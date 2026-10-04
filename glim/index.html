@@ -274,7 +274,8 @@ const FLAGS = (function () {
   let q = ''; try { q = location.search || ''; } catch (e) { }
   const p = {}; q.replace(/^\?/, '').split('&').forEach(kv => { if (!kv) return; const i = kv.indexOf('='); p[decodeURIComponent(i < 0 ? kv : kv.slice(0, i))] = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1)); });
   const has = k => Object.prototype.hasOwnProperty.call(p, k);
-  return { debug: has('debug'), test: has('test'), mute: has('mute') || has('test'), god: has('god'), daily: has('daily'), autoplay: has('autoplay'),
+  let h = ''; try { h = (location.hash || '').slice(1).toLowerCase(); } catch (e) { }
+  return { debug: has('debug') || h === 'debug', fps: has('fps') || h === 'fps', test: has('test'), mute: has('mute') || has('test'), god: has('god'), daily: has('daily'), autoplay: has('autoplay'),
     seed: has('seed') ? (parseInt(p.seed, 10) >>> 0) : null, gate: has('gate') ? Math.max(0, parseInt(p.gate, 10) || 0) : 0 };
 })();
 
@@ -548,6 +549,9 @@ const LEVELS = [{ scale: .70, parts: 140, ambient: 8, trail: 8, mid: false, edge
   { scale: .85, parts: 240, ambient: 14, trail: 12, mid: true, edge: false, fg: false, key: true },
   { scale: 1.0, parts: 360, ambient: 20, trail: 14, mid: true, edge: true, fg: true, key: true }];
 let LEVEL = LEVELS[2];
+// Canvas backing-store cap. iOS Safari rasterizes 2D canvas largely on the CPU, so a 2x backing store costs 1.8x the
+// fill of 1.5x for art that is soft papercut anyway; all text and HUD are DOM and stay sharp at full resolution.
+const DPR_CAP = 1.5;
 const Quality = (() => {
   const Q = { level: 2, auto: !FLAGS.test, changes: 0, ema: 0, interval: 1000 / 60, deltas: [], winT: 0, winN: 0, winLong: 0, clean: 0, fps: 60, fpsMin: 60, fpsAcc: 0, fpsN: 0, fpsT: 0, fpsMinT: 999, work: 0 };
   Q.set = function (l, manual) { l = clamp(l | 0, 0, 2); if (l !== Q.level) { Q.level = l; LEVEL = LEVELS[l]; View.dirty = true; Particles.resize(); } };
@@ -557,10 +561,10 @@ const Quality = (() => {
     const dms = dt * 1000; Q.work = workMs; Q.ema += (workMs - Q.ema) * 0.1;
     if (dms > 0) { Q.fpsAcc += dms; Q.fpsN++; if (dms > Q.fpsMinT || Q.fpsMinT === 999) Q.fpsMinT = Math.max(dms, Q.fpsMinT === 999 ? 0 : Q.fpsMinT);
       if (Q.fpsAcc >= 1000) { Q.fps = Q.fpsN * 1000 / Q.fpsAcc; Q.fpsMin = 1000 / Math.max(1, Q.fpsMinT); Q.fpsAcc = 0; Q.fpsN = 0; Q.fpsMinT = 999; } }
-    if (Q.deltas.length < 30) { if (dms > 0 && dms < 100) Q.deltas.push(dms); if (Q.deltas.length === 30) { const s = Q.deltas.slice().sort((a, b) => a - b); Q.interval = s[15]; } return; }
-    if (!Q.auto || Game.state !== 'playing') return;
+    if (Q.deltas.length < 30) { if (dms > 0 && dms < 100) Q.deltas.push(dms); if (Q.deltas.length === 30) { const s = Q.deltas.slice().sort((a, b) => a - b); Q.interval = s[15] < 12 ? 1000 / 120 : 1000 / 60; } return; }
+    const gs = Game.state; if (!Q.auto || (gs !== 'playing' && gs !== 'title' && gs !== 'ready')) return;
     Q.winT += dms; Q.winN++; if (dms > Q.interval * 1.5) Q.winLong++;
-    if (Q.winT >= 2000) {
+    if (Q.winT >= 1000) {
       const longR = Q.winLong / Math.max(1, Q.winN);
       if ((Q.ema > 0.7 * Q.interval || longR > 0.08) && Q.level > 0 && Q.changes < 3) { Q.set(Q.level - 1); Q.changes++; Q.clean = 0; }
       else if (Q.ema < 0.45 * Q.interval && longR < 0.02) { Q.clean += Q.winT; if (Q.clean >= 8000 && Q.level < 2 && Q.changes < 3) { Q.set(Q.level + 1); Q.changes++; Q.clean = 0; } }
@@ -582,7 +586,7 @@ const View = (() => {
     if (vw < 440) { s = w / 440; vw = 440; }
     V.s = s; V.viewW = vw; V.viewH = h / s; V.oy = (V.viewH - 1000) / 2;
     V.W = Math.min(vw, 760); V.colX = (vw - V.W) / 2; V.xP = clamp(0.27 * V.W, 120, 170);
-    let dpr = Math.min(window.devicePixelRatio || 1, 2) * LEVEL.scale;
+    let dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP) * LEVEL.scale;
     while (w * h * dpr * dpr > 3.2e6 && dpr > 0.5) dpr *= 0.92;
     V.dpr = dpr; V.K = s * dpr;
     const cw = Math.round(w * dpr), ch = Math.round(h * dpr);
@@ -622,7 +626,8 @@ const Art = (() => {
     const x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0); return { c, x, w: c.width / k, h: c.height / k, ox: 0, oy: 0 }; }
   A.cv = cv;
   // force deferred canvas rasterization now (inside a sliced bake job) instead of on first draw mid-game
-  let scratch = null; function bakeWarm(S) { try { if (!scratch) { const c = document.createElement('canvas'); c.width = c.height = 1; scratch = c.getContext('2d', { willReadFrequently: true }); } if (S && S.c && S.c.width) { scratch.drawImage(S.c, 0, 0, 1, 1); scratch.getImageData(0, 0, 1, 1); } } catch (e) { } }
+  const IS_WEBKIT = typeof window.GestureEvent !== 'undefined';
+  let scratch = null; function bakeWarm(S) { if (IS_WEBKIT) return; try { if (!scratch) { const c = document.createElement('canvas'); c.width = c.height = 1; scratch = c.getContext('2d', { willReadFrequently: true }); } if (S && S.c && S.c.width) { scratch.drawImage(S.c, 0, 0, 1, 1); scratch.getImageData(0, 0, 1, 1); } } catch (e) { } }
   A.bakeWarm = bakeWarm;
   function bakeGlow(col) { const S = cv(128, 128, 1), x = S.x, g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
     g.addColorStop(0, rgba(col, 1)); g.addColorStop(0.22, rgba(col, 0.62)); g.addColorStop(0.5, rgba(col, 0.22)); g.addColorStop(0.78, rgba(col, 0.06)); g.addColorStop(1, rgba(col, 0));
@@ -923,6 +928,25 @@ const Art = (() => {
     S.ox = 66; return S; }
   A.bakeRims = function (k) { A.rimW = []; A.rimR = []; for (let v = 0; v < 4; v++) { A.rimW.push([bakeCap(null, v, 0, k, COL.paper), bakeCap(null, v, 1, k, COL.paper)]); A.rimR.push([bakeCap(null, v, 0, k, COL.thorn), bakeCap(null, v, 1, k, COL.thorn)]); }
     const S = cv(16, 14, k); S.x.fillStyle = COL.paper; S.x.beginPath(); S.x.moveTo(8, 1); S.x.lineTo(15, 13); S.x.lineTo(1, 13); S.x.closePath(); S.x.fill(); S.ox = 8; S.oy = 7; A.chev = S; };
+  // bake-time scan of a layer tile: the row spans that hold any pixels (S.runs) and the row from which the tile is solid
+  // down to its bottom (S.opaque), both in tile units. The renderer draws only those spans and stops each layer where
+  // the layer in front of it is already solid, which roughly halves per-frame fill.
+  let scan = null;
+  function bakeRuns(S) {
+    S.runs = null; S.opaque = S.h;
+    try {
+      const w = S.c.width, h = S.c.height; if (!scan) scan = document.createElement('canvas');
+      scan.width = w; scan.height = h; const x = scan.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, w, h); x.drawImage(S.c, 0, 0);
+      const d = x.getImageData(0, 0, w, h).data, ku = h / S.h, runs = []; let start = -1, solid = h;
+      for (let r = 0; r < h; r++) { const o = r * w * 4; let any = false; for (let i = o + 3, e = o + w * 4; i < e; i += 4) if (d[i] > 3) { any = true; break; }
+        if (any && start < 0) start = r; else if (!any && start >= 0) { runs.push(start, r); start = -1; } }
+      if (start >= 0) runs.push(start, h);
+      for (let r = h - 3; r >= 0; r--) { const o = r * w * 4; let full = true; for (let i = o + 3, e = o + w * 4; i < e; i += 4) if (d[i] < 252) { full = false; break; } if (!full) break; solid = r; }
+      const out = []; for (let i = 0; i < runs.length; i += 2) { const a = Math.max(0, runs[i] - 2), b = Math.min(h, runs[i + 1] + 2); if (out.length && a - out[out.length - 1] < 24 * ku) out[out.length - 1] = b; else out.push(a, b); }
+      S.runs = out.map(v => v / ku); S.opaque = Math.min(S.h, (solid + 1) / ku);
+      scan.width = scan.height = 0;
+    } catch (e) { S.runs = null; S.opaque = S.h; }
+  }
   // ---------- biome cache with sliced jobs ----------
   const JOBS = ['sky', 'decor', 'far', 'mid', 'near', 'bramble', 'body', 'tips'];
   function bakeJob(b, name, k) { const B = BIOMES[b], E = A.biome[b], L = LAYERS[b], R = new RNG(500 + b * 97 + JOBS.indexOf(name) * 13);
@@ -935,6 +959,7 @@ const Art = (() => {
     else if (name === 'bramble') E.bramble = bakeBramble(B, k);
     else if (name === 'body') E.body = bakeBody(B, k);
     else if (name === 'tips') { E.caps = []; for (let v = 0; v < 4; v++) E.caps.push([bakeCap(B, v, 0, k), bakeCap(B, v, 1, k)]); }
+    if (name === 'decor' || name === 'far' || name === 'mid' || name === 'near' || name === 'bramble') bakeRuns(E[name]);
     if (name === 'tips') E.caps.forEach(p => { bakeWarm(p[0]); bakeWarm(p[1]); }); else if (name === 'sky') { bakeWarm(E.sun); if (E.ribbons) E.ribbons.forEach(bakeWarm); } else bakeWarm(E[name]);
     if (name === 'near') bakeWarm(E.leaf);
     E.done[name] = true; E.n++; if (E.n >= JOBS.length) E.ready = true;
@@ -1183,6 +1208,7 @@ function mission(i) {
 }
 const MEDALS = [{ id: 'bronze', g: 10, bonus: 20 }, { id: 'silver', g: 25, bonus: 50 }, { id: 'gold', g: 50, bonus: 100 }, { id: 'prism', g: 100, bonus: 250 }];
 const medalFor = g => { let m = null; for (const d of MEDALS) if (g >= d.g) m = d; return m; };
+const RM_MQ = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)'); } catch (e) { return null; } })();
 const Game = (() => {
   const G = { state: 'boot', tk: 0, god: FLAGS.god, manual: FLAGS.test, pendingSeed: null, hover: 0, titleScroll: 0, errs: 0 };
   const R = { seed: 1, mode: 'normal', mods: makeMods('normal'), start: 0, runTick: 0, dist: 0, v: 300, vb: 300, sf: 1, gates: 0, score: 0, chain: 0, mult: 1, maxChain: 0, maxMult: 1, meter: 0,
@@ -1191,7 +1217,7 @@ const Game = (() => {
     cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [] };
   G.run = R;
   G.runTime = () => R.runTick * CONST.STEP;
-  G.reduced = () => { if (FLAGS.test) return true; const v = Save.d.settings.reduceMotion; if (v === null) { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } } return !!v || FLAGS.test; };
+  G.reduced = () => { if (FLAGS.test) return true; const v = Save.d.settings.reduceMotion; if (v === null) return !!(RM_MQ && RM_MQ.matches); return !!v || FLAGS.test; };
   G.inkCol = () => BIOMES[R.biome].ink;
   G.dailyInfo = () => { const ymd = Calendar.today(); return { seed: ymd, mod: hash32(ymd) % 5, key: String(ymd) }; };
   // ---------- state machine ----------
@@ -1501,17 +1527,28 @@ const Renderer = (() => {
   // ---------- drawing ----------
   let lastBiomeFade = -1;
   R.biomeFade = () => { FX.fadeT = 0; };
-  function layer(E, name, speed, f, scroll, a) { const T = E && E[name]; if (!T || !T.c.width) return; setBase(f); ctx.globalAlpha = a; const V = View; let x = -((scroll * speed) % 1200) - V.colX; if (x > -V.colX) x -= 1200;
-    while (x < V.viewW - V.colX) { ctx.drawImage(T.c, x, T.y0, 1200, T.h); x += 1200; } }
+  // A periodic layer tile, drawn only where it has pixels (T.runs), only across the visible columns (40 u margin for
+  // shake, roll and zoom) and nothing below `cut` (world u), where the layer in front of it is already solid.
+  function layer(E, name, speed, f, scroll, a, cut) { const T = E && E[name]; if (!T || !T.c.width) return; setBase(f); ctx.globalAlpha = a; const V = View;
+    let x = -((scroll * speed) % 1200) - V.colX; if (x > -V.colX) x -= 1200;
+    const cw = T.c.width, ch = T.c.height, kx = cw / 1200, ky = ch / T.h, L = -V.colX - 40, Rr = V.viewW - V.colX + 40, runs = T.runs, n = runs ? runs.length : 2;
+    const yMax = cut === undefined ? T.h : Math.min(T.h, cut - T.y0);
+    for (; x < Rr; x += 1200) { const x0 = Math.max(x, L), x1 = Math.min(x + 1200, Rr); if (x1 <= x0) continue; const sx = (x0 - x) * kx, sw = Math.min((x1 - x0) * kx, cw - sx);
+      for (let i = 0; i < n; i += 2) { const y0 = runs ? runs[i] : 0, y1 = Math.min(runs ? runs[i + 1] : T.h, yMax); if (y1 <= y0) continue;
+        ctx.drawImage(T.c, sx, y0 * ky, sw, Math.min((y1 - y0) * ky, ch - y0 * ky), x0, T.y0 + y0, x1 - x0, y1 - y0); } } }
+  const solidAt = (T, m) => T && T.runs && T.c.width ? T.y0 + T.opaque + m : 1e4;
   function skyDraw(b, a, scroll) {
-    const E = Art.get(b), V = View, L = Art.biome; if (!E || !E.sky) return; setBase(0); ctx.globalAlpha = a; ctx.fillStyle = E.sky; ctx.fillRect(-V.colX - 50, -V.oy - 120, V.viewW + 100, V.viewH + 240);
+    const E = Art.get(b), V = View; if (!E || !E.sky) return; setBase(0); ctx.globalAlpha = a; ctx.fillStyle = E.sky;
+    const skyCut = solidAt(E.far, 30), skyTop = -V.oy - 120; ctx.fillRect(-V.colX - 50, skyTop, V.viewW + 100, Math.min(V.viewH + 240, skyCut - skyTop));
     if (E.ribbons) { ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) { const rb = E.ribbons[i], sw = Math.sin(FX.wall * 0.3 + i * 2) * 40; ctx.globalAlpha = a * (0.35 + 0.08 * Math.sin(FX.wall * 0.7 + i)); ctx.drawImage(rb.c, -V.colX + (i ? V.viewW * 0.35 : -V.viewW * 0.15) + sw - ((scroll * 0.01) % 300), 40 + i * 110, 900 * Math.max(1, V.viewW / 700), 300); } ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a; }
     if (E.sun) { const sd = LAYERS_SUN[b], span = V.viewW + 400; let x = V.viewW * sd.x - ((scroll * 0.02) % span); if (x < -200) x += span; spr(E.sun, x - V.colX, sd.y, 1); }
-    layer(E, 'decor', 0.03, 0.15, scroll, a);
+    layer(E, 'decor', 0.03, 0.15, scroll, a, solidAt(E.far, 30));
   }
   const FRAME_INK = 'rgba(30,20,40,.55)';
   const LAYERS_SUN = [{ x: 0.72, y: 300 }, { x: 0.24, y: 170 }, { x: 0.62, y: 575 }, { x: 0.76, y: 190 }, { x: 0.5, y: 200 }];
-  function backdrop(b, a, scroll) { const E = Art.get(b); if (!E) return; skyDraw(b, a, scroll); layer(E, 'far', 0.12, 0.3, scroll, a); if (LEVEL.mid) layer(E, 'mid', 0.3, 0.5, scroll, a); layer(E, 'near', 0.6, 0.8, scroll, a); }
+  function backdrop(b, a, scroll) { const E = Art.get(b); if (!E) return; skyDraw(b, a, scroll);
+    const cNear = solidAt(E.near, 30), cMid = LEVEL.mid ? Math.min(solidAt(E.mid, 30), cNear) : cNear;
+    layer(E, 'far', 0.12, 0.3, scroll, a, cMid); if (LEVEL.mid) layer(E, 'mid', 0.3, 0.5, scroll, a, cNear); layer(E, 'near', 0.6, 0.8, scroll, a, solidAt(E.bramble, 24)); }
   function glowMode(b) { return BIOMES[b].glow; }
   function gl(b, S, x, y, r, a) { const gm = glowMode(b); ctx.globalCompositeOperation = gm ? 'lighter' : 'source-over'; ctx.globalAlpha = a * (gm === 1 ? 0.6 : gm === 2 ? 1 : 0.85); ctx.drawImage(S.c, x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = 'source-over'; }
   R.draw = function (al) {
@@ -1525,7 +1562,8 @@ const Renderer = (() => {
     const camT = st === 'title' ? 0 : clamp((y - 500) * 0.12, -60, 60); FX.camY += (camT - FX.camY) * Math.min(1, (R.dtw || 0.016) * 6);
     R.gx = V.colX + gx; R.gy = V.oy + y - FX.camY;
     const bi = running ? RR.biome : 0, fade = running && FX.fadeT < 2.4 ? FX.fadeT / 2.4 : 1;
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#1E1428'; ctx.fillRect(0, 0, V.cw, V.ch);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const Eb = Art.get(running && fade < 1 ? RR.prevBiome : bi); if (!Eb || !Eb.sky) { ctx.fillStyle = '#1E1428'; ctx.fillRect(0, 0, V.cw, V.ch); }
     // 1-4 backdrop with crossfade
     if (fade < 1) { backdrop(RR.prevBiome, 1, scroll); backdrop(bi, fade, scroll); } else backdrop(bi, 1, scroll);
     ctx.globalAlpha = 1; setBase(1);
@@ -1551,7 +1589,7 @@ const Renderer = (() => {
     drawRingsPops(gx);
     // 18 screen space
     screenFX(gx, y, st, running, red);
-    if (FLAGS.debug || R.debugHit) debugOverlay(dist, y, FLAGS.debug, gx);
+    if (FLAGS.debug || R.debugHit || FLAGS.fps) debugOverlay(dist, y, FLAGS.debug || FLAGS.fps, gx, !FLAGS.debug && !R.debugHit);
   };
   function drawGates(dist, py, al) {
     const V = View, RR = Game.run, top = -V.oy + FX.camY - 120, bot = 1000 + V.oy + FX.camY + 120;
@@ -1688,11 +1726,13 @@ const Renderer = (() => {
     if (st === 'playing' && RR.runTick < 40 && !Save.d.seen.tutorial) Save.d.seen.tutorial = true;
     ctx.globalAlpha = 1;
   }
-  function debugOverlay(dist, py, txt, gx) {
+  function debugOverlay(dist, py, txt, gx, noBoxes) {
     const V = View, RR = Game.run; setBase(1); ctx.globalAlpha = 1; ctx.lineWidth = 1.5;
+    if (!noBoxes) {
     ctx.strokeStyle = '#00FF88'; ctx.beginPath(); ctx.arc(gx, py, Player.r, 0, TAU); ctx.stroke(); ctx.strokeStyle = 'rgba(0,255,136,.4)'; ctx.beginPath(); ctx.arc(gx, py, Player.r + CONST.PICK_R, 0, TAU); ctx.stroke();
     ctx.strokeStyle = '#FF2244'; ctx.beginPath(); ctx.moveTo(-V.colX, CONST.FLOOR); ctx.lineTo(V.viewW, CONST.FLOOR); ctx.stroke();
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on || g.smashed) continue; const cx = g.X - dist + V.xP, t = g.gapY - g.gap / 2 - CONST.INSET, b = g.gapY + g.gap / 2 + CONST.INSET; ctx.strokeRect(cx - 46, -200, 92, t + 200); ctx.strokeRect(cx - 46, b, 92, 1300 - b); }
+    }
     if (!txt) return;
     if (!R.dbg || FX.wall - R.dbgT > 0.25) { R.dbgT = FX.wall; const Q = Quality; R.dbg = ['fps ' + Q.fps.toFixed(0) + ' min ' + Q.fpsMin.toFixed(0), 'work ' + Q.ema.toFixed(2) + 'ms q' + Q.level + ' dpr ' + V.dpr.toFixed(2), 'parts ' + Particles.n + ' ' + Game.state + ' t' + Game.tk, 'audio ' + Audio.state() + ' seed ' + RR.seed]; }
     ctx.setTransform(1, 0, 0, 1, 0, 0); const s = Math.max(1, V.dpr); ctx.font = (12 * s) + 'px monospace'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(4 * s, (V.safe.t + 50) * s, 230 * s, 64 * s); ctx.fillStyle = '#9F9';
