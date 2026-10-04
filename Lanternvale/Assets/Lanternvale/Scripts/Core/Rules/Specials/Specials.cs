@@ -113,6 +113,24 @@ namespace Lanternvale.Rules
         /// <summary>The unit's pet changed (summoned, dismissed, died).</summary>
         public virtual void OnPetChanged(Battle b, Unit owner, int rank) { }
 
+        public virtual float InterruptResistChance(Unit u, int rank) => 0f;
+        /// <summary>Extra usability rule from a passive (e.g. Spirit of Redemption form): return a reason to block.</summary>
+        public virtual string CannotUse(Unit u, int rank, AbilityDef a, Unit target) => null;
+        /// <summary>Multiplier on enemies' stealth detection radius against this (stealthed) unit.</summary>
+        public virtual float DetectionRadiusMult(Unit stealthed, int rank) => 1f;
+        /// <summary>Aura-level: the bearer took damage (after it was applied).</summary>
+        public virtual void OnBearerDamaged(Battle b, AuraInstance a, Unit src, float amount, School s, DamageInfo info) { }
+
+        // ---- global hooks (called on every registered handler)
+        public virtual void OnAnyTurnStart(Battle b, Unit u) { }
+        public virtual void OnAnyUnitMoved(Battle b, Unit u) { }
+        public virtual void OnAnyAuraApplied(Battle b, AuraInstance a) { }
+        public virtual void OnAnyUnitFell(Battle b, Unit u) { }
+        public virtual void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { }
+        public virtual void OnBattleFinished(Battle b) { }
+        /// <summary>Abilities the unit may use because of its surroundings (Lightwell).</summary>
+        public virtual void ContextualAbilities(Battle b, Unit u, List<string> into) { }
+
         // ---- summons
         public virtual void OnSummoned(AbilityCast c, Unit summoned) { }
         /// <summary>Passive hook: a unit owned by <paramref name="owner"/> was summoned.</summary>
@@ -585,6 +603,60 @@ namespace Lanternvale.Rules
             if (c.Caster != null) foreach (var p in PassivesOf(c.Caster)) p.H.OnOwnerSummoned(c.Battle, c.Caster, p.Rank, summoned);
         }
 
+        internal static float InterruptResistChance(Unit u)
+        {
+            float v = 0f;
+            foreach (var p in PassivesOf(u)) v += p.H.InterruptResistChance(u, p.Rank);
+            return Math.Min(100f, v);
+        }
+
+        internal static string CannotUse(Unit u, AbilityDef a, Unit target)
+        {
+            foreach (var p in PassivesOf(u))
+            {
+                var why = p.H.CannotUse(u, p.Rank, a, target);
+                if (why != null) return why;
+            }
+            return null;
+        }
+
+        /// <summary>Aura ids that make the bearer undetectable even within the stealth detection distance (Vanish).</summary>
+        public static readonly HashSet<string> UndetectableAuras = new HashSet<string>();
+
+        internal static float DetectionRadiusMult(Unit stealthed)
+        {
+            foreach (var a in stealthed.Auras) if (UndetectableAuras.Contains(a.Def.id)) return 0f;
+            float m = 1f;
+            foreach (var p in PassivesOf(stealthed)) m *= p.H.DetectionRadiusMult(stealthed, p.Rank);
+            return Math.Max(0f, m);
+        }
+
+        internal static void OnBearerDamaged(Battle b, Unit tgt, Unit src, float amount, School s, DamageInfo info)
+        {
+            foreach (var r in SpecialAuras(tgt)) if (tgt.Auras.Contains(r.A)) r.H.OnBearerDamaged(b, r.A, src, amount, s, info);
+        }
+
+        static List<SpecialHandler> All()
+        {
+            var l = new List<SpecialHandler>(handlers.Values);
+            return l;
+        }
+
+        internal static void OnAnyTurnStart(Battle b, Unit u) { foreach (var h in All()) h.OnAnyTurnStart(b, u); }
+        internal static void OnAnyUnitMoved(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitMoved(b, u); }
+        internal static void OnAnyAuraApplied(Battle b, AuraInstance a) { foreach (var h in All()) h.OnAnyAuraApplied(b, a); }
+        internal static void OnAnyUnitFell(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitFell(b, u); }
+        internal static void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { foreach (var h in All()) h.OnAnyAbilityStart(b, u, c); }
+        internal static void OnBattleFinished(Battle b) { foreach (var h in All()) h.OnBattleFinished(b); }
+
+        /// <summary>Abilities usable by the unit because of its surroundings (e.g. Lightwell renew next to a Lightwell).</summary>
+        public static List<string> ContextualAbilities(Battle b, Unit u)
+        {
+            var l = new List<string>();
+            foreach (var h in All()) h.ContextualAbilities(b, u, l);
+            return l;
+        }
+
         /// <summary>Talent rank of the first talent of the unit that uses the named Special passive (0 if none).</summary>
         public static int TalentRankOfSpecial(Unit u, string special)
         {
@@ -623,6 +695,7 @@ namespace Lanternvale.Rules
         {
             Register(new ShootSpecial());
             Register(new HelpUpSpecial());
+            Register(new WeaponTypeTalentSpecial());
             RegisterClassSpecials();
         }
 

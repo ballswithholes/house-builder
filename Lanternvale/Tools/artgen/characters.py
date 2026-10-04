@@ -1250,6 +1250,786 @@ def cape_back(f, col, hem_dy=0.4, w=1.5):
     f.folds(m, [(cx + k * f.w_sh * 0.4, f.hip_y, cx + k * f.w_sh * 0.55, hem) for k in (-1.5, -0.5, 0.5, 1.5)], col, 0.45, hu * 0.04)
     return m
 
+
+# ----------------------------------------------------------------------------------------
+# hair styles (each returns nothing; `back` part is painted before the body, front after the face)
+# ----------------------------------------------------------------------------------------
+def hair_style(f, style, back):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    L = f.L
+    col = L.hair
+    hu = f.hu
+    if style == "spiky":
+        return hair_spiky(f, col, back=back)
+    if style == "spiky_band":
+        if back:
+            return hair_spiky(f, col, back=True, length=0.85)
+        hair_spiky(f, col, back=False, length=0.8)
+        headband(f, L.band, y=-0.5, tails=2)
+        return
+    if style == "braids":
+        if back:
+            f.paint_hair([f.hairline_cap(low=0.2)], col, shine=False)
+            for k in range(5):
+                t = k / 4
+                x0 = hx + (t - 0.5) * hw * 1.6
+                braid(f, [(x0, hy - hh * 0.2), (x0 + (t - 0.5) * hw * 0.8, hy + hh * 0.9), (x0 + (t - 0.5) * hw * 1.2, f.sh_y + hu * 0.25)],
+                      hw * 0.2, col, beads=[(0.55, P.HONEY), (1.0, P.hx("4fb3a9"))], key="bb%d" % k)
+            return
+        polys = [f.hairline_cap(fringe=-0.05)]
+        for k in range(7):
+            t = k / 6
+            root = (hx + (t - 0.5) * hw * 1.4, hy - hh * 0.6)
+            tip = (hx + (t - 0.5) * hw * 2.2, hy - hh * (1.35 + 0.15 * math.sin(t * math.pi)))
+            polys.append(f.hair_lock(root, tip, hw * 0.45, bend=(t - 0.5) * 0.3))
+        polys += side_locks(f, hy + hh * 0.25, width=0.32)
+        f.paint_hair(polys, col)
+        headband(f, L.band, y=-0.38, beads=[P.HONEY, P.hx("4fb3a9"), P.HONEY, P.hx("4fb3a9"), P.HONEY])
+        return
+    if style == "mohawk":
+        if back:
+            braid(f, [(hx - hw * 0.1, hy - hh * 0.6), (hx - hw * 0.5, hy + hh * 0.6), (hx - hw * 0.7, f.sh_y + hu * 0.6)], hw * 0.24, col,
+                  beads=[(0.7, P.TERRACOTTA), (1.0, P.HONEY)], key="mb")
+            return
+        cap = f.hairline_cap(fringe=-0.15)
+        m = f.cv.mask(cap)
+        f.cv.atop(P.mix(col, L.skin, 0.55), m * 0.75)
+        polys = []
+        for k in range(6):
+            t = k / 5
+            root = (hx - hw * 0.05 + (t - 0.5) * hw * 0.3, hy - hh * (0.75 - 0.05 * t))
+            ang = math.pi * (1.35 + t * 0.5)
+            tip = (root[0] + math.cos(ang) * hh * 0.9, root[1] + math.sin(ang) * hh * 0.85)
+            polys.append(f.hair_lock(root, tip, hw * 0.42, bend=0.1))
+        f.paint_hair(polys, col)
+        return
+    if style == "neat":
+        if back:
+            return f.paint_hair([f.hairline_cap(low=0.12)], col, shine=False)
+        polys = [f.hairline_cap(fringe=-0.08)]
+        polys += bangs(f, n=6, y_end=-0.22, spread=0.95, part=-0.2, sweep=0.55, width=0.5, curl=0.35)
+        polys += side_locks(f, hy + hh * 0.1, width=0.36)
+        f.paint_hair(polys, col)
+        return
+    if style == "swept_grey":
+        if back:
+            return f.paint_hair([f.hairline_cap(low=0.2)], col, shine=False)
+        polys = [f.hairline_cap(fringe=-0.12)]
+        for k in range(5):
+            t = k / 4
+            root = (hx + (t - 0.5) * hw * 1.2, hy - hh * 0.75)
+            tip = (hx + (t - 0.5) * hw * 1.6 + hw * 0.6, hy - hh * 1.05)
+            polys.append(f.hair_lock(root, tip, hw * 0.5, bend=0.2))
+        polys += side_locks(f, hy + hh * 0.15, width=0.34)
+        f.paint_hair(polys, col)
+        return
+    if style == "bun":
+        if back:
+            f.paint_hair([f.hairline_cap(low=0.3)], col, shine=False)
+            bx, by = hx - hw * 0.15, hy - hh * 0.35
+            f.paint_hair([ellipse(bx - hw * 0.55, by, hw * 0.75, hh * 0.62, -0.3, 40)], col, shine=True, shine_y=by - hh * 0.25)
+            for s, ang in ((-1, -0.5), (1, 0.4)):
+                f.band([(bx - hw * 0.55 - s * hw * 0.9, by - hh * 0.75), (bx - hw * 0.55 + s * hw * 0.9, by + hh * 0.55)], hw * 0.07,
+                       P.mix(P.HONEY, P.STONE, 0.3), hi=0.6)
+                f.ell(bx - hw * 0.55 - s * hw * 0.92, by - hh * 0.78, hw * 0.1, hw * 0.1, L.accent, hi=0.7, gloss=0.6)
+            return
+        polys = [f.hairline_cap(fringe=0.05)]
+        polys += bangs(f, n=6, y_end=0.05, spread=1.05, part=0.0, sweep=0.15, width=0.45, curl=0.45)
+        polys += side_locks(f, hy + hh * 0.75, width=0.4, out=0.05)
+        f.paint_hair(polys, col)
+        return
+    if style == "long":
+        if back:
+            return f.paint_hair(back_mass(f, L.hair_end if hasattr(L, "hair_end") else f.waist_y, width=1.35, n=8), col, shine=False,
+                                each=False)
+        polys = [f.hairline_cap(fringe=0.05)]
+        polys += bangs(f, n=7, y_end=0.12, spread=1.0, part=0.15, sweep=0.1, width=0.42, curl=0.3)
+        polys += side_locks(f, f.chest_y + hu * 0.2, width=0.42, out=0.1, n=2)
+        f.paint_hair(polys, col)
+        return
+    if style == "bob":
+        if back:
+            f.paint_hair(back_mass(f, f.chin + hu * 0.05, width=1.25, n=7, jag=0.05), col, shine=False, each=False)
+            # long wrapped tail down the back (visible beside the body)
+            tx = hx + hw * 0.95
+            f.band([(tx - hw * 0.4, hy + hh * 0.6), (tx + hw * 0.1, f.sh_y + hu * 0.5), (tx + hw * 0.25, f.hip_y)], hw * 0.22, col, w1=hw * 0.16)
+            for k in range(4):
+                yy = f.sh_y + hu * (0.6 + k * 0.45)
+                f.band([(tx - hw * 0.05, yy), (tx + hw * 0.35, yy + hu * 0.03)], hw * 0.12, L.accent, cap=False)
+            return
+        polys = [f.hairline_cap(fringe=0.08)]
+        polys += bangs(f, n=7, y_end=0.0, spread=1.0, part=0.1, sweep=-0.1, width=0.42, curl=0.3)
+        polys += side_locks(f, f.chin + hu * 0.05, width=0.48, out=0.1, inner=0.0)
+        polys.append(f.hair_lock((hx - hw * 0.85, hy - hh * 0.3), (hx - hw * 1.05, f.chin + hu * 0.55), hw * 0.3, bend=0.1))
+        f.paint_hair(polys, col)
+        # bead ornament on the long lock
+        f.ell(hx - hw * 1.02, f.chin + hu * 0.35, hw * 0.1, hw * 0.13, L.accent, hi=0.7, gloss=0.5)
+        return
+    if style == "ponytail":
+        if back:
+            f.paint_hair([f.hairline_cap(low=0.2)], col, shine=False)
+            root = (hx + hw * 0.1, hy - hh * 1.0)
+            pts = [root, (hx + hw * 1.2, hy - hh * 1.3), (hx + hw * 1.45, hy + hh * 0.6), (hx + hw * 1.2, f.chest_y + hu * 0.4)]
+            f.paint_hair([stroke_w(pts, [hw * 0.5, hw * 0.7, hw * 0.55, 1.0])], col, shine=False)
+            return
+        polys = [f.hairline_cap(fringe=0.0)]
+        polys += bangs(f, n=6, y_end=0.0, spread=1.0, part=-0.1, sweep=0.0, width=0.44, curl=0.3)
+        polys += side_locks(f, f.sh_y + hu * 0.2, width=0.34, out=0.05)
+        f.paint_hair(polys, col)
+        f.band([(hx + hw * 0.0, hy - hh * 1.02), (hx + hw * 0.25, hy - hh * 1.08)], hw * 0.18, L.accent, cap=False)
+        return
+    if style == "rogue":
+        if back:
+            f.paint_hair([f.hairline_cap(low=0.25)], col, shine=False)
+            for k in range(6):
+                a = math.pi * (0.95 + k * 0.22)
+                x0, y0 = hx + math.cos(a) * hw * 0.7, hy - hh * 0.1 + math.sin(a) * hh * 0.5
+                x1, y1 = hx + math.cos(a) * hw * 1.6, hy + hh * 0.9 + k * hh * 0.08
+                braid(f, [(x0, y0), ((x0 + x1) / 2 + math.cos(a) * hw * 0.2, (y0 + y1) / 2), (x1, y1)], hw * 0.16, col,
+                      beads=[(1.0, [P.hx("4fb3a9"), P.HONEY, P.VERMILION][k % 3])], key="rb%d" % k)
+            f.paint_hair([stroke_w([(hx + hw * 0.3, hy - hh * 0.6), (hx + hw * 1.3, hy - hh * 0.2), (hx + hw * 1.4, f.sh_y + hu * 0.8)],
+                                   [hw * 0.5, hw * 0.45, 1.0])], col, shine=False)
+            return
+        polys = [f.hairline_cap(fringe=0.0)]
+        r = rng(f.cv.seed, "rogue")
+        for k in range(7):
+            t = k / 6
+            root = (hx + (t - 0.5) * hw * 1.2, hy - hh * 0.95)
+            tip = (hx + (t - 0.5) * hw * 2.3 + r.normal() * hw * 0.1, hy + hh * (0.05 - 0.3 * abs(t - 0.5)) + r.normal() * hh * 0.06)
+            polys.append(f.hair_lock(root, tip, hw * 0.45, bend=(0.5 - t) * 0.5))
+        polys += side_locks(f, f.chin + hu * 0.1, width=0.34, out=0.15)
+        f.paint_hair(polys, col)
+        goggles(f)
+        return
+    if style == "twin_buns":
+        if back:
+            f.paint_hair([f.hairline_cap(low=0.15)], col, shine=False)
+            for s in (-1, 1):
+                f.paint_hair([ellipse(hx + s * hw * 0.85, hy - hh * 0.85, hw * 0.42, hw * 0.42, 0, 30)], col, shine=True,
+                             shine_y=hy - hh * 1.0)
+                f.band([(hx + s * hw * 0.55, hy - hh * 0.6), (hx + s * hw * 1.05, hy - hh * 0.55)], hw * 0.12, L.accent, cap=False)
+            return
+        polys = [f.hairline_cap(fringe=0.05)]
+        polys += bangs(f, n=6, y_end=-0.02, spread=1.05, part=0.0, sweep=0.0, width=0.45, curl=0.25)
+        polys += side_locks(f, f.chin - hu * 0.05, width=0.36, out=0.05)
+        f.paint_hair(polys, col)
+        return
+    if style == "swept_long":
+        if back:
+            return f.paint_hair(back_mass(f, f.chest_y + hu * 0.5, width=1.25, n=7), col, shine=False, each=False)
+        polys = [f.hairline_cap(fringe=-0.1)]
+        for k in range(5):
+            t = k / 4
+            root = (hx + (t - 0.5) * hw * 1.2, hy - hh * 0.7)
+            ang = math.pi * (1.25 + 0.5 * t)
+            tip = (root[0] + math.cos(ang) * hh * (0.9 + 0.5 * math.sin(t * math.pi)), root[1] + math.sin(ang) * hh * (1.2 + 0.4 * math.sin(t * math.pi)))
+            polys.append(f.hair_lock(root, tip, hw * 0.5, bend=0.18 * (1 if t > 0.5 else -1)))
+        polys += side_locks(f, f.chest_y + hu * 0.1, width=0.38, out=0.15, n=2)
+        f.paint_hair(polys, col)
+        return
+    if style == "bald_beard":
+        if back:
+            return
+        m = f.cv.mask(catmull(A([(hx - hw * 1.1, hy + hh * 0.2), (hx - hw * 1.08, hy - hh * 0.35), (hx - hw * 0.75, hy - hh * 0.3),
+                                  (hx - hw * 0.85, hy + hh * 0.15)]), True, 4))
+        polys = [catmull(A([(hx - hw * 1.12, hy + hh * 0.25), (hx - hw * 1.1, hy - hh * 0.4), (hx - hw * 0.75, hy - hh * 0.35),
+                            (hx - hw * 0.85, hy + hh * 0.15)]), True, 4),
+                 catmull(A([(hx + hw * 1.08, hy + hh * 0.25), (hx + hw * 1.08, hy - hh * 0.4), (hx + hw * 0.75, hy - hh * 0.35),
+                            (hx + hw * 0.83, hy + hh * 0.15)]), True, 4)]
+        f.paint_hair(polys, col, shine=False)
+        return
+    if style == "short":
+        if back:
+            return f.paint_hair([f.hairline_cap(low=0.1)], col, shine=False)
+        polys = [f.hairline_cap(fringe=-0.05)]
+        polys += bangs(f, n=5, y_end=-0.15, spread=0.95, part=0.1, sweep=0.2, width=0.5, curl=0.3)
+        polys += side_locks(f, hy + hh * 0.15, width=0.34)
+        f.paint_hair(polys, col)
+        return
+    if style == "none":
+        return
+
+
+def beard(f, col, length=1.0, mustache=True, full=True):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    t = f.L.turn
+    if full:
+        pts = [(hx - hw * 0.95, hy + hh * 0.1), (hx - hw * 0.7, hy + hh * 0.65), (hx - hw * 0.45, hy + hh * (1.1 + 0.6 * length)),
+               (hx + t * hw * 0.3, hy + hh * (1.3 + 0.9 * length)), (hx + hw * 0.5, hy + hh * (1.1 + 0.6 * length)), (hx + hw * 0.75, hy + hh * 0.6),
+               (hx + hw * 0.92, hy + hh * 0.1), (hx + hw * 0.5, hy + hh * 0.55), (hx + t * hw * 0.4, hy + hh * 0.78), (hx - hw * 0.45, hy + hh * 0.55)]
+        f.paint_hair([catmull(A(pts), True, 6)], col, shine=False, key="beard")
+        segs = []
+        r = rng(f.cv.seed, "beardstr")
+        for k in range(12):
+            x = hx + (r.random() - 0.5) * hw * 1.2
+            segs.append((x, hy + hh * 0.75, x + (x - hx) * 0.2, hy + hh * (1.0 + 0.8 * length * r.random())))
+        f.lines(segs, hw * 0.025, P.shadow_of(col, 1.0), 0.4)
+    if mustache:
+        mx, my = hx + t * hw * 0.5, hy + hh * 0.58
+        for s in (-1, 1):
+            f.paint_hair([f.hair_lock((mx, my - hh * 0.02), (mx + s * hw * 0.42, my + hh * 0.2), hw * 0.16, bend=s * 0.1)], col, shine=False,
+                         key="mus")
+
+
+# ----------------------------------------------------------------------------------------
+# heads
+# ----------------------------------------------------------------------------------------
+def human_head(f, back_only=False, front_extra=None):
+    L = f.L
+    if back_only:
+        hair_style(f, L.hair_style, back=True)
+        return
+    f.ears()
+    f.face()
+    if L.build == "old":
+        hx, hy = f.head_c
+        f.lines([(hx - f.hw * 0.75, hy + f.hh * 0.42, hx - f.hw * 0.6, hy + f.hh * 0.55),
+                 (hx + f.hw * 0.62, hy + f.hh * 0.42, hx + f.hw * 0.5, hy + f.hh * 0.55),
+                 (hx - f.hw * 0.25, hy - f.hh * 0.38, hx + f.hw * 0.3, hy - f.hh * 0.4)], f.hw * 0.025, skin_lo(L.skin), 0.6)
+    f.features()
+    if L.beard:
+        beard(f, L.beard, length=getattr(L, "beard_len", 1.0))
+    hair_style(f, L.hair_style, back=False)
+    if front_extra:
+        front_extra()
+
+
+def beast_head(f, fur_col, muzzle, horn, mane, eyes):
+    """Ram-horned feline beast-folk head (front, slight 3/4)."""
+    cv = f.cv
+    hx, hy = f.head_c
+    hw, hh = f.hw * 1.08, f.hh * 1.0
+    t = f.L.turn
+    r = rng(cv.seed, "beast")
+    # cheek tufts + head
+    pts = [(hx - hw * 0.2, hy - hh * 1.0), (hx + hw * 0.65, hy - hh * 0.85), (hx + hw * 1.0, hy - hh * 0.3), (hx + hw * 1.25, hy + hh * 0.15),
+           (hx + hw * 0.98, hy + hh * 0.25), (hx + hw * 1.15, hy + hh * 0.5), (hx + hw * 0.7, hy + hh * 0.6), (hx + hw * 0.4, hy + hh * 0.95),
+           (hx + t * hw * 0.3, hy + hh * 1.02), (hx - hw * 0.4, hy + hh * 0.95), (hx - hw * 0.75, hy + hh * 0.6), (hx - hw * 1.2, hy + hh * 0.52),
+           (hx - hw * 1.0, hy + hh * 0.25), (hx - hw * 1.3, hy + hh * 0.12), (hx - hw * 1.02, hy - hh * 0.3), (hx - hw * 0.7, hy - hh * 0.85)]
+    m = f.shape(pts, fur_col, n=4, shadow=0, soft=hw * 0.3, hi=0.35, cel=0.6)
+    mz = [(hx + t * hw * 0.35 - hw * 0.42, hy + hh * 0.38), (hx + t * hw * 0.35, hy + hh * 0.22), (hx + t * hw * 0.35 + hw * 0.42, hy + hh * 0.38),
+          (hx + t * hw * 0.35 + hw * 0.35, hy + hh * 0.82), (hx + t * hw * 0.35, hy + hh * 0.98), (hx + t * hw * 0.35 - hw * 0.35, hy + hh * 0.82)]
+    f.shape(mz, muzzle, n=5, shadow=0, line=0.5, soft=hw * 0.2)
+    nx, ny = hx + t * hw * 0.38, hy + hh * 0.42
+    f.shape([(nx - hw * 0.17, ny - hh * 0.05), (nx + hw * 0.17, ny - hh * 0.05), (nx + hw * 0.04, ny + hh * 0.1), (nx - hw * 0.04, ny + hh * 0.1)],
+            P.mix(P.INK, fur_col, 0.25), n=4, shadow=0, hi=0.6, gloss=0.4)
+    lc = P.mix(P.INK, fur_col, 0.2)
+    f.lines([(nx, ny + hh * 0.1, nx, ny + hh * 0.25), (nx, ny + hh * 0.25, nx - hw * 0.2, ny + hh * 0.33), (nx, ny + hh * 0.25, nx + hw * 0.2, ny + hh * 0.33)],
+            hw * 0.03, lc, 0.85)
+    # fur strokes
+    segs = []
+    for k in range(26):
+        a = r.random() * 2 * math.pi
+        d = 0.5 + 0.45 * r.random()
+        x, y = hx + math.cos(a) * hw * d, hy + math.sin(a) * hh * d * 0.9
+        segs.append((x, y, x + math.cos(a) * hw * 0.15, y + math.sin(a) * hh * 0.15))
+    f.lines(segs, hw * 0.02, P.shadow_of(fur_col, 1.0), 0.35, clip=m)
+    # eyes: feline, slit pupils, heavy brow
+    ey = hy + hh * 0.02
+    for d, ex, sc in ((-1, hx + t * hw * 0.4 - hw * 0.48, 1.0), (1, hx + t * hw * 0.4 + hw * 0.45, 1 - t * 0.5)):
+        w, h = hw * 0.36 * sc, hw * 0.2
+        em = cv.mask(catmull(A([(ex - d * w * 0.5, ey + h * 0.1), (ex, ey - h * 0.5), (ex + d * w * 0.5, ey - h * 0.15), (ex, ey + h * 0.45)]), True, 5))
+        paint(cv, em, eyes, line=0.0, soft=2, ao=0, flat=True)
+        cv.atop(P.light_of(eyes, 1.4), em * smoothstep(ey - h * 0.2, ey + h * 0.5, cv.yy()) * 0.6)
+        flat_fill(cv, cv.ellipse_mask(ex, ey, w * 0.07, h * 0.42) * em, P.INK, 0.95)
+        flat_fill(cv, cv.ellipse_mask(ex - w * 0.15, ey - h * 0.15, w * 0.08, h * 0.12) * em, P.WHITE_WARM, 0.9)
+        lid = [(ex + d * w * 0.6, ey - h * 0.25), (ex, ey - h * 0.6), (ex - d * w * 0.55, ey + h * 0.05)]
+        flat_fill(cv, cv.mask(stroke_w(lid, [h * 0.15, h * 0.32, h * 0.12])), P.INK, 1.0)
+        brow = [(ex + d * w * 0.65, ey - h * 0.85), (ex, ey - h * 1.15), (ex - d * w * 0.6, ey - h * 0.75)]
+        f.paint_hair([stroke_w(brow, [h * 0.3, h * 0.55, h * 0.25])], mane, shine=False, key="brow")
+    # mouth line with small fangs
+    my = hy + hh * 0.72
+    f.lines([(nx - hw * 0.22, my, nx + hw * 0.24, my - hh * 0.01)], hw * 0.025, lc, 0.8)
+    for s in (-1, 1):
+        f.shape([(nx + s * hw * 0.13, my), (nx + s * hw * 0.09, my), (nx + s * hw * 0.11, my + hh * 0.08)], P.WHITE_WARM, smooth=False,
+                shadow=0, line=0.6)
+    # mane tufts framing the face (front)
+    tufts = []
+    for k in range(9):
+        a = math.pi * (0.95 + k / 8 * 1.1)
+        root = (hx + math.cos(a) * hw * 0.7, hy - hh * 0.35 + math.sin(a) * hh * 0.6)
+        tip = (hx + math.cos(a) * hw * 1.15, hy - hh * 0.35 + math.sin(a) * hh * 1.05)
+        tufts.append(f.hair_lock(root, tip, hw * 0.38, bend=0.15))
+    f.paint_hair(tufts, mane, key="mane")
+    # ram horns curling back and around the ears
+    for s in (-1, 1):
+        cx_, cy_ = hx + s * hw * 1.08, hy - hh * 0.05
+        pts = []
+        ws = []
+        for k in range(10):
+            u = k / 9
+            th = math.radians(-115 + u * 330) if s > 0 else math.radians(-65 - u * 330)
+            rad = hw * (0.82 - 0.55 * u)
+            pts.append((cx_ + math.cos(th) * rad * 0.95, cy_ + math.sin(th) * rad))
+            ws.append(hw * (0.42 - 0.3 * u))
+        hm = cv.mask(stroke_w(pts, ws))
+        drop_shadow(cv, hm, 2, 4, 4, 0.3)
+        paint(cv, hm, horn, line=0.95, line_w=1.0, cel=0.65, hi=0.5, soft=hw * 0.12, ao=0.15)
+        c = catmull(A(pts), closed=False, n=8)
+        rid = []
+        for k in range(2, len(c) - 2, 3):
+            seg = c[k + 1] - c[k - 1]
+            n_ = np.array([-seg[1], seg[0]]) / max(1e-6, np.hypot(*seg))
+            w_ = ws[min(len(ws) - 1, k // 8)] * 0.5
+            rid.append((c[k][0] - n_[0] * w_, c[k][1] - n_[1] * w_, c[k][0] + n_[0] * w_, c[k][1] + n_[1] * w_))
+        f.lines(rid, hw * 0.025, P.shadow_of(horn, 1.2), 0.6, clip=hm)
+    return m
+
+
+# ----------------------------------------------------------------------------------------
+# HUNTER
+# ----------------------------------------------------------------------------------------
+def draw_hunter(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    quiver(f, f.shR[0] - hu * 0.2, f.sh_y + hu * 0.55, math.radians(28), pal["leather"])
+    human_head(f, back_only=True)
+    for s in (-1, 1):
+        f.leg(s, None, bare=True)
+    for s in (-1, 1):
+        f.boot(s, pal["boots"], top_y=f.ankle_y - hu * 0.45, cuff=pal["fur"])
+        knee = f.kneeL if s < 0 else f.kneeR
+        ank = f.ankL if s < 0 else f.ankR
+        for k in range(4):
+            t = 0.3 + k * 0.14
+            x = knee[0] + (ank[0] - knee[0]) * t
+            y = knee[1] + (ank[1] - knee[1]) * t
+            f.band([(x - hu * 0.2, y - hu * 0.04), (x + hu * 0.2, y + hu * 0.04)], hu * 0.07, pal["wrap"], cap=False)
+    shorts(f, pal["shorts"], hem_dy=-0.12, baggy=1.3, trim=pal["trim"], motif=pal["leather"])
+    f.neck()
+    f.torso(None, bare=True)
+    f.lines([(cx - f.w_chest * 0.5, f.chest_y + hu * 0.25, cx - hu * 0.05, f.chest_y + hu * 0.32),
+             (cx + hu * 0.05, f.chest_y + hu * 0.32, cx + f.w_chest * 0.5, f.chest_y + hu * 0.25),
+             (cx, f.chest_y + hu * 0.5, cx, f.waist_y)], hu * 0.025, skin_lo(look.skin), 0.55)
+    vest(f, pal["vest"], open_w=0.45, hem_y=f.waist_y + hu * 0.18, trim=pal["trim"])
+    # fur pelt over the left shoulder, strap across the chest
+    fur(f, [(cx - f.w_neck * 1.2, f.sh_y + hu * 0.05), (cx - f.w_sh * 0.8, f.sh_y + hu * 0.0), (cx - f.w_sh * 1.05, f.sh_y + hu * 0.35),
+            (cx - f.w_sh * 0.9, f.chest_y + hu * 0.1)], hu * 0.3, pal["fur"], key="pelt")
+    f.band([(cx - f.w_sh * 0.75, f.sh_y + hu * 0.15), (cx, f.chest_y + hu * 0.3), (cx + f.w_waist * 1.0, f.waist_y + hu * 0.05)], hu * 0.1,
+           pal["leather"])
+    f.belt(f.waist_y + hu * 0.12, hu * 0.2, pal["sash"], buckle=None)
+    kx, ky = cx + f.w_waist * 0.85, f.waist_y + hu * 0.15
+    f.ell(kx, ky, hu * 0.14, hu * 0.12, pal["sash"])
+    f.shape([(kx - hu * 0.05, ky + hu * 0.05), (kx + hu * 0.1, ky + hu * 0.05), (kx + hu * 0.18, ky + hu * 0.75), (kx + hu * 0.02, ky + hu * 0.7)],
+            pal["sash"], n=4)
+    necklace(f, [P.HONEY, P.hx("4fb3a9"), P.CREAM], y_off=0.18, n=9)
+    # left arm holds the bow at the side
+    el = (f.shL[0] - hu * 0.35, f.shL[1] + hu * 1.05)
+    wr = (f.shL[0] - hu * 0.52, f.hip_y + hu * 0.0)
+    f.arm(-1, el, wr, glove=pal["leather"], cuff=pal["trim"])
+    bow(f, wr[0] + hu * 0.05, f.sh_y - hu * 0.45, f.knee_y + hu * 0.25, col=pal["bow"], side=-1, bulge=0.12)
+    f.hand(wr[0], wr[1] + hu * 0.02, 0.0, fist=True)
+    # right arm relaxed, arrow in hand
+    el = (f.shR[0] + hu * 0.22, f.shR[1] + hu * 1.1)
+    wr = (f.shR[0] + hu * 0.3, f.shR[1] + hu * 2.05)
+    f.arm(1, el, wr, glove=pal["leather"], cuff=pal["trim"])
+    f.band([(wr[0] - hu * 0.15, wr[1] - hu * 0.3), (wr[0] + hu * 0.25, wr[1] + hu * 0.75)], hu * 0.03, P.WOOD_LIGHT, shadow=0.1)
+    f.hand(wr[0], wr[1] + hu * 0.02, -0.2, fist=True)
+    human_head(f)
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# PALADIN
+# ----------------------------------------------------------------------------------------
+def mail_texture(f, mask, col):
+    cv = f.cv
+    yy = cv.yy()
+    xx = cv.xx()
+    s = f.hu * 0.06
+    pat = (np.sin(xx / s * math.pi + (np.floor(yy / s) % 2) * math.pi) * np.sin(yy / s * math.pi)) ** 2
+    cv.atop(P.shadow_of(col, 1.0), (mask * smoothstep(0.6, 0.95, pat) * 0.35).astype(F32))
+
+
+def draw_paladin(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    cape_back(f, pal["cape"], hem_dy=0.5, w=1.45)
+    human_head(f, back_only=True)
+    for s in (-1, 1):
+        m = f.leg(s, pal["mail"])
+        mail_texture(f, m, pal["mail"])
+    for s in (-1, 1):
+        f.boot(s, pal["plate"], top_y=f.knee_y - hu * 0.25, cuff=pal["trim"])
+    f.neck()
+    m = f.torso(pal["mail"])
+    mail_texture(f, m, pal["mail"])
+    # faulds (hip plates) at the sides
+    for s in (-1, 1):
+        for k in range(3):
+            y = f.waist_y + hu * (0.15 + k * 0.22)
+            f.shape([(cx + s * f.w_waist * 0.6, y), (cx + s * f.w_hip * 1.2, y + hu * 0.05), (cx + s * f.w_hip * 1.25, y + hu * 0.25),
+                     (cx + s * f.w_waist * 0.65, y + hu * 0.22)], pal["plate"], smooth=False, hi=0.6, gloss=0.4)
+    cp = [(cx - f.w_chest * 0.95, f.sh_y + hu * 0.25), (cx + f.w_chest * 0.95, f.sh_y + hu * 0.25), (cx + f.w_chest, f.chest_y + hu * 0.3),
+          (cx + f.w_waist * 0.95, f.waist_y), (cx, f.waist_y + hu * 0.12), (cx - f.w_waist * 0.95, f.waist_y), (cx - f.w_chest, f.chest_y + hu * 0.3)]
+    f.shape(cp, pal["plate"], hi=0.65, gloss=0.45, cel=0.72)
+    # tabard: long front panel with emblem
+    tb = [(cx - f.w_chest * 0.6, f.sh_y + hu * 0.4), (cx + f.w_chest * 0.6, f.sh_y + hu * 0.4), (cx + f.w_waist * 0.75, f.waist_y),
+          (cx + f.w_hip * 0.75, f.knee_y + hu * 0.25), (cx, f.knee_y + hu * 0.4), (cx - f.w_hip * 0.75, f.knee_y + hu * 0.25),
+          (cx - f.w_waist * 0.75, f.waist_y)]
+    tm = f.shape(tb, pal["tabard"], n=6)
+    f.folds(tm, [(cx - hu * 0.15, f.hip_y, cx - hu * 0.2, f.knee_y), (cx + hu * 0.2, f.hip_y + hu * 0.2, cx + hu * 0.25, f.knee_y)], pal["tabard"],
+            0.4, hu * 0.03)
+    f.trim([(cx - f.w_chest * 0.6, f.sh_y + hu * 0.42), (cx - f.w_waist * 0.75, f.waist_y), (cx - f.w_hip * 0.75, f.knee_y + hu * 0.25),
+            (cx, f.knee_y + hu * 0.4), (cx + f.w_hip * 0.75, f.knee_y + hu * 0.25), (cx + f.w_waist * 0.75, f.waist_y),
+            (cx + f.w_chest * 0.6, f.sh_y + hu * 0.42)], hu * 0.08, pal["accent"], motif=pal["trim"])
+    sun_emblem(f, cx + look.turn * hu * 0.1, f.chest_y + hu * 0.12, hu * 0.36, pal["trim"])
+    f.belt(f.waist_y + hu * 0.08, hu * 0.2, pal["belt"], buckle=pal["trim"])
+    # gorget
+    f.shape([(cx - f.w_neck * 1.3, f.chin - hu * 0.02), (cx + f.w_neck * 1.3, f.chin - hu * 0.02), (cx + f.w_neck * 1.7, f.sh_y + hu * 0.25),
+             (cx, f.sh_y + hu * 0.35), (cx - f.w_neck * 1.7, f.sh_y + hu * 0.25)], pal["plate"], hi=0.6, gloss=0.4)
+    # right arm: hand on the warhammer whose head rests on the ground
+    el = (f.shR[0] + hu * 0.3, f.shR[1] + hu * 1.05)
+    hand = (f.shR[0] + hu * 0.45, f.hip_y + hu * 0.05)
+    f.arm(1, el, hand, sleeve=pal["mail"], glove=pal["plate"], cuff=pal["trim"])
+    hammer(f, (hand[0] + hu * 0.02, hand[1] - hu * 0.35), (hand[0] + hu * 0.18, f.feet - hu * 0.3), col=pal["plate"])
+    f.hand(hand[0], hand[1] - hu * 0.05, 0.0, fist=True, col=pal["plate"])
+    f.pauldron(1, pal["plate"], layers=3, size=1.2, trim=pal["trim"])
+    # left arm bent behind the kite shield
+    el = (f.shL[0] - hu * 0.25, f.shL[1] + hu * 1.0)
+    wr = (cx - f.w_waist * 0.4, f.waist_y + hu * 0.25)
+    f.arm(-1, el, wr, sleeve=pal["mail"], glove=pal["plate"])
+    f.pauldron(-1, pal["plate"], layers=3, size=1.2, trim=pal["trim"])
+    human_head(f)
+    kite_shield(f, cx - f.w_sh * 0.72, f.waist_y + hu * 0.55, hu * 1.25, hu * 2.0, pal["shield"], pal["plate"],
+                emblem=lambda x, y, r: sun_emblem(f, x, y, r, pal["trim"]))
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# MAGE
+# ----------------------------------------------------------------------------------------
+def draw_mage(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    human_head(f, back_only=True)
+    # staff (behind the right hand)
+    sx = f.shR[0] + hu * 0.55
+    staff(f, (sx, f.feet - hu * 0.05), (sx - hu * 0.05, f.top - hu * 0.05), hu * 0.1, col=pal["staff"])
+    curl = [(sx - hu * 0.05, f.top + hu * 0.1), (sx - hu * 0.35, f.top - hu * 0.15), (sx - hu * 0.2, f.top - hu * 0.55), (sx + hu * 0.25, f.top - hu * 0.55),
+            (sx + hu * 0.35, f.top - hu * 0.2), (sx + hu * 0.1, f.top + hu * 0.0)]
+    f.band(curl, hu * 0.08, pal["staff"])
+    orb(f, sx + hu * 0.0, f.top - hu * 0.25, hu * 0.22, pal["orb"])
+    f.glow(sx, f.top - hu * 0.25, hu * 0.9, pal["orb"], 0.4)
+    # long belted skirt to the floor
+    hem = f.feet + hu * 0.02
+    m = skirt(f, f.waist_y + hu * 0.05, hem, f.w_hip * 0.95, f.w_hip * 2.1, pal["dress"], folds=0)
+    # belt strips fanning out
+    n = 11
+    for k in range(n):
+        t = (k + 0.5) / n
+        xt = cx - f.w_hip * 0.9 + t * f.w_hip * 1.8
+        xb = cx - f.w_hip * 2.0 + t * f.w_hip * 4.0
+        col = pal["strip"] if k % 2 else P.mix(pal["strip"], pal["dress"], 0.5)
+        sm = f.band([(xt, f.hip_y), ((xt + xb) / 2, (f.hip_y + hem) / 2), (xb, hem + hu * 0.03)], hu * 0.2, col, cap=False, shadow=0.3)
+        for j, u in enumerate((0.3, 0.62)):
+            bx = xt + (xb - xt) * u
+            by = f.hip_y + (hem - f.hip_y) * u
+            f.shape([(bx - hu * 0.07, by - hu * 0.05), (bx + hu * 0.07, by - hu * 0.05), (bx + hu * 0.07, by + hu * 0.05), (bx - hu * 0.07, by + hu * 0.05)],
+                    pal["metal"], smooth=False, shadow=0.15, hi=0.6, line=0.7)
+    fur(f, [(cx - f.w_hip * 2.05, hem - hu * 0.02), (cx, hem + hu * 0.08), (cx + f.w_hip * 2.05, hem - hu * 0.02)], hu * 0.22, pal["fur"],
+        key="hemfur")
+    f.neck()
+    # bodice
+    f.torso(pal["dress"], neckline=0.65)
+    f.shape([(cx - f.w_chest * 0.8, f.chest_y - hu * 0.05), (cx, f.chest_y + hu * 0.1), (cx + f.w_chest * 0.8, f.chest_y - hu * 0.05),
+             (cx + f.w_waist * 0.9, f.waist_y + hu * 0.1), (cx, f.waist_y + hu * 0.25), (cx - f.w_waist * 0.9, f.waist_y + hu * 0.1)],
+            pal["strip"], hi=0.35)
+    for k in range(3):
+        y = f.chest_y + hu * (0.25 + k * 0.2)
+        f.lines([(cx - f.w_waist * 0.7, y, cx + f.w_waist * 0.7, y + hu * 0.02)], hu * 0.03, pal["metal"], 0.8)
+    # crossing hip belts
+    f.band([(cx - f.w_hip * 1.05, f.waist_y + hu * 0.1), (cx, f.hip_y + hu * 0.05), (cx + f.w_hip * 1.05, f.hip_y + hu * 0.25)], hu * 0.12,
+           pal["belt"])
+    f.band([(cx - f.w_hip * 1.05, f.hip_y + hu * 0.3), (cx, f.hip_y + hu * 0.1), (cx + f.w_hip * 1.05, f.waist_y + hu * 0.12)], hu * 0.12,
+           P.mix(pal["belt"], P.INK, 0.2))
+    f.ell(cx, f.hip_y + hu * 0.08, hu * 0.1, hu * 0.08, pal["metal"], hi=0.7, gloss=0.5)
+    # fur collar around the shoulders
+    fur(f, [(cx - f.w_sh * 1.0, f.sh_y + hu * 0.3), (cx - f.w_sh * 0.7, f.sh_y - hu * 0.02), (cx - f.w_neck * 1.2, f.chest_y - hu * 0.1),
+            (cx, f.chest_y + hu * 0.0)], hu * 0.26, pal["fur"], key="fc1")
+    fur(f, [(cx + f.w_sh * 1.0, f.sh_y + hu * 0.3), (cx + f.w_sh * 0.7, f.sh_y - hu * 0.02), (cx + f.w_neck * 1.2, f.chest_y - hu * 0.1),
+            (cx, f.chest_y + hu * 0.0)], hu * 0.26, pal["fur"], key="fc2")
+    f.ell(cx, f.chest_y + hu * 0.05, hu * 0.1, hu * 0.12, pal["orb"], hi=0.8, gloss=0.6, shadow=0.2)
+    # arms in long sleeves, bell cuffs with fur
+    el = (f.shL[0] - hu * 0.1, f.shL[1] + hu * 1.1)
+    wr = (cx - f.w_waist * 0.6, f.waist_y + hu * 0.35)
+    f.arm(-1, el, wr, sleeve=pal["dress"], sleeve_w=1.2)
+    f.shape([(wr[0] - hu * 0.32, wr[1] - hu * 0.35), (wr[0] + hu * 0.05, wr[1] - hu * 0.38), (wr[0] + hu * 0.25, wr[1] + hu * 0.25),
+             (wr[0] - hu * 0.45, wr[1] + hu * 0.25)], pal["dress"], n=4)
+    fur(f, [(wr[0] - hu * 0.45, wr[1] + hu * 0.22), (wr[0] + hu * 0.25, wr[1] + hu * 0.22)], hu * 0.14, pal["fur"], key="cf1")
+    f.hand(wr[0] - hu * 0.05, wr[1] + hu * 0.25, 0.4, fist=False)
+    hand = (sx - hu * 0.02, f.waist_y + hu * 0.1)
+    el = (f.shR[0] + hu * 0.25, f.shR[1] + hu * 1.05)
+    f.arm(1, el, hand, sleeve=pal["dress"], sleeve_w=1.2)
+    fur(f, [(hand[0] - hu * 0.25, hand[1] - hu * 0.15), (hand[0] + hu * 0.25, hand[1] - hu * 0.1)], hu * 0.14, pal["fur"], key="cf2")
+    f.hand(hand[0], hand[1] - hu * 0.08, 0.0, fist=True)
+    human_head(f)
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# PRIEST
+# ----------------------------------------------------------------------------------------
+def floral(f, mask, cols, n=10, s=0.09, key="fl"):
+    cv = f.cv
+    r = rng(cv.seed, key)
+    bb = bbox(mask)
+    if bb is None:
+        return
+    ys, xs = bb
+    hu = f.hu
+    placed = 0
+    tries = 0
+    while placed < n and tries < 400:
+        tries += 1
+        py, px = r.integers(ys.start, ys.stop), r.integers(xs.start, xs.stop)
+        if mask[py, px] < 0.95:
+            continue
+        x, y = (px - cv.padx) / cv.s, (py - cv.pady) / cv.s
+        rr = hu * s * (0.7 + 0.6 * r.random())
+        c = cols[placed % len(cols)]
+        pet = [ellipse(x + math.cos(k * 1.257) * rr * 0.55, y + math.sin(k * 1.257) * rr * 0.55, rr * 0.5, rr * 0.36, k * 1.257, 10) for k in range(5)]
+        pm = cv.polys_mask(pet) * mask
+        paint(cv, pm.astype(F32), c, line=0.7, line_w=0.6, soft=1.5, ao=0, hi=0.4, cel=0.7)
+        flat_fill(cv, cv.ellipse_mask(x, y, rr * 0.2, rr * 0.2) * mask, P.HONEY, 0.9)
+        placed += 1
+
+
+def draw_priest(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    # staff with rings (behind the left hand)
+    sx = f.shL[0] - hu * 0.55
+    shakujo(f, sx, f.top - hu * 0.35, f.feet - hu * 0.02, col=pal["gold"])
+    human_head(f, back_only=True)
+    # obi bow loops behind the waist
+    for s in (-1, 1):
+        f.shape([(cx + s * f.w_waist * 0.6, f.waist_y), (cx + s * f.w_hip * 1.6, f.waist_y - hu * 0.35), (cx + s * f.w_hip * 1.9, f.waist_y + hu * 0.1),
+                 (cx + s * f.w_hip * 1.55, f.waist_y + hu * 0.3), (cx + s * f.w_waist * 0.7, f.waist_y + hu * 0.15)], pal["obi"], n=5)
+    f.shape([(cx + f.w_waist * 0.4, f.waist_y + hu * 0.1), (cx + f.w_hip * 1.35, f.hip_y + hu * 0.4), (cx + f.w_hip * 1.25, f.knee_y + hu * 0.1),
+             (cx + f.w_hip * 0.95, f.knee_y), (cx + f.w_hip * 0.9, f.hip_y + hu * 0.3)], P.scale_v(pal["obi"], 0.9), n=5)
+    for s in (-1, 1):
+        f.boot(s, pal["boots"], top_y=f.knee_y + hu * 0.0, cuff=pal["gold"])
+    # long pleated hakama-like skirt
+    skirt(f, f.waist_y + hu * 0.05, f.ankle_y - hu * 0.2, f.w_hip * 1.0, f.w_hip * 1.65, pal["skirt"], folds=7, front_split=-0.25,
+          trim=pal["trim"], motif=pal["gold"])
+    f.neck()
+    # kimono top with crossed collar
+    t = f.torso(pal["top"])
+    f.shape([(cx - f.w_neck * 0.9, f.neck_y + hu * 0.0), (cx - f.w_neck * 0.2, f.neck_y), (cx + f.w_chest * 0.5, f.waist_y),
+             (cx + f.w_chest * 0.2, f.waist_y + hu * 0.05)], pal["trim"], smooth=False, shadow=0.2)
+    f.shape([(cx + f.w_neck * 0.9, f.neck_y + hu * 0.0), (cx + f.w_neck * 0.3, f.neck_y), (cx - f.w_chest * 0.15, f.chest_y + hu * 0.25),
+             (cx + f.w_neck * 0.1, f.chest_y + hu * 0.35)], P.scale_v(pal["trim"], 0.9), smooth=False, shadow=0.2)
+    floral(f, t, [pal["flower1"], pal["flower2"]], n=6, s=0.11, key="fl_top")
+    # obi
+    f.shape([(cx - f.w_waist * 1.08, f.waist_y - hu * 0.15), (cx + f.w_waist * 1.08, f.waist_y - hu * 0.15), (cx + f.w_waist * 1.1, f.waist_y + hu * 0.2),
+             (cx - f.w_waist * 1.1, f.waist_y + hu * 0.2)], pal["obi"], smooth=False, hi=0.4)
+    f.band([(cx - f.w_waist * 1.08, f.waist_y + hu * 0.02), (cx + f.w_waist * 1.08, f.waist_y + hu * 0.04)], hu * 0.05, pal["cord"], cap=False)
+    f.ell(cx + f.w_waist * 0.2, f.waist_y + hu * 0.03, hu * 0.07, hu * 0.06, pal["cord"], hi=0.6)
+    necklace(f, [pal["gold"], pal["flower2"]], y_off=0.3, n=7, r=0.04, sag=0.5)
+    # right hand raised to the chest (prayer gesture); detached wide sleeves with floral hems
+    for s in (-1, 1):
+        sh = f.shL if s < 0 else f.shR
+        if s > 0:
+            el = (sh[0] + hu * 0.2, sh[1] + hu * 1.1)
+            wr = (cx + f.w_chest * 0.35, f.chest_y + hu * 0.35)
+        else:
+            el = (sh[0] - hu * 0.3, sh[1] + hu * 1.05)
+            wr = (sx + hu * 0.12, f.waist_y + hu * 0.15)
+        f.arm(s, el, wr, sleeve=pal["top"], bare_from=0.75, sleeve_w=1.0)
+        sl = [(sh[0] - s * hu * 0.1, sh[1] + hu * 0.05), (sh[0] + s * hu * 0.35, sh[1] + hu * 0.1), (el[0] + s * hu * 0.55, el[1] + hu * 0.6),
+              (el[0] + s * hu * 0.35, el[1] + hu * 1.35), (el[0] - s * hu * 0.3, el[1] + hu * 1.3), (el[0] - s * hu * 0.25, el[1] + hu * 0.2)]
+        sm = f.shape(sl, pal["top"], n=5)
+        hemb = cv.mask(A([(el[0] - s * hu * 0.6, el[1] + hu * 0.95), (el[0] + s * hu * 0.9, el[1] + hu * 0.95),
+                          (el[0] + s * hu * 0.9, el[1] + hu * 1.6), (el[0] - s * hu * 0.6, el[1] + hu * 1.6)])) * sm
+        cv.atop(pal["skirt"], hemb * 0.85)
+        floral(f, hemb.astype(F32), [pal["flower1"], pal["flower2"], P.WHITE_WARM], n=5, s=0.1, key="fs%d" % s)
+        f.trim([(el[0] + s * hu * 0.35, el[1] + hu * 1.35), (el[0] - s * hu * 0.3, el[1] + hu * 1.3)], hu * 0.06, pal["gold"])
+        f.hand(wr[0], wr[1], -0.6 if s > 0 else 0.0, fist=s < 0)
+    human_head(f)
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# ROGUE
+# ----------------------------------------------------------------------------------------
+def draw_rogue(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    # playful stance: right knee bent outward
+    f.kneeR = (f.kneeR[0] + hu * 0.18, f.kneeR[1] - hu * 0.05)
+    f.ankR = (f.ankR[0] + hu * 0.2, f.ankR[1])
+    human_head(f, back_only=True)
+    scarf_tail = [(cx - f.w_neck * 0.5, f.sh_y + hu * 0.1), (cx - f.w_sh * 1.3, f.sh_y + hu * 0.1), (cx - f.w_sh * 1.75, f.sh_y + hu * 0.6),
+                  (cx - f.w_sh * 1.95, f.chest_y + hu * 0.3), (cx - f.w_sh * 1.55, f.chest_y + hu * 0.1), (cx - f.w_sh * 1.2, f.sh_y + hu * 0.55)]
+    f.shape(scarf_tail, P.scale_v(pal["scarf"], 0.9), n=5)
+    for s in (-1, 1):
+        f.leg(s, None, bare=True)
+    for s in (-1, 1):
+        f.boot(s, pal["boots"], top_y=f.knee_y + hu * 0.12, cuff=pal["accent"])
+        knee = f.kneeL if s < 0 else f.kneeR
+        ank = f.ankL if s < 0 else f.ankR
+        for k in range(4):
+            u = 0.4 + k * 0.13
+            x = knee[0] + (ank[0] - knee[0]) * u
+            y = knee[1] + (ank[1] - knee[1]) * u
+            f.lines([(x - hu * 0.13, y, x + hu * 0.13, y + hu * 0.08), (x - hu * 0.13, y + hu * 0.08, x + hu * 0.13, y)], hu * 0.025, P.CREAM, 0.8)
+    # thigh strap with pouch (asymmetric)
+    hipL, kneeL = f.hipL, f.kneeL
+    ty = f.crotch_y + hu * 0.5
+    tx = hipL[0] + (kneeL[0] - hipL[0]) * 0.45
+    f.band([(tx - hu * 0.3, ty - hu * 0.02), (tx + hu * 0.28, ty + hu * 0.04)], hu * 0.09, pal["belt"], cap=False)
+    f.shape([(tx - hu * 0.3, ty + hu * 0.0), (tx - hu * 0.05, ty + hu * 0.02), (tx - hu * 0.06, ty + hu * 0.3), (tx - hu * 0.3, ty + hu * 0.28)],
+            pal["belt"], smooth=False)
+    shorts(f, pal["shorts"], hem_dy=1.35, baggy=1.05, trim=pal["accent"])
+    f.neck()
+    f.torso(None, bare=True, bottom=f.hip_y)
+    top = [(cx - f.w_neck * 0.6, f.neck_y + hu * 0.12), (cx - f.w_sh * 0.85, f.sh_y + hu * 0.2), (cx - f.w_chest * 1.0, f.chest_y + hu * 0.1),
+           (cx - f.w_chest * 0.9, f.chest_y + hu * 0.55), (cx, f.chest_y + hu * 0.62), (cx + f.w_chest * 0.9, f.chest_y + hu * 0.55),
+           (cx + f.w_chest * 1.0, f.chest_y + hu * 0.1), (cx + f.w_sh * 0.85, f.sh_y + hu * 0.2), (cx + f.w_neck * 0.6, f.neck_y + hu * 0.12)]
+    tm = f.shape(top, pal["top"], n=5)
+    f.trim([(cx - f.w_chest * 0.9, f.chest_y + hu * 0.55), (cx, f.chest_y + hu * 0.62), (cx + f.w_chest * 0.9, f.chest_y + hu * 0.55)], hu * 0.07,
+           pal["accent"])
+    f.belt(f.waist_y + hu * 0.25, hu * 0.14, pal["belt"], buckle=pal["metal"], tilt=0.12)
+    for k, px in enumerate((cx - f.w_hip * 0.85, cx + f.w_hip * 0.7)):
+        py = f.waist_y + hu * (0.32 + k * 0.12)
+        f.shape([(px - hu * 0.15, py), (px + hu * 0.15, py), (px + hu * 0.14, py + hu * 0.3), (px - hu * 0.14, py + hu * 0.3)], pal["belt"], smooth=False)
+        f.shape([(px - hu * 0.16, py - hu * 0.02), (px + hu * 0.16, py - hu * 0.02), (px + hu * 0.14, py + hu * 0.1), (px - hu * 0.14, py + hu * 0.1)],
+                P.mix(pal["belt"], P.INK, 0.2), smooth=False, shadow=0)
+    scarf(f, pal["scarf"], tail_side=1, tail_len=1.6)
+    # arms: left low with dagger pointing down, right raised with reverse-grip dagger
+    el = (f.shL[0] - hu * 0.32, f.shL[1] + hu * 1.0)
+    wr = (f.shL[0] - hu * 0.42, f.hip_y + hu * 0.05)
+    f.arm(-1, el, wr, glove=pal["glove"], cuff=pal["accent"])
+    for k in range(2):
+        y = f.shL[1] + hu * (0.45 + k * 0.12)
+        f.band([(f.shL[0] - hu * 0.32, y), (f.shL[0] - hu * 0.02, y + hu * 0.03)], hu * 0.05, pal["accent"], cap=False)
+    dagger(f, (wr[0] - hu * 0.02, wr[1] + hu * 0.12), (wr[0] - hu * 0.25, wr[1] + hu * 1.05))
+    f.hand(wr[0], wr[1] + hu * 0.04, 0.2, fist=True, col=pal["glove"])
+    el = (f.shR[0] + hu * 0.5, f.shR[1] + hu * 0.75)
+    wr = (f.shR[0] + hu * 0.25, f.chest_y + hu * 0.25)
+    f.arm(1, el, wr, glove=pal["glove"], cuff=pal["accent"])
+    dagger(f, (wr[0] + hu * 0.02, wr[1] + hu * 0.0), (wr[0] + hu * 0.6, wr[1] + hu * 0.7))
+    f.hand(wr[0], wr[1] - hu * 0.05, -2.6, fist=True, col=pal["glove"])
+    human_head(f)
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# WARLOCK
+# ----------------------------------------------------------------------------------------
+def draw_warlock(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    coat, trim = pal["coat"], pal["trim"]
+    human_head(f, back_only=True)
+    coat_back(f, P.mix(pal["lining"], coat, 0.3), hem_dy=1.6, flare=1.45)
+    for s in (-1, 1):
+        f.leg(s, pal["pants"])
+    for s in (-1, 1):
+        f.boot(s, pal["boots"], top_y=f.knee_y + hu * 0.4, toe=1.4)
+    f.neck()
+    f.torso(pal["vest"])
+    for k in range(4):
+        y = f.chest_y + hu * (0.1 + k * 0.25)
+        f.ell(cx + hu * 0.05, y, hu * 0.045, hu * 0.045, trim, hi=0.7, gloss=0.5, shadow=0.15)
+    f.band([(cx - f.w_waist * 1.05, f.waist_y + hu * 0.05), (cx, f.waist_y + hu * 0.12), (cx + f.w_waist * 1.05, f.waist_y + hu * 0.05)], hu * 0.18,
+           pal["sash"])
+    hem = long_coat(f, coat, pal["lining"], trim, hem_dy=1.6, flare=1.45, open_w=0.45)
+    # glowing runes on the coat panels
+    for s in (-1, 1):
+        reg = cv.mask(A([(cx + s * f.w_hip * 0.85, f.hip_y + hu * 0.3), (cx + s * f.w_hip * 1.4, f.hip_y + hu * 0.3),
+                         (cx + s * f.w_hip * 1.4, hem - hu * 0.25), (cx + s * f.w_hip * 0.9, hem - hu * 0.25)]))
+        runes(f, (reg * (cv.a > 0.99)).astype(F32), pal["rune"], n=5, s=0.11, key="rn%d" % s)
+    # shoulder ornaments
+    for s in (-1, 1):
+        sh = f.shL if s < 0 else f.shR
+        f.shape([(sh[0] - s * hu * 0.25, sh[1] - hu * 0.15), (sh[0] + s * hu * 0.35, sh[1] - hu * 0.2), (sh[0] + s * hu * 0.5, sh[1] + hu * 0.15),
+                 (sh[0] + s * hu * 0.1, sh[1] + hu * 0.25)], coat, hi=0.4)
+        f.trim([(sh[0] - s * hu * 0.2, sh[1] + hu * 0.2), (sh[0] + s * hu * 0.48, sh[1] + hu * 0.12)], hu * 0.07, trim)
+    # left hand: open grimoire at the chest; right hand raised with a violet flame
+    gx, gy = cx - f.w_chest * 0.55, f.waist_y - hu * 0.05
+    el = (f.shL[0] - hu * 0.2, f.shL[1] + hu * 1.05)
+    f.arm(-1, el, (gx - hu * 0.05, gy + hu * 0.15), sleeve=coat, sleeve_w=1.15, glove=pal["glove"], cuff=trim)
+    grimoire(f, gx, gy, hu * 0.85, pal["book"], glow_col=pal["rune"])
+    f.hand(gx - hu * 0.1, gy + hu * 0.25, -0.4, fist=False, col=pal["glove"])
+    hand = (f.shR[0] + hu * 0.55, f.chest_y - hu * 0.1)
+    el = (f.shR[0] + hu * 0.5, f.waist_y - hu * 0.1)
+    f.arm(1, el, hand, sleeve=coat, sleeve_w=1.15, glove=pal["glove"], cuff=trim)
+    f.hand(hand[0], hand[1], math.pi, fist=False, col=pal["glove"])
+    fl = cv.mask(catmull(A([(hand[0] - hu * 0.2, hand[1] - hu * 0.2), (hand[0] - hu * 0.05, hand[1] - hu * 0.75), (hand[0] + hu * 0.05, hand[1] - hu * 0.55),
+                            (hand[0] + hu * 0.18, hand[1] - hu * 0.85), (hand[0] + hu * 0.25, hand[1] - hu * 0.25)]), True, 5))
+    flat_fill(cv, fl, pal["rune"], 0.85)
+    flat_fill(cv, cv.blur(fl, hu * 0.06) * 0.0 + cv.ellipse_mask(hand[0] + hu * 0.03, hand[1] - hu * 0.32, hu * 0.08, hu * 0.16), P.WHITE_WARM, 0.8)
+    f.glow(hand[0], hand[1] - hu * 0.4, hu * 0.8, pal["rune"], 0.35)
+    stand_collar(f, coat, pal["lining"], trim, height=0.75, flare=1.5)
+    human_head(f)
+    return f
+
+
+# ----------------------------------------------------------------------------------------
+# SHAMAN (horned beast-folk)
+# ----------------------------------------------------------------------------------------
+def draw_shaman(cv, look, pal):
+    f = Fig(cv, look)
+    hu, cx = f.hu, f.cx
+    furc = pal["fur"]
+    # spear (behind the right hand)
+    sx = f.shR[0] + hu * 0.55
+    spear(f, sx, f.top - hu * 0.6, f.feet - hu * 0.05, col=pal["wood"], tassel=pal["cloth"], feathers=[P.WHITE_WARM, P.TERRACOTTA])
+    # mane down the back and a tail
+    hx, hy = f.head_c
+    mane = back_mass(f, f.chest_y + hu * 0.6, width=1.6, n=9, jag=0.15)
+    f.paint_hair(mane, pal["mane"], shine=False, each=False, key="maneb")
+    f.tube([(cx + f.w_hip * 0.6, f.hip_y + hu * 0.3), (cx + f.w_hip * 1.6, f.knee_y), (cx + f.w_hip * 2.0, f.knee_y + hu * 0.9)],
+           [hu * 0.2, hu * 0.16, hu * 0.12], furc)
+    f.paint_hair([blob(cx + f.w_hip * 2.05, f.knee_y + hu * 1.0, hu * 0.18, hu * 0.25, rng(cv.seed, "tuft"), 0.2)], pal["mane"], shine=False)
+    for s in (-1, 1):
+        f.leg(s, pal["pants"], w_scale=1.05)
+    for s in (-1, 1):
+        f.boot(s, furc, top_y=f.ankle_y - hu * 0.3, cuff=pal["wrap"], toe=1.2)
+        knee = f.kneeL if s < 0 else f.kneeR
+        f.band([(knee[0] - hu * 0.28, knee[1] + hu * 0.25), (knee[0] + hu * 0.28, knee[1] + hu * 0.3)], hu * 0.1, pal["wrap"], cap=False)
+    f.neck()
+    t = f.torso(furc)
+    f.lines([(cx - f.w_chest * 0.55, f.chest_y + hu * 0.35, cx - hu * 0.05, f.chest_y + hu * 0.42),
+             (cx + hu * 0.05, f.chest_y + hu * 0.42, cx + f.w_chest * 0.55, f.chest_y + hu * 0.35)], hu * 0.03, P.shadow_of(furc, 1.0), 0.5)
+    lt = cv.mask(catmull(A([(cx - f.w_chest * 0.5, f.chest_y), (cx + f.w_chest * 0.5, f.chest_y), (cx + f.w_waist * 0.6, f.waist_y + hu * 0.2),
+                            (cx - f.w_waist * 0.6, f.waist_y + hu * 0.2)]), True, 5)) * t
+    cv.atop(P.light_of(furc, 1.0), lt * 0.4)
+    # loin panel + belt with charms
+    lp = [(cx - f.w_waist * 0.55, f.waist_y + hu * 0.15), (cx + f.w_waist * 0.55, f.waist_y + hu * 0.15), (cx + f.w_waist * 0.5, f.knee_y + hu * 0.1),
+          (cx, f.knee_y + hu * 0.25), (cx - f.w_waist * 0.5, f.knee_y + hu * 0.1)]
+    lm = f.shape(lp, pal["cloth"], n=5)
+    f.trim([(cx - f.w_waist * 0.5, f.knee_y + hu * 0.05), (cx, f.knee_y + hu * 0.22), (cx + f.w_waist * 0.5, f.knee_y + hu * 0.05)], hu * 0.09,
+           pal["trim"], motif=pal["wood"])
+    f.trim([(cx, f.waist_y + hu * 0.3), (cx, f.knee_y - hu * 0.1)], hu * 0.08, pal["trim"])
+    f.belt(f.waist_y + hu * 0.12, hu * 0.22, pal["leather"], buckle=P.CREAM)
+    for k, bx in enumerate((cx - f.w_hip * 0.8, cx + f.w_hip * 0.55, cx + f.w_hip * 0.9)):
+        totem_charm(f, bx, f.hip_y + hu * 0.35 + (k % 2) * hu * 0.12, hu * 0.42, [pal["wood"], P.mix(pal["wood"], P.TEAL, 0.4), P.mix(pal["wood"], P.TERRACOTTA, 0.4)][k])
+    # open vest/sash over one shoulder
+    f.band([(cx - f.w_sh * 0.8, f.sh_y + hu * 0.1), (cx - f.w_chest * 0.1, f.chest_y + hu * 0.25), (cx + f.w_waist * 0.9, f.waist_y + hu * 0.1)],
+           hu * 0.32, pal["cloth"])
+    necklace(f, [P.CREAM, pal["trim"], P.CREAM], y_off=0.2, n=7, r=0.06, sag=0.45)
+    # arms (fur), bracers
+    el = (f.shL[0] - hu * 0.3, f.shL[1] + hu * 1.05)
+    wr = (f.shL[0] - hu * 0.3, f.shL[1] + hu * 2.05)
+    f.tube([f.shL, el, wr], [f.w_uarm, f.w_farm * 1.05, f.w_wrist * 1.2], furc)
+    f.tube([(el[0] + (wr[0] - el[0]) * 0.35, el[1] + (wr[1] - el[1]) * 0.35), wr], [f.w_farm * 1.25, f.w_wrist * 1.45], pal["leather"], cap=False)
+    f.hand(wr[0], wr[1] + hu * 0.05, 0.0, fist=True, col=furc, s=1.15)
+    hand = (sx - hu * 0.02, f.waist_y + hu * 0.05)
+    el = (f.shR[0] + hu * 0.35, f.shR[1] + hu * 1.0)
+    f.tube([f.shR, el, hand], [f.w_uarm, f.w_farm * 1.05, f.w_wrist * 1.2], furc)
+    f.tube([(el[0] + (hand[0] - el[0]) * 0.35, el[1] + (hand[1] - el[1]) * 0.35), hand], [f.w_farm * 1.25, f.w_wrist * 1.45], pal["leather"], cap=False)
+    f.hand(hand[0], hand[1] - hu * 0.05, 0.0, fist=True, col=furc, s=1.15)
+    # shoulder pad of fur
+    fur(f, [(cx + f.w_sh * 0.4, f.sh_y + hu * 0.0), (cx + f.w_sh * 1.05, f.sh_y + hu * 0.1), (cx + f.w_sh * 1.15, f.sh_y + hu * 0.45)], hu * 0.3,
+        pal["mane"], key="sp")
+    beast_head(f, furc, pal["muzzle"], pal["horn"], pal["mane"], look.eyes)
+    return f
+
 def char_job(key, draw, look, pal, bg):
     cv = new_canvas(key)
     f = draw(cv, look, pal)
@@ -1260,9 +2040,79 @@ def char_job(key, draw, look, pal, bg):
     return out
 
 
+HUNTER = dict(leather=LEATHER, boots=LEATHER_DK, wrap=P.hx("b98a5a"), shorts=P.hx("3f8f86"), trim=P.hx("f2c14e"), vest=P.hx("a8774c"),
+              fur=P.hx("eadfc8"), sash=P.hx("e8b04f"), bow=P.WOOD)
+PALADIN = dict(cape=P.hx("3f6fae"), mail=P.hx("8c93a3"), plate=P.hx("c9d0dc"), trim=GOLD, tabard=P.hx("f6efe0"), accent=P.hx("3f6fae"),
+               belt=LEATHER, shield=P.hx("3f6fae"))
+MAGE = dict(staff=P.hx("4a3b4f"), orb=P.hx("b27cf0"), dress=P.hx("3a2d48"), strip=P.hx("241c2e"), metal=P.hx("c9ccd6"), fur=P.hx("ddd5dc"),
+            belt=P.hx("2a2230"))
+PRIEST = dict(gold=GOLD, obi=P.hx("f2c14e"), boots=P.hx("3a3442"), skirt=P.hx("3f6fb0"), trim=P.hx("e86f8a"), top=P.hx("f7f3ec"),
+              flower1=P.hx("f08aa0"), flower2=P.hx("8fb8de"), cord=P.hx("d9483b"))
+ROGUE = dict(boots=P.hx("6b4a33"), accent=P.hx("f2c14e"), shorts=P.hx("5f8f45"), top=P.hx("f2b33d"), belt=LEATHER, metal=P.HONEY,
+             scarf=P.hx("e8743b"), glove=P.hx("4a3b3a"))
+WARLOCK = dict(coat=P.hx("2f3a6b"), lining=P.hx("1c2140"), trim=GOLD, pants=P.hx("2a2a3a"), boots=P.hx("1f1d2a"), vest=P.hx("e8e2f0"),
+               sash=P.hx("7a4fb0"), rune=P.hx("b98cff"), glove=P.hx("2a2438"), book=P.hx("5a2f4f"))
+SHAMAN = dict(fur=P.hx("7f8fb0"), mane=P.hx("e6e0ef"), muzzle=P.hx("c9cfe0"), horn=P.hx("efe6d2"), pants=P.hx("5a4636"), wrap=P.hx("c9783a"),
+              cloth=P.hx("b8452f"), trim=P.hx("e8b04f"), wood=P.hx("9a6b45"), leather=LEATHER)
+
+
+def variant(base, **kw):
+    d = dict(base)
+    d.update(kw)
+    return d
+
+
+CLASS_BG = {
+    "warrior": (P.hx("f6d8c8"), P.hx("c0392b")), "hunter": (P.hx("e6edcf"), P.hx("6f9a3c")),
+    "paladin": (P.hx("fbefcf"), P.hx("e6b84a")), "mage": (P.hx("e6dcf2"), P.hx("6d5aa8")),
+    "priest": (P.hx("e3eef8"), P.hx("8fb8de")), "rogue": (P.hx("fae3cc"), P.hx("e88a3a")),
+    "warlock": (P.hx("e4dbf2"), P.hx("7a4fb0")), "shaman": (P.hx("dde7f4"), P.hx("3f78b5")),
+}
+
 ROSTER = {
-    "char_warrior": (draw_warrior, dict(hair=P.hx("3b2b2e"), eyes=P.hx("b5762e"), expr="stern", skin=P.SKIN_LIGHT), WARRIOR,
-                     (P.hx("f3d9c6"), P.hx("c0392b"))),
+    # heroes
+    "char_warrior": (draw_warrior, dict(hair=P.hx("3b2b2e"), eyes=P.hx("b5762e"), expr="stern", hair_style="spiky"), WARRIOR, CLASS_BG["warrior"]),
+    "char_hunter": (draw_hunter, dict(hair=P.hx("3b2a22"), eyes=P.hx("4f8f5a"), skin=P.SKIN_TAN, hair_style="braids", band=P.hx("3f8f86"),
+                                      expr="smile", height=1.84), HUNTER, CLASS_BG["hunter"]),
+    "char_paladin": (draw_paladin, dict(hair=P.hx("e2c06a"), eyes=P.hx("4f7fc4"), skin=P.SKIN_FAIR, hair_style="neat", height=1.84), PALADIN,
+                     CLASS_BG["paladin"]),
+    "char_mage": (draw_mage, dict(build="f", height=1.74, hair=P.hx("2b2333"), eyes=P.hx("9a3a5a"), skin=P.SKIN_FAIR, hair_style="bun",
+                                  accent=P.hx("b27cf0")), MAGE, CLASS_BG["mage"]),
+    "char_priest": (draw_priest, dict(build="f", height=1.66, hair=P.hx("6b4a33"), eyes=P.hx("4f9a9a"), skin=P.SKIN_FAIR, hair_style="bob",
+                                      accent=P.hx("e86f8a"), expr="smile"), PRIEST, CLASS_BG["priest"]),
+    "char_rogue": (draw_rogue, dict(build="f", height=1.62, hair=P.hx("f0cf6a"), eyes=P.hx("5aa05a"), skin=P.SKIN_TAN, hair_style="rogue",
+                                    expr="grin", turn=0.24), ROGUE, CLASS_BG["rogue"]),
+    "char_warlock": (draw_warlock, dict(height=1.85, hair=P.hx("a8c0e0"), eyes=P.hx("8a5ad0"), skin=P.SKIN_FAIR, hair_style="swept_long"),
+                     WARLOCK, CLASS_BG["warlock"]),
+    "char_shaman": (draw_shaman, dict(build="big", height=2.05, heads=7.0, eyes=P.hx("e8b04f"), turn=0.14), SHAMAN, CLASS_BG["shaman"]),
+    # companions (variations with their own palette / hair)
+    "comp_kael": (draw_warrior, dict(height=1.78, hair=P.hx("a8452e"), eyes=P.hx("4f8f5a"), expr="grin", hair_style="spiky_band",
+                                     band=P.hx("d9483b")),
+                  variant(WARRIOR, coat=P.hx("2f7f9a"), lining=P.hx("173a4a"), trim=P.hx("d6dbe4"), plate=P.hx("6a7385"),
+                          sash=P.hx("c9b48a"), gem=P.hx("4fb3a9"), flare=1.4), CLASS_BG["warrior"]),
+    "comp_lys": (draw_mage, dict(build="f", height=1.72, hair=P.hx("e6eaf2"), eyes=P.hx("3fa0a0"), skin=P.SKIN_FAIR, hair_style="long",
+                                 accent=P.hx("6fe0c8")),
+                 variant(MAGE, dress=P.hx("1f4a48"), strip=P.hx("163634"), orb=P.hx("6fe0c8"), fur=P.hx("f1f3ef")), CLASS_BG["mage"]),
+    "comp_seren": (draw_priest, dict(build="f", height=1.7, hair=P.hx("231e2a"), eyes=P.hx("6a5a8a"), skin=P.SKIN_FAIR, hair_style="ponytail",
+                                     accent=P.hx("d9483b")),
+                   variant(PRIEST, skirt=P.hx("b83a3a"), obi=P.hx("8a6ac8"), trim=P.hx("8a6ac8"), flower1=P.hx("c4b0ea"),
+                           flower2=P.WHITE_WARM, cord=P.HONEY), CLASS_BG["priest"]),
+    "comp_rook": (draw_hunter, dict(height=1.86, hair=P.hx("1c1616"), eyes=P.hx("c08a3a"), skin=P.SKIN_DEEP, hair_style="mohawk", expr="stern",
+                                    band=P.hx("8a3a2e")),
+                  variant(HUNTER, shorts=P.hx("8a3a2e"), vest=P.hx("5a3f2c"), fur=P.hx("9a8a78"), sash=P.hx("d9483b")), CLASS_BG["hunter"]),
+    "comp_pip": (draw_rogue, dict(build="f", height=1.52, heads=6.0, hair=P.hx("f2a0c0"), eyes=P.hx("c08a3a"), skin=P.SKIN_LIGHT,
+                                  hair_style="twin_buns", accent=P.hx("3fb0a8"), expr="grin", turn=0.22),
+                 variant(ROGUE, scarf=P.hx("3fb0a8"), top=P.hx("f08aa0"), shorts=P.hx("6a4f9a"), accent=P.hx("f2c14e")), CLASS_BG["rogue"]),
+    "comp_torvan": (draw_shaman, dict(build="big", height=2.1, heads=7.0, eyes=P.hx("d9a84a"), turn=0.12),
+                    variant(SHAMAN, fur=P.hx("cfcac0"), mane=P.hx("f6f2ea"), muzzle=P.hx("ebe7df"), horn=P.hx("b8a888"),
+                            cloth=P.hx("4f7f4a"), trim=P.hx("c9a85a")), CLASS_BG["shaman"]),
+    "comp_aldric": (draw_paladin, dict(height=1.8, hair=P.hx("b8b4b0"), beard=P.hx("c8c4c0"), beard_len=0.6, eyes=P.hx("6a8aa8"),
+                                       skin=P.SKIN_LIGHT, hair_style="swept_grey", expr="stern"),
+                    variant(PALADIN, tabard=P.hx("a8322e"), accent=P.hx("e8c45a"), cape=P.hx("5a2a2a"), shield=P.hx("a8322e"),
+                            plate=P.hx("b8bec8")), CLASS_BG["paladin"]),
+    "comp_morwen": (draw_warlock, dict(build="f", height=1.74, hair=P.hx("1c1820"), eyes=P.hx("9a6ad8"), skin=P.SKIN_FAIR, hair_style="long"),
+                    variant(WARLOCK, coat=P.hx("5a1f2e"), lining=P.hx("2a0f18"), rune=P.hx("c48cff"), vest=P.hx("2a2030"),
+                            sash=P.hx("8a3a5a")), CLASS_BG["warlock"]),
 }
 
 

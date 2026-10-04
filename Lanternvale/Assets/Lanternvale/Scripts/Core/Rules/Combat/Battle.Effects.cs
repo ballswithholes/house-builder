@@ -55,6 +55,15 @@ namespace Lanternvale.Rules
         public readonly Dictionary<string, float> Vars = new Dictionary<string, float>();
         /// <summary>Set by a special handler to skip the default effects.</summary>
         public bool SkipEffects;
+        /// <summary>The spell was reflected back at its caster.</summary>
+        public bool Reflected;
+
+        /// <summary>Hostile targets hit during the current effect pass (hit procs fire once per target after the pass).</summary>
+        internal readonly List<Unit> PassHits = new List<Unit>();
+        internal readonly Dictionary<Unit, bool> PassCrits = new Dictionary<Unit, bool>();
+        internal readonly Dictionary<Unit, float> PassDamage = new Dictionary<Unit, float>();
+        /// <summary>Effect currently being applied (for specials).</summary>
+        public EffectDef CurrentEffect;
 
         internal bool ConsumeBlock(Unit t) => blockPending.Remove(t);
         internal void MarkBlock(Unit t) => blockPending.Add(t);
@@ -99,10 +108,35 @@ namespace Lanternvale.Rules
             }
             if (a.area.shape != AreaShape.None)
                 cast.AreaUnits = Targeting.AreaUnits(this, u, a, cast.Target, cast.HasPoint ? cast.Point : (Vec2?)null, cast.Mods);
+            else RedirectOrReflect(cast);
             Specials.ResolveAbility(cast);
             if (!cast.SkipEffects) ExecuteEffects(cast, a.effects);
             Specials.AfterAbility(cast);
             AfterCast(cast);
+        }
+
+        /// <summary>Hostile single-target spells may be grounded (Grounding Totem) or reflected (ward talents).</summary>
+        void RedirectOrReflect(AbilityCast cast)
+        {
+            var a = cast.Ability;
+            var t = cast.Target;
+            if (a == null || t == null || cast.Periodic || cast.Depth > 0 || a.target != TargetType.Enemy) return;
+            if (!AbilityRules.IsSpell(a) || a.special == "Shoot" || !t.IsHostileTo(cast.Caster)) return;
+            foreach (var e in a.effects) if (e.chainTargets > 0) return;
+            var g = Specials.RedirectSpell(this, cast);
+            if (g != null && g != t)
+            {
+                Log($"{g.Name} redirects {a.name}.", g);
+                cast.Target = g;
+                return;
+            }
+            float refl = Specials.ReflectChance(t, cast);
+            if (refl > 0 && Rng.Chance(refl))
+            {
+                Log($"{t.Name} reflects {a.name}!", t);
+                cast.Target = cast.Caster;
+                cast.Reflected = true;
+            }
         }
 
         void ResolveChannelTick(AbilityCast cast, int index, int total)
@@ -116,9 +150,11 @@ namespace Lanternvale.Rules
             Emit(new CombatEvent { Type = CombatEventType.ChannelTick, Source = cast.Caster, Target = cast.Target, AbilityId = a.id, Name = a.name, Count = index + 1, Amount = total });
             cast.Vars["tick"] = index + 1;
             cast.Vars["ticks"] = total;
+            cast.SkipEffects = false;
             Specials.ResolveAbility(cast);
             if (!cast.SkipEffects) ExecuteEffects(cast, a.effects);
             Specials.AfterAbility(cast);
+            Specials.OnChannelTick(cast);
         }
 
         void ResolvePending(Unit u)
@@ -284,6 +320,31 @@ namespace Lanternvale.Rules
         public void ExecuteEffects(AbilityCast cast, IList<EffectDef> effects)
         {
             if (effects == null) return;
+            bool hitProcs = cast.Depth == 0 && !cast.Periodic && cast.SourceAura == null && cast.SourceProc == null && cast.Ability != null;
+            if (hitProcs) { cast.PassHits.Clear(); cast.PassCrits.Clear(); cast.PassDamage.Clear(); }
+            ExecuteEffectList(cast, effects);
+            if (hitProcs) FirePassHitProcs(cast);
+        }
+
+        void FirePassHitProcs(AbilityCast cast)
+        {
+            if (cast.PassHits.Count == 0) return;
+            var kind = cast.Kind;
+            var w = StatCalculator.GetWeapon(cast.Caster, kind == AttackKind.Ranged ? WeaponSlot.Ranged : WeaponSlot.MainHand);
+            foreach (var t in new List<Unit>(cast.PassHits))
+            {
+                cast.PassCrits.TryGetValue(t, out var crit);
+                cast.PassDamage.TryGetValue(t, out var dmg);
+                var info = new ProcInfo { Ability = cast.Ability, School = cast.School, Crit = crit, Damage = dmg, WeaponSpeed = w.Valid ? w.Speed : 2f, Ranged = kind == AttackKind.Ranged };
+                if (kind == AttackKind.Melee) FireProcs(ProcTrigger.OnMeleeHit, cast.Caster, t, info);
+                else if (kind == AttackKind.Ranged || kind == AttackKind.Wand) FireProcs(ProcTrigger.OnRangedHit, cast.Caster, t, info);
+                else FireProcs(ProcTrigger.OnSpellHit, cast.Caster, t, info);
+            }
+            cast.PassHits.Clear();
+        }
+
+        void ExecuteEffectList(AbilityCast cast, IList<EffectDef> effects)
+        {
             for (int i = 0; i < effects.Count; i++)
             {
                 if (!cast.Caster.IsAlive && cast.SourceAura == null && cast.Ability != null && !cast.Free) break;
@@ -372,9 +433,10 @@ namespace Lanternvale.Rules
             bool hostile = t.IsHostileTo(cast.Caster);
             if (hostile && !cast.Periodic && !e.cannotMiss && NeedsHitRoll(e.type))
             {
-                var o = GetOutcome(cast, t);
+                var o = GetOutcome(cast, t, e);
                 if (o != HitOutcome.Hit && o != HitOutcome.Block) return;
             }
+            if (hostile && !cast.Periodic && !cast.PassHits.Contains(t) && e.type != EffectType.Threat) cast.PassHits.Add(t);
             ApplyEffect(cast, e, t, chainScale);
             if (required != null && e.consumeTargetAura && t.Auras.Contains(required)) RemoveAura(required, AuraRemoveReason.Consumed);
         }
@@ -392,10 +454,10 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>Hit/avoid outcome of the cast on a hostile target (rolled once per cast and target).</summary>
-        HitOutcome GetOutcome(AbilityCast cast, Unit t)
+        HitOutcome GetOutcome(AbilityCast cast, Unit t, EffectDef e = null)
         {
             if (cast.Outcomes.TryGetValue(t, out var o)) return o;
-            o = RollOutcome(cast, t);
+            o = RollOutcome(cast, t, e != null && Specials.Unavoidable(cast, e));
             cast.Outcomes[t] = o;
             if (o == HitOutcome.Hit || o == HitOutcome.Block)
             {
@@ -406,7 +468,10 @@ namespace Lanternvale.Rules
             return o;
         }
 
-        HitOutcome RollOutcome(AbilityCast cast, Unit t)
+        /// <summary>The hit outcome already rolled for a target in this cast, or null when none was rolled.</summary>
+        public HitOutcome? OutcomeOf(AbilityCast cast, Unit t) => cast.Outcomes.TryGetValue(t, out var o) ? o : (HitOutcome?)null;
+
+        HitOutcome RollOutcome(AbilityCast cast, Unit t, bool unavoidable)
         {
             var c = cast.Caster;
             var kind = cast.Kind;
@@ -425,6 +490,7 @@ namespace Lanternvale.Rules
                 {
                     EmitAvoid(kind == AttackKind.Wand ? CombatEventType.Miss : CombatEventType.Resist, cast, t);
                     MetersOf(c).Misses++;
+                    if (kind == AttackKind.Spell) Specials.OnSpellResisted(this, t, c, cast);
                     return kind == AttackKind.Wand ? HitOutcome.Miss : HitOutcome.Resist;
                 }
                 return HitOutcome.Hit;
@@ -433,7 +499,7 @@ namespace Lanternvale.Rules
             float hit = ranged ? c.Stats.RangedHit : c.Stats.MeleeHit;
             float m = Formulas.MeleeMissChance(c.Level, t.Level, false) - hit - hitBonus - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f;
             m = MathUtil.Clamp(m, 100f - RulesConstants.MaxHitChance, 100f);
-            bool canAvoid = !t.IsControlled;
+            bool canAvoid = !t.IsControlled && !unavoidable;
             bool frontal = !c.IsBehind(t);
             float dodge = canAvoid ? Math.Max(0f, t.Stats.Dodge - c.Stats.DodgeChanceAgainstMe) : 0f;
             float parry = canAvoid && !ranged && frontal && t.Stats.CanParry ? t.Stats.Parry : 0f;
@@ -491,7 +557,15 @@ namespace Lanternvale.Rules
             else if (kind == AttackKind.Ranged) ch = c.Stats.RangedCrit;
             else ch = c.Stats.MeleeCrit;
             ch += cast.Mods.CritChance;
-            if (!heal && t != null && (kind == AttackKind.Melee || kind == AttackKind.Ranged)) ch -= t.Stats.Defense * 0.04f;
+            if (!heal && (kind == AttackKind.Melee || kind == AttackKind.Ranged))
+            {
+                var e = cast.CurrentEffect;
+                bool off = e != null && e.offHand;
+                var wt = WeaponTalents.AttackWeapon(c, off, kind == AttackKind.Ranged);
+                ch += WeaponTalents.StatBonus(c, wt, kind == AttackKind.Ranged ? StatId.RangedCrit : StatId.MeleeCrit);
+                if (t != null) ch -= t.Stats.Defense * 0.04f;
+            }
+            ch = Specials.CritChanceBonus(cast, t, school, ch);
             return MathUtil.Clamp(ch, 0f, 100f);
         }
 
@@ -500,6 +574,7 @@ namespace Lanternvale.Rules
             var kind = cast.Kind;
             float baseMult = heal || kind == AttackKind.Spell || kind == AttackKind.Wand ? 1.5f : 2f;
             float bonus = (baseMult - 1f) * (1f + cast.Mods.CritBonusPct / 100f) + cast.Caster.Stats.CritDamageBonus(school) / 100f;
+            bonus += Specials.CritBonusAdd(cast.Caster, cast.Target) / 100f;
             return 1f + Math.Max(0f, bonus);
         }
 
@@ -513,6 +588,8 @@ namespace Lanternvale.Rules
             var c = cast.Caster;
             var a = cast.Ability;
             bool hostile = t != null && t.IsHostileTo(c);
+            cast.CurrentEffect = e;
+            if (e.type != EffectType.Special && !string.IsNullOrEmpty(e.special) && Specials.ReplaceEffect(cast, e, t)) return;
             switch (e.type)
             {
                 case EffectType.Damage: EffectDamage(cast, e, t, chainScale); break;
@@ -522,13 +599,25 @@ namespace Lanternvale.Rules
                 {
                     var def = Db.Aura(e.aura);
                     if (def == null) break;
-                    float dur = AbilityRules.AuraDuration(def, e, cast.Periodic ? null : cast.Mods, cast.ComboPoints);
+                    float dur;
+                    if (!string.IsNullOrEmpty(e.special) && Specials.Get(e.special) != null)
+                    {
+                        dur = Specials.ModifyAuraDuration(cast, e, t, def, e.duration > 0 ? e.duration : def.duration);
+                        if (dur > 0 && !cast.Periodic) dur = (dur + cast.Mods.Duration) * (1f + cast.Mods.DurationPct / 100f);
+                    }
+                    else
+                    {
+                        dur = AbilityRules.AuraDuration(def, e, cast.Periodic ? null : cast.Mods, cast.ComboPoints);
+                        // ApplyAura `duration` + `perLevel`: extra seconds per level above learnLevel (Hammer of Justice 3-6 s)
+                        if (e.duration > 0 && e.perLevel != 0) dur += e.perLevel * Math.Max(0, cast.EffLevel - cast.LearnLevel);
+                    }
                     var info = new AuraApplyInfo
                     {
                         Source = a ?? cast.SourceAura?.SourceAbility, Rank = cast.Rank, EffLevel = cast.EffLevel, LearnLevel = cast.LearnLevel,
                         Stacks = Math.Max(1, e.stacks), Duration = dur, ComboPoints = cast.ComboPoints, Mods = cast.Mods,
                     };
-                    ApplyAura(c, t, def, info);
+                    var inst = ApplyAura(c, t, def, info);
+                    if (inst != null && !string.IsNullOrEmpty(e.special)) Specials.AfterAuraEffect(cast, e, t, inst);
                     if (hostile) AddThreat(t, c, e.threat * ThreatMult(c, def.school, cast.Mods), true);
                     break;
                 }
@@ -537,7 +626,7 @@ namespace Lanternvale.Rules
                     foreach (var au in new List<AuraInstance>(t.Auras))
                     {
                         if (au.IsPassive) continue;
-                        bool match = !string.IsNullOrEmpty(e.aura) ? au.Def.id == e.aura : (!string.IsNullOrEmpty(e.auraTag) && au.HasTag(e.auraTag));
+                        bool match = !string.IsNullOrEmpty(e.aura) ? au.Def.id == e.aura : (!string.IsNullOrEmpty(e.auraTag) && AuraMatchesTag(au, e.auraTag));
                         if (match) RemoveAura(au, AuraRemoveReason.Cancelled);
                     }
                     break;
@@ -611,6 +700,13 @@ namespace Lanternvale.Rules
 
         internal float ThreatMult(Unit c, School s, AbilityModSet mods) => c.Stats.Threat(s) * (mods != null ? mods.ThreatMult : 1f);
 
+        /// <summary>A tag matches an aura tag, or a UnitState name the aura imposes (Fear, Sleep, Stealth...).</summary>
+        public static bool AuraMatchesTag(AuraInstance au, string tag)
+        {
+            if (au.HasTag(tag)) return true;
+            return Enum.TryParse<UnitState>(tag, true, out var st) && au.HasState(st);
+        }
+
         /// <summary>Casts another ability for free (no cost/time/cooldown) on a target.</summary>
         public AbilityCast TriggerAbility(Unit caster, AbilityDef a, Unit target, Vec2? point, int depth = 1, int rank = 0, int comboPoints = 0)
         {
@@ -649,6 +745,7 @@ namespace Lanternvale.Rules
                 v *= cast.SourceAura.DamageMult * cast.SourceAura.EffectMult * Math.Max(1, cast.SourceAura.Stacks);
             else v *= cast.Mods.DamageMult;
             v *= CreatureDamageMult(c);
+            v += Specials.IncomingFlatDamageBonus(cast, e, t, school, false);
             v = Specials.ModifyDamage(cast, e, t, v);
             if (v <= 0f) return;
             bool crit = false;
@@ -663,7 +760,8 @@ namespace Lanternvale.Rules
                 Blocked = cast.ConsumeBlock(t), BonusThreat = e.threat, Mods = cast.Mods, SourceAura = cast.SourceAura, Cast = cast,
             };
             float dealt = DealDamage(c, t, v, school, info);
-            if (crit) cast.AnyCrit = true;
+            NoteHit(cast, t, crit, dealt);
+            if (crit) { cast.AnyCrit = true; Specials.OnEffectCrit(cast, e, t, dealt, false); }
             cast.TotalDamage += dealt;
             if (e.pctOfDamage > 0 && dealt > 0 && c.IsAlive)
                 HealUnit(c, c, dealt * e.pctOfDamage / 100f, new HealInfo { Ability = cast.Ability, Name = cast.Name, Periodic = cast.Periodic });
@@ -676,18 +774,21 @@ namespace Lanternvale.Rules
             var w = StatCalculator.GetWeapon(c, slot);
             if (!w.Valid) return;
             bool wand = w.Type == WeaponType.Wand || (cast.Ability != null && cast.Ability.special == "Shoot");
-            float ap = wand ? 0f : (slot == WeaponSlot.Ranged ? c.Stats.RangedAttackPower : c.Stats.AttackPower);
+            float ap = wand ? 0f : (slot == WeaponSlot.Ranged ? c.Stats.RangedAttackPower + Specials.IncomingRangedApBonus(c, t) : c.Stats.AttackPower);
+            ap += cast.Vars.TryGetValue("apBonus", out var apb) ? apb : 0f;
             float roll = Rng.Range(w.Min, w.Max) + ap / 14f * w.Speed;
             float v = roll * e.weaponPct / 100f;
             if (e.min > 0 || e.max > 0 || e.perLevel != 0 || e.perCombo != 0)
-                v += AbilityRules.BaseMagnitude(e, cast.EffLevel, cast.LearnLevel, cast.ComboPoints, Rng);
+                v += AbilityRules.BaseMagnitude(e, cast.EffLevel, cast.LearnLevel, cast.ComboPoints, Rng) * Specials.WeaponFlatBonusMult(cast, e);
             if (e.apCoef > 0) v += e.apCoef * ap;
             if (slot == WeaponSlot.OffHand) v *= RulesConstants.OffHandDamageFactor * Specials.OffHandMultiplier(c);
+            if (!wand) v *= 1f + WeaponTalents.StatBonus(c, w.Type, StatId.DamageDone) / 100f;
             v *= cast.MagnitudeScale * chainScale;
             if (cast.Periodic && cast.SourceAura != null) v *= cast.SourceAura.DamageMult * cast.SourceAura.EffectMult;
             else v *= cast.Mods.DamageMult;
             v *= CreatureDamageMult(c);
             var school = e.school ?? (cast.School != School.Physical ? cast.School : w.School);
+            v += Specials.IncomingFlatDamageBonus(cast, e, t, school, true);
             v = Specials.ModifyDamage(cast, e, t, v);
             if (v <= 0f) return;
             bool crit = false;
@@ -701,9 +802,11 @@ namespace Lanternvale.Rules
                 Ability = cast.Ability, Name = cast.Name, Crit = crit, Periodic = cast.Periodic, Kind = cast.Kind,
                 Blocked = cast.ConsumeBlock(t), BonusThreat = e.threat, Mods = cast.Mods, OffHand = slot == WeaponSlot.OffHand,
                 Ranged = slot == WeaponSlot.Ranged, Weapon = w, Cast = cast,
+                ExtraAttack = cast.SourceProc != null && !cast.Periodic && slot != WeaponSlot.Ranged,
             };
             float dealt = DealDamage(c, t, v, school, info);
-            if (crit) cast.AnyCrit = true;
+            NoteHit(cast, t, crit, dealt);
+            if (crit) { cast.AnyCrit = true; Specials.OnEffectCrit(cast, e, t, dealt, false); }
             cast.TotalDamage += dealt;
         }
 
@@ -736,6 +839,20 @@ namespace Lanternvale.Rules
             float healed = HealUnit(c, t, v, new HealInfo { Ability = cast.Ability, Name = cast.Name, Crit = crit, Periodic = cast.Periodic, Mods = cast.Mods, Cast = cast });
             cast.TotalHealing += healed;
             if (!cast.HitTargets.Contains(t)) cast.HitTargets.Add(t);
+            if (crit)
+            {
+                var pi = new ProcInfo { Ability = cast.Ability, School = school, Crit = true, Damage = healed };
+                FireProcs(ProcTrigger.OnCrit, c, t, pi);
+                FireProcs(ProcTrigger.OnSpellCrit, c, t, pi);
+                Specials.OnEffectCrit(cast, e, t, healed, true);
+            }
+        }
+
+        void NoteHit(AbilityCast cast, Unit t, bool crit, float dealt)
+        {
+            if (crit) cast.PassCrits[t] = true;
+            cast.PassDamage.TryGetValue(t, out var d);
+            cast.PassDamage[t] = d + dealt;
         }
 
         // ------------------------------------------------------------------ misc
@@ -766,7 +883,8 @@ namespace Lanternvale.Rules
                 foreach (var u in Units) if (u.Threat.ContainsKey(c)) tables.Add(u);
             }
             else tables.Add(t);
-            float flat = e.threat != 0 ? e.threat : e.amount;
+            float flat = (e.threat != 0 ? e.threat : e.amount);
+            if (flat != 0 || e.perLevel != 0) flat = (flat + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult;
             foreach (var tab in tables)
             {
                 if (tab.Team == c.Team) continue;
@@ -829,6 +947,14 @@ namespace Lanternvale.Rules
             if (!TryParseResource(e.resource, out var r, out var health, out var combo) || combo) return;
             float amt = ((e.amount != 0 ? e.amount : e.min) + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult * cast.MagnitudeScale;
             if (cast.Periodic && cast.SourceAura != null) amt *= cast.SourceAura.EffectMult;
+            if (health && t == c)
+            {
+                float loss = Math.Min(amt, Math.Max(0f, c.Health - 1f));
+                c.Health -= loss;
+                Emit(new CombatEvent { Type = CombatEventType.Damage, Source = c, Target = c, Amount = loss, AbilityId = cast.AbilityId, Name = cast.Name, Reason = "self", Periodic = cast.Periodic });
+                cast.Vars["drained"] = loss;
+                return;
+            }
             if (health)
             {
                 float dealt = DealDamage(c, t, amt, e.school ?? cast.School, new DamageInfo { Ability = cast.Ability, Name = cast.Name, Periodic = cast.Periodic, Mods = cast.Mods, Kind = AttackKind.Spell, Cast = cast });

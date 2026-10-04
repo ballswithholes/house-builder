@@ -27,7 +27,32 @@ namespace Lanternvale.Rules
         public float ExtraResource;
         public bool Free;
         public int StartRound;
+        /// <summary>Casting pushback applied so far (max 2) and channel time lost to pushback.</summary>
+        public int Pushbacks;
+        public float ChannelLoss;
+        /// <summary>Full channel duration (seconds) for pushback tick loss.</summary>
+        public float ChannelDuration;
         public override string ToString() => $"{Ability?.name} ({RemainingTime:0.#}s{(Channel ? $", {TicksLeft} ticks" : "")})";
+    }
+
+    /// <summary>A self-resurrection the downed/dead unit may accept at its next turn (Soulstone, Reincarnation).</summary>
+    public sealed class SelfResOffer
+    {
+        public string Source = "";       // aura/ability id that grants it
+        public string Name = "";         // display ("Soulstone", "Reincarnation")
+        public float Health, Mana;
+        /// <summary>Called when accepted (consume reagents, start cooldowns).</summary>
+        public Action<Battle, Unit> OnAccept;
+    }
+
+    /// <summary>Hunter's active pet (persisted in saves): template creature, display name, remembered health, dead flag.</summary>
+    public sealed class HunterPetState
+    {
+        public string TemplateId = "hunter_pet_wolf";
+        public string Name = "";
+        /// <summary>Remembered health fraction (0..1) when dismissed.</summary>
+        public float HealthFraction = 1f;
+        public bool Dead;
     }
 
     public sealed partial class Unit
@@ -123,6 +148,19 @@ namespace Lanternvale.Rules
         public string TotemElement = "";
         /// <summary>Demons/hunter pets persist with their owner across battles.</summary>
         public bool IsPersistentPet => Kind == UnitKind.Pet && Lifetime < 0;
+
+        /// <summary>Pending self-resurrection offer while downed/dead.</summary>
+        public SelfResOffer SelfRes;
+        /// <summary>Has dealt/taken damage or used an ability on an enemy in the current battle.</summary>
+        public bool Engaged;
+        /// <summary>When set, the unit keeps facing this point (Distract).</summary>
+        public Vec2? FacingLock;
+        /// <summary>Hunters: the active pet (template, name, health), persisted in saves.</summary>
+        public HunterPetState HunterPet;
+        /// <summary>Team before a temporary side change (Enslave Demon, Mind Control).</summary>
+        public Team? OriginalTeam;
+        /// <summary>Stored extra attacks (Reckoning).</summary>
+        public int ExtraAttacks;
 
         /// <summary>AI scratch state for the current turn.</summary>
         public readonly AITurnMemory AIMemory = new AITurnMemory();
@@ -334,7 +372,9 @@ namespace Lanternvale.Rules
         public bool IsUntargetable => HasStateAura(UnitState.Untargetable);
         public bool IsFeigningDeath => HasStateAura(UnitState.FeignDeath);
 
-        public bool CanMoveNow => IsAlive && !IsControlled && !HasState(UnitState.Root) && Pending == null;
+        public bool CanMoveNow => IsAlive && !IsControlled && !IsRooted && Pending == null;
+        /// <summary>Rooted (and not freed by Blessing of Freedom-like effects).</summary>
+        public bool IsRooted => HasState(UnitState.Root) && !Specials.IgnoresState(this, UnitState.Root);
 
         // -------------------------------------------------------------- relations
 
@@ -356,6 +396,7 @@ namespace Lanternvale.Rules
 
         public void FaceTowards(Vec2 p)
         {
+            if (FacingLock.HasValue) p = FacingLock.Value;
             var d = p - Position;
             if (d.SqrLength > 1e-6f) Facing = d.Normalized;
         }

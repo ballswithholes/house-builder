@@ -16,6 +16,10 @@ namespace Lanternvale.Rules
         /// <summary>The attack was blocked (damage reduced by block value).</summary>
         public bool Blocked;
         public bool IgnoreArmor, IgnoreAbsorb, IgnoreModifiers, NoThreat, NoProcs;
+        /// <summary>Extra weapon attack granted by a proc (Sword Specialization, Windfury): fires on-hit procs like a swing.</summary>
+        public bool ExtraAttack;
+        /// <summary>Redirected damage (Soul Link, Blessing of Sacrifice): never redirected again.</summary>
+        public bool Redirected;
         public float BonusThreat;
         public AbilityModSet Mods;
         public AuraInstance SourceAura;

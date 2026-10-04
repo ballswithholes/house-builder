@@ -39,6 +39,8 @@ namespace Lanternvale.Rules
         public float HealingDone = 1f, HealingTaken = 1f, EnergyRegen = 1f, RageGenerated = 1f;
         public float ArmorPenetration, DodgeChanceAgainstMe, ChanceToBeHit, StealthDetection;
         public float ExtraMaxEnergy;
+        /// <summary>Spell damage (all schools) added by special passives (Spiritual Guidance).</summary>
+        public float ExtraSpellDamage;
         public bool CanParry, CanBlock;
         ClassDef cls;
         int level;
@@ -46,7 +48,7 @@ namespace Lanternvale.Rules
 
         internal void Init(ClassDef c, int lvl, bool isCreature) { cls = c; level = lvl; creature = isCreature; }
 
-        public float SpellDamage(School s) => Block.Base(StatId.SpellDamage, 0f, s);
+        public float SpellDamage(School s) => Block.Base(StatId.SpellDamage, 0f, s) + ExtraSpellDamage;
         public float SpellHit(School s) => Block.Sum(StatId.SpellHit, s);
         public float SpellPenetration(School s) => Block.Sum(StatId.SpellPenetration, s);
         public float Resistance(School s) => s == School.Physical ? 0f : Math.Max(0f, Block.Base(StatId.Resistance, 0f, s));
