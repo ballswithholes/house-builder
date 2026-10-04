@@ -2,6 +2,8 @@
 // resource bars, combo-point pips, pending-cast bar, XP (main character), buffs/debuffs with time & stacks,
 // pet sub-frames, totems, downed/dead states, auto-play toggle (companions) and the leader's crown.
 // Click selects (GameFlow.Select); in the out-of-combat "choose a party member" mode the click casts instead.
+// Right-click one of your own buffs to cancel it (Ice Block, stealth, aspects…). Warlocks show their Soul Shards.
+// In combat health/death are read as presented (HudPresented), so bars move when the blow lands on screen.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -24,6 +26,8 @@ namespace Lanternvale.Game
 
         static readonly Color FrameDead = new Color(0.55f, 0.52f, 0.6f, 1f);
         static readonly Color AutoOn = Ui.Hex("#7fd47a");
+        static readonly Color ShardCol = Ui.Hex("#c9a6ff");
+        readonly HudText.One shardsText = new HudText.One("", " Soul Shards");
 
         readonly List<Unit> chars = new List<Unit>(6);
         readonly List<Unit> subs = new List<Unit>(4);
@@ -68,12 +72,12 @@ namespace Lanternvale.Game
             var r = new Rect(X, y, W, H);
             var combat = Hud.Combat;
             var battle = combat != null ? combat.Battle : null;
-            bool active = battle != null && battle.ActiveUnit == u && !battle.IsOver;
+            bool active = battle != null && !battle.IsOver && HudPresented.ActiveUnit(battle) == u;
             bool selected = Hud.Flow != null && Hud.Flow.Selected == u;
             var pick = Hud.FieldPick;
             bool pickable = pick != null && Hud.IsValidPickTarget(u);
             var classCol = Hud.UnitColor(u);
-            bool dead = u.Dead, downed = u.Downed && !u.Dead;
+            bool dead = HudPresented.Dead(u), downed = !dead && HudPresented.Downed(u);
 
             // backdrop & highlights
             if (active)
@@ -119,40 +123,28 @@ namespace Lanternvale.Game
             float cx = pr.xMax + 12f, cw = r.xMax - cx - 10f;
             // name
             bool companion = u.Companion != null || (u.Kind == UnitKind.Companion);
-            float nameW = cw - (companion ? 54f : 0f);
+            float nameW = cw - (companion ? 60f : 0f);
             HudDraw.Text(new Rect(cx, r.y + 6f, nameW, 22f), Hud.NameOf(u), HudStyles.Name, dead ? Hud.Muted : classCol);
 
             // auto-play toggle (companions)
             bool overToggle = false;
             if (companion)
             {
-                var ar = new Rect(r.xMax - 58f, r.y + 8f, 48f, 18f);
+                var ar = new Rect(r.xMax - 64f, r.y + 7f, 54f, 20f);
                 bool on = u.AutoPlay;
-                HudDraw.Fill(ar, on ? new Color(0.2f, 0.45f, 0.22f, 0.95f) : new Color(0.16f, 0.13f, 0.24f, 0.9f), 5);
-                HudDraw.Ring(ar, on ? AutoOn : new Color(1f, 1f, 1f, 0.3f), 5);
-                HudDraw.Text(ar, "AUTO", HudStyles.TinyCenter, on ? Color.white : Hud.Muted, false);
-                if (HudDraw.Hover(ar))
-                    Ui.TooltipFor(ar, on ? "<b>Auto-play on</b>\nThe companion's AI plays its turns in combat (and its pet's). Click to take control."
-                                         : "<b>Auto-play off</b>\nYou control this companion in combat. Click to let its AI play.");
-                Ui.Block(ar);
-                overToggle = HudDraw.Hover(ar);
-                if (HudDraw.Click(ar))
-                {
-                    var unit = u;
-                    bool want = !on;
-                    Hud.Post(() => SetAutoPlay(unit, want));
-                    Ui.Sfx?.Invoke("ui_click");
-                }
+                overToggle = DrawAutoToggle(ar, u, on, true,
+                    on ? "<b>Auto-play on</b>\nThe companion's AI plays its turns in combat (and its pet's). Click to take control."
+                       : "<b>Auto-play off</b>\nYou control this companion in combat. Click to let its AI play.");
             }
 
             // health (+ absorb)
-            var hr = new Rect(cx, r.y + 30f, cw, 18f);
+            var hr = new Rect(cx, r.y + 29f, cw, 19f);
             DrawHealth(hr, u, labels.Health, HudStyles.TinyCenter);
 
             // resource
             var res = u.PowerType;
             float maxRes = res != ResourceType.None ? u.MaxResource(res) : 0f;
-            var rr = new Rect(cx, r.y + 51f, cw, 13f);
+            var rr = new Rect(cx, r.y + 51f, cw, 16f);
             if (maxRes > 0f)
             {
                 float cur = u.GetResource(res);
@@ -162,10 +154,11 @@ namespace Lanternvale.Game
                 if (HudDraw.Hover(rr)) Ui.TooltipFor(rr, HudText.ResourceName(res));
             }
 
-            // third row: pending cast bar, else combo pips
-            var row3 = new Rect(cx, r.y + 68f, cw, 12f);
+            // third row: pending cast bar, else combo pips (rogues) / Soul Shards (warlocks)
+            var row3 = new Rect(cx, r.y + 70f, cw, 12f);
             if (u.Pending != null && u.Pending.Ability != null) DrawCastBar(row3, u.Pending, true);
             else if (u.ClassId == ClassId.Rogue || u.ComboPoints > 0) DrawCombo(row3, u);
+            else if (u.ClassId == ClassId.Warlock) DrawShards(row3);
 
             // XP (main character, outside combat)
             if (u.IsMainCharacter && battle == null && Hud.Db != null)
@@ -191,7 +184,7 @@ namespace Lanternvale.Game
                     var ab = new Rect(pr.xMax - 32f, pr.y + 2f, 30f, 18f);
                     HudDraw.Fill(ab, new Color(0.55f, 0.08f, 0.08f, 0.92f), 5);
                     HudDraw.Glyph(new Rect(ab.x + 2f, ab.y + 2f, 14f, 14f), "glyph_swords", Color.white);
-                    HudDraw.Text(new Rect(ab.x + 15f, ab.y, 14f, 18f), HudText.Int(attackers), HudStyles.TinyCenter, Color.white, false);
+                    HudDraw.Text(new Rect(ab.x + 15f, ab.y - 1f, 14f, 20f), HudText.Int(attackers), HudStyles.TinyCenter, Color.white, false);
                     if (HudDraw.Hover(ab)) Ui.TooltipFor(ab, attackers == 1 ? "An enemy is attacking " + Hud.NameOf(u) + "." : attackers + " enemies are attacking " + Hud.NameOf(u) + ".");
                 }
             }
@@ -241,6 +234,25 @@ namespace Lanternvale.Game
             return n;
         }
 
+        /// <summary>The AUTO pill (companions, pets). Returns true while the mouse is over it (the frame click is skipped).</summary>
+        static bool DrawAutoToggle(Rect ar, Unit u, bool on, bool enabled, string tip)
+        {
+            HudDraw.Fill(ar, on ? new Color(0.2f, 0.45f, 0.22f, enabled ? 0.95f : 0.6f) : new Color(0.16f, 0.13f, 0.24f, 0.9f), 5);
+            HudDraw.Ring(ar, on ? new Color(AutoOn.r, AutoOn.g, AutoOn.b, enabled ? 1f : 0.45f) : new Color(1f, 1f, 1f, 0.3f), 5);
+            HudDraw.Text(ar, "AUTO", HudStyles.TinyCenter, on ? (enabled ? Color.white : new Color(1f, 1f, 1f, 0.6f)) : Hud.Muted, false);
+            if (HudDraw.Hover(ar)) Ui.TooltipFor(ar, tip);
+            Ui.Block(ar);
+            bool over = HudDraw.Hover(ar);
+            if (enabled && HudDraw.Click(ar))
+            {
+                var unit = u;
+                bool want = !on;
+                Hud.Post(() => SetAutoPlay(unit, want));
+                Ui.Sfx?.Invoke("ui_click");
+            }
+            return over;
+        }
+
         static void SetAutoPlay(Unit u, bool on)
         {
             var c = Hud.Combat;
@@ -266,9 +278,9 @@ namespace Lanternvale.Game
         public static void DrawHealth(Rect hr, Unit u, HudText.Pair label, GUIStyle textStyle)
         {
             float max = Mathf.Max(1f, u.MaxHealth);
-            float hp = Mathf.Max(0f, u.Health);
+            float hp = HudPresented.Health(u);   // as presented: drops when the blow lands on screen
             float pct = hp / max;
-            HudDraw.Bar(hr, pct, u.Dead || u.Downed ? FrameDead : Hud.HealthColor(pct));
+            HudDraw.Bar(hr, pct, HudPresented.Dead(u) || HudPresented.Downed(u) ? FrameDead : Hud.HealthColor(pct));
             float absorb = Hud.AbsorbOf(u);
             if (absorb > 0f)
             {
@@ -309,6 +321,20 @@ namespace Lanternvale.Game
                                   "\n" + Ui.Rich("Builders add points to the target; finishers spend them all.", Hud.Muted));
         }
 
+        void DrawShards(Rect row)
+        {
+            int n = Hud.SoulShards;
+            var col = n > 0 ? ShardCol : Ui.Bad;
+            HudDraw.Glyph(new Rect(row.x - 1f, row.y - 2f, 16f, 16f), "glyph_soul_shard", col);
+            string txt = n == 1 ? "1 Soul Shard" : shardsText.Get(n);
+            HudDraw.Text(new Rect(row.x + 18f, row.y - 3f, row.width - 18f, 18f), txt, HudStyles.Tiny, col);
+            var hr = new Rect(row.x - 1f, row.y - 3f, Mathf.Min(row.width, 150f), 18f);
+            if (HudDraw.Hover(hr))
+                Ui.TooltipFor(hr, "<b>Soul Shards: " + n + "</b> (in the party's bags)\n" +
+                                  Ui.Rich("Soul Fire, Shadowburn, demon summons, Soulstones and Healthstones consume one. " +
+                                          "Drain Soul on a dying enemy (or Shadowburn's kill) creates one.", Hud.Muted));
+        }
+
         // ================================================================ auras
 
         /// <summary>Draws the unit's visible buffs/debuffs in rows (debuffs first). Returns the bottom y.</summary>
@@ -337,14 +363,17 @@ namespace Lanternvale.Game
             {
                 int row = i / perRow, col = i % perRow;
                 var ar = new Rect(x + col * (AuraSize + AuraGap), y + row * (AuraSize + AuraGap + 1f), AuraSize, AuraSize);
-                DrawAuraIcon(ar, auras[i], i < debuffs, null);
+                DrawAuraIcon(ar, auras[i], i < debuffs, null, true);
             }
             int rows = (n + perRow - 1) / perRow;
             return y + rows * (AuraSize + AuraGap + 1f);
         }
 
-        /// <summary>Aura icon with remaining time, stacks and tooltip. mine = highlight auras from this caster.</summary>
-        public static void DrawAuraIcon(Rect ar, AuraInstance a, bool debuff, Unit mine)
+        /// <summary>
+        /// Aura icon with remaining time, stacks and tooltip. mine = highlight auras from this caster. cancellable = the
+        /// party's own frames: the icon blocks world clicks and a right-click cancels a removable own buff (WoW).
+        /// </summary>
+        public static void DrawAuraIcon(Rect ar, AuraInstance a, bool debuff, Unit mine, bool cancellable = false)
         {
             var def = a.Def;
             var school = Hud.SchoolCol(def.school);
@@ -353,18 +382,27 @@ namespace Lanternvale.Game
             HudDraw.Icon(ar, string.IsNullOrEmpty(def.icon) ? "glyph_aura" : def.icon, frame, false, faded ? 0.7f : 1f);
             if (a.Duration > 0f && a.Remaining > 0f && !a.IsPermanent)
             {
-                var tr = new Rect(ar.x - 4f, ar.yMax - 11f, ar.width + 8f, 12f);
+                var tr = new Rect(ar.x - 4f, ar.yMax - 13f, ar.width + 8f, 16f);
                 HudDraw.Text(tr, HudText.Duration(a.Remaining), HudStyles.TinyCenter, a.Remaining <= 6f ? Hud.C("#ffd27a") : Ui.TextLight);
             }
             if (a.Stacks > 1)
-                HudDraw.Text(new Rect(ar.x, ar.y - 2f, ar.width - 1f, 12f), HudText.Int(a.Stacks), HudStyles.TinyRight, Ui.TextLight);
+                HudDraw.Text(new Rect(ar.x, ar.y - 4f, ar.width - 1f, 16f), HudText.Int(a.Stacks), HudStyles.TinyRight, Ui.TextLight);
             else if (a.Charges > 0)
-                HudDraw.Text(new Rect(ar.x, ar.y - 2f, ar.width - 1f, 12f), HudText.Int(a.Charges), HudStyles.TinyRight, Hud.C("#9fe3e0"));
+                HudDraw.Text(new Rect(ar.x, ar.y - 4f, ar.width - 1f, 16f), HudText.Int(a.Charges), HudStyles.TinyRight, Hud.C("#9fe3e0"));
+            bool canCancel = cancellable && !debuff && Hud.CanCancel(a);
+            if (cancellable) Ui.Block(ar);
             if (HudDraw.Hover(ar))
             {
                 string tip = UiText.Aura(a);
                 if (a.Caster != null && a.Caster != a.Bearer) tip += "\n" + Ui.Rich("From " + Hud.NameOf(a.Caster), Hud.Muted);
+                if (canCancel) tip += "\n" + Ui.Rich("Right-click to cancel.", Hud.Muted);
                 Ui.TooltipFor(ar, tip);
+            }
+            if (canCancel && HudDraw.Click(ar, 1))
+            {
+                var unit = a.Bearer;
+                var aura = a;
+                Hud.Post(() => Hud.CancelAura(unit, aura));
             }
         }
 
@@ -391,7 +429,7 @@ namespace Lanternvale.Game
                 for (int i = 0; i < units.Count; i++)
                 {
                     var p = units[i];
-                    if (p == null || p.Owner != owner || p.IsTotem || p.Dead) continue;
+                    if (p == null || p.Owner != owner || p.IsTotem || HudPresented.Dead(p)) continue;
                     if (p.Team != owner.Team && !p.OriginalTeam.HasValue) continue;
                     if (subs.Count < 3) subs.Add(p);
                 }
@@ -408,7 +446,7 @@ namespace Lanternvale.Game
         float DrawPet(Unit p, float y, Battle battle)
         {
             var r = new Rect(X + PetIndent, y, PetW, PetH);
-            bool active = battle != null && battle.ActiveUnit == p && !battle.IsOver;
+            bool active = battle != null && !battle.IsOver && HudPresented.ActiveUnit(battle) == p;
             bool selected = Hud.Flow != null && Hud.Flow.Selected == p;
             var pick = Hud.FieldPick;
             HudDraw.Frame(r, 0.72f, active ? new Color(1f, 0.85f, 0.45f, 0.95f) : (Color?)null);
@@ -417,12 +455,26 @@ namespace Lanternvale.Game
             if (pick != null && Hud.IsValidPickTarget(p)) HudDraw.Ring(r, new Color(0.5f, 1f, 0.55f, HudDraw.Pulse(6f, 0.45f, 1f)), 8, true);
 
             var pr = new Rect(r.x + 4f, r.y + 4f, PetH - 8f, PetH - 8f);
-            bool down = p.Downed || p.Dead;
+            bool down = HudPresented.Downed(p) || HudPresented.Dead(p);
             HudDraw.Portrait(pr, p, down ? FrameDead : Hud.UnitColor(p), down);
             float cx = pr.xMax + 7f, cw = r.xMax - cx - 7f;
             string name = Hud.NameOf(p);
             if (p.OriginalTeam.HasValue) name += " (controlled)";
-            HudDraw.Text(new Rect(cx, r.y + 2f, cw, 16f), name, HudStyles.NameSmall, Hud.UnitColor(p));
+            // AUTO toggle for the party's pets (hand the pet to the AI while you play its owner; the owner's AUTO overrides)
+            bool petToggle = p.Kind == UnitKind.Pet && p.Owner != null && p.Team == Team.Player && !p.OriginalTeam.HasValue;
+            bool overToggle = false;
+            if (petToggle)
+            {
+                var tr = new Rect(r.xMax - 56f, r.y + 3f, 50f, 17f);
+                bool ownerAuto = p.Owner.AutoPlay;
+                bool on = p.AutoPlay || ownerAuto;
+                string tip = !HudDraw.Hover(tr) ? null   // built only while hovered (no per-frame string)
+                           : ownerAuto ? "<b>Auto-play on</b>\nFollows " + Hud.NameOf(p.Owner) + "'s auto-play. Turn that off to choose for the pet."
+                           : on ? "<b>Auto-play on</b>\nThe pet's AI plays its turns in combat. Click to take control."
+                                : "<b>Auto-play off</b>\nYou control this pet in combat. Click to let its AI play its turns.";
+                overToggle = DrawAutoToggle(tr, p, on, !ownerAuto, tip);
+            }
+            HudDraw.Text(new Rect(cx, r.y + 1f, cw - (petToggle ? 56f : 0f), 18f), name, HudStyles.NameSmall, Hud.UnitColor(p));
             var labels = HudText.For(p);
             DrawHealth(new Rect(cx, r.y + 19f, cw, 9f), p, null, null);
             var res = p.PowerType;
@@ -430,13 +482,13 @@ namespace Lanternvale.Game
             if (maxRes > 0f) HudDraw.Bar(new Rect(cx, r.y + 30f, cw, 5f), p.GetResource(res) / maxRes, Ui.ResourceColor(res));
             if (p.Pending != null && p.Pending.Ability != null) DrawCastBar(new Rect(cx, r.y + 29f, cw, 7f), p.Pending, true);
 
-            if (HudDraw.Hover(r))
-                Ui.TooltipFor(r, "<b>" + name + "</b>\nHealth " + labels.PetHealth.Get(Mathf.CeilToInt(p.Health), Mathf.RoundToInt(p.MaxHealth)) +
+            if (HudDraw.Hover(r) && !overToggle)
+                Ui.TooltipFor(r, "<b>" + name + "</b>\nHealth " + labels.PetHealth.Get(Mathf.CeilToInt(HudPresented.Health(p)), Mathf.RoundToInt(p.MaxHealth)) +
                                  (maxRes > 0f ? "\n" + HudText.ResourceName(res) + " " + Mathf.FloorToInt(p.GetResource(res)) + " / " + Mathf.RoundToInt(maxRes) : "") +
                                  (p.Lifetime > 0f ? "\n" + Ui.Rich(UiText.Duration(p.Lifetime) + " remaining", Hud.Muted) : "") +
                                  "\n" + Ui.Rich("Click to select (its abilities appear on the action bar).", Hud.Muted));
             Ui.Block(r);
-            if (HudDraw.Click(r))
+            if (!overToggle && HudDraw.Click(r))
             {
                 var unit = p;
                 if (pick != null) Hud.ResolveFieldPick(unit);
@@ -459,7 +511,7 @@ namespace Lanternvale.Game
                 string element = kv.Key ?? "";
                 string glyph = TotemGlyph(element);
                 HudDraw.Icon(r, glyph, TotemColor(element));
-                if (t.Lifetime > 0f) HudDraw.Text(new Rect(r.x - 4f, r.yMax - 11f, r.width + 8f, 12f), HudText.Duration(t.Lifetime), HudStyles.TinyCenter, Ui.TextLight);
+                if (t.Lifetime > 0f) HudDraw.Text(new Rect(r.x - 4f, r.yMax - 13f, r.width + 8f, 16f), HudText.Duration(t.Lifetime), HudStyles.TinyCenter, Ui.TextLight);
                 if (HudDraw.Hover(r))
                     Ui.TooltipFor(r, "<b>" + Hud.NameOf(t) + "</b>\n" + element + " totem · Health " + Mathf.CeilToInt(t.Health) + " / " + Mathf.RoundToInt(t.MaxHealth) +
                                      (t.Lifetime > 0f ? "\n" + Ui.Rich(UiText.Duration(t.Lifetime) + " remaining", Hud.Muted) : ""));
@@ -468,26 +520,37 @@ namespace Lanternvale.Game
             return i > 0 ? y + s + 2f : y;
         }
 
+        // element → (glyph, colour) without lower-casing a string per totem per event
+        static int TotemElement(string element)
+        {
+            if (string.IsNullOrEmpty(element)) return -1;
+            if (string.Equals(element, "earth", StringComparison.OrdinalIgnoreCase)) return 0;
+            if (string.Equals(element, "fire", StringComparison.OrdinalIgnoreCase)) return 1;
+            if (string.Equals(element, "water", StringComparison.OrdinalIgnoreCase)) return 2;
+            if (string.Equals(element, "air", StringComparison.OrdinalIgnoreCase)) return 3;
+            return -1;
+        }
+
         static string TotemGlyph(string element)
         {
-            switch ((element ?? "").ToLowerInvariant())
+            switch (TotemElement(element))
             {
-                case "earth": return "glyph_totem_earth";
-                case "fire": return "glyph_totem_fire";
-                case "water": return "glyph_totem_water";
-                case "air": return "glyph_totem_air";
+                case 0: return "glyph_totem_earth";
+                case 1: return "glyph_totem_fire";
+                case 2: return "glyph_totem_water";
+                case 3: return "glyph_totem_air";
                 default: return "glyph_totem";
             }
         }
 
         static Color TotemColor(string element)
         {
-            switch ((element ?? "").ToLowerInvariant())
+            switch (TotemElement(element))
             {
-                case "earth": return Hud.C("#b08a52");
-                case "fire": return Hud.SchoolCol(School.Fire);
-                case "water": return Hud.SchoolCol(School.Frost);
-                case "air": return Hud.C("#d6e8f0");
+                case 0: return Hud.C("#b08a52");
+                case 1: return Hud.SchoolCol(School.Fire);
+                case 2: return Hud.SchoolCol(School.Frost);
+                case 3: return Hud.C("#d6e8f0");
                 default: return Hud.SchoolCol(School.Nature);
             }
         }

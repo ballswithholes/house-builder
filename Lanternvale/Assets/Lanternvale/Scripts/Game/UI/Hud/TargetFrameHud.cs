@@ -3,6 +3,8 @@
 // with absorbs, resource, a telegraphed cast bar for pending casts with an interrupt prompt when the active player
 // unit has a usable interrupt, buffs/debuffs (your own highlighted), combo points, and threat: who it attacks and
 // your share of the threat.
+// The frame is informational and does not block world clicks: it is often shown BECAUSE a unit under it is hovered,
+// and a blocker would drop that hover on the next frame (flicker, lost clicks). Health/death are read as presented.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -67,7 +69,8 @@ namespace Lanternvale.Game
             return null;
         }
 
-        static bool Valid(Unit u, Battle b) => u != null && !u.Dead && b.Units.Contains(u);
+        // a unit stays framed until its death has been shown (HudPresented), not when the killing command is issued
+        static bool Valid(Unit u, Battle b) => u != null && !HudPresented.Dead(u) && b.Units.Contains(u);
 
         void DrawInner()
         {
@@ -75,7 +78,9 @@ namespace Lanternvale.Game
             var c = Hud.Combat;
             var b = c != null ? c.Battle : null;
             Hud.FramedTarget = null;
-            if (b == null || b.IsOver) return;
+            // after the killing blow the battle is over at once, but the blow is still being animated: keep the frame
+            // until the controller has presented everything (the target then reads as dead and is dropped)
+            if (b == null || (b.IsOver && c.Finished)) return;
             var t = PickTarget(c, b);
             if (t == null) return;
             Hud.FramedTarget = t;
@@ -89,12 +94,12 @@ namespace Lanternvale.Game
             Color rankCol = rank == CreatureRank.Rare ? Hud.C("#d9e1f2") : Ui.Gold;
             if (rank == CreatureRank.Boss) HudDraw.Glow(new Rect(r.x - 40f, r.y - 30f, r.width + 80f, r.height + 60f), new Color(0.9f, 0.25f, 0.2f, 0.22f));
             HudDraw.Frame(r, 0.84f, elite ? new Color(rankCol.r, rankCol.g, rankCol.b, 0.9f) : (Color?)null);
-            Ui.Block(r);
+            // no Ui.Block: informational like the status pill (see the header)
 
             // portrait (+ dragon frame)
             var pr = new Rect(r.x + 10f, r.y + 10f, Portrait, Portrait);
             if (elite) DrawDragonFrame(pr, rankCol);
-            HudDraw.Portrait(pr, t, elite ? rankCol : Hud.TeamColor(t), t.Downed);
+            HudDraw.Portrait(pr, t, elite ? rankCol : Hud.TeamColor(t), HudPresented.Downed(t));
             // level badge (skull for bosses / far stronger foes)
             var me = Hud.ActivePlayerUnit ?? (Hud.Flow != null ? Hud.Flow.Selected : null);
             bool skull = hostile && (rank == CreatureRank.Boss || (me != null && t.Level >= me.Level + 10));
@@ -110,11 +115,11 @@ namespace Lanternvale.Game
             HudDraw.Text(new Rect(cx, r.y + 6f, cw - 120f, 22f), Hud.NameOf(t), HudStyles.Name, nameCol);
             string rankName = hostile ? Hud.RankName(rank) : "";
             string kind = t.Class != null ? t.Class.name : (t.Creature != null ? TypeName(t) : "");
-            HudDraw.Text(new Rect(cx, r.y + 7f, cw, 20f), rankName.Length > 0 ? RankLine(rankName, kind) : kind, HudStyles.SmallRight, elite ? rankCol : Hud.Muted);
+            HudDraw.Text(new Rect(cx, r.y + 7f, cw, 20f), rankName.Length > 0 ? RankLine(t, rank, kind) : kind, HudStyles.SmallRight, elite ? rankCol : Hud.Muted);
 
             // health
             var hr = new Rect(cx, r.y + 31f, cw, 20f);
-            float max = Mathf.Max(1f, t.MaxHealth), hp = Mathf.Max(0f, t.Health);
+            float max = Mathf.Max(1f, t.MaxHealth), hp = HudPresented.Health(t);
             PartyFramesHud.DrawHealth(hr, t, null, null);
             HudDraw.Text(new Rect(hr.x + 6f, hr.y - 1f, hr.width - 12f, hr.height + 2f), health.Get(Mathf.CeilToInt(hp), Mathf.RoundToInt(max)), HudStyles.Tiny, Ui.TextLight);
             HudDraw.Text(new Rect(hr.x + 6f, hr.y - 1f, hr.width - 12f, hr.height + 2f), pctText.Get(Mathf.CeilToInt(hp / max * 100f)), HudStyles.TinyRight, Ui.TextLight);
@@ -194,8 +199,13 @@ namespace Lanternvale.Game
             var c = left.center;
             GUI.matrix = old * Matrix4x4.TRS(new Vector3(c.x, c.y, 0f), Quaternion.identity, new Vector3(-1f, 1f, 1f)) *
                          Matrix4x4.TRS(new Vector3(-c.x, -c.y, 0f), Quaternion.identity, Vector3.one);
-            HudDraw.Glyph(left, "glyph_wings", col);
-            GUI.matrix = old;
+            HudDraw.Rehide();   // a matrix change recomputes the mouse: keep a covered layer's mouse hidden
+            try { HudDraw.Glyph(left, "glyph_wings", col); }
+            finally
+            {
+                GUI.matrix = old;
+                HudDraw.Rehide();
+            }
             HudDraw.Glyph(right, "glyph_wings", col);
             HudDraw.Ring(new Rect(pr.x - 3f, pr.y - 3f, pr.width + 6f, pr.height + 6f), new Color(col.r, col.g, col.b, 0.9f), 8, true);
         }
@@ -219,12 +229,18 @@ namespace Lanternvale.Game
             return s;
         }
 
-        static readonly Dictionary<string, string> rankLines = new Dictionary<string, string>();
-        static string RankLine(string rank, string kind)
+        // "Elite Beast" per framed unit (rebuilt only when the unit or its rank changes: no per-event key string)
+        Unit rankLineFor;
+        CreatureRank rankLineRank;
+        string rankLine = "";
+        string RankLine(Unit t, CreatureRank rank, string kind)
         {
-            string k = rank + "|" + kind;
-            if (!rankLines.TryGetValue(k, out var s)) rankLines[k] = s = kind.Length > 0 ? rank + " " + kind : rank;
-            return s;
+            if (t == rankLineFor && rank == rankLineRank && rankLine.Length > 0) return rankLine;
+            rankLineFor = t;
+            rankLineRank = rank;
+            string rn = Hud.RankName(rank);
+            rankLine = kind.Length > 0 ? rn + " " + kind : rn;
+            return rankLine;
         }
 
         string AttackLine(Unit t, Battle b, bool hostile)

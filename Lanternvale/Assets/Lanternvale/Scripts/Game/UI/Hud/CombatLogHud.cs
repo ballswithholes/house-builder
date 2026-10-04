@@ -92,12 +92,15 @@ namespace Lanternvale.Game
         }
     }
 
-    /// <summary>The full combat log panel (L).</summary>
+    /// <summary>
+    /// The full combat log panel (L). Sits at the bottom of the panel band (Hud.OrderCombatLogPanel) so every other window
+    /// covers it, and hides while a modal screen (dialogue, game over, menus) is up — it stays toggled open.
+    /// </summary>
     public sealed class CombatLogPanel : IUiScreen
     {
         public string Id => UiPanels.CombatLog;
         public int Order => Hud.OrderCombatLogPanel;
-        public bool Visible => UiRoot.IsOpen(Id) && GameFlow.HasGame && !UiRoot.IsOpen(UiPanels.Pause);
+        public bool Visible => UiRoot.IsOpen(Id) && GameFlow.HasGame && !UiRoot.IsOpen(UiPanels.Pause) && !UiRoot.ModalActive;
         public bool Modal => false;
 
         const float DefaultW = 600f, DefaultH = 392f, HeaderH = 40f;
@@ -105,7 +108,7 @@ namespace Lanternvale.Game
         readonly List<float> heights = new List<float>(CombatLogHistory.Cap + 64);
         readonly List<float> offsets = new List<float>(CombatLogHistory.Cap + 64);
         readonly GUIContent measure = new GUIContent();
-        int laidVersion = -1, laidDropped;
+        int laidVersion = -1, laidDropped, laidStyles = -1;
         float laidWidth = -1f, contentH;
         Vector2 scroll;
         bool stick = true;
@@ -129,18 +132,21 @@ namespace Lanternvale.Game
         public void Draw()
         {
             var layer = HudDraw.BeginLayer(Order);
-            try { DrawInner(); }
+            try { DrawInner(layer); }
             catch (Exception e) { Hud.LogOnce("log:" + e.GetType().Name, "Combat log panel: " + e); }
             finally { HudDraw.EndLayer(layer); }
         }
 
-        void DrawInner()
+        void DrawInner(HudDraw.Layer layer)
         {
             HudStyles.Ensure();
             var r = PanelRect();
             Ui.Panel(r, Ui.InkPanel, true);
             Hud.Occlude(r, Order);
             var e = Event.current;
+            // drags continue while the cursor crosses a window above this panel: they follow the REAL mouse (the layer
+            // hides it from clicks/hover only); new drags still start only where the panel is really under the mouse
+            var real = layer.RealMouse;
 
             // header (drag to move)
             var hr = new Rect(r.x + 16f, r.y + 8f, r.width - 150f, 26f);
@@ -158,7 +164,7 @@ namespace Lanternvale.Game
             }
             else if (e.type == EventType.MouseDrag && draggingPanel)
             {
-                offset = offsetStart + (e.mousePosition - dragStart);
+                offset = offsetStart + (real - dragStart);
             }
             else if (e.type == EventType.MouseUp && e.button == 0) draggingPanel = false;
 
@@ -186,13 +192,23 @@ namespace Lanternvale.Game
             else if (e.type == EventType.MouseUp && e.button == 0) draggingThumb = false;
             if (draggingThumb && (e.type == EventType.MouseDrag || e.type == EventType.MouseDown) && maxScroll > 0f)
             {
-                float t = Mathf.Clamp01((e.mousePosition.y - thumbGrab - track.y) / Mathf.Max(1f, track.height - thumbH));
+                float t = Mathf.Clamp01((real.y - thumbGrab - track.y) / Mathf.Max(1f, track.height - thumbH));
                 scroll.y = t * maxScroll;
                 stick = scroll.y >= maxScroll - 2f;
             }
 
+            // the wheel scrolls only when the panel itself is under the mouse (the layer's hide is respected): handled
+            // here instead of by GUI.EndScrollView, which tests the real cursor after its clip pop
+            if (e.type == EventType.ScrollWheel && maxScroll > 0f && view.Contains(e.mousePosition))
+            {
+                scroll.y = Mathf.Clamp(scroll.y + e.delta.y * 20f, 0f, maxScroll);
+                stick = scroll.y >= maxScroll - 2f;
+                e.Use();
+            }
+
             var content = new Rect(0f, 0f, view.width - 16f, Mathf.Max(contentH + 8f, view.height));
             scroll = GUI.BeginScrollView(view, scroll, content, false, false, GUIStyle.none, GUIStyle.none);
+            HudDraw.Rehide();   // the clip push recomputed the mouse from the real cursor
             if (lines.Count == 0)
             {
                 HudDraw.Text(new Rect(8f, 8f, textW, 22f), "Nothing has happened yet.", HudStyles.Small, Hud.Muted);
@@ -209,7 +225,8 @@ namespace Lanternvale.Game
                     GUI.Label(new Rect(8f, y + 4f, textW, heights[i]), lines[i], st);
                 }
             }
-            GUI.EndScrollView();
+            GUI.EndScrollView(false);
+            HudDraw.Rehide();   // ...and so did the clip pop: windows above keep their clicks (Jump to newest, header)
             if (e.type != EventType.Layout && e.type != EventType.Repaint && !draggingThumb) stick = scroll.y >= maxScroll - 2f;
 
             if (maxScroll > 0f)
@@ -228,9 +245,11 @@ namespace Lanternvale.Game
         void Relayout(float width)
         {
             var lines = CombatLogHistory.Lines;
-            if (laidVersion == CombatLogHistory.Version && Mathf.Abs(width - laidWidth) < 0.5f) return;
+            bool restyled = laidStyles != HudStyles.Version;   // fonts rebuilt (screen scale changed): measure again
+            if (!restyled && laidVersion == CombatLogHistory.Version && Mathf.Abs(width - laidWidth) < 0.5f) return;
+            laidStyles = HudStyles.Version;
             var st = HudStyles.LogWrap;
-            bool full = Mathf.Abs(width - laidWidth) >= 0.5f || CombatLogHistory.Dropped < laidDropped || heights.Count > lines.Count + (CombatLogHistory.Dropped - laidDropped);
+            bool full = restyled || Mathf.Abs(width - laidWidth) >= 0.5f || CombatLogHistory.Dropped < laidDropped || heights.Count > lines.Count + (CombatLogHistory.Dropped - laidDropped);
             if (!full)
             {
                 int drop = CombatLogHistory.Dropped - laidDropped;

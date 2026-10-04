@@ -79,8 +79,12 @@ namespace Lanternvale.Game
                 if (Session.Mode == SessionMode.Exploration && Session.IsInParty(u) && Session.Leader != u)
                 {
                     StopPartyMove(true);
-                    var why = Session.SetLeader(u);
-                    if (why != null) { Toast(why); return; }
+                    // the final position report may just have started a fight: the leader stays as it is then
+                    if (Session.Battle == null)
+                    {
+                        var why = Session.SetLeader(u);
+                        if (why != null) { Toast(why); return; }
+                    }
                 }
                 SetSelectedInternal(u);
             }

@@ -784,7 +784,9 @@ namespace Lanternvale.Game
     {
         static GUIStyle builtFrom;
         static float builtFactor = -1f;
-        public static GUIStyle Name, NameSmall, Small, SmallRight, SmallCenter, Tiny, TinyCenter, TinyRight, Body, BodyCenter, BodyWrap,
+        /// <summary>Increments whenever the styles are rebuilt (font sizes may have changed): drop cached text measurements.</summary>
+        public static int Version { get; private set; }
+        public static GUIStyle Name, NameSmall, Small, SmallWrap, SmallRight, SmallCenter, Tiny, TinyCenter, TinyRight, Body, BodyCenter, BodyWrap,
             Header, TitleHuge, TitleBig, Subtitle, ToastText, LogWrap, LogLine, Button, Center, Label18, TitleLine;
 
         /// <summary>
@@ -800,6 +802,7 @@ namespace Lanternvale.Game
             if (builtFrom == Ui.Label && Name != null && Mathf.Abs(factor - builtFactor) < 0.001f) return;
             builtFrom = Ui.Label;
             builtFactor = factor;
+            Version++;
             Font body = Ui.BodyFont, bold = Ui.BoldFont, title = Ui.TitleFont;
             GUIStyle Make(Font f, int size, TextAnchor a, bool wrap = false, bool rich = true)
             {
@@ -813,6 +816,7 @@ namespace Lanternvale.Game
             Name = Make(bold, 17, TextAnchor.MiddleLeft);
             NameSmall = Make(bold, 16, TextAnchor.MiddleLeft);
             Small = Make(body, 16, TextAnchor.MiddleLeft);
+            SmallWrap = Make(body, 16, TextAnchor.UpperLeft, true);   // Small that wraps (size with CalcHeight)
             SmallRight = Make(body, 16, TextAnchor.MiddleRight);
             SmallCenter = Make(body, 16, TextAnchor.MiddleCenter);
             // numbers read every turn (health, resource, costs, durations, levels): 15 px, never clipped vertically

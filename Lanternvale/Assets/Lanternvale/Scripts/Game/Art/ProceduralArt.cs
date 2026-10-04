@@ -49,11 +49,54 @@ namespace Lanternvale.Game
             }
         }
 
-        /// <summary>Rounded rectangle for 9-sliced UI panels (use GUIStyle.border = radius+border).</summary>
+        /// <summary>Value-type cache key for RoundedRect (no string formatting / boxing per lookup).</summary>
+        readonly struct RoundedKey : System.IEquatable<RoundedKey>
+        {
+            readonly int size, radius, borderWidth;
+            readonly Color fill, border, shade;
+            readonly bool hasShade;
+
+            public RoundedKey(int size, int radius, Color fill, Color border, int borderWidth, Color? shade)
+            {
+                this.size = size;
+                this.radius = radius;
+                this.borderWidth = borderWidth;
+                this.fill = fill;
+                this.border = border;
+                hasShade = shade.HasValue;
+                this.shade = shade ?? default;
+            }
+
+            public bool Equals(RoundedKey o) =>
+                size == o.size && radius == o.radius && borderWidth == o.borderWidth && hasShade == o.hasShade
+                && fill.Equals(o.fill) && border.Equals(o.border) && shade.Equals(o.shade);
+
+            public override bool Equals(object obj) => obj is RoundedKey o && Equals(o);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int h = size;
+                    h = h * 31 + radius;
+                    h = h * 31 + borderWidth;
+                    h = h * 31 + (hasShade ? 1 : 0);
+                    h = h * 31 + fill.GetHashCode();
+                    h = h * 31 + border.GetHashCode();
+                    h = h * 31 + shade.GetHashCode();
+                    return h;
+                }
+            }
+        }
+
+        static readonly Dictionary<RoundedKey, Texture2D> RoundedCache = new Dictionary<RoundedKey, Texture2D>();
+
+        /// <summary>Rounded rectangle for 9-sliced UI panels (use GUIStyle.border = radius+border).
+        /// Cached by value; lookups do not allocate, but hot draw paths should still keep the result in a field.</summary>
         public static Texture2D RoundedRect(int size, int radius, Color fill, Color border, int borderWidth, Color? shade = null)
         {
-            string key = $"__rr{size}_{radius}_{fill}_{border}_{borderWidth}_{shade}";
-            if (Cache.TryGetValue(key, out var t) && t != null) return t;
+            var key = new RoundedKey(size, radius, fill, border, borderWidth, shade);
+            if (RoundedCache.TryGetValue(key, out var t) && t != null) return t;
             t = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "rounded", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             var px = new Color[size * size];
             for (int y = 0; y < size; y++)
@@ -72,7 +115,7 @@ namespace Lanternvale.Game
                 }
             t.SetPixels(px);
             t.Apply(false, true);
-            Cache[key] = t;
+            RoundedCache[key] = t;
             return t;
         }
 

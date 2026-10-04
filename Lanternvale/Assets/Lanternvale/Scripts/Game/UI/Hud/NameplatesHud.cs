@@ -4,6 +4,7 @@
 //  * exploration: GameFlow.HoveredLabel near HoveredLabelWorld coloured by HoveredKind with an interaction prompt
 //    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover.
 // Anchors: UnitView.NameplatePosition → CameraRig.WorldToGui / Ui.Scale.
+// Combat plates read health/death as presented (HudPresented): a plate stays until the death is shown.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -68,7 +69,7 @@ namespace Lanternvale.Game
             for (int i = 0; i < units.Count; i++)
             {
                 var u = units[i];
-                if (u == null || u.Dead) continue;
+                if (u == null || HudPresented.Dead(u)) continue;
                 bool hostile = u.Team != b.PlayerTeam;
                 bool show = hostile ? !u.IsTotem || u == hovered : (u == hovered && !u.IsTotem);
                 if (!show) continue;
@@ -88,11 +89,12 @@ namespace Lanternvale.Game
             bool elite = hostile && (rank == CreatureRank.Elite || rank == CreatureRank.Rare || rank == CreatureRank.Boss);
             if (elite) { w += 16f; x -= 8f; }
             var bar = new Rect(x, y, w, PlateH);
-            float pct = u.MaxHealth > 0f ? Mathf.Clamp01(u.Health / u.MaxHealth) : 0f;
+            float hp = HudPresented.Health(u);
+            float pct = u.MaxHealth > 0f ? Mathf.Clamp01(hp / u.MaxHealth) : 0f;
             if (framed) HudDraw.Glow(new Rect(bar.x - 14f, bar.y - 10f, bar.width + 28f, bar.height + 20f), new Color(1f, 0.9f, 0.5f, 0.45f));
             HudDraw.Bar(bar, pct, hostile ? Hud.C("#d9483b") : Hud.HealthColor(pct), 0.85f);
             float absorb = Hud.AbsorbOf(u);
-            if (absorb > 0f && u.MaxHealth > 0f) HudDraw.BarSegment(bar, pct, Mathf.Min(1f, (u.Health + absorb) / u.MaxHealth), Hud.Absorb);
+            if (absorb > 0f && u.MaxHealth > 0f) HudDraw.BarSegment(bar, pct, Mathf.Min(1f, (hp + absorb) / u.MaxHealth), Hud.Absorb);
             Color edge = framed ? Ui.Gold : active ? new Color(1f, 0.85f, 0.45f, 0.9f) : elite ? new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.7f) : new Color(0f, 0f, 0f, 0.6f);
             HudDraw.Ring(new Rect(bar.x - 1f, bar.y - 1f, bar.width + 2f, bar.height + 2f), edge, 3);
 
@@ -100,13 +102,13 @@ namespace Lanternvale.Game
             if (hostile)
             {
                 string lv = LevelName(u);
-                var lr = new Rect(bar.x - 30f, bar.y - 4f, 28f, 16f);
+                var lr = new Rect(bar.x - 32f, bar.y - 5f, 30f, 18f);
                 HudDraw.Text(lr, lv, HudStyles.TinyRight, elite ? Ui.Gold : Ui.TextLight);
             }
             // name above when it matters
             if (hovered || framed || elite || active)
             {
-                var nr = new Rect(p.x - 110f, bar.y - 18f, 220f, 16f);
+                var nr = new Rect(p.x - 110f, bar.y - 20f, 220f, 18f);
                 HudDraw.Text(nr, Hud.NameOf(u), HudStyles.TinyCenter, hostile ? Hud.C("#ffb0a2") : Hud.UnitColor(u));
             }
             // telegraphed cast
@@ -118,7 +120,7 @@ namespace Lanternvale.Game
                 float total = Hud.PendingTotal(pend);
                 HudDraw.Bar(cr, Mathf.Max(0.05f, 1f - Mathf.Clamp01(pend.RemainingTime / total)), col, 0.85f);
                 HudDraw.Ring(new Rect(cr.x - 1f, cr.y - 1f, cr.width + 2f, cr.height + 2f), new Color(col.r, col.g, col.b, HudDraw.Pulse(7f, 0.4f, 1f)), 3);
-                HudDraw.Text(new Rect(p.x - 110f, cr.yMax, 220f, 15f), pend.Ability.name, HudStyles.TinyCenter, Color.Lerp(col, Color.white, 0.4f));
+                HudDraw.Text(new Rect(p.x - 110f, cr.yMax, 220f, 18f), pend.Ability.name, HudStyles.TinyCenter, Color.Lerp(col, Color.white, 0.4f));
             }
         }
 
@@ -216,8 +218,11 @@ namespace Lanternvale.Game
             return "Inspect";
         }
 
+        int measuredVersion = -1;
+
         float Measure(string text, GUIStyle st)
         {
+            if (measuredVersion != HudStyles.Version) { measuredVersion = HudStyles.Version; widthCache.Clear(); }
             if (widthCache.TryGetValue(text, out var w)) return w;
             if (widthCache.Count > 256) widthCache.Clear();
             measure.text = text;

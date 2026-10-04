@@ -1034,6 +1034,18 @@ namespace Lanternvale.Game
         string Begin(Unit u, AbilityDef a, ItemInstance item)
         {
             CancelTargeting();
+
+            // pressing a queued "next swing" ability again (Heroic Strike, Cleave, Raptor Strike) un-queues it, keeping
+            // the rage/mana (WoW). The engine emits no event for this, so bump QueueVersion for the hotbar's dirty check.
+            if (item == null && a.nextSwing && u != null && u.QueuedSwing == a.id)
+            {
+                Battle.CancelQueuedSwing(u);
+                QueueVersion++;
+                InvalidateTurnCaches();
+                FloatingText.Spawn(Head(u, V(u)) + new Vector2(0f, 0.3f), a.name + " cancelled", MutedText, 0.75f);
+                return null;
+            }
+
             var chk = Battle.CanUseIgnoringTarget(u, a, item != null);
             if (!chk.Ok)
             {

@@ -215,6 +215,16 @@ namespace Lanternvale.Game
 
         // ---------------------------------------------------------------- widgets
 
+        // Draw-path textures cached in fields so Repaint never touches the ProceduralArt cache.
+        static Texture2D fill32r8, fill32r7, fill48r10, ring48r10, fill64r16, ring64r16;
+        static readonly Color ClearWhite = new Color(1f, 1f, 1f, 0f);
+        static Texture2D Fill32R8 => fill32r8 != null ? fill32r8 : (fill32r8 = ProceduralArt.RoundedRect(32, 8, Color.white, Color.white, 0));
+        static Texture2D Fill32R7 => fill32r7 != null ? fill32r7 : (fill32r7 = ProceduralArt.RoundedRect(32, 7, Color.white, Color.white, 0));
+        static Texture2D Fill48R10 => fill48r10 != null ? fill48r10 : (fill48r10 = ProceduralArt.RoundedRect(48, 10, Color.white, Color.white, 0));
+        static Texture2D Ring48R10 => ring48r10 != null ? ring48r10 : (ring48r10 = ProceduralArt.RoundedRect(48, 10, ClearWhite, Color.white, 3));
+        static Texture2D Fill64R16 => fill64r16 != null ? fill64r16 : (fill64r16 = ProceduralArt.RoundedRect(64, 16, Color.white, Color.white, 0));
+        static Texture2D Ring64R16 => ring64r16 != null ? ring64r16 : (ring64r16 = ProceduralArt.RoundedRect(64, 16, ClearWhite, Color.white, 3));
+
         /// <summary>Draws a panel and blocks world clicks under it.</summary>
         public static void Panel(Rect r, GUIStyle style = null, bool shadow = true)
         {
@@ -251,13 +261,13 @@ namespace Lanternvale.Game
             if (Event.current.type != EventType.Repaint && text == null) return;
             var old = GUI.color;
             GUI.color = back ?? new Color(0.05f, 0.04f, 0.09f, 0.75f);
-            GUI.DrawTexture(r, ProceduralArt.RoundedRect(32, 8, Color.white, Color.white, 0), ScaleMode.StretchToFill);
+            GUI.DrawTexture(r, Fill32R8, ScaleMode.StretchToFill);
             fill = Mathf.Clamp01(fill);
             if (fill > 0.001f)
             {
                 GUI.color = color;
                 var fr = new Rect(r.x + 2, r.y + 2, (r.width - 4) * fill, r.height - 4);
-                GUI.DrawTexture(fr, ProceduralArt.RoundedRect(32, 7, Color.white, Color.white, 0), ScaleMode.StretchToFill);
+                GUI.DrawTexture(fr, Fill32R7, ScaleMode.StretchToFill);
                 GUI.color = new Color(1, 1, 1, 0.22f);
                 GUI.DrawTexture(new Rect(fr.x, fr.y, fr.width, fr.height * 0.45f), ProceduralArt.White);
             }
@@ -319,9 +329,9 @@ namespace Lanternvale.Game
             {
                 var old = GUI.color;
                 GUI.color = Color.Lerp(frameColor, Color.black, 0.55f);
-                GUI.DrawTexture(r, ProceduralArt.RoundedRect(48, 10, Color.white, Color.white, 0));
+                GUI.DrawTexture(r, Fill48R10);
                 GUI.color = frameColor;
-                GUI.DrawTexture(r, ProceduralArt.RoundedRect(48, 10, new Color(1, 1, 1, 0.0f), Color.white, 3));
+                GUI.DrawTexture(r, Ring48R10);
                 var inner = new Rect(r.x + r.width * 0.14f, r.y + r.height * 0.14f, r.width * 0.72f, r.height * 0.72f);
                 var gtex = GlyphTexture(glyph);
                 if (gtex != null)
@@ -337,7 +347,7 @@ namespace Lanternvale.Game
                 if (dim)
                 {
                     GUI.color = new Color(0, 0, 0, 0.45f);
-                    GUI.DrawTexture(r, ProceduralArt.RoundedRect(48, 10, Color.white, Color.white, 0));
+                    GUI.DrawTexture(r, Fill48R10);
                 }
                 if (cooldown01 > 0f)
                 {
@@ -373,18 +383,24 @@ namespace Lanternvale.Game
             if (Event.current.type != EventType.Repaint) return;
             var old = GUI.color;
             GUI.color = new Color(0.1f, 0.08f, 0.16f, 0.9f);
-            GUI.DrawTexture(r, ProceduralArt.RoundedRect(64, 16, Color.white, Color.white, 0));
+            GUI.DrawTexture(r, Fill64R16);
             GUI.color = dim ? new Color(0.5f, 0.5f, 0.55f, 1f) : Color.white;
             var tex = ArtLibrary.Texture(key);
             GUI.DrawTexture(new Rect(r.x + 3, r.y + 3, r.width - 6, r.height - 6), tex, ScaleMode.ScaleAndCrop);
             GUI.color = frame;
-            GUI.DrawTexture(r, ProceduralArt.RoundedRect(64, 16, new Color(1, 1, 1, 0f), Color.white, 3));
+            GUI.DrawTexture(r, Ring64R16);
             GUI.color = old;
         }
 
         // ---------------------------------------------------------------- tooltips
         static string tooltip, pendingTooltip;
         static Rect tooltipAnchor;
+        // measured tooltip cache: re-run text layout only when the text (or the style) changes
+        static readonly GUIContent tooltipContent = new GUIContent();
+        static string measuredTooltip;
+        static GUIStyle measuredStyle;
+        static float measuredHeight;
+        const float TooltipWidth = 360f;
 
         /// <summary>Shows a tooltip when the mouse hovers r (call every frame while drawing r).</summary>
         public static void TooltipFor(Rect r, string text)
@@ -401,15 +417,22 @@ namespace Lanternvale.Game
         public static void EndFrame()
         {
             if (pendingTooltip != null) tooltip = pendingTooltip;
-            if (string.IsNullOrEmpty(tooltip)) return;
-            float w = 360f;
-            float h = Tooltip.CalcHeight(new GUIContent(tooltip), w);
+            if (string.IsNullOrEmpty(tooltip) || Tooltip == null) return;
+            float w = TooltipWidth;
+            if (!ReferenceEquals(measuredStyle, Tooltip) || !string.Equals(measuredTooltip, tooltip, System.StringComparison.Ordinal))
+            {
+                tooltipContent.text = tooltip;
+                measuredHeight = Tooltip.CalcHeight(tooltipContent, w);
+                measuredTooltip = tooltip;
+                measuredStyle = Tooltip;
+            }
+            float h = measuredHeight;
             var mp = Event.current.mousePosition;
             float x = mp.x + 22f, y = mp.y + 18f;
             if (x + w > Width - 8) x = mp.x - w - 16f;
             if (y + h > Height - 8) y = Height - h - 8f;
             var r = new Rect(x, y, w, h);
-            GUI.Box(r, tooltip, Tooltip);
+            GUI.Box(r, tooltipContent, Tooltip);
         }
 
         /// <summary>Hook for UI sounds (set by the audio system).</summary>

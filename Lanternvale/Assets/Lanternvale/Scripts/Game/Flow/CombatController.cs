@@ -101,6 +101,13 @@ namespace Lanternvale.Game
         public bool IsTargeting => TargetingAbility != null || TargetingItem != null;
 
         /// <summary>
+        /// Bumped whenever the controller changes a unit's queued "next swing" ability without a combat event (pressing a
+        /// queued Heroic Strike/Cleave/Raptor Strike again un-queues it). Add it to hotbar dirty checks so the slot's
+        /// Active glow updates at once.
+        /// </summary>
+        public int QueueVersion { get; private set; }
+
+        /// <summary>
         /// Hotbar entry point. Self/no-target abilities and toggles (stances, aspects, auto attack) execute
         /// immediately; abilities needing a unit or point enter targeting mode (left click confirms, right
         /// click/Esc cancels). Returns null or the reason it cannot be used.

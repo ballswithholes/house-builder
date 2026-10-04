@@ -206,7 +206,7 @@ namespace Lanternvale.Game.Panels
             float cdLeft = 0f, cdTotal = 0f;
             try
             {
-                cdLeft = e.Owner.CooldownLeft(a);
+                cdLeft = Hud.CooldownLeft(e.Owner, a);   // Unit.CooldownLeft builds the "grp:" key on every call
                 cdTotal = Mathf.Max(a.cooldown, cdLeft);
             }
             catch (Exception) { }
@@ -243,7 +243,8 @@ namespace Lanternvale.Game.Panels
                 var c = f.Combat;
                 if (c == null) return;
                 if (c.ActiveUnit != u) { PanelKit.Notice("Wait for " + PanelKit.NameOf(u) + "'s turn."); return; }
-                PanelKit.Try(() => c.BeginAbility(id));
+                // a refusal is already shown by the HUD's error lane (Combat.LastError): no second notice
+                c.BeginAbility(id);
                 return;
             }
             if (s.Mode != SessionMode.Exploration) return;

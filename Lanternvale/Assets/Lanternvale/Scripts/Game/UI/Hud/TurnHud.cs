@@ -1,4 +1,4 @@
-// Turn economy (combat): the 6.0 s Time bar in four 1.5 s GCD pips with the hovered ability's cost previewed
+// Turn economy (combat): the 6.0 s Time bar in four 1.5 s GCD pips with the hovered (or being-targeted) ability's cost previewed
 // (overflow → time debt for instants, "pending" for casts), the time debt carried into the next turn, movement
 // left in metres, End Turn (Space), Leave Fight (practice fights), fast-forward, and a status pill: targeting
 // hints, "Grey Wolf is acting…" during AI turns (with "Take control" for auto-played companions), pending casts.
@@ -18,6 +18,7 @@ namespace Lanternvale.Game
         public bool Modal => false;
 
         const float Seg = 1.5f, TurnSeconds = 6f;
+        const float PreviewMaxText = 620f, PreviewPadX = 10f, PreviewPadY = 5f;
 
         readonly HudText.Tenths timeText = new HudText.Tenths("", " s");
         readonly HudText.Tenths debtText = new HudText.Tenths("", " s next turn");
@@ -26,6 +27,7 @@ namespace Lanternvale.Game
         readonly HudText.Tenths overflowText = new HudText.Tenths("+", " s debt");
         readonly GUIContent measure = new GUIContent();
         string measuredText;
+        int measuredStyles = -1;
         Vector2 measuredSize;
 
         Unit statusUnit;
@@ -178,11 +180,24 @@ namespace Lanternvale.Game
             const float barW = 300f, gap = 4f;
             float segW = (barW - gap * 3f) / 4f;
             float bx = gl.xMax + 10f, by = row.y + 9f;
-            HudDraw.Text(new Rect(bx, row.y + 1f, 200f, 12f), "TIME", HudStyles.Tiny, new Color(1f, 1f, 1f, 0.55f), false);
+            HudDraw.Text(new Rect(bx, row.y - 1f, 200f, 16f), "TIME", HudStyles.Tiny, new Color(1f, 1f, 1f, 0.55f), false);
             by = row.y + 15f;
 
+            // cost preview: the hovered bar slot, else the ability/item whose target is being chosen in the world
             var hov = Hud.HoveredSlot;
-            float cost = hov != null && canAct && hov.Usable ? hov.TimeCost : 0f;
+            float cost = 0f, castTime = 0f;
+            bool channeled = false;
+            if (canAct && hov != null && hov.Usable)
+            {
+                cost = hov.TimeCost;
+                castTime = hov.CastTime;
+                channeled = hov.Ability != null && hov.Ability.channeled;
+            }
+            else if (canAct && c.IsTargeting && c.TargetingAbility != null)
+            {
+                TargetingTime(u, c.TargetingAbility, out cost, out castTime);
+                channeled = c.TargetingAbility.channeled;
+            }
             float from = timeLeft - cost;
             float pulse = HudDraw.Pulse(6f, 0.55f, 0.95f);
             for (int i = 0; i < 4; i++)
@@ -203,13 +218,14 @@ namespace Lanternvale.Game
             // preview/debt notes under the bar
             string note = null;
             Color noteCol = Ui.Bad;
-            if (cost > 0.001f && cost > timeLeft + 0.001f && hov != null)
+            if (cost > 0.001f && cost > timeLeft + 0.001f)
             {
-                if (hov.CastTime > 0.01f) { note = "becomes pending — resolves at your next turn"; noteCol = Ui.Gold; }
+                if (castTime > 0.01f && channeled) { note = "channel continues into your next turn"; noteCol = Ui.Gold; }
+                else if (castTime > 0.01f) { note = "becomes pending — resolves at your next turn"; noteCol = Ui.Gold; }
                 else note = overflowText.Get(cost - timeLeft);
             }
             else if (u.TimeDebt > 0.01f) note = debtText.Get(-u.TimeDebt);
-            if (note != null) HudDraw.Text(new Rect(bx + 120f, row.y + 1f, 260f, 12f), note, HudStyles.TinyRight, noteCol, false);
+            if (note != null) HudDraw.Text(new Rect(bx + 120f, row.y - 1f, 260f, 16f), note, HudStyles.TinyRight, noteCol, false);
             if (HudDraw.Hover(barRect))
                 Ui.TooltipFor(barRect, "<b>Time</b>: " + HudText.Secs(timeLeft) + " of 6.0 s left this turn.\n" +
                     Ui.Rich("Abilities cost Time (the GCD is 1.5 s). Instants that overflow become time debt for the next turn; casts that do not fit become pending and resolve at the start of your next turn.", Hud.Muted) +
@@ -221,7 +237,7 @@ namespace Lanternvale.Game
             HudDraw.Glyph(mg, "glyph_boot", Hud.C("#d9c39a"));
             float mbx = mg.xMax + 8f;
             float mw = row.xMax - 12f - mbx;
-            HudDraw.Text(new Rect(mbx, row.y + 1f, 200f, 12f), "MOVE", HudStyles.Tiny, new Color(1f, 1f, 1f, 0.55f), false);
+            HudDraw.Text(new Rect(mbx, row.y - 1f, 200f, 16f), "MOVE", HudStyles.Tiny, new Color(1f, 1f, 1f, 0.55f), false);
             float budget = Mathf.Max(0.01f, u.MoveBudget);
             float left = Mathf.Max(0f, u.MoveLeft);
             var mr = new Rect(mbx, row.y + 17f, mw, 14f);
@@ -234,6 +250,35 @@ namespace Lanternvale.Game
             if (HudDraw.Hover(mr))
                 Ui.TooltipFor(mr, "<b>Movement</b>: " + HudText.Secs(left) + " of " + HudText.Secs(u.MoveBudget) + " m left.\n" +
                                   Ui.Rich("Moving is free of Time. A unit with a pending cast cannot move; roots stop movement and snares shorten it.", Hud.Muted));
+        }
+
+        // Time cost / cast time of the ability (or item's use ability) being targeted: the same numbers the cursor
+        // preview states (AbilityRules with the unit's mods). Cached per unit+ability, refreshed a few times a second
+        // so haste/aura changes during a long targeting session still show.
+        Unit tgtTimeUnit;
+        AbilityDef tgtTimeAbility;
+        float tgtTimeAt = -1f, tgtTimeCost, tgtCastTime;
+
+        void TargetingTime(Unit u, AbilityDef a, out float cost, out float cast)
+        {
+            float now = Time.unscaledTime;
+            if (u != tgtTimeUnit || a != tgtTimeAbility || now - tgtTimeAt > 0.25f || now < tgtTimeAt)
+            {
+                tgtTimeUnit = u;
+                tgtTimeAbility = a;
+                tgtTimeAt = now;
+                tgtTimeCost = tgtCastTime = 0f;
+                try
+                {
+                    AbilityModSet mods;
+                    try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
+                    tgtTimeCost = AbilityRules.TimeCost(u, a, mods);
+                    tgtCastTime = AbilityRules.CastTime(u, a, mods);
+                }
+                catch (Exception) { tgtTimeCost = tgtCastTime = 0f; }
+            }
+            cost = tgtTimeCost;
+            cast = tgtCastTime;
         }
 
         // ================================================================ buttons
@@ -277,22 +322,36 @@ namespace Lanternvale.Game
             if (!c.IsPlayerTurn || GameInput.PointerOverUi) return;
             string text = c.HoverPreview;
             if (string.IsNullOrEmpty(text)) return;
-            var st = HudStyles.Small;
-            if (!ReferenceEquals(text, measuredText))
+            // The preview carries the time/cost/pending part at its end ("… · 3.5 s cast (pending: resolves next
+            // turn, can be interrupted)"), so it wraps instead of being cut off: one line up to PreviewMaxText px,
+            // then as many lines as it needs. Measured once per preview string (and when the styles are rebuilt).
+            var st = HudStyles.SmallWrap ?? HudStyles.Small;
+            if (st == null) return;
+            if (!ReferenceEquals(text, measuredText) || measuredStyles != HudStyles.Version)
             {
-                measuredText = text;
                 measure.text = text;
-                measuredSize = st.CalcSize(measure);
+                bool wrap = st.wordWrap;
+                float tw;
+                st.wordWrap = false;
+                try { tw = st.CalcSize(measure).x + 2f; }   // +2: no wrap from rounding on single-line previews
+                finally { st.wordWrap = wrap; }
+                tw = Mathf.Min(tw, PreviewMaxText);
+                float th = wrap ? st.CalcHeight(measure, tw) : st.CalcSize(measure).y;
+                measuredSize = new Vector2(Mathf.Ceil(tw), Mathf.Ceil(th));
+                measuredText = text;
+                measuredStyles = HudStyles.Version;
             }
             var m = HudDraw.Mouse;
-            float w = Mathf.Min(measuredSize.x + 20f, 560f), h = 26f;
+            float w = measuredSize.x + PreviewPadX * 2f, h = Mathf.Max(26f, measuredSize.y + PreviewPadY * 2f);
             float x = m.x + 22f, y = m.y + 22f;
             if (x + w > Ui.Width - 6f) x = m.x - w - 12f;
             if (y + h > Ui.Height - 6f) y = m.y - h - 12f;
+            x = Mathf.Clamp(x, 6f, Mathf.Max(6f, Ui.Width - 6f - w));
+            y = Mathf.Clamp(y, 6f, Mathf.Max(6f, Ui.Height - 6f - h));
             var r = new Rect(x, y, w, h);
             HudDraw.Fill(r, new Color(0.08f, 0.06f, 0.14f, 0.86f), 8);
             HudDraw.Ring(r, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.5f), 8);
-            HudDraw.Text(new Rect(r.x + 10f, r.y, r.width - 16f, r.height), text, st, Ui.TextLight);
+            HudDraw.Text(new Rect(r.x + PreviewPadX, r.y + (h - measuredSize.y) * 0.5f, measuredSize.x, measuredSize.y), text, st, Ui.TextLight);
         }
     }
 

@@ -78,7 +78,8 @@ namespace Lanternvale.Game
         void Awake()
         {
             Instance = this;
-            useGUILayout = true;
+            // no screen uses GUILayout/GUI.Window: skip the extra Layout event (plain GUI + Rects only)
+            useGUILayout = false;
             DiscoverScreens();
         }
 

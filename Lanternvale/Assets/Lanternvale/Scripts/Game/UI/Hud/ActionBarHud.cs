@@ -1,7 +1,9 @@
 // Action bar (bottom centre) for GameFlow.Selected — in combat the active player unit. Abilities come from
-// Session.GetAbilityBar (the battle in combat, the field context outside). Icons use the school colour, show a
+// Session.GetAbilityBar (the battle in combat, the field context outside; pets, demons and controlled creatures also list
+// their data-"hidden" abilities, see FetchBar). Icons use the school colour, show a
 // clockwise cooldown sweep, dim with the rules' reason when unusable, cost / cast-time text, hotkeys 1–0 - =,
-// pages of 12 (wheel over the bar or the arrows), drag-to-rearrange (saved per character), and an "Active" glow
+// pages of 12 (wheel over the bar or the arrows), drag-to-rearrange across pages (wheel, or rest on a pager arrow while
+// dragging; saved per character), and an "Active" glow
 // for stances/aspects/auto attack/queued swings/targeting/armed openers. A consumables strip (potions, food,
 // bandages from the party bags) sits to its left. Clicks/hotkeys → Combat.BeginAbility/BeginItem in combat,
 // GameFlow.UseAbilityOutOfCombat/UseItemOutOfCombat in the field (ally spells first ask for a party member).
@@ -72,9 +74,18 @@ namespace Lanternvale.Game
         static readonly Dictionary<string, int> savedPages = new Dictionary<string, int>();
 
         // ---- mouse (Draw)
-        int pressId = -1;
+        // A left press remembers the ABSOLUTE slot index (across pages) and its ability id, so a drag survives page turns
+        // (wheel or hovering a pager arrow) and drops onto whatever page is showing.
+        int pressSlot = -1;
+        string pressAbility;
+        int pressItem = -1;
         Vector2 pressPos;
         bool dragging;
+        int pagerHoverDir;          // -1 = up arrow, +1 = down arrow, 0 = none (only while dragging)
+        float pagerHoverSince;
+        const float DragPageDelay = 0.4f;
+        string pagerTip;
+        int pagerTipPage = -1, pagerTipCount;
 
         public ActionBarHud()
         {
@@ -91,8 +102,11 @@ namespace Lanternvale.Game
             try
             {
                 UpdateUnit();
+                if (unit != lastUnit) ClearPress();
                 Refresh(dt);
                 HandleKeys();
+                // a release the bar never saw (another panel used the event, focus lost) must not leave a drag stuck
+                if ((pressSlot >= 0 || pressItem >= 0) && !GameInput.MouseHeld(0) && !GameInput.MouseDown(0) && !GameInput.MouseUp(0)) ClearPress();
             }
             catch (Exception e) { Hud.LogOnce("bar-tick:" + e.GetType().Name, "Action bar: " + e); }
         }
@@ -171,7 +185,7 @@ namespace Lanternvale.Game
         {
             var s = Hud.Session;
             List<AbilityStatus> bar;
-            try { bar = s.GetAbilityBar(unit); }
+            try { bar = FetchBar(s, unit); }
             catch (Exception e) { Hud.LogOnce("bar", "GetAbilityBar failed: " + e.Message); bar = new List<AbilityStatus>(); }
 
             Hud.BarStatuses.Clear();
@@ -200,6 +214,45 @@ namespace Lanternvale.Game
             page = Mathf.Clamp(page, 0, pageCount - 1);
 
             RebuildItems(s);
+
+            // a rebuild mid-press keeps pointing at the pressed ability (its absolute index can shift if the bar changed)
+            if (pressSlot >= 0)
+            {
+                pressSlot = IndexOfAbility(pressAbility);
+                if (pressSlot < 0) dragging = false;
+            }
+        }
+
+        /// <summary>
+        /// The unit's bar statuses. Pets, demons and controlled creatures (no class) only know abilities that the data flags
+        /// "hidden" (Bite, Growl, Firebolt, Torment, Seduction, Spell Lock…); Session.GetAbilityBar drops those, so for such units
+        /// the bar comes straight from their context (the battle in combat, the field outside) with hidden abilities included,
+        /// for units on the player's team. Totems are excluded: their hidden "pulse" abilities are internal, never player-chosen.
+        /// </summary>
+        static List<AbilityStatus> FetchBar(GameSession s, Unit u)
+        {
+            if (u == null || u.Class != null || u.Kind == UnitKind.Totem) return s.GetAbilityBar(u);
+            Battle ctx = s.Battle;
+            if (ctx == null)
+            {
+                if (s.Field == null)
+                {
+                    var plain = s.GetAbilityBar(u);   // lets the session build its field context first
+                    if (s.Field == null) return plain;
+                }
+                ctx = s.Field;
+            }
+            // only units on our side (an inspected enemy keeps the plain bar, so its kit is not spelled out)
+            if (ctx == null || !ctx.Units.Contains(u) || u.Team != ctx.PlayerTeam) return s.GetAbilityBar(u);
+            return ctx.GetAbilityBar(u, true);
+        }
+
+        int IndexOfAbility(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return -1;
+            for (int i = 0; i < slots.Count; i++)
+                if (slots[i].A != null && slots[i].A.id == id) return i;
+            return -1;
         }
 
         Slot MakeSlot(AbilityStatus st)
@@ -449,6 +502,15 @@ namespace Lanternvale.Game
             Ui.Sfx?.Invoke("ui_click");
         }
 
+        void ClearPress()
+        {
+            pressSlot = -1;
+            pressItem = -1;
+            pressAbility = null;
+            dragging = false;
+            pagerHoverDir = 0;
+        }
+
         void SetPage(int p)
         {
             int np = ((p % pageCount) + pageCount) % pageCount;
@@ -507,7 +569,7 @@ namespace Lanternvale.Game
                 var sl = slots[idx];
                 bool glow = sl.St.Active || (targeting != null && targeting == sl.A) || (!string.IsNullOrEmpty(opener) && opener == sl.A.id) ||
                             (pick != null && pick.Ability == sl.A && pick.Item == null);
-                if (!(dragging && pressId == i)) DrawSlot(r, sl, i, glow, alpha);
+                if (!(dragging && pressSlot == idx)) DrawSlot(r, sl, i, glow, alpha);
                 else HudDraw.Fill(r, new Color(0.03f, 0.02f, 0.07f, 0.6f), 8);
                 if (HudDraw.Hover(r)) hovered = i;
             }
@@ -534,9 +596,9 @@ namespace Lanternvale.Game
             HandleMouse(e, start);
 
             // drag ghost
-            if (dragging && pressId >= 0 && pressId < HudLayout.SlotsPerPage && start + pressId < slots.Count && HudDraw.IsRepaint)
+            if (dragging && pressSlot >= 0 && pressSlot < slots.Count && HudDraw.IsRepaint)
             {
-                var sl = slots[start + pressId];
+                var sl = slots[pressSlot];
                 var m = e.mousePosition;
                 HudDraw.Icon(new Rect(m.x - 26f, m.y - 26f, 52f, 52f), sl.A.icon, Hud.SchoolCol(sl.A.school), false, 0.85f);
             }
@@ -566,19 +628,20 @@ namespace Lanternvale.Game
                 HudDraw.Text(new Rect(r.x, r.y + 6f, r.width, r.height - 12f), HudText.Duration(left), Ui.NumberStyle(20), Ui.TextLight);
             }
             if (glow) HudDraw.Ring(r, new Color(1f, 0.88f, 0.5f, HudDraw.Pulse(4.5f, 0.6f, 1f) * alpha), 8, true);
-            // corners: hotkey (top left), cast time (top right), cost (bottom right), soul shards in the bags (bottom left)
+            // corners: hotkey (top left), cast time (top right), cost (bottom right) — or, for Soul Shard spells, the shards
+            // left in the bags (like WoW's reagent count; the mana cost stays in the tooltip and the blue "no mana" tint)
             HudDraw.Text(new Rect(r.x + 4f, r.y + 1f, 24f, 18f), HudText.Hotkey(index), HudStyles.Tiny, new Color(1f, 1f, 1f, 0.85f * alpha));
             if (sl.Cast.Length > 0)
                 HudDraw.Text(new Rect(r.x + 2f, r.y + 1f, r.width - 5f, 18f), sl.Cast, HudStyles.TinyRight, new Color(Ui.Time.r, Ui.Time.g, Ui.Time.b, alpha));
-            if (sl.Cost.Length > 0)
-                HudDraw.Text(new Rect(r.x + 2f, r.yMax - 18f, r.width - 5f, 17f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
             if (sl.Shard)
             {
                 int shards = Hud.SoulShards;
                 var sc = shards > 0 ? ShardColor : Ui.Bad;
                 HudDraw.Glyph(new Rect(r.x + 3f, r.yMax - 17f, 14f, 14f), "glyph_soul_shard", new Color(sc.r, sc.g, sc.b, alpha));
-                HudDraw.Text(new Rect(r.x + 18f, r.yMax - 18f, 22f, 17f), HudText.Int(shards), HudStyles.Tiny, new Color(sc.r, sc.g, sc.b, alpha));
+                HudDraw.Text(new Rect(r.x + 18f, r.yMax - 18f, r.width - 21f, 17f), HudText.Int(shards), HudStyles.Tiny, new Color(sc.r, sc.g, sc.b, alpha));
             }
+            else if (sl.Cost.Length > 0)
+                HudDraw.Text(new Rect(r.x + 2f, r.yMax - 18f, r.width - 5f, 17f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
         }
 
         static readonly Color ShardColor = Ui.Hex("#c9a6ff");
@@ -591,11 +654,37 @@ namespace Lanternvale.Game
             var down = new Rect(pr.x, pr.yMax - 22f, pr.width, 22f);
             var mid = new Rect(pr.x, pr.y + 22f, pr.width, pr.height - 44f);
             bool hu = HudDraw.Hover(up), hd = HudDraw.Hover(down);
+            // while dragging an ability, resting on an arrow for DragPageDelay turns the page (and keeps turning)
+            if (dragging && HudDraw.IsRepaint)
+            {
+                int dir = hu ? -1 : hd ? 1 : 0;
+                float now = Time.unscaledTime;
+                if (dir == 0) pagerHoverDir = 0;
+                else if (dir != pagerHoverDir) { pagerHoverDir = dir; pagerHoverSince = now; }
+                else if (now - pagerHoverSince >= DragPageDelay) { SetPage(page + dir); pagerHoverSince = now; }
+                if (pagerHoverDir != 0)
+                {
+                    var ar = pagerHoverDir < 0 ? up : down;
+                    float k = Mathf.Clamp01((now - pagerHoverSince) / DragPageDelay);
+                    HudDraw.Fill(new Rect(ar.x, ar.y, ar.width * k, ar.height), new Color(1f, 0.86f, 0.45f, 0.35f), 6);
+                }
+            }
+            else if (!dragging) pagerHoverDir = 0;
             HudDraw.Arrow(new Rect(up.x + 7f, up.y + 5f, 16f, 12f), true, hu ? Ui.Gold : Ui.TextLight);
             HudDraw.Arrow(new Rect(down.x + 7f, down.y + 5f, 16f, 12f), false, hd ? Ui.Gold : Ui.TextLight);
             HudDraw.Text(mid, HudText.Int(page + 1), HudStyles.TinyCenter, Ui.Gold);
             Ui.Block(pr);
-            if (HudDraw.Hover(pr)) Ui.TooltipFor(pr, "Page " + (page + 1) + " / " + pageCount + "\n" + Ui.Rich("Mouse wheel over the bar also turns pages.", Hud.Muted));
+            if (HudDraw.Hover(pr) && !dragging)
+            {
+                if (pagerTip == null || pagerTipPage != page || pagerTipCount != pageCount)
+                {
+                    pagerTipPage = page;
+                    pagerTipCount = pageCount;
+                    pagerTip = "Page " + (page + 1) + " / " + pageCount + "\n" +
+                               Ui.Rich("Mouse wheel over the bar also turns pages. While dragging an ability, rest on an arrow to turn the page.", Hud.Muted);
+                }
+                Ui.TooltipFor(pr, pagerTip);
+            }
             if (HudDraw.Click(up)) SetPage(page - 1);
             else if (HudDraw.Click(down)) SetPage(page + 1);
         }
@@ -684,9 +773,14 @@ namespace Lanternvale.Game
                     int it = ItemAt(m);
                     if (e.button == 0)
                     {
-                        pressId = s >= 0 ? s : it >= 0 ? 100 + it : -1;
+                        ClearPress();
+                        if (s >= 0 && start + s < slots.Count && slots[start + s].A != null)
+                        {
+                            pressSlot = start + s;
+                            pressAbility = slots[pressSlot].A.id;
+                        }
+                        else if (s < 0 && it >= 0) pressItem = it;
                         pressPos = m;
-                        dragging = false;
                     }
                     else if (e.button == 1)
                     {
@@ -706,20 +800,18 @@ namespace Lanternvale.Game
                     break;
                 }
                 case EventType.MouseDrag:
-                    if (pressId >= 0 && pressId < 100 && !dragging && (m - pressPos).sqrMagnitude > 64f && start + pressId < slots.Count) dragging = true;
+                    if (pressSlot >= 0 && pressSlot < slots.Count && !dragging && (m - pressPos).sqrMagnitude > 64f) dragging = true;
                     break;
                 case EventType.MouseUp:
                 {
                     if (e.button != 0) break;
-                    int id = pressId;
+                    int src = pressSlot, pressedItem = pressItem;
                     bool wasDragging = dragging;
-                    pressId = -1;
-                    dragging = false;
-                    if (id < 0) break;
-                    if (id >= 100)
+                    ClearPress();
+                    if (pressedItem >= 0)
                     {
                         int it = ItemAt(m);
-                        if (it == id - 100 && it < items.Count)
+                        if (it == pressedItem && it < items.Count)
                         {
                             var item = items[it];
                             Hud.Post(() => ActivateItem(item, false));
@@ -727,14 +819,14 @@ namespace Lanternvale.Game
                         }
                         break;
                     }
+                    if (src < 0 || src >= slots.Count) break;
                     int over = SlotAt(m);
-                    if (wasDragging)
+                    if (over < 0) break;
+                    int dst = start + over;   // the page showing now (the drag may have turned it)
+                    if (wasDragging) Swap(src, dst);
+                    else if (dst == src)
                     {
-                        if (over >= 0 && over != id) Swap(start + id, start + over);
-                    }
-                    else if (over == id && start + id < slots.Count)
-                    {
-                        var sl = slots[start + id];
+                        var sl = slots[src];
                         Hud.Post(() => Activate(sl, false));
                         Ui.Sfx?.Invoke("ui_click");
                     }

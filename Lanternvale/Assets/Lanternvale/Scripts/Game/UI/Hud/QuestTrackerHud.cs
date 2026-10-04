@@ -1,6 +1,7 @@
 // Top-right: the clock (day, time, phase with sun/moon) and the party's gold, and below it (exploration only)
 // a quest tracker listing active quests from the session's journal with their objectives and progress.
 // Quest events flash the updated quest; clicking a quest opens the journal; the header collapses the list.
+// The menu buttons (MenuBarHud) sit between the clock and the tracker (HudLayout.MenuBar).
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -49,6 +50,7 @@ namespace Lanternvale.Game
         float refreshTimer;
         bool layoutDirty = true;
         float layoutWidth = -1f;
+        int layoutStyles = -1;   // HudStyles.Version the heights were measured with
         int moreCount;
         readonly HudText.One moreText = new HudText.One("+", " more in the journal (J)");
         bool collapsed;
@@ -140,6 +142,7 @@ namespace Lanternvale.Game
             }
             layoutDirty = false;
             layoutWidth = width;
+            layoutStyles = HudStyles.Version;
         }
 
         public void Draw()
@@ -161,8 +164,8 @@ namespace Lanternvale.Game
             if (Hud.CombatHud || lines.Count == 0) return;
 
             float inner = W - 28f;
-            if (layoutDirty || Mathf.Abs(layoutWidth - inner) > 0.5f) Layout(inner);
-            float y = HudLayout.Margin + ClockH + 8f;
+            if (layoutDirty || Mathf.Abs(layoutWidth - inner) > 0.5f || layoutStyles != HudStyles.Version) Layout(inner);
+            float y = HudLayout.MenuBar.yMax + 8f;   // below the menu buttons (MenuBarHud)
             float h = 34f;
             if (!collapsed)
             {

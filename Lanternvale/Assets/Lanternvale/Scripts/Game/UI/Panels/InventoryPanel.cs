@@ -171,11 +171,11 @@ namespace Lanternvale.Game.Panels
             else if (PanelKit.IsQuestItem(d)) PanelKit.Notice("A quest item. Keep it safe.", false);
         }
 
-        static void Equip(ItemInstance it, Unit u)
+        static void Equip(ItemInstance it, Unit u, EquipSlot? slot = null)
         {
             var s = PanelKit.Sess;
             if (s == null || u == null) return;
-            if (PanelKit.Try(() => s.Equip(u, it))) Ui.Sfx?.Invoke("ui_open");
+            if (PanelKit.Try(() => s.Equip(u, it, slot))) Ui.Sfx?.Invoke("ui_open");
         }
 
         static void Use(ItemInstance it, Unit u)
@@ -187,7 +187,8 @@ namespace Lanternvale.Game.Panels
             {
                 var c = f.Combat;
                 if (c == null) { PanelKit.Notice("Not now."); return; }
-                PanelKit.Try(() => c.BeginItem(it));
+                // a refusal is already shown by the HUD's error lane (Combat.LastError): no second notice
+                c.BeginItem(it);
                 return;
             }
             var user = u ?? s.Leader;
@@ -209,6 +210,7 @@ namespace Lanternvale.Game.Panels
                     var who = m;
                     items.Add(new ContextMenuScreen.Item { Label = "Equip on " + PanelKit.NameOf(m), Enabled = why == null, Tip = why, Action = () => Equip(it, who) });
                 }
+            if (PanelKit.IsEquipment(d) && u != null && u.Class != null) AddSlotChoices(items, it, u, s);
             if (s.ActiveVendor != null)
             {
                 bool can = d.price > 0 && !PanelKit.IsQuestItem(d);
@@ -230,6 +232,57 @@ namespace Lanternvale.Game.Panels
             });
             items.Add(new ContextMenuScreen.Item { Label = "Cancel", Enabled = true, Action = null });
             ContextMenuScreen.Open(at, it.Name, items);
+        }
+
+        static readonly EquipSlot[] slotScratch = new EquipSlot[2];
+
+        /// <summary>
+        /// Rings, trinkets and one-handers (for members who dual wield) fit two slots; the plain "Equip" fills the empty
+        /// one or else the first. These entries let the player pick which item the new one replaces.
+        /// </summary>
+        static void AddSlotChoices(List<ContextMenuScreen.Item> items, ItemInstance it, Unit u, GameSession s)
+        {
+            EquipSlot[] slots;
+            try { slots = EquipmentRules.SlotsFor(it.Def); }
+            catch (Exception) { return; }
+            if (slots == null || slots.Length < 2) return;
+            int legal = 0;
+            foreach (var sl in slots)
+            {
+                string why = null;
+                try { why = s.CanEquip(u, it, sl); } catch (Exception e) { why = e.Message; }
+                if (why == null && legal < slotScratch.Length) slotScratch[legal++] = sl;
+            }
+            if (legal < 2) return;   // only one place it can go: the plain "Equip on" entry covers it
+            string name = PanelKit.NameOf(u);
+            for (int i = 0; i < legal; i++)
+            {
+                var slot = slotScratch[i];
+                ItemInstance cur = null;
+                try { cur = u.Equipment[slot]; } catch (Exception) { }
+                var who = u;
+                items.Add(new ContextMenuScreen.Item
+                {
+                    Label = "Equip in " + SlotPhrase(slot),
+                    Enabled = true,
+                    Tip = name + ": " + (cur != null ? "replaces " + cur.Name + "." : "the slot is empty."),
+                    Action = () => Equip(it, who, slot),
+                });
+            }
+        }
+
+        static string SlotPhrase(EquipSlot slot)
+        {
+            switch (slot)
+            {
+                case EquipSlot.MainHand: return "main hand";
+                case EquipSlot.OffHand: return "off hand";
+                case EquipSlot.Finger1: return "ring slot 1";
+                case EquipSlot.Finger2: return "ring slot 2";
+                case EquipSlot.Trinket1: return "trinket slot 1";
+                case EquipSlot.Trinket2: return "trinket slot 2";
+                default: return UiText.Spaced(slot.ToString()).ToLowerInvariant();
+            }
         }
     }
 }

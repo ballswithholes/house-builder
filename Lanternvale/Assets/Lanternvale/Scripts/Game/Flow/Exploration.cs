@@ -555,7 +555,15 @@ namespace Lanternvale.Game
             lastReportPos = lv.FeetPosition;
             if (tr != null && tr.Stop)
             {
-                StopPartyMove(false);
+                if (battlePresenting || s.Battle != null)
+                {
+                    // the trigger started a fight: OnCombatStarted already stopped every party view or sent it
+                    // walking to its battle position. Stopping views here would strand them away from u.Position.
+                    partyMoving = false;
+                    groundHold = false;
+                    footTimer = 0f;
+                }
+                else StopPartyMove(false);
                 ResetPending();
                 return false;
             }
@@ -584,12 +592,14 @@ namespace Lanternvale.Game
             groundHold = false;
             footTimer = 0f;
             if (s == null) return;
-            foreach (var kv in views)
-            {
-                var v = kv.Value;
-                if (v == null || !v.IsMoving) continue;
-                if (s.IsInParty(kv.Key.Owner ?? kv.Key)) v.StopMoving();
-            }
+            // once a battle is presented the CombatController owns the views (battle walks, lunges)
+            if (Combat == null)
+                foreach (var kv in views)
+                {
+                    var v = kv.Value;
+                    if (v == null || !v.IsMoving) continue;
+                    if (s.IsInParty(kv.Key.Owner ?? kv.Key)) v.StopMoving();
+                }
             if (!was) return;
             if (report && s.Mode == SessionMode.Exploration) ReportPositions();
             else SyncUnitPositionsFromViews();

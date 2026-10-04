@@ -24,7 +24,11 @@ namespace Lanternvale.Game.Panels
 
         Unit member;
         readonly List<TalentTreeDef> trees = new List<TalentTreeDef>();
+        readonly List<Color> treeColors = new List<Color>();
+        readonly List<string> treeTips = new List<string>();
         ClassDef treesFor;
+        string plateText = "";
+        int plateFor = -1;
         readonly Dictionary<string, string> tips = new Dictionary<string, string>();
         readonly Dictionary<string, int> tipStamp = new Dictionary<string, int>();
         readonly Dictionary<string, Rect> cellRects = new Dictionary<string, Rect>();
@@ -38,12 +42,19 @@ namespace Lanternvale.Game.Panels
             if (cls == treesFor) return;
             treesFor = cls;
             trees.Clear();
+            treeColors.Clear();
+            treeTips.Clear();
             tips.Clear();
             tipStamp.Clear();
             var db = PanelKit.Db;
             if (cls == null || db == null || cls.talentTrees == null) return;
             foreach (var id in cls.talentTrees)
-                if (!string.IsNullOrEmpty(id) && db.TalentTrees.TryGetValue(id, out var t) && t != null) trees.Add(t);
+                if (!string.IsNullOrEmpty(id) && db.TalentTrees.TryGetValue(id, out var t) && t != null)
+                {
+                    trees.Add(t);
+                    treeColors.Add(TreeColor(t));
+                    treeTips.Add(string.IsNullOrEmpty(t.description) ? null : "<b>" + t.name + "</b>\n" + t.description);
+                }
         }
 
         static Color TreeColor(TalentTreeDef t)
@@ -87,7 +98,7 @@ namespace Lanternvale.Game.Panels
             float tw = (area.width - gap * (trees.Count - 1)) / trees.Count;
             cellRects.Clear();
             for (int i = 0; i < trees.Count; i++)
-                DrawTree(new Rect(area.x + i * (tw + gap), area.y, tw, area.height), trees[i], u, avail, s);
+                DrawTree(new Rect(area.x + i * (tw + gap), area.y, tw, area.height), trees[i], treeColors[i], treeTips[i], u, avail, s);
             DrawFooter(new Rect(c.x, c.yMax - footerH + 10f, c.width, footerH - 10f), u, avail, s);
         }
 
@@ -104,12 +115,16 @@ namespace Lanternvale.Game.Panels
             PanelKit.Label(new Rect(r.x, r.y, r.width - 210f, r.height), headerText, PanelKit.Text);
             var plate = new Rect(r.xMax - 200f, r.y + 6f, 200f, 40f);
             PanelKit.Rounded(plate, avail > 0 ? new Color(1f, 0.82f, 0.4f, 0.55f) : new Color(0.17f, 0.13f, 0.22f, 0.1f));
-            PanelKit.Label(plate, avail > 0 ? $"<b>{avail}</b> point{(avail == 1 ? "" : "s")} to spend" : "No points to spend", PanelKit.TextCenter);
+            if (avail != plateFor)
+            {
+                plateFor = avail;
+                plateText = avail > 0 ? $"<b>{avail}</b> point{(avail == 1 ? "" : "s")} to spend" : "No points to spend";
+            }
+            PanelKit.Label(plate, plateText, PanelKit.TextCenter);
         }
 
-        void DrawTree(Rect r, TalentTreeDef tree, Unit u, int avail, GameSession s)
+        void DrawTree(Rect r, TalentTreeDef tree, Color col, string treeTip, Unit u, int avail, GameSession s)
         {
-            var col = TreeColor(tree);
             int spent = Progression.PointsInTree(u, tree.id);
             // background
             PanelKit.Rounded(r, new Color(col.r * 0.5f, col.g * 0.5f, col.b * 0.5f, 0.16f));
@@ -122,7 +137,8 @@ namespace Lanternvale.Game.Panels
             Ui.Icon(new Rect(r.x + 12f, r.y + 10f, 40f, 40f), tree.icon, col);
             PanelKit.Label(new Rect(r.x + 62f, r.y + 8f, r.width - 130f, 30f), tree.name, PanelKit.Heading);
             PanelKit.Label(new Rect(r.xMax - 70f, r.y + 10f, 58f, 30f), PanelKit.CountText(spent), Ui.NumberStyle(24, TextAnchor.MiddleRight), Ui.Ink);
-            if (!string.IsNullOrEmpty(tree.description)) Ui.TooltipFor(new Rect(r.x, r.y, r.width, 56f), "<b>" + tree.name + "</b>\n" + tree.description);
+            var headR = new Rect(r.x, r.y, r.width, 56f);
+            if (treeTip != null && PanelKit.Hover(headR)) Ui.TooltipFor(headR, treeTip);
 
             // grid
             var grid = new Rect(r.x + 8f, r.y + 62f, r.width - 16f, r.height - 70f);
@@ -226,7 +242,7 @@ namespace Lanternvale.Game.Panels
             var bc = maxed ? Ui.Gold : rank > 0 ? Ui.Good : canLearn ? Ui.TextLight : Ui.TextMuted;
             PanelKit.Label(badge, RankText(rank, max), Ui.NumberStyle(13), bc);
             var hitR = new Rect(cr.x - 6f, cr.y - 6f, cr.width + 12f, cr.height + 18f);
-            Ui.TooltipFor(hitR, TipOf(t, u, rank, avail, treeSpent));
+            if (PanelKit.Hover(hitR)) Ui.TooltipFor(hitR, TipOf(t, u, rank, avail, treeSpent));
             GameInput.BlockRectGui(hitR);
             if (PanelKit.Click(hitR, out int button) && button == 0 && Time.frameCount > lockFrame)
             {
