@@ -1,0 +1,39 @@
+{
+  "_note": "Abilities shared by every unit. Basic attacks are referenced by ClassDef.basicAttack.",
+  "abilities": [
+    {
+      "id": "attack", "name": "Attack", "icon": "sword", "school": "Physical",
+      "description": "Start attacking the target with your melee weapon(s). Auto attacks happen at the end of your turn while the target is in reach.",
+      "time": "OffGcd", "target": "Enemy", "melee": true, "autoAttack": true, "breaksStealth": true,
+      "effects": [ { "type": "WeaponDamage", "weaponPct": 100 } ],
+      "aiHint": "Damage", "aiPriority": 1
+    },
+    {
+      "id": "auto_shot", "name": "Auto Shot", "icon": "arrow", "school": "Physical",
+      "description": "Start shooting the target with your bow, gun or crossbow. Shots happen at the end of your turn while the target is in range and outside the 8 yard dead zone.",
+      "time": "OffGcd", "target": "Enemy", "range": 35, "minRange": 8, "autoAttack": true,
+      "requires": { "rangedWeapon": true },
+      "effects": [ { "type": "WeaponDamage", "weaponPct": 100, "ranged": true } ],
+      "aiHint": "Damage", "aiPriority": 1
+    },
+    {
+      "id": "shoot", "name": "Shoot", "icon": "staff", "school": "Arcane",
+      "description": "Shoot your wand at the target. Takes as long as the wand's speed.",
+      "target": "Enemy", "range": 30, "special": "Shoot",
+      "requires": { "rangedWeapon": true, "mainHand": [] },
+      "effects": [ { "type": "WeaponDamage", "weaponPct": 100, "ranged": true } ],
+      "aiHint": "Damage", "aiPriority": 0
+    },
+    {
+      "id": "help_up", "name": "Help", "icon": "hand", "school": "Physical",
+      "description": "Help a downed ally back to their feet with 1 health.",
+      "target": "AllyOther", "melee": true, "gcdOverride": 1.5,
+      "effects": [ { "type": "Special", "special": "HelpUp" } ],
+      "aiHint": "Heal", "aiPriority": 9
+    }
+  ],
+  "specials": [
+    { "id": "Shoot", "usedBy": "shoot", "behaviour": "Wand shot: time cost = equipped ranged weapon speed (instead of GCD); one ranged weapon hit using the wand's damage and damageSchool; no AP bonus; can crit as a spell (x1.5)." },
+    { "id": "HelpUp", "usedBy": "help_up", "behaviour": "Target must be a Downed ally within melee reach. Revives them with 1 health; they act normally from their next turn." }
+  ]
+}

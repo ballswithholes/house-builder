@@ -1,0 +1,5 @@
+<!-- The data mapper and save system use reflection over these assemblies' fields. -->
+<linker>
+  <assembly fullname="Lanternvale.Core" preserve="all" />
+  <assembly fullname="Lanternvale.Game" preserve="all" />
+</linker>

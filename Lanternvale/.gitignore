@@ -1,0 +1,21 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+*.csproj
+*.sln
+*.pidb
+*.userprefs
+.vs/
+.idea/
+# Verification harness
+!/Tools/harness/**/*.csproj
+/Tools/.cache/
+/Tools/harness/**/bin/
+/Tools/harness/**/obj/
+/Tools/artgen/__pycache__/
