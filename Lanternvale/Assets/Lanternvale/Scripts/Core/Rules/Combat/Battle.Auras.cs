@@ -86,7 +86,9 @@ namespace Lanternvale.Rules
                     Type = existing.Stacks != before ? CombatEventType.AuraStack : CombatEventType.AuraRefreshed, Source = caster, Target = target,
                     AuraId = def.id, Name = def.name, Count = existing.Stacks, Seconds = duration,
                 });
-                Specials.OnAuraAppliedByMe(this, caster, existing);
+                Specials.OnAuraRefreshed(this, existing);
+                if (target.Auras.Contains(existing)) Specials.OnAuraAppliedByMe(this, caster, existing);
+                if (target.Auras.Contains(existing)) Specials.OnAnyAuraApplied(this, existing);
                 return existing;
             }
             if (existing != null && existing.IsAreaChild && info.AreaSource != null)
@@ -154,6 +156,7 @@ namespace Lanternvale.Rules
             if (def.onApply.Count > 0) ExecuteAuraEffects(inst, def.onApply);
             Specials.OnAuraApplied(this, inst);
             if (target.Auras.Contains(inst)) Specials.OnAuraAppliedByMe(this, caster, inst);
+            if (target.Auras.Contains(inst)) Specials.OnAnyAuraApplied(this, inst);
             if (def.radius > 0) RefreshAreaAuras();
             return inst;
         }
@@ -214,6 +217,7 @@ namespace Lanternvale.Rules
             if (reason == AuraRemoveReason.Expired && a.Def.onExpire.Count > 0 && reason != AuraRemoveReason.Death) ExecuteAuraEffects(a, a.Def.onExpire);
             if (a.Def.onRemove.Count > 0 && reason != AuraRemoveReason.Death) ExecuteAuraEffects(a, a.Def.onRemove);
             Specials.OnAuraRemoved(this, a, reason);
+            Specials.OnAnyAuraRemoved(this, a, reason);
             if (a.Def.radius > 0) RemoveAreaChildren(a);
         }
 
@@ -392,7 +396,8 @@ namespace Lanternvale.Rules
             if (ability == null || ability.autoAttack || ability.passive) return;
             foreach (var a in new List<AuraInstance>(u.Auras))
             {
-                if (a.Charges <= 0 || a.Def.procs.Count > 0 || a.Def.absorb != null) continue;
+                // auras with a special manage their own charges ("next cast" buffs, Fear Ward, Sweeping Strikes)
+                if (a.Charges <= 0 || a.Def.procs.Count > 0 || a.Def.absorb != null || !string.IsNullOrEmpty(a.Def.special)) continue;
                 if (a.SourceAbility == ability && cast.Caster == a.Caster) continue; // the aura was just applied by this ability
                 if (a.Def.mods.Count > 0)
                 {

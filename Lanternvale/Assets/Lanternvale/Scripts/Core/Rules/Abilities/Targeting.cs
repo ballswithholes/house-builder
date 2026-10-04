@@ -85,6 +85,8 @@ namespace Lanternvale.Rules
                 if (!Affects(a.area.affects, caster, u)) continue;
                 if (u.IsHostileTo(caster) && u.HasStateAura(UnitState.Invisible)) continue;
                 if (u == caster && a.area.affects == AreaAffects.Enemies) continue;
+                if (u.IsHostileTo(caster) && a.requires != null && a.requires.targetCreatureTypes.Length > 0 &&
+                    Array.IndexOf(a.requires.targetCreatureTypes, u.Creature != null && u.Class == null ? u.Creature.type : CreatureType.Humanoid) < 0) continue;
                 if (!shape.Contains(u.Position, u.Radius)) continue;
                 list.Add(u);
             }

@@ -15,7 +15,7 @@ using Lanternvale.Util;
 
 namespace Lanternvale.Rules
 {
-    public enum BattleOutcome { None, Victory, Defeat }
+    public enum BattleOutcome { None, Victory, Defeat, Fled }
 
     /// <summary>Per-unit damage/healing/threat counters (combat meters; used by sims and the end-of-battle summary).</summary>
     public sealed class UnitMeters
@@ -207,10 +207,13 @@ namespace Lanternvale.Rules
         {
             if (observer == null || target == null) return true;
             if (observer.Team == target.Team) return true;
-            if (target.HasStateAura(UnitState.Invisible)) return false;
-            if (!target.HasStateAura(UnitState.Stealth)) return true;
-            float detect = RulesConstants.StealthDetectMetres + MathUtil.Yd(Math.Max(0f, observer.Stats.StealthDetection));
-            return observer.DistanceTo(target) <= detect + target.Radius;
+            bool invis = target.HasStateAura(UnitState.Invisible), stealth = target.HasStateAura(UnitState.Stealth);
+            if (!invis && !stealth) return true;
+            if (Specials.RevealedTo(target, observer)) return true;
+            if (invis) return false;
+            if (observer.FacingLock.HasValue) return false; // distracted
+            float detect = (RulesConstants.StealthDetectMetres + MathUtil.Yd(Math.Max(0f, observer.Stats.StealthDetection))) * Specials.DetectionRadiusMult(target);
+            return detect > 0 && observer.DistanceTo(target) <= detect + target.Radius;
         }
 
         /// <summary>True when the unit is controlled by AI this turn (enemies, auto-played party members, pets of auto-played owners).</summary>

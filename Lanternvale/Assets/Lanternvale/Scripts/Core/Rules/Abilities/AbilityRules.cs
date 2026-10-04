@@ -183,7 +183,7 @@ namespace Lanternvale.Rules
 
         /// <summary>The ability starts melee auto attack when used on an enemy (WoW behaviour for melee abilities).</summary>
         public static bool StartsMeleeAutoAttack(AbilityDef a) => !a.autoAttack && a.target == TargetType.Enemy && (a.melee || (HasWeaponEffect(a) && !IsRangedWeaponAbility(a)));
-        public static bool StartsAutoShot(AbilityDef a) => !a.autoAttack && a.target == TargetType.Enemy && IsRangedWeaponAbility(a) && a.special != "Shoot";
+        public static bool StartsAutoShot(AbilityDef a) => !a.autoAttack && a.target == TargetType.Enemy && IsRangedWeaponAbility(a) && a.special != "Shoot" && a.special != "PhysicalRangedShot";
 
         public static bool IsHarmful(AbilityDef a)
         {

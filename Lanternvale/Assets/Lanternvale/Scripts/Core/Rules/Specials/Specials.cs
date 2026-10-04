@@ -12,6 +12,15 @@ namespace Lanternvale.Rules
     /// referenced from an ability (`special`), an effect (`type: Special`), an aura (`special`), a talent or an item
     /// passive (`type: Special`). Passive hooks receive the talent rank (1 for items/auras/abilities).
     /// </summary>
+    /// <summary>What a content special (dialogue/encounter outcome) may do to the game state; implemented by the session.</summary>
+    public interface IContentContext
+    {
+        bool GetFlag(string flag);
+        void SetFlag(string flag, bool value);
+        /// <summary>Raises a named session event (UI/presentation reacts, e.g. relight every lantern on the map).</summary>
+        void RaiseEvent(string name, string arg = "");
+    }
+
     public abstract class SpecialHandler
     {
         public readonly string Name;
@@ -49,6 +58,8 @@ namespace Lanternvale.Rules
 
         // ---- aura-level (AuraDef.special, called for the aura instance)
         public virtual void OnAuraApplied(Battle b, AuraInstance a) { }
+        /// <summary>An existing instance was refreshed/stacked by a new application (mod values and duration were reset).</summary>
+        public virtual void OnAuraRefreshed(Battle b, AuraInstance a) { }
         public virtual void OnAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason reason) { }
         /// <summary>Periodic tick; return true to replace the default tickEffects.</summary>
         public virtual bool OnAuraTick(Battle b, AuraInstance a, AbilityCast c) => false;
@@ -87,6 +98,10 @@ namespace Lanternvale.Rules
         public virtual bool PreventDeath(Battle b, Unit u, Unit killer, int rank) => false;
         public virtual float ModifyOutgoingDamage(Battle b, Unit u, int rank, AbilityCast c, EffectDef e, Unit t, float v) => v;
         public virtual float ModifyCritChance(Battle b, Unit u, int rank, AbilityCast c, Unit t, School s, float chance) => chance;
+        /// <summary>Passive of the target: modify the crit chance of an attack against <paramref name="target"/>.</summary>
+        public virtual float ModifyIncomingCritChance(Unit target, int rank, AbilityCast c, float chance) => chance;
+        /// <summary>Extra percentage points for a proc of an aura on the unit (Improved Poisons).</summary>
+        public virtual float ProcChanceBonus(Unit u, int rank, AuraInstance aura, ProcDef p) => 0f;
         /// <summary>Extra crit damage bonus (fraction, 0.01 = +1% of the base bonus... added to the bonus) against the target.</summary>
         public virtual float CritBonusAdd(Unit u, int rank, Unit t) => 0f;
         /// <summary>Resist an incoming hostile aura: return "Immune"/"Resist" or null. <paramref name="holder"/> is the aura granting this (null for talents).</summary>
@@ -120,11 +135,18 @@ namespace Lanternvale.Rules
         public virtual float DetectionRadiusMult(Unit stealthed, int rank) => 1f;
         /// <summary>Aura-level: the bearer took damage (after it was applied).</summary>
         public virtual void OnBearerDamaged(Battle b, AuraInstance a, Unit src, float amount, School s, DamageInfo info) { }
+        /// <summary>Aura-level: the bearer cannot flee (AI cowards stay, no voluntary retreat).</summary>
+        public virtual bool PreventsFleeing(AuraInstance a) => false;
+
+        // ---- content specials (dialogue/encounter outcomes run by the session layer)
+        /// <summary>Runs a content special (dialogue outcome etc.). Return false when the handler is not a content special.</summary>
+        public virtual bool RunContent(IContentContext ctx) => false;
 
         // ---- global hooks (called on every registered handler)
         public virtual void OnAnyTurnStart(Battle b, Unit u) { }
         public virtual void OnAnyUnitMoved(Battle b, Unit u) { }
         public virtual void OnAnyAuraApplied(Battle b, AuraInstance a) { }
+        public virtual void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason reason) { }
         public virtual void OnAnyUnitFell(Battle b, Unit u) { }
         public virtual void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { }
         public virtual void OnBattleFinished(Battle b) { }
@@ -162,7 +184,27 @@ namespace Lanternvale.Rules
 
         // ============================================================ passive sources
 
-        struct PassiveRef { public SpecialHandler H; public int Rank; }
+        /// <summary>
+        /// A passive source of a handler. Reading <see cref="H"/> publishes the source as
+        /// <see cref="CurrentPassive"/>/<see cref="CurrentSource"/> so a handler shared by several talents
+        /// (e.g. Monster/Humanoid Slaying) knows which entry it is serving. Read them first thing in the hook.
+        /// </summary>
+        struct PassiveRef
+        {
+            public SpecialHandler Handler;
+            public int Rank;
+            public PassiveDef Def;
+            public string Source;
+            public SpecialHandler H { get { currentPassive = Def; currentSource = Source; return Handler; } }
+        }
+
+        static PassiveDef currentPassive;
+        static string currentSource;
+
+        /// <summary>The talent/item passive entry whose hook is running (null for aura/ability sources).</summary>
+        public static PassiveDef CurrentPassive => currentPassive;
+        /// <summary>Id of the talent, item or aura whose passive hook is running.</summary>
+        public static string CurrentSource => currentSource;
 
         /// <summary>Handlers acting passively on a unit: talent and item Special passives, auras and passive abilities with a special.</summary>
         static List<PassiveRef> PassivesOf(Unit u)
@@ -180,7 +222,7 @@ namespace Lanternvale.Rules
                         if (p.type == "Special" && !string.Equals(p.target, "Pet", StringComparison.OrdinalIgnoreCase))
                         {
                             var h = Get(p.special);
-                            if (h != null) list.Add(new PassiveRef { H = h, Rank = kv.Value });
+                            if (h != null) list.Add(new PassiveRef { Handler = h, Rank = kv.Value, Def = p, Source = t.id });
                         }
                 }
             if (db != null && u.Owner != null && u.Owner.Talents.Count > 0)
@@ -193,7 +235,7 @@ namespace Lanternvale.Rules
                         if (p.type == "Special" && string.Equals(p.target, "Pet", StringComparison.OrdinalIgnoreCase))
                         {
                             var h = Get(p.special);
-                            if (h != null) list.Add(new PassiveRef { H = h, Rank = kv.Value });
+                            if (h != null) list.Add(new PassiveRef { Handler = h, Rank = kv.Value, Def = p, Source = t.id });
                         }
                 }
             foreach (var kv in u.Equipment.Equipped)
@@ -201,13 +243,13 @@ namespace Lanternvale.Rules
                     if (p.type == "Special")
                     {
                         var h = Get(p.special);
-                        if (h != null) list.Add(new PassiveRef { H = h, Rank = 1 });
+                        if (h != null) list.Add(new PassiveRef { Handler = h, Rank = 1, Def = p, Source = kv.Value.Def.id });
                     }
             foreach (var a in u.Auras)
             {
                 if (string.IsNullOrEmpty(a.Def.special)) continue;
                 var h = Get(a.Def.special);
-                if (h != null) list.Add(new PassiveRef { H = h, Rank = Math.Max(1, a.Stacks) });
+                if (h != null) list.Add(new PassiveRef { Handler = h, Rank = Math.Max(1, a.Stacks), Source = a.Def.id });
             }
             return list;
         }
@@ -226,7 +268,7 @@ namespace Lanternvale.Rules
                     if (p.type == "Special" && !string.Equals(p.target, "Pet", StringComparison.OrdinalIgnoreCase))
                     {
                         var h = Get(p.special);
-                        if (h != null) list.Add(new PassiveRef { H = h, Rank = kv.Value });
+                        if (h != null) list.Add(new PassiveRef { Handler = h, Rank = kv.Value, Def = p, Source = t.id });
                     }
             }
             foreach (var kv in u.Equipment.Equipped)
@@ -234,7 +276,7 @@ namespace Lanternvale.Rules
                     if (p.type == "Special")
                     {
                         var h = Get(p.special);
-                        if (h != null) list.Add(new PassiveRef { H = h, Rank = 1 });
+                        if (h != null) list.Add(new PassiveRef { Handler = h, Rank = 1, Def = p, Source = kv.Value.Def.id });
                     }
             return list;
         }
@@ -283,7 +325,22 @@ namespace Lanternvale.Rules
             return m;
         }
 
-        internal static string CheckUse(Battle b, Unit u, AbilityDef a, Unit target) => Get(a.special)?.CheckUse(b, u, a, target);
+        /// <summary>Usability rule of the ability's special and of the specials of its effects (e.g. stance swap, Mind Control).</summary>
+        internal static string CheckUse(Battle b, Unit u, AbilityDef a, Unit target)
+        {
+            var h = Get(a.special);
+            var why = h?.CheckUse(b, u, a, target);
+            if (why != null) return why;
+            foreach (var e in a.effects)
+            {
+                if (string.IsNullOrEmpty(e.special)) continue;
+                var eh = Get(e.special);
+                if (eh == null || eh == h) continue;
+                why = eh.CheckUse(b, u, a, target);
+                if (why != null) return why;
+            }
+            return null;
+        }
 
         internal static UseCheck? ValidateTarget(Battle b, Unit u, AbilityDef a, Unit target, Vec2? point) => Get(a.special)?.ValidateTarget(b, u, a, target, point);
 
@@ -302,7 +359,8 @@ namespace Lanternvale.Rules
 
         internal static float ModifyDamage(AbilityCast c, EffectDef e, Unit t, float v)
         {
-            var h = c.Ability != null && c.SourceAura == null ? Get(c.Ability.special) : null;
+            // the ability's special also sees the periodic ticks of auras it applied (tick casts carry Ability = source ability)
+            var h = c.Ability != null && (c.SourceAura == null || c.SourceAura.SourceAbility == c.Ability) && c.SourceProc == null ? Get(c.Ability.special) : null;
             if (h != null) v = h.ModifyDamage(c, e, t, v);
             var eh = EffectHandler(e);
             if (eh != null && eh != h) v = eh.ModifyDamage(c, e, t, v);
@@ -314,8 +372,10 @@ namespace Lanternvale.Rules
 
         internal static float ModifyHealing(AbilityCast c, EffectDef e, Unit t, float v)
         {
-            var h = c.Ability != null && c.SourceAura == null ? Get(c.Ability.special) : null;
+            var h = c.Ability != null && (c.SourceAura == null || c.SourceAura.SourceAbility == c.Ability) && c.SourceProc == null ? Get(c.Ability.special) : null;
             if (h != null) v = h.ModifyHealing(c, e, t, v);
+            var ah = c.SourceAura != null ? Get(c.SourceAura.Def.special) : null;
+            if (ah != null && ah != h && ah != EffectHandler(e)) v = ah.ModifyHealing(c, e, t, v);
             var eh = EffectHandler(e);
             if (eh != null && eh != h) v = eh.ModifyHealing(c, e, t, v);
             return v;
@@ -349,9 +409,25 @@ namespace Lanternvale.Rules
 
         internal static void AfterAuraEffect(AbilityCast c, EffectDef e, Unit t, AuraInstance inst) => EffectHandler(e)?.AfterAuraEffect(c, e, t, inst);
 
-        internal static bool Unavoidable(AbilityCast c, EffectDef e) => EffectHandler(e)?.Unavoidable(c, e) ?? false;
+        internal static bool Unavoidable(AbilityCast c, EffectDef e) =>
+            (EffectHandler(e)?.Unavoidable(c, e) ?? false) || (c.Ability != null && c.SourceAura == null && (Get(c.Ability.special)?.Unavoidable(c, e) ?? false));
 
         internal static void OnAuraApplied(Battle b, AuraInstance a) => Get(a.Def.special)?.OnAuraApplied(b, a);
+        internal static void OnAuraRefreshed(Battle b, AuraInstance a) => Get(a.Def.special)?.OnAuraRefreshed(b, a);
+
+        internal static float ProcChanceBonus(Unit u, AuraInstance aura, ProcDef p)
+        {
+            float v = 0f;
+            foreach (var r in PassivesOf(u)) v += r.H.ProcChanceBonus(u, r.Rank, aura, p);
+            return v;
+        }
+
+        /// <summary>
+        /// Raised by specials whose effect lives outside combat rules (Pick Lock completed, Mind Soothe on an encounter
+        /// creature). Arguments: battle/field, acting unit, special name, target unit (may be null).
+        /// </summary>
+        public static event Action<Battle, Unit, string, Unit> FieldEvent;
+        internal static void RaiseFieldEvent(Battle b, Unit u, string name, Unit target) => FieldEvent?.Invoke(b, u, name, target);
         internal static void OnAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) => Get(a.Def.special)?.OnAuraRemoved(b, a, r);
         internal static bool OnAuraTick(Battle b, AuraInstance a, AbilityCast c) => Get(a.Def.special)?.OnAuraTick(b, a, c) ?? false;
 
@@ -396,6 +472,7 @@ namespace Lanternvale.Rules
         {
             if (t != null) foreach (var r in SpecialAuras(t)) chance += r.H.IncomingCritBonus(r.A, c, s);
             foreach (var p in PassivesOf(c.Caster)) chance = p.H.ModifyCritChance(c.Battle, c.Caster, p.Rank, c, t, s, chance);
+            if (t != null) foreach (var p in PassivesOf(t)) chance = p.H.ModifyIncomingCritChance(t, p.Rank, c, chance);
             return chance;
         }
 
@@ -645,6 +722,24 @@ namespace Lanternvale.Rules
         internal static void OnAnyTurnStart(Battle b, Unit u) { foreach (var h in All()) h.OnAnyTurnStart(b, u); }
         internal static void OnAnyUnitMoved(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitMoved(b, u); }
         internal static void OnAnyAuraApplied(Battle b, AuraInstance a) { foreach (var h in All()) h.OnAnyAuraApplied(b, a); }
+        internal static void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) { foreach (var h in All()) h.OnAnyAuraRemoved(b, a, r); }
+
+        /// <summary>True when an aura on the unit forbids fleeing (Judgement of Justice).</summary>
+        public static bool CannotFlee(Unit u)
+        {
+            foreach (var r in SpecialAuras(u)) if (r.H.PreventsFleeing(r.A)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Runs a content special (dialogue/encounter outcome such as RekindleLanterns) against the session's context.
+        /// Returns false when no content handler with that name exists.
+        /// </summary>
+        public static bool RunContentSpecial(string name, IContentContext ctx)
+        {
+            var h = Get(name);
+            return h != null && ctx != null && h.RunContent(ctx);
+        }
         internal static void OnAnyUnitFell(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitFell(b, u); }
         internal static void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { foreach (var h in All()) h.OnAnyAbilityStart(b, u, c); }
         internal static void OnBattleFinished(Battle b) { foreach (var h in All()) h.OnBattleFinished(b); }

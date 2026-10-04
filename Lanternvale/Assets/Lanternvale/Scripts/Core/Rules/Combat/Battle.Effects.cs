@@ -57,6 +57,8 @@ namespace Lanternvale.Rules
         public bool SkipEffects;
         /// <summary>The spell was reflected back at its caster.</summary>
         public bool Reflected;
+        /// <summary>Multiplier on the resource cost (set by "next cast is cheaper" auras when the cast starts).</summary>
+        public float CostMult = 1f;
 
         /// <summary>Hostile targets hit during the current effect pass (hit procs fire once per target after the pass).</summary>
         internal readonly List<Unit> PassHits = new List<Unit>();
@@ -184,6 +186,7 @@ namespace Lanternvale.Rules
             var cast = NewCast(u, a, p.Rank, p.Target, p.HasPoint ? p.Point : (Vec2?)null, mods);
             cast.ComboPoints = p.ComboPoints;
             cast.SourceItem = item;
+            cast.CostMult = p.CostMult;
             if (p.Channel)
             {
                 cast.Free = true;
@@ -191,7 +194,7 @@ namespace Lanternvale.Rules
                 Emit(new CombatEvent { Type = CombatEventType.CastComplete, Source = u, Target = p.Target, AbilityId = a.id, Name = a.name });
                 return;
             }
-            float cost = AbilityRules.ResourceCost(u, a, p.Rank, mods);
+            float cost = AbilityRules.ResourceCost(u, a, p.Rank, mods) * p.CostMult;
             if (cost > 0 && u.GetResource(a.cost.type) + 1e-3f < cost)
             {
                 Emit(new CombatEvent { Type = CombatEventType.CastFailed, Source = u, Target = p.Target, AbilityId = a.id, Name = a.name, Reason = $"Not enough {a.cost.type.ToString().ToLowerInvariant()}." });
@@ -223,7 +226,7 @@ namespace Lanternvale.Rules
             var u = cast.Caster;
             var a = cast.Ability;
             if (a.cost == null) return;
-            float cost = AbilityRules.ResourceCost(u, a, cast.Rank, cast.Mods);
+            float cost = AbilityRules.ResourceCost(u, a, cast.Rank, cast.Mods) * cast.CostMult;
             if (cost > 0 && a.cost.type != ResourceType.None)
             {
                 ChangeResource(u, a.cost.type, -cost);
@@ -633,7 +636,12 @@ namespace Lanternvale.Rules
                 }
                 case EffectType.Dispel: EffectDispel(cast, e, t); break;
                 case EffectType.Interrupt:
-                    if (t.Pending != null) CancelPending(t, "interrupted", c, e.lockout);
+                    if (t.Pending != null)
+                    {
+                        float ir = Specials.InterruptResistChance(t);
+                        if (ir > 0 && Rng.Chance(ir)) { EmitAvoid(CombatEventType.Resist, cast, t); break; }
+                        CancelPending(t, "interrupted", c, e.lockout);
+                    }
                     if (hostile && e.threat > 0) AddThreat(t, c, e.threat * ThreatMult(c, School.Physical, cast.Mods), true);
                     break;
                 case EffectType.Taunt: Taunt(c, t); break;

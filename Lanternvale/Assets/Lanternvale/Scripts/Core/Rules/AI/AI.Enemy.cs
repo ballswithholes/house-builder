@@ -25,7 +25,7 @@ namespace Lanternvale.Rules
             bool ranged = IsRangedProfile(u);
 
             // coward: flee at low health
-            if (profile == AIProfile.Coward && u.HealthPct < 20f)
+            if (profile == AIProfile.Coward && u.HealthPct < 20f && !Specials.CannotFlee(u))
             {
                 var near = b.NearestHostile(u);
                 if (near != null)

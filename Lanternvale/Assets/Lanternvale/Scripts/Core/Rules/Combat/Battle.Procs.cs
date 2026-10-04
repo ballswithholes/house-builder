@@ -46,7 +46,8 @@ namespace Lanternvale.Rules
                             var p = procs[i];
                             if (p.trigger != trigger || !Matches(p, info) || runningProcs.Contains(p)) continue;
                             if (i < a.ProcCooldowns.Length && a.ProcCooldowns[i] > 0) continue;
-                            if (!Rng.Chance(ProcChance(p, p.chance, info))) continue;
+                            float chance = p.chance + (p.ppm > 0 ? 0f : Specials.ProcChanceBonus(owner, a, p));
+                            if (!Rng.Chance(ProcChance(p, chance, info))) continue;
                             if (p.internalCooldown > 0 && i < a.ProcCooldowns.Length) a.ProcCooldowns[i] = p.internalCooldown;
                             RunProc(owner, other, p, info, a);
                             if (p.consumeCharge && owner.Auras.Contains(a)) ConsumeCharge(a);
@@ -111,7 +112,7 @@ namespace Lanternvale.Rules
                     else chance = pd.proc.chance;
                     if (!Rng.Chance(ProcChance(pd.proc, chance, info))) continue;
                     if (pd.proc.internalCooldown > 0) owner.ProcCooldowns[key] = pd.proc.internalCooldown;
-                    RunProc(owner, other, pd.proc, info, null, kv.Value, kv.Value);
+                    RunProc(owner, other, pd.proc, info, null, kv.Value, owner.Level);
                 }
             }
         }
@@ -141,8 +142,8 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>
-        /// Runs proc effects. Aura procs scale with the aura's rank/level; talent procs use D = talentRank − 1
-        /// (EffLevel = rank, LearnLevel = 1); item procs do not scale.
+        /// Runs proc effects. Aura procs scale with the aura's rank/level (source ability mods and combo points);
+        /// talent procs use Rank = talent rank, EffLevel = unit level, LearnLevel = 1; item procs do not scale.
         /// </summary>
         void RunProc(Unit owner, Unit other, ProcDef p, ProcInfo info, AuraInstance aura, int rank = 1, int effLevel = 1)
         {
@@ -154,7 +155,8 @@ namespace Lanternvale.Rules
                 SourceProc = p, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : rank,
                 EffLevel = aura != null ? aura.EffLevel : effLevel, LearnLevel = aura != null ? aura.LearnLevel : 1,
                 School = aura != null ? aura.Def.school : (p.effects[0].school ?? School.Physical),
-                Mods = src != null ? AbilityMods.For(owner, src) : AbilityModSet.Empty, ComboPoints = info.ComboPoints,
+                Mods = src != null ? AbilityMods.For(aura.Caster ?? owner, src) : AbilityModSet.Empty,
+                ComboPoints = aura != null && aura.ComboPoints > 0 ? aura.ComboPoints : info.ComboPoints,
                 ProcAura = aura,
             };
             runningProcs.Add(p);

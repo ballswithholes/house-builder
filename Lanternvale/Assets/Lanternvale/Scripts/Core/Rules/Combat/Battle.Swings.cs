@@ -79,6 +79,12 @@ namespace Lanternvale.Rules
                     WhiteSwing(u, target, WeaponSlot.OffHand);
                 }
             }
+            // stored extra attacks (Reckoning): one extra main-hand swing each, outside the swing timer
+            while (u.ExtraAttacks > 0 && target.IsAlive && u.IsAlive)
+            {
+                u.ExtraAttacks--;
+                WhiteSwing(u, target, WeaponSlot.MainHand);
+            }
             if (!target.IsAlive)
             {
                 u.SwingMain = Math.Min(u.SwingMain, main.Speed);
@@ -124,10 +130,11 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>One white (auto attack) swing: single-roll attack table miss/dodge/parry/block/crit/hit.</summary>
-        void WhiteSwing(Unit u, Unit target, WeaponSlot slot)
+        void WhiteSwing(Unit u, Unit target, WeaponSlot slot, float apBonus = 0f)
         {
             var w = StatCalculator.GetWeapon(u, slot);
             if (!w.Valid) return;
+            castSerial++;
             BreakOnAction(u);
             bool ranged = slot == WeaponSlot.Ranged;
             var st = u.Stats;
@@ -141,7 +148,9 @@ namespace Lanternvale.Rules
             float dodge = canAvoid ? Math.Max(0f, tst.Dodge - st.DodgeChanceAgainstMe) : 0f;
             float parry = canAvoid && !ranged && frontal && tst.CanParry ? tst.Parry : 0f;
             float block = canAvoid && frontal && tst.CanBlock ? tst.BlockChance : 0f;
-            float crit = Math.Max(0f, (ranged ? st.RangedCrit : st.MeleeCrit) - tst.Defense * 0.04f);
+            float crit = (ranged ? st.RangedCrit : st.MeleeCrit) - tst.Defense * 0.04f;
+            crit += WeaponTalents.StatBonus(u, w.Type, ranged ? StatId.RangedCrit : StatId.MeleeCrit);
+            crit = Math.Max(0f, Specials.CritChanceBonus(new AbilityCast { Battle = this, Caster = u, Ability = Db.Ability(ranged ? "auto_shot" : "attack"), Target = target, School = w.School }, target, w.School, crit));
             float roll = Rng.Value * 100f;
             var evInfo = new CombatEvent { Source = u, Target = target, AbilityId = basic != null ? basic.id : "attack", Name = basic != null ? basic.name : "Attack", AutoAttack = true, OffHand = slot == WeaponSlot.OffHand, Ranged = ranged };
             if (roll < miss)
@@ -172,17 +181,19 @@ namespace Lanternvale.Rules
                 roll -= block;
                 if (roll < crit) isCrit = true;
             }
-            float ap = ranged ? st.RangedAttackPower : st.AttackPower;
+            float ap = (ranged ? st.RangedAttackPower + Specials.IncomingRangedApBonus(u, target) : st.AttackPower) + apBonus;
             float dmg = Rng.Range(w.Min, w.Max) + ap / 14f * w.Speed;
             if (slot == WeaponSlot.OffHand) dmg *= RulesConstants.OffHandDamageFactor * Specials.OffHandMultiplier(u);
+            dmg *= 1f + WeaponTalents.StatBonus(u, w.Type, StatId.DamageDone) / 100f;
             dmg *= CreatureDamageMult(u);
             var mods = basic != null ? AbilityMods.For(u, basic) : AbilityModSet.Empty;
             dmg *= mods.DamageMult;
             if (isCrit)
             {
-                float bonus = 1f * (1f + mods.CritBonusPct / 100f) + st.CritDamageBonus(w.School) / 100f;
+                float bonus = 1f * (1f + mods.CritBonusPct / 100f) + st.CritDamageBonus(w.School) / 100f + Specials.CritBonusAdd(u, target) / 100f;
                 dmg *= 1f + bonus;
             }
+            dmg = Specials.ModifyDamage(new AbilityCast { Battle = this, Caster = u, Ability = basic, Target = target, School = w.School, Mods = mods }, null, target, dmg);
             var info = new DamageInfo
             {
                 Ability = basic, Name = basic != null ? basic.name : "Attack", Crit = isCrit, AutoAttack = true, OffHand = slot == WeaponSlot.OffHand,

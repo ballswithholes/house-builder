@@ -101,8 +101,12 @@ namespace Lanternvale.Rules
                         var t = db.Talent(kv.Key);
                         if (t == null) continue;
                         foreach (var p in t.effects)
-                            if (p.type == "AbilityMod" && IsPet(p.target) && Matches(p, a))
-                                set.Add(p.property, StatCalculator.RankValue(p.value, p.values, kv.Value));
+                        {
+                            if (p.type != "AbilityMod") continue;
+                            // "Pet" mods by any filter; the owner's own mods only when they name the pet ability explicitly
+                            bool ok = IsPet(p.target) ? Matches(p, a) : (p.abilities != null && Array.IndexOf(p.abilities, a.id) >= 0);
+                            if (ok) set.Add(p.property, StatCalculator.RankValue(p.value, p.values, kv.Value));
+                        }
                     }
                 }
             }

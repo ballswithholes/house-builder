@@ -32,6 +32,8 @@ namespace Lanternvale.Rules
         public float ChannelLoss;
         /// <summary>Full channel duration (seconds) for pushback tick loss.</summary>
         public float ChannelDuration;
+        /// <summary>Multiplier on the resource cost paid when the cast completes (Fel Domination).</summary>
+        public float CostMult = 1f;
         public override string ToString() => $"{Ability?.name} ({RemainingTime:0.#}s{(Channel ? $", {TicksLeft} ticks" : "")})";
     }
 
@@ -157,10 +159,17 @@ namespace Lanternvale.Rules
         public Vec2? FacingLock;
         /// <summary>Hunters: the active pet (template, name, health), persisted in saves.</summary>
         public HunterPetState HunterPet;
-        /// <summary>Team before a temporary side change (Enslave Demon, Mind Control).</summary>
+        /// <summary>Team/kind before a temporary side change (Enslave Demon, Mind Control).</summary>
         public Team? OriginalTeam;
+        public UnitKind OriginalKind;
+        public Unit OriginalOwner;
         /// <summary>Stored extra attacks (Reckoning).</summary>
         public int ExtraAttacks;
+
+        /// <summary>Free-form per-unit values for special handlers (lightwell charges, remembered threat...). Not saved.</summary>
+        public readonly Dictionary<string, float> Vars = new Dictionary<string, float>();
+        public float GetVar(string key, float def = 0f) => Vars.TryGetValue(key, out var v) ? v : def;
+        public void SetVar(string key, float v) => Vars[key] = v;
 
         /// <summary>AI scratch state for the current turn.</summary>
         public readonly AITurnMemory AIMemory = new AITurnMemory();

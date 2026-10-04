@@ -129,7 +129,7 @@ namespace Lanternvale.Rules
             if (!req.Ok) return req;
 
             // specials
-            var sp = Specials.CheckUse(this, u, a, target);
+            var sp = Specials.CheckUse(this, u, a, target) ?? Specials.CannotUse(u, a, target);
             if (sp != null) return UseCheck.Fail(UseFailure.Special, sp);
 
             if (!checkTarget) return UseCheck.Pass;
@@ -141,7 +141,7 @@ namespace Lanternvale.Rules
             if (u.Knows(a.id)) return true;
             if (a.id == "attack" || a.id == "help_up") return true;
             if (u.Class != null && a.id == u.Class.basicAttack) return true;
-            return false;
+            return Specials.ContextualAbilities(this, u).Contains(a.id);
         }
 
         static bool IsShapeshiftAbility(AbilityDef a) =>
@@ -223,11 +223,30 @@ namespace Lanternvale.Rules
             if (r.behindTarget && !u.IsBehind(target)) return UseCheck.Fail(UseFailure.Requirement, "You must be behind your target.");
             if (r.targetHealthBelowPct > 0 && target.HealthPct >= r.targetHealthBelowPct)
                 return UseCheck.Fail(UseFailure.Requirement, $"Target must be below {r.targetHealthBelowPct:0}% health.");
-            if (r.targetCreatureTypes.Length > 0 && Array.IndexOf(r.targetCreatureTypes, TypeOf(target)) < 0)
+            if (r.targetCreatureTypes.Length > 0 && target != u && Array.IndexOf(r.targetCreatureTypes, TypeOf(target)) < 0)
                 return UseCheck.Fail(UseFailure.InvalidTarget, $"Only works on {string.Join(", ", r.targetCreatureTypes)}.");
+            // Sap-like openers (stealth + incapacitate, no damage) only work on enemies not yet engaged in the fight
+            if (InCombat && Started && target.IsHostileTo(u) && target.Engaged && IsStealthIncapacitate(a))
+                return UseCheck.Fail(UseFailure.InvalidTarget, "Target is already in combat.");
             if (r.outOfMeleeRange && u.DistanceTo(target) < MathUtil.Yd(8f) + target.Radius)
                 return UseCheck.Fail(UseFailure.TooClose, "Target is too close.");
             return UseCheck.Pass;
+        }
+
+        bool IsStealthIncapacitate(AbilityDef a)
+        {
+            if (a.requires == null || Array.IndexOf(a.requires.casterStates, "Stealth") < 0) return false;
+            bool incap = false;
+            foreach (var e in a.effects)
+            {
+                if (e.type == EffectType.Damage || e.type == EffectType.WeaponDamage) return false;
+                if (e.type == EffectType.ApplyAura)
+                {
+                    var d = Db.Aura(e.aura);
+                    if (d != null && Array.IndexOf(d.states, UnitState.Incapacitate) >= 0) incap = true;
+                }
+            }
+            return incap;
         }
 
         static CreatureType TypeOf(Unit t) => t.Creature != null && t.Class == null ? t.Creature.type : CreatureType.Humanoid;
@@ -369,6 +388,11 @@ namespace Lanternvale.Rules
             }
             if (u.Class != null) Add(Db.Ability(u.Class.basicAttack));
             foreach (var kv in u.Abilities) Add(Db.Ability(kv.Key));
+            foreach (var id in Specials.ContextualAbilities(this, u))
+            {
+                var a = Db.Ability(id);
+                if (a != null && seen.Add(a.id)) list.Add(GetStatus(u, a));
+            }
             return list;
         }
 
@@ -455,10 +479,12 @@ namespace Lanternvale.Rules
                 return ActionResult.Success;
             }
 
+            castSerial++;
             var mods = AbilityMods.For(u, a);
             int rank = AbilityRules.UsedRank(u, a);
             float timeCost = AbilityRules.TimeCost(u, a, mods);
             float castTime = AbilityRules.CastTime(u, a, mods);
+            if (target != null && target.IsHostileTo(u)) u.Engaged = true;
 
             if (!string.IsNullOrEmpty(a.exclusiveGroup))
                 foreach (var au in new List<AuraInstance>(u.Auras))
@@ -478,6 +504,9 @@ namespace Lanternvale.Rules
             cast.SourceItem = item;
             if (a.cost != null && a.cost.consumesComboPoints) cast.ComboPoints = ComboPointsOn(u, target);
             Specials.OnBeforeUse(cast);
+            Specials.OnAbilityStart(this, u, cast, castTime);
+            Specials.OnAnyAbilityStart(this, u, cast);
+            if (!u.IsAlive) return ActionResult.Success;
             MetersOf(u).Casts++;
 
             bool timed = InCombat && Started && u != actingOutOfTurn;
@@ -497,7 +526,7 @@ namespace Lanternvale.Rules
                     {
                         Ability = a, Rank = rank, Target = target, Point = point ?? default, HasPoint = point.HasValue,
                         RemainingTime = channel - u.TimeLeft, Channel = true, TicksLeft = ticks - now, TicksTotal = ticks,
-                        ComboPoints = cast.ComboPoints, StartRound = Round,
+                        ComboPoints = cast.ComboPoints, StartRound = Round, ChannelDuration = channel,
                     };
                     u.TimeLeft = 0f;
                 }
@@ -517,7 +546,7 @@ namespace Lanternvale.Rules
                     u.Pending = new PendingCast
                     {
                         Ability = a, Rank = rank, Target = target, Point = point ?? default, HasPoint = point.HasValue,
-                        RemainingTime = castTime - u.TimeLeft, ComboPoints = cast.ComboPoints, StartRound = Round,
+                        RemainingTime = castTime - u.TimeLeft, ComboPoints = cast.ComboPoints, StartRound = Round, CostMult = cast.CostMult,
                     };
                     u.TimeLeft = 0f;
                     pendingItems[u] = item;
@@ -600,7 +629,7 @@ namespace Lanternvale.Rules
         public ActionResult CancelAura(Unit u, AuraInstance a)
         {
             if (a == null || a.Bearer != u || !u.Auras.Contains(a)) return ActionResult.Fail("No such aura.");
-            if (a.IsDebuff || a.IsPassive || a.IsAreaChild) return ActionResult.Fail("Cannot cancel that.");
+            if (a.IsDebuff || a.IsPassive || a.IsAreaChild || a.Def.hidden) return ActionResult.Fail("Cannot cancel that.");
             RemoveAura(a, AuraRemoveReason.Cancelled);
             return ActionResult.Success;
         }
@@ -622,7 +651,7 @@ namespace Lanternvale.Rules
             if (u.Pending != null) return "You are casting.";
             if (u.IsTotem) return "Totems cannot move.";
             if (u.IsControlled) return "You cannot move while controlled.";
-            if (u.HasState(UnitState.Root)) return "You are rooted.";
+            if (u.IsRooted) return "You are rooted.";
             if (InCombat && u.MoveLeft <= 0.05f) return "No movement left this turn.";
             return null;
         }
@@ -669,6 +698,8 @@ namespace Lanternvale.Rules
 
         internal void DoMove(Unit u, List<Vec2> points, float length, CombatEventType type, string reason)
         {
+            AuraInstance trigger = null;
+            if (InCombat && points.Count >= 2) TruncateAtTrigger(u, points, ref length, out trigger);
             var from = u.Position;
             var end = points[points.Count - 1];
             if (points.Count >= 2) u.FaceTowards(end);
@@ -676,7 +707,34 @@ namespace Lanternvale.Rules
             if (InCombat) u.MoveLeft = Math.Max(0f, u.MoveLeft - length);
             Emit(new CombatEvent { Type = type, Source = u, Target = u, From = from, To = end, Path = new List<Vec2>(points), Amount = length, Reason = reason });
             BreakOnMove(u);
+            Specials.OnAnyUnitMoved(this, u);
             RefreshAreaAuras();
+            if (trigger != null && trigger.Bearer != null && trigger.Bearer.IsAlive) Specials.OnMovementTrigger(this, trigger, u);
+        }
+
+        /// <summary>Stops a path where it first enters a hostile movement trigger (traps). Returns the trigger aura.</summary>
+        void TruncateAtTrigger(Unit u, List<Vec2> points, ref float length, out AuraInstance trigger)
+        {
+            trigger = null;
+            float walked = 0f;
+            for (int i = 1; i < points.Count; i++)
+            {
+                var a = points[i - 1]; var b = points[i];
+                float seg = Vec2.Distance(a, b);
+                for (float t = 0f; t <= seg + 1e-4f; t += 0.25f)
+                {
+                    var p = Vec2.MoveTowards(a, b, Math.Min(t, seg));
+                    var hit = Specials.MovementTriggerAt(this, u, p);
+                    if (hit == null) continue;
+                    if (i == 1 && t < 0.01f) { trigger = null; break; } // already inside at the start: no new trigger
+                    trigger = hit;
+                    points.RemoveRange(i, points.Count - i);
+                    points.Add(p);
+                    length = walked + Math.Min(t, seg);
+                    return;
+                }
+                walked += seg;
+            }
         }
 
         /// <summary>Places a unit instantly (out of combat / scripted) without spending movement.</summary>

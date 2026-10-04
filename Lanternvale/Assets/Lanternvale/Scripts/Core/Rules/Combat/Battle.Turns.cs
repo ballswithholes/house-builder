@@ -86,6 +86,7 @@ namespace Lanternvale.Rules
             u.TimeDebt = 0f;
             u.TimeLeft = RulesConstants.TurnSeconds;
             u.Reactive.Clear();
+            u.ExtraAttacks = 0;
             u.InOwnTurn = false;
             u.TurnsTaken = 0;
             u.ManaSpentTurn = -100;
@@ -97,7 +98,17 @@ namespace Lanternvale.Rules
         // ================================================================== turns
 
         /// <summary>Moves to the next unit able to act, processing skipped turns. Stops when a unit can act or the battle ends.</summary>
+        bool advancing;
+
         void AdvanceTurn()
+        {
+            if (advancing) return; // the running loop continues by itself
+            advancing = true;
+            try { AdvanceTurnLoop(); }
+            finally { advancing = false; }
+        }
+
+        void AdvanceTurnLoop()
         {
             int guard = 0;
             while (!IsOver && guard++ < 10000)
@@ -111,8 +122,14 @@ namespace Lanternvale.Rules
                     if (TurnOrder.Count == 0) { CheckBattleEnd(); return; }
                 }
                 var u = TurnOrder[TurnIndex];
-                if (!u.IsAlive || !Units.Contains(u)) continue;
+                if (!Units.Contains(u)) continue;
+                if (!u.IsAlive)
+                {
+                    if (u.SelfRes != null && u.IsDeadOrDowned && StartSelfResTurn(u)) return;
+                    continue;
+                }
                 if (StartTurn(u)) return; // waiting for actions
+                if (ActiveUnit != null) return; // something else took the turn (should not happen)
             }
         }
 
@@ -147,10 +164,13 @@ namespace Lanternvale.Rules
             foreach (var s in ControlStates)
                 if (u.HasStateAura(s)) { lost = RulesConstants.TurnSeconds; lostBy = s; break; }
             if (u.HasStateAura(UnitState.Root)) rootTime = RulesConstants.TurnSeconds;
+            if (Specials.IgnoresState(u, UnitState.Root)) rootTime = 0f;
+            Specials.OnBearerTurnStart(this, u);
+            Specials.OnAnyTurnStart(this, u);
+            if (!u.IsAlive || IsOver || ActiveUnit != u) { if (ActiveUnit == u) EndTurnInternal(u, false); return false; }
 
             // 3. regeneration
             RegenTurn(u);
-            if (u.HasStateAura(UnitState.Polymorph)) HealUnit(null, u, u.MaxHealth * 0.1f, new HealInfo { Periodic = true, Name = "Polymorph" });
 
             // 4. time budget
             float startClock = Math.Max(u.TimeDebt, lost);
@@ -386,8 +406,17 @@ namespace Lanternvale.Rules
             bool hostileAlive = false, partyUp = false, anyParty = false;
             foreach (var u in Units)
             {
-                if (u.Team != PlayerTeam && u.Team != Team.Neutral && !u.IsTotem && u.IsAlive) hostileAlive = true;
-                if (u.Team == PlayerTeam && u.IsCharacter) { anyParty = true; if (u.IsAlive) partyUp = true; }
+                if (!u.IsAlive) { if (u.Team == PlayerTeam && u.IsCharacter) anyParty = true; continue; }
+                // mind-controlled enemies still count as enemies (enslaved demons are real pets until they break free)
+                bool hostileSide = u.Team != PlayerTeam && u.Team != Team.Neutral;
+                if (u.Team == PlayerTeam && u.OriginalTeam.HasValue && u.OriginalTeam.Value != PlayerTeam && u.Kind != UnitKind.Pet) hostileSide = true;
+                if (hostileSide && !u.IsTotem) hostileAlive = true;
+                if (u.Team == PlayerTeam && u.IsCharacter)
+                {
+                    anyParty = true;
+                    // a party member sealed away (Divine Intervention: banished + invulnerable) cannot win the fight alone
+                    if (!(u.HasStateAura(UnitState.Banish) && u.IsInvulnerable)) partyUp = true;
+                }
             }
             if (anyParty && !partyUp) Finish(BattleOutcome.Defeat);
             else if (!hostileAlive) Finish(BattleOutcome.Victory);
@@ -418,6 +447,7 @@ namespace Lanternvale.Rules
                 u.TimeDebt = 0f;
                 u.InOwnTurn = false;
                 u.Reactive.Clear();
+                u.ExtraAttacks = 0;
                 if (outcome == BattleOutcome.Victory && u.Team == PlayerTeam && u.Downed)
                 {
                     u.Downed = false;
@@ -433,6 +463,7 @@ namespace Lanternvale.Rules
             }
             Emit(new CombatEvent { Type = CombatEventType.BattleEnd, Reason = outcome.ToString(), Count = Round });
             InCombat = false;
+            Specials.OnBattleFinished(this);
         }
 
         internal void Despawn(Unit u, string reason)

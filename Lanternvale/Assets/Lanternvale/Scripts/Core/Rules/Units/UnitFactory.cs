@@ -125,8 +125,14 @@ namespace Lanternvale.Rules
             var def = u.Creature;
             u.Abilities["attack"] = 1;
             if (def.ranged && u.Db.Ability("auto_shot") != null) u.Abilities["auto_shot"] = 1;
+            bool owned = u.Kind == UnitKind.Pet || u.Kind == UnitKind.Summon || u.Kind == UnitKind.Totem;
             foreach (var ca in def.abilities)
-                if (u.Db.Ability(ca.ability) != null) u.Abilities[ca.ability] = 1;
+            {
+                var a = u.Db.Ability(ca.ability);
+                if (a == null) continue;
+                if (owned && a.learnLevel > u.Level) continue; // pets/demons/totems learn abilities with their level
+                u.Abilities[ca.ability] = 1;
+            }
             AttachPassives(u);
             u.InvalidateStats();
             u.RestoreFull();
