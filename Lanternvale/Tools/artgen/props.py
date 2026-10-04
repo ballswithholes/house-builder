@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 import palette as P
-from brushes import (Canvas, F32, blob, blur, catmull, colfield, drop_shadow, ellipse, flat_fill, glow, grain,
+from brushes import (Canvas, F32, blob, blur, catmull, colfield, drop_shadow, ellipse, fit_to_canvas, flat_fill, glow, grain,
                      outline, paint, ragged, rim_light, rng, rotate, smoothstep, stroke, taper, to_image, warp, wash)
 from environment import fern, grass_tuft, leaf_poly, mossy_stone, round_tree
 
@@ -17,15 +17,26 @@ from environment import fern, grass_tuft, leaf_poly, mossy_stone, round_tree
 # ----------------------------------------------------------------------------------------
 # helpers
 # ----------------------------------------------------------------------------------------
+NOFIT = {"prop_fence"}
+
+
 def new(key, w, h, scale=1.0):
-    return Canvas(w, h, scale, seed=key)
+    cv = Canvas(w, h, scale, seed=key, margin=int(0.18 * max(w, h)))
+    cv.key = key
+    cv.base = (w / 2.0, BASE.get(key, h * 0.96))
+    return cv
 
 
 def done(cv, ow=2.6, rim=0.32, grain_amt=0.028, rim_w=3.0):
     rim_light(cv, rim, rim_w)
     grain(cv, grain_amt, key="paper")
     outline(cv, ow)
-    return to_image(cv.rgb, cv.a)
+    if getattr(cv, "key", "") in NOFIT:
+        rgb, a = fit_to_canvas(cv, cv.base[0], cv.base[1], margin=-1e6, bottom=-1e6)
+    else:
+        m = max(4.0, 0.012 * max(cv.w, cv.h))
+        rgb, a = fit_to_canvas(cv, cv.base[0], cv.base[1], margin=m, bottom=2.5)
+    return to_image(rgb, a)
 
 
 def A(pts):
@@ -238,6 +249,33 @@ def stone_band(cv, x0, x1, y0, y1, r, key, col=P.STONE_WARM, size=None):
     return m
 
 
+def side_details(cv, pj, x1, D, beams, key, windows=(), skirt=0.0):
+    """Timber bands and glowing windows on a receding side wall (plane x = x1)."""
+    segs = []
+    for (y0, y1) in beams:
+        for yy in (y0, y1):
+            a, b = pj(x1, yy, 0.05), pj(x1, yy, D - 0.05)
+            segs.append((a[0], a[1], b[0], b[1]))
+    for z in (0.08, D - 0.08):
+        a, b = pj(x1, 0.3, z), pj(x1, beams[-1][1] if beams else 2.3, z)
+        segs.append((a[0], a[1], b[0], b[1]))
+    if segs:
+        m = cv.lines_mask(segs, 7)
+        paint(cv, m, P.shadow_of(P.WOOD, 0.6), line=0.5, line_w=0.8, soft=2, ao=0)
+    if skirt:
+        sk = pj.poly([(x1, 0, 0), (x1, 0, D), (x1, skirt, D), (x1, skirt, 0)])
+        paint(cv, cv.mask(sk), P.shadow_of(P.mix(P.WOOD_LIGHT, P.DUSTY_BLUE, 0.25), 0.8), line=0.6, soft=3, ao=0)
+    for (z, y) in windows:
+        win = pj.poly([(x1, y - 0.35, z - 0.32), (x1, y - 0.35, z + 0.32), (x1, y + 0.35, z + 0.32), (x1, y + 0.35, z - 0.32)])
+        fr = pj.poly([(x1, y - 0.45, z - 0.42), (x1, y - 0.45, z + 0.42), (x1, y + 0.45, z + 0.42), (x1, y + 0.45, z - 0.42)])
+        paint(cv, cv.mask(fr), P.WOOD, line=0.8, soft=2, ao=0)
+        mw = cv.mask(win)
+        glow_pane(cv, mw)
+        c = win.mean(0)
+        lines(cv, [(win[0][0] / 2 + win[1][0] / 2, (win[0][1] + win[1][1]) / 2, win[3][0] / 2 + win[2][0] / 2, (win[3][1] + win[2][1]) / 2)], 3,
+              P.WOOD_DK, 0.9, clip=mw)
+
+
 def plaster(cv, pts, col, key, shade=0.5, ao=0.25):
     m = cv.mask(A(pts))
     tex = cv.noise(70, key + "pl", 3)
@@ -390,13 +428,14 @@ def moss_on(cv, key, cell=30, thr=0.6, opacity=1.0, where=None, top_bias=None):
 
 
 def shadow_ellipse(cv, cx, cy, rx, ry, strength=0.35):
+    ry = max(2.0, min(ry, (cv.h - cy - 1.0) / 1.9))
     m = cv.blur(cv.ellipse_mask(cx, cy, rx, ry), ry * 0.6)
     flat_fill(cv, m, P.mix(P.INK, P.VIOLET, 0.45), strength * 0.6)
 
 
 def wall_shade(c):
     """Side wall colour: cooler and darker but still warm (no grey mud)."""
-    return P.mix(P.scale_v(c, 0.8), P.LAVENDER, 0.25)
+    return P.mix(P.scale_v(c, 0.74), P.LAVENDER, 0.28)
 
 
 def grass_base(cv, x0, x1, y, r, key, h=26, n=4):
@@ -547,6 +586,7 @@ def prop_cottage_c(key="prop_cottage_c"):
     plaster(cv, side, wall_shade(P.mix(P.PLASTER, P.CREAM_WARM, 0.5)), key + "s", shade=0.2)
     gable = pj.poly([(x1, H, 0), (x1, H, D), (x1, H + 1.7, D / 2)])
     plaster(cv, gable, P.scale_v(wall_shade(P.PLASTER), 1.05), key + "g", shade=0.2)
+    side_details(cv, pj, x1, D, [], key + "sd", windows=[(1.6, 1.3)], skirt=0.55)
     front = pj.poly([(x0, 0, 0), (x1, 0, 0), (x1, H, 0), (x0, H, 0)])
     plaster(cv, front, P.mix(P.PLASTER, P.CREAM_WARM, 0.5), key + "f")
     # wooden plank skirt
@@ -596,6 +636,7 @@ def prop_inn(key="prop_inn"):
     plaster(cv, side, wall_shade(P.PLASTER), key + "s", shade=0.2)
     gable = pj.poly([(x1, H2, 0), (x1, H2, D), (x1, H2 + 2.6, D / 2)])
     plaster(cv, gable, P.scale_v(wall_shade(P.PLASTER), 1.05), key + "g", shade=0.2)
+    side_details(cv, pj, x1, D, [(0.6, H1), (H1, H2)], key + "sd", windows=[(1.4, 1.5), (2.8, 1.5), (2.1, H1 + 1.2)])
     front = pj.poly([(x0, 0, 0), (x1, 0, 0), (x1, H2, 0), (x0, H2, 0)])
     mf = plaster(cv, front, P.PLASTER, key + "f")
     stone_band(cv, front[0][0], front[1][0], pj(0, 0.6)[1], front[0][1], r, key + "sb", size=30)
@@ -1009,7 +1050,8 @@ def toro(cv, cx, by, s, key, dark=False):
         crystal_cluster(cv, cx - 1.4 * U, by, 0.9 * U, r, key + "cr", n=4)
         crystal_cluster(cv, cx + 1.5 * U, by + 2, 0.7 * U, r, key + "cr2", n=3)
     else:
-        moss_on(cv, key, cell=26, thr=0.62, top_bias=smoothstep(by - 5.6 * U, by - 6.6 * U, cv.yy()) * 0.3)
+        moss_on(cv, key, cell=26, thr=0.66, top_bias=smoothstep(by - 5.6 * U, by - 6.6 * U, cv.yy()) * 0.3
+                - smoothstep(by - 3.6 * U, by - 4.6 * U, cv.yy()) * smoothstep(by - 6.0 * U, by - 5.0 * U, cv.yy()) * 0.5)
 
 
 def crystal_cluster(cv, x, by, s, r, key, n=5, col=P.BLIGHT_VIOLET, glow_amt=0.5):
@@ -1017,7 +1059,7 @@ def crystal_cluster(cv, x, by, s, r, key, n=5, col=P.BLIGHT_VIOLET, glow_amt=0.5
     shards = []
     for i in range(n):
         off = (i - (n - 1) / 2)
-        a = -math.pi / 2 + off * 0.32 + r.normal() * 0.1
+        a = -math.pi / 2 + off * 0.24 + r.normal() * 0.08
         L = s * (0.55 + r.random() * 0.5) * (1.35 if i == n // 2 else 1.0)
         w = s * (0.13 + r.random() * 0.06) * (1.25 if i == n // 2 else 1.0)
         bx = x + off * s * 0.2
@@ -1106,7 +1148,7 @@ def canopy(cv, clusters, col, r, key, light=P.GRASS_LIGHT, leafy=True, line=0.6,
             a = r.random() * 2 * math.pi
             d = math.sqrt(r.random()) * 0.82
             px, py = cx + math.cos(a) * rx * d, cy + math.sin(a) * ry * d
-            cr = rx * clump * (0.75 + 0.5 * r.random())
+            cr = rx * clump * (0.6 + 0.8 * r.random())
             clumps.append((px, py, cr, cr * (0.72 + 0.15 * r.random()), cy, ry))
     ys = [c[1] for c in clumps]
     y0, y1 = min(ys), max(ys)
@@ -1129,9 +1171,9 @@ def canopy(cv, clusters, col, r, key, light=P.GRASS_LIGHT, leafy=True, line=0.6,
         drop_shadow(sub, m, rx * 0.08, ry * 0.18, rx * 0.12, 0.28)
         t = (py - y0) / max(1.0, y1 - y0)          # 0 top .. 1 bottom
         c = P.mix(P.mix(col, light, 0.22), dark, 0.1 + 0.5 * t)
-        paint(sub, m, c, line=line, line_w=1.2, soft=rx * 0.4, key=key + "c%d" % (i % 7), ao=0.35, hi=0.4, shade=0.95,
-              var=0.04, var_cell=rx * 0.5, cel=0.35, light_col=P.mix(light, P.CREAM_WARM, 0.3),
-              line_col=P.mix(c, P.INK, 0.45))
+        paint(sub, m, c, line=line * 0.7, line_w=1.1, soft=rx * 0.45, key=key + "c%d" % (i % 7), ao=0.35, hi=0.4, shade=0.85,
+              var=0.04, var_cell=rx * 0.5, cel=0.3, light_col=P.mix(light, P.CREAM_WARM, 0.3),
+              line_col=P.mix(c, P.INK, 0.32))
         if leafy:
             dabs = []
             nd = int(3 + rx / 7)
@@ -1226,7 +1268,7 @@ def prop_tree_birch(key="prop_tree_birch"):
           (256, 120, 110, 90)]
     for (tx, ty) in tips:
         cl.append((tx, ty, 80 + r.random() * 30, 60 + r.random() * 20))
-    canopy(cv, cl, P.mix(P.GRASS_LIGHT, P.LEAF_YELLOW, 0.25), r, key + "cn", light=P.CREAM_WARM)
+    canopy(cv, cl, P.mix(P.GRASS_LIGHT, P.LEAF_YELLOW, 0.25), r, key + "cn", light=P.CREAM_WARM, clump=0.46)
     grass_base(cv, 160, 360, 1000, r, key + "gb", h=32, n=3)
     return done(cv, 2.8)
 
@@ -1705,8 +1747,8 @@ def chest(cv, cx, by, s, r, opened=False):
         mc = cv.polys_mask(coins)
         paint(cv, mc, P.HONEY, line=0.7, line_w=0.8, soft=2, hi=0.8, gloss=0.6, ao=0)
         glow(cv, cx, by - H * 1.1, s * 0.5, P.LANTERN, 0.6, clip=True, falloff=1.5)
-        lid = A([(cx - W * 0.5, by - H * 1.22), (cx + W * 0.66, by - H * 1.42), (cx + W * 0.6, by - H * 2.0), (cx + W * 0.45, by - H * 2.12),
-                 (cx - W * 0.42, by - H * 1.92), (cx - W * 0.56, by - H * 1.7)])
+        lid = A([(cx - W * 0.5, by - H * 1.2), (cx + W * 0.66, by - H * 1.42), (cx + W * 0.7, by - H * 1.78), (cx + W * 0.52, by - H * 1.86),
+                 (cx - W * 0.4, by - H * 1.62), (cx - W * 0.54, by - H * 1.5)])
         part(cv, lid, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, soft=8, tex=wood_tex(cv, "lid"), hi=0.4)
     mb = cv.mask(body)
     paint(cv, mb, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, line_w=1.2, soft=8, tex=wood_tex(cv, "cb"))
@@ -1882,7 +1924,7 @@ def prop_blight_crystal(key="prop_blight_crystal"):
     shadow_ellipse(cv, 262, 492, 180, 16, 0.35)
     stain = cv.blur(cv.ellipse_mask(256, 492, 200, 22), 8)
     flat_fill(cv, stain, P.BLIGHT_DK, 0.6)
-    crystal_cluster(cv, 256, 494, 300, r, key + "a", n=5, glow_amt=0.8)
+    crystal_cluster(cv, 256, 494, 270, r, key + "a", n=5, glow_amt=0.8)
     crystal_cluster(cv, 120, 498, 140, r, key + "b", n=3)
     crystal_cluster(cv, 378, 498, 150, r, key + "c", n=3)
     return done(cv, 2.4)

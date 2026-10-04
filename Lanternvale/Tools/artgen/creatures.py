@@ -20,16 +20,24 @@ SS = 2
 
 
 def new(key, w, h):
-    return Canvas(w, h, SS, seed=key)
+    cv = Canvas(w, h, SS, seed=key, margin=int(0.16 * max(w, h)))
+    base = BASE[(w, h)]
+    if key in ("cr_training_dummy", "cr_hollow_treant", "demon_voidwalker"):
+        base = 990
+    cv.base = (w / 2.0, float(base))
+    return cv
 
 
 def finish(cv, ow=2.2, rim=0.38):
+    from brushes import fit_to_canvas
     rim_light(cv, rim, 2.6)
     grain(cv, 0.018, cell=1.2, key="paper")
     outline(cv, ow)
     for (x, y, r, col, s) in getattr(cv, "post_glow", []):
         glow(cv, x, y, r, col, s, clip=False, falloff=2.2)
-    rgb, a = downsample(cv.rgb, cv.a, SS)
+    m = max(5.0, 0.012 * max(cv.w, cv.h))
+    rgb, a = fit_to_canvas(cv, cv.base[0], cv.base[1], margin=m, bottom=2.5)
+    rgb, a = downsample(rgb, a, SS)
     return to_image(rgb, a)
 
 
@@ -609,7 +617,7 @@ def cr_hollow_warden(key="cr_hollow_warden"):
         tx, ty = x + math.cos(ang) * length * 0.55, y + math.sin(ang) * length * 0.55
         branch(tx, ty, ang + side * 0.6, length * 0.55, w * 0.55, depth - 1, side)
     for side, base in ((-1, (hx - 40, hy - 50)), (1, (hx + 10, hy - 55))):
-        branch(base[0], base[1], -math.pi / 2 + side * 0.5, 175, 34, 2, side)
+        branch(base[0], base[1], -math.pi / 2 + side * 0.45, 205, 38, 2, side)
     # ---------------- far legs
     for lx, ox in ((x0 + L * 0.22, -10), (x0 - L * 0.22, 20)):
         p.tube([(lx, g - H * 0.6), (lx + ox, g - H * 0.32), (lx + 8, g - 22)], [70, 34, 28], P.mix(deep, P.INK, 0.25), cel=0.6)
@@ -626,17 +634,28 @@ def cr_hollow_warden(key="cr_hollow_warden"):
             (x0 - L * 0.44, g - H * 0.5), (x0 - L * 0.6, g - H * 0.64)]
     bm = p.shape(body, coat, n=6, soft=100, shadow=0.35, hi=0.45, light_col=P.WHITE_WARM)
     p.fur_strokes(bm, coat, n=140, L=24, key="wf", direction=math.pi * 0.95, alpha=0.25, w=2.2)
-    # cloth drape over the top of the back
-    p.shape([(x0 + L * 0.3, g - H * 1.0), (x0 - L * 0.35, g - H * 0.92), (x0 - L * 0.42, g - H * 0.72), (x0 - L * 0.1, g - H * 0.68),
-             (x0 + L * 0.28, g - H * 0.78)], P.hx("6a5a8a"), n=4, hi=0.4)
-    p.tube([(x0 - L * 0.4, g - H * 0.75), (x0 - L * 0.05, g - H * 0.7), (x0 + L * 0.3, g - H * 0.8)], [16, 16, 16], P.hx("e2c98a"), cap=False)
+    # tattered spirit cloth draped over the back, hanging in torn strips down the flank
+    top = [(x0 + L * 0.32, g - H * 1.0), (x0 - L * 0.4, g - H * 0.9)]
+    strips = []
+    nst = 9
+    for k in range(nst + 1):
+        t = k / nst
+        x = x0 - L * 0.42 + t * L * 0.74
+        y = g - H * (0.48 + (0.12 if k % 2 else 0.0)) + r.random() * H * 0.08
+        strips.append((x, y))
+    p.shape(top + strips, P.hx("5e4e80"), n=3, soft=30, hi=0.4)
+    p.tube([(x0 - L * 0.42, g - H * 0.86), (x0 - L * 0.05, g - H * 0.8), (x0 + L * 0.3, g - H * 0.92)], [18, 18, 18], P.hx("e2c98a"), cap=False)
     # ---------------- near legs
     for lx, ox in ((x0 + L * 0.34, 10), (x0 - L * 0.36, -24)):
         p.tube([(lx, g - H * 0.66), (lx + ox, g - H * 0.33), (lx + 10, g - 22)], [96, 42, 34], coat, cel=0.6, hi=0.4)
         p.ell(lx + 14, g - 16, 30, 18, P.INK_SOFT, hi=0.5)
         fet = cv.mask(stroke_w([(lx + ox * 0.5, g - H * 0.28), (lx + 10, g - 30)], [46, 40])) * (cv.a > 0.5)
         cv.atop(P.WHITE_WARM, fet.astype(F32) * 0.0)
-    blight_overlay(p, (cv.a > 0.95).astype(F32) * smoothstep(g - H * 1.1, g - H * 0.2, cv.yy()), key, 0.95)
+    # ink-dipped legs and belly: the Hollow creeping up from the ground
+    Y = cv.yy()
+    dip = (cv.a > 0.5) * smoothstep(g - H * 0.55, g - H * 0.12, Y)
+    cv.atop(P.mix(P.BLIGHT_DK, P.INK, 0.35), (dip * 0.9).astype(F32))
+    blight_overlay(p, (cv.a > 0.95).astype(F32), key, 0.9)
     # ---------------- neck with a shaggy white mane, rope collar
     neck = [(x0 + L * 0.28, g - H * 0.95), (hx - 70, hy + 10), (hx + 30, hy + 30), (x0 + L * 0.6, g - H * 0.62)]
     p.shape(neck, coat, n=5, soft=60, hi=0.45)
@@ -1040,8 +1059,8 @@ def bandit(key, kind):
     else:  # chief: big axe on shoulder
         hand = (cx + f.w_sh * 0.4, f.chest_y + hu * 0.25)
         f.arm(1, (f.shR[0] + hu * 0.3, f.waist_y - hu * 0.05), hand, sleeve=None, glove=LEATHER_DK)
-        d = (math.sin(math.radians(25)), -math.cos(math.radians(25)))
-        top = (hand[0] + d[0] * hu * 2.2, hand[1] + d[1] * hu * 2.2)
+        d = (math.sin(math.radians(12)), -math.cos(math.radians(12)))
+        top = (hand[0] + d[0] * hu * 2.0, hand[1] + d[1] * hu * 2.0)
         f.band([(hand[0] - d[0] * hu * 0.6, hand[1] - d[1] * hu * 0.6), top], hu * 0.11, P.WOOD)
         ax = [(top[0] - hu * 0.1, top[1] + hu * 0.1), (top[0] + hu * 0.75, top[1] - hu * 0.2), (top[0] + hu * 0.95, top[1] + hu * 0.4),
               (top[0] + hu * 0.65, top[1] + hu * 0.75), (top[0] + hu * 0.05, top[1] + hu * 0.45)]

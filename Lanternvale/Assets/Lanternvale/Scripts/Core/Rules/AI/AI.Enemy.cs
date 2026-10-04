@@ -213,26 +213,43 @@ namespace Lanternvale.Rules
             target ??= b.NearestHostile(u);
             if (target == null) return AIStep.End(u, "no target");
 
-            // pet abilities: taunt if tank and target not on me, else by aiPriority
-            var abilities = new List<AbilityDef>();
+            // pet abilities: the creature's list (priority, chance per turn, condition), then anything else it knows by aiPriority
+            var entries = new List<PetAbility>();
+            if (u.Creature != null)
+                foreach (var ca in u.Creature.abilities)
+                {
+                    var a = b.Db.Ability(ca.ability);
+                    if (a != null && !a.passive && !a.autoAttack && u.Knows(a.id)) entries.Add(new PetAbility { A = a, C = ca, Priority = ca.priority });
+                }
             foreach (var kv in u.Abilities)
             {
                 var a = b.Db.Ability(kv.Key);
-                if (a != null && !a.passive && !a.autoAttack) abilities.Add(a);
+                if (a == null || a.passive || a.autoAttack || entries.Exists(x => x.A == a)) continue;
+                entries.Add(new PetAbility { A = a, Priority = a.aiPriority });
             }
-            abilities.Sort((x, y) => y.aiPriority.CompareTo(x.aiPriority));
-            foreach (var a in abilities)
+            entries.Sort((x, y) => y.Priority.CompareTo(x.Priority));
+            foreach (var en in entries)
             {
+                var a = en.A;
+                var ca = en.C;
+                if (ca != null && ca.chance < 100f)
+                {
+                    if (ca.chance <= 0f) continue;
+                    if (!u.AIMemory.ChanceRolls.TryGetValue(ca.ability, out var rolled))
+                        u.AIMemory.ChanceRolls[ca.ability] = rolled = b.Rng.Chance(ca.chance);
+                    if (!rolled) continue;
+                }
                 if (u.AIMemory.UsedCount(a.id) > 0 && a.time == TimeCost.OffGcd) continue;
                 Unit t = a.target == TargetType.Self ? u : a.target == TargetType.Ally || a.target == TargetType.AllyOther ? owner : target;
                 if (t == null || Failed(u, a, t)) continue;
+                if (ca != null && !string.IsNullOrEmpty(ca.condition) && !ConditionMet(b, u, ca.condition, t)) continue;
                 string hint = HintOf(a);
                 if (hint == "Taunt" && (u.Role != UnitRole.Tank || t.AggroTarget == u)) continue;
                 if (hint == "Defensive" && u.HealthPct > 40f) continue;
                 if (hint == "Interrupt" && t.Pending == null) continue;
                 if (hint == "Heal" && (t == null || t.HealthPct > 60f)) continue;
                 if ((hint == "Buff" || hint == "Debuff") && AlreadyHasAny(a, t, u)) continue;
-                if (hint == "CC" || hint == "Utility") continue;
+                if ((hint == "CC" || hint == "Utility") && ca == null) continue;
                 Vec2? point = a.target == TargetType.Point ? target.Position : (Vec2?)null;
                 if (b.CanUse(u, a, t, point).Ok) return Use(u, a, t, point, "pet " + hint);
             }
@@ -256,6 +273,8 @@ namespace Lanternvale.Rules
             }
             return AIStep.End(u, "pet done");
         }
+
+        struct PetAbility { public AbilityDef A; public CreatureAbilityDef C; public int Priority; }
 
         static bool AlreadyHasAny(AbilityDef a, Unit t, Unit caster)
         {

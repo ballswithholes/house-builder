@@ -1520,6 +1520,15 @@ def beast_head(f, fur_col, muzzle, horn, mane, eyes):
     hw, hh = f.hw * 1.32, f.hh * 1.15
     t = f.L.turn
     r = rng(cv.seed, "beast")
+    # mane tufts behind the head (radiating, jagged)
+    tufts = []
+    for k in range(13):
+        a = math.pi * (0.85 + k / 12 * 1.3)
+        root = (hx + math.cos(a) * hw * 0.5, hy - hh * 0.1 + math.sin(a) * hh * 0.5)
+        L = 1.15 + 0.2 * r.random()
+        tip = (hx + math.cos(a) * hw * L * 1.05, hy - hh * 0.1 + math.sin(a) * hh * L)
+        tufts.append(f.hair_lock(root, tip, hw * 0.5, bend=0.18))
+    f.paint_hair(tufts, P.mix(mane, P.LAVENDER, 0.25), key="mane", shine=False)
     # cheek tufts + head
     pts = [(hx - hw * 0.2, hy - hh * 1.0), (hx + hw * 0.65, hy - hh * 0.85), (hx + hw * 1.0, hy - hh * 0.3), (hx + hw * 1.25, hy + hh * 0.15),
            (hx + hw * 0.98, hy + hh * 0.25), (hx + hw * 1.15, hy + hh * 0.5), (hx + hw * 0.7, hy + hh * 0.6), (hx + hw * 0.4, hy + hh * 0.95),
@@ -1562,14 +1571,6 @@ def beast_head(f, fur_col, muzzle, horn, mane, eyes):
     for s in (-1, 1):
         f.shape([(nx + s * hw * 0.13, my), (nx + s * hw * 0.09, my), (nx + s * hw * 0.11, my + hh * 0.08)], P.WHITE_WARM, smooth=False,
                 shadow=0, line=0.6)
-    # mane tufts framing the face (front)
-    tufts = []
-    for k in range(9):
-        a = math.pi * (0.95 + k / 8 * 1.1)
-        root = (hx + math.cos(a) * hw * 0.7, hy - hh * 0.35 + math.sin(a) * hh * 0.6)
-        tip = (hx + math.cos(a) * hw * 1.1, hy - hh * 0.35 + math.sin(a) * hh * 0.95)
-        tufts.append(f.hair_lock(root, tip, hw * 0.34, bend=0.15))
-    f.paint_hair(tufts, mane, key="mane")
     # ram horns curling back and around the ears
     for s in (-1, 1):
         cx_, cy_ = hx + s * hw * 1.08, hy - hh * 0.05
@@ -2000,16 +2001,16 @@ def draw_shaman(cv, look, pal):
     furc = pal["fur"]
     # spear (behind the right hand)
     sx = f.shR[0] + hu * 0.55
-    spear(f, sx, f.top - hu * 0.6, f.feet - hu * 0.05, col=pal["wood"], tassel=pal["cloth"], feathers=[P.WHITE_WARM, P.TERRACOTTA])
+    spear(f, sx, f.top + hu * 0.05, f.feet - hu * 0.05, col=pal["wood"], tassel=pal["cloth"], feathers=[P.WHITE_WARM, P.TERRACOTTA])
     # mane down the back and a tail
     hx, hy = f.head_c
     r = rng(cv.seed, "mane")
     locks = []
-    for k in range(11):
-        t = k / 10
-        root = (hx + (t - 0.5) * f.hw * 1.6, hy + f.hh * 0.15)
-        tip = (hx + (t - 0.5) * f.hw * 4.2, f.chest_y + hu * (0.2 + 0.5 * math.sin(t * math.pi)) - r.random() * hu * 0.2)
-        locks.append(f.hair_lock(root, tip, f.hw * 0.9, ctrl=(hx + (t - 0.5) * f.hw * 3.6, hy + f.hh * 0.6)))
+    for k in range(13):
+        t = k / 12
+        root = (hx + (t - 0.5) * f.hw * 1.4, hy + f.hh * 0.3)
+        tip = (hx + (t - 0.5) * f.hw * 3.4, f.sh_y + hu * (0.2 + 0.75 * math.sin(t * math.pi)) - r.random() * hu * 0.3)
+        locks.append(f.hair_lock(root, tip, f.hw * 0.62, ctrl=(hx + (t - 0.5) * f.hw * 3.0, hy + f.hh * 0.9)))
     f.paint_hair(locks, pal["mane"], shine=False, each=False, key="maneb")
     f.tube([(cx + f.w_hip * 0.6, f.hip_y + hu * 0.4), (cx + f.w_hip * 1.35, f.knee_y + hu * 0.3), (cx + f.w_hip * 1.5, f.ankle_y - hu * 0.2)],
            [hu * 0.16, hu * 0.12, hu * 0.08], furc)
@@ -2061,7 +2062,8 @@ def draw_shaman(cv, look, pal):
 def char_job(key, draw, look, pal, bg):
     cv = new_canvas(key)
     f = draw(cv, look, pal)
-    sprite, portrait = finish_char(cv, portrait_box(f), bg)
+    box = portrait_box(f, scale=2.45, dy=0.4) if draw is draw_shaman else portrait_box(f)
+    sprite, portrait = finish_char(cv, box, bg)
     out = {key: sprite}
     pkey = "portrait_" + key.split("_", 1)[1]
     out[pkey] = portrait
@@ -2501,7 +2503,7 @@ ROGUE = dict(boots=P.hx("6b4a33"), accent=P.hx("f2c14e"), shorts=P.hx("5f8f45"),
              scarf=P.hx("e8743b"), glove=P.hx("4a3b3a"))
 WARLOCK = dict(coat=P.hx("2f3a6b"), lining=P.hx("1c2140"), trim=GOLD, pants=P.hx("2a2a3a"), boots=P.hx("1f1d2a"), vest=P.hx("e8e2f0"),
                sash=P.hx("7a4fb0"), rune=P.hx("b98cff"), glove=P.hx("2a2438"), book=P.hx("5a2f4f"))
-SHAMAN = dict(fur=P.hx("7f8fb0"), mane=P.hx("e6e0ef"), muzzle=P.hx("c9cfe0"), horn=P.hx("efe6d2"), pants=P.hx("5a4636"), wrap=P.hx("c9783a"),
+SHAMAN = dict(fur=P.hx("7f8fb0"), mane=P.hx("d6cfe2"), muzzle=P.hx("c9cfe0"), horn=P.hx("efe6d2"), pants=P.hx("5a4636"), wrap=P.hx("c9783a"),
               cloth=P.hx("b8452f"), trim=P.hx("e8b04f"), wood=P.hx("9a6b45"), leather=LEATHER)
 
 
@@ -2533,7 +2535,7 @@ ROSTER = {
                                     expr="grin", turn=0.24), ROGUE, CLASS_BG["rogue"]),
     "char_warlock": (draw_warlock, dict(height=1.85, hair=P.hx("a8c0e0"), eyes=P.hx("8a5ad0"), skin=P.SKIN_FAIR, hair_style="swept_long"),
                      WARLOCK, CLASS_BG["warlock"]),
-    "char_shaman": (draw_shaman, dict(build="big", height=2.05, heads=7.0, eyes=P.hx("e8b04f"), turn=0.14), SHAMAN, CLASS_BG["shaman"]),
+    "char_shaman": (draw_shaman, dict(build="big", height=1.95, heads=6.8, eyes=P.hx("e8b04f"), turn=0.14), SHAMAN, CLASS_BG["shaman"]),
     # companions (variations with their own palette / hair)
     "comp_kael": (draw_warrior, dict(height=1.78, hair=P.hx("a8452e"), eyes=P.hx("4f8f5a"), expr="grin", hair_style="spiky_band",
                                      band=P.hx("d9483b")),
@@ -2552,8 +2554,8 @@ ROSTER = {
     "comp_pip": (draw_rogue, dict(build="f", height=1.52, heads=6.0, hair=P.hx("f2a0c0"), eyes=P.hx("c08a3a"), skin=P.SKIN_LIGHT,
                                   hair_style="twin_buns", accent=P.hx("3fb0a8"), expr="grin", turn=0.22),
                  variant(ROGUE, scarf=P.hx("3fb0a8"), top=P.hx("f08aa0"), shorts=P.hx("6a4f9a"), accent=P.hx("f2c14e")), CLASS_BG["rogue"]),
-    "comp_torvan": (draw_shaman, dict(build="big", height=2.1, heads=7.0, eyes=P.hx("d9a84a"), turn=0.12),
-                    variant(SHAMAN, fur=P.hx("cfcac0"), mane=P.hx("f6f2ea"), muzzle=P.hx("ebe7df"), horn=P.hx("b8a888"),
+    "comp_torvan": (draw_shaman, dict(build="big", height=1.98, heads=6.8, eyes=P.hx("d9a84a"), turn=0.12),
+                    variant(SHAMAN, fur=P.hx("cfcac0"), mane=P.hx("eae2d4"), muzzle=P.hx("ebe7df"), horn=P.hx("b8a888"),
                             cloth=P.hx("4f7f4a"), trim=P.hx("c9a85a")), CLASS_BG["shaman"]),
     "comp_aldric": (draw_paladin, dict(height=1.8, hair=P.hx("b8b4b0"), beard=P.hx("c8c4c0"), beard_len=0.6, eyes=P.hx("6a8aa8"),
                                        skin=P.SKIN_LIGHT, hair_style="swept_grey", expr="stern"),

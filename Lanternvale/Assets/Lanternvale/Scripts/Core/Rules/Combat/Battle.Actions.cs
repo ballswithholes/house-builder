@@ -557,6 +557,8 @@ namespace Lanternvale.Rules
             }
             else if (timed) SpendTime(u, timeCost);
             else if (castTime > 0f) Emit(new CombatEvent { Type = CombatEventType.CastStart, Source = u, Target = target, AbilityId = a.id, Name = a.name, Seconds = castTime });
+            if (castTime <= 0f)
+                Emit(new CombatEvent { Type = CombatEventType.AbilityUsed, Source = u, Target = target, AbilityId = a.id, Name = a.name, School = a.school, Reason = item != null ? item.Name : "" });
 
             ResolveCast(cast);
             if (castTime > 0f) Emit(new CombatEvent { Type = CombatEventType.CastComplete, Source = u, Target = target, AbilityId = a.id, Name = a.name });

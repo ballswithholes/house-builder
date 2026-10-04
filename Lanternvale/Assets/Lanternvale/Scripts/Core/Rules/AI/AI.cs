@@ -46,7 +46,7 @@ namespace Lanternvale.Rules
             }
             catch (Exception ex)
             {
-                Log.Warn($"AI error for {u.Name}: {ex.Message}");
+                Log.Warn($"AI error for {u.Name}: {ex}");
                 return AIStep.End(u, "error");
             }
         }

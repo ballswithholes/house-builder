@@ -311,12 +311,14 @@ def lerp_pts(a, b, t):
 class Canvas:
     """Premultiplied float RGBA canvas addressed in design units."""
 
-    def __init__(self, w, h, scale=1.0, pad=0, wrap_x=False, wrap_y=False, seed="canvas"):
+    def __init__(self, w, h, scale=1.0, pad=0, wrap_x=False, wrap_y=False, seed="canvas", margin=0):
+        """margin (design units): hidden paint area around a non-wrapping canvas (see fit_to_canvas)."""
         self.w, self.h, self.s = w, h, float(scale)
         self.cw = int(round(w * scale))
         self.ch = int(round(h * scale))
-        self.padx = pad if wrap_x else 0
-        self.pady = pad if wrap_y else 0
+        mpx = int(round(margin * scale))
+        self.padx = pad if wrap_x else mpx
+        self.pady = pad if wrap_y else mpx
         self.PW = self.cw + 2 * self.padx
         self.PH = self.ch + 2 * self.pady
         self.wrap_x, self.wrap_y = wrap_x, wrap_y
@@ -532,6 +534,47 @@ class SubCanvas(Canvas):
 
     def noise(self, cell, key, octaves=4, gain=0.5):
         return self.root.noise(cell, key, octaves, gain)[self.sl]
+
+
+def fit_to_canvas(cv, base_x, base_y, margin=6.0, bottom=2.0, thresh=0.04):
+    """Return (rgb, a) cropped to the visible canvas. If the painted content spills outside the safe area,
+    the whole painting is first scaled down about the ground pivot (base_x, base_y) so nothing is clipped."""
+    from PIL import Image as _I
+    s = cv.s
+    a = cv.a
+    rows = np.where(a.max(axis=1) > thresh)[0]
+    cols = np.where(a.max(axis=0) > thresh)[0]
+    x0c, y0c = cv.padx, cv.pady
+    x1c, y1c = cv.padx + cv.cw, cv.pady + cv.ch
+    if len(rows) and len(cols):
+        bx, by = base_x * s + cv.padx, base_y * s + cv.pady
+        need = [1.0]
+        left, right = bx - cols[0], cols[-1] + 1 - bx
+        up, down = by - rows[0], rows[-1] + 1 - by
+        if left > 0:
+            need.append((bx - x0c - margin * s) / left)
+        if right > 0:
+            need.append((x1c - margin * s - bx) / right)
+        if up > 0:
+            need.append((by - y0c - margin * s) / up)
+        if down > 0:
+            need.append((y1c - bottom * s - by) / down)
+        k = max(0.3, min(need))
+        if k < 0.999:
+            data = (1.0 / k, 0.0, bx - bx / k, 0.0, 1.0 / k, by - by / k)
+            size = (cv.PW, cv.PH)
+
+            def tf(ch):
+                return np.asarray(_I.fromarray(np.ascontiguousarray(ch, dtype=F32), "F").transform(size, _I.AFFINE, data, resample=_I.BICUBIC),
+                                  dtype=F32)
+            # pre-blur a little to avoid aliasing when shrinking
+            sig = max(0.0, (1.0 / k - 1.0) * 0.8)
+            rgb_src = blur(cv.rgb, sig) if sig > 0.3 else cv.rgb
+            a_src = blur(a, sig) if sig > 0.3 else a
+            cv.rgb = np.stack([tf(rgb_src[..., i]) for i in range(3)], -1)
+            cv.a = np.clip(tf(a_src), 0, 1)
+            cv.rgb = np.clip(cv.rgb, 0, None)
+    return cv.rgb[y0c:y1c, x0c:x1c], cv.a[y0c:y1c, x0c:x1c]
 
 
 def bbox(mask, pad=0, thresh=1e-3):

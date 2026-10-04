@@ -1315,8 +1315,8 @@ def decal_flowers(key="decal_flowers"):
 def decal_blight(key="decal_blight"):
     cv = Canvas(512, 512, 1.0, seed=key)
     r = rng(key)
-    m = cv.mask(blob(256, 256, 190, 170, r, 0.25, 12))
-    m = ragged(cv, warp(cv, m, 24, 50, "w"), 0.7, 8, 16, "r")
+    m = cv.mask(blob(256, 256, 165, 150, r, 0.25, 12))
+    m = ragged(cv, warp(cv, m, 20, 50, "w"), 0.7, 8, 16, "r")
     rad = np.hypot(cv.xx() - 256, cv.yy() - 256) / 200
     fld = colfield(P.BLIGHT_DK, P.BLIGHT, np.clip(rad, 0, 1))
     wash(cv, m, P.BLIGHT, 0.85, field=fld, pool=0.5, pool_w=6, gran=0.25, key="b")
@@ -1346,11 +1346,17 @@ def decal_blight(key="decal_blight"):
 # ----------------------------------------------------------------------------------------
 # foreground (front-facing, isolated, transparent)
 # ----------------------------------------------------------------------------------------
+def fg_canvas(key):
+    return Canvas(1024, 512, 1.0, seed=key, margin=120)
+
+
 def fg_finish(cv):
+    from brushes import fit_to_canvas
     rim_light(cv, 0.35, 3)
     grain(cv, 0.025, key="paper")
     outline(cv, 2.6)
-    return to_image(cv.rgb, cv.a)
+    rgb, a = fit_to_canvas(cv, 512.0, 492.0, margin=8.0, bottom=2.0)
+    return to_image(rgb, a)
 
 
 def mossy_stone(cv, x, y, w, h, r, key, moss=0.7):
@@ -1415,7 +1421,7 @@ def bell_flower(cv, x, y, rad, col, key):
 
 
 def fg_stones(key, variant):
-    cv = Canvas(1024, 512, 1.0, seed=key)
+    cv = fg_canvas(key)
     r = rng(key)
     base = 488
     if variant == 0:
@@ -1430,7 +1436,7 @@ def fg_stones(key, variant):
 
 
 def fg_grass(key, variant):
-    cv = Canvas(1024, 512, 1.0, seed=key)
+    cv = fg_canvas(key)
     r = rng(key)
     base = 490
     tufts = 9 if variant == 0 else 6
@@ -1446,7 +1452,7 @@ def fg_grass(key, variant):
 
 
 def fg_flowers(key, variant):
-    cv = Canvas(1024, 512, 1.0, seed=key)
+    cv = fg_canvas(key)
     r = rng(key)
     base = 490
     for i in range(6):
@@ -1480,7 +1486,7 @@ def fg_flowers(key, variant):
 
 
 def fg_ferns(key="fg_ferns"):
-    cv = Canvas(1024, 512, 1.0, seed=key)
+    cv = fg_canvas(key)
     r = rng(key)
     for i, (x, h) in enumerate([(300, 420), (650, 460), (480, 330), (820, 300), (170, 280)]):
         fern(cv, x, 495, h, r, "f%d" % i, P.mix(P.MOSS, P.MOSS_DK, 0.3 + 0.15 * (i % 3)))

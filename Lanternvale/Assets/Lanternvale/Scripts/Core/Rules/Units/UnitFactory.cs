@@ -39,6 +39,9 @@ namespace Lanternvale.Rules
             if (items.Count == 0) items.AddRange(c.startingItems);
             InitCharacter(u, c, learnAll, items.ToArray(), leftovers);
             Progression.AutoAllocateTalents(u);
+            if (learnAll) Progression.LearnAllAvailable(u); // talent-granted abilities at their best rank
+            AttachPassives(u);
+            u.InvalidateStats();
             u.RestoreFull();
             return u;
         }

@@ -120,7 +120,7 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>Hostile single-target spells may be grounded (Grounding Totem) or reflected (ward talents).</summary>
-        void RedirectOrReflect(AbilityCast cast)
+        internal void RedirectOrReflect(AbilityCast cast)
         {
             var a = cast.Ability;
             var t = cast.Target;
@@ -1075,6 +1075,7 @@ namespace Lanternvale.Rules
                 Emit(new CombatEvent { Type = CombatEventType.Summon, Source = c, Target = u, Name = u.Name, AbilityId = cast.AbilityId, To = u.Position });
                 ApplyPassives(u);
                 Specials.OnSummoned(cast, u);
+                if (isPet) Specials.OnPetChanged(this, c);
             }
         }
 

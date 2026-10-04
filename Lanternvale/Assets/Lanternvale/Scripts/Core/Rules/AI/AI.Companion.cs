@@ -282,7 +282,8 @@ namespace Lanternvale.Rules
                     if (manaLow && a.cost.type == ResourceType.Mana && role == UnitRole.Healer) break;
                     foreach (var t in EnemyTargets(a, u, enemies, focus))
                     {
-                        if (t.IsTotem || AlreadyHasAny(a, t, u)) continue;
+                        var check = t == u && focus != null ? focus : t;
+                        if (t.IsTotem || AlreadyHasAny(a, check, u) || Pointless(b, u, a, check)) continue;
                         if (t.HealthPct < 20f && t.Rank != CreatureRank.Boss) continue;
                         float s = (basePri + 2.5f) * (t == focus ? 1.3f : 1f) * castPenalty;
                         if (role == UnitRole.Healer) s *= 0.4f;
@@ -370,7 +371,8 @@ namespace Lanternvale.Rules
                 {
                     // mana from health (Life Tap style) or resource tools
                     bool gainsMana = false;
-                    foreach (var e in a.effects) if (e.type == EffectType.GainResource && e.resource == "Mana") gainsMana = true;
+                    foreach (var e in a.effects)
+                        if ((e.type == EffectType.GainResource && e.resource == "Mana") || e.special == "WarlockLifeTap") gainsMana = true;
                     if (gainsMana && u.MaxMana > 0 && u.ManaPct < 40f && u.HealthPct > 60f)
                         yield return new Candidate { Ability = a, Target = a.target == TargetType.Self ? u : focus, Score = basePri + 4f, Why = "mana" };
                     break;
@@ -389,6 +391,8 @@ namespace Lanternvale.Rules
                     {
                         if (t.IsTotem && enemies.Count > 1) continue;
                         if (t.HasStateAura(UnitState.Polymorph) || t.HasStateAura(UnitState.Incapacitate) || t.HasStateAura(UnitState.Sleep)) continue;
+                        if (t != u && Pointless(b, u, a, t)) continue;
+                        if (t != u && !HasDirectEffect(a) && AlreadyHasAny(a, t, u)) continue;
                         float s = basePri * (t == focus ? 1.3f : 1f) * castPenalty;
                         if (a.generatesComboPoint) s = b.ComboPointsOn(u, t) >= 5 ? s * 0.2f : s + 2f;
                         if (a.special == "Shoot") s = 1.2f;
@@ -399,6 +403,55 @@ namespace Lanternvale.Rules
                     break;
                 }
             }
+        }
+
+        /// <summary>The ability would do nothing useful on the target (drain mana of a manaless unit, nothing to dispel,
+        /// own curse/sting of the same family already running, aura-only ability already applied).</summary>
+        static bool Pointless(Battle b, Unit u, AbilityDef a, Unit t)
+        {
+            if (t == null) return false;
+            bool hostile = t.IsHostileTo(u);
+            bool onlyDispel = a.effects.Count > 0;
+            bool anyDispellable = false;
+            foreach (var e in a.effects)
+            {
+                if (e.type == EffectType.Dispel)
+                {
+                    foreach (var x in t.Auras)
+                        if (!x.IsPassive && x.Def.dispel != DispelType.None && (hostile ? x.Def.kind == AuraKind.Buff : x.Def.kind == AuraKind.Debuff)
+                            && (e.dispelType == DispelType.None || x.Def.dispel == e.dispelType)) { anyDispellable = true; break; }
+                }
+                else if (e.type != EffectType.Threat) onlyDispel = false;
+                bool drainsMana = (e.type == EffectType.DrainResource && e.resource == "Mana") || e.special == "PriestManaBurn";
+                if (drainsMana && hostile && t.MaxMana <= 0f) return true;
+            }
+            if (onlyDispel && !anyDispellable) return true;
+            foreach (var id in AppliedAuras(a))
+            {
+                var def = b.Db.Aura(id);
+                if (def == null) continue;
+                foreach (var e in def.tickEffects)
+                    if (e.type == EffectType.DrainResource && e.resource == "Mana" && hostile && t.MaxMana <= 0f) return true;
+                if (hostile && !string.IsNullOrEmpty(def.exclusiveGroup) && def.exclusivePerCaster && !HasDirectEffect(a))
+                    foreach (var x in t.Auras)
+                        if (x.Caster == u && x.Def.exclusiveGroup == def.exclusiveGroup && x.Def.id != def.id && x.Remaining > 3f) return true;
+                if (hostile && SpecialUtilIsSnare(def) && (t.Creature != null && t.Class == null && t.Creature.moveSpeed <= 0f)) return true;
+            }
+            return false;
+        }
+
+        static bool SpecialUtilIsSnare(AuraDef d)
+        {
+            if (Array.IndexOf(d.states, UnitState.Root) >= 0) return true;
+            foreach (var m in d.mods) if (m.stat == StatId.MoveSpeed && m.value < 0) return true;
+            return false;
+        }
+
+        static bool HasDirectEffect(AbilityDef a)
+        {
+            foreach (var e in a.effects)
+                if (e.type == EffectType.Damage || e.type == EffectType.WeaponDamage || e.type == EffectType.Special || e.type == EffectType.DrainResource) return true;
+            return false;
         }
 
         static bool IsSelfOnly(AbilityDef a)
