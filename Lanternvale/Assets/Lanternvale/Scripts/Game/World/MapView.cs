@@ -275,7 +275,8 @@ namespace Lanternvale.Game
 
             // feathered back edge: the ground continues past the horizon and dissolves into the layers
             var avg = GroundAverage(key, sprite);
-            var edge = EdgeSprite(key, sprite);
+            float frac = Mathf.Clamp(2.2f / tileH, 0.1f, 0.5f); // ~2 m of feathered ground above the horizon
+            var edge = EdgeSprite(key, sprite, frac);
             if (edge != null)
             {
                 var er = PresentationArt.NewRenderer("Ground Edge", groundRoot, edge, SortingOrders.Ground + 10);
@@ -319,18 +320,19 @@ namespace Lanternvale.Game
             return c;
         }
 
-        /// <summary>Bottom half of the ground texture with a noisy watercolour fade to transparent.</summary>
-        static Sprite EdgeSprite(string key, Sprite ground)
+        /// <summary>Bottom rows (frac of a tile) of the ground texture with a noisy watercolour fade to transparent.</summary>
+        static Sprite EdgeSprite(string key, Sprite ground, float frac)
         {
-            if (EdgeSprites.TryGetValue(key, out var s)) return s;
+            string cacheKey = key + "@" + Mathf.RoundToInt(frac * 100f);
+            if (EdgeSprites.TryGetValue(cacheKey, out var s)) return s;
             s = null;
             try
             {
                 var tex = ground.texture;
                 var rect = ground.textureRect;
                 int w = Mathf.Clamp(Mathf.RoundToInt(rect.width), 16, 512);
-                int h = Mathf.Max(8, Mathf.RoundToInt(w * (rect.height / rect.width) * 0.5f));
-                var src = TextureReadback.Read(tex, new Rect(rect.x, rect.y, rect.width, rect.height * 0.5f), w, h);
+                int h = Mathf.Max(8, Mathf.RoundToInt(w * (rect.height / rect.width) * frac));
+                var src = TextureReadback.Read(tex, new Rect(rect.x, rect.y, rect.width, rect.height * frac), w, h);
                 if (src != null)
                 {
                     for (int y = 0; y < h; y++)
@@ -357,7 +359,7 @@ namespace Lanternvale.Game
                 }
             }
             catch (Exception) { s = null; }
-            EdgeSprites[key] = s;
+            EdgeSprites[cacheKey] = s;
             return s;
         }
 
@@ -410,7 +412,10 @@ namespace Lanternvale.Game
                 BuildLanternHalo(obj, h);
             }
             if (p.light != null)
+            {
                 AddLight(obj, p.light, scale, p.flip);
+                if (lantern && !obj.LanternLit) obj.light.Enabled = false; // dark lanterns stay dark until rekindled
+            }
             else if (lantern && obj.LanternLit)
                 AddLight(obj, new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, h * 0.68f / scale) }, scale, false);
 
@@ -974,6 +979,11 @@ namespace Lanternvale.Game
         {
             var o = Find(id);
             if (o == null || !o.IsLantern || o.LanternLit == lit) return;
+            SetLanternLitInternal(o, lit, animate);
+        }
+
+        void SetLanternLitInternal(MapObject o, bool lit, bool animate)
+        {
             o.LanternLit = lit;
             string art = o.Prop.art.EndsWith("_dark", StringComparison.Ordinal) ? o.Prop.art.Substring(0, o.Prop.art.Length - 5) : o.Prop.art;
             o.sprite.sprite = ArtLibrary.Sprite(lit ? art : art + "_dark");
@@ -985,10 +995,29 @@ namespace Lanternvale.Game
             if (animate && lit)
             {
                 var c = o.Position + new Vector2(0f, h * 0.66f);
-                FxSystem.Burst(c, 1.6f, School.Holy);
-                FxSystem.Sparkles(c, new Color(1f, 0.9f, 0.6f), 16);
+                FxSystem.Impact(c, School.Holy);
+                FxSystem.Sparkles(c, new Color(1f, 0.9f, 0.6f), 14);
+                FxSystem.AuraPulse(o.Position, 2.2f, new Color(1f, 0.86f, 0.55f, 0.8f));
             }
         }
+
+        /// <summary>
+        /// Lights (or darkens) every spirit lantern on the map. animate=false (default) switches
+        /// silently — use it on map load; pass true for the story moment.
+        /// </summary>
+        public void SetAllLanternsLit(bool lit, bool animate = false)
+        {
+            for (int i = 0; i < Objects.Count; i++)
+            {
+                var o = Objects[i];
+                if (!o.IsLantern || o.LanternLit == lit) continue;
+                if (!string.IsNullOrEmpty(o.Id) && Find(o.Id) == o) SetLanternLit(o.Id, lit, animate);
+                else SetLanternLitInternal(o, lit, animate);
+            }
+        }
+
+        /// <summary>Spirit lanterns on this map (props using prop_spirit_lantern / _dark).</summary>
+        public int LanternCount { get { int n = 0; foreach (var o in Objects) if (o.IsLantern) n++; return n; } }
 
         /// <summary>World rect of an object (empty rect if unknown).</summary>
         public Rect RectOf(string id) { var o = Find(id); return o != null ? o.Rect : new Rect(); }

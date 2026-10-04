@@ -827,6 +827,429 @@ WARRIOR = dict(coat=P.hx("b83a2e"), lining=P.hx("5e1c1c"), trim=GOLD, plate=P.hx
                pants=P.hx("3d3846"), boots=LEATHER_DK, belt=LEATHER, sash=P.hx("6e5d5a"), glove=P.hx("3f3a46"))
 
 
+
+# ----------------------------------------------------------------------------------------
+# generic hair building blocks
+# ----------------------------------------------------------------------------------------
+def bangs(f, n=6, y_end=0.1, spread=1.0, part=0.0, sweep=0.0, width=0.5, vary=0.12, curl=0.2):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    r = rng(f.cv.seed, "bangs", n)
+    out = []
+    for k in range(n):
+        t = k / max(1, n - 1)
+        root = (hx + (t - 0.5) * hw * 1.1 + part * hw, hy - hh * 0.98)
+        ye = hy + hh * (y_end - 0.28 * abs(t - 0.5) ** 1.5 + (r.random() - 0.5) * vary)
+        tip = (hx + (t - 0.5) * hw * 2.0 * spread + sweep * hw, ye)
+        out.append(f.hair_lock(root, tip, hw * width, bend=(0.5 - t) * curl + sweep * 0.15))
+    return out
+
+
+def side_locks(f, y_end, width=0.42, out=0.0, inner=0.0, both=True, n=1):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    res = []
+    for side in ((-1, 1) if both else (-1,)):
+        for k in range(n):
+            root = (hx + side * hw * (0.82 - k * 0.12), hy - hh * 0.6)
+            tip = (hx + side * hw * (1.0 + out) - side * inner * hw + side * k * hw * 0.15, y_end - k * hh * 0.2)
+            res.append(f.hair_lock(root, tip, hw * width, bend=-side * 0.08))
+    return res
+
+
+def back_mass(f, y_end, width=1.25, n=7, jag=0.1, flare=0.0):
+    """Long hair hanging behind the head and shoulders (paint before the body/face)."""
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    r = rng(f.cv.seed, "backmass")
+    locks = [f.hairline_cap(low=0.3)]
+    for k in range(n):
+        t = k / max(1, n - 1)
+        root = (hx + (t - 0.5) * hw * 1.4, hy - hh * 0.7)
+        tip = (hx + (t - 0.5) * hw * 2 * (width + flare), y_end - r.random() * jag * (y_end - hy))
+        ctrl = (hx + (t - 0.5) * hw * 2 * width * 1.05, hy + hh * 0.8)
+        locks.append(f.hair_lock(root, tip, hw * 0.75, ctrl=ctrl))
+    return locks
+
+
+def braid(f, pts, w, col, beads=None, key="br"):
+    """Braided strand: chain of overlapping ellipses along a path, optional beads."""
+    cv = f.cv
+    c = catmull(A(pts), closed=False, n=10)
+    seg = np.diff(c, axis=0)
+    L = np.concatenate([[0], np.cumsum(np.hypot(seg[:, 0], seg[:, 1]))])
+    step = w * 0.75
+    d = 0
+    polys = []
+    k = 0
+    while d < L[-1]:
+        i = min(len(c) - 2, np.searchsorted(L, d))
+        p = c[i]
+        a = math.atan2(seg[i][1], seg[i][0])
+        off = (0.18 if k % 2 else -0.18) * w
+        polys.append(ellipse(p[0] - math.sin(a) * off, p[1] + math.cos(a) * off, w * 0.62, w * 0.42, a + (0.5 if k % 2 else -0.5), 14))
+        d += step
+        k += 1
+    f.paint_hair([polys], col, key=key, shine=False, each=True)
+    if beads:
+        for j, (tt, bc) in enumerate(beads):
+            i = min(len(c) - 1, int(tt * (len(c) - 1)))
+            p = c[i]
+            f.ell(p[0], p[1], w * 0.55, w * 0.62, bc, hi=0.7, gloss=0.6, shadow=0.2)
+
+
+# ----------------------------------------------------------------------------------------
+# outfit building blocks
+# ----------------------------------------------------------------------------------------
+def skirt(f, top_y, hem_y, w_top, w_hem, col, folds=6, front_split=0.0, scallop=0.0, trim=None, motif=None, shadow=0.25):
+    cx = f.cx
+    hu = f.hu
+    pts = [(cx - w_top, top_y), (cx + w_top, top_y), (cx + w_top * 1.05 + (w_hem - w_top) * 0.35, (top_y + hem_y) / 2),
+           (cx + w_hem, hem_y)]
+    n = 7
+    for k in range(n + 1):
+        t = k / n
+        x = cx + w_hem - t * 2 * w_hem
+        y = hem_y + (hu * scallop * (0.5 + 0.5 * math.cos(t * n * 2 * math.pi)) if scallop else 0) + math.sin(t * math.pi) * hu * 0.08
+        pts.append((x, y))
+    pts.append((cx - w_top * 1.05 - (w_hem - w_top) * 0.35, (top_y + hem_y) / 2))
+    m = f.shape(pts, col, n=5, shadow=shadow, soft=hu * 0.3)
+    segs = []
+    for k in range(folds):
+        t = (k + 0.5) / folds
+        xt = cx - w_top + t * 2 * w_top
+        xb = cx - w_hem + t * 2 * w_hem
+        segs.append((xt, top_y + hu * 0.15, xb, hem_y - hu * 0.02))
+    f.folds(m, segs, col, 0.4, hu * 0.035)
+    if trim:
+        f.trim([(cx - w_hem, hem_y - hu * 0.02), (cx, hem_y + hu * 0.06), (cx + w_hem, hem_y - hu * 0.02)], hu * 0.09, trim, motif=motif)
+    if front_split:
+        sp = [(cx + front_split * w_top, top_y + hu * 0.3), (cx + front_split * w_hem * 0.9, hem_y + hu * 0.06),
+              (cx + front_split * w_hem * 0.5, hem_y + hu * 0.08)]
+        f.lines([(sp[0][0], sp[0][1], sp[1][0], sp[1][1])], hu * 0.03, P.shadow_of(col, 1.3), 0.7, clip=m)
+    return m
+
+
+def shorts(f, col, hem_dy=0.3, baggy=1.0, trim=None, motif=None):
+    """Shorts/breeches from waist to above/below the knee."""
+    hu = f.hu
+    cx = f.cx
+    m_all = []
+    for s in (-1, 1):
+        hip = f.hipL if s < 0 else f.hipR
+        knee = f.kneeL if s < 0 else f.kneeR
+        hem_y = knee[1] - hu * hem_dy
+        t = (hem_y - hip[1]) / (knee[1] - hip[1])
+        hx_ = hip[0] + (knee[0] - hip[0]) * t
+        w = f.w_thigh * (1.15 * baggy)
+        pts = [(cx, f.waist_y + hu * 0.1), (cx + s * f.w_waist * 1.05, f.waist_y + hu * 0.1), (cx + s * f.w_hip * 1.05 * baggy, f.hip_y + hu * 0.1),
+               (hx_ + s * w * 0.62, hem_y), (hx_ - s * w * 0.55, hem_y + hu * 0.03), (cx + s * hu * 0.02, f.crotch_y + hu * 0.12)]
+        m = f.shape(pts, col, n=5)
+        f.folds(m, [(hx_ + s * w * 0.1, f.hip_y + hu * 0.3, hx_ + s * w * 0.25, hem_y - hu * 0.05)], col, 0.35, hu * 0.03)
+        if trim:
+            f.trim([(hx_ - s * w * 0.55, hem_y), (hx_ + s * w * 0.62, hem_y - hu * 0.02)], hu * 0.08, trim, motif=motif)
+        m_all.append(m)
+    return m_all
+
+
+def vest(f, col, open_w=0.35, hem_y=None, trim=None, sides=(-1, 1), collar=True):
+    hu = f.hu
+    cx = f.cx
+    hem_y = hem_y or f.waist_y + hu * 0.25
+    for s in sides:
+        pts = [(cx + s * f.w_neck * 0.8, f.neck_y + hu * 0.1), (cx + s * f.w_sh * 0.92, f.sh_y + hu * 0.1), (cx + s * f.w_sh * 0.95, f.sh_y + hu * 0.4),
+               (cx + s * f.w_chest * 0.98, f.chest_y + hu * 0.35), (cx + s * f.w_waist * 1.05, hem_y), (cx + s * f.w_chest * open_w, hem_y + hu * 0.04),
+               (cx + s * f.w_chest * open_w, f.chest_y), (cx + s * f.w_neck * 0.9, f.sh_y + hu * 0.25)]
+        if s < 0:
+            pts = pts[::-1]
+        f.shape(pts, col, n=5)
+        if trim:
+            f.trim([(cx + s * f.w_neck * 0.8, f.neck_y + hu * 0.12), (cx + s * f.w_neck * 0.9, f.sh_y + hu * 0.25),
+                    (cx + s * f.w_chest * open_w, f.chest_y), (cx + s * f.w_chest * open_w, hem_y + hu * 0.04)], hu * 0.07, trim)
+
+
+def headband(f, col, y=-0.45, beads=None, tails=0):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    pts = [(hx - hw * 1.08, hy + hh * (y + 0.15)), (hx, hy + hh * (y - 0.02)), (hx + hw * 1.06, hy + hh * (y + 0.15))]
+    f.band(pts, hh * 0.13, col, shadow=0.25, cel=0.7)
+    if beads:
+        for k, bc in enumerate(beads):
+            t = (k + 1) / (len(beads) + 1)
+            x = hx - hw + t * 2 * hw
+            yy = hy + hh * (y + 0.02 + 0.13 * (2 * t - 1) ** 2)
+            f.ell(x, yy, hh * 0.05, hh * 0.05, bc, hi=0.7, gloss=0.5)
+    for k in range(tails):
+        f.band([(hx - hw * 1.0, hy + hh * (y + 0.15)), (hx - hw * 1.35, hy + hh * (y + 0.35 + k * 0.1)), (hx - hw * 1.55, hy + hh * (y + 0.9 + k * 0.15))],
+               hh * 0.1, col, w1=hh * 0.05)
+
+
+def necklace(f, cols, y_off=0.25, n=9, r=0.05, sag=0.35):
+    hu = f.hu
+    cx = f.cx
+    for k in range(n):
+        t = k / (n - 1)
+        x = cx + (t - 0.5) * f.w_neck * 2.6
+        y = f.neck_y + hu * y_off + math.sin(t * math.pi) * hu * sag * 0.5
+        f.ell(x, y, hu * r, hu * r, cols[k % len(cols)], hi=0.7, gloss=0.6, shadow=0.15, line=0.7)
+
+
+def fur(f, pts, w, col, key="fur"):
+    """Fluffy fur trim along a path: chain of soft tufts."""
+    cv = f.cv
+    c = catmull(A(pts), closed=False, n=8)
+    r = rng(cv.seed, key)
+    polys = []
+    for i in range(0, len(c), 3):
+        p = c[i]
+        polys.append(blob(p[0], p[1], w * (0.55 + 0.25 * r.random()), w * (0.45 + 0.2 * r.random()), r, 0.25, 7))
+    m = cv.polys_mask(polys)
+    m = warp(cv, m, w * 0.08, w * 0.6, key + "w")
+    drop_shadow(cv, m, 1.5, 3, 3, 0.25)
+    paint(cv, m, col, line=0.8, line_w=1.0, cel=0.5, soft=w * 0.35, hi=0.4, ao=0.2, var=0.04, var_cell=w * 0.6)
+    # tuft strokes
+    segs = []
+    for k in range(int(len(c) * 1.2)):
+        p = c[r.integers(len(c))]
+        a = r.random() * 6.28
+        segs.append((p[0], p[1], p[0] + math.cos(a) * w * 0.4, p[1] + math.sin(a) * w * 0.4))
+    f.lines(segs, max(0.7, w * 0.05), P.shadow_of(col, 1.0), 0.4, clip=m)
+    return m
+
+
+def sun_emblem(f, cx, cy, r, col, rays=12):
+    polys = [ellipse(cx, cy, r * 0.45, r * 0.45, 0, 28)]
+    for k in range(rays):
+        a = k / rays * 2 * math.pi
+        L = r * (1.0 if k % 2 == 0 else 0.75)
+        polys.append(A([(cx + math.cos(a - 0.12) * r * 0.42, cy + math.sin(a - 0.12) * r * 0.42), (cx + math.cos(a) * L, cy + math.sin(a) * L),
+                        (cx + math.cos(a + 0.12) * r * 0.42, cy + math.sin(a + 0.12) * r * 0.42)]))
+    m = f.cv.polys_mask(polys)
+    paint(f.cv, m, col, line=0.8, line_w=0.9, cel=0.7, hi=0.7, gloss=0.5, soft=r * 0.2, ao=0)
+    return m
+
+
+def runes(f, mask, col, n=8, s=0.12, key="rn", glow_amt=0.6):
+    """Small glowing rune glyphs scattered inside a mask."""
+    cv = f.cv
+    r = rng(cv.seed, key)
+    bb = bbox(mask, 0)
+    if bb is None:
+        return
+    ys, xs = bb
+    hu = f.hu
+    segs = []
+    placed = 0
+    tries = 0
+    while placed < n and tries < n * 30:
+        tries += 1
+        py = r.integers(ys.start, ys.stop)
+        px = r.integers(xs.start, xs.stop)
+        if mask[py, px] < 0.9:
+            continue
+        x, y = (px - cv.padx) / cv.s, (py - cv.pady) / cv.s
+        u = hu * s
+        kind = r.integers(4)
+        if kind == 0:
+            segs += [(x, y - u, x, y + u), (x - u * 0.6, y - u * 0.3, x + u * 0.6, y + u * 0.3)]
+        elif kind == 1:
+            segs += [(x - u * 0.6, y + u, x, y - u), (x, y - u, x + u * 0.6, y + u), (x - u * 0.3, y + u * 0.1, x + u * 0.3, y + u * 0.1)]
+        elif kind == 2:
+            segs += [(x - u * 0.5, y - u, x + u * 0.5, y - u), (x, y - u, x, y + u), (x - u * 0.5, y + u * 0.4, x + u * 0.5, y + u * 0.8)]
+        else:
+            segs += [(x - u * 0.6, y, x, y - u), (x, y - u, x + u * 0.6, y), (x + u * 0.6, y, x, y + u), (x, y + u, x - u * 0.6, y)]
+        placed += 1
+    m = cv.lines_mask(segs, hu * 0.03) * mask
+    gl = cv.blur(m, hu * 0.04) * mask
+    cv.atop(col, np.clip(gl * 1.5, 0, 1) * glow_amt * 0.6)
+    cv.atop(P.mix(col, P.WHITE_WARM, 0.5), m * 0.95)
+
+
+# ----------------------------------------------------------------------------------------
+# weapons / items
+# ----------------------------------------------------------------------------------------
+def bow(f, x, y_top, y_bot, col=P.WOOD, grip=LEATHER_DK, bulge=0.32, side=-1):
+    hu = f.hu
+    L = y_bot - y_top
+    ym = (y_top + y_bot) / 2
+    pts = [(x + side * hu * 0.12, y_top), (x - side * hu * 0.12, y_top + L * 0.08), (x - side * L * bulge * 0.55, y_top + L * 0.3),
+           (x - side * L * bulge * 0.62, ym), (x - side * L * bulge * 0.55, y_bot - L * 0.3), (x - side * hu * 0.12, y_bot - L * 0.08),
+           (x + side * hu * 0.12, y_bot)]
+    # string
+    f.lines([(x + side * hu * 0.1, y_top + hu * 0.02, x + side * hu * 0.1, y_bot - hu * 0.02)], hu * 0.018, P.CREAM, 0.95)
+    f.tube(pts, [hu * 0.06, hu * 0.1, hu * 0.13, hu * 0.15, hu * 0.13, hu * 0.1, hu * 0.06], col, hi=0.5)
+    gx = x - side * L * bulge * 0.62
+    f.band([(gx, ym - hu * 0.22), (gx, ym + hu * 0.22)], hu * 0.17, grip, cap=False)
+    for k in (-0.3, 0.3):
+        yy = y_top + L * (0.5 + k * 1.55)
+        f.ell(x - side * L * bulge * 0.42 * (1 - abs(k) * 0.3), yy, hu * 0.05, hu * 0.05, P.HONEY, hi=0.6)
+    return (gx, ym)
+
+
+def quiver(f, x, y, ang, col=LEATHER, n=5):
+    hu = f.hu
+    ca, sa = math.cos(ang), math.sin(ang)
+    top = (x + sa * hu * 0.9, y - ca * hu * 0.9)
+    bot = (x - sa * hu * 0.9, y + ca * hu * 0.9)
+    # arrows
+    for k in range(n):
+        off = (k - (n - 1) / 2) * hu * 0.07
+        p0 = (top[0] + ca * off, top[1] + sa * off)
+        p1 = (p0[0] + sa * hu * 0.55, p0[1] - ca * hu * 0.55)
+        f.band([p0, p1], hu * 0.025, P.WOOD_LIGHT, shadow=0)
+        fl = [(p1[0] - ca * hu * 0.06, p1[1] - sa * hu * 0.06), (p1[0] + sa * hu * 0.2, p1[1] - ca * hu * 0.2),
+              (p1[0] + ca * hu * 0.06, p1[1] + sa * hu * 0.06)]
+        f.shape(fl, [P.WHITE_WARM, P.TERRACOTTA, P.CREAM][k % 3], smooth=False, shadow=0, line=0.7)
+    f.band([top, bot], hu * 0.32, col, hi=0.4)
+    f.band([(top[0] - sa * hu * 0.02, top[1] + ca * hu * 0.02), (top[0] + sa * hu * 0.08, top[1] - ca * hu * 0.08)], hu * 0.36,
+           P.mix(col, P.INK, 0.25), cap=False)
+
+
+def kite_shield(f, cx, cy, w, h, col, rim, emblem=None):
+    pts = [(cx - w / 2, cy - h * 0.42), (cx - w * 0.3, cy - h * 0.5), (cx, cy - h * 0.52), (cx + w * 0.3, cy - h * 0.5),
+           (cx + w / 2, cy - h * 0.42), (cx + w * 0.42, cy + h * 0.05), (cx, cy + h * 0.5), (cx - w * 0.42, cy + h * 0.05)]
+    outer = f.shape(pts, rim, smooth=True, n=6, shadow=0.35, hi=0.6, gloss=0.4, cel=0.7)
+    c = np.asarray(pts) - (cx, cy)
+    inner = c * 0.86 + (cx, cy - h * 0.01)
+    m = f.shape(inner, col, smooth=True, n=6, shadow=0, hi=0.5, cel=0.7)
+    if emblem is not None:
+        emblem(cx, cy - h * 0.08, w * 0.24)
+    return outer
+
+
+def hammer(f, hand, head_c, col=STEEL, shaft=P.WOOD, w=1.0):
+    hu = f.hu
+    hx, hy = head_c
+    f.band([hand, (hx, hy)], hu * 0.11, shaft)
+    hw, hh = hu * 0.42 * w, hu * 0.26 * w
+    head = [(hx - hw, hy - hh), (hx + hw, hy - hh), (hx + hw * 1.05, hy + hh), (hx - hw * 1.05, hy + hh)]
+    f.shape(head, col, smooth=False, hi=0.6, gloss=0.4, cel=0.7)
+    for s in (-1, 1):
+        f.shape([(hx + s * hw, hy - hh * 1.1), (hx + s * hw * 1.18, hy - hh * 1.1), (hx + s * hw * 1.18, hy + hh * 1.1), (hx + s * hw, hy + hh * 1.1)],
+                P.mix(col, P.HONEY, 0.6), smooth=False, hi=0.6, gloss=0.4)
+    f.band([(hx - hw * 0.15, hy - hh * 0.9), (hx - hw * 0.15, hy + hh * 0.9)], hu * 0.07, P.HONEY, cap=False)
+
+
+def dagger(f, grip, tip, col=STEEL, hilt=LEATHER_DK, guard=GOLD):
+    hu = f.hu
+    gx, gy = grip
+    dx, dy = tip[0] - gx, tip[1] - gy
+    L = math.hypot(dx, dy)
+    ux, uy = dx / L, dy / L
+    base = (gx + ux * hu * 0.16, gy + uy * hu * 0.16)
+    blade(f, base, tip, hu * 0.13, col=col, edge=False)
+    pom = (gx - ux * hu * 0.18, gy - uy * hu * 0.18)
+    f.band([pom, base], hu * 0.075, hilt, shadow=0.15)
+    f.band([(base[0] - uy * hu * 0.14, base[1] + ux * hu * 0.14), (base[0] + uy * hu * 0.14, base[1] - ux * hu * 0.14)], hu * 0.055, guard,
+           hi=0.6)
+
+
+def spear(f, x, y_top, y_bot, col=P.WOOD, tip=STEEL, tassel=P.VERMILION, feathers=None):
+    hu = f.hu
+    f.band([(x, y_bot), (x + 1, (y_top + y_bot) / 2), (x + 2, y_top + hu * 0.6)], hu * 0.085, col)
+    blade(f, (x + 2, y_top + hu * 0.62), (x + 2, y_top), hu * 0.24, col=tip)
+    f.band([(x - hu * 0.07, y_top + hu * 0.64), (x + hu * 0.11, y_top + hu * 0.64)], hu * 0.08, GOLD, cap=False)
+    tas = [(x - hu * 0.02, y_top + hu * 0.68), (x + hu * 0.12, y_top + hu * 0.72), (x + hu * 0.2, y_top + hu * 1.2),
+           (x + hu * 0.05, y_top + hu * 1.1)]
+    f.shape(tas, tassel, n=4)
+    if feathers:
+        for k, fc in enumerate(feathers):
+            fx = x - hu * 0.05 - k * hu * 0.08
+            f.shape([(fx, y_top + hu * 0.75), (fx - hu * 0.12, y_top + hu * 1.0), (fx - hu * 0.08, y_top + hu * 1.35), (fx + hu * 0.02, y_top + hu * 1.0)],
+                    fc, n=4)
+
+
+def shakujo(f, x, y_top, y_bot, col=GOLD, shaft=P.WOOD):
+    hu = f.hu
+    f.band([(x, y_bot), (x, y_top + hu * 0.5)], hu * 0.08, shaft)
+    cv = f.cv
+    rr = hu * 0.32
+    ring = np.clip(cv.ellipse_mask(x, y_top + hu * 0.18, rr, rr * 1.15) - cv.ellipse_mask(x, y_top + hu * 0.18, rr * 0.78, rr * 0.92), 0, 1)
+    drop_shadow(cv, ring, 1.5, 3, 3, 0.25)
+    paint(cv, ring.astype(F32), col, line=0.9, line_w=0.9, hi=0.7, gloss=0.6, cel=0.7, soft=3)
+    f.band([(x, y_top - hu * 0.15), (x, y_top + hu * 0.55)], hu * 0.07, col, hi=0.6)
+    for s in (-1, 1):
+        for k in range(3):
+            yy = y_top + hu * (0.05 + k * 0.17)
+            xx = x + s * rr * 0.95
+            m = np.clip(cv.ellipse_mask(xx, yy, hu * 0.08, hu * 0.1) - cv.ellipse_mask(xx, yy, hu * 0.05, hu * 0.07), 0, 1)
+            paint(cv, m.astype(F32), col, line=0.8, line_w=0.8, hi=0.7, gloss=0.5, cel=0.7, soft=1)
+    f.ell(x, y_top + hu * 0.6, hu * 0.09, hu * 0.06, col, hi=0.6, gloss=0.5)
+    # streamer
+    f.shape([(x + hu * 0.05, y_top + hu * 0.62), (x + hu * 0.2, y_top + hu * 0.7), (x + hu * 0.28, y_top + hu * 1.3), (x + hu * 0.12, y_top + hu * 1.2)],
+            P.hx("e86f8a"), n=4)
+
+
+def grimoire(f, x, y, w, col, page=P.CREAM, glow_col=P.BLIGHT_GLOW):
+    hu = f.hu
+    h = w * 0.7
+    cover = [(x - w * 0.55, y - h * 0.48), (x, y - h * 0.38), (x + w * 0.55, y - h * 0.48), (x + w * 0.56, y + h * 0.5), (x, y + h * 0.58),
+             (x - w * 0.56, y + h * 0.5)]
+    f.shape(cover, col, smooth=False, hi=0.4)
+    pages = [(x - w * 0.5, y - h * 0.5), (x, y - h * 0.36), (x + w * 0.5, y - h * 0.5), (x + w * 0.5, y + h * 0.42), (x, y + h * 0.5),
+             (x - w * 0.5, y + h * 0.42)]
+    pm = f.shape(pages, page, smooth=False, shadow=0, hi=0.3, line=0.7)
+    f.lines([(x, y - h * 0.36, x, y + h * 0.5)], hu * 0.02, P.shadow_of(page, 1.4), 0.7)
+    segs = []
+    for k in range(5):
+        yy = y - h * 0.25 + k * h * 0.13
+        segs += [(x - w * 0.42, yy, x - w * 0.08, yy + h * 0.04), (x + w * 0.08, yy + h * 0.04, x + w * 0.42, yy)]
+    f.lines(segs, hu * 0.018, P.mix(glow_col, P.VIOLET, 0.5), 0.8, clip=pm)
+    f.glow(x, y - h * 0.2, w * 1.0, glow_col, 0.55, clip=False)
+
+
+def totem_charm(f, x, y, s, col, face=P.INK_SOFT):
+    hu = f.hu
+    f.lines([(x, y - s * 0.9, x, y - s * 0.45)], hu * 0.015, P.CREAM, 0.9)
+    body = [(x - s * 0.22, y - s * 0.5), (x + s * 0.22, y - s * 0.5), (x + s * 0.25, y + s * 0.5), (x - s * 0.25, y + s * 0.5)]
+    m = f.shape(body, col, smooth=False, hi=0.5, shadow=0.2, line=0.8)
+    f.ell(x - s * 0.09, y - s * 0.18, s * 0.05, s * 0.05, face, line=0, shadow=0)
+    f.ell(x + s * 0.09, y - s * 0.18, s * 0.05, s * 0.05, face, line=0, shadow=0)
+    f.lines([(x - s * 0.12, y + s * 0.12, x + s * 0.12, y + s * 0.12)], s * 0.05, face, 0.8, clip=m)
+    f.shape([(x - s * 0.32, y - s * 0.55), (x + s * 0.32, y - s * 0.55), (x + s * 0.2, y - s * 0.7), (x - s * 0.2, y - s * 0.7)],
+            P.mix(col, P.VERMILION, 0.5), smooth=False, shadow=0, line=0.7)
+
+
+def goggles(f, y_off=-0.62, lens=P.hx("6fd0c4"), frame=P.mix(P.HONEY, P.WOOD, 0.3)):
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    y = hy + hh * y_off
+    f.band([(hx - hw * 1.08, y + hh * 0.12), (hx, y - hh * 0.04), (hx + hw * 1.06, y + hh * 0.12)], hh * 0.12, LEATHER_DK)
+    for s, sc in ((-1, 1.0), (1, 0.9)):
+        cx_ = hx + f.L.turn * hw * 0.4 + s * hw * 0.42
+        f.ell(cx_, y, hw * 0.33 * sc, hh * 0.24, frame, hi=0.6, gloss=0.4, shadow=0.25)
+        m = f.ell(cx_, y, hw * 0.24 * sc, hh * 0.17, lens, hi=0.9, gloss=0.8, cel=0.5, shadow=0)
+        flat_fill(f.cv, f.cv.ellipse_mask(cx_ - hw * 0.08, y - hh * 0.06, hw * 0.07, hh * 0.05), P.WHITE_WARM, 0.9)
+
+
+def scarf(f, col, tail_side=1, tail_len=2.2, trim=None):
+    hu = f.hu
+    cx = f.cx
+    wrap = [(cx - f.w_neck * 1.25, f.chin - hu * 0.05), (cx + f.w_neck * 1.25, f.chin - hu * 0.05), (cx + f.w_neck * 1.6, f.sh_y + hu * 0.12),
+            (cx, f.sh_y + hu * 0.28), (cx - f.w_neck * 1.6, f.sh_y + hu * 0.12)]
+    m = f.shape(wrap, col, n=5)
+    f.folds(m, [(cx - f.w_neck, f.chin + hu * 0.02, cx + f.w_neck, f.chin + hu * 0.12),
+                (cx - f.w_neck * 1.2, f.chin + hu * 0.15, cx + f.w_neck * 1.1, f.sh_y + hu * 0.12)], col, 0.5, hu * 0.03)
+    s = tail_side
+    tail = [(cx + s * f.w_neck * 0.6, f.sh_y + hu * 0.1), (cx + s * f.w_neck * 1.4, f.sh_y + hu * 0.15), (cx + s * f.w_sh * 1.2, f.sh_y + hu * tail_len * 0.5),
+            (cx + s * f.w_sh * 1.55, f.sh_y + hu * tail_len), (cx + s * f.w_sh * 1.25, f.sh_y + hu * tail_len * 0.95),
+            (cx + s * f.w_sh * 0.95, f.sh_y + hu * tail_len * 0.5)]
+    tm = f.shape(tail, P.scale_v(col, 0.95), n=5)
+    if trim:
+        f.trim([(cx + s * f.w_sh * 1.25, f.sh_y + hu * tail_len * 0.95), (cx + s * f.w_sh * 1.55, f.sh_y + hu * tail_len)], hu * 0.06, trim)
+    return m
+
+
+def cape_back(f, col, hem_dy=0.4, w=1.5):
+    hu = f.hu
+    cx = f.cx
+    hem = f.knee_y + hu * hem_dy
+    pts = [(cx - f.w_sh * 0.95, f.sh_y + hu * 0.05), (cx + f.w_sh * 0.95, f.sh_y + hu * 0.05), (cx + f.w_sh * w * 0.75, f.hip_y),
+           (cx + f.w_sh * w * 0.85, hem), (cx, hem + hu * 0.1), (cx - f.w_sh * w * 0.85, hem), (cx - f.w_sh * w * 0.75, f.hip_y)]
+    m = f.shape(pts, col, n=5, shadow=0, soft=hu * 0.3)
+    f.folds(m, [(cx + k * f.w_sh * 0.4, f.hip_y, cx + k * f.w_sh * 0.55, hem) for k in (-1.5, -0.5, 0.5, 1.5)], col, 0.45, hu * 0.04)
+    return m
+
 def char_job(key, draw, look, pal, bg):
     cv = new_canvas(key)
     f = draw(cv, look, pal)

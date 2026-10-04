@@ -49,6 +49,12 @@ namespace Lanternvale.Game
             m.engine.Submit(new Composer(spec, m.engine.SampleRate, Mathf.Max(0.05f, fadeSeconds), m.seed));
         }
 
+        /// <summary>
+        /// Plays the mood for a map's music key: music_lanternvale → village, music_whisperwood →
+        /// forest, music_shrine → shrine; unknown keys → village.
+        /// </summary>
+        public static void PlayForMap(string musicKey, float fadeSeconds = 3f) => Play(MoodLibrary.Normalize(musicKey), fadeSeconds);
+
         /// <summary>Fades the music out.</summary>
         public static void Stop(float fadeSeconds = 2f)
         {

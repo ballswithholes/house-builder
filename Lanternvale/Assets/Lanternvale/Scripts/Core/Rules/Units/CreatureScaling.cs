@@ -13,8 +13,9 @@ namespace Lanternvale.Rules
     /// <item>Mana(L) = 60 + 25·L + 0.4·L²  (only creatures whose resource is Mana)</item>
     /// <item>Primary stats (initiative, skill checks) = 15 + 1.5·L</item>
     /// </list>
-    /// Rank multipliers (health / damage / armor): Normal 1/1/1, Elite 2.5/1.4/1.2, Rare 1.6/1.2/1.1,
-    /// Boss 7/1.8/1.3, Minion 0.5/0.6/0.8, Pet 1/0.75/1, Totem: health 5 + 3·L, damage 1, Critter 0.2/0.1/0.5.
+    /// Rank multipliers: the content data carries elite/boss/minion scaling in healthMult/damageMult
+    /// (e.g. elites ×2.5–3.2 health, the boss ×10), so Normal/Elite/Rare/Boss/Minion are all 1.
+    /// Pets deal ×0.75 damage; totems have 5 + 3·L health; critters 0.2 health / 0.1 damage / 0.5 armor.
     /// </summary>
     public static class CreatureScaling
     {
@@ -29,45 +30,11 @@ namespace Lanternvale.Rules
         public static float BaseMana(int level) => 60f + 25f * level + 0.4f * level * level;
         public static float PrimaryStat(int level) => 15f + 1.5f * level;
 
-        public static float HealthRankMult(CreatureRank r)
-        {
-            switch (r)
-            {
-                case CreatureRank.Elite: return 2.5f;
-                case CreatureRank.Rare: return 1.6f;
-                case CreatureRank.Boss: return 7f;
-                case CreatureRank.Minion: return 0.5f;
-                case CreatureRank.Critter: return 0.2f;
-                default: return 1f;
-            }
-        }
+        public static float HealthRankMult(CreatureRank r) => r == CreatureRank.Critter ? 0.2f : 1f;
 
-        public static float DamageRankMult(CreatureRank r)
-        {
-            switch (r)
-            {
-                case CreatureRank.Elite: return 1.4f;
-                case CreatureRank.Rare: return 1.2f;
-                case CreatureRank.Boss: return 1.8f;
-                case CreatureRank.Minion: return 0.6f;
-                case CreatureRank.Pet: return 0.75f;
-                case CreatureRank.Critter: return 0.1f;
-                default: return 1f;
-            }
-        }
+        public static float DamageRankMult(CreatureRank r) => r == CreatureRank.Pet ? 0.75f : r == CreatureRank.Critter ? 0.1f : 1f;
 
-        public static float ArmorRankMult(CreatureRank r)
-        {
-            switch (r)
-            {
-                case CreatureRank.Elite: return 1.2f;
-                case CreatureRank.Rare: return 1.1f;
-                case CreatureRank.Boss: return 1.3f;
-                case CreatureRank.Minion: return 0.8f;
-                case CreatureRank.Critter: return 0.5f;
-                default: return 1f;
-            }
-        }
+        public static float ArmorRankMult(CreatureRank r) => r == CreatureRank.Critter ? 0.5f : 1f;
 
         public static float Health(CreatureDef c, int level)
         {
