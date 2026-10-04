@@ -10,13 +10,13 @@ always runs, and real art can be dropped in later **with the same file name**.
 ```jsonc
 {
   "entries": [
-    { "key": "prop_cottage_a", "path": "Props/prop_cottage_a", "height": 6.0, "pivot": [0.5, 0.06],
+    { "key": "prop_cottage_a", "path": "Art/Props/prop_cottage_a", "height": 6.0, "pivot": [0.5, 0.06],
       "category": "Prop", "loop": false, "shadow": true }
   ]
 }
 ```
 
-* `path`: Resources path without extension. PNG with transparency.
+* `path`: Resources path without extension, including the `Art/` prefix (e.g. `Art/Props/prop_cottage_a`). PNG with transparency. Folders: `Art/{Backgrounds,Ground,Props,Foreground,Characters,Portraits,Creatures,Effects,Icons,UI}`.
 * `height`: height in **world metres** the sprite is drawn at (width follows the image aspect ratio).
   For `loop` backgrounds, `height` is the layer height. Icons/UI ignore it.
 * `pivot`: normalised pivot; props/characters stand on their pivot (feet at y ≈ 0.04–0.08).

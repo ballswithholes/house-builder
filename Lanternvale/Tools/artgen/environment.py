@@ -504,7 +504,8 @@ def bg_forest_far(key="bg_forest_far"):
         prof, centre = crown_row(cv, r, base, th, cr)
         m = cv.profile_mask(prof, 1.0)
         m = ragged(cv, m, 0.3, soft=1.0, cell=3, key="fr%d" % ri)
-        depth = Y - prof[None, :]
+        # mist depth from a smoothed crown line (no vertical streaks in narrow gaps between firs)
+        depth = Y - blur1d(np.minimum(prof, base + 40.0), th * 0.35)[None, :]
         sh = np.roll(np.roll(m, 9, 0), 7, 1)
         lit = cv.blur(np.clip(m - sh, 0, 1), 4.0) * 1.6
         shade = cv.blur(np.clip(m - np.roll(np.roll(m, -7, 0), -9, 1), 0, 1), 6.0)

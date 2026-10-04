@@ -130,7 +130,7 @@ def env_composite():
     tile_layer(c, "bg_mountains_far", 20, ppm * 0.62, 120)
     tile_layer(c, "bg_hills_far", 150, ppm * 0.62, 500)
     tile_layer(c, "bg_village_far", 330, ppm * 0.55, 150)
-    tile_layer(c, "bg_hills_near", 300, ppm * 0.6, 900)
+    tile_layer(c, "bg_hills_near", 362, ppm * 0.6, 900)
     # ground plane (squashed to suggest the oblique camera), hazed toward the horizon
     g = img("ground_meadow")
     gm = MAN["ground_meadow"]["height"] * ppm
@@ -295,7 +295,7 @@ def icons_sheet():
     cell = 76
     rows = int(math.ceil(len(glyphs) / float(cols)))
     fxk = [k for k in MAN if MAN[k]["category"] == "Effect"]
-    H = rows * (cell + 12) + 200
+    H = rows * (cell + 12) + 2 * 200 + 20
     c = Image.new("RGBA", (cols * cell, H), (38, 34, 48, 255))
     d = ImageDraw.Draw(c)
     f = font(10)
@@ -320,8 +320,9 @@ def icons_sheet():
         if k != "fx_shadow":
             a[..., :3] = a[..., :3] * np.array(tints[i % len(tints)]) / 255.0
         im = Image.fromarray(a.astype(np.uint8), "RGBA")
-        if x + im.width > c.width:
-            break
+        if x + max(im.width, 70) > c.width:
+            x = 10
+            y0 += 200
         c.alpha_composite(im, (x, y0 + (170 - im.height) // 2))
         d.text((x, y0 + 172), k, fill=(220, 214, 230), font=f)
         x += max(im.width, 70) + 12
