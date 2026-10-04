@@ -518,7 +518,7 @@ namespace Lanternvale.Game
                 foreach (var u in extras) Label(rig, u.NameplatePosition, u.DisplayName, style);
                 if (hoveredObject != null)
                     Label(rig, hoveredObject.LabelPosition, string.IsNullOrEmpty(hoveredObject.Label) ? hoveredObject.Id : hoveredObject.Label, Ui.Center);
-                foreach (var t in map.Transitions) Label(rig, t.LabelPosition, (t.Locked ? "🔒 " : "→ ") + t.Label, style);
+                foreach (var t in map.Transitions) Label(rig, t.LabelPosition, (t.Locked ? "[locked] " : "> ") + t.Label, style);
             }
 
             float w = 520f;

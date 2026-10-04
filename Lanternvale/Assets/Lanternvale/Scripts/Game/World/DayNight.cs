@@ -183,9 +183,13 @@ namespace Lanternvale.Game
             Changed?.Invoke(this);
         }
 
-        /// <summary>Sky colour for an authored map sky colour at the current time.</summary>
+        /// <summary>
+        /// Sky colour for an authored map sky colour at the current time. Fixed-time maps keep their
+        /// authored sky (it was painted for that time) unless the hour was overridden.
+        /// </summary>
         public Color SkyColor(Color authored, bool top)
         {
+            if (!Cycle && overrideHour == null) return authored;
             var key = top ? SkyTopTint : SkyBottomTint;
             return Color.Lerp(authored, key, SkyBlend);
         }

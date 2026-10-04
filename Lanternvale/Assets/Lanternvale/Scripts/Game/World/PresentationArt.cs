@@ -15,6 +15,7 @@ namespace Lanternvale.Game
         delegate Color ColorFn(float u, float v);
 
         static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
+        static readonly Dictionary<int, Sprite> IntCache = new Dictionary<int, Sprite>(); // allocation-free keys for ring/cone variants
         static readonly Dictionary<string, bool> RealArt = new Dictionary<string, bool>();
 
         // ------------------------------------------------------------------ materials
@@ -206,16 +207,20 @@ namespace Lanternvale.Game
         public static Sprite Ring(int thicknessPx, int size)
         {
             thicknessPx = Mathf.Clamp(thicknessPx, 1, size / 4);
-            return Cached("ring" + thicknessPx + "_" + size, () =>
+            int key = 1000000 + size * 1000 + thicknessPx;
+            if (IntCache.TryGetValue(key, out var cached) && cached != null) return cached;
+            return IntCache[key] = MakeRing(thicknessPx, size);
+        }
+
+        static Sprite MakeRing(int thicknessPx, int size)
+        {
+            float R = size * 0.5f;
+            float rc = R - thicknessPx * 0.5f - 1.5f;
+            return MakeSprite(MakeTex("lv_ring", size, size, (u, v) =>
             {
-                float R = size * 0.5f;
-                float rc = R - thicknessPx * 0.5f - 1.5f;
-                return MakeSprite(MakeTex("lv_ring", size, size, (u, v) =>
-                {
-                    float d = Mathf.Sqrt(Cx(u) * Cx(u) + Cx(v) * Cx(v)) * R;
-                    return thicknessPx * 0.5f + 0.5f - Mathf.Abs(d - rc);
-                }), new Vector2(0.5f, 0.5f));
-            });
+                float d = Mathf.Sqrt(Cx(u) * Cx(u) + Cx(v) * Cx(v)) * R;
+                return thicknessPx * 0.5f + 0.5f - Mathf.Abs(d - rc);
+            }), new Vector2(0.5f, 0.5f));
         }
 
         /// <summary>Ring sprite whose line looks ~lineMetres thick at the given radius.</summary>
@@ -435,27 +440,30 @@ namespace Lanternvale.Game
         public static Sprite Cone(float angleDeg)
         {
             int bucket = Mathf.Clamp(Mathf.RoundToInt(angleDeg / 5f) * 5, 5, 360);
-            return Cached("cone" + bucket, () =>
+            if (IntCache.TryGetValue(bucket, out var cached) && cached != null) return cached;
+            return IntCache[bucket] = MakeCone(bucket);
+        }
+
+        static Sprite MakeCone(int bucket)
+        {
+            float half = bucket * 0.5f * Mathf.Deg2Rad;
+            const float R = 128f;
+            return MakeSprite(MakeTex("lv_cone" + bucket, 256, 256, (u, v) =>
             {
-                float half = bucket * 0.5f * Mathf.Deg2Rad;
-                const float R = 128f;
-                return MakeSprite(MakeTex("lv_cone" + bucket, 256, 256, (u, v) =>
+                float x = Cx(u), y = Cx(v);
+                float d = Mathf.Sqrt(x * x + y * y);
+                float ang = Mathf.Abs(Mathf.Atan2(y, x));
+                float angular = -10f;
+                if (bucket < 360)
                 {
-                    float x = Cx(u), y = Cx(v);
-                    float d = Mathf.Sqrt(x * x + y * y);
-                    float ang = Mathf.Abs(Mathf.Atan2(y, x));
-                    float angular = -10f;
-                    if (bucket < 360)
-                    {
-                        float over = ang - half;
-                        angular = over < Mathf.PI * 0.5f ? d * Mathf.Sin(over) : d;
-                    }
-                    float sd = Mathf.Max(d - 0.985f, angular) * R; // signed distance in pixels
-                    float fill = Mathf.Clamp01(0.5f - sd) * (0.16f + 0.16f * d);
-                    float edge = Mathf.Clamp01(1.6f - Mathf.Abs(sd + 1.6f));
-                    return Mathf.Max(fill, edge);
-                }), new Vector2(0.5f, 0.5f));
-            });
+                    float over = ang - half;
+                    angular = over < Mathf.PI * 0.5f ? d * Mathf.Sin(over) : d;
+                }
+                float sd = Mathf.Max(d - 0.985f, angular) * R; // signed distance in pixels
+                float fill = Mathf.Clamp01(0.5f - sd) * (0.16f + 0.16f * d);
+                float edge = Mathf.Clamp01(1.6f - Mathf.Abs(sd + 1.6f));
+                return Mathf.Max(fill, edge);
+            }), new Vector2(0.5f, 0.5f));
         }
 
         /// <summary>

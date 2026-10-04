@@ -38,9 +38,15 @@ namespace Lanternvale.Rules
             if (!target.IsAlive && !def.persistThroughDeath) return null;
             bool harmful = def.kind == AuraKind.Debuff || (caster != null && caster.IsHostileTo(target));
 
-            // immunities
+            // immunities and resist effects (talents, Berserker Rage, Bestial Wrath, Freedom...)
             if (harmful && caster != target)
             {
+                var resist = Specials.ResistIncomingAura(this, target, caster, def);
+                if (resist != null)
+                {
+                    Emit(new CombatEvent { Type = resist == "Resist" ? CombatEventType.Resist : CombatEventType.Immune, Source = caster, Target = target, AuraId = def.id, Name = def.name, Reason = resist });
+                    return null;
+                }
                 string immune = null;
                 if (target.IsInvulnerable) immune = "invulnerable";
                 else if (def.school != School.Physical && target.HasStateAura(UnitState.ImmuneMagic)) immune = "magic";
@@ -72,6 +78,7 @@ namespace Lanternvale.Rules
                 FillScaling(existing, info, mods);
                 ResolveModValues(existing);
                 if (def.absorb != null) existing.AbsorbLeft = AbsorbAmount(existing);
+                existing.CastSerial = castSerial;
                 target.InvalidateStats();
                 target.ClampResources();
                 Emit(new CombatEvent
@@ -79,6 +86,7 @@ namespace Lanternvale.Rules
                     Type = existing.Stacks != before ? CombatEventType.AuraStack : CombatEventType.AuraRefreshed, Source = caster, Target = target,
                     AuraId = def.id, Name = def.name, Count = existing.Stacks, Seconds = duration,
                 });
+                Specials.OnAuraAppliedByMe(this, caster, existing);
                 return existing;
             }
             if (existing != null && existing.IsAreaChild && info.AreaSource != null)
@@ -105,7 +113,7 @@ namespace Lanternvale.Rules
                 Stacks = Math.Min(Math.Max(1, def.maxStacks), Math.Max(1, info.Stacks)),
                 Charges = def.charges > 0 ? def.charges + (int)Math.Round(mods.Charges) : 0,
                 AreaSource = info.AreaSource, IsPassive = info.Passive,
-                ProcCooldowns = new float[def.procs.Count],
+                ProcCooldowns = new float[def.procs.Count], CastSerial = castSerial,
             };
             FillScaling(inst, info, mods);
             ResolveModValues(inst);
@@ -145,6 +153,7 @@ namespace Lanternvale.Rules
 
             if (def.onApply.Count > 0) ExecuteAuraEffects(inst, def.onApply);
             Specials.OnAuraApplied(this, inst);
+            if (target.Auras.Contains(inst)) Specials.OnAuraAppliedByMe(this, caster, inst);
             if (def.radius > 0) RefreshAreaAuras();
             return inst;
         }

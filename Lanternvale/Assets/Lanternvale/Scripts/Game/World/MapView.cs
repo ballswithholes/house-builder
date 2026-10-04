@@ -414,7 +414,7 @@ namespace Lanternvale.Game
             else if (lantern && obj.LanternLit)
                 AddLight(obj, new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, h * 0.68f / scale) }, scale, false);
 
-            if (!decal && h >= 2.5f && !p.sway) occluders.Add(obj);
+            if (!decal && h >= 2.5f) occluders.Add(obj);
             Objects.Add(obj);
             if (!string.IsNullOrEmpty(p.interact))
             {
@@ -474,6 +474,7 @@ namespace Lanternvale.Game
             float scale = p.scale > 0f ? p.scale : 1f;
             var root = new GameObject("FG " + p.art).transform;
             root.SetParent(fgRoot, false);
+            root.localPosition = new Vector3(p.pos.x, p.pos.y, 0f); // before sway registration (it culls by x)
             var sprite = ArtLibrary.Sprite(p.art);
             int order = SortingOrders.Foreground + Mathf.Clamp(Mathf.RoundToInt(-p.pos.y * 10f), -900, 900) * 2 + (index & 1);
             var sr = PresentationArt.NewRenderer("Sprite", root, sprite, order);

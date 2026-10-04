@@ -53,6 +53,8 @@ namespace Lanternvale.Rules
         public bool IsPassive;
         /// <summary>Internal cooldown timers of this aura's procs (seconds remaining, index-aligned with Def.procs).</summary>
         public float[] ProcCooldowns = new float[0];
+        /// <summary>Battle cast serial during which the aura was applied (procs of that same cast ignore it).</summary>
+        public int CastSerial = -1;
         /// <summary>Free-form state for special handlers.</summary>
         public Dictionary<string, float> Vars;
 

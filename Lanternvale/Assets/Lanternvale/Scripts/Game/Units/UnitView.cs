@@ -118,6 +118,8 @@ namespace Lanternvale.Game
         float baseSpriteHeight;      // bounds height of baseSprite (local units)
         float spriteScale = 1f;      // visual scale so the sprite is Height tall
         float shadowW, shadowH;
+        Vector2 shadowBounds, ringBounds, circleBounds;   // cached sprite bounds (avoid per-frame native calls)
+        static int lastWarmFrame = -1;
         Silhouette silhouette;
         bool silhouetteTried;
 
@@ -198,10 +200,12 @@ namespace Lanternvale.Game
             shadowH = shadowW * 0.32f;
             var shSprite = PresentationArt.Fx("fx_shadow");
             shadow = PresentationArt.NewRenderer("Shadow", transform, shSprite, SortingOrders.Shadow + 1);
+            shadowBounds = shSprite.bounds.size;
             PresentationArt.SetSize(shadow.transform, shSprite, shadowW, shadowH);
             shadow.color = new Color(0.16f, 0.12f, 0.22f, 0.34f);
 
             var ringSprite = PresentationArt.Fx("fx_target_ring");
+            ringBounds = ringSprite.bounds.size;
             ring = PresentationArt.NewRenderer("Ring", transform, ringSprite, SortingOrders.Shadow + 20, true);
             PresentationArt.SetSize(ring.transform, ringSprite, shadowW * 1.45f, shadowW * 1.45f * 0.42f);
             ring.enabled = false;
@@ -273,6 +277,7 @@ namespace Lanternvale.Game
             if (castCircle != null) return castCircle;
             var s = PresentationArt.Fx("fx_rune_circle");
             castCircle = PresentationArt.NewRenderer("Cast Circle", transform, s, SortingOrders.Shadow + 25, true);
+            circleBounds = s.bounds.size;
             PresentationArt.SetSize(castCircle.transform, s, shadowW * 1.9f, shadowW * 1.9f * 0.45f);
             castCircle.enabled = false;
             return castCircle;
@@ -526,6 +531,13 @@ namespace Lanternvale.Game
         internal void Tick(float dt)
         {
             time += dt;
+            // pre-generate the hover/hit silhouettes in the background, one unit per frame,
+            // so the first hit or hover doesn't stall on a texture readback
+            if (!silhouetteTried && lastWarmFrame != Time.frameCount)
+            {
+                lastWarmFrame = Time.frameCount;
+                Sil();
+            }
 
             // ---- movement
             if (moving)
@@ -732,7 +744,7 @@ namespace Lanternvale.Game
                     castCircle.color = new Color(cc.r, cc.g, cc.b, circleA * alpha);
                     // fake rotation of a flat ellipse: pulse its scale instead (rotating a squashed sprite would skew it)
                     float k = 1f + 0.04f * Mathf.Sin(time * 3f);
-                    PresentationArt.SetSize(castCircle.transform, castCircle.sprite, shadowW * 1.9f * k, shadowW * 1.9f * 0.45f * k);
+                    SetScale(castCircle.transform, circleBounds, shadowW * 1.9f * k, shadowW * 1.9f * 0.45f * k);
                 }
             }
 
@@ -740,7 +752,7 @@ namespace Lanternvale.Game
             float shadowK = (1f - 0.35f * Mathf.Clamp01(off.y / 0.6f)) * deathFade;
             shadow.color = new Color(0.16f, 0.12f, 0.22f, 0.34f * shadowK * (stealthed ? 0.5f : 1f));
             float lieStretch = 1f + poseAngle01 * 0.9f;
-            PresentationArt.SetSize(shadow.transform, shadow.sprite, shadowW * lieStretch, shadowH);
+            SetScale(shadow.transform, shadowBounds, shadowW * lieStretch, shadowH);
             shadow.transform.localPosition = new Vector3(poseAngle01 * -facing * Height * 0.42f, 0f, 0f);
 
             if (ring.enabled)
@@ -760,7 +772,7 @@ namespace Lanternvale.Game
                 {
                     float u = Mathf.Repeat(time / 1.3f, 1f);
                     float k = 1f + 0.55f * u;
-                    PresentationArt.SetSize(ripple.transform, ripple.sprite, shadowW * 1.45f * k, shadowW * 1.45f * 0.42f * k);
+                    SetScale(ripple.transform, ringBounds, shadowW * 1.45f * k, shadowW * 1.45f * 0.42f * k);
                     ripple.color = new Color(RingColor.r, RingColor.g, RingColor.b, 0.7f * (1f - u));
                 }
             }
@@ -778,6 +790,11 @@ namespace Lanternvale.Game
                 lastSortOrder = order;
                 group.sortingOrder = order;
             }
+        }
+
+        static void SetScale(Transform t, Vector2 bounds, float w, float h)
+        {
+            t.localScale = new Vector3(w / Mathf.Max(1e-4f, bounds.x), h / Mathf.Max(1e-4f, bounds.y), 1f);
         }
 
         static float Ease(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }

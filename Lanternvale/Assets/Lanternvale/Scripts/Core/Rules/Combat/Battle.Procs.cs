@@ -15,11 +15,15 @@ namespace Lanternvale.Rules
         public float WeaponSpeed = 2f;
         public int ComboPoints;
         public int Depth;
+        public bool Ranged;
+        /// <summary>The proc comes from an extra attack granted by another proc (cannot re-trigger that proc).</summary>
+        public object FromProc;
     }
 
     public sealed partial class Battle
     {
         int procDepth;
+        readonly HashSet<object> runningProcs = new HashSet<object>();
 
         /// <summary>Fires every proc of <paramref name="owner"/> listening to <paramref name="trigger"/>. <paramref name="other"/> is the other unit of the event.</summary>
         public void FireProcs(ProcTrigger trigger, Unit owner, Unit other, ProcInfo info)
@@ -35,11 +39,12 @@ namespace Lanternvale.Rules
                     foreach (var a in new List<AuraInstance>(owner.Auras))
                     {
                         if (!owner.Auras.Contains(a)) continue;
+                        if (a.CastSerial == castSerial && castSerial != 0) continue; // applied by the event's own cast/swing
                         var procs = a.Def.procs;
                         for (int i = 0; i < procs.Count; i++)
                         {
                             var p = procs[i];
-                            if (p.trigger != trigger || !Matches(p, info)) continue;
+                            if (p.trigger != trigger || !Matches(p, info) || runningProcs.Contains(p)) continue;
                             if (i < a.ProcCooldowns.Length && a.ProcCooldowns[i] > 0) continue;
                             if (!Rng.Chance(ProcChance(p, p.chance, info))) continue;
                             if (p.internalCooldown > 0 && i < a.ProcCooldowns.Length) a.ProcCooldowns[i] = p.internalCooldown;
@@ -59,7 +64,7 @@ namespace Lanternvale.Rules
                     for (int i = 0; i < effs.Count; i++)
                     {
                         var pd = effs[i];
-                        if (pd.type != "Proc" || pd.proc == null || pd.proc.trigger != trigger || !Matches(pd.proc, info)) continue;
+                        if (pd.type != "Proc" || pd.proc == null || pd.proc.trigger != trigger || !Matches(pd.proc, info) || runningProcs.Contains(pd.proc)) continue;
                         // weapon "chance on hit" procs only from that weapon's swings
                         if ((kv.Key == EquipSlot.MainHand && info.OffHand) || (kv.Key == EquipSlot.OffHand && !info.OffHand && (trigger == ProcTrigger.OnMeleeHit || trigger == ProcTrigger.OnAutoAttackHit))) continue;
                         string key = "i:" + kv.Value.Def.id + ":" + i + ":" + kv.Key;
@@ -73,7 +78,7 @@ namespace Lanternvale.Rules
                         }
                         if (!Rng.Chance(ProcChance(pd.proc, baseChance, speedInfo))) continue;
                         if (pd.proc.internalCooldown > 0) owner.ProcCooldowns[key] = pd.proc.internalCooldown;
-                        RunProc(owner, other, pd.proc, info, null);
+                        RunProc(owner, other, pd.proc, info, null, 1, 1);
                     }
                 }
                 Specials.OnProcTrigger(this, trigger, owner, other, info);
@@ -92,7 +97,9 @@ namespace Lanternvale.Rules
                 for (int i = 0; i < t.effects.Count; i++)
                 {
                     var pd = t.effects[i];
-                    if (pd.type != "Proc" || pd.proc == null || pd.proc.trigger != trigger) continue;
+                    if (pd.proc == null || pd.proc.trigger != trigger || runningProcs.Contains(pd.proc)) continue;
+                    if (pd.type != "Proc" && !(pd.type == "Special" && pd.special == WeaponTalents.SpecialName)) continue;
+                    if (pd.type == "Special" && !WeaponTalents.AttackMatches(owner, pd, info)) continue;
                     bool pet = string.Equals(pd.target, "Pet", StringComparison.OrdinalIgnoreCase);
                     if (pet != petOnly) continue;
                     if (!Matches(pd.proc, info)) continue;
@@ -104,7 +111,7 @@ namespace Lanternvale.Rules
                     else chance = pd.proc.chance;
                     if (!Rng.Chance(ProcChance(pd.proc, chance, info))) continue;
                     if (pd.proc.internalCooldown > 0) owner.ProcCooldowns[key] = pd.proc.internalCooldown;
-                    RunProc(owner, other, pd.proc, info, null, kv.Value);
+                    RunProc(owner, other, pd.proc, info, null, kv.Value, kv.Value);
                 }
             }
         }
@@ -133,20 +140,26 @@ namespace Lanternvale.Rules
             return true;
         }
 
-        void RunProc(Unit owner, Unit other, ProcDef p, ProcInfo info, AuraInstance aura, int talentRank = 1)
+        /// <summary>
+        /// Runs proc effects. Aura procs scale with the aura's rank/level; talent procs use D = talentRank − 1
+        /// (EffLevel = rank, LearnLevel = 1); item procs do not scale.
+        /// </summary>
+        void RunProc(Unit owner, Unit other, ProcDef p, ProcInfo info, AuraInstance aura, int rank = 1, int effLevel = 1)
         {
             if (p.effects.Count == 0) return;
             var src = aura?.SourceAbility;
             var cast = new AbilityCast
             {
                 Battle = this, Caster = owner, Ability = src, Target = other ?? owner, Point = (other ?? owner).Position,
-                SourceProc = p, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : talentRank,
-                EffLevel = aura != null ? aura.EffLevel : owner.Level, LearnLevel = aura != null ? aura.LearnLevel : 1,
+                SourceProc = p, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : rank,
+                EffLevel = aura != null ? aura.EffLevel : effLevel, LearnLevel = aura != null ? aura.LearnLevel : 1,
                 School = aura != null ? aura.Def.school : (p.effects[0].school ?? School.Physical),
                 Mods = src != null ? AbilityMods.For(owner, src) : AbilityModSet.Empty, ComboPoints = info.ComboPoints,
+                ProcAura = aura,
             };
-            if (aura != null) cast.SourceAura = null; // proc effects target the event's other unit, not the aura bearer
-            ExecuteEffects(cast, p.effects);
+            runningProcs.Add(p);
+            try { ExecuteEffects(cast, p.effects); }
+            finally { runningProcs.Remove(p); }
         }
     }
 }

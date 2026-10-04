@@ -49,6 +49,8 @@ namespace Lanternvale.Rules
         /// <summary>Creature ids killed (for quest kill objectives), in order.</summary>
         public readonly List<string> KilledCreatures = new List<string>();
         public readonly Dictionary<Unit, UnitMeters> Meters = new Dictionary<Unit, UnitMeters>();
+        /// <summary>Serial of the top-level cast being resolved (auras applied during it are not consumed by its own procs).</summary>
+        internal int castSerial;
 
         public readonly List<CombatEvent> Events = new List<CombatEvent>();
         /// <summary>Raised for every event as it happens.</summary>

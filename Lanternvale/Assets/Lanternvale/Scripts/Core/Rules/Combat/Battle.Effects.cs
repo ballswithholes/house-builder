@@ -35,6 +35,8 @@ namespace Lanternvale.Rules
         public AuraInstance SourceAura;
         public bool Periodic;
         public ProcDef SourceProc;
+        /// <summary>The aura whose proc runs this cast (aura procs), or null.</summary>
+        public AuraInstance ProcAura;
         public Unit ProcOther;
         public int Depth;
         public School School;

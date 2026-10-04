@@ -32,7 +32,10 @@ namespace Lanternvale.Game
             return Instance;
         }
 
-        /// <summary>Crossfades to a mood (no-op if it's already playing). Unknown names play "village".</summary>
+        /// <summary>
+        /// Crossfades to a mood (no-op if it's already playing). Accepts mood names or map music ids
+        /// such as "music_whisperwood" (matched by keyword; unknown names play "village").
+        /// </summary>
         public static void Play(string mood, float fadeSeconds = 3f)
         {
             if (string.IsNullOrEmpty(mood)) { Stop(fadeSeconds); return; }
@@ -53,16 +56,15 @@ namespace Lanternvale.Game
             if (Instance != null && Instance.engine != null) Instance.engine.Stop(fadeSeconds);
         }
 
-        /// <summary>Mood for a map: MapDef.music if set, otherwise guessed from the id ("village"/"forest"/"shrine").</summary>
+        /// <summary>Mood for a map from MapDef.music (e.g. "music_whisperwood" → forest), else from the map id.</summary>
         public static string MoodForMap(MapDef map)
         {
             if (map == null) return "village";
-            if (!string.IsNullOrEmpty(map.music)) return map.music;
-            var id = (map.id ?? "").ToLowerInvariant();
-            if (id.Contains("shrine") || id.Contains("crypt") || id.Contains("dungeon")) return "shrine";
-            if (id.Contains("wood") || id.Contains("forest") || id.Contains("glade")) return "forest";
-            return "village";
+            return MoodLibrary.Normalize(!string.IsNullOrEmpty(map.music) ? map.music + " " + map.id : map.id);
         }
+
+        /// <summary>Normalised mood name for any mood/music id.</summary>
+        public static string Normalize(string moodOrMusicId) => MoodLibrary.Normalize(moodOrMusicId);
 
         void Awake()
         {

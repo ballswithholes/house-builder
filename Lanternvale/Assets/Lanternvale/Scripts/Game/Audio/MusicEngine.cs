@@ -37,9 +37,23 @@ namespace Lanternvale.Game
 
     internal static class MoodLibrary
     {
+        /// <summary>
+        /// Normalises a mood or map music id ("music_whisperwood", "forest", "boss_battle"…) to one of
+        /// village, forest, shrine, combat, menu.
+        /// </summary>
+        public static string Normalize(string mood)
+        {
+            var m = (mood ?? "").ToLowerInvariant();
+            if (m.Contains("combat") || m.Contains("battle") || m.Contains("boss") || m.Contains("fight")) return "combat";
+            if (m.Contains("menu") || m.Contains("title")) return "menu";
+            if (m.Contains("shrine") || m.Contains("dungeon") || m.Contains("crypt") || m.Contains("sad") || m.Contains("hollow")) return "shrine";
+            if (m.Contains("forest") || m.Contains("wood") || m.Contains("wild") || m.Contains("glade")) return "forest";
+            return "village";
+        }
+
         public static MoodSpec Get(string mood)
         {
-            switch ((mood ?? "").ToLowerInvariant())
+            switch (Normalize(mood))
             {
                 case "forest": case "whisperwood": case "wilds":
                     return new MoodSpec
