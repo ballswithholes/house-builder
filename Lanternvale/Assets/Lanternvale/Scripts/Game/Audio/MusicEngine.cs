@@ -89,7 +89,7 @@ namespace Lanternvale.Game
     internal sealed class Composer
     {
         public readonly MoodSpec spec;
-        public float gain, targetGain, gainStep;
+        public float gain, gainPrev, targetGain, gainStep;
         public int samplesToStep;
         public readonly int samplesPerStep;
         int step, bar, phraseIndex;
@@ -214,7 +214,7 @@ namespace Lanternvale.Game
             int kind = phraseIndex % 4;
             phraseIndex++;
             Array.Copy(phrase, previousPhrase, phraseLen);
-            if (kind == 1 && previousPhrase[0] != Rest || kind == 1)
+            if (kind == 1)
             {
                 // A': repeat with a varied ending
                 for (int i = 0; i < phraseLen; i++) phrase[i] = previousPhrase[i];
@@ -550,9 +550,11 @@ namespace Lanternvale.Game
 
         void RenderVoice(Voice v, int n)
         {
-            float g = v.owner != null ? v.owner.gain : 0f;
+            float g = v.owner != null ? v.owner.gainPrev : 0f;
+            float dg = v.owner != null ? (v.owner.gain - v.owner.gainPrev) / n : 0f;
             for (int i = 0; i < n; i++)
             {
+                g += dg;
                 if (v.delay > 0) { v.delay--; continue; }
                 float s = 0f;
                 v.age++;
@@ -676,11 +678,13 @@ namespace Lanternvale.Game
 
                 Array.Clear(mixL, 0, n);
                 Array.Clear(mixR, 0, n);
+                RampGain(current, n);
+                RampGain(fading, n);
                 for (int i = 0; i < MaxVoices; i++)
                 {
                     var v = voices[i];
                     if (v.kind == Kind.Off) continue;
-                    RenderVoiceOffset(v, n);
+                    RenderVoice(v, n);
                 }
                 Mix(data, channels, frameOffset + done, n);
 
@@ -695,19 +699,19 @@ namespace Lanternvale.Game
             }
         }
 
-        void RenderVoiceOffset(Voice v, int n)
+        static void RampGain(Composer c, int n)
         {
-            // mixL/mixR are indexed from 0 for this sub-block
-            RenderVoice(v, n);
+            if (c == null) return;
+            // voices interpolate gainPrev → gain per sample over this sub-block
+            c.gainPrev = c.gain;
+            float delta = c.gainStep * n;
+            if (c.gain < c.targetGain) c.gain = Math.Min(c.targetGain, c.gain + delta);
+            else if (c.gain > c.targetGain) c.gain = Math.Max(c.targetGain, c.gain - delta);
         }
 
         void AdvanceComposer(Composer c, int n)
         {
             if (c == null) return;
-            // gain ramps once per sub-block (sub-blocks are ≤ one 8th note; ramp is smooth enough at that rate)
-            float delta = c.gainStep * n;
-            if (c.gain < c.targetGain) c.gain = Math.Min(c.targetGain, c.gain + delta);
-            else if (c.gain > c.targetGain) c.gain = Math.Max(c.targetGain, c.gain - delta);
             c.samplesToStep -= n;
             if (c.samplesToStep <= 0)
             {

@@ -376,6 +376,19 @@ def chimney(cv, x, base_y, w, h, r, key, col=P.STONE_WARM, crooked=0.0):
     return m
 
 
+def moss_on(cv, key, cell=30, thr=0.6, opacity=1.0, where=None, top_bias=None):
+    """Soft moss patches on already-painted areas (bigger, smoother than speckles)."""
+    n = cv.noise(cell, key + "moss", 3)
+    if top_bias is not None:
+        n = n + top_bias
+    mo = cv.a * smoothstep(thr, thr + 0.06, n) * (cv.a > 0.95)
+    if where is not None:
+        mo = mo * where
+    mo = ragged(cv, mo.astype(F32), 0.35, 1.2, max(3, cell * 0.15), key + "mr")
+    paint(cv, mo, P.MOSS, line=0.45, line_w=0.9, soft=4, var=0.06, var_cell=cell * 0.4, hi=0.5, ao=0.15, opacity=opacity,
+          light_col=P.GRASS_LIGHT)
+
+
 def shadow_ellipse(cv, cx, cy, rx, ry, strength=0.35):
     m = cv.blur(cv.ellipse_mask(cx, cy, rx, ry), ry * 0.6)
     flat_fill(cv, m, P.mix(P.INK, P.VIOLET, 0.45), strength * 0.6)
@@ -891,8 +904,7 @@ def prop_well(key="prop_well"):
     paint(cv, rim, P.light_of(P.STONE_WARM, 0.6), line=0.8, soft=6, ao=0)
     hole = cv.ellipse_mask(256, 368, 130, 16)
     paint(cv, hole, P.mix(P.INK, P.TEAL, 0.3), line=0.4, soft=4, ao=0, hi=0)
-    mo = mr * smoothstep(0.6, 0.7, cv.noise(10, "mo", 3))
-    wash(cv, mo.astype(F32), P.MOSS, 0.85, pool=0.3, gran=0.2, key="mo")
+    moss_on(cv, key, cell=36, thr=0.6, where=mr)
     # little roof
     rf = A([(90, 140), (256, 50), (422, 140), (408, 156), (256, 76), (104, 156)])
     rfm = cv.mask(catmull(A([(80, 150), (180, 88), (256, 46), (332, 88), (432, 150), (420, 166), (256, 92), (92, 166)]), True, 4))
@@ -977,10 +989,10 @@ def toro(cv, cx, by, s, key, dark=False):
     part(cv, catmull(A([(cx, by - 7.9 * U), (cx + 0.25 * U, by - 7.45 * U), (cx, by - 7.3 * U), (cx - 0.25 * U, by - 7.45 * U)]), True, 4),
          stone, **kw)
     # moss
-    mo = cv.a * smoothstep(0.6, 0.7, cv.noise(18, key + "mo", 3)) * (cv.a > 0.9)
-    mo = cv.blur(mo.astype(F32), 0.8)
+    mo = np.zeros_like(cv.a)
     if dark:
-        wash(cv, mo.astype(F32), P.BLIGHT_DK, 0.7, pool=0.3, gran=0.2, key="bm")
+        bl = cv.a * smoothstep(0.58, 0.66, cv.noise(26, key + "bl", 3)) * (cv.a > 0.95)
+        wash(cv, bl.astype(F32), P.BLIGHT_DK, 0.6, pool=0.4, gran=0.2, key="bm")
         # cracks
         r = rng(key, "ck")
         for i in range(5):
@@ -997,28 +1009,46 @@ def toro(cv, cx, by, s, key, dark=False):
         crystal_cluster(cv, cx - 1.4 * U, by, 0.9 * U, r, key + "cr", n=4)
         crystal_cluster(cv, cx + 1.5 * U, by + 2, 0.7 * U, r, key + "cr2", n=3)
     else:
-        wash(cv, mo.astype(F32), P.MOSS, 0.8, pool=0.3, gran=0.2, key="gm")
+        moss_on(cv, key, cell=26, thr=0.62, top_bias=smoothstep(by - 5.6 * U, by - 6.6 * U, cv.yy()) * 0.3)
 
 
 def crystal_cluster(cv, x, by, s, r, key, n=5, col=P.BLIGHT_VIOLET, glow_amt=0.5):
+    """Faceted crystal shards: lit left facet, shadowed right facet, bright tips, inner glow."""
     shards = []
     for i in range(n):
-        a = -math.pi / 2 + (i - (n - 1) / 2) * 0.35 + r.normal() * 0.12
-        L = s * (0.6 + r.random() * 0.9) * (1.2 if i == n // 2 else 1.0)
-        w = s * (0.18 + r.random() * 0.1)
-        bx = x + (i - (n - 1) / 2) * s * 0.22
-        tip = (bx + math.cos(a) * L, by + math.sin(a) * L)
-        nx, ny = -math.sin(a), math.cos(a)
-        shards.append((A([(bx - nx * w, by - ny * w + 2), (bx - nx * w + math.cos(a) * L * 0.8, by - ny * w + math.sin(a) * L * 0.8), tip,
-                          (bx + nx * w + math.cos(a) * L * 0.8, by + ny * w + math.sin(a) * L * 0.8), (bx + nx * w, by + ny * w + 2)]), tip, (bx, by)))
-    for poly, tip, b in sorted(shards, key=lambda t: -len(t[0])):
-        m = cv.mask(poly)
-        drop_shadow(cv, m, 2, 3, 3, 0.3)
-        paint(cv, m, col, line=0.9, line_w=1.2, soft=3, hi=0.7, gloss=0.6, cel=0.8, ao=0.2,
-              light_col=P.mix(P.BLIGHT_GLOW, P.WHITE_WARM, 0.4), lo=P.mix(P.BLIGHT_DK, P.INK, 0.2))
-        # facet line
-        lines(cv, [(b[0], b[1], tip[0], tip[1])], max(1, s * 0.04), P.light_of(col, 1.2), 0.5, clip=m)
-    glow(cv, x, by - s * 0.5, s * 1.4, P.BLIGHT_GLOW, glow_amt * 0.4, clip=True)
+        off = (i - (n - 1) / 2)
+        a = -math.pi / 2 + off * 0.32 + r.normal() * 0.1
+        L = s * (0.55 + r.random() * 0.5) * (1.35 if i == n // 2 else 1.0)
+        w = s * (0.13 + r.random() * 0.06) * (1.25 if i == n // 2 else 1.0)
+        bx = x + off * s * 0.2
+        shards.append((abs(off), bx, a, L, w))
+    lit = P.mix(col, P.BLIGHT_GLOW, 0.55)
+    dk = P.mix(col, P.BLIGHT_DK, 0.6)
+    for (o, bx, a, L, w) in sorted(shards, key=lambda t: -t[0]):
+        ca, sa = math.cos(a), math.sin(a)
+        nx, ny = -sa, ca
+        base_l = (bx - nx * w, by - ny * w * 0.3 + 2)
+        base_r = (bx + nx * w, by + ny * w * 0.3 + 2)
+        sh_l = (bx - nx * w + ca * L * 0.78, by - ny * w + sa * L * 0.78)
+        sh_r = (bx + nx * w + ca * L * 0.78, by + ny * w + sa * L * 0.78)
+        tip = (bx + ca * L, by + sa * L)
+        ridge_b = (bx + nx * w * 0.15, by + 2)
+        ridge_t = (bx + ca * L * 0.8 + nx * w * 0.15, by + sa * L * 0.8)
+        whole = cv.mask(A([base_l, sh_l, tip, sh_r, base_r]))
+        drop_shadow(cv, whole, 2, 3, 3, 0.3)
+        left = cv.mask(A([base_l, sh_l, tip, ridge_t, ridge_b])) * whole
+        right = cv.mask(A([ridge_b, ridge_t, tip, sh_r, base_r])) * whole
+        paint(cv, left.astype(F32), lit, line=0.0, soft=2, ao=0.3, hi=0.2, var=0.04, flat=True)
+        paint(cv, right.astype(F32), dk, line=0.0, soft=2, ao=0.2, var=0.04, flat=True)
+        # bottom-to-top gradient: dark base, glowing upper part
+        g = whole * smoothstep(by, by + sa * L, cv.yy())
+        cv.atop(P.BLIGHT_GLOW, g * 0.35)
+        paint(cv, whole, col, line=0.9, line_w=1.2, soft=2, opacity=0.0)
+        edge = np.clip(whole - cv.blur(whole, 1.0), 0, 1)
+        cv.atop(P.mix(P.BLIGHT_DK, P.INK, 0.3), edge * 1.2)
+        lines(cv, [(ridge_b[0], ridge_b[1], ridge_t[0], ridge_t[1]), (ridge_t[0], ridge_t[1], tip[0], tip[1])], max(1, s * 0.012),
+              P.WHITE_WARM, 0.55, clip=whole)
+    glow(cv, x, by - s * 0.45, s * 1.1, P.BLIGHT_GLOW, glow_amt * 0.35, clip=True)
 
 
 def prop_spirit_lantern(key="prop_spirit_lantern"):
@@ -1675,17 +1705,22 @@ def chest(cv, cx, by, s, r, opened=False):
         mc = cv.polys_mask(coins)
         paint(cv, mc, P.HONEY, line=0.7, line_w=0.8, soft=2, hi=0.8, gloss=0.6, ao=0)
         glow(cv, cx, by - H * 1.3, s * 0.9, P.LANTERN, 0.5, clip=False, falloff=2.5)
-        lid = catmull(A([(cx - W / 2, by - H * 1.25), (cx + W * 0.66, by - H * 1.45), (cx + W * 0.66, by - H * 2.35), (cx + W * 0.1, by - H * 2.55),
-                         (cx - W / 2, by - H * 2.2)]), True, 4)
+        lid = A([(cx - W * 0.5, by - H * 1.22), (cx + W * 0.66, by - H * 1.42), (cx + W * 0.6, by - H * 2.0), (cx + W * 0.45, by - H * 2.12),
+                 (cx - W * 0.42, by - H * 1.92), (cx - W * 0.56, by - H * 1.7)])
         part(cv, lid, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, soft=8, tex=wood_tex(cv, "lid"), hi=0.4)
     mb = cv.mask(body)
     paint(cv, mb, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, line_w=1.2, soft=8, tex=wood_tex(cv, "cb"))
     if not opened:
-        lid = catmull(A([(cx - W / 2 - 2, by - H), (cx + W / 2 + 2, by - H), (cx + W * 0.68, by - H * 1.22), (cx + W * 0.66, by - H * 1.6),
-                         (cx + W * 0.4, by - H * 1.85), (cx - W * 0.3, by - H * 1.75), (cx - W / 2 - 2, by - H * 1.45)]), True, 4)
+        lid_side = A([(cx + W / 2, by - H), (cx + W * 0.66, by - H * 1.22), (cx + W * 0.66, by - H * 1.45), (cx + W / 2, by - H * 1.42)])
+        part(cv, lid_side, P.shadow_of(P.mix(P.WOOD, P.TERRACOTTA, 0.3), 0.8), line=0.9, soft=4, tex=wood_tex(cv, "ls"))
+        arc = [(cx - W / 2 + t * W, by - H - H * 0.42 - math.sin(math.pi * t) * H * 0.22) for t in np.linspace(0, 1, 10)]
+        lid = A([(cx - W / 2 - 2, by - H + 2)] + arc + [(cx + W / 2 + 2, by - H + 2)])
         part(cv, lid, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, soft=10, tex=wood_tex(cv, "lid"), hi=0.4)
+        top = A([(cx + W / 2, by - H * 1.42)] + [(cx - W / 2 + t * W + W * 0.16, by - H - H * 0.62 - math.sin(math.pi * t) * H * 0.22)
+                                               for t in np.linspace(1, 0, 10)][:1] + [(cx + W * 0.66, by - H * 1.45)])
     for fx in (-0.3, 0.3):
-        band = A([(cx + W * fx - s * 0.04, by), (cx + W * fx + s * 0.04, by), (cx + W * fx + s * 0.04, by - H), (cx + W * fx - s * 0.04, by - H)])
+        band = A([(cx + W * fx - s * 0.04, by), (cx + W * fx + s * 0.04, by), (cx + W * fx + s * 0.04, by - H * (1.0 if opened else 1.6)),
+                  (cx + W * fx - s * 0.04, by - H * (1.0 if opened else 1.6))])
         part(cv, band, P.HONEY, line=0.8, soft=2, hi=0.6, gloss=0.4, ao=0)
     lock = A([(cx - s * 0.06, by - H * 0.95), (cx + s * 0.06, by - H * 0.95), (cx + s * 0.06, by - H * 0.65), (cx - s * 0.06, by - H * 0.65)])
     part(cv, lock, P.HONEY, line=0.8, soft=2, hi=0.6, gloss=0.5, ao=0)
@@ -1731,10 +1766,7 @@ def prop_ruin_pillar(key="prop_ruin_pillar"):
     lines(cv, flutes, 3, P.shadow_of(P.STONE_WARM, 1.2), 0.5, clip=m)
     for yy in (250, 360):
         lines(cv, [(72, yy, 184, yy + 4)], 2.5, P.shadow_of(P.STONE_WARM, 1.5), 0.7, clip=m)
-    mo = cv.a * smoothstep(0.55, 0.66, cv.noise(10, "mo", 3)) * smoothstep(380, 140, cv.yy())
-    mo = np.maximum(mo, cv.a * smoothstep(420, 500, cv.yy()) * smoothstep(0.4, 0.6, cv.noise(12, "mo2", 3)))
-    mo = ragged(cv, mo.astype(F32), 0.3, 1, 3, "mr")
-    paint(cv, mo, P.MOSS, line=0.5, line_w=0.8, soft=3, var=0.15, var_cell=5, hi=0.5, ao=0)
+    moss_on(cv, key, cell=40, thr=0.58, top_bias=smoothstep(260, 120, cv.yy()) * 0.25)
     ivy(cv, [(184, 440), (176, 330), (186, 220)], r, key + "iv", 8, 40)
     rubble = [(30, 500, 30, 22), (220, 502, 26, 18)]
     for (x, y, w, h) in rubble:
@@ -1772,9 +1804,7 @@ def prop_ruin_arch(key="prop_ruin_arch"):
         m = cv.mask(sh)
         paint(cv, m, P.mix(P.STONE_WARM, P.STONE, r.random() * 0.6), line=0.9, line_w=1.2, soft=8, key=key + str(i), hi=0.45,
               var=0.1, var_cell=10, ao=0.15)
-    mo = cv.a * smoothstep(0.55, 0.65, cv.noise(9, "mo", 3))
-    mo = ragged(cv, mo.astype(F32), 0.3, 1, 3, "mr")
-    paint(cv, mo, P.MOSS, line=0.5, line_w=0.8, soft=3, var=0.15, var_cell=5, hi=0.5, ao=0)
+    moss_on(cv, key, cell=46, thr=0.6, top_bias=smoothstep(200, 40, cv.yy()) * 0.2)
     ivy(cv, [(140, 140), (160, 70), (240, 20), (330, 40)], r, key + "iv", 9, 70)
     for (x, y, w, h) in ((440, 500, 40, 30), (480, 498, 26, 20), (360, 502, 22, 16)):
         part(cv, rotate(A([(x - w, y), (x + w, y), (x + w * 0.8, y - h), (x - w * 0.9, y - h)]), r.normal() * 0.2, x, y), P.STONE_WARM,
@@ -1839,9 +1869,7 @@ def prop_spirit_statue(key="prop_spirit_statue"):
     # red bib
     bib = catmull(A([(214, 236), (298, 236), (290, 262), (256, 296), (222, 262)]), True, 5)
     part(cv, bib, P.VERMILION, line=0.9, soft=6, hi=0.4, tex=cv.noise(4, "cl", 2) * 0.3 + 0.35)
-    mo = cv.a * smoothstep(0.58, 0.66, cv.noise(9, "mo", 3))
-    mo = ragged(cv, mo.astype(F32), 0.3, 1, 3, "mr")
-    paint(cv, mo, P.MOSS, line=0.5, line_w=0.8, soft=3, var=0.15, var_cell=5, hi=0.5, ao=0)
+    moss_on(cv, key, cell=40, thr=0.62, where=smoothstep(380, 420, cv.yy()) + smoothstep(170, 120, cv.yy()))
     # offering: small lantern glow + flowers
     glow(cv, 256, 330, 120, P.LANTERN, 0.15, clip=True)
     grass_base(cv, 120, 400, 500, r, key + "gb", h=26, n=4)
@@ -1854,9 +1882,9 @@ def prop_blight_crystal(key="prop_blight_crystal"):
     shadow_ellipse(cv, 262, 492, 180, 16, 0.35)
     stain = cv.blur(cv.ellipse_mask(256, 492, 200, 22), 8)
     flat_fill(cv, stain, P.BLIGHT_DK, 0.6)
-    crystal_cluster(cv, 256, 494, 320, r, key + "a", n=5, glow_amt=0.8)
-    crystal_cluster(cv, 130, 496, 150, r, key + "b", n=3)
-    crystal_cluster(cv, 385, 496, 170, r, key + "c", n=3)
+    crystal_cluster(cv, 256, 494, 300, r, key + "a", n=5, glow_amt=0.8)
+    crystal_cluster(cv, 120, 498, 140, r, key + "b", n=3)
+    crystal_cluster(cv, 392, 498, 160, r, key + "c", n=3)
     return done(cv, 2.4)
 
 
