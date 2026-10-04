@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>霸王的大陆</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="view"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="hudInfo" class="glass"></div>
+    <button id="hudMenu" class="glass" aria-label="军务菜单">☰</button>
+  </div>
+  <div id="banner"></div>
+
+  <div id="battle" class="hidden">
+    <canvas id="bbg"></canvas>
+    <div id="bmsg"></div>
+    <div id="benemies"></div>
+    <div id="bparty"></div>
+    <div id="btp"></div>
+    <div id="bauto">全军突击中 · 按任意键停止</div>
+    <canvas id="bfx"></canvas>
+    <div id="bnums"></div>
+  </div>
+
+  <div id="title" class="hidden">
+    <div class="t-shade"></div>
+    <div class="t-logo">
+      <div class="t-seal">霸</div>
+      <h1>霸王的大陆</h1>
+      <div class="t-sub">BA WANG DE DA LU · 中文版</div>
+      <div class="t-line"></div>
+    </div>
+    <div class="t-foot">苍天已死 · 黄天当立 · 群雄逐鹿 · 谁主沉浮</div>
+  </div>
+
+  <div id="intro" class="hidden"></div>
+  <div id="swirl"></div>
+  <div id="layer"></div>
+  <div id="toasts"></div>
+
+  <div id="pad">
+    <div id="dpad"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i></div>
+    <div class="pad-btns">
+      <button data-act="cancel" class="pb b">B</button>
+      <button data-act="ok" class="pb a">A</button>
+    </div>
+  </div>
+
+  <div id="fade"></div>
+  <div id="loading"><div class="ld-seal">霸</div><div class="ld-t">正在绘制山河……</div></div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/world.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
