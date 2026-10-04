@@ -1,7 +1,8 @@
 // Exploration input (BG3-style): hover (units, then map objects), click to move the party in formation,
 // click NPCs/companions to talk, chests to open (locks: rogue Pick Lock or a Sleight of Hand check),
-// transition markers to travel, enemies to attack first, props to inspect. Tab cycles the selected
-// leader, right click stops the party, F5/F9 quick save/load.
+// transition markers to travel, enemies to attack first (optionally with an opener ability armed from the
+// hotbar: Charge, Cheap Shot, Ambush, Pyroblast…), props to inspect. Tab cycles the selected leader,
+// right click stops the party / cancels an armed opener, F5/F9 quick save/load.
 //
 // The session is authoritative for positions: views walk along the session's plan and report their
 // positions back (Session.UpdatePartyPositions) every ~0.2 m, which runs region/encounter/transition
@@ -22,6 +23,7 @@ namespace Lanternvale.Game
         const float WalkSpeed = 3.4f, JogSpeed = 4.8f;
         const float ReportStep = 0.2f;
         const float EngageRange = 9f;
+        const float ReachSlack = 1.6f;
         const float HoldMoveDelay = 0.28f, HoldReplanInterval = 0.22f;
 
         enum PendingKind { None, Talk, Chest, Transition, Prop, Engage }
@@ -31,7 +33,6 @@ namespace Lanternvale.Game
         Vector2 lastReportPos;
         float footTimer;
         readonly List<Vec2> otherPositions = new List<Vec2>();
-        readonly List<Vector2> pathBuffer = new List<Vector2>();
 
         // click-and-hold to keep walking towards the cursor
         bool groundHold;
@@ -42,8 +43,43 @@ namespace Lanternvale.Game
         PendingKind pendingKind;
         string pendingId = "";
         Vector2 pendingPos;
-        UnitView pendingView;
+        UnitView pendingView;      // moving targets (NPCs) are tracked through their view
+        Unit pendingActor;         // whose distance counts (null = leader)
         float pendingRange;
+        EncounterDef pendingEncounter;
+        string engageOpener = "";
+        int engageTargetIndex;
+
+        // opener armed from the hotbar (UseAbilityOutOfCombat with an enemy-target ability)
+        Unit openerCaster;
+
+        /// <summary>Ability id armed to open the next fight ("" when none): the next click on an enemy engages
+        /// its encounter with this ability (GameSession.EngageEncounter with an opener). Right click cancels.</summary>
+        public string PendingOpener { get; private set; } = "";
+
+        /// <summary>Who will use PendingOpener (null when none).</summary>
+        public Unit PendingOpenerCaster => string.IsNullOrEmpty(PendingOpener) ? null : openerCaster;
+
+        /// <summary>Disarms PendingOpener.</summary>
+        public void CancelOpener()
+        {
+            if (string.IsNullOrEmpty(PendingOpener) && openerCaster == null) return;
+            PendingOpener = "";
+            openerCaster = null;
+            for (int i = 0; i < enemyEntries.Count; i++)
+                if (enemyEntries[i].View != null) enemyEntries[i].View.SetTargetable(null);
+        }
+
+        void ArmOpener(Unit caster, AbilityDef a)
+        {
+            CancelOpener();
+            PendingOpener = a.id;
+            openerCaster = caster;
+            var col = new Color(1f, 0.45f, 0.38f);
+            for (int i = 0; i < enemyEntries.Count; i++)
+                if (enemyEntries[i].View != null) enemyEntries[i].View.SetTargetable(col);
+            Toast($"{a.name}: choose an enemy to open the fight with (right click to cancel).");
+        }
 
         // hover
         UnitView hoveredView;
@@ -98,8 +134,9 @@ namespace Lanternvale.Game
 
             if (GameInput.MouseDown(1))
             {
-                // right click: stop where we are
-                if (partyMoving || pendingKind != PendingKind.None)
+                // right click: disarm an opener, or stop where we are
+                if (!string.IsNullOrEmpty(PendingOpener)) CancelOpener();
+                else if (partyMoving || pendingKind != PendingKind.None)
                 {
                     StopPartyMove(true);
                     ResetPending();
@@ -111,6 +148,8 @@ namespace Lanternvale.Game
             if (GameInput.MouseDown(0))
             {
                 groundHold = false;
+                if (hoveredView != null && enemyByView.ContainsKey(hoveredView)) { ClickView(hoveredView); return; }
+                CancelOpener();   // anything but an enemy disarms the opener
                 if (hoveredView != null) { ClickView(hoveredView); return; }
                 if (hoveredObject != null) { ClickObject(hoveredObject); return; }
                 ResetPending();
@@ -146,18 +185,45 @@ namespace Lanternvale.Game
             if (u != null)
             {
                 if (s.IsInParty(u)) { Select(u); Sfx.Play("ui_click", null, 0.6f, 1.1f); }
-                else if (u.Owner != null && s.IsInParty(u.Owner)) SetSelectedInternal(u);   // pets: inspect only
+                else if (u.Owner != null && s.IsInParty(u.Owner)) SetSelectedInternal(u);   // pets/totems: inspect only
                 return;
             }
             if (npcByView.TryGetValue(v, out var npc))
             {
-                BeginInteraction(PendingKind.Talk, npc.Id, v.FeetPosition, v, GameSession.InteractionRange - 0.35f);
+                BeginInteraction(PendingKind.Talk, npc.Id, v.FeetPosition, v, null, GameSession.InteractionRange - 0.35f);
                 return;
             }
             if (enemyByView.TryGetValue(v, out var enemy) && enemy.Encounter != null)
+                ClickEnemy(enemy);
+        }
+
+        void ClickEnemy(EnemyEntry enemy)
+        {
+            var s = Session;
+            var enc = enemy.Encounter;
+            string opener = PendingOpener;
+            var caster = PendingOpenerCaster;
+            var a = !string.IsNullOrEmpty(opener) && Db != null ? Db.Ability(opener) : null;
+            if (a == null || caster == null || !s.IsInParty(caster) || !caster.IsAlive)
             {
-                BeginInteraction(PendingKind.Engage, enemy.Encounter.id, v.FeetPosition, v, EngageRange);
+                CancelOpener();
+                // plain attack: the party strikes first (surprise when the leader is stealthed)
+                engageOpener = "";
+                engageTargetIndex = 0;
+                BeginInteraction(PendingKind.Engage, enc.id, enemy.Home, null, null, EngageRange, enc);
+                return;
             }
+            // with an opener: walk until the caster is in the ability's range of the enemy's starting spot
+            float range;
+            try { range = AbilityRules.RangeMetres(caster, a, null, AbilityMods.For(caster, a), Db.Config); }
+            catch (Exception) { range = EngageRange; }
+            if (float.IsInfinity(range) || float.IsNaN(range)) range = EngageRange;
+            float minRange = AbilityRules.MinRangeMetres(a);
+            range = Mathf.Clamp(range - 0.45f, Mathf.Max(1.2f, minRange + 0.6f), Mathf.Max(EngageRange, minRange + 1f));
+            engageOpener = opener;
+            engageTargetIndex = Mathf.Max(0, enc.enemies.IndexOf(enemy.Def));
+            CancelOpener();
+            BeginInteraction(PendingKind.Engage, enc.id, enemy.Home, null, caster, range, enc);
         }
 
         void ClickObject(MapObject o)
@@ -165,13 +231,13 @@ namespace Lanternvale.Game
             switch (o.Kind)
             {
                 case MapObjectKind.Chest:
-                    BeginInteraction(PendingKind.Chest, o.Id, o.Position, null, GameSession.InteractionRange - 0.2f);
+                    BeginInteraction(PendingKind.Chest, o.Id, o.Position, null, null, GameSession.InteractionRange - 0.2f);
                     break;
                 case MapObjectKind.Transition:
-                    BeginInteraction(PendingKind.Transition, o.Id, o.Position, null, 1.2f);
+                    BeginInteraction(PendingKind.Transition, o.Id, o.Position, null, null, 1.2f);
                     break;
                 case MapObjectKind.Prop:
-                    BeginInteraction(PendingKind.Prop, o.Id, o.Position, null, GameSession.InteractionRange + 0.5f);
+                    BeginInteraction(PendingKind.Prop, o.Id, o.Position, null, null, GameSession.InteractionRange + 0.5f);
                     break;
             }
         }
@@ -195,29 +261,39 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------ interactions
 
-        void BeginInteraction(PendingKind kind, string id, Vector2 pos, UnitView view, float range)
+        void BeginInteraction(PendingKind kind, string id, Vector2 pos, UnitView view, Unit actor, float range, EncounterDef enc = null)
         {
             var s = Session;
-            var lv = ViewOf(s.Leader);
-            if (lv == null || string.IsNullOrEmpty(id)) return;
+            if (string.IsNullOrEmpty(id) || ViewOf(s.Leader) == null) return;
             pendingKind = kind;
             pendingId = id;
             pendingPos = pos;
             pendingView = view;
+            pendingActor = actor;
+            pendingEncounter = enc;
             pendingRange = Mathf.Max(0.5f, range);
-            if ((lv.FeetPosition - pos).sqrMagnitude <= pendingRange * pendingRange)
+            Sfx.Play("ui_click", null, 0.5f, 0.95f);
+            var av = ActorView();
+            if (av != null && (av.FeetPosition - pos).sqrMagnitude <= pendingRange * pendingRange)
             {
-                StopPartyMove(true);
-                ExecutePending();
+                StopPartyMove(!SilentApproach(av));
+                if (pendingKind != PendingKind.None) ExecutePending();
                 return;
             }
             if (!MoveTo(pos, false))
             {
                 // nothing walkable gets us closer: try anyway when nearly there
-                if ((lv.FeetPosition - pos).sqrMagnitude <= (pendingRange + 1.6f) * (pendingRange + 1.6f)) ExecutePending();
+                if (av != null && (av.FeetPosition - pos).sqrMagnitude <= (pendingRange + ReachSlack) * (pendingRange + ReachSlack)) ExecutePending();
                 else { ResetPending(); Toast("You can't reach that."); }
             }
-            Sfx.Play("ui_click", null, 0.5f, 0.95f);
+        }
+
+        UnitView ActorView()
+        {
+            var s = Session;
+            if (s == null) return null;
+            var v = pendingActor != null ? ViewOf(pendingActor) : null;
+            return v ?? ViewOf(s.Leader);
         }
 
         Vector2 PendingTarget() => pendingView != null ? pendingView.FeetPosition : pendingPos;
@@ -227,6 +303,8 @@ namespace Lanternvale.Game
             pendingKind = PendingKind.None;
             pendingId = "";
             pendingView = null;
+            pendingActor = null;
+            pendingEncounter = null;
         }
 
         void ExecutePending()
@@ -236,9 +314,10 @@ namespace Lanternvale.Game
             var id = pendingId;
             var target = PendingTarget();
             var targetView = pendingView;
+            var actor = pendingActor;
             ResetPending();
             if (kind == PendingKind.None || s == null || s.Mode != SessionMode.Exploration) return;
-            var lv = ViewOf(s.Leader);
+            var lv = ViewOf(actor ?? s.Leader);
             if (lv != null) lv.FaceTowards(target);
             try
             {
@@ -272,7 +351,11 @@ namespace Lanternvale.Game
                     }
                     case PendingKind.Engage:
                     {
-                        var b = s.EngageEncounter(id);
+                        string opener = engageOpener;
+                        engageOpener = "";
+                        var b = string.IsNullOrEmpty(opener)
+                            ? s.EngageEncounter(id)
+                            : s.EngageEncounter(id, actor, opener, engageTargetIndex);
                         if (b == null && !string.IsNullOrEmpty(s.LastError)) Toast(s.LastError);
                         break;
                     }
@@ -288,8 +371,7 @@ namespace Lanternvale.Game
         {
             var s = Session;
             var r = s.OpenChest(chestId);
-            if (r == null) return;
-            if (r.Ok) return;
+            if (r == null || r.Ok) return;
             if (r.Kind != InteractKind.Locked) { Toast(r.Message); return; }
             // locked: a rogue who knows Pick Lock tries first, otherwise the nimblest hands roll Sleight of Hand
             Unit rogue = null;
@@ -312,13 +394,12 @@ namespace Lanternvale.Game
             if (s == null || s.Mode != SessionMode.Exploration) return false;
             var leader = s.Leader;
             var lv = ViewOf(leader);
-            if (lv == null) return false;
-            if (lv.IsDowned) return false;
+            if (lv == null || lv.IsDowned) return false;
 
             // the plan starts from where the views are now (the session may lag by up to ReportStep)
             SyncUnitPositionsFromViews();
             var plan = s.PlanPartyMove(ToVec2(dest));
-            if (!plan.Reachable || plan.LeaderPath.Count < 2 || plan.Length < 0.05f)
+            if (plan == null || !plan.Reachable || plan.LeaderPath.Count < 2 || plan.Length < 0.05f)
             {
                 if (marker) FxSystem.GroundRing(dest, 0.3f, new Color(1f, 0.55f, 0.5f, 0.8f), 0.45f);
                 return false;
@@ -377,14 +458,15 @@ namespace Lanternvale.Game
             else footTimer = 0f;
 
             // arrived next to what we wanted to use?
-            if (pendingKind != PendingKind.None)
+            var av = pendingKind != PendingKind.None ? ActorView() : null;
+            if (av != null)
             {
                 var t = PendingTarget();
-                if ((lv.FeetPosition - t).sqrMagnitude <= pendingRange * pendingRange)
+                if ((av.FeetPosition - t).sqrMagnitude <= pendingRange * pendingRange)
                 {
                     int gen = worldGeneration;
-                    StopPartyMove(true);
-                    if (gen == worldGeneration && Session == s && s.Mode == SessionMode.Exploration) ExecutePending();
+                    StopPartyMove(!SilentApproach(av));
+                    if (gen == worldGeneration && Session == s && s.Mode == SessionMode.Exploration && pendingKind != PendingKind.None) ExecutePending();
                     else ResetPending();
                     return;
                 }
@@ -392,7 +474,13 @@ namespace Lanternvale.Game
 
             if ((lv.FeetPosition - lastReportPos).sqrMagnitude >= ReportStep * ReportStep || !anyMoving)
             {
-                if (!ReportPositions()) return;   // stopped by a trigger (or the world was rebuilt)
+                if (av != null && SilentApproach(av))
+                {
+                    // closing in on the encounter we are about to attack: do not let it trigger on its own
+                    SyncUnitPositionsFromViews();
+                    lastReportPos = lv.FeetPosition;
+                }
+                else if (!ReportPositions()) return;   // stopped by a trigger (or the world was rebuilt)
             }
 
             if (!anyMoving)
@@ -401,11 +489,26 @@ namespace Lanternvale.Game
                 if (pendingKind != PendingKind.None)
                 {
                     var t = PendingTarget();
-                    float slack = pendingRange + 1.6f;
-                    if ((lv.FeetPosition - t).sqrMagnitude <= slack * slack) ExecutePending();
+                    av = ActorView();
+                    float slack = pendingRange + ReachSlack;
+                    if (av != null && (av.FeetPosition - t).sqrMagnitude <= slack * slack) ExecutePending();
                     else { ResetPending(); Toast("You can't reach that."); }
                 }
             }
+        }
+
+        /// <summary>
+        /// True while walking up to an encounter the player chose to attack and the actor is already inside its
+        /// detection radius: positions are synced silently so the encounter does not start before the opener.
+        /// </summary>
+        bool SilentApproach(UnitView actorView)
+        {
+            if (pendingKind != PendingKind.Engage || pendingEncounter == null || actorView == null) return false;
+            var actor = pendingActor ?? Session.Leader;
+            float r = pendingEncounter.radius;
+            if (actor != null && actor.IsStealthed) r = Mathf.Min(r, Lanternvale.World.MapRuntime.StealthDetectRadius);
+            r += 0.75f;
+            return (actorView.FeetPosition - ToUnity(pendingEncounter.pos)).sqrMagnitude <= r * r;
         }
 
         /// <summary>Reports view positions to the session (runs triggers). False when movement was stopped.</summary>
@@ -436,11 +539,11 @@ namespace Lanternvale.Game
             return true;
         }
 
-        /// <summary>Copies view positions into the units without running triggers (used right before planning).</summary>
+        /// <summary>Copies view positions into the units without running triggers (right before planning, silent approach).</summary>
         void SyncUnitPositionsFromViews()
         {
             var s = Session;
-            if (s == null) return;
+            if (s == null || s.Mode != SessionMode.Exploration) return;
             foreach (var u in s.PartyUnits())
             {
                 var v = ViewOf(u);
@@ -455,6 +558,7 @@ namespace Lanternvale.Game
             bool was = partyMoving;
             partyMoving = false;
             groundHold = false;
+            footTimer = 0f;
             if (s == null) return;
             foreach (var kv in views)
             {
@@ -462,7 +566,9 @@ namespace Lanternvale.Game
                 if (v == null || !v.IsMoving) continue;
                 if (s.IsInParty(kv.Key.Owner ?? kv.Key)) v.StopMoving();
             }
-            if (report && was && s.Mode == SessionMode.Exploration) ReportPositions();
+            if (!was || s.Mode != SessionMode.Exploration) return;
+            if (report) ReportPositions();
+            else SyncUnitPositionsFromViews();
         }
 
         void ResetExplorationState()
@@ -470,7 +576,9 @@ namespace Lanternvale.Game
             partyMoving = false;
             groundHold = false;
             footTimer = 0f;
+            engageOpener = "";
             ResetPending();
+            CancelOpener();
         }
 
         // ------------------------------------------------------------ hover
@@ -614,18 +722,21 @@ namespace Lanternvale.Game
         static string PropName(string art)
         {
             if (string.IsNullOrEmpty(art)) return "Inspect";
+            if (PropNames.TryGetValue(art, out var cached)) return cached;
             string key = art.EndsWith("_dark", StringComparison.Ordinal) ? art.Substring(0, art.Length - 5) : art;
-            if (PropNames.TryGetValue(key, out var n)) return n;
+            if (PropNames.TryGetValue(key, out var n)) { PropNames[art] = n; return n; }
             if (key.StartsWith("prop_", StringComparison.Ordinal)) key = key.Substring(5);
             var parts = key.Split('_');
             var sb = new System.Text.StringBuilder();
-            foreach (var p in parts)
+            for (int i = 0; i < parts.Length; i++)
             {
-                if (p.Length == 0 || (p.Length == 1 && char.IsLetter(p[0]) && parts.Length > 1 && p == parts[parts.Length - 1])) continue;  // "_a"/"_b" variants
+                var p = parts[i];
+                if (p.Length == 0) continue;
+                if (p.Length == 1 && i == parts.Length - 1 && parts.Length > 1) continue;   // "_a" / "_b" art variants
                 if (sb.Length > 0) sb.Append(' ');
                 sb.Append(char.ToUpperInvariant(p[0])).Append(p, 1, p.Length - 1);
             }
-            var r = sb.ToString();
+            var r = sb.Length > 0 ? sb.ToString() : "Inspect";
             PropNames[art] = r;
             return r;
         }

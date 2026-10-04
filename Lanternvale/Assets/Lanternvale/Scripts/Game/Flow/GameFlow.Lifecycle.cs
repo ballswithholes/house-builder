@@ -423,6 +423,7 @@ namespace Lanternvale.Game
             ResetExplorationState();
             ClearHoverState();
             Selected = null;
+            battlePresenting = false;
             DisposeAllViews();
             ClearLanternSequence();
             if (MapView.Current != null) MapView.Current.Dispose();

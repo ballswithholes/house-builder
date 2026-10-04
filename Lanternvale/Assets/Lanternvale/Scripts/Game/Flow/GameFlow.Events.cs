@@ -53,7 +53,7 @@ namespace Lanternvale.Game
                 case SessionEventKind.PetChanged:
                 case SessionEventKind.CompanionRecruited:
                 case SessionEventKind.CompanionDismissed:
-                    if (Session.Battle == null) SyncWorldViews();
+                    if (!battlePresenting) SyncWorldViews();
                     break;
                 case SessionEventKind.LeaderChanged:
                     OnLeaderChanged(e.Unit);
@@ -186,7 +186,7 @@ namespace Lanternvale.Game
             dialogueCamActive = false;
             zoomBeforeDialogue = -1f;
             // flags may have changed (recruits, quests, peaceful encounters): refresh the world
-            if (Session != null && Session.Battle == null && MapView.Current != null)
+            if (Session != null && !battlePresenting && Session.Battle == null && MapView.Current != null)
             {
                 MapView.Current.RefreshFlags(Session.Flags.Test);
                 SyncWorldViews();
@@ -334,6 +334,7 @@ namespace Lanternvale.Game
             var s = Session;
             var b = e.Battle ?? s.Battle;
             if (b == null) return;
+            battlePresenting = true;
             StopPartyMove(false);
             ResetExplorationState();
             ClearHoverState();
@@ -438,6 +439,7 @@ namespace Lanternvale.Game
             var b = e.Battle;
             var c = Combat;
             Combat = null;
+            battlePresenting = false;
             if (c != null)
             {
                 try { c.Dispose(); } catch (Exception ex) { Debug.LogException(ex); }

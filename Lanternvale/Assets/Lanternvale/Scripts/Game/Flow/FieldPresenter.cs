@@ -37,6 +37,14 @@ namespace Lanternvale.Game
             }
             var a = Db != null ? Db.Ability(abilityId) : null;
             if (a == null) return "Unknown ability.";
+            if (a.target == TargetType.Enemy && (target == null || !target.IsHostileTo(caster)))
+            {
+                // an attack out of combat opens a fight: arm it, the next click on an enemy engages with it
+                if (!s.IsInParty(caster) || !caster.IsAlive) return "Only an active party member can start a fight.";
+                if (enemyEntries.Count == 0) return "There is no enemy to attack.";
+                ArmOpener(caster, a);
+                return null;
+            }
             if (target == null && (a.target == TargetType.Ally || a.target == TargetType.Self)) target = caster;
             if (target == null && a.target == TargetType.Pet) target = caster.Pet;
             try

@@ -352,10 +352,14 @@ namespace Lanternvale.Game
         void SyncWorldViews(List<KeyValuePair<Unit, UnitView>> reusableEnemies = null)
         {
             var s = Session;
-            if (s == null || MapView.Current == null || s.Battle != null) return;
+            if (s == null || MapView.Current == null || backdropActive || battlePresenting || s.Battle != null) return;
 
-            // ---- party (+ pets)
+            // ---- party (+ pets, and totems/guardians placed out of combat that are still in the field context)
             var units = s.PartyUnits();
+            var field = s.Field;
+            if (field != null)
+                foreach (var u in field.Units)
+                    if (u != null && u.IsAlive && u.Owner != null && s.IsInParty(u.Owner) && !units.Contains(u)) units.Add(u);
             tmpUnitSet.Clear();
             foreach (var u in units) tmpUnitSet.Add(u);
             tmpUnits.Clear();
