@@ -1,0 +1,263 @@
+{
+  "_note": "Creature and chest loot tables. Gold in copper. Entries roll independently (chance in %).",
+  "lootTables": [
+    {
+      "id": "lt_wolf",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "junk_broken_fang", "chance": 45}, {"item": "junk_ruined_pelt", "chance": 35}, {"random": true, "chance": 2, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_wolf_blighted",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_grey_ash", "chance": 30},
+        {"item": "junk_broken_fang", "chance": 30},
+        {"item": "junk_ruined_pelt", "chance": 25},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_greymane",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "greymanes_mantle"},
+        {"item": "junk_grey_ash"},
+        {"item": "wolf_tooth_necklace", "chance": 25},
+        {"random": true, "chance": 35, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_boar",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "junk_cracked_tusk", "chance": 40}, {"item": "junk_bristly_hide", "chance": 35}, {"random": true, "chance": 2, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_spider",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_sticky_web", "chance": 45},
+        {"item": "junk_chitin_fragment", "chance": 30},
+        {"item": "spiderhide_bracers", "chance": 2},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mossling",
+      "goldMin": 6,
+      "goldMax": 24,
+      "entries": [
+        {"item": "lantern_wick"},
+        {"item": "junk_tiny_leaf_hat", "chance": 25},
+        {"item": "junk_damp_pebbles", "chance": 25},
+        {"item": "junk_nibbled_mushroom", "chance": 20},
+        {"item": "food_mushroom_skewer", "chance": 8},
+        {"item": "junk_shiny_button", "chance": 5},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mossling_shaman",
+      "goldMin": 8,
+      "goldMax": 30,
+      "entries": [
+        {"item": "lantern_wick"},
+        {"item": "junk_tiny_leaf_hat", "chance": 20},
+        {"item": "junk_damp_pebbles", "chance": 20},
+        {"item": "potion_minor_mana", "chance": 6},
+        {"item": "mossweave_sandals", "chance": 2},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_puddlecap",
+      "goldMin": 60,
+      "goldMax": 140,
+      "entries": [
+        {"item": "lantern_wick", "min": 4, "max": 4},
+        {"item": "mossweave_sandals"},
+        {"item": "junk_shiny_button"},
+        {"random": true, "chance": 30, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_bandit",
+      "goldMin": 30,
+      "goldMax": 90,
+      "entries": [
+        {"item": "junk_torn_scarf_mask", "chance": 25},
+        {"item": "junk_chipped_dice", "chance": 12},
+        {"item": "junk_dented_cup", "chance": 15},
+        {"item": "junk_bad_poetry", "chance": 6},
+        {"item": "food_rice_ball", "chance": 10},
+        {"item": "drink_spring_water", "chance": 10},
+        {"item": "potion_minor_healing", "chance": 6},
+        {"item": "bandage_linen", "chance": 8},
+        {"item": "scroll_strength", "chance": 3},
+        {"item": "scroll_agility", "chance": 3},
+        {"item": "cutthroats_hood", "chance": 2},
+        {"item": "bandits_gutting_knife", "chance": 2},
+        {"item": "cutpurses_signet", "chance": 2},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_bandit_hexer",
+      "goldMin": 40,
+      "goldMax": 100,
+      "entries": [
+        {"item": "junk_chipped_dice", "chance": 15},
+        {"item": "junk_bad_poetry", "chance": 10},
+        {"item": "potion_minor_mana", "chance": 8},
+        {"item": "scroll_intellect", "chance": 5},
+        {"item": "hexers_charm_robe", "chance": 4},
+        {"item": "hexers_fetish_wand", "chance": 4},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_bandit_chief",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [
+        {"item": "rusks_toll_taker"},
+        {"item": "bridgekeepers_glaive", "chance": 25},
+        {"item": "potion_lesser_healing"},
+        {"random": true, "chance": 50, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_hollow_wisp",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "spirit_ember"},
+        {"item": "junk_grey_ash", "chance": 40},
+        {"item": "junk_dull_lantern_glass", "chance": 25},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_hollow_spirit",
+      "goldMin": 40,
+      "goldMax": 110,
+      "entries": [
+        {"item": "junk_faded_prayer_strip", "chance": 35},
+        {"item": "junk_grey_ash", "chance": 30},
+        {"item": "junk_hollow_shard", "chance": 15},
+        {"item": "potion_lesser_healing", "chance": 6},
+        {"item": "scroll_spirit", "chance": 3},
+        {"item": "scroll_stamina", "chance": 3},
+        {"item": "bindings_of_quiet_dusk", "chance": 2},
+        {"random": true, "chance": 5, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_keeper",
+      "goldMin": 200,
+      "goldMax": 400,
+      "entries": [{"item": "ishiros_prayer_beads"}, {"item": "junk_faded_prayer_strip"}, {"random": true, "chance": 50, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_rotheart",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "heartwood_bulwark"},
+        {"item": "junk_blighted_bark"},
+        {"item": "thornwood_staff", "chance": 30},
+        {"random": true, "chance": 40, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_warden",
+      "goldMin": 1500,
+      "goldMax": 2500,
+      "entries": [
+        {"item": "lanternbough"},
+        {"item": "antler_lantern_charm"},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 35, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_chest_forest",
+      "goldMin": 80,
+      "goldMax": 250,
+      "entries": [
+        {"item": "potion_minor_healing", "chance": 50, "min": 1, "max": 2},
+        {"item": "food_mushroom_skewer", "chance": 40, "min": 1, "max": 3},
+        {"item": "drink_barley_tea", "chance": 30, "min": 1, "max": 3},
+        {"item": "scroll_stamina", "chance": 15},
+        {"item": "scroll_spirit", "chance": 15},
+        {"random": true, "chance": 50, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_chest_forest_locked",
+      "goldMin": 200,
+      "goldMax": 500,
+      "entries": [
+        {"item": "potion_lesser_healing", "chance": 60, "min": 1, "max": 2},
+        {"item": "potion_minor_mana", "chance": 40},
+        {"item": "elixir_minor_agility", "chance": 30},
+        {"item": "elixir_lions_strength", "chance": 30},
+        {"item": "scroll_protection", "chance": 30},
+        {"random": true, "chance": 100, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_chest_spider_hollow",
+      "goldMin": 20,
+      "goldMax": 60,
+      "entries": [
+        {"item": "junk_sticky_web", "chance": 80, "min": 1, "max": 3},
+        {"item": "junk_bent_spoon", "chance": 30},
+        {"random": true, "chance": 25, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_chest_moppet",
+      "goldMin": 150,
+      "goldMax": 150,
+      "entries": [{"item": "junk_shiny_button"}, {"item": "valley_brass_band"}, {"item": "food_honey_cake", "min": 2, "max": 2}]
+    },
+    {
+      "id": "lt_chest_village",
+      "goldMin": 40,
+      "goldMax": 120,
+      "entries": [
+        {"item": "potion_minor_healing", "min": 1, "max": 2},
+        {"item": "food_rice_ball", "min": 2, "max": 3},
+        {"item": "junk_shiny_button", "chance": 30}
+      ]
+    },
+    {
+      "id": "lt_chest_shrine",
+      "goldMin": 300,
+      "goldMax": 700,
+      "entries": [
+        {"item": "potion_healing", "chance": 40},
+        {"item": "potion_lesser_mana", "chance": 30},
+        {"item": "elixir_wisdom", "chance": 20},
+        {"random": true, "chance": 100, "quality": "Uncommon"},
+        {"random": true, "chance": 10, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_chest_offering",
+      "goldMin": 600,
+      "goldMax": 1000,
+      "entries": [
+        {"item": "elixir_lantern_oil", "min": 2, "max": 2},
+        {"item": "potion_healing"},
+        {"random": true, "chance": 100, "quality": "Uncommon"},
+        {"random": true, "chance": 50, "quality": "Rare"}
+      ]
+    }
+  ]
+}

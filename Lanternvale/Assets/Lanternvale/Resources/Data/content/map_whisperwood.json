@@ -1,0 +1,393 @@
+{
+  "maps": [
+    {
+      "id": "whisperwood",
+      "name": "Whisperwood",
+      "subtitle": "The old pilgrim road",
+      "width": 100,
+      "depth": 15,
+      "skyTop": "#a8d8c8",
+      "skyBottom": "#f4f0d0",
+      "layers": [
+        {"art": "bg_clouds", "parallax": 0.05, "y": 17.0, "height": 6, "loop": true, "scrollSpeed": 0.1},
+        {"art": "bg_mountains_far", "parallax": 0.1, "y": 13.0, "height": 9, "loop": true},
+        {"art": "bg_forest_far", "parallax": 0.3, "y": 13.5, "height": 8, "loop": true},
+        {"art": "bg_forest_near", "parallax": 0.55, "y": 14.2, "height": 8, "loop": true}
+      ],
+      "ground": "ground_forest",
+      "groundTile": 8,
+      "props": [
+        {"art": "decal_path_dirt", "pos": [4, 6.0]},
+        {"art": "decal_path_dirt", "pos": [12, 6.4]},
+        {"art": "decal_path_dirt", "pos": [20, 6.0]},
+        {"art": "decal_path_dirt", "pos": [28, 5.6]},
+        {"art": "decal_path_dirt", "pos": [36, 6.0]},
+        {"art": "decal_path_dirt", "pos": [44, 6.4]},
+        {"art": "decal_path_dirt", "pos": [52, 6.0]},
+        {"art": "decal_path_dirt", "pos": [64, 6.2]},
+        {"art": "decal_path_dirt", "pos": [72, 6.6]},
+        {"art": "decal_path_dirt", "pos": [80, 6.2]},
+        {"art": "decal_path_dirt", "pos": [88, 6.6]},
+        {"art": "decal_path_dirt", "pos": [95, 7.0]},
+        {"art": "decal_path_stone", "pos": [40, 8.4]},
+        {"art": "decal_flowers", "pos": [8, 2.4]},
+        {"art": "decal_flowers", "pos": [33, 9.4]},
+        {"art": "decal_flowers", "pos": [47, 9.8]},
+        {"art": "decal_flowers", "pos": [57, 12.6]},
+        {"art": "decal_blight", "pos": [79, 9.0]},
+        {"art": "decal_blight", "pos": [84, 4.6]},
+        {"art": "decal_blight", "pos": [88, 10.4]},
+        {"art": "decal_blight", "pos": [92.5, 6.6]},
+        {"art": "decal_blight", "pos": [96, 3.0]},
+        {"art": "decal_blight", "pos": [75, 12.4]},
+        {"art": "prop_tree_oak", "pos": [2.0, 12.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [5.4, 10.8], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [8.8, 13.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [1.2, 9.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [1.6, 1.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_signpost",
+          "pos": [6.2, 3.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "West: Lanternvale. East: the Wayside Shrine, the Old Bridge and the pilgrim stair. (Someone has added: BEWARE MOSSLINGS.)"
+        },
+        {"art": "prop_tent", "pos": [12.0, 11.8], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [13.6, 9.6],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [11.0, 9.0], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [10.2, 11.0], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_tree_oak", "pos": [17.0, 13.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_a", "pos": [21.6, 13.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_stump", "pos": [15.6, 2.0], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_rock_large", "pos": [22.4, 12.9], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [26.6, 13.3], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [24.6, 13.7]},
+        {"art": "prop_tree_dead", "pos": [28.4, 13.1], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_pine", "pos": [31.0, 1.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [27.0, 1.0]},
+        {"art": "prop_mushrooms", "pos": [34.2, 13.3], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [36.8, 13.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [35.6, 12.6]},
+        {"art": "prop_stump", "pos": [32.6, 13.5], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_tree_birch", "pos": [31.4, 12.0], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_shrine_gate",
+          "pos": [40.0, 10.0],
+          "text": "A vermilion gate, its paint flaking. A wooden tablet reads: 'Halfway. Rest your feet, not your heart.'"
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [42.2, 12.2],
+          "scale": 1.1,
+          "collider": {"w": 0.99, "h": 0.55},
+          "interact": "wayside_lantern",
+          "text": "The Wayside lantern. A faint warmth lingers in the stone, like a hand just withdrawn."
+        },
+        {
+          "art": "prop_spirit_statue",
+          "pos": [37.8, 12.0],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A small stone fox wearing a red bib. Someone has left it a rice ball."
+        },
+        {"art": "prop_tree_oak", "pos": [35.0, 1.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [47.6, 13.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_a", "pos": [45.0, 10.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_mushrooms", "pos": [50.0, 11.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [54.4, 12.6]},
+        {"art": "prop_mushrooms", "pos": [51.6, 13.4]},
+        {"art": "prop_stump", "pos": [49.0, 12.8], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [55.2, 11.0], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [52.6, 13.2],
+          "scale": 0.4,
+          "collider": {"w": 0.16, "h": 0.12},
+          "light": {"color": "#ffe08a", "radius": 2.2, "intensity": 0.8, "offset": [0, 0.9], "flicker": true},
+          "text": "A tiny lantern made from a thimble, hung on a twig. It burns a very nibbled wick."
+        },
+        {"art": "prop_bush_b", "pos": [44.0, 1.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [48.6, 1.2]},
+        {
+          "art": "prop_bridge",
+          "pos": [59.0, 6.2],
+          "scale": 1.3,
+          "text": "The Old Bridge. Someone has painted 'TOLL' on it, and someone else has added a very small sad face."
+        },
+        {"art": "prop_rock_large", "pos": [59.0, 10.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [58.6, 2.0], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [60.8, 9.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tent", "pos": [64.2, 11.8], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [63.0, 10.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.0, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_banner", "pos": [61.6, 11.0], "collider": {"w": 0.4, "h": 0.3}, "sway": true},
+        {"art": "prop_crate", "pos": [66.0, 10.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [66.8, 9.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_tree_pine", "pos": [68.0, 13.7], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_log", "pos": [70.0, 12.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_rock_large", "pos": [74.2, 13.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_pine", "pos": [66.0, 1.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_stump", "pos": [72.6, 1.6], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_tree_dead", "pos": [77.0, 13.0], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [83.4, 13.6], "flip": true, "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [89.6, 12.8], "collider": {"w": 1.0, "h": 0.6}},
+        {
+          "art": "prop_blight_crystal",
+          "pos": [77.2, 2.8],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [80.6, 12.2],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [86.6, 11.8],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [91.2, 2.4],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [82.0, 9.0], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_tree_dead", "pos": [85.0, 1.2], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_ruin_arch", "pos": [96.6, 12.6], "text": "The first arch of the pilgrim stair, wound tight with grey, thorned roots."},
+        {"art": "prop_tree_dead", "pos": [98.4, 10.6], "collider": {"w": 1.0, "h": 0.6}},
+        {
+          "art": "prop_blight_crystal",
+          "pos": [98.2, 3.0],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [94.0, 11.6], "collider": {"w": 0.9, "h": 0.5}}
+      ],
+      "foreground": [
+        {"art": "fg_ferns", "pos": [2, -0.4], "sway": true},
+        {"art": "fg_grass_b", "pos": [10, -0.2], "sway": true},
+        {"art": "fg_stones_a", "pos": [18, -0.6]},
+        {"art": "fg_ferns", "pos": [27, -0.3], "flip": true, "sway": true},
+        {"art": "fg_flowers_b", "pos": [36, -0.5], "sway": true},
+        {"art": "fg_grass_a", "pos": [45, -0.2], "sway": true},
+        {"art": "fg_ferns", "pos": [54, -0.4], "sway": true},
+        {"art": "fg_stones_b", "pos": [63, -0.6]},
+        {"art": "fg_ferns", "pos": [72, -0.3], "flip": true, "sway": true},
+        {"art": "fg_grass_b", "pos": [81, -0.4], "sway": true},
+        {"art": "fg_stones_a", "pos": [90, -0.6], "flip": true},
+        {"art": "fg_ferns", "pos": [98, -0.3], "sway": true}
+      ],
+      "npcs": [
+        {"npc": "rook", "pos": [15.0, 9.4], "flip": true, "hideFlag": "rook_recruited"},
+        {"npc": "moppet", "pos": [35.6, 13.0], "hideFlag": "moppet_found"},
+        {"npc": "seren", "pos": [41.0, 10.6], "hideFlag": "seren_recruited"},
+        {"npc": "komorebi", "pos": [43.4, 11.6], "flip": true},
+        {"npc": "lys", "pos": [78.6, 4.0], "flip": true, "hideFlag": "lys_recruited"}
+      ],
+      "encounters": [
+        {
+          "id": "enc_boars_edge",
+          "pos": [19.6, 11.0],
+          "radius": 3.2,
+          "enemies": [{"creature": "cr_boar", "pos": [19.0, 11.6]}, {"creature": "cr_boar", "pos": [21.0, 12.2]}],
+          "doneFlag": "enc_boars_edge"
+        },
+        {
+          "id": "enc_greymane",
+          "pos": [24.6, 11.4],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_greymane", "pos": [24.6, 12.3]},
+            {"creature": "cr_wolf", "pos": [23.0, 11.4]},
+            {"creature": "cr_wolf", "pos": [26.2, 11.2]}
+          ],
+          "requireFlag": "shepherd_hunt",
+          "doneFlag": "greymane_dead"
+        },
+        {
+          "id": "enc_forest_wolves",
+          "pos": [29.6, 2.8],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_wolf", "pos": [29.0, 2.2]}, {"creature": "cr_wolf", "pos": [30.6, 3.2]}, {"creature": "cr_wolf", "pos": [30.0, 1.4]}],
+          "doneFlag": "enc_forest_wolves"
+        },
+        {
+          "id": "enc_mossling_scamps",
+          "pos": [46.8, 2.8],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_mossling", "pos": [46.0, 2.2]},
+            {"creature": "cr_mossling", "pos": [47.8, 3.2]},
+            {"creature": "cr_mossling_shaman", "pos": [47.0, 1.4]}
+          ],
+          "doneFlag": "enc_mossling_scamps"
+        },
+        {
+          "id": "enc_mossling_camp",
+          "pos": [52.0, 11.2],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_mossling_chief", "pos": [52.4, 12.2]},
+            {"creature": "cr_mossling", "pos": [50.6, 11.6]},
+            {"creature": "cr_mossling", "pos": [54.0, 11.4]},
+            {"creature": "cr_mossling_shaman", "pos": [53.2, 12.9]}
+          ],
+          "doneFlag": "mossling_camp_done",
+          "dialogue": "dlg_puddlecap"
+        },
+        {
+          "id": "enc_bandit_lookouts",
+          "pos": [56.0, 5.4],
+          "radius": 2.5,
+          "enemies": [{"creature": "cr_bandit_archer", "pos": [56.8, 7.2]}, {"creature": "cr_bandit_cutthroat", "pos": [57.0, 4.6]}],
+          "doneFlag": "lookouts_done",
+          "dialogue": "dlg_bandit_lookouts"
+        },
+        {
+          "id": "enc_bridge_toll",
+          "pos": [62.6, 7.2],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_bandit_chief", "pos": [63.2, 8.0]},
+            {"creature": "cr_bandit_cutthroat", "pos": [61.8, 6.2]},
+            {"creature": "cr_bandit_archer", "pos": [64.6, 9.2]},
+            {"creature": "cr_bandit_hexer", "pos": [65.0, 6.4]}
+          ],
+          "doneFlag": "bandits_dealt_with",
+          "dialogue": "dlg_rusk"
+        },
+        {
+          "id": "enc_boars_road",
+          "pos": [68.4, 3.0],
+          "radius": 2.8,
+          "enemies": [{"creature": "cr_boar", "pos": [67.8, 2.6]}, {"creature": "cr_boar", "pos": [69.4, 3.6]}],
+          "doneFlag": "enc_boars_road"
+        },
+        {
+          "id": "enc_spiders",
+          "pos": [70.4, 10.8],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_spider", "pos": [69.2, 11.6]},
+            {"creature": "cr_spider", "pos": [71.4, 11.9]},
+            {"creature": "cr_spider", "pos": [70.6, 9.8]}
+          ],
+          "doneFlag": "enc_spiders",
+          "hidden": true
+        },
+        {
+          "id": "enc_wisps_grove",
+          "pos": [82.2, 10.6],
+          "radius": 3.2,
+          "enemies": [{"creature": "cr_hollow_wisp", "pos": [81.4, 11.2]}, {"creature": "cr_hollow_wisp", "pos": [83.4, 11.6]}],
+          "doneFlag": "enc_wisps_grove"
+        },
+        {
+          "id": "enc_wisps_hollow",
+          "pos": [87.0, 3.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_hollow_wisp", "pos": [86.2, 2.8]},
+            {"creature": "cr_hollow_wisp", "pos": [88.2, 3.6]},
+            {"creature": "cr_wolf_blighted", "pos": [87.6, 2.0]}
+          ],
+          "doneFlag": "enc_wisps_hollow"
+        },
+        {
+          "id": "enc_blighted_wolves",
+          "pos": [90.4, 12.0],
+          "radius": 2.8,
+          "enemies": [{"creature": "cr_wolf_blighted", "pos": [89.8, 12.6]}, {"creature": "cr_wolf_blighted", "pos": [91.6, 11.8]}],
+          "doneFlag": "enc_blighted_wolves"
+        },
+        {
+          "id": "enc_rotheart",
+          "pos": [94.4, 7.4],
+          "radius": 3.4,
+          "enemies": [{"creature": "cr_hollow_treant", "pos": [96.0, 7.6]}],
+          "requireFlag": "embers_gathered",
+          "doneFlag": "rotheart_defeated"
+        }
+      ],
+      "chests": [
+        {"id": "chest_mossling_stash", "pos": [44.6, 3.6], "art": "prop_chest", "lootTable": "lt_chest_forest"},
+        {"id": "chest_moppet_stump", "pos": [33.2, 12.6], "art": "prop_chest", "lootTable": "lt_chest_moppet", "requireFlag": "moppet_secret"},
+        {
+          "id": "chest_bandit_strongbox",
+          "pos": [67.2, 11.4],
+          "art": "prop_chest",
+          "lootTable": "lt_chest_forest_locked",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 13}
+        },
+        {"id": "chest_satchel", "pos": [72.2, 13.0], "art": "prop_chest", "lootTable": "lt_chest_spider_hollow", "items": ["fennicks_satchel"]},
+        {
+          "id": "chest_grey_offering",
+          "pos": [92.6, 13.4],
+          "art": "prop_chest",
+          "lootTable": "lt_chest_forest_locked",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 15}
+        }
+      ],
+      "transitions": [
+        {
+          "id": "to_lanternvale",
+          "pos": [0.7, 6.0],
+          "size": [1.4, 6.0],
+          "targetMap": "lanternvale",
+          "targetSpawn": "from_whisperwood",
+          "label": "Lanternvale"
+        },
+        {
+          "id": "to_shrine",
+          "pos": [99.3, 7.0],
+          "size": [1.4, 6.0],
+          "targetMap": "shrine",
+          "targetSpawn": "from_whisperwood",
+          "label": "The Old Lantern Shrine",
+          "requireFlag": "rotheart_defeated",
+          "lockedText": "A wall of grey, thorned roots chokes the pilgrim stair. Something huge breathes behind it."
+        }
+      ],
+      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_village", "pos": [3.6, 6.0]}, {"id": "from_shrine", "pos": [97.4, 4.0]}],
+      "regions": [
+        {
+          "id": "reg_whisperwood_edge",
+          "pos": [7.0, 7.5],
+          "size": [12, 15],
+          "text": "Whisperwood — the old pilgrim road winds east beneath the trees."
+        },
+        {
+          "id": "reg_wayshrine",
+          "pos": [41.0, 9.5],
+          "size": [12, 10],
+          "enterFlag": "reg_wayshrine",
+          "text": "The Wayside Shrine — halfway up the pilgrim road. Its lantern is dark."
+        },
+        {"id": "reg_puddlecap_hollow", "pos": [52.0, 11.5], "size": [8, 6], "text": "Puddlecap Hollow. Tiny tents, tiny footprints, very large hat."},
+        {"id": "reg_old_bridge", "pos": [60.5, 7.0], "size": [10, 14], "text": "The Old Bridge."},
+        {"id": "reg_spider_hollow", "pos": [71.0, 11.8], "size": [8, 5], "text": "The Spiders' Hollow — webs glitter between the pines."},
+        {
+          "id": "reg_grey_grove",
+          "pos": [86.0, 7.5],
+          "size": [16, 15],
+          "enterFlag": "reg_grey_grove",
+          "text": "The Grey Grove. Colour drains from everything here. Even your breath looks grey."
+        }
+      ],
+      "ambient": {"leaves": true, "mist": true, "timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#e8f4dc", "ambientIntensity": 0.95},
+      "restArea": true,
+      "music": "music_whisperwood"
+    }
+  ]
+}

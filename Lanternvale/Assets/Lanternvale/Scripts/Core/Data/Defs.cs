@@ -246,7 +246,8 @@ namespace Lanternvale.Data
     {
         public StatId stat;
         public float value;
-        public float[] values = new float[0];            // per-rank explicit values (talents)
+        public float[] values = new float[0];            // per-rank explicit values (talents; auras: rank of the applying ability)
+        public float perLevel;                           // auras: added per (rank level - learnLevel) of the applying ability
         public bool pct;
         public School? school;
         public string target = "Self";                   // "Self" or "Pet" (talents that buff pets)

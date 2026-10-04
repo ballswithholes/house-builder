@@ -1,0 +1,2212 @@
+{
+  "_note": "Warrior class data (WoW Classic 1.12). Generated; see Docs/DataSchema.md.",
+  "classes": [
+    {
+      "id": "Warrior",
+      "name": "Warrior",
+      "description": "Masters of weapons and armour who thrive in the thick of battle, warriors draw strength from the fury of combat itself: every blow struck and suffered feeds their Rage.",
+      "roles": ["Tank", "Melee DPS"],
+      "color": "#C79C6E",
+      "icon": "crest_warrior",
+      "resource": "Rage",
+      "gcd": 1.5,
+      "armorTypes": ["Cloth", "Leather", "Mail"],
+      "armorUpgrade": {"level": 40, "type": "Plate"},
+      "weaponTypes": [
+        "Dagger",
+        "FistWeapon",
+        "OneHandAxe",
+        "OneHandMace",
+        "OneHandSword",
+        "Polearm",
+        "Staff",
+        "TwoHandAxe",
+        "TwoHandMace",
+        "TwoHandSword",
+        "Bow",
+        "Crossbow",
+        "Gun",
+        "Thrown",
+        "Shield"
+      ],
+      "dualWieldLevel": 20,
+      "canParry": true,
+      "canBlock": true,
+      "baseStatsLevel1": {"strength": 23, "agility": 20, "stamina": 22, "intellect": 20, "spirit": 21},
+      "baseStatsLevel60": {"strength": 120, "agility": 80, "stamina": 110, "intellect": 30, "spirit": 47},
+      "baseHealthLevel1": 20,
+      "baseHealthLevel60": 1689,
+      "baseManaLevel1": 0,
+      "baseManaLevel60": 0,
+      "meleeAp": "StrengthTimesTwo",
+      "agilityPerMeleeCritAt60": 20,
+      "agilityPerDodgeAt60": 20,
+      "intellectPerSpellCritAt60": 60,
+      "baseMeleeCrit": 5,
+      "baseSpellCrit": 0,
+      "baseDodge": 5,
+      "manaRegenBase": 0,
+      "manaRegenPerSpirit": 0,
+      "basicAttack": "attack",
+      "startingAbilities": [
+        "attack",
+        "warrior_battle_stance",
+        "warrior_heroic_strike",
+        "warrior_battle_shout",
+        "warrior_shoot",
+        "warrior_throw"
+      ],
+      "startingItems": ["warrior_starter_shortsword", "warrior_starter_shirt", "warrior_starter_pants", "warrior_starter_boots"],
+      "startingStance": "warrior_battle_stance_aura",
+      "talentTrees": ["tree_warrior_arms", "tree_warrior_fury", "tree_warrior_protection"],
+      "defaultBuild": [
+        "warrior_arms_improved_heroic_strike",
+        "warrior_arms_improved_heroic_strike",
+        "warrior_arms_improved_heroic_strike",
+        "warrior_arms_deflection",
+        "warrior_arms_deflection",
+        "warrior_arms_improved_charge",
+        "warrior_arms_improved_charge",
+        "warrior_arms_tactical_mastery",
+        "warrior_arms_tactical_mastery",
+        "warrior_arms_tactical_mastery",
+        "warrior_arms_anger_management",
+        "warrior_arms_deep_wounds",
+        "warrior_arms_deep_wounds",
+        "warrior_arms_deep_wounds",
+        "warrior_arms_improved_overpower",
+        "warrior_arms_impale",
+        "warrior_arms_impale",
+        "warrior_arms_two_handed_weapon_specialization",
+        "warrior_arms_two_handed_weapon_specialization",
+        "warrior_arms_two_handed_weapon_specialization",
+        "warrior_arms_sweeping_strikes",
+        "warrior_arms_sword_specialization",
+        "warrior_arms_sword_specialization",
+        "warrior_arms_sword_specialization",
+        "warrior_arms_sword_specialization",
+        "warrior_arms_sword_specialization",
+        "warrior_arms_two_handed_weapon_specialization",
+        "warrior_arms_two_handed_weapon_specialization",
+        "warrior_arms_improved_overpower",
+        "warrior_arms_tactical_mastery",
+        "warrior_arms_mortal_strike",
+        "warrior_fury_cruelty",
+        "warrior_fury_cruelty",
+        "warrior_fury_cruelty",
+        "warrior_fury_cruelty",
+        "warrior_fury_cruelty",
+        "warrior_fury_unbridled_wrath",
+        "warrior_fury_unbridled_wrath",
+        "warrior_fury_unbridled_wrath",
+        "warrior_fury_unbridled_wrath",
+        "warrior_fury_unbridled_wrath",
+        "warrior_fury_improved_battle_shout",
+        "warrior_fury_improved_battle_shout",
+        "warrior_fury_improved_battle_shout",
+        "warrior_fury_improved_battle_shout",
+        "warrior_fury_improved_battle_shout",
+        "warrior_fury_booming_voice",
+        "warrior_fury_booming_voice",
+        "warrior_fury_booming_voice",
+        "warrior_fury_booming_voice",
+        "warrior_fury_booming_voice"
+      ],
+      "sprite": "char_warrior",
+      "portrait": "portrait_warrior",
+      "designNotes": "Warriors have no mana: Rage builds from the white swings you land at the end of each turn and from the blows you take, and decays out of combat. Stances, Bloodrage and the big cooldowns cost no Time, and Heroic Strike/Cleave replace your next end-of-turn swing, so a turn is a stance dance plus one or two GCD attacks: Charge and Overpower in Battle Stance, Taunt, Sunder and Revenge as the party's tank in Defensive Stance, Whirlwind, Intercept and Pummel in Berserker Stance. Arms and Fury reward big two-handers or dual wielding; Protection turns a shield into a wall."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "warrior_battle_stance",
+      "name": "Battle Stance",
+      "icon": "stance_battle",
+      "classId": "Warrior",
+      "description": "A balanced combat stance. Generates 20% less threat. Required for Charge, Overpower, Thunder Clap, Mocking Blow, Retaliation and Sweeping Strikes. Changing stance discards rage above what Tactical Mastery lets you keep.",
+      "learnLevel": 1,
+      "trainCost": 10,
+      "time": "OffGcd",
+      "cooldown": 1,
+      "cooldownGroup": "warrior_stance",
+      "target": "Self",
+      "tags": ["Stance"],
+      "effects": [
+        {"type": "Special", "target": "Self", "special": "WarriorStanceSwap"},
+        {"type": "ApplyAura", "target": "Self", "aura": "warrior_battle_stance_aura"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "warrior_defensive_stance",
+      "name": "Defensive Stance",
+      "icon": "stance_defensive",
+      "classId": "Warrior",
+      "description": "A defensive combat stance. Decreases damage taken and damage caused by 10%. Increases threat generated by 30%. Required for Taunt, Revenge, Shield Block, Shield Wall and Disarm.",
+      "learnLevel": 10,
+      "trainCost": 600,
+      "time": "OffGcd",
+      "cooldown": 1,
+      "cooldownGroup": "warrior_stance",
+      "target": "Self",
+      "tags": ["Stance"],
+      "effects": [
+        {"type": "Special", "target": "Self", "special": "WarriorStanceSwap"},
+        {"type": "ApplyAura", "target": "Self", "aura": "warrior_defensive_stance_aura"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "warrior_berserker_stance",
+      "name": "Berserker Stance",
+      "icon": "stance_berserker",
+      "classId": "Warrior",
+      "description": "An aggressive stance. Critical hit chance is increased by 3% and all damage taken is increased by 10%. Generates 20% less threat. Required for Intercept, Pummel, Whirlwind, Berserker Rage and Recklessness.",
+      "learnLevel": 30,
+      "trainCost": 5000,
+      "time": "OffGcd",
+      "cooldown": 1,
+      "cooldownGroup": "warrior_stance",
+      "target": "Self",
+      "tags": ["Stance"],
+      "effects": [
+        {"type": "Special", "target": "Self", "special": "WarriorStanceSwap"},
+        {"type": "ApplyAura", "target": "Self", "aura": "warrior_berserker_stance_aura"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "warrior_heroic_strike",
+      "name": "Heroic Strike",
+      "icon": "sword",
+      "classId": "Warrior",
+      "description": "A strong attack that increases melee damage by {0} and causes a high amount of threat. Replaces your next main-hand auto attack (on next swing, no Time cost).",
+      "learnLevel": 1,
+      "rankLevels": [1, 8, 16, 24, 32, 40, 48, 56],
+      "trainCost": 10,
+      "time": "OffGcd",
+      "nextSwing": true,
+      "cost": {"type": "Rage", "amount": 15},
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 100, "min": 11, "perLevel": 2.31},
+        {"type": "Threat", "threat": 1, "min": 20, "perLevel": 2.27, "special": "ThreatFromMagnitude"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_charge",
+      "name": "Charge",
+      "icon": "charge",
+      "classId": "Warrior",
+      "description": "Charge an enemy, generate {2} rage, and stun it for 1 sec. Cannot be used in combat.",
+      "learnLevel": 4,
+      "rankLevels": [4, 26, 46],
+      "trainCost": 100,
+      "cooldown": 15,
+      "range": 25,
+      "minRange": 8,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"], "notInCombat": true},
+      "effects": [
+        {"type": "Charge"},
+        {"type": "ApplyAura", "aura": "warrior_charge_stun"},
+        {"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 9, "perLevel": 0.143}
+      ],
+      "aiHint": "Opener",
+      "aiPriority": 8
+    },
+    {
+      "id": "warrior_rend",
+      "name": "Rend",
+      "icon": "blood",
+      "classId": "Warrior",
+      "description": "Wounds the target causing them to bleed for damage every 3 sec over 21 sec (15 total at rank 1, 147 at rank 7). Bleed effects do not stack with your other applications of Rend.",
+      "learnLevel": 4,
+      "rankLevels": [4, 10, 20, 30, 40, 50, 60],
+      "trainCost": 100,
+      "cost": {"type": "Rage", "amount": 10},
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura", "warrior_defensive_stance_aura"]},
+      "tags": ["Bleed"],
+      "effects": [{"type": "ApplyAura", "aura": "warrior_rend"}],
+      "aiHint": "Debuff",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_thunder_clap",
+      "name": "Thunder Clap",
+      "icon": "lightning",
+      "classId": "Warrior",
+      "description": "Blasts up to 4 nearby enemies within 8 yards with thunder, dealing {0} damage and slowing their attack speed by 10% for {1} sec.",
+      "learnLevel": 6,
+      "rankLevels": [6, 18, 28, 38, 48, 58],
+      "trainCost": 200,
+      "cost": {"type": "Rage", "amount": 20},
+      "cooldown": 4,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "maxTargets": 4},
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"]},
+      "effects": [
+        {"type": "Damage", "min": 10, "perLevel": 1.788},
+        {
+          "type": "ApplyAura",
+          "aura": "warrior_thunder_clap",
+          "min": 10,
+          "perLevel": 0.385,
+          "special": "AuraDurationFromMagnitude"
+        }
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "warrior_hamstring",
+      "name": "Hamstring",
+      "icon": "boot",
+      "classId": "Warrior",
+      "description": "Maims the enemy, causing {0} damage and slowing its movement speed by 50% for 15 sec.",
+      "learnLevel": 8,
+      "rankLevels": [8, 32, 54],
+      "trainCost": 400,
+      "cost": {"type": "Rage", "amount": 10},
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura", "warrior_berserker_stance_aura"]},
+      "effects": [{"type": "Damage", "min": 5, "perLevel": 0.87}, {"type": "ApplyAura", "aura": "warrior_hamstring"}],
+      "aiHint": "Debuff",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_bloodrage",
+      "name": "Bloodrage",
+      "icon": "rage",
+      "classId": "Warrior",
+      "description": "Generates 10 rage at the cost of health (16% of base health), and then generates an additional 10 rage over 10 sec. The warrior is considered in combat for the duration.",
+      "learnLevel": 10,
+      "trainCost": 600,
+      "time": "OffGcd",
+      "cooldown": 60,
+      "target": "Self",
+      "effects": [
+        {"type": "Special", "target": "Self", "special": "WarriorBloodrageHealthCost"},
+        {"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 10},
+        {"type": "ApplyAura", "target": "Self", "aura": "warrior_bloodrage"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "warrior_battle_shout",
+      "name": "Battle Shout",
+      "icon": "shout",
+      "classId": "Warrior",
+      "description": "The warrior shouts, increasing the melee attack power of all party members within 20 yards by {0}. Lasts 2 min.",
+      "learnLevel": 1,
+      "rankLevels": [1, 12, 22, 32, 42, 52],
+      "trainCost": 10,
+      "cost": {"type": "Rage", "amount": 10},
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "tags": ["Shout"],
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "warrior_battle_shout",
+          "min": 20,
+          "perLevel": 3.39,
+          "special": "AuraModsFromMagnitude"
+        }
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "warrior_sunder_armor",
+      "name": "Sunder Armor",
+      "icon": "armor",
+      "classId": "Warrior",
+      "description": "Sunders the target's armor, reducing it by {0} per Sunder Armor and causing a high amount of threat. Can be applied up to 5 times. Lasts 30 sec.",
+      "learnLevel": 10,
+      "rankLevels": [10, 22, 34, 46, 58],
+      "trainCost": 600,
+      "cost": {"type": "Rage", "amount": 15},
+      "melee": true,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "warrior_sunder_armor",
+          "min": 90,
+          "perLevel": 7.5,
+          "special": "AuraModsFromMagnitude"
+        },
+        {"type": "Threat", "threat": 1, "min": 100, "perLevel": 3.35, "special": "ThreatFromMagnitude"}
+      ],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "warrior_taunt",
+      "name": "Taunt",
+      "icon": "shout",
+      "classId": "Warrior",
+      "description": "Taunts the target to attack you, but has no effect if the target is already attacking you.",
+      "learnLevel": 10,
+      "trainCost": 600,
+      "time": "OffGcd",
+      "cooldown": 10,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_defensive_stance_aura"]},
+      "tags": ["Taunt"],
+      "effects": [{"type": "Taunt"}],
+      "aiHint": "Taunt",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_overpower",
+      "name": "Overpower",
+      "icon": "swords",
+      "classId": "Warrior",
+      "description": "Instantly overpower the enemy, causing weapon damage plus {0}. Only usable after the target dodges (until the end of your next turn). Overpower cannot be blocked, dodged or parried.",
+      "learnLevel": 12,
+      "rankLevels": [12, 28, 44, 60],
+      "trainCost": 800,
+      "cost": {"type": "Rage", "amount": 5},
+      "cooldown": 5,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"], "reactive": "TargetDodged"},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 5, "perLevel": 0.625, "special": "UnavoidableHit"}],
+      "aiHint": "Damage",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_shield_bash",
+      "name": "Shield Bash",
+      "icon": "shield_bash",
+      "classId": "Warrior",
+      "description": "Bashes the target with your shield for {0} damage. It also interrupts spellcasting and prevents any spell in that school from being cast for 6 sec.",
+      "learnLevel": 12,
+      "rankLevels": [12, 32, 52],
+      "trainCost": 800,
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 12,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura", "warrior_defensive_stance_aura"], "shield": true},
+      "tags": ["Interrupt"],
+      "effects": [{"type": "Damage", "min": 6, "perLevel": 0.975}, {"type": "Interrupt", "lockout": 6}],
+      "aiHint": "Interrupt",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_demoralizing_shout",
+      "name": "Demoralizing Shout",
+      "icon": "shout",
+      "classId": "Warrior",
+      "description": "Reduces the melee attack power of all enemies within 10 yards by {0} for 30 sec.",
+      "learnLevel": 14,
+      "rankLevels": [14, 24, 34, 44, 54],
+      "trainCost": 1100,
+      "cost": {"type": "Rage", "amount": 10},
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true},
+      "tags": ["Shout"],
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "warrior_demoralizing_shout",
+          "min": 35,
+          "perLevel": 2.625,
+          "threat": 43,
+          "special": "AuraModsFromMagnitude"
+        }
+      ],
+      "aiHint": "Debuff",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_revenge",
+      "name": "Revenge",
+      "icon": "shield",
+      "classId": "Warrior",
+      "description": "Instantly counterattack an enemy for {0} damage and a high amount of threat. Revenge is only usable after the warrior blocks, dodges or parries an attack (until the end of the warrior's next turn).",
+      "learnLevel": 14,
+      "rankLevels": [14, 24, 34, 44, 54, 60],
+      "trainCost": 1100,
+      "cost": {"type": "Rage", "amount": 5},
+      "cooldown": 5,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_defensive_stance_aura"], "reactive": "SelfDodgedParriedBlocked"},
+      "effects": [
+        {"type": "Damage", "min": 12, "max": 14, "perLevel": 1.674},
+        {"type": "Threat", "threat": 1, "min": 155, "perLevel": 3.48, "special": "ThreatFromMagnitude"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 8
+    },
+    {
+      "id": "warrior_mocking_blow",
+      "name": "Mocking Blow",
+      "icon": "fist",
+      "classId": "Warrior",
+      "description": "A mocking attack that causes weapon damage plus {0}, a moderate amount of threat and forces the target to focus attacks on you for 6 sec.",
+      "learnLevel": 16,
+      "rankLevels": [16, 26, 36, 46, 56],
+      "trainCost": 1400,
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 120,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"]},
+      "tags": ["Taunt"],
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 16, "perLevel": 1.925}, {"type": "Taunt"}],
+      "aiHint": "Taunt",
+      "aiPriority": 6
+    },
+    {
+      "id": "warrior_shield_block",
+      "name": "Shield Block",
+      "icon": "shield",
+      "classId": "Warrior",
+      "description": "Increases your chance to block by 75% for 5 sec, but will only block 1 attack.",
+      "learnLevel": 16,
+      "trainCost": 1400,
+      "time": "OffGcd",
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 5,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_defensive_stance_aura"], "shield": true},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_shield_block"}],
+      "aiHint": "Defensive",
+      "aiPriority": 6
+    },
+    {
+      "id": "warrior_disarm",
+      "name": "Disarm",
+      "icon": "hand",
+      "classId": "Warrior",
+      "description": "Disarm the enemy's weapon for 10 sec.",
+      "learnLevel": 18,
+      "trainCost": 1800,
+      "cost": {"type": "Rage", "amount": 20},
+      "cooldown": 60,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_defensive_stance_aura"]},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_disarm"}],
+      "aiHint": "CC",
+      "aiPriority": 5
+    },
+    {
+      "id": "warrior_cleave",
+      "name": "Cleave",
+      "icon": "axe",
+      "classId": "Warrior",
+      "description": "A sweeping attack that does your weapon damage plus {0} to the target and his nearest ally. Replaces your next main-hand auto attack (on next swing, no Time cost).",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "trainCost": 2200,
+      "time": "OffGcd",
+      "nextSwing": true,
+      "cost": {"type": "Rage", "amount": 20},
+      "melee": true,
+      "area": {"shape": "Circle", "radius": 5, "maxTargets": 2},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 5, "perLevel": 1.125}],
+      "aiHint": "AoE",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_retaliation",
+      "name": "Retaliation",
+      "icon": "swords",
+      "classId": "Warrior",
+      "description": "Instantly counterattack any enemy that strikes you in melee for 15 sec. Melee attacks made from behind cannot be counterattacked. A maximum of 30 attacks will cause retaliation.",
+      "learnLevel": 20,
+      "trainCost": 2200,
+      "time": "OffGcd",
+      "cooldown": 1800,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"]},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_retaliation"}],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_intimidating_shout",
+      "name": "Intimidating Shout",
+      "icon": "fear",
+      "classId": "Warrior",
+      "description": "The warrior shouts, causing the targeted enemy to cower in fear. Up to 5 total nearby enemies will flee in fear. The targeted enemy will be unable to move while cowering. Lasts 8 sec.",
+      "learnLevel": 22,
+      "trainCost": 2700,
+      "cost": {"type": "Rage", "amount": 25},
+      "cooldown": 180,
+      "range": 10,
+      "tags": ["Shout"],
+      "effects": [
+        {"type": "ApplyAura", "aura": "warrior_intimidating_shout_cower"},
+        {"type": "ApplyAura", "target": "EnemiesInRadius", "radius": 10, "aura": "warrior_intimidating_shout_fear"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_execute",
+      "name": "Execute",
+      "icon": "skull",
+      "classId": "Warrior",
+      "description": "Attempt to finish off a wounded foe, causing {0} damage and converting each extra point of rage into 3 additional damage (6/9/12/15 at ranks 2-5). Only usable on enemies that have less than 20% health.",
+      "learnLevel": 24,
+      "rankLevels": [24, 32, 40, 48, 56],
+      "trainCost": 3200,
+      "cost": {"type": "Rage", "amount": 15, "consumeAll": true},
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_battle_stance_aura", "warrior_berserker_stance_aura"], "targetHealthBelowPct": 20},
+      "tags": ["Finisher"],
+      "effects": [{"type": "Damage", "min": 125, "perLevel": 14.84, "special": "WarriorExecute"}],
+      "aiHint": "Finisher",
+      "aiPriority": 10
+    },
+    {
+      "id": "warrior_challenging_shout",
+      "name": "Challenging Shout",
+      "icon": "shout",
+      "classId": "Warrior",
+      "description": "Forces all nearby enemies within 10 yards to focus attacks on you for 6 sec.",
+      "learnLevel": 26,
+      "trainCost": 3700,
+      "cost": {"type": "Rage", "amount": 5},
+      "cooldown": 600,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true},
+      "tags": ["Shout", "Taunt"],
+      "effects": [{"type": "Taunt"}],
+      "aiHint": "Taunt",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_shield_wall",
+      "name": "Shield Wall",
+      "icon": "shield",
+      "classId": "Warrior",
+      "description": "Reduces all damage taken by 75% for 10 sec.",
+      "learnLevel": 28,
+      "trainCost": 4300,
+      "time": "OffGcd",
+      "cooldown": 1800,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_defensive_stance_aura"], "shield": true},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_shield_wall"}],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_intercept",
+      "name": "Intercept",
+      "icon": "charge",
+      "classId": "Warrior",
+      "description": "Charge an enemy, causing {1} damage and stunning it for 3 sec.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50],
+      "trainCost": 5000,
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 30,
+      "range": 25,
+      "minRange": 8,
+      "requires": {"casterAuras": ["warrior_berserker_stance_aura"]},
+      "effects": [
+        {"type": "Charge"},
+        {"type": "Damage", "min": 25, "perLevel": 2},
+        {"type": "ApplyAura", "aura": "warrior_intercept_stun"}
+      ],
+      "aiHint": "Opener",
+      "aiPriority": 7
+    },
+    {
+      "id": "warrior_slam",
+      "name": "Slam",
+      "icon": "hammer",
+      "classId": "Warrior",
+      "description": "Slams the opponent, causing weapon damage plus {0}.",
+      "learnLevel": 30,
+      "rankLevels": [30, 38, 46, 54],
+      "trainCost": 5000,
+      "cost": {"type": "Rage", "amount": 15},
+      "castTime": 1.5,
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 32, "perLevel": 2.29}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_berserker_rage",
+      "name": "Berserker Rage",
+      "icon": "rage",
+      "classId": "Warrior",
+      "description": "The warrior enters a berserker rage, becoming immune to Fear, Sap and Incapacitate effects and generating extra rage when taking damage. Lasts 10 sec.",
+      "learnLevel": 32,
+      "trainCost": 5600,
+      "time": "OffGcd",
+      "cooldown": 30,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_berserker_stance_aura"]},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_berserker_rage"}],
+      "aiHint": "Defensive",
+      "aiPriority": 5
+    },
+    {
+      "id": "warrior_whirlwind",
+      "name": "Whirlwind",
+      "icon": "whirlwind",
+      "classId": "Warrior",
+      "description": "In a whirlwind of steel you attack up to 4 enemies within 8 yards, causing weapon damage to each enemy.",
+      "learnLevel": 36,
+      "trainCost": 7100,
+      "cost": {"type": "Rage", "amount": 25},
+      "cooldown": 10,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "maxTargets": 4},
+      "requires": {"casterAuras": ["warrior_berserker_stance_aura"]},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}],
+      "aiHint": "AoE",
+      "aiPriority": 8
+    },
+    {
+      "id": "warrior_pummel",
+      "name": "Pummel",
+      "icon": "fist",
+      "classId": "Warrior",
+      "description": "Pummel the target for {0} damage. It also interrupts spellcasting and prevents any spell in that school from being cast for 4 sec.",
+      "learnLevel": 38,
+      "rankLevels": [38, 58],
+      "trainCost": 7900,
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 10,
+      "melee": true,
+      "requires": {"casterAuras": ["warrior_berserker_stance_aura"]},
+      "tags": ["Interrupt"],
+      "effects": [{"type": "Damage", "min": 20, "perLevel": 1.5}, {"type": "Interrupt", "lockout": 4}],
+      "aiHint": "Interrupt",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_recklessness",
+      "name": "Recklessness",
+      "icon": "rage",
+      "classId": "Warrior",
+      "description": "The warrior will cause critical hits with most attacks and will be immune to Fear effects for the next 15 sec, but all damage taken is increased by 20%.",
+      "learnLevel": 50,
+      "trainCost": 13800,
+      "time": "OffGcd",
+      "cooldown": 1800,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_berserker_stance_aura"]},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_recklessness"}],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_shoot",
+      "name": "Shoot",
+      "icon": "bow",
+      "classId": "Warrior",
+      "description": "Shoot your equipped bow, gun or crossbow at the target for ranged weapon damage. Takes as long as the weapon's speed.",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "range": 30,
+      "minRange": 8,
+      "special": "PhysicalRangedShot",
+      "tags": ["Ranged", "Shoot"],
+      "requires": {"rangedWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "ranged": true}],
+      "aiHint": "Damage",
+      "aiPriority": 1
+    },
+    {
+      "id": "warrior_throw",
+      "name": "Throw",
+      "icon": "dagger",
+      "classId": "Warrior",
+      "description": "Throw your equipped thrown weapon at the target for ranged weapon damage. Takes as long as the weapon's speed.",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "range": 30,
+      "minRange": 8,
+      "special": "PhysicalRangedShot",
+      "tags": ["Ranged", "Thrown"],
+      "requires": {"rangedWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "ranged": true}],
+      "aiHint": "Damage",
+      "aiPriority": 1
+    },
+    {
+      "id": "warrior_parry",
+      "name": "Parry",
+      "icon": "swords",
+      "classId": "Warrior",
+      "description": "Gives a 5% chance to parry enemy melee attacks made from the front.",
+      "learnLevel": 6,
+      "trainCost": 200,
+      "passive": true
+    },
+    {
+      "id": "warrior_dual_wield",
+      "name": "Dual Wield",
+      "icon": "swords",
+      "classId": "Warrior",
+      "description": "Allows one-handed weapons to be equipped in the off hand. Off-hand attacks deal 50% damage.",
+      "learnLevel": 20,
+      "trainCost": 2200,
+      "passive": true
+    },
+    {
+      "id": "warrior_plate_mail",
+      "name": "Plate Mail",
+      "icon": "armor",
+      "classId": "Warrior",
+      "description": "Allows the warrior to wear plate armor.",
+      "learnLevel": 40,
+      "trainCost": 8800,
+      "passive": true
+    },
+    {
+      "id": "warrior_sweeping_strikes",
+      "name": "Sweeping Strikes",
+      "icon": "whirlwind",
+      "classId": "Warrior",
+      "description": "Your next 5 melee weapon swings strike an additional nearby opponent. Lasts 10 sec.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 30},
+      "cooldown": 30,
+      "target": "Self",
+      "requires": {"casterAuras": ["warrior_battle_stance_aura"]},
+      "effects": [{"type": "ApplyAura", "aura": "warrior_sweeping_strikes"}],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "warrior_mortal_strike",
+      "name": "Mortal Strike",
+      "icon": "sword",
+      "classId": "Warrior",
+      "description": "A vicious strike that deals weapon damage plus {0} and wounds the target, reducing the effectiveness of any healing by 50% for 10 sec.",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 54, 60],
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 30},
+      "cooldown": 6,
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 100, "min": 85, "perLevel": 3.75},
+        {"type": "ApplyAura", "aura": "warrior_mortal_strike"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_piercing_howl",
+      "name": "Piercing Howl",
+      "icon": "shout",
+      "classId": "Warrior",
+      "description": "Causes all enemies within 10 yards to be Dazed, reducing movement speed by 50% for 6 sec.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 10},
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true},
+      "tags": ["Shout"],
+      "effects": [{"type": "ApplyAura", "aura": "warrior_piercing_howl"}],
+      "aiHint": "Debuff",
+      "aiPriority": 3
+    },
+    {
+      "id": "warrior_death_wish",
+      "name": "Death Wish",
+      "icon": "skull",
+      "classId": "Warrior",
+      "description": "When activated, increases your physical damage by 20% and makes you immune to Fear effects, but lowers your armor and all resistances by 20%. Lasts 30 sec.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cost": {"type": "Rage", "amount": 10},
+      "cooldown": 180,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "warrior_death_wish"}],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "warrior_bloodthirst",
+      "name": "Bloodthirst",
+      "icon": "blood",
+      "classId": "Warrior",
+      "description": "Instantly attack the target causing damage equal to 45% of your attack power. In addition, the next 5 successful melee attacks will restore 10 health (20 at rank 4). This effect lasts 8 sec.",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 54, 60],
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 30},
+      "cooldown": 6,
+      "melee": true,
+      "effects": [{"type": "Damage", "apCoef": 0.45}, {"type": "ApplyAura", "target": "Self", "aura": "warrior_bloodthirst"}],
+      "aiHint": "Damage",
+      "aiPriority": 9
+    },
+    {
+      "id": "warrior_last_stand",
+      "name": "Last Stand",
+      "icon": "heart",
+      "classId": "Warrior",
+      "description": "When activated, this ability temporarily grants you 30% of your maximum health for 20 sec. After the effect expires, the health is lost.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "warrior_last_stand"}],
+      "aiHint": "Defensive",
+      "aiPriority": 4
+    },
+    {
+      "id": "warrior_concussion_blow",
+      "name": "Concussion Blow",
+      "icon": "hammer",
+      "classId": "Warrior",
+      "description": "Stuns the opponent for 5 sec.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 15},
+      "cooldown": 45,
+      "melee": true,
+      "effects": [{"type": "ApplyAura", "aura": "warrior_concussion_blow"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "warrior_shield_slam",
+      "name": "Shield Slam",
+      "icon": "shield_bash",
+      "classId": "Warrior",
+      "description": "Slam the target with your shield, causing {0} damage and dispelling 1 magic effect on the target. Also causes a high amount of threat.",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 54, 60],
+      "fromTalent": true,
+      "cost": {"type": "Rage", "amount": 20},
+      "cooldown": 6,
+      "melee": true,
+      "requires": {"shield": true},
+      "effects": [
+        {"type": "Damage", "min": 225, "max": 235, "perLevel": 6},
+        {"type": "Dispel", "dispelType": "Magic", "dispelCount": 1}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 9
+    }
+  ],
+  "auras": [
+    {
+      "id": "warrior_battle_stance_aura",
+      "name": "Battle Stance",
+      "icon": "stance_battle",
+      "description": "Generates 20% less threat.",
+      "kind": "Buff",
+      "duration": 0,
+      "exclusiveGroup": "warrior_stance",
+      "tags": ["Stance"],
+      "persistThroughDeath": true,
+      "mods": [{"stat": "ThreatGenerated", "value": -20, "pct": true}]
+    },
+    {
+      "id": "warrior_defensive_stance_aura",
+      "name": "Defensive Stance",
+      "icon": "stance_defensive",
+      "description": "Damage taken and damage caused reduced by 10%. Threat generated increased by 30%.",
+      "kind": "Buff",
+      "duration": 0,
+      "exclusiveGroup": "warrior_stance",
+      "tags": ["Stance"],
+      "persistThroughDeath": true,
+      "mods": [
+        {"stat": "DamageTaken", "value": -10, "pct": true},
+        {"stat": "DamageDone", "value": -10, "pct": true},
+        {"stat": "ThreatGenerated", "value": 30, "pct": true}
+      ]
+    },
+    {
+      "id": "warrior_berserker_stance_aura",
+      "name": "Berserker Stance",
+      "icon": "stance_berserker",
+      "description": "Critical hit chance increased by 3%. Damage taken increased by 10%. Generates 20% less threat.",
+      "kind": "Buff",
+      "duration": 0,
+      "exclusiveGroup": "warrior_stance",
+      "tags": ["Stance"],
+      "persistThroughDeath": true,
+      "mods": [
+        {"stat": "MeleeCrit", "value": 3},
+        {"stat": "DamageTaken", "value": 10, "pct": true},
+        {"stat": "ThreatGenerated", "value": -20, "pct": true}
+      ]
+    },
+    {
+      "id": "warrior_charge_stun",
+      "name": "Charge Stun",
+      "icon": "charge",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 1,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "warrior_rend",
+      "name": "Rend",
+      "icon": "blood",
+      "description": "Bleeding for Physical damage every 3 sec.",
+      "kind": "Debuff",
+      "duration": 21,
+      "tags": ["Bleed"],
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "min": 2.1, "perLevel": 0.335}]
+    },
+    {
+      "id": "warrior_thunder_clap",
+      "name": "Thunder Clap",
+      "icon": "lightning",
+      "description": "Attack speed reduced by 10%.",
+      "kind": "Debuff",
+      "duration": 10,
+      "mods": [{"stat": "MeleeHaste", "value": -10, "pct": true}, {"stat": "RangedHaste", "value": -10, "pct": true}]
+    },
+    {
+      "id": "warrior_hamstring",
+      "name": "Hamstring",
+      "icon": "boot",
+      "description": "Movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "duration": 15,
+      "tags": ["Snare"],
+      "mods": [{"stat": "MoveSpeed", "value": -50, "pct": true}]
+    },
+    {
+      "id": "warrior_improved_hamstring",
+      "name": "Improved Hamstring",
+      "icon": "boot",
+      "description": "Immobilized.",
+      "kind": "Debuff",
+      "duration": 5,
+      "tags": ["Root"],
+      "states": ["Root"]
+    },
+    {
+      "id": "warrior_bloodrage",
+      "name": "Bloodrage",
+      "icon": "rage",
+      "description": "Generating 1 rage per second.",
+      "kind": "Buff",
+      "duration": 10,
+      "tickInterval": 1,
+      "tickEffects": [{"type": "GainResource", "resource": "Rage", "amount": 1}]
+    },
+    {
+      "id": "warrior_battle_shout",
+      "name": "Battle Shout",
+      "icon": "shout",
+      "description": "Melee attack power increased.",
+      "kind": "Buff",
+      "duration": 120,
+      "tags": ["Shout"],
+      "mods": [{"stat": "AttackPower", "value": 20}]
+    },
+    {
+      "id": "warrior_demoralizing_shout",
+      "name": "Demoralizing Shout",
+      "icon": "shout",
+      "description": "Melee attack power reduced.",
+      "kind": "Debuff",
+      "duration": 30,
+      "tags": ["Shout"],
+      "mods": [{"stat": "AttackPower", "value": -35}]
+    },
+    {
+      "id": "warrior_sunder_armor",
+      "name": "Sunder Armor",
+      "icon": "armor",
+      "description": "Armor reduced per application (up to 5).",
+      "kind": "Debuff",
+      "duration": 30,
+      "maxStacks": 5,
+      "mods": [{"stat": "Armor", "value": -90}]
+    },
+    {
+      "id": "warrior_shield_block",
+      "name": "Shield Block",
+      "icon": "shield",
+      "description": "Block chance increased by 75%. Blocks 1 attack.",
+      "kind": "Buff",
+      "duration": 5,
+      "charges": 1,
+      "mods": [{"stat": "Block", "value": 75}],
+      "procs": [{"trigger": "OnBlock", "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "warrior_disarm",
+      "name": "Disarm",
+      "icon": "hand",
+      "description": "Disarmed: weapon damage greatly reduced.",
+      "kind": "Debuff",
+      "duration": 10,
+      "states": ["Disarm"]
+    },
+    {
+      "id": "warrior_retaliation",
+      "name": "Retaliation",
+      "icon": "swords",
+      "description": "Counterattacking any enemy that strikes you in melee (not from behind). Up to 30 counterattacks.",
+      "kind": "Buff",
+      "duration": 15,
+      "charges": 30,
+      "procs": [
+        {
+          "trigger": "OnStruck",
+          "consumeCharge": true,
+          "effects": [{"type": "WeaponDamage", "target": "Attacker", "weaponPct": 100}]
+        }
+      ]
+    },
+    {
+      "id": "warrior_intimidating_shout_cower",
+      "name": "Intimidating Shout",
+      "icon": "fear",
+      "description": "Cowering in fear, unable to move or act.",
+      "kind": "Debuff",
+      "duration": 8,
+      "states": ["Fear", "Root"],
+      "breakOnDamage": true,
+      "tags": ["Fear"]
+    },
+    {
+      "id": "warrior_intimidating_shout_fear",
+      "name": "Intimidating Shout",
+      "icon": "fear",
+      "description": "Fleeing in fear.",
+      "kind": "Debuff",
+      "duration": 8,
+      "states": ["Fear"],
+      "breakOnDamage": true,
+      "tags": ["Fear"]
+    },
+    {
+      "id": "warrior_shield_wall",
+      "name": "Shield Wall",
+      "icon": "shield",
+      "description": "All damage taken reduced by 75%.",
+      "kind": "Buff",
+      "duration": 10,
+      "mods": [{"stat": "DamageTaken", "value": -75, "pct": true}]
+    },
+    {
+      "id": "warrior_intercept_stun",
+      "name": "Intercept Stun",
+      "icon": "charge",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 3,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "warrior_berserker_rage",
+      "name": "Berserker Rage",
+      "icon": "rage",
+      "description": "Immune to Fear, Sap and Incapacitate effects. Generating extra rage when taking damage.",
+      "kind": "Buff",
+      "duration": 10,
+      "tags": ["ImmuneFear", "ImmuneIncapacitate"],
+      "special": "WarriorBerserkerRage"
+    },
+    {
+      "id": "warrior_recklessness",
+      "name": "Recklessness",
+      "icon": "rage",
+      "description": "Critical hits with most attacks. Immune to Fear. Damage taken increased by 20%.",
+      "kind": "Buff",
+      "duration": 15,
+      "tags": ["ImmuneFear"],
+      "special": "ImmunityFromTags",
+      "mods": [{"stat": "MeleeCrit", "value": 100}, {"stat": "DamageTaken", "value": 20, "pct": true}]
+    },
+    {
+      "id": "warrior_sweeping_strikes",
+      "name": "Sweeping Strikes",
+      "icon": "whirlwind",
+      "description": "Your next 5 melee weapon swings strike an additional nearby opponent.",
+      "kind": "Buff",
+      "duration": 10,
+      "charges": 5,
+      "special": "SweepingHits"
+    },
+    {
+      "id": "warrior_mortal_strike",
+      "name": "Mortal Strike",
+      "icon": "sword",
+      "description": "Healing effects reduced by 50%.",
+      "kind": "Debuff",
+      "duration": 10,
+      "mods": [{"stat": "HealingTaken", "value": -50, "pct": true}]
+    },
+    {
+      "id": "warrior_piercing_howl",
+      "name": "Piercing Howl",
+      "icon": "shout",
+      "description": "Dazed: movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "duration": 6,
+      "tags": ["Snare"],
+      "states": ["Daze"],
+      "mods": [{"stat": "MoveSpeed", "value": -50, "pct": true}]
+    },
+    {
+      "id": "warrior_death_wish",
+      "name": "Death Wish",
+      "icon": "skull",
+      "description": "Physical damage increased by 20%. Immune to Fear. Armor and resistances reduced by 20%.",
+      "kind": "Buff",
+      "duration": 30,
+      "tags": ["ImmuneFear"],
+      "special": "ImmunityFromTags",
+      "mods": [
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Physical"},
+        {"stat": "Armor", "value": -20, "pct": true},
+        {"stat": "Resistance", "value": -20, "pct": true}
+      ]
+    },
+    {
+      "id": "warrior_bloodthirst",
+      "name": "Bloodthirst",
+      "icon": "blood",
+      "description": "Your next 5 successful melee attacks restore health.",
+      "kind": "Buff",
+      "duration": 8,
+      "charges": 5,
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "consumeCharge": true,
+          "effects": [{"type": "Heal", "target": "Self", "min": 10, "perLevel": 0.5}]
+        }
+      ]
+    },
+    {
+      "id": "warrior_last_stand",
+      "name": "Last Stand",
+      "icon": "heart",
+      "description": "Maximum health increased by 30%.",
+      "kind": "Buff",
+      "duration": 20,
+      "mods": [{"stat": "Health", "value": 30, "pct": true}],
+      "onApply": [{"type": "Heal", "pctOfMax": 23.1}]
+    },
+    {
+      "id": "warrior_concussion_blow",
+      "name": "Concussion Blow",
+      "icon": "hammer",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 5,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "warrior_deep_wounds",
+      "name": "Deep Wounds",
+      "icon": "blood",
+      "description": "Bleeding for a portion of the warrior's weapon damage.",
+      "kind": "Debuff",
+      "duration": 12,
+      "tags": ["Bleed"],
+      "tickInterval": 3,
+      "tickEffects": [{"type": "WeaponDamage", "weaponPct": 15, "cannotMiss": true, "cannotCrit": true}]
+    },
+    {
+      "id": "warrior_enrage",
+      "name": "Enrage",
+      "icon": "rage",
+      "description": "Melee damage increased for up to 12 swings.",
+      "kind": "Buff",
+      "duration": 12,
+      "charges": 12,
+      "mods": [{"stat": "DamageDone", "value": 5, "pct": true, "school": "Physical"}],
+      "procs": [{"trigger": "OnMeleeHit", "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "warrior_flurry",
+      "name": "Flurry",
+      "icon": "whirlwind",
+      "description": "Attack speed increased for the next 3 swings.",
+      "kind": "Buff",
+      "duration": 15,
+      "charges": 3,
+      "mods": [{"stat": "MeleeHaste", "value": 10, "pct": true}],
+      "procs": [{"trigger": "OnAutoAttackHit", "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "warrior_blood_craze",
+      "name": "Blood Craze",
+      "icon": "blood",
+      "description": "Regenerating 3% of total health over 6 sec.",
+      "kind": "Buff",
+      "duration": 6,
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Heal", "pctOfMax": 1.5}]
+    },
+    {
+      "id": "warrior_revenge_stun",
+      "name": "Revenge Stun",
+      "icon": "shield",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 3,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "warrior_mace_stun",
+      "name": "Mace Stun Effect",
+      "icon": "mace",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 3,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "warrior_shield_bash_silence",
+      "name": "Shield Bash - Silenced",
+      "icon": "shield_bash",
+      "description": "Silenced.",
+      "kind": "Debuff",
+      "duration": 3,
+      "states": ["Silence"]
+    }
+  ],
+  "talentTrees": [
+    {
+      "id": "tree_warrior_arms",
+      "classId": "Warrior",
+      "name": "Arms",
+      "icon": "swords",
+      "description": "A battle-hardened master of weapons, using mobility and overpowering attacks to strike opponents down.",
+      "talents": [
+        {
+          "id": "warrior_arms_improved_heroic_strike",
+          "name": "Improved Heroic Strike",
+          "icon": "sword",
+          "tier": 1,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Reduces the cost of your Heroic Strike ability by {1/2/3} rage points.",
+          "effects": [{"type": "AbilityMod", "property": "CostFlat", "value": -1, "abilities": ["warrior_heroic_strike"]}]
+        },
+        {
+          "id": "warrior_arms_deflection",
+          "name": "Deflection",
+          "icon": "shield",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your Parry chance by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Parry", "value": 1}]
+        },
+        {
+          "id": "warrior_arms_improved_rend",
+          "name": "Improved Rend",
+          "icon": "blood",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the bleed damage done by your Rend ability by {15/25/35}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "values": [15, 25, 35], "abilities": ["warrior_rend"]}]
+        },
+        {
+          "id": "warrior_arms_improved_charge",
+          "name": "Improved Charge",
+          "icon": "charge",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the amount of rage generated by your Charge ability by {3/6}.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_charge"],
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 3, "perLevel": 3}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_tactical_mastery",
+          "name": "Tactical Mastery",
+          "icon": "stance_battle",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "You retain up to {5/10/15/20/25} of your rage points when you change stances.",
+          "effects": [{"type": "Special", "special": "WarriorStanceSwap", "value": 5}]
+        },
+        {
+          "id": "warrior_arms_improved_thunder_clap",
+          "name": "Improved Thunder Clap",
+          "icon": "lightning",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Reduces the cost of your Thunder Clap ability by {1/2/4} rage points.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CostFlat",
+              "values": [-1, -2, -4],
+              "abilities": ["warrior_thunder_clap"]
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_improved_overpower",
+          "name": "Improved Overpower",
+          "icon": "swords",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the critical strike chance of your Overpower ability by {25/50}%.",
+          "effects": [{"type": "AbilityMod", "property": "CritChance", "value": 25, "abilities": ["warrior_overpower"]}]
+        },
+        {
+          "id": "warrior_arms_anger_management",
+          "name": "Anger Management",
+          "icon": "rage",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Generates 1 rage point every 3 sec (2 rage at the start of each of your turns in combat).",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnTurnStart",
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 2}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_deep_wounds",
+          "name": "Deep Wounds",
+          "icon": "blood",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Your critical strikes cause the opponent to bleed, dealing {20/40/60}% of your melee weapon's average damage over 12 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {"trigger": "OnMeleeCrit", "effects": [{"type": "ApplyAura", "aura": "warrior_deep_wounds"}]},
+              "values": [33.3, 66.7, 100]
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_two_handed_weapon_specialization",
+          "name": "Two-Handed Weapon Specialization",
+          "icon": "sword",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the damage you deal with two-handed melee weapons by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["TwoHanded"],
+              "stat": "DamageDone",
+              "value": 1,
+              "pct": true
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_impale",
+          "name": "Impale",
+          "icon": "spear",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Increases the critical strike damage bonus of your abilities in Battle, Defensive, and Berserker stance by {10/20}%.",
+          "requires": "warrior_arms_deep_wounds",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CritBonus",
+              "value": 10,
+              "abilities": [
+                "warrior_heroic_strike",
+                "warrior_cleave",
+                "warrior_overpower",
+                "warrior_thunder_clap",
+                "warrior_hamstring",
+                "warrior_revenge",
+                "warrior_mocking_blow",
+                "warrior_execute",
+                "warrior_slam",
+                "warrior_whirlwind",
+                "warrior_intercept",
+                "warrior_pummel",
+                "warrior_shield_bash",
+                "warrior_mortal_strike",
+                "warrior_bloodthirst",
+                "warrior_shield_slam"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_axe_specialization",
+          "name": "Axe Specialization",
+          "icon": "axe",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with Axes by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandAxe", "TwoHandAxe"],
+              "stat": "MeleeCrit",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_sweeping_strikes",
+          "name": "Sweeping Strikes",
+          "icon": "whirlwind",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Sweeping Strikes ability.",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_sweeping_strikes"}]
+        },
+        {
+          "id": "warrior_arms_mace_specialization",
+          "name": "Mace Specialization",
+          "icon": "mace",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives you a {1/2/3/4/5}% chance to stun your target for 3 sec with a Mace.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandMace", "TwoHandMace"],
+              "values": [1, 2, 3, 4, 5],
+              "proc": {"trigger": "OnMeleeHit", "effects": [{"type": "ApplyAura", "aura": "warrior_mace_stun"}]}
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_sword_specialization",
+          "name": "Sword Specialization",
+          "icon": "sword",
+          "tier": 5,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Gives you a {1/2/3/4/5}% chance to get an extra attack on the same target after dealing damage with your Sword.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandSword", "TwoHandSword"],
+              "values": [1, 2, 3, 4, 5],
+              "proc": {"trigger": "OnMeleeHit", "effects": [{"type": "WeaponDamage", "weaponPct": 100}]}
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_polearm_specialization",
+          "name": "Polearm Specialization",
+          "icon": "spear",
+          "tier": 6,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with Polearms by {1/2/3/4/5}%.",
+          "effects": [{"type": "Special", "special": "WeaponTypeTalent", "tags": ["Polearm"], "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "warrior_arms_improved_hamstring",
+          "name": "Improved Hamstring",
+          "icon": "boot",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Gives your Hamstring ability a {5/10/15}% chance to immobilize the target for 5 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_hamstring"],
+                "effects": [{"type": "ApplyAura", "aura": "warrior_improved_hamstring"}]
+              },
+              "values": [5, 10, 15]
+            }
+          ]
+        },
+        {
+          "id": "warrior_arms_mortal_strike",
+          "name": "Mortal Strike",
+          "icon": "sword",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Mortal Strike ability.",
+          "requires": "warrior_arms_sweeping_strikes",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_mortal_strike"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_warrior_fury",
+      "classId": "Warrior",
+      "name": "Fury",
+      "icon": "rage",
+      "description": "A furious berserker wielding a weapon in each hand, unleashing a flurry of attacks.",
+      "talents": [
+        {
+          "id": "warrior_fury_booming_voice",
+          "name": "Booming Voice",
+          "icon": "shout",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the area of effect and duration of your Battle Shout and Demoralizing Shout by {10/20/30/40/50}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "DurationPct",
+              "value": 10,
+              "abilities": ["warrior_battle_shout", "warrior_demoralizing_shout"]
+            },
+            {
+              "type": "AbilityMod",
+              "property": "Radius",
+              "value": 10,
+              "abilities": ["warrior_battle_shout", "warrior_demoralizing_shout"]
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_cruelty",
+          "name": "Cruelty",
+          "icon": "sword",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with melee weapons by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "warrior_fury_improved_demoralizing_shout",
+          "name": "Improved Demoralizing Shout",
+          "icon": "shout",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the melee attack power reduction of your Demoralizing Shout by {8/16/24/32/40}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 8, "abilities": ["warrior_demoralizing_shout"]}]
+        },
+        {
+          "id": "warrior_fury_unbridled_wrath",
+          "name": "Unbridled Wrath",
+          "icon": "rage",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives you a {8/16/24/32/40}% chance to generate an additional rage point when you deal melee damage with a weapon.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnMeleeHit",
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 1}]
+              },
+              "values": [8, 16, 24, 32, 40]
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_improved_cleave",
+          "name": "Improved Cleave",
+          "icon": "axe",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the bonus damage done by your Cleave ability by {40/80/120}%.",
+          "effects": [{"type": "Special", "special": "WarriorImprovedCleave", "value": 40}]
+        },
+        {
+          "id": "warrior_fury_piercing_howl",
+          "name": "Piercing Howl",
+          "icon": "shout",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Piercing Howl ability.",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_piercing_howl"}]
+        },
+        {
+          "id": "warrior_fury_blood_craze",
+          "name": "Blood Craze",
+          "icon": "blood",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Regenerates {1/2/3}% of your total Health over 6 sec after being the victim of a critical strike.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "warrior_blood_craze"}]
+              },
+              "values": [3.3, 6.7, 10]
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_improved_battle_shout",
+          "name": "Improved Battle Shout",
+          "icon": "shout",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases the melee attack power bonus of your Battle Shout by {5/10/15/20/25}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 5, "abilities": ["warrior_battle_shout"]}]
+        },
+        {
+          "id": "warrior_fury_dual_wield_specialization",
+          "name": "Dual Wield Specialization",
+          "icon": "swords",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Increases the damage done by your offhand weapon by {5/10/15/20/25}%.",
+          "effects": [{"type": "Special", "special": "OffHandDamage", "value": 5}]
+        },
+        {
+          "id": "warrior_fury_improved_execute",
+          "name": "Improved Execute",
+          "icon": "skull",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Reduces the rage cost of your Execute ability by {2/5}.",
+          "effects": [{"type": "AbilityMod", "property": "CostFlat", "values": [-2, -5], "abilities": ["warrior_execute"]}]
+        },
+        {
+          "id": "warrior_fury_enrage",
+          "name": "Enrage",
+          "icon": "rage",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives you a {5/10/15/20/25}% melee damage bonus for 12 sec up to a maximum of 12 swings after being the victim of a critical strike.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "effects": [
+                  {
+                    "type": "ApplyAura",
+                    "target": "Self",
+                    "aura": "warrior_enrage",
+                    "min": 5,
+                    "perLevel": 5,
+                    "special": "AuraModsFromMagnitude"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_improved_slam",
+          "name": "Improved Slam",
+          "icon": "hammer",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Decreases the casting time of your Slam ability by {0.1/0.2/0.3/0.4/0.5} sec.",
+          "effects": [{"type": "AbilityMod", "property": "CastTime", "value": -0.1, "abilities": ["warrior_slam"]}]
+        },
+        {
+          "id": "warrior_fury_death_wish",
+          "name": "Death Wish",
+          "icon": "skull",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Death Wish ability.",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_death_wish"}]
+        },
+        {
+          "id": "warrior_fury_improved_intercept",
+          "name": "Improved Intercept",
+          "icon": "charge",
+          "tier": 5,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Intercept ability by {5/10} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -5, "abilities": ["warrior_intercept"]}]
+        },
+        {
+          "id": "warrior_fury_improved_berserker_rage",
+          "name": "Improved Berserker Rage",
+          "icon": "rage",
+          "tier": 6,
+          "column": 0,
+          "maxRank": 2,
+          "description": "The Berserker Rage ability will generate {5/10} rage when used.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_berserker_rage"],
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 5, "perLevel": 5}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_flurry",
+          "name": "Flurry",
+          "icon": "whirlwind",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your attack speed by {10/15/20/25/30}% for your next 3 swings after dealing a melee critical strike.",
+          "requires": "warrior_fury_enrage",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnMeleeCrit",
+                "effects": [
+                  {
+                    "type": "ApplyAura",
+                    "target": "Self",
+                    "aura": "warrior_flurry",
+                    "min": 10,
+                    "perLevel": 5,
+                    "special": "AuraModsFromMagnitude"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_fury_bloodthirst",
+          "name": "Bloodthirst",
+          "icon": "blood",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Bloodthirst ability.",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_bloodthirst"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_warrior_protection",
+      "classId": "Warrior",
+      "name": "Protection",
+      "icon": "shield",
+      "description": "A stalwart protector who uses a shield to safeguard themselves and their allies.",
+      "talents": [
+        {
+          "id": "warrior_protection_shield_specialization",
+          "name": "Shield Specialization",
+          "icon": "shield",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your chance to block attacks with a shield by {1/2/3/4/5}% and has a {20/40/60/80/100}% chance to generate 1 rage when a block occurs.",
+          "effects": [
+            {"type": "Stat", "stat": "Block", "value": 1},
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnBlock",
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 1}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "warrior_protection_anticipation",
+          "name": "Anticipation",
+          "icon": "eye",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your Defense skill by {2/4/6/8/10}.",
+          "effects": [{"type": "Stat", "stat": "Defense", "value": 2}]
+        },
+        {
+          "id": "warrior_protection_improved_bloodrage",
+          "name": "Improved Bloodrage",
+          "icon": "rage",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the instant rage generated by your Bloodrage ability by {2/5}.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_bloodrage"],
+                "effects": [{"type": "GainResource", "target": "Self", "resource": "Rage", "amount": 2, "perLevel": 3}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "warrior_protection_toughness",
+          "name": "Toughness",
+          "icon": "armor",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your armor value from items by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Armor", "value": 2, "pct": true}]
+        },
+        {
+          "id": "warrior_protection_iron_will",
+          "name": "Iron Will",
+          "icon": "shield",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases your chance to resist Stun and Charm effects by an additional {3/6/9/12/15}%.",
+          "effects": [{"type": "Special", "special": "WarriorIronWill", "value": 3}]
+        },
+        {
+          "id": "warrior_protection_last_stand",
+          "name": "Last Stand",
+          "icon": "heart",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Grants the Last Stand ability.",
+          "requires": "warrior_protection_improved_bloodrage",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_last_stand"}]
+        },
+        {
+          "id": "warrior_protection_improved_shield_block",
+          "name": "Improved Shield Block",
+          "icon": "shield",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Allows your Shield Block ability to block an additional attack and increases the duration by {0.5/1/2} sec.",
+          "requires": "warrior_protection_shield_specialization",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Duration",
+              "values": [0.5, 1, 2],
+              "abilities": ["warrior_shield_block"]
+            },
+            {"type": "AbilityMod", "property": "Charges", "values": [1, 1, 1], "abilities": ["warrior_shield_block"]}
+          ]
+        },
+        {
+          "id": "warrior_protection_improved_revenge",
+          "name": "Improved Revenge",
+          "icon": "shield",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Gives your Revenge ability a {15/30/45}% chance to stun the target for 3 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_revenge"],
+                "effects": [{"type": "ApplyAura", "aura": "warrior_revenge_stun"}]
+              },
+              "values": [15, 30, 45]
+            }
+          ]
+        },
+        {
+          "id": "warrior_protection_defiance",
+          "name": "Defiance",
+          "icon": "stance_defensive",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases the threat generated by your attacks by {3/6/9/12/15}% while in Defensive Stance.",
+          "effects": [{"type": "Special", "special": "WarriorDefiance", "value": 3}]
+        },
+        {
+          "id": "warrior_protection_improved_sunder_armor",
+          "name": "Improved Sunder Armor",
+          "icon": "armor",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Reduces the cost of your Sunder Armor ability by {1/2/3} rage points.",
+          "effects": [{"type": "AbilityMod", "property": "CostFlat", "value": -1, "abilities": ["warrior_sunder_armor"]}]
+        },
+        {
+          "id": "warrior_protection_improved_disarm",
+          "name": "Improved Disarm",
+          "icon": "hand",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases the duration of your Disarm ability by {1/2/3} secs.",
+          "effects": [{"type": "AbilityMod", "property": "Duration", "value": 1, "abilities": ["warrior_disarm"]}]
+        },
+        {
+          "id": "warrior_protection_improved_taunt",
+          "name": "Improved Taunt",
+          "icon": "shout",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Taunt ability by {1/2} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -1, "abilities": ["warrior_taunt"]}]
+        },
+        {
+          "id": "warrior_protection_improved_shield_wall",
+          "name": "Improved Shield Wall",
+          "icon": "shield",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the effect duration of your Shield Wall ability by {3/5} secs.",
+          "effects": [{"type": "AbilityMod", "property": "Duration", "values": [3, 5], "abilities": ["warrior_shield_wall"]}]
+        },
+        {
+          "id": "warrior_protection_concussion_blow",
+          "name": "Concussion Blow",
+          "icon": "hammer",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Concussion Blow ability.",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_concussion_blow"}]
+        },
+        {
+          "id": "warrior_protection_improved_shield_bash",
+          "name": "Improved Shield Bash",
+          "icon": "shield_bash",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Gives your Shield Bash ability a {50/100}% chance to silence the target for 3 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["warrior_shield_bash"],
+                "effects": [{"type": "ApplyAura", "aura": "warrior_shield_bash_silence"}]
+              },
+              "values": [50, 100]
+            }
+          ]
+        },
+        {
+          "id": "warrior_protection_one_handed_weapon_specialization",
+          "name": "One-Handed Weapon Specialization",
+          "icon": "sword",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage you deal with one-handed melee weapons by {2/4/6/8/10}%.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHanded"],
+              "stat": "DamageDone",
+              "value": 2,
+              "pct": true
+            }
+          ]
+        },
+        {
+          "id": "warrior_protection_shield_slam",
+          "name": "Shield Slam",
+          "icon": "shield_bash",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Shield Slam ability.",
+          "requires": "warrior_protection_concussion_blow",
+          "effects": [{"type": "GrantAbility", "ability": "warrior_shield_slam"}]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "warrior_starter_shortsword",
+      "name": "Worn Shortsword",
+      "icon": "sword",
+      "description": "A recruit's blade, notched from a hundred training-yard drills.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "equip": "OneHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 1,
+      "maxDamage": 3,
+      "speed": 1.9,
+      "price": 35
+    },
+    {
+      "id": "warrior_starter_shirt",
+      "name": "Recruit's Shirt",
+      "icon": "armor",
+      "description": "A plain linen shirt issued to every new recruit. Offers no protection to speak of.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Chest",
+      "armorType": "Cloth",
+      "armor": 0,
+      "price": 5
+    },
+    {
+      "id": "warrior_starter_pants",
+      "name": "Recruit's Pants",
+      "icon": "armor",
+      "description": "Sturdy trousers with patched knees.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Legs",
+      "armorType": "Cloth",
+      "armor": 1,
+      "price": 5
+    },
+    {
+      "id": "warrior_starter_boots",
+      "name": "Recruit's Boots",
+      "icon": "boot",
+      "description": "Hobnailed boots that have marched many a mile.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Feet",
+      "armorType": "Cloth",
+      "armor": 1,
+      "price": 5
+    }
+  ],
+  "specials": [
+    {
+      "id": "WarriorStanceSwap",
+      "usedBy": "warrior_battle_stance, warrior_defensive_stance, warrior_berserker_stance, warrior_arms_tactical_mastery",
+      "behaviour": "Effect special that runs before the stance's ApplyAura. If the warrior already has the target stance aura the ability cannot be used. Otherwise its rage becomes min(currentRage, keep) where keep = 5 x rank of Tactical Mastery (the talent's Special passive: value 5 per rank, 0-25; 0 without the talent). Then the stance aura is applied; its exclusiveGroup 'warrior_stance' removes the previous stance. Stance abilities share cooldownGroup 'warrior_stance' (1 s), i.e. at most one stance change per turn. Abilities whose requires.casterAuras lists stance auras are unusable in other stances. The Tactical Mastery passive has no other effect."
+    },
+    {
+      "id": "WarriorExecute",
+      "usedBy": "warrior_execute",
+      "behaviour": "Damage-effect modifier. Cost 15 rage (after Improved Execute CostFlat) is paid normally; because cost.consumeAll is set, ALL rage left after paying is also spent: bonus = extraRage x 3 x rankNumber (rankNumber = 1..5 = index of the highest known rank in rankLevels + 1, i.e. 3/6/9/12/15 damage per rage). Damage = rand(min,max) + perLevel x (effLevel - learnLevel) + bonus, resolved as a normal melee special attack (miss/dodge/parry/block, crit x2 + Impale, armor). The rage is lost even if the attack misses."
+    },
+    {
+      "id": "WarriorDefiance",
+      "usedBy": "warrior_protection_defiance",
+      "behaviour": "Talent passive: while the warrior has warrior_defensive_stance_aura, ThreatGenerated +3% per rank (pct stat, stacking additively with the stance's +30%: x1.30 -> up to x1.45). No effect in other stances."
+    },
+    {
+      "id": "WarriorImprovedCleave",
+      "usedBy": "warrior_fury_improved_cleave",
+      "behaviour": "Talent passive: the flat bonus of warrior_cleave's WeaponDamage effect (min/max + perLevel part, not the weapon roll) is multiplied by (1 + value x rank / 100), value = 40 -> +40/80/120%."
+    },
+    {
+      "id": "WarriorBloodrageHealthCost",
+      "usedBy": "warrior_bloodrage",
+      "behaviour": "Effect special (target Self): the caster loses health equal to 16% of its class base health at its current level (baseHealth linearly interpolated between baseHealthLevel1 and baseHealthLevel60). The loss is not mitigated (armor, absorbs, DamageTaken), cannot crit, generates no rage and no threat, and cannot reduce health below 1. Bloodrage is usable at any health above 1."
+    },
+    {
+      "id": "WarriorIronWill",
+      "usedBy": "warrior_protection_iron_will",
+      "behaviour": "Talent passive: whenever a hostile aura imposing the Stun state (or a charm/mind-control effect) would be applied to the warrior, roll value x rank % (3/6/9/12/15); on success the aura is resisted (emit a Resist combat event)."
+    },
+    {
+      "id": "WarriorBerserkerRage",
+      "usedBy": "warrior_berserker_rage (aura)",
+      "behaviour": "Aura special. On apply: removes the owner's auras whose states include Fear, Incapacitate or Sleep (Sap, Gouge, Intimidating Shout, Psychic Scream...). While active: hostile auras imposing Fear, Incapacitate or Sleep are not applied (immune, emit Immune event), and rage generated by taking damage is doubled (2 x the normal 2.5 x d / c). Equivalent to ImmunityFromTags for its tags ImmuneFear/ImmuneIncapacitate plus the rage rule."
+    },
+    {
+      "id": "ImmunityFromTags",
+      "usedBy": "warrior_recklessness, warrior_death_wish (auras)",
+      "behaviour": "Aura special: while the aura is active its owner is immune to the unit states named by the aura's tags: 'ImmuneFear' -> Fear, 'ImmuneIncapacitate' -> Incapacitate and Sleep, 'ImmuneStun' -> Stun, 'ImmuneRoot' -> Root. Hostile auras imposing such a state are not applied (emit Immune), and existing ones are removed when this aura is applied."
+    },
+    {
+      "id": "AuraModsFromMagnitude",
+      "usedBy": "ApplyAura effects of warrior_battle_shout, warrior_demoralizing_shout, warrior_sunder_armor, warrior_fury_enrage, warrior_fury_flurry, rogue_slice_and_dice, rogue_expose_armor, rogue_sprint, rogue_remorseless_attacks, poison applications (rogue)",
+      "behaviour": "Modifier on an ApplyAura effect (generic, used to scale aura stat amounts by rank, combo points or talent rank). The aura is applied normally, then its FIRST stat mod (mods[0]) is replaced for this aura instance by sign(mods[0].value) x M, where M = rand(min,max) + perLevel x D + (perCombo + amount x D) x CP, where D = effLevel - learnLevel of the ability that applies it (effLevel = level of the highest rank known, or caster level for scaleWithLevel), CP = combo points spent by the ability (0 for non-finishers), and inside a talent Proc passive D = talentRank - 1; then M is multiplied by (1 + sum of the casting ability's AbilityMod 'Effect' %/100). Other mods are unchanged. Stacking auras (Sunder Armor) use the newest M for every stack. Description token {n} for this effect shows M."
+    },
+    {
+      "id": "AuraDurationFromMagnitude",
+      "usedBy": "ApplyAura effects of warrior_thunder_clap, rogue_sap, rogue_kidney_shot",
+      "behaviour": "Modifier on an ApplyAura effect: the applied aura's duration (seconds) = M, where M = rand(min,max) + perLevel x D + (perCombo + amount x D) x CP, where D = effLevel - learnLevel of the ability that applies it (effLevel = level of the highest rank known, or caster level for scaleWithLevel), CP = combo points spent by the ability (0 for non-finishers), and inside a talent Proc passive D = talentRank - 1; then M is multiplied by (1 + sum of the casting ability's AbilityMod 'Effect' %/100); then AbilityMod Duration (seconds) and DurationPct apply as usual. Description token {n} shows M."
+    },
+    {
+      "id": "ThreatFromMagnitude",
+      "usedBy": "Threat effects of warrior_heroic_strike, warrior_sunder_armor, warrior_revenge, rogue_feint",
+      "behaviour": "Modifier on a Threat effect: instead of the flat 'threat' field, the effect adds M threat on the ability's target, where M is computed like a damage magnitude: rand(min,max) + perLevel x (effLevel - learnLevel), x (1 + AbilityMod Effect %/100). M is then multiplied by the caster's ThreatGenerated modifiers. If the effect's 'threat' field is negative (Feint) M is SUBTRACTED from the caster's threat on every enemy engaged with it (floor 0) and ThreatGenerated is not applied. Bonus threat is only added if the ability hit (not on miss/dodge/parry)."
+    },
+    {
+      "id": "SweepingHits",
+      "usedBy": "warrior_sweeping_strikes, rogue_blade_flurry (auras)",
+      "behaviour": "Aura special: while active, every melee hit by the owner on its target (auto attacks and single-target melee abilities; NOT area abilities such as Whirlwind/Cleave, not periodic damage) also deals the same final damage (after the primary target's mitigation, no new roll) to one other enemy within 8 yards of the primary target (nearest first). If the aura has charges, each extra hit consumes one charge and the aura ends at 0."
+    },
+    {
+      "id": "WeaponTypeTalent",
+      "usedBy": "warrior/rogue weapon specialization talents",
+      "behaviour": "Talent passive restricted to weapon types listed in its 'tags' (WeaponType names, plus 'OneHanded' = any one-handed melee weapon and 'TwoHanded' = any two-handed melee weapon). (a) If 'stat' is set: the stat mod (value x rank or values[rank-1], pct flag) applies only to attacks made with a weapon of a listed type, judged per hand (an off-hand dagger gets Dagger Specialization even with a main-hand sword); for attacks not made with a weapon the main hand decides. (b) If 'proc' is set: the proc behaves exactly like a Proc passive (chance = values[rank-1] when values is given) but only triggers on hits made with a weapon of a listed type. Extra attacks granted by a proc (Sword Specialization WeaponDamage effect = one extra main-hand swing, which can be dodged/parried/crit) cannot themselves trigger the same proc."
+    },
+    {
+      "id": "OffHandDamage",
+      "usedBy": "warrior_fury_dual_wield_specialization, rogue_combat_dual_wield_specialization",
+      "behaviour": "Talent passive: damage of off-hand weapon hits (auto attacks and off-hand WeaponDamage) is multiplied by (1 + value x rank / 100), applied on top of the normal 50% off-hand penalty."
+    },
+    {
+      "id": "PhysicalRangedShot",
+      "usedBy": "warrior_shoot, warrior_throw, rogue_shoot, rogue_throw",
+      "behaviour": "Ability special for warrior/rogue ranged attacks. Time cost = equipped ranged weapon speed / (1 + RangedHaste%/100) instead of the GCD (overflow becomes time debt like other instants). Abilities tagged 'Thrown' require a ranged weapon of type Thrown; abilities tagged 'Shoot' require Bow, Gun or Crossbow. Performs the ability's single ranged WeaponDamage hit: ranged attack power (Agi + level - 10 for Warrior and Rogue), Physical, can miss or be dodged (not parried/blocked), uses RangedHit/RangedCrit, crit x2. No ammo is consumed. Not an auto-repeat attack."
+    },
+    {
+      "id": "UnavoidableHit",
+      "usedBy": "warrior_overpower",
+      "behaviour": "Modifier on a WeaponDamage/Damage effect: the attack cannot be dodged, parried or blocked (it can still miss and crit)."
+    }
+  ]
+}

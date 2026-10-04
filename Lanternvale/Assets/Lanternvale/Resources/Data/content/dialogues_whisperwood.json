@@ -1,0 +1,715 @@
+{
+  "_note": "Whisperwood dialogues. dlg_puddlecap, dlg_bandit_lookouts and dlg_rusk are encounter dialogues: peaceful branches set the encounter's doneFlag (no combat); fight branches use StartCombat with the encounter id.",
+  "dialogues": [
+    {
+      "id": "dlg_komorebi",
+      "start": "k_post",
+      "nodes": [
+        {
+          "id": "k_post",
+          "speaker": "komorebi",
+          "text": "*The Wayside lantern blazes gold, and Komorebi spins inside it like a leaf in a sunbeam.* You did it! I can feel the Heart from here, warm as a hand on my back. Thank you, little lights.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "k_after",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "k_after",
+          "speaker": "komorebi",
+          "text": "The taper burns brighter now, doesn't it? Rotheart's roots seal the stair at the eastern edge of the wood. Burn through, little light. I'll keep this lantern warm as long as I can.",
+          "conditions": [{"type": "Flag", "key": "embers_gathered"}],
+          "fallback": "k_ret",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "k_ret",
+          "speaker": "komorebi",
+          "text": "You found them! Oh — oh, they're shivering. Quickly, hold the taper close.",
+          "conditions": [
+            {"type": "Flag", "key": "met_komorebi"},
+            {"type": "HasItem", "key": "spirit_ember", "amount": 3},
+            {"type": "QuestActive", "key": "mq_lanterns"}
+          ],
+          "fallback": "k_embers",
+          "choices": [
+            {
+              "text": "(Offer the Spirit Embers to the Kindling Taper.)",
+              "next": "k_emb2",
+              "outcomes": [
+                {"type": "TakeItem", "key": "spirit_ember", "amount": 3},
+                {"type": "SetFlag", "key": "embers_gathered"},
+                {"type": "SetQuestStage", "key": "mq_lanterns", "value": "rotheart"},
+                {"type": "GiveXP", "amount": 150}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "k_emb2",
+          "speaker": "narrator",
+          "text": "*The embers drift into the Kindling Taper's flame. It flares warm and gold, and for a moment the dark Wayside lantern flickers in answer.*",
+          "next": "k_emb3"
+        },
+        {
+          "id": "k_emb3",
+          "speaker": "komorebi",
+          "text": "There. Now the taper carries their light too. The Hollow has a heart in this wood: Rotheart, the old stair-guardian. His grey roots seal the way to the shrine, but with that flame his thorns will burn.",
+          "next": "k_emb4"
+        },
+        {
+          "id": "k_emb4",
+          "speaker": "komorebi",
+          "text": "Be gentle with him, if you can. He used to let the village children climb him on festival nights.",
+          "choices": [{"text": "I'll do what I can."}]
+        },
+        {
+          "id": "k_embers",
+          "speaker": "komorebi",
+          "text": "The wisps drift in the Grey Grove, past the Old Bridge. Three embers, little light. They want to come home; they just don't remember how.",
+          "conditions": [{"type": "Flag", "key": "met_komorebi"}, {"type": "QuestActive", "key": "mq_lanterns"}],
+          "fallback": "k_first",
+          "choices": [{"text": "I'll bring them."}]
+        },
+        {
+          "id": "k_first",
+          "speaker": "narrator",
+          "text": "*A small spirit, round as a dandelion clock, peers out of the dark lantern. Her light is barely a candle's.*",
+          "conditions": [{"type": "QuestActive", "key": "mq_lanterns"}],
+          "fallback": "k_noquest",
+          "outcomes": [{"type": "SetFlag", "key": "met_komorebi"}],
+          "next": "k_f1"
+        },
+        {
+          "id": "k_f1",
+          "speaker": "komorebi",
+          "text": "Oh! A traveller. With... is that a Kindling Taper? Then Maru sent you. Good. Good. I'm Komorebi. I keep the Wayside lantern for pilgrims. Or I did.",
+          "next": "k_f2"
+        },
+        {
+          "id": "k_f2",
+          "speaker": "komorebi",
+          "text": "The Warden stopped coming. Then the light from the Heart stopped coming. And now the Hollow is eating my forest, one wisp at a time.",
+          "choices": [
+            {"text": "What happened to the Warden?", "next": "k_warden"},
+            {
+              "text": "The Kindling. The Heart Lantern needs a new flame, doesn't it?",
+              "check": {"skill": "Religion", "dc": 12, "success": "k_rel_s", "failure": "k_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "This taper holds hearth-fire. Could it hold other lights too?",
+              "check": {"skill": "Arcana", "dc": 13, "success": "k_arc_s", "failure": "k_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "How can I help?", "next": "k_f3"}
+          ]
+        },
+        {
+          "id": "k_warden",
+          "speaker": "komorebi",
+          "text": "He's hungry. Lanterns are spirit, and so is he, and when the Heart ran low he started drinking from it instead of giving. The more he drinks, the greyer he gets. I don't think he can stop.",
+          "next": "k_f2b"
+        },
+        {
+          "id": "k_f2b",
+          "speaker": "komorebi",
+          "text": "*She flickers anxiously.*",
+          "choices": [
+            {
+              "text": "The Kindling. The Heart Lantern needs a new flame, doesn't it?",
+              "check": {"skill": "Religion", "dc": 12, "success": "k_rel_s", "failure": "k_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "This taper holds hearth-fire. Could it hold other lights too?",
+              "check": {"skill": "Arcana", "dc": 13, "success": "k_arc_s", "failure": "k_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "How can I help?", "next": "k_f3"}
+          ]
+        },
+        {
+          "id": "k_rel_s",
+          "speaker": "komorebi",
+          "text": "Yes! Every ten years. Isolde gave hers, and it was a good, bright flame... but one person's light can only last so long. There must be another way. There must.",
+          "outcomes": [{"type": "SetFlag", "key": "knows_kindling_cost"}, {"type": "GiveXP", "amount": 75}],
+          "next": "k_f2b"
+        },
+        {
+          "id": "k_rel_f",
+          "speaker": "komorebi",
+          "text": "*Komorebi tilts, like a puzzled flower.* It isn't that simple, little light.",
+          "next": "k_f2b"
+        },
+        {
+          "id": "k_arc_s",
+          "speaker": "komorebi",
+          "text": "Oh, clever! It can! It's a vessel, not a flame. If you fed it the light the Hollow stole... *She spins in a little circle of delight.*",
+          "outcomes": [{"type": "SetFlag", "key": "taper_insight"}, {"type": "GiveXP", "amount": 75}],
+          "next": "k_f3"
+        },
+        {"id": "k_arc_f", "speaker": "komorebi", "text": "*Komorebi blinks.* Tapers are for burning, silly.", "next": "k_f2b"},
+        {
+          "id": "k_f3",
+          "speaker": "komorebi",
+          "text": "The Hollow wisps in the Grey Grove are lantern-flames it stole and emptied. Free their embers and bring them here, and I'll feed them to your taper. A taper carrying the valley's light might burn through anything. Three embers. Please.",
+          "choices": [{"text": "I'll bring them.", "next": "k_f4", "outcomes": [{"type": "SetQuestStage", "key": "mq_lanterns", "value": "embers"}]}]
+        },
+        {
+          "id": "k_f4",
+          "speaker": "komorebi",
+          "text": "Thank you. Go east, past the Old Bridge. And little light — the wisps aren't wicked. They're lost. Be quick, and be kind.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "k_noquest",
+          "speaker": "komorebi",
+          "text": "*A tiny spirit peeks out of the dark lantern and whispers:* A pilgrim? No taper... Go and see Maru in the village first, little light. She'll know what to do.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_moppet",
+      "start": "m_home",
+      "nodes": [
+        {
+          "id": "m_home",
+          "speaker": "moppet",
+          "text": "*Moppet is curled up as close to Nell as a spirit can get. He jingles at you, happily and slightly sticky with honey.*",
+          "conditions": [{"type": "Flag", "key": "moppet_found"}],
+          "fallback": "m_find",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "m_find",
+          "speaker": "narrator",
+          "text": "*Under the glowing mushrooms, a tiny spirit with a leaf on its head is shivering. When it sees you, it jingles in alarm and ducks out of sight.*",
+          "conditions": [{"type": "QuestActive", "key": "sq_spirit_friend"}],
+          "fallback": "m_hide",
+          "choices": [
+            {"text": "(Ring Nell's bell.)", "next": "m_bell", "conditions": [{"type": "HasItem", "key": "nells_bell", "amount": 1}]},
+            {
+              "text": "(Sit very still and let him come to you.)",
+              "check": {"skill": "Nature", "dc": 12, "success": "m_nature", "failure": "m_fail"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "(Hum the pilgrim's song Komorebi sings.)",
+              "check": {"skill": "Religion", "dc": 11, "success": "m_success", "failure": "m_fail"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "(Offer him a honey cake.)",
+              "next": "m_cake",
+              "conditions": [{"type": "HasItem", "key": "food_honey_cake", "amount": 1}],
+              "outcomes": [{"type": "TakeItem", "key": "food_honey_cake", "amount": 1}]
+            },
+            {"text": "(Speak to him as the spirits speak.)", "next": "m_success", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {
+              "text": "(Offer him a little of your own light.)",
+              "next": "m_success",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "(Leave him be for now.)"}
+          ]
+        },
+        {
+          "id": "m_hide",
+          "speaker": "narrator",
+          "text": "*Something small and green is hiding under the glowing mushrooms. It peeks at you, jingles in alarm and vanishes beneath a cap. It seems to be waiting for someone it knows.*",
+          "choices": [{"text": "(Leave it be.)"}]
+        },
+        {
+          "id": "m_bell",
+          "speaker": "narrator",
+          "text": "*The little bell rings out, clear as morning. Moppet's head pops up. He jingles — a question.*",
+          "choices": [
+            {"text": "Nell sent me. She misses you.", "next": "m_success"},
+            {
+              "text": "The lanterns will be lit again, I promise. You don't have to be scared.",
+              "outcomes": [{"type": "Approval", "key": "seren", "amount": 2}],
+              "check": {"skill": "Persuasion", "dc": 10, "success": "m_success", "failure": "m_fail"},
+              "once": true,
+              "tag": "PERSUASION"
+            }
+          ]
+        },
+        {
+          "id": "m_fail",
+          "speaker": "narrator",
+          "text": "*Moppet squeaks and burrows deeper under the mushrooms. Perhaps something gentler — or something sweeter.*",
+          "next": "m_find"
+        },
+        {
+          "id": "m_cake",
+          "speaker": "narrator",
+          "text": "*Moppet inches forward... snatches the cake... and devours it in a shower of crumbs. He jingles. It is unmistakably 'MORE'.*",
+          "next": "m_success"
+        },
+        {
+          "id": "m_nature",
+          "speaker": "narrator",
+          "text": "*You sit. You wait. A moth lands on your knee. Then a tiny weight lands on the other one. Moppet looks up, decides you'll do, and climbs aboard.*",
+          "next": "m_secret"
+        },
+        {
+          "id": "m_success",
+          "speaker": "narrator",
+          "text": "*Moppet tumbles out from under the mushroom and leaps onto your shoulder, jingling like a sleigh full of bells. He smells of rain and moss.*",
+          "next": "m_secret"
+        },
+        {
+          "id": "m_secret",
+          "speaker": "narrator",
+          "text": "*Before you go, Moppet tugs your sleeve toward an old stump at the edge of the ring and jingles very seriously. Something is buried there — a secret, and he has decided you may have it.*",
+          "outcomes": [{"type": "SetFlag", "key": "moppet_found"}, {"type": "SetFlag", "key": "moppet_secret"}, {"type": "GiveXP", "amount": 100}],
+          "next": "m_end"
+        },
+        {
+          "id": "m_end",
+          "speaker": "narrator",
+          "text": "*He settles on your shoulder. Time to take him home to Nell.*",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_puddlecap",
+      "start": "p1",
+      "nodes": [
+        {
+          "id": "p1",
+          "speaker": "narrator",
+          "text": "*A ring of tiny tents made of leaves. In the middle, a little lantern made from a thimble burns a stolen wick. Mosslings scatter, brandishing twigs. The biggest one, in the biggest hat, steps forward.*",
+          "next": "p2"
+        },
+        {
+          "id": "p2",
+          "speaker": "puddlecap",
+          "text": "Big-folk! Stop! This is Puddlecap Hollow, and Puddlecap is chief, and these wicks are ours. We found them. In a shed. Behind a lock. Which we also found.",
+          "choices": [
+            {"text": "Those wicks belong to Tobben the lamplighter.", "next": "p3"},
+            {
+              "text": "That lantern you've made... you're trying to keep the Hollow away, aren't you?",
+              "check": {"skill": "Nature", "dc": 12, "success": "p_nat_s", "failure": "p_nat_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "(Speak in the slow, damp language of moss and stone.)",
+              "next": "p_shaman",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "Hand them over. Now.",
+              "check": {"skill": "Intimidation", "dc": 14, "success": "p_int_s", "failure": "p_threat"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {"text": "(Attack.)", "next": "p_attack"}
+          ]
+        },
+        {
+          "id": "p3",
+          "speaker": "puddlecap",
+          "text": "Tobben! Tobben has hundreds of wicks! A whole shed of light! Mosslings had one mushroom that glowed, and the grey ate it.",
+          "choices": [
+            {
+              "text": "If I ask Tobben to hang a lantern for you at the forest edge — a real one — will you give the wicks back?",
+              "check": {"skill": "Persuasion", "dc": 13, "success": "p_deal", "failure": "p_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "You're not thieves. You're frightened.",
+              "check": {"skill": "Insight", "dc": 11, "success": "p_ins_s", "failure": "p_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Give them back, or we take them.", "next": "p_threat"},
+            {"text": "(Attack.)", "next": "p_attack"}
+          ]
+        },
+        {
+          "id": "p_nat_s",
+          "speaker": "puddlecap",
+          "text": "*Puddlecap's ears droop.* The grey came to the mushroom ring. Ate the glow right out of it. Mosslings need light too, big-folk. Little light. Just a little.",
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "next": "p_offer"
+        },
+        {
+          "id": "p_nat_f",
+          "speaker": "puddlecap",
+          "text": "*You suggest the lantern is decorative. Puddlecap looks deeply offended on the lantern's behalf.*",
+          "next": "p3"
+        },
+        {
+          "id": "p_shaman",
+          "speaker": "narrator",
+          "text": "*You speak in the slow, damp tongue of moss. Every Mossling freezes. Puddlecap removes his enormous hat.* 'Old-speaker. We did not know. Forgive.'",
+          "next": "p_deal"
+        },
+        {
+          "id": "p_ins_s",
+          "speaker": "puddlecap",
+          "text": "*His lip wobbles.* Not frightened. Mosslings are BRAVE. ...Mosslings are a bit frightened.",
+          "next": "p_offer"
+        },
+        {"id": "p_ins_f", "speaker": "puddlecap", "text": "Frightened? Of BIG-FOLK? Ha! Ha. *Several Mosslings hide behind him.*", "next": "p3"},
+        {
+          "id": "p_offer",
+          "speaker": "puddlecap",
+          "text": "If big-folk promise light for Mosslings... maybe Mosslings give back wicks. Maybe. Promise?",
+          "choices": [{"text": "I promise. Tobben will hang a lantern for you.", "next": "p_deal"}, {"text": "No deals.", "next": "p_threat"}]
+        },
+        {
+          "id": "p_pers_f",
+          "speaker": "puddlecap",
+          "text": "Big-folk promises are like big-folk feet. They squash. *The Mosslings raise their twigs.*",
+          "choices": [
+            {"text": "Then we do this the hard way.", "next": "p_threat"},
+            {
+              "text": "You're not thieves. You're frightened.",
+              "check": {"skill": "Insight", "dc": 11, "success": "p_ins_s", "failure": "p_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            }
+          ]
+        },
+        {
+          "id": "p_int_s",
+          "speaker": "puddlecap",
+          "text": "*Puddlecap looks at your weapon. Then at his twig. Then, sulkily, at the wicks.* Fine. FINE. Take them. Mosslings are moving to a nicer forest. With nicer big-folk.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "lantern_wick", "amount": 6},
+            {"type": "SetFlag", "key": "mosslings_scared"},
+            {"type": "SetFlag", "key": "mossling_camp_done"},
+            {"type": "Approval", "key": "morwen", "amount": 3},
+            {"type": "Approval", "key": "seren", "amount": -3},
+            {"type": "Approval", "key": "pip", "amount": -2},
+            {"type": "GiveXP", "amount": 150}
+          ]
+        },
+        {
+          "id": "p_threat",
+          "speaker": "puddlecap",
+          "text": "Threats! In Puddlecap's own hollow! Mosslings — DEFEND THE THIMBLE!",
+          "outcomes": [
+            {"type": "Approval", "key": "morwen", "amount": 2},
+            {"type": "Approval", "key": "seren", "amount": -3},
+            {"type": "StartCombat", "key": "enc_mossling_camp"}
+          ]
+        },
+        {
+          "id": "p_attack",
+          "speaker": "narrator",
+          "text": "*Puddlecap squeaks in outrage. A dozen twigs are raised as one.*",
+          "outcomes": [
+            {"type": "Approval", "key": "seren", "amount": -5},
+            {"type": "Approval", "key": "rook", "amount": -3},
+            {"type": "StartCombat", "key": "enc_mossling_camp"}
+          ]
+        },
+        {
+          "id": "p_deal",
+          "speaker": "puddlecap",
+          "text": "Then it's a deal, big-folk! Mosslings keep promises. Mostly. Here — six wicks, only a bit nibbled. And this: Puddlecap's second-best hat, for a friend.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "lantern_wick", "amount": 6},
+            {"type": "GiveItem", "key": "puddlecaps_mushroom_hat", "amount": 1},
+            {"type": "SetFlag", "key": "mosslings_befriended"},
+            {"type": "SetFlag", "key": "mossling_camp_done"},
+            {"type": "Approval", "key": "seren", "amount": 5},
+            {"type": "Approval", "key": "rook", "amount": 3},
+            {"type": "Approval", "key": "pip", "amount": 3},
+            {"type": "GiveXP", "amount": 200}
+          ],
+          "next": "p_end"
+        },
+        {
+          "id": "p_end",
+          "speaker": "narrator",
+          "text": "*The Mosslings cheer, then immediately start arguing over who gets to sit nearest the thimble-lantern.*",
+          "choices": [{"text": "(Leave them to it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_bandit_lookouts",
+      "start": "l_peace",
+      "nodes": [
+        {
+          "id": "l_peace",
+          "speaker": "bandit_lookout",
+          "text": "Oh — it's you. Rusk says you're alright. Go on through, friend. Mind the loose plank.",
+          "conditions": [{"type": "Flag", "key": "bandits_peaceful"}],
+          "fallback": "l1",
+          "outcomes": [{"type": "SetFlag", "key": "lookouts_talked"}, {"type": "SetFlag", "key": "lookouts_done"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l1",
+          "speaker": "bandit_lookout",
+          "text": "Oi! Stop there. Road's closed. Well, not closed. Tolled. Toll's at the bridge, and Rusk does the talking. Off you go, and keep your hands where we can see 'em.",
+          "choices": [
+            {
+              "text": "Fine. Let's go and see Rusk.",
+              "next": "l_pass",
+              "outcomes": [{"type": "SetFlag", "key": "lookouts_talked"}, {"type": "SetFlag", "key": "lookouts_done"}]
+            },
+            {
+              "text": "You two don't look like you've ever robbed anyone.",
+              "check": {"skill": "Insight", "dc": 12, "success": "l_ins_s", "failure": "l_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Get out of our way.", "next": "l_fight"}
+          ]
+        },
+        {"id": "l_pass", "speaker": "bandit_lookout", "text": "Good. Sensible. You've got a sensible face.", "choices": [{"text": "(Continue.)"}]},
+        {
+          "id": "l_ins_s",
+          "speaker": "bandit_lookout",
+          "text": "*The younger one lowers his bow.* We haven't, he admits. We're from Stoneford. We grow barley. Don't tell Rusk I said.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "lookouts_talked"},
+            {"type": "SetFlag", "key": "lookouts_done"},
+            {"type": "SetFlag", "key": "bandits_are_farmers"},
+            {"type": "GiveXP", "amount": 50}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_ins_f",
+          "speaker": "bandit_lookout",
+          "text": "Have SO, says the younger one, and draws.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_bandit_lookouts"}]
+        },
+        {
+          "id": "l_fight",
+          "speaker": "bandit_lookout",
+          "text": "Right, then. Rusk won't like this.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": -2}, {"type": "StartCombat", "key": "enc_bandit_lookouts"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_rusk",
+      "start": "r_hurt",
+      "nodes": [
+        {
+          "id": "r_hurt",
+          "speaker": "rusk",
+          "text": "*A huge man in a patched coat blocks the Old Bridge, axe across his shoulders.* You cut down Tam and Wil. They were boys, with bows they couldn't string right. Give me one reason I shouldn't do the same to you.",
+          "conditions": [{"type": "Flag", "key": "lookouts_done"}, {"type": "NotFlag", "key": "lookouts_talked"}],
+          "fallback": "r1",
+          "choices": [
+            {
+              "text": "They drew on us. I'm sorry it came to that. It doesn't have to happen again.",
+              "check": {"skill": "Persuasion", "dc": 17, "success": "r_story", "failure": "r_fight"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Because you'd lose.",
+              "check": {"skill": "Intimidation", "dc": 13, "success": "r_scared", "failure": "r_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Five silver, and you take your people out of the valley.",
+              "next": "r_paid",
+              "conditions": [{"type": "Gold", "amount": 500}],
+              "outcomes": [{"type": "TakeGold", "amount": 500}, {"type": "SetFlag", "key": "bandits_paid"}, {"type": "SetFlag", "key": "bandits_dealt_with"}]
+            },
+            {"text": "(Attack.)", "next": "r_fight"}
+          ]
+        },
+        {
+          "id": "r1",
+          "speaker": "narrator",
+          "text": "*A huge man in a patched coat stands on the Old Bridge, axe across his shoulders. Behind him, a handful of thin, nervous figures clutch knives like they've never held one before.*",
+          "next": "r2"
+        },
+        {
+          "id": "r2",
+          "speaker": "rusk",
+          "text": "Name's Rusk. This is my bridge now. Toll's five silver a head, or everything you've got, whichever's more. I'm told that's how it works.",
+          "choices": [
+            {
+              "text": "You hold that axe like a hay-fork. You're a farmer.",
+              "check": {"skill": "Insight", "dc": 12, "success": "r_ins_s", "failure": "r_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "You're from Stoneford. You grow barley.", "next": "r_story", "conditions": [{"type": "Flag", "key": "bandits_are_farmers"}]},
+            {
+              "text": "Whatever brought you here, robbing pilgrims won't fix it. Talk to me.",
+              "check": {"skill": "Persuasion", "dc": 14, "success": "r_story", "failure": "r_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Walk away. Now. While you still can.",
+              "check": {"skill": "Intimidation", "dc": 15, "success": "r_scared", "failure": "r_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Lay down your arms. Nobody needs to bleed on this bridge today.",
+              "next": "r_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Plant your weapon in the planks.) One of us is leaving this bridge. Choose.",
+              "next": "r_scared",
+              "conditions": [{"type": "Class", "key": "Warrior"}],
+              "tag": "WARRIOR"
+            },
+            {
+              "text": "Five silver? Fine. Take it — and take your people out of the valley.",
+              "next": "r_paid",
+              "conditions": [{"type": "Gold", "amount": 500}],
+              "outcomes": [{"type": "TakeGold", "amount": 500}, {"type": "SetFlag", "key": "bandits_paid"}, {"type": "SetFlag", "key": "bandits_dealt_with"}]
+            },
+            {"text": "No toll. Stand aside.", "next": "r_fight"}
+          ]
+        },
+        {
+          "id": "r2b",
+          "speaker": "rusk",
+          "text": "*Rusk shifts his grip on the axe.* Well?",
+          "choices": [
+            {
+              "text": "You hold that axe like a hay-fork. You're a farmer.",
+              "check": {"skill": "Insight", "dc": 12, "success": "r_ins_s", "failure": "r_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "You're from Stoneford. You grow barley.", "next": "r_story", "conditions": [{"type": "Flag", "key": "bandits_are_farmers"}]},
+            {
+              "text": "Whatever brought you here, robbing pilgrims won't fix it. Talk to me.",
+              "check": {"skill": "Persuasion", "dc": 14, "success": "r_story", "failure": "r_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Walk away. Now. While you still can.",
+              "check": {"skill": "Intimidation", "dc": 15, "success": "r_scared", "failure": "r_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Lay down your arms. Nobody needs to bleed on this bridge today.",
+              "next": "r_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Plant your weapon in the planks.) One of us is leaving this bridge. Choose.",
+              "next": "r_scared",
+              "conditions": [{"type": "Class", "key": "Warrior"}],
+              "tag": "WARRIOR"
+            },
+            {
+              "text": "Five silver? Fine. Take it — and take your people out of the valley.",
+              "next": "r_paid",
+              "conditions": [{"type": "Gold", "amount": 500}],
+              "outcomes": [{"type": "TakeGold", "amount": 500}, {"type": "SetFlag", "key": "bandits_paid"}, {"type": "SetFlag", "key": "bandits_dealt_with"}]
+            },
+            {"text": "No toll. Stand aside.", "next": "r_fight"}
+          ]
+        },
+        {
+          "id": "r_ins_s",
+          "speaker": "rusk",
+          "text": "*His jaw works.* Barley. Thirty years. Then the grey came up out of the ground, and the barley came up grey with it. Can't eat grey. Can't sell grey.",
+          "outcomes": [{"type": "GiveXP", "amount": 75}],
+          "next": "r_story"
+        },
+        {"id": "r_ins_f", "speaker": "rusk", "text": "I hold it how I like, Rusk growls, gripping it tighter.", "next": "r2b"},
+        {
+          "id": "r_pers_f",
+          "speaker": "rusk",
+          "text": "*A short, tired laugh.* Talk. Everyone wants to talk. Talk doesn't grow barley.",
+          "next": "r2b"
+        },
+        {
+          "id": "r_paladin",
+          "speaker": "narrator",
+          "text": "*Your voice carries, warm and certain, and every bandit on the bridge goes still. Rusk lowers the axe an inch.* 'You'd... hear us out?'",
+          "next": "r_story"
+        },
+        {
+          "id": "r_story",
+          "speaker": "rusk",
+          "text": "The whole of Stoneford's gone grey. Fields, orchards, the lot. We came up the pilgrim road to beg at the shrine, and found the bridge empty and the shrine-folk gone. Took the bridge. Seemed easier than starving.",
+          "choices": [
+            {
+              "text": "Lanternvale needs hands. Sergeant Holt will find you honest work — and once the lanterns are lit, your fields will come back.",
+              "next": "r_peace"
+            },
+            {"text": "That's a sad story. The toll still isn't happening.", "next": "r_fight"}
+          ]
+        },
+        {
+          "id": "r_peace",
+          "speaker": "rusk",
+          "text": "*He looks at his people. They look back at him, thin and hopeful.* ...Lanternvale. Honest work. Aye. Alright. If you're lying, I'll find you. If you're not... I'll owe you.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "bandits_peaceful"},
+            {"type": "SetFlag", "key": "bandits_dealt_with"},
+            {"type": "Approval", "key": "seren", "amount": 8},
+            {"type": "Approval", "key": "aldric", "amount": 5},
+            {"type": "Approval", "key": "kael", "amount": 3},
+            {"type": "Approval", "key": "morwen", "amount": -3},
+            {"type": "GiveXP", "amount": 300}
+          ],
+          "next": "r_peace2"
+        },
+        {
+          "id": "r_peace2",
+          "speaker": "narrator",
+          "text": "*The bandits file off the bridge toward the village. One of them, a girl of about fifteen, gives you a tiny wave.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "r_scared",
+          "speaker": "narrator",
+          "text": "*Something in your face makes Rusk's people take a step back, then another. Rusk swallows.* 'Right. Right. We're going. Out of the valley. You won't see us again.'",
+          "outcomes": [
+            {"type": "SetFlag", "key": "bandits_scared"},
+            {"type": "SetFlag", "key": "bandits_dealt_with"},
+            {"type": "Approval", "key": "morwen", "amount": 5},
+            {"type": "Approval", "key": "seren", "amount": -5},
+            {"type": "GiveXP", "amount": 200}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "r_paid",
+          "speaker": "rusk",
+          "text": "*He stares at the coins, then at you.* You'd pay us to go. Not to pass — to GO. *He pockets them slowly.* There's an orchard two valleys over that's still green. We'll try there. Thank you, stranger.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 3}, {"type": "Approval", "key": "pip", "amount": -3}, {"type": "GiveXP", "amount": 150}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "r_fight",
+          "speaker": "rusk",
+          "text": "Right. The expensive way, then.",
+          "outcomes": [{"type": "Approval", "key": "morwen", "amount": 2}, {"type": "StartCombat", "key": "enc_bridge_toll"}]
+        }
+      ]
+    }
+  ]
+}

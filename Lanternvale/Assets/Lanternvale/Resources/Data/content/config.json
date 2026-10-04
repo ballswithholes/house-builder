@@ -1,0 +1,39 @@
+{
+  "_note": "Game configuration and the specials requested by world content.",
+  "config": {
+    "startMap": "lanternvale",
+    "startSpawn": "default",
+    "startDialogue": "dlg_opening",
+    "xpRate": 4,
+    "maxLevel": 60,
+    "partySize": 4,
+    "baseMoveMetres": 9,
+    "meleeReachMetres": 2.2,
+    "startingGold": 1000,
+    "startingItems": [
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_mana",
+      "potion_minor_mana",
+      "food_rice_ball",
+      "food_rice_ball",
+      "food_rice_ball",
+      "food_rice_ball",
+      "drink_spring_water",
+      "drink_spring_water",
+      "drink_spring_water",
+      "drink_spring_water",
+      "bandage_linen",
+      "bandage_linen"
+    ]
+  },
+  "specials": [
+    {
+      "id": "RekindleLanterns",
+      "usedBy": "dlg_warden_spirit (dialogue outcome Special)",
+      "behaviour": "Called when the Heart Lantern is rekindled (the dialogue also sets flags heart_lantern_lit and lanterns_rekindled). Play the valley-wide relight moment: every prop whose art is 'prop_spirit_lantern_dark' on every map is drawn as 'prop_spirit_lantern' from now on and gets a warm light (#ffd27a, radius 3.5 x scale, intensity 0.9, offset [0, 1.6 x scale], flicker), persisted via the lanterns_rekindled flag so it survives save/load and map changes. Optional polish: switch Lanternvale's windmill to a turning animation and add fireflies to every map."
+    }
+  ]
+}

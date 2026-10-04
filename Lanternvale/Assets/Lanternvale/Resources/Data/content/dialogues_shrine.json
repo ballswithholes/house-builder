@@ -1,0 +1,333 @@
+{
+  "_note": "Old Lantern Shrine dialogues. dlg_keeper_ishiro and dlg_warden_confront are encounter dialogues; dlg_warden_spirit appears after the Warden is defeated.",
+  "dialogues": [
+    {
+      "id": "dlg_keeper_ishiro",
+      "start": "k1",
+      "nodes": [
+        {
+          "id": "k1",
+          "speaker": "narrator",
+          "text": "*A tall, grey figure in a keeper's robes moves along a row of dead lanterns, pinching out flames that aren't there. Its face is a smudge of ash.*",
+          "next": "k2"
+        },
+        {
+          "id": "k2",
+          "speaker": "keeper_ishiro",
+          "text": "Put them out... put them all out... if they are dark, he cannot drink them... *It turns.* You carry a flame. Give it to me. I will keep it dark. I will keep it safe.",
+          "choices": [
+            {
+              "text": "Keeper Ishiro. Your letter reached Maru. She knows. She's sorry it was late.",
+              "next": "k_letter",
+              "conditions": [{"type": "Flag", "key": "ishiro_letter_read"}]
+            },
+            {"text": "Ishiro? It's Seren. Isolde's daughter.", "next": "k_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {
+              "text": "(Recite the keeper's evening prayer, carved on every lantern on the stair.)",
+              "check": {"skill": "Religion", "dc": 15, "success": "k_peace", "failure": "k_fail"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "You kept the lanterns for forty years. You can rest now. Let us finish your work.",
+              "check": {"skill": "Persuasion", "dc": 16, "success": "k_peace", "failure": "k_fail"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "(Lay a hand on his shoulder and lend him a little of your light.)",
+              "next": "k_peace",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "Stand aside, spirit.", "next": "k_fight"}
+          ]
+        },
+        {
+          "id": "k_letter",
+          "speaker": "narrator",
+          "text": "*The grey figure goes very still. Something like colour seeps back into the smudge of its face: an old man, tired and gentle.* 'Maru... read it? Then someone came. Someone finally came.'",
+          "outcomes": [{"type": "GiveXP", "amount": 200}],
+          "next": "k_peace"
+        },
+        {
+          "id": "k_seren",
+          "speaker": "seren",
+          "text": "Keeper Ishiro? It's Seren. You gave me barley sweets when I was small, and told me lanterns were only stars that decided to stay.",
+          "next": "k_seren2"
+        },
+        {
+          "id": "k_seren2",
+          "speaker": "keeper_ishiro",
+          "text": "*The grey figure tilts its head.* ...Little Seren. You came up the stair. Like her. *It sounds afraid.* Don't give it everything, child. Don't.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 10}],
+          "next": "k_peace"
+        },
+        {
+          "id": "k_fail",
+          "speaker": "narrator",
+          "text": "*The ash-face twists.* 'No. NO. You'll let him drink it!' *Every dead lantern in the hall flares grey.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_keeper"}]
+        },
+        {
+          "id": "k_fight",
+          "speaker": "narrator",
+          "text": "*The grey keeper raises its hands, and the air goes cold and colourless.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_keeper"}]
+        },
+        {
+          "id": "k_peace",
+          "speaker": "keeper_ishiro",
+          "text": "*He lowers his hands. For a moment he's only an old man in a faded robe.* The Warden is in the sanctum, drinking the Heart dry. He doesn't want to. He can't stop. Free him... and take these. Forty years of prayers. They'll know what to do.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "ishiros_prayer_beads", "amount": 1},
+            {"type": "SetFlag", "key": "ishiro_at_peace"},
+            {"type": "SetFlag", "key": "keeper_done"},
+            {"type": "Approval", "key": "seren", "amount": 5},
+            {"type": "Approval", "key": "torvan", "amount": 5},
+            {"type": "GiveXP", "amount": 400}
+          ],
+          "next": "k_peace2"
+        },
+        {
+          "id": "k_peace2",
+          "speaker": "narrator",
+          "text": "*Keeper Ishiro bows, and comes apart gently into motes of grey that warm, slowly, to gold, and drift up the stair toward the sanctum.*",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_warden_confront",
+      "start": "w1",
+      "nodes": [
+        {
+          "id": "w1",
+          "speaker": "narrator",
+          "text": "*The sanctum is a ring of standing stones around a vast stone lantern — the Heart Lantern — its light a single dying ember. Curled around it, drinking that ember in long, shuddering breaths, is the Warden.*",
+          "next": "w2"
+        },
+        {
+          "id": "w2",
+          "speaker": "narrator",
+          "text": "*He is enormous: a stag of mist and moss, his antlers hung with a hundred lanterns, every one burning grey. When he lifts his head, his eyes are empty as winter.*",
+          "next": "w3"
+        },
+        {
+          "id": "w3",
+          "speaker": "hollow_warden",
+          "text": "...LITTLE... LIGHTS... *The voice is a hundred lanterns guttering at once.* SO... HUNGRY... SO... COLD... GIVE... ME... YOUR... FLAME...",
+          "choices": [
+            {"text": "(Let Seren speak.)", "next": "w_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {"text": "(Let Kael speak.)", "next": "w_kael", "conditions": [{"type": "InParty", "key": "kael"}]},
+            {"text": "(Let Torvan speak.)", "next": "w_torvan", "conditions": [{"type": "InParty", "key": "torvan"}]},
+            {
+              "text": "Warden! Remember the Walk — every lantern in the valley, every autumn. Remember who you are!",
+              "check": {"skill": "Religion", "dc": 14, "success": "w_remember", "failure": "w_noremember"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "(Hold up the Kindling Taper and call to him as the herd calls to its stag.)",
+              "check": {"skill": "Nature", "dc": 14, "success": "w_remember", "failure": "w_noremember"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Then come and take it.", "next": "w_fight"}
+          ]
+        },
+        {
+          "id": "w_seren",
+          "speaker": "seren",
+          "text": "I'm Isolde's daughter. I came to give you my light, the way she did. *Her voice shakes.* But I don't think that's what you need. I think you need to stop being hungry.",
+          "next": "w_seren2"
+        },
+        {
+          "id": "w_seren2",
+          "speaker": "hollow_warden",
+          "text": "...ISOLDE... *For a heartbeat, the grey lanterns flicker gold.* ...RUN... LITTLE... ONE... I... CANNOT... STOP...",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}, {"type": "SetFlag", "key": "warden_remembers"}],
+          "next": "w_fight"
+        },
+        {
+          "id": "w_kael",
+          "speaker": "kael",
+          "text": "Ten years ago you took her, and I let you. *He raises the greatsword.* I'm not letting you take anyone else.",
+          "outcomes": [{"type": "Approval", "key": "kael", "amount": 5}],
+          "next": "w_fight"
+        },
+        {
+          "id": "w_torvan",
+          "speaker": "torvan",
+          "text": "Great One. The Hornkin swore to guard your herd, and we failed you. *He lowers his horns.* Forgive what we must do.",
+          "outcomes": [{"type": "Approval", "key": "torvan", "amount": 5}],
+          "next": "w_fight"
+        },
+        {
+          "id": "w_remember",
+          "speaker": "narrator",
+          "text": "*The Warden shudders. For an instant a single antler-lantern burns true gold.* '...WALK... I... REMEMBER... WALKING...' *Then the grey swallows it again — but something in the great beast has loosened.*",
+          "outcomes": [{"type": "SetFlag", "key": "warden_remembers"}, {"type": "GiveXP", "amount": 150}],
+          "next": "w_fight"
+        },
+        {
+          "id": "w_noremember",
+          "speaker": "narrator",
+          "text": "*The Warden doesn't hear you. Or it hears, and the hunger is louder.*",
+          "next": "w_fight"
+        },
+        {
+          "id": "w_fight",
+          "speaker": "narrator",
+          "text": "*The Warden rises, and rises, and keeps rising. Every lantern in its antlers gutters grey, and the sanctum goes very, very quiet.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_warden"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_warden_spirit",
+      "start": "ws_after",
+      "nodes": [
+        {
+          "id": "ws_after",
+          "speaker": "warden_spirit",
+          "text": "*The little stag of light dozes against the Heart Lantern, glowing like a banked hearth.* ...Thank you, little lights. Go home. Your valley is waiting for you.",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}],
+          "fallback": "ws1",
+          "choices": [{"text": "(Return to Lanternvale.)", "outcomes": [{"type": "Teleport", "key": "lanternvale", "value": "camphor"}]}, {"text": "Rest well."}]
+        },
+        {
+          "id": "ws1",
+          "speaker": "narrator",
+          "text": "*Where the Hollow Warden fell, mist settles... and from it, unsteady on new legs, rises a small stag of soft light, no bigger than a fawn. A single lantern hangs from one tiny antler, dark.*",
+          "next": "ws2"
+        },
+        {
+          "id": "ws2",
+          "speaker": "warden_spirit",
+          "text": "...I was so hungry. I drank and drank and could not stop. *He looks at the Heart Lantern, barely an ember.* The Heart needs a new flame, or I will grow hungry again. Every ten years a summoner gives one. Every ten years, I take it.",
+          "choices": [
+            {"text": "(Look to Seren.)", "next": "ws_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {
+              "text": "This taper carries a spark from every hearth in Lanternvale, and the embers the Hollow stole, set free. Would that be enough?",
+              "next": "ws_taper",
+              "conditions": [{"type": "HasItem", "key": "kindling_taper", "amount": 1}]
+            },
+            {
+              "text": "Every traveller carries a little hearth-light. Take some of ours — a little from each of us, not all from one.",
+              "next": "ws_hands",
+              "conditions": [{"type": "NotHasItem", "key": "kindling_taper"}]
+            }
+          ]
+        },
+        {
+          "id": "ws_seren",
+          "speaker": "seren",
+          "text": "*Seren steps forward, staff chiming.* I'm ready. My mother gave you everything she had. I can— *Her voice catches.*",
+          "choices": [
+            {
+              "text": "Seren, wait. You don't have to give yourself. Use the taper — the whole valley's light, not one life.",
+              "next": "ws_seren_taper",
+              "conditions": [{"type": "HasItem", "key": "kindling_taper", "amount": 1}],
+              "outcomes": [{"type": "Approval", "key": "seren", "amount": 15}, {"type": "Approval", "key": "kael", "amount": 10}]
+            },
+            {
+              "text": "(Look at her.) She's terrified, and she's going to do it anyway.",
+              "conditions": [{"type": "HasItem", "key": "kindling_taper", "amount": 1}],
+              "check": {"skill": "Insight", "dc": 10, "success": "ws_ins_s", "failure": "ws_ins_f"},
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "If that's your choice, Seren, I'll honour it.",
+              "next": "ws_seren_sac",
+              "outcomes": [{"type": "Approval", "key": "kael", "amount": -10}, {"type": "Approval", "key": "lys", "amount": -10}]
+            }
+          ]
+        },
+        {
+          "id": "ws_ins_s",
+          "speaker": "narrator",
+          "text": "*Her knuckles are white on the staff. You put your hand over hers and gently lift the Kindling Taper between you.* 'Not alone,' you tell her. 'Not this time.'",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 15}, {"type": "Approval", "key": "kael", "amount": 10}, {"type": "GiveXP", "amount": 100}],
+          "next": "ws_seren_taper"
+        },
+        {
+          "id": "ws_ins_f",
+          "speaker": "narrator",
+          "text": "*You can't read her face in the glow. Instead you simply hold out the Kindling Taper.*",
+          "next": "ws_seren_taper"
+        },
+        {
+          "id": "ws_seren_sac",
+          "speaker": "narrator",
+          "text": "*Seren lifts her staff, and her own light begins to rise from her like breath on a cold morning — until the little stag steps between her and the lantern.*",
+          "next": "ws_seren_sac2"
+        },
+        {
+          "id": "ws_seren_sac2",
+          "speaker": "warden_spirit",
+          "text": "No. Your mother's gift taught me what such a flame costs. I will not take another. *He nudges the taper in your hand with his small nose.* That. Use that.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}],
+          "next": "ws_seren_taper"
+        },
+        {
+          "id": "ws_seren_taper",
+          "speaker": "seren",
+          "text": "*She looks at the taper, then at you, and laughs — a wet, startled laugh.* The whole valley's light. Not one life. Mother, why didn't anyone think of that? *She takes it in both hands.* Then let's kindle it together.",
+          "outcomes": [{"type": "SetFlag", "key": "seren_kindled"}],
+          "next": "ws_light"
+        },
+        {
+          "id": "ws_taper",
+          "speaker": "narrator",
+          "text": "*You raise the Kindling Taper. Its little flame — every hearth in Lanternvale, every freed ember — leans toward the Heart Lantern like a sunflower toward morning.*",
+          "next": "ws_light"
+        },
+        {
+          "id": "ws_light",
+          "speaker": "narrator",
+          "text": "*The taper touches the Heart Lantern. For a moment, nothing. Then light — gold, warm, enormous — pours up through the sanctum, down the stair, across Whisperwood and into every lantern in the valley at once. Far below, a whole village gasps.*",
+          "outcomes": [
+            {"type": "TakeItem", "key": "kindling_taper", "amount": 1},
+            {"type": "SetFlag", "key": "heart_lantern_lit"},
+            {"type": "SetFlag", "key": "lanterns_rekindled"},
+            {"type": "Special", "key": "RekindleLanterns"},
+            {"type": "GiveXP", "amount": 250}
+          ],
+          "next": "ws_after2"
+        },
+        {
+          "id": "ws_hands",
+          "speaker": "narrator",
+          "text": "*One by one, you each cup your hands around the Heart Lantern's ember. A little warmth leaves each of you — no more than a deep breath's worth — and the ember catches. Gold light pours down the stair and into every lantern in the valley.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "heart_lantern_lit"},
+            {"type": "SetFlag", "key": "lanterns_rekindled"},
+            {"type": "Special", "key": "RekindleLanterns"},
+            {"type": "GiveXP", "amount": 250}
+          ],
+          "next": "ws_after2"
+        },
+        {
+          "id": "ws_after2",
+          "speaker": "warden_spirit",
+          "text": "*The little stag shakes himself, and the lantern on his antler blooms gold.* ...Warm. I had forgotten warm. *He bows his small head.* Every autumn I will walk the valley again. Tell them to leave the lanterns out for me. And honey cakes.",
+          "choices": [
+            {"text": "You remembered the Walk, even through the grey.", "next": "ws_rem", "conditions": [{"type": "Flag", "key": "warden_remembers"}]},
+            {"text": "(Return to Lanternvale.)", "outcomes": [{"type": "Teleport", "key": "lanternvale", "value": "camphor"}]},
+            {"text": "Rest now, Warden."}
+          ]
+        },
+        {
+          "id": "ws_rem",
+          "speaker": "warden_spirit",
+          "text": "Because you reminded me. A light only needs reminding, sometimes. *He lies down against the Heart, content.*",
+          "choices": [
+            {"text": "(Return to Lanternvale.)", "outcomes": [{"type": "Teleport", "key": "lanternvale", "value": "camphor"}]},
+            {"text": "Rest now, Warden."}
+          ]
+        }
+      ]
+    }
+  ]
+}

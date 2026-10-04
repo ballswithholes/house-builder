@@ -1,0 +1,233 @@
+{
+  "maps": [
+    {
+      "id": "shrine",
+      "name": "The Old Lantern Shrine",
+      "subtitle": "Where the Heart Lantern sleeps",
+      "width": 70,
+      "depth": 14,
+      "skyTop": "#3b3a63",
+      "skyBottom": "#e8a77c",
+      "layers": [
+        {"art": "bg_clouds", "parallax": 0.05, "y": 16.0, "height": 6, "loop": true, "tint": "#d6a6bc", "scrollSpeed": 0.08},
+        {"art": "bg_mountains_far", "parallax": 0.1, "y": 12.0, "height": 9, "loop": true, "tint": "#8a7fb0"},
+        {"art": "bg_forest_far", "parallax": 0.3, "y": 12.4, "height": 8, "loop": true, "tint": "#6f6c94"},
+        {"art": "bg_shrine_cliffs", "parallax": 0.45, "y": 12.8, "height": 9, "loop": true, "tint": "#c8bcdc"}
+      ],
+      "ground": "ground_shrine",
+      "groundTile": 8,
+      "groundTint": "#e2dcec",
+      "props": [
+        {"art": "decal_path_stone", "pos": [5, 6.0]},
+        {"art": "decal_path_stone", "pos": [13, 6.2]},
+        {"art": "decal_path_stone", "pos": [21, 6.4]},
+        {"art": "decal_path_stone", "pos": [29, 6.8]},
+        {"art": "decal_path_stone", "pos": [37, 7.0]},
+        {"art": "decal_path_stone", "pos": [45, 7.2]},
+        {"art": "decal_path_stone", "pos": [53, 7.6]},
+        {"art": "decal_path_stone", "pos": [61, 8.0]},
+        {"art": "decal_blight", "pos": [26, 3.0]},
+        {"art": "decal_blight", "pos": [30, 10.6]},
+        {"art": "decal_blight", "pos": [38, 9.4]},
+        {"art": "decal_blight", "pos": [42, 4.0]},
+        {"art": "decal_blight", "pos": [50, 10.8]},
+        {"art": "decal_blight", "pos": [57, 4.2]},
+        {"art": "decal_blight", "pos": [60, 11.0]},
+        {"art": "decal_blight", "pos": [65, 5.0]},
+        {"art": "prop_tent", "pos": [3.2, 12.2], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [5.4, 10.6],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 5.0, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [6.6, 12.4], "collider": {"w": 2.2, "h": 0.6}},
+        {
+          "art": "prop_shrine_gate",
+          "pos": [9.0, 9.8],
+          "text": "The vermilion gate of the Old Lantern Shrine. Above it, the stair climbs into dusk, lined with dark lanterns."
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [7.0, 8.6], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_spirit_lantern_dark", "pos": [11.2, 8.6], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_statue",
+          "pos": [14.6, 11.6],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A small stone deer, its lacquer worn away by forty years of a keeper's hand."
+        },
+        {"art": "prop_ruin_pillar", "pos": [17.0, 12.6], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [21.0, 13.0], "flip": true, "collider": {"w": 1.1, "h": 0.6}},
+        {
+          "art": "prop_blight_crystal",
+          "pos": [19.4, 12.0],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_rock_small", "pos": [2.0, 1.4]},
+        {"art": "prop_tree_pine", "pos": [1.2, 9.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [15.0, 1.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_spirit_lantern_dark", "pos": [23.4, 9.8], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_spirit_statue", "pos": [24.2, 12.0], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_ruin_arch", "pos": [32.0, 12.8]},
+        {
+          "art": "prop_blight_crystal",
+          "pos": [38.0, 12.2],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [30.4, 1.4],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [34.6, 10.4], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_tree_dead", "pos": [27.0, 13.4], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_rock_large", "pos": [39.4, 1.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_spirit_lantern_dark", "pos": [41.0, 11.6], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_spirit_lantern_dark", "pos": [43.6, 12.0], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_spirit_lantern_dark", "pos": [46.2, 11.6], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_ruin_pillar", "pos": [40.0, 13.2], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [48.6, 13.4], "collider": {"w": 1.1, "h": 0.6}},
+        {
+          "art": "prop_bench",
+          "pos": [50.0, 3.2],
+          "collider": {"w": 1.4, "h": 0.4},
+          "text": "A keeper's bench, worn smooth. A cup of tea sits on it, long cold."
+        },
+        {"art": "prop_rock_large", "pos": [54.0, 12.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [68.2, 12.6], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_ruin_pillar", "pos": [56.6, 13.4], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [66.6, 13.4], "flip": true, "collider": {"w": 1.1, "h": 0.6}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [62.0, 12.4],
+          "scale": 2.2,
+          "collider": {"w": 1.98, "h": 1.1},
+          "light": {"color": "#ff9a6a", "radius": 3.0, "intensity": 0.5, "offset": [0, 3.2], "flicker": true},
+          "interact": "heart_lantern",
+          "text": "The Heart Lantern. Deep inside, a single ember still glows, small as a held breath."
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [58.0, 11.8],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [66.0, 2.0],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_spirit_statue", "pos": [69.0, 9.4], "collider": {"w": 0.8, "h": 0.5}}
+      ],
+      "foreground": [
+        {"art": "fg_stones_a", "pos": [3, -0.5]},
+        {"art": "fg_ferns", "pos": [12, -0.3], "sway": true},
+        {"art": "fg_stones_b", "pos": [21, -0.6]},
+        {"art": "fg_grass_b", "pos": [30, -0.3], "sway": true},
+        {"art": "fg_stones_a", "pos": [39, -0.6], "flip": true},
+        {"art": "fg_ferns", "pos": [48, -0.4], "sway": true},
+        {"art": "fg_stones_b", "pos": [57, -0.5], "flip": true},
+        {"art": "fg_grass_a", "pos": [66, -0.3], "sway": true}
+      ],
+      "npcs": [
+        {"npc": "torvan", "pos": [12.6, 7.6], "flip": true, "hideFlag": "torvan_recruited"},
+        {"npc": "morwen", "pos": [18.8, 11.0], "hideFlag": "morwen_recruited"},
+        {"npc": "warden_spirit", "pos": [62.0, 9.4], "requireFlag": "warden_defeated"}
+      ],
+      "encounters": [
+        {
+          "id": "enc_hollow_pilgrims",
+          "pos": [28.2, 8.4],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_hollow_spirit", "pos": [27.6, 9.4]},
+            {"creature": "cr_hollow_spirit", "pos": [29.8, 8.6]},
+            {"creature": "cr_hollow_wisp", "pos": [28.8, 10.6]}
+          ],
+          "doneFlag": "enc_hollow_pilgrims"
+        },
+        {
+          "id": "enc_terrace_wisps",
+          "pos": [35.2, 3.4],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_hollow_wisp", "pos": [34.4, 2.8]},
+            {"creature": "cr_hollow_wisp", "pos": [36.2, 3.8]},
+            {"creature": "cr_hollow_spirit", "pos": [35.6, 2.0]}
+          ],
+          "doneFlag": "enc_terrace_wisps"
+        },
+        {
+          "id": "enc_keeper",
+          "pos": [44.6, 8.4],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_hollow_keeper", "pos": [44.6, 9.8]},
+            {"creature": "cr_hollow_wisp", "pos": [43.0, 10.4]},
+            {"creature": "cr_hollow_wisp", "pos": [46.2, 10.2]}
+          ],
+          "doneFlag": "keeper_done",
+          "dialogue": "dlg_keeper_ishiro"
+        },
+        {
+          "id": "enc_warden",
+          "pos": [60.0, 7.6],
+          "radius": 4.2,
+          "enemies": [{"creature": "cr_hollow_warden", "pos": [62.0, 9.6]}],
+          "requireFlag": "reg_shrine_approach",
+          "doneFlag": "warden_defeated",
+          "dialogue": "dlg_warden_confront"
+        }
+      ],
+      "chests": [
+        {"id": "chest_shrine_terrace", "pos": [24.6, 1.6], "art": "prop_chest", "lootTable": "lt_chest_shrine"},
+        {
+          "id": "chest_keepers_offering",
+          "pos": [48.6, 2.0],
+          "art": "prop_chest",
+          "lootTable": "lt_chest_offering",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 16}
+        }
+      ],
+      "transitions": [
+        {
+          "id": "to_whisperwood",
+          "pos": [0.7, 6.0],
+          "size": [1.4, 6.0],
+          "targetMap": "whisperwood",
+          "targetSpawn": "from_shrine",
+          "label": "Whisperwood"
+        }
+      ],
+      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_whisperwood", "pos": [3.6, 6.0]}, {"id": "sanctum", "pos": [54.0, 6.0]}],
+      "regions": [
+        {
+          "id": "reg_shrine_approach",
+          "pos": [8.0, 7.0],
+          "size": [14, 14],
+          "enterFlag": "reg_shrine_approach",
+          "text": "The Old Lantern Shrine. Above you, a hundred dark lanterns climb the cliffs like a stair of sleeping stars."
+        },
+        {
+          "id": "reg_pilgrim_terraces",
+          "pos": [31.0, 7.0],
+          "size": [16, 14],
+          "text": "The Pilgrim Terraces. Grey shapes walk here, still on pilgrimage, long after forgetting why."
+        },
+        {
+          "id": "reg_keepers_hall",
+          "pos": [44.6, 8.0],
+          "size": [10, 12],
+          "text": "The Keeper's Hall. Every lantern here has been pinched out by hand."
+        },
+        {"id": "reg_sanctum", "pos": [62.0, 7.5], "size": [16, 14], "text": "The Sanctum of the Heart Lantern."}
+      ],
+      "ambient": {"embers": true, "mist": true, "timeOfDay": "dusk", "dayNightCycle": false, "ambientColor": "#c8b8e0", "ambientIntensity": 0.75},
+      "restArea": true,
+      "music": "music_shrine"
+    }
+  ]
+}

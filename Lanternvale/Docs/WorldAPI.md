@@ -1,22 +1,22 @@
 # Lanternvale — World Core API (`Lanternvale.World`)
 
 Pure C# 9 (no UnityEngine), in `Assets/Lanternvale/Scripts/Core/World/**`. Used by the rules engine /
-`GameSession` (Core/Rules) and by the Unity presentation layer (Scripts/Game).
-
-> Status: **API contract — implementation in progress.** Signatures are stable; small additions may appear.
+`GameSession` (Core/Rules) and by the Unity presentation layer (Scripts/Game). Tests:
+`Tools/harness/CoreTests/TestsWorld*.cs` (`Tools/check.sh core --filter World`).
 
 Coordinates: world metres. Map ground is `x ∈ [0, width]`, `y ∈ [0, depth]`; `y = 0` is nearest the camera
-(bottom of the screen), larger `y` is further back. `Vec2` is `Lanternvale.Util.Vec2`. Unit ids for
-navigation occupancy are `int` (the rules engine's unit ids).
+(bottom of the screen), larger `y` is further back. `Vec2` is `Lanternvale.Util.Vec2`. Unit ids for navigation
+occupancy are `int` (`Rules.Unit.Id`, which starts at 1). Rectangles in map data (transitions, regions) are
+**centre `pos` + full `size`**.
 
-| Area | Main types |
-|---|---|
-| Navigation | `NavGrid`, `NavGridOptions`, `NavAgent`, `NavPath`, `PathStatus`, `ReachMap` |
-| Flags | `FlagStore` |
-| Dialogue | `IDialogueContext`, `PartyMemberInfo`, `DialogueRunner`, `DialogueView`, `ChoiceView`, `CheckResult`, `CheckPreview`, `SkillChecks`, `DialogueMemory`, `WorldRules` |
-| Quests | `QuestLog`, `QuestStatus`, `QuestEvent`, `QuestEventKind`, `QuestJournalEntry`, `ObjectiveView` |
-| Map state | `MapRuntime` |
-| Aggregate + saves | `WorldState`, `WorldSaveData` (+ `FlagStoreState`, `QuestLogState`, `DialogueMemoryState`, `MapRuntimeState`) |
+| Area | Files | Main types |
+|---|---|---|
+| Navigation | `Nav/NavGrid*.cs`, `Nav/ReachMap.cs`, `Nav/NavTypes.cs` | `NavGrid`, `NavGridOptions`, `NavAgent`, `NavPath`, `PathStatus`, `ReachMap` |
+| Flags | `Flags/FlagStore.cs` | `FlagStore`, `FlagStoreState` |
+| Dialogue | `Dialogue/*.cs` | `IDialogueContext`, `PartyMemberInfo`, `DialogueRunner`, `DialogueView`, `ChoiceView`, `SkillChecks`, `CheckResult`, `CheckPreview`, `StatKind`, `DialogueMemory`, `WorldRules` |
+| Quests | `Quests/QuestLog.cs` | `QuestLog`, `QuestStatus`, `QuestEvent`, `QuestEventKind`, `QuestJournalEntry`, `ObjectiveView` |
+| Map state | `Map/MapRuntime.cs` | `MapRuntime`, `MapRuntimeState` |
+| Aggregate + saves | `WorldState.cs` | `WorldState`, `WorldSaveData` |
 
 ---
 
@@ -34,14 +34,31 @@ public sealed class GameSession : IDialogueContext
 
     public GameSession(GameDatabase db, Rng rng)
     {
-        World = new WorldState(db, this);      // ctx may also be assigned later: World.Context = this
-        Dialogue = new DialogueRunner(db, this, World.DialogueMemory, rng);
+        World = new WorldState(db, this);      // wires FlagStore.Changed → QuestLog.OnFlag
+        Dialogue = World.CreateDialogueRunner(rng);   // = new DialogueRunner(db, this, World.DialogueMemory, rng)
+        World.Quests.Changed += e => { /* toast: e.Kind, e.QuestName, e.Text */ };
     }
 
-    void EnterMap(string mapId) {
+    void EnterMap(string mapId, string spawnId)
+    {
         Map = World.GetMap(mapId);             // cached; state persists in saves
         Nav = new NavGrid(Map.Def);            // static obstacles from props/chests/walkable polygon
+        var spawn = Map.SpawnPosition(spawnId);
+        var spots = new List<Vec2>();
+        Nav.FindStandingSpots(spawn, partyCount, 1.2f, NavAgent.Default, spots);
+        Map.OnEnterMap();                      // Reach objectives for the map id
     }
+
+    void OnLeaderMoved(Vec2 p)
+    {
+        foreach (var r in Map.UpdatePartyPosition(p)) ShowToast(r.text);   // first entries only
+        var t = Map.TransitionAt(p);
+        if (t != null) { if (Map.IsTransitionUnlocked(t)) Travel(t.targetMap, t.targetSpawn); else ShowToast(t.lockedText); }
+        var enc = Map.FindTriggeredEncounter(partyPositions, partyStealthed);
+        if (enc != null) { Map.MarkEncounterTriggered(enc.id); StartBattle(enc); }
+    }
+
+    void OnBattleWon(EncounterDef enc) { Map.MarkEncounterDone(enc.id); /* + Quests.OnKill per creature killed */ }
 
     // IDialogueContext: flags/quests come from the WorldState
     FlagStore IDialogueContext.Flags => World.Flags;
@@ -50,128 +67,186 @@ public sealed class GameSession : IDialogueContext
 }
 ```
 
-Save: `WorldSaveData data = World.Save();` → `JsonWriter.Serialize(data)`.
-Load: `World.Load(JsonMapper.FromJson<WorldSaveData>(json));`
+Inventory changes: call `World.Quests.OnItemCount(itemId, newCount)` (or `World.Quests.Refresh()` after bulk
+changes / loading). Kills: `World.Quests.OnKill(creatureId)`.
+
+Save: `JsonWriter.Serialize(World.Save())`. Load: `World.Load(JsonMapper.FromJson<WorldSaveData>(json))`
+(existing `MapRuntime` objects are updated in place; call `Quests.Refresh()` afterwards if inventory changed).
 
 ---
 
 ## 2. Navigation — `NavGrid`
 
-Built from a `MapDef` (or an empty rectangle for tests). Cells are `CellSize` metres (default 0.5).
-A cell is statically **walkable** when its centre is inside the ground rect shrunk by `EdgeMargin`, inside the
-optional `walkable` polygon, and outside every prop collider (ellipse `w×h` × `prop.scale`, centred at
-`pos + offset × scale`, offset.x mirrored when `flip`) and chest footprint. The cell containing a collider's
-centre is always blocked (so tiny colliders still block). Foreground props are ignored.
-
-Agents have a **radius**: a precomputed clearance field (exact Euclidean distance transform) makes a cell usable
-by an agent of radius `r` when `clearance(cell) ≥ r`. Dynamic **unit circles** (other combatants) are avoided
-by every query unless ignored.
-
 ```csharp
 var nav = new NavGrid(mapDef);                               // or new NavGrid(mapDef, new NavGridOptions { CellSize = 0.5f })
 var nav = new NavGrid(width: 40, depth: 20);                 // empty field (tests, arenas)
-nav.AddObstacleEllipse(center, w, h);                        // extra static obstacles, then call nav.Rebuild()
-nav.AddObstacleRect(min, max); nav.Rebuild();
-
-// dynamic occupancy (combat): id, position, radius
-nav.SetUnit(id, pos, radius);   nav.RemoveUnit(id);   nav.ClearUnits();
-bool nav.TryGetUnit(id, out Vec2 pos, out float radius);
-
-// agent description (struct, cheap to copy)
-var agent = new NavAgent(radius: 0.35f, selfId: unitId);     // selfId is always ignored
-agent = agent.Ignoring(targetId);                            // up to any number of extra ids (IReadOnlyCollection<int> Ignore)
-agent.IgnoreUnits = true;                                    // exploration: ignore all dynamic units
-NavAgent.Default                                             // radius 0.35, no self, units respected
+nav.AddObstacleEllipse(center, w, h); nav.AddObstacleRect(min, max); nav.AddLosBlocker(center, w, h);
+nav.SetWalkablePolygon(points); nav.ClearObstacles();
+nav.Rebuild();                                               // after adding static obstacles (Version++)
 ```
+
+**Static walkability** (built once): a cell is walkable when its centre is inside the ground rect shrunk by
+`EdgeMargin`, inside the optional `walkable` polygon, and outside every prop collider and chest footprint.
+Prop colliders: ellipse `w × h` (full extents) × `prop.scale`, centred at `pos + offset × scale`, `offset.x`
+mirrored when `flip`. A missing axis defaults to `h = w/2` (or `w = 2h`). The cell containing a collider's centre is
+always blocked (tiny colliders still block). `foreground` props are ignored. NPCs are *not* static obstacles:
+register them as units if they should block.
+
+**Agent radius**: an exact Euclidean distance transform gives every cell a `Clearance` (metres from its centre
+to the nearest blocked cell edge or the ground edge). A cell is usable by an agent of radius `r` when
+`clearance ≥ r`, so one grid serves all unit sizes and agents keep their body inside the ground.
+
+**Dynamic units** (combat occupancy), avoided by every query unless ignored:
+
+```csharp
+nav.SetUnit(id, pos, radius);     // register or move; radius <= 0 removes (dead units)
+nav.RemoveUnit(id); nav.ClearUnits(); nav.UnitCount; nav.GetUnitIds(list)
+bool nav.TryGetUnit(id, out Vec2 pos, out float radius)
+int  nav.UnitAt(point, agent)      // first non-ignored unit overlapping the agent at point, or NavAgent.NoId
+bool nav.IsOccupied(point, agent)
+```
+
+**`NavAgent`** (struct): `Radius`, `SelfId` (always ignored), `IgnoreId` (one extra id, allocation-free),
+`Ignore` (`ICollection<int>`: int[], List, HashSet), `IgnoreUnits` (ignore all units — exploration).
+
+```csharp
+NavAgent.Default                                  // radius 0.35, no self, respects units
+NavAgent.ForUnit(radius, selfId, ignoreId = NoId) // allocation-free; negative ignoreId = none
+new NavAgent(radius, selfId, ignoreList, ignoreUnits)
+agent.Ignoring(id1, id2) / agent.IgnoringAllUnits()   // copies
+NavAgent.NoId == int.MinValue; NavAgent.DefaultRadius == 0.35f
+```
+
+Units touching exactly (`distance == r1 + r2`) do not block each other (`NavGrid.UnitEpsilon` = 0.01 m slack).
 
 ### Path queries
 
 ```csharp
-NavPath p = nav.FindPath(start, goal, agent, maxLength: float.PositiveInfinity, result: reusedPathOrNull);
-NavPath p = nav.FindPathToRange(start, target, range, agent, maxLength, requireLineOfSight: false, result: null);
+NavPath p = nav.FindPath(start, goal, agent, maxLength = +inf, result = null);
+NavPath p = nav.FindPathToRange(start, target, range, agent, maxLength = +inf, requireLineOfSight = false, result = null);
+
 p.Status        // PathStatus.Complete | Partial | NoPath
-p.Points        // List<Vec2>: Points[0] == start; smoothed (string-pulled) polyline
+p.Points        // List<Vec2>: Points[0] == start; smoothed (string-pulled) polyline; last = goal when Complete
 p.Length        // metres along Points (after truncation)
 p.FullLength    // metres before truncation (UI: "12.4 m / 9 m")
-p.Truncated     // true when cut to maxLength
-p.End           // last point
-p.ReachedGoal   // Status == Complete && !Truncated
-NavPath.Truncate(p, maxLength)                    // in-place cut of any path
-Vec2 NavPath.PointAt(p, distance)                 // point along the polyline
+p.Truncated     // cut to maxLength
+p.End; p.Count; p.IsEmpty (nothing to walk); p.ReachedGoal (Complete && !Truncated)
+p.Truncate(maxLength)          // in-place cut
+p.PointAt(distance)            // point along the polyline
+p.RecomputeLength(); p.CopyFrom(other); p.Clear()
 ```
 
-* A* (8-directional, no corner cutting, octile heuristic, binary heap, reused buffers) then line-of-walk
-  smoothing. Typical 400×120-cell queries take well under a few ms with zero big allocations.
-* **Blocked/unreachable goal**: path to the closest reachable point (`Status = Partial`). A blocked goal is
-  first snapped to the nearest walkable cell.
+* A* (8-directional, no corner cutting, octile heuristic, binary heap, all big buffers reused per grid) then
+  line-of-walk smoothing (string pulling). Pass the same `NavPath` back as `result` for zero allocations.
+* **Blocked/unreachable goal** → path to the closest reachable point, `Status = Partial`. Static
+  connectivity labels (cached per radius) detect unreachable goals without flooding the map; near-equal
+  candidates prefer the start's side. `nav.AreConnected(a, b, radius)` exposes the static test.
 * **Range** (`FindPathToRange`): stops as soon as the agent is within `range` of `target` (minus
-  `NavGrid.RangeEpsilon` = 0.02 m so later `distance <= range` checks succeed). Use it for melee approach
-  (`range = meleeReachMetres`, ignore the target id or not — the target's own circle is usually in the way, so
-  ranged approach works either way) and spell range (`requireLineOfSight: true` to also need LOS).
-  Already in range ⇒ `Points = [start]`, `Length = 0`, `Complete`.
-* `maxLength` truncates (combat movement budget); `Truncated = true`, `FullLength` keeps the untruncated length.
-* Start cell inside an obstacle/unit: the search starts from the nearest usable cell.
+  `NavGrid.RangeEpsilon` = 0.02 m so later `distance <= range` checks succeed). Melee: `range = meleeReachMetres`
+  (centre to centre); the target's own circle can stay registered (or ignore it via `IgnoreId`). Spells:
+  `requireLineOfSight: true`. Already in range ⇒ `Points = [start]`, `Length = 0`, `Complete`.
+* `maxLength` truncates (movement budget): `Truncated = true`, `FullLength` keeps the untruncated length.
+* Start inside an obstacle/unit: the search starts from the nearest usable cell (`Points[0]` is still `start`).
+* Performance (200×60 m map, 400×120 cells, 300 obstacles, 12 units; optimized JIT ≈ IL2CPP): cross-map path
+  avg ≈ 0.9 ms (worst ≈ 3 ms), enclosed/unreachable goal ≈ 0.5 ms, 9 m reach flood ≈ 0.3 ms, build ≈ 3 ms.
+  (Debug/tier-0 JIT in the harness is ~2× slower.)
 
 ### Movement range — `ReachMap`
 
 ```csharp
 ReachMap reach = nav.ReachableWithin(start, maxMetres, agent, into: reusedOrNull);
-bool  reach.CanReach(point)            // reachable within maxMetres
-float reach.DistanceTo(point)          // path metres (Any-angle Dijkstra / Theta*-style), +inf when unreachable
+bool  reach.CanReach(point)            // walkable for the agent and within maxMetres of walking
+float reach.DistanceTo(point)          // walking metres (any-angle), +inf when unreachable
+NavPath reach.PathTo(point, result)    // path from the flood tree (Complete; NoPath when unreachable)
 bool  reach.IsCellReachable(cx, cy); float reach.CellDistance(cx, cy)
-void  reach.GetReachableCells(List<Vec2> centresInto)
-void  reach.GetBorderCells(List<Vec2> centresInto)      // reachable cells with an unreachable 4-neighbour
-void  reach.GetOutline(List<Vec2> segmentPairsInto)     // pairs (a,b) of cell-edge segments around the area
-NavPath reach.PathTo(point, NavPath result = null)       // path from the flood tree (no new search)
-reach.Start, reach.MaxMetres, reach.CellSize
+void  reach.GetReachableCells(List<Vec2> centres)
+void  reach.GetBorderCells(List<Vec2> centres)    // reachable cells with an unreachable 4-neighbour
+void  reach.GetOutline(List<Vec2> segmentPairs)   // (a0,b0,a1,b1,...) cell edges around the area, world metres
+reach.Start, reach.MaxMetres, reach.CellSize, reach.ReachableCount, reach.Grid
 ```
 
-Distances are any-angle (near-Euclidean in open ground), so the outline looks round, not octagonal.
-`CanReach(p) ⇒ FindPath(start, p).Length ≤ maxMetres` (the A* smoothed path is never longer).
+Lazy Theta* flood: distances are any-angle (within a few cm of Euclidean in open ground), so the area is round,
+not octagonal. **For combat moves inside the displayed range use `reach.PathTo(p)`** — its length equals
+`DistanceTo(p)` and is consistent with what the UI showed (an A* path to the same point may differ slightly).
 
-### Point queries
+### Point queries & helpers
 
 ```csharp
-bool nav.IsWalkable(point, agent)                       // static clearance + units (exact circle test)
-bool nav.IsWalkable(point, radius)                      // static only
-bool nav.LineWalkable(a, b, agent)                      // straight walk a→b is clear
-bool nav.HasLineOfSight(a, b)                           // blocked only by big props (see below)
-Vec2 nav.ClampToWalkable(point, agent)                  // point if walkable, else nearest walkable cell centre
-bool nav.RandomWalkablePointNear(center, maxDist, rng, agent, out Vec2 p)        // wander
-bool nav.FleePoint(from, awayFrom, distance, rng, agent, out Vec2 p)             // fear
-int  nav.FindStandingSpots(center, count, spacing, agent, List<Vec2> into)       // formation/party placement
+bool nav.IsWalkable(point, agent)          // static clearance + exact unit circles
+bool nav.IsWalkable(point, radius)         // static only
+bool nav.LineWalkable(a, b, agent)         // straight walk a→b is clear (cells along the segment)
+bool nav.LineWalkable(a, b, radius)        // static only
+bool nav.HasLineOfSight(a, b)              // blocked only by big props (below)
+Vec2 nav.ClampToWalkable(point, agent)     // point if walkable, else nearest walkable cell centre
+Vec2 nav.ClampToBounds(point)
+bool nav.RandomWalkablePointNear(center, maxDist, rng, agent, out Vec2 p)   // wander (straight-walkable)
+bool nav.FleePoint(from, awayFrom, distance, rng, agent, out Vec2 p)        // fear: away, then ±30..120°, then shorter
+int  nav.FindStandingSpots(center, count, spacing, agent, List<Vec2> into)  // nearest-first, reachable, spaced
 // cells
-int nav.Width, nav.Height (cells); float nav.CellSize, nav.WorldWidth, nav.WorldDepth
-bool nav.WorldToCell(p, out cx, out cy); Vec2 nav.CellCenter(cx, cy)
-bool nav.IsCellWalkable(cx, cy, radius = 0); float nav.Clearance(cx, cy)
+nav.Width, nav.Height (cells); nav.CellSize, nav.WorldWidth, nav.WorldDepth, nav.Version, nav.Map, nav.Options
+bool nav.WorldToCell(p, out cx, out cy); Vec2 nav.CellCenter(cx, cy); bool nav.InBounds(...)
+bool nav.IsCellWalkable(cx, cy, radius = 0); bool nav.IsCellBlocked(cx, cy); float nav.Clearance(cx, cy)
+int nav.LastExpandedNodes                   // diagnostics
 ```
 
-**Line of sight**: props whose collider's larger axis × scale ≥ `NavGridOptions.LosBlockerMinSize`
-(default 2.5 m: houses, big rocks, large trees) block sight (segment vs ellipse shrunk to 80%). Add more with
-`nav.AddLosBlocker(center, w, h)`. Everything else is see-through. Set `NavGridOptions.LineOfSight = false`
-to make `HasLineOfSight` always true.
+**Line of sight**: props whose collider's larger axis × scale ≥ `NavGridOptions.LosBlockerMinSize` (default
+2.5 m: houses, big rocks, large trees) block sight; tested as segment vs ellipse shrunk to 80% (units next to a
+blocker can see past its edge). Add more with `AddLosBlocker`. `NavGridOptions.LineOfSight = false` makes
+`HasLineOfSight` always true.
 
-`NavGridOptions`: `CellSize = 0.5`, `EdgeMargin = 0.25`, `ChestFootprint = (1.0, 0.6)`,
-`IncludeChests = true`, `LineOfSight = true`, `LosBlockerMinSize = 2.5`, `MaxSearchNodes = 200000`.
+`NavGridOptions`: `CellSize = 0.5`, `EdgeMargin = 0.25`, `ChestFootprint = (1.0, 0.6)`, `IncludeChests = true`,
+`LineOfSight = true`, `LosBlockerMinSize = 2.5`, `MaxSearchNodes = 200000`.
+
+### Adapting to `Lanternvale.Rules.IPathfinder`
+
+```csharp
+public sealed class NavGridPathfinder : IPathfinder
+{
+    public readonly NavGrid Grid;
+    readonly NavPath tmp = new NavPath();
+    public NavGridPathfinder(NavGrid grid) { Grid = grid; }
+
+    PathResult Convert(NavPath p)
+    {
+        // Found = Complete keeps ReachedGoal strict (range checks). Partial paths lead to the closest reachable
+        // point; if a click on a blocked spot should still walk there (BG3-style), accept Partial for player moves.
+        var r = new PathResult { Length = p.Length, FullLength = p.FullLength, Truncated = p.Truncated,
+                                 Found = p.Status == PathStatus.Complete };
+        r.Points.AddRange(p.Points);
+        return r;
+    }
+    public PathResult FindPath(Vec2 from, Vec2 to, float radius, int selfId, int ignoreId, float maxLength) =>
+        Convert(Grid.FindPath(from, to, NavAgent.ForUnit(radius, selfId, ignoreId), maxLength, tmp));
+    public PathResult FindPathToRange(Vec2 from, Vec2 target, float range, float radius, int selfId, int ignoreId, float maxLength) =>
+        Convert(Grid.FindPathToRange(from, target, range, NavAgent.ForUnit(radius, selfId, ignoreId), maxLength, false, tmp));
+    public bool IsWalkable(Vec2 p, float radius, int selfId) => Grid.IsWalkable(p, NavAgent.ForUnit(radius, selfId));
+    public bool HasLineOfSight(Vec2 a, Vec2 b) => Grid.HasLineOfSight(a, b);
+    public Vec2 ClampToWalkable(Vec2 p, float radius, int selfId) => Grid.ClampToWalkable(p, NavAgent.ForUnit(radius, selfId));
+    public void SetUnit(int id, Vec2 pos, float radius) => Grid.SetUnit(id, pos, radius);   // radius <= 0 removes
+    public void ClearUnits() => Grid.ClearUnits();
+}
+```
 
 ---
 
 ## 3. Flags — `FlagStore`
 
 ```csharp
-int  Get(string key)               // 0 when unset
+int  Get(string key)               // 0 when unset ("" / null keys are ignored)
 bool IsSet(string key)             // Get != 0
 void Set(string key, int value=1)  // value 0 clears
-void Add(string key, int delta)    // counters
-void Clear(string key)
-bool Test(string expr)             // "" → true, "flag" → IsSet, "!flag" → !IsSet  (used by requireFlag/hideFlag)
+void Add(string key, int delta)    // counters ("lanterns_lit")
+void Clear(string key); void ClearAll()
+bool Test(string expr)             // "" → true, "flag" → IsSet, "!flag" → !IsSet, "a&!b" → all terms
 event Action<string,int,int> Changed   // (key, oldValue, newValue)
-IEnumerable<KeyValuePair<string,int>> All; int Count; void ClearAll()
-FlagStoreState Save(); void Load(FlagStoreState)
+IEnumerable<KeyValuePair<string,int>> All; int Count
+FlagStoreState Save(); void Load(FlagStoreState)   // Load raises no events
 ```
 
-Conventions written by the world module: `enc_<encounterId>` (encounter defeated, default doneFlag),
-`recruited_<companionId>` (set by the `Recruit` outcome), region `enterFlag`s.
+`Test` is the evaluator for every `requireFlag` / `hideFlag` field (also usable as `MapView.Build(def, flags.Test)`).
+Conventions written by the world module: `enc_<encounterId>` (encounter defeated — default `doneFlag`),
+`recruited_<companionId>` (set by the `Recruit` outcome — use it as a `hideFlag` for the companion's map NPC),
+region `enterFlag`s.
 
 ---
 
@@ -186,22 +261,22 @@ public interface IDialogueContext
     QuestLog Quests { get; }
 
     string PlayerName { get; }
-    IReadOnlyList<PartyMemberInfo> Party { get; }   // active party, index 0 = main character
+    IReadOnlyList<PartyMemberInfo> Party { get; }   // active party, index 0 = main character; characters only
     int Gold { get; }                               // copper
     int CountItem(string itemId);
     int GetApproval(string companionId);
     string TimeOfDay { get; }                       // "dawn" | "day" | "dusk" | "night"
     int SkillCheckBonus(string memberId, SkillCheck skill);   // extra bonus from items/buffs (usually 0)
 
-    void GiveItem(string itemId, int count);
+    void GiveItem(string itemId, int count);        // also call Quests.OnItemCount(itemId, newCount)
     void TakeItem(string itemId, int count);
     void GiveGold(int copper);
     void TakeGold(int copper);
-    void GiveXP(int amount);                        // raw amount from data (apply xpRate yourself if desired)
+    void GiveXP(int amount);                        // raw amount from data (apply config.xpRate here if desired)
     void Recruit(string companionId);
     void Dismiss(string companionId);
     void ChangeApproval(string companionId, int delta);
-    void StartCombat(string encounterId);           // "" = the dialogue's encounter / owner
+    void StartCombat(string encounterId);           // "" = the dialogue owner's encounter
     void OpenVendor(string npcId);
     void OpenTrainer(string npcId);
     void OpenRespec(string npcId);
@@ -211,14 +286,15 @@ public interface IDialogueContext
     void RunSpecial(string specialId, OutcomeDef outcome);
 }
 
-public sealed class PartyMemberInfo
+public sealed class PartyMemberInfo   // [Serializable]
 {
-    public string id = "";            // "player" for the main character (any id works), else companion id
-    public string name = "";
+    public string id;        // "player" for the main character (any id works), else companion id
+    public string name;
     public ClassId classId;
-    public int level = 1;
-    public bool isMain;
-    public PrimaryStats stats = new PrimaryStats();   // current effective primary stats (gear + buffs)
+    public int level;
+    public bool isMain;      // else Party[0] is treated as the main character
+    public PrimaryStats stats;   // current effective primary stats (gear + buffs)
+    public PartyMemberInfo(string id, string name, ClassId classId, int level, bool isMain, PrimaryStats stats = null)
 }
 ```
 
@@ -226,180 +302,222 @@ public sealed class PartyMemberInfo
 
 | type | meaning |
 |---|---|
-| `Flag` | flag `key` set (≠0); with `amount > 0`: value ≥ amount |
+| `Flag` | flag `key` set (≠0); `amount > 0` → value ≥ amount; integer `value` → value == it |
 | `NotFlag` | negation of `Flag` |
-| `QuestState` | quest `key`: `value` is a status name (`NotStarted`/`Active`/`Completed`/`Failed`) → status equals; otherwise `value` is a stage id → quest active and on that stage |
-| `QuestNotStarted` / `QuestActive` / `QuestComplete` | status test (`QuestActive` with `value` = stage id also requires that stage) |
+| `QuestState` | quest `key`: `value` = status name (`NotStarted`/`Active`/`Completed`/`Failed`; also `done`, `started`…) → status equals; otherwise `value` = stage id → quest active on that stage; empty `value` → active |
+| `QuestNotStarted` / `QuestActive` / `QuestComplete` | status test (`QuestActive` with a `value` stage id also requires that stage) |
 | `HasItem` / `NotHasItem` | `CountItem(key) ≥ max(1, amount)` / negation |
 | `Gold` | `Gold ≥ amount` (copper) |
 | `Class` / `NotClass` | main character's class is `key` (`value: "party"` → anyone in the party) |
 | `Level` | main character level ≥ `amount` |
 | `InParty` / `NotInParty` | companion `key` is (not) in `Party` |
 | `Companion` | approval of companion `key` ≥ `amount` |
-| `TimeOfDay` | `TimeOfDay` equals `key` (or `value`), case-insensitive |
+| `TimeOfDay` | `TimeOfDay` equals `key` (or `value`); lists allowed: `"dusk,night"` |
 
-### Outcomes (`OutcomeDef`) — `WorldRules.Execute(outcome, ctx, ownerId)`
+### Outcomes (`OutcomeDef`) — `WorldRules.Execute(outcome, ctx, ownerId)` / `ExecuteAll`
 
 | type | effect |
 |---|---|
-| `SetFlag` | `Flags.Set(key, amount != 0 ? amount : int(value) or 1)` |
+| `SetFlag` | `Flags.Set(key, amount ≠ 0 ? amount : (integer value or 1))` |
 | `ClearFlag` | `Flags.Clear(key)` |
-| `StartQuest` / `SetQuestStage` (`value` = stage) / `CompleteQuest` / `FailQuest` | `Quests.*` |
+| `StartQuest` / `SetQuestStage` (`value` = stage) / `CompleteQuest` / `FailQuest` | `Quests.Start / SetStage / Complete / Fail` |
 | `GiveItem` / `TakeItem` | `key` item × `max(1, amount)` |
 | `GiveGold` / `TakeGold` | `amount` copper |
 | `GiveXP` | `amount` |
 | `Recruit` / `Dismiss` | companion `key` (`Recruit` also sets flag `recruited_<key>`) |
 | `Approval` | companion `key`, delta `amount` |
 | `StartCombat` | encounter `key` |
-| `OpenVendor` / `OpenTrainer` / `OpenRespec` | npc `key` ("" = dialogue owner npc) |
+| `OpenVendor` / `OpenTrainer` / `OpenRespec` | npc `key` (`""` = dialogue owner) |
 | `Rest`, `HealParty` | — |
 | `Teleport` | map `key`, spawn `value` (default `"default"`) |
-| `EndDialogue` | ends the conversation (after the node's text when used on a node) |
+| `EndDialogue` | ends the conversation (choice: immediately; node: after its text, choices hidden) |
 | `Special` | `ctx.RunSpecial(key, outcome)` |
 
-In a `DialogueRunner`, the *interrupting* outcomes `StartCombat`, `Teleport`, `OpenVendor`, `OpenTrainer`,
-`OpenRespec`, `Rest` are **deferred until the dialogue ends** (set `runner.DeferInterruptingOutcomes = false`
-to run them immediately). Everything else runs immediately.
+`WorldRules.IsInterrupting(type)`: `StartCombat`, `Teleport`, `OpenVendor`, `OpenTrainer`, `OpenRespec`, `Rest`.
+A `DialogueRunner` **defers** those until the dialogue ends (`runner.DeferInterruptingOutcomes = false` runs them
+immediately). Quest `onComplete` outcomes always run immediately (if one starts combat mid-dialogue, the session
+should queue it while `runner.IsActive`).
 
 ### `DialogueRunner`
 
 ```csharp
-var runner = new DialogueRunner(db, ctx, memory /*DialogueMemory or null*/, rng);
-bool  runner.Start(string dialogueId, string ownerId = "")   // ownerId: npc/companion talked to
-bool  runner.IsActive; bool runner.IsFinished
-DialogueView runner.Current          // null when not active
-bool  runner.Choose(int index)       // index into Current.Choices (visible choices only)
-bool  runner.Continue()              // node without choices: go to `next` (or end)
-void  runner.End()                   // abort/close
-CheckResult runner.LastCheck         // set by a check choice (for dice animation), cleared on next Choose
-events: NodeEntered(DialogueView), CheckRolled(CheckResult), ChoiceMade(ChoiceView), Ended(string dialogueId)
-string runner.Substitute(string text)    // {player} {class} {companion:<id>}
+var runner = new DialogueRunner(db, ctx, memory /*DialogueMemory or null*/, rng);   // or World.CreateDialogueRunner(rng)
+bool runner.Start(string dialogueId, string ownerId = "")   // ownerId: npc/companion talked to; false if unknown
+bool runner.Start(DialogueDef def, string ownerId = "")
+bool runner.IsActive; bool runner.IsFinished               // IsFinished == !IsActive
+DialogueView runner.Current                                // null when not active
+bool runner.Choose(int index)                              // index into Current.Choices
+bool runner.Continue()                                     // only when Current.Choices is empty
+void runner.End()                                          // close now (deferred outcomes still run)
+CheckResult runner.LastCheck                               // set by a check choice; cleared by the next Choose/Continue
+ChoiceView runner.LastChoice; DialogueDef runner.Dialogue; DialogueNodeDef runner.CurrentNode; string runner.OwnerId
+IReadOnlyList<OutcomeDef> runner.PendingOutcomes           // deferred, run at the end
+events: NodeEntered(DialogueView), ChoiceMade(ChoiceView), CheckRolled(CheckResult), Ended(string dialogueId)
+string runner.Substitute(string text)                      // {player} {class} {companion:<id>}; unknown tokens kept
+runner.Memory, runner.Rng, runner.Db, runner.Context, runner.MaxAutoSteps (64)
 ```
 
-`DialogueView`: `DialogueId, NodeId, SpeakerId, SpeakerName, Portrait, Text, Choices (List<ChoiceView>),
-CanContinue (no choices), IsLast (Continue will end)`.
-`ChoiceView`: `Index` (in visible list), `SourceIndex` (in node.choices), `Text` (substituted, no tag),
-`DisplayText` (`"[PALADIN] text"`; checks without tag show `"[PERSUASION] text"`), `Tag`, `Once`,
-`PreviouslyChosen` (grey out), `Check` (`CheckPreview` or null: skill, dc, best roller, modifier,
-successChance 0..1), `Def` (the ChoiceDef).
+`DialogueView`: `DialogueId, NodeId, SpeakerId, SpeakerName, Portrait, Text, Choices, CanContinue (no choices),
+IsLast (Continue ends the dialogue)`.
+`ChoiceView`: `Index` (visible list), `SourceIndex` (node.choices), `Text` (substituted, no tag), `DisplayText`
+(`"[PALADIN] text"`; a check without tag shows `"[PERSUASION] text"`), `Tag` (upper case, brackets stripped),
+`Once`, `PreviouslyChosen` (grey out), `Check` (`CheckPreview` or null), `Ends` (no next and no check), `Def`.
 
-Behaviour: entering a node checks `conditions` (fail → `fallback`, chained; no fallback → dialogue ends),
-runs `outcomes`, filters choices by `conditions`, hides used `once` choices. Nodes with empty text and no
-visible choices are auto-skipped (logic/router nodes). Choosing runs the choice's outcomes, then rolls its
-`check` (→ `success`/`failure` node) or goes to `next` (`""` ends). When the dialogue ends with an owner, the
-runner calls `ctx.Quests.OnTalk(ownerId)`. Speakers: `"player"` → `ctx.PlayerName`, `"narrator"` → "",
-npc/companion ids → names from the database, `""` → the owner.
+Behaviour:
+* Entering a node checks `conditions`; failing → `fallback` (chains allowed; no fallback → dialogue ends). Then the
+  node's `outcomes` run, choices are filtered by `conditions`, and used `once` choices are hidden.
+* Nodes with empty text and no visible choices are auto-skipped to `next` (logic/router nodes).
+* `Choose`: records the choice in `DialogueMemory`, raises `ChoiceMade`, runs the choice's outcomes, then rolls its
+  `check` (raises `CheckRolled`, goes to `success`/`failure`) or goes to `next` (`""` ends).
+* When a dialogue with an owner ends: `ctx.Quests.OnTalk(ownerId)`, then deferred outcomes, then `Ended`.
+* Speakers: `"player"` → `ctx.PlayerName`; `"narrator"` → `""`; npc/companion ids → name + portrait from the
+  database; `""` → the owner; other ids → party member name or the id itself.
 
 ### Skill checks — `SkillChecks`
 
 `d20 + modifier ≥ dc`; modifier = `floor((stat − 20) / 10)` + 2 if the member's class is proficient (Design §6)
-+ `ctx.SkillCheckBonus`. The best party member rolls (ties → earlier in `Party`). Natural 20 always succeeds,
-natural 1 always fails.
++ `ctx.SkillCheckBonus`. The party member with the best modifier rolls (ties → earlier in `Party`). Natural 20
+always succeeds, natural 1 always fails. Stats: Athletics/Intimidation → Strength; Acrobatics/Stealth/
+SleightOfHand → Agility; Endurance → Stamina; Arcana/History/Investigation → Intellect; Insight/Persuasion/
+Religion/Nature/Survival → Spirit.
 
 ```csharp
-CheckResult SkillChecks.Roll(IDialogueContext ctx, SkillCheck skill, int dc, Rng rng)
-CheckPreview SkillChecks.Preview(IDialogueContext ctx, SkillCheck skill, int dc)
-int  SkillChecks.Modifier(PartyMemberInfo m, SkillCheck skill)       // without ctx bonus
-bool SkillChecks.IsProficient(ClassId c, SkillCheck skill)
-StatKind SkillChecks.StatFor(SkillCheck skill)                      // Strength/Agility/Stamina/Intellect/Spirit
+CheckResult  SkillChecks.Roll(IDialogueContext ctx, SkillCheck skill, int dc, Rng rng)
+CheckPreview SkillChecks.Preview(ctx, skill, dc)            // RollerId, RollerName, Modifier, SuccessChance (0..1)
+PartyMemberInfo SkillChecks.BestRoller(ctx, skill, out int totalModifier)
+int   SkillChecks.Modifier(PartyMemberInfo m, SkillCheck skill)   // stat mod + proficiency (no ctx bonus)
+int   SkillChecks.StatModifier(float stat)
+bool  SkillChecks.IsProficient(ClassId c, SkillCheck skill)
+StatKind SkillChecks.StatFor(SkillCheck skill); float SkillChecks.StatValue(PrimaryStats s, StatKind k)
 float SkillChecks.SuccessChance(int modifier, int dc)
+string SkillChecks.DisplayName(SkillCheck skill)            // "SLEIGHT OF HAND"
 ```
 
-`CheckResult`: `Skill, Dc, RollerId, RollerName, Roll (natural d20), StatModifier, Proficiency, Bonus,
-Modifier (total), Total, Success, Critical (nat 20), Fumble (nat 1)`.
+`CheckResult`: `Skill, Dc, RollerId, RollerName, RollerClass, Roll (natural d20), StatModifier, Proficiency,
+Bonus, Modifier (total), Total, Success, Critical (nat 20), Fumble (nat 1)`; `ToString()` for logs.
 
 ### `DialogueMemory`
 
-Remembers chosen choices (`once` hiding + "previously chosen" greying) and started dialogues.
-`HasChosen(dialogueId, nodeId, choiceIndex)`, `MarkChosen(...)`, `TimesStarted(dialogueId)`,
-`Save() → DialogueMemoryState`, `Load(state)`.
+`HasChosen(dialogueId, nodeId, choiceIndex)`, `MarkChosen(...)`, `TimesStarted(dialogueId)`, `MarkStarted(id)`,
+`ChosenCount`, `Clear()`, `Save() → DialogueMemoryState`, `Load(state)`. Keys are `"dialogue/node/choiceIndex"`
+(so reordering a node's choices in data shifts `once` history for that node).
 
 ---
 
 ## 5. Quests — `QuestLog`
 
 ```csharp
-var quests = new QuestLog(db, ctx);           // ctx may be null and set later: quests.Context = ctx
+var quests = new QuestLog(db, ctx);           // WorldState creates it; ctx settable later: quests.Context = ctx
 QuestStatus GetStatus(id); string GetStage(id); int GetProgress(id, objectiveIndex)
-bool IsActive(id); bool IsCompleted(id)
+bool IsActive(id); bool IsCompleted(id); IEnumerable<string> KnownQuests()
 bool Start(id); bool SetStage(id, stageId); bool Complete(id); bool Fail(id)
-// notifications (call from the session / rules engine)
+// notifications
 void OnKill(string creatureId, int count = 1)
 void OnItemCount(string itemId, int count)    // absolute inventory count
 void OnTalk(string npcId)                     // DialogueRunner calls this when a dialogue with an owner ends
-void OnFlag(string flag)                      // WorldState wires FlagStore.Changed → OnFlag automatically
-void OnReach(string regionOrMapId)            // MapRuntime.UpdatePartyPosition calls this
+void OnFlag(string flag)                      // WorldState wires FlagStore.Changed → OnFlag
+void OnReach(string regionOrMapId)            // MapRuntime.UpdatePartyPosition / OnEnterMap call this
 void OnDefeat(string encounterId)             // MapRuntime.MarkEncounterDone calls this
-void Refresh()                                // re-pull Flag/Collect/Defeat objectives from ctx
+void Refresh()                                // re-pull Collect/Flag/Defeat objectives from ctx
 // rewards
 IReadOnlyList<string> PendingRewardChoices    // quest ids whose choiceItems await a pick
 bool ClaimRewardChoice(string questId, string itemId)
 // journal
-List<QuestJournalEntry> GetJournal(bool includeFinished = true)   // active first (main first), then completed, failed
-QuestJournalEntry GetEntry(string questId)
+List<QuestJournalEntry> GetJournal(bool includeFinished = true)
+QuestJournalEntry GetEntry(string questId)    // also for not-started quests (Status NotStarted)
+string ObjectiveText(ObjectiveDef o); string ObjectiveDisplay(ObjectiveDef o, int progress)
 event Action<QuestEvent> Changed
-QuestLogState Save(); void Load(QuestLogState)
+QuestLogState Save(); void Load(QuestLogState)   // Load raises no events; unknown quests are dropped
 ```
 
 Rules:
-* A stage completes when all its objectives are complete (stages with no objectives wait for an outcome:
-  `SetQuestStage` / `CompleteQuest`). Leaving a stage forward (objectives done, `SetQuestStage`,
-  `CompleteQuest`) runs its `onComplete` outcomes once. Then `next` stage (or quest completion when `next` is "").
-* Objectives: `Kill` (target creature id, counts kills while the stage is active), `Collect` (item id; progress =
-  current inventory count, pulled from `ctx.CountItem` on stage start), `Talk` (npc id), `Reach` (region id or
-  map id; completes while the party is inside during the stage), `Flag` (progress = flag value, so counters
-  work: count 3 ⇒ flag value 3), `Defeat` (encounter id; also satisfied when flag `enc_<id>` is set).
-* Completion grants `rewards` via ctx: `GiveXP(xp)`, `GiveGold(gold)`, `GiveItem(item,1)` for each item; a
-  non-empty `choiceItems` adds the quest to `PendingRewardChoices` (UI picks one → `ClaimRewardChoice`).
+* `Start` begins at the first stage (no-op/false if already started, completed or failed — quests never restart).
+* A stage completes when all its objectives are complete. Stages **without objectives wait** for an outcome
+  (`SetQuestStage` / `CompleteQuest`). Leaving a stage **forward** (objectives done, `SetQuestStage` to a later
+  stage, `CompleteQuest`) runs its `onComplete` outcomes once (re-entrancy safe); then the `next` stage, or quest
+  completion when `next` is `""`. `SetQuestStage` backwards or on a not-started quest runs no `onComplete`.
+* Objectives: `Kill` (creature id; only kills while the stage is active count), `Collect` (item id; progress =
+  current inventory count, can drop; pulled from `ctx.CountItem` on stage start), `Talk` (npc/companion id),
+  `Reach` (region id or map id; completes while the party is inside during the stage), `Flag` (progress = flag
+  value, so counters work: count 3 ⇒ value 3), `Defeat` (encounter id; also satisfied by flag `enc_<id>`, even if
+  won before the stage started; custom `doneFlag`s are reported through `OnDefeat`).
+* Completion grants `rewards` via ctx: `GiveXP(xp)`, `GiveGold(gold)`, `GiveItem(item, 1)` per item; a non-empty
+  `choiceItems` adds the quest to `PendingRewardChoices` (UI picks one → `ClaimRewardChoice`).
 * `QuestEvent`: `Kind` (`Started, ObjectiveProgress, ObjectiveCompleted, StageAdvanced, Completed, Failed,
-  RewardChoicePending`), `QuestId, QuestName, StageId, ObjectiveIndex, Progress, Count, Text` (toast-ready,
-  e.g. "Wolves slain 3/6").
-* `QuestJournalEntry`: `Id, Title, Summary, Giver, Level, Main, Status, StageId, StageText,
-  Objectives (List<ObjectiveView>), History (texts of completed stages), Rewards`.
-  `ObjectiveView`: `Text, Progress, Count, Complete, Display` ("Wolves slain 3/6"; count 1 → just the text).
+  RewardChoicePending`), `QuestId, QuestName, StageId, ObjectiveIndex, Progress, Count, Text` — toast-ready
+  ("Wolves slain 3/6", the new stage description, or the quest name).
+* `QuestJournalEntry`: `Id, Title, Summary, GiverId, GiverName, Level, Main, Status, StageId, StageText,
+  Objectives (List<ObjectiveView>), History (descriptions of completed stages, oldest first), Rewards,
+  RewardChoicePending`. Journal order: active (main first, then start order), completed, failed (newest first).
+* `ObjectiveView`: `Type, Target, Text, Progress, Count, Complete, Display` ("Wolves slain 3/6"; count 1 → just the
+  text). Missing objective text defaults to "Slay Grey Wolf", "Collect Wolf Pelt", "Speak with Brann",
+  "Reach Whisperwood", "Defeat <id>".
 
 ---
 
 ## 6. Map runtime — `MapRuntime`
 
-Engine-independent bookkeeping for one map (from `WorldState.GetMap(mapId)`).
+Engine-independent bookkeeping for one map (`WorldState.GetMap(mapId)`; state persisted in saves).
 
 ```csharp
-MapDef Def
+MapDef Def; string Id; FlagStore Flags; QuestLog Quests; MapRuntimeState State
+void OnEnterMap()                                 // visited + Quests.OnReach(mapId)
+Vec2 SpawnPosition(string spawnId)                // falls back to "default", then the map centre
 // encounters
-string DoneFlag(EncounterDef e)                  // e.doneFlag or "enc_<id>"
-bool IsEncounterDone(string id); bool IsEncounterAvailable(EncounterDef e)   // !done && requireFlag
-IEnumerable<EncounterDef> AvailableEncounters()  // enemies to show (skip e.hidden until triggered)
+static string DoneFlag(EncounterDef e)            // e.doneFlag or "enc_<id>"
+EncounterDef FindEncounter(id); bool IsEncounterDone(id | def)
+bool IsEncounterAvailable(EncounterDef e)         // !done && Flags.Test(requireFlag)
+bool IsEncounterVisible(EncounterDef e)           // available && (!hidden || triggered) → draw its enemies
+IEnumerable<EncounterDef> AvailableEncounters()
 EncounterDef FindTriggeredEncounter(IReadOnlyList<Vec2> partyPositions, IReadOnlyList<bool> stealthed = null)
-   // first available encounter with a party member within radius (stealthed members: within min(radius, 3 m))
-void MarkEncounterDone(string id)                // sets done flag + Quests.OnDefeat(id)
+EncounterDef FindTriggeredEncounter(Vec2 position, bool stealthed = false)
+   // first available encounter with a member within radius; stealthed members only within min(radius, 3 m)
+void MarkEncounterTriggered(id); bool IsEncounterTriggered(id)
+void MarkEncounterDone(id)                        // sets the done flag + Quests.OnDefeat(id)
+void ResetEncounter(id)                           // respawn / scripted reset
 // npcs
-bool IsNpcVisible(MapNpcDef n)                   // Flags.Test(requireFlag) && !(hideFlag != "" && Flags.Test(hideFlag))
+bool IsNpcVisible(MapNpcDef n)                    // Flags.Test(requireFlag) && !(hideFlag != "" && Flags.Test(hideFlag))
 IEnumerable<MapNpcDef> VisibleNpcs()
 // chests
-bool IsChestAvailable(ChestDef c)                // requireFlag
-bool IsChestOpened(string id); void MarkChestOpened(string id)
-bool IsChestLocked(ChestDef c)                   // lockCheck != null && not unlocked
-CheckResult TryUnlockChest(ChestDef c, IDialogueContext ctx, Rng rng)   // SleightOfHand (lockCheck.skill) roll
-// transitions & regions (pos = centre, size = full extents)
-bool IsTransitionUnlocked(TransitionDef t)       // Flags.Test(requireFlag)
-TransitionDef TransitionAt(Vec2 p)
-List<RegionDef> UpdatePartyPosition(Vec2 leaderPos)   // returns regions entered for the FIRST time (toasts)
-bool HasEnteredRegion(string id); IEnumerable<RegionDef> RegionsAt(Vec2 p)
-MapRuntimeState State
+ChestDef FindChest(id); bool IsChestAvailable(ChestDef c)   // requireFlag
+bool IsChestOpened(id); void MarkChestOpened(id)
+bool IsChestLocked(ChestDef c)                    // lockCheck != null, not unlocked, not opened
+void MarkChestUnlocked(id)
+CheckResult TryUnlockChest(ChestDef c, IDialogueContext ctx, Rng rng)   // null if not locked; success unlocks; retries allowed
+// transitions & regions
+bool IsTransitionUnlocked(TransitionDef t)        // Flags.Test(requireFlag); show t.lockedText otherwise
+TransitionDef TransitionAt(Vec2 p)                // size axes <= 0 default to 2 m (like MapView)
+static Vec2 TransitionSize(TransitionDef t); static bool RectContains(center, size, p)
+IReadOnlyList<RegionDef> UpdatePartyPosition(Vec2 leaderPos)
+   // Quests.OnReach(map id + every region containing the leader), sets enterFlags, returns regions entered
+   // for the FIRST time (toast r.text). The list is reused: valid until the next call.
+bool HasEnteredRegion(id); IEnumerable<RegionDef> RegionsAt(Vec2 p)
 ```
+
+Loot generation, combat setup and actually moving between maps are the session's job.
 
 ---
 
-## 7. Save data
-
-All DTOs are plain classes with public fields (JsonWriter/JsonMapper compatible):
+## 7. `WorldState` and save data
 
 ```csharp
-public sealed class WorldSaveData { FlagStoreState flags; QuestLogState quests; DialogueMemoryState dialogue; List<MapRuntimeState> maps; }
-public sealed class FlagStoreState { Dictionary<string,int> flags; }
-public sealed class QuestLogState { List<QuestRecordState> quests; List<string> pendingRewardChoices; }
+var world = new WorldState(db, ctx);    // Flags, Quests, DialogueMemory, per-map runtimes
+world.Context                            // get/set (forwards to Quests.Context)
+MapRuntime world.GetMap(string mapId)    // null + warning when unknown
+MapRuntime world.GetMap(MapDef def)      // registers ad-hoc maps
+IEnumerable<MapRuntime> world.LoadedMaps
+DialogueRunner world.CreateDialogueRunner(Rng rng = null)
+WorldSaveData world.Save(); void world.Load(WorldSaveData data)   // null/empty data resets
+```
+
+All DTOs are `[Serializable]` plain classes with public fields (`JsonWriter.Serialize` / `JsonMapper.FromJson`);
+a save → load → save round trip is byte-identical.
+
+```csharp
+public sealed class WorldSaveData { int version = 1; FlagStoreState flags; QuestLogState quests; DialogueMemoryState dialogue; List<MapRuntimeState> maps; }
+public sealed class FlagStoreState { Dictionary<string,int> flags; }                           // sorted keys
+public sealed class QuestLogState { List<QuestRecordState> quests; List<string> pendingRewardChoices; int nextOrder; }
 public sealed class QuestRecordState { string id; QuestStatus status; string stage; int[] progress; List<string> history; int order; }
 public sealed class DialogueMemoryState { List<string> chosen; Dictionary<string,int> started; }
-public sealed class MapRuntimeState { string mapId; List<string> openedChests; List<string> unlockedChests; List<string> enteredRegions; List<string> triggeredEncounters; }
+public sealed class MapRuntimeState { string mapId; bool visited; List<string> openedChests, unlockedChests, enteredRegions, triggeredEncounters; }
 ```

@@ -1,0 +1,1922 @@
+{
+  "_note": "Village dialogues. Speaker ids are npc ids, 'narrator' or 'player'. Choice tags mark class options and skill checks.",
+  "dialogues": [
+    {
+      "id": "dlg_opening",
+      "start": "o1",
+      "nodes": [
+        {
+          "id": "o1",
+          "speaker": "narrator",
+          "text": "Dusk settles over Lanternvale like a warm quilt. Smoke curls from crooked chimneys, a windmill stands idle on the hill, and beneath the great camphor tree the spirit-lanterns glow the colour of honey.",
+          "next": "o2"
+        },
+        {
+          "id": "o2",
+          "speaker": "narrator",
+          "text": "Then, one by one, the flames under the tree shiver... shrink... and go out. The square falls silent. Somewhere a child starts to cry, and somewhere else a sheep joins in, out of solidarity.",
+          "next": "o3"
+        },
+        {
+          "id": "o3",
+          "speaker": "elder_maru",
+          "text": "Well. That's the great lantern gone, and the fourth this month. *An old woman with a long pipe peers at you through the smoke.* You've a traveller's dust on your boots. See anything grey on the road in?",
+          "choices": [
+            {"text": "Grey? Like ash?", "next": "o4"},
+            {
+              "text": "The spirits here are frightened. I can feel it, like a held breath.",
+              "next": "o4_priest",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {
+              "text": "That wasn't a fire going out. Something unmade it.",
+              "next": "o4_mage",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {
+              "text": "Something drank that light. I'd know the taste anywhere.",
+              "next": "o4_warlock",
+              "conditions": [{"type": "Class", "key": "Warlock"}],
+              "tag": "WARLOCK"
+            },
+            {
+              "text": "The birds went quiet a full minute before it happened.",
+              "next": "o4_hunter",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "tag": "HUNTER"
+            },
+            {
+              "text": "The wind just stopped. The spirits of this place are holding very still.",
+              "next": "o4_shaman",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "Whatever is doing this, I'll stand against it.",
+              "next": "o4_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Point me at whatever did it.", "next": "o4_warrior", "conditions": [{"type": "Class", "key": "Warrior"}], "tag": "WARRIOR"},
+            {
+              "text": "I saw nothing, I was nowhere, and I definitely didn't just pocket that candle stub.",
+              "next": "o4_rogue",
+              "conditions": [{"type": "Class", "key": "Rogue"}],
+              "tag": "ROGUE"
+            }
+          ]
+        },
+        {
+          "id": "o4",
+          "speaker": "elder_maru",
+          "text": "Like ash that never knew a fire. We call it the Hollow. Where the lanterns go dark it creeps in, and whatever it touches forgets how to be itself.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_priest",
+          "speaker": "elder_maru",
+          "text": "Then you've the gift, and you're right. The little spirits of this valley sleep in the lantern-light. When it goes, so do they... and other things wake. We call it the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_mage",
+          "speaker": "elder_maru",
+          "text": "Unmade. Yes. That's the word I've been hunting for all month. The thing that does the unmaking, we call the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_warlock",
+          "speaker": "elder_maru",
+          "text": "...Is that so. Then I'll trust your nose, and keep an eye on the rest of you. Whatever it is, we call it the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_hunter",
+          "speaker": "elder_maru",
+          "text": "Aye, they always know first. The wolves have been coming down out of Whisperwood too. Something's emptying the forest. We call it the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_shaman",
+          "speaker": "elder_maru",
+          "text": "Then the spirits are wiser than the rest of us, keeping still. Something is eating this valley's light. We call it the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_paladin",
+          "speaker": "elder_maru",
+          "text": "Bold. I like bold. Bold gets things done, and only occasionally gets eaten. What you'd be standing against, we call the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_warrior",
+          "speaker": "elder_maru",
+          "text": "Ha! If only it had a nose to punch. Perhaps it does. We call it the Hollow, and it's coming down from the mountain.",
+          "next": "o5"
+        },
+        {
+          "id": "o4_rogue",
+          "speaker": "elder_maru",
+          "text": "Keep the candle, dear. Light's in short supply. What you didn't see, we call the Hollow.",
+          "next": "o5"
+        },
+        {
+          "id": "o5",
+          "speaker": "elder_maru",
+          "text": "Every lantern in this valley is fed by the Heart Lantern at the Old Shrine, up past Whisperwood. If they're failing, something's wrong up there. I'm too old for the stair, and the village is too frightened to climb it.",
+          "choices": [
+            {"text": "I'll help.", "next": "o6"},
+            {"text": "What's in it for me?", "next": "o5b"},
+            {"text": "I'm only passing through.", "next": "o5c"}
+          ]
+        },
+        {
+          "id": "o5b",
+          "speaker": "elder_maru",
+          "text": "A warm bed at the Sleepy Lantern, a hot meal, the gratitude of a whole valley, and my second-best pipe. Also, if the lanterns fail, the Hollow won't stop at our borders. So: everything, really.",
+          "choices": [{"text": "Fine. I'll help.", "next": "o6"}, {"text": "I'm still only passing through.", "next": "o5c"}]
+        },
+        {
+          "id": "o5c",
+          "speaker": "elder_maru",
+          "text": "So was everyone who ever lived here, once. Rest at the inn tonight. If you're still passing through in the morning, I'll not hold it against you. Much.",
+          "outcomes": [{"type": "SetFlag", "key": "opening_seen"}]
+        },
+        {
+          "id": "o6",
+          "speaker": "elder_maru",
+          "text": "Good. Come and find me under Old Kusu once you've your bearings — the big tree, you can't miss it, it's been there four hundred years. And mind the dark.",
+          "outcomes": [{"type": "StartQuest", "key": "mq_lanterns"}, {"type": "SetFlag", "key": "opening_seen"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_elder_maru",
+      "start": "e_post",
+      "nodes": [
+        {
+          "id": "e_post",
+          "speaker": "elder_maru",
+          "text": "There you are! Can you hear it? The whole valley's humming. Tobben's weeping into his lamp-oil and pretending it's smoke. Thank you, truly.",
+          "conditions": [{"type": "QuestComplete", "key": "mq_lanterns"}],
+          "fallback": "e_home",
+          "choices": [
+            {
+              "text": "I have a letter for you, from Keeper Ishiro at the Old Shrine.",
+              "next": "e_letter",
+              "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
+            },
+            {"text": "How is everyone?", "next": "e_post2"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "e_post2",
+          "speaker": "elder_maru",
+          "text": "Bram's counting sheep and getting the same number twice running. The children have their spirit-friends back. And the windmill's turning again — Hollis cried. Don't tell him I told you.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "e_home",
+          "speaker": "elder_maru",
+          "text": "Every lantern in the valley lit itself an hour ago. All at once. The whole village gasped like one big surprised cat. I take it that was you?",
+          "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "home"}],
+          "fallback": "e_brief",
+          "choices": [
+            {"text": "The Warden is at peace, and the Heart Lantern burns again.", "next": "e_home2"},
+            {
+              "text": "Seren performed the Kindling — with the light of every hearth in the valley, not her life.",
+              "next": "e_home_seren",
+              "conditions": [{"type": "Flag", "key": "seren_kindled"}]
+            }
+          ]
+        },
+        {
+          "id": "e_home2",
+          "speaker": "elder_maru",
+          "text": "Then the old stag walks again. Ha! You've given this valley back its light, and its children their spirit-friends. That's not a small thing. That's the only thing.",
+          "outcomes": [{"type": "CompleteQuest", "key": "mq_lanterns"}],
+          "next": "e_home3"
+        },
+        {
+          "id": "e_home_seren",
+          "speaker": "elder_maru",
+          "text": "Not her life. *Her pipe trembles.* Oh, Isolde would have laughed and cried at once. Ten years I've kept that taper, waiting for someone stubborn enough to try it the other way.",
+          "outcomes": [
+            {"type": "CompleteQuest", "key": "mq_lanterns"},
+            {"type": "Approval", "key": "seren", "amount": 10},
+            {"type": "Approval", "key": "kael", "amount": 10}
+          ],
+          "next": "e_home3"
+        },
+        {
+          "id": "e_home3",
+          "speaker": "elder_maru",
+          "text": "Go on, then. The Sleepy Lantern's pouring for free tonight, and you're the reason. Dorrit will pretend it was her idea.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "e_brief",
+          "speaker": "elder_maru",
+          "text": "Ah, our traveller. Sit, sit — Old Kusu doesn't mind. If you're to help us, you'd best hear about the Warden.",
+          "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "elder"}],
+          "fallback": "e_progress",
+          "next": "e_brief2"
+        },
+        {
+          "id": "e_brief2",
+          "speaker": "elder_maru",
+          "text": "Every autumn a great stag spirit walks down from the Old Shrine with lanterns hung in his antlers, and relights every lantern in the valley. We call him the Warden. This year he never came.",
+          "next": "e_brief3"
+        },
+        {
+          "id": "e_brief3",
+          "speaker": "elder_maru",
+          "text": "And every ten years, a summoner climbs to the shrine to kindle the Heart Lantern anew. The last was Isolde. She lit it... and she never came down.",
+          "choices": [
+            {"text": "What happened to her?", "next": "e_isolde"},
+            {
+              "text": "Summoners who 'never come down'... The old Kindling asked for more than prayers, didn't it?",
+              "check": {"skill": "History", "dc": 12, "success": "e_hist_s", "failure": "e_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {
+              "text": "A spirit-flame needs something to burn. What did she give it?",
+              "check": {"skill": "Religion", "dc": 13, "success": "e_rel_s", "failure": "e_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {"text": "Where do I start?", "next": "e_brief4"}
+          ]
+        },
+        {
+          "id": "e_isolde",
+          "speaker": "elder_maru",
+          "text": "Nobody truly knows. Her guardian came back down alone and has scarcely said ten words since. He sits outside the inn most days in a red coat, watching the road.",
+          "next": "e_brief4"
+        },
+        {
+          "id": "e_hist_s",
+          "speaker": "elder_maru",
+          "text": "Sharp. Yes. The old rite asks a summoner to give the Heart a piece of their own light. Most give a little. Isolde gave everything. That flame has kept us ten years, and now it's spent.",
+          "outcomes": [{"type": "SetFlag", "key": "knows_kindling_cost"}, {"type": "GiveXP", "amount": 100}],
+          "next": "e_brief4"
+        },
+        {
+          "id": "e_hist_f",
+          "speaker": "elder_maru",
+          "text": "*She squints at you.* You've read a book about it, haven't you? The wrong book. *She puffs her pipe and says no more about it.*",
+          "next": "e_brief4"
+        },
+        {
+          "id": "e_rel_s",
+          "speaker": "elder_maru",
+          "text": "Herself. A summoner gives the Heart Lantern a piece of their own spirit. Isolde gave all of hers, so the valley would have ten bright years. And it did.",
+          "outcomes": [{"type": "SetFlag", "key": "knows_kindling_cost"}, {"type": "GiveXP", "amount": 100}],
+          "next": "e_brief4"
+        },
+        {
+          "id": "e_rel_f",
+          "speaker": "elder_maru",
+          "text": "That's a question for a priest, dear, and you're asking an old woman with a pipe.",
+          "next": "e_brief4"
+        },
+        {
+          "id": "e_brief4",
+          "speaker": "elder_maru",
+          "text": "Take the pilgrim road east into Whisperwood. Halfway up there's a Wayside Shrine with its own little lantern spirit, Komorebi. If anyone knows what's gone wrong, she does. And take this.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "kindling_taper", "amount": 1},
+            {"type": "SetQuestStage", "key": "mq_lanterns", "value": "wayshrine"},
+            {"type": "SetFlag", "key": "met_elder"}
+          ],
+          "next": "e_brief5"
+        },
+        {
+          "id": "e_brief5",
+          "speaker": "elder_maru",
+          "text": "The Kindling Taper. Every hearth in Lanternvale gave it a spark the night Isolde climbed. It's never quite gone out. I've a feeling it wants to go home.",
+          "choices": [{"text": "I'll keep it safe.", "next": "e_brief_end"}, {"text": "Any advice for the road?", "next": "e_advice"}]
+        },
+        {
+          "id": "e_advice",
+          "speaker": "elder_maru",
+          "text": "Buy potions from Tilly, eat Dorrit's stew, never trust a Mossling with anything shiny — and if you meet a grey thing that used to be something else, be kind if you can. They were ours, once.",
+          "next": "e_brief_end"
+        },
+        {
+          "id": "e_brief_end",
+          "speaker": "elder_maru",
+          "text": "Off you go. The lanterns won't wait, and neither will my pipe.",
+          "choices": [
+            {
+              "text": "I have a letter for you, from Keeper Ishiro at the Old Shrine.",
+              "next": "e_letter",
+              "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "e_progress",
+          "speaker": "elder_maru",
+          "text": "Back already? The Hollow's still creeping, so I assume you're not finished.",
+          "conditions": [{"type": "QuestActive", "key": "mq_lanterns"}],
+          "fallback": "e_notstarted",
+          "choices": [
+            {
+              "text": "Remind me where I'm going.",
+              "next": "e_hint_way",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "wayshrine"}]
+            },
+            {
+              "text": "The Wayside spirit wants embers from the Hollow wisps.",
+              "next": "e_hint_embers",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "komorebi"}]
+            },
+            {
+              "text": "The Wayside spirit wants embers from the Hollow wisps.",
+              "next": "e_hint_embers",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "embers"}]
+            },
+            {
+              "text": "The Wayside spirit wants embers from the Hollow wisps.",
+              "next": "e_hint_embers",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "embers_return"}]
+            },
+            {
+              "text": "Something called Rotheart seals the shrine stair.",
+              "next": "e_hint_rotheart",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "rotheart"}]
+            },
+            {
+              "text": "What will I find at the shrine?",
+              "next": "e_hint_shrine",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "shrine"}]
+            },
+            {
+              "text": "What will I find at the shrine?",
+              "next": "e_hint_shrine",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "warden"}]
+            },
+            {
+              "text": "The Heart Lantern needs a new flame.",
+              "next": "e_hint_rekindle",
+              "conditions": [{"type": "QuestState", "key": "mq_lanterns", "value": "rekindle"}]
+            },
+            {
+              "text": "I have a letter for you, from Keeper Ishiro at the Old Shrine.",
+              "next": "e_letter",
+              "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
+            },
+            {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
+            {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
+            {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "e_hint_way",
+          "speaker": "elder_maru",
+          "text": "East through Bram's pasture, into Whisperwood, along the pilgrim road. The Wayside Shrine has a red gate, a little stone fox and a lantern that ought to be lit. You'll know it.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_hint_embers",
+          "speaker": "elder_maru",
+          "text": "Embers from the wisps? Poor things. They were lantern-flames once, you know. Taking their light back isn't cruelty. It's a rescue.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_hint_rotheart",
+          "speaker": "elder_maru",
+          "text": "Rotheart? He guarded the stair when I was a girl — a kind old tree who let children climb him. If he's gone grey... burn him clean, and don't let it break your heart.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_hint_shrine",
+          "speaker": "elder_maru",
+          "text": "The sanctum's at the top of the stair. Keeper Ishiro tends it, though he's not written in months, and he used to write every week. Be careful up there.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_hint_rekindle",
+          "speaker": "elder_maru",
+          "text": "Then light it. Whatever it costs. *She stops.* No. Not whatever it costs. We've paid that price before. Find a better way.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_notstarted",
+          "speaker": "elder_maru",
+          "text": "Still passing through, traveller? The lanterns aren't. They're going out, one by one.",
+          "conditions": [{"type": "QuestNotStarted", "key": "mq_lanterns"}],
+          "fallback": "e_hub",
+          "choices": [
+            {"text": "I'll help. Tell me what you need.", "next": "e_brief2", "outcomes": [{"type": "StartQuest", "key": "mq_lanterns"}]},
+            {
+              "text": "I have a letter for you, from Keeper Ishiro at the Old Shrine.",
+              "next": "e_letter",
+              "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
+            },
+            {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
+            {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
+            {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "e_hub",
+          "speaker": "elder_maru",
+          "text": "Anything else, dear? My pipe's going out, and that's one light I can fix myself.",
+          "choices": [
+            {
+              "text": "I have a letter for you, from Keeper Ishiro at the Old Shrine.",
+              "next": "e_letter",
+              "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
+            },
+            {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
+            {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
+            {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "e_lore_hollow",
+          "speaker": "elder_maru",
+          "text": "It isn't a creature. It's an absence — the shape a light leaves behind when it's taken. Beasts it touches go grey and angry. Spirits it touches forget their own names.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_lore_warden",
+          "speaker": "elder_maru",
+          "text": "A stag as tall as the inn, made of mist and moss, with a hundred lanterns in his antlers. When I was small I left honey cakes out for him on Walk Night. He always ate them. Spirits are terribly greedy about honey.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_lore_kusu",
+          "speaker": "elder_maru",
+          "text": "Old Kusu was here before the village. The first lamplighters tied the shimenawa rope round him and asked his leave to settle. He said yes, or at least he didn't say no, which with trees is much the same.",
+          "next": "e_hub"
+        },
+        {
+          "id": "e_letter",
+          "speaker": "elder_maru",
+          "text": "*She breaks the grey wax and reads aloud, quietly.* 'Maru. The Warden came to the Heart tonight and did not light his antlers. He drank from it instead. I am afraid. Send someone.' ...Three weeks ago. Oh, Ishiro.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "ishiro_letter", "amount": 1},
+            {"type": "SetFlag", "key": "ishiro_letter_read"},
+            {"type": "CompleteQuest", "key": "sq_satchel"}
+          ],
+          "next": "e_letter2"
+        },
+        {
+          "id": "e_letter2",
+          "speaker": "elder_maru",
+          "text": "If you meet him up there, tell him it arrived. Tell him I'm sorry it was late. He'll understand — he was never on time for anything in his life.",
+          "choices": [{"text": "I'll tell him.", "next": "e_hub"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_innkeeper_dorrit",
+      "start": "i_post",
+      "nodes": [
+        {
+          "id": "i_post",
+          "speaker": "innkeeper_dorrit",
+          "text": "The hero of the hour! Sit down, sit down — tonight it's on the house, and I'll hear no argument. There'll be singing later, I'm afraid. Hollis has been practising.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "i_greet",
+          "choices": [
+            {"text": "I'd like a room for the night.", "next": "i_rest"},
+            {"text": "What's cooking?", "outcomes": [{"type": "OpenVendor", "key": "innkeeper_dorrit"}]},
+            {"text": "Heard any news?", "next": "i_news", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {
+              "text": "Who's the man in the red coat outside?",
+              "next": "i_kael",
+              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
+              "text": "Any chance of a discount for a hero-in-training?",
+              "check": {"skill": "Persuasion", "dc": 10, "success": "i_disc_s", "failure": "i_disc_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_greet",
+          "speaker": "innkeeper_dorrit",
+          "text": "Welcome to the Sleepy Lantern! Mind the cat, mind the step, mind your head on the beam. Hungry? Tired? Both? It's usually both.",
+          "choices": [
+            {"text": "I'd like a room for the night.", "next": "i_rest"},
+            {"text": "What's cooking?", "outcomes": [{"type": "OpenVendor", "key": "innkeeper_dorrit"}]},
+            {"text": "Heard any news?", "next": "i_news", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {
+              "text": "Who's the man in the red coat outside?",
+              "next": "i_kael",
+              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
+              "text": "Any chance of a discount for a hero-in-training?",
+              "check": {"skill": "Persuasion", "dc": 10, "success": "i_disc_s", "failure": "i_disc_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_hub",
+          "speaker": "innkeeper_dorrit",
+          "text": "Anything else, love?",
+          "choices": [
+            {"text": "I'd like a room for the night.", "next": "i_rest"},
+            {"text": "What's cooking?", "outcomes": [{"type": "OpenVendor", "key": "innkeeper_dorrit"}]},
+            {"text": "Heard any news?", "next": "i_news", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {
+              "text": "Who's the man in the red coat outside?",
+              "next": "i_kael",
+              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
+              "text": "Any chance of a discount for a hero-in-training?",
+              "check": {"skill": "Persuasion", "dc": 10, "success": "i_disc_s", "failure": "i_disc_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_rest",
+          "speaker": "innkeeper_dorrit",
+          "text": "Top of the stairs, second door. The beds are feather, the quilts are patchwork, and the floorboard by the window sings. Sweet dreams.",
+          "outcomes": [{"type": "Rest"}]
+        },
+        {
+          "id": "i_news",
+          "speaker": "innkeeper_dorrit",
+          "text": "Bram's lost three ewes to wolves this week. Old Tobben swears Mosslings are nicking his wicks. And poor Fennick came back from Whisperwood without his mailbag, white as milk. Something about spiders.",
+          "next": "i_news2"
+        },
+        {
+          "id": "i_news2",
+          "speaker": "innkeeper_dorrit",
+          "text": "Oh, and Sergeant Holt's in a state about bandits at the Old Bridge. And little Nell's lost her spirit-friend. Busy month for bad news, and it's not even harvest.",
+          "next": "i_hub"
+        },
+        {
+          "id": "i_kael",
+          "speaker": "innkeeper_dorrit",
+          "text": "Kael? Pays for a week at a time, drinks one cup of tea a day, and watches the road. Ten years now. He's not unkind, love. He's just... waiting.",
+          "next": "i_hub"
+        },
+        {
+          "id": "i_disc_s",
+          "speaker": "innkeeper_dorrit",
+          "text": "Ha! Cheeky. I like cheeky. Here — two bowls of stew on the house, and don't tell the cat, he'll want one.",
+          "outcomes": [{"type": "GiveItem", "key": "food_lantern_stew", "amount": 2}],
+          "next": "i_hub"
+        },
+        {
+          "id": "i_disc_f",
+          "speaker": "innkeeper_dorrit",
+          "text": "Nice try, love. Prices are prices. The cat, however, accepts compliments free of charge.",
+          "next": "i_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_merchant_tilly",
+      "start": "t_post",
+      "nodes": [
+        {
+          "id": "t_post",
+          "speaker": "merchant_tilly",
+          "text": "Business is booming! Everyone wants lantern oil for the festival. I'm calling it 'Festival Oil' now. It's the same oil. Don't tell anyone.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "t_greet",
+          "choices": [
+            {"text": "Show me your wares.", "outcomes": [{"type": "OpenVendor", "key": "merchant_tilly"}]},
+            {"text": "Lantern oil? Against the Hollow?", "next": "t_oil"},
+            {
+              "text": "Your scales are off. Only slightly — and in your favour.",
+              "check": {"skill": "Investigation", "dc": 12, "success": "t_inv_s", "failure": "t_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_greet",
+          "speaker": "merchant_tilly",
+          "text": "Tilly Brambleback's General Goods! Potions, pickles, lantern oil and wands. The wands are new. The pickles are not.",
+          "choices": [
+            {"text": "Show me your wares.", "outcomes": [{"type": "OpenVendor", "key": "merchant_tilly"}]},
+            {"text": "Lantern oil? Against the Hollow?", "next": "t_oil"},
+            {
+              "text": "Your scales are off. Only slightly — and in your favour.",
+              "check": {"skill": "Investigation", "dc": 12, "success": "t_inv_s", "failure": "t_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_hub",
+          "speaker": "merchant_tilly",
+          "text": "What else can I tempt you with?",
+          "choices": [
+            {"text": "Show me your wares.", "outcomes": [{"type": "OpenVendor", "key": "merchant_tilly"}]},
+            {"text": "Lantern oil? Against the Hollow?", "next": "t_oil"},
+            {
+              "text": "Your scales are off. Only slightly — and in your favour.",
+              "check": {"skill": "Investigation", "dc": 12, "success": "t_inv_s", "failure": "t_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_oil",
+          "speaker": "merchant_tilly",
+          "text": "My Lantern-Oil Tonic! Lamp oil, honey, camphor and a great deal of hope. Keeps the grey off you — I've seen it work. Mostly I've seen people feel better, which counts.",
+          "next": "t_hub"
+        },
+        {
+          "id": "t_inv_s",
+          "speaker": "merchant_tilly",
+          "text": "...Oh, stars. Twenty years I've had those scales. *She presses a few bottles into your hands.* Take these, and please don't mention it to Sergeant Holt.",
+          "outcomes": [{"type": "GiveItem", "key": "potion_minor_healing", "amount": 3}, {"type": "GiveXP", "amount": 50}],
+          "next": "t_hub"
+        },
+        {
+          "id": "t_inv_f",
+          "speaker": "merchant_tilly",
+          "text": "*She follows your gaze to the scales.* Those are antiques, dear. Antiques are allowed to be eccentric.",
+          "next": "t_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_smith_garrow",
+      "start": "g_greet",
+      "nodes": [
+        {
+          "id": "g_greet",
+          "speaker": "smith_garrow",
+          "text": "*CLANG.* Garrow Ironhand, weaponsmith. Swords, axes, maces, bows — if it's pointy, heavy, or pointy AND heavy, I've got it.",
+          "choices": [
+            {"text": "Let me see your weapons.", "outcomes": [{"type": "OpenVendor", "key": "smith_garrow"}]},
+            {
+              "text": "Need a hand with that anvil?",
+              "check": {"skill": "Athletics", "dc": 13, "success": "g_ath_s", "failure": "g_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {"text": "You and the armorer look alike.", "next": "g_bess"},
+            {"text": "You're working late.", "next": "g_late", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "g_hub",
+          "speaker": "smith_garrow",
+          "text": "*He wipes his hands on his apron.* What else?",
+          "choices": [
+            {"text": "Let me see your weapons.", "outcomes": [{"type": "OpenVendor", "key": "smith_garrow"}]},
+            {
+              "text": "Need a hand with that anvil?",
+              "check": {"skill": "Athletics", "dc": 13, "success": "g_ath_s", "failure": "g_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {"text": "You and the armorer look alike.", "next": "g_bess"},
+            {"text": "You're working late.", "next": "g_late", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "g_ath_s",
+          "speaker": "smith_garrow",
+          "text": "Hah! You lifted the whole thing! Bess owes me a silver. Here — take some whetstones. They like a strong arm.",
+          "outcomes": [{"type": "GiveItem", "key": "whetstone_garrow", "amount": 3}, {"type": "GiveXP", "amount": 50}],
+          "next": "g_hub"
+        },
+        {
+          "id": "g_ath_f",
+          "speaker": "smith_garrow",
+          "text": "*You heave. The anvil does not.* It likes you, it's just not ready to move in together. Takes a while, with anvils.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_bess",
+          "speaker": "smith_garrow",
+          "text": "Bess? My sister. She does armour, I do weapons, we both do arguing. You'll need both from us, so we've agreed to be civil in front of customers.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_late",
+          "speaker": "smith_garrow",
+          "text": "Can't sleep. Every time a lantern goes out I hear it, like a bell that stops ringing. So I hit metal until I can't hear it any more.",
+          "next": "g_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_armorer_bess",
+      "start": "b_greet",
+      "nodes": [
+        {
+          "id": "b_greet",
+          "speaker": "armorer_bess",
+          "text": "Bess Ironhand, armorer. Cloth, leather, mail and plate — and before you ask, yes, the plate's real, and no, you probably can't wear it yet.",
+          "choices": [
+            {"text": "Show me your armour.", "outcomes": [{"type": "OpenVendor", "key": "armorer_bess"}]},
+            {"text": "Why couldn't I wear the plate?", "next": "b_plate"},
+            {
+              "text": "You're worried about your brother.",
+              "check": {"skill": "Insight", "dc": 11, "success": "b_ins_s", "failure": "b_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_hub",
+          "speaker": "armorer_bess",
+          "text": "Anything else? I've got buckles to polish.",
+          "choices": [
+            {"text": "Show me your armour.", "outcomes": [{"type": "OpenVendor", "key": "armorer_bess"}]},
+            {"text": "Why couldn't I wear the plate?", "next": "b_plate"},
+            {
+              "text": "You're worried about your brother.",
+              "check": {"skill": "Insight", "dc": 11, "success": "b_ins_s", "failure": "b_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_plate",
+          "speaker": "armorer_bess",
+          "text": "Plate's a craft, not a coat. Takes years of drill to move in it without falling over. Come back when you've the scars for it — or buy it now and hang it on the wall. I'm not fussy.",
+          "next": "b_hub"
+        },
+        {
+          "id": "b_ins_s",
+          "speaker": "armorer_bess",
+          "text": "...He's been forging all night since the lanterns started going out. Says it keeps his hands busy. Tell him to sleep, if he'll listen to anyone.",
+          "outcomes": [{"type": "GiveXP", "amount": 50}, {"type": "SetFlag", "key": "bess_worried"}],
+          "next": "b_hub"
+        },
+        {"id": "b_ins_f", "speaker": "armorer_bess", "text": "I'm worried about my prices, she says briskly, and nothing more.", "next": "b_hub"}
+      ]
+    },
+    {
+      "id": "dlg_trainer_odo",
+      "start": "tr_post",
+      "nodes": [
+        {
+          "id": "tr_post",
+          "speaker": "trainer_odo",
+          "text": "Ha! The lanterns are lit and my knees have stopped aching. Coincidence? I think not. What'll it be?",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "tr_greet",
+          "choices": [
+            {"text": "Teach me something that hits harder.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Warrior"}], "tag": "WARRIOR"},
+            {"text": "I seek the Light's instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Paladin"}], "tag": "PALADIN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_odo"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "You hold your sword like a man who lost someone to it.",
+              "check": {"skill": "Insight", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Could I practise on that training dummy?", "next": "tr_dummy"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_greet",
+          "speaker": "trainer_odo",
+          "text": "Sir Odo Brightwater — retired, unretired, and retired again. I train warriors and paladins: the shouty sort and the shiny sort.",
+          "choices": [
+            {"text": "Teach me something that hits harder.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Warrior"}], "tag": "WARRIOR"},
+            {"text": "I seek the Light's instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Paladin"}], "tag": "PALADIN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_odo"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "You hold your sword like a man who lost someone to it.",
+              "check": {"skill": "Insight", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Could I practise on that training dummy?", "next": "tr_dummy"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_hub",
+          "speaker": "trainer_odo",
+          "text": "Anything else?",
+          "choices": [
+            {"text": "Teach me something that hits harder.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Warrior"}], "tag": "WARRIOR"},
+            {"text": "I seek the Light's instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Paladin"}], "tag": "PALADIN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_odo"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "You hold your sword like a man who lost someone to it.",
+              "check": {"skill": "Insight", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Could I practise on that training dummy?", "next": "tr_dummy"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_a",
+          "speaker": "trainer_odo",
+          "text": "Harder! Splendid. Stance, breath, follow-through. The shouting comes naturally.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_odo"}]
+        },
+        {
+          "id": "tr_b",
+          "speaker": "trainer_odo",
+          "text": "Then let's see how brightly you burn. Seals first, judgement after, humility always.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_odo"}]
+        },
+        {
+          "id": "tr_respec",
+          "speaker": "trainer_odo",
+          "text": "Unlearning is harder than learning, and costs more besides. Shall we begin?",
+          "choices": [
+            {"text": "Yes, wipe the slate.", "outcomes": [{"type": "OpenRespec", "key": "trainer_odo"}]},
+            {"text": "On second thought, no.", "next": "tr_hub"}
+          ]
+        },
+        {
+          "id": "tr_chk_s",
+          "speaker": "trainer_odo",
+          "text": "*Odo's smile fades.* My squire. Forty years ago, on the pilgrim stair. *He straightens.* Which is why I teach you lot to come home. Again.",
+          "outcomes": [{"type": "GiveXP", "amount": 75}],
+          "next": "tr_hub"
+        },
+        {"id": "tr_chk_f", "speaker": "trainer_odo", "text": "Odo laughs. 'I hold it like a man with a bad shoulder, friend.'", "next": "tr_hub"},
+        {
+          "id": "tr_dummy",
+          "speaker": "trainer_odo",
+          "text": "Sir Turnip? By all means. He's never once hit back, which is more than I can say for my students. Mind his nose.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_training_dummy"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_trainer_fennel",
+      "start": "tr_post",
+      "nodes": [
+        {
+          "id": "tr_post",
+          "speaker": "trainer_fennel",
+          "text": "Hear that? Birdsong. Proper, silly, morning birdsong. I'd forgotten how loud it is. Training?",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "tr_greet",
+          "choices": [
+            {"text": "I need to sharpen my aim.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Hunter"}], "tag": "HUNTER"},
+            {"text": "The elements are restless.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_fennel"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The pasture grass is greying at the tips. Is the Hollow in the soil?",
+              "check": {"skill": "Nature", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_greet",
+          "speaker": "trainer_fennel",
+          "text": "Fennel Greythorn. I teach hunters to listen to the wild, and shamans to listen to the spirits under it. Most folk can't tell the difference. The wolves can.",
+          "choices": [
+            {"text": "I need to sharpen my aim.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Hunter"}], "tag": "HUNTER"},
+            {"text": "The elements are restless.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_fennel"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The pasture grass is greying at the tips. Is the Hollow in the soil?",
+              "check": {"skill": "Nature", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_hub",
+          "speaker": "trainer_fennel",
+          "text": "Anything else?",
+          "choices": [
+            {"text": "I need to sharpen my aim.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Hunter"}], "tag": "HUNTER"},
+            {"text": "The elements are restless.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_fennel"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The pasture grass is greying at the tips. Is the Hollow in the soil?",
+              "check": {"skill": "Nature", "dc": 12, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_a",
+          "speaker": "trainer_fennel",
+          "text": "Breathe out, loose on the empty. And feed your pet first. Always first.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_fennel"}]
+        },
+        {
+          "id": "tr_b",
+          "speaker": "trainer_fennel",
+          "text": "They are. The Hollow's made them jumpy. Let me show you how to calm them — and how to point them.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_fennel"}]
+        },
+        {
+          "id": "tr_respec",
+          "speaker": "trainer_fennel",
+          "text": "Unlearning is harder than learning, and costs more besides. Shall we begin?",
+          "choices": [
+            {"text": "Yes, wipe the slate.", "outcomes": [{"type": "OpenRespec", "key": "trainer_fennel"}]},
+            {"text": "On second thought, no.", "next": "tr_hub"}
+          ]
+        },
+        {
+          "id": "tr_chk_s",
+          "speaker": "trainer_fennel",
+          "text": "...Good eye. Not in the soil — in the light. Plants are just the first to notice. Take this; it's more use to you than me.",
+          "outcomes": [{"type": "GiveItem", "key": "elixir_lantern_oil", "amount": 1}, {"type": "GiveXP", "amount": 75}],
+          "next": "tr_hub"
+        },
+        {"id": "tr_chk_f", "speaker": "trainer_fennel", "text": "'Could be drought,' Fennel says, very unconvinced.", "next": "tr_hub"}
+      ]
+    },
+    {
+      "id": "dlg_trainer_quillon",
+      "start": "tr_post",
+      "nodes": [
+        {
+          "id": "tr_post",
+          "speaker": "trainer_quillon",
+          "text": "The floating books have started humming. I think they're happy. Or hungry. What do you need?",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "tr_greet",
+          "choices": [
+            {"text": "I'm ready for more advanced spells.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Mage"}], "tag": "MAGE"},
+            {"text": "I require... specialised instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Warlock"}], "tag": "WARLOCK"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_quillon"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The lantern-flames run on spirit, not oil. That's why the Hollow can eat them.",
+              "check": {"skill": "Arcana", "dc": 14, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_greet",
+          "speaker": "trainer_quillon",
+          "text": "Magister Quillon Ashby. Do not touch the floating books, do not feed the floating books, and do not, under any circumstances, read the floating books aloud.",
+          "choices": [
+            {"text": "I'm ready for more advanced spells.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Mage"}], "tag": "MAGE"},
+            {"text": "I require... specialised instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Warlock"}], "tag": "WARLOCK"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_quillon"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The lantern-flames run on spirit, not oil. That's why the Hollow can eat them.",
+              "check": {"skill": "Arcana", "dc": 14, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_hub",
+          "speaker": "trainer_quillon",
+          "text": "Anything else?",
+          "choices": [
+            {"text": "I'm ready for more advanced spells.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Mage"}], "tag": "MAGE"},
+            {"text": "I require... specialised instruction.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Warlock"}], "tag": "WARLOCK"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_quillon"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "The lantern-flames run on spirit, not oil. That's why the Hollow can eat them.",
+              "check": {"skill": "Arcana", "dc": 14, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_a",
+          "speaker": "trainer_quillon",
+          "text": "Ah, a scholar! Fireball? Frostbolt? Something tasteful in arcane? Sit. Don't touch anything.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_quillon"}]
+        },
+        {
+          "id": "tr_b",
+          "speaker": "trainer_quillon",
+          "text": "Of course you do. I teach it under protest, with the windows open.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_quillon"}]
+        },
+        {
+          "id": "tr_respec",
+          "speaker": "trainer_quillon",
+          "text": "Unlearning is harder than learning, and costs more besides. Shall we begin?",
+          "choices": [
+            {"text": "Yes, wipe the slate.", "outcomes": [{"type": "OpenRespec", "key": "trainer_quillon"}]},
+            {"text": "On second thought, no.", "next": "tr_hub"}
+          ]
+        },
+        {
+          "id": "tr_chk_s",
+          "speaker": "trainer_quillon",
+          "text": "Exactly! At last, someone who reads! Here — some of my study scrolls. Don't let them get damp. They sulk.",
+          "outcomes": [{"type": "GiveItem", "key": "scroll_intellect", "amount": 2}, {"type": "GiveXP", "amount": 100}],
+          "next": "tr_hub"
+        },
+        {"id": "tr_chk_f", "speaker": "trainer_quillon", "text": "'Close,' he says, in the tone of a man who means 'not remotely'.", "next": "tr_hub"}
+      ]
+    },
+    {
+      "id": "dlg_trainer_wick",
+      "start": "tr_post",
+      "nodes": [
+        {
+          "id": "tr_post",
+          "speaker": "trainer_wick",
+          "text": "The shrine bell rang on its own last night. Nobody touched it. I choose to believe it was saying thank you.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "tr_greet",
+          "choices": [
+            {"text": "I would learn more of the Light.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Priest"}], "tag": "PRIEST"},
+            {"text": "I'm after something quieter.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Rogue"}], "tag": "ROGUE"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_wick"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "(Pick his pocket while he's talking.)",
+              "check": {"skill": "SleightOfHand", "dc": 13, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "SLEIGHTOFHAND"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_greet",
+          "speaker": "trainer_wick",
+          "text": "Brother Wick. I tend the village shrine, and in the evenings I teach... other skills. I was a cutpurse once, before the lanterns caught me. Light and shadow, friend. You can't have one without the other.",
+          "choices": [
+            {"text": "I would learn more of the Light.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Priest"}], "tag": "PRIEST"},
+            {"text": "I'm after something quieter.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Rogue"}], "tag": "ROGUE"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_wick"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "(Pick his pocket while he's talking.)",
+              "check": {"skill": "SleightOfHand", "dc": 13, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "SLEIGHTOFHAND"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_hub",
+          "speaker": "trainer_wick",
+          "text": "Anything else?",
+          "choices": [
+            {"text": "I would learn more of the Light.", "next": "tr_a", "conditions": [{"type": "Class", "key": "Priest"}], "tag": "PRIEST"},
+            {"text": "I'm after something quieter.", "next": "tr_b", "conditions": [{"type": "Class", "key": "Rogue"}], "tag": "ROGUE"},
+            {"text": "I'd like to train.", "outcomes": [{"type": "OpenTrainer", "key": "trainer_wick"}]},
+            {"text": "I want to unlearn my talents.", "next": "tr_respec"},
+            {
+              "text": "(Pick his pocket while he's talking.)",
+              "check": {"skill": "SleightOfHand", "dc": 13, "success": "tr_chk_s", "failure": "tr_chk_f"},
+              "once": true,
+              "tag": "SLEIGHTOFHAND"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "tr_a",
+          "speaker": "trainer_wick",
+          "text": "Then pray with your hands as well as your heart. Healing is work, not wishing.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_wick"}]
+        },
+        {
+          "id": "tr_b",
+          "speaker": "trainer_wick",
+          "text": "Quieter, quicker, kinder when it counts. Let's begin.",
+          "outcomes": [{"type": "OpenTrainer", "key": "trainer_wick"}]
+        },
+        {
+          "id": "tr_respec",
+          "speaker": "trainer_wick",
+          "text": "Unlearning is harder than learning, and costs more besides. Shall we begin?",
+          "choices": [
+            {"text": "Yes, wipe the slate.", "outcomes": [{"type": "OpenRespec", "key": "trainer_wick"}]},
+            {"text": "On second thought, no.", "next": "tr_hub"}
+          ]
+        },
+        {
+          "id": "tr_chk_s",
+          "speaker": "trainer_wick",
+          "text": "You lift a little purse. He doesn't notice — then grins and pats the empty pocket. 'Good! Keep it. Consider it tuition, refunded.'",
+          "outcomes": [{"type": "GiveGold", "amount": 150}, {"type": "GiveXP", "amount": 50}],
+          "next": "tr_hub"
+        },
+        {
+          "id": "tr_chk_f",
+          "speaker": "trainer_wick",
+          "text": "*His hand closes, very gently, over yours.* 'Ah. Not yet. But your heart was in it.'",
+          "next": "tr_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_guard_holt",
+      "start": "h_done",
+      "nodes": [
+        {
+          "id": "h_done",
+          "speaker": "guard_holt",
+          "text": "Bridge is quiet, traders are moving and nobody's been stabbed all week. I could get used to this.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_bridge"}],
+          "fallback": "h_report",
+          "choices": [{"text": "And Rusk's people?", "next": "h_done_rusk", "conditions": [{"type": "Flag", "key": "bandits_peaceful"}]}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "h_done_rusk",
+          "speaker": "guard_holt",
+          "text": "Mending fences in the east field, singing badly. Strangest thing I've seen in twenty years of guarding, and I once saw a goose run for council.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_report",
+          "speaker": "guard_holt",
+          "text": "Well? Is the bridge clear?",
+          "conditions": [{"type": "QuestState", "key": "sq_bridge", "value": "report"}],
+          "fallback": "h_active",
+          "choices": [
+            {
+              "text": "They were farmers. Their fields went grey, so they took the bridge. I sent them here for honest work.",
+              "next": "h_rep_peace",
+              "conditions": [{"type": "Flag", "key": "bandits_peaceful"}]
+            },
+            {"text": "They won't be back. I made sure of it.", "next": "h_rep_scared", "conditions": [{"type": "Flag", "key": "bandits_scared"}]},
+            {"text": "I paid them to leave the valley.", "next": "h_rep_paid", "conditions": [{"type": "Flag", "key": "bandits_paid"}]},
+            {
+              "text": "The bandits won't trouble anyone again.",
+              "next": "h_rep_fight",
+              "conditions": [
+                {"type": "NotFlag", "key": "bandits_peaceful"},
+                {"type": "NotFlag", "key": "bandits_scared"},
+                {"type": "NotFlag", "key": "bandits_paid"}
+              ]
+            },
+            {"text": "Not yet."}
+          ]
+        },
+        {
+          "id": "h_rep_peace",
+          "speaker": "guard_holt",
+          "text": "...Farmers. Of course they were. Right. Dorrit needs hands and the mill needs a strong back. I'll find them work. You did a kinder thing than I asked, friend.",
+          "outcomes": [
+            {"type": "CompleteQuest", "key": "sq_bridge"},
+            {"type": "Approval", "key": "seren", "amount": 5},
+            {"type": "Approval", "key": "aldric", "amount": 5}
+          ],
+          "next": "h_end"
+        },
+        {
+          "id": "h_rep_scared",
+          "speaker": "guard_holt",
+          "text": "Good. Can't say I'll miss them. Can't say I'd want to live in the next valley over, either.",
+          "outcomes": [{"type": "CompleteQuest", "key": "sq_bridge"}],
+          "next": "h_end"
+        },
+        {
+          "id": "h_rep_paid",
+          "speaker": "guard_holt",
+          "text": "You... paid them. With money. *He rubs his face.* Well, it worked, and nobody's bleeding. I'll put it in the report as 'diplomacy'.",
+          "outcomes": [
+            {"type": "CompleteQuest", "key": "sq_bridge"},
+            {"type": "Approval", "key": "pip", "amount": -3},
+            {"type": "Approval", "key": "seren", "amount": 3}
+          ],
+          "next": "h_end"
+        },
+        {
+          "id": "h_rep_fight",
+          "speaker": "guard_holt",
+          "text": "Hm. Not how I'd have liked it, but it's done. The road's yours to walk again — yours, and every pilgrim's.",
+          "outcomes": [{"type": "CompleteQuest", "key": "sq_bridge"}],
+          "next": "h_end"
+        },
+        {
+          "id": "h_end",
+          "speaker": "guard_holt",
+          "text": "Here. The valley's thanks, such as the guard budget allows. Which is not very much.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_active",
+          "speaker": "guard_holt",
+          "text": "The Old Bridge, friend. Past the Wayside Shrine. Bandits, tolls, unhappy pilgrims. You know the one.",
+          "conditions": [{"type": "QuestState", "key": "sq_bridge", "value": "bandits"}],
+          "fallback": "h_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_greet",
+          "speaker": "guard_holt",
+          "text": "Sergeant Holt, Lanternvale Guard. All of it — I'm the whole guard. What can I do for you?",
+          "choices": [
+            {
+              "text": "Any trouble around?",
+              "next": "h_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "sq_bridge"}, {"type": "NotFlag", "key": "bandits_dealt_with"}]
+            },
+            {
+              "text": "About the bandits at the Old Bridge — it's already handled.",
+              "next": "h_report",
+              "conditions": [{"type": "QuestNotStarted", "key": "sq_bridge"}, {"type": "Flag", "key": "bandits_dealt_with"}],
+              "outcomes": [{"type": "StartQuest", "key": "sq_bridge"}, {"type": "SetQuestStage", "key": "sq_bridge", "value": "report"}]
+            },
+            {
+              "text": "You're more worried than you're letting on.",
+              "check": {"skill": "Insight", "dc": 11, "success": "h_ins_s", "failure": "h_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_offer",
+          "speaker": "guard_holt",
+          "text": "Bandits at the Old Bridge in Whisperwood, charging 'tolls' to anyone on the pilgrim road. Usually that means a stabbing, eventually. I can't leave the village. You could.",
+          "choices": [{"text": "I'll deal with them.", "next": "h_accept", "outcomes": [{"type": "StartQuest", "key": "sq_bridge"}]}, {"text": "Not right now."}]
+        },
+        {
+          "id": "h_accept",
+          "speaker": "guard_holt",
+          "text": "Run them off however you like. I'd prefer the kind of 'however' that doesn't end with you dead. Good luck.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_ins_s",
+          "speaker": "guard_holt",
+          "text": "*He lowers his voice.* Bandits I can handle. It's the grey that frightens me. You can't arrest a colour.",
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "next": "h_greet"
+        },
+        {"id": "h_ins_f", "speaker": "guard_holt", "text": "Worried? I'm a guard. Worry's the uniform.", "next": "h_greet"}
+      ]
+    },
+    {
+      "id": "dlg_shepherd_bram",
+      "start": "b_done",
+      "nodes": [
+        {
+          "id": "b_done",
+          "speaker": "shepherd_bram",
+          "text": "The flock's sleeping easy, and so am I, first time in weeks. If you ever want a lamb named after you, just say the word.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_shepherd"}],
+          "fallback": "b_return",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_return",
+          "speaker": "shepherd_bram",
+          "text": "Is it done? Is he...?",
+          "conditions": [{"type": "QuestState", "key": "sq_shepherd", "value": "return"}],
+          "fallback": "b_greymane",
+          "choices": [{"text": "Greymane won't trouble your flock again.", "next": "b_ret2"}, {"text": "Not yet."}]
+        },
+        {
+          "id": "b_ret2",
+          "speaker": "shepherd_bram",
+          "text": "Poor old devil. He kept this valley's wolves honest for ten years, you know. It's not his fault the grey got him. *He sniffs.* Thank you. Truly.",
+          "outcomes": [{"type": "CompleteQuest", "key": "sq_shepherd"}],
+          "next": "b_done_end"
+        },
+        {
+          "id": "b_done_end",
+          "speaker": "shepherd_bram",
+          "text": "Take something for your trouble. Not a sheep. Something else.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_greymane",
+          "speaker": "shepherd_bram",
+          "text": "His den's just inside Whisperwood, under the big rocks back from the road. You'll smell it before you see it. Mind yourself — he's not called the old alpha for nothing.",
+          "conditions": [{"type": "QuestState", "key": "sq_shepherd", "value": "greymane"}],
+          "fallback": "b_report",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_report",
+          "speaker": "shepherd_bram",
+          "text": "You chased 'em off? All three? Bless you. But they'll be back. They're not hungry, see — they're scared. Running from something in the woods.",
+          "conditions": [{"type": "QuestState", "key": "sq_shepherd", "value": "report"}],
+          "fallback": "b_active",
+          "choices": [
+            {
+              "text": "Let me look at those tracks again.",
+              "check": {"skill": "Survival", "dc": 11, "success": "b_surv_s", "failure": "b_surv_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {
+              "text": "Wolves only run from bigger wolves.",
+              "next": "b_hunt",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "outcomes": [{"type": "GiveXP", "amount": 50}],
+              "tag": "HUNTER"
+            },
+            {"text": "What are they running from?", "next": "b_hunt"}
+          ]
+        },
+        {
+          "id": "b_surv_s",
+          "speaker": "shepherd_bram",
+          "text": "*You kneel. The prints are panicked, wide-spaced — and one set is huge, with a grey crust in each print like frost that never melts.* 'Greymane,' Bram whispers. 'The old alpha.' He presses a potion into your hand.",
+          "outcomes": [{"type": "GiveXP", "amount": 100}, {"type": "GiveItem", "key": "potion_lesser_healing", "amount": 1}],
+          "next": "b_hunt"
+        },
+        {"id": "b_surv_f", "speaker": "shepherd_bram", "text": "Mud, mostly. And sheep. Bram looks hopeful, then less hopeful.", "next": "b_hunt"},
+        {
+          "id": "b_hunt",
+          "speaker": "shepherd_bram",
+          "text": "There's an old alpha, Greymane, dens at the edge of Whisperwood. If he's gone grey like the rest, the pack'll follow him anywhere. Would you...? He was a good wolf, once. Put him to rest.",
+          "choices": [
+            {
+              "text": "I'll find him.",
+              "outcomes": [{"type": "SetQuestStage", "key": "sq_shepherd", "value": "greymane"}, {"type": "SetFlag", "key": "shepherd_hunt"}]
+            }
+          ]
+        },
+        {
+          "id": "b_active",
+          "speaker": "shepherd_bram",
+          "text": "They come at dusk into the far corner of the east pasture. Three of 'em, I think — though they look like thirty when you're one man with a crook.",
+          "conditions": [{"type": "QuestState", "key": "sq_shepherd", "value": "wolves"}],
+          "fallback": "b_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_greet",
+          "speaker": "shepherd_bram",
+          "text": "Oh! Hello. Sorry. Counting. Thirty-one sheep. Thirty. ...Thirty.",
+          "choices": [
+            {"text": "Is something wrong?", "next": "b_offer"},
+            {
+              "text": "That ewe's limping. Let me take a look.",
+              "check": {"skill": "Nature", "dc": 9, "success": "b_nat_s", "failure": "b_nat_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_offer",
+          "speaker": "shepherd_bram",
+          "text": "Wolves. They've been at the flock every night since the lanterns started failing. Lost three ewes already. I'm a shepherd, not a fighter. Would you see them off?",
+          "choices": [
+            {
+              "text": "I'll handle it.",
+              "next": "b_accept",
+              "outcomes": [{"type": "StartQuest", "key": "sq_shepherd"}, {"type": "SetFlag", "key": "shepherd_quest"}]
+            },
+            {"text": "Sorry, not now."}
+          ]
+        },
+        {
+          "id": "b_accept",
+          "speaker": "shepherd_bram",
+          "text": "Bless you. They gather in the far corner of the pasture, by the hay. Mind the gate — Daisy bites.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_nat_s",
+          "speaker": "shepherd_bram",
+          "text": "*You tease a thorn out of her hoof. She headbutts you, affectionately. Bram beams like a proud father.*",
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "next": "b_greet"
+        },
+        {"id": "b_nat_f", "speaker": "shepherd_bram", "text": "*She headbutts you. Not affectionately.*", "next": "b_greet"}
+      ]
+    },
+    {
+      "id": "dlg_child_nell",
+      "start": "n_done",
+      "nodes": [
+        {
+          "id": "n_done",
+          "speaker": "child_nell",
+          "text": "Moppet says thank you! He says it in jingles. That one meant 'thank you'. That one meant 'cake'.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_spirit_friend"}],
+          "fallback": "n_return",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "n_return",
+          "speaker": "child_nell",
+          "text": "Did you— is he— MOPPET!",
+          "conditions": [{"type": "QuestState", "key": "sq_spirit_friend", "value": "return"}],
+          "fallback": "n_active",
+          "choices": [{"text": "He was hiding under the glowing mushrooms. He's safe.", "next": "n_ret2"}]
+        },
+        {
+          "id": "n_ret2",
+          "speaker": "child_nell",
+          "text": "*A tiny spirit tumbles into Nell's arms with a jingle.* He was scared of the dark, he says. I told him I'm not scared of anything. ...I was a bit scared. This is my luckiest thing. You have it. You need it more.",
+          "outcomes": [{"type": "CompleteQuest", "key": "sq_spirit_friend"}],
+          "next": "n_ret3"
+        },
+        {
+          "id": "n_ret3",
+          "speaker": "child_nell",
+          "text": "And if you ever get scared, ring a bell. Somebody always comes.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "n_active",
+          "speaker": "child_nell",
+          "text": "Ring my bell where it's quiet, and he'll come. He likes mushrooms that glow and places where grown-ups never look. And honey cake. He REALLY likes honey cake.",
+          "conditions": [{"type": "QuestState", "key": "sq_spirit_friend", "value": "find"}],
+          "fallback": "n_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "n_greet",
+          "speaker": "child_nell",
+          "text": "Have you seen Moppet? He's small and green-ish and he's got a leaf on his head and he jingles. He ran away when the big lantern went out.",
+          "choices": [
+            {"text": "Who's Moppet?", "next": "n_who"},
+            {
+              "text": "You're scared too, aren't you?",
+              "check": {"skill": "Insight", "dc": 8, "success": "n_ins_s", "failure": "n_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "I'll look for him.", "next": "n_offer"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "n_who",
+          "speaker": "child_nell",
+          "text": "My spirit friend! Nearly every kid in Lanternvale has one. They live in the lantern-light. When it went dark he got scared and ran to the woods. I'm not allowed in the woods.",
+          "next": "n_offer"
+        },
+        {
+          "id": "n_ins_s",
+          "speaker": "child_nell",
+          "text": "...A bit. Don't tell Toby.",
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "next": "n_offer"
+        },
+        {"id": "n_ins_f", "speaker": "child_nell", "text": "I'm not scared of ANYTHING, says Nell, very loudly.", "next": "n_offer"},
+        {
+          "id": "n_offer",
+          "speaker": "child_nell",
+          "text": "Take my bell. Ring it where it's quiet, and he'll know you're my friend. Please find him?",
+          "choices": [
+            {
+              "text": "I'll bring him home.",
+              "next": "n_accept",
+              "outcomes": [{"type": "StartQuest", "key": "sq_spirit_friend"}, {"type": "GiveItem", "key": "nells_bell", "amount": 1}]
+            },
+            {"text": "Maybe later."}
+          ]
+        },
+        {
+          "id": "n_accept",
+          "speaker": "child_nell",
+          "text": "Thank you thank you THANK you. He likes honey cake, if you need to bribe him. I always need to bribe him.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_lamplighter_tobben",
+      "start": "t_done_friend",
+      "nodes": [
+        {
+          "id": "t_done_friend",
+          "speaker": "lamplighter_tobben",
+          "text": "I hung a lantern at the edge of Whisperwood, for the little thieves. Every morning there's a mushroom left on the post. Every morning I eat it. We've an understanding.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_wicks"}, {"type": "Flag", "key": "mosslings_befriended"}],
+          "fallback": "t_done",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_done",
+          "speaker": "lamplighter_tobben",
+          "text": "Every wick back in its lantern. Not that it matters while the Heart's dark... but it will matter, once it's lit. It will.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_wicks"}],
+          "fallback": "t_return",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_return",
+          "speaker": "lamplighter_tobben",
+          "text": "Did you find them? My wicks?",
+          "conditions": [{"type": "QuestState", "key": "sq_wicks", "value": "return"}],
+          "fallback": "t_active",
+          "choices": [
+            {
+              "text": "The Mosslings gave them back. They only took them to light a lantern of their own — they're scared of the Hollow too.",
+              "next": "t_ret_friend",
+              "conditions": [{"type": "HasItem", "key": "lantern_wick", "amount": 6}, {"type": "Flag", "key": "mosslings_befriended"}]
+            },
+            {"text": "Here. Six wicks, slightly nibbled.", "next": "t_ret", "conditions": [{"type": "HasItem", "key": "lantern_wick", "amount": 6}]},
+            {"text": "Not yet."}
+          ]
+        },
+        {
+          "id": "t_ret_friend",
+          "speaker": "lamplighter_tobben",
+          "text": "...A lantern of their own. Forty years I've shooed them off my stores, and they only wanted the same as the rest of us. I'll hang one for them at the forest edge. Light's for everyone.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "lantern_wick", "amount": 6},
+            {"type": "CompleteQuest", "key": "sq_wicks"},
+            {"type": "Approval", "key": "seren", "amount": 5},
+            {"type": "Approval", "key": "rook", "amount": 3}
+          ],
+          "next": "t_thanks"
+        },
+        {
+          "id": "t_ret",
+          "speaker": "lamplighter_tobben",
+          "text": "Slightly nibbled! They nibble everything. Thank you — I'll have these trimmed and back in their lanterns by nightfall.",
+          "outcomes": [{"type": "TakeItem", "key": "lantern_wick", "amount": 6}, {"type": "CompleteQuest", "key": "sq_wicks"}],
+          "next": "t_thanks"
+        },
+        {
+          "id": "t_thanks",
+          "speaker": "lamplighter_tobben",
+          "text": "Here. Lamplighter's wages, and a lamplighter's thanks.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_active",
+          "speaker": "lamplighter_tobben",
+          "text": "Little muddy leaf-shaped footprints, all over my stores. Mosslings! They camp just east of the Wayside Shrine. Six wicks, that's all I need. Don't let them talk you into a trade. They always win the trade.",
+          "conditions": [{"type": "QuestState", "key": "sq_wicks", "value": "gather"}],
+          "fallback": "t_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_greet",
+          "speaker": "lamplighter_tobben",
+          "text": "Ah! Mind the ladder. Forty years I've lit these lanterns, and I've never seen them go out on their own. Now they won't relight. And someone's been stealing my wicks besides.",
+          "choices": [
+            {"text": "Stealing wicks?", "next": "t_offer"},
+            {
+              "text": "Why won't they relight?",
+              "check": {"skill": "Arcana", "dc": 11, "success": "t_arc_s", "failure": "t_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_offer",
+          "speaker": "lamplighter_tobben",
+          "text": "Spirit-wicks — braided under the full moon, blessed at the shrine. The Mosslings have been pinching them. Fetch me back six and I'll make it worth your while.",
+          "choices": [
+            {"text": "I'll get your wicks back.", "next": "t_accept", "outcomes": [{"type": "StartQuest", "key": "sq_wicks"}]},
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "t_accept",
+          "speaker": "lamplighter_tobben",
+          "text": "Bless you. Their camp's in Whisperwood, just past the Wayside Shrine. Look for tiny tents and a lot of very guilty faces.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_arc_s",
+          "speaker": "lamplighter_tobben",
+          "text": "*You realise:* the flame isn't fire, it's spirit — it has to come down from the Heart Lantern. Tobben stares. 'Forty years, and nobody ever explained it that neatly.'",
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "next": "t_greet"
+        },
+        {
+          "id": "t_arc_f",
+          "speaker": "lamplighter_tobben",
+          "text": "'Damp?' you suggest. Tobben gives you a look that has outlasted forty winters.",
+          "next": "t_greet"
+        }
+      ]
+    },
+    {
+      "id": "dlg_postman_fennick",
+      "start": "f_done",
+      "nodes": [
+        {
+          "id": "f_done",
+          "speaker": "postman_fennick",
+          "text": "Every letter delivered! Well. Nearly every letter. One was addressed to 'the moon'. I'm still working on that one.",
+          "conditions": [{"type": "QuestComplete", "key": "sq_satchel"}],
+          "fallback": "f_deliver",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "f_deliver",
+          "speaker": "postman_fennick",
+          "text": "Did the Elder get Ishiro's letter? I keep thinking... if I'd not dropped it...",
+          "conditions": [{"type": "QuestState", "key": "sq_satchel", "value": "deliver"}],
+          "fallback": "f_early",
+          "choices": [{"text": "I'm taking it to her now.", "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "f_early",
+          "speaker": "postman_fennick",
+          "text": "That's— that's MY SATCHEL!",
+          "conditions": [{"type": "QuestNotStarted", "key": "sq_satchel"}, {"type": "HasItem", "key": "fennicks_satchel", "amount": 1}],
+          "fallback": "f_return",
+          "outcomes": [{"type": "StartQuest", "key": "sq_satchel"}, {"type": "SetQuestStage", "key": "sq_satchel", "value": "return"}],
+          "next": "f_return"
+        },
+        {
+          "id": "f_return",
+          "speaker": "postman_fennick",
+          "text": "My satchel! You found my satchel! Oh, it's sticky. Why is it sticky? No — don't tell me.",
+          "conditions": [{"type": "HasItem", "key": "fennicks_satchel", "amount": 1}],
+          "fallback": "f_active",
+          "choices": [
+            {"text": "Here you go.", "next": "f_ret2"},
+            {
+              "text": "(Slip a letter out to read before you hand it over.)",
+              "check": {"skill": "SleightOfHand", "dc": 12, "success": "f_peek_s", "failure": "f_peek_f"},
+              "once": true,
+              "tag": "SLEIGHTOFHAND"
+            }
+          ]
+        },
+        {
+          "id": "f_peek_s",
+          "speaker": "narrator",
+          "text": "You palm a letter sealed with grey wax: 'To Elder Maru, from the Old Shrine. URGENT.' The handwriting shakes. You slide it back before Fennick notices.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "peeked_letter"},
+            {"type": "Approval", "key": "aldric", "amount": -3},
+            {"type": "Approval", "key": "pip", "amount": 3}
+          ],
+          "next": "f_ret2"
+        },
+        {
+          "id": "f_peek_f",
+          "speaker": "postman_fennick",
+          "text": "Ah-ah! *He catches your wrist.* Lanternvale Post. Sacred trust. *He looks more hurt than angry.*",
+          "outcomes": [{"type": "Approval", "key": "aldric", "amount": -2}],
+          "next": "f_ret2"
+        },
+        {
+          "id": "f_ret2",
+          "speaker": "postman_fennick",
+          "text": "*He sorts the letters with shaking hands.* Seed catalogue, seed catalogue, love letter — not mine, sadly — and... oh no. This one's from the Old Shrine. Keeper Ishiro, to the Elder. It's three weeks late.",
+          "outcomes": [{"type": "TakeItem", "key": "fennicks_satchel", "amount": 1}],
+          "next": "f_ret3"
+        },
+        {
+          "id": "f_ret3",
+          "speaker": "postman_fennick",
+          "text": "I can't bring it to her. Three weeks late, from the shrine, with the lanterns failing? She'll look at me and I'll know. ...Would you take it? Please?",
+          "choices": [
+            {"text": "I'll take it to her.", "next": "f_take"},
+            {
+              "text": "It isn't your fault, Fennick. A spider took it, not you.",
+              "check": {"skill": "Insight", "dc": 12, "success": "f_ins_s", "failure": "f_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            }
+          ]
+        },
+        {
+          "id": "f_ins_s",
+          "speaker": "postman_fennick",
+          "text": "*He laughs, a bit wetly.* Spiders. Of all the things. *He straightens his cap.* You're right. I'll come by later and tell her myself. But you go first. Please.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 3}, {"type": "GiveXP", "amount": 50}],
+          "next": "f_take"
+        },
+        {"id": "f_ins_f", "speaker": "postman_fennick", "text": "*He only shakes his head and presses the letter into your hands.*", "next": "f_take"},
+        {
+          "id": "f_take",
+          "speaker": "postman_fennick",
+          "text": "Thank you. Under Old Kusu, she'll be — she always is, this time of day.",
+          "outcomes": [{"type": "GiveItem", "key": "ishiro_letter", "amount": 1}, {"type": "SetQuestStage", "key": "sq_satchel", "value": "deliver"}],
+          "next": "f_take_end"
+        },
+        {"id": "f_take_end", "speaker": "postman_fennick", "text": "And... sorry. To her. From me.", "choices": [{"text": "Goodbye."}]},
+        {
+          "id": "f_active",
+          "speaker": "postman_fennick",
+          "text": "It's in the spiders' hollow, east of the Old Bridge. I heard it go. Rustle-rustle-drag. I'll hear it in my sleep.",
+          "conditions": [{"type": "QuestState", "key": "sq_satchel", "value": "find"}],
+          "fallback": "f_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "f_greet",
+          "speaker": "postman_fennick",
+          "text": "Fennick, Royal Lanternvale Post! Well. Lanternvale Post. Well. Me.",
+          "choices": [{"text": "You look shaken.", "next": "f_offer"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "f_offer",
+          "speaker": "postman_fennick",
+          "text": "A boar charged me on the Whisperwood road! I dropped the satchel and ran, and when I looked back — spiders. Big ones. They dragged it off to their hollow. Every letter in the valley, in a spider's larder.",
+          "choices": [
+            {"text": "I'll get it back.", "next": "f_accept", "outcomes": [{"type": "StartQuest", "key": "sq_satchel"}]},
+            {"text": "Good luck with that."}
+          ]
+        },
+        {
+          "id": "f_accept",
+          "speaker": "postman_fennick",
+          "text": "Oh, thank you! If they've eaten the seed catalogues, don't tell Bram. He's been waiting for the turnips.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_villager_june",
+      "start": "j_post",
+      "nodes": [
+        {
+          "id": "j_post",
+          "speaker": "villager_june",
+          "text": "The marigolds are blooming twice over! I'm putting them on every lantern in the valley. Twice.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "j_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "j_greet",
+          "speaker": "villager_june",
+          "text": "Marigolds for the lanterns? They like marigolds best. Don't ask me how I know. ...I talk to them.",
+          "choices": [
+            {"text": "Do they talk back?", "next": "j_talk"},
+            {
+              "text": "Your flowers are wilting at the edges.",
+              "check": {"skill": "Nature", "dc": 10, "success": "j_nat_s", "failure": "j_nat_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "j_talk",
+          "speaker": "villager_june",
+          "text": "Not in words. In warmth. Lately they've gone so quiet I keep checking they're still there.",
+          "next": "j_greet"
+        },
+        {
+          "id": "j_nat_s",
+          "speaker": "villager_june",
+          "text": "*She looks closer.* Grey at the tips... You're right. The Hollow's in the meadow now. *She tucks a marigold into your collar.* For luck. Keep it in your heart, if not in water.",
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "next": "j_greet"
+        },
+        {
+          "id": "j_nat_f",
+          "speaker": "villager_june",
+          "text": "They're just tired, June says, hugging her basket a little tighter.",
+          "next": "j_greet"
+        }
+      ]
+    },
+    {
+      "id": "dlg_villager_hollis",
+      "start": "hl_post",
+      "nodes": [
+        {
+          "id": "hl_post",
+          "speaker": "villager_hollis",
+          "text": "Hear that creaking? She's turning! First wind in a month, the moment the lanterns lit. Flour for the festival cakes! I may cry. I may already be crying.",
+          "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
+          "fallback": "hl_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "hl_greet",
+          "speaker": "villager_hollis",
+          "text": "The windmill only turns when the lanterns are lit. Daft, isn't it? But it's true. No wind since the great lantern went out — the sails just hang there.",
+          "choices": [{"text": "Why would a windmill need lanterns?", "next": "hl_why"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "hl_why",
+          "speaker": "villager_hollis",
+          "text": "Because the wind in this valley's a spirit, same as everything else here. Ask Fennel, she'll explain it better. And longer. Much longer.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_child_toby",
+      "start": "ty_greet",
+      "nodes": [
+        {
+          "id": "ty_greet",
+          "speaker": "child_toby",
+          "text": "I'm a knight! This is my sword. Its name is Stick.",
+          "choices": [
+            {"text": "A fine name for a sword.", "next": "ty_name"},
+            {
+              "text": "Kneel, Toby. I dub thee Knight of the Well.",
+              "next": "ty_knight",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Is Nell alright?", "next": "ty_nell", "conditions": [{"type": "NotFlag", "key": "moppet_found"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "ty_name",
+          "speaker": "child_toby",
+          "text": "It's a FIERCE name. Stick has slain eleven dragons. They were mostly dandelions. One was a cabbage.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "ty_knight",
+          "speaker": "child_toby",
+          "text": "*Toby kneels so fast he falls over.* I'M A REAL KNIGHT, *he informs the entire village.* STICK, WE'RE REAL.",
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "ty_nell",
+          "speaker": "child_toby",
+          "text": "She lost Moppet. She says she's not sad but she is. I gave her my best beetle and she's still sad. That was my BEST beetle.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_rusk_reformed",
+      "start": "rr_greet",
+      "nodes": [
+        {
+          "id": "rr_greet",
+          "speaker": "rusk",
+          "text": "Honest work. Feels strange. Good strange.",
+          "choices": [
+            {"text": "How are you settling in?", "next": "rr_settle"},
+            {"text": "You still owe me a toll refund.", "next": "rr_coin", "once": true},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "rr_settle",
+          "speaker": "rusk",
+          "text": "Dorrit feeds us till we can't move, and Hollis says my back's worth two mules. Once the lanterns are lit, Stoneford's fields'll come back. We'll go home in spring.",
+          "next": "rr_greet"
+        },
+        {
+          "id": "rr_coin",
+          "speaker": "rusk",
+          "text": "Ha! *He digs in his coat.* Here. The last coin I didn't spend on seed. Kept it for luck. Reckon you're luckier than me. Plant something with it.",
+          "outcomes": [{"type": "GiveItem", "key": "farmers_lucky_coin", "amount": 1}],
+          "next": "rr_greet"
+        }
+      ]
+    }
+  ]
+}

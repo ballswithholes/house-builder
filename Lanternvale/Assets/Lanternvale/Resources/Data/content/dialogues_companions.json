@@ -1,0 +1,1311 @@
+{
+  "_note": "Companion recruit and party dialogues (CompanionDef.recruitDialogue). The same dialogue is used when talking to a companion who is already in the party.",
+  "dialogues": [
+    {
+      "id": "dlg_recruit_kael",
+      "start": "ka_party",
+      "nodes": [
+        {
+          "id": "ka_party",
+          "speaker": "kael",
+          "text": "*Kael shifts the greatsword on his shoulder.* We're burning daylight.",
+          "conditions": [{"type": "InParty", "key": "kael"}],
+          "fallback": "ka_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "ka_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "ka_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Tell me about Isolde.", "next": "ka_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ka_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "kael_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "ka_banter_post",
+          "speaker": "kael",
+          "text": "The lanterns are lit, and she came home. *Something in his scarred face eases.* I kept my promise. Strange. I thought it would feel heavier.",
+          "next": "ka_party_hub"
+        },
+        {
+          "id": "ka_banter",
+          "speaker": "kael",
+          "text": "I've walked this road before. It ends at a stair, and the stair ends at a choice. This time I'd rather you were the one making it.",
+          "next": "ka_party_hub"
+        },
+        {
+          "id": "ka_lore",
+          "speaker": "kael",
+          "text": "She laughed at everything. Bad weather, bad food, me. Even the stair. *A pause.* She didn't laugh at the top.",
+          "next": "ka_party_hub"
+        },
+        {
+          "id": "ka_party_hub",
+          "speaker": "kael",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Tell me about Isolde.", "next": "ka_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ka_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "kael_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "ka_dismissed", "speaker": "kael", "text": "Hmph. I'll be at the Sleepy Lantern. Don't take long."},
+        {
+          "id": "ka_met",
+          "speaker": "kael",
+          "text": "Back again. Changed your mind, or lost your way?",
+          "conditions": [{"type": "Flag", "key": "kael_met"}],
+          "fallback": "ka1",
+          "choices": [{"text": "Come with me.", "next": "ka_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "ka1",
+          "speaker": "narrator",
+          "text": "*A broad man in a weathered red coat sits on the inn's bench, a greatsword propped beside him like an old friend. One eye is closed beneath a pale scar; the other watches the road east.*",
+          "outcomes": [{"type": "SetFlag", "key": "kael_met"}],
+          "next": "ka2"
+        },
+        {
+          "id": "ka2",
+          "speaker": "kael",
+          "text": "If you're here about the lanterns, the Elder's under the tree. If you're here about the bench, find another.",
+          "choices": [
+            {"text": "Who are you waiting for?", "next": "ka_wait"},
+            {
+              "text": "You're not resting. You're keeping watch.",
+              "check": {"skill": "Insight", "dc": 12, "success": "ka_ins_s", "failure": "ka_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "That blade's seen more winters than this village.",
+              "next": "ka_warrior",
+              "conditions": [{"type": "Class", "key": "Warrior"}],
+              "tag": "WARRIOR"
+            },
+            {"text": "I'm going up to the Old Shrine. Come with me.", "next": "ka_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "ka2b",
+          "speaker": "kael",
+          "text": "*He waits for you to say something worth hearing.*",
+          "choices": [
+            {"text": "Who are you waiting for?", "next": "ka_wait"},
+            {
+              "text": "You're not resting. You're keeping watch.",
+              "check": {"skill": "Insight", "dc": 12, "success": "ka_ins_s", "failure": "ka_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "I'm going up to the Old Shrine. Come with me.", "next": "ka_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "ka_wait",
+          "speaker": "kael",
+          "text": "Someone who'll come down that road when she's ready. Or won't. *He sips from a battered tea flask.* That's all you're getting.",
+          "next": "ka2b"
+        },
+        {
+          "id": "ka_ins_s",
+          "speaker": "kael",
+          "text": "*He's quiet a long moment.* Ten years ago I walked a summoner up to the Old Shrine. I walked back down alone. Her daughter's on the same road now. I made a promise.",
+          "outcomes": [{"type": "SetFlag", "key": "kael_confided"}, {"type": "Approval", "key": "kael", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "ka_pitch_after"
+        },
+        {"id": "ka_ins_f", "speaker": "kael", "text": "*He looks at you for a long moment.* I'm resting my legs. *He is not.*", "next": "ka2b"},
+        {
+          "id": "ka_warrior",
+          "speaker": "kael",
+          "text": "So have I. *He studies the way you stand.* You hold yours like you mean it. Good. Most don't.",
+          "outcomes": [{"type": "Approval", "key": "kael", "amount": 5}],
+          "next": "ka_pitch_after"
+        },
+        {"id": "ka_pitch", "speaker": "kael", "text": "*He grunts.* The shrine. Everyone's going up the shrine this year.", "next": "ka_pitch_after"},
+        {
+          "id": "ka_pitch_after",
+          "speaker": "kael",
+          "text": "If you're climbing that mountain, you'll want someone who's been. I won't promise to be pleasant.",
+          "choices": [
+            {"text": "Pleasant's overrated. Welcome aboard.", "next": "ka_join", "outcomes": [{"type": "Approval", "key": "kael", "amount": 3}]},
+            {
+              "text": "Seren's on the pilgrim road. She could use a guardian.",
+              "next": "ka_seren",
+              "conditions": [{"type": "Flag", "key": "seren_met"}]
+            },
+            {
+              "text": "Whatever happened ten years ago, you don't have to carry it up the stair alone.",
+              "check": {"skill": "Persuasion", "dc": 13, "success": "ka_pers_s", "failure": "ka_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {"text": "Maybe later."}
+          ]
+        },
+        {
+          "id": "ka_seren",
+          "speaker": "kael",
+          "text": "*He's on his feet before you finish.* Then we're late. Move.",
+          "outcomes": [{"type": "Approval", "key": "kael", "amount": 10}],
+          "next": "ka_join"
+        },
+        {
+          "id": "ka_pers_s",
+          "speaker": "kael",
+          "text": "*A long breath out.* ...No. I suppose I don't.",
+          "outcomes": [{"type": "Approval", "key": "kael", "amount": 8}],
+          "next": "ka_join"
+        },
+        {"id": "ka_pers_f", "speaker": "kael", "text": "Words. *But he stands up anyway.* Fine. Someone ought to keep you alive.", "next": "ka_join"},
+        {
+          "id": "ka_join",
+          "speaker": "narrator",
+          "text": "*Kael shoulders the greatsword and falls in beside you without another word.*",
+          "outcomes": [{"type": "Recruit", "key": "kael"}, {"type": "SetFlag", "key": "kael_recruited"}, {"type": "SetFlag", "key": "kael_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_aldric",
+      "start": "al_party",
+      "nodes": [
+        {
+          "id": "al_party",
+          "speaker": "aldric",
+          "text": "Is this the part where we have a meaningful conversation? I've been practising my thoughtful face. *He demonstrates. It is not thoughtful.*",
+          "conditions": [{"type": "InParty", "key": "aldric"}],
+          "fallback": "al_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "al_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "al_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Tell me about your family.", "next": "al_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "al_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "aldric_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "al_banter_post",
+          "speaker": "aldric",
+          "text": "We saved a whole VALLEY. Do you think they'll write a ballad? I've drafted one. Forty verses, and they all rhyme with 'Aldric'. Nothing rhymes with 'Aldric'. It's been a struggle.",
+          "next": "al_party_hub"
+        },
+        {
+          "id": "al_banter",
+          "speaker": "aldric",
+          "text": "Brilliant! Terrifying! Mostly brilliant. I've only fallen over twice today, which is a personal best.",
+          "next": "al_party_hub"
+        },
+        {
+          "id": "al_lore",
+          "speaker": "aldric",
+          "text": "The Sunmeres! Big house, bigger expectations, five older brothers who were better at everything. I'm the one who left to become a legend. Technically I ran away. Gloriously.",
+          "next": "al_party_hub"
+        },
+        {
+          "id": "al_party_hub",
+          "speaker": "aldric",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Tell me about your family.", "next": "al_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "al_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "aldric_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "al_dismissed", "speaker": "aldric", "text": "Right! I'll be by the well, being heroic in a standing-still sort of way."},
+        {
+          "id": "al_met",
+          "speaker": "aldric",
+          "text": "You're back! I knew it. Destiny! Or you forgot something.",
+          "conditions": [{"type": "Flag", "key": "aldric_met"}],
+          "fallback": "al1",
+          "choices": [{"text": "Come with me.", "next": "al_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "al1",
+          "speaker": "narrator",
+          "text": "*A young knight in a gold tabard is practising flourishes with a warhammer, narrating under his breath.* '...and bold Sir Aldric, undaunted, smote the—' *He notices you and nearly drops it.*",
+          "outcomes": [{"type": "SetFlag", "key": "aldric_met"}],
+          "next": "al2"
+        },
+        {
+          "id": "al2",
+          "speaker": "aldric",
+          "text": "Hello! Aldric Sunmere, knight-errant, slayer of — well, nothing yet, but I'm extremely ready. Are you a hero? You look like a hero. You've got the boots.",
+          "choices": [
+            {"text": "I'm going up to the Old Shrine to fix the lanterns.", "next": "al_quest"},
+            {
+              "text": "That's a line from 'The Lay of Sir Gallant'. The chapbook with the dragon on the cover.",
+              "check": {"skill": "History", "dc": 13, "success": "al_hist_s", "failure": "al_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {
+              "text": "Another servant of the Light! Walk with me.",
+              "next": "al_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "You'll get yourself killed swinging that like a cart handle.",
+              "check": {"skill": "Intimidation", "dc": 10, "success": "al_int_s", "failure": "al_int_f"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {"text": "Good luck with... all that."}
+          ]
+        },
+        {
+          "id": "al_quest",
+          "speaker": "aldric",
+          "text": "A quest! An actual quest, with a shrine and a curse and probably a monster! *He seizes your hand and pumps it.* I'm coming. I mean — may I come? I'm coming.",
+          "next": "al_offer"
+        },
+        {
+          "id": "al_hist_s",
+          "speaker": "aldric",
+          "text": "You've READ it! Nobody's read it! *He beams.* I know it's rubbish. The author's a cheesemonger from Velmora. But Sir Gallant never gave up, and I liked that.",
+          "outcomes": [{"type": "Approval", "key": "aldric", "amount": 8}, {"type": "GiveXP", "amount": 50}],
+          "next": "al_offer"
+        },
+        {
+          "id": "al_hist_f",
+          "speaker": "aldric",
+          "text": "Aldric frowns. 'It's from my own epic, actually. Which I'm writing. Currently.'",
+          "next": "al_offer"
+        },
+        {
+          "id": "al_paladin",
+          "speaker": "aldric",
+          "text": "Another paladin! Two of us! That's not a party, that's a BALLAD.",
+          "outcomes": [{"type": "Approval", "key": "aldric", "amount": 8}],
+          "next": "al_offer"
+        },
+        {
+          "id": "al_int_s",
+          "speaker": "aldric",
+          "text": "*He looks at his grip, then at yours, and adjusts.* ...Oh. Oh, that's MUCH better. You've probably saved my life already. I'm following you now. That's how it works.",
+          "outcomes": [{"type": "Approval", "key": "aldric", "amount": 5}],
+          "next": "al_offer"
+        },
+        {"id": "al_int_f", "speaker": "aldric", "text": "Then I'll die gloriously! says Aldric, cheerfully missing the point.", "next": "al_offer"},
+        {
+          "id": "al_offer",
+          "speaker": "aldric",
+          "text": "So? Shall I come along? I'm good with a hammer, better with a shield, and excellent at morale.",
+          "choices": [{"text": "Welcome aboard, Sir Aldric.", "next": "al_join"}, {"text": "Not right now.", "next": "al_wait"}]
+        },
+        {"id": "al_wait", "speaker": "aldric", "text": "Right! I'll be here. Practising. Heroically."},
+        {
+          "id": "al_join",
+          "speaker": "narrator",
+          "text": "*Aldric whoops, salutes, very nearly brains himself with the hammer, and falls into step beside you.*",
+          "outcomes": [{"type": "Recruit", "key": "aldric"}, {"type": "SetFlag", "key": "aldric_recruited"}, {"type": "SetFlag", "key": "aldric_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_pip",
+      "start": "pi_party",
+      "nodes": [
+        {
+          "id": "pi_party",
+          "speaker": "pip",
+          "text": "Ooh, are we talking? I love talking. It's like walking, but with your face.",
+          "conditions": [{"type": "InParty", "key": "pip"}],
+          "fallback": "pi_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "pi_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "pi_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "What's with the goggles?", "next": "pi_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "pi_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "pip_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "pi_banter_post",
+          "speaker": "pip",
+          "text": "We fixed the sky-lights! The whole valley's glowing! ...I may have pocketed a tiny bit of the glow. Kidding! Mostly.",
+          "next": "pi_party_hub"
+        },
+        {
+          "id": "pi_banter",
+          "speaker": "pip",
+          "text": "So the Hollow's... not ghosts, right? Definitely not ghosts. I'm fine. This is my fine face.",
+          "next": "pi_party_hub"
+        },
+        {
+          "id": "pi_lore",
+          "speaker": "pip",
+          "text": "Cogwright goggles! Three lenses: one for far, one for near, and one for seeing if something's worth nicking. That one's always on.",
+          "next": "pi_party_hub"
+        },
+        {
+          "id": "pi_party_hub",
+          "speaker": "pip",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "What's with the goggles?", "next": "pi_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "pi_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "pip_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "pi_dismissed", "speaker": "pip", "text": "Aww. Fine! I'll be by the junk cart, fixing things that aren't broken yet."},
+        {
+          "id": "pi_met",
+          "speaker": "pip",
+          "text": "Hey, it's you again! Need a scavenger? I come with gadgets AND opinions!",
+          "conditions": [{"type": "Flag", "key": "pip_met"}],
+          "fallback": "pi1",
+          "choices": [{"text": "Come with me.", "next": "pi_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "pi1",
+          "speaker": "narrator",
+          "text": "*A girl in enormous goggles is elbow-deep in a cart full of scrap, humming. Gears, springs and a teapot fly over her shoulder.*",
+          "outcomes": [{"type": "SetFlag", "key": "pip_met"}],
+          "next": "pi2"
+        },
+        {
+          "id": "pi2",
+          "speaker": "pip",
+          "text": "Oh! Hi! Pip. Cogwright caravans — scavenger first class, gadgeteer second class, thief— er, finder of lost things, third class. You look like you're going somewhere exciting!",
+          "choices": [
+            {"text": "I'm going to the Old Shrine. There may be treasure.", "next": "pi_treasure"},
+            {
+              "text": "(Try to lift the spanner from her belt.)",
+              "check": {"skill": "SleightOfHand", "dc": 13, "success": "pi_soh_s", "failure": "pi_soh_f"},
+              "once": true,
+              "tag": "SLEIGHTOFHAND"
+            },
+            {
+              "text": "Finder of lost things? Same. Want to find some together?",
+              "next": "pi_rogue",
+              "conditions": [{"type": "Class", "key": "Rogue"}],
+              "tag": "ROGUE"
+            },
+            {
+              "text": "That gadget in your hand is backwards.",
+              "check": {"skill": "Investigation", "dc": 12, "success": "pi_inv_s", "failure": "pi_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "I found this shiny button. Want it?",
+              "next": "pi_button",
+              "conditions": [{"type": "HasItem", "key": "junk_shiny_button", "amount": 1}],
+              "outcomes": [{"type": "TakeItem", "key": "junk_shiny_button", "amount": 1}, {"type": "Approval", "key": "pip", "amount": 10}]
+            },
+            {"text": "Bye, Pip."}
+          ]
+        },
+        {
+          "id": "pi_treasure",
+          "speaker": "pip",
+          "text": "Treasure? At a shrine? Old shrines ALWAYS have treasure! ...Wait. Old shrines also always have ghosts. *She swallows.* Are there ghosts?",
+          "choices": [{"text": "...No?", "next": "pi_lie"}, {"text": "Hollowed spirits, yes. I won't lie to you.", "next": "pi_truth"}]
+        },
+        {
+          "id": "pi_lie",
+          "speaker": "pip",
+          "text": "You're a terrible liar and I love you for trying. Okay! Ghosts! Fine! You go first.",
+          "outcomes": [{"type": "Approval", "key": "pip", "amount": 3}],
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_truth",
+          "speaker": "pip",
+          "text": "Okay. Okay okay okay. Honest. I like honest. I hate ghosts, but I like honest.",
+          "outcomes": [{"type": "Approval", "key": "pip", "amount": 5}],
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_soh_s",
+          "speaker": "pip",
+          "text": "*Your fingers close on the spanner — and find a second spanner already in your pocket.* 'Swapsies!' Pip crows. 'You're good. I'm better. We should team up!'",
+          "outcomes": [{"type": "Approval", "key": "pip", "amount": 8}],
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_soh_f",
+          "speaker": "pip",
+          "text": "Nope! *Her hand clamps on your wrist without her even looking up.* Seven out of ten. Lovely technique, terrible timing.",
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_rogue",
+          "speaker": "pip",
+          "text": "A fellow finder! *She fist-bumps you.* Ooh, we're going to find SO many things.",
+          "outcomes": [{"type": "Approval", "key": "pip", "amount": 8}],
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_inv_s",
+          "speaker": "pip",
+          "text": "Is it? *She flips it. It whirrs, sparks, and pours a cup of tea.* IT WAS! You're a genius! We're a team now. I've decided.",
+          "outcomes": [{"type": "Approval", "key": "pip", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_inv_f",
+          "speaker": "pip",
+          "text": "It's MEANT to be backwards, Pip says, and it explodes, very gently, in a puff of soot. Mostly meant to be.",
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_button",
+          "speaker": "pip",
+          "text": "A BUTTON! Look at it! It's so SHINY! I'm keeping it forever. And I'm coming with you forever. Or at least until lunch.",
+          "next": "pi_offer"
+        },
+        {
+          "id": "pi_offer",
+          "speaker": "pip",
+          "text": "So! Want a scavenger? I pick locks, I spot traps, I make tea with explosives. Partly with explosives.",
+          "choices": [{"text": "You're hired.", "next": "pi_join"}, {"text": "Maybe later.", "next": "pi_wait"}]
+        },
+        {"id": "pi_wait", "speaker": "pip", "text": "I'll be here! Probably! If not, check the junk."},
+        {
+          "id": "pi_join",
+          "speaker": "narrator",
+          "text": "*Pip snaps her goggles down over her eyes and bounces into line beside you.*",
+          "outcomes": [{"type": "Recruit", "key": "pip"}, {"type": "SetFlag", "key": "pip_recruited"}, {"type": "SetFlag", "key": "pip_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_rook",
+      "start": "ro_party",
+      "nodes": [
+        {
+          "id": "ro_party",
+          "speaker": "rook",
+          "text": "Tide's happy, I'm happy. Long walk, good company, monsters for exercise. Life's simple, friend.",
+          "conditions": [{"type": "InParty", "key": "rook"}],
+          "fallback": "ro_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "ro_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "ro_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Tell me about ringball.", "next": "ro_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ro_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "rook_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "ro_banter_post",
+          "speaker": "rook",
+          "text": "Lanterns are lit, the woods are singing, and Tide caught a fish nobody believes was that big. Best season ever, friend. Best season ever.",
+          "next": "ro_party_hub"
+        },
+        {
+          "id": "ro_banter",
+          "speaker": "rook",
+          "text": "You hear the woods? Too quiet. Back home we say a quiet reef is holding its breath. I don't like it, friend.",
+          "next": "ro_party_hub"
+        },
+        {
+          "id": "ro_lore",
+          "speaker": "rook",
+          "text": "Best game in the world! Two teams, one ring, a lot of water and no rules about tackling. I captained the Saltreach Gulls three seasons. Lost a tooth in the final. Worth it!",
+          "next": "ro_party_hub"
+        },
+        {
+          "id": "ro_party_hub",
+          "speaker": "rook",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Tell me about ringball.", "next": "ro_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ro_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "rook_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "ro_dismissed", "speaker": "rook", "text": "Alright! Tide and I'll be back at the camp. Shout if you need a strong arm."},
+        {
+          "id": "ro_met",
+          "speaker": "rook",
+          "text": "Back again, friend! Tide remembers you — that's his remembering wag.",
+          "conditions": [{"type": "Flag", "key": "rook_met"}],
+          "fallback": "ro1",
+          "choices": [{"text": "Come with me.", "next": "ro_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "ro1",
+          "speaker": "narrator",
+          "text": "*A huge, sun-browned man with beaded hair is grilling a fish over a campfire. A grey wolf with one white ear lies beside him, tail thumping.*",
+          "outcomes": [{"type": "SetFlag", "key": "rook_met"}],
+          "next": "ro2"
+        },
+        {
+          "id": "ro2",
+          "speaker": "rook",
+          "text": "Ho, friend! Sit, sit — fish is nearly done. I'm Rook, from the Saltreach Isles, and this handsome devil is Tide. Don't mind him. He only bites fish, and people I point at.",
+          "choices": [
+            {"text": "What's an islander doing in Whisperwood?", "next": "ro_why"},
+            {
+              "text": "(Catch the ball he suddenly lobs at your head.)",
+              "check": {"skill": "Athletics", "dc": 12, "success": "ro_ath_s", "failure": "ro_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "Those tracks by your camp aren't Tide's. Something's been circling.",
+              "check": {"skill": "Survival", "dc": 11, "success": "ro_surv_s", "failure": "ro_surv_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {
+              "text": "A fine wolf. Strong shoulders, kind eyes.",
+              "next": "ro_hunter",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "tag": "HUNTER"
+            },
+            {"text": "The Hollow's spreading. I'm heading deeper in.", "next": "ro_hollow"},
+            {"text": "Enjoy your fish."}
+          ]
+        },
+        {
+          "id": "ro_why",
+          "speaker": "rook",
+          "text": "Came looking for the best fishing in the world! Found it, too — the river past the Old Bridge. Then the grey came, and the fish went grey, and Tide won't eat them. Neither will I.",
+          "next": "ro_hollow"
+        },
+        {
+          "id": "ro_ath_s",
+          "speaker": "rook",
+          "text": "*You snatch it out of the air one-handed.* HA! Reflexes! You'd make a fine ringball player, friend. I'd put you on the wing.",
+          "outcomes": [{"type": "Approval", "key": "rook", "amount": 8}],
+          "next": "ro_offer"
+        },
+        {
+          "id": "ro_ath_f",
+          "speaker": "rook",
+          "text": "*The ball bonks you on the forehead. Tide wags apologetically.* Ahh, sorry, sorry! Habit! Back home that's how we say hello.",
+          "next": "ro_offer"
+        },
+        {
+          "id": "ro_surv_s",
+          "speaker": "rook",
+          "text": "*Rook's grin fades.* Aye. Big one, and grey. Came by three nights running. Tide's been sleeping with one eye open, and so have I. *He looks at you with new respect.*",
+          "outcomes": [{"type": "Approval", "key": "rook", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "ro_hollow"
+        },
+        {"id": "ro_surv_f", "speaker": "rook", "text": "Those are mine, says Rook. I walk funny after beans.", "next": "ro_hollow"},
+        {
+          "id": "ro_hunter",
+          "speaker": "rook",
+          "text": "Isn't he? *Rook beams like a proud father.* Raised him from a pup. He's smarter than me, but don't tell him.",
+          "outcomes": [{"type": "Approval", "key": "rook", "amount": 8}],
+          "next": "ro_offer"
+        },
+        {
+          "id": "ro_hollow",
+          "speaker": "rook",
+          "text": "This grey — it's in the river, the trees, the beasts. Back home, when the reef goes sick, everyone pulls together. Nobody's pulling together here. Everyone's just scared.",
+          "next": "ro_offer"
+        },
+        {
+          "id": "ro_offer",
+          "speaker": "rook",
+          "text": "So how about it? You need a bow, a strong back and a wolf who's better than both? We're yours, friend.",
+          "choices": [{"text": "Welcome aboard, Rook. And Tide.", "next": "ro_join"}, {"text": "Not just yet.", "next": "ro_wait"}]
+        },
+        {"id": "ro_wait", "speaker": "rook", "text": "Fish'll be here. So will we."},
+        {
+          "id": "ro_join",
+          "speaker": "narrator",
+          "text": "*Rook stamps out the fire, slings his bow over his shoulder and whistles. Tide bounds to his side, tail up like a flag.*",
+          "outcomes": [{"type": "Recruit", "key": "rook"}, {"type": "SetFlag", "key": "rook_recruited"}, {"type": "SetFlag", "key": "rook_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_seren",
+      "start": "se_party",
+      "nodes": [
+        {
+          "id": "se_party",
+          "speaker": "seren",
+          "text": "*Her ringed staff chimes softly as she walks.* Is everything alright? You look like you're carrying something heavy.",
+          "conditions": [{"type": "InParty", "key": "seren"}],
+          "fallback": "se_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "se_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "se_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Tell me about your pilgrimage.", "next": "se_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "se_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "seren_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "se_banter_post",
+          "speaker": "seren",
+          "text": "*She looks up at the lanterns. Her eyes are wet, and she is smiling.* I came up this road to end my pilgrimage. I think I've only just begun it.",
+          "next": "se_party_hub"
+        },
+        {
+          "id": "se_banter",
+          "speaker": "seren",
+          "text": "My mother walked this road ten years ago. I keep finding her in it — a ribbon on a branch, a prayer scratched into a stone. I think she wanted me to know she wasn't afraid. ...I am, a little.",
+          "next": "se_party_hub"
+        },
+        {
+          "id": "se_lore",
+          "speaker": "seren",
+          "text": "A summoner visits every shrine in the valley and rekindles its lantern before she climbs to the Heart. I've lit six. The Wayside lantern wouldn't take. None will, now, until the Heart burns again.",
+          "next": "se_party_hub"
+        },
+        {
+          "id": "se_party_hub",
+          "speaker": "seren",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Tell me about your pilgrimage.", "next": "se_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "se_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "seren_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "se_dismissed", "speaker": "seren", "text": "Of course. I'll wait at the Wayside Shrine. Komorebi likes the company."},
+        {
+          "id": "se_met",
+          "speaker": "seren",
+          "text": "You came back. *She smiles.* Komorebi said you would.",
+          "conditions": [{"type": "Flag", "key": "seren_met"}],
+          "fallback": "se1",
+          "choices": [{"text": "Come with me.", "next": "se_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "se1",
+          "speaker": "narrator",
+          "text": "*A young woman in pale blue summoner's robes kneels before the dark Wayside lantern, a ringed staff across her knees. Her hair is dark, with a single white streak at the temple.*",
+          "outcomes": [{"type": "SetFlag", "key": "seren_met"}],
+          "next": "se2"
+        },
+        {
+          "id": "se2",
+          "speaker": "seren",
+          "text": "Oh! I'm sorry, I didn't hear you. I'm Seren. I'm a summoner, on pilgrimage to rekindle the shrines. *She glances at the lantern.* It isn't going very well.",
+          "choices": [
+            {"text": "Why won't it light?", "next": "se_why"},
+            {
+              "text": "(Kneel beside her and pray with her.)",
+              "check": {"skill": "Religion", "dc": 12, "success": "se_rel_s", "failure": "se_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "You're afraid of what's waiting at the top of the stair.",
+              "check": {"skill": "Insight", "dc": 13, "success": "se_ins_s", "failure": "se_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Kael is with me.", "next": "se_kael", "conditions": [{"type": "InParty", "key": "kael"}]},
+            {"text": "I'm going up to the Old Shrine too.", "next": "se_together"}
+          ]
+        },
+        {
+          "id": "se_why",
+          "speaker": "seren",
+          "text": "The little shrines borrow their light from the Heart Lantern, up the stair. If the Heart is failing, nothing I do down here will hold. *She squares her shoulders.* So I have to go up. That was always the plan.",
+          "next": "se_together"
+        },
+        {
+          "id": "se_rel_s",
+          "speaker": "narrator",
+          "text": "*You kneel. Together you murmur the pilgrim's prayer, and for a moment the Wayside lantern flickers — a tiny, defiant gold — before it fades.* Seren stares at you. 'It answered. It answered both of us.'",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 8}, {"type": "GiveXP", "amount": 75}],
+          "next": "se_together"
+        },
+        {
+          "id": "se_rel_f",
+          "speaker": "seren",
+          "text": "*You stumble over the words. Seren gently finishes the line for you.* It's alright. The spirits listen to the meaning, not the grammar.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 2}],
+          "next": "se_together"
+        },
+        {
+          "id": "se_ins_s",
+          "speaker": "seren",
+          "text": "*Her hands tighten on the staff.* My mother climbed the stair ten years ago and gave the Heart Lantern everything she had. Everyone says it's the bravest thing a summoner can do. *Quietly.* I don't want to be brave like that. But I will be, if I have to.",
+          "outcomes": [{"type": "SetFlag", "key": "seren_confided"}, {"type": "Approval", "key": "seren", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "se_together"
+        },
+        {"id": "se_ins_f", "speaker": "seren", "text": "Afraid? No. *She smiles brightly. It almost reaches her eyes.*", "next": "se_together"},
+        {
+          "id": "se_kael",
+          "speaker": "seren",
+          "text": "Kael? *She's on her feet.* Kael! You never answered my letters. Not one, in ten years.",
+          "next": "se_kael2"
+        },
+        {
+          "id": "se_kael2",
+          "speaker": "kael",
+          "text": "I'm answering now. I made your mother a promise. I'm keeping it.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}, {"type": "Approval", "key": "kael", "amount": 5}],
+          "next": "se_together"
+        },
+        {
+          "id": "se_together",
+          "speaker": "seren",
+          "text": "A summoner should have guardians on the pilgrim road. It's tradition. *She hesitates, then smiles — properly, this time.* Would you be mine? I can heal, I can pray, and I'm much braver with company.",
+          "choices": [
+            {"text": "I'd be honoured, Seren.", "next": "se_join", "outcomes": [{"type": "Approval", "key": "seren", "amount": 3}]},
+            {"text": "Guardian? I'm more of a 'hit things' sort.", "next": "se_funny"},
+            {"text": "Not yet.", "next": "se_wait"}
+          ]
+        },
+        {"id": "se_funny", "speaker": "seren", "text": "Guardians hit things all the time. It's most of the job, Kael says.", "next": "se_join"},
+        {"id": "se_wait", "speaker": "seren", "text": "Then I'll keep praying. Come back when you're ready — I'll be here."},
+        {
+          "id": "se_join",
+          "speaker": "narrator",
+          "text": "*Seren rises, brushes the moss from her robes and lifts her staff. Its rings chime, clear and bright, like the first step of a long road.*",
+          "outcomes": [{"type": "Recruit", "key": "seren"}, {"type": "SetFlag", "key": "seren_recruited"}, {"type": "SetFlag", "key": "seren_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_lys",
+      "start": "ly_party",
+      "nodes": [
+        {
+          "id": "ly_party",
+          "speaker": "lys",
+          "text": "If you're going to ask how I'm feeling, don't. If you're going to ask about the Hollow, do.",
+          "conditions": [{"type": "InParty", "key": "lys"}],
+          "fallback": "ly_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "ly_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "ly_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "What's in the pressed-flower book?", "next": "ly_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ly_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "lys_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "ly_banter_post",
+          "speaker": "lys",
+          "text": "The lanterns are lit, the Hollow has receded, and I have three notebooks of observations nobody will believe. *Beat.* ...It was well done. Don't make me say it twice.",
+          "next": "ly_party_hub"
+        },
+        {
+          "id": "ly_banter",
+          "speaker": "lys",
+          "text": "Fascinating stuff, this blight. It doesn't destroy light — it inverts it. Light turned inside out. If I weren't standing in it, I'd be delighted.",
+          "next": "ly_party_hub"
+        },
+        {
+          "id": "ly_lore",
+          "speaker": "lys",
+          "text": "*She snaps it shut.* Research. *A pause.* ...Marigolds. From Lanternvale. Tell anyone and I will turn you into a newt. I've been practising.",
+          "next": "ly_party_hub"
+        },
+        {
+          "id": "ly_party_hub",
+          "speaker": "lys",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "What's in the pressed-flower book?", "next": "ly_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "ly_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "lys_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "ly_dismissed", "speaker": "lys", "text": "Fine. I'll be at the grove, taking notes. Try not to die before I've finished them."},
+        {
+          "id": "ly_met",
+          "speaker": "lys",
+          "text": "You again. Have you read a book since we last spoke?",
+          "conditions": [{"type": "Flag", "key": "lys_met"}],
+          "fallback": "ly1",
+          "choices": [{"text": "Come with me.", "next": "ly_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "ly1",
+          "speaker": "narrator",
+          "text": "*A tall woman in a black dress made almost entirely of belts stands at the edge of the grey, scribbling in a notebook. A staff with a dark, storm-filled orb leans against a dead tree beside her.*",
+          "outcomes": [{"type": "SetFlag", "key": "lys_met"}],
+          "next": "ly2"
+        },
+        {
+          "id": "ly2",
+          "speaker": "lys",
+          "text": "Don't step on the specimens. *She doesn't look up.* Lys. Arcanum of Velmora. If you're lost, Lanternvale's west. If you're a pilgrim, you're late. If you're a hero, you're tediously early.",
+          "choices": [
+            {
+              "text": "The blight isn't darkness. It's light turned inside out — that's why the crystals grow where lanterns die.",
+              "check": {"skill": "Arcana", "dc": 13, "success": "ly_arc_s", "failure": "ly_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "Velmora's Arcanum hasn't sent anyone to Lanternvale in a century. Why you?",
+              "check": {"skill": "History", "dc": 12, "success": "ly_hist_s", "failure": "ly_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {
+              "text": "Professional courtesy, colleague. Mind if I look at your notes?",
+              "next": "ly_mage",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {
+              "text": "Your Arcanum would call this fel corruption and burn the whole grove.",
+              "next": "ly_warlock",
+              "conditions": [{"type": "Class", "key": "Warlock"}],
+              "tag": "WARLOCK"
+            },
+            {"text": "I'm going to the Old Shrine to stop this.", "next": "ly_shrine"},
+            {"text": "Sorry to bother you."}
+          ]
+        },
+        {
+          "id": "ly_arc_s",
+          "speaker": "lys",
+          "text": "*Her pen stops. She looks at you for the first time.* ...Inverted. Yes. Exactly that. *Something almost like a smile.* How irritating. I was going to publish that.",
+          "outcomes": [{"type": "Approval", "key": "lys", "amount": 10}, {"type": "GiveXP", "amount": 75}],
+          "next": "ly_offer"
+        },
+        {
+          "id": "ly_arc_f",
+          "speaker": "lys",
+          "text": "You've strung three correct words into an incorrect sentence. Impressive, in its way.",
+          "next": "ly_shrine"
+        },
+        {
+          "id": "ly_hist_s",
+          "speaker": "lys",
+          "text": "*A long pause.* They didn't send me. I came. I grew up here, before the Arcanum. Seren was my— *She stops.* It's none of your concern.",
+          "outcomes": [{"type": "SetFlag", "key": "lys_confided"}, {"type": "Approval", "key": "lys", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "ly_shrine"
+        },
+        {"id": "ly_hist_f", "speaker": "lys", "text": "Because I'm the best they have, says Lys, which is not an answer.", "next": "ly_shrine"},
+        {
+          "id": "ly_mage",
+          "speaker": "lys",
+          "text": "*She hands you the notebook without a word. Her notes are meticulous, annotated, and occasionally rude.* ...You may continue to exist near me.",
+          "outcomes": [{"type": "Approval", "key": "lys", "amount": 8}],
+          "next": "ly_offer"
+        },
+        {
+          "id": "ly_warlock",
+          "speaker": "lys",
+          "text": "They would. Fools. *She eyes you.* And you'd want to bottle it. Also a fool, but a more interesting one.",
+          "outcomes": [{"type": "Approval", "key": "lys", "amount": 3}],
+          "next": "ly_offer"
+        },
+        {
+          "id": "ly_shrine",
+          "speaker": "lys",
+          "text": "Stop this. *She closes the notebook.* Every observation I've made points up the stair. I've been waiting for someone sufficiently reckless to escort me.",
+          "next": "ly_offer"
+        },
+        {
+          "id": "ly_offer",
+          "speaker": "lys",
+          "text": "I'll come. Not because I like you. Because the Hollow needs studying at its source, and you need someone who can set things on fire precisely.",
+          "choices": [
+            {"text": "Glad to have you, Lys.", "next": "ly_join"},
+            {"text": "Seren will be glad to see you.", "next": "ly_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {"text": "Another time.", "next": "ly_wait"}
+          ]
+        },
+        {"id": "ly_seren", "speaker": "seren", "text": "*Softly.* Hello, Lys.", "next": "ly_seren2"},
+        {
+          "id": "ly_seren2",
+          "speaker": "lys",
+          "text": "*Her composure cracks for exactly half a second.* ...Seren. *She clears her throat.* Well. Someone has to keep you alive. Again.",
+          "outcomes": [{"type": "Approval", "key": "lys", "amount": 10}, {"type": "Approval", "key": "seren", "amount": 5}],
+          "next": "ly_join"
+        },
+        {"id": "ly_wait", "speaker": "lys", "text": "I'll be here. With the crystals. They're better conversationalists."},
+        {
+          "id": "ly_join",
+          "speaker": "narrator",
+          "text": "*Lys tucks the notebook into one of her many belts and takes up her staff. Inside the orb, a small storm wakes and pays attention.*",
+          "outcomes": [{"type": "Recruit", "key": "lys"}, {"type": "SetFlag", "key": "lys_recruited"}, {"type": "SetFlag", "key": "lys_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_torvan",
+      "start": "to_party",
+      "nodes": [
+        {
+          "id": "to_party",
+          "speaker": "torvan",
+          "text": "I am listening.",
+          "conditions": [{"type": "InParty", "key": "torvan"}],
+          "fallback": "to_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "to_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "to_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Tell me of the Hornkin.", "next": "to_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "to_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "torvan_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "to_banter_post",
+          "speaker": "torvan",
+          "text": "The Great One walks again. The Hornkin's shame is lifted. *He touches the cords braided on his horn.* Tonight I will braid a new cord. For you.",
+          "next": "to_party_hub"
+        },
+        {
+          "id": "to_banter",
+          "speaker": "torvan",
+          "text": "The mountain is angry. The wind tastes of ash. We climb anyway, because we must.",
+          "next": "to_party_hub"
+        },
+        {
+          "id": "to_lore",
+          "speaker": "torvan",
+          "text": "My people live above the snowline. For a thousand years we guarded the Warden's herd: deer, goats, the small spirits of the high meadows. When the Warden fell, I was on watch. I came down alone, to set it right.",
+          "next": "to_party_hub"
+        },
+        {
+          "id": "to_party_hub",
+          "speaker": "torvan",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Tell me of the Hornkin.", "next": "to_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "to_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "torvan_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "to_dismissed", "speaker": "torvan", "text": "Then I will guard the stair until you call."},
+        {
+          "id": "to_met",
+          "speaker": "torvan",
+          "text": "You return. Good.",
+          "conditions": [{"type": "Flag", "key": "torvan_met"}],
+          "fallback": "to1",
+          "choices": [{"text": "Come with me.", "next": "to_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "to1",
+          "speaker": "narrator",
+          "text": "*At the foot of the shrine stair stands a giant: a horned beast-folk with silver-grey fur, a leaf-bladed staff planted at his side. Charms and braided cords hang from his great curled horns.*",
+          "outcomes": [{"type": "SetFlag", "key": "torvan_met"}],
+          "next": "to2"
+        },
+        {
+          "id": "to2",
+          "speaker": "torvan",
+          "text": "Stop. *His voice is deep as a landslide.* I am Torvan of the Hornkin. The stair above is grey and hungry. None pass who cannot stand against it.",
+          "choices": [
+            {
+              "text": "(Plant your feet and meet his challenge, shoulder to shoulder.)",
+              "check": {"skill": "Athletics", "dc": 14, "success": "to_ath_s", "failure": "to_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "The Hornkin guarded the Warden's herd. You blame yourself for what happened to him.",
+              "check": {"skill": "Nature", "dc": 12, "success": "to_nat_s", "failure": "to_nat_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "(Touch your totem to his horn-charm and greet him in the old way.)",
+              "next": "to_shaman",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "You're not guarding the stair to keep us out. You're afraid to climb it alone.",
+              "check": {"skill": "Insight", "dc": 13, "success": "to_ins_s", "failure": "to_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "We're here to free the Warden, not to fight you.", "next": "to_free"}
+          ]
+        },
+        {
+          "id": "to_ath_s",
+          "speaker": "torvan",
+          "text": "*He pushes. You push back. The ground creaks. Then Torvan steps aside and inclines his great head.* You stand. Good.",
+          "outcomes": [{"type": "Approval", "key": "torvan", "amount": 10}],
+          "next": "to_offer"
+        },
+        {
+          "id": "to_ath_f",
+          "speaker": "torvan",
+          "text": "*He leans, gently, and you slide back three paces through the moss.* ...You are small. But you did not fall. That is something.",
+          "next": "to_free"
+        },
+        {
+          "id": "to_nat_s",
+          "speaker": "torvan",
+          "text": "*His ears flatten.* ...Yes. I was on watch the night the grey took him. I heard him cry out, and I did not understand. A Hornkin should have understood.",
+          "outcomes": [{"type": "Approval", "key": "torvan", "amount": 8}, {"type": "GiveXP", "amount": 75}],
+          "next": "to_offer"
+        },
+        {
+          "id": "to_nat_f",
+          "speaker": "torvan",
+          "text": "You know nothing of the Hornkin, Torvan rumbles. He is not angry. Only tired.",
+          "next": "to_free"
+        },
+        {
+          "id": "to_shaman",
+          "speaker": "torvan",
+          "text": "*His eyes widen. Gravely, he touches his horn-charm to your totem.* Spirit-speaker. Then you hear it too — the Warden, crying. Yes. We go together.",
+          "outcomes": [{"type": "Approval", "key": "torvan", "amount": 10}],
+          "next": "to_offer"
+        },
+        {
+          "id": "to_ins_s",
+          "speaker": "torvan",
+          "text": "*A long, heavy silence.* ...Yes. Alone, I would fail him twice. With you, perhaps not.",
+          "outcomes": [{"type": "Approval", "key": "torvan", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "to_offer"
+        },
+        {"id": "to_ins_f", "speaker": "torvan", "text": "I fear nothing, Torvan says. His tail flicks, once.", "next": "to_free"},
+        {
+          "id": "to_free",
+          "speaker": "torvan",
+          "text": "Free him. *He considers you for a long moment.* Words are light. Deeds are heavy. Show me.",
+          "next": "to_offer"
+        },
+        {
+          "id": "to_offer",
+          "speaker": "torvan",
+          "text": "I will climb with you. My staff, my spirits and my horns are yours, until the Warden walks again.",
+          "choices": [{"text": "Climb with us, Torvan.", "next": "to_join"}, {"text": "Not yet.", "next": "to_wait"}]
+        },
+        {"id": "to_wait", "speaker": "torvan", "text": "Then I will wait. I have waited a long time. A little longer is nothing."},
+        {
+          "id": "to_join",
+          "speaker": "narrator",
+          "text": "*Torvan pulls his staff from the earth. The charms on his horns clack softly, like distant stones.*",
+          "outcomes": [{"type": "Recruit", "key": "torvan"}, {"type": "SetFlag", "key": "torvan_recruited"}, {"type": "SetFlag", "key": "torvan_met"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_morwen",
+      "start": "mo_party",
+      "nodes": [
+        {
+          "id": "mo_party",
+          "speaker": "morwen",
+          "text": "Yes, darling? *A tiny imp peers over her shoulder, then ducks back.* Dear and I were just discussing you. Favourably, mostly.",
+          "conditions": [{"type": "InParty", "key": "morwen"}],
+          "fallback": "mo_met",
+          "choices": [
+            {"text": "How are you holding up?", "next": "mo_banter_post", "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}]},
+            {"text": "How are you holding up?", "next": "mo_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
+            {"text": "Who is 'Dear'?", "next": "mo_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "mo_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "morwen_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "mo_banter_post",
+          "speaker": "morwen",
+          "text": "A great spirit restored, a valley relit, and not a single demon involved. How quaint. *She smiles.* I had a lovely time.",
+          "next": "mo_party_hub"
+        },
+        {
+          "id": "mo_banter",
+          "speaker": "morwen",
+          "text": "I came for a demonic incursion and found a very sad deer. I'm told this is called 'character growth'.",
+          "next": "mo_party_hub"
+        },
+        {
+          "id": "mo_lore",
+          "speaker": "morwen",
+          "text": "My imp. Small, rude, devoted. He has a proper name, of course, but it's forty syllables and half of them are on fire. 'Dear' is simpler.",
+          "next": "mo_party_hub"
+        },
+        {
+          "id": "mo_party_hub",
+          "speaker": "morwen",
+          "text": "...Anything else?",
+          "choices": [
+            {"text": "Who is 'Dear'?", "next": "mo_lore"},
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "mo_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "morwen_recruited"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "mo_dismissed", "speaker": "morwen", "text": "As you wish. I'll be among the ruins. Do fetch me before anything interesting happens."},
+        {
+          "id": "mo_met",
+          "speaker": "morwen",
+          "text": "Ah. The persistent one. How nice.",
+          "conditions": [{"type": "Flag", "key": "morwen_met"}],
+          "fallback": "mo1",
+          "choices": [{"text": "Come with me.", "next": "mo_join"}, {"text": "Just passing by."}]
+        },
+        {
+          "id": "mo1",
+          "speaker": "narrator",
+          "text": "*Among the broken pillars, a tall woman in a high-collared violet coat is sketching a blight crystal in a leather grimoire. A tiny red imp sits on her shoulder, holding the inkpot.*",
+          "outcomes": [{"type": "SetFlag", "key": "morwen_met"}],
+          "next": "mo2"
+        },
+        {
+          "id": "mo2",
+          "speaker": "morwen",
+          "text": "Visitors! How lovely. Morwen Vale-Ashcombe — scholar, collector, occasional correspondent with things one shouldn't write to. And this is Dear. Say hello, Dear. *The imp hisses.* He's shy.",
+          "choices": [
+            {
+              "text": "These crystals aren't fel. There's no demonic signature here at all.",
+              "check": {"skill": "Arcana", "dc": 14, "success": "mo_arc_s", "failure": "mo_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "Keep that imp on a leash, or I'll do it for you.",
+              "check": {"skill": "Intimidation", "dc": 13, "success": "mo_int_s", "failure": "mo_int_f"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "A fellow correspondent. What brings you somewhere so dull and demon-free?",
+              "next": "mo_warlock",
+              "conditions": [{"type": "Class", "key": "Warlock"}],
+              "tag": "WARLOCK"
+            },
+            {
+              "text": "This is sacred ground. Your kind of study isn't welcome here.",
+              "check": {"skill": "Religion", "dc": 10, "success": "mo_rel_s", "failure": "mo_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {"text": "What are you doing here?", "next": "mo_why"}
+          ]
+        },
+        {
+          "id": "mo_why",
+          "speaker": "morwen",
+          "text": "I heard rumours of a grey blight that hollows out spirits, and naturally I assumed demons. I was so excited. *She sighs.* It isn't demons. It's grief, or hunger, or some tedious spiritual malaise. Still — a shrine-god gone feral is not nothing.",
+          "next": "mo_offer"
+        },
+        {
+          "id": "mo_arc_s",
+          "speaker": "morwen",
+          "text": "*She closes the grimoire with a soft clap.* No. There isn't, is there? I've stared at these for three days hoping I was wrong. You've a precise mind. I collect those.",
+          "outcomes": [{"type": "Approval", "key": "morwen", "amount": 10}, {"type": "GiveXP", "amount": 75}],
+          "next": "mo_offer"
+        },
+        {"id": "mo_arc_f", "speaker": "morwen", "text": "Hm. A theory, Morwen says kindly. Not a good one. But a theory.", "next": "mo_why"},
+        {
+          "id": "mo_int_s",
+          "speaker": "morwen",
+          "text": "*Dear dives into her coat. Morwen laughs, delighted.* Oh, I like you. Nobody threatens anyone properly any more. It's refreshing.",
+          "outcomes": [{"type": "Approval", "key": "morwen", "amount": 8}],
+          "next": "mo_offer"
+        },
+        {
+          "id": "mo_int_f",
+          "speaker": "morwen",
+          "text": "Dear, says Morwen mildly. The imp grins and sets your bootlace on fire. Shall we try that again, with manners?",
+          "next": "mo_why"
+        },
+        {
+          "id": "mo_warlock",
+          "speaker": "morwen",
+          "text": "A colleague! How marvellous. We must compare pacts over tea. *Dear mutters something sulky in a language made of sparks.*",
+          "outcomes": [{"type": "Approval", "key": "morwen", "amount": 10}],
+          "next": "mo_offer"
+        },
+        {
+          "id": "mo_rel_s",
+          "speaker": "morwen",
+          "text": "Sacred ground, she repeats, amused. Darling, I have been terribly respectful. I've only taken samples of the parts already dead.",
+          "outcomes": [{"type": "Approval", "key": "morwen", "amount": -3}],
+          "next": "mo_why"
+        },
+        {"id": "mo_rel_f", "speaker": "morwen", "text": "Unwelcome? I'm a delight. *Dear nods vigorously.*", "next": "mo_why"},
+        {
+          "id": "mo_offer",
+          "speaker": "morwen",
+          "text": "You're going up to the sanctum, aren't you? To face whatever sits at the heart of all this grey. I should very much like to watch. And help, of course. I'm extremely helpful when I'm interested.",
+          "choices": [
+            {"text": "Your help is welcome.", "next": "mo_join"},
+            {"text": "Watch, or help?", "next": "mo_both"},
+            {"text": "No, thank you.", "next": "mo_wait"}
+          ]
+        },
+        {
+          "id": "mo_both",
+          "speaker": "morwen",
+          "text": "Both, darling. I'm a scholar. Watching is how I help.",
+          "choices": [{"text": "...Fine. Come along.", "next": "mo_join"}, {"text": "No, thank you.", "next": "mo_wait"}]
+        },
+        {"id": "mo_wait", "speaker": "morwen", "text": "Pity. I'll be here, should you change your mind. Dear will be sulking."},
+        {
+          "id": "mo_join",
+          "speaker": "narrator",
+          "text": "*Morwen tucks her grimoire under one arm. Dear scrambles back onto her shoulder and blows a tiny, smug smoke ring at you.*",
+          "outcomes": [{"type": "Recruit", "key": "morwen"}, {"type": "SetFlag", "key": "morwen_recruited"}, {"type": "SetFlag", "key": "morwen_met"}]
+        }
+      ]
+    }
+  ]
+}
