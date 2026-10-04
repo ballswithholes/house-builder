@@ -8,7 +8,8 @@ namespace Lanternvale.Rules
 {
     public sealed partial class Unit
     {
-        /// <summary>Seconds of this turn the unit was in control (swing timers advance by this × haste).</summary>
+        /// <summary>Seconds of this turn the unit was in control and not casting or channelling (swing timers advance by
+        /// this × haste). Set at turn start; cast and channel time spent in the turn is taken off it.</summary>
         public float SwingTimeThisTurn = RulesConstants.TurnSeconds;
     }
 
@@ -25,7 +26,8 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>Auto attacks at the end of the unit's turn (Design.md §2): the swing timers advance by the
-        /// controlled part of 6 s × haste; one swing per full weapon speed while the target is in reach.</summary>
+        /// controlled part of 6 s, minus the time spent casting/channelling, × haste; one swing per full weapon speed while
+        /// the target is in reach.</summary>
         void AutoAttacks(Unit u, bool canSwing)
         {
             float t = u.SwingTimeThisTurn;

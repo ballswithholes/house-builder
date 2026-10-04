@@ -152,6 +152,10 @@ namespace Lanternvale.Rules
                 if (u.StateWindow[(int)s] > lost) { lost = u.StateWindow[(int)s]; lostBy = s; }
             if (u.Surprised && u.TurnsTaken == 1) { lost = RulesConstants.TurnSeconds; lostBy = UnitState.Stun; }
             float rootTime = u.StateWindow[(int)UnitState.Root];
+            // a slow (Daze / negative MoveSpeed) that wears off during these 6 s still holds for that part of the turn:
+            // the movement before the elapse, and how long the expiring slows last into the turn
+            float moveBefore = BaseMove(u);
+            float slowTime = ExpiringSlowWindow(u);
 
             // 2. elapse 6 s: auras (ticks), cooldowns, lockouts, proc ICDs, lifetime
             ElapseAuras(u, RulesConstants.TurnSeconds);
@@ -182,6 +186,10 @@ namespace Lanternvale.Rules
 
             // 5. movement budget
             u.MoveBudget = BaseMove(u);
+            // slows that expired in the elapse cover their remaining seconds of the turn (Concussive Shot's 4 s = two
+            // thirds of it), the way roots do: the budget blends the slowed and the free speed by time
+            if (slowTime > 0f && moveBefore < u.MoveBudget)
+                u.MoveBudget = moveBefore + (u.MoveBudget - moveBefore) * (1f - slowTime / RulesConstants.TurnSeconds);
             float movingFraction = 1f - Math.Min(RulesConstants.TurnSeconds, Math.Max(lost, rootTime)) / RulesConstants.TurnSeconds;
             u.MoveLeft = u.MoveBudget * movingFraction;
 
@@ -203,6 +211,7 @@ namespace Lanternvale.Rules
                 {
                     float used = Math.Min(RulesConstants.TurnSeconds, u.Pending.RemainingTime);
                     u.TimeLeft = Math.Min(u.TimeLeft, RulesConstants.TurnSeconds - used);
+                    SpendSwingTime(u, used);   // the rest of the cast/channel holds the swing timers too
                     ResolvePending(u);
                     if (!u.IsAlive || IsOver) { EndTurnInternal(u, false); return false; }
                 }
@@ -240,6 +249,20 @@ namespace Lanternvale.Rules
             u.LockoutWindow.Clear();
             foreach (var kv in u.Lockouts)
                 if (kv.Value > 0) u.LockoutWindow[kv.Key] = Math.Min(RulesConstants.TurnSeconds, kv.Value);
+        }
+
+        /// <summary>Seconds of the coming turn covered by movement slows (Daze or a negative MoveSpeed mod) that expire within
+        /// it (the longest of them; 0 when none expires). Slows lasting past the turn are still on the unit after the
+        /// elapse, so BaseMove sees them anyway.</summary>
+        static float ExpiringSlowWindow(Unit u)
+        {
+            float w = 0f;
+            foreach (var a in u.Auras)
+            {
+                if (a.IsPermanent || a.IsAreaChild || a.Remaining > RulesConstants.TurnSeconds + 1e-3f) continue;
+                if (SpecialUtil.IsSnare(a.Def)) w = Math.Max(w, Math.Min(RulesConstants.TurnSeconds, Math.Max(0f, a.Remaining)));
+            }
+            return w;
         }
 
         float BaseMove(Unit u)
@@ -394,14 +417,25 @@ namespace Lanternvale.Rules
 
         // ======================================================= victory / defeat
 
-        /// <summary>Checks victory (no hostile non-totem unit alive) and defeat (whole party downed).</summary>
+        /// <summary>Checks victory (no hostile non-totem unit alive) and defeat (whole party downed, with no pending
+        /// self-resurrection: a downed member holding a Soulstone/Reincarnation offer keeps the fight going until its turn
+        /// slot, where it may rise; declining the offer re-checks).</summary>
         public void CheckBattleEnd()
         {
             if (!Started || IsOver || !InCombat) return;
             bool hostileAlive = false, partyUp = false, anyParty = false;
             foreach (var u in Units)
             {
-                if (!u.IsAlive) { if (u.Team == PlayerTeam && u.IsCharacter) anyParty = true; continue; }
+                if (!u.IsAlive)
+                {
+                    if (u.Team == PlayerTeam && u.IsCharacter)
+                    {
+                        anyParty = true;
+                        // the offer is taken at the unit's own slot (AdvanceTurnLoop): only one that will get that slot counts
+                        if (u.SelfRes != null && u.IsDeadOrDowned && TurnOrder.Contains(u)) partyUp = true;
+                    }
+                    continue;
+                }
                 // mind-controlled enemies still count as enemies (enslaved demons are real pets until they break free)
                 bool hostileSide = u.Team != PlayerTeam && u.Team != Team.Neutral;
                 if (u.Team == PlayerTeam && u.OriginalTeam.HasValue && u.OriginalTeam.Value != PlayerTeam && u.Kind != UnitKind.Pet) hostileSide = true;

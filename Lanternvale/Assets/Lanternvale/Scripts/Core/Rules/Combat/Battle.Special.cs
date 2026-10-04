@@ -52,7 +52,8 @@ namespace Lanternvale.Rules
             u.InOwnTurn = false;
             Emit(new CombatEvent { Type = CombatEventType.TurnEnd, Source = u, Target = u });
             ActiveUnit = null;
-            AdvanceTurn();
+            CheckBattleEnd();   // the offer was all that kept a wiped party in the fight
+            if (!IsOver) AdvanceTurn();
             return ActionResult.Success;
         }
 

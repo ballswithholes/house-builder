@@ -2001,8 +2001,8 @@
       "itemLevel": 2,
       "equip": "OneHand",
       "weaponType": "Dagger",
-      "minDamage": 1,
-      "maxDamage": 3,
+      "minDamage": 5,
+      "maxDamage": 8,
       "speed": 1.6,
       "price": 35
     },
@@ -2016,8 +2016,8 @@
       "itemLevel": 2,
       "equip": "OneHand",
       "weaponType": "Dagger",
-      "minDamage": 1,
-      "maxDamage": 3,
+      "minDamage": 5,
+      "maxDamage": 8,
       "speed": 1.6,
       "price": 35
     },

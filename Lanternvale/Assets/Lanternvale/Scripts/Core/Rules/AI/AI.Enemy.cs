@@ -276,17 +276,35 @@ namespace Lanternvale.Rules
 
         struct PetAbility { public AbilityDef A; public CreatureAbilityDef C; public int Priority; }
 
+        /// <summary>
+        /// One of the ability's auras is already up on the target and will still be up after the bearer's next turn start
+        /// (where it loses <see cref="RulesConstants.TurnSeconds"/>): a fully stacked or non-stacking aura with more than a
+        /// turn left. Stacking debuffs (Sunder Armor) are one shared instance whoever applied it last (Battle.ApplyAura), so
+        /// they are looked up from any caster; non-stacking debuffs are per caster. Auras that last a turn or less count as
+        /// up while present (recasting them in the same turn would only refresh them). A pure DoT/HoT (ticks and nothing
+        /// else that lapses with it) counts as up while it still has a tick to deliver: the bearer's turn start ticks it for
+        /// what is left before it expires (Battle.ElapseAuraList), so refreshing it a turn early would only throw those
+        /// ticks away.
+        /// </summary>
         static bool AlreadyHasAny(AbilityDef a, Unit t, Unit caster)
         {
             foreach (var id in AppliedAuras(a))
             {
                 var def = caster.Db.Aura(id);
                 if (def == null) continue;
-                var ex = t.FindAura(id, def.kind == AuraKind.Debuff ? caster : null);
-                if (ex != null && (def.maxStacks <= 1 || ex.Stacks >= def.maxStacks)) return true;
+                var ex = t.FindAura(id, def.kind == AuraKind.Debuff && def.maxStacks <= 1 ? caster : null);
+                if (ex == null || (def.maxStacks > 1 && ex.Stacks < def.maxStacks)) continue;
+                if (ex.IsPermanent || ex.Duration <= RulesConstants.TurnSeconds + 1e-3f || ex.Remaining > RulesConstants.TurnSeconds + 1e-3f) return true;
+                if (PurePeriodic(def) && ex.TickAccum + ex.Remaining >= def.tickInterval - 1e-4f) return true;
             }
             return false;
         }
+
+        /// <summary>A DoT/HoT whose only lasting effect is its ticks: no states, stat mods, absorb or procs that would lapse
+        /// at the bearer's turn start along with its last ticks.</summary>
+        static bool PurePeriodic(AuraDef def) =>
+            def.tickInterval > 0f && (def.tickEffects.Count > 0 || !string.IsNullOrEmpty(def.special))
+            && def.states.Length == 0 && def.mods.Count == 0 && def.absorb == null && def.procs.Count == 0;
 
         internal static string HintOf(AbilityDef a)
         {

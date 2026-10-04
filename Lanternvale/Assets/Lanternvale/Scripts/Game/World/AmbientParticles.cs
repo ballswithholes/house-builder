@@ -23,6 +23,8 @@ namespace Lanternvale.Game
             public Kind kind;
             public Vector2 pos, vel;
             public float phase, size, age, life, rot, spin, baseAlpha, w, h;
+            /// <summary>1 / sprite bounds: turns a size in metres into a localScale for any sprite.</summary>
+            public float invW = 1f, invH = 1f;
             public Color color;
             public bool alive = true;
         }
@@ -52,7 +54,7 @@ namespace Lanternvale.Game
             float d = Mathf.Max(0f, Density);
             var vr = PresentationHost.ViewRect(1.5f);
 
-            int glowOrder = Lighting2D.IsLit ? SortingOrders.Glow + 10 : SortingOrders.NightOverlay + 50;
+            int glowOrder = PresentationArt.SpritesLit ? SortingOrders.Glow + 10 : SortingOrders.NightOverlay + 50;
 
             if (a.fireflies)
                 for (int i = 0; i < Mathf.RoundToInt(18 * d); i++)
@@ -144,6 +146,14 @@ namespace Lanternvale.Game
         {
             var sr = PresentationArt.NewRenderer(k.ToString(), root, s, order, unlit);
             var p = new P { t = sr.transform, sr = sr, kind = k };
+            // Real fx PNGs (fx_firefly, fx_leaf) are sized by their manifest height, not 1 m like the
+            // procedural fallbacks, so particle sizes are applied relative to the sprite's bounds.
+            if (s != null)
+            {
+                var b = s.bounds.size;
+                p.invW = 1f / Mathf.Max(1e-4f, b.x);
+                p.invH = 1f / Mathf.Max(1e-4f, b.y);
+            }
             ps.Add(p);
             return p;
         }
@@ -196,7 +206,7 @@ namespace Lanternvale.Game
                         float vis = Mathf.Lerp(0.12f, 1f, night) * (airVisible ? 1f : 0f);
                         float s = p.size * (0.8f + 0.35f * blink);
                         p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.t.localScale = new Vector3(s, s, 1f);
+                        p.t.localScale = new Vector3(s * p.invW, s * p.invH, 1f);
                         p.sr.color = new Color(p.color.r, p.color.g, p.color.b, vis * (0.2f + 0.8f * blink));
                         break;
                     }
@@ -220,7 +230,7 @@ namespace Lanternvale.Game
                         float tumble = Mathf.Cos(time * 2.1f + p.phase);
                         p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
                         p.t.localRotation = Quaternion.Euler(0f, 0f, p.rot);
-                        p.t.localScale = new Vector3(p.size * (0.25f + 0.75f * Mathf.Abs(tumble)), p.size, 1f);
+                        p.t.localScale = new Vector3(p.size * (0.25f + 0.75f * Mathf.Abs(tumble)) * p.invW, p.size * p.invH, 1f);
                         p.sr.color = new Color(p.color.r, p.color.g, p.color.b, 0.92f);
                         break;
                     }

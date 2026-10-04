@@ -1,6 +1,7 @@
-// Trainer window (Session.ActiveTrainer, Order 111): tabs for every party member the trainer can teach; per ability the
-// highest rank trainable now (lower missing ranks are paid too) with its total cost, "New" badges, the next ranks that
-// unlock later (level requirement), tooltips with numbers; Train / Train All. Members of other classes get a hint.
+// Trainer window (Session.ActiveTrainer, Order 143: above the sheets, like the vendor, so an open Spellbook or Talents
+// window never hides it): tabs for every party member the trainer can teach; per ability the highest rank trainable now
+// (lower missing ranks are paid too) with its total cost, "New" badges, the next ranks that unlock later (level
+// requirement), tooltips with numbers; Train / Train All. Members of other classes get a hint.
 // Respec window (Session.ActiveRespecNpc, Order 200): unlearn a member's talents for the escalating fee, then the
 // Talents window opens for that member.
 using System;
@@ -14,8 +15,9 @@ namespace Lanternvale.Game.Panels
 {
     public sealed class TrainerScreen : IUiScreen
     {
+        public const int ScreenOrder = 143;
         public string Id => "";
-        public int Order => 111;
+        public int Order => ScreenOrder;
         public bool Modal => false;
 
         public bool Visible
@@ -65,7 +67,7 @@ namespace Lanternvale.Game.Panels
                 if (t == null || !t.Visible) return false;
                 PanelKit.Do(() => PanelKit.Sess?.CloseTrainer());
                 return true;
-            });
+            }, ScreenOrder);
         }
 
         public void Tick(float dt)
@@ -306,8 +308,9 @@ namespace Lanternvale.Game.Panels
 
     public sealed class RespecScreen : IUiScreen
     {
+        public const int ScreenOrder = 200;
         public string Id => "";
-        public int Order => 200;
+        public int Order => ScreenOrder;
         public bool Modal => false;
 
         public bool Visible
@@ -362,7 +365,7 @@ namespace Lanternvale.Game.Panels
                 if (r == null || !r.Visible) return false;
                 PanelKit.Do(() => PanelKit.Sess?.CloseRespec());
                 return true;
-            });
+            }, ScreenOrder);
         }
 
         public void Tick(float dt)

@@ -429,12 +429,16 @@ namespace Lanternvale.Game
         // ---------------------------------------------------------------- tooltips
         static string tooltip, pendingTooltip;
         static Rect tooltipAnchor;
-        // measured tooltip cache: re-run text layout only when the text (or the style) changes
-        static readonly GUIContent tooltipContent = new GUIContent();
+        // measured tooltip cache: re-run text layout only when the text, the style or the screen height changes
+        static readonly GUIContent measureContent = new GUIContent();
         static string measuredTooltip;
         static GUIStyle measuredStyle;
-        static float measuredHeight;
-        const float TooltipWidth = 360f;
+        static float measuredMaxHeight = -1f;
+        // one box per column: a tooltip taller than the screen is split at line breaks into boxes side by side
+        static readonly List<GUIContent> tooltipColumns = new List<GUIContent>();
+        static readonly List<float> tooltipHeights = new List<float>();
+        static readonly List<string> tooltipParts = new List<string>(), tooltipLines = new List<string>();
+        const float TooltipWidth = 360f, TooltipGap = 6f, TooltipMargin = 8f;
 
         /// <summary>Shows a tooltip when the mouse hovers r (call every frame while drawing r).</summary>
         public static void TooltipFor(Rect r, string text)
@@ -452,21 +456,119 @@ namespace Lanternvale.Game
         {
             if (pendingTooltip != null) tooltip = pendingTooltip;
             if (string.IsNullOrEmpty(tooltip) || Tooltip == null) return;
-            float w = TooltipWidth;
-            if (!ReferenceEquals(measuredStyle, Tooltip) || !string.Equals(measuredTooltip, tooltip, System.StringComparison.Ordinal))
+            float w = TooltipWidth, maxH = Mathf.Max(64f, Height - 2f * TooltipMargin);
+            if (!ReferenceEquals(measuredStyle, Tooltip) || !string.Equals(measuredTooltip, tooltip, System.StringComparison.Ordinal)
+                || Mathf.Abs(measuredMaxHeight - maxH) > 0.5f)
             {
-                tooltipContent.text = tooltip;
-                measuredHeight = Tooltip.CalcHeight(tooltipContent, w);
+                LayoutTooltip(tooltip, w, maxH);
                 measuredTooltip = tooltip;
                 measuredStyle = Tooltip;
+                measuredMaxHeight = maxH;
             }
-            float h = measuredHeight;
+            int n = tooltipColumns.Count;
+            if (n == 0) return;
+            float h = 0f;
+            for (int i = 0; i < n; i++) h = Mathf.Max(h, tooltipHeights[i]);
+            float totalW = n * w + (n - 1) * TooltipGap;
             var mp = Event.current.mousePosition;
             float x = mp.x + 22f, y = mp.y + 18f;
-            if (x + w > Width - 8) x = mp.x - w - 16f;
-            if (y + h > Height - 8) y = Height - h - 8f;
-            var r = new Rect(x, y, w, h);
-            GUI.Box(r, tooltipContent, Tooltip);
+            if (x + totalW > Width - TooltipMargin) x = mp.x - totalW - 16f;
+            if (y + h > Height - TooltipMargin) y = Height - h - TooltipMargin;
+            // never past the left / top edge: the first lines (item name, quality, slot) are the ones that matter most
+            x = Mathf.Max(TooltipMargin, x);
+            y = Mathf.Max(TooltipMargin, y);
+            for (int i = 0; i < n; i++)
+                GUI.Box(new Rect(x + i * (w + TooltipGap), y, w, tooltipHeights[i]), tooltipColumns[i], Tooltip);
+        }
+
+        /// <summary>
+        /// Lays the tooltip out as one box, or — when it is taller than maxH (long item comparisons at a large interface size)
+        /// — as several boxes side by side, WoW-style: whole paragraphs (blank-line separated, e.g. "Currently equipped") are
+        /// packed into columns, and a paragraph is broken at its own line breaks only when it alone is too tall. Breaks inside
+        /// a rich-text tag are never used, so every column keeps balanced markup.
+        /// </summary>
+        static void LayoutTooltip(string text, float w, float maxH)
+        {
+            tooltipColumns.Clear();
+            tooltipHeights.Clear();
+            float h = MeasureTooltip(text, w);
+            if (h <= maxH || text.IndexOf('\n') < 0) { tooltipColumns.Add(new GUIContent(text)); tooltipHeights.Add(h); return; }
+            string cur = null;
+            SplitOutsideTags(text, "\n\n", tooltipParts);
+            foreach (var para in tooltipParts)
+            {
+                string cand = cur == null ? para : cur + "\n\n" + para;
+                if (MeasureTooltip(cand, w) <= maxH) { cur = cand; continue; }
+                if (cur != null) { AddTooltipColumn(cur, MeasureTooltip(cur, w)); cur = null; }
+                if (MeasureTooltip(para, w) <= maxH) { cur = para; continue; }
+                SplitOutsideTags(para, "\n", tooltipLines);
+                foreach (var line in tooltipLines)
+                {
+                    cand = cur == null ? line : cur + "\n" + line;
+                    // a single line taller than the screen still gets a column of its own (clamped to the top edge)
+                    if (cur == null || MeasureTooltip(cand, w) <= maxH) { cur = cand; continue; }
+                    AddTooltipColumn(cur, MeasureTooltip(cur, w));
+                    cur = line;
+                }
+            }
+            if (cur != null) AddTooltipColumn(cur, MeasureTooltip(cur, w));
+            if (tooltipColumns.Count == 0) { tooltipColumns.Add(new GUIContent(text)); tooltipHeights.Add(h); }
+        }
+
+        static float MeasureTooltip(string text, float w)
+        {
+            measureContent.text = text;
+            return Tooltip.CalcHeight(measureContent, w);
+        }
+
+        static void AddTooltipColumn(string text, float h)
+        {
+            if (text.Trim().Length == 0) return;   // no empty box for a stray blank line
+            tooltipColumns.Add(new GUIContent(text));
+            tooltipHeights.Add(h);
+        }
+
+        /// <summary>Splits text at every sep that lies outside rich-text tags (b, i, size, color, material).</summary>
+        static void SplitOutsideTags(string text, string sep, List<string> into)
+        {
+            into.Clear();
+            int depth = 0, start = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '<')
+                {
+                    int close = text.IndexOf('>', i + 1);
+                    if (close < 0) continue;
+                    bool end = text[i + 1] == '/';
+                    int nameStart = end ? i + 2 : i + 1, nameEnd = nameStart;
+                    while (nameEnd < close && char.IsLetter(text[nameEnd])) nameEnd++;
+                    if (nameEnd < text.Length && (text[nameEnd] == '>' || (!end && text[nameEnd] == '=')) && IsRichTag(text, nameStart, nameEnd - nameStart))
+                    {
+                        depth = end ? Mathf.Max(0, depth - 1) : depth + 1;
+                        i = close;
+                    }
+                    continue;
+                }
+                if (depth == 0 && string.CompareOrdinal(text, i, sep, 0, sep.Length) == 0)
+                {
+                    into.Add(text.Substring(start, i - start));
+                    start = i + sep.Length;
+                    i = start - 1;
+                }
+            }
+            into.Add(text.Substring(start));
+        }
+
+        static bool IsRichTag(string text, int at, int len)
+        {
+            switch (len)
+            {
+                case 1: return text[at] == 'b' || text[at] == 'i';
+                case 4: return string.CompareOrdinal(text, at, "size", 0, 4) == 0;
+                case 5: return string.CompareOrdinal(text, at, "color", 0, 5) == 0;
+                case 8: return string.CompareOrdinal(text, at, "material", 0, 8) == 0;
+                default: return false;
+            }
         }
 
         /// <summary>Hook for UI sounds (set by the audio system).</summary>

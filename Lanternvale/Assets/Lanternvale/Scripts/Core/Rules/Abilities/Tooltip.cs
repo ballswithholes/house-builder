@@ -83,6 +83,10 @@ namespace Lanternvale.Rules
         public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods, int rank)
         {
             float delta = Math.Max(0, eff - a.learnLevel);
+            // damage and heal magnitudes (direct and per tick) as Battle reads them: an unowned creature's above level 20
+            // follow the creature melee curve (CreatureScaling.SpellMagnitudeLevel)
+            int spellEff = CreatureScaling.SpellMagnitudeLevel(u, eff, a.learnLevel, out float sm);
+            float sdelta = Math.Max(0, spellEff - a.learnLevel);
             var school = e.school ?? a.school;
             string combo = e.perCombo > 0 ? $" (+{N(e.perCombo)} per combo point)" : "";
             switch (e.type)
@@ -93,14 +97,14 @@ namespace Lanternvale.Rules
                     if (u != null && e.coef > 0) bonus += e.coef * u.Stats.SpellDamage(school);
                     if (u != null && e.apCoef > 0) bonus += e.apCoef * (AbilityRules.IsRangedWeaponAbility(a) ? u.Stats.RangedAttackPower : u.Stats.AttackPower);
                     float m = mods.DamageMult * (u != null && u.Class == null && u.Creature != null ? CreatureScaling.DamageMult(u.Creature) : 1f);
-                    return Range((e.min + e.perLevel * delta + bonus) * m, (Math.Max(e.min, e.max) + e.perLevel * delta + bonus) * m) + combo;
+                    return Range(((e.min + e.perLevel * sdelta) * sm + bonus) * m, ((Math.Max(e.min, e.max) + e.perLevel * sdelta) * sm + bonus) * m) + combo;
                 }
                 case EffectType.Heal:
                 {
                     if (e.pctOfMax > 0) return N(e.pctOfMax) + "%";
                     float bonus = u != null && e.coef > 0 ? e.coef * u.Stats.HealingPower : 0f;
                     float m = mods.HealingMult;
-                    return Range((e.min + e.perLevel * delta + bonus) * m, (Math.Max(e.min, e.max) + e.perLevel * delta + bonus) * m);
+                    return Range(((e.min + e.perLevel * sdelta) * sm + bonus) * m, ((Math.Max(e.min, e.max) + e.perLevel * sdelta) * sm + bonus) * m);
                 }
                 case EffectType.WeaponDamage:
                 {
@@ -124,8 +128,8 @@ namespace Lanternvale.Rules
                     {
                         if (te.type != EffectType.Damage && te.type != EffectType.Heal) continue;
                         int ticks = aura.tickInterval > 0 && d > 0 ? (int)Math.Floor(d / aura.tickInterval + 1e-3f) : 1;
-                        float per = te.min + te.perLevel * delta;
-                        float perHi = Math.Max(te.min, te.max) + te.perLevel * delta;
+                        float per = (te.min + te.perLevel * sdelta) * sm;
+                        float perHi = (Math.Max(te.min, te.max) + te.perLevel * sdelta) * sm;
                         if (u != null && te.coef > 0) { float sp = te.type == EffectType.Heal ? u.Stats.HealingPower : u.Stats.SpellDamage(te.school ?? aura.school); per += te.coef * sp; perHi += te.coef * sp; }
                         float m = (te.type == EffectType.Heal ? mods.HealingMult : mods.DamageMult) * mods.EffectMult;
                         string extra = te.perCombo > 0 ? $" (+{N(te.perCombo * ticks)} per combo point)" : "";

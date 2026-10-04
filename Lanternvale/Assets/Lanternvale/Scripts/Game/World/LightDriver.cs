@@ -61,7 +61,7 @@ namespace Lanternvale.Game
         }
     }
 
-    /// <summary>A point light from Lighting2D.AddPointLight animated by day/night and flicker.</summary>
+    /// <summary>A point light from PresentationArt.AddPointLight (Lighting2D) animated by day/night and flicker.</summary>
     public sealed class AnimatedLight
     {
         public readonly LightHandle Handle;
@@ -106,7 +106,7 @@ namespace Lanternvale.Game
             setter.Set(Handle.color, Handle.intensity * k);
             if (Handle.glow != null)
             {
-                float a = (Lighting2D.IsLit ? 0.18f : 0.38f) * Mathf.Lerp(0.15f, 1f, nightFactor) * f * gate * Mathf.Clamp01(Handle.intensity);
+                float a = (PresentationArt.SpritesLit ? 0.18f : 0.38f) * Mathf.Lerp(0.15f, 1f, nightFactor) * f * gate * Mathf.Clamp01(Handle.intensity);
                 if (Mathf.Abs(a - lastGlowAlpha) > 0.002f)
                 {
                     lastGlowAlpha = a;

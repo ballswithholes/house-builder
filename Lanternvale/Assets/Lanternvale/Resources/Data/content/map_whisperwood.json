@@ -83,7 +83,7 @@
           "art": "prop_spirit_lantern_dark",
           "pos": [42.2, 12.2],
           "scale": 1.1,
-          "collider": {"w": 0.99, "h": 0.55},
+          "collider": {"w": 0.9, "h": 0.5},
           "interact": "wayside_lantern",
           "text": "The Wayside lantern. A faint warmth lingers in the stone, like a hand just withdrawn."
         },
@@ -105,8 +105,8 @@
           "art": "prop_lamp_post",
           "pos": [52.6, 13.2],
           "scale": 0.4,
-          "collider": {"w": 0.16, "h": 0.12},
-          "light": {"color": "#ffe08a", "radius": 2.2, "intensity": 0.8, "offset": [0, 0.9], "flicker": true},
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffe08a", "radius": 2.2, "intensity": 0.8, "offset": [0, 2.3], "flicker": true},
           "text": "A tiny lantern made from a thimble, hung on a twig. It burns a very nibbled wick."
         },
         {"art": "prop_bush_b", "pos": [44.0, 1.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},

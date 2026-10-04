@@ -35,9 +35,16 @@ namespace Lanternvale.Tests
         [Test]
         public static void CreatureCurves()
         {
+            AssertNear(CreatureScaling.BaseHealth(10), 251f, 1f, "L10 base health");
+            AssertNear(CreatureScaling.BaseHealth(60), 3626f, 2f, "L60 base health");
+            // normals fight a whole party (2-3 of them against 3-4 members): twice the one-on-one curve; minions ×1
             var plain = new CreatureDef { id = "t", type = CreatureType.Beast, rank = CreatureRank.Normal };
-            AssertNear(CreatureScaling.Health(plain, 10), 251f, 1f, "L10 health");
-            AssertNear(CreatureScaling.Health(plain, 60), 3626f, 2f, "L60 health");
+            AssertNear(CreatureScaling.Health(plain, 10), 502f, 2f, "normal L10 health");
+            AssertNear(CreatureScaling.Health(plain, 60), 7252f, 4f, "normal L60 health");
+            var minion = new CreatureDef { id = "m", type = CreatureType.Beast, rank = CreatureRank.Minion };
+            AssertNear(CreatureScaling.Health(minion, 10), 251f, 1f, "minion L10 health");
+            var pet = new CreatureDef { id = "p", type = CreatureType.Beast, rank = CreatureRank.Pet };
+            AssertNear(CreatureScaling.Health(pet, 10), 251f, 1f, "pets keep the base curve");
             // the Warden at party level 12 should be around 3,100 health (content multipliers on top)
             var warden = Db.Creature("cr_hollow_warden");
             if (warden != null)

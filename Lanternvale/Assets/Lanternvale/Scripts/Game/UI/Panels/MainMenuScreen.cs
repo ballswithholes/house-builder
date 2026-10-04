@@ -221,18 +221,30 @@ namespace Lanternvale.Game.Panels
         {
             float h = Ui.Height;
             float colX = Mathf.Max(60f, Ui.Width * 0.07f);
-            var logo = new Rect(colX - 40f, h * 0.06f, 640f, 320f);
+            const float bw = 400f, gap = 14f, contH = 74f, btnH = 58f;
+            const float hintY = 46f;      // the footer hint sits at h - hintY
+            const float errH = 64f;       // error line below the column (y + 4, 60 high)
+            var err = GameFlow.Instance != null ? GameFlow.Instance.LastError : "";
+            bool hasErr = !string.IsNullOrEmpty(err);
+            // The column must end above the footer hint (with room for the focus glow) on every canvas height: at the
+            // 150% interface size the canvas is only 720 high, so the logo gives up height first, then the top margin.
+            float column = (latest != null ? contH : btnH) + (Labels.Length - 1) * btnH + (Labels.Length - 1) * gap;
+            float bottom = h - hintY - 14f - (hasErr ? errH : 0f);
+            float top = h * 0.06f;
+            float logoH = Mathf.Clamp(bottom - column - 24f - top, 120f, 320f);
+            top = Mathf.Clamp(bottom - column - 24f - logoH, 8f, top);
+            float k = logoH / 320f;
+            var logo = new Rect(colX - 40f * k, top, 640f * k, logoH);
             DrawLogo(logo, fade);
-            PanelKit.Label(new Rect(colX + 10f, logo.yMax - 34f, 560f, 30f), "<i>The spirit-lanterns are going dark…</i>", PanelKit.LTextSmall, new Color(1f, 0.93f, 0.8f, 0.85f * fade));
+            PanelKit.Label(new Rect(colX + 10f, logo.yMax - 34f * k, 560f, 30f), "<i>The spirit-lanterns are going dark…</i>", PanelKit.LTextSmall, new Color(1f, 0.93f, 0.8f, 0.85f * fade));
 
             float y = logo.yMax + 24f;
-            const float bw = 400f;
             var old = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, fade);
             for (int i = 0; i < Labels.Length; i++)
             {
                 bool cont = i == 0;
-                float bh = cont && latest != null ? 74f : 58f;
+                float bh = cont && latest != null ? contH : btnH;
                 var r = new Rect(colX, y, bw, bh);
                 bool en = Enabled(i);
                 if (en && PanelKit.Hover(r) && Event.current.type == EventType.Repaint) focus = i;
@@ -241,13 +253,19 @@ namespace Lanternvale.Game.Panels
                 string label = Labels[i];
                 if (cont && latest != null) label = continueButton;
                 if (Ui.Btn(r, label, i == 0 || (i == 1 && latest == null) ? Ui.ButtonGold : Ui.Button, en, cont && !en ? "No saved game yet." : null)) Activate(i);
-                y += bh + 14f;
+                y += bh + gap;
             }
             GUI.color = old;
-            var err = GameFlow.Instance != null ? GameFlow.Instance.LastError : "";
-            if (!string.IsNullOrEmpty(err))
+            // laid out from the last button (y is its bottom + gap)
+            float end = y - gap + 14f;
+            if (hasErr)
+            {
                 PanelKit.Label(new Rect(colX, y + 4f, 520f, 60f), err, PanelKit.LTextSmall, Ui.Bad);
-            PanelKit.Label(new Rect(colX, h - 46f, 700f, 30f), "Arrow keys choose · Enter confirms · a cosy tale of lanterns and lost spirits", PanelKit.LMuted, new Color(1f, 1f, 1f, 0.55f * fade));
+                end = y + 4f + 60f;
+            }
+            // the hint only where it does not run into the column (a canvas under 720 high: a window below 540 px)
+            if (end <= h - hintY + 1f)
+                PanelKit.Label(new Rect(colX, h - hintY, 700f, 30f), "Arrow keys choose · Enter confirms · a cosy tale of lanterns and lost spirits", PanelKit.LMuted, new Color(1f, 1f, 1f, 0.55f * fade));
         }
 
         void DrawLoad()

@@ -763,11 +763,19 @@ namespace Lanternvale.Rules
 
         // ---------------------------------------------------------------- damage
 
+        /// <summary>Base magnitude (min..max + perLevel + perCombo) of a Damage/Heal effect, direct or periodic; an unowned
+        /// creature's above level 20 follows the creature melee curve (CreatureScaling.SpellMagnitudeLevel).</summary>
+        float SpellBaseMagnitude(AbilityCast cast, EffectDef e)
+        {
+            int level = CreatureScaling.SpellMagnitudeLevel(cast.Caster, cast.EffLevel, cast.LearnLevel, out float mult);
+            return AbilityRules.BaseMagnitude(e, level, cast.LearnLevel, cast.ComboPoints, Rng) * mult;
+        }
+
         void EffectDamage(AbilityCast cast, EffectDef e, Unit t, float chainScale)
         {
             var c = cast.Caster;
             var school = e.school ?? cast.School;
-            float v = AbilityRules.BaseMagnitude(e, cast.EffLevel, cast.LearnLevel, cast.ComboPoints, Rng);
+            float v = SpellBaseMagnitude(cast, e);
             if (e.coef > 0) v += e.coef * c.Stats.SpellDamage(school);
             if (e.apCoef > 0)
             {
@@ -852,7 +860,7 @@ namespace Lanternvale.Rules
             if (e.pctOfMax > 0) v = t.MaxHealth * e.pctOfMax / 100f;
             else
             {
-                v = AbilityRules.BaseMagnitude(e, cast.EffLevel, cast.LearnLevel, cast.ComboPoints, Rng);
+                v = SpellBaseMagnitude(cast, e);
                 if (e.coef > 0) v += e.coef * c.Stats.HealingPower;
                 if (e.apCoef > 0) v += e.apCoef * c.Stats.AttackPower;
                 if (!cast.Periodic) v += Specials.IncomingFlatHealBonus(cast, e, t);

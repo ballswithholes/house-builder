@@ -190,6 +190,9 @@ The repository ships only `Assets/`. It has no `ProjectSettings/` (so no pinned 
 3. Run **Lanternvale ▸ Setup ▸ Configure URP 2D Renderer**. The first run only offers to install the URP
    package (this needs network access). Wait for Unity to finish importing, then **run it a second time**.
    The second run creates and assigns a URP asset with the 2D renderer, so sprites react to 2D lights.
+   It also adds URP's 2D sprite shaders to *Always Included Shaders* (a build step does the same before
+   every player build, or use **Lanternvale ▸ Setup ▸ Include 2D Sprite Shaders in Builds**), because the
+   game creates its sprites at runtime and a build would otherwise strip the lit sprite shader.
 4. Choose **Lanternvale ▸ Create Game Scene**, then press **Play**.
 
 Unity writes `ProjectSettings/`, `Packages/`, `Library/` and other folders into the project folder.
@@ -435,6 +438,10 @@ whole jobs of PNGs (§9 explains which).
   rules, world, dialogue, quest and save code is tested headlessly. Expect first-run rough edges in
   everything that only the editor can show: layout and scaling of the IMGUI windows, sorting and lighting
   values, input feel, animation timing and frame rate. The presentation timings in the docs are estimates.
+* **Review status.** Besides the tests, the code went through several rounds of independent review
+  (reviewer → two skeptical verifiers → fixer). The last round still confirmed a handful of new issues
+  (they were fixed), so the code is converging but not proven clean; a first play session in the editor is
+  the most valuable next check.
 * **Placeholder art.** All 292 images are generated placeholders, painterly but not production quality.
   Real art is meant to replace them (see above).
 * **Vertical slice.** There are three maps and six quests, tuned around levels 1–12. Classes, abilities and

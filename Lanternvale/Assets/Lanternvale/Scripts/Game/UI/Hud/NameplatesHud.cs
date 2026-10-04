@@ -2,9 +2,10 @@
 //  * combat: small health bars over enemies (level/rank, name when hovered/targeted/elite, telegraphed cast bar),
 //    a slim bar over hovered allies, the framed target outlined;
 //  * exploration: GameFlow.HoveredLabel near HoveredLabelWorld coloured by HoveredKind with an interaction prompt
-//    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover. Encounter enemies get a
-//    plate from Session.PreviewEncounter (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the
-//    level the battle will scale it to; "??" for bosses), elite/rare winged mark or boss skull, and the group size.
+//    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover ("Select"; "Talk" over the
+//    selected companion, GameFlow.CanTalkTo). Encounter enemies get a plate from Session.PreviewEncounter
+//    (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the level the battle will scale it to;
+//    "??" for bosses), elite/rare winged mark or boss skull, and the group size.
 // Anchors: UnitView.NameplatePosition → CameraRig.WorldToGui / Ui.Scale.
 // Combat plates read health/death as presented (HudPresented): a plate stays until the death is shown.
 using System;
@@ -156,7 +157,8 @@ namespace Lanternvale.Game
                     if (u == null) return;
                     label = Hud.NameOf(u);
                     col = Hud.UnitColor(u);
-                    prompt = f.Selected == u ? "" : "Select";
+                    // a click selects; the selected companion clicked again is talked to (GameFlow.ClickView → TalkToCompanion)
+                    prompt = f.Selected != u ? "Select" : f.CanTalkTo(u) ? "Talk" : "";
                     if (Hud.FieldPick != null) prompt = "";
                     break;
                 }

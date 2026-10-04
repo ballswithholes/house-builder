@@ -197,6 +197,10 @@ namespace Lanternvale.Game.Panels
 
         void OnNewView(GameSession s, DialogueView v)
         {
+            // a conversation started by clicking an NPC in range began in this frame's Update (legacy input): that
+            // same MouseDown still reaches this frame's OnGUI, where the box is now drawn under the cursor — it must
+            // not finish the first line, arm Continue or pick a choice nobody has read
+            lockedUntilFrame = Mathf.Max(lockedUntilFrame, Time.frameCount + 1);
             shown = v;
             shownNode = v.NodeId ?? "";
             revealStart = Time.unscaledTime;
@@ -423,6 +427,9 @@ namespace Lanternvale.Game.Panels
             float contentH = 26f + nameH + textH + (rows.Count > 0 ? 18f + choicesH : 0f) + footer;
             float bh = Mathf.Clamp(Mathf.Max(contentH, hasPortrait ? portrait + 70f : 160f), 160f, H - 120f);
             var box = new Rect((W - bw) * 0.5f, H - bh - 24f, bw, bh);
+            // locked (just opened, or a choice / Continue is on its way): no click on the box counts, and none arms the
+            // Continue button (a GUI.Button fires on the later release, past the lock)
+            if (Time.frameCount <= lockedUntilFrame) PanelKit.SwallowMouseDown(box);
             Ui.Panel(box);
 
             // speaker

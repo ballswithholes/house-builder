@@ -208,11 +208,35 @@ namespace Lanternvale.Game.Panels
             }
         }
 
+        const float RowStep = 46f, ColumnHead = 42f;
+        // "Good to know": divider 10 above, heading 38, two tips per 36 px row, 4 px bottom margin (150 for 5 tips)
+        static float TipsHeight => 42f + (Tips.Length + 1) / 2 * 36f;
+
+        readonly PanelKit.ScrollState scroll = new PanelKit.ScrollState();
+
         protected override void DrawPanel()
         {
             Split();
             var r = PanelKit.Centered(Mathf.Min(1500f, Ui.Width - 40f), Mathf.Min(820f, Ui.Height - 60f));
             var c = Chrome(r, "How to play");
+            int rows = 0;
+            foreach (var col in Columns) rows = Mathf.Max(rows, col.Length - 1);
+            float columnsH = ColumnHead + rows * RowStep;
+            // the tips go below the tallest column (12 px clear of it, plus the 10 px to their divider); when the window
+            // is too short for both (the 150% interface size: a 720 high canvas) the body scrolls instead of overlapping
+            float contentH = columnsH + 22f + TipsHeight;
+            if (contentH <= c.height + 0.5f)
+            {
+                DrawBody(c, columnsH);
+                return;
+            }
+            float cw = PanelKit.BeginScroll(c, scroll, contentH);
+            try { DrawBody(new Rect(0f, 0f, cw, contentH), columnsH); }
+            finally { PanelKit.EndScroll(scroll); }
+        }
+
+        void DrawBody(Rect c, float columnsH)
+        {
             float colW = (c.width - 40f) / 3f;
             for (int i = 0; i < Columns.Length; i++)
             {
@@ -220,7 +244,7 @@ namespace Lanternvale.Game.Panels
                 float x = c.x + i * (colW + 20f);
                 float y = c.y;
                 PanelKit.Label(new Rect(x, y, colW, 34f), col[0], PanelKit.Heading);
-                y += 42f;
+                y += ColumnHead;
                 for (int k = 1; k < col.Length; k++)
                 {
                     string key = keys[i][k];
@@ -229,10 +253,10 @@ namespace Lanternvale.Game.Panels
                     PanelKit.Rounded(new Rect(kr.x, kr.y + 4f, kr.width - 8f, 34f), new Color(0.17f, 0.13f, 0.22f, 0.08f));
                     PanelKit.Label(new Rect(kr.x + 10f, kr.y + 4f, kr.width - 20f, 34f), key, PanelKit.TextBoldSmall);
                     PanelKit.Label(new Rect(x + colW * 0.42f + 4f, y + 4f, colW * 0.58f - 4f, 44f), what, PanelKit.TextSmall);
-                    y += 46f;
+                    y += RowStep;
                 }
             }
-            float ty = c.yMax - 150f;
+            float ty = Mathf.Max(c.yMax - TipsHeight, c.y + columnsH + 22f);
             PanelKit.HLine(c.x, ty - 10f, c.width);
             PanelKit.Label(new Rect(c.x, ty, c.width, 30f), "Good to know", PanelKit.Heading);
             for (int i = 0; i < Tips.Length; i++)

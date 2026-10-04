@@ -28,6 +28,19 @@ namespace Lanternvale.Game
             "heal", "buff", "debuff", "death", "level_up", "quest", "coin", "footstep_grass", "chest_open", "door",
         };
 
+        /// <summary>
+        /// Play-mode entry (GameAudio.ResetStatics): forgets the destroyed player and, if Unity unloaded any
+        /// synthesized clip with the previous session, lets Init synthesize them again.
+        /// </summary>
+        internal static void ResetStatics()
+        {
+            player = null;
+            var c = clips;
+            if (c == null) return;
+            foreach (var clip in c.Values)
+                if (clip == null) { clips = null; generating = false; break; }
+        }
+
         /// <summary>Generates the clips and the source pool (idempotent; GameAudio.Init calls it).</summary>
         public static void Init()
         {
@@ -75,7 +88,7 @@ namespace Lanternvale.Game
         public static void Play(string id, Vector2? worldPos, float volume, float pitch)
         {
             if (string.IsNullOrEmpty(id)) return;
-            if (player == null) GameAudio.Init();
+            if (player == null) GameAudio.Init(); // re-entrant: recreates a destroyed player
             if (clips == null) PollReady();
             if (clips == null || player == null) return; // still synthesizing (first fraction of a second)
             if (!clips.TryGetValue(id, out var clip))

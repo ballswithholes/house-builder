@@ -320,7 +320,7 @@ namespace Lanternvale.Rules
                     if (auras.Count == 0) break;
                     var def = b.Db.Aura(auras[0]);
                     if (def == null) break;
-                    if (!string.IsNullOrEmpty(def.exclusiveGroup) && (a.target == TargetType.Self || IsSelfOnly(a)))
+                    if (!string.IsNullOrEmpty(def.exclusiveGroup) && (a.target == TargetType.Self || KeptOnCaster(def)))
                     {
                         // stances/aspects/seals/armors: keep one, prefer the role's choice
                         AuraInstance current = null;
@@ -329,6 +329,8 @@ namespace Lanternvale.Rules
                         if (current != null && (current.Def.id == def.id || MatchesPreference(current.Def.id, pref) || !MatchesPreference(def.id, pref))) break;
                         if (current == null && pref != null && !MatchesPreference(def.id, pref) && KnowsPreferred(b, u, def.exclusiveGroup, pref)) break;
                         if (u.PowerType == ResourceType.Rage && current != null && u.Rage > 25f) break;
+                        // the party-wide versions (Prayer of Fortitude, Arcane Brilliance) wait for the end of the fight too
+                        if (IsPartyBuff(a) && TooCostlyForCombat(b, u, a, def, mods)) break;
                         yield return new Candidate { Ability = a, Target = u, Score = basePri + 8f, Why = "group " + def.exclusiveGroup };
                         break;
                     }
@@ -337,21 +339,24 @@ namespace Lanternvale.Rules
                         bool missing = false;
                         var check = IsPartyBuff(a) ? allies : new List<Unit> { u };
                         foreach (var t in check) if (t.IsCharacter || t == u) if (!t.HasAura(def.id)) { missing = true; break; }
-                        if (!missing) break;
+                        if (!missing || TooCostlyForCombat(b, u, a, def, mods)) break;
                         yield return new Candidate { Ability = a, Target = u, Score = basePri + (b.Round <= 1 ? 6f : 3f), Why = "party buff" };
                         break;
                     }
+                    if (TooCostlyForCombat(b, u, a, def, mods)) break;
                     foreach (var t in TargetsFor(a, u, allies))
                     {
                         if (!t.IsCharacter && t != u.Pet) continue;
-                        if (t.HasAura(def.id)) continue;
+                        if (t.HasAura(def.id) || !BuffSuits(def, t)) continue;
                         if (!string.IsNullOrEmpty(def.exclusiveGroup))
                         {
                             bool groupTaken = false;
                             foreach (var x in t.Auras) if (x.Def.exclusiveGroup == def.exclusiveGroup && (!def.exclusivePerCaster || x.Caster == u)) { groupTaken = true; break; }
                             if (groupTaken) continue;
                         }
-                        float s = basePri + 3f + (t.Role == UnitRole.Tank ? 1f : 0f);
+                        // buffs that outlast the fight (Fortitude, Arcane Intellect, Blessings) go up at its start, like party buffs
+                        bool lasting = def.duration >= 60f;
+                        float s = basePri + (lasting && b.Round <= 1 ? 6f : 3f) + (t.Role == UnitRole.Tank ? 1f : 0f);
                         if (def.absorb != null) s = t.HealthPct < 80f || t.AggroTargetedBy(b) > 0 ? basePri + 6f : 0f;
                         if (s > 0) yield return new Candidate { Ability = a, Target = t, Score = s, Why = "buff " + t.Name };
                     }
@@ -359,7 +364,8 @@ namespace Lanternvale.Rules
                 }
                 case "Debuff":
                 {
-                    if (manaLow && a.cost.type == ResourceType.Mana && role == UnitRole.Healer) break;
+                    // a healer keeps the same mana floor for debuffs (Shadow Word: Pain) as for nukes: mana goes to heals first
+                    if (role == UnitRole.Healer && a.cost.type == ResourceType.Mana && u.ManaPct < 70f) break;
                     foreach (var t in EnemyTargets(a, u, enemies, focus))
                     {
                         var check = t == u && focus != null ? focus : t;
@@ -465,7 +471,9 @@ namespace Lanternvale.Rules
                             yield return new Candidate { Ability = a, Target = focus, Score = basePri + 1f, Why = "rage dump" };
                         break;
                     }
-                    if (manaLow && a.cost.type == ResourceType.Mana && a.special != "Shoot") break;
+                    // saving the last quarter of mana only pays with a free attack to fall back on (wand, melee swings,
+                    // Auto Shot): a ranged caster without one keeps casting down to the mana-potion step instead of idling
+                    if (manaLow && a.cost.type == ResourceType.Mana && a.special != "Shoot" && HasFreeAttack(u, role)) break;
                     if (role == UnitRole.Healer && a.cost.type == ResourceType.Mana && u.ManaPct < 70f) break;
                     foreach (var t in EnemyTargets(a, u, enemies, focus))
                     {
@@ -485,6 +493,15 @@ namespace Lanternvale.Rules
                     break;
                 }
             }
+        }
+
+        /// <summary>The unit has an attack that costs no mana to fall back on when it saves its mana: melee swings (tanks,
+        /// melee, healers who stand back anyway), a wand it can Shoot, or a ranged weapon for Auto Shot.</summary>
+        static bool HasFreeAttack(Unit u, UnitRole role)
+        {
+            if (role != UnitRole.RangedDps) return true;
+            if (u.Equipment.HasWand && u.Knows("shoot")) return true;
+            return u.Equipment.HasRangedWeapon && !u.Equipment.HasWand && u.Knows("auto_shot");
         }
 
         /// <summary>The ability would do nothing useful on the target (drain mana of a manaless unit, nothing to dispel,
@@ -578,11 +595,55 @@ namespace Lanternvale.Rules
             return false;
         }
 
-        static bool IsSelfOnly(AbilityDef a)
+        /// <summary>Most of its mana pool a buff that outlasts the fight may cost for the AI to cast it in combat.</summary>
+        public const float CombatBuffManaShare = 0.10f;
+
+        /// <summary>
+        /// A buff that outlasts the fight (a minute or more, no charges to spend: Fortitude, Arcane Intellect, their party-wide
+        /// versions) whose mana cost is over <see cref="CombatBuffManaShare"/> of the caster's pool: put up between fights, not
+        /// in one — ranks grow faster than the pool (Fortitude rank 3 is ~23% of a level-30 priest's mana), so casting them at
+        /// the start of a fight left the healer dry by round 3. Cheaper ones (Blessings, Shadow Protection, low-rank
+        /// Arcane Intellect) and charge-based shields (Inner Fire, Lightning Shield) still go up in combat.
+        /// </summary>
+        static bool TooCostlyForCombat(Battle b, Unit u, AbilityDef a, AuraDef def, AbilityModSet mods)
         {
-            foreach (var e in a.effects) if (e.type == EffectType.ApplyAura && e.target != EffectTarget.Self && e.target != EffectTarget.Target) return false;
+            if (!b.InCombat || def.duration < 60f || def.charges > 0) return false;
+            if (a.cost == null || a.cost.type != ResourceType.Mana || u.MaxMana <= 0f) return false;
+            return AbilityRules.ResourceCost(u, a, AbilityRules.UsedRank(u, a), mods) > CombatBuffManaShare * u.MaxMana;
+        }
+
+        /// <summary>An ally-targeted buff of an exclusive group the AI keeps on the caster, like a stance: Dampen/Amplify
+        /// Magic change the healing taken (and Amplify the spell damage taken) of whoever wears them. Every other
+        /// ally-targeted grouped buff (Fortitude, Arcane Intellect, Blessings) goes to the party member that lacks it.</summary>
+        static bool KeptOnCaster(AuraDef def) => def.special == "MageFlatMagicModifier";
+
+        /// <summary>A single-target buff is worth giving the ally: mana buffs (Intellect, Wisdom's mana regeneration,
+        /// Spirit) only to units with mana, attack power (Might) only to units that fight with it, threat reduction
+        /// (Salvation) never to a tank.</summary>
+        static bool BuffSuits(AuraDef def, Unit t)
+        {
+            foreach (var m in def.mods)
+            {
+                float v = m.values != null && m.values.Length > 0 ? m.values[0] : m.value;
+                switch (m.stat)
+                {
+                    case StatId.Intellect: case StatId.ManaRegen: case StatId.Spirit:
+                        if (v > 0 && t.MaxMana <= 0f) return false;
+                        break;
+                    case StatId.AttackPower: case StatId.RangedAttackPower:
+                        if (v > 0 && !UsesAttackPower(t)) return false;
+                        break;
+                    case StatId.ThreatGenerated:
+                        if (v < 0 && t.Role == UnitRole.Tank) return false;
+                        break;
+                }
+            }
             return true;
         }
+
+        /// <summary>The unit's damage scales with attack power: tanks and melee (characters and pets) and hunters.</summary>
+        static bool UsesAttackPower(Unit t) =>
+            t.Role == UnitRole.Tank || t.Role == UnitRole.MeleeDps || t.ClassId == ClassId.Hunter;
 
         static bool KnowsPreferred(Battle b, Unit u, string group, string pref)
         {

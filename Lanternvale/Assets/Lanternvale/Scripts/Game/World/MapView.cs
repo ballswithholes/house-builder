@@ -27,7 +27,7 @@ namespace Lanternvale.Game
         public MapObjectKind Kind;
         /// <summary>Prop/chest pivot (feet) or transition/region centre.</summary>
         public Vector2 Position;
-        /// <summary>World rect: sprite bounds for props/chests, ground footprint for transitions/regions.</summary>
+        /// <summary>World rect: painted (opaque) sprite bounds for props/chests, ground footprint for transitions/regions.</summary>
         public Rect Rect;
         /// <summary>Where the UI should draw a label/prompt (above the sprite or marker).</summary>
         public Vector2 LabelPosition;
@@ -66,7 +66,7 @@ namespace Lanternvale.Game
         public static float ForegroundParallax = 1.15f;
         /// <summary>Alpha of foreground props while a unit is behind them.</summary>
         public static float ForegroundFadeAlpha = 0.35f;
-        /// <summary>Tall props (≥ 2.5 m) fade to this alpha when a unit stands behind them. 1 disables.</summary>
+        /// <summary>Tall props (painted part ≥ 2.5 m) fade to this alpha when a unit stands behind them. 1 disables.</summary>
         public static float OccluderFadeAlpha = 0.5f;
         /// <summary>How strongly background layers sink when the camera looks towards the front.</summary>
         public static float VerticalParallax = 0.4f;
@@ -110,6 +110,7 @@ namespace Lanternvale.Game
             public Vector2 pivot;
             public int lastN = -1;
             public bool loop;
+            public Color tint = Color.white;
         }
 
         sealed class FgView
@@ -210,7 +211,7 @@ namespace Lanternvale.Game
             moon = PresentationArt.NewRenderer("Moon", skyRoot, PresentationArt.Moon, SortingOrders.Sky + 4, true);
             moon.transform.localScale = new Vector3(1.6f, 1.6f, 1f);
             moon.enabled = moonGlow.enabled = false;
-            if (!Lighting2D.IsLit)
+            if (!PresentationArt.SpritesLit)
             {
                 overlay = PresentationArt.NewRenderer("Night Overlay", skyRoot, PresentationArt.White, SortingOrders.NightOverlay);
                 overlay.enabled = false;
@@ -223,7 +224,9 @@ namespace Lanternvale.Game
         {
             if (l == null || string.IsNullOrEmpty(l.art)) return;
             var sprite = ArtLibrary.Sprite(l.art);
-            var sr = PresentationArt.NewRenderer("Layer " + index + " " + l.art, layersRoot, sprite, SortingOrders.Background + index * 10);
+            // Unlit material (URP 2D): point lights work in screen XY and would light the distant
+            // mountains behind them; UpdateView tints the layers with the global ambient instead.
+            var sr = PresentationArt.NewRenderer("Layer " + index + " " + l.art, layersRoot, sprite, SortingOrders.Background + index * 10, true);
             var lv = new LayerView
             {
                 def = l,
@@ -233,6 +236,7 @@ namespace Lanternvale.Game
                 spriteH = Mathf.Max(0.01f, sprite.bounds.size.y),
                 pivot = PresentationArt.PivotNorm(sprite),
                 loop = l.loop,
+                tint = string.IsNullOrEmpty(l.tint) ? Color.white : Ui.Hex(l.tint),
             };
             lv.scale = l.height > 0f ? l.height / lv.spriteH : 1f;
             sr.transform.localScale = new Vector3(lv.scale, lv.scale, 1f);
@@ -241,7 +245,7 @@ namespace Lanternvale.Game
                 sr.drawMode = SpriteDrawMode.Tiled;
                 sr.tileMode = SpriteTileMode.Continuous;
             }
-            if (!string.IsNullOrEmpty(l.tint)) sr.color = Ui.Hex(l.tint);
+            sr.color = lv.tint;
             layers.Add(lv);
         }
 
@@ -401,7 +405,9 @@ namespace Lanternvale.Game
             obj.Rect = SpriteRect(sprite, obj.Position, scale, p.flip);
             obj.LabelPosition = new Vector2(obj.Position.x, obj.Rect.yMax + 0.35f);
 
-            if (!decal && ArtLibrary.CastsShadow(art)) obj.shadow = AddShadow(root, sprite.bounds.size.x * scale, h);
+            // painted size (canvases carry wide transparent margins): shadows and the occluder test use it
+            var content = SpriteContent.Bounds(sprite);
+            if (!decal && ArtLibrary.CastsShadow(art)) obj.shadow = AddShadow(root, content.width * scale, content.height * scale);
             if (p.sway) SwayManager.Get().Add(sr.transform, h, this, decal ? 0f : 1f);
 
             bool lantern = art.Contains("spirit_lantern");
@@ -417,9 +423,9 @@ namespace Lanternvale.Game
                 if (lantern && !obj.LanternLit) obj.light.Enabled = false; // dark lanterns stay dark until rekindled
             }
             else if (lantern && obj.LanternLit)
-                AddLight(obj, new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, h * 0.68f / scale) }, scale, false);
+                AddLight(obj, LanternLight(LanternLampY(obj, h) / scale), scale, false);
 
-            if (!decal && h >= 2.5f) occluders.Add(obj);
+            if (!decal && content.height * scale >= 2.5f) occluders.Add(obj);
             Objects.Add(obj);
             if (!string.IsNullOrEmpty(p.interact))
             {
@@ -428,15 +434,21 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>World rect of the painted part of a sprite at pos (picking, labels, occluder/foreground fades).</summary>
         static Rect SpriteRect(Sprite s, Vector2 pos, float scale, bool flip)
         {
-            var b = s.bounds;
-            float minX = b.min.x * scale, maxX = b.max.x * scale;
+            var c = SpriteContent.Bounds(s, out bool exact);
+            float minX = c.xMin * scale, maxX = c.xMax * scale;
+            float minY = c.yMin * scale, maxY = c.yMax * scale;
             if (flip) { float t = minX; minX = -maxX; maxX = -t; }
-            float w = maxX - minX;
-            // painted sprites have transparent margins: tighten horizontally for picking
-            minX += w * 0.12f; maxX -= w * 0.12f;
-            return Rect.MinMaxRect(pos.x + minX, pos.y + b.min.y * scale, pos.x + maxX, pos.y + b.max.y * scale * 0.97f);
+            if (!exact)
+            {
+                // no alpha readback: canvas bounds only, so tighten horizontally for the transparent margins
+                float w = maxX - minX;
+                minX += w * 0.12f; maxX -= w * 0.12f;
+                maxY *= 0.97f;
+            }
+            return Rect.MinMaxRect(pos.x + minX, pos.y + minY, pos.x + maxX, pos.y + maxY);
         }
 
         SpriteRenderer AddShadow(Transform parent, float spriteWidth, float height)
@@ -455,18 +467,39 @@ namespace Lanternvale.Game
         {
             var off = new Vector3(l.offset.x * scale * (flip ? -1f : 1f), l.offset.y * scale, 0f);
             var color = string.IsNullOrEmpty(l.color) ? Ui.Hex("#ffd9a0") : Ui.Hex(l.color);
-            var handle = Lighting2D.AddPointLight(obj.root.gameObject, off, color, Mathf.Max(0.5f, l.radius), Mathf.Max(0f, l.intensity));
-            if (handle?.glow != null) PresentationArt.MakeUnlit(handle.glow);
+            var handle = PresentationArt.AddPointLight(obj.root.gameObject, off, color, Mathf.Max(0.5f, l.radius), Mathf.Max(0f, l.intensity));
             var al = new AnimatedLight(handle, l.flicker, l.nightOnly);
             obj.light = al;
             lights.Add(al);
         }
 
+        /// <summary>
+        /// Height of the lamp above the pivot on spirit-lantern art, as a fraction of the (scaled) canvas
+        /// height: the warm lamp pixels sit at v ≈ 0.36–0.44 over a 0.039 pivot, ≈ 1.5 m on the 4.08 m canvas.
+        /// </summary>
+        const float LanternLampFraction = 0.37f;
+
+        /// <summary>
+        /// World height of a lantern's lamp above its pivot: the authored light offset when the prop has
+        /// one, else derived from the art. One value for the halo, the default light and the rekindle FX.
+        /// </summary>
+        static float LanternLampY(MapObject o, float canvasH)
+        {
+            var l = o.Prop != null ? o.Prop.light : null;
+            return l != null ? l.offset.y * o.scale : canvasH * LanternLampFraction;
+        }
+
+        /// <summary>Default warm light of a lit spirit lantern with no authored light (offsetY in unscaled units).</summary>
+        static LightDef LanternLight(float offsetY) =>
+            new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, offsetY) };
+
         void BuildLanternHalo(MapObject obj, float h)
         {
-            int order = Lighting2D.IsLit ? SortingOrders.Glow : SortingOrders.NightOverlay + 90;
+            // URP-lit: sorted just above the lantern so units standing in front of it are not washed over.
+            // Unlit: above the night overlay so the glow punches through the darkness.
+            int order = PresentationArt.SpritesLit ? obj.order + 2 : SortingOrders.NightOverlay + 90;
             obj.halo = PresentationArt.NewRenderer("Spirit Halo", obj.root, PresentationArt.Glow, order, true);
-            obj.halo.transform.localPosition = new Vector3(0f, h * 0.66f, 0f);
+            obj.halo.transform.localPosition = new Vector3(0f, LanternLampY(obj, h), 0f);
             float d = Mathf.Max(1.6f, h * 1.15f);
             obj.halo.transform.localScale = new Vector3(d, d, 1f);
             animated.Add(obj);
@@ -522,7 +555,8 @@ namespace Lanternvale.Game
             };
             obj.Rect = SpriteRect(sprite, obj.Position, 1f, false);
             obj.LabelPosition = new Vector2(obj.Position.x, obj.Rect.yMax + 0.3f);
-            obj.shadow = AddShadow(root, sprite.bounds.size.x, sprite.bounds.size.y);
+            var content = SpriteContent.Bounds(sprite);
+            obj.shadow = AddShadow(root, content.width, content.height);
             obj.Visible = string.IsNullOrEmpty(c.requireFlag) || flagTest == null || flagTest(c.requireFlag);
             obj.Locked = c.lockCheck != null;
             root.gameObject.SetActive(obj.Visible);
@@ -622,7 +656,7 @@ namespace Lanternvale.Game
 
         void BuildLighting()
         {
-            if (Lighting2D.IsLit)
+            if (PresentationArt.SpritesLit)
             {
                 DisableSceneGlobalLights();
                 globalLightComp = Lighting2D.CreateGlobalLight(transform, DayNight.AmbientColor, DayNight.AmbientIntensity);
@@ -692,11 +726,21 @@ namespace Lanternvale.Game
             }
             if (globalLight != null) globalLight.Set(DayNight.AmbientColor, DayNight.AmbientIntensity);
 
-            // ---- parallax layers
+            // ---- parallax layers (unlit material in URP-lit mode: lit by the global ambient only, by hand)
             float camYRef = Def.depth - 1f;
+            var layerMul = Color.white;
+            if (PresentationArt.SpritesLit)
+            {
+                var amb = DayNight.AmbientColor;
+                float k = DayNight.AmbientIntensity;
+                layerMul = new Color(Mathf.Clamp01(amb.r * k), Mathf.Clamp01(amb.g * k), Mathf.Clamp01(amb.b * k), 1f);
+            }
             for (int i = 0; i < layers.Count; i++)
             {
                 var l = layers[i];
+                var lc = l.tint * layerMul;
+                lc.a = l.tint.a;
+                l.sr.color = lc;
                 float p = l.def.parallax;
                 float tileW = l.spriteW * l.scale, tileH = l.spriteH * l.scale;
                 if (Mathf.Abs(l.def.scrollSpeed) > 1e-5f)
@@ -726,7 +770,7 @@ namespace Lanternvale.Game
             // ---- foreground parallax + fade when a unit is behind
             var units = UnitView.All;
             float fpar = ForegroundParallax - 1f;
-            var fgMul = Lighting2D.IsLit ? Color.white : DayNight.OverlayMultiply;
+            var fgMul = PresentationArt.SpritesLit ? Color.white : DayNight.OverlayMultiply;
             for (int i = 0; i < foreground.Count; i++)
             {
                 var f = foreground[i];
@@ -987,13 +1031,13 @@ namespace Lanternvale.Game
             string art = o.Prop.art.EndsWith("_dark", StringComparison.Ordinal) ? o.Prop.art.Substring(0, o.Prop.art.Length - 5) : o.Prop.art;
             o.sprite.sprite = ArtLibrary.Sprite(lit ? art : art + "_dark");
             RefreshHighlightSprites(o);
-            float h = o.sprite.sprite.bounds.size.y * o.scale;
+            float lampY = LanternLampY(o, o.sprite.sprite.bounds.size.y * o.scale);
             if (o.light == null && lit)
-                AddLight(o, new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, h * 0.68f / o.scale) }, o.scale, false);
+                AddLight(o, LanternLight(lampY / Mathf.Max(0.01f, o.scale)), o.scale, false);
             if (o.light != null) o.light.Enabled = lit;
             if (animate && lit)
             {
-                var c = o.Position + new Vector2(0f, h * 0.66f);
+                var c = o.Position + new Vector2(0f, lampY);
                 FxSystem.Impact(c, School.Holy);
                 FxSystem.Sparkles(c, new Color(1f, 0.9f, 0.6f), 14);
                 FxSystem.AuraPulse(o.Position, 2.2f, new Color(1f, 0.86f, 0.55f, 0.8f));
@@ -1036,6 +1080,11 @@ namespace Lanternvale.Game
             if (disposed) return;
             disposed = true;
             if (SwayManager.Instance != null) SwayManager.Instance.RemoveOwner(this);
+            // Switch this map's own global light off before restoring the scene's: Destroy is deferred to the
+            // end of the frame, and URP logs "More than one global light" when a second one registers meanwhile.
+            var ownGlobal = globalLightComp as Behaviour;
+            if (ownGlobal != null) ownGlobal.enabled = false;
+            globalLight = null;
             foreach (var b in disabledGlobalLights) if (b != null) b.enabled = true;
             disabledGlobalLights.Clear();
             if (Current == this) Current = null;

@@ -73,9 +73,11 @@ namespace Lanternvale.Game
 
         public void SnapToTarget()
         {
+            // size first: the bounds clamp below depends on it
+            if (Cam != null) Cam.orthographicSize = targetSize;
+            ClampPan();
             var t = DesiredCenter();
             basePos = new Vector3(t.x, t.y, CameraZ);
-            if (Cam != null) Cam.orthographicSize = targetSize;
             ClampBase();
             transform.position = basePos;
         }
@@ -111,14 +113,19 @@ namespace Lanternvale.Game
             return new Vector2(s.x, Screen.height - s.y);
         }
 
-        Vector2 DesiredCenter()
+        /// <summary>The view centre before manual pan: focus point or follow target plus the look-ahead, else the current centre.</summary>
+        Vector2 AnchorCenter()
         {
-            Vector2 c;
-            if (focusPoint.HasValue) c = focusPoint.Value;
-            else if (Follow != null) c = Follow.position;
-            else c = new Vector2(basePos.x, basePos.y - LookAhead);
-            return c + new Vector2(0, LookAhead) + panOffset;
+            if (focusPoint.HasValue) return focusPoint.Value + new Vector2(0, LookAhead);
+            if (Follow != null) return (Vector2)Follow.position + new Vector2(0, LookAhead);
+            return new Vector2(basePos.x, basePos.y);
         }
+
+        /// <summary>
+        /// The anchor kept inside the bounds, plus the manual pan. ClampPan keeps the sum inside the bounds too, so
+        /// panning away from an edge the anchor is pressed against moves the view at once.
+        /// </summary>
+        Vector2 DesiredCenter() => ClampCenter(AnchorCenter()) + panOffset;
 
         void LateUpdate()
         {
@@ -142,6 +149,7 @@ namespace Lanternvale.Game
                 if (GameInput.MouseHeld(2)) panOffset -= MouseDelta() * (Cam.orthographicSize * 2f / Screen.height);
                 panOffset = Vector2.ClampMagnitude(panOffset, 30f);
             }
+            ClampPan();
             lastMouse = GameInput.MousePosition;
 
             var target = DesiredCenter();
@@ -163,16 +171,44 @@ namespace Lanternvale.Game
         Vector2 lastMouse;
         Vector2 MouseDelta() => GameInput.MousePosition - lastMouse;
 
+        /// <summary>Range the view centre may take at the current zoom (the bounds' centre on an axis the view outgrows).</summary>
+        void CenterRange(out Vector2 min, out Vector2 max)
+        {
+            float halfH = Cam.orthographicSize;
+            float halfW = halfH * Cam.aspect;
+            min = new Vector2(Bounds.xMin + halfW, Bounds.yMin + halfH);
+            max = new Vector2(Bounds.xMax - halfW, Bounds.yMax - halfH);
+            if (min.x > max.x) min.x = max.x = Bounds.center.x;
+            if (min.y > max.y) min.y = max.y = Bounds.center.y;
+        }
+
+        Vector2 ClampCenter(Vector2 c)
+        {
+            if (Cam == null) return c;
+            CenterRange(out var min, out var max);
+            return new Vector2(Mathf.Clamp(c.x, min.x, max.x), Mathf.Clamp(c.y, min.y, max.y));
+        }
+
+        /// <summary>
+        /// Feeds the bounds clamp back into the manual pan: the panned centre (bounded anchor + offset) may not
+        /// leave the reachable range, so pushing against an edge builds no hidden offset that must be unwound
+        /// before the opposite direction responds. The allowed range always contains zero, so this only ever
+        /// shrinks the offset toward zero and never turns it around.
+        /// </summary>
+        void ClampPan()
+        {
+            if (Cam == null) return;
+            CenterRange(out var min, out var max);
+            var a = ClampCenter(AnchorCenter());
+            panOffset = new Vector2(Mathf.Clamp(panOffset.x, min.x - a.x, max.x - a.x),
+                                    Mathf.Clamp(panOffset.y, min.y - a.y, max.y - a.y));
+        }
+
         void ClampBase()
         {
             if (Cam == null) return;
-            float halfH = Cam.orthographicSize;
-            float halfW = halfH * Cam.aspect;
-            float minX = Bounds.xMin + halfW, maxX = Bounds.xMax - halfW;
-            float minY = Bounds.yMin + halfH, maxY = Bounds.yMax - halfH;
-            float x = minX > maxX ? Bounds.center.x : Mathf.Clamp(basePos.x, minX, maxX);
-            float y = minY > maxY ? Bounds.center.y : Mathf.Clamp(basePos.y, minY, maxY);
-            basePos = new Vector3(x, y, CameraZ);
+            var c = ClampCenter(basePos);
+            basePos = new Vector3(c.x, c.y, CameraZ);
         }
 
         public static Vector2 ToUnity(Vec2 v) => new Vector2(v.x, v.y);

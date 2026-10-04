@@ -36,6 +36,7 @@ namespace Lanternvale.Game.Panels
         float xpFill, approvalFill;
         int approval;
         int lockFrame;
+        readonly PanelKit.ScrollState bodyScroll = new PanelKit.ScrollState();
 
         protected override void DrawPanel()
         {
@@ -44,7 +45,7 @@ namespace Lanternvale.Game.Panels
             var r = PanelKit.Fit(new Rect(40f, 66f, 900f, Mathf.Min(890f, Ui.Height - 160f)));
             var c = Chrome(r, "Character");
             var nm = PanelKit.MemberTabs(new Rect(c.x, c.y - 4f, c.width, 52f), u, s.Roster.Count > s.Party.Count ? s.Roster : s.Party, 48f);
-            if (nm != u) { PanelKit.Member = nm; u = nm; statsAt = 0f; }
+            if (nm != u) { PanelKit.Member = nm; u = nm; statsAt = 0f; bodyScroll.Reset(); }
             if (u == null) return;
             if (u != statsFor || Time.unscaledTime >= statsAt) Rebuild(s, u);
 
@@ -63,44 +64,89 @@ namespace Lanternvale.Game.Panels
             }
             y += 34f;
 
+            // Body: paper doll + stats, then experience / approval. The window is only Ui.Height - 160 high, so at the
+            // larger interface sizes (125% / 150%: a 864 / 720 high canvas) the fixed 58 px doll would hang below the
+            // parchment and the screen (weapon row, lower stats, approval). The slots shrink to fit first; when even the
+            // smallest size does not fit, the whole body scrolls inside the window.
+            float footH = FooterHeight(u, s);
+            var body = new Rect(c.x, y, c.width, Mathf.Max(80f, c.yMax - y));
+            float slot = Mathf.Clamp(Mathf.Floor((body.height - footH - DollChrome) / DollSlotRows), MinSlot, MaxSlot);
+            float contentH = DollHeight(slot) + footH;
+            if (contentH <= body.height + 0.5f)
+            {
+                DrawBody(body, u, s, slot);
+                return;
+            }
+            // a little room around the content so the hover glow of the first column / top row is not cut by the clip
+            const float padX = 8f, padY = 6f;
+            var view = new Rect(body.x - padX, body.y - padY, body.width + padX, body.height + padY);
+            float cw = PanelKit.BeginScroll(view, bodyScroll, contentH + padY);
+            try { DrawBody(new Rect(padX, padY, cw - padX, contentH), u, s, slot); }
+            finally { PanelKit.EndScroll(bodyScroll); }
+        }
+
+        const float MaxSlot = 58f, MinSlot = 44f, SlotGap = 8f;
+        // doll height = 7 side rows (slot + gap) + the weapon row (slot) + 14 = 8 × slot + DollChrome
+        static float DollSlotRows => LeftSlots.Length + 1f;
+        static float DollChrome => LeftSlots.Length * SlotGap + 14f;
+        static float DollHeight(float slot) => LeftSlots.Length * (slot + SlotGap) + slot + 14f;
+
+        /// <summary>Height of everything below the doll (same predicates as DrawBody draws them).</summary>
+        static float FooterHeight(Unit u, GameSession s)
+        {
+            float h = 10f;
+            if (u.IsMainCharacter || u == s.Main) h += 32f;
+            else if (u.Companion != null)
+            {
+                var ct = CompanionTextOf(u.Companion);
+                h += 32f;
+                if (ct.Likes.Length > 0) h += 26f;
+                if (ct.Dislikes.Length > 0) h += 26f;
+            }
+            if (u.Pet != null) h += 26f;
+            return h;
+        }
+
+        void DrawBody(Rect area, Unit u, GameSession s, float slot)
+        {
+            float y = area.y;
             // paper doll
-            const float slot = 58f, sgap = 8f;
-            var doll = new Rect(c.x, y, 400f, LeftSlots.Length * (slot + sgap) + slot + 14f);
-            DrawDoll(doll, u, s, slot, sgap);
+            var doll = new Rect(area.x, y, 400f, DollHeight(slot));
+            DrawDoll(doll, u, s, slot, SlotGap);
             // stats
-            var sr = new Rect(doll.xMax + 26f, y, c.xMax - doll.xMax - 26f, doll.height);
+            var sr = new Rect(doll.xMax + 26f, y, area.xMax - doll.xMax - 26f, doll.height);
             DrawStats(sr);
             y = doll.yMax + 10f;
             // experience & approval
             if (u.IsMainCharacter || u == s.Main)
             {
-                PanelKit.Label(new Rect(c.x, y, 160f, 26f), "Experience", PanelKit.TextBoldSmall);
-                Ui.Bar(new Rect(c.x + 130f, y + 2f, c.width - 130f, 22f), xpFill, Ui.Hex("#b07be0"), xpText);
+                PanelKit.Label(new Rect(area.x, y, 160f, 26f), "Experience", PanelKit.TextBoldSmall);
+                Ui.Bar(new Rect(area.x + 130f, y + 2f, area.width - 130f, 22f), xpFill, Ui.Hex("#b07be0"), xpText);
                 y += 32f;
             }
             else if (u.Companion != null)
             {
-                PanelKit.Label(new Rect(c.x, y, 160f, 26f), "Approval", PanelKit.TextBoldSmall);
-                var bar = new Rect(c.x + 130f, y + 2f, c.width - 130f, 22f);
+                PanelKit.Label(new Rect(area.x, y, 160f, 26f), "Approval", PanelKit.TextBoldSmall);
+                var bar = new Rect(area.x + 130f, y + 2f, area.width - 130f, 22f);
                 Ui.Bar(bar, approvalFill, approval >= 0 ? Ui.Hex("#f2a6c2") : Ui.Hex("#8f8aa6"), approvalText);
                 PanelKit.Rect(new Rect(bar.center.x - 1f, bar.y - 2f, 2f, bar.height + 4f), new Color(0.17f, 0.13f, 0.22f, 0.5f));
                 var ct = CompanionTextOf(u.Companion);
-                Ui.TooltipFor(new Rect(c.x, y, c.width, 26f), ct.ApprovalTip);
+                Ui.TooltipFor(new Rect(area.x, y, area.width, 26f), ct.ApprovalTip);
                 y += 32f;
                 // what earns (and costs) their approval: the authored likes / dislikes, full lists in the tooltip
-                if (ct.Likes.Length > 0 && y < c.yMax - 24f)
+                if (ct.Likes.Length > 0)
                 {
-                    TasteLine(new Rect(c.x, y, c.width, 24f), "Likes", ct.Likes, PanelKit.GoodDark, ct.ApprovalTip);
+                    TasteLine(new Rect(area.x, y, area.width, 24f), "Likes", ct.Likes, PanelKit.GoodDark, ct.ApprovalTip);
                     y += 26f;
                 }
-                if (ct.Dislikes.Length > 0 && y < c.yMax - 24f)
+                if (ct.Dislikes.Length > 0)
                 {
-                    TasteLine(new Rect(c.x, y, c.width, 24f), "Dislikes", ct.Dislikes, PanelKit.BadDark, ct.ApprovalTip);
+                    TasteLine(new Rect(area.x, y, area.width, 24f), "Dislikes", ct.Dislikes, PanelKit.BadDark, ct.ApprovalTip);
                     y += 26f;
                 }
             }
-            if (u.Pet != null && y < c.yMax - 26f)
-                PanelKit.Label(new Rect(c.x, y, c.width, 26f), petLine, PanelKit.TextSmall);
+            if (u.Pet != null)
+                PanelKit.Label(new Rect(area.x, y, area.width, 26f), petLine, PanelKit.TextSmall);
         }
 
         void DrawDoll(Rect r, Unit u, GameSession s, float slot, float gap)

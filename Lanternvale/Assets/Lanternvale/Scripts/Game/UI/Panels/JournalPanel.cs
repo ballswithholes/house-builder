@@ -26,6 +26,11 @@ namespace Lanternvale.Game.Panels
         readonly PanelKit.ScrollState listScroll = new PanelKit.ScrollState();
         readonly PanelKit.ScrollState detailScroll = new PanelKit.ScrollState();
         readonly Dictionary<string, ItemInstance> samples = new Dictionary<string, ItemInstance>();
+        // height of the detail column as the last draw of that quest laid it out (wrapped reward rows, the choice
+        // button): the scroll range comes from it, so the bottom of a long quest stays reachable. EstimateDetail
+        // sizes only the first draw after a selection.
+        string detailMeasuredFor = "";
+        float detailMeasuredH;
 
         // list rows (rebuilt with the entries)
         struct ListRow
@@ -81,6 +86,7 @@ namespace Lanternvale.Game.Panels
                     case SessionEventKind.GameLoaded:
                         refreshAt = 0f;
                         selectedId = "";
+                        detailMeasuredFor = "";
                         break;
                 }
             };
@@ -226,7 +232,10 @@ namespace Lanternvale.Game.Panels
             float hObj = q.Objectives != null ? q.Objectives.Count * 32f : 0f;
             float hHist = 0f;
             if (q.History != null) foreach (var h in q.History) hHist += PanelKit.TextHeight(h, PanelKit.TextMutedSmall, w - 24f) + 6f;
-            float content = 46f + 30f + hSummary + 20f + 40f + hStage + 12f + hObj + 16f + (hHist > 0 ? 40f + hHist : 0f) + 220f;
+            string qid = q.Id ?? "";
+            float content = detailMeasuredFor == qid && detailMeasuredH > 0f
+                ? detailMeasuredH
+                : EstimateDetail(q, r.width, hSummary, hStage, hObj, hHist);
             float cw = PanelKit.BeginScroll(r, detailScroll, content);
             bool chooseNow = false;
             try
@@ -270,7 +279,7 @@ namespace Lanternvale.Game.Panels
                 }
                 // rewards
                 var rw = q.Rewards;
-                if (rw != null && (rw.xp > 0 || rw.gold > 0 || (rw.items != null && rw.items.Length > 0) || (rw.choiceItems != null && rw.choiceItems.Length > 0)))
+                if (HasRewards(rw))
                 {
                     PanelKit.Label(new Rect(0f, y, cw, 32f), "Rewards", PanelKit.Heading);
                     y += 40f;
@@ -304,9 +313,48 @@ namespace Lanternvale.Game.Panels
                         y += 56f;
                     }
                 }
+                detailMeasuredFor = qid;
+                detailMeasuredH = y + DetailBottomPad;
             }
             finally { PanelKit.EndScroll(detailScroll); }
             if (chooseNow) { QuestRewardScreen.Show(q.Id); Close(); }
+        }
+
+        const float DetailBottomPad = 12f;
+
+        static bool HasRewards(QuestRewardDef rw) =>
+            rw != null && (rw.xp > 0 || rw.gold > 0 || (rw.items != null && rw.items.Length > 0) || (rw.choiceItems != null && rw.choiceItems.Length > 0));
+
+        /// <summary>Content height of DrawDetail before it has been drawn for this quest: mirrors its layout (the "Now"
+        /// section only for active quests; reward rows wrapped at the narrower width a scrollbar leaves).</summary>
+        float EstimateDetail(QuestJournalEntry q, float width, float hSummary, float hStage, float hObj, float hHist)
+        {
+            float h = 46f + 30f + (hSummary > 0f ? hSummary + 20f : 0f);
+            if (q.Status == QuestStatus.Active) h += 38f + (hStage > 0f ? hStage + 12f : 0f) + hObj + 16f;
+            if (hHist > 0f) h += 38f + hHist + 10f;
+            var rw = q.Rewards;
+            if (HasRewards(rw))
+            {
+                float cw = width - 16f;
+                h += 40f + 48f;
+                if (rw.items != null && rw.items.Length > 0) h += RewardItemsHeight(rw.items, cw);
+                if (rw.choiceItems != null && rw.choiceItems.Length > 0) h += 30f + RewardItemsHeight(rw.choiceItems, cw);
+                if (q.RewardChoicePending) h += 56f;
+            }
+            return h + DetailBottomPad;
+        }
+
+        /// <summary>Height DrawRewardItems adds for these items at content width cw (same wrapping).</summary>
+        float RewardItemsHeight(string[] ids, float cw)
+        {
+            float x = 0f, y = 0f;
+            foreach (var id in ids)
+            {
+                if (Sample(id) == null) continue;
+                if (x + 250f > cw) { x = 0f; y += 62f; }
+                x += 250f;
+            }
+            return y + 64f;
         }
 
         float DrawRewardItems(float y, float cw, string[] ids, string hint)

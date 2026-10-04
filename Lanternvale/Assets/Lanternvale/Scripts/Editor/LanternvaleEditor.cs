@@ -16,6 +16,10 @@ namespace Lanternvale.EditorTools
     /// <summary>Applies sprite-friendly import settings to everything under Resources/Art.</summary>
     public sealed class LanternvaleArtImporter : AssetPostprocessor
     {
+        // Bump whenever the settings below change: the Asset Database then reimports the textures this
+        // postprocessor handles, instead of keeping Library artifacts built with the old settings.
+        public override uint GetVersion() => 2;
+
         void OnPreprocessTexture()
         {
             var path = assetPath.Replace('\\', '/');
@@ -23,10 +27,16 @@ namespace Lanternvale.EditorTools
             var ti = (TextureImporter)assetImporter;
             ti.textureType = TextureImporterType.Sprite;
             ti.spriteImportMode = SpriteImportMode.Single;
-            ti.mipmapEnabled = false;
-            ti.alphaIsTransparency = true;
+            // World art is authored at 170-600 px/m but the default camera shows ~87 px/m at 1080p, and icons and
+            // portraits are drawn well below their size. Without a mip chain, bilinear sampling skips most texels, so
+            // ink lines and hair shimmer as units breathe/bob and the camera moves sub-pixel. Mips + trilinear keep
+            // them stable (at magnification this samples mip 0, so it looks exactly like bilinear). UI art (vignette,
+            // logo, parchment) is drawn at or above its native size, so it keeps a single level.
+            bool mips = !path.Contains("/UI/");
+            ti.mipmapEnabled = mips;
+            ti.alphaIsTransparency = true; // dilates colour under transparent texels so lower mips get no dark fringes
             ti.npotScale = TextureImporterNPOTScale.None;
-            ti.filterMode = FilterMode.Bilinear;
+            ti.filterMode = mips ? FilterMode.Trilinear : FilterMode.Bilinear;
             ti.maxTextureSize = 4096;
             bool tile = path.Contains("/Backgrounds/") || path.Contains("/Ground/");
             ti.wrapMode = tile ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
@@ -144,6 +154,7 @@ namespace Lanternvale.EditorTools
             QualitySettings.SetQualityLevel(current, false);
             AssetDatabase.SaveAssets();
             Lighting2D.Reset();
+            LanternvaleShaderIncludes.Ensure();
             Debug.Log("[Lanternvale] URP with the 2D Renderer is configured. Sprites now react to 2D lights.");
         }
 
@@ -173,5 +184,54 @@ namespace Lanternvale.EditorTools
 
         [MenuItem("Lanternvale/Open Save Folder", priority = 60)]
         public static void OpenSaveFolder() => EditorUtility.RevealInFinder(Application.persistentDataPath);
+    }
+}
+
+namespace Lanternvale.EditorTools
+{
+    /// <summary>
+    /// Sprites are created at runtime, so nothing in a scene references URP's 2D sprite shaders and a player
+    /// build could strip them (sprites would then ignore Light2D). Before every build, and from the URP setup
+    /// menu, both shaders are added to Project Settings > Graphics > Always Included Shaders when URP is present.
+    /// </summary>
+    public sealed class LanternvaleShaderIncludes : UnityEditor.Build.IPreprocessBuildWithReport
+    {
+        static readonly string[] Shaders =
+        {
+            "Universal Render Pipeline/2D/Sprite-Lit-Default",
+            "Universal Render Pipeline/2D/Sprite-Unlit-Default",
+        };
+
+        public int callbackOrder => 0;
+
+        public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report) => Ensure();
+
+        [MenuItem("Lanternvale/Setup/Include 2D Sprite Shaders in Builds", priority = 41)]
+        public static void Ensure()
+        {
+            var settings = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (settings == null || settings.Length == 0 || settings[0] == null) return;
+            var so = new SerializedObject(settings[0]);
+            var list = so.FindProperty("m_AlwaysIncludedShaders");
+            if (list == null || !list.isArray) return;
+            bool changed = false;
+            foreach (var name in Shaders)
+            {
+                var shader = Shader.Find(name);
+                if (shader == null) continue; // URP not installed: nothing to include
+                bool present = false;
+                for (int i = 0; i < list.arraySize; i++)
+                    if (list.GetArrayElementAtIndex(i).objectReferenceValue == shader) { present = true; break; }
+                if (present) continue;
+                int idx = list.arraySize;
+                list.InsertArrayElementAtIndex(idx);
+                list.GetArrayElementAtIndex(idx).objectReferenceValue = shader;
+                changed = true;
+            }
+            if (!changed) return;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Lanternvale] Added URP 2D sprite shaders to Always Included Shaders so runtime sprites stay lit in builds.");
+        }
     }
 }

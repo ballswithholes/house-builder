@@ -1,6 +1,7 @@
 // Save game DTOs: plain classes with public fields (Lanternvale.Json.JsonWriter / JsonMapper). Versioned by
 // SessionSaveData.version (GameSession.SaveVersion). Dictionaries are written with sorted keys so that
-// save -> load -> save is byte-identical. No readonly fields (the mapper skips them).
+// save -> load -> save is byte-identical, except the units' `abilities`, which keep the learn order (the default action
+// bar order and the AI's tie-break order; the loader preserves the JSON order). No readonly fields (the mapper skips them).
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -113,6 +114,7 @@ namespace Lanternvale.Session
         public Vec2 position;
         public Vec2 facing;
         public bool autoPlay;
+        /// <summary>Known abilities (id -> rank) in learn order, not sorted (see GameSession.InLearnOrder).</summary>
         public Dictionary<string, int> abilities = new Dictionary<string, int>();
         public Dictionary<string, float> cooldowns = new Dictionary<string, float>();
         public Dictionary<string, float> procCooldowns = new Dictionary<string, float>();
@@ -139,6 +141,7 @@ namespace Lanternvale.Session
         public int respecCount;
         public float secondsSinceManaSpent;
         public float secondsSinceCombat;
+        /// <summary>Known abilities (id -> rank) in learn order, not sorted (see GameSession.InLearnOrder).</summary>
         public Dictionary<string, int> abilities = new Dictionary<string, int>();
         public Dictionary<string, int> talents = new Dictionary<string, int>();
         public Dictionary<string, float> cooldowns = new Dictionary<string, float>();
@@ -150,6 +153,36 @@ namespace Lanternvale.Session
         public List<AuraSaveData> auras = new List<AuraSaveData>();
         public HunterPetSaveData hunterPet;
         public PetSaveData pet;
+        /// <summary>Living totems, hunter traps and temporary guardians placed out of combat (totems by element, then
+        /// summons in order); null when none (and in saves made before they were saved).</summary>
+        public List<SummonSaveData> summons;
+    }
+
+    /// <summary>A totem, trap or temporary guardian (Lightwell, Inferno...) owned by a party member (Session.OwnedSummons).</summary>
+    [Serializable]
+    public sealed class SummonSaveData
+    {
+        public string creature = "";
+        /// <summary>Totem (traps too) or Summon.</summary>
+        public UnitKind kind = UnitKind.Summon;
+        /// <summary>Owner's totem slot (totems: "Earth", "Trap"...).</summary>
+        public string totemElement = "";
+        public string name = "";
+        public int level = 1;
+        /// <summary>Seconds of lifetime left (−1 = no limit).</summary>
+        public float lifetime = -1f;
+        public float health, mana, rage, energy, focus;
+        public float maxHealthMult = 1f;
+        public Vec2 position;
+        public Vec2 facing;
+        public bool autoPlay;
+        /// <summary>Known abilities (id -> rank) in learn order, not sorted (see GameSession.InLearnOrder).</summary>
+        public Dictionary<string, int> abilities = new Dictionary<string, int>();
+        public Dictionary<string, float> cooldowns = new Dictionary<string, float>();
+        public Dictionary<string, float> procCooldowns = new Dictionary<string, float>();
+        /// <summary>Unit values of special handlers (Lightwell charges and rank), sorted; null when none.</summary>
+        public Dictionary<string, float> vars;
+        public List<AuraSaveData> auras = new List<AuraSaveData>();
     }
 
     [Serializable]

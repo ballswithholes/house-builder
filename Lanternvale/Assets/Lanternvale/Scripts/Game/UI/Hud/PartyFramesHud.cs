@@ -4,6 +4,8 @@
 // Click selects (GameFlow.Select); in the out-of-combat "choose a party member" mode the click casts instead.
 // Right-click one of your own buffs to cancel it (Ice Block, stealth, aspects…). Warlocks show their Soul Shards.
 // In combat health/death are read as presented (HudPresented), so bars move when the blow lands on screen.
+// The column never skips a member: when the party does not fit above the bottom HUD block (larger interface sizes)
+// the extras give way first — fewer aura rows, pet auras, buffs (debuffs stay), pet/totem rows (see Layouts).
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -22,7 +24,32 @@ namespace Lanternvale.Game
 
         const float X = 14f, Y = 14f, W = 300f, H = 90f, Portrait = 70f;
         const float PetW = 236f, PetH = 38f, PetIndent = 44f;
-        const float AuraSize = 24f, AuraGap = 3f;
+        const float AuraSize = 24f, AuraGap = 3f, TotemSize = 24f;
+        const float DeadPetHintH = 18f;
+
+        /// <summary>How much of each member's extras (aura rows, pet/summon frames, totems) the column shows.</summary>
+        struct FrameLayout
+        {
+            public readonly int AuraRows, PetAuraRows;
+            public readonly bool Buffs;  // false: only debuffs (what a dispel or a heal answers) get an aura row
+            public readonly bool Subs;   // pet / summon frames, the dead-pet hint and totems
+            public readonly float Gap;
+            public FrameLayout(int auraRows, int petAuraRows, bool buffs, bool subs, float gap)
+            { AuraRows = auraRows; PetAuraRows = petAuraRows; Buffs = buffs; Subs = subs; Gap = gap; }
+        }
+
+        /// <summary>Tried in order; the first under which the whole party fits above the bottom HUD block is drawn (the
+        /// last one when none does, and a member that would still push the rest past the bottom is drawn bare). Every
+        /// member is always drawn: at larger interface sizes the extras give way first — fewer aura rows (debuffs come
+        /// first), no pet auras, no buffs, no pet/totem rows.</summary>
+        static readonly FrameLayout[] Layouts =
+        {
+            new FrameLayout(2, 2, true, true, 10f),
+            new FrameLayout(1, 1, true, true, 10f),
+            new FrameLayout(1, 0, true, true, 6f),
+            new FrameLayout(1, 0, false, true, 6f),
+            new FrameLayout(1, 0, false, false, 4f),
+        };
 
         static readonly Color FrameDead = new Color(0.55f, 0.52f, 0.6f, 1f);
         static readonly Color AutoOn = Ui.Hex("#7fd47a");
@@ -53,21 +80,100 @@ namespace Lanternvale.Game
                 var party = s.Party;
                 for (int i = 0; i < party.Count; i++) if (party[i] != null) chars.Add(party[i]);
 
+                // never skip a member: pick the fullest layout that keeps the column above the bottom HUD block
+                // (the compact combat log, and the action bar row under it)
+                var combat = Hud.Combat;
+                var battle = combat != null ? combat.Battle : null;
+                float bottom = HudLayout.CompactLog.y - 8f;
+                var lay = ChooseLayout(bottom - Y, battle);
+                var bare = new FrameLayout(0, 0, false, false, lay.Gap);
                 float y = Y;
                 for (int i = 0; i < chars.Count; i++)
                 {
-                    y = DrawCharacter(chars[i], y, s);
-                    y += 10f;
-                    if (y > Ui.Height - 260f) break;   // never run into the bottom HUD block
+                    if (i > 0) y += lay.Gap;
+                    // last resort (nothing fits): a member whose extras would push the rest past the bottom is drawn bare
+                    float rest = (chars.Count - 1 - i) * (lay.Gap + BareHeight);
+                    var li = y + CharacterHeight(chars[i], battle, lay) + rest > bottom + 0.5f ? bare : lay;
+                    y = DrawCharacter(chars[i], y, s, li);
                 }
             }
             catch (Exception e) { Hud.LogOnce("party:" + e.GetType().Name, "Party frames: " + e); }
             finally { HudDraw.EndLayer(layer); }
         }
 
+        // ================================================================ layout (measured with DrawCharacter's own metrics)
+
+        FrameLayout ChooseLayout(float available, Battle battle)
+        {
+            for (int i = 0; i < Layouts.Length - 1; i++)
+                if (PartyHeight(Layouts[i], battle) <= available) return Layouts[i];
+            return Layouts[Layouts.Length - 1];
+        }
+
+        float PartyHeight(FrameLayout lay, Battle battle)
+        {
+            float h = 0f;
+            for (int i = 0; i < chars.Count; i++)
+            {
+                if (i > 0) h += lay.Gap;
+                h += CharacterHeight(chars[i], battle, lay);
+            }
+            return h;
+        }
+
+        /// <summary>A member frame without extras (DrawCharacter: the frame and the 3 px under it).</summary>
+        const float BareHeight = H + 3f;
+
+        /// <summary>The height DrawCharacter takes for u under lay (frame, aura rows, pet frames, dead-pet hint, totems).</summary>
+        float CharacterHeight(Unit u, Battle battle, FrameLayout lay)
+        {
+            float h = BareHeight + AuraBlockHeight(CountAuras(u, lay.Buffs), W - 4f, lay.AuraRows);
+            if (!lay.Subs) return h;
+            CollectSubs(u, battle);
+            for (int i = 0; i < subs.Count; i++)
+                h += 2f + PetH + 2f + AuraBlockHeight(CountAuras(subs[i], lay.Buffs), PetW - 4f, lay.PetAuraRows) + 1f;
+            if (ShowDeadPetHint(u)) h += 2f + DeadPetHintH;
+            if (u.Totems.Count > 0) h += 3f + (LiveTotems(u) > 0 ? TotemSize + 2f : 0f);
+            return h;
+        }
+
+        /// <summary>Auras DrawAuras would list for u (debuffs, plus buffs when buffs is set).</summary>
+        static int CountAuras(Unit u, bool buffs)
+        {
+            int n = 0;
+            var list = u.Auras;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var a = list[i];
+                if (a != null && a.Def != null && !a.Def.hidden && !a.IsPassive && (buffs || a.IsDebuff)) n++;
+            }
+            return n;
+        }
+
+        static int AurasPerRow(float width) => Mathf.Max(1, (int)((width + AuraGap) / (AuraSize + AuraGap)));
+
+        static float AuraBlockHeight(int count, float width, int maxRows)
+        {
+            if (count <= 0 || maxRows <= 0) return 0f;
+            int perRow = AurasPerRow(width);
+            int rows = Mathf.Min(maxRows, (count + perRow - 1) / perRow);
+            return rows * (AuraSize + AuraGap + 1f);
+        }
+
+        /// <summary>A hunter whose pet is dead and who has no other pet/summon frame shows "… is dead — Revive Pet"
+        /// (call after CollectSubs).</summary>
+        bool ShowDeadPetHint(Unit u) => subs.Count == 0 && u.HunterPet != null && u.HunterPet.Dead && u.Pet == null;
+
+        static int LiveTotems(Unit u)
+        {
+            int n = 0;
+            foreach (var kv in u.Totems) if (kv.Value != null && !kv.Value.Dead) n++;
+            return n;
+        }
+
         // ================================================================ character frame
 
-        float DrawCharacter(Unit u, float y, GameSession s)
+        float DrawCharacter(Unit u, float y, GameSession s, FrameLayout lay)
         {
             var r = new Rect(X, y, W, H);
             var combat = Hud.Combat;
@@ -203,14 +309,15 @@ namespace Lanternvale.Game
 
             float y2 = r.yMax + 3f;
             // auras
-            y2 = DrawAuras(u, X + 2f, y2, W - 4f);
+            y2 = DrawAuras(u, X + 2f, y2, W - 4f, lay.AuraRows, lay.Buffs);
+            if (!lay.Subs) return y2;   // compact column (see Layouts): no pet / totem rows
             // pets / controlled summons
             CollectSubs(u, battle);
-            for (int i = 0; i < subs.Count; i++) y2 = DrawPet(subs[i], y2 + 2f, battle) + 1f;
+            for (int i = 0; i < subs.Count; i++) y2 = DrawPet(subs[i], y2 + 2f, battle, lay.PetAuraRows, lay.Buffs) + 1f;
             // dead hunter pet hint
-            if (subs.Count == 0 && u.HunterPet != null && u.HunterPet.Dead && u.Pet == null)
+            if (ShowDeadPetHint(u))
             {
-                var dr = new Rect(X + PetIndent, y2 + 2f, PetW, 18f);
+                var dr = new Rect(X + PetIndent, y2 + 2f, PetW, DeadPetHintH);
                 string pn = string.IsNullOrEmpty(u.HunterPet.Name) ? "Your pet" : u.HunterPet.Name;
                 if (!deadPetText.TryGetValue(pn, out var line)) deadPetText[pn] = line = pn + " is dead — Revive Pet";
                 HudDraw.Text(dr, line, HudStyles.Small, Hud.Muted);
@@ -306,8 +413,13 @@ namespace Lanternvale.Game
             var cls = u.Class != null ? u.Class.name : (u.Creature != null ? u.Creature.name : "");
             string role = "";
             try { role = u.IsCharacter ? UiText.Spaced(u.Role.ToString()) : ""; } catch (Exception) { }
+            // the selected companion: clicking them in the world again talks to them (GameFlow.ClickView → TalkToCompanion)
+            var flow = Hud.Flow;
+            string click = Hud.FieldPick != null ? "Click to choose this party member."
+                         : flow != null && flow.Selected == u && flow.CanTalkTo(u) ? "Selected. Click " + Hud.NameOf(u) + " in the world to talk."
+                         : "Click to select.";
             tipText = "<b>" + Hud.NameOf(u) + "</b>\nLevel " + u.Level + " " + cls + (role.Length > 0 ? "  ·  " + role : "") +
-                      "\n" + Ui.Rich(Hud.FieldPick != null ? "Click to choose this party member." : "Click to select.", Hud.Muted);
+                      "\n" + Ui.Rich(click, Hud.Muted);
             return tipText;
         }
 
@@ -374,9 +486,11 @@ namespace Lanternvale.Game
 
         // ================================================================ auras
 
-        /// <summary>Draws the unit's visible buffs/debuffs in rows (debuffs first). Returns the bottom y.</summary>
-        float DrawAuras(Unit u, float x, float y, float width)
+        /// <summary>Draws the unit's visible debuffs and (when buffs is set) buffs in up to maxRows rows, debuffs first.
+        /// Returns the bottom y (AuraBlockHeight below y).</summary>
+        float DrawAuras(Unit u, float x, float y, float width, int maxRows, bool buffs)
         {
+            if (maxRows <= 0) return y;
             auras.Clear();
             var list = u.Auras;
             for (int i = 0; i < list.Count; i++)
@@ -386,24 +500,22 @@ namespace Lanternvale.Game
                 if (a.IsDebuff) auras.Add(a);
             }
             int debuffs = auras.Count;
-            for (int i = 0; i < list.Count; i++)
+            for (int i = 0; buffs && i < list.Count; i++)
             {
                 var a = list[i];
                 if (a == null || a.Def == null || a.Def.hidden || a.IsPassive) continue;
                 if (!a.IsDebuff) auras.Add(a);
             }
             if (auras.Count == 0) return y;
-            int perRow = Mathf.Max(1, (int)((width + AuraGap) / (AuraSize + AuraGap)));
-            int max = perRow * 2;
-            int n = Mathf.Min(auras.Count, max);
+            int perRow = AurasPerRow(width);
+            int n = Mathf.Min(auras.Count, perRow * maxRows);
             for (int i = 0; i < n; i++)
             {
                 int row = i / perRow, col = i % perRow;
                 var ar = new Rect(x + col * (AuraSize + AuraGap), y + row * (AuraSize + AuraGap + 1f), AuraSize, AuraSize);
                 DrawAuraIcon(ar, auras[i], i < debuffs, null, true);
             }
-            int rows = (n + perRow - 1) / perRow;
-            return y + rows * (AuraSize + AuraGap + 1f);
+            return y + AuraBlockHeight(auras.Count, width, maxRows);
         }
 
         /// <summary>
@@ -480,7 +592,7 @@ namespace Lanternvale.Game
             }
         }
 
-        float DrawPet(Unit p, float y, Battle battle)
+        float DrawPet(Unit p, float y, Battle battle, int auraRows, bool buffs)
         {
             var r = new Rect(X + PetIndent, y, PetW, PetH);
             bool active = battle != null && !battle.IsOver && HudPresented.ActiveUnit(battle) == p;
@@ -534,13 +646,13 @@ namespace Lanternvale.Game
                 else Hud.ClickUnit(unit);
                 Ui.Sfx?.Invoke("ui_click");
             }
-            float y2 = DrawAuras(p, r.x + 2f, r.yMax + 2f, r.width - 4f);
+            float y2 = DrawAuras(p, r.x + 2f, r.yMax + 2f, r.width - 4f, auraRows, buffs);
             return Mathf.Max(r.yMax, y2);
         }
 
         static float DrawTotems(Unit u, float x, float y)
         {
-            const float s = 24f;
+            const float s = TotemSize;
             int i = 0;
             foreach (var kv in u.Totems)
             {

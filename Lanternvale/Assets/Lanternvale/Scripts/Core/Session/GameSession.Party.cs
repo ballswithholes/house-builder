@@ -197,9 +197,15 @@ namespace Lanternvale.Session
         public int GetApproval(string companionId) =>
             companionId != null && approval.TryGetValue(companionId, out var v) ? v : 0;
 
+        /// <summary>
+        /// Changes a companion's approval (dialogue outcome), BG3-style: only a companion who witnesses the scene reacts —
+        /// one in the active party, or the companion the party is talking to (its own recruitment talk). A companion not
+        /// met yet, waiting at camp or away is unaffected and raises no ApprovalChanged event.
+        /// </summary>
         public void ChangeApproval(string companionId, int delta)
         {
             if (resetting || string.IsNullOrEmpty(companionId) || delta == 0) return;
+            if (!WitnessesScene(companionId)) return;
             approval[companionId] = GetApproval(companionId) + delta;
             string name = Db.Companions.TryGetValue(companionId, out var c) ? c.name : companionId;
             Raise(new SessionEvent
@@ -207,6 +213,15 @@ namespace Lanternvale.Session
                 Kind = SessionEventKind.ApprovalChanged, Id = companionId, Amount = delta, Unit = FindMember(companionId),
                 Text = delta > 0 ? $"{name} approves." : $"{name} disapproves.",
             });
+        }
+
+        /// <summary>The companion is present for what the party does now: in the active party, or the one being talked to.</summary>
+        public bool WitnessesScene(string companionId)
+        {
+            if (string.IsNullOrEmpty(companionId)) return false;
+            var u = FindMember(companionId);
+            if (u != null && u != Main && party.Contains(u)) return true;
+            return Dialogue != null && Dialogue.IsActive && Dialogue.OwnerId == companionId && Db.Companions.ContainsKey(companionId);
         }
 
         /// <summary>All approval values (companion id → value).</summary>

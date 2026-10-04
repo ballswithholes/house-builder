@@ -2464,8 +2464,8 @@
       "requiredLevel": 1,
       "equip": "TwoHand",
       "weaponType": "TwoHandMace",
-      "minDamage": 5,
-      "maxDamage": 9,
+      "minDamage": 13,
+      "maxDamage": 22,
       "speed": 2.9,
       "price": 45,
       "classes": ["Paladin"]

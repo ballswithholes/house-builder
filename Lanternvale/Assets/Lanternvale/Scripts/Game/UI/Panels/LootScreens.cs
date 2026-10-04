@@ -13,8 +13,9 @@ namespace Lanternvale.Game.Panels
 {
     public sealed class LootScreen : IUiScreen
     {
+        public const int ScreenOrder = 150;
         public string Id => "";
-        public int Order => 150;
+        public int Order => ScreenOrder;
         public bool Modal => false;
 
         public bool Visible
@@ -53,7 +54,7 @@ namespace Lanternvale.Game.Panels
                 if (l == null || !l.Visible) return false;
                 l.TakeAll();
                 return true;
-            });
+            }, ScreenOrder);
         }
 
         public void Tick(float dt)
@@ -64,6 +65,9 @@ namespace Lanternvale.Game.Panels
             {
                 lastWindow = w;
                 openedAt = Time.unscaledTime;
+                // a chest clicked in range opened in this frame's Update (legacy input): its MouseDown still reaches
+                // this frame's OnGUI over the new window, where it must not take an item or arm a button
+                lockFrame = Mathf.Max(lockFrame, Time.frameCount + 1);
                 scroll.Reset();
                 Ui.Sfx?.Invoke("ui_open");
             }
@@ -97,6 +101,8 @@ namespace Lanternvale.Game.Panels
                 var r = PanelKit.Fit(new Rect(x, Ui.Height * 0.2f + (1f - pop) * 16f, 470f, h));
                 windowRect = r;
                 windowFrame = Time.frameCount;
+                // locked: no click on the window counts, and none arms Take All / Close (they fire on the release)
+                if (Time.frameCount <= lockFrame) PanelKit.SwallowMouseDown(r);
                 string title = string.IsNullOrEmpty(w.Title) ? "Spoils" : w.Title;
                 var c = PanelKit.Window(r, title, Order, out bool close);
                 float y = c.y;

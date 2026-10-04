@@ -21,12 +21,29 @@ namespace Lanternvale.Game
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void AutoInit() => Init();
 
-        /// <summary>Synthesizes the SFX, creates the music source and hooks Ui.Sfx. Idempotent.</summary>
+        /// <summary>
+        /// Clears the audio statics on every entry to Play mode. With domain reload off (Enter Play Mode Options)
+        /// statics survive while the SFX player and music source (under the presentation root) are destroyed at Stop.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Initialized = false;
+            Sfx.ResetStatics();
+            Music.ResetStatics();
+        }
+
+        /// <summary>
+        /// Synthesizes the SFX, creates the music source and hooks Ui.Sfx. Idempotent and re-entrant: anything
+        /// that was destroyed (the SFX player, the music source) is recreated.
+        /// </summary>
         public static void Init()
         {
-            if (Initialized) return;
-            Initialized = true;
-            LoadPrefs();
+            if (!Initialized)
+            {
+                Initialized = true;
+                LoadPrefs();
+            }
             Sfx.Init();
             Music.Ensure();
             Ui.Sfx = id => Sfx.Play(id);

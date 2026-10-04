@@ -1,4 +1,5 @@
-// Vendor window (Session.ActiveVendor, Order 110, left side; the bags open beside it on VendorOpened).
+// Vendor window (Session.ActiveVendor, Order 142, left side; the bags open beside it on VendorOpened). It is drawn above the
+// sheets (Character, Spellbook, Journal, Map, Party, Talents) so a sheet left open never hides the shop; Esc closes it first.
 // Buy: offers with prices (red when unaffordable) and stock, click Buy (Shift: a whole stack). Sell: the party bags with
 // sell prices, "Sell junk" in one click; right-click in the bags also sells while a vendor is open. Buy back: the last
 // items sold, at the price they fetched. Esc / × closes (Session.CloseVendor).
@@ -13,8 +14,9 @@ namespace Lanternvale.Game.Panels
 {
     public sealed class VendorScreen : IUiScreen
     {
+        public const int ScreenOrder = 142;
         public string Id => "";
-        public int Order => 110;
+        public int Order => ScreenOrder;
         public bool Modal => false;
 
         public bool Visible
@@ -61,7 +63,7 @@ namespace Lanternvale.Game.Panels
                 if (v == null || !v.Visible) return false;
                 PanelKit.Do(() => PanelKit.Sess?.CloseVendor());
                 return true;
-            });
+            }, ScreenOrder);
         }
 
         public void Tick(float dt)

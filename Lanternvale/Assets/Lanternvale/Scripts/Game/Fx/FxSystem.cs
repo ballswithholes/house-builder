@@ -31,7 +31,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Sorting order for airborne effects: above units; above the night overlay in unlit mode so spells glow.</summary>
-        public static int AirOrder => Lighting2D.IsLit ? SortingOrders.Effects : SortingOrders.NightOverlay + 200;
+        public static int AirOrder => PresentationArt.SpritesLit ? SortingOrders.Effects : SortingOrders.NightOverlay + 200;
         /// <summary>Sorting order for effects lying on the ground (under units).</summary>
         public const int GroundOrder = SortingOrders.Shadow + 60;
 

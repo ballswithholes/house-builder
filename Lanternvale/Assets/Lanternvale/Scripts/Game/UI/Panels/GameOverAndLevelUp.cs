@@ -142,8 +142,9 @@ namespace Lanternvale.Game.Panels
 
     public sealed class LevelUpPopup : IUiScreen
     {
+        public const int ScreenOrder = 160;
         public string Id => "";
-        public int Order => 160;
+        public int Order => ScreenOrder;
         public bool Modal => false;
         public bool Visible => entries.Count > 0 && GameFlow.HasGame && PanelKit.Mode != SessionMode.Dialogue && PanelKit.Mode != SessionMode.GameOver;
 
@@ -178,7 +179,7 @@ namespace Lanternvale.Game.Panels
                 if (p == null || !p.Visible) return false;
                 p.entries.Clear();
                 return true;
-            });
+            }, ScreenOrder);
         }
 
         Entry For(Unit u)

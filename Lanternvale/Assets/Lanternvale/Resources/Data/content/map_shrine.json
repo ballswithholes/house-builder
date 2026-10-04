@@ -145,8 +145,8 @@
           "art": "prop_spirit_lantern_dark",
           "pos": [62.0, 12.4],
           "scale": 2.2,
-          "collider": {"w": 1.98, "h": 1.1},
-          "light": {"color": "#ff9a6a", "radius": 3.0, "intensity": 0.5, "offset": [0, 3.2], "flicker": true},
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ff9a6a", "radius": 3.0, "intensity": 0.5, "offset": [0, 1.45], "flicker": true},
           "interact": "heart_lantern",
           "text": "The Heart Lantern. Deep inside, a single ember still glows, small as a held breath."
         },

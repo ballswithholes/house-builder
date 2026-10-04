@@ -149,8 +149,11 @@ namespace Lanternvale.Tests
             AssertNear(AbilityRules.CastTime(mage, def, AbilityModSet.Empty), 3f, 1e-3f, "known rank 3 casts in 3 s");
             AssertNear(AbilityRules.CastTime(mage, def, AbilityModSet.Empty, 1), 1.5f, 1e-3f, "downranked cast time");
             AssertNear(AbilityRules.TimeCost(mage, def, AbilityModSet.Empty, 1), 1.5f, 1e-3f, "downranked Time cost");
-            var plain = Db.Ability("mage_fireball");
+            var plain = Db.Ability("paladin_holy_light");
             AssertNear(AbilityRules.BaseCastTime(plain, 1), plain.castTime, 1e-4f, "no rankCastTimes: castTime for every rank");
+            var fb = Db.Ability("mage_fireball");
+            AssertNear(AbilityRules.BaseCastTime(fb, 1), 1.5f, 1e-4f, "data: Fireball Rank 1 casts in 1.5 s");
+            AssertNear(AbilityRules.BaseCastTime(fb, 2), fb.castTime, 1e-4f, "data: Fireball Rank 2+ uses castTime");
             mage.Abilities.Remove(def.id);
         }
 

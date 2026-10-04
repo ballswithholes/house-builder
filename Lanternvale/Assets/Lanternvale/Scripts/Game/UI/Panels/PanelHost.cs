@@ -11,21 +11,27 @@ using UnityEngine;
 
 namespace Lanternvale.Game.Panels
 {
-    /// <summary>Esc routing for windows that are not UiRoot panels (vendors, loot, menus…).</summary>
+    /// <summary>Esc routing: the topmost window drawn gets it — a state-driven window (vendor, loot, menus…) through its
+    /// handler, else the visible toggled panel with the highest Order.</summary>
     public static class EscRouter
     {
         struct Handler
         {
             public int Priority;
+            public int Order;
             public Func<bool> Handle;
         }
 
         static readonly List<Handler> handlers = new List<Handler>();
 
-        /// <summary>Registers a handler (higher priority first). Priorities ≥ 800 run even while UiRoot panels are open.</summary>
-        public static void Register(int priority, Func<bool> handle)
+        /// <summary>
+        /// Registers a handler (higher priority first). Priorities ≥ 800 run even while toggled panels are drawn over their
+        /// window. Below that, `order` is the draw order of the window the handler closes: it runs only when no visible
+        /// toggled panel is drawn above it (the default, int.MinValue, = under every panel).
+        /// </summary>
+        public static void Register(int priority, Func<bool> handle, int order = int.MinValue)
         {
-            handlers.Add(new Handler { Priority = priority, Handle = handle });
+            handlers.Add(new Handler { Priority = priority, Order = order, Handle = handle });
             handlers.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
@@ -33,22 +39,22 @@ namespace Lanternvale.Game.Panels
 
         internal static bool Route()
         {
-            // a conversation hides the sheets (bags, journal…) but leaves them open: only the windows drawn over it count
-            bool dialogue = PanelKit.Mode == SessionMode.Dialogue;
-            bool panelsOpen = dialogue ? OverlayPanelOpen() : AnyPanelOpen();
+            // Esc goes to the topmost window actually drawn. UiRoot.CloseTop would close the most recently opened panel,
+            // which may be drawn under another window (Talents, then C) or hidden (a conversation hides the sheets but
+            // leaves them open; only the pause menu, save/load, settings and help stay drawn over it).
+            var top = PanelWindow.TopVisible();
             for (int i = 0; i < handlers.Count; i++)
             {
                 var h = handlers[i];
-                if (panelsOpen && h.Priority < AbovePanels) break;   // let UiRoot close the top panel
+                if (top != null && h.Priority < AbovePanels && h.Order < top.Order) continue;   // a panel covers its window
                 bool done;
                 try { done = h.Handle(); }
                 catch (Exception e) { Debug.LogException(e); done = false; }
                 if (done) return true;
             }
-            // UiRoot.CloseTop closes the most recently opened panel, which may be a hidden sheet during a conversation:
-            // close the topmost window actually drawn over it instead
-            if (panelsOpen && dialogue) return CloseTopOverlay();
-            return false;
+            if (top == null) return false;   // no toggled panel drawn: UiRoot closes the combat log or opens the pause menu
+            UiRoot.Close(top.Id);
+            return true;
         }
 
         static readonly string[] PanelIds =
@@ -57,7 +63,7 @@ namespace Lanternvale.Game.Panels
             UiPanels.CombatLog, UiPanels.Party, UiPanels.Settings, UiPanels.Pause, UiPanels.SaveLoad, UiPanels.Help, UiPanels.Map,
         };
 
-        /// <summary>The panels drawn over a conversation (PanelWindow.ShowInDialogue), topmost first.</summary>
+        /// <summary>The panels drawn over a conversation (PanelWindow.ShowInDialogue).</summary>
         static readonly string[] OverlayIds = { UiPanels.Help, UiPanels.Settings, UiPanels.SaveLoad, UiPanels.Pause };
 
         public static bool AnyPanelOpen()
@@ -73,13 +79,6 @@ namespace Lanternvale.Game.Panels
         {
             if (!GameFlow.HasGame) return false;
             for (int i = 0; i < OverlayIds.Length; i++) if (UiRoot.IsOpen(OverlayIds[i])) return true;
-            return false;
-        }
-
-        static bool CloseTopOverlay()
-        {
-            for (int i = 0; i < OverlayIds.Length; i++)
-                if (UiRoot.IsOpen(OverlayIds[i])) { UiRoot.Close(OverlayIds[i]); return true; }
             return false;
         }
     }

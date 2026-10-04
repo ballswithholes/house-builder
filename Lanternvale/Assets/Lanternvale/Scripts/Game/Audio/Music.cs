@@ -22,9 +22,18 @@ namespace Lanternvale.Game
         AudioSource source;
         uint seed = 12345u;
 
+        /// <summary>Play-mode entry (GameAudio.ResetStatics): statics survive Stop when domain reload is off.</summary>
+        internal static void ResetStatics()
+        {
+            Instance = null;
+            Mood = "";
+        }
+
         public static Music Ensure()
         {
             if (Instance != null) return Instance;
+            // a fresh source plays nothing yet: forget the mood of a destroyed one, or Play(sameMood) would no-op
+            Mood = "";
             var go = new GameObject("Music");
             go.transform.SetParent(PresentationHost.Root.transform, false);
             go.AddComponent<AudioSource>();

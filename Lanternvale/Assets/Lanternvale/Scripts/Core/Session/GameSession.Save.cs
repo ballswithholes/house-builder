@@ -112,6 +112,19 @@ namespace Lanternvale.Session
             return d;
         }
 
+        /// <summary>
+        /// A copy of a unit's known abilities in their own (learn) order, NOT sorted: that order is the default order of the
+        /// action bar (hotkeys 1..=, until the player drags a slot) and the order in which the AI breaks score ties. The
+        /// loader inserts them back in the JSON's order, so the bar and the AI after a load are those of the saved game,
+        /// and save -> load -> save stays byte-identical.
+        /// </summary>
+        static Dictionary<string, int> InLearnOrder(Dictionary<string, int> src)
+        {
+            var d = new Dictionary<string, int>();
+            foreach (var kv in src) d[kv.Key] = kv.Value;
+            return d;
+        }
+
         static Dictionary<string, float> SortedFloats(Dictionary<string, float> src)
         {
             var keys = new List<string>(src.Keys);
@@ -138,7 +151,7 @@ namespace Lanternvale.Session
                 health = u.Health, mana = u.Mana, rage = u.Rage, energy = u.Energy, focus = u.Focus,
                 position = u.Position, facing = u.Facing, autoPlay = u.AutoPlay, role = u.RoleOverride, respecCount = u.RespecCount,
                 secondsSinceManaSpent = u.SecondsSinceManaSpent, secondsSinceCombat = u.SecondsSinceCombat,
-                abilities = SortedInts(u.Abilities), talents = SortedInts(u.Talents),
+                abilities = InLearnOrder(u.Abilities), talents = SortedInts(u.Talents),
                 cooldowns = SortedFloats(u.Cooldowns), procCooldowns = SortedFloats(u.ProcCooldowns),
             };
             var lk = new Dictionary<string, float>();
@@ -155,12 +168,47 @@ namespace Lanternvale.Session
                 {
                     creature = p.Creature.id, name = p.Name, level = p.Level, health = p.Health, mana = p.Mana, rage = p.Rage,
                     energy = p.Energy, focus = p.Focus, position = p.Position, facing = p.Facing, autoPlay = p.AutoPlay,
-                    abilities = SortedInts(p.Abilities), cooldowns = SortedFloats(p.Cooldowns), procCooldowns = SortedFloats(p.ProcCooldowns),
+                    abilities = InLearnOrder(p.Abilities), cooldowns = SortedFloats(p.Cooldowns), procCooldowns = SortedFloats(p.ProcCooldowns),
                 };
                 SaveAuras(p, ps.auras);
                 s.pet = ps;
             }
+            s.summons = SaveSummons(u);
             return s;
+        }
+
+        /// <summary>
+        /// The member's living totems/traps (by element) and temporary guardians (Lightwell, Inferno...) placed out of
+        /// combat: they keep working after a load like the mana and cooldowns spent on them. Null when there are none.
+        /// </summary>
+        List<SummonSaveData> SaveSummons(Unit owner)
+        {
+            List<SummonSaveData> list = null;
+            var seen = new HashSet<Unit>();
+            var elements = new List<string>(owner.Totems.Keys);
+            elements.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (var el in elements) AddSummon(owner.Totems[el], el, seen, ref list);
+            foreach (var x in owner.Summons) if (x != owner.Pet) AddSummon(x, null, seen, ref list);
+            return list;
+        }
+
+        void AddSummon(Unit x, string element, HashSet<Unit> seen, ref List<SummonSaveData> list)
+        {
+            if (x == null || !x.IsAlive || x.Creature == null || (x.Kind != UnitKind.Totem && x.Kind != UnitKind.Summon) || !seen.Add(x)) return;
+            var s = new SummonSaveData
+            {
+                creature = x.Creature.id, kind = x.Kind, totemElement = element ?? x.TotemElement ?? "", name = x.Name ?? "", level = x.Level,
+                lifetime = x.Lifetime, health = x.Health, mana = x.Mana, rage = x.Rage, energy = x.Energy, focus = x.Focus,
+                maxHealthMult = x.MaxHealthMult, position = x.Position, facing = x.Facing, autoPlay = x.AutoPlay,
+                abilities = InLearnOrder(x.Abilities), cooldowns = SortedFloats(x.Cooldowns), procCooldowns = SortedFloats(x.ProcCooldowns),
+            };
+            // keys holding a unit id ("fd_resist:<id>") mean nothing after a load
+            Dictionary<string, float> vars = null;
+            foreach (var kv in x.Vars)
+                if (kv.Key.IndexOf(':') < 0) (vars ??= new Dictionary<string, float>())[kv.Key] = kv.Value;
+            if (vars != null) s.vars = SortedFloats(vars);
+            SaveAuras(x, s.auras);
+            (list ??= new List<SummonSaveData>()).Add(s);
         }
 
         void SaveAuras(Unit u, List<AuraSaveData> into)
@@ -336,6 +384,11 @@ namespace Lanternvale.Session
                     loadedVitals.Add(new LoadedVitals { Unit = p, Health = s.pet.health, Mana = s.pet.mana });
                 }
             }
+            // totems, traps and temporary guardians last: their auras may come from any member or pet
+            // (RebuildField puts the active party's ones back into the exploration context)
+            foreach (var kv in saves)
+                if (kv.Value.summons != null)
+                    foreach (var ss in kv.Value.summons) LoadSummon(kv.Key, ss);
 
             if (d.party != null)
                 foreach (var id in d.party)
@@ -500,6 +553,45 @@ namespace Lanternvale.Session
             if (s.procCooldowns != null) foreach (var kv in s.procCooldowns) p.ProcCooldowns[kv.Key] = kv.Value;
             p.InvalidateStats();
             owner.Pet = p;
+        }
+
+        void LoadSummon(Unit owner, SummonSaveData s)
+        {
+            if (s == null) return;
+            var def = Db.Creature(s.creature ?? "");
+            if (def == null) { Log.Warn($"GameSession.LoadGame: unknown summon creature '{s.creature}' dropped"); return; }
+            if (s.kind != UnitKind.Totem && s.kind != UnitKind.Summon) return;   // pets are saved in UnitSaveData.pet
+            if (s.lifetime > 0f && s.lifetime <= 1e-3f) return;   // would expire on the first tick
+            var x = UnitFactory.CreateSummon(Db, def, owner, s.kind, s.lifetime);
+            x.Name = string.IsNullOrEmpty(s.name) ? def.name : s.name;
+            x.Level = Math.Max(1, s.level);
+            x.Position = s.position;
+            x.Facing = s.facing;
+            x.AutoPlay = s.autoPlay;
+            x.MaxHealthMult = s.maxHealthMult > 0f ? s.maxHealthMult : 1f;
+            if (s.abilities != null && s.abilities.Count > 0)
+            {
+                x.Abilities.Clear();
+                foreach (var kv in s.abilities) if (Db.Ability(kv.Key) != null) x.Abilities[kv.Key] = kv.Value;
+                UnitFactory.AttachPassives(x);
+            }
+            if (s.cooldowns != null) foreach (var kv in s.cooldowns) x.Cooldowns[kv.Key] = kv.Value;
+            if (s.procCooldowns != null) foreach (var kv in s.procCooldowns) x.ProcCooldowns[kv.Key] = kv.Value;
+            if (s.vars != null) foreach (var kv in s.vars) x.Vars[kv.Key] = kv.Value;
+            if (x.Kind == UnitKind.Totem)
+            {
+                string el = !string.IsNullOrEmpty(s.totemElement) ? s.totemElement : (string.IsNullOrEmpty(x.TotemElement) ? def.id : x.TotemElement);
+                if (owner.Totems.ContainsKey(el)) return;   // one totem per slot
+                x.TotemElement = el;
+                owner.Totems[el] = x;
+            }
+            else owner.Summons.Add(x);
+            LoadAuras(x, s.auras);
+            x.InvalidateStats();
+            x.Health = MathUtil.Clamp(s.health, 1f, Math.Max(1f, x.MaxHealth));
+            x.Mana = MathUtil.Clamp(s.mana, 0f, x.MaxMana);
+            x.Rage = s.rage; x.Energy = s.energy; x.Focus = s.focus;
+            loadedVitals.Add(new LoadedVitals { Unit = x, Health = Math.Max(1f, s.health), Mana = s.mana });
         }
 
         void LoadAuras(Unit u, List<AuraSaveData> list)

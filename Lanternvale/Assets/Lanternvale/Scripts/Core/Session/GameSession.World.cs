@@ -116,7 +116,7 @@ namespace Lanternvale.Session
         }
 
         /// <summary>Living totems and temporary summons of the active party (not pets): spawn views for them in exploration;
-        /// they join the next battle and are cleared on map change.</summary>
+        /// they join the next battle, are kept by saves (UnitSaveData.summons) and are cleared on map change.</summary>
         public List<Unit> OwnedSummons()
         {
             var list = new List<Unit>();

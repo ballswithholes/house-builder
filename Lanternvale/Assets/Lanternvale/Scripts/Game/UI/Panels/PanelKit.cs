@@ -265,6 +265,19 @@ namespace Lanternvale.Game.Panels
             return b == 0;
         }
 
+        /// <summary>
+        /// Uses up a MouseDown inside r without acting on it. For a screen in the frames right after it appears: with
+        /// the legacy input path the world click that opened it (an NPC or chest clicked in range acts in that
+        /// frame's Update) is still queued for the same frame's OnGUI, and would land on whatever the new screen draws
+        /// under the cursor — a row, a choice, or a GUI.Button that would then fire on the release. Call it before the
+        /// screen draws its controls.
+        /// </summary>
+        public static void SwallowMouseDown(Rect r)
+        {
+            var e = Event.current;
+            if (e != null && e.type == EventType.MouseDown && r.Contains(e.mousePosition)) e.Use();
+        }
+
         // ================================================================ styles
 
         public static GUIStyle Text, TextSmall, TextTiny, TextBold, TextBoldSmall, TextMuted, TextMutedSmall, TextCenter,

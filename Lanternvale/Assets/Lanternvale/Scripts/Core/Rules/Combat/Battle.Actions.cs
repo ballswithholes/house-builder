@@ -616,7 +616,11 @@ namespace Lanternvale.Rules
                     };
                     u.TimeLeft = 0f;
                 }
-                else if (timed) SpendTime(u, timeCost);
+                else if (timed)
+                {
+                    SpendTime(u, timeCost);
+                    SpendSwingTime(u, channel);   // channelling holds the swing / auto-shot timers
+                }
                 for (int i = 0; i < now && u.IsAlive; i++) ResolveChannelTick(cast, i, ticks);
                 AfterCast(cast);
                 if (u.Pending != null) { EndTurnInternal(u, false); return ActionResult.Success; }
@@ -642,6 +646,7 @@ namespace Lanternvale.Rules
                     return ActionResult.Success;
                 }
                 SpendTime(u, timeCost);
+                SpendSwingTime(u, castTime);   // casting holds the swing / auto-shot timers (instants do not)
             }
             else if (timed) SpendTime(u, timeCost);
             else if (castTime > 0f) Emit(new CombatEvent { Type = CombatEventType.CastStart, Source = u, Target = target, AbilityId = a.id, Name = a.name, Seconds = castTime });
@@ -681,6 +686,13 @@ namespace Lanternvale.Rules
             foreach (var e in a.effects)
                 if (e.type == EffectType.ApplyAura && e.target == EffectTarget.Target && IsBreakableControl(Db.Aura(e.aura))) return true;
             return false;
+        }
+
+        /// <summary>Seconds of this turn spent casting or channelling do not advance the swing timers (WoW: a cast pauses
+        /// melee swings and Auto Shot), so a turn of casting is not also a full turn of white swings at EndTurn.</summary>
+        static void SpendSwingTime(Unit u, float seconds)
+        {
+            if (seconds > 0f) u.SwingTimeThisTurn = Math.Max(0f, u.SwingTimeThisTurn - seconds);
         }
 
         void SpendTime(Unit u, float t)

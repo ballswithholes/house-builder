@@ -132,6 +132,81 @@ namespace Lanternvale.Game
         }
     }
 
+    /// <summary>
+    /// Painted (opaque) bounding box of a sprite. Prop art is painted on canvases with wide transparent
+    /// margins (the great tree is 11.6 m wide on a 39.8 m canvas), so sprite.bounds overstates the size:
+    /// picking, labels, occluder fades and ground shadows use this box instead. The alpha is read back
+    /// once per sprite (downscaled) and cached; without GPU readback the canvas bounds are returned.
+    /// </summary>
+    public static class SpriteContent
+    {
+        const int MaxDim = 128;          // ~0.3 m resolution on the largest canvas, plenty for rects
+        const byte AlphaThreshold = 32;  // ignore faint watercolour wash at the canvas edges
+
+        struct Entry { public Rect rect; public bool exact; }
+
+        // Keyed by the Sprite itself (identity), like Silhouettes.
+        static readonly Dictionary<Sprite, Entry> Cache = new Dictionary<Sprite, Entry>();
+        static bool failed; // readback unavailable (e.g. -nographics): stop trying
+
+        /// <summary>
+        /// Opaque bounds of s in sprite-local units (pivot at the origin, unscaled, not flipped). exact is
+        /// false when the alpha could not be read; the full sprite bounds are returned then.
+        /// </summary>
+        public static Rect Bounds(Sprite s, out bool exact)
+        {
+            exact = false;
+            if (s == null) return new Rect();
+            if (Cache.TryGetValue(s, out var e)) { exact = e.exact; return e.rect; }
+            var b = s.bounds;
+            e = new Entry { rect = Rect.MinMaxRect(b.min.x, b.min.y, b.max.x, b.max.y) };
+            if (!failed)
+            {
+                try
+                {
+                    var r = Compute(s, e.rect);
+                    if (r.HasValue) e = new Entry { rect = r.Value, exact = true };
+                }
+                catch (Exception) { failed = true; }
+            }
+            Cache[s] = e;
+            exact = e.exact;
+            return e.rect;
+        }
+
+        public static Rect Bounds(Sprite s) => Bounds(s, out _);
+
+        static Rect? Compute(Sprite s, Rect full)
+        {
+            var tex = s.texture;
+            if (tex == null) return null;
+            var tr = s.textureRect;
+            int srcW = Mathf.Max(1, Mathf.RoundToInt(tr.width)), srcH = Mathf.Max(1, Mathf.RoundToInt(tr.height));
+            float f = Mathf.Min(1f, MaxDim / (float)Mathf.Max(srcW, srcH));
+            int w = Mathf.Max(4, Mathf.RoundToInt(srcW * f)), h = Mathf.Max(4, Mathf.RoundToInt(srcH * f));
+            var px = TextureReadback.Read(tex, tr, w, h);
+            if (px == null || px.Length < w * h) return null;
+            int x0 = w, x1 = -1, y0 = h, y1 = -1;
+            for (int y = 0; y < h; y++)
+            {
+                int row = y * w;
+                for (int x = 0; x < w; x++)
+                {
+                    if (px[row + x].a < AlphaThreshold) continue;
+                    if (x < x0) x0 = x;
+                    if (x > x1) x1 = x;
+                    if (y < y0) y0 = y;
+                    if (y > y1) y1 = y;
+                }
+            }
+            if (x1 < 0) return null; // fully transparent: keep the canvas
+            // rows are bottom-up; sample i covers [i, i + 1) / w of the sprite (a half-sample margin)
+            return Rect.MinMaxRect(
+                full.xMin + full.width * x0 / w, full.yMin + full.height * y0 / h,
+                full.xMin + full.width * (x1 + 1) / w, full.yMin + full.height * (y1 + 1) / h);
+        }
+    }
+
     /// <summary>One-off CPU copies of (possibly non-readable) textures, downscaled.</summary>
     public static class TextureReadback
     {

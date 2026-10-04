@@ -215,9 +215,15 @@ namespace Lanternvale.Game
         public static void ShowMoveRange(string id, Lanternvale.World.ReachMap reach, Color color)
         {
             if (reach == null) return;
-            float m = reach.MaxMetres + reach.CellSize * 2f;
-            var area = new Rect(reach.Start.x - m, reach.Start.y - m, m * 2f, m * 2f);
-            ShowMoveRange(id, v => reach.CanReach(new Vec2(v.x, v.y)), area, reach.CellSize, color);
+            float cs = Mathf.Max(0.1f, reach.CellSize); // the cell size BakeMoveRange samples with
+            float m = reach.MaxMetres + cs * 2f;
+            // Snap to the NavGrid lattice (cells span [k·cs, (k+1)·cs) from the origin): every sample is then a
+            // cell centre and the baked texels line up with the cells, so the contour sits on the cell edges
+            // instead of drifting by up to half a cell with the unit's exact position.
+            float x0 = Mathf.Floor((reach.Start.x - m) / cs) * cs, y0 = Mathf.Floor((reach.Start.y - m) / cs) * cs;
+            float x1 = Mathf.Ceil((reach.Start.x + m) / cs) * cs, y1 = Mathf.Ceil((reach.Start.y + m) / cs) * cs;
+            var area = Rect.MinMaxRect(x0, y0, x1, y1);
+            ShowMoveRange(id, v => reach.CanReach(new Vec2(v.x, v.y)), area, cs, color);
         }
 
         void BakeMoveRange(Preview p, Func<Vector2, bool> canReach, Rect area, float cellSize, Color color)

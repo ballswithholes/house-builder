@@ -20,8 +20,15 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------------ materials
 
+        const string LitShaderName = "Universal Render Pipeline/2D/Sprite-Lit-Default";
+
         static Material unlit;
-        static bool unlitProbed;
+        static bool unlitMissing;
+        static Material lit;
+        static bool litMissing;
+
+        // Neither probe caches a "not lit" answer: Lighting2D.Reset() (editor pipeline setup) can turn
+        // URP-lit mode on later in the same domain.
 
         /// <summary>
         /// Unlit sprite material for glows, FX, sky and previews when URP 2D lights are active
@@ -31,15 +38,54 @@ namespace Lanternvale.Game
         {
             get
             {
-                if (unlitProbed) return unlit;
-                unlitProbed = true;
                 if (!Lighting2D.IsLit) return null;
+                if (unlit != null) return unlit;
+                if (unlitMissing) return null;
                 var s = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
                 if (s == null) s = Shader.Find("Sprites/Default");
-                if (s != null) unlit = new Material(s) { name = "Lanternvale Sprite Unlit" };
+                if (s == null) { unlitMissing = true; return null; }
+                unlit = new Material(s) { name = "Lanternvale Sprite Unlit" };
                 return unlit;
             }
         }
+
+        /// <summary>
+        /// Sprite-Lit material for every world sprite that should react to URP 2D lights. It has to be
+        /// assigned explicitly: URP hands a new SpriteRenderer its Sprite-Lit-Default as the pipeline's
+        /// default 2D material only in the Editor (UniversalRenderPipelineAsset.GetMaterial returns null in
+        /// players), so in a build a renderer created at runtime keeps the built-in unlit Sprites-Default
+        /// and ignores every Light2D. Null when not URP-lit, or when the shader is not in this build
+        /// (URP 12–14 ship it only if something references it; URP 17 ships it with the 2D renderer).
+        /// </summary>
+        public static Material Lit
+        {
+            get
+            {
+                if (!Lighting2D.IsLit) return null;
+                if (lit != null) return lit;
+                if (litMissing) return null;
+                var s = Shader.Find(LitShaderName);
+                if (s == null || !s.isSupported)
+                {
+                    litMissing = true;
+                    Debug.LogWarning($"[Lanternvale] The URP 2D Renderer is active, but the shader '{LitShaderName}' is " +
+                                     (s == null ? "not included in this build" : "not supported on this device") +
+                                     ", so sprites cannot be lit by 2D lights. Falling back to the night-overlay lighting. " +
+                                     "Add it (and Sprite-Unlit-Default) to Project Settings > Graphics > Always Included Shaders.");
+                    return null;
+                }
+                lit = new Material(s) { name = "Lanternvale Sprite Lit" };
+                return lit;
+            }
+        }
+
+        /// <summary>
+        /// True when world sprites really are lit by URP 2D lights: the 2D Renderer is active AND the
+        /// Sprite-Lit material is available. Presentation code branches on this (not Lighting2D.IsLit)
+        /// between the Light2D path and the night-overlay path, so a build without the lit shader still
+        /// gets darker nights instead of daylight-bright sprites under an unused global light.
+        /// </summary>
+        public static bool SpritesLit => Lit != null;
 
         /// <summary>Makes a renderer ignore 2D lights (no-op in unlit projects).</summary>
         public static void MakeUnlit(SpriteRenderer sr)
@@ -49,8 +95,44 @@ namespace Lanternvale.Game
             if (m != null) sr.sharedMaterial = m;
         }
 
+        /// <summary>Makes a renderer react to 2D lights (no-op when sprites are not URP-lit).</summary>
+        public static void MakeLit(SpriteRenderer sr)
+        {
+            if (sr == null) return;
+            var m = Lit;
+            if (m != null) sr.sharedMaterial = m;
+        }
+
+        /// <summary>
+        /// Lighting2D.AddPointLight for world props, with the halo sprite unlit. When the 2D Renderer is
+        /// active but sprites cannot be lit (see <see cref="SpritesLit"/>), the Light2D is switched off and
+        /// the halo is laid out like Lighting2D's unlit mode (bigger, above the night overlay).
+        /// </summary>
+        public static LightHandle AddPointLight(GameObject go, Vector3 localOffset, Color color, float radius, float intensity)
+        {
+            var h = Lighting2D.AddPointLight(go, localOffset, color, radius, intensity);
+            if (h == null) return null;
+            if (Lighting2D.IsLit && !SpritesLit)
+            {
+                if (h.light is Behaviour b) b.enabled = false;
+                h.light = null;
+                if (h.glow != null)
+                {
+                    h.glow.sortingOrder = SortingOrders.NightOverlay + 100;
+                    float d = radius * 1.6f;
+                    h.glow.transform.localScale = new Vector3(d, d, 1f);
+                }
+            }
+            if (h.glow != null) MakeUnlit(h.glow);
+            return h;
+        }
+
         // ------------------------------------------------------------------ renderer helpers
 
+        /// <summary>
+        /// New sprite renderer. Lit by URP 2D lights (Sprite-Lit material) unless <paramref name="unlitMat"/>,
+        /// which keeps glows, FX and the sky bright at night.
+        /// </summary>
         public static SpriteRenderer NewRenderer(string name, Transform parent, Sprite sprite, int order, bool unlitMat = false)
         {
             var go = new GameObject(name);
@@ -59,6 +141,7 @@ namespace Lanternvale.Game
             sr.sprite = sprite;
             sr.sortingOrder = order;
             if (unlitMat) MakeUnlit(sr);
+            else MakeLit(sr);
             return sr;
         }
 

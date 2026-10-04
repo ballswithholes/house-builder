@@ -2337,8 +2337,8 @@
       "requiredLevel": 1,
       "equip": "OneHand",
       "weaponType": "OneHandAxe",
-      "minDamage": 2,
-      "maxDamage": 5,
+      "minDamage": 7,
+      "maxDamage": 13,
       "speed": 2.2,
       "price": 9
     },
@@ -2369,8 +2369,8 @@
       "requiredLevel": 1,
       "equip": "Ranged",
       "weaponType": "Bow",
-      "minDamage": 2,
-      "maxDamage": 4,
+      "minDamage": 7,
+      "maxDamage": 11,
       "speed": 2.3,
       "price": 9
     },

@@ -2061,8 +2061,8 @@
       "itemLevel": 2,
       "equip": "OneHand",
       "weaponType": "OneHandSword",
-      "minDamage": 1,
-      "maxDamage": 3,
+      "minDamage": 6,
+      "maxDamage": 11,
       "speed": 1.9,
       "price": 35
     },

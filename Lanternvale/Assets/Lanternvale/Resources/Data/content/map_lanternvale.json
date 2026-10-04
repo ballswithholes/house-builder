@@ -89,7 +89,7 @@
           "art": "prop_spirit_lantern_dark",
           "pos": [22.6, 9.8],
           "scale": 1.15,
-          "collider": {"w": 1.03, "h": 0.57},
+          "collider": {"w": 0.9, "h": 0.5},
           "interact": "great_lantern",
           "text": "The great lantern beneath Old Kusu. Its stone is cold, and smells faintly of ash."
         },
@@ -97,7 +97,7 @@
           "art": "prop_spirit_lantern_dark",
           "pos": [27.4, 9.8],
           "scale": 1.15,
-          "collider": {"w": 1.03, "h": 0.57},
+          "collider": {"w": 0.9, "h": 0.5},
           "interact": "great_lantern_twin",
           "text": "A twin of the great lantern, dark as a closed eye."
         },

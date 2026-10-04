@@ -526,7 +526,7 @@ namespace Lanternvale.Game
             Ui.Panel(r, Ui.InkPanelSoft);
             var dn = map.DayNight;
             GUI.Label(new Rect(r.x + 16f, r.y + 10f, w - 32f, 26f),
-                $"<b>{map.Def.name}</b>  ·  {dn.Hour:00.0}h {dn.Phase}  ·  {fpsSmoothed:0} fps  ·  fx {FxSystem.ActiveSprites}  ·  lit {(Lighting2D.IsLit ? "URP 2D" : "overlay")}", Ui.LabelSmall);
+                $"<b>{map.Def.name}</b>  ·  {dn.Hour:00.0}h {dn.Phase}  ·  {fpsSmoothed:0} fps  ·  fx {FxSystem.ActiveSprites}  ·  lit {(PresentationArt.SpritesLit ? "URP 2D" : Lighting2D.IsLit ? "overlay (no Sprite-Lit shader)" : "overlay")}", Ui.LabelSmall);
             GUI.Label(new Rect(r.x + 16f, r.y + 34f, w - 32f, 24f), status, Ui.LabelSmall);
             if (!showHelp) return;
             string help =

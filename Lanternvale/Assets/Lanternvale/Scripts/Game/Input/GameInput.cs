@@ -26,6 +26,28 @@ namespace Lanternvale.Game
         internal static Vector2 guiScreenOrigin;
         internal static bool haveGuiScreenOrigin;
 
+        /// <summary>
+        /// Clears all input state on every entry to Play mode. Statics survive between sessions when domain reload is off
+        /// (Enter Play Mode Options): a text field focused at Stop would otherwise mute every hotkey, and a key held at
+        /// Stop (the P of Ctrl+P) would never report KeyDown again on the IMGUI input path.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        internal static void ResetStatics()
+        {
+            mouse = Vector2.zero;
+            for (int b = 0; b < 3; b++) down[b] = held[b] = up[b] = false;
+            scroll = 0f;
+            keysHeld.Clear();
+            keysDown.Clear();
+            keysUp.Clear();
+            blockers.Clear();
+            nextBlockers.Clear();
+            blockClips.Clear();
+            textFieldFocused = false;
+            guiScreenOrigin = Vector2.zero;
+            haveGuiScreenOrigin = false;
+        }
+
         /// <summary>Mouse position in screen pixels (origin bottom-left, like Input.mousePosition).</summary>
         public static Vector2 MousePosition => mouse;
 
