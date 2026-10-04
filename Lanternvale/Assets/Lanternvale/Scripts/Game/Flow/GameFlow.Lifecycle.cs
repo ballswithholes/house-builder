@@ -72,6 +72,8 @@ namespace Lanternvale.Game
                 {
                     var s = Session;
                     if (!pausedByMenu) s.Tick(dt);
+                    UpdateGlobalHotkeys();
+                    if (Session != s || !HasGame) { SyncGameRootMode(); return; }
                     var mode = s.Mode;
                     switch (mode)
                     {
