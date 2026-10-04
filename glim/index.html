@@ -38,10 +38,11 @@ canvas{display:block;width:100%;height:100%}
 button{touch-action:manipulation;font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}
 .scroll{touch-action:pan-x;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
-.vscroll{touch-action:pan-y;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.vscroll{touch-action:pan-y;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 svg.i{width:22px;height:22px;fill:currentColor;flex:none}
 #fx .vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 60%,rgba(30,20,40,.35))}
 #fx .grain{position:absolute;inset:0;opacity:.06;background-size:128px 128px}
+#fx .scr{position:absolute;inset:0;width:100%;height:100%;opacity:0;will-change:opacity}#dimFx{background:#1E1428}
 .cap{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
 .chip{background:var(--paper);color:var(--ink);border-radius:18px;box-shadow:0 4px 0 rgba(30,20,40,.25);transition:transform .08s,box-shadow .08s}
 .chip:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(30,20,40,.25)}
@@ -52,21 +53,21 @@ svg.i{width:22px;height:22px;fill:currentColor;flex:none}
 .mote-ic{color:#E8A23B}
 /* HUD */
 #hud>*{position:absolute}
-#score{left:0;right:0;top:calc(var(--st) + 8px);text-align:center;font-size:56px;font-weight:800;line-height:1;color:var(--paper);text-shadow:0 3px 0 #1E1428;font-variant-numeric:tabular-nums;will-change:transform}
+#score{left:0;right:0;top:calc(var(--st) + 8px);text-align:center;font-size:56px;font-weight:800;line-height:1;color:var(--paper);text-shadow:0 3px 0 #1E1428,0 0 2px #1E1428,0 0 8px rgba(30,20,40,.45);font-variant-numeric:tabular-nums;will-change:transform}
 #multRow{left:0;right:0;top:calc(var(--st) + 70px);display:flex;justify-content:center;align-items:center;gap:8px;height:30px}
 #mult{height:28px;padding:0 10px;border-radius:14px;background:var(--paper);color:var(--ink);font-weight:800;font-size:17px;display:flex;align-items:center;box-shadow:0 3px 0 rgba(30,20,40,.3);opacity:0;transition:opacity .2s}
 #mult.on{opacity:1}
-.pips{display:flex;gap:5px}.pips i{width:9px;height:9px;border-radius:50%;background:rgba(255,244,224,.35);box-shadow:0 2px 0 rgba(30,20,40,.3)}
+.pips{display:flex;gap:5px}.pips i{width:9px;height:9px;border-radius:50%;background:rgba(255,244,224,.35);box-shadow:0 0 0 1.5px rgba(30,20,40,.35),0 2px 0 rgba(30,20,40,.3)}
 .pips i.on{background:var(--amber-hot)}.pips.max i{background:var(--amber-hot);animation:pip .5s ease-in-out infinite alternate}
 @keyframes pip{to{opacity:.45}}
-#hudToast{left:0;right:0;top:calc(var(--st) + 108px);text-align:center;color:var(--paper);text-shadow:0 2px 0 #1E1428;opacity:0}
+#hudToast{left:0;right:0;top:calc(var(--st) + 108px);text-align:center;color:var(--paper);text-shadow:0 2px 0 #1E1428,0 0 2px #1E1428,0 0 6px rgba(30,20,40,.5);opacity:0}
 #motePill{left:var(--sl);top:var(--st);transition:opacity .2s}
 #pups{left:var(--sl);top:calc(var(--st) + 46px);display:flex;flex-direction:column;gap:6px}
 .pup{width:36px;height:36px;border-radius:18px;background:var(--paper);box-shadow:0 3px 0 rgba(30,20,40,.25);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .pup svg{width:22px;height:22px}.pup b{position:absolute;left:6px;right:6px;bottom:4px;height:3px;border-radius:2px;transform-origin:0 50%;background:currentColor}
 #pauseBtn{right:var(--sr);top:var(--st);width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;gap:5px}
 #pauseBtn i{width:5px;height:16px;border-radius:3px;background:var(--ink)}
-#meterWrap{left:0;right:0;bottom:calc(var(--sb) + 6px);display:flex;justify-content:center;align-items:center;gap:8px;color:var(--paper);text-shadow:0 2px 0 #1E1428}
+#meterWrap{left:0;right:0;bottom:calc(var(--sb) + 6px);display:flex;justify-content:center;align-items:center;gap:8px;color:var(--paper);text-shadow:0 2px 0 #1E1428,0 0 2px #1E1428,0 0 6px rgba(30,20,40,.5)}
 #meter{position:relative;width:min(60vw,320px);height:12px;border-radius:6px;background:rgba(255,244,224,.35);overflow:hidden;box-shadow:0 2px 0 rgba(30,20,40,.3)}
 #meterFill{position:absolute;inset:0;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#FFB347,#FFE08A);border-radius:6px}
 #meterFull{position:absolute;inset:0;background:#FFF4E0;opacity:0;border-radius:6px}
@@ -137,6 +138,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .scard canvas.lk{background:radial-gradient(circle at 50% 45%,#FFF4E0,#E2CFAE)}
 .scard .small{color:var(--ink)}
 .scard .chip{background:var(--paper-2)}
+@media (max-height:520px){.scard{padding:10px 14px;gap:6px}.scard canvas{width:100px;height:100px}.seg{margin-top:8px}.seg button{min-height:44px}}
 .scard .chip.primary{background:var(--amber)}
 .scard.cen canvas{animation:bob 1.6s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translateY(-6px)}to{transform:translateY(6px)}}
@@ -181,7 +183,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 5h3v3H3zm5 0h13v3H8zM3 10.5h3v3H3zm5 0h13v3H8zM3 16h3v3H3zm5 0h13v3H8z"/></symbol>
 </svg>
 <div id="stage" tabindex="0"><canvas id="cv" role="img" aria-label="Glim, a tap-to-fly lantern game. Tap to fly."></canvas></div>
-<div id="fx"><div class="vig"></div><div class="grain" id="grain"></div></div>
+<div id="fx"><canvas class="scr" id="vigFx" width="128" height="128"></canvas><div class="scr" id="dimFx"></div><div class="vig"></div><div class="grain" id="grain"></div></div>
 <div id="hud">
  <div id="score" aria-live="off">0</div>
  <div id="multRow"><div id="mult">&times;2</div><div class="pips" id="pips"><i></i><i></i><i></i></div></div>
@@ -381,7 +383,7 @@ const Audio = (() => {
     ['pad', 'bass', 'hats', 'arp', 'kick'].forEach(n => { const g = ctx.createGain(); g.gain.value = 0; g.connect(musicBus); L[n] = g; });
     padLP.connect(L.pad);
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    nextT = ctx.currentTime + 0.1;
+    nextT = ctx.currentTime + 0.1; lastTg = null; vEnd.fill(0); vGain.fill(null); moteT = -9; // a rebuilt context restarts its clock at 0
     sched = setInterval(schedule, 25); wd = setInterval(watchdog, 1000);
   }
   function unlock() {
@@ -525,6 +527,7 @@ const Input = (() => {
       Audio.unlock(); if (press('pointer') && HAPTIC_EVENT === 'pointerdown') Haptics.tick();
     }, { passive: false });
     stage.addEventListener('touchstart', e => { e.preventDefault(); if (HAPTIC_EVENT === 'touchstart' && Game.flapPossible()) Haptics.tick(); }, { passive: false });
+    window.addEventListener('pointerdown', () => Quality.remeasure(), { once: true, capture: true }); // WebKit lifts the untouched-iframe 30 Hz rAF throttle here
     window.addEventListener('keydown', e => {
       const c = e.code || e.key;
       if (c === 'Space' || c === 'ArrowUp' || c === 'KeyW' || c === 'Enter' || c === ' ') {
@@ -542,7 +545,8 @@ const Input = (() => {
     });
     const guard = e => { e.preventDefault(); };
     ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu'].forEach(t => document.addEventListener(t, guard, { passive: false }));
-    document.addEventListener('touchmove', e => { const t = e.target; if (t && t.closest && t.closest('.scroll,.vscroll')) return; e.preventDefault(); }, { passive: false });
+    // let a scroller pan only when it can actually scroll; otherwise the pan chains out of the iframe and drags the host page
+    document.addEventListener('touchmove', e => { const t = e.target, s = t && t.closest && t.closest('.scroll,.vscroll'); if (s && (s.scrollHeight > s.clientHeight + 1 || s.scrollWidth > s.clientWidth + 1)) return; e.preventDefault(); }, { passive: false });
     const un = e => { if (isHap(e.target)) return; Audio.unlock(); };
     ['pointerup', 'touchend', 'click', 'keydown'].forEach(t => window.addEventListener(t, un, true));
   }
@@ -559,25 +563,37 @@ let LEVEL = LEVELS[2];
 const DPR_CAP = 1.5;
 const Quality = (() => {
   const Q = { level: 2, auto: !FLAGS.test, changes: 0, ema: 0, interval: 1000 / 60, deltas: [], winT: 0, winN: 0, winLong: 0, clean: 0, fps: 60, fpsMin: 60, fpsAcc: 0, fpsN: 0, fpsT: 0, fpsMinT: 999, work: 0 };
-  Q.set = function (l, manual) { l = clamp(l | 0, 0, 2); if (l !== Q.level) { Q.level = l; LEVEL = LEVELS[l]; View.dirty = true; Particles.resize(); } };
+  // cap: the highest level not yet seen to fail (a dropped level is never retried); hold: settle time after a change (canvas resize)
+  // probe: a steady 30 Hz cadence is either a raster-bound device or a display capped at 30 Hz (Low Power Mode, thermal).
+  // 0 untested, 1 testing at level 0, 2 display proven >= 60 Hz (a 30 Hz cadence is missed frames), 3 display is 30 Hz
+  Q.cap = 2; Q.hold = 0; Q.win30 = 0; Q.probe = 0; Q.probeFrom = 2;
+  Q.set = function (l, manual) { l = clamp(l | 0, 0, 2); if (l !== Q.level) { Q.level = l; LEVEL = LEVELS[l]; View.dirty = true; Particles.resize(); Q.winT = Q.winN = Q.winLong = Q.win30 = 0; Q.hold = 500; } };
   Q.remeasure = function () { Q.deltas.length = 0; };
   // the median frame delta snapped to the nearest real display refresh (120/60/30 Hz), never above 33.4 ms
   // the display refresh is 120 or 60 Hz; a slow device (or Low Power Mode) must read as missed frames, never as a 30 Hz display
   Q.snap = ms => ms < 12 ? 1000 / 120 : 1000 / 60;
-  Q.newRun = function () { Q.changes = 0; };
+  Q.newRun = function () { Q.changes = 0; Q.clean = 0; };
   Q.sample = function (workMs, dt) {
     const dms = dt * 1000; Q.work = workMs; Q.ema += (workMs - Q.ema) * 0.1;
     if (dms > 0) { Q.fpsAcc += dms; Q.fpsN++; if (dms > Q.fpsMinT || Q.fpsMinT === 999) Q.fpsMinT = Math.max(dms, Q.fpsMinT === 999 ? 0 : Q.fpsMinT);
       if (Q.fpsAcc >= 1000) { Q.fps = Q.fpsN * 1000 / Q.fpsAcc; Q.fpsMin = 1000 / Math.max(1, Q.fpsMinT); Q.fpsAcc = 0; Q.fpsN = 0; Q.fpsMinT = 999; } }
     if (Q.deltas.length < 30) { if (dms > 0 && dms <= 100) Q.deltas.push(dms); if (Q.deltas.length === 30) { const s = Q.deltas.slice().sort((a, b) => a - b); Q.interval = Q.snap(s[15]); } return; }
-    const gs = Game.state; if (!Q.auto || (gs !== 'playing' && gs !== 'title' && gs !== 'ready')) return;
-    Q.winT += dms; Q.winN++; if (dms > Q.interval * 1.5) Q.winLong++;
-    if (Q.winT >= 1000) {
-      const longR = Q.winLong / Math.max(1, Q.winN);
-      if ((Q.ema > 0.7 * Q.interval || longR > 0.08) && Q.level > 0 && Q.changes < 3) { Q.set(Q.level - 1); Q.changes++; Q.clean = 0; }
-      else if (Q.ema < 0.45 * Q.interval && longR < 0.02) { Q.clean += Q.winT; if (Q.clean >= 8000 && Q.level < 2 && Q.changes < 3) { Q.set(Q.level + 1); Q.changes++; Q.clean = 0; } }
+    // only live play is governed; the 2.4 s biome crossfade is a scheduled transient, not the device's steady cost.
+    // A steady 30 Hz cadence is ambiguous (WebKit caps rAF at 30 Hz in Low Power Mode and under thermal mitigation, and a
+    // raster-bound device also settles there), so it triggers one test at level 0 instead of counting as long frames.
+    const gs = Game.state; if (!Q.auto || gs !== 'playing' || Renderer.FX.fadeT < 2.4) return;
+    if (Q.hold > 0) { Q.hold -= dms; return; }
+    Q.winT += dms; Q.winN++; if (dms > Q.interval * 1.5) Q.winLong++; if (dms > 28 && dms < 38) Q.win30++;
+    if (Q.winT >= 2000 || (Q.winT >= 1000 && Q.winLong > 0.25 * Q.winN)) { // 2 s windows (spec 13.7); a severely janky second is judged at once
+      const longR = Q.winLong / Math.max(1, Q.winN), steady30 = Q.win30 >= 0.9 * Q.winN && Q.probe !== 3;
+      if (Q.probe === 1) { // judge the test: still 30 Hz at the lowest level means the display itself is capped
+        if (steady30) { Q.probe = 3; Q.interval = 1000 / 30; Q.cap = Q.probeFrom; Q.set(Q.probeFrom); } else { Q.probe = 2; Q.cap = Q.probeFrom - 1; }
+        Q.winT = 0; Q.winN = 0; Q.winLong = 0; Q.win30 = 0; return; }
+      if (steady30 && Q.probe === 0 && Q.level > 0 && Q.changes < 3) { Q.probe = 1; Q.probeFrom = Q.level; Q.set(0); Q.changes++; Q.clean = 0; }
+      else if ((Q.ema > 0.7 * Q.interval || (longR > 0.08 && !(steady30 && Q.probe !== 2))) && Q.level > 0 && Q.changes < 3) { Q.cap = Q.level - 1; Q.set(Q.level - 1); Q.changes++; Q.clean = 0; }
+      else if (Q.ema < 0.45 * Q.interval && longR < 0.02) { Q.clean += Q.winT; if (Q.clean >= 8000 && Q.level < Q.cap && Q.changes < 3) { Q.set(Q.level + 1); Q.changes++; Q.clean = 0; } }
       else Q.clean = 0;
-      Q.winT = 0; Q.winN = 0; Q.winLong = 0;
+      Q.winT = 0; Q.winN = 0; Q.winLong = 0; Q.win30 = 0;
     }
   };
   return Q;
@@ -601,7 +617,8 @@ const View = (() => {
     if (cw !== V.cw || ch !== V.ch) { V.cw = cw; V.ch = ch; canvas.width = cw; canvas.height = ch; }
     V.landscape = w > h;
     try { const cs = getComputedStyle($('probe')); V.safe.t = parseFloat(cs.paddingTop) || 0; V.safe.b = parseFloat(cs.paddingBottom) || 0; V.safe.l = parseFloat(cs.paddingLeft) || 0; V.safe.r = parseFloat(cs.paddingRight) || 0; } catch (e) { }
-    if (V.bakeK > 0 && Math.abs(V.K / V.bakeK - 1) > 0.08) V.rebakeAt = performance.now() + 250;
+    // every drawer is resolution-independent, so sprites baked at a higher K just draw downscaled: rebake only to upscale
+    if (V.bakeK > 0 && V.K / V.bakeK > 1.08) V.rebakeAt = performance.now() + 250;
     V.dirty = false; UI.onResize();
   };
   V.init = function () {
@@ -824,7 +841,7 @@ const Art = (() => {
     if (name === 'words') { const W = A.words, ws = { perfect: 'PERFECT', graze: 'GRAZE', surge: 'SURGE!', newbest: 'NEW BEST!', best: 'BEST', shield: 'SHIELD!', tobest: '2 TO BEST!', tap: 'TAP', tapfly: 'tap to fly',
         p_shield: 'SHIELD', p_magnet: 'MAGNET', p_slowmo: 'SLOW-MO', p_shrink: 'SHRINK', revive: 'GO!' };
       for (const key in ws) W[key] = bakeWord(ws[key], key === 'tap' || key === 'tapfly' ? 30 : 44, k);
-      W.moves = bakeWord('MOVES', 34, k, true); W.jaws = bakeWord('JAWS', 34, k);
+      W.moves = bakeWord('MOVES', 34, k, true); W.jaws = bakeWord('JAWS', 34, k); W.spins = bakeWord('SPINS', 34, k);
       for (let i = 2; i <= 5; i++) W['x' + i] = bakeWord('×' + i, 40, k);
       for (let i = 1; i <= 3; i++) W['cd' + i] = bakeWord(String(i), 180, k);
       '0123456789+'.split('').forEach(ch => { A.digits[ch] = bakeWord(ch, 36, k); }); warmIn(A.words); warmIn(A.digits); }
@@ -992,7 +1009,8 @@ const Art = (() => {
     const S = cv(240, 150, k), x = S.x, off = 600; x.shadowColor = mixHex(B.near, B.ink, 0.45); x.shadowBlur = 9 * k; x.shadowOffsetX = off * k;
     x.translate(120 - off, 75); x.rotate(-0.25); x.fillStyle = '#000'; x.beginPath(); x.moveTo(-100, 0); x.bezierCurveTo(-40, -70, 60, -60, 100, 0); x.bezierCurveTo(60, 55, -40, 62, -100, 0); x.fill();
     x.shadowColor = mixHex(B.near, '#FFFFFF', 0.12); x.shadowBlur = 5 * k; x.beginPath(); x.moveTo(-96, 0); x.quadraticCurveTo(0, -8, 98, 0); x.lineWidth = 4; x.strokeStyle = '#000'; x.stroke(); S.ox = 120; S.oy = 75; return S; }
-  function bakeSun(def, k) { const r = def.r, S = cv(r * 5, r * 5, k), x = S.x, c = r * 2.5; const g = x.createRadialGradient(c, c, r * 0.8, c, c, c); g.addColorStop(0, rgba(def.glow, 0.45)); g.addColorStop(1, rgba(def.glow, 0)); x.fillStyle = g; x.fillRect(0, 0, S.w, S.h);
+  // glow out to 2r (not 2.5r): same profile to 1.6r, and 36% fewer sprite pixels for the faint outer ring
+  function bakeSun(def, k) { const r = def.r, S = cv(r * 4, r * 4, k), x = S.x, c = r * 2; const g = x.createRadialGradient(c, c, r * 0.8, c, c, c); g.addColorStop(0, rgba(def.glow, 0.45)); g.addColorStop(0.667, rgba(def.glow, 0.238)); g.addColorStop(1, rgba(def.glow, 0)); x.fillStyle = g; x.fillRect(0, 0, S.w, S.h);
     if (def.moon) { const M = cv(r * 2.2, r * 2.2, k), m = M.x, cc = r * 1.1; m.fillStyle = def.col; m.beginPath(); m.arc(cc, cc, r, 0, TAU); m.fill(); m.globalCompositeOperation = 'destination-out'; m.beginPath(); m.arc(cc + r * 0.45, cc - r * 0.2, r * 0.85, 0, TAU); m.fill(); x.drawImage(M.c, c - cc, c - cc, r * 2.2, r * 2.2); }
     else { x.fillStyle = def.col; x.beginPath(); x.arc(c, c, r, 0, TAU); x.fill(); }
     S.ox = S.oy = c; return S; }
@@ -1041,7 +1059,8 @@ const Art = (() => {
   // bake-time scan of a layer tile: the row spans that hold any pixels (S.runs) and the row from which the tile is solid
   // down to its bottom (S.opaque), both in tile units. The renderer draws only those spans and stops each layer where
   // the layer in front of it is already solid, which roughly halves per-frame fill.
-  let scan = null;
+  // runs/opaque are in tile units, so each (biome, layer) is scanned once per session: a readback is a GPU-process round trip on WebKit
+  let scan = null; const RUNS = {};
   function bakeRuns(S) {
     S.runs = null; S.opaque = S.h;
     try {
@@ -1069,7 +1088,7 @@ const Art = (() => {
     else if (name === 'bramble') E.bramble = bakeBramble(B, k);
     else if (name === 'body') E.body = bakeBody(B, k);
     else if (name === 'tips') { E.caps = []; for (let v = 0; v < 4; v++) E.caps.push([bakeCap(B, v, 0, k), bakeCap(B, v, 1, k)]); }
-    if (name === 'decor' || name === 'far' || name === 'mid' || name === 'near' || name === 'bramble') bakeRuns(E[name]);
+    if (name === 'decor' || name === 'far' || name === 'mid' || name === 'near' || name === 'bramble') { const key = b + name, c = RUNS[key]; if (c) { E[name].runs = c[0]; E[name].opaque = c[1]; } else { bakeRuns(E[name]); RUNS[key] = [E[name].runs, E[name].opaque]; } }
     if (name === 'tips') E.caps.forEach(p => { bakeWarm(p[0]); bakeWarm(p[1]); }); else if (name === 'sky') { bakeWarm(E.sun); if (E.ribbons) E.ribbons.forEach(bakeWarm); } else bakeWarm(E[name]);
     if (name === 'near') bakeWarm(E.leaf);
     E.done[name] = true; E.n++; if (E.n >= JOBS.length) E.ready = true;
@@ -1352,7 +1371,7 @@ const Game = (() => {
     paused: { enter() { Input.clear(); wake(false); Audio.suspend(); Save.write(); } },
     countdown: { enter() { R.cdT = 0; Input.clear(); }, tick() { if (R.cdT % 48 === 0) Bus.emit('countdown', 3 - R.cdT / 48); R.cdT++; Player.save(); if (R.cdT >= CONST.COUNTDOWN) G.go('playing'); } },
     dying: { enter() { R.dyingT = 0; wake(false); }, tick: dyingTick },
-    results: { enter() { finalize(true); wake(false); }, tick() { if (R.lockout > 0) R.lockout--; Player.save(); } }
+    results: { enter() { R.resT = 0; finalize(true); wake(false); }, tick() { if (R.lockout > 0) R.lockout--; R.resT++; Player.save(); } }
   };
   G.go = function (name) {
     const prev = G.state; if (ST[prev] && ST[prev].exit) ST[prev].exit(); G.state = name; MS.state = name;
@@ -1388,7 +1407,7 @@ const Game = (() => {
   G.nextBiomeIdx = () => (R.biomeN + 1) % 5;
   function fillGates() { let guard = 0; while (guard++ < 8 && World.nextX() - R.dist + View.xP < View.W + 260) { const g = World.spawn(); if (!g) break; decorate(g); } }
   function decorate(g) { const sv = Save.d; if (R.mode !== 'daily' && R.best.gates > 0 && g.k - R.start === R.best.gates) g.ribbon = true;
-    if (g.kind === 1 && !sv.seen.drifter) { g.caption = 1; sv.seen.drifter = true; } if (g.kind === 2 && !sv.seen.jaws) { g.caption = 2; sv.seen.jaws = true; } if (g.kind === 3 && !sv.seen.pinwheel) { g.caption = 1; sv.seen.pinwheel = true; }
+    if (g.kind === 1 && !sv.seen.drifter) { g.caption = 1; sv.seen.drifter = true; } if (g.kind === 2 && !sv.seen.jaws) { g.caption = 2; sv.seen.jaws = true; } if (g.kind === 3 && !sv.seen.pinwheel) { g.caption = 3; sv.seen.pinwheel = true; }
     if (!Art.get(g.biome) || !Art.get(g.biome).ready) Art.ensure(g.biome, true); }
   G.startRun = function (o) { G.newRun(o); G.go('playing'); };
   G.toReady = function (o) { G.newRun(o); G.go('ready'); };
@@ -1464,7 +1483,7 @@ const Game = (() => {
         const ge = R.start + R.gates;
         if (g.ribbon && !R.bestShown) { R.bestShown = true; Bus.emit('best', R.gates, 0); }
         if (R.mode !== 'daily' && R.best.gates >= 8 && R.gates === R.best.gates - 2) Bus.emit('tobest', R.gates, 0);
-        if (ge >= THRESH(R.biomeN)) { R.prevBiome = R.biome; R.biomeN++; R.biome = R.biomeN % 5; MS.biome = R.biome; Bus.emit('biome', R.biome, R.biomeN); Art.ensure(G.nextBiomeIdx(), false); }
+        if (ge >= THRESH(R.biomeN)) { R.prevBiome = R.biome; R.biomeN++; R.biome = R.biomeN % 5; MS.biome = R.biome; Bus.emit('biome', R.biome, R.biomeN); }
         else if (ge === THRESH(R.biomeN) - 6) Art.ensure(G.nextBiomeIdx(), false);
         for (let j = 0; j < 4; j++) if (R.gates === MEDALS[j].g) Bus.emit('medal', j, 0);
         if (R.gates % 10 === 0) Bus.emit('ten', R.gates, 0);
@@ -1652,31 +1671,33 @@ const Renderer = (() => {
     for (let i = 0; i < 3; i++) { const L = LEAVES[i]; if (!L.on) continue; L.x -= lv * dt; L.r += L.vr * dt; if (L.x < -200) L.on = false; }
     for (let i = 0; i < 12; i++) { const l = SL[i]; l.x -= l.v * dt; if (l.x < -200) { l.x = View.viewW + rng.fx.next() * 200; l.y = rng.fx.next() * 1000; } }
     if (View.rebakeAt && performance.now() > View.rebakeAt) { View.rebakeAt = 0; KEEP[1] = RR.biome; KEEP[2] = G.nextBiomeIdx(); Art.rebake(View.K, KEEP); }
-    Art.pump();
+    if (FX.fadeT >= 2.4 || !RR.active) Art.pump(); // the crossfade frames already draw two backdrops
   };
   // ---------- drawing ----------
   R.biomeFade = () => { FX.fadeT = 0; SUNB[Game.run.biome] = Game.run.dist; };
   // A periodic layer tile, drawn only where it has pixels (T.runs), only across the visible columns (40 u margin for
   // shake, roll and zoom) and nothing below `cut` (world u), where the layer in front of it is already solid.
   function layer(E, name, speed, f, scroll, a, cut) { const T = E && E[name]; if (!T || !T.c.width) return; setBase(f); ctx.globalAlpha = a; const V = View;
-    let x = -((scroll * speed) % 1200) - V.colX; if (x > -V.colX) x -= 1200;
-    const cw = T.c.width, ch = T.c.height, kx = cw / 1200, ky = ch / T.h, L = -V.colX - 40, Rr = V.viewW - V.colX + 40, runs = T.runs, n = runs ? runs.length : 2;
-    const yMax = cut === undefined ? T.h : Math.min(T.h, cut - T.y0);
+    const L = -V.colX - 40; let x = -((scroll * speed) % 1200) - V.colX; if (x > L) x -= 1200; // wrap against the shake margin, not the column edge
+    const cw = T.c.width, ch = T.c.height, kx = cw / 1200, ky = ch / T.h, Rr = V.viewW - V.colX + 40, runs = T.runs, n = runs ? runs.length : 2;
+    const yMax = cut === undefined || noCut ? T.h : Math.min(T.h, cut - T.y0);
     for (; x < Rr; x += 1200) { const x0 = Math.max(x, L), x1 = Math.min(x + 1200, Rr); if (x1 <= x0) continue; const sx = (x0 - x) * kx, sw = Math.min((x1 - x0) * kx, cw - sx);
       for (let i = 0; i < n; i += 2) { const y0 = runs ? runs[i] : 0, y1 = Math.min(runs ? runs[i + 1] : T.h, yMax); if (y1 <= y0) continue;
         ctx.drawImage(T.c, sx, y0 * ky, sw, Math.min((y1 - y0) * ky, ch - y0 * ky), x0, T.y0 + y0, x1 - x0, y1 - y0); } } }
   const solidAt = (T, m) => T && T.runs && T.c.width ? T.y0 + T.opaque + m : 1e4;
   function skyDraw(b, a, scroll) {
     const E = Art.get(b), V = View; if (!E || !E.sky) return; setBase(0); ctx.globalAlpha = a; ctx.fillStyle = E.sky;
-    const skyCut = solidAt(E.far, 30), skyTop = -V.oy - 120; ctx.fillRect(-V.colX - 50, skyTop, V.viewW + 100, Math.min(V.viewH + 240, skyCut - skyTop));
+    const skyCut = noCut ? 1e4 : solidAt(E.far, 30), skyTop = -V.oy - 120; ctx.fillRect(-V.colX - 50, skyTop, V.viewW + 100, Math.min(V.viewH + 240, skyCut - skyTop));
     if (E.ribbons && LEVEL.rib) { ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) { const rb = E.ribbons[i], sw = Math.sin(FX.wall * 0.3 + i * 2) * 40; ctx.globalAlpha = a * (0.35 + 0.08 * Math.sin(FX.wall * 0.7 + i)); ctx.drawImage(rb.c, -V.colX + (i ? V.viewW * 0.35 : -V.viewW * 0.15) + sw - ((scroll * 0.01) % 300), 40 + i * 110, 900 * Math.max(1, V.viewW / 700), 300); } ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a; }
-    if (E.sun) { const sd = LAYERS_SUN[b], span = V.viewW + 400, ss = drawDist >= 0 ? drawDist - SUNB[b] : scroll; let x = V.viewW * sd.x - ((ss * (sd.p || 0.02)) % span); if (x < -200) x += span; spr(E.sun, x - V.colX, sd.y, 1); }
+    if (E.sun) { const sd = LAYERS_SUN[b], span = V.viewW + 400, ss = drawDist >= 0 ? drawDist - SUNB[b] : 0; let x = V.viewW * sd.x - ((ss * (sd.p || 0.02)) % span); if (x < -200) x += span; spr(E.sun, x - V.colX, sd.y, 1); }
     layer(E, 'decor', 0.03, 0.15, scroll, a, solidAt(E.far, 30));
   }
   const FRAME_INK = 'rgba(30,20,40,.55)';
   const LAYERS_SUN = [{ x: 0.72, y: 300 }, { x: 0.24, y: 170 }, { x: 0.62, y: 455 }, { x: 0.76, y: 190, p: 0.01 }, { x: 0.5, y: 200 }];
   // the sun/moon parallax (0.02, moon 0.01) runs from when its biome began, so it starts where it was placed (in view in portrait) instead of wherever the run's distance has pushed it
   const SUNB = new Float32Array(5); let drawDist = -1;
+  // under the death roll the rotated, antialiased tile edges let the previous frame show through: clear and skip the occlusion cuts
+  let noCut = false;
   function backdrop(b, a, scroll) { const E = Art.get(b); if (!E) return; skyDraw(b, a, scroll);
     const cNear = solidAt(E.near, 30), cMid = LEVEL.mid ? Math.min(solidAt(E.mid, 30), cNear) : cNear;
     layer(E, 'far', 0.12, 0.3, scroll, a, cMid); if (LEVEL.mid) layer(E, 'mid', 0.3, 0.5, scroll, a, cNear); layer(E, 'near', 0.6, 0.8, scroll, a, solidAt(E.bramble, 24)); }
@@ -1694,8 +1715,8 @@ const Renderer = (() => {
     const camT = st === 'title' ? 0 : clamp((y - 500) * 0.12, -60, 60); FX.camY += (camT - FX.camY) * Math.min(1, (R.dtw || 0.016) * 6);
     R.gx = V.colX + gx; R.gy = V.oy + y - FX.camY;
     const bi = running ? RR.biome : 0, fade = running && FX.fadeT < 2.4 ? FX.fadeT / 2.4 : 1;
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const Eb = Art.get(running && fade < 1 ? RR.prevBiome : bi); if (!Eb || !Eb.sky) { ctx.fillStyle = '#1E1428'; ctx.fillRect(0, 0, V.cw, V.ch); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); noCut = FX.roll !== 0;
+    const Eb = Art.get(running && fade < 1 ? RR.prevBiome : bi); if (!Eb || !Eb.sky || noCut) { ctx.fillStyle = '#1E1428'; ctx.fillRect(0, 0, V.cw, V.ch); }
     // 1-4 backdrop with crossfade
     if (fade < 1) { backdrop(RR.prevBiome, 1, scroll); backdrop(bi, fade, scroll); } else backdrop(bi, 1, scroll);
     ctx.globalAlpha = 1; setBase(1);
@@ -1727,6 +1748,8 @@ const Renderer = (() => {
     const V = View, RR = Game.run, top = -V.oy + FX.camY - 120, bot = 1000 + V.oy + FX.camY + 120;
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on) continue;
       const cx = g.X - dist + V.xP; if (cx < -150 || cx > V.W + 320) continue;
+      // incoming-gap hint: on tall portrait views a gate scrolls in only ~0.7 s before it must be flown, so mark its gap at the right edge first
+      if (cx > V.W + 50) { const a = clamp(1 - (cx - V.W - 50) / 140, 0, 1); if (a > 0.02 && !g.smashed) { const hy = lerp(g.pgapY, g.gapY, al), hg = lerp(g.pgap, g.gap, al); base(); ctx.globalAlpha = 0.9 * a; ctx.fillStyle = COL.thorn; ctx.fillRect(V.W - 5, hy - hg / 2 - 22, 5, 22); ctx.fillRect(V.W - 5, hy + hg / 2, 5, 22); ctx.globalAlpha = 1; } }
       if (g.smashed && g.dissolve <= 0) continue;
       const E = Art.get(g.biome) || Art.get(RR.biome); if (!E || !E.caps) continue;
       const gy = lerp(g.pgapY, g.gapY, al), gp = lerp(g.pgap, g.gap, al), tt = gy - gp / 2, tb = gy + gp / 2;
@@ -1743,7 +1766,7 @@ const Renderer = (() => {
         spr(Art.chev, cx, tt - 30, 1); place(cx, tb + 30, Math.PI, 1, 1); ctx.drawImage(Art.chev.c, -8, -7, 16, 14); base(); }
       if (g.kind === 3) { ctx.globalAlpha = g.smashed ? g.dissolve : 1; place(cx, gy, g.phase + g.dir * (Math.PI / 2) * (RR.runTick - 1 + al) * CONST.STEP, 1, 1); ctx.drawImage(Art.pin.c, -70, -70, 140, 140); base(); }
       if (g.ribbon && !g.passed) { ctx.globalAlpha = 1; spr(Art.ribbon, cx, gy - 10 - g.pinH, 0.9 + 0.04 * Math.sin(FX.wall * 3)); }
-      if (g.caption && g.capT > 0 && g.capT < 1.2) { const a = Math.min(1, g.capT * 6, (1.2 - g.capT) * 5); ctx.globalAlpha = a; spr(g.caption === 1 ? Art.words.moves : Art.words.jaws, cx, Math.max(-V.oy + 70 + V.safe.t / V.s, tt - 70), 0.8); }
+      if (g.caption && g.capT > 0 && g.capT < 1.2) { const a = Math.min(1, g.capT * 6, (1.2 - g.capT) * 5); ctx.globalAlpha = a; spr(g.caption === 1 ? Art.words.moves : g.caption === 2 ? Art.words.jaws : Art.words.spins, cx, Math.max(-V.oy + 70 + V.safe.t / V.s, tt - 70), 0.8); }
       // spire edge light: side facing Glim, at Glim's y, inside spire extents
       if (LEVEL.edge && !g.smashed && glowMode(g.biome)) { const d = Math.abs(cx - V.xP) - 50, a = 0.6 * clamp(1 - d / 260, 0, 1);
         if (a > 0.02) { const ex = cx < V.xP ? cx + 44 : cx - 52; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; const k = Art.edge.c.height / 200;
@@ -1840,14 +1863,17 @@ const Renderer = (() => {
     }
     ctx.globalAlpha = 1;
   }
+  // the slow-mo vignette and the death dim are full-screen blends: as composited DOM layers (#fx, opacity only) they cost no canvas raster
+  const DOMFX = [null, null], DOMO = new Float32Array(2);
+  function domO(i, o) { if (Math.abs(o - DOMO[i]) < 0.02 && (o > 0 || DOMO[i] === 0)) return; DOMO[i] = o; const el = DOMFX[i] || (DOMFX[i] = $(i ? 'dimFx' : 'vigFx')); el.style.opacity = o; }
   function screenFX(gx, y, st, running, red) {
     const V = View, RR = Game.run; setBase(0); const left = -V.colX, top = -V.oy - 10, W2 = V.viewW, H2 = V.viewH + 20;
     ctx.setTransform(V.K, 0, 0, V.K, V.K * V.colX, V.K * V.oy);
     if (V.colX > 1) { const fw = 60; ctx.globalAlpha = 1; ctx.drawImage(Art.frame.c, V.W, top, fw, H2); ctx.fillStyle = FRAME_INK; ctx.fillRect(V.W + fw, top, V.colX + 10, H2);
       ctx.drawImage(Art.frameL.c, -fw, top, fw, H2); ctx.fillRect(-V.colX - 10, top, V.colX + 10 - fw, H2); }
-    if (FX.slowV < 0.999) { ctx.globalAlpha = 0.22 * (1 - FX.slowV) / 0.4; ctx.drawImage(Art.slowVig.c, left, top, W2, H2); }
+    domO(0, FX.slowV < 0.999 ? 0.22 * (1 - FX.slowV) / 0.4 : 0);
     if (running && RR.surgeT > 0 && !red && (st === 'playing')) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35; for (let i = 0; i < 12; i++) { const l = SL[i]; ctx.drawImage(Art.speedLine.c, l.x - V.colX, l.y - V.oy, l.w, 3); } ctx.globalCompositeOperation = 'source-over'; }
-    if (FX.dim > 0.005) { ctx.globalAlpha = FX.dim; ctx.fillStyle = COL.ink; ctx.fillRect(left, top, W2, H2); }
+    domO(1, FX.dim > 0.005 ? FX.dim : 0);
     if (FX.flashA > 0.005) { ctx.globalAlpha = Math.min(0.5, FX.flashA); ctx.fillStyle = FX.flashCol; ctx.fillRect(left, top, W2, H2); }
     if (FX.iris < 0.15) { const t = FX.iris / 0.15, Rm = Math.hypot(W2, H2), r = t * Rm; ctx.globalAlpha = 1; ctx.strokeStyle = COL.ink; ctx.lineWidth = Rm * 2; ctx.beginPath(); ctx.arc(gx, y, r + Rm, 0, TAU); ctx.stroke(); }
     const safeT = V.safe.t / V.s;
@@ -1924,7 +1950,7 @@ const UI = (() => {
   U.onState = function (st, prev) {
     const hudOn = st === 'ready' || st === 'playing' || st === 'paused' || st === 'countdown' || st === 'dying';
     [E.score, E.meterWrap, E.pauseBtn, E.pups, $('multRow')].forEach(el => { el.style.visibility = hudOn ? 'visible' : 'hidden'; });
-    E.pauseBtn.style.visibility = (st === 'playing' || st === 'ready' || st === 'countdown') ? 'visible' : 'hidden';
+    E.pauseBtn.style.visibility = (st === 'playing' || st === 'countdown') ? 'visible' : 'hidden';
     E.titleUI.classList.toggle('off', st !== 'title');
     E.pause.classList.toggle('open', st === 'paused'); if (st === 'paused') renderPause();
     if (st === 'results') openResults(); else if (prev === 'results') { E.results.classList.remove('open'); U.count = null; }
@@ -1940,10 +1966,11 @@ const UI = (() => {
   };
   // ---------- toasts ----------
   let toastTo = 0, toastCur = null; const toastQ = [];
-  const toastBlocked = () => Game.state === 'paused' || Game.state === 'results' || U.panel !== null;
+  // mid-run toasts would cover Glim and the gates; the results card lists the run's completed missions instead
+  const toastBlocked = () => Game.state === 'playing' || Game.state === 'countdown' || Game.state === 'dying' || Game.state === 'paused' || Game.state === 'results' || U.panel !== null;
   function toastShow(html, held) { toastCur = held ? html : null; E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo);
     toastTo = setTimeout(() => { E.toast.classList.remove('on'); toastCur = null; if (toastQ.length) toastTo = setTimeout(U.flushToasts, 300); }, 2440); }
-  U.toast = function (html) { if (toastBlocked()) { if (toastQ.length < 6) toastQ.push(html); return; } toastShow(html, true); };
+  U.toast = function (html) { if (toastBlocked() || E.toast.classList.contains('on')) { if (toastQ.length < 6) toastQ.push(html); return; } toastShow(html, true); };
   U.holdToasts = function (keep) { if (E.toast.classList.contains('on')) { clearTimeout(toastTo); E.toast.classList.remove('on'); if (keep && toastCur !== null) toastQ.unshift(toastCur); toastCur = null; } if (!keep) toastQ.length = 0; };
   U.flushToasts = function () { if (toastQ.length && !toastBlocked() && !E.toast.classList.contains('on')) toastShow(toastQ.shift(), true); };
   U.hudToast = function (txt) { E.hudToast.textContent = txt; try { E.hudToast.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: 2200, easing: 'ease-out', fill: 'forwards' }); } catch (e) { E.hudToast.style.opacity = 0; } };
@@ -1988,6 +2015,7 @@ const UI = (() => {
   // shop
   let shopTab = 'skins', armed = null, armTo = 0;
   function buildShop() {
+    armed = null; clearTimeout(armTo); // a rebuilt card shows the plain price, so it must not stay armed
     E.segSkins.setAttribute('aria-pressed', shopTab === 'skins'); E.segTrails.setAttribute('aria-pressed', shopTab === 'trails');
     const list = shopTab === 'skins' ? SKINS : TRAILS, sv = Save.d, owned = shopTab === 'skins' ? sv.owned.skins : sv.owned.trails, eq = shopTab === 'skins' ? sv.equipped.skin : sv.equipped.trail;
     E.carousel.innerHTML = ''; E.shopMotes.textContent = fmt(sv.motes);
@@ -2081,9 +2109,13 @@ const UI = (() => {
     btn(E.rRetry, () => { if (Game.state === 'results') { Renderer.iris(); Game.toReady({ mode: Game.run.mode === 'daily' ? 'daily' : undefined, chain: true }); } });
     btn(E.rHome, () => Game.toTitle(), true); btn(E.rShop, () => { Game.toTitle(); U.openPanel('shop'); });
     btn(E.rCont, () => { if (Game.revive()) show(E.rCont, false); });
-    const anyTap = e => { if (e.target.closest && e.target.closest('button')) return; if (e.type === 'pointerdown') { if (E.rSheet.contains(e.target)) return; e.preventDefault(); }
+    // tap-anywhere on the sheet fires on click, so it only counts a press that went down after the lockout (spec 3.4)
+    let sheetDownOK = false; E.rSheet.addEventListener('pointerdown', () => { sheetDownOK = Game.state === 'results' && Game.run.lockout <= 0; });
+    const anyTap = e => { if (e.target.closest && e.target.closest('button')) return; if (e.type === 'pointerdown') { if (E.rSheet.contains(e.target)) return; e.preventDefault(); } else if (!sheetDownOK) return;
       U.skipCount(); Audio.unlock(); if (Game.press('card')) Haptics.tick(); };
     E.results.addEventListener('pointerdown', anyTap); E.rSheet.addEventListener('click', anyTap);
+    // a reflexive flap right after death lands where the sheet's buttons slide in: ignore them for the first 0.6 s of results
+    E.rSheet.addEventListener('click', e => { if (Game.state === 'results' && Game.run.resT < CONST.LOCKOUT && e.target.closest && e.target.closest('button')) { e.stopPropagation(); e.preventDefault(); } }, true);
     btn(E.shopBtn = $('shopBtn'), () => U.openPanel('shop')); btn($('setBtn'), () => U.openPanel('settings')); btn(E.missionStrip, () => U.openPanel('missions')); btn(E.bestPill, () => U.openPanel('missions'));
     btn(E.dailyChip, () => { Renderer.iris(); Game.toReady({ mode: 'daily' }); });
     btn(E.shopClose, () => U.closePanel(), true); document.querySelectorAll('.closeP').forEach(b => btn(b, () => U.closePanel(), true));
@@ -2151,7 +2183,7 @@ function snapshot() {
     audio: Audio.state(), missions: sv.missions.slots.map(s => { const m = mission(s.i); return { id: s.id, p: s.p, target: m.target, done: s.p >= m.target }; }), lockoutTicks: R.lockout, medal: R.medal || null, newBest: !!R.newBest, fx: { shakeX: Renderer.FX.sx, shakeY: Renderer.FX.sy, zoom: Renderer.FX.zoom, roll: Renderer.FX.roll, reducedMotion: Game.reduced() } };
 }
 const Loop = (() => {
-  let raf = 0, last = -1, errs = 0, nextW = -1, prevW = -1;
+  let raf = 0, last = -1, errs = 0, nextW = -1, prevW = -1, pausedDrawn = false, odd = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame);
     let dt = last < 0 ? 0 : (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt < 0) dt = 0;
@@ -2169,7 +2201,10 @@ const Loop = (() => {
         Input.tickTime = Infinity; alpha = clamp(1 - (nextW - nowS) / Math.max(1e-6, nextW - prevW), 0, 1);
       }
       FX.clock = Game.manual ? FX.clock : nowS; Input.frameTime = now;
-      Renderer.dtw = dt; Renderer.wallTick(dt); Renderer.draw(alpha); UI.update(dt);
+      Renderer.dtw = dt; Renderer.wallTick(dt);
+      // the paused world is frozen, and in results it only drifts behind the dimmed sheet: don't re-raster it at full rate there
+      const st = Game.state; if (!(st === 'paused' && pausedDrawn && !View.dirty) && !(st === 'results' && Renderer.FX.deathT > 1.5 && (odd ^= 1))) Renderer.draw(alpha); pausedDrawn = st === 'paused';
+      UI.update(dt);
       if (FLAGS.autoplay) autoplay();
     } catch (e) { onError(e); }
     Quality.sample(performance.now() - t0, dt);
@@ -2230,6 +2265,7 @@ function boot() {
   Save.load(); if (FLAGS.test) Quality.auto = false;
   Input.init(); View.init(); View.measure();
   Art.init(View.K); Particles.resize(); Particles.ambInit();
+  try { $('vigFx').getContext('2d').drawImage(Art.slowVig.c, 0, 0); } catch (e) { }
   wireFX(); Game.wireMissions(); UI.init();
   const hide = () => { if (Game.pause()) { } Audio.suspend(); Save.write(); };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hide(); else { Loop.resetClock(); Quality.remeasure(); Audio.resyncClock(); } });
