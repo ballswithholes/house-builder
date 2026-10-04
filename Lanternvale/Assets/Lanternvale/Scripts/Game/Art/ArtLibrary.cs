@@ -95,10 +95,16 @@ namespace Lanternvale.Game
         }
 
         /// <summary>True if a real (non-procedural) texture exists for the key.</summary>
+        static readonly Dictionary<string, bool> RealCache = new Dictionary<string, bool>(StringComparer.Ordinal);
+
         public static bool HasRealTexture(string key)
         {
+            if (string.IsNullOrEmpty(key)) return false;
+            if (RealCache.TryGetValue(key, out var has)) return has;
             var e = Entry(key);
-            return e != null && Resources.Load<Texture2D>(e.path) != null;
+            has = e != null && Resources.Load<Texture2D>(e.path) != null;
+            RealCache[key] = has;
+            return has;
         }
 
         /// <summary>Sprite scaled so that it is Height(key) metres tall, pivot from the manifest. Never null.</summary>

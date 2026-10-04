@@ -264,20 +264,35 @@ namespace Lanternvale.Game
             GUI.color = old;
             if (!string.IsNullOrEmpty(text))
             {
-                var s = new GUIStyle(Number) { fontSize = Mathf.Clamp((int)(r.height * 0.72f), 11, 20) };
-                Shadowed(r, text, s);
+                Shadowed(r, text, NumberStyle(Mathf.Clamp((int)(r.height * 0.72f), 11, 20)));
             }
         }
 
         /// <summary>Label with a 1px dark shadow, readable over art.</summary>
         public static void Shadowed(Rect r, string text, GUIStyle style, Color? color = null)
         {
-            var s = new GUIStyle(style);
-            var c = color ?? style.normal.textColor;
-            s.normal.textColor = new Color(0, 0, 0, 0.75f * c.a);
-            GUI.Label(new Rect(r.x + 1.5f, r.y + 2f, r.width, r.height), StripColor(text), s);
-            s.normal.textColor = c;
-            GUI.Label(r, text, s);
+            // temporarily recolour the style instead of allocating a copy every call
+            var orig = style.normal.textColor;
+            var c = color ?? orig;
+            style.normal.textColor = new Color(0, 0, 0, 0.75f * c.a);
+            GUI.Label(new Rect(r.x + 1.5f, r.y + 2f, r.width, r.height), StripColor(text), style);
+            style.normal.textColor = c;
+            GUI.Label(r, text, style);
+            style.normal.textColor = orig;
+        }
+
+        static readonly Dictionary<int, GUIStyle> SizedNumbers = new Dictionary<int, GUIStyle>();
+
+        /// <summary>Cached bold number style at a given size and alignment (no per-frame allocation).</summary>
+        public static GUIStyle NumberStyle(int fontSize, TextAnchor anchor = TextAnchor.MiddleCenter)
+        {
+            int key = fontSize * 16 + (int)anchor;
+            if (!SizedNumbers.TryGetValue(key, out var st) || st == null)
+            {
+                st = new GUIStyle(Number) { fontSize = fontSize, alignment = anchor };
+                SizedNumbers[key] = st;
+            }
+            return st;
         }
 
         static string StripColor(string t)
@@ -316,10 +331,8 @@ namespace Lanternvale.Game
                 }
                 else
                 {
-                    var s = new GUIStyle(Number) { fontSize = (int)(r.height * 0.45f) };
-                    s.normal.textColor = new Color(1, 1, 1, dim ? 0.5f : 1f);
-                    GUI.color = Color.white;
-                    GUI.Label(r, string.IsNullOrEmpty(glyph) ? "?" : glyph.Substring(0, 1).ToUpperInvariant(), s);
+                    GUI.color = new Color(1, 1, 1, dim ? 0.5f : 1f);
+                    GUI.Label(r, string.IsNullOrEmpty(glyph) ? "?" : glyph.Substring(0, 1).ToUpperInvariant(), NumberStyle((int)(r.height * 0.45f)));
                 }
                 if (dim)
                 {
@@ -335,10 +348,10 @@ namespace Lanternvale.Game
                 GUI.color = old;
             }
             if (!string.IsNullOrEmpty(centerText))
-                Shadowed(r, centerText, new GUIStyle(Number) { fontSize = (int)(r.height * 0.36f) });
+                Shadowed(r, centerText, NumberStyle((int)(r.height * 0.36f)));
             if (!string.IsNullOrEmpty(corner))
                 Shadowed(new Rect(r.x + 3, r.y + 1, r.width - 6, r.height * 0.4f), corner,
-                    new GUIStyle(Number) { fontSize = Mathf.Max(11, (int)(r.height * 0.24f)), alignment = TextAnchor.UpperRight });
+                    NumberStyle(Mathf.Max(11, (int)(r.height * 0.24f)), TextAnchor.UpperRight));
         }
 
         static readonly Dictionary<string, Texture2D> GlyphCache = new Dictionary<string, Texture2D>();
@@ -396,7 +409,6 @@ namespace Lanternvale.Game
             if (x + w > Width - 8) x = mp.x - w - 16f;
             if (y + h > Height - 8) y = Height - h - 8f;
             var r = new Rect(x, y, w, h);
-            var oldDepth = GUI.depth;
             GUI.Box(r, tooltip, Tooltip);
         }
 
