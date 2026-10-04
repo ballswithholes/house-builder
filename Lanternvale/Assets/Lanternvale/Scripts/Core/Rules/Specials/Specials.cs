@@ -149,6 +149,8 @@ namespace Lanternvale.Rules
         public virtual void OnAnyUnitMoved(Battle b, Unit u) { }
         public virtual void OnAnyAuraApplied(Battle b, AuraInstance a) { }
         public virtual void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason reason) { }
+        /// <summary>An aura's mod values were recomputed from data (save restore): re-apply special scaling.</summary>
+        public virtual void OnModValuesRefreshed(AuraInstance a) { }
         public virtual void OnAnyUnitFell(Battle b, Unit u) { }
         public virtual void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { }
         public virtual void OnBattleFinished(Battle b) { }
@@ -737,6 +739,7 @@ namespace Lanternvale.Rules
         internal static void OnAnyUnitMoved(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitMoved(b, u); }
         internal static void OnAnyAuraApplied(Battle b, AuraInstance a) { foreach (var h in All()) h.OnAnyAuraApplied(b, a); }
         internal static void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) { foreach (var h in All()) h.OnAnyAuraRemoved(b, a, r); }
+        internal static void OnModValuesRefreshed(AuraInstance a) { if (handlers.Count > 0) foreach (var h in All()) h.OnModValuesRefreshed(a); }
 
         /// <summary>True when an aura on the unit forbids fleeing (Judgement of Justice).</summary>
         public static bool CannotFlee(Unit u)

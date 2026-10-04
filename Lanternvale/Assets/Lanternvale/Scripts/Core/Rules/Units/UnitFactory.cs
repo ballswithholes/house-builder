@@ -181,12 +181,18 @@ namespace Lanternvale.Rules
             return inst;
         }
 
-        internal static void RefreshModValues(AuraInstance a)
+        /// <summary>
+        /// Recomputes an aura instance's stat mod values from its def, Rank, EffLevel, LearnLevel and EffectMult, then lets
+        /// specials re-apply their scaling (Master Demonologist × talent rank, Expose Armor × combo points...). Use it when
+        /// restoring saved auras; call <c>bearer.InvalidateStats()</c> afterwards.
+        /// </summary>
+        public static void RefreshModValues(AuraInstance a)
         {
             var mods = a.Def.mods;
             if (a.ModValues.Length != mods.Count) a.ModValues = new float[mods.Count];
             for (int i = 0; i < mods.Count; i++)
                 a.ModValues[i] = StatCalculator.AuraModValue(mods[i], a.Rank, a.EffLevel, a.LearnLevel, a.EffectMult);
+            Specials.OnModValuesRefreshed(a);
         }
 
         /// <summary>Level used for a creature in an encounter (explicit, scaled to party, or random in its range).</summary>

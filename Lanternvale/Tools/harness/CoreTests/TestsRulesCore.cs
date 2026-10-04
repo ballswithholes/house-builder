@@ -280,6 +280,15 @@ namespace Lanternvale.Tests
         }
 
         [Test]
+        public static void GeneratedItemIdsStayUniqueAfterLoad()
+        {
+            ItemGenerator.EnsureCounterAbove(new[] { "gen_chest_20_5000", "sword_of_x", "gen_ring_30_bad" });
+            var def = ItemGenerator.MakeDef("Test", EquipType.Chest, ArmorType.Cloth, WeaponType.None, 20, Quality.Common);
+            int n = int.Parse(def.id.Substring(def.id.LastIndexOf('_') + 1));
+            Assert(n > 5000, "generated id above every loaded one: " + def.id);
+        }
+
+        [Test]
         public static void InventoryStacksAndSoulShardCap()
         {
             var inv = new Inventory();

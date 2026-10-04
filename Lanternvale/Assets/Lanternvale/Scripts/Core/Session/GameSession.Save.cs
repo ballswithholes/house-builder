@@ -379,6 +379,8 @@ namespace Lanternvale.Session
             }
             var it = new ItemInstance(def, Math.Max(1, s.count)) { Generated = generated, SuffixId = s.suffix ?? "", SuffixName = s.suffixName ?? "" };
             if (s.suffixStats != null) it.SuffixStats.AddRange(s.suffixStats);
+            // keep newly generated item ids from colliding with the ones we just loaded
+            if (generated) ItemGenerator.EnsureCounterAbove(new[] { def.id });
             return it;
         }
 

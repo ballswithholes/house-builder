@@ -11,6 +11,28 @@ namespace Lanternvale.Rules
     {
         static int genCounter;
 
+        /// <summary>The counter used for generated item ids ("gen_&lt;slot&gt;_&lt;ilvl&gt;_&lt;n&gt;").</summary>
+        public static int GeneratedCounter => genCounter;
+
+        /// <summary>Makes the next generated id use a number above <paramref name="n"/> (call after loading a save).</summary>
+        public static void EnsureCounterAbove(int n)
+        {
+            if (genCounter < n) genCounter = n;
+        }
+
+        /// <summary>Raises the counter above every generated id in <paramref name="ids"/> ("gen_*_N"); other ids are ignored.</summary>
+        public static void EnsureCounterAbove(IEnumerable<string> ids)
+        {
+            if (ids == null) return;
+            foreach (var id in ids)
+            {
+                if (string.IsNullOrEmpty(id) || !id.StartsWith("gen_", StringComparison.Ordinal)) continue;
+                int us = id.LastIndexOf('_');
+                if (us >= 0 && int.TryParse(id.Substring(us + 1), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var n))
+                    EnsureCounterAbove(n);
+            }
+        }
+
         public static float QualityMult(Quality q)
         {
             switch (q)

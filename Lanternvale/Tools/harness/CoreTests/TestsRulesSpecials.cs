@@ -688,6 +688,10 @@ namespace Lanternvale.Tests
             if (w.Pet != null) b.DismissPet(w);
             var imp = b.SummonUnit(w, Db.Creature("warlock_demon_imp"), UnitKind.Pet, -1f, w.Position + new Vec2(1, 0));
             Assert(w.HasAura("warlock_master_demonologist_imp") && imp.HasAura("warlock_master_demonologist_imp"), "master demonologist imp aura on both");
+            var md = w.FindAura("warlock_master_demonologist_imp");
+            float scaled = md.ModValues[0];
+            UnitFactory.RefreshModValues(md);
+            AssertNear(md.ModValues[0], scaled, 0.001f, "save-restore recompute keeps the talent scaling");
             w.Abilities["warlock_demonic_sacrifice"] = 1;
             Fresh(w);
             Assert(b.UseAbility(w, "warlock_demonic_sacrifice", w).Ok, "sacrifice");

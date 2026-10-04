@@ -365,10 +365,24 @@ namespace Lanternvale.Rules
             {
                 var inst = b.ApplyAura(owner, u, def, new AuraApplyInfo { EffLevel = owner.Level, LearnLevel = 1, Duration = -1f });
                 if (inst == null) continue;
-                bool perLevel = def.id.EndsWith("_felhunter");
-                for (int i = 0; i < inst.ModValues.Length; i++) inst.ModValues[i] *= r * (perLevel ? owner.Level : 1f);
+                Scale(inst, owner, r);
                 u.InvalidateStats();
             }
+        }
+
+        static void Scale(AuraInstance inst, Unit warlock, float r)
+        {
+            bool perLevel = inst.Def.id.EndsWith("_felhunter");
+            for (int i = 0; i < inst.ModValues.Length; i++) inst.ModValues[i] *= r * (perLevel ? warlock.Level : 1f);
+        }
+
+        public override void OnModValuesRefreshed(AuraInstance a)
+        {
+            if (a.Def.exclusiveGroup != Group) return;
+            var warlock = a.Caster ?? (a.Bearer?.Owner ?? a.Bearer);
+            if (warlock == null) return;
+            float r = TalentValue(warlock, Name);
+            if (r > 0f) Scale(a, warlock, r);
         }
     }
 

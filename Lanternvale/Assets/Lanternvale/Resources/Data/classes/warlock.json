@@ -96,7 +96,7 @@
       "effects": [{"type": "Damage", "min": 13, "max": 18, "perLevel": 8.381, "coef": 0.857}],
       "tags": ["Destruction"],
       "aiHint": "Damage",
-      "aiPriority": 5
+      "aiPriority": 6
     },
     {
       "_note": "Level-60 values = rank 8: 279 + 510 over 15 sec, 380 mana. Coefficients 0.20 direct / 0.65 over the DoT.",
@@ -462,7 +462,7 @@
       "effects": [{"type": "ApplyAura", "aura": "warlock_fear"}],
       "tags": ["Affliction", "CC"],
       "aiHint": "CC",
-      "aiPriority": 6
+      "aiPriority": 3
     },
     {
       "id": "warlock_howl_of_terror",
@@ -482,7 +482,7 @@
       "effects": [{"type": "ApplyAura", "aura": "warlock_howl_of_terror"}],
       "tags": ["Affliction", "CC"],
       "aiHint": "CC",
-      "aiPriority": 6
+      "aiPriority": 3
     },
     {
       "id": "warlock_death_coil",
@@ -602,7 +602,7 @@
       "effects": [{"type": "ApplyAura", "aura": "warlock_banish"}],
       "tags": ["Demonology", "CC"],
       "aiHint": "CC",
-      "aiPriority": 6
+      "aiPriority": 3
     },
     {
       "id": "warlock_enslave_demon",

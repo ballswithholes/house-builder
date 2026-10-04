@@ -61,6 +61,11 @@ namespace Lanternvale.Rules
 
         public override void OnAuraRefreshed(Battle b, AuraInstance a) => OnAuraApplied(b, a);
 
+        public override void OnModValuesRefreshed(AuraInstance a)
+        {
+            if (a.Def.special == Name && a.ModValues.Length > 0) a.ModValues[0] *= Math.Max(1, a.ComboPoints);
+        }
+
         public override void OnAnyAuraApplied(Battle b, AuraInstance a)
         {
             if (a.Def.id == Sunder) Resolve(b, a.Bearer);
