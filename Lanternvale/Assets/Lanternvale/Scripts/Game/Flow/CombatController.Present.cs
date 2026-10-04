@@ -660,10 +660,18 @@ namespace Lanternvale.Game
                 case CombatEventType.CooldownReset:
                     if (e.Source != null) FloatingText.Spawn(Head(e.Source, V(e.Source)), "Cooldowns reset", Ui.Time, 0.7f);
                     break;
+                case CombatEventType.TurnEnd:
+                {
+                    // enemies turn to their target at the end of their turn (no event of its own): match the sprite
+                    var u = e.Source ?? e.Target;
+                    var v = V(u);
+                    if (u != null && u.IsAlive && v != null && !v.IsMoving && !v.IsDowned && Mathf.Abs(u.Facing.x) > 0.1f)
+                        v.SetFacing(u.Facing.x >= 0f ? 1 : -1);
+                    break;
+                }
                 // presented through the log/HUD only
                 case CombatEventType.BattleEnd:
                 case CombatEventType.RoundStart:
-                case CombatEventType.TurnEnd:
                 case CombatEventType.AuraRefreshed:
                 case CombatEventType.AbilityUsed:
                 case CombatEventType.ChannelTick:

@@ -35,6 +35,16 @@ namespace Lanternvale.Game.Panels
 
         public LootScreen() { instance = this; }
 
+        static Rect windowRect;
+        static int windowFrame = -1;
+
+        /// <summary>The loot window's rect while it is drawn this frame (screens above it step aside), else false.</summary>
+        internal static bool TryGetWindowRect(out Rect r)
+        {
+            r = windowRect;
+            return windowFrame == Time.frameCount && instance != null && instance.Visible;
+        }
+
         static LootScreen()
         {
             EscRouter.Register(400, () =>
@@ -85,6 +95,8 @@ namespace Lanternvale.Game.Panels
                 float x = Mathf.Min(Ui.Width * 0.5f + 140f, Ui.Width - 500f);
                 float pop = Mathf.Clamp01((Time.unscaledTime - openedAt) / 0.2f);
                 var r = PanelKit.Fit(new Rect(x, Ui.Height * 0.2f + (1f - pop) * 16f, 470f, h));
+                windowRect = r;
+                windowFrame = Time.frameCount;
                 string title = string.IsNullOrEmpty(w.Title) ? "Spoils" : w.Title;
                 var c = PanelKit.Window(r, title, Order, out bool close);
                 float y = c.y;
@@ -286,7 +298,7 @@ namespace Lanternvale.Game.Panels
                     PanelKit.ItemIcon(new Rect(cr.center.x - 40f, cr.y + 22f, 80f, 80f), it, false, hover || sel);
                     PanelKit.Label(new Rect(cr.x + 10f, cr.y + 114f, cr.width - 20f, 56f), d.name, PanelKit.TextSmallCenter, PanelKit.QualityInk(d.quality));
                     PanelKit.Label(new Rect(cr.x + 10f, cr.y + 172f, cr.width - 20f, 44f), LootScreen.ItemKindText(d), PanelKit.TextSmallCenter, Ui.InkSoft);
-                    Ui.TooltipFor(cr, PanelKit.ItemTip(it, member, true));
+                    if (hover) Ui.TooltipFor(cr, PanelKit.ItemTip(it, member, true));   // built only for the hovered card
                     if (PanelKit.LeftClick(cr))
                     {
                         picked = d.id;

@@ -300,7 +300,7 @@ namespace Lanternvale.Game
             {
                 var v = ViewOf(u);
                 if (v == null) continue;
-                if (v.IsDowned && u.IsAlive) v.PlayRevive();
+                if (u.IsAlive && (v.IsDowned || v.IsDead)) v.PlayRevive();
                 FxSystem.HealSparkles(v.FeetPosition, v.Height);
             }
             Sfx.Play("buff", null, 0.9f, 0.9f);

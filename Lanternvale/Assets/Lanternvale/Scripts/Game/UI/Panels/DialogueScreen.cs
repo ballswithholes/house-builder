@@ -138,8 +138,9 @@ namespace Lanternvale.Game.Panels
                 waitForRoll = false;
                 revealStart = Time.unscaledTime;
             }
-            // keys belong to the pause menu / settings while one is open over the conversation
-            if (ConfirmScreen.IsOpen || EscRouter.AnyPanelOpen() || Time.frameCount <= lockedUntilFrame) return;
+            // keys belong to the pause menu / settings while one is open over the conversation (sheets left open
+            // before it — bags, journal, combat log — are hidden or passive and must not swallow them)
+            if (ConfirmScreen.IsOpen || EscRouter.OverlayPanelOpen() || Time.frameCount <= lockedUntilFrame) return;
 
             if (roll.Active)
             {

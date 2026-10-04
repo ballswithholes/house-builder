@@ -87,6 +87,7 @@ namespace Lanternvale.Game
         {
             public AbilityDef Ability;
             public bool Approach;
+            public bool Behind;          // the approach goes behind the target (Backstab…)
             public float ApproachLength;
             public string Error;
             public bool AlreadyAttacking;
@@ -149,6 +150,7 @@ namespace Lanternvale.Game
             HoveredTarget = hover;
 
             UpdateMoveRange(u);
+            UpdateFacing(u);
 
             var key = MakeKey(u, hover, mouse, overUi);
             if (hoverDirty || !key.Equals(lastKey))
@@ -195,15 +197,140 @@ namespace Lanternvale.Game
             FxSystem.Hide(AoeId);
             FxSystem.Hide(RangeId);
             rangeRingFor = null;
+            HideFacingIndicators();
         }
 
+        /// <summary>
+        /// Front-most battle unit whose body contains the point. Views that are not part of this fight (map NPCs, other
+        /// encounters' enemies) are skipped instead of hiding the battle unit behind them. Dead bodies count only while
+        /// targeting an ability for dead allies (resurrection).
+        /// </summary>
         Unit PickUnit(Vector2 world)
         {
-            var v = UnitView.Pick(world, false);
-            if (v == null) return null;
-            var u = UnitOfView(v);
-            if (u == null || !Battle.Units.Contains(u)) return null;
-            return u;
+            var ta = TargetingAbility;
+            bool includeDead = ta != null && ta.target == TargetType.DeadAlly;
+            var all = UnitView.All;
+            UnitView best = null;
+            Unit bestUnit = null;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var v = all[i];
+                if (v == null || !v.Visible || (!includeDead && v.IsDead)) continue;
+                if (best != null && v.FeetPosition.y >= best.FeetPosition.y) continue;
+                if (!v.Bounds.Contains(world)) continue;
+                var u = UnitOfView(v);
+                if (u == null || !Battle.Units.Contains(u)) continue;
+                if (v.IsDead && (Battle.ActiveUnit == null || !u.IsFriendlyTo(Battle.ActiveUnit))) continue;   // enemy corpses
+                best = v;
+                bestUnit = u;
+            }
+            return bestUnit;
+        }
+
+        // ================================================================ facing
+
+        // Sprites only flip left/right, but the rules' facing is a 2D vector (Unit.IsBehind). While the active unit
+        // knows an ability that needs it behind its target (Backstab, Ambush, Garrote, Ravage) every visible enemy
+        // shows its "behind" zone (the arc where those abilities work, as far as melee reach) — brighter while such
+        // an ability is being targeted. Views are also turned to match the rules' facing whenever the screen is idle.
+        const string FacingIdPrefix = "combat_facing:";
+        const float BehindArcDeg = 160f;   // the rules' behind arc is ±84° around the back (BehindDot −0.1)
+        static readonly Color BehindZoneColor = new Color(1f, 0.84f, 0.42f, 0.32f);
+        static readonly Color BehindZoneTargetingColor = new Color(1f, 0.86f, 0.4f, 0.7f);
+
+        readonly Dictionary<int, string> facingIds = new Dictionary<int, string>();
+        readonly List<Unit> facingShown = new List<Unit>(8);
+        readonly List<Unit> facingNext = new List<Unit>(8);
+        bool facingValid;
+        int facingStamp = -1;
+        Unit facingFor;
+        bool facingStrong;
+        Unit behindKnowsUnit;
+        int behindKnowsCount = -1;
+        bool behindKnows;
+        int flipStamp = -1;
+
+        void UpdateFacing(Unit u)
+        {
+            int stamp = Battle.Events.Count;
+            if (stamp != flipStamp)
+            {
+                flipStamp = stamp;
+                SyncViewFacings();
+            }
+            var ta = TargetingAbility;
+            bool strong = ta != null && ta.requires != null && ta.requires.behindTarget;
+            if (!strong && !KnowsBehindAbility(u)) { HideFacingIndicators(); return; }
+            if (facingValid && stamp == facingStamp && u == facingFor && strong == facingStrong) return;
+            facingValid = true;
+            facingStamp = stamp;
+            facingFor = u;
+            facingStrong = strong;
+            facingNext.Clear();
+            var col = strong ? BehindZoneTargetingColor : BehindZoneColor;
+            foreach (var o in Battle.Units)
+            {
+                if (o == null || !o.IsAlive || o.IsTotem || !o.IsHostileTo(u)) continue;
+                bool seen;
+                try { seen = Battle.CanSee(u, o); } catch (Exception) { seen = true; }
+                if (!seen) continue;
+                var v = V(o);
+                if (v == null || !v.Visible || v.IsDead) continue;
+                var f = o.Facing.Normalized;
+                if (f.SqrLength < 1e-6f) continue;
+                float r = Mathf.Max(0.8f, Battle.MeleeReachOf(u, o));
+                FxSystem.ShowCone(FacingId(o), v.FeetPosition, new Vector2(-f.x, -f.y), r, BehindArcDeg, col);
+                facingNext.Add(o);
+            }
+            for (int i = 0; i < facingShown.Count; i++)
+                if (!facingNext.Contains(facingShown[i])) FxSystem.Hide(FacingId(facingShown[i]));
+            facingShown.Clear();
+            facingShown.AddRange(facingNext);
+        }
+
+        void HideFacingIndicators()
+        {
+            facingValid = false;
+            for (int i = 0; i < facingShown.Count; i++) FxSystem.Hide(FacingId(facingShown[i]));
+            facingShown.Clear();
+        }
+
+        string FacingId(Unit o)
+        {
+            if (!facingIds.TryGetValue(o.Id, out var id)) facingIds[o.Id] = id = FacingIdPrefix + o.Id;
+            return id;
+        }
+
+        bool KnowsBehindAbility(Unit u)
+        {
+            if (u == behindKnowsUnit && u.Abilities.Count == behindKnowsCount) return behindKnows;
+            behindKnowsUnit = u;
+            behindKnowsCount = u.Abilities.Count;
+            behindKnows = false;
+            var db = Db;
+            if (db == null) return false;
+            foreach (var kv in u.Abilities)
+            {
+                var a = db.Ability(kv.Key);
+                if (a != null && !a.passive && a.requires != null && a.requires.behindTarget) { behindKnows = true; break; }
+            }
+            return behindKnows;
+        }
+
+        /// <summary>Turns idle views left/right to match the rules' facing (it changes without a visible event, e.g. an
+        /// enemy turning to its target at the end of its turn).</summary>
+        void SyncViewFacings()
+        {
+            foreach (var o in Battle.Units)
+            {
+                if (o == null || !o.IsAlive) continue;
+                float fx = o.Facing.x;
+                if (Mathf.Abs(fx) <= 0.1f) continue;
+                var v = V(o);
+                if (v == null || v.IsMoving || v.IsDead || v.IsDowned) continue;
+                int dir = fx >= 0f ? 1 : -1;
+                if (v.Facing != dir) v.SetFacing(dir);
+            }
         }
 
         // ================================================================ movement range & paths
@@ -365,7 +492,7 @@ namespace Lanternvale.Game
             if (why != null)
             {
                 FxSystem.Hide(PathId);
-                return u.MoveLeft <= 0.05f && u.CanMoveNow ? "No movement left. Use an ability or press Space to end the turn." : why;
+                return u.MoveLeft <= 0.05f && u.CanMoveNow ? "No movement left. Use an ability or press Space to end the turn." : why + WaitHint(u);
             }
             if (!PlanMove(u, ToVec(mouse)))
             {
@@ -386,8 +513,69 @@ namespace Lanternvale.Game
             FxSystem.Hide(AoeId);
             sb.Length = 0;
             sb.Append(u.Name).Append(" · ").Append(Mathf.Max(0f, u.TimeLeft).ToString("0.0")).Append(" s and ")
-              .Append(Mathf.Max(0f, u.MoveLeft).ToString("0.0")).Append(" m left this turn · Space ends the turn");
+              .Append(Mathf.Max(0f, u.MoveLeft).ToString("0.0")).Append(" m left this turn");
+            // a silence/root/lockout left from the start of the turn runs out as Time is spent: clicking yourself waits
+            float free = FreeIn(u, out string what);
+            if (free > 0.01f) sb.Append(" · click to wait ").Append(free.ToString("0.0")).Append(" s until the ").Append(what).Append(" wears off");
+            sb.Append(" · Space ends the turn");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Seconds of Time until every window left from the start of the turn has run out: silence, pacify and root (only
+        /// when no aura still applies them) and school lockouts. what = the longest one ("silence", "Fire lockout").
+        /// </summary>
+        float FreeIn(Unit u, out string what)
+        {
+            what = "";
+            if (u == null || !u.InOwnTurn || u.TimeLeft <= 0.01f) return 0f;
+            float clock = u.TurnClock, best = 0f;
+            try
+            {
+                CheckWindow(u, UnitState.Silence, "silence", clock, ref best, ref what);
+                CheckWindow(u, UnitState.Pacify, "pacify", clock, ref best, ref what);
+                if (u.MoveLeft > 0.05f) CheckWindow(u, UnitState.Root, "root", clock, ref best, ref what);
+                foreach (var kv in u.LockoutWindow)
+                {
+                    float left = kv.Value - clock;
+                    if (left > best + 1e-4f) { best = left; what = LockoutName(kv.Key); }
+                }
+            }
+            catch (Exception) { return 0f; }
+            return Mathf.Min(best, Mathf.Max(0f, u.TimeLeft));
+        }
+
+        static readonly Dictionary<School, string> lockoutNames = new Dictionary<School, string>();
+
+        static string LockoutName(School s)
+        {
+            if (!lockoutNames.TryGetValue(s, out var n)) lockoutNames[s] = n = s + " lockout";
+            return n;
+        }
+
+        static void CheckWindow(Unit u, UnitState s, string name, float clock, ref float best, ref string what)
+        {
+            int i = (int)s;
+            if (i < 0 || i >= u.StateWindow.Length || u.HasStateAura(s)) return;
+            float left = u.StateWindow[i] - clock;
+            if (left > best + 1e-4f) { best = left; what = name; }
+        }
+
+        /// <summary>" Click yourself to wait 2.0 s until the root wears off." or "".</summary>
+        string WaitHint(Unit u)
+        {
+            float free = FreeIn(u, out string what);
+            return free > 0.01f ? " Click yourself to wait " + free.ToString("0.0") + " s until the " + what + " wears off." : "";
+        }
+
+        /// <summary>Caches keyed on the event count (waiting changes the turn clock without an event).</summary>
+        void InvalidateTurnCaches()
+        {
+            reachUnit = null;
+            validStamp = -1;
+            rangeRingFor = null;
+            facingValid = false;
+            hoverDirty = true;
         }
 
         string UnitPreview(Unit u, Unit target)
@@ -533,12 +721,15 @@ namespace Lanternvale.Game
                 validTargets.Clear();
                 foreach (var o in Battle.Units)
                 {
-                    if (o == null || (!o.IsAlive && !(a.target == TargetType.DeadAlly && o.IsDeadOrDowned))) continue;
+                    // downed/dead allies are checked too (Help, resurrections): CanUse decides whether they are valid
+                    if (o == null || (!o.IsAlive && (o.IsHostileTo(u) || !o.IsDeadOrDowned))) continue;
                     UseCheck c;
                     try { c = Battle.CanUse(u, a, o, null, fromItem); }
                     catch (Exception) { continue; }
                     if (c.Ok) validTargets[o] = true;
                     else if (c.Code == UseFailure.Range || c.Code == UseFailure.LineOfSight) validTargets[o] = false;
+                    // Backstab & co. on an enemy the unit is not behind yet (a click walks behind it)
+                    else if (c.Code == UseFailure.Requirement && a.requires != null && a.requires.behindTarget && o != u && !u.IsBehind(o)) validTargets[o] = false;
                 }
             }
             foreach (var kv in validTargets)
@@ -560,7 +751,24 @@ namespace Lanternvale.Game
             var chk = Battle.CanUse(u, a, target, point, fromItem);
             lastCheckCode = chk.Code;
             if (chk.Ok) return plan;
-            if (chk.Code == UseFailure.Range)
+            // Backstab, Ambush, Garrote, Ravage: the requirement is checked before the range, so both failures lead here
+            bool behind = a.requires != null && a.requires.behindTarget && target != null && target != u &&
+                          (chk.Code == UseFailure.Range || (chk.Code == UseFailure.Requirement && !u.IsBehind(target)));
+            if (behind)
+            {
+                if (TryApproachBehind(u, a, target, chk, fromItem, out float blen, out string bwhy))
+                {
+                    plan.Approach = true;
+                    plan.Behind = true;
+                    plan.ApproachLength = blen;
+                    return plan;
+                }
+                plan.Error = bwhy ?? chk.Reason;
+                return plan;
+            }
+            // out of range, or out of sight with a spot in sight reachable this turn: walk there first
+            bool sight = chk.Code == UseFailure.LineOfSight && !AbilityRules.UsesMeleeReach(a);
+            if (chk.Code == UseFailure.Range || sight)
             {
                 if (TryApproach(u, a, target, point, out float len, out string why))
                 {
@@ -568,11 +776,97 @@ namespace Lanternvale.Game
                     plan.ApproachLength = len;
                     return plan;
                 }
-                plan.Error = why ?? chk.Reason;
+                plan.Error = sight ? chk.Reason : why ?? chk.Reason;
                 return plan;
             }
             plan.Error = chk.Reason;
             return plan;
+        }
+
+        /// <summary>
+        /// Path to a spot behind the target (outside its frontal arc, within melee reach) reachable this turn, for abilities
+        /// that require standing behind it (fills approachPoints). The ability is checked as if the unit stood there.
+        /// </summary>
+        bool TryApproachBehind(Unit u, AbilityDef a, Unit target, UseCheck chk, bool fromItem, out float length, out string why)
+        {
+            approachPoints.Clear();
+            length = 0f;
+            why = null;
+            var grid = Grid;
+            if (grid == null) return false;
+            var cannot = Battle.CannotMoveReason(u);
+            if (cannot != null)
+            {
+                why = chk.Code == UseFailure.Range ? "Out of range (" + cannot.TrimEnd('.').ToLowerInvariant() + ")." : chk.Reason;
+                return false;
+            }
+            var face = target.Facing.Normalized;
+            if (face.SqrLength < 1e-6f) face = Vec2.Right;
+            float reachM = Battle.MeleeReachOf(u, target);
+            float touch = u.Radius + target.Radius + 0.05f;
+            float dist = Mathf.Clamp(reachM - 0.25f, Mathf.Min(touch, reachM - 0.05f), reachM - 0.05f);
+            var r = EnsureReach(u);
+
+            // candidates straight behind and up to 70° to either side (the behind arc is ±84° around the back)
+            Vec2 best = default, nearest = default;
+            float bestLen = float.PositiveInfinity, nearestD = float.PositiveInfinity;
+            bool found = false;
+            string blocked = null;
+            for (int i = 0; i < BehindAngles.Length; i++)
+            {
+                float ang = BehindAngles[i] * Mathf.Deg2Rad;
+                float cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
+                var dir = new Vec2(-(face.x * cs - face.y * sn), -(face.x * sn + face.y * cs));
+                var goal = target.Position + dir * dist;
+                float straight = Vec2.Distance(u.Position, goal);
+                if (straight < nearestD && grid.IsWalkable(goal, NavAgent.ForUnit(u.Radius, u.Id)))
+                {
+                    nearestD = straight;
+                    nearest = goal;
+                }
+                if (r == null || !r.CanReach(goal)) continue;
+                float walk = r.DistanceTo(goal);
+                if (walk >= bestLen) continue;
+                var sim = CheckFrom(u, a, target, goal, fromItem);
+                if (!sim.Ok) { blocked ??= sim.Reason; continue; }
+                bestLen = walk;
+                best = goal;
+                found = true;
+            }
+            if (found)
+            {
+                var p = r.PathTo(best, approachTmp);
+                if (p != null && p.Status != PathStatus.NoPath && !p.IsEmpty && p.Points.Count >= 2)
+                {
+                    approachPoints.AddRange(p.Points);
+                    length = p.Length;
+                    return true;
+                }
+            }
+            // reachable but something else fails there (Garrote on an immune target…): that reason
+            if (blocked != null) { why = blocked; return false; }
+            if (float.IsInfinity(nearestD)) { why = "There is no room behind " + target.Name + "."; return false; }
+            // tell how far it is (one full path to the nearest free spot behind)
+            var full = grid.FindPath(u.Position, nearest, NavAgent.ForUnit(u.Radius, u.Id), float.PositiveInfinity, approachTmp);
+            if (full.Status == PathStatus.Complete && full.FullLength > u.MoveLeft)
+                why = "Out of reach (needs " + Mathf.Max(0.1f, full.FullLength - u.MoveLeft).ToString("0.0") + " m more movement to get behind " + target.Name + ").";
+            else if (full.Status != PathStatus.Complete) why = "Cannot get behind " + target.Name + " from here.";
+            return false;
+        }
+
+        static readonly float[] BehindAngles = { 0f, 35f, -35f, 70f, -70f };
+
+        /// <summary>The ability's checks as if the unit stood at p (its Position is restored before returning; CanUse has no side effects).</summary>
+        UseCheck CheckFrom(Unit u, AbilityDef a, Unit target, Vec2 p, bool fromItem)
+        {
+            var old = u.Position;
+            try
+            {
+                u.Position = p;
+                return Battle.CanUse(u, a, target, null, fromItem);
+            }
+            catch (Exception) { return UseCheck.Fail(UseFailure.Unknown, "That cannot be used right now."); }
+            finally { u.Position = old; }
         }
 
         /// <summary>BG3-style click on an enemy: the unit's basic attack (Auto Shot for hunters, a wand out of melee for casters, else melee Attack).</summary>
@@ -588,12 +882,20 @@ namespace Lanternvale.Game
                 if (p.Error == null) return MarkAttacking(u, target, p);
                 if (lastCheckCode != UseFailure.TooClose && lastCheckCode != UseFailure.Requirement && lastCheckCode != UseFailure.LineOfSight) return p;
             }
+            // casters with a wand shoot when out of melee reach, walking into wand range (or sight) first when needed
             var shoot = db?.Ability("shoot");
             if (shoot != null && basic == melee && u.Knows("shoot") && !Battle.InMeleeRange(u, target))
             {
-                UseCheck c;
-                try { c = Battle.CanUse(u, shoot, target); } catch (Exception) { c = UseCheck.Fail(UseFailure.Unknown, ""); }
-                if (c.Ok) { approachPoints.Clear(); return new SmartPlan { Ability = shoot }; }
+                var sp = PlanUse(u, shoot, target, null, false);
+                if (sp.Error == null) return sp;
+                // no wand (Requirement) or too close: melee. Otherwise melee only when it works now (e.g. no Time left for
+                // the wand but walking into melee and starting the auto attack is free); else the wand's reason
+                if (melee == null || lastCheckCode == UseFailure.Requirement || lastCheckCode == UseFailure.TooClose)
+                    return melee == null ? sp : MarkAttacking(u, target, PlanUse(u, melee, target, null, false));
+                var mp = MarkAttacking(u, target, PlanUse(u, melee, target, null, false));
+                if (mp.Error == null) return mp;
+                approachPoints.Clear();
+                return sp;
             }
             if (melee == null) return new SmartPlan { Error = "You cannot attack." };
             return MarkAttacking(u, target, PlanUse(u, melee, target, null, false));
@@ -626,9 +928,15 @@ namespace Lanternvale.Game
                 }
                 return;
             }
-            if (hover == u) return;
+            if (hover == u)
+            {
+                // clicking yourself waits out a silence/root/lockout from the start of the turn (see SelfPreview)
+                float free = FreeIn(u, out _);
+                if (free > 0.01f) Wait(free);
+                return;
+            }
             var why = Battle.CannotMoveReason(u);
-            if (why != null) { Fail(why); return; }
+            if (why != null) { Fail(why + WaitHint(u)); return; }
             if (!PlanMove(u, ToVec(mouse))) { Fail("Cannot move there."); return; }
             ActionResult r;
             try { r = Battle.MoveAlong(u, planPoints); }
@@ -727,7 +1035,11 @@ namespace Lanternvale.Game
         {
             CancelTargeting();
             var chk = Battle.CanUseIgnoringTarget(u, a, item != null);
-            if (!chk.Ok) return Fail(chk.Reason);
+            if (!chk.Ok)
+            {
+                bool waitable = chk.Code == UseFailure.Silenced || chk.Code == UseFailure.Pacified || chk.Code == UseFailure.Locked;
+                return Fail(waitable ? chk.Reason + WaitHint(u) : chk.Reason);
+            }
 
             // no target needed: execute now (cones and lines are aimed with the mouse first)
             bool aimed = IsAimed(a);
@@ -735,10 +1047,14 @@ namespace Lanternvale.Game
             if (a.target == TargetType.Pet) return Execute(u, a, item, u.Pet, null);
             if (a.target == TargetType.Point && a.area.centeredOnCaster && !aimed) return Execute(u, a, item, null, u.Position);
 
-            // toggles on the current target: auto attack (on/off), "next swing" abilities (Heroic Strike…)
+            // toggles on the current target: auto attack (on/off), "next swing" abilities (Heroic Strike…). Only the running
+            // auto attack toggles off unchecked; switching (Attack while Auto Shot runs) needs the new one to be usable on
+            // the target, otherwise targeting mode offers the approach (walk into melee, then attack)
             var cur = u.AttackTarget;
             bool curOk = cur != null && cur.IsAlive && cur.IsHostileTo(u) && Battle.Units.Contains(cur);
-            if (item == null && a.autoAttack && curOk && (u.AutoAttacking || Battle.CanUse(u, a, cur).Ok)) return Execute(u, a, null, cur, null);
+            if (item == null && a.autoAttack && curOk &&
+                ((u.AutoAttacking && u.AutoAttackAbility == a.id) || Battle.CanUse(u, a, cur).Ok))
+                return Execute(u, a, null, cur, null);
             if (item == null && a.nextSwing && curOk && Battle.CanUse(u, a, cur).Ok) return Execute(u, a, null, cur, null);
 
             TargetingAbility = a;
@@ -814,7 +1130,7 @@ namespace Lanternvale.Game
                 try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
             }
             sb.Length = 0;
-            if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(" m, then ");
+            if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(plan.Behind ? " m behind, then " : " m, then ");
             sb.Append(label ?? a.name);
             if (target != null && target != u)
             {

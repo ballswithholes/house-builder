@@ -29,11 +29,14 @@ namespace Lanternvale.Game
         public const int OrderTargetFrame = 16;
         public const int OrderQuestTracker = 18;
         public const int OrderActionBar = 20;
+        public const int OrderMenuBar = 22;
         public const int OrderTurn = 24;
         public const int OrderCompactLog = 26;
         public const int OrderToasts = 60;
         public const int OrderSelfRes = 80;
-        public const int OrderCombatLogPanel = 110;   // the toggled log panel lives in the panel band
+        // the toggled log panel lives in the panel band, below every other window (vendor 110, trainer 111, bags 126…):
+        // occlusion tests "Order > order" strictly, so two windows must never share an order
+        public const int OrderCombatLogPanel = 105;
 
         // ------------------------------------------------------------ accessors
         public static GameFlow Flow => GameFlow.Instance;
@@ -83,28 +86,31 @@ namespace Lanternvale.Game
         public static bool InDialogue { get { RefreshState(); return sDialogue; } }
 
         // ------------------------------------------------------------ who acts
-        /// <summary>The active battle unit when it is player-controlled (its bar/turn economy are shown), else null.</summary>
+        // Both follow the PRESENTED turn (HudPresented.ActiveUnit): while the previous unit's blows / end-of-turn swings
+        // are still being animated, the HUD keeps showing that unit; it switches when the next TurnStart is shown.
+
+        /// <summary>The acting battle unit when it is player-controlled (its bar/turn economy are shown), else null.</summary>
         public static Unit ActivePlayerUnit
         {
             get
             {
                 var b = Battle;
                 if (b == null || b.IsOver) return null;
-                var u = b.ActiveUnit;
+                var u = HudPresented.ActiveUnit(b);
                 if (u == null || u.Team != b.PlayerTeam) return null;
                 try { return b.IsAIControlled(u) ? null : u; }
                 catch (Exception) { return null; }
             }
         }
 
-        /// <summary>The active battle unit when an AI plays it (enemy, auto-played companion, pet, controlled unit).</summary>
+        /// <summary>The acting battle unit when an AI plays it (enemy, auto-played companion, pet, controlled unit).</summary>
         public static Unit ActiveAiUnit
         {
             get
             {
                 var b = Battle;
                 if (b == null || b.IsOver) return null;
-                var u = b.ActiveUnit;
+                var u = HudPresented.ActiveUnit(b);
                 if (u == null) return null;
                 try { return b.IsAIControlled(u) ? u : null; }
                 catch (Exception) { return null; }
@@ -205,6 +211,66 @@ namespace Lanternvale.Game
             else return;
             if (!string.IsNullOrEmpty(why)) Error(why);
         }
+
+        // ------------------------------------------------------------ cancelling own buffs (right-click, WoW)
+
+        /// <summary>True for a buff the player may right-click off (party unit's own removable buff: Ice Block, stealth, aspects…).</summary>
+        public static bool CanCancel(AuraInstance a)
+        {
+            if (a == null || a.Def == null || a.IsDebuff || a.IsPassive || a.IsAreaChild || a.Def.hidden) return false;
+            var u = a.Bearer;
+            return u != null && u.Team == Team.Player && !u.OriginalTeam.HasValue && u.IsAlive;
+        }
+
+        /// <summary>
+        /// Cancels one of a party unit's own buffs: Battle.CancelAura in combat, the session's field context outside
+        /// (Battle.CancelAura is the rules' "right-click a buff"). The combat controller pulls the AuraRemoved event on its
+        /// next tick. Run from Tick (posted), never from OnGUI.
+        /// </summary>
+        public static void CancelAura(Unit u, AuraInstance a)
+        {
+            if (u == null || a == null) return;
+            try
+            {
+                Battle ctx = null;
+                var b = Battle;
+                if (b != null && !b.IsOver && b.Units.Contains(u)) ctx = b;
+                else if (b == null)
+                {
+                    var s = Session;
+                    var field = s != null ? s.Field : null;
+                    if (field != null && field.Units.Contains(u)) ctx = field;
+                }
+                if (ctx == null) { Error("That cannot be cancelled right now."); return; }
+                var r = ctx.CancelAura(u, a);
+                if (!r.Ok) Error(string.IsNullOrEmpty(r.Reason) ? "That cannot be cancelled." : r.Reason);
+                else Ui.Sfx?.Invoke("ui_close");
+            }
+            catch (Exception e) { LogOnce("cancelaura", "Cancelling an aura failed: " + e); Error("That cannot be cancelled right now."); }
+        }
+
+        // ------------------------------------------------------------ soul shards (warlock reagent, a bag item)
+        public const string SoulShardItem = "soul_shard";
+        static int shardFrame = -1, shardCount;
+
+        /// <summary>Soul Shards in the party bags (cached per frame).</summary>
+        public static int SoulShards
+        {
+            get
+            {
+                int f = Time.frameCount;
+                if (f == shardFrame) return shardCount;
+                shardFrame = f;
+                shardCount = 0;
+                try { var s = Session; if (s != null) shardCount = s.CountItem(SoulShardItem); }
+                catch (Exception) { shardCount = 0; }
+                return shardCount;
+            }
+        }
+
+        /// <summary>Abilities that consume a Soul Shard (Soul Fire, Shadowburn, demon summons, stones, Enslave Demon).</summary>
+        public static bool UsesSoulShard(AbilityDef a) =>
+            a != null && (a.special == "WarlockConsumeSoulShard" || a.special == "WarlockEnslaveDemon");
 
         // ------------------------------------------------------------ posted commands (clicks → Tick)
         static readonly List<Action> commands = new List<Action>();
@@ -540,6 +606,16 @@ namespace Lanternvale.Game
 
         public static float ErrorY => StatusPill.y - 44f;
 
+        /// <summary>The menu buttons row (top right, under the clock/gold pill; the quest tracker sits below it).</summary>
+        public static Rect MenuBar
+        {
+            get
+            {
+                float w = QuestTrackerHud.W;
+                return new Rect(Ui.Width - Margin - w, Margin + QuestTrackerHud.ClockH + 6f, w, 38f);
+            }
+        }
+
         public static Rect CompactLog
         {
             get
@@ -707,17 +783,27 @@ namespace Lanternvale.Game
     public static class HudStyles
     {
         static GUIStyle builtFrom;
+        static float builtFactor = -1f;
         public static GUIStyle Name, NameSmall, Small, SmallRight, SmallCenter, Tiny, TinyCenter, TinyRight, Body, BodyCenter, BodyWrap,
             Header, TitleHuge, TitleBig, Subtitle, ToastText, LogWrap, LogLine, Button, Center, Label18, TitleLine;
 
+        /// <summary>
+        /// Builds the styles (again when the screen scale changes). The HUD draws in a virtual 1080p space, so a 15 px
+        /// label is 10 physical px at 720p: the small styles (≤ 16 px) grow below 810p so they never render smaller than
+        /// about 11 physical px.
+        /// </summary>
         public static void Ensure()
         {
             if (Ui.Label == null) return;
-            if (builtFrom == Ui.Label && Name != null) return;
+            float factor = Mathf.Max(1f, 0.75f / Mathf.Max(0.1f, Ui.Scale));
+            factor = Mathf.Ceil(factor * 20f) / 20f;   // steps of 5 %: no rebuild for every pixel of a window resize
+            if (builtFrom == Ui.Label && Name != null && Mathf.Abs(factor - builtFactor) < 0.001f) return;
             builtFrom = Ui.Label;
+            builtFactor = factor;
             Font body = Ui.BodyFont, bold = Ui.BoldFont, title = Ui.TitleFont;
             GUIStyle Make(Font f, int size, TextAnchor a, bool wrap = false, bool rich = true)
             {
+                if (size <= 16) size = Mathf.CeilToInt(size * factor);
                 var s = new GUIStyle(Ui.Label) { font = f, fontSize = size, alignment = a, wordWrap = wrap, richText = rich, clipping = TextClipping.Clip };
                 s.padding = new RectOffset(0, 0, 0, 0);
                 s.margin = new RectOffset(0, 0, 0, 0);
@@ -725,13 +811,15 @@ namespace Lanternvale.Game
                 return s;
             }
             Name = Make(bold, 17, TextAnchor.MiddleLeft);
-            NameSmall = Make(bold, 14, TextAnchor.MiddleLeft);
-            Small = Make(body, 14, TextAnchor.MiddleLeft);
-            SmallRight = Make(body, 14, TextAnchor.MiddleRight);
-            SmallCenter = Make(body, 14, TextAnchor.MiddleCenter);
-            Tiny = Make(bold, 12, TextAnchor.MiddleLeft);
-            TinyCenter = Make(bold, 12, TextAnchor.MiddleCenter);
-            TinyRight = Make(bold, 12, TextAnchor.MiddleRight);
+            NameSmall = Make(bold, 16, TextAnchor.MiddleLeft);
+            Small = Make(body, 16, TextAnchor.MiddleLeft);
+            SmallRight = Make(body, 16, TextAnchor.MiddleRight);
+            SmallCenter = Make(body, 16, TextAnchor.MiddleCenter);
+            // numbers read every turn (health, resource, costs, durations, levels): 15 px, never clipped vertically
+            Tiny = Make(bold, 15, TextAnchor.MiddleLeft);
+            TinyCenter = Make(bold, 15, TextAnchor.MiddleCenter);
+            TinyRight = Make(bold, 15, TextAnchor.MiddleRight);
+            Tiny.clipping = TinyCenter.clipping = TinyRight.clipping = TextClipping.Overflow;
             Body = Make(body, 16, TextAnchor.MiddleLeft);
             BodyCenter = Make(body, 16, TextAnchor.MiddleCenter);
             BodyWrap = Make(body, 15, TextAnchor.UpperLeft, true);
@@ -1096,7 +1184,14 @@ namespace Lanternvale.Game
         {
             internal bool Hidden;
             internal Vector2 Saved;
+            /// <summary>True while a higher screen covers the mouse (the layer sees it "nowhere").</summary>
+            public bool IsHidden => Hidden;
+            /// <summary>The real mouse position (GUI space at BeginLayer), also while hidden — for drags that cross other windows.</summary>
+            public Vector2 RealMouse => Hidden ? Saved : (Event.current != null ? Event.current.mousePosition : Nowhere);
         }
+
+        static readonly Vector2 Nowhere = new Vector2(-100000f, -100000f);
+        static int hiddenLayers, hiddenFrame = -1;
 
         /// <summary>Hides the mouse from a HUD screen while a higher screen covers it. Always pair with EndLayer.</summary>
         public static Layer BeginLayer(int order)
@@ -1108,7 +1203,9 @@ namespace Lanternvale.Game
             {
                 h.Saved = e.mousePosition;
                 h.Hidden = true;
-                e.mousePosition = new Vector2(-100000f, -100000f);
+                e.mousePosition = Nowhere;
+                if (hiddenFrame != Time.frameCount) { hiddenFrame = Time.frameCount; hiddenLayers = 0; }   // never leak across frames
+                hiddenLayers++;
             }
             return h;
         }
@@ -1116,8 +1213,20 @@ namespace Lanternvale.Game
         public static void EndLayer(Layer h)
         {
             if (!h.Hidden) return;
+            hiddenLayers = Mathf.Max(0, hiddenLayers - 1);
             var e = Event.current;
             if (e != null) e.mousePosition = h.Saved;
+        }
+
+        /// <summary>
+        /// Re-applies an active layer hide. IMGUI recomputes Event.mousePosition from the real cursor whenever a clip is
+        /// pushed/popped (GUI.BeginScrollView/EndScrollView, BeginGroup…) or GUI.matrix changes, which would let a covered
+        /// HUD layer see the mouse again: call this right after each of those inside a layer.
+        /// </summary>
+        public static void Rehide()
+        {
+            var e = Event.current;
+            if (e != null && hiddenLayers > 0 && hiddenFrame == Time.frameCount) e.mousePosition = Nowhere;
         }
 
         public static float Pulse(float speed = 3f, float min = 0.55f, float max = 1f) =>

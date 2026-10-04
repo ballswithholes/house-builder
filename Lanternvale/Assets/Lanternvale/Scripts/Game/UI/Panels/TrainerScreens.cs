@@ -34,7 +34,7 @@ namespace Lanternvale.Game.Panels
             public AbilityDef Ability;
             public int Rank, FromRank, Level, Cost;
             public bool Now, Afford, IsNew;
-            public string RankText = "", LevelText = "", Tip;
+            public string RankText = "", LevelText = "", Sub = "", Tip;
         }
 
         readonly List<Row> rows = new List<Row>();
@@ -151,6 +151,7 @@ namespace Lanternvale.Game.Panels
                 r.RankText = count <= 1 ? (r.IsNew ? "New ability" : "") : r.FromRank != r.Rank ? $"Ranks {r.FromRank}–{r.Rank}" : $"Rank {r.Rank}";
                 if (r.IsNew && count > 1) r.RankText = "New · " + r.RankText;
                 r.LevelText = r.Now ? "Level " + r.Level : Ui.Rich("Requires level " + r.Level, PanelKit.BadDark);
+                r.Sub = r.RankText.Length > 0 ? r.RankText + "  ·  " + r.LevelText : r.LevelText;
             }
         }
 
@@ -253,8 +254,7 @@ namespace Lanternvale.Game.Panels
                     Ui.Icon(new Rect(rr.x + 6f, rr.y + 5f, 50f, 50f), a.icon, Ui.SchoolColor(a.school), 0f, !row.Now);
                     float nameW = rr.width - 68f - 270f;
                     PanelKit.Label(new Rect(rr.x + 68f, rr.y + 6f, nameW, 26f), a.name, PanelKit.RowText, row.Now ? Ui.Ink : Ui.InkSoft);
-                    string sub = row.RankText.Length > 0 ? row.RankText + "  ·  " + row.LevelText : row.LevelText;
-                    PanelKit.Label(new Rect(rr.x + 68f, rr.y + 32f, nameW + 60f, 22f), sub, PanelKit.RowTextSmall, row.IsNew && row.Now ? PanelKit.GoodDark : Ui.InkSoft);
+                    PanelKit.Label(new Rect(rr.x + 68f, rr.y + 32f, nameW + 60f, 22f), row.Sub, PanelKit.RowTextSmall, row.IsNew && row.Now ? PanelKit.GoodDark : Ui.InkSoft);
                     if (row.Cost > 0) PanelKit.MoneyPlate(new Rect(rr.xMax - 270f, rr.y + 14f, 160f, 32f), row.Cost);
                     else PanelKit.Label(new Rect(rr.xMax - 270f, rr.y + 14f, 160f, 32f), "Free", PanelKit.TextSmallRight, PanelKit.GoodDark);
                     if (row.Now)
@@ -319,8 +319,40 @@ namespace Lanternvale.Game.Panels
             }
         }
 
+        // per-member texts and numbers, refreshed from Tick (talents learned elsewhere raise no event, so also on a timer)
+        sealed class Row
+        {
+            public Unit Unit;
+            public int Spent = -1, Cost;
+            public string Name = "", SpentText = "";
+        }
+
+        readonly List<Row> rows = new List<Row>();
+        string npcFor;
+        string npcName = "";
+        float refreshAt;
+
         static RespecScreen instance;
-        public RespecScreen() { instance = this; }
+
+        public RespecScreen()
+        {
+            instance = this;
+            PanelKit.Events += e =>
+            {
+                switch (e.Kind)
+                {
+                    case SessionEventKind.RespecOpened:
+                    case SessionEventKind.GoldChanged:
+                    case SessionEventKind.LevelUp:
+                    case SessionEventKind.PartyChanged:
+                    case SessionEventKind.TalentPointsAvailable:
+                    case SessionEventKind.GameStarted:
+                    case SessionEventKind.GameLoaded:
+                        refreshAt = 0f;
+                        break;
+                }
+            };
+        }
 
         static RespecScreen()
         {
@@ -333,34 +365,66 @@ namespace Lanternvale.Game.Panels
             });
         }
 
-        public void Tick(float dt) { }
+        public void Tick(float dt)
+        {
+            if (!Visible) { npcFor = null; return; }
+            if (Time.unscaledTime >= refreshAt) Refresh(PanelKit.Sess);
+        }
+
+        void Refresh(GameSession s)
+        {
+            refreshAt = Time.unscaledTime + 0.5f;
+            if (npcFor != s.ActiveRespecNpc)
+            {
+                npcFor = s.ActiveRespecNpc;
+                npcName = s.NpcName(npcFor);
+            }
+            int n = 0;
+            var party = s.Party;
+            for (int i = 0; i < party.Count; i++)
+            {
+                var u = party[i];
+                if (u == null || u.Class == null) continue;
+                if (n == rows.Count) rows.Add(new Row());
+                var row = rows[n++];
+                int spent = Progression.TalentPointsSpent(u);
+                if (row.Unit != u || row.Spent != spent)
+                {
+                    row.Name = PanelKit.NameOf(u);
+                    row.SpentText = spent <= 0 ? "No talents learned" : spent == 1 ? "1 talent point spent" : spent + " talent points spent";
+                }
+                row.Unit = u;
+                row.Spent = spent;
+                row.Cost = s.RespecCost(u);
+            }
+            if (rows.Count > n) rows.RemoveRange(n, rows.Count - n);
+        }
 
         public void Draw()
         {
             PanelKit.EnsureStyles();
             var s = PanelKit.Sess;
+            if (npcFor != s.ActiveRespecNpc) Refresh(s);   // opened after this frame's Tick
             var layer = PanelKit.BeginLayer(Order);
             try
             {
-                var party = s.Party;
-                float h = 210f + party.Count * 84f;
+                float h = 210f + rows.Count * 84f;
                 var r = PanelKit.Centered(620f, h, -60f);
-                string npcName = s.NpcName(s.ActiveRespecNpc);
                 var c = PanelKit.Window(r, "Unlearn talents", Order, out bool close, npcName);
                 if (close) PanelKit.Do(() => PanelKit.Sess?.CloseRespec());
                 PanelKit.Label(new Rect(c.x, c.y, c.width, 46f), "Forget every talent and spend the points anew. The fee grows each time.", PanelKit.TextSmall);
                 float y = c.y + 54f;
-                for (int i = 0; i < party.Count; i++)
+                for (int i = 0; i < rows.Count; i++)
                 {
-                    var u = party[i];
-                    if (u == null || u.Class == null) continue;
+                    var rw = rows[i];
+                    var u = rw.Unit;
                     var row = new Rect(c.x, y, c.width, 76f);
                     PanelKit.Rounded(row, PanelKit.Hover(row) ? PanelKit.RowHover : PanelKit.RowShade);
                     Ui.Portrait(new Rect(row.x + 8f, row.y + 8f, 60f, 60f), PanelKit.PortraitOf(u), PanelKit.ColorOf(u));
-                    int spent = Progression.TalentPointsSpent(u);
-                    int cost = s.RespecCost(u);
-                    PanelKit.Label(new Rect(row.x + 80f, row.y + 10f, 260f, 28f), PanelKit.NameOf(u), PanelKit.RowText);
-                    PanelKit.Label(new Rect(row.x + 80f, row.y + 38f, 260f, 24f), spent > 0 ? $"{spent} talent points spent" : "No talents learned", PanelKit.RowTextSmall);
+                    int spent = rw.Spent;
+                    int cost = rw.Cost;
+                    PanelKit.Label(new Rect(row.x + 80f, row.y + 10f, 260f, 28f), rw.Name, PanelKit.RowText);
+                    PanelKit.Label(new Rect(row.x + 80f, row.y + 38f, 260f, 24f), rw.SpentText, PanelKit.RowTextSmall);
                     if (spent > 0) PanelKit.MoneyPlate(new Rect(row.xMax - 290f, row.y + 21f, 150f, 34f), cost);
                     bool afford = s.Gold >= cost;
                     string tip = spent == 0 ? "There is nothing to unlearn." : afford ? null : "Not enough money.";
@@ -374,6 +438,8 @@ namespace Lanternvale.Game.Panels
                             if (ss == null) return;
                             if (PanelKit.Try(() => ss.Respec(who), $"{PanelKit.NameOf(who)}'s talents are reset."))
                             {
+                                // the trainer's window would cover the middle talent tree: close it, then show the talents
+                                ss.CloseRespec();
                                 PanelKit.Member = who;
                                 TalentsPanel.SelectMember(who);
                                 UiRoot.Open(UiPanels.Talents);

@@ -161,7 +161,9 @@ namespace Lanternvale.Game
         /// <summary>Unit under the mouse (party member or battle unit) or null. Exploration NPCs and encounter
         /// enemies have no rules Unit: they are reported through HoveredLabel/HoveredKind.</summary>
         public Unit HoveredUnit { get; private set; }
-        /// <summary>Label for the hovered non-unit object or NPC ("Elder Maru", "Chest", "To Whisperwood"), "" if none.</summary>
+        /// <summary>Label for the hovered non-unit object or NPC ("Elder Maru", "Chest", "To Whisperwood"), "" if none.
+        /// Exploration encounter enemies get their level (range), rank and group size, the level wrapped in a rich-text
+        /// colour tag ("Mossling  &lt;color=#ffe14a&gt;Lv 3-4&lt;/color&gt;  (x3)"): draw it with a richText style.</summary>
         public string HoveredLabel { get; private set; } = "";
         /// <summary>World position to anchor HoveredLabel.</summary>
         public Vector2 HoveredLabelWorld { get; private set; }

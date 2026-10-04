@@ -115,10 +115,13 @@ namespace Lanternvale.Game
         bool WorldInputAllowed() =>
             WorldInputEnabled && !UiRoot.ModalActive && !GameInput.PointerOverUi && !pausedByMenu && !FadeBlocksInput;
 
-        /// <summary>F5 / F9 (any mode while a game runs).</summary>
+        /// <summary>F5 / F9 (any mode while a game runs). Ignored while a yes/no prompt or a context menu is open:
+        /// their closures are bound to the current session and its objects ("Destroy Wolf Pelt?", "Dismiss Rook?",
+        /// "Overwrite save?"), and a quick load underneath would leave them acting on the freshly loaded game.</summary>
         void UpdateGlobalHotkeys()
         {
             if (UiRoot.HotkeysSuppressed) return;
+            if (SessionBoundPromptOpen()) return;
             if (GameInput.KeyDown(KeyCode.F5))
             {
                 var err = QuickSave();
@@ -130,6 +133,12 @@ namespace Lanternvale.Game
                 var err = QuickLoad();
                 if (err != null) Toast(err);
             }
+        }
+
+        static bool SessionBoundPromptOpen()
+        {
+            try { return Panels.ConfirmScreen.IsOpen || Panels.ContextMenuScreen.IsOpen; }
+            catch (Exception) { return false; }
         }
 
         void HandleExplorationClicks(float dt)
@@ -642,11 +651,17 @@ namespace Lanternvale.Game
                     HoveredLabel = "";
                     HoveredKind = IsPlayerSide(u) ? HoverKind.PartyMember : u.Team == Team.Enemy ? HoverKind.Enemy : HoverKind.Npc;
                 }
+                else if (enemyByView.TryGetValue(hoveredView, out var enemy))
+                {
+                    HoveredUnit = null;
+                    HoveredLabel = EnemyHoverLabel(hoveredView, enemy);
+                    HoveredKind = HoverKind.Enemy;
+                }
                 else
                 {
                     HoveredUnit = null;
                     HoveredLabel = hoveredView.DisplayName ?? "";
-                    HoveredKind = enemyByView.ContainsKey(hoveredView) ? HoverKind.Enemy : HoverKind.Npc;
+                    HoveredKind = HoverKind.Npc;
                 }
             }
             else if (hoveredObject != null)
@@ -680,8 +695,125 @@ namespace Lanternvale.Game
             ShowBark(v, bark);
         }
 
+        // ------------------------------------------------------------ encounter hover label
+
+        // cached label of the hovered encounter enemy (rebuilt when the hovered view/entry or the party level changes)
+        UnitView enemyLabelView;
+        EnemyEntry enemyLabelEntry;
+        int enemyLabelPartyLevel = -1;
+        string enemyLabel = "";
+        readonly System.Text.StringBuilder enemyLabelBuilder = new System.Text.StringBuilder(96);
+
+        /// <summary>
+        /// What the player needs before committing to a fight: "Mossling  Lv 3-4  (x3)", "Hollow Warden  Lv 8 Boss",
+        /// "Mossling  Lv 5  (group of 3, Boss)". The level is coloured WoW-style by its difference to the party level
+        /// (grey/green/yellow/orange/red, as on the target frame); rich-text colour tag, the nameplate styles render it.
+        /// </summary>
+        string EnemyHoverLabel(UnitView v, EnemyEntry e)
+        {
+            int party = Session != null ? Session.PartyLevel : 1;
+            if (ReferenceEquals(v, enemyLabelView) && ReferenceEquals(e, enemyLabelEntry) && party == enemyLabelPartyLevel) return enemyLabel;
+            enemyLabelView = v;
+            enemyLabelEntry = e;
+            enemyLabelPartyLevel = party;
+            try { enemyLabel = BuildEnemyLabel(v, e, party); }
+            catch (Exception ex) { LogStageOnce("enemy-label", ex); enemyLabel = v != null ? v.DisplayName ?? "" : ""; }
+            return enemyLabel;
+        }
+
+        string BuildEnemyLabel(UnitView v, EnemyEntry e, int partyLevel)
+        {
+            var cdef = e.Creature;
+            string name = cdef != null && !string.IsNullOrEmpty(cdef.name) ? cdef.name : (v != null ? v.DisplayName ?? "" : "");
+            if (cdef == null) return name;
+            var sb = enemyLabelBuilder;
+            sb.Length = 0;
+            sb.Append(name);
+
+            // level (range) of this creature as the session will roll it (UnitFactory.CreatureLevel)
+            CreatureLevelRange(cdef, e.Def != null ? e.Def.level : 0, partyLevel, out int lo, out int hi);
+            sb.Append("  <color=").Append(LevelColorHex(hi - partyLevel)).Append(">Lv ").Append(lo);
+            if (hi != lo) sb.Append('-').Append(hi);
+            sb.Append("</color>");
+            string rank = RankWord(cdef.rank);
+            if (rank.Length > 0) sb.Append(' ').Append(rank);
+
+            // the size of the fight (and a tougher member when the hovered one is not the leader of the pack)
+            var enc = e.Encounter;
+            var db = Db;
+            if (enc != null && enc.enemies != null && db != null)
+            {
+                int count = 0;
+                bool same = true;
+                CreatureRank top = CreatureRank.Normal;
+                foreach (var ed in enc.enemies)
+                {
+                    var c = ed != null ? db.Creature(ed.creature) : null;
+                    if (c == null) continue;
+                    count++;
+                    if (c != cdef) same = false;
+                    if (RankDanger(c.rank) > RankDanger(top)) top = c.rank;
+                }
+                if (count > 1)
+                {
+                    if (same) sb.Append("  (x").Append(count).Append(')');
+                    else
+                    {
+                        sb.Append("  (group of ").Append(count);
+                        if (RankDanger(top) > RankDanger(cdef.rank)) sb.Append(", ").Append(RankWord(top));
+                        sb.Append(')');
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Mirror of UnitFactory.CreatureLevel without the roll: the range the level can land in.</summary>
+        static void CreatureLevelRange(CreatureDef def, int explicitLevel, int partyLevel, out int lo, out int hi)
+        {
+            if (explicitLevel > 0) { lo = hi = explicitLevel; return; }
+            if (def.scaleToParty) { lo = hi = Mathf.Clamp(partyLevel + def.levelOffset, 1, 63); return; }
+            lo = def.levelMin;
+            hi = Mathf.Max(def.levelMin, def.levelMax);
+        }
+
+        /// <summary>WoW level colours (same thresholds as the target frame): red ≥ +5, orange ≥ +3, yellow ≥ -2, green ≥ -7, grey.</summary>
+        static string LevelColorHex(int diff)
+        {
+            if (diff >= 5) return "#ff4a3a";
+            if (diff >= 3) return "#ff8a3a";
+            if (diff >= -2) return "#ffe14a";
+            if (diff >= -7) return "#5ee05e";
+            return "#9d9d9d";
+        }
+
+        static string RankWord(CreatureRank r)
+        {
+            switch (r)
+            {
+                case CreatureRank.Elite: return "Elite";
+                case CreatureRank.Rare: return "Rare";
+                case CreatureRank.Boss: return "Boss";
+                default: return "";
+            }
+        }
+
+        static int RankDanger(CreatureRank r)
+        {
+            switch (r)
+            {
+                case CreatureRank.Boss: return 3;
+                case CreatureRank.Elite: return 2;
+                case CreatureRank.Rare: return 1;
+                default: return 0;
+            }
+        }
+
         void ClearHoverState()
         {
+            enemyLabelView = null;
+            enemyLabelEntry = null;
+            enemyLabelPartyLevel = -1;
             if (hoveredView != null) hoveredView.SetHovered(false);
             hoveredView = null;
             if (hoveredObject != null && MapView.Current != null) MapView.Current.SetHighlighted(hoveredObject.Id, false);

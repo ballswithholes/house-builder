@@ -449,17 +449,73 @@ namespace Lanternvale.Game
             SyncWorldViews();
         }
 
+        /// <summary>
+        /// Out of combat (5x/s): re-applies every aura-driven look of the unit views — stealth, polymorph and the
+        /// control/invulnerability tint — from the units' real auras. Self-cast state auras survive a won fight
+        /// (Divine Shield, Ice Block…) and expire in the field without a presented event, so the tint the combat
+        /// presenter left must follow them here. The combat presenter owns these visuals during a battle.
+        /// </summary>
         void SyncStealthVisuals()
         {
             var s = Session;
-            if (s == null || s.Battle != null) return;
+            if (s == null || s.Battle != null || battlePresenting) return;
             foreach (var kv in views)
             {
                 var v = kv.Value;
-                if (v == null) continue;
-                v.SetStealthed(kv.Key.IsStealthed);
+                if (v == null || kv.Key == null) continue;
+                ApplyAuraStateVisuals(kv.Key, v);
             }
         }
+
+        static readonly Color BanishTint = new Color(0.78f, 0.72f, 1f, 0.8f);
+        static readonly Color InvulnerableTint = new Color(1f, 0.95f, 0.72f);
+        static readonly Color FrostTint = new Color(0.62f, 0.85f, 1f);
+        static readonly Color StunTint = new Color(0.96f, 0.9f, 0.62f);
+        static readonly Color FearTint = new Color(0.8f, 0.68f, 0.96f);
+        static readonly Color ConfuseTint = new Color(0.92f, 0.74f, 0.95f);
+        static readonly Color SleepTint = new Color(0.78f, 0.8f, 0.95f);
+        static readonly Color RootTint = new Color(0.78f, 0.93f, 0.66f);
+
+        /// <summary>Same mapping as the combat presenter's state visuals (CombatController.ApplyStateMask), from the
+        /// unit's current auras. Dead views are left alone (their fade-out owns the look).</summary>
+        static void ApplyAuraStateVisuals(Unit u, UnitView v)
+        {
+            if (v.IsDead) return;
+            int mask = 0;
+            bool frost = false;
+            if (u.IsAlive)
+            {
+                var auras = u.Auras;
+                for (int i = 0; i < auras.Count; i++)
+                {
+                    var a = auras[i];
+                    var def = a != null ? a.Def : null;
+                    if (def == null || def.states == null || def.states.Length == 0) continue;
+                    bool rootOrStun = false;
+                    for (int k = 0; k < def.states.Length; k++)
+                    {
+                        var st = def.states[k];
+                        mask |= 1 << (int)st;
+                        if (st == UnitState.Root || st == UnitState.Stun) rootOrStun = true;
+                    }
+                    if (rootOrStun && def.school == School.Frost) frost = true;
+                }
+            }
+            v.SetStealthed(HasStateBit(mask, UnitState.Stealth) || HasStateBit(mask, UnitState.Invisible));
+            v.SetPolymorphed(HasStateBit(mask, UnitState.Polymorph));
+            Color tint = Color.white;
+            if (HasStateBit(mask, UnitState.Banish)) tint = BanishTint;
+            else if (HasStateBit(mask, UnitState.Invulnerable)) tint = InvulnerableTint;
+            else if (frost) tint = FrostTint;
+            else if (HasStateBit(mask, UnitState.Stun)) tint = StunTint;
+            else if (HasStateBit(mask, UnitState.Fear)) tint = FearTint;
+            else if (HasStateBit(mask, UnitState.Confuse)) tint = ConfuseTint;
+            else if (HasStateBit(mask, UnitState.Sleep) || HasStateBit(mask, UnitState.Incapacitate)) tint = SleepTint;
+            else if (HasStateBit(mask, UnitState.Root)) tint = RootTint;
+            v.SetTint(tint);
+        }
+
+        static bool HasStateBit(int mask, UnitState s) => (mask & (1 << (int)s)) != 0;
 
         // ------------------------------------------------------------ movement helpers
 

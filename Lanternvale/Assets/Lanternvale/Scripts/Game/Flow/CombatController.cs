@@ -15,8 +15,10 @@
 // See Docs/CombatFlow.md for the input rules and the presentation timing.
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Lanternvale.Data;
 using Lanternvale.Rules;
+using Lanternvale.Session;
 using Lanternvale.Util;
 using UnityEngine;
 
@@ -181,6 +183,9 @@ namespace Lanternvale.Game
             }
             catch (Exception e) { LogOnce("autoplay", "SetAutoPlay: " + e); }
             if (on && Battle != null && (u == Battle.ActiveUnit || u.Pet == Battle.ActiveUnit)) CancelTargeting();
+            // a step the AI previewed (path shown, not walked yet) is stale now: the AI re-plans from scratch
+            DropAIPreview();
+            aiUnit = null;
             hoverDirty = true;
         }
 
@@ -197,8 +202,13 @@ namespace Lanternvale.Game
             if (!r.Ok) Fail(r.Reason);
         }
 
-        /// <summary>Show the movement-range overlay for the active player unit.</summary>
-        public bool ShowMoveRange { get; set; } = true;
+        /// <summary>Show the movement-range overlay for the active player unit (a setting remembered across fights,
+        /// see ShowMoveRangeSetting).</summary>
+        public bool ShowMoveRange
+        {
+            get => ShowMoveRangeSetting;
+            set => ShowMoveRangeSetting = value;
+        }
 
         /// <summary>Recently presented combat log lines (newest last), already formatted.</summary>
         public IReadOnlyList<string> LogLines => logLines;
@@ -263,6 +273,67 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>
+        /// The "show the movement range in combat" setting without a running fight (settings screens). Every battle gets a
+        /// new controller, so the value lives here and in PlayerPrefs; ShowMoveRange reads and writes the same value.
+        /// </summary>
+        public static bool ShowMoveRangeSetting
+        {
+            get
+            {
+                if (showMoveRangePref < 0)
+                {
+                    try { showMoveRangePref = PlayerPrefs.GetInt(ShowMoveRangeKey, 1) == 0 ? 0 : 1; }
+                    catch (Exception) { showMoveRangePref = 1; }
+                }
+                return showMoveRangePref == 1;
+            }
+            set
+            {
+                int v = value ? 1 : 0;
+                if (v == showMoveRangePref) return;
+                showMoveRangePref = v;
+                try { PlayerPrefs.SetInt(ShowMoveRangeKey, v); } catch (Exception) { }
+            }
+        }
+
+        const string ShowMoveRangeKey = "lv.combat.showMoveRange";
+        static int showMoveRangePref = -1;   // -1 = not loaded yet
+
+        /// <summary>
+        /// Spends seconds of the active player unit's Time without acting, so that windows from the start of the turn
+        /// (silence, pacify, root, school lockouts) run out (see WaitUntilFree). Only during IsPlayerTurn. Returns null on
+        /// success, else the reason.
+        /// </summary>
+        public string Wait(float seconds)
+        {
+            if (disposed || Battle == null || Finished) return Fail("Not in combat.");
+            if (!IsPlayerTurn) return Fail(Battle.NeedsPlayerInput ? "Wait for the action to finish." : "It is not your turn.");
+            var u = Battle.ActiveUnit;
+            if (u == null) return Fail("It is not your turn.");
+            if (float.IsNaN(seconds) || seconds <= 0.001f) return Fail("Nothing to wait for.");
+            seconds = Mathf.Min(seconds, Mathf.Max(0f, u.TimeLeft));
+            ActionResult r;
+            try { r = Battle.Wait(u, seconds); }
+            catch (Exception e) { LogOnce("wait", "Wait: " + e); r = ActionResult.Fail("You cannot wait right now."); }
+            PullEvents(null);
+            // waiting emits no event: drop every cache keyed on the event count (move range, valid targets, hover)
+            InvalidateTurnCaches();
+            if (!r.Ok) return Fail(r.Reason);
+            FloatingText.Spawn(Head(u, V(u)) + new Vector2(0f, 0.3f), "Waits " + seconds.ToString("0.#") + " s", MutedText, 0.75f);
+            return null;
+        }
+
+        /// <summary>
+        /// Seconds of Time the active unit has to wait until every window left from the start of its turn (silence,
+        /// pacify, root, school lockouts) has run out; 0 when nothing can be waited out this turn. For a "Wait" button.
+        /// </summary>
+        public float WaitUntilFree => Battle != null && Battle.ActiveUnit != null ? FreeIn(Battle.ActiveUnit, out _) : 0f;
+
+        /// <summary>Why the battle cannot continue (an AI turn that cannot be ended, a battle that cannot be finished) for a
+        /// banner; "" while everything works. The player is then told to load a save or return to the main menu (Esc).</summary>
+        public string StuckReason { get; private set; } = "";
+
         // ================================================================ per frame
 
         const float FastForwardFactor = 2.5f;
@@ -282,7 +353,7 @@ namespace Lanternvale.Game
             if (disposed) return;
             UpdatePersistentVisuals();
 
-            bool playerTurnShown = false;
+            bool playerTurnShown = false, aiDriven = false;
             if (QueueIdle && !Finished)
             {
                 if (disengageRequested) HandleDisengage();
@@ -294,16 +365,33 @@ namespace Lanternvale.Game
                     {
                         if (IsTargeting) CancelTargeting();
                         DriveAI(dt);
+                        aiDriven = true;
                     }
                     else if (Battle.NeedsPlayerInput)
                     {
+                        // the AI does not drive this turn (any more): a previewed step is stale and it re-plans next time
+                        aiUnit = null;
                         UpdatePlayerTurn();
                         playerTurnShown = true;
                     }
                 }
             }
             if (disposed) return;
-            if (!playerTurnShown) HidePlayerTurnVisuals();
+            if (!aiDriven) DropAIPreview();
+            if (!playerTurnShown)
+            {
+                HidePlayerTurnVisuals();
+                // targeting can stay active while a beat plays (an approach walk whose cast then failed): right click/Esc
+                // still cancel it, and Esc must not open the pause menu meanwhile
+                if (IsTargeting && !Finished) UpdateBusyTargetingInput();
+            }
+        }
+
+        void UpdateBusyTargetingInput()
+        {
+            if (UiRoot.ModalActive || (flow != null && !flow.WorldInputEnabled)) return;
+            UiRoot.HotkeysSuppressed = true;
+            if (GameInput.KeyDown(KeyCode.Escape) || (GameInput.MouseDown(1) && !GameInput.PointerOverUi)) CancelTargeting();
         }
 
         /// <summary>Scaled frame delta of the presentation clock (used by per-frame presenter loops).</summary>
@@ -390,6 +478,61 @@ namespace Lanternvale.Game
                 }
             }
             catch (Exception e) { LogOnce("finish-ex", "Finishing the battle failed: " + e); }
+            if (disposed || !Finished) return;   // the normal path: CombatEnded was raised and GameFlow disposed us
+
+            // FinishBattle/LeaveCombat clear Session.Battle first and raise CombatEnded last. When something in between
+            // threw (quest kills, XP, level-ups, encounter state), the session is out of the fight but GameFlow never
+            // heard of it and would keep this controller (no world sync, no field events, no autosave).
+            bool sessionLeft;
+            try { sessionLeft = s.Battle != Battle; } catch (Exception) { sessionLeft = true; }
+            if (sessionLeft) RaiseMissingCombatEnded(s, leave);
+            else
+            {
+                StuckReason = "The battle could not be finished. Open the menu (Esc) to load a save or return to the main menu.";
+                Fail(StuckReason);
+                if (flow != null) flow.Toast(StuckReason);
+            }
+        }
+
+        static MethodInfo flowEventHandler;
+        static bool flowEventHandlerLooked;
+
+        /// <summary>
+        /// Delivers the CombatEnded event the session failed to raise to GameFlow's session-event handler, so the flow runs
+        /// its usual teardown (dispose this controller, re-sync the world views, music, victory autosave) and relays it to
+        /// the UI. GameFlow has no public hook for this, hence the lookup of its handler.
+        /// </summary>
+        void RaiseMissingCombatEnded(GameSession s, bool leave)
+        {
+            var outcome = Battle.Outcome == BattleOutcome.Defeat ? CombatEndKind.Defeat
+                : leave || Battle.Outcome == BattleOutcome.Fled ? CombatEndKind.Left : CombatEndKind.Victory;
+            var ev = new SessionEvent
+            {
+                Kind = SessionEventKind.CombatEnded, Outcome = outcome, Battle = Battle,
+                Text = outcome == CombatEndKind.Victory ? "Victory!" : outcome == CombatEndKind.Left ? "You step away from the fight." : "Defeat...",
+            };
+            Debug.LogError("[Lanternvale] The session left the battle without raising CombatEnded; ending the fight in the flow.");
+            bool delivered = false;
+            try
+            {
+                if (!flowEventHandlerLooked)
+                {
+                    flowEventHandlerLooked = true;
+                    const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                    flowEventHandler = typeof(GameFlow).GetMethod("OnSessionEventRaised", flags, null, new[] { typeof(SessionEvent) }, null)
+                                       ?? typeof(GameFlow).GetMethod("OnCombatEnded", flags, null, new[] { typeof(SessionEvent) }, null);
+                }
+                if (flowEventHandler != null && flow != null && flow.Combat == this)
+                {
+                    flowEventHandler.Invoke(flow, new object[] { ev });
+                    delivered = true;
+                }
+            }
+            catch (Exception e) { LogOnce("finish-recover", "Ending the fight in the flow failed: " + e); }
+            if (delivered || disposed) return;
+            StuckReason = "The battle could not be finished. Open the menu (Esc) to load a save or return to the main menu.";
+            Fail(StuckReason);
+            if (flow != null) flow.Toast(StuckReason);
         }
 
         // ================================================================ teardown
@@ -402,6 +545,9 @@ namespace Lanternvale.Game
             FxSystem.Hide(AoeId);
             FxSystem.Hide(RangeId);
             FxSystem.Hide(AiPathId);
+            aiPathShown = false;
+            aiPreview = null;
+            HideFacingIndicators();
             ClearHighlights();
             if (activeRingView != null) { activeRingView.SetActiveTurn(false); activeRingView = null; }
             foreach (var kv in casting)

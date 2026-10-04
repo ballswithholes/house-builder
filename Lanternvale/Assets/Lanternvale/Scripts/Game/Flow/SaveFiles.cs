@@ -1,5 +1,6 @@
 // Save slots on disk: Application.persistentDataPath/saves/<slot>.json.
-// Writes are atomic (temp file + replace) so a crash mid-save never corrupts an existing slot.
+// Writes are atomic (temp file + replace; where Replace is unsupported: old file parked as .bak first) so a crash
+// mid-save never loses an existing slot: leftovers of an interrupted write are recovered when the slot is read/listed.
 // Headers (name, class, level, map, day/hour, play time) are parsed once per file version and cached,
 // so save-slot screens may call GameFlow.ListSaves() every frame.
 using System;
@@ -70,7 +71,8 @@ namespace Lanternvale.Game
             var s = CleanSlot(slot);
             if (s.Length == 0) return "Invalid save slot name.";
             if (string.IsNullOrEmpty(json)) return "Nothing to save.";
-            string path = PathOf(s), tmp = path + ".tmp";
+            string path = PathOf(s), tmp = path + TmpSuffix, bak = path + BakSuffix;
+            bool movedToBak = false;
             try
             {
                 System.IO.Directory.CreateDirectory(Directory);
@@ -80,9 +82,19 @@ namespace Lanternvale.Game
                     try { File.Replace(tmp, path, null); }
                     catch (Exception)
                     {
-                        // some platforms/file systems do not support Replace: fall back to delete + move
-                        File.Delete(path);
+                        // Some platforms/file systems do not support Replace. Never delete the old save before the new
+                        // one is in place: park it as <slot>.json.bak, move the new file in, then drop the .bak. A crash
+                        // in between leaves .bak/.tmp files that Read/List recover (see RecoverSlot).
+                        if (!File.Exists(tmp)) throw;   // Replace failed half-way and consumed the new file
+                        if (File.Exists(path))
+                        {
+                            if (File.Exists(bak)) File.Delete(bak);
+                            File.Move(path, bak);
+                            movedToBak = true;
+                        }
                         File.Move(tmp, path);
+                        movedToBak = false;
+                        try { File.Delete(bak); } catch (Exception) { }
                     }
                 }
                 else File.Move(tmp, path);
@@ -92,9 +104,84 @@ namespace Lanternvale.Game
             catch (Exception e)
             {
                 Debug.LogWarning($"[Lanternvale] Saving slot '{s}' failed: {e}");
-                try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception) { }
+                // put the previous save back if it had been parked; keep a complete .tmp only when it is all we have
+                try { if (movedToBak && !File.Exists(path) && File.Exists(bak)) File.Move(bak, path); } catch (Exception) { }
+                try { if (File.Exists(tmp) && (File.Exists(path) || !IsReadableSave(tmp))) File.Delete(tmp); } catch (Exception) { }
+                orphansChecked = false;
                 Invalidate();
                 return "Could not write the save file: " + e.Message;
+            }
+        }
+
+        const string TmpSuffix = ".tmp", BakSuffix = ".bak";
+        static bool orphansChecked;
+
+        /// <summary>
+        /// When &lt;slot&gt;.json is missing but an interrupted write left &lt;slot&gt;.json.tmp (the new save, complete
+        /// once a .bak exists or when its JSON parses) or &lt;slot&gt;.json.bak (the previous save), renames the best one
+        /// back to &lt;slot&gt;.json. Returns true when the slot file exists afterwards.
+        /// </summary>
+        static bool RecoverSlot(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) return true;
+                string tmp = path + TmpSuffix, bak = path + BakSuffix;
+                bool hasTmp = File.Exists(tmp), hasBak = File.Exists(bak);
+                if (!hasTmp && !hasBak) return false;
+                // the .tmp is the newer save: written completely before the old file was parked as .bak; on its
+                // own it may also be a write cut short, so it must parse
+                if (hasTmp && (hasBak || IsReadableSave(tmp)))
+                {
+                    File.Move(tmp, path);
+                    if (hasBak) { try { File.Delete(bak); } catch (Exception) { } }
+                }
+                else if (hasBak)
+                {
+                    File.Move(bak, path);
+                }
+                else return false;
+                Debug.LogWarning("[Lanternvale] Recovered save file " + Path.GetFileName(path) + " after an interrupted write.");
+                Invalidate();
+                return File.Exists(path);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Lanternvale] Recovering save " + Path.GetFileName(path) + " failed: " + e.Message);
+                return false;
+            }
+        }
+
+        static bool IsReadableSave(string file)
+        {
+            try
+            {
+                var h = GameSession.ReadSaveHeader(File.ReadAllText(file, Encoding.UTF8));
+                return h != null && h.version > 0 && !string.IsNullOrEmpty(h.mapId);
+            }
+            catch (Exception) { return false; }
+        }
+
+        /// <summary>Recovers every slot whose write was interrupted (once per run, and again after a failed write).</summary>
+        static void RecoverOrphans()
+        {
+            if (orphansChecked) return;
+            orphansChecked = true;
+            try
+            {
+                if (!System.IO.Directory.Exists(Directory)) return;
+                var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var suffix in new[] { TmpSuffix, BakSuffix })
+                    foreach (var f in System.IO.Directory.GetFiles(Directory, "*" + Extension + suffix))
+                    {
+                        if (!f.EndsWith(Extension + suffix, StringComparison.OrdinalIgnoreCase)) continue;
+                        var path = f.Substring(0, f.Length - suffix.Length);
+                        if (done.Add(path) && !File.Exists(path)) RecoverSlot(path);
+                    }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Lanternvale] Checking for interrupted saves failed: " + e.Message);
             }
         }
 
@@ -107,7 +194,7 @@ namespace Lanternvale.Game
             var path = PathOf(s);
             try
             {
-                if (!File.Exists(path)) return $"There is no save in slot '{DisplaySlot(s)}'.";
+                if (!File.Exists(path) && !RecoverSlot(path)) return $"There is no save in slot '{DisplaySlot(s)}'.";
                 json = File.ReadAllText(path, Encoding.UTF8);
                 if (string.IsNullOrEmpty(json)) return "The save file is empty.";
                 return null;
@@ -126,7 +213,15 @@ namespace Lanternvale.Game
             try
             {
                 var path = PathOf(s);
-                if (!File.Exists(path)) return $"There is no save in slot '{DisplaySlot(s)}'.";
+                // leftovers of an interrupted write would otherwise bring the deleted slot back (RecoverSlot)
+                bool leftovers = false;
+                foreach (var extra in new[] { path + TmpSuffix, path + BakSuffix })
+                    if (File.Exists(extra)) { File.Delete(extra); leftovers = true; }
+                if (!File.Exists(path))
+                {
+                    Invalidate();
+                    return leftovers ? null : $"There is no save in slot '{DisplaySlot(s)}'.";
+                }
                 File.Delete(path);
                 Invalidate();
                 return null;
@@ -181,6 +276,7 @@ namespace Lanternvale.Game
             dirty = false;
             cachedAt = now;
             cachedList.Clear();
+            RecoverOrphans();
             string[] files;
             try
             {

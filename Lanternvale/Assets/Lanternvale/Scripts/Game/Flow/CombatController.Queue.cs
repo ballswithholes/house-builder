@@ -248,6 +248,9 @@ namespace Lanternvale.Game
                         // everything the command caused belongs to it (procs, reactions, deaths) until a separator;
                         // only a second, different cast start (e.g. a proc'd cast) opens a new beat
                         if (t == CombatEventType.CastStart && e.Source == b.Actor && b.HasCastStart) return false;
+                        // ...and units acting on their own: a cast that does not fit ends the turn inside the command, so
+                        // the caster's totems act (Searing bolt, Healing Stream) — they get their own beat and delivery
+                        if (ActsOnItsOwn(b, e)) return false;
                         return true;
                     }
                     if (IsOutcome(t) && e.AutoAttack) return false;
@@ -299,6 +302,16 @@ namespace Lanternvale.Game
                 default:
                     return false;
             }
+        }
+
+        /// <summary>An action (outcome, AbilityUsed, cast) of a totem that is not part of the beat: it acts on its own at the
+        /// end of its owner's turn and must not be shown as a consequence of the beat's ability.</summary>
+        static bool ActsOnItsOwn(Beat b, CombatEvent e)
+        {
+            var src = e.Source;
+            if (src == null || src == b.Actor || !src.IsTotem || b.Participants.Contains(src)) return false;
+            var t = e.Type;
+            return IsOutcome(t) || t == CombatEventType.AbilityUsed || t == CombatEventType.CastStart || t == CombatEventType.ChannelTick;
         }
 
         /// <summary>Opens the beat for list[i] (no beat was open or it did not fit).</summary>

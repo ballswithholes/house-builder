@@ -295,6 +295,10 @@ namespace Lanternvale.Game.Panels
                 // bottom right: free of the HUD (party frames left, tracker top right, toasts and banners top centre)
                 float slide = (1f - Mathf.Clamp01(t / 0.3f)) * 30f;
                 var r = new Rect(Ui.Width - w - 26f + slide, Ui.Height - h - 120f, w, h);
+                // a victory opens the loot window at the same moment (Order 150, below this card): move left of it so
+                // its item rows and Close button stay reachable
+                if (LootScreen.TryGetWindowRect(out var loot) && r.Overlaps(loot))
+                    r.x = Mathf.Max(8f, loot.x - w - 16f + slide);
                 hovered = PanelKit.Hover(r);
                 var old = GUI.color;
                 GUI.color = new Color(1f, 1f, 1f, a);

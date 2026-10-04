@@ -170,6 +170,7 @@ namespace Lanternvale.Game.Panels
                 "P|spellbook",
                 "N|talents",
                 "J|journal",
+                "K|party & camp (swap companions)",
                 "M|map",
                 "L|combat log",
                 "Esc|close the last window / pause",

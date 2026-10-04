@@ -33,16 +33,21 @@ namespace Lanternvale.Game.Panels
 
         internal static bool Route()
         {
-            bool panelsOpen = AnyPanelOpen();
+            // a conversation hides the sheets (bags, journal…) but leaves them open: only the windows drawn over it count
+            bool dialogue = PanelKit.Mode == SessionMode.Dialogue;
+            bool panelsOpen = dialogue ? OverlayPanelOpen() : AnyPanelOpen();
             for (int i = 0; i < handlers.Count; i++)
             {
                 var h = handlers[i];
-                if (panelsOpen && h.Priority < AbovePanels) return false;   // let UiRoot close the top panel
+                if (panelsOpen && h.Priority < AbovePanels) break;   // let UiRoot close the top panel
                 bool done;
                 try { done = h.Handle(); }
                 catch (Exception e) { Debug.LogException(e); done = false; }
                 if (done) return true;
             }
+            // UiRoot.CloseTop closes the most recently opened panel, which may be a hidden sheet during a conversation:
+            // close the topmost window actually drawn over it instead
+            if (panelsOpen && dialogue) return CloseTopOverlay();
             return false;
         }
 
@@ -52,10 +57,29 @@ namespace Lanternvale.Game.Panels
             UiPanels.CombatLog, UiPanels.Party, UiPanels.Settings, UiPanels.Pause, UiPanels.SaveLoad, UiPanels.Help, UiPanels.Map,
         };
 
+        /// <summary>The panels drawn over a conversation (PanelWindow.ShowInDialogue), topmost first.</summary>
+        static readonly string[] OverlayIds = { UiPanels.Help, UiPanels.Settings, UiPanels.SaveLoad, UiPanels.Pause };
+
         public static bool AnyPanelOpen()
         {
             if (!GameFlow.HasGame) return false;
             for (int i = 0; i < PanelIds.Length; i++) if (UiRoot.IsOpen(PanelIds[i])) return true;
+            return false;
+        }
+
+        /// <summary>True while the pause menu, save/load, settings or help is open (the windows that stay on screen
+        /// over a conversation; the sheets step aside but stay open).</summary>
+        public static bool OverlayPanelOpen()
+        {
+            if (!GameFlow.HasGame) return false;
+            for (int i = 0; i < OverlayIds.Length; i++) if (UiRoot.IsOpen(OverlayIds[i])) return true;
+            return false;
+        }
+
+        static bool CloseTopOverlay()
+        {
+            for (int i = 0; i < OverlayIds.Length; i++)
+                if (UiRoot.IsOpen(OverlayIds[i])) { UiRoot.Close(OverlayIds[i]); return true; }
             return false;
         }
     }
@@ -155,6 +179,15 @@ namespace Lanternvale.Game.Panels
             EscRouter.Register(900, () => { if (!open) return false; Close(); return true; });
         }
 
+        public ContextMenuScreen()
+        {
+            // the entries hold closures over the replaced session's items
+            PanelKit.Events += e =>
+            {
+                if (e.Kind == SessionEventKind.GameStarted || e.Kind == SessionEventKind.GameLoaded) Close();
+            };
+        }
+
         public static void Open(Vector2 guiPos, string heading, List<Item> entries)
         {
             items.Clear();
@@ -240,6 +273,7 @@ namespace Lanternvale.Game.Panels
         static Action onYes, onNo;
         static bool danger;
         static float openedAt;
+        static GameSession askedIn;
 
         public const int ScreenOrder = 470;
         public string Id => "";
@@ -252,6 +286,23 @@ namespace Lanternvale.Game.Panels
             EscRouter.Register(1000, () => { if (!open) return false; Answer(false); return true; });
         }
 
+        public ConfirmScreen()
+        {
+            // a prompt asked in the replaced game ("Leave the loot?", "Dismiss Seren?") must not act on the new one
+            PanelKit.Events += e =>
+            {
+                if (e.Kind == SessionEventKind.GameStarted || e.Kind == SessionEventKind.GameLoaded) Dismiss();
+            };
+        }
+
+        /// <summary>Closes the prompt without running either answer.</summary>
+        public static void Dismiss()
+        {
+            open = false;
+            onYes = onNo = null;
+            askedIn = null;
+        }
+
         /// <summary>Opens a yes/no prompt. onYes runs as a deferred command.</summary>
         public static void Ask(string heading, string body, string yesLabel, Action yesAction, string noLabel = "Cancel", Action noAction = null, bool dangerous = false)
         {
@@ -262,6 +313,7 @@ namespace Lanternvale.Game.Panels
             onYes = yesAction;
             onNo = noAction;
             danger = dangerous;
+            askedIn = PanelKit.Sess;
             open = true;
             openedAt = Time.unscaledTime;
             ContextMenuScreen.Close();
@@ -275,8 +327,12 @@ namespace Lanternvale.Game.Panels
             if (!open) return;
             open = false;
             var a = ok ? onYes : onNo;
+            var session = askedIn;
             onYes = onNo = null;
-            if (a != null) PanelKit.Do(a);
+            askedIn = null;
+            if (a == null) return;
+            // the answer runs next Update; drop it if the game was replaced in between (or since the question)
+            PanelKit.Do(() => { if (PanelKit.Sess == session) a(); });
         }
 
         public void Tick(float dt)

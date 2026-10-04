@@ -537,7 +537,8 @@ namespace Lanternvale.Game.Panels
 
         /// <summary>
         /// Begins a scroll view with a painted scrollbar. The mouse is hidden from the content while it is outside the
-        /// viewport (no clicks on rows scrolled out of sight). Returns the content width.
+        /// viewport (no clicks on rows scrolled out of sight); the wheel scrolls only when the mouse is over the viewport
+        /// and the window is not covered there (see EndScroll). Returns the content width.
         /// </summary>
         public static float BeginScroll(Rect r, ScrollState st, float contentHeight)
         {
@@ -558,12 +559,24 @@ namespace Lanternvale.Game.Panels
 
         public static void EndScroll(ScrollState st)
         {
-            // the wheel only scrolls when the mouse is really over the viewport (hidden → Nowhere)
-            GUI.EndScrollView(true);
+            // Unity's own wheel handling (EndScrollView(true)) runs right after the clip pop, which recomputes
+            // Event.mousePosition from the real cursor: a list in a window covered by another one would scroll and eat
+            // the wheel meant for the window on top. So the wheel is handled here, after the layer's hide is re-applied.
+            GUI.EndScrollView(false);
             Rehide();
             RestoreMouse(st.Hide);
             st.Hide = new MouseHide();
             var r = st.Viewport;
+            var ev = Event.current;
+            if (ev != null && ev.type == EventType.ScrollWheel && r.Contains(ev.mousePosition))
+            {
+                float maxScroll = Mathf.Max(0f, st.ContentHeight - r.height);
+                if (maxScroll > 0.5f)
+                {
+                    st.Pos.y = Mathf.Clamp(st.Pos.y + ev.delta.y * 20f, 0f, maxScroll);
+                    ev.Use();
+                }
+            }
             if (st.ContentHeight <= r.height + 0.5f) { st.Dragging = false; return; }
             // painted scrollbar: track + thumb, draggable
             var track = new Rect(r.xMax - ScrollbarWidth, r.y + 2f, ScrollbarWidth, r.height - 4f);

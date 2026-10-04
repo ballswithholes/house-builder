@@ -33,6 +33,7 @@ namespace Lanternvale.Game
             public AbilityDef A;
             public string Cost = "", Cast = "";
             public Color CostColor;
+            public bool Shard;          // consumes a Soul Shard (bag count shown in the corner)
             public float CdMax;
             public string Tip;
         }
@@ -85,6 +86,7 @@ namespace Lanternvale.Game
         public void Tick(float dt)
         {
             Hud.RollOccluders();
+            HudPresented.Update();
             Hud.RunCommands();
             try
             {
@@ -202,7 +204,7 @@ namespace Lanternvale.Game
 
         Slot MakeSlot(AbilityStatus st)
         {
-            var sl = new Slot { St = st, A = st.Ability };
+            var sl = new Slot { St = st, A = st.Ability, Shard = Hud.UsesSoulShard(st.Ability) };
             if (st.Cost > 0.5f && st.CostType != ResourceType.None)
             {
                 sl.Cost = HudText.Int(Mathf.RoundToInt(st.Cost));
@@ -291,7 +293,12 @@ namespace Lanternvale.Game
             {
                 if (inspect) { Hud.Error(Hud.NameOf(unit) + " must wait for their turn."); return; }
                 var c = Hud.Combat;
-                c?.BeginAbility(a.id);   // failures arrive through Combat.LastError (red error lane)
+                if (c == null) return;
+                var why = c.BeginAbility(a.id);   // failures arrive through Combat.LastError (red error lane)
+                // right-click = self-cast (WoW): a friendly spell that entered targeting mode is confirmed on the caster
+                if (selfCast && why == null && c.IsTargeting && c.TargetingItem == null && c.TargetingAbility != null &&
+                    c.TargetingAbility.id == a.id && SelfCastable(a.target))
+                    c.TargetUnit(unit);
                 return;
             }
             UseInFieldWithPick(a, null, a.target, selfCast);
@@ -303,12 +310,19 @@ namespace Lanternvale.Game
             if (inCombat)
             {
                 if (inspect) { Hud.Error(Hud.NameOf(unit) + " must wait for their turn."); return; }
-                Hud.Combat?.BeginItem(it.Item);
+                var c = Hud.Combat;
+                if (c == null) return;
+                var why = c.BeginItem(it.Item);
+                if (selfCast && why == null && c.IsTargeting && c.TargetingItem == it.Item && it.Use != null && SelfCastable(it.Use.target))
+                    c.TargetUnit(unit);
                 return;
             }
             if (!string.IsNullOrEmpty(it.Reason)) { Hud.Error(it.Reason); return; }
             UseInFieldWithPick(null, it.Item, it.Use != null ? it.Use.target : TargetType.Self, selfCast);
         }
+
+        /// <summary>Target types a right-click may confirm on the caster (friendly spells; hostile ones keep targeting).</summary>
+        static bool SelfCastable(TargetType t) => t == TargetType.Ally || t == TargetType.Any;
 
         void UseInFieldWithPick(AbilityDef a, ItemInstance item, TargetType target, bool selfCast)
         {
@@ -487,7 +501,7 @@ namespace Lanternvale.Game
                 {
                     HudDraw.Fill(r, new Color(0.03f, 0.02f, 0.07f, 0.45f), 8);
                     HudDraw.Ring(r, new Color(1f, 1f, 1f, 0.08f), 8);
-                    HudDraw.Text(new Rect(r.x + 4f, r.y + 2f, 20f, 14f), HudText.Hotkey(i), HudStyles.Tiny, new Color(1f, 1f, 1f, 0.25f), false);
+                    HudDraw.Text(new Rect(r.x + 4f, r.y + 1f, 24f, 18f), HudText.Hotkey(i), HudStyles.Tiny, new Color(1f, 1f, 1f, 0.25f), false);
                     continue;
                 }
                 var sl = slots[idx];
@@ -552,13 +566,22 @@ namespace Lanternvale.Game
                 HudDraw.Text(new Rect(r.x, r.y + 6f, r.width, r.height - 12f), HudText.Duration(left), Ui.NumberStyle(20), Ui.TextLight);
             }
             if (glow) HudDraw.Ring(r, new Color(1f, 0.88f, 0.5f, HudDraw.Pulse(4.5f, 0.6f, 1f) * alpha), 8, true);
-            // hotkey, cost, cast time
-            HudDraw.Text(new Rect(r.x + 4f, r.y + 2f, 22f, 14f), HudText.Hotkey(index), HudStyles.Tiny, new Color(1f, 1f, 1f, 0.85f * alpha));
-            if (sl.Cost.Length > 0)
-                HudDraw.Text(new Rect(r.x + 2f, r.yMax - 15f, r.width - 5f, 14f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
+            // corners: hotkey (top left), cast time (top right), cost (bottom right), soul shards in the bags (bottom left)
+            HudDraw.Text(new Rect(r.x + 4f, r.y + 1f, 24f, 18f), HudText.Hotkey(index), HudStyles.Tiny, new Color(1f, 1f, 1f, 0.85f * alpha));
             if (sl.Cast.Length > 0)
-                HudDraw.Text(new Rect(r.x + 4f, r.yMax - 15f, r.width - 8f, 14f), sl.Cast, HudStyles.Tiny, new Color(Ui.Time.r, Ui.Time.g, Ui.Time.b, alpha));
+                HudDraw.Text(new Rect(r.x + 2f, r.y + 1f, r.width - 5f, 18f), sl.Cast, HudStyles.TinyRight, new Color(Ui.Time.r, Ui.Time.g, Ui.Time.b, alpha));
+            if (sl.Cost.Length > 0)
+                HudDraw.Text(new Rect(r.x + 2f, r.yMax - 18f, r.width - 5f, 17f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
+            if (sl.Shard)
+            {
+                int shards = Hud.SoulShards;
+                var sc = shards > 0 ? ShardColor : Ui.Bad;
+                HudDraw.Glyph(new Rect(r.x + 3f, r.yMax - 17f, 14f, 14f), "glyph_soul_shard", new Color(sc.r, sc.g, sc.b, alpha));
+                HudDraw.Text(new Rect(r.x + 18f, r.yMax - 18f, 22f, 17f), HudText.Int(shards), HudStyles.Tiny, new Color(sc.r, sc.g, sc.b, alpha));
+            }
         }
+
+        static readonly Color ShardColor = Ui.Hex("#c9a6ff");
 
         void DrawPager()
         {
@@ -601,7 +624,7 @@ namespace Lanternvale.Game
                     HudDraw.Sweep(r, Mathf.Clamp01(left / Mathf.Max(it.CdMax, left)));
                     HudDraw.Text(new Rect(r.x, r.y + 4f, r.width, r.height - 10f), HudText.Duration(left), Ui.NumberStyle(16), Ui.TextLight);
                 }
-                if (it.Count > 1) HudDraw.Text(new Rect(r.x, r.yMax - 15f, r.width - 4f, 14f), HudText.Int(it.Count), HudStyles.TinyRight, Ui.TextLight);
+                if (it.Count > 1) HudDraw.Text(new Rect(r.x, r.yMax - 18f, r.width - 4f, 17f), HudText.Int(it.Count), HudStyles.TinyRight, Ui.TextLight);
                 if (HudDraw.Hover(r))
                 {
                     if (it.Tip == null)
@@ -634,8 +657,14 @@ namespace Lanternvale.Game
                 if (st.CastTime > 0.01f) time += " · cast " + HudText.Secs(st.CastTime) + " s (becomes pending if it does not fit)";
                 tip += "\n" + Ui.Rich(time, Ui.Time);
             }
+            if (sl.Shard)
+            {
+                int shards = Hud.SoulShards;
+                tip += "\n" + Ui.Rich("Consumes a Soul Shard — " + (shards == 1 ? "1 shard" : HudText.Int(shards) + " shards") + " in your bags.", shards > 0 ? ShardColor : Ui.Bad);
+            }
             if (st.Active) tip += "\n" + Ui.Rich("Active", Ui.Gold);
-            tip += "\n" + Ui.Rich("Hotkey " + HudText.Hotkey(index) + " · drag to rearrange · Shift+right-click resets the order", Hud.Muted);
+            string self = SelfCastable(sl.A.target) ? " · right-click casts on yourself" : "";
+            tip += "\n" + Ui.Rich("Hotkey " + HudText.Hotkey(index) + self + " · drag to rearrange · Shift+right-click resets the order", Hud.Muted);
             return tip;
         }
 

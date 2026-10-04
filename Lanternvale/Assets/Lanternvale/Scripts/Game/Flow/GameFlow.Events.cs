@@ -330,7 +330,7 @@ namespace Lanternvale.Game
             {
                 var v = ViewOf(u);
                 if (v == null) continue;
-                if (v.IsDowned) v.PlayRevive();
+                if (u.IsAlive && (v.IsDowned || v.IsDead)) v.PlayRevive();
                 FxSystem.HealSparkles(v.FeetPosition, v.Height);
             }
             Sfx.Play("heal");
@@ -502,7 +502,9 @@ namespace Lanternvale.Game
                 }
             }
 
-            // allies are back on their feet after a win; clear combat visuals
+            // allies are back on their feet after a win; clear combat visuals. Characters who died outright
+            // (Divine Intervention, a killing blow while downed) are in the death pose, faded out: the session
+            // brought them back at 1 HP without a Revive event, so stand them up as well.
             foreach (var kv in views)
             {
                 var u = kv.Key;
@@ -511,7 +513,7 @@ namespace Lanternvale.Game
                 v.SetTargetable(null);
                 v.SetActiveTurn(false);
                 v.StopCasting();
-                if (u.IsAlive && v.IsDowned) v.PlayRevive();
+                if (u.IsAlive && (v.IsDowned || v.IsDead)) v.PlayRevive();
             }
 
             if (s != null)

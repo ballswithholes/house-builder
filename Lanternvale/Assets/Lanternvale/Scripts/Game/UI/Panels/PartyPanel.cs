@@ -1,4 +1,4 @@
-// Party & camp roster (UiPanels.Party; opened from the Journal or the HUD): every recruited character with portrait,
+// Party & camp roster (UiPanels.Party; K, or the Journal's "Party & camp" button): every recruited character with portrait,
 // class and level, status (leader / in the party / at camp / away), approval; make leader, send to camp / join the
 // party (out of combat), companion auto-play (the AI plays their turns), dismiss with confirmation.
 using System;
@@ -13,7 +13,15 @@ namespace Lanternvale.Game.Panels
     public sealed class PartyPanel : PanelWindow
     {
         public override string Id => UiPanels.Party;
-        public override int Order => 124;
+        // above the journal (130) and the map (132), which it is opened from / centred over; below the talents (140)
+        public override int Order => 134;
+
+        public override void Tick(float dt)
+        {
+            // K toggles the roster (UiRoot's hotkey table has no entry for it); same gates as UiRoot.HandleHotkeys
+            if (!GameInput.KeyDown(KeyCode.K) || UiRoot.HotkeysSuppressed || !GameFlow.HasGame || UiRoot.ModalActive) return;
+            UiRoot.Toggle(Id);
+        }
 
         readonly PanelKit.ScrollState scroll = new PanelKit.ScrollState();
         readonly List<Unit> roster = new List<Unit>();

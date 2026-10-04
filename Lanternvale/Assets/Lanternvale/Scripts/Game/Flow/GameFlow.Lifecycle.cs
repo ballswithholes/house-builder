@@ -62,48 +62,85 @@ namespace Lanternvale.Game
         {
             float dt = Time.deltaTime;
             float unscaled = Time.unscaledDeltaTime;
-            UpdatePause();
-            try
+            // Every stage has its own guard: one stage that throws every frame (a broken out-of-combat special in
+            // Session.Tick, a bad pick…) must not freeze the others — the hotkeys (F5/F9) and the overlay (fades)
+            // in particular always run. Repeating errors are logged once (see LogStageOnce).
+            try { UpdatePause(); } catch (Exception e) { LogStageOnce("pause", e); }
+            if (!HasGame)
             {
-                if (!HasGame)
+                try { UpdateMenu(unscaled); } catch (Exception e) { LogStageOnce("menu", e); }
+            }
+            else
+            {
+                var s = Session;
+                // in combat only the play time advances: count real seconds, not the fast-forwarded presentation
+                if (!pausedByMenu)
                 {
-                    UpdateMenu(unscaled);
+                    try { s.Tick(s.Mode == SessionMode.Combat ? Mathf.Min(unscaled, 0.25f) : dt); }
+                    catch (Exception e) { LogStageOnce("session-tick", e); }
                 }
-                else
+                if (Session == s && HasGame)
                 {
-                    var s = Session;
-                    // in combat only the play time advances: count real seconds, not the fast-forwarded presentation
-                    if (!pausedByMenu) s.Tick(s.Mode == SessionMode.Combat ? Mathf.Min(unscaled, 0.25f) : dt);
-                    UpdateGlobalHotkeys();
-                    if (Session != s || !HasGame) { SyncGameRootMode(); return; }
-                    var mode = s.Mode;
-                    switch (mode)
+                    try { UpdateGlobalHotkeys(); } catch (Exception e) { LogStageOnce("hotkeys", e); }
+                }
+                // a quick load / main menu replaced the session: skip the per-mode work this frame
+                if (Session == s && HasGame)
+                {
+                    try
                     {
-                        case SessionMode.Exploration:
-                            UpdateExploration(dt);
-                            break;
-                        case SessionMode.Dialogue:
-                            UpdateDialogueCamera();
-                            break;
-                        case SessionMode.Combat:
-                            UpdateCombat(unscaled);
-                            break;
+                        switch (s.Mode)
+                        {
+                            case SessionMode.Exploration:
+                                UpdateExploration(dt);
+                                break;
+                            case SessionMode.Dialogue:
+                                UpdateDialogueCamera();
+                                break;
+                            case SessionMode.Combat:
+                                UpdateCombat(unscaled);
+                                break;
+                        }
                     }
-                    if (Session == s) UpdateHover(s.Mode);
-                    UpdateWorldTimers(dt);
+                    catch (Exception e) { LogStageOnce("mode:" + s.Mode, e); }
+                    if (Session == s)
+                    {
+                        try { UpdateHover(s.Mode); } catch (Exception e) { LogStageOnce("hover", e); }
+                    }
+                    try { UpdateWorldTimers(dt); } catch (Exception e) { LogStageOnce("world-timers", e); }
                 }
-                UpdateClock();
-                UpdateWanderers(dt);
-                UpdateDelayedRemovals(dt);
-                UpdateLanternSequence(dt);
-                UpdateOverlay(unscaled);
-                if (autosavePending) RunAutosave();
-                SyncGameRootMode();
             }
-            catch (Exception e)
+            try { UpdateClock(); } catch (Exception e) { LogStageOnce("clock", e); }
+            try { UpdateWanderers(dt); } catch (Exception e) { LogStageOnce("wanderers", e); }
+            try { UpdateDelayedRemovals(dt); } catch (Exception e) { LogStageOnce("removals", e); }
+            try { UpdateLanternSequence(dt); } catch (Exception e) { LogStageOnce("lanterns", e); }
+            try { UpdateOverlay(unscaled); } catch (Exception e) { LogStageOnce("overlay", e); }
+            if (autosavePending)
             {
-                Debug.LogException(e);
+                try { RunAutosave(); }
+                catch (Exception e) { autosavePending = false; LogStageOnce("autosave", e); }
             }
+            try { SyncGameRootMode(); } catch (Exception e) { LogStageOnce("root-mode", e); }
+        }
+
+        // stage errors already logged (stage + type + message) and how many distinct ones each stage logged
+        readonly HashSet<string> loggedStageErrors = new HashSet<string>();
+        readonly Dictionary<string, int> stageErrorCounts = new Dictionary<string, int>();
+        const int MaxDistinctErrorsPerStage = 6;
+
+        /// <summary>Logs a frame-loop exception once per stage/type/message (a stage failing every frame would
+        /// otherwise print ~60 stack traces a second); a stage stops logging after a few distinct errors.</summary>
+        void LogStageOnce(string stage, Exception e)
+        {
+            if (e == null) return;
+            string key = stage + "|" + e.GetType().FullName + "|" + e.Message;
+            if (loggedStageErrors.Contains(key)) return;
+            stageErrorCounts.TryGetValue(stage, out int n);
+            if (n >= MaxDistinctErrorsPerStage) return;
+            stageErrorCounts[stage] = n + 1;
+            loggedStageErrors.Add(key);
+            Debug.LogError("[Lanternvale] GameFlow stage '" + stage + "' failed (repeats of this error are not logged"
+                           + (n + 1 == MaxDistinctErrorsPerStage ? "; further errors of this stage are muted" : "") + "):");
+            Debug.LogException(e);
         }
 
         void UpdateCombat(float unscaledDt)
@@ -112,7 +149,7 @@ namespace Lanternvale.Game
             if (c != null)
             {
                 try { c.Update(unscaledDt); }
-                catch (Exception e) { Debug.LogException(e); }
+                catch (Exception e) { LogStageOnce("combat", e); }
                 // Selected follows the active unit when a turn of one of ours begins (the UI may select another
                 // member in between to inspect it)
                 var active = Combat != null ? Combat.ActiveUnit : null;
@@ -307,6 +344,12 @@ namespace Lanternvale.Game
             var old = Session;
             var s = CreateSession();
             int gen = worldGeneration;
+            // an autosave still pending for the old game (e.g. waiting for its opening conversation to end) must not
+            // write the new one over the 'auto' slot: only requests raised by the new session's own events survive
+            bool oldAutosave = autosavePending;
+            string oldAutosaveReason = autosaveReason;
+            autosavePending = false;
+            autosaveReason = "";
             Session = s;
             try
             {
@@ -317,16 +360,29 @@ namespace Lanternvale.Game
                 Debug.LogException(e);
                 Unsubscribe(s);
                 Session = old;
-                LastError = "Could not start a new game: " + e.Message;
+                autosavePending = oldAutosave;
+                autosaveReason = oldAutosaveReason;
+                string error = "Could not start a new game: " + e.Message;
                 if (old == null || old.Mode == SessionMode.None) ReturnToMainMenuInternal();
                 else if (gen != worldGeneration) RebuildWorld();   // the failed game had replaced the views: restore ours
+                LastError = error;   // after ReturnToMainMenuInternal, which clears it
                 Toast(LastError);
                 return;
             }
             if (old != null && old != s) Unsubscribe(old);
             if (MapView.Current == null || backdropActive) RebuildWorld();   // MapEntered normally did this already
             UiRoot.CloseAll();
+            CloseSessionBoundPrompts();
             combatFallbackLogged = false;
+        }
+
+        /// <summary>Closes UI that holds closures bound to the replaced session (a right-click context menu over an
+        /// item of the old bags). Yes/no prompts (ConfirmScreen) cannot be closed from outside: the quick save/load
+        /// hotkeys are ignored while one is open instead (see UpdateGlobalHotkeys).</summary>
+        static void CloseSessionBoundPrompts()
+        {
+            try { Panels.ContextMenuScreen.Close(); }
+            catch (Exception e) { Debug.LogException(e); }
         }
 
         string LoadFromSlotInternal(string slot)
@@ -349,6 +405,12 @@ namespace Lanternvale.Game
             if (Db == null) return "The game data is not loaded.";
             var old = Session;
             var s = CreateSession();
+            // a pending autosave belongs to the game being replaced (e.g. a new game still in its opening
+            // conversation): it must not write the loaded game over the 'auto' slot
+            bool oldAutosave = autosavePending;
+            string oldAutosaveReason = autosaveReason;
+            autosavePending = false;
+            autosaveReason = "";
             Session = s;
             bool ok;
             string error;
@@ -358,11 +420,14 @@ namespace Lanternvale.Game
             {
                 Unsubscribe(s);
                 Session = old;
+                autosavePending = oldAutosave;
+                autosaveReason = oldAutosaveReason;
                 return string.IsNullOrEmpty(error) ? "Load failed." : error;
             }
             if (old != null && old != s) Unsubscribe(old);
             if (MapView.Current == null || backdropActive) RebuildWorld();
             UiRoot.CloseAll();
+            CloseSessionBoundPrompts();
             combatFallbackLogged = false;
             return null;
         }
@@ -416,10 +481,14 @@ namespace Lanternvale.Game
 
         void ReturnToMainMenuInternal()
         {
+            // a refused save ("Cannot save during a conversation.") must not greet the player in red on the title
+            LastError = "";
             try
             {
                 if (Session != null) Unsubscribe(Session);
                 Session = null;
+                autosavePending = false;
+                autosaveReason = "";
                 DisposeWorld();
                 UiRoot.CloseAll();
                 if (pausedByMenu) pausedByMenu = false;
@@ -453,6 +522,12 @@ namespace Lanternvale.Game
             try { FxSystem.ClearAll(); } catch (Exception e) { Debug.LogException(e); }
             FloatingText.Clear();
             ClearBarks();
+            // a long-rest fade (and its pending wake-up) belongs to the old world: the next BeginFadeIn must apply
+            fadePhase = FadePhase.None;
+            restHoldHour = null;
+            fadeAlpha = 0f;
+            fadeHold = 0f;
+            flashAlpha = 0f;
             var rig = CameraRig.Instance;
             if (rig != null)
             {
@@ -460,7 +535,11 @@ namespace Lanternvale.Game
                 rig.Focus(null);
                 rig.ResetPan();
                 rig.AllowManualPan = true;
+                // leaving mid-conversation (load, travel, main menu): give the player's own zoom back
+                if (dialogueCamActive && zoomBeforeDialogue > 0f) rig.Zoom = zoomBeforeDialogue;
             }
+            dialogueCamActive = false;
+            zoomBeforeDialogue = -1f;
         }
     }
 }

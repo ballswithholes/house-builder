@@ -134,7 +134,12 @@ namespace Lanternvale.Game.Panels
         {
             var r = PanelKit.Centered(Mathf.Min(1160f, Ui.Width - 40f), Mathf.Min(860f, Ui.Height - 120f), -10f);
             var c = Chrome(r, "Journal");
-            if (Ui.Btn(new Rect(r.xMax - 260f, r.y + 16f, 190f, 38f), "Party & camp", PanelKit.SmallButton)) UiRoot.Open(UiPanels.Party);
+            // the roster is centred where the journal is: close the journal so it is not drawn on top of it
+            if (Ui.Btn(new Rect(r.xMax - 260f, r.y + 16f, 190f, 38f), "Party & camp", PanelKit.SmallButton, true, "Party & camp (K)"))
+            {
+                Close();
+                UiRoot.Open(UiPanels.Party);
+            }
             var listR = new Rect(c.x, c.y, 380f, c.height);
             var detailR = new Rect(listR.xMax + 24f, c.y, c.xMax - listR.xMax - 24f, c.height);
             PanelKit.Rounded(listR, new Color(0.55f, 0.42f, 0.25f, 0.07f));
@@ -314,10 +319,11 @@ namespace Lanternvale.Game.Panels
                 if (it == null) continue;
                 if (x + 250f > cw) { x = 0f; y += 62f; }
                 var rr = new Rect(x, y, 240f, 56f);
-                PanelKit.Rounded(rr, PanelKit.Hover(rr) ? PanelKit.RowHover : PanelKit.RowShade);
+                bool hover = PanelKit.Hover(rr);
+                PanelKit.Rounded(rr, hover ? PanelKit.RowHover : PanelKit.RowShade);
                 PanelKit.ItemIcon(new Rect(rr.x + 4f, rr.y + 4f, 48f, 48f), it);
                 PanelKit.Label(new Rect(rr.x + 60f, rr.y + 4f, rr.width - 64f, 48f), it.Name, PanelKit.TextSmall, PanelKit.QualityInk(it.Def.quality));
-                Ui.TooltipFor(rr, PanelKit.ItemTip(it, member, true, hint));
+                if (hover) Ui.TooltipFor(rr, PanelKit.ItemTip(it, member, true, hint));   // built only for the hovered item
                 x += 250f;
             }
             return y + 64f;

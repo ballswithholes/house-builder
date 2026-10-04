@@ -57,8 +57,9 @@ namespace Lanternvale.Game.Panels
         string[] LinesOf(SaveSlotInfo s)
         {
             if (lines.TryGetValue(s.Slot, out var l)) return l;
-            l = new string[4];
+            l = new string[5];   // title, line 1, line 2, date, portrait key
             l[0] = PanelKit.SlotDisplay(s.Slot);
+            l[4] = s.Header != null ? "portrait_" + s.Header.playerClass.ToString().ToLowerInvariant() : "";
             if (!Exists(s))
             {
                 l[1] = "Empty slot";
@@ -117,11 +118,7 @@ namespace Lanternvale.Game.Panels
             PanelKit.Rounded(row, sel ? PanelKit.RowSelected : hover ? PanelKit.RowHover : PanelKit.RowShade);
             var l = LinesOf(s);
             var pr = new Rect(row.x + 10f, row.y + 9f, 70f, 70f);
-            if (exists && s.Header != null)
-            {
-                string key = "portrait_" + s.Header.playerClass.ToString().ToLowerInvariant();
-                Ui.Portrait(pr, key, Ui.ClassColor(s.Header.playerClass));
-            }
+            if (exists && s.Header != null) Ui.Portrait(pr, l[4], Ui.ClassColor(s.Header.playerClass));
             else PanelKit.Tex(pr, Ui.GlyphTexture("book") ?? PanelArt.Diamond, new Color(0.17f, 0.13f, 0.22f, 0.18f), ScaleMode.ScaleToFit);
             float x = pr.xMax + 14f;
             float bw = SaveMode ? 230f : 230f;
@@ -257,7 +254,13 @@ namespace Lanternvale.Game.Panels
             PanelKit.Label(new Rect(r.x, y, 230f, 36f), "Dialogue text", PanelKit.Text);
             int nt = Segments(new Rect(r.x + 240f, y, r.width - 240f, 36f), TextLabels, ti, "How quickly dialogue lines are written out (click to finish a line).");
             if (nt != ti) PanelPrefs.TextSpeed = TextSpeeds[nt];
-            y += 52f;
+            y += 46f;
+            // remembered across fights (PlayerPrefs, see CombatController.ShowMoveRangeSetting); a running fight follows it
+            bool showRange = CombatController.ShowMoveRangeSetting;
+            bool mr = Toggle(new Rect(r.x, y, r.width, 34f), "Show the movement range in combat", showRange,
+                "Shades the ground the active character can still reach this turn.");
+            if (mr != showRange) CombatController.ShowMoveRangeSetting = mr;
+            y += 46f;
 
             var s = PanelKit.Sess;
             if (GameFlow.HasGame && s != null && s.Settings != null)
@@ -274,13 +277,6 @@ namespace Lanternvale.Game.Panels
                 v = Toggle(new Rect(r.x, y, r.width, 34f), "Companions spend their talent points automatically", st.AutoAllocateCompanionTalents);
                 if (v != st.AutoAllocateCompanionTalents) { bool nv = v; PanelKit.Do(() => st.AutoAllocateCompanionTalents = nv); }
                 y += 40f;
-                var c = f != null ? f.Combat : null;
-                if (c != null)
-                {
-                    bool mr = Toggle(new Rect(r.x, y, r.width, 34f), "Show the movement range in combat", c.ShowMoveRange);
-                    if (mr != c.ShowMoveRange) c.ShowMoveRange = mr;
-                    y += 40f;
-                }
             }
         }
 
