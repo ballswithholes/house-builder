@@ -16,6 +16,11 @@
             {"text": "How are you holding up?", "next": "ka_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
             {"text": "Tell me about Isolde.", "next": "ka_lore"},
             {
+              "text": "What happened at the top of the stair, ten years ago?",
+              "next": "ka_top",
+              "conditions": [{"type": "Companion", "key": "kael", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ka_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "recruited_kael"}]
@@ -48,6 +53,11 @@
           "choices": [
             {"text": "Tell me about Isolde.", "next": "ka_lore"},
             {
+              "text": "What happened at the top of the stair, ten years ago?",
+              "next": "ka_top",
+              "conditions": [{"type": "Companion", "key": "kael", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ka_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "recruited_kael"}]
@@ -56,6 +66,13 @@
           ]
         },
         {"id": "ka_dismissed", "speaker": "kael", "text": "Hmph. I'll be at the Sleepy Lantern. Don't take long."},
+        {
+          "id": "ka_top",
+          "speaker": "kael",
+          "text": "*He's quiet a long time.* She lit the Heart, and it took everything she had, and she smiled while it did. I've hated that smile for ten years. *A breath.* ...I think she was smiling at me. Telling me it was alright.",
+          "outcomes": [{"type": "Approval", "key": "kael", "amount": 3}],
+          "next": "ka_party_hub"
+        },
         {
           "id": "ka_met",
           "speaker": "kael",
@@ -665,6 +682,11 @@
             {"text": "How are you holding up?", "next": "se_banter", "conditions": [{"type": "NotFlag", "key": "lanterns_rekindled"}]},
             {"text": "Tell me about your pilgrimage.", "next": "se_lore"},
             {
+              "text": "What will you do at the top of the stair?",
+              "next": "se_top",
+              "conditions": [{"type": "Companion", "key": "seren", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
@@ -697,6 +719,11 @@
           "choices": [
             {"text": "Tell me about your pilgrimage.", "next": "se_lore"},
             {
+              "text": "What will you do at the top of the stair?",
+              "next": "se_top",
+              "conditions": [{"type": "Companion", "key": "seren", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
@@ -705,6 +732,13 @@
           ]
         },
         {"id": "se_dismissed", "speaker": "seren", "text": "Of course. I'll wait at the Wayside Shrine. Komorebi likes the company."},
+        {
+          "id": "se_top",
+          "speaker": "seren",
+          "text": "Kneel, pray, and give the Heart what it asks. That's the rite. *She turns the staff in her hands until its rings chime.* ...But if you find another way before we get there — please. Please tell me.",
+          "outcomes": [{"type": "SetFlag", "key": "seren_hopes"}, {"type": "Approval", "key": "seren", "amount": 3}],
+          "next": "se_party_hub"
+        },
         {
           "id": "se_met",
           "speaker": "seren",
