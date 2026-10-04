@@ -12,7 +12,7 @@
         {
           "id": "elder",
           "description": "Speak with Elder Maru beneath Old Kusu, the great camphor tree in the village square.",
-          "objectives": [{"type": "Talk", "target": "elder_maru", "text": "Speak with Elder Maru"}],
+          "objectives": [{"type": "Flag", "target": "met_elder", "text": "Speak with Elder Maru"}],
           "next": "wayshrine"
         },
         {
@@ -25,7 +25,7 @@
         {
           "id": "komorebi",
           "description": "Learn what has happened to the Wayside Shrine's lantern from the spirit who keeps it.",
-          "objectives": [{"type": "Talk", "target": "komorebi", "text": "Speak with the Wayside spirit"}],
+          "objectives": [{"type": "Flag", "target": "met_komorebi", "text": "Speak with the Wayside spirit"}],
           "next": "embers"
         },
         {
@@ -38,7 +38,7 @@
         {
           "id": "embers_return",
           "description": "Bring the Spirit Embers to Komorebi at the Wayside Shrine.",
-          "objectives": [{"type": "Talk", "target": "komorebi", "text": "Return to Komorebi"}],
+          "objectives": [{"type": "Flag", "target": "embers_gathered", "text": "Return to Komorebi"}],
           "next": "rotheart"
         },
         {
@@ -103,7 +103,7 @@
         {
           "id": "report",
           "description": "Tell Bram the pasture is clear.",
-          "objectives": [{"type": "Talk", "target": "shepherd_bram", "text": "Speak with Bram"}],
+          "objectives": [{"type": "Flag", "target": "shepherd_hunt", "text": "Speak with Bram"}],
           "next": "greymane"
         },
         {
@@ -157,7 +157,7 @@
         {
           "id": "return",
           "description": "Bring the wicks back to Tobben in Lanternvale.",
-          "objectives": [{"type": "Talk", "target": "lamplighter_tobben", "text": "Return to Tobben"}]
+          "objectives": [{"type": "Flag", "target": "wicks_returned", "text": "Return to Tobben"}]
         }
       ],
       "rewards": {"xp": 800, "gold": 250, "choiceItems": ["lamplighters_gloves", "wayfarers_chain_boots", "mossy_cloak"]}
@@ -184,7 +184,7 @@
         {
           "id": "deliver",
           "description": "Deliver Keeper Ishiro's letter to Elder Maru.",
-          "objectives": [{"type": "Talk", "target": "elder_maru", "text": "Deliver the letter to Elder Maru"}]
+          "objectives": [{"type": "Flag", "target": "ishiro_letter_read", "text": "Deliver the letter to Elder Maru"}]
         }
       ],
       "rewards": {"xp": 750, "gold": 300, "choiceItems": ["couriers_swift_cloak", "willow_ring", "cutpurses_signet"]}

@@ -51,7 +51,7 @@ namespace Lanternvale.Rules
                 var a = b.Db.Ability(kv.Key);
                 if (a == null || a.passive || a.autoAttack || a.id == "help_up") continue;
                 if (a.nextSwing && u.QueuedSwing == a.id) continue;
-                if (u.AIMemory.UsedCount(a.id) > 0 && AbilityRules.TimeCost(u, a, AbilityMods.Empty) <= 0f && a.cooldown <= 0) continue;
+                if (u.AIMemory.UsedCount(a.id) > 0 && AbilityRules.TimeCost(u, a, AbilityModSet.Empty) <= 0f && a.cooldown <= 0) continue;
                 foreach (var c in Candidates(b, u, a, enemies, allies, focus, role))
                 {
                     if (c.Score <= 0 || Failed(u, a, c.Target)) continue;
@@ -201,7 +201,6 @@ namespace Lanternvale.Rules
             {
                 string el = TotemElementOf(b, a);
                 if (u.Totems.TryGetValue(el, out var have) && have != null && have.IsAlive && have.DistanceTo(u) < MathUtil.Yd(20f)) yield break;
-                if (u.AIMemory.UsedCount("totem:" + el) > 0) yield break;
                 yield return new Candidate { Ability = a, Target = u, Point = u.Position, Score = basePri + 3f, Why = "totem " + el };
                 yield break;
             }
@@ -286,7 +285,7 @@ namespace Lanternvale.Rules
                 case "Finisher":
                 {
                     if (focus == null) break;
-                    int cp = b.ComboPointsOnPublic(u, focus);
+                    int cp = b.ComboPointsOn(u, focus);
                     float s = 0f;
                     if (cp >= 5) s = basePri + 7f;
                     else if (cp >= 3 && focus.HealthPct < 30f) s = basePri + 4f;
@@ -322,7 +321,6 @@ namespace Lanternvale.Rules
                     bool pet = false;
                     foreach (var e in a.effects) if (e.type == EffectType.Summon) { var cr = b.Db.Creature(e.summon); pet = cr != null && cr.rank == CreatureRank.Pet && e.lifetime < 0; }
                     if (pet && u.Pet != null && !u.Pet.Dead) break;
-                    if (pet && u.AIMemory.UsedCount("summon") > 0) break;
                     yield return new Candidate { Ability = a, Target = a.target == TargetType.Enemy ? focus : u, Point = focus?.Position, Score = pet ? 17f : basePri + 2f, Why = "summon" };
                     break;
                 }
@@ -383,7 +381,7 @@ namespace Lanternvale.Rules
                         if (t.IsTotem && enemies.Count > 1) continue;
                         if (t.HasStateAura(UnitState.Polymorph) || t.HasStateAura(UnitState.Incapacitate) || t.HasStateAura(UnitState.Sleep)) continue;
                         float s = basePri * (t == focus ? 1.3f : 1f) * castPenalty;
-                        if (a.generatesComboPoint) s = b.ComboPointsOnPublic(u, t) >= 5 ? s * 0.2f : s + 2f;
+                        if (a.generatesComboPoint) s = b.ComboPointsOn(u, t) >= 5 ? s * 0.2f : s + 2f;
                         if (a.special == "Shoot") s = 1.2f;
                         if (role == UnitRole.Tank && a.effects.Exists(e => e.threat > 0)) s += 2f;
                         s *= ThreatFactor(b, u, t, tank, role);

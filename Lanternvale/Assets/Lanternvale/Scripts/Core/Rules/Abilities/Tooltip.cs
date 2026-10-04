@@ -227,7 +227,7 @@ namespace Lanternvale.Rules
                 sb.Append('\n');
                 float cast = u != null ? AbilityRules.CastTime(u, a, mods) : a.castTime;
                 sb.Append(a.channeled ? $"Channeled ({N(cast)} sec)" : cast > 0 ? $"{N(cast)} sec cast" : "Instant");
-                float cd = AbilityRules.Cooldown(u ?? new Unit(null), a, mods);
+                float cd = Math.Max(0f, a.cooldown + mods.Cooldown);
                 if (cd > 0) sb.Append($"   {N(cd)} sec cooldown");
                 sb.Append('\n');
             }

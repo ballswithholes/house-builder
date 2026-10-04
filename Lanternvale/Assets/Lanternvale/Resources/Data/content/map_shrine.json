@@ -47,8 +47,20 @@
           "pos": [9.0, 9.8],
           "text": "The vermilion gate of the Old Lantern Shrine. Above it, the stair climbs into dusk, lined with dark lanterns."
         },
-        {"art": "prop_spirit_lantern_dark", "pos": [7.0, 8.6], "collider": {"w": 0.9, "h": 0.5}},
-        {"art": "prop_spirit_lantern_dark", "pos": [11.2, 8.6], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [7.0, 8.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_20",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [11.2, 8.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_21",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
         {
           "art": "prop_spirit_statue",
           "pos": [14.6, 11.6],
@@ -66,7 +78,13 @@
         {"art": "prop_rock_small", "pos": [2.0, 1.4]},
         {"art": "prop_tree_pine", "pos": [1.2, 9.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_bush_b", "pos": [15.0, 1.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
-        {"art": "prop_spirit_lantern_dark", "pos": [23.4, 9.8], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [23.4, 9.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_29",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
         {"art": "prop_spirit_statue", "pos": [24.2, 12.0], "collider": {"w": 0.8, "h": 0.5}},
         {"art": "prop_ruin_arch", "pos": [32.0, 12.8]},
         {
@@ -81,12 +99,36 @@
           "collider": {"w": 1.2, "h": 0.7},
           "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
         },
-        {"art": "prop_spirit_lantern_dark", "pos": [34.6, 10.4], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [34.6, 10.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_34",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
         {"art": "prop_tree_dead", "pos": [27.0, 13.4], "collider": {"w": 1.0, "h": 0.6}},
         {"art": "prop_rock_large", "pos": [39.4, 1.2], "collider": {"w": 2.0, "h": 1.0}},
-        {"art": "prop_spirit_lantern_dark", "pos": [41.0, 11.6], "collider": {"w": 0.9, "h": 0.5}},
-        {"art": "prop_spirit_lantern_dark", "pos": [43.6, 12.0], "collider": {"w": 0.9, "h": 0.5}},
-        {"art": "prop_spirit_lantern_dark", "pos": [46.2, 11.6], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [41.0, 11.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_37",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [43.6, 12.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_38",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [46.2, 11.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_39",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
         {"art": "prop_ruin_pillar", "pos": [40.0, 13.2], "collider": {"w": 1.1, "h": 0.6}},
         {"art": "prop_ruin_pillar", "pos": [48.6, 13.4], "collider": {"w": 1.1, "h": 0.6}},
         {
@@ -133,8 +175,8 @@
         {"art": "fg_grass_a", "pos": [66, -0.3], "sway": true}
       ],
       "npcs": [
-        {"npc": "torvan", "pos": [12.6, 7.6], "flip": true, "hideFlag": "torvan_recruited"},
-        {"npc": "morwen", "pos": [18.8, 11.0], "hideFlag": "morwen_recruited"},
+        {"npc": "torvan", "pos": [12.6, 7.6], "flip": true, "hideFlag": "recruited_torvan"},
+        {"npc": "morwen", "pos": [18.8, 11.0], "hideFlag": "recruited_morwen"},
         {"npc": "warden_spirit", "pos": [62.0, 9.4], "requireFlag": "warden_defeated"}
       ],
       "encounters": [

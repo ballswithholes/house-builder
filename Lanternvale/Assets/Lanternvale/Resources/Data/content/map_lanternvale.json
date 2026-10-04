@@ -98,20 +98,24 @@
           "pos": [27.4, 9.8],
           "scale": 1.15,
           "collider": {"w": 1.03, "h": 0.57},
-          "interact": "great_lantern",
+          "interact": "great_lantern_twin",
           "text": "A twin of the great lantern, dark as a closed eye."
         },
         {
           "art": "prop_spirit_lantern",
           "pos": [19.6, 9.2],
           "collider": {"w": 0.9, "h": 0.5},
-          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "lantern_lanternvale_39",
+          "text": "A spirit-lantern, still glowing honey-gold. For now."
         },
         {
           "art": "prop_spirit_lantern",
           "pos": [31.4, 9.0],
           "collider": {"w": 0.9, "h": 0.5},
-          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "lantern_lanternvale_40",
+          "text": "A spirit-lantern, still glowing honey-gold. For now."
         },
         {
           "art": "prop_noticeboard",
@@ -235,12 +239,12 @@
         {"npc": "child_nell", "pos": [21.6, 6.6]},
         {"npc": "moppet", "pos": [22.4, 7.0], "requireFlag": "moppet_found"},
         {"npc": "lamplighter_tobben", "pos": [28.8, 9.0], "flip": true},
-        {"npc": "aldric", "pos": [30.0, 6.6], "flip": true, "hideFlag": "aldric_recruited"},
+        {"npc": "aldric", "pos": [30.0, 6.6], "flip": true, "hideFlag": "recruited_aldric"},
         {"npc": "child_toby", "pos": [35.2, 6.4], "flip": true},
         {"npc": "merchant_tilly", "pos": [40.0, 3.6]},
         {"npc": "innkeeper_dorrit", "pos": [43.0, 8.8]},
-        {"npc": "kael", "pos": [47.4, 9.1], "flip": true, "hideFlag": "kael_recruited"},
-        {"npc": "pip", "pos": [52.0, 3.7], "hideFlag": "pip_recruited"},
+        {"npc": "kael", "pos": [47.4, 9.1], "flip": true, "hideFlag": "recruited_kael"},
+        {"npc": "pip", "pos": [52.0, 3.7], "hideFlag": "recruited_pip"},
         {"npc": "smith_garrow", "pos": [55.2, 8.6]},
         {"npc": "armorer_bess", "pos": [58.8, 8.6], "flip": true},
         {"npc": "trainer_odo", "pos": [63.6, 8.2]},
@@ -264,7 +268,7 @@
           "id": "enc_pasture_wolves",
           "pos": [85.2, 11.4],
           "radius": 3.2,
-          "enemies": [{"creature": "cr_wolf", "pos": [84.4, 12.2]}, {"creature": "cr_wolf", "pos": [86.4, 12.6]}, {"creature": "cr_wolf", "pos": [86.8, 10.8]}],
+          "enemies": [{"creature": "cr_wolf", "pos": [84.8, 11.6]}, {"creature": "cr_wolf", "pos": [86.4, 12.6]}, {"creature": "cr_wolf", "pos": [86.8, 10.8]}],
           "requireFlag": "shepherd_quest",
           "doneFlag": "pasture_wolves_done"
         }

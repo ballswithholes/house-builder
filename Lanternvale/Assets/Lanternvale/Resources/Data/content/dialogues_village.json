@@ -169,8 +169,15 @@
               "conditions": [{"type": "HasItem", "key": "ishiro_letter", "amount": 1}]
             },
             {"text": "How is everyone?", "next": "e_post2"},
+            {"text": "Keeper Ishiro is at peace now.", "next": "e_ishiro", "conditions": [{"type": "Flag", "key": "ishiro_at_peace"}], "once": true},
             {"text": "Goodbye."}
           ]
+        },
+        {
+          "id": "e_ishiro",
+          "speaker": "elder_maru",
+          "text": "*She is quiet for a long moment.* Then he's finally on time for something. *She laughs, and wipes her eyes with the back of her pipe hand.* Thank you for telling me.",
+          "choices": [{"text": "Goodbye."}]
         },
         {
           "id": "e_post2",
@@ -497,7 +504,7 @@
             {
               "text": "Who's the man in the red coat outside?",
               "next": "i_kael",
-              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+              "conditions": [{"type": "NotFlag", "key": "recruited_kael"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
             },
             {
               "text": "Any chance of a discount for a hero-in-training?",
@@ -519,7 +526,7 @@
             {
               "text": "Who's the man in the red coat outside?",
               "next": "i_kael",
-              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+              "conditions": [{"type": "NotFlag", "key": "recruited_kael"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
             },
             {
               "text": "Any chance of a discount for a hero-in-training?",
@@ -541,7 +548,7 @@
             {
               "text": "Who's the man in the red coat outside?",
               "next": "i_kael",
-              "conditions": [{"type": "NotFlag", "key": "kael_recruited"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
+              "conditions": [{"type": "NotFlag", "key": "recruited_kael"}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
             },
             {
               "text": "Any chance of a discount for a hero-in-training?",
@@ -1201,8 +1208,7 @@
                 {"type": "NotFlag", "key": "bandits_scared"},
                 {"type": "NotFlag", "key": "bandits_paid"}
               ]
-            },
-            {"text": "Not yet."}
+            }
           ]
         },
         {
@@ -1320,7 +1326,7 @@
           "text": "Is it done? Is he...?",
           "conditions": [{"type": "QuestState", "key": "sq_shepherd", "value": "return"}],
           "fallback": "b_greymane",
-          "choices": [{"text": "Greymane won't trouble your flock again.", "next": "b_ret2"}, {"text": "Not yet."}]
+          "choices": [{"text": "Greymane won't trouble your flock again.", "next": "b_ret2"}]
         },
         {
           "id": "b_ret2",
@@ -1561,8 +1567,12 @@
               "next": "t_ret_friend",
               "conditions": [{"type": "HasItem", "key": "lantern_wick", "amount": 6}, {"type": "Flag", "key": "mosslings_befriended"}]
             },
-            {"text": "Here. Six wicks, slightly nibbled.", "next": "t_ret", "conditions": [{"type": "HasItem", "key": "lantern_wick", "amount": 6}]},
-            {"text": "Not yet."}
+            {
+              "text": "Here. Six wicks, slightly nibbled.",
+              "next": "t_ret",
+              "conditions": [{"type": "HasItem", "key": "lantern_wick", "amount": 6}, {"type": "NotFlag", "key": "mosslings_befriended"}]
+            },
+            {"text": "Not yet.", "conditions": [{"type": "NotHasItem", "key": "lantern_wick", "amount": 6}]}
           ]
         },
         {
@@ -1571,6 +1581,7 @@
           "text": "...A lantern of their own. Forty years I've shooed them off my stores, and they only wanted the same as the rest of us. I'll hang one for them at the forest edge. Light's for everyone.",
           "outcomes": [
             {"type": "TakeItem", "key": "lantern_wick", "amount": 6},
+            {"type": "SetFlag", "key": "wicks_returned"},
             {"type": "CompleteQuest", "key": "sq_wicks"},
             {"type": "Approval", "key": "seren", "amount": 5},
             {"type": "Approval", "key": "rook", "amount": 3}
@@ -1581,7 +1592,11 @@
           "id": "t_ret",
           "speaker": "lamplighter_tobben",
           "text": "Slightly nibbled! They nibble everything. Thank you — I'll have these trimmed and back in their lanterns by nightfall.",
-          "outcomes": [{"type": "TakeItem", "key": "lantern_wick", "amount": 6}, {"type": "CompleteQuest", "key": "sq_wicks"}],
+          "outcomes": [
+            {"type": "TakeItem", "key": "lantern_wick", "amount": 6},
+            {"type": "SetFlag", "key": "wicks_returned"},
+            {"type": "CompleteQuest", "key": "sq_wicks"}
+          ],
           "next": "t_thanks"
         },
         {

@@ -1704,7 +1704,7 @@ def chest(cv, cx, by, s, r, opened=False):
             coins.append(ellipse(cx - W * 0.3 + r.random() * W * 0.8, by - H * 1.05 - r.random() * H * 0.25, s * 0.06, s * 0.035, 0, 12))
         mc = cv.polys_mask(coins)
         paint(cv, mc, P.HONEY, line=0.7, line_w=0.8, soft=2, hi=0.8, gloss=0.6, ao=0)
-        glow(cv, cx, by - H * 1.3, s * 0.9, P.LANTERN, 0.5, clip=False, falloff=2.5)
+        glow(cv, cx, by - H * 1.1, s * 0.5, P.LANTERN, 0.6, clip=True, falloff=1.5)
         lid = A([(cx - W * 0.5, by - H * 1.22), (cx + W * 0.66, by - H * 1.42), (cx + W * 0.6, by - H * 2.0), (cx + W * 0.45, by - H * 2.12),
                  (cx - W * 0.42, by - H * 1.92), (cx - W * 0.56, by - H * 1.7)])
         part(cv, lid, P.mix(P.WOOD, P.TERRACOTTA, 0.3), line=0.9, soft=8, tex=wood_tex(cv, "lid"), hi=0.4)
@@ -1884,7 +1884,7 @@ def prop_blight_crystal(key="prop_blight_crystal"):
     flat_fill(cv, stain, P.BLIGHT_DK, 0.6)
     crystal_cluster(cv, 256, 494, 300, r, key + "a", n=5, glow_amt=0.8)
     crystal_cluster(cv, 120, 498, 140, r, key + "b", n=3)
-    crystal_cluster(cv, 392, 498, 160, r, key + "c", n=3)
+    crystal_cluster(cv, 378, 498, 150, r, key + "c", n=3)
     return done(cv, 2.4)
 
 
@@ -1947,6 +1947,19 @@ def prop_bridge(key="prop_bridge"):
 # ----------------------------------------------------------------------------------------
 # registration
 # ----------------------------------------------------------------------------------------
+# base line (design y of the ground contact) per prop; pivot y = 1 - base / height
+BASE = {
+    "prop_cottage_a": 960, "prop_cottage_b": 975, "prop_cottage_c": 965, "prop_inn": 975, "prop_shop_stall": 488,
+    "prop_smithy": 486, "prop_windmill": 1000, "prop_well": 490, "prop_fence": 237, "prop_lamp_post": 496,
+    "prop_spirit_lantern": 492, "prop_spirit_lantern_dark": 492, "prop_tree_oak": 990, "prop_tree_pine": 1000,
+    "prop_tree_birch": 1000, "prop_tree_great": 1004, "prop_tree_dead": 504, "prop_bush_a": 246, "prop_bush_b": 246,
+    "prop_rock_large": 494, "prop_rock_small": 122, "prop_stump": 244, "prop_log": 236, "prop_cart": 492, "prop_barrel": 246,
+    "prop_crate": 246, "prop_hay": 244, "prop_signpost": 500, "prop_noticeboard": 500, "prop_bench": 240, "prop_campfire": 236,
+    "prop_tent": 494, "prop_chest": 234, "prop_chest_open": 234, "prop_mushrooms": 238, "prop_ruin_pillar": 500,
+    "prop_ruin_arch": 500, "prop_shrine_gate": 1000, "prop_spirit_statue": 500, "prop_blight_crystal": 494,
+    "prop_banner": 502, "prop_bridge": 470,
+}
+
 PROPS = {
     # key: (fn, (w,h), catalogue height m)
     "prop_cottage_a": (prop_cottage_a, (1024, 1024), 6.0),
@@ -2003,6 +2016,6 @@ def _one(fn, key):
 def register(reg):
     for k, (fn, size, h) in PROPS.items():
         # pivot: bottom of the painted base line (props stand ~3-6% above the image bottom)
-        piv_y = {256: 0.05, 128: 0.05, 512: 0.035, 1024: 0.035}[size[1]]
+        piv_y = round(1.0 - BASE[k] / float(size[1]), 4)
         reg.spec(k, "Prop", size=size, measure=h, pivot=(0.5, piv_y), shadow=k not in NO_SHADOW)
         reg.job([k], _one, fn, k)

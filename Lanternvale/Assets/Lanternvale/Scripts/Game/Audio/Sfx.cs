@@ -12,6 +12,13 @@ namespace Lanternvale.Game
         static Dictionary<string, AudioClip> clips;
         static SfxPlayer player;
         static readonly HashSet<string> warned = new HashSet<string>();
+        static volatile Dictionary<string, float[]> readyPcm;
+        static volatile bool generating;
+        static readonly List<string> genErrors = new List<string>();
+        static float genStart;
+
+        /// <summary>True once the clips exist (synthesis runs on a worker thread for a fraction of a second after boot).</summary>
+        public static bool Ready => clips != null;
 
         /// <summary>All synthesized effect ids.</summary>
         public static readonly string[] Ids =
@@ -25,11 +32,18 @@ namespace Lanternvale.Game
         public static void Init()
         {
             if (clips != null && player != null) return;
-            if (clips == null)
+            if (clips == null && !generating)
             {
-                float t0 = Time.realtimeSinceStartup;
-                clips = SfxSynth.GenerateAll();
-                Debug.Log($"[Lanternvale] Synthesized {clips.Count} sound effects in {(Time.realtimeSinceStartup - t0) * 1000f:0} ms.");
+                generating = true;
+                genStart = Time.realtimeSinceStartup;
+                if (Application.platform == RuntimePlatform.WebGLPlayer)
+                    readyPcm = SfxSynth.GeneratePcm(genErrors);
+                else
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        try { readyPcm = SfxSynth.GeneratePcm(genErrors); }
+                        catch (System.Exception e) { lock (genErrors) genErrors.Add(e.Message); readyPcm = new Dictionary<string, float[]>(); }
+                    });
             }
             if (player == null)
             {
@@ -39,6 +53,21 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>Main thread: turns finished PCM into AudioClips (called by SfxPlayer.Update).</summary>
+        internal static void PollReady()
+        {
+            if (clips != null) return;
+            var pcm = readyPcm;
+            if (pcm == null) return;
+            var d = new Dictionary<string, AudioClip>(System.StringComparer.Ordinal);
+            foreach (var kv in pcm) d[kv.Key] = SynthBuffer.ToClip("sfx_" + kv.Key, kv.Value);
+            clips = d;
+            readyPcm = null;
+            Debug.Log($"[Lanternvale] Synthesized {clips.Count} sound effects ({(Time.realtimeSinceStartup - genStart) * 1000f:0} ms, worker thread).");
+            lock (genErrors)
+                foreach (var e in genErrors) Debug.LogWarning("[Lanternvale] sfx synthesis failed: " + e);
+        }
+
         /// <summary>Plays an effect. worldPos (optional) pans it and softens it when off-screen.</summary>
         public static void Play(string id, Vector2? worldPos = null) => Play(id, worldPos, 1f, 1f);
 
@@ -46,8 +75,9 @@ namespace Lanternvale.Game
         public static void Play(string id, Vector2? worldPos, float volume, float pitch)
         {
             if (string.IsNullOrEmpty(id)) return;
-            if (clips == null || player == null) GameAudio.Init();
-            if (clips == null || player == null) return;
+            if (player == null) GameAudio.Init();
+            if (clips == null) PollReady();
+            if (clips == null || player == null) return; // still synthesizing (first fraction of a second)
             if (!clips.TryGetValue(id, out var clip))
             {
                 id = Alias(id);
@@ -136,6 +166,7 @@ namespace Lanternvale.Game
 
         void Update()
         {
+            if (!Sfx.Ready) Sfx.PollReady();
             var cam = PresentationHost.Cam;
             if (cam != listenerCheckedFor)
             {

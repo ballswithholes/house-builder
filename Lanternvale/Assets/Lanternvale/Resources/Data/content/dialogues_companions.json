@@ -18,7 +18,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ka_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "kael_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "recruited_kael"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -50,7 +50,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ka_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "kael_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "kael"}, {"type": "ClearFlag", "key": "recruited_kael"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -170,7 +170,7 @@
           "id": "ka_join",
           "speaker": "narrator",
           "text": "*Kael shoulders the greatsword and falls in beside you without another word.*",
-          "outcomes": [{"type": "Recruit", "key": "kael"}, {"type": "SetFlag", "key": "kael_recruited"}, {"type": "SetFlag", "key": "kael_met"}]
+          "outcomes": [{"type": "Recruit", "key": "kael"}, {"type": "SetFlag", "key": "kael_met"}]
         }
       ]
     },
@@ -191,7 +191,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "al_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "aldric_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "recruited_aldric"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -223,7 +223,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "al_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "aldric_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "aldric"}, {"type": "ClearFlag", "key": "recruited_aldric"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -316,7 +316,7 @@
           "id": "al_join",
           "speaker": "narrator",
           "text": "*Aldric whoops, salutes, very nearly brains himself with the hammer, and falls into step beside you.*",
-          "outcomes": [{"type": "Recruit", "key": "aldric"}, {"type": "SetFlag", "key": "aldric_recruited"}, {"type": "SetFlag", "key": "aldric_met"}]
+          "outcomes": [{"type": "Recruit", "key": "aldric"}, {"type": "SetFlag", "key": "aldric_met"}]
         }
       ]
     },
@@ -337,7 +337,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "pi_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "pip_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "recruited_pip"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -369,7 +369,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "pi_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "pip_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "pip"}, {"type": "ClearFlag", "key": "recruited_pip"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -493,7 +493,7 @@
           "id": "pi_join",
           "speaker": "narrator",
           "text": "*Pip snaps her goggles down over her eyes and bounces into line beside you.*",
-          "outcomes": [{"type": "Recruit", "key": "pip"}, {"type": "SetFlag", "key": "pip_recruited"}, {"type": "SetFlag", "key": "pip_met"}]
+          "outcomes": [{"type": "Recruit", "key": "pip"}, {"type": "SetFlag", "key": "pip_met"}]
         }
       ]
     },
@@ -514,7 +514,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ro_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "rook_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "recruited_rook"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -546,7 +546,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ro_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "rook_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "rook"}, {"type": "ClearFlag", "key": "recruited_rook"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -646,7 +646,7 @@
           "id": "ro_join",
           "speaker": "narrator",
           "text": "*Rook stamps out the fire, slings his bow over his shoulder and whistles. Tide bounds to his side, tail up like a flag.*",
-          "outcomes": [{"type": "Recruit", "key": "rook"}, {"type": "SetFlag", "key": "rook_recruited"}, {"type": "SetFlag", "key": "rook_met"}]
+          "outcomes": [{"type": "Recruit", "key": "rook"}, {"type": "SetFlag", "key": "rook_met"}]
         }
       ]
     },
@@ -667,7 +667,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "seren_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -699,7 +699,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "seren_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -799,7 +799,7 @@
           "id": "se_join",
           "speaker": "narrator",
           "text": "*Seren rises, brushes the moss from her robes and lifts her staff. Its rings chime, clear and bright, like the first step of a long road.*",
-          "outcomes": [{"type": "Recruit", "key": "seren"}, {"type": "SetFlag", "key": "seren_recruited"}, {"type": "SetFlag", "key": "seren_met"}]
+          "outcomes": [{"type": "Recruit", "key": "seren"}, {"type": "SetFlag", "key": "seren_met"}]
         }
       ]
     },
@@ -820,7 +820,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ly_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "lys_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "recruited_lys"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -852,7 +852,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "ly_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "lys_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "lys"}, {"type": "ClearFlag", "key": "recruited_lys"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -970,7 +970,7 @@
           "id": "ly_join",
           "speaker": "narrator",
           "text": "*Lys tucks the notebook into one of her many belts and takes up her staff. Inside the orb, a small storm wakes and pays attention.*",
-          "outcomes": [{"type": "Recruit", "key": "lys"}, {"type": "SetFlag", "key": "lys_recruited"}, {"type": "SetFlag", "key": "lys_met"}]
+          "outcomes": [{"type": "Recruit", "key": "lys"}, {"type": "SetFlag", "key": "lys_met"}]
         }
       ]
     },
@@ -991,7 +991,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "to_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "torvan_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "recruited_torvan"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -1023,7 +1023,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "to_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "torvan_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "torvan"}, {"type": "ClearFlag", "key": "recruited_torvan"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -1134,7 +1134,7 @@
           "id": "to_join",
           "speaker": "narrator",
           "text": "*Torvan pulls his staff from the earth. The charms on his horns clack softly, like distant stones.*",
-          "outcomes": [{"type": "Recruit", "key": "torvan"}, {"type": "SetFlag", "key": "torvan_recruited"}, {"type": "SetFlag", "key": "torvan_met"}]
+          "outcomes": [{"type": "Recruit", "key": "torvan"}, {"type": "SetFlag", "key": "torvan_met"}]
         }
       ]
     },
@@ -1155,7 +1155,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "mo_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "morwen_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "recruited_morwen"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -1187,7 +1187,7 @@
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "mo_dismissed",
-              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "morwen_recruited"}]
+              "outcomes": [{"type": "Dismiss", "key": "morwen"}, {"type": "ClearFlag", "key": "recruited_morwen"}]
             },
             {"text": "Let's keep moving."}
           ]
@@ -1303,7 +1303,7 @@
           "id": "mo_join",
           "speaker": "narrator",
           "text": "*Morwen tucks her grimoire under one arm. Dear scrambles back onto her shoulder and blows a tiny, smug smoke ring at you.*",
-          "outcomes": [{"type": "Recruit", "key": "morwen"}, {"type": "SetFlag", "key": "morwen_recruited"}, {"type": "SetFlag", "key": "morwen_met"}]
+          "outcomes": [{"type": "Recruit", "key": "morwen"}, {"type": "SetFlag", "key": "morwen_met"}]
         }
       ]
     }

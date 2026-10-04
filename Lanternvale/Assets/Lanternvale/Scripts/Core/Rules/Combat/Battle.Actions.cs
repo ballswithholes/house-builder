@@ -77,7 +77,7 @@ namespace Lanternvale.Rules
             if (InCombat && Started)
             {
                 if (IsOver) return UseCheck.Fail(UseFailure.NotYourTurn, "The battle is over.");
-                if (ActiveUnit != u) return UseCheck.Fail(UseFailure.NotYourTurn, "It is not your turn.");
+                if (ActiveUnit != u && actingOutOfTurn != u) return UseCheck.Fail(UseFailure.NotYourTurn, "It is not your turn.");
             }
             if (u.Pending != null) return UseCheck.Fail(UseFailure.Casting, $"Already casting {u.Pending.Ability.name}.");
             if (!fromItem && !KnowsForUse(u, a)) return UseCheck.Fail(UseFailure.Unknown, $"You do not know {a.name}.");
@@ -480,7 +480,7 @@ namespace Lanternvale.Rules
             Specials.OnBeforeUse(cast);
             MetersOf(u).Casts++;
 
-            bool timed = InCombat && Started;
+            bool timed = InCombat && Started && u != actingOutOfTurn;
             if (a.channeled && a.channelTicks > 0)
             {
                 PayCost(cast);

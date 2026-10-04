@@ -119,7 +119,7 @@ namespace Lanternvale.Rules
             var special = Specials.TimeCost(u, a);
             if (special.HasValue) return special.Value;
             float cast = CastTime(u, a, mods);
-            if (a.time == TimeCost.OffGcd) return cast;
+            if (a.time == Lanternvale.Data.TimeCost.OffGcd) return cast;
             return Math.Max(cast, Gcd(u, a, mods));
         }
 

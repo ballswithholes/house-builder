@@ -376,6 +376,9 @@ namespace Lanternvale.Game
 
         public int SampleRate => sr;
 
+        /// <summary>Number of sounding voices (diagnostics).</summary>
+        public int ActiveVoices { get { int n = 0; for (int i = 0; i < MaxVoices; i++) if (voices[i].kind != Kind.Off) n++; return n; } }
+
         static void BuildTables()
         {
             if (sineTable != null) return;
@@ -484,7 +487,7 @@ namespace Lanternvale.Game
             v.ksPos = 0;
             v.ksDamp = 0.9965f;
             v.amp = amp * 1.7f;
-            v.hold = sr * 4;
+            v.hold = Math.Max(sr, Math.Min((int)(sr * (f < 200f ? 3.2f : 2.4f)), o.samplesPerStep * 6));
         }
 
         public void Bell(Composer o, int midi, float amp)
@@ -493,7 +496,7 @@ namespace Lanternvale.Game
             float f = Freq(midi);
             v.inc1 = f / sr; v.inc2 = f * 2f / sr; v.inc3 = f * 4.07f / sr;
             v.env = 0f; v.e2 = 1f; v.e3 = 1f;
-            v.d1 = (float)Math.Exp(-1.0 / (sr * 1.4));
+            v.d1 = (float)Math.Exp(-1.0 / (sr * 1.15));
             v.d2 = (float)Math.Exp(-1.0 / (sr * 0.35));
             v.d3 = (float)Math.Exp(-1.0 / (sr * 0.12));
             v.attackInc = 1f / (sr * 0.003f);
@@ -503,6 +506,10 @@ namespace Lanternvale.Game
 
         public void Bass(Composer o, int midi, float amp)
         {
+            // monophonic: the previous bass note of this composer fades out quickly
+            float quick = (float)Math.Exp(-1.0 / (sr * 0.04));
+            for (int i = 0; i < MaxVoices; i++)
+                if (voices[i].kind == Kind.Bass && voices[i].owner == o && !voices[i].releasing) { voices[i].releasing = true; voices[i].releaseMul = quick; }
             var v = Alloc(o, Kind.Bass);
             v.inc1 = Freq(midi) / sr;
             v.attackInc = 1f / (sr * 0.02f);
@@ -562,7 +569,7 @@ namespace Lanternvale.Game
                 {
                     case Kind.Pad:
                         if (!v.releasing) { v.env = Math.Min(1f, v.env + v.attackInc); if (v.age > v.hold) v.releasing = true; }
-                        else { v.env *= v.releaseMul; if (v.env < 1e-4f) { v.kind = Kind.Off; return; } }
+                        else { v.env *= v.releaseMul; if (v.env < 0.002f) { v.kind = Kind.Off; return; } }
                         v.ph1 += v.inc1; if (v.ph1 >= 1f) v.ph1 -= 1f;
                         v.ph2 += v.inc2; if (v.ph2 >= 1f) v.ph2 -= 1f;
                         s = (Lookup(padTable, v.ph1) + Lookup(padTable, v.ph2)) * 0.5f;
@@ -575,36 +582,37 @@ namespace Lanternvale.Game
                         float y = v.ks[v.ksPos];
                         v.ks[v.ksPos] = (y + v.ks[nxt]) * 0.5f * v.ksDamp;
                         v.ksPos = nxt;
-                        s = y;
-                        if (v.age > v.hold) { v.kind = Kind.Off; return; }
+                        int left = v.hold - v.age;
+                        if (left <= 0) { v.kind = Kind.Off; return; }
+                        s = left < 16384 ? y * (left / 16384f) : y;
                         break;
                     }
                     case Kind.Bell:
                         v.env = v.age < 200 ? Math.Min(1f, v.env + v.attackInc) : v.env * v.d1;
                         v.e2 *= v.d2; v.e3 *= v.d3;
-                        if (v.age > 200 && v.env < 1e-4f) { v.kind = Kind.Off; return; }
+                        if (v.age > 200 && v.env < 0.003f) { v.kind = Kind.Off; return; }
                         v.ph1 += v.inc1; if (v.ph1 >= 1f) v.ph1 -= 1f;
                         v.ph2 += v.inc2; if (v.ph2 >= 1f) v.ph2 -= 1f;
                         v.ph3 += v.inc3; if (v.ph3 >= 1f) v.ph3 -= 1f;
                         s = Lookup(sineTable, v.ph1) * v.env + Lookup(sineTable, v.ph2) * v.e2 * 0.3f * v.env + Lookup(sineTable, v.ph3) * v.e3 * 0.14f * Math.Min(1f, v.env * 4f);
                         break;
                     case Kind.Bass:
-                        v.env = v.age < sr / 50 ? Math.Min(1f, v.env + v.attackInc) : v.env * v.d1;
-                        if (v.age > sr / 50 && v.env < 1e-4f) { v.kind = Kind.Off; return; }
+                        v.env = v.releasing ? v.env * v.releaseMul : v.age < sr / 50 ? Math.Min(1f, v.env + v.attackInc) : v.env * v.d1;
+                        if (v.age > sr / 50 && v.env < 0.003f) { v.kind = Kind.Off; return; }
                         v.ph1 += v.inc1; if (v.ph1 >= 1f) v.ph1 -= 1f;
                         { float p2 = v.ph1 * 2f; if (p2 >= 1f) p2 -= 1f; s = (Lookup(sineTable, v.ph1) + 0.22f * Lookup(sineTable, p2)) * v.env; }
                         break;
                     case Kind.Kick:
                         v.pitchEnv *= v.pitchDecay;
                         v.env *= v.d1;
-                        if (v.env < 1e-4f) { v.kind = Kind.Off; return; }
+                        if (v.env < 0.002f) { v.kind = Kind.Off; return; }
                         v.ph1 += (46f + 80f * v.pitchEnv) / sr; if (v.ph1 >= 1f) v.ph1 -= 1f;
                         s = Lookup(sineTable, v.ph1) * v.env;
                         break;
                     case Kind.Shaker:
                     {
                         v.env *= v.d1;
-                        if (v.env < 1e-4f) { v.kind = Kind.Off; return; }
+                        if (v.env < 0.002f) { v.kind = Kind.Off; return; }
                         v.noise ^= v.noise << 13; v.noise ^= v.noise >> 17; v.noise ^= v.noise << 5;
                         float x = (v.noise & 0xFFFF) / 32768f - 1f;
                         v.lp += (x - v.lp) * v.lpA;
@@ -614,7 +622,7 @@ namespace Lanternvale.Game
                     case Kind.Flute:
                     {
                         if (!v.releasing) { v.env = Math.Min(1f, v.env + v.attackInc); if (v.age > v.hold) v.releasing = true; }
-                        else { v.env *= v.releaseMul; if (v.env < 1e-4f) { v.kind = Kind.Off; return; } }
+                        else { v.env *= v.releaseMul; if (v.env < 0.002f) { v.kind = Kind.Off; return; } }
                         v.vibPh += v.vibInc; if (v.vibPh >= 1f) v.vibPh -= 1f;
                         float vib = v.age > sr / 4 ? Lookup(sineTable, v.vibPh) * 0.004f : 0f;
                         v.ph1 += v.inc1 * (1f + vib); if (v.ph1 >= 1f) v.ph1 -= 1f;

@@ -214,6 +214,15 @@
               "conditions": [{"type": "HasItem", "key": "kindling_taper", "amount": 1}]
             },
             {
+              "text": "A Kindling doesn't need one life. It needs light — and light can come from many hands.",
+              "next": "ws_wise",
+              "conditions": [
+                {"type": "Flag", "key": "knows_kindling_cost"},
+                {"type": "HasItem", "key": "kindling_taper", "amount": 1},
+                {"type": "NotInParty", "key": "seren"}
+              ]
+            },
+            {
               "text": "Every traveller carries a little hearth-light. Take some of ours — a little from each of us, not all from one.",
               "next": "ws_hands",
               "conditions": [{"type": "NotHasItem", "key": "kindling_taper"}]
@@ -276,6 +285,13 @@
           "text": "*She looks at the taper, then at you, and laughs — a wet, startled laugh.* The whole valley's light. Not one life. Mother, why didn't anyone think of that? *She takes it in both hands.* Then let's kindle it together.",
           "outcomes": [{"type": "SetFlag", "key": "seren_kindled"}],
           "next": "ws_light"
+        },
+        {
+          "id": "ws_wise",
+          "speaker": "warden_spirit",
+          "text": "...Many hands. *His small ears lift.* In a thousand years, no one ever offered me that. Show me.",
+          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "next": "ws_taper"
         },
         {
           "id": "ws_taper",

@@ -240,5 +240,9 @@ namespace Lanternvale.Rules
 
         internal float MeleeReach(Unit a, Unit b) => AbilityRules.MeleeReach(a, b, Config);
         internal bool InMeleeReach(Unit a, Unit b) => a.DistanceTo(b) <= MeleeReach(a, b) + 1e-3f;
+        /// <summary>Centre-to-centre melee reach between two units (metres).</summary>
+        public float MeleeReachOf(Unit a, Unit b) => MeleeReach(a, b);
+        /// <summary>True when the two units are within melee reach of each other.</summary>
+        public bool InMeleeRange(Unit a, Unit b) => InMeleeReach(a, b);
     }
 }

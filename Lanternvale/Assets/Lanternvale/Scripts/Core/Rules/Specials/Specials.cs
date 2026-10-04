@@ -86,8 +86,6 @@ namespace Lanternvale.Rules
 
         struct PassiveRef { public SpecialHandler H; public int Rank; }
 
-        static readonly List<PassiveRef> scratch = new List<PassiveRef>();
-
         /// <summary>Handlers acting passively on a unit: talent and item Special passives, auras and passive abilities with a special.</summary>
         static List<PassiveRef> PassivesOf(Unit u)
         {
@@ -302,7 +300,7 @@ namespace Lanternvale.Rules
             if (target == null) return UseCheck.Fail(UseFailure.NoTarget, "Select a downed ally.");
             if (!target.IsFriendlyTo(u) || target == u) return UseCheck.Fail(UseFailure.InvalidTarget, "Select a downed ally.");
             if (!target.Downed) return UseCheck.Fail(UseFailure.InvalidTarget, "That ally is not downed.");
-            if (!b.InMeleeReachPublic(u, target)) return UseCheck.Fail(UseFailure.Range, "Move next to the downed ally.");
+            if (!b.InMeleeRange(u, target)) return UseCheck.Fail(UseFailure.Range, "Move next to the downed ally.");
             return UseCheck.Pass;
         }
 

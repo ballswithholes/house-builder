@@ -142,7 +142,8 @@ namespace Lanternvale.Game
             }
         }
 
-        public AudioClip ToClip(string name, float peak)
+        /// <summary>Normalises to the peak and fades the tail; returns the samples (thread-safe, no Unity API).</summary>
+        public float[] Finish(float peak)
         {
             float max = 1e-6f;
             for (int i = 0; i < Data.Length; i++) max = Mathf.Max(max, Mathf.Abs(Data[i]));
@@ -155,8 +156,14 @@ namespace Lanternvale.Game
                 if (fromEnd < fade) v *= fromEnd / (float)fade;
                 Data[i] = v;
             }
-            var clip = AudioClip.Create(name, Data.Length, 1, SampleRate, false);
-            clip.SetData(Data, 0);
+            return Data;
+        }
+
+        /// <summary>Creates an AudioClip from finished samples (main thread only).</summary>
+        public static AudioClip ToClip(string name, float[] data)
+        {
+            var clip = AudioClip.Create(name, data.Length, 1, SampleRate, false);
+            clip.SetData(data, 0);
             return clip;
         }
     }
@@ -165,19 +172,22 @@ namespace Lanternvale.Game
     {
         static float Midi(int m) => 440f * Mathf.Pow(2f, (m - 69) / 12f);
 
-        /// <summary>Generates every effect clip. Takes a few tens of milliseconds.</summary>
-        public static Dictionary<string, AudioClip> GenerateAll()
+        /// <summary>
+        /// Synthesizes every effect as mono 44.1 kHz samples. Pure maths (no Unity API), so it can run
+        /// on a worker thread; ~0.1–0.3 s of CPU in total.
+        /// </summary>
+        public static Dictionary<string, float[]> GeneratePcm(List<string> errors = null)
         {
-            var d = new Dictionary<string, AudioClip>(StringComparer.Ordinal);
+            var d = new Dictionary<string, float[]>(StringComparer.Ordinal);
             void Add(string id, float peak, float seconds, int seed, Action<SynthBuffer> make)
             {
                 try
                 {
                     var b = new SynthBuffer(seconds, seed);
                     make(b);
-                    d[id] = b.ToClip("sfx_" + id, peak);
+                    d[id] = b.Finish(peak);
                 }
-                catch (Exception e) { Debug.LogWarning("[Lanternvale] sfx '" + id + "' failed: " + e.Message); }
+                catch (Exception e) { errors?.Add(id + ": " + e.Message); }
             }
             var W = SynthBuffer.Wave.Sine;
 

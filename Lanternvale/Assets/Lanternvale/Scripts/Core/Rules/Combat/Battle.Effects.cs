@@ -256,7 +256,8 @@ namespace Lanternvale.Rules
 
         // ============================================================ combo points
 
-        internal int ComboPointsOn(Unit u, Unit target)
+        /// <summary>Combo points the unit has on the target (0 when they are on another target).</summary>
+        public int ComboPointsOn(Unit u, Unit target)
         {
             if (u.ComboPoints <= 0) return 0;
             if (target != null && u.ComboTarget != null && target != u.ComboTarget) return 0;
@@ -613,8 +614,7 @@ namespace Lanternvale.Rules
         {
             if (a.target == TargetType.Self) target = caster;
             else if (a.target == TargetType.Pet) target = caster.Pet;
-            int r = rank > 0 ? Math.Min(rank, AbilityRules.RankCount(a)) : Math.Max(1, caster.RankOf(a.id));
-            if (caster.RankOf(a.id) > 0) r = caster.RankOf(a.id);
+            int r = caster.RankOf(a.id) > 0 ? caster.RankOf(a.id) : (rank > 0 ? Math.Min(rank, AbilityRules.RankCount(a)) : 1);
             var cast = NewCast(caster, a, r, target, point, null);
             cast.Free = true;
             cast.Depth = depth;
@@ -795,7 +795,7 @@ namespace Lanternvale.Rules
             if (!TryParseResource(e.resource, out var r, out var health, out var combo)) return;
             float amt = e.pctOfMax > 0
                 ? (health ? t.MaxHealth : t.MaxResource(r)) * e.pctOfMax / 100f
-                : (e.amount + e.min + e.perLevel * (cast.EffLevel - cast.LearnLevel) + e.perCombo * cast.ComboPoints) * cast.Mods.EffectMult;
+                : ((e.amount != 0 ? e.amount : e.min) + e.perLevel * (cast.EffLevel - cast.LearnLevel) + e.perCombo * cast.ComboPoints) * cast.Mods.EffectMult;
             amt *= cast.MagnitudeScale;
             amt = Specials.ModifyResourceGain(cast, e, t, amt);
             if (combo)
@@ -825,7 +825,7 @@ namespace Lanternvale.Rules
         {
             var c = cast.Caster;
             if (!TryParseResource(e.resource, out var r, out var health, out var combo) || combo) return;
-            float amt = (e.amount + e.min + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult * cast.MagnitudeScale;
+            float amt = ((e.amount != 0 ? e.amount : e.min) + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult * cast.MagnitudeScale;
             if (cast.Periodic && cast.SourceAura != null) amt *= cast.SourceAura.EffectMult;
             if (health)
             {

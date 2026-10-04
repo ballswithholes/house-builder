@@ -157,7 +157,20 @@
           "id": "k_f3",
           "speaker": "komorebi",
           "text": "The Hollow wisps in the Grey Grove are lantern-flames it stole and emptied. Free their embers and bring them here, and I'll feed them to your taper. A taper carrying the valley's light might burn through anything. Three embers. Please.",
-          "choices": [{"text": "I'll bring them.", "next": "k_f4", "outcomes": [{"type": "SetQuestStage", "key": "mq_lanterns", "value": "embers"}]}]
+          "choices": [
+            {
+              "text": "I've already freed three embers. Here.",
+              "next": "k_emb2",
+              "conditions": [{"type": "HasItem", "key": "spirit_ember", "amount": 3}],
+              "outcomes": [
+                {"type": "TakeItem", "key": "spirit_ember", "amount": 3},
+                {"type": "SetFlag", "key": "embers_gathered"},
+                {"type": "SetQuestStage", "key": "mq_lanterns", "value": "rotheart"},
+                {"type": "GiveXP", "amount": 150}
+              ]
+            },
+            {"text": "I'll bring them.", "next": "k_f4"}
+          ]
         },
         {
           "id": "k_f4",

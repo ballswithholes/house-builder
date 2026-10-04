@@ -162,7 +162,13 @@
           "collider": {"w": 1.2, "h": 0.7},
           "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
         },
-        {"art": "prop_spirit_lantern_dark", "pos": [82.0, 9.0], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [82.0, 9.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_whisperwood_82",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        },
         {"art": "prop_tree_dead", "pos": [85.0, 1.2], "collider": {"w": 1.0, "h": 0.6}},
         {"art": "prop_ruin_arch", "pos": [96.6, 12.6], "text": "The first arch of the pilgrim stair, wound tight with grey, thorned roots."},
         {"art": "prop_tree_dead", "pos": [98.4, 10.6], "collider": {"w": 1.0, "h": 0.6}},
@@ -172,7 +178,13 @@
           "collider": {"w": 1.2, "h": 0.7},
           "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
         },
-        {"art": "prop_spirit_lantern_dark", "pos": [94.0, 11.6], "collider": {"w": 0.9, "h": 0.5}}
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [94.0, 11.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_whisperwood_87",
+          "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
+        }
       ],
       "foreground": [
         {"art": "fg_ferns", "pos": [2, -0.4], "sway": true},
@@ -189,18 +201,18 @@
         {"art": "fg_ferns", "pos": [98, -0.3], "sway": true}
       ],
       "npcs": [
-        {"npc": "rook", "pos": [15.0, 9.4], "flip": true, "hideFlag": "rook_recruited"},
+        {"npc": "rook", "pos": [15.0, 9.4], "flip": true, "hideFlag": "recruited_rook"},
         {"npc": "moppet", "pos": [35.6, 13.0], "hideFlag": "moppet_found"},
-        {"npc": "seren", "pos": [41.0, 10.6], "hideFlag": "seren_recruited"},
+        {"npc": "seren", "pos": [41.0, 10.6], "hideFlag": "recruited_seren"},
         {"npc": "komorebi", "pos": [43.4, 11.6], "flip": true},
-        {"npc": "lys", "pos": [78.6, 4.0], "flip": true, "hideFlag": "lys_recruited"}
+        {"npc": "lys", "pos": [78.6, 4.0], "flip": true, "hideFlag": "recruited_lys"}
       ],
       "encounters": [
         {
           "id": "enc_boars_edge",
-          "pos": [19.6, 11.0],
-          "radius": 3.2,
-          "enemies": [{"creature": "cr_boar", "pos": [19.0, 11.6]}, {"creature": "cr_boar", "pos": [21.0, 12.2]}],
+          "pos": [18.0, 3.0],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_boar", "pos": [17.4, 2.4]}, {"creature": "cr_boar", "pos": [19.0, 3.4]}],
           "doneFlag": "enc_boars_edge"
         },
         {
@@ -219,7 +231,7 @@
           "id": "enc_forest_wolves",
           "pos": [29.6, 2.8],
           "radius": 3.0,
-          "enemies": [{"creature": "cr_wolf", "pos": [29.0, 2.2]}, {"creature": "cr_wolf", "pos": [30.6, 3.2]}, {"creature": "cr_wolf", "pos": [30.0, 1.4]}],
+          "enemies": [{"creature": "cr_wolf", "pos": [29.0, 2.2]}, {"creature": "cr_wolf", "pos": [30.6, 3.2]}, {"creature": "cr_wolf", "pos": [29.0, 1.4]}],
           "doneFlag": "enc_forest_wolves"
         },
         {
@@ -306,16 +318,16 @@
         },
         {
           "id": "enc_blighted_wolves",
-          "pos": [90.4, 12.0],
-          "radius": 2.8,
-          "enemies": [{"creature": "cr_wolf_blighted", "pos": [89.8, 12.6]}, {"creature": "cr_wolf_blighted", "pos": [91.6, 11.8]}],
+          "pos": [88.0, 12.6],
+          "radius": 2.4,
+          "enemies": [{"creature": "cr_wolf_blighted", "pos": [87.2, 13.2]}, {"creature": "cr_wolf_blighted", "pos": [88.6, 11.8]}],
           "doneFlag": "enc_blighted_wolves"
         },
         {
           "id": "enc_rotheart",
-          "pos": [94.4, 7.4],
-          "radius": 3.4,
-          "enemies": [{"creature": "cr_hollow_treant", "pos": [96.0, 7.6]}],
+          "pos": [93.6, 8.4],
+          "radius": 3.2,
+          "enemies": [{"creature": "cr_hollow_treant", "pos": [95.4, 8.6]}],
           "requireFlag": "embers_gathered",
           "doneFlag": "rotheart_defeated"
         }
@@ -359,7 +371,7 @@
           "lockedText": "A wall of grey, thorned roots chokes the pilgrim stair. Something huge breathes behind it."
         }
       ],
-      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_village", "pos": [3.6, 6.0]}, {"id": "from_shrine", "pos": [97.4, 4.0]}],
+      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_village", "pos": [3.6, 6.0]}, {"id": "from_shrine", "pos": [97.6, 3.6]}],
       "regions": [
         {
           "id": "reg_whisperwood_edge",
