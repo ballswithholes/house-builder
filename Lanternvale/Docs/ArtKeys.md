@@ -140,7 +140,7 @@ NPCs: `npc_elder`, `npc_innkeeper`, `npc_merchant`, `npc_smith`, `npc_villager_a
 | `cr_training_dummy` | straw training dummy | 1.6 |
 
 Pets/demons/totems: `pet_wolf`, `pet_cat`, `pet_boar`, `pet_bear`, `pet_owl`, `demon_imp`, `demon_voidwalker`,
-`demon_succubus`, `demon_felhunter`, `totem_earth`, `totem_fire`, `totem_water`, `totem_air` (totems 1.2 m).
+`demon_succubus`, `demon_felhunter`, `demon_infernal` (hulking burning stone golem, 2.6 m), `totem_earth`, `totem_fire`, `totem_water`, `totem_air` (totems 1.2 m).
 
 ## Effects (category Effect)
 

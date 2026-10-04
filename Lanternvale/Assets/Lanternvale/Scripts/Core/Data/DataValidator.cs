@@ -160,7 +160,7 @@ namespace Lanternvale.Data
                     if (!string.IsNullOrEmpty(tal.requires))
                     {
                         if (!ids.Contains(tal.requires)) Err(tw, $"requires '{tal.requires}' not in the same tree");
-                        else if (db.Talents[tal.requires].tier >= tal.tier) Err(tw, "prerequisite must be on an earlier tier");
+                        else if (db.Talents[tal.requires].tier > tal.tier) Err(tw, "prerequisite must be on the same or an earlier tier");
                     }
                     if (tal.effects.Count == 0) Err(tw, "no effects");
                     foreach (var e in tal.effects)
