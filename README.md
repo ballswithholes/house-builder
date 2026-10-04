@@ -6,10 +6,17 @@ once the page has loaded. Works on an iPad, an iPhone and a desktop browser.
 
 This repository is only the published page; the source lives elsewhere.
 
-## 霸王的大陆 · 中文版（`bawang/`）
+## 三国志II 霸王的大陆 · Unity（`sanguozhi2-unity/`）
 
-A modern-graphics remake of the Famicom RPG 霸王的大陆 (Destiny of an Emperor),
-in Chinese. Open `bawang/index.html` in a browser — static files only, no build
+A 3D low-poly Unity remake of Namco's Famicom strategy game 三国志II 霸王的大陆
+(1992), in Chinese, for Windows/Mac and iPad/iPhone. See
+[`sanguozhi2-unity/README.md`](sanguozhi2-unity/README.md) for setup and rules.
+
+## 吞食天地 web remake（`bawang/`）
+
+A browser remake of Capcom's Famicom RPG 吞食天地 (Destiny of an Emperor),
+in Chinese. (Built first by mistake for 霸王的大陆; kept as a separate game.)
+Open `bawang/index.html` in a browser — static files only, no build
 step, no network requests.
 
 - **Look**: painterly procedurally-drawn overworld (soft coastlines, animated
