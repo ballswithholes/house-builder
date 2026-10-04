@@ -176,7 +176,7 @@ namespace Lanternvale.Rules
         {
             float lo = e.min, hi = Math.Max(e.min, e.max);
             float v = rng != null ? rng.Range(lo, hi) : (lo + hi) * 0.5f;
-            v += e.perLevel * (effLevel - learnLevel);
+            v += e.perLevel * Math.Max(0, effLevel - learnLevel); // like costs, absorbs and aura mods: never below the base value
             v += e.perCombo * comboPoints;
             return v;
         }

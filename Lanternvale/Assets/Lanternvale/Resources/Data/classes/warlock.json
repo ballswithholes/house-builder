@@ -291,7 +291,7 @@
       "icon": "curse",
       "classId": "Warlock",
       "school": "Shadow",
-      "description": "Forces the target to speak in Demonic, increasing the casting time of all spells by {0}%. Only one Curse per Warlock can be active on any one target. Lasts 30 sec.",
+      "description": "Forces the target to speak in Demonic, increasing the casting time of all spells by 50% (60% at rank 2). Only one Curse per Warlock can be active on any one target. Lasts 30 sec.",
       "learnLevel": 26,
       "rankLevels": [26, 50],
       "trainCost": 5070,
@@ -1516,7 +1516,7 @@
       "trainCost": 12000,
       "fromTalent": true,
       "cooldown": 10,
-      "cost": {"type": "Mana", "amount": 165, "perLevel": 5.75},
+      "cost": {"type": "Mana", "amount": 165, "perLevel": 4.5},
       "target": "Enemy",
       "range": 30,
       "requires": {"targetAuras": ["warlock_immolate"], "targetAuraFromSelf": true},
@@ -1898,7 +1898,7 @@
       ]
     },
     {
-      "_note": "CastSpeed -50 is meant as cast time x1.5 (x1.6 at rank 2).",
+      "_note": "CastSpeed divides cast time: -33.33 => x1.5 (rank 1), -37.5 => x1.6 (rank 2).",
       "id": "warlock_curse_of_tongues",
       "name": "Curse of Tongues",
       "icon": "curse",
@@ -1910,7 +1910,7 @@
       "exclusiveGroup": "warlock_curse",
       "exclusivePerCaster": true,
       "tags": ["Curse"],
-      "mods": [{"stat": "CastSpeed", "value": -50, "values": [-50, -60], "pct": true}]
+      "mods": [{"stat": "CastSpeed", "value": -33.33, "values": [-33.33, -37.5], "pct": true}]
     },
     {
       "id": "warlock_curse_of_the_elements",
@@ -2084,7 +2084,7 @@
       "dispel": "Magic",
       "duration": 300,
       "tags": ["CC"],
-      "mods": [{"stat": "MeleeHaste", "value": -30, "pct": true}, {"stat": "CastSpeed", "value": -20, "pct": true}],
+      "mods": [{"stat": "MeleeHaste", "value": -23.08, "pct": true}, {"stat": "CastSpeed", "value": -16.67, "pct": true}],
       "special": "WarlockEnslaveDemon"
     },
     {
@@ -2378,7 +2378,7 @@
       "school": "Shadow",
       "dispel": "Magic",
       "duration": 15,
-      "tags": ["CC"],
+      "tags": ["CC", "Charm"],
       "states": ["Incapacitate"],
       "breakOnDamage": true
     },
@@ -2804,14 +2804,15 @@
           "effects": [{"type": "GrantAbility", "ability": "warlock_curse_of_exhaustion"}]
         },
         {
-          "_note": "WoW prerequisite is Curse of Exhaustion via a same-tier (sideways) arrow, which the validator rejects ('prerequisite must be on an earlier tier'); the requirement is stated in the description only. Effect +50% per rank turns the 10% slow into 15/20/25/30%.",
+          "_note": "Effect +50% per rank turns the 10% slow into 15/20/25/30%.",
           "id": "warlock_affliction_improved_curse_of_exhaustion",
           "name": "Improved Curse of Exhaustion",
           "icon": "curse",
           "tier": 5,
           "column": 3,
           "maxRank": 4,
-          "description": "Increases the speed reduction of your Curse of Exhaustion by {5/10/15/20}%. Requires Curse of Exhaustion.",
+          "requires": "warlock_affliction_curse_of_exhaustion",
+          "description": "Increases the speed reduction of your Curse of Exhaustion by {5/10/15/20}%.",
           "effects": [
             {
               "type": "AbilityMod",
@@ -3026,7 +3027,7 @@
           "effects": [{"type": "Stat", "stat": "DamageDone", "value": 4, "pct": true, "target": "Pet"}]
         },
         {
-          "_note": "Effect -6.7% per rank shrinks the 30%/20% penalties by about 2 points each.",
+          "_note": "Effect scales both aura mods: the attack-time penalty lands on +28/26/24/22/20%; the cast-time penalty becomes about +19/18/16/15/14% (WoW 18/16/14/12/10%), since one shared Effect mod cannot hit both exactly.",
           "id": "warlock_demonology_improved_enslave_demon",
           "name": "Improved Enslave Demon",
           "icon": "demon",
@@ -3039,7 +3040,7 @@
             {
               "type": "AbilityMod",
               "property": "Effect",
-              "values": [-6.7, -13.3, -20, -26.7, -33.3],
+              "values": [-5.2, -10.6, -16.1, -21.9, -27.8],
               "abilities": ["warlock_enslave_demon"]
             }
           ]
@@ -3920,7 +3921,7 @@
     {
       "id": "WarlockAmplifyCurse",
       "usedBy": "warlock_amplify_curse (aura)",
-      "behaviour": "While present (1 charge, 30 sec), the next warlock_curse_of_agony or warlock_curse_of_weakness the holder applies has its magnitude x1.5 (CoA tick damage, CoW attack-power reduction), or the next warlock_curse_of_exhaustion gets +20 percentage points of slow (10% -> 30%, before Improved Curse of Exhaustion). Applying any of those three curses removes the aura; other curses do not."
+      "behaviour": "While present (1 charge, 30 sec), the next warlock_curse_of_agony or warlock_curse_of_weakness the holder applies has its magnitude x1.5 (CoA tick damage, CoW attack-power reduction), or the next warlock_curse_of_exhaustion gets +20 percentage points of slow added after Improved Curse of Exhaustion (10% -> 30%; 30% -> 50% with 4/4 Improved Curse of Exhaustion; the +20 is flat and is not scaled by the talent's Effect mod). Applying any of those three curses removes the aura; other curses do not."
     },
     {
       "id": "WarlockShadowTrance",

@@ -304,7 +304,7 @@ namespace Lanternvale.Rules
             if (!u.HasAura(FormId)) return null;
             bool heal = AbilityMods.HasTag(a, "Heal") || a.aiHint == "Heal";
             if (!heal) foreach (var e in a.effects) if (e.type == EffectType.Heal) { heal = true; break; }
-            return heal && a.special != "HelpUp" ? null : "Only healing spells can be cast in spirit form.";
+            return heal && !Specials.UsesSpecial(a, "HelpUp") ? null : "Only healing spells can be cast in spirit form.";
         }
 
         public override void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason reason)

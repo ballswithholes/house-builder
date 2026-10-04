@@ -73,7 +73,7 @@
   ],
   "abilities": [
     {
-      "_note": "Ranks 1-4 cast in 1.5/2.0/2.5/3.0 sec in WoW; one castTime per ability, so the 3.5 sec of ranks 5-11 is used. R11 (60): 561-715 + 72 over 8 sec, 410 mana. The DoT has no spell power coefficient in Classic.",
+      "_note": "Ranks 1-4 cast in 1.5/2.0/2.5/3.0 sec in WoW; one castTime per ability, so the 3.5 sec of ranks 5-11 is used. R11 (60): 561-715 + 72 over 8 sec, 395 mana. The DoT has no spell power coefficient in Classic.",
       "id": "mage_fireball",
       "name": "Fireball",
       "icon": "fireball",
@@ -84,7 +84,7 @@
       "rankLevels": [1, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60],
       "trainCost": 10,
       "castTime": 3.5,
-      "cost": {"type": "Mana", "amount": 30, "perLevel": 6.441},
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 6.186},
       "target": "Enemy",
       "range": 35,
       "effects": [
@@ -147,14 +147,14 @@
       "range": 30,
       "area": {"shape": "Circle", "radius": 8, "affects": "Enemies"},
       "effects": [
-        {"type": "Damage", "min": 52, "max": 68, "perLevel": 8.925, "coef": 0.176},
+        {"type": "Damage", "min": 52, "max": 68, "perLevel": 8.925, "coef": 0.157},
         {"type": "ApplyAura", "aura": "mage_flamestrike_burn"}
       ],
       "aiHint": "AoE",
       "aiPriority": 5
     },
     {
-      "_note": "Ranks 1-4 cast faster (1.5-2.6 sec) and slow for 5-7 sec in WoW; max-rank 3.0 sec cast and 9 sec slow are used. Coefficient 3.0/3.5 x 0.95 (slow penalty) = 0.814.",
+      "_note": "Ranks 1-4 cast faster (1.5-2.6 sec) and slow for 5-7 sec in WoW; max-rank 3.0 sec cast and 9 sec slow are used. Coefficient 3.0/3.5 x 0.95 (slow penalty) = 0.814. R1-R10 from trainers (R10 at 56: 429-464, 260 mana); R11 at 60 (515-555, 290 mana) is the AQ20 Tome of Frostbolt XI, taught by the trainer here like Arcane Missiles VIII.",
       "id": "mage_frostbolt",
       "name": "Frostbolt",
       "icon": "ice_shard",
@@ -222,7 +222,7 @@
       "aiPriority": 6
     },
     {
-      "_note": "Channel: the effects list is the per-tick payload, applied once per channel tick (channelTicks over castTime). R6 (60): 1192 damage over 8 sec, 1400 mana. Coefficient 8/3.5 x 1/3 (AoE) spread over 8 ticks.",
+      "_note": "Channel: the effects list is the per-tick payload, applied once per channel tick (channelTicks over castTime). R6 (60): 1192 damage over 8 sec, 1400 mana. Coefficient 0.042 per tick (~1/3 total, Classic value).",
       "id": "mage_blizzard",
       "name": "Blizzard",
       "icon": "snowflake",
@@ -239,7 +239,7 @@
       "target": "Point",
       "range": 30,
       "area": {"shape": "Circle", "radius": 8, "affects": "Enemies"},
-      "effects": [{"type": "Damage", "min": 25, "perLevel": 3.1, "coef": 0.095}],
+      "effects": [{"type": "Damage", "min": 25, "perLevel": 3.1, "coef": 0.042}],
       "aiHint": "AoE",
       "aiPriority": 5
     },
@@ -260,7 +260,7 @@
       "cost": {"type": "Mana", "amount": 85, "perLevel": 10.962},
       "target": "Enemy",
       "range": 30,
-      "effects": [{"type": "Damage", "min": 14.4, "perLevel": 4.146, "coef": 0.286}],
+      "effects": [{"type": "Damage", "min": 14.4, "perLevel": 4.146, "coef": 0.24}],
       "aiHint": "Damage",
       "aiPriority": 5
     },
@@ -613,7 +613,7 @@
       "icon": "potion_blue",
       "classId": "Mage",
       "school": "Arcane",
-      "description": "Conjures a mana jade that can be used to instantly restore 565 to 635 mana.",
+      "description": "Conjures a mana jade that can be used to instantly restore 550 to 650 mana.",
       "learnLevel": 38,
       "trainCost": 10830,
       "castTime": 3,
@@ -630,7 +630,7 @@
       "icon": "potion_blue",
       "classId": "Mage",
       "school": "Arcane",
-      "description": "Conjures a mana citrine that can be used to instantly restore 775 to 825 mana.",
+      "description": "Conjures a mana citrine that can be used to instantly restore 775 to 925 mana.",
       "learnLevel": 48,
       "trainCost": 17280,
       "castTime": 3,
@@ -865,13 +865,13 @@
       "aiPriority": 4
     },
     {
-      "_note": "GainResource has no min/max range: the average of 565-635 is used. Gems share a 2 min cooldown.",
+      "_note": "GainResource has no min/max range: the average of 550-650 is used. Gems share a 2 min cooldown.",
       "id": "mage_mana_jade_use",
       "name": "Restore Mana",
       "icon": "potion_blue",
       "classId": "Mage",
       "school": "Arcane",
-      "description": "Restores 565 to 635 mana.",
+      "description": "Restores 550 to 650 mana.",
       "learnLevel": 38,
       "hidden": true,
       "time": "OffGcd",
@@ -883,20 +883,20 @@
       "aiPriority": 4
     },
     {
-      "_note": "GainResource has no min/max range: the average of 775-825 is used. Gems share a 2 min cooldown.",
+      "_note": "GainResource has no min/max range: the average of 775-925 is used. Gems share a 2 min cooldown.",
       "id": "mage_mana_citrine_use",
       "name": "Restore Mana",
       "icon": "potion_blue",
       "classId": "Mage",
       "school": "Arcane",
-      "description": "Restores 775 to 825 mana.",
+      "description": "Restores 775 to 925 mana.",
       "learnLevel": 48,
       "hidden": true,
       "time": "OffGcd",
       "cooldown": 120,
       "cooldownGroup": "mage_mana_gem",
       "target": "Self",
-      "effects": [{"type": "GainResource", "target": "Self", "resource": "Mana", "amount": 800}],
+      "effects": [{"type": "GainResource", "target": "Self", "resource": "Mana", "amount": 850}],
       "aiHint": "Utility",
       "aiPriority": 4
     },
@@ -970,7 +970,7 @@
       "dispel": "None",
       "duration": 8,
       "tickInterval": 2,
-      "tickEffects": [{"type": "Damage", "min": 12, "perLevel": 1.825, "coef": 0.028}]
+      "tickEffects": [{"type": "Damage", "min": 12, "perLevel": 1.825, "coef": 0.02}]
     },
     {
       "id": "mage_cone_of_cold_chill",
@@ -1602,6 +1602,7 @@
           "tier": 5,
           "column": 2,
           "maxRank": 5,
+          "requires": "mage_arcane_arcane_resilience",
           "description": "Increases your maximum Mana by {2/4/6/8/10}%.",
           "effects": [{"type": "Stat", "stat": "Mana", "value": 2, "pct": true}]
         },
@@ -1909,7 +1910,7 @@
           "effects": [{"type": "AbilityMod", "property": "CritBonus", "value": 20, "schools": ["Frost"]}]
         },
         {
-          "_note": "Chill sources: Frostbolt and Cone of Cold (Blizzard's chill from Improved Blizzard and Frost Armor's chill are not included).",
+          "_note": "Chill sources: Frostbolt, Cone of Cold, Blizzard with Improved Blizzard, Frost/Ice Armor chill. Blizzard only rolls on targets already carrying an Improved Blizzard chill (one at a time via its exclusiveGroup); the armor proc rolls after the aura's own OnStruck proc has chilled the attacker (aura procs fire before talent procs).",
           "id": "mage_frost_frostbite",
           "name": "Frostbite",
           "icon": "frost",
@@ -1926,6 +1927,31 @@
                 "chance": 5,
                 "effects": [{"type": "ApplyAura", "aura": "mage_frostbite"}],
                 "abilities": ["mage_frostbolt", "mage_cone_of_cold"]
+              }
+            },
+            {
+              "type": "Proc",
+              "values": [5, 10, 15],
+              "proc": {
+                "trigger": "OnSpellHit",
+                "chance": 5,
+                "effects": [
+                  {"type": "ApplyAura", "aura": "mage_frostbite", "requireTargetAura": "mage_improved_blizzard_chill_1"},
+                  {"type": "ApplyAura", "aura": "mage_frostbite", "requireTargetAura": "mage_improved_blizzard_chill_2"},
+                  {"type": "ApplyAura", "aura": "mage_frostbite", "requireTargetAura": "mage_improved_blizzard_chill_3"}
+                ],
+                "abilities": ["mage_blizzard"]
+              }
+            },
+            {
+              "type": "Proc",
+              "values": [5, 10, 15],
+              "proc": {
+                "trigger": "OnStruck",
+                "chance": 5,
+                "effects": [
+                  {"type": "ApplyAura", "target": "Attacker", "aura": "mage_frostbite", "school": "Frost", "requireTargetAura": "mage_frost_armor_chill"}
+                ]
               }
             }
           ]

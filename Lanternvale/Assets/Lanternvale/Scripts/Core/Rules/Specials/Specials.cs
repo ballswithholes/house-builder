@@ -348,7 +348,31 @@ namespace Lanternvale.Rules
             return null;
         }
 
-        internal static UseCheck? ValidateTarget(Battle b, Unit u, AbilityDef a, Unit target, Vec2? point) => Get(a.special)?.ValidateTarget(b, u, a, target, point);
+        /// <summary>Target rule of the ability's special, else of the specials of its effects (help_up carries HelpUp on its effect).</summary>
+        internal static UseCheck? ValidateTarget(Battle b, Unit u, AbilityDef a, Unit target, Vec2? point)
+        {
+            var h = Get(a.special);
+            var r = h?.ValidateTarget(b, u, a, target, point);
+            if (r.HasValue) return r;
+            foreach (var e in a.effects)
+            {
+                if (string.IsNullOrEmpty(e.special)) continue;
+                var eh = Get(e.special);
+                if (eh == null || eh == h) continue;
+                r = eh.ValidateTarget(b, u, a, target, point);
+                if (r.HasValue) return r;
+            }
+            return null;
+        }
+
+        /// <summary>True when the ability uses the named special, on the ability itself or on one of its effects.</summary>
+        internal static bool UsesSpecial(AbilityDef a, string name)
+        {
+            if (a == null || string.IsNullOrEmpty(name)) return false;
+            if (a.special == name) return true;
+            foreach (var e in a.effects) if (e.special == name) return true;
+            return false;
+        }
 
         internal static void OnBeforeUse(AbilityCast c) => Get(c.Ability?.special)?.BeforeUse(c);
 

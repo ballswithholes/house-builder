@@ -1346,7 +1346,7 @@
       "learnLevel": 40,
       "fromTalent": true,
       "cooldown": 20,
-      "cost": {"type": "Mana", "pctBaseMana": 8},
+      "cost": {"type": "Mana", "pctBaseMana": 21},
       "target": "Enemy",
       "melee": true,
       "requires": {"meleeWeapon": true},
@@ -1715,10 +1715,7 @@
         {
           "trigger": "OnSpellCast",
           "chance": 100,
-          "abilities": [
-            "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
-            "shaman_frost_shock"
-          ],
+          "schools": ["Fire", "Frost", "Nature"],
           "consumeCharge": true,
           "effects": []
         }
@@ -2016,6 +2013,7 @@
               "values": [33, 66, 100],
               "proc": {
                 "trigger": "OnCritTaken",
+                "schools": ["Physical"],
                 "effects": [{"type": "ApplyAura", "target": "Self", "aura": "shaman_focused_casting"}]
               }
             }
@@ -2096,6 +2094,7 @@
           "column": 2,
           "maxRank": 5,
           "description": "Reduces the cast time of your Lightning Bolt and Chain Lightning spells by {0.2/0.4/0.6/0.8/1} sec.",
+          "requires": "shaman_ele_call_of_thunder",
           "effects": [
             {
               "type": "AbilityMod",
@@ -2568,6 +2567,7 @@
           "column": 1,
           "maxRank": 1,
           "description": "Summons a Mana Tide Totem with 5 health at the feet of the caster for 12 sec that restores 170 mana every 3 seconds to group members within 20 yards.",
+          "requires": "shaman_resto_restorative_totems",
           "effects": [{"type": "GrantAbility", "ability": "shaman_mana_tide_totem"}]
         }
       ]

@@ -95,9 +95,16 @@ namespace Lanternvale.Rules
             return AIStep.End(u, "done");
         }
 
+        /// <summary>Sapped, gouged, polymorphed or asleep: damage would wake it, so it is left alone while others fight.</summary>
+        static bool SoftControlled(Unit t) =>
+            t.HasStateAura(UnitState.Polymorph) || t.HasStateAura(UnitState.Incapacitate) || t.HasStateAura(UnitState.Sleep);
+
         /// <summary>Main enemy for the unit: tanks pick enemies hitting others, DPS assist the tank.</summary>
         static Unit FocusTarget(Battle b, Unit u, List<Unit> enemies, UnitRole role)
         {
+            // never focus a crowd-controlled enemy while another one is free
+            var free = enemies.FindAll(e => !SoftControlled(e));
+            if (free.Count > 0 && free.Count < enemies.Count) enemies = free;
             Unit tank = null;
             foreach (var a in b.AlliesOf(u, false)) if (a.IsCharacter && a.Role == UnitRole.Tank && a.IsAlive) { tank = a; break; }
             if (role == UnitRole.Tank)
@@ -139,15 +146,15 @@ namespace Lanternvale.Rules
             int eff = AbilityRules.EffLevel(u, a, AbilityRules.UsedRank(u, a));
             foreach (var e in a.effects)
                 if (e.type == EffectType.Heal)
-                    v += e.pctOfMax > 0 ? 0f : (e.min + e.max) * 0.5f + e.perLevel * (eff - a.learnLevel) + e.coef * u.Stats.HealingPower;
+                    v += e.pctOfMax > 0 ? 0f : (e.min + e.max) * 0.5f + e.perLevel * Math.Max(0, eff - a.learnLevel) + e.coef * u.Stats.HealingPower;
             foreach (var id in AppliedAuras(a))
             {
                 var def = u.Db.Aura(id);
                 if (def == null) continue;
                 foreach (var te in def.tickEffects)
                     if (te.type == EffectType.Heal && def.tickInterval > 0)
-                        v += ((te.min + te.max) * 0.5f + te.perLevel * (eff - a.learnLevel) + te.coef * u.Stats.HealingPower) * Math.Max(1f, def.duration / def.tickInterval);
-                if (def.absorb != null) v += def.absorb.amount + def.absorb.perLevel * (eff - a.learnLevel);
+                        v += ((te.min + te.max) * 0.5f + te.perLevel * Math.Max(0, eff - a.learnLevel) + te.coef * u.Stats.HealingPower) * Math.Max(1f, def.duration / def.tickInterval);
+                if (def.absorb != null) v += def.absorb.amount + def.absorb.perLevel * Math.Max(0, eff - a.learnLevel);
             }
             return Math.Max(1f, v);
         }
@@ -507,7 +514,7 @@ namespace Lanternvale.Rules
 
         static AIStep AutoAttackChoice(Battle b, Unit u, Unit focus, UnitRole role)
         {
-            if (focus == null) return null;
+            if (focus == null || SoftControlled(focus)) return null; // a swing would break the Sap/Gouge/Polymorph
             AbilityDef auto = null;
             if (u.ClassId == ClassId.Hunter && u.Knows("auto_shot") && u.Equipment.HasRangedWeapon && !b.InMeleeRange(u, focus)) auto = b.Db.Ability("auto_shot");
             else if (role == UnitRole.Tank || role == UnitRole.MeleeDps || (u.MaxMana <= 0)) auto = b.Db.Ability(u.Class?.basicAttack == "auto_shot" ? "attack" : u.Class?.basicAttack ?? "attack");

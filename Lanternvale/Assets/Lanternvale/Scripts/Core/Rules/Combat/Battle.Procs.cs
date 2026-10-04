@@ -154,7 +154,9 @@ namespace Lanternvale.Rules
                 Battle = this, Caster = owner, Ability = src, Target = other ?? owner, Point = (other ?? owner).Position,
                 SourceProc = p, ProcInfo = info, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : rank,
                 EffLevel = aura != null ? aura.EffLevel : effLevel, LearnLevel = aura != null ? aura.LearnLevel : 1,
-                School = aura != null ? aura.Def.school : (p.effects[0].school ?? School.Physical),
+                // talent/item procs without an explicit school take the school of the triggering ability (Winter's Chill,
+                // Impact, Shadow Weaving... are Frost/Fire/Shadow spell effects, not melee attacks that can be parried)
+                School = aura != null ? aura.Def.school : (p.effects[0].school ?? (info != null && info.Ability != null ? info.School : School.Physical)),
                 Mods = src != null ? AbilityMods.For(aura.Caster ?? owner, src) : AbilityModSet.Empty,
                 ComboPoints = aura != null && aura.ComboPoints > 0 ? aura.ComboPoints : info.ComboPoints,
                 ProcAura = aura,

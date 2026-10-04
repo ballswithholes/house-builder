@@ -1,5 +1,5 @@
 {
-  "_note": "Hunter (WoW Classic 1.12). Conventions: magnitudes are rank-1 numbers with perLevel landing the last rank on the real max rank; aura mod 'values' are indexed by the rank of the ability/talent that applied the aura; pet abilities scale with pet level (scaleWithLevel) and their auras use perLevel; channel effects are per tick; non-scalable per-rank values (durations) use the max-rank value. Traps are hidden totem-like units (totemElement 'Trap') that use their ability when an enemy comes within 5 yards and then kill themselves; owner talents reach them via AbilityMods with target 'Pet'. Abilities tagged 'Shot' or requiring a ranged weapon use the ranged hit table (crit x2), whatever their school.",
+  "_note": "Hunter (WoW Classic 1.12). Conventions: magnitudes are rank-1 numbers with perLevel landing the last rank on the real max rank; aura mod 'values' are indexed by the rank of the ability/talent that applied the aura; pet abilities scale with pet level (scaleWithLevel) and their auras use perLevel; channel effects are per tick; non-scalable per-rank values (durations) use the max-rank value. Traps are hidden totem-like units (totemElement 'Trap') that use their ability when an enemy comes within 5 yards and then kill themselves; owner talents reach them via AbilityMods with target 'Pet'. Accepted deviation: traps may be laid during battle (1.12 allowed it only out of combat, e.g. before the pull or after Feign Death); see the HunterTrap special. Abilities tagged 'Shot' or requiring a ranged weapon use the ranged hit table (crit x2), whatever their school.",
   "classes": [
     {
       "id": "Hunter",
@@ -351,11 +351,11 @@
       "icon": "snake",
       "classId": "Hunter",
       "school": "Nature",
-      "description": "Stings the target, causing 4 (rank 1) to 98 (rank 8) Nature damage every 3 sec for 15 sec (5 ticks). Only one Sting per Hunter can be active on any one target.",
+      "description": "Stings the target, causing 4 (rank 1) to 111 (rank 9) Nature damage every 3 sec for 15 sec (5 ticks). Only one Sting per Hunter can be active on any one target.",
       "learnLevel": 4,
-      "rankLevels": [4, 10, 18, 26, 34, 42, 50, 58],
+      "rankLevels": [4, 10, 18, 26, 34, 42, 50, 58, 60],
       "trainCost": 190,
-      "cost": {"type": "Mana", "amount": 15, "perLevel": 3.981},
+      "cost": {"type": "Mana", "amount": 15, "perLevel": 4.196},
       "target": "Enemy",
       "range": 35,
       "minRange": 8,
@@ -939,7 +939,7 @@
       "requires": {"reactive": "SelfParried"},
       "effects": [
         {"type": "Damage", "min": 40, "perLevel": 2.917, "cannotMiss": true},
-        {"type": "ApplyAura", "aura": "hunter_counterattack"}
+        {"type": "ApplyAura", "aura": "hunter_counterattack", "cannotMiss": true}
       ],
       "tags": ["Melee"],
       "aiHint": "Damage",
@@ -1221,7 +1221,7 @@
       "exclusivePerCaster": true,
       "tags": ["Sting"],
       "tickInterval": 3,
-      "tickEffects": [{"type": "Damage", "min": 4, "perLevel": 1.741, "coef": 0.08}]
+      "tickEffects": [{"type": "Damage", "min": 4, "perLevel": 1.911, "coef": 0.08}]
     },
     {
       "id": "hunter_scorpid_sting",
@@ -1897,6 +1897,7 @@
           "column": 3,
           "maxRank": 2,
           "description": "Increases the Focus regeneration of your pets by {10/20}%.",
+          "_note": "There is no separate Focus-regeneration stat: the EnergyRegen multiplier also scales Focus regeneration (36 Focus per 6 s turn in combat, 6 per second out of combat), so 2/2 gives the pet 43.2 Focus per turn. The engine must apply st.EnergyRegen in the Focus branches of Battle.RegenTurn and Battle.RegenOutOfCombat.",
           "effects": [{"type": "Stat", "stat": "EnergyRegen", "value": 10, "target": "Pet"}]
         },
         {
@@ -2666,7 +2667,7 @@
     {
       "id": "HunterTrap",
       "usedBy": "hunter_trap_armed (passive of hunter_trap_immolation/freezing/frost/explosive)",
-      "behaviour": "Trap units are SummonTotem units with totemElement 'Trap' (so a hunter has one trap at a time; a new trap replaces the old). This aura makes the trap invisible to enemy AI (not targetable, ignored by pathing/aggro) and adds an immediate trigger: whenever a hostile unit's movement brings it within 5 yards of the trap, stop that unit's movement at that point and make the trap use its first creature ability on that unit at once (the unit then continues its turn if not incapacitated). Otherwise the trap behaves like a totem: at the end of the owner's turn it uses its ability on a hostile unit within 5 yards if any. Every trap ability ends by killing the trap (Kill Self) except Frost Trap, which instead becomes a 30 s ice slick (its 600 s cooldown stops re-triggers). Trap abilities use owner-'Pet' AbilityMods (Clever Traps, Trap Mastery) like totem abilities; threat caused by a trap is credited to the owning hunter and the trap never appears on threat tables. Traps cannot be damaged or affected by hostile abilities/auras (area effects ignore them); only their own Kill(Self), lifetime expiry, replacement by a new trap or the end of battle remove them."
+      "behaviour": "Trap units are SummonTotem units with totemElement 'Trap' (so a hunter has one trap at a time; a new trap replaces the old). This aura makes the trap invisible to enemy AI (not targetable, ignored by pathing/aggro) and adds an immediate trigger: whenever a hostile unit's movement brings it within 5 yards of the trap, stop that unit's movement at that point and make the trap use its first creature ability on that unit at once (the unit then continues its turn if not incapacitated). Otherwise the trap behaves like a totem: at the end of the owner's turn it uses its ability on a hostile unit within 5 yards if any. Every trap ability ends by killing the trap (Kill Self) except Frost Trap, which instead becomes a 30 s ice slick (its 600 s cooldown stops re-triggers). Trap abilities use owner-'Pet' AbilityMods (Clever Traps, Trap Mastery) like totem abilities; threat caused by a trap is credited to the owning hunter and the trap never appears on threat tables. Traps cannot be damaged or affected by hostile abilities/auras (area effects ignore them); only their own Kill(Self), lifetime expiry, replacement by a new trap or the end of battle remove them. ACCEPTED DEVIATION (in-combat trapping): in WoW Classic 1.12 the four trap-laying spells were not usable in combat; traps were laid before the pull, or after a successful Feign Death had dropped the hunter out of combat (only if her pet was not keeping her in combat). Lanternvale lets the hunter lay a trap on any of her turns in battle, because Battle.InCombat is a single flag for the whole fight and cannot express a hunter who is out of combat while the battle goes on. Traps laid in the field before an encounter already carry into the battle (they are owned totems, GameSession.OwnedSummons). To restore the 1.12 rule: add requires.notInCombat to hunter_immolation_trap, hunter_freezing_trap, hunter_frost_trap and hunter_explosive_trap, and make HunterFeignDeath count the hunter as out of combat for notInCombat checks while her hunter_feign_death aura is up, no enemy resisted it and her pet is not attacking."
     },
     {
       "id": "HunterMark",

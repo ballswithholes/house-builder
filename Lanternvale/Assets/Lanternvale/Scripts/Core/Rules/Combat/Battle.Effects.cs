@@ -338,6 +338,8 @@ namespace Lanternvale.Rules
             var w = StatCalculator.GetWeapon(cast.Caster, kind == AttackKind.Ranged ? WeaponSlot.Ranged : WeaponSlot.MainHand);
             foreach (var t in new List<Unit>(cast.PassHits))
             {
+                // a proc must not break the control this very cast just put on the target (Sword Specialization after Sap/Gouge)
+                if (HasOwnBreakableControl(cast, t)) continue;
                 cast.PassCrits.TryGetValue(t, out var crit);
                 cast.PassDamage.TryGetValue(t, out var dmg);
                 var info = new ProcInfo { Ability = cast.Ability, School = cast.School, Crit = crit, Damage = dmg, WeaponSpeed = w.Valid ? w.Speed : 2f, Ranged = kind == AttackKind.Ranged };
@@ -346,6 +348,13 @@ namespace Lanternvale.Rules
                 else FireProcs(ProcTrigger.OnSpellHit, cast.Caster, t, info);
             }
             cast.PassHits.Clear();
+        }
+
+        bool HasOwnBreakableControl(AbilityCast cast, Unit t)
+        {
+            foreach (var au in t.Auras)
+                if (au.Caster == cast.Caster && au.CastSerial == castSerial && IsBreakableControl(au.Def)) return true;
+            return false;
         }
 
         void ExecuteEffectList(AbilityCast cast, IList<EffectDef> effects)
@@ -441,7 +450,8 @@ namespace Lanternvale.Rules
                 var o = GetOutcome(cast, t, e);
                 if (o != HitOutcome.Hit && o != HitOutcome.Block) return;
             }
-            if (hostile && !cast.Periodic && !cast.PassHits.Contains(t) && e.type != EffectType.Threat) cast.PassHits.Add(t);
+            // taunts and threat effects are not attacks: they do not trigger on-hit procs
+            if (hostile && !cast.Periodic && !cast.PassHits.Contains(t) && e.type != EffectType.Threat && e.type != EffectType.Taunt) cast.PassHits.Add(t);
             ApplyEffect(cast, e, t, chainScale);
             if (required != null && e.consumeTargetAura && t.Auras.Contains(required)) RemoveAura(required, AuraRemoveReason.Consumed);
         }
@@ -462,7 +472,10 @@ namespace Lanternvale.Rules
         HitOutcome GetOutcome(AbilityCast cast, Unit t, EffectDef e = null)
         {
             if (cast.Outcomes.TryGetValue(t, out var o)) return o;
-            o = RollOutcome(cast, t, e != null && Specials.Unavoidable(cast, e));
+            bool rides = e != null && RidesOnHit(cast, t, e);
+            // a physical proc riding on the hit that triggered it simply lands; spell procs keep their resist roll
+            if (rides && (cast.Kind == AttackKind.Melee || cast.Kind == AttackKind.Ranged) && !t.IsInvulnerable) o = HitOutcome.Hit;
+            else o = RollOutcome(cast, t, e != null && (Specials.Unavoidable(cast, e) || rides));
             cast.Outcomes[t] = o;
             if (o == HitOutcome.Hit || o == HitOutcome.Block)
             {
@@ -471,6 +484,24 @@ namespace Lanternvale.Rules
             }
             else if (t == cast.Target) cast.PrimaryAvoided = true;
             return o;
+        }
+
+        /// <summary>
+        /// A proc's effect on the unit whose hit/crit triggered it (Deep Wounds, Mace Specialization, Winter's Chill...):
+        /// the triggering attack already connected, so it cannot miss, be dodged, parried or blocked (spell procs can still
+        /// be resisted; extra attacks roll their own swing).
+        /// </summary>
+        static bool RidesOnHit(AbilityCast cast, Unit t, EffectDef e)
+        {
+            var p = cast.SourceProc;
+            if (p == null || t != cast.ProcOther || e.type == EffectType.WeaponDamage) return false;
+            switch (p.trigger)
+            {
+                case ProcTrigger.OnMeleeHit: case ProcTrigger.OnAutoAttackHit: case ProcTrigger.OnRangedHit: case ProcTrigger.OnSpellHit:
+                case ProcTrigger.OnCrit: case ProcTrigger.OnMeleeCrit: case ProcTrigger.OnSpellCrit:
+                    return true;
+                default: return false;
+            }
         }
 
         /// <summary>Rolls (once per cast and target) the hit table for a special effect that needs it (Mana Burn).</summary>
@@ -898,7 +929,7 @@ namespace Lanternvale.Rules
             }
             else tables.Add(t);
             float flat = (e.threat != 0 ? e.threat : e.amount);
-            if (flat != 0 || e.perLevel != 0) flat = (flat + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult;
+            if (flat != 0 || e.perLevel != 0) flat = (flat + e.perLevel * Math.Max(0, cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult;
             foreach (var tab in tables)
             {
                 if (tab.Team == c.Team) continue;
@@ -929,7 +960,7 @@ namespace Lanternvale.Rules
             if (!TryParseResource(e.resource, out var r, out var health, out var combo)) return;
             float amt = e.pctOfMax > 0
                 ? (health ? t.MaxHealth : t.MaxResource(r)) * e.pctOfMax / 100f
-                : ((e.amount != 0 ? e.amount : e.min) + e.perLevel * (cast.EffLevel - cast.LearnLevel) + e.perCombo * cast.ComboPoints) * cast.Mods.EffectMult;
+                : ((e.amount != 0 ? e.amount : e.min) + e.perLevel * Math.Max(0, cast.EffLevel - cast.LearnLevel) + e.perCombo * cast.ComboPoints) * cast.Mods.EffectMult;
             amt *= cast.MagnitudeScale;
             amt = Specials.ModifyResourceGain(cast, e, t, amt);
             if (combo)
@@ -959,7 +990,7 @@ namespace Lanternvale.Rules
         {
             var c = cast.Caster;
             if (!TryParseResource(e.resource, out var r, out var health, out var combo) || combo) return;
-            float amt = ((e.amount != 0 ? e.amount : e.min) + e.perLevel * (cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult * cast.MagnitudeScale;
+            float amt = ((e.amount != 0 ? e.amount : e.min) + e.perLevel * Math.Max(0, cast.EffLevel - cast.LearnLevel)) * cast.Mods.EffectMult * cast.MagnitudeScale;
             if (cast.Periodic && cast.SourceAura != null) amt *= cast.SourceAura.EffectMult;
             if (health && t == c)
             {

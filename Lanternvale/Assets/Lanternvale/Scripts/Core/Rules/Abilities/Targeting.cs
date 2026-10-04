@@ -79,11 +79,12 @@ namespace Lanternvale.Rules
         {
             var shape = AreaOf(caster, a, target, point, mods);
             var list = new List<Unit>();
+            bool reveals = RevealsHidden(b, a);
             foreach (var u in b.Units)
             {
                 if (!u.IsAlive || u.IsUntargetable) continue;
                 if (!Affects(a.area.affects, caster, u)) continue;
-                if (u.IsHostileTo(caster) && u.HasStateAura(UnitState.Invisible)) continue;
+                if (u.IsHostileTo(caster) && u.HasStateAura(UnitState.Invisible) && !reveals) continue;
                 if (u == caster && a.area.affects == AreaAffects.Enemies) continue;
                 if (u.IsHostileTo(caster) && a.requires != null && a.requires.targetCreatureTypes.Length > 0 &&
                     Array.IndexOf(a.requires.targetCreatureTypes, u.Creature != null && u.Class == null ? u.Creature.type : CreatureType.Humanoid) < 0) continue;
@@ -100,6 +101,19 @@ namespace Lanternvale.Rules
             });
             if (a.area.maxTargets > 0 && list.Count > a.area.maxTargets) list.RemoveRange(a.area.maxTargets, list.Count - a.area.maxTargets);
             return list;
+        }
+
+        /// <summary>Flare-like abilities (remove Stealth/Invisible auras in an area) also find invisible units.</summary>
+        static bool RevealsHidden(Battle b, AbilityDef a)
+        {
+            foreach (var e in a.effects)
+            {
+                if (e.type != EffectType.RemoveAura) continue;
+                if (string.Equals(e.auraTag, "Invisible", StringComparison.OrdinalIgnoreCase)) return true;
+                var d = !string.IsNullOrEmpty(e.aura) ? b.Db.Aura(e.aura) : null;
+                if (d != null && Array.IndexOf(d.states, UnitState.Invisible) >= 0) return true;
+            }
+            return false;
         }
 
         /// <summary>

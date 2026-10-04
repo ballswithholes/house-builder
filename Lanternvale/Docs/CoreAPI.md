@@ -102,7 +102,9 @@ units are skipped automatically (events `TurnStart` + `TurnSkipped` + `TurnEnd`)
 * Player actions on the active unit (all return `ActionResult { Ok, Reason }`):
   * `UseAbility(unit, abilityId, targetUnit = null, point = null)` — ability by id (auto attacks toggle; `nextSwing`
     abilities queue; casts that do not fit the remaining Time become **pending** and end the turn).
-  * `UseItem(unit, itemInstance, target, point)` — item `use` ability; consumes one if `consumable`.
+  * `UseItem(unit, itemInstance, target, point)` — item `use` ability; consumes one if `consumable`. Characters must meet
+    the item's `requiredLevel` and `classes`; `CanUseItem(unit, item, target, point)` is the matching full check
+    (`Battle.ItemUseRestriction(unit, def)` = level/class reason or null).
   * `Move(unit, destination)` / `MoveAlong(unit, pathPoints)` — truncated to `MoveLeft`; `PreviewMove(unit, dest)`
     returns the `PathResult` for UI previews; `CannotMoveReason(unit)`.
   * `Wait(unit, seconds)`, `StartAutoAttack(unit, target, basicAbilityDef, toggle)`, `StopAutoAttack(unit)`,
@@ -164,6 +166,15 @@ CastFailed, ChannelTick, SwingQueued, AutoAttackToggled, ResourceChange, ComboPo
 Charge, Knockback, Summon, Despawn, Death, Downed, Revive, Threat, Taunt, TargetChanged, ItemCreated,
 ItemConsumed, CooldownReset, Initiative, Log.
 
+Combat log wording: debuffs "afflict" their bearer, buffs are "gained" (also when an ally casts them).
+
+**Ability smoke test** (`Tools/harness/CoreTests/TestsAbilitySmoke.cs`, `Tools/check.sh core --filter Smoke`): every class
+ability (level 60, max ranks, every talent), pet/demon/totem/trap ability, triggered hidden ability, item `use` and enemy
+creature ability is used in a fresh battle with its prerequisites set up; each use must succeed (or be refused for a
+deliberate requirement), produce evidence of every effect, pay its cost, start its cooldown, spend its Time and survive
+its aftermath. Data problems are listed in its `KnownDataIssues`. `SMOKE_DEBUG=<ability[@variant]>` dumps a job's events,
+`SMOKE_VERBOSE=1` lists every job.
+
 ### Out of combat ("field")
 
 ```csharp
@@ -208,6 +219,18 @@ encounter's trigger radius by 4 m while the creature has `priest_mind_soothe`).
 * Procs fire from auras (scaled by the applying ability: rank, EffLevel, its AbilityMods and combo points),
   talents (`Proc` passives; Rank = talent rank, EffLevel = unit level, LearnLevel = 1) and items (no scaling). Hit procs (OnMeleeHit/OnRangedHit/OnSpellHit) fire **once per target per cast / channel tick** after the
   cast's effects (and per white swing); auras applied by a cast are not consumed by that same cast's procs.
+* Hit procs ride on the hit: a talent/item proc without an explicit effect school takes the school of the triggering
+  ability (Winter's Chill, Impact, Shadow Weaving are Frost/Fire/Shadow spell effects), and its effects on the unit whose
+  hit/crit triggered it cannot miss, be dodged, parried or blocked (spell procs may still be resisted; extra attacks such
+  as Sword Specialization roll their own swing). Taunt effects are not attacks and trigger no on-hit procs.
+* Breakable crowd control (an aura with a control state and `breakOnDamage` without threshold: Sap, Gouge, Blind, Scatter
+  Shot, Wyvern Sting, Repentance...) applied by an ability to its target never starts the caster's auto attack and turns
+  it off against that target (Gouge "turns off your attack"); the same cast's on-hit procs skip that target. Companion
+  AI does not focus or auto attack a sapped/gouged/polymorphed/sleeping enemy while another one is free.
+* Area abilities that remove Stealth/Invisible auras (Flare) also find invisible units in the area.
+* Ability-level target rules of a special also apply when the special sits on an effect (`help_up`'s HelpUp).
+* `perLevel` growth never goes below the base value: an effect used below its ability's `learnLevel` (a level-scaled
+  item used by a low-level character) uses the base magnitude, like costs, absorbs and aura mods already did.
 * Area auras (`radius` + `radiusAura`) are maintained around their bearer (paladin auras include the paladin).
 * `RemoveAura` with `auraTag` also matches auras whose `states` include that UnitState name.
 

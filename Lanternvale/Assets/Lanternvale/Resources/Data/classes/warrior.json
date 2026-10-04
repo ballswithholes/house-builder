@@ -63,10 +63,11 @@
         "warrior_arms_improved_heroic_strike",
         "warrior_arms_improved_heroic_strike",
         "warrior_arms_improved_heroic_strike",
-        "warrior_arms_deflection",
-        "warrior_arms_deflection",
-        "warrior_arms_improved_charge",
-        "warrior_arms_improved_charge",
+        "warrior_arms_improved_rend",
+        "warrior_arms_improved_rend",
+        "warrior_arms_improved_rend",
+        "warrior_arms_tactical_mastery",
+        "warrior_arms_tactical_mastery",
         "warrior_arms_tactical_mastery",
         "warrior_arms_tactical_mastery",
         "warrior_arms_tactical_mastery",
@@ -74,7 +75,6 @@
         "warrior_arms_deep_wounds",
         "warrior_arms_deep_wounds",
         "warrior_arms_deep_wounds",
-        "warrior_arms_improved_overpower",
         "warrior_arms_impale",
         "warrior_arms_impale",
         "warrior_arms_two_handed_weapon_specialization",
@@ -89,7 +89,7 @@
         "warrior_arms_two_handed_weapon_specialization",
         "warrior_arms_two_handed_weapon_specialization",
         "warrior_arms_improved_overpower",
-        "warrior_arms_tactical_mastery",
+        "warrior_arms_improved_overpower",
         "warrior_arms_mortal_strike",
         "warrior_fury_cruelty",
         "warrior_fury_cruelty",
@@ -1365,6 +1365,7 @@
           "column": 1,
           "maxRank": 1,
           "description": "Generates 1 rage point every 3 sec (2 rage at the start of each of your turns in combat).",
+          "requires": "warrior_arms_tactical_mastery",
           "effects": [
             {
               "type": "Proc",
@@ -1383,6 +1384,7 @@
           "column": 2,
           "maxRank": 3,
           "description": "Your critical strikes cause the opponent to bleed, dealing {20/40/60}% of your melee weapon's average damage over 12 sec.",
+          "requires": "warrior_arms_improved_rend",
           "effects": [
             {
               "type": "Proc",
@@ -2112,7 +2114,7 @@
     {
       "id": "WarriorCharge",
       "usedBy": "warrior_charge (ability)",
-      "behaviour": "Ability special (CheckUse). WoW Charge cannot be used while the warrior is in combat. In a battle the warrior counts as 'out of combat' until it has dealt damage, taken damage or used any ability against an enemy in this battle (normally only its first action of the fight); afterwards Charge is unusable for the rest of the battle (Intercept is the in-combat version). Outside battles Charge is used like an opener and starts the encounter. Other requirements (Battle Stance, 8-25 yd range, cooldown) are the normal data checks."
+      "behaviour": "Ability special (CheckUse). WoW Charge cannot be used while the warrior is in combat. In a battle the warrior counts as 'out of combat' until it has dealt damage, taken damage or used any ability against an enemy in this battle (normally only its first action of the fight); afterwards Charge is unusable for the rest of the battle (Intercept is the in-combat version). The warrior also counts as in combat while it has the warrior_bloodrage aura (Bloodrage: 'considered in combat for the duration'), so Charge is unusable until Bloodrage expires; the opener is Charge first, then Bloodrage. Outside battles Charge is used like an opener and starts the encounter. Other requirements (Battle Stance, 8-25 yd range, cooldown) are the normal data checks."
     },
     {
       "id": "WarriorOverpower",

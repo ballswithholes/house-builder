@@ -95,7 +95,7 @@ namespace Lanternvale.Rules
                 return UseCheck.Fail(UseFailure.Shapeshifted, "Cannot do that while shapeshifted.");
             bool spell = AbilityRules.IsSpell(a) && a.special != "Shoot" && !a.autoAttack;
             if (spell && u.HasState(UnitState.Silence)) return UseCheck.Fail(UseFailure.Silenced, "You are silenced.");
-            if (!spell && !fromItem && !a.autoAttack && a.school == School.Physical && a.special != "HelpUp" && u.HasState(UnitState.Pacify))
+            if (!spell && !fromItem && !a.autoAttack && a.school == School.Physical && !Specials.UsesSpecial(a, "HelpUp") && u.HasState(UnitState.Pacify))
                 return UseCheck.Fail(UseFailure.Pacified, "You are pacified.");
             if (a.school != School.Physical && u.IsSchoolLocked(a.school))
                 return UseCheck.Fail(UseFailure.Locked, $"{a.school} spells are locked out.");
@@ -453,7 +453,36 @@ namespace Lanternvale.Rules
             var a = Db.Ability(item.Def.use);
             if (a == null) return ActionResult.Fail($"{item.Name} cannot be used.");
             if (Inventory != null && !Inventory.Items.Contains(item)) return ActionResult.Fail("The item is not in your bags.");
+            var why = ItemUseRestriction(u, item.Def);
+            if (why != null) return ActionResult.Fail(why);
             return UseAbility(u, a, target, point, true, item);
+        }
+
+        /// <summary>
+        /// Full usability check of a bag item for the unit: the item's level and class requirements (a level 12 Healing
+        /// Potion, a Mage's Mana Ruby, a Rogue's poison vials), then its `use` ability (target omitted = target ignored).
+        /// </summary>
+        public UseCheck CanUseItem(Unit u, ItemInstance item, Unit target = null, Vec2? point = null)
+        {
+            if (item == null) return UseCheck.Fail(UseFailure.Unknown, "No item.");
+            var a = Db.Ability(item.Def.use);
+            if (a == null) return UseCheck.Fail(UseFailure.Unknown, $"{item.Name} cannot be used.");
+            if (Inventory != null && !Inventory.Items.Contains(item)) return UseCheck.Fail(UseFailure.Unknown, "The item is not in your bags.");
+            var why = ItemUseRestriction(u, item.Def);
+            if (why != null) return UseCheck.Fail(UseFailure.Requirement, why);
+            if (a.target == TargetType.Self) target = u;
+            else if (a.target == TargetType.Pet) target = u?.Pet;
+            return CheckUse(u, a, target, point, true, target != null || point != null);
+        }
+
+        /// <summary>Why a character cannot use the item at all (required level, class restriction), or null.</summary>
+        public static string ItemUseRestriction(Unit u, ItemDef def)
+        {
+            if (u == null || def == null || !u.IsCharacter) return null;
+            if (def.requiredLevel > u.Level) return $"Requires level {def.requiredLevel}.";
+            if (def.classes != null && def.classes.Length > 0 && Array.IndexOf(def.classes, u.ClassId) < 0)
+                return $"Requires class: {string.Join(", ", def.classes)}.";
+            return null;
         }
 
         internal ActionResult UseAbility(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, ItemInstance item)
@@ -495,7 +524,9 @@ namespace Lanternvale.Rules
 
             if (target != null && target.IsHostileTo(u))
             {
-                if (AbilityRules.StartsMeleeAutoAttack(a)) StartAutoAttack(u, target, Db.Ability("attack"), false);
+                // Sap, Gouge, Scatter Shot, Repentance...: a swing would break the control at once (Gouge "turns off your attack")
+                if (AppliesBreakableControl(a)) { if (u.AutoAttacking && u.AttackTarget == target) StopAutoAttack(u); }
+                else if (AbilityRules.StartsMeleeAutoAttack(a)) StartAutoAttack(u, target, Db.Ability("attack"), false);
                 else if (AbilityRules.StartsAutoShot(a) && u.Knows("auto_shot")) StartAutoAttack(u, target, Db.Ability("auto_shot"), false);
             }
             ConsumeReactive(u, a.requires?.reactive);
@@ -566,6 +597,27 @@ namespace Lanternvale.Rules
         }
 
         readonly Dictionary<Unit, ItemInstance> pendingItems = new Dictionary<Unit, ItemInstance>();
+
+        static readonly UnitState[] BreakableControlStates =
+        {
+            UnitState.Stun, UnitState.Incapacitate, UnitState.Sleep, UnitState.Polymorph, UnitState.Confuse, UnitState.Fear,
+        };
+
+        /// <summary>True when the aura takes control of its bearer and any damage breaks it (Sap, Gouge, Polymorph...).</summary>
+        internal static bool IsBreakableControl(AuraDef d)
+        {
+            if (d == null || !d.breakOnDamage || d.breakDamageThreshold > 0f) return false;
+            foreach (var st in BreakableControlStates) if (Array.IndexOf(d.states, st) >= 0) return true;
+            return false;
+        }
+
+        /// <summary>The ability puts a breakable control effect on its target (its caster must not keep swinging at it).</summary>
+        internal bool AppliesBreakableControl(AbilityDef a)
+        {
+            foreach (var e in a.effects)
+                if (e.type == EffectType.ApplyAura && e.target == EffectTarget.Target && IsBreakableControl(Db.Aura(e.aura))) return true;
+            return false;
+        }
 
         void SpendTime(Unit u, float t)
         {

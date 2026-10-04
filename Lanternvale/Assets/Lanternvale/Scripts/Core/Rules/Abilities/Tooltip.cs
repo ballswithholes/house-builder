@@ -71,7 +71,7 @@ namespace Lanternvale.Rules
         /// <summary>Displayed magnitude of an ability effect at an effective level for a unit (null unit = no stats).</summary>
         public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods)
         {
-            float delta = eff - a.learnLevel;
+            float delta = Math.Max(0, eff - a.learnLevel);
             var school = e.school ?? a.school;
             string combo = e.perCombo > 0 ? $" (+{N(e.perCombo)} per combo point)" : "";
             switch (e.type)
@@ -101,7 +101,8 @@ namespace Lanternvale.Rules
                     float lo = (w.Min + ap / 14f * w.Speed) * e.weaponPct / 100f + flatLo;
                     float hi = (w.Max + ap / 14f * w.Speed) * e.weaponPct / 100f + flatHi;
                     if (e.offHand) { lo *= 0.5f; hi *= 0.5f; }
-                    return Range(lo * mods.DamageMult, hi * mods.DamageMult) + combo;
+                    float cm = u.Class == null && u.Creature != null ? CreatureScaling.DamageMult(u.Creature) : 1f; // as Battle.EffectWeaponDamage
+                    return Range(lo * mods.DamageMult * cm, hi * mods.DamageMult * cm) + combo;
                 }
                 case EffectType.ApplyAura:
                 {

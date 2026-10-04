@@ -55,7 +55,12 @@ namespace Lanternvale.Rules
                 case CombatEventType.Immune: return $"{Who(t)} is immune to {Possessive(s, string.IsNullOrEmpty(what) ? "attack" : what)}.";
                 case CombatEventType.Evade: return $"{Who(t)} evades.";
                 case CombatEventType.AuraApplied:
-                    return s != null && s != t ? $"{Who(t)} is afflicted by {what}." : $"{Who(t)} gains {what}.";
+                {
+                    // debuffs afflict, buffs are gained (an ally's Blessing of Kings is not an affliction)
+                    var def = t?.Db?.Aura(e.AuraId);
+                    bool debuff = def != null ? def.kind == AuraKind.Debuff : s != null && s != t && s.IsHostileTo(t);
+                    return debuff ? $"{Who(t)} is afflicted by {what}." : $"{Who(t)} gains {what}.";
+                }
                 case CombatEventType.AuraRefreshed: return $"{what} on {Who(t)} is refreshed.";
                 case CombatEventType.AuraStack: return e.Reason == "charges" ? $"{what} on {Who(t)}: {e.Count} charges left." : $"{what} on {Who(t)} ({e.Count}).";
                 case CombatEventType.AuraRemoved:
