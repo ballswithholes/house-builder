@@ -390,7 +390,10 @@ namespace Lanternvale.Game
             }
             // dead units whose fade-out was still running
             for (int i = 0; i < deferred.Count; i++)
-                if (deferred[i].Kind == DeferredKind.RemoveView) RemoveViewNow(deferred[i].Unit);
+            {
+                var d = deferred[i];
+                if (d.Unit != null && (d.Kind == DeferredKind.RemoveDespawned || !d.Unit.IsAlive)) RemoveViewNow(d.Unit);
+            }
             deferred.Clear();
 
             if (timeScaleOwned && Time.timeScale > 0f) Time.timeScale = 1f;

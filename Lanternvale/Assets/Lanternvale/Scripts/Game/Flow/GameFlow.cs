@@ -87,8 +87,28 @@ namespace Lanternvale.Game
             catch (Exception e) { Debug.LogException(e); }
         }
 
-        /// <summary>Active party (main character + companions + pets) in display order.</summary>
-        public IReadOnlyList<Unit> PartyUnits => Session != null ? (IReadOnlyList<Unit>)Session.PartyUnits() : Array.Empty<Unit>();
+        /// <summary>Active party (main character + companions + pets) in display order. Cached per frame and refreshed
+        /// on every session event, so UI code may read it freely (do not keep the list across frames).</summary>
+        public IReadOnlyList<Unit> PartyUnits
+        {
+            get
+            {
+                if (Session == null) return Array.Empty<Unit>();
+                int frame = Time.frameCount;
+                if (partyUnitsFrame != frame || partyUnitsSession != Session || partyUnitsCache == null)
+                {
+                    // a fresh list each time (never mutated afterwards): safe even while a caller iterates the old one
+                    partyUnitsFrame = frame;
+                    partyUnitsSession = Session;
+                    partyUnitsCache = Session.PartyUnits();
+                }
+                return partyUnitsCache;
+            }
+        }
+
+        List<Unit> partyUnitsCache;
+        int partyUnitsFrame = -1;
+        GameSession partyUnitsSession;
 
         public UnitView ViewOf(Unit u)
         {

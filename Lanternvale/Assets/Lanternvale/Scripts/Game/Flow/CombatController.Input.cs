@@ -1,0 +1,885 @@
+// CombatController — the player's turn: movement range overlay (ReachMap of the battle NavGrid), path preview
+// with remaining metres, hover preview text, valid-target / AoE highlights, targeting mode for abilities and items,
+// BG3-style smart clicks (attack an enemy: start the basic attack, walking into reach first when movement allows;
+// help a downed ally up), click-to-move, Space/Enter to end the turn, right click/Esc to cancel targeting.
+//
+// All world input goes through GameInput. Clicks over UI panels (Ui.Panel/Ui.Btn/Ui.Block) are suppressed by
+// GameInput.WorldClick; modal screens and GameFlow.WorldInputEnabled = false block world input entirely.
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Lanternvale.Data;
+using Lanternvale.Rules;
+using Lanternvale.Util;
+using Lanternvale.World;
+using UnityEngine;
+
+namespace Lanternvale.Game
+{
+    public sealed partial class CombatController
+    {
+        // FxSystem preview ids owned by the combat controller
+        const string MoveRangeId = "combat_move_range";
+        const string PathId = "combat_path";
+        const string AoeId = "combat_aoe";
+        const string RangeId = "combat_range";
+        const string AiPathId = "combat_ai_path";
+
+        static readonly Color MoveRangeColor = new Color(0.68f, 0.9f, 1f, 0.95f);
+        static readonly Color PathColor = new Color(1f, 0.86f, 0.5f, 0.95f);
+        static readonly Color PathFarColor = new Color(1f, 0.62f, 0.45f, 0.9f);
+        static readonly Color HostileColor = new Color(1f, 0.45f, 0.38f, 1f);
+        static readonly Color FriendlyColor = new Color(0.5f, 0.95f, 0.55f, 1f);
+        static readonly Color InvalidColor = new Color(0.7f, 0.66f, 0.75f, 0.6f);
+        static readonly Color RangeRingColor = new Color(1f, 1f, 1f, 0.28f);
+
+        // ---------------------------------------------------------------- state
+        Unit turnUnit;
+        bool playerVisualsShown, moveRangeShown, moveRangeDirty;
+        bool hoverDirty = true;
+        HoverKey lastKey;
+        AbilityModSet targetingMods;
+
+        ReachMap reach;
+        bool reachValid;
+        Unit reachUnit;
+        int reachStamp = -1, reachGridVersion = -1;
+        Vec2 reachPos;
+        float reachMove = -1f;
+
+        readonly NavPath navTmp = new NavPath();
+        readonly NavPath approachTmp = new NavPath();
+        readonly List<Vec2> planPoints = new List<Vec2>(32);
+        float planLength;
+        bool planReached, planTruncated;
+        readonly List<Vec2> approachPoints = new List<Vec2>(32);
+        UseFailure lastCheckCode;
+
+        int validStamp = -1;
+        AbilityDef validFor;
+        Unit validUnit;
+        readonly Dictionary<Unit, bool> validTargets = new Dictionary<Unit, bool>();
+
+        AbilityDef rangeRingFor;
+        int rangeRingStamp = -1;
+
+        readonly Dictionary<UnitView, Color> wantHl = new Dictionary<UnitView, Color>();
+        readonly Dictionary<UnitView, Color> haveHl = new Dictionary<UnitView, Color>();
+        readonly List<UnitView> hlTmp = new List<UnitView>();
+        readonly StringBuilder sb = new StringBuilder(128);
+
+        struct HoverKey : IEquatable<HoverKey>
+        {
+            public int Unit, Hover, Cx, Cy, Stamp;
+            public AbilityDef Ability;
+            public ItemInstance Item;
+            public bool OverUi;
+
+            public bool Equals(HoverKey o) =>
+                Unit == o.Unit && Hover == o.Hover && Cx == o.Cx && Cy == o.Cy && Stamp == o.Stamp &&
+                ReferenceEquals(Ability, o.Ability) && ReferenceEquals(Item, o.Item) && OverUi == o.OverUi;
+
+            public override bool Equals(object obj) => obj is HoverKey k && Equals(k);
+            public override int GetHashCode() => Unit ^ (Hover << 8) ^ (Cx << 16) ^ Cy ^ Stamp;
+        }
+
+        struct SmartPlan
+        {
+            public AbilityDef Ability;
+            public bool Approach;
+            public float ApproachLength;
+            public string Error;
+            public bool AlreadyAttacking;
+        }
+
+        // ================================================================ per frame
+
+        void UpdatePlayerTurn()
+        {
+            var u = Battle.ActiveUnit;
+            if (u == null) return;
+            if (u != turnUnit)
+            {
+                CancelTargeting();
+                turnUnit = u;
+                hoverDirty = true;
+            }
+            playerVisualsShown = true;
+            bool blocked = UiRoot.ModalActive || (flow != null && !flow.WorldInputEnabled);
+            if (IsTargeting) UiRoot.HotkeysSuppressed = true;   // Esc cancels targeting instead of opening the pause menu
+
+            if (!blocked)
+            {
+                if (IsTargeting && (GameInput.KeyDown(KeyCode.Escape) || (GameInput.MouseDown(1) && !GameInput.PointerOverUi)))
+                {
+                    CancelTargeting();
+                    UiRoot.HotkeysSuppressed = true;
+                    return;
+                }
+                if (GameInput.KeyDown(KeyCode.Space) || GameInput.KeyDown(KeyCode.Return) || GameInput.KeyDown(KeyCode.KeypadEnter))
+                {
+                    EndTurn();
+                    return;
+                }
+            }
+
+            // a downed unit offered a self-resurrection: the UI shows the prompt (AnswerSelfResurrection)
+            var offer = Battle.PendingSelfResurrection(u);
+            if (offer != null)
+            {
+                HideTurnPreviews();
+                ClearHighlights();
+                HoveredTarget = null;
+                if (hoverDirty || lastKey.Unit != -u.Id)
+                {
+                    lastKey = new HoverKey { Unit = -u.Id };
+                    hoverDirty = false;
+                    HoverPreview = (string.IsNullOrEmpty(offer.Name) ? "Resurrection" : offer.Name) + ": rise now, or wait (Space).";
+                }
+                return;
+            }
+
+            var rig = CameraRig.Instance;
+            if (rig == null) return;
+            bool overUi = blocked || GameInput.PointerOverUi;
+            var mouse = rig.MouseWorld;
+            var hover = overUi ? null : PickUnit(mouse);
+            HoveredTarget = hover;
+
+            UpdateMoveRange(u);
+
+            var key = MakeKey(u, hover, mouse, overUi);
+            if (hoverDirty || !key.Equals(lastKey))
+            {
+                lastKey = key;
+                hoverDirty = false;
+                RecomputeHover(u, hover, mouse, overUi);
+            }
+
+            if (!blocked && GameInput.WorldClick(0))
+            {
+                try { OnLeftClick(u, hover, mouse); }
+                catch (Exception e) { LogOnce("click", "Combat click failed: " + e); }
+                hoverDirty = true;
+            }
+        }
+
+        HoverKey MakeKey(Unit u, Unit hover, Vector2 mouse, bool overUi)
+        {
+            var a = TargetingAbility;
+            float q = a != null && (a.target == TargetType.Point || IsAimed(a)) ? 0.1f : 0.25f;
+            return new HoverKey
+            {
+                Unit = u.Id, Hover = hover != null ? hover.Id : 0, Cx = Mathf.FloorToInt(mouse.x / q), Cy = Mathf.FloorToInt(mouse.y / q),
+                Stamp = Battle.Events.Count, Ability = a, Item = TargetingItem, OverUi = overUi,
+            };
+        }
+
+        void HidePlayerTurnVisuals()
+        {
+            if (!playerVisualsShown) return;
+            playerVisualsShown = false;
+            HideTurnPreviews();
+            ClearHighlights();
+            HoverPreview = "";
+            HoveredTarget = null;
+            hoverDirty = true;
+        }
+
+        void HideTurnPreviews()
+        {
+            if (moveRangeShown) { FxSystem.Hide(MoveRangeId); moveRangeShown = false; }
+            FxSystem.Hide(PathId);
+            FxSystem.Hide(AoeId);
+            FxSystem.Hide(RangeId);
+            rangeRingFor = null;
+        }
+
+        Unit PickUnit(Vector2 world)
+        {
+            var v = UnitView.Pick(world, false);
+            if (v == null) return null;
+            var u = UnitOfView(v);
+            if (u == null || !Battle.Units.Contains(u)) return null;
+            return u;
+        }
+
+        // ================================================================ movement range & paths
+
+        NavGrid Grid
+        {
+            get
+            {
+                if (Battle != null && Battle.Pathfinder is Lanternvale.Session.NavGridPathfinder p) return p.Grid;
+                var s = flow != null ? flow.Session : null;
+                return s != null ? s.Nav : null;
+            }
+        }
+
+        ReachMap EnsureReach(Unit u)
+        {
+            var grid = Grid;
+            if (grid == null || u == null) return null;
+            int stamp = Battle.Events.Count;
+            if (reachUnit == u && reachStamp == stamp && reachGridVersion == grid.Version && reachPos == u.Position &&
+                Mathf.Abs(reachMove - u.MoveLeft) < 1e-4f)
+                return reachValid ? reach : null;
+            reachUnit = u;
+            reachStamp = stamp;
+            reachGridVersion = grid.Version;
+            reachPos = u.Position;
+            reachMove = u.MoveLeft;
+            reachValid = false;
+            moveRangeDirty = true;
+            if (u.MoveLeft <= 0.05f || Battle.CannotMoveReason(u) != null) return null;
+            try
+            {
+                reach = grid.ReachableWithin(u.Position, u.MoveLeft, NavAgent.ForUnit(u.Radius, u.Id), reach);
+                reachValid = reach != null;
+            }
+            catch (Exception e) { LogOnce("reach", "Movement range failed: " + e.Message); }
+            return reachValid ? reach : null;
+        }
+
+        void UpdateMoveRange(Unit u)
+        {
+            var r = EnsureReach(u);
+            bool want = ShowMoveRange && r != null && !IsTargeting;
+            if (!want)
+            {
+                if (moveRangeShown) { FxSystem.Hide(MoveRangeId); moveRangeShown = false; }
+                return;
+            }
+            if (!moveRangeShown || moveRangeDirty)
+            {
+                FxSystem.ShowMoveRange(MoveRangeId, r, MoveRangeColor);
+                moveRangeShown = true;
+                moveRangeDirty = false;
+            }
+        }
+
+        /// <summary>Path the active unit would walk to goal this turn (fills planPoints/planLength).</summary>
+        bool PlanMove(Unit u, Vec2 goal)
+        {
+            planPoints.Clear();
+            planLength = 0f;
+            planReached = planTruncated = false;
+            var grid = Grid;
+            if (grid != null)
+            {
+                NavPath p = null;
+                var r = EnsureReach(u);
+                if (r != null && r.CanReach(goal))
+                {
+                    p = r.PathTo(goal, navTmp);
+                    planReached = p.Status != PathStatus.NoPath && !p.IsEmpty;
+                }
+                if (!planReached)
+                {
+                    p = grid.FindPath(u.Position, goal, NavAgent.ForUnit(u.Radius, u.Id), Mathf.Max(0f, u.MoveLeft), navTmp);
+                    planReached = p.ReachedGoal;
+                    planTruncated = p.Truncated;
+                }
+                if (p == null || p.Status == PathStatus.NoPath || p.IsEmpty) return false;
+                planPoints.AddRange(p.Points);
+                planLength = p.Length;
+                return planLength > 0.05f;
+            }
+            var pr = Battle.PreviewMove(u, goal);
+            if (pr == null || !pr.Found || pr.Points.Count < 2) return false;
+            planPoints.AddRange(pr.Points);
+            planLength = pr.Length;
+            planReached = !pr.Truncated;
+            planTruncated = pr.Truncated;
+            return planLength > 0.05f;
+        }
+
+        /// <summary>Path that brings the unit into range of a target unit or point this turn (fills approachPoints).</summary>
+        bool TryApproach(Unit u, AbilityDef a, Unit target, Vec2? point, out float length, out string why)
+        {
+            approachPoints.Clear();
+            length = 0f;
+            why = null;
+            var grid = Grid;
+            if (grid == null || a == null || (target == null && !point.HasValue)) return false;
+            var cannot = Battle.CannotMoveReason(u);
+            if (cannot != null) { why = "Out of range (" + cannot.TrimEnd('.').ToLowerInvariant() + ")."; return false; }
+            AbilityModSet mods;
+            try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
+            float range;
+            if (a.target == TargetType.Point || target == null)
+                range = a.range > 0f ? MathUtil.Yd(a.range * (1f + mods.RangePct / 100f)) : float.PositiveInfinity;
+            else
+            {
+                range = AbilityRules.RangeMetres(u, a, target, mods, Battle.Config);
+                if (a.autoAttack && u.Class == null && u.Creature != null && AbilityRules.IsRangedWeaponAbility(a))
+                    range = MathUtil.Yd(u.Creature.rangedRange) + target.Radius;
+            }
+            if (float.IsInfinity(range) || range <= 0f) return false;
+            var goal = target != null ? target.Position : point.Value;
+            bool los = !AbilityRules.UsesMeleeReach(a);
+            var agent = NavAgent.ForUnit(u.Radius, u.Id, target != null ? target.Id : NavAgent.NoId);
+            var p = grid.FindPathToRange(u.Position, goal, Mathf.Max(0.1f, range - 0.15f), agent, Mathf.Max(0f, u.MoveLeft), los, approachTmp);
+            if (p.Status == PathStatus.NoPath) { why = "No path to the target."; return false; }
+            if (p.Truncated || p.Status != PathStatus.Complete)
+            {
+                float more = Mathf.Max(0.1f, p.FullLength - u.MoveLeft);
+                why = p.Truncated ? "Out of range (needs " + more.ToString("0.0") + " m more movement)." : "Cannot get into range from here.";
+                return false;
+            }
+            if (p.IsEmpty) return false;
+            approachPoints.AddRange(p.Points);
+            length = p.Length;
+            return true;
+        }
+
+        // ================================================================ hover preview
+
+        void RecomputeHover(Unit u, Unit hover, Vector2 mouse, bool overUi)
+        {
+            wantHl.Clear();
+            string text;
+            try
+            {
+                if (IsTargeting) text = TargetingPreview(u, hover, mouse, overUi);
+                else if (overUi) { FxSystem.Hide(PathId); FxSystem.Hide(AoeId); text = ""; }
+                else if (hover != null && hover != u) text = UnitPreview(u, hover);
+                else text = GroundPreview(u, mouse);
+            }
+            catch (Exception e)
+            {
+                LogOnce("hover", "Hover preview failed: " + e);
+                text = "";
+            }
+            HoverPreview = text ?? "";
+            CommitHighlights();
+        }
+
+        string GroundPreview(Unit u, Vector2 mouse)
+        {
+            FxSystem.Hide(AoeId);
+            var why = Battle.CannotMoveReason(u);
+            if (why != null)
+            {
+                FxSystem.Hide(PathId);
+                return u.MoveLeft <= 0.05f && u.CanMoveNow ? "No movement left. Use an ability or press Space to end the turn." : why;
+            }
+            if (!PlanMove(u, ToVec(mouse)))
+            {
+                FxSystem.Hide(PathId);
+                return "Cannot move there.";
+            }
+            FxSystem.ShowPath(PathId, planPoints, planReached ? PathColor : PathFarColor, true);
+            float left = Mathf.Max(0f, u.MoveLeft - planLength);
+            sb.Length = 0;
+            sb.Append("Move ").Append(planLength.ToString("0.0")).Append(" m (").Append(left.ToString("0.0")).Append(" m left)");
+            if (!planReached) sb.Append(planTruncated ? " · too far to reach this turn" : " · as close as possible");
+            return sb.ToString();
+        }
+
+        string UnitPreview(Unit u, Unit target)
+        {
+            FxSystem.Hide(AoeId);
+            if (target.IsHostileTo(u))
+            {
+                if (!target.IsAlive) { FxSystem.Hide(PathId); return target.Name; }
+                var plan = PlanSmartAttack(u, target);
+                Want(target, plan.Error == null ? HostileColor : InvalidColor);
+                ShowApproach(plan);
+                if (plan.Error != null)
+                    return plan.Ability != null ? plan.Ability.name + " → " + target.Name + ": " + plan.Error : target.Name + ": " + plan.Error;
+                if (plan.AlreadyAttacking)
+                    return "Attacking " + target.Name + " · auto attacks swing at the end of your turn (Space).";
+                return Line(u, plan.Ability, target, null, null, plan);
+            }
+            if (target.IsFriendlyTo(u) && target.Downed)
+            {
+                var help = Db?.Ability("help_up");
+                if (help != null)
+                {
+                    var plan = PlanUse(u, help, target, null, false);
+                    Want(target, plan.Error == null ? FriendlyColor : InvalidColor);
+                    ShowApproach(plan);
+                    if (plan.Error != null) return help.name + " → " + target.Name + ": " + plan.Error;
+                    return Line(u, help, target, null, null, plan);
+                }
+            }
+            FxSystem.Hide(PathId);
+            sb.Length = 0;
+            sb.Append(target.Name).Append(" · ").Append(Mathf.CeilToInt(Mathf.Max(0f, target.Health))).Append('/')
+              .Append(Mathf.CeilToInt(target.MaxHealth)).Append(" HP");
+            return sb.ToString();
+        }
+
+        void ShowApproach(SmartPlan plan)
+        {
+            if (plan.Error == null && plan.Approach && approachPoints.Count >= 2) FxSystem.ShowPath(PathId, approachPoints, PathColor, true);
+            else FxSystem.Hide(PathId);
+        }
+
+        string TargetingPreview(Unit u, Unit hover, Vector2 mouse, bool overUi)
+        {
+            var a = TargetingAbility;
+            if (a == null) return "";
+            bool fromItem = TargetingItem != null;
+            var mods = targetingMods;
+            if (mods == null)
+            {
+                try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
+                targetingMods = mods;
+            }
+            ShowRangeRing(u, a, mods);
+            bool aimed = IsAimed(a);
+            bool pointed = a.target == TargetType.Point;
+            if (!pointed && !aimed) WantValidTargets(u, a, fromItem);
+
+            string label = fromItem ? TargetingItem.Name : a.name;
+            if (overUi && (pointed || aimed))
+            {
+                FxSystem.Hide(AoeId);
+                FxSystem.Hide(PathId);
+                return label + ": choose a location (right click to cancel).";
+            }
+            Unit tgt = null;
+            Vec2? point = null;
+            if (pointed) point = hover != null ? hover.Position : ToVec(mouse);
+            else if (aimed) point = ToVec(mouse);
+            else tgt = hover;
+
+            // area preview + affected units
+            int enemies = -1, allies = -1;
+            if (a.area.shape != AreaShape.None && (tgt != null || point.HasValue))
+            {
+                var shape = Targeting.AreaOf(u, a, tgt, point, mods);
+                ShowShape(shape, a);
+                var hit = Targeting.AreaUnits(Battle, u, a, tgt, point, mods);
+                enemies = allies = 0;
+                for (int i = 0; i < hit.Count; i++)
+                {
+                    bool hostile = hit[i].IsHostileTo(u);
+                    if (hostile) enemies++; else allies++;
+                    Want(hit[i], hostile ? HostileColor : FriendlyColor);
+                }
+            }
+            else FxSystem.Hide(AoeId);
+
+            if (!pointed && !aimed && tgt == null)
+            {
+                FxSystem.Hide(PathId);
+                sb.Length = 0;
+                sb.Append(label).Append(": ").Append(a.target == TargetType.Enemy ? "choose an enemy" : "choose a target")
+                  .Append(" · ").Append(TimeText(u, a, mods)).Append(" (right click to cancel)");
+                return sb.ToString();
+            }
+            var plan = PlanUse(u, a, tgt, point, fromItem);
+            if (tgt != null) Want(tgt, plan.Error != null ? InvalidColor : tgt.IsHostileTo(u) ? HostileColor : FriendlyColor);
+            ShowApproach(plan);
+            if (plan.Error != null) return tgt != null ? label + " → " + tgt.Name + ": " + plan.Error : label + ": " + plan.Error;
+            return Line(u, a, tgt, mods, null, plan, enemies, allies, fromItem ? TargetingItem.Name : null);
+        }
+
+        void ShowShape(AreaShapeInfo shape, AbilityDef a)
+        {
+            var col = Color.Lerp(Ui.SchoolColor(a.school), Color.white, 0.15f);
+            col.a = 0.95f;
+            var c = ToV(shape.Center);
+            switch (shape.Shape)
+            {
+                case AreaShape.Circle:
+                    FxSystem.ShowCircle(AoeId, c, Mathf.Max(0.2f, shape.Radius), col);
+                    break;
+                case AreaShape.Cone:
+                    FxSystem.ShowCone(AoeId, c, ToV(shape.Direction), Mathf.Max(0.2f, shape.Radius), shape.Angle, col);
+                    break;
+                case AreaShape.Line:
+                    FxSystem.ShowLine(AoeId, c, ToV(shape.Center + shape.Direction * shape.Radius), Mathf.Max(0.2f, shape.Width), col);
+                    break;
+                default:
+                    FxSystem.Hide(AoeId);
+                    break;
+            }
+        }
+
+        void ShowRangeRing(Unit u, AbilityDef a, AbilityModSet mods)
+        {
+            int stamp = Battle.Events.Count;
+            if (rangeRingFor == a && rangeRingStamp == stamp) return;
+            rangeRingFor = a;
+            rangeRingStamp = stamp;
+            float range = 0f;
+            if (!AbilityRules.UsesMeleeReach(a) && a.range > 0f) range = MathUtil.Yd(a.range * (1f + mods.RangePct / 100f));
+            if (range <= 0.5f || range > 45f || IsAimed(a)) { FxSystem.Hide(RangeId); return; }
+            FxSystem.ShowCircle(RangeId, Feet(u, V(u)), range, RangeRingColor);
+        }
+
+        void WantValidTargets(Unit u, AbilityDef a, bool fromItem)
+        {
+            int stamp = Battle.Events.Count;
+            if (validStamp != stamp || validFor != a || validUnit != u)
+            {
+                validStamp = stamp;
+                validFor = a;
+                validUnit = u;
+                validTargets.Clear();
+                foreach (var o in Battle.Units)
+                {
+                    if (o == null || (!o.IsAlive && !(a.target == TargetType.DeadAlly && o.IsDeadOrDowned))) continue;
+                    UseCheck c;
+                    try { c = Battle.CanUse(u, a, o, null, fromItem); }
+                    catch (Exception) { continue; }
+                    if (c.Ok) validTargets[o] = true;
+                    else if (c.Code == UseFailure.Range || c.Code == UseFailure.LineOfSight) validTargets[o] = false;
+                }
+            }
+            foreach (var kv in validTargets)
+            {
+                var col = kv.Key.IsHostileTo(u) ? HostileColor : FriendlyColor;
+                col.a = kv.Value ? 0.6f : 0.3f;
+                Want(kv.Key, col);
+            }
+        }
+
+        // ================================================================ plans
+
+        SmartPlan PlanUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem)
+        {
+            var plan = new SmartPlan { Ability = a };
+            approachPoints.Clear();
+            lastCheckCode = UseFailure.None;
+            if (a == null) { plan.Error = "Nothing to use."; return plan; }
+            var chk = Battle.CanUse(u, a, target, point, fromItem);
+            lastCheckCode = chk.Code;
+            if (chk.Ok) return plan;
+            if (chk.Code == UseFailure.Range)
+            {
+                if (TryApproach(u, a, target, point, out float len, out string why))
+                {
+                    plan.Approach = true;
+                    plan.ApproachLength = len;
+                    return plan;
+                }
+                plan.Error = why ?? chk.Reason;
+                return plan;
+            }
+            plan.Error = chk.Reason;
+            return plan;
+        }
+
+        /// <summary>BG3-style click on an enemy: the unit's basic attack (Auto Shot for hunters, a wand out of melee for casters, else melee Attack).</summary>
+        SmartPlan PlanSmartAttack(Unit u, Unit target)
+        {
+            var db = Db;
+            var melee = db?.Ability("attack");
+            var basic = u.Class != null ? db?.Ability(u.Class.basicAttack) : melee;
+            if (basic == null) basic = melee;
+            if (basic != null && basic != melee && basic.autoAttack)
+            {
+                var p = PlanUse(u, basic, target, null, false);
+                if (p.Error == null) return MarkAttacking(u, target, p);
+                if (lastCheckCode != UseFailure.TooClose && lastCheckCode != UseFailure.Requirement && lastCheckCode != UseFailure.LineOfSight) return p;
+            }
+            var shoot = db?.Ability("shoot");
+            if (shoot != null && basic == melee && u.Knows("shoot") && !Battle.InMeleeRange(u, target))
+            {
+                UseCheck c;
+                try { c = Battle.CanUse(u, shoot, target); } catch (Exception) { c = UseCheck.Fail(UseFailure.Unknown, ""); }
+                if (c.Ok) { approachPoints.Clear(); return new SmartPlan { Ability = shoot }; }
+            }
+            if (melee == null) return new SmartPlan { Error = "You cannot attack." };
+            return MarkAttacking(u, target, PlanUse(u, melee, target, null, false));
+        }
+
+        static SmartPlan MarkAttacking(Unit u, Unit target, SmartPlan p)
+        {
+            if (p.Error == null && !p.Approach && p.Ability != null && p.Ability.autoAttack &&
+                u.AutoAttacking && u.AttackTarget == target && u.AutoAttackAbility == p.Ability.id)
+                p.AlreadyAttacking = true;
+            return p;
+        }
+
+        // ================================================================ clicks & commands
+
+        void OnLeftClick(Unit u, Unit hover, Vector2 mouse)
+        {
+            if (IsTargeting) { ConfirmTargeting(u, hover, mouse); return; }
+            if (hover != null && hover != u)
+            {
+                if (hover.IsHostileTo(u))
+                {
+                    if (hover.IsAlive) ExecutePlan(u, PlanSmartAttack(u, hover), hover, null, null);
+                    return;
+                }
+                if (hover.IsFriendlyTo(u) && hover.Downed)
+                {
+                    var help = Db?.Ability("help_up");
+                    if (help != null) ExecutePlan(u, PlanUse(u, help, hover, null, false), hover, null, null);
+                }
+                return;
+            }
+            if (hover == u) return;
+            var why = Battle.CannotMoveReason(u);
+            if (why != null) { Fail(why); return; }
+            if (!PlanMove(u, ToVec(mouse))) { Fail("Cannot move there."); return; }
+            ActionResult r;
+            try { r = Battle.MoveAlong(u, planPoints); }
+            catch (Exception e) { LogOnce("move", "Move failed: " + e); r = ActionResult.Fail("Cannot move there."); }
+            PullEvents(new Intent { Kind = IntentKind.Move, Actor = u });
+            if (!r.Ok) Fail(r.Reason);
+        }
+
+        void ConfirmTargeting(Unit u, Unit hover, Vector2 mouse)
+        {
+            var a = TargetingAbility;
+            var item = TargetingItem;
+            if (a == null) return;
+            Unit tgt = null;
+            Vec2? point = null;
+            if (a.target == TargetType.Point) point = hover != null ? hover.Position : ToVec(mouse);
+            else if (IsAimed(a)) point = ToVec(mouse);
+            else
+            {
+                if (hover == null) { Fail(a.target == TargetType.Enemy ? "Select an enemy." : "Select a target."); return; }
+                tgt = hover;
+            }
+            ExecutePlan(u, PlanUse(u, a, tgt, point, item != null), tgt, point, item);
+        }
+
+        string ExecutePlan(Unit u, SmartPlan plan, Unit target, Vec2? point, ItemInstance item)
+        {
+            if (plan.Error != null) return Fail(plan.Error);
+            if (plan.AlreadyAttacking || plan.Ability == null) return null;
+            if (plan.Approach)
+            {
+                if (approachPoints.Count < 2) return Fail("Cannot move there.");
+                ActionResult m;
+                try { m = Battle.MoveAlong(u, approachPoints); }
+                catch (Exception e) { LogOnce("approach", "Approach move failed: " + e); m = ActionResult.Fail("Cannot move there."); }
+                PullEvents(new Intent { Kind = IntentKind.Move, Actor = u });
+                if (!m.Ok) return Fail(m.Reason);
+                var chk = Battle.CanUse(u, plan.Ability, target, point, item != null);
+                if (!chk.Ok) return Fail(chk.Reason);
+            }
+            // never toggle a running auto attack off by "attacking" the same target again
+            if (plan.Ability.autoAttack && item == null && u.AutoAttacking && u.AttackTarget == target && u.AutoAttackAbility == plan.Ability.id)
+            {
+                CancelTargeting();
+                return null;
+            }
+            return Execute(u, plan.Ability, item, target, point);
+        }
+
+        /// <summary>Uses an ability/item on the battle and queues its events with the command as intent.</summary>
+        string Execute(Unit u, AbilityDef a, ItemInstance item, Unit target, Vec2? point)
+        {
+            var intent = new Intent { Kind = IntentKind.Ability, Actor = u, Ability = a, Item = item, Target = target, Point = point };
+            ActionResult r;
+            try { r = item != null ? Battle.UseItem(u, item, target, point) : Battle.UseAbility(u, a.id, target, point); }
+            catch (Exception e)
+            {
+                LogOnce("use:" + a.id, "Using " + a.id + " failed: " + e);
+                r = ActionResult.Fail("That cannot be used right now.");
+            }
+            PullEvents(intent);
+            if (!r.Ok) return Fail(r.Reason);
+            CancelTargeting();
+            hoverDirty = true;
+            return null;
+        }
+
+        string BeginAbilityInternal(string abilityId)
+        {
+            if (disposed || Battle == null || Finished) return Fail("Not in combat.");
+            if (!IsPlayerTurn) return Fail(Battle.NeedsPlayerInput ? "Wait for the action to finish." : "It is not your turn.");
+            var a = Db?.Ability(abilityId);
+            if (a == null) return Fail("Unknown ability.");
+            return Begin(Battle.ActiveUnit, a, null);
+        }
+
+        string BeginItemInternal(ItemInstance item)
+        {
+            if (disposed || Battle == null || Finished) return Fail("Not in combat.");
+            if (item == null || item.Def == null) return Fail("No item.");
+            if (!IsPlayerTurn) return Fail(Battle.NeedsPlayerInput ? "Wait for the action to finish." : "It is not your turn.");
+            var u = Battle.ActiveUnit;
+            var a = Db?.Ability(item.Def.use);
+            if (a == null) return Fail(item.Name + " cannot be used.");
+            var s = flow != null ? flow.Session : null;
+            if (s != null)
+            {
+                string why;
+                try { why = s.CannotUseItemReason(u, item); }
+                catch (Exception) { why = null; }
+                if (why != null) return Fail(why);
+            }
+            return Begin(u, a, item);
+        }
+
+        string Begin(Unit u, AbilityDef a, ItemInstance item)
+        {
+            CancelTargeting();
+            var chk = Battle.CanUseIgnoringTarget(u, a, item != null);
+            if (!chk.Ok) return Fail(chk.Reason);
+
+            // no target needed: execute now
+            if (a.target == TargetType.Self && !IsAimed(a)) return Execute(u, a, item, u, null);
+            if (a.target == TargetType.Pet) return Execute(u, a, item, u.Pet, null);
+            if (a.target == TargetType.Point && a.area.centeredOnCaster) return Execute(u, a, item, null, u.Position);
+
+            // toggles on the current target: auto attack (on/off), "next swing" abilities (Heroic Strike…)
+            var cur = u.AttackTarget;
+            bool curOk = cur != null && cur.IsAlive && cur.IsHostileTo(u) && Battle.Units.Contains(cur);
+            if (item == null && a.autoAttack && curOk && (u.AutoAttacking || Battle.CanUse(u, a, cur).Ok)) return Execute(u, a, null, cur, null);
+            if (item == null && a.nextSwing && curOk && Battle.CanUse(u, a, cur).Ok) return Execute(u, a, null, cur, null);
+
+            TargetingAbility = a;
+            TargetingItem = item;
+            targetingMods = null;
+            validStamp = -1;
+            rangeRingFor = null;
+            hoverDirty = true;
+            if (moveRangeShown) { FxSystem.Hide(MoveRangeId); moveRangeShown = false; }
+            return null;
+        }
+
+        static bool IsAimed(AbilityDef a) =>
+            a != null && a.target == TargetType.Self && (a.area.shape == AreaShape.Cone || a.area.shape == AreaShape.Line);
+
+        // ================================================================ highlights
+
+        void Want(Unit u, Color c)
+        {
+            var v = V(u);
+            if (v != null) wantHl[v] = c;
+        }
+
+        void CommitHighlights()
+        {
+            hlTmp.Clear();
+            foreach (var kv in haveHl)
+                if (kv.Key == null || !wantHl.ContainsKey(kv.Key)) hlTmp.Add(kv.Key);
+            for (int i = 0; i < hlTmp.Count; i++)
+            {
+                var v = hlTmp[i];
+                if (v != null) v.SetTargetable(null);
+                haveHl.Remove(v);
+            }
+            foreach (var kv in wantHl)
+            {
+                if (kv.Key == null) continue;
+                if (haveHl.TryGetValue(kv.Key, out var c) && c == kv.Value) continue;
+                kv.Key.SetTargetable(kv.Value);
+            }
+            haveHl.Clear();
+            foreach (var kv in wantHl) if (kv.Key != null) haveHl[kv.Key] = kv.Value;
+        }
+
+        void ClearHighlights()
+        {
+            wantHl.Clear();
+            CommitHighlights();
+        }
+
+        // ================================================================ hover text pieces
+
+        string Line(Unit u, AbilityDef a, Unit target, AbilityModSet mods, Vec2? point, SmartPlan plan,
+                    int enemies = -1, int allies = -1, string label = null)
+        {
+            if (a == null) return "";
+            if (mods == null)
+            {
+                try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
+            }
+            sb.Length = 0;
+            if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(" m, then ");
+            sb.Append(label ?? a.name);
+            if (target != null && target != u) sb.Append(" → ").Append(target.Name);
+            var mag = MagnitudeText(u, a, mods);
+            if (!string.IsNullOrEmpty(mag)) sb.Append(" · ").Append(mag);
+            if (enemies >= 0)
+            {
+                sb.Append(" · ").Append(enemies).Append(enemies == 1 ? " enemy" : " enemies");
+                if (allies > 0) sb.Append(", ").Append(allies).Append(allies == 1 ? " ally" : " allies");
+            }
+            if (target != null && target.IsHostileTo(u) && AbilityRules.IsHarmful(a))
+            {
+                float hit = EstimateHit(u, a, target, mods);
+                if (hit >= 0f) sb.Append(" · ").Append(hit.ToString("0")).Append("% hit");
+            }
+            float cost = 0f;
+            try { cost = AbilityRules.ResourceCost(u, a, AbilityRules.UsedRank(u, a), mods); } catch (Exception) { }
+            if (cost > 0f && a.cost != null && a.cost.type != ResourceType.None)
+                sb.Append(" · ").Append(cost.ToString("0")).Append(' ').Append(a.cost.type.ToString());
+            sb.Append(" · ").Append(TimeText(u, a, mods));
+            return sb.ToString();
+        }
+
+        string MagnitudeText(Unit u, AbilityDef a, AbilityModSet mods)
+        {
+            try
+            {
+                int eff = AbilityRules.EffLevel(u, a, AbilityRules.UsedRank(u, a));
+                foreach (var e in a.effects)
+                {
+                    if (e == null) continue;
+                    if (e.type != EffectType.Damage && e.type != EffectType.WeaponDamage && e.type != EffectType.Heal) continue;
+                    var m = Tooltip.Magnitude(u, a, e, eff, mods);
+                    if (string.IsNullOrEmpty(m)) continue;
+                    m = m.Replace(" to ", "–");
+                    if (e.type == EffectType.Heal) return m + " healing";
+                    var school = e.school ?? a.school;
+                    return school == School.Physical ? m + " damage" : m + " " + school;
+                }
+            }
+            catch (Exception) { }
+            return "";
+        }
+
+        /// <summary>Chance the ability lands (miss/dodge/parry for weapons, miss/resist for spells), mirroring the engine's hit table.</summary>
+        static float EstimateHit(Unit u, AbilityDef a, Unit t, AbilityModSet mods)
+        {
+            try
+            {
+                var kind = AbilityRules.KindOf(a);
+                float bonus = mods != null ? mods.HitChance : 0f;
+                float floor = 100f - RulesConstants.MaxHitChance;
+                if (kind == AttackKind.Spell || kind == AttackKind.Wand)
+                {
+                    float miss = Formulas.SpellMissChance(u.Level, t.Level) - u.Stats.SpellHit(a.school) - bonus - t.Stats.ChanceToBeHit;
+                    return 100f - Mathf.Clamp(miss, floor, 100f);
+                }
+                bool ranged = kind == AttackKind.Ranged;
+                bool dw = a.autoAttack && !ranged && u.Equipment != null && u.Equipment.IsDualWielding;
+                float m = Formulas.MeleeMissChance(u.Level, t.Level, dw) - (ranged ? u.Stats.RangedHit : u.Stats.MeleeHit) - bonus
+                          - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f;
+                m = Mathf.Clamp(m, floor, 100f);
+                bool canAvoid = !t.IsControlled;
+                bool frontal = !u.IsBehind(t);
+                float dodge = canAvoid ? Mathf.Max(0f, t.Stats.Dodge - u.Stats.DodgeChanceAgainstMe) : 0f;
+                float parry = canAvoid && !ranged && frontal && t.Stats.CanParry ? t.Stats.Parry : 0f;
+                return Mathf.Clamp(100f - m - dodge - parry, 0f, 100f);
+            }
+            catch (Exception) { return -1f; }
+        }
+
+        static string TimeText(Unit u, AbilityDef a, AbilityModSet mods)
+        {
+            if (a.autoAttack) return "auto attack at the end of your turn";
+            if (a.nextSwing) return "replaces your next swing";
+            float tc, ct;
+            try
+            {
+                tc = AbilityRules.TimeCost(u, a, mods);
+                ct = AbilityRules.CastTime(u, a, mods);
+            }
+            catch (Exception) { return ""; }
+            float left = Mathf.Max(0f, u.TimeLeft);
+            if (ct > 0f && a.channeled)
+                return ct > left + 1e-3f ? ct.ToString("0.#") + " s channel (continues next turn)" : ct.ToString("0.#") + " s channel";
+            if (ct > 0f)
+                return ct > left + 1e-3f ? ct.ToString("0.#") + " s cast (pending: resolves next turn, can be interrupted)" : ct.ToString("0.#") + " s cast";
+            if (tc > 0f)
+                return tc > left + 1e-3f ? tc.ToString("0.#") + " s (+" + (tc - left).ToString("0.#") + " s time debt)" : tc.ToString("0.#") + " s";
+            return "free action";
+        }
+    }
+}

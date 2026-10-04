@@ -30,6 +30,7 @@ namespace Lanternvale.Game
         bool combatFallbackLogged;
         float stealthSyncTimer, worldRefreshTimer;
         GameMode lastMode = GameMode.Boot;
+        Unit lastActiveUnit;
 
         const string BackdropMapId = "lanternvale";
         const float BackdropHour = 19.1f;
@@ -111,9 +112,14 @@ namespace Lanternvale.Game
             {
                 try { c.Update(unscaledDt); }
                 catch (Exception e) { Debug.LogException(e); }
-                // Selected follows the active unit when it is one of ours
+                // Selected follows the active unit when a turn of one of ours begins (the UI may select another
+                // member in between to inspect it)
                 var active = Combat != null ? Combat.ActiveUnit : null;
-                if (active != null && active != Selected && IsPlayerSide(active)) SetSelectedInternal(active);
+                if (active != lastActiveUnit)
+                {
+                    lastActiveUnit = active;
+                    if (active != null && IsPlayerSide(active)) SetSelectedInternal(active);
+                }
                 return;
             }
             // Safety net: the combat presenter is missing (e.g. it failed to construct). Resolve the fight with the
@@ -184,7 +190,12 @@ namespace Lanternvale.Game
             var root = GameRoot.Instance;
             if (root == null) return;
             GameMode m;
-            if (!HasGame) m = GameMode.MainMenu;
+            if (!HasGame)
+            {
+                // the menu UI may switch to CharacterCreation itself: leave that alone
+                if (root.Mode == GameMode.CharacterCreation || (root.Mode == GameMode.MainMenu && lastMode == GameMode.MainMenu)) return;
+                m = GameMode.MainMenu;
+            }
             else
             {
                 switch (Session.Mode)
@@ -292,6 +303,7 @@ namespace Lanternvale.Game
             if (Db == null) { LastError = "The game data is not loaded."; Toast(LastError); return; }
             var old = Session;
             var s = CreateSession();
+            int gen = worldGeneration;
             Session = s;
             try
             {
@@ -304,6 +316,7 @@ namespace Lanternvale.Game
                 Session = old;
                 LastError = "Could not start a new game: " + e.Message;
                 if (old == null || old.Mode == SessionMode.None) ReturnToMainMenuInternal();
+                else if (gen != worldGeneration) RebuildWorld();   // the failed game had replaced the views: restore ours
                 Toast(LastError);
                 return;
             }
@@ -380,8 +393,11 @@ namespace Lanternvale.Game
 
         void RunAutosave()
         {
+            if (!HasGame) { autosavePending = false; return; }
+            // wait for a conversation to end (the opening, a dialogue right after travelling); drop it otherwise
+            if (Session.Mode == SessionMode.Dialogue) return;
             autosavePending = false;
-            if (!HasGame || Session.CannotSaveReason() != null) return;
+            if (Session.CannotSaveReason() != null) return;
             var err = SaveToSlotInternal("auto");
             if (err != null) Debug.LogWarning($"[Lanternvale] Autosave ({autosaveReason}) failed: {err}");
             else LastError = "";
@@ -423,6 +439,7 @@ namespace Lanternvale.Game
             ResetExplorationState();
             ClearHoverState();
             Selected = null;
+            lastActiveUnit = null;
             battlePresenting = false;
             DisposeAllViews();
             ClearLanternSequence();

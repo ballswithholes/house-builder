@@ -21,6 +21,7 @@ namespace Lanternvale.Game
         void OnSessionEventRaised(SessionEvent e)
         {
             if (e == null || Session == null) return;
+            partyUnitsFrame = -1;   // the party may have changed: PartyUnits is rebuilt on next read
             try { React(e); }
             catch (Exception ex) { Debug.LogException(ex); }
             Relay(e);
@@ -445,6 +446,21 @@ namespace Lanternvale.Game
                 try { c.Dispose(); } catch (Exception ex) { Debug.LogException(ex); }
             }
             ClearHoverState();
+            lastActiveUnit = null;
+
+            if (e.Outcome == CombatEndKind.Defeat)
+            {
+                // game over: the battlefield stays as it is behind the game-over screen
+                foreach (var kv in views)
+                {
+                    if (kv.Value == null) continue;
+                    kv.Value.SetTargetable(null);
+                    kv.Value.SetActiveTurn(false);
+                    kv.Value.StopCasting();
+                }
+                if (CameraRig.Instance != null) CameraRig.Instance.Focus(null);
+                return;
+            }
 
             // enemies: the dead fade out, the living (practice dummies, a fight left early) go back to being encounter views
             List<KeyValuePair<Unit, UnitView>> living = null;
@@ -480,7 +496,7 @@ namespace Lanternvale.Game
                 if (u.IsAlive && v.IsDowned) v.PlayRevive();
             }
 
-            if (e.Outcome != CombatEndKind.Defeat && s != null)
+            if (s != null)
             {
                 SyncWorldViews(living);
                 // party members walk to where the session has them (should already match)

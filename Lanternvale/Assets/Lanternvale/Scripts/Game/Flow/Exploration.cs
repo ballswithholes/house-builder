@@ -103,6 +103,12 @@ namespace Lanternvale.Game
             if (!UiRoot.ModalActive && !UiRoot.HotkeysSuppressed && !pausedByMenu)
             {
                 if (GameInput.KeyDown(KeyCode.Tab)) CycleSelection(GameInput.Key(KeyCode.LeftShift) || GameInput.Key(KeyCode.RightShift) ? -1 : 1);
+                if (GameInput.KeyDown(KeyCode.Escape) && !string.IsNullOrEmpty(PendingOpener))
+                {
+                    // Esc disarms the opener instead of opening the pause menu this frame
+                    CancelOpener();
+                    UiRoot.HotkeysSuppressed = true;
+                }
             }
         }
 
@@ -543,11 +549,12 @@ namespace Lanternvale.Game
         void SyncUnitPositionsFromViews()
         {
             var s = Session;
-            if (s == null || s.Mode != SessionMode.Exploration) return;
+            // never in combat: battle positions are authoritative there
+            if (s == null || (s.Mode != SessionMode.Exploration && s.Mode != SessionMode.Dialogue)) return;
             foreach (var u in s.PartyUnits())
             {
                 var v = ViewOf(u);
-                if (v != null) u.Position = ToVec2(v.FeetPosition);
+                if (v != null && !v.IsDowned) u.Position = ToVec2(v.FeetPosition);
             }
         }
 
@@ -566,8 +573,8 @@ namespace Lanternvale.Game
                 if (v == null || !v.IsMoving) continue;
                 if (s.IsInParty(kv.Key.Owner ?? kv.Key)) v.StopMoving();
             }
-            if (!was || s.Mode != SessionMode.Exploration) return;
-            if (report) ReportPositions();
+            if (!was) return;
+            if (report && s.Mode == SessionMode.Exploration) ReportPositions();
             else SyncUnitPositionsFromViews();
         }
 

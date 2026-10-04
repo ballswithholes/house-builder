@@ -410,7 +410,7 @@ namespace Lanternvale.Game
 
         // ================================================================ deferred (non-blocking) work
 
-        enum DeferredKind { RemoveView }
+        enum DeferredKind { RemoveDead, RemoveDespawned }
 
         struct Deferred
         {
@@ -437,7 +437,9 @@ namespace Lanternvale.Game
                 deferred.RemoveAt(i);
                 try
                 {
-                    if (d.Kind == DeferredKind.RemoveView && d.Unit != null && !d.Unit.IsAlive) RemoveViewNow(d.Unit);
+                    // a unit revived during its fade-out (Revive Pet, resurrection) keeps its view
+                    if (d.Kind == DeferredKind.RemoveDead && d.Unit != null && !d.Unit.IsAlive) RemoveViewNow(d.Unit);
+                    else if (d.Kind == DeferredKind.RemoveDespawned && d.Unit != null) RemoveViewNow(d.Unit);
                 }
                 catch (Exception e) { LogOnce("deferred", "Deferred combat work failed: " + e.Message); }
             }
