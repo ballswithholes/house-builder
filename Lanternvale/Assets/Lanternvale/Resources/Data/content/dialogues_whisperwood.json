@@ -74,7 +74,7 @@
           "id": "k_first",
           "speaker": "narrator",
           "text": "*A small spirit, round as a dandelion clock, peers out of the dark lantern. Her light is barely a candle's.*",
-          "conditions": [{"type": "QuestActive", "key": "mq_lanterns"}],
+          "conditions": [{"type": "QuestActive", "key": "mq_lanterns"}, {"type": "Flag", "key": "met_elder"}],
           "fallback": "k_noquest",
           "outcomes": [{"type": "SetFlag", "key": "met_komorebi"}],
           "next": "k_f1"

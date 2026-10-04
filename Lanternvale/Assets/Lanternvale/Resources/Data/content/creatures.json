@@ -1,5 +1,5 @@
 {
-  "_note": "Enemies of the Lanternvale slice. All hostile creatures use scaleToParty + levelOffset; levelMin/levelMax are the intended band for a fresh level-1 playthrough. Enemy-only abilities and auras are prefixed cr_.",
+  "_note": "Enemies of the Lanternvale slice. All hostile creatures use scaleToParty + levelOffset (level = clamp(partyLevel + levelOffset, 1, 63)); levelMin/levelMax document the intended band for a fresh level-1 playthrough. health/damage/armor/xp multipliers are ON TOP of the engine's rank multipliers. Enemy-only abilities and auras are prefixed cr_.",
   "creatures": [
     {
       "id": "cr_training_dummy",
@@ -57,7 +57,6 @@
       "levelMax": 6,
       "scaleToParty": true,
       "levelOffset": 0,
-      "healthMult": 0.6,
       "attackSpeed": 2.0,
       "moveSpeed": 11,
       "size": 1.0,
@@ -78,8 +77,8 @@
       "levelMax": 6,
       "scaleToParty": true,
       "levelOffset": 1,
-      "healthMult": 3.0,
-      "damageMult": 1.3,
+      "healthMult": 1.2,
+      "damageMult": 0.95,
       "attackSpeed": 2.0,
       "moveSpeed": 11,
       "size": 1.5,
@@ -93,7 +92,6 @@
       "passives": ["cr_hollow_touched"],
       "immune": ["Fear"],
       "lootTable": "lt_greymane",
-      "xpMult": 2,
       "faction": "Wildlife",
       "bark": "*Greymane's eyes burn violet. The whole pack falls silent around him.*"
     },
@@ -231,8 +229,8 @@
       "levelMax": 7,
       "scaleToParty": true,
       "levelOffset": 1,
-      "healthMult": 2.2,
-      "damageMult": 1.1,
+      "healthMult": 0.9,
+      "damageMult": 0.8,
       "attackSpeed": 2.0,
       "meleeSchool": "Nature",
       "ranged": true,
@@ -248,7 +246,6 @@
         {"ability": "cr_thorn_bolt", "priority": 3}
       ],
       "lootTable": "lt_puddlecap",
-      "xpMult": 2,
       "faction": "Mosslings",
       "bark": "You want wicks? Take them from Puddlecap's cold hands! ...They are always cold. Is a moss thing."
     },
@@ -338,8 +335,8 @@
       "levelMax": 10,
       "scaleToParty": true,
       "levelOffset": 2,
-      "healthMult": 2.8,
-      "damageMult": 1.4,
+      "healthMult": 1.1,
+      "damageMult": 1.0,
       "attackSpeed": 2.6,
       "moveSpeed": 9,
       "size": 2.0,
@@ -351,7 +348,6 @@
         {"ability": "cr_sinister_slash", "priority": 3, "chance": 60}
       ],
       "lootTable": "lt_bandit_chief",
-      "xpMult": 2,
       "faction": "Bandits",
       "bark": "Right. The expensive way, then."
     },
@@ -392,7 +388,6 @@
       "levelMax": 12,
       "scaleToParty": true,
       "levelOffset": 0,
-      "healthMult": 0.5,
       "attackSpeed": 2.0,
       "meleeSchool": "Shadow",
       "ranged": true,
@@ -439,8 +434,8 @@
       "levelMax": 11,
       "scaleToParty": true,
       "levelOffset": 2,
-      "healthMult": 2.5,
-      "damageMult": 1.3,
+      "healthMult": 1.0,
+      "damageMult": 0.95,
       "attackSpeed": 2.2,
       "meleeSchool": "Shadow",
       "ranged": true,
@@ -457,7 +452,6 @@
       "passives": ["cr_hollow_touched"],
       "immune": ["Fear"],
       "lootTable": "lt_keeper",
-      "xpMult": 2,
       "faction": "Hollow",
       "bark": "The lanterns... must be put out... so it cannot... take them..."
     },
@@ -472,9 +466,9 @@
       "levelMax": 10,
       "scaleToParty": true,
       "levelOffset": 2,
-      "healthMult": 3.2,
-      "damageMult": 1.4,
-      "armorMult": 1.5,
+      "healthMult": 1.3,
+      "damageMult": 1.0,
+      "armorMult": 1.25,
       "attackSpeed": 3.0,
       "moveSpeed": 6,
       "size": 2.6,
@@ -487,7 +481,6 @@
       "passives": ["cr_hollow_touched"],
       "immune": ["Fear", "Polymorph", "Sleep"],
       "lootTable": "lt_rotheart",
-      "xpMult": 2,
       "faction": "Hollow",
       "bark": "*Rotheart's roots heave. Deep inside, old wood groans like a sleeper caught in a nightmare.*"
     },
@@ -502,9 +495,9 @@
       "levelMax": 12,
       "scaleToParty": true,
       "levelOffset": 2,
-      "healthMult": 10,
-      "damageMult": 1.6,
-      "armorMult": 1.2,
+      "healthMult": 1.15,
+      "damageMult": 0.9,
+      "armorMult": 0.95,
       "attackSpeed": 2.5,
       "moveSpeed": 8,
       "size": 4.5,
@@ -521,7 +514,7 @@
       "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
       "stats": [{"stat": "Resistance", "value": 15, "school": "Shadow"}],
       "lootTable": "lt_warden",
-      "xpMult": 4,
+      "xpMult": 1.3,
       "faction": "Hollow",
       "bark": "*The Warden raises its head. Every lantern in its antlers gutters grey, and the shrine goes very, very quiet.*"
     }
@@ -978,7 +971,7 @@
       "cooldown": 30,
       "target": "Self",
       "area": {"shape": "Circle", "radius": 40, "centeredOnCaster": true, "affects": "Enemies"},
-      "effects": [{"type": "Damage", "min": 40, "max": 55, "perLevel": 4.0}, {"type": "ApplyAura", "aura": "cr_hollowed"}],
+      "effects": [{"type": "Damage", "min": 25, "max": 35, "perLevel": 2.5}, {"type": "ApplyAura", "aura": "cr_hollowed"}],
       "tags": ["Telegraph"],
       "aiHint": "AoE",
       "aiPriority": 9
@@ -1006,7 +999,7 @@
       "cooldown": 12,
       "target": "Self",
       "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies"},
-      "effects": [{"type": "Damage", "min": 18, "max": 26, "perLevel": 2.0}, {"type": "ApplyAura", "aura": "cr_dazed"}],
+      "effects": [{"type": "Damage", "min": 12, "max": 18, "perLevel": 1.2}, {"type": "ApplyAura", "aura": "cr_dazed"}],
       "aiHint": "AoE",
       "aiPriority": 7
     },
@@ -1258,7 +1251,7 @@
       "tickInterval": 3,
       "tags": ["Bleed"],
       "description": "Bleeding.",
-      "tickEffects": [{"type": "Damage", "min": 4, "perLevel": 0.6}]
+      "tickEffects": [{"type": "Damage", "min": 3, "perLevel": 0.4}]
     },
     {
       "id": "cr_hollowed",
