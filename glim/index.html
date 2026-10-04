@@ -105,14 +105,14 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 #bestPill canvas{width:30px;height:30px}
 /* results */
 #results{left:0;right:0;bottom:0;top:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
-#results .sheet{position:relative;width:100%;max-width:420px;box-sizing:border-box;background:var(--paper);border-radius:24px 24px 0 0;box-shadow:0 -4px 0 rgba(30,20,40,.2);padding:16px var(--sr) var(--sb) var(--sl);transform:translateY(100%);transition:transform .32s cubic-bezier(.3,1.35,.5,1)}
+#results .sheet{position:relative;width:100%;max-width:420px;max-height:calc(100% - var(--st) - 8px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--paper);border-radius:24px 24px 0 0;box-shadow:0 -4px 0 rgba(30,20,40,.2);padding:16px var(--sr) var(--sb) var(--sl);transform:translateY(100%);transition:transform .32s cubic-bezier(.3,1.35,.5,1)}
 #results.open .sheet{transform:none}
 #results .scrim{background:rgba(30,20,40,.35)}
-.rhead{display:flex;align-items:center;gap:12px}
+.rhead{display:flex;align-items:center;gap:14px;margin-bottom:10px}
 .rhead canvas{width:72px;height:72px;flex:none}
-#rHeading{font-size:20px;font-weight:800}
+#rHeading{font-size:22px;font-weight:800;line-height:1.15}
 #rScore{font-size:64px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-#rNew{display:inline-block;background:var(--thorn);color:#fff;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:800;letter-spacing:.1em;transform:rotate(-4deg)}
+#rNew{display:inline-block;flex:none;margin-left:auto;align-self:center;background:var(--thorn);color:#fff;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:800;letter-spacing:.1em;transform:rotate(-4deg)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin:8px 0;font-size:15px}
 .stats div{display:flex;justify-content:space-between}.stats b{font-variant-numeric:tabular-nums}
 .small{font-size:14px;opacity:.75}
@@ -125,7 +125,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 #rHint{text-align:center;margin-top:8px}
 .leaf{display:inline-block;background:var(--mint);border-radius:8px;padding:1px 8px;font-size:13px;margin-left:6px}
 /* shop */
-#shop{inset:0;background:rgba(30,20,40,.96);color:var(--paper);display:flex;flex-direction:column;padding:var(--st) 0 var(--sb)}
+#shop{inset:0;background:var(--ink);color:var(--paper);display:flex;flex-direction:column;padding:var(--st) 0 var(--sb)}
 .shead{display:flex;align-items:center;gap:10px;padding:0 var(--sr) 0 var(--sl)}
 .shead h2{margin:0;flex:1;text-align:left;color:var(--paper)}
 .seg{display:flex;margin:14px var(--sr) 0 var(--sl);background:rgba(255,244,224,.12);border-radius:16px;padding:4px}
@@ -207,9 +207,9 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
   <div class="row mt"><button class="tgl" data-set="sfx" aria-pressed="true">SFX<span class="sw"></span></button><button class="tgl" data-set="music" aria-pressed="true">Music<span class="sw"></span></button></div>
   <div class="cap mt" style="opacity:.6">Missions</div><div id="pMissions"></div>
  </div></div>
- <div id="results" class="panel"><div class="scrim"></div><div class="sheet" id="rSheet">
-  <div class="rhead"><canvas id="rMedal" width="144" height="144"></canvas><div style="flex:1;min-width:0"><div id="rHeading">Nice flying!</div><div class="cap small" id="rRun">Run #1</div></div><span id="rNew" class="hid">NEW BEST</span></div>
-  <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px"><div id="rScore">0</div><div class="cap small">score</div></div>
+ <div id="results" class="panel"><div class="scrim"></div><div class="sheet vscroll" id="rSheet">
+  <div class="rhead"><canvas id="rMedal" width="144" height="144"></canvas><div style="flex:1;min-width:0"><div id="rHeading">Nice flying!</div><div class="cap small" id="rRun">Run #1</div></div></div>
+  <div style="display:flex;align-items:baseline;gap:10px"><div id="rScore">0</div><div class="cap small">score</div><span id="rNew" class="hid">NEW BEST</span></div>
   <div class="stats" id="rStats"></div>
   <div class="small" id="rBiome"></div>
   <div class="small mt" id="rNext"></div><div class="bar"><i id="rNextBar"></i></div>
@@ -406,8 +406,8 @@ const Audio = (() => {
   // voice accounting: at most VMAX concurrent SFX voices; priority voices steal the oldest
   function voice(dur, prio) {
     if (!ctx || ctx.state !== 'running' || !sfxOn) return null;
-    const t = ctx.currentTime; let n = 0, free = -1, old = 0;
-    for (let i = 0; i < VMAX; i++) { if (vEnd[i] > t) { n++; if (vEnd[i] < vEnd[old] || vEnd[old] <= t) old = i; } else if (free < 0) free = i; }
+    const t = ctx.currentTime; let free = -1, old = 0;
+    for (let i = 0; i < VMAX; i++) { if (vEnd[i] > t) { if (vEnd[i] < vEnd[old] || vEnd[old] <= t) old = i; } else if (free < 0) free = i; }
     if (free < 0) { if (!prio) return null; free = old; try { vGain[free].gain.cancelScheduledValues(t); vGain[free].gain.setTargetAtTime(0, t, 0.005); } catch (e) { } }
     const g = ctx.createGain(); g.gain.value = 1; g.connect(sfxBus); vEnd[free] = t + dur; vGain[free] = g; return g;
   }
@@ -493,9 +493,10 @@ const Haptics = (() => { let lbl = null, inp = null, last = 0, on = true;
     inp = document.createElement('input'); inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.tabIndex = -1;
     lbl.append(inp); document.body.append(lbl); } catch (e) { lbl = null; } }
   let vib = false; try { vib = typeof navigator.vibrate === 'function'; } catch (e) { }
+  const active = () => { try { const ua = navigator.userActivation; return !ua || ua.hasBeenActive; } catch (e) { return false; } };
   function tick() { const t = performance.now(); if (!on || t - last < 50) return; last = t;
-    try { if (vib) navigator.vibrate(8); else if (lbl) lbl.click(); } catch (e) { } }
-  function pattern(p) { if (!on || !vib) return; try { navigator.vibrate(p); } catch (e) { } }
+    try { if (vib) { if (active()) navigator.vibrate(8); } else if (lbl) lbl.click(); } catch (e) { } }
+  function pattern(p) { if (!on || !vib || !active()) return; try { navigator.vibrate(p); } catch (e) { } }
   return { supported: ok || vib, tick, pattern, set: v => { on = !!v; }, el: lbl, input: inp };
 })();
 
@@ -556,12 +557,15 @@ const Quality = (() => {
   const Q = { level: 2, auto: !FLAGS.test, changes: 0, ema: 0, interval: 1000 / 60, deltas: [], winT: 0, winN: 0, winLong: 0, clean: 0, fps: 60, fpsMin: 60, fpsAcc: 0, fpsN: 0, fpsT: 0, fpsMinT: 999, work: 0 };
   Q.set = function (l, manual) { l = clamp(l | 0, 0, 2); if (l !== Q.level) { Q.level = l; LEVEL = LEVELS[l]; View.dirty = true; Particles.resize(); } };
   Q.remeasure = function () { Q.deltas.length = 0; };
+  // the median frame delta snapped to the nearest real display refresh (120/60/30 Hz), never above 33.4 ms
+  // the display refresh is 120 or 60 Hz; a slow device (or Low Power Mode) must read as missed frames, never as a 30 Hz display
+  Q.snap = ms => ms < 12 ? 1000 / 120 : 1000 / 60;
   Q.newRun = function () { Q.changes = 0; };
   Q.sample = function (workMs, dt) {
     const dms = dt * 1000; Q.work = workMs; Q.ema += (workMs - Q.ema) * 0.1;
     if (dms > 0) { Q.fpsAcc += dms; Q.fpsN++; if (dms > Q.fpsMinT || Q.fpsMinT === 999) Q.fpsMinT = Math.max(dms, Q.fpsMinT === 999 ? 0 : Q.fpsMinT);
       if (Q.fpsAcc >= 1000) { Q.fps = Q.fpsN * 1000 / Q.fpsAcc; Q.fpsMin = 1000 / Math.max(1, Q.fpsMinT); Q.fpsAcc = 0; Q.fpsN = 0; Q.fpsMinT = 999; } }
-    if (Q.deltas.length < 30) { if (dms > 0 && dms < 100) Q.deltas.push(dms); if (Q.deltas.length === 30) { const s = Q.deltas.slice().sort((a, b) => a - b); Q.interval = s[15] < 12 ? 1000 / 120 : 1000 / 60; } return; }
+    if (Q.deltas.length < 30) { if (dms > 0 && dms <= 100) Q.deltas.push(dms); if (Q.deltas.length === 30) { const s = Q.deltas.slice().sort((a, b) => a - b); Q.interval = Q.snap(s[15]); } return; }
     const gs = Game.state; if (!Q.auto || (gs !== 'playing' && gs !== 'title' && gs !== 'ready')) return;
     Q.winT += dms; Q.winN++; if (dms > Q.interval * 1.5) Q.winLong++;
     if (Q.winT >= 1000) {
@@ -619,7 +623,6 @@ const SKINS = [{ id: 'glim', name: 'Glim', price: 0, d: 'The little lantern spir
 const TRAILS = [{ id: 'ember', name: 'Ember', price: 0, d: 'Warm amber glow' }, { id: 'petals', name: 'Petals', price: 120, d: 'Tumbling paper petals' }, { id: 'bubbles', name: 'Bubbles', price: 250, d: 'Wobbly sky bubbles' },
   { id: 'starlight', name: 'Starlight', price: 400, d: 'Twinkling four-point stars' }, { id: 'rainbow', name: 'Rainbow', price: 800, d: 'Seven glowing hues' }, { id: 'aurora', name: 'Aurora', price: -1, secret: '7-day daily streak', d: 'Secret: a 7-day daily streak' }];
 const PUPS = ['shield', 'magnet', 'slowmo', 'shrink'];
-const PUP_NAME = { shield: 'SHIELD', magnet: 'MAGNET', slowmo: 'SLOW-MO', shrink: 'SHRINK' };
 const Art = (() => {
   const A = { K: 1.7, glow: {}, words: {}, digits: {}, skins: {}, sil: {}, inkSil: {}, trail: {}, pick: {}, orb: {}, medals: {}, biome: [], ready: false };
   function cv(wu, hu, k) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(wu * k)); c.height = Math.max(1, Math.ceil(hu * k));
@@ -664,6 +667,13 @@ const Art = (() => {
       y.strokeStyle = COL[p]; y.lineWidth = 3; y.beginPath(); y.arc(0, 0, 19.5, 0, TAU); y.stroke();
       glyph(y, p, 0, 0, 11, COL[p]); O.ox = 28; O.oy = 28; A.orb[p] = O; });
   }
+  // pinwheel gate: ink paper blades with red edges and a red hub (r 12); drawn rotated with setTransform
+  function bakePin(k) { const S = cv(140, 140, k), x = S.x;
+    for (let j = 0; j < 4; j++) { const c = Math.cos(j * Math.PI / 2) * k, s = Math.sin(j * Math.PI / 2) * k; x.setTransform(c, s, -s, c, 70 * k, 70 * k);
+      x.fillStyle = COL.ink; x.beginPath(); x.moveTo(6, -5); x.quadraticCurveTo(34, -18, 58, -6); x.lineTo(58, 4); x.quadraticCurveTo(32, 4, 6, 5); x.closePath(); x.fill();
+      x.strokeStyle = COL.thorn; x.lineWidth = 2.5; x.lineCap = 'round'; x.beginPath(); x.moveTo(8, -6); x.quadraticCurveTo(34, -19, 58, -6); x.stroke(); }
+    x.setTransform(k, 0, 0, k, 70 * k, 70 * k); x.fillStyle = COL.thorn; x.beginPath(); x.arc(0, 0, 12, 0, TAU); x.fill(); x.fillStyle = COL.ink; x.beginPath(); x.arc(0, 0, 4, 0, TAU); x.fill();
+    S.ox = S.oy = 70; A.pin = S; }
   function glyph(x, p, cx, cy, s, col) {
     x.fillStyle = col; x.strokeStyle = col; x.lineJoin = 'round'; x.lineCap = 'round';
     if (p === 'shield') { x.lineWidth = s * 0.28; x.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 - Math.PI / 2; x.lineTo(cx + Math.cos(a) * s, cy + Math.sin(a) * s); } x.closePath(); x.stroke(); x.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 - Math.PI / 2; x.lineTo(cx + Math.cos(a) * s * 0.45, cy + Math.sin(a) * s * 0.45); } x.fill(); }
@@ -800,7 +810,7 @@ const Art = (() => {
       for (let i = 2; i <= 5; i++) W['x' + i] = bakeWord('×' + i, 40, k);
       for (let i = 1; i <= 3; i++) W['cd' + i] = bakeWord(String(i), 180, k);
       '0123456789+'.split('').forEach(ch => { A.digits[ch] = bakeWord(ch, 36, k); }); warmIn(A.words); warmIn(A.digits); }
-    else if (name === 'pick') { bakePickups(k); warmIn(A.pick); warmIn(A.orb); }
+    else if (name === 'pick') { bakePickups(k); bakePin(k); warmIn(A.pick); warmIn(A.orb); bakeWarm(A.pin); }
     else if (name === 'skins') { bakeSkins(k); warmIn(A.skins); warmIn(A.sil); [A.flame, A.sparkMint, A.shieldBub, A.magRing].forEach(bakeWarm); }
     else if (name === 'trails') { bakeTrails(k); warmIn(A.trail); [A.puff, A.smoke, A.leaf, A.starSpr].forEach(bakeWarm); }
     else if (name === 'misc') { bakeMisc(k); [A.frame, A.frameL, A.slowVig, A.speedLine, A.edge, A.ribbon].forEach(bakeWarm); }
@@ -1092,41 +1102,48 @@ const speedAt = (n, m) => (CONST.V0 + CONST.V1 * (1 - Math.exp(-n / CONST.VN))) 
 const gapAt = (k, m) => { let G = k <= 3 ? CONST.ONB_G : CONST.G0 + CONST.G1 * Math.exp(-k / CONST.GK); if (k > 3 && isRest(k)) G += CONST.REST_G; if (m.breeze) G = Math.min(CONST.BREEZE_GMAX, G * CONST.BREEZE_G); return G + m.gapAdd; };
 function GenState(seed, mods, startGate) {
   const R = Reach.build(mods.grav, mods.flap);
-  return { rng: new RNG(seed), mods, start: startGate, k: startGate, prevX: 0, prevC: 460, prevAmp: 0, prevMoving: false, nextOrb: startGate + 6,
+  return { rng: new RNG(seed), mods, start: startGate, k: startGate, prevX: 0, prevC: 460, prevAmp: 0, prevMoving: false, prevPinH: 0, nextOrb: startGate + 6,
     slalom: 0, slSign: 1, firstDrift: true, UP: R.UP, DOWN: R.DOWN };
 }
 // genGate: the ONLY consumer of the world RNG. Writes gate fields into g; calls pick(kind, dx, dy, follow, power) for pickups.
 function genGate(gs, g, pick) {
   const R = gs.rng, m = gs.mods, k = ++gs.k, onb = k <= 3, rest = !onb && isRest(k);
   let G = gapAt(k, m), D = onb ? CONST.ONB_D : CONST.D0 + CONST.D1 * Math.exp(-k / CONST.DK);
-  if (rest) D += CONST.REST_D; const slal = gs.slalom > 0; if (slal) D *= 0.75;
+  if (rest) D += CONST.REST_D; if (gs.prevPinH > 0) D += 60; const slal = gs.slalom > 0; if (slal) D *= 0.75;
   const X = k === gs.start + 1 ? CONST.FIRST_X : gs.prevX + D;
   let kind = 0, amp = 0, period = 0, phase = 0;
   const forced = onb || rest || k < (m.drift ? 6 : 12) || slal;
-  if (!forced) { const r = R.next(), pJ = k >= 30 ? 0.2 : 0, pD = (0.25 + 0.15 * Math.min(1, (k - 12) / 28)) * (m.drift ? 1.5 : 1);
-    if (r < pJ) kind = 2; else if (r < pJ + pD) kind = 1; if (k < 45 && gs.prevMoving) kind = 0; }
+  if (!forced) { const r = R.next(), pP = k >= 45 && !isRest(k + 1) ? 0.1 : 0, pJ = k >= 30 ? 0.2 : 0, pD = (0.25 + 0.15 * Math.min(1, (k - 12) / 28)) * (m.drift ? 1.5 : 1);
+    if (r < pP) kind = 3; else if (r < pP + pJ) kind = 2; else if (r < pP + pJ + pD) kind = 1; if (k < 45 && gs.prevMoving) kind = 0; if (kind === 3 && gs.prevPinH > 0) kind = 0; } // no pinwheel twice in a row or right before a (cap 60) rest zone
   if (kind === 1) { const f = clamp((k - 12) / 28, 0, 1); amp = gs.firstDrift ? 30 : Math.min(CONST.DRIFT_AMAX, CONST.DRIFT_A0 + CONST.DRIFT_A1 * f); period = gs.firstDrift ? 2.6 : CONST.DRIFT_P0 - CONST.DRIFT_P1 * f; phase = R.next() * TAU; }
-  else if (kind === 2) phase = R.next() * TAU;
+  else if (kind >= 2) phase = R.next() * TAU;
   const vPrev = speedAt(Math.max(0, k - 1), m), t = D / vPrev - CONST.REACT, UPt = Reach.at(gs.UP, t), DNt = Reach.at(gs.DOWN, t);
   const cap = (onb || rest) ? 60 : 70 + 230 * (1 - Math.exp(-k / 30)), dRawU = R.next() + R.next() - 1;
-  let c = 0, lo = 0, hi = 0;
+  let c = 0, lo = 0, hi = 0, pinH = 0;
   for (let pass = 0; pass < 2; pass++) {
     const ampSum = amp + gs.prevAmp, up = Math.max(20, CONST.REACH * UPt - ampSum), dn = Math.max(20, CONST.REACH * DNt - ampSum);
     lo = -Math.min(up, cap); hi = Math.min(dn, cap);
+    // after a pinwheel the rule must hold from both band centres (prevC +- prevPinH)
+    let both = true; if (gs.prevPinH > 0) { const lo2 = lo + gs.prevPinH, hi2 = hi - gs.prevPinH; if (lo2 > hi2) { lo = hi = (lo2 + hi2) / 2; both = false; } else { lo = lo2; hi = hi2; } }
     let dRaw = dRawU * cap; if (slal) dRaw = gs.slSign * 0.9 * (gs.slSign < 0 ? -lo : hi);
-    const ext = (kind === 2 ? 20 : 0) + amp;
-    c = clamp(gs.prevC + clamp(dRaw, lo, hi), 110 + G / 2 + ext, 860 - G / 2 - ext);
-    const d = c - gs.prevC; if ((d >= lo - 1e-6 && d <= hi + 1e-6) || kind === 0) break;
-    kind = 0; amp = 0; period = 0;
+    const ext = (kind === 2 ? 20 : 0) + amp; let d = 0;
+    if (kind === 3) { // pinwheel: gap 1.8G+120 with the hub at its centre; delta goes to the nearer passage band centre c +- pinH
+      pinH = 0.45 * G + 60; const Gp = 1.8 * G + 120, tg = gs.prevC + clamp(dRaw, lo, hi), l3 = 110 + Gp / 2, h3 = 860 - Gp / 2;
+      const cA = clamp(tg + pinH, l3, h3), cB = clamp(tg - pinH, l3, h3), eA = Math.abs(cA - pinH - tg), eB = Math.abs(cB + pinH - tg), upper = eA < eB || (eA === eB && (k & 1) === 1);
+      c = upper ? cA : cB; d = (upper ? c - pinH : c + pinH) - gs.prevC; }
+    else { c = clamp(gs.prevC + clamp(dRaw, lo, hi), 110 + G / 2 + ext, 860 - G / 2 - ext); d = c - gs.prevC; }
+    if ((both && d >= lo - 1e-6 && d <= hi + 1e-6) || kind === 0) break;
+    kind = 0; amp = 0; period = 0; pinH = 0;
   }
   if (slal) { gs.slalom--; gs.slSign = -gs.slSign; }
-  g.k = k; g.kind = kind; g.X = X; g.c = c; g.G = G; g.D = D; g.amp = amp; g.period = period; g.phase = phase; g.rest = rest; g.onb = onb; g.lo = lo; g.hi = hi; g.cap = cap; g.vPrev = vPrev;
+  g.k = k; g.kind = kind; g.X = X; g.c = c; g.G = G; g.D = D; g.amp = amp; g.period = period; g.phase = phase; g.rest = rest; g.onb = onb; g.lo = lo; g.hi = hi; g.cap = cap; g.vPrev = vPrev; g.pinH = pinH; g.dir = (k & 1) ? 1 : -1;
   if (kind === 1) gs.firstDrift = false;
   // pickups
   const Xp = gs.prevX, cp = gs.prevC; let orb = false;
-  if (k >= gs.nextOrb) { const r = R.next() * (m.breeze ? 115 : 100), w0 = m.breeze ? 50 : 35; const p = r < w0 ? 0 : r < w0 + 30 ? 1 : r < w0 + 50 ? 3 : 2;
+  if (k >= gs.nextOrb && kind === 3) gs.nextOrb = k + 1; // the orb sits at the gap centre, so never on a pinwheel hub
+  else if (k >= gs.nextOrb) { const r = R.next() * (m.breeze ? 115 : 100), w0 = m.breeze ? 50 : 35; const p = r < w0 ? 0 : r < w0 + 30 ? 1 : r < w0 + 50 ? 3 : 2;
     pick(2, 0, 0, true, p); gs.nextOrb = k + 10 + Math.floor(R.next() * 7); orb = true; }
-  if (!orb) {
+  if (!orb && kind !== 3) {
     if (rest) { for (let i = 0; i < 9; i++) { const u = (i - 4) / 4; pick(0, (i - 4) * 34, -50 + 50 * u * u, true, 0); } if (restIndex(k) === 3) pick(1, 0, 18, true, 0); }
     else if (k >= 10 && R.next() < 0.08 * (m.moteRain ? 2 : 1)) { pick(1, 0, (R.next() < 0.5 ? -1 : 1) * (G / 2 - 28), true, 0); }
     else if (k >= 2 && (R.next() < 0.6 || m.moteRain)) {
@@ -1138,19 +1155,19 @@ function genGate(gs, g, pick) {
     }
   }
   if (!slal && kind === 0 && k >= 50 && !rest && R.next() < 0.08) gs.slalom = 3;
-  gs.prevX = X; gs.prevC = c; gs.prevAmp = amp; gs.prevMoving = kind !== 0;
+  gs.prevX = X; gs.prevC = c; gs.prevAmp = amp; gs.prevMoving = kind !== 0; gs.prevPinH = pinH;
   return g;
 }
 const World = (() => {
   const W = { gates: [], picks: [], gs: null };
   for (let i = 0; i < 8; i++) W.gates.push({ on: false, k: 0, kind: 0, X: 0, c: 0, G: 0, D: 0, amp: 0, period: 0, phase: 0, rest: false, onb: false, lo: 0, hi: 0, cap: 0, vPrev: 0,
     gapY: 0, gap: 0, pgapY: 0, pgap: 0, closing: false, passed: false, exited: false, smashed: false, noHit: false, perfect: false, graze: false, surgeP: false, minClear: 999,
-    flash: 0, biome: 0, ribbon: false, caption: 0, capT: 0, tip: 0, idx: i });
-  for (let i = 0; i < 96; i++) W.picks.push({ on: false, kind: 0, power: 0, X: 0, y: 0, dx: 0, dy: 0, gate: null, follow: false, free: false, sp: 0, px: 0, py: 0, ph: 0 });
+    flash: 0, biome: 0, ribbon: false, caption: 0, capT: 0, tip: 0, idx: i, pinH: 0, dir: 1, ang: 0 });
+  for (let i = 0; i < 96; i++) W.picks.push({ on: false, kind: 0, power: 0, X: 0, y: 0, dx: 0, dy: 0, gate: null, gk: -1, follow: false, free: false, sp: 0, px: 0, py: 0, ph: 0 });
   let curGate = null;
   function addPick(kind, dx, dy, follow, power) {
     const g = curGate; for (let i = 0; i < W.picks.length; i++) { const p = W.picks[i]; if (p.on) continue;
-      p.on = true; p.kind = kind; p.power = power; p.dx = dx; p.dy = dy; p.gate = g; p.follow = follow; p.free = false; p.sp = 0; p.X = g.X + dx; p.y = g.c + dy; p.px = p.X; p.py = p.y; p.ph = (g.k * 1.7 + i) % TAU; return; }
+      p.on = true; p.kind = kind; p.power = power; p.dx = dx; p.dy = dy; p.gate = g; p.gk = g.k; p.follow = follow; p.free = false; p.sp = 0; p.X = g.X + dx; p.y = g.c + dy; p.px = p.X; p.py = p.y; p.ph = (g.k * 1.7 + i) % TAU; return; }
   }
   W.find = function (k) { for (let i = 0; i < 8; i++) { const g = W.gates[i]; if (g.on && g.k === k) return g; } return null; };
   W.reset = function (gs) { W.gs = gs; for (const g of W.gates) g.on = false; for (const p of W.picks) p.on = false; };
@@ -1164,10 +1181,16 @@ const World = (() => {
   W.nextX = () => W.gs.k === W.gs.start ? CONST.FIRST_X : W.gs.prevX + 400;
   W.motion = function (g, rt) {
     if (g.kind === 1) g.gapY = g.c + g.amp * Math.sin(TAU * rt / g.period + g.phase); else g.gapY = g.c;
-    if (g.kind === 2) { const a = TAU * rt / CONST.JAWS_P + g.phase; g.gap = g.G + 20 + 20 * Math.sin(a); g.closing = Math.cos(a) < 0; } else g.gap = g.G;
+    if (g.kind === 2) { const a = TAU * rt / CONST.JAWS_P + g.phase; g.gap = g.G + 20 + 20 * Math.sin(a); g.closing = Math.cos(a) < 0; } else g.gap = g.kind === 3 ? 1.8 * g.G + 120 : g.G;
+    if (g.kind === 3) g.ang = g.phase + g.dir * (Math.PI / 2) * rt; // pinwheel: 90 deg/s, direction by k parity
   };
-  W.pickPos = function (p) { if (p.free) return; if (p.follow && p.gate) { p.X = p.gate.X + p.dx; p.y = p.gate.gapY + p.dy; } };
+  W.pickPos = function (p) { if (p.free) return; if (p.follow && p.gate) { if (p.gate.on && p.gate.k === p.gk) { p.X = p.gate.X + p.dx; p.y = p.gate.gapY + p.dy; } else p.follow = false; } };
+  // pinwheel: hub circle (r 12) + 4 blade capsules (55 u long, radius 6), segment-to-circle
+  W.pinHit = function (g, x, y, r) { const dx = x - g.X, dy = y - g.gapY; if (Math.abs(dx) > 61 + r || Math.abs(dy) > 61 + r) return false; if (dx * dx + dy * dy <= (r + 12) * (r + 12)) return true;
+    const rr = (r + 6) * (r + 6); for (let b = 0; b < 4; b++) { const a = g.ang + b * Math.PI / 2, ex = 55 * Math.cos(a), ey = 55 * Math.sin(a); let t = (dx * ex + dy * ey) / 3025; t = t < 0 ? 0 : t > 1 ? 1 : t; const qx = dx - t * ex, qy = dy - t * ey; if (qx * qx + qy * qy <= rr) return true; }
+    return false; };
   W.collide = function (g, x, y, r) {
+    if (g.kind === 3 && W.pinHit(g, x, y, r)) return true;
     if (Math.abs(x - g.X) > CONST.COL_HALF + r) return false;
     const top = g.gapY - g.gap / 2 - CONST.INSET, bot = g.gapY + g.gap / 2 + CONST.INSET, nx = x - clamp(x, g.X - CONST.COL_HALF, g.X + CONST.COL_HALF), n2 = nx * nx, r2 = r * r;
     if (y <= top || y >= bot) return n2 < r2;
@@ -1208,7 +1231,6 @@ function mission(i) {
 }
 const MEDALS = [{ id: 'bronze', g: 10, bonus: 20 }, { id: 'silver', g: 25, bonus: 50 }, { id: 'gold', g: 50, bonus: 100 }, { id: 'prism', g: 100, bonus: 250 }];
 const medalFor = g => { let m = null; for (const d of MEDALS) if (g >= d.g) m = d; return m; };
-const RM_MQ = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)'); } catch (e) { return null; } })();
 const Game = (() => {
   const G = { state: 'boot', tk: 0, god: FLAGS.god, manual: FLAGS.test, pendingSeed: null, hover: 0, titleScroll: 0, errs: 0 };
   const R = { seed: 1, mode: 'normal', mods: makeMods('normal'), start: 0, runTick: 0, dist: 0, v: 300, vb: 300, sf: 1, gates: 0, score: 0, chain: 0, mult: 1, maxChain: 0, maxMult: 1, meter: 0,
@@ -1217,7 +1239,9 @@ const Game = (() => {
     cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [] };
   G.run = R;
   G.runTime = () => R.runTick * CONST.STEP;
-  G.reduced = () => { if (FLAGS.test) return true; const v = Save.d.settings.reduceMotion; if (v === null) return !!(RM_MQ && RM_MQ.matches); return !!v || FLAGS.test; };
+  let sysRM = false; try { const mq = matchMedia('(prefers-reduced-motion: reduce)'); sysRM = mq.matches; const onRM = () => { sysRM = mq.matches; try { UI.applySettings(); } catch (e) { } };
+    if (mq.addEventListener) mq.addEventListener('change', onRM); else if (mq.addListener) mq.addListener(onRM); } catch (e) { }
+  G.reduced = () => { if (FLAGS.test) return true; const v = Save.d.settings.reduceMotion; return v === null ? sysRM : !!v; };
   G.inkCol = () => BIOMES[R.biome].ink;
   G.dailyInfo = () => { const ymd = Calendar.today(); return { seed: ymd, mod: hash32(ymd) % 5, key: String(ymd) }; };
   // ---------- state machine ----------
@@ -1264,7 +1288,7 @@ const Game = (() => {
   G.nextBiomeIdx = () => (R.biomeN + 1) % 5;
   function fillGates() { let guard = 0; while (guard++ < 8 && World.nextX() - R.dist + View.xP < View.W + 260) { const g = World.spawn(); if (!g) break; decorate(g); } }
   function decorate(g) { const sv = Save.d; if (R.mode !== 'daily' && R.best.gates > 0 && g.k - R.start === R.best.gates) g.ribbon = true;
-    if (g.kind === 1 && !sv.seen.drifter) { g.caption = 1; sv.seen.drifter = true; } if (g.kind === 2 && !sv.seen.jaws) { g.caption = 2; sv.seen.jaws = true; }
+    if (g.kind === 1 && !sv.seen.drifter) { g.caption = 1; sv.seen.drifter = true; } if (g.kind === 2 && !sv.seen.jaws) { g.caption = 2; sv.seen.jaws = true; } if (g.kind === 3 && !sv.seen.pinwheel) { g.caption = 1; sv.seen.pinwheel = true; }
     if (!Art.get(g.biome) || !Art.get(g.biome).ready) Art.ensure(g.biome, true); }
   G.startRun = function (o) { G.newRun(o); G.go('playing'); };
   G.toReady = function (o) { G.newRun(o); G.go('ready'); };
@@ -1331,7 +1355,7 @@ const Game = (() => {
       const ax = Math.abs(R.dist - g.X);
       if (ax <= CONST.COL_HALF && !g.smashed) { const top = g.gapY - g.gap / 2 - CONST.INSET, bot = g.gapY + g.gap / 2 + CONST.INSET, mc = Math.min(P.y - P.r - top, bot - P.y - P.r); if (mc < g.minClear) g.minClear = mc; }
       if (!g.passed && R.dist >= g.X) {
-        g.passed = true; R.gates++; g.perfect = !g.smashed && Math.abs(P.y - g.gapY) <= CONST.PERFECT; g.surgeP = surge;
+        g.passed = true; R.gates++; g.perfect = !g.smashed && Math.abs(P.y - g.gapY - (P.y < g.gapY ? -g.pinH : g.pinH)) <= CONST.PERFECT; g.surgeP = surge;
         const pts = (1 + (g.perfect ? 1 : 0)) * R.mult * sm; R.score += pts;
         if (!surge) gain(2 + (g.perfect ? 8 : 0));
         if (g.perfect) R.perfects++;
@@ -1364,7 +1388,7 @@ const Game = (() => {
     if (R.magT > 0 && --R.magT === 0) Bus.emit('powerupEnd', 1, 0);
     if (R.slowT > 0 && --R.slowT === 0) { Audio.setSlow(false); Bus.emit('powerupEnd', 2, 0); }
     if (R.shrT > 0 && --R.shrT === 0) R.shrHold = true;
-    if (R.shrHold) { let clear = true; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && Math.abs(R.dist - g.X) <= CONST.COL_HALF + CONST.R) { clear = false; break; } } if (clear) { R.shrHold = false; Bus.emit('powerupEnd', 3, 0); } }
+    if (R.shrHold) { let clear = true; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && Math.abs(R.dist - g.X) <= (g.kind === 3 ? 61 : CONST.COL_HALF) + CONST.R) { clear = false; break; } } if (clear) { R.shrHold = false; Bus.emit('powerupEnd', 3, 0); } }
     P.r = (R.shrT > 0 || R.shrHold) ? CONST.R * CONST.SHRINK : CONST.R;
     if (R.graceT > 0) R.graceT--;
     if (R.invulnT > 0) R.invulnT--;
@@ -1400,7 +1424,7 @@ const Game = (() => {
     let next = null; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on || g.exited) continue;
       if (g.k === R.killer || (g.X >= R.dist - 60 && g.X <= R.dist + 250)) { g.smashed = true; g.noHit = true; g.passed = true; g.exited = true; g.dissolve = 1; Bus.emit('dissolve', g.k, 0); } }
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && !g.smashed && g.X > R.dist && (!next || g.X < next.X)) next = g; }
-    Player.reset(next ? next.gapY : CONST.START_Y); R.alive = true; MS.dead = false; R.invulnT = 241; R.lockout = 0; R.v = R.vb * R.sf; Audio.newRun();
+    Player.reset(next ? next.gapY - next.pinH : CONST.START_Y); R.alive = true; MS.dead = false; R.invulnT = 241; R.lockout = 0; R.v = R.vb * R.sf; Audio.newRun();
     G.go('countdown'); return true;
   };
   // ---------- finalize (results / abandon) ----------
@@ -1525,7 +1549,6 @@ const Renderer = (() => {
     Art.pump();
   };
   // ---------- drawing ----------
-  let lastBiomeFade = -1;
   R.biomeFade = () => { FX.fadeT = 0; };
   // A periodic layer tile, drawn only where it has pixels (T.runs), only across the visible columns (40 u margin for
   // shake, roll and zoom) and nothing below `cut` (world u), where the layer in front of it is already solid.
@@ -1609,7 +1632,8 @@ const Renderer = (() => {
       if (g.flash > 0) { ctx.globalAlpha = 0.8 * g.flash / 0.12; const wb = Art.rimW[g.tip][0], wt = Art.rimW[g.tip][1]; ctx.drawImage(wb.c, cx - 66, tb - wb.oy, 132, 70); ctx.drawImage(wt.c, cx - 66, tt - wt.oy, 132, 70); }
       if (g.kind === 1 && !g.smashed) { ctx.globalAlpha = 0.6; ctx.fillStyle = COL.paper; ctx.fillRect(cx - 1, top, 2, tt - 40 - top); ctx.globalAlpha = 0.5;
         spr(Art.chev, cx, tt - 30, 1); place(cx, tb + 30, Math.PI, 1, 1); ctx.drawImage(Art.chev.c, -8, -7, 16, 14); base(); }
-      if (g.ribbon && !g.passed) { ctx.globalAlpha = 1; spr(Art.ribbon, cx, gy - 10, 0.9 + 0.04 * Math.sin(FX.wall * 3)); }
+      if (g.kind === 3) { ctx.globalAlpha = g.smashed ? g.dissolve : 1; place(cx, gy, g.phase + g.dir * (Math.PI / 2) * (RR.runTick - 1 + al) * CONST.STEP, 1, 1); ctx.drawImage(Art.pin.c, -70, -70, 140, 140); base(); }
+      if (g.ribbon && !g.passed) { ctx.globalAlpha = 1; spr(Art.ribbon, cx, gy - 10 - g.pinH, 0.9 + 0.04 * Math.sin(FX.wall * 3)); }
       if (g.caption && g.capT > 0 && g.capT < 1.2) { const a = Math.min(1, g.capT * 6, (1.2 - g.capT) * 5); ctx.globalAlpha = a; spr(g.caption === 1 ? Art.words.moves : Art.words.jaws, cx, Math.max(-V.oy + 70 + V.safe.t / V.s, tt - 70), 0.8); }
       // spire edge light: side facing Glim, at Glim's y, inside spire extents
       if (LEVEL.edge && !g.smashed && glowMode(g.biome)) { const d = Math.abs(cx - V.xP) - 50, a = 0.6 * clamp(1 - d / 260, 0, 1);
@@ -1731,7 +1755,8 @@ const Renderer = (() => {
     if (!noBoxes) {
     ctx.strokeStyle = '#00FF88'; ctx.beginPath(); ctx.arc(gx, py, Player.r, 0, TAU); ctx.stroke(); ctx.strokeStyle = 'rgba(0,255,136,.4)'; ctx.beginPath(); ctx.arc(gx, py, Player.r + CONST.PICK_R, 0, TAU); ctx.stroke();
     ctx.strokeStyle = '#FF2244'; ctx.beginPath(); ctx.moveTo(-V.colX, CONST.FLOOR); ctx.lineTo(V.viewW, CONST.FLOOR); ctx.stroke();
-    for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on || g.smashed) continue; const cx = g.X - dist + V.xP, t = g.gapY - g.gap / 2 - CONST.INSET, b = g.gapY + g.gap / 2 + CONST.INSET; ctx.strokeRect(cx - 46, -200, 92, t + 200); ctx.strokeRect(cx - 46, b, 92, 1300 - b); }
+    for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on || g.smashed) continue; const cx = g.X - dist + V.xP, t = g.gapY - g.gap / 2 - CONST.INSET, b = g.gapY + g.gap / 2 + CONST.INSET; ctx.strokeRect(cx - 46, -200, 92, t + 200); ctx.strokeRect(cx - 46, b, 92, 1300 - b);
+      if (g.kind === 3) { ctx.beginPath(); ctx.arc(cx, g.gapY, 12, 0, TAU); for (let k = 0; k < 4; k++) { const a = g.ang + k * Math.PI / 2; ctx.moveTo(cx, g.gapY); ctx.lineTo(cx + 55 * Math.cos(a), g.gapY + 55 * Math.sin(a)); } ctx.stroke(); } }
     }
     if (!txt) return;
     if (!R.dbg || FX.wall - R.dbgT > 0.25) { R.dbgT = FX.wall; const Q = Quality; R.dbg = ['fps ' + Q.fps.toFixed(0) + ' min ' + Q.fpsMin.toFixed(0), 'work ' + Q.ema.toFixed(2) + 'ms q' + Q.level + ' dpr ' + V.dpr.toFixed(2), 'parts ' + Particles.n + ' ' + Game.state + ' t' + Game.tk, 'audio ' + Audio.state() + ' seed ' + RR.seed]; }
@@ -1791,6 +1816,7 @@ const UI = (() => {
     if (st === 'title') { refreshTitle(); C.score = -1; }
     if (st === 'ready' || (st === 'playing' && prev !== 'countdown' && prev !== 'paused')) { C.score = -1; C.mult = -1; C.pip = -1; C.meter = -1; C.full = null; }
     if (st !== 'title' && U.panel) U.closePanel(true);
+    if (st === 'paused') U.holdToasts(true); else if (st === 'results') U.holdToasts(false); else U.flushToasts();
   };
   U.onResize = function () {
     const V = View, land = V.landscape && V.coarse;
@@ -1798,8 +1824,13 @@ const UI = (() => {
     if (!land) { U.rotShown = false; E.rotChip.style.opacity = '0'; }
   };
   // ---------- toasts ----------
-  let toastTo = 0;
-  U.toast = function (html) { E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo); toastTo = setTimeout(() => E.toast.classList.remove('on'), 2440); };
+  let toastTo = 0, toastCur = null; const toastQ = [];
+  const toastBlocked = () => Game.state === 'paused' || Game.state === 'results' || U.panel !== null;
+  function toastShow(html, held) { toastCur = held ? html : null; E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo);
+    toastTo = setTimeout(() => { E.toast.classList.remove('on'); toastCur = null; if (toastQ.length) toastTo = setTimeout(U.flushToasts, 300); }, 2440); }
+  U.toast = function (html) { if (toastBlocked()) { if (toastQ.length < 6) toastQ.push(html); return; } toastShow(html, true); };
+  U.holdToasts = function (keep) { if (E.toast.classList.contains('on')) { clearTimeout(toastTo); E.toast.classList.remove('on'); if (keep && toastCur !== null) toastQ.unshift(toastCur); toastCur = null; } if (!keep) toastQ.length = 0; };
+  U.flushToasts = function () { if (toastQ.length && !toastBlocked() && !E.toast.classList.contains('on')) toastShow(toastQ.shift(), true); };
   U.hudToast = function (txt) { E.hudToast.textContent = txt; try { E.hudToast.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: 2200, easing: 'ease-out', fill: 'forwards' }); } catch (e) { E.hudToast.style.opacity = 0; } };
   // ---------- title ----------
   function bakeMedalIcon(cv, id) { const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(Art.medals[id || 'none'].c, 0, 0, cv.width, cv.height); }
@@ -1816,10 +1847,10 @@ const UI = (() => {
   // ---------- panels ----------
   U.openPanel = function (name) {
     if (Game.state !== 'title') Game.toTitle();
-    if (U.panel) U.closePanel(true); U.panel = name; const el = E[name]; el.classList.add('open');
+    if (U.panel) U.closePanel(true); U.holdToasts(true); U.panel = name; const el = E[name]; el.classList.add('open');
     if (name === 'shop') buildShop(); else if (name === 'settings') renderSettings(); else if (name === 'missions') renderMissions();
   };
-  U.closePanel = function (silent) { if (!U.panel) return; E[U.panel].classList.remove('open'); U.panel = null; if (!silent) { refreshTitle(); try { stage.focus({ preventScroll: true }); } catch (e) { } } };
+  U.closePanel = function (silent) { if (!U.panel) return; E[U.panel].classList.remove('open'); U.panel = null; U.flushToasts(); if (!silent) { refreshTitle(); try { stage.focus({ preventScroll: true }); } catch (e) { } } };
   function missionRows(target) {
     const sv = Save.d; let h = '';
     sv.missions.slots.forEach(s => { const m = mission(s.i), p = Math.min(s.p, m.target), done = s.p >= m.target;
@@ -1885,7 +1916,7 @@ const UI = (() => {
     const row = (k, v) => '<div><span>' + k + '</span><b>' + v + '</b></div>';
     E.rStats.innerHTML = row('Gates', R.gates + ' <span class="small">(best ' + bestG + ')</span>') + row('Perfects', R.perfects) + row('Grazes', R.grazes) + row('Best chain', '×' + Math.max(1, Math.min(5, 1 + Math.floor(R.maxChain / 3)))) +
       row('Motes', '+' + R.motes) + (R.mode === 'breeze' ? '<div><span class="leaf">Breeze</span></div>' : R.mode === 'daily' ? '<div><span class="leaf" style="background:var(--amber-hot)">' + MODS[R.daily].name + '</span></div>' : '');
-    const gEff = R.start + R.gates, n = R.biomeN, nextT = THRESH(n);
+    const n = R.biomeN, nextT = THRESH(n);
     E.rBiome.textContent = 'Reached ' + BIOMES[R.biome].name + ' · Next: ' + BIOMES[(n + 1) % 5].name.toUpperCase() + ' at gate ' + nextT;
     const nm = MEDALS.find(d => R.gates < d.g);
     if (nm) { E.rNext.textContent = nm.id[0].toUpperCase() + nm.id.slice(1) + ' at ' + nm.g + ' gates — ' + (nm.g - R.gates) + ' to go'; E.rNextBar.style.transform = 'scaleX(' + (R.gates / nm.g).toFixed(3) + ')'; }
@@ -1912,8 +1943,9 @@ const UI = (() => {
     btn(E.rRetry, () => { if (Game.state === 'results') { Renderer.iris(); Game.toReady({ mode: Game.run.mode === 'daily' ? 'daily' : undefined, chain: true }); } });
     btn(E.rHome, () => Game.toTitle(), true); btn(E.rShop, () => { Game.toTitle(); U.openPanel('shop'); });
     btn(E.rCont, () => { if (Game.revive()) show(E.rCont, false); });
-    const anyTap = e => { if (e.target.closest && e.target.closest('button')) return; e.preventDefault(); U.skipCount(); Audio.unlock(); if (Game.press('card')) Haptics.tick(); };
-    E.results.addEventListener('pointerdown', anyTap);
+    const anyTap = e => { if (e.target.closest && e.target.closest('button')) return; if (e.type === 'pointerdown') { if (E.rSheet.contains(e.target)) return; e.preventDefault(); }
+      U.skipCount(); Audio.unlock(); if (Game.press('card')) Haptics.tick(); };
+    E.results.addEventListener('pointerdown', anyTap); E.rSheet.addEventListener('click', anyTap);
     btn(E.shopBtn = $('shopBtn'), () => U.openPanel('shop')); btn($('setBtn'), () => U.openPanel('settings')); btn(E.missionStrip, () => U.openPanel('missions')); btn(E.bestPill, () => U.openPanel('missions'));
     btn(E.dailyChip, () => { Renderer.iris(); Game.toReady({ mode: 'daily' }); });
     btn(E.shopClose, () => U.closePanel(), true); document.querySelectorAll('.closeP').forEach(b => btn(b, () => U.closePanel(), true));
@@ -1923,7 +1955,7 @@ const UI = (() => {
     let sr = 0; E.carousel.addEventListener('scroll', () => { if (!sr) sr = requestAnimationFrame(() => { sr = 0; centerCard(); }); }, { passive: true });
     document.querySelectorAll('.tgl[data-set]').forEach(b => btn(b, () => { const k = b.dataset.set, cur = b.getAttribute('aria-pressed') === 'true'; U.setSetting(k, !cur); }));
     let rTo = 0; btn(E.resetBtn, () => { if (!E.resetBtn.classList.contains('armed')) { E.resetBtn.classList.add('armed'); E.resetBtn.textContent = 'Tap again to erase everything'; clearTimeout(rTo); rTo = setTimeout(() => { E.resetBtn.classList.remove('armed'); E.resetBtn.textContent = 'Reset progress'; }, 3000); return; }
-      clearTimeout(rTo); Save.reset(); U.applySettings(); renderSettings(); refreshTitle(); U.toast('Progress erased'); });
+      clearTimeout(rTo); Save.reset(); U.applySettings(); renderSettings(); refreshTitle(); toastShow('Progress erased'); });
     U.applySettings(); refreshTitle();
   };
   return U;
@@ -1968,7 +2000,7 @@ const KINDS = ['static', 'drifter', 'jaws', 'pinwheel'];
 function snapshot() {
   const G = Game, R = G.run, P = Player, V = View, sv = Save.d, bk = R.mode === 'breeze' ? 'breeze' : 'normal';
   const obstacles = [], pickups = [];
-  if (R.active) { for (const g of World.gates) if (g.on) obstacles.push({ i: g.k, kind: KINDS[g.kind], x: g.X - R.dist + V.xP, gapY: g.gapY, gapH: g.gap, w: CONST.GATE_W, passed: g.passed, smashed: g.smashed });
+  if (R.active) { for (const g of World.gates) if (g.on) obstacles.push({ i: g.k, kind: KINDS[g.kind], x: g.X - R.dist + V.xP, gapY: g.gapY, gapH: g.gap, w: CONST.GATE_W, passed: g.passed, smashed: g.smashed, bands: g.kind === 3 ? [g.gapY - g.pinH, g.gapY + g.pinH] : undefined });
     obstacles.sort((a, b) => a.i - b.i);
     for (const p of World.picks) if (p.on) pickups.push({ kind: p.kind === 0 ? 'mote' : p.kind === 1 ? 'gem' : 'orb', power: p.kind === 2 ? PUPS[p.power] : undefined, x: p.X - R.dist + V.xP, y: p.y }); }
   return { state: G.state, panel: UI.panel, tick: G.tk, runTick: R.runTick, seed: R.seed, mode: R.mode, score: R.score, gates: R.gates, chain: R.chain, mult: R.mult, meter: R.meter,
@@ -2007,7 +2039,7 @@ const Loop = (() => {
   function softReset() { try { Particles.clear(); Renderer.reset(); Input.clear(); Game.run.active = false; for (const g of World.gates) g.on = false; for (const p of World.picks) p.on = false; if (UI.panel) UI.closePanel(true); Game.manual = FLAGS.test; Game.go('title'); } catch (e2) { } }
   function autoplay() { const s = Game.state; if (s === 'title' || s === 'ready' || (s === 'results' && Game.run.lockout <= 0)) { Game.press('bot'); return; } if (s !== 'playing') return;
     const R = Game.run; let tg = null; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && !g.smashed && g.X + 63 > R.dist && (!tg || g.X < tg.X)) tg = g; }
-    let ty = tg ? tg.gapY : 480; if (tg && tg.kind === 1) ty += (tg.gapY - tg.pgapY) * 120 * Math.min(Math.max(0, (tg.X - R.dist) / Math.max(1, R.v)), 0.35);
+    let ty = tg ? tg.gapY : 480; if (tg && tg.kind === 3) ty += Player.y < tg.gapY ? -tg.pinH : tg.pinH; if (tg && tg.kind === 1) ty += (tg.gapY - tg.pgapY) * 120 * Math.min(Math.max(0, (tg.X - R.dist) / Math.max(1, R.v)), 0.35);
     if (Player.y > ty + 52 && Player.vy > 0 && Input.queued === 0) Input.push(); }
   return { start() { last = -1; raf = requestAnimationFrame(frame); }, resetClock() { last = -1; nextW = -1; }, softReset, onError, frame, get errs() { return errs; } };
 })();
@@ -2042,7 +2074,7 @@ const API = {
   previewGates(seed, count, opts) {
     opts = opts || {}; const mode = opts.mode || 'normal', di = Game.dailyInfo(), gs = GenState((seed === undefined ? 1 : seed) >>> 0, makeMods(mode, opts.mod !== undefined ? opts.mod : di.mod), opts.startGate | 0), out = [];
     for (let i = 0; i < (count || 0); i++) { const g = {}, picks = []; genGate(gs, g, (kind, dx, dy, follow, power) => picks.push({ kind: kind === 0 ? 'mote' : kind === 1 ? 'gem' : 'orb', dx, dy, power: kind === 2 ? PUPS[power] : undefined }));
-      out.push({ i: g.k, kind: KINDS[g.kind], X: g.X, c: g.c, G: g.G, D: g.D, amp: g.amp, period: g.period, phase: g.phase, v: g.vPrev, rest: g.rest, onboarding: g.onb, lo: g.lo, hi: g.hi, cap: g.cap, pickups: picks }); }
+      out.push({ i: g.k, kind: KINDS[g.kind], X: g.X, c: g.c, G: g.G, D: g.D, amp: g.amp, period: g.period, phase: g.phase, v: g.vPrev, rest: g.rest, onboarding: g.onb, lo: g.lo, hi: g.hi, cap: g.cap, pinH: g.pinH, pickups: picks }); }
     return out;
   },
   setSetting(key, value) { UI.setSetting(key, value); return Save.clone(Save.d.settings); },
