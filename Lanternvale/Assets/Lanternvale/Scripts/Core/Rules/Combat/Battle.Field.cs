@@ -54,6 +54,7 @@ namespace Lanternvale.Rules
             }
             if (u.Downed) return;
             RegenOutOfCombat(u, seconds);
+            Specials.OnOutOfCombatTick(this, u, seconds);
         }
 
         /// <summary>

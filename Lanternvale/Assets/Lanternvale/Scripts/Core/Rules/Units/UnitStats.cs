@@ -154,6 +154,9 @@ namespace Lanternvale.Rules
                     float v = i < a.ModValues.Length ? a.ModValues[i] : AuraModValue(m, a.Rank, a.EffLevel, a.LearnLevel, a.EffectMult);
                     b.Add(m.stat, v * Math.Max(1, a.Stacks), m.pct, m.school);
                 }
+                if (a.ExtraMods != null)
+                    foreach (var m in a.ExtraMods)
+                        if (!IsPetTarget(m.target)) b.Add(m.stat, m.value * Math.Max(1, a.Stacks), m.pct, m.school);
                 if (a.Def.states.Length > 0)
                 {
                     foreach (var st in a.Def.states)
@@ -208,6 +211,7 @@ namespace Lanternvale.Rules
                 s.BaseMana = CreatureScaling.Mana(cr, u.Level);
                 if (s.BaseMana > 0) s.MaxMana = b.Base(StatId.Mana, s.BaseMana);
             }
+            s.MaxHealth *= u.MaxHealthMult;
             s.MaxHealth = Math.Max(1f, (float)Math.Round(s.MaxHealth));
             s.MaxMana = Math.Max(0f, (float)Math.Round(s.MaxMana));
 

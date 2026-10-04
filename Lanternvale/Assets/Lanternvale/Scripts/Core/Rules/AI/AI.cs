@@ -101,7 +101,7 @@ namespace Lanternvale.Rules
         {
             var list = new List<Unit>();
             foreach (var o in b.Units)
-                if (o.IsAlive && o.IsHostileTo(u) && !o.IsUntargetable && b.CanSee(u, o) && !o.IsFeigningDeath) list.Add(o);
+                if (o.IsAlive && o.IsHostileTo(u) && !o.IsUntargetable && b.CanSee(u, o) && !o.IsFeigningDeathFor(u)) list.Add(o);
             return list;
         }
 

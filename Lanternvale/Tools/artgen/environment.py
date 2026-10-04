@@ -27,7 +27,7 @@ def tile_canvas(key, n=1024):
     return Canvas(n, n, 1.0, pad=160, wrap_x=True, wrap_y=True, seed=key)
 
 
-def finish(cv, grain_amt=0.022, do_grade=True):
+def finish(cv, grain_amt=0.014, do_grade=True):
     grain(cv, grain_amt, cell=1.5, key="paper")
     rgb, a = cv.crop_pad()
     return to_image(rgb, a, bleed=True, do_grade=do_grade)
@@ -1040,7 +1040,7 @@ def ground_meadow(key="ground_meadow"):
     blades(cv, r, 900, 22, [P.MOSS, P.GRASS_LIGHT], key + "bl2", width=3.4, alpha=0.7)
     cols = [(P.WHITE_WARM, P.HONEY), (P.LEAF_YELLOW, P.AMBER), (P.ROSE, P.CREAM_WARM), (P.LAVENDER, P.CREAM)]
     flower_patches(cv, r, 16, 9, cols, (7, 11), 40)
-    return finish(cv, 0.02)
+    return finish(cv, 0.013)
 
 
 def leaf_poly(x, y, L, a, w=0.45):
@@ -1091,7 +1091,7 @@ def ground_forest(key="ground_forest"):
            cluster=[(r.random() * 1024, r.random() * 1024, 50) for _ in range(14)])
     # pebbles
     pebbles(cv, r, 40, 7, 14, P.STONE, "pb")
-    return finish(cv, 0.02)
+    return finish(cv, 0.013)
 
 
 def pebbles(cv, r, n, rmin, rmax, col, key, where=None):
@@ -1180,7 +1180,7 @@ def ground_shrine(key="ground_shrine"):
         a = r.random() * 6.28
         for X, Y in each_copy(cv, x, y, 8):
             paint(cv, cv.mask(leaf_poly(X, Y, 8, a, 0.7)), P.ROSE, line=0.3, line_w=0.6, soft=1, key="pt", ao=0)
-    return finish(cv, 0.02)
+    return finish(cv, 0.013)
 
 
 def ground_village(key="ground_village"):
@@ -1206,7 +1206,7 @@ def ground_village(key="ground_village"):
         blades(cv, r, 1400, 24, [P.MOSS, P.GRASS_LIGHT, P.mix(P.MOSS, P.MOSS_DK, 0.5)], key + "bl", 3.4, 0.85, cluster=pts)
     pebbles(cv, r, 90, 5, 12, P.STONE_WARM, "pb")
     pebbles(cv, r, 30, 4, 8, P.mix(P.STONE, P.TERRACOTTA, 0.3), "pb2")
-    return finish(cv, 0.02)
+    return finish(cv, 0.013)
 
 
 # ----------------------------------------------------------------------------------------

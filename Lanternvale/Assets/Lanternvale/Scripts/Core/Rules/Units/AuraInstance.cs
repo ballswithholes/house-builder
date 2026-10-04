@@ -46,6 +46,8 @@ namespace Lanternvale.Rules
         public float AbsorbLeft;
         /// <summary>Resolved stat modifier values (index-aligned with Def.mods), already scaled by rank/effect mult (per stack).</summary>
         public float[] ModValues = new float[0];
+        /// <summary>Extra stat mods added by specials to this instance (value = final amount per stack), or null.</summary>
+        public List<StatModDef> ExtraMods;
 
         /// <summary>For radiusAura children: the area aura that grants this aura (removed when out of range).</summary>
         public AuraInstance AreaSource;

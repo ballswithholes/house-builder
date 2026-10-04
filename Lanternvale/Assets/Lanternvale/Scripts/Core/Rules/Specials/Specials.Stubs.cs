@@ -3,10 +3,6 @@ namespace Lanternvale.Rules
 {
     public static partial class Specials
     {
-        static void RegisterPriest() { }
-        static void RegisterPaladin() { }
-        static void RegisterHunter() { }
-        static void RegisterShaman() { }
         static void RegisterWarlock() { }
         static void RegisterContent() { }
     }

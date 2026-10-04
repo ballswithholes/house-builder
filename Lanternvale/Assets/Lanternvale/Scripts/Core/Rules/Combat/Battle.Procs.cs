@@ -152,7 +152,7 @@ namespace Lanternvale.Rules
             var cast = new AbilityCast
             {
                 Battle = this, Caster = owner, Ability = src, Target = other ?? owner, Point = (other ?? owner).Position,
-                SourceProc = p, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : rank,
+                SourceProc = p, ProcInfo = info, ProcOther = other, Free = true, Depth = info.Depth + 1, Rank = aura != null ? aura.Rank : rank,
                 EffLevel = aura != null ? aura.EffLevel : effLevel, LearnLevel = aura != null ? aura.LearnLevel : 1,
                 School = aura != null ? aura.Def.school : (p.effects[0].school ?? School.Physical),
                 Mods = src != null ? AbilityMods.For(aura.Caster ?? owner, src) : AbilityModSet.Empty,

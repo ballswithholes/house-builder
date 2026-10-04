@@ -72,6 +72,8 @@ namespace Lanternvale.Rules
         public virtual float IncomingCritBonus(AuraInstance a, AbilityCast c, School s) => 0f;
         /// <summary>Flat damage bonus added to damage effects against the bearer (before crit).</summary>
         public virtual float IncomingFlatDamageBonus(AuraInstance a, AbilityCast c, EffectDef e, School s, bool weapon) => 0f;
+        /// <summary>Flat healing added to heal effects on the bearer (before multipliers and crit).</summary>
+        public virtual float IncomingFlatHealBonus(AuraInstance a, AbilityCast c, EffectDef e) => 0f;
         /// <summary>Extra ranged attack power for ranged attacks against the bearer.</summary>
         public virtual float IncomingRangedApBonus(AuraInstance a, Unit attacker) => 0f;
         /// <summary>True: the aura's absorb is not a depleting shield (handled by ModifyIncomingDamage).</summary>
@@ -150,6 +152,8 @@ namespace Lanternvale.Rules
         public virtual void OnAnyUnitFell(Battle b, Unit u) { }
         public virtual void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { }
         public virtual void OnBattleFinished(Battle b) { }
+        /// <summary>Out-of-combat real-time tick of a unit (field context).</summary>
+        public virtual void OnOutOfCombatTick(Battle b, Unit u, float seconds) { }
         /// <summary>Abilities the unit may use because of its surroundings (Lightwell).</summary>
         public virtual void ContextualAbilities(Battle b, Unit u, List<string> into) { }
 
@@ -490,6 +494,13 @@ namespace Lanternvale.Rules
             return v;
         }
 
+        internal static float IncomingFlatHealBonus(AbilityCast c, EffectDef e, Unit t)
+        {
+            float v = 0f;
+            if (t != null) foreach (var r in SpecialAuras(t)) v += r.H.IncomingFlatHealBonus(r.A, c, e);
+            return v;
+        }
+
         internal static float IncomingRangedApBonus(Unit attacker, Unit t)
         {
             float v = 0f;
@@ -697,6 +708,9 @@ namespace Lanternvale.Rules
             return null;
         }
 
+        /// <summary>Aura ids whose bearer's pending casts ignore casting pushback (Power Word: Shield).</summary>
+        public static readonly HashSet<string> PushbackImmuneAuras = new HashSet<string>();
+
         /// <summary>Aura ids that make the bearer undetectable even within the stealth detection distance (Vanish).</summary>
         public static readonly HashSet<string> UndetectableAuras = new HashSet<string>();
 
@@ -743,6 +757,7 @@ namespace Lanternvale.Rules
         internal static void OnAnyUnitFell(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitFell(b, u); }
         internal static void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { foreach (var h in All()) h.OnAnyAbilityStart(b, u, c); }
         internal static void OnBattleFinished(Battle b) { foreach (var h in All()) h.OnBattleFinished(b); }
+        internal static void OnOutOfCombatTick(Battle b, Unit u, float s) { foreach (var h in All()) h.OnOutOfCombatTick(b, u, s); }
 
         /// <summary>Abilities usable by the unit because of its surroundings (e.g. Lightwell renew next to a Lightwell).</summary>
         public static List<string> ContextualAbilities(Battle b, Unit u)

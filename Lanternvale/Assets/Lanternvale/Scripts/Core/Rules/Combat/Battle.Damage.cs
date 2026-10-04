@@ -178,6 +178,7 @@ namespace Lanternvale.Rules
         {
             var p = u.Pending;
             if (p == null || p.Pushbacks >= 2) return;
+            foreach (var a in u.Auras) if (Specials.PushbackImmuneAuras.Contains(a.Def.id)) return;
             float resist = Specials.PushbackResistChance(u, p.Ability);
             if (resist > 0 && Rng.Chance(resist)) return;
             float amount = 0.5f * (1f - Specials.PushbackReduction(u));

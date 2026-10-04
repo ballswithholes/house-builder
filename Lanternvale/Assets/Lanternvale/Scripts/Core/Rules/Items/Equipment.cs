@@ -96,7 +96,7 @@ namespace Lanternvale.Rules
             if (c == null) return true;
             foreach (var w in c.weaponTypes) if (w == t) return true;
             if (t == WeaponType.Shield && c.canBlock) return true;
-            return false;
+            return Specials.GrantsWeapon(u, t); // talents granting proficiency (Two-Handed Axes and Maces)
         }
 
         public static bool CanDualWield(Unit u) => u.Class != null && u.Class.dualWieldLevel > 0 && u.Level >= u.Class.dualWieldLevel;

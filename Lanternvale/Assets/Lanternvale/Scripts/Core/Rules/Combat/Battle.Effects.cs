@@ -35,6 +35,8 @@ namespace Lanternvale.Rules
         public AuraInstance SourceAura;
         public bool Periodic;
         public ProcDef SourceProc;
+        /// <summary>The trigger context of a proc cast (damage, crit, school...), or null.</summary>
+        public ProcInfo ProcInfo;
         /// <summary>The aura whose proc runs this cast (aura procs), or null.</summary>
         public AuraInstance ProcAura;
         public Unit ProcOther;
@@ -471,6 +473,9 @@ namespace Lanternvale.Rules
             return o;
         }
 
+        /// <summary>Rolls (once per cast and target) the hit table for a special effect that needs it (Mana Burn).</summary>
+        internal HitOutcome RollHit(AbilityCast cast, Unit t, EffectDef e) => GetOutcome(cast, t, e);
+
         /// <summary>The hit outcome already rolled for a target in this cast, or null when none was rolled.</summary>
         public HitOutcome? OutcomeOf(AbilityCast cast, Unit t) => cast.Outcomes.TryGetValue(t, out var o) ? o : (HitOutcome?)null;
 
@@ -829,6 +834,7 @@ namespace Lanternvale.Rules
                 v = AbilityRules.BaseMagnitude(e, cast.EffLevel, cast.LearnLevel, cast.ComboPoints, Rng);
                 if (e.coef > 0) v += e.coef * c.Stats.HealingPower;
                 if (e.apCoef > 0) v += e.apCoef * c.Stats.AttackPower;
+                if (!cast.Periodic) v += Specials.IncomingFlatHealBonus(cast, e, t);
             }
             v *= cast.MagnitudeScale * chainScale;
             if (cast.Periodic && cast.SourceAura != null)

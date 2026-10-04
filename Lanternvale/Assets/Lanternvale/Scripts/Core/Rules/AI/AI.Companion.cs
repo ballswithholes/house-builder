@@ -45,6 +45,15 @@ namespace Lanternvale.Rules
             if (enemies.Count == 0) return AIStep.End(u, "no enemies");
             var focus = FocusTarget(b, u, enemies, role);
 
+            // contextual heals (Lightwell): take one when below 70% health
+            if (u.HealthPct < 70f)
+                foreach (var id in Specials.ContextualAbilities(b, u))
+                {
+                    var ca = b.Db.Ability(id);
+                    if (ca == null || ca.aiHint != "Heal" || Failed(u, ca, u)) continue;
+                    if (b.CanUse(u, ca, u).Ok) return Use(u, ca, u, null, "contextual heal");
+                }
+
             Candidate best = null;
             foreach (var kv in u.Abilities)
             {

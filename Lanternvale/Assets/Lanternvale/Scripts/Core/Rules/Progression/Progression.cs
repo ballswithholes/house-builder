@@ -183,7 +183,11 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>Removes all talents (and talent-granted abilities). Does not charge gold (see GameSession.Respec).</summary>
-        public static void ResetTalents(Unit u)
+        /// <summary>
+        /// Unlearns every talent (and talent-granted abilities). Items the unit can no longer use (e.g. two-handers
+        /// granted by a talent) are unequipped into <paramref name="bags"/> when given; they are returned either way.
+        /// </summary>
+        public static List<ItemInstance> ResetTalents(Unit u, Inventory bags = null)
         {
             var db = u.Db;
             foreach (var kv in u.Talents)
@@ -202,7 +206,11 @@ namespace Lanternvale.Rules
                 if (a.IsPassive && a.SourceAbility != null && !u.Knows(a.SourceAbility.id)) u.Auras.RemoveAt(i);
             }
             u.InvalidateStats();
+            var removed = EquipmentRules.RemoveIllegal(u);
+            if (bags != null) foreach (var it in removed) bags.Add(it);
+            u.InvalidateStats();
             u.ClampResources();
+            return removed;
         }
 
         /// <summary>Spends all free points following CompanionDef.preferredTalents or ClassDef.defaultBuild (illegal entries are retried later, then skipped).</summary>

@@ -52,7 +52,7 @@ namespace Lanternvale.Rules
             Unit best = null; float bv = -1f;
             foreach (var kv in table.Threat)
             {
-                if (!kv.Key.IsAlive || kv.Key.IsFeigningDeath) continue;
+                if (!kv.Key.IsAlive || kv.Key.IsFeigningDeathFor(table)) continue;
                 if (kv.Value > bv) { bv = kv.Value; best = kv.Key; }
             }
             return best;
@@ -84,12 +84,12 @@ namespace Lanternvale.Rules
             if (ai.TauntedBy != null && ai.TauntedBy.IsAlive && CanSee(ai, ai.TauntedBy)) return SetAggro(ai, ai.TauntedBy);
             EnsureThreatEntries(ai);
             Unit cur = ai.AggroTarget;
-            bool curOk = cur != null && cur.IsAlive && cur.IsHostileTo(ai) && CanSee(ai, cur) && !cur.IsFeigningDeath && !cur.IsUntargetable && (reachable == null || reachable(cur));
+            bool curOk = cur != null && cur.IsAlive && cur.IsHostileTo(ai) && CanSee(ai, cur) && !cur.IsFeigningDeathFor(ai) && !cur.IsUntargetable && (reachable == null || reachable(cur));
             Unit best = null; float bv = -1f;
             foreach (var kv in ai.Threat)
             {
                 var u = kv.Key;
-                if (!u.IsAlive || !CanSee(ai, u) || u.IsFeigningDeath || u.IsUntargetable || u.IsTotem) continue;
+                if (!u.IsAlive || !CanSee(ai, u) || u.IsFeigningDeathFor(ai) || u.IsUntargetable || u.IsTotem) continue;
                 if (reachable != null && !reachable(u)) continue;
                 float v = kv.Value;
                 if (v > bv || (Math.Abs(v - bv) < 1e-3f && best != null && ai.DistanceTo(u) < ai.DistanceTo(best))) { bv = v; best = u; }
@@ -115,7 +115,7 @@ namespace Lanternvale.Rules
             Unit best = null; float bd = float.MaxValue;
             foreach (var o in Units)
             {
-                if (!o.IsAlive || !o.IsHostileTo(u) || (!includeTotems && o.IsTotem) || !CanSee(u, o) || o.IsUntargetable || o.IsFeigningDeath) continue;
+                if (!o.IsAlive || !o.IsHostileTo(u) || (!includeTotems && o.IsTotem) || !CanSee(u, o) || o.IsUntargetable || o.IsFeigningDeathFor(u)) continue;
                 float d = u.DistanceTo(o);
                 if (d < bd) { bd = d; best = o; }
             }

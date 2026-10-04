@@ -166,6 +166,9 @@ namespace Lanternvale.Rules
         /// <summary>Stored extra attacks (Reckoning).</summary>
         public int ExtraAttacks;
 
+        /// <summary>Multiplier on maximum health set by specials (Earth's Grasp on Stoneclaw Totems).</summary>
+        public float MaxHealthMult = 1f;
+
         /// <summary>Free-form per-unit values for special handlers (lightwell charges, remembered threat...). Not saved.</summary>
         public readonly Dictionary<string, float> Vars = new Dictionary<string, float>();
         public float GetVar(string key, float def = 0f) => Vars.TryGetValue(key, out var v) ? v : def;
@@ -380,6 +383,9 @@ namespace Lanternvale.Rules
         public bool IsInvulnerable => HasStateAura(UnitState.Invulnerable) || HasStateAura(UnitState.Banish);
         public bool IsUntargetable => HasStateAura(UnitState.Untargetable);
         public bool IsFeigningDeath => HasStateAura(UnitState.FeignDeath);
+
+        /// <summary>Feigning death as far as <paramref name="observer"/> is concerned (enemies that resisted Feign Death see through it).</summary>
+        public bool IsFeigningDeathFor(Unit observer) => IsFeigningDeath && (observer == null || !Vars.ContainsKey("fd_resist:" + observer.Id));
 
         public bool CanMoveNow => IsAlive && !IsControlled && !IsRooted && Pending == null;
         /// <summary>Rooted (and not freed by Blessing of Freedom-like effects).</summary>
