@@ -10,6 +10,7 @@ the design agents used to produce it from WoW Classic reference numbers (rank-1 
 | `mage_warlock/` | `classes/mage.json`, `classes/warlock.json` |
 | `hunter_shaman/` | `classes/hunter.json`, `classes/shaman.json` |
 | `paladin_priest/` | `classes/paladin.json`, `classes/priest.json` |
+| `warrior_rogue/` | `classes/warrior.json`, `classes/rogue.json` (`warrior_main.py`, `rogue_main.py <out>`) |
 | `world_content/` | `content/*.json` (`wn_build.py`; `wn_check.py` runs extra content checks) |
 
 Paths inside the scripts may point at the original build machine; adjust before running.

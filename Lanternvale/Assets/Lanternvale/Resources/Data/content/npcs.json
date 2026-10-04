@@ -37,6 +37,8 @@
       "portrait": "portrait_merchant",
       "dialogue": "dlg_merchant_tilly",
       "vendor": [
+        { "item": "rogue_flash_powder" },
+        { "item": "rogue_blinding_powder" },
         {"item": "potion_minor_healing"},
         {"item": "potion_lesser_healing"},
         {"item": "potion_minor_mana"},
