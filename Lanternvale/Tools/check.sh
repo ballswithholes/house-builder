@@ -43,7 +43,8 @@ gen_unity_proj() { # $1 = name, $2 = player (true/false)
   local defines="UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;ENABLE_LEGACY_INPUT_MANAGER"
   local editorRef="<Reference Include=\"UnityEditor\"><HintPath>$CACHE/unityrefs/UnityEditor.dll</HintPath><Private>false</Private></Reference>"
   local remove=""
-  if [ "$2" = "true" ]; then remove="<Compile Remove=\"$SCRIPTS/Editor/**/*.cs\" />"; editorRef=""; else defines="UNITY_EDITOR;$defines"; fi
+  # player config also drops the legacy input define so the IMGUI-input code path gets compiled too
+  if [ "$2" = "true" ]; then remove="<Compile Remove=\"$SCRIPTS/Editor/**/*.cs\" />"; editorRef=""; defines="UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;ENABLE_INPUT_SYSTEM"; else defines="UNITY_EDITOR;$defines"; fi
   cat > "$dir/$1.csproj" <<PROJ
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
