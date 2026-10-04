@@ -211,14 +211,14 @@ Template:
 
 | key | class | SUBJECT |
 |---|---|---|
-| `comp_kael` | Warrior | cheerful young swordsman, teal-blue long coat with silver trims over steel-grey plate, high collar, spiky auburn hair with a red bandana whose tails flutter, green eyes, grin, greatsword on his shoulder |
-| `comp_lys` | Mage | serene mage, long straight silver-white hair, dark-teal belted dress fanning to the floor with silver buckles, white fur stole, staff with a glowing mint-teal orb, teal eyes |
-| `comp_seren` | Priest | composed shrine priestess, long black hair in a high ponytail with a red tie, white top with lavender floral trim, wide sleeves, crimson pleated hakama, violet obi, golden ringed staff |
-| `comp_rook` | Hunter | towering stoic hunter with deep brown skin, black mohawk and a long beaded braid, dark leather vest, brown fur pelt, maroon shorts with gold trim, red sash, recurve bow and quiver |
-| `comp_pip` | Rogue | tiny energetic girl (1.5 m), pink hair in twin buns with teal ribbons, teal scarf, pink cropped top, purple shorts, pouches, laced boots, twin daggers, big grin |
-| `comp_torvan` | Shaman | elderly beast-folk shaman with white-grey fur and a cream mane, darker weathered curled horns, moss-green cloth sash and loin panel with gold trim, totem charms, spear with feathers |
-| `comp_aldric` | Paladin | veteran knight, grey swept hair and a short grey beard, silver-grey plate, crimson tabard with a golden sun, dark red cape, crimson kite shield, warhammer, stern expression |
-| `comp_morwen` | Warlock | poised sorceress with long black hair, dark crimson tall-collared coat with gold trims and violet runes, dark inner vest, grimoire and violet flame |
+| `comp_kael` | Warrior | weathered veteran guardian (late 30s), heavy dark-crimson greatcoat worn with the left arm tucked inside so the empty sleeve hangs loose, tall stiff collar, mail skirt and dark plate beneath, a pale scar closing his left eye, swept-back dark hair streaked with grey, stern, a battered tea flask at the hip, an enormous notched greatsword resting on his shoulder |
+| `comp_lys` | Mage | aloof sorceress, long dark slate-and-ink dress made of crossing belts with silver buckles, pale fur collar, very dark hair with two thick front braids and long needles pinned through a knot at the back, staff topped with a storm-blue orb, carries a small pressed-flower book |
+| `comp_seren` | Priest | young summoner-pilgrim, pale blue kimono-style top with wide sleeves and floral hems, long flowing violet hakama skirt, lavender obi, golden ringed staff that chimes, dark hair in a high ponytail with a single white streak and a beaded hair ornament, gentle smile |
+| `comp_rook` | Hunter | big broad-shouldered islander athlete, sun-browned skin, ginger hair in beaded braids under a blue knotted bandana, sporty blue vest with a big number seven, fur pelt, orange baggy shorts, red sash, a ringball on his hip, a pale driftwood recurve bow, big grin |
+| `comp_pip` | Rogue | tiny cheerful tinker girl (1.5 m), blonde twin buns, oversized three-lens brass goggles on her forehead, bright pink scarf, teal cropped top, short purple shorts, mismatched sleeves (one long yellow sleeve, one bare arm), belt of pouches, twin cog-bladed daggers |
+| `comp_torvan` | Shaman | towering horned beast-folk oathkeeper, silver-grey fur and pale mane, great curled ram horns hung with braided cords, beads and feathers, blue tribal markings on the face, moss-green sash and loin panel with gold trim, totem charms, leaf-bladed spear-staff, solemn |
+| `comp_aldric` | Paladin | sunny, brash young knight-errant (about 18), youthful clean-shaven face, tousled spiky honey-blond hair, a confident grin, light armour, an asymmetric one-shouldered bright gold tabard with a sun motif and sky-blue trim, one bare sword arm with a leather bracer, sky-blue cape, cream kite shield painted with a golden sun, polished warhammer |
+| `comp_morwen` | Warlock | elegant gothic scholar, long black hair, high-collared dark plum long coat with violet lining and silver trims, layered belts, violet runes stitched along the hems, silver rings, a leather grimoire in hand, a violet flame, and a tiny red imp familiar perched on her shoulder holding an inkpot |
 
 ### 4.3 NPCs (`npc_*`)
 
