@@ -2,6 +2,9 @@
 // talent abilities, the pet's abilities, then passives. Each entry: icon, name, "Rank 3 (next at 24)", cost and cast
 // time; tooltips with the real numbers (UiText.Ability). Click to use: out of combat through the field
 // (UseAbilityOutOfCombat; enemy abilities arm an opener), in combat on the member's own turn (Combat.BeginAbility).
+// Downranking (WoW Classic): abilities with several known ranks get a rank button ("Ranks…" / "R5 on bar"; also
+// Shift+click or right-click the entry) listing every known rank with its own tooltip; picking one pins that rank to
+// the action bar (RankPins — the bar, its hotkey and a click here cast it); the highest rank unpins (follows new ranks).
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,6 +26,9 @@ namespace Lanternvale.Game.Panels
             public Unit Owner;
             public string Name = "", Sub = "", Tip;
             public int TipStamp = -1;
+            public int Known;               // ranks known (rank button when > 1)
+            public int PinShown = -1;       // pinned rank the label was built for
+            public string PinLabel = "";
         }
 
         sealed class Group
@@ -40,6 +46,7 @@ namespace Lanternvale.Game.Panels
         Unit headFor;
         int headLevel;
         string headText = "";
+        Vector2 scrollOrigin;   // top-level GUI position of the scroll content's origin (context menus open there)
 
         static readonly School[] SchoolOrder = { School.Physical, School.Holy, School.Fire, School.Frost, School.Arcane, School.Nature, School.Shadow };
 
@@ -88,7 +95,11 @@ namespace Lanternvale.Game.Panels
                 foreach (var kv in u.Pet.Abilities)
                 {
                     var a = db.Ability(kv.Key);
-                    if (a == null || a.hidden || a.autoAttack) continue;
+                    // pets, demons and controlled creatures only know abilities the data flags "hidden" (Bite, Growl,
+                    // Firebolt, Blood Pact, Torment, Seduction, Spell Lock…; hidden keeps them out of class trainers and
+                    // the owner's list), so the hidden flag is no filter here — as on the action bar (ActionBarHud.FetchBar);
+                    // only the swing/shot and passives are left out. Totems and traps are summons, never the Pet.
+                    if (a == null || a.passive || a.autoAttack) continue;
                     pet.Entries.Add(new Entry { Ability = a, Owner = u.Pet, Name = a.name });
                 }
                 if (pet.Entries.Count > 0) groups.Add(pet);
@@ -98,7 +109,12 @@ namespace Lanternvale.Game.Panels
             foreach (var g in groups)
             {
                 g.Entries.Sort((x, y) => x.Ability.learnLevel != y.Ability.learnLevel ? x.Ability.learnLevel.CompareTo(y.Ability.learnLevel) : string.CompareOrdinal(x.Name, y.Name));
-                foreach (var e in g.Entries) e.Sub = SubOf(e);
+                foreach (var e in g.Entries)
+                {
+                    e.Sub = SubOf(e);
+                    try { e.Known = e.Ability.passive ? 0 : AbilityRules.KnownRanks(e.Owner, e.Ability); }
+                    catch (Exception) { e.Known = 0; }
+                }
             }
         }
 
@@ -170,6 +186,7 @@ namespace Lanternvale.Game.Panels
             float colW = (area.width - 20f - colGap) * 0.5f;
             float content = 0f;
             foreach (var g in groups) content += headH + Mathf.CeilToInt(g.Entries.Count / 2f) * rowH + 8f;
+            scrollOrigin = new Vector2(area.x - scroll.Pos.x, area.y - scroll.Pos.y);
             float cw = PanelKit.BeginScroll(area, scroll, content);
             colW = (cw - colGap) * 0.5f;
             try
@@ -195,7 +212,8 @@ namespace Lanternvale.Game.Panels
             }
             finally { PanelKit.EndScroll(scroll); }
             if (groups.Count == 0) PanelKit.Label(area, "No abilities yet.", PanelKit.TextCenter);
-            PanelKit.Label(new Rect(c.x, c.yMax - 30f, c.width, 28f), PanelKit.InCombat ? "Click an ability to use it on this member's turn." : "Click an ability to use it now (buffs, heals, summons, openers).", PanelKit.TextMutedSmall);
+            PanelKit.Label(new Rect(c.x, c.yMax - 30f, c.width, 28f), (PanelKit.InCombat ? "Click an ability to use it on this member's turn." : "Click an ability to use it now (buffs, heals, summons, openers).") +
+                " Ranks… (or Shift+click) pins a lower rank to the action bar.", PanelKit.TextMutedSmall);
         }
 
         void DrawEntry(Rect er, Entry e, GameSession s)
@@ -212,24 +230,100 @@ namespace Lanternvale.Game.Panels
             catch (Exception) { }
             var ir = new Rect(er.x + 5f, er.y + 5f, 48f, 48f);
             Ui.Icon(ir, a.icon, Ui.SchoolColor(a.school), cdTotal > 0f ? cdLeft / cdTotal : 0f, a.passive);
-            PanelKit.Label(new Rect(er.x + 62f, er.y + 6f, er.width - 68f, 26f), e.Name, PanelKit.RowText);
+            bool ranks = e.Known > 1;
+            float nameW = er.width - 68f - (ranks ? 96f : 0f);
+            PanelKit.Label(new Rect(er.x + 62f, er.y + 6f, nameW, 26f), e.Name, PanelKit.RowText);
             PanelKit.Label(new Rect(er.x + 62f, er.y + 31f, er.width - 68f, 22f), e.Sub, PanelKit.RowTextSmall);
+
+            // rank button: every known rank, pick one to pin it to the action bar
+            if (ranks)
+            {
+                int pin = RankPins.RankFor(e.Owner, a);
+                if (pin != e.PinShown)
+                {
+                    e.PinShown = pin;
+                    e.PinLabel = pin > 0 ? "R" + pin + " on bar" : "Ranks…";
+                }
+                var pr = new Rect(er.xMax - 98f, er.y + 6f, 92f, 24f);
+                bool ph = PanelKit.Hover(pr);
+                PanelKit.Rounded(pr, pin > 0 ? new Color(0.91f, 0.70f, 0.36f, ph ? 0.95f : 0.75f) : new Color(0.17f, 0.13f, 0.22f, ph ? 0.22f : 0.12f));
+                PanelKit.Label(pr, e.PinLabel, PanelKit.TextSmallCenter);
+                if (ph) Ui.TooltipFor(pr, pin > 0
+                    ? "<b>Rank " + pin + " of " + e.Known + " is pinned</b> to the action bar (cheaper, weaker — WoW downranking).\nClick to choose another rank."
+                    : "<b>" + e.Known + " ranks known.</b> The action bar casts the highest.\nClick to pin a lower rank (cheaper, weaker — WoW downranking).");
+                if (PanelKit.LeftClick(pr) && Time.frameCount > lockFrame)
+                {
+                    lockFrame = Time.frameCount + 1;
+                    OpenRankMenu(e, scrollOrigin + new Vector2(pr.x, pr.yMax));
+                    return;
+                }
+            }
             if (hover) Ui.TooltipFor(er, TipOf(e));
-            if (!a.passive && PanelKit.LeftClick(er) && Time.frameCount > lockFrame)
+            if (!a.passive && PanelKit.Click(er, out int button) && Time.frameCount > lockFrame)
             {
                 lockFrame = Time.frameCount + 1;
+                var ev = Event.current;
+                if (ranks && (button == 1 || (ev != null && ev.shift)))
+                {
+                    OpenRankMenu(e, scrollOrigin + (ev != null ? ev.mousePosition : er.center));
+                    return;
+                }
+                if (button != 0) return;
                 var owner = e.Owner;
                 string id = a.id;
                 PanelKit.Do(() => UseAbility(owner, id));
             }
         }
 
+        /// <summary>Context menu with every known rank of the entry's ability (each with its own tooltip); a pick pins it.</summary>
+        static void OpenRankMenu(Entry e, Vector2 guiPos)
+        {
+            var u = e.Owner;
+            var a = e.Ability;
+            int known = e.Known;
+            int pinned = RankPins.RankFor(u, a);
+            var items = new List<ContextMenuScreen.Item>(known);
+            for (int r = known; r >= 1; r--)
+            {
+                int rank = r;
+                bool current = pinned > 0 ? rank == pinned : rank == known;
+                string cost = "";
+                try
+                {
+                    if (a.cost != null && a.cost.type != ResourceType.None)
+                    {
+                        float c = AbilityRules.ResourceCost(u, a, rank, AbilityMods.For(u, a));
+                        if (c > 0.5f) cost = " · " + Mathf.RoundToInt(c) + " " + PanelKit.ResourceName(a.cost.type).ToLowerInvariant();
+                    }
+                }
+                catch (Exception) { }
+                string label = (current ? "• " : "") + "Rank " + rank + (rank == known ? " (highest)" : cost);
+                string tip = UiText.Ability(u, a, rank) + "\n" + Ui.Rich(rank == known
+                    ? "The action bar casts the highest rank and follows new ranks you learn."
+                    : "Pin Rank " + rank + " to the action bar: its slot, hotkey and this spellbook cast it.", Ui.Gold);
+                items.Add(new ContextMenuScreen.Item
+                {
+                    Label = label, Enabled = true, Tip = tip,
+                    Action = () =>
+                    {
+                        RankPins.Pin(u, a, rank);
+                        PanelKit.Notice(rank >= known ? a.name + ": the action bar casts the highest rank." : a.name + " Rank " + rank + " pinned to the action bar.", false);
+                    },
+                });
+            }
+            ContextMenuScreen.Open(guiPos, a.name + " — rank", items);
+        }
+
         string TipOf(Entry e)
         {
-            int st = e.Owner.RankOf(e.Ability.id) * 100 + e.Owner.Level;
+            int pin = e.Known > 1 ? RankPins.RankFor(e.Owner, e.Ability) : 0;
+            int st = e.Owner.RankOf(e.Ability.id) * 100 + e.Owner.Level + pin * 100000;
             if (e.Tip != null && e.TipStamp == st) return e.Tip;
             e.TipStamp = st;
-            e.Tip = UiText.Ability(e.Owner, e.Ability);
+            // the pinned rank is what a click (and the action bar) casts: describe that one
+            e.Tip = UiText.Ability(e.Owner, e.Ability, pin);
+            if (pin > 0) e.Tip += "\n" + Ui.Rich("Rank " + pin + " of " + e.Known + " pinned to the action bar.", Ui.Gold);
+            if (e.Known > 1) e.Tip += "\n" + Ui.Rich("Shift+click or right-click: choose the rank on the action bar.", Ui.TextMuted);
             return e.Tip;
         }
 
@@ -238,17 +332,19 @@ namespace Lanternvale.Game.Panels
             var f = PanelKit.Flow;
             var s = PanelKit.Sess;
             if (f == null || s == null || u == null) return;
+            var a = PanelKit.Db != null ? PanelKit.Db.Ability(id) : null;
+            int rank = RankPins.RankFor(u, a);   // a pinned lower rank (downranking), else 0 = the highest known
             if (s.Mode == SessionMode.Combat)
             {
                 var c = f.Combat;
                 if (c == null) return;
                 if (c.ActiveUnit != u) { PanelKit.Notice("Wait for " + PanelKit.NameOf(u) + "'s turn."); return; }
                 // a refusal is already shown by the HUD's error lane (Combat.LastError): no second notice
-                c.BeginAbility(id);
+                c.BeginAbility(id, rank);
                 return;
             }
             if (s.Mode != SessionMode.Exploration) return;
-            PanelKit.Try(() => f.UseAbilityOutOfCombat(u, id));
+            PanelKit.Try(() => f.UseAbilityOutOfCombat(u, id, null, rank));
         }
     }
 }

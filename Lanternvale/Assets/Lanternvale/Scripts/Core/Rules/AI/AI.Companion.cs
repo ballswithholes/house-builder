@@ -16,6 +16,8 @@ namespace Lanternvale.Rules
             public Unit Target;
             public Vec2? Point;
             public float Score;
+            /// <summary>Rank to use (0 = highest known; low-mana healers downrank).</summary>
+            public int Rank;
             public bool NeedsMove;
             public string Why = "";
         }
@@ -45,6 +47,10 @@ namespace Lanternvale.Rules
             if (enemies.Count == 0) return AIStep.End(u, "no enemies");
             var focus = FocusTarget(b, u, enemies, role);
 
+            // consumables from the party bags: a healing potion when about to fall, a mana potion when dry
+            var potion = PotionStep(b, u);
+            if (potion != null) return potion;
+
             // contextual heals (Lightwell): take one when below 70% health
             if (u.HealthPct < 70f)
                 foreach (var id in Specials.ContextualAbilities(b, u))
@@ -64,11 +70,11 @@ namespace Lanternvale.Rules
                 foreach (var c in Candidates(b, u, a, enemies, allies, focus, role))
                 {
                     if (c.Score <= 0 || Failed(u, a, c.Target)) continue;
-                    var chk = b.CanUse(u, a, c.Target, c.Point);
+                    var chk = b.CanUse(u, a, c.Target, c.Point, false, c.Rank);
                     if (!chk.Ok)
                     {
                         if (!IsMovableFailure(chk.Code) || c.Target == null || mem.Moves >= 2 || b.CannotMoveReason(u) != null) continue;
-                        if (!b.CanUseIgnoringTarget(u, a).Ok) continue;
+                        if (!b.CanUseIgnoringTarget(u, a, false, c.Rank).Ok) continue;
                         c.NeedsMove = true;
                         c.Score *= 0.85f;
                     }
@@ -77,7 +83,7 @@ namespace Lanternvale.Rules
             }
             if (best != null)
             {
-                if (!best.NeedsMove) return Use(u, best.Ability, best.Target, best.Point, best.Why);
+                if (!best.NeedsMove) { var step = Use(u, best.Ability, best.Target, best.Point, best.Why); step.Rank = best.Rank; return step; }
                 var mods = AbilityMods.For(u, best.Ability);
                 float range = AbilityRules.RangeMetres(u, best.Ability, best.Target, mods, b.Config) - best.Target.Radius;
                 bool behind = best.Ability.requires != null && best.Ability.requires.behindTarget;
@@ -140,23 +146,81 @@ namespace Lanternvale.Rules
             return best;
         }
 
-        static float ExpectedHeal(Unit u, AbilityDef a)
+        static float ExpectedHeal(Unit u, AbilityDef a) => ExpectedHeal(u, a, 0);
+
+        /// <summary>Average healing of a rank (0 = highest known) of a heal, including HoT ticks and absorbs.</summary>
+        internal static float ExpectedHeal(Unit u, AbilityDef a, int rank)
         {
             float v = 0f;
-            int eff = AbilityRules.EffLevel(u, a, AbilityRules.UsedRank(u, a));
+            int eff = AbilityRules.EffLevel(u, a, AbilityRules.UsedRank(u, a, rank));
             foreach (var e in a.effects)
                 if (e.type == EffectType.Heal)
-                    v += e.pctOfMax > 0 ? 0f : (e.min + e.max) * 0.5f + e.perLevel * Math.Max(0, eff - a.learnLevel) + e.coef * u.Stats.HealingPower;
+                    v += e.pctOfMax > 0 ? 0f : (e.min + Math.Max(e.min, e.max)) * 0.5f + e.perLevel * Math.Max(0, eff - a.learnLevel) + e.coef * u.Stats.HealingPower;
             foreach (var id in AppliedAuras(a))
             {
                 var def = u.Db.Aura(id);
                 if (def == null) continue;
                 foreach (var te in def.tickEffects)
                     if (te.type == EffectType.Heal && def.tickInterval > 0)
-                        v += ((te.min + te.max) * 0.5f + te.perLevel * Math.Max(0, eff - a.learnLevel) + te.coef * u.Stats.HealingPower) * Math.Max(1f, def.duration / def.tickInterval);
+                        v += ((te.min + Math.Max(te.min, te.max)) * 0.5f + te.perLevel * Math.Max(0, eff - a.learnLevel) + te.coef * u.Stats.HealingPower) * Math.Max(1f, def.duration / def.tickInterval);
                 if (def.absorb != null) v += def.absorb.amount + def.absorb.perLevel * Math.Max(0, eff - a.learnLevel);
             }
             return Math.Max(1f, v);
+        }
+
+        /// <summary>Health (percent) below which an AI-played party member drinks a healing potion from the party bags.</summary>
+        public const float PotionHealthPct = 30f;
+        /// <summary>Mana (percent) below which an AI-played caster drinks a mana potion.</summary>
+        public const float PotionManaPct = 15f;
+
+        /// <summary>
+        /// A self-targeted consumable from the party inventory: the biggest usable healing potion below
+        /// <see cref="PotionHealthPct"/>% health, else a mana potion below <see cref="PotionManaPct"/>% mana (shared potion
+        /// cooldown, level/class restrictions and combat-only rules are checked by Battle.CanUseItem).
+        /// </summary>
+        internal static AIStep PotionStep(Battle b, Unit u)
+        {
+            if (b.Inventory == null || !b.InCombat || u.Team != b.PlayerTeam || !u.IsCharacter) return null;
+            bool low = u.HealthPct < PotionHealthPct;
+            bool dry = !low && u.PowerType == ResourceType.Mana && u.MaxMana > 0 && u.ManaPct < PotionManaPct;
+            if (!low && !dry) return null;
+            ItemInstance best = null;
+            float bestV = 0f;
+            foreach (var it in b.Inventory.Items)
+            {
+                var a = it?.Def != null ? b.Db.Ability(it.Def.use) : null;
+                if (a == null || a.target != TargetType.Self) continue;
+                float v = 0f;
+                foreach (var e in a.effects)
+                {
+                    if (low && e.type == EffectType.Heal)
+                        v += e.pctOfMax > 0 ? u.MaxHealth * e.pctOfMax / 100f : (e.min + Math.Max(e.min, e.max)) * 0.5f;
+                    if (dry && e.type == EffectType.GainResource && e.resource == "Mana")
+                        v += e.pctOfMax > 0 ? u.MaxMana * e.pctOfMax / 100f : (e.amount != 0 ? e.amount : e.min);
+                }
+                if (v <= bestV || u.AIMemory.Failed.Contains("item:" + it.Id)) continue;
+                if (!b.CanUseItem(u, it, u).Ok) continue;
+                best = it;
+                bestV = v;
+            }
+            return best == null ? null : new AIStep { Kind = AIStepKind.UseItem, Unit = u, Item = best, Target = u, Reason = low ? "healing potion" : "mana potion" };
+        }
+
+        /// <summary>Mana below this percentage: companion healers downrank direct heals to the smallest rank that covers the deficit.</summary>
+        public const float DownrankManaPct = 50f;
+
+        /// <summary>
+        /// WoW downranking for companion healers: with mana below <see cref="DownrankManaPct"/>%, the lowest known rank of a
+        /// direct heal whose average healing covers the deficit (0 = the highest rank: plenty of mana, or no lower rank
+        /// is enough).
+        /// </summary>
+        internal static int DownrankFor(Unit u, AbilityDef a, float deficit)
+        {
+            int known = u.RankOf(a.id);
+            if (known <= 1 || u.PowerType != ResourceType.Mana || u.MaxMana <= 0 || u.ManaPct >= DownrankManaPct) return 0;
+            for (int r = 1; r < known; r++)
+                if (ExpectedHeal(u, a, r) >= deficit) return r;
+            return 0;
         }
 
         static bool IsTotemAbility(AbilityDef a)
@@ -208,6 +272,12 @@ namespace Lanternvale.Rules
             var mods = AbilityMods.For(u, a);
             float cast = AbilityRules.CastTime(u, a, mods);
             float castPenalty = cast > u.TimeLeft + 0.01f ? 0.8f : 1f;
+
+            // stop a big (telegraphed) enemy cast with anything that cancels it: interrupts, stuns, silences...
+            if (hint != "Interrupt" && (a.target == TargetType.Enemy || a.target == TargetType.Any) && cast <= 0.01f)
+                foreach (var t in enemies)
+                    if (t.Pending != null && !t.IsTotem && IsBigCast(t.Pending) && CancelsCast(b, a, t))
+                        yield return new Candidate { Ability = a, Target = t, Score = 24f, Why = "stop " + t.Pending.Ability.name };
             bool manaLow = u.MaxMana > 0 && u.ManaPct < 25f;
             Unit tank = null;
             foreach (var x in allies) if (x != u && x.IsCharacter && x.Role == UnitRole.Tank) { tank = x; break; }
@@ -228,16 +298,19 @@ namespace Lanternvale.Rules
                     float expected = ExpectedHeal(u, a);
                     bool hot = AppliedAuras(a).Count > 0;
                     float threshold = role == UnitRole.Healer ? 90f : 45f;
+                    bool emergency = a.cooldown >= 60f;   // Lay on Hands and friends: only for a character about to fall
                     foreach (var t in TargetsFor(a, u, allies))
                     {
                         if (t.HealthPct >= threshold) continue;
+                        if (emergency && (!t.IsCharacter || t.HealthPct >= 25f)) continue;
                         float deficit = t.MaxHealth - t.Health;
                         if (deficit < expected * 0.5f && t.HealthPct > 50f) continue;
                         if (hot && AlreadyHasAny(a, t, u)) continue;
                         float urgency = 1f - t.HealthPct / 100f;
                         float s = basePri * (1f + 5f * urgency) * (role == UnitRole.Healer ? 1.5f : 1f) * (t.Role == UnitRole.Tank ? 1.2f : 1f) * castPenalty;
                         if (deficit < expected) s *= 0.7f;
-                        yield return new Candidate { Ability = a, Target = t, Score = s + 4f, Why = $"heal {t.Name} {t.HealthPct:0}%" };
+                        int rank = hot ? 0 : DownrankFor(u, a, deficit);
+                        yield return new Candidate { Ability = a, Target = t, Score = s + 4f, Rank = rank, Why = $"heal {t.Name} {t.HealthPct:0}%" + (rank > 0 ? $" (rank {rank})" : "") };
                     }
                     break;
                 }
@@ -401,6 +474,8 @@ namespace Lanternvale.Rules
                         if (t != u && Pointless(b, u, a, t)) continue;
                         if (t != u && !HasDirectEffect(a) && AlreadyHasAny(a, t, u)) continue;
                         float s = basePri * (t == focus ? 1.3f : 1f) * castPenalty;
+                        // a nuke with a DoT rider (Immolate) is not recast while its own DoT is still fresh: other nukes first
+                        if (t != u && HasDirectEffect(a) && OwnDotFresh(b, a, t, u)) s *= 0.4f;
                         if (a.generatesComboPoint) s = b.ComboPointsOn(u, t) >= 5 ? s * 0.2f : s + 2f;
                         if (a.special == "Shoot") s = 1.2f;
                         if (role == UnitRole.Tank && a.effects.Exists(e => e.threat > 0)) s += 2f;
@@ -454,10 +529,52 @@ namespace Lanternvale.Rules
             return false;
         }
 
+        /// <summary>A pending enemy cast worth stopping: telegraphed, long (≥ 2.5 s) or a heal.</summary>
+        internal static bool IsBigCast(PendingCast p) =>
+            p != null && p.Ability != null && (Battle.IsTelegraphed(p.Ability) || p.TotalTime >= 2.5f || p.Ability.castTime >= 2.5f || p.Ability.aiHint == "Heal");
+
+        /// <summary>Using the ability on the caster would cancel its pending cast: an Interrupt effect, or an aura whose state
+        /// cancels casts (stun, fear, polymorph, incapacitate, sleep, banish, confuse; silence for spells) the target is not immune to.</summary>
+        internal static bool CancelsCast(Battle b, AbilityDef a, Unit t)
+        {
+            if (t == null || t.Pending == null || t.IsInvulnerable) return false;
+            foreach (var e in a.effects)
+            {
+                if (e.chance < 100f) continue;
+                if (e.type == EffectType.Interrupt && (e.target == EffectTarget.Target || e.target == EffectTarget.Area)) return true;
+                if (e.type != EffectType.ApplyAura || e.target != EffectTarget.Target) continue;
+                var def = b.Db.Aura(e.aura);
+                if (def == null) continue;
+                foreach (var s in def.states)
+                {
+                    bool cancels = s == UnitState.Stun || s == UnitState.Fear || s == UnitState.Polymorph || s == UnitState.Incapacitate
+                                   || s == UnitState.Sleep || s == UnitState.Banish || s == UnitState.Confuse
+                                   || (s == UnitState.Silence && AbilityRules.IsSpell(t.Pending.Ability));
+                    if (!cancels) continue;
+                    bool immune = t.Creature != null && t.Class == null && Array.IndexOf(t.Creature.immune, s) >= 0;
+                    if (!immune) return true;
+                }
+            }
+            return false;
+        }
+
         static bool HasDirectEffect(AbilityDef a)
         {
             foreach (var e in a.effects)
                 if (e.type == EffectType.Damage || e.type == EffectType.WeaponDamage || e.type == EffectType.Special || e.type == EffectType.DrainResource) return true;
+            return false;
+        }
+
+        /// <summary>The caster's periodic aura from this ability is on the target with more than half its duration left.</summary>
+        static bool OwnDotFresh(Battle b, AbilityDef a, Unit t, Unit u)
+        {
+            foreach (var id in AppliedAuras(a))
+            {
+                var def = b.Db.Aura(id);
+                if (def == null || def.tickInterval <= 0 || def.kind != AuraKind.Debuff) continue;
+                var x = t.FindAura(id, u);
+                if (x != null && !x.IsPermanent && x.Duration > 0 && x.Remaining > x.Duration * 0.5f) return true;
+            }
             return false;
         }
 

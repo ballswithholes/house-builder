@@ -105,7 +105,12 @@ namespace Lanternvale.Rules
                 u.Mana = Math.Min(u.MaxMana, u.Mana + Math.Max(0f, info.ManaGained));
             }
             info.TalentPointsGained = TalentPointsTotal(u.Level) - oldPoints;
-            if (u.Pet != null) { u.Pet.Level = u.Level; u.Pet.InvalidateStats(); }
+            if (u.Pet != null)
+            {
+                u.Pet.Level = u.Level;
+                u.Pet.InvalidateStats();
+                if (u.Pet.IsPersistentPet) UnitFactory.LearnCreatureAbilities(u.Pet);   // abilities its new level unlocks
+            }
             foreach (var o in TrainerOffers(u, null))
                 if (o.Level > info.OldLevel && o.Level <= info.NewLevel) info.NewTrainable.Add(o);
             UnitFactory.AttachPassives(u);

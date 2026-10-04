@@ -19,7 +19,12 @@ namespace Lanternvale.Game
         internal static readonly HashSet<KeyCode> keysUp = new HashSet<KeyCode>();
         internal static readonly List<Rect> blockers = new List<Rect>();      // screen space, origin bottom-left
         internal static readonly List<Rect> nextBlockers = new List<Rect>();
+        internal static readonly List<Rect> blockClips = new List<Rect>();   // screen space, innermost last
         internal static bool textFieldFocused;
+        // GUIUtility.GUIToScreenPoint of the top-level GUI origin (identity matrix, no clip), captured by the driver's
+        // OnGUI: subtracting it turns GUIToScreenPoint results into game-view pixels (the editor adds the window position)
+        internal static Vector2 guiScreenOrigin;
+        internal static bool haveGuiScreenOrigin;
 
         /// <summary>Mouse position in screen pixels (origin bottom-left, like Input.mousePosition).</summary>
         public static Vector2 MousePosition => mouse;
@@ -48,16 +53,68 @@ namespace Lanternvale.Game
         public static bool KeyUp(KeyCode k) => keysUp.Contains(k);
         public static bool AnyKeyDown => !textFieldFocused && keysDown.Count > 0;
 
-        /// <summary>UI calls this (in GUI coordinates, origin top-left) for every panel drawn this frame.</summary>
+        /// <summary>
+        /// UI calls this (in GUI coordinates, origin top-left) for every panel drawn this frame. The rect is converted with
+        /// GUIUtility.GUIToScreenPoint, so it is right under any GUI.matrix and inside scroll views / groups / clips (their
+        /// offsets are applied), and it is cut to the innermost block clip (BeginBlockClip: a scroll view's viewport), so
+        /// rows scrolled out of sight never block the world.
+        /// </summary>
         public static void BlockRectGui(Rect guiRect)
         {
             // only collect once per frame (OnGUI runs for Layout, Repaint and every input event)
             if (Event.current != null && Event.current.type != EventType.Repaint) return;
-            // convert from IMGUI (top-left origin, current GUI.matrix) to screen (bottom-left origin)
-            var m = GUI.matrix;
-            var p0 = m.MultiplyPoint3x4(new Vector3(guiRect.xMin, guiRect.yMin, 0));
-            var p1 = m.MultiplyPoint3x4(new Vector3(guiRect.xMax, guiRect.yMax, 0));
-            nextBlockers.Add(Rect.MinMaxRect(p0.x, Screen.height - p1.y, p1.x, Screen.height - p0.y));
+            var r = GuiToScreenRect(guiRect);
+            if (blockClips.Count > 0)
+            {
+                var c = blockClips[blockClips.Count - 1];
+                float x0 = Mathf.Max(r.xMin, c.xMin), y0 = Mathf.Max(r.yMin, c.yMin), x1 = Mathf.Min(r.xMax, c.xMax), y1 = Mathf.Min(r.yMax, c.yMax);
+                if (x1 <= x0 || y1 <= y0) return;
+                r = Rect.MinMaxRect(x0, y0, x1, y1);
+            }
+            nextBlockers.Add(r);
+        }
+
+        /// <summary>
+        /// Limits the blockers registered until EndBlockClip to guiRect (the viewport of a scroll view, drawn outside it —
+        /// call BEFORE GUI.BeginScrollView). Nested clips intersect. Call on every event (balanced push/pop).
+        /// </summary>
+        public static void BeginBlockClip(Rect guiRect)
+        {
+            var r = GuiToScreenRect(guiRect);
+            if (blockClips.Count > 0)
+            {
+                var c = blockClips[blockClips.Count - 1];
+                float x0 = Mathf.Max(r.xMin, c.xMin), y0 = Mathf.Max(r.yMin, c.yMin);
+                float x1 = Mathf.Max(x0, Mathf.Min(r.xMax, c.xMax)), y1 = Mathf.Max(y0, Mathf.Min(r.yMax, c.yMax));
+                r = Rect.MinMaxRect(x0, y0, x1, y1);
+            }
+            blockClips.Add(r);
+        }
+
+        public static void EndBlockClip()
+        {
+            if (blockClips.Count > 0) blockClips.RemoveAt(blockClips.Count - 1);
+        }
+
+        /// <summary>GUI rect (current matrix and clip) → screen rect (pixels, origin bottom-left, like MousePosition).</summary>
+        public static Rect GuiToScreenRect(Rect guiRect)
+        {
+            Vector2 a, b;
+            if (haveGuiScreenOrigin)
+            {
+                // GUIToScreenPoint applies the clip stack (scroll offsets, groups) and GUI.matrix
+                a = GUIUtility.GUIToScreenPoint(new Vector2(guiRect.xMin, guiRect.yMin)) - guiScreenOrigin;
+                b = GUIUtility.GUIToScreenPoint(new Vector2(guiRect.xMax, guiRect.yMax)) - guiScreenOrigin;
+            }
+            else
+            {
+                // before the driver's first OnGUI: the matrix alone (correct outside clips)
+                var m = GUI.matrix;
+                a = m.MultiplyPoint3x4(new Vector3(guiRect.xMin, guiRect.yMin, 0f));
+                b = m.MultiplyPoint3x4(new Vector3(guiRect.xMax, guiRect.yMax, 0f));
+            }
+            float x0 = Mathf.Min(a.x, b.x), x1 = Mathf.Max(a.x, b.x), y0 = Mathf.Min(a.y, b.y), y1 = Mathf.Max(a.y, b.y);
+            return Rect.MinMaxRect(x0, Screen.height - y1, x1, Screen.height - y0);
         }
 
         /// <summary>Set by text fields so typing doesn't trigger hotkeys.</summary>
@@ -97,6 +154,7 @@ namespace Lanternvale.Game
             GameInput.blockers.Clear();
             GameInput.blockers.AddRange(GameInput.nextBlockers);
             GameInput.nextBlockers.Clear();
+            GameInput.blockClips.Clear();   // safety: an unbalanced BeginBlockClip never leaks into the next frame
             GameInput.keysDown.Clear();
             GameInput.keysUp.Clear();
 
@@ -142,6 +200,9 @@ namespace Lanternvale.Game
             var e = Event.current;
             if (e == null) return;
             GUI.matrix = Matrix4x4.identity;
+            // top level, identity matrix: the offset GUIToScreenPoint adds (0 in a player, the window position in the editor)
+            GameInput.guiScreenOrigin = GUIUtility.GUIToScreenPoint(Vector2.zero);
+            GameInput.haveGuiScreenOrigin = true;
             // mousePosition is valid for mouse events and repaints
             if (e.isMouse || e.type == EventType.Repaint || e.type == EventType.Layout)
             {

@@ -33,6 +33,8 @@ namespace Lanternvale.Session
         Rested, PartyHealed,
         SpecialOutcome,
         TimeOfDayChanged,
+        /// <summary>Story flags changed (Amount = GameSession.FlagsVersion); at most once per Tick / dialogue step.</summary>
+        FlagsChanged,
     }
 
     /// <summary>A notification for the UI (toasts, window requests, state changes). See Docs/SessionAPI.md §2.</summary>
@@ -169,6 +171,29 @@ namespace Lanternvale.Session
         public float Length;
         public bool Reachable;
         public readonly List<UnitMovePlan> Followers = new List<UnitMovePlan>();
+    }
+
+    /// <summary>One enemy of an encounter, for exploration nameplates (<see cref="GameSession.PreviewEncounter"/>).</summary>
+    public sealed class EncounterEnemyPreview
+    {
+        public string CreatureId = "";
+        public string Name = "";
+        /// <summary>Level the creature will have if the fight starts now (explicit level, or party level + levelOffset for
+        /// scaleToParty creatures; the low end of the creature's range otherwise — see MinLevel/MaxLevel).</summary>
+        public int Level;
+        public int MinLevel, MaxLevel;
+        /// <summary>Normal, Elite, Rare, Boss, Minion, Critter (nameplate dragon/skull).</summary>
+        public CreatureRank Rank;
+        public CreatureType Type;
+        /// <summary>Where the enemy stands (EncounterDef enemy position, world metres).</summary>
+        public Vec2 Position;
+        /// <summary>Which way the enemy faces while idle (unit vector; towards the encounter's centre). A fight opened from
+        /// stealth (EngageEncounter with a stealthed attacker) starts with the enemies still facing this way, so openers
+        /// that need the attacker behind the target (Garrote, Ambush, Ravage) are used from Position - Facing × reach.</summary>
+        public Vec2 Facing = Vec2.Right;
+        /// <summary>Passive enemies (training dummies) never attack.</summary>
+        public bool Passive;
+        public override string ToString() => $"{Name} (L{Level}{(Rank != CreatureRank.Normal ? " " + Rank : "")})";
     }
 
     /// <summary>Header of a save game (for save-slot lists).</summary>

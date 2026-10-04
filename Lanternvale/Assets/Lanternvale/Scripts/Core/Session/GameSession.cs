@@ -63,7 +63,37 @@ namespace Lanternvale.Session
             Dialogue.Ended += OnDialogueEnded;
             Dialogue.CheckRolled += OnCheckRolled;
             World.Quests.Changed += OnQuestEvent;
+            World.Flags.Changed += OnFlagChanged;
             Inventory.Changed += OnInventoryChanged;
+        }
+
+        // ------------------------------------------------------------------ flags
+
+        int flagsVersion;
+        bool flagsDirty;
+
+        /// <summary>
+        /// Incremented on every story-flag change (and when NewGame/LoadGame replace the flags): cache flag-dependent UI
+        /// (visible NPCs, map props, journal) and rebuild it when the value differs. <see cref="SessionEventKind.FlagsChanged"/>
+        /// announces changes at most once per Tick / dialogue step.
+        /// </summary>
+        public int FlagsVersion => flagsVersion;
+
+        void OnFlagChanged(string key, int oldValue, int newValue) => MarkFlagsChanged();
+
+        void MarkFlagsChanged()
+        {
+            flagsVersion++;
+            flagsDirty = true;
+        }
+
+        /// <summary>Raises one FlagsChanged event for every flag change since the last one (Tick, dialogue steps, battles).</summary>
+        void FlushFlagsChanged()
+        {
+            if (!flagsDirty || resetting) return;
+            flagsDirty = false;
+            if (!hasGame) return;
+            Raise(new SessionEvent { Kind = SessionEventKind.FlagsChanged, Amount = flagsVersion });
         }
 
         // ------------------------------------------------------------------ mode
@@ -138,6 +168,8 @@ namespace Lanternvale.Session
                 Raise(new SessionEvent { Kind = SessionEventKind.TalentPointsAvailable, Unit = u, Amount = Progression.TalentPointsAvailable(u) });
             if (o.PlayOpening && !string.IsNullOrEmpty(cfg.startDialogue) && Db.Dialogues.ContainsKey(cfg.startDialogue))
                 StartDialogue(cfg.startDialogue);
+            MarkFlagsChanged();
+            FlushFlagsChanged();
         }
 
         string FirstMapId()
@@ -180,6 +212,8 @@ namespace Lanternvale.Session
             Nav = null;
             pathfinder = null;
             suppressedEncounters.Clear();
+            soothedEncounters.Clear();
+            loadedVitals.Clear();
             transitionArmed = false;
             gameOver = false;
             hasGame = false;

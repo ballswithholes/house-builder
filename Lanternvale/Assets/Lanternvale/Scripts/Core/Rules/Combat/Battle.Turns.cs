@@ -80,8 +80,10 @@ namespace Lanternvale.Rules
             u.AggroTarget = null;
             u.TauntedBy = null;
             u.TauntUntilTurn = -1;
+            u.SelfRes = null;
             u.SwingMain = u.SwingOff = u.SwingRanged = 0f;
             u.QueuedSwing = "";
+            u.QueuedSwingRank = 0;
             u.Pending = null;
             u.TimeDebt = 0f;
             u.TimeLeft = RulesConstants.TurnSeconds;
@@ -247,35 +249,27 @@ namespace Lanternvale.Rules
             return Math.Max(0f, b * (1f + u.Stats.MoveSpeedPct / 100f));
         }
 
+        // key snapshots of ElapseTimers (it calls nothing back, so one scratch list each is enough)
+        readonly List<string> timerKeys = new List<string>();
+        readonly List<School> lockoutKeys = new List<School>();
+
         void ElapseTimers(Unit u, float dt)
         {
-            if (u.Cooldowns.Count > 0)
+            if (u.Cooldowns.Count > 0) ElapseTimerDictionary(u.Cooldowns, timerKeys, dt);
+            if (u.Lockouts.Count > 0) ElapseTimerDictionary(u.Lockouts, lockoutKeys, dt);
+            if (u.ProcCooldowns.Count > 0) ElapseTimerDictionary(u.ProcCooldowns, timerKeys, dt);
+        }
+
+        static void ElapseTimerDictionary<TKey>(Dictionary<TKey, float> timers, List<TKey> keys, float dt)
+        {
+            keys.Clear();
+            foreach (var kv in timers) keys.Add(kv.Key);
+            foreach (var k in keys)
             {
-                var keys = new List<string>(u.Cooldowns.Keys);
-                foreach (var k in keys)
-                {
-                    float v = u.Cooldowns[k] - dt;
-                    if (v <= 1e-3f) u.Cooldowns.Remove(k); else u.Cooldowns[k] = v;
-                }
+                float v = timers[k] - dt;
+                if (v <= 1e-3f) timers.Remove(k); else timers[k] = v;
             }
-            if (u.Lockouts.Count > 0)
-            {
-                var keys = new List<School>(u.Lockouts.Keys);
-                foreach (var k in keys)
-                {
-                    float v = u.Lockouts[k] - dt;
-                    if (v <= 1e-3f) u.Lockouts.Remove(k); else u.Lockouts[k] = v;
-                }
-            }
-            if (u.ProcCooldowns.Count > 0)
-            {
-                var keys = new List<string>(u.ProcCooldowns.Keys);
-                foreach (var k in keys)
-                {
-                    float v = u.ProcCooldowns[k] - dt;
-                    if (v <= 1e-3f) u.ProcCooldowns.Remove(k); else u.ProcCooldowns[k] = v;
-                }
-            }
+            keys.Clear();
         }
 
         /// <summary>Fear/confuse: the unit moves on its own for the controlled part of the turn.</summary>
@@ -434,6 +428,7 @@ namespace Lanternvale.Rules
             foreach (var u in new List<Unit>(Units))
             {
                 if (!Units.Contains(u)) continue;
+                u.SelfRes = null;   // self-resurrection offers (Soulstone, Reincarnation) only last for this battle
                 if ((u.Kind == UnitKind.Totem || u.Kind == UnitKind.Summon || (u.Kind == UnitKind.Pet && u.Lifetime > 0)) && u.Team == PlayerTeam && !u.Dead)
                 {
                     Despawn(u, "combat ended");
@@ -443,6 +438,7 @@ namespace Lanternvale.Rules
                 u.AutoAttacking = false;
                 u.AttackTarget = null;
                 u.QueuedSwing = "";
+                u.QueuedSwingRank = 0;
                 u.Threat.Clear();
                 u.ComboPoints = 0; u.ComboTarget = null;
                 u.TimeDebt = 0f;

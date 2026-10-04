@@ -2636,6 +2636,28 @@
         {"ability": "hunter_pet_growl", "priority": 3},
         {"ability": "hunter_pet_dive", "priority": 1}
       ]
+    },
+    {
+      "id": "hunter_pet_spider",
+      "name": "Spider",
+      "description": "A patient forest spider whose venomous jaws hit a little harder than most pet families.",
+      "sprite": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Pet",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1.07,
+      "armorMult": 1.0,
+      "resource": "Focus",
+      "attackSpeed": 2.0,
+      "size": 0.9,
+      "ai": "Pet",
+      "abilities": [
+        {"ability": "hunter_pet_bite", "priority": 6},
+        {"ability": "hunter_pet_growl", "priority": 3}
+      ]
     }
   ],
   "specials": [
@@ -2657,7 +2679,7 @@
     {
       "id": "HunterTameBeast",
       "usedBy": "hunter_tame_beast",
-      "behaviour": "Resolves when the 20 s channel completes uninterrupted (it is cancelled like any channel by stun, fear, interrupt, death, or the hunter moving). Target must be a living hostile creature with CreatureDef.tameable = true, type Beast, level <= hunter level, and not a Boss/Elite unless a future flag allows it; the hunter must have no pet out. On success the creature leaves the hostile side (RemoveUnit, no XP/loot) and becomes the hunter's active pet: template = 'hunter_pet_' + family.lower() if such a creature exists (wolf, cat, boar, bear, owl), else 'hunter_pet_wolf'; display name = the creature's name; it is summoned immediately at the creature's position with the creature's current health % and full Focus, at the hunter's level. The previous active pet is released. While channelling, the beast keeps attacking the hunter normally."
+      "behaviour": "Resolves when the 20 s channel completes uninterrupted (it is cancelled like any channel by stun, fear, interrupt, death, or the hunter moving). Target must be a living hostile creature with CreatureDef.tameable = true, type Beast, level <= hunter level, and not a Boss/Elite unless a future flag allows it; the hunter must have no pet out. On success the creature leaves the hostile side (RemoveUnit, no XP/loot) and becomes the hunter's active pet: template = 'hunter_pet_' + family.lower() if such a creature exists (wolf, cat, boar, bear, owl, spider), else 'hunter_pet_wolf'; display name = the creature's name; it is summoned immediately at the creature's position with the creature's current health % and full Focus, at the hunter's level. The previous active pet is released. While channelling, the beast keeps attacking the hunter normally."
     },
     {
       "id": "HunterFeignDeath",

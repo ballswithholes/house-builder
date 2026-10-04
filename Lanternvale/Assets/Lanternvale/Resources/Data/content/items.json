@@ -408,61 +408,6 @@
       "price": 60
     },
     {
-      "id": "reagent_light_feather",
-      "name": "Light Feather",
-      "icon": "feather",
-      "description": "A downy feather that never quite settles.",
-      "kind": "Reagent",
-      "quality": "Common",
-      "itemLevel": 1,
-      "stack": 20,
-      "price": 15
-    },
-    {
-      "id": "reagent_ankh",
-      "name": "Ankh",
-      "icon": "cross",
-      "description": "A small totem of carved bone, warm to the touch.",
-      "kind": "Reagent",
-      "quality": "Common",
-      "itemLevel": 1,
-      "stack": 20,
-      "price": 200
-    },
-    {
-      "id": "reagent_flash_powder",
-      "name": "Flash Powder",
-      "icon": "sparkle",
-      "description": "Do not sneeze near it.",
-      "kind": "Reagent",
-      "quality": "Common",
-      "itemLevel": 1,
-      "stack": 20,
-      "price": 25
-    },
-    {
-      "id": "reagent_holy_candle",
-      "name": "Holy Candle",
-      "icon": "fire",
-      "description": "Blessed beeswax from the Lanternvale shrine.",
-      "kind": "Reagent",
-      "quality": "Common",
-      "itemLevel": 1,
-      "stack": 20,
-      "price": 125
-    },
-    {
-      "id": "reagent_arcane_powder",
-      "name": "Arcane Powder",
-      "icon": "arcane",
-      "description": "Glitters in a way that makes cats nervous.",
-      "kind": "Reagent",
-      "quality": "Common",
-      "itemLevel": 1,
-      "stack": 20,
-      "price": 100
-    },
-    {
       "id": "kindling_taper",
       "name": "Kindling Taper",
       "icon": "fire",
@@ -591,6 +536,17 @@
       "itemLevel": 1,
       "stack": 10,
       "price": 48
+    },
+    {
+      "id": "junk_ruffled_feather",
+      "name": "Ruffled Owl Feather",
+      "icon": "feather",
+      "description": "Soft as a whisper and twice as quiet.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 30
     },
     {
       "id": "junk_tiny_leaf_hat",

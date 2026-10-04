@@ -71,16 +71,21 @@ namespace Lanternvale.Game
             var events = Battle.Events;
             if (cursor > events.Count) cursor = events.Count;   // event list was trimmed: never re-present
             if (events.Count <= cursor) return;
-            List<CombatEvent> batch;
-            try { batch = Battle.TakeEvents(ref cursor); }
-            catch (Exception e) { LogOnce("take", "TakeEvents failed: " + e.Message); cursor = events.Count; return; }
+            // the allocation-free overload appends to a reused list (Segment only reads it while grouping)
+            var batch = pullBuffer;
+            batch.Clear();
+            try { Battle.TakeEvents(ref cursor, batch); }
+            catch (Exception e) { LogOnce("take", "TakeEvents failed: " + e.Message); cursor = events.Count; batch.Clear(); return; }
             try { Segment(batch, intent); }
             catch (Exception e)
             {
                 LogOnce("segment", "Grouping combat events failed (presenting them one by one): " + e);
                 foreach (var ev in batch) if (ev != null) Enqueue(Single(BeatKind.Marker, ev));
             }
+            batch.Clear();
         }
+
+        readonly List<CombatEvent> pullBuffer = new List<CombatEvent>(64);
 
         void Enqueue(Beat b)
         {
@@ -111,6 +116,15 @@ namespace Lanternvale.Game
             {
                 var e = list[i];
                 if (e == null) continue;
+                // an area aura's radius children (paladin/totem auras, Trueshot Aura) come and go as units walk: they are
+                // bookkeeping for the presented aura set only — never an action of their source, never a beat of their own
+                // when one is open
+                if (e.AreaAuraChild)
+                {
+                    if (cur != null) cur.Events.Add(e);
+                    else Enqueue(Single(BeatKind.Marker, e));
+                    continue;
+                }
                 if (IsSeparator(e))
                 {
                     Close(ref cur);
@@ -189,6 +203,7 @@ namespace Lanternvale.Game
         /// <summary>Events by which the actor visibly does something (as opposed to consequences such as resource or threat changes).</summary>
         static bool IsPrimary(CombatEvent e)
         {
+            if (e.AreaAuraChild) return false;
             switch (e.Type)
             {
                 case CombatEventType.Damage:

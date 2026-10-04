@@ -6,7 +6,14 @@ the exploration ("field") rules context, the current battle, the game clock and 
 of it as one JSON string.
 
 Pure C# 9 in `Assets/Lanternvale/Scripts/Core/Session/**` (no UnityEngine). Tests:
-`Tools/harness/CoreTests/TestsSession*.cs` (`Tools/check.sh core --filter Session`).
+`Tools/harness/CoreTests/TestsSession*.cs` (`Tools/check.sh core --filter Session`). **Full-game playthrough**:
+`TestsSessionFullPlaythrough.cs` plays the whole slice through this API for every class — level 1 `NewGame` with the
+opening, every main-quest stage to the Hollow Warden and the `RekindleLanterns` outcome, back to Elder Maru, and every
+side quest (routes varied per class: fight / intimidate / pay / paladin's word; Puddlecap fought or befriended by a shaman;
+Keeper Ishiro calmed by the letter or a priest, or fought), recruiting companions by dialogue, walking through
+transitions, triggering encounters by walking, fights won by the party AI (`AutoPlay` on everyone), training, talents,
+loot, upgrades, quest rewards and rests. `--sim` adds `FullPlaythrough_WinRates` (many seeds per class; where runs fail)
+and `Warden_Replay` (the boss fight replayed from a save).
 
 It hands out the rules engine's and the world module's own types unchanged — `Unit`, `Battle`, `AIStep`,
 `ItemInstance`, `VendorShop`, `TrainerOffer`, `LevelUpInfo`, `AbilityStatus`, `CombatEvent` (`Docs/CoreAPI.md`);
@@ -26,7 +33,7 @@ Everything the UI should react to is also announced as a `SessionEvent` (§2).
 | `GameSession.Combat.cs` | encounters → `Battle`, openers, AI stepping, leave combat, `FinishBattle` |
 | `GameSession.Time.cs` | `Tick`, clock / time of day, resting |
 | `GameSession.Save.cs`, `SaveData.cs` | save/load and the versioned DTOs |
-| `SessionTypes.cs` | `SessionMode`, `SessionEvent(Kind)`, `NewGameOptions`, `SessionSettings`, `LootWindow`, `BattleSummary`, `InteractResult`, `TriggerResult`, `MoveResult`, `PartyMovePlan`, `SaveHeader` |
+| `SessionTypes.cs` | `SessionMode`, `SessionEvent(Kind)`, `NewGameOptions`, `SessionSettings`, `LootWindow`, `BattleSummary`, `InteractResult`, `TriggerResult`, `MoveResult`, `PartyMovePlan`, `EncounterEnemyPreview`, `SaveHeader` |
 | `NavGridPathfinder.cs` | `IPathfinder` adapter over `World.NavGrid` (every battle uses it) |
 | `StartingGear.cs` | level-appropriate ("veteran") gear selection |
 
@@ -73,6 +80,9 @@ Overlays do not change the mode; they are state opened/closed with events: `Acti
 
 Helpers: `HasGame`, `IsExploring`, `InCombat`, `IsGameOver`.
 
+`int FlagsVersion` — incremented on every story-flag change (and when `NewGame`/`LoadGame` replace the flags): cache
+anything derived from flags and rebuild it when the number differs (cheaper than listening to every change).
+
 ---
 
 ## 2. Events
@@ -92,6 +102,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 |---|---|
 | `Toast` | info line in `Text` (NPC bark, sign text, "The chest is empty.", an opener that failed …) |
 | `GameStarted` / `GameLoaded` | after `NewGame` / `LoadGame` (a `MapEntered` follows) |
+| `FlagsChanged` | story flags changed — `Amount` = `FlagsVersion`; raised **at most once per `Tick` / dialogue step** (also after a battle, `NewGame`, `LoadGame`), however many flags changed. Rebuild flag-dependent views (visible NPCs, chests, props, journal) |
 | `GameOver` | the party was defeated (`Mode == GameOver`) |
 | `MapEntered` | `Id` map id, `Id2` spawn id ("" after a load), `Text` map name — rebuild the `MapView`, then spawn views for `PartyUnits()`, `VisibleNpcs()`, `VisibleEncounters()` |
 | `RegionEntered` | first entry: `Id` region id, `Text` region text |
@@ -186,8 +197,10 @@ string Unequip(Unit u, EquipSlot slot)
 string DestroyItem(ItemInstance item, int count = 1)                  // quest items refuse
 
 // abilities & items — combat: the active unit through the Battle; exploration: the Field context
-List<AbilityStatus> GetAbilityBar(Unit u)
-ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null)   // buffs, Call Pet, Stealth…
+List<AbilityStatus> GetAbilityBar(Unit u, bool includeTooltips = true)   // false: Tooltip = "" (frequent HUD refreshes)
+   // AbilityStatus.KnownRanks / CanDownrank (rank picker), InRangeOfAttackTarget (bool?, tinting) — Docs/CoreAPI.md §2
+ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null, int rank = 0)
+   // buffs, Call Pet, Stealth…; rank 0 = highest known, 1..known = WoW downranking (cheaper, weaker)
 string CannotUseItemReason(Unit user, ItemInstance item, Unit target = null)  // Battle.CanUseItem: level/class restriction first, then the use ability
 ActionResult UseItem(Unit user, ItemInstance item, Unit target = null, Vec2? point = null)
 Battle Field                                   // exploration context (InCombat = false) of PartyUnits()
@@ -232,6 +245,13 @@ string MapId; MapDef MapDef; MapRuntime Map; NavGrid Nav; IPathfinder Pathfinder
 void EnterMap(string mapId, string spawnId = "default")     // travel; places the party on standing spots around the spawn
 List<MapNpcDef> VisibleNpcs()                               // requireFlag/hideFlag applied (recruited companions hidden)
 List<EncounterDef> VisibleEncounters()                      // draw their enemies (hidden ambushes only once triggered)
+List<EncounterEnemyPreview> PreviewEncounter(string encounterId)
+   // exploration nameplates: { CreatureId, Name, Level (as the battle will scale it now), MinLevel, MaxLevel, Rank
+   // (Normal/Elite/Rare/Boss/Minion/Critter), Type, Position, Passive } per enemy; current map first, else any map;
+   // draws no random numbers; empty when unknown
+List<Unit> OwnedSummons()                                   // living totems/temporary guardians of the party (not pets):
+                                                            // spawn views for them; they join the next battle (which despawns
+                                                            // them when it ends, so this is empty after CombatEnded); cleared on map change
 string NpcName(string id); string DialogueOf(string id)     // npcs and companions
 bool LanternsRekindled                                      // flag lanterns_rekindled (also see SpecialOutcome)
 ```
@@ -245,6 +265,9 @@ PartyMovePlan PlanPartyMove(Vec2 destination)
 TriggerResult UpdatePartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others = null)
    // report positions while animating (whenever the leader moved ~0.25 m): others = the other PartyUnits() in order,
    // null = followers snap to formation slots. Then runs CheckTriggers().
+string SetPartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others = null)
+   // the same placement WITHOUT any trigger (regions, encounters, transitions): scripted placement, snapping views after a
+   // cutscene/load. Null = OK; refused during combat. A leader placed inside a transition must step out before it travels.
 TriggerResult CheckTriggers()      // region first entries, encounter triggers, transitions
    // TriggerResult { Stop, Kind (None | Dialogue | Combat | Travel | Locked), Id } — Stop: stop animating
 MoveResult MoveLeader(Vec2 destination)   // instant walk in 0.25 m steps (tests, fast travel); stops at a trigger
@@ -300,9 +323,11 @@ session clock.
 Battle Battle; EncounterDef BattleEncounter     // set from CombatStarted until FinishBattle/LeaveCombat
 Battle StartEncounter(string encounterId, SurpriseMode surprise = SurpriseMode.None)   // None | EnemiesSurprised | PartySurprised
 Battle EngageEncounter(string encounterId, Unit attacker = null, string openerAbilityId = null, int targetIndex = 0)
-   // the player strikes first (dialogue skipped): with an opener (Charge, Cheap Shot, Ambush, Pyroblast…) on
-   // enemy targetIndex (EncounterDef.enemies order) via Battle.BeginWithOpener — an Opener from stealth surprises
-   // the enemies; without one, enemies are surprised when the attacker (default leader) is stealthed.
+   // starts the fight now (encounter dialogue skipped). With an opener (Charge, Cheap Shot, Ambush, Pyroblast…) the
+   // attacker acts first: it is used on enemy targetIndex (EncounterDef.enemies order) via Battle.BeginWithOpener, and
+   // an Opener from stealth surprises the enemies. Without one there is no first strike: Battle.Begin rolls normal
+   // initiative (d20 + Agility) for everyone, and the enemies are surprised only when the attacker (default leader)
+   // is stealthed.
 bool IsPlayerTurn; Unit ActiveUnit
 AIStep RunAIStep()          // one step of the active AI unit (enemy, pet, auto-played companion); null on a player turn
 int RunAITurn()
@@ -330,7 +355,9 @@ placeholder enemy views on `CombatStarted`. Overlapping units are moved to free 
   reset (fight it again later; it does not re-trigger while you stand in it).
 * **Defeat**: `Mode = GameOver`, `CombatEnded` + `GameOver` events.
 
-After any battle the party stands where it fought; the field context is rebuilt.
+After any battle the party stands where it fought; the field context is rebuilt. A leader who finished the fight inside a
+transition rectangle must step out of it before it travels (as on map entry), so the first step after a battle never
+changes the map by surprise.
 
 ---
 

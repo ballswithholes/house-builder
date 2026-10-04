@@ -32,6 +32,14 @@ namespace Lanternvale.Rules
         public float ChannelLoss;
         /// <summary>Full channel duration (seconds) for pushback tick loss.</summary>
         public float ChannelDuration;
+        /// <summary>
+        /// Full cast (or channel) time in seconds for cast bars: the hasted cast time when it started, plus casting pushback
+        /// (channels: minus the time pushback cut off). Progress = (TotalTime − RemainingTime) / TotalTime at the start of the
+        /// caster's next turn; RemainingTime is what is still to elapse then.
+        /// </summary>
+        public float TotalTime;
+        /// <summary>Fraction (0..1) of the cast already elapsed (see <see cref="TotalTime"/>).</summary>
+        public float Progress => TotalTime > 1e-4f ? Math.Max(0f, Math.Min(1f, (TotalTime - RemainingTime) / TotalTime)) : 0f;
         /// <summary>Multiplier on the resource cost paid when the cast completes (Fel Domination).</summary>
         public float CostMult = 1f;
         public override string ToString() => $"{Ability?.name} ({RemainingTime:0.#}s{(Channel ? $", {TicksLeft} ticks" : "")})";
@@ -109,6 +117,8 @@ namespace Lanternvale.Rules
         public float SwingMain, SwingOff, SwingRanged;
         /// <summary>nextSwing ability (Heroic Strike/Cleave/Raptor Strike) replacing the next main-hand swing.</summary>
         public string QueuedSwing = "";
+        /// <summary>Rank requested for the queued swing (0 = highest known; downranked Heroic Strike).</summary>
+        public int QueuedSwingRank;
         public int ComboPoints;
         public Unit ComboTarget;
         /// <summary>Threat table (enemies controlled by AI): unit → threat.</summary>
@@ -309,13 +319,19 @@ namespace Lanternvale.Rules
         public int RankOf(string abilityId) => abilityId != null && Abilities.TryGetValue(abilityId, out var r) ? r : 0;
         public int TalentRank(string talentId) => talentId != null && Talents.TryGetValue(talentId, out var r) ? r : 0;
 
+        /// <summary>Seconds until the ability is ready: its own cooldown or its shared group's (whichever is longer).</summary>
         public float CooldownLeft(AbilityDef a)
         {
+            if (a == null || Cooldowns.Count == 0) return 0f;
             float cd = 0f;
             if (Cooldowns.TryGetValue(a.id, out var c)) cd = c;
-            if (!string.IsNullOrEmpty(a.cooldownGroup) && Cooldowns.TryGetValue("grp:" + a.cooldownGroup, out var g)) cd = Math.Max(cd, g);
+            var key = a.CooldownGroupKey;   // cached per definition: no string building per call
+            if (key != null && Cooldowns.TryGetValue(key, out var g)) cd = Math.Max(cd, g);
             return cd;
         }
+
+        /// <summary>The <see cref="Cooldowns"/> key of an ability's shared cooldown group ("grp:&lt;group&gt;"), or null.</summary>
+        public static string CooldownGroupKey(AbilityDef a) => a?.CooldownGroupKey;
 
         // ----------------------------------------------------------------- auras
 

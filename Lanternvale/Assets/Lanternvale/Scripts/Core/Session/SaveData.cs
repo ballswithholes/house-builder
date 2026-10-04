@@ -41,6 +41,11 @@ namespace Lanternvale.Session
         public LootSaveData loot;
         public SessionSettings settings = new SessionSettings();
         public WorldSaveData world = new WorldSaveData();
+        /// <summary>Encounters of the current map that do not trigger until the party has moved away from them (left or
+        /// practice fights, finished encounter dialogues), sorted. Null in saves made before it was saved.</summary>
+        public List<string> suppressedEncounters;
+        /// <summary>Mind Soothe: encounter id -> real seconds left of its reduced trigger radius (sorted keys; null = none).</summary>
+        public Dictionary<string, float> soothedEncounters;
     }
 
     [Serializable]

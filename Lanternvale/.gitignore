@@ -18,4 +18,5 @@
 /Tools/.cache/
 /Tools/harness/**/bin/
 /Tools/harness/**/obj/
-/Tools/artgen/__pycache__/
+__pycache__/
+*.pyc

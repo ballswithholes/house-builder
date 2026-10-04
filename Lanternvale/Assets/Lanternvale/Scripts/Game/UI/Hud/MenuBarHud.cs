@@ -1,6 +1,6 @@
 // Menu bar (top right, under the clock/gold pill): one button per window so everything reachable by hotkey is also
 // reachable with the mouse — Character (C), Bags (I), Spellbook (P), Talents (N, glows with unspent points),
-// Journal (J), Party, Map (M) and Help (F1). Each toggles its panel through UiRoot (posted, run from Tick); the hotkey
+// Journal (J), Party (K), Map (M) and Help (F1). Each toggles its panel through UiRoot (posted, run from Tick); the hotkey
 // sits in the button's corner and its tooltip. The first time the exploration HUD appears (after the opening
 // conversation) a one-time toast points at the menus and F1.
 using System;
@@ -27,7 +27,7 @@ namespace Lanternvale.Game
             new Entry { Panel = UiPanels.Spellbook, Glyph = "glyph_sparkle", Key = "P", Tip = "<b>Spellbook</b>  (P)\nEvery ability and its ranks." },
             new Entry { Panel = UiPanels.Talents, Glyph = "glyph_star", Key = "N", Tip = "<b>Talents</b>  (N)\nThree trees per class; a point every level from 10." },
             new Entry { Panel = UiPanels.Journal, Glyph = "glyph_feather", Key = "J", Tip = "<b>Journal</b>  (J)\nQuests, objectives and rewards." },
-            new Entry { Panel = UiPanels.Party, Glyph = "glyph_banner", Key = "", Tip = "<b>Party</b>\nYour companions, the party order and the leader." },
+            new Entry { Panel = UiPanels.Party, Glyph = "glyph_banner", Key = "K", Tip = "<b>Party</b>  (K)\nYour companions, the party order and the leader." },
             new Entry { Panel = UiPanels.Map, Glyph = "glyph_eagle", Key = "M", Tip = "<b>Map</b>  (M)\nWhere you are and where you can travel." },
             new Entry { Panel = UiPanels.Help, Glyph = "", Key = "F1", Tip = "<b>Help</b>  (F1)\nControls and how combat works." },
         };
@@ -61,7 +61,7 @@ namespace Lanternvale.Game
                     hintState = 1;
                     hintGlowUntil = Time.unscaledTime + 25f;
                     try { PlayerPrefs.SetInt(HintKey, 1); PlayerPrefs.Save(); } catch (Exception) { }
-                    Hud.Flow.Toast("Menus are at the top right (Character C · Bags I · Spellbook P · Talents N · Journal J · Map M) — F1 shows every control.");
+                    Hud.Flow.Toast("Menus are at the top right (Character C · Bags I · Spellbook P · Talents N · Journal J · Party K · Map M) — F1 shows every control.");
                 }
             }
             catch (Exception e) { Hud.LogOnce("menubar-tick", "Menu bar: " + e.Message); }

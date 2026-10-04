@@ -17,7 +17,9 @@ namespace Lanternvale.Game
     public static class Silhouettes
     {
         const int MaxDim = 320;
-        static readonly Dictionary<int, Silhouette> Cache = new Dictionary<int, Silhouette>();
+        // Keyed by the Sprite itself (UnityEngine.Object equality/hash are identity-based): avoids
+        // GetInstanceID, which is obsolete-as-error from Unity 6.5 (GetEntityId doesn't exist pre-6).
+        static readonly Dictionary<Sprite, Silhouette> Cache = new Dictionary<Sprite, Silhouette>();
         static bool failed; // readback unavailable (e.g. -nographics): stop trying
 
         /// <summary>
@@ -27,8 +29,7 @@ namespace Lanternvale.Game
         public static Silhouette Get(Sprite s, float outlineMetres = 0.05f)
         {
             if (s == null || failed) return null;
-            int key = s.GetInstanceID();
-            if (Cache.TryGetValue(key, out var sil)) return sil;
+            if (Cache.TryGetValue(s, out var sil)) return sil;
             sil = null;
             try { sil = Build(s, outlineMetres); }
             catch (Exception e)
@@ -36,7 +37,7 @@ namespace Lanternvale.Game
                 Debug.LogWarning("[Lanternvale] Silhouette generation unavailable: " + e.Message);
                 failed = true;
             }
-            Cache[key] = sil;
+            Cache[s] = sil;
             return sil;
         }
 
@@ -155,7 +156,7 @@ namespace Lanternvale.Game
                 }
                 return res;
             }
-            if (!SystemInfo.supportsRenderTextures || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
                 throw new InvalidOperationException("no GPU readback");
             var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             var prev = RenderTexture.active;

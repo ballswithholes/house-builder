@@ -142,6 +142,29 @@ namespace Lanternvale.Rules
             if (def.resource == ResourceType.Rage) u.Rage = 0f;
         }
 
+        /// <summary>
+        /// Teaches a creature every ability of its CreatureDef that its current level allows and that it does not know yet
+        /// (pets and demons learn them with their level: Furious Howl at 10, Phase Shift at 12, Seduction at 26...), then
+        /// attaches/refreshes passives. Known abilities are kept. Call it after a pet's level rises or a pet is loaded.
+        /// Returns the number of abilities added.
+        /// </summary>
+        public static int LearnCreatureAbilities(Unit u)
+        {
+            if (u?.Creature == null) return 0;
+            int added = 0;
+            foreach (var ca in u.Creature.abilities)
+            {
+                if (ca == null || string.IsNullOrEmpty(ca.ability) || u.Abilities.ContainsKey(ca.ability)) continue;
+                var a = u.Db.Ability(ca.ability);
+                if (a == null || a.learnLevel > u.Level) continue;
+                u.Abilities[ca.ability] = 1;
+                added++;
+            }
+            AttachPassives(u);
+            u.InvalidateStats();
+            return added;
+        }
+
         /// <summary>Creature passives and passive abilities' auras, attached directly (no events).</summary>
         public static void AttachPassives(Unit u)
         {

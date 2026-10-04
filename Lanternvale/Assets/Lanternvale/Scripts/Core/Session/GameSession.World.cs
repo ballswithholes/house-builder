@@ -70,12 +70,14 @@ namespace Lanternvale.Session
             pathfinder = new NavGridPathfinder(Nav);
             fieldPathfinder = new NavGridPathfinder(Nav) { AcceptPartial = true, TrackUnits = false };
             suppressedEncounters.Clear();
+            soothedEncounters.Clear();
         }
 
         /// <summary>Rebuilds the exploration context with the current party units and pets (no-op during combat).</summary>
         void RebuildField()
         {
             if (Battle != null) return;
+            var old = Field;
             DetachField();
             if (!hasGame || roster.Count == 0) return;
             IPathfinder pf = fieldPathfinder != null ? (IPathfinder)fieldPathfinder : new StraightLinePathfinder { UnitsBlock = false };
@@ -85,12 +87,37 @@ namespace Lanternvale.Session
             f.EventRaised += ForwardCombatEvent;
             f.UnitAdded += OnFieldUnitAdded;
             f.UnitRemoved += OnFieldUnitRemoved;
+            f.FieldEventRaised += OnFieldSpecialEvent;
             Field = f;
             f.RefreshAreaAuras();
+            StripAreaChildrenOutside(f, old);
         }
 
-        /// <summary>Living totems and temporary summons of the active party (not pets).</summary>
-        List<Unit> OwnedSummons()
+        /// <summary>
+        /// Units that are no longer in the exploration context (companions sent to camp or dismissed, their pets, summons
+        /// left behind) lose the area-aura children they carry (Blood Pact, paladin auras…): the new field's orphan pass
+        /// only walks its own units, so they would keep the buff (and the source aura alive) forever.
+        /// </summary>
+        void StripAreaChildrenOutside(Battle f, Battle old)
+        {
+            foreach (var m in roster)
+            {
+                StripAreaChildren(f, m);
+                StripAreaChildren(f, m.Pet);
+            }
+            if (old != null) foreach (var u in old.Units) StripAreaChildren(f, u);
+        }
+
+        static void StripAreaChildren(Battle f, Unit u)
+        {
+            if (u == null || f.Units.Contains(u)) return;
+            for (int i = u.Auras.Count - 1; i >= 0; i--)
+                if (i < u.Auras.Count && u.Auras[i].IsAreaChild) f.RemoveAura(u.Auras[i], AuraRemoveReason.SourceGone);
+        }
+
+        /// <summary>Living totems and temporary summons of the active party (not pets): spawn views for them in exploration;
+        /// they join the next battle and are cleared on map change.</summary>
+        public List<Unit> OwnedSummons()
         {
             var list = new List<Unit>();
             foreach (var m in party)
@@ -119,6 +146,7 @@ namespace Lanternvale.Session
             Field.EventRaised -= ForwardCombatEvent;
             Field.UnitAdded -= OnFieldUnitAdded;
             Field.UnitRemoved -= OnFieldUnitRemoved;
+            Field.FieldEventRaised -= OnFieldSpecialEvent;
             Field = null;
         }
 
@@ -139,6 +167,41 @@ namespace Lanternvale.Session
             if (Map?.Def?.encounters == null) return list;
             foreach (var e in Map.Def.encounters)
                 if (Map.IsEncounterVisible(e) && !(Battle != null && BattleEncounter == e)) list.Add(e);
+            return list;
+        }
+
+        /// <summary>
+        /// The enemies an encounter would field if the fight started now (current map first, else any map), for exploration
+        /// nameplates: creature id, name, level (scaled to the party like the battle will be), rank, position, idle facing. Changes
+        /// nothing and draws no random numbers. Empty when the encounter is unknown.
+        /// </summary>
+        public List<EncounterEnemyPreview> PreviewEncounter(string encounterId)
+        {
+            var list = new List<EncounterEnemyPreview>();
+            if (string.IsNullOrEmpty(encounterId)) return list;
+            var enc = Map?.FindEncounter(encounterId);
+            if (enc == null)
+                foreach (var m in Db.Maps.Values)
+                {
+                    if (m?.encounters == null) continue;
+                    foreach (var e in m.encounters) if (e != null && e.id == encounterId) { enc = e; break; }
+                    if (enc != null) break;
+                }
+            if (enc?.enemies == null) return list;
+            int partyLevel = PartyLevel;
+            foreach (var ed in enc.enemies)
+            {
+                var def = ed != null ? Db.Creature(ed.creature) : null;
+                if (def == null) continue;
+                int lvl = UnitFactory.CreatureLevel(def, ed.level, partyLevel, null);
+                int lo = lvl, hi = lvl;
+                if (ed.level <= 0 && !def.scaleToParty) { lo = def.levelMin; hi = Math.Max(def.levelMin, def.levelMax); }
+                list.Add(new EncounterEnemyPreview
+                {
+                    CreatureId = def.id, Name = def.name ?? def.id, Level = lvl, MinLevel = lo, MaxLevel = hi, Rank = def.rank, Type = def.type,
+                    Position = ed.pos, Facing = EncounterIdleFacing(enc, ed), Passive = def.ai == AIProfile.Passive,
+                });
+            }
             return list;
         }
 
@@ -200,6 +263,29 @@ namespace Lanternvale.Session
         public TriggerResult UpdatePartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others = null)
         {
             if (!IsExploring || Leader == null) return TriggerResult.Nothing;
+            ApplyPartyPositions(leaderPos, others);
+            return CheckTriggers();
+        }
+
+        /// <summary>
+        /// Sets the party's positions WITHOUT running any trigger (regions, encounters, transitions): scripted placement,
+        /// snapping views after a cutscene or a load, dragging the party in an editor. Same rules as
+        /// <see cref="UpdatePartyPositions"/> for <paramref name="others"/> (the other PartyUnits() in order; null = formation
+        /// slots), facing and seated food/drink. A leader placed inside a transition does not travel until it has left it.
+        /// Not during combat (the battle owns positions). Null on success, else the reason.
+        /// </summary>
+        public string SetPartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others = null)
+        {
+            if (!hasGame || Leader == null) return "No game.";
+            if (gameOver) return "The game is over.";
+            if (Battle != null) return "The battle owns positions during combat.";
+            ApplyPartyPositions(leaderPos, others);
+            if (Map != null && Map.TransitionAt(leaderPos) != null) transitionArmed = false;
+            return null;
+        }
+
+        void ApplyPartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others)
+        {
             var l = Leader;
             var units = PartyUnits();
             var d = leaderPos - l.Position;
@@ -237,7 +323,6 @@ namespace Lanternvale.Session
                 }
             }
             if (Field != null) Field.RefreshAreaAuras();
-            return CheckTriggers();
         }
 
         /// <summary>Instant move along the exploration path in small steps (tests, fast travel), stopping at a trigger.</summary>
@@ -317,10 +402,11 @@ namespace Lanternvale.Session
             foreach (var e in Map.Def.encounters)
             {
                 if (e == null || !Map.IsEncounterAvailable(e) || suppressedEncounters.Contains(e.id)) continue;
+                float radius = TriggerRadius(e);
                 foreach (var u in party)
                 {
                     if (!u.IsAlive) continue;
-                    float r = u.IsStealthed ? Math.Min(e.radius, MapRuntime.StealthDetectRadius) : e.radius;
+                    float r = u.IsStealthed ? Math.Min(radius, MapRuntime.StealthDetectRadius) : radius;
                     if ((u.Position - e.pos).SqrLength <= r * r) return e;
                 }
             }
@@ -358,6 +444,144 @@ namespace Lanternvale.Session
             var b = StartEncounter(enc.id);
             if (b == null) { suppressedEncounters.Add(enc.id); return TriggerResult.Nothing; }
             return new TriggerResult { Stop = true, Kind = TriggerKind.Combat, Id = enc.id };
+        }
+
+        // ================================================================= field specials (Mind Soothe, Pick Lock)
+
+        /// <summary>Mind Soothe: encounter id -> real seconds left of its reduced trigger radius (current map only).</summary>
+        readonly Dictionary<string, float> soothedEncounters = new Dictionary<string, float>(StringComparer.Ordinal);
+        readonly List<string> soothedScratch = new List<string>();
+        Unit encounterStandIn;           // the encounter enemy UseAbilityOnEncounter targets, while the ability resolves
+        string encounterStandInId = "";
+        bool encounterStandInHit;
+
+        /// <summary>Mind Soothe shrinks an encounter's trigger radius by 10 yards (4 m)...</summary>
+        public static readonly float SootheRadiusReduction = MathUtil.Yd(10f);
+        /// <summary>...but not below 1 m.</summary>
+        public const float SoothedMinRadius = 1f;
+        public const string MindSootheSpecial = "PriestMindSoothe";
+        public const string PickLockSpecial = "RoguePickLock";
+
+        /// <summary>Radius (metres) at which an encounter of the current map triggers now: EncounterDef.radius, reduced while
+        /// soothed (stealthed members are only noticed within MapRuntime.StealthDetectRadius of it). 0 when unknown.</summary>
+        public float EncounterTriggerRadius(string encounterId)
+        {
+            var e = Map?.FindEncounter(encounterId);
+            return e != null ? TriggerRadius(e) : 0f;
+        }
+
+        float TriggerRadius(EncounterDef e) =>
+            soothedEncounters.ContainsKey(e.id) ? Math.Max(Math.Min(e.radius, SoothedMinRadius), e.radius - SootheRadiusReduction) : e.radius;
+
+        /// <summary>Real seconds left of Mind Soothe on an encounter of the current map (0 = not soothed).</summary>
+        public float EncounterSoothedSeconds(string encounterId) =>
+            encounterId != null && soothedEncounters.TryGetValue(encounterId, out var t) ? t : 0f;
+
+        /// <summary>True when the ability is cast on an encounter out of combat without starting the fight (Mind Soothe):
+        /// use <see cref="UseAbilityOnEncounter"/> (EngageEncounter with it as the opener does the same).</summary>
+        public bool IsEncounterFieldAbility(string abilityId) => Specials.TargetsEncounterOutOfCombat(Db.Ability(abilityId));
+
+        /// <summary>
+        /// Casts an encounter field ability (<see cref="IsEncounterFieldAbility"/>: Mind Soothe) out of combat on enemy
+        /// <paramref name="targetIndex"/> of an encounter of the current map (EncounterDef.enemies order) without starting
+        /// the fight. The enemy is a stand-in built like the battle's (level scaled to the party, at its map position): the
+        /// exploration context checks cost, cooldown, range, line of sight and requirements (Humanoid only), pays the cost and
+        /// rolls the hit. Mind Soothe that lands shrinks the encounter's trigger radius by 4 m (min 1 m) for 15 s of real
+        /// time (Toast; a resist is toasted too). Fails (reason) in combat, during dialogue, for a finished or unknown
+        /// encounter, and for abilities that would start the fight.
+        /// </summary>
+        public ActionResult UseAbilityOnEncounter(Unit u, string abilityId, string encounterId, int targetIndex = 0, int rank = 0)
+        {
+            if (!hasGame || gameOver) return ActionResult.Fail("No game.");
+            if (Battle != null) return ActionResult.Fail("Not during combat.");
+            if (Dialogue.IsActive) return ActionResult.Fail("Not during a conversation.");
+            var a = Db.Ability(abilityId);
+            if (a == null) return ActionResult.Fail($"Unknown ability '{abilityId}'.");
+            if (!Specials.TargetsEncounterOutOfCombat(a)) return ActionResult.Fail($"{a.name} would start the fight.");
+            var enc = Map?.FindEncounter(encounterId);
+            if (enc == null || Map.IsEncounterDone(enc) || !Map.IsEncounterAvailable(enc)) return ActionResult.Fail("There is nobody there.");
+            var ctx = ContextFor(u);
+            if (ctx == null || ctx != Field) return ActionResult.Fail("That unit is not in the party.");
+            var standIn = EncounterStandIn(enc, targetIndex);
+            if (standIn == null) return ActionResult.Fail("There is nobody there.");
+            encounterStandIn = standIn;
+            encounterStandInId = enc.id;
+            encounterStandInHit = false;
+            try
+            {
+                var r = ctx.UseAbility(u, abilityId, standIn, null, rank);
+                if (!r.Ok) return r;
+                if (!encounterStandInHit) Toast($"{standIn.Name} resists {a.name}.");
+                AfterFieldAction();
+                return r;
+            }
+            finally
+            {
+                encounterStandIn = null;
+                encounterStandInId = "";
+            }
+        }
+
+        Unit EncounterStandIn(EncounterDef enc, int index)
+        {
+            if (enc.enemies == null || enc.enemies.Count == 0) return null;
+            var ed = enc.enemies[MathUtil.Clamp(index, 0, enc.enemies.Count - 1)];
+            var def = ed != null ? Db.Creature(ed.creature) : null;
+            if (def == null) return null;
+            var e = UnitFactory.CreateCreature(Db, def, UnitFactory.CreatureLevel(def, ed.level, PartyLevel, null), Team.Enemy);
+            e.Position = ed.pos;
+            return e;
+        }
+
+        /// <summary>Specials.FieldEvent of the exploration context: Mind Soothe on an encounter, Pick Lock used from the bar.</summary>
+        void OnFieldSpecialEvent(Unit u, string name, Unit target)
+        {
+            if (resetting || !hasGame || Battle != null) return;
+            switch (name)
+            {
+                case MindSootheSpecial:
+                {
+                    if (target == null || target != encounterStandIn || string.IsNullOrEmpty(encounterStandInId)) return;
+                    AuraInstance landed = null;
+                    foreach (var x in target.Auras) if (!x.IsPassive && x.Caster == u) { landed = x; break; }
+                    if (landed == null) return;   // resisted: UseAbilityOnEncounter says so
+                    encounterStandInHit = true;
+                    float secs = landed.Remaining > 0f ? landed.Remaining : (landed.Duration > 0f ? landed.Duration : 15f);
+                    soothedEncounters[encounterStandInId] = secs;
+                    Toast($"{target.Name} is soothed: it will only notice you up close ({secs:0} s).");
+                    break;
+                }
+                case PickLockSpecial:
+                {
+                    // Pick Lock from the action bar: the nearest locked chest within reach of the rogue
+                    if (u == null || Map?.Def?.chests == null) return;
+                    ChestDef best = null;
+                    float bestD = float.MaxValue;
+                    foreach (var c in Map.Def.chests)
+                    {
+                        if (c == null || !Map.IsChestAvailable(c) || !Map.IsChestLocked(c)) continue;
+                        float d = Vec2.Distance(u.Position, c.pos);
+                        if (d <= InteractionRange + 0.5f && d < bestD) { best = c; bestD = d; }
+                    }
+                    if (best == null) { Toast("There is no lock to pick here."); return; }
+                    PickLock(best.id, u);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>Counts Mind Soothe down in real time (exploration).</summary>
+        void ElapseSoothedEncounters(float dt)
+        {
+            if (soothedEncounters.Count == 0) return;
+            soothedScratch.Clear();
+            foreach (var kv in soothedEncounters) soothedScratch.Add(kv.Key);
+            foreach (var id in soothedScratch)
+            {
+                float left = soothedEncounters[id] - dt;
+                if (left <= 1e-3f) soothedEncounters.Remove(id); else soothedEncounters[id] = left;
+            }
+            soothedScratch.Clear();
         }
 
         /// <summary>Cancels Food/Drink auras of a unit that moves ("must remain seated").</summary>
@@ -520,12 +744,30 @@ namespace Lanternvale.Session
             if (string.IsNullOrEmpty(dialogueId) || !Db.Dialogues.ContainsKey(dialogueId)) { LastError = $"Unknown dialogue '{dialogueId}'."; return false; }
             if (Dialogue.IsActive) Dialogue.End();
             Raise(new SessionEvent { Kind = SessionEventKind.DialogueStarted, Id = dialogueId, Id2 = ownerId ?? "" });
-            return Dialogue.Start(dialogueId, ownerId ?? "");
+            bool ok = Dialogue.Start(dialogueId, ownerId ?? "");
+            FlushFlagsChanged();
+            return ok;
         }
 
-        public bool ChooseDialogue(int index) => Dialogue.Choose(index);
-        public bool ContinueDialogue() => Dialogue.Continue();
-        public void EndDialogue() { if (Dialogue.IsActive) Dialogue.End(); }
+        public bool ChooseDialogue(int index)
+        {
+            bool ok = Dialogue.Choose(index);
+            FlushFlagsChanged();
+            return ok;
+        }
+
+        public bool ContinueDialogue()
+        {
+            bool ok = Dialogue.Continue();
+            FlushFlagsChanged();
+            return ok;
+        }
+
+        public void EndDialogue()
+        {
+            if (Dialogue.IsActive) Dialogue.End();
+            FlushFlagsChanged();
+        }
 
         void OnDialogueEnded(string dialogueId)
         {

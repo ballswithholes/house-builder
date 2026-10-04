@@ -633,8 +633,7 @@ namespace Lanternvale.Game
         /// <summary>A template scene may already contain a Global Light 2D; two would fight. Disable them while the map lives.</summary>
         void DisableSceneGlobalLights()
         {
-            var type = Type.GetType("UnityEngine.Rendering.Universal.Light2D, Unity.RenderPipelines.Universal.Runtime")
-                    ?? Type.GetType("UnityEngine.Experimental.Rendering.Universal.Light2D, Unity.RenderPipelines.Universal.Runtime");
+            var type = Lighting2D.Light2DType;
             if (type == null) return;
             var prop = type.GetProperty("lightType", BindingFlags.Public | BindingFlags.Instance);
             if (prop == null) return;

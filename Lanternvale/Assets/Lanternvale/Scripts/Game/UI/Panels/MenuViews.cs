@@ -225,9 +225,24 @@ namespace Lanternvale.Game.Panels
             }
         }
 
-        public float Height => GameFlow.HasGame ? 640f : 470f;
+        public float Height => GameFlow.HasGame ? 720f : 550f;
 
+        // interface size slider: the value follows the drag, the scale is applied on release (the layout would otherwise
+        // move under the cursor while dragging)
+        float uiScalePending = -1f;
+
+        readonly PanelKit.ScrollState scroll = new PanelKit.ScrollState();
+
+        /// <summary>Draws the settings into r; scrolls when r is shorter than Height (large interface sizes).</summary>
         public void Draw(Rect r)
+        {
+            if (r.height + 0.5f >= Height) { DrawContent(r); return; }
+            float cw = PanelKit.BeginScroll(r, scroll, Height);
+            try { DrawContent(new Rect(0f, 0f, cw, Height)); }
+            finally { PanelKit.EndScroll(scroll); }
+        }
+
+        void DrawContent(Rect r)
         {
             float y = r.y;
             Section(r.x, ref y, r.width, "Sound");
@@ -237,6 +252,9 @@ namespace Lanternvale.Game.Panels
             bool muted = Toggle(new Rect(r.x, y, r.width, 34f), "Mute all sound", GameAudio.Muted);
             if (muted != GameAudio.Muted) { GameAudio.Muted = muted; audioDirty = true; }
             y += 44f;
+
+            Section(r.x, ref y, r.width, "Interface");
+            UiScaleRow(r.x, ref y, r.width);
 
             Section(r.x, ref y, r.width, "Pace");
             var f = PanelKit.Flow;
@@ -278,6 +296,26 @@ namespace Lanternvale.Game.Panels
                 if (v != st.AutoAllocateCompanionTalents) { bool nv = v; PanelKit.Do(() => st.AutoAllocateCompanionTalents = nv); }
                 y += 40f;
             }
+        }
+
+        void UiScaleRow(float x, ref float y, float w)
+        {
+            PanelKit.Label(new Rect(x, y, 230f, 34f), "Interface size", PanelKit.Text);
+            var track = new Rect(x + 240f, y + 8f, w - 240f - 70f, 18f);
+            float range = Ui.MaxUserScale - Ui.MinUserScale;
+            float cur = uiScalePending >= 0f ? uiScalePending : Ui.UserScale;
+            float v01 = Slider(track, (cur - Ui.MinUserScale) / range, 3);
+            // snap to 5 % steps
+            float nv = Mathf.Round((Ui.MinUserScale + v01 * range) * 20f) / 20f;
+            if (dragging == 3) uiScalePending = nv;
+            else if (uiScalePending >= 0f)
+            {
+                Ui.UserScale = uiScalePending;   // released (or clicked): apply and remember
+                uiScalePending = -1f;
+            }
+            PanelKit.Label(new Rect(track.xMax + 10f, y, 60f, 34f), PanelKit.PercentText(Mathf.RoundToInt(nv * 100f)), PanelKit.TextSmallRight);
+            Ui.TooltipFor(new Rect(x, y, w, 34f), "Scales every window, the HUD and the nameplates (75–150 %). Applied when you let go of the slider.");
+            y += 42f;
         }
 
         static int Nearest(float[] values, float v)
@@ -322,7 +360,9 @@ namespace Lanternvale.Game.Panels
                 }
                 else if (e.type == EventType.MouseDrag && dragging == index && GUIUtility.hotControl == id)
                 {
-                    value = Mathf.Clamp01((e.mousePosition.x - track.x) / track.width);
+                    // the real cursor: the settings scroll view (large interface sizes) and covering windows hide the
+                    // mouse outside the viewport, which would snap the value to 0 when the drag overshoots
+                    value = Mathf.Clamp01((PanelKit.RealMouse.x - track.x) / track.width);
                     e.Use();
                 }
                 else if (e.type == EventType.MouseUp && dragging == index)

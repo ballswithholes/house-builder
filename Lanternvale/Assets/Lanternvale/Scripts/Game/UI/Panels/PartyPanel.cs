@@ -1,6 +1,7 @@
 // Party & camp roster (UiPanels.Party; K, or the Journal's "Party & camp" button): every recruited character with portrait,
 // class and level, status (leader / in the party / at camp / away), approval; make leader, send to camp / join the
-// party (out of combat), companion auto-play (the AI plays their turns), dismiss with confirmation.
+// party (out of combat), companion auto-play (the AI plays their turns), dismiss with confirmation; hovering a
+// companion shows their bio, personality, likes and dislikes (CharacterPanel.CompanionAbout).
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -60,7 +61,7 @@ namespace Lanternvale.Game.Panels
             if (stamp != headStamp)
             {
                 headStamp = stamp;
-                headText = $"Travelling together: <b>{s.Party.Count} / {s.PartySize}</b>. Companions at camp wait for you and keep their gear and levels.";
+                headText = $"Travelling together: <b>{s.Party.Count} / {s.PartySize}</b>. Companions at camp wait for you and keep their gear and levels. Hover a companion to learn who they are and what they approve of.";
             }
             PanelKit.Label(new Rect(c.x, c.y, c.width, 50f), headText, PanelKit.TextSmall);
             bool explore = s.Mode == SessionMode.Exploration;
@@ -106,10 +107,13 @@ namespace Lanternvale.Game.Panels
                 int a = s.GetApproval(u.Companion.id);
                 PanelKit.Label(new Rect(x + 226f, row.y + 60f, 190f, 24f), tx.Approval, PanelKit.RowTextSmall, a >= 10 ? PanelKit.GoodDark : a <= -10 ? PanelKit.BadDark : Ui.InkSoft);
             }
-            if (away) return;
-
             // buttons (right side, two rows)
             float bx = row.xMax - 404f, by = row.y + 8f;
+            // companions: hovering the portrait / name / status area shows who they are and what earns their approval
+            if (u.Companion != null)
+                Ui.TooltipFor(new Rect(row.x, row.y, (away ? row.xMax : bx - 8f) - row.x, row.height), CharacterPanel.CompanionAbout(u.Companion));
+            if (away) return;
+
             if (inParty && !leader)
             {
                 if (PanelKit.Btn(new Rect(bx, by, 128f, 38f), "Lead", PanelKit.SmallButton, explore, explore ? "Make them the leader (the one you move)." : "Only while exploring."))

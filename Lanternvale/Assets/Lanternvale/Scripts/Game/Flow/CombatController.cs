@@ -99,6 +99,9 @@ namespace Lanternvale.Game
         /// <summary>Item being targeted (null when not targeting an item).</summary>
         public ItemInstance TargetingItem { get; private set; }
         public bool IsTargeting => TargetingAbility != null || TargetingItem != null;
+        /// <summary>Rank of the ability being targeted: 0 = the highest known rank, 1..known = a pinned lower rank
+        /// (WoW downranking, see BeginAbility(id, rank)). Always 0 for items.</summary>
+        public int TargetingRank { get; private set; }
 
         /// <summary>
         /// Bumped whenever the controller changes a unit's queued "next swing" ability without a combat event (pressing a
@@ -112,9 +115,16 @@ namespace Lanternvale.Game
         /// immediately; abilities needing a unit or point enter targeting mode (left click confirms, right
         /// click/Esc cancels). Returns null or the reason it cannot be used.
         /// </summary>
-        public string BeginAbility(string abilityId)
+        public string BeginAbility(string abilityId) => BeginAbility(abilityId, 0);
+
+        /// <summary>
+        /// BeginAbility at a specific rank (WoW downranking): 0 = the highest known rank, 1..known = that rank (cheaper,
+        /// weaker; cost, magnitudes, aura values and cast time follow the rank). The rank is kept while targeting
+        /// (TargetingRank) and used by the confirm (left click, TargetUnit). Returns null or the reason.
+        /// </summary>
+        public string BeginAbility(string abilityId, int rank)
         {
-            try { return BeginAbilityInternal(abilityId); }
+            try { return BeginAbilityInternal(abilityId, Math.Max(0, rank)); }
             catch (Exception e) { LogOnce("begin:" + abilityId, "BeginAbility(" + abilityId + "): " + e); return Fail("That cannot be used right now."); }
         }
 
@@ -130,6 +140,7 @@ namespace Lanternvale.Game
             bool was = IsTargeting;
             TargetingAbility = null;
             TargetingItem = null;
+            TargetingRank = 0;
             targetingMods = null;
             validStamp = -1;
             if (was)
@@ -263,13 +274,14 @@ namespace Lanternvale.Game
                 var u = Battle.ActiveUnit;
                 var a = TargetingAbility;
                 var item = TargetingItem;
+                int rank = item != null ? 0 : TargetingRank;
                 if (u == null || a == null) return null;
                 if (!Battle.Units.Contains(target)) return Fail("That is not part of this fight.");
                 Unit tgt = null;
                 Vec2? point = null;
                 if (a.target == TargetType.Point || IsAimed(a)) point = AimPoint(u, a, target, ToV(target.Position));
                 else tgt = target;
-                var why = ExecutePlan(u, PlanUse(u, a, tgt, point, item != null), tgt, point, item);
+                var why = ExecutePlan(u, PlanUse(u, a, tgt, point, item != null, rank), tgt, point, item, rank);
                 hoverDirty = true;
                 return why;
             }

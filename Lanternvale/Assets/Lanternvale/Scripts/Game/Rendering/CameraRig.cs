@@ -9,6 +9,12 @@ namespace Lanternvale.Game
     {
         public static CameraRig Instance { get; private set; }
 
+        /// <summary>
+        /// Fixed rig depth. Every world sprite lives on z = 0, so the camera must always sit at a negative z
+        /// (beyond the near clip plane) whatever x/y it follows; nothing may inherit z from elsewhere.
+        /// </summary>
+        public const float CameraZ = -20f;
+
         public Camera Cam { get; private set; }
         public Transform Follow;
         public float MinSize = 4.5f, MaxSize = 9f, DefaultSize = 6.2f;
@@ -29,6 +35,8 @@ namespace Lanternvale.Game
         {
             if (Instance != null) return Instance;
             var go = new GameObject("Lanternvale Camera");
+            // Position before AddComponent: Awake runs inside AddComponent and records basePos.
+            go.transform.position = new Vector3(0, 0, CameraZ);
             var rig = go.AddComponent<CameraRig>();
             var cam = Camera.main;
             if (cam == null)
@@ -45,7 +53,6 @@ namespace Lanternvale.Game
             cam.farClipPlane = 100f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.78f, 0.88f, 0.95f);
-            go.transform.position = new Vector3(0, 0, -20f);
             rig.Cam = cam;
             return rig;
         }
@@ -54,7 +61,7 @@ namespace Lanternvale.Game
         {
             Instance = this;
             targetSize = DefaultSize;
-            basePos = transform.position;
+            basePos = new Vector3(transform.position.x, transform.position.y, CameraZ);
         }
 
         public float Zoom { get => targetSize; set => targetSize = Mathf.Clamp(value, MinSize, MaxSize); }
@@ -67,7 +74,7 @@ namespace Lanternvale.Game
         public void SnapToTarget()
         {
             var t = DesiredCenter();
-            basePos = new Vector3(t.x, t.y, basePos.z);
+            basePos = new Vector3(t.x, t.y, CameraZ);
             if (Cam != null) Cam.orthographicSize = targetSize;
             ClampBase();
             transform.position = basePos;
@@ -83,7 +90,8 @@ namespace Lanternvale.Game
         public Vector2 ScreenToWorld(Vector2 screen)
         {
             if (Cam == null) return Vector2.zero;
-            var p = Cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, -transform.position.z));
+            // distance from the camera to the z = 0 world plane
+            var p = Cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, -Cam.transform.position.z));
             return new Vector2(p.x, p.y);
         }
 
@@ -138,7 +146,7 @@ namespace Lanternvale.Game
 
             var target = DesiredCenter();
             float k = 1f - Mathf.Exp(-FollowSharpness * dt);
-            basePos = new Vector3(Mathf.Lerp(basePos.x, target.x, k), Mathf.Lerp(basePos.y, target.y, k), basePos.z);
+            basePos = new Vector3(Mathf.Lerp(basePos.x, target.x, k), Mathf.Lerp(basePos.y, target.y, k), CameraZ);
             ClampBase();
 
             var pos = basePos;
@@ -164,7 +172,7 @@ namespace Lanternvale.Game
             float minY = Bounds.yMin + halfH, maxY = Bounds.yMax - halfH;
             float x = minX > maxX ? Bounds.center.x : Mathf.Clamp(basePos.x, minX, maxX);
             float y = minY > maxY ? Bounds.center.y : Mathf.Clamp(basePos.y, minY, maxY);
-            basePos = new Vector3(x, y, basePos.z);
+            basePos = new Vector3(x, y, CameraZ);
         }
 
         public static Vector2 ToUnity(Vec2 v) => new Vector2(v.x, v.y);

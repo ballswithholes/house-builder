@@ -79,7 +79,8 @@ run_core() { # $1 = name, $2 = full; remaining = harness args
   fi
   local extra=()
   if [ "$full" != "true" ]; then extra+=(--no-tests); fi
-  dotnet "$BUILD/$name/out/CoreTests.dll" --data "$ROOT/Assets/Lanternvale/Resources/Data" "${extra[@]}" "$@"
+  # ${a[@]+"${a[@]}"}: bash < 4.4 (macOS /bin/bash 3.2) treats an empty array / no arguments as unbound under set -u
+  dotnet "$BUILD/$name/out/CoreTests.dll" --data "$ROOT/Assets/Lanternvale/Resources/Data" ${extra[@]+"${extra[@]}"} ${1+"$@"}
 }
 
 run_unity() {
@@ -97,9 +98,9 @@ run_unity() {
 }
 
 case "$MODE" in
-  data)  echo "== Data validation"; run_core DataCheck false "$@" ;;
-  core)  echo "== Core (rules engine, data validation, tests)"; run_core CoreTests true "$@" ;;
+  data)  echo "== Data validation"; run_core DataCheck false ${1+"$@"} ;;
+  core)  echo "== Core (rules engine, data validation, tests)"; run_core CoreTests true ${1+"$@"} ;;
   unity) run_unity ;;
-  all)   status=0; echo "== Core"; run_core CoreTests true "$@" || status=1; run_unity || status=1; exit $status ;;
+  all)   status=0; echo "== Core"; run_core CoreTests true ${1+"$@"} || status=1; run_unity || status=1; exit $status ;;
   *)     echo "usage: $0 data|core|unity|all [args]"; exit 2 ;;
 esac

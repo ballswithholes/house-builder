@@ -91,6 +91,9 @@ namespace Lanternvale.Rules
             float absorbed = 0f;
             if (!info.IgnoreAbsorb && v > 0) absorbed = Absorb(tgt, v, school);
             float hp = v - absorbed;
+            // outside combat nothing downs a party character (Hellfire's self-damage, a lingering DoT): like health
+            // costs (Life Tap, self drains), the damage stops at 1 health
+            if (!InCombat && tgt.Team == PlayerTeam && tgt.IsCharacter) hp = Math.Min(hp, Math.Max(0f, (float)Math.Floor(tgt.Health - 1f)));
             float overkill = Math.Max(0f, hp - tgt.Health);
             tgt.Health -= hp;
             if (tgt.Health < 0) tgt.Health = 0;
@@ -189,9 +192,11 @@ namespace Lanternvale.Rules
                 p.ChannelLoss += amount;
                 float tick = p.ChannelDuration > 0 && p.TicksTotal > 0 ? p.ChannelDuration / p.TicksTotal : 1f;
                 while (p.ChannelLoss >= tick - 1e-4f && p.TicksLeft > 0) { p.TicksLeft--; p.ChannelLoss -= tick; }
+                float cut = Math.Min(amount, p.RemainingTime);
                 p.RemainingTime = Math.Max(0f, p.RemainingTime - amount);
+                p.TotalTime = Math.Max(0f, p.TotalTime - cut);
             }
-            else p.RemainingTime += amount;
+            else { p.RemainingTime += amount; p.TotalTime += amount; }
             Emit(new CombatEvent { Type = CombatEventType.Log, Source = u, Target = u, AbilityId = p.Ability.id, Name = p.Ability.name, Seconds = amount, Text = $"{u.Name}'s {p.Ability.name} is pushed back." });
         }
 
@@ -267,6 +272,7 @@ namespace Lanternvale.Rules
             CancelPending(tgt, "died", null, 0f);
             tgt.AutoAttacking = false;
             tgt.QueuedSwing = "";
+            tgt.QueuedSwingRank = 0;
             bool downed = tgt.Team == PlayerTeam && tgt.IsCharacter && !forceDeath;
             Specials.OnHolderDowned(this, tgt);
             if (downed)

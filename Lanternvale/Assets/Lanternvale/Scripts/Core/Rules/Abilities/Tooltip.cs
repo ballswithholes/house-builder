@@ -22,13 +22,16 @@ namespace Lanternvale.Rules
 
         static string Range(float lo, float hi) => Math.Abs(hi - lo) < 0.5f ? N((lo + hi) / 2f) : $"{N(lo)} to {N(hi)}";
 
-        /// <summary>Ability description with {N}/{dN} tokens replaced using the unit's rank and stats (unit may be null).</summary>
+        /// <summary>
+        /// Ability description with {N}/{dN} tokens replaced using the unit's rank and stats (unit may be null).
+        /// <paramref name="rankOverride"/> &gt; 0 shows that rank instead of the highest known one (downranking picker).
+        /// </summary>
         public static string Ability(Unit u, AbilityDef a, int rankOverride = 0)
         {
             if (a == null) return "";
             var text = a.description ?? "";
             if (text.IndexOf('{') < 0) return text;
-            int rank = rankOverride > 0 ? rankOverride : (u != null ? AbilityRules.UsedRank(u, a) : 1);
+            int rank = rankOverride > 0 ? Math.Min(rankOverride, AbilityRules.RankCount(a)) : (u != null ? AbilityRules.UsedRank(u, a) : 1);
             var mods = u != null ? AbilityMods.For(u, a) : AbilityModSet.Empty;
             int eff = u != null ? AbilityRules.EffLevel(u, a, rank) : AbilityRules.RankLevel(a, rank);
             var sb = new StringBuilder();
@@ -42,7 +45,7 @@ namespace Lanternvale.Rules
                     if (close > i)
                     {
                         var tok = text.Substring(i + 1, close - i - 1);
-                        var rep = Token(u, a, tok, eff, mods);
+                        var rep = Token(u, a, tok, eff, mods, rank);
                         if (rep != null) { sb.Append(rep); i = close + 1; continue; }
                     }
                 }
@@ -52,7 +55,7 @@ namespace Lanternvale.Rules
             return sb.ToString();
         }
 
-        static string Token(Unit u, AbilityDef a, string tok, int eff, AbilityModSet mods)
+        static string Token(Unit u, AbilityDef a, string tok, int eff, AbilityModSet mods, int rank)
         {
             bool dur = tok.StartsWith("d", StringComparison.Ordinal);
             if (!int.TryParse(dur ? tok.Substring(1) : tok, NumberStyles.Integer, CultureInfo.InvariantCulture, out int idx)) return null;
@@ -63,13 +66,21 @@ namespace Lanternvale.Rules
             {
                 var aura = db?.Aura(e.aura);
                 if (aura == null) return e.duration > 0 ? N(e.duration) : "?";
-                return N(AbilityRules.AuraDuration(aura, e, mods, 0));
+                float d = AbilityRules.AuraDuration(aura, e, mods, 0);
+                // as Battle.ApplyEffect: an ApplyAura duration with perLevel grows per rank level (Hammer of Justice 3-6 s)
+                if (e.type == EffectType.ApplyAura && e.duration > 0 && e.perLevel != 0 && string.IsNullOrEmpty(e.special))
+                    d += e.perLevel * Math.Max(0, eff - a.learnLevel);
+                return N(d);
             }
-            return Magnitude(u, a, e, eff, mods);
+            return Magnitude(u, a, e, eff, mods, rank);
         }
 
-        /// <summary>Displayed magnitude of an ability effect at an effective level for a unit (null unit = no stats).</summary>
-        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods)
+        /// <summary>Displayed magnitude of an ability effect at an effective level for a unit (null unit = no stats), using
+        /// the unit's highest known rank for per-rank aura values.</summary>
+        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods) => Magnitude(u, a, e, eff, mods, 0);
+
+        /// <summary>Displayed magnitude of an ability effect at an effective level and rank (0 = the unit's highest known rank).</summary>
+        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods, int rank)
         {
             float delta = Math.Max(0, eff - a.learnLevel);
             var school = e.school ?? a.school;
@@ -128,8 +139,8 @@ namespace Lanternvale.Rules
                     }
                     if (aura.mods.Count > 0)
                     {
-                        int rank = u != null ? AbilityRules.UsedRank(u, a) : 1;
-                        float v = StatCalculator.AuraModValue(aura.mods[0], rank, eff, a.learnLevel, mods.EffectMult);
+                        int r = rank > 0 ? rank : (u != null ? AbilityRules.UsedRank(u, a) : 1);
+                        float v = StatCalculator.AuraModValue(aura.mods[0], r, eff, a.learnLevel, mods.EffectMult);
                         return N(Math.Abs(v));
                     }
                     return N(d);
@@ -204,12 +215,13 @@ namespace Lanternvale.Rules
             return sb.ToString();
         }
 
-        /// <summary>Multi-line tooltip: name, rank, cost, range, cast time, cooldown, requirements and description.</summary>
-        public static string AbilityFull(Unit u, AbilityDef a)
+        /// <summary>Multi-line tooltip: name, rank, cost, range, cast time, cooldown, requirements and description.
+        /// <paramref name="rankOverride"/> &gt; 0 describes that rank (downranking).</summary>
+        public static string AbilityFull(Unit u, AbilityDef a, int rankOverride = 0)
         {
             var sb = new StringBuilder();
             sb.Append(a.name);
-            int rank = u != null ? u.RankOf(a.id) : 0;
+            int rank = rankOverride > 0 ? Math.Min(rankOverride, AbilityRules.RankCount(a)) : (u != null ? u.RankOf(a.id) : 0);
             if (AbilityRules.RankCount(a) > 1 && rank > 0) sb.Append($"  (Rank {rank})");
             sb.Append('\n');
             var mods = u != null ? AbilityMods.For(u, a) : AbilityModSet.Empty;
@@ -218,7 +230,7 @@ namespace Lanternvale.Rules
             {
                 if (u != null && a.cost != null && a.cost.type != ResourceType.None)
                 {
-                    float cost = AbilityRules.ResourceCost(u, a, AbilityRules.UsedRank(u, a), mods);
+                    float cost = AbilityRules.ResourceCost(u, a, rank > 0 ? rank : AbilityRules.UsedRank(u, a), mods);
                     if (cost > 0) sb.Append($"{N(cost)} {a.cost.type}");
                     if (a.cost.consumesComboPoints) sb.Append(cost > 0 ? ", finisher" : "Finisher");
                     sb.Append("   ");
@@ -226,13 +238,13 @@ namespace Lanternvale.Rules
                 if (a.melee) sb.Append("Melee range");
                 else if (a.range > 0) sb.Append($"{N(a.range)} yd range");
                 sb.Append('\n');
-                float cast = u != null ? AbilityRules.CastTime(u, a, mods) : a.castTime;
+                float cast = u != null ? AbilityRules.CastTime(u, a, mods, rank) : AbilityRules.BaseCastTime(a, rank);
                 sb.Append(a.channeled ? $"Channeled ({N(cast)} sec)" : cast > 0 ? $"{N(cast)} sec cast" : "Instant");
                 float cd = Math.Max(0f, a.cooldown + mods.Cooldown);
                 if (cd > 0) sb.Append($"   {N(cd)} sec cooldown");
                 sb.Append('\n');
             }
-            var desc = Ability(u, a);
+            var desc = Ability(u, a, rankOverride);
             if (desc.Length > 0) sb.Append(desc);
             return sb.ToString();
         }

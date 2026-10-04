@@ -93,6 +93,7 @@ namespace Lanternvale.Game
                 if (pickable) HudDraw.Ring(r, new Color(0.5f, 1f, 0.55f, HudDraw.Pulse(6f, 0.45f, 1f)), 8, true);
                 else HudDraw.Fill(r, new Color(0f, 0f, 0f, 0.35f), 8);
             }
+            DrawTargetState(r, Hud.TargetStateOf(u));
 
             // portrait + overlays
             var pr = new Rect(r.x + 9f, r.y + 10f, Portrait, Portrait);
@@ -260,8 +261,45 @@ namespace Lanternvale.Game
             else Hud.Session?.SetAutoPlay(u, on);
         }
 
+        /// <summary>Combat targeting from the frames: valid targets pulse green, reachable ones (a click walks into range
+        /// first) pulse softer, others are dimmed.</summary>
+        static void DrawTargetState(Rect r, Hud.TargetState st)
+        {
+            switch (st)
+            {
+                case Hud.TargetState.Valid:
+                    HudDraw.Ring(r, new Color(0.5f, 1f, 0.55f, HudDraw.Pulse(6f, 0.5f, 1f)), 8, true);
+                    break;
+                case Hud.TargetState.Reachable:
+                    HudDraw.Ring(r, new Color(0.5f, 1f, 0.55f, HudDraw.Pulse(6f, 0.2f, 0.5f)), 8);
+                    break;
+                case Hud.TargetState.Invalid:
+                    HudDraw.Fill(r, new Color(0f, 0f, 0f, 0.35f), 8);
+                    break;
+            }
+        }
+
+        static string TargetHint(Unit u, Hud.TargetState st)
+        {
+            var c = Hud.Combat;
+            string what = c != null && c.TargetingItem != null ? c.TargetingItem.Name : c != null && c.TargetingAbility != null ? c.TargetingAbility.name : "it";
+            switch (st)
+            {
+                case Hud.TargetState.Valid: return Ui.Rich("Click to use " + what + " on " + Hud.NameOf(u) + ".", Ui.Good);
+                case Hud.TargetState.Reachable: return Ui.Rich("Out of range — a click walks into range first, then uses " + what + ".", Ui.Gold);
+                default: return Ui.Rich(what + " cannot be used on " + Hud.NameOf(u) + ".", Ui.Bad);
+            }
+        }
+
         string TipFor(Unit u)
         {
+            var tst = Hud.TargetStateOf(u);
+            if (tst != Hud.TargetState.None)
+            {
+                // targeting in combat: the tooltip says what the click does (no cache: the state changes as you move)
+                var cls0 = u.Class != null ? u.Class.name : (u.Creature != null ? u.Creature.name : "");
+                return "<b>" + Hud.NameOf(u) + "</b>\nLevel " + u.Level + " " + cls0 + "\n" + TargetHint(u, tst);
+            }
             if (tipUnit == u && tipFrame > Time.frameCount - 15) return tipText;
             tipUnit = u;
             tipFrame = Time.frameCount;
@@ -297,8 +335,7 @@ namespace Lanternvale.Game
         {
             var a = p.Ability;
             var col = Hud.SchoolCol(a.school);
-            float total = Hud.PendingTotal(p);
-            float progress = 1f - Mathf.Clamp01(p.RemainingTime / total);
+            float progress = Hud.PendingProgress(p);
             HudDraw.Bar(r, Mathf.Max(0.04f, progress), new Color(col.r, col.g, col.b, 0.92f));
             HudDraw.Ring(r, new Color(col.r, col.g, col.b, HudDraw.Pulse(5f, 0.4f, 0.9f)), 5);
             if (r.height >= 11f)
@@ -453,6 +490,8 @@ namespace Lanternvale.Game
             if (active) HudDraw.Ring(r, new Color(1f, 0.85f, 0.45f, HudDraw.Pulse(4f, 0.5f, 1f)), 8, true);
             else if (selected) HudDraw.Ring(r, new Color(1f, 1f, 1f, 0.55f), 8);
             if (pick != null && Hud.IsValidPickTarget(p)) HudDraw.Ring(r, new Color(0.5f, 1f, 0.55f, HudDraw.Pulse(6f, 0.45f, 1f)), 8, true);
+            var tstate = Hud.TargetStateOf(p);
+            DrawTargetState(r, tstate);
 
             var pr = new Rect(r.x + 4f, r.y + 4f, PetH - 8f, PetH - 8f);
             bool down = HudPresented.Downed(p) || HudPresented.Dead(p);
@@ -486,7 +525,7 @@ namespace Lanternvale.Game
                 Ui.TooltipFor(r, "<b>" + name + "</b>\nHealth " + labels.PetHealth.Get(Mathf.CeilToInt(HudPresented.Health(p)), Mathf.RoundToInt(p.MaxHealth)) +
                                  (maxRes > 0f ? "\n" + HudText.ResourceName(res) + " " + Mathf.FloorToInt(p.GetResource(res)) + " / " + Mathf.RoundToInt(maxRes) : "") +
                                  (p.Lifetime > 0f ? "\n" + Ui.Rich(UiText.Duration(p.Lifetime) + " remaining", Hud.Muted) : "") +
-                                 "\n" + Ui.Rich("Click to select (its abilities appear on the action bar).", Hud.Muted));
+                                 "\n" + (tstate != Hud.TargetState.None ? TargetHint(p, tstate) : Ui.Rich("Click to select (its abilities appear on the action bar).", Hud.Muted)));
             Ui.Block(r);
             if (!overToggle && HudDraw.Click(r))
             {

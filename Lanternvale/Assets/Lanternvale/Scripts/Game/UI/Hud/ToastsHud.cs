@@ -1,11 +1,14 @@
 // Toasts, errors and banners.
-//  * Toasts (centre top, queued, fading, merged): SessionEvents — quests (started/updated/completed/failed/reward),
-//    items received (quality colour, stacked counts), money, experience, abilities learned, talent points,
-//    companions, approval, skill-check rolls ("Persuasion check: 14 + 2 = 16 vs DC 12 — Success"), locked
-//    transitions, rests, time of day, combat barks, telegraphed pending casts (CombatEventPresented) and flow toasts.
+//  * Toasts — THE single toast lane (centre top, queued, fading, merged): SessionEvents — quests (started/updated/
+//    completed/failed/reward), items received (quality colour, stacked counts), money, experience, abilities learned,
+//    talent points, companions, approval, skill-check rolls ("Persuasion check: 14 + 2 = 16 vs DC 12 — Success"), locked
+//    transitions, rests, time of day, combat barks, telegraphed pending casts (CombatEventPresented), flow toasts and the
+//    panels' notices (PanelKit.Notice → GameFlow.Toast(text, colour): red refusals, gold confirmations). The lane is
+//    drawn by ToastLaneHud (Order 480) so it shows above windows and menus too; it never reaches down into the error lane.
 //  * Error lane (red, above the bottom HUD): Combat.LastError ("Not enough rage (15).") and HUD failures.
-//  * Banners (one at a time): map title cards (Title font), region names, level up, Victory!/Defeat/Disengaged
-//    (hooked to Combat.Battle.IsOver), combat start, story moments (SpecialOutcome).
+//  * Banners (one at a time, kept below the toast stack): map title cards (Title font), region names, a short level-up
+//    banner (the details are the panels' level-up card, bottom right), Victory!/Defeat/Disengaged (hooked to
+//    Combat.Battle.IsOver — the world only gets sparkles and sound), combat start, story moments (SpecialOutcome).
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,7 +30,7 @@ namespace Lanternvale.Game
         const int MaxVisible = 5;
         const float FadeIn = 0.22f, FadeOut = 0.55f, ToastH = 34f;
 
-        enum Kind { Info, Quest, QuestDone, Item, Money, Xp, Ability, Talent, Party, Approval, Check, Bark, Warn, Time }
+        enum Kind { Info, Quest, QuestDone, Item, Money, Xp, Ability, Talent, Party, Approval, Check, Bark, Warn, Time, Notice }
 
         sealed class Toast
         {
@@ -50,7 +53,7 @@ namespace Lanternvale.Game
         sealed class Banner
         {
             public BannerKind Kind;
-            public string Title = "", Sub = "", Sub2 = "";
+            public string Title = "", Sub = "";
             public Color Color;
             public float Age, Life;
             public int Level;
@@ -63,6 +66,20 @@ namespace Lanternvale.Game
             public float Age;
             public int Count = 1;
         }
+
+        /// <summary>The instance UiRoot created (ToastLaneHud draws its lane).</summary>
+        internal static ToastsHud Current { get; private set; }
+
+        public ToastsHud() { Current = this; }
+
+        /// <summary>Toasts on screen (the lane screen is visible while there are any).</summary>
+        internal bool HasToasts => active.Count > 0;
+
+        // how many toasts fit between the lane's top and the error lane (measured by the last lane draw)
+        int laneFit = MaxVisible;
+        float laneBottom = 120f;
+        // last level-up per unit (unscaled time): its talent-point / learned toasts are the level-up card's job
+        readonly Dictionary<Unit, float> levelUpAt = new Dictionary<Unit, float>();
 
         readonly List<Toast> active = new List<Toast>();
         readonly List<Toast> waiting = new List<Toast>();
@@ -161,7 +178,7 @@ namespace Lanternvale.Game
                 t.Age += dt * speed;
                 if (t.Age >= t.Life) active.RemoveAt(i);
             }
-            while (active.Count < MaxVisible && waiting.Count > 0)
+            while (active.Count < Mathf.Min(MaxVisible, laneFit) && waiting.Count > 0)
             {
                 active.Add(waiting[0]);
                 waiting.RemoveAt(0);
@@ -195,8 +212,14 @@ namespace Lanternvale.Game
             switch (e.Kind)
             {
                 case SessionEventKind.Toast:
-                    if (!string.IsNullOrEmpty(e.Text)) Add(Kind.Info, e.Text, null, InfoCol, "info:" + e.Text);
+                {
+                    if (string.IsNullOrEmpty(e.Text)) break;
+                    // GameFlow.Toast(text, colour): panel notices (red refusals, gold confirmations) and coloured flow toasts
+                    var col = Hud.Flow != null ? Hud.Flow.ToastColorOf(e) : null;
+                    if (col.HasValue) Add(Kind.Notice, e.Text, null, col.Value, "note:" + e.Text);
+                    else Add(Kind.Info, e.Text, null, InfoCol, "info:" + e.Text);
                     break;
+                }
                 case SessionEventKind.GameStarted:
                 case SessionEventKind.GameLoaded:
                     ClearAll();
@@ -272,13 +295,15 @@ namespace Lanternvale.Game
                     break;
                 case SessionEventKind.LevelUp:
                     AddLevelUp(e);
+                    if (e.Unit != null) levelUpAt[e.Unit] = Time.unscaledTime;
                     break;
                 case SessionEventKind.AbilityLearned:
+                    if (FromLevelUp(e.Unit)) break;   // the level-up card lists what a companion learned
                     AddLearned(e);
                     break;
                 case SessionEventKind.TalentPointsAvailable:
                 {
-                    if (e.Amount <= 0) break;
+                    if (e.Amount <= 0 || FromLevelUp(e.Unit)) break;   // the level-up card offers "Talents (N)"
                     string who = Hud.NameOf(e.Unit);
                     string txt = !string.IsNullOrEmpty(e.Text) ? e.Text : who + " has " + e.Amount + " unspent talent point" + (e.Amount == 1 ? "" : "s") + ".";
                     var t = Add(Kind.Talent, txt + "  " + Ui.Rich("(N)", Hud.Muted), "glyph_sparkle", Hud.C("#c9a3f0"), "tp:" + who, txt + "  (N)");
@@ -324,6 +349,9 @@ namespace Lanternvale.Game
                     break;
             }
         }
+
+        /// <summary>True right after a level-up of the unit (its learned ranks / talent points are on the level-up card).</summary>
+        bool FromLevelUp(Unit u) => u != null && levelUpAt.TryGetValue(u, out var t) && Time.unscaledTime - t < 2f;
 
         void OnCombatEvent(CombatEvent e)
         {
@@ -499,26 +527,13 @@ namespace Lanternvale.Game
                 if (level > b.Level) { b.Level = level; b.Title = "Level " + level; }
                 if (!b.Names.Contains(who)) b.Names.Add(who);
                 b.Sub = string.Join("  ·  ", b.Names);
-                AppendLevelInfo(b, e);
                 return;
             }
-            var nb = new Banner { Kind = BannerKind.LevelUp, Title = "Level " + level, Level = level, Color = Ui.Gold, Life = 4f };
+            // short on purpose: "Level 12" and who — the panels' level-up card (bottom right) has the details
+            var nb = new Banner { Kind = BannerKind.LevelUp, Title = "Level " + level, Level = level, Color = Ui.Gold, Life = 3f };
             nb.Names.Add(who);
             nb.Sub = who;
-            AppendLevelInfo(nb, e);
             AddBanner(nb);
-        }
-
-        static void AppendLevelInfo(Banner b, SessionEvent e)
-        {
-            var info = e.LevelUp;
-            if (info == null || e.Unit == null || !e.Unit.IsMainCharacter) return;
-            var parts = new List<string>(3);
-            if (info.HealthGained > 0.5f) parts.Add("+" + Mathf.RoundToInt(info.HealthGained) + " health");
-            if (info.ManaGained > 0.5f) parts.Add("+" + Mathf.RoundToInt(info.ManaGained) + " mana");
-            if (info.TalentPointsGained > 0) parts.Add("+" + info.TalentPointsGained + " talent point" + (info.TalentPointsGained == 1 ? "" : "s"));
-            if (info.NewTrainable.Count > 0) parts.Add("new abilities at your trainer");
-            if (parts.Count > 0) b.Sub2 = string.Join("  ·  ", parts);
         }
 
         void AddTimeOfDay(string phase)
@@ -558,6 +573,7 @@ namespace Lanternvale.Game
             waiting.Clear();
             banners.Clear();
             errors.Clear();
+            levelUpAt.Clear();
         }
 
         static string QuestName(SessionEvent e)
@@ -592,8 +608,7 @@ namespace Lanternvale.Game
                 HudStyles.Ensure();
                 bool combat = Hud.Battle != null;
                 DrawBanner(combat);
-                DrawToasts(combat);
-                DrawErrors();
+                DrawErrors();   // the toasts are drawn by ToastLaneHud (Order 480: above windows and menus)
             }
             catch (Exception e) { Hud.LogOnce("toast-draw:" + e.GetType().Name, "Toasts draw: " + e); }
         }
@@ -612,16 +627,45 @@ namespace Lanternvale.Game
             return 1f;
         }
 
-        void DrawToasts(bool combat)
+        /// <summary>Top of the toast lane: below the target frame in combat, under the clock row in exploration, at the
+        /// very top in conversations, menus and windows over the HUD.</summary>
+        static float LaneTop()
         {
-            if (active.Count == 0) return;
+            if (Hud.InDialogue || !Hud.WorldHud) return 40f;
             // combat: below the target frame (+ its cast bar and two rows of auras)
-            float y = combat ? TurnOrderHud.Bottom + 8f + 96f + 26f + 66f + 12f : 78f;
-            if (Hud.InDialogue) y = 40f;
+            return Hud.CombatHud ? TurnOrderHud.Bottom + 8f + 96f + 26f + 66f + 12f : 78f;
+        }
+
+        /// <summary>Lowest y the lane may use: above the error lane (room for its three lines) while the HUD is up, above
+        /// the dialogue window in conversations, the upper half of the screen in menus.</summary>
+        static float LaneLimit()
+        {
+            if (Hud.InDialogue) return Ui.Height * 0.5f;
+            if (Hud.WorldHud) return HudLayout.ErrorY - 26f * 2f - 10f;
+            return Ui.Height * 0.45f;
+        }
+
+        /// <summary>Draws the toast lane (called by ToastLaneHud on Repaint).</summary>
+        internal void DrawLane()
+        {
+            HudStyles.Ensure();
+            DrawToasts();
+        }
+
+        void DrawToasts()
+        {
+            float top = LaneTop(), limit = LaneLimit();
+            float y = top;
+            int fit = 0;
+            laneBottom = top;
+            if (active.Count == 0) { laneFit = Mathf.Max(1, Mathf.FloorToInt((limit - top) / (ToastH + 6f))); return; }
             var st = HudStyles.ToastText;
             for (int i = 0; i < active.Count; i++)
             {
                 var t = active[i];
+                // never down into the error lane / dialogue window: the rest waits (it is shown as the older ones fade)
+                if (y + ToastH * t.Scale > limit && fit > 0) break;
+                fit++;
                 float a = Fade(t.Age, t.Life);
                 if (t.Width < 0f)
                 {
@@ -647,7 +691,8 @@ namespace Lanternvale.Game
                 var tr = new Rect(tx, r.y, r.xMax - tx - 8f, h);
                 var old = GUI.color;
                 GUI.color = new Color(1f, 1f, 1f, a);
-                Color textCol = t.Kind == Kind.Quest || t.Kind == Kind.QuestDone ? Ui.TextLight : (t.Kind == Kind.Warn ? WarnCol : t.Kind == Kind.Xp ? Hud.Xp : Ui.TextLight);
+                Color textCol = t.Kind == Kind.Quest || t.Kind == Kind.QuestDone ? Ui.TextLight
+                              : t.Kind == Kind.Warn ? WarnCol : t.Kind == Kind.Xp ? Hud.Xp : t.Kind == Kind.Notice ? acc : Ui.TextLight;
                 if (t.Text.IndexOf('<') >= 0) HudDraw.Rich(tr, t.Text, st, t.Plain);
                 else HudDraw.Text(tr, t.Text, st, textCol);
                 GUI.color = old;
@@ -655,6 +700,9 @@ namespace Lanternvale.Game
                     HudDraw.Text(new Rect(r.xMax - 40f, r.y - 8f, 44f, 16f), Times(t.Count), HudStyles.TinyRight, new Color(1f, 1f, 1f, 0.7f * a));
                 y += h + 6f;
             }
+            laneBottom = y;
+            // how many fit at the standard height (Age only promotes waiting toasts into the room there is)
+            laneFit = Mathf.Max(1, Mathf.FloorToInt((limit - top) / (ToastH + 6f)));
         }
 
         void DrawErrors()
@@ -672,6 +720,20 @@ namespace Lanternvale.Game
             }
         }
 
+        static float BannerHalfHeight(BannerKind k)
+        {
+            switch (k)
+            {
+                case BannerKind.MapTitle: return 48f;
+                case BannerKind.Region: return 34f;
+                case BannerKind.LevelUp: return 50f;
+                case BannerKind.Story: return 56f;
+                case BannerKind.Combat:
+                case BannerKind.Left: return 36f;
+                default: return 52f;
+            }
+        }
+
         void DrawBanner(bool combat)
         {
             if (banners.Count == 0) return;
@@ -680,6 +742,8 @@ namespace Lanternvale.Game
             float a = Fade(b.Age, b.Life, 0.5f, 0.9f);
             float cy = combat ? Ui.Height * 0.27f : Ui.Height * 0.22f;
             if (Hud.InDialogue) cy = Ui.Height * 0.14f;
+            // never under the toast lane: start below the toasts on screen (laneBottom from the lane's last draw)
+            if (active.Count > 0) cy = Mathf.Max(cy, laneBottom + BannerHalfHeight(b.Kind) + 12f);
             float cx = Ui.Width * 0.5f;
             float rise = (1f - Mathf.Clamp01(b.Age / 0.5f)) * 14f;
             cy += rise;
@@ -719,8 +783,6 @@ namespace Lanternvale.Game
                     HudDraw.Glow(new Rect(cx - 300f, cy - 120f, 600f, 240f), new Color(1f, 0.8f, 0.35f, 0.35f * a));
                     HudDraw.Text(new Rect(cx - 500f, cy - 44f, 1000f, 80f), b.Title, HudStyles.TitleHuge, new Color(1f, 0.86f, 0.45f, a));
                     HudDraw.Text(new Rect(cx - 500f, cy + 34f, 1000f, 30f), b.Sub, HudStyles.Subtitle, new Color(1f, 0.96f, 0.86f, a));
-                    if (!string.IsNullOrEmpty(b.Sub2))
-                        HudDraw.Text(new Rect(cx - 500f, cy + 62f, 1000f, 28f), b.Sub2, HudStyles.Subtitle, new Color(0.85f, 0.95f, 0.8f, 0.9f * a));
                     break;
                 }
                 case BannerKind.Victory:
@@ -754,6 +816,28 @@ namespace Lanternvale.Game
                     break;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// The single toast lane, drawn above windows, menus and the HUD (Order 480; visual only — no input) so session toasts,
+    /// flow toasts and the panels' notices (GameFlow.Toast) are seen wherever the player is: the toasts themselves live in
+    /// ToastsHud (intake, merging, ageing); this screen only draws them.
+    /// </summary>
+    public sealed class ToastLaneHud : IUiScreen
+    {
+        public const int LaneOrder = 480;
+        public string Id => "";
+        public int Order => LaneOrder;
+        public bool Visible { get { var t = ToastsHud.Current; return t != null && t.HasToasts; } }
+        public bool Modal => false;
+        public void Tick(float dt) { }
+
+        public void Draw()
+        {
+            if (!HudDraw.IsRepaint) return;
+            try { ToastsHud.Current?.DrawLane(); }
+            catch (Exception e) { Hud.LogOnce("toast-lane:" + e.GetType().Name, "Toast lane: " + e); }
         }
     }
 }

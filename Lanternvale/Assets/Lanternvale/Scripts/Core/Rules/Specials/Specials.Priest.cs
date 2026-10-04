@@ -110,10 +110,14 @@ namespace Lanternvale.Rules
         }
     }
 
-    /// <summary>Mind Soothe: out of combat the session shrinks the encounter's trigger radius (FieldEvent "PriestMindSoothe").</summary>
+    /// <summary>
+    /// Mind Soothe: out of combat the session shrinks the trigger radius of the encounter the target belongs to (FieldEvent
+    /// "PriestMindSoothe", cast through GameSession.UseAbilityOnEncounter); in combat only the debuff remains.
+    /// </summary>
     sealed class PriestMindSoothe : SpecialHandler
     {
         public PriestMindSoothe() : base("PriestMindSoothe") { }
+        public override bool FieldTargetsEncounter => true;
         public override void Execute(AbilityCast c, EffectDef e, Unit t)
         {
             if (!c.Battle.InCombat) Specials.RaiseFieldEvent(c.Battle, c.Caster, Name, t);

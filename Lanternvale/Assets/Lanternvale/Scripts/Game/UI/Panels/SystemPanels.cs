@@ -167,7 +167,7 @@ namespace Lanternvale.Game.Panels
                 "Windows",
                 "C|character sheet",
                 "I or B|bags",
-                "P|spellbook",
+                "P|spellbook (Shift/right click: pick a rank)",
                 "N|talents",
                 "J|journal",
                 "K|party & camp (swap companions)",

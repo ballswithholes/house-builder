@@ -17,11 +17,15 @@ namespace Lanternvale.Game
         static readonly Color Muted = Ui.Hex("#b8acc9");
         static readonly Color Red = Ui.Hex("#ff6b5e");
 
-        public static string Ability(Unit u, AbilityDef a)
+        public static string Ability(Unit u, AbilityDef a) => Ability(u, a, 0);
+
+        /// <summary>Full ability tooltip at a rank (0 = the highest known rank; a lower rank describes that rank's cost,
+        /// numbers and cast time — downranking).</summary>
+        public static string Ability(Unit u, AbilityDef a, int rank)
         {
             if (a == null) return "";
             if (u == null) return $"<b>{a.name}</b>\n{a.description}";
-            try { return Tooltip.AbilityFull(u, a); }
+            try { return Tooltip.AbilityFull(u, a, rank > 0 ? rank : 0); }
             catch (System.Exception) { return $"<b>{a.name}</b>\n{a.description}"; }
         }
 

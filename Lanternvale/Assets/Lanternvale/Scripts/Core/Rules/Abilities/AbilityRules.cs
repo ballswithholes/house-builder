@@ -47,6 +47,19 @@ namespace Lanternvale.Rules
             return r > 0 ? r : 1;
         }
 
+        /// <summary>
+        /// Rank used for a requested rank (WoW downranking): 0 (or less) = the highest known rank (<see cref="UsedRank(Unit, AbilityDef)"/>),
+        /// otherwise the requested rank, never above the highest known one (Battle.CanUse refuses unknown ranks).
+        /// </summary>
+        public static int UsedRank(Unit u, AbilityDef a, int requested)
+        {
+            int max = UsedRank(u, a);
+            return requested <= 0 ? max : Math.Max(1, Math.Min(requested, max));
+        }
+
+        /// <summary>Ranks the unit knows of the ability (1..n usable; 0 when not learned: basic attacks, contextual abilities).</summary>
+        public static int KnownRanks(Unit u, AbilityDef a) => u != null && a != null ? u.RankOf(a.id) : 0;
+
         public static bool IsSpell(AbilityDef a) => a.school != School.Physical;
 
         /// <summary>The ability attacks with the ranged weapon (uses RAP and the ranged hit table).</summary>
@@ -98,10 +111,23 @@ namespace Lanternvale.Rules
             return Math.Max(0f, g + mods.Gcd);
         }
 
-        /// <summary>Cast time after CastTime mods and haste (channel duration for channels).</summary>
-        public static float CastTime(Unit u, AbilityDef a, AbilityModSet mods)
+        /// <summary>Cast time after CastTime mods and haste (channel duration for channels), at the highest known rank.</summary>
+        public static float CastTime(Unit u, AbilityDef a, AbilityModSet mods) => CastTime(u, a, mods, 0);
+
+        /// <summary>Base cast time of a rank (data: <c>rankCastTimes[rank-1]</c> when given — WoW's faster low ranks, e.g.
+        /// Fireball Rank 1 1.5 s — else <c>castTime</c>). Rank 0 = the highest rank.</summary>
+        public static float BaseCastTime(AbilityDef a, int rank)
         {
-            float t = a.castTime;
+            var arr = a.rankCastTimes;
+            if (arr == null || arr.Length == 0) return a.castTime;
+            int i = (rank <= 0 ? arr.Length : Math.Min(rank, arr.Length)) - 1;
+            return arr[Math.Max(0, i)];
+        }
+
+        /// <summary>Cast time of <paramref name="rank"/> (0 = the unit's highest known rank) after CastTime mods and haste.</summary>
+        public static float CastTime(Unit u, AbilityDef a, AbilityModSet mods, int rank)
+        {
+            float t = BaseCastTime(a, rank > 0 ? rank : (u != null ? UsedRank(u, a) : 0));
             if (t <= 0f) return 0f;
             t = Math.Max(0f, t + mods.CastTime);
             if (!a.channeled)
@@ -112,13 +138,17 @@ namespace Lanternvale.Rules
             return Specials.ModifyCastTime(u, a, t);
         }
 
-        /// <summary>Seconds of turn Time the ability costs (Design.md §2).</summary>
-        public static float TimeCost(Unit u, AbilityDef a, AbilityModSet mods)
+        /// <summary>Seconds of turn Time the ability costs (Design.md §2), at the highest known rank.</summary>
+        public static float TimeCost(Unit u, AbilityDef a, AbilityModSet mods) => TimeCost(u, a, mods, 0);
+
+        /// <summary>Seconds of turn Time a rank of the ability costs (0 = the highest known rank): max(cast, GCD), or the
+        /// cast time for OffGcd abilities.</summary>
+        public static float TimeCost(Unit u, AbilityDef a, AbilityModSet mods, int rank)
         {
             if (a.autoAttack || a.nextSwing || a.passive) return 0f;
             var special = Specials.TimeCost(u, a);
             if (special.HasValue) return special.Value;
-            float cast = CastTime(u, a, mods);
+            float cast = CastTime(u, a, mods, rank);
             if (a.time == Lanternvale.Data.TimeCost.OffGcd) return cast;
             return Math.Max(cast, Gcd(u, a, mods));
         }

@@ -7,7 +7,7 @@
 //   no clicks, hovers, wheel or tooltips. Modal screens occlude the whole screen.
 // * Deferred commands: buttons never mutate session state inside OnGUI; they queue a command with Do(...) that the
 //   PanelHost runs in the next Update (no "collection modified" surprises, no layout changes mid-event).
-// * Notices (error/feedback lines), confirm dialogs and context menus (see PanelHost.cs).
+// * Notices (error/feedback lines → GameFlow.Toast, the single toast lane), confirm dialogs and context menus (PanelHost.cs).
 // * Styles, item/portrait/money helpers, windows, tabs, scroll views with a painted scrollbar, member tabs.
 using System;
 using System.Collections.Generic;
@@ -85,23 +85,19 @@ namespace Lanternvale.Game.Panels
 
         // ================================================================ notices
 
-        public struct NoticeLine
-        {
-            public string Text;
-            public Color Color;
-            public float Born;
-        }
+        static readonly Color NoticeError = Ui.Hex("#ff8a7a");
+        static readonly Color NoticeGood = Ui.Hex("#ffe08a");
 
-        internal static readonly List<NoticeLine> NoticeLines = new List<NoticeLine>();
-
-        /// <summary>Shows a short feedback line (errors in red, confirmations in gold) near the top of the screen.</summary>
+        /// <summary>
+        /// Shows a short feedback line — errors in red, confirmations in gold — in the game's single toast lane
+        /// (GameFlow.Toast(text, colour) → the HUD's ToastsHud/ToastLaneHud, drawn above windows and menus).
+        /// </summary>
         public static void Notice(string text, bool error = true)
         {
             if (string.IsNullOrEmpty(text)) return;
-            for (int i = NoticeLines.Count - 1; i >= 0; i--)
-                if (NoticeLines[i].Text == text) NoticeLines.RemoveAt(i);
-            NoticeLines.Add(new NoticeLine { Text = text, Color = error ? Ui.Hex("#ff8a7a") : Ui.Hex("#ffe08a"), Born = Time.unscaledTime });
-            while (NoticeLines.Count > 3) NoticeLines.RemoveAt(0);
+            var f = GameFlow.Instance;
+            if (f != null) f.Toast(text, error ? NoticeError : NoticeGood);
+            else Debug.Log("[Lanternvale] " + text);
             if (error) Ui.Sfx?.Invoke("ui_close");
         }
 
@@ -225,6 +221,23 @@ namespace Lanternvale.Game.Panels
         }
 
         public static Vector2 Mouse => Event.current != null ? Event.current.mousePosition : Nowhere;
+
+        /// <summary>
+        /// The real cursor in the current GUI space, also while a covering screen (BeginLayer) or a scroll viewport
+        /// (BeginScroll) hides it. For drags that already own the mouse (slider knobs, scrollbar thumbs) and must keep
+        /// following it when it leaves the viewport or crosses another window; never use it to start a click or a hover.
+        /// </summary>
+        public static Vector2 RealMouse
+        {
+            get
+            {
+                var e = Event.current;
+                if (e == null) return Nowhere;
+                if (hideDepth > 0 && hideFrame == Time.frameCount) return GUIUtility.ScreenToGUIPoint(hiddenScreenPos);
+                return e.mousePosition;
+            }
+        }
+
         public static bool Hover(Rect r) => Event.current != null && r.Contains(Event.current.mousePosition);
         public static bool IsRepaint => Event.current != null && Event.current.type == EventType.Repaint;
 
@@ -491,19 +504,12 @@ namespace Lanternvale.Game.Panels
         }
 
         /// <summary>
-        /// Button for use INSIDE scroll views: like Ui.Btn but without registering a world-click blocker (GameInput's
-        /// blocker conversion ignores the scroll clip, and the window panel already blocks the world).
+        /// Button (also inside scroll views): Ui.Btn. GameInput.BlockRectGui converts through GUIUtility.GUIToScreenPoint
+        /// and is cut to the scroll viewport (BeginScroll registers it as a block clip), so the blocker lands where the
+        /// button is on screen and rows scrolled out of sight block nothing.
         /// </summary>
-        public static bool Btn(Rect r, string text, GUIStyle style = null, bool enabled = true, string tip = null)
-        {
-            var old = GUI.enabled;
-            GUI.enabled = enabled && old;
-            bool clicked = GUI.Button(r, text, style ?? Ui.Button);
-            GUI.enabled = old;
-            if (tip != null) Ui.TooltipFor(r, tip);
-            if (clicked) Ui.Sfx?.Invoke("ui_click");
-            return clicked;
-        }
+        public static bool Btn(Rect r, string text, GUIStyle style = null, bool enabled = true, string tip = null) =>
+            Ui.Btn(r, text, style, enabled, tip);
 
         /// <summary>Small inline button with a tooltip and a disabled reason.</summary>
         public static bool SmallBtn(Rect r, string text, bool enabled = true, string tip = null, GUIStyle style = null) =>
@@ -551,6 +557,7 @@ namespace Lanternvale.Game.Panels
             st.Hide = new MouseHide();
             var e = Event.current;
             bool outside = e != null && !r.Contains(e.mousePosition) && !st.Dragging;
+            GameInput.BeginBlockClip(r);   // world-click blockers of the rows are cut to the viewport
             st.Pos = GUI.BeginScrollView(r, st.Pos, new Rect(0f, 0f, w, Mathf.Max(st.ContentHeight, r.height)), false, false, GUIStyle.none, GUIStyle.none);
             Rehide();
             if (outside) HideMouse(ref st.Hide);
@@ -563,6 +570,7 @@ namespace Lanternvale.Game.Panels
             // Event.mousePosition from the real cursor: a list in a window covered by another one would scroll and eat
             // the wheel meant for the window on top. So the wheel is handled here, after the layer's hide is re-applied.
             GUI.EndScrollView(false);
+            GameInput.EndBlockClip();
             Rehide();
             RestoreMouse(st.Hide);
             st.Hide = new MouseHide();
@@ -614,7 +622,9 @@ namespace Lanternvale.Game.Panels
                 case EventType.MouseDrag:
                     if (st.Dragging && GUIUtility.hotControl == st.DragId)
                     {
-                        DragTo(st, track, thumbH, e.mousePosition.y);
+                        // the real cursor: a window above this one hides the mouse from the layer (Nowhere would jump
+                        // the list to the top while the drag crosses that window)
+                        DragTo(st, track, thumbH, RealMouse.y);
                         e.Use();
                     }
                     break;

@@ -1,6 +1,7 @@
 // Game over (Session.Mode == GameOver, Order 340, modal): the battlefield fades to dusk, "The lanterns dim…", embers
 // drift down; Load last save / Load… (slot list) / Main Menu.
-// Level-up card (LevelUp events, Order 160): who reached which level, health/mana gained, talent points, new ranks at
+// Level-up card (LevelUp events, Order 160; the detailed half of the level-up — the HUD's banner only says "Level N"
+// and who): who reached which level, health/mana gained, talent points, new ranks at
 // the trainer (or learned for free by companions); merges simultaneous level-ups, dismissable, fades after a while.
 using System;
 using System.Collections.Generic;
@@ -265,6 +266,13 @@ namespace Lanternvale.Game.Panels
             return sb.ToString();
         }
 
+        float CardHeight(int shown, float w)
+        {
+            float h = 82f + 56f;
+            for (int i = 0; i < shown; i++) h += Mathf.Max(64f, PanelKit.TextHeight(entries[i].Text, PanelKit.TextSmall, w - 120f) + 12f) + 8f;
+            return h;
+        }
+
         static string Join(List<string> l)
         {
             if (l.Count <= 4) return string.Join(", ", l);
@@ -287,14 +295,14 @@ namespace Lanternvale.Game.Panels
                 float t = Time.unscaledTime - shownAt;
                 float a = Mathf.Clamp01(t / 0.3f) * (hovered ? 1f : Mathf.Clamp01((Life - t) / 0.8f));
                 const float w = 500f;
-                float h = 82f;
-                var heights = 0f;
                 int shown = Mathf.Min(entries.Count, 4);
-                for (int i = 0; i < shown; i++) heights += Mathf.Max(64f, PanelKit.TextHeight(entries[i].Text, PanelKit.TextSmall, w - 120f) + 12f) + 8f;
-                h += heights + 56f;
-                // bottom right: free of the HUD (party frames left, tracker top right, toasts and banners top centre)
+                // bottom right, apart from the HUD's short "Level N" banner and the toast lane (top centre): the card never
+                // rises above the lower 62 % of the screen — with many entries (or a large interface size) it shows fewer
+                float top = Ui.Height * 0.38f;
+                float h = CardHeight(shown, w);
+                while (shown > 1 && Ui.Height - h - 120f < top) h = CardHeight(--shown, w);
                 float slide = (1f - Mathf.Clamp01(t / 0.3f)) * 30f;
-                var r = new Rect(Ui.Width - w - 26f + slide, Ui.Height - h - 120f, w, h);
+                var r = new Rect(Ui.Width - w - 26f + slide, Mathf.Max(8f, Ui.Height - h - 120f), w, h);
                 // a victory opens the loot window at the same moment (Order 150, below this card): move left of it so
                 // its item rows and Close button stay reachable
                 if (LootScreen.TryGetWindowRect(out var loot) && r.Overlaps(loot))

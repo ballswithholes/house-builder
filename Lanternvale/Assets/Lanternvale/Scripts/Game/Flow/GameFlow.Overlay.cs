@@ -176,7 +176,7 @@ namespace Lanternvale.Game
                 barkStyle = new GUIStyle(Ui.LabelSmall) { alignment = TextAnchor.MiddleCenter, wordWrap = true, fontStyle = FontStyle.Italic };
                 barkStyle.normal.textColor = Ui.TextLight;
             }
-            float scale = Mathf.Max(0.5f, Screen.height / Ui.RefHeight);
+            float scale = Ui.ComputeScale();   // the bubbles follow the interface size setting like every other screen
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             for (int i = 0; i < barks.Count; i++)
             {

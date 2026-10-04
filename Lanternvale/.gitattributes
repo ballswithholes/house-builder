@@ -1,0 +1,4 @@
+# Keep shell and Python tools LF-only in every checkout (Git for Windows defaults to core.autocrlf=true),
+# so Tools/check.sh and the generators also run from WSL on a Windows clone.
+*.sh text eol=lf
+*.py text eol=lf

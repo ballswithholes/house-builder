@@ -2,7 +2,9 @@
 //  * combat: small health bars over enemies (level/rank, name when hovered/targeted/elite, telegraphed cast bar),
 //    a slim bar over hovered allies, the framed target outlined;
 //  * exploration: GameFlow.HoveredLabel near HoveredLabelWorld coloured by HoveredKind with an interaction prompt
-//    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover.
+//    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover. Encounter enemies get a
+//    plate from Session.PreviewEncounter (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the
+//    level the battle will scale it to; "??" for bosses), elite/rare winged mark or boss skull, and the group size.
 // Anchors: UnitView.NameplatePosition → CameraRig.WorldToGui / Ui.Scale.
 // Combat plates read health/death as presented (HudPresented): a plate stays until the death is shown.
 using System;
@@ -117,8 +119,7 @@ namespace Lanternvale.Game
             {
                 var cr = new Rect(bar.x, bar.yMax + 3f, bar.width, 7f);
                 var col = Hud.SchoolCol(pend.Ability.school);
-                float total = Hud.PendingTotal(pend);
-                HudDraw.Bar(cr, Mathf.Max(0.05f, 1f - Mathf.Clamp01(pend.RemainingTime / total)), col, 0.85f);
+                HudDraw.Bar(cr, Mathf.Max(0.05f, Hud.PendingProgress(pend)), col, 0.85f);
                 HudDraw.Ring(new Rect(cr.x - 1f, cr.y - 1f, cr.width + 2f, cr.height + 2f), new Color(col.r, col.g, col.b, HudDraw.Pulse(7f, 0.4f, 1f)), 3);
                 HudDraw.Text(new Rect(p.x - 110f, cr.yMax, 220f, 18f), pend.Ability.name, HudStyles.TinyCenter, Color.Lerp(col, Color.white, 0.4f));
             }
@@ -166,6 +167,7 @@ namespace Lanternvale.Game
                 case HoverKind.Enemy:
                     col = Hud.C("#ff9a88");
                     prompt = OpenerPrompt(f);
+                    if (f.HoveredUnit == null && f.HoveredEnemy != null) { DrawEnemyPreview(pos, f, prompt); return; }
                     if (f.HoveredUnit != null && string.IsNullOrEmpty(label)) label = Hud.NameOf(f.HoveredUnit);
                     break;
                 case HoverKind.Object:
@@ -185,6 +187,102 @@ namespace Lanternvale.Game
             HudDraw.Fill(r, new Color(0.09f, 0.07f, 0.15f, 0.78f), 8);
             HudDraw.Ring(r, new Color(col.r, col.g, col.b, 0.55f), 8);
             HudDraw.Text(r, label, HudStyles.Center, col);
+            if (pw > 0f)
+            {
+                var pr = new Rect(Mathf.Round(r.center.x - pw * 0.5f), r.yMax + 2f, pw, 20f);
+                HudDraw.Fill(pr, new Color(0.09f, 0.07f, 0.15f, 0.62f), 8);
+                HudDraw.Glyph(new Rect(pr.x + 6f, pr.y + 3f, 14f, 14f), "glyph_hand", new Color(1f, 1f, 1f, 0.8f));
+                HudDraw.Text(new Rect(pr.x + 20f, pr.y, pr.width - 24f, pr.height), prompt, HudStyles.SmallCenter, Hud.Muted);
+            }
+        }
+
+        // ---------------------------------------------------------------- exploration enemy plate (PreviewEncounter)
+
+        Lanternvale.Session.EncounterEnemyPreview plateFor;
+        IReadOnlyList<Lanternvale.Session.EncounterEnemyPreview> plateGroup;
+        int plateParty = -1;
+        string plateName = "", plateLevel = "", plateGroupText = "", plateMark;
+        Color plateLevelCol, plateMarkCol;
+
+        void BuildEnemyPlate(Lanternvale.Session.EncounterEnemyPreview p, IReadOnlyList<Lanternvale.Session.EncounterEnemyPreview> group, int party)
+        {
+            plateFor = p;
+            plateGroup = group;
+            plateParty = party;
+            plateName = p.Name ?? "";
+            int lo = p.MinLevel > 0 ? p.MinLevel : p.Level, hi = Mathf.Max(lo, p.MaxLevel > 0 ? p.MaxLevel : p.Level);
+            bool boss = p.Rank == CreatureRank.Boss;
+            bool elite = p.Rank == CreatureRank.Elite || p.Rank == CreatureRank.Rare;
+            // WoW: a boss (or anything 10+ levels above you) shows "??" with a skull; elites add "+"
+            if (boss || hi - party >= 10) plateLevel = "??";
+            else plateLevel = (lo == hi ? HudText.Int(lo) : HudText.Int(lo) + "-" + HudText.Int(hi)) + (elite ? "+" : "");
+            plateLevelCol = boss || hi - party >= 10 ? Hud.C("#ff4a3a") : LevelColor(hi - party);
+            plateMark = boss ? "glyph_skull" : elite ? "glyph_wings" : null;
+            plateMarkCol = boss ? Hud.C("#ff8a7a") : p.Rank == CreatureRank.Rare ? Hud.C("#d9e0ea") : Ui.Gold;
+            plateGroupText = "";
+            if (group != null && group.Count > 1)
+            {
+                bool same = true;
+                CreatureRank top = CreatureRank.Normal;
+                for (int i = 0; i < group.Count; i++)
+                {
+                    if (group[i].CreatureId != p.CreatureId) same = false;
+                    if (Danger(group[i].Rank) > Danger(top)) top = group[i].Rank;
+                }
+                plateGroupText = same ? "pack of " + group.Count : "group of " + group.Count;
+                if (!same && Danger(top) > Danger(p.Rank)) plateGroupText += " · " + Hud.RankName(top);
+            }
+            if (p.Passive) plateGroupText = plateGroupText.Length > 0 ? plateGroupText + " · passive" : "passive";
+        }
+
+        static int Danger(CreatureRank r) => r == CreatureRank.Boss ? 3 : r == CreatureRank.Elite ? 2 : r == CreatureRank.Rare ? 1 : 0;
+
+        /// <summary>WoW level colours (target frame thresholds): red ≥ +5, orange ≥ +3, yellow ≥ -2, green ≥ -7, grey.</summary>
+        static Color LevelColor(int diff)
+        {
+            if (diff >= 5) return Hud.C("#ff4a3a");
+            if (diff >= 3) return Hud.C("#ff8a3a");
+            if (diff >= -2) return Hud.C("#ffe14a");
+            if (diff >= -7) return Hud.C("#5ee05e");
+            return Hud.C("#9d9d9d");
+        }
+
+        void DrawEnemyPreview(Vector2 pos, GameFlow f, string prompt)
+        {
+            var p = f.HoveredEnemy;
+            var group = f.HoveredEncounter;
+            int party = f.Session != null ? f.Session.PartyLevel : 1;
+            if (!ReferenceEquals(p, plateFor) || !ReferenceEquals(group, plateGroup) || party != plateParty) BuildEnemyPlate(p, group, party);
+            var col = Hud.C("#ff9a88");
+            float nameW = Measure(plateName, HudStyles.Label18);
+            float levelW = Measure(plateLevel, HudStyles.TinyCenter) + 14f;
+            float markW = plateMark != null ? 24f : 0f;
+            float w = Mathf.Max(nameW + levelW + markW + 34f, plateGroupText.Length > 0 ? Measure(plateGroupText, HudStyles.Small) + 26f : 0f);
+            float pw = string.IsNullOrEmpty(prompt) ? 0f : Measure(prompt, HudStyles.Small) + 34f;
+            float total = Mathf.Max(w, pw);
+            float h = plateGroupText.Length > 0 ? 46f : 28f;
+            var r = new Rect(Mathf.Round(pos.x - total * 0.5f), Mathf.Round(pos.y - 34f - (h - 28f) - (pw > 0f ? 20f : 0f)), total, h);
+            r.x = Mathf.Clamp(r.x, 6f, Ui.Width - r.width - 6f);
+            r.y = Mathf.Clamp(r.y, 6f, Ui.Height - 80f);
+            HudDraw.Fill(r, new Color(0.09f, 0.07f, 0.15f, 0.8f), 8);
+            HudDraw.Ring(r, new Color(col.r, col.g, col.b, 0.55f), 8);
+            if (plateMark != null) HudDraw.Ring(new Rect(r.x - 1f, r.y - 1f, r.width + 2f, r.height + 2f), new Color(plateMarkCol.r, plateMarkCol.g, plateMarkCol.b, 0.5f), 8);
+            // row 1: [mark] name [level]
+            float x = r.x + 12f;
+            float rowY = r.y;
+            if (plateMark != null)
+            {
+                HudDraw.Glyph(new Rect(x, rowY + 5f, 18f, 18f), plateMark, plateMarkCol);
+                x += markW;
+            }
+            HudDraw.Text(new Rect(x, rowY, nameW + 4f, 28f), plateName, HudStyles.Label18, col);
+            var lb = new Rect(r.xMax - 10f - levelW, rowY + 5f, levelW, 18f);
+            HudDraw.Fill(lb, new Color(0.04f, 0.03f, 0.08f, 0.9f), 5);
+            HudDraw.Ring(lb, new Color(plateLevelCol.r, plateLevelCol.g, plateLevelCol.b, 0.8f), 5);
+            HudDraw.Text(lb, plateLevel, HudStyles.TinyCenter, plateLevelCol, false);
+            // row 2: group
+            if (plateGroupText.Length > 0)
+                HudDraw.Text(new Rect(r.x + 12f, rowY + 25f, r.width - 24f, 18f), plateGroupText, HudStyles.Small, Hud.Muted);
             if (pw > 0f)
             {
                 var pr = new Rect(Mathf.Round(r.center.x - pw * 0.5f), r.yMax + 2f, pw, 20f);

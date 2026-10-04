@@ -99,6 +99,10 @@ namespace Lanternvale.Game
                 case SessionEventKind.PartyHealed:
                     OnPartyHealed();
                     break;
+                case SessionEventKind.FlagsChanged:
+                    // at most once per Tick / dialogue step; exploration rebuilds now, dialogue/combat when they end
+                    RefreshWorldIfFlagsChanged();
+                    break;
             }
         }
 
@@ -140,7 +144,9 @@ namespace Lanternvale.Game
             DayNight.Paused = true;
             DayNight.WorldHour = s.GameHour;
             map.DayNight.MarkDirty();
-            worldRefreshTimer = 1f;
+            // MapView.Build and SpawnWorldViews used the current flags
+            worldFlagsVersion = s.FlagsVersion;
+            worldFlagsSession = s;
             stealthSyncTimer = 0f;
             BeginFadeIn(0.8f);
             // a dialogue may already be running (opening scene, loads never are): frame it right away
@@ -195,10 +201,7 @@ namespace Lanternvale.Game
             zoomBeforeDialogue = -1f;
             // flags may have changed (recruits, quests, peaceful encounters): refresh the world
             if (Session != null && !battlePresenting && Session.Battle == null && MapView.Current != null)
-            {
-                MapView.Current.RefreshFlags(Session.Flags.Test);
-                SyncWorldViews();
-            }
+                RefreshWorldFromFlags();
         }
 
         /// <summary>Keeps the camera between the leader and the current speaker; the two face each other.</summary>
@@ -290,11 +293,12 @@ namespace Lanternvale.Game
             if (levelFxFrame.TryGetValue(u, out var f) && f == frame) return;
             levelFxFrame[u] = frame;
             if (levelFxFrame.Count > 32) levelFxFrame.Clear();
+            // the world gets the celebration (chime, golden sparkles, ring); the words are the HUD's short banner and the
+            // panels' level-up card — no floating "Level N!" on top of them
             Sfx.Play("level_up", v.FeetPosition);
             FxSystem.Sparkles(v.CenterPosition, LevelGold, 26);
             FxSystem.AuraPulse(v.FeetPosition, 1.8f, new Color(LevelGold.r, LevelGold.g, LevelGold.b, 0.9f));
             FxSystem.HealSparkles(v.FeetPosition, v.Height);
-            FloatingText.Spawn(v.HeadPosition + new Vector2(0f, 0.25f), level > 0 ? "Level " + level + "!" : "Level up!", LevelGold, 1.15f, true);
         }
 
         void OnApprovalChanged(SessionEvent e)

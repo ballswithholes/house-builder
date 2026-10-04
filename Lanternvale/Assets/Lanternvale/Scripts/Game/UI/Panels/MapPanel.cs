@@ -21,7 +21,8 @@ namespace Lanternvale.Game.Panels
         int groundVersion = -1;
         readonly List<MapNpcDef> npcs = new List<MapNpcDef>();
         readonly List<EncounterDef> encounters = new List<EncounterDef>();
-        float listsAt;
+        int listsFlags = -1, lastDrawFrame = -10;
+        GameSession listsSession;
         string titleSub = "";
         string titleFor = "";
 
@@ -78,9 +79,14 @@ namespace Lanternvale.Game.Panels
             var def = s.MapDef;
             if (def == null) { Close(); return; }
             EnsureGround(s);
-            if (Time.unscaledTime >= listsAt || titleFor != def.id)
+            // NPCs and encounters depend on story flags: rebuild when the map, the session or its FlagsVersion changed, or
+            // when the window was (re)opened — no polling
+            bool reopened = lastDrawFrame < Time.frameCount - 1;
+            lastDrawFrame = Time.frameCount;
+            if (reopened || titleFor != def.id || listsSession != s || listsFlags != s.FlagsVersion)
             {
-                listsAt = Time.unscaledTime + 1f;
+                listsSession = s;
+                listsFlags = s.FlagsVersion;
                 npcs.Clear();
                 encounters.Clear();
                 try { npcs.AddRange(s.VisibleNpcs()); encounters.AddRange(s.VisibleEncounters()); }

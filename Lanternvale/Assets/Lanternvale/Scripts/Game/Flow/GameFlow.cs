@@ -229,7 +229,11 @@ namespace Lanternvale.Game
         public bool WorldInputEnabled { get; set; } = true;
 
         /// <summary>Use an ability outside combat (field buffs, heals, Conjure, Call Pet…). Returns null or a reason.</summary>
-        public string UseAbilityOutOfCombat(Unit caster, string abilityId, Unit target = null) => UseAbilityInField(caster, abilityId, target);
+        public string UseAbilityOutOfCombat(Unit caster, string abilityId, Unit target = null) => UseAbilityInField(caster, abilityId, target, 0);
+
+        /// <summary>UseAbilityOutOfCombat at a specific rank (WoW downranking): 0 = the highest known rank, 1..known = that
+        /// rank. Openers armed this way start the fight with the highest rank (the session's opener takes no rank).</summary>
+        public string UseAbilityOutOfCombat(Unit caster, string abilityId, Unit target, int rank) => UseAbilityInField(caster, abilityId, target, rank);
 
         /// <summary>Use an item outside combat (food, potions, scrolls). Returns null or a reason.</summary>
         public string UseItemOutOfCombat(Unit user, ItemInstance item, Unit target = null) => UseItemInField(user, item, target);
@@ -260,13 +264,32 @@ namespace Lanternvale.Game
             if (v != null) v.SetSelected(true);
         }
 
-        /// <summary>Raises a toast for the UI without going through the session (flow-local messages): relayed through
-        /// SessionEventRaised as a SessionEventKind.Toast, so it lands in the HUD's toast lane like every other toast.</summary>
-        public void Toast(string text)
+        /// <summary>
+        /// Raises a toast without going through the session (flow messages, panel notices — the single toast lane): relayed
+        /// through SessionEventRaised as a SessionEventKind.Toast, so it lands in the HUD's toast lane like every other toast.
+        /// color: accent/text colour (e.g. red for a refused command, gold for a confirmation); null = the default info look.
+        /// The colour of the toast being relayed is available to handlers through ToastColorOf(e).
+        /// </summary>
+        public void Toast(string text, Color? color = null)
         {
             if (string.IsNullOrEmpty(text)) return;
-            Relay(new SessionEvent { Kind = SessionEventKind.Toast, Text = text });
+            var e = new SessionEvent { Kind = SessionEventKind.Toast, Text = text };
+            relayingToast = e;
+            relayingToastColor = color;
+            try { Relay(e); }
+            finally
+            {
+                relayingToast = null;
+                relayingToastColor = null;
+            }
         }
+
+        SessionEvent relayingToast;
+        Color? relayingToastColor;
+
+        /// <summary>The colour passed to Toast(text, color) for the toast event being relayed right now (null for session
+        /// toasts and colourless flow toasts). Valid only inside a SessionEventRaised handler.</summary>
+        public Color? ToastColorOf(SessionEvent e) => e != null && ReferenceEquals(e, relayingToast) ? relayingToastColor : null;
 
         void Relay(SessionEvent e)
         {

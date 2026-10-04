@@ -122,11 +122,45 @@ namespace Lanternvale.Game
         public static float Width => Screen.width / Scale;
         public static float Height => Screen.height / Scale;
 
+        // ---------------------------------------------------------------- user scale (Settings ▸ Interface size)
+        public const float MinUserScale = 0.75f, MaxUserScale = 1.5f;
+        const string UserScaleKey = "lv_ui_scale";
+        static float userScale = -1f;   // -1 = not loaded from PlayerPrefs yet
+
+        /// <summary>
+        /// The player's interface size multiplier on top of the 1080p reference scale (Settings slider), clamped to
+        /// 0.75–1.5 and remembered in PlayerPrefs ("lv_ui_scale"). Applied by BeginFrame: Scale = max(0.5, height / 1080) ×
+        /// UserScale, so every screen (HUD, panels, nameplates, barks) grows or shrinks together.
+        /// </summary>
+        public static float UserScale
+        {
+            get
+            {
+                if (userScale < 0f)
+                {
+                    try { userScale = Mathf.Clamp(PlayerPrefs.GetFloat(UserScaleKey, 1f), MinUserScale, MaxUserScale); }
+                    catch (System.Exception) { userScale = 1f; }
+                }
+                return userScale;
+            }
+            set
+            {
+                float v = float.IsNaN(value) || float.IsInfinity(value) ? 1f : Mathf.Clamp(value, MinUserScale, MaxUserScale);
+                if (userScale >= 0f && Mathf.Abs(v - userScale) < 0.0005f) return;
+                userScale = v;
+                try { PlayerPrefs.SetFloat(UserScaleKey, v); PlayerPrefs.Save(); }
+                catch (System.Exception) { }
+            }
+        }
+
+        /// <summary>The GUI scale BeginFrame applies (reference scale × UserScale), for IMGUI drawn outside UiRoot (barks).</summary>
+        public static float ComputeScale() => Mathf.Max(0.5f, Screen.height / RefHeight) * UserScale;
+
         /// <summary>Call at the start of every OnGUI. Sets scaling and builds styles on first use.</summary>
         public static void BeginFrame()
         {
             Build();
-            Scale = Mathf.Max(0.5f, Screen.height / RefHeight);
+            Scale = ComputeScale();
             GUI.matrix = Matrix4x4.Scale(new Vector3(Scale, Scale, 1f));
             GUI.skin.settings.cursorColor = Ink;
             if (Event.current.type == EventType.Repaint) tooltip = pendingTooltip = null;

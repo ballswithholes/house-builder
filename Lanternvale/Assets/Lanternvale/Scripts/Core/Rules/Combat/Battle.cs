@@ -81,6 +81,7 @@ namespace Lanternvale.Rules
         {
             if (u == null || Units.Contains(u)) return;
             Units.Add(u);
+            if (InCombat && !Started) u.Engaged = false;   // a new fight: nobody has fought in it yet (Charge, Sap-like openers)
             if (!Meters.ContainsKey(u)) Meters[u] = new UnitMeters();
             if (u.IsAlive) Pathfinder?.SetUnit(u.Id, u.Position, u.Radius);
             if (Started && InCombat)
@@ -95,6 +96,37 @@ namespace Lanternvale.Rules
         }
 
         public void AddUnits(IEnumerable<Unit> units) { foreach (var u in units) AddUnit(u); }
+
+        // ---- reusable snapshot lists: the exploration context ticks every frame, so the loops that must survive their
+        // collection changing iterate a rented copy instead of a new list. Each call rents its own (nested calls are safe).
+        readonly Stack<List<Unit>> unitListPool = new Stack<List<Unit>>();
+        readonly Stack<List<AuraInstance>> auraListPool = new Stack<List<AuraInstance>>();
+
+        internal List<Unit> RentUnitList(List<Unit> copyOf)
+        {
+            var l = unitListPool.Count > 0 ? unitListPool.Pop() : new List<Unit>();
+            l.AddRange(copyOf);
+            return l;
+        }
+
+        internal void ReturnUnitList(List<Unit> l)
+        {
+            l.Clear();
+            unitListPool.Push(l);
+        }
+
+        internal List<AuraInstance> RentAuraList(List<AuraInstance> copyOf)
+        {
+            var l = auraListPool.Count > 0 ? auraListPool.Pop() : new List<AuraInstance>();
+            l.AddRange(copyOf);
+            return l;
+        }
+
+        internal void ReturnAuraList(List<AuraInstance> l)
+        {
+            l.Clear();
+            auraListPool.Push(l);
+        }
 
         /// <summary>Removes a unit from the battle without killing it (despawn/dismiss).</summary>
         public void RemoveUnit(Unit u, string reason = "despawn")
@@ -161,9 +193,21 @@ namespace Lanternvale.Rules
         public List<CombatEvent> TakeEvents(ref int cursor)
         {
             var list = new List<CombatEvent>();
-            for (int i = Math.Max(0, cursor); i < Events.Count; i++) list.Add(Events[i]);
-            cursor = Events.Count;
+            TakeEvents(ref cursor, list);
             return list;
+        }
+
+        /// <summary>
+        /// Appends the events added since <paramref name="cursor"/> to <paramref name="into"/> (not cleared first) and advances
+        /// the cursor; no allocation when the list has capacity. Returns how many were appended.
+        /// </summary>
+        public int TakeEvents(ref int cursor, List<CombatEvent> into)
+        {
+            int start = Math.Max(0, cursor), n = 0;
+            if (into != null)
+                for (int i = start; i < Events.Count; i++) { into.Add(Events[i]); n++; }
+            cursor = Events.Count;
+            return n;
         }
 
         public void Log(string text, Unit source = null)

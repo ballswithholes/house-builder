@@ -7,6 +7,9 @@
 // for stances/aspects/auto attack/queued swings/targeting/armed openers. A consumables strip (potions, food,
 // bandages from the party bags) sits to its left. Clicks/hotkeys → Combat.BeginAbility/BeginItem in combat,
 // GameFlow.UseAbilityOutOfCombat/UseItemOutOfCombat in the field (ally spells first ask for a party member).
+// Statuses are fetched without tooltips (GetAbilityBar(.., includeTooltips: false)); a slot's tooltip is built on hover.
+// Ranks pinned in the Spellbook (RankPins, WoW downranking) are cast at that rank and show an "R3" badge; enemy abilities
+// out of range of the unit's attack target get a red tint (AbilityStatus.InRangeOfAttackTarget).
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -38,6 +41,8 @@ namespace Lanternvale.Game
             public bool Shard;          // consumes a Soul Shard (bag count shown in the corner)
             public float CdMax;
             public string Tip;
+            public int Rank;            // pinned rank cast by this slot (0 = the highest known rank)
+            public string RankLabel = "";
         }
 
         sealed class ItemSlot
@@ -64,6 +69,7 @@ namespace Lanternvale.Game
         AbilityDef lastTargeting;
         string lastOpener = "";
         int lastBagSig;
+        int lastPins = -1, lastQueue = -1;
         bool forceRefresh;
 
         readonly Dictionary<string, AbilityStatus> byId = new Dictionary<string, AbilityStatus>();
@@ -156,9 +162,12 @@ namespace Lanternvale.Game
             var targeting = c != null ? c.TargetingAbility : null;
             string opener = Hud.Flow != null ? Hud.Flow.PendingOpener ?? "" : "";
             int bagSig = BagSignature();
+            int pins = RankPins.Version, queueV = c != null ? c.QueueVersion : -1;
             bool dirty = forceRefresh || unit != lastUnit || events != lastEvents || playerTurn != lastPlayerTurn || targeting != lastTargeting ||
-                         opener != lastOpener || bagSig != lastBagSig || refreshTimer <= 0f;
+                         opener != lastOpener || bagSig != lastBagSig || pins != lastPins || queueV != lastQueue || refreshTimer <= 0f;
             if (!dirty) return;
+            lastPins = pins;
+            lastQueue = queueV;
             if (unit != lastUnit) cdMax.Clear();
             forceRefresh = false;
             lastUnit = unit;
@@ -200,14 +209,15 @@ namespace Lanternvale.Game
                 if (bar[i] != null && bar[i].Ability != null && !byId.ContainsKey(bar[i].Ability.id)) byId[bar[i].Ability.id] = bar[i];
 
             slots.Clear();
+            var ctx = ContextOf(s, unit);
             if (saved != null)
                 for (int i = 0; i < saved.Count; i++)
-                    if (byId.TryGetValue(saved[i], out var st) && used.Add(saved[i])) slots.Add(MakeSlot(st));
+                    if (byId.TryGetValue(saved[i], out var st) && used.Add(saved[i])) slots.Add(MakeSlot(Ranked(ctx, st)));
             for (int i = 0; i < bar.Count; i++)
             {
                 var st = bar[i];
                 if (st == null || st.Ability == null || !used.Add(st.Ability.id)) continue;
-                slots.Add(MakeSlot(st));
+                slots.Add(MakeSlot(Ranked(ctx, st)));
             }
             pageCount = Mathf.Max(1, (slots.Count + HudLayout.SlotsPerPage - 1) / HudLayout.SlotsPerPage);
             savedPages.TryGetValue(orderKey, out page);
@@ -231,20 +241,40 @@ namespace Lanternvale.Game
         /// </summary>
         static List<AbilityStatus> FetchBar(GameSession s, Unit u)
         {
-            if (u == null || u.Class != null || u.Kind == UnitKind.Totem) return s.GetAbilityBar(u);
+            // refreshed often: no description text (Tooltip = ""), the slot builds its tooltip on hover
+            if (u == null || u.Class != null || u.Kind == UnitKind.Totem) return s.GetAbilityBar(u, false);
             Battle ctx = s.Battle;
             if (ctx == null)
             {
                 if (s.Field == null)
                 {
-                    var plain = s.GetAbilityBar(u);   // lets the session build its field context first
+                    var plain = s.GetAbilityBar(u, false);   // lets the session build its field context first
                     if (s.Field == null) return plain;
                 }
                 ctx = s.Field;
             }
             // only units on our side (an inspected enemy keeps the plain bar, so its kit is not spelled out)
-            if (ctx == null || !ctx.Units.Contains(u) || u.Team != ctx.PlayerTeam) return s.GetAbilityBar(u);
-            return ctx.GetAbilityBar(u, true);
+            if (ctx == null || !ctx.Units.Contains(u) || u.Team != ctx.PlayerTeam) return s.GetAbilityBar(u, false);
+            return ctx.GetAbilityBar(u, true, false);
+        }
+
+        /// <summary>The rules context the unit's bar comes from (the battle in combat, the field outside), or null.</summary>
+        static Battle ContextOf(GameSession s, Unit u)
+        {
+            if (s == null || u == null) return null;
+            var b = s.Battle;
+            if (b != null) return b.Units.Contains(u) ? b : null;
+            var f = s.Field;
+            return f != null && f.Units.Contains(u) ? f : null;
+        }
+
+        /// <summary>The status at the unit's pinned rank (RankPins), or the highest-rank status the bar returned.</summary>
+        AbilityStatus Ranked(Battle ctx, AbilityStatus st)
+        {
+            int rank = RankPins.RankFor(unit, st.Ability);
+            if (rank <= 0 || ctx == null) return st;
+            try { return ctx.GetStatus(unit, st.Ability, false, rank, false) ?? st; }
+            catch (Exception e) { Hud.LogOnce("bar-rank", "GetStatus at a pinned rank failed: " + e.Message); return st; }
         }
 
         int IndexOfAbility(string id)
@@ -258,6 +288,12 @@ namespace Lanternvale.Game
         Slot MakeSlot(AbilityStatus st)
         {
             var sl = new Slot { St = st, A = st.Ability, Shard = Hud.UsesSoulShard(st.Ability) };
+            // a status built at a lower rank than the highest known one = a pinned rank (Ranked above)
+            if (st.Rank > 0 && st.KnownRanks > 1 && st.Rank < st.KnownRanks)
+            {
+                sl.Rank = st.Rank;
+                sl.RankLabel = RankBadge(st.Rank);
+            }
             if (st.Cost > 0.5f && st.CostType != ResourceType.None)
             {
                 sl.Cost = HudText.Int(Mathf.RoundToInt(st.Cost));
@@ -347,14 +383,14 @@ namespace Lanternvale.Game
                 if (inspect) { Hud.Error(Hud.NameOf(unit) + " must wait for their turn."); return; }
                 var c = Hud.Combat;
                 if (c == null) return;
-                var why = c.BeginAbility(a.id);   // failures arrive through Combat.LastError (red error lane)
+                var why = c.BeginAbility(a.id, sl.Rank);   // failures arrive through Combat.LastError (red error lane)
                 // right-click = self-cast (WoW): a friendly spell that entered targeting mode is confirmed on the caster
                 if (selfCast && why == null && c.IsTargeting && c.TargetingItem == null && c.TargetingAbility != null &&
                     c.TargetingAbility.id == a.id && SelfCastable(a.target))
                     c.TargetUnit(unit);
                 return;
             }
-            UseInFieldWithPick(a, null, a.target, selfCast);
+            UseInFieldWithPick(a, null, a.target, selfCast, sl.Rank);
         }
 
         void ActivateItem(ItemSlot it, bool selfCast)
@@ -377,7 +413,7 @@ namespace Lanternvale.Game
         /// <summary>Target types a right-click may confirm on the caster (friendly spells; hostile ones keep targeting).</summary>
         static bool SelfCastable(TargetType t) => t == TargetType.Ally || t == TargetType.Any;
 
-        void UseInFieldWithPick(AbilityDef a, ItemInstance item, TargetType target, bool selfCast)
+        void UseInFieldWithPick(AbilityDef a, ItemInstance item, TargetType target, bool selfCast, int rank = 0)
         {
             var pick = Hud.FieldPick;
             bool samePick = pick != null && pick.Caster == unit && pick.Ability == a && pick.Item == item;
@@ -385,7 +421,7 @@ namespace Lanternvale.Game
             {
                 Hud.FieldPick = null;
                 if (target == TargetType.AllyOther) { Hud.Error("Choose another party member."); return; }
-                Hud.UseInField(unit, a, item, target == TargetType.DeadAlly ? null : unit);
+                Hud.UseInField(unit, a, item, target == TargetType.DeadAlly ? null : unit, rank);
                 return;
             }
             bool allyish = target == TargetType.Ally || target == TargetType.AllyOther || target == TargetType.DeadAlly || target == TargetType.Any;
@@ -396,13 +432,13 @@ namespace Lanternvale.Game
                 if (target == TargetType.AllyOther && candidates == 0) { Hud.Error("There is nobody else to target."); return; }
                 if (candidates > 1 || target == TargetType.DeadAlly || target == TargetType.AllyOther)
                 {
-                    Hud.FieldPick = new Hud.FieldPickState { Caster = unit, Ability = a, Item = item, Target = target };
+                    Hud.FieldPick = new Hud.FieldPickState { Caster = unit, Ability = a, Item = item, Target = target, Rank = rank };
                     Ui.Sfx?.Invoke("ui_open");
                     return;
                 }
             }
             Hud.FieldPick = null;
-            Hud.UseInField(unit, a, item, null);
+            Hud.UseInField(unit, a, item, null, rank);
         }
 
         int CountCandidates(TargetType t)
@@ -616,10 +652,12 @@ namespace Lanternvale.Game
                 HudDraw.Glow(new Rect(r.x - 14f, r.y - 14f, r.width + 28f, r.height + 28f), new Color(1f, 0.86f, 0.45f, 0.55f * p * alpha));
             }
             HudDraw.Icon(r, string.IsNullOrEmpty(a.icon) ? "glyph_star" : a.icon, school, !usable, alpha);
-            if (!usable && !inspect)
+            if (!inspect)
             {
-                if (st.Code == UseFailure.Resource) HudDraw.Fill(r, new Color(0.15f, 0.25f, 0.75f, 0.35f), 8);
-                else if (st.Code == UseFailure.Range || st.Code == UseFailure.TooClose) HudDraw.Fill(r, new Color(0.8f, 0.15f, 0.12f, 0.3f), 8);
+                if (!usable && st.Code == UseFailure.Resource) HudDraw.Fill(r, new Color(0.15f, 0.25f, 0.75f, 0.35f), 8);
+                // WoW's red icon: an enemy ability out of range (or inside the dead zone / out of sight) of the attack target
+                else if (st.InRangeOfAttackTarget == false || (!usable && (st.Code == UseFailure.Range || st.Code == UseFailure.TooClose)))
+                    HudDraw.Fill(r, new Color(0.8f, 0.15f, 0.12f, usable ? 0.36f : 0.3f), 8);
             }
             float left = Hud.CooldownLeft(unit, a);
             if (left > 0.01f)
@@ -642,6 +680,22 @@ namespace Lanternvale.Game
             }
             else if (sl.Cost.Length > 0)
                 HudDraw.Text(new Rect(r.x + 2f, r.yMax - 18f, r.width - 5f, 17f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
+            // pinned lower rank: a small "R3" plate (bottom left; top centre on Soul Shard spells, whose corner shows shards)
+            if (sl.RankLabel.Length > 0)
+            {
+                var br = sl.Shard ? new Rect(r.center.x - 13f, r.y + 2f, 26f, 15f) : new Rect(r.x + 3f, r.yMax - 17f, 26f, 15f);
+                HudDraw.Fill(br, new Color(0.08f, 0.06f, 0.13f, 0.85f * alpha), 4);
+                HudDraw.Ring(br, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.7f * alpha), 4);
+                HudDraw.Text(br, sl.RankLabel, HudStyles.TinyCenter, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, alpha), false);
+            }
+        }
+
+        static readonly string[] rankBadges = new string[32];
+
+        static string RankBadge(int rank)
+        {
+            if (rank < 0 || rank >= rankBadges.Length) return "R" + rank;
+            return rankBadges[rank] ??= "R" + rank;
         }
 
         static readonly Color ShardColor = Ui.Hex("#c9a6ff");
@@ -737,9 +791,14 @@ namespace Lanternvale.Game
 
         string BuildTip(Slot sl, int index)
         {
-            string tip = UiText.Ability(unit, sl.A);
+            // the bar is fetched without tooltips: the description is built here, on hover, at the slot's rank
+            string tip = UiText.Ability(unit, sl.A, sl.Rank);
             var st = sl.St;
+            if (sl.Rank > 0)
+                tip += "\n" + Ui.Rich("Pinned to Rank " + sl.Rank + " of " + st.KnownRanks + " (downranked: cheaper, weaker). Change it in the Spellbook (P).", Ui.Gold);
             if (!st.Usable && !string.IsNullOrEmpty(st.Reason)) tip += "\n" + Ui.Rich(st.Reason, Ui.Bad);
+            else if (st.InRangeOfAttackTarget == false && unit != null && unit.AttackTarget != null)
+                tip += "\n" + Ui.Rich("Out of range of " + Hud.NameOf(unit.AttackTarget) + ".", Ui.Bad);
             if (inCombat)
             {
                 string time = st.TimeCost > 0.01f ? "Costs " + HudText.Secs(st.TimeCost) + " s of this turn's Time" : "No Time cost (off the GCD)";

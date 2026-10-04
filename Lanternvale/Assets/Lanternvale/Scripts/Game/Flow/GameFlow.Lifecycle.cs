@@ -28,7 +28,7 @@ namespace Lanternvale.Game
         bool autosavePending;
         string autosaveReason = "";
         bool combatFallbackLogged;
-        float stealthSyncTimer, worldRefreshTimer;
+        float stealthSyncTimer;
         GameMode lastMode = GameMode.Boot;
         Unit lastActiveUnit;
 
@@ -189,16 +189,9 @@ namespace Lanternvale.Game
                 stealthSyncTimer = 0.2f;
                 SyncStealthVisuals();
             }
-            // flags can change from many places (dialogue outcomes, quests): re-evaluate the world now and then
-            if (Session != null && Session.Mode == SessionMode.Exploration)
-            {
-                worldRefreshTimer -= dt;
-                if (worldRefreshTimer <= 0f)
-                {
-                    worldRefreshTimer = 1f;
-                    RefreshWorldFromFlags();
-                }
-            }
+            // flags change from many places (dialogue outcomes, quests, battles): the session counts every change
+            // (FlagsVersion, announced by FlagsChanged) — rebuild the flag-driven world only when it moved
+            RefreshWorldIfFlagsChanged();
         }
 
         void UpdateClock()
@@ -224,6 +217,18 @@ namespace Lanternvale.Game
         /// <summary>Time scale to restore after the pause menu: the combat presenter's speed only while the battle it
         /// was paused in is still being presented (a load or "main menu" from the pause screen disposed it).</summary>
         float ResumeTimeScale() => Combat != null && savedTimeScale > 0f ? savedTimeScale : 1f;
+
+        /// <summary>
+        /// Back to real time after the world was replaced (new game, load — also from the pause screen —, main menu): the
+        /// pause is over, no fast-forward rate is remembered for a resume, Time.timeScale = 1. The combat presenter that set
+        /// a faster scale is gone by then (DisposeWorld); a later fight applies its own speed again.
+        /// </summary>
+        void ResetTimeScale()
+        {
+            pausedByMenu = false;
+            savedTimeScale = 1f;
+            Time.timeScale = 1f;
+        }
 
         void SyncGameRootMode()
         {
@@ -372,6 +377,7 @@ namespace Lanternvale.Game
             if (old != null && old != s) Unsubscribe(old);
             if (MapView.Current == null || backdropActive) RebuildWorld();   // MapEntered normally did this already
             UiRoot.CloseAll();
+            ResetTimeScale();
             CloseSessionBoundPrompts();
             combatFallbackLogged = false;
         }
@@ -427,6 +433,8 @@ namespace Lanternvale.Game
             if (old != null && old != s) Unsubscribe(old);
             if (MapView.Current == null || backdropActive) RebuildWorld();
             UiRoot.CloseAll();
+            // a load from the pause screen (even mid-fight with fast-forward on): resume in real time
+            ResetTimeScale();
             CloseSessionBoundPrompts();
             combatFallbackLogged = false;
             return null;
@@ -491,8 +499,7 @@ namespace Lanternvale.Game
                 autosaveReason = "";
                 DisposeWorld();
                 UiRoot.CloseAll();
-                if (pausedByMenu) pausedByMenu = false;
-                Time.timeScale = 1f;   // the combat presenter (if any) is gone: never leave its fast-forward behind
+                ResetTimeScale();   // the combat presenter (if any) is gone: never leave its pause or fast-forward behind
                 backdropTried = false;
                 if (!DioramaPreview.Active) BuildBackdrop();
             }

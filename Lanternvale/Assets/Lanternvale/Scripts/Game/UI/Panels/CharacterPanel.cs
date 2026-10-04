@@ -1,7 +1,7 @@
 // Character sheet (C): party member tabs, paper doll with the 17 equipment slots around the hero art (click a slot to
 // unequip; click an item in the bags to equip it on this member), primary attributes, derived stats (attack power,
 // spell power, crit, hit, dodge/parry/block, armour mitigation, resistances, mana regeneration), health/resource,
-// experience, and approval for companions.
+// experience, and approval for companions (with their likes / dislikes; hover the name line for their bio).
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -50,6 +50,8 @@ namespace Lanternvale.Game.Panels
 
             float y = c.y + 56f;
             PanelKit.Label(new Rect(c.x, y, c.width, 30f), titleLine, PanelKit.Text);
+            // companions: hovering the name line tells who they are (bio, personality, likes and dislikes)
+            if (u.Companion != null) Ui.TooltipFor(new Rect(c.x, y, c.width, 30f), CompanionAbout(u.Companion));
             y += 34f;
             // bars
             float bw = 380f;
@@ -82,7 +84,20 @@ namespace Lanternvale.Game.Panels
                 var bar = new Rect(c.x + 130f, y + 2f, c.width - 130f, 22f);
                 Ui.Bar(bar, approvalFill, approval >= 0 ? Ui.Hex("#f2a6c2") : Ui.Hex("#8f8aa6"), approvalText);
                 PanelKit.Rect(new Rect(bar.center.x - 1f, bar.y - 2f, 2f, bar.height + 4f), new Color(0.17f, 0.13f, 0.22f, 0.5f));
+                var ct = CompanionTextOf(u.Companion);
+                Ui.TooltipFor(new Rect(c.x, y, c.width, 26f), ct.ApprovalTip);
                 y += 32f;
+                // what earns (and costs) their approval: the authored likes / dislikes, full lists in the tooltip
+                if (ct.Likes.Length > 0 && y < c.yMax - 24f)
+                {
+                    TasteLine(new Rect(c.x, y, c.width, 24f), "Likes", ct.Likes, PanelKit.GoodDark, ct.ApprovalTip);
+                    y += 26f;
+                }
+                if (ct.Dislikes.Length > 0 && y < c.yMax - 24f)
+                {
+                    TasteLine(new Rect(c.x, y, c.width, 24f), "Dislikes", ct.Dislikes, PanelKit.BadDark, ct.ApprovalTip);
+                    y += 26f;
+                }
             }
             if (u.Pet != null && y < c.yMax - 26f)
                 PanelKit.Label(new Rect(c.x, y, c.width, 26f), petLine, PanelKit.TextSmall);
@@ -289,6 +304,61 @@ namespace Lanternvale.Game.Panels
             if (a > -10) return "Neutral";
             if (a > -30) return "Wary";
             return "Disapproves";
+        }
+
+        static void TasteLine(Rect r, string label, string list, Color labelColor, string tip)
+        {
+            PanelKit.Label(new Rect(r.x, r.y, 130f, r.height), label, PanelKit.TextBoldSmall, labelColor);
+            PanelKit.Label(new Rect(r.x + 130f, r.y, r.width - 130f, r.height), list, PanelKit.RowTextSmall);
+            Ui.TooltipFor(r, tip);
+        }
+
+        // ------------------------------------------------------------------ companion bio (companions.json; cached per def)
+
+        sealed class CompanionText
+        {
+            public string About = "", ApprovalTip = "", Likes = "", Dislikes = "";
+        }
+
+        static readonly Dictionary<CompanionDef, CompanionText> companionTexts = new Dictionary<CompanionDef, CompanionText>();
+
+        static CompanionText CompanionTextOf(CompanionDef c)
+        {
+            if (companionTexts.TryGetValue(c, out var t)) return t;
+            t = new CompanionText { Likes = JoinList(c.likes), Dislikes = JoinList(c.dislikes) };
+            string name = string.IsNullOrEmpty(c.name) ? c.id : c.name;
+            string tastes = "";
+            if (t.Likes.Length > 0) tastes = Ui.Rich("Likes: ", Ui.Good) + t.Likes;
+            if (t.Dislikes.Length > 0) tastes += (tastes.Length > 0 ? "\n" : "") + Ui.Rich("Dislikes: ", Ui.Bad) + t.Dislikes;
+
+            var sb = new StringBuilder();
+            sb.Append("<b>").Append(name).Append("</b>");
+            if (!string.IsNullOrEmpty(c.title)) sb.Append("  ·  ").Append(Ui.Rich(c.title, Ui.Gold));
+            if (!string.IsNullOrEmpty(c.bio)) sb.Append('\n').Append(c.bio);
+            if (!string.IsNullOrEmpty(c.personality)) sb.Append("\n\n").Append(Ui.Rich("<i>" + c.personality + "</i>", Ui.TextMuted));
+            if (tastes.Length > 0) sb.Append("\n\n").Append(tastes);
+            t.About = sb.ToString();
+
+            t.ApprovalTip = $"<b>Approval</b>\n{name}'s opinion of you rises with choices they like and falls with ones they dislike."
+                            + (tastes.Length > 0 ? "\n\n" + tastes : "");
+            companionTexts[c] = t;
+            return t;
+        }
+
+        /// <summary>Companion tooltip: name and title, bio, personality, likes and dislikes (approval hints).</summary>
+        public static string CompanionAbout(CompanionDef c) => c != null ? CompanionTextOf(c).About : null;
+
+        static string JoinList(string[] items)
+        {
+            if (items == null || items.Length == 0) return "";
+            var sb = new StringBuilder();
+            foreach (var it in items)
+            {
+                if (string.IsNullOrEmpty(it)) continue;
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append(it);
+            }
+            return sb.ToString();
         }
 
         void Header(string label) => stats.Add(new StatLine { Label = label, Header = true });

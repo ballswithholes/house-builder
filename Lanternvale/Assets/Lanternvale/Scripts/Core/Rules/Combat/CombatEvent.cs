@@ -44,6 +44,12 @@ namespace Lanternvale.Rules
         public bool OffHand;
         public bool Ranged;
         public bool AutoAttack;
+        /// <summary>
+        /// AuraApplied/AuraRemoved of an area-aura child: the radiusAura a bearer's area aura (paladin auras, totems, Trueshot,
+        /// Moonkin-style auras…) puts on units entering its radius and takes off units leaving it (or when the source goes).
+        /// Presenters may skip these (they fire on every step in and out of range); the combat log omits nothing.
+        /// </summary>
+        public bool AreaAuraChild;
         public ResourceType Resource;
         public Vec2 From, To;
         public List<Vec2> Path;

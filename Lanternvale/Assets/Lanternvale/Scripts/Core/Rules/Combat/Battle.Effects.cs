@@ -519,14 +519,12 @@ namespace Lanternvale.Rules
                 EmitAvoid(CombatEventType.Immune, cast, t);
                 return HitOutcome.Immune;
             }
-            float hitBonus = cast.Mods.HitChance;
+            // the same table HitChance() previews (Battle.HitTable.cs)
+            AbilityAvoidanceTable(c, t, kind, cast.School, cast.Mods.HitChance, unavoidable, out float m, out float dodge, out float parry, out float block);
             float roll = Rng.Value * 100f;
             if (kind == AttackKind.Spell || kind == AttackKind.Wand)
             {
-                float miss = Formulas.SpellMissChance(c.Level, t.Level) - c.Stats.SpellHit(cast.School) - hitBonus - t.Stats.ChanceToBeHit
-                             + Specials.IncomingMissChance(t, kind);
-                miss = MathUtil.Clamp(miss, 100f - RulesConstants.MaxHitChance, 100f);
-                if (roll < miss)
+                if (roll < m)
                 {
                     EmitAvoid(kind == AttackKind.Wand ? CombatEventType.Miss : CombatEventType.Resist, cast, t);
                     MetersOf(c).Misses++;
@@ -535,16 +533,6 @@ namespace Lanternvale.Rules
                 }
                 return HitOutcome.Hit;
             }
-            bool ranged = kind == AttackKind.Ranged;
-            float hit = ranged ? c.Stats.RangedHit : c.Stats.MeleeHit;
-            float m = Formulas.MeleeMissChance(c.Level, t.Level, false) - hit - hitBonus - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f
-                      + Specials.IncomingMissChance(t, kind);
-            m = MathUtil.Clamp(m, 100f - RulesConstants.MaxHitChance, 100f);
-            bool canAvoid = !t.IsControlled && !unavoidable;
-            bool frontal = !c.IsBehind(t);
-            float dodge = canAvoid ? Math.Max(0f, t.Stats.Dodge - c.Stats.DodgeChanceAgainstMe) : 0f;
-            float parry = canAvoid && !ranged && frontal && t.Stats.CanParry ? t.Stats.Parry : 0f;
-            float block = canAvoid && frontal && t.Stats.CanBlock ? t.Stats.BlockChance : 0f;
             if (roll < m) { EmitAvoid(CombatEventType.Miss, cast, t); MetersOf(c).Misses++; return HitOutcome.Miss; }
             roll -= m;
             if (roll < dodge) { OnAvoided(c, t, HitOutcome.Dodge, cast); return HitOutcome.Dodge; }
@@ -1053,7 +1041,7 @@ namespace Lanternvale.Rules
                 if (!match) foreach (var s in e.schools) if (ad.school == s) { match = true; break; }
                 if (!match) continue;
                 remove.Add(key);
-                if (!string.IsNullOrEmpty(ad.cooldownGroup)) remove.Add("grp:" + ad.cooldownGroup);
+                if (ad.CooldownGroupKey != null) remove.Add(ad.CooldownGroupKey);
             }
             foreach (var k in remove) c.Cooldowns.Remove(k);
             if (remove.Count > 0) Emit(new CombatEvent { Type = CombatEventType.CooldownReset, Source = c, Target = c, AbilityId = cast.AbilityId, Name = cast.Name, Count = remove.Count });
@@ -1069,6 +1057,7 @@ namespace Lanternvale.Rules
         /// <summary>Revives a downed party member or dead pet with the given health/mana.</summary>
         public void Revive(Unit t, float health, float mana, Unit by, string name = "")
         {
+            t.SelfRes = null;   // up by other means (Help, a resurrection spell): an unused Soulstone/Reincarnation offer lapses
             t.Downed = false;
             t.Dead = false;
             t.Health = Math.Min(t.MaxHealth, Math.Max(1f, health));

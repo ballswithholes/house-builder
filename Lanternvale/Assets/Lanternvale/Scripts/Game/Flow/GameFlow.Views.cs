@@ -38,6 +38,9 @@ namespace Lanternvale.Game
             public EncounterDef Encounter;
             public EncounterEnemyDef Def;
             public CreatureDef Creature;
+            /// <summary>Session.PreviewEncounter entry (name, level as the battle will scale it, rank) for nameplates.</summary>
+            public EncounterEnemyPreview Preview;
+            public int Index;                 // index among the encounter's (valid) enemies, as PreviewEncounter lists them
             public UnitView View;
             public Vector2 Home;
             public bool Wanders;
@@ -274,11 +277,14 @@ namespace Lanternvale.Game
             if (enc == null || enc.enemies == null) return;
             var db = Db;
             Vector2 lookAt = LeaderFeet();
+            var previews = EncounterPreview(enc.id, true);
+            int index = -1;
             foreach (var ed in enc.enemies)
             {
                 if (ed == null) continue;
                 var cdef = db != null ? db.Creature(ed.creature) : null;
                 if (cdef == null) continue;
+                index++;   // PreviewEncounter skips the same entries (null / unknown creature)
                 var home = ToUnity(ed.pos);
                 UnitView v = null;
                 if (reusable != null)
@@ -318,7 +324,8 @@ namespace Lanternvale.Game
                 v.UnitId = int.MinValue;
                 var e = new EnemyEntry
                 {
-                    Encounter = enc, Def = ed, Creature = cdef, View = v, Home = home,
+                    Encounter = enc, Def = ed, Creature = cdef, View = v, Home = home, Index = index,
+                    Preview = previews != null && index < previews.Count && previews[index].CreatureId == cdef.id ? previews[index] : null,
                     Wanders = cdef.type == CreatureType.Beast || cdef.type == CreatureType.Critter,
                     NextIdle = idleClock + 1f + presentationRng.Range(0f, 6f),
                 };
@@ -355,12 +362,10 @@ namespace Lanternvale.Game
             var s = Session;
             if (s == null || MapView.Current == null || backdropActive || battlePresenting || s.Battle != null) return;
 
-            // ---- party (+ pets, and totems/guardians placed out of combat that are still in the field context)
+            // ---- party (+ pets, and the totems/temporary guardians placed out of combat: Session.OwnedSummons)
             var units = s.PartyUnits();
-            var field = s.Field;
-            if (field != null)
-                foreach (var u in field.Units)
-                    if (u != null && u.IsAlive && u.Owner != null && s.IsInParty(u.Owner) && !units.Contains(u)) units.Add(u);
+            foreach (var u in s.OwnedSummons())
+                if (u != null && !units.Contains(u)) units.Add(u);
             tmpUnitSet.Clear();
             foreach (var u in units) tmpUnitSet.Add(u);
             tmpUnits.Clear();
@@ -439,14 +444,33 @@ namespace Lanternvale.Game
                 if (!HasEncounterViews(enc)) CreateEncounterViews(enc, reusableEnemies, true);
         }
 
-        /// <summary>Re-evaluates flag-driven world state: chests/transitions (requireFlag), NPCs, encounters.</summary>
+        /// <summary>Re-evaluates flag-driven world state: chests/transitions (requireFlag), NPCs, encounters. Remembers the
+        /// session's FlagsVersion it was built for (see RefreshWorldIfFlagsChanged).</summary>
         void RefreshWorldFromFlags()
         {
             var s = Session;
             var map = MapView.Current;
             if (s == null || map == null || backdropActive) return;
+            worldFlagsVersion = s.FlagsVersion;
+            worldFlagsSession = s;
             map.RefreshFlags(s.Flags.Test);
             SyncWorldViews();
+        }
+
+        int worldFlagsVersion = -1;
+        GameSession worldFlagsSession;
+
+        /// <summary>
+        /// Rebuilds the flag-dependent world (chests, transitions, NPCs, encounters) when the session's story flags changed
+        /// since the last rebuild (GameSession.FlagsVersion; FlagsChanged events land here too). Only in exploration and
+        /// out of a presented battle: changes made during a conversation or a fight are picked up when it ends.
+        /// </summary>
+        void RefreshWorldIfFlagsChanged()
+        {
+            var s = Session;
+            if (s == null || s.Mode != SessionMode.Exploration || battlePresenting || s.Battle != null || MapView.Current == null || backdropActive) return;
+            if (worldFlagsSession == s && worldFlagsVersion == s.FlagsVersion) return;
+            RefreshWorldFromFlags();
         }
 
         /// <summary>

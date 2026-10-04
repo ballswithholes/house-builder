@@ -26,17 +26,30 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>
+        /// Raised (with <see cref="Specials.FieldEvent"/>) by specials of this battle whose effect lives outside the combat
+        /// rules: acting unit, special name ("RoguePickLock", "PriestMindSoothe"), target unit (may be null).
+        /// </summary>
+        public event Action<Unit, string, Unit> FieldEventRaised;
+
+        internal void RaiseFieldEvent(Unit u, string name, Unit target) => FieldEventRaised?.Invoke(u, name, target);
+
+        /// <summary>
         /// Advances out-of-combat time for every unit in this (field) context: cooldowns, lockouts, aura durations and
         /// periodic ticks (food, drink, HoTs), summon lifetimes and resource regeneration.
         /// </summary>
         public void TickOutOfCombat(float seconds)
         {
             if (seconds <= 0f || InCombat) return;
-            foreach (var u in new List<Unit>(Units))
+            var units = RentUnitList(Units);
+            try
             {
-                if (!Units.Contains(u)) continue;
-                TickUnitOutOfCombat(u, seconds);
+                foreach (var u in units)
+                {
+                    if (!Units.Contains(u)) continue;
+                    TickUnitOutOfCombat(u, seconds);
+                }
             }
+            finally { ReturnUnitList(units); }
         }
 
         /// <summary>Real-time update of one unit (see <see cref="TickOutOfCombat"/>).</summary>
@@ -52,7 +65,13 @@ namespace Lanternvale.Rules
                 u.Lifetime -= seconds;
                 if (u.Lifetime <= 1e-3f) { Despawn(u, "expired"); return; }
             }
-            if (u.Downed) return;
+            if (u.Downed)
+            {
+                // outside combat nothing keeps a party character down (a scripted kill, anything past the field damage
+                // floor in DealDamage): they get back up at 1 health and regenerate as usual
+                if (InCombat || u.Team != PlayerTeam || !u.IsCharacter) return;
+                Revive(u, Math.Max(1f, u.Health), 0f, u);
+            }
             RegenOutOfCombat(u, seconds);
             Specials.OnOutOfCombatTick(this, u, seconds);
         }

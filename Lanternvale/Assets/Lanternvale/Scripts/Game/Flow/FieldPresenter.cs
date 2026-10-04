@@ -26,7 +26,7 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------ commands
 
-        string UseAbilityInField(Unit caster, string abilityId, Unit target)
+        string UseAbilityInField(Unit caster, string abilityId, Unit target, int rank)
         {
             var s = Session;
             if (s == null || !HasGame) return "There is no game running.";
@@ -45,6 +45,10 @@ namespace Lanternvale.Game
                 if (!s.IsInParty(caster) || !caster.IsAlive) return "Only an active party member can start a fight.";
                 if (!caster.Knows(a.id)) return $"{caster.Name} does not know {a.name}.";
                 if (enemyEntries.Count == 0) return "There is no enemy to attack.";
+                // refuse what cannot open the fight anyway (no stealth/stance, cooldown, cost…) instead of walking the
+                // party into the pack only for the engagement to fail and start a plain fight
+                var why = OpenerUnusableReason(caster, a);
+                if (why != null) return why;
                 ArmOpener(caster, a);
                 return null;
             }
@@ -56,13 +60,42 @@ namespace Lanternvale.Game
                 MarkFieldAction(caster);
                 Lanternvale.Util.Vec2? point = null;
                 if (a.target == TargetType.Point) point = target != null ? target.Position : caster.Position;
-                var r = s.UseAbility(caster, abilityId, target, point);
+                // a pinned rank the caster no longer knows falls back to the highest known one
+                if (rank > 0 && rank > AbilityRules.KnownRanks(caster, a)) rank = 0;
+                var r = s.UseAbility(caster, abilityId, target, point, Math.Max(0, rank));
                 return r.Ok ? null : (string.IsNullOrEmpty(r.Reason) ? "You can't do that now." : r.Reason);
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
                 return "That didn't work.";
+            }
+        }
+
+        /// <summary>
+        /// Why <paramref name="caster"/> cannot open a fight with <paramref name="a"/> right now, or null: the
+        /// target-independent use check of the exploration context (the action bar's: stealth/stance requirements, cooldown,
+        /// resource cost, reagents…) at the highest known rank, the rank the engagement uses the opener at. Range, facing and
+        /// the target's own requirements depend on the enemy and stay with the engagement (BeginWithOpener, whose failure
+        /// starts the fight normally). Null as well when there is no field context to ask (nothing is refused then).
+        /// </summary>
+        string OpenerUnusableReason(Unit caster, AbilityDef a)
+        {
+            var s = Session;
+            if (s == null || caster == null || a == null || s.Battle != null) return null;
+            try
+            {
+                if (s.Field == null) s.GetAbilityBar(caster, false);   // lets the session build its field context first
+                var f = s.Field;
+                if (f == null || !f.Units.Contains(caster)) return null;
+                var chk = f.CanUseIgnoringTarget(caster, a, false, 0);
+                if (chk.Ok) return null;
+                return string.IsNullOrEmpty(chk.Reason) ? $"{a.name} cannot be used now." : chk.Reason;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return null;
             }
         }
 
@@ -189,8 +222,9 @@ namespace Lanternvale.Game
                 case CombatEventType.AuraApplied:
                 case CombatEventType.AuraStack:
                 {
-                    // area auras are re-applied as the party walks around: only present auras from an action just taken
-                    if (!InFieldAction) break;
+                    // an area aura's radius children follow the party around (CombatEvent.AreaAuraChild): never shown; other
+                    // auras only when an action was just taken (field rebuilds re-apply auras silently)
+                    if (e.AreaAuraChild || !InFieldAction) break;
                     var tv = ViewOf(e.Target);
                     if (tv == null) break;
                     var def = Db != null ? Db.Aura(e.AuraId) : null;

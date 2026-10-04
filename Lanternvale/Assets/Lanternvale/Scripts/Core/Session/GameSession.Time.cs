@@ -47,11 +47,13 @@ namespace Lanternvale.Session
         /// </summary>
         public void Tick(float realSeconds)
         {
+            FlushFlagsChanged();
             if (!hasGame || !(realSeconds > 0f) || float.IsInfinity(realSeconds)) return;
             playSeconds += realSeconds;
             if (Mode != SessionMode.Exploration) return;
             AdvanceClock(realSeconds * Math.Max(0f, Settings.GameHoursPerRealMinute) / 60f);
             ElapseOutOfCombat(realSeconds);
+            FlushFlagsChanged();
         }
 
         /// <summary>Moves the clock forward by game hours (raises TimeOfDayChanged on phase changes).</summary>
@@ -87,6 +89,7 @@ namespace Lanternvale.Session
             if (Field == null) RebuildField();
             Field?.TickOutOfCombat(dt);
             Field?.RefreshAreaAuras();
+            ElapseSoothedEncounters(dt);
         }
 
         // ================================================================= resting

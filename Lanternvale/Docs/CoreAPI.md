@@ -11,7 +11,7 @@ It interprets the data in `Resources/Data` (see `DataSchema.md`, `Design.md`) an
 |---|---|
 | Units & stats | `Unit`, `UnitKind`, `UnitRole`, `UnitStats`, `StatBlock`, `StatCalculator`, `CreatureScaling`, `UnitFactory`, `WeaponInfo` |
 | Abilities | `AbilityRules`, `AbilityMods`/`AbilityModSet`, `Targeting`/`AreaShapeInfo`, `Tooltip`, `AbilityStatus`, `UseCheck`/`UseFailure` |
-| Combat | `Battle` (+ `CombatEvent`, `CombatLog`, `BattleResult`, `BattleOutcome`, `UnitMeters`, `AbilityCast`) |
+| Combat | `Battle` (+ `CombatEvent`, `CombatLog`, `BattleResult`, `BattleOutcome`, `UnitMeters`, `AbilityCast`, `HitChanceInfo`) |
 | AI | `AI` (`NextStep`, `Execute`, `RunTurn`), `AIStep` |
 | Items | `ItemInstance`, `Inventory`, `Equipment`, `EquipmentRules`, `ItemGenerator`, `LootGenerator`, `LootDrop`, `VendorShop` |
 | Progression | `Progression` (XP, levels, talents, respec, trainers), `LevelUpInfo`, `TrainerOffer` |
@@ -40,9 +40,14 @@ Key `Unit` members:
   `PowerType`, `HealthPct`, `GetResource/SetResource`, `RestoreFull()`.
 * Knowledge: `Abilities` (id → rank), `Talents` (id → rank), `Knows(id)`, `RankOf(id)`, `TalentRank(id)`.
 * `Equipment` (paper doll, see §6), `Auras` (`List<AuraInstance>`), `Cooldowns` (id or `grp:<group>` → s),
-  `CooldownLeft(abilityDef)`, `Lockouts` (school → s).
+  `CooldownLeft(abilityDef)` (own or shared-group cooldown, whichever is longer; the `grp:` key is built once per
+  `AbilityDef` and cached — no string building per call), `static string Unit.CooldownGroupKey(AbilityDef)` (that key,
+  or null without a `cooldownGroup`), `Lockouts` (school → s).
 * Combat state: `AttackTarget`, `AutoAttacking`, `AutoAttackAbility`, `QueuedSwing`, `ComboPoints`, `ComboTarget`,
-  `Threat` (AI units: unit → threat), `AggroTarget`, `Pending` (`PendingCast`), `TimeLeft`, `TimeDebt`,
+  `Threat` (AI units: unit → threat), `AggroTarget`, `Pending` (`PendingCast`: `Ability`, `Rank`, `Target`, `RemainingTime`,
+  `Channel`, `TicksLeft/TicksTotal`, `Pushbacks`, **`TotalTime`** — full hasted cast/channel time for cast bars, +0.5 s per
+  pushback on casts, −the cut time on channels — and `Progress` = (TotalTime − RemainingTime) / TotalTime), `QueuedSwing`
+  + `QueuedSwingRank` (downranked Heroic Strike), `TimeLeft`, `TimeDebt`,
   `MoveLeft`/`MoveBudget` (metres), `TurnsTaken`, `Reactive` windows, `Downed`, `Dead`, `IsAlive`.
 * Pets: `Owner`, `Pet`, `Totems` (element → unit), `Summons`, `Lifetime`, `HunterPet` (`HunterPetState`: template,
   name, remembered health, dead flag — persist it in saves).
@@ -100,8 +105,9 @@ units are skipped automatically (events `TurnStart` + `TurnSkipped` + `TurnEnd`)
 
 * `battle.NeedsPlayerInput` — active unit is player-controlled; else `battle.IsAIControlled(unit)` → use §4.
 * Player actions on the active unit (all return `ActionResult { Ok, Reason }`):
-  * `UseAbility(unit, abilityId, targetUnit = null, point = null)` — ability by id (auto attacks toggle; `nextSwing`
-    abilities queue; casts that do not fit the remaining Time become **pending** and end the turn).
+  * `UseAbility(unit, abilityId, targetUnit = null, point = null, int rank = 0)` — ability by id (auto attacks toggle;
+    `nextSwing` abilities queue; casts that do not fit the remaining Time become **pending** and end the turn).
+    `rank`: 0 = the highest known rank, 1..known = **downranking** (see "Downranking" below).
   * `UseItem(unit, itemInstance, target, point)` — item `use` ability; consumes one if `consumable`. Characters must meet
     the item's `requiredLevel` and `classes`; `CanUseItem(unit, item, target, point)` is the matching full check
     (`Battle.ItemUseRestriction(unit, def)` = level/class reason or null).
@@ -133,10 +139,21 @@ units are skipped automatically (events `TurnStart` + `TurnSkipped` + `TurnEnd`)
 
 ```csharp
 UseCheck c = battle.CanUse(unit, "mage_fireball", target, point);   // c.Ok / c.Code (UseFailure) / c.Reason (UI text)
-UseCheck c2 = battle.CanUseIgnoringTarget(unit, abilityDef);         // for greying out bar buttons
+UseCheck c1 = battle.CanUse(unit, "mage_fireball", target, point, fromItem: false, rank: 1);   // a lower rank
+UseCheck c2 = battle.CanUseIgnoringTarget(unit, abilityDef);         // for greying out bar buttons (also: fromItem, rank)
 List<AbilityStatus> bar = battle.GetAbilityBar(unit);               // known non-passive, non-hidden (+ contextual, e.g. Lightwell renew)
-// AbilityStatus: Ability, Rank, MaxRank, Usable, Code, Reason, Cost, CostType, TimeCost, CastTime,
-//                Cooldown, CooldownLeft, NeedsTarget, NeedsPoint, Active (stance/aura on, auto attack, queued), Tooltip
+List<AbilityStatus> lean = battle.GetAbilityBar(unit, includeTooltips: false); // frequent HUD refreshes: Tooltip = ""
+// GetAbilityBar(Unit u, bool includeHidden = false, bool includeTooltips = true)
+AbilityStatus st = battle.GetStatus(unit, abilityDef, fromItem: false, rank: 2, includeTooltip: true); // one entry, any rank
+// AbilityStatus: Ability, Rank (the rank described: requested or highest known; 0 for basic/contextual abilities),
+//                MaxRank (ranks the ability has), KnownRanks (1..KnownRanks usable), CanDownrank (KnownRanks > 1),
+//                Usable, Code, Reason, Cost, CostType, TimeCost, CastTime, Cooldown, CooldownLeft, NeedsTarget, NeedsPoint,
+//                Active (stance/aura on, auto attack, queued), Tooltip,
+//                InRangeOfAttackTarget (bool?: range/min range/line of sight to unit.AttackTarget for Enemy/Any-target
+//                abilities; null without a living attack target or for self/ally/ground/pet abilities)
+bool inRange = battle.IsInRange(unit, abilityDef, anyTarget);        // the range part of CanUse (tint against a UI-selected target)
+HitChanceInfo h = battle.HitChance(unit, abilityDef, target);       // attack-table preview (null ability = white swing)
+HitChanceInfo w = battle.SwingHitChance(unit, target, WeaponSlot.OffHand);
 AreaShapeInfo shape = Targeting.AreaOf(unit, ability, target, point, AbilityMods.For(unit, ability)); // circle/cone/line
 List<Unit> hit = Targeting.AreaUnits(battle, unit, ability, target, point, mods);
 bool seen = battle.CanSee(observer, target);       // stealth
@@ -146,6 +163,26 @@ float reach = battle.MeleeReachOf(a, b); bool inMelee = battle.InMeleeRange(a, b
 Reasons are complete sentences ("Not enough rage (15).", "You must be behind your target.", "Requires Battle
 Stance.", "Target is too close.", "It is not your turn." …).
 
+**Hit chance previews.** `HitChanceInfo` { `Kind` (AttackKind), `SingleRoll` (white swing), `Rolls` (the ability rolls
+at all), `Immune`, `CanCrit`, `Hit`, `Miss`, `Dodge`, `Parry`, `Block`, `Resist`, `Crit`, `CritOnHit` } — percentages of
+attempts, computed by the very functions the engine rolls with (`Battle.HitTable.cs`: `RollOutcome` and `WhiteSwing`
+call the same table builders), so the preview always matches the rolls. `Hit` = lands = 100 − Miss − Dodge − Parry −
+Resist (includes blocked and critical hits); spells "miss" as `Resist` (wands as `Miss`); white swings are one roll (crit
+is what the table leaves after the avoidance results); abilities roll crit per effect on a landed hit, so `Crit` = Hit ×
+CritOnHit / 100. The hit roll previewed is the one of the ability's first hostile effect that needs it (with its
+`Unavoidable` special); the crit is the first damage (on allies: heal) effect that can crit. Helpful abilities on allies:
+Hit 100. Invulnerable targets: `Immune`. Partial resists are mitigation, not outcomes.
+
+**Downranking (WoW Classic).** Every use path takes a rank: `Battle.UseAbility(.., rank)`, `CanUse(.., rank)`,
+`CanUseIgnoringTarget(.., rank)`, `GetStatus(.., rank)`, `AI` steps (`AIStep.Rank`) and `GameSession.UseAbility(.., rank)`.
+0 = the highest known rank; a rank above the known one is refused (`UseFailure.Unknown`, "You do not know Fireball (Rank
+12)."). The rank drives the cost (`cost.perLevel` at the rank's level), magnitudes and aura values/durations (EffLevel of
+the rank), the cast time when the ability has `rankCastTimes`, tooltips, pending casts (`PendingCast.Rank`) and queued
+swings (`Unit.QueuedSwingRank`). Helpers: `AbilityRules.UsedRank(unit, ability, requestedRank)` (0 → highest known,
+clamped to the known rank), `AbilityRules.KnownRanks(unit, ability)`, `AbilityRules.BaseCastTime(ability, rank)`,
+`AbilityRules.CastTime(unit, ability, mods, rank)` and `AbilityRules.TimeCost(unit, ability, mods, rank)` (the 3-argument
+overloads use the highest known rank).
+
 Ability numbers: `AbilityRules.ResourceCost(unit, ability, rank, mods)`, `TimeCost`, `CastTime`, `Gcd`,
 `Cooldown`, `RangeMetres`, `MinRangeMetres`, `RadiusMetres`, `KindOf` (Melee/Ranged/Spell/Wand hit table),
 `EffLevel` (rank level, or unit level for creatures/`scaleWithLevel`), `RankCount`, `MaxRankAtLevel`.
@@ -153,10 +190,14 @@ Ability numbers: `AbilityRules.ResourceCost(unit, ability, rank, mods)`, `TimeCo
 ### Events
 
 Every visible change is a `CombatEvent` appended to `battle.Events` and raised on `battle.EventRaised`.
-Read incrementally: `var list = battle.TakeEvents(ref cursor);`. Fields: `Type`, `Round`, `Source`, `Target`,
+Read incrementally: `var list = battle.TakeEvents(ref cursor);`, or without allocating:
+`int n = battle.TakeEvents(ref cursor, reusableList);` (appends — clear the list yourself — and returns the count).
+Fields: `Type`, `Round`, `Source`, `Target`,
 `AbilityId`, `AuraId`, `Name`, `School`, `Amount`, `Overkill`, `Overheal`, `Absorbed`, `Resisted`, `Blocked`,
-`Crit`, `Periodic`, `OffHand`, `Ranged`, `AutoAttack`, `Resource`, `From`, `To`, `Path`, `Seconds`, `Count`,
-`Reason`, `Text` (ready combat-log line; `CombatLog.Format(e)`).
+`Crit`, `Periodic`, `OffHand`, `Ranged`, `AutoAttack`, `AreaAuraChild`, `Resource`, `From`, `To`, `Path`, `Seconds`,
+`Count`, `Reason`, `Text` (ready combat-log line; `CombatLog.Format(e)`). `AreaAuraChild` marks AuraApplied/AuraRemoved
+of an area aura's radius children (paladin auras, totem auras, Trueshot Aura… applied to units entering the radius and
+removed when they leave or the source goes) so presenters can skip them.
 
 Types: BattleStart, BattleEnd, RoundStart, TurnStart, TurnEnd, TurnSkipped, Damage, Heal, Miss, Dodge, Parry,
 Block, Resist, Absorb, Immune, Evade, AuraApplied, AuraRefreshed, AuraRemoved, AuraStack, AuraBroken, Dispel,
@@ -200,7 +241,10 @@ encounter's trigger radius by 4 m while the creature has `priest_mind_soothe`).
 
 * Time: `Gcd` abilities cost max(cast, GCD); `OffGcd` cost the cast time. Instants overflowing the remaining Time
   create **time debt**; casts/channels that do not fit become **pending** (turn ends) and resolve at the start of
-  the next turn (`Pending.RemainingTime`, >6 s casts span several turns). Channels resolve ticks proportionally
+  the next turn (`Pending.RemainingTime`, >6 s casts span several turns). **Telegraphed casts** (ability tag
+  `Telegraph`, `Battle.TelegraphTag`; `Battle.IsTelegraphed(ability)`) always become pending in combat, even when they
+  would fit in the remaining Time — everyone gets a turn to interrupt, stun or silence them (the Hollow Warden's Lantern
+  Requiem). Channels resolve ticks proportionally
   (effects are per tick). **Casting pushback**: damage taken by a unit with a pending cast adds 0.5 s (channels
   lose 0.5 s), max twice per cast; talents/auras resist or reduce it.
 * Control: at turn start the remaining duration of control auras (stun, incapacitate, sleep, polymorph, banish,
@@ -258,14 +302,23 @@ AI.RunTurn(battle, unit);                                    // whole turn at on
   (heals by deficit, buffs/debuffs kept up, interrupts, taunts by tanks, threat cap for DPS, finishers at 5 combo
   points, totems per element, stances/seals/aspects by role, hunters out of the dead zone, casters out of melee).
   Pointless uses are skipped (DoT/curse/sting already running, mana drains on manaless targets, dispels with nothing
-  to dispel, snares on immobile targets); contextual heals (Lightwell) are taken below 70% health.
+  to dispel, snares on immobile targets); contextual heals (Lightwell) are taken below 70% health. Also:
+  * **big enemy casts** (telegraphed, ≥ 2.5 s, or heals) are stopped with any instant that cancels them — Interrupt
+    effects, or auras with Stun/Fear/Polymorph/Incapacitate/Sleep/Banish/Confuse (Silence for spells) the caster is not
+    immune to (Hammer of Justice on the Hollow Warden);
+  * **potions** from the party bags (`Battle.Inventory`): the biggest usable healing potion below 30% health
+    (`AI.PotionHealthPct`), a mana potion below 15% mana (`AI.PotionManaPct`) — `AIStep` of kind `UseItem`;
+  * long-cooldown heals (cooldown ≥ 60 s: Lay on Hands) only on a character below 25% health, never on pets;
+  * a nuke with a DoT rider (Immolate) is not recast while its own DoT has more than half its duration left;
+  * **healer downranking**: below 50% mana (`AI.DownrankManaPct`) a direct heal uses the lowest known rank whose average
+    healing covers the deficit (`AIStep.Rank`); otherwise every AI uses the highest rank.
 
 ---
 
 ## 5. Specials
 
 `Specials.IsImplemented(name)`; `Specials.Register(handler)`; `Specials.Get(name)`; `Specials.Names`. Every special
-documented in `classes/*.json` and `content/config.json` is implemented (129 names; the harness test
+documented in `classes/*.json` and `content/config.json` is implemented (130 names today; the harness test
 `TestsRulesCore.EveryDocumentedSpecialIsImplemented` checks it). Source: `Rules/Specials/Specials.<Class>.cs`.
 
 A handler derives from `SpecialHandler` and overrides only the hooks it needs. The same name may be used as an
@@ -362,8 +415,11 @@ Progression.LearnAllAvailable(unit);         // veteran start
 
 ## 8. Tooltips
 
-`Tooltip.Ability(unit, ability)` replaces `{0}`, `{1}` (effect magnitudes at the unit's rank/stats, "14 to 22")
-and `{d0}` (aura duration). `Tooltip.AbilityFull(unit, ability)` adds name/rank/cost/range/cast/cooldown lines.
+`Tooltip.Ability(unit, ability, rankOverride = 0)` replaces `{0}`, `{1}` (effect magnitudes at the unit's rank/stats,
+"14 to 22") and `{d0}` (aura duration, incl. per-rank duration growth such as Hammer of Justice); `rankOverride` > 0
+describes that rank (downranking picker: magnitudes, aura values). `Tooltip.AbilityFull(unit, ability, rankOverride = 0)`
+adds name/rank/cost/range/cast/cooldown lines for that rank. `Tooltip.Magnitude(unit, ability, effect, effLevel, mods,
+rank)` (the 5-argument overload uses the highest known rank).
 `Tooltip.Talent(talentDef, rank, onlyCurrent:false)` renders `{a/b/c}` groups with the current rank wrapped in
 `Tooltip.HighlightOpen/HighlightClose` (IMGUI rich text by default).
 

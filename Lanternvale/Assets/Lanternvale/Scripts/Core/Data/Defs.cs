@@ -211,6 +211,7 @@ namespace Lanternvale.Data
 
         public TimeCost time = TimeCost.Gcd;
         public float castTime;                           // seconds; 0 = instant
+        public float[] rankCastTimes = new float[0];     // optional per-rank cast times (WoW's faster low ranks); empty = castTime for every rank
         public bool channeled;                           // ticks over castTime
         public int channelTicks;                         // number of ticks for channeled abilities
         public float gcdOverride = -1f;                  // >= 0 overrides class GCD
@@ -237,6 +238,22 @@ namespace Lanternvale.Data
         public string special = "";                      // named handler for unique mechanics
         public int aiPriority;                           // companion/enemy AI hint (higher = preferred)
         public string aiHint = "";                       // "Heal", "Buff", "Interrupt", "Defensive", "Finisher", "Opener", "AoE", "Taunt"...
+
+        // runtime cache (not data: non-public, never serialized)
+        string grpKeySource, grpKey;
+
+        /// <summary>"grp:&lt;cooldownGroup&gt;" (the Unit.Cooldowns key of the shared group), or null without a group.
+        /// Built once per definition (rebuilt only if <see cref="cooldownGroup"/> is reassigned).</summary>
+        internal string CooldownGroupKey
+        {
+            get
+            {
+                var g = cooldownGroup;
+                if (string.IsNullOrEmpty(g)) return null;
+                if (!ReferenceEquals(g, grpKeySource)) { grpKey = "grp:" + g; grpKeySource = g; }
+                return grpKey;
+            }
+        }
     }
 
     // -------------------------------------------------------------------- auras

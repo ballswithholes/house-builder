@@ -108,11 +108,13 @@ namespace Lanternvale.Rules
             if (!string.IsNullOrEmpty(u.QueuedSwing))
             {
                 var a = Db.Ability(u.QueuedSwing);
+                int requested = u.QueuedSwingRank;
                 u.QueuedSwing = "";
+                u.QueuedSwingRank = 0;
                 if (a != null)
                 {
                     var mods = AbilityMods.For(u, a);
-                    int rank = AbilityRules.UsedRank(u, a);
+                    int rank = AbilityRules.UsedRank(u, a, requested);
                     float cost = AbilityRules.ResourceCost(u, a, rank, mods);
                     bool afford = cost <= 0 || u.GetResource(a.cost.type) + 1e-3f >= cost;
                     var req = CheckRequirements(u, a, target, true);
@@ -138,20 +140,9 @@ namespace Lanternvale.Rules
             BreakOnAction(u);
             bool ranged = slot == WeaponSlot.Ranged;
             var st = u.Stats;
-            var tst = target.Stats;
             var basic = Db.Ability(ranged ? (u.Class != null ? u.AutoAttackAbility : "auto_shot") : "attack");
-            bool dw = !ranged && u.Equipment.IsDualWielding;
-            float miss = Formulas.MeleeMissChance(u.Level, target.Level, dw) - (ranged ? st.RangedHit : st.MeleeHit) - tst.ChanceToBeHit + tst.Defense * 0.04f
-                         + Specials.IncomingMissChance(target, ranged ? AttackKind.Ranged : AttackKind.Melee);
-            miss = MathUtil.Clamp(miss, 100f - RulesConstants.MaxHitChance, 100f);
-            bool canAvoid = !target.IsControlled;
-            bool frontal = !u.IsBehind(target);
-            float dodge = canAvoid ? Math.Max(0f, tst.Dodge - st.DodgeChanceAgainstMe) : 0f;
-            float parry = canAvoid && !ranged && frontal && tst.CanParry ? tst.Parry : 0f;
-            float block = canAvoid && frontal && tst.CanBlock ? tst.BlockChance : 0f;
-            float crit = (ranged ? st.RangedCrit : st.MeleeCrit) - tst.Defense * 0.04f;
-            crit += WeaponTalents.StatBonus(u, w.Type, ranged ? StatId.RangedCrit : StatId.MeleeCrit);
-            crit = Math.Max(0f, Specials.CritChanceBonus(new AbilityCast { Battle = this, Caster = u, Ability = Db.Ability(ranged ? "auto_shot" : "attack"), Target = target, School = w.School }, target, w.School, crit));
+            // the single-roll table SwingHitChance() previews (Battle.HitTable.cs)
+            SwingTable(u, target, slot, w, out float miss, out float dodge, out float parry, out float block, out float crit);
             float roll = Rng.Value * 100f;
             var evInfo = new CombatEvent { Source = u, Target = target, AbilityId = basic != null ? basic.id : "attack", Name = basic != null ? basic.name : "Attack", AutoAttack = true, OffHand = slot == WeaponSlot.OffHand, Ranged = ranged };
             if (roll < miss)

@@ -16,17 +16,60 @@ namespace Lanternvale.Game
         static bool probed;
         static bool? lit;
 
-        static Type LightType
+        // URP moves Light2D between assemblies/namespaces across versions:
+        //   URP 16+ (Unity 2023.2 / Unity 6): UnityEngine.Rendering.Universal.Light2D in Unity.RenderPipelines.Universal.2D.Runtime
+        //   URP 11-15 (2021.x / 2022.x):       UnityEngine.Rendering.Universal.Light2D in Unity.RenderPipelines.Universal.Runtime
+        //   URP <= 10:                         UnityEngine.Experimental.Rendering.Universal.Light2D in Unity.RenderPipelines.Universal.Runtime
+        const string Light2DName = "UnityEngine.Rendering.Universal.Light2D";
+        const string Light2DNameExperimental = "UnityEngine.Experimental.Rendering.Universal.Light2D";
+        static readonly string[] Light2DQualifiedNames =
+        {
+            Light2DName + ", Unity.RenderPipelines.Universal.2D.Runtime",
+            Light2DName + ", Unity.RenderPipelines.Universal.Runtime",
+            Light2DNameExperimental + ", Unity.RenderPipelines.Universal.Runtime",
+        };
+
+        /// <summary>
+        /// URP's Light2D component type (whatever assembly this URP version compiles it into), or null when
+        /// URP is not installed. Resolved once; shared by everything that needs to find or add 2D lights.
+        /// </summary>
+        public static Type Light2DType
         {
             get
             {
                 if (probed) return lightType;
                 probed = true;
-                lightType = Type.GetType("UnityEngine.Rendering.Universal.Light2D, Unity.RenderPipelines.Universal.Runtime")
-                         ?? Type.GetType("UnityEngine.Experimental.Rendering.Universal.Light2D, Unity.RenderPipelines.Universal.Runtime");
+                lightType = null;
+                foreach (var qn in Light2DQualifiedNames)
+                {
+                    lightType = AsBehaviour(SafeGetType(qn));
+                    if (lightType != null) return lightType;
+                }
+                // unknown assembly layout: scan everything loaded
+                lightType = AsBehaviour(FindType(Light2DName)) ?? AsBehaviour(FindType(Light2DNameExperimental));
                 return lightType;
             }
         }
+
+        /// <summary>Finds a type by full name in any loaded assembly (null when none defines it).</summary>
+        public static Type FindType(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName)) return null;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type t = null;
+                try { t = asm.GetType(fullName, false); } catch (Exception) { }
+                if (t != null) return t;
+            }
+            return null;
+        }
+
+        static Type SafeGetType(string assemblyQualifiedName)
+        {
+            try { return Type.GetType(assemblyQualifiedName, false); } catch (Exception) { return null; }
+        }
+
+        static Type AsBehaviour(Type t) => t != null && typeof(Behaviour).IsAssignableFrom(t) ? t : null;
 
         /// <summary>True when sprites are lit by URP 2D lights (2D Renderer active).</summary>
         public static bool IsLit
@@ -36,7 +79,7 @@ namespace Lanternvale.Game
                 if (lit.HasValue) return lit.Value;
                 lit = false;
                 var rp = GraphicsSettings.currentRenderPipeline;
-                if (rp == null || LightType == null) return false;
+                if (rp == null || Light2DType == null) return false;
                 try
                 {
                     // UniversalRenderPipelineAsset.scriptableRenderer -> Renderer2D when the 2D renderer is active.
@@ -53,7 +96,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Forget cached detection (call after changing the pipeline in the editor).</summary>
-        public static void Reset() { lit = null; }
+        public static void Reset() { lit = null; probed = false; lightType = null; }
 
         static void Set(Component c, string prop, object value)
         {
@@ -84,7 +127,7 @@ namespace Lanternvale.Game
             if (!IsLit) return null;
             var go = new GameObject("Global Light 2D");
             go.transform.SetParent(parent, false);
-            var c = go.AddComponent(LightType);
+            var c = go.AddComponent(Light2DType);
             Set(c, "lightType", "Global");
             ApplyToAllSortingLayers(c);
             Set(c, "color", color);
@@ -111,7 +154,7 @@ namespace Lanternvale.Game
             var h = new LightHandle { color = color, radius = radius, intensity = intensity };
             if (IsLit)
             {
-                var c = holder.AddComponent(LightType);
+                var c = holder.AddComponent(Light2DType);
                 Set(c, "lightType", "Point");
                 ApplyToAllSortingLayers(c);
                 Set(c, "pointLightOuterRadius", radius);

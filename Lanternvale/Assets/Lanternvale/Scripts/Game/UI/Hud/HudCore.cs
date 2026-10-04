@@ -144,6 +144,8 @@ namespace Lanternvale.Game
             public AbilityDef Ability;
             public ItemInstance Item;
             public TargetType Target;
+            /// <summary>Pinned rank to cast (0 = the highest known rank).</summary>
+            public int Rank;
             public string Name => Item != null ? Item.Name : (Ability != null ? Ability.name : "");
             string hint;
             /// <summary>The instruction line shown while choosing (built once).</summary>
@@ -179,7 +181,7 @@ namespace Lanternvale.Game
                 return;
             }
             FieldPick = null;
-            Post(() => UseInField(p.Caster, p.Ability, p.Item, u));
+            Post(() => UseInField(p.Caster, p.Ability, p.Item, u, p.Rank));
         }
 
         /// <summary>
@@ -201,13 +203,64 @@ namespace Lanternvale.Game
             });
         }
 
-        public static void UseInField(Unit caster, AbilityDef a, ItemInstance item, Unit target)
+        // ------------------------------------------------------------ combat targeting from the HUD (party frames)
+
+        /// <summary>How a HUD-clicked unit would answer the ability/item being targeted in combat.</summary>
+        public enum TargetState { None, Valid, Reachable, Invalid }
+
+        static readonly Dictionary<Unit, TargetState> targetStates = new Dictionary<Unit, TargetState>();
+        static int targetStamp = -1;
+        static AbilityDef targetAbility;
+        static int targetRank = -1;
+        static Unit targetActor;
+
+        /// <summary>
+        /// While the player targets an ability/item in combat: Valid (a click on the unit's frame casts it now), Reachable
+        /// (out of range or sight, a click walks into range first when the movement allows), Invalid; None when nothing is
+        /// targeted. Cached until the battle, the ability or its rank changes.
+        /// </summary>
+        public static TargetState TargetStateOf(Unit u)
+        {
+            var c = Combat;
+            var b = c != null ? c.Battle : null;
+            if (u == null || b == null || !c.IsTargeting || !c.IsPlayerTurn) return TargetState.None;
+            var a = c.TargetingAbility;
+            var actor = b.ActiveUnit;
+            if (a == null || actor == null) return TargetState.None;
+            int rank = c.TargetingItem != null ? 0 : c.TargetingRank;
+            int stamp = b.Events.Count;
+            if (stamp != targetStamp || a != targetAbility || rank != targetRank || actor != targetActor)
+            {
+                targetStates.Clear();
+                targetStamp = stamp;
+                targetAbility = a;
+                targetRank = rank;
+                targetActor = actor;
+            }
+            if (targetStates.TryGetValue(u, out var st)) return st;
+            st = TargetState.Invalid;
+            try
+            {
+                if (a.target == TargetType.Point || a.target == TargetType.Self || a.target == TargetType.Pet) st = TargetState.None;
+                else if (b.Units.Contains(u))
+                {
+                    var chk = b.CanUse(actor, a, u, null, c.TargetingItem != null, rank);
+                    if (chk.Ok) st = TargetState.Valid;
+                    else if (chk.Code == UseFailure.Range || chk.Code == UseFailure.LineOfSight) st = TargetState.Reachable;
+                }
+            }
+            catch (Exception) { st = TargetState.Invalid; }
+            targetStates[u] = st;
+            return st;
+        }
+
+        public static void UseInField(Unit caster, AbilityDef a, ItemInstance item, Unit target, int rank = 0)
         {
             var f = Flow;
             if (f == null || caster == null) return;
             string why;
             if (item != null) why = f.UseItemOutOfCombat(caster, item, target);
-            else if (a != null) why = f.UseAbilityOutOfCombat(caster, a.id, target);
+            else if (a != null) why = f.UseAbilityOutOfCombat(caster, a.id, target, rank);
             else return;
             if (!string.IsNullOrEmpty(why)) Error(why);
         }
@@ -397,20 +450,12 @@ namespace Lanternvale.Game
             return t;
         }
 
-        static readonly Dictionary<string, string> groupKeys = new Dictionary<string, string>();
-
-        /// <summary>Unit.CooldownLeft without the per-call "grp:" string allocation.</summary>
+        /// <summary>Own or shared-group cooldown left (Unit.CooldownLeft caches its "grp:" key per AbilityDef: no allocation).</summary>
         public static float CooldownLeft(Unit u, AbilityDef a)
         {
             if (u == null || a == null) return 0f;
-            float cd = 0f;
-            if (u.Cooldowns.TryGetValue(a.id, out var c)) cd = c;
-            if (!string.IsNullOrEmpty(a.cooldownGroup))
-            {
-                if (!groupKeys.TryGetValue(a.cooldownGroup, out var key)) groupKeys[a.cooldownGroup] = key = "grp:" + a.cooldownGroup;
-                if (u.Cooldowns.TryGetValue(key, out var g) && g > cd) cd = g;
-            }
-            return cd;
+            try { return u.CooldownLeft(a); }
+            catch (Exception) { return 0f; }
         }
 
         public static bool HasTag(AbilityDef a, string tag)
@@ -421,14 +466,26 @@ namespace Lanternvale.Game
             return false;
         }
 
-        /// <summary>Total seconds of a pending cast (for progress), at least its remaining time.</summary>
+        /// <summary>Total seconds of a pending cast for cast bars: PendingCast.TotalTime (hasted, with pushback), at least its
+        /// remaining time.</summary>
         public static float PendingTotal(PendingCast p)
         {
             if (p == null) return 1f;
-            float total = 0f;
-            if (p.Channel && p.ChannelDuration > 0f) total = p.ChannelDuration;
-            else if (p.Ability != null) total = p.Ability.castTime;
+            float total = p.TotalTime;
+            if (total <= 1e-3f)
+            {
+                if (p.Channel && p.ChannelDuration > 0f) total = p.ChannelDuration;
+                else if (p.Ability != null) total = p.Ability.castTime;
+            }
             return Mathf.Max(total, p.RemainingTime, 0.1f);
+        }
+
+        /// <summary>Elapsed fraction of a pending cast (PendingCast.Progress; for cast bars).</summary>
+        public static float PendingProgress(PendingCast p)
+        {
+            if (p == null) return 0f;
+            if (p.TotalTime > 1e-3f) return p.Progress;
+            return 1f - Mathf.Clamp01(p.RemainingTime / PendingTotal(p));
         }
 
         public static string RankName(CreatureRank r)
@@ -565,6 +622,9 @@ namespace Lanternvale.Game
         {
             portraitCache.Clear();
             HudText.ClearUnitCaches();
+            RankPins.ClearUnitKeys();
+            targetStates.Clear();
+            targetStamp = -1;
         }
     }
 

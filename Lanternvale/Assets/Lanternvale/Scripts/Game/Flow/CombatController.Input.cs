@@ -58,6 +58,7 @@ namespace Lanternvale.Game
         int validStamp = -1;
         AbilityDef validFor;
         Unit validUnit;
+        int validRank;
         readonly Dictionary<Unit, bool> validTargets = new Dictionary<Unit, bool>();
 
         AbilityDef rangeRingFor;
@@ -70,13 +71,13 @@ namespace Lanternvale.Game
 
         struct HoverKey : IEquatable<HoverKey>
         {
-            public int Unit, Hover, Cx, Cy, Stamp;
+            public int Unit, Hover, Cx, Cy, Stamp, Rank;
             public AbilityDef Ability;
             public ItemInstance Item;
             public bool OverUi;
 
             public bool Equals(HoverKey o) =>
-                Unit == o.Unit && Hover == o.Hover && Cx == o.Cx && Cy == o.Cy && Stamp == o.Stamp &&
+                Unit == o.Unit && Hover == o.Hover && Cx == o.Cx && Cy == o.Cy && Stamp == o.Stamp && Rank == o.Rank &&
                 ReferenceEquals(Ability, o.Ability) && ReferenceEquals(Item, o.Item) && OverUi == o.OverUi;
 
             public override bool Equals(object obj) => obj is HoverKey k && Equals(k);
@@ -175,7 +176,7 @@ namespace Lanternvale.Game
             return new HoverKey
             {
                 Unit = u.Id, Hover = hover != null ? hover.Id : 0, Cx = Mathf.FloorToInt(mouse.x / q), Cy = Mathf.FloorToInt(mouse.y / q),
-                Stamp = Battle.Events.Count, Ability = a, Item = TargetingItem, OverUi = overUi,
+                Stamp = Battle.Events.Count, Ability = a, Item = TargetingItem, OverUi = overUi, Rank = TargetingRank,
             };
         }
 
@@ -623,6 +624,7 @@ namespace Lanternvale.Game
             var a = TargetingAbility;
             if (a == null) return "";
             bool fromItem = TargetingItem != null;
+            int rank = fromItem ? 0 : TargetingRank;
             var mods = targetingMods;
             if (mods == null)
             {
@@ -632,9 +634,9 @@ namespace Lanternvale.Game
             ShowRangeRing(u, a, mods);
             bool aimed = IsAimed(a);
             bool pointed = a.target == TargetType.Point || aimed;
-            if (!pointed) WantValidTargets(u, a, fromItem);
+            if (!pointed) WantValidTargets(u, a, fromItem, rank);
 
-            string label = fromItem ? TargetingItem.Name : a.name;
+            string label = fromItem ? TargetingItem.Name : RankedName(u, a, rank);
             if (overUi && pointed)
             {
                 FxSystem.Hide(AoeId);
@@ -666,14 +668,14 @@ namespace Lanternvale.Game
                 FxSystem.Hide(PathId);
                 sb.Length = 0;
                 sb.Append(label).Append(": ").Append(a.target == TargetType.Enemy ? "choose an enemy" : "choose a target")
-                  .Append(" · ").Append(TimeText(u, a, mods)).Append(" (right click to cancel)");
+                  .Append(" · ").Append(TimeText(u, a, mods, rank)).Append(" (right click to cancel)");
                 return sb.ToString();
             }
-            var plan = PlanUse(u, a, tgt, point, fromItem);
+            var plan = PlanUse(u, a, tgt, point, fromItem, rank);
             if (tgt != null) Want(tgt, plan.Error != null ? InvalidColor : tgt.IsHostileTo(u) ? HostileColor : FriendlyColor);
             ShowApproach(plan);
             if (plan.Error != null) return tgt != null ? label + " → " + tgt.Name + ": " + plan.Error : label + ": " + plan.Error;
-            return Line(u, a, tgt, mods, null, plan, enemies, allies, fromItem ? TargetingItem.Name : null);
+            return Line(u, a, tgt, mods, null, plan, enemies, allies, label, rank);
         }
 
         void ShowShape(AreaShapeInfo shape, AbilityDef a)
@@ -710,21 +712,22 @@ namespace Lanternvale.Game
             FxSystem.ShowCircle(RangeId, Feet(u, V(u)), range, RangeRingColor);
         }
 
-        void WantValidTargets(Unit u, AbilityDef a, bool fromItem)
+        void WantValidTargets(Unit u, AbilityDef a, bool fromItem, int rank)
         {
             int stamp = Battle.Events.Count;
-            if (validStamp != stamp || validFor != a || validUnit != u)
+            if (validStamp != stamp || validFor != a || validUnit != u || validRank != rank)
             {
                 validStamp = stamp;
                 validFor = a;
                 validUnit = u;
+                validRank = rank;
                 validTargets.Clear();
                 foreach (var o in Battle.Units)
                 {
                     // downed/dead allies are checked too (Help, resurrections): CanUse decides whether they are valid
                     if (o == null || (!o.IsAlive && (o.IsHostileTo(u) || !o.IsDeadOrDowned))) continue;
                     UseCheck c;
-                    try { c = Battle.CanUse(u, a, o, null, fromItem); }
+                    try { c = Battle.CanUse(u, a, o, null, fromItem, rank); }
                     catch (Exception) { continue; }
                     if (c.Ok) validTargets[o] = true;
                     else if (c.Code == UseFailure.Range || c.Code == UseFailure.LineOfSight) validTargets[o] = false;
@@ -742,13 +745,13 @@ namespace Lanternvale.Game
 
         // ================================================================ plans
 
-        SmartPlan PlanUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem)
+        SmartPlan PlanUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, int rank = 0)
         {
             var plan = new SmartPlan { Ability = a };
             approachPoints.Clear();
             lastCheckCode = UseFailure.None;
             if (a == null) { plan.Error = "Nothing to use."; return plan; }
-            var chk = Battle.CanUse(u, a, target, point, fromItem);
+            var chk = Battle.CanUse(u, a, target, point, fromItem, rank);
             lastCheckCode = chk.Code;
             if (chk.Ok) return plan;
             // Backstab, Ambush, Garrote, Ravage: the requirement is checked before the range, so both failures lead here
@@ -756,7 +759,7 @@ namespace Lanternvale.Game
                           (chk.Code == UseFailure.Range || (chk.Code == UseFailure.Requirement && !u.IsBehind(target)));
             if (behind)
             {
-                if (TryApproachBehind(u, a, target, chk, fromItem, out float blen, out string bwhy))
+                if (TryApproachBehind(u, a, target, chk, fromItem, rank, out float blen, out string bwhy))
                 {
                     plan.Approach = true;
                     plan.Behind = true;
@@ -787,7 +790,7 @@ namespace Lanternvale.Game
         /// Path to a spot behind the target (outside its frontal arc, within melee reach) reachable this turn, for abilities
         /// that require standing behind it (fills approachPoints). The ability is checked as if the unit stood there.
         /// </summary>
-        bool TryApproachBehind(Unit u, AbilityDef a, Unit target, UseCheck chk, bool fromItem, out float length, out string why)
+        bool TryApproachBehind(Unit u, AbilityDef a, Unit target, UseCheck chk, bool fromItem, int rank, out float length, out string why)
         {
             approachPoints.Clear();
             length = 0f;
@@ -827,7 +830,7 @@ namespace Lanternvale.Game
                 if (r == null || !r.CanReach(goal)) continue;
                 float walk = r.DistanceTo(goal);
                 if (walk >= bestLen) continue;
-                var sim = CheckFrom(u, a, target, goal, fromItem);
+                var sim = CheckFrom(u, a, target, goal, fromItem, rank);
                 if (!sim.Ok) { blocked ??= sim.Reason; continue; }
                 bestLen = walk;
                 best = goal;
@@ -857,13 +860,13 @@ namespace Lanternvale.Game
         static readonly float[] BehindAngles = { 0f, 35f, -35f, 70f, -70f };
 
         /// <summary>The ability's checks as if the unit stood at p (its Position is restored before returning; CanUse has no side effects).</summary>
-        UseCheck CheckFrom(Unit u, AbilityDef a, Unit target, Vec2 p, bool fromItem)
+        UseCheck CheckFrom(Unit u, AbilityDef a, Unit target, Vec2 p, bool fromItem, int rank)
         {
             var old = u.Position;
             try
             {
                 u.Position = p;
-                return Battle.CanUse(u, a, target, null, fromItem);
+                return Battle.CanUse(u, a, target, null, fromItem, rank);
             }
             catch (Exception) { return UseCheck.Fail(UseFailure.Unknown, "That cannot be used right now."); }
             finally { u.Position = old; }
@@ -958,10 +961,11 @@ namespace Lanternvale.Game
                 if (hover == null) { Fail(a.target == TargetType.Enemy ? "Select an enemy." : "Select a target."); return; }
                 tgt = hover;
             }
-            ExecutePlan(u, PlanUse(u, a, tgt, point, item != null), tgt, point, item);
+            int rank = item != null ? 0 : TargetingRank;
+            ExecutePlan(u, PlanUse(u, a, tgt, point, item != null, rank), tgt, point, item, rank);
         }
 
-        string ExecutePlan(Unit u, SmartPlan plan, Unit target, Vec2? point, ItemInstance item)
+        string ExecutePlan(Unit u, SmartPlan plan, Unit target, Vec2? point, ItemInstance item, int rank = 0)
         {
             if (plan.Error != null) return Fail(plan.Error);
             if (plan.AlreadyAttacking || plan.Ability == null) return null;
@@ -973,7 +977,7 @@ namespace Lanternvale.Game
                 catch (Exception e) { LogOnce("approach", "Approach move failed: " + e); m = ActionResult.Fail("Cannot move there."); }
                 PullEvents(new Intent { Kind = IntentKind.Move, Actor = u });
                 if (!m.Ok) return Fail(m.Reason);
-                var chk = Battle.CanUse(u, plan.Ability, target, point, item != null);
+                var chk = Battle.CanUse(u, plan.Ability, target, point, item != null, rank);
                 if (!chk.Ok) return Fail(chk.Reason);
             }
             // never toggle a running auto attack off by "attacking" the same target again
@@ -982,15 +986,16 @@ namespace Lanternvale.Game
                 CancelTargeting();
                 return null;
             }
-            return Execute(u, plan.Ability, item, target, point);
+            return Execute(u, plan.Ability, item, target, point, rank);
         }
 
-        /// <summary>Uses an ability/item on the battle and queues its events with the command as intent.</summary>
-        string Execute(Unit u, AbilityDef a, ItemInstance item, Unit target, Vec2? point)
+        /// <summary>Uses an ability/item on the battle and queues its events with the command as intent. rank: 0 = highest
+        /// known, else that rank (downranking; ignored for items).</summary>
+        string Execute(Unit u, AbilityDef a, ItemInstance item, Unit target, Vec2? point, int rank = 0)
         {
             var intent = new Intent { Kind = IntentKind.Ability, Actor = u, Ability = a, Item = item, Target = target, Point = point };
             ActionResult r;
-            try { r = item != null ? Battle.UseItem(u, item, target, point) : Battle.UseAbility(u, a.id, target, point); }
+            try { r = item != null ? Battle.UseItem(u, item, target, point) : Battle.UseAbility(u, a.id, target, point, rank); }
             catch (Exception e)
             {
                 LogOnce("use:" + a.id, "Using " + a.id + " failed: " + e);
@@ -1003,13 +1008,16 @@ namespace Lanternvale.Game
             return null;
         }
 
-        string BeginAbilityInternal(string abilityId)
+        string BeginAbilityInternal(string abilityId, int rank)
         {
             if (disposed || Battle == null || Finished) return Fail("Not in combat.");
             if (!IsPlayerTurn) return Fail(Battle.NeedsPlayerInput ? "Wait for the action to finish." : "It is not your turn.");
             var a = Db?.Ability(abilityId);
             if (a == null) return Fail("Unknown ability.");
-            return Begin(Battle.ActiveUnit, a, null);
+            var u = Battle.ActiveUnit;
+            // a pinned rank the unit does not know (any more) falls back to the highest known rank
+            if (rank > 0 && u != null && rank > AbilityRules.KnownRanks(u, a)) rank = 0;
+            return Begin(u, a, null, rank);
         }
 
         string BeginItemInternal(ItemInstance item)
@@ -1028,12 +1036,13 @@ namespace Lanternvale.Game
                 catch (Exception) { why = null; }
                 if (why != null) return Fail(why);
             }
-            return Begin(u, a, item);
+            return Begin(u, a, item, 0);
         }
 
-        string Begin(Unit u, AbilityDef a, ItemInstance item)
+        string Begin(Unit u, AbilityDef a, ItemInstance item, int rank)
         {
             CancelTargeting();
+            if (item != null) rank = 0;
 
             // pressing a queued "next swing" ability again (Heroic Strike, Cleave, Raptor Strike) un-queues it, keeping
             // the rage/mana (WoW). The engine emits no event for this, so bump QueueVersion for the hotbar's dirty check.
@@ -1046,7 +1055,7 @@ namespace Lanternvale.Game
                 return null;
             }
 
-            var chk = Battle.CanUseIgnoringTarget(u, a, item != null);
+            var chk = Battle.CanUseIgnoringTarget(u, a, item != null, rank);
             if (!chk.Ok)
             {
                 bool waitable = chk.Code == UseFailure.Silenced || chk.Code == UseFailure.Pacified || chk.Code == UseFailure.Locked;
@@ -1055,9 +1064,9 @@ namespace Lanternvale.Game
 
             // no target needed: execute now (cones and lines are aimed with the mouse first)
             bool aimed = IsAimed(a);
-            if (a.target == TargetType.Self && !aimed) return Execute(u, a, item, u, null);
-            if (a.target == TargetType.Pet) return Execute(u, a, item, u.Pet, null);
-            if (a.target == TargetType.Point && a.area.centeredOnCaster && !aimed) return Execute(u, a, item, null, u.Position);
+            if (a.target == TargetType.Self && !aimed) return Execute(u, a, item, u, null, rank);
+            if (a.target == TargetType.Pet) return Execute(u, a, item, u.Pet, null, rank);
+            if (a.target == TargetType.Point && a.area.centeredOnCaster && !aimed) return Execute(u, a, item, null, u.Position, rank);
 
             // toggles on the current target: auto attack (on/off), "next swing" abilities (Heroic Strike…). Only the running
             // auto attack toggles off unchecked; switching (Attack while Auto Shot runs) needs the new one to be usable on
@@ -1067,10 +1076,11 @@ namespace Lanternvale.Game
             if (item == null && a.autoAttack && curOk &&
                 ((u.AutoAttacking && u.AutoAttackAbility == a.id) || Battle.CanUse(u, a, cur).Ok))
                 return Execute(u, a, null, cur, null);
-            if (item == null && a.nextSwing && curOk && Battle.CanUse(u, a, cur).Ok) return Execute(u, a, null, cur, null);
+            if (item == null && a.nextSwing && curOk && Battle.CanUse(u, a, cur, null, false, rank).Ok) return Execute(u, a, null, cur, null, rank);
 
             TargetingAbility = a;
             TargetingItem = item;
+            TargetingRank = rank;
             targetingMods = null;
             validStamp = -1;
             rangeRingFor = null;
@@ -1134,13 +1144,14 @@ namespace Lanternvale.Game
         // ================================================================ hover text pieces
 
         string Line(Unit u, AbilityDef a, Unit target, AbilityModSet mods, Vec2? point, SmartPlan plan,
-                    int enemies = -1, int allies = -1, string label = null)
+                    int enemies = -1, int allies = -1, string label = null, int rank = 0)
         {
             if (a == null) return "";
             if (mods == null)
             {
                 try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
             }
+            int used = UsedRank(u, a, rank);
             sb.Length = 0;
             if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(plan.Behind ? " m behind, then " : " m, then ");
             sb.Append(label ?? a.name);
@@ -1151,36 +1162,49 @@ namespace Lanternvale.Game
                 if (p != null && p.Ability != null && target.IsHostileTo(u))
                     sb.Append(" (casting ").Append(p.Ability.name).Append(", ").Append(p.RemainingTime.ToString("0.#")).Append(" s left)");
             }
-            var mag = MagnitudeText(u, a, mods);
+            var mag = MagnitudeText(u, a, mods, used);
             if (!string.IsNullOrEmpty(mag)) sb.Append(" · ").Append(mag);
             if (enemies >= 0)
             {
                 sb.Append(" · ").Append(enemies).Append(enemies == 1 ? " enemy" : " enemies");
                 if (allies > 0) sb.Append(", ").Append(allies).Append(allies == 1 ? " ally" : " allies");
             }
-            if (target != null && target.IsHostileTo(u) && AbilityRules.IsHarmful(a))
-            {
-                float hit = EstimateHit(u, a, target, mods);
-                if (hit >= 0f) sb.Append(" · ").Append(hit.ToString("0")).Append("% hit");
-            }
+            if (target != null && target != u && target.IsHostileTo(u)) AppendHitChance(u, a, target);
             float cost = 0f;
-            try { cost = AbilityRules.ResourceCost(u, a, AbilityRules.UsedRank(u, a), mods); } catch (Exception) { }
+            try { cost = AbilityRules.ResourceCost(u, a, used, mods); } catch (Exception) { }
             if (cost > 0f && a.cost != null && a.cost.type != ResourceType.None)
                 sb.Append(" · ").Append(cost.ToString("0")).Append(' ').Append(a.cost.type.ToString());
-            sb.Append(" · ").Append(TimeText(u, a, mods));
+            sb.Append(" · ").Append(TimeText(u, a, mods, rank));
             return sb.ToString();
         }
 
-        string MagnitudeText(Unit u, AbilityDef a, AbilityModSet mods)
+        /// <summary>The rank the engine will use (0 = the highest known; basic/contextual abilities stay 0).</summary>
+        static int UsedRank(Unit u, AbilityDef a, int rank)
+        {
+            try { return AbilityRules.UsedRank(u, a, rank); }
+            catch (Exception) { return rank; }
+        }
+
+        /// <summary>"Fireball (Rank 3)" while a lower rank than the highest known is used, else the plain name.</summary>
+        static string RankedName(Unit u, AbilityDef a, int rank)
+        {
+            if (a == null) return "";
+            if (rank <= 0 || u == null) return a.name;
+            int known;
+            try { known = AbilityRules.KnownRanks(u, a); } catch (Exception) { known = 0; }
+            return rank < known ? a.name + " (Rank " + rank + ")" : a.name;
+        }
+
+        string MagnitudeText(Unit u, AbilityDef a, AbilityModSet mods, int rank)
         {
             try
             {
-                int eff = AbilityRules.EffLevel(u, a, AbilityRules.UsedRank(u, a));
+                int eff = AbilityRules.EffLevel(u, a, rank);
                 foreach (var e in a.effects)
                 {
                     if (e == null) continue;
                     if (e.type != EffectType.Damage && e.type != EffectType.WeaponDamage && e.type != EffectType.Heal) continue;
-                    var m = Tooltip.Magnitude(u, a, e, eff, mods);
+                    var m = Tooltip.Magnitude(u, a, e, eff, mods, rank);
                     if (string.IsNullOrEmpty(m)) continue;
                     m = m.Replace(" to ", "–");
                     if (e.type == EffectType.Heal) return m + " healing";
@@ -1192,47 +1216,39 @@ namespace Lanternvale.Game
             return "";
         }
 
-        /// <summary>Chance the ability lands (miss/dodge/parry for weapons, miss/resist for spells), mirroring the engine's hit table.</summary>
-        static float EstimateHit(Unit u, AbilityDef a, Unit t, AbilityModSet mods)
+        /// <summary>
+        /// " · 92% hit · 18% crit" from the engine's own attack table (Battle.HitChance — the very numbers the rolls use;
+        /// basic attacks are previewed as white swings), " · immune" against an invulnerable target, nothing for
+        /// abilities that cannot miss.
+        /// </summary>
+        void AppendHitChance(Unit u, AbilityDef a, Unit target)
         {
-            try
-            {
-                var kind = AbilityRules.KindOf(a);
-                float bonus = mods != null ? mods.HitChance : 0f;
-                float floor = 100f - RulesConstants.MaxHitChance;
-                if (kind == AttackKind.Spell || kind == AttackKind.Wand)
-                {
-                    float miss = Formulas.SpellMissChance(u.Level, t.Level) - u.Stats.SpellHit(a.school) - bonus - t.Stats.ChanceToBeHit;
-                    return 100f - Mathf.Clamp(miss, floor, 100f);
-                }
-                bool ranged = kind == AttackKind.Ranged;
-                bool dw = a.autoAttack && !ranged && u.Equipment != null && u.Equipment.IsDualWielding;
-                float m = Formulas.MeleeMissChance(u.Level, t.Level, dw) - (ranged ? u.Stats.RangedHit : u.Stats.MeleeHit) - bonus
-                          - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f;
-                m = Mathf.Clamp(m, floor, 100f);
-                bool canAvoid = !t.IsControlled;
-                bool frontal = !u.IsBehind(t);
-                float dodge = canAvoid ? Mathf.Max(0f, t.Stats.Dodge - u.Stats.DodgeChanceAgainstMe) : 0f;
-                float parry = canAvoid && !ranged && frontal && t.Stats.CanParry ? t.Stats.Parry : 0f;
-                return Mathf.Clamp(100f - m - dodge - parry, 0f, 100f);
-            }
-            catch (Exception) { return -1f; }
+            HitChanceInfo h;
+            try { h = Battle.HitChance(u, a, target); }
+            catch (Exception) { return; }
+            if (h.Immune) { sb.Append(" · immune"); return; }
+            if (!h.Rolls && !h.SingleRoll) return;
+            sb.Append(" · ").Append(Mathf.Clamp(h.Hit, 0f, 100f).ToString("0")).Append("% hit");
+            if (h.CanCrit && h.Crit >= 0.5f) sb.Append(" · ").Append(h.Crit.ToString("0")).Append("% crit");
         }
 
-        static string TimeText(Unit u, AbilityDef a, AbilityModSet mods)
+        string TimeText(Unit u, AbilityDef a, AbilityModSet mods, int rank = 0)
         {
             if (a.autoAttack) return "auto attack at the end of your turn";
             if (a.nextSwing) return "replaces your next swing";
             float tc, ct;
+            int used = UsedRank(u, a, rank);
             try
             {
-                tc = AbilityRules.TimeCost(u, a, mods);
-                ct = AbilityRules.CastTime(u, a, mods);
+                tc = AbilityRules.TimeCost(u, a, mods, used);
+                ct = AbilityRules.CastTime(u, a, mods, used);
             }
             catch (Exception) { return ""; }
             float left = Mathf.Max(0f, u.TimeLeft);
             if (ct > 0f && a.channeled)
                 return ct > left + 1e-3f ? ct.ToString("0.#") + " s channel (continues next turn)" : ct.ToString("0.#") + " s channel";
+            if (ct > 0f && Battle.InCombat && Battle.IsTelegraphed(a))
+                return ct.ToString("0.#") + " s cast (telegraphed: resolves next turn, can be interrupted)";
             if (ct > 0f)
                 return ct > left + 1e-3f ? ct.ToString("0.#") + " s cast (pending: resolves next turn, can be interrupted)" : ct.ToString("0.#") + " s cast";
             if (tc > 0f)

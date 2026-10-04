@@ -28,7 +28,7 @@ namespace Lanternvale.EditorTools
             ti.npotScale = TextureImporterNPOTScale.None;
             ti.filterMode = FilterMode.Bilinear;
             ti.maxTextureSize = 4096;
-            bool tile = path.Contains("/Background/") || path.Contains("/Ground/");
+            bool tile = path.Contains("/Backgrounds/") || path.Contains("/Ground/");
             ti.wrapMode = tile ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
             bool crisp = path.Contains("/Icon") || path.Contains("/UI/") || path.Contains("/Portrait");
             ti.textureCompression = crisp ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
@@ -96,13 +96,21 @@ namespace Lanternvale.EditorTools
         [MenuItem("Lanternvale/Setup/Configure URP 2D Renderer", priority = 40)]
         public static void SetupUrp2D()
         {
-            const string asm = "Unity.RenderPipelines.Universal.Runtime";
-            var rendererDataType = Type.GetType($"UnityEngine.Rendering.Universal.Renderer2DData, {asm}");
-            var pipelineType = Type.GetType($"UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset, {asm}");
-            if (rendererDataType == null || pipelineType == null)
+            // UniversalRenderPipelineAsset lives in the main URP runtime assembly; Renderer2DData moved to
+            // Unity.RenderPipelines.Universal.2D.Runtime in URP 17 / Unity 6 (2023.2+), so look in both.
+            var pipelineType = FindType("UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset",
+                UrpRuntimeAssembly);
+            if (pipelineType == null)
             {
                 if (EditorUtility.DisplayDialog("Lanternvale", "The Universal Render Pipeline package is not installed. Install it now? Run this menu again after Unity finishes importing.", "Install URP", "Cancel"))
                     UnityEditor.PackageManager.Client.Add("com.unity.render-pipelines.universal");
+                return;
+            }
+            var rendererDataType = FindType("UnityEngine.Rendering.Universal.Renderer2DData",
+                Urp2DRuntimeAssembly, UrpRuntimeAssembly);
+            if (rendererDataType == null)
+            {
+                EditorUtility.DisplayDialog("Lanternvale", "URP is installed, but its 2D Renderer (Renderer2DData) could not be found in this URP version. Create a URP asset with a 2D Renderer manually (Assets > Create > Rendering > URP Asset (with 2D Renderer)) and assign it in Project Settings > Graphics.", "OK");
                 return;
             }
             Directory.CreateDirectory(SettingsDir);
@@ -137,6 +145,30 @@ namespace Lanternvale.EditorTools
             AssetDatabase.SaveAssets();
             Lighting2D.Reset();
             Debug.Log("[Lanternvale] URP with the 2D Renderer is configured. Sprites now react to 2D lights.");
+        }
+
+        const string UrpRuntimeAssembly = "Unity.RenderPipelines.Universal.Runtime";
+        const string Urp2DRuntimeAssembly = "Unity.RenderPipelines.Universal.2D.Runtime";
+
+        /// <summary>
+        /// Resolves <paramref name="fullName"/> from the named assemblies (in order), then from any loaded
+        /// assembly, so a type that moved between URP assemblies across Unity versions is still found.
+        /// </summary>
+        static Type FindType(string fullName, params string[] assemblies)
+        {
+            foreach (var asm in assemblies)
+            {
+                var t = Type.GetType($"{fullName}, {asm}");
+                if (t != null) return t;
+            }
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type t;
+                try { t = asm.GetType(fullName, false); }
+                catch (Exception) { continue; }
+                if (t != null) return t;
+            }
+            return null;
         }
 
         [MenuItem("Lanternvale/Open Save Folder", priority = 60)]

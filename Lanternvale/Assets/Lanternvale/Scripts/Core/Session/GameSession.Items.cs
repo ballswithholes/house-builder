@@ -149,11 +149,12 @@ namespace Lanternvale.Session
 
         // ================================================================= abilities & items
 
-        /// <summary>The action bar of a unit (battle or field context).</summary>
-        public List<AbilityStatus> GetAbilityBar(Unit u)
+        /// <summary>The action bar of a unit (battle or field context). <paramref name="includeTooltips"/> = false skips the
+        /// description text (frequent HUD refreshes; build it on hover with Tooltip.Ability(unit, ability, rank)).</summary>
+        public List<AbilityStatus> GetAbilityBar(Unit u, bool includeTooltips = true)
         {
             var ctx = ContextFor(u);
-            return ctx != null ? ctx.GetAbilityBar(u) : new List<AbilityStatus>();
+            return ctx != null ? ctx.GetAbilityBar(u, false, includeTooltips) : new List<AbilityStatus>();
         }
 
         /// <summary>The battle when fighting, else the field (exploration) context, if the unit is in it.</summary>
@@ -165,14 +166,15 @@ namespace Lanternvale.Session
             return Field != null && Field.Units.Contains(u) ? Field : null;
         }
 
-        /// <summary>Uses an ability in combat (active unit) or out of combat (buffs, summons, Call Pet…).</summary>
-        public ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null)
+        /// <summary>Uses an ability in combat (active unit) or out of combat (buffs, summons, Call Pet…). <paramref name="rank"/>:
+        /// 0 = the highest known rank, else that rank (WoW downranking).</summary>
+        public ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null, int rank = 0)
         {
             if (!hasGame || gameOver) return ActionResult.Fail("No game.");
             if (Battle == null && Dialogue.IsActive) return ActionResult.Fail("Not during a conversation.");
             var ctx = ContextFor(u);
             if (ctx == null) return ActionResult.Fail("That unit is not in the party.");
-            var r = ctx.UseAbility(u, abilityId, target, point);
+            var r = ctx.UseAbility(u, abilityId, target, point, rank);
             if (r.Ok && ctx == Field) AfterFieldAction();
             return r;
         }
@@ -248,15 +250,22 @@ namespace Lanternvale.Session
             CloseLoot();
         }
 
-        /// <summary>Closes the loot window. Items not taken are lost unless <paramref name="takeAll"/>.</summary>
+        /// <summary>True for quest items (kind Quest or tied to a quest): they cannot be destroyed, sold or left behind.</summary>
+        static bool IsQuestItem(ItemDef d) => d != null && (d.kind == ItemKind.Quest || !string.IsNullOrEmpty(d.quest));
+
+        /// <summary>
+        /// Closes the loot window. Items not taken are lost unless <paramref name="takeAll"/>; quest items are never lost
+        /// (they go into the bags either way, like everywhere else quest items cannot be thrown away).
+        /// </summary>
         public void CloseLoot(bool takeAll = false)
         {
             if (PendingLoot == null) return;
             var w = PendingLoot;
-            if (takeAll)
+            foreach (var it in new List<ItemInstance>(w.Items))
             {
-                foreach (var it in new List<ItemInstance>(w.Items)) ReceiveInstance(it);
-                w.Items.Clear();
+                if (!takeAll && (it == null || !IsQuestItem(it.Def))) continue;
+                w.Items.Remove(it);
+                ReceiveInstance(it);
             }
             PendingLoot = null;
             Raise(new SessionEvent { Kind = SessionEventKind.LootClosed, Loot = w, Id = w.Source });

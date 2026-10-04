@@ -123,7 +123,7 @@ namespace Lanternvale.Rules
             target.Auras.Add(inst);
             target.InvalidateStats();
             target.ClampResources();
-            Emit(new CombatEvent { Type = CombatEventType.AuraApplied, Source = caster, Target = target, AuraId = def.id, Name = def.name, Count = inst.Stacks, Seconds = duration, School = def.school });
+            Emit(new CombatEvent { Type = CombatEventType.AuraApplied, Source = caster, Target = target, AuraId = def.id, Name = def.name, Count = inst.Stacks, Seconds = duration, School = def.school, AreaAuraChild = inst.IsAreaChild });
 
             // state side effects
             if (target.Pending != null)
@@ -208,7 +208,7 @@ namespace Lanternvale.Rules
             Emit(new CombatEvent
             {
                 Type = reason == AuraRemoveReason.Broken ? CombatEventType.AuraBroken : CombatEventType.AuraRemoved,
-                Source = a.Caster, Target = u, AuraId = a.Def.id, Name = a.Def.name, Reason = reason.ToString(),
+                Source = a.Caster, Target = u, AuraId = a.Def.id, Name = a.Def.name, Reason = reason.ToString(), AreaAuraChild = a.IsAreaChild,
             });
             // a control effect broken/dispelled during the bearer's own turn stops applying immediately
             if (reason != AuraRemoveReason.Expired && u.InOwnTurn)
@@ -248,7 +248,15 @@ namespace Lanternvale.Rules
         /// <summary>Elapses <paramref name="dt"/> seconds on the unit's auras: periodic ticks (fractional carry), expiry.</summary>
         public void ElapseAuras(Unit u, float dt)
         {
-            foreach (var a in new List<AuraInstance>(u.Auras))
+            if (u.Auras.Count == 0) return;
+            var auras = RentAuraList(u.Auras);
+            try { ElapseAuraList(u, auras, dt); }
+            finally { ReturnAuraList(auras); }
+        }
+
+        void ElapseAuraList(Unit u, List<AuraInstance> auras, float dt)
+        {
+            foreach (var a in auras)
             {
                 if (!u.Auras.Contains(a)) continue;
                 for (int i = 0; i < a.ProcCooldowns.Length; i++) a.ProcCooldowns[i] = Math.Max(0f, a.ProcCooldowns[i] - dt);
@@ -306,42 +314,64 @@ namespace Lanternvale.Rules
                         RemoveAura(c, AuraRemoveReason.SourceGone);
                 }
             }
-            foreach (var s in new List<Unit>(Units))
+            var sources = RentUnitList(Units);
+            try
             {
-                if (!s.IsAlive) continue;
-                foreach (var a in new List<AuraInstance>(s.Auras))
+                foreach (var s in sources) RefreshAreaAurasOf(s);
+            }
+            finally { ReturnUnitList(sources); }
+        }
+
+        void RefreshAreaAurasOf(Unit s)
+        {
+            if (!s.IsAlive) return;
+            bool any = false;
+            foreach (var a in s.Auras) if (a.Def.radius > 0) { any = true; break; }
+            if (!any) return;
+            var auras = RentAuraList(s.Auras);
+            try
+            {
+                foreach (var a in auras)
                 {
                     if (a.Def.radius <= 0 || !s.Auras.Contains(a)) continue;
                     var child = Db.Aura(a.Def.radiusAura);
                     if (child == null) continue;
-                    float r = MathUtil.Yd(a.Def.radius);
-                    foreach (var u in new List<Unit>(Units))
-                    {
-                        if (!u.IsAlive) continue;
-                        bool side;
-                        switch (a.Def.radiusAffects)
-                        {
-                            case AreaAffects.Enemies: side = u.IsHostileTo(s) && !u.IsTotem; break;
-                            case AreaAffects.Allies: side = u.IsFriendlyTo(s) && !u.IsTotem; break;
-                            default: side = !u.IsTotem || u == s; break;
-                        }
-                        bool inRange = side && u.DistanceTo(s) <= r + u.Radius;
-                        AuraInstance existing = null;
-                        foreach (var x in u.Auras) if (x.AreaSource == a) { existing = x; break; }
-                        if (inRange && existing == null)
-                        {
-                            // another source already provides the same child aura: keep a single instance
-                            var same = u.FindAura(child.id);
-                            if (same != null && same.IsAreaChild) continue;
-                            ApplyAura(a.Caster ?? s, u, child, new AuraApplyInfo
-                            {
-                                Source = a.SourceAbility, Rank = a.Rank, EffLevel = a.EffLevel, LearnLevel = a.LearnLevel,
-                                Duration = -1f, AreaSource = a, Mods = new AbilityModSet { EffectPct = (a.EffectMult - 1f) * 100f },
-                            });
-                        }
-                        else if (!inRange && existing != null) RemoveAura(existing, AuraRemoveReason.OutOfRange);
-                    }
+                    var units = RentUnitList(Units);
+                    try { RefreshAreaChildren(s, a, child, units); }
+                    finally { ReturnUnitList(units); }
                 }
+            }
+            finally { ReturnAuraList(auras); }
+        }
+
+        void RefreshAreaChildren(Unit s, AuraInstance a, AuraDef child, List<Unit> units)
+        {
+            float r = MathUtil.Yd(a.Def.radius);
+            foreach (var u in units)
+            {
+                if (!u.IsAlive) continue;
+                bool side;
+                switch (a.Def.radiusAffects)
+                {
+                    case AreaAffects.Enemies: side = u.IsHostileTo(s) && !u.IsTotem; break;
+                    case AreaAffects.Allies: side = u.IsFriendlyTo(s) && !u.IsTotem; break;
+                    default: side = !u.IsTotem || u == s; break;
+                }
+                bool inRange = side && u.DistanceTo(s) <= r + u.Radius;
+                AuraInstance existing = null;
+                foreach (var x in u.Auras) if (x.AreaSource == a) { existing = x; break; }
+                if (inRange && existing == null)
+                {
+                    // another source already provides the same child aura: keep a single instance
+                    var same = u.FindAura(child.id);
+                    if (same != null && same.IsAreaChild) continue;
+                    ApplyAura(a.Caster ?? s, u, child, new AuraApplyInfo
+                    {
+                        Source = a.SourceAbility, Rank = a.Rank, EffLevel = a.EffLevel, LearnLevel = a.LearnLevel,
+                        Duration = -1f, AreaSource = a, Mods = new AbilityModSet { EffectPct = (a.EffectMult - 1f) * 100f },
+                    });
+                }
+                else if (!inRange && existing != null) RemoveAura(existing, AuraRemoveReason.OutOfRange);
             }
         }
 

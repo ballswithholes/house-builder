@@ -55,6 +55,8 @@ Key fields (see Defs.cs for all):
 
 * `time`: `"Gcd"` (default, costs max(castTime, GCD) seconds of the 6 s turn) or `"OffGcd"` (costs castTime only).
 * `castTime`, `channeled` + `channelTicks`, `cooldown`, `cooldownGroup` (shared cooldown, e.g. `"shock"`).
+* `rankCastTimes` (optional, one value per rank): per-rank cast times for WoW's faster low ranks (Fireball Rank 1
+  1.5 s); empty = `castTime` for every rank. Used when a lower rank is cast (downranking).
 * `cost`: `{ "type": "Mana|Rage|Energy|Focus", "amount", "perLevel", "pctBaseMana", "consumeAll", "consumesComboPoints" }`.
 * `target`: `Self | Enemy | Ally | AllyOther | Point | Any | DeadAlly | Pet`.
 * `range` / `minRange` (yards), `melee: true` for melee reach.
@@ -68,6 +70,8 @@ Key fields (see Defs.cs for all):
   `hasPet`, `noPet`, `minComboPoints`, `outOfMeleeRange`, `minHealthPct`.
 * `tags`: free-form but use the common ones: `Interrupt Finisher Opener Builder Totem Seal Judgement Aura
   Blessing Stance Sting Aspect Curse Shock Armor Poison Heal Shout Trap Pet Shapeshift Form Conjure Buff Taunt`.
+  `Telegraph` (engine rule): a cast-time ability that always becomes a pending cast in combat — it resolves at the start
+  of the caster's next turn even if it would fit, so the party can interrupt/stun/silence it (boss big casts).
 * `exclusiveGroup`: using the ability removes the caster's auras of that group first (stances, aspects…).
   Normally put `exclusiveGroup` on the **aura** instead; the engine enforces aura groups on application.
 * `autoAttack: true` for basic attacks (`attack`, `auto_shot`, `shoot`); `nextSwing: true` for Heroic Strike,

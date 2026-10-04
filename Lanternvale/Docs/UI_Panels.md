@@ -15,13 +15,13 @@ presentation helpers: `ArtLibrary`, `Sfx`, `GameAudio`, `Ui`, `UiText`).
 | `TrainerScreen` (TrainerScreens.cs) | 111 | `Session.ActiveTrainer` | – |
 | `CharacterPanel` **C** | 120 | `UiPanels.Character` | – |
 | `SpellbookPanel` **P** | 122 | `UiPanels.Spellbook` | – |
-| `PartyPanel` | 124 | `UiPanels.Party` (Journal button) | – |
 | `InventoryPanel` **I / B** | 126 | `UiPanels.Inventory` | – |
 | `JournalPanel` **J** | 130 | `UiPanels.Journal` | – |
 | `MapPanel` **M** | 132 | `UiPanels.Map` | – |
+| `PartyPanel` **K** | 134 | `UiPanels.Party` — K (bound in `PartyPanel.Tick`, not in UiRoot's hotkey table), the HUD menu bar's Party button or the Journal's "Party & camp" button | – |
 | `TalentsPanel` **N** | 140 | `UiPanels.Talents` | – |
 | `LootScreen` | 150 | `Session.PendingLoot` (exploration) | – |
-| `LevelUpPopup` | 160 | `LevelUp` events (bottom right, waits for dialogue to end) | – |
+| `LevelUpPopup` | 160 | `LevelUp` events (bottom right, waits for dialogue to end; the detailed half of a level-up) | – |
 | `RespecScreen` | 200 | `Session.ActiveRespecNpc != ""` | – |
 | `QuestRewardScreen` | 205 | `Session.PendingQuestRewards` not deferred (exploration) | ✓ |
 | `DialogueScreen` | 220 | `Session.Mode == Dialogue` (+ a lingering d20 roll) | ✓ |
@@ -34,7 +34,7 @@ presentation helpers: `ArtLibrary`, `Sfx`, `GameAudio`, `Ui`, `UiText`).
 | `GameOverScreen` | 340 | `Session.Mode == GameOver` | ✓ |
 | `ContextMenuScreen` | 460 | right-click menus (`ContextMenuScreen.Open`) | – |
 | `ConfirmScreen` | 470 | yes/no prompts (`ConfirmScreen.Ask`) | ✓ |
-| `NoticeScreen` | 480 | feedback lines (`PanelKit.Notice`) | – |
+| (HUD) `ToastLaneHud` | 480 | the single toast lane — also every `PanelKit.Notice` (see UI_HUD.md) | – |
 
 Shared bodies: `SaveSlotsView` and `SettingsView` (MenuViews.cs) are used by the main menu, the pause panels and the
 game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, discs, check marks, gradients).
@@ -76,7 +76,12 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   Use / Equip on … (each member, reason when not allowed) / Sell / Sell one / Destroy… (confirm; quest items refuse).
 * **Spellbook** — groups by school (physical named per class), talent abilities, the pet's abilities, general attacks,
   passives; "Rank 3 (next at 24)", cost, cast and cooldown; live cooldown sweep; click = use (field, or the member's turn
-  in combat via `Combat.BeginAbility`).
+  in combat via `Combat.BeginAbility(id, rank)`). **Downranking:** every ability with more than one known rank has a rank
+  button ("Ranks…", gold "R5 on bar" while a rank is pinned; Shift+click or right-click on the entry does the same) that
+  opens a list of **every known rank** — highest first, current choice marked, cost per rank, each with its own full
+  tooltip (`UiText.Ability(unit, ability, rank)` → `Tooltip.AbilityFull(.., rank)`). Picking a rank pins it to the action
+  bar (`RankPins.Pin`; the bar's slot, its hotkey and a click here cast that rank); picking the highest clears the pin.
+  The entry tooltip describes the pinned rank.
 * **Talents** — three trees, 7×4 grid, `x/y` badges, learnable talents glow, locked tiers dimmed with their point
   requirement, prerequisite arrows (gold when met), tooltips (`UiText.Talent` + why not), left click learns
   (`Session.LearnTalent`), "Recommended build" (`AutoAllocateTalents`, confirm), "Reset talents" only while a trainer's
@@ -87,14 +92,20 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
 * **Map** — ground painted once per map from the nav grid; live party (leader ringed), NPC names, enemies, chests,
   lanterns (lit glow), signs and exits with labels/tooltips.
 * **Pause** — Resume, Save (disabled with the reason), Load, Settings, Help, Main Menu (confirm), Quit (confirm).
+  Loading a save or returning to the main menu from here resumes in real time (`Time.timeScale = 1`, no pause, no
+  fast-forward rate left behind — GameFlow.md §1).
   **Save/Load** — Quicksave + Slot 1–9 (save) or every save (load): name, class, level, map, day/hour, play time,
   modified date; overwrite / load / delete confirmations. **Settings** — master/music/effects volume + mute
-  (`GameAudio`, saved), animation speed (`GameFlow.AnimationSpeed`, saved in PlayerPrefs `lv_anim_speed` and restored at
-  boot), dialogue text speed (`lv_text_speed`), companion defaults (`Session.Settings`), combat move range overlay.
+  (`GameAudio`, saved), **Interface size** slider (75–150 % in 5 % steps → `Ui.UserScale`, applied when the slider is
+  released, PlayerPrefs `lv_ui_scale`), animation speed (`GameFlow.AnimationSpeed`, saved in PlayerPrefs `lv_anim_speed`
+  and restored at boot), dialogue text speed (`lv_text_speed`), companion defaults (`Session.Settings`), combat move range
+  overlay. The settings scroll when the window is shorter than them (large interface sizes).
   **Help** — controls cheat-sheet and tips.
 * **Game over** — "The lanterns dim…", embers, Load last save / Load a save… / Main Menu.
 * **Level up** — merged card per member: level, health/mana gained, talent points (+ "Talents (N)" button), new ranks
-  at the trainer or ranks learned by companions.
+  at the trainer or ranks learned by companions. Bottom right, apart from the HUD's short "Level N" banner (top centre)
+  and the toast lane: it never rises above 38 % of the screen height (with many entries it shows fewer), and it steps left
+  of an open loot window.
 
 ## Conventions (PanelKit)
 
@@ -108,13 +119,19 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
 * **Plain GUI with rects only** (no GUILayout); custom scroll views (`BeginScroll/EndScroll`: painted draggable
   scrollbar, rows outside the viewport are skipped and cannot be clicked). Clicks: `PanelKit.Click` on mouse-down (uses
   the MouseDown, never the MouseUp).
+* **World-click blockers inside scroll views.** `GameInput.BlockRectGui` converts with `GUIUtility.GUIToScreenPoint`
+  (minus the top-level origin the input driver records), so a rect drawn inside a scroll view / group / clip blocks the
+  screen area it really covers; `BeginScroll` registers its viewport as a block clip (`GameInput.BeginBlockClip` /
+  `EndBlockClip`), so rows scrolled out of sight block nothing. `PanelKit.Btn` is therefore just `Ui.Btn` (the old
+  "no blocker inside scroll views" workaround is gone).
 * **Esc.** `EscRouter` (in `PanelHost.Tick`, before UiRoot's hotkeys): confirm (1000) and context menu (900) first;
   then, if any UiRoot panel is open, UiRoot closes the top one; otherwise level-up card (500), loot = take all (400),
   respec (350), trainer (300), vendor (290), dialogue = open the pause menu (200; UiRoot never opens it over a modal
   screen, the conversation is the exception — the dialogue window ignores its keys while a panel is open over it),
   character creation / main-menu pages. Handled presses set `UiRoot.HotkeysSuppressed`.
-* **Feedback.** Session command reasons ("Not enough money.") become `PanelKit.Notice` lines (red; confirmations gold)
-  above the HUD's bottom block. `ConfirmScreen.Ask(title, text, yes, onYes, no, onNo, dangerous)` and
+* **Feedback.** Session command reasons ("Not enough money.") become `PanelKit.Notice` lines (red; confirmations gold),
+  routed through `GameFlow.Toast(text, colour)` into the HUD's **single toast lane** (drawn above windows and menus,
+  never overlapping the error lane or the banners). `ConfirmScreen.Ask(title, text, yes, onYes, no, onNo, dangerous)` and
   `ContextMenuScreen.Open(pos, title, items)` are available to any screen.
 * **Shared selection.** `PanelKit.Member` is the party member shown by the sheet, bags, spellbook and talents; it follows
   `GameFlow.Selected` when that changes and can be switched with the member tabs (without changing the leader).

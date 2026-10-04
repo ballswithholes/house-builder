@@ -22,6 +22,9 @@ occupancy are `int` (`Rules.Unit.Id`, which starts at 1). Rectangles in map data
 
 ## 1. Typical wiring (GameSession)
 
+A simplified sketch of how a host wires the world module (`ShowToast`, `Travel`, `StartBattle` stand for host code).
+The real host is `Core/Session/GameSession*.cs` — see `SessionAPI.md`.
+
 ```csharp
 using Lanternvale.World;
 

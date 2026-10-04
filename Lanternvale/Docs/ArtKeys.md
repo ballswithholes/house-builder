@@ -17,8 +17,13 @@ always runs, and real art can be dropped in later **with the same file name**.
 ```
 
 * `path`: Resources path without extension, including the `Art/` prefix (e.g. `Art/Props/prop_cottage_a`). PNG with transparency. Folders: `Art/{Backgrounds,Ground,Props,Foreground,Characters,Portraits,Creatures,Effects,Icons,UI}`.
-* `height`: height in **world metres** the sprite is drawn at (width follows the image aspect ratio).
-  For `loop` backgrounds, `height` is the layer height. Icons/UI ignore it.
+* `height`: height in **world metres** the **whole image** is drawn at (width follows the image aspect
+  ratio). For `loop` backgrounds, `height` is the layer height. Icons/UI ignore it. Units with a creature
+  definition and no class (enemies, hunter pets, warlock demons, shaman totems and other summons) ignore it
+  too: they are drawn with the whole image `size` metres tall, where `size` is the field of their creature
+  entry (`Resources/Data/content/creatures.json`, or the `creatures` list in
+  `Resources/Data/classes/<class>.json` for pets, demons, totems and other summons) — edit that, not the
+  manifest `height`, to resize their art. Their `pivot` still comes from the manifest.
 * `pivot`: normalised pivot; props/characters stand on their pivot (feet at y ≈ 0.04–0.08).
 * `category`: Background, Ground, Prop, Foreground, Character, Portrait, Creature, Effect, Icon, UI.
 * `loop`: background seamlessly tiles horizontally. Ground textures tile in both axes.
@@ -121,6 +126,11 @@ NPCs: `npc_elder`, `npc_innkeeper`, `npc_merchant`, `npc_smith`, `npc_villager_a
 
 ## Creatures (category Creature)
 
+The heights below are the `size` values (whole-image height in metres; see `height` above) of the
+creature entries with the same id in `creatures.json`. They, not the manifest `height`, set how tall these
+sprites are drawn as units. Entries that share a sprite can differ (`cr_greymane` draws `cr_wolf_blighted`
+at 1.5 m, `cr_wolf_packmate` draws `cr_wolf` at 1.0 m).
+
 | key | description | height |
 |---|---|---|
 | `cr_wolf` | grey wolf | 1.1 |
@@ -141,6 +151,7 @@ NPCs: `npc_elder`, `npc_innkeeper`, `npc_merchant`, `npc_smith`, `npc_villager_a
 
 Pets/demons/totems: `pet_wolf`, `pet_cat`, `pet_boar`, `pet_bear`, `pet_owl`, `demon_imp`, `demon_voidwalker`,
 `demon_succubus`, `demon_felhunter`, `demon_infernal` (hulking burning stone golem, 2.6 m), `totem_earth`, `totem_fire`, `totem_water`, `totem_air` (totems 1.2 m).
+These are drawn at the `size` of their entries in the class files (`hunter.json`, `warlock.json`, `shaman.json`).
 
 ## Effects (category Effect)
 

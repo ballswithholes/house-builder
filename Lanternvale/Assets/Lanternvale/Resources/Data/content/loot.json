@@ -47,6 +47,12 @@
       ]
     },
     {
+      "id": "lt_owl",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "junk_ruffled_feather", "chance": 45}, {"item": "junk_ruined_pelt", "chance": 15}, {"random": true, "chance": 2, "quality": "Uncommon"}]
+    },
+    {
       "id": "lt_mossling",
       "goldMin": 6,
       "goldMax": 24,

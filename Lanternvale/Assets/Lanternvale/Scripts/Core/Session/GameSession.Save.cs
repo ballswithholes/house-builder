@@ -90,6 +90,9 @@ namespace Lanternvale.Session
                 d.loot = new LootSaveData { source = PendingLoot.Source, title = PendingLoot.Title, gold = PendingLoot.Gold };
                 foreach (var it in PendingLoot.Items) d.loot.items.Add(SaveItem(it));
             }
+            d.suppressedEncounters = new List<string>(suppressedEncounters);
+            d.suppressedEncounters.Sort(StringComparer.Ordinal);
+            d.soothedEncounters = SortedFloats(soothedEncounters);
             return d;
         }
 
@@ -251,6 +254,7 @@ namespace Lanternvale.Session
                         resetting = false;
                         hasGame = true;
                         RebuildField();
+                        RestoreLoadedVitals();
                     }
                     catch (Exception) { resetting = false; ResetState(); }
                 }
@@ -260,11 +264,14 @@ namespace Lanternvale.Session
 
             hasGame = true;
             RebuildField();
+            RestoreLoadedVitals();
             transitionArmed = Map.TransitionAt(Leader.Position) == null;
             lastPhase = TimeOfDay;
             Raise(new SessionEvent { Kind = SessionEventKind.GameLoaded, Unit = Main, Text = $"Loaded: {Main.Name}, level {Main.Level}." });
             Raise(new SessionEvent { Kind = SessionEventKind.MapEntered, Id = MapId, Id2 = "", Text = MapDef?.name ?? "" });
             if (LanternsRekindled) Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
+            MarkFlagsChanged();   // FlagStore.Load replaces the flags without Changed events
+            FlushFlagsChanged();
             return true;
         }
 
@@ -306,14 +313,19 @@ namespace Lanternvale.Session
                 LoadAuras(kv.Key, kv.Value.auras);
                 if (kv.Value.pet != null && kv.Key.Pet != null) LoadAuras(kv.Key.Pet, kv.Value.pet.auras);
             }
+            loadedVitals.Clear();
             foreach (var kv in saves)
             {
                 var u = kv.Key;
                 var s = kv.Value;
                 u.InvalidateStats();
-                u.Health = MathUtil.Clamp(s.health, 0f, u.MaxHealth);
+                // saves are made out of combat, where nobody stays down: a character saved at 0 health (downed by
+                // field damage, older saves) loads standing at 1 health, never as a 0-health "alive" unit
+                float health = Math.Max(1f, s.health);
+                u.Health = MathUtil.Clamp(health, 0f, u.MaxHealth);
                 u.Mana = MathUtil.Clamp(s.mana, 0f, u.MaxMana);
                 u.Rage = s.rage; u.Energy = s.energy; u.Focus = s.focus;
+                loadedVitals.Add(new LoadedVitals { Unit = u, Health = health, Mana = s.mana });
                 if (u.Pet != null && s.pet != null)
                 {
                     var p = u.Pet;
@@ -321,6 +333,7 @@ namespace Lanternvale.Session
                     p.Health = MathUtil.Clamp(s.pet.health, 0f, p.MaxHealth);
                     p.Mana = MathUtil.Clamp(s.pet.mana, 0f, p.MaxMana);
                     p.Rage = s.pet.rage; p.Energy = s.pet.energy; p.Focus = s.pet.focus;
+                    loadedVitals.Add(new LoadedVitals { Unit = p, Health = s.pet.health, Mana = s.pet.mana });
                 }
             }
 
@@ -354,6 +367,53 @@ namespace Lanternvale.Session
             }
 
             SetMap(World.GetMap(d.mapId));
+            if (d.suppressedEncounters != null)
+            {
+                foreach (var id in d.suppressedEncounters)
+                    if (!string.IsNullOrEmpty(id) && Map.FindEncounter(id) != null) suppressedEncounters.Add(id);
+            }
+            else SuppressEncountersAroundParty();   // older saves: what stood next to the party could not have triggered
+            if (d.soothedEncounters != null)
+                foreach (var kv in d.soothedEncounters)
+                    if (kv.Value > 0f && Map.FindEncounter(kv.Key) != null) soothedEncounters[kv.Key] = kv.Value;
+        }
+
+        /// <summary>Suppresses every available encounter with a living party member within its radius + 1 m (the release rule
+        /// of UpdateSuppression): loading a save without the suppressed list never restarts the fight the party just left.</summary>
+        void SuppressEncountersAroundParty()
+        {
+            if (Map?.Def?.encounters == null) return;
+            foreach (var e in Map.Def.encounters)
+            {
+                if (e == null || !Map.IsEncounterAvailable(e)) continue;
+                foreach (var u in party)
+                    if (u.IsAlive && (u.Position - e.pos).Length <= e.radius + 1f) { suppressedEncounters.Add(e.id); break; }
+            }
+        }
+
+        struct LoadedVitals
+        {
+            public Unit Unit;
+            public float Health, Mana;
+        }
+
+        /// <summary>Health/mana read by ApplySave, re-applied once the exploration context has put area-aura children back.</summary>
+        readonly List<LoadedVitals> loadedVitals = new List<LoadedVitals>();
+
+        /// <summary>
+        /// Area-aura children (Blood Pact…) are not saved: RebuildField re-applies them. Health and mana were clamped against
+        /// the maxima without them, so they are set again from the save, clamped against the complete maxima.
+        /// </summary>
+        void RestoreLoadedVitals()
+        {
+            foreach (var v in loadedVitals)
+            {
+                var u = v.Unit;
+                u.InvalidateStats();
+                u.Health = MathUtil.Clamp(v.Health, 0f, u.MaxHealth);
+                u.Mana = MathUtil.Clamp(v.Mana, 0f, u.MaxMana);
+            }
+            loadedVitals.Clear();
         }
 
         static ulong ParseHex(string s, ulong fallback) =>
@@ -433,8 +493,9 @@ namespace Lanternvale.Session
             {
                 p.Abilities.Clear();
                 foreach (var kv in s.abilities) if (Db.Ability(kv.Key) != null) p.Abilities[kv.Key] = kv.Value;
-                UnitFactory.AttachPassives(p);
             }
+            // plus what its level allows (saves from before pets learned abilities on level-up lack them)
+            UnitFactory.LearnCreatureAbilities(p);
             if (s.cooldowns != null) foreach (var kv in s.cooldowns) p.Cooldowns[kv.Key] = kv.Value;
             if (s.procCooldowns != null) foreach (var kv in s.procCooldowns) p.ProcCooldowns[kv.Key] = kv.Value;
             p.InvalidateStats();

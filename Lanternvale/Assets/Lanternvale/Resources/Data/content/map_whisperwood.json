@@ -299,6 +299,13 @@
           "hidden": true
         },
         {
+          "id": "enc_owls",
+          "pos": [75.4, 2.0],
+          "radius": 2.2,
+          "enemies": [{"creature": "cr_owl", "pos": [74.8, 2.4]}, {"creature": "cr_owl", "pos": [76.0, 1.4]}],
+          "doneFlag": "enc_owls"
+        },
+        {
           "id": "enc_wisps_grove",
           "pos": [82.2, 10.6],
           "radius": 3.2,

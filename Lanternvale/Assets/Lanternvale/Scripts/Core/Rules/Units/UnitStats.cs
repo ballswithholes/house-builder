@@ -239,8 +239,10 @@ namespace Lanternvale.Rules
                 s.MeleeCrit = mc + b.Sum(StatId.MeleeCrit);
                 s.RangedCrit = mc + b.Sum(StatId.RangedCrit);
                 s.Dodge = Formulas.DodgeFromAgility(c, s.Agility, u.Level) + b.Sum(StatId.Dodge) + defBonus;
-                s.CanParry = c.canParry && u.Equipment.HasMeleeWeapon;
-                s.Parry = s.CanParry ? 5f + b.Sum(StatId.Parry) + defBonus : 0f;
+                // parry needs the trained Parry passive (Warrior 6, Paladin/Hunter 8, Rogue 12; Shaman: Enhancement talent);
+                // classes with innate parry (canParry) get the 5% base, the Shaman's 5% comes from its passive's aura
+                s.CanParry = EquipmentRules.HasParry(u) && u.Equipment.HasMeleeWeapon;
+                s.Parry = s.CanParry ? (c.canParry ? 5f : 0f) + b.Sum(StatId.Parry) + defBonus : 0f;
                 s.CanBlock = c.canBlock && u.Equipment.HasShield;
                 s.BlockChance = s.CanBlock ? 5f + b.Sum(StatId.Block) + defBonus : 0f;
             }

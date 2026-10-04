@@ -47,8 +47,12 @@ namespace Lanternvale.Game
         static readonly Color GoldText = new Color(1f, 0.85f, 0.42f);
         static readonly Color ComboColor = new Color(1f, 0.92f, 0.4f);
 
+        /// <summary>Buff aura ids already named over a unit during the current beat (group buffs are named once).</summary>
+        readonly HashSet<string> beatBuffNames = new HashSet<string>();
+
         void ResetCtx(Beat b)
         {
+            beatBuffNames.Clear();
             ctxActor = b != null ? b.Actor : null;
             ctxDelivery = Delivery.None;
             ctxImpactDrawnFor = null;
@@ -490,8 +494,8 @@ namespace Lanternvale.Game
             HidePlayerTurnVisuals();
             if (activeRingView != null) { activeRingView.SetActiveTurn(false); activeRingView = null; }
             var pos = BannerPosition();
-            // the "Victory!" / "Defeat" words are the HUD's banner (ToastsHud, on the BattleEnd event); the world gets
-            // the sparkles and the sound only, so the outcome is not announced twice
+            // ONE outcome presentation: the words ("Victory!", "Defeat", "Disengaged") are the HUD's banner (ToastsHud, on
+            // the BattleEnd event / CombatEnded); the world only gets the softer cue — sparkles and a sound — never text
             switch (Battle.Outcome)
             {
                 case BattleOutcome.Victory:
@@ -502,7 +506,7 @@ namespace Lanternvale.Game
                     Sfx.Play("death", null, 0.9f, 0.7f);
                     break;
                 default:
-                    FloatingText.Spawn(pos, "The fight is over", MutedText, 1.5f, false);
+                    FxSystem.Puff(pos - new Vector2(0f, 0.6f), new Color(0.85f, 0.82f, 0.95f), 0.8f);
                     Sfx.Play("ui_close");
                     break;
             }
@@ -516,7 +520,8 @@ namespace Lanternvale.Game
             var u = Battle.ActiveUnit;
             if (u == null || u.Team != Battle.PlayerTeam)
                 foreach (var m in Battle.Units) if (m.Team == Battle.PlayerTeam && m.IsCharacter && m.IsAlive) { u = m; break; }
-            if (u != null) FloatingText.Spawn(Head(u, V(u)) + new Vector2(0f, 0.5f), "Disengaged", MutedText, 1.2f);
+            // the "Disengaged" words are the HUD's banner (CombatEnded, Left): the world gets a soft puff
+            if (u != null) FxSystem.Puff(Center(u, V(u)), new Color(0.85f, 0.82f, 0.95f), 0.7f);
             Sfx.Play("ui_close");
             yield return 0.7f;
             disengageDone = true;
@@ -937,6 +942,8 @@ namespace Lanternvale.Game
             if (u == null) return;
             IncAura(u, e.AuraId, 1);
             RefreshStateVisuals(u);
+            // an area aura's radius child (a unit walked into a paladin/totem aura): bookkeeping only
+            if (e.AreaAuraChild) return;
             var def = Db?.Aura(e.AuraId);
             if (def == null || def.hidden) return;
             var v = V(u);
@@ -952,10 +959,9 @@ namespace Lanternvale.Game
                 FxSystem.Puff(Center(u, v), new Color(0.55f, 0.5f, 0.7f, 0.7f), 1f);
                 return;
             }
-            // a buff named like the ability that applied it (Battle Shout, Devotion Aura…) is already told by the
-            // ability label / aura pulse — don't repeat it over every ally
-            if (def.kind == AuraKind.Buff && curBeat != null && curBeat.Ability != null && curBeat.Ability.name == def.name) return;
-            if (Throttled(u, e.AuraId, 2.5f)) return;
+            // a group buff (Battle Shout, Arcane Intellect on the party, Prayer of Fortitude) is named once per action —
+            // the group pulse shows who received it — instead of over every ally
+            if (def.kind == AuraKind.Buff && curBeat != null && e.Source == curBeat.Actor && e.Source != u && !beatBuffNames.Add(e.AuraId)) return;
             if (def.kind == AuraKind.Debuff)
             {
                 FloatingText.Spawn(Head(u, v), def.name, DebuffTextColor, 0.75f);
@@ -974,6 +980,7 @@ namespace Lanternvale.Game
             if (u == null) return;
             IncAura(u, e.AuraId, -1);
             RefreshStateVisuals(u);
+            if (e.AreaAuraChild) return;
             var def = Db?.Aura(e.AuraId);
             if (def == null || def.hidden) return;
             var v = V(u);
@@ -1110,8 +1117,16 @@ namespace Lanternvale.Game
             else if (p != null && p.HasPoint) { c.HasPoint = true; c.Point = ToV(p.Point); }
             if (p != null && p.Ability != null && (a == null || p.Ability.id == a.id))
             {
-                float tot = channel && p.ChannelDuration > 0f ? p.ChannelDuration : c.Total;
-                c.Progress = Mathf.Clamp01(1f - p.RemainingTime / Mathf.Max(0.01f, tot));
+                if (p.TotalTime > 1e-3f)
+                {
+                    c.Total = p.TotalTime;
+                    c.Progress = p.Progress;
+                }
+                else
+                {
+                    float tot = channel && p.ChannelDuration > 0f ? p.ChannelDuration : c.Total;
+                    c.Progress = Mathf.Clamp01(1f - p.RemainingTime / Mathf.Max(0.01f, tot));
+                }
             }
             casting[u] = c;
             var v = V(u);
@@ -1129,6 +1144,8 @@ namespace Lanternvale.Game
                 BeginCastVis(u, Db?.Ability(e.AbilityId), e.Name, e.Seconds + RulesConstants.TurnSeconds, false, -1, e.Target);
                 return;
             }
+            var pc = u.Pending;
+            if (pc != null && pc.TotalTime > 1e-3f) c.Total = pc.TotalTime;
             c.Progress = Mathf.Clamp01(1f - e.Seconds / Mathf.Max(c.Total, e.Seconds + 0.01f));
             var v = V(u);
             if (v != null) v.SetCasting(c.Color, Mathf.Max(0.15f, c.Progress));
@@ -1403,6 +1420,8 @@ namespace Lanternvale.Game
 
         void AddLog(CombatEvent e)
         {
+            // area-aura children appear/disappear whenever someone walks through an aura radius: not log-worthy
+            if (e.AreaAuraChild) return;
             // resource costs and small gains (rage from every hit) would drown the log: HUD bars show them
             if (e.Type == CombatEventType.ResourceChange && (e.Amount < 0f || e.Amount < (e.Resource == ResourceType.Mana ? 50f : 10f))) return;
             string text = e.Text;

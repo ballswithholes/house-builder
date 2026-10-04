@@ -114,6 +114,11 @@ namespace Lanternvale.Data
                 if (a.rankLevels.Length > 0 && a.rankLevels[0] != a.learnLevel) Err(w, "rankLevels[0] must equal learnLevel");
                 if (a.passive && !string.IsNullOrEmpty(a.passiveAura) && !HasAura(a.passiveAura)) Err(w, $"unknown passiveAura '{a.passiveAura}'");
                 if (a.channeled && a.channelTicks <= 0) Err(w, "channeled ability needs channelTicks");
+                if (a.rankCastTimes != null && a.rankCastTimes.Length > 0)
+                {
+                    if (a.rankCastTimes.Length != Math.Max(1, a.rankLevels.Length)) Err(w, "rankCastTimes needs one value per rank");
+                    foreach (var t in a.rankCastTimes) if (t < 0f) Err(w, "rankCastTimes must be >= 0");
+                }
                 if (a.target == TargetType.Point && a.area.shape == AreaShape.None && !a.effects.Any(e => e.type == EffectType.Teleport || e.type == EffectType.SummonTotem || e.type == EffectType.Special))
                     Err(w, "Point target without area");
                 if (!a.passive && a.effects.Count == 0 && string.IsNullOrEmpty(a.special)) Err(w, "no effects");

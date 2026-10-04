@@ -16,6 +16,8 @@ namespace Lanternvale.Rules
         public Unit Unit;
         public List<Vec2> Path;
         public string AbilityId = "";
+        /// <summary>Rank to use (0 = the highest known; companion healers may downrank when mana runs low).</summary>
+        public int Rank;
         public Unit Target;
         public Vec2? Point;
         public ItemInstance Item;
@@ -65,7 +67,7 @@ namespace Lanternvale.Rules
                     else u.AIMemory.Moves++;
                     return r;
                 case AIStepKind.UseAbility:
-                    r = b.UseAbility(u, step.AbilityId, step.Target, step.Point);
+                    r = b.UseAbility(u, step.AbilityId, step.Target, step.Point, step.Rank);
                     if (!r.Ok) u.AIMemory.Failed.Add(step.AbilityId + "@" + (step.Target?.Id ?? 0));
                     else u.AIMemory.Used(step.AbilityId);
                     return r;

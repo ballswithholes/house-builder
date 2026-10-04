@@ -75,19 +75,82 @@ namespace Lanternvale.Rules
             }
         }
 
-        /// <summary>Highest armour type the unit may wear (armorTypes + armorUpgrade at its level).</summary>
+        /// <summary>
+        /// Highest armour type the unit may wear: armorTypes, plus armorUpgrade from its level once the class's armour
+        /// passive (Plate Mail, Mail) is trained (see <see cref="ProficiencyPassive"/>).
+        /// </summary>
         public static ArmorType MaxArmor(Unit u)
         {
             var c = u.Class;
             if (c == null) return ArmorType.Plate;
             var max = ArmorType.Cloth;
             foreach (var t in c.armorTypes) if (t > max) max = t;
-            if (c.armorUpgrade != null && c.armorUpgrade.type != ArmorType.None && u.Level >= c.armorUpgrade.level && c.armorUpgrade.type > max)
+            if (c.armorUpgrade != null && c.armorUpgrade.type != ArmorType.None && u.Level >= c.armorUpgrade.level && c.armorUpgrade.type > max
+                && HasProficiency(u, Proficiency.ArmorUpgrade))
                 max = c.armorUpgrade.type;
             return max;
         }
 
         public static bool CanWearArmor(Unit u, ArmorType t) => t == ArmorType.None || t <= MaxArmor(u);
+
+        /// <summary>Class proficiencies unlocked by a trained passive.</summary>
+        public enum Proficiency { ArmorUpgrade, DualWield, Parry }
+
+        static readonly Dictionary<ClassDef, string>[] ProficiencyIds =
+        {
+            new Dictionary<ClassDef, string>(), new Dictionary<ClassDef, string>(), new Dictionary<ClassDef, string>(),
+        };
+
+        /// <summary>
+        /// The class passive a trainer sells for a proficiency, by data convention: &lt;class&gt;_plate_mail / &lt;class&gt;_mail
+        /// for the armorUpgrade type, &lt;class&gt;_dual_wield, &lt;class&gt;_parry (Shaman: granted by the Enhancement talent).
+        /// Null when the class data has no such passive: the level/class rule alone applies then.
+        /// </summary>
+        public static AbilityDef ProficiencyPassive(Unit u, Proficiency p)
+        {
+            var c = u?.Class;
+            if (c == null || u.Db == null) return null;
+            var ids = ProficiencyIds[(int)p];
+            string id;
+            lock (ids)
+            {
+                if (!ids.TryGetValue(c, out id))
+                {
+                    string prefix = c.id.ToString().ToLowerInvariant();
+                    switch (p)
+                    {
+                        case Proficiency.DualWield: id = prefix + "_dual_wield"; break;
+                        case Proficiency.Parry: id = prefix + "_parry"; break;
+                        default:
+                            var type = c.armorUpgrade != null ? c.armorUpgrade.type : ArmorType.None;
+                            id = type == ArmorType.Plate ? prefix + "_plate_mail" : type == ArmorType.Mail ? prefix + "_mail" : "";
+                            break;
+                    }
+                    ids[c] = id;
+                }
+            }
+            if (string.IsNullOrEmpty(id)) return null;
+            var a = u.Db.Ability(id);
+            return a != null && a.passive && a.classId == c.id ? a : null;
+        }
+
+        /// <summary>The unit knows the proficiency's passive (true when its class data has none).</summary>
+        public static bool HasProficiency(Unit u, Proficiency p)
+        {
+            var a = ProficiencyPassive(u, p);
+            return a == null || u.Knows(a.id);
+        }
+
+        /// <summary>
+        /// The character can parry (with a melee weapon): its class parry passive is trained (Warrior/Rogue/Paladin/Hunter
+        /// Parry from the trainer, Shaman Parry from the Enhancement talent); classes without one parry when ClassDef.canParry.
+        /// </summary>
+        public static bool HasParry(Unit u)
+        {
+            if (u?.Class == null) return false;
+            var a = ProficiencyPassive(u, Proficiency.Parry);
+            return a != null ? u.Knows(a.id) : u.Class.canParry;
+        }
 
         public static bool CanUseWeapon(Unit u, WeaponType t)
         {
@@ -99,7 +162,9 @@ namespace Lanternvale.Rules
             return Specials.GrantsWeapon(u, t); // talents granting proficiency (Two-Handed Axes and Maces)
         }
 
-        public static bool CanDualWield(Unit u) => u.Class != null && u.Class.dualWieldLevel > 0 && u.Level >= u.Class.dualWieldLevel;
+        /// <summary>Off-hand one-handers: the class dual wields from dualWieldLevel once its Dual Wield passive is trained.</summary>
+        public static bool CanDualWield(Unit u) =>
+            u.Class != null && u.Class.dualWieldLevel > 0 && u.Level >= u.Class.dualWieldLevel && HasProficiency(u, Proficiency.DualWield);
 
         /// <summary>Why the unit cannot use the item at all (ignoring slot), or null.</summary>
         public static string CannotUseReason(Unit u, ItemDef def)
@@ -112,7 +177,11 @@ namespace Lanternvale.Rules
             if (def.equip != EquipType.Back && !CanWearArmor(u, def.armorType))
             {
                 if (u.Class != null && u.Class.armorUpgrade != null && u.Class.armorUpgrade.type == def.armorType)
-                    return $"{def.armorType} armour requires level {u.Class.armorUpgrade.level}.";
+                {
+                    if (u.Level < u.Class.armorUpgrade.level) return $"{def.armorType} armour requires level {u.Class.armorUpgrade.level}.";
+                    var pa = ProficiencyPassive(u, Proficiency.ArmorUpgrade);
+                    if (pa != null && !u.Knows(pa.id)) return $"{def.armorType} armour requires {pa.name} (class trainer).";
+                }
                 return $"{u.Class?.name ?? "This class"} cannot wear {def.armorType} armour.";
             }
             if (def.weaponType != WeaponType.None && !CanUseWeapon(u, def.weaponType))
@@ -145,7 +214,12 @@ namespace Lanternvale.Rules
             if (Array.IndexOf(SlotsFor(def), slot) < 0) return $"{def.name} does not go in the {slot} slot.";
             if (slot == EquipSlot.OffHand && def.equip == EquipType.OneHand && !CanDualWield(u))
             {
-                if (u.Class != null && u.Class.dualWieldLevel > 0) return $"Dual Wield requires level {u.Class.dualWieldLevel}.";
+                if (u.Class != null && u.Class.dualWieldLevel > 0)
+                {
+                    if (u.Level < u.Class.dualWieldLevel) return $"Dual Wield requires level {u.Class.dualWieldLevel}.";
+                    var pa = ProficiencyPassive(u, Proficiency.DualWield);
+                    if (pa != null && !u.Knows(pa.id)) return $"Requires {pa.name} (class trainer).";
+                }
                 return $"{u.Class?.name ?? "This class"} cannot dual wield.";
             }
             if (def.unique)

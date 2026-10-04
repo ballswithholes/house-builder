@@ -142,8 +142,7 @@ namespace Lanternvale.Game
                 var p = t.Pending;
                 var cr = new Rect(cx, y, cw, 20f);
                 var col = Hud.SchoolCol(p.Ability.school);
-                float total = Hud.PendingTotal(p);
-                HudDraw.Bar(cr, Mathf.Max(0.04f, 1f - Mathf.Clamp01(p.RemainingTime / total)), new Color(col.r, col.g, col.b, 0.95f));
+                HudDraw.Bar(cr, Mathf.Max(0.04f, Hud.PendingProgress(p)), new Color(col.r, col.g, col.b, 0.95f));
                 HudDraw.Ring(cr, new Color(col.r, col.g, col.b, HudDraw.Pulse(6f, 0.5f, 1f)), 5);
                 HudDraw.Text(new Rect(cr.x + 6f, cr.y - 1f, cr.width - 12f, cr.height + 2f), p.Ability.name, HudStyles.NameSmall, Ui.TextLight);
                 HudDraw.Text(new Rect(cr.x + 6f, cr.y - 1f, cr.width - 12f, cr.height + 2f), castLeft.Get(p.RemainingTime), HudStyles.TinyRight, Ui.TextLight);

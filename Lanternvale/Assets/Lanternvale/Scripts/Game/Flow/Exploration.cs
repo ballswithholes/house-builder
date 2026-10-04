@@ -1,8 +1,10 @@
 // Exploration input (BG3-style): hover (units, then map objects), click to move the party in formation,
 // click NPCs/companions to talk, chests to open (locks: rogue Pick Lock or a Sleight of Hand check),
 // transition markers to travel, enemies to attack first (optionally with an opener ability armed from the
-// hotbar: Charge, Cheap Shot, Ambush, Pyroblast…), props to inspect. Tab cycles the selected leader,
-// right click stops the party / cancels an armed opener, F5/F9 quick save/load.
+// hotbar: Charge, Cheap Shot, Ambush, Pyroblast…), props to inspect. Clicking a party member selects it (it
+// leads); clicking the selected companion again talks to it (TalkToCompanion: the hero walks up to it and its
+// in-party dialogue opens). Tab cycles the selected leader, right click stops the party / cancels an armed
+// opener, F5/F9 quick save/load.
 //
 // The session is authoritative for positions: views walk along the session's plan and report their
 // positions back (Session.UpdatePartyPositions) every ~0.2 m, which runs region/encounter/transition
@@ -19,8 +21,10 @@ namespace Lanternvale.Game
 {
     public sealed partial class GameFlow
     {
-        /// <summary>Walking speed range (m/s): short hops stroll, long trips jog.</summary>
+        /// <summary>Walking speed range (m/s): short hops stroll, long trips jog. Scaled by the leader's movement speed
+        /// (Unit.Stats.MoveSpeedPct), clamped to MinSpeedFactor..MaxSpeedFactor.</summary>
         const float WalkSpeed = 3.4f, JogSpeed = 4.8f;
+        const float MinSpeedFactor = 0.3f, MaxSpeedFactor = 2.5f;
         const float ReportStep = 0.2f;
         const float EngageRange = 9f;
         const float ReachSlack = 1.6f;
@@ -199,7 +203,20 @@ namespace Lanternvale.Game
             var u = UnitOf(v);
             if (u != null)
             {
-                if (s.IsInParty(u)) { Select(u); Sfx.Play("ui_click", null, 0.6f, 1.1f); }
+                if (s.IsInParty(u))
+                {
+                    // the selected companion clicked again: talk to them (in-party banter, approval scenes, dismiss).
+                    // Not on the second click of a quick double click that has only just selected them.
+                    if (u == Selected && CanTalkTo(u))
+                    {
+                        if (!ReferenceEquals(u, clickSelectedUnit) || Time.unscaledTime - clickSelectedTime >= TalkClickGuard)
+                            TalkToCompanion(u);
+                        return;
+                    }
+                    Select(u);
+                    if (Selected == u) { clickSelectedUnit = u; clickSelectedTime = Time.unscaledTime; }
+                    Sfx.Play("ui_click", null, 0.6f, 1.1f);
+                }
                 else if (u.Owner != null && s.IsInParty(u.Owner)) SetSelectedInternal(u);   // pets/totems: inspect only
                 return;
             }
@@ -210,6 +227,79 @@ namespace Lanternvale.Game
             }
             if (enemyByView.TryGetValue(v, out var enemy) && enemy.Encounter != null)
                 ClickEnemy(enemy);
+        }
+
+        // a click that selects a companion is not followed by a talk on the next click within this time (double click)
+        const float TalkClickGuard = 0.35f;
+        Unit clickSelectedUnit;
+        float clickSelectedTime = -10f;
+
+        /// <summary>True when <paramref name="u"/> is a living companion in the active party and the party is exploring:
+        /// <see cref="TalkToCompanion"/> would start walking over to them (UI: a "Talk" prompt / button).</summary>
+        public bool CanTalkTo(Unit u)
+        {
+            var s = Session;
+            return s != null && s.Mode == SessionMode.Exploration && s.Battle == null && u != null && u.Companion != null
+                   && u != s.Main && s.IsInParty(u) && u.IsAlive;
+        }
+
+        /// <summary>
+        /// Talks to a companion in the active party (exploration): the main character (else the leader or another standing
+        /// member, never the companion itself) takes the lead, walks up to them like to any NPC, both face each other and
+        /// Session.TalkTo(companion id) opens their dialogue — whose in-party branch holds banter, approval scenes and the
+        /// in-dialogue dismiss. Null when the walk started or the dialogue opened, else the reason (also toasted).
+        /// </summary>
+        public string TalkToCompanion(Unit u)
+        {
+            var s = Session;
+            string why = null;
+            if (u == null || s == null || u.Companion == null || u == s.Main || !s.IsInParty(u)) why = "They are not travelling with you.";
+            else if (s.Mode != SessionMode.Exploration || s.Battle != null) why = "Not now.";
+            else if (!u.IsAlive) why = $"{NameOf(u)} can't talk right now.";
+            if (why != null) { Toast(why); return why; }
+
+            string id = u.Companion.id;
+            CancelOpener();
+            groundHold = false;
+            ResetPending();
+            var talker = CompanionTalker(s, u);
+            var cv = ViewOf(u);
+            if (talker == null || cv == null)
+            {
+                // nobody else can walk over (or no view to walk to): talk from where everyone stands
+                var r = s.TalkTo(id);
+                if (r != null && r.Ok && r.Kind == InteractKind.Text && cv != null) ShowBark(cv, r.Message);
+                else if (r != null && !r.Ok) { Toast(r.Message); return r.Message; }
+                return null;
+            }
+            if (s.Leader != talker)
+            {
+                int gen = worldGeneration;
+                Select(talker);   // stops the party (final position report) and hands the lead to the talker
+                if (gen != worldGeneration || Session != s || s.Mode != SessionMode.Exploration || s.Battle != null)
+                    return "Not now.";   // that report started a fight, a dialogue or a journey
+                if (s.Leader != talker) return "Not now.";   // SetLeader refused (Select toasted why)
+            }
+            BeginInteraction(PendingKind.Talk, id, cv.FeetPosition, cv, null, GameSession.InteractionRange - 0.35f);
+            return null;
+        }
+
+        /// <summary>Who walks over to talk to a companion: the main character, else the leader, else any standing active
+        /// member other than the companion; null when nobody can.</summary>
+        Unit CompanionTalker(GameSession s, Unit companion)
+        {
+            if (CanWalkOverToTalk(s, s.Main, companion)) return s.Main;
+            if (CanWalkOverToTalk(s, s.Leader, companion)) return s.Leader;
+            foreach (var m in s.Party)
+                if (CanWalkOverToTalk(s, m, companion)) return m;
+            return null;
+        }
+
+        bool CanWalkOverToTalk(GameSession s, Unit m, Unit companion)
+        {
+            if (m == null || m == companion || !s.IsInParty(m) || !m.IsAlive) return false;
+            var v = ViewOf(m);
+            return v != null && !v.IsDowned;
         }
 
         void ClickEnemy(EnemyEntry enemy)
@@ -226,6 +316,15 @@ namespace Lanternvale.Game
                 engageOpener = "";
                 engageTargetIndex = 0;
                 BeginInteraction(PendingKind.Engage, enc.id, enemy.Home, null, null, EngageRange, enc);
+                return;
+            }
+            // it may have become unusable since it was armed (stealth or stance dropped, resource spent): say why and
+            // disarm rather than walk the party into the pack for a fight that would start without it
+            var unusable = OpenerUnusableReason(caster, a);
+            if (unusable != null)
+            {
+                CancelOpener();
+                Toast(unusable);
                 return;
             }
             // with an opener: walk until the caster is in the ability's range of the enemy's starting spot
@@ -297,6 +396,9 @@ namespace Lanternvale.Game
             }
             if (!MoveTo(pos, false))
             {
+                // a position report before planning stopped the party (travel, fight, dialogue, locked exit) and
+                // cleared the interaction: nothing more to do
+                if (pendingKind == PendingKind.None || Session != s || s.Mode != SessionMode.Exploration) return;
                 // nothing walkable gets us closer: try anyway when nearly there
                 if (av != null && (av.FeetPosition - pos).sqrMagnitude <= (pendingRange + ReachSlack) * (pendingRange + ReachSlack)) ExecutePending();
                 else { ResetPending(); Toast("You can't reach that."); }
@@ -402,7 +504,8 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------ party movement
 
-        /// <summary>Plans a party move to a world point and starts animating it. False when unreachable.</summary>
+        /// <summary>Plans a party move to a world point and starts animating it. False when unreachable, or when the
+        /// position report made before planning mid-walk stopped the party (pending interaction cleared).</summary>
         bool MoveTo(Vector2 dest, bool marker)
         {
             var s = Session;
@@ -411,16 +514,27 @@ namespace Lanternvale.Game
             var lv = ViewOf(leader);
             if (lv == null || lv.IsDowned) return false;
 
-            // the plan starts from where the views are now (the session may lag by up to ReportStep)
-            SyncUnitPositionsFromViews();
+            // the plan starts from where the views are now (the session may lag by up to ReportStep). Mid-walk these
+            // are walking positions: report them (triggers run, as the next step's report would have), so an exit the
+            // leader has just stepped into still travels; a Stop (travel, fight, dialogue, locked exit) ends here.
+            // During a silent approach nothing may trigger: hand them over without triggers instead.
+            bool leaderHeldBack = false;
+            if (partyMoving && !SilentApproach(ActorView()))
+            {
+                if (!ReportPositions()) return false;
+            }
+            else leaderHeldBack = SyncUnitPositionsFromViews();
             var plan = s.PlanPartyMove(ToVec2(dest));
             if (plan == null || !plan.Reachable || plan.LeaderPath.Count < 2 || plan.Length < 0.05f)
             {
                 if (marker) FxSystem.GroundRing(dest, 0.3f, new Color(1f, 0.55f, 0.5f, 0.8f), 0.45f);
                 return false;
             }
+            // a leader kept at its last reported spot (see SyncUnitPositionsFromViews) planned from there: walk on from
+            // the view instead of stepping back to it
+            if (leaderHeldBack) plan.LeaderPath[0] = ToVec2(lv.FeetPosition);
             lastMoveDest = dest;
-            float speed = Mathf.Lerp(WalkSpeed, JogSpeed, Mathf.Clamp01((plan.Length - 6f) / 14f));
+            float speed = Mathf.Lerp(WalkSpeed, JogSpeed, Mathf.Clamp01((plan.Length - 6f) / 14f)) * ExploreSpeedFactor(leader);
             lv.MoveAlong(plan.LeaderPath, speed, null);
             float leaderLen = Mathf.Max(0.5f, plan.Length);
             foreach (var f in plan.Followers)
@@ -439,6 +553,16 @@ namespace Lanternvale.Game
                 FxSystem.GroundRing(ToUnity(end), 0.35f, new Color(1f, 0.93f, 0.7f, 0.85f), 0.5f);
             }
             return true;
+        }
+
+        /// <summary>Walking speed multiplier from the leader's movement speed (Aspect of the Cheetah/Pack, Ghost Wolf, Sprint,
+        /// the Stealth/Prowl slow, snares), clamped to a sane range; followers scale with the leader's speed.</summary>
+        static float ExploreSpeedFactor(Unit leader)
+        {
+            if (leader == null) return 1f;
+            float pct = leader.Stats.MoveSpeedPct;
+            if (float.IsNaN(pct) || float.IsInfinity(pct)) return 1f;
+            return Mathf.Clamp(1f + pct / 100f, MinSpeedFactor, MaxSpeedFactor);
         }
 
         static float PathLength(List<Vec2> pts)
@@ -570,17 +694,39 @@ namespace Lanternvale.Game
             return true;
         }
 
-        /// <summary>Copies view positions into the units without running triggers (right before planning, silent approach).</summary>
-        void SyncUnitPositionsFromViews()
+        /// <summary>Hands the views' positions to the session without running triggers (right before planning, silent
+        /// approach, field actions, stops): GameSession.SetPartyPositions (facing, seated food/drink, area auras follow).
+        /// SetPartyPositions disarms a transition the leader is placed in (meant for teleports and snaps), but these views
+        /// only ever walked there: a leader whose view stands in a transition the session has not seen it enter keeps
+        /// its last reported position (followers are still synced), so the next UpdatePartyPositions report moves it in
+        /// and travels. True when the leader was held back like that.</summary>
+        bool SyncUnitPositionsFromViews()
         {
             var s = Session;
-            // never in combat: battle positions are authoritative there
-            if (s == null || (s.Mode != SessionMode.Exploration && s.Mode != SessionMode.Dialogue)) return;
+            // never in combat: battle positions are authoritative there (the session refuses as well)
+            if (s == null || (s.Mode != SessionMode.Exploration && s.Mode != SessionMode.Dialogue)) return false;
+            var leader = s.Leader;
+            if (leader == null) return false;
+            var lv = ViewOf(leader);
+            var leaderPos = lv != null && !lv.IsDowned ? ToVec2(lv.FeetPosition) : leader.Position;
+            bool heldBack = false;
+            var map = s.Map;
+            if (map != null && (leaderPos - leader.Position).SqrLength > 1e-6f
+                && map.TransitionAt(leaderPos) != null && map.TransitionAt(leader.Position) == null)
+            {
+                leaderPos = leader.Position;
+                heldBack = true;
+            }
+            otherPositions.Clear();
             foreach (var u in s.PartyUnits())
             {
+                if (u == leader) continue;
                 var v = ViewOf(u);
-                if (v != null && !v.IsDowned) u.Position = ToVec2(v.FeetPosition);
+                otherPositions.Add(v != null && !v.IsDowned ? ToVec2(v.FeetPosition) : u.Position);
             }
+            var why = s.SetPartyPositions(leaderPos, otherPositions);
+            if (why != null) { Debug.LogWarning("[Lanternvale] SetPartyPositions refused: " + why); return false; }
+            return heldBack;
         }
 
         /// <summary>Stops every party view; report = tell the session the final positions (may fire triggers).</summary>
@@ -651,6 +797,8 @@ namespace Lanternvale.Game
                 if (mo != null && map != null) map.SetHighlighted(mo.Id, true);
             }
 
+            HoveredEnemy = null;
+            HoveredEncounter = null;
             if (hoveredView != null)
             {
                 var u = UnitOf(hoveredView);
@@ -666,6 +814,8 @@ namespace Lanternvale.Game
                     HoveredUnit = null;
                     HoveredLabel = EnemyHoverLabel(hoveredView, enemy);
                     HoveredKind = HoverKind.Enemy;
+                    HoveredEnemy = PreviewOf(enemy);
+                    HoveredEncounter = enemy.Encounter != null ? EncounterPreview(enemy.Encounter.id) : null;
                 }
                 else
                 {
@@ -707,6 +857,48 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------ encounter hover label
 
+        // Session.PreviewEncounter per encounter id, rebuilt when the party level changes (scaleToParty creatures follow it)
+        readonly Dictionary<string, List<EncounterEnemyPreview>> encounterPreviews = new Dictionary<string, List<EncounterEnemyPreview>>();
+        int encounterPreviewLevel = -1;
+        GameSession encounterPreviewSession;
+
+        /// <summary>Session.PreviewEncounter (cached; refetched when the party level or the session changes), or null.</summary>
+        List<EncounterEnemyPreview> EncounterPreview(string encounterId, bool fresh = false)
+        {
+            var s = Session;
+            if (s == null || string.IsNullOrEmpty(encounterId)) return null;
+            int level = s.PartyLevel;
+            if (level != encounterPreviewLevel || s != encounterPreviewSession)
+            {
+                encounterPreviews.Clear();
+                encounterPreviewLevel = level;
+                encounterPreviewSession = s;
+            }
+            if (!fresh && encounterPreviews.TryGetValue(encounterId, out var list)) return list;
+            try { list = s.PreviewEncounter(encounterId); }
+            catch (Exception e) { LogStageOnce("preview-encounter", e); list = null; }
+            encounterPreviews[encounterId] = list;
+            return list;
+        }
+
+        /// <summary>The entry's preview, refetched when the party level changed since it was taken.</summary>
+        EncounterEnemyPreview PreviewOf(EnemyEntry e)
+        {
+            if (e == null || e.Encounter == null) return null;
+            var list = EncounterPreview(e.Encounter.id);
+            if (list != null && e.Index >= 0 && e.Index < list.Count && e.Creature != null && list[e.Index].CreatureId == e.Creature.id)
+                e.Preview = list[e.Index];
+            return e.Preview;
+        }
+
+        /// <summary>The hovered exploration enemy as the session previews it (name, level as the battle will scale it, rank
+        /// — elite/rare/boss), or null. Nameplates draw the level badge and the elite/boss marker from it.</summary>
+        public EncounterEnemyPreview HoveredEnemy { get; private set; }
+
+        /// <summary>Every enemy of the hovered exploration encounter (PreviewEncounter), or null — group size and its
+        /// toughest member for nameplates.</summary>
+        public IReadOnlyList<EncounterEnemyPreview> HoveredEncounter { get; private set; }
+
         // cached label of the hovered encounter enemy (rebuilt when the hovered view/entry or the party level changes)
         UnitView enemyLabelView;
         EnemyEntry enemyLabelEntry;
@@ -716,8 +908,9 @@ namespace Lanternvale.Game
 
         /// <summary>
         /// What the player needs before committing to a fight: "Mossling  Lv 3-4  (x3)", "Hollow Warden  Lv 8 Boss",
-        /// "Mossling  Lv 5  (group of 3, Boss)". The level is coloured WoW-style by its difference to the party level
-        /// (grey/green/yellow/orange/red, as on the target frame); rich-text colour tag, the nameplate styles render it.
+        /// "Mossling  Lv 5  (group of 3, Boss)" — from Session.PreviewEncounter (the level the battle will scale it to). The
+        /// level is coloured WoW-style by its difference to the party level (grey/green/yellow/orange/red, as on the target
+        /// frame); rich-text colour tag, the nameplate styles render it.
         /// </summary>
         string EnemyHoverLabel(UnitView v, EnemyEntry e)
         {
@@ -733,58 +926,43 @@ namespace Lanternvale.Game
 
         string BuildEnemyLabel(UnitView v, EnemyEntry e, int partyLevel)
         {
+            var p = PreviewOf(e);
             var cdef = e.Creature;
-            string name = cdef != null && !string.IsNullOrEmpty(cdef.name) ? cdef.name : (v != null ? v.DisplayName ?? "" : "");
-            if (cdef == null) return name;
+            string name = p != null && !string.IsNullOrEmpty(p.Name) ? p.Name
+                        : cdef != null && !string.IsNullOrEmpty(cdef.name) ? cdef.name : (v != null ? v.DisplayName ?? "" : "");
+            if (p == null) return name;
             var sb = enemyLabelBuilder;
             sb.Length = 0;
             sb.Append(name);
 
-            // level (range) of this creature as the session will roll it (UnitFactory.CreatureLevel)
-            CreatureLevelRange(cdef, e.Def != null ? e.Def.level : 0, partyLevel, out int lo, out int hi);
+            // the level the battle will give it (a range for creatures rolled within one)
+            int lo = p.MinLevel > 0 ? p.MinLevel : p.Level, hi = Mathf.Max(lo, p.MaxLevel > 0 ? p.MaxLevel : p.Level);
             sb.Append("  <color=").Append(LevelColorHex(hi - partyLevel)).Append(">Lv ").Append(lo);
             if (hi != lo) sb.Append('-').Append(hi);
             sb.Append("</color>");
-            string rank = RankWord(cdef.rank);
+            string rank = RankWord(p.Rank);
             if (rank.Length > 0) sb.Append(' ').Append(rank);
 
             // the size of the fight (and a tougher member when the hovered one is not the leader of the pack)
-            var enc = e.Encounter;
-            var db = Db;
-            if (enc != null && enc.enemies != null && db != null)
+            var group = e.Encounter != null ? EncounterPreview(e.Encounter.id) : null;
+            if (group != null && group.Count > 1)
             {
-                int count = 0;
                 bool same = true;
                 CreatureRank top = CreatureRank.Normal;
-                foreach (var ed in enc.enemies)
+                for (int i = 0; i < group.Count; i++)
                 {
-                    var c = ed != null ? db.Creature(ed.creature) : null;
-                    if (c == null) continue;
-                    count++;
-                    if (c != cdef) same = false;
-                    if (RankDanger(c.rank) > RankDanger(top)) top = c.rank;
+                    if (group[i].CreatureId != p.CreatureId) same = false;
+                    if (RankDanger(group[i].Rank) > RankDanger(top)) top = group[i].Rank;
                 }
-                if (count > 1)
+                if (same) sb.Append("  (x").Append(group.Count).Append(')');
+                else
                 {
-                    if (same) sb.Append("  (x").Append(count).Append(')');
-                    else
-                    {
-                        sb.Append("  (group of ").Append(count);
-                        if (RankDanger(top) > RankDanger(cdef.rank)) sb.Append(", ").Append(RankWord(top));
-                        sb.Append(')');
-                    }
+                    sb.Append("  (group of ").Append(group.Count);
+                    if (RankDanger(top) > RankDanger(p.Rank)) sb.Append(", ").Append(RankWord(top));
+                    sb.Append(')');
                 }
             }
             return sb.ToString();
-        }
-
-        /// <summary>Mirror of UnitFactory.CreatureLevel without the roll: the range the level can land in.</summary>
-        static void CreatureLevelRange(CreatureDef def, int explicitLevel, int partyLevel, out int lo, out int hi)
-        {
-            if (explicitLevel > 0) { lo = hi = explicitLevel; return; }
-            if (def.scaleToParty) { lo = hi = Mathf.Clamp(partyLevel + def.levelOffset, 1, 63); return; }
-            lo = def.levelMin;
-            hi = Mathf.Max(def.levelMin, def.levelMax);
         }
 
         /// <summary>WoW level colours (same thresholds as the target frame): red ≥ +5, orange ≥ +3, yellow ≥ -2, green ≥ -7, grey.</summary>
@@ -832,6 +1010,9 @@ namespace Lanternvale.Game
             HoveredUnit = null;
             HoveredLabel = "";
             HoveredKind = HoverKind.None;
+            HoveredEnemy = null;
+            HoveredEncounter = null;
+            encounterPreviews.Clear();
         }
 
         /// <summary>Short label for a map object ("Chest", "Locked chest", "To Whisperwood", "Spirit Lantern").</summary>

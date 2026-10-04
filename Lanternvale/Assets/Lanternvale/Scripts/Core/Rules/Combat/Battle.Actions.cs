@@ -37,7 +37,20 @@ namespace Lanternvale.Rules
     public sealed class AbilityStatus
     {
         public AbilityDef Ability;
+        /// <summary>Rank this status describes: the requested rank (downranking) or the highest known rank (0 when the
+        /// ability is not a learned one: basic attacks, contextual abilities). MaxRank = ranks the ability has.</summary>
         public int Rank, MaxRank;
+        /// <summary>Ranks the unit knows (ranks 1..KnownRanks can be used; 0 for basic/contextual abilities). Offer a rank
+        /// picker when it is above 1 (WoW downranking: lower ranks cost less and do less).</summary>
+        public int KnownRanks;
+        /// <summary>True when ranks 1..KnownRanks give the player a choice.</summary>
+        public bool CanDownrank => KnownRanks > 1;
+        /// <summary>
+        /// Range to the unit's current attack target (Unit.AttackTarget) for enemy-targeted abilities: true in range (and in
+        /// line of sight, not inside the minimum range), false out of range; null when there is no living attack target or
+        /// the ability does not target enemies (self, ally, ground and pet abilities).
+        /// </summary>
+        public bool? InRangeOfAttackTarget;
         /// <summary>Usable now (ignoring target and range).</summary>
         public bool Usable;
         public UseFailure Code;
@@ -48,6 +61,7 @@ namespace Lanternvale.Rules
         public bool NeedsTarget, NeedsPoint;
         /// <summary>Stance/aura/seal from this ability is active, auto attack running, or swing queued.</summary>
         public bool Active;
+        /// <summary>Description with magnitudes at <see cref="Rank"/> ("" when the bar was built without tooltips).</summary>
         public string Tooltip = "";
         public override string ToString() => $"{Ability.name} r{Rank} {(Usable ? "ready" : Reason)}";
     }
@@ -56,20 +70,21 @@ namespace Lanternvale.Rules
     {
         // ===================================================== usability checks
 
-        /// <summary>Checks everything except target and range (for the action bar).</summary>
-        public UseCheck CanUseIgnoringTarget(Unit u, AbilityDef a, bool fromItem = false) => CheckUse(u, a, null, null, fromItem, false);
+        /// <summary>Checks everything except target and range (for the action bar). <paramref name="rank"/>: 0 = the highest
+        /// known rank, else that rank (downranking; it must be known).</summary>
+        public UseCheck CanUseIgnoringTarget(Unit u, AbilityDef a, bool fromItem = false, int rank = 0) => CheckUse(u, a, null, null, fromItem, false, rank);
 
-        /// <summary>Full usability check for an ability on a target unit and/or ground point.</summary>
-        public UseCheck CanUse(Unit u, string abilityId, Unit target = null, Vec2? point = null, bool fromItem = false)
+        /// <summary>Full usability check for an ability on a target unit and/or ground point (rank 0 = highest known).</summary>
+        public UseCheck CanUse(Unit u, string abilityId, Unit target = null, Vec2? point = null, bool fromItem = false, int rank = 0)
         {
             var a = Db.Ability(abilityId);
             if (a == null) return UseCheck.Fail(UseFailure.Unknown, $"Unknown ability '{abilityId}'.");
-            return CheckUse(u, a, target, point, fromItem, true);
+            return CheckUse(u, a, target, point, fromItem, true, rank);
         }
 
-        public UseCheck CanUse(Unit u, AbilityDef a, Unit target = null, Vec2? point = null, bool fromItem = false) => CheckUse(u, a, target, point, fromItem, true);
+        public UseCheck CanUse(Unit u, AbilityDef a, Unit target = null, Vec2? point = null, bool fromItem = false, int rank = 0) => CheckUse(u, a, target, point, fromItem, true, rank);
 
-        UseCheck CheckUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, bool checkTarget)
+        UseCheck CheckUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, bool checkTarget, int requestedRank = 0)
         {
             if (u == null || a == null) return UseCheck.Fail(UseFailure.Unknown, "Nothing to use.");
             if (u.Dead) return UseCheck.Fail(UseFailure.Dead, "You are dead.");
@@ -82,6 +97,8 @@ namespace Lanternvale.Rules
             if (u.Pending != null) return UseCheck.Fail(UseFailure.Casting, $"Already casting {u.Pending.Ability.name}.");
             if (!fromItem && !KnowsForUse(u, a)) return UseCheck.Fail(UseFailure.Unknown, $"You do not know {a.name}.");
             if (a.passive) return UseCheck.Fail(UseFailure.Passive, $"{a.name} is passive.");
+            if (requestedRank > 0 && !fromItem && requestedRank > AbilityRules.UsedRank(u, a))
+                return UseCheck.Fail(UseFailure.Unknown, $"You do not know {a.name} (Rank {requestedRank}).");
 
             // control states
             if (u.HasState(UnitState.Stun)) return UseCheck.Fail(UseFailure.Controlled, "You are stunned.");
@@ -107,10 +124,10 @@ namespace Lanternvale.Rules
             float cd = u.CooldownLeft(a);
             if (cd > 1e-3f) return UseCheck.Fail(UseFailure.Cooldown, $"{a.name} is not ready ({cd:0.#} s).");
             var mods = AbilityMods.For(u, a);
-            int rank = AbilityRules.UsedRank(u, a);
+            int rank = AbilityRules.UsedRank(u, a, requestedRank);
             if (InCombat && Started)
             {
-                float tc = AbilityRules.TimeCost(u, a, mods);
+                float tc = AbilityRules.TimeCost(u, a, mods, rank);
                 if (tc > 0f && u.TimeLeft <= 1e-3f) return UseCheck.Fail(UseFailure.NoTime, "No time left this turn.");
             }
             if (a.nextSwing && u.QueuedSwing == a.id) return UseCheck.Fail(UseFailure.AlreadyQueued, $"{a.name} is already queued.");
@@ -375,8 +392,12 @@ namespace Lanternvale.Rules
 
         // ======================================================== action bar
 
-        /// <summary>Known, non-passive, non-hidden abilities with usability/cost/time/cooldown (target-independent).</summary>
-        public List<AbilityStatus> GetAbilityBar(Unit u, bool includeHidden = false)
+        /// <summary>
+        /// Known, non-passive, non-hidden abilities with usability/cost/time/cooldown (target-independent) at their highest
+        /// known rank. <paramref name="includeTooltips"/> = false skips the description text (AbilityStatus.Tooltip stays
+        /// "") for frequent HUD refreshes; build it on hover with Tooltip.Ability(unit, ability, rank).
+        /// </summary>
+        public List<AbilityStatus> GetAbilityBar(Unit u, bool includeHidden = false, bool includeTooltips = true)
         {
             var list = new List<AbilityStatus>();
             var seen = new HashSet<string>();
@@ -384,43 +405,72 @@ namespace Lanternvale.Rules
             {
                 if (a == null || !seen.Add(a.id)) return;
                 if (a.passive || (a.hidden && !includeHidden)) return;
-                list.Add(GetStatus(u, a));
+                list.Add(GetStatus(u, a, false, 0, includeTooltips));
             }
             if (u.Class != null) Add(Db.Ability(u.Class.basicAttack));
             foreach (var kv in u.Abilities) Add(Db.Ability(kv.Key));
             foreach (var id in Specials.ContextualAbilities(this, u))
             {
                 var a = Db.Ability(id);
-                if (a != null && seen.Add(a.id)) list.Add(GetStatus(u, a));
+                if (a != null && seen.Add(a.id)) list.Add(GetStatus(u, a, false, 0, includeTooltips));
             }
             return list;
         }
 
-        public AbilityStatus GetStatus(Unit u, AbilityDef a, bool fromItem = false)
+        /// <summary>
+        /// State of one ability for the unit (target-independent). <paramref name="rank"/>: 0 = highest known rank, else
+        /// that rank (downranking previews: cost, usability and tooltip of the lower rank).
+        /// </summary>
+        public AbilityStatus GetStatus(Unit u, AbilityDef a, bool fromItem = false, int rank = 0, bool includeTooltip = true)
         {
             var mods = AbilityMods.For(u, a);
-            int rank = AbilityRules.UsedRank(u, a);
-            var chk = CheckUse(u, a, null, null, fromItem, false);
+            int used = AbilityRules.UsedRank(u, a, rank);
+            var chk = CheckUse(u, a, null, null, fromItem, false, rank);
+            int known = u.RankOf(a.id);
             var st = new AbilityStatus
             {
                 Ability = a,
-                Rank = u.RankOf(a.id),
+                Rank = rank > 0 ? rank : known,
                 MaxRank = AbilityRules.RankCount(a),
+                KnownRanks = known,
                 Usable = chk.Ok,
                 Code = chk.Code,
                 Reason = chk.Reason ?? "",
-                Cost = AbilityRules.ResourceCost(u, a, rank, mods),
+                Cost = AbilityRules.ResourceCost(u, a, used, mods),
                 CostType = a.cost != null ? a.cost.type : ResourceType.None,
-                TimeCost = AbilityRules.TimeCost(u, a, mods),
-                CastTime = AbilityRules.CastTime(u, a, mods),
+                TimeCost = AbilityRules.TimeCost(u, a, mods, used),
+                CastTime = AbilityRules.CastTime(u, a, mods, used),
                 Cooldown = AbilityRules.Cooldown(u, a, mods),
                 CooldownLeft = u.CooldownLeft(a),
                 NeedsTarget = a.target != TargetType.Self && a.target != TargetType.Point && a.target != TargetType.Pet,
                 NeedsPoint = a.target == TargetType.Point,
             };
             st.Active = IsAbilityActive(u, a);
-            st.Tooltip = Tooltip.Ability(u, a);
+            st.InRangeOfAttackTarget = InRangeOfAttackTarget(u, a);
+            if (includeTooltip) st.Tooltip = Tooltip.Ability(u, a, rank > 0 ? used : 0);
             return st;
+        }
+
+        /// <summary>See <see cref="AbilityStatus.InRangeOfAttackTarget"/>.</summary>
+        bool? InRangeOfAttackTarget(Unit u, AbilityDef a)
+        {
+            var t = u.AttackTarget;
+            if (t == null || !t.IsAlive || !Units.Contains(t) || t == u) return null;
+            if (a.target != TargetType.Enemy && a.target != TargetType.Any) return null;
+            return IsInRange(u, a, t);
+        }
+
+        /// <summary>
+        /// True when <paramref name="target"/> is within the ability's range of <paramref name="u"/> right now: maximum range
+        /// (melee reach for melee abilities, range mods, the target's radius), minimum range (hunter dead zone) and line of
+        /// sight — the range part of CanUse, for out-of-range tinting against any target the UI has selected.
+        /// </summary>
+        public bool IsInRange(Unit u, AbilityDef a, Unit target)
+        {
+            if (u == null || a == null || target == null) return false;
+            if (target == u) return true;
+            var chk = CheckRange(u, a, target, AbilityMods.For(u, a));
+            return chk.Ok;
         }
 
         /// <summary>True when the ability's toggle state is on (auto attack, queued swing, its aura active on the caster).</summary>
@@ -438,12 +488,16 @@ namespace Lanternvale.Rules
 
         // ======================================================== ability use
 
-        /// <summary>Uses an ability (by id) on a target unit and/or point. Returns why it failed, if it did.</summary>
-        public ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null)
+        /// <summary>
+        /// Uses an ability (by id) on a target unit and/or point. Returns why it failed, if it did. <paramref name="rank"/>:
+        /// 0 = the highest known rank; 1..known rank = WoW downranking (cost, magnitudes, aura values and durations of that
+        /// rank; pending casts and queued swings keep it).
+        /// </summary>
+        public ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null, int rank = 0)
         {
             var a = Db.Ability(abilityId);
             if (a == null) return ActionResult.Fail($"Unknown ability '{abilityId}'.");
-            return UseAbility(u, a, target, point, false, null);
+            return UseAbility(u, a, target, point, false, null, rank);
         }
 
         /// <summary>Uses an item from the shared inventory (its `use` ability); consumes one when consumable.</summary>
@@ -485,13 +539,13 @@ namespace Lanternvale.Rules
             return null;
         }
 
-        internal ActionResult UseAbility(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, ItemInstance item)
+        internal ActionResult UseAbility(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, ItemInstance item, int requestedRank = 0)
         {
             if (a.target == TargetType.Self) target = u;
             else if (a.target == TargetType.Pet) target = u.Pet;
             else if (a.target == TargetType.Point && point == null && target != null) point = target.Position;
             else if (a.target == TargetType.Point && point == null && a.area.centeredOnCaster) point = u.Position;
-            var chk = CheckUse(u, a, target, point, fromItem, true);
+            var chk = CheckUse(u, a, target, point, fromItem, true, requestedRank);
             if (!chk.Ok) return ActionResult.Fail(chk.Reason);
 
             // toggles
@@ -503,6 +557,7 @@ namespace Lanternvale.Rules
             if (a.nextSwing)
             {
                 u.QueuedSwing = a.id;
+                u.QueuedSwingRank = fromItem ? 0 : requestedRank;
                 if (target != null && target.IsHostileTo(u)) StartAutoAttack(u, target, Db.Ability("attack"), false);
                 Emit(new CombatEvent { Type = CombatEventType.SwingQueued, Source = u, Target = target, AbilityId = a.id, Name = a.name });
                 return ActionResult.Success;
@@ -510,9 +565,9 @@ namespace Lanternvale.Rules
 
             castSerial++;
             var mods = AbilityMods.For(u, a);
-            int rank = AbilityRules.UsedRank(u, a);
-            float timeCost = AbilityRules.TimeCost(u, a, mods);
-            float castTime = AbilityRules.CastTime(u, a, mods);
+            int rank = AbilityRules.UsedRank(u, a, fromItem ? 0 : requestedRank);
+            float timeCost = AbilityRules.TimeCost(u, a, mods, rank);
+            float castTime = AbilityRules.CastTime(u, a, mods, rank);
             if (target != null && target.IsHostileTo(u)) u.Engaged = true;
 
             if (!string.IsNullOrEmpty(a.exclusiveGroup))
@@ -557,7 +612,7 @@ namespace Lanternvale.Rules
                     {
                         Ability = a, Rank = rank, Target = target, Point = point ?? default, HasPoint = point.HasValue,
                         RemainingTime = channel - u.TimeLeft, Channel = true, TicksLeft = ticks - now, TicksTotal = ticks,
-                        ComboPoints = cast.ComboPoints, StartRound = Round, ChannelDuration = channel,
+                        ComboPoints = cast.ComboPoints, StartRound = Round, ChannelDuration = channel, TotalTime = channel,
                     };
                     u.TimeLeft = 0f;
                 }
@@ -572,12 +627,14 @@ namespace Lanternvale.Rules
             if (castTime > 0f && timed)
             {
                 Emit(new CombatEvent { Type = CombatEventType.CastStart, Source = u, Target = target, AbilityId = a.id, Name = a.name, Seconds = castTime });
-                if (u.TimeLeft + 1e-3f < castTime)
+                // "Telegraph" casts never complete in the turn they start: everyone gets a turn to interrupt, stun or silence them
+                if (u.TimeLeft + 1e-3f < castTime || IsTelegraphed(a))
                 {
                     u.Pending = new PendingCast
                     {
                         Ability = a, Rank = rank, Target = target, Point = point ?? default, HasPoint = point.HasValue,
-                        RemainingTime = castTime - u.TimeLeft, ComboPoints = cast.ComboPoints, StartRound = Round, CostMult = cast.CostMult,
+                        RemainingTime = Math.Max(0f, castTime - u.TimeLeft), ComboPoints = cast.ComboPoints, StartRound = Round, CostMult = cast.CostMult,
+                        TotalTime = castTime,
                     };
                     u.TimeLeft = 0f;
                     pendingItems[u] = item;
@@ -597,6 +654,13 @@ namespace Lanternvale.Rules
         }
 
         readonly Dictionary<Unit, ItemInstance> pendingItems = new Dictionary<Unit, ItemInstance>();
+
+        /// <summary>Ability tag: a cast-time ability that always becomes a pending cast in combat (resolves at the start of the
+        /// caster's next turn even when it would fit in the remaining Time) — a telegraphed boss cast.</summary>
+        public const string TelegraphTag = "Telegraph";
+
+        /// <summary>The ability is a telegraphed cast (tag <see cref="TelegraphTag"/> and a cast time).</summary>
+        public static bool IsTelegraphed(AbilityDef a) => a != null && a.castTime > 0f && !a.channeled && AbilityMods.HasTag(a, TelegraphTag);
 
         static readonly UnitState[] BreakableControlStates =
         {
@@ -647,7 +711,7 @@ namespace Lanternvale.Rules
             {
                 // shared group cooldown: the group lock lasts the ability's cooldown (at least its GCD-free minimum)
                 float g = Math.Max(cd, 0f);
-                if (g > 0f) u.Cooldowns["grp:" + a.cooldownGroup] = g;
+                if (g > 0f) u.Cooldowns[a.CooldownGroupKey] = g;
             }
         }
 
@@ -677,7 +741,7 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>Removes a queued nextSwing ability.</summary>
-        public void CancelQueuedSwing(Unit u) { u.QueuedSwing = ""; }
+        public void CancelQueuedSwing(Unit u) { u.QueuedSwing = ""; u.QueuedSwingRank = 0; }
 
         /// <summary>Cancels one of the unit's own buffs (right-click a buff). Debuffs cannot be cancelled.</summary>
         public ActionResult CancelAura(Unit u, AuraInstance a)

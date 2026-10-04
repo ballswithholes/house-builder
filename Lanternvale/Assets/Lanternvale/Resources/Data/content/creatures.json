@@ -166,6 +166,28 @@
       "bark": "*Something many-legged clicks in the canopy.*"
     },
     {
+      "id": "cr_owl",
+      "name": "Duskfeather Owl",
+      "description": "A great round owl that hunts the pilgrim road at dusk. It does not like being stared at.",
+      "sprite": "pet_owl",
+      "type": "Beast",
+      "family": "Owl",
+      "rank": "Normal",
+      "levelMin": 5,
+      "levelMax": 7,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "attackSpeed": 2.0,
+      "moveSpeed": 10,
+      "size": 0.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_owl_screech", "priority": 4, "chance": 50, "condition": "targetNoAura:cr_screeched"}],
+      "lootTable": "lt_owl",
+      "faction": "Wildlife",
+      "tameable": true,
+      "bark": "*Two enormous amber eyes blink at you from a low branch. Hoo.*"
+    },
+    {
       "id": "cr_mossling",
       "name": "Mossling Scamp",
       "description": "Knee-high, leaf-hatted and absolutely certain everything shiny belongs to it.",
@@ -624,6 +646,20 @@
       "effects": [{"type": "ApplyAura", "aura": "cr_webbed"}],
       "aiHint": "CC",
       "aiPriority": 5
+    },
+    {
+      "id": "cr_owl_screech",
+      "name": "Screech",
+      "icon": "owl",
+      "description": "A piercing screech: weapon damage, and the target's melee attack power is lowered for 4 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}, {"type": "ApplyAura", "aura": "cr_screeched"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
     },
     {
       "id": "cr_pebble_toss",
@@ -1115,6 +1151,16 @@
       "duration": 6,
       "states": ["Root"],
       "description": "Stuck fast in sticky web."
+    },
+    {
+      "id": "cr_screeched",
+      "name": "Screech",
+      "icon": "owl",
+      "kind": "Debuff",
+      "school": "Physical",
+      "duration": 4,
+      "description": "Melee attack power reduced.",
+      "mods": [{"stat": "AttackPower", "value": -25, "perLevel": -1.442}]
     },
     {
       "id": "cr_mud_blind",

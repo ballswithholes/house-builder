@@ -3,7 +3,7 @@
 //                  commands, Esc routing for state-driven windows, persisted UI settings.
 //   ContextMenuScreen (460)  right-click menus (inventory: use / equip on… / sell / destroy).
 //   ConfirmScreen  (470, modal) yes/no prompts ("Return to the main menu?", "Destroy Wolf Pelt?").
-//   NoticeScreen   (480)  short feedback lines ("Not enough money.", "Saved to Slot 2.").
+//   (notices: PanelKit.Notice → GameFlow.Toast — the HUD's single toast lane, ToastLaneHud at 480)
 using System;
 using System.Collections.Generic;
 using Lanternvale.Session;
@@ -362,50 +362,6 @@ namespace Lanternvale.Game.Panels
             }
             catch (Exception e) when (!(e is ExitGUIException)) { PanelKit.LogOnce(this, e); }
             finally { PanelKit.EndLayer(layer); }
-        }
-    }
-
-    // ==================================================================== notices
-
-    public sealed class NoticeScreen : IUiScreen
-    {
-        public string Id => "";
-        public int Order => 480;
-        public bool Visible => PanelKit.NoticeLines.Count > 0;
-        public bool Modal => false;
-        const float Life = 3.2f;
-        GUIStyle style;
-
-        public void Tick(float dt)
-        {
-            var lines = PanelKit.NoticeLines;
-            for (int i = lines.Count - 1; i >= 0; i--)
-                if (Time.unscaledTime - lines[i].Born > Life) lines.RemoveAt(i);
-        }
-
-        public void Draw()
-        {
-            if (!PanelKit.IsRepaint) return;
-            if (style == null && Ui.Number != null)
-                style = new GUIStyle(Ui.Number) { fontSize = 22, alignment = TextAnchor.MiddleCenter, wordWrap = false, richText = true };
-            if (style == null) return;
-            var lines = PanelKit.NoticeLines;
-            // between the world and the HUD's bottom block (HUD toasts/banners live at the top)
-            float y = Ui.Height * 0.64f;
-            for (int i = 0; i < lines.Count; i++)
-            {
-                var l = lines[i];
-                float age = Time.unscaledTime - l.Born;
-                float a = Mathf.Clamp01(age / 0.12f) * Mathf.Clamp01((Life - age) / 0.6f);
-                float pop = 1f + 0.12f * Mathf.Clamp01(1f - age / 0.18f);
-                var c = l.Color;
-                c.a = a;
-                var r = new Rect(0f, y + i * 34f, Ui.Width, 32f);
-                var old = GUI.matrix;
-                if (pop > 1.001f) GUIUtility.ScaleAroundPivot(new Vector2(pop, pop), new Vector2(Ui.Width * 0.5f, r.center.y) * Ui.Scale);
-                Ui.Shadowed(r, l.Text, style, c);
-                GUI.matrix = old;
-            }
         }
     }
 }

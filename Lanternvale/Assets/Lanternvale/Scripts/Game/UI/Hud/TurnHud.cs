@@ -195,7 +195,7 @@ namespace Lanternvale.Game
             }
             else if (canAct && c.IsTargeting && c.TargetingAbility != null)
             {
-                TargetingTime(u, c.TargetingAbility, out cost, out castTime);
+                TargetingTime(u, c.TargetingAbility, c.TargetingItem != null ? 0 : c.TargetingRank, out cost, out castTime);
                 channeled = c.TargetingAbility.channeled;
             }
             float from = timeLeft - cost;
@@ -257,23 +257,27 @@ namespace Lanternvale.Game
         // so haste/aura changes during a long targeting session still show.
         Unit tgtTimeUnit;
         AbilityDef tgtTimeAbility;
+        int tgtTimeRank;
         float tgtTimeAt = -1f, tgtTimeCost, tgtCastTime;
 
-        void TargetingTime(Unit u, AbilityDef a, out float cost, out float cast)
+        void TargetingTime(Unit u, AbilityDef a, int rank, out float cost, out float cast)
         {
             float now = Time.unscaledTime;
-            if (u != tgtTimeUnit || a != tgtTimeAbility || now - tgtTimeAt > 0.25f || now < tgtTimeAt)
+            if (u != tgtTimeUnit || a != tgtTimeAbility || rank != tgtTimeRank || now - tgtTimeAt > 0.25f || now < tgtTimeAt)
             {
                 tgtTimeUnit = u;
                 tgtTimeAbility = a;
+                tgtTimeRank = rank;
                 tgtTimeAt = now;
                 tgtTimeCost = tgtCastTime = 0f;
                 try
                 {
                     AbilityModSet mods;
                     try { mods = AbilityMods.For(u, a); } catch (Exception) { mods = AbilityModSet.Empty; }
-                    tgtTimeCost = AbilityRules.TimeCost(u, a, mods);
-                    tgtCastTime = AbilityRules.CastTime(u, a, mods);
+                    // a pinned lower rank may cast faster (rankCastTimes: Fireball Rank 1 is 1.5 s)
+                    int used = AbilityRules.UsedRank(u, a, rank);
+                    tgtTimeCost = AbilityRules.TimeCost(u, a, mods, used);
+                    tgtCastTime = AbilityRules.CastTime(u, a, mods, used);
                 }
                 catch (Exception) { tgtTimeCost = tgtCastTime = 0f; }
             }

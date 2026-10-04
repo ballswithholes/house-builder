@@ -41,12 +41,20 @@ namespace Lanternvale.Session
         /// Cheap Shot, Pyroblast…) the attacker uses it on enemy <paramref name="targetIndex"/> (EncounterDef.enemies
         /// order) before the first round (Battle.BeginWithOpener: an Opener from stealth surprises the enemies).
         /// Without one, the enemies are surprised when the attacker (default: the leader) is stealthed.
+        /// An encounter field ability as the opener (IsEncounterFieldAbility: Mind Soothe) starts no fight: it is cast through
+        /// <see cref="UseAbilityOnEncounter"/> and null is returned (LastError = its failure reason, "" on success).
         /// </summary>
         public Battle EngageEncounter(string encounterId, Unit attacker = null, string openerAbilityId = null, int targetIndex = 0)
         {
             attacker ??= Leader;
+            if (!string.IsNullOrEmpty(openerAbilityId) && Battle == null && IsEncounterFieldAbility(openerAbilityId))
+            {
+                var fr = UseAbilityOnEncounter(attacker, openerAbilityId, encounterId, targetIndex);
+                LastError = fr.Ok ? "" : (fr.Reason ?? "");
+                return null;
+            }
             bool stealth = attacker != null && attacker.IsStealthed;
-            var b = PrepareEncounter(encounterId, out var enemies);
+            var b = PrepareEncounter(encounterId, out var enemies, stealth);
             if (b == null) return null;
             if (!string.IsNullOrEmpty(openerAbilityId) && attacker != null && b.Units.Contains(attacker))
             {
@@ -60,8 +68,9 @@ namespace Lanternvale.Session
             return b;
         }
 
-        /// <summary>Builds (but does not begin) the battle for an encounter; null + LastError when not possible.</summary>
-        Battle PrepareEncounter(string encounterId, out List<Unit> enemies)
+        /// <summary>Builds (but does not begin) the battle for an encounter; null + LastError when not possible.
+        /// <paramref name="unaware"/>: a stealthed attacker opens the fight, the enemies keep their idle facing.</summary>
+        Battle PrepareEncounter(string encounterId, out List<Unit> enemies, bool unaware = false)
         {
             enemies = new List<Unit>();
             LastError = "";
@@ -91,6 +100,7 @@ namespace Lanternvale.Session
                 int level = UnitFactory.CreatureLevel(def, ed.level, lvl, Rng);
                 var e = UnitFactory.CreateCreature(Db, def, level, Team.Enemy);
                 e.Position = ed.pos;
+                e.Facing = EncounterIdleFacing(enc, ed);
                 enemies.Add(e);
             }
             if (enemies.Count == 0) { LastError = "There is nobody to fight."; return null; }
@@ -116,8 +126,14 @@ namespace Lanternvale.Session
                 }
                 Nav.SetUnit(u.Id, u.Position, u.Radius);
             }
-            var partyCenter = Centroid(units);
-            foreach (var e in enemies) e.FaceTowards(partyCenter);
+            // the enemies turn towards the party, unless a stealthed attacker opens on them: they have noticed nobody yet
+            // and keep their idle facing, so a rogue standing behind one can open with Garrote or Ambush (Battle.Begin
+            // turns everyone towards the closest hostile after the opener)
+            if (!unaware)
+            {
+                var partyCenter = Centroid(units);
+                foreach (var e in enemies) e.FaceTowards(partyCenter);
+            }
 
             var b = new Battle(Db, Rng, pathfinder, Inventory, true);
             b.AddUnits(all);
@@ -129,11 +145,26 @@ namespace Lanternvale.Session
             battleLeft = false;
             Map.MarkEncounterTriggered(enc.id);
             suppressedEncounters.Remove(enc.id);
+            soothedEncounters.Remove(enc.id);
 
             string bark = "";
             foreach (var e in enemies) if (!string.IsNullOrEmpty(e.Creature.bark)) { bark = e.Creature.bark; break; }
             Raise(new SessionEvent { Kind = SessionEventKind.CombatStarted, Battle = b, Id = enc.id, Text = bark });
             return b;
+        }
+
+        /// <summary>
+        /// Which way an encounter enemy faces while idle (<see cref="EncounterEnemyPreview.Facing"/>): towards the
+        /// encounter's centre, so a group faces inwards; +x for an enemy standing on the centre.
+        /// </summary>
+        static Vec2 EncounterIdleFacing(EncounterDef enc, EncounterEnemyDef ed)
+        {
+            if (enc != null && ed != null)
+            {
+                var d = enc.pos - ed.pos;
+                if (d.SqrLength > 0.0625f) return d.Normalized;
+            }
+            return Vec2.Right;
         }
 
         static Vec2 Centroid(List<Unit> units)
@@ -287,11 +318,15 @@ namespace Lanternvale.Session
             }
 
             RebuildField();
+            // the party stands where it fought: a leader who ended the fight inside a transition must step out of it before
+            // it can travel (as on map entry) — the next step after a battle never changes the map by surprise
+            if (Map != null && Leader != null) transitionArmed = Map.TransitionAt(Leader.Position) == null;
             Raise(new SessionEvent
             {
                 Kind = SessionEventKind.CombatEnded, Outcome = s.Outcome, Id = s.EncounterId, Battle = b,
                 Text = left ? "You step away from the fight." : "Victory!",
             });
+            FlushFlagsChanged();
 
             // loot
             if (b.Result != null && (b.Result.Loot.Items.Count > 0 || b.Result.Loot.Gold > 0))

@@ -415,19 +415,51 @@ priest: wings with a halo · rogue: crossed daggers · warlock: horned demon hea
    trim stray halos, and keep the soft dark outline inside the alpha. Leave a small transparent margin.
    Effects and icons: RGB white, shape in alpha. Real art may be any size; power-of-two is only needed for
    the placeholders.
-3. **Height and pivot live in `art_manifest.json`.** `height` is the world height in metres of the **whole
-   image** (the engine sets pixels-per-unit = texture height / height); `pivot` is the normalised point that
-   stands on the ground (feet/base). After replacing an image either
+3. **Height and pivot live in `art_manifest.json`** — except the drawn height of creatures, pets, demons
+   and totems (next paragraph). `height` is the world height in metres of the **whole image** (the engine
+   sets pixels-per-unit = texture height / height); `pivot` is the normalised point that stands on the
+   ground (feet/base). After replacing an image either
    * paint it with the same framing as the placeholder (characters: 2.2 m canvas, feet at 5 % from the
      bottom, figure ≈ 82 % of the height; props/creatures: base on the pivot line, top of the object near the
      top edge), or
-   * edit that entry's `height`/`pivot` by hand. Re-running the generator **overwrites** both the PNGs and
-     the manifest — once real art is in, run it only with `--only <keys>` for keys that are still
-     placeholders (it re-writes the manifest for all keys, measuring object heights from the PNGs on disk,
-     so check hand-edited values afterwards or keep a copy).
+   * edit that entry's `height`/`pivot` by hand — for creature, pet, demon and totem sprites edit the
+     `pivot` there but the creature's `size` instead of `height`.
+
+   **Creature, pet, demon and totem sprites are scaled by `size`, not by the manifest `height`.** Every unit
+   that has a creature definition and no class — enemies (`cr_*`), hunter pets (mostly `pet_*`; a tamed
+   beast becomes the `hunter_pet_<family>` entry), warlock demons (`demon_*`), shaman totems (`totem_*`) and
+   other summons (hunter traps, the priest's Lightwell) — is drawn with its **whole image** `size` metres
+   tall. `size` is a field of the creature entry: in `Resources/Data/content/creatures.json` for enemies,
+   and in the `creatures` list of `Resources/Data/classes/<class>.json` for pets, demons, totems and other
+   summons (default 1.8). Whenever the sprite is drawn as that unit, `size` overrides the manifest
+   `height`, so editing the manifest `height` of these keys has no visible effect on the unit. To make art
+   whose figure fills less (or more) of the canvas come out at the right size, change `size`. Several
+   entries can share one sprite (`cr_wolf` is both `cr_wolf` and `cr_wolf_packmate`, `pet_owl` both
+   `cr_owl` and `hunter_pet_owl`), so scale every entry that uses it by the same factor. `generate.py`
+   never touches these data files.
+
+   **Once real art is in, every `generate.py` run is destructive** — the generator cannot tell real art from
+   its own placeholders. Commit (or copy aside) `Resources/Art` before running it, check `git status` /
+   `git diff` afterwards, and restore what it clobbered:
+   * **Every run rewrites the whole manifest** — a full run, `--only` and `--manifest-only` alike. For all
+     keys, `pivot` and fixed heights are reset to the generator specs, and props (except `decal_*`),
+     foreground and most creatures have `height` re-measured from the PNG on disk (against the spec
+     pivot). **Any `height` or `pivot` edited by hand is lost**; merge those entries back from your copy
+     (`git diff art_manifest.json` shows which ones changed).
+   * **`--only` re-renders whole jobs**, not single keys. It matches key **prefixes** (`--only prop_tree`
+     selects every `prop_tree*` key), and it repaints and saves *every* image in each job that contains a
+     match. Every `char_*`/`comp_*`/`npc_*` key is painted together with its `portrait_*` key (asking for
+     either one re-renders both), all eight `crest_*` keys form one job, and `glyph_*` icons are painted in
+     batches of 24. Finished sibling art in those jobs is **silently overwritten with placeholders**, so
+     back it up and restore it after the run.
 4. **Loops and tiles:** `loop: true` backgrounds must tile horizontally; ground textures (and
-   `ui_parchment`) must tile in both axes. `generate.py --manifest-only` re-checks seams, power-of-two sizes
-   (placeholder rule — ignore for real art) and that every documented key exists.
+   `ui_parchment`) must tile in both axes. `generate.py --manifest-only` repaints no PNGs. It checks seams,
+   that every documented key has a file, and that sizes match the placeholder specs. It is **not**
+   read-only, though: it rewrites `art_manifest.json` exactly as described in step 3, so back up
+   hand-edited heights/pivots first. Real art usually makes it print `PROBLEMS` (exit code 2): every
+   replaced PNG whose size differs from its placeholder is listed as
+   `<key>: file size (w, h) != spec (W, H)`, plus `<key>: not power-of-two (WxH)` when that applies. Both
+   messages are **expected for real art; ignore them**. Missing-file and seam problems are real.
 5. **Facing:** unit sprites face screen-right; the engine mirrors them.
 6. **Unity import settings** (sprite mode, filtering, wrap mode for loops/ground, compression, max size,
    alpha-is-transparency) are applied automatically by the editor postprocessor when the PNG is imported —

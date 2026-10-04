@@ -2,6 +2,7 @@
 // Every special must be documented in a data `specials` array; the validator asks IsImplemented(name).
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Lanternvale.Data;
 using Lanternvale.Util;
 
@@ -167,6 +168,13 @@ namespace Lanternvale.Rules
         /// <summary>Abilities the unit may use because of its surroundings (Lightwell).</summary>
         public virtual void ContextualAbilities(Battle b, Unit u, List<string> into) { }
 
+        // ---- out of combat
+        /// <summary>
+        /// The special's effect lives on an encounter out of combat (raised as Specials.FieldEvent with an encounter enemy as
+        /// target): the ability is cast on the encounter instead of opening the fight (Mind Soothe).
+        /// </summary>
+        public virtual bool FieldTargetsEncounter => false;
+
         // ---- summons
         public virtual void OnSummoned(AbilityCast c, Unit summoned) { }
         /// <summary>Passive hook: a unit owned by <paramref name="owner"/> was summoned.</summary>
@@ -187,6 +195,7 @@ namespace Lanternvale.Rules
         {
             if (h == null || string.IsNullOrEmpty(h.Name)) return;
             handlers[h.Name] = h;
+            hookLists = null;   // rebuilt on the next broadcast
         }
 
         /// <summary>True when a handler with this name exists.</summary>
@@ -465,7 +474,30 @@ namespace Lanternvale.Rules
         /// creature). Arguments: battle/field, acting unit, special name, target unit (may be null).
         /// </summary>
         public static event Action<Battle, Unit, string, Unit> FieldEvent;
-        internal static void RaiseFieldEvent(Battle b, Unit u, string name, Unit target) => FieldEvent?.Invoke(b, u, name, target);
+
+        /// <summary>Raises <see cref="FieldEvent"/> and the battle's own <see cref="Battle.FieldEventRaised"/> (the session listens there).</summary>
+        internal static void RaiseFieldEvent(Battle b, Unit u, string name, Unit target)
+        {
+            b?.RaiseFieldEvent(u, name, target);
+            FieldEvent?.Invoke(b, u, name, target);
+        }
+
+        /// <summary>
+        /// True for an Enemy-target ability whose special acts on an encounter out of combat without starting the fight
+        /// (Mind Soothe): the session casts it on the encounter (GameSession.UseAbilityOnEncounter) instead of opening a battle.
+        /// </summary>
+        public static bool TargetsEncounterOutOfCombat(AbilityDef a)
+        {
+            if (a == null || a.target != TargetType.Enemy) return false;
+            var h = Get(a.special);
+            if (h != null && h.FieldTargetsEncounter) return true;
+            foreach (var e in a.effects)
+            {
+                h = EffectHandler(e);
+                if (h != null && h.FieldTargetsEncounter) return true;
+            }
+            return false;
+        }
         internal static void OnAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) => Get(a.Def.special)?.OnAuraRemoved(b, a, r);
         internal static bool OnAuraTick(Battle b, AuraInstance a, AbilityCast c) => Get(a.Def.special)?.OnAuraTick(b, a, c) ?? false;
 
@@ -780,17 +812,57 @@ namespace Lanternvale.Rules
             foreach (var r in SpecialAuras(tgt)) if (tgt.Auras.Contains(r.A)) r.H.OnBearerDamaged(b, r.A, src, amount, s, info);
         }
 
-        static List<SpecialHandler> All()
+        // ---- broadcast hooks: dispatched only to the handlers whose type overrides the hook. The lists are built once
+        // (and again after Register), so the per-frame exploration tick and every aura change allocate nothing here.
+        enum Hook { TurnStart, UnitMoved, AuraApplied, AuraRemoved, ModValuesRefreshed, UnitFell, AbilityStart, BattleFinished, OutOfCombatTick, Contextual, Count }
+
+        static readonly string[] HookMethods =
         {
-            var l = new List<SpecialHandler>(handlers.Values);
-            return l;
+            nameof(SpecialHandler.OnAnyTurnStart), nameof(SpecialHandler.OnAnyUnitMoved), nameof(SpecialHandler.OnAnyAuraApplied),
+            nameof(SpecialHandler.OnAnyAuraRemoved), nameof(SpecialHandler.OnModValuesRefreshed), nameof(SpecialHandler.OnAnyUnitFell),
+            nameof(SpecialHandler.OnAnyAbilityStart), nameof(SpecialHandler.OnBattleFinished), nameof(SpecialHandler.OnOutOfCombatTick),
+            nameof(SpecialHandler.ContextualAbilities),
+        };
+
+        static SpecialHandler[][] hookLists;
+
+        static SpecialHandler[] HandlersFor(Hook hook)
+        {
+            var lists = hookLists;
+            if (lists == null)
+            {
+                lists = new SpecialHandler[(int)Hook.Count][];
+                var tmp = new List<SpecialHandler>();
+                for (int i = 0; i < lists.Length; i++)
+                {
+                    tmp.Clear();
+                    foreach (var h in handlers.Values) if (Overrides(h, HookMethods[i])) tmp.Add(h);
+                    lists[i] = tmp.ToArray();
+                }
+                hookLists = lists;
+            }
+            return lists[(int)hook];
         }
 
-        internal static void OnAnyTurnStart(Battle b, Unit u) { foreach (var h in All()) h.OnAnyTurnStart(b, u); }
-        internal static void OnAnyUnitMoved(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitMoved(b, u); }
-        internal static void OnAnyAuraApplied(Battle b, AuraInstance a) { foreach (var h in All()) h.OnAnyAuraApplied(b, a); }
-        internal static void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) { foreach (var h in All()) h.OnAnyAuraRemoved(b, a, r); }
-        internal static void OnModValuesRefreshed(AuraInstance a) { if (handlers.Count > 0) foreach (var h in All()) h.OnModValuesRefreshed(a); }
+        static bool Overrides(SpecialHandler h, string method)
+        {
+            try
+            {
+                foreach (var m in h.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance))
+                    if (m.Name == method && m.DeclaringType != typeof(SpecialHandler)) return true;
+                return false;
+            }
+            catch (Exception)
+            {
+                return true;   // no reflection: dispatch to it anyway (the base hooks do nothing)
+            }
+        }
+
+        internal static void OnAnyTurnStart(Battle b, Unit u) { foreach (var h in HandlersFor(Hook.TurnStart)) h.OnAnyTurnStart(b, u); }
+        internal static void OnAnyUnitMoved(Battle b, Unit u) { foreach (var h in HandlersFor(Hook.UnitMoved)) h.OnAnyUnitMoved(b, u); }
+        internal static void OnAnyAuraApplied(Battle b, AuraInstance a) { foreach (var h in HandlersFor(Hook.AuraApplied)) h.OnAnyAuraApplied(b, a); }
+        internal static void OnAnyAuraRemoved(Battle b, AuraInstance a, AuraRemoveReason r) { foreach (var h in HandlersFor(Hook.AuraRemoved)) h.OnAnyAuraRemoved(b, a, r); }
+        internal static void OnModValuesRefreshed(AuraInstance a) { foreach (var h in HandlersFor(Hook.ModValuesRefreshed)) h.OnModValuesRefreshed(a); }
 
         /// <summary>True when an aura on the unit forbids fleeing (Judgement of Justice).</summary>
         public static bool CannotFlee(Unit u)
@@ -808,16 +880,16 @@ namespace Lanternvale.Rules
             var h = Get(name);
             return h != null && ctx != null && h.RunContent(ctx);
         }
-        internal static void OnAnyUnitFell(Battle b, Unit u) { foreach (var h in All()) h.OnAnyUnitFell(b, u); }
-        internal static void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { foreach (var h in All()) h.OnAnyAbilityStart(b, u, c); }
-        internal static void OnBattleFinished(Battle b) { foreach (var h in All()) h.OnBattleFinished(b); }
-        internal static void OnOutOfCombatTick(Battle b, Unit u, float s) { foreach (var h in All()) h.OnOutOfCombatTick(b, u, s); }
+        internal static void OnAnyUnitFell(Battle b, Unit u) { foreach (var h in HandlersFor(Hook.UnitFell)) h.OnAnyUnitFell(b, u); }
+        internal static void OnAnyAbilityStart(Battle b, Unit u, AbilityCast c) { foreach (var h in HandlersFor(Hook.AbilityStart)) h.OnAnyAbilityStart(b, u, c); }
+        internal static void OnBattleFinished(Battle b) { foreach (var h in HandlersFor(Hook.BattleFinished)) h.OnBattleFinished(b); }
+        internal static void OnOutOfCombatTick(Battle b, Unit u, float s) { foreach (var h in HandlersFor(Hook.OutOfCombatTick)) h.OnOutOfCombatTick(b, u, s); }
 
         /// <summary>Abilities usable by the unit because of its surroundings (e.g. Lightwell renew next to a Lightwell).</summary>
         public static List<string> ContextualAbilities(Battle b, Unit u)
         {
             var l = new List<string>();
-            foreach (var h in All()) h.ContextualAbilities(b, u, l);
+            foreach (var h in HandlersFor(Hook.Contextual)) h.ContextualAbilities(b, u, l);
             return l;
         }
 
