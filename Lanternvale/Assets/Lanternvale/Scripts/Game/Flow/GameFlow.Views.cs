@@ -269,7 +269,7 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------ encounter views
 
-        void CreateEncounterViews(EncounterDef enc, List<KeyValuePair<Unit, UnitView>> reusable)
+        void CreateEncounterViews(EncounterDef enc, List<KeyValuePair<Unit, UnitView>> reusable, bool appearFx = false)
         {
             if (enc == null || enc.enemies == null) return;
             var db = Db;
@@ -308,9 +308,10 @@ namespace Lanternvale.Game
                 }
                 if (v == null)
                 {
-                    v = UnitView.Create(cdef.sprite, cdef.size > 0f ? cdef.size : 0f, EnemyRing);
+                    v = UnitView.Create(cdef.sprite, Mathf.Max(0f, cdef.size), EnemyRing);
                     v.Teleport(home);
                     if (Mathf.Abs(lookAt.x - home.x) > 0.05f) v.SetFacing(lookAt.x < home.x ? -1 : 1);
+                    if (appearFx) FxSystem.Puff(v.CenterPosition, new Color(0.85f, 0.85f, 0.8f), 1f);
                 }
                 v.DisplayName = cdef.name;
                 v.Tag = null;
@@ -392,7 +393,7 @@ namespace Lanternvale.Game
                     v.Teleport(from.Value);
                     WalkView(v, dest, 3.0f, null);
                 }
-                else if (u.IsPetLike)
+                else if (u.IsPetLike && !InFieldAction)   // summoned right now: the Summon event plays its own effect
                 {
                     FxSystem.Sparkles(v.CenterPosition, Ui.SchoolColor(u.Creature != null ? u.Creature.meleeSchool : School.Arcane), 10);
                 }
@@ -435,7 +436,7 @@ namespace Lanternvale.Game
                 DisposeView(e.View);
             }
             foreach (var enc in visibleEnc)
-                if (!HasEncounterViews(enc)) CreateEncounterViews(enc, reusableEnemies);
+                if (!HasEncounterViews(enc)) CreateEncounterViews(enc, reusableEnemies, true);
         }
 
         /// <summary>Re-evaluates flag-driven world state: chests/transitions (requireFlag), NPCs, encounters.</summary>

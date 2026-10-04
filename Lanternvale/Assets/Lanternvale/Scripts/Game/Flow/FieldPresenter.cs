@@ -17,6 +17,8 @@ namespace Lanternvale.Game
         bool battlePresenting;
         int fieldActionFrame = -1;
         Unit fieldActionCaster;
+        int castFxFrame = -1;
+        Unit castFxCaster;
 
         static readonly Color BuffColor = new Color(0.98f, 0.9f, 0.62f, 0.85f);
         static readonly Color DebuffColor = new Color(0.72f, 0.55f, 0.9f, 0.85f);
@@ -41,6 +43,7 @@ namespace Lanternvale.Game
             {
                 // an attack out of combat opens a fight: arm it, the next click on an enemy engages with it
                 if (!s.IsInParty(caster) || !caster.IsAlive) return "Only an active party member can start a fight.";
+                if (!caster.Knows(a.id)) return $"{caster.Name} does not know {a.name}.";
                 if (enemyEntries.Count == 0) return "There is no enemy to attack.";
                 ArmOpener(caster, a);
                 return null;
@@ -128,8 +131,11 @@ namespace Lanternvale.Game
                 case CombatEventType.AbilityUsed:
                 case CombatEventType.CastStart:
                 {
+                    // instants raise AbilityUsed, cast-time spells CastStart (+ CastComplete): present each action once
                     MarkFieldAction(e.Source);
-                    if (e.Type == CombatEventType.CastStart) break;
+                    if (castFxFrame == Time.frameCount && castFxCaster == e.Source) break;
+                    castFxFrame = Time.frameCount;
+                    castFxCaster = e.Source;
                     var v = ViewOf(e.Source);
                     if (v == null) break;
                     var a = Db != null ? Db.Ability(e.AbilityId) : null;

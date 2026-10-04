@@ -83,6 +83,17 @@ namespace Lanternvale.Game
             for (int i = 0; i < b.Events.Count; i++) Show(b.Events[i]);
         }
 
+        /// <summary>Shows the beat's events in order up to and including e (keeps the presentation order = event order).</summary>
+        void ShowUpTo(Beat b, CombatEvent e)
+        {
+            for (int i = 0; i < b.Events.Count; i++)
+            {
+                var x = b.Events[i];
+                Show(x);
+                if (x == e) return;
+            }
+        }
+
         // ================================================================ presenters
 
         IEnumerator<float> PresentMarker(Beat b)
@@ -93,7 +104,7 @@ namespace Lanternvale.Game
             switch (e.Type)
             {
                 case CombatEventType.TurnStart:
-                    wait = e.Source != null && !Battle.IsAIControlled(e.Source) ? 0.2f : 0.35f;
+                    wait = e.Source != null && !Battle.IsAIControlled(e.Source) ? 0.2f : 0.25f;
                     break;
                 case CombatEventType.TurnSkipped: wait = 0.6f; break;
                 case CombatEventType.BattleStart: wait = 0.3f; break;
@@ -140,11 +151,18 @@ namespace Lanternvale.Game
             if (visible) yield return 0.4f;
         }
 
+        Unit lastSwingActor, lastSwingTarget;
+        float lastSwingClock = -10f;
+
         IEnumerator<float> PresentSwing(Beat b)
         {
             var head = b.Events[0];
             var actor = head.Source;
             var target = head.Target;
+            // follow-up swings of one end-of-turn volley (fast weapons, off hand, extra attacks) play quicker
+            bool followUp = actor == lastSwingActor && target == lastSwingTarget && presClock - lastSwingClock < 1.5f;
+            lastSwingActor = actor;
+            lastSwingTarget = target;
             var av = V(actor);
             var tv = V(target);
             ctxActor = actor;
@@ -161,7 +179,8 @@ namespace Lanternvale.Game
                 if (school != School.Physical) ctxImpactDrawnFor = target;
                 if (flight > 0f) yield return flight;
                 ShowAll(b);
-                yield return 0.3f;
+                lastSwingClock = presClock;
+                yield return followUp ? 0.12f : 0.28f;
             }
             else
             {
@@ -169,8 +188,9 @@ namespace Lanternvale.Game
                 Sfx.Play("swing", Feet(actor, av), 0.75f, 1f);
                 yield return UnitView.AttackHitTime;
                 ShowAll(b);
+                lastSwingClock = presClock;
                 float rest = Mathf.Max(0.2f, dur - UnitView.AttackHitTime);
-                yield return head.OffHand ? Mathf.Min(rest, 0.2f) : rest;
+                yield return head.OffHand || followUp ? Mathf.Min(rest, 0.16f) : rest;
             }
         }
 
@@ -219,7 +239,8 @@ namespace Lanternvale.Game
             }
 
             // auto attack toggles and queued "next swing" abilities: no wind-up, the swing comes at the end of the turn
-            if (a != null && (a.autoAttack || a.nextSwing) && castStart == null)
+            // (a queued Heroic Strike resolving inside the swing has outcome events and is presented as a strike)
+            if (a != null && (a.autoAttack || a.nextSwing) && castStart == null && !HasOutcomeFrom(b, actor))
             {
                 if (av != null && target != null && target != actor) av.FaceTowards(Feet(target, tv));
                 ShowAll(b);
@@ -245,7 +266,7 @@ namespace Lanternvale.Game
             // leading motion (Charge, Intercept): run in first, then strike
             if (charge != null)
             {
-                Show(charge);
+                ShowUpTo(b, charge);
                 float timeout = Vec2.Distance(charge.From, charge.To) / ChargeSpeed + 0.6f;
                 while (av != null && av.IsMoving && timeout > 0f)
                 {
@@ -256,16 +277,16 @@ namespace Lanternvale.Game
                 actorFeet = Feet(actor, av);
             }
 
-            var d = Classify(a, b, actor, target, av, tv);
+            var d = charge != null ? Delivery.Melee : Classify(a, b, actor, target, av, tv);
             ctxDelivery = d;
 
             // cast time resolved within this turn: a short wind-up with the casting glow
             if (castStart != null && d != Delivery.Channel)
             {
-                Show(castStart);
+                ShowUpTo(b, castStart);
                 Sfx.Play("cast_start", actorFeet, 0.8f, 1f);
                 float t = 0f;
-                const float wind = 0.4f;
+                const float wind = 0.32f;
                 while (t < wind)
                 {
                     t += FrameDt;
@@ -285,7 +306,7 @@ namespace Lanternvale.Game
                     yield return UnitView.AttackHitTime;
                     StopCastVis(actor);
                     ShowAll(b);
-                    yield return Mathf.Max(0.3f, dur - UnitView.AttackHitTime) + 0.15f;
+                    yield return Mathf.Max(0.3f, dur - UnitView.AttackHitTime) + 0.05f;
                     break;
                 }
                 case Delivery.Ranged:
@@ -306,7 +327,7 @@ namespace Lanternvale.Game
                     }
                     if (flight > 0f) yield return flight;
                     ShowAll(b);
-                    yield return 0.4f;
+                    yield return 0.32f;
                     break;
                 }
                 case Delivery.Bolt:
@@ -324,7 +345,7 @@ namespace Lanternvale.Game
                     }
                     if (flight > 0f) yield return flight;
                     ShowAll(b);
-                    yield return 0.45f;
+                    yield return 0.38f;
                     break;
                 }
                 case Delivery.OnTarget:
@@ -339,7 +360,7 @@ namespace Lanternvale.Game
                     StopCastVis(actor);
                     ShowAll(b);
                     PulseIfGroupBuff(b, actor, av, col);
-                    yield return 0.45f;
+                    yield return 0.38f;
                     break;
                 }
                 case Delivery.Self:
@@ -349,7 +370,7 @@ namespace Lanternvale.Game
                     StopCastVis(actor);
                     ShowAll(b);
                     PulseIfGroupBuff(b, actor, av, col);
-                    yield return 0.4f;
+                    yield return 0.32f;
                     break;
                 }
                 case Delivery.AreaCaster:
@@ -366,7 +387,7 @@ namespace Lanternvale.Game
                     FxSystem.Burst(Feet(actor, av), AreaRadius(actor, a), school);
                     Sfx.Impact(school, actorFeet, false);
                     ShowAll(b);
-                    yield return 0.55f;
+                    yield return 0.48f;
                     break;
                 }
                 case Delivery.AreaPoint:
@@ -379,7 +400,7 @@ namespace Lanternvale.Game
                     FxSystem.Burst(c, AreaRadius(actor, a), school);
                     Sfx.Impact(school, c, false);
                     ShowAll(b);
-                    yield return 0.55f;
+                    yield return 0.48f;
                     break;
                 }
                 case Delivery.Cone:
@@ -406,7 +427,7 @@ namespace Lanternvale.Game
                 case Delivery.Channel:
                 {
                     if (av != null) av.PlayCast(col);
-                    if (castStart != null) { Show(castStart); Sfx.Play("cast_start", actorFeet, 0.7f, 0.9f); }
+                    if (castStart != null) { ShowUpTo(b, castStart); Sfx.Play("cast_start", actorFeet, 0.7f, 0.9f); }
                     yield return UnitView.CastReleaseTime * 0.6f;
                     bool area = a != null && a.area.shape != AreaShape.None;
                     var areaC = area ? AreaCenter(b, a, actor, target) : Vector2.zero;
@@ -424,13 +445,13 @@ namespace Lanternvale.Game
                     for (int i = 0; i < b.Events.Count; i++)
                     {
                         var e = b.Events[i];
+                        if (e == castComplete || e == castStop) break;   // shown (in order) once the beam is down
                         if (e.Type == CombatEventType.ChannelTick && e.Source == actor)
                         {
                             if (!firstTick) yield return 0.32f;
                             firstTick = false;
                             if (area) { FxSystem.Burst(areaC, rad * 0.75f, school); Sfx.Impact(school, areaC, false); }
                         }
-                        if (e == castComplete || e == castStop) continue;
                         Show(e);
                     }
                     yield return 0.3f;
@@ -469,15 +490,15 @@ namespace Lanternvale.Game
             HidePlayerTurnVisuals();
             if (activeRingView != null) { activeRingView.SetActiveTurn(false); activeRingView = null; }
             var pos = BannerPosition();
+            // the "Victory!" / "Defeat" words are the HUD's banner (ToastsHud, on the BattleEnd event); the world gets
+            // the sparkles and the sound only, so the outcome is not announced twice
             switch (Battle.Outcome)
             {
                 case BattleOutcome.Victory:
-                    FloatingText.Spawn(pos, "Victory!", GoldText, 2.1f, true);
                     FxSystem.Sparkles(pos - new Vector2(0f, 0.6f), GoldText, 18);
                     Sfx.Play("quest");
                     break;
                 case BattleOutcome.Defeat:
-                    FloatingText.Spawn(pos, "Defeat", new Color(0.88f, 0.48f, 0.58f), 2.0f, false);
                     Sfx.Play("death", null, 0.9f, 0.7f);
                     break;
                 default:
@@ -923,6 +944,9 @@ namespace Lanternvale.Game
                 FxSystem.Puff(Center(u, v), new Color(0.55f, 0.5f, 0.7f, 0.7f), 1f);
                 return;
             }
+            // a buff named like the ability that applied it (Battle Shout, Devotion Aura…) is already told by the
+            // ability label / aura pulse — don't repeat it over every ally
+            if (def.kind == AuraKind.Buff && curBeat != null && curBeat.Ability != null && curBeat.Ability.name == def.name) return;
             if (Throttled(u, e.AuraId, 2.5f)) return;
             if (def.kind == AuraKind.Debuff)
             {
@@ -1057,6 +1081,8 @@ namespace Lanternvale.Game
             public int Beam = -1;
             public Unit Target;
             public bool Channel;
+            public bool HasPoint;
+            public Vector2 Point;
         }
 
         readonly Dictionary<Unit, CastVis> casting = new Dictionary<Unit, CastVis>();
@@ -1072,6 +1098,8 @@ namespace Lanternvale.Game
                 Total = Mathf.Max(0.01f, total), Beam = beam, Target = target, Channel = channel, Progress = 0.5f,
             };
             var p = u.Pending;
+            if (curBeat != null && curBeat.Actor == u && curBeat.Point.HasValue) { c.HasPoint = true; c.Point = ToV(curBeat.Point.Value); }
+            else if (p != null && p.HasPoint) { c.HasPoint = true; c.Point = ToV(p.Point); }
             if (p != null && p.Ability != null && (a == null || p.Ability.id == a.id))
             {
                 float tot = channel && p.ChannelDuration > 0f ? p.ChannelDuration : c.Total;
@@ -1182,7 +1210,8 @@ namespace Lanternvale.Game
         bool ShouldAnnounce(Unit actor, AbilityDef a)
         {
             if (a == null || a.autoAttack || a.nextSwing) return false;
-            if (a.id == "attack" || a.id == "auto_shot" || a.id == "shoot") return false;
+            if (a.id == "attack" || a.id == "auto_shot" || a.id == "shoot" || a.special == "Shoot") return false;
+            if (a.name == "Shoot" || a.name == "Throw" || a.name == "Attack") return false;
             return Battle.IsAIControlled(actor);
         }
 
@@ -1206,6 +1235,8 @@ namespace Lanternvale.Game
         {
             if (a != null && (a.area.centeredOnCaster || a.target == TargetType.Self)) return Feet(actor, V(actor));
             if (b.Point.HasValue) return ToV(b.Point.Value);
+            // a pending area cast resolving at turn start: the point it was aimed at
+            if (actor != null && casting.TryGetValue(actor, out var cv) && cv.HasPoint) return cv.Point;
             if (target != null && target != actor) return Feet(target, V(target));
             // centroid of everyone hit
             Vector2 sum = Vector2.zero;
@@ -1251,6 +1282,16 @@ namespace Lanternvale.Game
             else if (n == 1 && last == actor) FxSystem.AuraPulse(c, 1.3f, Color.Lerp(col, Color.white, 0.3f));
         }
 
+        static bool HasOutcomeFrom(Beat b, Unit actor)
+        {
+            for (int i = 0; i < b.Events.Count; i++)
+            {
+                var e = b.Events[i];
+                if (e.Source == actor && IsOutcome(e.Type) && !e.AutoAttack) return true;
+            }
+            return false;
+        }
+
         bool HasVisibleText(Beat b)
         {
             for (int i = 0; i < b.Events.Count; i++)
@@ -1271,6 +1312,7 @@ namespace Lanternvale.Game
                     case CombatEventType.Downed:
                     case CombatEventType.Revive:
                     case CombatEventType.CastInterrupted:
+                    case CombatEventType.CastFailed:
                     case CombatEventType.Taunt:
                     case CombatEventType.Dispel:
                     case CombatEventType.AuraBroken:
@@ -1353,6 +1395,8 @@ namespace Lanternvale.Game
 
         void AddLog(CombatEvent e)
         {
+            // resource costs and small gains (rage from every hit) would drown the log: HUD bars show them
+            if (e.Type == CombatEventType.ResourceChange && (e.Amount < 0f || e.Amount < (e.Resource == ResourceType.Mana ? 50f : 10f))) return;
             string text = e.Text;
             if (string.IsNullOrEmpty(text))
             {

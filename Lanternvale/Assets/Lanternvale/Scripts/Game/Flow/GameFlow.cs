@@ -254,8 +254,9 @@ namespace Lanternvale.Game
             if (v != null) v.SetSelected(true);
         }
 
-        /// <summary>Raises a toast for the UI without going through the session (flow-local messages).</summary>
-        void Toast(string text)
+        /// <summary>Raises a toast for the UI without going through the session (flow-local messages): relayed through
+        /// SessionEventRaised as a SessionEventKind.Toast, so it lands in the HUD's toast lane like every other toast.</summary>
+        public void Toast(string text)
         {
             if (string.IsNullOrEmpty(text)) return;
             Relay(new SessionEvent { Kind = SessionEventKind.Toast, Text = text });

@@ -59,7 +59,8 @@ namespace Lanternvale.Game
         float waitLeft;
         readonly HashSet<CombatEvent> presented = new HashSet<CombatEvent>();
 
-        bool QueueIdle => curRoutine == null && queue.Count == 0;
+        /// <summary>Nothing is animating and every battle event has been taken (events not pulled yet count as work).</summary>
+        bool QueueIdle => curRoutine == null && queue.Count == 0 && (Battle == null || Battle.Events.Count <= cursor);
 
         // ================================================================ intake
 
@@ -254,8 +255,10 @@ namespace Lanternvale.Game
                     if (t == CombatEventType.CastStart)
                         return e.Source == b.Actor && !b.HasCastStart && !b.HasPrimary &&
                                (b.Ability == null || b.Ability.id == e.AbilityId);
-                    if (t == CombatEventType.CastComplete || t == CombatEventType.ChannelTick || t == CombatEventType.AbilityUsed ||
-                        t == CombatEventType.SwingQueued)
+                    // AbilityUsed is the header of an instant: a second one by the same actor is a new action
+                    if (t == CombatEventType.AbilityUsed)
+                        return e.Source == b.Actor && !b.HasPrimary && (b.Ability == null || b.Ability.id == e.AbilityId);
+                    if (t == CombatEventType.CastComplete || t == CombatEventType.ChannelTick || t == CombatEventType.SwingQueued)
                         return e.Source == b.Actor;
                     if (e.Source == null || b.Participants.Contains(e.Source)) return true;
                     return !IsPrimary(e) && e.Target != null && b.Participants.Contains(e.Target);

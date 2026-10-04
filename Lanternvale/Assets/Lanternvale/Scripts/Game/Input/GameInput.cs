@@ -187,6 +187,9 @@ namespace Lanternvale.Game
             KeyCode.I, KeyCode.C, KeyCode.N, KeyCode.P, KeyCode.L, KeyCode.J, KeyCode.M, KeyCode.K, KeyCode.B, KeyCode.H,
             KeyCode.T, KeyCode.V, KeyCode.X, KeyCode.Z, KeyCode.F1, KeyCode.F2, KeyCode.F3, KeyCode.F4, KeyCode.F5,
             KeyCode.F9, KeyCode.F10, KeyCode.F11, KeyCode.F12, KeyCode.BackQuote,
+            // dialogue choices also accept the keypad (PanelKit.NumberKeyDown)
+            KeyCode.Keypad1, KeyCode.Keypad2, KeyCode.Keypad3, KeyCode.Keypad4, KeyCode.Keypad5,
+            KeyCode.Keypad6, KeyCode.Keypad7, KeyCode.Keypad8, KeyCode.Keypad9,
         };
     }
 }

@@ -12,15 +12,16 @@ namespace Lanternvale.Game
 {
     public sealed partial class CombatController
     {
-        const float AiFirstThink = 0.3f;      // before the first step of a turn (after the TurnStart beat)
-        const float AiStepPause = 0.22f;      // between steps (after the previous step finished animating)
-        const float AiPathPreview = 0.4f;     // a Move step's path is shown this long before walking
+        const float AiFirstThink = 0.2f;      // before the first step of a turn (after the TurnStart beat)
+        const float AiStepPause = 0.12f;      // between steps (after the previous step finished animating)
+        const float AiPathPreview = 0.3f;     // a Move step's path is shown this long before walking
         const int AiStepGuardExtra = 8;       // AI.MaxStepsPerTurn + this → end turn
 
         static readonly Color AiEnemyPathColor = new Color(1f, 0.55f, 0.45f, 0.85f);
         static readonly Color AiAllyPathColor = new Color(0.62f, 0.9f, 1f, 0.85f);
 
         Unit aiUnit;
+        int aiTurnNumber = -1;
         float aiWait;
         int aiNoChange, aiSteps;
         AIStep aiPreview;
@@ -29,9 +30,10 @@ namespace Lanternvale.Game
         {
             var u = Battle.ActiveUnit;
             if (u == null) return;
-            if (u != aiUnit)
+            if (u != aiUnit || u.TurnsTaken != aiTurnNumber)
             {
                 aiUnit = u;
+                aiTurnNumber = u.TurnsTaken;
                 aiNoChange = 0;
                 aiSteps = 0;
                 aiPreview = null;

@@ -72,6 +72,12 @@ namespace Lanternvale.Game
                 case SessionEventKind.QuestCompleted:
                     Sfx.Play("quest");
                     break;
+                case SessionEventKind.QuestFailed:
+                    Sfx.Play("debuff");
+                    break;
+                case SessionEventKind.ApprovalChanged:
+                    OnApprovalChanged(e);
+                    break;
                 case SessionEventKind.SkillCheck:
                     OnSkillCheck(e);
                     break;
@@ -103,6 +109,7 @@ namespace Lanternvale.Game
         {
             var s = Session;
             if (s == null || s.MapDef == null) return;
+            bool fromTitle = backdropActive || MapView.Current == null;
             DisposeWorld();
             var def = s.MapDef;
             var map = MapView.Build(def, s.Flags.Test);
@@ -124,7 +131,7 @@ namespace Lanternvale.Game
                 rig.Focus(null);
                 rig.ResetPan();
                 rig.AllowManualPan = true;
-                rig.Zoom = rig.DefaultSize;
+                if (fromTitle) rig.Zoom = rig.DefaultSize;   // travelling keeps the player's zoom
                 rig.SnapToTarget();
             }
             dialogueCamActive = false;
@@ -288,6 +295,17 @@ namespace Lanternvale.Game
             FxSystem.AuraPulse(v.FeetPosition, 1.8f, new Color(LevelGold.r, LevelGold.g, LevelGold.b, 0.9f));
             FxSystem.HealSparkles(v.FeetPosition, v.Height);
             FloatingText.Spawn(v.HeadPosition + new Vector2(0f, 0.25f), level > 0 ? "Level " + level + "!" : "Level up!", LevelGold, 1.15f, true);
+        }
+
+        void OnApprovalChanged(SessionEvent e)
+        {
+            if (e.Amount == 0 || Session == null) return;
+            var u = e.Unit ?? Session.FindMember(e.Id);
+            var v = ViewOf(u);
+            if (v == null) { var ne = FindNpcEntry(e.Id); v = ne != null ? ne.View : null; }
+            if (v == null) return;
+            FloatingText.Status(v.HeadPosition + new Vector2(0f, 0.15f), e.Amount > 0 ? "Approves" : "Disapproves",
+                e.Amount > 0 ? new Color(0.62f, 0.95f, 0.6f) : new Color(1f, 0.55f, 0.5f));
         }
 
         void OnSkillCheck(SessionEvent e)

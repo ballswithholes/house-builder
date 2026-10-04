@@ -29,7 +29,6 @@ namespace Lanternvale.Game
         bool endingQueued, endingDone;
         bool disengageRequested, disengageQueued, disengageDone;
         bool timeScaleOwned;
-        float lastAppliedTimeScale = 1f;
 
         /// <summary>Created by GameFlow when the session raises CombatStarted.</summary>
         public CombatController(GameFlow flow, Battle battle)
@@ -233,6 +232,37 @@ namespace Lanternvale.Game
         /// <summary>Battle unit under the mouse during the player's turn (target frame preview), or null.</summary>
         public Unit HoveredTarget { get; private set; }
 
+        /// <summary>
+        /// Confirms the ability/item being targeted on a unit picked from the UI (party frames, turn order) instead of
+        /// the world, exactly like a left click on that unit (walks into range first when needed). Returns null on
+        /// success (or when nothing is being targeted), else the reason.
+        /// </summary>
+        public string TargetUnit(Unit target)
+        {
+            if (!IsTargeting || target == null) return null;
+            try
+            {
+                if (!IsPlayerTurn) return Fail(Battle != null && Battle.NeedsPlayerInput ? "Wait for the action to finish." : "It is not your turn.");
+                var u = Battle.ActiveUnit;
+                var a = TargetingAbility;
+                var item = TargetingItem;
+                if (u == null || a == null) return null;
+                if (!Battle.Units.Contains(target)) return Fail("That is not part of this fight.");
+                Unit tgt = null;
+                Vec2? point = null;
+                if (a.target == TargetType.Point || IsAimed(a)) point = AimPoint(u, a, target, ToV(target.Position));
+                else tgt = target;
+                var why = ExecutePlan(u, PlanUse(u, a, tgt, point, item != null), tgt, point, item);
+                hoverDirty = true;
+                return why;
+            }
+            catch (Exception e)
+            {
+                LogOnce("targetunit", "TargetUnit: " + e);
+                return Fail("That cannot be used right now.");
+            }
+        }
+
         // ================================================================ per frame
 
         const float FastForwardFactor = 2.5f;
@@ -241,7 +271,9 @@ namespace Lanternvale.Game
         {
             float speed = ApplySpeed();
             bool paused = Time.timeScale <= 0f;
-            float dt = paused ? 0f : Mathf.Clamp(rawDt, 0f, 0.1f) * speed;
+            // GameFlow passes unscaled time; guard against a scaled delta (we drive Time.timeScale ourselves)
+            float real = Mathf.Min(Mathf.Max(0f, rawDt), Time.unscaledDeltaTime + 0.0001f);
+            float dt = paused ? 0f : Mathf.Min(real, 0.1f) * speed;
             FrameDt = dt;
 
             PullEvents(null);
@@ -292,8 +324,13 @@ namespace Lanternvale.Game
                 Time.timeScale = s;
                 timeScaleOwned = true;
             }
-            lastAppliedTimeScale = s;
             return s;
+        }
+
+        void RestoreTimeScale()
+        {
+            if (timeScaleOwned && Time.timeScale > 0f) Time.timeScale = 1f;
+            timeScaleOwned = false;
         }
 
         // ================================================================ ending / disengage
@@ -328,6 +365,7 @@ namespace Lanternvale.Game
             if (Finished) return;
             var s = flow != null ? flow.Session : null;
             HidePlayerTurnVisuals();
+            RestoreTimeScale();
             Finished = true;   // set first: the session raises CombatEnded synchronously and GameFlow disposes us
             if (s == null) return;
             try
@@ -396,8 +434,7 @@ namespace Lanternvale.Game
             }
             deferred.Clear();
 
-            if (timeScaleOwned && Time.timeScale > 0f) Time.timeScale = 1f;
-            timeScaleOwned = false;
+            RestoreTimeScale();
             var rig = CameraRig.Instance;
             if (rig != null) rig.Focus(null);
             if (Battle != null && Battle.Outcome != BattleOutcome.Defeat && startedCombatMusic)

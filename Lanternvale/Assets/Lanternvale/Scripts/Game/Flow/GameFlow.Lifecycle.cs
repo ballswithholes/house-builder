@@ -51,7 +51,7 @@ namespace Lanternvale.Game
         void OnDestroy()
         {
             if (Instance != this) return;
-            if (pausedByMenu) Time.timeScale = savedTimeScale;
+            if (pausedByMenu || Time.timeScale != 1f) Time.timeScale = 1f;
             if (Session != null) Unsubscribe(Session);
             Instance = null;
         }
@@ -72,7 +72,8 @@ namespace Lanternvale.Game
                 else
                 {
                     var s = Session;
-                    if (!pausedByMenu) s.Tick(dt);
+                    // in combat only the play time advances: count real seconds, not the fast-forwarded presentation
+                    if (!pausedByMenu) s.Tick(s.Mode == SessionMode.Combat ? Mathf.Min(unscaled, 0.25f) : dt);
                     UpdateGlobalHotkeys();
                     if (Session != s || !HasGame) { SyncGameRootMode(); return; }
                     var mode = s.Mode;
@@ -125,15 +126,13 @@ namespace Lanternvale.Game
             // Safety net: the combat presenter is missing (e.g. it failed to construct). Resolve the fight with the
             // AI so the game never soft-locks, then let the normal CombatEnded flow run.
             var b = Session.Battle;
-            if (b == null) return;
-            if (!combatFallbackLogged)
-            {
-                combatFallbackLogged = true;
-                Debug.LogError("[Lanternvale] No CombatController for the running battle; auto-resolving it.");
-            }
+            if (b == null || combatFallbackLogged) return;   // one attempt per battle (F9 / main menu remain available)
+            combatFallbackLogged = true;
+            Debug.LogError("[Lanternvale] No CombatController for the running battle; auto-resolving it.");
             if (!b.IsOver) Session.AutoResolve(200);
             if (b.IsOver) Session.FinishBattle();
             else if (Session.CannotLeaveCombatReason() == null) Session.LeaveCombat();
+            else Toast("The battle could not be resolved. Load a save to continue.");
         }
 
         bool IsPlayerSide(Unit u)
@@ -182,8 +181,12 @@ namespace Lanternvale.Game
                 savedTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
                 Time.timeScale = 0f;
             }
-            else Time.timeScale = savedTimeScale > 0f ? savedTimeScale : 1f;
+            else Time.timeScale = ResumeTimeScale();
         }
+
+        /// <summary>Time scale to restore after the pause menu: the combat presenter's speed only while the battle it
+        /// was paused in is still being presented (a load or "main menu" from the pause screen disposed it).</summary>
+        float ResumeTimeScale() => Combat != null && savedTimeScale > 0f ? savedTimeScale : 1f;
 
         void SyncGameRootMode()
         {
@@ -419,7 +422,8 @@ namespace Lanternvale.Game
                 Session = null;
                 DisposeWorld();
                 UiRoot.CloseAll();
-                if (pausedByMenu) { pausedByMenu = false; Time.timeScale = savedTimeScale > 0f ? savedTimeScale : 1f; }
+                if (pausedByMenu) pausedByMenu = false;
+                Time.timeScale = 1f;   // the combat presenter (if any) is gone: never leave its fast-forward behind
                 backdropTried = false;
                 if (!DioramaPreview.Active) BuildBackdrop();
             }

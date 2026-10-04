@@ -59,8 +59,10 @@ out-of-combat presentation, saves, and hands battles to the `CombatController`.
 `GameFlow.SessionEventRaised`, not `TakeEvents()`. Successful starts/loads close every UI panel (`UiRoot.CloseAll()`).
 
 **Pause.** While the `UiPanels.Pause` panel is open in a game, `Time.timeScale` is 0 (views, FX, floating text and the
-session clock freeze; IMGUI keeps working) and is restored when it closes. The combat controller never overrides a
-time scale of 0.
+session clock freeze; IMGUI keeps working) and is restored when it closes — to the combat presenter's speed only while
+the battle it was paused in is still presented, otherwise to 1 (a load / main menu from the pause screen never leaves a
+fast-forward rate behind). The combat controller never overrides a time scale of 0. In combat the session's play time
+advances with real (unscaled) seconds.
 
 ## 2. Frame loop (`GameFlow.Update`, execution order −50)
 
@@ -166,11 +168,14 @@ Field `CombatEvent`s are ignored while a battle is presented.
 
 * `UseAbilityOutOfCombat(caster, abilityId, target)` → `Session.UseAbility` in the field context. Self/ally abilities
   default to the caster, pet abilities to its pet. **Enemy-target abilities arm an opener** instead (`PendingOpener`,
-  enemies pulse red, a toast explains): the next click on an enemy starts the fight with it; right click/Esc/any other
-  click disarms (`CancelOpener()`). Returns null or a reason ("You are in combat.", the rules' reason…).
+  enemies pulse red, a toast explains; the caster must know the ability): the next click on an enemy starts the fight
+  with it via `Battle.BeginWithOpener` (an Opener from stealth surprises the enemies; if the opener cannot be used the
+  session toasts why and the fight starts normally); right click/Esc/any other click disarms (`CancelOpener()`).
+  Returns null or a reason ("You are in combat.", the rules' reason…).
 * `UseItemOutOfCombat(user, item, target)` → `CannotUseItemReason` then `Session.UseItem` (food/drink, potions, scrolls).
 * `TryRest()` → `Session.LongRest()` (restArea maps); the `Rested` event plays the fade (also for the innkeeper's Rest).
-* Presentation of field `CombatEvent`s: casts glow (`PlayCast` + `cast_start`), direct heals (+number, sparkles, `heal`;
+* Presentation of field `CombatEvent`s (only while no battle is presented): each action once — instants on
+  `AbilityUsed`, cast-time spells on `CastStart` — spells glow (`PlayCast` + `cast_start`), direct heals (+number, sparkles, `heal`;
   periodic food/HoT ticks stay quiet), damage, misses, buffs/debuffs from an action just taken (ring + name +
   `buff`/`debuff`; area auras re-applied while walking are not shown), summons (view + puff/sparkles), despawns,
   deaths, revives, teleports (Blink), conjured items ("+2 Conjured Water"), resource gains (Life Tap, Evocation).
@@ -235,3 +240,5 @@ whenever saving is allowed (they wait for a running conversation to end; failure
 * `GameFlow.LastError`
 * `GameFlow.DeleteSave(string slot)`
 * `GameFlow.PendingOpener`, `GameFlow.PendingOpenerCaster`, `GameFlow.CancelOpener()`
+* `GameFlow.Toast(string)` (integration): flow-local toast relayed through `SessionEventRaised` as `SessionEventKind.Toast`
+* `CombatController.TargetUnit(Unit)` (integration): confirms the ability/item being targeted on a unit picked in the UI

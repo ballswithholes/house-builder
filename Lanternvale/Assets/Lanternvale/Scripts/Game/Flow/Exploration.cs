@@ -509,12 +509,20 @@ namespace Lanternvale.Game
         /// </summary>
         bool SilentApproach(UnitView actorView)
         {
-            if (pendingKind != PendingKind.Engage || pendingEncounter == null || actorView == null) return false;
-            var actor = pendingActor ?? Session.Leader;
-            float r = pendingEncounter.radius;
-            if (actor != null && actor.IsStealthed) r = Mathf.Min(r, Lanternvale.World.MapRuntime.StealthDetectRadius);
-            r += 0.75f;
-            return (actorView.FeetPosition - ToUnity(pendingEncounter.pos)).sqrMagnitude <= r * r;
+            if (pendingKind != PendingKind.Engage || pendingEncounter == null || actorView == null || Session == null) return false;
+            var center = ToUnity(pendingEncounter.pos);
+            // any active member close enough to be noticed (stealthed ones only within 3 m, like the session's trigger)
+            foreach (var u in Session.Party)
+            {
+                if (u == null || !u.IsAlive) continue;
+                var v = ViewOf(u);
+                if (v == null) continue;
+                float r = pendingEncounter.radius;
+                if (u.IsStealthed) r = Mathf.Min(r, Lanternvale.World.MapRuntime.StealthDetectRadius);
+                r += 0.75f;
+                if ((v.FeetPosition - center).sqrMagnitude <= r * r) return true;
+            }
+            return false;
         }
 
         /// <summary>Reports view positions to the session (runs triggers). False when movement was stopped.</summary>

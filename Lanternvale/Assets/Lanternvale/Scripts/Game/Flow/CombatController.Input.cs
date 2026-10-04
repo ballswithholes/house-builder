@@ -106,10 +106,12 @@ namespace Lanternvale.Game
             }
             playerVisualsShown = true;
             bool blocked = UiRoot.ModalActive || (flow != null && !flow.WorldInputEnabled);
-            if (IsTargeting) UiRoot.HotkeysSuppressed = true;   // Esc cancels targeting instead of opening the pause menu
 
             if (!blocked)
             {
+                // Esc cancels targeting instead of opening the pause menu (while a modal window is up — a confirm
+                // prompt — Esc belongs to that window, so hotkeys are left alone then)
+                if (IsTargeting) UiRoot.HotkeysSuppressed = true;
                 if (IsTargeting && (GameInput.KeyDown(KeyCode.Escape) || (GameInput.MouseDown(1) && !GameInput.PointerOverUi)))
                 {
                     CancelTargeting();
@@ -344,6 +346,7 @@ namespace Lanternvale.Game
                 if (IsTargeting) text = TargetingPreview(u, hover, mouse, overUi);
                 else if (overUi) { FxSystem.Hide(PathId); FxSystem.Hide(AoeId); text = ""; }
                 else if (hover != null && hover != u) text = UnitPreview(u, hover);
+                else if (hover == u) text = SelfPreview(u);
                 else text = GroundPreview(u, mouse);
             }
             catch (Exception e)
@@ -374,6 +377,16 @@ namespace Lanternvale.Game
             sb.Length = 0;
             sb.Append("Move ").Append(planLength.ToString("0.0")).Append(" m (").Append(left.ToString("0.0")).Append(" m left)");
             if (!planReached) sb.Append(planTruncated ? " · too far to reach this turn" : " · as close as possible");
+            return sb.ToString();
+        }
+
+        string SelfPreview(Unit u)
+        {
+            FxSystem.Hide(PathId);
+            FxSystem.Hide(AoeId);
+            sb.Length = 0;
+            sb.Append(u.Name).Append(" · ").Append(Mathf.Max(0f, u.TimeLeft).ToString("0.0")).Append(" s and ")
+              .Append(Mathf.Max(0f, u.MoveLeft).ToString("0.0")).Append(" m left this turn · Space ends the turn");
             return sb.ToString();
         }
 
@@ -430,21 +443,18 @@ namespace Lanternvale.Game
             }
             ShowRangeRing(u, a, mods);
             bool aimed = IsAimed(a);
-            bool pointed = a.target == TargetType.Point;
-            if (!pointed && !aimed) WantValidTargets(u, a, fromItem);
+            bool pointed = a.target == TargetType.Point || aimed;
+            if (!pointed) WantValidTargets(u, a, fromItem);
 
             string label = fromItem ? TargetingItem.Name : a.name;
-            if (overUi && (pointed || aimed))
+            if (overUi && pointed)
             {
                 FxSystem.Hide(AoeId);
                 FxSystem.Hide(PathId);
                 return label + ": choose a location (right click to cancel).";
             }
-            Unit tgt = null;
-            Vec2? point = null;
-            if (pointed) point = hover != null ? hover.Position : ToVec(mouse);
-            else if (aimed) point = ToVec(mouse);
-            else tgt = hover;
+            Unit tgt = pointed ? null : hover;
+            Vec2? point = pointed ? AimPoint(u, a, hover, mouse) : null;
 
             // area preview + affected units
             int enemies = -1, allies = -1;
@@ -463,7 +473,7 @@ namespace Lanternvale.Game
             }
             else FxSystem.Hide(AoeId);
 
-            if (!pointed && !aimed && tgt == null)
+            if (!pointed && tgt == null)
             {
                 FxSystem.Hide(PathId);
                 sb.Length = 0;
@@ -634,8 +644,7 @@ namespace Lanternvale.Game
             if (a == null) return;
             Unit tgt = null;
             Vec2? point = null;
-            if (a.target == TargetType.Point) point = hover != null ? hover.Position : ToVec(mouse);
-            else if (IsAimed(a)) point = ToVec(mouse);
+            if (a.target == TargetType.Point || IsAimed(a)) point = AimPoint(u, a, hover, mouse);
             else
             {
                 if (hover == null) { Fail(a.target == TargetType.Enemy ? "Select an enemy." : "Select a target."); return; }
@@ -720,10 +729,11 @@ namespace Lanternvale.Game
             var chk = Battle.CanUseIgnoringTarget(u, a, item != null);
             if (!chk.Ok) return Fail(chk.Reason);
 
-            // no target needed: execute now
-            if (a.target == TargetType.Self && !IsAimed(a)) return Execute(u, a, item, u, null);
+            // no target needed: execute now (cones and lines are aimed with the mouse first)
+            bool aimed = IsAimed(a);
+            if (a.target == TargetType.Self && !aimed) return Execute(u, a, item, u, null);
             if (a.target == TargetType.Pet) return Execute(u, a, item, u.Pet, null);
-            if (a.target == TargetType.Point && a.area.centeredOnCaster) return Execute(u, a, item, null, u.Position);
+            if (a.target == TargetType.Point && a.area.centeredOnCaster && !aimed) return Execute(u, a, item, null, u.Position);
 
             // toggles on the current target: auto attack (on/off), "next swing" abilities (Heroic Strike…)
             var cur = u.AttackTarget;
@@ -741,8 +751,22 @@ namespace Lanternvale.Game
             return null;
         }
 
+        /// <summary>Cones and lines from the caster (Cone of Cold, breath attacks) are aimed with the mouse.</summary>
         static bool IsAimed(AbilityDef a) =>
-            a != null && a.target == TargetType.Self && (a.area.shape == AreaShape.Cone || a.area.shape == AreaShape.Line);
+            a != null && (a.area.shape == AreaShape.Cone || a.area.shape == AreaShape.Line) &&
+            (a.target == TargetType.Self || (a.target == TargetType.Point && a.area.centeredOnCaster));
+
+        /// <summary>Ground point for point abilities (snaps to a hovered unit); for aimed cones/lines a point 1 m along the aim.</summary>
+        static Vec2 AimPoint(Unit u, AbilityDef a, Unit hover, Vector2 mouse)
+        {
+            if (IsAimed(a))
+            {
+                var d = (hover != null ? hover.Position : ToVec(mouse)) - u.Position;
+                if (d.SqrLength < 1e-4f) d = u.Facing;
+                return u.Position + d.Normalized * 1f;
+            }
+            return hover != null ? hover.Position : ToVec(mouse);
+        }
 
         // ================================================================ highlights
 
@@ -792,7 +816,13 @@ namespace Lanternvale.Game
             sb.Length = 0;
             if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(" m, then ");
             sb.Append(label ?? a.name);
-            if (target != null && target != u) sb.Append(" → ").Append(target.Name);
+            if (target != null && target != u)
+            {
+                sb.Append(" → ").Append(target.Name);
+                var p = target.Pending;
+                if (p != null && p.Ability != null && target.IsHostileTo(u))
+                    sb.Append(" (casting ").Append(p.Ability.name).Append(", ").Append(p.RemainingTime.ToString("0.#")).Append(" s left)");
+            }
             var mag = MagnitudeText(u, a, mods);
             if (!string.IsNullOrEmpty(mag)) sb.Append(" · ").Append(mag);
             if (enemies >= 0)
