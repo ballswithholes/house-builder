@@ -44,7 +44,8 @@ const Game = {
     Sfx.startMusic('title');
     const t = $('#title');
     t.classList.remove('hidden');
-    const has = !!localStorage.getItem(SAVE_KEY);
+    let has = false;
+    try { has = !!localStorage.getItem(SAVE_KEY); } catch (e) { }
     for (; ;) {
       const v = await UI.menu({
         cls: 'title-menu', cancel: false, start: has ? 1 : 0, items: [
