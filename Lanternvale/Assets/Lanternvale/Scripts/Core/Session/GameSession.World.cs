@@ -45,6 +45,8 @@ namespace Lanternvale.Session
             CloseVendor();
             CloseTrainer();
             CloseRespec();
+            DetachField();
+            ClearOwnedSummons();
             SetMap(rt);
             if (string.IsNullOrEmpty(spawnId)) spawnId = "default";
             var spawn = rt.SpawnPosition(spawnId);
@@ -70,25 +72,54 @@ namespace Lanternvale.Session
             suppressedEncounters.Clear();
         }
 
-        /// <summary>Rebuilds the exploration context with the current party units (no-op during combat).</summary>
+        /// <summary>Rebuilds the exploration context with the current party units and pets (no-op during combat).</summary>
         void RebuildField()
         {
             if (Battle != null) return;
-            if (Field != null)
-            {
-                Field.EventRaised -= ForwardCombatEvent;
-                Field.UnitAdded -= OnFieldUnitAdded;
-                Field.UnitRemoved -= OnFieldUnitRemoved;
-            }
-            if (!hasGame || roster.Count == 0) { Field = null; return; }
+            DetachField();
+            if (!hasGame || roster.Count == 0) return;
             IPathfinder pf = fieldPathfinder != null ? (IPathfinder)fieldPathfinder : new StraightLinePathfinder { UnitsBlock = false };
-            var f = new Battle(Db, Rng, pf, Inventory, false) { RecordEvents = false };
-            foreach (var u in PartyUnits()) f.AddUnit(u);
+            var f = Battle.CreateField(Db, Rng, party, pf, Inventory);
+            f.RecordEvents = false;
+            foreach (var s in OwnedSummons()) f.AddUnit(s);   // totems/guardians placed earlier keep working
             f.EventRaised += ForwardCombatEvent;
             f.UnitAdded += OnFieldUnitAdded;
             f.UnitRemoved += OnFieldUnitRemoved;
             Field = f;
             f.RefreshAreaAuras();
+        }
+
+        /// <summary>Living totems and temporary summons of the active party (not pets).</summary>
+        List<Unit> OwnedSummons()
+        {
+            var list = new List<Unit>();
+            foreach (var m in party)
+            {
+                foreach (var t in m.Totems.Values) if (t != null && t.IsAlive && !list.Contains(t)) list.Add(t);
+                foreach (var x in m.Summons) if (x != null && x.IsAlive && x != m.Pet && !list.Contains(x)) list.Add(x);
+            }
+            return list;
+        }
+
+        /// <summary>Removes the party's totems and temporary summons (map change).</summary>
+        void ClearOwnedSummons()
+        {
+            foreach (var m in roster)
+            {
+                foreach (var t in m.Totems.Values) if (t != null) t.Dead = true;
+                m.Totems.Clear();
+                foreach (var x in m.Summons) if (x != null && x != m.Pet) x.Dead = true;
+                m.Summons.RemoveAll(x => x == null || x != m.Pet);
+            }
+        }
+
+        void DetachField()
+        {
+            if (Field == null) return;
+            Field.EventRaised -= ForwardCombatEvent;
+            Field.UnitAdded -= OnFieldUnitAdded;
+            Field.UnitRemoved -= OnFieldUnitRemoved;
+            Field = null;
         }
 
         /// <summary>Spirit lanterns are lit (flag lanterns_rekindled).</summary>
@@ -551,18 +582,48 @@ namespace Lanternvale.Session
             EnterMap(mapId, string.IsNullOrEmpty(spawnId) ? "default" : spawnId);
         }
 
-        /// <summary>Data `Special` outcomes. RekindleLanterns: flag lanterns_rekindled + SpecialOutcome event (Amount 1 = animate).</summary>
+        /// <summary>
+        /// Data `Special` outcomes: run through the rules engine's content specials (Specials.RunContentSpecial with the
+        /// session as IContentContext → flags + SpecialOutcome events). RekindleLanterns: flag lanterns_rekindled +
+        /// SpecialOutcome (Amount 1 = animate now; 0 is raised after every map load while the flag is set).
+        /// </summary>
         public void RunSpecial(string specialId, OutcomeDef outcome)
         {
             if (resetting || string.IsNullOrEmpty(specialId)) return;
+            pendingSpecialArg = outcome?.value ?? "";
+            try
+            {
+                if (Specials.RunContentSpecial(specialId, this)) return;
+            }
+            finally { pendingSpecialArg = ""; }
             if (specialId == RekindleLanternsSpecial)
             {
                 World.Flags.Set(LanternsFlag, 1);
-                Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = specialId, Amount = 1, Text = "The lanterns of Lanternvale are lit!" });
+                Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = specialId, Amount = 1, Text = LanternsText });
                 return;
             }
-            Log.Warn($"GameSession: special outcome '{specialId}' has no session handler (forwarded to the UI)");
+            Log.Warn($"GameSession: special outcome '{specialId}' has no handler (forwarded to the UI)");
             Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = specialId, Id2 = outcome?.value ?? "", Amount = outcome?.amount ?? 0 });
+        }
+
+        const string LanternsText = "The lanterns of Lanternvale are lit!";
+        string pendingSpecialArg = "";
+
+        bool IContentContext.GetFlag(string flag) => World.Flags.IsSet(flag);
+
+        void IContentContext.SetFlag(string flag, bool value)
+        {
+            if (value) World.Flags.Set(flag, 1);
+            else World.Flags.Clear(flag);
+        }
+
+        void IContentContext.RaiseEvent(string name, string arg)
+        {
+            Raise(new SessionEvent
+            {
+                Kind = SessionEventKind.SpecialOutcome, Id = name ?? "", Id2 = string.IsNullOrEmpty(arg) ? pendingSpecialArg : arg, Amount = 1,
+                Text = name == RekindleLanternsSpecial ? LanternsText : "",
+            });
         }
 
         /// <summary>Special outcome ids handled by the session (the data validator may treat these as implemented).</summary>

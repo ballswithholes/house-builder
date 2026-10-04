@@ -29,6 +29,41 @@ namespace Lanternvale.Session
         /// </summary>
         public Battle StartEncounter(string encounterId, SurpriseMode surprise = SurpriseMode.None)
         {
+            var b = PrepareEncounter(encounterId, out var enemies);
+            if (b == null) return null;
+            Team? surprised = surprise == SurpriseMode.EnemiesSurprised ? Team.Enemy : surprise == SurpriseMode.PartySurprised ? Team.Player : (Team?)null;
+            b.Begin(surprised);
+            return b;
+        }
+
+        /// <summary>
+        /// The player attacks an encounter first (its dialogue is skipped). With an opener ability (Charge, Ambush,
+        /// Cheap Shot, Pyroblast…) the attacker uses it on enemy <paramref name="targetIndex"/> (EncounterDef.enemies
+        /// order) before the first round (Battle.BeginWithOpener: an Opener from stealth surprises the enemies).
+        /// Without one, the enemies are surprised when the attacker (default: the leader) is stealthed.
+        /// </summary>
+        public Battle EngageEncounter(string encounterId, Unit attacker = null, string openerAbilityId = null, int targetIndex = 0)
+        {
+            attacker ??= Leader;
+            bool stealth = attacker != null && attacker.IsStealthed;
+            var b = PrepareEncounter(encounterId, out var enemies);
+            if (b == null) return null;
+            if (!string.IsNullOrEmpty(openerAbilityId) && attacker != null && b.Units.Contains(attacker))
+            {
+                var target = enemies.Count > 0 ? enemies[MathUtil.Clamp(targetIndex, 0, enemies.Count - 1)] : null;
+                var r = b.BeginWithOpener(attacker, openerAbilityId, target);
+                if (r.Ok) return b;
+                LastError = r.Reason;
+                Toast(r.Reason);
+            }
+            b.Begin(stealth ? Team.Enemy : (Team?)null);
+            return b;
+        }
+
+        /// <summary>Builds (but does not begin) the battle for an encounter; null + LastError when not possible.</summary>
+        Battle PrepareEncounter(string encounterId, out List<Unit> enemies)
+        {
+            enemies = new List<Unit>();
             LastError = "";
             if (!hasGame || gameOver) { LastError = "No game."; return null; }
             if (Battle != null) { LastError = "Already in combat."; return null; }
@@ -38,11 +73,6 @@ namespace Lanternvale.Session
             if (Map.IsEncounterDone(enc)) { LastError = "That fight is already over."; return null; }
             if (!Map.IsEncounterAvailable(enc)) { LastError = "There is nobody to fight."; return null; }
 
-            if (PendingLoot != null) CloseLoot(true);
-            CloseVendor();
-            CloseTrainer();
-            CloseRespec();
-
             var units = new List<Unit>();
             foreach (var m in party)
             {
@@ -51,8 +81,8 @@ namespace Lanternvale.Session
             }
             foreach (var m in party)
                 if (m.Pet != null && m.Pet.IsAlive && units.Contains(m) && !units.Contains(m.Pet)) units.Add(m.Pet);
+            foreach (var x in OwnedSummons()) if (!units.Contains(x)) units.Add(x);   // totems placed before the pull
 
-            var enemies = new List<Unit>();
             int lvl = PartyLevel;
             foreach (var ed in enc.enemies)
             {
@@ -64,6 +94,11 @@ namespace Lanternvale.Session
                 enemies.Add(e);
             }
             if (enemies.Count == 0) { LastError = "There is nobody to fight."; return null; }
+
+            if (PendingLoot != null) CloseLoot(true);
+            CloseVendor();
+            CloseTrainer();
+            CloseRespec();
 
             // stand everyone on free walkable spots
             Nav.ClearUnits();
@@ -87,13 +122,7 @@ namespace Lanternvale.Session
             var b = new Battle(Db, Rng, pathfinder, Inventory, true);
             b.AddUnits(all);
             b.EventRaised += ForwardCombatEvent;
-            if (Field != null)
-            {
-                Field.EventRaised -= ForwardCombatEvent;
-                Field.UnitAdded -= OnFieldUnitAdded;
-                Field.UnitRemoved -= OnFieldUnitRemoved;
-                Field = null;
-            }
+            DetachField();
             Battle = b;
             BattleEncounter = enc;
             battleCursor = 0;
@@ -104,17 +133,7 @@ namespace Lanternvale.Session
             string bark = "";
             foreach (var e in enemies) if (!string.IsNullOrEmpty(e.Creature.bark)) { bark = e.Creature.bark; break; }
             Raise(new SessionEvent { Kind = SessionEventKind.CombatStarted, Battle = b, Id = enc.id, Text = bark });
-            Team? surprised = surprise == SurpriseMode.EnemiesSurprised ? Team.Enemy : surprise == SurpriseMode.PartySurprised ? Team.Player : (Team?)null;
-            b.Begin(surprised);
             return b;
-        }
-
-        /// <summary>The player attacks an encounter first (skips its dialogue): enemies are surprised when the leader is stealthed.</summary>
-        public Battle EngageEncounter(string encounterId)
-        {
-            var l = Leader;
-            bool stealth = l != null && l.IsStealthed;
-            return StartEncounter(encounterId, stealth ? SurpriseMode.EnemiesSurprised : SurpriseMode.None);
         }
 
         static Vec2 Centroid(List<Unit> units)
@@ -175,21 +194,18 @@ namespace Lanternvale.Session
             var b = Battle;
             if (b == null) return "Not in combat.";
             if (b.IsOver) return "The battle is over.";
-            foreach (var u in b.Units)
-            {
-                if (u.Team == b.PlayerTeam || u.Team == Team.Neutral || !u.IsAlive || u.IsTotem) continue;
-                if (u.Creature == null || u.Creature.ai != AIProfile.Passive) return "You cannot leave while enemies are fighting.";
-            }
-            return null;
+            return b.CanDisengage ? null : "You cannot leave while enemies are fighting.";
         }
 
-        /// <summary>Ends a fight against passive targets without marking the encounter done. Returns the summary (null when not allowed).</summary>
+        /// <summary>Ends a fight against passive targets (Battle.Disengage) without marking the encounter done; applies it
+        /// like FinishBattle. Returns the summary (Outcome Left), or null (LastError) when not allowed.</summary>
         public BattleSummary LeaveCombat()
         {
             var why = CannotLeaveCombatReason();
             if (why != null) { LastError = why; return null; }
+            var r = Battle.Disengage();
+            if (!r.Ok) { LastError = r.Reason; return null; }
             battleLeft = true;
-            Battle.Finish(BattleOutcome.Victory);
             return FinishBattle();
         }
 
@@ -207,11 +223,11 @@ namespace Lanternvale.Session
             b.EventRaised -= ForwardCombatEvent;
             Battle = null;
             BattleEncounter = null;
-            bool left = battleLeft;
+            bool left = battleLeft || b.Outcome == BattleOutcome.Fled;
             battleLeft = false;
             Nav?.ClearUnits();
 
-            if (b.Outcome == BattleOutcome.Defeat && !left)
+            if (b.Outcome == BattleOutcome.Defeat)
             {
                 s.Outcome = CombatEndKind.Defeat;
                 gameOver = true;

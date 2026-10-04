@@ -100,28 +100,30 @@ namespace Lanternvale.Tests
         [Test]
         public static void WalkingIntoEncounter_Triggers_StealthRule()
         {
+            // wisps' grove: radius 3.2 m. Stealthed members are only noticed within 3 m.
             var s = SessionTest.NewGame(ClassId.Rogue, 10, seed: 81);
             s.EnterMap("whisperwood", "from_village");
-            var enc = s.Map.FindEncounter("enc_forest_wolves");
+            var enc = s.Map.FindEncounter("enc_wisps_grove");
+            Harness.Assert(enc.radius > 3.1f, "test needs a radius above 3 m");
             var r = s.UseAbility(s.Main, "rogue_stealth");
             Harness.Assert(r.Ok && s.Main.IsStealthed, "stealthed: " + r.Reason);
-            // stand 4 m away (inside the 3 m radius? no: radius 3 → normal party would trigger at 3 m; stealth at min(3,3))
-            var near = enc.pos + new Vec2(0, 2.5f);
-            near = s.Nav.ClampToWalkable(near, NavAgent.Default.IgnoringAllUnits());
-            float d = Vec2.Distance(near, enc.pos);
-            var tr = s.UpdatePartyPositions(near);
-            if (d <= Math.Min(enc.radius, 3f)) Harness.Assert(tr.Stop && tr.Kind == TriggerKind.Combat, "inside 3 m triggers even when stealthed");
-            else Harness.Assert(!tr.Stop, "stealthed outside 3 m does not trigger");
-            if (s.Battle != null) { s.AutoResolve(); s.FinishBattle(); if (s.PendingLoot != null) s.CloseLoot(true); }
+            var edge = enc.pos + new Vec2(-3.1f, 0f);
+            Harness.Assert(s.Nav.IsWalkable(edge, 0.3f), "test point walkable");
+            var tr = s.UpdatePartyPositions(edge);
+            Harness.Assert(!tr.Stop && s.Battle == null, "stealthed at 3.1 m: unnoticed");
+            var close = enc.pos + new Vec2(-2.5f, 0f);
+            tr = s.UpdatePartyPositions(close);
+            Harness.Assert(tr.Stop && tr.Kind == TriggerKind.Combat && s.BattleEncounter.id == "enc_wisps_grove", "stealthed at 2.5 m: noticed");
+            Harness.Assert(s.Battle.Units.Exists(u => u.Team == Team.Enemy), "wisps in the battle");
 
-            // boars: radius 3; a non-stealthed party triggers at 2.9 m, a stealthed one does not at 3.5 m of a 4 m-radius encounter
+            // not stealthed: the full radius counts
             var s2 = SessionTest.NewGame(ClassId.Warrior, 10, seed: 82);
             s2.EnterMap("whisperwood", "from_village");
-            var boars = s2.Map.FindEncounter("enc_boars_edge");
-            var p = s2.Nav.ClampToWalkable(boars.pos + new Vec2(-boars.radius + 0.3f, 0f), NavAgent.Default.IgnoringAllUnits());
-            Harness.Assert(Vec2.Distance(p, boars.pos) <= boars.radius, "test point inside the radius");
-            var t2 = s2.UpdatePartyPositions(p);
-            Harness.Assert(t2.Stop && t2.Kind == TriggerKind.Combat && s2.BattleEncounter.id == "enc_boars_edge", "walking in triggers combat");
+            var t2 = s2.UpdatePartyPositions(edge);
+            Harness.Assert(t2.Stop && t2.Kind == TriggerKind.Combat && s2.BattleEncounter.id == "enc_wisps_grove", "walking in at 3.1 m triggers combat");
+            // hidden ambushes appear only once triggered
+            var spiders = s2.Map.FindEncounter("enc_spiders");
+            Harness.Assert(spiders.hidden && !s2.VisibleEncounters().Contains(spiders), "hidden spiders not drawn");
         }
 
         [Test]
@@ -168,6 +170,24 @@ namespace Lanternvale.Tests
         }
 
         [Test]
+        public static void Engage_WithOpenerFromStealth_SurprisesEnemies()
+        {
+            var s = SessionTest.NewGame(ClassId.Rogue, 30, seed: 121);
+            s.EnterMap("whisperwood", "from_village");
+            var enc = s.Map.FindEncounter("enc_boars_edge");
+            Harness.Assert(s.UseAbility(s.Main, "rogue_stealth").Ok && s.Main.IsStealthed, "stealth");
+            s.Main.Position = enc.enemies[0].pos + new Vec2(-1.6f, 0f);   // the UI walks the rogue up to the boar
+            var b = s.EngageEncounter("enc_boars_edge", s.Main, "rogue_cheap_shot", 0);
+            Harness.Assert(b != null && b.Started, "battle begun: " + s.LastError);
+            int surprised = 0;
+            foreach (var u in b.Units) if (u.Team == Team.Enemy && u.Surprised) surprised++;
+            Harness.Assert(surprised == enc.enemies.Count, $"enemies surprised ({surprised}) — " + s.LastError);
+            Harness.Assert(b.Events.Exists(e => e.Type == CombatEventType.AbilityUsed && e.AbilityId == "rogue_cheap_shot") ||
+                           b.Events.Exists(e => e.AbilityId == "rogue_cheap_shot"), "opener used");
+            SessionTest.WinBattle(s);
+        }
+
+        [Test]
         public static void Defeat_GameOver()
         {
             var s = SessionTest.NewGame(ClassId.Mage, 1, seed: 101);
@@ -176,14 +196,12 @@ namespace Lanternvale.Tests
             Harness.Assert(b != null, "fight");
             s.Main.Health = 1f;
             var oc = s.AutoResolve(40);
-            if (oc == BattleOutcome.Defeat)
-            {
-                var sum = s.FinishBattle();
-                Harness.Assert(sum.Outcome == CombatEndKind.Defeat && s.Mode == SessionMode.GameOver && s.IsGameOver, "game over");
-                Harness.Assert(s.CannotSaveReason() != null, "cannot save a lost game");
-                Harness.Assert(SessionTest.FindEvent(s.TakeEvents(), SessionEventKind.GameOver) != null, "GameOver event");
-            }
-            else Harness.Assert(oc == BattleOutcome.Victory, "a lone level-1 mage at 1 HP should lose to three wolves");
+            Harness.Assert(oc == BattleOutcome.Defeat, $"a lone level-1 mage at 1 HP loses to three wolves (got {oc})");
+            var sum = s.FinishBattle();
+            Harness.Assert(sum.Outcome == CombatEndKind.Defeat && s.Mode == SessionMode.GameOver && s.IsGameOver, "game over");
+            Harness.Assert(s.CannotSaveReason() != null, "cannot save a lost game");
+            Harness.Assert(SessionTest.FindEvent(s.TakeEvents(), SessionEventKind.GameOver) != null, "GameOver event");
+            Harness.Assert(s.StartEncounter("enc_forest_wolves") == null, "nothing starts after game over");
         }
 
         [Test]
@@ -196,7 +214,12 @@ namespace Lanternvale.Tests
             var b = s.StartEncounter("enc_training_dummy");
             Harness.Assert(b != null, "battle");
             int guard = 0;
-            while (!s.IsPlayerTurn && !b.IsOver && guard++ < 200) Harness.Assert(s.RunAIStep() != null, "AI step for AI units");
+            // companions are player-controlled by default (BG3-style): skip their turns until the priest acts
+            while (!(s.IsPlayerTurn && s.ActiveUnit == s.Main) && !b.IsOver && guard++ < 200)
+            {
+                if (s.IsPlayerTurn) b.EndTurn(s.ActiveUnit);
+                else Harness.Assert(s.RunAIStep() != null, "AI step for AI units");
+            }
             Harness.Assert(s.IsPlayerTurn && s.ActiveUnit == s.Main, "the priest's turn waits for input");
             Harness.Assert(s.RunAIStep() == null, "no AI step on the player's turn");
             var fr = s.UseItem(s.Main, food);

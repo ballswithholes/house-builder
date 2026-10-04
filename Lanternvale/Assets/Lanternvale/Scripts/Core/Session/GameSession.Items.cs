@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Lanternvale.Data;
 using Lanternvale.Rules;
 using Lanternvale.Util;
+using Lanternvale.World;
 
 namespace Lanternvale.Session
 {
@@ -385,6 +386,37 @@ namespace Lanternvale.Session
             }
             return n;
         }
+
+        // ================================================================= quest rewards & journal
+
+        /// <summary>Quests whose pick-one reward (choiceItems) awaits the player's choice.</summary>
+        public IReadOnlyList<string> PendingQuestRewards => World.Quests.PendingRewardChoices;
+
+        /// <summary>The pick-one reward items of a quest (empty when none).</summary>
+        public List<ItemDef> QuestRewardChoices(string questId)
+        {
+            var list = new List<ItemDef>();
+            if (string.IsNullOrEmpty(questId) || !Db.Quests.TryGetValue(questId, out var q) || q.rewards?.choiceItems == null) return list;
+            foreach (var id in q.rewards.choiceItems)
+            {
+                var d = Db.Item(id);
+                if (d != null) list.Add(d);
+            }
+            return list;
+        }
+
+        /// <summary>Takes the chosen reward item (ItemReceived event). Null on success, else the reason.</summary>
+        public string ClaimQuestReward(string questId, string itemId)
+        {
+            if (string.IsNullOrEmpty(questId)) return "No quest.";
+            bool pending = false;
+            foreach (var q in World.Quests.PendingRewardChoices) if (q == questId) { pending = true; break; }
+            if (!pending) return "There is no reward to choose for that quest.";
+            return World.Quests.ClaimRewardChoice(questId, itemId) ? null : "That reward is not offered.";
+        }
+
+        /// <summary>Quest journal (World.QuestLog.GetJournal): active (main first), completed, failed.</summary>
+        public List<QuestJournalEntry> Journal(bool includeFinished = true) => World.Quests.GetJournal(includeFinished);
 
         // ================================================================= talents & respec
 

@@ -81,7 +81,7 @@ namespace Lanternvale.Session
     public sealed class SessionSettings
     {
         /// <summary>Default auto-play state of newly recruited companions (companion AI plays them in combat).</summary>
-        public bool CompanionAutoPlay = true;
+        public bool CompanionAutoPlay = false;           // BG3-style: the player controls every party member by default
         /// <summary>Companions learn every rank available at their new level for free when they level up.</summary>
         public bool CompanionAutoTrain = true;
         /// <summary>Companions spend new talent points on their preferred build automatically.</summary>

@@ -14,14 +14,6 @@ namespace Lanternvale.Session
         float playSeconds;
         string lastPhase = "";
 
-        /// <summary>Out-of-combat health regeneration: % of max health per second (+ Spirit × OocHealthPerSpirit, + HP5).</summary>
-        public static float OocHealthPctPerSecond = 0.5f;
-        public static float OocHealthPerSpirit = 0.1f;
-        /// <summary>Out-of-combat mana regeneration on top of Spirit regen: % of max mana per second.</summary>
-        public static float OocManaPctPerSecond = 0.5f;
-        /// <summary>Out-of-combat pet health/mana regeneration: % of max per second.</summary>
-        public static float OocPetPctPerSecond = 1.5f;
-
         /// <summary>Hour of day, 0..24.</summary>
         public float GameHour => gameHour;
         public int Day => day;
@@ -51,6 +43,7 @@ namespace Lanternvale.Session
         /// <summary>
         /// Advances real time. Out of combat and outside dialogue: the clock (Settings.GameHoursPerRealMinute),
         /// regeneration, cooldowns, aura ticks/expiry (food/drink) and summon lifetimes. Combat time is turn based.
+        /// Companions waiting at camp are not ticked.
         /// </summary>
         public void Tick(float realSeconds)
         {
@@ -87,96 +80,13 @@ namespace Lanternvale.Session
             if (!first) Raise(new SessionEvent { Kind = SessionEventKind.TimeOfDayChanged, Id = phase, Text = phase });
         }
 
+        /// <summary>Real time out of combat for the party, its pets and field summons (Rules: Battle.TickOutOfCombat —
+        /// cooldowns, aura ticks/expiry incl. food and drink, summon lifetimes, regeneration).</summary>
         void ElapseOutOfCombat(float dt)
         {
-            var units = PartyUnits();
-            foreach (var u in units)
-            {
-                ElapseTimers(u, dt);
-                RegenOutOfCombat(u, dt);
-                u.SecondsSinceCombat += dt;
-                u.SecondsSinceManaSpent += dt;
-            }
-            var f = Field;
-            if (f == null) return;
-            foreach (var u in new List<Unit>(f.Units))
-            {
-                if (!f.Units.Contains(u)) continue;
-                if (u.IsAlive) f.ElapseAuras(u, dt);
-                if (u.Lifetime > 0f && (u.Kind == UnitKind.Summon || u.Kind == UnitKind.Totem || u.Kind == UnitKind.Pet))
-                {
-                    u.Lifetime -= dt;
-                    if (u.Lifetime <= 1e-3f) f.RemoveUnit(u, "expired");
-                }
-            }
-            f.RefreshAreaAuras();
-        }
-
-        /// <summary>Cooldowns, school lockouts and proc internal cooldowns (seconds).</summary>
-        static void ElapseTimers(Unit u, float dt)
-        {
-            ElapseDict(u.Cooldowns, dt);
-            ElapseDict(u.ProcCooldowns, dt);
-            if (u.Lockouts.Count > 0)
-            {
-                var keys = new List<School>(u.Lockouts.Keys);
-                foreach (var k in keys)
-                {
-                    float v = u.Lockouts[k] - dt;
-                    if (v <= 1e-3f) u.Lockouts.Remove(k); else u.Lockouts[k] = v;
-                }
-            }
-        }
-
-        static void ElapseDict(Dictionary<string, float> d, float dt)
-        {
-            if (d.Count == 0) return;
-            var keys = new List<string>(d.Keys);
-            foreach (var k in keys)
-            {
-                float v = d[k] - dt;
-                if (v <= 1e-3f) d.Remove(k); else d[k] = v;
-            }
-        }
-
-        /// <summary>Generous out-of-combat regeneration (Design §2/§3): health, mana (five-second rule), energy, focus, rage decay.</summary>
-        static void RegenOutOfCombat(Unit u, float dt)
-        {
-            if (!u.IsAlive) return;
-            var st = u.Stats;
-            bool pet = u.Class == null;
-            if (u.Health < u.MaxHealth)
-            {
-                float hps = pet ? u.MaxHealth * OocPetPctPerSecond / 100f
-                    : u.MaxHealth * OocHealthPctPerSecond / 100f + st.Spirit * OocHealthPerSpirit;
-                hps += st.HealthRegen / 5f;
-                u.Health = Math.Min(u.MaxHealth, u.Health + Math.Max(0f, hps) * dt);
-            }
-            if (u.MaxMana > 0f && u.Mana < u.MaxMana)
-            {
-                float mps;
-                if (pet) mps = u.MaxMana * OocPetPctPerSecond / 100f;
-                else
-                {
-                    float spirit = st.SpiritRegenPerTick / 2f;
-                    if (u.SecondsSinceManaSpent < RulesConstants.FiveSecondRule) spirit *= st.SpiritRegenWhileCasting / 100f;
-                    mps = spirit + u.MaxMana * OocManaPctPerSecond / 100f;
-                }
-                mps += st.ManaRegen / 5f;
-                u.Mana = Math.Min(u.MaxMana, u.Mana + Math.Max(0f, mps) * dt);
-            }
-            switch (u.PowerType)
-            {
-                case ResourceType.Energy:
-                    u.SetResource(ResourceType.Energy, u.Energy + RulesConstants.EnergyPerSecondOoc * st.EnergyRegen * dt);
-                    break;
-                case ResourceType.Focus:
-                    u.SetResource(ResourceType.Focus, u.Focus + RulesConstants.FocusPerSecondOoc * dt);
-                    break;
-                case ResourceType.Rage:
-                    if (u.Rage > 0f) u.SetResource(ResourceType.Rage, u.Rage - RulesConstants.RageDecayPerSecondOoc * dt);
-                    break;
-            }
+            if (Field == null) RebuildField();
+            Field?.TickOutOfCombat(dt);
+            Field?.RefreshAreaAuras();
         }
 
         // ================================================================= resting
@@ -218,7 +128,7 @@ namespace Lanternvale.Session
             }
             float target = gameHour < 4f ? 8f : 32f;
             AdvanceClock(target - gameHour);
-            Raise(new SessionEvent { Kind = SessionEventKind.Rested, Text = "You wake rested as the morning lanterns are snuffed." });
+            Raise(new SessionEvent { Kind = SessionEventKind.Rested, Text = "You wake rested. Morning light spills over the valley." });
         }
 
         void RestUnit(Unit u)

@@ -16,7 +16,7 @@ using Lanternvale.World;
 
 namespace Lanternvale.Session
 {
-    public sealed partial class GameSession : IDialogueContext
+    public sealed partial class GameSession : IDialogueContext, IContentContext
     {
         /// <summary>Save format version written by <see cref="SaveGame"/>.</summary>
         public const int SaveVersion = 1;
@@ -188,7 +188,8 @@ namespace Lanternvale.Session
             playSeconds = 0f;
             lastPhase = "";
             queue.Clear();
-            Settings = new SessionSettings();
+            Settings ??= new SessionSettings();   // player preferences survive NewGame; LoadGame applies the saved ones
+            Settings.VeteranGear = false;
             LastError = "";
         }
 
