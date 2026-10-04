@@ -699,7 +699,15 @@
       "cooldown": 15,
       "cost": {"type": "Mana", "amount": 95, "perLevel": 10.625},
       "target": "Self",
-      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_fire_nova", "totemElement": "Fire", "lifetime": 5}],
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_fire_nova",
+          "totemElement": "Fire",
+          "lifetime": 10
+        }
+      ],
       "tags": ["Totem"],
       "aiHint": "AoE",
       "aiPriority": 5
@@ -1073,7 +1081,7 @@
           "target": "Self",
           "summon": "shaman_totem_mana_tide",
           "totemElement": "Water",
-          "lifetime": 12
+          "lifetime": 13
         }
       ],
       "tags": ["Totem"],
@@ -3131,7 +3139,7 @@
     {
       "id": "ShamanReincarnation",
       "usedBy": "shaman_reincarnation (passive aura)",
-      "behaviour": "When the shaman is Downed or killed in combat and the ability shaman_reincarnation is off cooldown and the party inventory holds a 'shaman_ankh': at the start of the shaman's next turn offer 'Reincarnate' (companion AI always accepts). Accepting consumes one Ankh, revives the shaman in place with 20% x (1 + Effect AbilityMod%) of maximum health and mana (Improved Reincarnation +50/100% => 30/40%), clears Downed/Dead, and starts the ability's cooldown (3600 s + Cooldown mods: -600/-1200 s). The shaman then acts normally that turn. Cooldown recovers in real time out of combat. Declining leaves the shaman Downed."
+      "behaviour": "When the shaman becomes Downed (or dead) in combat while the ability shaman_reincarnation is off cooldown and the party inventory holds a 'shaman_ankh', she is flagged 'can reincarnate'. When her turn slot next comes up (Downed units normally skip it), offer 'Reincarnate' instead of skipping (the player chooses; companion AI always accepts). Accepting consumes one Ankh, clears Downed/Dead and revives her in place with 20% x (1 + Effect AbilityMod%) of maximum health and mana (Improved Reincarnation +50/100% => 30/40%), starts the ability's cooldown (3600 s + Cooldown mods: -600/-1200 s; recovers in real time out of combat), and she then takes that turn normally. Declining leaves her Downed (allies can still Help her up)."
     },
     {
       "id": "ShamanNaturesSwiftness",

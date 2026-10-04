@@ -732,10 +732,7 @@
       "cooldown": 600,
       "target": "Enemy",
       "range": 5,
-      "effects": [
-        {"type": "RemoveAura", "target": "Self", "aura": "hunter_trap_armed"},
-        {"type": "ApplyAura", "target": "Self", "aura": "hunter_frost_trap_ice"}
-      ],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "hunter_frost_trap_ice"}],
       "tags": ["Trap"],
       "aiHint": "CC",
       "aiPriority": 10
@@ -2669,7 +2666,7 @@
     {
       "id": "HunterTrap",
       "usedBy": "hunter_trap_armed (passive of hunter_trap_immolation/freezing/frost/explosive)",
-      "behaviour": "Trap units are SummonTotem units with totemElement 'Trap' (so a hunter has one trap at a time; a new trap replaces the old). This aura makes the trap invisible to enemy AI (not targetable, ignored by pathing/aggro) and adds an immediate trigger: whenever a hostile unit's movement brings it within 5 yards of the trap, stop that unit's movement at that point and make the trap use its first creature ability on that unit at once (the unit then continues its turn if not incapacitated). Otherwise the trap behaves like a totem: at the end of the owner's turn it uses its ability on a hostile unit within 5 yards if any. Every trap ability ends by killing the trap (Kill Self) except Frost Trap, which instead removes this aura and becomes a 30 s ice slick. Trap abilities use owner-'Pet' AbilityMods (Clever Traps, Trap Mastery) like totem abilities; threat caused by a trap is credited to the owning hunter and the trap never appears on threat tables. Traps despawn when the battle ends."
+      "behaviour": "Trap units are SummonTotem units with totemElement 'Trap' (so a hunter has one trap at a time; a new trap replaces the old). This aura makes the trap invisible to enemy AI (not targetable, ignored by pathing/aggro) and adds an immediate trigger: whenever a hostile unit's movement brings it within 5 yards of the trap, stop that unit's movement at that point and make the trap use its first creature ability on that unit at once (the unit then continues its turn if not incapacitated). Otherwise the trap behaves like a totem: at the end of the owner's turn it uses its ability on a hostile unit within 5 yards if any. Every trap ability ends by killing the trap (Kill Self) except Frost Trap, which instead becomes a 30 s ice slick (its 600 s cooldown stops re-triggers). Trap abilities use owner-'Pet' AbilityMods (Clever Traps, Trap Mastery) like totem abilities; threat caused by a trap is credited to the owning hunter and the trap never appears on threat tables. Traps cannot be damaged or affected by hostile abilities/auras (area effects ignore them); only their own Kill(Self), lifetime expiry, replacement by a new trap or the end of battle remove them."
     },
     {
       "id": "HunterMark",
