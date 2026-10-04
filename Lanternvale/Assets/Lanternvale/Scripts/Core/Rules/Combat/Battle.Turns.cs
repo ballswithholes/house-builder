@@ -322,7 +322,8 @@ namespace Lanternvale.Rules
                     ChangeResource(u, ResourceType.Energy, RulesConstants.EnergyPerTurn * st.EnergyRegen, null, true);
                     break;
                 case ResourceType.Focus:
-                    ChangeResource(u, ResourceType.Focus, RulesConstants.FocusPerTurn, null, true);
+                    // no separate Focus-regeneration stat: EnergyRegen also scales Focus (Bestial Discipline)
+                    ChangeResource(u, ResourceType.Focus, RulesConstants.FocusPerTurn * st.EnergyRegen, null, true);
                     break;
             }
             if (u.MaxMana > 0)

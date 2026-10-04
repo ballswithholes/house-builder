@@ -187,7 +187,7 @@ field.AddUnit(newPet) / RemoveUnit(unit)
 
 Out-of-combat regeneration per second: health 2% max + 0.25 × Spirit (+HP5/5); mana: Spirit regen (2 s tick / 2)
 + 1% max outside the five-second rule (only the SpiritRegenWhileCasting share inside it) + MP5/5; energy +10,
-focus +6, rage −1. Specials also tick out of combat (Spirit Bond heals per 10 s).
+focus +6 (both × the unit's `EnergyRegen`; in combat energy +60 / focus +36 per turn, also × `EnergyRegen`), rage −1. Specials also tick out of combat (Spirit Bond heals per 10 s).
 
 `Specials.FieldEvent` (`Action<Battle, Unit, string, Unit>`) is raised for specials whose effect is outside combat
 rules: `"RoguePickLock"` (the Pick Lock cast completed; the session resolves the lock — `RoguePickLock.Roll(rogue,
@@ -265,7 +265,7 @@ AI.RunTurn(battle, unit);                                    // whole turn at on
 ## 5. Specials
 
 `Specials.IsImplemented(name)`; `Specials.Register(handler)`; `Specials.Get(name)`; `Specials.Names`. Every special
-documented in `classes/*.json` and `content/config.json` is implemented (123 names; the harness test
+documented in `classes/*.json` and `content/config.json` is implemented (129 names; the harness test
 `TestsRulesCore.EveryDocumentedSpecialIsImplemented` checks it). Source: `Rules/Specials/Specials.<Class>.cs`.
 
 A handler derives from `SpecialHandler` and overrides only the hooks it needs. The same name may be used as an
@@ -279,9 +279,12 @@ talent/item `Special` passive. Hook families:
 * aura-level: `OnAuraApplied/Refreshed/Removed`, `OnAuraTick`, `OnBearerTurnStart`, `ModifyIncomingDamage/Heal`,
   `IncomingCritBonus`, `IncomingFlatDamageBonus`, `IncomingFlatHealBonus`, `IncomingRangedApBonus`, `SkipAbsorbPool`,
   `RevealsTo`, `RedirectSpell`, `OnHolderDowned`, `MovementTriggerRadius/OnMovementTrigger`, `OnBearerDamaged`,
-  `PreventsFleeing`;
+  `PreventsFleeing`, `AllowsAuraProc` (suppress one of the aura's own data procs for an event, e.g. Retaliation
+  against an attacker behind the bearer: no proc, no charge used);
 * passive (talents, items, and auras carrying the special): stats (`ContributeStats`, `AdjustStats`), ability mods,
-  cost/cast time, crit (`ModifyCritChance`, `ModifyIncomingCritChance`, `CritBonusAdd`), procs (`OnProc`,
+  cost/cast time, crit (`ModifyCritChance`, `ModifyIncomingCritChance`, `CritBonusAdd`), incoming miss chance by
+  hit table (`IncomingMissChance`; `Specials.IncomingMissChance(target, kind)` is public for hit-chance previews:
+  Heightened Senses), procs (`OnProc`,
   `ProcChanceBonus`), resists (`ResistIncomingAura`, `InterruptResistChance`, pushback resist/reduction), reflect,
   `PreventDeath`, `GrantsWeapon`, `CannotUse`, `DetectionRadiusMult`, `OnPetChanged`, `OnOwnerSummoned`, …
   (`Specials.CurrentPassive` / `CurrentSource` tell a shared handler which talent it serves);
@@ -291,6 +294,13 @@ talent/item `Special` passive. Hook families:
 `Specials.ContextualAbilities(battle, unit)` lists abilities a unit may use because of its surroundings (Lightwell
 renew within 5 yd of a Lightwell with charges). `Specials.UndetectableAuras` (Vanish) and
 `Specials.PushbackImmuneAuras` (Power Word: Shield) are id sets.
+
+"Next spell" buffs whose bonus must only reach the spells that consume them (Elemental Mastery
+`ShamanNextDamageSpell`, Elemental Focus' Clearcasting `ShamanClearcasting`, `PaladinDivineFavor`) use one generic
+handler (`NextSpellBonus`, Specials.Shaman.cs): the consuming spells are the abilities selected by the aura's own
+`consumeCharge` OnSpellCast proc, which get 0 mana cost and/or +100 crit chance while the aura is up (also for a
+cast that went pending); the data proc removes the aura once that cast has resolved. Use it instead of school-wide
+`ManaCost`/`SpellCrit` aura mods, which would also reach heals and totems.
 
 **Content specials** (dialogue/encounter outcomes) run through the session:
 `Specials.RunContentSpecial(name, IContentContext ctx)` → false if unknown. `IContentContext` = `GetFlag`, `SetFlag`,

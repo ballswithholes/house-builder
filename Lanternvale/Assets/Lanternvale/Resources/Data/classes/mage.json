@@ -1208,7 +1208,6 @@
       "mods": [{"stat": "DamageDone", "value": 30, "pct": true}, {"stat": "ManaCost", "value": 30, "pct": true}]
     },
     {
-      "_note": "Engine: the ManaCost mod must be applied to the cast that consumes the charge (cost is paid before OnSpellCast fires).",
       "id": "mage_clearcasting",
       "name": "Clearcasting",
       "icon": "sparkle",
@@ -1217,19 +1216,28 @@
       "school": "Arcane",
       "duration": 15,
       "charges": 1,
-      "mods": [{"stat": "ManaCost", "value": -100, "pct": true}],
       "procs": [
         {
           "trigger": "OnSpellCast",
           "abilities": [
-            "mage_fireball", "mage_frostbolt", "mage_arcane_missiles", "mage_fire_blast", "mage_frost_nova",
-            "mage_arcane_explosion", "mage_blizzard", "mage_flamestrike", "mage_cone_of_cold", "mage_scorch",
-            "mage_pyroblast", "mage_blast_wave"
+            "mage_fireball",
+            "mage_frostbolt",
+            "mage_arcane_missiles",
+            "mage_fire_blast",
+            "mage_frost_nova",
+            "mage_arcane_explosion",
+            "mage_blizzard",
+            "mage_flamestrike",
+            "mage_cone_of_cold",
+            "mage_scorch",
+            "mage_pyroblast",
+            "mage_blast_wave"
           ],
           "consumeCharge": true,
           "effects": []
         }
-      ]
+      ],
+      "special": "MageClearcasting"
     },
     {
       "id": "mage_counterspell_silence",
@@ -2292,6 +2300,7 @@
     }
   ],
   "specials": [
+    {"id": "MageClearcasting", "usedBy": "mage_clearcasting (aura from Arcane Concentration)", "behaviour": "Clearcasting from Arcane Concentration (WoW 1.12: 'reduces the mana cost of your next damage spell by 100%'). Only the spells that consume the aura (the abilities of its consumeCharge OnSpellCast proc: the mage damage spells) cost 0 mana while it is up; utility spells (Polymorph, Blink, armors, Arcane Intellect, wards, conjures, Counterspell) pay full cost and do not consume it. Same generic handler as ShamanClearcasting."},
     {
       "id": "MageBlinkFreedom",
       "usedBy": "mage_blink",

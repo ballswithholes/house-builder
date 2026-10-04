@@ -55,11 +55,12 @@ ARMS = {
           [P_mod("CritChance", 25, abilities=["warrior_overpower"])]),
         T(A + "anger_management", "Anger Management", "rage", 3, 1, 1,
           "Generates 1 rage point every 3 sec (2 rage at the start of each of your turns in combat).",
-          [P_proc(proc("OnTurnStart", [rage_self(2)]))]),
+          [P_proc(proc("OnTurnStart", [rage_self(2)]))], requires=A + "tactical_mastery"),
         T(A + "deep_wounds", "Deep Wounds", "blood", 3, 2, 3,
           "Your critical strikes cause the opponent to bleed, dealing {20/40/60}% of your melee weapon's average damage "
           "over 12 sec.",
-          [P_proc(proc("OnMeleeCrit", [E("ApplyAura", aura="warrior_deep_wounds")]), values=[33.3, 66.7, 100])]),
+          [P_proc(proc("OnMeleeCrit", [E("ApplyAura", aura="warrior_deep_wounds")]), values=[33.3, 66.7, 100])],
+          requires=A + "improved_rend"),
         T(A + "two_handed_weapon_specialization", "Two-Handed Weapon Specialization", "sword", 4, 1, 5,
           "Increases the damage you deal with two-handed melee weapons by {1/2/3/4/5}%.",
           [wtt(["TwoHanded"], stat="DamageDone", value=1, pct=True)]),
@@ -211,11 +212,12 @@ PROT = {
 
 TREES = [ARMS, FURY, PROT]
 
+# Must match classes/warrior.json defaultBuild exactly (class audit: Improved Rend -> Deep Wounds and
+# Tactical Mastery -> Anger Management are arrow prerequisites, so both are maxed first).
 BUILD = (
-    [A + "improved_heroic_strike"] * 3 + [A + "deflection"] * 2 + [A + "improved_charge"] * 2 +
-    [A + "tactical_mastery"] * 3 + [A + "anger_management"] + [A + "deep_wounds"] * 3 + [A + "improved_overpower"] +
-    [A + "impale"] * 2 + [A + "two_handed_weapon_specialization"] * 3 + [A + "sweeping_strikes"] +
-    [A + "sword_specialization"] * 5 + [A + "two_handed_weapon_specialization"] * 2 + [A + "improved_overpower"] +
-    [A + "tactical_mastery"] + [A + "mortal_strike"] +
+    [A + "improved_heroic_strike"] * 3 + [A + "improved_rend"] * 3 + [A + "tactical_mastery"] * 5 +
+    [A + "anger_management"] + [A + "deep_wounds"] * 3 + [A + "impale"] * 2 +
+    [A + "two_handed_weapon_specialization"] * 3 + [A + "sweeping_strikes"] + [A + "sword_specialization"] * 5 +
+    [A + "two_handed_weapon_specialization"] * 2 + [A + "improved_overpower"] * 2 + [A + "mortal_strike"] +
     [F + "cruelty"] * 5 + [F + "unbridled_wrath"] * 5 + [F + "improved_battle_shout"] * 5 + [F + "booming_voice"] * 5
 )

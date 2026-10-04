@@ -17,7 +17,11 @@ REMORSELESS_ABILITIES = ["rogue_sinister_strike", "rogue_hemorrhage", "rogue_bac
                          "rogue_ghostly_strike"]
 
 AURAS = [
-    buff("rogue_stealth_aura", "Stealth", "stealth", "Stealthed. Movement speed reduced by 30%.", 0,
+    # Stealth rank 1-4: -50/-40/-35/-30% movement speed (values by the rank of the Stealth ability)
+    buff("rogue_stealth_aura", "Stealth", "stealth", "Stealthed. Movement speed reduced.", 0,
+         states=["Stealth"], breakOnAction=True, tags=["Stealth"], mods=[vmod("MoveSpeed", [-50, -40, -35, -30], pct=True)]),
+    # Vanish / Improved Sap restealth: no Stealth rank to scale by, so the max-rank penalty
+    buff("rogue_restealth_aura", "Stealth", "stealth", "Stealthed. Movement speed reduced by 30%.", 0,
          states=["Stealth"], breakOnAction=True, tags=["Stealth"], mods=[mod("MoveSpeed", -30, pct=True)]),
     buff("rogue_vanish_aura", "Vanish", "stealth", "Vanished: improved stealth for 10 sec.", 10,
          states=["Stealth"], breakOnAction=True, tags=["Stealth"]),
@@ -37,7 +41,7 @@ AURAS = [
     debuff("rogue_expose_armor", "Expose Armor", "armor", "Armor reduced.", 30, special="RogueExposeArmor",
            mods=[vmod("Armor", [-80, -145, -210, -275, -340])]),
     debuff("rogue_rupture", "Rupture", "blood", "Bleeding for Physical damage every 2 sec.", 6, tags=["Bleed"],
-           tickInterval=2, tickEffects=[E("Damage", min=8, perLevel=1.2, perCombo=2, amount=0.3)]),
+           tickInterval=2, tickEffects=[E("Damage", min=8, perLevel=1.2, perCombo=2, amount=0.3, apCoef=0.03)]),
     debuff("rogue_distract", "Distracted", "coin", "Distracted: looking away from the rogue.", 10,
            breakOnDamage=True, special="RogueDistracted"),
     debuff("rogue_cheap_shot", "Cheap Shot", "fist", "Stunned.", 4, states=["Stun"], tags=["Stun"]),
@@ -60,7 +64,8 @@ AURAS = [
            procs=[proc("OnStruck", [], schools=["Physical"], consumeCharge=True)]),
     buff("rogue_cold_blood", "Cold Blood", "skull", "Your next offensive ability will be a critical strike.", 0,
          charges=1, mods=[mod("MeleeCrit", 100)],
-         procs=[proc("OnAbilityUsed", [], tags=["Builder", "Finisher", "Opener"], consumeCharge=True)]),
+         procs=[proc("OnAbilityUsed", [], abilities=["rogue_riposte"], tags=["Builder", "Finisher", "Opener"],
+                     consumeCharge=True)]),
     buff("rogue_remorseless_attacks", "Remorseless", "skull",
          "Critical strike chance of your next Sinister Strike, Hemorrhage, Backstab, Ambush or Ghostly Strike increased.",
          20, charges=1, mods=[vmod("MeleeCrit", [20, 40])],

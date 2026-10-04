@@ -73,17 +73,17 @@ AURAS.append(make_aura("paladin_judgement_of_the_crusader_debuff", "Judgement of
                        exclusiveGroup="paladin_judgement", exclusivePerCaster=True, tags=["Judgement"],
                        special="PaladinJudgementOfTheCrusader"))
 
-SOJ_R = [22, 48]
+# Seal of Justice has a single rank in WoW 1.12 (class audit)
 seal("paladin_seal_of_justice", "Seal of Justice",
      "Fills the Paladin with the spirit of justice for 30 sec, giving each melee attack a chance to stun the target "
      "for 2 sec. Judgement prevents the target from fleeing and restricts its movement speed to normal for 10 sec.",
-     22, SOJ_R, 35, 60,
+     22, None, 35, 60,
      "Melee attacks have a chance to stun the target for 2 sec.",
      dict(procs=[proc("OnMeleeHit", [apply("paladin_seal_of_justice_stun")], ppm=1.0)]))
 AURAS.append(make_aura("paladin_seal_of_justice_stun", "Seal of Justice", "seal", "Debuff", "Holy",
                        "Stunned.", 2, dispel="Magic", states=["Stun"], tags=["Stun"]))
 judgement("paladin_judgement_of_justice", "Judgement of Justice",
-          "Prevents the target from fleeing and restricts its movement speed to normal for 10 sec.", 22, SOJ_R,
+          "Prevents the target from fleeing and restricts its movement speed to normal for 10 sec.", 22, None,
           [apply("paladin_judgement_of_justice_debuff")])
 AURAS.append(make_aura("paladin_judgement_of_justice_debuff", "Judgement of Justice", "judgement", "Debuff", "Holy",
                        "Cannot flee; movement speed cannot exceed normal.", 10,

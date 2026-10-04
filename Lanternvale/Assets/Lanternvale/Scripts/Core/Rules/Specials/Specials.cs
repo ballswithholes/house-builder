@@ -87,6 +87,12 @@ namespace Lanternvale.Rules
         /// <summary>Called when a unit moves within range of the bearer: return >0 trigger radius (metres) for movement triggers.</summary>
         public virtual float MovementTriggerRadius(AuraInstance a) => 0f;
         public virtual void OnMovementTrigger(Battle b, AuraInstance a, Unit mover) { }
+        /// <summary>
+        /// One of the aura's own data procs is about to fire (before its chance roll and charge use). Return false to
+        /// suppress it for this event (it does not fire and consumes no charge). <paramref name="other"/> is the other unit
+        /// of the event (the attacker for OnStruck).
+        /// </summary>
+        public virtual bool AllowsAuraProc(Battle b, AuraInstance a, ProcDef p, ProcTrigger trigger, Unit other, ProcInfo info) => true;
 
         // ---- passive hooks (talent Special passives, item Special passives, auras/abilities with this special)
         public virtual void ContributeStats(Unit u, int rank, StatBlock block) { }
@@ -102,6 +108,8 @@ namespace Lanternvale.Rules
         public virtual float ModifyCritChance(Battle b, Unit u, int rank, AbilityCast c, Unit t, School s, float chance) => chance;
         /// <summary>Passive of the target: modify the crit chance of an attack against <paramref name="target"/>.</summary>
         public virtual float ModifyIncomingCritChance(Unit target, int rank, AbilityCast c, float chance) => chance;
+        /// <summary>Passive of the target: extra percentage points for an attack of hit table <paramref name="kind"/> to miss <paramref name="target"/>.</summary>
+        public virtual float IncomingMissChance(Unit target, int rank, AttackKind kind) => 0f;
         /// <summary>Extra percentage points for a proc of an aura on the unit (Improved Poisons).</summary>
         public virtual float ProcChanceBonus(Unit u, int rank, AuraInstance aura, ProcDef p) => 0f;
         /// <summary>Extra crit damage bonus (fraction, 0.01 = +1% of the base bonus... added to the bonus) against the target.</summary>
@@ -504,6 +512,25 @@ namespace Lanternvale.Rules
             foreach (var p in PassivesOf(c.Caster)) chance = p.H.ModifyCritChance(c.Battle, c.Caster, p.Rank, c, t, s, chance);
             if (t != null) foreach (var p in PassivesOf(t)) chance = p.H.ModifyIncomingCritChance(t, p.Rank, c, chance);
             return chance;
+        }
+
+        /// <summary>
+        /// Extra percentage points for an attack of hit table <paramref name="kind"/> to miss <paramref name="target"/>, from the
+        /// target's passives (Heightened Senses: spells and ranged attacks). Added to the miss chance before the hit cap.
+        /// </summary>
+        public static float IncomingMissChance(Unit target, AttackKind kind)
+        {
+            if (target == null || handlers.Count == 0) return 0f;
+            float v = 0f;
+            foreach (var p in PassivesOf(target)) v += p.H.IncomingMissChance(target, p.Rank, kind);
+            return v;
+        }
+
+        /// <summary>False when the special of the aura suppresses one of its data procs for this event (Retaliation from behind).</summary>
+        internal static bool AuraProcAllowed(Battle b, AuraInstance a, ProcDef p, ProcTrigger trigger, Unit other, ProcInfo info)
+        {
+            var h = Get(a.Def.special);
+            return h == null || h.AllowsAuraProc(b, a, p, trigger, other, info);
         }
 
         internal static float CritBonusAdd(Unit u, Unit t)

@@ -73,8 +73,16 @@ SPECIALS = [
        "Ability special (CheckUse). WoW Charge cannot be used while the warrior is in combat. In a battle the warrior "
        "counts as 'out of combat' until it has dealt damage, taken damage or used any ability against an enemy in this "
        "battle (normally only its first action of the fight); afterwards Charge is unusable for the rest of the battle "
-       "(Intercept is the in-combat version). Outside battles Charge is used like an opener and starts the encounter. "
+       "(Intercept is the in-combat version). The warrior also counts as in combat while it has the warrior_bloodrage "
+       "aura (Bloodrage: 'considered in combat for the duration'), so Charge is unusable until Bloodrage expires; the "
+       "opener is Charge first, then Bloodrage. Outside battles Charge is used like an opener and starts the encounter. "
        "Other requirements (Battle Stance, 8-25 yd range, cooldown) are the normal data checks."),
+    sp("WarriorRetaliation", "warrior_retaliation (aura)",
+       "Aura special (AllowsAuraProc). The aura's OnStruck proc (an instant 100% weapon damage counterattack on the "
+       "attacker that uses one of the 30 charges) does not fire, and uses no charge, when the attacker is behind the "
+       "warrior: the same facing test as requires.behindTarget, seen from the bearer (attacker.IsBehind(warrior), i.e. "
+       "the attacker stands outside the warrior's frontal arc). OnStruck is raised only by melee hits, so spells and "
+       "ranged attacks never cause retaliation."),
     sp("WarriorOverpower", "warrior_overpower (ability)",
        "Ability special: the Overpower attack cannot be dodged, parried or blocked (roll only miss/hit/crit on the "
        "melee table). Using it consumes the TargetDodged reactive window (requires.reactive)."),

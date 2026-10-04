@@ -25,9 +25,11 @@ def blessing(id_, name, desc, learn, ranks, c, cmax, aura_desc, aura_kw, from_ta
 
 
 def greater(id_, name, desc, learn, ranks, c, cmax, aura_desc, aura_kw, from_talent=False):
+    # WoW 1.12: cast on one friendly target; the PaladinGreaterBlessing special also blesses every other party
+    # member who shares the target's class (class audit + engine follow-up).
     PA(id_, name, "crown", "Holy", desc, learn, ranks, cost=cost(c, cmax, ranks) if ranks else cost(c),
-       target="Self", effects=[apply(id_, target="Party")], tags=["Blessing"], aiHint="Buff", aiPriority=3,
-       **({"fromTalent": True} if from_talent else {}))
+       target="Ally", range=40, effects=[apply(id_)], tags=["Blessing"], special="PaladinGreaterBlessing",
+       aiHint="Buff", aiPriority=3, **({"fromTalent": True} if from_talent else {}))
     bless_aura(id_, name, aura_desc, 900, **aura_kw)
 
 
@@ -103,27 +105,34 @@ ABILITIES[-1]["aiHint"] = "Defensive"
 
 # ------------------------------------------------------- greater blessings
 greater("paladin_greater_blessing_of_might", "Greater Blessing of Might",
-        "Gives all party members a Greater Blessing of Might, increasing melee attack power by 155 (rank 2: 185) for "
-        "15 min. Players may only have one Blessing on them per Paladin at any one time.", 52, [52, 60], 175, 205,
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Might, "
+        "increasing melee attack power by 155 (rank 2: 185) for 15 min. Players may only have one Blessing on them "
+        "per Paladin at any one time.", 52, [52, 60], 175, 205,
         "Melee attack power increased.", dict(mods=[M("AttackPower", values=[155, 185])]))
 greater("paladin_greater_blessing_of_wisdom", "Greater Blessing of Wisdom",
-        "Gives all party members a Greater Blessing of Wisdom, restoring 30 (rank 2: 33) mana every 5 seconds for "
-        "15 min. Players may only have one Blessing on them per Paladin at any one time.", 54, [54, 60], 150, 165,
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Wisdom, "
+        "restoring 30 (rank 2: 33) mana every 5 seconds for 15 min. Players may only have one Blessing on them per "
+        "Paladin at any one time.", 54, [54, 60], 150, 165,
         "Restores mana every 5 seconds.", dict(mods=[M("ManaRegen", values=[30, 33])]))
 greater("paladin_greater_blessing_of_kings", "Greater Blessing of Kings",
-        "Gives all party members a Greater Blessing of Kings, increasing total stats by 10% for 15 min.", 60, None,
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Kings, "
+        "increasing total stats by 10% for 15 min. Players may only have one Blessing on them per Paladin at any "
+        "one time.", 60, None,
         150, None, "All stats increased by 10%.", dict(mods=[M("AllStats", 10, pct=True)]), from_talent=True)
 greater("paladin_greater_blessing_of_salvation", "Greater Blessing of Salvation",
-        "Gives all party members a Greater Blessing of Salvation, reducing the threat they generate by 30% for "
-        "15 min.", 60, None, 140, None, "Threat generated reduced by 30%.",
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Salvation, "
+        "reducing the threat it generates by 30% for 15 min. Players may only have one Blessing on them per Paladin "
+        "at any one time.", 60, None, 140, None, "Threat generated reduced by 30%.",
         dict(mods=[M("ThreatGenerated", -30, pct=True)]))
 greater("paladin_greater_blessing_of_light", "Greater Blessing of Light",
-        "Gives all party members a Greater Blessing of Light, increasing the effects of Holy Light by up to 400 and "
-        "Flash of Light by up to 115 for 15 min.", 60, None, 170, None,
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Light, "
+        "increasing the effects of Holy Light by up to 400 and Flash of Light by up to 115 for 15 min. Players may "
+        "only have one Blessing on them per Paladin at any one time.", 60, None, 170, None,
         "Holy Light and Flash of Light heal you for more.", dict(special="PaladinBlessingOfLight"))
 greater("paladin_greater_blessing_of_sanctuary", "Greater Blessing of Sanctuary",
-        "Gives all party members a Greater Blessing of Sanctuary, reducing damage from all sources by up to 24 for "
-        "15 min; blocking a melee attack deals 35 Holy damage to the attacker.", 60, None, 170, None,
+        "Gives the friendly target and every party member who shares its class a Greater Blessing of Sanctuary, "
+        "reducing damage from all sources by up to 24 for 15 min; blocking a melee attack deals 35 Holy damage to "
+        "the attacker. Players may only have one Blessing on them per Paladin at any one time.", 60, None, 170, None,
         "Damage taken reduced; blocking deals Holy damage to the attacker.",
         dict(special="PaladinBlessingOfSanctuary",
              procs=[proc("OnBlock", [E("Damage", target="Attacker", school="Holy", min=35)])]),

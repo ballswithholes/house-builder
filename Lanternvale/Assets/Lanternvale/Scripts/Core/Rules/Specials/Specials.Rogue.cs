@@ -26,6 +26,7 @@ namespace Lanternvale.Rules
             Register(new RogueMasterOfDeception());
             Register(new RogueRemoveSnares());
             Register(new RogueSleightOfHand());
+            Register(new RogueHeightenedSenses());
             Register(new RogueSerratedBlades());
             UndetectableAuras.Add("rogue_vanish_aura");
         }
@@ -281,6 +282,14 @@ namespace Lanternvale.Rules
             var k = c.Kind;
             return k == AttackKind.Melee || k == AttackKind.Ranged ? Math.Max(0f, chance - v) : chance;
         }
+    }
+
+    /// <summary>Heightened Senses: spells (and wands) and ranged attacks miss the rogue value × rank (2/4) percentage points more often; melee is unaffected.</summary>
+    sealed class RogueHeightenedSenses : SpecialHandler
+    {
+        public RogueHeightenedSenses() : base("RogueHeightenedSenses") { }
+        public override float IncomingMissChance(Unit target, int rank, AttackKind kind) =>
+            kind == AttackKind.Spell || kind == AttackKind.Wand || kind == AttackKind.Ranged ? PV(rank) : 0f;
     }
 
     /// <summary>Serrated Blades: physical attacks ignore values[rank] × level armor.</summary>

@@ -172,9 +172,12 @@ PA("paladin_divine_favor", "Divine Favor", "star", "Holy",
    effects=[apply("paladin_divine_favor", target="Self")], aiHint="Buff", aiPriority=6)
 AU("paladin_divine_favor", "Divine Favor", "star", "Buff", "Holy",
    "Your next Flash of Light, Holy Light or Holy Shock is a critical effect.", 0, charges=1,
-   mods=[M("SpellCrit", 100, school="Holy")],
    procs=[proc("OnSpellCast", [], abilities=["paladin_holy_light", "paladin_flash_of_light", "paladin_holy_shock"],
-               consumeCharge=True)])
+               consumeCharge=True)],
+   special="PaladinDivineFavor")   # forced crit only for the spells of the consuming proc
+
+PA("paladin_parry", "Parry", "swords", "Physical", "Gives a chance to parry enemy melee attacks made from the front.",
+   8, trainCost=200, passive=True)
 
 # ---------------------------------------------------------------- passive
 PA("paladin_plate_mail", "Plate Mail", "armor", "Physical",

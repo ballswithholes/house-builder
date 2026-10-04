@@ -20,6 +20,8 @@ namespace Lanternvale.Rules
             Register(new NextCastInstant("ShamanNaturesSwiftness", a => a.school == School.Nature));
             Register(new ShamanTwoHandedWeapons());
             Register(new ShamanPushbackResist());
+            Register(new NextSpellBonus("ShamanNextDamageSpell", free: true, crit: true));   // Elemental Mastery
+            Register(new NextSpellBonus("ShamanClearcasting", free: true, crit: false));     // Elemental Focus' Clearcasting
         }
     }
 
@@ -158,6 +160,51 @@ namespace Lanternvale.Rules
             if (p == null) return 100f; // shaman_focused_casting aura
             float v = Specials.RankValue(p, rank);
             return PriestPushbackResist.IsHeal(pending) ? v : 0f;
+        }
+    }
+
+    /// <summary>
+    /// "Your next X spell" buffs (Elemental Mastery, shaman Clearcasting, Divine Favor) whose bonus applies only to the
+    /// spells that consume them. The consuming spells are the abilities selected by the aura's own consumeCharge
+    /// OnSpellCast procs (their abilities/tags/schools filters), so the bonus and the charge always go together: a
+    /// matching spell costs no mana (<c>free</c>) and/or every non-periodic effect of it is a guaranteed critical
+    /// (<c>crit</c>, +100 points); other spells (heals, totems, Exorcism...) neither benefit nor consume the charge.
+    /// The bonus lasts while the aura is up, i.e. it also covers a cast that went pending; the data proc removes the
+    /// aura once the consuming cast has resolved (after its cost and crit rolls).
+    /// </summary>
+    sealed class NextSpellBonus : SpecialHandler
+    {
+        readonly bool free, crit;
+        public NextSpellBonus(string name, bool free, bool crit) : base(name) { this.free = free; this.crit = crit; }
+
+        /// <summary>The aura instance serving the running passive hook (aura passives publish their aura id as CurrentSource).</summary>
+        static AuraInstance Serving(Unit u)
+        {
+            var id = Specials.CurrentSource;
+            return u != null && id != null ? u.FindAura(id) : null;
+        }
+
+        /// <summary>True when a use of <paramref name="a"/> consumes the aura (one of its consumeCharge OnSpellCast procs matches).</summary>
+        internal static bool Consumes(AuraDef d, AbilityDef a)
+        {
+            if (d == null || a == null || !AbilityRules.IsSpell(a) || a.special == "Shoot") return false;
+            foreach (var p in d.procs)
+                if (p.consumeCharge && p.trigger == ProcTrigger.OnSpellCast && Battle.ProcMatchesAbility(p, a)) return true;
+            return false;
+        }
+
+        public override float ModifyCost(Unit u, int rank, AbilityDef a, float cost)
+        {
+            if (!free || cost <= 0f || a?.cost == null || a.cost.type != ResourceType.Mana) return cost;
+            var aura = Serving(u);
+            return aura != null && Consumes(aura.Def, a) ? 0f : cost;
+        }
+
+        public override float ModifyCritChance(Battle b, Unit u, int rank, AbilityCast c, Unit t, School s, float chance)
+        {
+            if (!crit || c == null || c.Periodic || c.SourceAura != null || c.SourceProc != null || c.Depth > 0) return chance;
+            var aura = Serving(u);
+            return aura != null && Consumes(aura.Def, c.Ability) ? chance + 100f : chance;
         }
     }
 }

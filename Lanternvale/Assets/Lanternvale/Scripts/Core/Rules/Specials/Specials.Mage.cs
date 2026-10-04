@@ -12,6 +12,7 @@ namespace Lanternvale.Rules
         static void RegisterMage()
         {
             Register(new MageBlinkFreedom());
+            Register(new NextSpellBonus("MageClearcasting", free: true, crit: false));   // Arcane Concentration's Clearcasting
             Register(new OneTargetPerCaster("MageOnePolymorph"));
             Register(new MageEvocation());
             Register(new MageFlatMagicModifier());

@@ -60,7 +60,7 @@ namespace Lanternvale.Rules
         /// <summary>
         /// Out-of-combat regeneration per second: health 2% of max + 0.25 × Spirit (+HP5); mana: Spirit regen
         /// (per 2 s tick / 2) + 1% of max outside the five-second rule (SpiritRegenWhileCasting share inside it) + MP5;
-        /// energy +10/s, focus +6/s, rage −1/s.
+        /// energy +10/s, focus +6/s (both × EnergyRegen), rage −1/s.
         /// </summary>
         void RegenOutOfCombat(Unit u, float dt)
         {
@@ -75,7 +75,7 @@ namespace Lanternvale.Rules
                 u.Mana = Math.Min(u.MaxMana, u.Mana + (perSec + st.ManaRegen / 5f) * dt);
             }
             if (u.PowerType == ResourceType.Energy) u.Energy = Math.Min(u.MaxResource(ResourceType.Energy), u.Energy + RulesConstants.EnergyPerSecondOoc * st.EnergyRegen * dt);
-            if (u.PowerType == ResourceType.Focus) u.Focus = Math.Min(RulesConstants.MaxFocus, u.Focus + RulesConstants.FocusPerSecondOoc * dt);
+            if (u.PowerType == ResourceType.Focus) u.Focus = Math.Min(RulesConstants.MaxFocus, u.Focus + RulesConstants.FocusPerSecondOoc * st.EnergyRegen * dt);
             if (u.Rage > 0) u.Rage = Math.Max(0f, u.Rage - RulesConstants.RageDecayPerSecondOoc * dt);
         }
 

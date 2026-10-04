@@ -260,7 +260,7 @@ namespace Lanternvale.Rules
             if (amp == null) return;
             if (id == "warlock_curse_of_agony") inst.DamageMult *= 1.5f;
             else if (id == "warlock_curse_of_weakness") { for (int i = 0; i < inst.ModValues.Length; i++) inst.ModValues[i] *= 1.5f; }
-            else if (inst.ModValues.Length > 0) inst.ModValues[0] -= 20f * inst.EffectMult;
+            else if (inst.ModValues.Length > 0) inst.ModValues[0] -= 20f; // flat 20 points more slow (not scaled by the curse's Effect mods)
             inst.Bearer.InvalidateStats();
             b.RemoveAura(amp, AuraRemoveReason.Consumed);
         }

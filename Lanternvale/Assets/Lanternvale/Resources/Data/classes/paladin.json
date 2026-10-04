@@ -501,8 +501,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Might, increasing melee attack power by 155 (rank 2: 185) for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Might, increasing melee attack power by 155 (rank 2: 185) for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 52,
       "rankLevels": [52, 60],
       "trainCost": 28120,
@@ -511,6 +510,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_might"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -520,8 +520,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Wisdom, restoring 30 (rank 2: 33) mana every 5 seconds for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Wisdom, restoring 30 (rank 2: 33) mana every 5 seconds for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 54,
       "rankLevels": [54, 60],
       "trainCost": 31490,
@@ -530,6 +529,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_wisdom"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -539,8 +539,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Kings, increasing total stats by 10% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Kings, increasing total stats by 10% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 60,
       "fromTalent": true,
       "cost": {"type": "Mana", "amount": 150},
@@ -548,6 +547,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_kings"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -557,8 +557,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Salvation, reducing the threat it generates by 30% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Salvation, reducing the threat it generates by 30% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 60,
       "trainCost": 43200,
       "cost": {"type": "Mana", "amount": 140},
@@ -566,6 +565,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_salvation"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -575,8 +575,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Light, increasing the effects of Holy Light by up to 400 and Flash of Light by up to 115 for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Light, increasing the effects of Holy Light by up to 400 and Flash of Light by up to 115 for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 60,
       "trainCost": 43200,
       "cost": {"type": "Mana", "amount": 170},
@@ -584,6 +583,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_light"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -593,8 +593,7 @@
       "icon": "crown",
       "classId": "Paladin",
       "school": "Holy",
-      "description": "Gives the friendly target a Greater Blessing of Sanctuary, reducing damage from all sources by up to 24 for 15 min; blocking a melee attack deals 35 Holy damage to the attacker. Players may only have one Blessing on them per Paladin at any one time.",
-      "_note": "WoW 1.12: the Greater Blessing also reaches every other party member who shares the target's class. That spread needs an engine special (PaladinGreaterBlessing, not implemented yet); until then only the target is blessed. With a 4-unit party of distinct classes the result is the same.",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Sanctuary, reducing damage from all sources by up to 24 for 15 min; blocking a melee attack deals 35 Holy damage to the attacker. Players may only have one Blessing on them per Paladin at any one time.",
       "learnLevel": 60,
       "fromTalent": true,
       "cost": {"type": "Mana", "amount": 170},
@@ -602,6 +601,7 @@
       "range": 40,
       "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_sanctuary"}],
       "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
       "aiHint": "Buff",
       "aiPriority": 3
     },
@@ -1798,26 +1798,19 @@
       "name": "Divine Favor",
       "icon": "star",
       "description": "Your next Flash of Light, Holy Light or Holy Shock is a critical effect.",
-      "_note": "Data-only approximation until an engine special (PaladinDivineFavor: force the crit on paladin_holy_light, paladin_flash_of_light and paladin_holy_shock only) exists. The +100% Holy SpellCrit mod cannot be filtered by ability, so the charge is spent by the FIRST Holy critical effect of any kind (OnSpellCrit, e.g. an Exorcism or Judgement cast before the heal takes the crit instead), and always by a Holy Light, Flash of Light or Holy Shock cast (OnSpellCast). Holy spells that cannot crit (Seals, Blessings, Auras) leave the charge in place.",
       "kind": "Buff",
       "school": "Holy",
       "duration": 0,
       "charges": 1,
-      "mods": [{"stat": "SpellCrit", "value": 100, "school": "Holy"}],
       "procs": [
-        {
-          "trigger": "OnSpellCrit",
-          "schools": ["Holy"],
-          "consumeCharge": true,
-          "effects": []
-        },
         {
           "trigger": "OnSpellCast",
           "abilities": ["paladin_holy_light", "paladin_flash_of_light", "paladin_holy_shock"],
           "consumeCharge": true,
           "effects": []
         }
-      ]
+      ],
+      "special": "PaladinDivineFavor"
     },
     {
       "id": "paladin_improved_lay_on_hands",
@@ -2618,6 +2611,16 @@
       "id": "PaladinEyeForAnEye",
       "usedBy": "paladin_retribution_eye_for_an_eye",
       "behaviour": "On a spell (non-Physical) critical hit taken by the paladin, deal Holy damage to the attacker equal to 15% x talent rank of the damage taken, capped at 50% of the paladin's maximum health. Cannot crit, no coefficient, cannot be resisted."
+    },
+    {
+      "id": "PaladinGreaterBlessing",
+      "usedBy": "paladin_greater_blessing_of_might, _wisdom, _kings, _salvation, _light, _sanctuary (abilities)",
+      "behaviour": "Ability special (After hook). WoW 1.12: a Greater Blessing reaches every party member who shares the target's class. After the blessing's ApplyAura effect has blessed the target, the same ApplyAura effect (same rank, duration and AbilityMods of the cast, e.g. Improved Blessing of Might) is applied to every other living unit of the battle/field on the target's team whose class is the target's class (characters and companions; pets, totems, summons and mind-controlled creatures have no class and are skipped), regardless of distance. The normal blessing rules apply to each of them (one Blessing per Paladin: exclusiveGroup paladin_blessing per caster). Mana is paid once."
+    },
+    {
+      "id": "PaladinDivineFavor",
+      "usedBy": "paladin_divine_favor (aura)",
+      "behaviour": "Divine Favor (WoW 1.12): the next Holy Light, Flash of Light or Holy Shock is a guaranteed critical effect. The spells are exactly the abilities of the aura's consumeCharge OnSpellCast proc; while the aura is up every non-periodic heal/damage effect of such a cast gets +100 crit chance (Holy Shock's heal or damage alike). The bonus also covers a cast that went pending; the proc consumes the aura once that cast has resolved. Other Holy spells (Exorcism, Judgements, Holy Wrath, Seals, Blessings...) neither benefit from nor consume it."
     }
   ]
 }

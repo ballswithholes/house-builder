@@ -1925,7 +1925,7 @@
           "description": "Increases your Stealth detection and reduces the chance you are hit by spells and ranged attacks by {2/4}%.",
           "effects": [
             {"type": "Stat", "stat": "StealthDetection", "value": 5},
-            {"type": "Stat", "stat": "ChanceToBeHit", "value": -2}
+            {"type": "Special", "special": "RogueHeightenedSenses", "value": 2}
           ]
         },
         {
@@ -2250,6 +2250,11 @@
       "id": "RogueSleightOfHand",
       "usedBy": "rogue_subtlety_sleight_of_hand (talent passive)",
       "behaviour": "Talent passive: melee and ranged attacks against the rogue have their critical strike chance reduced by 1% x rank (applied in the attacker's crit roll, not below 0). The Feint part is an AbilityMod Threat."
+    },
+    {
+      "id": "RogueHeightenedSenses",
+      "usedBy": "rogue_subtlety_heightened_senses (talent passive)",
+      "behaviour": "Talent passive (IncomingMissChance hook): spells (incl. wand shots) and ranged attacks (Auto Shot, ranged weapon abilities, thrown) aimed at the rogue get +value x rank percentage points (2/4) of miss chance, added to the attacker's miss chance before the 99% hit cap (spells: the resist roll; physical ranged: the miss part of the ranged table). Melee attacks are not affected. The Stealth detection part is a separate Stat passive."
     },
     {
       "id": "RogueSerratedBlades",

@@ -131,6 +131,8 @@ Common to all: `target` (`Target Self Area Pet Owner AlliesInRadius EnemiesInRad
 * `kind` Buff/Debuff, `dispel` None/Magic/Curse/Poison/Disease, `duration` seconds (≤ 0 = until removed),
   `maxStacks`, `charges`, `exclusiveGroup` + `exclusivePerCaster`, `tags`, `hidden`.
 * `mods`: `[{ "stat": "Armor", "value": 25, "pct": true, "school": "Fire" }]` (StatId list in Enums.cs).
+  There is no separate Focus stat: `EnergyRegen` (pct) scales both Energy and Focus regeneration (pets: a talent
+  `Stat` passive with `"target": "Pet"`, e.g. Bestial Discipline).
 * `states`: UnitState names (`Stun Root Silence Pacify Disarm Fear Polymorph Incapacitate Sleep Confuse Stealth
   Invisible Invulnerable ImmunePhysical ImmuneMagic Banish Shapeshift FeignDeath Daze Untargetable`).
 * `forbidSchools`, `absorb` (`{ "amount", "perLevel", "coef", "schools", "manaPerDamage" }`),

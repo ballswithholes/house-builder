@@ -27,6 +27,7 @@ namespace Lanternvale.Rules
         {
             Register(new WarriorStanceSwap());
             Register(new WarriorCharge());
+            Register(new WarriorRetaliation());
             Register(new WarriorOverpower());
             Register(new WarriorExecute());
             Register(new WarriorDefiance());
@@ -68,12 +69,24 @@ namespace Lanternvale.Rules
         }
     }
 
-    /// <summary>Charge only while the warrior has not yet fought in this battle (or out of combat as an opener).</summary>
+    /// <summary>
+    /// Charge only while the warrior has not yet fought in this battle (or out of combat as an opener), and never while
+    /// Bloodrage is up (1.12: Bloodrage puts the warrior in combat for its duration).
+    /// </summary>
     sealed class WarriorCharge : SpecialHandler
     {
+        const string BloodrageAura = "warrior_bloodrage";
         public WarriorCharge() : base("WarriorCharge") { }
         public override string CheckUse(Battle b, Unit u, AbilityDef a, Unit target) =>
-            b.InCombat && b.Started && u.Engaged ? "You are already in combat." : null;
+            (b.InCombat && b.Started && u.Engaged) || u.HasAura(BloodrageAura) ? "You are already in combat." : null;
+    }
+
+    /// <summary>Retaliation: the OnStruck counterattack does not fire (nor use a charge) against attackers behind the warrior.</summary>
+    sealed class WarriorRetaliation : SpecialHandler
+    {
+        public WarriorRetaliation() : base("WarriorRetaliation") { }
+        public override bool AllowsAuraProc(Battle b, AuraInstance a, ProcDef p, ProcTrigger trigger, Unit other, ProcInfo info) =>
+            trigger != ProcTrigger.OnStruck || other == null || a.Bearer == null || !other.IsBehind(a.Bearer);
     }
 
     /// <summary>Overpower cannot be dodged, parried or blocked.</summary>

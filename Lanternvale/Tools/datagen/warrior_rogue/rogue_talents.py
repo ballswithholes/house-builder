@@ -173,7 +173,7 @@ SUBTLETY = {
           [P_proc(proc("OnDodge", [cp("Attacker")]), values=[15, 30, 45])]),
         T(S + "improved_sap", "Improved Sap", "mace", 4, 1, 3,
           "Gives you a {30/60/90}% chance to return to stealth mode after using your Sap ability.",
-          [P_proc(used(["rogue_sap"], [E("ApplyAura", target="Self", aura="rogue_stealth_aura")]),
+          [P_proc(used(["rogue_sap"], [E("ApplyAura", target="Self", aura="rogue_restealth_aura")]),
                   values=[30, 60, 90])]),
         T(S + "serrated_blades", "Serrated Blades", "dagger", 4, 2, 3,
           "Causes your attacks to ignore armor (about {2.7/5.4/8} per level) and increases the damage dealt by your "
@@ -183,7 +183,7 @@ SUBTLETY = {
         T(S + "heightened_senses", "Heightened Senses", "eye", 5, 0, 2,
           "Increases your Stealth detection and reduces the chance you are hit by spells and ranged attacks by "
           "{2/4}%.",
-          [P_stat("StealthDetection", 5), P_stat("ChanceToBeHit", -2)]),
+          [P_stat("StealthDetection", 5), P_special("RogueHeightenedSenses", value=2)]),
         T(S + "preparation", "Preparation", "hourglass", 5, 1, 1, "Grants the Preparation ability.",
           [P_grant("rogue_preparation")]),
         T(S + "hemorrhage", "Hemorrhage", "blood", 5, 2, 1, "Grants the Hemorrhage ability.",

@@ -436,15 +436,13 @@ A("shaman_elemental_mastery", "Elemental Mastery", "sparkle", "Nature",
   effects=[eff("ApplyAura", aura="shaman_elemental_mastery")], aiHint="Buff", aiPriority=6)
 U("shaman_elemental_mastery", "Elemental Mastery", "sparkle",
   "Your next Fire, Frost, or Nature damage spell is a critical strike and costs no mana.", school="Nature",
-  duration=0, charges=1,
-  mods=[mod("SpellCrit", 100, school=s) for s in ("Fire", "Frost", "Nature")] +
-       [mod("ManaCost", -100, school=s) for s in ("Fire", "Frost", "Nature")],
+  duration=0, charges=1, special="ShamanNextDamageSpell",   # crit + free only for the DMG_SPELLS that consume it
   procs=[{"trigger": "OnSpellCast", "chance": 100, "abilities": DMG_SPELLS, "consumeCharge": True, "effects": []}])
 
 A("shaman_stormstrike", "Stormstrike", "fist", "Nature",
   "Gives you an extra attack ({0}). In addition, the next 2 sources of Nature damage dealt to the target are "
   "increased by 20%. Lasts 12 sec.",
-  learn=40, fromTalent=True, cooldown=20, cost={"type": "Mana", "pctBaseMana": 8}, target="Enemy", melee=True,
+  learn=40, fromTalent=True, cooldown=20, cost={"type": "Mana", "pctBaseMana": 21}, target="Enemy", melee=True,
   requires={"meleeWeapon": True},
   effects=[eff("WeaponDamage", weaponPct=100), eff("ApplyAura", aura="shaman_stormstrike")],
   aiHint="Damage", aiPriority=8)
@@ -466,7 +464,7 @@ U("shaman_parry", "Parry", "swords", "Able to parry melee attacks.", hidden=True
 
 # Talent proc auras ----------------------------------------------------------------------------------------------------
 U("shaman_clearcasting", "Clearcasting", "sparkle", "Your next damage spell costs no mana.", school="Nature",
-  duration=15, charges=1, mods=[mod("ManaCost", -100, school=s) for s in ("Fire", "Frost", "Nature")],
+  duration=15, charges=1, special="ShamanClearcasting",   # free only for the DMG_SPELLS that consume it
   procs=[{"trigger": "OnSpellCast", "chance": 100, "abilities": DMG_SPELLS, "consumeCharge": True, "effects": []}])
 U("shaman_focused_casting", "Focused Casting", "storm", "Taking damage does not delay your spellcasting.",
   school="Nature", duration=6, special="ShamanPushbackResist")
@@ -529,7 +527,7 @@ ele = [
            "Gives you a {33/66/100}% chance to gain the Focused Casting effect that lasts for 6 sec after being the "
            "victim of a melee or ranged critical strike. The Focused Casting effect prevents you from losing casting "
            "time when taking damage.",
-           [proc_p({"trigger": "OnCritTaken",
+           [proc_p({"trigger": "OnCritTaken", "schools": ["Physical"],
                     "effects": [eff("ApplyAura", target="Self", aura="shaman_focused_casting")]},
                    values=[33, 66, 100])]),
     talent(EL + "elemental_devastation", "Elemental Devastation", "storm", 4, 3, 3,
@@ -546,7 +544,7 @@ ele = [
            [amod("CritBonus", 100, abilities=DMG_SPELLS), amod("CritBonus", 100, abilities=FIRE_TOTEM_FX, target="Pet")]),
     talent(EL + "lightning_mastery", "Lightning Mastery", "lightning", 6, 2, 5,
            "Reduces the cast time of your Lightning Bolt and Chain Lightning spells by {0.2/0.4/0.6/0.8/1} sec.",
-           [amod("CastTime", -0.2, abilities=LIGHTNING)]),
+           [amod("CastTime", -0.2, abilities=LIGHTNING)], requires=EL + "call_of_thunder"),
     talent(EL + "elemental_mastery", "Elemental Mastery", "sparkle", 7, 1, 1,
            "When activated, this spell gives your next Fire, Frost, or Nature damage spell a 100% critical strike "
            "chance and reduces the mana cost by 100%. 3 min cooldown.", [grant("shaman_elemental_mastery")],
@@ -663,7 +661,8 @@ resto = [
             amod("Healing", 2, abilities=["shaman_healing_stream_totem_pulse"], target="Pet")]),
     talent(RE + "mana_tide_totem", "Mana Tide Totem", "totem_water", 7, 1, 1,
            "Summons a Mana Tide Totem with 5 health at the feet of the caster for 12 sec that restores 170 mana every "
-           "3 seconds to group members within 20 yards.", [grant("shaman_mana_tide_totem")]),
+           "3 seconds to group members within 20 yards.", [grant("shaman_mana_tide_totem")],
+           requires=RE + "restorative_totems"),
 ]
 
 TREES = [
@@ -788,6 +787,22 @@ SPECIALS = [
      "behaviour": "The next ability the bearer uses whose school is Nature and whose (modified) castTime is > 0 and "
                   "< 10 s has castTime 0 (its Time cost becomes the GCD, it can never become a pending cast). The aura "
                   "is consumed by that cast. Channeled abilities are not affected."},
+    {"id": "ShamanNextDamageSpell", "usedBy": "shaman_elemental_mastery (aura)",
+     "behaviour": "Elemental Mastery (WoW 1.12): the next Fire, Frost or Nature DAMAGE spell is a guaranteed critical "
+                  "strike and costs no mana. The damage spells are exactly the abilities of the aura's consumeCharge "
+                  "OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock). While the aura is up, "
+                  "such a spell costs 0 mana (ResourceCost, so the action bar shows it free) and every non-periodic "
+                  "effect of that cast gets +100 crit chance (all Chain Lightning targets; not the Flame Shock DoT "
+                  "ticks, not procs). The bonus also covers a cast that went pending; the proc consumes the aura once "
+                  "that cast has resolved (whether it hit or was resisted; an interrupted cast keeps it). Heals "
+                  "(Healing Wave, Chain Heal...), totems, Purge and weapon imbues neither benefit from nor consume it."},
+    {"id": "ShamanClearcasting", "usedBy": "shaman_clearcasting (aura from Elemental Focus)",
+     "behaviour": "Clearcasting from Elemental Focus (WoW 1.12: 'reduces the mana cost of your next damage spell by "
+                  "100%'). The mana-cost reduction applies only to the spells that consume the aura, i.e. the abilities "
+                  "of its consumeCharge OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock): "
+                  "those cost 0 mana while it is up; heals, totems and other spells pay full cost and do not consume "
+                  "it. The proc consumes the charge after the free cast resolved (aura procs fire before talent procs, "
+                  "so a new Clearcasting from the same cast's Elemental Focus roll is kept)."},
     {"id": "ShamanTwoHandedWeapons", "usedBy": EN + "two_handed_axes_and_maces",
      "behaviour": "While the talent is learned the shaman is proficient with TwoHandAxe and TwoHandMace (added to the "
                   "class weaponTypes for equip checks). Unlearning it (respec) unequips such weapons to the bags."},

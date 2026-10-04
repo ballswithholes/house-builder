@@ -177,15 +177,18 @@ namespace Lanternvale.Session
             return r;
         }
 
+        /// <summary>
+        /// Why <paramref name="user"/> cannot use the bag item now (null = usable): the item's level/class restriction
+        /// (Battle.ItemUseRestriction, so the UI greys out a Mana Ruby for a warrior or a level 12 potion at level 5), then
+        /// its `use` ability in the battle/field context (target omitted = target ignored).
+        /// </summary>
         public string CannotUseItemReason(Unit user, ItemInstance item, Unit target = null)
         {
             if (item == null || !Inventory.Items.Contains(item)) return "The item is not in your bags.";
             if (string.IsNullOrEmpty(item.Def.use) || Db.Ability(item.Def.use) == null) return $"{item.Name} cannot be used.";
             var ctx = ContextFor(user);
             if (ctx == null) return "That unit is not in the party.";
-            var a = Db.Ability(item.Def.use);
-            if (a.target == TargetType.Self) target = user;
-            var chk = target != null ? ctx.CanUse(user, a, target, null, true) : ctx.CanUseIgnoringTarget(user, a, true);
+            var chk = ctx.CanUseItem(user, item, target, null);
             return chk.Ok ? null : chk.Reason;
         }
 

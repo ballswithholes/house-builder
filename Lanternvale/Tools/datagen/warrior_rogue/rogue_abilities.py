@@ -66,9 +66,9 @@ ABILITIES = [
        tags=["Finisher"], special="RoguePerComboByRank",
        effects=[E("Damage", min=1, max=5, perLevel=1.76, perCombo=5, amount=2.582)], aiHint="Finisher", aiPriority=8),
     ab("rogue_stealth", "Stealth", "stealth",
-       "Allows the rogue to sneak around, but reduces your speed by 30%. Lasts until cancelled. Attacking from Stealth "
-       "with an opener starts the battle with a surprise round.",
-       ranks=[1, 10, 20, 30], time="OffGcd", cooldown=10, target="Self", breaksStealth=False,
+       "Allows the rogue to sneak around, but reduces your speed by 50% (40%, 35% and 30% at ranks 2-4). Lasts until "
+       "cancelled. Attacking from Stealth with an opener starts the battle with a surprise round.",
+       ranks=[1, 20, 40, 60], time="OffGcd", cooldown=10, target="Self", breaksStealth=False,
        requires={"notInCombat": True}, effects=[E("ApplyAura", target="Self", aura="rogue_stealth_aura")],
        aiHint="Utility", aiPriority=2),
     ab("rogue_backstab", "Backstab", "dagger",
@@ -120,10 +120,10 @@ ABILITIES = [
        ranks=[14, 26, 36, 46, 56], cost=energy(25, combo=True), melee=True, requires=finisher_req(),
        tags=["Finisher"], effects=[E("ApplyAura", aura="rogue_expose_armor")], aiHint="Debuff", aiPriority=4),
     ab("rogue_feint", "Feint", "mask",
-       "Performs a feint, causing no damage but lowering your threat by a large amount (600 at rank 4), making the "
+       "Performs a feint, causing no damage but lowering your threat by 150 at rank 1 (600 at rank 4), making the "
        "enemy less likely to attack you.",
        ranks=[16, 28, 40, 52], cost=energy(20), cooldown=10, melee=True,
-       effects=[E("Threat", threat=-600)], aiHint="Utility", aiPriority=4),
+       effects=[E("Threat", threat=-150, perLevel=-12.5)], aiHint="Utility", aiPriority=4),
     ab("rogue_pick_lock", "Pick Lock", "key",
        "Allows opening of locked chests and doors that require a Sleight of Hand check. 5 sec cast, out of combat.",
        ranks=[16], castTime=5, target="Self", breaksStealth=False, requires={"notInCombat": True},
@@ -135,8 +135,8 @@ ABILITIES = [
        tags=["Opener", "Builder"], requires={"casterStates": STEALTH, "behindTarget": True, "mainHand": ["Dagger"]},
        effects=[E("WeaponDamage", weaponPct=250, min=70, perLevel=5.5)], aiHint="Opener", aiPriority=9),
     ab("rogue_rupture", "Rupture", "blood",
-       "Finishing move that causes damage over time, increased by combo points: 1 point 40 over 8 sec, 2 points 60 "
-       "over 10 sec, 3 points 84 over 12 sec, 4 points 112 over 14 sec, 5 points 144 over 16 sec (much more at "
+       "Finishing move that causes damage over time, increased by combo points and by your attack power: 1 point 40 "
+       "over 8 sec, 2 points 60 over 10 sec, 3 points 84 over 12 sec, 4 points 112 over 14 sec, 5 points 144 over 16 sec (much more at "
        "higher ranks).",
        ranks=[20, 28, 36, 44, 52, 60], cost=energy(25, combo=True), melee=True, requires=finisher_req(),
        tags=["Finisher", "Bleed"], special="RoguePerComboByRank",
@@ -150,7 +150,7 @@ ABILITIES = [
        "Allows the rogue to vanish from sight, entering an improved stealth mode for 10 sec. Also breaks movement "
        "impairing effects and drops you from enemy threat. Requires Flash Powder.",
        ranks=[22, 42], cooldown=300, target="Self", breaksStealth=False, special="RogueVanish",
-       effects=[E("ApplyAura", target="Self", aura="rogue_stealth_aura"),
+       effects=[E("ApplyAura", target="Self", aura="rogue_restealth_aura"),
                 E("ApplyAura", target="Self", aura="rogue_vanish_aura")], aiHint="Defensive", aiPriority=3),
     ab("rogue_cheap_shot", "Cheap Shot", "fist",
        "Stuns the target for 4 sec. Must be stealthed. Awards 2 combo points.",
@@ -194,9 +194,9 @@ ABILITIES = [
     # talent abilities
     ab("rogue_riposte", "Riposte", "swords",
        "A strike that becomes active after parrying an opponent's attack (until the end of your next turn). This "
-       "attack deals 150% weapon damage ({0}) and disarms the target for 6 sec. Awards 1 combo point.",
-       ranks=[20], fromTalent=True, cost=energy(10), cooldown=6, melee=True, generatesComboPoint=True,
-       tags=["Builder"], requires={"reactive": "SelfParried", "meleeWeapon": True},
+       "attack deals 150% weapon damage ({0}) and disarms the target for 6 sec.",
+       ranks=[20], fromTalent=True, cost=energy(10), cooldown=6, melee=True,
+       tags=[], requires={"reactive": "SelfParried", "meleeWeapon": True},
        effects=[E("WeaponDamage", weaponPct=150), E("ApplyAura", aura="rogue_riposte_disarm")],
        aiHint="Damage", aiPriority=8),
     ab("rogue_ghostly_strike", "Ghostly Strike", "dagger",
@@ -227,7 +227,7 @@ ABILITIES = [
        effects=[E("ResetCooldowns", target="Self", abilities=PREP_RESET)], aiHint="Utility", aiPriority=2),
     ab("rogue_adrenaline_rush", "Adrenaline Rush", "rage",
        "Increases your Energy regeneration rate by 100% for 15 sec.",
-       ranks=[40], fromTalent=True, time="OffGcd", cooldown=300, target="Self",
+       ranks=[40], fromTalent=True, cooldown=300, target="Self",
        effects=[E("ApplyAura", target="Self", aura="rogue_adrenaline_rush")], aiHint="Buff", aiPriority=5),
     ab("rogue_premeditation", "Premeditation", "eye",
        "When used, adds 2 combo points to your target. You must add to or use those combo points within 10 sec or the "

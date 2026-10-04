@@ -30,6 +30,8 @@ namespace Lanternvale.Rules
             Register(new PaladinReckoning());
             Register(new PaladinWeaponSpecialization());
             Register(new PaladinEyeForAnEye());
+            Register(new PaladinGreaterBlessing());
+            Register(new NextSpellBonus("PaladinDivineFavor", free: false, crit: true));   // Divine Favor (see NextSpellBonus)
         }
     }
 
@@ -91,6 +93,33 @@ namespace Lanternvale.Rules
         {
             float bonus = s.Block.Flat(StatId.MoveSpeed);
             if (bonus > 0f) s.MoveSpeedPct -= bonus;
+        }
+    }
+
+    /// <summary>
+    /// Greater Blessings: after blessing the target, the same blessing (same rank, duration and ability mods) is also
+    /// applied to every other living party member of the battle/field that shares the target's class (characters and
+    /// companions; pets, totems and summons have no class and are skipped). The usual one-blessing-per-paladin rule
+    /// (exclusive group per caster) applies to each of them.
+    /// </summary>
+    sealed class PaladinGreaterBlessing : SpecialHandler
+    {
+        public PaladinGreaterBlessing() : base("PaladinGreaterBlessing") { }
+
+        public override void After(AbilityCast c)
+        {
+            var b = c.Battle;
+            var t = c.Target;
+            if (b == null || t == null || !t.IsAlive || t.Class == null || c.Ability == null) return;
+            var auras = new List<EffectDef>();
+            foreach (var e in c.Ability.effects)
+                if (e.type == EffectType.ApplyAura && e.target == EffectTarget.Target) auras.Add(e);
+            if (auras.Count == 0) return;
+            foreach (var u in new List<Unit>(b.Units))
+            {
+                if (u == t || !u.IsAlive || u.Class == null || u.Team != t.Team || u.ClassId != t.ClassId) continue;
+                foreach (var e in auras) b.ApplyEffect(c, e, u, 1f);
+            }
         }
     }
 

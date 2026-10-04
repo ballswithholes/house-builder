@@ -523,7 +523,8 @@ namespace Lanternvale.Rules
             float roll = Rng.Value * 100f;
             if (kind == AttackKind.Spell || kind == AttackKind.Wand)
             {
-                float miss = Formulas.SpellMissChance(c.Level, t.Level) - c.Stats.SpellHit(cast.School) - hitBonus - t.Stats.ChanceToBeHit;
+                float miss = Formulas.SpellMissChance(c.Level, t.Level) - c.Stats.SpellHit(cast.School) - hitBonus - t.Stats.ChanceToBeHit
+                             + Specials.IncomingMissChance(t, kind);
                 miss = MathUtil.Clamp(miss, 100f - RulesConstants.MaxHitChance, 100f);
                 if (roll < miss)
                 {
@@ -536,7 +537,8 @@ namespace Lanternvale.Rules
             }
             bool ranged = kind == AttackKind.Ranged;
             float hit = ranged ? c.Stats.RangedHit : c.Stats.MeleeHit;
-            float m = Formulas.MeleeMissChance(c.Level, t.Level, false) - hit - hitBonus - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f;
+            float m = Formulas.MeleeMissChance(c.Level, t.Level, false) - hit - hitBonus - t.Stats.ChanceToBeHit + t.Stats.Defense * 0.04f
+                      + Specials.IncomingMissChance(t, kind);
             m = MathUtil.Clamp(m, 100f - RulesConstants.MaxHitChance, 100f);
             bool canAvoid = !t.IsControlled && !unavoidable;
             bool frontal = !c.IsBehind(t);

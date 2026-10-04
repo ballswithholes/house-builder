@@ -188,7 +188,7 @@ string DestroyItem(ItemInstance item, int count = 1)                  // quest i
 // abilities & items — combat: the active unit through the Battle; exploration: the Field context
 List<AbilityStatus> GetAbilityBar(Unit u)
 ActionResult UseAbility(Unit u, string abilityId, Unit target = null, Vec2? point = null)   // buffs, Call Pet, Stealth…
-string CannotUseItemReason(Unit user, ItemInstance item, Unit target = null)
+string CannotUseItemReason(Unit user, ItemInstance item, Unit target = null)  // Battle.CanUseItem: level/class restriction first, then the use ability
 ActionResult UseItem(Unit user, ItemInstance item, Unit target = null, Vec2? point = null)
 Battle Field                                   // exploration context (InCombat = false) of PartyUnits()
 ```

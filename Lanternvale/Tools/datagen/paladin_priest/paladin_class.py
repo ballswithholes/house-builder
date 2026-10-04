@@ -161,4 +161,19 @@ SPECIALS = [
      "behaviour": "On a spell (non-Physical) critical hit taken by the paladin, deal Holy damage to the attacker "
                   "equal to 15% x talent rank of the damage taken, capped at 50% of the paladin's maximum health. "
                   "Cannot crit, no coefficient, cannot be resisted."},
+    {"id": "PaladinGreaterBlessing", "usedBy": "paladin_greater_blessing_of_might, _wisdom, _kings, _salvation, _light, _sanctuary (abilities)",
+     "behaviour": "Ability special (After hook). WoW 1.12: a Greater Blessing reaches every party member who shares the "
+                  "target's class. After the blessing's ApplyAura effect has blessed the target, the same ApplyAura "
+                  "effect (same rank, duration and AbilityMods of the cast, e.g. Improved Blessing of Might) is applied "
+                  "to every other living unit of the battle/field on the target's team whose class is the target's "
+                  "class (characters and companions; pets, totems, summons and mind-controlled creatures have no class "
+                  "and are skipped), regardless of distance. The normal blessing rules apply to each of them (one "
+                  "Blessing per Paladin: exclusiveGroup paladin_blessing per caster). Mana is paid once."},
+    {"id": "PaladinDivineFavor", "usedBy": "paladin_divine_favor (aura)",
+     "behaviour": "Divine Favor (WoW 1.12): the next Holy Light, Flash of Light or Holy Shock is a guaranteed critical "
+                  "effect. The spells are exactly the abilities of the aura's consumeCharge OnSpellCast proc; while the "
+                  "aura is up every non-periodic heal/damage effect of such a cast gets +100 crit chance (Holy Shock's "
+                  "heal or damage alike). The bonus also covers a cast that went pending; the proc consumes the aura "
+                  "once that cast has resolved. Other Holy spells (Exorcism, Judgements, Holy Wrath, Seals, "
+                  "Blessings...) neither benefit from nor consume it."},
 ]

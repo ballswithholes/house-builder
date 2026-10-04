@@ -141,7 +141,8 @@ namespace Lanternvale.Rules
             var tst = target.Stats;
             var basic = Db.Ability(ranged ? (u.Class != null ? u.AutoAttackAbility : "auto_shot") : "attack");
             bool dw = !ranged && u.Equipment.IsDualWielding;
-            float miss = Formulas.MeleeMissChance(u.Level, target.Level, dw) - (ranged ? st.RangedHit : st.MeleeHit) - tst.ChanceToBeHit + tst.Defense * 0.04f;
+            float miss = Formulas.MeleeMissChance(u.Level, target.Level, dw) - (ranged ? st.RangedHit : st.MeleeHit) - tst.ChanceToBeHit + tst.Defense * 0.04f
+                         + Specials.IncomingMissChance(target, ranged ? AttackKind.Ranged : AttackKind.Melee);
             miss = MathUtil.Clamp(miss, 100f - RulesConstants.MaxHitChance, 100f);
             bool canAvoid = !target.IsControlled;
             bool frontal = !u.IsBehind(target);

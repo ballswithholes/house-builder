@@ -98,14 +98,15 @@ SPECIALS = [
        "ModValues[0] (DamageTaken, pct) to 3 x r so the stunned target takes +3/6/9% damage from all sources while "
        "the stun lasts. The talent's own Special passive does nothing else."),
     sp("RogueVanish", "rogue_vanish (ability)",
-       "Ability special. CheckUse: requires one rogue_flash_powder in the party inventory. Resolve (before the "
-       "ability's effects): consume one Flash Powder; remove every aura on the rogue imposing Root or a negative "
-       "MoveSpeed mod (snares, Daze; same rule as RogueRemoveSnares); set the rogue's threat to 0 on every enemy "
-       "table and make enemies that were targeting it pick a new target; cancel its auto attack and combo-point "
-       "target. Then the effects apply rogue_stealth_aura (allowed in combat, unlike the Stealth ability) and "
-       "rogue_vanish_aura (10 s; while it lasts the rogue cannot be detected even within 3 m and cannot be targeted "
-       "by enemies). Rank 2 only differs in WoW stealth level (no extra rule). Openers used from Vanish stealth in an "
-       "ongoing battle do NOT grant a surprise round."),
+       "Ability special. CheckUse: requires one rogue_flash_powder in the party inventory. Resolve (before the ability's "
+       "effects): consume one Flash Powder; remove every aura on the rogue imposing Root or a negative MoveSpeed mod "
+       "(snares, Daze; same rule as RogueRemoveSnares); set the rogue's threat to 0 on every enemy table and make "
+       "enemies that were targeting it pick a new target; cancel its auto attack and combo-point target. Then the "
+       "effects apply rogue_restealth_aura (the Stealth state with a flat -30% MoveSpeed, i.e. the max-rank Stealth "
+       "penalty as a documented approximation; allowed in combat, unlike the Stealth ability) and rogue_vanish_aura (10 "
+       "s; while it lasts the rogue cannot be detected even within 3 m and cannot be targeted by enemies). Rank 2 only "
+       "differs in WoW stealth level (no extra rule). Openers used from Vanish stealth in an ongoing battle do NOT grant "
+       "a surprise round."),
     sp("RogueBlind", "rogue_blind (ability)",
        "Ability special. CheckUse: requires one rogue_blinding_powder in the party inventory (reason 'Requires "
        "Blinding Powder'). On cast (even if the target resists) consume one Blinding Powder."),
@@ -134,7 +135,8 @@ SPECIALS = [
        "Talent passive: maximum Energy +10 (100 -> 110). Turn regeneration is unchanged (+60)."),
     sp("RogueCamouflage", "rogue_subtlety_camouflage (talent passive)",
        "Talent passive: while the rogue has an aura with the Stealth state, MoveSpeed +3% x rank (pct, offsets the "
-       "-30% stealth penalty). The Stealth cooldown reduction is a separate AbilityMod."),
+       "stealth movement penalty: -50/-40/-35/-30% by Stealth rank, -30% when Vanish or Improved Sap restealths via "
+       "rogue_restealth_aura). The Stealth cooldown reduction is a separate AbilityMod."),
     sp("RogueMasterOfDeception", "rogue_subtlety_master_of_deception (talent passive)",
        "Talent passive: enemies' stealth detection radius against this rogue (base 3 m out of combat, see Design.md "
        "Stealth) is reduced by 10% x rank (to 1.5 m at 5/5); in-combat detection checks against the rogue take the "
@@ -145,6 +147,11 @@ SPECIALS = [
     sp("RogueSleightOfHand", "rogue_subtlety_sleight_of_hand (talent passive)",
        "Talent passive: melee and ranged attacks against the rogue have their critical strike chance reduced by "
        "1% x rank (applied in the attacker's crit roll, not below 0). The Feint part is an AbilityMod Threat."),
+    sp("RogueHeightenedSenses", "rogue_subtlety_heightened_senses (talent passive)",
+       "Talent passive (IncomingMissChance hook): spells (incl. wand shots) and ranged attacks (Auto Shot, ranged weapon "
+       "abilities, thrown) aimed at the rogue get +value x rank percentage points (2/4) of miss chance, added to the "
+       "attacker's miss chance before the 99% hit cap (spells: the resist roll; physical ranged: the miss part of the "
+       "ranged table). Melee attacks are not affected. The Stealth detection part is a separate Stat passive."),
     sp("RogueSerratedBlades", "rogue_subtlety_serrated_blades (talent passive)",
        "Talent passive: the rogue's physical attacks ignore armor equal to values[rank-1] x rogue level (2.67/5.43/8 "
        "per level: 160/326/480 at level 60), i.e. a level-scaled ArmorPenetration stat. The Rupture damage bonus is a "

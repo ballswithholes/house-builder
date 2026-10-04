@@ -1703,23 +1703,19 @@
       "school": "Nature",
       "duration": 0,
       "charges": 1,
-      "mods": [
-        {"stat": "SpellCrit", "value": 100, "school": "Fire"},
-        {"stat": "SpellCrit", "value": 100, "school": "Frost"},
-        {"stat": "SpellCrit", "value": 100, "school": "Nature"},
-        {"stat": "ManaCost", "value": -100, "school": "Fire"},
-        {"stat": "ManaCost", "value": -100, "school": "Frost"},
-        {"stat": "ManaCost", "value": -100, "school": "Nature"}
-      ],
       "procs": [
         {
           "trigger": "OnSpellCast",
           "chance": 100,
-          "schools": ["Fire", "Frost", "Nature"],
+          "abilities": [
+            "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+            "shaman_frost_shock"
+          ],
           "consumeCharge": true,
           "effects": []
         }
-      ]
+      ],
+      "special": "ShamanNextDamageSpell"
     },
     {
       "id": "shaman_stormstrike",
@@ -1764,11 +1760,6 @@
       "school": "Nature",
       "duration": 15,
       "charges": 1,
-      "mods": [
-        {"stat": "ManaCost", "value": -100, "school": "Fire"},
-        {"stat": "ManaCost", "value": -100, "school": "Frost"},
-        {"stat": "ManaCost", "value": -100, "school": "Nature"}
-      ],
       "procs": [
         {
           "trigger": "OnSpellCast",
@@ -1780,7 +1771,8 @@
           "consumeCharge": true,
           "effects": []
         }
-      ]
+      ],
+      "special": "ShamanClearcasting"
     },
     {
       "id": "shaman_focused_casting",
@@ -3145,6 +3137,16 @@
       "id": "ShamanNaturesSwiftness",
       "usedBy": "shaman_natures_swiftness (aura)",
       "behaviour": "The next ability the bearer uses whose school is Nature and whose (modified) castTime is > 0 and < 10 s has castTime 0 (its Time cost becomes the GCD, it can never become a pending cast). The aura is consumed by that cast. Channeled abilities are not affected."
+    },
+    {
+      "id": "ShamanNextDamageSpell",
+      "usedBy": "shaman_elemental_mastery (aura)",
+      "behaviour": "Elemental Mastery (WoW 1.12): the next Fire, Frost or Nature DAMAGE spell is a guaranteed critical strike and costs no mana. The damage spells are exactly the abilities of the aura's consumeCharge OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock). While the aura is up, such a spell costs 0 mana (ResourceCost, so the action bar shows it free) and every non-periodic effect of that cast gets +100 crit chance (all Chain Lightning targets; not the Flame Shock DoT ticks, not procs). The bonus also covers a cast that went pending; the proc consumes the aura once that cast has resolved (whether it hit or was resisted; an interrupted cast keeps it). Heals (Healing Wave, Chain Heal...), totems, Purge and weapon imbues neither benefit from nor consume it."
+    },
+    {
+      "id": "ShamanClearcasting",
+      "usedBy": "shaman_clearcasting (aura from Elemental Focus)",
+      "behaviour": "Clearcasting from Elemental Focus (WoW 1.12: 'reduces the mana cost of your next damage spell by 100%'). The mana-cost reduction applies only to the spells that consume the aura, i.e. the abilities of its consumeCharge OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock): those cost 0 mana while it is up; heals, totems and other spells pay full cost and do not consume it. The proc consumes the charge after the free cast resolved (aura procs fire before talent procs, so a new Clearcasting from the same cast's Elemental Focus roll is kept)."
     },
     {
       "id": "ShamanTwoHandedWeapons",

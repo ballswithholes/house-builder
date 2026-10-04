@@ -46,6 +46,7 @@ namespace Lanternvale.Rules
                             var p = procs[i];
                             if (p.trigger != trigger || !Matches(p, info) || runningProcs.Contains(p)) continue;
                             if (i < a.ProcCooldowns.Length && a.ProcCooldowns[i] > 0) continue;
+                            if (!string.IsNullOrEmpty(a.Def.special) && !Specials.AuraProcAllowed(this, a, p, trigger, other, info)) continue;
                             float chance = p.chance + (p.ppm > 0 ? 0f : Specials.ProcChanceBonus(owner, a, p));
                             if (!Rng.Chance(ProcChance(p, chance, info))) continue;
                             if (p.internalCooldown > 0 && i < a.ProcCooldowns.Length) a.ProcCooldowns[i] = p.internalCooldown;
@@ -122,6 +123,9 @@ namespace Lanternvale.Rules
             if (p.ppm > 0) return p.ppm * Math.Max(0.5f, info.WeaponSpeed) / 60f * 100f;
             return chance;
         }
+
+        /// <summary>True when the proc's ability/tag/school filters select a use of <paramref name="a"/> (as its OnSpellCast/OnAbilityUsed would).</summary>
+        internal static bool ProcMatchesAbility(ProcDef p, AbilityDef a) => a != null && Matches(p, new ProcInfo { Ability = a, School = a.school });
 
         static bool Matches(ProcDef p, ProcInfo info)
         {

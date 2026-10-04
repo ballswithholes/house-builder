@@ -55,7 +55,8 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   * Mana: Spirit regen per 2 s tick = `manaRegenBase + Spirit * manaRegenPerSpirit` (class data), ×3 per turn.
     **Five-second rule:** if the unit spent mana during its previous turn, only `SpiritRegenWhileCasting`% of
     Spirit regen applies (MP5 always applies, ×6/5 per turn).
-  * Focus (hunter pets): +24 per 4 s ⇒ +36 per turn. Max 100.
+  * Focus (hunter pets): +24 per 4 s ⇒ +36 per turn (modified by the pet's `EnergyRegen` pct, e.g. Bestial
+    Discipline +10/20%; out of combat +6/s × `EnergyRegen`). Max 100.
   * Health: no in-combat regen except HP5/effects. Out of combat Spirit-based regen (generous for pacing).
 
 ## 3. Units, stats and formulas (WoW Classic)
@@ -97,6 +98,10 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
 * **Pets**: Hunter pets (Focus) and Warlock demons (Mana) are party units with their own turn right after
   their owner, fully controllable, with AI fallback. One pet per owner. **Totems** (one per element) are
   stationary units with no turn: their periodic auras/abilities act at the end of the owner's turn.
+  **Hunter traps** (one at a time, a `Trap` totem) may be laid on any turn in battle as well as before a pull.
+  This is a deliberate deviation from 1.12, where traps needed the hunter out of combat (before the pull or
+  after a successful Feign Death): `Battle.InCombat` is one flag for the whole fight, so Feign Death does not
+  drop the hunter out of combat (see the `HunterTrap` / `HunterFeignDeath` specials in `hunter.json`).
 * **Stealth**: out of combat, stealthed units are not seen by encounters unless within 3 m. Starting combat
   from stealth (attacking with an Opener) grants a **surprise round**: enemies lose their first turn.
 * **Death**: party members at 0 HP are **Downed**. An adjacent ally can spend 1.5 s to *Help* them up at 1 HP
