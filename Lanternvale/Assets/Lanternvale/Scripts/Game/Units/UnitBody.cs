@@ -103,6 +103,26 @@ namespace Lanternvale.Game
     {
         static readonly Dictionary<string, UnitModel> cache = new Dictionary<string, UnitModel>(System.StringComparer.Ordinal);
 
+        /// <summary>
+        /// The model of `key` in a deterministic look variation (generic villagers and children; any int, e.g. a hash of
+        /// an NPC id). Keys without variations, and variation 0, give the plain model. Meshes are cached per
+        /// (key, variation): at most UnitRecipes.VariantCount(key) of them.
+        /// </summary>
+        public static UnitModel Get(string key, int variant)
+        {
+            int v = NormalizeVariant(key, variant);
+            return Get(v == 0 ? key : key + "#" + v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>The variation index (0 … VariantCount − 1) a requested variant maps to for this key (0: none).</summary>
+        public static int NormalizeVariant(string key, int variant)
+        {
+            int n = UnitRecipes.VariantCount(key);
+            if (n <= 1) return 0;
+            int v = variant % n;
+            return v < 0 ? v + n : v;
+        }
+
         public static UnitModel Get(string key)
         {
             key = string.IsNullOrEmpty(key) ? "npc_villager_a" : key;

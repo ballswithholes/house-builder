@@ -13,8 +13,35 @@ namespace Lanternvale.Game
     {
         static Color C(string h) => Paint.Hex(h);
 
+        /// <summary>Number of look variations of a key (UnitModels.Get(key, variant), UnitView.SetVariant); 1 = none.</summary>
+        public static int VariantCount(string key)
+        {
+            switch (key)
+            {
+                case "npc_villager_a":
+                case "npc_villager_b":
+                case "npc_child":
+                    return 16;
+            }
+            return 1;
+        }
+
         public static UnitModel Build(string key)
         {
+            // "key#n": look variation n of a generic villager (see VariantCount)
+            int hash = key.IndexOf('#');
+            if (hash > 0)
+            {
+                string baseKey = key.Substring(0, hash);
+                if (!int.TryParse(key.Substring(hash + 1), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int v)) v = 0;
+                switch (baseKey)
+                {
+                    case "npc_villager_a": return VillagerA(key, v);
+                    case "npc_villager_b": return VillagerB(key, v);
+                    case "npc_child": return Child(key, v);
+                }
+                return Build(baseKey);
+            }
             switch (key)
             {
                 // ---- player classes
@@ -52,6 +79,7 @@ namespace Lanternvale.Game
                 case "cr_bandit_hexer": return BanditHexer(key);
                 case "cr_bandit_chief": return BanditChief(key);
                 case "cr_hollow_spirit": return HollowSpirit(key);
+                case "cr_hollow_keeper": return HollowKeeper(key);
                 case "cr_hollow_wisp": return HollowWisp(key);
                 case "cr_hollow_treant": return Treant(key);
                 case "cr_mossling": return Mossling(key, false);
@@ -159,9 +187,10 @@ namespace Lanternvale.Game
             k.Pouch(-1, leather, 0.2f, 0.8f);
             k.Bow(-1, 1.25f, C("#9a6b3d"), leatherD, cream);
             k.Quiver(leather, cream);
-            k.Dagger(1, C("#d0d6dc"), leatherD, 0.26f);
+            // the hunting knife lives on the right hip and is drawn for melee only (the right hand draws the bowstring)
+            k.SheathedDagger(C("#d0d6dc"), leatherD, leather, 0.26f, C("#d9b25a"));
             var m = k.Model;
-            m.HoldL = UnitHold.Bow; m.HoldR = UnitHold.OneHand; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Bow;
+            m.HoldL = UnitHold.Bow; m.HoldR = UnitHold.Relaxed; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Bow;
             return Done(k, key);
         }
 
@@ -207,7 +236,8 @@ namespace Lanternvale.Game
             k.HairCap(hair);
             k.Bangs(hair, 5, 0.4f);
             k.LongBack(hair, k.ShoulderY - 0.2f, 1f, 1.1f);
-            k.BrimHat(violetD, violet, 2.7f, 2.6f, 0.65f, gold);
+            // brim kept narrow and tipped back so the face shows under it from the 44° game camera
+            k.BrimHat(violetD, violet, 1.95f, 2.6f, 0.65f, gold, -12f);
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, violet, violet, skin);

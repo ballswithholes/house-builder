@@ -83,7 +83,12 @@ namespace Lanternvale.Game
             Bind[BB.Tail] = new Vector3(0f, PelvisY - 0.05f * U, -HipR * DepthK);
             Bind[BB.WingL] = new Vector3(-0.07f * U, ShoulderY - 0.07f * U, -ChestR * DepthK);
             Bind[BB.WingR] = new Vector3(0.07f * U, ShoulderY - 0.07f * U, -ChestR * DepthK);
+            Bind[BB.DrawnR] = Grip(1);
+            Bind[BB.SheathR] = SheathMouth;
         }
+
+        /// <summary>Mouth of the knife sheath on the right hip (slightly behind the side seam).</summary>
+        Vector3 SheathMouth => new Vector3(HipR * 1.16f + 0.01f * U, HipY + 0.06f * U, -0.035f * U);
 
         public Vector3 Grip(int side) => new Vector3(side * ShoulderX, WristY - 0.05f * U * HandK, 0.012f * U);
 
@@ -561,7 +566,20 @@ namespace Lanternvale.Game
             float rMid = Mathf.Lerp(r0, r1, 0.45f);
             var prof = new[] { new Vector2(r0, top), new Vector2(rMid * 1.02f, Mathf.Lerp(top, hemY, 0.45f)), new Vector2(r1, hemY) };
             float dk = DepthK * 1.08f;
-            float side = 92f;   // front/back split angle
+            // a long closed robe/dress (below the knee, front closed or nearly so): its front halves move together in the
+            // walk (UnitModel.SkirtClosed) and overlap the back panel at the sides, which sits a little inside them, so
+            // the side seams do not gape when the front swings forward and the back swings back
+            bool closed = backOnly <= 0f && openFront < 30f && hemY < KneeY - 0.08f * U;
+            if (closed) Model.SkirtClosed = 1f;
+            float side = closed ? 110f : 92f;      // front/back split angle
+            float backFrom = closed ? 70f : side - 4f;
+            float bk = closed ? 0.975f : 1f;
+            var profB = prof;
+            if (closed)
+            {
+                profB = new Vector2[prof.Length];
+                for (int i = 0; i < prof.Length; i++) profB[i] = new Vector2(prof[i].x * bk, prof[i].y);
+            }
             float o = openFront;
             if (backOnly <= 0f)
             {
@@ -571,18 +589,25 @@ namespace Lanternvale.Game
                 M.Panel(Vector3.zero, -side, -o, 4, prof, dk, c, lining);
             }
             M.Bone = BB.SkirtB;
-            M.Panel(Vector3.zero, side - 4f, 360f - side + 4f, 7, prof, dk, c, lining);
+            M.Panel(Vector3.zero, backFrom, 360f - backFrom, 7, profB, dk, c, lining);
             if (hem.HasValue)
             {
                 var hp = new[] { new Vector2(r1 * 1.01f + 0.004f, hemY + 0.05f * U), new Vector2(r1 * 1.02f + 0.004f, hemY - 0.005f) };
+                var hpB = new[] { new Vector2(hp[0].x * bk, hp[0].y), new Vector2(hp[1].x * bk, hp[1].y) };
+                float keepE = M.Emission;
+                if (HemGlow > 0f) M.Emission = HemGlow;
                 if (backOnly <= 0f)
                 {
                     M.Bone = BB.SkirtR; M.Panel(Vector3.zero, o, side, 4, hp, dk, hem.Value, new Color(0, 0, 0, 0));
                     M.Bone = BB.SkirtL; M.Panel(Vector3.zero, -side, -o, 4, hp, dk, hem.Value, new Color(0, 0, 0, 0));
                 }
-                M.Bone = BB.SkirtB; M.Panel(Vector3.zero, side - 4f, 360f - side + 4f, 7, hp, dk, hem.Value, new Color(0, 0, 0, 0));
+                M.Bone = BB.SkirtB; M.Panel(Vector3.zero, backFrom, 360f - backFrom, 7, hpB, dk, hem.Value, new Color(0, 0, 0, 0));
+                M.Emission = keepE;
             }
         }
+
+        /// <summary>Emission of garment hem trims (Skirt, WideSleeve) — glowing spirit robes; 0 = plain cloth.</summary>
+        public float HemGlow;
 
         /// <summary>Front flap (tabard, apron, loin panel) hanging from the waist to hemY (SkirtF).</summary>
         public void FrontFlap(Color c, float hemY, float width = 0.2f, Color? trim = null, float topY = -1f, float zOff = 0f)
@@ -812,10 +837,15 @@ namespace Lanternvale.Game
                 new Vector2(ForeR * width * 1.05f, ElbowY - length * U),
             }, 1f, c, lining, 0.008f);
             if (hem.HasValue)
+            {
+                float keepE = M.Emission;
+                if (HemGlow > 0f) M.Emission = HemGlow;
                 M.Panel(center, 0f, 360f, 9, new[]
                 {
                     new Vector2(ForeR * width * 1.07f + 0.003f, ElbowY - (length - 0.05f) * U), new Vector2(ForeR * width * 1.07f + 0.003f, ElbowY - length * U - 0.003f),
                 }, 1f, hem.Value, new Color(0, 0, 0, 0));
+                M.Emission = keepE;
+            }
         }
 
         /// <summary>Puffed upper sleeve (ArmU).</summary>
@@ -887,9 +917,9 @@ namespace Lanternvale.Game
         // ================================================================== held items (authored along +Z of the hand)
 
         /// <summary>Starts the hand frame: origin at the fist, +Y of the weapon along the hand's +Z. Pop afterwards.</summary>
-        public void BeginHand(int side, float along = 0f)
+        public void BeginHand(int side, float along = 0f, int bone = -1)
         {
-            M.Bone = BB.Hand(side);
+            M.Bone = bone >= 0 ? bone : BB.Hand(side);
             M.Push().Translate(Grip(side)).Rotate(90f, 0f, 0f).Translate(0f, along, 0f);
         }
 
@@ -928,9 +958,9 @@ namespace Lanternvale.Game
             End();
         }
 
-        public void Dagger(int side, Color blade, Color hilt, float len = 0.3f, bool cog = false, Color? cogCol = null)
+        public void Dagger(int side, Color blade, Color hilt, float len = 0.3f, bool cog = false, Color? cogCol = null, int bone = -1)
         {
-            BeginHand(side);
+            BeginHand(side, 0f, bone);
             M.Color = hilt;
             M.Cylinder(new Vector3(0f, -0.07f * U, 0f), 0.015f * U, 0.016f * U, 0.09f * U, 6);
             M.Box(new Vector3(0f, 0.02f * U, 0f), new Vector3(0.09f * U, 0.02f * U, 0.03f * U));
@@ -951,6 +981,32 @@ namespace Lanternvale.Game
                 }
             }
             End();
+        }
+
+        /// <summary>
+        /// A bow user's knife: in the right hand only while striking in melee (BB.DrawnR), otherwise sheathed on the right
+        /// hip (scabbard on SkirtR, the hilt sticking out of it on BB.SheathR). Sets UnitModel.DrawOnAttack.
+        /// </summary>
+        public void SheathedDagger(Color blade, Color hilt, Color sheath, float len = 0.26f, Color? guard = null)
+        {
+            Dagger(1, blade, hilt, len, false, null, BB.DrawnR);
+            var a = SheathMouth;
+            var down = new Vector3(0.14f, -1f, -0.55f).normalized;   // hangs down and back along the thigh
+            float l = len * U;
+            M.Bone = BB.SkirtR; M.Color = sheath;
+            M.Segment(a + down * 0.005f * U, a + down * l, 0.026f * U, 0.014f * U, 6);
+            M.Color = Paint.Shade(sheath, 0.7f);
+            M.Sphere(a + down * l, 0.016f * U, 5, 3);
+            // the hilt standing out of the sheath (hidden while the knife is drawn)
+            M.Bone = BB.SheathR;
+            M.Aim(a, -down);
+            M.Color = guard ?? hilt;
+            M.Box(new Vector3(0f, 0.012f * U, 0f), new Vector3(0.075f * U, 0.018f * U, 0.026f * U));
+            M.Color = hilt;
+            M.Cylinder(new Vector3(0f, 0.018f * U, 0f), 0.014f * U, 0.015f * U, 0.08f * U, 6);
+            M.Sphere(new Vector3(0f, 0.1f * U, 0f), 0.019f * U, 5, 3);
+            M.Pop();
+            Model.DrawOnAttack = true;
         }
 
         public void Hammer(int side, Color head, Color shaft, float len = 0.75f, float headK = 1f, Color? band = null)

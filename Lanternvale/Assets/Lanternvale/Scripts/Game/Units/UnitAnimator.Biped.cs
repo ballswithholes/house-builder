@@ -11,16 +11,24 @@ namespace Lanternvale.Game
         // in metres for a 1.75 m human (scaled by arm length); Dir = where the item in the hand points (hand +Z);
         // Pole = where the elbow points.
 
+        // Lunge / Crouch / Step move the hips and the front foot and are scaled by the LEG length (a 2.6 m treant on
+        // short root legs must not fold into the ground); Leap / Hop move the whole body, feet included (a jump), and
+        // are scaled by the body height.
         struct AKey
         {
             public float T;
             public Vector3 R, RDir, RPole, L, LDir, LPole;
-            public float ChestYaw, ChestPitch, Spine, Head, Lunge, Crouch, Step;
+            public float ChestYaw, ChestPitch, Spine, Head, Lunge, Crouch, Step, Leap, Hop;
         }
 
         static AKey K(float t, Vector3 r, Vector3 rd, Vector3 rp, Vector3 l, Vector3 ld, Vector3 lp,
-                      float cy = 0f, float cp = 0f, float sp = 0f, float hd = 0f, float lunge = 0f, float crouch = 0f, float step = 0f) =>
-            new AKey { T = t, R = r, RDir = rd, RPole = rp, L = l, LDir = ld, LPole = lp, ChestYaw = cy, ChestPitch = cp, Spine = sp, Head = hd, Lunge = lunge, Crouch = crouch, Step = step };
+                      float cy = 0f, float cp = 0f, float sp = 0f, float hd = 0f, float lunge = 0f, float crouch = 0f, float step = 0f,
+                      float leap = 0f, float hop = 0f) =>
+            new AKey { T = t, R = r, RDir = rd, RPole = rp, L = l, LDir = ld, LPole = lp, ChestYaw = cy, ChestPitch = cp, Spine = sp, Head = hd,
+                       Lunge = lunge, Crouch = crouch, Step = step, Leap = leap, Hop = hop };
+
+        /// <summary>Leg (hip joint) height of the 1.75 m reference human the action keys are authored for.</summary>
+        const float RefLeg = 1.75f * 0.49f;
 
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
@@ -101,6 +109,18 @@ namespace Lanternvale.Game
             K(0.34f, V(0.12f, -0.32f, 0.52f), V(0f, -1f, 0.3f), V(1f, 0f, 0f), V(-0.12f, -0.32f, 0.52f), V(0f, -1f, 0.3f), V(-1f, 0f, 0f), 0f, 26f, 11f, 8f, 0.24f, 0.15f, 0.15f),
         };
 
+        // small round creatures (mosslings): rock back, then hop forward and butt with the head, arms flung back
+        static readonly AKey[] HeadbuttKeys =
+        {
+            K(0.00f, V(0.24f, -0.12f, 0.12f), V(0f, 0f, 1f), PoleR, V(-0.24f, -0.12f, 0.12f), V(0f, 0f, 1f), PoleL),
+            K(0.12f, V(0.3f, 0.12f, 0.2f), V(0f, 1f, 0.3f), V(1f, -0.5f, -0.5f), V(-0.3f, 0.12f, 0.2f), V(0f, 1f, 0.3f), V(-1f, -0.5f, -0.5f),
+              0f, -16f, -10f, -12f, 0f, 0.06f, 0f, -0.08f, 0f),
+            K(0.22f, V(0.3f, 0.05f, -0.3f), V(0f, -0.3f, -1f), V(1f, -1f, 0f), V(-0.3f, 0.05f, -0.3f), V(0f, -0.3f, -1f), V(-1f, -1f, 0f),
+              0f, 18f, 10f, 6f, 0f, 0f, 0f, 0.7f, 0.16f),
+            K(0.34f, V(0.3f, -0.02f, -0.22f), V(0f, -0.5f, -1f), V(1f, -1f, 0f), V(-0.3f, -0.02f, -0.22f), V(0f, -0.5f, -1f), V(-1f, -1f, 0f),
+              0f, 16f, 8f, 8f, 0f, 0.03f, 0f, 0.66f, 0.02f),
+        };
+
         static readonly AKey[] BowKeys =
         {
             K(0.00f, V(0.22f, -0.1f, 0.1f), V(0f, 0f, 1f), PoleR, V(-0.22f, -0.1f, 0.15f), V(0f, 1f, 0.1f), PoleL),
@@ -144,6 +164,7 @@ namespace Lanternvale.Game
                 ChestYaw = Mathf.Lerp(a.ChestYaw, b.ChestYaw, u), ChestPitch = Mathf.Lerp(a.ChestPitch, b.ChestPitch, u),
                 Spine = Mathf.Lerp(a.Spine, b.Spine, u), Head = Mathf.Lerp(a.Head, b.Head, u),
                 Lunge = Mathf.Lerp(a.Lunge, b.Lunge, u), Crouch = Mathf.Lerp(a.Crouch, b.Crouch, u), Step = Mathf.Lerp(a.Step, b.Step, u),
+                Leap = Mathf.Lerp(a.Leap, b.Leap, u), Hop = Mathf.Lerp(a.Hop, b.Hop, u),
             };
         }
 
@@ -175,6 +196,7 @@ namespace Lanternvale.Game
                 case UnitStrike.Spear: return SpearKeys;
                 case UnitStrike.Claw: case UnitStrike.Whip: return ClawKeys;
                 case UnitStrike.Slam: return SlamKeys;
+                case UnitStrike.Headbutt: return HeadbuttKeys;
                 default: return FistKeys;
             }
         }
@@ -224,7 +246,8 @@ namespace Lanternvale.Game
             float chain = hasLegs ? l0.A + l0.B : L;
             // stride/cadence from the actual ground speed (right from the first frame of a move); amplitude (g.Walk)
             // ramps with the smoothed speed so starts and stops blend without pops
-            var g = GaitParams(Mathf.Max(vs, speed), L, chain, 1.0f, m.StrideK, m.MaxCadence);
+            // long robes and dresses take shorter, quicker steps
+            var g = GaitParams(Mathf.Max(vs, speed), L, chain, 1.0f, m.StrideK * (1f - 0.15f * m.SkirtClosed), m.MaxCadence * (1f + 0.15f * m.SkirtClosed));
             g.Walk = WalkWeight(vs, L);
             g.Run = Win(g.Vn, 1.08f, 1.4f) * (1f - heavy);
             float turnW = Mathf.Clamp01(turn / 2.2f) * (1f - g.Walk);
@@ -329,6 +352,7 @@ namespace Lanternvale.Game
 
             // ---- one-shot actions (IK arms)
             BipedActions(inp, U);
+            if (m.DrawOnAttack) UpdateDrawn(inp);
 
             // ---- hit recoil (additive)
             if (inp.HitT >= 0f && inp.HitT < 0.35f)
@@ -382,7 +406,7 @@ namespace Lanternvale.Game
                     handLock[si] = true; handDir[si] = new Vector3(0f, 1f, 0.05f); e += 6f; swingK = 0.9f;
                     break;
                 case UnitHold.Shoulder:
-                    p = -32f; inw = 18f; roll = 12f; e = 138f; handE[si] = new Vector3(5f, 0f, 0f); swingK = 0.12f;
+                    p = -32f; inw = 4f; roll = 14f; e = 138f; handE[si] = new Vector3(5f, -s * 16f, 0f); swingK = 0.12f;
                     break;
                 case UnitHold.Book:
                     p = -14f; inw = 22f; roll = 6f; e = 84f; swingK = 0.15f;
@@ -525,23 +549,48 @@ namespace Lanternvale.Game
             chestE.y += act.ChestYaw * wA;
             headE.x += act.Head * wA;
             if (!body) return;
-            float lunge = act.Lunge * wA;
-            float crouchA = act.Crouch * wA;
-            hipsPos.y -= crouchA * U;
+            // crouch / lunge / step by the leg length: the legs have to reach the planted feet
+            float lk = m.LegLength / RefLeg;
+            // heavies (treant, infernal) bend at the waist rather than squatting on their stumpy legs
+            float stiff = 1f - 0.6f * Mathf.Clamp01(m.Heavy);
+            float lunge = act.Lunge * wA * stiff;
+            float crouchA = act.Crouch * wA * stiff;
+            hipsPos.y -= crouchA * lk;
             var dir = actDir;
-            BodyOffset += dir * (lunge * U);
+            BodyOffset += dir * (lunge * lk);
             if (m.Legs.Length == 2)
             {
                 // back (left) foot stays planted in the world, front (right) foot steps forward
-                footT[0] -= dir * (lunge * U);
-                footT[1] += dir * ((act.Step * wA - lunge) * U);
+                footT[0] -= dir * (lunge * lk);
+                footT[1] += dir * ((act.Step * wA - lunge) * lk);
                 if (act.Step > 0.01f)
-                    footT[1].y += 0.06f * U * wA * Mathf.Sin(Mathf.PI * Mathf.Clamp01((actStepT - 0.08f) / 0.16f));
+                    footT[1].y += 0.06f * lk * wA * Mathf.Sin(Mathf.PI * Mathf.Clamp01((actStepT - 0.08f) / 0.16f));
             }
+            // a leap carries the whole body, feet and all
+            BodyOffset += dir * (act.Leap * wA * U) + Vector3.up * (act.Hop * wA * U);
         }
 
         Vector3 actDir = Vector3.forward;
         float actStepT;
+        readonly Quaternion[] skirtQ = new Quaternion[2];
+
+        /// <summary>
+        /// Bow users' knife (UnitModel.DrawOnAttack): in the hand only during a melee attack, otherwise its hilt shows in
+        /// the hip sheath. The hidden copy is scaled (almost) to nothing (rigid skinning; no degenerate normals).
+        /// </summary>
+        void UpdateDrawn(in UnitAnimInput inp)
+        {
+            float drawn = 0f;
+            if (inp.Action == UnitAction.Attack && !inp.Dead && !inp.Lying)
+            {
+                float dur = Mathf.Max(0.1f, inp.ActionDur);
+                drawn = Win(inp.ActionT, 0f, 0.05f) * (1f - Win(inp.ActionT, dur - 0.07f, dur));
+            }
+            SetScale(BB.DrawnR, Mathf.Max(0.001f, drawn));
+            SetScale(BB.SheathR, Mathf.Max(0.001f, 1f - drawn));
+        }
+
+        void SetScale(int bone, float s) { if (bone < n) t[bone].localScale = new Vector3(s, s, s); }
 
         // ---------------------------------------------------------------- lying
 
@@ -745,9 +794,23 @@ namespace Lanternvale.Game
                     SetRot(leg.Foot, Quaternion.Inverse(wl) * wf);
                     var dn = lu * Vector3.down;
                     legPitch[i] = -Mathf.Atan2(dn.z, -dn.y) * Mathf.Rad2Deg;
-                    if (i == 0) SetRot(BB.SkirtL, Quaternion.Slerp(Quaternion.identity, lu, 0.72f));
-                    else SetRot(BB.SkirtR, Quaternion.Slerp(Quaternion.identity, lu, 0.72f));
+                    skirtQ[i] = Quaternion.Slerp(Quaternion.identity, lu, 0.72f);
                 }
+                if (m.SkirtClosed > 0f)
+                {
+                    // long robe: both front halves swing forward together with the leading leg (and a little sideways
+                    // with each leg) so the front stays closed; the back panel follows the trailing leg (below)
+                    float fwd = Mathf.Min(0f, Mathf.Min(legPitch[0], legPitch[1])) * 0.62f;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var dn = skirtQ[i] * Vector3.down;
+                        float rollDeg = Mathf.Clamp(Mathf.Atan2(dn.x, -dn.y) * Mathf.Rad2Deg * 0.5f, -10f, 10f);
+                        var closedQ = E(fwd, 0f, rollDeg);
+                        skirtQ[i] = Quaternion.Slerp(skirtQ[i], closedQ, m.SkirtClosed);
+                    }
+                }
+                SetRot(BB.SkirtL, skirtQ[0]);
+                SetRot(BB.SkirtR, skirtQ[1]);
             }
             else
             {
@@ -764,7 +827,7 @@ namespace Lanternvale.Game
             float speedK = Mathf.Clamp01(vs / Mathf.Max(0.5f, 1.6f * m.LegLength * 2f));
             float drag = speedK * (10f + 18f * run);
             float frontFlap = Mathf.Min(legPitch[0], legPitch[1]) * 0.6f;
-            float backFlap = Mathf.Max(legPitch[0], legPitch[1]) * 0.6f;
+            float backFlap = Mathf.Max(legPitch[0], legPitch[1]) * Mathf.Lerp(0.6f, 0.8f, m.SkirtClosed);   // a long robe's back covers the trailing leg
             SetRot(BB.SkirtF, E(Mathf.Min(0f, frontFlap) * 1.0f + drag * 0.4f, 0f, 0f));
             SetRot(BB.SkirtB, E(Mathf.Max(0f, backFlap) + drag * 0.8f + (floater ? Mathf.Sin(time * 2.1f) * 5f : 0f), 0f, 0f));
 

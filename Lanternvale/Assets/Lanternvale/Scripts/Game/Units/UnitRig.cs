@@ -25,7 +25,7 @@ namespace Lanternvale.Game
     public enum UnitHold { Relaxed, OneHand, Daggers, Staff, Bow, Shoulder, Book, Cane, Carry, Spear, Claws }
 
     /// <summary>Melee motion (PlayAttack).</summary>
-    public enum UnitStrike { Fist, Sword, Greatsword, Daggers, Mace, Staff, Spear, Claw, Slam, Whip, Bite, Charge, Swipe, Stomp, Fangs, Lunge, Bump }
+    public enum UnitStrike { Fist, Sword, Greatsword, Daggers, Mace, Staff, Spear, Claw, Slam, Whip, Bite, Charge, Swipe, Stomp, Fangs, Lunge, Bump, Headbutt }
 
     /// <summary>Ranged motion (PlayShoot).</summary>
     public enum UnitRanged { Throw, Bow, Point, Howl, Pulse }
@@ -37,7 +37,13 @@ namespace Lanternvale.Game
         public const int ArmUL = 5, ArmLL = 6, HandL = 7, ArmUR = 8, ArmLR = 9, HandR = 10;
         public const int LegUL = 11, LegLL = 12, FootL = 13, LegUR = 14, LegLR = 15, FootR = 16;
         public const int SkirtL = 17, SkirtR = 18, SkirtB = 19, SkirtF = 20, Cape = 21, HairB = 22, Tail = 23, WingL = 24, WingR = 25;
-        public const int Count = 26;
+        /// <summary>
+        /// Swappable items: DrawnR (child of HandR) holds a weapon that is only shown while it is in use, SheathR
+        /// (child of SkirtR) the same weapon sheathed on the hip. The animator scales one of them to zero
+        /// (UnitModel.DrawOnAttack): bow users carry their knife on the hip and draw it for melee only.
+        /// </summary>
+        public const int DrawnR = 26, SheathR = 27;
+        public const int Count = 28;
 
         public static readonly int[] Parent =
         {
@@ -45,13 +51,14 @@ namespace Lanternvale.Game
             Chest, ArmUL, ArmLL, Chest, ArmUR, ArmLR,
             Hips, LegUL, LegLL, Hips, LegUR, LegLR,
             Hips, Hips, Hips, Hips, Chest, Head, Hips, Chest, Chest,
+            HandR, SkirtR,
         };
 
         public static readonly string[] Names =
         {
             "Hips", "Spine", "Chest", "Neck", "Head", "ArmUL", "ArmLL", "HandL", "ArmUR", "ArmLR", "HandR",
             "LegUL", "LegLL", "FootL", "LegUR", "LegLR", "FootR", "SkirtL", "SkirtR", "SkirtB", "SkirtF", "Cape",
-            "HairB", "Tail", "WingL", "WingR",
+            "HairB", "Tail", "WingL", "WingR", "DrawnR", "SheathR",
         };
 
         public static int ArmU(int side) => side < 0 ? ArmUL : ArmUR;
@@ -171,6 +178,13 @@ namespace Lanternvale.Game
         public UnitStrike Strike = UnitStrike.Fist;
         public UnitRanged Ranged = UnitRanged.Throw;
         public bool TwoHanded;
+        /// <summary>The right-hand weapon (BB.DrawnR) is drawn from its hip sheath (BB.SheathR) only for melee attacks.</summary>
+        public bool DrawOnAttack;
+        /// <summary>
+        /// 0 … 1: long closed robe/dress. Its front halves (SkirtL/R) move together and only sway with the forward leg
+        /// instead of following each thigh, so the hem stays closed (no trouser legs) at walking pace.
+        /// </summary>
+        public float SkirtClosed;
         public float FloatHeight;
         public float BaseFade = 1f;
         public float Heavy;              // 0 light … 1 lumbering

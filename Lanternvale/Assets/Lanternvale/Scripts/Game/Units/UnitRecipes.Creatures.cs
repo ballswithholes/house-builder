@@ -367,7 +367,7 @@ namespace Lanternvale.Game
         static UnitModel Spider(string key)
         {
             var k = new SpiderKit(69, 0.32f, 0.2f, 0.62f);
-            k.Build(C("#4a3a30"), C("#5a4a3a"), C("#c8a060"), C("#3a2e26"), C("#c8a060"), C("#ff5040"), C("#7d9a55"));
+            k.Build(C("#4a3a30"), C("#5a4a3a"), C("#c8a060"), C("#5c4636"), C("#d8b070"), C("#ff5040"), C("#7d9a55"));   // legs lighter than the body so they read
             k.Finish(key, 0.62f);
             k.Model.DustColor = new Color(0.8f, 0.74f, 0.6f, 0.2f);
             return UnitModels.Bake(k.Model, k.M);

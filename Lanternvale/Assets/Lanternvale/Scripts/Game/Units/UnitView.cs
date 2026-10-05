@@ -175,7 +175,7 @@ namespace Lanternvale.Game
 
         enum Pose { Standing, Lying, Dead }
 
-        const float FacingBias = 15f;   // SetFacing turns the face a little towards the camera (3/4 view)
+        const float FacingBias = UnitFacing.Bias;   // SetFacing turns the face a little towards the camera (3/4 view)
 
         UnitModel model;
         UnitBody baseBody, sheepBody, body;
@@ -193,6 +193,10 @@ namespace Lanternvale.Game
         Vector2 pos, prevPos;
         float yaw = 90f + FacingBias, targetYaw = 90f + FacingBias;
         int facingSign = 1;
+        // SetFacing(±1) faces screen-left/right relative to the camera yaw it was applied for; it is re-applied when the
+        // camera turns (0: the facing came from FaceTowards / movement and stays put in the world)
+        int sideFacing;
+        float sideCamYaw;
         bool visible = true;
         bool ticked;
         float time, spawnT;
@@ -263,7 +267,8 @@ namespace Lanternvale.Game
 
         void BuildBase()
         {
-            model = UnitModels.Get(SpriteKey);
+            Variant = UnitModels.NormalizeVariant(SpriteKey, requestedVariant);
+            model = UnitModels.Get(SpriteKey, requestedVariant);
             if (model == null) return;
             scale = requestedHeight > 0f ? requestedHeight / Mathf.Max(0.05f, model.Height) : 1f;
             Height = model.Height * scale;
@@ -401,13 +406,28 @@ namespace Lanternvale.Game
         {
             var d = target - pos;
             if (d.sqrMagnitude < 0.0004f) return;
+            sideFacing = 0;
             SetYawTarget(World3D.YawOf(d));
         }
 
-        /// <summary>+1 = face right (+X), −1 = face left (−X); turned a little towards the camera.</summary>
+        /// <summary>
+        /// +1 = face screen-right, −1 = screen-left (+X / −X with the default camera), turned a little towards the camera
+        /// (3/4 view). Relative to the camera's current rotation, and kept so while the camera turns.
+        /// </summary>
         public void SetFacing(int dir)
         {
-            SetYawTarget(dir >= 0 ? 90f + FacingBias : -(90f + FacingBias));
+            sideFacing = dir >= 0 ? 1 : -1;
+            sideCamYaw = CameraYaw;
+            SetYawTarget(UnitFacing.SideYaw(sideFacing, sideCamYaw));
+        }
+
+        static float CameraYaw
+        {
+            get
+            {
+                var rig = CameraRig.Instance;
+                return rig != null ? rig.Yaw : 0f;
+            }
         }
 
         void SetYawTarget(float y)
@@ -565,6 +585,30 @@ namespace Lanternvale.Game
             spriteKey = spriteKey ?? "";
             if (spriteKey == SpriteKey && baseBody != null) return;
             SpriteKey = spriteKey;
+            RebuildBase();
+        }
+
+        /// <summary>
+        /// Deterministic look variation for generic villager and child models (npc_villager_a, npc_villager_b,
+        /// npc_child): palette, headwear, apron / satchel / scarf / shawl, hair and the carried item, so NPCs that share a
+        /// sprite key look like different people. Pass any int (e.g. a hash of the NPC id); 0 is the plain model. Other keys
+        /// ignore it (and keep it for a later SetSprite). The model is rebuilt only when its look changes; meshes are
+        /// shared per (key, variation).
+        /// </summary>
+        public void SetVariant(int variant)
+        {
+            requestedVariant = variant;
+            if (UnitModels.NormalizeVariant(SpriteKey, variant) == Variant && baseBody != null) return;
+            RebuildBase();
+        }
+
+        /// <summary>The look variation in use (0 = plain; see SetVariant).</summary>
+        public int Variant { get; private set; }
+
+        int requestedVariant;
+
+        void RebuildBase()
+        {
             if (baseBody != null) baseBody.Destroy();
             baseBody = null;
             if (!polymorphed) body = null;
@@ -633,6 +677,7 @@ namespace Lanternvale.Game
                 if (moved > 1e-5f)
                 {
                     if (dt > 0f) vel = delta / dt;
+                    sideFacing = 0;
                     SetYawTarget(World3D.YawOf(delta));
                 }
                 if (pathIndex >= path.Count)
@@ -670,6 +715,17 @@ namespace Lanternvale.Game
             }
             prevPos = pos;
             transform.position = new Vector3(pos.x, pos.y, 0f);
+
+            // ---- screen-relative facing follows the camera's rotation
+            if (sideFacing != 0)
+            {
+                float camYaw = CameraYaw;
+                if (Mathf.Abs(Mathf.DeltaAngle(camYaw, sideCamYaw)) > 0.5f)
+                {
+                    sideCamYaw = camYaw;
+                    SetYawTarget(UnitFacing.SideYaw(sideFacing, camYaw));
+                }
+            }
 
             // ---- turning (smooth, never a snap)
             float before = yaw;

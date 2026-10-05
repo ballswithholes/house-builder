@@ -175,9 +175,11 @@ namespace Lanternvale.Game
         /// <summary>Tail in two segments (bushy = blob tuft at the end).</summary>
         public void Tail(Color c, float len, float r, Color? tip = null, bool bushy = false, float droop = 0.4f)
         {
+            // the root segment is never longer than the tail itself (a bear's stub must not become a stick)
             var a = Bind[QB.Tail1];
+            var dir2 = (Bind[QB.Tail2] - a).normalized;
+            Bind[QB.Tail2] = a + dir2 * Mathf.Min(0.9f * BodyR, len);
             var b = Bind[QB.Tail2];
-            var dir2 = (b - a).normalized;
             M.Bone = QB.Tail1; M.Color = c;
             M.Segment(a, b, r, r * 0.9f, 6);
             M.Bone = QB.Tail2;
@@ -292,20 +294,23 @@ namespace Lanternvale.Game
                 M.Sphere(ab + new Vector3(0f, BodyR * 0.82f, BodyR * (0.5f - i * 0.45f)), new Vector3(BodyR * 0.32f, BodyR * 0.12f, BodyR * 0.2f), 6, 3);
             M.Color = moss;
             M.Blob(ab + new Vector3(BodyR * 0.25f, BodyR * 0.85f, -BodyR * 0.3f), new Vector3(0.45f, 0.18f, 0.5f) * BodyR, 1, 0.3f, 4);
+            // legs: thick enough to read at game zoom (1.6× the old radii), light bands at the knees and shins
+            const float lk = 1.6f;
+            var bandL = Color.Lerp(band, Color.white, 0.25f);
             for (int i = 0; i < 8; i++)
             {
                 M.Bone = SB.Upper(i); M.Color = legs;
-                M.Segment(Bind[SB.Upper(i)], Bind[SB.Lower(i)], BodyR * 0.14f, BodyR * 0.11f, 5);
+                M.Segment(Bind[SB.Upper(i)], Bind[SB.Lower(i)], BodyR * 0.14f * lk, BodyR * 0.11f * lk, 6);
                 M.Bone = SB.Lower(i);
-                M.Color = band;
-                M.Sphere(Bind[SB.Lower(i)], BodyR * 0.13f, 5, 3);
+                M.Color = bandL;
+                M.Sphere(Bind[SB.Lower(i)], BodyR * 0.135f * lk, 6, 4);
                 M.Color = legs;
                 var mid = Vector3.Lerp(Bind[SB.Lower(i)], feet[i], 0.5f);
-                M.Segment(Bind[SB.Lower(i)], mid, BodyR * 0.11f, BodyR * 0.09f, 5);
-                M.Color = band;
-                M.Segment(mid, mid + (feet[i] - mid) * 0.15f, BodyR * 0.1f, BodyR * 0.09f, 5);
+                M.Segment(Bind[SB.Lower(i)], mid, BodyR * 0.11f * lk, BodyR * 0.09f * lk, 6);
+                M.Color = bandL;
+                M.Segment(mid, mid + (feet[i] - mid) * 0.18f, BodyR * 0.1f * lk, BodyR * 0.09f * lk, 6);
                 M.Color = legs;
-                M.Segment(mid + (feet[i] - mid) * 0.15f, feet[i], BodyR * 0.09f, BodyR * 0.03f, 5);
+                M.Segment(mid + (feet[i] - mid) * 0.18f, feet[i], BodyR * 0.09f * lk, BodyR * 0.035f * lk, 5);
             }
         }
 

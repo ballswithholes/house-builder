@@ -86,9 +86,10 @@ namespace Lanternvale.Game
             k.Head(skin, C("#5a7a4a"), beard, EyeStyle.Round, -3f);
             k.HairCap(beard, 60f, 100f, 118f);
             k.Beard(beard, 0.3f, 0.75f);
-            k.BrimHat(hat, hat, 2.5f, 0.85f, 0f, vest, -4f);
+            // narrow brim tipped back: the face stays visible from the 44° game camera
+            k.BrimHat(hat, hat, 1.85f, 0.85f, 0f, vest, -12f);
             k.M.Bone = BB.Head; k.M.Color = feather;
-            k.M.Blade(new Vector3(0.95f * k.R, k.HeadCY + 0.75f * k.R, -0.2f * k.R), new Vector3(1.3f * k.R, k.HeadCY + 1.9f * k.R, -0.9f * k.R), 0.06f);
+            k.M.Blade(new Vector3(0.95f * k.R, k.HeadCY + 0.8f * k.R, -0.3f * k.R), new Vector3(1.3f * k.R, k.HeadCY + 1.95f * k.R, -1.0f * k.R), 0.06f);
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, shirt, shirt, skin);
@@ -135,21 +136,151 @@ namespace Lanternvale.Game
             return Done(k, key);
         }
 
-        static UnitModel VillagerA(string key)
+        // ---------------------------------------------------------------- generic villagers: look variations
+        // Variation 0 is the plain look; 1 … VariantCount−1 mix palette, headwear, extras (satchel, apron, scarf,
+        // shawl), hair and the carried item deterministically from the variation number (UnitView.SetVariant).
+
+        /// <summary>Deterministic, well-mixed choice 0 … n−1 for variation v and feature `salt`.</summary>
+        static int Pick(int v, int salt, int n)
         {
-            var k = new BipedKit(35, 1.64f, 0.138f, 0.5f, 0.95f, true);
-            Color dress = C("#5a7fc0"), bodice = C("#3f5f9a"), cream = C("#f2e8d0"), yellow = C("#f0c84a"), skin = C("#f2cfae"),
-                  hair = C("#7a4a2a"), basket = C("#b08a50");
+            unchecked
+            {
+                uint h = Mix32((uint)v * 0x9E3779B1u + 0x632BE5ABu) ^ ((uint)(salt + 1) * 0x85EBCA77u);
+                return (int)(Mix32(h) % (uint)n);
+            }
+        }
+
+        static uint Mix32(uint h)
+        {
+            unchecked
+            {
+                h ^= h >> 16; h *= 0x85EBCA6Bu; h ^= h >> 13; h *= 0xC2B2AE35u; h ^= h >> 16;
+                return h;
+            }
+        }
+
+        static Color PickC(int v, int salt, string[] hex) => C(hex[Pick(v, salt, hex.Length)]);
+
+        static readonly string[] VSkins = { "#f2cfae", "#e9c4a0", "#d9a882", "#c08a62", "#a87050", "#f6d7bd" };
+        static readonly string[] VHairs = { "#6a4a2a", "#a0582a", "#2a2420", "#a8a098", "#d8b060", "#4a3020", "#7a4a2a" };
+        static readonly string[] VEyes = { "#5a8ac0", "#6a5030", "#4f8f5a", "#5a6a7a", "#8a6a30" };
+
+        /// <summary>A sleeveless vest over the shirt (open at the front).</summary>
+        static void Vest(BipedKit k, Color c)
+        {
+            k.M.Bone = BB.Chest;
+            k.M.Panel(Vector3.zero, 26f, 334f, 9, new[]
+            {
+                new Vector2(k.ShoulderR * 1.03f, k.ShoulderY - 0.035f * k.U), new Vector2(k.ChestR * 1.07f, k.ChestY),
+                new Vector2(k.WaistR * 1.12f, k.SpineY - 0.03f * k.U),
+            }, k.DepthK * 1.07f, c, Paint.Shade(c, 0.7f));
+        }
+
+        /// <summary>A crossbody satchel: strap from the right shoulder, bag on the left hip (a letter peeking out).</summary>
+        static void Satchel(BipedKit k, Color bag, Color strap, bool letter)
+        {
+            k.Strap(strap, 1, 0.045f);
+            k.M.Bone = BB.Hips; k.M.Color = bag;
+            float th = -62f * Mathf.Deg2Rad, rr = k.HipR * 1.2f;
+            var p = new Vector3(Mathf.Sin(th) * rr, k.HipY + 0.02f * k.U, Mathf.Cos(th) * rr * k.DepthK * 1.1f);
+            k.M.Push().Translate(p).Rotate(0f, -62f, 0f);
+            k.M.Box(Vector3.zero, new Vector3(0.2f, 0.16f, 0.07f) * k.U);
+            k.M.Color = Paint.Shade(bag, 0.8f);
+            k.M.Box(new Vector3(0f, 0.05f * k.U, 0.037f * k.U), new Vector3(0.21f, 0.07f, 0.012f) * k.U);
+            if (letter)
+            {
+                k.M.Color = C("#f6f0e0");
+                k.M.Box(new Vector3(0.04f * k.U, 0.1f * k.U, 0f), new Vector3(0.09f, 0.06f, 0.012f) * k.U);
+            }
+            k.M.Pop();
+        }
+
+        /// <summary>A shawl around the shoulders, knotted in front.</summary>
+        static void Shawl(BipedKit k, Color c)
+        {
+            k.M.Bone = BB.Chest;
+            k.M.Panel(Vector3.zero, 0f, 360f, 10, new[]
+            {
+                new Vector2(0.095f * k.U, k.NeckY + 0.01f * k.U), new Vector2(k.ShoulderR * 1.08f, k.ShoulderY - 0.02f * k.U),
+                new Vector2(k.ShoulderR * 1.16f, k.ShoulderY - 0.13f * k.U),
+            }, k.DepthK * 1.12f, c, Paint.Shade(c, 0.7f));
+            k.M.Color = Paint.Shade(c, 0.85f);
+            k.M.Sphere(new Vector3(0f, k.ShoulderY - 0.1f * k.U, k.ChestR * k.DepthK * 1.15f + 0.02f * k.U), 0.035f * k.U, 6, 4);
+        }
+
+        /// <summary>A basket carried in the left hand (flowers, bread or apples).</summary>
+        static void Basket(BipedKit k, int contents)
+        {
+            k.BeginHand(-1, 0f);
+            k.M.Color = C("#b08a50");
+            k.M.Lathe(new[] { new Vector2(0.07f, -0.02f), new Vector2(0.11f, 0.08f), new Vector2(0.115f, 0.1f) }, 8, false, true, false);
+            k.M.Push().Translate(0f, 0.1f, 0f).Rotate(0f, 0f, 90f);
+            k.M.Torus(Vector3.zero, 0.1f, 0.008f, 8, 3);
+            k.M.Pop();
+            switch (contents)
+            {
+                case 0:   // flowers
+                    k.M.Color = C("#f2a0b8"); k.M.Sphere(new Vector3(0.03f, 0.11f, 0.02f), 0.035f, 5, 3);
+                    k.M.Color = C("#fff6e0"); k.M.Sphere(new Vector3(-0.04f, 0.11f, -0.01f), 0.03f, 5, 3);
+                    k.M.Color = C("#f0d050"); k.M.Sphere(new Vector3(0.0f, 0.12f, -0.05f), 0.03f, 5, 3);
+                    k.M.Color = C("#7aa05a"); k.M.Blade(new Vector3(0.02f, 0.1f, 0.05f), new Vector3(0.05f, 0.17f, 0.08f), 0.03f);
+                    break;
+                case 1:   // bread
+                    k.M.Color = C("#d8a058");
+                    k.M.Sphere(new Vector3(0.02f, 0.11f, 0.02f), new Vector3(0.07f, 0.035f, 0.035f), 7, 4);
+                    k.M.Sphere(new Vector3(-0.03f, 0.115f, -0.03f), new Vector3(0.035f, 0.035f, 0.065f), 7, 4);
+                    break;
+                default:  // apples
+                    k.M.Color = C("#d8463a");
+                    k.M.Sphere(new Vector3(0.03f, 0.11f, 0.01f), 0.032f, 6, 4);
+                    k.M.Sphere(new Vector3(-0.035f, 0.11f, 0.025f), 0.03f, 6, 4);
+                    k.M.Color = C("#9ac04a");
+                    k.M.Sphere(new Vector3(0.0f, 0.115f, -0.04f), 0.03f, 6, 4);
+                    break;
+            }
+            k.End();
+        }
+
+        static UnitModel VillagerA(string key, int v = 0)
+        {
+            bool plain = v == 0;
+            float h = plain ? 1.64f : 1.58f + Pick(v, 1, 5) * 0.03f;
+            var k = new BipedKit(35 + v * 11, h, 0.138f, 0.5f, plain ? 0.95f : 0.9f + Pick(v, 2, 4) * 0.05f, true);
+            string[][] dresses =
+            {
+                new[] { "#5a7fc0", "#3f5f9a" }, new[] { "#d07a8a", "#a8505e" }, new[] { "#7fa86a", "#5a7f4a" }, new[] { "#9a88c8", "#6f5fa0" },
+                new[] { "#d8a840", "#a87a2a" }, new[] { "#4a9a9a", "#2f6f70" }, new[] { "#c8684a", "#94442e" },
+            };
+            var dp = dresses[plain ? 0 : Pick(v, 3, dresses.Length)];
+            Color dress = C(dp[0]), bodice = C(dp[1]), cream = plain ? C("#f2e8d0") : PickC(v, 4, new[] { "#f2e8d0", "#f6f2ea", "#e8dcc0" }),
+                  skin = plain ? C("#f2cfae") : PickC(v, 5, VSkins), hair = plain ? C("#7a4a2a") : PickC(v, 6, VHairs),
+                  scarf = plain ? C("#f0c84a") : PickC(v, 7, new[] { "#f0c84a", "#e86a6a", "#6ab0d8", "#f2f0e8", "#9ad070", "#d890d0" });
+            int head = plain ? 0 : Pick(v, 8, 5);      // 0 headscarf, 1 bun, 2 ponytail, 3 sun hat, 4 braids
+            int extra = plain ? 0 : Pick(v, 9, 4);     // 0 apron, 1 none, 2 shawl, 3 apron + shawl
+            int carry = plain ? 0 : Pick(v, 10, 5);    // 0 flowers, 1 bread, 2 apples, 3-4 nothing
             k.Torso(bodice, dress);
             k.M.Bone = BB.Chest; k.M.Color = cream;
             for (int i = 0; i < 3; i++)
                 k.M.Box(new Vector3(0f, k.ChestY - 0.04f + i * 0.06f, k.ChestR * k.DepthK + 0.008f), new Vector3(0.06f, 0.01f, 0.01f));
             k.Neck(skin);
-            k.Head(skin, C("#5a8ac0"), hair, EyeStyle.Round, -4f);
+            k.Head(skin, plain ? C("#5a8ac0") : PickC(v, 11, VEyes), hair, EyeStyle.Round, -4f);
             k.Cheeks(C("#f0a8a8"), 0.8f);
             k.HairCap(hair);
-            k.Bangs(hair, 4, 0.35f, 60f);
-            k.Headscarf(yellow, yellow);
+            k.Bangs(hair, 4, 0.35f, head == 3 ? 90f : 60f);
+            switch (head)
+            {
+                case 0: k.Headscarf(scarf, scarf); break;
+                case 1: k.Bun(hair, k.HeadPoint(180f, 40f, 1.05f), 0.45f); break;
+                case 2: k.Ponytail(hair, k.ChestY + 0.02f, 0.3f, 0.5f, scarf); break;
+                case 3:
+                    k.LongBack(hair, k.ShoulderY - 0.08f, 1f, 1.1f);
+                    k.BrimHat(C("#e8c870"), C("#e8c870"), 1.8f, 0.7f, 0f, scarf, -12f);
+                    break;
+                default:
+                    for (int s = -1; s <= 1; s += 2)
+                        k.Braid(hair, k.HeadPoint(s * 75f, 95f, 1.02f), new Vector3(s * 0.1f, k.ChestY + 0.02f, 0.08f), 6, 0.2f, scarf);
+                    break;
+            }
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, cream, skin, skin);
@@ -157,67 +288,115 @@ namespace Lanternvale.Game
                 k.Leg(s, dress, skin, C("#6a4a30"), 0.35f);
             }
             k.Skirt(dress, bodice, k.AnkleY + 0.08f, 1.45f, 0f, bodice);
-            k.FrontFlap(cream, k.KneeY - 0.1f, 0.26f, null, -1f, 0.03f);
-            // flower basket on the left arm
-            k.BeginHand(-1, 0f);
-            k.M.Color = basket;
-            k.M.Lathe(new[] { new Vector2(0.07f, -0.02f), new Vector2(0.11f, 0.08f), new Vector2(0.115f, 0.1f) }, 8, false, true, false);
-            k.M.Push().Translate(0f, 0.1f, 0f).Rotate(0f, 0f, 90f);
-            k.M.Torus(Vector3.zero, 0.1f, 0.008f, 8, 3);
-            k.M.Pop();
-            k.M.Color = C("#f2a0b8"); k.M.Sphere(new Vector3(0.03f, 0.11f, 0.02f), 0.035f, 5, 3);
-            k.M.Color = C("#fff6e0"); k.M.Sphere(new Vector3(-0.04f, 0.11f, -0.01f), 0.03f, 5, 3);
-            k.M.Color = C("#f0d050"); k.M.Sphere(new Vector3(0.0f, 0.12f, -0.05f), 0.03f, 5, 3);
-            k.M.Color = C("#7aa05a"); k.M.Blade(new Vector3(0.02f, 0.1f, 0.05f), new Vector3(0.05f, 0.17f, 0.08f), 0.03f);
-            k.End();
+            if (extra == 0 || extra == 3) k.FrontFlap(cream, k.KneeY - 0.1f, 0.26f, null, -1f, 0.03f);
+            if (extra >= 2) Shawl(k, plain ? scarf : PickC(v, 12, new[] { "#b8584a", "#5a7a4a", "#e8dcc8", "#6a5a8a", "#c89a4a" }));
             var m = k.Model;
-            m.HoldL = UnitHold.Carry; m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Throw;
+            if (carry <= 2) { Basket(k, carry); m.HoldL = UnitHold.Carry; }
+            m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Throw;
             return Done(k, key);
         }
 
-        static UnitModel VillagerB(string key)
+        static UnitModel VillagerB(string key, int v = 0)
         {
-            var k = new BipedKit(36, 1.76f, 0.14f, 0.49f, 1.02f, false);
-            Color straw = C("#e8c870"), shirt = C("#efe3c4"), overalls = C("#4a6fa8"), skin = C("#d9a882"), hair = C("#6a4a2a"),
-                  wood = C("#8a6a48"), steel = C("#8a929a");
-            k.Torso(shirt, overalls);
-            k.ChestPanel(overalls, 0.2f, false, null, k.ShoulderY - 0.1f);
-            k.Strap(overalls, -1, 0.035f);
-            k.Strap(overalls, 1, 0.035f);
+            bool plain = v == 0;
+            float h = plain ? 1.76f : 1.68f + Pick(v, 1, 5) * 0.035f;
+            var k = new BipedKit(36 + v * 11, h, 0.14f, 0.49f, plain ? 1.02f : 0.94f + Pick(v, 2, 4) * 0.06f, false);
+            Color shirt = plain ? C("#efe3c4") : PickC(v, 3, new[] { "#efe3c4", "#a8c08a", "#9fb8d8", "#c8784a", "#e8d8a8", "#d8a0a0", "#b8b0a0" }),
+                  lower = plain ? C("#4a6fa8") : PickC(v, 4, new[] { "#4a6fa8", "#7a5a3a", "#6a7040", "#5a5a62", "#8a6a48", "#4a4a6a" }),
+                  skin = plain ? C("#d9a882") : PickC(v, 5, VSkins), hair = plain ? C("#6a4a2a") : PickC(v, 6, VHairs),
+                  accent = plain ? C("#c44a3a") : PickC(v, 7, new[] { "#c44a3a", "#3f6fb8", "#5f9a4a", "#d8a030", "#7a3f6e" }),
+                  leather = C("#6a4a32"), wood = C("#8a6a48"), steel = C("#8a929a"), boot = C("#5a4030");
+            int hat = plain ? 0 : Pick(v, 8, 5);       // 0 straw hat, 1 none, 2 felt hat, 3 cap, 4 bandana
+            int top = plain ? 0 : Pick(v, 9, 3);       // 0 overalls, 1 vest, 2 shirt and belt
+            int extra = plain ? 0 : Pick(v, 10, 4);    // 0 none, 1 satchel, 2 apron, 3 scarf
+            int face = plain ? 0 : Pick(v, 11, 3);     // 0 clean, 1 beard, 2 moustache
+            int tool = plain ? 0 : Pick(v, 12, 4);     // 0 hoe, 1 crook, 2-3 nothing
+            bool rolled = plain || Pick(v, 13, 2) == 0;
+            k.Torso(shirt, lower);
+            if (top == 0)
+            {
+                k.ChestPanel(lower, 0.2f, false, null, k.ShoulderY - 0.1f);
+                k.Strap(lower, -1, 0.035f);
+                k.Strap(lower, 1, 0.035f);
+            }
+            else if (top == 1) { Vest(k, PickC(v, 14, new[] { "#6a4a32", "#5f7a4a", "#7a3a3a", "#3f5a7a", "#8a7a5a" })); k.Belt(leather, C("#d9b25a")); }
+            else k.Belt(leather, C("#c0c6cc"));
             k.Neck(skin);
-            k.Head(skin, C("#6a5030"), hair, EyeStyle.Round, 0f);
+            k.Head(skin, plain ? C("#6a5030") : PickC(v, 15, VEyes), Paint.Shade(hair, 0.9f), EyeStyle.Round, plain ? 0f : Pick(v, 16, 3) * 5f - 4f);
             k.HairCap(hair);
-            k.BrimHat(straw, straw, 2.5f, 0.8f, 0f, C("#c44a3a"), -3f);
+            if (hat == 1 || hat == 4)
+            {
+                if (Pick(v, 17, 2) == 0) k.Bangs(hair, 4, 0.36f, 64f);
+                else k.Spikes(hair, 9, 0.36f, 0.4f, 0.5f, 50 + v, 0.22f);
+            }
+            if (face == 1) k.Beard(hair, 0.35f, 0.8f);
+            else if (face == 2) k.Moustache(hair);
+            switch (hat)
+            {
+                // narrow brims tipped back: the face stays visible from the 44° game camera
+                case 0: k.BrimHat(C("#e8c870"), C("#e8c870"), 1.85f, 0.8f, 0f, accent, -12f); break;
+                case 2: { var felt = PickC(v, 18, new[] { "#6a4a32", "#4a4a52", "#7a6a4a" }); k.BrimHat(felt, felt, 1.55f, 0.78f, 0f, Paint.Shade(felt, 0.6f), -12f); break; }
+                case 3: { var cap = PickC(v, 19, new[] { "#5a5a62", "#7a5a3a", "#4a6a8a" }); k.BrimHat(cap, cap, 1.22f, 0.5f, 0f, null, -8f); break; }
+                case 4: k.Headscarf(accent, accent); break;
+            }
             for (int s = -1; s <= 1; s += 2)
             {
-                k.Arm(s, shirt, skin, skin);
-                k.ArmBand(s, shirt, 0.9f, 1.3f, 0.05f);
-                k.Leg(s, overalls, overalls, C("#5a4030"), 0.5f);
+                k.Arm(s, shirt, rolled ? skin : shirt, skin);
+                if (rolled) k.ArmBand(s, shirt, 0.9f, 1.3f, 0.05f);
+                k.Leg(s, lower, lower, boot, 0.5f);
             }
-            k.Staff(1, 1.6f, wood, BipedKit.StaffTop.Plain, wood, wood);
-            k.BeginHand(1, 0f);
-            k.M.Color = steel;
-            k.M.Box(new Vector3(0f, 0.58f * 1.6f * k.U - 0.02f, -0.07f), new Vector3(0.13f, 0.03f, 0.16f));
-            k.End();
+            if (extra == 1) Satchel(k, C("#8a6a48"), leather, Pick(v, 20, 2) == 0);
+            else if (extra == 2) k.FrontFlap(PickC(v, 21, new[] { "#efe8d8", "#8a7a64", "#c8b898" }), k.KneeY - 0.04f, 0.3f, null, -1f, 0.03f);
+            else if (extra == 3) k.Scarf(accent, 0.3f);
             var m = k.Model;
-            m.HoldR = UnitHold.Staff; m.Strike = UnitStrike.Staff; m.Ranged = UnitRanged.Throw;
+            if (tool == 0)
+            {
+                k.Staff(1, 1.6f, wood, BipedKit.StaffTop.Plain, wood, wood);
+                k.BeginHand(1, 0f);
+                k.M.Color = steel;
+                k.M.Box(new Vector3(0f, 0.58f * 1.6f * k.U - 0.02f, -0.07f), new Vector3(0.13f, 0.03f, 0.16f));
+                k.End();
+            }
+            else if (tool == 1) k.Staff(1, 1.7f, wood, BipedKit.StaffTop.Crook, wood, wood);
+            if (tool <= 1) { m.HoldR = UnitHold.Staff; m.Strike = UnitStrike.Staff; }
+            else m.Strike = UnitStrike.Fist;
+            m.Ranged = UnitRanged.Throw;
             return Done(k, key);
         }
 
-        static UnitModel Child(string key)
+        static UnitModel Child(string key, int v = 0)
         {
-            var k = new BipedKit(37, 1.2f, 0.13f, 0.43f, 0.95f, false, 0.95f, 0.95f);
-            Color tunic = C("#6fa35a"), tunicD = C("#4f7f42"), cream = C("#f2e8d0"), shorts = C("#7a5a3a"), skin = C("#f2cfae"),
-                  hair = C("#7a4a2a"), paper = C("#ffe0a0"), stick = C("#8a6a48");
+            bool plain = v == 0;
+            var k = new BipedKit(37 + v * 11, plain ? 1.2f : 1.12f + Pick(v, 1, 4) * 0.04f, 0.13f, 0.43f, 0.95f, false, 0.95f, 0.95f);
+            string[][] tunics =
+            {
+                new[] { "#6fa35a", "#4f7f42" }, new[] { "#d8584a", "#a8402e" }, new[] { "#5a8ad0", "#3f6aa8" }, new[] { "#e8b840", "#b88a28" },
+                new[] { "#9a6ac0", "#704a98" }, new[] { "#e88aa8", "#b8607a" },
+            };
+            var tp = tunics[plain ? 0 : Pick(v, 2, tunics.Length)];
+            Color tunic = C(tp[0]), tunicD = C(tp[1]), cream = C("#f2e8d0"),
+                  shorts = plain ? C("#7a5a3a") : PickC(v, 3, new[] { "#7a5a3a", "#4a5a7a", "#6a6a40", "#5a4a5a" }),
+                  skin = plain ? C("#f2cfae") : PickC(v, 4, VSkins), hair = plain ? C("#7a4a2a") : PickC(v, 5, VHairs),
+                  paper = C("#ffe0a0"), stick = C("#8a6a48");
+            int hairStyle = plain ? 0 : Pick(v, 6, 3);   // 0 spiky, 1 pigtails, 2 cap
+            int prop = plain ? 0 : Pick(v, 7, 4);        // 0 paper lantern, 1 stick "sword", 2 pinwheel, 3 nothing
             k.Torso(tunic, tunicD);
             k.M.Bone = BB.Chest; k.M.Color = cream;
             k.M.Band(Vector3.zero, 0.08f, 0.1f, k.ShoulderY - 0.02f, k.ShoulderY + 0.015f, 10, 0.9f);
             k.Neck(skin);
-            k.Head(skin, C("#6a4a30"), hair, EyeStyle.Round, -6f, true, 0.95f);
+            k.Head(skin, plain ? C("#6a4a30") : PickC(v, 8, VEyes), hair, EyeStyle.Round, -6f, true, 0.95f);
             k.Cheeks(C("#f0a0a0"));
             k.HairCap(hair);
-            k.Spikes(hair, 10, 0.4f, 0.3f, 0.3f, 37, 0.24f);
+            if (hairStyle == 0) k.Spikes(hair, 10, 0.4f, 0.3f, 0.3f, 37 + v, 0.24f);
             k.Bangs(hair, 5, 0.45f, 80f);
+            if (hairStyle == 1)
+                for (int s = -1; s <= 1; s += 2)
+                    k.Braid(hair, k.HeadPoint(s * 85f, 70f, 1.05f), k.HeadPoint(s * 95f, 70f, 1.05f) + new Vector3(s * 0.06f, -0.16f, -0.02f), 4, 0.24f, PickC(v, 9, new[] { "#e84a5a", "#f0c840", "#5ab0e0" }));
+            else if (hairStyle == 2)
+            {
+                var cap = PickC(v, 10, new[] { "#c44a3a", "#3f6fb8", "#5f9a4a" });
+                k.BrimHat(cap, cap, 1.2f, 0.55f, 0f, null, -8f);
+            }
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, tunic, skin, skin);
@@ -225,21 +404,53 @@ namespace Lanternvale.Game
             }
             k.Skirt(tunic, tunicD, k.HipY - 0.07f, 1.25f, 0f, tunicD);
             k.Belt(C("#6a4a30"), cream, k.HipY + 0.06f, 1.08f, 0.03f);
-            // little paper lantern on a stick
-            k.BeginHand(1, 0f);
-            k.M.Color = stick;
-            k.M.Segment(new Vector3(0f, -0.04f, 0f), new Vector3(0f, 0.36f, 0.02f), 0.008f, 0.006f, 4);
-            k.M.Segment(new Vector3(0f, 0.36f, 0.02f), new Vector3(0f, 0.36f, 0.12f), 0.005f, 0.005f, 3);
-            k.M.Emission = 1f; k.M.Color = paper;
-            k.M.Sphere(new Vector3(0f, 0.36f, 0.16f), new Vector3(0.045f, 0.045f, 0.055f), 7, 5);
-            k.M.Emission = 0f; k.M.Color = C("#c44a3a");
-            k.M.Box(new Vector3(0f, 0.36f, 0.215f), new Vector3(0.03f, 0.03f, 0.01f));
-            k.End();
             var m = k.Model;
-            m.HoldR = UnitHold.Carry; m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Throw;
-            m.CastBone = BB.HandR;
-            m.CastOffset = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(0f, -0.16f, 0.36f);
+            m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Throw;
             m.Breath = 1.3f;
+            switch (prop)
+            {
+                case 0:
+                    // little paper lantern on a stick
+                    k.BeginHand(1, 0f);
+                    k.M.Color = stick;
+                    k.M.Segment(new Vector3(0f, -0.04f, 0f), new Vector3(0f, 0.36f, 0.02f), 0.008f, 0.006f, 4);
+                    k.M.Segment(new Vector3(0f, 0.36f, 0.02f), new Vector3(0f, 0.36f, 0.12f), 0.005f, 0.005f, 3);
+                    k.M.Emission = 1f; k.M.Color = paper;
+                    k.M.Sphere(new Vector3(0f, 0.36f, 0.16f), new Vector3(0.045f, 0.045f, 0.055f), 7, 5);
+                    k.M.Emission = 0f; k.M.Color = C("#c44a3a");
+                    k.M.Box(new Vector3(0f, 0.36f, 0.215f), new Vector3(0.03f, 0.03f, 0.01f));
+                    k.End();
+                    m.HoldR = UnitHold.Carry;
+                    m.CastBone = BB.HandR;
+                    m.CastOffset = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(0f, -0.16f, 0.36f);
+                    break;
+                case 1:
+                    // a stick for a sword (its name is Stick)
+                    k.BeginHand(1, 0f);
+                    k.M.Color = stick;
+                    k.M.Segment(new Vector3(0f, -0.06f, 0f), new Vector3(0.01f, 0.42f, 0.01f), 0.014f, 0.009f, 5);
+                    k.M.Segment(new Vector3(0.005f, 0.2f, 0f), new Vector3(0.06f, 0.27f, 0.01f), 0.007f, 0.004f, 4);
+                    k.M.Color = C("#c44a3a");
+                    k.M.Box(new Vector3(0f, 0.02f, 0f), new Vector3(0.08f, 0.018f, 0.025f));
+                    k.End();
+                    m.HoldR = UnitHold.OneHand; m.Strike = UnitStrike.Sword;
+                    break;
+                case 2:
+                    // pinwheel
+                    k.BeginHand(1, 0f);
+                    k.M.Color = stick;
+                    k.M.Segment(new Vector3(0f, -0.04f, 0f), new Vector3(0f, 0.32f, 0f), 0.006f, 0.005f, 4);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        k.M.Color = i % 2 == 0 ? C("#e84a5a") : C("#f0c840");
+                        float a = i * Mathf.PI * 0.5f + 0.3f;
+                        var c0 = new Vector3(0f, 0.34f, 0.012f);
+                        k.M.Blade(c0, c0 + new Vector3(Mathf.Cos(a) * 0.07f, Mathf.Sin(a) * 0.07f, 0f), 0.05f, Vector3.forward);
+                    }
+                    k.End();
+                    m.HoldR = UnitHold.Carry;
+                    break;
+            }
             return Done(k, key);
         }
 
@@ -380,29 +591,60 @@ namespace Lanternvale.Game
             return Done(k, key);
         }
 
+        /// <summary>
+        /// Rusk's lookout: an outlaw, not a ranger — red bandana and face mask, a ragged ash-blue cloak, a patched jerkin,
+        /// wrapped shins, a crude bow with a red grip and red-fletched arrows, a knife sheathed on the hip.
+        /// </summary>
         static UnitModel BanditArcher(string key)
         {
             var k = new BipedKit(42, 1.78f, 0.138f, 0.49f, 0.98f, false);
-            Color olive = C("#6f7a3e"), oliveD = C("#4a5228"), scarf = C("#5a4a3a"), leather = C("#6a4a32"), leatherD = C("#4a3424"),
-                  pants = C("#4a4038"), skin = C("#d9a882"), wood = C("#7a5534");
+            Color cloak = C("#56606c"), cloakD = C("#353b44"), red = C("#b8382e"), redD = C("#7e2620"), leather = C("#6a4a32"),
+                  leatherD = C("#4a3424"), patch = C("#9a7a52"), shirt = C("#8a7a64"), pants = C("#3e3a36"), wrap = C("#b4a688"),
+                  skin = C("#d9a882"), hair = C("#2a2420"), wood = C("#5e4030");
             k.Torso(leather, pants);
+            // patches sewn on the jerkin
+            k.M.Bone = BB.Chest; k.M.Color = patch;
+            k.M.Push().Translate(-0.06f * k.U, k.ChestY - 0.03f * k.U, k.ChestR * k.DepthK * 0.97f + 0.008f).Rotate(0f, -14f, 10f);
+            k.M.Box(Vector3.zero, new Vector3(0.07f, 0.06f, 0.012f) * k.U);
+            k.M.Pop();
+            k.M.Bone = BB.Spine;
+            k.M.Push().Translate(0.05f * k.U, k.SpineY - 0.01f * k.U, k.WaistR * k.DepthK + 0.008f).Rotate(0f, 12f, -8f);
+            k.M.Box(Vector3.zero, new Vector3(0.055f, 0.05f, 0.012f) * k.U);
+            k.M.Pop();
             k.Neck(skin);
-            k.Head(skin, C("#3a3028"), C("#2a2420"), EyeStyle.Narrow, 12f);
-            k.HairCap(C("#3a2a22"));
-            k.Hood(olive, oliveD, 55f, 0.5f);
-            k.Scarf(scarf, 0.3f, true);
-            k.Cape(olive, oliveD, k.KneeY - 0.02f, 1f);
+            k.Head(skin, C("#3a3028"), hair, EyeStyle.Narrow, 18f);
+            k.HairCap(hair, 62f, 100f, 120f);
+            k.Spikes(hair, 7, 0.42f, -0.4f, 1.4f, 42, 0.22f);   // shaggy hair sticking out under the bandana
+            k.Headscarf(red, redD);
+            k.Scarf(red, 0.24f, true);
+            // ragged ash-blue cloak with a torn hem
+            k.Cape(cloak, cloakD, k.KneeY + 0.04f, 1f);
+            k.M.Bone = BB.Cape;
+            float hem = k.KneeY + 0.04f;
+            for (int i = 0; i < 7; i++)
+            {
+                float th = Mathf.Lerp(124f, 236f, i / 6f) * Mathf.Deg2Rad;
+                float r = k.ShoulderR * 1.45f;
+                var a = new Vector3(Mathf.Sin(th) * r, hem + 0.035f * k.U, Mathf.Cos(th) * r * k.DepthK * 1.25f + 0.02f * k.U);
+                k.M.Color = i % 2 == 0 ? cloak : cloakD;
+                k.M.Blade(a, a + new Vector3(Mathf.Sin(th) * 0.02f, -0.08f - (i % 3) * 0.04f, Mathf.Cos(th) * 0.03f), 0.07f);
+            }
             for (int s = -1; s <= 1; s += 2)
             {
-                k.Arm(s, olive, leatherD, leatherD);
-                k.Leg(s, pants, pants, leatherD, 0.7f);
+                k.Arm(s, shirt, s < 0 ? leatherD : shirt, leatherD);
+                k.Leg(s, pants, pants, leatherD, 0.38f);
+                k.LegCuff(s, wrap, 0.45f, 1.22f, true);
+                k.LegCuff(s, wrap, 0.25f, 1.25f, true);
             }
+            k.Cuff(-1, leather, 0.25f, 0.95f, 1.3f);   // bracer on the bow arm
+            k.Pauldron(-1, leatherD, 1.05f, null, 1);
             k.Belt(leatherD, C("#a8a090"));
-            k.Bow(-1, 1.05f, wood, leatherD, C("#efe3c4"));
-            k.Quiver(leather, C("#e8e0d0"));
-            k.Dagger(1, C("#c0c6cc"), leatherD, 0.24f);
+            k.Pouch(-1, patch, 0.4f, 0.9f);
+            k.Bow(-1, 1.05f, wood, red, C("#e8e0d0"));
+            k.Quiver(leatherD, red);
+            k.SheathedDagger(C("#b8bec4"), leatherD, leather, 0.24f);
             var m = k.Model;
-            m.HoldL = UnitHold.Bow; m.HoldR = UnitHold.OneHand; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Bow;
+            m.HoldL = UnitHold.Bow; m.HoldR = UnitHold.Relaxed; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Bow;
             return Done(k, key);
         }
 
@@ -490,50 +732,187 @@ namespace Lanternvale.Game
 
         // ================================================================== hollow & forest foes
 
+        /// <summary>
+        /// Hollowed pilgrim: a floating hooded spirit. Dark indigo robes (they must stand out against the violet shrine
+        /// flagstones at dusk), a pale mask with glowing eyes, the pilgrim's pale cross-tie, glowing lavender hems and
+        /// chest runes; tatters instead of feet.
+        /// </summary>
         static UnitModel HollowSpirit(string key)
         {
             var k = new BipedKit(45, 2.0f, 0.15f, 0.36f, 0.95f, false, 0.95f, 1.35f);
-            Color robe = C("#8e8899"), robeD = C("#5e5870"), robeT = C("#c9c2d6"), mask = C("#f2ede4"), glow = C("#c9a8ff"), hand = C("#d8d2e2");
-            k.Torso(robe, robeD);
-            k.Neck(robeD);
-            // pale mask face with hollow glowing eyes, inside a hood
-            k.M.Bone = BB.Head; k.M.Color = C("#2a2632");
-            k.M.Sphere(new Vector3(0f, k.HeadCY, -0.02f * k.R), new Vector3(k.R, k.R, k.R * 0.95f), 10, 7);
-            k.M.Color = mask;
-            k.M.Shell(new Vector3(0f, k.HeadCY - 0.05f * k.R, 0.06f * k.R), new Vector3(0.88f, 1.02f, 0.98f) * k.R, -62f, 62f, 8, 25f, 150f, 4);
-            k.Eyes(glow, new Color(0, 0, 0, 0), EyeStyle.Glow, 0f, -0.1f, 0.34f, 1.1f);
-            k.M.Emission = 0.6f; k.M.Color = glow;
-            k.M.Box(new Vector3(0f, k.HeadCY + 0.42f * k.R, 0.95f * k.R), new Vector3(0.06f, 0.18f, 0.03f) * k.R);
+            Color robe = C("#3a3450"), robeD = C("#221d30"), robeL = C("#4e4668"), trim = C("#d8c6ff"), tie = C("#e6e0ee"),
+                  mask = C("#f4efe6"), glow = C("#d4b8ff"), hand = C("#c9c2dc");
+            k.HemGlow = 0.55f;
+            k.Torso(robeL, robeD);
+            k.M.Emission = 0.15f;
+            k.Strap(tie, -1, 0.045f);
+            k.Strap(tie, 1, 0.045f);
             k.M.Emission = 0f;
-            k.Hood(robe, robeD, 60f, 0.7f);
+            k.Neck(robeD);
+            HollowFace(k, mask, glow, 1f);
+            k.Hood(robe, robeD, 60f, 0.32f);   // a soft peak (a tall one reads as cat ears from above)
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, robe, hand, hand);
-                k.WideSleeve(s, robe, robeD, 0.34f, 2.2f, robeT);
+                k.WideSleeve(s, robe, robeD, 0.34f, 2.2f, trim);
             }
             // long robe fading into tatters near the ground (robe hangs from the hips; the spirit floats)
-            k.Skirt(robe, robeD, 0.25f, 1.6f, 0f, robeT);
-            k.M.Bone = BB.SkirtB;
-            for (int i = 0; i < 10; i++)
-            {
-                float th = i * 36f * Mathf.Deg2Rad;
-                float r = k.HipR * 1.55f;
-                var a = new Vector3(Mathf.Sin(th) * r, 0.3f, Mathf.Cos(th) * r * k.DepthK * 1.08f);
-                k.M.Color = i % 2 == 0 ? robeT : robe;
-                k.M.Blade(a, a + new Vector3(Mathf.Sin(th) * 0.05f, -0.32f - (i % 3) * 0.05f, Mathf.Cos(th) * 0.05f), 0.09f);
-            }
+            k.Skirt(robe, robeD, 0.25f, 1.6f, 0f, trim);
+            HollowTatters(k, 10, 0.3f, k.HipR * 1.55f, robe, robeL, trim);
             // faint runes on the chest
-            k.M.Bone = BB.Chest; k.M.Emission = 0.8f; k.M.Color = glow;
+            k.M.Bone = BB.Chest; k.M.Emission = 0.9f; k.M.Color = glow;
             for (int i = 0; i < 3; i++)
-                k.M.Box(new Vector3((i - 1) * 0.06f, k.ChestY + 0.02f * i, k.ChestR * k.DepthK + 0.006f), new Vector3(0.025f, 0.05f, 0.008f));
+                k.M.Box(new Vector3((i - 1) * 0.06f, k.ChestY + 0.02f * i, k.ChestR * k.DepthK + 0.008f), new Vector3(0.025f, 0.05f, 0.008f));
             k.M.Emission = 0f;
             var m = k.Model;
             m.FloatHeight = 0.3f;
-            m.BaseFade = 0.88f;
+            m.BaseFade = 1f;   // solid: a dithered robe vanishes against the shrine's violet flagstones at dusk
             m.Strike = UnitStrike.Claw; m.Ranged = UnitRanged.Point;
             m.HoldR = UnitHold.Claws; m.HoldL = UnitHold.Claws;
             m.Dust = false;
             m.CastBone = BB.HandR; m.CastOffset = new Vector3(0f, -0.07f, 0.02f);
+            k.Finish(key, UnitGait.Floater);
+            m.Legs = new UnitLeg[0];
+            return UnitModels.Bake(m, k.M);
+        }
+
+        /// <summary>Dark head inside a hood, a pale (slightly glowing) mask with glowing eyes and a brow mark.</summary>
+        static void HollowFace(BipedKit k, Color mask, Color glow, float size)
+        {
+            k.M.Bone = BB.Head; k.M.Color = C("#15121c");
+            k.M.Sphere(new Vector3(0f, k.HeadCY, -0.02f * k.R), new Vector3(k.R, k.R, k.R * 0.95f), 10, 7);
+            k.M.Emission = 0.3f; k.M.Color = mask;
+            k.M.Shell(new Vector3(0f, k.HeadCY - 0.05f * k.R, 0.06f * k.R), new Vector3(0.88f, 1.02f, 0.98f) * k.R * size, -62f, 62f, 8, 25f, 150f, 4);
+            k.M.Emission = 0f;
+            k.Eyes(glow, new Color(0, 0, 0, 0), EyeStyle.Glow, 0f, -0.1f, 0.34f, 1.25f);
+            k.M.Emission = 0.85f; k.M.Color = glow;
+            k.M.Box(new Vector3(0f, k.HeadCY + 0.42f * k.R, 0.97f * k.R * size), new Vector3(0.06f, 0.18f, 0.03f) * k.R);
+            k.M.Emission = 0f;
+        }
+
+        /// <summary>Ragged strips hanging from a floating robe's hem (SkirtB), every other one a faintly glowing trim.</summary>
+        static void HollowTatters(BipedKit k, int n, float y, float r, Color robe, Color robeL, Color trim)
+        {
+            k.M.Bone = BB.SkirtB;
+            for (int i = 0; i < n; i++)
+            {
+                float th = i * (360f / n) * Mathf.Deg2Rad;
+                var a = new Vector3(Mathf.Sin(th) * r, y, Mathf.Cos(th) * r * k.DepthK * 1.08f);
+                bool lit = i % 2 == 0;
+                k.M.Emission = lit ? 0.35f : 0f;
+                k.M.Color = lit ? trim : (i % 4 == 1 ? robe : robeL);
+                k.M.Blade(a, a + new Vector3(Mathf.Sin(th) * 0.05f, -0.32f - (i % 3) * 0.05f, Mathf.Cos(th) * 0.05f), 0.09f);
+            }
+            k.M.Emission = 0f;
+        }
+
+        /// <summary>
+        /// Keeper Ishiro, hollowed: an elder spirit-keeper, taller than the pilgrims, in layered dark shrine robes with a
+        /// vermilion stole, a tall peaked hood with a glowing crest, a white mask with vermilion markings above a long
+        /// white beard, big prayer beads, a straw rope belt with paper streamers, and a staff with a hanging spirit lantern.
+        /// </summary>
+        static UnitModel HollowKeeper(string key)
+        {
+            var k = new BipedKit(55, 2.25f, 0.155f, 0.37f, 1.05f, false, 1.02f, 1.3f);
+            Color robe = C("#2c2540"), robeD = C("#1b1727"), robeL = C("#463c62"), gold = C("#e0b85c"), red = C("#c8402e"),
+                  trim = C("#e2d0ff"), mask = C("#f6f0e4"), glow = C("#dcc4ff"), hand = C("#c9c2dc"), beard = C("#ece8f2"),
+                  bead = C("#7a5232"), wood = C("#4a3a30"), straw = C("#cdb47a"), paper = C("#f6f1e4");
+            float U = k.U, R = k.R;
+            k.HemGlow = 0.5f;
+            k.Torso(robeL, robeD);
+            k.Strap(red, -1, 0.1f);
+            k.Neck(robeD);
+            HollowFace(k, mask, glow, 1.02f);
+            // vermilion mask markings (cheek slashes) and a long white beard flowing from under the mask
+            k.M.Bone = BB.Head; k.M.Color = red; k.M.Emission = 0.2f;
+            for (int s = -1; s <= 1; s += 2)
+                for (int i = 0; i < 2; i++)
+                {
+                    k.M.Push().Translate(k.HeadPoint(s * (34f + i * 9f), 108f + i * 9f, 1.02f)).Rotate(0f, s * 34f, s * 24f);
+                    k.M.Box(Vector3.zero, new Vector3(0.26f * R, 0.05f * R, 0.04f * R));
+                    k.M.Pop();
+                }
+            k.M.Emission = 0.12f; k.M.Color = beard;
+            k.M.Aim(new Vector3(0f, k.HeadCY - 0.82f * R, 0.62f * R), new Vector3(0f, -1f, 0.25f));
+            k.M.Lathe(new[] { new Vector2(0.42f * R, 0f), new Vector2(0.38f * R, 0.9f * R), new Vector2(0.18f * R, 2.2f * R), new Vector2(0f, 2.8f * R) }, 6, false, true, false);
+            k.M.Pop();
+            k.M.Emission = 0f;
+            // tall peaked hood (one high peak bending back) with a glowing crest on the brow
+            k.Hood(robe, robeD, 58f, 0f);
+            var hoodC = new Vector3(0f, k.HeadCY + 0.06f * R, -0.08f * R);
+            float hr = R * 1.3f;
+            k.M.Bone = BB.Head; k.M.Color = robe;
+            var peak0 = hoodC + new Vector3(0f, 0.6f * hr, -0.18f * hr);
+            k.M.Curve(peak0, peak0 + new Vector3(0f, 0.75f * hr, -0.2f * hr), peak0 + new Vector3(0f, 1.15f * hr, -0.75f * hr), 0.62f * hr, 0.04f * hr, 4, 8);
+            var crest = hoodC + new Vector3(0f, Mathf.Cos(38f * Mathf.Deg2Rad), Mathf.Sin(38f * Mathf.Deg2Rad)) * hr * 1.02f;
+            k.M.Color = gold;
+            k.M.Aim(crest, crest - hoodC);
+            k.M.Cylinder(Vector3.zero, 0.2f * R, 0.17f * R, 0.05f * R, 8);
+            k.M.Pop();
+            k.M.Emission = 1f; k.M.Color = glow;
+            k.M.Blade(crest + (crest - hoodC).normalized * 0.03f * R, crest + new Vector3(0f, 0.42f * R, 0.12f * R), 0.17f * R);
+            k.M.Emission = 0f;
+            // big prayer beads hanging on the chest (one glowing)
+            k.M.Bone = BB.Chest;
+            for (int i = 0; i <= 12; i++)
+            {
+                float u = i / 6f - 1f;
+                float x = u * 0.13f * U;
+                float y = Mathf.Lerp(k.ChestY - 0.07f * U, k.ShoulderY - 0.1f * U, u * u);
+                float rr = k.ChestR * 1.1f;
+                float z = rr * k.DepthK * 1.1f * Mathf.Sqrt(Mathf.Max(0.05f, 1f - (x / rr) * (x / rr))) + 0.02f * U;
+                bool big = i == 6;
+                k.M.Emission = big ? 1f : 0f;
+                k.M.Color = big ? glow : (i % 2 == 0 ? bead : Paint.Shade(bead, 0.75f));
+                k.M.Sphere(new Vector3(x, y, z), (big ? 0.034f : 0.024f) * U, 6, 4);
+            }
+            k.M.Emission = 0f;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.Arm(s, robe, hand, hand);
+                k.WideSleeve(s, robe, robeD, 0.42f, 2.5f, trim);
+            }
+            // straw rope belt with zigzag paper streamers (shimenawa and shide)
+            k.Belt(straw, Paint.Shade(straw, 0.8f), -1f, 1.14f, 0.075f);
+            k.M.Bone = BB.SkirtF; k.M.Color = paper; k.M.Emission = 0.2f;
+            float bz = k.HipR * k.DepthK * 1.2f + 0.02f * U, by = k.HipY + 0.05f * U;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var p = new Vector3(s * 0.06f * U, by, bz);
+                for (int j = 0; j < 4; j++)
+                {
+                    var q = p + new Vector3((j % 2 == 0 ? 0.035f : -0.035f) * U, -0.06f * U, 0.004f * U);
+                    k.M.Blade(p, q, 0.04f * U);
+                    p = q;
+                }
+            }
+            k.M.Emission = 0f;
+            // long floating robe, tatters
+            k.Skirt(robe, robeD, 0.22f, 1.75f, 0f, trim);
+            HollowTatters(k, 12, 0.27f, k.HipR * 1.7f, robe, robeL, trim);
+            // staff with a hook and a hanging paper spirit lantern
+            k.Staff(1, 2.05f, wood, BipedKit.StaffTop.Crook, gold, glow);
+            float above = 2.05f * 0.58f * U;
+            var hook = new Vector3(0f, above + 0.12f * U, 0.12f * U);
+            var lamp = hook + new Vector3(0f, -0.2f * U, 0f);
+            k.BeginHand(1);
+            k.M.Color = gold;
+            k.M.Segment(hook, hook + new Vector3(0f, -0.09f * U, 0f), 0.006f * U, 0.006f * U, 4);
+            k.M.Cylinder(lamp + new Vector3(0f, 0.08f * U, 0f), 0.04f * U, 0.035f * U, 0.025f * U, 8);
+            k.M.Cylinder(lamp + new Vector3(0f, -0.105f * U, 0f), 0.035f * U, 0.04f * U, 0.025f * U, 8);
+            k.M.Emission = 1f; k.M.Color = glow;
+            k.M.Sphere(lamp, new Vector3(0.075f, 0.1f, 0.075f) * U, 8, 6);
+            k.M.Emission = 0f;
+            k.End();
+            var m = k.Model;
+            m.CastBone = BB.HandR;
+            m.CastOffset = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(lamp.x, -lamp.z, lamp.y);
+            m.FloatHeight = 0.3f;
+            m.BaseFade = 1f;
+            m.Strike = UnitStrike.Staff; m.Ranged = UnitRanged.Point;
+            m.HoldR = UnitHold.Staff;
+            m.Dust = false;
+            m.TurnRate = 480f;
             k.Finish(key, UnitGait.Floater);
             m.Legs = new UnitLeg[0];
             return UnitModels.Bake(m, k.M);
@@ -662,7 +1041,8 @@ namespace Lanternvale.Game
         static UnitModel Mossling(string key, bool shaman)
         {
             float H = shaman ? 1.0f : 0.9f;
-            var k = new BipedKit(shaman ? 48 : 49, H, 0.22f, 0.24f, 1.4f, false, 1.1f, 0.85f);
+            // arms long enough to read in an attack (they hang from inside the big head-body ball)
+            var k = new BipedKit(shaman ? 48 : 49, H, 0.22f, 0.24f, 1.4f, false, 1.1f, 1.3f);
             Color moss = C("#7d9a55"), mossD = C("#5a7a3e"), mossL = C("#a8bc8a"), leaf = C("#5f9a4a"), leafD = C("#3f6a32"),
                   eye = C("#2a2a20"), teeth = C("#f4f0e0"), feet = C("#6a5a3a");
             float r = k.R;
@@ -736,7 +1116,7 @@ namespace Lanternvale.Game
             if (shaman) k.Staff(1, 0.95f, C("#7a5a3a"), BipedKit.StaffTop.Bead, C("#7aa05a"), C("#5fe8d8"));
             var m = k.Model;
             m.HoldR = shaman ? UnitHold.Staff : UnitHold.Relaxed;
-            m.Strike = shaman ? UnitStrike.Staff : UnitStrike.Fist;
+            m.Strike = shaman ? UnitStrike.Staff : UnitStrike.Headbutt;   // a hop and a head-butt reads at game zoom
             m.Ranged = shaman ? UnitRanged.Point : UnitRanged.Throw;
             m.DustColor = new Color(0.72f, 0.8f, 0.55f, 0.3f);
             var res = Done(k, key, UnitGait.Small);
