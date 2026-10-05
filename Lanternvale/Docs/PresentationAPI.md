@@ -1,11 +1,24 @@
 # Lanternvale — Presentation API (world, units, FX, audio)
 
-Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio}`, namespace `Lanternvale.Game`.
-Presentation only: nothing here contains rules logic. Everything compiles against Unity 2021.3 → Unity 6
-(no URP compile-time types, no custom shaders, no TextMeshPro/UI Toolkit, no `Find*ObjectOfType`).
+Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio,Rendering,Rendering3D}`, namespace
+`Lanternvale.Game`. Presentation only: nothing here contains rules logic.
 
-Coordinates: world XY plane, 1 unit = 1 m. Ground is `x ∈ [0,width]`, `y ∈ [0,depth]`; `y = 0` is the front edge.
-Everything is on the "Default" sorting layer using the `SortingOrders` bands from `Lighting2D.cs`.
+> **3D.** The presentation is full 3D (stylized low-poly, procedural models, own shaders and lighting). The
+> binding contract — conventions, shaders, `SceneLighting`, `MeshBuilder`, and the 3D form of every API below — is
+> **[`ThreeD.md`](ThreeD.md)**; where this file's 2D-era wording differs, ThreeD.md wins. The API semantics below
+> still hold, with these changes:
+> * Coordinates: the ground is the XY plane (as before) and **up is −Z**; `World3D.At(ground, height)`.
+>   `UnitView.CenterPosition/HeadPosition/NameplatePosition` and `MapObject.LabelPosition` are `Vector3`.
+> * Picking is screen-space: `UnitView.PickScreen(screen)` / `HitTestScreen(screen, out depth)`,
+>   `MapView.PickScreen(screen, includeRegions)`. `UnitView.Bounds` is now the ground footprint.
+> * `UnitView.SetFacing(±1)` turns to ±105° (a 3/4 view towards the camera); `FaceTowards` turns to any direction.
+> * `FxSystem` airborne effects take `Vector3` (`Projectile`, `Beam`, `MoveBeam`, `Impact`, `Slash`, `Sparkles`,
+>   `Puff`); ground effects keep `Vector2`. There are no sorting-order constants any more (render queues layer the
+>   ground overlays). `FloatingText` takes `Vector3`.
+> * `CameraRig` is a perspective rig (Zoom keeps its units: half the view height at the look-at point); see
+>   ThreeD.md §8 and the controls in the README.
+> * `Lighting2D`, `Silhouettes`, `SwayManager`, `LightDriver` and the QA `DioramaPreview` are gone; lights are
+>   `SceneLighting` point lights, wind is in the shaders.
 
 | File | Contents |
 |---|---|
