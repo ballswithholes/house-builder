@@ -138,26 +138,42 @@ namespace Lanternvale.Game
         {
             var k = new BipedKit(11, 1.8f, 0.14f, 0.49f, 1.1f, false, 1.06f);
             Color steel = C("#aab4bf"), steelD = C("#6d7885"), crimson = C("#b8323c"), crimsonD = C("#7a1e29"), gold = C("#e3b65c"),
-                  leather = C("#6b4630"), skin = C("#eec39e"), hair = C("#3b2b2a");
+                  leather = C("#6b4630"), skin = C("#eec39e"), hair = C("#9a5a34"), hairL = C("#b06c3e"), sash = C("#e0a848");
             k.Torso(steel, crimsonD);
             k.ChestPanel(crimson, 0.22f, true, gold);
             k.Neck(skin);
-            k.Head(skin, C("#c98b2e"), hair, EyeStyle.Narrow, 12f);
+            k.Head(skin, C("#c98b2e"), C("#6e3e24"), EyeStyle.Narrow, 12f);
             k.HairCap(hair, 55f, 96f, 118f);
-            k.Spikes(hair, 11, 0.62f, 0.45f, 0.8f, 7);
+            k.Spikes(hair, 6, 0.5f, 0.45f, 0.9f, 7);
             k.Bangs(hair, 4, 0.38f, 60f);
+            // FFX hero hair: three bold locks swept up and back from the brow, one flicking out at the nape
+            float r = k.R;
+            k.M.Bone = BB.Head;
+            k.M.Color = hairL;
+            var l0 = k.HeadPoint(4f, 30f, 0.92f);
+            k.M.Curve(l0, l0 + new Vector3(0.02f * r, 0.72f * r, 0.12f * r), l0 + new Vector3(0.08f * r, 0.88f * r, -1.25f * r), 0.36f * r, 0.03f * r, 3, 5);
+            k.M.Color = hair;
+            var l1 = k.HeadPoint(58f, 48f, 0.92f);
+            k.M.Curve(l1, l1 + new Vector3(0.4f * r, 0.5f * r, -0.1f * r), l1 + new Vector3(0.68f * r, 0.5f * r, -1.3f * r), 0.3f * r, 0.03f * r, 3, 5);
+            var l2 = k.HeadPoint(-62f, 52f, 0.92f);
+            k.M.Curve(l2, l2 + new Vector3(-0.38f * r, 0.45f * r, -0.1f * r), l2 + new Vector3(-0.64f * r, 0.42f * r, -1.25f * r), 0.29f * r, 0.03f * r, 3, 5);
+            var l3 = k.HeadPoint(170f, 72f, 0.9f);
+            k.M.Curve(l3, l3 + new Vector3(0.05f * r, 0.1f * r, -0.5f * r), l3 + new Vector3(0.12f * r, 0.36f * r, -0.85f * r), 0.26f * r, 0.03f * r, 3, 5);
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, steel, steelD, leather);
                 k.Cuff(s, gold, 0.8f, 0.95f, 1.25f);
-                k.Pauldron(s, steel, 1.4f, gold, 3);
                 k.Leg(s, crimsonD, steelD, leather, 0.62f, steel);
             }
+            // asymmetric armour: one oversized layered pauldron on the shield shoulder, a small one on the sword arm
+            k.BigPauldron(1, steel, gold, crimsonD, 1.75f);
+            k.Pauldron(-1, steel, 1.0f, gold, 2);
             k.Skirt(crimson, crimsonD, k.KneeY + 0.06f, 1.3f, 0f, gold);
             k.Belt(leather, gold);
+            k.SashTails(1, sash, crimsonD, 0.4f);
             k.Cape(crimson, crimsonD, k.KneeY - 0.05f, 0.95f, gold);
             k.Sword(1, 0.78f, 0.075f, C("#dfe4ea"), leather, gold);
-            k.Shield(crimson, steel, gold);
+            k.Shield(crimson, steel, gold, false, 1f, C("#8a5e3c"));
             var m = k.Model;
             m.HoldR = UnitHold.OneHand; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Throw;
             return Done(k, key);
@@ -468,9 +484,18 @@ namespace Lanternvale.Game
             k.HairCap(hair);
             k.Bangs(hair, 5, 0.4f);
             k.Ponytail(hair, k.ChestY - 0.06f, 0.32f, 0.7f, gold);
-            k.M.Bone = BB.Head; k.M.Color = white;
-            k.M.Segment(k.HeadPoint(40f, 55f, 1.08f), k.HeadPoint(48f, 105f, 1.04f), 0.03f, 0.012f, 5);
+            // Yuna's wrapped lock: a long lock beside the right ear, bound in white cloth, falling to the shoulder
+            // (it used to cross the face like a bandage)
+            k.M.Bone = BB.Head;
+            var wt = k.HeadPoint(90f, 74f, 1.07f);
+            var wb = new Vector3(wt.x - 0.012f, k.ShoulderY - 0.07f, wt.z + 0.06f);
+            k.M.Color = hair;
+            k.M.Segment(wt + new Vector3(0f, 0.01f, -0.01f), wb + Vector3.down * 0.07f, 0.026f, 0.008f, 5);
+            k.M.Color = white;
+            k.M.Segment(wt + Vector3.down * 0.03f, wb, 0.032f, 0.029f, 6);
             k.M.Color = C("#5fc0c0");
+            k.M.Segment(wb + Vector3.up * 0.012f, wb + Vector3.down * 0.006f, 0.034f, 0.031f, 6);
+            k.M.Segment(wt + Vector3.down * 0.022f, wt + Vector3.down * 0.04f, 0.035f, 0.034f, 6);
             k.M.Sphere(k.HeadPoint(-55f, 50f, 1.1f), 0.022f, 5, 3);
             k.M.Sphere(k.HeadPoint(-62f, 58f, 1.1f), 0.018f, 5, 3);
             for (int s = -1; s <= 1; s += 2)
@@ -582,7 +607,8 @@ namespace Lanternvale.Game
         static UnitModel Torvan(string key)
         {
             var k = new BipedKit(26, 2.1f, 0.15f, 0.48f, 1.25f, false, 1.12f, 1.05f);
-            Color fur = C("#9aa3ad"), furL = C("#c9cfd6"), mane = C("#ecebe6"), horn = C("#e8dcc0"), mark = C("#4f7fd0"),
+            // slate-blue Ronso fur with a cream mane (grey fur read as unpainted plaster next to stone)
+            Color fur = C("#6f84b0"), furL = C("#b8c6e0"), mane = C("#f2e6c8"), horn = C("#e8dcc0"), mark = C("#d8573a"),
                   moss = C("#6f8f4a"), gold = C("#d9b25a"), leather = C("#6a4a32"), wood = C("#8a6a48");
             k.Skin = fur;
             k.Torso(fur, moss);
@@ -670,16 +696,29 @@ namespace Lanternvale.Game
         static UnitModel Morwen(string key)
         {
             var k = new BipedKit(28, 1.74f, 0.136f, 0.5f, 0.9f, true);
-            Color plum = C("#4a2a48"), plumD = C("#2e1a2e"), violet = C("#8a5ac8"), silver = C("#c8ccd6"), hair = C("#1a1820"),
-                  skin = C("#f0e2da"), rune = C("#c9a8ff"), book = C("#6a3a2a");
+            // told apart from Lys (black hair, ink robes) at a glance: silver-white hair, a wine-red gold-trimmed coat
+            // and a gold crescent diadem
+            Color plum = C("#7a2a40"), plumD = C("#4a1a2a"), violet = C("#a04a6a"), silver = C("#d9b25a"), hair = C("#ece6f2"),
+                  skin = C("#f0e2da"), rune = C("#c9a8ff"), book = C("#4a3a6a"), gold = C("#e2b45a");
             k.Torso(plum, plumD);
-            k.Collar(plum, violet, 0.18f, 30f, 1.4f);
+            k.Collar(plum, gold, 0.18f, 30f, 1.4f);
             k.Neck(skin);
-            k.Head(skin, C("#a070e0"), hair, EyeStyle.Narrow, 6f);
+            k.Head(skin, C("#a070e0"), C("#b8aec8"), EyeStyle.Narrow, 6f);
             k.HairCap(hair);
             k.Bangs(hair, 5, 0.45f, 70f);
             k.LongBack(hair, k.ChestY - 0.12f, 1.05f, 1.15f);
-            k.SideLocks(hair, k.ChestY + 0.05f, 0.17f);
+            k.SideLocks(hair, k.ShoulderY - 0.01f, 0.15f);
+            // crescent diadem: a gold band over the brow, a crescent rising at the front with a violet gem
+            k.M.Bone = BB.Head; k.M.Color = gold;
+            k.M.Push().Translate(0f, k.HeadCY + 0.4f * k.R, -0.02f * k.R).Rotate(-10f, 0f, 0f);
+            k.M.Torus(Vector3.zero, 1.1f * k.R, 0.045f * k.R, 14, 4);
+            k.M.Pop();
+            var dc = k.HeadPoint(0f, 34f, 1.14f);
+            for (int s = -1; s <= 1; s += 2)
+                k.M.Curve(dc + new Vector3(0f, -0.01f, 0f), dc + new Vector3(s * 0.05f, 0.015f, 0.01f), dc + new Vector3(s * 0.065f, 0.075f, -0.005f), 0.014f, 0.004f, 3, 5);
+            Glint(k, true); k.M.Color = rune;
+            k.M.Sphere(dc + new Vector3(0f, 0.004f, 0.008f), 0.016f, 6, 4);
+            Glint(k, false);
             for (int s = -1; s <= 1; s += 2)
             {
                 k.Arm(s, plum, plum, skin);

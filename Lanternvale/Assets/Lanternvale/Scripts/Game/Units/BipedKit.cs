@@ -589,21 +589,62 @@ namespace Lanternvale.Game
             M.Pop();
         }
 
-        /// <summary>Headscarf (shell over the hair) with a knot at the back.</summary>
-        public void Headscarf(Color c, Color knot)
+        /// <summary>
+        /// Cloth headscarf / bandana tied at the nape: snug over the crown, its edge riding up at the temples so the
+        /// hair shows there, a rolled hem along the edge, a big knot with two flowing tails (HairB) and an optional dot
+        /// print — cloth, not a smooth helmet.
+        /// </summary>
+        public void Headscarf(Color c, Color knot, Color? dots = null)
         {
             M.Bone = BB.Head; M.Color = c;
             float r = R;
-            M.Shell(new Vector3(0f, HeadCY + 0.06f * r, -0.05f * r), new Vector3(1.14f * r, 1.1f * r, 1.12f * r), -180f, 180f, 12, 0f, th =>
+            var center = new Vector3(0f, HeadCY + 0.05f * r, -0.04f * r);
+            var rad = new Vector3(1.1f * r, 1.09f * r, 1.1f * r);
+            System.Func<float, float> edge = th =>
             {
                 float a = Mathf.Abs(th);
-                return a < 70f ? Mathf.Lerp(50f, 70f, a / 70f) : Mathf.Lerp(70f, 112f, (a - 70f) / 110f);
-            }, 3);
+                if (a < 40f) return Mathf.Lerp(47f, 52f, a / 40f);            // over the brow
+                if (a < 95f) return Mathf.Lerp(52f, 62f, (a - 40f) / 55f);    // riding up over the temples
+                return Mathf.Lerp(62f, 116f, (a - 95f) / 85f);                 // down behind the ears to the nape
+            };
+            M.Shell(center, rad, -180f, 180f, 12, 0f, edge, 3);
+            // rolled hem along the edge (open tube pieces, the back is under the knot)
+            M.Color = Paint.Shade(c, 0.86f);
+            Vector3 EdgePoint(float th)
+            {
+                float t = th * Mathf.Deg2Rad, p = edge(th) * Mathf.Deg2Rad;
+                return center + new Vector3(rad.x * Mathf.Sin(p) * Mathf.Sin(t), rad.y * Mathf.Cos(p), rad.z * Mathf.Sin(p) * Mathf.Cos(t)) * 1.01f;
+            }
+            for (int i = 0; i < 12; i++)
+            {
+                float t0 = -144f + i * 24f, t1 = t0 + 24f;
+                M.Segment(EdgePoint(t0), EdgePoint(t1), 0.065f * r, 0.065f * r, 5, false, false);
+            }
+            if (dots.HasValue)
+            {
+                M.Color = dots.Value;
+                float[,] dp = { { -30f, 22f }, { 28f, 28f }, { 72f, 40f }, { -78f, 44f }, { 130f, 50f }, { -128f, 40f }, { 170f, 72f }, { -160f, 84f } };
+                for (int i = 0; i < dp.GetLength(0); i++)
+                {
+                    float t = dp[i, 0] * Mathf.Deg2Rad, p = dp[i, 1] * Mathf.Deg2Rad;
+                    var n = new Vector3(Mathf.Sin(p) * Mathf.Sin(t), Mathf.Cos(p), Mathf.Sin(p) * Mathf.Cos(t));
+                    var at = center + Vector3.Scale(rad, n) * 1.0f;
+                    M.Aim(at, n);
+                    M.Cylinder(Vector3.zero, 0.09f * r, 0.075f * r, 0.025f * r, 5, false, false, true);
+                    M.Pop();
+                }
+            }
+            // the knot at the nape, with two lobes, and its tails falling down the back of the neck
             M.Color = knot;
-            M.Sphere(new Vector3(0f, HeadCY - 0.25f * r, -1.08f * r), 0.18f * r, 6, 4);
+            var kp = new Vector3(0f, HeadCY - 0.28f * r, -1.12f * r);
+            M.Sphere(kp, new Vector3(0.24f, 0.2f, 0.18f) * r, 6, 4);
+            for (int s = -1; s <= 1; s += 2)
+                M.Sphere(kp + new Vector3(s * 0.24f * r, 0.04f * r, -0.04f * r), new Vector3(0.18f, 0.12f, 0.08f) * r, 5, 3);
             M.Bone = BB.HairB;
-            M.Blade(new Vector3(-0.05f * r, HeadCY - 0.3f * r, -1.1f * r), new Vector3(-0.25f * r, HeadCY - 1.0f * r, -1.2f * r), 0.22f * r);
-            M.Blade(new Vector3(0.05f * r, HeadCY - 0.3f * r, -1.1f * r), new Vector3(0.22f * r, HeadCY - 0.9f * r, -1.25f * r), 0.22f * r);
+            M.CurvedStrip(kp + new Vector3(-0.06f * r, -0.08f * r, -0.04f * r), kp + new Vector3(-0.22f * r, -0.6f * r, -0.2f * r),
+                          kp + new Vector3(-0.32f * r, -1.25f * r, -0.12f * r), 0.24f * r, 0.15f * r, Vector3.back, 0.05f * r, 3);
+            M.CurvedStrip(kp + new Vector3(0.06f * r, -0.08f * r, -0.04f * r), kp + new Vector3(0.2f * r, -0.5f * r, -0.22f * r),
+                          kp + new Vector3(0.3f * r, -1.05f * r, -0.18f * r), 0.24f * r, 0.15f * r, Vector3.back, 0.05f * r, 3);
         }
 
         /// <summary>Metal dome helmet (kettle hat with a brim when brim &gt; 0).</summary>
@@ -687,6 +728,7 @@ namespace Lanternvale.Game
                 for (int i = 0; i < prof.Length; i++) profB[i] = new Vector2(prof[i].x * bk, prof[i].y);
             }
             float o = openFront;
+            if (backOnly <= 0f && openFront < 30f) { skirtProf = prof; skirtDk = dk; }
             if (backOnly <= 0f)
             {
                 M.Bone = BB.SkirtR;
@@ -714,6 +756,81 @@ namespace Lanternvale.Game
 
         /// <summary>Emission of garment hem trims (Skirt, WideSleeve) — glowing spirit robes; 0 = plain cloth.</summary>
         public float HemGlow;
+
+        // the last front-closed skirt's profile (radius, y) and depth squash, for an apron laid over it
+        Vector2[] skirtProf;
+        float skirtDk;
+
+        float SkirtRadiusAt(float y)
+        {
+            var p = skirtProf;
+            if (y >= p[0].y) return p[0].x;
+            for (int i = 0; i + 1 < p.Length; i++)
+                if (y >= p[i + 1].y) return Mathf.Lerp(p[i].x, p[i + 1].x, Mathf.InverseLerp(p[i].y, p[i + 1].y, y));
+            return p[p.Length - 1].x;
+        }
+
+        /// <summary>
+        /// Apron over the front of the skirt from the waist to hemY: three rows laid on the skirt's own profile (just
+        /// outside it) on the skirt's front bones, so it follows the flare and the walk instead of standing off like a
+        /// board; without a skirt it curves round the thighs (top row on the hips, the rest on SkirtF). Apron strings
+        /// round the waist with a bow at the back.
+        /// </summary>
+        public void Apron(Color c, float hemY, float width = 0.28f, Color? trim = null, Color? strings = null)
+        {
+            float top = HipY + 0.1f * U;
+            float w = width * U;
+            var lining = Paint.Shade(c, 0.72f);
+            if (skirtProf != null && hemY > skirtProf[skirtProf.Length - 1].y - 0.01f)
+            {
+                float off = 0.012f * U;
+                var prof = new Vector2[4];
+                for (int i = 0; i < 4; i++)
+                {
+                    float y = Mathf.Lerp(top, hemY, i / 3f);
+                    prof[i] = new Vector2(SkirtRadiusAt(y) + off + i * 0.003f * U, y);
+                }
+                float rMid = SkirtRadiusAt(Mathf.Lerp(top, hemY, 0.5f));
+                float half = Mathf.Min(80f, w * 0.5f / Mathf.Max(0.05f, rMid) * Mathf.Rad2Deg);
+                M.Bone = BB.SkirtR; M.Panel(Vector3.zero, 0f, half, 3, prof, skirtDk, c, lining, 0.006f);
+                M.Bone = BB.SkirtL; M.Panel(Vector3.zero, -half, 0f, 3, prof, skirtDk, c, lining, 0.006f);
+                if (trim.HasValue)
+                {
+                    var hp = new[] { new Vector2(prof[3].x + 0.004f, hemY + 0.04f * U), new Vector2(prof[3].x + 0.004f, hemY - 0.003f) };
+                    M.Bone = BB.SkirtR; M.Panel(Vector3.zero, 0f, half, 3, hp, skirtDk, trim.Value, new Color(0, 0, 0, 0));
+                    M.Bone = BB.SkirtL; M.Panel(Vector3.zero, -half, 0f, 3, hp, skirtDk, trim.Value, new Color(0, 0, 0, 0));
+                }
+            }
+            else
+            {
+                // round the thighs: the top row sits on the hips, the lower ones swing on SkirtF
+                float dk = DepthK * 1.08f;
+                float r0 = HipR * 1.1f, r1 = HipR * 1.18f, r2 = HipR * 1.3f;
+                float ySplit = HipY + 0.05f * U;
+                float half = Mathf.Min(80f, w * 0.5f / r1 * Mathf.Rad2Deg);
+                M.Bone = BB.Hips;
+                M.Panel(Vector3.zero, -half, half, 4, new[] { new Vector2(r0, top), new Vector2(r1, ySplit) }, dk, c, lining, 0.006f);
+                M.Bone = BB.SkirtF;
+                var low = new[] { new Vector2(r1, ySplit), new Vector2(Mathf.Lerp(r1, r2, 0.5f), Mathf.Lerp(ySplit, hemY, 0.5f)), new Vector2(r2, hemY) };
+                M.Panel(Vector3.zero, -half, half, 4, low, dk, c, lining, 0.006f);
+                if (trim.HasValue)
+                    M.Panel(Vector3.zero, -half, half, 4, new[] { new Vector2(r2 + 0.004f, hemY + 0.04f * U), new Vector2(r2 + 0.004f, hemY - 0.003f) }, dk, trim.Value, new Color(0, 0, 0, 0));
+            }
+            // apron strings and the bow at the back
+            var sc = strings ?? c;
+            M.Bone = BB.Hips; M.Color = sc;
+            float br = Mathf.Max(HipR, WaistR) * 1.1f;
+            M.Band(Vector3.zero, br, br, top - 0.012f * U, top + 0.012f * U, 10, DepthK * 1.1f);
+            float bz = -br * DepthK * 1.1f - 0.01f * U;
+            M.Sphere(new Vector3(0f, top, bz), new Vector3(0.025f, 0.022f, 0.018f) * U, 5, 3);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                M.Sphere(new Vector3(s * 0.04f * U, top + 0.01f * U, bz - 0.004f * U), new Vector3(0.04f, 0.025f, 0.014f) * U, 6, 3);
+                M.Bone = BB.SkirtB;
+                M.Strip(new Vector3(s * 0.012f * U, top - 0.01f * U, bz - 0.008f * U), new Vector3(s * 0.035f * U, top - 0.15f * U, bz - 0.02f * U), 0.03f * U, 0.024f * U, Vector3.back, 0.01f * U);
+                M.Bone = BB.Hips;
+            }
+        }
 
         /// <summary>Front flap (tabard, apron, loin panel) hanging from the waist to hemY (SkirtF).</summary>
         public void FrontFlap(Color c, float hemY, float width = 0.2f, Color? trim = null, float topY = -1f, float zOff = 0f)
@@ -818,6 +935,38 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>
+        /// A sash knotted on one hip over the belt, its two tails hanging down the thigh (SkirtL/R, so they swing with
+        /// the leg). The tails are cloth strips with thickness and a darker lining edge.
+        /// </summary>
+        public void SashTails(int side, Color c, Color? hem = null, float len = 0.42f, float y = -1f)
+        {
+            float yy = y > 0f ? y : HipY + 0.09f * U;
+            float th = side * 62f * Mathf.Deg2Rad;
+            float rr = Mathf.Max(HipR, WaistR) * 1.12f;
+            var knot = new Vector3(Mathf.Sin(th) * rr, yy - 0.01f * U, Mathf.Cos(th) * rr * DepthK * 1.1f);
+            var outN = new Vector3(Mathf.Sin(th), 0f, Mathf.Cos(th) * 0.6f).normalized;
+            M.Bone = BB.Hips; M.Color = c;
+            M.Sphere(knot, new Vector3(0.04f, 0.035f, 0.03f) * U, 6, 4);
+            M.Bone = side < 0 ? BB.SkirtL : BB.SkirtR;
+            float w = 0.075f * U;
+            for (int t = 0; t < 2; t++)
+            {
+                var a = knot + new Vector3(side * (t == 0 ? -0.012f : 0.022f) * U, -0.02f * U, (t == 0 ? 0.012f : -0.018f) * U);
+                var b = a + new Vector3(side * (t == 0 ? 0.015f : 0.05f) * U, -len * U * (t == 0 ? 1f : 0.82f), (t == 0 ? 0.03f : -0.04f) * U);
+                var ctrl = Vector3.Lerp(a, b, 0.5f) + outN * 0.025f * U;
+                M.Color = c;
+                M.CurvedStrip(a, ctrl, b, w * (t == 0 ? 1f : 0.9f), w * 0.8f, outN, 0.014f * U, 2);
+                if (hem.HasValue)
+                {
+                    // fringed end band
+                    M.Color = hem.Value;
+                    var d = (b - ctrl).normalized;
+                    M.Strip(b - d * 0.035f * U, b + d * 0.01f * U, w * 0.82f, w * 0.82f, outN, 0.018f * U);
+                }
+            }
+        }
+
         /// <summary>Diagonal strap/baldric across the chest (left shoulder → right hip by default).</summary>
         public void Strap(Color c, int side = -1, float w = 0.045f)
         {
@@ -865,6 +1014,47 @@ namespace Lanternvale.Game
                 var center = new Vector3(x + side * 0.012f * U, ShoulderY + 0.01f * U, 0f);
                 M.Shell(center, new Vector3(r * 1.02f, r * 0.82f, r * 0.97f), -180f, 180f, 8, 70f, 80f, 1);
             }
+        }
+
+        /// <summary>
+        /// Oversized hero pauldron (FFX-style asymmetric armour): three overlapping lames stepping out and down from a
+        /// raised top plate with an upswept outer edge, trimmed, riveted, over a cloth pad. Only the outer side of the
+        /// shoulder is covered, so the plates never reach the neck or chin.
+        /// </summary>
+        public void BigPauldron(int side, Color c, Color trim, Color pad, float size = 1.8f)
+        {
+            M.Bone = BB.ArmU(side);
+            float x = side * ShoulderX;
+            float r = ArmR * 1.9f * size;
+            // every plate is a dome tipped outwards (its inner edge drops onto the trapezius, clear of the neck)
+            var pivot = new Vector3(x + side * 0.04f * U, ShoulderY + 0.02f * U, -0.004f * U);
+            M.Push().Translate(pivot).Rotate(0f, 0f, -side * 24f);
+            // cloth pad hanging under the plates
+            M.Color = pad;
+            M.Shell(new Vector3(0f, -0.05f * U, 0f), new Vector3(r * 0.8f, r * 0.95f, r * 0.84f), -180f, 180f, 10, 40f, 96f, 2);
+            for (int i = 2; i >= 0; i--)
+            {
+                float k = 1f - i * 0.12f;
+                var center = new Vector3(side * i * 0.012f * U, (0.01f - i * 0.072f) * U * size / 1.8f, 0f);
+                var rad = new Vector3(r * k, r * k * 0.8f, r * k * 0.95f);
+                M.Color = i == 0 ? c : Paint.Shade(c, 0.9f - i * 0.04f);
+                int np = i == 0 ? 4 : 3;
+                M.Shell(center, rad, -180f, 180f, 10, 0f, 80f, np);
+                if (i == 2) M.Shell(center, rad * 0.95f, -180f, 180f, 10, 0f, 80f, np, true);   // only the lowest lame's underside shows
+                if (i != 1)
+                {
+                    M.Color = trim;
+                    M.Shell(center, rad * 1.025f, -180f, 180f, 10, 70f, 82f, 1);
+                }
+            }
+            // a raised ridge over the top plate (front to back) and rivets
+            var top = new Vector3(0f, 0.01f * U * size / 1.8f, 0f);
+            M.Color = trim;
+            M.Box(top + new Vector3(0f, r * 0.8f, 0f), new Vector3(0.024f * U, 0.034f * U, r * 1.3f));
+            M.Color = Paint.Shade(trim, 0.85f);
+            for (int s = -1; s <= 1; s += 2)
+                M.Sphere(top + new Vector3(side * r * 0.5f, r * 0.5f, s * r * 0.55f), 0.013f * U, 5, 3);
+            M.Pop();
         }
 
         /// <summary>High stiff collar around the neck, open at the front (coat collars).</summary>
@@ -924,10 +1114,67 @@ namespace Lanternvale.Game
             }
             if (tail > 0f)
             {
+                // a knot at the back of the roll and two cloth tails with thickness (Cape bone), rooted inside the roll
+                // so they stay attached and never thin out to floating ink specks edge-on
+                M.Color = Paint.Shade(c, 0.9f);
+                M.Sphere(new Vector3(0.01f * U, NeckY - 0.01f * U, -0.09f * U), new Vector3(0.04f, 0.035f, 0.03f) * U, 6, 4);
                 M.Bone = BB.Cape; M.Color = c;
-                var a = new Vector3(0.04f * U, NeckY - 0.02f * U, -0.08f * U);
-                M.Blade(a, a + new Vector3(0.05f * U, -tail * U, -0.12f * U), 0.08f * U, Vector3.right);
-                M.Blade(a + new Vector3(-0.05f * U, 0f, 0f), a + new Vector3(-0.02f * U, -tail * 0.8f * U, -0.16f * U), 0.075f * U, Vector3.right);
+                var a = new Vector3(0.03f * U, NeckY - 0.015f * U, -0.085f * U);
+                var e0 = a + new Vector3(0.05f * U, -tail * U, -0.12f * U);
+                M.CurvedStrip(a, Vector3.Lerp(a, e0, 0.5f) + new Vector3(0.015f, 0f, -0.03f) * U, e0, 0.075f * U, 0.06f * U, Vector3.back, 0.018f * U, 3);
+                var b = a + new Vector3(-0.05f * U, 0f, 0.005f * U);
+                var e1 = b + new Vector3(-0.02f * U, -tail * 0.8f * U, -0.16f * U);
+                M.CurvedStrip(b, Vector3.Lerp(b, e1, 0.5f) + new Vector3(-0.015f, 0f, -0.035f) * U, e1, 0.07f * U, 0.055f * U, Vector3.back, 0.018f * U, 3);
+            }
+        }
+
+        /// <summary>
+        /// Bat/demon wing on WingL/WingR (span in metres): an arm strut up to the wrist, three finger struts fanning out
+        /// from it and a lighter membrane between them with a scalloped trailing edge and a slight backward camber —
+        /// a wing, not a flat board. The membrane is two-sided; the struts keep the wing readable edge-on.
+        /// </summary>
+        public void BatWing(int side, float span, Color strut, Color membrane, Color? claw = null)
+        {
+            int wb = side < 0 ? BB.WingL : BB.WingR;
+            M.Bone = wb;
+            var w0 = Bind[wb];
+            float s = side;
+            Vector3 P(float x, float y, float z) => w0 + new Vector3(s * x, y, z) * span;
+            var elbow = P(0.32f, 0.4f, -0.1f);
+            var wrist = P(0.55f, 0.62f, -0.16f);
+            var tips = new[] { P(1.0f, 0.48f, -0.22f), P(0.95f, 0.08f, -0.22f), P(0.68f, -0.24f, -0.17f), P(0.3f, -0.38f, -0.1f) };
+            var low = P(0.04f, -0.3f, 0.02f);
+            var back = Vector3.back * 0.05f * span;
+            // membrane (both sides), scalloped between the finger tips
+            M.Color = membrane;
+            void Tri(Vector3 a, Vector3 b, Vector3 c)
+            {
+                var n = Vector3.Cross(b - a, c - a);
+                M.TriangleFacing(a, b, c, n);
+                M.TriangleFacing(a, b, c, -n);
+            }
+            for (int i = 0; i + 1 < tips.Length; i++)
+            {
+                var mid = Vector3.Lerp(Vector3.Lerp(tips[i], tips[i + 1], 0.5f), wrist, 0.3f) + back;
+                Tri(wrist, tips[i], mid);
+                Tri(wrist, mid, tips[i + 1]);
+            }
+            Tri(w0, elbow, wrist);
+            Tri(w0, wrist, tips[3]);
+            var midL = Vector3.Lerp(Vector3.Lerp(tips[3], low, 0.5f), w0, 0.25f) + back * 0.6f;
+            Tri(w0, tips[3], midL);
+            Tri(w0, midL, low);
+            // struts
+            M.Color = strut;
+            M.Segment(w0, elbow, 0.035f * span, 0.028f * span, 5);
+            M.Segment(elbow, wrist, 0.028f * span, 0.022f * span, 5);
+            M.Sphere(wrist, 0.03f * span, 5, 3);
+            for (int i = 0; i < tips.Length; i++)
+                M.Segment(wrist, tips[i], 0.018f * span, 0.006f * span, 4);
+            if (claw.HasValue)
+            {
+                M.Color = claw.Value;
+                M.Spike(wrist, (wrist - elbow).normalized + Vector3.up * 0.5f, 0.022f * span, 0.1f * span, 4);
             }
         }
 
@@ -1204,17 +1451,36 @@ namespace Lanternvale.Game
                     M.Emission = 0f;
                     break;
                 case StaffTop.Skull:
+                {
+                    // a horned skull: round cranium, cheekbones and a short jaw, dark sockets with fel glows, the
+                    // horns curling back and down like a ram's (they used to point up and read as fingers)
+                    anchor = tip + new Vector3(0f, 0.085f * U, 0f);
+                    M.Color = Paint.Shade(accent, 0.75f);
+                    M.Cylinder(tip - new Vector3(0f, 0.01f * U, 0f), 0.03f * U, 0.026f * U, 0.035f * U, 6);
                     M.Color = accent;
-                    anchor = tip + new Vector3(0f, 0.08f * U, 0f);
-                    M.Sphere(anchor, new Vector3(0.075f, 0.07f, 0.08f) * U, 8, 6);
-                    M.Box(anchor + new Vector3(0f, -0.06f * U, 0.02f * U), new Vector3(0.08f, 0.04f, 0.07f) * U);
-                    M.Curve(anchor + new Vector3(-0.05f, 0.04f, -0.02f) * U, anchor + new Vector3(-0.13f, 0.06f, -0.04f) * U, anchor + new Vector3(-0.12f, 0.16f, 0f) * U, 0.02f * U, 0.004f * U, 3, 4);
-                    M.Curve(anchor + new Vector3(0.05f, 0.04f, -0.02f) * U, anchor + new Vector3(0.13f, 0.06f, -0.04f) * U, anchor + new Vector3(0.12f, 0.16f, 0f) * U, 0.02f * U, 0.004f * U, 3, 4);
+                    M.Sphere(anchor + new Vector3(0f, 0.012f, -0.006f) * U, new Vector3(0.078f, 0.074f, 0.082f) * U, 9, 7);
+                    M.Sphere(anchor + new Vector3(0f, -0.042f, 0.028f) * U, new Vector3(0.056f, 0.04f, 0.05f) * U, 7, 4);
+                    M.Box(anchor + new Vector3(0f, -0.072f, 0.03f) * U, new Vector3(0.05f, 0.022f, 0.045f) * U);
+                    var socket = Paint.Hex("#241a2a");
+                    M.Color = socket;
+                    for (int s = -1; s <= 1; s += 2)
+                        M.Sphere(anchor + new Vector3(s * 0.03f, -0.006f, 0.064f) * U, new Vector3(0.024f, 0.021f, 0.016f) * U, 6, 4);
+                    M.Box(anchor + new Vector3(0f, -0.036f, 0.073f) * U, new Vector3(0.014f, 0.016f, 0.01f) * U);
+                    M.Color = Paint.Shade(accent, 0.8f);
+                    for (int s = -1; s <= 1; s += 2)
+                    {
+                        var h0 = anchor + new Vector3(s * 0.052f, 0.045f, -0.01f) * U;
+                        var h1 = anchor + new Vector3(s * 0.11f, 0.06f, -0.075f) * U;
+                        var h2 = anchor + new Vector3(s * 0.1f, -0.01f, -0.125f) * U;
+                        M.Curve(h0, anchor + new Vector3(s * 0.1f, 0.1f, -0.02f) * U, h1, 0.022f * U, 0.015f * U, 3, 5);
+                        M.Curve(h1, anchor + new Vector3(s * 0.125f, 0.02f, -0.12f) * U, h2, 0.015f * U, 0.004f * U, 2, 4);
+                    }
                     M.Emission = 1f; M.Color = glow;
-                    M.Sphere(anchor + new Vector3(-0.028f, 0.005f, 0.068f) * U, 0.018f * U, 5, 3);
-                    M.Sphere(anchor + new Vector3(0.028f, 0.005f, 0.068f) * U, 0.018f * U, 5, 3);
+                    for (int s = -1; s <= 1; s += 2)
+                        M.Sphere(anchor + new Vector3(s * 0.03f, -0.006f, 0.072f) * U, 0.012f * U, 5, 3);
                     M.Emission = 0f;
                     break;
+                }
                 case StaffTop.Totem:
                     M.Color = accent;
                     anchor = tip + new Vector3(0f, 0.06f * U, 0f);
@@ -1353,34 +1619,64 @@ namespace Lanternvale.Game
                 M.Blade(gr + new Vector3(0f, 0f, 0.0f), gr + new Vector3(s * 0.022f * U, 0f, 0.09f * U), 0.028f * U, Vector3.up);
         }
 
-        public void Shield(Color face, Color rim, Color emblem, bool round = false, float size = 1f)
+        /// <summary>
+        /// Shield on the left forearm: painted face (with emblem) outwards, a metal rim band, and a wooden back with
+        /// leather arm straps and rivets towards the body — the side the game camera sees when the bearer faces
+        /// screen-right (the shield arm is then the far arm), so it reads as a real shield, not a grey board.
+        /// </summary>
+        public void Shield(Color face, Color rim, Color emblem, bool round = false, float size = 1f, Color? back = null)
         {
             M.Bone = BB.ArmLL;
             float x = -ShoulderX - ForeR - 0.035f * U;
             float y = Mathf.Lerp(ElbowY, WristY, 0.45f);
             M.Push().Translate(x, y, 0.02f * U).Rotate(0f, 90f, 0f);
             float s = size * U;
+            var wood = back ?? Paint.Hex("#8a5e3c");
+            var leather = Paint.Hex("#5a3a26");
             if (round)
             {
                 M.Color = face;
                 M.Push().Rotate(90f, 0f, 0f);
                 M.Cylinder(new Vector3(0f, -0.02f * s, 0f), 0.27f * s, 0.27f * s, 0.04f * s, 12);
+                M.Color = wood;
+                M.Cylinder(new Vector3(0f, 0.0f, 0f), 0.235f * s, 0.235f * s, 0.032f * s, 12);
                 M.Color = rim;
-                M.Torus(new Vector3(0f, 0.0f, 0f), 0.265f * s, 0.022f * s, 12, 4);
+                M.Torus(new Vector3(0f, 0.0f, 0f), 0.265f * s, 0.024f * s, 12, 4);
                 M.Color = emblem;
                 M.Sphere(new Vector3(0f, -0.03f * s, 0f), new Vector3(0.07f * s, 0.035f * s, 0.07f * s), 7, 4);
                 M.Pop();
+                ShieldStraps(s, 0.036f * s, wood, leather, rim, 0.2f);
             }
             else
             {
+                Vector2[] Kite(float k) => new[]
+                {
+                    new Vector2(-0.24f * s * k, 0.27f * s * k), new Vector2(0.24f * s * k, 0.27f * s * k), new Vector2(0.25f * s * k, 0.02f * s * k),
+                    new Vector2(0f, -0.38f * s * k), new Vector2(-0.25f * s * k, 0.02f * s * k),
+                };
+                // metal band all round (the outline seen from both sides)
                 M.Color = rim;
-                M.Flat(new[] { new Vector2(-0.24f * s, 0.27f * s), new Vector2(0.24f * s, 0.27f * s), new Vector2(0.25f * s, 0.02f * s), new Vector2(0f, -0.38f * s), new Vector2(-0.25f * s, 0.02f * s) }, 0.05f * s);
+                M.Flat(Kite(1f), 0.03f * s);
+                // painted face, standing proud of the band on the outside
                 M.Color = face;
-                M.Push().Translate(0f, 0f, -0.012f * s);
-                M.Flat(new[] { new Vector2(-0.2f * s, 0.235f * s), new Vector2(0.2f * s, 0.235f * s), new Vector2(0.21f * s, 0.02f * s), new Vector2(0f, -0.32f * s), new Vector2(-0.21f * s, 0.02f * s) }, 0.04f * s);
+                M.Push().Translate(0f, 0.005f * s, -0.012f * s);
+                M.Flat(Kite(0.83f), 0.03f * s);
                 M.Pop();
+                // wooden back, standing proud of the band on the inside
+                M.Color = wood;
+                M.Push().Translate(0f, 0.005f * s, 0.012f * s);
+                M.Flat(Kite(0.83f), 0.03f * s);
+                M.Pop();
+                M.Color = Paint.Shade(wood, 0.78f);
+                for (int i = -1; i <= 1; i += 2)
+                {
+                    M.Push().Translate(i * 0.07f * s, 0.0f, 0.028f * s);
+                    M.Flat(new[] { new Vector2(-0.006f * s, 0.2f * s), new Vector2(0.006f * s, 0.2f * s), new Vector2(0.006f * s, -0.2f * s), new Vector2(-0.006f * s, -0.2f * s) }, 0.006f * s);
+                    M.Pop();
+                }
+                ShieldStraps(s, 0.034f * s, wood, leather, rim, 0.17f);
                 M.Color = emblem;
-                M.Push().Translate(0f, 0.03f * s, -0.035f * s);
+                M.Push().Translate(0f, 0.03f * s, -0.033f * s);
                 M.Flat(new[]
                 {
                     new Vector2(0f, 0.1f * s), new Vector2(0.07f * s, 0.07f * s), new Vector2(0.1f * s, 0f), new Vector2(0.07f * s, -0.07f * s),
@@ -1390,6 +1686,23 @@ namespace Lanternvale.Game
             }
             M.Pop();
             Model.Shield = true;
+        }
+
+        /// <summary>The two leather arm straps across a shield's back (shield frame: back towards +Z) with rivets.</summary>
+        void ShieldStraps(float s, float z, Color wood, Color leather, Color rivet, float halfW)
+        {
+            for (int i = -1; i <= 1; i += 2)
+            {
+                float yy = i * 0.085f * s;
+                M.Color = leather;
+                M.Box(new Vector3(0f, yy, z), new Vector3(halfW * 2f, 0.04f * s, 0.012f * s));
+                M.Color = rivet;
+                for (int j = -1; j <= 1; j += 2)
+                    M.Sphere(new Vector3(j * (halfW - 0.015f * s), yy, z + 0.006f * s), 0.012f * s, 5, 3);
+            }
+            // the grip block in the middle
+            M.Color = Paint.Shade(leather, 0.8f);
+            M.Box(new Vector3(0f, 0f, z + 0.004f * s), new Vector3(0.05f * s, 0.12f * s, 0.02f * s));
         }
 
         public void Book(int side, Color cover, Color pages, bool glow = false, Color? glowCol = null)

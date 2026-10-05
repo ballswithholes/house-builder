@@ -52,16 +52,45 @@ namespace Lanternvale.Game
             Bind[f] = new Vector3(x, PawY, z);
         }
 
-        public void Body(Color back, Color belly, float rearK = 0.95f, float frontK = 1.05f, float hump = 0f)
+        // the body's three ellipsoids (rear, waist bridge, front) — TopY reads the back line from them
+        readonly Vector3[] bodyC = new Vector3[3], bodyR3 = new Vector3[3];
+
+        /// <summary>
+        /// Barrel body: a rear ellipsoid (Hips), a front one (Chest, raised by `hump` at the shoulders) and a bridge
+        /// through the waist (Hips) so the two halves read as one body, not two balls; `waist` &lt; 1 keeps a lean tuck
+        /// (wolves, cats), ≈ 1 a solid barrel (boars, bears).
+        /// </summary>
+        public void Body(Color back, Color belly, float rearK = 0.95f, float frontK = 1.05f, float hump = 0f, float waist = 0.97f)
         {
             M.Bone = QB.Hips; M.Color = back;
             var rear = Bind[QB.Hips] + new Vector3(0f, 0f, BodyLen * 0.08f);
-            M.Sphere(rear, new Vector3(BodyR * rearK, BodyR * rearK * 0.95f, BodyLen * 0.48f), 10, 7, false);
-            M.Bone = QB.Chest;
+            var rearR = new Vector3(BodyR * rearK, BodyR * rearK * 0.95f, BodyLen * 0.48f);
+            M.Sphere(rear, rearR, 10, 7, false);
             var front = Bind[QB.Chest] + new Vector3(0f, hump * BodyR * 0.3f, -BodyLen * 0.12f);
-            M.Sphere(front, new Vector3(BodyR * frontK, BodyR * frontK * (1f + hump * 0.25f), BodyLen * 0.52f), 10, 7, false);
+            var frontR = new Vector3(BodyR * frontK, BodyR * frontK * (1f + hump * 0.25f), BodyLen * 0.52f);
+            // waist bridge between the two, on the hips (the chest turns about its own centre, so the seam stays filled)
+            var mid = Vector3.Lerp(rear, front, 0.5f) + new Vector3(0f, -BodyR * 0.02f, 0f);
+            var midR = new Vector3(BodyR * (rearK + frontK) * 0.5f * waist, (rearR.y + frontR.y) * 0.5f * waist * 0.98f, BodyLen * 0.38f);
+            M.Sphere(mid, midR, 10, 6, false);
+            M.Bone = QB.Chest;
+            M.Sphere(front, frontR, 10, 7, false);
             M.Color = belly;
             M.Sphere(front + new Vector3(0f, -BodyR * 0.35f, BodyLen * 0.12f), new Vector3(BodyR * frontK * 0.82f, BodyR * 0.7f, BodyLen * 0.38f), 8, 5, false);
+            bodyC[0] = rear; bodyR3[0] = rearR; bodyC[1] = mid; bodyR3[1] = midR; bodyC[2] = front; bodyR3[2] = frontR;
+        }
+
+        /// <summary>Height of the back line (top of the body ellipsoids) at body depth z (after Body()).</summary>
+        public float TopY(float z)
+        {
+            float best = HipY;
+            for (int i = 0; i < 3; i++)
+            {
+                if (bodyR3[i].z <= 0f) continue;
+                float t = (z - bodyC[i].z) / bodyR3[i].z;
+                if (t * t >= 1f) continue;
+                best = Mathf.Max(best, bodyC[i].y + bodyR3[i].y * Mathf.Sqrt(1f - t * t));
+            }
+            return best;
         }
 
         public void Neck(Color c, float r0 = 1f, float r1 = 0.8f)
@@ -196,6 +225,29 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>
+        /// A long tapered tail that sweeps back, rises in an S and curls over at the tip (cats): a short root on
+        /// Tail1, the curve on Tail2 so it still wags and drags.
+        /// </summary>
+        public void CurlTail(Color c, float len, float r, Color? tip = null)
+        {
+            var a = Bind[QB.Tail1];
+            var back = Vector3.back;
+            Bind[QB.Tail2] = a + (back * 0.8f + Vector3.down * 0.25f).normalized * Mathf.Min(0.6f * BodyR, len * 0.18f);
+            var b = Bind[QB.Tail2];
+            M.Bone = QB.Tail1; M.Color = c;
+            M.Segment(a, b, r, r * 0.95f, 6);
+            M.Bone = QB.Tail2;
+            // low arc back, then up, then the tip curling forward over the back
+            var p1 = b + back * len * 0.38f + Vector3.up * len * 0.05f;
+            var p2 = p1 + back * len * 0.1f + Vector3.up * len * 0.36f;
+            var p3 = p2 + Vector3.up * len * 0.1f + Vector3.forward * len * 0.12f;
+            M.Curve(b, b + back * len * 0.24f + Vector3.down * len * 0.06f, p1, r * 0.95f, r * 0.8f, 3, 6);
+            M.Curve(p1, p1 + back * len * 0.16f + Vector3.up * len * 0.08f, p2, r * 0.8f, r * 0.62f, 3, 6);
+            M.Curve(p2, p2 + Vector3.up * len * 0.12f, p3, r * 0.62f, r * 0.42f, 2, 6);
+            if (tip.HasValue) { M.Color = tip.Value; M.Sphere(p3, r * 0.55f, 6, 4); }
+        }
+
         public void Finish(string key, float height, UnitStrike strike = UnitStrike.Bite, UnitRanged ranged = UnitRanged.Howl)
         {
             var m = Model;
@@ -244,6 +296,7 @@ namespace Lanternvale.Game
         public readonly Vector3[] Bind = new Vector3[SB.Count];
         public readonly float BodyY, BodyR, Span;
         readonly Vector3[] feet = new Vector3[8];
+        readonly float[] legA = new float[8], legB = new float[8];
 
         public SpiderKit(int seed, float bodyY, float bodyR, float span)
         {
@@ -252,8 +305,12 @@ namespace Lanternvale.Game
             Bind[SB.Body] = new Vector3(0f, bodyY, 0f);
             Bind[SB.Abdomen] = new Vector3(0f, bodyY + bodyR * 0.15f, -bodyR * 0.8f);
             Bind[SB.Fangs] = new Vector3(0f, bodyY - bodyR * 0.2f, bodyR * 0.85f);
-            // leg i: 0..3 left (front → back), 4..7 right
-            float[] ang = { 38f, 78f, 108f, 145f };
+            // leg i: 0..3 left (front → back), 4..7 right. Splayed wide with the knees arched high above the body, so
+            // the eight legs stand out of the silhouette at game zoom (not two balls on twigs). The arch is what the
+            // leg IK solves to (pole: out + up); the leg segments themselves are authored hanging straight down from
+            // their joints (−Y), the bone convention UnitAnimator.SolveIK/BoneRot rotates from — authoring them along
+            // the arch instead turned them inside out (folded under the body).
+            float[] ang = { 34f, 72f, 110f, 150f };
             for (int i = 0; i < 8; i++)
             {
                 int side = i < 4 ? -1 : 1;
@@ -261,9 +318,11 @@ namespace Lanternvale.Game
                 var outDir = new Vector3(side * Mathf.Sin(a), 0f, Mathf.Cos(a));
                 var hip = Bind[SB.Body] + outDir * bodyR * 0.75f + Vector3.up * bodyR * 0.05f;
                 var foot = new Vector3(0f, 0.02f, 0f) + new Vector3(outDir.x, 0f, outDir.z) * span;
-                var knee = hip + outDir * (span - bodyR * 0.75f) * 0.45f + Vector3.up * bodyY * 0.85f;
+                var knee = hip + outDir * (span - bodyR * 0.75f) * 0.4f + Vector3.up * bodyY * 1.2f;
+                legA[i] = (knee - hip).magnitude;
+                legB[i] = (foot - knee).magnitude;
                 Bind[SB.Upper(i)] = hip;
-                Bind[SB.Lower(i)] = knee;
+                Bind[SB.Lower(i)] = hip + Vector3.down * legA[i];
                 feet[i] = foot;
             }
         }
@@ -299,18 +358,21 @@ namespace Lanternvale.Game
             var bandL = Color.Lerp(band, Color.white, 0.25f);
             for (int i = 0; i < 8; i++)
             {
+                // authored hanging down (see the constructor); the animator's IK swings them into the arch
+                var knee = Bind[SB.Lower(i)];
+                var foot = knee + Vector3.down * legB[i];
                 M.Bone = SB.Upper(i); M.Color = legs;
-                M.Segment(Bind[SB.Upper(i)], Bind[SB.Lower(i)], BodyR * 0.14f * lk, BodyR * 0.11f * lk, 6);
+                M.Segment(Bind[SB.Upper(i)], knee, BodyR * 0.15f * lk, BodyR * 0.11f * lk, 6);
                 M.Bone = SB.Lower(i);
                 M.Color = bandL;
-                M.Sphere(Bind[SB.Lower(i)], BodyR * 0.135f * lk, 6, 4);
+                M.Sphere(knee, BodyR * 0.135f * lk, 6, 4);
                 M.Color = legs;
-                var mid = Vector3.Lerp(Bind[SB.Lower(i)], feet[i], 0.5f);
-                M.Segment(Bind[SB.Lower(i)], mid, BodyR * 0.11f * lk, BodyR * 0.09f * lk, 6);
+                var mid = Vector3.Lerp(knee, foot, 0.5f);
+                M.Segment(knee, mid, BodyR * 0.11f * lk, BodyR * 0.09f * lk, 6);
                 M.Color = bandL;
-                M.Segment(mid, mid + (feet[i] - mid) * 0.18f, BodyR * 0.1f * lk, BodyR * 0.09f * lk, 6);
+                M.Segment(mid, mid + (foot - mid) * 0.18f, BodyR * 0.1f * lk, BodyR * 0.09f * lk, 6);
                 M.Color = legs;
-                M.Segment(mid + (feet[i] - mid) * 0.18f, feet[i], BodyR * 0.09f * lk, BodyR * 0.035f * lk, 5);
+                M.Segment(mid + (foot - mid) * 0.18f, foot, BodyR * 0.09f * lk, BodyR * 0.035f * lk, 5);
             }
         }
 
@@ -324,7 +386,7 @@ namespace Lanternvale.Game
             m.Parent = SB.Parent;
             m.Names = SB.Names;
             m.Height = height;
-            m.Radius = Span * 0.7f;
+            m.Radius = Span * 0.6f;
             m.HalfLength = BodyR * 0.4f;
             m.HipY = BodyY;
             m.LegLength = BodyY * 1.6f;
@@ -354,7 +416,7 @@ namespace Lanternvale.Game
                 m.Legs[i] = new UnitLeg
                 {
                     Upper = SB.Upper(i), Lower = SB.Lower(i), Foot = -1, Root = SB.Body, Side = side,
-                    A = (knee - hip).magnitude, B = (feet[i] - knee).magnitude,
+                    A = legA[i], B = legB[i],
                     Rest = feet[i],
                     Pole = (outDir * 0.5f + Vector3.up).normalized,
                     Phase = groupA ? 0f : 0.5f,

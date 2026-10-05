@@ -48,7 +48,7 @@ namespace Lanternvale.Game
             k.Head(skin, C("#6a4a30"), hair, EyeStyle.Closed, -6f);
             k.Cheeks(C("#f0a0a0"));
             k.HairCap(hair);
-            k.Headscarf(green, green);
+            k.Headscarf(green, Paint.Shade(green, 0.85f), C("#f6efdc"));
             // towel over the right shoulder
             k.M.Bone = BB.Chest; k.M.Color = C("#e8e0d0");
             k.M.Box(new Vector3(k.ShoulderX * 0.7f, k.ShoulderY + 0.01f, 0f), new Vector3(0.1f, 0.03f, 0.26f));
@@ -60,8 +60,7 @@ namespace Lanternvale.Game
                 k.Leg(s, roseD, skin, C("#6a4a30"), 0.35f);
             }
             k.Skirt(rose, roseD, k.AnkleY + 0.06f, 1.45f, 0f, roseD);
-            k.FrontFlap(cream, k.KneeY - 0.12f, 0.3f, null, -1f, 0.03f);
-            k.Belt(cream, cream, k.HipY + 0.12f, 1.12f, 0.035f);
+            k.Apron(cream, k.KneeY - 0.12f, 0.3f);
             // frothy mug in the left hand
             k.BeginHand(-1, 0.0f);
             k.M.Color = wood;
@@ -269,7 +268,13 @@ namespace Lanternvale.Game
             k.Bangs(hair, 4, 0.35f, head == 3 ? 90f : 60f);
             switch (head)
             {
-                case 0: k.Headscarf(scarf, scarf); break;
+                case 0:
+                {
+                    // a dotted kerchief (red dots on a pale one, cream on the rest)
+                    bool pale = scarf.r + scarf.g + scarf.b > 2.6f;
+                    k.Headscarf(scarf, Paint.Shade(scarf, 0.88f), plain || Pick(v, 13, 2) == 0 ? (pale ? C("#e06a6a") : C("#fff4dc")) : (Color?)null);
+                    break;
+                }
                 case 1: k.Bun(hair, k.HeadPoint(180f, 40f, 1.05f), 0.45f); break;
                 case 2: k.Ponytail(hair, k.ChestY + 0.02f, 0.3f, 0.5f, scarf); break;
                 case 3:
@@ -290,7 +295,7 @@ namespace Lanternvale.Game
                 k.Leg(s, dress, skin, C("#6a4a30"), 0.35f);
             }
             k.Skirt(dress, bodice, k.AnkleY + 0.08f, 1.45f, 0f, bodice);
-            if (extra == 0 || extra == 3) k.FrontFlap(cream, k.KneeY - 0.1f, 0.26f, null, -1f, 0.03f);
+            if (extra == 0 || extra == 3) k.Apron(cream, k.KneeY - 0.1f, 0.26f);
             if (extra >= 2) Shawl(k, plain ? scarf : PickC(v, 12, new[] { "#b8584a", "#5a7a4a", "#e8dcc8", "#6a5a8a", "#c89a4a" }));
             var m = k.Model;
             if (carry <= 2) { Basket(k, carry); m.HoldL = UnitHold.Carry; }
@@ -348,7 +353,7 @@ namespace Lanternvale.Game
                 k.Leg(s, lower, lower, boot, 0.5f);
             }
             if (extra == 1) Satchel(k, C("#8a6a48"), leather, Pick(v, 20, 2) == 0);
-            else if (extra == 2) k.FrontFlap(PickC(v, 21, new[] { "#efe8d8", "#8a7a64", "#c8b898" }), k.KneeY - 0.04f, 0.3f, null, -1f, 0.03f);
+            else if (extra == 2) k.Apron(PickC(v, 21, new[] { "#efe8d8", "#8a7a64", "#c8b898" }), k.KneeY - 0.04f, 0.3f);
             else if (extra == 3) k.Scarf(accent, 0.3f);
             var m = k.Model;
             if (tool == 0)
@@ -983,8 +988,11 @@ namespace Lanternvale.Game
         static UnitModel Treant(string key)
         {
             var k = new BipedKit(47, 2.6f, 0.26f, 0.36f, 1.7f, false, 1.15f, 1.25f);
-            Color bark = C("#6e6878"), barkD = C("#4a4554"), barkL = C("#8e8899"), glow = C("#c9a8ff"), leaf = C("#9a7a5a"),
-                  crystal = C("#b98aff"), moss = C("#7a8a5a");
+            // a hollowed old oak: warm bark, the violet blight glowing only in its cracks, a crown of forked branches
+            // with the last dying leaves, moss and bracket fungus, splayed root toes
+            Color bark = C("#6a5644"), barkD = C("#4a3a30"), barkL = C("#8a7258"), crack = C("#2e2028"), glow = C("#c9a8ff"),
+                  crystal = C("#b98aff"), moss = C("#7d9a55"), mossL = C("#9ab86a"), fungus = C("#e2cfa4"), fungusD = C("#b89a68");
+            Color[] dying = { C("#c8963c"), C("#b0603a"), C("#9a8a48"), C("#d8b050") };
             float U = k.U;
             k.M.Jitter = 0.08f;
             // trunk body: faceted
@@ -994,35 +1002,157 @@ namespace Lanternvale.Game
             k.M.Body(Vector3.zero, new[] { new Vector2(k.HipR * 1.1f, k.PelvisY - 0.02f * U), new Vector2(k.WaistR * 1.2f, k.SpineY + 0.08f * U) }, 7, 0.9f, false, false);
             k.M.Bone = BB.Chest;
             k.M.Body(Vector3.zero, new[] { new Vector2(k.WaistR * 1.2f, k.SpineY), new Vector2(k.ChestR * 1.15f, k.ChestY), new Vector2(k.ShoulderR * 1.1f, k.ShoulderY), new Vector2(k.ShoulderR * 0.6f, k.NeckY + 0.05f) }, 7, 0.85f, false, true);
-            k.M.Color = moss;
-            k.M.Blob(new Vector3(-k.ShoulderX * 0.5f, k.ShoulderY + 0.02f, 0f), new Vector3(0.18f, 0.08f, 0.16f) * U, 1, 0.3f, 2);
-            k.M.Color = crystal; k.M.Emission = 0.85f;
-            k.M.Spike(new Vector3(k.ShoulderX * 0.4f, k.ShoulderY, -0.05f), new Vector3(0.3f, 1f, -0.3f), 0.05f * U, 0.32f * U, 5);
-            k.M.Spike(new Vector3(k.ShoulderX * 0.6f, k.ShoulderY - 0.05f, 0.05f), new Vector3(0.7f, 1f, 0.2f), 0.04f * U, 0.22f * U, 5);
+            // the trunk's radius profile (matching the bodies above) to seat ridges and cracks on its surface
+            var trunkProf = new[]
+            {
+                new Vector2(k.HipY - 0.1f * U, k.HipR * 1.1f), new Vector2(k.PelvisY + 0.02f * U, k.HipR * 1.13f), new Vector2(k.SpineY, k.WaistR * 1.2f),
+                new Vector2(k.ChestY, k.ChestR * 1.15f), new Vector2(k.ShoulderY, k.ShoulderR * 1.1f),
+            };
+            float TrunkR(float y)
+            {
+                if (y <= trunkProf[0].x) return trunkProf[0].y;
+                for (int i = 0; i + 1 < trunkProf.Length; i++)
+                    if (y <= trunkProf[i + 1].x) return Mathf.Lerp(trunkProf[i].y, trunkProf[i + 1].y, Mathf.InverseLerp(trunkProf[i].x, trunkProf[i + 1].x, y));
+                return trunkProf[trunkProf.Length - 1].y;
+            }
+            Vector3 OnTrunk(float x, float y, float th = float.NaN)
+            {
+                float r = TrunkR(y) * 0.96f;
+                if (float.IsNaN(th)) return new Vector3(x, y, r * 0.87f * Mathf.Sqrt(Mathf.Max(0.05f, 1f - (x / r) * (x / r))));
+                return new Vector3(Mathf.Sin(th) * r, y, Mathf.Cos(th) * r * 0.87f);
+            }
+            // long vertical bark ridges round the trunk (belly on the Spine, chest on the Chest), catching the light
+            for (int i = 0; i < 11; i++)
+            {
+                float th = (i * 360f / 11f + 9f + (i % 3) * 5f) * Mathf.Deg2Rad;
+                var nrm = new Vector3(Mathf.Sin(th), 0f, Mathf.Cos(th));
+                float lean = ((i * 7) % 5 - 2) * 0.012f * U;
+                k.M.Color = (i % 3 == 0) ? barkL : Paint.Shade(bark, 1.1f);
+                k.M.Bone = BB.Spine;
+                k.M.Strip(OnTrunk(0f, k.PelvisY - 0.02f * U, th), OnTrunk(0f, k.SpineY + 0.02f * U, th), 0.032f * U, 0.04f * U, nrm, 0.03f * U);
+                k.M.Bone = BB.Chest;
+                if (i % 4 != 2)
+                {
+                    var c0 = OnTrunk(0f, k.SpineY + 0.01f * U, th);
+                    var c1 = OnTrunk(0f, k.ChestY + (0.06f + (i % 3) * 0.05f) * U, th) + new Vector3(lean, 0f, 0f);
+                    k.M.Strip(c0, c1, 0.04f * U, 0.022f * U, nrm, 0.03f * U);
+                }
+            }
+            // blight cracks: dark split bark with a violet glow deep inside (front of the chest, one on the belly)
+            Vector3[][] cracks =
+            {
+                new[] { new Vector3(-0.08f, k.ChestY + 0.16f * U, 0f), new Vector3(0.02f, k.ChestY + 0.02f * U, 0f), new Vector3(-0.05f, k.ChestY - 0.12f * U, 0f), new Vector3(0.04f, k.SpineY + 0.02f * U, 0f) },
+                new[] { new Vector3(0.16f, k.ChestY + 0.06f * U, 0f), new Vector3(0.22f, k.ChestY - 0.06f * U, 0f), new Vector3(0.18f, k.ChestY - 0.18f * U, 0f) },
+            };
+            k.M.Bone = BB.Chest;
+            foreach (var cr in cracks)
+                for (int i = 0; i + 1 < cr.Length; i++)
+                {
+                    var a = OnTrunk(cr[i].x, cr[i].y);
+                    var b = OnTrunk(cr[i + 1].x, cr[i + 1].y);
+                    k.M.Emission = 0f; k.M.Color = crack;
+                    k.M.Strip(a, b, 0.05f * U, 0.05f * U, Vector3.forward, 0.02f * U);
+                    k.M.Emission = 1f; k.M.Color = glow;
+                    k.M.Strip(a + Vector3.forward * 0.012f * U, b + Vector3.forward * 0.012f * U, 0.022f * U, 0.022f * U, Vector3.forward, 0.012f * U);
+                }
             k.M.Emission = 0f;
-            // head: top of the trunk with a carved face
+            // moss on the left shoulder, bracket fungus stepping down the right side of the chest
+            k.M.Color = moss;
+            k.M.Blob(new Vector3(-k.ShoulderX * 0.55f, k.ShoulderY + 0.02f, 0f), new Vector3(0.2f, 0.09f, 0.18f) * U, 1, 0.3f, 2);
+            k.M.Color = mossL;
+            k.M.Blob(new Vector3(-k.ShoulderX * 0.75f, k.ShoulderY + 0.04f, 0.08f), new Vector3(0.09f, 0.06f, 0.08f) * U, 0, 0.3f, 5);
+            for (int i = 0; i < 3; i++)
+            {
+                var fp = new Vector3(k.ChestR * 1.05f - i * 0.02f, k.ChestY + 0.12f * U - i * 0.12f * U, 0.12f - i * 0.1f);
+                k.M.Color = i == 1 ? fungusD : fungus;
+                k.M.Push().Translate(fp).Rotate(0f, 90f - i * 25f, 0f);
+                k.M.Push().Scale(new Vector3(1f, 0.3f, 0.7f));
+                k.M.Sphere(new Vector3(0f, 0f, 0.06f * U), (0.14f - i * 0.02f) * U, 8, 4);
+                k.M.Pop();
+                k.M.Pop();
+            }
+            // a cluster of blight crystals breaking out of the right shoulder
+            k.M.Color = crystal; k.M.Emission = 0.85f;
+            k.M.Spike(new Vector3(k.ShoulderX * 0.45f, k.ShoulderY - 0.02f, -0.12f), new Vector3(0.3f, 1f, -0.4f), 0.05f * U, 0.26f * U, 5);
+            k.M.Spike(new Vector3(k.ShoulderX * 0.62f, k.ShoulderY - 0.06f, -0.04f), new Vector3(0.8f, 1f, -0.1f), 0.035f * U, 0.17f * U, 5);
+            k.M.Emission = 0f;
+            // head: top of the trunk with a carved face (glowing eyes and mouth in the hollows), a mossy brow
             k.M.Bone = BB.Head; k.M.Color = bark;
-            k.M.Body(Vector3.zero, new[] { new Vector2(k.R * 0.85f, k.HeadY - 0.02f), new Vector2(k.R * 1.0f, k.HeadCY), new Vector2(k.R * 0.75f, k.H - 0.02f) }, 7, 0.95f, true, true);
+            k.M.Body(Vector3.zero, new[] { new Vector2(k.R * 0.85f, k.HeadY - 0.02f), new Vector2(k.R * 1.0f, k.HeadCY), new Vector2(k.R * 0.8f, k.H - 0.02f) }, 7, 0.95f, true, true);
+            k.M.Color = crack;
+            for (int s = -1; s <= 1; s += 2)
+                k.M.Sphere(new Vector3(s * 0.38f * k.R, k.HeadCY + 0.08f * k.R, 0.9f * k.R), new Vector3(0.22f, 0.17f, 0.06f) * k.R, 6, 3);
+            k.M.Sphere(new Vector3(0f, k.HeadCY - 0.4f * k.R, 0.88f * k.R), new Vector3(0.36f, 0.14f, 0.06f) * k.R, 6, 3);
             k.M.Emission = 1f; k.M.Color = glow;
             for (int s = -1; s <= 1; s += 2)
-                k.M.Sphere(new Vector3(s * 0.38f * k.R, k.HeadCY + 0.08f * k.R, 0.92f * k.R), new Vector3(0.16f, 0.12f, 0.05f) * k.R, 6, 3);
-            k.M.Sphere(new Vector3(0f, k.HeadCY - 0.4f * k.R, 0.9f * k.R), new Vector3(0.3f, 0.1f, 0.05f) * k.R, 6, 3);
+                k.M.Sphere(new Vector3(s * 0.38f * k.R, k.HeadCY + 0.08f * k.R, 0.93f * k.R), new Vector3(0.15f, 0.11f, 0.05f) * k.R, 6, 3);
+            k.M.Sphere(new Vector3(0f, k.HeadCY - 0.4f * k.R, 0.91f * k.R), new Vector3(0.28f, 0.08f, 0.05f) * k.R, 6, 3);
             k.M.Emission = 0f;
-            // branches on the head
-            k.M.Color = barkL;
-            k.M.Curve(new Vector3(-0.2f * k.R, k.H - 0.05f, 0f), new Vector3(-0.6f * k.R, k.H + 0.25f, 0.05f), new Vector3(-1.2f * k.R, k.H + 0.35f, -0.1f), 0.06f * U, 0.015f, 3, 5);
-            k.M.Curve(new Vector3(0.25f * k.R, k.H - 0.05f, -0.05f), new Vector3(0.5f * k.R, k.H + 0.35f, -0.1f), new Vector3(0.7f * k.R, k.H + 0.5f, 0.1f), 0.05f * U, 0.012f, 3, 5);
-            k.M.Color = leaf;
-            k.M.Blade(new Vector3(-1.1f * k.R, k.H + 0.33f, -0.1f), new Vector3(-1.25f * k.R, k.H + 0.2f, 0.05f), 0.08f);
-            k.M.Blade(new Vector3(0.68f * k.R, k.H + 0.48f, 0.1f), new Vector3(0.85f * k.R, k.H + 0.4f, 0.2f), 0.08f);
-            // branch arms with twig fingers
+            k.M.Color = barkD;
+            k.M.Push().Translate(0f, k.HeadCY + 0.36f * k.R, 0.8f * k.R).Rotate(-20f, 0f, 0f);
+            k.M.Box(Vector3.zero, new Vector3(1.4f * k.R, 0.14f * k.R, 0.22f * k.R));
+            k.M.Pop();
+            k.M.Color = moss;
+            k.M.Blob(new Vector3(0.1f * k.R, k.H - 0.02f, -0.05f * k.R), new Vector3(0.8f, 0.25f, 0.75f) * k.R, 1, 0.3f, 9);
+            // the crown: forked branches fanning up and out from the head and shoulders, tipped with dying leaves
+            // (a few already blight crystals)
+            var crown = new (Vector3 at, Vector3 dir, float len, float r)[]
+            {
+                (new Vector3(-0.3f * k.R, k.H - 0.06f, 0.05f), new Vector3(-0.55f, 1f, 0.1f), 0.62f, 0.07f),
+                (new Vector3(0.3f * k.R, k.H - 0.06f, -0.05f), new Vector3(0.5f, 1f, -0.15f), 0.68f, 0.07f),
+                (new Vector3(0f, k.H - 0.04f, -0.2f * k.R), new Vector3(0.05f, 1f, -0.45f), 0.58f, 0.065f),
+                (new Vector3(0.05f, k.H - 0.08f, 0.25f * k.R), new Vector3(0.15f, 1f, 0.35f), 0.42f, 0.055f),
+                (new Vector3(-k.ShoulderX * 0.62f, k.ShoulderY + 0.04f, -0.05f), new Vector3(-0.85f, 1f, -0.25f), 0.55f, 0.065f),
+                (new Vector3(k.ShoulderX * 0.7f, k.ShoulderY + 0.02f, -0.1f), new Vector3(0.9f, 1f, -0.2f), 0.5f, 0.06f),
+            };
+            for (int b = 0; b < crown.Length; b++)
+            {
+                var (at, dir, len, br) = crown[b];
+                k.M.Bone = b < 4 ? BB.Head : BB.Chest;
+                dir.Normalize();
+                var side = Vector3.Cross(dir, Vector3.forward).normalized;
+                if (side.sqrMagnitude < 0.01f) side = Vector3.right;
+                var tip = at + dir * len + Vector3.up * len * 0.1f;
+                var ctrl = at + dir * len * 0.45f + side * len * 0.12f * ((b & 1) == 0 ? 1f : -1f);
+                k.M.Color = b % 3 == 0 ? barkL : bark;
+                k.M.Curve(at, ctrl, tip, br * U, 0.012f * U, 3, 5);
+                // a fork from just past the middle, and a little twig
+                var fork0 = Vector3.Lerp(Vector3.Lerp(at, ctrl, 0.55f), Vector3.Lerp(ctrl, tip, 0.55f), 0.55f);
+                var forkDir = (dir + side * ((b & 1) == 0 ? -0.9f : 0.9f) + Vector3.up * 0.3f).normalized;
+                var forkTip = fork0 + forkDir * len * 0.48f;
+                k.M.Curve(fork0, fork0 + forkDir * len * 0.25f + Vector3.up * len * 0.06f, forkTip, br * 0.62f * U, 0.01f * U, 2, 5);
+                k.M.Segment(Vector3.Lerp(at, tip, 0.3f), Vector3.Lerp(at, tip, 0.3f) + (side * ((b & 1) == 0 ? 1f : -1f) + Vector3.up).normalized * len * 0.2f, br * 0.35f * U, 0.006f * U, 4);
+                // leaf clusters on the tips (one tip in three has turned to crystal)
+                foreach (var (p, n) in new[] { (tip, 0), (forkTip, 1) })
+                {
+                    if ((b + n) % 4 == 3)
+                    {
+                        k.M.Emission = 0.85f; k.M.Color = crystal;
+                        k.M.Spike(p - dir * 0.02f, dir + Vector3.up * 0.4f, 0.035f * U, 0.16f * U, 5);
+                        k.M.Emission = 0f;
+                        continue;
+                    }
+                    k.M.Color = dying[(b * 2 + n) % dying.Length];
+                    k.M.Blob(p, new Vector3(0.11f, 0.08f, 0.1f) * U * (n == 0 ? 1f : 0.8f), 0, 0.3f, 40 + b * 2 + n);
+                    k.M.Color = dying[(b * 2 + n + 1) % dying.Length];
+                    k.M.Blade(p, p + (dir + side * 0.6f).normalized * 0.13f * U + Vector3.down * 0.04f * U, 0.07f * U);
+                    k.M.Blade(p, p + (dir - side * 0.7f).normalized * 0.12f * U + Vector3.up * 0.03f * U, 0.07f * U);
+                }
+            }
+            // branch arms with twig fingers (and a leafy twig growing from each forearm)
             for (int s = -1; s <= 1; s += 2)
             {
                 k.M.Bone = BB.ArmU(s); k.M.Color = bark;
                 k.M.Segment(k.Bind[BB.ArmU(s)] + Vector3.up * 0.05f, k.Bind[BB.ArmL(s)], 0.12f * U, 0.09f * U, 6);
                 k.M.Bone = BB.ArmL(s);
-                k.M.Sphere(k.Bind[BB.ArmL(s)], 0.09f * U, 6, 4);
+                k.M.Sphere(k.Bind[BB.ArmL(s)], 0.095f * U, 6, 4);
                 k.M.Segment(k.Bind[BB.ArmL(s)], k.Bind[BB.Hand(s)], 0.09f * U, 0.07f * U, 6);
+                var tw = Vector3.Lerp(k.Bind[BB.ArmL(s)], k.Bind[BB.Hand(s)], 0.35f) + new Vector3(s * 0.06f * U, 0f, -0.03f);
+                var twTip = tw + new Vector3(s * 0.2f, 0.08f, -0.08f) * U;
+                k.M.Color = barkL;
+                k.M.Curve(tw, tw + new Vector3(s * 0.12f, -0.02f, 0f) * U, twTip, 0.03f * U, 0.008f * U, 2, 4);
+                k.M.Color = dying[s < 0 ? 2 : 0];
+                k.M.Blade(twTip, twTip + new Vector3(s * 0.06f, -0.1f, 0.02f) * U, 0.07f * U);
                 k.M.Bone = BB.Hand(s); k.M.Color = barkL;
                 var h = k.Bind[BB.Hand(s)];
                 for (int f = 0; f < 3; f++)
@@ -1032,13 +1162,24 @@ namespace Lanternvale.Game
                 k.M.Segment(k.Bind[BB.LegU(s)] + Vector3.up * 0.05f, k.Bind[BB.LegL(s)], 0.13f * U, 0.11f * U, 6);
                 k.M.Bone = BB.LegL(s);
                 k.M.Sphere(k.Bind[BB.LegL(s)], 0.11f * U, 6, 4);
-                k.M.Segment(k.Bind[BB.LegL(s)], k.Bind[BB.Foot(s)], 0.11f * U, 0.12f * U, 6);
+                k.M.Segment(k.Bind[BB.LegL(s)], k.Bind[BB.Foot(s)], 0.11f * U, 0.13f * U, 6);
+                // wide splayed root toes gripping the ground (four, the outer ones swept back), moss on the left foot
                 k.M.Bone = BB.Foot(s);
                 var ft = k.Bind[BB.Foot(s)];
-                for (int r = 0; r < 3; r++)
+                float[] toes = { -1.05f, -0.35f, 0.35f, 1.3f };
+                for (int r = 0; r < toes.Length; r++)
                 {
-                    float a = (r - 1) * 0.6f;
-                    k.M.Curve(ft, ft + new Vector3(Mathf.Sin(a) * 0.12f, -0.02f, Mathf.Cos(a) * 0.12f + 0.02f), new Vector3(ft.x + Mathf.Sin(a) * 0.22f, 0.02f, Mathf.Cos(a) * 0.24f), 0.05f * U, 0.02f, 2, 4);
+                    float a = toes[r] * s;
+                    float reach = r == 3 ? 0.3f : 0.36f;
+                    var end = new Vector3(ft.x + Mathf.Sin(a) * reach, 0.015f, ft.z + Mathf.Cos(a) * reach + 0.04f);
+                    var mid = new Vector3(ft.x + Mathf.Sin(a) * reach * 0.45f, ft.y * 0.75f + 0.04f, ft.z + Mathf.Cos(a) * reach * 0.45f + 0.04f);
+                    k.M.Color = r == 1 ? bark : barkD;
+                    k.M.Curve(ft + Vector3.up * 0.02f, mid, end, 0.07f * U, 0.016f * U, 3, 5);
+                }
+                if (s < 0)
+                {
+                    k.M.Color = moss;
+                    k.M.Blob(ft + new Vector3(0.02f, 0.02f, 0.08f), new Vector3(0.1f, 0.05f, 0.09f) * U, 0, 0.3f, 13);
                 }
             }
             var m = k.Model;
@@ -1046,7 +1187,9 @@ namespace Lanternvale.Game
             m.Strike = UnitStrike.Slam; m.Ranged = UnitRanged.Point;
             m.DustColor = new Color(0.8f, 0.76f, 0.7f, 0.4f);
             m.CastBone = BB.Head; m.CastOffset = new Vector3(0f, k.HeadCY - k.HeadY, 0.9f * k.R);
-            return Done(k, key, UnitGait.Heavy);
+            var res = Done(k, key, UnitGait.Heavy);
+            res.HeadTop = new Vector3(0f, k.H + 0.5f - k.HeadY, 0f);   // above the crown (nameplate, floating text)
+            return res;
         }
 
         static UnitModel Mossling(string key, bool shaman)
@@ -1154,14 +1297,9 @@ namespace Lanternvale.Game
                 k.Arm(s, red, red, redD);
                 k.Leg(s, red, red, redD, 0f);
             }
-            // bat wings + devil tail
+            // bat wings (struts + scalloped membrane) + devil tail
             for (int s = -1; s <= 1; s += 2)
-            {
-                k.M.Bone = s < 0 ? BB.WingL : BB.WingR; k.M.Color = redD;
-                var w0 = k.Bind[s < 0 ? BB.WingL : BB.WingR];
-                k.M.Segment(w0, w0 + new Vector3(s * 0.22f, 0.16f, -0.05f), 0.012f, 0.008f, 4);
-                k.M.QuadTwoSided(w0, w0 + new Vector3(s * 0.22f, 0.16f, -0.05f), w0 + new Vector3(s * 0.26f, -0.05f, -0.06f), w0 + new Vector3(s * 0.08f, -0.1f, -0.03f));
-            }
+                k.BatWing(s, 0.34f, C("#7a2a1e"), C("#e8845a"), horn);
             k.M.Bone = BB.Tail; k.M.Color = red;
             var t0 = k.Bind[BB.Tail];
             k.M.Curve(t0, t0 + new Vector3(0f, -0.12f, -0.15f), t0 + new Vector3(0.05f, 0.05f, -0.3f), 0.018f, 0.01f, 4, 5);
@@ -1236,14 +1374,9 @@ namespace Lanternvale.Game
             }
             k.Skirt(gown, gownD, k.AnkleY + 0.03f, 1.55f, 18f, gold);
             k.Belt(armor, gold);
+            // bat wings: dark struts, a lighter violet membrane with a scalloped edge
             for (int s = -1; s <= 1; s += 2)
-            {
-                k.M.Bone = s < 0 ? BB.WingL : BB.WingR; k.M.Color = C("#3a2a4a");
-                var w0 = k.Bind[s < 0 ? BB.WingL : BB.WingR];
-                var tip = w0 + new Vector3(s * 0.45f, 0.42f, -0.12f);
-                k.M.Segment(w0, tip, 0.02f, 0.01f, 4);
-                k.M.QuadTwoSided(w0, tip, w0 + new Vector3(s * 0.55f, -0.05f, -0.15f), w0 + new Vector3(s * 0.18f, -0.3f, -0.08f));
-            }
+                k.BatWing(s, 0.66f, C("#2a2032"), C("#6e4a8a"), gold);
             k.M.Bone = BB.Tail; k.M.Color = skin;
             var t0 = k.Bind[BB.Tail];
             k.M.Curve(t0, t0 + new Vector3(0f, -0.3f, -0.2f), t0 + new Vector3(0.1f, -0.15f, -0.45f), 0.025f, 0.012f, 4, 5);

@@ -25,7 +25,7 @@ namespace Lanternvale.Game
                 case WolfKind.Felhunter: back = C("#3e2c4e"); belly = C("#5a4470"); legs = C("#2a1e36"); eyes = C("#7cf06a"); break;
                 default: back = C("#8a8a90"); belly = C("#e8e0d0"); legs = C("#6a6a72"); eyes = C("#e8a030"); break;
             }
-            k.Body(back, belly);
+            k.Body(back, belly, 0.95f, 1.05f, 0f, 0.86f);
             // darker saddle
             k.M.Bone = QB.Chest; k.M.Color = Paint.Shade(back, 0.7f);
             k.M.Sphere(k.Bind[QB.Chest] + new Vector3(0f, k.BodyR * 0.45f, -k.BodyLen * 0.25f), new Vector3(k.BodyR * 0.75f, k.BodyR * 0.45f, k.BodyLen * 0.45f), 8, 4, false);
@@ -115,7 +115,7 @@ namespace Lanternvale.Game
             var k = new QuadKit(pet ? 63 : 64, 0.48f, 0.52f, 0.6f, 0.27f, 0.13f, 0.055f, 0.36f, 0.38f, 0.02f, 0.16f, 0.17f, 0.03f);
             Color hide = pet ? C("#8a6248") : C("#6e4a32"), hideD = pet ? C("#6a4a36") : C("#4a3020"), snout = C("#c08070"),
                   tusk = C("#f2ead8"), mane = C("#2e2018"), eyes = C("#2a1a10");
-            k.Body(hide, Paint.Shade(hide, 1.15f), 0.92f, 1.08f, 0.6f);
+            k.Body(hide, Paint.Shade(hide, 1.15f), 0.92f, 1.08f, 0.6f, 1.0f);
             k.Neck(hide, 1.15f, 1.1f);
             var tip = k.Head(hide, hideD, snout, eyes, 0.14f, 0.62f, false, 0.7f);
             k.M.Bone = QB.Head; k.M.Color = snout;
@@ -133,10 +133,23 @@ namespace Lanternvale.Game
             k.Ears(hide, hideD, 0.9f, 0.6f, 0.25f);
             k.Legs(hideD, hideD, C("#2a201a"), 1f, true);
             k.Tail(hide, 0.1f, 0.02f, mane, false, 1.2f);
-            // spiky dark mane along the back
-            k.M.Bone = QB.Back; k.M.Color = mane;
-            for (int i = 0; i < 7; i++)
-                k.M.Spike(k.Bind[QB.Back] + new Vector3(0f, -0.04f, 0.34f - i * 0.1f), new Vector3(0f, 1f, -0.6f), 0.035f, 0.13f - Mathf.Abs(i - 2f) * 0.012f, 4);
+            // bristly dorsal crest from the nape to the rump, tallest over the shoulder hump, sitting on the back line
+            float zMid = (k.Bind[QB.Hips].z + k.Bind[QB.Chest].z) * 0.5f;
+            const int crest = 12;
+            for (int i = 0; i < crest; i++)
+            {
+                float t = i / (crest - 1f);
+                float z = Mathf.Lerp(k.Bind[QB.Chest].z + k.BodyR * 0.62f, k.Bind[QB.Hips].z - k.BodyR * 0.4f, t);
+                float len = Mathf.Lerp(0.2f, 0.07f, t) * (t < 0.2f ? Mathf.Lerp(0.7f, 1f, t / 0.2f) : 1f);
+                var at = new Vector3((i & 1) == 0 ? 0.012f : -0.012f, k.TopY(z) - 0.03f, z);
+                k.M.Bone = z > zMid ? QB.Chest : QB.Hips;
+                k.M.Color = (i % 3 == 1) ? Paint.Shade(mane, 1.5f) : mane;
+                k.M.Aim(at, new Vector3((i & 1) == 0 ? 0.12f : -0.12f, 1f, -0.7f));
+                k.M.Push().Scale(new Vector3(0.5f, 1f, 1.25f));
+                k.M.Cone(Vector3.zero, 0.042f, len, 4);
+                k.M.Pop();
+                k.M.Pop();
+            }
             if (pet)
             {
                 // teal saddle blanket draped over the back (a cylinder section around the body's long axis)
@@ -160,7 +173,7 @@ namespace Lanternvale.Game
         {
             var k = new QuadKit(65, 0.3f, 0.32f, 0.36f, 0.11f, 0.06f, 0.028f, 0.28f, 0.3f, 0.1f, 0.14f, 0.1f, 0.025f);
             Color fur = C("#e0903a"), stripe = C("#a85a22"), cream = C("#f6e6c8"), eyes = C("#c8e060"), blue = C("#3f6fb8"), gold = C("#f0c840");
-            k.Body(fur, cream);
+            k.Body(fur, cream, 0.95f, 1.05f, 0f, 0.86f);
             k.M.Color = stripe;
             for (int i = 0; i < 4; i++)
             {
@@ -179,7 +192,7 @@ namespace Lanternvale.Game
             for (int s = -1; s <= 1; s += 2)
                 k.M.Spike(k.HeadBase + new Vector3(s * k.HeadR * 0.7f, -k.HeadR * 0.15f, k.HeadR * 0.4f), new Vector3(s, -0.5f, -0.2f), k.HeadR * 0.25f, k.HeadR * 0.55f, 4);
             k.Legs(fur, fur, cream);
-            k.Tail(fur, 0.3f, 0.028f, C("#3a2a20"), false, -0.2f);
+            k.CurlTail(fur, 0.36f, 0.03f, C("#3a2a20"));
             // blue collar with a gold bell
             k.M.Bone = QB.Neck; k.M.Color = blue;
             var nb = Vector3.Lerp(k.NeckBase, k.HeadBase, 0.3f);
@@ -200,7 +213,7 @@ namespace Lanternvale.Game
         {
             var k = new QuadKit(66, 0.82f, 0.9f, 0.8f, 0.38f, 0.2f, 0.1f, 0.72f, 0.74f, 0.08f, 0.22f, 0.22f, 0.04f);
             Color fur = C("#7a5232"), furD = C("#5a3a22"), muzzle = C("#b08a62"), eyes = C("#2a1a10"), teal = C("#3f8f8a");
-            k.Body(fur, Paint.Shade(fur, 1.1f), 0.95f, 1.08f, 0.8f);
+            k.Body(fur, Paint.Shade(fur, 1.1f), 0.95f, 1.08f, 0.8f, 1.0f);
             k.Neck(fur, 1.1f, 1.1f);
             var tip = k.Head(fur, muzzle, C("#2a2020"), eyes, 0.12f, 0.6f, false, 0.8f);
             k.Jaw(muzzle, 0.14f, C("#f4f0e0"), 0.38f);
@@ -259,7 +272,7 @@ namespace Lanternvale.Game
                   cloth = C("#6a4a9a"), clothD = C("#44306a"), rope = C("#d8c080"), mane = C("#f6f4f0"), red = C("#d8402e"),
                   antler = C("#d8ccb8"), gold = C("#ffd27a"), paper = C("#f2e6c8");
             k.M.Jitter = 0.06f;
-            k.Body(coat, coatD, 0.95f, 1.05f, 0.3f);
+            k.Body(coat, coatD, 0.95f, 1.05f, 0.3f, 0.9f);
             // the Hollow creeping up: ink-violet belly patches and glowing veins
             k.M.Bone = QB.Hips; k.M.Color = ink;
             k.M.Sphere(k.Bind[QB.Hips] + new Vector3(0f, -0.25f, 0.1f), new Vector3(0.45f, 0.3f, 0.55f), 9, 5, false);
@@ -366,9 +379,10 @@ namespace Lanternvale.Game
 
         static UnitModel Spider(string key)
         {
-            var k = new SpiderKit(69, 0.32f, 0.2f, 0.62f);
-            k.Build(C("#4a3a30"), C("#5a4a3a"), C("#c8a060"), C("#5c4636"), C("#d8b070"), C("#ff5040"), C("#7d9a55"));   // legs lighter than the body so they read
-            k.Finish(key, 0.62f);
+            // low body, wide span: the arched legs splay well beyond the body
+            var k = new SpiderKit(69, 0.26f, 0.22f, 0.95f);
+            k.Build(C("#4a3a30"), C("#5a4a3a"), C("#c8a060"), C("#6a5240"), C("#e0bc7a"), C("#ff5040"), C("#7d9a55"));   // legs lighter than the body so they read
+            k.Finish(key, 0.66f);
             k.Model.DustColor = new Color(0.8f, 0.74f, 0.6f, 0.2f);
             return UnitModels.Bake(k.Model, k.M);
         }
@@ -422,13 +436,28 @@ namespace Lanternvale.Game
                 int wb = s < 0 ? BB.WingL : BB.WingR;
                 k.Bind[wb] = bodyC + new Vector3(s * 0.15f, 0.12f, -0.02f);
                 var w0 = k.Bind[wb];
+                // a wing with body: a rounded leading-edge "arm", a thick feathered panel and primaries with
+                // thickness, swept back a little — never a zero-thickness card that turns into a line edge-on
                 k.M.Bone = wb; k.M.Color = brown;
-                k.M.QuadTwoSided(w0, w0 + new Vector3(s * 0.38f, 0.05f, -0.05f), w0 + new Vector3(s * 0.42f, -0.12f, -0.1f), w0 + new Vector3(s * 0.05f, -0.22f, -0.06f));
+                var wrist = w0 + new Vector3(s * 0.36f, 0.05f, -0.05f);
+                k.M.Segment(w0, wrist, 0.042f, 0.026f, 6);
+                k.M.Sphere(wrist, 0.03f, 6, 4);
+                k.M.Push().Translate(w0 + new Vector3(0f, 0f, -0.04f)).Rotate(0f, s * 10f, 0f);
+                k.M.Flat(new[]
+                {
+                    new Vector2(s * 0.0f, 0.02f), new Vector2(s * 0.2f, 0.07f), new Vector2(s * 0.37f, 0.06f), new Vector2(s * 0.43f, -0.06f),
+                    new Vector2(s * 0.34f, -0.17f), new Vector2(s * 0.06f, -0.22f),
+                }, 0.04f);
+                k.M.Color = Paint.Shade(brown, 1.18f);
+                k.M.Push().Translate(0f, 0f, -0.022f);
+                k.M.Flat(new[] { new Vector2(s * 0.02f, -0.0f), new Vector2(s * 0.3f, 0.03f), new Vector2(s * 0.33f, -0.06f), new Vector2(s * 0.05f, -0.1f) }, 0.012f);
+                k.M.Pop();
+                k.M.Pop();
                 k.M.Color = brownD;
                 for (int f = 0; f < 4; f++)
                 {
-                    var b = w0 + new Vector3(s * (0.12f + f * 0.09f), -0.1f - f * 0.01f, -0.06f);
-                    k.M.Blade(b, b + new Vector3(s * 0.04f, -0.14f, -0.03f), 0.06f, Vector3.forward);
+                    var b = w0 + new Vector3(s * (0.12f + f * 0.09f), -0.12f - f * 0.01f, -0.06f - f * 0.012f);
+                    k.M.Strip(b, b + new Vector3(s * 0.04f, -0.13f + f * 0.01f, -0.03f), 0.06f, 0.035f, Vector3.forward, 0.016f);
                 }
             }
             // tail fan, talons

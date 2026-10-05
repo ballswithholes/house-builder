@@ -175,6 +175,49 @@ namespace Lanternvale.Game
             m.Color = keep;
         }
 
+        /// <summary>
+        /// Cloth strip with thickness from a to b (sash and scarf tails, ribbons, straps that hang free): a tapered flat
+        /// box, width w0 → w1, whose broad faces look along `facing` (projected off the strip axis). Unlike a Blade it
+        /// never collapses to a line edge-on, so the ink outline keeps it one connected shape.
+        /// </summary>
+        public static void Strip(this MeshBuilder m, Vector3 a, Vector3 b, float w0, float w1, Vector3 facing, float thick = 0.012f)
+        {
+            var axis = b - a;
+            if (axis.sqrMagnitude < 1e-8f) return;
+            var side = Vector3.Cross(axis, facing);
+            if (side.sqrMagnitude < 1e-8f) side = Vector3.Cross(axis, Vector3.up);
+            if (side.sqrMagnitude < 1e-8f) side = Vector3.Cross(axis, Vector3.right);
+            side.Normalize();
+            var n = Vector3.Cross(side, axis).normalized;
+            if (Vector3.Dot(n, facing) < 0f) { n = -n; side = -side; }
+            var h = n * (thick * 0.5f);
+            var a0 = a - side * (w0 * 0.5f); var a1 = a + side * (w0 * 0.5f);
+            var b0 = b - side * (w1 * 0.5f); var b1 = b + side * (w1 * 0.5f);
+            m.Quad(a0 + h, a1 + h, b1 + h, b0 + h, n);
+            m.Quad(a0 - h, a1 - h, b1 - h, b0 - h, -n);
+            m.Quad(a1 + h, a1 - h, b1 - h, b1 + h, side);
+            m.Quad(a0 + h, a0 - h, b0 - h, b0 + h, -side);
+            var ax = axis.normalized;
+            m.Quad(b0 + h, b1 + h, b1 - h, b0 - h, ax);
+            m.Quad(a0 + h, a1 + h, a1 - h, a0 - h, -ax);
+        }
+
+        /// <summary>A strip following a quadratic curve a → ctrl → b in `segs` pieces (curling ribbons and tails).</summary>
+        public static void CurvedStrip(this MeshBuilder m, Vector3 a, Vector3 ctrl, Vector3 b, float w0, float w1, Vector3 facing, float thick = 0.012f, int segs = 3)
+        {
+            var prev = a;
+            float prevW = w0;
+            for (int i = 1; i <= segs; i++)
+            {
+                float t = (float)i / segs;
+                var p = (1 - t) * (1 - t) * a + 2 * (1 - t) * t * ctrl + t * t * b;
+                float w = Mathf.Lerp(w0, w1, t);
+                m.Strip(prev, p, prevW, w, facing, thick);
+                prev = p;
+                prevW = w;
+            }
+        }
+
         /// <summary>Cone spike from `at` along `dir` (hair spikes, horns, claws, thorns).</summary>
         public static void Spike(this MeshBuilder m, Vector3 at, Vector3 dir, float radius, float length, int sides = 5)
         {
