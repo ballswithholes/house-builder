@@ -12,7 +12,7 @@ that empties spirits — spreads from the old shrine, and your party has to reki
 
 > **Status — please read [Known limitations](#known-limitations).** This is a complete vertical slice, but
 > nobody has run it inside the Unity editor yet. The Unity scripts are compile-checked against Unity reference
-> assemblies, and the rules, world and save code is tested headlessly (200 tests, including full
+> assemblies, and the rules, world and save code is tested headlessly (223 tests, including full
 > playthroughs of the slice for every class). The art is placeholder art.
 
 ---
@@ -353,7 +353,7 @@ Harness arguments (after `data`/`core`/`all`):
 * `--no-tests`, `--quiet`.
 * `--allow-problems` doesn't fail on data problems. Don't use it for a real check.
 
-The current state is `Data validation: OK` and **`Tests: 200/200 passed`**, and both Unity configurations
+The current state is `Data validation: OK` and **`Tests: 223/223 passed`**, and both Unity configurations
 report `compile OK`. The tests cover formulas and the hit table, every class ability used through the real
 engine (smoke tests), AI battles, items, progression, navigation, dialogue, quests, saves, and **full
 playthroughs** of the slice for every class through the `GameSession` API.
