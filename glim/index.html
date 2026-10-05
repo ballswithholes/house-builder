@@ -65,6 +65,13 @@ svg.i{width:22px;height:22px;fill:currentColor;flex:none}
 #pups{left:var(--sl);top:calc(var(--st) + 46px);display:flex;flex-direction:column;gap:6px}
 .pup{width:36px;height:36px;border-radius:18px;background:var(--paper);box-shadow:0 3px 0 rgba(30,20,40,.25);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .pup svg{width:22px;height:22px}.pup b{position:absolute;left:6px;right:6px;bottom:4px;height:3px;border-radius:2px;transform-origin:0 50%;background:currentColor}
+/* character ability chip: glyph + recharge ring (gates left) */
+.abchip{width:36px;height:36px;border-radius:18px;background:var(--paper);box-shadow:0 3px 0 rgba(30,20,40,.25);display:flex;align-items:center;justify-content:center;position:relative;transition:background .15s}
+.abchip .g{width:20px;height:20px;transition:opacity .15s}.abchip.dim .g{opacity:.38}
+.abchip .rg{position:absolute;inset:0;width:36px;height:36px;fill:none;stroke-width:3;transform:rotate(-90deg)}
+.abchip .rg circle{stroke:rgba(30,20,40,.14)}.abchip .rg .p{stroke:currentColor;stroke-dasharray:97.4;stroke-dashoffset:0;stroke-linecap:round}
+.abchip b{position:absolute;right:-7px;bottom:-5px;min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;border-radius:9px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:800;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
+.abchip b:empty{display:none}.abchip.lit{background:var(--amber-hot)}
 #pauseBtn{right:var(--sr);top:var(--st);width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;gap:5px}
 #pauseBtn i{width:5px;height:16px;border-radius:3px;background:var(--ink)}
 #meterWrap{left:0;right:0;bottom:calc(var(--sb) + 6px);display:flex;justify-content:center;align-items:center;gap:8px;color:var(--paper);text-shadow:0 2px 0 #1E1428,0 0 2px #1E1428,0 0 6px rgba(30,20,40,.5)}
@@ -138,7 +145,24 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .scard canvas.lk{background:radial-gradient(circle at 50% 45%,#FFF4E0,#E2CFAE)}
 .scard .small{color:var(--ink)}
 .scard .chip{background:var(--paper-2)}
-@media (max-height:520px){.scard{padding:10px 14px;gap:6px}.scard canvas{width:100px;height:100px}.seg{margin-top:8px}.seg button{min-height:44px}}
+.scard .pw{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-top:-6px}
+.scard .pw span{opacity:.6;margin-right:3px}.scard .pw i{width:10px;height:10px;border-radius:5px;background:rgba(30,20,40,.14)}.scard .pw i.on{background:var(--ember);box-shadow:0 1px 0 rgba(30,20,40,.35)}
+.scard .ab{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 12px 0 8px;border-radius:14px;background:var(--ink);color:var(--paper);font-size:15px;font-weight:800;white-space:nowrap}
+.scard .ab svg{width:18px;height:18px}
+.scard .ds{margin-top:-4px;text-align:center;padding:0 6px;line-height:1.3}
+.scard .bars{display:flex;gap:10px;width:100%;padding:0 4px;box-sizing:border-box}
+.scard .bars div{flex:1;font-size:13px;font-weight:700;opacity:.8}.scard .bars b{display:block;height:6px;border-radius:3px;background:rgba(30,20,40,.12);margin-top:3px;overflow:hidden}
+.scard .bars b i{display:block;height:100%;border-radius:3px;background:var(--ink);transform-origin:0 50%}
+.scard .alt{font-size:13px;font-weight:700;margin-top:-4px;opacity:.75;text-align:center}
+@media (max-height:520px){.scard{padding:10px 14px;gap:6px}.scard canvas{width:100px;height:100px}.seg{margin-top:8px}.seg button{min-height:44px}
+ #carousel.chars{padding:0 calc(50vw - min(41vw,245px))}
+ .chars .scard{display:grid;grid-template-columns:96px 1fr;column-gap:14px;row-gap:5px;width:82vw;max-width:490px;align-items:center;justify-items:start;padding:12px 16px}
+ .chars .scard canvas{grid-column:1;grid-row:1 / span 5;width:96px;height:96px;align-self:center}
+ .chars .scard>*:not(canvas){grid-column:2}.chars .scard .pw,.chars .scard .ds,.chars .scard .alt{margin-top:0}.chars .scard .ds{text-align:left;padding:0}
+ .chars .scard .bars{padding:0}.chars .scard button{justify-self:stretch}
+ .chars .scard>.alt{grid-column:1;grid-row:6;justify-self:center;text-align:center;line-height:1.2}}
+@media (max-height:600px) and (orientation:portrait){.scard{padding:12px 14px;gap:6px}.scard canvas{width:96px;height:96px}}
+@media (max-height:360px){.seg{margin-top:4px}.chars .scard{padding:8px 14px;row-gap:3px}.chars .scard button{min-height:44px}} /* Safari landscape with the tab bar (852x342) */
 .scard .chip.primary{background:var(--amber)}
 .scard.cen canvas{animation:bob 1.6s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translateY(-6px)}to{transform:translateY(6px)}}
@@ -158,6 +182,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 #toast{position:fixed;left:0;right:0;top:calc(var(--st) + 146px);z-index:4;display:flex;justify-content:center;pointer-events:none}
 #toast .pill{height:auto;min-height:36px;padding:6px 14px;transform:translateY(-12px);opacity:0;transition:transform .24s var(--ease),opacity .24s}
 #toast.on .pill{transform:none;opacity:1}
+#toast.inshop{top:calc(var(--st) + 60px)}@media (max-height:360px){#toast.inshop{top:calc(var(--st) + 52px)}} /* in the shop: over the Characters / Trails switch, clear of the cards */
 #crash{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:var(--scrim);padding:24px}
 #crash.on{display:flex}
 #crash .card{text-align:center;max-width:320px}
@@ -177,6 +202,11 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M4 3h5v9a3 3 0 0 0 6 0V3h5v9a8 8 0 0 1-16 0zM4 3v4h5V3zm11 0v4h5V3z"/></symbol>
  <symbol id="i-slowmo" viewBox="0 0 24 24"><path d="M5 2h14v2h-1.5c0 4-2.5 6-4.5 8 2 2 4.5 4 4.5 8H19v2H5v-2h1.5c0-4 2.5-6 4.5-8-2-2-4.5-4-4.5-8H5zm4 18h6c-.3-2.4-1.6-3.8-3-5-1.4 1.2-2.7 2.6-3 5z"/></symbol>
  <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M2 4.1 4.1 2 9 6.9V4h2v6H5V8h2.9zM22 4.1 19.9 2 15 6.9V4h-2v6h6V8h-2.9zM2 19.9 4.1 22 9 17.1V20h2v-6H5v2h2.9zM22 19.9 19.9 22 15 17.1V20h-2v-6h6v2h-2.9z"/></symbol>
+ <symbol id="i-drift" viewBox="0 0 24 24"><path d="M3.5 20.5C3 11 9 3.8 21 3c-.6 11.6-7.6 17.6-17.5 17.5z"/><path d="M4.5 19.5 14 10" fill="none" stroke="#FFF4E0" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></symbol>
+ <symbol id="i-splash" viewBox="0 0 24 24"><path d="M2 19.5h20V23H2z"/><path d="M4.5 3.5 10 16l5.5-10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.6 4.6 19.4 3l-.4 7z"/></symbol>
+ <symbol id="i-ward" viewBox="0 0 24 24"><path d="M14.5 2.2A10 10 0 1 0 21.8 17 8.2 8.2 0 0 1 14.5 2.2z"/><path d="M18.5 3.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></symbol>
+ <symbol id="i-phase" viewBox="0 0 24 24"><circle cx="16.5" cy="7.5" r="5"/><path d="M2.5 21.5 10.5 12M2.5 15l5.5-4.5M9 21.5l4-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+ <symbol id="i-tidal" viewBox="0 0 24 24"><path d="M2 8c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2.5 5 0M2 15c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2.5 5 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 18.5l-3 3.5h6z"/></symbol>
  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
  <symbol id="i-home" viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-4.5v-6h-3v6H6v-9H3z"/></symbol>
  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M12 4a8 8 0 0 1 7.4 5H22l-3.5 5L15 9h2.2A6 6 0 1 0 18 14h2.1A8 8 0 1 1 12 4z"/></symbol>
@@ -241,7 +271,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
   <div class="cap small mt">Sound follows your silent switch</div>
   <div class="cap small mt" style="opacity:.6">Stats</div><div class="slist" id="statList"></div>
   <button id="resetBtn" class="chip btn danger mt" style="width:100%">Reset progress</button>
-  <div class="small mt" style="text-align:center" id="verTxt">Glim v1.0.0</div>
+  <div class="small mt" style="text-align:center" id="verTxt">Glim v1.1.0</div>
  </div></div>
  <div id="missions" class="panel center"><div class="scrim"></div><div class="card vscroll">
   <div style="display:flex;align-items:center"><h2 style="flex:1;margin:0;text-align:left">Missions</h2><button class="chip xbtn closeP" aria-label="Close missions"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -254,7 +284,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
 <script>
 'use strict';
 /* ===================== Const / Util ===================== */
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const CONST = Object.freeze({
   STEP: 1 / 120, GRAVITY: 2600, APEX_VY: 150, APEX_MUL: 0.6, FLAP_VY: -760, MAX_FALL: 1050,
   H: 1000, CEIL: 30, FLOOR: 920, START_Y: 440, R: 17, R_VIS: 22, SHRINK: 0.6, GATE_W: 100, COL_HALF: 46, INSET: 4,
@@ -453,6 +483,11 @@ const Audio = (() => {
     medal() { const v = voice(0.42); if (!v) return; const t = ctx.currentTime; tone(v, 'sine', 90, t, 0.12, 0.25, 0.003); tone(v, 'sine', 660, t, 0.4, 0.14, 0.002); tone(v, 'sine', 990, t, 0.4, 0.1, 0.002); },
     mission() { const v = voice(0.35); if (!v) return; const t = ctx.currentTime; tone(v, 'sine', 1319, t, 0.25, 0.14, 0.003); tone(v, 'sine', 1760, t + 0.09, 0.25, 0.14, 0.003); },
     whoosh() { const v = voice(1.2); if (v) nz(v, ctx.currentTime, 1.2, 0.08, 0.4, 'bandpass', 400, 2000, 1.2, 1.5, 0.7); },
+    // character abilities: a watery bloop (Splash Back), a glassy upward shimmer (Phase Tail), a soft moon chime (Moon Ward regrown)
+    splash() { const v = voice(0.3, true); if (!v) return; const t = ctx.currentTime; nz(v, t, 0.26, 0.22, 0.004, 'lowpass', 2600, 450, 0.26, 1.5); tone(v, 'sine', 260, t, 0.2, 0.26, 0.003, 880, 0.14); tone(v, 'sine', 620, t + 0.07, 0.12, 0.1, 0.003, 1100, 0.1); },
+    phase() { const v = voice(0.36, true); if (!v) return; const t = ctx.currentTime; tone(v, 'sine', 700, t, 0.32, 0.14, 0.01, 2100, 0.28); tone(v, 'triangle', 1050, t, 0.3, 0.07, 0.01, 2800, 0.28, 9); nz(v, t, 0.2, 0.05, 0.02, 'highpass', 5000); },
+    ward() { const v = voice(0.5); if (!v) return; const t = ctx.currentTime; [0, 2, 4].forEach((d, i) => tone(v, 'triangle', mtof(deg(d, 12)), t + i * 0.06, 0.3, 0.13, 0.006)); tone(v, 'sine', mtof(deg(5, 24)), t + 0.16, 0.32, 0.08, 0.004); },
+    charged() { const v = voice(0.12); if (!v) return; const t = ctx.currentTime; tone(v, 'sine', mtof(deg(2, 24)), t, 0.1, 0.07, 0.003); tone(v, 'sine', mtof(deg(4, 24)), t + 0.05, 0.1, 0.07, 0.003); },
     purchase() { S.gem(); S.medal(); }
   };
   function play(name, a) { if (!ctx) return; try { S[name](a); } catch (e) { } }
@@ -514,10 +549,23 @@ const Input = (() => {
   let queued = 0, head = 0; const RING = 8, stamp = new Float64Array(RING);
   const I = { tickTime: Infinity, frameTime: -1 };
   // stamp with performance.now() when it is coherent with rAF time; otherwise resolve to the next frame's time
-  function push() { if (queued >= RING) return; let t = performance.now(); const f = I.frameTime; if (f < 0 || t < f - 1 || t > f + 250) t = NaN; stamp[(head + queued) % RING] = t; queued++; }
-  I.resolve = function (now) { for (let i = 0; i < queued; i++) { const j = (head + i) % RING; if (stamp[j] !== stamp[j]) stamp[j] = now; } };
+  function stampNow() { let t = performance.now(); const f = I.frameTime; if (f < 0 || t < f - 1 || t > f + 250) t = NaN; return t; }
+  function push() { if (queued >= RING) return; stamp[(head + queued) % RING] = stampNow(); queued++; }
+  I.resolve = function (now) { for (let i = 0; i < queued; i++) { const j = (head + i) % RING; if (stamp[j] !== stamp[j]) stamp[j] = now; }
+    for (let i = 0; i < hq; i++) { const j = (hh + i) % HR; if (hStamp[j] !== hStamp[j]) hStamp[j] = now; } };
   function pop() { if (queued > 0 && (Game.manual || stamp[head] <= I.tickTime + 0.01)) { head = (head + 1) % RING; queued--; return true; } return false; }
-  function clear() { queued = 0; }
+  // held input (Mintleaf's Drift): any pointer that went down on #stage, a held flap key, or __GAME.hold(). Each change of the
+  // aggregate is a timestamped transition, applied by the first tick at or after its stamp exactly like a press.
+  const HR = 16, hStamp = new Float64Array(HR), hVal = new Uint8Array(HR), ptrs = [], KEYBIT = { Space: 1, ' ': 1, ArrowUp: 2, KeyW: 4, Enter: 8 };
+  let hq = 0, hh = 0, hCur = 0, hLast = 0, keyMask = 0, apiHold = 0;
+  const physical = () => (ptrs.length > 0 || keyMask !== 0 || apiHold !== 0) ? 1 : 0;
+  function hpush(v, t) { if (hq >= HR) { hVal[(hh + hq - 1) % HR] = v; return; } const j = (hh + hq) % HR; hStamp[j] = t; hVal[j] = v; hq++; }
+  function holdChanged(t) { const v = physical(); if (v === hLast) return; hLast = v; hpush(v, t === undefined ? stampNow() : t); }
+  I.popHold = function () { while (hq > 0 && (Game.manual || hStamp[hh] <= I.tickTime + 0.01)) { hCur = hVal[hh]; hh = (hh + 1) % HR; hq--; } return hCur === 1; };
+  I.setApiHold = function (on) { apiHold = on ? 1 : 0; holdChanged(); }; // stamped like __GAME.flap(): the next tick under step(), frame-rate independent in real time
+  I.releaseAll = function () { ptrs.length = 0; keyMask = 0; apiHold = 0; holdChanged(); };
+  // a cleared queue restarts from what is physically held now, so a run never inherits a stale transition
+  function clear() { queued = 0; hq = 0; hLast = physical(); hpush(hLast, -Infinity); }
   function press(src) { return Game.press(src); }
   const isHap = t => t && (t === Haptics.el || t === Haptics.input);
   function init() {
@@ -525,7 +573,13 @@ const Input = (() => {
       if (e.button > 0) return; e.preventDefault();
       try { stage.focus({ preventScroll: true }); } catch (err) { }
       Audio.unlock(); if (press('pointer') && HAPTIC_EVENT === 'pointerdown') Haptics.tick();
+      if (ptrs.indexOf(e.pointerId) < 0 && ptrs.length < 10) { ptrs.push(e.pointerId); holdChanged(); }
     }, { passive: false });
+    const lift = e => { const i = ptrs.indexOf(e.pointerId); if (i >= 0) { ptrs.splice(i, 1); holdChanged(); } };
+    window.addEventListener('pointerup', lift, true); window.addEventListener('pointercancel', lift, true);
+    // a release outside the page (mouse dragged out of the frame) never arrives: a buttonless move ends that pointer's hold
+    window.addEventListener('pointermove', e => { if (e.buttons === 0 && ptrs.length && e.pointerType === 'mouse') lift(e); }, true);
+    window.addEventListener('keyup', e => { const b = KEYBIT[e.code || e.key] || 0; if (b && (keyMask & b)) { keyMask &= ~b; holdChanged(); } });
     stage.addEventListener('touchstart', e => { e.preventDefault(); if (HAPTIC_EVENT === 'touchstart' && Game.flapPossible()) Haptics.tick(); }, { passive: false });
     window.addEventListener('pointerdown', () => Quality.remeasure(), { once: true, capture: true }); // WebKit lifts the untouched-iframe 30 Hz rAF throttle here
     window.addEventListener('keydown', e => {
@@ -534,7 +588,7 @@ const Input = (() => {
         const panelOpen = UI.panelOpen();
         const onBtn = document.activeElement && document.activeElement.tagName === 'BUTTON';
         if (panelOpen || (onBtn && c !== 'Space' && c !== ' ')) { if (c === 'Space' || c === ' ') e.preventDefault(); return; }
-        e.preventDefault(); if (e.repeat) return; Audio.unlock(); press('key'); return;
+        e.preventDefault(); if (e.repeat) return; Audio.unlock(); press('key'); keyMask |= KEYBIT[c] || 0; holdChanged(); return;
       }
       if (c === 'KeyP' || c === 'Escape' || c === 'p' || c === 'P') {
         if (e.repeat) return;
@@ -639,8 +693,30 @@ const BIOMES = [
   { name: 'Dusk Canyon', sky: ['#E9806E', '#FFC57E'], far: '#CF6B78', mid: '#923F60', near: '#5A2550', ink: '#23102A', amb: '#FFD9A8', glow: 1, rim: null },
   { name: 'Night Woods', sky: ['#0E1834', '#2C3D70'], far: '#26345F', mid: '#1B2549', near: '#121A36', ink: '#06091A', amb: '#FFE58A', glow: 2, rim: '#9FB2E8' },
   { name: 'Aurora Peaks', sky: ['#071422', '#13314A'], far: '#1C4560', mid: '#10293B', near: '#0A1A27', ink: '#02070C', amb: '#E8F7FF', glow: 2, rim: '#BFE9FF' }];
-const SKINS = [{ id: 'glim', name: 'Glim', price: 0, d: 'The little lantern spirit' }, { id: 'mintleaf', name: 'Mintleaf', price: 150, d: 'A leaf pod with a springy stem' }, { id: 'koi', name: 'Koi', price: 300, d: 'Snaps its tail on every flap' },
-  { id: 'moth', name: 'Moth', price: 600, d: 'Soft wings with golden eyespots' }, { id: 'comet', name: 'Comet', price: 1000, d: 'Double-length trail of stardust' }, { id: 'jelly', name: 'Jelly', price: -1, secret: 'Earn the Prism medal', d: 'Secret: fly 100 gates in a run' }];
+const SKINS = [{ id: 'glim', name: 'Glim', price: 0, d: 'The little lantern spirit. No tricks: every gate is your own skill.' },
+  { id: 'mintleaf', name: 'Mintleaf', price: 150, d: 'A little floatier. Keep your finger on the screen to glide down slowly.' },
+  { id: 'koi', name: 'Koi', price: 300, d: 'Bounces off the ground instead of crashing. Ready again after 4 gates.' },
+  { id: 'moth', name: 'Moth', price: 600, d: 'Starts with a shield, and it grows back 7 gates after it breaks.' },
+  { id: 'comet', name: 'Comet', price: 1000, d: 'Slips right through a spire, ready again after 5 gates. SURGE fills faster.' },
+  { id: 'jelly', name: 'Jelly', price: 2000, alt: 'or free with the Prism medal', d: 'Gently pulled toward each gap. Bounces off the ground, ready again after 4 gates.' }];
+// Characters: each has its own flying feel and one signature ability, ordered so every step up the price ladder is easier.
+// Applied ONLY in the simulation step (gravity, flap, max fall, apex hang, hitbox, scroll pace); level generation never reads
+// it, so a seed (and the daily) lays out the same gates for everyone. Glim is the [FIXED] baseline: its values reproduce CONST
+// exactly. chg: gates passed to recharge the one charged ability (splash, ward or phase); power: shop pips (1-6).
+// Tuned with a human-like bot (150-250 ms reactions, timing and aim noise) so each step reaches ~1.3x the gates of the one
+// before; every row still covers the generator's reach envelope (UP/DOWN >= REACH x Glim's over the gate's time window).
+const CHARS = (() => { const C = {}, def = (id, o) => { o.id = id; o.chg = o.splash || o.ward || o.phase || 0; C[id] = Object.freeze(o); };
+  def('glim', { grav: 1, flap: -760, fall: 1050, apex: 150, r: 17, pace: 1, power: 1, ab: null, abName: 'All skill', glyph: 'mote', col: '#E8A23B', splash: 0, ward: 0, phase: 0, drift: false, pull: false, sgain: 1, tip: 'no tricks, all skill' });
+  def('mintleaf', { grav: 0.85, flap: -700, fall: 770, apex: 175, r: 13.5, pace: 0.9, power: 2, ab: 'drift', abName: 'Drift', glyph: 'drift', col: '#2F9E7E', splash: 0, ward: 0, phase: 0, drift: true, pull: false, sgain: 1, tip: 'hold to glide' });
+  def('koi', { grav: 0.75, flap: -650, fall: 570, apex: 165, r: 12.5, pace: 0.82, power: 3, ab: 'splash', abName: 'Splash Back', glyph: 'splash', col: '#E2602A', splash: 4, ward: 0, phase: 0, drift: false, pull: false, sgain: 1, tip: 'bounces off the ground' });
+  def('moth', { grav: 0.85, flap: -700, fall: 620, apex: 190, r: 13, pace: 0.9, power: 4, ab: 'ward', abName: 'Moon Ward', glyph: 'ward', col: '#7A68B0', splash: 0, ward: 7, phase: 0, drift: false, pull: false, sgain: 1, tip: 'a shield that grows back' });
+  def('comet', { grav: 0.9, flap: -722, fall: 850, apex: 160, r: 12.5, pace: 0.92, power: 5, ab: 'phase', abName: 'Phase Tail', glyph: 'phase', col: '#2E9BCB', splash: 0, ward: 0, phase: 5, drift: false, pull: false, sgain: 1.5, tip: 'slips through a spire' });
+  def('jelly', { grav: 0.7, flap: -610, fall: 500, apex: 210, r: 10, pace: 0.76, power: 6, ab: 'tidal', abName: 'Tidal Pull', glyph: 'tidal', col: '#E05A9A', splash: 4, ward: 0, phase: 0, drift: false, pull: true, sgain: 1, tip: 'drifts toward the gap' });
+  return Object.freeze(C); })();
+// PULL_UP/PULL_DN: the pull's limits as fractions of the character's gravity. Upward it stays below even the apex-hang gravity
+// (x0.6), so the pull can never hold Jelly up: it is a nudge, the player keeps tapping. DRIFT_VY 540 (not 260): a held glide
+// that capped the fall harder made a holding Mintleaf (150) as easy as Koi (300) or Moth (600), breaking the price ladder.
+const ABIL = Object.freeze({ DRIFT_VY: 540, SPLASH_VY: -900, PHASE_TICKS: 36, PULL_D: 240, PULL_K: 20, PULL_UP: 0.43, PULL_DN: 0.9 });
 const TRAILS = [{ id: 'ember', name: 'Ember', price: 0, d: 'Warm amber glow' }, { id: 'petals', name: 'Petals', price: 120, d: 'Tumbling paper petals' }, { id: 'bubbles', name: 'Bubbles', price: 250, d: 'Wobbly sky bubbles' },
   { id: 'starlight', name: 'Starlight', price: 400, d: 'Twinkling four-point stars' }, { id: 'rainbow', name: 'Rainbow', price: 800, d: 'Seven glowing hues' }, { id: 'aurora', name: 'Aurora', price: -1, secret: '7-day daily streak', d: 'Secret: a 7-day daily streak' }];
 const PUPS = ['shield', 'magnet', 'slowmo', 'shrink'];
@@ -782,6 +858,7 @@ const Art = (() => {
     S.x.fillStyle = 'rgba(255,255,255,.9)'; S.x.beginPath(); S.x.arc(7, 7, 1.8, 0, TAU); S.x.fill(); S.ox = S.oy = 10; T.bubbles = [S];
     S = cv(16, 16, k); S.x.fillStyle = COL.paper; S.x.beginPath(); S.x.arc(8, 8, 7, 0, TAU); S.x.fill(); S.ox = S.oy = 8; A.puff = S;
     S = cv(16, 10, k); S.x.fillStyle = '#CDE77F'; S.x.beginPath(); S.x.moveTo(1, 5); S.x.quadraticCurveTo(8, -2, 15, 5); S.x.quadraticCurveTo(8, 12, 1, 5); S.x.fill(); S.x.strokeStyle = '#8FB35A'; S.x.lineWidth = 0.8; S.x.beginPath(); S.x.moveTo(2, 5); S.x.lineTo(14, 5); S.x.stroke(); A.leaf = S;
+    S = cv(16, 10, k); S.x.fillStyle = '#7FE0B5'; S.x.beginPath(); S.x.moveTo(1, 5); S.x.quadraticCurveTo(8, -2, 15, 5); S.x.quadraticCurveTo(8, 12, 1, 5); S.x.fill(); S.x.strokeStyle = '#2F7A6B'; S.x.lineWidth = 1; S.x.beginPath(); S.x.moveTo(2, 5); S.x.lineTo(14, 5); S.x.stroke(); A.leafMint = S; // Mintleaf's Drift sheds these
     S = cv(16, 16, k); S.x.fillStyle = '#8A7F92'; S.x.beginPath(); S.x.arc(8, 8, 7, 0, TAU); S.x.fill(); S.ox = S.oy = 8; A.smoke = S;
   }
   // ---------- medals ----------
@@ -839,7 +916,7 @@ const Art = (() => {
   A.COMMON_JOBS = ['words', 'pick', 'skins', 'trails', 'misc', 'mark', 'rims'];
   function bakeCommonJob(name, k) {
     if (name === 'words') { const W = A.words, ws = { perfect: 'PERFECT', graze: 'GRAZE', surge: 'SURGE!', newbest: 'NEW BEST!', best: 'BEST', shield: 'SHIELD!', tobest: '2 TO BEST!', tap: 'TAP', tapfly: 'tap to fly',
-        p_shield: 'SHIELD', p_magnet: 'MAGNET', p_slowmo: 'SLOW-MO', p_shrink: 'SHRINK', revive: 'GO!' };
+        p_shield: 'SHIELD', p_magnet: 'MAGNET', p_slowmo: 'SLOW-MO', p_shrink: 'SHRINK', revive: 'GO!', splash: 'SPLASH!', phase: 'PHASE!', ward: 'WARD!' };
       for (const key in ws) W[key] = bakeWord(ws[key], key === 'tap' || key === 'tapfly' ? 30 : 44, k);
       W.moves = bakeWord('MOVES', 34, k, true); W.jaws = bakeWord('JAWS', 34, k); W.spins = bakeWord('SPINS', 34, k);
       for (let i = 2; i <= 5; i++) W['x' + i] = bakeWord('×' + i, 40, k);
@@ -847,7 +924,7 @@ const Art = (() => {
       '0123456789+'.split('').forEach(ch => { A.digits[ch] = bakeWord(ch, 36, k); }); warmIn(A.words); warmIn(A.digits); }
     else if (name === 'pick') { bakePickups(k); bakePin(k); warmIn(A.pick); warmIn(A.orb); bakeWarm(A.pin); }
     else if (name === 'skins') { bakeSkins(k); warmIn(A.skins); warmIn(A.sil); warmIn(A.warmSil); [A.flame, A.sparkMint, A.shieldBub, A.magRing].forEach(bakeWarm); }
-    else if (name === 'trails') { bakeTrails(k); warmIn(A.trail); [A.puff, A.smoke, A.leaf, A.starSpr].forEach(bakeWarm); }
+    else if (name === 'trails') { bakeTrails(k); warmIn(A.trail); [A.puff, A.smoke, A.leaf, A.leafMint, A.starSpr].forEach(bakeWarm); }
     else if (name === 'misc') { bakeMisc(k); [A.frame, A.frameL, A.slowVig, A.speedLine, A.edge, A.ribbon].forEach(bakeWarm); }
     else if (name === 'mark') { bakeWordmark(k); bakeHand(k); bakeWarm(A.wordmark); bakeWarm(A.hand); }
     else if (name === 'rims') { A.bakeRims(k); A.rimW.forEach(p => { bakeWarm(p[0]); bakeWarm(p[1]); }); A.rimR.forEach(p => { bakeWarm(p[0]); bakeWarm(p[1]); }); bakeWarm(A.chev); }
@@ -1105,7 +1182,7 @@ const Art = (() => {
   // sliced rebake after a big K change: old sprites stay drawable (scaled) until each slice replaces them
   A.rebake = function (k, keep) { A.K = k; View.bakeK = k; queue.length = 0; A.COMMON_JOBS.forEach(j => queue.push('c', j));
     for (let b = 0; b < 5; b++) { const E = A.biome[b]; if (!E) continue; if (b !== 0 && keep.indexOf(b) < 0) continue; E.k = k; E.done = {}; E.n = 0; JOBS.forEach(j => queue.push(b, j)); } };
-  A.warmAll = function () { const W = [A.wordmark, A.hand, A.ribbon, A.flame, A.shieldBub, A.magRing, A.pick.mote, A.pick.gem, A.chev, A.edge, A.speedLine, A.slowVig, A.frame, A.frameL, A.puff, A.smoke, A.starSpr, A.sparkMint, A.leaf];
+  A.warmAll = function () { const W = [A.wordmark, A.hand, A.ribbon, A.flame, A.shieldBub, A.magRing, A.pick.mote, A.pick.gem, A.chev, A.edge, A.speedLine, A.slowVig, A.frame, A.frameL, A.puff, A.smoke, A.starSpr, A.sparkMint, A.leaf, A.leafMint];
     for (const k in A.words) W.push(A.words[k]); for (const k in A.digits) W.push(A.digits[k]); for (const k in A.skins) { W.push(A.skins[k]); W.push(A.sil[k]); W.push(A.warmSil[k]); } for (const k in A.orb) W.push(A.orb[k]); for (const k in A.glow) W.push(A.glow[k]);
     for (const k in A.trail) A.trail[k].forEach(t => W.push(t)); A.rimW.forEach(p => { W.push(p[0], p[1]); }); A.rimR.forEach(p => { W.push(p[0], p[1]); }); W.forEach(bakeWarm); };
   A.init = function (k) { A.bakeCommon(k); A.bakeOnce(); A.ensure(0, true); A.warmAll(); View.bakeK = k; A.ready = true; };
@@ -1113,7 +1190,7 @@ const Art = (() => {
 })();
 
 /* ===================== Particles ===================== */
-const PK = { SPARK: 0, HOT: 1, PUFF: 2, SHARD_INK: 3, SHARD_RED: 4, SHARD_CYAN: 5, CONFETTI: 6, SMOKE: 7, STAR: 8, MINT: 9, MOTE: 10, NK: 11 };
+const PK = { SPARK: 0, HOT: 1, PUFF: 2, SHARD_INK: 3, SHARD_RED: 4, SHARD_CYAN: 5, CONFETTI: 6, SMOKE: 7, STAR: 8, MINT: 9, MOTE: 10, LEAF: 11, NK: 12 };
 const CONF_COLS = ['#FFF4E0', '#FFB347', '#FF9BC8', '#7FE0B5', '#9BE7FF', '#FFE08A'];
 const Particles = (() => {
   const CAP = 360, px = new Float32Array(CAP), py = new Float32Array(CAP), vx = new Float32Array(CAP), vy = new Float32Array(CAP), life = new Float32Array(CAP),
@@ -1144,7 +1221,7 @@ const Particles = (() => {
     for (let kd = 0; kd < PK.NK; kd++) {
       let spr = null, add = false;
       if (kd === PK.SPARK) { spr = A.glow.white; add = true; } else if (kd === PK.HOT) { spr = A.glow.hot; add = true; } else if (kd === PK.PUFF) spr = A.puff; else if (kd === PK.SMOKE) spr = A.smoke;
-      else if (kd === PK.STAR) { spr = A.starSpr; } else if (kd === PK.MINT) spr = A.sparkMint; else if (kd === PK.MOTE) spr = A.pick.mote;
+      else if (kd === PK.STAR) { spr = A.starSpr; } else if (kd === PK.MINT) spr = A.sparkMint; else if (kd === PK.MOTE) spr = A.pick.mote; else if (kd === PK.LEAF) spr = A.leafMint;
       let set = false;
       for (let i = 0; i < n; i++) {
         if (kind[i] !== kd) continue;
@@ -1152,6 +1229,7 @@ const Particles = (() => {
         const t = life[i] / max[i], a = 1 - t, X = px[i] + offX, Y = py[i];
         if (spr) { const s = size[i] * (kd === PK.PUFF || kd === PK.SMOKE ? (0.6 + t * 0.8) : (1 - t * 0.5)); ctx.globalAlpha = kd === PK.PUFF ? a * 0.6 : kd === PK.SMOKE ? a * 0.5 : a;
           if (kd === PK.STAR || kd === PK.MINT || kd === PK.MOTE) { place(X, Y, rot[i], 1, 1); ctx.drawImage(spr.c, -s, -s, s * 2, s * 2); base(); }
+          else if (kd === PK.LEAF) { place(X, Y, rot[i] * 0.4, 1, 1); ctx.drawImage(spr.c, -s, -s * 0.6, s * 2, s * 1.2); base(); }
           else ctx.drawImage(spr.c, X - s, Y - s, s * 2, s * 2); }
         else { ctx.globalAlpha = kd === PK.CONFETTI ? Math.min(1, a * 2) : a; ctx.fillStyle = kd === PK.SHARD_INK ? Game.inkCol() : kd === PK.SHARD_RED ? COL.thorn : kd === PK.SHARD_CYAN ? COL.shield : CONF_COLS[col[i]];
           const s = size[i]; place(X, Y, rot[i], 1, 1);
@@ -1324,11 +1402,11 @@ const Player = {
   reset(y) { const p = Player; p.y = p.py = y; p.vy = 0; p.rot = p.prot = 0; p.sx = p.sy = 1; p.svx = p.svy = 0; p.r = CONST.R; },
   save() { const p = Player; p.py = p.y; p.prot = p.rot; },
   flap(vy) { const p = Player; p.vy = vy; p.rot = -22 * Math.PI / 180; p.sx = 0.8; p.sy = 1.22; p.svx = p.svy = 0; p.flapN++; },
-  cosmetic(dead) { // deterministic per-tick spring + tilt
+  cosmetic(dead, flat) { // deterministic per-tick spring + tilt; flat: Mintleaf gliding levels out like a leaf
     const p = Player, S = CONST.STEP, k = 380, c = 22;
     p.svx += (-k * (p.sx - 1) - c * p.svx) * S; p.sx += p.svx * S; p.svy += (-k * (p.sy - 1) - c * p.svy) * S; p.sy += p.svy * S;
     if (dead) p.rot += 540 * Math.PI / 180 * S;
-    else { const tg = clamp(p.vy * 0.075, -22, 70) * Math.PI / 180; p.rot += (tg - p.rot) * (1 - Math.exp(-12 * S)); }
+    else { const tg = flat ? 0.06 : clamp(p.vy * 0.075, -22, 70) * Math.PI / 180; p.rot += (tg - p.rot) * (1 - Math.exp(-12 * S)); }
   }
 };
 
@@ -1355,7 +1433,8 @@ const Game = (() => {
   const R = { seed: 1, mode: 'normal', mods: makeMods('normal'), start: 0, runTick: 0, dist: 0, v: 300, vb: 300, sf: 1, gates: 0, score: 0, chain: 0, mult: 1, maxChain: 0, maxMult: 1, meter: 0,
     surgeT: 0, graceT: 0, invulnT: 0, shield: false, magT: 0, slowT: 0, shrT: 0, shrHold: false, perfects: 0, grazes: 0, smashes: 0, motes: 0, moteN: 0, gems: 0, pups: 0, pure: true,
     alive: true, lockout: 0, dyingT: 0, cdT: 0, biomeN: 0, biome: 0, prevBiome: 0, best: { score: 0, gates: 0 }, newBest: false, bestShown: false, active: false, reviveUsed: false,
-    cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [] };
+    cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [],
+    ch: CHARS.glim, grav: CONST.GRAVITY, flapV: CONST.FLAP_VY, knockV: CONST.FLAP_VY, pickK: 1, chg: 0, chgK: -1, held: false, glide: false, pull: false };
   G.run = R;
   G.runTime = () => R.runTick * CONST.STEP;
   let sysRM = false; try { const mq = matchMedia('(prefers-reduced-motion: reduce)'); sysRM = mq.matches; const onRM = () => { sysRM = mq.matches; try { UI.applySettings(); } catch (e) { } };
@@ -1368,7 +1447,7 @@ const Game = (() => {
     boot: {}, title: { enter() { R.active = false; Input.clear(); } , tick() { G.titleScroll += 90 * CONST.STEP; } },
     ready: { enter() { G.hover = 0; Input.clear(); }, tick() { G.hover++; Player.save(); Player.y = CONST.START_Y + 12 * Math.sin(TAU * G.hover * CONST.STEP / 1.6); Player.vy = 0; Player.cosmetic(false); } },
     playing: { enter() { wake(true); }, tick: simTick },
-    paused: { enter() { Input.clear(); wake(false); Audio.suspend(); Save.write(); } },
+    paused: { enter() { Input.releaseAll(); Input.clear(); R.held = R.glide = R.pull = false; wake(false); Audio.suspend(); Save.write(); } }, // the sim stops: no stale held/glide/pull
     countdown: { enter() { R.cdT = 0; Input.clear(); }, tick() { if (R.cdT % 48 === 0) Bus.emit('countdown', 3 - R.cdT / 48); R.cdT++; Player.save(); if (R.cdT >= CONST.COUNTDOWN) G.go('playing'); } },
     dying: { enter() { R.dyingT = 0; wake(false); }, tick: dyingTick },
     results: { enter() { R.resT = 0; finalize(true); wake(false); }, tick() { if (R.lockout > 0) R.lockout--; R.resT++; Player.save(); } }
@@ -1391,15 +1470,18 @@ const Game = (() => {
     R.seed = seed >>> 0; R.mode = mode; R.daily = mode === 'daily' ? di.mod : -1; R.mods = makeMods(mode, di.mod);
     R.start = o.startGate !== undefined ? Math.max(0, o.startGate | 0) : FLAGS.gate;
     R.skin = o.skin && Art.BODY[o.skin] ? o.skin : sv.equipped.skin; R.trail = o.trail && TRAILS.some(t => t.id === o.trail) ? o.trail : sv.equipped.trail;
-    const gs = GenState(R.seed, R.mods, R.start); rng.world = gs.rng; World.reset(gs);
-    R.runTick = 0; R.dist = 0; R.pdist = 0; R.vb = R.v = speedAt(R.start, R.mods); R.sf = 1; R.gates = 0; R.score = 0; R.chain = 0; R.mult = 1; R.maxChain = 0; R.maxMult = 1; R.meter = 0;
-    R.surgeT = 0; R.graceT = 0; R.invulnT = 0; R.shield = R.mods.breeze; R.magT = 0; R.slowT = 0; R.shrT = R.mods.tiny ? 1200 : 0; R.shrHold = false;
+    const gs = GenState(R.seed, R.mods, R.start); rng.world = gs.rng; World.reset(gs); // generation uses the mode's mods only, never the character
+    // the character's physics on top of the mode mods (for Glim every factor is exactly 1, so these equal the CONST values bit for bit)
+    const c = R.ch = CHARS[R.skin] || CHARS.glim; R.grav = CONST.GRAVITY * R.mods.grav * c.grav; R.flapV = R.mods.flap * (c.flap / -760); R.knockV = CONST.FLAP_VY * (c.flap / -760);
+    R.pickK = CONST.R / c.r; R.chg = 0; R.chgK = -1; R.held = false; R.glide = false; R.pull = false;
+    R.runTick = 0; R.dist = 0; R.pdist = 0; R.vb = R.v = speedAt(R.start, R.mods) * c.pace; R.sf = 1; R.gates = 0; R.score = 0; R.chain = 0; R.mult = 1; R.maxChain = 0; R.maxMult = 1; R.meter = 0;
+    R.surgeT = 0; R.graceT = 0; R.invulnT = 0; R.shield = R.mods.breeze || c.ward > 0; R.magT = 0; R.slowT = 0; R.shrT = R.mods.tiny ? 1200 : 0; R.shrHold = false;
     R.perfects = R.grazes = R.smashes = R.motes = R.moteN = R.gems = R.pups = R.surges = 0; R.pure = true; R.alive = true; R.lockout = 0; R.dyingT = 0; R.cdT = 0;
     R.biomeN = biomeCount(R.start); R.biome = R.prevBiome = R.biomeN % 5; R.newBest = false; R.bestShown = false; R.active = true; R.reviveUsed = false; R.missionsDone = [];
     R.cm = { gates: 0, motes: 0, score: 0, ticks: 0, runs: false, died: 0 };
     const bk = mode === 'breeze' ? 'breeze' : 'normal'; R.best = { score: mode === 'daily' ? sv.daily.best : sv.best[bk].score, gates: mode === 'daily' ? 0 : sv.best[bk].gates };
     sv.missions.slots.forEach(s => { const m = mission(s.i); if (m.sc === 'run' || m.sc === 'max') s.p = 0; s.done = s.p >= m.target; });
-    Player.reset(CONST.START_Y); Player.r = R.shrT > 0 ? CONST.R * CONST.SHRINK : CONST.R; Input.clear(); Particles.clear(); Quality.newRun();
+    Player.reset(CONST.START_Y); Player.r = R.shrT > 0 ? c.r * CONST.SHRINK : c.r; Input.clear(); Particles.clear(); Quality.newRun();
     Art.ensure(R.biome, true); Art.ensure(G.nextBiomeIdx(), false); Art.evict([0, R.biome, G.nextBiomeIdx()]);
     fillGates(); Audio.newRun(); MS.dead = false; MS.biome = R.biome; MS.gates = 0; MS.chain = 0; MS.mult = 1; MS.surge = false; Audio.setSlow(false);
     Bus.emit('run', R.seed, R.start);
@@ -1429,22 +1511,28 @@ const Game = (() => {
   G.onAudioInterrupted = function () { G.pause(); };
   // ---------- simulation ----------
   function simTick() {
-    const P = Player, S = CONST.STEP, m = R.mods; R.runTick++; P.save(); R.pdist = R.dist;
+    const P = Player, S = CONST.STEP, m = R.mods, c = R.ch; R.runTick++; P.save(); R.pdist = R.dist;
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on) { g.pgapY = g.gapY; g.pgap = g.gap; } }
     for (let i = 0; i < World.picks.length; i++) { const p = World.picks[i]; if (p.on) { p.px = p.X; p.py = p.y; } }
-    // 1. presses
-    let flapped = false;
-    if (Input.pop()) { P.flap(m.flap); flapped = true; Bus.emit('flap', R.chain, 0); }
-    // 2-5. gravity, clamp, integrate, ceiling
-    if (!flapped) { let gr = CONST.GRAVITY * m.grav; if (Math.abs(P.vy) < CONST.APEX_VY) gr *= CONST.APEX_MUL; P.vy += gr * S; }
-    if (P.vy > CONST.MAX_FALL) P.vy = CONST.MAX_FALL;
+    // 1. presses (and the held state, consumed the same way)
+    let flapped = false; R.held = Input.popHold();
+    if (Input.pop()) { P.flap(R.flapV); flapped = true; Bus.emit('flap', R.chain, 0); }
+    // Tidal Pull (Jelly): toward the next unpassed gate's gap centre (pinwheel: nearer band) while it is 0-240 u ahead and SURGE is off
+    let pa = 0;
+    if (c.pull) { let tg = null; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && !g.passed && !g.smashed && (!tg || g.X < tg.X)) tg = g; }
+      const ah = tg ? tg.X - R.dist : -1; R.pull = R.surgeT === 0 && ah >= 0 && ah <= ABIL.PULL_D;
+      if (R.pull) { const ty = tg.kind === 3 ? (P.y < tg.gapY ? tg.gapY - tg.pinH : tg.gapY + tg.pinH) : tg.gapY; pa = clamp((ty - P.y) * ABIL.PULL_K, -ABIL.PULL_UP * R.grav, ABIL.PULL_DN * R.grav); } }
+    // 2-5. gravity (+ Jelly's pull), clamp, integrate, ceiling
+    if (!flapped) { let gr = R.grav; if (Math.abs(P.vy) < c.apex) gr *= CONST.APEX_MUL; P.vy += gr * S; if (pa !== 0) P.vy += pa * S; }
+    if (P.vy > c.fall) P.vy = c.fall;
+    if (c.drift) { R.glide = R.held && P.vy > 0; if (R.glide && P.vy > ABIL.DRIFT_VY) P.vy = ABIL.DRIFT_VY; } // Drift: holding caps the fall, never adds lift
     P.y += P.vy * S;
     if (P.y - P.r < CONST.CEIL) { P.y = CONST.CEIL + P.r; if (P.vy < 0) P.vy = 0; P.sx = 1.15; P.sy = 0.87; }
-    P.cosmetic(false);
+    P.cosmetic(false, R.glide);
     // 6. scroll
     const gEff = R.start + R.gates;
     R.dist += R.v * S;
-    R.vb += (speedAt(gEff, m) - R.vb) * (1 - Math.exp(-2 * S)); R.sf += ((R.surgeT > 0 ? CONST.SURGE_V : 1) - R.sf) * (1 - Math.exp(-S / 0.1)); R.v = R.vb * R.sf;
+    R.vb += (speedAt(gEff, m) * c.pace - R.vb) * (1 - Math.exp(-2 * S)); R.sf += ((R.surgeT > 0 ? CONST.SURGE_V : 1) - R.sf) * (1 - Math.exp(-S / 0.1)); R.v = R.vb * R.sf;
     // 7. gates + pickups motion, generation
     const rt = R.runTick * S;
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on) continue; World.motion(g, rt); if (g.X - R.dist + View.xP < -160 && g.exited) g.on = false; }
@@ -1461,11 +1549,13 @@ const Game = (() => {
       if (G.god) continue;
       if (R.surgeT > 0) smash(g);
       else if (R.invulnT > 0 || R.graceT > 0) continue;
-      else if (R.shield) { R.shield = false; R.invulnT = CONST.INVULN_TICKS + 1; P.flap(CONST.FLAP_VY); g.noHit = true; Bus.emit('shieldBreak', g.k, 0); }
+      else if (c.phase && R.chg === 0) { g.noHit = true; R.invulnT = ABIL.PHASE_TICKS + 1; R.chg = c.phase; R.chgK = g.passed ? -1 : g.k; Bus.emit('phase', g.k, 0); } // Phase Tail: through this spire
+      else if (R.shield) { R.shield = false; R.invulnT = CONST.INVULN_TICKS + 1; P.flap(R.knockV); g.noHit = true; if (c.ward) { R.chg = c.ward; R.chgK = g.passed ? -1 : g.k; } Bus.emit('shieldBreak', g.k, 0); }
       else { die(g.k); return; } }
     if (P.y + P.r >= CONST.FLOOR) {
       if (G.god || R.surgeT > 0 || R.graceT > 0 || R.invulnT > 0) { P.y = CONST.FLOOR - P.r; P.vy = CONST.BOUNCE_VY; Bus.emit('bounce', 0, 0); }
-      else if (R.shield) { R.shield = false; R.invulnT = CONST.INVULN_TICKS + 1; P.y = CONST.FLOOR - P.r; P.vy = CONST.BOUNCE_VY; Bus.emit('shieldBreak', 0, 1); }
+      else if (c.splash && R.chg === 0) { P.y = CONST.FLOOR - P.r; P.vy = ABIL.SPLASH_VY; R.chg = c.splash; R.chgK = -1; Bus.emit('splash', 0, 0); } // Splash Back
+      else if (R.shield) { R.shield = false; R.invulnT = CONST.INVULN_TICKS + 1; P.y = CONST.FLOOR - P.r; P.vy = CONST.BOUNCE_VY; if (c.ward) { R.chg = c.ward; R.chgK = -1; } Bus.emit('shieldBreak', 0, 1); }
       else { die(0); return; }
     }
     // 9. pass / perfect / graze, pickups
@@ -1479,6 +1569,8 @@ const Game = (() => {
         if (!surge) gain(2 + (g.perfect ? 8 : 0));
         if (g.perfect) R.perfects++;
         Bus.emit('pass', g.k, pts); if (g.perfect) Bus.emit('perfect', g.k, R.mult);
+        // ability recharge: counts gates passed after the one it fired on (chgK), so 'after 8 more gates' means 8 new gates
+        if (R.chg > 0 && g.k !== R.chgK && --R.chg === 0) { if (c.ward) { if (!R.shield) { R.shield = true; Bus.emit('ward', g.k, 0); } } else Bus.emit('charged', g.k, 0); }
         if (R.pure) Bus.emit('pure', R.gates, 0);
         const ge = R.start + R.gates;
         if (g.ribbon && !R.bestShown) { R.bestShown = true; Bus.emit('best', R.gates, 0); }
@@ -1497,7 +1589,7 @@ const Game = (() => {
         MS.chain = R.chain; MS.mult = R.mult; Bus.emit('chain', R.chain, R.mult);
       }
     }
-    const rr = P.r + CONST.PICK_R;
+    const rr = P.r * R.pickK + CONST.PICK_R; // pickups keep Glim's reach: a smaller hitbox never makes motes harder to grab
     for (let i = 0; i < World.picks.length; i++) { const p = World.picks[i]; if (!p.on) continue; const dx = p.X - R.dist, dy = p.y - P.y; if (dx * dx + dy * dy > rr * rr) continue;
       p.on = false;
       if (p.kind === 0) { const v = sm; R.motes += v; R.moteN++; if (!surge) gain(1); Bus.emit('mote', v, R.moteN); }
@@ -1507,33 +1599,33 @@ const Game = (() => {
     if (R.magT > 0 && --R.magT === 0) Bus.emit('powerupEnd', 1, 0);
     if (R.slowT > 0 && --R.slowT === 0) { Audio.setSlow(false); Bus.emit('powerupEnd', 2, 0); }
     if (R.shrT > 0 && --R.shrT === 0) R.shrHold = true;
-    if (R.shrHold) { let clear = true; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && Math.abs(R.dist - g.X) <= (g.kind === 3 ? 61 : CONST.COL_HALF) + CONST.R) { clear = false; break; } } if (clear) { R.shrHold = false; Bus.emit('powerupEnd', 3, 0); } }
-    P.r = (R.shrT > 0 || R.shrHold) ? CONST.R * CONST.SHRINK : CONST.R;
+    if (R.shrHold) { let clear = true; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && Math.abs(R.dist - g.X) <= (g.kind === 3 ? 61 : CONST.COL_HALF) + c.r) { clear = false; break; } } if (clear) { R.shrHold = false; Bus.emit('powerupEnd', 3, 0); } }
+    P.r = (R.shrT > 0 || R.shrHold) ? c.r * CONST.SHRINK : c.r;
     if (R.graceT > 0) R.graceT--;
     if (R.invulnT > 0) R.invulnT--;
     if (R.surgeT > 0) { R.surgeT--; R.meter = 100 * R.surgeT / CONST.SURGE_TICKS; if (R.surgeT === 0) { R.graceT = CONST.GRACE_TICKS; MS.surge = false; Bus.emit('surgeEnd', 0, 0); } }
     else if (R.meter >= 100) { R.meter = 100; R.surgeT = CONST.SURGE_TICKS; R.surges++; MS.surge = true; Bus.emit('surge', 0, 0); }
   }
-  function gain(v) { if (R.surgeT > 0) return; R.meter = Math.min(100, R.meter + v); }
+  function gain(v) { if (R.surgeT > 0) return; R.meter = Math.min(100, R.meter + v * R.ch.sgain); } // Comet fills SURGE x1.5
   function smash(g) { g.smashed = true; const pts = 2 * R.mult * 2; R.score += pts; R.smashes++; Bus.emit('smash', g.k, pts); }
   function die(k) {
-    const P = Player; R.alive = false; R.killer = k; R.lockout = CONST.LOCKOUT; R.vDeath = R.v; P.vy = CONST.KNOCK_VY; MS.dead = true;
+    const P = Player; R.alive = false; R.held = R.glide = R.pull = false; R.killer = k; R.lockout = CONST.LOCKOUT; R.vDeath = R.v; P.vy = CONST.KNOCK_VY; MS.dead = true;
     Bus.emit('hit', k, 0); G.go('dying'); Bus.emit('death', k, R.gates);
   }
   function dyingTick() {
     const P = Player, S = CONST.STEP; R.runTick++; P.save(); R.pdist = R.dist; if (R.lockout > 0) R.lockout--;
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on) { g.pgapY = g.gapY; g.pgap = g.gap; World.motion(g, R.runTick * S); } }
     for (let i = 0; i < World.picks.length; i++) { const p = World.picks[i]; if (p.on) { p.px = p.X; p.py = p.y; World.pickPos(p); } }
-    P.vy = Math.min(CONST.MAX_FALL, P.vy + CONST.GRAVITY * R.mods.grav * S); P.y = Math.min(1300, P.y + P.vy * S); P.cosmetic(true);
+    P.vy = Math.min(R.ch.fall, P.vy + R.grav * S); P.y = Math.min(1300, P.y + P.vy * S); P.cosmetic(true);
     R.v = Math.max(0, R.v - R.vDeath / 36); R.dist += R.v * S;
     if (++R.dyingT >= CONST.DYING) G.go('results');
   }
   G.givePowerup = function (kind, secs) {
     const T = s => Math.round(s / CONST.STEP);
-    if (kind === 'shield') { if (R.shield) { R.motes += 5; Bus.emit('mote', 5, R.moteN); } else R.shield = true; }
+    if (kind === 'shield') { if (R.shield) { R.motes += 5; Bus.emit('mote', 5, R.moteN); } else { R.shield = true; if (R.ch.ward) { R.chg = 0; R.chgK = -1; } } } // an orb restores Moth's ward at once
     else if (kind === 'magnet') R.magT = T(secs || CONST.DUR.magnet);
     else if (kind === 'slowmo') { R.slowT = T(secs || CONST.DUR.slowmo); Audio.setSlow(true); }
-    else if (kind === 'shrink') { R.shrT = T(secs || CONST.DUR.shrink); R.shrHold = false; Player.r = CONST.R * CONST.SHRINK; }
+    else if (kind === 'shrink') { R.shrT = T(secs || CONST.DUR.shrink); R.shrHold = false; Player.r = R.ch.r * CONST.SHRINK; }
   };
   G.setMeter = v => { R.meter = clamp(+v || 0, 0, 100); };
   // ---------- revive ----------
@@ -1543,7 +1635,8 @@ const Game = (() => {
     let next = null; for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (!g.on || g.exited) continue;
       if (g.k === R.killer || (g.X >= R.dist - 60 && g.X <= R.dist + 250)) { g.smashed = true; g.noHit = true; g.passed = true; g.exited = true; g.dissolve = 1; Bus.emit('dissolve', g.k, 0); } }
     for (let i = 0; i < 8; i++) { const g = World.gates[i]; if (g.on && !g.smashed && g.X > R.dist && (!next || g.X < next.X)) next = g; }
-    Player.reset(next ? next.gapY - next.pinH : CONST.START_Y); R.alive = true; MS.dead = false; R.invulnT = 241; R.lockout = 0; R.v = R.vb * R.sf; Audio.newRun();
+    Player.reset(next ? next.gapY - next.pinH : CONST.START_Y); Player.r = R.ch.r; R.alive = true; MS.dead = false; R.invulnT = 241; R.lockout = 0; R.v = R.vb * R.sf; Audio.newRun();
+    R.chg = 0; R.chgK = -1; if (R.ch.ward) R.shield = true; R.held = false; R.glide = false; R.pull = false; // Continue keeps the character with its ability ready
     G.go('countdown'); return true;
   };
   // ---------- finalize (results / abandon) ----------
@@ -1619,13 +1712,16 @@ const Renderer = (() => {
   R.place = place; R.base = base;
   const spr = (S, x, y, sc) => ctx.drawImage(S.c, x - S.ox * sc, y - S.oy * sc, S.w * sc, S.h * sc);
   // ---------- pools: pops, rings, trail ----------
-  const POPS = []; for (let i = 0; i < 16; i++) POPS.push({ on: false, s: null, x: 0, y: 0, t: 0, dur: 0, rise: 0, sc: 1, num: -1, screen: false, dx: 0 });
+  const POPS = []; for (let i = 0; i < 16; i++) POPS.push({ on: false, s: null, x: 0, y: 0, t: 0, dur: 0, rise: 0, sc: 1, num: -1, screen: false, dx: 0, ly: 0, gl: 0 });
   const RINGS = []; for (let i = 0; i < 8; i++) RINGS.push({ on: false, x: 0, y: 0, r0: 0, r1: 0, t: 0, dur: 0, col: '#FFE08A', w: 3, world: false });
-  const TN = 28, tX = new Float32Array(TN), tY = new Float32Array(TN); let tHead = 0, tCount = 0, tTick = -1; const TRAIL_FADE = 0.45;
+  const TN = 28, tX = new Float32Array(TN), tY = new Float32Array(TN); let tHead = 0, tCount = 0, tTick = -1, driftT = -99; const TRAIL_FADE = 0.45;
   const LEAVES = []; for (let i = 0; i < 3; i++) LEAVES.push({ on: false, x: 0, y: 0, r: 0, vr: 0, s: 1 }); let leafT = 1.5;
   const SL = []; for (let i = 0; i < 12; i++) SL.push({ y: rng.fx.next() * 1000, x: rng.fx.next() * 900, v: 1300 + rng.fx.next() * 1000, w: 140 + rng.fx.next() * 120 });
-  R.pop = function (s, x, y, dur, rise, sc, num, screen, dx) { let p = POPS[0]; for (let i = 0; i < 16; i++) { if (!POPS[i].on) { p = POPS[i]; break; } if (POPS[i].t / POPS[i].dur > p.t / p.dur) p = POPS[i]; }
-    p.on = true; p.s = s; p.x = x; p.y = y; p.t = 0; p.dur = dur || 0.7; p.rise = rise === undefined ? 50 : rise; p.sc = sc || 1; p.num = num === undefined ? -1 : num; p.screen = !!screen; p.dx = dx || 0; };
+  // gl: how far the word (or its group: GRAZE + xN) reaches left of the anchor x, used to keep it clear of the HUD column
+  R.pop = function (s, x, y, dur, rise, sc, num, screen, dx, gl) { let p = POPS[0]; for (let i = 0; i < 16; i++) { if (!POPS[i].on) { p = POPS[i]; break; } if (POPS[i].t / POPS[i].dur > p.t / p.dur) p = POPS[i]; }
+    p.on = true; p.s = s; p.x = x; p.y = y; p.t = 0; p.dur = dur || 0.7; p.rise = rise === undefined ? 50 : rise; p.sc = sc || 1; p.num = num === undefined ? -1 : num; p.screen = !!screen; p.dx = dx || 0; p.ly = 0; p.gl = gl !== undefined ? gl : s ? s.ox * p.sc : 0;
+    // words that start together (WARD! with PERFECT or GRAZE) stack into lanes instead of drawing over each other
+    if (s && !p.screen) for (let i = 0; i < 16; i++) { const q = POPS[i]; if (q !== p && q.on && q.s && !q.screen && !q.dx && q.t < 0.3 && Math.abs(q.y + q.ly - y) < 40) p.ly = Math.min(p.ly, q.ly - 46); } };
   R.ring = function (x, y, r0, r1, dur, col, w) { let r = RINGS[0]; for (let i = 0; i < 8; i++) { if (!RINGS[i].on) { r = RINGS[i]; break; } } r.on = true; r.x = x; r.y = y; r.r0 = r0; r.r1 = r1; r.t = 0; r.dur = dur; r.col = col; r.w = w || 3; };
   R.trailSample = function (X, y) { tX[tHead] = X; tY[tHead] = y; tHead = (tHead + 1) % TN; if (tCount < TN) tCount++; };
   R.trailClear = () => { tCount = 0; tTick = -1; };
@@ -1640,7 +1736,8 @@ const Renderer = (() => {
   // while playing (spec 8.4), Comet sheds star dust, and a dead Glim's trail is dropped once it has faded out.
   function fxTick() { const RR = Game.run, t = RR.runTick;
     if (Game.state === 'playing') { if (t !== tTick && (t & 1) === 0) { tTick = t; R.trailSample(RR.dist, Player.y);
-      if (RR.skin === 'comet' && rng.fx.next() < 0.7) Particles.spawn(PK.STAR, RR.dist - 14, Player.y + (rng.fx.next() - 0.5) * 22, -50 - rng.fx.next() * 50, (rng.fx.next() - 0.5) * 40, 0.45 + rng.fx.next() * 0.25, 2.5 + rng.fx.next() * 2.5, 0); } }
+      if (RR.skin === 'comet' && rng.fx.next() < 0.7) Particles.spawn(PK.STAR, RR.dist - 14, Player.y + (rng.fx.next() - 0.5) * 22, -50 - rng.fx.next() * 50, (rng.fx.next() - 0.5) * 40, 0.45 + rng.fx.next() * 0.25, 2.5 + rng.fx.next() * 2.5, 0);
+      if (RR.glide && (t - driftT >= 30 || t < driftT)) { driftT = t; Particles.spawn(PK.LEAF, RR.dist - 12, Player.y + 8, -70 - rng.fx.next() * 50, 20 + rng.fx.next() * 30, 1 + rng.fx.next() * 0.3, 6 + rng.fx.next() * 2, 40); } } } // Drift sheds a leaf every 0.25 s
     else if (!RR.alive && FX.clock - FX.deathAt > TRAIL_FADE) tCount = 0; }
   R.syncSlow = function (W) { fxTick(); const RR = Game.run, tg = RR.slowT > 0 && Game.state === 'playing' ? CONST.SLOW_SCALE : 1; if (tg !== FX.slowTarget) { FX.slowFrom = Game.manual ? tg : slowAt(W); FX.slowAt = W; FX.slowTarget = tg; } };
   R.interval = function (W) { let w = W; if (w < FX.hsUntil) w = FX.hsUntil; const ts = R.tsAt(w); return (w - W) + CONST.STEP / (ts > 0.05 ? ts : 0.05); };
@@ -1823,7 +1920,8 @@ const Renderer = (() => {
       ctx.fillStyle = '#FFD27A'; ctx.beginPath(); ctx.arc(-26, -9, 4.5, 0, TAU); ctx.arc(26, -9, 4.5, 0, TAU); ctx.fill(); ctx.fillStyle = COL.ink; ctx.beginPath(); ctx.arc(-26, -9, 1.8, 0, TAU); ctx.arc(26, -9, 1.8, 0, TAU); ctx.fill(); }
     if (skin === 'koi') { const sn = Math.max(0, 1 - FX.flame / 0.18) * 0.44, c = Math.cos(sn), s = Math.sin(sn); place(gx, y, rot, sx, sy); ctx.fillStyle = '#FF8A4C'; ctx.beginPath(); ctx.moveTo(-16, 0); // fan tail snaps 25° on flap
       ctx.lineTo(-16 - 20 * c + 13 * s, -20 * s - 13 * c); ctx.quadraticCurveTo(-16 - 13 * c, -13 * s, -16 - 20 * c - 13 * s, -20 * s + 13 * c); ctx.closePath(); ctx.fill(); }
-    if (skin === 'jelly') { ctx.strokeStyle = '#FF9BC8'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; place(gx, y, rot, sx, sy); for (let t = 0; t < 4; t++) { ctx.beginPath(); for (let j = 0; j < 8; j++) { const yy = 8 + j * 4, xx = -12 + t * 8 + Math.sin(FX.wall * 6 + t + j * 0.6) * (1 + j * 0.5); j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); } }
+    if (skin === 'jelly') { ctx.strokeStyle = '#FF9BC8'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; place(gx, y, rot, sx, sy); for (let t = 0; t < 4; t++) { ctx.beginPath(); for (let j = 0; j < 8; j++) { const yy = 8 + j * 4, xx = -12 + t * 8 + Math.sin(FX.wall * 6 + t + j * 0.6) * (1 + j * 0.5); j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); }
+      if (running && RR.pull && RR.alive) { ctx.strokeStyle = COL.paper; ctx.lineWidth = 1.4; for (let t = 0; t < 4; t++) { ctx.globalAlpha = (vis ? 1 : 0.35) * (0.3 + 0.3 * Math.sin(FX.wall * 16 + t * 1.7)); ctx.beginPath(); for (let j = 0; j < 8; j++) { const yy = 8 + j * 4, xx = -12 + t * 8 + Math.sin(FX.wall * 6 + t + j * 0.6) * (1 + j * 0.5); j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); } ctx.globalAlpha = vis ? 1 : 0.35; } } // Tidal Pull shimmer
     // body
     place(gx, y, rot, sx, sy);
     ctx.drawImage(A.skins[skin].c, -32, -32, 64, 64);
@@ -1852,9 +1950,11 @@ const Renderer = (() => {
     setBase(1);
     for (let i = 0; i < 8; i++) { const r = RINGS[i]; if (!r.on) continue; const t = r.t / r.dur; ctx.globalAlpha = 1 - t; ctx.strokeStyle = r.col; ctx.lineWidth = r.w * (1 - t * 0.5);
       ctx.beginPath(); ctx.arc(r.x === -1 ? gx : r.x, r.y, lerp(r.r0, r.r1, easeOutCubic(t)), 0, TAU); ctx.stroke(); }
-    const V = View;
+    const V = View, colN = UI.colN, top0 = -V.oy + FX.camY; // left HUD column (mote pill, power-up pills, ability chip) in world units
+    const colR = (Math.max(16, V.safe.l) + 50) / V.s - V.colX, colB = top0 + (Math.max(12, V.safe.t) + 44 + 42 * colN) / V.s;
     for (let i = 0; i < 16; i++) { const p = POPS[i]; if (!p.on) continue; const t = p.t / p.dur, e = t < 0.25 ? easeOutBack(t / 0.25) : 1, a = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
-      const x = (p.x === -1 ? gx : p.x) + p.dx, minY = -V.oy + FX.camY + (V.safe.t + 150) / V.s, y = Math.max(minY, (p.screen ? -V.oy + FX.camY + V.safe.t / V.s : 0) + p.y) - p.rise * easeOutCubic(t), sc = p.sc * (0.6 + 0.4 * e);
+      const ax = p.x === -1 ? gx : p.x; let x = ax + p.dx; const minY = -V.oy + FX.camY + (V.safe.t + 150) / V.s, y = Math.max(minY, (p.screen ? -V.oy + FX.camY + V.safe.t / V.s : 0) + p.y) + p.ly - p.rise * easeOutCubic(t), sc = p.sc * (0.6 + 0.4 * e);
+      if (colN > 0 && p.s && !p.screen && y - 30 < colB && ax - p.gl < colR) x += colR - (ax - p.gl); // slide right of the column, groups together
       ctx.globalAlpha = a;
       if (p.s) spr(p.s, x, y, sc);
       if (p.num >= 0) { let n = p.num, w = 0, d = 1; while (n >= 10 * d) d *= 10; const plus = Art.digits['+'], dw = plus.w * 0.5 * sc;
@@ -1910,7 +2010,7 @@ const Renderer = (() => {
 /* ===================== UI (DOM) ===================== */
 const TIPS = ['Tap gently, in rhythm', 'Skim a thorn rim for a GRAZE', 'Fly through the very centre for PERFECT', 'Fill SURGE to smash straight through spires', 'Style keeps your chain going: ×5 is the max', 'Shield saves you once, even from the bramble'];
 const UI = (() => {
-  const U = { panel: null }, E = {};
+  const U = { panel: null, colN: 0 }, E = {}; // colN: pills + ability chip showing in the left HUD column (word pops keep clear of it)
   ['score', 'mult', 'pips', 'hudToast', 'motePill', 'moteN', 'pups', 'pauseBtn', 'meterWrap', 'meterFill', 'meterLbl', 'rotChip', 'titleUI', 'dailyChip', 'missionStrip', 'msText', 'bestPill', 'bestTxt', 'bestMedal',
     'pause', 'pResume', 'pRestart', 'pHome', 'pMissions', 'results', 'rSheet', 'rMedal', 'rHeading', 'rRun', 'rNew', 'rScore', 'rStats', 'rBiome', 'rNext', 'rNextBar', 'rMissions', 'rTip', 'rCont', 'rContRing', 'rRetry', 'rHome', 'rShop', 'rHint',
     'shop', 'shopMotes', 'shopClose', 'segSkins', 'segTrails', 'carousel', 'settings', 'statList', 'resetBtn', 'verTxt', 'missions', 'mCycle', 'mList', 'toast', 'toastPill', 'hapRow', 'score'].forEach(id => { E[id] = $(id); });
@@ -1919,6 +2019,11 @@ const UI = (() => {
   const REM = { shield: 0, magnet: 0, slowmo: 0, shrink: 0 }, LEFT = { shield: 99, magnet: 0, slowmo: 0, shrink: 0 };
   const pips = E.pips.children; const C = { score: -1, mult: -1, pip: -1, motes: -1, meter: -1, full: null, lbl: '', pups: '' };
   const PILLS = {}; PUPS.forEach(p => { const d = document.createElement('div'); d.className = 'pup hid'; d.style.color = COL[p]; d.innerHTML = '<svg class="i"><use href="#i-' + p + '"/></svg><b></b>'; E.pups.appendChild(d); PILLS[p] = { el: d, bar: d.querySelector('b'), on: false, blink: false, ph: 0 }; });
+  // character ability chip under the power-up pills: glyph, a ring that fills as gates recharge it, and the gates left
+  const AB = { el: document.createElement('div'), on: false, id: '', left: -1, lit: null }; AB.el.className = 'abchip hid';
+  AB.el.innerHTML = '<svg class="rg" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5"/><circle class="p" cx="18" cy="18" r="15.5"/></svg><svg class="i g"><use href="#i-mote"/></svg><b></b>';
+  E.pups.appendChild(AB.el); AB.use = AB.el.querySelector('use'); AB.ring = AB.el.querySelector('.p'); AB.num = AB.el.querySelector('b');
+  U.abPulse = () => { if (AB.on && !Game.reduced()) { try { AB.el.animate(POP_KF, POP_OPT); } catch (e) { } } };
   const show = (el, on) => el.classList.toggle('hid', !on);
   const fmt = n => String(Math.floor(n));
   function btn(el, fn, back) { el.addEventListener('click', e => { if (e.target === Haptics.el || e.target === Haptics.input) return; Haptics.tick(); Audio.unlock(); Audio.play(back ? 'back' : 'ui'); try { fn(e); } finally { try { el.blur(); } catch (x) { } } }); }
@@ -1940,6 +2045,12 @@ const UI = (() => {
         if (!on) continue; P.bar.style.transform = 'scaleX(' + Math.min(1, rem[p]).toFixed(3) + ')';
         const l = left[p]; if (p !== 'shield' && l < 1.5 && l > 0 && st === 'playing') { const hz = 4 + 4 * (1 - l / 1.5); P.ph += dt * hz; const b = (P.ph % 1) < 0.5; if (b !== P.blink) { P.blink = b; P.el.style.opacity = b ? '0.35' : '1'; if (!b) Audio.play('expiring'); } }
         else if (P.blink) { P.blink = false; P.el.style.opacity = '1'; } }
+      // ability chip (no chip for Glim): only touches the DOM when the value changes
+      const ch = R.ch, abOn = inRun && R.alive && ch.ab !== null; if (abOn !== AB.on) { AB.on = abOn; show(AB.el, abOn); }
+      if (abOn) { if (ch.id !== AB.id) { AB.id = ch.id; AB.use.setAttribute('href', '#i-' + ch.glyph); AB.el.style.color = ch.col; AB.left = -1; AB.lit = null; }
+        const left = ch.chg ? R.chg : 0; if (left !== AB.left) { AB.left = left; AB.ring.style.strokeDashoffset = ch.chg ? (97.4 * left / ch.chg).toFixed(2) : '0'; AB.num.textContent = left > 0 ? String(left) : ''; AB.el.classList.toggle('dim', left > 0 && !ch.pull); } // Jelly's pull never stops: only the ring/number track the splash
+        const lit = ch.drift && R.glide; if (lit !== AB.lit) { AB.lit = lit; AB.el.classList.toggle('lit', lit); } }
+      let n = AB.on ? 1 : 0; for (const p of PUPS) if (PILLS[p].on) n++; U.colN = n;
     }
     const mv2 = Save.d.motes + (R.active && st !== 'results' && st !== 'title' ? R.motes - (R.cm ? R.cm.motes : 0) : 0);
     if (mv2 !== C.motes) { C.motes = mv2; E.moteN.textContent = fmt(mv2); E.shopMotes.textContent = fmt(Save.d.motes); }
@@ -1968,7 +2079,7 @@ const UI = (() => {
   let toastTo = 0, toastCur = null; const toastQ = [];
   // mid-run toasts would cover Glim and the gates; the results card lists the run's completed missions instead
   const toastBlocked = () => Game.state === 'playing' || Game.state === 'countdown' || Game.state === 'dying' || Game.state === 'paused' || Game.state === 'results' || U.panel !== null;
-  function toastShow(html, held) { toastCur = held ? html : null; E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo);
+  function toastShow(html, held) { E.toast.classList.toggle('inshop', U.panel === 'shop'); toastCur = held ? html : null; E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo);
     toastTo = setTimeout(() => { E.toast.classList.remove('on'); toastCur = null; if (toastQ.length) toastTo = setTimeout(U.flushToasts, 300); }, 2440); }
   U.toast = function (html) { if (toastBlocked() || E.toast.classList.contains('on')) { if (toastQ.length < 6) toastQ.push(html); return; } toastShow(html, true); };
   U.holdToasts = function (keep) { if (E.toast.classList.contains('on')) { clearTimeout(toastTo); E.toast.classList.remove('on'); if (keep && toastCur !== null) toastQ.unshift(toastCur); toastCur = null; } if (!keep) toastQ.length = 0; };
@@ -2018,27 +2129,48 @@ const UI = (() => {
     armed = null; clearTimeout(armTo); // a rebuilt card shows the plain price, so it must not stay armed
     E.segSkins.setAttribute('aria-pressed', shopTab === 'skins'); E.segTrails.setAttribute('aria-pressed', shopTab === 'trails');
     const list = shopTab === 'skins' ? SKINS : TRAILS, sv = Save.d, owned = shopTab === 'skins' ? sv.owned.skins : sv.owned.trails, eq = shopTab === 'skins' ? sv.equipped.skin : sv.equipped.trail;
-    E.carousel.innerHTML = ''; E.shopMotes.textContent = fmt(sv.motes);
+    E.carousel.innerHTML = ''; E.shopMotes.textContent = fmt(sv.motes); E.carousel.classList.toggle('chars', shopTab === 'skins');
     list.forEach((it, idx) => {
       const card = document.createElement('div'); card.className = 'scard'; const cvs = document.createElement('canvas'); const px = Math.round(160 * Math.min(2, window.devicePixelRatio || 1)); cvs.width = cvs.height = px; card.appendChild(cvs);
       const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name; card.appendChild(nm);
-      const ds = document.createElement('div'); ds.className = 'small'; ds.style.cssText = 'margin-top:-6px;opacity:.7;text-align:center;padding:0 12px'; ds.textContent = it.d; card.appendChild(ds);
-      const b = document.createElement('button'); b.className = 'chip btn'; const has = owned.indexOf(it.id) >= 0;
+      const has = owned.indexOf(it.id) >= 0;
+      if (shopTab === 'skins') charInfo(card, it, has);
+      else { const ds = document.createElement('div'); ds.className = 'small'; ds.style.cssText = 'margin-top:-6px;opacity:.7;text-align:center;padding:0 12px'; ds.textContent = it.d; card.appendChild(ds); }
+      const b = document.createElement('button'); b.className = 'chip btn';
       bakePreview(cvs, it.id, has);
       const label = () => { if (has) { b.textContent = it.id === eq ? 'Equipped' : 'Equip'; b.classList.toggle('eq', it.id === eq); b.setAttribute('aria-label', (it.id === eq ? 'Equipped: ' : 'Equip ') + it.name); }
         else if (it.price < 0) { b.textContent = it.secret; b.disabled = true; b.style.opacity = '.7'; }
         else { b.innerHTML = '<svg class="i mote-ic" style="width:18px;height:18px"><use href="#i-mote"/></svg> ' + it.price; b.classList.toggle('poor', sv.motes < it.price); b.setAttribute('aria-label', 'Buy ' + it.name + ' for ' + it.price + ' motes'); } };
       label(); card.appendChild(b);
       b.addEventListener('click', () => { Haptics.tick(); Audio.unlock(); try { b.blur(); } catch (e) { }
-        if (has) { if (shopTab === 'skins') sv.equipped.skin = it.id; else sv.equipped.trail = it.id; Save.write(); Audio.play('ui'); buildShop(); return; }
+        if (has) { if (shopTab === 'skins') { sv.equipped.skin = it.id; equipToast(it); } else sv.equipped.trail = it.id; Save.write(); Audio.play('ui'); buildShop(); return; }
         if (it.price < 0 || sv.motes < it.price) return;
         if (armed !== it.id) { armed = it.id; b.textContent = 'Buy for ' + it.price + '?'; b.classList.add('primary'); clearTimeout(armTo); armTo = setTimeout(() => { armed = null; label(); b.classList.remove('primary'); }, 3000); Audio.play('ui'); return; }
-        armed = null; clearTimeout(armTo); sv.motes -= it.price; owned.push(it.id); if (shopTab === 'skins') sv.equipped.skin = it.id; else sv.equipped.trail = it.id; Save.write(); Audio.play('purchase'); buildShop();
+        armed = null; clearTimeout(armTo); sv.motes -= it.price; owned.push(it.id); if (shopTab === 'skins') { sv.equipped.skin = it.id; equipToast(it); } else sv.equipped.trail = it.id; Save.write(); Audio.play('purchase'); buildShop();
         const c2 = E.carousel.children[idx]; if (c2) { c2.querySelector('canvas').classList.add('stamp'); c2.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
       E.carousel.appendChild(card);
     });
     const ci = Math.max(0, list.findIndex(it => it.id === eq)); requestAnimationFrame(() => { const c = E.carousel.children[ci]; if (c) E.carousel.scrollLeft = c.offsetLeft - (E.carousel.clientWidth - c.clientWidth) / 2; centerCard(); });
   }
+  // character card: Power pips, the ability chip with a plain sentence, and Float / Pace / Size bars (fuller = easier)
+  // Float = how long one hop hangs in the air (flap, gravity, apex hang and fall cap together); every bar is scaled so Glim
+  // (the baseline) shows a stub and the gentlest character a full bar
+  const BAR = v => (0.12 + 0.88 * clamp(v, 0, 1)).toFixed(3);
+  function hopTime(c) { let y = 0, vy = c.flap, t = 0; const g = CONST.GRAVITY * c.grav, S = CONST.STEP;
+    while (t < 600 && (vy < 0 || y < 0)) { vy += (Math.abs(vy) < c.apex ? g * CONST.APEX_MUL : g) * S; if (vy > c.fall) vy = c.fall; y += vy * S; t++; } return t; }
+  const SPAN = (() => { const o = { h0: 1e9, h1: 0, p0: 1, p1: 1, r0: 99, r1: 0 }; for (const k in CHARS) { const c = CHARS[k], h = hopTime(c);
+    o.h0 = Math.min(o.h0, h); o.h1 = Math.max(o.h1, h); o.p0 = Math.min(o.p0, c.pace); o.r0 = Math.min(o.r0, c.r); o.r1 = Math.max(o.r1, c.r); } return o; })();
+  function charInfo(card, it, has) { const c = CHARS[it.id] || CHARS.glim, Q = SPAN;
+    const fl = (hopTime(c) - Q.h0) / Math.max(1, Q.h1 - Q.h0), pc = (Q.p1 - c.pace) / Math.max(0.01, Q.p1 - Q.p0), sz = (Q.r1 - c.r) / Math.max(0.5, Q.r1 - Q.r0);
+    let pw = '<span>Power</span>'; for (let i = 1; i <= 6; i++) pw += '<i' + (i <= c.power ? ' class="on"' : '') + '></i>';
+    const add = (cls, html, label) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; if (label) { d.setAttribute('role', 'img'); d.setAttribute('aria-label', label); } card.appendChild(d); return d; };
+    add('pw', pw, 'Power ' + c.power + ' of 6');
+    add('ab', '<svg class="i" style="color:' + (c.ab ? '#FFE08A' : '#FFB347') + '"><use href="#i-' + c.glyph + '"/></svg>' + c.abName);
+    add('small ds', ''); card.lastChild.textContent = it.d;
+    const bar = (n, v) => '<div>' + n + '<b><i style="transform:scaleX(' + BAR(v) + ')"></i></b></div>';
+    add('bars', bar('Float', fl) + bar('Slow', pc) + bar('Small', sz), 'Float ' + Math.round(fl * 10) + ', gentle pace ' + Math.round(pc * 10) + ', small size ' + Math.round(sz * 10) + ' out of 10');
+    if (!has && it.alt) add('alt', it.alt); }
+  function equipToast(it) { const c = CHARS[it.id]; if (c) toastShow('<b>' + it.name + ':</b> ' + c.tip); }
   function centerCard() { const cs = E.carousel.children, mid = E.carousel.scrollLeft + E.carousel.clientWidth / 2; let best = null, bd = 1e9; for (const c of cs) { const d = Math.abs(c.offsetLeft + c.clientWidth / 2 - mid); if (d < bd) { bd = d; best = c; } } for (const c of cs) c.classList.toggle('cen', c === best); }
   // shop previews: unlocked items glow on a dark lantern-box with the trail streaming behind; locked ones are a clear ink silhouette
   // of the whole character (wings, tail, tentacles, stem) on light paper, with an amber '?' for secrets
@@ -2142,7 +2274,7 @@ function wireFX() {
     const ry = g ? (top ? g.gapY - g.gap / 2 : g.gapY + g.gap / 2) : P.y; Pt.burst(PK.SPARK, g ? g.X : gx(), ry, 14, 380, 0.4, 7, 0, false, top ? Math.PI * 0.6 : -Math.PI * 0.6, 1.6);
     FX.nudge = Game.reduced() ? 0 : (top ? -4 : 4); FX.squint = 0; rp.grazeSlow();
     const gw = Art.words.graze.w * 0.375, xw = R.mult > 1 ? Art.words['x' + R.mult].w * 0.3 : 0; // GRAZE and its ×N side by side on one line
-    rp.pop(Art.words.graze, -1, P.y - 50, 0.6, 60, 0.75, -1, false, -xw); if (R.mult > 1) rp.pop(Art.words['x' + R.mult], -1, P.y - 50, 0.6, 60, 0.6, -1, false, gw + 2); Audio.play('graze'); });
+    rp.pop(Art.words.graze, -1, P.y - 50, 0.6, 60, 0.75, -1, false, -xw, xw + gw); if (R.mult > 1) rp.pop(Art.words['x' + R.mult], -1, P.y - 50, 0.6, 60, 0.6, -1, false, gw + 2, xw + gw); Audio.play('graze'); });
   Bus.on('mote', () => { Pt.burst(PK.MOTE, gx() + 10, P.y, 4, 160, 0.35, 5); Audio.play('mote'); });
   Bus.on('gem', () => { Pt.burst(PK.STAR, gx() + 10, P.y, 12, 260, 0.5, 7); Audio.play('gem'); });
   Bus.on('powerup', p => { const c = COL[PUPS[p]]; Pt.burst(PK.SPARK, gx(), P.y, 16, 360, 0.5, 9); rp.ring(-1, P.y, 24, 110, 0.35, c, 4); rp.pop(Art.words['p_' + PUPS[p]], -1, P.y - 64, 0.9, 50, 0.8); Audio.play('powerup'); });
@@ -2160,6 +2292,12 @@ function wireFX() {
   Bus.on('death', () => { rp.deathSlow(); Pt.burst(PK.HOT, gx(), P.y, 18, 420, 0.6, 9, 0, true); Pt.burst(PK.SMOKE, gx(), P.y - 20, 10, 90, 0.9, 9, -60, true); rp.ring(-1, P.y, 20, 120, 0.35, COL.paper, 4);
     rp.shake(16, 8); rp.flash(COL.thorn, 0.22); Audio.play('death'); Haptics.pattern([20, 40, 30]); });
   Bus.on('bounce', () => Pt.burst(PK.PUFF, gx(), CONST.FLOOR - 4, 4, 120, 0.3, 4, 0, false, -Math.PI / 2, 1.4));
+  // character abilities (automatic, so no iOS haptic: WebKit only allows it inside a gesture; Android gets a short tick)
+  Bus.on('splash', () => { Pt.burst(PK.SHARD_CYAN, gx(), CONST.FLOOR - 6, 14, 460, 0.6, 5, 1500, true, -Math.PI / 2, 1.5); Pt.burst(PK.PUFF, gx(), CONST.FLOOR - 4, 6, 160, 0.35, 5, 0, false, -Math.PI / 2, 2);
+    rp.ring(-1, CONST.FLOOR - 8, 16, 90, 0.35, COL.shield, 4); rp.pop(Art.words.splash, -1, P.y - 70, 0.8, 50, 0.85); rp.shake(5, 9); Audio.play('splash'); Haptics.pattern(10); UI.abPulse(); });
+  Bus.on('phase', () => { Pt.burst(PK.STAR, gx(), P.y, 14, 340, 0.5, 6, 0, true); rp.ring(-1, P.y, 24, 120, 0.35, '#9BE7FF', 4); rp.pop(Art.words.phase, -1, P.y - 64, 0.8, 50, 0.85); Audio.play('phase'); Haptics.pattern(10); UI.abPulse(); });
+  Bus.on('ward', () => { Pt.burst(PK.SPARK, gx(), P.y, 12, 300, 0.45, 8); rp.ring(-1, P.y, 40, 24, 0.4, COL.shield, 4); rp.pop(Art.words.ward, -1, P.y - 64, 0.9, 50, 0.85); Audio.play('ward'); Haptics.pattern(10); UI.abPulse(); });
+  Bus.on('charged', () => { Audio.play('charged'); UI.abPulse(); });
   Bus.on('dissolve', k => { const g = World.find(k); if (g) Pt.burst(PK.PUFF, g.X, g.gapY, 8, 200, 0.5, 7); });
   Bus.on('countdown', () => Audio.play('countdown'));
   Bus.on('mission', (j, rw) => { const s = Save.d.missions.slots[j], m = mission(s.i); UI.toast('<span class="chk"></span>' + m.text + ' <b>+' + rw + '</b>'); Audio.play('mission'); });
@@ -2174,13 +2312,17 @@ function snapshot() {
   if (R.active) { for (const g of World.gates) if (g.on) obstacles.push({ i: g.k, kind: KINDS[g.kind], x: g.X - R.dist + V.xP, gapY: g.gapY, gapH: g.gap, w: CONST.GATE_W, passed: g.passed, smashed: g.smashed, bands: g.kind === 3 ? [g.gapY - g.pinH, g.gapY + g.pinH] : undefined });
     obstacles.sort((a, b) => a.i - b.i);
     for (const p of World.picks) if (p.on) pickups.push({ kind: p.kind === 0 ? 'mote' : p.kind === 1 ? 'gem' : 'orb', power: p.kind === 2 ? PUPS[p.power] : undefined, x: p.X - R.dist + V.xP, y: p.y }); }
+  // character: the run's (or, outside a run, the equipped one's) physics and ability state; gatesToCharge 0 = ready, null = no charge
+  const ch = R.active ? R.ch : (CHARS[sv.equipped.skin] || CHARS.glim), left = R.active && ch.chg ? R.chg : 0; // Drift has no charge: always ready
+  const char = { id: ch.id, grav: ch.grav, flap: ch.flap, fall: ch.fall, apex: ch.apex, r: ch.r, pace: ch.pace, ability: ch.ab, ready: ch.ab === null ? null : left === 0,
+    gatesToCharge: ch.ab === null ? null : left, held: R.active && R.held, gliding: R.active && R.glide, pulling: R.active && R.pull };
   return { state: G.state, panel: UI.panel, tick: G.tk, runTick: R.runTick, seed: R.seed, mode: R.mode, score: R.score, gates: R.gates, chain: R.chain, mult: R.mult, meter: R.meter,
     surge: { active: R.surgeT > 0, t: R.surgeT * CONST.STEP, grace: R.graceT * CONST.STEP }, best: R.mode === 'daily' ? { score: sv.daily.best, gates: 0 } : { score: sv.best[bk].score, gates: sv.best[bk].gates },
     motes: sv.motes, runMotes: R.motes, runGems: R.gems, alive: R.alive, god: G.god,
     player: { x: G.state === 'title' ? V.W / 2 : V.xP, y: P.y, vy: P.vy, r: P.r, rot: P.rot, invuln: Math.max(R.invulnT, R.graceT) }, speed: R.v, dist: R.dist, obstacles, pickups,
     powerups: { shield: R.shield, magnet: R.magT * CONST.STEP, slowmo: R.slowT * CONST.STEP, shrink: R.shrT * CONST.STEP },
     biome: { index: R.biome, name: BIOMES[R.biome].name, nextAt: THRESH(R.biomeN) }, timeScale: Renderer.timeScale(), quality: Quality.level, fps: Math.round(Quality.fps * 10) / 10, dpr: V.dpr, W: V.W, xP: V.xP,
-    audio: Audio.state(), missions: sv.missions.slots.map(s => { const m = mission(s.i); return { id: s.id, p: s.p, target: m.target, done: s.p >= m.target }; }), lockoutTicks: R.lockout, medal: R.medal || null, newBest: !!R.newBest, fx: { shakeX: Renderer.FX.sx, shakeY: Renderer.FX.sy, zoom: Renderer.FX.zoom, roll: Renderer.FX.roll, reducedMotion: Game.reduced() } };
+    char, audio: Audio.state(), missions: sv.missions.slots.map(s => { const m = mission(s.i); return { id: s.id, p: s.p, target: m.target, done: s.p >= m.target }; }), lockoutTicks: R.lockout, medal: R.medal || null, newBest: !!R.newBest, fx: { shakeX: Renderer.FX.sx, shakeY: Renderer.FX.sy, zoom: Renderer.FX.zoom, roll: Renderer.FX.roll, reducedMotion: Game.reduced() } };
 }
 const Loop = (() => {
   let raf = 0, last = -1, errs = 0, nextW = -1, prevW = -1, pausedDrawn = false, odd = 0;
@@ -2218,7 +2360,7 @@ const Loop = (() => {
   return { start() { last = -1; raf = requestAnimationFrame(frame); }, resetClock() { last = -1; nextW = -1; }, softReset, onError, frame, get errs() { return errs; } };
 })();
 const API = {
-  version: VERSION, CONST,
+  version: VERSION, CONST, CHARS, ABIL,
   getState: () => snapshot(),
   getEvents: (clear = true) => Bus.events(clear),
   setSeed(seed) { Game.pendingSeed = seed === null || seed === undefined ? null : (seed >>> 0); },
@@ -2233,11 +2375,12 @@ const API = {
     else if (name === 'paused') { if (!inRun) API.forceStart(); G.go('paused'); }
     else if (name === 'countdown') { if (!inRun) API.forceStart(); G.go('countdown'); }
     else if (name === 'dying' || name === 'results') { if (!(R.active && R.alive && (G.state === 'playing' || G.state === 'paused' || G.state === 'countdown'))) { if (G.state !== 'dying' && G.state !== 'results') API.forceStart(); }
-      if (G.state === 'playing' || G.state === 'paused' || G.state === 'countdown') { if (G.state !== 'playing') G.go('playing'); R.alive = false; R.lockout = CONST.LOCKOUT; R.vDeath = R.v; Player.vy = CONST.KNOCK_VY; MS.dead = true; Bus.emit('hit', 0, 0); G.go('dying'); Bus.emit('death', 0, R.gates); }
+      if (G.state === 'playing' || G.state === 'paused' || G.state === 'countdown') { if (G.state !== 'playing') G.go('playing'); R.alive = false; R.held = R.glide = R.pull = false; R.lockout = CONST.LOCKOUT; R.vDeath = R.v; Player.vy = CONST.KNOCK_VY; MS.dead = true; Bus.emit('hit', 0, 0); G.go('dying'); Bus.emit('death', 0, R.gates); }
       if (name === 'results' && G.state === 'dying') G.go('results'); }
     return snapshot();
   },
   flap() { Game.press('api'); },
+  hold(on) { Input.setApiHold(!!on); }, // held input (Mintleaf's Drift); takes effect on the next tick
   step(n = 1) { Game.manual = true; n = Math.max(0, n | 0); const FX = Renderer.FX; for (let i = 0; i < n; i++) { FX.clock += CONST.STEP; Input.tickTime = Infinity; Game.tick(); Renderer.syncSlow(FX.clock); Renderer.wallTick(CONST.STEP); }
     const now = performance.now(); if (now - API._lastDraw > 16) { API._lastDraw = now; try { Renderer.dtw = CONST.STEP; Renderer.draw(1); UI.update(CONST.STEP * n); } catch (e) { Loop.onError(e); } } return snapshot(); }, _lastDraw: 0,
   setManualClock(on) { Game.manual = !!on; Loop.resetClock(); },
@@ -2267,7 +2410,7 @@ function boot() {
   Art.init(View.K); Particles.resize(); Particles.ambInit();
   try { $('vigFx').getContext('2d').drawImage(Art.slowVig.c, 0, 0); } catch (e) { }
   wireFX(); Game.wireMissions(); UI.init();
-  const hide = () => { if (Game.pause()) { } Audio.suspend(); Save.write(); };
+  const hide = () => { Input.releaseAll(); if (Game.pause()) { } Audio.suspend(); Save.write(); };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hide(); else { Loop.resetClock(); Quality.remeasure(); Audio.resyncClock(); } });
   window.addEventListener('pagehide', hide); window.addEventListener('blur', hide);
   window.addEventListener('focus', () => Loop.resetClock());
