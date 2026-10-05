@@ -265,6 +265,45 @@ namespace Lanternvale.Game.Panels
             return b == 0;
         }
 
+        static readonly GUIContent pressContent = new GUIContent();
+
+        /// <summary>
+        /// A button that fires on the press (MouseDown, left button), like the list rows' LeftClick. GUI.Button needs the
+        /// press and the release to reach the same control id; a window that is rebuilt between the two (loot from a
+        /// chest or a victory, whose rows, scroll view and occluders change under the cursor) can lose the release, and
+        /// the click silently does nothing. Draws exactly like Ui.Btn (hover / pressed / disabled states, tooltip,
+        /// world-click blocker).
+        /// </summary>
+        public static bool PressButton(Rect r, string text, GUIStyle style = null, bool enabled = true, string tip = null)
+        {
+            var e = Event.current;
+            style = style ?? Ui.Button;
+            bool fired = false;
+            if (e != null && style != null)
+            {
+                bool on = enabled && GUI.enabled;
+                if (e.type == EventType.Repaint)
+                {
+                    var old = GUI.enabled;
+                    GUI.enabled = on;
+                    bool hover = on && r.Contains(e.mousePosition);
+                    pressContent.text = text;
+                    style.Draw(r, pressContent, hover, hover && GameInput.MouseHeld(0), false, false);
+                    GUI.enabled = old;
+                }
+                else if (e.type == EventType.MouseDown && e.button == 0 && on && r.Contains(e.mousePosition))
+                {
+                    LastClickFrame = Time.frameCount;
+                    e.Use();
+                    fired = true;
+                }
+            }
+            if (tip != null) Ui.TooltipFor(r, tip);
+            GameInput.BlockRectGui(r);
+            if (fired) Ui.Sfx?.Invoke("ui_click");
+            return fired;
+        }
+
         /// <summary>
         /// Uses up a MouseDown inside r without acting on it. For a screen in the frames right after it appears: with
         /// the legacy input path the world click that opened it (an NPC or chest clicked in range acts in that
@@ -440,7 +479,7 @@ namespace Lanternvale.Game.Panels
                 float tw = TextWidth(title, TitleDark);
                 Label(new Rect(x + tw + 14f, r.y + 24f, r.width - tw - 140f, 26f), subtitle, TextMuted);
             }
-            close = Ui.Btn(new Rect(r.xMax - 54f, r.y + 14f, 38f, 36f), "×", CloseButton, true, "Close (Esc)");
+            close = PressButton(new Rect(r.xMax - 54f, r.y + 14f, 38f, 36f), "×", CloseButton, true, "Close (Esc)");
             Ornament(r.x + 22f, r.y + 60f, r.width - 44f);
             return new Rect(r.x + 24f, r.y + 74f, r.width - 48f, r.height - 92f);
         }
@@ -835,13 +874,13 @@ namespace Lanternvale.Game.Panels
             return n.ToString();
         }
 
-        /// <summary>Item icon in a dark slot with a quality frame and a stack count.</summary>
+        /// <summary>Item icon (painted glyph on a rarity slot, see ItemArt) with a stack count.</summary>
         public static void ItemIcon(Rect r, ItemInstance it, bool dim = false, bool highlight = false)
         {
             if (it == null || it.Def == null) { EmptySlot(r, null); return; }
             var q = Ui.QualityColor(it.Def.quality);
             if (highlight) Tex(new Rect(r.x - 6f, r.y - 6f, r.width + 12f, r.height + 12f), ProceduralArt.Glow, new Color(q.r, q.g, q.b, 0.85f));
-            Ui.Icon(r, ItemGlyph(it.Def), it.Def.quality <= Quality.Common ? Ui.Hex("#a99b86") : q, 0f, dim);
+            ItemArt.Draw(r, it.Def, dim);
             if (it.Count > 1)
                 Ui.Shadowed(new Rect(r.x + 2f, r.y + r.height * 0.5f, r.width - 6f, r.height * 0.5f - 2f), CountText(it.Count),
                     Ui.NumberStyle(Mathf.Max(12, (int)(r.height * 0.3f)), TextAnchor.LowerRight));
@@ -850,8 +889,7 @@ namespace Lanternvale.Game.Panels
         public static void ItemIcon(Rect r, ItemDef d, int count = 1, bool dim = false)
         {
             if (d == null) { EmptySlot(r, null); return; }
-            var q = Ui.QualityColor(d.quality);
-            Ui.Icon(r, ItemGlyph(d), d.quality <= Quality.Common ? Ui.Hex("#a99b86") : q, 0f, dim);
+            ItemArt.Draw(r, d, dim);
             if (count > 1)
                 Ui.Shadowed(new Rect(r.x + 2f, r.y + r.height * 0.5f, r.width - 6f, r.height * 0.5f - 2f), CountText(count),
                     Ui.NumberStyle(Mathf.Max(12, (int)(r.height * 0.3f)), TextAnchor.LowerRight));
@@ -863,6 +901,20 @@ namespace Lanternvale.Game.Panels
             GUI.Box(r, GUIContent.none, Ui.Slot);
             if (!string.IsNullOrEmpty(label))
                 Label(r, label, Ui.NumberStyle(Mathf.Clamp((int)(r.height * 0.2f), 10, 14)), new Color(1f, 1f, 1f, 0.38f));
+        }
+
+        /// <summary>
+        /// Rarity marks of an item row: a quality-coloured stripe down the row's left edge and, for uncommon and better,
+        /// the quality word right-aligned on the name line.
+        /// </summary>
+        public static void QualityRowMarks(Rect row, Quality q, float nameY, bool word = true)
+        {
+            if (!IsRepaint) return;
+            var c = q == Quality.Common ? new Color(0.55f, 0.5f, 0.42f, 0.55f) : Ui.QualityColor(q);
+            Rounded(new Rect(row.x, row.y + 4f, 4f, row.height - 8f), c);
+            string text = ItemArt.QualityWord(q);
+            if (word && text.Length > 0 && q != Quality.Poor)
+                Label(new Rect(row.xMax - 130f, nameY, 122f, 22f), text, TextSmallRight, QualityInk(q));
         }
 
         public static Color QualityInk(Quality q)

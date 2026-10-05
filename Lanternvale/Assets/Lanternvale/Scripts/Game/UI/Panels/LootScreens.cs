@@ -124,9 +124,10 @@ namespace Lanternvale.Game.Panels
                         if (!scroll.IsVisible(row) || it == null || it.Def == null) continue;
                         bool hover = PanelKit.Hover(row);
                         PanelKit.Rounded(row, hover ? PanelKit.RowHover : PanelKit.RowShade);
-                        PanelKit.ItemIcon(new Rect(row.x + 6f, row.y + 5f, 50f, 50f), it, false, hover);
-                        PanelKit.Label(new Rect(row.x + 68f, row.y + 6f, row.width - 76f, 26f), it.Name, PanelKit.RowText, PanelKit.QualityInk(it.Def.quality));
-                        PanelKit.Label(new Rect(row.x + 68f, row.y + 32f, row.width - 76f, 22f), ItemKindText(it.Def), PanelKit.RowTextSmall);
+                        PanelKit.QualityRowMarks(row, it.Def.quality, row.y + 9f);
+                        PanelKit.ItemIcon(new Rect(row.x + 10f, row.y + 5f, 50f, 50f), it, false, hover);
+                        PanelKit.Label(new Rect(row.x + 72f, row.y + 6f, row.width - 80f - (it.Def.quality > Quality.Common ? 96f : 0f), 26f), it.Name, PanelKit.RowText, PanelKit.QualityInk(it.Def.quality));
+                        PanelKit.Label(new Rect(row.x + 72f, row.y + 32f, row.width - 80f, 22f), ItemKindText(it.Def), PanelKit.RowTextSmall);
                         if (hover) Ui.TooltipFor(row, PanelKit.ItemTip(it, member, true, Ui.Rich("Click to take", Ui.Good)));
                         if (PanelKit.LeftClick(row) && Time.frameCount > lockFrame)
                         {
@@ -141,8 +142,9 @@ namespace Lanternvale.Game.Panels
                 if (items.Count == 0) PanelKit.Label(listR, "Nothing else here.", PanelKit.TextCenter);
 
                 float by = r.yMax - 66f;
-                if (Ui.Btn(new Rect(c.x, by, 220f, 48f), "Take All", Ui.ButtonGold, items.Count > 0, "Space / E")) TakeAll();
-                if (Ui.Btn(new Rect(c.xMax - 150f, by, 150f, 48f), "Close") || close) CloseWindow(items.Count);
+                // press-fired (like the rows): GUI.Button's press/release pair could be lost here and the click did nothing
+                if (PanelKit.PressButton(new Rect(c.x, by, 220f, 48f), "Take All", Ui.ButtonGold, items.Count > 0, "Space / E")) TakeAll();
+                if (PanelKit.PressButton(new Rect(c.xMax - 150f, by, 150f, 48f), "Close") || close) CloseWindow(items.Count);
             }
             catch (Exception e) when (!(e is ExitGUIException)) { PanelKit.LogOnce(this, e); }
             finally { PanelKit.EndLayer(layer); }

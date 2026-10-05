@@ -760,7 +760,7 @@ namespace Lanternvale.Game
                 var r = new Rect(panel.x + 8f + i * (HudLayout.ItemSlot + HudLayout.ItemGap), panel.y + (panel.height - HudLayout.ItemSlot) * 0.5f, HudLayout.ItemSlot, HudLayout.ItemSlot);
                 var d = it.Item.Def;
                 bool usable = it.Reason == null && !inspect;
-                HudDraw.Icon(r, string.IsNullOrEmpty(d.icon) ? "glyph_vial" : d.icon, Hud.QualityCol(d.quality), !usable, alpha);
+                ItemArt.Draw(r, d, !usable, alpha);
                 float left = Hud.CooldownLeft(unit, it.Use);
                 if (left > 0.01f)
                 {

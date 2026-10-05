@@ -182,6 +182,7 @@ namespace Lanternvale.Game.Panels
                     bool hover = PanelKit.Hover(row);
                     PanelKit.Rounded(row, hover ? PanelKit.RowHover : PanelKit.RowShade);
                     var it = Sample(o.Item);
+                    PanelKit.QualityRowMarks(row, it.Def != null ? it.Def.quality : Quality.Common, row.y + 9f, false);
                     PanelKit.ItemIcon(new Rect(row.x + 6f, row.y + 5f, 50f, 50f), it, soldOut || !afford, hover);
                     float nameW = row.width - 68f - 250f;
                     PanelKit.Label(new Rect(row.x + 68f, row.y + 6f, nameW, 26f), o.Item.name, PanelKit.RowText, PanelKit.QualityInk(o.Item.quality));
@@ -241,6 +242,7 @@ namespace Lanternvale.Game.Panels
                     if (!scroll.IsVisible(row) || it == null || it.Def == null) continue;
                     bool hover = PanelKit.Hover(row);
                     PanelKit.Rounded(row, hover ? PanelKit.RowHover : PanelKit.RowShade);
+                    PanelKit.QualityRowMarks(row, it.Def != null ? it.Def.quality : Quality.Common, row.y + 9f, false);
                     PanelKit.ItemIcon(new Rect(row.x + 6f, row.y + 5f, 50f, 50f), it, false, hover);
                     float nameW = row.width - 68f - 250f;
                     PanelKit.Label(new Rect(row.x + 68f, row.y + 6f, nameW, 26f), it.Name, PanelKit.RowText, PanelKit.QualityInk(it.Def.quality));
@@ -298,6 +300,7 @@ namespace Lanternvale.Game.Panels
                     bool afford = s.Gold >= cost;
                     bool hover = PanelKit.Hover(row);
                     PanelKit.Rounded(row, hover ? PanelKit.RowHover : PanelKit.RowShade);
+                    PanelKit.QualityRowMarks(row, it.Def != null ? it.Def.quality : Quality.Common, row.y + 9f, false);
                     PanelKit.ItemIcon(new Rect(row.x + 6f, row.y + 5f, 50f, 50f), it, !afford, hover);
                     float nameW = row.width - 68f - 250f;
                     PanelKit.Label(new Rect(row.x + 68f, row.y + 6f, nameW, 26f), it.Name, PanelKit.RowText, PanelKit.QualityInk(it.Def.quality));
