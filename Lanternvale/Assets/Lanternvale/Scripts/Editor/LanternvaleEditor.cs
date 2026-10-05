@@ -63,6 +63,14 @@ namespace Lanternvale.EditorTools
             Debug.Log($"[Lanternvale] Created {ScenePath} and added it to Build Settings. Press Play!");
         }
 
+        /// <summary>Command-line entry point (-executeMethod): creates the game scene if needed and opens it.</summary>
+        public static void OpenGameScene()
+        {
+            var path = File.Exists(ScenePath) ? ScenePath : EnsureGameScene();
+            EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            Debug.Log("[Lanternvale] Game scene open. Press Play!");
+        }
+
         /// <summary>Creates the game scene (one GameRoot) and puts it first in Build Settings, without prompts.</summary>
         public static string EnsureGameScene()
         {

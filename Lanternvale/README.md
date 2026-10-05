@@ -161,7 +161,28 @@ There are no audio files: everything is **synthesized at runtime**.
 You need **Unity 6 or Unity 2022.3 LTS**. The scripts avoid APIs newer than 2021.3, so 2021.3 LTS should
 also work but is untried. No packages are required besides the optional URP.
 
-### Option A (recommended): Universal 2D template
+### Quickest: one command
+
+From a clone of this repository, with Unity 6 (or 2022.3) installed through Unity Hub:
+
+```bash
+# macOS / Linux
+Lanternvale/Tools/local/play.sh            # creates a Universal 2D project, builds the game and launches it
+Lanternvale/Tools/local/play.sh --editor   # or open it in the Unity editor (then press Play)
+```
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File Lanternvale\Tools\local\play.ps1          # build and launch
+powershell -ExecutionPolicy Bypass -File Lanternvale\Tools\local\play.ps1 -Editor  # open in the editor
+```
+
+The script finds the newest Unity 6 editor that Unity Hub installed (set `UNITY_EDITOR` to override),
+creates the project from the **Universal 2D** template in `Lanternvale/Tools/.cache/local/LanternvaleProject`,
+copies `Assets/Lanternvale` into it, builds a player for your computer with your Unity license and starts
+it. The first build imports all the art and takes several minutes; later runs are quicker. `--tour` / `-Tour`
+starts the game with the autopilot tour (screenshots in `Tools/.cache/local/shots`).
+
+### Option A (recommended for development): Universal 2D template
 
 With this template, 2D lights work out of the box.
 
