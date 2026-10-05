@@ -1,7 +1,7 @@
 # Lanternvale
 
-A party-based, turn-based CRPG in the spirit of **Baldur's Gate 3**, played on hand-painted **2.5D
-orthographic dioramas** in a cosy, Ghibli-inspired watercolour style, with **Final Fantasy X–inspired**
+A party-based, turn-based CRPG in the spirit of **Baldur's Gate 3**, in **full 3D**: a tilted perspective camera
+you can zoom and rotate over a cosy, Ghibli-warm, stylized low-poly world, with **Final Fantasy X–inspired**
 heroes. The eight classes — Warrior, Hunter, Paladin, Mage, Priest, Rogue, Warlock, Shaman — play like
 their **World of Warcraft Classic (1.12)** counterparts: the same abilities and ranks, the same three talent
 trees each, the same weapon/armour rules, roles and resources (rage, energy + combo points, mana and the
@@ -12,8 +12,8 @@ that empties spirits — spreads from the old shrine, and your party has to reki
 
 > **Status — please read [Known limitations](#known-limitations).** This is a complete vertical slice, but
 > nobody has run it inside the Unity editor yet. The Unity scripts are compile-checked against Unity reference
-> assemblies, and the rules, world and save code is tested headlessly (223 tests, including full
-> playthroughs of the slice for every class). The art is placeholder art.
+> assemblies, the shaders are compile-checked offline, and the rules, world and save code is tested headlessly
+> (223 tests, including full playthroughs of the slice for every class). All 3D models are built in code.
 
 ---
 
@@ -122,18 +122,24 @@ Sleight of Hand, or a rogue's Pick Lock with a bonus for level.
 
 ### Art, lighting and presentation
 
-* An orthographic camera over the XY plane, with parallax background layers, a tiled ground and
-  y-sorted props. Foreground and tall props fade when a unit is behind them.
-* **Soft 2D lights.** With URP and the 2D Renderer, the game uses real `Light2D` components: a global
-  light driven by the day/night cycle, and point lights on lanterns, lamps and fires, which can flicker or
-  turn on only at night. Fireflies, halos and spells add soft glow sprites. URP is reached through
-  reflection only, so nothing depends on URP at compile time. Without URP (built-in pipeline), a tinted
-  night overlay and the glow sprites fake the same mood.
-* Clean silhouettes: hover and hit outlines, ground rings and pooled effects (bolts, beams, bursts,
-  sparkles). Floating combat text.
-* **All 292 art keys have painted placeholder art**, made by a deterministic Python generator
-  (`Tools/artgen`). Missing keys fall back to procedural sprites at runtime. See
-  [Replacing the art](#replacing-the-art).
+* **Full 3D, stylized low-poly, every model built in code** (`MeshBuilder`): the eight classes, companions,
+  villagers, creatures, pets and demons are rigged and animated procedurally (walk cycles matched to speed,
+  weapon swings, casts, hits, deaths). All 49 props have their own models: cottages, the inn, smithy, windmill,
+  the great camphor tree, spirit lanterns, the torii gate, ruins, trees and grass. The terrain is painted and
+  rolls into hills and mountains around the play area. Ink outlines keep edges clean.
+* **A BG3-style camera**: perspective view of a point on the ground that follows the party. Zoom from close-ups
+  that look out over the land (low pitch, sky and hills visible) to a near top-down tactical view. Rotate
+  ±45° (Q/E or middle-drag) and pan (WASD/arrows).
+* **Own lighting** (`Resources/Shaders`, `SceneLighting`). The shaders do their own lighting, so the game looks
+  the same in any project setup (built-in pipeline; URP projects are switched to it by the build step).
+  * Day/night (`DayNight`): a soft wrapped sun that rises and sets, sky and ground ambient, cool moonlight,
+    windows and lanterns that glow at night.
+  * Up to 16 point lights (lanterns, lamps, campfires, the forge, spells), distance fog, wind sway.
+  * Dither fades for props between the camera and the party, and soft blob shadows.
+* Effects in 3D: arrows fly real arcs, bolts trail light, beams, bursts and slashes; targeting previews (move
+  range, paths, circles, cones) lie on the ground. Floating combat text and nameplates follow units.
+* The painted 2D art (`Tools/artgen`, 292 keys) is still used for portraits, icons, the ground textures and
+  path decals.
 * The UI is **IMGUI** throughout: a WoW-like HUD (party frames, action bar, target frame, turn order,
   combat log, quest tracker) plus parchment windows. It needs no TextMeshPro or UI Toolkit. The fonts
   are Nunito and Fredoka (SIL OFL), and the interface size is adjustable (75–150%).
@@ -159,7 +165,8 @@ There are no audio files: everything is **synthesized at runtime**.
 ## Getting started
 
 You need **Unity 6 or Unity 2022.3 LTS**. The scripts avoid APIs newer than 2021.3, so 2021.3 LTS should
-also work but is untried. No packages are required besides the optional URP.
+also work but is untried. No packages are required: the game renders with its own shaders on the built-in
+render pipeline (a project that has URP assigned is switched over by the build step / the setup menu).
 
 ### Quickest: one command
 
@@ -167,7 +174,7 @@ From a clone of this repository, with Unity 6 (or 2022.3) installed through Unit
 
 ```bash
 # macOS / Linux
-Lanternvale/Tools/local/play.sh            # creates a Universal 2D project, builds the game and launches it
+Lanternvale/Tools/local/play.sh            # creates a Unity project, builds the game and launches it
 Lanternvale/Tools/local/play.sh --editor   # or open it in the Unity editor (then press Play)
 ```
 ```powershell
@@ -177,49 +184,27 @@ powershell -ExecutionPolicy Bypass -File Lanternvale\Tools\local\play.ps1 -Edito
 ```
 
 The script finds the newest Unity 6 editor that Unity Hub installed (set `UNITY_EDITOR` to override),
-creates the project from the **Universal 2D** template in `Lanternvale/Tools/.cache/local/LanternvaleProject`,
+creates a project in `Lanternvale/Tools/.cache/local/LanternvaleProject` (an existing one, e.g. from the earlier
+Universal 2D template, is reused and switched to the built-in pipeline),
 copies `Assets/Lanternvale` into it, builds a player for your computer with your Unity license and starts
 it. The first build imports all the art and takes several minutes; later runs are quicker. `--tour` / `-Tour`
 starts the game with the autopilot tour (screenshots in `Tools/.cache/local/shots`).
 
-### Option A (recommended for development): Universal 2D template
+### By hand in the Unity editor
 
-With this template, 2D lights work out of the box.
-
-1. Unity Hub → *New project* → **Universal 2D** template (called **2D (URP)** in older editors) → create.
-   If you pick a built-in-pipeline template instead (plain *2D* or *3D*), also run **Lanternvale ▸ Setup ▸
-   Configure URP 2D Renderer** after step 3. Otherwise the game falls back to unlit sprites with faked
-   lighting.
+1. Unity Hub → *New project* → any template (**3D (Built-In Render Pipeline)** is the simplest; a URP template
+   also works, the setup step below unassigns URP) → create.
 2. Close Unity. Copy `Lanternvale/Assets/Lanternvale` from this repository into the new project's
    `Assets/` folder, so you have `Assets/Lanternvale/Scripts`, `Assets/Lanternvale/Resources`, and so on.
-3. Open the project. Choose **Lanternvale ▸ Create Game Scene**, which creates
-   `Assets/Lanternvale/Scenes/Lanternvale.unity` and adds it to Build Settings. Then press **Play**.
-   Pressing Play in *any* scene also works, because the game boots itself (`GameRoot.AutoBoot`).
+3. Open the project. Choose **Lanternvale ▸ Create Game Scene**, which sets up rendering (built-in pipeline,
+   4× MSAA), creates `Assets/Lanternvale/Scenes/Lanternvale.unity` and adds it to Build Settings. Then press
+   **Play**. Pressing Play in *any* scene also works, because the game boots itself (`GameRoot.AutoBoot`).
+   **Lanternvale ▸ Setup ▸ Use the Built-in Render Pipeline (3D)** redoes the rendering setup on its own.
 
-### Option B: open this folder directly
-
-The repository ships only `Assets/`. It has no `ProjectSettings/` (so no pinned editor version) and no
-`Packages/manifest.json` (so no URP). Unity Hub only recognises a folder as a project when it has a
-`ProjectSettings/` folder, so:
-
-1. Create an empty `Lanternvale/ProjectSettings` folder. Then use Unity Hub → *Add* → *Add project from
-   disk* → pick `Lanternvale/`, and choose an installed editor version for it. Or skip Hub and launch that
-   editor with `-projectPath <path to>/Lanternvale`.
-2. Unity generates default settings and a default package manifest. That gives a built-in-pipeline project
-   in 3D mode, without URP, which is fine: the art importer (`LanternvaleArtImporter`) forces sprite import
-   settings, and the game boots in any scene.
-3. Run **Lanternvale ▸ Setup ▸ Configure URP 2D Renderer**. The first run only offers to install the URP
-   package (this needs network access). Wait for Unity to finish importing, then **run it a second time**.
-   The second run creates and assigns a URP asset with the 2D renderer, so sprites react to 2D lights.
-   It also adds URP's 2D sprite shaders to *Always Included Shaders* (a build step does the same before
-   every player build, or use **Lanternvale ▸ Setup ▸ Include 2D Sprite Shaders in Builds**), because the
-   game creates its sprites at runtime and a build would otherwise strip the lit sprite shader.
-4. Choose **Lanternvale ▸ Create Game Scene**, then press **Play**.
-
-Unity writes `ProjectSettings/`, `Packages/`, `Library/` and other folders into the project folder.
-`Library/`, `Temp/`, `Logs/` and `UserSettings/` are git-ignored. `ProjectSettings/` and `Packages/` are not,
-so leave them uncommitted unless you mean to pin them. If you skip step 3 (no URP), the game still runs and
-fakes the lighting with glows and a night overlay.
+The repository ships only `Assets/` (no `ProjectSettings/`, no `Packages/`). To open the folder itself as a
+project, create an empty `Lanternvale/ProjectSettings` folder, add `Lanternvale/` in Unity Hub, then do step 3.
+`Library/`, `Temp/`, `Logs/` and `UserSettings/` are git-ignored; leave the generated `ProjectSettings/` and
+`Packages/` uncommitted unless you mean to pin them.
 
 ### Running headlessly (cloud, CI)
 
@@ -230,8 +215,7 @@ in-game **autopilot** (`-lv-autopilot`), which plays a scripted tour and saves s
 `Tools/.cache/cloud/shots/`. `run-game.sh start` plus `Tools/cloud/x.sh` (click / key / screenshot) lets you
 drive it by hand. It needs a Unity license in the environment (`UNITY_LICENSE` = contents of
 `Unity_lic.ulf`, or `UNITY_SERIAL` + `UNITY_EMAIL` + `UNITY_PASSWORD`) and network access to Unity's
-license servers; with Unity's package registry reachable it uses URP and real 2D lights, otherwise the
-built-in pipeline and the fallback lighting. Batch builds for other platforms: `BuildWindowsPlayer`,
+license servers (Unity's package registry is not needed). Batch builds for other platforms: `BuildWindowsPlayer`,
 `BuildMacPlayer`. The same autopilot works in any build or in the editor (`-lv-autopilot -lv-quit
 -lv-shots <dir> -lv-class Mage -lv-level 20`).
 
@@ -265,7 +249,9 @@ These are the keys and clicks actually bound in code. Press **F1** in game for t
 | Input | Action |
 |---|---|
 | Mouse wheel | zoom (over the action bar: page the bar) |
-| Arrow keys, middle-drag | pan the camera |
+| Q / E, middle-drag | rotate the camera (±45°) |
+| WASD / arrow keys, Shift+middle-drag | pan the camera |
+| Middle click | recentre the camera |
 | 1–0, -, = | action bar slots of the visible page (in combat and out of it) |
 | F5 / F9 | quick save / quick load |
 | F1 | help |
@@ -346,19 +332,23 @@ Assets/Lanternvale/
     Session           GameSession (the single API the game talks to), save/load, starting gear
   Scripts/Game      Unity layer (asmdef Lanternvale.Game)
     Boot              GameRoot: loads data, creates input, camera, flow, UI, audio
-    Art, Rendering    ArtLibrary (manifest + procedural fallbacks), Lighting2D (URP by reflection), CameraRig
+    Art, Rendering    ArtLibrary (manifest + procedural fallbacks), CameraRig (BG3-style perspective rig)
+    Rendering3D       World3D conventions (ground = XY, up = −Z), MeshBuilder, Materials3D, SceneLighting
     Input             GameInput: the only input path (legacy Input Manager or IMGUI events)
-    World, Units, Fx  MapView dioramas, day/night, ambient particles, UnitView, effects, floating text
+    World, Units, Fx  MapView (terrain, backdrop, sky, props via World/Props), day/night, particles, UnitView
+                      (rigged procedural characters), 3D effects and previews, floating text
     Audio             synthesized SFX and the generative music engine
     Flow              GameFlow (hub), Exploration, FieldPresenter, CombatController, SaveFiles
     UI                Ui toolkit, UiRoot host, UiText tooltips, Hud/* (HUD layers), Panels/* (windows)
-  Scripts/Editor    art import settings, Create Game Scene, Validate Data, URP 2D setup
+  Scripts/Editor    art import settings, Create Game Scene, Validate Data, rendering setup, batch builds
   Resources/Data    all game data as JSON (classes/*.json, content/*.json)
-  Resources/Art     292 PNGs + art_manifest.json (placeholders — replace with final art, same names)
+  Resources/Art     292 PNGs + art_manifest.json (portraits, icons, ground textures, decals; 2D-era sprites)
+  Resources/Shaders the stylized shaders (own lighting) + LanternvaleCommon.cginc
   Resources/Fonts   Nunito & Fredoka (SIL OFL)
   link.xml          keeps the reflection-mapped assemblies from being stripped in IL2CPP builds
 Docs/               design, data schema, API and flow docs, art keys and art prompts (index below)
-Tools/check.sh      compile, validate and test everything without Unity
+Tools/check.sh      compile, validate and test everything without Unity (scripts, data, tests, shaders)
+Tools/shadercheck/  offline HLSL check of every shader pass (glslangValidator + a UnityCG stand-in)
 Tools/harness/      CoreTests: the headless test runner and all [Test]/[Sim] methods
 Tools/artgen/       the placeholder-art generator (Python 3 + numpy + Pillow)
 Tools/datagen/      the scripts that first generated the class/content JSON (read its README before running)
@@ -438,6 +428,10 @@ example when several builds run at once.
 `Docs/ArtPrompts.md` has a style bible and a production prompt for every asset. `Docs/ArtKeys.md` lists
 every key with its size and purpose. `Docs/art_previews/` has contact sheets of the current placeholders.
 
+Since the move to 3D, characters, creatures and props are procedural models (`Scripts/Game/Units`,
+`Scripts/Game/World/Props`); the PNGs still drive portraits, icons, the painted ground, path decals and the
+UI. Real 3D models can replace a procedural one behind the same `UnitView` / `PropModels` APIs.
+
 To replace art, drop finished PNGs over the placeholders in `Resources/Art/**` with the **same file names**.
 Nothing else needs to change, because `ArtLibrary` loads by key and the editor importer applies the sprite
 settings. Drawn height and pivot live in `art_manifest.json`. The exception is creature, pet, demon and
@@ -458,7 +452,8 @@ whole jobs of PNGs (§9 explains which).
 | `Docs/SessionAPI.md` | `GameSession`: the one API the Unity layer talks to, events, saves |
 | `Docs/GameFlow.md` | Unity game flow: states, exploration input, combat hand-off, saves |
 | `Docs/CombatFlow.md` | `CombatController`: battle presentation, targeting, input rules |
-| `Docs/PresentationAPI.md` | maps, units, effects, floating text, audio, the QA preview |
+| `Docs/ThreeD.md` | **the 3D presentation contract**: conventions, shaders, lighting, modelling, MapView/UnitView/Fx/camera APIs |
+| `Docs/PresentationAPI.md` | the presentation APIs' semantics (2D-era wording; ThreeD.md wins where they differ), audio |
 | `Docs/UI_HUD.md`, `Docs/UI_Panels.md` | every HUD layer and window, UI conventions |
 | `Docs/ArtKeys.md`, `Docs/ArtPrompts.md` | art key catalog and production prompts |
 
@@ -468,17 +463,17 @@ whole jobs of PNGs (§9 explains which).
 
 * **Never run inside the Unity editor by its authors.** Every Unity-side script is compile-checked in editor
   and player configurations, but only against the Unity 2021.1 reference assemblies that the harness
-  downloads from NuGet (`Unity3D.SDK`). Compatibility with 2022.3 and Unity 6 (URP types, `GraphicsSettings`
-  properties, `Light2D` assemblies) was handled by reflection and review, not verified in those editors. The
-  rules, world, dialogue, quest and save code is tested headlessly. Expect first-run rough edges in
-  everything that only the editor can show: layout and scaling of the IMGUI windows, sorting and lighting
-  values, input feel, animation timing and frame rate. The presentation timings in the docs are estimates.
+  downloads from NuGet (`Unity3D.SDK`); the shaders are checked offline with glslang's HLSL front end. The 3D
+  models were previewed with an offline software renderer, not in Unity. The rules, world, dialogue, quest and
+  save code is tested headlessly. Expect first-run rough edges in everything that only the editor can show:
+  lighting levels and colours (gamma vs linear projects), effect sizes, camera feel, animation timing, layout
+  and scaling of the IMGUI windows, and frame rate. The presentation timings in the docs are estimates.
 * **Review status.** Besides the tests, the code went through several rounds of independent review
   (reviewer → two skeptical verifiers → fixer). The last round still confirmed a handful of new issues
   (they were fixed), so the code is converging but not proven clean; a first play session in the editor is
   the most valuable next check.
-* **Placeholder art.** All 292 images are generated placeholders, painterly but not production quality.
-  Real art is meant to replace them (see above).
+* **Procedural art.** Every 3D model is built in code (stylized low-poly) and the 292 images are generated
+  placeholders: charming, but not production art. Real models and art can replace them later.
 * **Vertical slice.** There are three maps and six quests, tuned around levels 1–12. Classes, abilities and
   talents go to level 60, and character creation offers veteran starts at 10–60 with level-appropriate
   gear. Enemies scale to the party's level, so the slice plays at any level, but there is no content beyond
@@ -488,7 +483,8 @@ whole jobs of PNGs (§9 explains which).
   and Feign Death does not drop combat. Resurrection works in combat, and party members are downed rather
   than killed. These choices are documented in `Docs/Design.md`.
 * **Unity project files are not included.** The repository has no `ProjectSettings/` and no `Packages/`, so
-  the editor version, URP and input settings are whatever your project has (see Getting started).
+  the editor version and input settings are whatever your project has (see Getting started); the render
+  pipeline is set by the build step.
 * **Input.** Mouse and keyboard only: no gamepad, no rebinding, no touch.
 * **Audio.** Everything is synthesized. On WebGL the music is silent, because `OnAudioFilterRead` is
   unsupported there; sound effects still play.
