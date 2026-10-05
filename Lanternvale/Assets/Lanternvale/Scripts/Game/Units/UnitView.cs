@@ -1,12 +1,14 @@
-// Visual for any character or creature (presentation only — no rules logic).
+// Visual for any character or creature (presentation only — no rules logic), in 3D.
 //
-//   UnitView.Create(spriteKey, height, ringColor) → y-sorted sprite with a soft ground shadow,
-//   idle breathing, walking bob + facing, path movement, one-shot animations (attack, shoot, cast,
-//   hit, dodge, death, downed, revive) and state visuals (selection/target/active-turn ring,
-//   hover outline, stealth, tints, polymorph, cast glow).
+//   UnitView.Create(spriteKey, height, ringColor) → a procedurally modelled, rigged low-poly model (UnitRecipes) with
+//   procedural animation (UnitAnimator): walk/run/trot cycles matched to the ground speed, idle life, weapon-specific
+//   one-shots (attack, shoot, cast, hit, dodge, death, downed, revive), smooth turning, plus state visuals
+//   (selection/target/active-turn rings on the ground, hover rim + gold outline, stealth dither, tints, polymorph sheep,
+//   casting rune + hand glow + light) and a soft blob shadow.
 //
-// There is no per-unit Update: UnitViewSystem ticks every registered unit once per frame and only
-// re-sorts a unit when it moved. Callbacks (MoveAlong onArrive) run after all units were ticked.
+// The GameObject's transform stays at the FEET GROUND POINT (z = 0; the camera follows it). The model lives on a child
+// "Body" transform (World3D.Yaw + size scale) offset by lunges/hops; rings, rune and shadow lie flat on the ground.
+// There is no per-unit Update: UnitViewSystem ticks every unit once per frame, then runs deferred callbacks.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Util;
@@ -39,18 +41,65 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// True when the body is under the screen position; depth = distance from the camera (smaller = in front), for
-        /// choosing the front-most of several hits.
+        /// True when the body is under the screen position (the projected skeleton rect, padded a little);
+        /// depth = distance from the camera (smaller = in front), for choosing the front-most of several hits.
         /// </summary>
         public bool HitTestScreen(Vector2 screen, out float depth)
         {
             depth = float.MaxValue;
-            var rig = CameraRig.Instance;
-            if (rig == null) return false;
-            var w = rig.ScreenToWorld(screen);
-            if (!Bounds.Contains(w)) return false;
-            depth = pos.y;
+            var b = body;
+            if (b == null || !visible) return false;
+            var cam = Cam;
+            if (cam == null) return false;
+            var center = CenterPosition;
+            var cs = cam.WorldToScreenPoint(center);
+            if (cs.z <= 0.01f) return false;
+            // quick reject: far outside a generous circle around the body
+            float pxPerM = PixelsPerMetre(cam, cs.z);
+            float reach = (Height + 0.6f) * pxPerM;
+            if (Mathf.Abs(screen.x - cs.x) > reach || Mathf.Abs(screen.y - cs.y) > reach) return false;
+
+            float xmin = cs.x, xmax = cs.x, ymin = cs.y, ymax = cs.y;
+            var bones = b.Bones;
+            var pick = b.Model.PickBones;
+            if (pick != null)
+            {
+                for (int i = 0; i < pick.Length; i++)
+                {
+                    int bi = pick[i];
+                    if (bi < 0 || bi >= bones.Length) continue;
+                    var p = cam.WorldToScreenPoint(bones[bi].position);
+                    if (p.z <= 0.01f) continue;
+                    if (p.x < xmin) xmin = p.x; if (p.x > xmax) xmax = p.x;
+                    if (p.y < ymin) ymin = p.y; if (p.y > ymax) ymax = p.y;
+                }
+            }
+            var head = cam.WorldToScreenPoint(HeadPosition);
+            if (head.z > 0.01f)
+            {
+                if (head.x < xmin) xmin = head.x; if (head.x > xmax) xmax = head.x;
+                if (head.y < ymin) ymin = head.y; if (head.y > ymax) ymax = head.y;
+            }
+            float pad = b.Model.PickPad * CurrentScale * pxPerM;
+            if (screen.x < xmin - pad || screen.x > xmax + pad || screen.y < ymin - pad * 0.5f || screen.y > ymax + pad * 0.6f) return false;
+            depth = Vector3.Distance(cam.transform.position, center);
             return true;
+        }
+
+        static float PixelsPerMetre(Camera cam, float dist)
+        {
+            if (cam.orthographic) return Screen.height / Mathf.Max(0.01f, cam.orthographicSize * 2f);
+            return Screen.height / Mathf.Max(0.01f, 2f * dist * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad));
+        }
+
+        static Camera Cam
+        {
+            get
+            {
+                var rig = CameraRig.Instance;
+                if (rig != null && rig.Cam != null) return rig.Cam;
+                return PresentationHost.Cam;
+            }
         }
 
         // timing constants for callers (seconds from the start of the animation)
@@ -61,7 +110,7 @@ namespace Lanternvale.Game
         // ================================================================== public state
 
         public string SpriteKey { get; private set; }
-        /// <summary>World height of the sprite in metres.</summary>
+        /// <summary>Height of the unit in metres (top of the head).</summary>
         public float Height { get; private set; }
         public Color RingColor { get; set; }
         /// <summary>Display name for nameplates (UI reads it; UnitView doesn't draw text).</summary>
@@ -71,12 +120,13 @@ namespace Lanternvale.Game
         public int UnitId = int.MinValue;
         /// <summary>Tall props fade when this unit walks behind them (party: true; set false for ambient NPCs if desired).</summary>
         public bool FadesOccluders = true;
-        /// <summary>Hovering creatures (wisps) float above their shadow.</summary>
+        /// <summary>Hovering units float above their shadow (automatic for wisps, spirits, owls).</summary>
         public bool Floating;
 
         public Vector2 FeetPosition => pos;
         public Vector2 Position => pos;
-        public int Facing => facing;
+        /// <summary>±1: the sign of the facing direction's x (+1 = facing right).</summary>
+        public int Facing => facingSign;
         public bool IsMoving => moving;
         public bool IsDead => pose == Pose.Dead;
         public bool IsDowned => pose == Pose.Lying;
@@ -86,13 +136,14 @@ namespace Lanternvale.Game
         public bool IsActiveTurn => activeTurn;
         public bool IsPolymorphed => polymorphed;
 
-        /// <summary>Approximate centre of the body in the world (z = −height; follows bob/hover; lowered when lying).</summary>
+        /// <summary>Centre of the body in the world (Vector3, z = −height; follows the animated body, lowered when lying).</summary>
         public Vector3 CenterPosition
         {
             get
             {
-                float lie = poseAngle01;
-                return World3D.At(pos + new Vector2(offset.x, 0f), offset.y + Mathf.Lerp(CurrentHeight * 0.5f, CurrentHeight * 0.18f, lie));
+                var b = body;
+                if (b == null) return World3D.At(pos, Height * 0.5f);
+                return b.BonePoint(b.Model.CenterBone, b.Model.CenterOffset);
             }
         }
 
@@ -101,72 +152,70 @@ namespace Lanternvale.Game
         {
             get
             {
-                float lie = poseAngle01;
-                return World3D.At(pos + new Vector2(offset.x, 0f), offset.y + Mathf.Lerp(CurrentHeight * 0.97f, CurrentHeight * 0.35f, lie));
+                var b = body;
+                if (b == null) return World3D.At(pos, Height);
+                return b.BonePoint(b.Model.HeadBone, b.Model.HeadTop);
             }
         }
 
         /// <summary>Where a nameplate/health bar should be anchored (a little above the head).</summary>
         public Vector3 NameplatePosition => HeadPosition + World3D.Up * 0.28f;
 
-        /// <summary>World rect of the body for mouse picking.</summary>
+        /// <summary>Ground footprint rect (kept for compatibility; picking uses HitTestScreen).</summary>
         public Rect Bounds
         {
             get
             {
-                if (body == null) return new Rect(pos, Vector2.zero);
-                var b = body.bounds;
-                float w = b.size.x, h = b.size.y;
-                float insetX = w * 0.16f;
-                return Rect.MinMaxRect(b.min.x + insetX, b.min.y, b.max.x - insetX, b.max.y - h * 0.03f);
+                float r = FootRadius;
+                return new Rect(pos.x - r, pos.y - r, r * 2f, r * 2f);
             }
         }
 
         // ================================================================== internals
 
         enum Pose { Standing, Lying, Dead }
-        enum Anim { None, Attack, Shoot, Cast, Dodge, Knockback, Fall, Revive, Death }
 
-        Transform visual;            // SortingGroup root: offsets, rotation, squash
-        SortingGroup group;
-        SpriteRenderer body, outline, flash, glow, shadow, ring, ripple, castCircle;
-        Sprite baseSprite;
-        float baseSpriteHeight;      // bounds height of baseSprite (local units)
-        float spriteScale = 1f;      // visual scale so the sprite is Height tall
-        float shadowW, shadowH;
-        Vector2 shadowBounds, ringBounds, circleBounds;   // cached sprite bounds (avoid per-frame native calls)
-        static int lastWarmFrame = -1;
-        Silhouette silhouette;
-        bool silhouetteTried;
+        const float FacingBias = 15f;   // SetFacing turns the face a little towards the camera (3/4 view)
 
-        Vector2 pos;
-        Vector2 offset;              // last computed visual offset (for anchors)
-        int facing = 1;
+        UnitModel model;
+        UnitBody baseBody, sheepBody, body;
+        float scale = 1f;            // model → world
+        float FootRadius => (body != null ? body.Model.Radius * CurrentScale : 0.35f);
+        float CurrentScale => body == baseBody ? scale : 1f;
+
+        MeshRenderer shadow;
+        MaterialPropertyBlock shadowBlock;
+        float lastShadowA = -1f;
+        SpriteRenderer ring, ripple, rune, glow;
+        SceneLighting.PointLight castLight;
+        static Material spriteMat;
+
+        Vector2 pos, prevPos;
+        float yaw = 90f + FacingBias, targetYaw = 90f + FacingBias;
+        int facingSign = 1;
         bool visible = true;
-        float phase;                 // per-unit random phase
-        float time;
+        bool ticked;
+        float time, spawnT;
 
         // movement
         readonly List<Vector2> path = new List<Vector2>();
         int pathIndex;
         float moveSpeed = 3.2f;
         bool moving;
-        System.Action onArrive;
-        float walkPhase, walkBlend;
+        Action onArrive;
+        float pendingDist;
 
         // one-shot action
-        Anim action;
+        UnitAction action;
         float actionT, actionDur;
         Vector2 actionDir;
         Color actionColor;
         Vector2 kbFrom, kbTo;
+        int dodgeSide = 1;
 
-        // hit channel
         float hitT = -1f;
 
-        // pose
         Pose pose = Pose.Standing;
-        float poseAngle01;           // 0 standing .. 1 lying
         float deathFade = 1f;
 
         // states
@@ -175,14 +224,12 @@ namespace Lanternvale.Game
         Color tint = Color.white;
         Color castColor = Color.white;
         float castProgress;
-        int lastSortOrder = int.MinValue;
-        float lastSortY = float.NaN;
+        float stealthFade = 1f;
 
         // ================================================================== creation
 
         /// <summary>
-        /// Creates a unit visual. height ≤ 0 uses the art manifest height (ArtLibrary.Height); pass
-        /// CreatureDef.size for creatures.
+        /// Creates a unit visual. height ≤ 0 uses the model's natural height; pass CreatureDef.size for creatures.
         /// </summary>
         public static UnitView Create(string spriteKey, float height, Color ringColor)
         {
@@ -197,106 +244,82 @@ namespace Lanternvale.Game
         {
             SpriteKey = key ?? "";
             RingColor = ringColor;
-            phase = UnityEngine.Random.value * 100f;
-            Floating = SpriteKey.Contains("wisp");
-
-            var sprite = ArtLibrary.Sprite(SpriteKey);
-            baseSprite = sprite;
-            baseSpriteHeight = Mathf.Max(0.01f, sprite.bounds.size.y);
-            Height = height > 0f ? height : ArtLibrary.Height(SpriteKey, baseSpriteHeight);
-            spriteScale = Height / baseSpriteHeight;
-
-            visual = new GameObject("Visual").transform;
-            visual.SetParent(transform, false);
-            group = visual.gameObject.AddComponent<SortingGroup>();
-            body = PresentationArt.NewRenderer("Body", visual, sprite, 1);
-
-            float spriteW = sprite.bounds.size.x * spriteScale;
-            shadowW = Mathf.Clamp(Mathf.Max(Height * 0.36f, spriteW * 0.55f), 0.4f, 5f);
-            shadowH = shadowW * 0.32f;
-            var shSprite = PresentationArt.Fx("fx_shadow");
-            shadow = PresentationArt.NewRenderer("Shadow", transform, shSprite, SortingOrders.Shadow + 1);
-            shadowBounds = shSprite.bounds.size;
-            PresentationArt.SetSize(shadow.transform, shSprite, shadowW, shadowH);
-            shadow.color = new Color(0.16f, 0.12f, 0.22f, 0.34f);
-
-            var ringSprite = PresentationArt.Fx("fx_target_ring");
-            ringBounds = ringSprite.bounds.size;
-            ring = PresentationArt.NewRenderer("Ring", transform, ringSprite, SortingOrders.Shadow + 20, true);
-            PresentationArt.SetSize(ring.transform, ringSprite, shadowW * 1.45f, shadowW * 1.45f * 0.42f);
-            ring.enabled = false;
-            ripple = PresentationArt.NewRenderer("Ripple", transform, ringSprite, SortingOrders.Shadow + 19, true);
-            ripple.enabled = false;
-
-            ApplySprite(sprite);
+            requestedHeight = height;
+            SceneLighting.Ensure();
+            BuildBase();
+            shadow = MeshCache.AddShadow(transform, 0.4f, 0.4f);
+            shadow.name = "Shadow";
+            shadowBlock = new MaterialPropertyBlock();
+            // rings draw after ground decals (same sorting layer, higher order)
+            ring = NewGroundSprite("Ring", PresentationArt.UnitRing, SpriteMat, 2);
+            ripple = NewGroundSprite("Ripple", PresentationArt.UnitRing, SpriteMat, 2);
             all.Add(this);
             UnitViewSystem.Ensure();
             Teleport(Vector2.zero);
+            Animate(0f);
         }
 
-        void ApplySprite(Sprite s)
+        float requestedHeight;
+
+        void BuildBase()
         {
-            body.sprite = s;
-            float sh = Mathf.Max(0.01f, s.bounds.size.y);
-            float scale = polymorphed ? Mathf.Min(Height, 1.0f) / sh : Height / sh;
-            spriteScale = scale;
-            body.transform.localScale = new Vector3(scale, scale, 1f);
-            silhouette = null;
-            silhouetteTried = false;
-            if (outline != null) { Destroy(outline.gameObject); outline = null; }
-            if (flash != null) { Destroy(flash.gameObject); flash = null; }
-            UpdateOverlays();
+            model = UnitModels.Get(SpriteKey);
+            if (model == null) return;
+            scale = requestedHeight > 0f ? requestedHeight / Mathf.Max(0.05f, model.Height) : 1f;
+            Height = model.Height * scale;
+            Floating = model.FloatHeight > 0f;
+            baseBody = UnitBody.Create(model, transform);
+            if (!polymorphed) body = baseBody;
+            else baseBody.SetActive(false);
+            ApplyBodyTransform(baseBody, Vector3.zero, 1f);
         }
 
-        Silhouette Sil()
+        static Material SpriteMat
         {
-            if (!silhouetteTried)
+            get
             {
-                silhouetteTried = true;
-                silhouette = Silhouettes.Get(body.sprite, 0.045f / Mathf.Max(0.05f, spriteScale));
+                if (spriteMat == null) spriteMat = new Material(Materials3D.Find("Sprites/Default")) { name = "LV Unit Rings", hideFlags = HideFlags.DontSave };
+                return spriteMat;
             }
-            return silhouette;
         }
 
-        SpriteRenderer EnsureOutline()
+        SpriteRenderer NewGroundSprite(string name, Sprite sprite, Material mat, int order)
         {
-            if (outline != null) return outline;
-            var s = Sil();
-            if (s == null) return null;
-            outline = PresentationArt.NewRenderer("Outline", body.transform, s.Outline, 0, true);
-            outline.flipX = body.flipX;
-            outline.enabled = false;
-            return outline;
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, 0f, -0.012f);
+            go.transform.localRotation = Quaternion.identity;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sharedMaterial = mat;
+            sr.sortingOrder = order;
+            sr.shadowCastingMode = ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+            sr.enabled = false;
+            return sr;
         }
 
-        SpriteRenderer EnsureFlash()
+        SpriteRenderer EnsureRune()
         {
-            if (flash != null) return flash;
-            var s = Sil();
-            if (s == null) return null;
-            flash = PresentationArt.NewRenderer("Flash", body.transform, s.Fill, 2, true);
-            flash.flipX = body.flipX;
-            flash.enabled = false;
-            return flash;
+            if (rune != null) return rune;
+            rune = NewGroundSprite("Cast Rune", PresentationArt.RuneCircle, Materials3D.Additive, 3);
+            rune.transform.localPosition = new Vector3(0f, 0f, -0.016f);
+            return rune;
         }
 
         SpriteRenderer EnsureGlow()
         {
             if (glow != null) return glow;
-            glow = PresentationArt.NewRenderer("Cast Glow", visual, PresentationArt.Glow, 3, true);
+            var go = new GameObject("Hand Glow");
+            go.transform.SetParent(transform, false);
+            glow = go.AddComponent<SpriteRenderer>();
+            glow.sprite = PresentationArt.SoftDot;
+            glow.sharedMaterial = Materials3D.Additive;
+            glow.shadowCastingMode = ShadowCastingMode.Off;
+            glow.receiveShadows = false;
+            glow.sortingOrder = 5;
             glow.enabled = false;
             return glow;
-        }
-
-        SpriteRenderer EnsureCastCircle()
-        {
-            if (castCircle != null) return castCircle;
-            var s = PresentationArt.Fx("fx_rune_circle");
-            castCircle = PresentationArt.NewRenderer("Cast Circle", transform, s, SortingOrders.Shadow + 25, true);
-            circleBounds = s.bounds.size;
-            PresentationArt.SetSize(castCircle.transform, s, shadowW * 1.9f, shadowW * 1.9f * 0.45f);
-            castCircle.enabled = false;
-            return castCircle;
         }
 
         // ================================================================== movement
@@ -306,8 +329,8 @@ namespace Lanternvale.Game
         {
             StopMoving();
             pos = p;
+            prevPos = p;
             transform.position = new Vector3(p.x, p.y, 0f);
-            Resort(true);
         }
 
         /// <summary>
@@ -315,7 +338,7 @@ namespace Lanternvale.Game
         /// at speed m/s, then calls onArrive. A new MoveAlong/Teleport/StopMoving replaces the move
         /// without calling the previous callback.
         /// </summary>
-        public void MoveAlong(List<Vector2> points, float speed, System.Action arrive = null)
+        public void MoveAlong(List<Vector2> points, float speed, Action arrive = null)
         {
             path.Clear();
             if (points != null)
@@ -325,7 +348,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>MoveAlong for rules-engine paths (NavPath.Points).</summary>
-        public void MoveAlong(IReadOnlyList<Vec2> points, float speed, System.Action arrive = null)
+        public void MoveAlong(IReadOnlyList<Vec2> points, float speed, Action arrive = null)
         {
             path.Clear();
             if (points != null)
@@ -337,14 +360,14 @@ namespace Lanternvale.Game
             BeginMove(speed, arrive);
         }
 
-        void BeginMove(float speed, System.Action arrive)
+        void BeginMove(float speed, Action arrive)
         {
             moveSpeed = speed > 0f ? speed : 3.2f;
             onArrive = arrive;
             pathIndex = 0;
             moving = path.Count > 0;
             if (!moving && arrive != null) UnitViewSystem.Defer(arrive);
-            if (moving && action == Anim.Knockback) action = Anim.None;
+            if (moving && action == UnitAction.Knockback) action = UnitAction.None;
         }
 
         public void StopMoving()
@@ -370,81 +393,91 @@ namespace Lanternvale.Game
             StopMoving();
             kbFrom = pos;
             kbTo = to;
-            return Begin(Anim.Knockback, Mathf.Max(0.1f, duration), Vector2.zero, Color.white);
+            return Begin(UnitAction.Knockback, Mathf.Max(0.1f, duration), Vector2.zero, Color.white);
         }
 
+        /// <summary>Turns (smoothly) to face a ground point.</summary>
         public void FaceTowards(Vector2 target)
         {
-            float dx = target.x - pos.x;
-            if (Mathf.Abs(dx) > 0.02f) SetFacing(dx > 0f ? 1 : -1);
+            var d = target - pos;
+            if (d.sqrMagnitude < 0.0004f) return;
+            SetYawTarget(World3D.YawOf(d));
         }
 
-        /// <summary>+1 = facing right (art default), −1 = left.</summary>
+        /// <summary>+1 = face right (+X), −1 = face left (−X); turned a little towards the camera.</summary>
         public void SetFacing(int dir)
         {
-            facing = dir >= 0 ? 1 : -1;
-            bool flip = facing < 0;
-            body.flipX = flip;
-            if (outline != null) outline.flipX = flip;
-            if (flash != null) flash.flipX = flip;
+            SetYawTarget(dir >= 0 ? 90f + FacingBias : -(90f + FacingBias));
+        }
+
+        void SetYawTarget(float y)
+        {
+            targetYaw = Mathf.Repeat(y + 180f, 360f) - 180f;
+            float sx = Mathf.Sin(targetYaw * Mathf.Deg2Rad);
+            if (Mathf.Abs(sx) > 0.05f) facingSign = sx > 0f ? 1 : -1;
+            if (!ticked) yaw = targetYaw;
         }
 
         // ================================================================== one-shot animations
 
-        float Begin(Anim a, float dur, Vector2 dir, Color c)
+        float Begin(UnitAction a, float dur, Vector2 dir, Color c)
         {
-            if (pose == Pose.Dead && a != Anim.Revive) return 0f;
+            if (pose == Pose.Dead && a != UnitAction.Revive) return 0f;
             action = a;
             actionT = 0f;
             actionDur = dur;
-            actionDir = dir.sqrMagnitude > 1e-6f ? dir.normalized : new Vector2(facing, 0f);
+            actionDir = dir.sqrMagnitude > 1e-6f ? dir.normalized : World3D.DirOf(targetYaw);
             actionColor = c;
             return dur;
         }
 
-        /// <summary>Melee lunge towards a point. Returns the duration; the blow lands at AttackHitTime.</summary>
+        /// <summary>Weapon swing/lunge towards a point. Returns the duration; the blow lands at AttackHitTime.</summary>
         public float PlayAttack(Vector2 towards)
         {
             FaceTowards(towards);
-            return Begin(Anim.Attack, 0.5f, towards - pos, Color.white);
+            return Begin(UnitAction.Attack, 0.5f, towards - pos, Color.white);
         }
 
-        /// <summary>Bow/wand/throw recoil (no direction change). Release at ShootReleaseTime.</summary>
-        public float PlayShoot() => Begin(Anim.Shoot, 0.45f, new Vector2(facing, 0f), Color.white);
+        /// <summary>Bow draw &amp; release / throw / staff point. Release at ShootReleaseTime.</summary>
+        public float PlayShoot() => Begin(UnitAction.Shoot, 0.45f, World3D.DirOf(targetYaw), Color.white);
 
-        /// <summary>Bow/wand/throw recoil towards a point. Release at ShootReleaseTime.</summary>
+        /// <summary>Bow draw &amp; release / throw towards a point. Release at ShootReleaseTime.</summary>
         public float PlayShoot(Vector2 towards)
         {
             FaceTowards(towards);
-            return Begin(Anim.Shoot, 0.45f, towards - pos, Color.white);
+            return Begin(UnitAction.Shoot, 0.45f, towards - pos, Color.white);
         }
 
-        /// <summary>Raise + glow in the school colour. Release at CastReleaseTime.</summary>
+        /// <summary>Arms raise, hand/staff glows in the school colour. Release at CastReleaseTime.</summary>
         public float PlayCast(Color schoolColor)
         {
             EnsureGlow();
-            EnsureCastCircle();
-            return Begin(Anim.Cast, 0.7f, Vector2.zero, schoolColor);
+            EnsureRune();
+            return Begin(UnitAction.Cast, 0.7f, World3D.DirOf(targetYaw), schoolColor);
         }
 
-        /// <summary>White flash + shake (overlaps other animations).</summary>
+        /// <summary>Recoil + white flash (overlaps other animations).</summary>
         public float PlayHit()
         {
             if (pose == Pose.Dead) return 0f;
             hitT = 0f;
-            EnsureFlash();
             return 0.3f;
         }
 
-        public float PlayDodge() => Begin(Anim.Dodge, 0.4f, new Vector2(-facing, 0f), Color.white);
+        /// <summary>A quick side hop (alternating sides).</summary>
+        public float PlayDodge()
+        {
+            dodgeSide = -dodgeSide;
+            return Begin(UnitAction.Dodge, 0.4f, World3D.DirOf(targetYaw), Color.white);
+        }
 
-        /// <summary>Falls over and fades out (unit stays registered but invisible; Destroy it when done).</summary>
+        /// <summary>Crumples, falls and dissolves (unit stays registered but invisible; Dispose it when done).</summary>
         public float PlayDeath()
         {
             StopMoving();
             hitT = 0f;
-            EnsureFlash();
-            float d = Begin(Anim.Death, 1.2f, Vector2.zero, Color.white);
+            casting = false;
+            float d = Begin(UnitAction.Death, 1.2f, Vector2.zero, Color.white);
             pose = Pose.Dead;
             UpdateOverlays();
             return d;
@@ -454,18 +487,18 @@ namespace Lanternvale.Game
         public float PlayDowned()
         {
             StopMoving();
-            float d = Begin(Anim.Fall, 0.6f, Vector2.zero, Color.white);
+            float d = Begin(UnitAction.Fall, 0.6f, Vector2.zero, Color.white);
             pose = Pose.Lying;
             return d;
         }
 
-        /// <summary>Stands back up with a warm glow (help up / resurrection).</summary>
+        /// <summary>Gets back up with a warm glow (help up / resurrection).</summary>
         public float PlayRevive()
         {
             pose = Pose.Standing;
             deathFade = 1f;
             EnsureGlow();
-            float d = Begin(Anim.Revive, 0.8f, Vector2.zero, new Color(1f, 0.88f, 0.55f));
+            float d = Begin(UnitAction.Revive, 0.8f, Vector2.zero, new Color(1f, 0.88f, 0.55f));
             UpdateOverlays();
             return d;
         }
@@ -474,18 +507,25 @@ namespace Lanternvale.Game
 
         public void SetSelected(bool on) { selected = on; UpdateOverlays(); }
         public void SetHovered(bool on) { hovered = on; UpdateOverlays(); }
-        /// <summary>Highlights the unit as a valid target in a colour; null clears.</summary>
+        /// <summary>Highlights the unit as a valid target in a colour (pulsing ring + outline); null clears.</summary>
         public void SetTargetable(Color? color) { targetColor = color; UpdateOverlays(); }
         public void SetActiveTurn(bool on) { activeTurn = on; UpdateOverlays(); }
-        /// <summary>Stealth: 40% alpha.</summary>
+        /// <summary>Stealth: dithered to ~45 %.</summary>
         public void SetStealthed(bool on) { stealthed = on; }
         /// <summary>Body tint (frozen blue, poisoned green…); Color.white clears.</summary>
         public void SetTint(Color c) { tint = c; }
+
         public void SetVisible(bool on)
         {
             visible = on;
-            visual.gameObject.SetActive(on);
-            shadow.enabled = on;
+            if (body != null) body.SetActive(on);
+            if (shadow != null) shadow.enabled = on;
+            if (!on)
+            {
+                if (glow != null) glow.enabled = false;
+                if (rune != null) rune.enabled = false;
+                ReleaseLight();
+            }
             UpdateOverlays();
         }
 
@@ -494,31 +534,60 @@ namespace Lanternvale.Game
         {
             if (polymorphed == on) return;
             polymorphed = on;
-            ApplySprite(on ? PresentationArt.Sheep : baseSprite);
-            SetFacing(facing);
-            if (on) FxSystem.Sparkles(CenterPosition, Ui.SchoolColor(Lanternvale.Data.School.Arcane), 10);
+            if (on)
+            {
+                if (sheepBody == null)
+                {
+                    var sm = UnitModels.Get("sheep");
+                    if (sm != null) sheepBody = UnitBody.Create(sm, transform, "Sheep");
+                }
+                if (sheepBody != null)
+                {
+                    if (baseBody != null) baseBody.SetActive(false);
+                    body = sheepBody;
+                    sheepBody.SetActive(visible);
+                }
+                FxSystem.Sparkles(CenterPosition, Ui.SchoolColor(Lanternvale.Data.School.Arcane), 10);
+            }
+            else
+            {
+                if (sheepBody != null) sheepBody.SetActive(false);
+                body = baseBody;
+                if (baseBody != null) baseBody.SetActive(visible);
+                FxSystem.Sparkles(CenterPosition, Ui.SchoolColor(Lanternvale.Data.School.Arcane), 8);
+            }
+            Animate(0f);
         }
 
-        /// <summary>Swaps the base art (shapeshift, disguise).</summary>
+        /// <summary>Rebuilds the model from another key (shapeshift, disguise).</summary>
         public void SetSprite(string spriteKey)
         {
-            SpriteKey = spriteKey ?? "";
-            baseSprite = ArtLibrary.Sprite(SpriteKey);
-            if (!polymorphed) ApplySprite(baseSprite);
-            SetFacing(facing);
+            spriteKey = spriteKey ?? "";
+            if (spriteKey == SpriteKey && baseBody != null) return;
+            SpriteKey = spriteKey;
+            if (baseBody != null) baseBody.Destroy();
+            baseBody = null;
+            if (!polymorphed) body = null;
+            BuildBase();
+            if (baseBody != null) baseBody.SetActive(visible && !polymorphed);
+            Animate(0f);
         }
 
-        /// <summary>Casting glow growing with progress 0..1 (pending/channelled casts).</summary>
+        /// <summary>Casting rune + hand glow + light growing with progress 0..1 (pending/channelled casts).</summary>
         public void SetCasting(Color color, float progress)
         {
             casting = true;
             castColor = color;
             castProgress = Mathf.Clamp01(progress);
             EnsureGlow();
-            EnsureCastCircle();
+            EnsureRune();
         }
 
-        public void StopCasting() { casting = false; }
+        public void StopCasting()
+        {
+            casting = false;
+            if (action != UnitAction.Cast && action != UnitAction.Revive) ReleaseLight();
+        }
 
         int CurrentRingState()
         {
@@ -535,38 +604,36 @@ namespace Lanternvale.Game
             bool show = visible && pose != Pose.Dead && CurrentRingState() > 0;
             ring.enabled = show;
             ripple.enabled = show && activeTurn;
-            bool wantOutline = visible && hovered && pose != Pose.Dead;
-            if (wantOutline) EnsureOutline();
-            if (outline != null) outline.enabled = wantOutline;
         }
-
-        float CurrentHeight => polymorphed ? Mathf.Min(Height, 1.0f) : Height;
 
         // ================================================================== per-frame
 
         internal void Tick(float dt)
         {
             time += dt;
-            // pre-generate the hover/hit silhouettes in the background, one unit per frame,
-            // so the first hit or hover doesn't stall on a texture readback
-            if (!silhouetteTried && lastWarmFrame != Time.frameCount)
-            {
-                lastWarmFrame = Time.frameCount;
-                Sil();
-            }
+            spawnT += dt;
+            float moved = 0f;
+            Vector2 vel = Vector2.zero;
 
-            // ---- movement
+            // ---- path movement
             if (moving)
             {
+                var start = pos;
                 float step = moveSpeed * dt;
                 while (step > 0f && pathIndex < path.Count)
                 {
                     var target = path[pathIndex];
                     var d = target - pos;
                     float len = d.magnitude;
-                    if (Mathf.Abs(d.x) > 0.02f) SetFacing(d.x > 0f ? 1 : -1);
                     if (len <= step) { pos = target; step -= len; pathIndex++; }
                     else { pos += d / len * step; step = 0f; }
+                }
+                var delta = pos - start;
+                moved = delta.magnitude;
+                if (moved > 1e-5f)
+                {
+                    if (dt > 0f) vel = delta / dt;
+                    SetYawTarget(World3D.YawOf(delta));
                 }
                 if (pathIndex >= path.Count)
                 {
@@ -576,246 +643,321 @@ namespace Lanternvale.Game
                     onArrive = null;
                     if (cb != null) UnitViewSystem.Defer(cb);
                 }
-                walkPhase += dt * moveSpeed / 0.62f * Mathf.PI;
             }
-            walkBlend = Mathf.MoveTowards(walkBlend, moving ? 1f : 0f, dt * 6f);
 
-            // ---- one-shot action
-            Vector2 off = Vector2.zero;
-            float angle = 0f, sx = 1f, sy = 1f;
-            float glowA = 0f, glowSize = 0.6f, circleA = 0f;
-            Color glowC = castColor;
-            if (action != Anim.None)
+            // ---- one-shot action timeline
+            if (action != UnitAction.None)
             {
                 actionT += dt;
-                float t = actionT;
-                switch (action)
+                if (action == UnitAction.Knockback)
                 {
-                    case Anim.Attack:
-                    {
-                        float k;
-                        if (t < 0.1f) k = -0.14f * Ease(t / 0.1f);
-                        else if (t < 0.22f) k = Mathf.Lerp(-0.14f, 0.55f, EaseOut((t - 0.1f) / 0.12f));
-                        else if (t < 0.3f) k = 0.55f;
-                        else k = Mathf.Lerp(0.55f, 0f, Ease((t - 0.3f) / 0.2f));
-                        off += actionDir * k;
-                        angle = -actionDir.x * k * 14f;
-                        if (t < 0.1f) { sy = 1f - 0.05f * Ease(t / 0.1f); sx = 1f + 0.03f * Ease(t / 0.1f); }
-                        break;
-                    }
-                    case Anim.Shoot:
-                    {
-                        float k = t < 0.18f ? -0.1f * Ease(t / 0.18f) : t < 0.24f ? Mathf.Lerp(-0.1f, -0.2f, (t - 0.18f) / 0.06f) : Mathf.Lerp(-0.2f, 0f, Ease((t - 0.24f) / 0.21f));
-                        off += actionDir * k;
-                        angle = actionDir.x * k * 20f;
-                        break;
-                    }
-                    case Anim.Cast:
-                    {
-                        float rise = t < 0.45f ? Ease(t / 0.45f) : 1f - Ease((t - 0.45f) / 0.25f);
-                        off.y += 0.12f * rise;
-                        sy = 1f + 0.05f * rise; sx = 1f - 0.025f * rise;
-                        glowC = actionColor;
-                        glowA = t < 0.45f ? 0.25f + 0.55f * Ease(t / 0.45f) : 0.8f * (1f - Ease((t - 0.45f) / 0.25f));
-                        glowSize = t < 0.45f ? 0.5f + 0.7f * Ease(t / 0.45f) : 1.2f + 0.8f * Ease((t - 0.45f) / 0.25f);
-                        circleA = t < 0.45f ? 0.7f * Ease(t / 0.45f) : 0.7f * (1f - Ease((t - 0.45f) / 0.25f));
-                        break;
-                    }
-                    case Anim.Dodge:
-                    {
-                        float k = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / actionDur));
-                        off += actionDir * (0.42f * k);
-                        off.y += 0.14f * k;
-                        angle = -actionDir.x * 10f * k;
-                        break;
-                    }
-                    case Anim.Knockback:
-                    {
-                        float u = Mathf.Clamp01(t / actionDur);
-                        pos = Vector2.Lerp(kbFrom, kbTo, EaseOut(u));
-                        off.y += Mathf.Sin(Mathf.PI * u) * 0.22f;
-                        angle = (kbTo.x > kbFrom.x ? -1f : 1f) * 12f * Mathf.Sin(Mathf.PI * u);
-                        break;
-                    }
-                    case Anim.Revive:
-                    {
-                        glowC = actionColor;
-                        float u = Mathf.Clamp01(t / actionDur);
-                        glowA = 0.75f * Mathf.Sin(Mathf.PI * u);
-                        glowSize = 1.2f + 0.8f * u;
-                        off.y += 0.1f * Mathf.Sin(Mathf.PI * u);
-                        break;
-                    }
+                    float u = Mathf.Clamp01(actionT / actionDur);
+                    pos = Vector2.Lerp(kbFrom, kbTo, 1f - (1f - u) * (1f - u));
                 }
+                if (pose == Pose.Dead && action == UnitAction.Death)
+                    deathFade = 1f - Mathf.Clamp01((actionT - 0.6f) / 0.6f);
                 if (actionT >= actionDur)
                 {
-                    if (action == Anim.Knockback) pos = kbTo;
-                    action = Anim.None;
+                    if (action == UnitAction.Knockback) pos = kbTo;
+                    if (action == UnitAction.Death) deathFade = 0f;
+                    action = UnitAction.None;
                 }
             }
-
-            // ---- pose (lying / dead)
-            float targetLie = pose == Pose.Standing ? 0f : 1f;
-            float lieSpeed = pose == Pose.Standing ? 2.2f : (pose == Pose.Dead ? 2.4f : 2.0f);
-            poseAngle01 = Mathf.MoveTowards(poseAngle01, targetLie, dt * lieSpeed);
-            if (pose == Pose.Dead)
-            {
-                if (actionT > 0.55f || action == Anim.None) deathFade = Mathf.MoveTowards(deathFade, 0f, dt / 0.6f);
-            }
-            float lieEase = pose == Pose.Standing ? EaseOut(poseAngle01) : EaseIn(poseAngle01);
-            angle += lieEase * 84f * facing;
-
-            // ---- idle breathing / walking bob
-            float breathe = Mathf.Sin(time * 2.1f + phase);
-            float idle = (1f - walkBlend) * (1f - poseAngle01);
-            sy *= 1f + 0.014f * breathe * idle;
-            sx *= 1f - 0.007f * breathe * idle;
-            if (walkBlend > 0f)
-            {
-                off.y += Mathf.Abs(Mathf.Sin(walkPhase)) * 0.065f * walkBlend * Mathf.Clamp(Height / 1.8f, 0.5f, 1.5f);
-                angle += Mathf.Sin(walkPhase) * 2.2f * walkBlend;
-            }
-            if (Floating)
-            {
-                off.y += 0.35f + Mathf.Sin(time * 1.7f + phase) * 0.08f;
-            }
-
-            // ---- hit flash + shake
-            float flashA = 0f;
             if (hitT >= 0f)
             {
                 hitT += dt;
-                float u = hitT / 0.3f;
-                if (u >= 1f) hitT = -1f;
-                else
-                {
-                    off.x += Mathf.Sin(hitT * 55f) * 0.07f * (1f - u);
-                    sy *= 1f - 0.04f * (1f - u);
-                    flashA = Mathf.Clamp01(1f - hitT / 0.16f) * 0.85f;
-                }
+                if (hitT > 0.4f) hitT = -1f;
             }
-
-            // ---- casting state (pending cast)
-            if (casting)
-            {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 6f);
-                float ga = 0.3f + 0.45f * castProgress + 0.1f * pulse;
-                if (ga > glowA) { glowA = ga; glowC = castColor; glowSize = 0.6f + 0.8f * castProgress + 0.1f * pulse; }
-                circleA = Mathf.Max(circleA, 0.35f + 0.4f * castProgress);
-                if (action != Anim.Cast) glowC = castColor;
-            }
-
-            offset = off;
+            prevPos = pos;
             transform.position = new Vector3(pos.x, pos.y, 0f);
-            visual.localPosition = new Vector3(off.x, off.y, 0f);
-            visual.localRotation = Quaternion.Euler(0f, 0f, angle);
-            visual.localScale = new Vector3(sx, sy, 1f);
 
-            // ---- colours
-            float alpha = (stealthed ? 0.4f : 1f) * deathFade;
+            // ---- turning (smooth, never a snap)
+            float before = yaw;
+            float delta2 = Mathf.DeltaAngle(yaw, targetYaw);
+            float rate = model != null ? model.TurnRate : 720f;
+            if (action != UnitAction.None) rate *= 1.6f;
+            float stepYaw = delta2 * (1f - Mathf.Exp(-dt * 13f));
+            float maxStep = rate * dt;
+            yaw += Mathf.Clamp(stepYaw, -maxStep, maxStep);
+            if (Mathf.Abs(Mathf.DeltaAngle(yaw, targetYaw)) < 0.05f) yaw = targetYaw;
+            float yawRate = dt > 0f ? Mathf.DeltaAngle(before, yaw) / dt : 0f;
+
+            Animate(dt, moved, vel, yawRate);
+            ticked = true;
+        }
+
+        void Animate(float dt, float moved = 0f, Vector2 vel = default, float yawRate = 0f)
+        {
+            var b = body;
+            if (b == null) return;
+            float sc = CurrentScale;
+            var m = b.Model;
+
+            // world → model space
+            var fwd = World3D.DirOf(yaw);
+            var right = new Vector2(fwd.y, -fwd.x);
+            var inp = new UnitAnimInput
+            {
+                Dt = dt,
+                Time = time,
+                Velocity = new Vector3(Vector2.Dot(vel, right), 0f, Vector2.Dot(vel, fwd)) / sc,
+                MoveDist = moved / sc,
+                YawRate = yawRate,
+                Action = action,
+                ActionT = actionT,
+                ActionDur = actionDur,
+                ActionDir = new Vector3(Vector2.Dot(actionDir, right), 0f, Vector2.Dot(actionDir, fwd)),
+                DodgeSide = dodgeSide,
+                HitT = hitT,
+                Lying = pose == Pose.Lying,
+                Dead = pose == Pose.Dead,
+                Casting = casting,
+                CastProgress = castProgress,
+                SpawnT = spawnT,
+            };
+            if (polymorphed && (action == UnitAction.Attack || action == UnitAction.Shoot || action == UnitAction.Cast))
+                inp.Action = UnitAction.None;   // a sheep just bleats
+            b.Anim.Tick(inp);
+
+            // ---- body transform
+            var off = b.Anim.BodyOffset;
+            if (Floating && m.FloatHeight <= 0f && pose == Pose.Standing)
+                off.y += (0.35f + Mathf.Sin(time * 1.7f) * 0.08f) / Mathf.Max(0.05f, sc);
+            ApplyBodyTransform(b, off, b.Anim.ScalePop);
+
+            UpdateLook(b, dt);
+            UpdateGround(b, sc);
+            UpdateCastFx(b, sc);
+
+            // ---- footstep dust (not every step)
+            if (b.Anim.FootDown && visible && pose == Pose.Standing && m.Dust && moveSpeed > 0.8f && m.FloatHeight <= 0f && !Floating)
+            {
+                stepDust++;
+                if ((stepDust % 3) == 0 || moveSpeed > 4f && (stepDust % 2) == 0)
+                {
+                    var p = b.Root.TransformPoint(b.Anim.FootDownPos);
+                    FxSystem.Puff(new Vector3(p.x, p.y, 0f), m.DustColor, Mathf.Clamp(0.32f * sc * m.Height / 1.75f + 0.12f, 0.18f, 1.2f));
+                }
+            }
+        }
+
+        int stepDust;
+
+        void ApplyBodyTransform(UnitBody b, Vector3 offsetModel, float pop)
+        {
+            float sc = b == baseBody ? scale : 1f;
+            var rot = World3D.Yaw(yaw);
+            b.Root.localPosition = rot * (offsetModel * sc);
+            b.Root.localRotation = rot;
+            float s = sc * pop;
+            b.Root.localScale = new Vector3(s, s, s);
+        }
+
+        // ---------------------------------------------------------------- looks
+
+        void UpdateLook(UnitBody b, float dt)
+        {
+            var look = b.Look;
+            var m = b.Model;
+
+            // tint (lying party members are a little dimmer)
             var c = tint;
-            if (pose == Pose.Lying) c = new Color(c.r * 0.78f, c.g * 0.78f, c.b * 0.84f, c.a);
-            if (flash == null && flashA > 0f) c = Color.Lerp(c, new Color(1f, 0.55f, 0.5f), flashA * 0.7f); // fallback hit tint
-            if (hovered && flash == null) c = Color.Lerp(c, Color.white, 0.12f);
-            c.a *= alpha;
-            body.color = c;
+            float tintFade = Mathf.Clamp01(c.a <= 0f ? 1f : c.a);
+            c.a = 1f;
+            if (pose == Pose.Lying) c = new Color(c.r * 0.85f, c.g * 0.85f, c.b * 0.9f, 1f);
+            look.Tint = c;
 
-            if (flash != null)
+            // hit flash (white), revive glow (warm)
+            float flashA = 0f;
+            Color flashC = new Color(1f, 1f, 0.96f, 0f);
+            if (hitT >= 0f) flashA = Mathf.Clamp01(1f - hitT / 0.16f) * 0.85f;
+            if (action == UnitAction.Revive)
             {
-                float hoverA = hovered && pose != Pose.Dead ? 0.1f : 0f;
-                float fa = Mathf.Max(flashA, hoverA) * alpha;
-                bool on = fa > 0.003f && visible;
-                if (flash.enabled != on) flash.enabled = on;
-                if (on) flash.color = new Color(1f, 1f, 0.96f, fa);
+                float k = Mathf.Sin(Mathf.PI * Mathf.Clamp01(actionT / actionDur)) * 0.45f;
+                if (k > flashA) { flashA = k; flashC = actionColor; }
             }
-
-            if (outline != null && outline.enabled)
+            if (pose == Pose.Dead && action == UnitAction.Death)
             {
-                var oc = targetColor ?? new Color(1f, 0.92f, 0.68f);
-                float pulse = 0.82f + 0.18f * Mathf.Sin(time * 5f);
-                outline.color = new Color(oc.r, oc.g, oc.b, 0.95f * pulse * alpha);
+                float k = Mathf.Clamp01((actionT - 0.55f) / 0.5f) * 0.35f;
+                if (k > flashA) { flashA = k; flashC = new Color(0.85f, 0.82f, 0.95f); }
             }
+            flashC.a = flashA;
+            look.Flash = flashC;
 
-            if (glow != null)
+            // dither fade: stealth, death dissolve, translucent spirits
+            stealthFade = Mathf.MoveTowards(stealthFade, stealthed ? 0.45f : 1f, dt * 2.5f);
+            look.Fade = Mathf.Clamp01(m.BaseFade * stealthFade * deathFade * tintFade);
+
+            // hover / target highlight
+            float pulse = 0.5f + 0.5f * Mathf.Sin(time * 6f);
+            bool alive = pose != Pose.Dead;
+            if (targetColor.HasValue && alive)
             {
-                bool on = glowA > 0.01f && visible;
-                if (glow.enabled != on) glow.enabled = on;
+                var tc = targetColor.Value;
+                look.OutlineColor = Color.Lerp(new Color(tc.r, tc.g, tc.b, 1f), Color.white, 0.25f * pulse);
+                look.OutlineWidth = 2.6f + 0.8f * pulse;
+                look.Rim = (hovered ? 0.55f : 0.3f) + 0.15f * pulse;
+            }
+            else if (hovered && alive)
+            {
+                look.OutlineColor = new Color(1f, 0.84f, 0.42f, 1f);
+                look.OutlineWidth = 2.9f + 0.3f * pulse;
+                look.Rim = 0.5f + 0.12f * pulse;
+            }
+            else
+            {
+                look.OutlineColor = Materials3D.Ink;
+                look.OutlineWidth = 1.9f;
+                look.Rim = (selected || activeTurn) && alive ? 0.12f : 0f;
+            }
+            b.ApplyLook();
+        }
+
+        // ---------------------------------------------------------------- shadow & rings
+
+        void UpdateGround(UnitBody b, float sc)
+        {
+            var m = b.Model;
+            float r = m.Radius * sc;
+            float lie = b.Anim.LieAmount;
+            // body offset on the ground (lunges, dodges) — the shadow follows the body
+            var bo = b.Root.localPosition;
+            float hover = Mathf.Max(0f, -bo.z) + (m.FloatHeight > 0f ? m.FloatHeight * sc : 0f);
+            if (shadow != null)
+            {
+                bool on = visible;
+                if (shadow.enabled != on) shadow.enabled = on;
                 if (on)
                 {
-                    glow.transform.localPosition = new Vector3(0.12f * facing * Mathf.Clamp(Height / 1.8f, 0.5f, 2f), CurrentHeight * 0.55f, 0f);
-                    float gs = glowSize * Mathf.Clamp(Height / 1.8f, 0.6f, 2f);
-                    glow.transform.localScale = new Vector3(gs, gs, 1f);
-                    glow.color = new Color(glowC.r, glowC.g, glowC.b, glowA * alpha);
+                    float len = (m.HalfLength * sc + r) * (1f + lie * 0.5f);
+                    float wid = r * (1f + (m.Rig == UnitRigKind.Quad ? lie * 0.4f : 0f));
+                    if (m.Rig == UnitRigKind.Biped && lie > 0f) len = r + lie * Height * 0.42f;
+                    float shrink = 1f / (1f + hover * 0.35f);
+                    var st = shadow.transform;
+                    var fwd = World3D.DirOf(yaw);
+                    var center = new Vector2(bo.x, bo.y);
+                    if (m.Rig == UnitRigKind.Biped && lie > 0f) center -= fwd * 0.0f;
+                    st.localPosition = new Vector3(center.x, center.y, -0.004f);
+                    st.localRotation = Quaternion.AngleAxis(Mathf.Atan2(fwd.y, fwd.x) * Mathf.Rad2Deg, Vector3.forward);
+                    st.localScale = new Vector3(len * 2f * shrink, wid * 2f * shrink, 1f);
+                    float a = 0.4f * deathFade * (stealthed ? 0.55f : 1f) * shrink * Mathf.Lerp(1f, 0.85f, lie);
+                    if (Mathf.Abs(a - lastShadowA) > 0.004f)
+                    {
+                        lastShadowA = a;
+                        shadowBlock.SetColor(Materials3D.ColorId, new Color(0.12f, 0.09f, 0.16f, a));
+                        shadow.SetPropertyBlock(shadowBlock);
+                    }
                 }
             }
 
-            if (castCircle != null)
+            if (ring != null && ring.enabled)
             {
-                bool on = circleA > 0.01f && visible;
-                if (castCircle.enabled != on) castCircle.enabled = on;
-                if (on)
-                {
-                    castCircle.transform.localRotation = Quaternion.identity;
-                    var cc = action == Anim.Cast ? actionColor : castColor;
-                    castCircle.color = new Color(cc.r, cc.g, cc.b, circleA * alpha);
-                    // fake rotation of a flat ellipse: pulse its scale instead (rotating a squashed sprite would skew it)
-                    float k = 1f + 0.04f * Mathf.Sin(time * 3f);
-                    SetScale(castCircle.transform, circleBounds, shadowW * 1.9f * k, shadowW * 1.9f * 0.45f * k);
-                }
-            }
-
-            // ---- shadow + rings
-            float shadowK = (1f - 0.35f * Mathf.Clamp01(off.y / 0.6f)) * deathFade;
-            shadow.color = new Color(0.16f, 0.12f, 0.22f, 0.34f * shadowK * (stealthed ? 0.5f : 1f));
-            float lieStretch = 1f + poseAngle01 * 0.9f;
-            SetScale(shadow.transform, shadowBounds, shadowW * lieStretch, shadowH);
-            shadow.transform.localPosition = new Vector3(poseAngle01 * -facing * Height * 0.42f, 0f, 0f);
-
-            if (ring.enabled)
-            {
+                float rr = Mathf.Max(0.42f, (r + m.HalfLength * sc * 0.6f) * 1.3f);
                 int st = CurrentRingState();
                 Color rc;
                 float a;
+                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 6f);
+                float k = 1f;
                 switch (st)
                 {
-                    case 4: rc = targetColor.Value; a = 0.6f + 0.35f * (0.5f + 0.5f * Mathf.Sin(time * 6f)); break;
+                    case 4: rc = targetColor.Value; a = 0.6f + 0.35f * pulse; k = 1f + 0.05f * pulse; break;
                     case 3: rc = RingColor; a = 0.95f; break;
                     case 2: rc = RingColor; a = 0.85f; break;
                     default: rc = new Color(1f, 0.96f, 0.86f); a = 0.5f; break;
                 }
                 ring.color = new Color(rc.r, rc.g, rc.b, a * (stealthed ? 0.6f : 1f));
+                ring.transform.localScale = new Vector3(rr * 2f * k, rr * 2f * k, 1f);
                 if (ripple.enabled)
                 {
                     float u = Mathf.Repeat(time / 1.3f, 1f);
-                    float k = 1f + 0.55f * u;
-                    SetScale(ripple.transform, ringBounds, shadowW * 1.45f * k, shadowW * 1.45f * 0.42f * k);
-                    ripple.color = new Color(RingColor.r, RingColor.g, RingColor.b, 0.7f * (1f - u));
+                    float rk = 1f + 0.6f * u;
+                    ripple.transform.localScale = new Vector3(rr * 2f * rk, rr * 2f * rk, 1f);
+                    ripple.color = new Color(RingColor.r, RingColor.g, RingColor.b, 0.7f * (1f - u) * (1f - u));
                 }
             }
-
-            Resort(false);
         }
 
-        void Resort(bool force)
+        // ---------------------------------------------------------------- casting: rune, hand glow, light
+
+        void UpdateCastFx(UnitBody b, float sc)
         {
-            if (!force && Mathf.Abs(pos.y - lastSortY) < 0.004f) return;
-            lastSortY = pos.y;
-            int order = SortingOrders.ForY(pos.y);
-            if (order != lastSortOrder)
+            float glowA = 0f, glowSize = 0.5f, runeA = 0f;
+            Color gc = castColor;
+            var m = b.Model;
+            if (action == UnitAction.Cast)
             {
-                lastSortOrder = order;
-                group.sortingOrder = order;
+                float t = actionT;
+                gc = actionColor;
+                glowA = t < 0.45f ? 0.25f + 0.65f * Ease(t / 0.45f) : 0.9f * (1f - Ease((t - 0.45f) / 0.25f));
+                glowSize = t < 0.45f ? 0.35f + 0.45f * Ease(t / 0.45f) : 0.8f + 0.6f * Ease((t - 0.45f) / 0.25f);
+                runeA = t < 0.45f ? 0.75f * Ease(t / 0.45f) : 0.75f * (1f - Ease((t - 0.45f) / 0.25f));
             }
-        }
+            if (casting && pose != Pose.Dead)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 6f);
+                float ga = 0.35f + 0.45f * castProgress + 0.1f * pulse;
+                if (ga > glowA) { glowA = ga; gc = castColor; glowSize = 0.4f + 0.45f * castProgress + 0.08f * pulse; }
+                runeA = Mathf.Max(runeA, 0.35f + 0.4f * castProgress);
+            }
+            bool reviving = action == UnitAction.Revive;
+            if (reviving)
+            {
+                float u = Mathf.Clamp01(actionT / actionDur);
+                float ra = 0.8f * Mathf.Sin(Mathf.PI * u);
+                if (ra > glowA) { glowA = ra; gc = actionColor; glowSize = 0.9f + 0.7f * u; }
+            }
+            float vis = visible ? 1f : 0f;
+            glowA *= vis * deathFade;
+            runeA *= vis;
+            float k = Mathf.Clamp(Height / 1.75f, 0.6f, 2.2f);
 
-        static void SetScale(Transform t, Vector2 bounds, float w, float h)
-        {
-            t.localScale = new Vector3(w / Mathf.Max(1e-4f, bounds.x), h / Mathf.Max(1e-4f, bounds.y), 1f);
+            if (glow != null)
+            {
+                bool on = glowA > 0.01f;
+                if (glow.enabled != on) glow.enabled = on;
+                if (on)
+                {
+                    Vector3 p = reviving ? CenterPosition : b.BonePoint(m.CastBone, m.CastOffset);
+                    var gt = glow.transform;
+                    gt.position = p;
+                    var cam = Cam;
+                    if (cam != null) gt.rotation = cam.transform.rotation;
+                    float gs = glowSize * k;
+                    gt.localScale = new Vector3(gs, gs, gs);
+                    glow.color = new Color(gc.r, gc.g, gc.b, glowA);
+                }
+            }
+            // small point light at the hand
+            if (glowA > 0.02f)
+            {
+                if (castLight != null && !castLight.IsRegistered) castLight = null;
+                Vector3 p = glow != null ? glow.transform.position : CenterPosition;
+                if (castLight == null) castLight = SceneLighting.Add(p, gc, 0f, 3f);
+                castLight.Enabled = true;
+                castLight.Position = p;
+                castLight.Color = gc;
+                castLight.Intensity = 1.3f * glowA;
+                castLight.Range = 2.6f * k + 1.2f * glowSize;
+            }
+            else ReleaseLight();
+
+            if (rune != null)
+            {
+                bool on = runeA > 0.01f;
+                if (rune.enabled != on) rune.enabled = on;
+                if (on)
+                {
+                    var rc = action == UnitAction.Cast ? actionColor : castColor;
+                    rune.color = new Color(rc.r, rc.g, rc.b, runeA);
+                    float d = Mathf.Max(1.1f, (m.Radius * sc + m.HalfLength * sc * 0.5f) * 3.6f) * (1f + 0.03f * Mathf.Sin(time * 3f));
+                    var rt = rune.transform;
+                    rt.localScale = new Vector3(d, d, 1f);
+                    rt.localRotation = Quaternion.AngleAxis(time * 24f, Vector3.forward);
+                }
+            }
         }
 
         static float Ease(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
-        static float EaseOut(float t) { t = Mathf.Clamp01(t); return 1f - (1f - t) * (1f - t); }
-        static float EaseIn(float t) { t = Mathf.Clamp01(t); return t * t; }
 
         // ================================================================== lifetime
 
@@ -823,10 +965,21 @@ namespace Lanternvale.Game
         public void Dispose()
         {
             all.Remove(this);
+            ReleaseLight();
             if (this != null) Destroy(gameObject);
         }
 
-        void OnDestroy() { all.Remove(this); }
+        void ReleaseLight()
+        {
+            if (castLight != null) SceneLighting.Remove(castLight);
+            castLight = null;
+        }
+
+        void OnDestroy()
+        {
+            all.Remove(this);
+            ReleaseLight();
+        }
 
         internal static void TickAll(float dt)
         {
@@ -845,15 +998,15 @@ namespace Lanternvale.Game
     public sealed class UnitViewSystem : MonoBehaviour
     {
         static UnitViewSystem instance;
-        static readonly List<System.Action> deferred = new List<System.Action>();
-        static readonly List<System.Action> running = new List<System.Action>();
+        static readonly List<Action> deferred = new List<Action>();
+        static readonly List<Action> running = new List<Action>();
 
         public static void Ensure()
         {
             if (instance == null) instance = PresentationHost.Ensure<UnitViewSystem>();
         }
 
-        internal static void Defer(System.Action a) { if (a != null) deferred.Add(a); }
+        internal static void Defer(Action a) { if (a != null) deferred.Add(a); }
 
         void Awake() { instance = this; }
 

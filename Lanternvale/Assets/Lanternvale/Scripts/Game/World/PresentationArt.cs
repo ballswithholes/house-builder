@@ -103,32 +103,6 @@ namespace Lanternvale.Game
             return sr;
         }
 
-        // ------------------------------------------------------------------ 2D-era leftovers (kept compiling for old callers)
-
-        /// <summary>
-        /// 2D-era: a plain SpriteRenderer with the default sprite material (there are no 2D lights any more). Kept only
-        /// for the remaining 2.5D world/unit code; 3D code uses meshes (Materials3D), NewGroundSprite or SpriteAlpha.
-        /// </summary>
-        [System.Obsolete("2D-era sprite helper: 3D code uses meshes (Materials3D), NewGroundSprite or SpriteAlpha.")]
-        public static SpriteRenderer NewRenderer(string name, Transform parent, Sprite sprite, int order, bool unlitMat = false)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sortingOrder = order;
-            return sr;
-        }
-
-        /// <summary>2D-era: URP 2D lighting is gone, so sprites are never lit by Light2D (always false).</summary>
-        [System.Obsolete("2D-era: URP 2D lighting is gone (always false). Lighting is SceneLighting + the Lanternvale shaders.")]
-        public static bool SpritesLit => false;
-
-        /// <summary>2D-era bridge to Lighting2D.AddPointLight (a glow sprite). 3D code uses SceneLighting.Add.</summary>
-        [System.Obsolete("2D-era: use SceneLighting.Add. Delete together with Lighting2D.")]
-        public static LightHandle AddPointLight(GameObject go, Vector3 localOffset, Color color, float radius, float intensity)
-            => Lighting2D.AddPointLight(go, localOffset, color, radius, intensity);
-
         // ------------------------------------------------------------------ sprite helpers
 
         /// <summary>Scales t so that sprite s is drawn w × h world units.</summary>
