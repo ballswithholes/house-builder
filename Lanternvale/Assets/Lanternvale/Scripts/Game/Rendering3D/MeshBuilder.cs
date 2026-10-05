@@ -664,7 +664,8 @@ namespace Lanternvale.Game
             go.transform.rotation = Quaternion.identity;
             go.transform.localScale = Vector3.one;
             var ls = go.transform.lossyScale;
-            go.transform.localScale = new Vector3(rx * 2f / Mathf.Max(1e-4f, ls.x), ry * 2f / Mathf.Max(1e-4f, ls.y), 1f / Mathf.Max(1e-4f, ls.z));
+            // magnitudes: a mirrored (negative-scale) parent must not blow the shadow up; the quad has Cull Off anyway
+            go.transform.localScale = new Vector3(rx * 2f / Mathf.Max(1e-4f, Mathf.Abs(ls.x)), ry * 2f / Mathf.Max(1e-4f, Mathf.Abs(ls.y)), 1f / Mathf.Max(1e-4f, Mathf.Abs(ls.z)));
             go.AddComponent<MeshFilter>().sharedMesh = GroundQuad;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = Materials3D.Shadow;

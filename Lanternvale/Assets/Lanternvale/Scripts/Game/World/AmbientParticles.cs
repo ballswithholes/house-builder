@@ -1,41 +1,42 @@
-// Cosy ambient particles for a map (AmbientDef flags): fireflies, drifting leaves, pollen, mist
-// banks, rain (with splashes) and embers. Everything is pooled once at build time; one LateUpdate
-// simulates all of it on the CPU. Camera-space particles wrap around the view so the density stays
-// constant while panning; mist banks drift across the whole map.
+// Cosy ambient particles for a map (AmbientDef flags): fireflies, drifting leaves, pollen, mist banks, rain (with
+// splashes) and embers — 3D billboards in a few pooled batches (one draw call per kind of material). Camera-near
+// particles live in a box around the camera's look-at point and wrap around it, so the density stays constant while
+// the camera pans; mist banks drift across the whole map; embers rise from fires and forges. Glowing ones are additive,
+// leaves / mist / rain are lit (Lanternvale/LitTransparent) so they follow the mood. Simulated on the CPU by MapView's
+// LateUpdate, allocation-free.
 using System.Collections.Generic;
 using Lanternvale.Data;
 using UnityEngine;
 
 namespace Lanternvale.Game
 {
-    [DefaultExecutionOrder(1001)]
-    public sealed class AmbientParticles : MonoBehaviour
+    public sealed class AmbientParticles
     {
         /// <summary>Global density multiplier (graphics option).</summary>
         public static float Density = 1f;
 
-        enum Kind { Firefly, Pollen, Leaf, Mist, Rain, Ember, Splash }
+        enum Kind { Firefly, Pollen, Leaf, Mist, Rain, Ember }
 
         sealed class P
         {
-            public Transform t;
-            public SpriteRenderer sr;
             public Kind kind;
-            public Vector2 pos, vel;
+            public Vector3 pos, vel;
             public float phase, size, age, life, rot, spin, baseAlpha, w, h;
-            /// <summary>1 / sprite bounds: turns a size in metres into a localScale for any sprite.</summary>
-            public float invW = 1f, invH = 1f;
             public Color color;
-            public bool alive = true;
         }
 
+        sealed class Splash { public Vector3 pos; public float age, life; public bool alive; }
+
+        const float Reach = 17f;   // half size of the box around the look-at point
+
         readonly List<P> ps = new List<P>();
-        readonly List<P> splashes = new List<P>();
-        readonly List<Vector2> emberSources = new List<Vector2>();
-        MapView map;
-        Transform root;
+        readonly List<Splash> splashes = new List<Splash>();
+        readonly List<Vector3> emberSources = new List<Vector3>();
+        readonly MapView map;
+        readonly Transform root;
+        readonly System.Random rng;
+        BillboardBatch glow, leaves, mist, rain, rings;
         int splashNext;
-        System.Random rng;
 
         static readonly Color[] LeafColors =
         {
@@ -44,152 +45,165 @@ namespace Lanternvale.Game
 
         float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
 
-        public void Configure(MapView view)
+        internal AmbientParticles(MapView view, Transform parent)
         {
             map = view;
-            rng = new System.Random(((view.Def.id ?? "") + "ambient").GetHashCode());
+            rng = new System.Random(MapTerrain.StableHash((view.Def.id ?? "") + "ambient"));
             root = new GameObject("Ambient Particles").transform;
-            root.SetParent(transform, false);
+            root.SetParent(parent, false);
             var a = view.Def.ambient ?? new AmbientDef();
             float d = Mathf.Max(0f, Density);
-            var vr = PresentationHost.ViewRect(1.5f);
+            float W = Mathf.Max(1f, view.Def.width), D = Mathf.Max(1f, view.Def.depth);
+            var c = new Vector3(W * 0.5f, D * 0.5f, 0f);
 
-            int glowOrder = PresentationArt.SpritesLit ? SortingOrders.Glow + 10 : SortingOrders.NightOverlay + 50;
-
+            int glowCount = 0;
             if (a.fireflies)
-                for (int i = 0; i < Mathf.RoundToInt(18 * d); i++)
+                for (int i = 0; i < Mathf.RoundToInt(26 * d); i++)
                 {
-                    var p = Make(Kind.Firefly, PresentationArt.Fx("fx_firefly"), glowOrder, true);
-                    p.pos = RandomIn(vr);
-                    p.size = R(0.14f, 0.22f);
+                    var p = Add(Kind.Firefly);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0.3f, 2.6f));
+                    p.size = R(0.16f, 0.26f);
                     p.color = new Color(0.84f, 1f, 0.52f);
                     p.phase = R(0f, 100f);
+                    glowCount++;
                 }
             if (a.pollen)
-                for (int i = 0; i < Mathf.RoundToInt(24 * d); i++)
+                for (int i = 0; i < Mathf.RoundToInt(36 * d); i++)
                 {
-                    var p = Make(Kind.Pollen, PresentationArt.SoftDot, SortingOrders.Effects - 10, false);
-                    p.pos = RandomIn(vr);
-                    p.size = R(0.05f, 0.09f);
-                    p.color = new Color(1f, 0.97f, 0.84f);
+                    var p = Add(Kind.Pollen);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0.3f, 3.8f));
+                    p.size = R(0.06f, 0.11f);
+                    p.color = new Color(1f, 0.96f, 0.82f);
                     p.phase = R(0f, 100f);
-                    p.vel = new Vector2(R(0.06f, 0.16f), R(0.03f, 0.1f));
+                    p.vel = new Vector3(R(0.08f, 0.2f), R(0.02f, 0.08f), 0f);
+                    glowCount++;
                 }
+            int leafCount = 0;
             if (a.leaves)
-                for (int i = 0; i < Mathf.RoundToInt(9 * d); i++)
+                for (int i = 0; i < Mathf.RoundToInt(16 * d); i++)
                 {
-                    var p = Make(Kind.Leaf, PresentationArt.Fx("fx_leaf"), SortingOrders.Effects - 5, false);
-                    p.pos = RandomIn(vr);
+                    var p = Add(Kind.Leaf);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 7f));
                     p.size = R(0.2f, 0.3f);
                     p.color = LeafColors[i % LeafColors.Length];
                     p.phase = R(0f, 100f);
-                    p.vel = new Vector2(R(0.3f, 0.6f), -R(0.45f, 0.7f));
-                    p.spin = R(-120f, 120f);
+                    p.vel = new Vector3(R(0.3f, 0.6f), R(-0.15f, 0.15f), R(0.5f, 0.8f));   // +z = falling
+                    p.spin = R(-140f, 140f);
                     p.rot = R(0f, 360f);
+                    leafCount++;
                 }
+            int mistCount = 0;
             if (a.mist)
             {
-                int n = Mathf.RoundToInt(Mathf.Clamp(3 + view.Def.width / 12f, 3, 10) * d);
+                int n = Mathf.RoundToInt(Mathf.Clamp(4 + W / 9f, 4, 16) * d);
                 for (int i = 0; i < n; i++)
                 {
-                    var p = Make(Kind.Mist, PresentationArt.Mist, 0, false);
-                    p.w = R(7f, 13f);
-                    p.h = p.w * R(0.26f, 0.36f);
-                    p.pos = new Vector2(R(-6f, view.Def.width + 6f), R(0.4f, view.Def.depth + 0.8f));
-                    p.vel = new Vector2(R(0.12f, 0.3f) * (rng.NextDouble() < 0.5 ? -1f : 1f), 0f);
-                    p.baseAlpha = R(0.10f, 0.18f);
+                    var p = Add(Kind.Mist);
+                    p.w = R(8f, 14f);
+                    p.h = p.w * R(0.3f, 0.42f);
+                    p.pos = new Vector3(R(-8f, W + 8f), R(-1f, D + 6f), -R(0.5f, 1.4f));
+                    p.vel = new Vector3(R(0.12f, 0.3f) * (rng.NextDouble() < 0.5 ? -1f : 1f), 0f, 0f);
+                    p.baseAlpha = R(0.16f, 0.26f);
                     p.color = new Color(0.95f, 0.97f, 1f);
                     p.phase = R(0f, 100f);
-                    PresentationArt.SetSize(p.t, p.sr.sprite, p.w, p.h);
-                    p.sr.flipX = rng.NextDouble() < 0.5;
-                    p.sr.sortingOrder = SortingOrders.ForY(p.pos.y - p.h * 0.25f);
+                    mistCount++;
                 }
             }
+            int rainCount = 0;
             if (a.rain)
             {
-                for (int i = 0; i < Mathf.RoundToInt(110 * d); i++)
+                for (int i = 0; i < Mathf.RoundToInt(170 * d); i++)
                 {
-                    var p = Make(Kind.Rain, PresentationArt.RainStreak, SortingOrders.Effects - 2, false);
-                    p.pos = RandomIn(vr);
-                    p.vel = new Vector2(-R(1.2f, 2f), -R(11f, 14f));
-                    p.size = R(0.45f, 0.7f);
+                    var p = Add(Kind.Rain);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 12f));
+                    p.vel = new Vector3(-R(0.8f, 1.4f), R(-0.3f, 0.3f), R(11f, 14f));
+                    p.size = R(0.5f, 0.75f);
                     p.color = new Color(0.82f, 0.88f, 0.98f);
-                    p.baseAlpha = R(0.22f, 0.38f);
-                    float ang = Mathf.Atan2(p.vel.y, p.vel.x) * Mathf.Rad2Deg + 90f;
-                    p.t.localRotation = Quaternion.Euler(0f, 0f, ang);
-                    PresentationArt.SetSize(p.t, p.sr.sprite, 0.035f, p.size);
+                    p.baseAlpha = R(0.3f, 0.5f);
+                    rainCount++;
                 }
-                for (int i = 0; i < 14; i++)
-                {
-                    var s = Make(Kind.Splash, PresentationArt.Ring(4, 64), SortingOrders.Shadow + 5, false);
-                    s.alive = false;
-                    s.sr.enabled = false;
-                    s.color = new Color(0.85f, 0.9f, 1f);
-                    ps.Remove(s);
-                    splashes.Add(s);
-                }
+                for (int i = 0; i < 24; i++) splashes.Add(new Splash());
             }
             if (a.embers)
             {
                 foreach (var prop in view.Def.props)
                     if (prop != null && prop.art != null && (prop.art.Contains("campfire") || prop.art.Contains("smithy") || prop.art.Contains("brazier") || prop.art.Contains("forge")))
-                        emberSources.Add(new Vector2(prop.pos.x, prop.pos.y + 0.35f * Mathf.Max(0.3f, prop.scale)));
-                for (int i = 0; i < Mathf.RoundToInt(16 * d); i++)
+                    {
+                        float h = prop.art.Contains("campfire") ? 0.45f : 1.0f;
+                        emberSources.Add(World3D.At(new Vector2(prop.pos.x, prop.pos.y), h * Mathf.Max(0.3f, prop.scale)));
+                    }
+                for (int i = 0; i < Mathf.RoundToInt(26 * d); i++)
                 {
-                    var p = Make(Kind.Ember, PresentationArt.SoftDot, glowOrder, true);
-                    RespawnEmber(p, vr, true);
+                    var p = Add(Kind.Ember);
+                    RespawnEmber(p, c, true);
+                    glowCount++;
                 }
+            }
+
+            if (glowCount > 0) glow = new BillboardBatch("Glow Motes", root, Materials3D.AdditiveFor(WorldTextures.Glow), glowCount);
+            if (leafCount > 0) leaves = new BillboardBatch("Leaves", root, Materials3D.LitTransparent(WorldTextures.Leaf), leafCount, 5);
+            if (mistCount > 0) mist = new BillboardBatch("Mist", root, Materials3D.LitTransparent(WorldTextures.Mist), mistCount, 6);
+            if (rainCount > 0)
+            {
+                rain = new BillboardBatch("Rain", root, Materials3D.LitTransparent(WorldTextures.Streak), rainCount, 7);
+                rings = new BillboardBatch("Rain Splashes", root, Materials3D.LitTransparent(WorldTextures.Ring), splashes.Count, 4);
             }
         }
 
-        P Make(Kind k, Sprite s, int order, bool unlit)
+        P Add(Kind k)
         {
-            var sr = PresentationArt.NewRenderer(k.ToString(), root, s, order, unlit);
-            var p = new P { t = sr.transform, sr = sr, kind = k };
-            // Real fx PNGs (fx_firefly, fx_leaf) are sized by their manifest height, not 1 m like the
-            // procedural fallbacks, so particle sizes are applied relative to the sprite's bounds.
-            if (s != null)
-            {
-                var b = s.bounds.size;
-                p.invW = 1f / Mathf.Max(1e-4f, b.x);
-                p.invH = 1f / Mathf.Max(1e-4f, b.y);
-            }
+            var p = new P { kind = k };
             ps.Add(p);
             return p;
         }
 
-        Vector2 RandomIn(Rect r) => new Vector2(R(r.xMin, r.xMax), R(r.yMin, r.yMax));
-
-        void RespawnEmber(P p, Rect view, bool randomAge)
+        void RespawnEmber(P p, Vector3 around, bool randomAge)
         {
             if (emberSources.Count > 0)
             {
                 var s = emberSources[rng.Next(emberSources.Count)];
-                p.pos = s + new Vector2(R(-0.35f, 0.35f), R(0f, 0.3f));
-                p.vel = new Vector2(R(-0.15f, 0.15f), R(0.55f, 1.0f));
+                p.pos = s + new Vector3(R(-0.3f, 0.3f), R(-0.25f, 0.25f), -R(0f, 0.25f));
+                p.vel = new Vector3(R(-0.15f, 0.15f), R(-0.1f, 0.1f), -R(0.55f, 1.0f));
             }
             else
             {
-                p.pos = new Vector2(R(view.xMin, view.xMax), R(view.yMin, view.yMin + view.height * 0.6f));
-                p.vel = new Vector2(R(-0.1f, 0.1f), R(0.25f, 0.5f));
+                p.pos = around + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 0.5f));
+                p.vel = new Vector3(R(-0.1f, 0.1f), R(-0.1f, 0.1f), -R(0.25f, 0.5f));
             }
-            p.size = R(0.05f, 0.1f);
+            p.size = R(0.06f, 0.11f);
             p.life = R(2.2f, 4f);
             p.age = randomAge ? R(0f, p.life) : 0f;
             p.phase = R(0f, 100f);
         }
 
-        void LateUpdate()
+        static float Wrap(float v, float centre, float half)
         {
-            if (map == null || ps.Count == 0 && splashes.Count == 0) return;
-            float dt = Mathf.Min(Time.deltaTime, 0.1f);
-            float time = Time.time;
-            float night = map.DayNight != null ? map.DayNight.NightFactor : 0f;
-            var vr = PresentationHost.ViewRect(1.5f);
-            var airTop = Mathf.Min(vr.yMax, map.Def.depth + 3f);
-            var air = Rect.MinMaxRect(vr.xMin, vr.yMin, vr.xMax, Mathf.Max(vr.yMin + 0.01f, airTop));
-            bool airVisible = airTop > vr.yMin + 1f;
-            float wind = SwayManager.Wind;
+            float span = half * 2f;
+            float d = v - centre;
+            if (d < -half) v += span * Mathf.Ceil((-half - d) / span);
+            else if (d > half) v -= span * Mathf.Ceil((d - half) / span);
+            return v;
+        }
+
+        static Color32 C(Color c, float a) => new Color32((byte)(Mathf.Clamp01(c.r) * 255f), (byte)(Mathf.Clamp01(c.g) * 255f), (byte)(Mathf.Clamp01(c.b) * 255f), (byte)(Mathf.Clamp01(a) * 255f));
+
+        /// <summary>Simulates and redraws every particle (called once per frame by MapView).</summary>
+        internal void Update(float dt, float time, Camera cam, Vector3 lookAt)
+        {
+            if (cam == null || ps.Count == 0) return;
+            dt = Mathf.Min(dt, 0.1f);
+            var dn = map.DayNight;
+            float night = dn != null ? dn.NightFactor : 0f;
+            var ct = cam.transform;
+            var camPos = ct.position;
+            Vector3 right = ct.right, up = ct.up;
+            float wind = Mathf.Clamp(SceneLighting.WindStrength / 0.06f, 0.2f, 3f);
+            float W = Mathf.Max(1f, map.Def.width);
+
+            if (glow != null) glow.Begin();
+            if (leaves != null) leaves.Begin();
+            if (mist != null) mist.Begin();
+            if (rain != null) rain.Begin();
 
             for (int i = 0; i < ps.Count; i++)
             {
@@ -199,97 +213,123 @@ namespace Lanternvale.Game
                     case Kind.Firefly:
                     {
                         float ang = Mathf.PerlinNoise(time * 0.18f + p.phase, p.phase * 0.37f) * Mathf.PI * 4f;
-                        p.pos += new Vector2(Mathf.Cos(ang), Mathf.Sin(ang) * 0.7f) * (0.32f * dt);
-                        p.pos = Wrap(p.pos, air);
+                        float bob = Mathf.Sin(time * 0.9f + p.phase) * 0.12f;
+                        p.pos += new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), bob) * (0.34f * dt);
+                        p.pos.z = Mathf.Clamp(p.pos.z, -2.8f, -0.25f);
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
                         float blink = 0.5f + 0.5f * Mathf.Sin(time * 1.6f + p.phase * 3f);
                         blink = blink * blink * blink;
-                        float vis = Mathf.Lerp(0.12f, 1f, night) * (airVisible ? 1f : 0f);
-                        float s = p.size * (0.8f + 0.35f * blink);
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.t.localScale = new Vector3(s * p.invW, s * p.invH, 1f);
-                        p.sr.color = new Color(p.color.r, p.color.g, p.color.b, vis * (0.2f + 0.8f * blink));
+                        float vis = Mathf.Lerp(0.08f, 1f, night);
+                        float s = p.size * (0.8f + 0.5f * blink);
+                        glow.Add(p.pos, right * s, up * s, C(p.color, vis * (0.2f + 0.8f * blink)));
                         break;
                     }
                     case Kind.Pollen:
                     {
-                        p.pos += new Vector2(p.vel.x * wind + Mathf.Sin(time * 0.7f + p.phase) * 0.05f, p.vel.y + Mathf.Sin(time * 1.1f + p.phase * 2f) * 0.04f) * dt;
-                        p.pos = Wrap(p.pos, air);
+                        p.pos += new Vector3(p.vel.x * wind + Mathf.Sin(time * 0.7f + p.phase) * 0.05f, p.vel.y,
+                                             Mathf.Sin(time * 1.1f + p.phase * 2f) * 0.05f) * dt;
+                        p.pos.z = Mathf.Clamp(p.pos.z, -4f, -0.2f);
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
                         float tw = 0.6f + 0.4f * Mathf.Sin(time * 2.3f + p.phase);
-                        float vis = Mathf.Lerp(0.55f, 0.15f, night) * (airVisible ? 1f : 0f);
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.t.localScale = new Vector3(p.size, p.size, 1f);
-                        p.sr.color = new Color(p.color.r, p.color.g, p.color.b, vis * tw);
+                        float vis = Mathf.Lerp(0.5f, 0.12f, night);
+                        glow.Add(p.pos, right * p.size, up * p.size, C(p.color, vis * tw));
                         break;
                     }
                     case Kind.Leaf:
                     {
                         float sway = Mathf.Sin(time * 1.3f + p.phase) * 0.55f;
-                        p.pos += new Vector2((p.vel.x + sway) * (0.4f + 0.6f * wind), p.vel.y + Mathf.Cos(time * 1.3f + p.phase) * 0.12f) * dt;
-                        p.pos = Wrap(p.pos, vr);
+                        p.pos += new Vector3((p.vel.x + sway) * (0.4f + 0.6f * wind), p.vel.y + Mathf.Cos(time * 0.9f + p.phase) * 0.1f,
+                                             p.vel.z + Mathf.Cos(time * 1.3f + p.phase) * 0.15f) * dt;
+                        if (p.pos.z > -0.02f)
+                        {
+                            // landed: start again high above a random spot near the view
+                            p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(5f, 8f));
+                        }
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
                         p.rot += p.spin * dt;
                         float tumble = Mathf.Cos(time * 2.1f + p.phase);
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.t.localRotation = Quaternion.Euler(0f, 0f, p.rot);
-                        p.t.localScale = new Vector3(p.size * (0.25f + 0.75f * Mathf.Abs(tumble)) * p.invW, p.size * p.invH, 1f);
-                        p.sr.color = new Color(p.color.r, p.color.g, p.color.b, 0.92f);
+                        float a = p.rot * Mathf.Deg2Rad;
+                        float cs = Mathf.Cos(a), sn = Mathf.Sin(a);
+                        var r = (right * cs + up * sn) * (p.size * 0.5f * (0.25f + 0.75f * Mathf.Abs(tumble)));
+                        var u = (up * cs - right * sn) * (p.size * 0.5f);
+                        float fadeIn = Mathf.Clamp01((-p.pos.z) / 0.3f);
+                        leaves.Add(p.pos, r, u, C(p.color, 0.95f * fadeIn));
                         break;
                     }
                     case Kind.Mist:
                     {
                         p.pos.x += p.vel.x * wind * dt;
-                        float minX = -p.w * 0.6f - 2f, maxX = map.Def.width + p.w * 0.6f + 2f;
+                        float minX = -p.w * 0.6f - 8f, maxX = W + p.w * 0.6f + 8f;
                         if (p.pos.x < minX) p.pos.x = maxX; else if (p.pos.x > maxX) p.pos.x = minX;
-                        if (p.pos.x + p.w * 0.6f < vr.xMin || p.pos.x - p.w * 0.6f > vr.xMax) { if (p.sr.enabled) p.sr.enabled = false; break; }
-                        if (!p.sr.enabled) p.sr.enabled = true;
+                        float dist = Vector3.Distance(p.pos, camPos);
+                        float near = Mathf.Clamp01((dist - 6f) / 8f);
+                        if (near <= 0.01f) break;
                         float breathe = 0.82f + 0.18f * Mathf.Sin(time * 0.21f + p.phase);
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y + Mathf.Sin(time * 0.13f + p.phase) * 0.15f, 0f);
-                        p.sr.color = new Color(p.color.r, p.color.g, p.color.b, p.baseAlpha * breathe * Mathf.Lerp(1f, 0.75f, night));
+                        var pos = p.pos + new Vector3(0f, 0f, Mathf.Sin(time * 0.13f + p.phase) * 0.15f);
+                        // lean the bank towards the ground: half camera-up, half along the ground away from the camera
+                        var fwd = new Vector3(ct.forward.x, ct.forward.y, 0f);
+                        fwd = fwd.sqrMagnitude > 1e-4f ? fwd.normalized : Vector3.up;
+                        var u = (up + fwd).normalized * (p.h * 0.5f);
+                        mist.Add(pos, right * (p.w * 0.5f), u, C(p.color, p.baseAlpha * breathe * near * Mathf.Lerp(1f, 0.7f, night)));
                         break;
                     }
                     case Kind.Rain:
                     {
                         p.pos += p.vel * dt;
-                        if (p.pos.y < vr.yMin)
+                        if (p.pos.z > 0f)
                         {
-                            if (rng.NextDouble() < 0.35) Splash(new Vector2(R(vr.xMin, vr.xMax), R(vr.yMin, Mathf.Min(vr.yMax, map.Def.depth))));
-                            p.pos = new Vector2(R(vr.xMin, vr.xMax), vr.yMax + R(0f, 2f));
+                            if (rng.NextDouble() < 0.4) SpawnSplash(new Vector3(p.pos.x, p.pos.y, -0.02f));
+                            p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(10f, 13f));
                         }
-                        p.pos = Wrap(p.pos, Rect.MinMaxRect(vr.xMin, vr.yMin - 1f, vr.xMax, vr.yMax + 3f));
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.sr.color = new Color(p.color.r, p.color.g, p.color.b, p.baseAlpha);
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        // a streak along its velocity, as wide as it is thin towards the camera
+                        var axis = p.vel.normalized;
+                        var side = Vector3.Cross(axis, camPos - p.pos);
+                        side = side.sqrMagnitude > 1e-6f ? side.normalized * 0.018f : right * 0.018f;
+                        rain.Add(p.pos, side, axis * (p.size * 0.5f), C(p.color, p.baseAlpha));
                         break;
                     }
                     case Kind.Ember:
                     {
                         p.age += dt;
-                        if (p.age >= p.life) RespawnEmber(p, vr, false);
-                        p.pos += new Vector2(p.vel.x + Mathf.Sin(time * 3.1f + p.phase) * 0.25f, p.vel.y) * dt;
+                        if (p.age >= p.life) RespawnEmber(p, lookAt, false);
+                        p.pos += new Vector3(p.vel.x + Mathf.Sin(time * 3.1f + p.phase) * 0.25f, p.vel.y + Mathf.Cos(time * 2.7f + p.phase) * 0.15f, p.vel.z) * dt;
                         float t = p.age / p.life;
                         float a = Mathf.Clamp01(t * 6f) * (1f - t) * (0.7f + 0.3f * Mathf.Sin(time * 11f + p.phase));
-                        var c = Color.Lerp(new Color(1f, 0.72f, 0.3f), new Color(1f, 0.38f, 0.18f), t);
+                        var col = Color.Lerp(new Color(1f, 0.72f, 0.3f), new Color(1f, 0.38f, 0.18f), t);
                         float s = p.size * (1f - t * 0.5f);
-                        p.t.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-                        p.t.localScale = new Vector3(s, s, 1f);
-                        p.sr.color = new Color(c.r, c.g, c.b, a);
+                        glow.Add(p.pos, right * s, up * s, C(col, a));
                         break;
                     }
                 }
             }
 
-            for (int i = 0; i < splashes.Count; i++)
+            if (rings != null)
             {
-                var s = splashes[i];
-                if (!s.alive) continue;
-                s.age += dt;
-                float t = s.age / s.life;
-                if (t >= 1f) { s.alive = false; s.sr.enabled = false; continue; }
-                float k = 0.06f + 0.3f * (1f - (1f - t) * (1f - t));
-                s.t.localScale = new Vector3(k, k * 0.45f, 1f);
-                s.sr.color = new Color(s.color.r, s.color.g, s.color.b, 0.45f * (1f - t));
+                rings.Begin();
+                for (int i = 0; i < splashes.Count; i++)
+                {
+                    var s = splashes[i];
+                    if (!s.alive) continue;
+                    s.age += dt;
+                    float t = s.age / s.life;
+                    if (t >= 1f) { s.alive = false; continue; }
+                    float k = 0.04f + 0.18f * (1f - (1f - t) * (1f - t));
+                    rings.Add(s.pos, new Vector3(k, 0f, 0f), new Vector3(0f, k, 0f), C(new Color(0.85f, 0.9f, 1f), 0.5f * (1f - t)));
+                }
+                rings.End();
             }
+            if (glow != null) glow.End();
+            if (leaves != null) leaves.End();
+            if (mist != null) mist.End();
+            if (rain != null) rain.End();
         }
 
-        void Splash(Vector2 at)
+        void SpawnSplash(Vector3 at)
         {
             if (splashes.Count == 0) return;
             var s = splashes[splashNext];
@@ -298,18 +338,15 @@ namespace Lanternvale.Game
             s.age = 0f;
             s.life = 0.32f;
             s.pos = at;
-            s.t.localPosition = new Vector3(at.x, at.y, 0f);
-            s.sr.enabled = true;
         }
 
-        static Vector2 Wrap(Vector2 p, Rect r)
+        internal void Dispose()
         {
-            if (r.width <= 0f || r.height <= 0f) return p;
-            if (p.x < r.xMin) p.x += r.width * Mathf.Ceil((r.xMin - p.x) / r.width);
-            else if (p.x > r.xMax) p.x -= r.width * Mathf.Ceil((p.x - r.xMax) / r.width);
-            if (p.y < r.yMin) p.y += r.height * Mathf.Ceil((r.yMin - p.y) / r.height);
-            else if (p.y > r.yMax) p.y -= r.height * Mathf.Ceil((p.y - r.yMax) / r.height);
-            return p;
+            if (glow != null) glow.Dispose();
+            if (leaves != null) leaves.Dispose();
+            if (mist != null) mist.Dispose();
+            if (rain != null) rain.Dispose();
+            if (rings != null) rings.Dispose();
         }
     }
 }

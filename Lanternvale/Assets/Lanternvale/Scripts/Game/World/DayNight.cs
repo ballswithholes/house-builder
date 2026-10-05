@@ -1,9 +1,10 @@
-// Time of day → lighting mood. Pure data/maths, driven by MapView every frame.
+// Time of day → lighting mood. Pure data/maths, driven by MapView every frame; MapView pushes the result into
+// SceneLighting (sun, ambient, fog, night glow) — see ApplyTo.
 //
-//   dawn  peach and lavender, soft light
-//   day   warm white (the map's own sky colours)
-//   dusk  rose and amber, long warm light
-//   night deep blue ambient; lanterns, fireflies and spirit glows carry the scene
+//   dawn  peach and lavender, a low warm sun from the left
+//   day   high, soft white sun (the map's own sky colours)
+//   dusk  rose and amber, a low warm sun from the right
+//   night cool moonlight and deep blue ambient; lanterns, fireflies and spirit glows carry the scene
 //
 // Maps either use a fixed time (ambient.timeOfDay) or the shared world clock (ambient.dayNightCycle),
 // which keeps running across maps through the static WorldHour.
@@ -35,13 +36,35 @@ namespace Lanternvale.Game
         // ---- current state (computed by Update)
         public float Hour { get; private set; } = 12.5f;
         public float NightFactor { get; private set; }
+        /// <summary>Overall light colour × intensity (map ambient included); kept for 2D-era callers.</summary>
         public Color AmbientColor { get; private set; } = Color.white;
         public float AmbientIntensity { get; private set; } = 1f;
         public Color SkyTopTint { get; private set; } = Color.white;
         public Color SkyBottomTint { get; private set; } = Color.white;
         public float SkyBlend { get; private set; }
-        /// <summary>Unlit-mode overlay (rgb + alpha) laid over the world.</summary>
+        /// <summary>2D-era unlit overlay (rgb + alpha); unused by the 3D world, kept for compatibility.</summary>
         public Color Overlay { get; private set; } = new Color(0, 0, 0, 0);
+
+        // ---- 3D lighting (map ambient included)
+        /// <summary>Direction from the ground TO the light (sun by day, moon by night), up = −Z.</summary>
+        public Vector3 LightDirection { get; private set; } = new Vector3(-0.35f, -0.55f, -0.75f);
+        public Color LightColor { get; private set; } = new Color(1f, 0.93f, 0.8f);
+        public float LightIntensity { get; private set; } = 0.95f;
+        public Color SkyAmbient { get; private set; } = new Color(0.62f, 0.68f, 0.82f);
+        public Color GroundAmbient { get; private set; } = new Color(0.42f, 0.38f, 0.34f);
+        public float SceneAmbientIntensity { get; private set; } = 0.75f;
+        /// <summary>Emissive boost (windows, lantern glass, crystals) — 0 by day, ~1 at night.</summary>
+        public float NightGlow { get; private set; }
+        /// <summary>Where the sun / moon discs sit in the sky (unit directions from the viewer, up = −Z).</summary>
+        public Vector3 SunSkyDirection { get; private set; } = new Vector3(0f, 0.8f, -0.6f);
+        public Vector3 MoonSkyDirection { get; private set; } = new Vector3(0.45f, 0.75f, -0.5f);
+        /// <summary>0..1 visibility of the sun disc / moon disc and stars.</summary>
+        public float SunVisibility { get; private set; } = 1f;
+        public float MoonVisibility { get; private set; }
+        /// <summary>Warm glow colour of the sky around the sun (dawn/dusk), alpha = strength.</summary>
+        public Color SunGlow { get; private set; } = new Color(1f, 0.8f, 0.6f, 0f);
+        /// <summary>Approximate brightness of the lit scene 0..1 (for unlit sprites that must follow the mood).</summary>
+        public float LightLevel { get; private set; } = 1f;
 
         public DayNight() { }
 
@@ -100,6 +123,9 @@ namespace Lanternvale.Game
         /// <summary>Back to the map's authored time (fixed maps).</summary>
         public void ClearOverride() { overrideHour = null; }
 
+        /// <summary>True when the map shows its authored time (fixed map, no override): its authored sky is kept.</summary>
+        public bool UsesAuthoredSky => !Cycle && overrideHour == null;
+
         float EffectiveHour() => overrideHour ?? (Cycle ? WorldHour : FixedHour);
 
         /// <summary>Advances the clock (cycling maps) and recomputes the lighting.</summary>
@@ -124,10 +150,16 @@ namespace Lanternvale.Game
         {
             public float hour, intensity, skyBlend, night;
             public Color ambient, skyTop, skyBottom, overlay;
-            public Key(float hour, Color ambient, float intensity, Color skyTop, Color skyBottom, float skyBlend, Color overlay, float night)
+            // 3D: light colour/intensity, sky & ground ambient, scene ambient intensity, night glow
+            public Color sun, skyAmb, groundAmb;
+            public float sunI, ambI, glow;
+
+            public Key(float hour, Color ambient, float intensity, Color skyTop, Color skyBottom, float skyBlend, Color overlay, float night,
+                       Color sun, float sunI, Color skyAmb, Color groundAmb, float ambI, float glow)
             {
                 this.hour = hour; this.ambient = ambient; this.intensity = intensity; this.skyTop = skyTop;
                 this.skyBottom = skyBottom; this.skyBlend = skyBlend; this.overlay = overlay; this.night = night;
+                this.sun = sun; this.sunI = sunI; this.skyAmb = skyAmb; this.groundAmb = groundAmb; this.ambI = ambI; this.glow = glow;
             }
         }
 
@@ -135,20 +167,36 @@ namespace Lanternvale.Game
         static readonly Color NightTop = new Color(0.05f, 0.07f, 0.19f), NightBot = new Color(0.19f, 0.21f, 0.40f);
         static readonly Color NightOver = new Color(0.06f, 0.08f, 0.25f, 0.48f);
         static readonly Color NoOver = new Color(1f, 0.95f, 0.85f, 0f);
+        static readonly Color Moon = new Color(0.58f, 0.68f, 1.00f);
+        static readonly Color NightSky = new Color(0.32f, 0.38f, 0.66f), NightGround = new Color(0.16f, 0.16f, 0.26f);
+        static readonly Color DaySun = new Color(1.00f, 0.93f, 0.80f);
+        static readonly Color DaySky = new Color(0.62f, 0.68f, 0.82f), DayGround = new Color(0.42f, 0.38f, 0.34f);
 
         static readonly Key[] Keys =
         {
-            new Key(0f,    NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f),
-            new Key(4.6f,  NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f),
-            new Key(6.0f,  new Color(0.86f, 0.72f, 0.84f), 0.76f, new Color(0.44f, 0.47f, 0.72f), new Color(1.00f, 0.77f, 0.66f), 0.72f, new Color(0.55f, 0.36f, 0.52f, 0.22f), 0.55f),
-            new Key(7.4f,  new Color(1.00f, 0.86f, 0.76f), 0.92f, new Color(0.62f, 0.74f, 0.90f), new Color(1.00f, 0.86f, 0.72f), 0.45f, new Color(1.00f, 0.74f, 0.58f, 0.10f), 0.12f),
-            new Key(9.5f,  new Color(1.00f, 0.97f, 0.92f), 1.00f, Color.white, Color.white, 0f, NoOver, 0f),
-            new Key(15.5f, new Color(1.00f, 0.96f, 0.88f), 1.00f, Color.white, new Color(1.00f, 0.93f, 0.80f), 0.12f, NoOver, 0f),
-            new Key(17.8f, new Color(1.00f, 0.80f, 0.66f), 0.90f, new Color(0.56f, 0.55f, 0.80f), new Color(1.00f, 0.70f, 0.50f), 0.60f, new Color(0.95f, 0.50f, 0.40f, 0.14f), 0.22f),
-            new Key(19.4f, new Color(0.80f, 0.60f, 0.78f), 0.75f, new Color(0.30f, 0.27f, 0.55f), new Color(0.95f, 0.56f, 0.50f), 0.76f, new Color(0.40f, 0.25f, 0.46f, 0.28f), 0.60f),
-            new Key(20.9f, new Color(0.50f, 0.53f, 0.86f), 0.64f, new Color(0.08f, 0.10f, 0.25f), new Color(0.25f, 0.25f, 0.48f), 0.90f, new Color(0.07f, 0.09f, 0.26f, 0.45f), 0.94f),
-            new Key(24f,   NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f),
+            new Key(0f,    NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
+            new Key(4.6f,  NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
+            new Key(6.0f,  new Color(0.86f, 0.72f, 0.84f), 0.76f, new Color(0.44f, 0.47f, 0.72f), new Color(1.00f, 0.77f, 0.66f), 0.72f, new Color(0.55f, 0.36f, 0.52f, 0.22f), 0.55f,
+                           new Color(1.00f, 0.68f, 0.54f), 0.58f, new Color(0.60f, 0.54f, 0.76f), new Color(0.40f, 0.30f, 0.34f), 0.74f, 0.55f),
+            new Key(7.4f,  new Color(1.00f, 0.86f, 0.76f), 0.92f, new Color(0.62f, 0.74f, 0.90f), new Color(1.00f, 0.86f, 0.72f), 0.45f, new Color(1.00f, 0.74f, 0.58f, 0.10f), 0.12f,
+                           new Color(1.00f, 0.84f, 0.67f), 0.84f, new Color(0.62f, 0.64f, 0.80f), new Color(0.44f, 0.37f, 0.33f), 0.75f, 0.15f),
+            new Key(9.5f,  new Color(1.00f, 0.97f, 0.92f), 1.00f, Color.white, Color.white, 0f, NoOver, 0f,
+                           DaySun, 0.95f, DaySky, DayGround, 0.75f, 0f),
+            new Key(15.5f, new Color(1.00f, 0.96f, 0.88f), 1.00f, Color.white, new Color(1.00f, 0.93f, 0.80f), 0.12f, NoOver, 0f,
+                           new Color(1.00f, 0.91f, 0.76f), 0.93f, new Color(0.63f, 0.67f, 0.80f), new Color(0.43f, 0.38f, 0.33f), 0.75f, 0f),
+            new Key(17.8f, new Color(1.00f, 0.80f, 0.66f), 0.90f, new Color(0.56f, 0.55f, 0.80f), new Color(1.00f, 0.70f, 0.50f), 0.60f, new Color(0.95f, 0.50f, 0.40f, 0.14f), 0.22f,
+                           new Color(1.00f, 0.72f, 0.50f), 0.86f, new Color(0.64f, 0.58f, 0.76f), new Color(0.48f, 0.35f, 0.31f), 0.82f, 0.25f),
+            new Key(19.4f, new Color(0.80f, 0.60f, 0.78f), 0.75f, new Color(0.30f, 0.27f, 0.55f), new Color(0.95f, 0.56f, 0.50f), 0.76f, new Color(0.40f, 0.25f, 0.46f, 0.28f), 0.60f,
+                           new Color(0.98f, 0.58f, 0.48f), 0.62f, new Color(0.52f, 0.46f, 0.70f), new Color(0.32f, 0.24f, 0.30f), 0.80f, 0.62f),
+            new Key(20.9f, new Color(0.50f, 0.53f, 0.86f), 0.64f, new Color(0.08f, 0.10f, 0.25f), new Color(0.25f, 0.25f, 0.48f), 0.90f, new Color(0.07f, 0.09f, 0.26f, 0.45f), 0.94f,
+                           Moon, 0.40f, NightSky, NightGround, 0.72f, 0.95f),
+            new Key(24f,   NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
         };
+
+        /// <summary>Sunrise / sunset hours of the sun's path (the disc is below the horizon outside them).</summary>
+        public const float Sunrise = 5.9f, Sunset = 19.5f;
+
+        static Color Mul(Color a, Color b) => new Color(a.r * b.r, a.g * b.g, a.b * b.b, 1f);
 
         void Evaluate(float hour)
         {
@@ -168,7 +216,7 @@ namespace Lanternvale.Game
             SkyBottomTint = Color.Lerp(a.skyBottom, b.skyBottom, t);
             SkyBlend = Mathf.Lerp(a.skyBlend, b.skyBlend, t);
             var o = Color.Lerp(a.overlay, b.overlay, t);
-            // map ambient darker than white → extra tinted overlay in unlit mode
+            // map ambient darker than white → extra tinted overlay in unlit mode (2D-era value, kept for callers)
             float lum = MapAmbient.r * 0.3f + MapAmbient.g * 0.55f + MapAmbient.b * 0.15f;
             lum *= Mathf.Clamp01(MapAmbientIntensity);
             float extra = Mathf.Clamp01(1f - lum) * 0.6f;
@@ -180,7 +228,71 @@ namespace Lanternvale.Game
                 o = new Color(rgb.r, rgb.g, rgb.b, total);
             }
             Overlay = o;
+
+            EvaluateLight(a, b, t);
             Changed?.Invoke(this);
+        }
+
+        void EvaluateLight(Key a, Key b, float t)
+        {
+            // ---- the sun's path: rises on the left (−X), culminates in front of the scene, sets on the right (+X)
+            float dayT = (Hour - Sunrise) / (Sunset - Sunrise);
+            float az = Mathf.Lerp(-100f, 100f, Mathf.Clamp01(dayT)) * Mathf.Deg2Rad;
+            float elev = (dayT > 0f && dayT < 1f ? Mathf.Sin(dayT * Mathf.PI) * 62f : 0f) - 4f;   // degrees
+            float sx = Mathf.Sin(az), sy = -Mathf.Max(0.3f, Mathf.Cos(az));
+            float hl = Mathf.Sqrt(sx * sx + sy * sy);
+            sx /= hl; sy /= hl;
+            // lighting never grazes: a low sun still lights the ground softly (painterly, no cast shadows)
+            float le = Mathf.Max(elev, 14f) * Mathf.Deg2Rad;
+            var sunLight = new Vector3(sx * Mathf.Cos(le), sy * Mathf.Cos(le), -Mathf.Sin(le));
+            var moonLight = new Vector3(0.47f, -0.56f, -0.68f);
+            float moonW = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.35f) / 0.45f));
+            var dir = Vector3.Lerp(sunLight, moonLight, moonW);
+            LightDirection = dir.sqrMagnitude > 1e-6f ? dir.normalized : moonLight;
+
+            // the discs: the sun crosses the sky behind the scene (where the camera can see it), the moon hangs high right
+            float de = elev * Mathf.Deg2Rad;
+            var sunSky = new Vector3(sx * Mathf.Cos(de) * 0.9f, Mathf.Max(0.35f, Mathf.Cos(az)) * Mathf.Cos(de) + 0.25f, -Mathf.Sin(de));
+            SunSkyDirection = sunSky.normalized;
+            MoonSkyDirection = new Vector3(0.42f, 0.78f, -0.46f).normalized;
+            SunVisibility = Mathf.Clamp01((elev + 3f) / 5f) * (1f - Mathf.Clamp01((NightFactor - 0.5f) / 0.4f));
+            MoonVisibility = Mathf.Clamp01((NightFactor - 0.3f) / 0.5f);
+            float low = 1f - Mathf.Clamp01((elev - 2f) / 22f);
+            SunGlow = new Color(1f, 0.62f + 0.2f * (1f - low), 0.42f, low * SunVisibility * 0.85f);
+
+            // the map's ambient multiplies the light; its intensity a little softened (2.5D maps were tuned against
+            // pre-lit painted sprites — a dusk map at 0.75 would otherwise turn unreadably dark in 3D)
+            float mai = Mathf.Lerp(1f, MapAmbientIntensity, 0.6f);
+            var sun = Color.Lerp(a.sun, b.sun, t);
+            LightColor = Mul(sun, MapAmbient);
+            LightIntensity = Mathf.Lerp(a.sunI, b.sunI, t) * mai;
+            SkyAmbient = Mul(Color.Lerp(a.skyAmb, b.skyAmb, t), MapAmbient);
+            GroundAmbient = Mul(Color.Lerp(a.groundAmb, b.groundAmb, t), MapAmbient);
+            SceneAmbientIntensity = Mathf.Lerp(a.ambI, b.ambI, t) * mai;
+            NightGlow = Mathf.Lerp(a.glow, b.glow, t);
+
+            var lc = LightColor;
+            var sk = SkyAmbient;
+            float lit = (lc.r * 0.3f + lc.g * 0.55f + lc.b * 0.15f) * LightIntensity * 0.7f
+                        + (sk.r * 0.3f + sk.g * 0.55f + sk.b * 0.15f) * SceneAmbientIntensity;
+            LightLevel = Mathf.Clamp01(lit);
+        }
+
+        /// <summary>
+        /// Pushes the mood into SceneLighting (sun, ambient, rim, night glow). Fog is the map's business (sky colours):
+        /// MapView sets it right after.
+        /// </summary>
+        public void ApplyTo()
+        {
+            SceneLighting.SunDirection = LightDirection;
+            SceneLighting.SunColor = LightColor;
+            SceneLighting.SunIntensity = LightIntensity;
+            SceneLighting.SkyAmbient = SkyAmbient;
+            SceneLighting.GroundAmbient = GroundAmbient;
+            SceneLighting.AmbientIntensity = SceneAmbientIntensity;
+            SceneLighting.NightGlow = NightGlow;
+            var rim = Color.Lerp(Color.Lerp(LightColor, Color.white, 0.45f), new Color(0.62f, 0.72f, 1f), Mathf.Clamp01(NightFactor));
+            SceneLighting.RimColor = rim;
         }
 
         /// <summary>
@@ -195,8 +307,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// Approximate per-sprite multiply colour equivalent to the unlit overlay (for sprites drawn
-        /// above the overlay band, such as foreground props).
+        /// Approximate multiply colour equivalent to the 2D-era unlit overlay (kept for compatibility).
         /// </summary>
         public Color OverlayMultiply
         {

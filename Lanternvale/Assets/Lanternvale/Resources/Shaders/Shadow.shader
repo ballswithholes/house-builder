@@ -9,7 +9,8 @@ Shader "Lanternvale/Shadow"
     }
     SubShader
     {
-        Tags { "Queue"="Geometry+20" "RenderType"="Transparent" "IgnoreProjector"="True" }
+        // after the painted ground decals (LitTransparent, Transparent-50), before the ground previews (Transparent-44…)
+        Tags { "Queue"="Transparent-45" "RenderType"="Transparent" "IgnoreProjector"="True" }
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha

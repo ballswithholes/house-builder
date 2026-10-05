@@ -41,8 +41,12 @@ namespace Lanternvale.Game
 
         /// <summary>Vertical field of view (degrees).</summary>
         public float FieldOfView = 38f;
-        /// <summary>Pitch (degrees below the horizon) at DistanceNear and DistanceFar; linear in between.</summary>
-        public float PitchNear = 40f, PitchFar = 60f;
+        /// <summary>
+        /// Pitch (degrees below the horizon) at DistanceNear and DistanceFar, eased in between (PitchCurve &lt; 1 tilts up
+        /// quickly as you zoom out): close-ups look out over the land to the hills and sky, BG3-style; the default zoom
+        /// (~18 m) is ≈ 44°; zoomed out it is a near top-down tactical view.
+        /// </summary>
+        public float PitchNear = 24f, PitchFar = 58f, PitchCurve = 0.7f;
         public float DistanceNear = 7f, DistanceFar = 30f;
         /// <summary>Rotation limit either side of the default view (degrees).</summary>
         public float MaxYaw = 45f;
@@ -207,7 +211,8 @@ namespace Lanternvale.Game
 
         float TanHalfFov => Mathf.Tan(Mathf.Clamp(FieldOfView, 10f, 120f) * 0.5f * Mathf.Deg2Rad);
 
-        float PitchFor(float distance) => Mathf.Lerp(PitchNear, PitchFar, Mathf.InverseLerp(DistanceNear, DistanceFar, distance));
+        float PitchFor(float distance) =>
+            Mathf.Lerp(PitchNear, PitchFar, Mathf.Pow(Mathf.InverseLerp(DistanceNear, DistanceFar, distance), Mathf.Max(0.1f, PitchCurve)));
 
         /// <summary>Ground direction "into the view" for a yaw (0 → +Y).</summary>
         static Vector2 GroundForward(float yawDeg)

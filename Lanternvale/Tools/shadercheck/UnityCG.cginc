@@ -21,6 +21,8 @@ inline float3 UnityObjectToWorldNormal(float3 n) { return normalize(mul(n, (floa
 inline float3 UnityObjectToWorldDir(float3 d) { return normalize(mul((float3x3)unity_ObjectToWorld, d)); }
 inline float4 ComputeScreenPos(float4 pos) { float4 o = pos * 0.5; o.xy = float2(o.x, o.y * _ProjectionParams.x) + o.w; o.zw = pos.zw; return o; }
 #define TRANSFORM_TEX(tex, name) (tex.xy * name##_ST.xy + name##_ST.zw)
+// glslang's HLSL front end has no tex2Dlod: an equivalent-for-type-checking sample
+#define tex2Dlod(s, uv) tex2D(s, (uv).xy)
 inline half3 GammaToLinearSpace(half3 sRGB) { return sRGB * (sRGB * (sRGB * 0.305306011 + 0.682171111) + 0.012522878); }
 inline half3 LinearToGammaSpace(half3 lin) { return max(1.055 * pow(max(lin, 0.0), 0.416666667) - 0.055, 0.0); }
 #endif

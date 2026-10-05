@@ -1,35 +1,34 @@
-// Builds a complete 2.5D diorama from a MapDef and tears it down cleanly.
+// Builds a complete 3D map from a MapDef and tears it down cleanly (World layer; see Docs/ThreeD.md §6).
 //
-//   sky gradient (camera-fixed, time-of-day tinted, stars + moon at night)
-//   parallax layers (tiled horizontally, back → front)
-//   ground (tiled) + feathered back edge + horizon haze, decals
-//   props (y-sorted, shadows, sway, lights, spirit-lantern halos, highlight outlines)
-//   chests, transition markers, regions (world rects for the game flow)
-//   foreground props (extra parallax, fade when a unit is behind them)
-//   day/night (URP global light or an unlit overlay) and ambient particles
+//   sky dome, sun / moon / stars (MapSky), time of day (DayNight → SceneLighting: sun, ambient, fog, night glow)
+//   terrain: flat walkable ground at z = 0 painted with the map's ground texture, hills behind, banks in front,
+//            ground cover, a brook under the bridge (MapTerrain)
+//   backdrop from def.layers: mountains, clouds, distant village, forests, shrine cliffs (MapBackdrop)
+//   decals (painted ground quads), props and foreground (PropModels), chests (lid opens), transition waymarkers,
+//   regions (rects), prop lights (SceneLighting point lights with flicker / night-only), ambient particles
 //
-// Static props have no Update: one LateUpdate here drives parallax, sky, fades, light flicker and
-// marker pulses; SwayManager animates swaying props; AmbientParticles owns the particles.
+// Static props carry no scripts: this component's single LateUpdate drives the mood, sky, clouds, light flicker and
+// halos, occluder fades, highlights, chest lids, markers and particles, allocation-free.
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Lanternvale.Data;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Lanternvale.Game
 {
     public enum MapObjectKind { Prop, Chest, Transition, Region }
 
-    /// <summary>An interactable/area of the diorama with its world rect (for picking and UI labels).</summary>
+    /// <summary>An interactable/area of the map with its ground rect (for picking and UI labels).</summary>
     public sealed class MapObject
     {
         public string Id = "";
         public MapObjectKind Kind;
-        /// <summary>Prop/chest pivot (feet) or transition/region centre.</summary>
+        /// <summary>Prop/chest pivot (feet) or transition/region centre (ground point).</summary>
         public Vector2 Position;
-        /// <summary>World rect: painted (opaque) sprite bounds for props/chests, ground footprint for transitions/regions.</summary>
+        /// <summary>Ground rect: the model's footprint for props/chests, the authored area for transitions/regions.</summary>
         public Rect Rect;
-        /// <summary>Where the UI should draw a label/prompt: a world point above the object (z = −height).</summary>
+        /// <summary>Where the UI should draw a label/prompt: a world point just above the object (z = −height).</summary>
         public Vector3 LabelPosition;
         public string Label = "";
         public PropDef Prop;
@@ -43,39 +42,85 @@ namespace Lanternvale.Game
         public bool IsLantern;
         public bool LanternLit;
 
-        // presentation internals
-        internal Transform root;
-        internal SpriteRenderer sprite, outline, brighten, shadow, marker, markerGlow, halo;
-        internal AnimatedLight light;
-        internal int order;
-        internal Color tint = Color.white;
+        // ---- presentation internals
+        internal Transform root;            // holder at the ground point (identity rotation, scale 1)
+        internal PropModel model;
+        internal string art = "";
+        internal int seed;
         internal float scale = 1f;
-        internal float pop;          // chest-open bounce timer
-        internal float fade = 1f;    // occlusion fade (tall props)
-        internal Color markerColor;
+        internal bool flip;
+        internal Color tint = Color.white;
+        internal float windScale = 1f;
+        internal Bounds bounds;             // world AABB of the model (picking, occlusion, labels)
+        internal bool hasBounds;
+        internal readonly Materials3D.Look look = new Materials3D.Look();
+        internal bool occluder;
+        internal float fade = 1f, fadeTarget = 1f, occludedAlpha = 0.35f;
+        internal bool lookDirty;
+        internal WorldLight light;
+        internal Vector3 lampPoint;
+        internal Quaternion lidRest = Quaternion.identity;
+        internal float lid, lidFrom, lidTo, lidTime = -1f;
+        internal float pop;
+        internal bool groundShadow;
+        internal Marker marker;
     }
 
-    [DefaultExecutionOrder(1000)] // after CameraRig.LateUpdate
+    /// <summary>A prop's point light (lantern flame, lamp, fire, window glow) driven by the time of day.</summary>
+    internal sealed class WorldLight
+    {
+        public SceneLighting.PointLight handle;
+        public Vector3 position;
+        public Color color;
+        public float intensity, range, haloSize;
+        public bool flicker, nightOnly, on = true, visible = true;
+        public float level = 1f;            // fades towards on (lanterns rekindling)
+        public float boost = 1f;            // extra multiplier (hovered waymarkers)
+        public float seed;
+        public Action<bool> setLit;         // night-only lamps / windows: the model's glowing parts follow the light
+        public int litState = -1;
+        public float current;               // effective intensity this frame (halos)
+        public bool dormantGlow;            // a dark spirit lantern: faint violet halo while off
+    }
+
+    /// <summary>Transition waymarker: arch + hanging lantern, chevrons on the ground, a warm light.</summary>
+    internal sealed class Marker
+    {
+        public Transform arch;
+        public readonly List<Renderer> archRenderers = new List<Renderer>();
+        public Renderer lantern;
+        public readonly Materials3D.Look archLook = new Materials3D.Look();
+        public readonly Materials3D.Look lanternLook = new Materials3D.Look();
+        public WorldLight light;
+        public Vector2 dir;                 // outward (towards the exit), zero for a mid-map marker
+        public Vector2 center;
+        public float size;
+        public float glow;                  // smoothed highlight
+        public float appliedGlow = -1f;
+    }
+
+    [DefaultExecutionOrder(1000)] // after CameraRig and the unit views, before SceneLightingDriver (2000)
     public sealed class MapView : MonoBehaviour
     {
         /// <summary>The most recently built (and not yet disposed) map.</summary>
         public static MapView Current { get; private set; }
 
         // ---- tunables (static so game flow / options can change them)
-        /// <summary>Parallax factor of foreground props (1 = world).</summary>
+        /// <summary>2D-era parallax factor of foreground props (unused in 3D: real depth parallaxes).</summary>
         public static float ForegroundParallax = 1.15f;
-        /// <summary>Alpha of foreground props while a unit is behind them.</summary>
+        /// <summary>Dither level of foreground props while a unit stands behind them.</summary>
         public static float ForegroundFadeAlpha = 0.35f;
-        /// <summary>Tall props (painted part ≥ 2.5 m) fade to this alpha when a unit stands behind them. 1 disables.</summary>
-        public static float OccluderFadeAlpha = 0.5f;
-        /// <summary>How strongly background layers sink when the camera looks towards the front.</summary>
+        /// <summary>Tall props (≥ 2.5 m) dither to this level when they hide a unit from the camera. 1 disables.</summary>
+        public static float OccluderFadeAlpha = 0.35f;
+        /// <summary>2D-era tunable (unused in 3D).</summary>
         public static float VerticalParallax = 0.4f;
         public static Color HighlightColor = new Color(1f, 0.88f, 0.52f, 1f);
 
         public MapDef Def { get; private set; }
         public DayNight DayNight { get; private set; }
-        /// <summary>Camera bounds: x 0..width, y −3..depth + layers (also applied to CameraRig on build).</summary>
+        /// <summary>Ground rect the camera's look-at point may roam (x −2..W+2, y −2..D+2; also applied to CameraRig).</summary>
         public Rect Bounds { get; private set; }
+        /// <summary>Colour of the distance haze (fog) right now.</summary>
         public Color HazeColor { get; private set; }
 
         public readonly List<MapObject> Objects = new List<MapObject>();
@@ -86,50 +131,31 @@ namespace Lanternvale.Game
         public readonly List<MapObject> Interactables = new List<MapObject>();
         readonly Dictionary<string, MapObject> byId = new Dictionary<string, MapObject>(StringComparer.Ordinal);
 
-        Transform layersRoot, groundRoot, propsRoot, fgRoot, skyRoot, markersRoot;
-        SpriteRenderer skyBottom, skyTop, overlay, moon, moonGlow;
-        readonly List<SpriteRenderer> stars = new List<SpriteRenderer>();
-        readonly List<Vector2> starPos = new List<Vector2>();
-        float starViewH = -1f;
-        Light2DSetter globalLight;
-        Component globalLightComp;
-        readonly List<Behaviour> disabledGlobalLights = new List<Behaviour>();
-        readonly List<AnimatedLight> lights = new List<AnimatedLight>();
-        readonly List<MapObject> animated = new List<MapObject>(); // markers, halos, highlights, pops
-        readonly List<MapObject> occluders = new List<MapObject>();
+        Transform propsRoot, fgRoot, decalsRoot, markersRoot, fxRoot;
+        MapTerrain terrain;
+        MapBackdrop backdrop;
+        MapSky sky;
         AmbientParticles particles;
+        BillboardBatch halos, chevrons;
+        readonly List<Mesh> ownedMeshes = new List<Mesh>();
+        readonly List<WorldLight> lights = new List<WorldLight>();
+        readonly List<MapObject> props = new List<MapObject>();         // every placed prop model (incl. non-interactable)
+        readonly List<MapObject> foreground = new List<MapObject>();
+        readonly List<MapObject> occluders = new List<MapObject>();
+        readonly List<MapObject> animated = new List<MapObject>();      // highlights, lids, pops (drained when idle)
+        MeshFilter shadowFilter;
+        Mesh shadowMesh;
+        bool shadowsDirty;
         Color skyTopColor, skyBottomColor;
+        float fogStart = 30f, fogEnd = 150f, windStrength = 0.06f;
         bool disposed;
 
-        sealed class LayerView
-        {
-            public ParallaxLayerDef def;
-            public Transform t;
-            public SpriteRenderer sr;
-            public float scale, spriteW, spriteH, scroll;
-            public Vector2 pivot;
-            public int lastN = -1;
-            public bool loop;
-            public Color tint = Color.white;
-        }
-
-        sealed class FgView
-        {
-            public Transform root;
-            public SpriteRenderer sr;
-            public Vector2 pos;
-            public Rect local; // sprite rect relative to the pivot
-            public Color tint;
-            public float alpha = 1f;
-        }
-
-        readonly List<LayerView> layers = new List<LayerView>();
-        readonly List<FgView> foreground = new List<FgView>();
+        static readonly MaterialPropertyBlock Mpb = new MaterialPropertyBlock();
 
         // ================================================================== building
 
         /// <summary>
-        /// Builds the diorama for def. flagTest (optional) evaluates requireFlag strings
+        /// Builds the map for def. flagTest (optional) evaluates requireFlag strings
         /// (e.g. FlagStore.Test): hidden chests and locked transitions.
         /// </summary>
         public static MapView Build(MapDef def, Func<string, bool> flagTest = null)
@@ -146,41 +172,71 @@ namespace Lanternvale.Game
             Def = def;
             Current = this;
             ArtLibrary.Init();
+            SceneLighting.Ensure();
             DayNight = new DayNight(def.ambient);
-
-            skyRoot = Child("Sky");
-            layersRoot = Child("Layers");
-            groundRoot = Child("Ground");
-            propsRoot = Child("Props");
-            markersRoot = Child("Markers");
-            fgRoot = Child("Foreground");
 
             skyTopColor = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
             skyBottomColor = Ui.Hex(string.IsNullOrEmpty(def.skyBottom) ? "#fdf1d6" : def.skyBottom);
+            var amb = def.ambient ?? new AmbientDef();
+            if (amb.mist) { fogStart = 22f; fogEnd = 115f; }
+            windStrength = amb.leaves ? 0.075f : amb.embers ? 0.045f : 0.06f;
 
-            BuildSky();
-            for (int i = 0; i < def.layers.Count; i++) BuildLayer(def.layers[i], i);
-            BuildGround();
+            sky = new MapSky(transform, skyTopColor, skyBottomColor, MapTerrain.StableHash(def.id), ownedMeshes);
+            terrain = new MapTerrain(def, transform, ownedMeshes);
+            terrain.Build(TerrainMaterial(def), def.groundTile > 0f ? def.groundTile : 8f);
+            backdrop = new MapBackdrop(def, terrain, transform, ownedMeshes);
+            // scenery is decoration: a failure there must never cost the map
+            Guard("backdrop", backdrop.Build);
+            Guard("ground cover", () => terrain.BuildGroundCover(!backdrop.HasForest));
+            Guard("brook", () => terrain.BuildStream(skyBottomColor));
+
+            propsRoot = Child("Props");
+            decalsRoot = Child("Decals");
+            fgRoot = Child("Foreground");
+            markersRoot = Child("Markers");
+            fxRoot = Child("Glows");
+            halos = new BillboardBatch("Light Halos", fxRoot, Materials3D.AdditiveFor(WorldTextures.Glow), 64, 20);
+            chevrons = new BillboardBatch("Waymarker Chevrons", fxRoot, Materials3D.AdditiveFor(WorldTextures.Chevron), 48, 10);
+
+            Guard("decals", BuildDecals);
             for (int i = 0; i < def.props.Count; i++)
-                if (def.props[i] != null && !string.IsNullOrEmpty(def.props[i].art)) BuildProp(def.props[i], i);
+            {
+                var p = def.props[i];
+                if (p == null || string.IsNullOrEmpty(p.art) || IsDecal(p.art)) continue;
+                int index = i;
+                Guard(p.art, () => BuildProp(p, index));
+            }
             for (int i = 0; i < def.foreground.Count; i++)
-                if (def.foreground[i] != null && !string.IsNullOrEmpty(def.foreground[i].art)) BuildForeground(def.foreground[i], i);
-            foreach (var c in def.chests) if (c != null) BuildChest(c, flagTest);
-            foreach (var t in def.transitions) if (t != null) BuildTransition(t, flagTest);
+            {
+                var p = def.foreground[i];
+                if (p == null || string.IsNullOrEmpty(p.art)) continue;
+                int index = i;
+                Guard(p.art, () => BuildForeground(p, index));
+            }
+            foreach (var c in def.chests) if (c != null) Guard("chest " + c.id, () => BuildChest(c, flagTest));
+            foreach (var t in def.transitions) if (t != null) Guard("transition " + t.id, () => BuildTransition(t, flagTest));
             foreach (var r in def.regions) if (r != null) BuildRegion(r);
+            shadowsDirty = true;
+            UpdateCliffLanterns(false);
 
-            BuildLighting();
-            particles = gameObject.AddComponent<AmbientParticles>();
-            particles.Configure(this);
+            particles = new AmbientParticles(this, transform);
 
-            float top = def.depth + 4f;
-            foreach (var l in layers) top = Mathf.Max(top, l.def.y + l.spriteH * l.scale);
-            top = Mathf.Min(top, def.depth + 11f);
-            Bounds = new Rect(0f, -3f, Mathf.Max(1f, def.width), top + 3f);
+            Bounds = new Rect(-2f, -2f, Mathf.Max(1f, def.width) + 4f, Mathf.Max(1f, def.depth) + 4f);
             if (CameraRig.Instance != null) CameraRig.Instance.Bounds = Bounds;
 
             DayNight.MarkDirty();
+            sky.MarkDirty();
             UpdateView(0f);
+        }
+
+        void Guard(string what, Action build)
+        {
+            try { build(); }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Lanternvale] Map '{Def.id}': building {what} failed: {e.Message}");
+                Debug.LogException(e);
+            }
         }
 
         Transform Child(string name)
@@ -190,384 +246,405 @@ namespace Lanternvale.Game
             return go.transform;
         }
 
-        // ------------------------------------------------------------------ sky
-
-        void BuildSky()
+        static void Quiet(Renderer r)
         {
-            skyBottom = PresentationArt.NewRenderer("Sky Bottom", skyRoot, PresentationArt.White, SortingOrders.Sky, true);
-            skyTop = PresentationArt.NewRenderer("Sky Gradient", skyRoot, PresentationArt.GradientUp, SortingOrders.Sky + 1, true);
-            var rng = new System.Random((Def.id ?? "").GetHashCode());
-            for (int i = 0; i < 46; i++)
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            r.lightProbeUsage = LightProbeUsage.Off;
+            r.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        }
+
+        static int Seed(string mapId, Vector2 pos, int salt)
+        {
+            unchecked
             {
-                var s = PresentationArt.NewRenderer("Star", skyRoot, PresentationArt.SoftDot, SortingOrders.Sky + 2, true);
-                float size = 0.07f + (float)rng.NextDouble() * 0.09f;
-                s.transform.localScale = new Vector3(size, size, 1f);
-                s.enabled = false;
-                stars.Add(s);
-                starPos.Add(new Vector2((float)rng.NextDouble() - 0.5f, 0.02f + (float)Math.Pow(rng.NextDouble(), 0.8) * 0.48f));
-            }
-            moonGlow = PresentationArt.NewRenderer("Moon Glow", skyRoot, PresentationArt.Glow, SortingOrders.Sky + 3, true);
-            moonGlow.transform.localScale = new Vector3(3.2f, 3.2f, 1f);
-            moon = PresentationArt.NewRenderer("Moon", skyRoot, PresentationArt.Moon, SortingOrders.Sky + 4, true);
-            moon.transform.localScale = new Vector3(1.6f, 1.6f, 1f);
-            moon.enabled = moonGlow.enabled = false;
-            if (!PresentationArt.SpritesLit)
-            {
-                overlay = PresentationArt.NewRenderer("Night Overlay", skyRoot, PresentationArt.White, SortingOrders.NightOverlay);
-                overlay.enabled = false;
+                int h = MapTerrain.StableHash(mapId) ^ (Mathf.RoundToInt(pos.x * 10f) * 73856093) ^ (Mathf.RoundToInt(pos.y * 10f) * 19349663) ^ (salt * 83492791);
+                return (h & 0x7fffffff) % 100003;
             }
         }
 
-        // ------------------------------------------------------------------ parallax layers
+        // ------------------------------------------------------------------ terrain material
 
-        void BuildLayer(ParallaxLayerDef l, int index)
+        static readonly Dictionary<string, Material> TerrainMaterials = new Dictionary<string, Material>();
+        static readonly Dictionary<Texture, Color> TextureAverages = new Dictionary<Texture, Color>();
+        static readonly int SideTexId = Shader.PropertyToID("_SideTex");
+        static readonly int SidePlanarScaleId = Shader.PropertyToID("_SidePlanarScale");
+        static readonly int MainAvgId = Shader.PropertyToID("_MainAvg");
+        static readonly int SideAvgId = Shader.PropertyToID("_SideAvg");
+
+        static Material TerrainMaterial(MapDef def)
         {
-            if (l == null || string.IsNullOrEmpty(l.art)) return;
-            var sprite = ArtLibrary.Sprite(l.art);
-            // Unlit material (URP 2D): point lights work in screen XY and would light the distant
-            // mountains behind them; UpdateView tints the layers with the global ambient instead.
-            var sr = PresentationArt.NewRenderer("Layer " + index + " " + l.art, layersRoot, sprite, SortingOrders.Background + index * 10, true);
-            var lv = new LayerView
+            string groundKey = string.IsNullOrEmpty(def.ground) ? "ground_meadow" : def.ground;
+            const string sideKey = "ground_meadow";
+            float tile = def.groundTile > 0f ? def.groundTile : 8f;
+            var ground = ArtLibrary.Texture(groundKey);
+            var side = ArtLibrary.Texture(sideKey);
+            string key = groundKey + "|" + sideKey + "|" + tile.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            if (TerrainMaterials.TryGetValue(key, out var m) && m != null) return m;
+            var shader = Shader.Find("Lanternvale/Terrain");
+            if (shader == null || !shader.isSupported)
             {
-                def = l,
-                t = sr.transform,
-                sr = sr,
-                spriteW = Mathf.Max(0.01f, sprite.bounds.size.x),
-                spriteH = Mathf.Max(0.01f, sprite.bounds.size.y),
-                pivot = PresentationArt.PivotNorm(sprite),
-                loop = l.loop,
-                tint = string.IsNullOrEmpty(l.tint) ? Color.white : Ui.Hex(l.tint),
-            };
-            lv.scale = l.height > 0f ? l.height / lv.spriteH : 1f;
-            sr.transform.localScale = new Vector3(lv.scale, lv.scale, 1f);
-            if (lv.loop)
-            {
-                sr.drawMode = SpriteDrawMode.Tiled;
-                sr.tileMode = SpriteTileMode.Continuous;
+                Debug.LogWarning("[Lanternvale] Shader 'Lanternvale/Terrain' is missing or unsupported; the terrain uses the plain textured material.");
+                return Materials3D.Textured(ground, 1f / tile);
             }
-            sr.color = lv.tint;
-            layers.Add(lv);
+            m = new Material(shader) { name = "LV Terrain " + groundKey, hideFlags = HideFlags.DontSave };
+            m.SetTexture(Materials3D.MainTexId, ground);
+            m.SetTexture(SideTexId, side);
+            m.SetFloat(Materials3D.PlanarScaleId, 1f / tile);
+            m.SetFloat(SidePlanarScaleId, 1f / 8f);
+            m.SetColor(MainAvgId, Average(ground, groundKey));
+            m.SetColor(SideAvgId, Average(side, sideKey));
+            TerrainMaterials[key] = m;
+            return m;
         }
 
-        // ------------------------------------------------------------------ ground
-
-        static readonly Dictionary<string, Sprite> EdgeSprites = new Dictionary<string, Sprite>();
-        static readonly Dictionary<string, Color> GroundAverages = new Dictionary<string, Color>();
-
-        void BuildGround()
+        /// <summary>Average colour of a painted texture (GPU downsample + readback once; known fallbacks without a GPU).</summary>
+        static Color Average(Texture2D tex, string key)
         {
-            string key = string.IsNullOrEmpty(Def.ground) ? "ground_meadow" : Def.ground;
-            var sprite = ArtLibrary.Sprite(key);
-            float sw = Mathf.Max(0.01f, sprite.bounds.size.x), sh = Mathf.Max(0.01f, sprite.bounds.size.y);
-            float tile = Def.groundTile > 0f ? Def.groundTile : 8f;
-            float s = tile / sh;
-            float tileW = sw * s, tileH = sh * s;
-            const float margin = 6f, below = 7f;
-            int nx = Mathf.Max(1, Mathf.CeilToInt((Def.width + margin * 2f) / tileW));
-            int ny = Mathf.Max(1, Mathf.CeilToInt((Def.depth + below) / tileH));
-            float left = -margin, topY = Def.depth;
-            var tint = string.IsNullOrEmpty(Def.groundTint) ? Color.white : Ui.Hex(Def.groundTint);
-
-            var body = PresentationArt.NewRenderer("Ground " + key, groundRoot, sprite, SortingOrders.Ground);
-            body.drawMode = SpriteDrawMode.Tiled;
-            body.tileMode = SpriteTileMode.Continuous;
-            body.size = new Vector2(nx * sw, ny * sh);
-            body.color = tint;
-            var piv = PresentationArt.PivotNorm(sprite);
-            body.transform.localScale = new Vector3(s, s, 1f);
-            body.transform.localPosition = new Vector3(left + nx * tileW * piv.x, topY - ny * tileH + ny * tileH * piv.y, 0f);
-
-            // feathered back edge: the ground continues past the horizon and dissolves into the layers
-            var avg = GroundAverage(key, sprite);
-            float frac = Mathf.Clamp(2.2f / tileH, 0.1f, 0.5f); // ~2 m of feathered ground above the horizon
-            var edge = EdgeSprite(key, sprite, frac);
-            if (edge != null)
+            Color fallback = key.Contains("forest") ? new Color(0.36f, 0.38f, 0.25f) : key.Contains("shrine") ? new Color(0.66f, 0.65f, 0.6f)
+                           : key.Contains("village") ? new Color(0.74f, 0.66f, 0.5f) : new Color(0.6f, 0.69f, 0.45f);
+            if (tex == null) return fallback;
+            if (TextureAverages.TryGetValue(tex, out var c)) return c;
+            c = fallback;
+            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
             {
-                var er = PresentationArt.NewRenderer("Ground Edge", groundRoot, edge, SortingOrders.Ground + 10);
-                er.drawMode = SpriteDrawMode.Tiled;
-                er.tileMode = SpriteTileMode.Continuous;
-                float ew = edge.bounds.size.x, eh = edge.bounds.size.y;
-                er.size = new Vector2(nx * ew, eh);
-                er.color = tint;
-                float es = tileW / Mathf.Max(0.01f, ew);
-                er.transform.localScale = new Vector3(es, es, 1f);
-                var ep = PresentationArt.PivotNorm(edge);
-                er.transform.localPosition = new Vector3(left + nx * tileW * ep.x, topY + eh * es * ep.y, 0f);
-            }
-
-            // horizon haze: a soft band of sky/ground colour hiding the seam between ground and layers
-            HazeColor = Color.Lerp(skyBottomColor, new Color(avg.r * tint.r, avg.g * tint.g, avg.b * tint.b), 0.35f);
-            var haze = PresentationArt.NewRenderer("Horizon Haze", groundRoot, PresentationArt.HazeBand, SortingOrders.Ground + 20);
-            PresentationArt.SetSize(haze.transform, haze.sprite, Def.width + margin * 2f + 4f, 3.4f);
-            haze.transform.localPosition = new Vector3(Def.width * 0.5f, Def.depth + 0.35f, 0f);
-            haze.color = PresentationArt.WithAlpha(HazeColor, layers.Count > 0 ? 0.55f : 0.35f);
-        }
-
-        static Color GroundAverage(string key, Sprite sprite)
-        {
-            if (GroundAverages.TryGetValue(key, out var c)) return c;
-            c = key.Contains("forest") ? new Color(0.42f, 0.55f, 0.38f) : key.Contains("shrine") ? new Color(0.55f, 0.6f, 0.52f)
-              : key.Contains("village") ? new Color(0.7f, 0.66f, 0.5f) : new Color(0.62f, 0.74f, 0.48f);
-            try
-            {
-                var px = TextureReadback.Read(sprite.texture, sprite.textureRect, 16, 16);
-                if (px != null && px.Length > 0)
+                RenderTexture rt = null;
+                Texture2D read = null;
+                var prev = RenderTexture.active;
+                try
                 {
-                    float r = 0, g = 0, b = 0;
-                    foreach (var p in px) { r += p.r; g += p.g; b += p.b; }
-                    float n = px.Length * 255f;
-                    c = new Color(r / n, g / n, b / n);
+                    const int n = 16;
+                    rt = RenderTexture.GetTemporary(n, n, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+                    Graphics.Blit(tex, rt);
+                    RenderTexture.active = rt;
+                    read = new Texture2D(n, n, TextureFormat.RGBA32, false);
+                    read.ReadPixels(new Rect(0, 0, n, n), 0, 0, false);
+                    read.Apply(false);
+                    var px = read.GetPixels32();
+                    float r = 0f, g = 0f, b = 0f;
+                    for (int i = 0; i < px.Length; i++) { r += px[i].r; g += px[i].g; b += px[i].b; }
+                    float k = 1f / (px.Length * 255f);
+                    var avg = new Color(r * k, g * k, b * k, 1f);
+                    if (avg.r + avg.g + avg.b > 0.05f) c = avg;
+                }
+                catch (Exception) { c = fallback; }
+                finally
+                {
+                    RenderTexture.active = prev;
+                    if (rt != null) RenderTexture.ReleaseTemporary(rt);
+                    if (read != null) Destroy(read);
                 }
             }
-            catch (Exception) { }
-            GroundAverages[key] = c;
+            TextureAverages[tex] = c;
             return c;
         }
 
-        /// <summary>Bottom rows (frac of a tile) of the ground texture with a noisy watercolour fade to transparent.</summary>
-        static Sprite EdgeSprite(string key, Sprite ground, float frac)
+        // ------------------------------------------------------------------ decals
+
+        static bool IsDecal(string art) => art.StartsWith("decal_", StringComparison.Ordinal);
+
+        const int DecalSortingBase = -8;
+
+        static int DecalOrder(string art) => art.Contains("blight") ? 3 : art.Contains("flower") ? 2 : art.Contains("stone") ? 1 : 0;
+
+        /// <summary>Painted ground decals: one merged mesh of flat quads per texture, just above z = 0.</summary>
+        void BuildDecals()
         {
-            string cacheKey = key + "@" + Mathf.RoundToInt(frac * 100f);
-            if (EdgeSprites.TryGetValue(cacheKey, out var s)) return s;
-            s = null;
-            try
+            var byArt = new Dictionary<string, List<PropDef>>(StringComparer.Ordinal);
+            var order = new List<string>();
+            foreach (var p in Def.props)
             {
-                var tex = ground.texture;
-                var rect = ground.textureRect;
-                int w = Mathf.Clamp(Mathf.RoundToInt(rect.width), 16, 512);
-                int h = Mathf.Max(8, Mathf.RoundToInt(w * (rect.height / rect.width) * frac));
-                var src = TextureReadback.Read(tex, new Rect(rect.x, rect.y, rect.width, rect.height * frac), w, h);
-                if (src != null)
-                {
-                    for (int y = 0; y < h; y++)
-                    {
-                        float v = (y + 0.5f) / h;
-                        for (int x = 0; x < w; x++)
-                        {
-                            float u = (x + 0.5f) / w;
-                            float n = 0.5f * Mathf.Sin(2f * Mathf.PI * (2f * u) + 1.3f) + 0.3f * Mathf.Sin(2f * Mathf.PI * (5f * u) + 0.4f)
-                                    + 0.2f * Mathf.Sin(2f * Mathf.PI * (11f * u) + 2.2f);
-                            float t = Mathf.Clamp01((v + n * 0.22f - 0.04f) / 0.86f);
-                            float a = 1f - t * t * (3f - 2f * t);
-                            var p = src[y * w + x];
-                            p.a = (byte)(p.a * a);
-                            src[y * w + x] = p;
-                        }
-                    }
-                    var t2 = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = "edge_" + key, wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-                    t2.SetPixels32(src);
-                    t2.Apply(false, true);
-                    float ppu = w / Mathf.Max(0.01f, ground.bounds.size.x);
-                    s = Sprite.Create(t2, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), ppu, 0, SpriteMeshType.FullRect);
-                    s.name = "edge_" + key;
-                }
+                if (p == null || string.IsNullOrEmpty(p.art) || !IsDecal(p.art)) continue;
+                if (!byArt.TryGetValue(p.art, out var list)) { byArt[p.art] = list = new List<PropDef>(); order.Add(p.art); }
+                list.Add(p);
             }
-            catch (Exception) { s = null; }
-            EdgeSprites[cacheKey] = s;
-            return s;
+            foreach (var art in order)
+            {
+                var tex = ArtLibrary.Texture(art);
+                float aspect = tex != null && tex.height > 0 ? (float)tex.width / tex.height : 1f;
+                float baseH = ArtLibrary.Height(art, 4f);
+                int ord = DecalOrder(art);
+                var list = byArt[art];
+                var verts = new List<Vector3>(list.Count * 4);
+                var norms = new List<Vector3>(list.Count * 4);
+                var uvs = new List<Vector2>(list.Count * 4);
+                var cols = new List<Color32>(list.Count * 4);
+                var tris = new List<int>(list.Count * 6);
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var p = list[i];
+                    float s = p.scale > 0f ? p.scale : 1f;
+                    float h = baseH * s, w = h * aspect;
+                    float z = -(0.006f + ord * 0.002f + (i % 8) * 0.0003f);
+                    float cx = p.pos.x, cy = p.pos.y;
+                    int b = verts.Count;
+                    verts.Add(new Vector3(cx - w * 0.5f, cy - h * 0.5f, z));
+                    verts.Add(new Vector3(cx - w * 0.5f, cy + h * 0.5f, z));
+                    verts.Add(new Vector3(cx + w * 0.5f, cy + h * 0.5f, z));
+                    verts.Add(new Vector3(cx + w * 0.5f, cy - h * 0.5f, z));
+                    float u0 = p.flip ? 1f : 0f, u1 = p.flip ? 0f : 1f;
+                    uvs.Add(new Vector2(u0, 0f)); uvs.Add(new Vector2(u0, 1f)); uvs.Add(new Vector2(u1, 1f)); uvs.Add(new Vector2(u1, 0f));
+                    var tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint);
+                    // the ground is painted a little under white to stay "as painted" under the bright up-facing light
+                    var c = new Color(tint.r * 0.86f, tint.g * 0.86f, tint.b * 0.86f, tint.a);
+                    for (int k = 0; k < 4; k++) { cols.Add(c); norms.Add(World3D.Up); }
+                    // clockwise seen from above (as MeshCache.GroundQuad)
+                    tris.Add(b); tris.Add(b + 1); tris.Add(b + 2); tris.Add(b); tris.Add(b + 2); tris.Add(b + 3);
+                }
+                var m = new Mesh { name = "lv_decals_" + art };
+                m.SetVertices(verts);
+                m.SetNormals(norms);
+                m.SetUVs(0, uvs);
+                m.SetColors(cols);
+                m.SetTriangles(tris, 0, true);
+                ownedMeshes.Add(m);
+                var go = new GameObject("Decals " + art);
+                go.transform.SetParent(decalsRoot, false);
+                go.AddComponent<MeshFilter>().sharedMesh = m;
+                var r = go.AddComponent<MeshRenderer>();
+                var mat = Materials3D.LitTransparent(tex);
+                if (art.Contains("blight")) mat.SetFloat(Materials3D.EmissionId, 0.18f);
+                r.sharedMaterial = mat;
+                r.sortingOrder = DecalSortingBase + ord;   // under ground previews / rings drawn at order ≥ 0
+                Quiet(r);
+            }
         }
 
         // ------------------------------------------------------------------ props
 
-        static bool IsDecal(string art) => art.StartsWith("decal_", StringComparison.Ordinal);
+        PropModel PlaceModel(MapObject o, Transform holder)
+        {
+            var m = PropModels.Create(o.art, o.seed);
+            var t = m.Root.transform;
+            t.SetParent(holder, false);
+            t.localPosition = Vector3.zero;
+            t.localRotation = World3D.Upright;
+            t.localScale = new Vector3(o.flip ? -o.scale : o.scale, o.scale, o.scale);
+            if (m.SetLit != null && o.IsLantern) m.SetLit(o.LanternLit);
+            o.model = m;
+            o.lidRest = m.Lid != null ? m.Lid.localRotation : Quaternion.identity;
+            ComputeBounds(o);
+            o.lookDirty = true;
+            ApplyLook(o);
+            return m;
+        }
+
+        static void ComputeBounds(MapObject o)
+        {
+            o.hasBounds = false;
+            var m = o.model;
+            if (m == null) return;
+            for (int i = 0; i < m.Renderers.Count; i++)
+            {
+                var r = m.Renderers[i];
+                // disabled parts (an unlit glow, the other state of a switchable model) report stale bounds
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+                if (!(r is MeshRenderer) && !(r is SkinnedMeshRenderer)) continue;
+                if (!o.hasBounds) { o.bounds = r.bounds; o.hasBounds = true; }
+                else o.bounds.Encapsulate(r.bounds);
+            }
+            if (!o.hasBounds && m.Root != null)
+            {
+                // no renderers listed: transform the model-space bounds
+                var lb = m.LocalBounds;
+                var tr = m.Root.transform;
+                for (int i = 0; i < 8; i++)
+                {
+                    var c = lb.center + Vector3.Scale(lb.extents, new Vector3((i & 1) != 0 ? 1f : -1f, (i & 2) != 0 ? 1f : -1f, (i & 4) != 0 ? 1f : -1f));
+                    var w = tr.TransformPoint(c);
+                    if (!o.hasBounds) { o.bounds = new Bounds(w, Vector3.zero); o.hasBounds = true; }
+                    else o.bounds.Encapsulate(w);
+                }
+            }
+        }
+
+        /// <summary>World height of the top of an object's model.</summary>
+        static float TopOf(MapObject o) => o.hasBounds ? Mathf.Max(0.3f, -o.bounds.min.z) : 1.5f;
+
+        void SetFootprint(MapObject o)
+        {
+            if (o.hasBounds)
+            {
+                var b = o.bounds;
+                o.Rect = Rect.MinMaxRect(b.min.x, b.min.y, b.max.x, b.max.y);
+            }
+            else o.Rect = new Rect(o.Position - new Vector2(0.5f, 0.5f), Vector2.one);
+            o.LabelPosition = World3D.At(o.Position, TopOf(o) + 0.35f);
+        }
 
         void BuildProp(PropDef p, int index)
         {
             string art = p.art;
-            bool decal = IsDecal(art);
-            float scale = p.scale > 0f ? p.scale : 1f;
-            var root = new GameObject(art).transform;
-            root.SetParent(propsRoot, false);
-            root.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
-
-            var sprite = ArtLibrary.Sprite(art);
-            int order = decal ? SortingOrders.Decal + (index % 90) : SortingOrders.ForY(p.pos.y);
-            var sr = PresentationArt.NewRenderer("Sprite", root, sprite, order);
-            sr.transform.localScale = new Vector3(scale, scale, 1f);
-            sr.flipX = p.flip;
-            var tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint);
-            sr.color = tint;
-            float h = sprite.bounds.size.y * scale;
-
-            var obj = new MapObject
+            var holder = new GameObject(art).transform;
+            holder.SetParent(propsRoot, false);
+            holder.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
+            var o = new MapObject
             {
                 Id = p.interact ?? "",
                 Kind = MapObjectKind.Prop,
                 Position = new Vector2(p.pos.x, p.pos.y),
                 Prop = p,
                 Label = p.text ?? "",
-                root = root,
-                sprite = sr,
-                order = order,
-                tint = tint,
-                scale = scale,
+                root = holder,
+                art = art,
+                seed = Seed(Def.id, new Vector2(p.pos.x, p.pos.y), index),
+                scale = p.scale > 0f ? p.scale : 1f,
+                flip = p.flip,
+                tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint),
+                windScale = p.sway ? 1f : 0.3f,
             };
-            obj.Rect = SpriteRect(sprite, obj.Position, scale, p.flip);
-            obj.LabelPosition = new Vector2(obj.Position.x, obj.Rect.yMax + 0.35f);
-
-            // painted size (canvases carry wide transparent margins): shadows and the occluder test use it
-            var content = SpriteContent.Bounds(sprite);
-            if (!decal && ArtLibrary.CastsShadow(art)) obj.shadow = AddShadow(root, content.width * scale, content.height * scale);
-            if (p.sway) SwayManager.Get().Add(sr.transform, h, this, decal ? 0f : 1f);
-
             bool lantern = art.Contains("spirit_lantern");
             if (lantern)
             {
-                obj.IsLantern = true;
-                obj.LanternLit = !art.EndsWith("_dark", StringComparison.Ordinal);
-                BuildLanternHalo(obj, h);
+                o.IsLantern = true;
+                o.LanternLit = !art.EndsWith("_dark", StringComparison.Ordinal);
             }
+            PlaceModel(o, holder);
+            SetFootprint(o);
+            o.groundShadow = true;
+            o.occluder = TopOf(o) >= 2.5f;
+            o.occludedAlpha = OccluderFadeAlpha;
+            if (o.occluder) occluders.Add(o);
+
             if (p.light != null)
             {
-                AddLight(obj, p.light, scale, p.flip);
-                if (lantern && !obj.LanternLit) obj.light.Enabled = false; // dark lanterns stay dark until rekindled
+                var l = AddLight(o, p.light);
+                if (lantern) { l.on = o.LanternLit; l.level = l.on ? 1f : 0f; l.dormantGlow = true; l.nightOnly = false; }
             }
-            else if (lantern && obj.LanternLit)
-                AddLight(obj, LanternLight(LanternLampY(obj, h) / scale), scale, false);
+            else if (lantern)
+            {
+                var l = AddLight(o, DefaultLanternLight());
+                l.on = o.LanternLit;
+                l.level = l.on ? 1f : 0f;
+                l.dormantGlow = true;
+            }
 
-            if (!decal && content.height * scale >= 2.5f) occluders.Add(obj);
-            Objects.Add(obj);
+            props.Add(o);
+            Objects.Add(o);
             if (!string.IsNullOrEmpty(p.interact))
             {
-                Interactables.Add(obj);
-                Register(obj);
+                Interactables.Add(o);
+                Register(o);
             }
         }
-
-        /// <summary>World rect of the painted part of a sprite at pos (picking, labels, occluder/foreground fades).</summary>
-        static Rect SpriteRect(Sprite s, Vector2 pos, float scale, bool flip)
-        {
-            var c = SpriteContent.Bounds(s, out bool exact);
-            float minX = c.xMin * scale, maxX = c.xMax * scale;
-            float minY = c.yMin * scale, maxY = c.yMax * scale;
-            if (flip) { float t = minX; minX = -maxX; maxX = -t; }
-            if (!exact)
-            {
-                // no alpha readback: canvas bounds only, so tighten horizontally for the transparent margins
-                float w = maxX - minX;
-                minX += w * 0.12f; maxX -= w * 0.12f;
-                maxY *= 0.97f;
-            }
-            return Rect.MinMaxRect(pos.x + minX, pos.y + minY, pos.x + maxX, pos.y + maxY);
-        }
-
-        SpriteRenderer AddShadow(Transform parent, float spriteWidth, float height)
-        {
-            var sprite = PresentationArt.Fx("fx_shadow");
-            var sh = PresentationArt.NewRenderer("Shadow", parent, sprite, SortingOrders.Shadow);
-            float w = Mathf.Clamp(spriteWidth * 0.72f, 0.4f, 9f);
-            float hh = Mathf.Clamp(w * 0.3f, 0.15f, Mathf.Max(0.5f, height * 0.25f));
-            PresentationArt.SetSize(sh.transform, sprite, w, hh);
-            sh.transform.localPosition = new Vector3(0f, hh * 0.08f, 0f);
-            sh.color = new Color(0.16f, 0.12f, 0.22f, 0.3f);
-            return sh;
-        }
-
-        void AddLight(MapObject obj, LightDef l, float scale, bool flip)
-        {
-            var off = new Vector3(l.offset.x * scale * (flip ? -1f : 1f), l.offset.y * scale, 0f);
-            var color = string.IsNullOrEmpty(l.color) ? Ui.Hex("#ffd9a0") : Ui.Hex(l.color);
-            var handle = PresentationArt.AddPointLight(obj.root.gameObject, off, color, Mathf.Max(0.5f, l.radius), Mathf.Max(0f, l.intensity));
-            var al = new AnimatedLight(handle, l.flicker, l.nightOnly);
-            obj.light = al;
-            lights.Add(al);
-        }
-
-        /// <summary>
-        /// Height of the lamp above the pivot on spirit-lantern art, as a fraction of the (scaled) canvas
-        /// height: the warm lamp pixels sit at v ≈ 0.36–0.44 over a 0.039 pivot, ≈ 1.5 m on the 4.08 m canvas.
-        /// </summary>
-        const float LanternLampFraction = 0.37f;
-
-        /// <summary>
-        /// World height of a lantern's lamp above its pivot: the authored light offset when the prop has
-        /// one, else derived from the art. One value for the halo, the default light and the rekindle FX.
-        /// </summary>
-        static float LanternLampY(MapObject o, float canvasH)
-        {
-            var l = o.Prop != null ? o.Prop.light : null;
-            return l != null ? l.offset.y * o.scale : canvasH * LanternLampFraction;
-        }
-
-        /// <summary>Default warm light of a lit spirit lantern with no authored light (offsetY in unscaled units).</summary>
-        static LightDef LanternLight(float offsetY) =>
-            new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, offsetY) };
-
-        void BuildLanternHalo(MapObject obj, float h)
-        {
-            // URP-lit: sorted just above the lantern so units standing in front of it are not washed over.
-            // Unlit: above the night overlay so the glow punches through the darkness.
-            int order = PresentationArt.SpritesLit ? obj.order + 2 : SortingOrders.NightOverlay + 90;
-            obj.halo = PresentationArt.NewRenderer("Spirit Halo", obj.root, PresentationArt.Glow, order, true);
-            obj.halo.transform.localPosition = new Vector3(0f, LanternLampY(obj, h), 0f);
-            float d = Mathf.Max(1.6f, h * 1.15f);
-            obj.halo.transform.localScale = new Vector3(d, d, 1f);
-            animated.Add(obj);
-        }
-
-        // ------------------------------------------------------------------ foreground
 
         void BuildForeground(PropDef p, int index)
         {
-            float scale = p.scale > 0f ? p.scale : 1f;
-            var root = new GameObject("FG " + p.art).transform;
-            root.SetParent(fgRoot, false);
-            root.localPosition = new Vector3(p.pos.x, p.pos.y, 0f); // before sway registration (it culls by x)
-            var sprite = ArtLibrary.Sprite(p.art);
-            int order = SortingOrders.Foreground + Mathf.Clamp(Mathf.RoundToInt(-p.pos.y * 10f), -900, 900) * 2 + (index & 1);
-            var sr = PresentationArt.NewRenderer("Sprite", root, sprite, order);
-            sr.transform.localScale = new Vector3(scale, scale, 1f);
-            sr.flipX = p.flip;
-            var fv = new FgView
+            var holder = new GameObject("FG " + p.art).transform;
+            holder.SetParent(fgRoot, false);
+            holder.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
+            var o = new MapObject
             {
-                root = root,
-                sr = sr,
-                pos = new Vector2(p.pos.x, p.pos.y),
+                Kind = MapObjectKind.Prop,
+                Position = new Vector2(p.pos.x, p.pos.y),
+                Prop = p,
+                root = holder,
+                art = p.art,
+                seed = Seed(Def.id, new Vector2(p.pos.x, p.pos.y), 1000 + index),
+                scale = p.scale > 0f ? p.scale : 1f,
+                flip = p.flip,
                 tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint),
+                windScale = p.sway ? 1f : 0.3f,
             };
-            var r = SpriteRect(sprite, Vector2.zero, scale, p.flip);
-            fv.local = r;
-            sr.color = fv.tint;
-            if (p.sway) SwayManager.Get().Add(sr.transform, sprite.bounds.size.y * scale, this);
-            foreground.Add(fv);
+            PlaceModel(o, holder);
+            SetFootprint(o);
+            o.groundShadow = p.art.Contains("stone");
+            o.occluder = TopOf(o) >= 0.7f;
+            o.occludedAlpha = ForegroundFadeAlpha;
+            if (o.occluder) occluders.Add(o);
+            foreground.Add(o);
+        }
+
+        static LightDef DefaultLanternLight() => new LightDef { color = "#ffe2a6", radius = 4.5f, intensity = 0.9f, offset = new Lanternvale.Util.Vec2(0f, -1f), flicker = true };
+
+        /// <summary>
+        /// A prop light: at the model's light anchor nearest to the authored offset (2.5D offsets: x along the map, y =
+        /// height), else at the offset itself — pushed out in front of big props (windows, forges) so it lights the street.
+        /// </summary>
+        WorldLight AddLight(MapObject o, LightDef def)
+        {
+            var m = o.model;
+            var tr = m.Root.transform;
+            bool big = m.LocalBounds.size.x * o.scale > 2.4f;
+            Vector3 world;
+            float ox = def.offset.x, oy = def.offset.y;
+            if (oy < 0f) oy = m.Height * o.scale * 0.62f;   // default lantern light: no authored height
+            if (m.LightAnchors.Count > 0)
+            {
+                int best = 0;
+                float bd = float.MaxValue;
+                for (int i = 0; i < m.LightAnchors.Count; i++)
+                {
+                    var a = m.LightAnchors[i];
+                    float d = (a.x * o.scale - ox) * (a.x * o.scale - ox) + (a.y * o.scale - oy) * (a.y * o.scale - oy);
+                    if (d < bd) { bd = d; best = i; }
+                }
+                world = tr.TransformPoint(m.LightAnchors[best]);
+                if (big) world.y -= 0.4f;
+            }
+            else
+            {
+                // model space: offset / scale (the root's scale re-applies it; flip mirrors x like the 2.5D art did)
+                float front = big ? m.LocalBounds.min.z - 0.35f / o.scale : 0f;
+                world = tr.TransformPoint(new Vector3(ox / o.scale, oy / o.scale, front));
+            }
+            var l = new WorldLight
+            {
+                position = world,
+                color = string.IsNullOrEmpty(def.color) ? Ui.Hex("#ffd9a0") : Ui.Hex(def.color),
+                intensity = Mathf.Max(0f, def.intensity),
+                range = Mathf.Max(0.5f, def.radius) * 1.3f,
+                flicker = def.flicker,
+                nightOnly = def.nightOnly,
+                seed = UnityEngine.Random.value * 100f,
+            };
+            l.haloSize = Mathf.Clamp(def.radius * 0.42f, 0.7f, 2.4f) * (big ? 1.25f : 1f);
+            l.handle = SceneLighting.Add(world, l.color, 0f, l.range);
+            l.handle.Enabled = false;
+            if (!o.IsLantern && m.SetLit != null)
+            {
+                if (def.nightOnly) l.setLit = m.SetLit;   // lamps and windows follow the night (UpdateLights)
+                else m.SetLit(true);                      // fires and forges always burn
+            }
+            o.light = l;
+            o.lampPoint = world;
+            lights.Add(l);
+            return l;
         }
 
         // ------------------------------------------------------------------ chests, transitions, regions
 
         void BuildChest(ChestDef c, Func<string, bool> flagTest)
         {
-            string art = string.IsNullOrEmpty(c.art) ? "prop_chest" : c.art;
-            var root = new GameObject("Chest " + c.id).transform;
-            root.SetParent(propsRoot, false);
-            root.localPosition = new Vector3(c.pos.x, c.pos.y, 0f);
-            var sprite = ArtLibrary.Sprite(art);
-            int order = SortingOrders.ForY(c.pos.y);
-            var sr = PresentationArt.NewRenderer("Sprite", root, sprite, order);
-            var obj = new MapObject
+            var holder = new GameObject("Chest " + c.id).transform;
+            holder.SetParent(propsRoot, false);
+            holder.localPosition = new Vector3(c.pos.x, c.pos.y, 0f);
+            var o = new MapObject
             {
                 Id = c.id ?? "",
                 Kind = MapObjectKind.Chest,
                 Position = new Vector2(c.pos.x, c.pos.y),
                 Chest = c,
-                root = root,
-                sprite = sr,
-                order = order,
+                root = holder,
+                art = string.IsNullOrEmpty(c.art) ? "prop_chest" : c.art,
+                seed = Seed(Def.id, new Vector2(c.pos.x, c.pos.y), 77),
+                windScale = 0f,
             };
-            obj.Rect = SpriteRect(sprite, obj.Position, 1f, false);
-            obj.LabelPosition = new Vector2(obj.Position.x, obj.Rect.yMax + 0.3f);
-            var content = SpriteContent.Bounds(sprite);
-            obj.shadow = AddShadow(root, content.width, content.height);
-            obj.Visible = string.IsNullOrEmpty(c.requireFlag) || flagTest == null || flagTest(c.requireFlag);
-            obj.Locked = c.lockCheck != null;
-            root.gameObject.SetActive(obj.Visible);
-            Chests.Add(obj);
-            Objects.Add(obj);
-            Register(obj);
+            PlaceModel(o, holder);
+            SetFootprint(o);
+            var e = o.hasBounds ? o.bounds.extents : new Vector3(0.5f, 0.35f, 0.4f);
+            MeshCache.AddShadow(holder, e.x + 0.12f, e.y + 0.1f, 0.38f);
+            o.Visible = string.IsNullOrEmpty(c.requireFlag) || flagTest == null || flagTest(c.requireFlag);
+            o.Locked = c.lockCheck != null;
+            holder.gameObject.SetActive(o.Visible);
+            Chests.Add(o);
+            Objects.Add(o);
+            Register(o);
         }
 
         static string OpenArt(string closed)
         {
-            if (ArtLibrary.Has(closed + "_open") || PresentationArt.HasReal(closed + "_open")) return closed + "_open";
+            if (PropModels.Has(closed + "_open")) return closed + "_open";
             return "prop_chest_open";
         }
 
@@ -575,23 +652,9 @@ namespace Lanternvale.Game
         {
             var size = new Vector2(t.size.x > 0f ? t.size.x : 2f, t.size.y > 0f ? t.size.y : 2f);
             var pos = new Vector2(t.pos.x, t.pos.y);
-            var root = new GameObject("Transition " + t.id).transform;
-            root.SetParent(markersRoot, false);
-            root.localPosition = new Vector3(pos.x, pos.y, 0f);
-
-            // arrow towards the nearest map edge, or a rune circle when it's in the middle of the map
-            float dl = pos.x, dr = Def.width - pos.x, df = pos.y, db = Def.depth - pos.y;
-            float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
-            Sprite sprite;
-            float angle = 0f;
-            if (min <= 3.5f)
-            {
-                sprite = PresentationArt.Chevron;
-                if (min == dl) angle = 90f; else if (min == dr) angle = -90f; else if (min == df) angle = 180f; else angle = 0f;
-            }
-            else sprite = PresentationArt.Fx("fx_rune_circle");
-
-            var obj = new MapObject
+            var holder = new GameObject("Transition " + t.id).transform;
+            holder.SetParent(markersRoot, false);
+            var o = new MapObject
             {
                 Id = t.id ?? "",
                 Kind = MapObjectKind.Transition,
@@ -599,34 +662,153 @@ namespace Lanternvale.Game
                 Rect = new Rect(pos - size * 0.5f, size),
                 Label = string.IsNullOrEmpty(t.label) ? t.targetMap : t.label,
                 Transition = t,
-                root = root,
+                root = holder,
             };
-            obj.LabelPosition = new Vector2(pos.x, pos.y + size.y * 0.5f + 0.7f);
-            obj.Locked = !string.IsNullOrEmpty(t.requireFlag) && flagTest != null && !flagTest(t.requireFlag);
+            o.Locked = !string.IsNullOrEmpty(t.requireFlag) && flagTest != null && !flagTest(t.requireFlag);
 
-            obj.markerGlow = PresentationArt.NewRenderer("Glow", root, PresentationArt.Glow, SortingOrders.Shadow + 29, true);
-            float g = Mathf.Clamp(Mathf.Max(size.x, size.y) * 1.3f, 1.8f, 4.5f);
-            obj.markerGlow.transform.localScale = new Vector3(g, g * 0.6f, 1f);
-            obj.marker = PresentationArt.NewRenderer("Marker", root, sprite, SortingOrders.Shadow + 30, true);
-            float m = Mathf.Clamp(Mathf.Min(size.x, size.y) * 0.7f, 0.9f, 1.8f);
-            PresentationArt.SetSize(obj.marker.transform, sprite, m, m * (sprite == PresentationArt.Chevron ? 1f : 0.62f));
-            obj.marker.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
-            ApplyTransitionColor(obj);
-            Transitions.Add(obj);
-            Objects.Add(obj);
-            animated.Add(obj);
-            Register(obj);
+            // outward direction: towards the nearest map edge (a ring of chevrons when it's in the middle of the map)
+            float W = Def.width, D = Def.depth;
+            float dl = pos.x, dr = W - pos.x, df = pos.y, db = D - pos.y;
+            float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
+            var mk = new Marker { center = pos, size = Mathf.Max(size.x, size.y) };
+            Vector2 archAt = pos;
+            float span = 3f;
+            if (min <= 3.5f)
+            {
+                if (min == dl) { mk.dir = new Vector2(-1f, 0f); archAt = new Vector2(-0.3f, pos.y); span = size.y; }
+                else if (min == dr) { mk.dir = new Vector2(1f, 0f); archAt = new Vector2(W + 0.3f, pos.y); span = size.y; }
+                else if (min == df) { mk.dir = new Vector2(0f, -1f); archAt = new Vector2(pos.x, -0.3f); span = size.x; }
+                else { mk.dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
+            }
+            span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
+
+            holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
+            var arch = new GameObject("Waymarker").transform;
+            arch.SetParent(holder, false);
+            arch.localPosition = Vector3.zero;
+            arch.rotation = mk.dir == Vector2.zero ? World3D.Upright : World3D.Facing(mk.dir);
+            arch.localScale = mk.dir == Vector2.zero ? new Vector3(0.6f, 0.75f, 0.6f) : new Vector3(span / 3f, 1f, 1f);
+            var archGo = new GameObject("Arch");
+            archGo.transform.SetParent(arch, false);
+            archGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_arch", BuildArchMesh);
+            var ar = archGo.AddComponent<MeshRenderer>();
+            ar.sharedMaterials = Materials3D.WithOutline();
+            Quiet(ar);
+            mk.archRenderers.Add(ar);
+            var lanGo = new GameObject("Lantern");
+            lanGo.transform.SetParent(holder, false);          // not under the arch: keeps its shape when the span stretches
+            lanGo.transform.localRotation = arch.localRotation;
+            lanGo.transform.localScale = mk.dir == Vector2.zero ? new Vector3(0.75f, 0.75f, 0.75f) : Vector3.one;
+            lanGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_lantern", BuildArchLanternMesh);
+            var lr = lanGo.AddComponent<MeshRenderer>();
+            lr.sharedMaterial = Materials3D.LowPoly;
+            Quiet(lr);
+            mk.lantern = lr;
+            mk.arch = arch;
+            var ab = ar.bounds;
+            MeshCache.AddShadow(holder, ab.extents.x + 0.25f, ab.extents.y + 0.25f, 0.3f);
+
+            var lamp = arch.TransformPoint(new Vector3(0f, 2.02f, 0f));
+            var light = new WorldLight
+            {
+                position = lamp,
+                color = new Color(1f, 0.82f, 0.52f),
+                intensity = 0.85f,
+                range = 5.2f,
+                flicker = true,
+                seed = UnityEngine.Random.value * 100f,
+                haloSize = 1.3f,
+            };
+            light.handle = SceneLighting.Add(lamp, light.color, 0f, light.range);
+            light.handle.Enabled = false;
+            lights.Add(light);
+            mk.light = light;
+            o.light = light;
+            o.lampPoint = lamp;
+            o.marker = mk;
+            ApplyTransitionColor(o);
+
+            // picking / labels: the arch's projected bounds plus the authored ground rect
+            o.bounds = ar.bounds;
+            o.bounds.Encapsulate(lr.bounds);
+            o.hasBounds = true;
+            o.LabelPosition = World3D.At(archAt, TopOf(o) + 0.45f);
+
+            Transitions.Add(o);
+            Objects.Add(o);
+            Register(o);
+        }
+
+        static Mesh BuildArchMesh()
+        {
+            // a weathered wooden waymarker arch (torii-like), spanning local X (posts at ±1.5 m), walked through along Z
+            var mb = new MeshBuilder(17) { Jitter = 0.07f, AOStrength = 0.3f, AOHeight = 0.6f };
+            var wood = Ui.Hex("#7a5a43");
+            var dark = Ui.Hex("#4a3a30");
+            var stone = Ui.Hex("#a39c94");
+            for (int s = -1; s <= 1; s += 2)
+            {
+                mb.Color = stone;
+                mb.Cylinder(new Vector3(s * 1.5f, 0f, 0f), 0.24f, 0.2f, 0.32f, 6);
+                mb.Color = wood;
+                mb.Cylinder(new Vector3(s * 1.5f, 0.3f, 0f), 0.13f, 0.11f, 2.45f, 6);
+            }
+            mb.Color = dark;
+            mb.Box(new Vector3(0f, 2.78f, 0f), new Vector3(3.9f, 0.18f, 0.3f));
+            mb.Push().Translate(1.98f, 2.84f, 0f).Rotate(0f, 0f, 12f);
+            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
+            mb.Pop();
+            mb.Push().Translate(-1.98f, 2.84f, 0f).Rotate(0f, 0f, -12f);
+            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
+            mb.Pop();
+            mb.Color = wood;
+            mb.Box(new Vector3(0f, 2.42f, 0f), new Vector3(3.2f, 0.13f, 0.18f));
+            // a little plaque and the lantern's hook
+            mb.Color = Ui.Hex("#d8c7a2");
+            mb.Box(new Vector3(0f, 2.6f, 0f), new Vector3(0.5f, 0.3f, 0.06f));
+            mb.Color = dark;
+            mb.Segment(new Vector3(0f, 2.36f, 0f), new Vector3(0f, 2.22f, 0f), 0.02f, 0.02f, 4);
+            return mb.ToMesh("lv_waymarker_arch");
+        }
+
+        static Mesh BuildArchLanternMesh()
+        {
+            var mb = new MeshBuilder(18) { Jitter = 0.04f };
+            mb.Color = Ui.Hex("#4a3a30");
+            mb.Box(new Vector3(0f, 2.21f, 0f), new Vector3(0.3f, 0.05f, 0.3f));
+            mb.Box(new Vector3(0f, 1.83f, 0f), new Vector3(0.26f, 0.05f, 0.26f));
+            mb.Color = new Color(1f, 0.84f, 0.55f);
+            mb.Emission = 1f;
+            mb.Box(new Vector3(0f, 2.02f, 0f), new Vector3(0.24f, 0.33f, 0.24f));
+            return mb.ToMesh("lv_waymarker_lantern");
         }
 
         static void ApplyTransitionColor(MapObject o)
         {
-            o.markerColor = o.Locked ? new Color(0.62f, 0.58f, 0.72f, 1f) : new Color(1f, 0.86f, 0.55f, 1f);
+            var mk = o.marker;
+            if (mk == null) return;
+            if (o.Locked)
+            {
+                mk.light.color = new Color(0.62f, 0.55f, 0.88f);
+                mk.light.intensity = 0.38f;
+                mk.light.flicker = false;
+                mk.lanternLook.Tint = new Color(0.5f, 0.46f, 0.72f);
+            }
+            else
+            {
+                mk.light.color = new Color(1f, 0.82f, 0.52f);
+                mk.light.intensity = 0.85f;
+                mk.light.flicker = true;
+                mk.lanternLook.Tint = Color.white;
+            }
+            if (mk.light.handle != null) mk.light.handle.Color = mk.light.color;
+            mk.lanternLook.Apply(mk.lantern);
         }
 
         void BuildRegion(RegionDef r)
         {
             var size = new Vector2(r.size.x, r.size.y);
-            var obj = new MapObject
+            var o = new MapObject
             {
                 Id = r.id ?? "",
                 Kind = MapObjectKind.Region,
@@ -635,10 +817,10 @@ namespace Lanternvale.Game
                 Label = r.text ?? "",
                 Region = r,
             };
-            obj.LabelPosition = obj.Position;
-            Regions.Add(obj);
-            Objects.Add(obj);
-            Register(obj);
+            o.LabelPosition = World3D.At(o.Position, 0f);
+            Regions.Add(o);
+            Objects.Add(o);
+            Register(o);
         }
 
         void Register(MapObject o)
@@ -652,34 +834,67 @@ namespace Lanternvale.Game
             byId[o.Id] = o;
         }
 
-        // ------------------------------------------------------------------ lighting
+        // ------------------------------------------------------------------ prop shadows (one merged mesh)
 
-        void BuildLighting()
+        void RebuildShadows()
         {
-            if (PresentationArt.SpritesLit)
+            shadowsDirty = false;
+            var verts = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var cols = new List<Color32>();
+            var tris = new List<int>();
+            void Add(MapObject o)
             {
-                DisableSceneGlobalLights();
-                globalLightComp = Lighting2D.CreateGlobalLight(transform, DayNight.AmbientColor, DayNight.AmbientIntensity);
-                globalLight = new Light2DSetter(globalLightComp);
+                if (!o.groundShadow || !o.Visible || !o.hasBounds) return;
+                var e = o.bounds.extents;
+                var c = o.bounds.center;
+                float big = Mathf.Max(e.x, e.y);
+                float rx = Mathf.Clamp(e.x * 0.95f + 0.12f, 0.25f, 7f), ry = Mathf.Clamp(e.y * 0.95f + 0.1f, 0.2f, 5f);
+                float a = big > 2f ? 0.72f : 1f;   // big footprints (buildings, canopies) a little lighter
+                const float z = -0.004f;
+                int b = verts.Count;
+                verts.Add(new Vector3(c.x - rx, c.y - ry, z)); verts.Add(new Vector3(c.x - rx, c.y + ry, z));
+                verts.Add(new Vector3(c.x + rx, c.y + ry, z)); verts.Add(new Vector3(c.x + rx, c.y - ry, z));
+                uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(0, 1)); uvs.Add(new Vector2(1, 1)); uvs.Add(new Vector2(1, 0));
+                var col = new Color32(255, 255, 255, (byte)(a * 255f));
+                cols.Add(col); cols.Add(col); cols.Add(col); cols.Add(col);
+                tris.Add(b); tris.Add(b + 1); tris.Add(b + 2); tris.Add(b); tris.Add(b + 2); tris.Add(b + 3);
             }
+            for (int i = 0; i < props.Count; i++) Add(props[i]);
+            for (int i = 0; i < foreground.Count; i++) Add(foreground[i]);
+            if (shadowFilter == null)
+            {
+                var go = new GameObject("Prop Shadows");
+                go.transform.SetParent(propsRoot, false);
+                shadowFilter = go.AddComponent<MeshFilter>();
+                var r = go.AddComponent<MeshRenderer>();
+                r.sharedMaterial = ShadowOverDecals;
+                Quiet(r);
+                shadowMesh = new Mesh { name = "lv_prop_shadows" };
+                ownedMeshes.Add(shadowMesh);
+                shadowFilter.sharedMesh = shadowMesh;
+            }
+            shadowMesh.Clear();
+            shadowMesh.SetVertices(verts);
+            shadowMesh.SetUVs(0, uvs);
+            shadowMesh.SetColors(cols);
+            shadowMesh.SetTriangles(tris, 0, true);
         }
 
-        /// <summary>A template scene may already contain a Global Light 2D; two would fight. Disable them while the map lives.</summary>
-        void DisableSceneGlobalLights()
+        static Material shadowOverDecals;
+
+        /// <summary>
+        /// The blob-shadow material drawn after the painted decals (Lanternvale/Shadow's own queue, Geometry+20, comes
+        /// before them, so a path would cover the shadow of a prop standing on it). One shared copy for all map shadows.
+        /// </summary>
+        static Material ShadowOverDecals
         {
-            var type = Lighting2D.Light2DType;
-            if (type == null) return;
-            var prop = type.GetProperty("lightType", BindingFlags.Public | BindingFlags.Instance);
-            if (prop == null) return;
-            foreach (var o in Resources.FindObjectsOfTypeAll(type))
+            get
             {
-                var b = o as Behaviour;
-                if (b == null || !b.isActiveAndEnabled || !b.gameObject.scene.IsValid()) continue;
-                object lt = null;
-                try { lt = prop.GetValue(b, null); } catch (Exception) { }
-                if (lt == null || lt.ToString() != "Global") continue;
-                b.enabled = false;
-                disabledGlobalLights.Add(b);
+                if (shadowOverDecals != null) return shadowOverDecals;
+                shadowOverDecals = new Material(Materials3D.Shadow) { name = "LV Shadow (over decals)", hideFlags = HideFlags.DontSave };
+                shadowOverDecals.renderQueue = 2955;   // LitTransparent decals are Transparent−50 (2950)
+                return shadowOverDecals;
             }
         }
 
@@ -694,200 +909,263 @@ namespace Lanternvale.Game
         void UpdateView(float dt)
         {
             var cam = PresentationHost.Cam;
-            Vector3 cp = cam != null ? cam.transform.position : new Vector3(Def.width * 0.5f, Def.depth * 0.5f, -20f);
-            float halfH = cam != null ? cam.orthographicSize : 6.2f;
-            float halfW = halfH * (cam != null ? cam.aspect : 16f / 9f);
             float time = Time.time;
 
             DayNight.Update(dt);
+            sky.Update(cam, DayNight, time);
+            ApplyMood(cam);
+            backdrop.Update(dt, time, DayNight);
+            terrain.Update(dt);
+            UpdateLights(cam, time, dt);
+            UpdateFades(cam, dt);
+            UpdateAnimated(time, dt);
+            UpdateMarkers(cam, time, dt);
+            if (particles != null)
+            {
+                var rig = CameraRig.Instance;
+                var look = rig != null ? rig.LookAtPoint : new Vector3(Def.width * 0.5f, Def.depth * 0.5f, 0f);
+                particles.Update(dt, time, cam, look);
+            }
+            if (shadowsDirty) RebuildShadows();
+        }
+
+        void ApplyMood(Camera cam)
+        {
+            DayNight.ApplyTo();
+            var horizon = sky.Horizon;
+            var fog = Color.Lerp(horizon, sky.Zenith, 0.22f);
+            HazeColor = fog;
+            SceneLighting.FogColor = fog;
+            SceneLighting.FogStart = fogStart;
+            SceneLighting.FogEnd = fogEnd;
+            SceneLighting.FogMax = 0.85f;
+            SceneLighting.WindStrength = windStrength;
+            if (cam != null) cam.backgroundColor = horizon;
+        }
+
+        void UpdateLights(Camera cam, float time, float dt)
+        {
             float night = DayNight.NightFactor;
-
-            // ---- sky
-            var top = DayNight.SkyColor(skyTopColor, true);
-            var bottom = DayNight.SkyColor(skyBottomColor, false);
-            float vw = halfW * 2.3f, vh = halfH * 2.3f;
-            skyRoot.position = new Vector3(cp.x, cp.y, 0f);
-            PresentationArt.SetSize(skyBottom.transform, skyBottom.sprite, vw, vh);
-            PresentationArt.SetSize(skyTop.transform, skyTop.sprite, vw, vh);
-            skyBottom.color = bottom;
-            skyTop.color = top;
-            if (cam != null) cam.backgroundColor = bottom;
-            UpdateNightSky(night, halfW, halfH, time);
-            if (overlay != null)
+            bool haveCam = cam != null;
+            Vector3 right = Vector3.right, up = World3D.Up;
+            if (haveCam) { right = cam.transform.right; up = cam.transform.up; }
+            halos.Begin();
+            for (int i = 0; i < lights.Count; i++)
             {
-                var o = DayNight.Overlay;
-                bool on = o.a > 0.004f;
-                if (overlay.enabled != on) overlay.enabled = on;
-                if (on)
+                var l = lights[i];
+                l.level = Mathf.MoveTowards(l.level, l.on ? 1f : 0f, dt * 1.4f);
+                float f = 1f;
+                if (l.flicker)
+                    f = 1f + (Mathf.PerlinNoise(time * 5.3f + l.seed, l.seed) - 0.5f) * 0.24f + Mathf.Sin(time * 17.3f + l.seed) * 0.035f;
+                float gate = l.visible ? l.level * l.boost : 0f;
+                if (l.nightOnly) gate *= Mathf.Clamp01((night - 0.2f) / 0.45f);
+                if (l.setLit != null)
                 {
-                    PresentationArt.SetSize(overlay.transform, overlay.sprite, vw, vh);
-                    overlay.color = o;
+                    int want = night > 0.42f ? 1 : 0;
+                    if (want != l.litState) { l.litState = want; l.setLit(want == 1); }
                 }
+                // lights read softly by day and carry the scene at night
+                float k = gate * f * Mathf.Lerp(0.4f, 1f, night);
+                l.current = l.intensity * k;
+                var h = l.handle;
+                bool on = l.current > 0.005f;
+                if (h != null)
+                {
+                    if (h.Enabled != on) h.Enabled = on;
+                    if (on) h.Intensity = l.current;
+                }
+                if (!haveCam || !l.visible) continue;
+                float a = 0f;
+                Color hc = l.color;
+                if (on) a = Mathf.Clamp01(l.current) * Mathf.Lerp(0.16f, 0.42f, night);
+                if (l.dormantGlow && l.level < 0.99f)
+                {
+                    float breathe = 0.5f + 0.5f * Mathf.Sin(time * 1.1f + l.seed);
+                    float da = (0.05f + 0.04f * breathe) * (1f - l.level);
+                    if (da > a) { a = da; hc = new Color(0.62f, 0.55f, 0.82f); }
+                }
+                if (a < 0.004f) continue;
+                float s = l.haloSize * (0.92f + 0.08f * f);
+                halos.Add(l.position, right * s, up * s, new Color32((byte)(hc.r * 255f), (byte)(hc.g * 255f), (byte)(hc.b * 255f), (byte)(a * 255f)));
             }
-            if (globalLight != null) globalLight.Set(DayNight.AmbientColor, DayNight.AmbientIntensity);
+            halos.End();
+        }
 
-            // ---- parallax layers (unlit material in URP-lit mode: lit by the global ambient only, by hand)
-            float camYRef = Def.depth - 1f;
-            var layerMul = Color.white;
-            if (PresentationArt.SpritesLit)
-            {
-                var amb = DayNight.AmbientColor;
-                float k = DayNight.AmbientIntensity;
-                layerMul = new Color(Mathf.Clamp01(amb.r * k), Mathf.Clamp01(amb.g * k), Mathf.Clamp01(amb.b * k), 1f);
-            }
-            for (int i = 0; i < layers.Count; i++)
-            {
-                var l = layers[i];
-                var lc = l.tint * layerMul;
-                lc.a = l.tint.a;
-                l.sr.color = lc;
-                float p = l.def.parallax;
-                float tileW = l.spriteW * l.scale, tileH = l.spriteH * l.scale;
-                if (Mathf.Abs(l.def.scrollSpeed) > 1e-5f)
-                {
-                    l.scroll += l.def.scrollSpeed * dt;
-                    if (l.loop) l.scroll = Mathf.Repeat(l.scroll, tileW);
-                }
-                float originX = cp.x * (1f - p) + l.scroll;
-                float sink = Mathf.Min(0f, cp.y - camYRef) * (1f - Mathf.Clamp01(p)) * VerticalParallax;
-                float x;
-                if (l.loop)
-                {
-                    float viewL = cp.x - halfW - 2f, viewR = cp.x + halfW + 2f;
-                    float left = originX + Mathf.Floor((viewL - originX) / tileW) * tileW;
-                    int n = Mathf.Max(1, Mathf.CeilToInt((viewR - left) / tileW));
-                    if (n != l.lastN)
-                    {
-                        l.lastN = n;
-                        l.sr.size = new Vector2(n * l.spriteW, l.spriteH);
-                    }
-                    x = left + n * tileW * l.pivot.x;
-                }
-                else x = originX + p * Def.width * 0.5f + (l.pivot.x - 0.5f) * tileW;
-                l.t.localPosition = new Vector3(x, l.def.y + sink + l.pivot.y * tileH, 0f);
-            }
-
-            // ---- foreground parallax + fade when a unit is behind
+        void UpdateFades(Camera cam, float dt)
+        {
+            if (cam == null) return;
             var units = UnitView.All;
-            float fpar = ForegroundParallax - 1f;
-            var fgMul = PresentationArt.SpritesLit ? Color.white : DayNight.OverlayMultiply;
-            for (int i = 0; i < foreground.Count; i++)
+            var cp = cam.transform.position;
+            for (int i = 0; i < occluders.Count; i++)
             {
-                var f = foreground[i];
-                var pos = new Vector2(f.pos.x + (f.pos.x - cp.x) * fpar, f.pos.y + (f.pos.y - cp.y) * fpar);
-                f.root.localPosition = new Vector3(pos.x, pos.y, 0f);
-                var r = new Rect(f.local.x + pos.x, f.local.y + pos.y, f.local.width, f.local.height);
-                bool covering = false;
-                for (int u = 0; u < units.Count && !covering; u++)
+                var o = occluders[i];
+                if (!o.Visible || !o.hasBounds) continue;
+                bool hides = false;
+                if (o.occludedAlpha < 0.999f)
                 {
-                    var uv = units[u];
-                    if (uv == null || !uv.Visible) continue;
-                    if (r.Overlaps(uv.Bounds)) covering = true;
-                }
-                float target = covering ? ForegroundFadeAlpha : 1f;
-                f.alpha = Mathf.MoveTowards(f.alpha, target, dt * 3.5f);
-                var c = f.tint * fgMul;
-                c.a = f.tint.a * f.alpha;
-                f.sr.color = c;
-            }
-
-            // ---- tall props fade when a unit stands behind them
-            if (OccluderFadeAlpha < 0.999f)
-            {
-                for (int i = 0; i < occluders.Count; i++)
-                {
-                    var o = occluders[i];
-                    if (o.sprite == null) continue;
-                    var r = o.Rect;
-                    r.xMin += r.width * 0.08f; r.xMax -= r.width * 0.08f;
-                    r.yMin += r.height * 0.12f;
-                    bool behind = false;
-                    for (int u = 0; u < units.Count && !behind; u++)
+                    var b = o.bounds;
+                    var ext = b.extents;
+                    b.extents = new Vector3(ext.x * 0.82f, ext.y * 0.82f, ext.z);
+                    for (int u = 0; u < units.Count && !hides; u++)
                     {
                         var uv = units[u];
                         if (uv == null || !uv.Visible || !uv.FadesOccluders) continue;
-                        var feet = uv.FeetPosition;
-                        if (feet.y <= o.Position.y + 0.15f) continue;
-                        if (r.Contains(uv.CenterPosition) || r.Contains(uv.HeadPosition)) behind = true;
+                        hides = Hides(b, cp, uv.CenterPosition) || Hides(b, cp, uv.HeadPosition);
                     }
-                    float target = behind ? OccluderFadeAlpha : 1f;
-                    if (Mathf.Abs(o.fade - target) < 0.001f) continue;
-                    o.fade = Mathf.MoveTowards(o.fade, target, dt * 3f);
-                    var c = o.tint;
-                    c.a *= o.fade;
-                    o.sprite.color = c;
                 }
+                o.fadeTarget = hides ? o.occludedAlpha : 1f;
+                if (Mathf.Abs(o.fade - o.fadeTarget) < 0.001f) continue;
+                o.fade = Mathf.MoveTowards(o.fade, o.fadeTarget, dt * 3f);
+                o.lookDirty = true;
+                ApplyLook(o);
             }
-
-            // ---- lights
-            for (int i = 0; i < lights.Count; i++) lights[i].Apply(night, time);
-
-            // ---- markers, halos, highlights, pops
-            for (int i = 0; i < animated.Count; i++) Animate(animated[i], time, dt, night);
         }
 
-        void UpdateNightSky(float night, float halfW, float halfH, float time)
+        static bool Hides(Bounds b, Vector3 cam, Vector3 target)
         {
-            bool on = night > 0.05f;
-            if (moon.enabled != on) { moon.enabled = on; moonGlow.enabled = on; }
-            for (int i = 0; i < stars.Count; i++) if (stars[i].enabled != on) stars[i].enabled = on;
-            if (!on) return;
-            float vh = halfH * 2f, vw = halfW * 2f;
-            if (Mathf.Abs(vh - starViewH) > 0.01f)
-            {
-                starViewH = vh;
-                for (int i = 0; i < stars.Count; i++)
-                    stars[i].transform.localPosition = new Vector3(starPos[i].x * vw, starPos[i].y * vh, 0f);
-                moon.transform.localPosition = new Vector3(vw * 0.3f, vh * 0.33f, 0f);
-                moonGlow.transform.localPosition = moon.transform.localPosition;
-            }
-            float k = Mathf.Clamp01((night - 0.05f) / 0.6f);
-            for (int i = 0; i < stars.Count; i++)
-            {
-                float tw = 0.55f + 0.45f * Mathf.Sin(time * (1.3f + (i % 7) * 0.37f) + i * 2.1f);
-                stars[i].color = new Color(1f, 0.97f, 0.88f, k * tw * 0.9f);
-            }
-            moon.color = new Color(1f, 0.97f, 0.88f, k);
-            moonGlow.color = new Color(0.85f, 0.88f, 1f, k * 0.35f);
+            var d = target - cam;
+            float len = d.magnitude;
+            if (len < 0.01f) return false;
+            return b.IntersectRay(new Ray(cam, d / len), out float t) && t < len - 0.35f;
         }
 
-        void Animate(MapObject o, float time, float dt, float night)
+        void UpdateAnimated(float time, float dt)
         {
-            if (o.Kind == MapObjectKind.Transition && o.marker != null)
+            for (int i = animated.Count - 1; i >= 0; i--)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 2.2f + o.Position.x);
-                float hl = o.Highlighted ? 1f : 0f;
-                float a = (o.Locked ? 0.35f : 0.55f + 0.25f * pulse) + hl * 0.25f;
-                var c = o.markerColor;
-                o.marker.color = new Color(c.r, c.g, c.b, Mathf.Clamp01(a));
-                o.markerGlow.color = new Color(c.r, c.g, c.b, (o.Locked ? 0.12f : 0.22f + 0.12f * pulse) + hl * 0.2f);
-                float s = 1f + hl * 0.12f + 0.04f * pulse;
-                o.root.localScale = new Vector3(s, s, 1f);
-            }
-            if (o.halo != null)
-            {
-                float breathe = 0.5f + 0.5f * Mathf.Sin(time * 1.1f + o.Position.x * 0.7f);
-                if (o.LanternLit)
+                var o = animated[i];
+                bool busy = false;
+                if (o.Highlighted)
                 {
-                    float a = Mathf.Lerp(0.16f, 0.42f, night) * (0.8f + 0.2f * breathe);
-                    o.halo.color = new Color(1f, 0.88f, 0.6f, a);
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(time * 4f);
+                    o.look.Rim = 0.35f + 0.3f * pulse;
+                    o.look.Flash = new Color(1f, 0.95f, 0.8f, 0.04f + 0.04f * pulse);
+                    o.look.OutlineColor = HighlightColor;
+                    o.look.OutlineWidth = 3.2f + 0.6f * pulse;
+                    o.lookDirty = true;
+                    busy = true;
                 }
-                else o.halo.color = new Color(0.6f, 0.54f, 0.78f, 0.07f + 0.05f * breathe);
+                if (o.lidTime >= 0f && o.model != null && o.model.Lid != null)
+                {
+                    o.lidTime += dt;
+                    const float dur = 0.55f;
+                    float t = Mathf.Clamp01(o.lidTime / dur);
+                    float e = o.lidTo > o.lidFrom ? EaseOutBack(t) : t * t * (3f - 2f * t);
+                    o.lid = Mathf.LerpUnclamped(o.lidFrom, o.lidTo, e);
+                    o.model.Lid.localRotation = o.lidRest * Quaternion.Euler(o.lid, 0f, 0f);
+                    if (t >= 1f) o.lidTime = -1f;
+                    else busy = true;
+                }
+                if (o.pop > 0f && o.root != null)
+                {
+                    o.pop = Mathf.Max(0f, o.pop - dt);
+                    float t = 1f - o.pop / 0.4f;
+                    float k = Mathf.Sin(t * Mathf.PI) * (1f - t) * 0.5f;
+                    o.root.localScale = new Vector3(1f - k * 0.25f, 1f - k * 0.25f, 1f + k);
+                    if (o.pop <= 0f) o.root.localScale = Vector3.one;
+                    else busy = true;
+                }
+                if (o.lookDirty) ApplyLook(o);
+                if (!busy) animated.RemoveAt(i);
             }
-            if (o.outline != null && o.outline.enabled)
+        }
+
+        static float EaseOutBack(float t)
+        {
+            const float c1 = 1.9f, c3 = c1 + 1f;
+            float u = t - 1f;
+            return 1f + c3 * u * u * u + c1 * u * u;
+        }
+
+        void UpdateMarkers(Camera cam, float time, float dt)
+        {
+            chevrons.Begin();
+            for (int i = 0; i < Transitions.Count; i++)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(time * 4f);
-                var hc = HighlightColor;
-                o.outline.color = new Color(hc.r, hc.g, hc.b, (0.75f + 0.25f * pulse) * o.fade);
-                if (o.brighten != null) o.brighten.color = new Color(1f, 1f, 0.92f, (0.1f + 0.06f * pulse) * o.fade);
+                var o = Transitions[i];
+                var mk = o.marker;
+                if (mk == null) continue;
+                mk.light.visible = o.Visible;
+                if (!o.Visible) continue;
+                mk.glow = Mathf.MoveTowards(mk.glow, o.Highlighted ? 1f : 0f, dt * 5f);
+                float hl = mk.glow;
+                mk.light.boost = 1f + 0.45f * hl;
+                if (Mathf.Abs(hl - mk.appliedGlow) > 0.001f)
+                {
+                    mk.appliedGlow = hl;
+                    float s = 1f + 0.06f * hl;
+                    o.root.localScale = new Vector3(s, s, s);
+                    // arch look: gold outline when hovered
+                    mk.archLook.Rim = 0.3f * hl;
+                    mk.archLook.OutlineColor = Color.Lerp(Materials3D.Ink, HighlightColor, hl);
+                    mk.archLook.OutlineWidth = 2.2f + 1.4f * hl;
+                    for (int r = 0; r < mk.archRenderers.Count; r++) mk.archLook.Apply(mk.archRenderers[r]);
+                }
+                // chevrons flowing towards the exit
+                var c = o.Locked ? new Color(0.62f, 0.56f, 0.85f) : new Color(1f, 0.84f, 0.52f);
+                if (mk.dir != Vector2.zero)
+                {
+                    var dir = new Vector3(mk.dir.x, mk.dir.y, 0f);
+                    var side = new Vector3(-mk.dir.y, mk.dir.x, 0f);
+                    const int n = 3;
+                    for (int k = 0; k < n; k++)
+                    {
+                        float phase = Mathf.Repeat(time * (o.Locked ? 0.35f : 0.8f) - k / (float)n, 1f);
+                        float a = o.Locked ? 0.28f : (0.25f + 0.55f * Mathf.Sin(phase * Mathf.PI)) * 0.85f + 0.3f * hl;
+                        var p = new Vector3(o.Position.x, o.Position.y, -0.03f) + dir * (-1.1f + k * 0.95f);
+                        float sz = 0.55f + 0.08f * hl;
+                        chevrons.Add(p, side * sz, dir * sz, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), (byte)(Mathf.Clamp01(a) * 255f)));
+                    }
+                }
+                else
+                {
+                    const int n = 4;
+                    for (int k = 0; k < n; k++)
+                    {
+                        float ang = time * 0.4f + k * Mathf.PI * 0.5f;
+                        var dir = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f);
+                        var side = new Vector3(-dir.y, dir.x, 0f);
+                        var p = new Vector3(o.Position.x, o.Position.y, -0.03f) + dir * 0.9f;
+                        float a = (o.Locked ? 0.25f : 0.55f) + 0.3f * hl;
+                        chevrons.Add(p, side * 0.45f, dir * 0.45f, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), (byte)(Mathf.Clamp01(a) * 255f)));
+                    }
+                }
             }
-            if (o.pop > 0f && o.sprite != null)
+            chevrons.End();
+        }
+
+        /// <summary>Pushes an object's look (tint, wind, fade, highlight rim/outline) to every renderer of its model,
+        /// keeping any other per-renderer property the model set.</summary>
+        static void ApplyLook(MapObject o)
+        {
+            o.lookDirty = false;
+            var m = o.model;
+            if (m == null) return;
+            var look = o.look;
+            look.Tint = o.tint;
+            look.WindScale = o.windScale;
+            look.Fade = o.fade;
+            if (!o.Highlighted)
             {
-                o.pop = Mathf.Max(0f, o.pop - dt);
-                float t = 1f - o.pop / 0.35f;
-                float k = Mathf.Sin(t * Mathf.PI) * (1f - t) * 0.6f;
-                o.sprite.transform.localScale = new Vector3(o.scale * (1f - k * 0.3f), o.scale * (1f + k), 1f);
-                if (o.pop <= 0f) o.sprite.transform.localScale = new Vector3(o.scale, o.scale, 1f);
+                look.Rim = 0f;
+                look.Flash = new Color(1f, 1f, 1f, 0f);
+                look.OutlineColor = Materials3D.Ink;
+                look.OutlineWidth = 2.2f;
+            }
+            for (int i = 0; i < m.Renderers.Count; i++)
+            {
+                var r = m.Renderers[i];
+                if (r == null) continue;
+                r.GetPropertyBlock(Mpb);
+                Mpb.SetColor(Materials3D.TintId, look.Tint);
+                Mpb.SetColor(Materials3D.FlashId, look.Flash);
+                Mpb.SetFloat(Materials3D.FadeId, look.Fade);
+                Mpb.SetFloat(Materials3D.RimId, look.Rim);
+                Mpb.SetFloat(Materials3D.FogScaleId, look.FogScale);
+                Mpb.SetFloat(Materials3D.WindScaleId, look.WindScale);
+                Mpb.SetColor(Materials3D.OutlineColorId, look.OutlineColor);
+                Mpb.SetFloat(Materials3D.OutlineWidthId, look.OutlineWidth);
+                r.SetPropertyBlock(Mpb);
             }
         }
 
@@ -897,20 +1175,84 @@ namespace Lanternvale.Game
         public MapObject Find(string id) => !string.IsNullOrEmpty(id) && byId.TryGetValue(id, out var o) ? o : null;
 
         /// <summary>
-        /// Front-most visible interactable under a world point: props/chests by sprite rect (lowest y
-        /// wins), then transitions by ground rect, then (optionally) regions.
-        /// </summary>
-        /// <summary>
-        /// The object under a SCREEN position (pixels, bottom-left origin): the front-most prop/chest whose model is under
-        /// it, else a transition (ground rect under the cursor), else (includeRegions) a region.
+        /// The object under a SCREEN position (pixels, bottom-left origin): the front-most interactable prop/chest whose
+        /// projected model bounds contain it, else a transition (its waymarker, or the ground rect under the cursor),
+        /// else (includeRegions) a region.
         /// </summary>
         public MapObject PickScreen(Vector2 screen, bool includeRegions = false)
         {
             var rig = CameraRig.Instance;
-            if (rig == null) return null;
-            return Pick(rig.ScreenToWorld(screen), includeRegions);
+            var cam = rig != null && rig.Cam != null ? rig.Cam : PresentationHost.Cam;
+            if (cam == null) return null;
+            MapObject best = null;
+            float bestDepth = float.MaxValue;
+            for (int i = 0; i < Interactables.Count; i++) best = Closer(cam, screen, Interactables[i], best, ref bestDepth);
+            for (int i = 0; i < Chests.Count; i++) best = Closer(cam, screen, Chests[i], best, ref bestDepth);
+            if (best != null) return best;
+            var ground = rig != null ? rig.ScreenToWorld(screen) : GroundUnder(cam, screen);
+            for (int i = 0; i < Transitions.Count; i++)
+            {
+                var t = Transitions[i];
+                if (!t.Visible) continue;
+                var r = t.Rect;
+                r.xMin -= 0.3f; r.yMin -= 0.3f; r.xMax += 0.3f; r.yMax += 0.3f;
+                if (r.Contains(ground) || ScreenHit(cam, t.bounds, screen, out _)) return t;
+            }
+            if (includeRegions)
+                for (int i = 0; i < Regions.Count; i++)
+                    if (Regions[i].Rect.Contains(ground)) return Regions[i];
+            return null;
         }
 
+        static MapObject Closer(Camera cam, Vector2 screen, MapObject o, MapObject best, ref float bestDepth)
+        {
+            if (!o.Visible || !o.hasBounds) return best;
+            if (!ScreenHit(cam, o.bounds, screen, out float depth) || depth >= bestDepth) return best;
+            bestDepth = depth;
+            return o;
+        }
+
+        /// <summary>True when the screen point is inside the (slightly inset, at least ~30 px) screen rect of projected bounds.</summary>
+        static bool ScreenHit(Camera cam, Bounds b, Vector2 screen, out float depth)
+        {
+            depth = 0f;
+            var c = b.center;
+            var e = b.extents;
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            for (int i = 0; i < 8; i++)
+            {
+                var p = new Vector3(c.x + ((i & 1) != 0 ? e.x : -e.x), c.y + ((i & 2) != 0 ? e.y : -e.y), c.z + ((i & 4) != 0 ? e.z : -e.z));
+                var s = cam.WorldToScreenPoint(p);
+                if (s.z <= 0.05f) return false;
+                if (s.x < minX) minX = s.x;
+                if (s.x > maxX) maxX = s.x;
+                if (s.y < minY) minY = s.y;
+                if (s.y > maxY) maxY = s.y;
+            }
+            float w = maxX - minX, h = maxY - minY;
+            minX += w * 0.08f; maxX -= w * 0.08f;
+            minY += h * 0.04f; maxY -= h * 0.06f;
+            const float minSize = 30f;
+            if (maxX - minX < minSize) { float m = (minX + maxX) * 0.5f; minX = m - minSize * 0.5f; maxX = m + minSize * 0.5f; }
+            if (maxY - minY < minSize) { float m = (minY + maxY) * 0.5f; minY = m - minSize * 0.5f; maxY = m + minSize * 0.5f; }
+            if (screen.x < minX || screen.x > maxX || screen.y < minY || screen.y > maxY) return false;
+            depth = cam.WorldToScreenPoint(c).z;
+            return true;
+        }
+
+        static Vector2 GroundUnder(Camera cam, Vector2 screen)
+        {
+            var ray = cam.ScreenPointToRay(new Vector3(screen.x, screen.y, 0f));
+            if (Mathf.Abs(ray.direction.z) < 1e-5f) return new Vector2(ray.origin.x, ray.origin.y);
+            float t = -ray.origin.z / ray.direction.z;
+            var p = ray.origin + ray.direction * t;
+            return new Vector2(p.x, p.y);
+        }
+
+        /// <summary>
+        /// Ground-point version of PickScreen: interactable props/chests whose footprint contains the point (the one
+        /// nearest the front wins), then transitions by ground rect, then (optionally) regions.
+        /// </summary>
         public MapObject Pick(Vector2 world, bool includeRegions = false)
         {
             MapObject best = null;
@@ -927,40 +1269,23 @@ namespace Lanternvale.Game
 
         static MapObject Better(MapObject best, MapObject o, Vector2 p)
         {
-            if (!o.Visible || !o.Rect.Contains(p)) return best;
+            if (!o.Visible) return best;
+            var r = o.Rect;
+            r.xMin -= 0.4f; r.yMin -= 0.4f; r.xMax += 0.4f; r.yMax += 0.4f;
+            if (!r.Contains(p)) return best;
             return best == null || o.Position.y < best.Position.y ? o : best;
         }
 
-        /// <summary>Outline + brighten a prop/chest, or brighten a transition marker.</summary>
+        /// <summary>Rim light + gold outline (pulsing) on a prop/chest; a brighter, slightly larger waymarker for a transition.</summary>
         public void SetHighlighted(string objectId, bool on)
         {
             var o = Find(objectId);
             if (o == null || o.Highlighted == on) return;
             o.Highlighted = on;
-            if (o.Kind == MapObjectKind.Transition || o.sprite == null) return;
-            if (on && o.outline == null) CreateHighlight(o);
-            if (o.outline != null) o.outline.enabled = on;
-            if (o.brighten != null) o.brighten.enabled = on;
-            if (on && !animated.Contains(o)) animated.Add(o);
-        }
-
-        void CreateHighlight(MapObject o)
-        {
-            var sil = Silhouettes.Get(o.sprite.sprite, Mathf.Clamp(o.sprite.sprite.bounds.size.y * 0.012f, 0.035f, 0.09f) / Mathf.Max(0.1f, o.scale));
-            if (sil == null) return;
-            o.outline = PresentationArt.NewRenderer("Outline", o.sprite.transform, sil.Outline, o.order - 1, true);
-            o.outline.flipX = o.sprite.flipX;
-            o.brighten = PresentationArt.NewRenderer("Brighten", o.sprite.transform, sil.Fill, o.order + 1, true);
-            o.brighten.flipX = o.sprite.flipX;
-        }
-
-        void RefreshHighlightSprites(MapObject o)
-        {
-            if (o.outline == null) return;
-            var sil = Silhouettes.Get(o.sprite.sprite, Mathf.Clamp(o.sprite.sprite.bounds.size.y * 0.012f, 0.035f, 0.09f) / Mathf.Max(0.1f, o.scale));
-            if (sil == null) return;
-            o.outline.sprite = sil.Outline;
-            if (o.brighten != null) o.brighten.sprite = sil.Fill;
+            if (o.Kind == MapObjectKind.Transition || o.model == null) return;
+            o.lookDirty = true;
+            if (!on) ApplyLook(o);
+            else if (!animated.Contains(o)) animated.Add(o);
         }
 
         /// <summary>Clears every highlight.</summary>
@@ -970,22 +1295,58 @@ namespace Lanternvale.Game
                 if (Objects[i].Highlighted) SetHighlighted(Objects[i].Id, false);
         }
 
-        /// <summary>Swaps a chest to its open (or closed) art; animate adds a little pop + sparkles.</summary>
+        /// <summary>Opens (or closes) a chest: the lid swings open with a little bounce; animate adds a pop + sparkles.</summary>
         public void SetChestOpen(string id, bool open = true, bool animate = true)
         {
             var o = Find(id);
-            if (o == null || o.Kind != MapObjectKind.Chest || o.sprite == null) return;
+            if (o == null || o.Kind != MapObjectKind.Chest || o.model == null) return;
             if (o.Opened == open && animate) return;
             o.Opened = open;
-            string closed = string.IsNullOrEmpty(o.Chest.art) ? "prop_chest" : o.Chest.art;
-            o.sprite.sprite = ArtLibrary.Sprite(open ? OpenArt(closed) : closed);
-            RefreshHighlightSprites(o);
+            const float openAngle = 105f;
+            if (o.model.Lid != null)
+            {
+                float target = open ? openAngle : 0f;
+                if (animate)
+                {
+                    o.lidFrom = o.lid;
+                    o.lidTo = target;
+                    o.lidTime = 0f;
+                }
+                else
+                {
+                    o.lid = target;
+                    o.lidTime = -1f;
+                    o.model.Lid.localRotation = o.lidRest * Quaternion.Euler(target, 0f, 0f);
+                }
+            }
+            else
+            {
+                // no hinged lid: swap to the open / closed model
+                string closed = string.IsNullOrEmpty(o.Chest.art) ? "prop_chest" : o.Chest.art;
+                ReplaceModel(o, open ? OpenArt(closed) : closed);
+            }
             if (animate && open)
             {
-                o.pop = 0.35f;
-                if (!animated.Contains(o)) animated.Add(o);
-                FxSystem.Sparkles(o.Position + new Vector2(0f, 0.5f), new Color(1f, 0.86f, 0.5f), 10);
+                o.pop = 0.4f;
+                FxSystem.Sparkles(World3D.At(o.Position, TopOf(o) * 0.9f), new Color(1f, 0.86f, 0.5f), 12);
             }
+            if (animate && !animated.Contains(o)) animated.Add(o);
+        }
+
+        void ReplaceModel(MapObject o, string art)
+        {
+            if (o.root == null) return;
+            if (o.model != null && o.model.Root != null) Destroy(o.model.Root);
+            o.art = art;
+            PlaceModel(o, o.root);
+            SetFootprint(o);
+            if (o.light != null && !o.IsLantern && o.model.SetLit != null)
+            {
+                if (o.light.nightOnly) { o.light.setLit = o.model.SetLit; o.light.litState = -1; }
+                else o.model.SetLit(true);
+            }
+            if (o.Highlighted && !animated.Contains(o)) animated.Add(o);
+            shadowsDirty = true;
         }
 
         /// <summary>Shows/hides a chest, prop or transition (e.g. after a flag changes).</summary>
@@ -993,11 +1354,14 @@ namespace Lanternvale.Game
         {
             var o = Find(id);
             if (o == null) return;
+            if (o.Visible == visible) return;
             o.Visible = visible;
             if (o.root != null) o.root.gameObject.SetActive(visible);
+            if (o.light != null) o.light.visible = visible;
+            if (o.groundShadow) shadowsDirty = true;
         }
 
-        /// <summary>Locks/unlocks a transition (dim grey-violet marker when locked) or a chest.</summary>
+        /// <summary>Locks/unlocks a transition (dim violet waymarker when locked) or a chest.</summary>
         public void SetLocked(string id, bool locked)
         {
             var o = Find(id);
@@ -1016,39 +1380,50 @@ namespace Lanternvale.Game
                 if (!string.IsNullOrEmpty(t.Transition.requireFlag)) SetLocked(t.Id, !flagTest(t.Transition.requireFlag));
         }
 
-        /// <summary>Replaces the art of a prop (by interact id).</summary>
+        /// <summary>Replaces the model of a prop (by interact id); highlight, lights and labels follow.</summary>
         public void SetPropArt(string id, string art)
         {
             var o = Find(id);
-            if (o == null || o.sprite == null || string.IsNullOrEmpty(art)) return;
-            o.sprite.sprite = ArtLibrary.Sprite(art);
-            RefreshHighlightSprites(o);
+            if (o == null || o.model == null || string.IsNullOrEmpty(art) || o.Kind == MapObjectKind.Transition) return;
+            ReplaceModel(o, art);
         }
 
         /// <summary>
-        /// Rekindles (or darkens) a spirit lantern prop: swaps prop_spirit_lantern ↔ _dark, toggles its
-        /// light and halo, and plays a holy burst when lit.
+        /// Rekindles (or darkens) a spirit lantern prop: its glass glows (PropModel.SetLit), its warm light fades in
+        /// and, when animated, a holy burst with sparkles plays at the lamp.
         /// </summary>
         public void SetLanternLit(string id, bool lit, bool animate = true)
         {
             var o = Find(id);
             if (o == null || !o.IsLantern || o.LanternLit == lit) return;
             SetLanternLitInternal(o, lit, animate);
+            UpdateCliffLanterns(animate);
         }
 
         void SetLanternLitInternal(MapObject o, bool lit, bool animate)
         {
             o.LanternLit = lit;
-            string art = o.Prop.art.EndsWith("_dark", StringComparison.Ordinal) ? o.Prop.art.Substring(0, o.Prop.art.Length - 5) : o.Prop.art;
-            o.sprite.sprite = ArtLibrary.Sprite(lit ? art : art + "_dark");
-            RefreshHighlightSprites(o);
-            float lampY = LanternLampY(o, o.sprite.sprite.bounds.size.y * o.scale);
+            if (o.model != null && o.model.SetLit != null) o.model.SetLit(lit);
+            else
+            {
+                // no switchable glass: use the lit / dark model
+                string baseArt = o.art.EndsWith("_dark", StringComparison.Ordinal) ? o.art.Substring(0, o.art.Length - 5) : o.art;
+                ReplaceModel(o, lit ? baseArt : baseArt + "_dark");
+            }
             if (o.light == null && lit)
-                AddLight(o, LanternLight(lampY / Mathf.Max(0.01f, o.scale)), o.scale, false);
-            if (o.light != null) o.light.Enabled = lit;
+            {
+                var l = AddLight(o, DefaultLanternLight());
+                l.level = animate ? 0f : 1f;
+                l.dormantGlow = true;
+            }
+            if (o.light != null)
+            {
+                o.light.on = lit;
+                if (!animate) o.light.level = lit ? 1f : 0f;
+            }
             if (animate && lit)
             {
-                var c = o.Position + new Vector2(0f, lampY);
+                var c = o.light != null ? o.light.position : World3D.At(o.Position, TopOf(o) * 0.6f);
                 FxSystem.Impact(c, School.Holy);
                 FxSystem.Sparkles(c, new Color(1f, 0.9f, 0.6f), 14);
                 FxSystem.AuraPulse(o.Position, 2.2f, new Color(1f, 0.86f, 0.55f, 0.8f));
@@ -1065,20 +1440,29 @@ namespace Lanternvale.Game
             {
                 var o = Objects[i];
                 if (!o.IsLantern || o.LanternLit == lit) continue;
-                if (!string.IsNullOrEmpty(o.Id) && Find(o.Id) == o) SetLanternLit(o.Id, lit, animate);
-                else SetLanternLitInternal(o, lit, animate);
+                SetLanternLitInternal(o, lit, animate);
             }
+            UpdateCliffLanterns(animate);
+        }
+
+        void UpdateCliffLanterns(bool animate)
+        {
+            if (backdrop == null || !backdrop.HasCliffLanterns) return;
+            int total = 0, lit = 0;
+            for (int i = 0; i < Objects.Count; i++)
+                if (Objects[i].IsLantern) { total++; if (Objects[i].LanternLit) lit++; }
+            backdrop.SetLanternFraction(total > 0 ? (float)lit / total : 0f, animate);
         }
 
         /// <summary>Spirit lanterns on this map (props using prop_spirit_lantern / _dark).</summary>
         public int LanternCount { get { int n = 0; foreach (var o in Objects) if (o.IsLantern) n++; return n; } }
 
-        /// <summary>World rect of an object (empty rect if unknown).</summary>
+        /// <summary>Ground rect of an object (empty rect if unknown).</summary>
         public Rect RectOf(string id) { var o = Find(id); return o != null ? o.Rect : new Rect(); }
 
         // ================================================================== teardown
 
-        /// <summary>Destroys the diorama and everything it registered (sway entries, lights, particles).</summary>
+        /// <summary>Destroys the map and everything it registered (lights, meshes, particles).</summary>
         public void Dispose()
         {
             if (disposed) return;
@@ -1090,14 +1474,15 @@ namespace Lanternvale.Game
         {
             if (disposed) return;
             disposed = true;
-            if (SwayManager.Instance != null) SwayManager.Instance.RemoveOwner(this);
-            // Switch this map's own global light off before restoring the scene's: Destroy is deferred to the
-            // end of the frame, and URP logs "More than one global light" when a second one registers meanwhile.
-            var ownGlobal = globalLightComp as Behaviour;
-            if (ownGlobal != null) ownGlobal.enabled = false;
-            globalLight = null;
-            foreach (var b in disabledGlobalLights) if (b != null) b.enabled = true;
-            disabledGlobalLights.Clear();
+            for (int i = 0; i < lights.Count; i++)
+                if (lights[i].handle != null) SceneLighting.Remove(lights[i].handle);
+            lights.Clear();
+            if (particles != null) particles.Dispose();
+            if (halos != null) halos.Dispose();
+            if (chevrons != null) chevrons.Dispose();
+            for (int i = 0; i < ownedMeshes.Count; i++)
+                if (ownedMeshes[i] != null) Destroy(ownedMeshes[i]);
+            ownedMeshes.Clear();
             if (Current == this) Current = null;
         }
 
