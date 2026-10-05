@@ -277,8 +277,10 @@ namespace Lanternvale.Game
                     k.BrimHat(C("#e8c870"), C("#e8c870"), 1.8f, 0.7f, 0f, scarf, -12f);
                     break;
                 default:
+                    // braids rooted behind and above the ears, falling behind the jaw to the front of the shoulders
+                    // (rooted over the ear, the first bead sat on the cheek like a patch in the side view)
                     for (int s = -1; s <= 1; s += 2)
-                        k.Braid(hair, k.HeadPoint(s * 75f, 95f, 1.02f), new Vector3(s * 0.1f, k.ChestY + 0.02f, 0.08f), 6, 0.2f, scarf);
+                        k.Braid(hair, k.HeadPoint(s * 110f, 80f, 1.02f), new Vector3(s * 0.11f, k.ChestY + 0.03f, 0.085f), 6, 0.2f, scarf);
                     break;
             }
             for (int s = -1; s <= 1; s += 2)
@@ -410,20 +412,29 @@ namespace Lanternvale.Game
             switch (prop)
             {
                 case 0:
-                    // little paper lantern on a stick
+                {
+                    // little paper lantern on a stick: the stick leans forward and out from the fist, and the lantern
+                    // hangs from its tip on a short cord at chest height (a stick straight up ran past the face)
+                    // hand frame: +Y up the stick (the Carry hold points it up), +Z forward, +X out to the right
+                    var tip = new Vector3(0.05f, 0.24f, 0.17f);
+                    var lantern = tip + new Vector3(0f, -0.1f, 0.01f);
                     k.BeginHand(1, 0f);
                     k.M.Color = stick;
-                    k.M.Segment(new Vector3(0f, -0.04f, 0f), new Vector3(0f, 0.36f, 0.02f), 0.008f, 0.006f, 4);
-                    k.M.Segment(new Vector3(0f, 0.36f, 0.02f), new Vector3(0f, 0.36f, 0.12f), 0.005f, 0.005f, 3);
+                    k.M.Segment(new Vector3(0f, -0.04f, -0.02f), tip, 0.008f, 0.006f, 4);
+                    k.M.Segment(tip, tip + new Vector3(0f, -0.045f, 0.005f), 0.003f, 0.003f, 3);
                     k.M.Emission = 1f; k.M.Color = paper;
-                    k.M.Sphere(new Vector3(0f, 0.36f, 0.16f), new Vector3(0.045f, 0.045f, 0.055f), 7, 5);
+                    k.M.Sphere(lantern, new Vector3(0.045f, 0.055f, 0.045f), 7, 5);
                     k.M.Emission = 0f; k.M.Color = C("#c44a3a");
-                    k.M.Box(new Vector3(0f, 0.36f, 0.215f), new Vector3(0.03f, 0.03f, 0.01f));
+                    k.M.Box(lantern + new Vector3(0f, 0.058f, 0f), new Vector3(0.05f, 0.012f, 0.05f));
+                    k.M.Box(lantern + new Vector3(0f, -0.06f, 0f), new Vector3(0.04f, 0.012f, 0.04f));
+                    k.M.Segment(lantern + new Vector3(0f, -0.066f, 0f), lantern + new Vector3(0f, -0.1f, 0f), 0.006f, 0.002f, 3);
                     k.End();
                     m.HoldR = UnitHold.Carry;
                     m.CastBone = BB.HandR;
-                    m.CastOffset = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(0f, -0.16f, 0.36f);
+                    // hand frame → hand bone space: (x, y, z) → (x, −z, y)
+                    m.CastOffset = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(lantern.x, -lantern.z, lantern.y);
                     break;
+                }
                 case 1:
                     // a stick for a sword (its name is Stick)
                     k.BeginHand(1, 0f);

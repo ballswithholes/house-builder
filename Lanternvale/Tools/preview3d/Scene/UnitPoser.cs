@@ -1,7 +1,8 @@
 // A unit as UnitView builds and animates it, without UnitView's FX/UI/system plumbing: UnitModels.Get(key) →
 // UnitBody.Create under a holder at the feet, the body transform (World3D.Yaw + size scale + the animator's body
 // offset and pop), the per-renderer Look and the blob shadow (UnitView.UpdateGround). Time is stepped explicitly so
-// a pose can be sampled at an exact moment of a walk cycle or an action (UnitView.Tick/Animate, UnitView.cs:611-756).
+// a pose can be sampled at an exact moment of a walk cycle or an action (UnitView.Tick/Animate). Facing conventions
+// (UnitFacing: SetFacing's 3/4 turn, static models facing the camera, idle heads turning to it) are shared with the game.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Game;
@@ -12,6 +13,12 @@ namespace Lanternvale.Preview
     public sealed class UnitPoser
     {
         public const float FacingBias = UnitFacing.Bias;   // UnitView.SetFacing
+
+        /// <summary>
+        /// The camera yaw (CameraRig.Yaw) the units are posed for: idle heads turn towards the camera (UnitAnimInput.ViewYaw)
+        /// and static models are set down facing it. The sheets' cameras look along yaw 0; a map view sets its --yaw.
+        /// </summary>
+        public static float CameraYaw;
 
         public readonly string Key;
         public readonly UnitModel Model;
@@ -29,7 +36,12 @@ namespace Lanternvale.Preview
         float actionT, actionDur;
         Vector2 actionDir;
 
-        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw, int variant = 0)
+        /// <summary>
+        /// A unit at `pos` facing world `yaw`. As UnitView, a static model (totem, dummy) ignores the facing it is given
+        /// and is set down showing its front to the camera (UnitFacing.StaticYaw, to the side `yaw` points to), unless
+        /// `exactYaw` (a sheet's fixed 3/4 view).
+        /// </summary>
+        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw, int variant = 0, bool exactYaw = false)
         {
             Key = key;
             Model = UnitModels.Get(key, variant) ?? throw new InvalidOperationException("no unit model for " + key);
@@ -38,6 +50,8 @@ namespace Lanternvale.Preview
             Holder.SetParent(parent, false);
             Pos = pos;
             Holder.localPosition = new Vector3(pos.x, pos.y, 0f);
+            if (!exactYaw && UnitFacing.IsStatic(Model))
+                yaw = UnitFacing.StaticYaw(Mathf.DeltaAngle(CameraYaw, yaw) >= 0f ? 1 : -1, CameraYaw);
             Yaw = yaw;
             Body = UnitBody.Create(Model, Holder);
             shadow = MeshCache.AddShadow(Holder, 0.4f, 0.4f);
@@ -92,6 +106,7 @@ namespace Lanternvale.Preview
                 DodgeSide = 1,
                 HitT = -1f,
                 SpawnT = spawnT,
+                ViewYaw = UnitFacing.ViewYaw(Yaw, CameraYaw),
             };
             Body.Anim.Tick(inp);
             ApplyBody(Body.Anim.BodyOffset, Body.Anim.ScalePop);
@@ -113,20 +128,18 @@ namespace Lanternvale.Preview
             Body.Look.OutlineWidth = 1.9f;
             Body.Look.Rim = 0f;
             Body.ApplyLook();
-            // UnitView.UpdateGround: the blob shadow follows the body offset, shrinks while hovering
-            float r = Model.Radius * Scale;
+            // UnitView.UpdateGround: the blob shadow (UnitShadow.Blob) follows the body offset, shrinks while hovering
             float lie = Body.Anim.LieAmount;
             var bo = Body.Root.localPosition;
             float hover = Mathf.Max(0f, -bo.z) + (Model.FloatHeight > 0f ? Model.FloatHeight * Scale : 0f);
-            float len = (Model.HalfLength * Scale + r) * (1f + lie * 0.5f);
-            float wid = r * (1f + (Model.Rig == UnitRigKind.Quad ? lie * 0.4f : 0f));
-            float shrink = 1f / (1f + hover * 0.35f);
+            UnitShadow.Blob(Model, Scale, Height, bo, hover, lie, out var center, out float len, out float wid, out float alpha, out float soft);
             var st = shadow.transform;
             var f = World3D.DirOf(Yaw);
-            st.localPosition = new Vector3(bo.x, bo.y, -0.004f);
+            st.localPosition = new Vector3(center.x, center.y, -0.004f);
             st.localRotation = Quaternion.AngleAxis(Mathf.Atan2(f.y, f.x) * Mathf.Rad2Deg, Vector3.forward);
-            st.localScale = new Vector3(len * 2f * shrink, wid * 2f * shrink, 1f);
-            shadowBlock.SetColor(Materials3D.ColorId, new Color(0.12f, 0.09f, 0.16f, 0.4f * shrink * Mathf.Lerp(1f, 0.85f, lie)));
+            st.localScale = new Vector3(len * 2f, wid * 2f, 1f);
+            shadowBlock.SetColor(Materials3D.ColorId, new Color(0.12f, 0.09f, 0.16f, alpha));
+            shadowBlock.SetFloat(Materials3D.SoftnessId, soft);
             shadow.SetPropertyBlock(shadowBlock);
         }
 

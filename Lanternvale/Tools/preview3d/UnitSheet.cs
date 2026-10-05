@@ -75,6 +75,7 @@ namespace Lanternvale.Preview
                 }
             }
             Debug.Quiet = true;
+            UnitPoser.CameraYaw = 0f;   // every tile's camera looks along yaw 0
 
             // noon lighting from the real DayNight; no fog at sheet distances
             var dn = new DayNight();
@@ -130,7 +131,8 @@ namespace Lanternvale.Preview
             foreach (var col in Columns.Take(ncol))
             {
                 var t = new Tile { Col = col, Root = new GameObject("Tile " + col.Label).transform };
-                t.Unit = new UnitPoser(key, 0f, t.Root, Vector2.zero, col.Yaw);
+                // the game column is placed like SetFacing(+1) (static models face the camera); the 3/4 columns are fixed views
+                t.Unit = new UnitPoser(key, 0f, t.Root, Vector2.zero, col.Yaw, 0, col.View != View.Game);
                 var u = t.Unit;
                 bool still = model.Static || model.Rig == UnitRigKind.Static;
                 switch (col.Pose)

@@ -30,6 +30,9 @@ namespace Lanternvale.Game
         /// <summary>Leg (hip joint) height of the 1.75 m reference human the action keys are authored for.</summary>
         const float RefLeg = 1.75f * 0.49f;
 
+        /// <summary>Most an idle head + neck turn towards the camera (degrees), and how far they tip up to it.</summary>
+        const float ViewTurn = 22f, ViewPitch = 7f;
+
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
         static readonly Vector3 PoleR = V(1f, -1f, -0.2f), PoleL = V(-1f, -1f, -0.2f);
@@ -46,7 +49,8 @@ namespace Lanternvale.Game
         static readonly AKey[] GreatKeys =
         {
             K(0.00f, V(0.15f, 0.08f, 0.28f), V(0.1f, 0.35f, -0.95f), PoleR, V(0.05f, 0.04f, 0.3f), V(0.1f, 0.35f, -0.95f), PoleL),
-            K(0.13f, V(0.42f, 0.15f, -0.08f), V(0.6f, 0.2f, -0.8f), V(1f, -1f, -0.5f), V(0.3f, 0.12f, 0.0f), V(0.6f, 0.2f, -0.8f), V(-0.5f, -1f, 0f), 50f, -4f, 0f, 0f, -0.05f, 0.05f, 0f),
+            // wind-up: both hands raised over the right shoulder, the blade up and back, ready to come down
+            K(0.13f, V(0.3f, 0.42f, -0.02f), V(0.35f, 0.7f, -0.6f), V(1f, -0.4f, -0.4f), V(0.24f, 0.32f, 0.06f), V(0.35f, 0.7f, -0.6f), V(-0.5f, -1f, 0f), 35f, -6f, -2f, 0f, -0.05f, 0.05f, 0f),
             K(0.22f, V(-0.15f, 0.0f, 0.55f), V(-0.95f, 0.0f, 0.3f), V(1f, -1f, 0f), V(-0.02f, -0.02f, 0.5f), V(-0.95f, 0.0f, 0.3f), V(-1f, -1f, 0f), -40f, 8f, 4f, 0f, 0.36f, 0.08f, 0.3f),
             K(0.32f, V(-0.35f, -0.05f, 0.35f), V(-0.75f, -0.1f, -0.6f), V(1f, -1f, 0f), V(-0.25f, -0.06f, 0.4f), V(-0.75f, -0.1f, -0.6f), V(-1f, -1f, 0f), -55f, 6f, 3f, 0f, 0.34f, 0.06f, 0.3f),
         };
@@ -69,12 +73,41 @@ namespace Lanternvale.Game
             K(0.32f, V(0.05f, -0.16f, 0.5f), V(0f, -0.95f, 0.3f), V(1f, -0.3f, 0f), V(-0.28f, -0.1f, 0.15f), ShieldDir, PoleL, -8f, 18f, 9f, 4f, 0.3f, 0.1f, 0.25f),
         };
 
+        // Staff holders grip their staff at 42 % of its length, so ~0.7 m of shaft sticks out BELOW the hand: any key
+        // that points the staff forward or back swings that butt through the head or the torso. Their keys keep the
+        // staff upright, raised out at the right side and a little behind the shoulder line (seen from the game camera
+        // it stands clear behind the head instead of across the face) while the free left hand points or casts; the
+        // melee jab is two-handed with the shaft carried along the right flank (the butt passes behind the right hip).
+        //   melee: staff raised up and back over the right shoulder, both hands on it, then a two-handed jab
         static readonly AKey[] StaffKeys =
         {
-            K(0.00f, V(0.22f, -0.1f, 0.18f), V(0f, 1f, 0.1f), PoleR, V(-0.22f, -0.2f, 0.05f), V(0f, 0f, 1f), PoleL),
-            K(0.13f, V(0.2f, 0.45f, 0.0f), V(0f, 0.2f, -1f), V(1f, 0f, -0.5f), V(-0.22f, -0.2f, 0.05f), V(0f, 0f, 1f), PoleL, 12f, -6f, 0f, 0f, -0.03f, 0.02f, 0f),
-            K(0.22f, V(0.05f, 0.0f, 0.5f), V(0f, -0.5f, 1f), V(1f, -1f, 0f), V(-0.22f, -0.2f, 0.05f), V(0f, 0f, 1f), PoleL, -12f, 12f, 4f, 0f, 0.28f, 0.06f, 0.22f),
-            K(0.32f, V(0.05f, -0.05f, 0.48f), V(0f, -0.6f, 1f), V(1f, -1f, 0f), V(-0.22f, -0.2f, 0.05f), V(0f, 0f, 1f), PoleL, -12f, 10f, 3f, 0f, 0.26f, 0.05f, 0.22f),
+            K(0.00f, V(0.26f, -0.12f, 0.16f), V(0.12f, 1f, 0.1f), PoleR, V(-0.2f, -0.14f, 0.18f), V(0.12f, 1f, 0.1f), PoleL),
+            K(0.13f, V(0.24f, 0.52f, -0.28f), V(0.3f, 0.7f, -0.65f), V(1f, 0.1f, -0.4f), V(0.15f, 0.31f, -0.085f), V(0.3f, 0.7f, -0.65f), V(-1f, -1f, 0f),
+              15f, -6f, -2f, 0f, -0.03f, 0.02f, 0f),
+            K(0.22f, V(0.15f, -0.03f, 0.15f), V(-0.25f, 0.05f, 1f), V(1f, -1f, 0f), V(0.08f, -0.02f, 0.42f), V(-0.25f, 0.05f, 1f), V(-1f, -1f, 0f),
+              15f, 10f, 4f, 0f, 0.28f, 0.06f, 0.22f),
+            K(0.32f, V(0.15f, -0.05f, 0.13f), V(-0.25f, 0.02f, 1f), V(1f, -1f, 0f), V(0.08f, -0.04f, 0.4f), V(-0.25f, 0.02f, 1f), V(-1f, -1f, 0f),
+              15f, 9f, 3f, 0f, 0.26f, 0.05f, 0.22f),
+        };
+
+        //   shot (point / throw): the staff is raised upright at the side, the left hand thrusts forward at the target
+        static readonly AKey[] StaffShootKeys =
+        {
+            K(0.00f, V(0.26f, -0.12f, 0.16f), V(0.12f, 1f, 0.1f), PoleR, V(-0.2f, -0.15f, 0.1f), V(0f, 0f, 1f), PoleL),
+            K(0.14f, V(0.36f, 0.14f, 0.0f), V(0.16f, 1f, -0.06f), V(1f, -0.6f, -0.2f), V(-0.24f, 0.06f, 0.24f), V(0f, 0.6f, 1f), V(-1f, -0.6f, -0.3f), 10f, -4f),
+            K(0.20f, V(0.4f, 0.22f, -0.04f), V(0.18f, 1f, -0.06f), V(1f, -0.6f, -0.2f), V(-0.1f, 0.18f, 0.58f), V(0.05f, 0.2f, 1f), V(-1f, -1f, 0f),
+              -10f, 6f, 2f, 0f, 0.1f, 0.02f, 0.1f),
+            K(0.30f, V(0.4f, 0.2f, -0.04f), V(0.18f, 1f, -0.05f), V(1f, -0.6f, -0.2f), V(-0.1f, 0.16f, 0.56f), V(0.05f, 0.2f, 1f), V(-1f, -1f, 0f),
+              -9f, 5f, 2f, 0f, 0.09f, 0.02f, 0.1f),
+        };
+
+        //   cast: the staff is raised high and upright at the side while the left hand gathers, then casts forward
+        static readonly AKey[] StaffCastKeys =
+        {
+            K(0.00f, V(0.26f, -0.12f, 0.16f), V(0.12f, 1f, 0.1f), PoleR, V(-0.22f, -0.12f, 0.2f), V(0f, 1f, 0.2f), PoleL),
+            K(0.40f, V(0.38f, 0.34f, -0.04f), V(0.14f, 1f, -0.06f), V(1f, -0.5f, -0.2f), V(-0.26f, 0.2f, 0.3f), V(0f, 1f, 0.5f), V(-1f, -0.6f, -0.3f), 0f, -8f, -3f, -10f),
+            K(0.47f, V(0.4f, 0.3f, -0.02f), V(0.18f, 1f, 0.02f), V(1f, -0.5f, -0.2f), V(-0.14f, 0.15f, 0.58f), V(0f, 0.3f, 1f), V(-1f, -1f, 0f), -6f, 10f, 3f, 0f, 0.08f, 0.02f, 0f),
+            K(0.60f, V(0.4f, 0.28f, -0.02f), V(0.18f, 1f, 0.02f), V(1f, -0.5f, -0.2f), V(-0.14f, 0.13f, 0.56f), V(0f, 0.3f, 1f), V(-1f, -1f, 0f), -6f, 8f, 3f, 0f, 0.07f, 0.02f, 0f),
         };
 
         static readonly AKey[] SpearKeys =
@@ -183,6 +216,12 @@ namespace Lanternvale.Game
             o = keys[keys.Length - 1];
         }
 
+        /// <summary>Holds a staff in the right hand (its own shot and cast keys: the staff stays upright).</summary>
+        bool StaffHolder => m.HoldR == UnitHold.Staff;
+
+        /// <summary>The left hand is free to grip a staff or to gesture (no book, flame, bow or shield in it).</summary>
+        bool LeftFree => m.HoldL == UnitHold.Relaxed && !m.Shield;
+
         AKey[] StrikeKeys(out bool useL)
         {
             useL = true;
@@ -192,7 +231,7 @@ namespace Lanternvale.Game
                 case UnitStrike.Greatsword: return GreatKeys;
                 case UnitStrike.Daggers: return DaggerKeys;
                 case UnitStrike.Mace: useL = m.Shield || m.TwoHanded; return MaceKeys;
-                case UnitStrike.Staff: useL = false; return StaffKeys;
+                case UnitStrike.Staff: useL = LeftFree; return StaffKeys;   // two-handed when the left hand is free
                 case UnitStrike.Spear: return SpearKeys;
                 case UnitStrike.Claw: case UnitStrike.Whip: return ClawKeys;
                 case UnitStrike.Slam: return SlamKeys;
@@ -207,10 +246,19 @@ namespace Lanternvale.Game
             switch (m.Ranged)
             {
                 case UnitRanged.Bow: useL = true; return BowKeys;
-                case UnitRanged.Throw: return ThrowKeys;
-                default: return PointKeys;
+                case UnitRanged.Throw when !StaffHolder: return ThrowKeys;
+                default:
+                    // staff holders keep the staff upright and point / throw with the left hand
+                    if (StaffHolder) { useL = m.HoldL != UnitHold.Bow && !m.Shield; return StaffShootKeys; }
+                    return PointKeys;
             }
         }
+
+        /// <summary>Cast keys (one-shot and channelled): staff holders raise the staff upright instead of levelling it.</summary>
+        AKey[] CastKeysFor => StaffHolder ? StaffCastKeys : CastKeys;
+
+        /// <summary>A bow or shield in the left hand stays in its carry pose while casting (only the right hand casts).</summary>
+        bool CastWithLeft => !(m.HoldL == UnitHold.Bow || m.Shield);
 
         // ================================================================== biped tick
 
@@ -318,22 +366,33 @@ namespace Lanternvale.Game
             chestE = new Vector3(lean * 0.5f + breathe, -hipYaw * 1.0f, -hipRoll * 0.35f);
             if (heavy > 0f) chestE.z += Mathf.Sin(swPh) * 4f * heavy * w;
 
-            // glance around while idle
+            // face the player: while idle the head and neck turn towards the camera (and tip up a little: it looks down
+            // from ~44°) so faces read from the game camera instead of in profile; never round to a camera behind
+            float view = inp.ViewYaw;
+            bool camFront = Mathf.Abs(view) < 115f;
+            float viewSide = camFront && Mathf.Abs(view) > 8f ? Mathf.Sign(view) : 0f;
+            float viewGoal = camFront && inp.Action == UnitAction.None && !inp.Lying && !inp.Dead ? idleW : 0f;
+            viewW = Mathf.Lerp(viewW, viewGoal, 1f - Mathf.Exp(-dt * (viewGoal < viewW ? 9f : 2.5f)));   // snaps back for actions
+            float camYaw = Mathf.Clamp(view, -ViewTurn, ViewTurn) * viewW * (camFront ? 1f : 0f);
+            float camPitch = -ViewPitch * viewW;
+
+            // glance around while idle (mostly to the camera's side)
             glanceTimer -= dt;
             if (glanceTimer <= 0f)
             {
                 glanceTimer = 2.5f + Random.value * 5f;
                 bool look = Random.value < 0.6f && idleW > 0.5f;
-                glanceTarget = look ? Random.Range(-38f, 38f) : 0f;
+                glanceTarget = look ? (viewSide != 0f ? viewSide * Random.Range(-14f, 26f) : Random.Range(-38f, 38f)) : 0f;
                 glancePitchTarget = look ? Random.Range(-6f, 8f) : 0f;
             }
             if (idleW < 0.5f) { glanceTarget = 0f; glancePitchTarget = 0f; }
             glanceYaw = Mathf.Lerp(glanceYaw, glanceTarget, 1f - Mathf.Exp(-dt * 3.5f));
             glancePitch = Mathf.Lerp(glancePitch, glancePitchTarget, 1f - Mathf.Exp(-dt * 3.5f));
+            float lookYaw = Mathf.Clamp(glanceYaw + camYaw, -55f, 55f), lookPitch = glancePitch + camPitch;
             float chestModelYaw = hipYaw + spineE.y + chestE.y;
             float totalPitch = hipPitch + spineE.x + chestE.x;
-            neckE = new Vector3(-totalPitch * 0.35f + glancePitch * 0.4f, -chestModelYaw * 0.4f + glanceYaw * 0.4f, -(hipRoll + spineE.z + chestE.z) * 0.4f);
-            headE = new Vector3(-totalPitch * 0.4f + glancePitch * 0.6f - breathe * 0.4f, -chestModelYaw * 0.5f + glanceYaw * 0.6f, -(hipRoll + spineE.z + chestE.z) * 0.4f);
+            neckE = new Vector3(-totalPitch * 0.35f + lookPitch * 0.4f, -chestModelYaw * 0.4f + lookYaw * 0.4f, -(hipRoll + spineE.z + chestE.z) * 0.4f);
+            headE = new Vector3(-totalPitch * 0.4f + lookPitch * 0.6f - breathe * 0.4f, -chestModelYaw * 0.5f + lookYaw * 0.6f, -(hipRoll + spineE.z + chestE.z) * 0.4f);
 
             // ---- arms (FK carry styles)
             for (int si = 0; si < 2; si++) HoldPose(si, si == 0 ? m.HoldL : m.HoldR, w, run, gL, heavy, small, floater, v);
@@ -372,6 +431,60 @@ namespace Lanternvale.Game
             if (kneel > 0f || lie > 0f) ApplyLie(lie, kneel, U, floater);
 
             SolveBiped(U, floater, flier, time, v, w, run, dt);
+            if (m.BowString) UpdateBow(inp);
+        }
+
+        /// <summary>
+        /// Strung bow (BipedKit.Bow): while a shot is drawn the two string halves are aimed from the limb tips at the
+        /// right hand and stretched to reach it, and an arrow sits on the string pointing through the bow hand; at
+        /// ShootReleaseTime the arrow leaves (the projectile takes over) and the string snaps back.
+        /// </summary>
+        void UpdateBow(in UnitAnimInput inp)
+        {
+            float draw = 0f, arrow = 0f;
+            if (inp.Action == UnitAction.Shoot && m.Ranged == UnitRanged.Bow && !inp.Dead && !inp.Lying && LieAmount < 0.5f)
+            {
+                float t = inp.ActionT, rel = UnitView.ShootReleaseTime;
+                draw = Win(t, 0.05f, 0.15f) * (1f - Win(t, rel, rel + 0.035f));
+                arrow = Win(t, 0.02f, 0.06f) * (1f - Win(t, rel, rel + 0.012f));
+            }
+            Quaternion bowQ = handRotM[0], drawQ = handRotM[1];
+            Vector3 bowP = handPosM[0], drawP = handPosM[1];
+            var nock = m.StringNock;   // HandL space
+            if (draw > 0.001f)
+            {
+                var pull = Quaternion.Inverse(bowQ) * (drawP + drawQ * m.DrawPoint - bowP);
+                nock = Vector3.Lerp(m.StringNock, pull, draw);
+            }
+            AimString(BB.StringA, nock);
+            AimString(BB.StringB, nock);
+            if (arrow > 0.001f)
+            {
+                // from the nock (right hand) through the arrow rest on the bow
+                var rest = Quaternion.Inverse(drawQ) * (bowP + bowQ * m.ArrowRest - drawP) - Rest(BB.ArrowR);
+                if (rest.sqrMagnitude > 1e-6f) SetRot(BB.ArrowR, Quaternion.FromToRotation(Vector3.forward, rest));
+            }
+            SetScale(BB.ArrowR, Mathf.Max(0.001f, arrow));
+        }
+
+        /// <summary>
+        /// Points a string half (authored from its limb tip, the bone origin, to the nocking point m.StringNock) at
+        /// `nock` (HandL space) and stretches it along its length to reach it (rigid skinning: scale, not bend).
+        /// </summary>
+        void AimString(int bone, Vector3 nock)
+        {
+            if (bone >= n) return;
+            var tip = Rest(bone);
+            var rest = m.StringNock - tip;
+            var want = nock - tip;
+            float rz = Mathf.Abs(rest.z);
+            if (rz < 1e-4f || want.sqrMagnitude < 1e-8f) return;
+            // the halves run (almost) along the bind Z axis: stretch Z so the stretched half is exactly as long as `want`
+            float k = Mathf.Sqrt(Mathf.Max(0f, want.sqrMagnitude - rest.x * rest.x - rest.y * rest.y)) / rz;
+            k = Mathf.Max(0.2f, k);
+            var stretched = new Vector3(rest.x, rest.y, rest.z * k);
+            t[bone].localRotation = Quaternion.FromToRotation(stretched, want);
+            t[bone].localScale = new Vector3(1f, 1f, k);
         }
 
         // ---------------------------------------------------------------- carry styles
@@ -392,11 +505,16 @@ namespace Lanternvale.Game
             if (si == 0 && m.Shield && hold == UnitHold.Relaxed) { e += 22f; p -= 6f; swingK = 0.7f; }
             switch (hold)
             {
-                case UnitHold.OneHand: p -= 6f; e += 16f; handE[si] = new Vector3(76f, 0f, 0f); swingK = 0.8f; break;   // blade forward-down
+                case UnitHold.OneHand:
+                    // blade forward-down and a little out: it clears the knee and its tip stays off the ground
+                    p -= 6f; e += 16f; roll += 3f; handE[si] = new Vector3(62f, s * 16f, 0f); swingK = 0.8f;
+                    break;
                 case UnitHold.Daggers: p -= 8f; e += 24f; inw += 6f; handE[si] = new Vector3(56f, 0f, 0f); swingK = 0.85f; break;   // blades ~level
                 case UnitHold.Staff:
-                    p = -12f - 6f * run; roll = 10f; e = 36f + 20f * run; swingK = 0.45f;
-                    handLock[si] = true; handDir[si] = new Vector3(s * 0.04f, 1f, 0.06f + 0.1f * run);
+                    // hand out at the side and level with the hip (not in front of the body), the shaft leaning a little
+                    // outwards: from the high game camera the staff top then stands beside the head instead of on the face
+                    p = 10f - 16f * run; roll = 16f; e = 30f + 20f * run; swingK = 0.45f;
+                    handLock[si] = true; handDir[si] = new Vector3(s * 0.2f, 1f, -0.08f + 0.18f * run);
                     break;
                 case UnitHold.Spear:
                     p = -10f; roll = 9f; e = 30f + 20f * run; swingK = 0.4f;
@@ -406,7 +524,10 @@ namespace Lanternvale.Game
                     handLock[si] = true; handDir[si] = new Vector3(0f, 1f, 0.05f); e += 6f; swingK = 0.9f;
                     break;
                 case UnitHold.Shoulder:
-                    p = -32f; inw = 4f; roll = 14f; e = 138f; handE[si] = new Vector3(5f, -s * 16f, 0f); swingK = 0.12f;
+                    // greatsword carried on the shoulder: the fist in front of the chest, the blade resting on the
+                    // shoulder and lying back past it, low behind the head (it used to stand up beside the face)
+                    p = -25f; inw = 10f; roll = 14f; e = 80f; swingK = 0.12f;
+                    handLock[si] = true; handDir[si] = new Vector3(s * 0.3f, 0.45f, -0.85f);
                     break;
                 case UnitHold.Book:
                     p = -14f; inw = 22f; roll = 6f; e = 84f; swingK = 0.15f;
@@ -484,14 +605,14 @@ namespace Lanternvale.Game
             {
                 case UnitAction.Attack: keys = StrikeKeys(out useL); break;
                 case UnitAction.Shoot: keys = RangedKeys(out useL); break;
-                case UnitAction.Cast: keys = CastKeys; useL = true; envOut = 0.2f; break;
+                case UnitAction.Cast: keys = CastKeysFor; useL = CastWithLeft; envOut = 0.2f; break;
             }
             if (keys == null && inp.Casting && inp.Action == UnitAction.None)
             {
                 // channelling: arms half raised, slow sway
-                Sample(CastKeys, 0.3f + Mathf.Sin(inp.Time * 2.2f) * 0.05f, out act);
+                Sample(CastKeysFor, 0.3f + Mathf.Sin(inp.Time * 2.2f) * 0.05f, out act);
                 actW = 0.55f + 0.25f * inp.CastProgress;
-                actWL = m.HoldL == UnitHold.Bow || m.Shield ? 0f : actW;
+                actWL = CastWithLeft ? actW : 0f;
                 BlendCarry(cw);
                 ApplyActKey(U, actW, false);
                 return;
@@ -748,6 +869,11 @@ namespace Lanternvale.Game
                 SetRot(bu, uQ);
                 SetRot(bl, lQ);
                 SetRot(bh, hQ);
+                // the solved hand in model space (the bow string and the nocked arrow span both hands)
+                var upperM = chestModel * uQ;
+                var lowerM = upperM * lQ;
+                handPosM[si] = chestPos + chestModel * Rest(bu) + upperM * Rest(bl) + lowerM * Rest(bh);
+                handRotM[si] = lowerM * hQ;
             }
 
             // ---- legs (IK)

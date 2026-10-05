@@ -185,7 +185,7 @@ namespace Lanternvale.Game
 
         MeshRenderer shadow;
         MaterialPropertyBlock shadowBlock;
-        float lastShadowA = -1f;
+        float lastShadowA = -1f, lastShadowSoft = -1f;
         SpriteRenderer ring, ripple, rune, glow;
         SceneLighting.PointLight castLight;
         static Material spriteMat;
@@ -276,8 +276,12 @@ namespace Lanternvale.Game
             baseBody = UnitBody.Create(model, transform);
             if (!polymorphed) body = baseBody;
             else baseBody.SetActive(false);
+            // totems and dummies never turn: they are set down showing their carved front to the camera
+            if (IsStatic) SetFacing(facingSign);
             ApplyBodyTransform(baseBody, Vector3.zero, 1f);
         }
+
+        bool IsStatic => UnitFacing.IsStatic(model);
 
         static Material SpriteMat
         {
@@ -401,21 +405,29 @@ namespace Lanternvale.Game
             return Begin(UnitAction.Knockback, Mathf.Max(0.1f, duration), Vector2.zero, Color.white);
         }
 
-        /// <summary>Turns (smoothly) to face a ground point.</summary>
+        /// <summary>Turns (smoothly) to face a ground point. Static models (totems, dummies) keep showing their front to the camera.</summary>
         public void FaceTowards(Vector2 target)
         {
             var d = target - pos;
-            if (d.sqrMagnitude < 0.0004f) return;
+            if (d.sqrMagnitude < 0.0004f || IsStatic) return;
             sideFacing = 0;
             SetYawTarget(World3D.YawOf(d));
         }
 
         /// <summary>
-        /// +1 = face screen-right, −1 = screen-left (+X / −X with the default camera), turned a little towards the camera
-        /// (3/4 view). Relative to the camera's current rotation, and kept so while the camera turns.
+        /// +1 = face screen-right, −1 = screen-left (+X / −X with the default camera), turned towards the camera (a 3/4
+        /// view, UnitFacing.Bias). Relative to the camera's current rotation, and kept so while the camera turns.
+        /// Static models are set down with their front to the camera (UnitFacing.StaticYaw) and stay put.
         /// </summary>
         public void SetFacing(int dir)
         {
+            if (IsStatic)
+            {
+                sideFacing = 0;
+                SetYawTarget(UnitFacing.StaticYaw(dir, CameraYaw));
+                yaw = targetYaw;   // placed, not turned (static models have no turn rate)
+                return;
+            }
             sideFacing = dir >= 0 ? 1 : -1;
             sideCamYaw = CameraYaw;
             SetYawTarget(UnitFacing.SideYaw(sideFacing, sideCamYaw));
@@ -770,6 +782,7 @@ namespace Lanternvale.Game
                 Casting = casting,
                 CastProgress = castProgress,
                 SpawnT = spawnT,
+                ViewYaw = UnitFacing.ViewYaw(yaw, CameraYaw),
             };
             if (polymorphed && (action == UnitAction.Attack || action == UnitAction.Shoot || action == UnitAction.Cast))
                 inp.Action = UnitAction.None;   // a sheep just bleats
@@ -885,22 +898,19 @@ namespace Lanternvale.Game
                 if (shadow.enabled != on) shadow.enabled = on;
                 if (on)
                 {
-                    float len = (m.HalfLength * sc + r) * (1f + lie * 0.5f);
-                    float wid = r * (1f + (m.Rig == UnitRigKind.Quad ? lie * 0.4f : 0f));
-                    if (m.Rig == UnitRigKind.Biped && lie > 0f) len = r + lie * Height * 0.42f;
-                    float shrink = 1f / (1f + hover * 0.35f);
+                    UnitShadow.Blob(m, sc, Height, bo, hover, lie, out var center, out float len, out float wid, out float alpha, out float soft);
                     var st = shadow.transform;
                     var fwd = World3D.DirOf(yaw);
-                    var center = new Vector2(bo.x, bo.y);
-                    if (m.Rig == UnitRigKind.Biped && lie > 0f) center -= fwd * 0.0f;
                     st.localPosition = new Vector3(center.x, center.y, -0.004f);
                     st.localRotation = Quaternion.AngleAxis(Mathf.Atan2(fwd.y, fwd.x) * Mathf.Rad2Deg, Vector3.forward);
-                    st.localScale = new Vector3(len * 2f * shrink, wid * 2f * shrink, 1f);
-                    float a = 0.4f * deathFade * (stealthed ? 0.55f : 1f) * shrink * Mathf.Lerp(1f, 0.85f, lie);
-                    if (Mathf.Abs(a - lastShadowA) > 0.004f)
+                    st.localScale = new Vector3(len * 2f, wid * 2f, 1f);
+                    float a = alpha * deathFade * (stealthed ? 0.55f : 1f);
+                    if (Mathf.Abs(a - lastShadowA) > 0.004f || Mathf.Abs(soft - lastShadowSoft) > 0.001f)
                     {
                         lastShadowA = a;
+                        lastShadowSoft = soft;
                         shadowBlock.SetColor(Materials3D.ColorId, new Color(0.12f, 0.09f, 0.16f, a));
+                        shadowBlock.SetFloat(Materials3D.SoftnessId, soft);
                         shadow.SetPropertyBlock(shadowBlock);
                     }
                 }

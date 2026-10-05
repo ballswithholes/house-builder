@@ -43,7 +43,13 @@ namespace Lanternvale.Game
         /// (UnitModel.DrawOnAttack): bow users carry their knife on the hip and draw it for melee only.
         /// </summary>
         public const int DrawnR = 26, SheathR = 27;
-        public const int Count = 28;
+        /// <summary>
+        /// A strung bow (BipedKit.Bow in the left hand): the two halves of its string, each from a limb tip to the nocking
+        /// point (children of HandL; the animator aims and stretches them to the right hand while drawing), and the
+        /// nocked arrow (child of HandR, shown only while a shot is drawn).
+        /// </summary>
+        public const int StringA = 28, StringB = 29, ArrowR = 30;
+        public const int Count = 31;
 
         public static readonly int[] Parent =
         {
@@ -52,13 +58,14 @@ namespace Lanternvale.Game
             Hips, LegUL, LegLL, Hips, LegUR, LegLR,
             Hips, Hips, Hips, Hips, Chest, Head, Hips, Chest, Chest,
             HandR, SkirtR,
+            HandL, HandL, HandR,
         };
 
         public static readonly string[] Names =
         {
             "Hips", "Spine", "Chest", "Neck", "Head", "ArmUL", "ArmLL", "HandL", "ArmUR", "ArmLR", "HandR",
             "LegUL", "LegLL", "FootL", "LegUR", "LegLR", "FootR", "SkirtL", "SkirtR", "SkirtB", "SkirtF", "Cape",
-            "HairB", "Tail", "WingL", "WingR", "DrawnR", "SheathR",
+            "HairB", "Tail", "WingL", "WingR", "DrawnR", "SheathR", "StringA", "StringB", "ArrowR",
         };
 
         public static int ArmU(int side) => side < 0 ? ArmUL : ArmUR;
@@ -180,6 +187,12 @@ namespace Lanternvale.Game
         public bool TwoHanded;
         /// <summary>The right-hand weapon (BB.DrawnR) is drawn from its hip sheath (BB.SheathR) only for melee attacks.</summary>
         public bool DrawOnAttack;
+        /// <summary>
+        /// A strung bow in the left hand (BB.StringA/B/ArrowR): the nocking point (string middle) and the arrow rest in
+        /// HandL bone space, and the point the right hand draws the string to in HandR bone space.
+        /// </summary>
+        public bool BowString;
+        public Vector3 StringNock, ArrowRest, DrawPoint;
         /// <summary>
         /// 0 … 1: long closed robe/dress. Its front halves (SkirtL/R) move together and only sway with the forward leg
         /// instead of following each thigh, so the hem stays closed (no trouser legs) at walking pace.

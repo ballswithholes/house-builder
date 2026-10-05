@@ -34,6 +34,11 @@ namespace Lanternvale.Game
         public bool Casting;
         public float CastProgress;
         public float SpawnT;
+        /// <summary>
+        /// Where the camera is, as a yaw relative to the facing (degrees, + = to the unit's right, 0 = straight ahead;
+        /// UnitFacing.ViewYaw). Idle bipeds turn their heads towards it so faces read from the game camera.
+        /// </summary>
+        public float ViewYaw;
     }
 
     public sealed partial class UnitAnimator
@@ -62,6 +67,7 @@ namespace Lanternvale.Game
 
         // ---- idle life
         float glanceYaw, glanceTarget, glanceTimer, glancePitchTarget, glancePitch;
+        float viewW;   // 0 … 1: how much an idle biped is turned to the camera (eased)
 
         // ---- secondary motion (springs)
         float capeA, capeV, hairA, hairV, tailA, tailV, tailYaw, tailYawV, wobX, wobXV, wobZ, wobZV;
@@ -71,6 +77,8 @@ namespace Lanternvale.Game
         Vector3 hipsPos, hipsE, spineE, chestE, neckE, headE;
         readonly float[] armP = new float[2], armI = new float[2], armRl = new float[2], elb = new float[2];
         readonly Vector3[] handE = new Vector3[2];
+        readonly Vector3[] handPosM = new Vector3[2];        // solved hands in model space (bow string, arrow)
+        readonly Quaternion[] handRotM = new Quaternion[2];
         readonly bool[] handLock = new bool[2];
         readonly Vector3[] handDir = new Vector3[2];
         readonly Vector3[] footT = new Vector3[8];

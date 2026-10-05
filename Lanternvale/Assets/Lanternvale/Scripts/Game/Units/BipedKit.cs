@@ -198,6 +198,9 @@ namespace Lanternvale.Game
 
         // ================================================================== head & face
 
+        /// <summary>Degrees each eye disc (and brow) is turned out to its side of the face.</summary>
+        const float EyeTurn = 32f;
+
         /// <summary>Head (cranium + chin), ears, eyes and brows.</summary>
         public void Head(Color skin, Color iris, Color brow, EyeStyle eyes = EyeStyle.Round, float browTilt = 0f, bool ears = true, float chin = 1f)
         {
@@ -211,7 +214,12 @@ namespace Lanternvale.Game
             Eyes(iris, brow, eyes, browTilt);
         }
 
-        public void Eyes(Color iris, Color brow, EyeStyle style, float browTilt = 0f, float y = -0.12f, float spread = 0.36f, float size = 1f)
+        /// <summary>
+        /// Eyes and brows. The units are mostly seen from the side and from above (SetFacing turns them only partly to the
+        /// camera, which looks down at ~44°), so the eye discs are turned well out to the sides (EyeTurn) and stand a
+        /// little proud of the face: an eye seen at 100° from the front still shows as a shape, not an edge.
+        /// </summary>
+        public void Eyes(Color iris, Color brow, EyeStyle style, float browTilt = 0f, float y = -0.1f, float spread = 0.36f, float size = 1f)
         {
             if (style == EyeStyle.None) return;
             float r = R;
@@ -223,7 +231,7 @@ namespace Lanternvale.Game
             {
                 float ex = s * spread * r, ey = HeadCY + y * r;
                 float zs = 0.96f * r * Mathf.Sqrt(Mathf.Max(0.05f, 1f - spread * spread - y * y));
-                M.Push().Translate(ex, ey, zs - 0.05f * r).Rotate(0f, s * 20f, 0f);
+                M.Push().Translate(ex, ey, zs - 0.036f * r).Rotate(0f, s * EyeTurn, 0f);
                 bool closed = style == EyeStyle.Closed || (style == EyeStyle.Scar && s < 0);
                 if (closed)
                 {
@@ -255,7 +263,7 @@ namespace Lanternvale.Game
                 if (style == EyeStyle.Scar && s < 0)
                 {
                     M.Color = Paint.Shade(Skin, 0.78f);
-                    M.Push().Translate(ex, ey, zs + 0.0f * r).Rotate(0f, s * 20f, 12f);
+                    M.Push().Translate(ex, ey, zs + 0.0f * r).Rotate(0f, s * EyeTurn, 12f);
                     M.Box(Vector3.zero, new Vector3(0.035f * r, 0.5f * r, 0.035f * r));
                     M.Pop();
                 }
@@ -265,7 +273,7 @@ namespace Lanternvale.Game
                     float by = ey + (style == EyeStyle.Narrow ? 0.2f : 0.27f) * r;
                     float bz = 0.96f * r * Mathf.Sqrt(Mathf.Max(0.05f, 1f - spread * spread - (y + 0.27f) * (y + 0.27f)));
                     M.Color = brow;
-                    M.Push().Translate(ex, by, bz - 0.01f * r).Rotate(0f, s * 20f, s * browTilt);
+                    M.Push().Translate(ex, by, bz - 0.01f * r).Rotate(0f, s * EyeTurn, s * browTilt);
                     M.Box(Vector3.zero, new Vector3(0.26f * r, 0.05f * r, 0.05f * r));
                     M.Pop();
                 }
@@ -291,7 +299,7 @@ namespace Lanternvale.Game
         /// <summary>Beard: chin wedge + sideburns; long = a flowing beard cone (elder).</summary>
         public void Beard(Color c, float length = 0.4f, float width = 0.8f)
         {
-            M.Bone = BB.Head; M.Color = c;
+            M.Bone = BB.Head; M.Color = HairTone(c);
             float r = R;
             M.Shell(new Vector3(0f, HeadCY - 0.25f * r, 0.0f), new Vector3(1.0f * r, 0.85f * r, 0.98f * r), -75f, 75f, 8, 95f, 150f, 3);
             if (length > 0.2f)
@@ -304,51 +312,146 @@ namespace Lanternvale.Game
 
         public void Moustache(Color c)
         {
-            M.Bone = BB.Head; M.Color = c;
+            M.Bone = BB.Head; M.Color = HairTone(c);
             for (int s = -1; s <= 1; s += 2)
                 M.Segment(new Vector3(s * 0.04f * R, HeadCY - 0.42f * R, 0.86f * R), new Vector3(s * 0.38f * R, HeadCY - 0.55f * R, 0.66f * R), 0.07f * R, 0.03f * R, 5);
         }
 
         // ================================================================== hair
 
+        /// <summary>
+        /// The colour hair is drawn in. Near-black hair turns into a solid black mass under the ink outline at game zoom
+        /// (no shading, no shape), so dark values are lifted towards a warm dark brown, keeping their hue: black-haired
+        /// characters stay dark-haired, but the hair reads as painted hair. Lighter colours are unchanged.
+        /// </summary>
+        public static Color HairTone(Color c)
+        {
+            float v = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+            float lifted = 0.25f + 0.5f * v;   // meets v at 0.5
+            if (v >= lifted) return c;
+            float k = lifted / Mathf.Max(0.02f, v);
+            var up = new Color(Mathf.Clamp01(c.r * k), Mathf.Clamp01(c.g * k), Mathf.Clamp01(c.b * k), c.a);
+            var warm = new Color(lifted, lifted * 0.8f, lifted * 0.66f, c.a);
+            return Color.Lerp(up, warm, 0.36f * (lifted - v) / lifted);
+        }
+
+        // the last hair cap (the fringe continues it over the forehead)
+        Vector3 hairC, hairR;
+        float hairFront = 58f, hairSide = 100f, hairBack = 122f;
+        bool hairSet;
+
+        void SetHairCap(float frontPhi, float sidePhi, float backPhi, float puff)
+        {
+            float r = R;
+            hairC = new Vector3(0f, HeadCY + 0.05f * r, -0.03f * r);
+            hairR = new Vector3(r * puff, r * puff * 1.0f, r * puff * 0.98f);
+            hairFront = frontPhi; hairSide = sidePhi; hairBack = backPhi;
+            hairSet = true;
+        }
+
+        /// <summary>Polar angle of the cap's hairline at θ (degrees from the top of the hair ellipsoid).</summary>
+        float Hairline(float th)
+        {
+            float a = Mathf.Abs(th);
+            if (a < 55f) return Mathf.Lerp(hairFront, hairFront + 10f, a / 55f);
+            if (a < 110f) return Mathf.Lerp(hairFront + 10f, hairSide, (a - 55f) / 55f);
+            return Mathf.Lerp(hairSide, hairBack, (a - 110f) / 70f);
+        }
+
         /// <summary>Hair cap over the cranium: hairline at frontPhi (forehead), sidePhi (over the ears), backPhi (nape).</summary>
         public void HairCap(Color c, float frontPhi = 58f, float sidePhi = 100f, float backPhi = 122f, float puff = 1.08f)
         {
-            M.Bone = BB.Head; M.Color = c;
-            float r = R;
-            var center = new Vector3(0f, HeadCY + 0.05f * r, -0.03f * r);
-            var rad = new Vector3(r * puff, r * puff * 1.0f, r * puff * 0.98f);
-            M.Shell(center, rad, -180f, 180f, 14, 0f, th =>
-            {
-                float a = Mathf.Abs(th);
-                if (a < 55f) return Mathf.Lerp(frontPhi, frontPhi + 10f, a / 55f);
-                if (a < 110f) return Mathf.Lerp(frontPhi + 10f, sidePhi, (a - 55f) / 55f);
-                return Mathf.Lerp(sidePhi, backPhi, (a - 110f) / 70f);
-            }, 4);
+            M.Bone = BB.Head; M.Color = HairTone(c);
+            SetHairCap(frontPhi, sidePhi, backPhi, puff);
+            M.Shell(hairC, hairR, -180f, 180f, 14, 0f, Hairline, 4);
         }
 
-        /// <summary>Fringe locks over the forehead (cones pointing down/forward).</summary>
+        /// <summary>
+        /// Fringe: the front of the hair cap carried down over the forehead into `count` broad pointed locks — ONE shell
+        /// on the cap's ellipsoid with a sawtooth lower edge, so the fringe is a single painted shape with no inner ink
+        /// lines (separate little cones each get a full ink outline and read as black teeth at game zoom). The locks
+        /// lie flat against the forehead and stop at the brows, so the eyes stay clear from the high game camera.
+        /// length: how far the lock tips reach below the hairline (head radii); spread: the fringe's width (degrees
+        /// around the head); tilt: how far the tips stand off the forehead (0 tucked … 1 a little swept out).
+        /// </summary>
         public void Bangs(Color c, int count = 5, float length = 0.42f, float spread = 70f, float tilt = 0.4f)
         {
-            M.Bone = BB.Head; M.Color = c;
+            if (!hairSet) SetHairCap(58f, 100f, 122f, 1.08f);
+            M.Bone = BB.Head; M.Color = HairTone(c);
             float r = R;
-            for (int i = 0; i < count; i++)
+            count = Mathf.Max(1, count);
+            float half = spread * 0.5f, wedge = spread / count, taper = wedge * 0.8f;
+            float minY = HeadCY + 0.2f * r;            // tips stop on the brows
+            float notch = 0.3f * length * r;           // the cut between two locks
+            float hug = Mathf.Lerp(0.95f, 0.99f, Mathf.Clamp01(tilt));
+            // columns: a short taper back into the cap's hairline on each side, then perLock columns per lock
+            const int perLock = 4, taperCols = 3;
+            int nCols = taperCols * 2 + count * perLock;
+            var th = new float[nCols + 1];
+            var bottom = new float[nCols + 1];
+            for (int j = 0; j <= nCols; j++)
             {
-                float t = count > 1 ? (float)i / (count - 1) : 0.5f;
-                float th = Mathf.Lerp(-spread * 0.5f, spread * 0.5f, t) * Mathf.Deg2Rad;
-                var at = new Vector3(Mathf.Sin(th) * 0.84f * r, HeadCY + 0.48f * r, Mathf.Cos(th) * 0.84f * r);
-                var dir = new Vector3(Mathf.Sin(th) * 0.35f, -1f, tilt + 0.1f);
-                float len = length * r * (0.8f + 0.4f * Mathf.Sin(t * 9.1f + 1.3f) * 0.5f + 0.2f);
-                M.Aim(at, dir);
-                M.Lathe(new[] { new Vector2(0.13f * r, 0f), new Vector2(0.11f * r, len * 0.4f), new Vector2(0f, len) }, 4, false, true, false);
-                M.Pop();
+                float t;
+                if (j < taperCols) t = -half - taper * (1f - (float)j / taperCols);
+                else if (j <= taperCols + count * perLock) t = -half + wedge * (j - taperCols) / perLock;
+                else t = half + taper * (float)(j - taperCols - count * perLock) / taperCols;
+                th[j] = t;
+                float yHL = HairY(Hairline(t));
+                float y;
+                if (Mathf.Abs(t) <= half + 1e-3f)
+                {
+                    float u = Mathf.Clamp((t + half) / wedge, 0f, count - 1e-4f);
+                    int i = Mathf.FloorToInt(u);
+                    float f = u - i, tri = 1f - Mathf.Abs(2f * f - 1f);
+                    float li = count > 1 ? (float)i / (count - 1) : 0.5f;
+                    // lock lengths vary a little (an even comb reads as a helmet edge)
+                    float drop = length * r * (0.85f + 0.3f * (0.5f + 0.5f * Mathf.Sin(li * 9.1f + 1.3f)));
+                    float yTip = Mathf.Max(minY, HairY(Hairline(-half + wedge * (i + 0.5f))) - drop);
+                    y = Mathf.Lerp(yHL - notch, yTip, tri);
+                }
+                else
+                {
+                    float s = Mathf.Clamp01((Mathf.Abs(t) - half) / taper);
+                    y = Mathf.Lerp(HairY(Hairline(Mathf.Sign(t) * half)) - notch, yHL + 0.03f * r, s * s * (3f - 2f * s));
+                }
+                bottom[j] = HairPhi(y);
             }
+            const int rows = 3;
+            for (int j = 0; j < nCols; j++)
+            {
+                float ta = th[j], tb = th[j + 1];
+                float topA = Hairline(ta) - 14f, topB = Hairline(tb) - 14f;
+                for (int i = 0; i < rows; i++)
+                {
+                    float u0 = (float)i / rows, u1 = (float)(i + 1) / rows;
+                    var a = FringePoint(ta, Mathf.Lerp(topA, bottom[j], u0), hug);
+                    var b = FringePoint(tb, Mathf.Lerp(topB, bottom[j + 1], u0), hug);
+                    var cc = FringePoint(tb, Mathf.Lerp(topB, bottom[j + 1], u1), hug);
+                    var d = FringePoint(ta, Mathf.Lerp(topA, bottom[j], u1), hug);
+                    var mid = (a + b + cc + d) * 0.25f;
+                    var n = new Vector3((mid.x - hairC.x) / (hairR.x * hairR.x), (mid.y - hairC.y) / (hairR.y * hairR.y), (mid.z - hairC.z) / (hairR.z * hairR.z));
+                    M.Quad(a, b, cc, d, n);
+                }
+            }
+        }
+
+        float HairY(float phi) => hairC.y + hairR.y * Mathf.Cos(phi * Mathf.Deg2Rad);
+
+        float HairPhi(float y) => Mathf.Acos(Mathf.Clamp((y - hairC.y) / hairR.y, -1f, 1f)) * Mathf.Rad2Deg;
+
+        /// <summary>A point of the fringe: on the cap's ellipsoid (just over it) above the hairline, hugging the forehead below.</summary>
+        Vector3 FringePoint(float thDeg, float phDeg, float hug)
+        {
+            float t = thDeg * Mathf.Deg2Rad, p = phDeg * Mathf.Deg2Rad, s = Mathf.Sin(p);
+            float below = Mathf.Clamp01((phDeg - Hairline(thDeg)) / 30f);
+            float k = Mathf.Lerp(1.006f, hug, below * below * (3f - 2f * below));
+            return hairC + new Vector3(hairR.x * s * Mathf.Sin(t), hairR.y * Mathf.Cos(p), hairR.z * s * Mathf.Cos(t)) * k;
         }
 
         /// <summary>Spiky hair: cones radiating from the head (up / back / sides).</summary>
         public void Spikes(Color c, int count = 12, float length = 0.55f, float upBias = 0.5f, float backBias = 0.5f, int seed = 3, float radius = 0.2f)
         {
-            M.Bone = BB.Head; M.Color = c;
+            M.Bone = BB.Head; M.Color = HairTone(c);
             float r = R;
             var rng = new MeshBuilder(seed);
             for (int i = 0; i < count; i++)
@@ -367,6 +470,7 @@ namespace Lanternvale.Game
         /// <summary>Long hair falling down the back (bound to HairB so it sways), to y = endY.</summary>
         public void LongBack(Color c, float endY, float width = 1f, float flare = 1.15f)
         {
+            c = HairTone(c);
             M.Bone = BB.HairB; M.Color = c;
             float r = R;
             var top = new Vector3(0f, HeadCY + 0.1f * r, -0.1f * r);
@@ -377,15 +481,15 @@ namespace Lanternvale.Game
             }, 1f, c, Paint.Shade(c, 0.7f), 0.012f);
         }
 
-        /// <summary>Side locks framing the face, from the temples to y = endY.</summary>
+        /// <summary>Side locks framing the face, from the temples (just in front of the ears, clear of the cheeks) to y = endY.</summary>
         public void SideLocks(Color c, float endY, float width = 0.2f)
         {
-            M.Bone = BB.Head; M.Color = c;
+            M.Bone = BB.Head; M.Color = HairTone(c);
             float r = R;
             for (int s = -1; s <= 1; s += 2)
             {
-                var a = new Vector3(s * 0.82f * r, HeadCY + 0.15f * r, 0.35f * r);
-                var b = new Vector3(s * 0.9f * r, endY, 0.32f * r);
+                var a = new Vector3(s * 0.86f * r, HeadCY + 0.18f * r, 0.22f * r);
+                var b = new Vector3(s * 0.98f * r, endY, 0.2f * r);
                 M.Segment(a, b, width * r, width * 0.45f * r, 5);
             }
         }
@@ -394,6 +498,7 @@ namespace Lanternvale.Game
         public void Ponytail(Color c, float endY, float thick = 0.32f, float high = 0.45f, Color? tie = null)
         {
             float r = R;
+            c = HairTone(c);
             var tieP = new Vector3(0f, HeadCY + high * r, -0.95f * r);
             M.Bone = BB.Head; M.Color = tie ?? Paint.Shade(c, 0.6f);
             M.Sphere(tieP, 0.16f * r, 6, 4);
@@ -405,7 +510,7 @@ namespace Lanternvale.Game
 
         public void Bun(Color c, Vector3 at, float size = 0.4f)
         {
-            M.Bone = BB.Head; M.Color = c;
+            M.Bone = BB.Head; M.Color = HairTone(c);
             M.Sphere(at, new Vector3(size * R, size * R * 0.9f, size * R), 8, 6);
         }
 
@@ -418,6 +523,7 @@ namespace Lanternvale.Game
         public void Braid(Color c, Vector3 from, Vector3 to, int beads, float r0, Color? tip = null, int bone = BB.Head)
         {
             M.Bone = bone;
+            c = HairTone(c);
             M.Beads(from, to, beads, r0 * R, r0 * 0.7f * R, c, Paint.Shade(c, 0.85f));
             if (tip.HasValue) { M.Color = tip.Value; M.Sphere(to + (to - from).normalized * 0.06f * R, 0.12f * R, 5, 4); }
         }
@@ -1178,8 +1284,13 @@ namespace Lanternvale.Game
             End();
         }
 
-        /// <summary>Recurve bow held in the hand (limbs along the hand's ±Z, belly towards the target).</summary>
-        public void Bow(int side, float len, Color wood, Color grip, Color str)
+        /// <summary>
+        /// Recurve bow held in the hand (limbs along the hand's ±Z, belly towards the target). In the left hand the bow is
+        /// strung for real: each half of the string is its own bone (BB.StringA/B, from a limb tip to the nocking point),
+        /// which the animator pulls back to the right hand while drawing, and an arrow (BB.ArrowR, in the right hand) is
+        /// nocked until the release (UnitAnimator.UpdateBow). Rigid skinning cannot stretch one piece between two hands.
+        /// </summary>
+        public void Bow(int side, float len, Color wood, Color grip, Color str, Color? arrowShaft = null, Color? fletch = null)
         {
             BeginHand(side);
             float h = len * 0.5f * U;
@@ -1196,9 +1307,50 @@ namespace Lanternvale.Game
                 M.Segment(b, c, 0.016f * U, 0.011f * U, 5);
                 M.Segment(c, tip, 0.011f * U, 0.008f * U, 5);
             }
-            M.Color = str;
-            M.Box(new Vector3(0f, 0f, 0.028f * U), new Vector3(0.006f * U, len * 0.95f * U, 0.006f * U));
+            if (side > 0)
+            {
+                // right-handed bows keep a fixed string (the string and arrow bones belong to the left hand)
+                M.Color = str;
+                M.Box(new Vector3(0f, 0f, 0.028f * U), new Vector3(0.006f * U, len * 0.95f * U, 0.006f * U));
+                End();
+                return;
+            }
             End();
+
+            // hand frame → model space (bind pose): weapon (x, y, z) → Grip + (x, −z, y)
+            var g = Grip(side);
+            Vector3 W(float x, float y, float z) => g + new Vector3(x, -z, y);
+            var tipA = W(0f, h * 0.985f, 0.05f * U);
+            var tipB = W(0f, -h * 0.985f, 0.05f * U);
+            var nock = W(0f, 0f, 0.03f * U);
+            Bind[BB.StringA] = tipA;
+            Bind[BB.StringB] = tipB;
+            M.Color = str;
+            float sr = 0.0042f * U;
+            M.Bone = BB.StringA;
+            M.Segment(tipA, nock, sr, sr, 4);
+            M.Bone = BB.StringB;
+            M.Segment(tipB, nock, sr, sr, 4);
+            Model.BowString = true;
+            Model.StringNock = nock - Bind[BB.Hand(side)];
+            Model.ArrowRest = W(0f, 0.025f * U, 0.0f) - Bind[BB.Hand(side)];
+
+            // the nocked arrow: in the right hand, along the bone's +Z (aimed at the bow by the animator), hidden
+            // (scaled to nothing) unless a shot is being drawn
+            var gr = Grip(1);
+            Bind[BB.ArrowR] = gr;
+            Model.DrawPoint = gr - Bind[BB.HandR];
+            float al = Mathf.Max(0.62f, len * 0.56f) * U;
+            M.Bone = BB.ArrowR;
+            M.Color = arrowShaft ?? new Color(0.62f, 0.46f, 0.3f);
+            M.Segment(gr + new Vector3(0f, 0f, -0.05f * U), gr + new Vector3(0f, 0f, al), 0.0065f * U, 0.0065f * U, 4);
+            M.Color = new Color(0.78f, 0.8f, 0.84f);
+            M.Push().Translate(gr + new Vector3(0f, 0f, al)).Rotate(90f, 0f, 0f).Scale(new Vector3(0.02f * U, 1f, 0.008f * U));
+            M.Lathe(new[] { new Vector2(1f, 0f), new Vector2(0f, 0.07f * U) }, 4, false, true, false);
+            M.Pop();
+            M.Color = fletch ?? new Color(0.92f, 0.9f, 0.84f);
+            for (int s = -1; s <= 1; s += 2)
+                M.Blade(gr + new Vector3(0f, 0f, 0.0f), gr + new Vector3(s * 0.022f * U, 0f, 0.09f * U), 0.028f * U, Vector3.up);
         }
 
         public void Shield(Color face, Color rim, Color emblem, bool round = false, float size = 1f)
