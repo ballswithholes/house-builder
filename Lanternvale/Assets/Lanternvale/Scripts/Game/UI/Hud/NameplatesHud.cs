@@ -6,7 +6,8 @@
 //    selected companion, GameFlow.CanTalkTo). Encounter enemies get a plate from Session.PreviewEncounter
 //    (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the level the battle will scale it to;
 //    "??" for bosses), elite/rare winged mark or boss skull, and the group size.
-// Anchors: UnitView.NameplatePosition → CameraRig.WorldToGui / Ui.Scale.
+// Anchors: UnitView.NameplatePosition (3D world point) → CameraRig.WorldToGui / Ui.Scale; anchors behind the
+// perspective camera (CameraRig.IsInFront false) get no plate.
 // Combat plates read health/death as presented (HudPresented): a plate stays until the death is shown.
 using System;
 using System.Collections.Generic;
@@ -79,6 +80,7 @@ namespace Lanternvale.Game
                 UnitView v;
                 try { v = f.ViewOf(u); } catch (Exception) { v = null; }
                 if (v == null || !v.Visible || v.IsDead) continue;
+                if (!rig.IsInFront(v.NameplatePosition)) continue;   // behind the camera: no meaningful projection
                 var p = ToGui(rig, v.NameplatePosition);
                 if (!OnScreen(p)) continue;
                 DrawPlate(p, u, hostile, u == framed, u == hovered, u == active);
@@ -145,6 +147,7 @@ namespace Lanternvale.Game
         {
             var kind = f.HoveredKind;
             if (kind == HoverKind.None) return;
+            if (!rig.IsInFront(f.HoveredLabelWorld)) return;
             var pos = ToGui(rig, f.HoveredLabelWorld);
             string label = f.HoveredLabel;
             Color col;

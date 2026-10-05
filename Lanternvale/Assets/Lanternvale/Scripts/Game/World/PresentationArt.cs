@@ -4,6 +4,12 @@
 // can be tinted per use (school colours, ring colours, time of day). Sprites are sized so their
 // LARGEST side is 1 world unit unless stated otherwise; scale them with SetSize().
 // Real art always wins: Fx(key) returns ArtLibrary's sprite when a PNG exists for an fx_* key.
+//
+// In the 3D world a sprite is a quad in its transform's XY plane: lying flat (rotation identity = World3D.Flat) it is
+// a ground decal facing up (−Z); turned to the camera's rotation it is a billboard. Materials: SpriteAlpha (unlit
+// alpha billboards), Materials3D.Additive / AdditiveFor (glows), GroundOverlay (flat on the ground, unlit, drawn over
+// the terrain and decals and under units). On meshes use `sprite.texture` with Materials3D.AdditiveFor or
+// GroundOverlayFor.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,121 +24,92 @@ namespace Lanternvale.Game
         static readonly Dictionary<int, Sprite> IntCache = new Dictionary<int, Sprite>(); // allocation-free keys for ring/cone variants
         static readonly Dictionary<string, bool> RealArt = new Dictionary<string, bool>();
 
-        // ------------------------------------------------------------------ materials
+        // ------------------------------------------------------------------ 3D materials and renderer helpers
 
-        const string LitShaderName = "Universal Render Pipeline/2D/Sprite-Lit-Default";
+        public const string GroundOverlayShader = "Lanternvale/GroundOverlay";
+        static readonly int SrcBlendId = Shader.PropertyToID("_SrcBlend");
+        static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
 
-        static Material unlit;
-        static bool unlitMissing;
-        static Material lit;
-        static bool litMissing;
-
-        // Neither probe caches a "not lit" answer: Lighting2D.Reset() (editor pipeline setup) can turn
-        // URP-lit mode on later in the same domain.
+        static Material spriteAlpha, groundAlpha, groundAdditive;
+        static readonly Dictionary<Texture, Material> groundAlphaCache = new Dictionary<Texture, Material>();
+        static readonly Dictionary<Texture, Material> groundAdditiveCache = new Dictionary<Texture, Material>();
 
         /// <summary>
-        /// Unlit sprite material for glows, FX, sky and previews when URP 2D lights are active
-        /// (so they glow instead of being darkened at night). Null when not needed / not found.
+        /// Shared unlit alpha-blended material for camera-facing sprites in the 3D world (smoke, dust, leaves, mist):
+        /// Unity's Sprites/Default. Glowing sprites use <see cref="Materials3D.Additive"/> instead.
         /// </summary>
-        public static Material Unlit
+        public static Material SpriteAlpha
         {
             get
             {
-                if (!Lighting2D.IsLit) return null;
-                if (unlit != null) return unlit;
-                if (unlitMissing) return null;
-                var s = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-                if (s == null) s = Shader.Find("Sprites/Default");
-                if (s == null) { unlitMissing = true; return null; }
-                unlit = new Material(s) { name = "Lanternvale Sprite Unlit" };
-                return unlit;
+                if (spriteAlpha != null) return spriteAlpha;
+                var s = Shader.Find("Sprites/Default");
+                if (s == null) s = Materials3D.Find(Materials3D.AdditiveShader);
+                spriteAlpha = new Material(s) { name = "LV Sprite Alpha", hideFlags = HideFlags.DontSave };
+                return spriteAlpha;
             }
         }
 
         /// <summary>
-        /// Sprite-Lit material for every world sprite that should react to URP 2D lights. It has to be
-        /// assigned explicitly: URP hands a new SpriteRenderer its Sprite-Lit-Default as the pipeline's
-        /// default 2D material only in the Editor (UniversalRenderPipelineAsset.GetMaterial returns null in
-        /// players), so in a build a renderer created at runtime keeps the built-in unlit Sprites-Default
-        /// and ignores every Light2D. Null when not URP-lit, or when the shader is not in this build
-        /// (URP 12–14 ship it only if something references it; URP 17 ships it with the 2D renderer).
+        /// Shared material for sprites lying flat on the ground (Lanternvale/GroundOverlay: unlit, drawn over the terrain
+        /// and decals, hidden behind anything standing on it). additive = glow (SrcAlpha One), else alpha-blended. The
+        /// texture comes from the SpriteRenderer; meshes use <see cref="GroundOverlayFor"/>.
         /// </summary>
-        public static Material Lit
+        public static Material GroundOverlay(bool additive)
         {
-            get
+            if (additive) return groundAdditive != null ? groundAdditive : (groundAdditive = MakeGround("LV Ground Additive", null, true));
+            return groundAlpha != null ? groundAlpha : (groundAlpha = MakeGround("LV Ground Alpha", null, false));
+        }
+
+        /// <summary>GroundOverlay material with a texture (for MeshRenderers), cached per texture and blend mode.</summary>
+        public static Material GroundOverlayFor(Texture tex, bool additive)
+        {
+            var key = tex != null ? tex : Texture2D.whiteTexture;
+            var cache = additive ? groundAdditiveCache : groundAlphaCache;
+            if (cache.TryGetValue(key, out var m) && m != null) return m;
+            m = MakeGround((additive ? "LV Ground Additive " : "LV Ground Alpha ") + key.name, key, additive);
+            cache[key] = m;
+            return m;
+        }
+
+        static Material MakeGround(string name, Texture tex, bool additive)
+        {
+            var m = new Material(Materials3D.Find(GroundOverlayShader)) { name = name, hideFlags = HideFlags.DontSave };
+            if (tex != null) m.SetTexture(Materials3D.MainTexId, tex);
+            if (m.HasProperty(SrcBlendId))
             {
-                if (!Lighting2D.IsLit) return null;
-                if (lit != null) return lit;
-                if (litMissing) return null;
-                var s = Shader.Find(LitShaderName);
-                if (s == null || !s.isSupported)
-                {
-                    litMissing = true;
-                    Debug.LogWarning($"[Lanternvale] The URP 2D Renderer is active, but the shader '{LitShaderName}' is " +
-                                     (s == null ? "not included in this build" : "not supported on this device") +
-                                     ", so sprites cannot be lit by 2D lights. Falling back to the night-overlay lighting. " +
-                                     "Add it (and Sprite-Unlit-Default) to Project Settings > Graphics > Always Included Shaders.");
-                    return null;
-                }
-                lit = new Material(s) { name = "Lanternvale Sprite Lit" };
-                return lit;
+                m.SetFloat(SrcBlendId, (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                m.SetFloat(DstBlendId, (float)(additive ? UnityEngine.Rendering.BlendMode.One : UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
             }
+            return m;
         }
 
         /// <summary>
-        /// True when world sprites really are lit by URP 2D lights: the 2D Renderer is active AND the
-        /// Sprite-Lit material is available. Presentation code branches on this (not Lighting2D.IsLit)
-        /// between the Light2D path and the night-overlay path, so a build without the lit shader still
-        /// gets darker nights instead of daylight-bright sprites under an unused global light.
+        /// A sprite lying flat on the ground plane (rings, runes, glows under units): child of parent at its local origin
+        /// lifted by `lift` metres (keep it ≤ 0.03; the parent should not tilt), w × h metres, GroundOverlay material.
         /// </summary>
-        public static bool SpritesLit => Lit != null;
-
-        /// <summary>Makes a renderer ignore 2D lights (no-op in unlit projects).</summary>
-        public static void MakeUnlit(SpriteRenderer sr)
+        public static SpriteRenderer NewGroundSprite(string name, Transform parent, Sprite sprite, float w, float h, bool additive, float lift = 0.015f)
         {
-            if (sr == null || !Lighting2D.IsLit) return;
-            var m = Unlit;
-            if (m != null) sr.sharedMaterial = m;
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0f, -lift);
+            go.transform.rotation = World3D.Flat;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sharedMaterial = GroundOverlay(additive);
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+            SetSize(go.transform, sprite, w, h);
+            return sr;
         }
 
-        /// <summary>Makes a renderer react to 2D lights (no-op when sprites are not URP-lit).</summary>
-        public static void MakeLit(SpriteRenderer sr)
-        {
-            if (sr == null) return;
-            var m = Lit;
-            if (m != null) sr.sharedMaterial = m;
-        }
+        // ------------------------------------------------------------------ 2D-era leftovers (kept compiling for old callers)
 
         /// <summary>
-        /// Lighting2D.AddPointLight for world props, with the halo sprite unlit. When the 2D Renderer is
-        /// active but sprites cannot be lit (see <see cref="SpritesLit"/>), the Light2D is switched off and
-        /// the halo is laid out like Lighting2D's unlit mode (bigger, above the night overlay).
+        /// 2D-era: a plain SpriteRenderer with the default sprite material (there are no 2D lights any more). Kept only
+        /// for the remaining 2.5D world/unit code; 3D code uses meshes (Materials3D), NewGroundSprite or SpriteAlpha.
         /// </summary>
-        public static LightHandle AddPointLight(GameObject go, Vector3 localOffset, Color color, float radius, float intensity)
-        {
-            var h = Lighting2D.AddPointLight(go, localOffset, color, radius, intensity);
-            if (h == null) return null;
-            if (Lighting2D.IsLit && !SpritesLit)
-            {
-                if (h.light is Behaviour b) b.enabled = false;
-                h.light = null;
-                if (h.glow != null)
-                {
-                    h.glow.sortingOrder = SortingOrders.NightOverlay + 100;
-                    float d = radius * 1.6f;
-                    h.glow.transform.localScale = new Vector3(d, d, 1f);
-                }
-            }
-            if (h.glow != null) MakeUnlit(h.glow);
-            return h;
-        }
-
-        // ------------------------------------------------------------------ renderer helpers
-
-        /// <summary>
-        /// New sprite renderer. Lit by URP 2D lights (Sprite-Lit material) unless <paramref name="unlitMat"/>,
-        /// which keeps glows, FX and the sky bright at night.
-        /// </summary>
+        [System.Obsolete("2D-era sprite helper: 3D code uses meshes (Materials3D), NewGroundSprite or SpriteAlpha.")]
         public static SpriteRenderer NewRenderer(string name, Transform parent, Sprite sprite, int order, bool unlitMat = false)
         {
             var go = new GameObject(name);
@@ -140,10 +117,19 @@ namespace Lanternvale.Game
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sortingOrder = order;
-            if (unlitMat) MakeUnlit(sr);
-            else MakeLit(sr);
             return sr;
         }
+
+        /// <summary>2D-era: URP 2D lighting is gone, so sprites are never lit by Light2D (always false).</summary>
+        [System.Obsolete("2D-era: URP 2D lighting is gone (always false). Lighting is SceneLighting + the Lanternvale shaders.")]
+        public static bool SpritesLit => false;
+
+        /// <summary>2D-era bridge to Lighting2D.AddPointLight (a glow sprite). 3D code uses SceneLighting.Add.</summary>
+        [System.Obsolete("2D-era: use SceneLighting.Add. Delete together with Lighting2D.")]
+        public static LightHandle AddPointLight(GameObject go, Vector3 localOffset, Color color, float radius, float intensity)
+            => Lighting2D.AddPointLight(go, localOffset, color, radius, intensity);
+
+        // ------------------------------------------------------------------ sprite helpers
 
         /// <summary>Scales t so that sprite s is drawn w × h world units.</summary>
         public static void SetSize(Transform t, Sprite s, float w, float h)
@@ -260,8 +246,8 @@ namespace Lanternvale.Game
         /// <summary>1×1 m white square, centred pivot.</summary>
         public static Sprite White => Cached("white", () => MakeSprite(ProceduralArt.White, new Vector2(0.5f, 0.5f)));
 
-        /// <summary>Soft radial glow, 1 m diameter (same texture as Lighting2D glows).</summary>
-        public static Sprite Glow => Lighting2D.GlowSprite;
+        /// <summary>Soft radial glow, 1 m diameter (ProceduralArt.Glow).</summary>
+        public static Sprite Glow => Cached("glow", () => MakeSprite(ProceduralArt.Glow, new Vector2(0.5f, 0.5f)));
 
         /// <summary>Small bright dot with a soft halo (fireflies, pollen, trails), 1 m diameter.</summary>
         public static Sprite SoftDot => Cached("softdot", () => MakeSprite(MakeTex("lv_softdot", 64, 64, (u, v) =>

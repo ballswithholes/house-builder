@@ -1,6 +1,8 @@
 // World-anchored combat text (damage, heals, misses, resources, status words) drawn with IMGUI and
-// the Ui toolkit fonts. Texts rise and fade; crits pop; texts spawned close together stack upwards.
-// Drawn at GUI.depth 10, i.e. underneath the regular UI (depth 0).
+// the Ui toolkit fonts. Texts rise (world up is −Z) and fade; crits pop; texts spawned close together stack upwards.
+// The anchor is a 3D world point projected through the perspective camera every repaint: texts behind the camera are
+// skipped, and texts scale a little with distance (bigger up close). Drawn at GUI.depth 10, i.e. underneath the
+// regular UI (depth 0).
 using System.Collections.Generic;
 using Lanternvale.Data;
 using UnityEngine;
@@ -15,6 +17,8 @@ namespace Lanternvale.Game
         public static int GuiDepth = 10;
         /// <summary>Global size multiplier (accessibility option).</summary>
         public static float SizeScale = 1f;
+        /// <summary>Camera distance at which texts have their nominal size (≈ the default zoom); nearer is a bit bigger.</summary>
+        public static float ReferenceDistance = 18f;
 
         sealed class Entry
         {
@@ -139,7 +143,6 @@ namespace Lanternvale.Game
             if (entries.Count == 0) return;
             var ev = Event.current;
             if (ev == null || ev.type != EventType.Repaint) return;
-            var rig = CameraRig.Instance;
             var cam = PresentationHost.Cam;
             if (cam == null) return;
             Ui.BeginFrame();
@@ -149,6 +152,9 @@ namespace Lanternvale.Game
                 style.font = Ui.BoldFont;
             }
             float inv = 1f / Mathf.Max(0.01f, Ui.Scale);
+            var ct = cam.transform;
+            var camPos = ct.position;
+            var camRight = ct.right;
             var oldColor = GUI.color;
             GUI.color = Color.white;
             for (int i = 0; i < entries.Count; i++)
@@ -156,22 +162,19 @@ namespace Lanternvale.Game
                 var e = entries[i];
                 float t = e.age / e.life;
                 float rise = 1f - (1f - t) * (1f - t);
-                // rises (world up is −Z) and drifts sideways along x
-                var w = e.world + new Vector3(e.drift * rise, 0f, 0f) + World3D.Up * (0.15f + e.stack + rise * 0.95f);
-                Vector2 gui;
-                if (rig != null) gui = rig.WorldToGui(w);
-                else
-                {
-                    var sp = cam.WorldToScreenPoint(w);
-                    if (sp.z <= 0f) continue;   // behind the camera
-                    gui = new Vector2(sp.x, Screen.height - sp.y);
-                }
-                gui *= inv;
+                // rises (world up is −Z) and drifts sideways as seen on screen
+                var w = e.world + camRight * (e.drift * rise) + World3D.Up * (0.15f + e.stack + rise * 0.95f);
+                var sp = cam.WorldToScreenPoint(w);
+                if (sp.z <= 0.05f) continue;   // behind the camera: its projection is meaningless
+                var gui = new Vector2(sp.x, Screen.height - sp.y) * inv;
+                // a little bigger up close, a little smaller far away (reference: the default view, ≈ 18 m)
+                float dist = Vector3.Distance(camPos, w);
+                float near = Mathf.Clamp(Mathf.Pow(ReferenceDistance / Mathf.Max(1f, dist), 0.35f), 0.82f, 1.22f);
                 float pop = 1f;
                 if (e.crit && e.age < 0.2f) { float k = 1f - e.age / 0.2f; pop = 1f + 0.75f * k * k; }
                 else if (e.age < 0.1f) pop = 1f + 0.25f * (1f - e.age / 0.1f);
                 float alpha = 1f - Mathf.Clamp01((t - 0.62f) / 0.38f);
-                int size = Mathf.Clamp(Mathf.RoundToInt((e.crit ? 36f : 27f) * e.scale * pop * SizeScale), 8, 120);
+                int size = Mathf.Clamp(Mathf.RoundToInt((e.crit ? 36f : 27f) * e.scale * pop * near * SizeScale), 8, 120);
                 style.fontSize = size;
                 var r = new Rect(gui.x - 200f, gui.y - size, 400f, size * 2f);
 
