@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Offline 3D preview of Lanternvale (see README.md): compiles the game's own world/prop/rendering code and the Core
+    data layer against a managed UnityEngine stand-in (Stubs/) and renders with a software rasterizer (Render/).
+    Game sources are referenced by relative path and never edited for the tool's sake.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Preview3D</AssemblyName>
+    <RootNamespace>Lanternvale.Preview</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <Optimize>true</Optimize>
+    <NoWarn>CS0414;CS0169;CS0649;CS0162;CS0067;CS8981;CS0618;CS0219;CS0168</NoWarn>
+    <Game>../../Assets/Lanternvale/Scripts</Game>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- the tool -->
+    <Compile Include="*.cs" />
+    <Compile Include="Stubs/*.cs" />
+    <Compile Include="Render/*.cs" />
+    <Compile Include="Scene/*.cs" />
+    <!-- game: data layer (pure C#) -->
+    <Compile Include="$(Game)/Core/**/*.cs" />
+    <!-- game: 3D foundation, prop library, world (terrain, backdrop, sky, time of day) -->
+    <Compile Include="$(Game)/Game/Rendering3D/MeshBuilder.cs" />
+    <Compile Include="$(Game)/Game/Rendering3D/World3D.cs" />
+    <Compile Include="$(Game)/Game/Rendering3D/Materials3D.cs" />
+    <Compile Include="$(Game)/Game/Rendering3D/SceneLighting.cs" />
+    <Compile Include="$(Game)/Game/World/Props/*.cs" />
+    <Compile Include="$(Game)/Game/World/MapTerrain.cs" />
+    <Compile Include="$(Game)/Game/World/MapBackdrop.cs" />
+    <Compile Include="$(Game)/Game/World/MapSky.cs" />
+    <Compile Include="$(Game)/Game/World/DayNight.cs" />
+    <Compile Include="$(Game)/Game/World/WorldTextures.cs" />
+    <!-- game: unit models and their procedural animation (UnitView itself drives FX/UI and is replaced by Scene/UnitPoser) -->
+    <Compile Include="$(Game)/Game/Units/*.cs" Exclude="$(Game)/Game/Units/UnitView.cs" />
+  </ItemGroup>
+</Project>

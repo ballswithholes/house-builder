@@ -284,7 +284,7 @@
           "label": "Whisperwood"
         }
       ],
-      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [25.0, 6.0]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}],
+      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [23.2, 5.4]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}],
       "regions": [
         {
           "id": "reg_old_kusu",
