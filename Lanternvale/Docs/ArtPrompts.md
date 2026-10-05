@@ -235,6 +235,10 @@ Same template, NPCs use a softer, simpler costume (`<CHAR>`, less armour, fewer 
 | `npc_child` | small child (1.2 m), messy brown hair, green tunic with a cream collar, shorts, little boots, holding a tiny glowing paper lantern on a stick |
 | `npc_guard` | village guard with a kettle helmet, chainmail, teal and cream tabard, steel pauldrons, round teal-and-cream shield, spear |
 | `npc_trainer` | generic class trainer in a long dusty-blue robe with a gold sash, plum stole, hood down, short grey beard, holding a book |
+| `npc_trainer_warrior` | Sir Odo, an old knight trainer: plate armour and a crimson tabard, a grand grey handlebar moustache, sword in hand and a kite shield on his back, gold sash with a lantern medallion (also `npc_trainer_paladin`) |
+| `npc_trainer_hunter` | Fennel, a green-clad ranger trainer: soft feathered hunter's cap, a long braided beard with a gold bead, fur collar, bow and quiver, gold sash with a lantern medallion (also `npc_trainer_shaman`) |
+| `npc_trainer_mage` | Magister Quillon, a tall scholar trainer: starry indigo robe with a short plum shoulder cape, tall bent hat with a gold band, spectacles, long white beard, orb staff, a little grimoire at the belt, gold sash with a lantern medallion (also `npc_trainer_warlock`) |
+| `npc_trainer_priest` | Brother Wick, a round tonsured friar trainer: undyed wool habit with a rope belt and a plum-lined cowl, gold stole with a lantern medallion, rosary, a lit lantern in hand (also `npc_trainer_rogue`) |
 | `npc_spirit` | friendly forest spirit (kodama-like), small (0.9 m) pale white-green body, round head with three dark hollow dots for eyes and mouth, a sprout on its head, soft glow — original design, cute and quiet |
 
 ### 4.4 Portraits (`portrait_<suffix>` for every char_/comp_/npc_)
@@ -256,6 +260,7 @@ Quadrupeds are drawn **side 3/4 view facing right**. Template:
 |---|---|---|
 | `cr_wolf` | grey wolf with a cream chest and muzzle, darker saddle, amber eyes, bared fangs (1.1 m) | 2:1 |
 | `cr_wolf_blighted` | wolf corrupted by the Hollow: grey-violet fur darkening toward the legs, glowing violet vein cracks, small violet crystals on the back, glowing violet eyes (1.2 m) | 2:1 |
+| `cr_wolf_greymane` | Greymane, the pasture pack's old alpha touched by the Hollow: huge heavy wolf with a charcoal coat, a shaggy silver mane ruff, glowing violet eyes, scars and a torn ear, large glowing violet crystals along the spine (1.5 m) | 2:1 |
 | `cr_boar` | bristly brown boar with a spiky dark mane, big tusks, small eyes (1.0 m) | 2:1 |
 | `cr_spider` | big forest spider with a patterned abdomen with moss on it, banded legs, cluster of red eyes (0.9 m) | 2:1 |
 | `cr_mossling` | small mischievous round moss creature with big shiny eyes, toothy grin, stubby arms and feet, wearing a big leaf as a hat (0.9 m) | 1:1 |

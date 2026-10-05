@@ -605,8 +605,14 @@ namespace Lanternvale.Game
             p = default;
             try
             {
+                // a creature may name another unit's sprite as its portrait (Greymane: cr_wolf_blighted, whose 3D
+                // model has no 2D art of its own): that is drawn like a sprite, only portrait_* keys are busts
                 if (!string.IsNullOrEmpty(portraitKey) && (ArtLibrary.HasRealTexture(portraitKey) || string.IsNullOrEmpty(spriteKey)))
-                    p = new PortraitArt { Tex = ArtLibrary.Texture(portraitKey), IsPortrait = true };
+                    p = new PortraitArt
+                    {
+                        Tex = ArtLibrary.Texture(portraitKey),
+                        IsPortrait = portraitKey.StartsWith("portrait_", StringComparison.Ordinal) || !ArtLibrary.HasRealTexture(portraitKey),
+                    };
                 else if (!string.IsNullOrEmpty(spriteKey))
                     p = new PortraitArt { Tex = ArtLibrary.Texture(spriteKey), IsPortrait = false };
                 else

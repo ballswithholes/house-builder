@@ -15,7 +15,8 @@ Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio,Renderi
 >   `UnitFacing.Bias` 35° towards the camera for a 3/4 view; re-applied when the camera turns, see
 >   `UnitFacing.SideYaw`); `FaceTowards` turns to any direction. Static models (totems, the dummy) are set down facing
 >   the camera (`UnitFacing.StaticYaw`) and ignore facing requests; idle bipeds turn their heads towards the camera
->   (`UnitAnimInput.ViewYaw`). Bow users have string and arrow bones (`BB.StringA/StringB/ArrowR`, `BB.Count` 31); the
+>   (`UnitAnimInput.ViewYaw`), action poses keep the face up and partly turned to it, and staff, spear and greatsword
+>   holds lean away from the camera on its side so a weapon never crosses the face. Bow users have string and arrow bones (`BB.StringA/StringB/ArrowR`, `BB.Count` 31); the
 >   blob shadow's parameters come from `UnitShadow.Blob`.
 > * Occluding props no longer fade as a whole: they open soft round cut-outs around hidden units, the hovered object,
 >   the cursor's ground point and the camera's focus (`MapView.OccluderCutOuts`, default true; ThreeD.md §6). `UnitView.SetVariant(int)` / `Variant` give generic villagers and children a stable look per NPC.
@@ -121,7 +122,11 @@ Phases: dawn [5,8) peach/lavender, day [8,17.5) warm white, dusk [17.5,20.5) ros
 Map `ambientColor × ambientIntensity` multiplies the light.
 3D additions: `dn.NightGrade` / `DayNight.NightGradeTint` (the `_LV_Grade` night grade MapView pushes),
 `DayNight.LampColor(authored, night)` (warm-white/yellow lamps and windows deepen to amber at night; coloured lights
-keep their hue) and `DayNight.LampRange(range, night)` (+22 % reach at full night).
+keep their hue) and `DayNight.LampRange(range, night)` (+22 % reach at full night). Golden hour:
+`dn.Golden` (0..1, `DayNight.GoldenAt(hour)`: full from late afternoon to sunset, a little at sunrise; 0 on fixed-time
+maps) strengthens the warm sun, lowers the cool fill and hazes the distance (`DayNight.GoldenHaze`, MapView's fog);
+`dn.Warmth` is the `_LV_Warmth` shader global MapView pushes (x golden-hour saturation of sunlit colours, y lamplit
+colours leaning to amber at night, z a lamp pool greying out the moon fill; zero by day).
 
 ## 3. UnitView
 

@@ -57,6 +57,10 @@ belts/sashes/shoulder pieces, distinct class silhouettes and weapons), rendered 
   albedo drifts towards its luma × the tint (a cool blue-grey), while point lights (lamps, fire) light the full colour.
   `MapView.ApplyMood` sets it from `DayNight.NightGrade` / `DayNight.NightGradeTint` (0.38 at full night); MapView's
   cleanup resets it to zero.
+  **Warmth** (shader global `_LV_Warmth`, zero = off, the default): x = the golden-hour saturation lift of sunlit
+  colours (up to 0.12), y = how far lamplit colours lean to amber at night (up to 0.45), z = how much a lamp pool greys
+  out and dims the cool moon fill under it in deep night (up to 0.8; so the edge of a pool passes through warm grey,
+  never pink). `MapView.ApplyMood` sets it from `DayNight.Warmth`; MapView's cleanup resets it to zero.
 
   Add your own shaders next to them if you need one (same rules: `#include "LanternvaleCommon.cginc"`, no pipeline
   includes, no LightMode tag, `#pragma target 3.0`). Unity's `Sprites/Default` is fine for alpha-blended billboards.
@@ -92,8 +96,8 @@ exact ellipsoid normals and a canopy-wide vertex ramp, warm on top and cool teal
 reads better; saturated-but-soft palettes (warm creams, sage and moss greens, dusty
 blues, terracotta roofs, honey-gold lantern light); per-face `Jitter` 0.04–0.08; `AOStrength` ~0.3 on props; ink
 outline on characters, creatures and props (not on terrain, grass, decals, particles). Keep triangle counts sane:
-character ≤ 3k tris (the leader and companions up to ~3.8k), big building ≤ 3.2k, tree ≤ 1.5k (Old Kusu ≈ 3.4k plus
-its plaza), small prop ≤ 400, grass tuft ≤ 60.
+character ≤ 3k tris (the leader and companions up to ~3.8k), big building ≤ 3.2k, tree ≤ 1.5k (Old Kusu ≈ 5.1k plus
+its lanterns part ≈ 0.7k and its plaza ≈ 2.4k), small prop ≤ 400, grass tuft ≤ 60.
 
 ## 4. Ownership (who edits what) — never edit another builder's files
 
@@ -120,8 +124,11 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
 * `static UnitView Create(string spriteKey, float height, Color ringColor)` — spriteKey selects the model recipe:
   `char_<class>` (player classes), `comp_<name>` (companions: kael, lys, seren, rook, pip, torvan, aldric, morwen —
   see `Resources/Data/content/companions.json` for their classes/looks), `npc_*` (elder, innkeeper, merchant, smith,
-  villager_a/b, child, guard, trainer, spirit), creatures `cr_*` (wolf, wolf_blighted, boar, spider, mossling,
-  mossling_shaman, bandit, bandit_archer, bandit_hexer, bandit_chief, hollow_wisp, hollow_spirit, hollow_keeper, hollow_treant,
+  villager_a/b, child, guard, trainer, spirit; the four class trainers `npc_trainer_warrior` (= `_paladin`, Sir Odo the
+  old knight), `npc_trainer_hunter` (= `_shaman`, Fennel the ranger), `npc_trainer_mage` (= `_warlock`, Magister
+  Quillon), `npc_trainer_priest` (= `_rogue`, Brother Wick the friar)), creatures `cr_*` (wolf, wolf_blighted,
+  wolf_greymane (= `cr_greymane`, the elite alpha: charcoal coat, silver mane, glowing violet eyes and spine
+  crystals), boar, spider, mossling, mossling_shaman, bandit, bandit_archer, bandit_hexer, bandit_chief, hollow_wisp, hollow_spirit, hollow_keeper, hollow_treant,
   hollow_warden (≈4.5 m boss), training_dummy), pets `pet_*` (wolf, cat, boar, bear, owl), demons `demon_*` (imp,
   voidwalker, succubus, felhunter, infernal), totems `totem_*` (earth, fire, water, air). `height` > 0 scales the
   model to that height (creature `size`), ≤ 0 = the model's natural height. Unknown keys get a sensible generic model.
@@ -142,7 +149,14 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
   never a snap. **Static models** (totems, the training dummy: `UnitFacing.IsStatic`) are set down with their front
   towards the camera (`UnitFacing.StaticYaw`, 60° bias) and ignore `FaceTowards`. **Idle bipeds turn head and neck
   towards the camera** (up to 22°, tipped up 7°; never towards a camera behind them) through `UnitAnimInput.ViewYaw`
-  (= `UnitFacing.ViewYaw(unitYaw, cameraYaw)`); actions snap the head back.
+  (= `UnitFacing.ViewYaw(unitYaw, cameraYaw)`). In strike, shoot and cast the neck and head take back most of the
+  chest's bow (90 %) and twist (60 %), the chin lifts 5° and 55 % of the camera turn stays, so faces read in action
+  poses too (`ActionView`, `HeadLevel`, `HeadAim`, `ActionChinUp` in `UnitAnimator.Biped.cs`; headbutts excepted).
+  **Holds follow the camera side** (`ViewYaw`): a staff or spear whose holding hand is on the camera's side is held
+  back with the shaft leaning away from the camera, out beside the head (`PoleHold`), so it never splits the face;
+  a shouldered greatsword/great-axe sits low and back on the camera's side and points forward and down on the far
+  side. Children carry a one-hand stick up and forward like a toy sword. Wind-ups keep the weapon beside and behind
+  the right shoulder, clear of the head (two-handed hammers/axes lower with a wider grip: `MaceTwoKeys`).
 * **Walk cycle** (the user explicitly complained the old walking looked bad): proper procedural gait — legs swing
   with knee bend and foot lift, arms counter-swing, hips/shoulders counter-rotate, a two-bump-per-stride vertical bob,
   slight forward lean scaling with speed, cadence and stride matched to the actual movement speed (feet must not
@@ -212,7 +226,9 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
   On paved maps (the shrine) path decals and the worn-path halo are skipped: the terrain paves a processional walkway
   through the trail decals' centres plus forecourts at gates, lanterns, statues and the arch, borders it with raked
   gravel (Terrain detail layer) and leaves moss beyond. Whisperwood gathers leaf litter under trees, stumps, logs and
-  along the trail through the same layer.
+  along the trail through the same layer. Old Kusu's crown, far above the game camera's frame, is told on the ground:
+  a broad flat-topped canopy shade broken by round sun flecks over its plaza (a dappled `MapTerrain` blot; the tree
+  itself adds no shade decal, keep it to one).
   **Foreground** (`fg_*`) → 3D
   ferns/grass/stones/flowers along the front edge (from PropModels).
 * **Chests** (closed/open), **transition markers** (`Waymarker`: a pair of lantern posts with an arrow sign at side
@@ -224,9 +240,16 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
   (low warm at dawn/dusk, high soft white by day, cool moonlight at night), sky/ground ambient, fog colour = sky
   horizon, `NightGlow` up at night, lantern/lamp lights on at night (`nightOnly`). Golden hour and dusk keep the greens
   (warm sun, cool sky fill, neutral ground bounce); night is a deep blue fill with a crisp moon and the night grade
-  (§2). Warm-white/yellow lamp and window lights deepen to amber at night and reach 22 % further
-  (`DayNight.LampColor(authored, night)`, `LampRange(range, night)`); coloured lights (violet crystals, locked
-  waymarkers) keep their hue. Map `ambientColor × ambientIntensity` multiplies (its hue softened by 35 %).
+  (§2). **Golden hour** (`DayNight.Golden`, 0..1 = `GoldenAt(hour)`: full from late afternoon to sunset, 0.6 at
+  sunrise; 0 on fixed-time maps, which keep their authored sky's mood) boosts the honey-gold sun (+36 %), cuts the cool
+  fill (−23 %), raises the light's elevation floor from 14° to 22° so the meadow catches the low sun, warms the rim
+  (+60 %), lifts the saturation of sunlit colours (`_LV_Warmth.x`, §2) and hazes the distance warm
+  (`MapView.ApplyMood`: fog colour 30 % towards `DayNight.GoldenHaze`, fog starting 30 % nearer). Noon and night are
+  untouched. Warm-white/yellow lamp and window lights deepen to amber at night and reach 22 % further
+  (`DayNight.LampColor(authored, night)`, `LampRange(range, night)`); lamplit colours lean to amber and, in deep
+  night, a lamp pool greys out the moon's blue fill under it (`_LV_Warmth.yz` from `DayNight.Warmth`), so pools stay
+  amber on dirt, grass and stone; coloured lights (violet crystals, locked waymarkers) keep their hue. Map
+  `ambientColor × ambientIntensity` multiplies (its hue softened by 35 %).
   Fixed-time maps (shrine: dusk) keep their mood.
 * **Ambient particles** (`AmbientDef`: fireflies, pollen, leaves, mist, rain, embers) as camera-near 3D billboards
   (`Additive` for glowing ones, `Sprites/Default` for leaves/mist), pooled, around the camera's look-at point.
@@ -246,10 +269,14 @@ cuts or tints with the prop and does not count towards its bounds, occluder grid
 Keys to model (map counts in brackets): props — cottage_a/b/c, inn, smithy (forge glow), shop_stall (awning, goods),
 windmill (sails turn slowly), well, fence, lamp_post, spirit_lantern & spirit_lantern_dark (same model, `SetLit`;
 stone tōrō-style lantern with paper/glass glowing honey-gold), tree_oak/pine/birch/dead, **tree_great** (Old Kusu, a
-huge camphor tree ~25 m with a shimenawa rope and paper charms — the village landmark), bush_a/b, rock_large/small,
-stump, log, cart, barrel, crate, hay, signpost, noticeboard, bench, campfire (`SetLit`: flames + embers), tent,
+huge camphor tree ~25 m with a shimenawa rope and paper charms — the village landmark; since the game camera never
+frames the high crown, the tree is told low down: a twisting fluted trunk with buttress flare, burls, ivy and a shrine
+plaque, knuckled and surface roots over the paving, and two low limbs from ≈ 3.4 m carrying leaves, a second sacred
+rope and four paper lanterns — their own part, lit at night through `SetLit`), bush_a/b, rock_large/small
+(rock_large's crack is cast onto its own surface: `PropKit.BlobRayHit` / `BlobPoint`), stump, log, cart, barrel, crate, hay, signpost, noticeboard, bench, campfire (`SetLit`: flames + embers), tent,
 mushrooms, ruin_pillar, ruin_arch, shrine_gate (torii-like), spirit_statue (fox/kitsune), blight_crystal (violet
-emissive crystals), banner (cloth sways), bridge, stone_wall (low mossy rubble wall), veg_patch (vegetable bed),
+emissive crystals), banner (cloth sways), bridge, stone_wall (dry-stone wall, 2.9 m: two courses of warm sandstone
+and grey stones under a flat cap course, small moss tufts), veg_patch (vegetable bed),
 washing_line (laundry sways; all three in `PropGarden.cs`); chests `prop_chest` (+ `_open`); foreground fg_ferns,
 fg_grass_a/b, fg_stones_a/b, fg_flowers_a/b. Sizes: use believable real-world sizes (person = 1.75 m; cottage ridge ≈ 6 m, inn ≈ 8 m,
 windmill ≈ 11 m, oak ≈ 8 m, pine ≈ 11 m), but the **solid footprint must fit the prop's nav collider**

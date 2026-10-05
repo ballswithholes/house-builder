@@ -6,6 +6,7 @@ tool="$here/preview3d.sh"
 out="${1:-$here/../../Docs/previews3d}"
 mkdir -p "$out"
 "$tool" map lanternvale "$out/lanternvale_noon.png"
+"$tool" map lanternvale "$out/lanternvale_golden.png" --hour 18
 "$tool" map lanternvale "$out/lanternvale_night.png" --hour 22.5
 "$tool" map lanternvale "$out/lanternvale_far.png" --zoom 10.4
 "$tool" map lanternvale "$out/lanternvale_close.png" --zoom 3 --yaw 30

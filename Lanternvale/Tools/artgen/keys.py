@@ -44,6 +44,8 @@ def required_keys(artkeys_path=None, schema_path=None):
     artkeys_path = artkeys_path or os.path.join(DOCS, "ArtKeys.md")
     with open(artkeys_path, encoding="utf-8") as f:
         text = f.read()
+    # keys that only name a 3D model (UnitRecipes) have no 2D art to paint
+    text = text.split("## 3D-only model keys", 1)[0]
     ordered = []
     seen = set()
 

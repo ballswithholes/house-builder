@@ -2,6 +2,7 @@
 //
 //   props <out.png> [keys|all] [seed] [--views gqtfb] [--tile px] [--lit 0|1] [--open] [--stats]
 //   units <out.png> [keys|group|all] [--tile px] [--ss N] [--hour H] [--speed m/s]
+//                          [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
 //   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size WxH] [--ss N] [--spawn id]
 //                          [--player key] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
 using System;
@@ -49,8 +50,11 @@ namespace Lanternvale.Preview
   props <out.png> [key[,key@seed...]|all] [seed] [--views gqtfb] [--tile 380] [--lit 0|1] [--open] [--stats]
       contact sheet of prop models: g = game camera, q = 3/4, t = top (collider ellipse), f = front, b = back
   units <out.png> [key,key...|group|all] [--tile 240] [--ss 2] [--hour 12.5] [--speed 3.4]
+        [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
       unit models posed by the game's animator: game camera, 3/4 idle, walk, attack wind-up/strike, shoot, cast;
-      groups: chars comps npcs foes beasts pets demons static (all = one page per group, <out>_<group>.png)
+      --view game: every column at the game camera (idle/walk facing right and left, actions facing --facing);
+      --view spin: one --pose at nine facings; a key may name a look variant (npc_child#2, npc_child@child_nell);
+      groups: chars comps npcs trainers foes beasts pets demons static (all = one page per group, <out>_<group>.png)
   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size 1600x900] [--ss 2] [--spawn id]
                         [--player char_warrior] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
       the player's view of a map: look-at = the spawn (or --at), Zoom = CameraRig zoom (2.6 … 10.4, default 6.2),

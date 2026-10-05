@@ -26,7 +26,7 @@ static class PropSheet
         ["prop_hay"] = (1.2f, 0.7f), ["prop_signpost"] = (0.4f, 0.3f), ["prop_noticeboard"] = (1.6f, 0.5f),
         ["prop_bench"] = (1.4f, 0.4f), ["prop_campfire"] = (1.0f, 0.6f), ["prop_tent"] = (2.4f, 1.2f),
         ["prop_ruin_pillar"] = (1.1f, 0.6f), ["prop_spirit_statue"] = (0.8f, 0.5f), ["prop_blight_crystal"] = (1.2f, 0.7f),
-        ["prop_banner"] = (0.4f, 0.3f), ["prop_stone_wall"] = (3.2f, 0.5f), ["prop_veg_patch"] = (2.8f, 1.4f),
+        ["prop_banner"] = (0.4f, 0.3f), ["prop_stone_wall"] = (3.4f, 0.6f), ["prop_veg_patch"] = (3.6f, 1.8f),
         ["prop_washing_line"] = (3.4f, 0.3f),
     };
 

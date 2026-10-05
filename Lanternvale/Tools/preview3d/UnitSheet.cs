@@ -25,9 +25,10 @@ namespace Lanternvale.Preview
         {
             ("chars", new[] { "char_warrior", "char_hunter", "char_paladin", "char_mage", "char_priest", "char_rogue", "char_warlock", "char_shaman" }),
             ("comps", new[] { "comp_kael", "comp_lys", "comp_seren", "comp_rook", "comp_pip", "comp_torvan", "comp_aldric", "comp_morwen" }),
-            ("npcs", new[] { "npc_elder", "npc_innkeeper", "npc_merchant", "npc_smith", "npc_villager_a", "npc_villager_b", "npc_child", "npc_guard", "npc_trainer", "npc_spirit" }),
+            ("npcs", new[] { "npc_elder", "npc_innkeeper", "npc_merchant", "npc_smith", "npc_villager_a", "npc_villager_b", "npc_child", "npc_guard", "npc_spirit" }),
+            ("trainers", new[] { "npc_trainer", "npc_trainer_warrior", "npc_trainer_hunter", "npc_trainer_mage", "npc_trainer_priest" }),
             ("foes", new[] { "cr_bandit", "cr_bandit_archer", "cr_bandit_hexer", "cr_bandit_chief", "cr_mossling", "cr_mossling_shaman", "cr_hollow_spirit", "cr_hollow_wisp", "cr_hollow_treant" }),
-            ("beasts", new[] { "cr_wolf", "cr_wolf_blighted", "cr_boar", "cr_spider", "cr_hollow_warden", "sheep" }),
+            ("beasts", new[] { "cr_wolf", "cr_wolf_blighted", "cr_wolf_greymane", "cr_boar", "cr_spider", "cr_hollow_warden", "sheep" }),
             ("pets", new[] { "pet_wolf", "pet_boar", "pet_cat", "pet_bear", "pet_owl" }),
             ("demons", new[] { "demon_imp", "demon_voidwalker", "demon_succubus", "demon_infernal", "demon_felhunter" }),
             ("static", new[] { "totem_earth", "totem_fire", "totem_water", "totem_air", "cr_training_dummy" }),

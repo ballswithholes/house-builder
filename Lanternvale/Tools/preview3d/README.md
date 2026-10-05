@@ -56,9 +56,21 @@ Each unit stands beside a 1.75 m slate reference figure on a 1 m checker. Poses 
 `UnitAnimator` at 60 fps (`Scene/UnitPoser.cs` replays UnitView's Animate/ApplyBodyTransform/UpdateLook/
 UpdateGround). The rigidly skinned mesh is skinned on the CPU: each vertex follows bone.localToWorld × bindpose.
 
-Groups are `chars comps npcs foes beasts pets demons static`. `all` writes `<out>_<group>.png`.
+Groups are `chars comps npcs trainers foes beasts pets demons static`. `all` writes `<out>_<group>.png`.
+
+| option | meaning |
+|---|---|
+| `--view sheet` | the 7 columns above (default). |
+| `--view game` | every column at the game camera: idle and walk facing right and left (`SetFacing(±1)`), then wind-up, strike, shoot and cast facing right (`--facing -1`: left). Use it to check faces and weapon holds in the action poses. |
+| `--view spin --pose P` | one pose (`idle walk wind strike shoot cast`) at nine facings relative to the camera, from the game camera's pitch (or `--pitch deg`): in combat a unit faces its target, any way. |
+| `--facing 1\|-1` | the facing of the action columns in `--view game`. |
+| `--pitch deg` | the camera pitch of `--view spin`. |
+| `key#N`, `key@npcId` | a look variation: `npc_child#2`, or `npc_child@child_nell` for the one that NPC id gets in the game (UnitModels.StableVariant). |
 
 Other options are `--tile px`, `--ss N`, `--hour H` and `--speed m/s`.
+
+The animator reads the camera yaw (`UnitAnimInput.ViewYaw`): staff and spear holds lean away from the camera on the
+holding hand's side, so a sheet shows the hold the game shows from the same camera.
 
 ### `props <out.png> [keys|all]`
 
@@ -84,6 +96,10 @@ anchors (magenta) and a 1.75 m person.
 - Terrain, backdrop and sky come from the real classes.
 - Lighting is DayNight.ApplyTo → SceneLighting (the 16 strongest point lights near the focus), with the night grade
   (`_LV_Grade` from DayNight.NightGrade) and amber, wider lamplight at night (DayNight.LampColor / LampRange).
+- Warmth (`_LV_Warmth` from DayNight.Warmth: x = golden-hour saturation lift of sunlit colours, y = lamplit colours
+  leaning to amber, z = a lamp pool greying out the moon fill under it) and the golden-hour haze (fog towards
+  DayNight.GoldenHaze by DayNight.Golden, fog starting nearer), as MapView.ApplyMood sets them.
+- Lit parts swap at night through the props' `SetLit` (lamps, windows, campfires, Old Kusu's paper lanterns).
 - LV_Shade: wrapped sun, hemisphere ambient, point lights, rim, emission, fog.
 - Linear colour space.
 - Dithered `_Fade` and `_Cut0`…`_Cut3` (LV_CutCoverage: LowPoly keeps surfaces behind the cut's centre, the ink hull

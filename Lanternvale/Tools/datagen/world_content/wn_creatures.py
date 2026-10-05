@@ -227,7 +227,7 @@ creature(id="cr_wolf_packmate", name="Greymane's Packmate", description="Answers
          xpMult=0, faction="Wildlife")
 creature(id="cr_greymane", name="Greymane",
          description="The pasture wolves' old alpha, silver-ruffed and huge. The grey has crept into his eyes.",
-         sprite="cr_wolf_blighted", type="Beast", family="Wolf", rank="Elite", levelMin=6, levelMax=6, levelOffset=1,
+         sprite="cr_wolf_greymane", portrait="cr_wolf_blighted", type="Beast", family="Wolf", rank="Elite", levelMin=6, levelMax=6, levelOffset=1,
          healthMult=1.2, damageMult=0.95, attackSpeed=2.0, moveSpeed=11, size=1.5, ai="Melee",
          abilities=[CA("cr_call_the_pack", 10, condition="selfHpBelow:50"), CA("cr_hollow_howl", 6, 50),
                     CA("cr_ravage", 5), CA("cr_bite", 3, 50)],

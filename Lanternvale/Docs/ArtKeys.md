@@ -124,12 +124,16 @@ e.g. `portrait_warrior`, `portrait_kael`, `portrait_elder`.
 NPCs: `npc_elder`, `npc_innkeeper`, `npc_merchant`, `npc_smith`, `npc_villager_a`, `npc_villager_b`,
 `npc_child`, `npc_guard`, `npc_trainer` (generic robed trainer), `npc_spirit` (friendly forest spirit, kodama-like).
 
+The four class trainers have their own 3D models (see "3D-only model keys" at the end); their 2D portrait stays
+`portrait_trainer`.
+
 ## Creatures (category Creature)
 
 The heights below are the `size` values (whole-image height in metres; see `height` above) of the
 creature entries with the same id in `creatures.json`. They, not the manifest `height`, set how tall these
-sprites are drawn as units. Entries that share a sprite can differ (`cr_greymane` draws `cr_wolf_blighted`
-at 1.5 m, `cr_wolf_packmate` draws `cr_wolf` at 1.0 m).
+sprites are drawn as units. Entries that share a sprite can differ (the creature *cr_wolf_packmate* draws
+`cr_wolf` at 1.0 m). The creature *cr_greymane* has its own 3D model (see "3D-only model keys" at the end), drawn at
+1.5 m; its portrait key is `cr_wolf_blighted`, the 2D art the UI shows for it.
 
 | key | description | height |
 |---|---|---|
@@ -168,3 +172,23 @@ school-coloured frame. Class crests: `crest_<class>` (warrior, hunter, …).
 ## UI (category UI)
 
 `ui_parchment` (tileable warm paper texture 512×512), `ui_vignette`, `logo_lanternvale` (title logo).
+
+## 3D-only model keys (no 2D art)
+
+Sprite keys in the data that only name a 3D model (`UnitRecipes`, see `Docs/ThreeD.md` §5): they have no entry in
+the manifest and no painter, so the UI shows the portrait key instead. `Tools/artgen` stops reading this file at this
+heading; the content checks (`Tools/datagen/world_content/wn_check.py`) accept them as sprite keys.
+
+| key | model | used by |
+|---|---|---|
+| `npc_trainer_warrior` | Sir Odo: an old knight in plate and a crimson tabard, a grand handlebar moustache, sword in hand, kite shield on his back (also `npc_trainer_paladin`) | trainer_odo |
+| `npc_trainer_hunter` | Fennel: a green-clad ranger with a feathered cap, a braided beard, a fur collar, bow and quiver (also `npc_trainer_shaman`) | trainer_fennel |
+| `npc_trainer_mage` | Magister Quillon: a tall scholar in starry indigo with a tall bent hat, spectacles, a long white beard and an orb staff (also `npc_trainer_warlock`) | trainer_quillon |
+| `npc_trainer_priest` | Brother Wick: a round, tonsured friar in undyed wool with a gold stole, a rosary and a lit lantern (also `npc_trainer_rogue`) | trainer_wick |
+| `cr_hollow_keeper` | Keeper Ishiro, hollowed: the Old Shrine's last keeper (portrait key `cr_hollow_spirit`) | cr_hollow_keeper, keeper_ishiro |
+| `cr_wolf_greymane` | Greymane, the elite alpha: bigger and heavier, charcoal coat, shaggy silver mane, glowing violet eyes, scars, torn ear, big glowing spine crystals (also the creature id `cr_greymane`) | cr_greymane |
+
+All four trainers share the trainers' gold sash with a lantern medallion.
+
+3D-only props (`PropModels`, `World/Props/PropGarden.cs`; the village garden by the cottages): `prop_stone_wall`
+(dry-stone wall), `prop_veg_patch` (vegetable bed with a watering can), `prop_washing_line` (laundry on a line, sways).
