@@ -43,6 +43,8 @@ namespace Lanternvale.Game
             public float Range = 5f;
             public bool Enabled = true;
             internal bool registered;
+            /// <summary>False once removed (Remove, or ResetAll at a map change): add a new light instead of reusing it.</summary>
+            public bool IsRegistered => registered;
         }
 
         static readonly List<PointLight> lights = new List<PointLight>();

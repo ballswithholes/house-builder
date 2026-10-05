@@ -1408,7 +1408,7 @@ namespace Lanternvale.Game
             var rig = CameraRig.Instance;
             if (rig == null || rig.Cam == null) return;
             var vp = rig.Cam.WorldToViewportPoint(new Vector3(p.x, p.y, 0f));
-            if (vp.x > 0.16f && vp.x < 0.84f && vp.y > 0.14f && vp.y < 0.86f) return;
+            if (vp.z > 0f && vp.x > 0.16f && vp.x < 0.84f && vp.y > 0.14f && vp.y < 0.86f) return;
             rig.Focus(p);
         }
 

@@ -148,6 +148,9 @@ namespace Lanternvale.Game.Panels
                 "Right click|stop, cancel an opener",
                 "Tab / Shift+Tab|next / previous party member",
                 "Mouse wheel|zoom",
+                "Q / E or middle drag|rotate the camera",
+                "WASD / arrows|pan (Shift+middle drag too)",
+                "Middle click|recentre the camera",
                 "F5 / F9|quick save / quick load",
             },
             new[]

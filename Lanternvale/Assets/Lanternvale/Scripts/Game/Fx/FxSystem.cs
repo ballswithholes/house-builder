@@ -321,7 +321,7 @@ namespace Lanternvale.Game
                 lights.Add(l);
             }
             // (re)register: a map change resets SceneLighting and drops every handle
-            if (l.h == null || !l.h.registered) l.h = SceneLighting.Add(pos, color, 0f, range);
+            if (l.h == null || !l.h.IsRegistered) l.h = SceneLighting.Add(pos, color, 0f, range);
             l.inUse = true;
             l.age = 0f;
             l.life = life;
@@ -348,7 +348,7 @@ namespace Lanternvale.Game
                 var l = lights[i];
                 if (!l.inUse || l.life <= 0f) continue;
                 l.age += dt;
-                if (l.age >= l.life || l.h == null || !l.h.registered) { FreeLight(l); continue; }
+                if (l.age >= l.life || l.h == null || !l.h.IsRegistered) { FreeLight(l); continue; }
                 float k = l.age < 0.05f ? l.age / 0.05f : 1f - (l.age - 0.05f) / Mathf.Max(0.01f, l.life - 0.05f);
                 l.h.Intensity = l.peak * k * k;
             }
