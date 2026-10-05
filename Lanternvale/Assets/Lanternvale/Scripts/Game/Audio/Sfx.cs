@@ -226,13 +226,17 @@ namespace Lanternvale.Game
                 var cam = PresentationHost.Cam;
                 if (cam != null)
                 {
-                    float halfH = cam.orthographicSize, halfW = halfH * cam.aspect;
-                    var cp = cam.transform.position;
-                    float dx = worldPos.Value.x - cp.x, dy = worldPos.Value.y - cp.y;
-                    pan = Mathf.Clamp(dx / Mathf.Max(1f, halfW), -1f, 1f) * 0.55f;
-                    float outX = Mathf.Max(0f, Mathf.Abs(dx) - halfW), outY = Mathf.Max(0f, Mathf.Abs(dy) - halfH);
-                    att = Mathf.Clamp01(1f - Mathf.Sqrt(outX * outX + outY * outY) / 14f) * 0.75f + 0.25f;
-                    if (outX <= 0f && outY <= 0f) att = 1f;
+                    // pan from where the sound sits on screen; softer the further it is outside the view (works for any
+                    // camera: the ground point is projected, so perspective and yaw are accounted for)
+                    var vp = cam.WorldToViewportPoint(new Vector3(worldPos.Value.x, worldPos.Value.y, 0f));
+                    if (vp.z <= 0f) { pan = 0f; att = 0.25f; }
+                    else
+                    {
+                        float vx = vp.x * 2f - 1f, vy = vp.y * 2f - 1f;
+                        pan = Mathf.Clamp(vx, -1f, 1f) * 0.55f;
+                        float outX = Mathf.Max(0f, Mathf.Abs(vx) - 1f), outY = Mathf.Max(0f, Mathf.Abs(vy) - 1f);
+                        att = (outX <= 0f && outY <= 0f) ? 1f : Mathf.Clamp01(1f - Mathf.Sqrt(outX * outX + outY * outY) * 0.9f) * 0.75f + 0.25f;
+                    }
                 }
             }
 

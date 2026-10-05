@@ -57,7 +57,7 @@ Shader "Lanternvale/Outline"
                 o.worldPos = wp;
                 float4 pos = UnityWorldToClipPos(wp);
                 float3 nw = normalize(mul((float3x3)unity_ObjectToWorld, n));
-                float2 nc = mul((float2x3)UNITY_MATRIX_VP, nw);
+                float2 nc = mul((float3x3)UNITY_MATRIX_VP, nw).xy;
                 float len = length(nc);
                 if (len > 0.00001)
                 {

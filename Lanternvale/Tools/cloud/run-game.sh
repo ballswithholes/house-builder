@@ -18,9 +18,8 @@
 #   * A Unity license, provided through the environment (never committed):
 #       UNITY_LICENSE   contents of Unity_lic.ulf (Personal/Plus/Pro), or
 #       UNITY_SERIAL + UNITY_EMAIL + UNITY_PASSWORD   (Plus/Pro serial activation)
-#   * Network access to Docker Hub and Unity's servers (license/activation and the package registry):
-#       license.unity3d.com, activation.unity3d.com, core.cloud.unity3d.com, api.unity.com,
-#       login.unity.com, packages.unity.com, download.packages.unity.com
+#   * Network access to Docker Hub and Unity's license servers:
+#       license.unity3d.com, activation.unity3d.com, core.cloud.unity3d.com, api.unity.com, login.unity.com
 #
 # Environment overrides: UNITY_IMAGE, LV_WORK (work dir), LV_SHOTS (screenshot dir), LV_CLASS, LV_LEVEL.
 set -euo pipefail
@@ -72,31 +71,15 @@ prepare_project() {
   rm -rf "$PROJECT/Assets/Lanternvale"
   cp -a "$ROOT/Assets/Lanternvale" "$PROJECT/Assets/Lanternvale"
   printf 'm_EditorVersion: %s\n' "$(editor_version)" > "$PROJECT/ProjectSettings/ProjectVersion.txt"
-  # URP ships inside the editor, but its dependencies (burst, mathematics, collections, searcher) come from
-  # Unity's package registry. With the registry reachable the project uses URP + the 2D renderer (real 2D
-  # lights); without it, it builds on the built-in pipeline and the game uses its fallback lighting.
-  local want_urp="${LV_URP:-auto}"
-  if [ "$want_urp" = "auto" ]; then
-    if curl -s -o /dev/null -m 10 https://packages.unity.com/com.unity.burst; then want_urp=1; else want_urp=0; fi
-  fi
-  local urp_line=""
-  if [ "$want_urp" = "1" ]; then
-    local urp
-    urp="$(docker run --rm --entrypoint bash "$IMAGE" -c \
-      'f=/opt/unity/Editor/Data/Resources/PackageManager/BuiltInPackages/com.unity.render-pipelines.universal/package.json; [ -f "$f" ] && grep -m1 "\"version\"" "$f" | sed -E "s/.*\"([0-9][^\"]*)\".*/\1/"' || true)"
-    [ -n "$urp" ] || urp="17.0.4"
-    urp_line="\"com.unity.render-pipelines.universal\": \"$urp\","
-    log "Render pipeline: URP $urp with the 2D renderer"
-  else
-    log "Render pipeline: built-in (Unity's package registry is unreachable, so URP's dependencies cannot be fetched; the game uses its fallback lighting)"
-  fi
-  if [ ! -f "$PROJECT/Packages/manifest.json" ] || [ "$(cat "$WORK/.pipeline" 2>/dev/null)" != "$want_urp" ]; then
-    echo "$want_urp" > "$WORK/.pipeline"
+  # The 3D presentation renders with its own shaders on the built-in pipeline: only built-in modules are needed,
+  # so the project builds without Unity's package registry.
+  log "Render pipeline: built-in (Lanternvale's own stylized shaders)"
+  if [ ! -f "$PROJECT/Packages/manifest.json" ] || [ "$(cat "$WORK/.pipeline" 2>/dev/null)" != "builtin3d" ]; then
+    echo "builtin3d" > "$WORK/.pipeline"
     rm -rf "$PROJECT/Library/PackageCache" "$PROJECT/Packages/packages-lock.json"
     cat > "$PROJECT/Packages/manifest.json" <<JSON
 {
   "dependencies": {
-    $urp_line
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",

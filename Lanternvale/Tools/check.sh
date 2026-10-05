@@ -4,6 +4,8 @@
 #   Tools/check.sh data  [args]   validate JSON data only (compiles Core/Json+Data+Util; robust while Rules is being edited)
 #   Tools/check.sh core  [args]   compile the whole pure-C# core, validate data, run [Test]s (add --sim for [Sim]s)
 #   Tools/check.sh unity          compile-check every Unity script against Unity reference assemblies (editor + player)
+#                                 and every shader pass (HLSL via glslangValidator, see Tools/shadercheck)
+#   Tools/check.sh shaders        shaders only
 #   Tools/check.sh all   [args]   core + unity
 #
 # Harness args: --grep <text> (only print data problems containing text), --filter <test name>, --sim,
@@ -100,7 +102,9 @@ run_unity() {
 case "$MODE" in
   data)  echo "== Data validation"; run_core DataCheck false ${1+"$@"} ;;
   core)  echo "== Core (rules engine, data validation, tests)"; run_core CoreTests true ${1+"$@"} ;;
-  unity) run_unity ;;
-  all)   status=0; echo "== Core"; run_core CoreTests true ${1+"$@"} || status=1; run_unity || status=1; exit $status ;;
-  *)     echo "usage: $0 data|core|unity|all [args]"; exit 2 ;;
+  unity) status=0; run_unity || status=1; echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" || status=1; exit $status ;;
+  shaders) echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" ;;
+  all)   status=0; echo "== Core"; run_core CoreTests true ${1+"$@"} || status=1; run_unity || status=1
+         echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" || status=1; exit $status ;;
+  *)     echo "usage: $0 data|core|unity|shaders|all [args]"; exit 2 ;;
 esac

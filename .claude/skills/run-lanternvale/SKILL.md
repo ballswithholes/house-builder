@@ -16,11 +16,10 @@ assets, builds a Linux player and runs it on a virtual display.
      Windows `C:\ProgramData\Unity\Unity_lic.ulf`, macOS `/Library/Application Support/Unity/Unity_lic.ulf`,
      Linux `~/.local/share/unity3d/Unity/Unity_lic.ulf`), or
    * `UNITY_SERIAL` + `UNITY_EMAIL` + `UNITY_PASSWORD` (Plus/Pro).
-2. **Network access** (Custom network policy, keep the default package managers) to Docker Hub and:
-   `license.unity3d.com`, `activation.unity3d.com`, `core.cloud.unity3d.com`, `api.unity.com`,
-   `login.unity.com`, `packages.unity.com`, `download.packages.unity.com`.
-   Without the two `packages` hosts the build still works on the built-in render pipeline (fallback
-   lighting instead of URP 2D lights).
+2. **Network access** (Custom network policy, keep the default package managers) to Docker Hub and Unity's license
+   servers: `license.unity3d.com`, `activation.unity3d.com`, `core.cloud.unity3d.com`, `api.unity.com`,
+   `login.unity.com`. (The game renders with its own shaders on the built-in pipeline, so Unity's package registry is
+   not needed.)
 
 Check quickly: `curl -s -o /dev/null -w '%{http_code}\n' https://license.unity3d.com/` (000 = blocked) and
 `[ -n "$UNITY_LICENSE$UNITY_SERIAL" ] && echo license set`.
@@ -38,7 +37,7 @@ check `Tools/.cache/cloud/player.log`. Build problems: `Tools/.cache/cloud/proje
 Options: `LV_CLASS=Mage LV_LEVEL=30 Tools/cloud/run-game.sh play` (re-uses the build).
 
 The tour is the in-game autopilot (`Scripts/Game/Debug/Autopilot.cs`, enabled by `-lv-autopilot`): main menu →
-new game → opening dialogue → village by day → Character/Bags/Spellbook/Talents/Journal → training-dummy fight
+new game → opening dialogue → the 3D village by day → Character/Bags/Spellbook/Talents/Journal → training-dummy fight
 using real abilities → village at night → Whisperwood → Old Shrine.
 
 ## Drive it interactively
