@@ -52,45 +52,164 @@ namespace Lanternvale.Game
             Bind[f] = new Vector3(x, PawY, z);
         }
 
-        // the body's three ellipsoids (rear, waist bridge, front) — TopY reads the back line from them
-        readonly Vector3[] bodyC = new Vector3[3], bodyR3 = new Vector3[3];
+        // the torso's shape (set by Body): rump end and chest front (body depth z), the build factors
+        float tz0, tz1, tRearK = 0.95f, tFrontK = 1.05f, tHump, tWaist = 1f;
+        bool torsoSet;
 
-        /// <summary>
-        /// Barrel body: a rear ellipsoid (Hips), a front one (Chest, raised by `hump` at the shoulders) and a bridge
-        /// through the waist (Hips) so the two halves read as one body, not two balls; `waist` &lt; 1 keeps a lean tuck
-        /// (wolves, cats), ≈ 1 a solid barrel (boars, bears).
-        /// </summary>
-        public void Body(Color back, Color belly, float rearK = 0.95f, float frontK = 1.05f, float hump = 0f, float waist = 0.97f)
+        static float Smooth(float a, float b, float x)
         {
-            M.Bone = QB.Hips; M.Color = back;
-            var rear = Bind[QB.Hips] + new Vector3(0f, 0f, BodyLen * 0.08f);
-            var rearR = new Vector3(BodyR * rearK, BodyR * rearK * 0.95f, BodyLen * 0.48f);
-            M.Sphere(rear, rearR, 10, 7, false);
-            var front = Bind[QB.Chest] + new Vector3(0f, hump * BodyR * 0.3f, -BodyLen * 0.12f);
-            var frontR = new Vector3(BodyR * frontK, BodyR * frontK * (1f + hump * 0.25f), BodyLen * 0.52f);
-            // waist bridge between the two, on the hips (the chest turns about its own centre, so the seam stays filled)
-            var mid = Vector3.Lerp(rear, front, 0.5f) + new Vector3(0f, -BodyR * 0.02f, 0f);
-            var midR = new Vector3(BodyR * (rearK + frontK) * 0.5f * waist, (rearR.y + frontR.y) * 0.5f * waist * 0.98f, BodyLen * 0.38f);
-            M.Sphere(mid, midR, 10, 6, false);
-            M.Bone = QB.Chest;
-            M.Sphere(front, frontR, 10, 7, false);
-            M.Color = belly;
-            M.Sphere(front + new Vector3(0f, -BodyR * 0.35f, BodyLen * 0.12f), new Vector3(BodyR * frontK * 0.82f, BodyR * 0.7f, BodyLen * 0.38f), 8, 5, false);
-            bodyC[0] = rear; bodyR3[0] = rearR; bodyC[1] = mid; bodyR3[1] = midR; bodyC[2] = front; bodyR3[2] = frontR;
+            float t = Mathf.Clamp01((x - a) / (b - a));
+            return t * t * (3f - 2f * t);
         }
 
-        /// <summary>Height of the back line (top of the body ellipsoids) at body depth z (after Body()).</summary>
+        /// <summary>The torso's section at body depth z: centre height, half width, height above and depth below the centre.</summary>
+        void Section(float z, out float cy, out float w, out float top, out float bottom)
+        {
+            float s = Mathf.Clamp01((z - tz0) / (tz1 - tz0));
+            float u = s * 2f - 1f;
+            // rounded rump and chest: a superellipse along the spine (flatter sides than an ellipse, a bean not a ball)
+            float e = Mathf.Pow(Mathf.Max(0f, 1f - Mathf.Pow(Mathf.Abs(u), 2.6f)), 1f / 2.6f);
+            float front = Smooth(0.42f, 0.78f, s) * (1f - Smooth(0.9f, 1f, s) * 0.4f);
+            float tuck = (1f - tWaist) * Mathf.Exp(-((s - 0.48f) / 0.2f) * ((s - 0.48f) / 0.2f));
+            float wb = BodyR * Mathf.Lerp(tRearK, tFrontK, Smooth(0.3f, 0.7f, s));
+            cy = Mathf.Lerp(HipY, ChestY, Smooth(0.2f, 0.8f, s)) + tHump * BodyR * 0.3f * front;
+            w = wb * 1.05f * (1f - tuck * 0.5f) * e;
+            top = wb * (1f + tHump * 0.25f * front) * (1f - tuck * 0.3f) * e;
+            // lean builds (a waist tuck) get a deep chest over the tucked belly: the canine/feline line
+            bottom = wb * 0.98f * (1f - tuck * 1.1f) * (1f + (1f - tWaist) * 1.5f * front) * e;
+        }
+
+        /// <summary>
+        /// The torso as ONE continuous faceted bean from the rump to the chest, tucked at the waist (`waist` &lt; 1: wolves,
+        /// cats; ≈ 1: a solid barrel for boars and bears) and raised at the shoulders by `hump`. Rigidly skinned, it is two
+        /// pieces sharing the middle ring: the rear half on the Hips, the front half on the Chest, each running on past
+        /// the middle while shrinking inside the other half, so the chest can turn without opening a gap — and at rest
+        /// the outline is one smooth body (overlapping ellipsoids read as beads with creases between them). Belly faces
+        /// under the chest take `belly`, an optional darker `saddle` runs along the top.
+        /// </summary>
+        public void Body(Color back, Color belly, float rearK = 0.95f, float frontK = 1.05f, float hump = 0f, float waist = 0.97f, Color? saddle = null)
+        {
+            tz0 = Bind[QB.Hips].z - BodyLen * 0.4f;
+            tz1 = Bind[QB.Chest].z + BodyLen * 0.4f;
+            tRearK = rearK; tFrontK = frontK; tHump = hump; tWaist = waist;
+            torsoSet = true;
+            const int n = 14, over = 2;
+            var zs = new float[n + 1];
+            for (int i = 0; i <= n; i++) zs[i] = Mathf.Lerp(tz0, tz1, 0.5f - 0.5f * Mathf.Cos(Mathf.PI * i / n));   // denser at the ends
+            int mid = n / 2;
+            TorsoPiece(QB.Hips, zs, 0, mid + over, mid, back, belly, saddle);
+            TorsoPiece(QB.Chest, zs, mid - over, n, mid, back, belly, saddle);
+        }
+
+        void TorsoPiece(int bone, float[] zs, int from, int to, int mid, Color back, Color belly, Color? saddle)
+        {
+            const int sides = 10, over = 2;
+            int rings = to - from + 1;
+            var pts = new Vector3[rings, sides];
+            var centre = new Vector3[rings];
+            for (int r = 0; r < rings; r++)
+            {
+                int i = from + r;
+                Section(zs[i], out float cy, out float w, out float top, out float bottom);
+                // past the shared middle ring this piece shrinks inside the other one (same slope at the middle: no kink)
+                float k = 1f;
+                if (bone == QB.Hips && i > mid) k = 1f - 0.3f * Smooth(0f, 1f, (i - mid) / (float)over);
+                if (bone == QB.Chest && i < mid) k = 1f - 0.3f * Smooth(0f, 1f, (mid - i) / (float)over);
+                centre[r] = new Vector3(0f, cy, zs[i]);
+                for (int j = 0; j < sides; j++)
+                {
+                    float a = j * Mathf.PI * 2f / sides;
+                    float c = Mathf.Cos(a);
+                    pts[r, j] = new Vector3(Mathf.Sin(a) * w * k, cy + c * (c >= 0f ? top : bottom) * k, zs[i]);
+                }
+            }
+            M.Bone = bone;
+            // big regular facets: a softer per-face jitter than the small parts, or the pelt reads as a checkerboard
+            float keepJ = M.Jitter;
+            M.Jitter = keepJ * 0.5f;
+            float zMid = zs[mid], len = tz1 - tz0;
+            for (int r = 0; r + 1 < rings; r++)
+            {
+                float zc = (zs[from + r] + zs[from + r + 1]) * 0.5f;
+                for (int j = 0; j < sides; j++)
+                {
+                    int j1 = (j + 1) % sides;
+                    float am = (j + 0.5f) * Mathf.PI * 2f / sides, ca = Mathf.Cos(am);
+                    bool underChest = ca < -0.45f && zc > zMid - 0.12f * len;
+                    bool onTop = ca > 0.55f && zc > tz0 + 0.18f * len && zc < tz1 - 0.12f * len;
+                    M.Color = underChest ? belly : onTop && saddle.HasValue ? saddle.Value : back;
+                    var a0 = pts[r, j]; var a1 = pts[r, j1]; var b0 = pts[r + 1, j]; var b1 = pts[r + 1, j1];
+                    var outward = (a0 + a1 + b0 + b1) * 0.25f - Vector3.Lerp(centre[r], centre[r + 1], 0.5f);
+                    if ((a0 - a1).sqrMagnitude < 1e-10f) M.TriangleFacing(a0, b0, b1, outward);
+                    else if ((b0 - b1).sqrMagnitude < 1e-10f) M.TriangleFacing(a0, b0, a1, outward);
+                    else M.Quad(a0, a1, b1, b0, outward);
+                }
+            }
+            // close the end that runs on inside the other half (it shows only while the chest turns)
+            int capR = bone == QB.Hips ? rings - 1 : 0;
+            M.Color = back;
+            var dir = new Vector3(0f, 0f, bone == QB.Hips ? 1f : -1f);
+            for (int j = 0; j < sides; j++)
+                M.TriangleFacing(centre[capR], pts[capR, j], pts[capR, (j + 1) % sides], dir);
+            M.Jitter = keepJ;
+        }
+
+        /// <summary>A point on the torso (after Body) at body depth z and angle aDeg round it (0 = the top, 90 = the +x side), `lift` metres out.</summary>
+        public Vector3 TorsoPoint(float z, float aDeg, float lift = 0f)
+        {
+            Section(Mathf.Clamp(z, tz0, tz1), out float cy, out float w, out float top, out float bottom);
+            float a = aDeg * Mathf.Deg2Rad, c = Mathf.Cos(a);
+            return new Vector3(Mathf.Sin(a) * (w + lift), cy + c * ((c >= 0f ? top : bottom) + lift), z);
+        }
+
+        /// <summary>
+        /// A cloth (saddle blanket) draped over the torso from depth z0 to z1, halfAngle degrees down each flank,
+        /// following the body (a cylinder section around it sank into the hump), with a lining underneath and an
+        /// optional hem band along its lower edges. Bound to the current M.Bone.
+        /// </summary>
+        public void Drape(Color c, Color lining, float z0, float z1, float halfAngle, float lift, Color? hem = null)
+        {
+            const int nz = 6, na = 8;
+            float keepJ = M.Jitter;
+            M.Jitter = keepJ * 0.5f;
+            for (int layer = 0; layer < 2; layer++)
+            {
+                float l = layer == 0 ? lift : lift * 0.5f;
+                for (int i = 0; i < nz; i++)
+                    for (int j = 0; j < na; j++)
+                    {
+                        float za = Mathf.Lerp(z0, z1, (float)i / nz), zb = Mathf.Lerp(z0, z1, (float)(i + 1) / nz);
+                        float aa = Mathf.Lerp(-halfAngle, halfAngle, (float)j / na), ab = Mathf.Lerp(-halfAngle, halfAngle, (float)(j + 1) / na);
+                        var p00 = TorsoPoint(za, aa, l); var p01 = TorsoPoint(za, ab, l);
+                        var p11 = TorsoPoint(zb, ab, l); var p10 = TorsoPoint(zb, aa, l);
+                        Section((za + zb) * 0.5f, out float cy, out _, out _, out _);
+                        var outward = (p00 + p01 + p11 + p10) * 0.25f - new Vector3(0f, cy, (za + zb) * 0.5f);
+                        M.Color = layer == 0 ? c : lining;
+                        M.Quad(p00, p01, p11, p10, layer == 0 ? outward : -outward);
+                    }
+            }
+            if (hem.HasValue)
+            {
+                M.Color = hem.Value;
+                for (int s = -1; s <= 1; s += 2)
+                    for (int i = 0; i < nz; i++)
+                    {
+                        float za = Mathf.Lerp(z0, z1, (float)i / nz), zb = Mathf.Lerp(z0, z1, (float)(i + 1) / nz);
+                        var a = TorsoPoint(za, s * halfAngle, lift * 1.4f); var b = TorsoPoint(zb, s * halfAngle, lift * 1.4f);
+                        var a2 = TorsoPoint(za, s * (halfAngle - 9f), lift * 1.4f); var b2 = TorsoPoint(zb, s * (halfAngle - 9f), lift * 1.4f);
+                        Section((za + zb) * 0.5f, out float cy, out _, out _, out _);
+                        M.Quad(a, b, b2, a2, (a + b + a2 + b2) * 0.25f - new Vector3(0f, cy, (za + zb) * 0.5f));
+                    }
+            }
+            M.Jitter = keepJ;
+        }
+
+        /// <summary>Height of the back line (the top of the torso) at body depth z (after Body()).</summary>
         public float TopY(float z)
         {
-            float best = HipY;
-            for (int i = 0; i < 3; i++)
-            {
-                if (bodyR3[i].z <= 0f) continue;
-                float t = (z - bodyC[i].z) / bodyR3[i].z;
-                if (t * t >= 1f) continue;
-                best = Mathf.Max(best, bodyC[i].y + bodyR3[i].y * Mathf.Sqrt(1f - t * t));
-            }
-            return best;
+            if (!torsoSet) return HipY + BodyR;
+            Section(Mathf.Clamp(z, tz0, tz1), out float cy, out _, out float top, out _);
+            return cy + top;
         }
 
         public void Neck(Color c, float r0 = 1f, float r1 = 0.8f)
@@ -153,13 +272,16 @@ namespace Lanternvale.Game
             }
         }
 
-        public void Ears(Color c, Color inner, float size = 1f, float spread = 0.55f, float back = 0.1f, bool round = false, bool tufts = false)
+        /// <summary>Ears; leftK &lt; 1 shortens the left one (a torn ear).</summary>
+        public void Ears(Color c, Color inner, float size = 1f, float spread = 0.55f, float back = 0.1f, bool round = false, bool tufts = false, float leftK = 1f)
         {
             M.Bone = QB.Head;
             float r = HeadR;
             var c0 = HeadBase + new Vector3(0f, r * 0.2f, r * 0.35f);
+            float size0 = size;
             for (int s = -1; s <= 1; s += 2)
             {
+                size = s < 0 ? size0 * leftK : size0;
                 var at = c0 + new Vector3(s * r * spread, r * 0.72f, -r * back);
                 M.Color = c;
                 if (round) M.Sphere(at + Vector3.up * r * 0.1f * size, new Vector3(r * 0.28f, r * 0.28f, r * 0.14f) * size, 6, 4);
@@ -201,7 +323,11 @@ namespace Lanternvale.Game
             Leg(QB.BRU, QB.BRL, QB.BRF, upper, lower, paw, rk * backK, hoof);
         }
 
-        /// <summary>Tail in two segments (bushy = blob tuft at the end).</summary>
+        /// <summary>
+        /// Tail rooted in the rump: a root on Tail1 starting inside the body, then the tail on Tail2. Bushy: the root
+        /// thickens straight into one tapered brush curving down (a thin stub with a separate lozenge on it read as a
+        /// detached piece on a stick), the last part in `tip`.
+        /// </summary>
         public void Tail(Color c, float len, float r, Color? tip = null, bool bushy = false, float droop = 0.4f)
         {
             // the root segment is never longer than the tail itself (a bear's stub must not become a stick)
@@ -209,17 +335,27 @@ namespace Lanternvale.Game
             var dir2 = (Bind[QB.Tail2] - a).normalized;
             Bind[QB.Tail2] = a + dir2 * Mathf.Min(0.9f * BodyR, len);
             var b = Bind[QB.Tail2];
-            M.Bone = QB.Tail1; M.Color = c;
-            M.Segment(a, b, r, r * 0.9f, 6);
-            M.Bone = QB.Tail2;
             var end = b + (dir2 + Vector3.down * droop).normalized * len;
+            M.Bone = QB.Tail1; M.Color = c;
             if (bushy)
             {
-                M.Blob((b + end) * 0.5f, new Vector3(r * 1.5f, r * 1.5f, len * 0.6f), 1, 0.18f, 7);
-                if (tip.HasValue) { M.Color = tip.Value; M.Blob(end, new Vector3(r * 0.9f, r * 0.9f, r * 1.3f), 0, 0.2f, 9); }
+                M.Segment(a - dir2 * r * 1.3f, b, r * 0.95f, r * 1.4f, 7);
+                M.Bone = QB.Tail2;
+                // the brush along a gentle curve: thickest a third of the way, tapering to the tip
+                var ctrl = b + dir2 * len * 0.45f;
+                Vector3 P(float t) => (1f - t) * (1f - t) * b + 2f * (1f - t) * t * ctrl + t * t * end;
+                float[] ts = { 0f, 0.35f, 0.72f, 1f };
+                float[] rs = { 1.4f, 1.65f, 1.3f, 0.3f };
+                for (int i = 0; i + 1 < ts.Length; i++)
+                {
+                    if (i == ts.Length - 2 && tip.HasValue) M.Color = tip.Value;
+                    M.Segment(P(ts[i]), P(ts[i + 1]), r * rs[i], r * rs[i + 1], 7);
+                }
             }
             else
             {
+                M.Segment(a - dir2 * r * 0.8f, b, r, r * 0.9f, 6);
+                M.Bone = QB.Tail2;
                 M.Segment(b, end, r * 0.9f, r * 0.3f, 6);
                 if (tip.HasValue) { M.Color = tip.Value; M.Sphere(end, r * 0.55f, 5, 4); }
             }

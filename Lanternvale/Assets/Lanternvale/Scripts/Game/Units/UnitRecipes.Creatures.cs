@@ -25,10 +25,8 @@ namespace Lanternvale.Game
                 case WolfKind.Felhunter: back = C("#3e2c4e"); belly = C("#5a4470"); legs = C("#2a1e36"); eyes = C("#7cf06a"); break;
                 default: back = C("#8a8a90"); belly = C("#e8e0d0"); legs = C("#6a6a72"); eyes = C("#e8a030"); break;
             }
-            k.Body(back, belly, 0.95f, 1.05f, 0f, 0.86f);
-            // darker saddle
-            k.M.Bone = QB.Chest; k.M.Color = Paint.Shade(back, 0.7f);
-            k.M.Sphere(k.Bind[QB.Chest] + new Vector3(0f, k.BodyR * 0.45f, -k.BodyLen * 0.25f), new Vector3(k.BodyR * 0.75f, k.BodyR * 0.45f, k.BodyLen * 0.45f), 8, 4, false);
+            // a darker saddle along the back
+            k.Body(back, belly, 0.95f, 1.05f, 0f, 0.86f, Paint.Shade(back, 0.7f));
             k.Neck(back);
             // chest ruff
             k.M.Bone = QB.Neck; k.M.Color = belly;
@@ -108,6 +106,97 @@ namespace Lanternvale.Game
             return Bake(k);
         }
 
+        /// <summary>
+        /// Greymane, the blighted pack leader (elite): bigger and heavier than his grey packmates, a charcoal pelt under a
+        /// shaggy silver-white mane ruff (his name, readable from the high camera), glowing violet eyes, a scarred brow
+        /// and flank, a torn ear and a row of big blight crystals along the spine.
+        /// </summary>
+        static UnitModel Greymane(string key)
+        {
+            var k = new QuadKit(69, 0.6f, 0.66f, 0.6f, 0.215f, 0.11f, 0.05f, 0.56f, 0.58f, 0.15f, 0.24f, 0.13f);
+            Color back = C("#544e60"), belly = C("#7e7a8c"), legs = C("#2e2a36"), eyes = C("#e0c0ff"), nose = C("#1e1c22"),
+                  mane = C("#dedbe6"), maneD = C("#aaa4b8"), scar = C("#d8b4bc"), blight = C("#b98aff");
+            k.Body(back, belly, 1.0f, 1.12f, 0.35f, 0.88f, Paint.Shade(back, 0.72f));
+            k.Neck(back, 1.15f, 1.05f);
+            var tip = k.Head(back, Paint.Shade(belly, 1.1f), nose, eyes, 0.17f, 0.5f, true, 1.35f);
+            k.Jaw(Paint.Shade(belly, 0.95f), 0.21f, C("#f4f0e0"), 0.36f);
+            k.Ears(back, Paint.Shade(back, 0.6f), 1.05f, 0.55f, 0.12f, false, false, 0.55f);
+            k.Legs(back, legs, Paint.Shade(legs, 0.8f), 1.05f);
+            k.Tail(back, 0.36f, 0.065f, maneD, true, 0.5f);
+            // the silver mane: a shaggy ruff round the neck and over the shoulders, longest at the nape
+            k.M.Jitter = 0.08f;
+            k.M.Bone = QB.Chest;
+            var nb = k.NeckBase;
+            float[,] ruff =
+            {
+                { 0f, 0.07f, -0.06f, 0.15f }, { 0.12f, 0.02f, -0.03f, 0.13f }, { -0.12f, 0.02f, -0.03f, 0.13f },
+                { 0f, -0.08f, 0.07f, 0.13f }, { 0.1f, -0.06f, 0.04f, 0.11f }, { -0.1f, -0.06f, 0.04f, 0.11f },
+                { 0f, 0.06f, -0.17f, 0.12f },
+            };
+            for (int i = 0; i < ruff.GetLength(0); i++)
+            {
+                k.M.Color = i % 3 == 2 ? maneD : mane;
+                float rr = ruff[i, 3];
+                k.M.Blob(nb + new Vector3(ruff[i, 0], ruff[i, 1], ruff[i, 2]), new Vector3(rr, rr * 0.9f, rr), 1, 0.22f, 20 + i);
+            }
+            k.M.Bone = QB.Neck;
+            for (int i = 0; i < 3; i++)
+            {
+                k.M.Color = i == 1 ? maneD : mane;
+                var p = Vector3.Lerp(nb, k.HeadBase, 0.3f + i * 0.2f) + new Vector3(0f, 0.06f - i * 0.01f, -0.03f);
+                k.M.Blob(p, new Vector3(0.1f, 0.08f, 0.09f) * (1f - i * 0.12f), 1, 0.22f, 30 + i);
+            }
+            // shaggy locks standing out of the ruff
+            k.M.Bone = QB.Chest;
+            for (int i = 0; i < 9; i++)
+            {
+                float a = (i / 8f - 0.5f) * 2.6f;
+                var dir = new Vector3(Mathf.Sin(a), 0.55f + 0.3f * Mathf.Cos(a), -0.75f);
+                k.M.Color = (i & 1) == 0 ? mane : maneD;
+                k.M.Spike(nb + new Vector3(Mathf.Sin(a) * 0.12f, 0.03f, -0.05f), dir, 0.04f, 0.15f, 4);
+            }
+            k.M.Jitter = 0.055f;
+            // scars: one over the left eye, three claw marks on the right flank
+            k.M.Bone = QB.Head; k.M.Color = scar;
+            var hc = k.HeadBase + new Vector3(0f, k.HeadR * 0.2f, k.HeadR * 0.35f);
+            k.M.Push().Translate(hc + new Vector3(-k.HeadR * 0.6f, k.HeadR * 0.12f, k.HeadR * 0.72f)).Rotate(0f, -35f, 25f);
+            k.M.Box(Vector3.zero, new Vector3(0.012f, k.HeadR * 0.75f, 0.012f));
+            k.M.Pop();
+            k.M.Bone = QB.Hips;
+            for (int i = 0; i < 3; i++)
+            {
+                float z = k.Bind[QB.Hips].z + 0.05f + i * 0.05f;
+                k.M.Push().Translate(k.BodyR * 1.03f, k.HipY + 0.02f, z).Rotate(0f, 90f, -35f);
+                k.M.Box(Vector3.zero, new Vector3(0.012f, 0.14f, 0.012f));
+                k.M.Pop();
+            }
+            // the blight: big glowing crystals along the spine and vein cracks on the flanks
+            k.M.Emission = 1f; k.M.Color = blight;
+            for (int i = 0; i < 6; i++)
+            {
+                float t = i / 5f;
+                float z = Mathf.Lerp(k.Bind[QB.Chest].z - 0.02f, k.Bind[QB.Hips].z - 0.05f, t);
+                k.M.Bone = z > 0f ? QB.Chest : QB.Hips;
+                float len = Mathf.Lerp(0.26f, 0.13f, t) * ((i & 1) == 0 ? 1f : 0.75f);
+                var at = new Vector3((i & 1) == 0 ? 0.025f : -0.025f, k.TopY(z) - 0.025f, z);
+                k.M.Spike(at, new Vector3((i & 1) == 0 ? 0.25f : -0.25f, 1f, -0.35f), 0.045f, len, 4);
+            }
+            k.M.Emission = 0.9f; k.M.Color = eyes;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.M.Bone = QB.Chest;
+                k.M.Push().Translate(s * k.BodyR * 1.04f, k.ChestY - 0.01f, k.Bind[QB.Chest].z - 0.08f).Rotate(0f, 0f, s * 65f);
+                k.M.Box(Vector3.zero, new Vector3(0.016f, 0.14f, 0.022f));
+                k.M.Pop();
+            }
+            k.M.Emission = 0f;
+            k.Finish(key, 1.0f, UnitStrike.Bite, UnitRanged.Howl);
+            var m = k.Model;
+            m.CastOffset = tip - k.HeadBase;
+            m.Heavy = 0.25f;
+            return Bake(k);
+        }
+
         // ================================================================== boars
 
         static UnitModel Boar(string key, bool pet)
@@ -152,14 +241,16 @@ namespace Lanternvale.Game
             }
             if (pet)
             {
-                // teal saddle blanket draped over the back (a cylinder section around the body's long axis)
+                // teal saddle blanket draped over the back, following the body, gold-hemmed with a gold stripe
                 k.M.Bone = QB.Back;
-                float axisY = (k.HipY + k.ChestY) * 0.5f;
-                k.M.Push().Translate(0f, axisY, 0.02f).Rotate(90f, 0f, 0f);
-                k.M.Panel(Vector3.zero, 100f, 260f, 7, new[] { new Vector2(k.BodyR * 1.12f, 0.17f), new Vector2(k.BodyR * 1.12f, -0.17f) }, 1f, C("#3f8f8a"), C("#2a5f5c"), 0.012f);
-                k.M.Pop();
-                k.M.Color = C("#e2b45a");
-                k.M.Box(new Vector3(0f, axisY + k.BodyR * 1.13f, 0.02f), new Vector3(0.05f, 0.02f, 0.36f));
+                var gold = C("#e2b45a");
+                k.Drape(C("#3f8f8a"), C("#2a5f5c"), -0.15f, 0.19f, 72f, 0.016f, gold);
+                k.M.Color = gold;
+                for (int i = 0; i < 4; i++)
+                {
+                    float za = Mathf.Lerp(-0.15f, 0.19f, i / 4f), zb = Mathf.Lerp(-0.15f, 0.19f, (i + 1) / 4f);
+                    k.M.Segment(k.TorsoPoint(za, 0f, 0.022f), k.TorsoPoint(zb, 0f, 0.022f), 0.014f, 0.014f, 4);
+                }
             }
             k.Finish(key, 0.9f, UnitStrike.Charge, UnitRanged.Howl);
             var m = k.Model;

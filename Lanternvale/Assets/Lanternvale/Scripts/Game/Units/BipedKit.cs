@@ -201,17 +201,89 @@ namespace Lanternvale.Game
         /// <summary>Degrees each eye disc (and brow) is turned out to its side of the face.</summary>
         const float EyeTurn = 32f;
 
-        /// <summary>Head (cranium + chin), ears, eyes and brows.</summary>
+        /// <summary>Head (cranium, jaw and chin as one surface), ears, eyes and brows.</summary>
         public void Head(Color skin, Color iris, Color brow, EyeStyle eyes = EyeStyle.Round, float browTilt = 0f, bool ears = true, float chin = 1f)
         {
             M.Bone = BB.Head; M.Color = skin;
             float r = R;
-            M.Sphere(new Vector3(0f, HeadCY + 0.03f * r, -0.02f * r), new Vector3(r, r * 1.0f, r * 0.96f), 12, 9);
-            M.Sphere(new Vector3(0f, HeadCY - 0.42f * r, 0.1f * r), new Vector3(0.72f * r * chin, 0.62f * r, 0.78f * r), 9, 6);
+            HeadShape(chin);
             if (ears)
                 for (int s = -1; s <= 1; s += 2)
                     M.Sphere(new Vector3(s * 0.95f * r, HeadCY - 0.12f * r, -0.04f * r), new Vector3(0.12f * r, 0.2f * r, 0.1f * r), 6, 4);
             Eyes(iris, brow, eyes, browTilt);
+        }
+
+        // the head surface: a smooth lathe around an axis tipped forward by HeadTilt, in a frame scaled by HeadScale
+        // around HeadCenter (unit sphere above the equator, the jaw below it)
+        Vector3 HeadCenter => new Vector3(0f, HeadCY + 0.03f * R, -0.02f * R);
+        Vector3 HeadScale => new Vector3(R, R, 0.96f * R);
+        const float HeadTilt = -12f;      // tips the jaw forward (the cranium is a sphere about the centre, so it is unchanged)
+        const float JawFrom = 0.3f;       // the jaw narrows from this depth below the equator (0 … 1), clear of the eyes
+        const float JawDrop = 0.12f;      // and lengthens by this much at the chin
+        Vector2[] headProf;
+
+        /// <summary>
+        /// Cranium, jaw and chin as ONE smooth surface: an egg lathed around an axis tipped forward, a sphere above the
+        /// equator, narrowing (chin &lt; 1: narrower) and lengthening below it into a soft chin under the face. Two
+        /// intersecting spheres left a jagged seam with a jump in shading across the cheeks and mouth.
+        /// </summary>
+        void HeadShape(float chin)
+        {
+            const int rings = 12, sides = 16;
+            float narrow = Mathf.Clamp(0.2f - (chin - 1f) * 0.3f, 0.06f, 0.4f);
+            var prof = new Vector2[rings + 1];
+            for (int i = 0; i <= rings; i++)
+            {
+                float phi = Mathf.PI * i / rings;
+                float y = -Mathf.Cos(phi), rad = Mathf.Sin(phi);
+                if (y < 0f)
+                {
+                    float q = -y;
+                    float t = Mathf.Clamp01((q - JawFrom) / (1f - JawFrom));
+                    rad *= 1f - narrow * t * t * (3f - 2f * t);
+                    y *= 1f + JawDrop * q * q;
+                }
+                prof[i] = new Vector2(i == 0 || i == rings ? 0f : rad, y);
+            }
+            headProf = prof;
+            M.Push().Translate(HeadCenter).Scale(HeadScale).Rotate(HeadTilt, 0f, 0f);
+            M.Lathe(prof, sides, true, false, false);
+            M.Pop();
+        }
+
+        /// <summary>True when the model-space point p lies inside the head surface (see HeadShape).</summary>
+        bool InsideHead(Vector3 p)
+        {
+            var s = HeadScale;
+            var d = p - HeadCenter;
+            d = new Vector3(d.x / s.x, d.y / s.y, d.z / s.z);
+            float a = -HeadTilt * Mathf.Deg2Rad, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+            float y = d.y * ca - d.z * sa, z = d.y * sa + d.z * ca;
+            float rho = Mathf.Sqrt(d.x * d.x + z * z);
+            var pr = headProf;
+            if (pr == null) return rho * rho + y * y <= 1f;
+            if (y <= pr[0].y || y >= pr[pr.Length - 1].y) return false;
+            for (int i = 0; i + 1 < pr.Length; i++)
+                if (y <= pr[i + 1].y)
+                    return rho <= Mathf.Lerp(pr[i].x, pr[i + 1].x, Mathf.InverseLerp(pr[i].y, pr[i + 1].y, y));
+            return false;
+        }
+
+        /// <summary>
+        /// The point on the front of the face at (x, y) (head radii from the head centre line, y from HeadCY), lifted
+        /// `lift` head radii off the skin — for features laid on the face (cheeks, nose, mouth lines).
+        /// </summary>
+        public Vector3 FacePoint(float x, float y, float lift = 0f)
+        {
+            float px = x * R, py = HeadCY + y * R;
+            float lo = HeadCenter.z, hi = HeadCenter.z + 1.4f * R;
+            if (!InsideHead(new Vector3(px, py, lo))) return new Vector3(px, py, lo + lift * R);
+            for (int i = 0; i < 20; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (InsideHead(new Vector3(px, py, mid))) lo = mid; else hi = mid;
+            }
+            return new Vector3(px, py, lo + lift * R);
         }
 
         /// <summary>
@@ -282,18 +354,53 @@ namespace Lanternvale.Game
             M.Emission = keepE;
         }
 
-        /// <summary>Blush / face paint marks (two small flattened discs on the cheeks).</summary>
-        public void Cheeks(Color c, float k = 1f)
+        /// <summary>Blush / face paint marks (two small flattened discs on the cheeks, y in head radii from HeadCY).</summary>
+        public void Cheeks(Color c, float k = 1f, float y = -0.36f)
         {
             M.Bone = BB.Head; M.Color = c;
             for (int s = -1; s <= 1; s += 2)
             {
-                float x = s * 0.5f * R, y = HeadCY - 0.36f * R;
-                float z = 0.96f * R * Mathf.Sqrt(1f - 0.25f - 0.13f) - 0.012f * R;
-                M.Push().Translate(x, y, z).Rotate(0f, s * 30f, 0f);
+                M.Push().Translate(FacePoint(s * 0.5f, y, 0.004f)).Rotate(0f, s * 30f, 0f);
                 M.Sphere(Vector3.zero, new Vector3(0.11f * R * k, 0.06f * R * k, 0.03f * R), 6, 3);
                 M.Pop();
             }
+        }
+
+        /// <summary>
+        /// Bushy brows laid on the face above the eyes (y in head radii from HeadCY), turned out like the eyes; droop
+        /// (degrees) lowers their outer ends (kindly, old), negative raises them (stern). Pass brow alpha 0 to Head/Eyes
+        /// and draw these instead.
+        /// </summary>
+        public void BushyBrows(Color c, float y = 0.18f, float spread = 0.36f, float droop = 0f, float size = 1f)
+        {
+            M.Bone = BB.Head; M.Color = HairTone(c);
+            var keepJ = M.Jitter;
+            M.Jitter = 0f;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                M.Push().Translate(FacePoint(s * spread, y, 0.02f)).Rotate(0f, s * EyeTurn, -s * droop);
+                M.Sphere(Vector3.zero, new Vector3(0.2f, 0.075f, 0.07f) * R * size, 7, 4);
+                M.Sphere(new Vector3(s * 0.16f, -0.03f, -0.02f) * R * size, new Vector3(0.1f, 0.06f, 0.06f) * R * size, 5, 3);
+                M.Pop();
+            }
+            M.Jitter = keepJ;
+        }
+
+        /// <summary>A button nose on the front of the face (y in head radii from HeadCY).</summary>
+        public void Nose(Color c, float size = 1f, float y = -0.3f)
+        {
+            M.Bone = BB.Head; M.Color = c;
+            M.Sphere(FacePoint(0f, y, 0.02f * size), new Vector3(0.1f, 0.08f, 0.08f) * R * size, 6, 4);
+        }
+
+        /// <summary>A small smiling mouth: a thin dark curve on the face (y in head radii from HeadCY).</summary>
+        public void Smile(Color c, float y = -0.56f, float width = 0.26f)
+        {
+            M.Bone = BB.Head; M.Color = c;
+            Vector3 P(float t) => FacePoint(t * width * 0.5f, y + 0.07f * t * t, 0.015f);
+            M.Segment(P(-1f), P(-0.4f), 0.022f * R, 0.026f * R, 4);
+            M.Segment(P(-0.4f), P(0.4f), 0.026f * R, 0.026f * R, 4);
+            M.Segment(P(0.4f), P(1f), 0.026f * R, 0.022f * R, 4);
         }
 
         /// <summary>Beard: chin wedge + sideburns; long = a flowing beard cone (elder).</summary>
@@ -590,63 +697,90 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// Cloth headscarf / bandana tied at the nape: snug over the crown, its edge riding up at the temples so the
-        /// hair shows there, a rolled hem along the edge, a big knot with two flowing tails (HairB) and an optional dot
-        /// print — cloth, not a smooth helmet.
+        /// Cloth headscarf / kerchief tied at the nape: a low crown sitting back off the brow (the hair shows over the
+        /// forehead and at the temples), a rolled hem along the edge, the kerchief's point hanging over the nape and a big
+        /// knot whose ears and tails stand out behind the head, so the side view reads as tied cloth. An optional print of
+        /// small dense dots (big spots on a dome read as a toadstool cap).
         /// </summary>
         public void Headscarf(Color c, Color knot, Color? dots = null)
         {
             M.Bone = BB.Head; M.Color = c;
             float r = R;
-            var center = new Vector3(0f, HeadCY + 0.05f * r, -0.04f * r);
-            // finely tessellated and a little fuller than the hair cap (1.08 R): a coarse shell's flat facets sag inside
-            // its ellipsoid and the cap's vertices poke through as brown flecks
-            var rad = new Vector3(1.13f * r, 1.12f * r, 1.13f * r);
+            // finely tessellated and fuller than the hair cap (1.08 R about HeadCY + 0.05 R) everywhere it covers it, but
+            // wider than tall: a flatter crown than a cap's dome
+            var center = new Vector3(0f, HeadCY + 0.1f * r, -0.05f * r);
+            var rad = new Vector3(1.15f * r, 1.05f * r, 1.14f * r);
             System.Func<float, float> edge = th =>
             {
                 float a = Mathf.Abs(th);
-                if (a < 40f) return Mathf.Lerp(47f, 52f, a / 40f);            // over the brow
-                if (a < 95f) return Mathf.Lerp(52f, 62f, (a - 40f) / 55f);    // riding up over the temples
-                return Mathf.Lerp(62f, 116f, (a - 95f) / 85f);                 // down behind the ears to the nape
+                if (a < 35f) return Mathf.Lerp(40f, 45f, a / 35f);            // pushed back off the brow
+                if (a < 95f) return Mathf.Lerp(45f, 66f, (a - 35f) / 60f);    // over the temples, the hair showing below
+                return Mathf.Lerp(66f, 118f, (a - 95f) / 85f);                 // down behind the ears to the nape
             };
             M.Shell(center, rad, -180f, 180f, 16, 0f, edge, 6);
+            Vector3 Surface(float th, float ph, float k)
+            {
+                float t = th * Mathf.Deg2Rad, p = ph * Mathf.Deg2Rad;
+                return center + new Vector3(rad.x * Mathf.Sin(p) * Mathf.Sin(t), rad.y * Mathf.Cos(p), rad.z * Mathf.Sin(p) * Mathf.Cos(t)) * k;
+            }
             // rolled hem along the edge (open tube pieces, the back is under the knot)
             M.Color = Paint.Shade(c, 0.86f);
-            Vector3 EdgePoint(float th)
-            {
-                float t = th * Mathf.Deg2Rad, p = edge(th) * Mathf.Deg2Rad;
-                return center + new Vector3(rad.x * Mathf.Sin(p) * Mathf.Sin(t), rad.y * Mathf.Cos(p), rad.z * Mathf.Sin(p) * Mathf.Cos(t)) * 1.01f;
-            }
             for (int i = 0; i < 12; i++)
             {
                 float t0 = -144f + i * 24f, t1 = t0 + 24f;
-                M.Segment(EdgePoint(t0), EdgePoint(t1), 0.065f * r, 0.065f * r, 5, false, false);
+                M.Segment(Surface(t0, edge(t0), 1.01f), Surface(t1, edge(t1), 1.01f), 0.06f * r, 0.06f * r, 5, false, false);
             }
             if (dots.HasValue)
             {
+                // a fine print: small dots spread evenly (golden-angle spiral) over the cloth, clear of the hem
                 M.Color = dots.Value;
-                float[,] dp = { { -30f, 22f }, { 28f, 28f }, { 72f, 40f }, { -78f, 44f }, { 130f, 50f }, { -128f, 40f }, { 170f, 72f }, { -160f, 84f } };
-                for (int i = 0; i < dp.GetLength(0); i++)
+                const int n = 30;
+                for (int i = 0; i < n; i++)
                 {
-                    float t = dp[i, 0] * Mathf.Deg2Rad, p = dp[i, 1] * Mathf.Deg2Rad;
-                    var n = new Vector3(Mathf.Sin(p) * Mathf.Sin(t), Mathf.Cos(p), Mathf.Sin(p) * Mathf.Cos(t));
-                    var at = center + Vector3.Scale(rad, n) * 1.0f;
-                    M.Aim(at, n);
-                    M.Cylinder(Vector3.zero, 0.09f * r, 0.075f * r, 0.025f * r, 5, false, false, true);
+                    float th = Mathf.DeltaAngle(0f, i * 137.508f);
+                    float ph = Mathf.Lerp(10f, edge(th) - 9f, Mathf.Sqrt((i + 0.5f) / n));
+                    var at = Surface(th, ph, 1f);
+                    M.Aim(at, (at - center).normalized);
+                    M.Cylinder(Vector3.zero, 0.05f * r, 0.042f * r, 0.02f * r, 5, false, false, true);
                     M.Pop();
                 }
             }
-            // the knot at the nape, with two lobes, and its tails falling down the back of the neck
-            M.Color = knot;
-            var kp = new Vector3(0f, HeadCY - 0.28f * r, -1.12f * r);
-            M.Sphere(kp, new Vector3(0.24f, 0.2f, 0.18f) * r, 6, 4);
-            for (int s = -1; s <= 1; s += 2)
-                M.Sphere(kp + new Vector3(s * 0.24f * r, 0.04f * r, -0.04f * r), new Vector3(0.18f, 0.12f, 0.08f) * r, 5, 3);
+            // the cloth gathered into the knot: soft fold lines running back from the crown and the sides
+            var kp = new Vector3(0f, HeadCY - 0.16f * r, -1.13f * r);
+            M.Color = Paint.Shade(c, 0.8f);
+            float[,] folds = { { 62f, 32f }, { -62f, 32f }, { 112f, 50f }, { -112f, 50f } };
+            for (int i = 0; i < folds.GetLength(0); i++)
+            {
+                float th0 = folds[i, 0], ph0 = folds[i, 1], th1 = Mathf.Sign(th0) * 168f, ph1 = 100f;
+                var prev = Surface(th0, ph0, 1.012f);
+                for (int j = 1; j <= 4; j++)
+                {
+                    float t = j / 4f;
+                    var p = Surface(Mathf.Lerp(th0, th1, t), Mathf.Lerp(ph0, ph1, t), 1.012f);
+                    M.Segment(prev, p, 0.018f * r + 0.012f * r * (j - 1) / 3f, 0.018f * r + 0.012f * r * j / 4f, 4);
+                    prev = p;
+                }
+            }
+            // the kerchief's point hanging over the nape, under the knot
+            M.Color = c;
             M.Bone = BB.HairB;
-            M.CurvedStrip(kp + new Vector3(-0.06f * r, -0.08f * r, -0.04f * r), kp + new Vector3(-0.22f * r, -0.6f * r, -0.2f * r),
-                          kp + new Vector3(-0.32f * r, -1.25f * r, -0.12f * r), 0.24f * r, 0.15f * r, Vector3.back, 0.05f * r, 3);
-            M.CurvedStrip(kp + new Vector3(0.06f * r, -0.08f * r, -0.04f * r), kp + new Vector3(0.2f * r, -0.5f * r, -0.22f * r),
-                          kp + new Vector3(0.3f * r, -1.05f * r, -0.18f * r), 0.24f * r, 0.15f * r, Vector3.back, 0.05f * r, 3);
+            M.CurvedStrip(kp + new Vector3(0f, 0.08f * r, 0.06f * r), kp + new Vector3(0f, -0.32f * r, -0.06f * r),
+                          kp + new Vector3(0f, -0.74f * r, 0f), 0.66f * r, 0.04f * r, Vector3.back, 0.04f * r, 3);
+            // the knot high on the back of the head (seen from the high camera) with two big ears standing out to the
+            // sides, and two tails flaring back and out
+            M.Bone = BB.Head; M.Color = knot;
+            M.Sphere(kp + new Vector3(0f, 0f, -0.07f * r), new Vector3(0.21f, 0.19f, 0.17f) * r, 6, 4);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                M.Push().Translate(kp + new Vector3(s * 0.34f * r, 0.07f * r, -0.12f * r)).Rotate(0f, s * 28f, s * 16f);
+                M.Sphere(Vector3.zero, new Vector3(0.3f, 0.16f, 0.1f) * r, 7, 4);
+                M.Pop();
+            }
+            M.Bone = BB.HairB;
+            M.CurvedStrip(kp + new Vector3(-0.08f * r, -0.1f * r, -0.12f * r), kp + new Vector3(-0.36f * r, -0.55f * r, -0.45f * r),
+                          kp + new Vector3(-0.56f * r, -1.2f * r, -0.48f * r), 0.26f * r, 0.18f * r, Vector3.back, 0.05f * r, 3);
+            M.CurvedStrip(kp + new Vector3(0.08f * r, -0.1f * r, -0.12f * r), kp + new Vector3(0.34f * r, -0.48f * r, -0.48f * r),
+                          kp + new Vector3(0.52f * r, -1.02f * r, -0.52f * r), 0.26f * r, 0.18f * r, Vector3.back, 0.05f * r, 3);
         }
 
         /// <summary>Metal dome helmet (kettle hat with a brim when brim &gt; 0).</summary>
@@ -1688,6 +1822,67 @@ namespace Lanternvale.Game
             }
             M.Pop();
             Model.Shield = true;
+        }
+
+        /// <summary>
+        /// A kite shield slung on the back (Chest bone): painted face and emblem outwards, a rim band, tipped a little
+        /// off the vertical. Unlike Shield it is not on the arm, so it does not set UnitModel.Shield.
+        /// </summary>
+        public void BackShield(Color face, Color rim, Color emblem, float size = 0.85f, float tilt = -14f)
+        {
+            M.Bone = BB.Chest;
+            float s = size * U;
+            M.Push().Translate(0.02f * U, ChestY - 0.03f * U, -ChestR * DepthK - 0.05f * U).Rotate(0f, 0f, tilt);
+            Vector2[] Kite(float k) => new[]
+            {
+                new Vector2(-0.24f * s * k, 0.27f * s * k), new Vector2(0.24f * s * k, 0.27f * s * k), new Vector2(0.25f * s * k, 0.02f * s * k),
+                new Vector2(0f, -0.38f * s * k), new Vector2(-0.25f * s * k, 0.02f * s * k),
+            };
+            // the frame's −Z is the outside (the back of the bearer)
+            M.Color = rim;
+            M.Flat(Kite(1f), 0.03f * s);
+            M.Color = face;
+            M.Push().Translate(0f, 0.005f * s, -0.012f * s);
+            M.Flat(Kite(0.83f), 0.03f * s);
+            M.Pop();
+            M.Color = emblem;
+            M.Push().Translate(0f, 0.03f * s, -0.033f * s);
+            M.Flat(new[]
+            {
+                new Vector2(0f, 0.1f * s), new Vector2(0.07f * s, 0.07f * s), new Vector2(0.1f * s, 0f), new Vector2(0.07f * s, -0.07f * s),
+                new Vector2(0f, -0.1f * s), new Vector2(-0.07f * s, -0.07f * s), new Vector2(-0.1f * s, 0f), new Vector2(-0.07f * s, 0.07f * s),
+            }, 0.012f * s);
+            M.Pop();
+            M.Pop();
+        }
+
+        /// <summary>Round spectacles on the face: two wire rims over the eyes (turned out with them) and a bridge.</summary>
+        public void Spectacles(Color frame, Color? glass = null, float y = -0.1f, float spread = 0.36f)
+        {
+            M.Bone = BB.Head;
+            var keepJ = M.Jitter;
+            M.Jitter = 0f;
+            Vector3 left = Vector3.zero, right = Vector3.zero;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var at = FacePoint(s * spread, y, 0.1f);
+                if (s < 0) left = at; else right = at;
+                M.Push().Translate(at).Rotate(0f, s * EyeTurn * 0.75f, 0f).Rotate(90f, 0f, 0f);
+                M.Color = frame;
+                M.Torus(Vector3.zero, 0.2f * R, 0.028f * R, 10, 4);
+                if (glass.HasValue)
+                {
+                    M.Color = glass.Value;
+                    M.Cylinder(new Vector3(0f, -0.004f * R, 0f), 0.19f * R, 0.19f * R, 0.008f * R, 10);
+                }
+                M.Pop();
+                // the arm back to the ear
+                M.Color = frame;
+                M.Segment(at + new Vector3(s * 0.19f * R, 0.02f * R, -0.05f * R), new Vector3(s * 0.97f * R, HeadCY - 0.02f * R, -0.1f * R), 0.022f * R, 0.022f * R, 4);
+            }
+            var mid = (left + right) * 0.5f;
+            M.Curve(left + new Vector3(0.18f * R, 0.02f * R, 0f), mid + new Vector3(0f, 0.07f * R, 0.04f * R), right + new Vector3(-0.18f * R, 0.02f * R, 0f), 0.024f * R, 0.024f * R, 3, 4);
+            M.Jitter = keepJ;
         }
 
         /// <summary>The two leather arm straps across a shield's back (shield frame: back towards +Z) with rivets.</summary>

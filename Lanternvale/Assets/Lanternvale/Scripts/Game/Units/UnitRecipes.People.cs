@@ -15,12 +15,18 @@ namespace Lanternvale.Game
             k.Torso(robe, robeD);
             k.Sash(honey, k.SpineY - 0.03f, 0.08f);
             k.Neck(skin);
-            k.Head(skin, C("#4a3a30"), white, EyeStyle.Closed, -8f);
+            // a readable kindly face from the high game camera: open dark eyes with a glint (closed eyes in white-tinted
+            // lids vanished), big white brows lifted clear of them and drooping at the ends, rosy cheeks above the beard
+            // and a button nose
+            k.Head(skin, C("#3a2a20"), new Color(0f, 0f, 0f, 0f), EyeStyle.Round);
+            k.BushyBrows(white, 0.2f, 0.38f, 14f, 1.05f);
+            k.Cheeks(C("#ec9a8a"), 0.9f, -0.24f);
             // bald with white hair at the sides and back
             k.M.Bone = BB.Head; k.M.Color = white;
             k.M.Shell(new Vector3(0f, k.HeadCY + 0.02f * k.R, -0.03f * k.R), new Vector3(1.07f, 1.04f, 1.06f) * k.R, 70f, 290f, 10, 72f, 118f, 2);
             k.Beard(white, 1.4f, 0.85f);
             k.Moustache(white);
+            k.Nose(Paint.Shade(skin, 0.92f), 1.1f, -0.27f);
             k.Cape(green, greenD, k.KneeY - 0.02f, 1.05f, gold);
             k.Collar(green, greenD, 0.05f, 30f, 1.15f);
             for (int s = -1; s <= 1; s += 2)
@@ -524,6 +530,259 @@ namespace Lanternvale.Game
             k.Book(-1, book, C("#f2ecd8"));
             var m = k.Model;
             m.HoldL = UnitHold.Book; m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Point;
+            return Done(k, key);
+        }
+
+        // ---------------------------------------------------------------- class trainers
+        // The training yard's four trainers (npcs.json sprite npc_trainer_<class>, either class they teach) each look
+        // like their discipline, and all wear the trainers' gold sash with a lantern medallion so they read as a set.
+
+        /// <summary>
+        /// The trainers' mark: a gold sash from the left shoulder to the right hip with a lantern medallion on it (stole:
+        /// worn as a priest's stole down the front instead).
+        /// </summary>
+        static void TrainerSash(BipedKit k, Color gold, bool stole = false)
+        {
+            float u = k.U;
+            Vector3 at;
+            if (stole)
+            {
+                k.ChestPanel(gold, 0.085f, false, null, k.ShoulderY - 0.01f * u);
+                k.FrontFlap(gold, k.KneeY - 0.1f * u, 0.085f, Paint.Shade(gold, 0.8f), -1f, 0.012f * u);
+                at = new Vector3(0f, k.ChestY + 0.03f * u, k.ChestR * k.DepthK + 0.03f * u);
+            }
+            else
+            {
+                k.Strap(gold, -1, 0.075f);
+                at = new Vector3(-k.ShoulderX * 0.3f, Mathf.Lerp(k.ShoulderY - 0.03f * u, k.ChestY, 0.45f), k.ChestR * k.DepthK + 0.026f * u);
+            }
+            k.M.Bone = BB.Chest; k.M.Color = Paint.Shade(gold, 0.85f);
+            k.M.Aim(at, Vector3.forward);
+            k.M.Cylinder(Vector3.zero, 0.034f * u, 0.03f * u, 0.014f * u, 8);
+            k.M.Pop();
+            Glint(k, true); k.M.Color = C("#ffd27a");
+            k.M.Sphere(at + new Vector3(0f, 0f, 0.012f * u), new Vector3(0.016f, 0.022f, 0.01f) * u, 5, 3);
+            Glint(k, false);
+        }
+
+        /// <summary>Sir Odo Brightwater (Warrior &amp; Paladin): an old knight in plate and a crimson tabard, a grand grey moustache, sword in hand and a kite shield on his back.</summary>
+        static UnitModel TrainerKnight(string key)
+        {
+            var k = new BipedKit(41, 1.8f, 0.142f, 0.49f, 1.16f, false, 1.08f);
+            Color steel = C("#b4bcc6"), steelD = C("#78838e"), crimson = C("#a83a3a"), crimsonD = C("#6e2228"), gold = C("#e2b45a"),
+                  skin = C("#e6b690"), grey = C("#d2cec6"), leather = C("#6b4630");
+            k.Torso(steel, crimsonD);
+            k.ChestPanel(crimson, 0.24f, true, gold);
+            TrainerSash(k, gold);
+            k.Neck(skin);
+            k.Head(skin, C("#5a6a7a"), new Color(0f, 0f, 0f, 0f), EyeStyle.Narrow);
+            k.BushyBrows(grey, 0.2f, 0.36f, -8f, 0.95f);
+            k.HairCap(grey, 68f, 100f, 118f, 1.06f);
+            // a grand handlebar moustache sweeping out and up
+            k.M.Bone = BB.Head; k.M.Color = BipedKit.HairTone(grey);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var a = k.FacePoint(s * 0.05f, -0.4f, 0.05f);
+                var b = k.FacePoint(s * 0.42f, -0.5f, 0.06f);
+                k.M.Curve(a, b, b + new Vector3(s * 0.2f, 0.14f, -0.1f) * k.R, 0.12f * k.R, 0.03f * k.R, 3, 5);
+            }
+            k.Nose(Paint.Shade(skin, 0.94f), 1.05f, -0.27f);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.Arm(s, steel, steelD, leather);
+                k.Cuff(s, gold, 0.8f, 0.95f, 1.25f);
+                k.Pauldron(s, steel, 1.35f, gold, 2);
+                k.Leg(s, crimsonD, steelD, leather, 0.62f, steel);
+            }
+            k.FrontFlap(crimson, k.KneeY - 0.04f, 0.24f, gold);
+            k.BackFlap(crimson, k.KneeY - 0.06f, 0.24f, gold);
+            k.Belt(leather, gold);
+            k.BackShield(crimson, steel, gold, 0.85f);
+            k.Sword(1, 0.8f, 0.075f, C("#dfe4ea"), leather, gold);
+            var m = k.Model;
+            m.HoldR = UnitHold.OneHand; m.Strike = UnitStrike.Sword; m.Ranged = UnitRanged.Throw;
+            return Done(k, key);
+        }
+
+        /// <summary>Fennel Greythorn (Hunter &amp; Shaman): a green-clad ranger with a feathered cap, a braided beard, a fur collar, a bow and a quiver.</summary>
+        static UnitModel TrainerRanger(string key)
+        {
+            var k = new BipedKit(42, 1.76f, 0.14f, 0.5f, 0.98f, false);
+            Color green = C("#4f7a3e"), greenD = C("#35562c"), leaf = C("#9ab85a"), leather = C("#8a5a3a"), leatherD = C("#5e3c27"),
+                  skin = C("#d9a882"), hair = C("#8a7a64"), fur = C("#cdb894"), gold = C("#e2b45a"), cream = C("#efe3c4"),
+                  red = C("#d8573a"), pants = C("#6a5a40");
+            k.Torso(green, leatherD);
+            Vest(k, leather);
+            TrainerSash(k, gold);
+            k.Mantle(fur, 0.72f, 0.05f, 11);
+            k.Neck(skin);
+            k.Head(skin, C("#4f8f5a"), Paint.Shade(hair, 0.85f), EyeStyle.Round, 6f);
+            k.HairCap(hair, 58f, 100f, 122f);
+            k.SideLocks(hair, k.HeadCY - 0.5f * k.R, 0.16f);
+            k.Beard(hair, 0.25f, 0.8f);
+            // the beard's long braid with a gold bead
+            k.Braid(hair, new Vector3(0f, k.HeadCY - 0.95f * k.R, 0.58f * k.R), new Vector3(0f, k.NeckY - 0.1f, 0.2f), 5, 0.17f, gold);
+            // feathered cap: a soft pointed hunter's cap with the point flopping back, a band and two feathers
+            k.BrimHat(greenD, green, 1.35f, 1.5f, 0.95f, leatherD, -10f);
+            k.M.Bone = BB.Head;
+            var fb = k.HeadPoint(78f, 52f, 1.12f);
+            k.M.Color = red; k.M.Blade(fb, fb + new Vector3(0.06f, 0.26f, -0.16f), 0.06f);
+            k.M.Color = cream; k.M.Blade(fb + new Vector3(0f, 0f, -0.01f), fb + new Vector3(0.1f, 0.2f, -0.2f), 0.05f);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.Arm(s, green, leather, skin);
+                k.Cuff(s, leatherD, 0.4f, 0.95f, 1.22f);
+                k.Leg(s, pants, pants, leatherD, 0.76f, leather);
+            }
+            k.Skirt(green, greenD, k.KneeY + 0.05f, 1.25f, 30f, leaf);
+            k.Belt(leatherD, gold);
+            k.Pouch(1, leather, 0.6f, 1f);
+            k.Bow(-1, 1.3f, C("#9a6b3d"), leatherD, cream);
+            k.Quiver(leather, cream);
+            var m = k.Model;
+            m.HoldL = UnitHold.Bow; m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Bow;
+            return Done(k, key);
+        }
+
+        /// <summary>Magister Quillon Ashby (Mage &amp; Warlock): a tall scholar in starry indigo with a tall bent hat, spectacles, a long white beard and an orb staff.</summary>
+        static UnitModel TrainerMagister(string key)
+        {
+            var k = new BipedKit(43, 1.88f, 0.138f, 0.51f, 0.88f, false, 0.94f);
+            Color indigo = C("#3e4f94"), indigoD = C("#2b3768"), sky = C("#9fb4ec"), plum = C("#7a3f6e"), gold = C("#e2b45a"),
+                  skin = C("#f0d0b4"), white = C("#f2f0ea"), wood = C("#5a3e2c"), star = C("#ffe9a8");
+            k.Torso(indigo, indigoD);
+            // a short plum shoulder cape (the warlock's half of his teaching), open at the front
+            k.M.Bone = BB.Chest;
+            k.M.Panel(Vector3.zero, 34f, 326f, 10, new[] { new Vector2(0.1f * k.U, k.NeckY + 0.01f), new Vector2(k.ShoulderR * 1.12f, k.ShoulderY - 0.03f), new Vector2(k.ShoulderR * 1.24f, k.ShoulderY - 0.16f) }, k.DepthK * 1.14f, plum, Paint.Shade(plum, 0.65f));
+            TrainerSash(k, gold);
+            k.Neck(skin);
+            k.Head(skin, C("#6a7ab0"), new Color(0f, 0f, 0f, 0f), EyeStyle.Round);
+            k.BushyBrows(white, 0.24f, 0.37f, 10f, 1f);
+            k.HairCap(white, 64f, 100f, 120f);
+            k.LongBack(white, k.ShoulderY - 0.06f, 1f, 1.1f);
+            k.Beard(white, 1.2f, 0.62f);
+            k.Moustache(white);
+            k.Nose(Paint.Shade(skin, 0.94f), 1.15f, -0.28f);
+            k.Spectacles(C("#d9b25a"), new Color(0.82f, 0.9f, 1f));
+            // a tall hat bending back, a gold band and a few stars
+            k.BrimHat(indigoD, indigo, 2.0f, 3.1f, 0.95f, gold, -12f);
+            Glint(k, true); k.M.Color = star;
+            k.M.Bone = BB.Head;
+            for (int i = 0; i < 4; i++)
+            {
+                float th = -50f + i * 34f, h = 0.75f + 0.5f * (i % 2);
+                var p = new Vector3(Mathf.Sin(th * Mathf.Deg2Rad) * 0.86f * k.R, k.HeadCY + (0.5f + h) * k.R, Mathf.Cos(th * Mathf.Deg2Rad) * 0.86f * k.R);
+                k.M.Push().Translate(p).Rotate(0f, th, 45f);
+                k.M.Box(Vector3.zero, new Vector3(0.09f, 0.09f, 0.02f) * k.R);
+                k.M.Pop();
+            }
+            Glint(k, false);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.Arm(s, indigo, indigo, skin);
+                k.WideSleeve(s, indigo, sky, 0.32f, 2.4f, gold);
+                k.Leg(s, indigoD, indigoD, C("#3a2e48"), 0.4f);
+            }
+            k.Skirt(indigo, sky, k.AnkleY + 0.05f, 1.5f, 0f, gold);
+            // gold stars scattered on the robe
+            Glint(k, true); k.M.Color = star;
+            for (int i = 0; i < 6; i++)
+            {
+                float th = -70f + i * 28f, y = k.AnkleY + 0.25f + 0.17f * (i % 3);
+                int bone = th < 0f ? BB.SkirtL : BB.SkirtR;
+                k.M.Bone = bone;
+                float rr = Mathf.Lerp(k.HipR * 1.5f, k.HipR * 1.1f, (y - k.AnkleY) / (k.HipY - k.AnkleY)) + 0.012f;
+                var p = new Vector3(Mathf.Sin(th * Mathf.Deg2Rad) * rr, y, Mathf.Cos(th * Mathf.Deg2Rad) * rr * k.DepthK * 1.08f);
+                k.M.Push().Translate(p).Rotate(0f, th, 45f);
+                k.M.Box(Vector3.zero, new Vector3(0.035f, 0.035f, 0.01f));
+                k.M.Pop();
+            }
+            Glint(k, false);
+            k.Belt(C("#3a2a2a"), gold, k.HipY + 0.1f, 1.1f, 0.04f);
+            // a little grimoire hanging at the belt
+            k.M.Bone = BB.SkirtL; k.M.Color = plum;
+            k.M.Box(new Vector3(-k.HipR * 1.22f, k.HipY - 0.02f, 0.02f), new Vector3(0.03f, 0.14f, 0.11f));
+            k.M.Color = C("#f2ecd8");
+            k.M.Box(new Vector3(-k.HipR * 1.22f + 0.004f, k.HipY - 0.02f, 0.02f), new Vector3(0.028f, 0.125f, 0.1f));
+            k.Staff(1, 1.95f, wood, BipedKit.StaffTop.Orb, gold, C("#c9a8ff"), 0.075f);
+            var m = k.Model;
+            m.HoldR = UnitHold.Staff; m.Strike = UnitStrike.Staff; m.Ranged = UnitRanged.Point;
+            m.StrideK = 0.9f;
+            return Done(k, key);
+        }
+
+        /// <summary>Brother Wick (Priest &amp; Rogue): a round, tonsured friar in undyed wool with a rope belt, a rosary, a shadow-plum lined cowl and a lit lantern.</summary>
+        static UnitModel TrainerFriar(string key)
+        {
+            var k = new BipedKit(44, 1.66f, 0.145f, 0.48f, 1.24f, false, 1.0f);
+            Color wool = C("#cdb690"), woolD = C("#a48c68"), rope = C("#ece0bc"), skin = C("#f0c8a4"), hair = C("#7a4a2a"),
+                  plum = C("#4e2f48"), gold = C("#e2b45a"), wood = C("#6a4630"), bead = C("#5a3a2a"), glow = C("#ffd27a");
+            k.Torso(wool, woolD, wool, 0.16f);
+            // the cowl down around the shoulders, lined in shadow plum
+            k.M.Bone = BB.Chest;
+            k.M.Panel(Vector3.zero, 0f, 360f, 10, new[] { new Vector2(0.11f * k.U, k.NeckY + 0.02f), new Vector2(k.ShoulderR * 1.12f, k.ShoulderY - 0.035f), new Vector2(k.ShoulderR * 1.22f, k.ShoulderY - 0.13f) }, k.DepthK * 1.14f, woolD, plum);
+            k.Neck(skin);
+            k.Head(skin, C("#5a8a6a"), Paint.Shade(hair, 0.9f), EyeStyle.Round, -8f);
+            k.Cheeks(C("#ee9a8a"), 1f, -0.3f);
+            k.Nose(Paint.Shade(skin, 0.93f), 1.1f, -0.27f);
+            k.Smile(Paint.Shade(skin, 0.55f), -0.58f, 0.3f);
+            // the tonsure: a ring of hair round a bald crown (a big read from the high camera)
+            k.M.Bone = BB.Head; k.M.Color = BipedKit.HairTone(hair);
+            k.M.Shell(new Vector3(0f, k.HeadCY + 0.05f * k.R, -0.03f * k.R), new Vector3(1.08f, 1.08f, 1.06f) * k.R, -180f, 180f, 14, 44f,
+                      th => Mathf.Abs(th) < 50f ? 66f : Mathf.Lerp(66f, 122f, (Mathf.Abs(th) - 50f) / 130f), 3);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                k.Arm(s, wool, wool, skin);
+                k.WideSleeve(s, wool, woolD, 0.28f, 2.2f);
+                k.Leg(s, woolD, skin, wood, 0.12f);
+            }
+            k.Skirt(wool, woolD, k.AnkleY + 0.07f, 1.45f, 0f);
+            TrainerSash(k, gold, true);
+            // rope belt with knotted ends hanging at the front
+            k.Belt(rope, rope, k.HipY + 0.1f, 1.12f, 0.035f);
+            k.M.Bone = BB.SkirtF; k.M.Color = rope;
+            float bz = Mathf.Max(k.HipR, k.WaistR) * 1.12f * k.DepthK * 1.1f + 0.01f;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var top = new Vector3(s * 0.03f, k.HipY + 0.08f, bz);
+                var end = top + new Vector3(s * 0.02f, -0.34f + s * 0.04f, 0.04f);
+                k.M.Segment(top, end, 0.012f, 0.011f, 4);
+                k.M.Sphere(Vector3.Lerp(top, end, 0.55f), 0.02f, 5, 3);
+                k.M.Sphere(end, 0.022f, 5, 3);
+            }
+            // a rosary hanging at the left hip with a little gold sun
+            k.M.Bone = BB.SkirtL;
+            var r0 = new Vector3(-k.HipR * 1.14f, k.HipY + 0.08f, 0.04f);
+            var r1 = r0 + new Vector3(-0.02f, -0.24f, 0.03f);
+            k.M.Beads(r0, r1, 8, 0.013f, 0.013f, bead, Paint.Shade(bead, 1.25f), 5);
+            k.M.Color = gold;
+            k.M.Aim(r1 + new Vector3(0f, -0.03f, 0f), Vector3.forward);
+            k.M.Cylinder(Vector3.zero, 0.028f, 0.028f, 0.008f, 8);
+            k.M.Pop();
+            // a knife hidden at the right hip under the habit's fold (the rogue's half)
+            k.HipItem(1, C("#3a3040"), 0.2f, 0.022f, plum);
+            // a lit lantern carried in the left hand, hanging from its bail (hand frame: +Y up, +Z forward)
+            k.BeginHand(-1, 0f);
+            k.M.Color = C("#3a3038");
+            k.M.Torus(new Vector3(0f, 0.0f, 0.03f), 0.035f, 0.007f, 8, 3);
+            var lp = new Vector3(0f, -0.1f, 0.06f);
+            k.M.Box(lp + new Vector3(0f, 0.065f, 0f), new Vector3(0.09f, 0.02f, 0.09f));
+            k.M.Box(lp + new Vector3(0f, -0.065f, 0f), new Vector3(0.1f, 0.02f, 0.1f));
+            for (int i = 0; i < 4; i++)
+            {
+                float a = i * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
+                k.M.Box(lp + new Vector3(Mathf.Cos(a) * 0.04f, 0f, Mathf.Sin(a) * 0.04f), new Vector3(0.012f, 0.12f, 0.012f));
+            }
+            k.M.Emission = 1f; k.M.Color = glow;
+            k.M.Box(lp, new Vector3(0.07f, 0.1f, 0.07f));
+            k.M.Emission = 0f;
+            k.End();
+            var m = k.Model;
+            m.HoldL = UnitHold.Carry; m.Strike = UnitStrike.Fist; m.Ranged = UnitRanged.Point;
+            m.CastBone = BB.HandL;
+            // hand frame → hand bone space: (x, y, z) → (x, −z, y)
+            m.CastOffset = k.Grip(-1) - k.Bind[BB.HandL] + new Vector3(lp.x, -lp.z, lp.y);
+            m.StrideK = 0.85f;
             return Done(k, key);
         }
 

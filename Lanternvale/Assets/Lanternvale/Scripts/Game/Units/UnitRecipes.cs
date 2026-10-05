@@ -72,6 +72,11 @@ namespace Lanternvale.Game
                 case "npc_child": return Child(key);
                 case "npc_guard": return Guard(key);
                 case "npc_trainer": return Trainer(key);
+                // class trainers, keyed by either class they teach
+                case "npc_trainer_warrior": case "npc_trainer_paladin": return TrainerKnight(key);
+                case "npc_trainer_hunter": case "npc_trainer_shaman": return TrainerRanger(key);
+                case "npc_trainer_mage": case "npc_trainer_warlock": return TrainerMagister(key);
+                case "npc_trainer_priest": case "npc_trainer_rogue": return TrainerFriar(key);
                 case "npc_spirit": return ForestSpirit(key);
                 // ---- humanoid foes & demons
                 case "cr_bandit": return Bandit(key);
@@ -91,6 +96,7 @@ namespace Lanternvale.Game
                 // ---- beasts
                 case "cr_wolf": return Wolf(key, WolfKind.Grey);
                 case "cr_wolf_blighted": return Wolf(key, WolfKind.Blighted);
+                case "cr_wolf_greymane": case "cr_greymane": return Greymane(key);
                 case "pet_wolf": return Wolf(key, WolfKind.Pet);
                 case "demon_felhunter": return Wolf(key, WolfKind.Felhunter);
                 case "cr_boar": return Boar(key, false);
@@ -245,7 +251,8 @@ namespace Lanternvale.Game
             Color violet = C("#6a4fa3"), violetD = C("#46336f"), blueL = C("#8fa7e8"), gold = C("#e2b45a"), skin = C("#f6d7bd"),
                   hair = C("#2d2a3e"), boot = C("#3d2b4f"), wood = C("#6b4a35");
             k.Torso(violet, violetD);
-            k.Collar(violetD, blueL, 0.12f, 35f, 1.3f);
+            // a low flared collar open at the front frames the face (a high stand-up one masked the mouth from the camera)
+            k.Collar(violetD, blueL, 0.07f, 55f, 1.45f);
             k.Sash(gold, k.SpineY - 0.02f, 0.06f);
             k.Neck(skin);
             k.Head(skin, C("#9b6ee0"), hair, EyeStyle.Round, 2f);
