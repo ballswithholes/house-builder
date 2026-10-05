@@ -60,14 +60,14 @@ namespace Lanternvale.Game
         static PropModel Placeholder(string artKey, int seed)
         {
             var mb = new MeshBuilder(seed) { Color = new Color(0.72f, 0.66f, 0.58f), Jitter = 0.06f, AOStrength = 0.3f };
-            mb.Blob(new Vector3(0f, 0.5f, 0f), new Vector3(0.6f, 0.5f, 0.6f), 1, 0.12f, seed, 0.6f);
+            mb.Blob(new Vector3(0f, 0.2f, 0f), new Vector3(0.6f, 0.5f, 0.6f), 1, 0.12f, seed, 0.6f);   // flattened bottom rests on y = 0
             var go = new GameObject(artKey);
             go.transform.rotation = World3D.Upright;
             var mf = go.AddComponent<MeshFilter>();
             mf.sharedMesh = MeshCache.Get("prop_placeholder", () => mb.ToMesh("prop_placeholder"));
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterials = Materials3D.WithOutline();
-            var m = new PropModel { Root = go, Height = 1f, Radius = 0.6f, LocalBounds = new Bounds(new Vector3(0f, 0.5f, 0f), new Vector3(1.2f, 1f, 1.2f)) };
+            var m = new PropModel { Root = go, Height = 0.7f, Radius = 0.6f, LocalBounds = new Bounds(new Vector3(0f, 0.35f, 0f), new Vector3(1.2f, 0.7f, 1.2f)) };
             m.Renderers.Add(r);
             return m;
         }
