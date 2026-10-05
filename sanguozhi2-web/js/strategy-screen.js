@@ -10,6 +10,11 @@
 
   const CINNABAR = '#c8382c';
   const GREY_SPEAKER = '#666673';               // C# new Color(0.4, 0.4, 0.45)
+  const LABEL_HIDE_BEYOND = 170;                // C# WorldFollow.hideBeyond = 170
+  const LABEL_FADE = 0.18;                      // 城名标签避让时的淡入淡出时长（秒）
+
+  // 屏幕矩形 { l, t, r, b } 是否相交
+  function overlaps(a, b) { return a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t; }
 
   function G() { return SG.G; }
   function UI() { return SG.UI; }
@@ -59,12 +64,19 @@
     constructor() {
       this.hud = null; this.cityPanel = null; this.cmdGrid = null; this.genList = null;
       this.topLeft = null; this.topCenter = null; this.cityTitle = null; this.cityStats = null;
-      this.endBtn = null;
-      this.labels = new Map();        // cityId → { el, text, handle }
+      this.endBtn = null; this.saveBtn = null;
+      this.labels = new Map();        // cityId → { el, handle, cv, w, h, fade, on, seen }
       this.selected = -1;
       this.busy = false;
       this.endMonth = false;
       this._onMapTap = (x, y) => this.onMapTap(x, y);
+      // 城名标签避让
+      this._labelsOn = true;
+      this._occ = [];                 // 遮挡标签的界面矩形（顶栏、城池面板）
+      this._occAt = -1e9; this._occDirty = true;
+      this._sizeAt = -1e9; this._sizeDirty = true;
+      this._declutterLast = 0;
+      this._compact = false;
     }
 
     // ---------------------------------------------------------- 主循环 --
@@ -139,7 +151,9 @@
       this.topCenter = h('div', 'sg-topbar-center', '', top);
       const row = h('div', 'sg-topbar-actions', null, top);
       SG.UI.button(row, '势力', () => this.do(() => this.factionInfo()));
-      SG.UI.button(row, '记录', () => {
+      // 指令或月末处理进行中（令牌已用、军粮已扣、尚未交战等）不可记录，避免存下半途的局面
+      this.saveBtn = SG.UI.button(row, '记录', () => {
+        if (this.busy || this.endMonth) return;
         let ok = false;
         try { ok = G().save() !== false; } catch (e) { ok = false; }
         UI().toast(ok ? '✦ 进度已记录' : '记录失败');
@@ -172,21 +186,114 @@
         if (need > css) cp.style.top = need + 'px';
       };
       this._syncTop = syncTop;
-      if (window.ResizeObserver) new ResizeObserver(syncTop).observe(top);
-      window.addEventListener('resize', syncTop);
+      const relayout = () => { syncTop(); this._occDirty = true; this._sizeDirty = true; };
+      if (window.ResizeObserver) new ResizeObserver(relayout).observe(top);
+      window.addEventListener('resize', relayout);
 
       // 地图上的城名
       for (const cv of SG.Game.map.cities.values()) {
         const el = h('div', 'sg-citylabel', SG.esc(cv.city.name), null);
-        const handle = SG.UI.follow(el, () => cv.labelPos, { hideBeyond: 170 });
-        this.labels.set(cv.city.id, { el, handle });
+        const handle = SG.UI.follow(el, () => cv.labelPos, { hideBeyond: LABEL_HIDE_BEYOND });
+        handle.alpha = 0;             // 首次避让计算后才显示，避免第一帧城名叠在一起
+        this.labels.set(cv.city.id, { el, handle, cv, w: 0, h: 0, fade: -1, on: false, seen: false });
       }
+      this.startDeclutter();
     }
 
     setMapLabelsVisible(on) {
+      this._labelsOn = !!on;
       for (const l of this.labels.values()) {
-        if (l.handle) l.handle.alpha = on ? 1 : 0;
-        else l.el.style.visibility = on ? '' : 'hidden';
+        if (l.handle) {
+          if (!on) { l.handle.alpha = 0; l.seen = false; }       // 重新显示时由避让逻辑直接定出透明度
+        } else l.el.style.visibility = on ? '' : 'hidden';
+      }
+      if (on) { this._occDirty = true; this.declutterLabels(performance.now(), true); }
+    }
+
+    // ---------------------------------------------------------- 城名避让 --
+    // 每帧（在主循环投影标签之后）按优先级摆放城名：选中的城 → 我方城池 → 其余（人口多者优先），
+    // 与已摆放的标签重叠、或被顶栏 / 城池面板遮住的标签淡出，避免城名互相压住或被界面切掉一半。
+    startDeclutter() {
+      if (this._declutterOn) return;
+      this._declutterOn = true;
+      const step = now => {
+        requestAnimationFrame(step);
+        try { this.declutterLabels(now, false); } catch (e) { if ((this._declutterErr = (this._declutterErr || 0) + 1) <= 3) console.error(e); }
+      };
+      requestAnimationFrame(step);
+    }
+
+    measureLabels(now) {
+      for (const l of this.labels.values()) { l.w = l.el.offsetWidth; l.h = l.el.offsetHeight; }
+      this._sizeAt = now; this._sizeDirty = false;
+    }
+
+    measureOccluders(now) {
+      const occ = [];
+      const add = (el, toTop) => {
+        if (!el || el.style.display === 'none') return;
+        const b = el.getBoundingClientRect();
+        if (!(b.width > 0 && b.height > 0)) return;
+        // 顶栏上方的窄缝也算遮挡：标签伸进去只会露出半截
+        occ.push({ l: b.left, t: toTop ? -1e5 : b.top, r: b.right, b: b.bottom });
+      };
+      if (this.hud && this.hud.style.display !== 'none') { add(this.topBar, true); add(this.cityPanel, false); }
+      this._occ = occ; this._occAt = now; this._occDirty = false;
+    }
+
+    declutterLabels(now, snap) {
+      if (!this.hud || this.labels.size === 0) return;
+      const dt = this._declutterLast > 0 ? M.clamp((now - this._declutterLast) / 1000, 0, 0.1) : 0;
+      this._declutterLast = now;
+      if (!this._labelsOn || this.hud.style.display === 'none') return;
+      const Gfx = SG.Gfx;
+      if (!Gfx || !Gfx.camera || typeof Gfx.worldToScreen !== 'function') return;
+      const g = G();
+      if (!g) return;
+      // 紧凑模式：视口高度不足 540 且镜头距离超过约 90（带滞后，缩放时不来回切换）
+      const dist = SG.Game && SG.Game.rig ? SG.Game.rig.distance : 0;
+      const compact = window.innerHeight < 540 && dist > (this._compact ? 86 : 92);
+      if (compact !== !!this._compact) {
+        this._compact = compact;
+        for (const [id, l] of this.labels) this.renderLabel(id, l);
+        this._sizeDirty = true;
+      }
+      if (this._sizeDirty || now - this._sizeAt > 1000) this.measureLabels(now);
+      if (this._occDirty || now - this._occAt > 200) this.measureOccluders(now);
+
+      const cand = [];
+      for (const [id, l] of this.labels) {
+        const s = Gfx.worldToScreen(l.cv.labelPos);
+        if (!(s && s.visible && s.dist < LABEL_HIDE_BEYOND && isFinite(s.x) && isFinite(s.y)) || !(l.w > 0)) {
+          // 不在画面内（由 follow 自行隐藏）；再次进入画面时直接取目标透明度，不闪现
+          l.seen = false; l.on = false;
+          continue;
+        }
+        const c = g.cities[id];
+        const rank = id === this.selected ? 0 : c && c.owner === g.player ? 1 : 2;
+        cand.push({ l, id, x: s.x, y: s.y, rank, pop: c ? c.population : 0 });
+      }
+      cand.sort((a, b) => (a.rank - b.rank) || (b.pop - a.pop) || (a.id - b.id));
+
+      const placed = [];
+      const k = dt / LABEL_FADE;
+      for (const o of cand) {
+        const l = o.l;
+        // 滞后：已显示的标签真正压住才隐藏；已隐藏的要留出几像素空隙才重新出现，镜头移动时不闪烁
+        const pad = l.on ? -1 : 4;
+        const hw = l.w / 2, hh = l.h / 2;
+        const test = { l: o.x - hw - pad, t: o.y - hh - pad, r: o.x + hw + pad, b: o.y + hh + pad };
+        let ok = true;
+        for (const q of this._occ) if (overlaps(test, q)) { ok = false; break; }
+        if (ok) for (const q of placed) if (overlaps(test, q)) { ok = false; break; }
+        if (ok) placed.push({ l: o.x - hw, t: o.y - hh, r: o.x + hw, b: o.y + hh });
+        l.on = ok;
+        const target = ok ? 1 : 0;
+        if (snap || !l.seen || l.fade < 0) l.fade = target;
+        else l.fade = target > l.fade ? Math.min(target, l.fade + k) : Math.max(target, l.fade - k);
+        l.seen = true;
+        if (l.handle) l.handle.alpha = l.fade;
+        else l.el.style.visibility = l.fade > 0 ? '' : 'hidden';
       }
     }
 
@@ -205,14 +312,24 @@
         `<span class="sg-chip"><i>金</i><b>${gold}</b></span>` +
         `<span class="sg-chip"><i>粮</i><b>${food}</b></span>`;
       this.endBtn.disabled = this.busy;
+      this.saveBtn.disabled = this.busy || this.endMonth;
       for (const [id, l] of this.labels) {
-        const c = g.cities[id];
-        const col = c.owner >= 0 ? g.factions[c.owner].color : '#b3b3b3';
-        l.el.innerHTML = dot(col, '●') + SG.esc(c.name) + (c.owner === g.player ? `<small>${g.troopsIn(c)}</small>` : '');
-        l.el.classList.toggle('is-mine', c.owner === g.player);
+        this.renderLabel(id, l);
         l.el.classList.toggle('is-selected', id === this.selected);
       }
+      this._sizeDirty = true;         // 兵力数字可能改变标签宽度
       this.refreshCityPanel();
+    }
+
+    // 城名标签内容；紧凑模式（矮屏且镜头拉远）字号略小、不显示兵力，减少拥挤
+    renderLabel(id, l) {
+      const g = G();
+      const c = g.cities[id];
+      const col = c.owner >= 0 ? g.factions[c.owner].color : '#b3b3b3';
+      l.el.innerHTML = dot(col, '●') + SG.esc(c.name) + (c.owner === g.player && !this._compact ? `<small>${g.troopsIn(c)}</small>` : '');
+      l.el.classList.toggle('is-mine', c.owner === g.player);
+      l.el.style.fontSize = this._compact ? '.92rem' : '';
+      l.el.style.padding = this._compact ? '.1rem .5rem .14rem .42rem' : '';
     }
 
     selectCity(id) {
@@ -226,10 +343,14 @@
     refreshCityPanel() {
       const g = G();
       if (!this.cityPanel) return;
-      if (this.selected < 0) { this.cityPanel.style.display = 'none'; return; }
+      if (this.selected < 0) {
+        if (this.cityPanel.style.display !== 'none') { this.cityPanel.style.display = 'none'; this._occDirty = true; }
+        return;
+      }
       if (this.cityPanel.style.display === 'none') {
         this.cityPanel.style.display = '';
         if (this._syncTop) this._syncTop();
+        this._occDirty = true;
       }
       const c = g.cities[this.selected];
       const mine = c.owner === g.player;

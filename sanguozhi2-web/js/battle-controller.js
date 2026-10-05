@@ -114,6 +114,7 @@
       rig.onTap.push(this._onTap);
       music('battle');
       this.buildHud();
+      this.updateHud();                          // 开场横幅期间顶栏即显示日数 / 兵力 / 粮草
       try {
         const an = G().factions[s.attacker].name;
         const dn = s.defender >= 0 ? G().factions[s.defender].name : '守军';
@@ -391,44 +392,52 @@
         for (const x of Mdl.units) V.refresh(x);
         return;
       }
-      await UI().say(a.gen.name + '：' + b.gen.name + '，可敢与我一战？', a.gen.name, sideColor(a.side));
-
-      // 单挑画面
-      const modal = openModal('sg-duel', 980, 420);
-      const panel = modal.panel;
-      h('div', 'sg-duel-title', '单　挑', panel);
-      const arena = h('div', 'sg-duel-arena', null, panel);
-      const side = u => {
-        const col = h('div', 'sg-duel-side sg-side-' + u.side, null, arena);
-        col.appendChild(SG.UI.medal(u.gen.name.substring(0, 1), sideColor(u.side), 130));
-        h('div', 'sg-duel-name', SG.esc(u.gen.name) + '<small>武力 ' + u.gen.war + '</small>', col);
-        const bar = SG.UI.bar(1, sideColor(u.side));
-        col.appendChild(bar);
-        return { col, bar };
-      };
-      const sa = side(a);
-      const vs = h('div', 'sg-duel-vs', 'VS', arena);
-      const sb = side(b);
-      const log = h('div', 'sg-duel-log', '', panel);
-      await SG.wait(0.6);
-      let round = 0;
-      for (const rd of res.rounds) {
-        round++;
-        sfx('duel');
-        setBar(sa.bar, rd.hpA / 100); setBar(sb.bar, rd.hpB / 100);
-        const striker = rd.who === 0 ? a : b;
-        log.innerHTML = `第 ${round} 合　${SG.esc(striker.gen.name)}一击，造成 ${rd.dmg} 伤害`;
-        pulse((rd.who === 0 ? sb : sa).col, 'is-struck');
-        pulse(vs, 'is-hit');
-        await SG.wait(0.32);
-      }
       const winner = res.winner === 0 ? a : b, loser = res.winner === 0 ? b : a;
-      (res.winner === 0 ? sb : sa).col.style.opacity = '0.55';
-      log.innerHTML = `<b>${SG.esc(winner.gen.name)}</b>击败了${SG.esc(loser.gen.name)}！`;
-      sfx('win', 0.5);
-      await SG.wait(1.4);
-      modal.close();
-      for (const x of Mdl.units) V.refresh(x);
+      // Mdl.duel 已判定胜负（败者 alive = false）；单挑画面播完前保留败者头顶标签，免得提前泄露结果
+      const lv = V.vis(loser);
+      if (lv) lv.holdLabel = true;
+      let modal = null;
+      try {
+        await UI().say(a.gen.name + '：' + b.gen.name + '，可敢与我一战？', a.gen.name, sideColor(a.side));
+
+        // 单挑画面
+        modal = openModal('sg-duel', 980, 420);
+        const panel = modal.panel;
+        h('div', 'sg-duel-title', '单　挑', panel);
+        const arena = h('div', 'sg-duel-arena', null, panel);
+        const side = u => {
+          const col = h('div', 'sg-duel-side sg-side-' + u.side, null, arena);
+          col.appendChild(SG.UI.medal(u.gen.name.substring(0, 1), sideColor(u.side), 130));
+          h('div', 'sg-duel-name', SG.esc(u.gen.name) + '<small>武力 ' + u.gen.war + '</small>', col);
+          const bar = SG.UI.bar(1, sideColor(u.side));
+          col.appendChild(bar);
+          return { col, bar };
+        };
+        const sa = side(a);
+        const vs = h('div', 'sg-duel-vs', 'VS', arena);
+        const sb = side(b);
+        const log = h('div', 'sg-duel-log', '', panel);
+        await SG.wait(0.6);
+        let round = 0;
+        for (const rd of res.rounds) {
+          round++;
+          sfx('duel');
+          setBar(sa.bar, rd.hpA / 100); setBar(sb.bar, rd.hpB / 100);
+          const striker = rd.who === 0 ? a : b;
+          log.innerHTML = `第 ${round} 合　${SG.esc(striker.gen.name)}一击，造成 ${rd.dmg} 伤害`;
+          pulse((rd.who === 0 ? sb : sa).col, 'is-struck');
+          pulse(vs, 'is-hit');
+          await SG.wait(0.32);
+        }
+        (res.winner === 0 ? sb : sa).col.style.opacity = '0.55';
+        log.innerHTML = `<b>${SG.esc(winner.gen.name)}</b>击败了${SG.esc(loser.gen.name)}！`;
+        sfx('win', 0.5);
+        await SG.wait(1.4);
+      } finally {
+        if (modal) modal.close();
+        for (const x of Mdl.units) V.refresh(x);
+        if (lv) lv.holdLabel = false;          // 单挑结束：标签随溃散动画一起消失
+      }
       await V.rout(loser);
     }
 

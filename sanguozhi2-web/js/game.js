@@ -59,13 +59,10 @@
     }, opts);
     for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), opts);
     document.addEventListener('dblclick', e => e.preventDefault(), opts);
-    // 双击缩放（iOS 旧版不认 touch-action）
-    let lastEnd = 0;
-    document.addEventListener('touchend', e => {
-      const now = performance.now();
-      if (now - lastEnd < 300 && e.target === canvas) e.preventDefault();
-      lastEnd = now;
-    }, opts);
+    // 画布只用 pointer 事件：始于画布的触摸一律取消 touchend，
+    // 不再生成兼容的 mouse / click 事件。否则点城池后弹出的面板会在手指下
+    // 收到同一次点击（幽灵点击），也顺带阻止 iOS 旧版的双击缩放。
+    if (canvas) canvas.addEventListener('touchend', e => { if (e.cancelable) e.preventDefault(); }, opts);
   }
   // 首次用户手势：解锁音频
   function installAudioUnlock() {

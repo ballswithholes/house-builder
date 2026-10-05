@@ -506,7 +506,10 @@ body {
 }
 
 .sg-modal.no-dim::before { background: rgba(0, 0, 0, .001); }
-.sg-modal.is-closing { pointer-events: none; }
+/* 正在淡出的对话框整棵子树都不再命中：紧接着的点击/轻触直接落到下面的 HUD
+   （.sg-dialog / .sg-item / .sg-btn 自身声明了 pointer-events:auto，必须一并压住） */
+.sg-modal.is-closing,
+.sg-modal.is-closing * { pointer-events: none !important; }
 .sg-modal.is-closing::before { animation: sg-fade-out .16s ease-in both; }
 .sg-modal.is-closing > .sg-dialog { animation: sg-pop-out .16s ease-in both; }
 
@@ -586,8 +589,29 @@ body {
 .sg-count { color: var(--sg-muted); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 .sg-count b { color: var(--sg-gold) !important; }
 
+/* 滚动渐隐：列表能滚动时，在“还有内容”的一侧显出一段较长的渐隐，
+   提示可以继续滚动，被截断的那一行也不会硬生生切在文字中间。
+   --sg-fade-t / --sg-fade-b 是当前的上 / 下渐隐长度，静止值为 --sg-fade-edge-t / -b（细边）；
+   支持滚动驱动动画的浏览器按滚动位置在静止值与 --sg-fade-len 之间过渡。
+   内容放得下时滚动时间线无效、动画不生效，只剩细边渐隐。
+   scroll-padding 让键盘选中项滚入视野时停在渐隐区之外。 */
+@property --sg-fade-t { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --sg-fade-b { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
+@keyframes sg-scroll-fade {
+  0% { --sg-fade-t: var(--sg-fade-edge-t, 0px); --sg-fade-b: var(--sg-fade-len, 2.4rem); }
+  6% { --sg-fade-t: var(--sg-fade-len, 2.4rem); }
+  94% { --sg-fade-b: var(--sg-fade-len, 2.4rem); }
+  100% { --sg-fade-t: var(--sg-fade-len, 2.4rem); --sg-fade-b: var(--sg-fade-edge-b, 0px); }
+}
+
 /* 滚动列表（iOS 惯性滚动） */
 .sg-list {
+  --sg-fade-len: 2.4rem;
+  --sg-fade-edge-t: .4rem;
+  --sg-fade-edge-b: .5rem;
+  --sg-fade-t: var(--sg-fade-edge-t);
+  --sg-fade-b: var(--sg-fade-edge-b);
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -599,10 +623,18 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  scroll-padding-block: var(--sg-fade-len);
   scrollbar-width: thin;
   scrollbar-color: rgba(243, 201, 105, .35) transparent;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 .4rem, #000 calc(100% - .5rem), transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 .4rem, #000 calc(100% - .5rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
+}
+@supports (animation-timeline: scroll()) {
+  .sg-list {
+    scroll-timeline: --sg-fade y;
+    animation: sg-scroll-fade 1ms linear both;
+    animation-timeline: --sg-fade;
+  }
 }
 .sg-list::-webkit-scrollbar { width: 6px; }
 .sg-list::-webkit-scrollbar-thumb { background: rgba(243, 201, 105, .32); border-radius: 3px; }
@@ -1044,7 +1076,7 @@ body {
 .sg-citylabel small {
   font-family: var(--sg-font-body);
   font-weight: 500;
-  font-size: .72em;
+  font-size: max(11px, .72em);
   color: #d8cfbb;
   margin-left: .3em;
   font-variant-numeric: tabular-nums;
@@ -1084,8 +1116,12 @@ body {
 }
 .sg-unitinfo-name { font-size: .9rem; font-weight: 700; line-height: 1.25; color: var(--sg-text); }
 .sg-unitinfo-name .sg-star { color: var(--sg-gold); margin-right: .15em; }
-.sg-unitinfo-troops { font-size: .75rem; font-weight: 500; color: #d8cfbb; margin-left: .45em; font-variant-numeric: tabular-nums; }
+.sg-unitinfo-troops { font-size: max(11px, .75rem); font-weight: 500; color: #d8cfbb; margin-left: .45em; font-variant-numeric: tabular-nums; }
 .sg-unitinfo .sg-bar { height: .32rem; margin-top: .22rem; }
+
+/* 战场部队标签（.sg-uinfo，基础样式由 battle-view.js 注入）里的兵力数：
+   不小于 11px，但也不大于武将名本身的字号，免得在手机上缩到 9px 以下 */
+.sg-labels .sg-uinfo .sg-tr { font-size: max(.8em, min(1em, 11px)); }
 
 /* ---------------------------------------------------------------- 战略画面 -- */
 .sg-topbar {
@@ -1237,9 +1273,23 @@ body {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(243, 201, 105, .35) transparent;
+  /* 武将多时的滚动渐隐（见 .sg-list 上方的说明；静止时无渐隐） */
+  --sg-fade-len: 2.2rem;
+  --sg-fade-t: 0px;
+  --sg-fade-b: 0px;
+  scroll-padding-block: var(--sg-fade-len);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
 }
 .sg-genlist::-webkit-scrollbar { width: 6px; }
 .sg-genlist::-webkit-scrollbar-thumb { background: rgba(243, 201, 105, .32); border-radius: 3px; }
+@supports (animation-timeline: scroll()) {
+  .sg-genlist {
+    scroll-timeline: --sg-fade y;
+    animation: sg-scroll-fade 1ms linear both;
+    animation-timeline: --sg-fade;
+  }
+}
 
 .sg-genrow {
   flex: none;
@@ -1257,7 +1307,7 @@ body {
 .sg-genrow-name { flex: 1 1 auto; min-width: 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-genrow-stats {
   flex: none;
-  font-size: .76rem;
+  font-size: max(11px, .76rem);
   line-height: 1.32;
   color: var(--sg-muted);
   text-align: right;
@@ -1422,6 +1472,8 @@ body {
 }
 
 .sg-title-sub0 {
+  position: relative;
+  isolation: isolate;
   margin-top: 1.4rem;
   font-family: var(--sg-font-title);
   font-size: 2rem;
@@ -1429,8 +1481,24 @@ body {
   letter-spacing: .5em;
   padding-left: .5em;
   color: var(--sg-text);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, .7);
+  /* 细描边 + 暗晕：飘过的浅色云朵挡在后面时仍然清晰 */
+  text-shadow:
+    0 0 1px rgba(20, 10, 4, .95),
+    0 0 2px rgba(20, 10, 4, .85),
+    0 1px 2px rgba(0, 0, 0, .85),
+    0 2px 4px rgba(0, 0, 0, .7),
+    0 0 .5em rgba(0, 0, 0, .65);
   animation: sg-rise-in .7s var(--sg-ease) .25s both;
+}
+/* 字后的一抹暗影，兜住云朵与雪山这类亮色背景 */
+.sg-title-sub0::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -.3em -.7em -.25em -.2em;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(14, 9, 6, .58), rgba(14, 9, 6, .36) 60%, rgba(14, 9, 6, 0));
+  pointer-events: none;
 }
 
 .sg-title-main {
@@ -1476,7 +1544,7 @@ body {
   letter-spacing: .45em;
   padding-left: .45em;
   color: rgba(255, 240, 204, .88);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, .85), 0 0 .8rem rgba(0, 0, 0, .7);
+  text-shadow: 0 0 1px rgba(20, 10, 4, .95), 0 1px 2px rgba(0, 0, 0, .85), 0 2px 4px rgba(0, 0, 0, .85), 0 0 .8rem rgba(0, 0, 0, .7);
   animation: sg-rise-in .9s var(--sg-ease) .55s both;
 }
 .sg-title-sub::before, .sg-title-sub::after {
@@ -1512,8 +1580,9 @@ body {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: .8rem;
-  color: rgba(245, 237, 219, .45);
+  font-size: max(11px, .8rem);
+  color: rgba(245, 237, 219, .62);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
   letter-spacing: .1em;
   pointer-events: none;
 }
@@ -1658,8 +1727,25 @@ body {
     padding: .3rem .3rem 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(243, 201, 105, .35) transparent;
+    /* 滚动渐隐（见 .sg-list 上方的说明）：被命令栏截住的那一行淡出，提示下面还有武将 */
+    --sg-fade-len: 2rem;
+    --sg-fade-t: 0px;
+    --sg-fade-b: 0px;
+    scroll-padding-block: var(--sg-fade-len);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 var(--sg-fade-t), #000 calc(100% - var(--sg-fade-b)), transparent 100%);
   }
-  .sg-citypanel-body .sg-genlist { flex: none; overflow: visible; min-height: 0; margin: 0; padding: 0; }
+  .sg-citypanel-body .sg-genlist {
+    flex: none; overflow: visible; min-height: 0; margin: 0; padding: 0;
+    -webkit-mask-image: none; mask-image: none; animation: none; scroll-timeline: none;
+  }
+  @supports (animation-timeline: scroll()) {
+    .sg-citypanel-body {
+      scroll-timeline: --sg-fade y;
+      animation: sg-scroll-fade 1ms linear both;
+      animation-timeline: --sg-fade;
+    }
+  }
   .sg-citystats { font-size: 1rem; line-height: 1.45; }
   .sg-stat > b { font-size: 1.02rem; }
   .sg-genrow { min-height: 44px; }

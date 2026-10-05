@@ -92,7 +92,9 @@
   // ---------------------------------------------------------- 地表颜色 --
   const LUSH = [0.36, 0.62, 0.3], DRY = [0.66, 0.64, 0.38], STEPPE = [0.62, 0.55, 0.36];
   const SEABED = [0.7, 0.66, 0.5], SAND = [0.86, 0.8, 0.6], FOREST = [0.22, 0.45, 0.24];
-  const UPLAND = [0.56, 0.52, 0.4], ROCK = [0.58, 0.56, 0.53], SNOW = [0.95, 0.96, 0.98];
+  // ROCK / SNOW 比 C#（0.58,0.56,0.53 / 0.95,0.96,0.98）略暗：网页端没有色调映射，
+  // 半兰伯特太阳光 + 三色环境光的总辐照度可达 1.3，原值会让西部雪原整片截断成纯白、看不出低多边形面。
+  const UPLAND = [0.56, 0.52, 0.4], ROCK = [0.55, 0.53, 0.5], SNOW = [0.88, 0.9, 0.94];
   function lerpInto(c, b, t) { t = M.clamp01(t); c[0] += (b[0] - c[0]) * t; c[1] += (b[1] - c[1]) * t; c[2] += (b[2] - c[2]) * t; }
   const _gc = [0, 0, 0], _gcOut = new THREE.Color();
   function groundColor(x, z, h, slope, jitter, noForest) {
@@ -117,8 +119,35 @@
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   const _m4 = new THREE.Matrix4(), _m4b = new THREE.Matrix4();
   const ZERO_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
-  const _sphere = new THREE.Sphere(), _hit = new THREE.Vector3();
+  const _sphere = new THREE.Sphere(), _hit = new THREE.Vector3(), _cloudPos = new THREE.Vector3();
   const _plane05 = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+
+  // ---------------------------------------------------------- 地形材质 --
+  // LowPoly 材质 + 高光肩部：最终颜色的最大通道超过 KNEE 后按指数曲线平滑趋近 1（保持色相），
+  // 向阳的亮面（雪原、沙滩）不再截断为纯白，相邻三角面仍保留明暗差。KNEE 以下与 LowPoly 完全一致。
+  const TERRAIN_KNEE = '0.8';
+  const TERRAIN_SHOULDER =
+    '\tfloat sgPeak = max( max( outgoingLight.r, outgoingLight.g ), outgoingLight.b );\n' +
+    '\tif ( sgPeak > ' + TERRAIN_KNEE + ' ) outgoingLight *= ( ' + TERRAIN_KNEE + ' + ( 1.0 - ' + TERRAIN_KNEE + ' ) * ( 1.0 - exp( ( ' + TERRAIN_KNEE +
+    ' - sgPeak ) / ( 1.0 - ' + TERRAIN_KNEE + ' ) ) ) ) / sgPeak;\n' +
+    '\t#include <opaque_fragment>';
+  // 新建一个带高光肩部的 LowPoly 材质（地形、云共用同一着色器程序，各自的 uniform 独立）
+  function shoulderMaterial(name) {
+    const mat = SG.Gfx.newLowPoly();
+    const lowPolyCompile = mat.onBeforeCompile;
+    // 包一层新函数：three 以 onBeforeCompile.toString() 作程序缓存键，因此得到独立于普通 LowPoly 的着色器程序
+    mat.onBeforeCompile = function terrainCompile(shader, renderer) {
+      lowPolyCompile.call(this, shader, renderer);
+      shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', TERRAIN_SHOULDER);
+    };
+    mat.name = name;
+    return mat;
+  }
+  let _terrainMat = null;
+  function terrainMaterial() {
+    if (!_terrainMat) _terrainMat = shoulderMaterial('TerrainLowPoly');
+    return _terrainMat;
+  }
 
   // ---------------------------------------------------------- MapView --
   class MapView {
@@ -232,7 +261,7 @@
       for (let i = 0; i <= nx; i++) for (let j = 0; j <= nz; j++) hs[i * W + j] = this.height(x0 + i * step, z0 + j * step);
       this._grid = { x0, z0, step, nx, nz, hs };
       const rnd = SG.SeededRandom(7);
-      const mat = SG.Gfx.lowPoly();
+      const mat = terrainMaterial();
       // 分块，避免单个网格过大，并让视锥剔除生效
       const chunk = 32;
       for (let ci = 0; ci < nx; ci += chunk)
@@ -291,7 +320,7 @@
       const bed = new THREE.Color(SEABED[0], SEABED[1], SEABED[2]);
       const E = 1200, by = -5.2;
       mb.quad(V(-E, by, -E), V(-E, by, E), V(E, by, E), V(E, by, -E), bed);
-      const m = SG.Gfx.mesh(mb.toGeometry(), SG.Gfx.lowPoly(), { castShadow: false, receiveShadow: true });
+      const m = SG.Gfx.mesh(mb.toGeometry(), terrainMaterial(), { castShadow: false, receiveShadow: true });
       m.name = 'TerrainFar';
       this.root.add(m);
     }
@@ -582,9 +611,9 @@
 
     _buildClouds() {
       const rnd = SG.SeededRandom(5);
-      const mat = SG.Gfx.newLowPoly();
-      mat.emission = 0.35;
-      mat.color.setRGB(0.74, 0.75, 0.78); // _Color：略压暗，让云的明暗面不被截断成一片白
+      // 只写深度的前置遍：半透明的云只显示最外层的面，不会透出内部互相穿插的云团
+      const depthMat = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true });
+      depthMat.name = 'CloudDepth';
       for (let i = 0; i < 9; i++) {
         const mb = new SG.MeshBuilder();
         const puffs = 4 + rnd.next(4);
@@ -593,8 +622,22 @@
           const r = 1.4 + rnd.nextDouble() * 1.6;
           mb.blob(V(ox, oy, oz), V(r, r * 0.6, r * 0.85), new THREE.Color(1, 1, 1), k);
         }
-        const m = SG.Gfx.mesh(mb.toGeometry(), mat, { castShadow: true, receiveShadow: false });
+        // 白云（C# _Emission 0.35）：向阳面的亮度超过 1，同样走高光肩部，云顶不会截断成一整片纯白。
+        // 每朵云一个材质：镜头拉近（战略视角）时离镜头近的云淡成半透明，不再整片挡住城池（见 update）
+        const mat = shoulderMaterial('CloudLowPoly');
+        mat.emission = 0.35;
+        mat.color.setRGB(0.74, 0.75, 0.78); // _Color：略压暗，让云的明暗面不被截断成一片白
+        mat.transparent = true;
+        const geo = mb.toGeometry();
+        const m = SG.Gfx.mesh(geo, mat, { castShadow: true, receiveShadow: false });
         m.name = 'Cloud';
+        m.renderOrder = 21;
+        const pre = new THREE.Mesh(geo, depthMat);
+        pre.name = 'CloudDepth';
+        pre.renderOrder = 20;
+        pre.castShadow = false; pre.receiveShadow = false;
+        pre.userData.sharedGeometry = true;
+        m.add(pre);
         const px = rnd.nextDouble() * MapW, py = 15 + rnd.nextDouble() * 5, pz = rnd.nextDouble() * MapH;
         m.position.copy(SG.U(px, py, pz));
         this.root.add(m);
@@ -694,11 +737,18 @@
         map.repeat.set(1 / s, 1 / s);
         map.rotation = -this._selectAngle * M.deg2rad;
       }
+      const cam = SG.Gfx && SG.Gfx.camera;
       for (const c of this._clouds) {
         c.position.x += 0.6 * dt;
         c.position.z -= 0.15 * dt;
         if (c.position.x > MapW + 30) c.position.x = -30;
         if (-c.position.z > MapH + 30) c.position.z = 30;
+        // 离镜头越近越透明：标题 / 全图视角（镜头距离 85 以上）几乎不透明，战略视角（45～48）约 0.35
+        if (cam) {
+          c.getWorldPosition(_cloudPos);
+          const f = M.clamp01((_cloudPos.distanceTo(cam.position) - 28) / 30);
+          c.material.opacity = 0.35 + 0.65 * f * f * (3 - 2 * f);
+        }
       }
       this._updateFlags();
     }

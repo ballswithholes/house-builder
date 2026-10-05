@@ -39,7 +39,10 @@
   SG.M = M;
 
   // ---------------------------------------------------------- Perlin 噪声 --
-  // 与 Unity Mathf.PerlinNoise 相同的接口：返回约 [0,1] 的值
+  // 与 Unity Mathf.PerlinNoise 相同的接口与输出尺度：原始噪声按 Unity 的
+  // (n + 0.69) / 1.483 归一化（整数坐标处为 0.4652731，均值约 0.465），
+  // 不做截断——与 Unity 一样，返回值可能略小于 0 或略大于 1。
+  // C# 中的阈值（如 BattleModel 的 0.72 / 0.6 / 0.62）都基于这一尺度。
   const perm = new Uint8Array(512);
   (function () {
     const p = [];
@@ -68,7 +71,7 @@
     const x1 = grad(aa, xf, yf) + (grad(ba, xf - 1, yf) - grad(aa, xf, yf)) * u;
     const x2 = grad(ab, xf, yf - 1) + (grad(bb, xf - 1, yf - 1) - grad(ab, xf, yf - 1)) * u;
     const n = x1 + (x2 - x1) * v; // 约 [-1, 1]
-    return M.clamp01(n * 0.5 + 0.5);
+    return (n + 0.69) / 1.483;
   };
 
   // --------------------------------------------------------------- Random --
