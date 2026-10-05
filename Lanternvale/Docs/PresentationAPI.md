@@ -11,9 +11,14 @@ Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio,Renderi
 >   `UnitView.CenterPosition/HeadPosition/NameplatePosition` and `MapObject.LabelPosition` are `Vector3`.
 > * Picking is screen-space: `UnitView.PickScreen(screen)` / `HitTestScreen(screen, out depth)`,
 >   `MapView.PickScreen(screen, includeRegions)`. `UnitView.Bounds` is now the ground footprint.
-> * `UnitView.SetFacing(±1)` faces screen-right / screen-left for the current camera yaw (`CameraRig.Yaw` ± 105°, a 3/4
->   view towards the camera; re-applied when the camera turns, see `UnitFacing.SideYaw`); `FaceTowards` turns to any
->   direction. `UnitView.SetVariant(int)` / `Variant` give generic villagers and children a stable look per NPC.
+> * `UnitView.SetFacing(±1)` faces screen-right / screen-left for the current camera yaw (`CameraRig.Yaw` ± 125°, i.e.
+>   `UnitFacing.Bias` 35° towards the camera for a 3/4 view; re-applied when the camera turns, see
+>   `UnitFacing.SideYaw`); `FaceTowards` turns to any direction. Static models (totems, the dummy) are set down facing
+>   the camera (`UnitFacing.StaticYaw`) and ignore facing requests; idle bipeds turn their heads towards the camera
+>   (`UnitAnimInput.ViewYaw`). Bow users have string and arrow bones (`BB.StringA/StringB/ArrowR`, `BB.Count` 31); the
+>   blob shadow's parameters come from `UnitShadow.Blob`.
+> * Occluding props no longer fade as a whole: they open soft round cut-outs around hidden units, the hovered object,
+>   the cursor's ground point and the camera's focus (`MapView.OccluderCutOuts`, default true; ThreeD.md §6). `UnitView.SetVariant(int)` / `Variant` give generic villagers and children a stable look per NPC.
 > * `FxSystem` airborne effects take `Vector3` (`Projectile`, `Beam`, `MoveBeam`, `Impact`, `Slash`, `Sparkles`,
 >   `Puff`); ground effects keep `Vector2`. There are no sorting-order constants any more (render queues layer the
 >   ground overlays). `FloatingText` takes `Vector3`.
@@ -53,7 +58,8 @@ view.Dispose();                                      // destroys everything, unr
 ```
 
 Static: `MapView.Current`, tunables `ForegroundParallax` (1.15), `ForegroundFadeAlpha` (0.35),
-`OccluderFadeAlpha` (0.5; 1 disables), `VerticalParallax` (0.4), `HighlightColor`.
+`OccluderFadeAlpha` (0.35; 1 disables occluder handling), `OccluderCutOuts` (true: cut-outs instead of whole-prop fades),
+`VerticalParallax` (0.4), `HighlightColor`.
 
 Members:
 
@@ -89,7 +95,8 @@ What a map contains (all from `MapDef`):
 * **Props** — y-sorted (`ForY(pos.y)`), `scale`, `flip`, `tint`; soft ground shadow if the manifest says `shadow`;
   `sway`; `light` → `Lighting2D.AddPointLight` (offset × scale, mirrored with flip; `flicker`, `nightOnly`);
   spirit lanterns get a breathing halo (and a default warm light when lit and no `light` is authored).
-  Props ≥ 2.5 m tall fade to 50% while a unit stands behind them.
+  Props ≥ 2.5 m tall fade to 50% while a unit stands behind them (3D: they open a soft cut-out around it instead,
+  ThreeD.md §6).
 * **Foreground** — `SortingOrders.Foreground`, parallax 1.15, fade to 35% when a unit's body overlaps them.
 * **Chests** (closed/open art), **transition markers** (glowing chevron pointing at the nearest map edge, or a rune
   circle mid-map), **regions** (rects only).
@@ -112,6 +119,9 @@ event Action<DayNight> Changed
 ```
 Phases: dawn [5,8) peach/lavender, day [8,17.5) warm white, dusk [17.5,20.5) rose/amber, night deep blue.
 Map `ambientColor × ambientIntensity` multiplies the light.
+3D additions: `dn.NightGrade` / `DayNight.NightGradeTint` (the `_LV_Grade` night grade MapView pushes),
+`DayNight.LampColor(authored, night)` (warm-white/yellow lamps and windows deepen to amber at night; coloured lights
+keep their hue) and `DayNight.LampRange(range, night)` (+22 % reach at full night).
 
 ## 3. UnitView
 

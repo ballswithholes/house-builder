@@ -24,6 +24,8 @@ namespace Lanternvale.Preview
         static readonly int TexStrengthId = Shader.PropertyToID("_TexStrength");
         static readonly int SoftnessId = Shader.PropertyToID("_Softness");
         static readonly int FadeId = Shader.PropertyToID("_Fade");
+        static readonly int DetailTexId = Shader.PropertyToID("_DetailTex");
+        static readonly int DetailPlanarId = Shader.PropertyToID("_DetailPlanarScale");
 
         public sealed class Stats { public int Renderers, Draws, Outlined; }
 
@@ -49,6 +51,10 @@ namespace Lanternvale.Preview
                     foreach (var m in mats) if (m != null && m.shader != null && m.shader.name == Materials3D.OutlineShader) outlined = true;
                     float fade = r.Block.Floats.TryGetValue(FadeId, out var fv) ? fv : 1f;
                     int obj = frame.NewObject(outlined, fade);
+                    // occluder cut-outs (_Cut0.._Cut3 in the property block, as MapView.ApplyCuts writes them); the ink
+                    // hull is cut with them too
+                    var cuts = Cuts(r);
+                    if (cuts != null) frame.SetCuts(obj, cuts);
                     if (stats != null) { stats.Renderers++; if (outlined) stats.Outlined++; }
                     var M = t.localToWorldMatrix;
                     float dist = Vector3.Distance(r.bounds.center, camPos);
@@ -64,6 +70,7 @@ namespace Lanternvale.Preview
                         var d = Make(m, r, mesh, M);
                         if (d == null) continue;
                         d.ObjId = obj;
+                        d.Cuts = cuts;
                         if (d.Kind == DrawKind.Opaque) d.Fade = fade;
                         d.Outlined = outlined;
                         d.SortDist = dist;
@@ -100,6 +107,19 @@ namespace Lanternvale.Preview
             }
             m.RecalculateBounds();
             return m;
+        }
+
+        /// <summary>The renderer's _Cut0.._Cut3 (xyz centre, w radius; null when none is set).</summary>
+        static Vector4[] Cuts(Renderer r)
+        {
+            Vector4[] cuts = null;
+            for (int i = 0; i < PropOccluder.MaxCuts; i++)
+                if (r.Block.Colors.TryGetValue(PropOccluder.CutIds[i], out var c) && c.a > 0f)
+                {
+                    cuts ??= new Vector4[PropOccluder.MaxCuts];
+                    cuts[i] = new Vector4(c.r, c.g, c.b, c.a);
+                }
+            return cuts;
         }
 
         static float F(Renderer r, Material m, int id, float def)
@@ -150,6 +170,9 @@ namespace Lanternvale.Preview
                     d.Planar2 = F(r, m, SidePlanarId, 0.125f);
                     d.Avg1 = Lighting.Lin(Col(r, m, MainAvgId, new Color(0.6f, 0.69f, 0.45f)));
                     d.Avg2 = Lighting.Lin(Col(r, m, SideAvgId, new Color(0.6f, 0.69f, 0.45f)));
+                    // the optional detail layer (shrine gravel, forest leaf litter), weighted per vertex by uv1.x
+                    d.Tex3 = Sampler.For(Tex(r, m, DetailTexId));
+                    d.Planar3 = F(r, m, DetailPlanarId, 0.25f);
                     d.FogScale = F(r, m, FogScaleId, 1f);
                     break;
                 case Materials3D.LitTransparentShader:

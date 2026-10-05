@@ -20,13 +20,14 @@ static class PropSheet
         ["prop_windmill"] = (2.6f, 1.0f), ["prop_well"] = (1.8f, 0.9f), ["prop_fence"] = (3.0f, 0.35f),
         ["prop_lamp_post"] = (0.4f, 0.3f), ["prop_spirit_lantern"] = (0.9f, 0.5f), ["prop_spirit_lantern_dark"] = (0.9f, 0.5f),
         ["prop_tree_oak"] = (1.2f, 0.7f), ["prop_tree_pine"] = (1.0f, 0.6f), ["prop_tree_birch"] = (0.7f, 0.4f),
-        ["prop_tree_dead"] = (1.0f, 0.6f), ["prop_tree_great"] = (3.4f, 1.6f), ["prop_bush_a"] = (1.2f, 0.6f),
+        ["prop_tree_dead"] = (1.0f, 0.6f), ["prop_tree_great"] = (3.4f, 2.6f), ["prop_bush_a"] = (1.2f, 0.6f),
         ["prop_bush_b"] = (1.2f, 0.6f), ["prop_rock_large"] = (2.0f, 1.0f), ["prop_stump"] = (0.9f, 0.5f),
         ["prop_log"] = (2.2f, 0.6f), ["prop_cart"] = (2.0f, 1.0f), ["prop_barrel"] = (0.8f, 0.5f), ["prop_crate"] = (0.9f, 0.6f),
         ["prop_hay"] = (1.2f, 0.7f), ["prop_signpost"] = (0.4f, 0.3f), ["prop_noticeboard"] = (1.6f, 0.5f),
         ["prop_bench"] = (1.4f, 0.4f), ["prop_campfire"] = (1.0f, 0.6f), ["prop_tent"] = (2.4f, 1.2f),
         ["prop_ruin_pillar"] = (1.1f, 0.6f), ["prop_spirit_statue"] = (0.8f, 0.5f), ["prop_blight_crystal"] = (1.2f, 0.7f),
-        ["prop_banner"] = (0.4f, 0.3f),
+        ["prop_banner"] = (0.4f, 0.3f), ["prop_stone_wall"] = (3.2f, 0.5f), ["prop_veg_patch"] = (2.8f, 1.4f),
+        ["prop_washing_line"] = (3.4f, 0.3f),
     };
 
     public static readonly string[] AllKeys =
@@ -37,11 +38,14 @@ static class PropSheet
         "prop_bush_a", "prop_bush_b", "prop_rock_large", "prop_rock_small", "prop_stump", "prop_log",
         "prop_cart", "prop_barrel", "prop_crate", "prop_hay", "prop_signpost", "prop_noticeboard", "prop_bench",
         "prop_campfire", "prop_tent", "prop_mushrooms", "prop_ruin_pillar", "prop_ruin_arch", "prop_shrine_gate",
-        "prop_spirit_statue", "prop_blight_crystal", "prop_banner", "prop_bridge", "prop_chest", "prop_chest_open",
+        "prop_spirit_statue", "prop_blight_crystal", "prop_banner", "prop_bridge", "prop_stone_wall", "prop_veg_patch",
+        "prop_washing_line", "prop_chest", "prop_chest_open",
         "fg_ferns", "fg_grass_a", "fg_grass_b", "fg_stones_a", "fg_stones_b", "fg_flowers_a", "fg_flowers_b",
     };
 
-    sealed class Part { public Mesh Mesh; public Matrix4x4 M; public bool Outline; public string Name; }
+    // Ground = a child renderer the model leaves out of PropModel.Renderers on purpose (the Kusu plaza paving): it never
+    // fades or tints with the prop and is not part of its solid footprint.
+    sealed class Part { public Mesh Mesh; public Matrix4x4 M; public bool Outline; public string Name; public bool Ground; }
 
     public static int Run(string[] args)
     {
@@ -107,7 +111,8 @@ static class PropSheet
             var mf = t.gameObject.GetComponent<MeshFilter>();
             var mr = t.gameObject.GetComponent<MeshRenderer>();
             if (active && mf != null && mr != null && mf.sharedMesh != null && mr.enabled)
-                list.Add(new Part { Mesh = mf.sharedMesh, M = inv * t.localToWorldMatrix, Outline = mr.sharedMaterials.Length > 1, Name = t.gameObject.name });
+                list.Add(new Part { Mesh = mf.sharedMesh, M = inv * t.localToWorldMatrix, Outline = mr.sharedMaterials.Length > 1, Name = t.gameObject.name,
+                                    Ground = model.Renderers.Count > 0 && !model.Renderers.Contains(mr) });
             foreach (var c in t.children.ToArray()) Walk(c, active);
         }
         Walk(model.Root.transform, true);
@@ -125,7 +130,7 @@ static class PropSheet
                 if (first) { b = new Bounds(w, Vector3.zero); first = false; } else b.Encapsulate(w);
                 minY = Math.Min(minY, w.y);
             }
-        string partInfo = string.Join(" ", parts.Select(p => $"{p.Name}:{p.Mesh.T.Count / 3}{(p.Outline ? "" : "(noOL)")}"));
+        string partInfo = string.Join(" ", parts.Select(p => $"{p.Name}:{p.Mesh.T.Count / 3}{(p.Outline ? "" : "(noOL)")}{(p.Ground ? "(ground)" : "")}"));
         Console.WriteLine($"{key}@{seed}: tris {tris} [{partInfo}] H={model.Height:F2} R={model.Radius:F2} meshBounds min{b.min} max{b.max} LocalBounds min{model.LocalBounds.min} max{model.LocalBounds.max} lights[{string.Join(" ", model.LightAnchors)}] lid={(model.Lid != null)} lit={(model.SetLit != null)} sways={model.Sways}");
         if (minY < -0.02f) Console.WriteLine($"   WARN below ground: minY {minY:F2}");
         if (Colliders.TryGetValue(key, out var c))
@@ -133,6 +138,8 @@ static class PropSheet
             float a = c.w * 0.5f, bb = c.h * 0.5f;
             float worst = 0f; Vector3 worstP = Vector3.zero; float backMax = 0f, sideMax = 0f;
             foreach (var p in parts)
+            {
+                if (p.Ground) continue;   // ground parts (plaza paving) are walkable, not solid
                 foreach (var v in p.Mesh.V)
                 {
                     var w = p.M.MultiplyPoint3x4(v);
@@ -145,6 +152,7 @@ static class PropSheet
                     else { float zf = -bb * (float)Math.Sqrt(1 - (w.x / a) * (w.x / a)); viol = zf - w.z; }
                     if (viol > worst) { worst = viol; worstP = w; }
                 }
+            }
             Console.WriteLine($"   footprint vs collider {c.w}x{c.h}: worst front violation {worst:F2} m at {worstP}; low parts |x|max {sideMax:F2} (a={a:F2}), back z max {backMax:F2}");
         }
     }
@@ -297,7 +305,8 @@ static class PropSheet
 
     static void DrawMesh(SheetImage img, Cam cam, float[] zb, int[] id, Mesh m, Matrix4x4 M, int pid)
     {
-        var V = m.V; var T = m.T; var C = m.C;
+        var V = m.V; var T = m.T; var C = m.C; var N = m.N;
+        bool smooth = N.Count == V.Count;
         for (int i = 0; i < T.Count; i += 3)
         {
             var a = M.MultiplyPoint3x4(V[T[i]]); var b = M.MultiplyPoint3x4(V[T[i + 1]]); var c = M.MultiplyPoint3x4(V[T[i + 2]]);
@@ -306,13 +315,24 @@ static class PropSheet
             var toCam = cam.Ortho ? -cam.F : cam.Pos - a;
             if (Vector3.Dot(n, toCam) <= 0f) continue;   // back face culled
             n = n.normalized;
+            if (smooth)
+            {
+                // the mesh's own vertex normals (flat-shaded parts have split vertices = face normals; soft foliage is
+                // smooth), shaded per vertex and interpolated like the map renders
+                Vector3 Vn(int k) { var vn = M.MultiplyVector(N[T[k]]); return vn.sqrMagnitude > 1e-12f ? vn.normalized : n; }
+                Color Vc(int k) => C.Count > 0 ? C[T[k]] : Color.white;
+                DrawTri(img, cam, zb, id, pid, a, b, c, Shade(Vn(i), Vc(i)), false, Shade(Vn(i + 1), Vc(i + 1)), Shade(Vn(i + 2), Vc(i + 2)));
+                continue;
+            }
             var cc = C.Count > 0 ? (C[T[i]] + C[T[i + 1]] + C[T[i + 2]]) * (1f / 3f) : Color.white;
             var shade = Shade(n, cc);
             DrawTri(img, cam, zb, id, pid, a, b, c, shade, false);
         }
     }
 
-    static void DrawTri(SheetImage img, Cam cam, float[] zb, int[] id, int pid, Vector3 a, Vector3 b, Vector3 c, Vector3 col, bool ground)
+    // colB / colC given: the colour is interpolated across the triangle (col at a)
+    static void DrawTri(SheetImage img, Cam cam, float[] zb, int[] id, int pid, Vector3 a, Vector3 b, Vector3 c, Vector3 col, bool ground,
+                        Vector3? colB = null, Vector3? colC = null)
     {
         if (!cam.Project(a, out var ax, out var ay, out var az) || !cam.Project(b, out var bx, out var by, out var bz) || !cam.Project(c, out var cx, out var cy, out var cz)) return;
         int size = cam.Size;
@@ -334,7 +354,7 @@ static class PropSheet
                 if (z >= zb[i]) continue;
                 zb[i] = ground ? z + 0.02f : z;
                 id[i] = pid;
-                img.Set(cam.Ox + x, cam.Oy + y, col);
+                img.Set(cam.Ox + x, cam.Oy + y, colB.HasValue ? col * w0 + colB.Value * w1 + colC.Value * w2 : col);
             }
     }
 

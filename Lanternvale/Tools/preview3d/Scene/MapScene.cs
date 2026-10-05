@@ -200,14 +200,13 @@ namespace Lanternvale.Preview
             m.SetFloat(Shader.PropertyToID("_SidePlanarScale"), 1f / 8f);
             m.SetColor(Shader.PropertyToID("_MainAvg"), Average(ground, groundKey));
             m.SetColor(Shader.PropertyToID("_SideAvg"), Average(side, sideKey));
-            // as MapView: the detail layer (gravel / leaf litter); the rasterizer finds it through TerrainDetail
+            // as MapView: the detail layer (gravel / leaf litter), read back by the Collector
             var detail = MapTerrain.DetailTexture(def, out float detailScale);
             if (detail != null)
             {
                 m.SetTexture(Shader.PropertyToID("_DetailTex"), detail);
                 m.SetFloat(Shader.PropertyToID("_DetailPlanarScale"), detailScale);
             }
-            TerrainDetail.Register(ground, detail, detailScale);
             return m;
         }
 
@@ -434,6 +433,8 @@ namespace Lanternvale.Preview
 
         void BuildUnits()
         {
+            // idle heads turn towards this camera and static models are set down facing it (UnitView: CameraRig.Yaw)
+            UnitPoser.CameraYaw = opt.Yaw;
             var spawn = SpawnPoint();
             int n = 0;
             // the party leader: UnitView.Create(class sprite, natural height), facing right
@@ -575,7 +576,7 @@ namespace Lanternvale.Preview
         /// <summary>
         /// As MapView.UpdateCuts with every hole fully open: a soft round cut-out around each unit the occluder hides and
         /// around the camera's focus (the look-at point) when it hides that; no cursor here. The renderers get _Cut0.._Cut3
-        /// like MapView.ApplyCuts writes them (the preview's rasterizer finds them through CutRegistry).
+        /// like MapView.ApplyCuts writes them (the Collector reads them back into the draw calls).
         /// </summary>
         void Cut(PObj o, Vector3 cp)
         {
@@ -596,7 +597,6 @@ namespace Lanternvale.Preview
             {
                 if (r == null) continue;
                 for (int i = 0; i < arr.Length; i++) r.Block.SetVector(PropOccluder.CutIds[i], arr[i]);
-                CutRegistry.Set(r, arr);
             }
         }
 

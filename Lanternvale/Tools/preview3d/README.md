@@ -67,20 +67,29 @@ anchors (magenta) and a 1.75 m person.
 
 - Views (`--views`): `g` game, `q` 3/4, `t` top, `f` front, `b` back.
 - `--lit 0|1` switches lamps and windows, `--open` opens chest lids, and `--stats` prints stats only.
+- Shading uses the meshes' vertex normals (faceted parts stay faceted, soft foliage is smooth), as in map renders.
+- The footprint check (front violation vs the collider ellipse) skips ground parts, i.e. child renderers a model
+  leaves out of `PropModel.Renderers` (Old Kusu's plaza paving); the stats line marks them `(ground)`.
 
 ## Faithful vs approximated
 
 **Faithful:**
 - Map building follows MapView.BuildAll: seeds, transforms, tints, light anchors, night gating, halos, merged
-  shadows, decals (the real MapTerrain.BuildDecals), waymarkers (the shared Waymarker) and occluder fading (the
-  shared PropOccluder).
+  shadows, decals (the real MapTerrain.BuildDecals), waymarkers (the shared Waymarker, side-exit posts fitted clear of
+  props with Waymarker.FitPosts) and occluder cut-outs (the shared PropOccluder): every hole fully open, around each
+  unit an occluder hides and around the camera's look-at point; there is no cursor, so no cursor or hover cut.
+- The terrain's detail layer (`_DetailTex`: shrine gravel, Whisperwood leaf litter; MapTerrain.DetailTexture).
 - Units are placed like GameFlow.Views (NPC sprite/flip and look variant, enemy size and facing towards the leader;
   SetFacing is screen-right/left for `--yaw`, via UnitFacing.SideYaw).
 - Terrain, backdrop and sky come from the real classes.
-- Lighting is DayNight.ApplyTo → SceneLighting (the 16 strongest point lights near the focus).
+- Lighting is DayNight.ApplyTo → SceneLighting (the 16 strongest point lights near the focus), with the night grade
+  (`_LV_Grade` from DayNight.NightGrade) and amber, wider lamplight at night (DayNight.LampColor / LampRange).
 - LV_Shade: wrapped sun, hemisphere ambient, point lights, rim, emission, fog.
 - Linear colour space.
-- Dithered `_Fade`.
+- Dithered `_Fade` and `_Cut0`…`_Cut3` (LV_CutCoverage: LowPoly keeps surfaces behind the cut's centre, the ink hull
+  is cut at any depth).
+- Units are posed for the map camera's yaw (`UnitPoser.CameraYaw`): idle heads turn to the camera, static models face
+  it, and blob shadows come from the shared UnitShadow.Blob.
 - Inverted-hull ink: 2.2 px at 1080p for maps, 1.9 px for units relative to their on-screen size.
 
 **Approximated:**

@@ -701,7 +701,7 @@ namespace Lanternvale.Game
             Color plum = C("#7a2a40"), plumD = C("#4a1a2a"), violet = C("#a04a6a"), silver = C("#d9b25a"), hair = C("#ece6f2"),
                   skin = C("#f0e2da"), rune = C("#c9a8ff"), book = C("#4a3a6a"), gold = C("#e2b45a");
             k.Torso(plum, plumD);
-            k.Collar(plum, gold, 0.18f, 30f, 1.4f);
+            k.Collar(plum, gold, 0.1f, 40f, 1.4f);   // low and open at the front: her face turns to the camera when idle
             k.Neck(skin);
             k.Head(skin, C("#a070e0"), C("#b8aec8"), EyeStyle.Narrow, 6f);
             k.HairCap(hair);

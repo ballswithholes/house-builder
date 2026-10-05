@@ -46,7 +46,7 @@
           "art": "prop_cottage_a",
           "pos": [6.5, 11.6],
           "collider": {"w": 5.0, "h": 2.2},
-          "light": {"color": "#ffb062", "radius": 3.9, "intensity": 0.7, "offset": [1.3, 2.4], "nightOnly": true}
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.3, 2.4], "nightOnly": true}
         },
         {
           "art": "prop_signpost",
@@ -58,7 +58,7 @@
           "art": "prop_lamp_post",
           "pos": [9.6, 7.0],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {"art": "prop_bush_a", "pos": [11.6, 9.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {"art": "prop_stone_wall", "pos": [1.7, 0.6], "collider": {"w": 3.2, "h": 0.5}},
@@ -72,14 +72,14 @@
           "art": "prop_cottage_b",
           "pos": [13.8, 12.2],
           "collider": {"w": 4.4, "h": 2.0},
-          "light": {"color": "#ffb062", "radius": 3.9, "intensity": 0.7, "offset": [-1.0, 3.0], "nightOnly": true}
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.0, 3.0], "nightOnly": true}
         },
         {"art": "prop_barrel", "pos": [10.6, 10.6], "collider": {"w": 0.8, "h": 0.5}},
         {
           "art": "prop_lamp_post",
           "pos": [15.2, 3.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {
           "art": "prop_tree_great",
@@ -134,7 +134,7 @@
           "art": "prop_lamp_post",
           "pos": [34.8, 3.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {"art": "prop_fence", "pos": [21.0, 2.3], "collider": {"w": 3.0, "h": 0.35}},
         {"art": "prop_rock_small", "pos": [28.0, 2.6]},
@@ -142,7 +142,7 @@
           "art": "prop_inn",
           "pos": [43.0, 12.0],
           "collider": {"w": 7.0, "h": 2.6},
-          "light": {"color": "#ffb062", "radius": 3.9, "intensity": 0.7, "offset": [-1.6, 3.2], "nightOnly": true},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.6, 3.2], "nightOnly": true},
           "text": "The Sleepy Lantern. A painted sign shows a lantern wearing a nightcap."
         },
         {"art": "prop_barrel", "pos": [38.8, 9.8], "collider": {"w": 0.8, "h": 0.5}},
@@ -153,13 +153,13 @@
           "art": "prop_lamp_post",
           "pos": [38.2, 7.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {
           "art": "prop_lamp_post",
           "pos": [49.6, 7.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {"art": "prop_shop_stall", "pos": [40.0, 2.3], "collider": {"w": 3.0, "h": 1.1}},
         {"art": "prop_shop_stall", "pos": [45.6, 2.3], "flip": true, "collider": {"w": 3.0, "h": 1.1}},
@@ -180,13 +180,13 @@
           "art": "prop_lamp_post",
           "pos": [59.8, 3.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {
           "art": "prop_cottage_c",
           "pos": [67.0, 12.2],
           "collider": {"w": 5.0, "h": 2.2},
-          "light": {"color": "#ffb062", "radius": 3.9, "intensity": 0.7, "offset": [1.5, 2.6], "nightOnly": true},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.5, 2.6], "nightOnly": true},
           "text": "The Trainers' Hall. Someone has carved 'ELBOWS UP' over the door."
         },
         {"art": "prop_banner", "pos": [63.4, 10.8], "collider": {"w": 0.4, "h": 0.3}, "sway": true},
@@ -199,7 +199,7 @@
           "art": "prop_lamp_post",
           "pos": [74.6, 3.4],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {"art": "prop_windmill", "pos": [79.0, 13.7], "collider": {"w": 2.6, "h": 1.0}, "text": "Hollis's windmill. Its sails hang perfectly still."},
         {"art": "prop_tree_pine", "pos": [72.4, 15.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
@@ -220,7 +220,7 @@
           "art": "prop_lamp_post",
           "pos": [86.0, 7.2],
           "collider": {"w": 0.4, "h": 0.3},
-          "light": {"color": "#ffb46c", "radius": 4.6, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
         {"art": "prop_rock_small", "pos": [77.0, 2.0]}
       ],

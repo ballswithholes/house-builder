@@ -38,12 +38,25 @@ belts/sashes/shoulder pieces, distinct class silhouettes and weapons), rendered 
 
 | Shader | Use |
 |---|---|
-| `Lanternvale/LowPoly` | opaque vertex-coloured models; vertex alpha = emission; uv1.x = wind weight; optional painted `_MainTex` (mesh UVs, or world-XY planar with `_PlanarScale` for terrain); per renderer `_Tint`, `_Flash`, `_Fade` (dither dissolve), `_Rim`, `_FogScale`, `_WindScale`; `_Cull` |
-| `Lanternvale/Outline` | ink outline (inverted hull, constant pixel width) — add as the **last** material: `Materials3D.WithOutline()` |
+| `Lanternvale/LowPoly` | opaque vertex-coloured models; vertex alpha = emission; uv1.x = wind weight; optional painted `_MainTex` (mesh UVs, or world-XY planar with `_PlanarScale` for terrain); per renderer `_Tint`, `_Flash`, `_Fade` (dither dissolve), `_Rim`, `_FogScale`, `_WindScale`, `_Cut0`…`_Cut3` (cut-outs, below); `_Cull` |
+| `Lanternvale/Outline` | ink outline (inverted hull, constant pixel width) — add as the **last** material: `Materials3D.WithOutline()`; per renderer `_OutlineColor`, `_OutlineWidth`, `_Fade`, `_WindScale`, `_Cut0`…`_Cut3` |
+| `Lanternvale/Terrain` | the map ground (MapTerrain): `_MainTex` (the map's ground) blended into `_SideTex` (the surroundings) by uv0.x, uv0.y = painted detail vs the textures' average colours (`_MainAvg`/`_SideAvg`, far hills); optional **detail layer** `_DetailTex` (rgb, a = cover; world-XY planar with `_DetailPlanarScale`) painted over the ground with the per-vertex weight in **uv1.x** (raked gravel at the shrine, leaf litter in Whisperwood: `WorldTextures.Gravel` / `LeafLitter`). The default (transparent black) texture or uv1.x = 0 = the ground unchanged |
+| `Lanternvale/GroundOverlay` | unlit overlays on the ground (targeting previews, rings, bursts, aura pulses), above terrain and decals, hidden behind units/props |
 | `Lanternvale/Additive` | glows, sparks, magic (SpriteRenderer, particles, meshes), fogged out with distance |
 | `Lanternvale/Shadow` | soft blob shadow quad on the ground (`MeshCache.AddShadow`) |
 | `Lanternvale/LitTransparent` | painted textures with alpha, lit (ground decals, foliage cards, water) |
 | `Lanternvale/Sky` | unlit vertex-coloured sky dome / far backdrop |
+
+  **Cut-outs** (`LanternvaleCommon.cginc` `LV_CutCoverage`, used by LowPoly and Outline): up to four soft dithered
+  holes per renderer, round on screen around a world point. `_CutN.xyz` = the centre (world), `_CutN.w` = the hole's
+  radius in metres at that centre, 0 = no cut (the default). Inside half the radius the surface is gone; towards the rim
+  it dithers back in. LowPoly keeps surfaces clearly behind the centre (further along the view ray than centre + 0.35 ×
+  radius), so a trunk behind a unit stays solid; Outline ignores depth (the ink hull is the model's back faces, which
+  would otherwise show through a hollowed canopy as solid black). `PropOccluder.CutIds` holds the property ids.
+  **Night grade** (shader global `_LV_Grade`, x = amount, yzw = tint; zero = off): under sun/moon and sky light the
+  albedo drifts towards its luma × the tint (a cool blue-grey), while point lights (lamps, fire) light the full colour.
+  `MapView.ApplyMood` sets it from `DayNight.NightGrade` / `DayNight.NightGradeTint` (0.38 at full night); MapView's
+  cleanup resets it to zero.
 
   Add your own shaders next to them if you need one (same rules: `#include "LanternvaleCommon.cginc"`, no pipeline
   includes, no LightMode tag, `#pragma target 3.0`). Unity's `Sprites/Default` is fine for alpha-blended billboards.
@@ -72,11 +85,15 @@ in the tangents (for the outline); `ToMesh(name, bindposes)` → rigidly skinned
 `Paint.Hex/Shade/Mix/Hsv` for palettes. Build each distinct mesh once and share it: `MeshCache.Get(key, build)`.
 `MeshCache.GroundQuad` (unit quad on the ground plane), `MeshCache.AddShadow(parent, rx, ry)` (blob shadow).
 
-**Style guide.** Chunky readable silhouettes; 6–12 sided round things; faceted (flat) shading for nature and props,
-smooth for faces/bodies where it reads better; saturated-but-soft palettes (warm creams, sage and moss greens, dusty
+**Style guide.** Chunky readable silhouettes; 6–12 sided round things; faceted (flat) shading for rocks, stumps, trunks,
+buildings and props; **foliage** (tree canopies, bushes, Old Kusu) is smooth-shaded soft lumps — jittered icospheres with
+exact ellipsoid normals and a canopy-wide vertex ramp, warm on top and cool teal underneath (`PropKit.SoftenParts`,
+`PropNature.SoftLump` / `CanopyRamp`) — so canopies read as soft scalloped masses; smooth for faces/bodies where it
+reads better; saturated-but-soft palettes (warm creams, sage and moss greens, dusty
 blues, terracotta roofs, honey-gold lantern light); per-face `Jitter` 0.04–0.08; `AOStrength` ~0.3 on props; ink
 outline on characters, creatures and props (not on terrain, grass, decals, particles). Keep triangle counts sane:
-character ≤ 3k tris, big building ≤ 3k, tree ≤ 1.5k, small prop ≤ 400, grass tuft ≤ 60.
+character ≤ 3k tris (the leader and companions up to ~3.8k), big building ≤ 3.2k, tree ≤ 1.5k (Old Kusu ≈ 3.4k plus
+its plaza), small prop ≤ 400, grass tuft ≤ 60.
 
 ## 4. Ownership (who edits what) — never edit another builder's files
 
@@ -119,9 +136,13 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
   `Bounds` (Rect) may be removed.
 * Movement: `Teleport`, `MoveAlong(path, speed, onArrive)` (both overloads), `StopMoving`, `IsMoving`,
   `RemainingPathLength()`, `Knockback`, **`FaceTowards(Vector2)` turns smoothly to any direction**, `SetFacing(±1)`
-  (= face screen-right / screen-left for the current `CameraRig.Yaw`, turned `UnitFacing.Bias` 15° towards the
-  camera — `UnitFacing.SideYaw(dir, cameraYaw)`; re-applied when the camera turns until `FaceTowards` or movement
-  takes over), `Facing` (±1: the sign of the facing's x). Turning is smooth (yaw slerp), never a snap.
+  (= face screen-right / screen-left for the current `CameraRig.Yaw`, turned `UnitFacing.Bias` 35° towards the
+  camera — `UnitFacing.SideYaw(dir, cameraYaw)`, i.e. camera yaw ± 125°; re-applied when the camera turns until
+  `FaceTowards` or movement takes over), `Facing` (±1: the sign of the facing's x). Turning is smooth (yaw slerp),
+  never a snap. **Static models** (totems, the training dummy: `UnitFacing.IsStatic`) are set down with their front
+  towards the camera (`UnitFacing.StaticYaw`, 60° bias) and ignore `FaceTowards`. **Idle bipeds turn head and neck
+  towards the camera** (up to 22°, tipped up 7°; never towards a camera behind them) through `UnitAnimInput.ViewYaw`
+  (= `UnitFacing.ViewYaw(unitYaw, cameraYaw)`); actions snap the head back.
 * **Walk cycle** (the user explicitly complained the old walking looked bad): proper procedural gait — legs swing
   with knee bend and foot lift, arms counter-swing, hips/shoulders counter-rotate, a two-bump-per-stride vertical bob,
   slight forward lean scaling with speed, cadence and stride matched to the actual movement speed (feet must not
@@ -140,7 +161,13 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
   `Floating`, `IsDead`, `IsDowned`, …, `Dispose()`.
 * Ground rings / selection discs lie on the ground plane (z ≈ −0.01) — the procedural ring textures in
   `PresentationArt` already exist; draw them with `Sprites/Default` or `Materials3D.AdditiveFor`.
-* Blob shadow under every unit. One update loop for all units (`UnitViewSystem`), no per-unit `Update`.
+* Blob shadow under every unit: `UnitShadow.Blob` (shared with the offline preview) gives its centre, size, darkness
+  and `_Softness`; bipeds standing on the ground get at least 0.5 × 0.48 m (scaled by height), alpha 0.5, softness 0.5,
+  nudged 0.1 m away from the sun.
+* Bows are strung: the rig has `BB.StringA` / `BB.StringB` (string halves) and `BB.ArrowR` (nocked arrow) —
+  `BB.Count` is 31; `UnitModel.BowString` / `StringNock` / `ArrowRest` / `DrawPoint`, and `UnitAnimator.UpdateBow`
+  pulls the string to the draw hand and shows the arrow until `ShootReleaseTime`.
+* One update loop for all units (`UnitViewSystem`), no per-unit `Update`.
 * Performance: ≤ 2 draw calls per unit body (e.g. one rigidly-skinned `SkinnedMeshRenderer` + outline material, or
   a few `MeshRenderer` parts sharing the LowPoly material); meshes cached per recipe; no per-frame allocations.
 
@@ -170,22 +197,37 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
   moon discs and stars at night (additive). Camera `backgroundColor` = horizon colour as a fallback.
 * **Props:** `PropModels.Create(art, seed)` (Props builder), placed at `pos` (`World3D.At`), `scale`, `flip` (mirror
   X), `tint` (`Look.Tint`), soft blob shadow, `light` → `SceneLighting` point light at the anchor/offset (`flicker`,
-  `nightOnly`), `sway` (wind is in the vertex weights; set `Look.WindScale`). Tall props between the camera and a unit
-  with `FadesOccluders` dither-fade (`Look.Fade` ≈ 0.35) when they actually hide the unit on screen (`PropOccluder`:
-  camera rays to the unit's body points through each mesh's voxelised surface). **Decals** (`decal_*`: paths, flower
+  `nightOnly`), `sway` (wind is in the vertex weights; set `Look.WindScale`). **Occluders:** tall props between the
+  camera and something the player needs to see open a **soft round cut-out** around it (`_Cut0`…`_Cut3`, §2) instead of
+  dissolving as a whole, so the unit reads clearly and the tree keeps its mass: units with `FadesOccluders` (hole ≈
+  1.5 × the unit's height, or its length for quadrupeds: `PropOccluder.UnitCut`), the hovered object (chest, prop,
+  waymarker: `BoundsCut`), a hovered unit, the cursor's ground point (not while the pointer is over UI) and the camera's
+  look-at point (`PointCut`). Up to 4 per renderer, eased in and out (`MapView.UpdateCuts`). A prop only cuts when it
+  really hides the target on screen (`PropOccluder`: camera rays to the target's sample points through each mesh's
+  voxelised surface; `HidesPoint` for ground points). `MapView.OccluderCutOuts = false` restores the old whole-prop
+  dither (`OccluderFadeAlpha` 0.35, foreground `ForegroundFadeAlpha` 0.35). **Decals** (`decal_*`: paths, flower
   beds, blight) are owned by the terrain (`MapTerrain.BuildDecals`): consecutive path pieces join into one feathered
   ribbon (trails run on under side exits), flower beds and blight are soft-rimmed discs, all
   `Materials3D.LitTransparent` just above z = 0; the ground under them is dirt, the village meadow stays green.
+  On paved maps (the shrine) path decals and the worn-path halo are skipped: the terrain paves a processional walkway
+  through the trail decals' centres plus forecourts at gates, lanterns, statues and the arch, borders it with raked
+  gravel (Terrain detail layer) and leaves moss beyond. Whisperwood gathers leaf litter under trees, stumps, logs and
+  along the trail through the same layer.
   **Foreground** (`fg_*`) → 3D
   ferns/grass/stones/flowers along the front edge (from PropModels).
 * **Chests** (closed/open), **transition markers** (`Waymarker`: a pair of lantern posts with an arrow sign at side
-  exits, an arch at front/back/mid-map exits, + chevron; the lanterns are lit and their warm light on only at night;
-  locked = dim violet), **regions** (rects only).
+  exits — `Waymarker.FitPosts` narrows and, if needed, slides a side exit's post pair clear of nearby props, keeping the
+  road centred between the posts — an arch at front/back/mid-map exits, + chevron; the lanterns are lit and their warm
+  light on only at night; locked = dim violet), **regions** (rects only).
 * **Day/night:** `DayNight` keeps its maths/API (`Hour`, `NightFactor`, `Phase`, `SetHour`, `WorldHour`,
   `HoursPerSecond`, `Paused`, `HourOf`, `PhaseOf`, `Changed`); it now drives `SceneLighting`: sun direction/colour
   (low warm at dawn/dusk, high soft white by day, cool moonlight at night), sky/ground ambient, fog colour = sky
-  horizon, `NightGlow` up at night, lantern/lamp lights on at night (`nightOnly`). Map `ambientColor ×
-  ambientIntensity` multiplies. Fixed-time maps (shrine: dusk) keep their mood.
+  horizon, `NightGlow` up at night, lantern/lamp lights on at night (`nightOnly`). Golden hour and dusk keep the greens
+  (warm sun, cool sky fill, neutral ground bounce); night is a deep blue fill with a crisp moon and the night grade
+  (§2). Warm-white/yellow lamp and window lights deepen to amber at night and reach 22 % further
+  (`DayNight.LampColor(authored, night)`, `LampRange(range, night)`); coloured lights (violet crystals, locked
+  waymarkers) keep their hue. Map `ambientColor × ambientIntensity` multiplies (its hue softened by 35 %).
+  Fixed-time maps (shrine: dusk) keep their mood.
 * **Ambient particles** (`AmbientDef`: fireflies, pollen, leaves, mist, rain, embers) as camera-near 3D billboards
   (`Additive` for glowing ones, `Sprites/Default` for leaves/mist), pooled, around the camera's look-at point.
 * Performance: static props without scripts; meshes cached per (art, seed bucket); one `LateUpdate` for fades,
@@ -198,6 +240,8 @@ PropModel model)` and `static partial void TryHas(string artKey, ref bool has)` 
 in `PropModels.cs` — keep that file's public surface; you may edit it). A `PropModel` has `Root` (upright at the ground
 pivot, `rotation = World3D.Upright`; children/meshes in Y-up model space), `Height`, `Radius`, `LocalBounds`,
 `Renderers`, `LightAnchors` (model space), `Lid` (chests), `SetLit` (lanterns, lamp posts, campfire, windows), `Sways`.
+A child renderer left out of `Renderers` on purpose is a **ground part** (Old Kusu's flagstone plaza): it never fades,
+cuts or tints with the prop and does not count towards its bounds, occluder grid or blob shadow.
 
 Keys to model (map counts in brackets): props — cottage_a/b/c, inn, smithy (forge glow), shop_stall (awning, goods),
 windmill (sails turn slowly), well, fence, lamp_post, spirit_lantern & spirit_lantern_dark (same model, `SetLit`;
@@ -205,8 +249,9 @@ stone tōrō-style lantern with paper/glass glowing honey-gold), tree_oak/pine/b
 huge camphor tree ~25 m with a shimenawa rope and paper charms — the village landmark), bush_a/b, rock_large/small,
 stump, log, cart, barrel, crate, hay, signpost, noticeboard, bench, campfire (`SetLit`: flames + embers), tent,
 mushrooms, ruin_pillar, ruin_arch, shrine_gate (torii-like), spirit_statue (fox/kitsune), blight_crystal (violet
-emissive crystals), banner (cloth sways), bridge; chests `prop_chest` (+ `_open`); foreground fg_ferns, fg_grass_a/b,
-fg_stones_a/b, fg_flowers_a/b. Sizes: use believable real-world sizes (person = 1.75 m; cottage ridge ≈ 6 m, inn ≈ 8 m,
+emissive crystals), banner (cloth sways), bridge, stone_wall (low mossy rubble wall), veg_patch (vegetable bed),
+washing_line (laundry sways; all three in `PropGarden.cs`); chests `prop_chest` (+ `_open`); foreground fg_ferns,
+fg_grass_a/b, fg_stones_a/b, fg_flowers_a/b. Sizes: use believable real-world sizes (person = 1.75 m; cottage ridge ≈ 6 m, inn ≈ 8 m,
 windmill ≈ 11 m, oak ≈ 8 m, pine ≈ 11 m), but the **solid footprint must fit the prop's nav collider**
 (`collider.w` × `collider.h` ellipse in the map JSON, e.g. cottages 5.0 × 2.2, inn 7.0 × 2.6, well 1.8 × 0.9, trees
 trunk-sized) so units never walk through walls: buildings may extend backwards (+local Z, away from the camera) past

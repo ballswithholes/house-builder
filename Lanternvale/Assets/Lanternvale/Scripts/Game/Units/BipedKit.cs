@@ -599,7 +599,9 @@ namespace Lanternvale.Game
             M.Bone = BB.Head; M.Color = c;
             float r = R;
             var center = new Vector3(0f, HeadCY + 0.05f * r, -0.04f * r);
-            var rad = new Vector3(1.1f * r, 1.09f * r, 1.1f * r);
+            // finely tessellated and a little fuller than the hair cap (1.08 R): a coarse shell's flat facets sag inside
+            // its ellipsoid and the cap's vertices poke through as brown flecks
+            var rad = new Vector3(1.13f * r, 1.12f * r, 1.13f * r);
             System.Func<float, float> edge = th =>
             {
                 float a = Mathf.Abs(th);
@@ -607,7 +609,7 @@ namespace Lanternvale.Game
                 if (a < 95f) return Mathf.Lerp(52f, 62f, (a - 40f) / 55f);    // riding up over the temples
                 return Mathf.Lerp(62f, 116f, (a - 95f) / 85f);                 // down behind the ears to the nape
             };
-            M.Shell(center, rad, -180f, 180f, 12, 0f, edge, 3);
+            M.Shell(center, rad, -180f, 180f, 16, 0f, edge, 6);
             // rolled hem along the edge (open tube pieces, the back is under the knot)
             M.Color = Paint.Shade(c, 0.86f);
             Vector3 EdgePoint(float th)
