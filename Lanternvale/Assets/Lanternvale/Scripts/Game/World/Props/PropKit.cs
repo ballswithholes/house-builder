@@ -494,6 +494,52 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>A FacetBlob's displaced vertex for the unit icosphere direction dir (shared by FacetBlob and BlobRayHit).</summary>
+        static Vector3 BlobPoint(Vector3 center, Vector3 radii, float jitter, int seed, float flattenBottom, Vector3 dir)
+        {
+            float k = 1f + (Hash01(dir, seed) * 2f - 1f) * jitter;
+            var p = Vector3.Scale(dir * k, radii);
+            if (flattenBottom > 0f && p.y < 0f) p.y *= 1f - flattenBottom;
+            return center + p;
+        }
+
+        /// <summary>
+        /// First hit of the ray origin + t·dir (t > 0) on the facets of a FacetBlob built with the same parameters, with
+        /// the facet's outward normal — so surface details (cracks, lichen) sit exactly on the jittered faces.
+        /// </summary>
+        static bool BlobRayHit(Vector3 center, Vector3 radii, int detail, float jitter, int seed, float flattenBottom, Vector3 origin, Vector3 dir,
+                               out Vector3 hit, out Vector3 normal)
+        {
+            hit = normal = Vector3.zero;
+            float best = float.MaxValue;
+            foreach (var f in Ico(detail))
+            {
+                var a = BlobPoint(center, radii, jitter, seed, flattenBottom, f[0]);
+                var b = BlobPoint(center, radii, jitter, seed, flattenBottom, f[1]);
+                var c = BlobPoint(center, radii, jitter, seed, flattenBottom, f[2]);
+                // Möller–Trumbore
+                var e1 = b - a;
+                var e2 = c - a;
+                var pv = Vector3.Cross(dir, e2);
+                float det = Vector3.Dot(e1, pv);
+                if (Mathf.Abs(det) < 1e-9f) continue;
+                float inv = 1f / det;
+                var tv = origin - a;
+                float u = Vector3.Dot(tv, pv) * inv;
+                if (u < 0f || u > 1f) continue;
+                var qv = Vector3.Cross(tv, e1);
+                float v = Vector3.Dot(dir, qv) * inv;
+                if (v < 0f || u + v > 1f) continue;
+                float t = Vector3.Dot(e2, qv) * inv;
+                if (t <= 0f || t >= best) continue;
+                best = t;
+                hit = origin + dir * t;
+                var n = Vector3.Cross(e1, e2).normalized;
+                normal = Vector3.Dot(n, (a + b + c) / 3f - center) < 0f ? -n : n;
+            }
+            return best < float.MaxValue;
+        }
+
         /// <summary>
         /// Faceted blob (jittered icosphere: detail 0 = 20, 1 = 80, 2 = 320 faces) whose faces are coloured by their
         /// local-space normal (mossy rock tops, sun-lit canopy tops, darker undersides). flattenBottom squashes the
@@ -501,13 +547,7 @@ namespace Lanternvale.Game
         /// </summary>
         static void FacetBlob(MeshBuilder mb, Vector3 center, Vector3 radii, int detail, float jitter, int seed, float flattenBottom, Func<Vector3, Color> colorOf)
         {
-            Vector3 Displace(Vector3 dir)
-            {
-                float k = 1f + (Hash01(dir, seed) * 2f - 1f) * jitter;
-                var p = Vector3.Scale(dir * k, radii);
-                if (flattenBottom > 0f && p.y < 0f) p.y *= 1f - flattenBottom;
-                return center + p;
-            }
+            Vector3 Displace(Vector3 dir) => BlobPoint(center, radii, jitter, seed, flattenBottom, dir);
             foreach (var f in Ico(detail))
             {
                 var a = Displace(f[0]);

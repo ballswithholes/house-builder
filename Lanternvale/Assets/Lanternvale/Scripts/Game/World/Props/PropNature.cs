@@ -367,11 +367,31 @@ namespace Lanternvale.Game
             var mb = Builder(VariantSeed("prop_rock_large", b), 0.07f, 0.35f, 0.6f);
             var stone = Paint.Hsv(Pal.Stone, (b - 1.5f) * 6f, 0.9f);
             int seed = VariantSeed("rockL", b);
-            FacetBlob(mb, new Vector3(0f, 0.92f, 0.22f), new Vector3(0.98f, 1.05f, 0.72f), 1, 0.2f, seed, 0.3f, Mossy(stone, Pal.Moss, 0.5f));
+            var bigC = new Vector3(0f, 0.92f, 0.22f);
+            var bigR = new Vector3(0.98f, 1.05f, 0.72f);
+            FacetBlob(mb, bigC, bigR, 1, 0.2f, seed, 0.3f, Mossy(stone, Pal.Moss, 0.5f));
             FacetBlob(mb, new Vector3(0.55f, 0.36f, 0.12f), new Vector3(0.4f, 0.38f, 0.3f), 1, 0.2f, seed + 5, 0.35f, Mossy(Paint.Shade(stone, 1.05f), Pal.MossLight, 0.55f));
-            mb.Color = Paint.Shade(stone, 0.6f);
-            Beam(mb, new Vector3(-0.35f, 1.55f, -0.38f), new Vector3(-0.15f, 0.95f, -0.52f), 0.035f, 0.03f, Vector3.back);
-            Beam(mb, new Vector3(-0.15f, 0.95f, -0.52f), new Vector3(-0.3f, 0.5f, -0.48f), 0.03f, 0.03f, Vector3.back);
+            // a weathering crack down the bare stone of the front face: its points are cast onto the big blob's own facets
+            // (rays along +Z), so it always lies on the surface, whatever the seed or flip
+            mb.Color = Paint.Shade(stone, 0.58f);
+            Vector2[][] cracks =
+            {
+                new[] { new Vector2(-0.3f, 1.28f), new Vector2(-0.16f, 1.04f), new Vector2(-0.25f, 0.82f), new Vector2(-0.12f, 0.6f) },
+                new[] { new Vector2(-0.16f, 1.04f), new Vector2(0.0f, 0.95f) },
+            };
+            foreach (var crack in cracks)
+            {
+                Vector3? prev = null;
+                for (int i = 0; i < crack.Length - 1; i++)
+                    for (int s = (i == 0 ? 0 : 1); s <= 3; s++)
+                    {
+                        var p2 = Vector2.Lerp(crack[i], crack[i + 1], s / 3f);
+                        if (!BlobRayHit(bigC, bigR, 1, 0.2f, seed, 0.3f, new Vector3(p2.x, p2.y, -3f), Vector3.forward, out var hit, out var n)) { prev = null; continue; }
+                        var at = hit + n * 0.012f;
+                        if (prev.HasValue) mb.Segment(prev.Value, at, 0.02f, 0.02f, 3, false, false);
+                        prev = at;
+                    }
+            }
             for (int i = 0; i < 4; i++)
             {
                 mb.Color = mb.Random01() < 0.5f ? Pal.StoneLight : stone;

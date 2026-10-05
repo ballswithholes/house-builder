@@ -1,4 +1,5 @@
-// Village garden & yard dressing (the snug front band of Lanternvale): a low dry-stone wall with mossy capstones, a raised
+// Village garden & yard dressing (the snug front band of Lanternvale): a low dry-stone wall of coursed field stones under a
+// flat cap course (moss tufts in a few joints and over one end), a raised
 // vegetable patch (cabbages, carrots, leeks, a pumpkin and a watering can) and a washing line with pegged laundry that
 // flutters in the wind. Same conventions as the rest of the library: front faces −Z, the solid base fits the collider.
 using System.Collections.Generic;
@@ -15,72 +16,116 @@ namespace Lanternvale.Game
             r["prop_washing_line"] = (art, seed) => Swaying(art, seed, BuildWashingLine, 1.7f);
         }
 
-        // ------------------------------------------------------------------ dry-stone wall (collider 3.2 × 0.5)
+        // ------------------------------------------------------------------ dry-stone wall (collider 3.4 × 0.6: the ends fit)
 
+        /// <summary>Warm sandstone and grey field stones (sRGB): the wall sits in a sunny meadow.</summary>
         static readonly Color[] WallStones =
         {
-            Paint.Hex("#B9AD9C"), Paint.Hex("#C9BBA2"), Paint.Hex("#A89F95"), Paint.Hex("#D2C2A4"), Paint.Hex("#9D978F"), Paint.Hex("#BFAF94"),
+            Paint.Hex("#CDB898"), Paint.Hex("#D8C4A0"), Paint.Hex("#BCAE98"), Paint.Hex("#C9B08C"), Paint.Hex("#B4ACA0"), Paint.Hex("#D2BEA0"),
+            Paint.Hex("#AFA699"),
         };
+
+        /// <summary>
+        /// One dressed field stone centred on c: an octagon in the front plane (a rectangle with clipped corners, so the face
+        /// reads rounded) extruded through the wall's depth, its front face a touch proud of its back. Flat-shaded, one
+        /// colour with a slightly darker underside band.
+        /// </summary>
+        static void CutStone(MeshBuilder mb, Vector3 c, Vector3 size, float chamfer, Color col, float tiltDeg = 0f)
+        {
+            float hx = size.x * 0.5f, hy = size.y * 0.5f, hz = size.z * 0.5f;
+            float cx = Mathf.Min(chamfer, hx * 0.45f), cy = Mathf.Min(chamfer, hy * 0.45f);
+            var oct = new[]
+            {
+                new Vector2(-hx + cx, -hy), new Vector2(hx - cx, -hy), new Vector2(hx, -hy + cy), new Vector2(hx, hy - cy),
+                new Vector2(hx - cx, hy), new Vector2(-hx + cx, hy), new Vector2(-hx, hy - cy), new Vector2(-hx, -hy + cy),
+            };
+            var rot = Quaternion.Euler(0f, 0f, tiltDeg);
+            Vector3[] Ring(float z, float k)
+            {
+                var r = new Vector3[oct.Length];
+                for (int i = 0; i < oct.Length; i++) r[i] = c + rot * new Vector3(oct[i].x * k, oct[i].y * k, z);
+                return r;
+            }
+            var under = Paint.Shade(col, 0.86f);
+            Loft(mb, new[] { Ring(hz, 0.94f), Ring(-hz, 1f) }, true, true, n => n.y < -0.4f ? under : col);
+        }
 
         static MeshBuilder BuildStoneWall(int b)
         {
-            var mb = Builder(VariantSeed("prop_stone_wall", b), 0.07f, 0.28f, 0.5f);
-            const float L = 3.1f;
-            float[] courseH = { 0.22f, 0.19f, 0.17f };
+            var mb = Builder(VariantSeed("prop_stone_wall", b), 0.05f, 0.25f, 0.45f);
+            const float L = 2.9f;
+            Color Stone() => Paint.Shade(WallStones[(int)(mb.Random01() * WallStones.Length) % WallStones.Length], 0.95f + 0.09f * mb.Random01());
+            // two courses of flat, wide stones (joints staggered, the face battered back a little), the ends of each course
+            // a little shallower (cheek ends), then a flat cap course slightly overhanging
+            float[] courseH = { 0.25f, 0.21f };
+            float[] depth = { 0.33f, 0.3f };
             float y = 0f;
-            int seed = VariantSeed("stonewall", b);
             for (int c = 0; c < courseH.Length; c++)
             {
                 float h = courseH[c];
-                // rounded rubble laid in courses; the upper courses stop short of the ends (a tumbled, hand-laid look)
-                // and carry more moss on their tops
-                float left = -L * 0.5f + c * (0.1f + 0.14f * ((b + c) % 2)), right = L * 0.5f - c * (0.1f + 0.14f * ((b + c + 1) % 2));
-                float depth = 0.44f - c * 0.06f;
-                float x = left + (c % 2) * 0.06f;
+                float x = -L * 0.5f, right = L * 0.5f;
+                float first = 0.32f + 0.18f * ((b + c) % 2);
                 int guard = 0;
-                while (x < right - 0.1f && guard++ < 24)
+                while (x < right - 0.05f && guard++ < 16)
                 {
-                    float len = Mathf.Min(0.24f + mb.Random01() * 0.26f, right - x);
-                    if (right - (x + len) < 0.15f) len = right - x;
-                    var stone = Paint.Shade(WallStones[(int)(mb.Random01() * WallStones.Length) % WallStones.Length], 0.94f + 0.1f * mb.Random01());
-                    float sh = h * (0.85f + 0.3f * mb.Random01());
-                    var at = new Vector3(x + len * 0.5f, y + sh * 0.5f, (mb.Random01() - 0.5f) * 0.05f);
-                    FacetBlob(mb, at, new Vector3(len * 0.56f, sh * 0.6f, depth * 0.52f), 0, 0.12f, seed + c * 101 + guard * 7, 0.3f,
-                              Mossy(stone, Color.Lerp(Pal.Moss, stone, 0.45f), c == courseH.Length - 1 ? 0.82f : 0.98f, Paint.Shade(stone, 0.8f)));
+                    float len = guard == 1 ? first : 0.36f + 0.26f * mb.Random01();
+                    if (right - (x + len) < 0.22f) len = right - x;
+                    float sh = h * (0.92f + 0.08f * mb.Random01());
+                    bool end = x <= -L * 0.5f + 0.01f || x + len >= right - 0.01f;
+                    float d = depth[c] * (end ? 0.88f : 1f) * (0.96f + 0.04f * mb.Random01());
+                    var at = new Vector3(x + len * 0.5f, y + sh * 0.5f, (mb.Random01() - 0.5f) * 0.015f + c * 0.01f);
+                    CutStone(mb, at, new Vector3(len - 0.025f, sh - 0.02f, d), 0.05f, Stone(), (mb.Random01() - 0.5f) * 2.5f);
                     x += len;
                 }
-                y += h * 0.92f;
+                y += h;
             }
-            // soft moss cushions along the top, a couple of pebbles fallen at the foot
-            var mossRamp = CanopyRamp(Pal.MossLight, Pal.Moss, Pal.LeafDark, y - 0.02f, y + 0.08f);
+            // cap course
+            {
+                float x = -L * 0.5f - 0.02f, right = L * 0.5f + 0.02f;
+                int guard = 0;
+                while (x < right - 0.05f && guard++ < 12)
+                {
+                    float len = 0.42f + 0.22f * mb.Random01();
+                    if (right - (x + len) < 0.25f) len = right - x;
+                    bool end = guard == 1 || x + len >= right - 0.01f;
+                    // weathered caps: a shade darker than the courses (their tops face the sun), uneven in thickness
+                    var col = Paint.Shade(Stone(), 0.92f);
+                    float ch = 0.08f + 0.03f * mb.Random01();
+                    CutStone(mb, new Vector3(x + len * 0.5f, y + ch * 0.5f, 0.01f), new Vector3(len - 0.02f, ch, end ? 0.3f : 0.34f), 0.03f, col, (mb.Random01() - 0.5f) * 2.5f);
+                    x += len;
+                }
+                y += 0.09f;
+            }
+            // small dark moss cushions in a few joints and over one end of the cap, a few blades at the foot (kept inside
+            // the collider)
+            var mossRamp = CanopyRamp(Paint.Hex("#86A35A"), Pal.Moss, Pal.LeafDark, 0f, y + 0.06f);
+            float endX = (b % 2 == 0 ? 1f : -1f) * (L * 0.5f - 0.18f);
+            SoftLump(mb, new Vector3(endX, y - 0.005f, 0.0f), new Vector3(0.2f, 0.05f, 0.15f), 0, b * 31f, mossRamp, 0.15f);
+            SoftLump(mb, new Vector3(endX + Mathf.Sign(endX) * 0.05f, y - 0.12f, -0.12f), new Vector3(0.1f, 0.08f, 0.04f), 0, b * 17f, mossRamp, 0.15f);
             for (int i = 0; i < 3; i++)
-                SoftLump(mb, new Vector3(-0.95f + i * 0.9f + (mb.Random01() - 0.5f) * 0.3f, y + 0.01f, 0.02f), new Vector3(0.24f + 0.08f * mb.Random01(), 0.07f, 0.16f), 0, i * 50f, mossRamp, 0.15f);
+            {
+                float mx = -0.85f + i * 0.85f + (mb.Random01() - 0.5f) * 0.3f;
+                SoftLump(mb, new Vector3(mx, 0.25f + (i % 2) * 0.21f, -0.165f), new Vector3(0.07f, 0.035f, 0.025f), 0, i * 50f + b, mossRamp, 0.1f);
+            }
+            for (int i = 0; i < 4; i++)
+                Tuft(mb, new Vector3(-1.05f + i * 0.7f + (mb.Random01() - 0.5f) * 0.15f, 0f, -0.11f), 0.18f + 0.07f * mb.Random01(), 4, i % 2 == 0 ? Pal.Leaf : Pal.Sage);
+            Color[] wild = { Color.white, Paint.Hex("#FFD84E"), Paint.Hex("#B48CE0") };
             for (int i = 0; i < 2; i++)
             {
-                mb.Color = WallStones[(b + i) % WallStones.Length];
-                FacetBlob(mb, new Vector3(-1.2f + i * 2.1f, 0.06f, -0.34f), new Vector3(0.11f, 0.07f, 0.09f), 0, 0.2f, seed + 900 + i, 0.4f,
-                          Mossy(mb.Color, Pal.Moss, 0.7f));
-            }
-            // grass and a few flowers at the foot
-            for (int i = 0; i < 5; i++)
-                Tuft(mb, new Vector3(-1.35f + i * 0.66f + (mb.Random01() - 0.5f) * 0.2f, 0f, -0.26f), 0.24f + 0.12f * mb.Random01(), 4, i % 2 == 0 ? Pal.Leaf : Pal.Sage);
-            Color[] wild = { Color.white, Paint.Hex("#FFD84E"), Paint.Hex("#B48CE0") };
-            for (int i = 0; i < 3; i++)
-            {
-                var at = new Vector3(-1.0f + i * 0.95f + (mb.Random01() - 0.5f) * 0.3f, 0.12f + 0.06f * mb.Random01(), -0.3f);
+                var at = new Vector3(-0.6f + i * 1.15f + (mb.Random01() - 0.5f) * 0.2f, 0.13f + 0.05f * mb.Random01(), -0.19f);
                 mb.Color = Pal.Leaf;
                 mb.Segment(at + Vector3.down * at.y, at, 0.012f, 0.008f, 3, false, false);
-                Bloom(mb, at, 0.06f, new Vector3(0f, 0.8f, -0.6f), wild[(i + b) % wild.Length], Paint.Hex("#F2B02E"), i * 23f);
+                Bloom(mb, at, 0.055f, new Vector3(0f, 0.8f, -0.6f), wild[(i + b) % wild.Length], Paint.Hex("#F2B02E"), i * 23f);
             }
             return mb;
         }
 
-        // ------------------------------------------------------------------ vegetable patch (collider 2.8 × 1.4)
+        // ------------------------------------------------------------------ vegetable patch (collider 3.6 × 1.8: the bed's corners and the can fit)
 
         static MeshBuilder BuildVegPatch(int b)
         {
             var mb = Builder(VariantSeed("prop_veg_patch", b), 0.06f, 0.25f, 0.3f);
-            const float W = 2.7f, Dp = 1.3f, H = 0.2f;
+            const float W = 2.5f, Dp = 1.15f, H = 0.2f;
             // plank edging with corner posts, soil inside with three ridged rows
             var plank = Color.Lerp(Pal.WoodGrey, Pal.Wood, 0.45f);
             mb.Color = plank;
@@ -95,7 +140,7 @@ namespace Lanternvale.Game
             var soil = Paint.Hex("#6E4E3A");
             mb.Color = soil;
             mb.BoxOn(new Vector3(0f, 0f, 0f), new Vector3(W - 0.06f, H - 0.03f, Dp - 0.06f));
-            float[] rows = { -0.38f, 0f, 0.38f };
+            float[] rows = { -0.33f, 0f, 0.33f };
             for (int i = 0; i < rows.Length; i++)
             {
                 mb.Color = Paint.Shade(soil, 1.12f);
@@ -107,7 +152,7 @@ namespace Lanternvale.Game
             var cabbageRamp = CanopyRamp(Paint.Hex("#CFE29A"), Paint.Hex("#93BC72"), Paint.Hex("#5F8A5A"), top, top + 0.24f);
             for (int i = 0; i < 5; i++)
             {
-                var at = new Vector3(-1.05f + i * 0.52f + (mb.Random01() - 0.5f) * 0.06f, top, rows[0] + (mb.Random01() - 0.5f) * 0.05f);
+                var at = new Vector3(-0.96f + i * 0.48f + (mb.Random01() - 0.5f) * 0.06f, top, rows[0] + (mb.Random01() - 0.5f) * 0.05f);
                 for (int k = 0; k < 5; k++)
                 {
                     float a = (k * 72f + i * 31f) * Mathf.Deg2Rad;
@@ -120,7 +165,7 @@ namespace Lanternvale.Game
             // middle row: carrots (orange shoulders under feathery tops)
             for (int i = 0; i < 7; i++)
             {
-                var at = new Vector3(-1.1f + i * 0.37f + (mb.Random01() - 0.5f) * 0.05f, top - 0.01f, rows[1] + (mb.Random01() - 0.5f) * 0.06f);
+                var at = new Vector3(-1.02f + i * 0.34f + (mb.Random01() - 0.5f) * 0.05f, top - 0.01f, rows[1] + (mb.Random01() - 0.5f) * 0.06f);
                 mb.Color = Pal.Pumpkin;
                 mb.Cone(at, 0.045f, 0.06f, 5);
                 for (int k = 0; k < 3; k++)
@@ -133,7 +178,7 @@ namespace Lanternvale.Game
             // back row: leeks / spring onions (tall blue-green blades on white stems)
             for (int i = 0; i < 6; i++)
             {
-                var at = new Vector3(-1.05f + i * 0.42f + (mb.Random01() - 0.5f) * 0.05f, top - 0.01f, rows[2] + (mb.Random01() - 0.5f) * 0.05f);
+                var at = new Vector3(-0.95f + i * 0.38f + (mb.Random01() - 0.5f) * 0.05f, top - 0.01f, rows[2] + (mb.Random01() - 0.5f) * 0.05f);
                 mb.Color = Paint.Hex("#EDEBD8");
                 mb.Cylinder(at, 0.035f, 0.03f, 0.12f, 5);
                 for (int k = 0; k < 3; k++)
@@ -144,11 +189,11 @@ namespace Lanternvale.Game
                 }
             }
             mb.Wind = 0f;
-            // a pumpkin ripening at the back corner and a watering can at the front corner
+            // a pumpkin ripening at the back corner and a watering can left beside the bed's end, its spout over the edging
             mb.Color = Pal.Pumpkin;
-            Pumpkin(mb, new Vector3(1.1f, top - 0.02f, 0.42f), 0.17f);
+            Pumpkin(mb, new Vector3(0.98f, top - 0.02f, 0.36f), 0.16f);
             var can = Paint.Hex("#7FA6A8");
-            var canAt = new Vector3(W * 0.5f + 0.2f, 0f, -Dp * 0.5f + 0.05f);
+            var canAt = new Vector3(W * 0.5f + 0.18f, 0f, -0.14f);
             mb.Color = can;
             mb.Cylinder(canAt, 0.1f, 0.09f, 0.2f, 8);
             mb.Segment(canAt + new Vector3(-0.07f, 0.06f, -0.03f), canAt + new Vector3(-0.24f, 0.24f, -0.08f), 0.025f, 0.018f, 4);
@@ -158,7 +203,7 @@ namespace Lanternvale.Game
             mb.Segment(canAt + new Vector3(-0.04f, 0.3f, 0f), canAt + new Vector3(-0.06f, 0.2f, 0f), 0.014f, 0.014f, 3);
             // grass creeping along the edging
             for (int i = 0; i < 4; i++)
-                Tuft(mb, new Vector3(-1.2f + i * 0.8f + (mb.Random01() - 0.5f) * 0.2f, 0f, -Dp * 0.5f - 0.06f), 0.22f, 4, Pal.Leaf);
+                Tuft(mb, new Vector3(-1.0f + i * 0.66f + (mb.Random01() - 0.5f) * 0.2f, 0f, -Dp * 0.5f - 0.05f), 0.22f, 4, Pal.Leaf);
             return mb;
         }
 
@@ -176,16 +221,16 @@ namespace Lanternvale.Game
                 mb.Push().Translate(s * X, 0f, 0f).Rotate(0f, 0f, s * -1.5f);
                 mb.BoxOn(Vector3.zero, new Vector3(0.1f, Top, 0.1f));
                 mb.Color = Paint.Shade(wood, 1.08f);
-                mb.Box(new Vector3(0f, Top - 0.06f, 0f), new Vector3(0.09f, 0.07f, 0.5f));
+                mb.Box(new Vector3(0f, Top - 0.06f, 0.04f), new Vector3(0.09f, 0.07f, 0.36f));
                 mb.Pop();
-                Tuft(mb, new Vector3(s * X + 0.05f, 0f, -0.06f), 0.3f, 5, Pal.Leaf);
+                Tuft(mb, new Vector3(s * X + 0.03f, 0f, 0.05f), 0.3f, 5, Pal.Leaf);
             }
             // the line (front strand carries the laundry)
-            var a = new Vector3(-X, LineY, -0.2f);
-            var c = new Vector3(X, LineY, -0.2f);
+            var a = new Vector3(-X, LineY, -0.06f);
+            var c = new Vector3(X, LineY, -0.06f);
             mb.Color = Pal.RopeStraw;
             Rope(mb, a, c, Sag, 0.012f, 8, 3);
-            Rope(mb, new Vector3(-X, LineY, 0.2f), new Vector3(X, LineY, 0.2f), Sag * 0.8f, 0.01f, 6, 3);
+            Rope(mb, new Vector3(-X, LineY, 0.14f), new Vector3(X, LineY, 0.14f), Sag * 0.8f, 0.01f, 6, 3);
             // laundry: a sheet, a shirt, a striped towel and two socks, gently waving (wind grows downwards from the line)
             Color[] sheets = { Paint.Hex("#F6F0E2"), Paint.Hex("#F3E3C8"), Paint.Hex("#EEF2F4"), Paint.Hex("#F6E9EC") };
             Color[] shirts = { Paint.Hex("#7FA7D6"), Paint.Hex("#E3B26A"), Paint.Hex("#8DBB8A"), Paint.Hex("#C98FB4") };
@@ -197,8 +242,8 @@ namespace Lanternvale.Game
             Cloth(mb, a, c, Sag, 0.9f, 0.93f, 0.22f, Paint.Hex("#D8735E"), Paint.Hex("#D8735E"), 1);
             mb.Wind = 0f;
             mb.WindGradient = false;
-            // a wicker basket of folded laundry by the left post
-            var basket = new Vector3(-X + 0.45f, 0f, -0.15f);
+            // a wicker basket of folded laundry under the line by the left post (inside the collider)
+            var basket = new Vector3(-X + 0.5f, 0f, 0.1f);
             mb.Color = Pal.WoodLight;
             mb.Push().Translate(basket).Scale(new Vector3(1.25f, 1f, 0.9f));
             mb.Lathe(new[] { new Vector2(0.17f, 0f), new Vector2(0.22f, 0.2f), new Vector2(0.235f, 0.23f), new Vector2(0.21f, 0.23f) }, 8, false, true, false,
