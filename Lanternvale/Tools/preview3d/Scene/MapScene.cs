@@ -1,8 +1,9 @@
 // Builds a map exactly like MapView.BuildAll does (Scripts/Game/World/MapView.cs), minus the per-frame scripts:
-// the real MapSky / MapTerrain / MapBackdrop / DayNight, props, foreground and chests from PropModels.Create with
-// MapView's seeds, transforms, light placement and hour gating, painted decals, merged blob shadows, transition
-// waymarkers, light halos, and the real unit models (Scene/UnitPoser: UnitModels + UnitAnimator, idling) for the
-// party leader, NPCs and encounter enemies, placed and faced like GameFlow.Views does.
+// the real MapSky / MapTerrain (ground, painted decals) / MapBackdrop / DayNight, props, foreground and chests from
+// PropModels.Create with MapView's seeds, transforms, light placement and hour gating, merged blob shadows, the
+// shared transition waymarkers (Waymarker) and occluder test (PropOccluder), light halos, and the real unit models
+// (Scene/UnitPoser: UnitModels + UnitAnimator, idling) for the party leader, NPCs and encounter enemies, placed and
+// faced like GameFlow.Views does.
 // Keep in sync with MapView when its building logic changes (the copied parts are marked "as MapView").
 using System;
 using System.Collections.Generic;
@@ -42,6 +43,7 @@ namespace Lanternvale.Preview
             public Color tint = Color.white;
             public Bounds bounds;
             public bool hasBounds;
+            public PropOccluder occ;
         }
 
         sealed class WLight
@@ -115,7 +117,7 @@ namespace Lanternvale.Preview
             markersRoot = Child("Markers");
             unitsRoot = Child("Units");
 
-            Guard("decals", BuildDecals);
+            Guard("decals", () => terrain.BuildDecals(decalsRoot));   // the real MapTerrain decals (trail ribbons, soft patches)
             for (int i = 0; i < def.props.Count; i++)
             {
                 var p = def.props[i];
@@ -210,58 +212,6 @@ namespace Lanternvale.Preview
             return c.r + c.g + c.b > 0.05f ? c : fallback;
         }
 
-        // ------------------------------------------------------------------ decals (as MapView.BuildDecals)
-
-        static int DecalOrder(string art) => art.Contains("blight") ? 3 : art.Contains("flower") ? 2 : art.Contains("stone") ? 1 : 0;
-
-        void BuildDecals()
-        {
-            var byArt = new Dictionary<string, List<PropDef>>(StringComparer.Ordinal);
-            var order = new List<string>();
-            foreach (var p in Def.props)
-            {
-                if (p == null || string.IsNullOrEmpty(p.art) || !p.art.StartsWith("decal_", StringComparison.Ordinal)) continue;
-                if (!byArt.TryGetValue(p.art, out var list)) { byArt[p.art] = list = new List<PropDef>(); order.Add(p.art); }
-                list.Add(p);
-            }
-            foreach (var art in order)
-            {
-                var tex = ArtLibrary.Texture(art);
-                float aspect = tex != null && tex.height > 0 ? (float)tex.width / tex.height : 1f;
-                float baseH = ArtLibrary.Height(art, 4f);
-                int ord = DecalOrder(art);
-                var list = byArt[art];
-                var verts = new List<Vector3>(); var norms = new List<Vector3>(); var uvs = new List<Vector2>(); var cols = new List<Color32>(); var tris = new List<int>();
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var p = list[i];
-                    float s = p.scale > 0f ? p.scale : 1f;
-                    float h = baseH * s, w = h * aspect;
-                    float z = -(0.006f + ord * 0.002f + (i % 8) * 0.0003f);
-                    float cx = p.pos.x, cy = p.pos.y;
-                    int b = verts.Count;
-                    verts.Add(new Vector3(cx - w * 0.5f, cy - h * 0.5f, z)); verts.Add(new Vector3(cx - w * 0.5f, cy + h * 0.5f, z));
-                    verts.Add(new Vector3(cx + w * 0.5f, cy + h * 0.5f, z)); verts.Add(new Vector3(cx + w * 0.5f, cy - h * 0.5f, z));
-                    float u0 = p.flip ? 1f : 0f, u1 = p.flip ? 0f : 1f;
-                    uvs.Add(new Vector2(u0, 0f)); uvs.Add(new Vector2(u0, 1f)); uvs.Add(new Vector2(u1, 1f)); uvs.Add(new Vector2(u1, 0f));
-                    var tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint);
-                    var c = new Color(tint.r * 0.86f, tint.g * 0.86f, tint.b * 0.86f, tint.a);
-                    for (int k = 0; k < 4; k++) { cols.Add(c); norms.Add(World3D.Up); }
-                    tris.Add(b); tris.Add(b + 1); tris.Add(b + 2); tris.Add(b); tris.Add(b + 2); tris.Add(b + 3);
-                }
-                var m = new Mesh { name = "lv_decals_" + art };
-                m.SetVertices(verts); m.SetNormals(norms); m.SetUVs(0, uvs); m.SetColors(cols); m.SetTriangles(tris, 0, true);
-                var go = new GameObject("Decals " + art);
-                go.transform.SetParent(decalsRoot, false);
-                go.AddComponent<MeshFilter>().sharedMesh = m;
-                var r = go.AddComponent<MeshRenderer>();
-                var mat = new Material(Materials3D.LitTransparent(tex));
-                if (art.Contains("blight")) mat.SetFloat(Materials3D.EmissionId, 0.18f);
-                r.sharedMaterial = mat;
-                r.sortingOrder = -8 + ord;
-            }
-        }
-
         // ------------------------------------------------------------------ props (as MapView.PlaceModel / BuildProp / BuildForeground)
 
         void PlaceModel(PObj o, int seed)
@@ -315,6 +265,7 @@ namespace Lanternvale.Preview
             o.groundShadow = true;
             o.occluder = TopOf(o) >= 2.5f;
             o.occludedAlpha = 0.35f;   // MapView.OccluderFadeAlpha
+            if (o.occluder) o.occ = PropOccluder.Build(o.model.Renderers, occGrids);   // as MapView
             if (p.light != null)
             {
                 var l = AddLight(o, p.light);
@@ -343,6 +294,7 @@ namespace Lanternvale.Preview
             o.groundShadow = p.art.Contains("stone");
             o.occluder = TopOf(o) >= 0.7f;
             o.occludedAlpha = 0.35f;   // MapView.ForegroundFadeAlpha
+            if (o.occluder) o.occ = PropOccluder.Build(o.model.Renderers, occGrids);   // as MapView
             foreground.Add(o);
         }
 
@@ -429,78 +381,23 @@ namespace Lanternvale.Preview
             var holder = new GameObject("Transition " + t.id).transform;
             holder.SetParent(markersRoot, false);
             holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
-            var arch = new GameObject("Waymarker").transform;
-            arch.SetParent(holder, false);
-            arch.rotation = dir == Vector2.zero ? World3D.Upright : World3D.Facing(dir);
-            arch.localScale = dir == Vector2.zero ? new Vector3(0.6f, 0.75f, 0.6f) : new Vector3(span / 3f, 1f, 1f);
-            var archGo = new GameObject("Arch");
-            archGo.transform.SetParent(arch, false);
-            archGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_arch", BuildArchMesh);
-            var ar = archGo.AddComponent<MeshRenderer>();
-            ar.sharedMaterials = Materials3D.WithOutline();
-            var lanGo = new GameObject("Lantern");
-            lanGo.transform.SetParent(holder, false);
-            lanGo.transform.localRotation = arch.localRotation;
-            lanGo.transform.localScale = dir == Vector2.zero ? new Vector3(0.75f, 0.75f, 0.75f) : Vector3.one;
-            lanGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_lantern", BuildArchLanternMesh);
-            var lr = lanGo.AddComponent<MeshRenderer>();
-            lr.sharedMaterial = Materials3D.LowPoly;
-            if (locked) lr.Block.SetColor(Materials3D.TintId, new Color(0.5f, 0.46f, 0.72f));
-            var ab = ar.bounds;
-            MeshCache.AddShadow(holder, ab.extents.x + 0.25f, ab.extents.y + 0.25f, 0.3f);
-            var lamp = arch.TransformPoint(new Vector3(0f, 2.02f, 0f));
-            lights.Add(new WLight
+            // as MapView.BuildTransition: the shared waymarker model, night-only lanterns
+            var wm = Waymarker.Build(holder, dir, span);
+            if (locked) foreach (var lr in wm.Lanterns) lr.Block.SetColor(Materials3D.TintId, new Color(0.5f, 0.46f, 0.72f));
+            for (int i = 0; i < wm.Lamps.Count; i++)
             {
-                position = lamp,
-                color = locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f),
-                intensity = locked ? 0.38f : 0.85f,
-                range = 5.2f,
-                flicker = !locked,
-                haloSize = 1.3f,
-            });
-        }
-
-        // as MapView.BuildArchMesh / BuildArchLanternMesh
-        static Mesh BuildArchMesh()
-        {
-            var mb = new MeshBuilder(17) { Jitter = 0.07f, AOStrength = 0.3f, AOHeight = 0.6f };
-            var wood = Ui.Hex("#7a5a43");
-            var dark = Ui.Hex("#4a3a30");
-            var stone = Ui.Hex("#a39c94");
-            for (int s = -1; s <= 1; s += 2)
-            {
-                mb.Color = stone;
-                mb.Cylinder(new Vector3(s * 1.5f, 0f, 0f), 0.24f, 0.2f, 0.32f, 6);
-                mb.Color = wood;
-                mb.Cylinder(new Vector3(s * 1.5f, 0.3f, 0f), 0.13f, 0.11f, 2.45f, 6);
+                lights.Add(new WLight
+                {
+                    position = wm.Lamps[i],
+                    color = locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f),
+                    intensity = (locked ? 0.38f : 0.85f) * (wm.Lamps.Count > 1 ? 0.7f : 1f),
+                    range = wm.Lamps.Count > 1 ? 4.6f : 5.2f,
+                    flicker = !locked,
+                    nightOnly = true,
+                    haloSize = wm.Lamps.Count > 1 ? 1.0f : 1.3f,
+                    setLit = i == 0 ? wm.SetLit : null,
+                });
             }
-            mb.Color = dark;
-            mb.Box(new Vector3(0f, 2.78f, 0f), new Vector3(3.9f, 0.18f, 0.3f));
-            mb.Push().Translate(1.98f, 2.84f, 0f).Rotate(0f, 0f, 12f);
-            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
-            mb.Pop();
-            mb.Push().Translate(-1.98f, 2.84f, 0f).Rotate(0f, 0f, -12f);
-            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
-            mb.Pop();
-            mb.Color = wood;
-            mb.Box(new Vector3(0f, 2.42f, 0f), new Vector3(3.2f, 0.13f, 0.18f));
-            mb.Color = Ui.Hex("#d8c7a2");
-            mb.Box(new Vector3(0f, 2.6f, 0f), new Vector3(0.5f, 0.3f, 0.06f));
-            mb.Color = dark;
-            mb.Segment(new Vector3(0f, 2.36f, 0f), new Vector3(0f, 2.22f, 0f), 0.02f, 0.02f, 4);
-            return mb.ToMesh("lv_waymarker_arch");
-        }
-
-        static Mesh BuildArchLanternMesh()
-        {
-            var mb = new MeshBuilder(18) { Jitter = 0.04f };
-            mb.Color = Ui.Hex("#4a3a30");
-            mb.Box(new Vector3(0f, 2.21f, 0f), new Vector3(0.3f, 0.05f, 0.3f));
-            mb.Box(new Vector3(0f, 1.83f, 0f), new Vector3(0.26f, 0.05f, 0.26f));
-            mb.Color = new Color(1f, 0.84f, 0.55f);
-            mb.Emission = 1f;
-            mb.Box(new Vector3(0f, 2.02f, 0f), new Vector3(0.24f, 0.33f, 0.24f));
-            return mb.ToMesh("lv_waymarker_lantern");
         }
 
         void UpdateCliffLanterns()
@@ -524,7 +421,8 @@ namespace Lanternvale.Preview
             foreach (var npc in Def.npcs)
             {
                 if (npc == null || !opt.Has(npc.requireFlag)) continue;
-                AddUnit(NpcSprite(npc.npc), 0f, new Vector2(npc.pos.x, npc.pos.y), npc.flip ? -1 : 1, false, n++);
+                // as CreateNpcView: generic villagers / children get a stable look per NPC id (SetVariant)
+                AddUnit(NpcSprite(npc.npc), 0f, new Vector2(npc.pos.x, npc.pos.y), npc.flip ? -1 : 1, false, n++, UnitModels.StableVariant(npc.npc ?? ""));
             }
             foreach (var e in Def.encounters)
             {
@@ -557,10 +455,12 @@ namespace Lanternvale.Preview
             return string.IsNullOrEmpty(sprite) ? "npc_villager_a" : sprite;
         }
 
-        void AddUnit(string key, float height, Vector2 pos, int facing, bool fadesOccluders, int index)
+        void AddUnit(string key, float height, Vector2 pos, int facing, bool fadesOccluders, int index, int variant = 0)
         {
-            float yaw = facing == 0 ? 90f + UnitPoser.FacingBias : UnitPoser.FacingYaw(facing);
-            var u = new UnitPoser(key, height, unitsRoot, pos, yaw);
+            // SetFacing(±1) is screen-right/left for the current camera yaw (UnitFacing.SideYaw); no SetFacing keeps
+            // UnitView's initial world yaw
+            float yaw = facing == 0 ? 90f + UnitPoser.FacingBias : UnitPoser.FacingYaw(facing, opt.Yaw);
+            var u = new UnitPoser(key, height, unitsRoot, pos, yaw, variant);
             // a little idle life, desynchronised per unit (breathing, weight shift, glances)
             u.Idle(1.2f + (index * 0.37f) % 1.6f);
             Units.Add(u);
@@ -639,43 +539,27 @@ namespace Lanternvale.Preview
             foreach (var o in foreground) Fade(o, cp);
         }
 
+        // as MapView: the voxelised meshes, shared by the props using the same mesh
+        readonly Dictionary<Mesh, PropOccluder.Grid> occGrids = new Dictionary<Mesh, PropOccluder.Grid>();
+
+        /// <summary>As MapView: only units in view (viewport −0.05 … 1.05) fade props.</summary>
+        bool OnScreen(Vector3 p)
+        {
+            var d = p - View.Pos;
+            float z = Vector3.Dot(d, View.F);
+            if (z <= View.Near) return false;
+            float x = Vector3.Dot(d, View.R) / (z * View.TanHalf * View.Aspect), y = Vector3.Dot(d, View.U) / (z * View.TanHalf);
+            return Mathf.Abs(x) <= 1.1f && Mathf.Abs(y) <= 1.1f;
+        }
+
         void Fade(PObj o, Vector3 cp)
         {
-            if (!o.occluder || !o.hasBounds || o.occludedAlpha >= 0.999f) return;
-            var b = o.bounds;
-            var ext = b.extents;
-            b.extents = new Vector3(ext.x * 0.82f, ext.y * 0.82f, ext.z);
+            if (!o.occluder || o.occ == null || o.occludedAlpha >= 0.999f) return;
             bool hides = false;
             foreach (var u in fadingUnits)
-                if (Hides(b, cp, u.CenterPosition) || Hides(b, cp, u.HeadPosition)) { hides = true; break; }
+                if (OnScreen(u.CenterPosition) && o.occ.Hides(cp, View.R, u.CenterPosition, u.HeadPosition, false)) { hides = true; break; }
             if (!hides) return;
             foreach (var r in o.model.Renderers) r?.Block.SetFloat(Materials3D.FadeId, o.occludedAlpha);
-        }
-
-        static bool Hides(Bounds b, Vector3 cam, Vector3 target)
-        {
-            var d = target - cam;
-            float len = d.magnitude;
-            if (len < 0.01f) return false;
-            return IntersectRay(b, cam, d / len, out float t) && t < len - 0.35f;
-        }
-
-        /// <summary>Bounds.IntersectRay (slab test): distance to the box along the ray, 0 when starting inside.</summary>
-        static bool IntersectRay(Bounds b, Vector3 o, Vector3 dir, out float t)
-        {
-            float tmin = 0f, tmax = float.PositiveInfinity;
-            var mn = b.min; var mx = b.max;
-            for (int i = 0; i < 3; i++)
-            {
-                float oi = o[i], di = dir[i];
-                if (Mathf.Abs(di) < 1e-8f) { if (oi < mn[i] || oi > mx[i]) { t = 0f; return false; } continue; }
-                float t1 = (mn[i] - oi) / di, t2 = (mx[i] - oi) / di;
-                if (t1 > t2) { var tmp = t1; t1 = t2; t2 = tmp; }
-                tmin = Mathf.Max(tmin, t1); tmax = Mathf.Min(tmax, t2);
-                if (tmin > tmax) { t = 0f; return false; }
-            }
-            t = tmin;
-            return true;
         }
 
         // ================================================================== mood and lights (as MapView.ApplyMood / UpdateLights at t = 0)

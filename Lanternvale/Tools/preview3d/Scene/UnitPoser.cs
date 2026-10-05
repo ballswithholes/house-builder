@@ -11,7 +11,7 @@ namespace Lanternvale.Preview
 {
     public sealed class UnitPoser
     {
-        public const float FacingBias = 15f;   // UnitView.cs:178
+        public const float FacingBias = UnitFacing.Bias;   // UnitView.SetFacing
 
         public readonly string Key;
         public readonly UnitModel Model;
@@ -29,10 +29,10 @@ namespace Lanternvale.Preview
         float actionT, actionDur;
         Vector2 actionDir;
 
-        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw)
+        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw, int variant = 0)
         {
             Key = key;
-            Model = UnitModels.Get(key) ?? throw new InvalidOperationException("no unit model for " + key);
+            Model = UnitModels.Get(key, variant) ?? throw new InvalidOperationException("no unit model for " + key);
             Scale = height > 0f ? height / Mathf.Max(0.05f, Model.Height) : 1f;
             Holder = new GameObject("Unit " + key).transform;
             Holder.SetParent(parent, false);
@@ -45,8 +45,8 @@ namespace Lanternvale.Preview
             ApplyBody(Vector3.zero, 1f);
         }
 
-        /// <summary>UnitView.SetFacing: +1 right, −1 left, turned a little towards the camera.</summary>
-        public static float FacingYaw(int dir) => dir >= 0 ? 90f + FacingBias : -(90f + FacingBias);
+        /// <summary>UnitView.SetFacing: +1 screen-right, −1 screen-left for a camera turned by cameraYaw, a little towards it.</summary>
+        public static float FacingYaw(int dir, float cameraYaw = 0f) => UnitFacing.SideYaw(dir, cameraYaw);
 
         public void StartAction(UnitAction a, float dur, Vector2 dirWorld)
         {

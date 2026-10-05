@@ -11,7 +11,9 @@ Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio,Renderi
 >   `UnitView.CenterPosition/HeadPosition/NameplatePosition` and `MapObject.LabelPosition` are `Vector3`.
 > * Picking is screen-space: `UnitView.PickScreen(screen)` / `HitTestScreen(screen, out depth)`,
 >   `MapView.PickScreen(screen, includeRegions)`. `UnitView.Bounds` is now the ground footprint.
-> * `UnitView.SetFacing(±1)` turns to ±105° (a 3/4 view towards the camera); `FaceTowards` turns to any direction.
+> * `UnitView.SetFacing(±1)` faces screen-right / screen-left for the current camera yaw (`CameraRig.Yaw` ± 105°, a 3/4
+>   view towards the camera; re-applied when the camera turns, see `UnitFacing.SideYaw`); `FaceTowards` turns to any
+>   direction. `UnitView.SetVariant(int)` / `Variant` give generic villagers and children a stable look per NPC.
 > * `FxSystem` airborne effects take `Vector3` (`Projectile`, `Beam`, `MoveBeam`, `Impact`, `Slash`, `Sparkles`,
 >   `Puff`); ground effects keep `Vector2`. There are no sorting-order constants any more (render queues layer the
 >   ground overlays). `FloatingText` takes `Vector3`.
@@ -125,10 +127,10 @@ u.Dispose();
 |---|---|
 | Registry | `UnitView.All`, `UnitView.Pick(Vector2 world, bool includeDead = false)` (front-most body under point) |
 | Anchors | `FeetPosition`/`Position`, `CenterPosition`, `HeadPosition`, `NameplatePosition`, `Bounds` (picking rect), `Height`, `Facing` |
-| Movement | `Teleport`, `MoveAlong(path, speed, onArrive)`, `StopMoving`, `IsMoving`, `RemainingPathLength()`, `Knockback(to, dur=0.35)`, `FaceTowards`, `SetFacing(±1)` |
+| Movement | `Teleport`, `MoveAlong(path, speed, onArrive)`, `StopMoving`, `IsMoving`, `RemainingPathLength()`, `Knockback(to, dur=0.35)`, `FaceTowards`, `SetFacing(±1)` (screen-right/left for the current camera yaw) |
 | One-shots (return duration s) | `PlayAttack(towards)`, `PlayShoot()`/`PlayShoot(towards)` (release at `ShootReleaseTime` 0.2), `PlayCast(color)` (release at `CastReleaseTime` 0.45), `PlayHit()` (white flash + shake, overlaps others), `PlayDodge()`, `PlayDeath()` (falls, fades out; Dispose afterwards), `PlayDowned()` (lies down, stays), `PlayRevive()` |
-| States | `SetSelected`, `SetHovered` (outline + brighten), `SetTargetable(Color? c)` (pulsing ring + outline colour; null clears), `SetActiveTurn` (ring + ripple), `SetStealthed` (40% alpha), `SetTint(Color)` (white clears), `SetPolymorphed(bool)` (sheep), `SetCasting(color, progress 0..1)` / `StopCasting()` (chest glow + ground rune), `SetVisible`, `SetSprite(key)` |
-| Data | `DisplayName`, `Tag`, `UnitId`, `RingColor`, `FadesOccluders` (default true), `Floating` (auto for `*wisp*`), `IsDead`, `IsDowned`, `IsSelected`, `IsHovered`, `IsActiveTurn`, `IsPolymorphed` |
+| States | `SetSelected`, `SetHovered` (outline + brighten), `SetTargetable(Color? c)` (pulsing ring + outline colour; null clears), `SetActiveTurn` (ring + ripple), `SetStealthed` (40% alpha), `SetTint(Color)` (white clears), `SetPolymorphed(bool)` (sheep), `SetCasting(color, progress 0..1)` / `StopCasting()` (chest glow + ground rune), `SetVisible`, `SetSprite(key)`, `SetVariant(int)` (look variation of `npc_villager_a/b` and `npc_child`, 16 each; other keys ignore it; kept across `SetSprite`) |
+| Data | `DisplayName`, `Tag`, `UnitId`, `RingColor`, `FadesOccluders` (default true), `Floating` (auto for `*wisp*`), `IsDead`, `IsDowned`, `IsSelected`, `IsHovered`, `IsActiveTurn`, `IsPolymorphed`, `Variant` |
 
 Ring priority: targetable > active turn > selected > hovered. Art is assumed to face **right** (+x); `MapNpcDef.flip`
 → `SetFacing(-1)`. `onArrive` is not called when a move is replaced by another `MoveAlong`/`Teleport`/`StopMoving`.

@@ -104,10 +104,13 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
   `char_<class>` (player classes), `comp_<name>` (companions: kael, lys, seren, rook, pip, torvan, aldric, morwen —
   see `Resources/Data/content/companions.json` for their classes/looks), `npc_*` (elder, innkeeper, merchant, smith,
   villager_a/b, child, guard, trainer, spirit), creatures `cr_*` (wolf, wolf_blighted, boar, spider, mossling,
-  mossling_shaman, bandit, bandit_archer, bandit_hexer, bandit_chief, hollow_wisp, hollow_spirit, hollow_treant,
+  mossling_shaman, bandit, bandit_archer, bandit_hexer, bandit_chief, hollow_wisp, hollow_spirit, hollow_keeper, hollow_treant,
   hollow_warden (≈4.5 m boss), training_dummy), pets `pet_*` (wolf, cat, boar, bear, owl), demons `demon_*` (imp,
   voidwalker, succubus, felhunter, infernal), totems `totem_*` (earth, fire, water, air). `height` > 0 scales the
   model to that height (creature `size`), ≤ 0 = the model's natural height. Unknown keys get a sensible generic model.
+  **`SetVariant(int)`** / `Variant`: 16 deterministic looks each for `npc_villager_a/b` and `npc_child` (0 = plain;
+  other keys ignore it; `UnitModels.Get(key, variant)`, `UnitModels.NormalizeVariant`, `UnitRecipes.VariantCount`).
+  `GameFlow.CreateNpcView` passes `UnitModels.StableVariant(npc id)` (FNV-1a), so an NPC always looks the same.
 * Anchors: `FeetPosition`/`Position` (Vector2 ground), **`CenterPosition`, `HeadPosition`, `NameplatePosition`
   are `Vector3` world points** (z = −height; follow the animated body; lowered when lying).
 * Picking: **`static UnitView PickScreen(Vector2 screen, bool includeDead = false)`** and
@@ -116,7 +119,9 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
   `Bounds` (Rect) may be removed.
 * Movement: `Teleport`, `MoveAlong(path, speed, onArrive)` (both overloads), `StopMoving`, `IsMoving`,
   `RemainingPathLength()`, `Knockback`, **`FaceTowards(Vector2)` turns smoothly to any direction**, `SetFacing(±1)`
-  (= face +X / −X), `Facing` (±1: the sign of the facing's x). Turning is smooth (yaw slerp), never a snap.
+  (= face screen-right / screen-left for the current `CameraRig.Yaw`, turned `UnitFacing.Bias` 15° towards the
+  camera — `UnitFacing.SideYaw(dir, cameraYaw)`; re-applied when the camera turns until `FaceTowards` or movement
+  takes over), `Facing` (±1: the sign of the facing's x). Turning is smooth (yaw slerp), never a snap.
 * **Walk cycle** (the user explicitly complained the old walking looked bad): proper procedural gait — legs swing
   with knee bend and foot lift, arms counter-swing, hips/shoulders counter-rotate, a two-bump-per-stride vertical bob,
   slight forward lean scaling with speed, cadence and stride matched to the actual movement speed (feet must not
@@ -166,10 +171,15 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
 * **Props:** `PropModels.Create(art, seed)` (Props builder), placed at `pos` (`World3D.At`), `scale`, `flip` (mirror
   X), `tint` (`Look.Tint`), soft blob shadow, `light` → `SceneLighting` point light at the anchor/offset (`flicker`,
   `nightOnly`), `sway` (wind is in the vertex weights; set `Look.WindScale`). Tall props between the camera and a unit
-  with `FadesOccluders` dither-fade (`Look.Fade` ≈ 0.35). **Decals** (`decal_*`: paths, flower beds, blight) are the
-  painted PNGs on flat ground quads (`Materials3D.LitTransparent`) just above z = 0. **Foreground** (`fg_*`) → 3D
+  with `FadesOccluders` dither-fade (`Look.Fade` ≈ 0.35) when they actually hide the unit on screen (`PropOccluder`:
+  camera rays to the unit's body points through each mesh's voxelised surface). **Decals** (`decal_*`: paths, flower
+  beds, blight) are owned by the terrain (`MapTerrain.BuildDecals`): consecutive path pieces join into one feathered
+  ribbon (trails run on under side exits), flower beds and blight are soft-rimmed discs, all
+  `Materials3D.LitTransparent` just above z = 0; the ground under them is dirt, the village meadow stays green.
+  **Foreground** (`fg_*`) → 3D
   ferns/grass/stones/flowers along the front edge (from PropModels).
-* **Chests** (closed/open), **transition markers** (a glowing waymarker/arch + chevron at the map edge, warm light;
+* **Chests** (closed/open), **transition markers** (`Waymarker`: a pair of lantern posts with an arrow sign at side
+  exits, an arch at front/back/mid-map exits, + chevron; the lanterns are lit and their warm light on only at night;
   locked = dim violet), **regions** (rects only).
 * **Day/night:** `DayNight` keeps its maths/API (`Hour`, `NightFactor`, `Phase`, `SetHour`, `WorldHour`,
   `HoursPerSecond`, `Paused`, `HourOf`, `PhaseOf`, `Changed`); it now drives `SceneLighting`: sun direction/colour

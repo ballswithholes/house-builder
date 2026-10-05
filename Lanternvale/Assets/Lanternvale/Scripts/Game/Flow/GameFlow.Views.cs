@@ -225,6 +225,7 @@ namespace Lanternvale.Game
             if (string.IsNullOrEmpty(sprite)) sprite = "npc_villager_a";
 
             var v = UnitView.Create(sprite, 0f, NpcRing);
+            v.SetVariant(UnitModels.StableVariant(id));   // generic villagers / children: a stable look per NPC id (no-op for other keys)
             v.FadesOccluders = false;
             v.DisplayName = NpcDisplayName(id);
             var home = ToUnity(n.pos);

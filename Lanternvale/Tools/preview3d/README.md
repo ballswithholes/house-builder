@@ -72,8 +72,10 @@ anchors (magenta) and a 1.75 m person.
 
 **Faithful:**
 - Map building follows MapView.BuildAll: seeds, transforms, tints, light anchors, night gating, halos, merged
-  shadows, decals, waymarkers and occluder fading.
-- Units are placed like GameFlow.Views (NPC sprite/flip, enemy size and facing towards the leader).
+  shadows, decals (the real MapTerrain.BuildDecals), waymarkers (the shared Waymarker) and occluder fading (the
+  shared PropOccluder).
+- Units are placed like GameFlow.Views (NPC sprite/flip and look variant, enemy size and facing towards the leader;
+  SetFacing is screen-right/left for `--yaw`, via UnitFacing.SideYaw).
 - Terrain, backdrop and sky come from the real classes.
 - Lighting is DayNight.ApplyTo → SceneLighting (the 16 strongest point lights near the focus).
 - LV_Shade: wrapped sun, hemisphere ambient, point lights, rim, emission, fog.

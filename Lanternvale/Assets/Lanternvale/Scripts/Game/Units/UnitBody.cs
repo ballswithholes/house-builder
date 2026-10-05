@@ -114,6 +114,21 @@ namespace Lanternvale.Game
             return Get(v == 0 ? key : key + "#" + v.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
+        /// <summary>
+        /// A stable variant number for an id (FNV-1a over its UTF-16 code units; string.GetHashCode is randomised per
+        /// process), so an NPC keeps its look across sessions and the preview tool shows the same one (GameFlow.Views:
+        /// CreateNpcView calls UnitView.SetVariant(StableVariant(npc id))).
+        /// </summary>
+        public static int StableVariant(string id)
+        {
+            unchecked
+            {
+                uint h = 2166136261u;
+                if (id != null) foreach (char c in id) { h ^= c; h *= 16777619u; }
+                return (int)h;
+            }
+        }
+
         /// <summary>The variation index (0 … VariantCount − 1) a requested variant maps to for this key (0: none).</summary>
         public static int NormalizeVariant(string key, int variant)
         {

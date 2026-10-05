@@ -327,7 +327,7 @@
       "id": "keeper_ishiro",
       "name": "Keeper Ishiro",
       "title": "Hollowed Keeper of the Old Shrine",
-      "sprite": "cr_hollow_spirit",
+      "sprite": "cr_hollow_keeper",
       "bark": "...put them out... put them all out..."
     },
     {"id": "hollow_warden", "name": "The Hollow Warden", "sprite": "cr_hollow_warden", "bark": "...SO... HUNGRY..."}
