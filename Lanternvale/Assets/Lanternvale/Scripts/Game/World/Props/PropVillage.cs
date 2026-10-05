@@ -521,7 +521,8 @@ namespace Lanternvale.Game
         /// The bridge model includes the brook it crosses (a 12 m water strip along local Z at y = 0.02 with pebbly banks).
         /// Turn this off if the world draws its own stream.
         /// </summary>
-        static readonly bool BridgeWithBrook = true;
+        // the World's terrain already carves and draws Whisperwood's brook under the bridge
+        static readonly bool BridgeWithBrook = false;
 
         static PropModel Bridge(string art, int seed)
         {

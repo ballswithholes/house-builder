@@ -139,6 +139,9 @@ namespace Lanternvale.Game
         BillboardBatch halos, chevrons;
         readonly List<Mesh> ownedMeshes = new List<Mesh>();
         readonly List<WorldLight> lights = new List<WorldLight>();
+        // glowing props without a map light (stall lamps, tent, windmill windows): they follow the night too
+        readonly List<MapObject> nightGlows = new List<MapObject>();
+        int nightGlowState = -1;
         readonly List<MapObject> props = new List<MapObject>();         // every placed prop model (incl. non-interactable)
         readonly List<MapObject> foreground = new List<MapObject>();
         readonly List<MapObject> occluders = new List<MapObject>();
@@ -421,6 +424,11 @@ namespace Lanternvale.Game
             t.localRotation = World3D.Upright;
             t.localScale = new Vector3(o.flip ? -o.scale : o.scale, o.scale, o.scale);
             if (m.SetLit != null && o.IsLantern) m.SetLit(o.LanternLit);
+            else if (m.SetLit != null && (o.Prop == null || o.Prop.light == null))
+            {
+                if (!nightGlows.Contains(o)) nightGlows.Add(o);
+                if (nightGlowState >= 0) m.SetLit(nightGlowState == 1);
+            }
             o.model = m;
             o.lidRest = m.Lid != null ? m.Lid.localRotation : Quaternion.identity;
             ComputeBounds(o);
@@ -946,6 +954,16 @@ namespace Lanternvale.Game
         void UpdateLights(Camera cam, float time, float dt)
         {
             float night = DayNight.NightFactor;
+            int glowWant = night > 0.42f ? 1 : 0;
+            if (glowWant != nightGlowState)
+            {
+                nightGlowState = glowWant;
+                for (int i = 0; i < nightGlows.Count; i++)
+                {
+                    var g = nightGlows[i];
+                    if (g != null && g.model != null && g.model.SetLit != null && g.model.Root != null) g.model.SetLit(glowWant == 1);
+                }
+            }
             bool haveCam = cam != null;
             Vector3 right = Vector3.right, up = World3D.Up;
             if (haveCam) { right = cam.transform.right; up = cam.transform.up; }

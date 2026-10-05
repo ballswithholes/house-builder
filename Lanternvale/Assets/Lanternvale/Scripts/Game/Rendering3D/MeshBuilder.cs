@@ -109,7 +109,12 @@ namespace Lanternvale.Game
                 c = new Color(c.r * k, c.g * k, c.b * k, c.a);
             }
             float w = Wind;
-            if (WindGradient) w = Wind * Mathf.Clamp01((p.y - WindY0) / Mathf.Max(0.001f, WindY1 - WindY0));
+            if (WindGradient)
+            {
+                float span = WindY1 - WindY0;   // may be negative: weights ramp downwards (hanging cloth, vines)
+                if (Mathf.Abs(span) < 1e-3f) span = 1e-3f;
+                w = Wind * Mathf.Clamp01((p.y - WindY0) / span);
+            }
             verts.Add(p);
             normals.Add(n);
             colors.Add(new Color(Mathf.Clamp01(c.r), Mathf.Clamp01(c.g), Mathf.Clamp01(c.b), Mathf.Clamp01(Emission)));
