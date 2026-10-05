@@ -59,6 +59,13 @@ namespace Lanternvale.EditorTools
         public static void CreateScene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            EnsureGameScene();
+            Debug.Log($"[Lanternvale] Created {ScenePath} and added it to Build Settings. Press Play!");
+        }
+
+        /// <summary>Creates the game scene (one GameRoot) and puts it first in Build Settings, without prompts.</summary>
+        public static string EnsureGameScene()
+        {
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var go = new GameObject("Lanternvale");
@@ -67,7 +74,7 @@ namespace Lanternvale.EditorTools
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
-            Debug.Log($"[Lanternvale] Created {ScenePath} and added it to Build Settings. Press Play!");
+            return ScenePath;
         }
 
         [MenuItem("Lanternvale/Validate Data", priority = 20)]
@@ -104,7 +111,10 @@ namespace Lanternvale.EditorTools
         /// react to Light2D. (Projects created from the "Universal 2D" template already have this.)
         /// </summary>
         [MenuItem("Lanternvale/Setup/Configure URP 2D Renderer", priority = 40)]
-        public static void SetupUrp2D()
+        public static void SetupUrp2D() => ConfigureUrp2D(interactive: true);
+
+        /// <summary>Batch-safe URP 2D setup (no dialogs when <paramref name="interactive"/> is false). Returns true when configured.</summary>
+        public static bool ConfigureUrp2D(bool interactive)
         {
             // UniversalRenderPipelineAsset lives in the main URP runtime assembly; Renderer2DData moved to
             // Unity.RenderPipelines.Universal.2D.Runtime in URP 17 / Unity 6 (2023.2+), so look in both.
@@ -112,16 +122,18 @@ namespace Lanternvale.EditorTools
                 UrpRuntimeAssembly);
             if (pipelineType == null)
             {
+                if (!interactive) { Debug.LogError("[Lanternvale] URP is not installed; add com.unity.render-pipelines.universal to Packages/manifest.json."); return false; }
                 if (EditorUtility.DisplayDialog("Lanternvale", "The Universal Render Pipeline package is not installed. Install it now? Run this menu again after Unity finishes importing.", "Install URP", "Cancel"))
                     UnityEditor.PackageManager.Client.Add("com.unity.render-pipelines.universal");
-                return;
+                return false;
             }
             var rendererDataType = FindType("UnityEngine.Rendering.Universal.Renderer2DData",
                 Urp2DRuntimeAssembly, UrpRuntimeAssembly);
             if (rendererDataType == null)
             {
-                EditorUtility.DisplayDialog("Lanternvale", "URP is installed, but its 2D Renderer (Renderer2DData) could not be found in this URP version. Create a URP asset with a 2D Renderer manually (Assets > Create > Rendering > URP Asset (with 2D Renderer)) and assign it in Project Settings > Graphics.", "OK");
-                return;
+                const string msg = "URP is installed, but its 2D Renderer (Renderer2DData) could not be found in this URP version. Create a URP asset with a 2D Renderer manually (Assets > Create > Rendering > URP Asset (with 2D Renderer)) and assign it in Project Settings > Graphics.";
+                if (interactive) EditorUtility.DisplayDialog("Lanternvale", msg, "OK"); else Debug.LogError("[Lanternvale] " + msg);
+                return false;
             }
             Directory.CreateDirectory(SettingsDir);
             var dataPath = SettingsDir + "/Lanternvale_2DRenderer.asset";
@@ -137,7 +149,7 @@ namespace Lanternvale.EditorTools
             {
                 var create = pipelineType.GetMethods(BindingFlags.Public | BindingFlags.Static)
                     .FirstOrDefault(mi => mi.Name == "Create" && mi.GetParameters().Length == 1);
-                if (create == null) { Debug.LogError("[Lanternvale] UniversalRenderPipelineAsset.Create not found in this URP version. Create a URP asset with a 2D Renderer manually."); return; }
+                if (create == null) { Debug.LogError("[Lanternvale] UniversalRenderPipelineAsset.Create not found in this URP version. Create a URP asset with a 2D Renderer manually."); return false; }
                 pipeline = (RenderPipelineAsset)create.Invoke(null, new object[] { data });
                 AssetDatabase.CreateAsset(pipeline, pipePath);
             }
@@ -156,6 +168,7 @@ namespace Lanternvale.EditorTools
             Lighting2D.Reset();
             LanternvaleShaderIncludes.Ensure();
             Debug.Log("[Lanternvale] URP with the 2D Renderer is configured. Sprites now react to 2D lights.");
+            return true;
         }
 
         const string UrpRuntimeAssembly = "Unity.RenderPipelines.Universal.Runtime";

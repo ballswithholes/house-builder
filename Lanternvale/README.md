@@ -200,6 +200,20 @@ Unity writes `ProjectSettings/`, `Packages/`, `Library/` and other folders into 
 so leave them uncommitted unless you mean to pin them. If you skip step 3 (no URP), the game still runs and
 fakes the lighting with glows and a night overlay.
 
+### Running headlessly (cloud, CI)
+
+`Tools/cloud/run-game.sh` builds and runs the game without a desktop: it pulls a Unity 6 editor image
+(GameCI, via Docker), assembles a project around `Assets/Lanternvale`, builds a Linux player
+(`Lanternvale.EditorTools.LanternvaleBuild.BuildLinuxPlayer`) and runs it on a virtual display with the
+in-game **autopilot** (`-lv-autopilot`), which plays a scripted tour and saves screenshots to
+`Tools/.cache/cloud/shots/`. `run-game.sh start` plus `Tools/cloud/x.sh` (click / key / screenshot) lets you
+drive it by hand. It needs a Unity license in the environment (`UNITY_LICENSE` = contents of
+`Unity_lic.ulf`, or `UNITY_SERIAL` + `UNITY_EMAIL` + `UNITY_PASSWORD`) and network access to Unity's
+license servers; with Unity's package registry reachable it uses URP and real 2D lights, otherwise the
+built-in pipeline and the fallback lighting. Batch builds for other platforms: `BuildWindowsPlayer`,
+`BuildMacPlayer`. The same autopilot works in any build or in the editor (`-lv-autopilot -lv-quit
+-lv-shots <dir> -lv-class Mage -lv-level 20`).
+
 ### Active Input Handling
 
 Any setting works, and you don't need to change anything. *Project Settings ▸ Player ▸ Active Input
