@@ -2,10 +2,11 @@
 //
 //   sky dome, sun / moon / stars (MapSky), time of day (DayNight → SceneLighting: sun, ambient, fog, night glow)
 //   terrain: flat walkable ground at z = 0 painted with the map's ground texture, hills behind, banks in front,
-//            ground cover, a brook under the bridge (MapTerrain)
+//            ground cover, a brook under the bridge, the painted decals: trails as soft ribbons (MapTerrain)
 //   backdrop from def.layers: mountains, clouds, distant village, forests, shrine cliffs (MapBackdrop)
-//   decals (painted ground quads), props and foreground (PropModels), chests (lid opens), transition waymarkers,
-//   regions (rects), prop lights (SceneLighting point lights with flicker / night-only), ambient particles
+//   props and foreground (PropModels), chests (lid opens), transition waymarkers (Waymarker), regions (rects), prop
+//   lights (SceneLighting point lights with flicker / night-only), ambient particles; tall props dither out while
+//   they hide a unit (PropOccluder)
 //
 // Static props carry no scripts: this component's single LateUpdate drives the mood, sky, clouds, light flicker and
 // halos, occluder fades, highlights, chest lids, markers and particles, allocation-free.
@@ -64,6 +65,7 @@ namespace Lanternvale.Game
         internal float pop;
         internal bool groundShadow;
         internal Marker marker;
+        internal PropOccluder occ;          // occluders: the model's voxelised surface (fade test)
     }
 
     /// <summary>A prop's point light (lantern flame, lamp, fire, window glow) driven by the time of day.</summary>
@@ -83,15 +85,16 @@ namespace Lanternvale.Game
         public bool dormantGlow;            // a dark spirit lantern: faint violet halo while off
     }
 
-    /// <summary>Transition waymarker: arch + hanging lantern, chevrons on the ground, a warm light.</summary>
+    /// <summary>
+    /// Transition waymarker (World/Props/Waymarker.cs): an arch (front / back / mid-map exits) or a pair of lantern posts
+    /// (side exits), lanterns lit at night with warm lights, chevrons on the ground.
+    /// </summary>
     internal sealed class Marker
     {
-        public Transform arch;
-        public readonly List<Renderer> archRenderers = new List<Renderer>();
-        public Renderer lantern;
+        public Waymarker model;
         public readonly Materials3D.Look archLook = new Materials3D.Look();
         public readonly Materials3D.Look lanternLook = new Materials3D.Look();
-        public WorldLight light;
+        public readonly List<WorldLight> lights = new List<WorldLight>();
         public Vector2 dir;                 // outward (towards the exit), zero for a mid-map marker
         public Vector2 center;
         public float size;
@@ -145,6 +148,9 @@ namespace Lanternvale.Game
         readonly List<MapObject> props = new List<MapObject>();         // every placed prop model (incl. non-interactable)
         readonly List<MapObject> foreground = new List<MapObject>();
         readonly List<MapObject> occluders = new List<MapObject>();
+        // voxelised meshes for the occluder fade test, shared by the props using the same mesh (this map only)
+        readonly Dictionary<Mesh, PropOccluder.Grid> occluderGrids = new Dictionary<Mesh, PropOccluder.Grid>();
+        readonly List<UnitView> fadeUnits = new List<UnitView>();
         readonly List<MapObject> animated = new List<MapObject>();      // highlights, lids, pops (drained when idle)
         MeshFilter shadowFilter;
         Mesh shadowMesh;
@@ -176,6 +182,8 @@ namespace Lanternvale.Game
             Current = this;
             ArtLibrary.Init();
             SceneLighting.Ensure();
+            // painted textures aren't CPU-readable: the terrain measures the path art through a GPU read-back
+            if (MapTerrain.ReadPixels == null) MapTerrain.ReadPixels = ReadBack;
             DayNight = new DayNight(def.ambient);
 
             skyTopColor = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
@@ -201,7 +209,7 @@ namespace Lanternvale.Game
             halos = new BillboardBatch("Light Halos", fxRoot, Materials3D.AdditiveFor(WorldTextures.Glow), 64, 20);
             chevrons = new BillboardBatch("Waymarker Chevrons", fxRoot, Materials3D.AdditiveFor(WorldTextures.Chevron), 48, 10);
 
-            Guard("decals", BuildDecals);
+            Guard("decals", () => terrain.BuildDecals(decalsRoot));
             for (int i = 0; i < def.props.Count; i++)
             {
                 var p = def.props[i];
@@ -309,109 +317,56 @@ namespace Lanternvale.Game
             if (tex == null) return fallback;
             if (TextureAverages.TryGetValue(tex, out var c)) return c;
             c = fallback;
-            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
+            var px = ReadBack(tex, 16, 16);
+            if (px != null && px.Length > 0)
             {
-                RenderTexture rt = null;
-                Texture2D read = null;
-                var prev = RenderTexture.active;
-                try
-                {
-                    const int n = 16;
-                    rt = RenderTexture.GetTemporary(n, n, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-                    Graphics.Blit(tex, rt);
-                    RenderTexture.active = rt;
-                    read = new Texture2D(n, n, TextureFormat.RGBA32, false);
-                    read.ReadPixels(new Rect(0, 0, n, n), 0, 0, false);
-                    read.Apply(false);
-                    var px = read.GetPixels32();
-                    float r = 0f, g = 0f, b = 0f;
-                    for (int i = 0; i < px.Length; i++) { r += px[i].r; g += px[i].g; b += px[i].b; }
-                    float k = 1f / (px.Length * 255f);
-                    var avg = new Color(r * k, g * k, b * k, 1f);
-                    if (avg.r + avg.g + avg.b > 0.05f) c = avg;
-                }
-                catch (Exception) { c = fallback; }
-                finally
-                {
-                    RenderTexture.active = prev;
-                    if (rt != null) RenderTexture.ReleaseTemporary(rt);
-                    if (read != null) Destroy(read);
-                }
+                float r = 0f, g = 0f, b = 0f;
+                for (int i = 0; i < px.Length; i++) { r += px[i].r; g += px[i].g; b += px[i].b; }
+                float k = 1f / (px.Length * 255f);
+                var avg = new Color(r * k, g * k, b * k, 1f);
+                if (avg.r + avg.g + avg.b > 0.05f) c = avg;
             }
             TextureAverages[tex] = c;
             return c;
         }
 
-        // ------------------------------------------------------------------ decals
-
-        static bool IsDecal(string art) => art.StartsWith("decal_", StringComparison.Ordinal);
-
-        const int DecalSortingBase = -8;
-
-        static int DecalOrder(string art) => art.Contains("blight") ? 3 : art.Contains("flower") ? 2 : art.Contains("stone") ? 1 : 0;
-
-        /// <summary>Painted ground decals: one merged mesh of flat quads per texture, just above z = 0.</summary>
-        void BuildDecals()
+        /// <summary>MapTerrain.PixelReader: the texture's pixels at up to 256 × 128 (rows bottom-up), read back from the GPU.</summary>
+        static Color32[] ReadBack(Texture2D tex, out int width, out int height)
         {
-            var byArt = new Dictionary<string, List<PropDef>>(StringComparer.Ordinal);
-            var order = new List<string>();
-            foreach (var p in Def.props)
+            width = tex != null ? Mathf.Clamp(tex.width, 1, 256) : 0;
+            height = tex != null ? Mathf.Clamp(tex.height * width / Mathf.Max(1, tex.width), 1, 256) : 0;
+            return ReadBack(tex, width, height);
+        }
+
+        /// <summary>A downsampled copy of a (non-readable) texture's pixels via a GPU blit; null without a GPU or on failure.</summary>
+        static Color32[] ReadBack(Texture2D tex, int w, int h)
+        {
+            if (tex == null || w <= 0 || h <= 0 || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return null;
+            RenderTexture rt = null;
+            Texture2D read = null;
+            var prev = RenderTexture.active;
+            try
             {
-                if (p == null || string.IsNullOrEmpty(p.art) || !IsDecal(p.art)) continue;
-                if (!byArt.TryGetValue(p.art, out var list)) { byArt[p.art] = list = new List<PropDef>(); order.Add(p.art); }
-                list.Add(p);
+                rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+                Graphics.Blit(tex, rt);
+                RenderTexture.active = rt;
+                read = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                read.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+                read.Apply(false);
+                return read.GetPixels32();
             }
-            foreach (var art in order)
+            catch (Exception) { return null; }
+            finally
             {
-                var tex = ArtLibrary.Texture(art);
-                float aspect = tex != null && tex.height > 0 ? (float)tex.width / tex.height : 1f;
-                float baseH = ArtLibrary.Height(art, 4f);
-                int ord = DecalOrder(art);
-                var list = byArt[art];
-                var verts = new List<Vector3>(list.Count * 4);
-                var norms = new List<Vector3>(list.Count * 4);
-                var uvs = new List<Vector2>(list.Count * 4);
-                var cols = new List<Color32>(list.Count * 4);
-                var tris = new List<int>(list.Count * 6);
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var p = list[i];
-                    float s = p.scale > 0f ? p.scale : 1f;
-                    float h = baseH * s, w = h * aspect;
-                    float z = -(0.006f + ord * 0.002f + (i % 8) * 0.0003f);
-                    float cx = p.pos.x, cy = p.pos.y;
-                    int b = verts.Count;
-                    verts.Add(new Vector3(cx - w * 0.5f, cy - h * 0.5f, z));
-                    verts.Add(new Vector3(cx - w * 0.5f, cy + h * 0.5f, z));
-                    verts.Add(new Vector3(cx + w * 0.5f, cy + h * 0.5f, z));
-                    verts.Add(new Vector3(cx + w * 0.5f, cy - h * 0.5f, z));
-                    float u0 = p.flip ? 1f : 0f, u1 = p.flip ? 0f : 1f;
-                    uvs.Add(new Vector2(u0, 0f)); uvs.Add(new Vector2(u0, 1f)); uvs.Add(new Vector2(u1, 1f)); uvs.Add(new Vector2(u1, 0f));
-                    var tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint);
-                    // the ground is painted a little under white to stay "as painted" under the bright up-facing light
-                    var c = new Color(tint.r * 0.86f, tint.g * 0.86f, tint.b * 0.86f, tint.a);
-                    for (int k = 0; k < 4; k++) { cols.Add(c); norms.Add(World3D.Up); }
-                    // clockwise seen from above (as MeshCache.GroundQuad)
-                    tris.Add(b); tris.Add(b + 1); tris.Add(b + 2); tris.Add(b); tris.Add(b + 2); tris.Add(b + 3);
-                }
-                var m = new Mesh { name = "lv_decals_" + art };
-                m.SetVertices(verts);
-                m.SetNormals(norms);
-                m.SetUVs(0, uvs);
-                m.SetColors(cols);
-                m.SetTriangles(tris, 0, true);
-                ownedMeshes.Add(m);
-                var go = new GameObject("Decals " + art);
-                go.transform.SetParent(decalsRoot, false);
-                go.AddComponent<MeshFilter>().sharedMesh = m;
-                var r = go.AddComponent<MeshRenderer>();
-                var mat = Materials3D.LitTransparent(tex);
-                if (art.Contains("blight")) mat.SetFloat(Materials3D.EmissionId, 0.18f);
-                r.sharedMaterial = mat;
-                r.sortingOrder = DecalSortingBase + ord;   // under ground previews / rings drawn at order ≥ 0
-                Quiet(r);
+                RenderTexture.active = prev;
+                if (rt != null) RenderTexture.ReleaseTemporary(rt);
+                if (read != null) Destroy(read);
             }
         }
+
+        // ------------------------------------------------------------------ decals (built by MapTerrain.BuildDecals)
+
+        static bool IsDecal(string art) => art.StartsWith("decal_", StringComparison.Ordinal);
 
         // ------------------------------------------------------------------ props
 
@@ -512,7 +467,7 @@ namespace Lanternvale.Game
             o.groundShadow = true;
             o.occluder = TopOf(o) >= 2.5f;
             o.occludedAlpha = OccluderFadeAlpha;
-            if (o.occluder) occluders.Add(o);
+            if (o.occluder) { o.occ = PropOccluder.Build(o.model.Renderers, occluderGrids); occluders.Add(o); }
 
             if (p.light != null)
             {
@@ -559,7 +514,7 @@ namespace Lanternvale.Game
             o.groundShadow = p.art.Contains("stone");
             o.occluder = TopOf(o) >= 0.7f;
             o.occludedAlpha = ForegroundFadeAlpha;
-            if (o.occluder) occluders.Add(o);
+            if (o.occluder) { o.occ = PropOccluder.Build(o.model.Renderers, occluderGrids); occluders.Add(o); }
             foreground.Add(o);
         }
 
@@ -691,54 +646,38 @@ namespace Lanternvale.Game
             span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
 
             holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
-            var arch = new GameObject("Waymarker").transform;
-            arch.SetParent(holder, false);
-            arch.localPosition = Vector3.zero;
-            arch.rotation = mk.dir == Vector2.zero ? World3D.Upright : World3D.Facing(mk.dir);
-            arch.localScale = mk.dir == Vector2.zero ? new Vector3(0.6f, 0.75f, 0.6f) : new Vector3(span / 3f, 1f, 1f);
-            var archGo = new GameObject("Arch");
-            archGo.transform.SetParent(arch, false);
-            archGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_arch", BuildArchMesh);
-            var ar = archGo.AddComponent<MeshRenderer>();
-            ar.sharedMaterials = Materials3D.WithOutline();
-            Quiet(ar);
-            mk.archRenderers.Add(ar);
-            var lanGo = new GameObject("Lantern");
-            lanGo.transform.SetParent(holder, false);          // not under the arch: keeps its shape when the span stretches
-            lanGo.transform.localRotation = arch.localRotation;
-            lanGo.transform.localScale = mk.dir == Vector2.zero ? new Vector3(0.75f, 0.75f, 0.75f) : Vector3.one;
-            lanGo.AddComponent<MeshFilter>().sharedMesh = MeshCache.Get("lv_waymarker_lantern", BuildArchLanternMesh);
-            var lr = lanGo.AddComponent<MeshRenderer>();
-            lr.sharedMaterial = Materials3D.LowPoly;
-            Quiet(lr);
-            mk.lantern = lr;
-            mk.arch = arch;
-            var ab = ar.bounds;
-            MeshCache.AddShadow(holder, ab.extents.x + 0.25f, ab.extents.y + 0.25f, 0.3f);
+            // the model: an arch facing the camera, or lantern posts at a side exit (an arch there is seen edge-on)
+            var wm = Waymarker.Build(holder, mk.dir, span);
+            for (int i = 0; i < wm.Frame.Count; i++) Quiet(wm.Frame[i]);
+            for (int i = 0; i < wm.Lanterns.Count; i++) Quiet(wm.Lanterns[i]);
+            mk.model = wm;
 
-            var lamp = arch.TransformPoint(new Vector3(0f, 2.02f, 0f));
-            var light = new WorldLight
+            // warm lanterns that light the road at night only (by day they'd paint a glowing disc on the ground)
+            bool pair = wm.Lamps.Count > 1;
+            for (int i = 0; i < wm.Lamps.Count; i++)
             {
-                position = lamp,
-                color = new Color(1f, 0.82f, 0.52f),
-                intensity = 0.85f,
-                range = 5.2f,
-                flicker = true,
-                seed = UnityEngine.Random.value * 100f,
-                haloSize = 1.3f,
-            };
-            light.handle = SceneLighting.Add(lamp, light.color, 0f, light.range);
-            light.handle.Enabled = false;
-            lights.Add(light);
-            mk.light = light;
-            o.light = light;
-            o.lampPoint = lamp;
+                var lamp = wm.Lamps[i];
+                var light = new WorldLight
+                {
+                    position = lamp,
+                    range = pair ? 4.6f : 5.2f,
+                    nightOnly = true,
+                    seed = UnityEngine.Random.value * 100f,
+                    haloSize = pair ? 1.0f : 1.3f,
+                    setLit = i == 0 ? (Action<bool>)wm.SetLit : null,
+                };
+                light.handle = SceneLighting.Add(lamp, Color.white, 0f, light.range);
+                light.handle.Enabled = false;
+                lights.Add(light);
+                mk.lights.Add(light);
+            }
+            o.light = mk.lights.Count > 0 ? mk.lights[0] : null;
+            o.lampPoint = wm.Lamps.Count > 0 ? wm.Lamps[0] : World3D.At(archAt, 2f);
             o.marker = mk;
             ApplyTransitionColor(o);
 
-            // picking / labels: the arch's projected bounds plus the authored ground rect
-            o.bounds = ar.bounds;
-            o.bounds.Encapsulate(lr.bounds);
+            // picking / labels: the marker's projected bounds plus the authored ground rect
+            o.bounds = wm.Bounds;
             o.hasBounds = true;
             o.LabelPosition = World3D.At(archAt, TopOf(o) + 0.45f);
 
@@ -747,70 +686,23 @@ namespace Lanternvale.Game
             Register(o);
         }
 
-        static Mesh BuildArchMesh()
-        {
-            // a weathered wooden waymarker arch (torii-like), spanning local X (posts at ±1.5 m), walked through along Z
-            var mb = new MeshBuilder(17) { Jitter = 0.07f, AOStrength = 0.3f, AOHeight = 0.6f };
-            var wood = Ui.Hex("#7a5a43");
-            var dark = Ui.Hex("#4a3a30");
-            var stone = Ui.Hex("#a39c94");
-            for (int s = -1; s <= 1; s += 2)
-            {
-                mb.Color = stone;
-                mb.Cylinder(new Vector3(s * 1.5f, 0f, 0f), 0.24f, 0.2f, 0.32f, 6);
-                mb.Color = wood;
-                mb.Cylinder(new Vector3(s * 1.5f, 0.3f, 0f), 0.13f, 0.11f, 2.45f, 6);
-            }
-            mb.Color = dark;
-            mb.Box(new Vector3(0f, 2.78f, 0f), new Vector3(3.9f, 0.18f, 0.3f));
-            mb.Push().Translate(1.98f, 2.84f, 0f).Rotate(0f, 0f, 12f);
-            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
-            mb.Pop();
-            mb.Push().Translate(-1.98f, 2.84f, 0f).Rotate(0f, 0f, -12f);
-            mb.Box(Vector3.zero, new Vector3(0.3f, 0.14f, 0.3f));
-            mb.Pop();
-            mb.Color = wood;
-            mb.Box(new Vector3(0f, 2.42f, 0f), new Vector3(3.2f, 0.13f, 0.18f));
-            // a little plaque and the lantern's hook
-            mb.Color = Ui.Hex("#d8c7a2");
-            mb.Box(new Vector3(0f, 2.6f, 0f), new Vector3(0.5f, 0.3f, 0.06f));
-            mb.Color = dark;
-            mb.Segment(new Vector3(0f, 2.36f, 0f), new Vector3(0f, 2.22f, 0f), 0.02f, 0.02f, 4);
-            return mb.ToMesh("lv_waymarker_arch");
-        }
-
-        static Mesh BuildArchLanternMesh()
-        {
-            var mb = new MeshBuilder(18) { Jitter = 0.04f };
-            mb.Color = Ui.Hex("#4a3a30");
-            mb.Box(new Vector3(0f, 2.21f, 0f), new Vector3(0.3f, 0.05f, 0.3f));
-            mb.Box(new Vector3(0f, 1.83f, 0f), new Vector3(0.26f, 0.05f, 0.26f));
-            mb.Color = new Color(1f, 0.84f, 0.55f);
-            mb.Emission = 1f;
-            mb.Box(new Vector3(0f, 2.02f, 0f), new Vector3(0.24f, 0.33f, 0.24f));
-            return mb.ToMesh("lv_waymarker_lantern");
-        }
-
         static void ApplyTransitionColor(MapObject o)
         {
             var mk = o.marker;
             if (mk == null) return;
-            if (o.Locked)
+            // a pair of posts shares the arch's light between its two lanterns
+            float share = mk.lights.Count > 1 ? 0.7f : 1f;
+            for (int i = 0; i < mk.lights.Count; i++)
             {
-                mk.light.color = new Color(0.62f, 0.55f, 0.88f);
-                mk.light.intensity = 0.38f;
-                mk.light.flicker = false;
-                mk.lanternLook.Tint = new Color(0.5f, 0.46f, 0.72f);
+                var l = mk.lights[i];
+                l.color = o.Locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f);
+                l.intensity = (o.Locked ? 0.38f : 0.85f) * share;
+                l.flicker = !o.Locked;
+                if (l.handle != null) l.handle.Color = l.color;
             }
-            else
-            {
-                mk.light.color = new Color(1f, 0.82f, 0.52f);
-                mk.light.intensity = 0.85f;
-                mk.light.flicker = true;
-                mk.lanternLook.Tint = Color.white;
-            }
-            if (mk.light.handle != null) mk.light.handle.Color = mk.light.color;
-            mk.lanternLook.Apply(mk.lantern);
+            mk.lanternLook.Tint = o.Locked ? new Color(0.5f, 0.46f, 0.72f) : Color.white;
+            if (mk.model != null)
+                for (int i = 0; i < mk.model.Lanterns.Count; i++) mk.lanternLook.Apply(mk.model.Lanterns[i]);
         }
 
         void BuildRegion(RegionDef r)
@@ -1009,27 +901,37 @@ namespace Lanternvale.Game
             halos.End();
         }
 
+        /// <summary>
+        /// Tall props (and foreground) dither out while they really hide a unit that fades occluders: camera rays to points
+        /// spread over the unit's body are marched through the prop's voxelised surface (PropOccluder), so only a prop
+        /// clearly between the camera and the unit counts — a tree behind a unit stays solid, a canopy in front fades.
+        /// </summary>
         void UpdateFades(Camera cam, float dt)
         {
             if (cam == null) return;
             var units = UnitView.All;
-            var cp = cam.transform.position;
+            var ct = cam.transform;
+            var cp = ct.position;
+            var right = ct.right;
+            // the units in view (off-screen units must not fade the props at the screen's edge)
+            fadeUnits.Clear();
+            for (int u = 0; u < units.Count; u++)
+            {
+                var uv = units[u];
+                if (uv == null || !uv.Visible || !uv.FadesOccluders) continue;
+                var vp = cam.WorldToViewportPoint(uv.CenterPosition);
+                if (vp.z > cam.nearClipPlane && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f) fadeUnits.Add(uv);
+            }
             for (int i = 0; i < occluders.Count; i++)
             {
                 var o = occluders[i];
                 if (!o.Visible || !o.hasBounds) continue;
                 bool hides = false;
-                if (o.occludedAlpha < 0.999f)
+                if (o.occ != null && o.occludedAlpha < 0.999f)
                 {
-                    var b = o.bounds;
-                    var ext = b.extents;
-                    b.extents = new Vector3(ext.x * 0.82f, ext.y * 0.82f, ext.z);
-                    for (int u = 0; u < units.Count && !hides; u++)
-                    {
-                        var uv = units[u];
-                        if (uv == null || !uv.Visible || !uv.FadesOccluders) continue;
-                        hides = Hides(b, cp, uv.CenterPosition) || Hides(b, cp, uv.HeadPosition);
-                    }
+                    bool fadedNow = o.fadeTarget < 0.999f;
+                    for (int u = 0; u < fadeUnits.Count && !hides; u++)
+                        hides = o.occ.Hides(cp, right, fadeUnits[u].CenterPosition, fadeUnits[u].HeadPosition, fadedNow);
                 }
                 o.fadeTarget = hides ? o.occludedAlpha : 1f;
                 if (Mathf.Abs(o.fade - o.fadeTarget) < 0.001f) continue;
@@ -1037,14 +939,6 @@ namespace Lanternvale.Game
                 o.lookDirty = true;
                 ApplyLook(o);
             }
-        }
-
-        static bool Hides(Bounds b, Vector3 cam, Vector3 target)
-        {
-            var d = target - cam;
-            float len = d.magnitude;
-            if (len < 0.01f) return false;
-            return b.IntersectRay(new Ray(cam, d / len), out float t) && t < len - 0.35f;
         }
 
         void UpdateAnimated(float time, float dt)
@@ -1103,11 +997,11 @@ namespace Lanternvale.Game
                 var o = Transitions[i];
                 var mk = o.marker;
                 if (mk == null) continue;
-                mk.light.visible = o.Visible;
+                for (int l = 0; l < mk.lights.Count; l++) mk.lights[l].visible = o.Visible;
                 if (!o.Visible) continue;
                 mk.glow = Mathf.MoveTowards(mk.glow, o.Highlighted ? 1f : 0f, dt * 5f);
                 float hl = mk.glow;
-                mk.light.boost = 1f + 0.45f * hl;
+                for (int l = 0; l < mk.lights.Count; l++) mk.lights[l].boost = 1f + 0.45f * hl;
                 if (Mathf.Abs(hl - mk.appliedGlow) > 0.001f)
                 {
                     mk.appliedGlow = hl;
@@ -1117,7 +1011,8 @@ namespace Lanternvale.Game
                     mk.archLook.Rim = 0.3f * hl;
                     mk.archLook.OutlineColor = Color.Lerp(Materials3D.Ink, HighlightColor, hl);
                     mk.archLook.OutlineWidth = 2.2f + 1.4f * hl;
-                    for (int r = 0; r < mk.archRenderers.Count; r++) mk.archLook.Apply(mk.archRenderers[r]);
+                    var frame = mk.model.Frame;
+                    for (int r = 0; r < frame.Count; r++) mk.archLook.Apply(frame[r]);
                 }
                 // chevrons flowing towards the exit
                 var c = o.Locked ? new Color(0.62f, 0.56f, 0.85f) : new Color(1f, 0.84f, 0.52f);
@@ -1358,6 +1253,7 @@ namespace Lanternvale.Game
             o.art = art;
             PlaceModel(o, o.root);
             SetFootprint(o);
+            if (o.occluder) o.occ = PropOccluder.Build(o.model.Renderers, occluderGrids);
             if (o.light != null && !o.IsLantern && o.model.SetLit != null)
             {
                 if (o.light.nightOnly) { o.light.setLit = o.model.SetLit; o.light.litState = -1; }
@@ -1376,6 +1272,8 @@ namespace Lanternvale.Game
             o.Visible = visible;
             if (o.root != null) o.root.gameObject.SetActive(visible);
             if (o.light != null) o.light.visible = visible;
+            if (o.marker != null)
+                for (int i = 0; i < o.marker.lights.Count; i++) o.marker.lights[i].visible = visible;
             if (o.groundShadow) shadowsDirty = true;
         }
 
@@ -1501,6 +1399,7 @@ namespace Lanternvale.Game
             for (int i = 0; i < ownedMeshes.Count; i++)
                 if (ownedMeshes[i] != null) Destroy(ownedMeshes[i]);
             ownedMeshes.Clear();
+            occluderGrids.Clear();
             if (Current == this) Current = null;
         }
 
