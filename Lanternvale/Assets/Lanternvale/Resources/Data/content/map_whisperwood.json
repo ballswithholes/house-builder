@@ -44,7 +44,8 @@
         {"art": "prop_tree_birch", "pos": [5.4, 10.8], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
         {"art": "prop_tree_pine", "pos": [8.8, 13.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_bush_b", "pos": [1.2, 9.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
-        {"art": "prop_tree_birch", "pos": [1.6, 1.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [-3.0, 1.8], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_bush_a", "pos": [1.9, 1.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {
           "art": "prop_signpost",
           "pos": [6.2, 3.6],
@@ -67,7 +68,8 @@
         {"art": "prop_rock_large", "pos": [26.6, 13.3], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
         {"art": "prop_rock_small", "pos": [24.6, 13.7]},
         {"art": "prop_tree_dead", "pos": [28.4, 13.1], "collider": {"w": 1.0, "h": 0.6}},
-        {"art": "prop_tree_pine", "pos": [31.0, 1.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [30.4, 16.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [32.2, 0.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {"art": "prop_rock_small", "pos": [27.0, 1.0]},
         {"art": "prop_mushrooms", "pos": [34.2, 13.3], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
         {"art": "prop_mushrooms", "pos": [36.8, 13.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
@@ -93,7 +95,8 @@
           "collider": {"w": 0.8, "h": 0.5},
           "text": "A small stone fox wearing a red bib. Someone has left it a rice ball."
         },
-        {"art": "prop_tree_oak", "pos": [35.0, 1.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [37.2, 16.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_stump", "pos": [35.4, 1.0], "collider": {"w": 0.9, "h": 0.5}},
         {"art": "prop_tree_oak", "pos": [47.6, 13.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
         {"art": "prop_bush_a", "pos": [45.0, 10.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {"art": "prop_mushrooms", "pos": [50.0, 11.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
@@ -133,7 +136,8 @@
         {"art": "prop_tree_pine", "pos": [68.0, 13.7], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_log", "pos": [70.0, 12.6], "collider": {"w": 2.2, "h": 0.6}},
         {"art": "prop_rock_large", "pos": [74.2, 13.0], "collider": {"w": 2.0, "h": 1.0}},
-        {"art": "prop_tree_pine", "pos": [66.0, 1.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [62.8, 16.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [65.6, 0.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {"art": "prop_stump", "pos": [72.6, 1.6], "collider": {"w": 0.9, "h": 0.5}},
         {"art": "prop_tree_dead", "pos": [77.0, 13.0], "collider": {"w": 1.0, "h": 0.6}},
         {"art": "prop_tree_dead", "pos": [83.4, 13.6], "flip": true, "collider": {"w": 1.0, "h": 0.6}},
@@ -169,7 +173,7 @@
           "interact": "lantern_whisperwood_82",
           "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
         },
-        {"art": "prop_tree_dead", "pos": [85.0, 1.2], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [84.4, -1.6], "collider": {"w": 1.0, "h": 0.6}},
         {"art": "prop_ruin_arch", "pos": [96.6, 12.6], "text": "The first arch of the pilgrim stair, wound tight with grey, thorned roots."},
         {"art": "prop_tree_dead", "pos": [98.4, 10.6], "collider": {"w": 1.0, "h": 0.6}},
         {
@@ -188,6 +192,12 @@
       ],
       "foreground": [
         {"art": "fg_ferns", "pos": [2, -0.4], "sway": true},
+        {"art": "fg_ferns", "pos": [10.6, 1.1], "sway": true},
+        {"art": "fg_grass_a", "pos": [24.2, 0.9], "sway": true},
+        {"art": "fg_ferns", "pos": [38.6, 1.3], "flip": true, "sway": true},
+        {"art": "fg_flowers_a", "pos": [53.4, 1.0], "sway": true},
+        {"art": "fg_stones_b", "pos": [81.2, 0.9]},
+        {"art": "fg_stones_a", "pos": [94.6, 1.2], "flip": true},
         {"art": "fg_grass_b", "pos": [10, -0.2], "sway": true},
         {"art": "fg_stones_a", "pos": [18, -0.6]},
         {"art": "fg_ferns", "pos": [27, -0.3], "flip": true, "sway": true},
@@ -212,7 +222,7 @@
           "id": "enc_boars_edge",
           "pos": [18.0, 3.0],
           "radius": 3.0,
-          "enemies": [{"creature": "cr_boar", "pos": [17.4, 2.4]}, {"creature": "cr_boar", "pos": [19.0, 3.4]}],
+          "enemies": [{"creature": "cr_boar", "pos": [17.6, 1.6]}, {"creature": "cr_boar", "pos": [20.0, 4.0]}],
           "doneFlag": "enc_boars_edge"
         },
         {
@@ -283,7 +293,7 @@
           "id": "enc_boars_road",
           "pos": [68.4, 3.0],
           "radius": 2.8,
-          "enemies": [{"creature": "cr_boar", "pos": [67.8, 2.6]}, {"creature": "cr_boar", "pos": [69.4, 3.6]}],
+          "enemies": [{"creature": "cr_boar", "pos": [67.4, 2.0]}, {"creature": "cr_boar", "pos": [69.8, 4.0]}],
           "doneFlag": "enc_boars_road"
         },
         {
@@ -378,7 +388,7 @@
           "lockedText": "A wall of grey, thorned roots chokes the pilgrim stair. Something huge breathes behind it."
         }
       ],
-      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_village", "pos": [3.6, 6.0]}, {"id": "from_shrine", "pos": [97.6, 3.6]}],
+      "spawns": [{"id": "default", "pos": [5.4, 6.6]}, {"id": "from_village", "pos": [5.4, 6.6]}, {"id": "from_shrine", "pos": [97.6, 3.6]}],
       "regions": [
         {
           "id": "reg_whisperwood_edge",

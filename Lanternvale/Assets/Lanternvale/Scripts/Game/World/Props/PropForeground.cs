@@ -196,10 +196,10 @@ namespace Lanternvale.Game
                     mb.Pop();
                     continue;
                 }
-                mb.Color = col;
-                Gem(mb, head, new Vector3(0.1f, 0.03f, 0.1f));
-                mb.Color = second && kind == 1 ? Paint.Hex("#2E2430") : Paint.Hex("#F2B02E");
-                Gem(mb, head + Vector3.up * 0.025f, 0.035f);
+                // a five-petal bloom facing up and a little towards the camera
+                var heart = second && kind == 1 ? Paint.Hex("#2E2430") : Paint.Hex("#F2B02E");
+                var face = new Vector3((mb.Random01() - 0.5f) * 0.4f, 1f, -0.35f);
+                Bloom(mb, head, 0.075f + 0.02f * mb.Random01(), face, col, heart, i * 37f);
             }
             return mb;
         }

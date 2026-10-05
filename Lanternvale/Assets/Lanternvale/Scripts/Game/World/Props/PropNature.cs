@@ -1,6 +1,7 @@
 // Nature: oak, pine, birch, blighted dead tree, bushes, rocks, stump, log, glowing mushrooms.
 // Trees: the trunk fits the (trunk-sized) collider, canopies overhang; foliage carries wind weights that grow with height
-// (Sways = true). Canopies are faceted blobs coloured by normal (sun-lit tops, cool undersides); seed shifts the hue.
+// (Sways = true). Canopies are soft lumps (SoftLump: lumpy silhouettes, smooth shading) coloured by a canopy-wide
+// vertical ramp (warm sun-lit tops, cool teal undersides); seed shifts the hue. Rocks, stumps and logs stay faceted.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -38,6 +39,58 @@ namespace Lanternvale.Game
             bottom = Paint.Hsv(Color.Lerp(side, Paint.Hex("#3C5A5A"), 0.45f), 0f, 1f, 0.85f);
         }
 
+        /// <summary>
+        /// Canopy-wide vertical colour ramp: cool, darker teal-green underneath → the foliage colour → warm sun-lit
+        /// yellow-green on top, over the canopy's height span [y0, y1] (model space).
+        /// </summary>
+        static System.Func<float, Color> CanopyRamp(Color top, Color side, Color bottom, float y0, float y1)
+        {
+            var warm = Paint.Hsv(Color.Lerp(top, Paint.Hex("#F2E38A"), 0.22f), -2f, 1f, 1.04f);
+            var cool = Color.Lerp(bottom, Paint.Hex("#355A63"), 0.25f);
+            return y =>
+            {
+                float t = Mathf.Clamp01((y - y0) / Mathf.Max(0.01f, y1 - y0));
+                if (t < 0.45f) return Color.Lerp(cool, side, Mathf.SmoothStep(0f, 1f, t / 0.45f));
+                if (t < 0.8f) return Color.Lerp(side, top, Mathf.SmoothStep(0f, 1f, (t - 0.45f) / 0.35f));
+                return Color.Lerp(top, warm, (t - 0.8f) / 0.2f);
+            };
+        }
+
+        /// <summary>
+        /// Soft foliage lump: a jittered icosphere (detail 1 = 80 tris: an irregular, lumpy silhouette) that is SHADED
+        /// smooth — after ToMesh its vertices get the ellipsoid's analytic normals and per-vertex colours from the
+        /// canopy ramp at their height (a little darker towards the lump's own underside so neighbouring lumps separate,
+        /// plus a faint painterly noise), see SoftenParts in PropKit. Rocks and buildings stay faceted.
+        /// </summary>
+        static void SoftLump(MeshBuilder mb, Vector3 c, Vector3 r, int detail, float yawDeg, System.Func<float, Color> ramp, float lumpiness = 0.1f)
+        {
+            int seed = Mathf.RoundToInt(c.x * 97f + c.y * 31f + c.z * 13f + yawDeg);
+            var rot = Quaternion.Euler(0f, yawDeg, 0f);
+            int start = mb.VertexCount;
+            Vector3 Displace(Vector3 dir)
+            {
+                float k = 1f + (Hash01(dir, seed) * 2f - 1f) * lumpiness;
+                var p = dir * k;
+                if (p.y < 0f) p.y *= SoftUnder;   // a flatter underside
+                return c + rot * Vector3.Scale(p, r);
+            }
+            var white = Color.white;
+            foreach (var f in Ico(detail))
+            {
+                var a = Displace(f[0]);
+                var b = Displace(f[1]);
+                var d = Displace(f[2]);
+                if (Vector3.Dot(Vector3.Cross(b - a, d - a), (a + b + d) / 3f - c) < 0f) mb.Triangle(a, d, b, white);
+                else mb.Triangle(a, b, d, white);
+            }
+            RegisterSoft(mb, new SoftPart
+            {
+                start = start, end = mb.VertexCount, ramp = ramp,
+                toUnit = (mb.Matrix * Matrix4x4.TRS(c, rot, r)).inverse,
+                jitter = mb.Jitter, ao = mb.AOStrength, aoHeight = mb.AOHeight,
+            });
+        }
+
         /// <summary>Tapered faceted trunk (Lathe) squashed in depth so it fits a trunk collider.</summary>
         static void Trunk(MeshBuilder mb, Vector2[] profile, int sides, Color bark, float depthScale, Color[] rings = null, float angle = 0f)
         {
@@ -45,6 +98,27 @@ namespace Lanternvale.Game
             mb.Push().Scale(new Vector3(1f, 1f, depthScale));
             mb.Lathe(profile, sides, false, false, true, rings, angle);
             mb.Pop();
+        }
+
+        /// <summary>
+        /// Point on the faceted bark of a Trunk (flat Lathe, `sides`-gon, angle offset 0, z squashed by depthScale) at
+        /// angle `a` (radians) and height y, pushed `outward` metres off the facet along its normal.
+        /// </summary>
+        static Vector3 TrunkSurface(Vector2[] profile, int sides, float depthScale, float a, float y, float outward)
+        {
+            float r = profile[profile.Length - 1].x;
+            for (int i = 0; i < profile.Length - 1; i++)
+                if (y <= profile[i + 1].y)
+                {
+                    r = Mathf.Lerp(profile[i].x, profile[i + 1].x, Mathf.InverseLerp(profile[i].y, profile[i + 1].y, y));
+                    break;
+                }
+            float step = Mathf.PI * 2f / sides;
+            float local = Mathf.Repeat(a, step) - step * 0.5f;            // angle from the facet centre
+            float d = r * Mathf.Cos(step * 0.5f) / Mathf.Cos(local);       // distance to the facet plane along a
+            float facet = a - local;                                       // the facet's centre angle
+            var n = new Vector2(Mathf.Cos(facet), Mathf.Sin(facet) / depthScale).normalized;
+            return new Vector3(Mathf.Cos(a) * d + n.x * outward, y, Mathf.Sin(a) * d * depthScale + n.y * outward);
         }
 
         static void Roots(MeshBuilder mb, int count, float reach, float radius, float depthScale, float startDeg, Color bark)
@@ -72,8 +146,8 @@ namespace Lanternvale.Game
             Vector3[] tips = { new Vector3(-1.4f, 4.5f, 0.1f), new Vector3(1.4f, 4.6f, 0.3f), new Vector3(0.2f, 5.2f, -0.3f), new Vector3(-0.2f, 5.0f, 0.8f) };
             foreach (var t in tips) mb.Segment(fork, t, 0.2f, 0.08f, 5);
             Foliage(b, Paint.Hex("#6E9A4E"), out var top, out var side, out var bottom);
-            var col = ByNormal(top, side, bottom, 0.25f);
-            int seed = VariantSeed("oak_canopy", b);
+            var ramp = CanopyRamp(top, side, bottom, 3.5f, 8.0f);
+            // big soft masses, then smaller lumps around the silhouette so the outline reads leafy and scalloped
             (Vector3 c, Vector3 r)[] blobs =
             {
                 (new Vector3(0f, 5.5f, 0.2f), new Vector3(2.3f, 1.9f, 2.0f)),
@@ -84,11 +158,20 @@ namespace Lanternvale.Game
                 (new Vector3(0.35f, 4.5f, -1.05f), new Vector3(1.35f, 1.15f, 1.1f)),
                 (new Vector3(-0.3f, 5.1f, 1.6f), new Vector3(1.5f, 1.3f, 1.2f)),
             };
+            (Vector3 c, Vector3 r)[] lumps =
+            {
+                (new Vector3(-2.95f, 5.2f, 0.3f), new Vector3(0.85f, 0.75f, 0.8f)), (new Vector3(3.0f, 5.45f, 0.55f), new Vector3(0.85f, 0.75f, 0.8f)),
+                (new Vector3(-1.75f, 7.1f, 0.25f), new Vector3(0.8f, 0.7f, 0.75f)), (new Vector3(1.75f, 6.95f, 0.45f), new Vector3(0.9f, 0.75f, 0.8f)),
+                (new Vector3(-1.35f, 4.0f, -0.75f), new Vector3(0.85f, 0.62f, 0.72f)), (new Vector3(1.5f, 4.1f, -0.6f), new Vector3(0.85f, 0.62f, 0.72f)),
+                (new Vector3(0.15f, 7.8f, 0.4f), new Vector3(0.85f, 0.62f, 0.8f)),
+            };
             for (int i = 0; i < blobs.Length; i++)
             {
                 var c = blobs[i].c + new Vector3((mb.Random01() - 0.5f) * 0.3f, (mb.Random01() - 0.5f) * 0.3f, 0f);
-                FacetBlob(mb, c, blobs[i].r, 1, 0.16f, seed + i * 31, 0.15f, col);
+                SoftLump(mb, c, blobs[i].r, 1, i * 47f + b * 13f, ramp, 0.12f);
             }
+            for (int i = 0; i < lumps.Length; i++)
+                SoftLump(mb, lumps[i].c, lumps[i].r, 1, i * 61f + b * 17f, ramp, 0.14f);
             return mb;
         }
 
@@ -103,16 +186,21 @@ namespace Lanternvale.Game
             Roots(mb, 4, 0.48f, 0.16f, 0.55f, 40f + b * 17f, bark);
             Foliage(b, Paint.Hex("#3F6B4A"), out var top, out var side, out var bottom, 6f);
             const int tiers = 6;
+            // the canopy ramp runs over the whole tree (cool lower skirts, warm sun-lit crown); each tier is a soft,
+            // smooth-shaded skirt with a darker underside
+            var ramp = CanopyRamp(top, side, bottom, 2.2f, 11.2f);
             for (int i = 0; i < tiers; i++)
             {
                 float y0 = 2.55f + i * 1.36f, r = 2.3f - i * 0.33f + (i % 2) * 0.08f, h = 2.45f - i * 0.15f;
                 mb.Push().Translate(0f, y0, 0f).Rotate((mb.Random01() - 0.5f) * 6f, 0f, (mb.Random01() - 0.5f) * 6f);
+                var under = Paint.Shade(ramp(y0 - 0.3f), 0.78f);
                 mb.Color = side;
-                mb.Lathe(new[] { new Vector2(r * 0.86f, -0.42f), new Vector2(r, -0.18f), new Vector2(r * 0.52f, h * 0.38f), new Vector2(0f, h) }, 8, false, true, false,
-                         new[] { bottom, Color.Lerp(side, bottom, 0.3f), side, top }, i * 19f + b * 11f);
+                mb.Lathe(new[] { new Vector2(r * 0.8f, -0.42f), new Vector2(r * 0.97f, -0.24f), new Vector2(r, -0.12f), new Vector2(r * 0.55f, h * 0.36f), new Vector2(0f, h) },
+                         9, true, true, false,
+                         new[] { under, Color.Lerp(under, ramp(y0), 0.6f), ramp(y0), ramp(y0 + h * 0.36f), ramp(y0 + h) }, i * 19f + b * 11f);
                 mb.Pop();
             }
-            mb.Color = top;
+            mb.Color = ramp(11.2f);
             mb.Cone(new Vector3(0f, 2.55f + tiers * 1.36f - 0.45f, 0f), 0.35f, 1.3f, 6);
             return mb;
         }
@@ -131,16 +219,18 @@ namespace Lanternvale.Game
             foreach (var (from, to) in new[] { (new Vector3(0f, 3.6f, 0f), new Vector3(-1.1f, 5.0f, 0.2f)), (new Vector3(0f, 4.2f, 0f), new Vector3(1.0f, 5.6f, -0.1f)), (new Vector3(0f, 5.0f, 0f), new Vector3(-0.4f, 6.4f, -0.4f)) })
                 mb.Segment(from, to, 0.06f, 0.025f, 4);
             Foliage(b, Paint.Hex("#8CB25A"), out var top, out var side, out var bottom, 9f);
-            var col = ByNormal(top, side, bottom, 0.2f);
-            int seed = VariantSeed("birch_canopy", b);
+            var ramp = CanopyRamp(top, side, bottom, 3.6f, 7.8f);
+            // airy clusters of small soft lumps around the branch tips
             (Vector3 c, float r)[] blobs =
             {
                 (new Vector3(-1.1f, 5.2f, 0.2f), 0.95f), (new Vector3(1.0f, 5.7f, -0.1f), 1.0f), (new Vector3(-0.35f, 6.6f, -0.3f), 1.0f),
                 (new Vector3(0.4f, 7.0f, 0.4f), 0.85f), (new Vector3(0.05f, 4.4f, 0.6f), 0.8f), (new Vector3(0.6f, 4.6f, -0.7f), 0.7f),
                 (new Vector3(-0.8f, 4.1f, -0.5f), 0.6f),
+                (new Vector3(-1.75f, 5.5f, 0.0f), 0.5f), (new Vector3(1.7f, 5.95f, 0.1f), 0.5f), (new Vector3(-0.5f, 7.35f, 0.1f), 0.48f),
+                (new Vector3(1.25f, 4.85f, -0.45f), 0.45f),
             };
             for (int i = 0; i < blobs.Length; i++)
-                FacetBlob(mb, blobs[i].c, new Vector3(blobs[i].r * 1.1f, blobs[i].r * 0.85f, blobs[i].r), 1, 0.22f, seed + i * 13, 0.2f, col);
+                SoftLump(mb, blobs[i].c, new Vector3(blobs[i].r * 1.1f, blobs[i].r * 0.85f, blobs[i].r), 1, i * 53f + b * 19f, ramp, 0.13f);
             return mb;
         }
 
@@ -173,7 +263,10 @@ namespace Lanternvale.Game
             var mb = Builder(VariantSeed("prop_tree_dead", b), 0.07f, 0.3f, 1.0f);
             var bark = Pal.Blight;
             mb.Push().Rotate(0f, b * 40f, (b - 1.5f) * 3f);
-            Trunk(mb, new[] { new Vector2(0.4f, 0f), new Vector2(0.28f, 0.4f), new Vector2(0.22f, 2.2f), new Vector2(0.17f, 3.3f) }, 6, bark, 0.75f);
+            var trunkProfile = new[] { new Vector2(0.4f, 0f), new Vector2(0.28f, 0.4f), new Vector2(0.22f, 2.2f), new Vector2(0.17f, 3.3f) };
+            const int trunkSides = 6;
+            const float trunkDepth = 0.75f;
+            Trunk(mb, trunkProfile, trunkSides, bark, trunkDepth);
             Roots(mb, 5, 0.52f, 0.2f, 0.55f, 10f, bark);
             // gnarled limbs: three main branches, each forking into twigs
             mb.Color = bark;
@@ -196,15 +289,23 @@ namespace Lanternvale.Game
             }
             // a low side limb
             mb.Segment(new Vector3(0f, 1.9f, 0f), new Vector3(0.95f, 2.5f, -0.2f), 0.1f, 0.03f, 4);
-            // violet veins and root crystals (faint glow)
+            // violet veins and root crystals (faint glow): each vein follows the faceted bark (on the 6-gon surface of the
+            // tapering, depth-squashed trunk) through several points, half sunk into it so it reads as a glowing crack
             mb.Color = Pal.Violet;
             mb.Emission = 0.7f;
             for (int i = 0; i < 4; i++)
             {
-                float a = (i * 90f + 30f) * Mathf.Deg2Rad;
-                var p0 = new Vector3(Mathf.Cos(a) * 0.3f, 0.25f, Mathf.Sin(a) * 0.22f);
-                var p1 = new Vector3(Mathf.Cos(a + 0.3f) * 0.24f, 1.0f + i * 0.35f, Mathf.Sin(a + 0.3f) * 0.18f);
-                mb.Segment(p0, p1, 0.025f, 0.012f, 3, false, true);
+                float a0 = (i * 90f + 30f) * Mathf.Deg2Rad, top = 1.0f + i * 0.35f;
+                const int steps = 4;
+                var prev = TrunkSurface(trunkProfile, trunkSides, trunkDepth, a0, 0.25f, 0.006f);
+                for (int k = 1; k <= steps; k++)
+                {
+                    float t = (float)k / steps;
+                    float a = a0 + 0.3f * t + Mathf.Sin(t * 5.5f + i) * 0.08f;
+                    var p = TrunkSurface(trunkProfile, trunkSides, trunkDepth, a, Mathf.Lerp(0.25f, top, t), 0.006f);
+                    mb.Segment(prev, p, Mathf.Lerp(0.026f, 0.012f, (k - 1f) / steps), Mathf.Lerp(0.026f, 0.012f, t), 3, false, true);
+                    prev = p;
+                }
             }
             mb.Pop();
             mb.Emission = 0.55f;
@@ -229,28 +330,31 @@ namespace Lanternvale.Game
             var mb = Builder(VariantSeed(flowering ? "prop_bush_b" : "prop_bush_a", b), 0.06f, 0.35f, 0.6f);
             mb.WindGradient = true; mb.WindY0 = 0.2f; mb.WindY1 = 1.4f; mb.Wind = 1.1f;
             Foliage(b, flowering ? Paint.Hex("#5F8F4A") : Paint.Hex("#729E4E"), out var top, out var side, out var bottom);
-            var col = ByNormal(top, side, bottom, 0.25f);
-            int seed = VariantSeed(flowering ? "bushb" : "busha", b);
+            var ramp = CanopyRamp(top, side, bottom, 0.15f, 1.35f);
             (Vector3 c, Vector3 r)[] blobs =
             {
-                (new Vector3(0f, 0.62f, 0.25f), new Vector3(0.68f, 0.6f, 0.5f)),
-                (new Vector3(-0.38f, 0.45f, 0.3f), new Vector3(0.38f, 0.4f, 0.36f)),
-                (new Vector3(0.4f, 0.48f, 0.32f), new Vector3(0.38f, 0.42f, 0.36f)),
-                (new Vector3(0.1f, 0.98f, 0.28f), new Vector3(0.42f, 0.38f, 0.38f)),
+                (new Vector3(0f, 0.66f, 0.25f), new Vector3(0.68f, 0.6f, 0.5f)),
+                (new Vector3(-0.4f, 0.47f, 0.3f), new Vector3(0.38f, 0.4f, 0.36f)),
+                (new Vector3(0.42f, 0.5f, 0.32f), new Vector3(0.38f, 0.42f, 0.36f)),
+                (new Vector3(0.1f, 1.0f, 0.28f), new Vector3(0.42f, 0.38f, 0.38f)),
+                (new Vector3(-0.62f, 0.33f, 0.18f), new Vector3(0.24f, 0.24f, 0.24f)),
+                (new Vector3(0.66f, 0.36f, 0.2f), new Vector3(0.24f, 0.25f, 0.24f)),
+                (new Vector3(-0.3f, 0.95f, 0.35f), new Vector3(0.28f, 0.26f, 0.28f)),
             };
             for (int i = 0; i < blobs.Length; i++)
-                FacetBlob(mb, blobs[i].c, blobs[i].r, 1, 0.18f, seed + i * 7, 0.45f, col);
+                SoftLump(mb, blobs[i].c, blobs[i].r, i < 4 ? 1 : 0, i * 41f + b * 23f, ramp, 0.12f);
             if (flowering)
             {
+                // five-petal blossoms dotted over the sun-facing side
                 var petals = new[] { Paint.Hex("#F6A9C0"), Paint.Hex("#FFD3E0"), Paint.Hex("#F07FA0") };
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < 14; i++)
                 {
-                    var bl = blobs[i % blobs.Length];
-                    float a = mb.Random01() * Mathf.PI * 2f, e = Mathf.Lerp(0.15f, 1.2f, mb.Random01());
+                    var bl = blobs[i % 4];
+                    float a = mb.Random01() * Mathf.PI * 2f, e = Mathf.Lerp(0.2f, 1.15f, mb.Random01());
                     var dir = new Vector3(Mathf.Cos(a) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Sin(a) * Mathf.Cos(e));
-                    if (dir.z > 0.5f) dir.z = -dir.z;
-                    mb.Color = petals[i % petals.Length];
-                    Gem(mb, bl.c + Vector3.Scale(dir, bl.r) * 1.02f, 0.07f);
+                    if (dir.z > 0.3f) dir.z = -dir.z;
+                    var nrm = new Vector3(dir.x / bl.r.x, dir.y / bl.r.y, dir.z / bl.r.z).normalized;
+                    Bloom(mb, bl.c + Vector3.Scale(dir, bl.r) * 1.06f, 0.08f, nrm, petals[i % petals.Length], Paint.Hex("#F6D35A"), i * 29f);
                 }
             }
             return mb;
@@ -349,9 +453,10 @@ namespace Lanternvale.Game
                 FacetBlob(mb, new Vector3(-0.65f + i * 0.45f, r * 1.85f, 0.04f), new Vector3(0.26f, 0.06f, 0.16f), 0, 0.25f, b * 3 + i, 0f, ByNormal(Pal.MossLight, Pal.Moss, Pal.Moss));
             mb.Color = bark;
             mb.Segment(new Vector3(0.3f, r * 1.4f, 0.1f), new Vector3(0.45f, r * 2.3f, 0.25f), 0.06f, 0.025f, 4);
-            mb.Color = Pal.Leaf;
+            // a little sprig of leaves sprouting from the bark
             for (int i = 0; i < 4; i++)
-                Gem(mb, new Vector3(0.75f + i * 0.08f, 0.15f + i * 0.08f, -0.22f), new Vector3(0.1f, 0.03f, 0.06f));
+                Leaf(mb, new Vector3(0.72f + i * 0.07f, 0.14f + i * 0.08f, -0.24f), new Vector3(i % 2 == 0 ? -0.6f : 0.7f, 0.8f, -0.2f),
+                     new Vector3(0f, 0.6f, -1f).normalized, 0.13f, i % 2 == 0 ? Pal.Leaf : Paint.Hex("#86AE57"));
             var cap = b % 2 == 0 ? Paint.Hex("#E8863A") : Paint.Hex("#E3C08A");
             LittleMushroom(mb, new Vector3(-0.3f, 0.02f, -0.24f), 0.12f, 0.08f, cap, 10f, 0f);
             LittleMushroom(mb, new Vector3(-0.42f, 0.02f, -0.2f), 0.08f, 0.06f, cap, -6f, 20f);

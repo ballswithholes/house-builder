@@ -11,7 +11,257 @@ namespace Lanternvale.Game
     {
         static void RegisterGreatTree(Dictionary<string, Recipe> r)
         {
-            r["prop_tree_great"] = (art, seed) => Swaying(art, seed, BuildGreatTree, 1.7f);
+            r["prop_tree_great"] = GreatTree;
+        }
+
+        /// <summary>
+        /// Old Kusu plus its plaza. The paving is a child renderer deliberately left OUT of PropModel.Renderers: it is
+        /// ground dressing, so it must not dither out with the tree when a unit walks behind the trunk, must not widen the
+        /// tree's bounds / occluder grid / blob shadow, and takes the shader defaults (no tint, ink 2.2 px).
+        /// </summary>
+        static PropModel GreatTree(string art, int seed)
+        {
+            int b = Bucket(seed);
+            var rig = new Rig(art);
+            rig.Body(Cached(art + "#" + b, () => BuildGreatTree(b)));
+            var model = rig.Done(1.7f);
+            model.Sways = true;
+            var plaza = new GameObject("Plaza");
+            plaza.transform.SetParent(rig.Root, false);
+            plaza.AddComponent<MeshFilter>().sharedMesh = Cached(art + "#plaza" + b, () => BuildKusuPlaza(b));
+            var mr = plaza.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = MaterialsFor(Skin.Outlined);
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            return model;
+        }
+
+        // ------------------------------------------------------------------ the plaza: flagstone ring, stepping stones, offerings
+
+        static readonly Color[] KusuStones =
+        {
+            Paint.Hex("#DCC6A2"), Paint.Hex("#D2B994"), Paint.Hex("#E3D3B6"), Paint.Hex("#CFB9A4"), Paint.Hex("#C9BFAF"), Paint.Hex("#D8BFA4"),
+            Paint.Hex("#BDB6AA"),
+        };
+
+        /// <summary>
+        /// Irregular flat stone (star-shaped polygon in XZ) standing `h` above the ground, sunk a little below it: one flat
+        /// colour on top (no per-triangle jitter, which would show the fan) and slightly darker, worn edges.
+        /// </summary>
+        static void FlagStone(MeshBuilder mb, List<Vector2> poly, float h, Color col)
+        {
+            int n = poly.Count;
+            var c = Vector2.zero;
+            foreach (var p in poly) c += p;
+            c /= n;
+            var top = new Vector3(c.x, h, c.y);
+            var edge = Paint.Shade(col, 0.84f);
+            for (int i = 0; i < n; i++)
+            {
+                var p = poly[i];
+                var q = poly[(i + 1) % n];
+                // a worn bevel: the flat top is inset a touch and its rim slopes straight down into the turf
+                var pi = Vector2.Lerp(p, c, 0.07f);
+                var qi = Vector2.Lerp(q, c, 0.07f);
+                Tri(mb, top, new Vector3(pi.x, h, pi.y), new Vector3(qi.x, h, qi.y), Vector3.up, col);
+                var outward = new Vector3((p + q).x * 0.5f - c.x, 0.3f, (p + q).y * 0.5f - c.y);
+                QuadC(mb, new Vector3(pi.x, h, pi.y), new Vector3(qi.x, h, qi.y), new Vector3(q.x, -0.02f, q.y), new Vector3(p.x, -0.02f, p.y), outward, edge);
+            }
+        }
+
+        /// <summary>A rounded, irregular stepping stone (7-gon with uneven radii, slightly elongated) centred on c.</summary>
+        static void RoughStone(MeshBuilder mb, Vector2 c, float r, Color col, int sides = 7)
+        {
+            var poly = new List<Vector2>();
+            float spin = mb.Random01() * 50f, stretch = 1.05f + 0.25f * mb.Random01();
+            for (int j = 0; j < sides; j++)
+            {
+                float a = (spin + j * 360f / sides + (mb.Random01() - 0.5f) * (126f / sides)) * Mathf.Deg2Rad;
+                float rr = r * (0.78f + 0.32f * mb.Random01());
+                poly.Add(new Vector2(c.x + Mathf.Cos(a) * rr * stretch, c.y + Mathf.Sin(a) * rr * 0.88f));
+            }
+            FlagStone(mb, poly, 0.03f + 0.012f * mb.Random01(), col);
+        }
+
+        static MeshBuilder BuildKusuPlaza(int b)
+        {
+            var mb = Builder(VariantSeed("kusu_plaza", b), 0.05f, 0f, 1f);
+            var centre = new Vector2(0f, KusuZ);
+            const float rxIn = 2.65f, rzIn = 1.95f, rxOut = 4.5f, rzOut = 3.75f, gap = 0.07f;
+            Color StoneCol(float mossiness)
+            {
+                var c = KusuStones[(int)(mb.Random01() * KusuStones.Length) % KusuStones.Length];
+                c = Paint.Shade(c, 0.95f + 0.1f * mb.Random01());
+                return mb.Random01() < mossiness ? Color.Lerp(c, Pal.MossLight, 0.3f + 0.2f * mb.Random01()) : c;
+            }
+            Vector2 P(float a, float s)
+            {
+                float rx = Mathf.Lerp(rxIn, rxOut, s), rz = Mathf.Lerp(rzIn, rzOut, s);
+                return centre + new Vector2(Mathf.Cos(a) * rx, Mathf.Sin(a) * rz);
+            }
+            // one hand-cut flagstone over the annulus patch [a0, a1] × [s0, s1]: inset by the joint, corners nudged, one
+            // corner clipped
+            void Patch(float a0, float a1, float s0, float s1, float moss)
+            {
+                var corners = new[] { P(a0, s0), P(a1, s0), P(a1, s1), P(a0, s1) };
+                var mid = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
+                var poly = new List<Vector2>();
+                int cut = (int)(mb.Random01() * 4f);
+                for (int k = 0; k < 4; k++)
+                {
+                    var p = corners[k] + (mid - corners[k]).normalized * gap * 1.4f;
+                    p += new Vector2(mb.Random01() - 0.5f, mb.Random01() - 0.5f) * 0.08f;
+                    if (k == cut)
+                    {
+                        var prev = corners[(k + 3) % 4];
+                        var next = corners[(k + 1) % 4];
+                        poly.Add(Vector2.Lerp(p, prev + (mid - prev).normalized * gap * 1.4f, 0.25f));
+                        poly.Add(Vector2.Lerp(p, next + (mid - next).normalized * gap * 1.4f, 0.25f));
+                    }
+                    else poly.Add(p);
+                }
+                FlagStone(mb, poly, 0.03f + 0.015f * mb.Random01(), StoneCol(moss));
+            }
+            // the ring: three bands of flagstones of uneven length around the trunk (joints staggered between bands);
+            // some outer stones are split across the band, a few are missing so grass shows through
+            const int bands = 3;
+            for (int band = 0; band < bands; band++)
+            {
+                float s0 = (float)band / bands, s1 = (float)(band + 1) / bands;
+                float rxm = Mathf.Lerp(rxIn, rxOut, (s0 + s1) * 0.5f), rzm = Mathf.Lerp(rzIn, rzOut, (s0 + s1) * 0.5f);
+                float circumference = Mathf.PI * (3f * (rxm + rzm) - Mathf.Sqrt((3f * rxm + rzm) * (rxm + 3f * rzm)));
+                float step = Mathf.PI * 2f * (0.9f + band * 0.05f) / circumference;
+                float start = mb.Random01() * step, a = start, end = start + Mathf.PI * 2f;
+                while (a < end - step * 0.3f)
+                {
+                    float a1 = Mathf.Min(end, a + step * (0.6f + 0.75f * mb.Random01()));
+                    if (end - a1 < step * 0.45f) a1 = end;
+                    float moss = band == 0 ? 0.4f : 0.16f;
+                    if (Mathf.Sin((a + a1) * 0.5f) > 0.3f) moss += 0.2f;   // more moss in the tree's shade, behind the trunk
+                    if (mb.Random01() < 0.05f) { a = a1; continue; }
+                    if (band == bands - 1 && mb.Random01() < 0.3f)
+                    {
+                        float sm = Mathf.Lerp(s0, s1, 0.45f + 0.1f * mb.Random01());
+                        Patch(a, a1, s0, sm, moss);
+                        Patch(a, a1, sm, s1, moss);
+                    }
+                    else Patch(a, a1, s0, s1, moss);
+                    a = a1;
+                }
+            }
+            // loose stones and pebbles scattered just outside the ring soften its edge
+            for (int i = 0; i < 11; i++)
+            {
+                float a = (i * 32.7f + mb.Random01() * 15f) * Mathf.Deg2Rad;
+                if (Mathf.Sin(a) < -0.85f) continue;   // keep the front entrance clear
+                var c = P(a, 1.12f + 0.12f * mb.Random01());
+                RoughStone(mb, c, 0.12f + 0.12f * mb.Random01(), StoneCol(0.25f), 5);
+            }
+            // stepping stones from the ring down to the village road (world y ≈ 5.6 → local z ≈ −6.6)
+            float z = KusuZ - rzOut - 0.45f;
+            int row = 0;
+            while (z > -6.7f)
+            {
+                int count = row < 3 ? 2 : 1;
+                for (int k = 0; k < count; k++)
+                {
+                    float x = count == 2 ? (k == 0 ? -0.42f : 0.42f) + (row % 2 == 0 ? 0.08f : -0.08f) : (row % 2 == 0 ? 0.22f : -0.22f);
+                    float r = (count == 2 ? 0.33f : 0.4f) * (0.9f + 0.18f * mb.Random01());
+                    RoughStone(mb, new Vector2(x, z + (mb.Random01() - 0.5f) * 0.1f), r, StoneCol(0.15f), 9);
+                }
+                z -= row < 3 ? 0.78f : 0.95f;
+                row++;
+            }
+            // moss cushions creeping over the joints, and grass tufts in them
+            var mossRamp = CanopyRamp(Pal.MossLight, Pal.Moss, Pal.LeafDark, 0f, 0.09f);
+            for (int i = 0; i < 9; i++)
+            {
+                float a = (i * 40f + mb.Random01() * 25f) * Mathf.Deg2Rad;
+                var p = P(a, mb.Random01());
+                SoftLump(mb, new Vector3(p.x, 0.03f, p.y), new Vector3(0.22f + 0.1f * mb.Random01(), 0.085f, 0.17f), 0, i * 41f, mossRamp, 0.15f);
+            }
+            for (int i = 0; i < 9; i++)
+            {
+                float a = (i * 40f + mb.Random01() * 20f) * Mathf.Deg2Rad;
+                float s = (i % 3 + 1) / 3f;
+                var p = centre + new Vector2(Mathf.Cos(a) * Mathf.Lerp(rxIn, rxOut, s), Mathf.Sin(a) * Mathf.Lerp(rzIn, rzOut, s));
+                Tuft(mb, new Vector3(p.x, 0f, p.y), 0.14f + 0.08f * mb.Random01(), 3, i % 2 == 0 ? Pal.Leaf : Pal.Sage);
+            }
+            KusuOfferings(mb, b);
+            return mb;
+        }
+
+        /// <summary>A low stone offering table at the foot of the trunk: sake bottles, rice balls, mikan, a vase of sakaki.</summary>
+        static void KusuOfferings(MeshBuilder mb, int b)
+        {
+            const float z = -1.05f, top = 0.34f;
+            var stone = Paint.Hex("#C9BDA8");
+            mb.Color = Paint.Shade(stone, 0.9f);
+            mb.BoxOn(new Vector3(-0.32f, 0f, z), new Vector3(0.14f, top - 0.07f, 0.26f));
+            mb.BoxOn(new Vector3(0.32f, 0f, z), new Vector3(0.14f, top - 0.07f, 0.26f));
+            mb.Color = stone;
+            mb.BoxOn(new Vector3(0f, top - 0.07f, z), new Vector3(0.95f, 0.07f, 0.34f), Paint.Shade(stone, 1.06f));
+            // two white sake bottles with a blue band
+            var white = Paint.Hex("#F3EFE6");
+            var blue = Paint.Hex("#5F7FB8");
+            for (int s = -1; s <= 1; s += 2)
+            {
+                mb.Color = white;
+                mb.Push().Translate(s * 0.34f, top, z + 0.04f);
+                mb.Lathe(new[] { new Vector2(0.045f, 0f), new Vector2(0.065f, 0.08f), new Vector2(0.06f, 0.14f), new Vector2(0.022f, 0.2f), new Vector2(0.026f, 0.24f) }, 7, false, true, true,
+                         new[] { white, white, blue, white, white });
+                mb.Pop();
+            }
+            // a dish of three rice balls (white triangles with a nori band)
+            mb.Color = Paint.Hex("#E8E0D0");
+            mb.Cylinder(new Vector3(-0.1f, top, z - 0.02f), 0.13f, 0.15f, 0.025f, 8);
+            for (int i = 0; i < 3; i++)
+            {
+                var at = new Vector3(-0.17f + i * 0.07f, top + 0.025f, z - 0.02f + (i == 1 ? 0.05f : -0.02f));
+                mb.Color = Paint.Hex("#FBF8F0");
+                mb.Push().Translate(at).Rotate(0f, i * 30f - 30f, 0f);
+                mb.Lathe(new[] { new Vector2(0.045f, 0f), new Vector2(0.05f, 0.03f), new Vector2(0.03f, 0.07f), new Vector2(0.008f, 0.085f) }, 3, false, true, true);
+                mb.Color = Paint.Hex("#2F3A33");
+                mb.Box(new Vector3(0f, 0.02f, -0.03f), new Vector3(0.04f, 0.035f, 0.012f));
+                mb.Pop();
+            }
+            // three mikan on a little stand
+            mb.Color = Pal.Wood;
+            mb.Cylinder(new Vector3(0.14f, top, z), 0.07f, 0.06f, 0.05f, 6);
+            var mikan = Paint.Hex("#F29A3A");
+            for (int i = 0; i < 3; i++)
+            {
+                mb.Color = Paint.Shade(mikan, 0.95f + 0.1f * i);
+                var at = new Vector3(0.14f + (i - 1) * 0.045f, top + 0.08f + (i == 1 ? 0.05f : 0f), z + (i == 1 ? 0f : 0.02f));
+                mb.Sphere(at, new Vector3(0.045f, 0.04f, 0.045f), 6, 4, false);
+            }
+            mb.Color = Pal.LeafDark;
+            mb.Box(new Vector3(0.14f, top + 0.18f, z), new Vector3(0.03f, 0.012f, 0.02f));
+            // a celadon vase with sakaki sprigs at the back of the table
+            var celadon = Paint.Hex("#9FC4B2");
+            mb.Color = celadon;
+            mb.Push().Translate(0.02f, top, z + 0.1f);
+            mb.Lathe(new[] { new Vector2(0.04f, 0f), new Vector2(0.06f, 0.06f), new Vector2(0.035f, 0.14f), new Vector2(0.045f, 0.17f) }, 7, false, true, false);
+            mb.Pop();
+            var sprigBase = new Vector3(0.02f, top + 0.16f, z + 0.1f);
+            for (int i = 0; i < 5; i++)
+            {
+                float a = (i * 72f + b * 20f) * Mathf.Deg2Rad;
+                var dir = new Vector3(Mathf.Cos(a) * 0.5f, 1f, Mathf.Sin(a) * 0.35f - 0.2f);
+                mb.Color = Paint.Shade(Paint.Hex("#3F6E48"), 0.9f + 0.2f * mb.Random01());
+                Leaf(mb, sprigBase, dir, new Vector3(dir.x, 0.3f, -1f).normalized, 0.14f, mb.Color);
+            }
+            // a folded paper charm leaning on the table leg and a little cairn of river stones beside it
+            mb.Color = Pal.Paper;
+            Slab(mb, new[] { new Vector3(0.43f, 0.02f, z - 0.15f), new Vector3(0.53f, 0.02f, z - 0.15f), new Vector3(0.5f, 0.22f, z - 0.12f), new Vector3(0.44f, 0.22f, z - 0.12f) }, Vector3.back, 0.01f);
+            float cy = 0f;
+            for (int i = 0; i < 3; i++)
+            {
+                float r = 0.1f - i * 0.025f;
+                mb.Color = Paint.Shade(Pal.StoneLight, 0.9f + 0.08f * i);
+                mb.Sphere(new Vector3(-0.62f, cy + r * 0.5f, z - 0.05f), new Vector3(r, r * 0.5f, r * 0.9f), 6, 3, false);
+                cy += r * 0.95f;
+            }
         }
 
         const float KusuZ = 0.45f, KusuRx = 1.55f, KusuRz = 1.25f;
@@ -87,10 +337,9 @@ namespace Lanternvale.Game
                 (2, new Vector3(-3.6f, 18.6f, 1.2f)), (2, new Vector3(0.6f, 19.5f, 4.0f)), (3, new Vector3(3.8f, 19.0f, -0.4f)), (3, new Vector3(-0.6f, 20.5f, -1.0f)),
             };
             foreach (var br in branches) mb.Segment(limbs[br.limb].end, br.to, limbs[br.limb].r1 * 0.95f, 0.12f, 6, false, true);
-            // canopy: a broad layered dome of faceted leaf clumps
+            // canopy: a broad layered dome of soft leaf clumps (smooth shading, canopy-wide warm-top / cool-underside ramp)
             Foliage(b, Paint.Hex("#5C8B4C"), out var top, out var side, out var bottom, 5f);
-            var col = ByNormal(top, side, bottom, 0.22f);
-            int seed = VariantSeed("kusu_canopy", b);
+            var ramp = CanopyRamp(top, side, bottom, 10.6f, 25.2f);
             (Vector3 c, Vector3 r)[] clumps =
             {
                 // lower tier (≈ 12 m)
@@ -106,7 +355,7 @@ namespace Lanternvale.Game
                 (new Vector3(0.3f, 23.1f, 0.9f), new Vector3(2.6f, 2.0f, 2.4f)),
             };
             for (int i = 0; i < clumps.Length; i++)
-                FacetBlob(mb, clumps[i].c, clumps[i].r, 1, 0.2f, seed + i * 17, 0.28f, col);
+                SoftLump(mb, clumps[i].c, clumps[i].r, 1, i * 37f + b * 11f, ramp, 0.12f);
             // spirit motes glinting among the leaves
             mb.Emission = 1f;
             for (int i = 0; i < 18; i++)

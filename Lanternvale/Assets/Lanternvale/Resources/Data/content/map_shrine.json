@@ -76,7 +76,7 @@
           "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
         },
         {"art": "prop_rock_small", "pos": [2.0, 1.4]},
-        {"art": "prop_tree_pine", "pos": [1.2, 9.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [-1.7, 12.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_bush_b", "pos": [15.0, 1.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {
           "art": "prop_spirit_lantern_dark",

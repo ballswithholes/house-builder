@@ -1,6 +1,6 @@
 // Prop library kit: the TryBuild / TryHas registry, model assembly (Rig), lit/unlit mesh variants, the palette and the
 // modelling helpers shared by the recipes (PropBuildings, PropVillage, PropNature, PropGreatTree, PropShrine,
-// PropForeground).
+// PropForeground, PropGarden), and the soft-foliage pass (smooth normals + colour ramps applied after ToMesh).
 //
 // Conventions (Docs/ThreeD.md §1, §7): models are authored in Y-up local space, metres, FRONT FACING −Z (towards the
 // camera); the root is stood up with World3D.Upright. The solid base of every prop fits its nav collider ellipse
@@ -33,6 +33,7 @@ namespace Lanternvale.Game
                 RegisterGreatTree(r);
                 RegisterShrine(r);
                 RegisterForeground(r);
+                RegisterGarden(r);
                 recipes = r;
             }
             if (recipes.TryGetValue(artKey, out var recipe)) return recipe;
@@ -74,7 +75,68 @@ namespace Lanternvale.Game
             }
         }
 
-        static Mesh Cached(string key, Func<MeshBuilder> build) => MeshCache.Get(key, () => build().ToMesh(key));
+        static Mesh Cached(string key, Func<MeshBuilder> build) => MeshCache.Get(key, () =>
+        {
+            var mb = build();
+            var mesh = mb.ToMesh(key);
+            SoftenParts(mb, mesh);
+            return mesh;
+        });
+
+        // ------------------------------------------------------------------ soft (smooth-shaded) foliage
+
+        /// <summary>Underside squash of soft foliage lumps (unit-sphere y below 0 is multiplied by this).</summary>
+        const float SoftUnder = 0.8f;
+
+        /// <summary>A range of builder vertices forming one soft lump (PropNature.SoftLump), re-shaded after ToMesh.</summary>
+        sealed class SoftPart
+        {
+            public int start, end;
+            public Matrix4x4 toUnit;                // builder root space → the lump's unit sphere
+            public Func<float, Color> ramp;         // colour by root-space height
+            public float jitter, ao, aoHeight;
+        }
+
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MeshBuilder, List<SoftPart>> softParts =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<MeshBuilder, List<SoftPart>>();
+
+        static void RegisterSoft(MeshBuilder mb, SoftPart part) => softParts.GetOrCreateValue(mb).Add(part);
+
+        /// <summary>
+        /// MeshBuilder only makes flat or lathe-smooth normals, so soft lumps get theirs here: the analytic ellipsoid
+        /// normal at every vertex (coincident corners of the faceted icosphere share it → smooth shading over a lumpy
+        /// silhouette) and a per-vertex colour (canopy ramp × the lump's own top-light × faint position noise × AO).
+        /// </summary>
+        static void SoftenParts(MeshBuilder mb, Mesh mesh)
+        {
+            if (!softParts.TryGetValue(mb, out var parts) || parts.Count == 0) return;
+            softParts.Remove(mb);
+            var v = mesh.vertices;
+            var n = mesh.normals;
+            var col = mesh.colors;
+            if (n.Length != v.Length || col.Length != v.Length) return;
+            foreach (var part in parts)
+            {
+                var toUnitT = part.toUnit.transpose;
+                for (int i = part.start; i < part.end && i < v.Length; i++)
+                {
+                    var p = v[i];
+                    var u = part.toUnit.MultiplyPoint3x4(p);
+                    var g = u;
+                    if (g.y < 0f) g.y /= SoftUnder * SoftUnder;
+                    var nn = toUnitT.MultiplyVector(g);
+                    n[i] = nn.sqrMagnitude > 1e-12f ? nn.normalized : Vector3.up;
+                    float t = Mathf.Clamp01((u.y + SoftUnder) / (1f + SoftUnder));
+                    float k = Mathf.Lerp(0.84f, 1.04f, Mathf.SmoothStep(0f, 1f, t));
+                    k *= 1f + (Hash01(p * 1.7f, 7) * 2f - 1f) * part.jitter * 0.5f;
+                    if (part.ao > 0f && part.aoHeight > 0f) k *= Mathf.Lerp(1f - part.ao, 1f, Mathf.Clamp01(p.y / part.aoHeight));
+                    var c = part.ramp(p.y);
+                    col[i] = new Color(Mathf.Clamp01(c.r * k), Mathf.Clamp01(c.g * k), Mathf.Clamp01(c.b * k), col[i].a);
+                }
+            }
+            mesh.normals = n;
+            mesh.colors = col;
+        }
 
         static MeshBuilder Builder(int seed, float jitter = 0.06f, float ao = 0.3f, float aoHeight = 0.6f) =>
             new MeshBuilder(seed) { Jitter = jitter, AOStrength = ao, AOHeight = aoHeight };
@@ -632,40 +694,141 @@ namespace Lanternvale.Game
             mb.Color = keepC;
         }
 
-        /// <summary>Window box with greenery and flowers on a front wall (top at y).</summary>
+        /// <summary>
+        /// Five-petal bloom (single-sided, facing `normal`): rounded kite petals, slightly cupped, around a raised centre.
+        /// ≈ 15 tris; reads as a flower at close zoom and as a soft colour dot from afar.
+        /// </summary>
+        static void Bloom(MeshBuilder mb, Vector3 c, float r, Vector3 normal, Color petal, Color heart, float spinDeg = 0f)
+        {
+            normal = normal.normalized;
+            var u = Vector3.Cross(normal, Mathf.Abs(normal.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+            var v = Vector3.Cross(normal, u);
+            Vector3 Dir(float deg) { float a = deg * Mathf.Deg2Rad; return u * Mathf.Cos(a) + v * Mathf.Sin(a); }
+            var lift = normal * (r * 0.18f);
+            for (int i = 0; i < 5; i++)
+            {
+                float a = spinDeg + i * 72f;
+                float k = 1f + (mb.Random01() * 2f - 1f) * mb.Jitter;
+                var col = new Color(petal.r * k, petal.g * k, petal.b * k, 1f);
+                var tip = c + Dir(a) * r + lift;
+                var left = c + Dir(a - 27f) * (r * 0.62f) + lift * 0.5f;
+                var right = c + Dir(a + 27f) * (r * 0.62f) + lift * 0.5f;
+                Tri(mb, c, left, tip, normal, col);
+                Tri(mb, c, tip, right, normal, col);
+            }
+            var top = c + normal * (r * 0.22f);
+            for (int i = 0; i < 4; i++)
+            {
+                float a = spinDeg + 20f + i * 90f;
+                Tri(mb, c + Dir(a) * (r * 0.3f), c + Dir(a + 90f) * (r * 0.3f), top, normal, heart);
+            }
+        }
+
+        /// <summary>Heart-shaped leaf (single-sided, facing `normal`) from its stem point `at` towards `dir`.</summary>
+        static void Leaf(MeshBuilder mb, Vector3 at, Vector3 dir, Vector3 normal, float size, Color col)
+        {
+            dir = dir.normalized;
+            var s = Vector3.Cross(normal, dir).normalized;
+            float w = size * 0.42f;
+            var tip = at + dir * size;
+            var r1 = at + dir * (size * 0.22f) + s * w;
+            var r2 = at + dir * (size * 0.62f) + s * (w * 0.72f);
+            var l1 = at + dir * (size * 0.22f) - s * w;
+            var l2 = at + dir * (size * 0.62f) - s * (w * 0.72f);
+            var notch = at + dir * (size * 0.06f);
+            Tri(mb, notch, r1, r2, normal, col);
+            Tri(mb, notch, r2, tip, normal, col);
+            Tri(mb, notch, tip, l2, normal, Paint.Shade(col, 0.92f));
+            Tri(mb, notch, l2, l1, normal, Paint.Shade(col, 0.92f));
+        }
+
+        /// <summary>Window box: a planter with rounded greenery, trailing leaves and five-petal blooms (top at y).</summary>
         static void FlowerBox(MeshBuilder mb, float x, float y, float width, float wallZ, Color box, int flowerSeed)
         {
             var keepC = mb.Color;
             mb.Color = box;
             mb.Box(new Vector3(x, y - 0.11f, wallZ - 0.12f), new Vector3(width, 0.22f, 0.24f));
-            int n = Mathf.Max(3, Mathf.RoundToInt(width / 0.2f));
-            for (int i = 0; i < n; i++)
+            mb.Color = Paint.Shade(box, 0.8f);
+            mb.Box(new Vector3(x, y - 0.2f, wallZ - 0.245f), new Vector3(width + 0.04f, 0.04f, 0.02f));
+            // greenery: a row of soft leafy mounds spilling over the front edge
+            var greens = ByNormal(Paint.Hex("#9DC163"), Pal.Leaf, Pal.LeafDark, 0.2f);
+            int mounds = Mathf.Max(2, Mathf.RoundToInt(width / 0.36f));
+            for (int i = 0; i < mounds; i++)
             {
-                float fx = x - width * 0.5f + width * (i + 0.5f) / n;
-                mb.Color = i % 2 == 0 ? Pal.Leaf : Pal.LeafDark;
-                Gem(mb, new Vector3(fx, y + 0.04f, wallZ - 0.13f), new Vector3(0.11f, 0.09f, 0.1f));
+                float fx = x - width * 0.5f + width * (i + 0.5f) / mounds;
+                FacetBlob(mb, new Vector3(fx, y + 0.02f, wallZ - 0.14f), new Vector3(width * 0.5f / mounds + 0.05f, 0.1f, 0.13f), 0, 0.12f, flowerSeed * 7 + i, 0.3f, greens);
             }
+            // trailing leaves hanging over the box front
+            var front = new Vector3(0f, 0.25f, -1f).normalized;
+            for (int i = 0; i < mounds + 1; i++)
+            {
+                float fx = x - width * 0.5f + width * (i + 0.25f + 0.5f * mb.Random01()) / (mounds + 1);
+                var at = new Vector3(fx, y - 0.01f, wallZ - 0.25f);
+                var col = mb.Random01() < 0.5f ? Pal.Leaf : Paint.Hex("#86AE57");
+                Leaf(mb, at, new Vector3((mb.Random01() - 0.5f) * 0.6f, -1f, -0.15f), front, 0.11f + 0.03f * mb.Random01(), col);
+            }
+            // blooms on top, facing up and out to the street
+            int n = Mathf.Max(3, Mathf.RoundToInt(width / 0.2f));
+            var face = new Vector3(0f, 0.75f, -0.66f).normalized;
             for (int i = 0; i < n; i++)
             {
                 float fx = x - width * 0.5f + width * (i + 0.3f + 0.4f * mb.Random01()) / n;
-                mb.Color = Pal.Flowers[(flowerSeed + i * (i % 2 == 0 ? 1 : 3)) % Pal.Flowers.Length];
-                Gem(mb, new Vector3(fx, y + 0.13f + mb.Random01() * 0.06f, wallZ - 0.12f - mb.Random01() * 0.08f), 0.055f);
+                var petal = Pal.Flowers[(flowerSeed + i * (i % 2 == 0 ? 1 : 3)) % Pal.Flowers.Length];
+                var heart = petal.r > 0.95f && petal.g > 0.8f ? Paint.Hex("#E08A2E") : Paint.Hex("#F6CF4A");
+                Bloom(mb, new Vector3(fx, y + 0.11f + mb.Random01() * 0.05f, wallZ - 0.16f - mb.Random01() * 0.07f), 0.075f + 0.02f * mb.Random01(), face, petal, heart, mb.Random01() * 72f);
             }
             mb.Color = keepC;
         }
 
-        /// <summary>Ivy climbing a wall from `from` to `to` (points on the wall face), small leaf clusters.</summary>
+        /// <summary>
+        /// Ivy climbing a wall from `from` to `to` (points on the wall face): a thin wandering stem with a few side shoots
+        /// and clusters of two or three heart-shaped leaves angled off the wall. `leaves` ≈ the number of leaves.
+        /// </summary>
         static void Ivy(MeshBuilder mb, Vector3 from, Vector3 to, int leaves, float spread, Vector3 wallNormal)
         {
             var keepC = mb.Color;
-            var side = Vector3.Cross(wallNormal, (to - from).normalized);
-            for (int i = 0; i < leaves; i++)
+            var n = wallNormal.normalized;
+            var axis = (to - from).normalized;
+            var side = Vector3.Cross(n, axis).normalized;
+            int nodes = Mathf.Max(3, Mathf.RoundToInt(leaves / 1.9f));
+            float phase = mb.Random01() * 6.28f;
+            var pts = new Vector3[nodes + 1];
+            for (int i = 0; i <= nodes; i++)
             {
-                float t = (float)i / Mathf.Max(1, leaves - 1);
-                var p = Vector3.Lerp(from, to, t) + side * ((mb.Random01() - 0.5f) * spread * (1.2f - t * 0.6f)) + wallNormal * 0.05f;
-                mb.Color = mb.Random01() < 0.5f ? Pal.Leaf : (mb.Random01() < 0.5f ? Pal.LeafDark : Pal.Moss);
-                float s = Mathf.Lerp(0.16f, 0.09f, t);
-                Gem(mb, p, new Vector3(s, s * 0.9f, s * 0.6f));
+                float t = (float)i / nodes;
+                float wob = Mathf.Sin(phase + t * 7.2f) * spread * 0.4f * (1.1f - t * 0.5f);
+                pts[i] = Vector3.Lerp(from, to, t) + side * wob + n * 0.03f;
+            }
+            var stem = Paint.Hex("#5F6A3A");
+            mb.Color = stem;
+            for (int i = 0; i < nodes; i++)
+                mb.Segment(pts[i], pts[i + 1], Mathf.Lerp(0.024f, 0.012f, (float)i / nodes), Mathf.Lerp(0.024f, 0.012f, (float)(i + 1) / nodes), 3, false, false);
+            Color[] greens = { Pal.Leaf, Pal.LeafDark, Paint.Hex("#86AE57"), Pal.Moss };
+            for (int i = 0; i < nodes; i++)
+            {
+                float t = (i + 0.5f) / nodes;
+                var at = Vector3.Lerp(pts[i], pts[i + 1], 0.5f);
+                float size = Mathf.Lerp(0.2f, 0.13f, t);
+                float sign = i % 2 == 0 ? 1f : -1f;
+                // a side shoot every other node, carrying its own leaf
+                if (i % 2 == 1 && i < nodes - 1)
+                {
+                    var shootEnd = at + side * (sign * spread * 0.5f) + axis * (spread * 0.25f) + n * 0.01f;
+                    mb.Color = stem;
+                    mb.Segment(at, shootEnd, 0.012f, 0.008f, 3, false, false);
+                    var c0 = greens[(i + 1) % greens.Length];
+                    mb.Color = c0;
+                    Leaf(mb, shootEnd, side * sign + axis * 0.4f + n * 0.5f, (n + axis * 0.2f).normalized, size * 0.85f, FaceCol(mb));
+                }
+                int count = 2 + (mb.Random01() < 0.6f ? 1 : 0);
+                for (int k = 0; k < count; k++)
+                {
+                    float a = (k - (count - 1) * 0.5f) * 62f + (mb.Random01() - 0.5f) * 25f + sign * 12f;
+                    var dir = side * Mathf.Sin(a * Mathf.Deg2Rad) + axis * (Mathf.Cos(a * Mathf.Deg2Rad) * 0.55f - 0.25f) + n * 0.45f;
+                    mb.Color = greens[(int)(mb.Random01() * greens.Length) % greens.Length];
+                    var face = (n + axis * 0.25f - dir.normalized * 0.2f).normalized;
+                    Leaf(mb, at, dir, face, size * (0.85f + 0.3f * mb.Random01()), FaceCol(mb));
+                }
             }
             mb.Color = keepC;
         }

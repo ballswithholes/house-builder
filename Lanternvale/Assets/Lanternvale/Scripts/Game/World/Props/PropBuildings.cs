@@ -282,8 +282,10 @@ namespace Lanternvale.Game
             for (int i = 0; i < 4; i++)
             {
                 float a = (i * 90f + flowerSeed * 37f) * Mathf.Deg2Rad;
-                mb.Color = Pal.Flowers[(flowerSeed + i) % Pal.Flowers.Length];
-                Gem(mb, at + new Vector3(Mathf.Cos(a) * r * 0.7f, h + r * (1.1f + 0.3f * (i % 2)), Mathf.Sin(a) * r * 0.7f), r * 0.32f);
+                var petal = Pal.Flowers[(flowerSeed + i) % Pal.Flowers.Length];
+                var dir = new Vector3(Mathf.Cos(a), 1.6f, Mathf.Sin(a) - 0.6f);
+                Bloom(mb, at + new Vector3(Mathf.Cos(a) * r * 0.75f, h + r * (1.15f + 0.3f * (i % 2)), Mathf.Sin(a) * r * 0.75f), r * 0.42f, dir,
+                      petal, Paint.Hex("#F6CF4A"), i * 31f);
             }
             mb.Color = keepC;
         }
