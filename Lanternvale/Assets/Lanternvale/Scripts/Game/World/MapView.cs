@@ -224,6 +224,7 @@ namespace Lanternvale.Game
 
         static readonly MaterialPropertyBlock Mpb = new MaterialPropertyBlock();
         static readonly int GradeId = Shader.PropertyToID("_LV_Grade");
+        static readonly int WarmthId = Shader.PropertyToID("_LV_Warmth");
         readonly List<Rect> postObstacles = new List<Rect>();
 
         // ================================================================== building
@@ -920,15 +921,20 @@ namespace Lanternvale.Game
             DayNight.ApplyTo();
             var horizon = sky.Horizon;
             var fog = Color.Lerp(horizon, sky.Zenith, fogZenith);
+            // golden hour: the low sun's glow hangs warm in the distance
+            float gold = DayNight.Golden;
+            fog = Color.Lerp(fog, DayNight.GoldenHaze, 0.3f * gold);
             HazeColor = fog;
             SceneLighting.FogColor = fog;
-            SceneLighting.FogStart = fogStart;
+            SceneLighting.FogStart = Mathf.Lerp(fogStart, fogStart * 0.7f, gold);
             SceneLighting.FogEnd = fogEnd;
             SceneLighting.FogMax = 0.85f;
             SceneLighting.WindStrength = windStrength;
             // night grade: moonlit colours cool towards blue-grey, lamplight keeps its warmth (LanternvaleCommon.cginc)
             var gt = DayNight.NightGradeTint;
             Shader.SetGlobalVector(GradeId, new Vector4(DayNight.NightGrade, gt.x, gt.y, gt.z));
+            // warmth: richer sunlit colours at golden hour, amber lamp pools at night (LanternvaleCommon.cginc)
+            Shader.SetGlobalVector(WarmthId, DayNight.Warmth);
             if (cam != null) cam.backgroundColor = horizon;
         }
 
@@ -1622,6 +1628,7 @@ namespace Lanternvale.Game
             {
                 Current = null;
                 Shader.SetGlobalVector(GradeId, Vector4.zero);   // no night grade outside a map
+                Shader.SetGlobalVector(WarmthId, Vector4.zero);  // nor warmth
             }
         }
 

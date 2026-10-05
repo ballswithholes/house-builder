@@ -49,6 +49,10 @@ namespace Lanternvale.Preview
         /// <summary>_LV_Grade (MapView): night grade amount and the tint the graded luma takes.</summary>
         public float Grade;
         public V3 GradeTint = new V3(1, 1, 1);
+        /// <summary>_LV_Warmth (MapView): golden-hour saturation lift (x), lamplight amber pull (y), lamp pool masking
+        /// the cool fill (z). Zero = off.</summary>
+        public float GoldenLift, LampAmber, LampMask;
+        static readonly V3 LampAmberTint = new V3(1.3f, 1f, 0.5f);
         public int LightCount;
         public readonly V3[] LPos = new V3[MaxLights];
         public readonly V3[] LCol = new V3[MaxLights];
@@ -113,10 +117,7 @@ namespace Lanternvale.Preview
         /// <summary>LV_LightSplit: sun and hemisphere ambient; the point lights separately.</summary>
         public V3 LightSplit(V3 wp, V3 n, out V3 points)
         {
-            float ndl = V3.Dot(n, SunDir);
-            float wrap = Mathf.Clamp01((ndl + 0.45f) / 1.45f);
-            float ramp = wrap * wrap * (3f - 2f * wrap);
-            var light = SunCol * ramp;
+            var light = SunCol * SunRamp(n);
             float hemi = -n.z * 0.5f + 0.5f;
             light = light + V3.Lerp(GroundAmb, SkyAmb, hemi);
             points = new V3(0, 0, 0);
@@ -134,6 +135,16 @@ namespace Lanternvale.Preview
             return light;
         }
 
+        /// <summary>LV_SunRamp: wrapped diffuse eased into a soft ramp.</summary>
+        public float SunRamp(V3 n)
+        {
+            float ndl = V3.Dot(n, SunDir);
+            float wrap = Mathf.Clamp01((ndl + 0.45f) / 1.45f);
+            return wrap * wrap * (3f - 2f * wrap);
+        }
+
+        static float Luma(V3 c) => c.x * 0.3f + c.y * 0.59f + c.z * 0.11f;
+
         /// <summary>LV_Shade: lit albedo + rim + emission, then fog.</summary>
         public V3 Shade(V3 wp, V3 n, V3 albedo, float emission, float rimBoost, float fogScale)
         {
@@ -149,9 +160,30 @@ namespace Lanternvale.Preview
                 float l = albedo.x * 0.3f + albedo.y * 0.59f + albedo.z * 0.11f;
                 moonlit = V3.Lerp(albedo, GradeTint * l, Mathf.Clamp01(Grade));
             }
-            var col = moonlit * b + albedo * pts;
+            var col = moonlit * b;
+            var lampAlbedo = albedo;
+            if (LampAmber > 0f || LampMask > 0f)
+            {
+                // lamp pools: amber on any ground, and under them the warm light wins over the blue fill
+                lampAlbedo = V3.Lerp(albedo, LampAmberTint * Luma(albedo), Mathf.Clamp01(LampAmber));
+                // towards a pool the cool fill greys out (blue + warm passes through warm grey, never pink) and yields
+                float pl = Luma(pts);
+                float share = pl / Math.Max(pl + Luma(b), 0.0001f);
+                float z = Mathf.Clamp01(LampMask);
+                float cl0 = Luma(col);
+                col = V3.Lerp(col, new V3(cl0, cl0, cl0), Mathf.Clamp01(z * share * 4f)) * (1f - 0.5f * z * share);
+            }
+            col = col + lampAlbedo * pts;
+            if (GoldenLift > 0f)
+            {
+                // golden hour: sunlit colours richer, the cool-lit shade as it is
+                float sunShare = Mathf.Clamp01(Luma(SunCol) * SunRamp(n) / Math.Max(Luma(light), 0.0001f));
+                float cl = Luma(col);
+                float k = 1f + GoldenLift * sunShare;
+                col = new V3(Math.Max(0f, cl + (col.x - cl) * k), Math.Max(0f, cl + (col.y - cl) * k), Math.Max(0f, cl + (col.z - cl) * k));
+            }
             float rim = Mathf.Pow(1f - Mathf.Clamp01(V3.Dot(n, view)), Math.Max(RimPower, 0.5f));
-            float lum = light.x * 0.3f + light.y * 0.59f + light.z * 0.11f;
+            float lum = Luma(light);
             col = col + RimCol * (rim * (0.22f * Mathf.Clamp01(lum) + rimBoost));
             float e = Mathf.Clamp01(emission);
             if (e > 0f) col = V3.Lerp(col, albedo * (1f + NightGlow), e);

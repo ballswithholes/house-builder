@@ -94,14 +94,30 @@ inline half LV_CutCoverage(float3 worldPos, bool keepBehind)
 // lights) keep the full colour — warm pools stand out of a deep blue night instead of washing into teal.
 float4 _LV_Grade;
 
+// Warmth (MapView, Shader.SetGlobalVector; zero = off, the default — the look is then exactly as without it):
+//   x = golden hour: how much the sun's share of a surface's light lifts its saturation (rich, glowing greens instead
+//       of grey-olive under a warm low sun)
+//   y = night: how far lamplit colours lean towards amber (the albedo's luma × LV_LAMP_AMBER), so a lamp pool reads
+//       candle-gold on reddish dirt, grass and stone alike
+//   z = night: how much a lamp's pool greys out and dims the cool moon / sky fill under it (warm light plus blue
+//       moonlight on a red path would otherwise mix to pink)
+float4 _LV_Warmth;
+static const half3 LV_LAMP_AMBER = half3(1.3, 1.0, 0.5);
+static const half3 LV_LUMA = half3(0.3, 0.59, 0.11);
+
+// The sun's soft painterly ramp: wrapped diffuse eased in.
+inline half LV_SunRamp(half3 n)
+{
+    half ndl = dot(n, _LV_SunDir.xyz);
+    half wrap = saturate((ndl + 0.45) / 1.45);
+    return wrap * wrap * (3.0 - 2.0 * wrap);
+}
+
 // Sun and hemisphere ambient; the point lights' contribution separately (points).
 inline half3 LV_LightSplit(float3 worldPos, half3 n, out half3 points)
 {
     // sun: wrapped diffuse eased into a soft painterly ramp
-    half ndl = dot(n, _LV_SunDir.xyz);
-    half wrap = saturate((ndl + 0.45) / 1.45);
-    half ramp = wrap * wrap * (3.0 - 2.0 * wrap);
-    half3 light = _LV_SunColor.rgb * ramp;
+    half3 light = _LV_SunColor.rgb * LV_SunRamp(n);
 
     // hemisphere ambient (sky above, bounce below)
     half hemi = dot(n, LV_UP) * 0.5 + 0.5;
@@ -143,10 +159,29 @@ inline half3 LV_Shade(float3 worldPos, half3 n, half3 albedo, half emission, hal
     half3 light = base + points;
     half3 moonlit = albedo;
     if (_LV_Grade.x > 0.0)
-        moonlit = lerp(albedo, dot(albedo, half3(0.3, 0.59, 0.11)) * _LV_Grade.yzw, saturate(_LV_Grade.x));
-    half3 col = moonlit * base + albedo * points;
+        moonlit = lerp(albedo, dot(albedo, LV_LUMA) * _LV_Grade.yzw, saturate(_LV_Grade.x));
+    half3 col = moonlit * base;
+    half3 lampAlbedo = albedo;
+    if (_LV_Warmth.y > 0.0 || _LV_Warmth.z > 0.0)
+    {
+        // lamp pools: amber on any ground, and under them the warm light wins over the blue fill
+        lampAlbedo = lerp(albedo, dot(albedo, LV_LUMA) * LV_LAMP_AMBER, saturate(_LV_Warmth.y));
+        // towards a pool the cool fill greys out (so blue + warm passes through warm grey, never pink) and yields
+        half pl = dot(points, LV_LUMA);
+        half share = pl / max(pl + dot(base, LV_LUMA), 0.0001);
+        half z = saturate(_LV_Warmth.z);
+        col = lerp(col, dot(col, LV_LUMA).xxx, saturate(z * share * 4.0)) * (1.0 - 0.5 * z * share);
+    }
+    col += lampAlbedo * points;
+    if (_LV_Warmth.x > 0.0)
+    {
+        // golden hour: sunlit colours richer, the cool-lit shade as it is
+        half sunShare = saturate(dot(_LV_SunColor.rgb, LV_LUMA) * LV_SunRamp(n) / max(dot(light, LV_LUMA), 0.0001));
+        half cl = dot(col, LV_LUMA);
+        col = max(cl + (col - cl) * (1.0 + _LV_Warmth.x * sunShare), 0.0);
+    }
     half rim = pow(1.0 - saturate(dot(n, viewDir)), max(_LV_RimColor.a, 0.5));
-    half lum = dot(light, half3(0.3, 0.59, 0.11));
+    half lum = dot(light, LV_LUMA);
     col += _LV_RimColor.rgb * rim * (0.22 * saturate(lum) + rimBoost);
     col = lerp(col, albedo * (1.0 + _LV_Misc.x), saturate(emission));
     float dist = distance(worldPos, _WorldSpaceCameraPos.xyz);

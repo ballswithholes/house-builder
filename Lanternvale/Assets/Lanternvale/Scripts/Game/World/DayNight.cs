@@ -66,6 +66,16 @@ namespace Lanternvale.Game
         public Color SunGlow { get; private set; } = new Color(1f, 0.8f, 0.6f, 0f);
         /// <summary>Approximate brightness of the lit scene 0..1 (for unlit sprites that must follow the mood).</summary>
         public float LightLevel { get; private set; } = 1f;
+        /// <summary>
+        /// The shader global _LV_Warmth (MapView): x = golden-hour saturation lift of sunlit colours, y = how far lamplit
+        /// colours lean to amber at night, z = how much a lamp pool greys out and dims the cool night fill under it; zero by
+        /// day.
+        /// </summary>
+        public Vector4 Warmth { get; private set; }
+        /// <summary>0..1: how golden the hour is (GoldenAt): MapView hazes the distance warm by it.</summary>
+        public float Golden { get; private set; }
+        /// <summary>The warm haze golden hour lends the distance (fog colour blend, MapView.ApplyMood).</summary>
+        public static readonly Color GoldenHaze = new Color(1f, 0.80f, 0.55f);
 
         public DayNight() { }
 
@@ -187,10 +197,14 @@ namespace Lanternvale.Game
                            DaySun, 0.95f, DaySky, DayGround, 0.75f, 0f),
             new Key(15.5f, new Color(1.00f, 0.96f, 0.88f), 1.00f, Color.white, new Color(1.00f, 0.93f, 0.80f), 0.12f, NoOver, 0f,
                            new Color(1.00f, 0.91f, 0.76f), 0.93f, new Color(0.63f, 0.67f, 0.80f), new Color(0.43f, 0.38f, 0.33f), 0.75f, 0f),
+            // golden hour: a honey-gold sun, a cool teal-blue fill in the shade, a warm bounce from the sunlit meadow; the
+            // golden-hour boost (Golden) then lets the sun carry the light so greens glow instead of greying
             new Key(17.8f, new Color(1.00f, 0.80f, 0.66f), 0.90f, new Color(0.56f, 0.55f, 0.80f), new Color(1.00f, 0.70f, 0.50f), 0.60f, new Color(0.95f, 0.50f, 0.40f, 0.14f), 0.22f,
-                           new Color(1.00f, 0.82f, 0.62f), 0.9f, new Color(0.58f, 0.64f, 0.86f), new Color(0.42f, 0.40f, 0.32f), 0.8f, 0.25f),
+                           new Color(1.00f, 0.82f, 0.54f), 1.0f, new Color(0.50f, 0.62f, 0.84f), new Color(0.46f, 0.42f, 0.28f), 0.75f, 0.22f),
+            // dusk: the sun sinks low and gold (yellow enough that the grass stays green, not khaki) under a rose sky, the
+            // fill turns violet-blue and takes over
             new Key(19.4f, new Color(0.80f, 0.60f, 0.78f), 0.75f, new Color(0.30f, 0.27f, 0.55f), new Color(0.95f, 0.56f, 0.50f), 0.76f, new Color(0.40f, 0.25f, 0.46f, 0.28f), 0.60f,
-                           new Color(1.00f, 0.66f, 0.50f), 0.66f, new Color(0.48f, 0.50f, 0.80f), new Color(0.28f, 0.26f, 0.30f), 0.76f, 0.62f),
+                           new Color(1.00f, 0.82f, 0.58f), 0.72f, new Color(0.44f, 0.54f, 0.86f), new Color(0.36f, 0.34f, 0.30f), 0.75f, 0.62f),
             new Key(20.9f, new Color(0.50f, 0.53f, 0.86f), 0.64f, new Color(0.08f, 0.10f, 0.25f), new Color(0.25f, 0.25f, 0.48f), 0.90f, new Color(0.07f, 0.09f, 0.26f, 0.45f), 0.94f,
                            Moon, MoonI * 0.95f, NightSky, NightGround, NightAmbI, 0.95f),
             new Key(24f,   NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, MoonI, NightSky, NightGround, NightAmbI, 1f),
@@ -200,6 +214,25 @@ namespace Lanternvale.Game
         public const float Sunrise = 5.9f, Sunset = 19.5f;
 
         static Color Mul(Color a, Color b) => new Color(a.r * b.r, a.g * b.g, a.b * b.b, 1f);
+
+        /// <summary>The lowest elevation (degrees) the light comes from, however low the sun's disc; at golden hour a
+        /// little higher, so the meadow catches the low sun.</summary>
+        public const float LightElevationFloor = 14f, GoldenElevationFloor = 22f;
+        /// <summary>Golden hour at its peak: the sun's intensity raised, the cool fill lowered (so the sun carries the
+        /// light), and the saturation lift of sunlit colours (Warmth.x).</summary>
+        public const float GoldenSunBoost = 0.36f, GoldenFillCut = 0.23f, GoldenLift = 0.12f;
+        /// <summary>Deep night: how far lamplit colours lean to amber (Warmth.y) and how much a lamp pool greys out and
+        /// dims the cool fill under it (Warmth.z).</summary>
+        public const float LampAmberPull = 0.45f, LampMoonMask = 0.8f;
+
+        /// <summary>0..1: how golden the hour is — full from late afternoon to sunset, a little at sunrise.</summary>
+        public static float GoldenAt(float hour)
+        {
+            hour = Mathf.Repeat(hour, 24f);
+            float dusk = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hour - 15.6f) / 1.6f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hour - 19.4f) / 1.2f)));
+            float dawn = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hour - 5.5f) / 0.9f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hour - 7.4f) / 1.4f)));
+            return Mathf.Max(dusk, dawn * 0.6f);
+        }
 
         void Evaluate(float hour)
         {
@@ -245,8 +278,12 @@ namespace Lanternvale.Game
             float sx = Mathf.Sin(az), sy = -Mathf.Max(0.3f, Mathf.Cos(az));
             float hl = Mathf.Sqrt(sx * sx + sy * sy);
             sx /= hl; sy /= hl;
-            // lighting never grazes: a low sun still lights the ground softly (painterly, no cast shadows)
-            float le = Mathf.Max(elev, 14f) * Mathf.Deg2Rad;
+            // golden hour (not on a fixed-time map: it keeps the mood its authored sky was painted for — the shrine's
+            // violet dusk)
+            Golden = UsesAuthoredSky ? 0f : GoldenAt(Hour);
+            // lighting never grazes: a low sun still lights the ground softly (painterly, no cast shadows), and at
+            // golden hour the meadow catches the warm light instead of falling to the fill
+            float le = Mathf.Max(elev, Mathf.Lerp(LightElevationFloor, GoldenElevationFloor, Golden)) * Mathf.Deg2Rad;
             var sunLight = new Vector3(sx * Mathf.Cos(le), sy * Mathf.Cos(le), -Mathf.Sin(le));
             var moonLight = new Vector3(0.47f, -0.56f, -0.68f);
             float moonW = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.35f) / 0.45f));
@@ -272,11 +309,17 @@ namespace Lanternvale.Game
             var mapLight = Color.Lerp(new Color(ml, ml, ml, 1f), MapAmbient, 0.65f);
             var sun = Color.Lerp(a.sun, b.sun, t);
             LightColor = Mul(sun, mapLight);
-            LightIntensity = Mathf.Lerp(a.sunI, b.sunI, t) * mai;
+            LightIntensity = Mathf.Lerp(a.sunI, b.sunI, t) * mai * (1f + GoldenSunBoost * Golden);
             SkyAmbient = Mul(Color.Lerp(a.skyAmb, b.skyAmb, t), mapLight);
             GroundAmbient = Mul(Color.Lerp(a.groundAmb, b.groundAmb, t), mapLight);
-            SceneAmbientIntensity = Mathf.Lerp(a.ambI, b.ambI, t) * mai;
+            SceneAmbientIntensity = Mathf.Lerp(a.ambI, b.ambI, t) * mai * (1f - GoldenFillCut * Golden);
             NightGlow = Mathf.Lerp(a.glow, b.glow, t);
+
+            // warmth (_LV_Warmth): the golden lift around sunrise and sunset, amber lamp pools as night falls (the fill
+            // greys under lamps only once it is the night's blue: at dusk it is still the warm sunlit ground)
+            float nightK = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.3f) / 0.5f));
+            float deepK = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.62f) / 0.3f));
+            Warmth = new Vector4(Golden * GoldenLift, LampAmberPull * nightK, LampMoonMask * deepK, 0f);
 
             var lc = LightColor;
             var sk = SkyAmbient;
@@ -287,7 +330,7 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------------ lamplight
 
-        static readonly Color Amber = new Color(1f, 0.68f, 0.38f);
+        static readonly Color Amber = new Color(1f, 0.78f, 0.46f);
 
         /// <summary>
         /// A lamp's / window's light colour at a night factor: warm whites and yellows deepen towards amber as night
@@ -332,7 +375,8 @@ namespace Lanternvale.Game
             SceneLighting.AmbientIntensity = SceneAmbientIntensity;
             SceneLighting.NightGlow = NightGlow;
             var rim = Color.Lerp(Color.Lerp(LightColor, Color.white, 0.45f), new Color(0.62f, 0.72f, 1f), Mathf.Clamp01(NightFactor));
-            SceneLighting.RimColor = rim;
+            // golden hour: silhouettes catch a warm glowing edge
+            SceneLighting.RimColor = rim * (1f + 0.6f * Golden);
         }
 
         /// <summary>

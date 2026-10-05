@@ -158,6 +158,11 @@ namespace Lanternvale.Preview
             // as MapView.ApplyMood: the night grade (_LV_Grade)
             Lighting.Grade = DayNight.NightGrade;
             Lighting.GradeTint = new V3(DayNight.NightGradeTint.x, DayNight.NightGradeTint.y, DayNight.NightGradeTint.z);
+            // ... and the warmth (_LV_Warmth): golden-hour lift, amber lamp pools
+            var wm = DayNight.Warmth;
+            Lighting.GoldenLift = wm.x;
+            Lighting.LampAmber = wm.y;
+            Lighting.LampMask = wm.z;
             LightCount = Lighting.LightCount;
         }
 
@@ -607,8 +612,11 @@ namespace Lanternvale.Preview
             DayNight.ApplyTo();
             var horizon = sky.Horizon;
             var fog = Color.Lerp(horizon, sky.Zenith, fogZenith);
+            // golden hour: the low sun's glow hangs warm in the distance
+            float gold = DayNight.Golden;
+            fog = Color.Lerp(fog, DayNight.GoldenHaze, 0.3f * gold);
             SceneLighting.FogColor = fog;
-            SceneLighting.FogStart = fogStart;
+            SceneLighting.FogStart = Mathf.Lerp(fogStart, fogStart * 0.7f, gold);
             SceneLighting.FogEnd = fogEnd;
             SceneLighting.FogMax = 0.85f;
             SceneLighting.WindStrength = windStrength;

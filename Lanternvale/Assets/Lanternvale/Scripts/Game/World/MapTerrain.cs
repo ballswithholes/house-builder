@@ -29,7 +29,8 @@ namespace Lanternvale.Game
         readonly List<Mesh> owned;
         readonly Transform root;
 
-        struct Blot { public Vector2 p; public float r; public Color tint; public float k; }
+        /// <summary>A soft shade on the ground; dapple: broken by sun flecks (a great canopy far overhead).</summary>
+        struct Blot { public Vector2 p; public float r; public Color tint; public float k; public bool dapple; }
         readonly List<Blot> blots = new List<Blot>();
         readonly List<Vector2> corridors = new List<Vector2>();   // x: −1 left / +1 right, y: centre
 
@@ -167,7 +168,8 @@ namespace Lanternvale.Game
                 float sc = p.scale > 0f ? p.scale : 1f;
                 string a = p.art;
                 if (a.StartsWith("decal_")) continue;
-                if (a.Contains("tree_great")) blots.Add(new Blot { p = pos + new Vector2(0f, 1f), r = 10f * sc, tint = new Color(0.66f, 0.74f, 0.78f), k = 0.75f });
+                // the great tree's crown is far above the camera's view: its dappled shade on the plaza tells of it
+                if (a.Contains("tree_great")) blots.Add(new Blot { p = pos + new Vector2(0f, 1f), r = 11f * sc, tint = new Color(0.62f, 0.72f, 0.80f), k = 0.85f, dapple = true });
                 else if (a.Contains("tree_dead")) blots.Add(new Blot { p = pos, r = 2f * sc, tint = new Color(0.8f, 0.8f, 0.84f), k = 0.5f });
                 // under a forest's canopies the shade stays soft (the floor is already a deep green)
                 else if (a.Contains("tree")) blots.Add(new Blot { p = pos + new Vector2(0f, 0.3f), r = 3.6f * sc, tint = new Color(0.68f, 0.76f, 0.78f), k = forest ? 0.45f : 0.7f });
@@ -578,6 +580,13 @@ namespace Lanternvale.Game
                 float d2 = (dx * dx + dy * dy) / (b.r * b.r);
                 if (d2 >= 1f) continue;
                 float f = (1f - d2) * (1f - d2) * b.k;
+                if (b.dapple)
+                {
+                    // a flat-topped shade (the crown's footprint) broken by round sun flecks
+                    f = Smooth(0f, 0.55f, 1f - d2) * b.k;
+                    float fleck = Mathf.PerlinNoise(x * 0.62f + s2, y * 0.7f + s5) * 0.7f + Mathf.PerlinNoise(x * 1.5f + s6, y * 1.6f + s3) * 0.3f;
+                    f *= Mathf.Lerp(1.1f, 0.15f, Smooth(0.5f, 0.62f, fleck));
+                }
                 c = new Color(c.r * Mathf.Lerp(1f, b.tint.r, f), c.g * Mathf.Lerp(1f, b.tint.g, f), c.b * Mathf.Lerp(1f, b.tint.b, f));
             }
             // the roads out of the map: warmer, worn ground (near the village the dirt texture shows it, tint the meadow)
