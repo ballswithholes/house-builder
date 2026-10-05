@@ -33,6 +33,15 @@ namespace Lanternvale.Game
         /// <summary>Most an idle head + neck turn towards the camera (degrees), and how far they tip up to it.</summary>
         const float ViewTurn = 22f, ViewPitch = 7f;
 
+        /// <summary>Share of that turn kept while striking, shooting or casting (the face stays readable in combat).</summary>
+        const float ActionView = 0.55f;
+
+        /// <summary>
+        /// Share of an action key's chest bow and twist the neck and head take back (the gaze stays level and on the
+        /// target), and how far the chin then lifts (degrees): seen from ~44° above, a level head still shows mostly crown.
+        /// </summary>
+        const float HeadLevel = 0.9f, HeadAim = 0.6f, ActionChinUp = 5f;
+
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
         static readonly Vector3 PoleR = V(1f, -1f, -0.2f), PoleL = V(-1f, -1f, -0.2f);
@@ -65,12 +74,24 @@ namespace Lanternvale.Game
             K(0.45f, V(0.22f, -0.12f, 0.15f), V(0f, 0f, 1f), PoleR, V(-0.2f, -0.1f, 0.2f), V(0f, 0f, 1f), PoleL, 0f, 4f, 0f, 0f, 0.3f, 0.04f, 0.25f),
         };
 
+        // Mace / hammer: the wind-up raises the fist beside and behind the right shoulder (not over the crown) with the
+        // head of the weapon up and back, so from any side the haft stands clear of the skull, then chops down in front.
         static readonly AKey[] MaceKeys =
         {
             K(0.00f, V(0.24f, -0.18f, 0.18f), V(0f, 0.6f, 0.8f), PoleR, ShieldL, ShieldDir, PoleL),
-            K(0.14f, V(0.12f, 0.6f, -0.06f), V(0f, 0.3f, -1f), V(1f, 0.2f, -0.3f), V(-0.22f, 0.1f, 0.28f), ShieldDir, PoleL, 10f, -10f, -4f, -6f, -0.03f, 0f, 0f),
+            K(0.14f, V(0.34f, 0.46f, -0.16f), V(0.35f, 0.55f, -0.75f), V(1f, 0.2f, -0.4f), V(-0.22f, 0.1f, 0.28f), ShieldDir, PoleL, 20f, -8f, -3f, -4f, -0.03f, 0f, 0f),
             K(0.22f, V(0.05f, -0.1f, 0.55f), V(0f, -0.85f, 0.5f), V(1f, -0.3f, 0f), V(-0.28f, -0.1f, 0.15f), ShieldDir, PoleL, -8f, 20f, 10f, 6f, 0.32f, 0.12f, 0.25f),
             K(0.32f, V(0.05f, -0.16f, 0.5f), V(0f, -0.95f, 0.3f), V(1f, -0.3f, 0f), V(-0.28f, -0.1f, 0.15f), ShieldDir, PoleL, -8f, 18f, 9f, 4f, 0.3f, 0.1f, 0.25f),
+        };
+
+        // two-handed hammer / axe (smith, bandit chief): both fists on the haft over the right shoulder, lower than the
+        // one-handed wind-up so the left forearm crosses below the chin (the left hand is put on the haft: SolveBiped)
+        static readonly AKey[] MaceTwoKeys =
+        {
+            K(0.00f, V(0.2f, -0.12f, 0.22f), V(0.1f, 0.5f, 0.85f), PoleR, V(0.1f, -0.16f, 0.22f), V(0.1f, 0.5f, 0.85f), PoleL),
+            K(0.14f, V(0.34f, 0.3f, -0.14f), V(0.3f, 0.62f, -0.72f), V(1f, 0f, -0.5f), V(0.26f, 0.16f, -0.02f), V(0.3f, 0.62f, -0.72f), V(-0.5f, -1f, 0f), 30f, -8f, -3f, -4f, -0.04f, 0.04f, 0f),
+            K(0.22f, V(0.04f, -0.12f, 0.52f), V(0f, -0.85f, 0.5f), V(1f, -0.3f, 0f), V(-0.04f, -0.2f, 0.42f), V(0f, -0.85f, 0.5f), V(-1f, -1f, 0f), -10f, 18f, 9f, 5f, 0.34f, 0.12f, 0.28f),
+            K(0.32f, V(0.04f, -0.18f, 0.48f), V(0f, -0.95f, 0.3f), V(1f, -0.3f, 0f), V(-0.04f, -0.24f, 0.4f), V(0f, -0.95f, 0.3f), V(-1f, -1f, 0f), -10f, 16f, 8f, 4f, 0.32f, 0.1f, 0.28f),
         };
 
         // Staff holders grip their staff at 42 % of its length, so ~0.7 m of shaft sticks out BELOW the hand: any key
@@ -78,11 +99,13 @@ namespace Lanternvale.Game
         // staff upright, raised out at the right side and a little behind the shoulder line (seen from the game camera
         // it stands clear behind the head instead of across the face) while the free left hand points or casts; the
         // melee jab is two-handed with the shaft carried along the right flank (the butt passes behind the right hip).
-        //   melee: staff raised up and back over the right shoulder, both hands on it, then a two-handed jab
+        //   melee: staff raised high out beside the right shoulder, cocked back a little (the butt stays out at the side
+        //   and behind the chest line, so from the camera's side neither half of the shaft crosses the face and from the
+        //   far side it stays behind the head), the free left hand reaching forward; then a two-handed jab
         static readonly AKey[] StaffKeys =
         {
             K(0.00f, V(0.26f, -0.12f, 0.16f), V(0.12f, 1f, 0.1f), PoleR, V(-0.2f, -0.14f, 0.18f), V(0.12f, 1f, 0.1f), PoleL),
-            K(0.13f, V(0.24f, 0.52f, -0.28f), V(0.3f, 0.7f, -0.65f), V(1f, 0.1f, -0.4f), V(0.15f, 0.31f, -0.085f), V(0.3f, 0.7f, -0.65f), V(-1f, -1f, 0f),
+            K(0.13f, V(0.36f, 0.28f, -0.1f), V(0.08f, 0.93f, -0.36f), V(1f, -0.3f, -0.4f), V(-0.06f, 0.04f, 0.34f), V(0f, 0.4f, 1f), V(-1f, -1f, 0f),
               15f, -6f, -2f, 0f, -0.03f, 0.02f, 0f),
             K(0.22f, V(0.15f, -0.03f, 0.15f), V(-0.25f, 0.05f, 1f), V(1f, -1f, 0f), V(0.08f, -0.02f, 0.42f), V(-0.25f, 0.05f, 1f), V(-1f, -1f, 0f),
               15f, 10f, 4f, 0f, 0.28f, 0.06f, 0.22f),
@@ -230,7 +253,7 @@ namespace Lanternvale.Game
                 case UnitStrike.Sword: return SwordKeys;
                 case UnitStrike.Greatsword: return GreatKeys;
                 case UnitStrike.Daggers: return DaggerKeys;
-                case UnitStrike.Mace: useL = m.Shield || m.TwoHanded; return MaceKeys;
+                case UnitStrike.Mace: useL = m.Shield || m.TwoHanded; return m.TwoHanded ? MaceTwoKeys : MaceKeys;
                 case UnitStrike.Staff: useL = LeftFree; return StaffKeys;   // two-handed when the left hand is free
                 case UnitStrike.Spear: return SpearKeys;
                 case UnitStrike.Claw: case UnitStrike.Whip: return ClawKeys;
@@ -371,8 +394,10 @@ namespace Lanternvale.Game
             float view = inp.ViewYaw;
             bool camFront = Mathf.Abs(view) < 115f;
             float viewSide = camFront && Mathf.Abs(view) > 8f ? Mathf.Sign(view) : 0f;
-            float viewGoal = camFront && inp.Action == UnitAction.None && !inp.Lying && !inp.Dead ? idleW : 0f;
-            viewW = Mathf.Lerp(viewW, viewGoal, 1f - Mathf.Exp(-dt * (viewGoal < viewW ? 9f : 2.5f)));   // snaps back for actions
+            // (striking, shooting and casting keep part of the turn: the face stays readable in combat)
+            bool combatAct = inp.Action == UnitAction.Attack || inp.Action == UnitAction.Shoot || inp.Action == UnitAction.Cast;
+            float viewGoal = !camFront || inp.Lying || inp.Dead ? 0f : inp.Action == UnitAction.None ? idleW : combatAct ? ActionView : 0f;
+            viewW = Mathf.Lerp(viewW, viewGoal, 1f - Mathf.Exp(-dt * (viewGoal < viewW ? 9f : 2.5f)));   // eases back quickly for actions
             float camYaw = Mathf.Clamp(view, -ViewTurn, ViewTurn) * viewW * (camFront ? 1f : 0f);
             float camPitch = -ViewPitch * viewW;
 
@@ -395,6 +420,7 @@ namespace Lanternvale.Game
             headE = new Vector3(-totalPitch * 0.4f + lookPitch * 0.6f - breathe * 0.4f, -chestModelYaw * 0.5f + lookYaw * 0.6f, -(hipRoll + spineE.z + chestE.z) * 0.4f);
 
             // ---- arms (FK carry styles)
+            holdView = view;
             for (int si = 0; si < 2; si++) HoldPose(si, si == 0 ? m.HoldL : m.HoldR, w, run, gL, heavy, small, floater, v);
 
             // ---- floating
@@ -506,29 +532,51 @@ namespace Lanternvale.Game
             switch (hold)
             {
                 case UnitHold.OneHand:
+                    if (m.Height < ChildHeight)
+                    {
+                        // a child's stick sword, held up and forward like a toy sword (the adult hold dragged it along
+                        // the ground between the short legs)
+                        p = -22f; inw = 4f; roll += 4f; e = 52f + 20f * run; swingK = 0.35f;
+                        handLock[si] = true; handDir[si] = new Vector3(s * 0.25f, 0.75f, 0.62f);
+                        break;
+                    }
                     // blade forward-down and a little out: it clears the knee and its tip stays off the ground
                     p -= 6f; e += 16f; roll += 3f; handE[si] = new Vector3(62f, s * 16f, 0f); swingK = 0.8f;
                     break;
                 case UnitHold.Daggers: p -= 8f; e += 24f; inw += 6f; handE[si] = new Vector3(56f, 0f, 0f); swingK = 0.85f; break;   // blades ~level
                 case UnitHold.Staff:
-                    // hand out at the side and level with the hip (not in front of the body), the shaft leaning a little
-                    // outwards: from the high game camera the staff top then stands beside the head instead of on the face
-                    p = 10f - 16f * run; roll = 16f; e = 30f + 20f * run; swingK = 0.45f;
-                    handLock[si] = true; handDir[si] = new Vector3(s * 0.2f, 1f, -0.08f + 0.18f * run);
+                {
+                    // hand out at the side and level with the hip (not in front of the body), the shaft upright beside
+                    // the head as the camera sees it (PoleHold)
+                    float near = PoleHold(s, out var dir);
+                    p = 10f + 16f * Mathf.Max(0f, near) - 16f * run; roll = 16f + 4f * Mathf.Abs(near); e = 30f + 20f * run; swingK = 0.45f;
+                    handLock[si] = true; handDir[si] = dir + new Vector3(0f, 0f, 0.18f * run);
                     break;
+                }
                 case UnitHold.Spear:
-                    p = -10f; roll = 9f; e = 30f + 20f * run; swingK = 0.4f;
-                    handLock[si] = true; handDir[si] = new Vector3(0f, 1f, 0.05f + 0.25f * run);
+                {
+                    float near = PoleHold(s, out var dir);
+                    p = -10f + 28f * Mathf.Max(0f, near) - 6f * run; roll = 12f + 5f * Mathf.Abs(near); e = 30f + 20f * run; swingK = 0.4f;
+                    handLock[si] = true; handDir[si] = dir + new Vector3(0f, 0f, 0.05f + 0.25f * run);
                     break;
+                }
                 case UnitHold.Bow:
                     handLock[si] = true; handDir[si] = new Vector3(0f, 1f, 0.05f); e += 6f; swingK = 0.9f;
                     break;
                 case UnitHold.Shoulder:
-                    // greatsword carried on the shoulder: the fist in front of the chest, the blade resting on the
-                    // shoulder and lying back past it, low behind the head (it used to stand up beside the face)
-                    p = -25f; inw = 10f; roll = 14f; e = 80f; swingK = 0.12f;
-                    handLock[si] = true; handDir[si] = new Vector3(s * 0.3f, 0.45f, -0.85f);
+                {
+                    // greatsword / great axe. On the camera's side of the body it is carried back over the shoulder, the
+                    // fist in front of the chest and the blade sloping back and out: it runs out to the screen side
+                    // behind the head, under the chin. On the far side anything that goes back from a raised fist is
+                    // seen rising behind the head (going away from the high camera reads as going up) and a blade
+                    // trailing back hides behind the body, so there the fist drops to the hip and the blade is held
+                    // point forward and down in front, its tip off the ground
+                    float near = Mathf.Clamp01(s * Mathf.Sin(holdView * Mathf.Deg2Rad) * 1.4f + 0.3f);
+                    p = Mathf.Lerp(-8f, -16f, near); inw = 0f; roll = 22f; e = Mathf.Lerp(40f, 92f, near); swingK = 0.12f;
+                    handLock[si] = true;
+                    handDir[si] = Vector3.Lerp(new Vector3(s * 0.22f, -0.55f, 0.8f), new Vector3(s * 0.42f, 0.26f, -0.87f), near);
                     break;
+                }
                 case UnitHold.Book:
                     p = -14f; inw = 22f; roll = 6f; e = 84f; swingK = 0.15f;
                     handLock[si] = true; handDir[si] = new Vector3(-s * 0.15f, 0.85f, 0.5f);
@@ -559,6 +607,34 @@ namespace Lanternvale.Game
             armI[si] = inw;
             armRl[si] = roll;
             elb[si] = e + Mathf.Max(0f, -sw) * 0.35f;
+        }
+
+        /// <summary>UnitAnimInput.ViewYaw of this frame (where the camera is, seen from the unit), for the carry styles.</summary>
+        float holdView;
+
+        /// <summary>Bipeds shorter than this (the village children) carry a one-hand weapon like a toy.</summary>
+        const float ChildHeight = 1.4f;
+
+        /// <summary>
+        /// A staff or spear held upright at the side, the hand at the hip. Seen from the high game camera a vertical
+        /// shaft runs straight up through whatever is above the hand, so where it may go depends on the camera's side:
+        /// a hand on the camera's side of the body (`near` → +1, e.g. the right hand of a unit facing screen-right) is
+        /// held back, behind the face as seen on screen; the shaft always leans out to the hand's side of the head on
+        /// screen and away from the camera, so it is seen at full length beside the head (leaning towards the camera it
+        /// foreshortened into a hip-high cane). Returns `near`; `dir` is the shaft direction in model space.
+        /// </summary>
+        float PoleHold(int s, out Vector3 dir)
+        {
+            float a = holdView * Mathf.Deg2Rad;
+            float sn = Mathf.Sin(a), cs = Mathf.Cos(a);
+            var toCam = new Vector3(sn, 0f, cs);   // horizontal, model space
+            var right = new Vector3(-cs, 0f, sn);  // screen-right
+            float near = s * sn;
+            // the hand's screen offset from the head: out at the side (s * 0.3 m), moved back when near
+            float hs = -s * (0.3f * cs + 0.12f * sn * sn);
+            float side = Mathf.Clamp(hs / 0.08f, -1f, 1f);
+            dir = Vector3.up + right * (0.2f * side) - toCam * 0.15f;
+            return near;
         }
 
         // ---------------------------------------------------------------- actions
@@ -601,6 +677,8 @@ namespace Lanternvale.Game
             AKey[] keys = null;
             bool useL = false;
             float envOut = 0.16f;
+            // a headbutt leads with the head; everything else keeps the face up
+            actHeadLevel = inp.Action != UnitAction.Attack || m.Strike != UnitStrike.Headbutt;
             switch (inp.Action)
             {
                 case UnitAction.Attack: keys = StrikeKeys(out useL); break;
@@ -669,6 +747,14 @@ namespace Lanternvale.Game
             chestE.x += act.ChestPitch * wA;
             chestE.y += act.ChestYaw * wA;
             headE.x += act.Head * wA;
+            if (actHeadLevel)
+            {
+                // the neck and head take back most of the chest's bow and twist: the face stays up and towards the
+                // target instead of showing the high game camera the crown at the moment of a strike or a cast
+                float bow = ((act.ChestPitch + act.Spine) * HeadLevel + ActionChinUp) * wA, twist = act.ChestYaw * wA * HeadAim;
+                neckE.x -= bow * 0.4f; headE.x -= bow * 0.6f;
+                neckE.y -= twist * 0.4f; headE.y -= twist * 0.6f;
+            }
             if (!body) return;
             // crouch / lunge / step by the leg length: the legs have to reach the planted feet
             float lk = m.LegLength / RefLeg;
@@ -693,6 +779,7 @@ namespace Lanternvale.Game
 
         Vector3 actDir = Vector3.forward;
         float actStepT;
+        bool actHeadLevel = true;
         readonly Quaternion[] skirtQ = new Quaternion[2];
 
         /// <summary>
@@ -847,7 +934,8 @@ namespace Lanternvale.Game
                         target = act.L; dir = act.LDir; pole = act.LPole;
                         if (m.TwoHanded && (m.Strike == UnitStrike.Mace || m.Strike == UnitStrike.Greatsword))
                         {
-                            target = act.R - act.RDir.normalized * 0.14f;
+                            // both fists on the grip: a sword hilt is short, a hammer or axe haft is gripped wider
+                            target = act.R - act.RDir.normalized * (m.Strike == UnitStrike.Mace ? 0.2f : 0.14f);
                             dir = act.RDir;
                             pole = V(-1f, -0.5f, 0f);
                         }

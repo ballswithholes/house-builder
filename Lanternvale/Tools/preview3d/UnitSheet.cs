@@ -4,7 +4,12 @@
 // wind-up and strike, a shot (release) and a cast (release), each beside a 1.75 m reference figure (slate) on a 1 m
 // checker. Shading is the map renderer's (noon light, ink outlines at the game's 1.9 px relative to on-screen size).
 //   units <out.png> [keys|group|all] [--tile 240] [--ss 2] [--hour 12.5] [--speed 3.4]
-// `all` writes one page per group (<out>_<group>.png); a group name or a key list writes one page.
+//         [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
+// `all` writes one page per group (<out>_<group>.png); a group name or a key list writes one page. A key may name a
+// look variation: `npc_child#2`, or `npc_child@child_nell` for the one an NPC id gets in the game.
+// `--view game` puts every column at the game camera: idle and walk facing right and left (SetFacing ±1), then the
+// four action frames facing right (`--facing -1`: left). `--view spin` shows one pose (`--pose`) at nine facings
+// relative to the camera, from the game camera's pitch (or `--pitch`): in combat a unit faces its target, any way.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -37,7 +42,7 @@ namespace Lanternvale.Preview
             public UnitAction Action; public float Dur, At;
         }
 
-        static readonly Column[] Columns =
+        static readonly Column[] SheetColumns =
         {
             new Column { Label = "game", View = View.Game, Pose = PoseKind.Idle, Yaw = UnitPoser.FacingYaw(1) },
             new Column { Label = "3/4 idle", View = View.Quarter, Pose = PoseKind.Idle, Yaw = 150f },
@@ -48,9 +53,52 @@ namespace Lanternvale.Preview
             new Column { Label = "cast", View = View.Quarter, Pose = PoseKind.Act, Yaw = 115f, Action = UnitAction.Cast, Dur = 0.7f, At = UnitView.CastReleaseTime },
         };
 
+        static Column[] Columns = SheetColumns;
+
+        /// <summary>A column showing a pose by name (--pose), with the sheet columns' action timings.</summary>
+        static Column PoseColumn(string pose, string label, View view, float yaw)
+        {
+            var c = new Column { Label = label, View = view, Yaw = yaw, Pose = PoseKind.Act, Action = UnitAction.Attack, Dur = 0.5f };
+            switch (pose)
+            {
+                case "idle": c.Pose = PoseKind.Idle; break;
+                case "walk": c.Pose = PoseKind.Walk; break;
+                case "wind": c.At = 0.13f; break;
+                case "strike": c.At = UnitView.AttackHitTime; break;
+                case "shoot": c.Action = UnitAction.Shoot; c.Dur = 0.45f; c.At = UnitView.ShootReleaseTime; break;
+                case "cast": c.Action = UnitAction.Cast; c.Dur = 0.7f; c.At = UnitView.CastReleaseTime; break;
+                default: throw new ArgumentException("unknown pose " + pose + " (idle walk wind strike shoot cast)");
+            }
+            return c;
+        }
+
+        /// <summary>--view game: idle and walk facing right and left, then the four action frames facing `facing`.</summary>
+        static Column[] GameColumns(int facing)
+        {
+            float r = UnitPoser.FacingYaw(1), l = UnitPoser.FacingYaw(-1), a = UnitPoser.FacingYaw(facing);
+            string side = facing >= 0 ? "" : " L";
+            return new[]
+            {
+                PoseColumn("idle", "game R", View.Game, r),
+                PoseColumn("idle", "game L", View.Game, l),
+                PoseColumn("walk", "walk R", View.Game, r),
+                PoseColumn("walk", "walk L", View.Game, l),
+                PoseColumn("wind", "wind-up" + side, View.Game, a),
+                PoseColumn("strike", "strike" + side, View.Game, a),
+                PoseColumn("shoot", "shoot" + side, View.Game, a),
+                PoseColumn("cast", "cast" + side, View.Game, a),
+            };
+        }
+
+        /// <summary>--view spin: one pose at nine facings (World3D yaw: 90 = screen-right, 180 = towards the camera).</summary>
+        static Column[] SpinColumns(string pose) =>
+            new[] { 30f, 70f, 90f, 125f, 160f, 200f, 235f, 270f, 310f }
+                .Select(y => PoseColumn(pose, pose + " " + y.ToString("0", CultureInfo.InvariantCulture), View.Game, y)).ToArray();
+
         // the game camera at the default zoom (CameraRig): distance and pitch; the 3/4 camera: low and closer
         static readonly float GameDist = CameraMath.DefaultSize / Mathf.Tan(CameraMath.FieldOfView * 0.5f * Mathf.Deg2Rad);
-        static readonly float GamePitch = CameraMath.PitchFor(GameDist);
+        static readonly float DefaultGamePitch = CameraMath.PitchFor(GameDist);
+        static float GamePitch = DefaultGamePitch;
         const float QuarterDist = 9f, QuarterPitch = 14f;
         // pixels per metre at 1080p for a unit at the look-at point of the default view (outline width reference)
         static readonly float GamePxPerM = 1080f / (2f * CameraMath.DefaultSize);
@@ -61,6 +109,9 @@ namespace Lanternvale.Preview
             string sel = args.Length > 1 && !args[1].StartsWith("--") ? args[1] : "all";
             int tile = 240, ss = 2;
             float hour = 12.5f, speed = 3.4f;
+            string view = "sheet", pose = "wind";
+            int facing = 1;
+            float pitch = DefaultGamePitch;
             for (int i = 1; i < args.Length; i++)
             {
                 switch (args[i])
@@ -69,11 +120,23 @@ namespace Lanternvale.Preview
                     case "--ss": ss = Math.Clamp(int.Parse(args[++i]), 1, 4); break;
                     case "--hour": hour = float.Parse(args[++i], CultureInfo.InvariantCulture); break;
                     case "--speed": speed = float.Parse(args[++i], CultureInfo.InvariantCulture); break;
+                    case "--view": view = args[++i]; break;
+                    case "--pose": pose = args[++i]; break;
+                    case "--facing": facing = int.Parse(args[++i], CultureInfo.InvariantCulture) >= 0 ? 1 : -1; break;
+                    case "--pitch": pitch = float.Parse(args[++i], CultureInfo.InvariantCulture); break;
                     case "--gamma": Lighting.Linear = false; QualitySettings.activeColorSpace = ColorSpace.Gamma; break;
                     case "--root": i++; break;
                     default: if (i == 1) break; throw new ArgumentException("unknown option " + args[i]);
                 }
             }
+            switch (view)
+            {
+                case "sheet": Columns = SheetColumns; break;
+                case "game": Columns = GameColumns(facing); break;
+                case "spin": Columns = SpinColumns(pose); break;
+                default: throw new ArgumentException("unknown view " + view + " (sheet game spin)");
+            }
+            GamePitch = pitch;
             Debug.Quiet = true;
             UnitPoser.CameraYaw = 0f;   // every tile's camera looks along yaw 0
 
@@ -100,11 +163,12 @@ namespace Lanternvale.Preview
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 int header = 22;
                 // pages of static models (totems, dummy) only have the two idle columns
-                bool allStatic = page.keys.All(k => { var m = UnitModels.Get(k); return m != null && (m.Static || m.Rig == UnitRigKind.Static); });
-                int ncol = allStatic ? 2 : Columns.Length;
+                bool allStatic = page.keys.All(k => { var m = ModelOf(k); return m != null && (m.Static || m.Rig == UnitRigKind.Static); });
+                int ncol = allStatic && view == "sheet" ? 2 : Columns.Length;
                 var img = new SheetImage(Math.Max(tile * ncol, 640), header + tile * page.keys.Length);
                 img.Fill(0, 0, Math.Max(tile * ncol, 640), header + tile * page.keys.Length, new Vector3(0.93f, 0.92f, 0.88f));
-                img.Text(6, 6, $"{page.title}  hour {hour:0.0}  walk {speed:0.0} m/s  checker 1 m  slate figure 1.75 m");
+                string viewNote = view == "sheet" ? "" : $"  view {view}{(view == "spin" ? " " + pose : "")} pitch {GamePitch:0}";
+                img.Text(6, 6, $"{page.title}  hour {hour:0.0}  walk {speed:0.0} m/s  checker 1 m  slate figure 1.75 m{viewNote}");
                 for (int r = 0; r < page.keys.Length; r++)
                 {
                     string key = page.keys[r];
@@ -124,15 +188,31 @@ namespace Lanternvale.Preview
             public bool Skip;
         }
 
-        static void RenderRow(SheetImage img, int ox, int oy, int tile, int ss, string key, float speed, int ncol)
+        /// <summary>
+        /// A sheet key: a model key, `key#N` (look variation N) or `key@npcId` (the variation that NPC gets in the game,
+        /// UnitModels.StableVariant), e.g. npc_child@child_nell.
+        /// </summary>
+        static string ParseKey(string k, out int variant)
         {
-            var model = UnitModels.Get(key);
+            variant = 0;
+            int at = k.IndexOf('@');
+            if (at < 0) return k;
+            variant = UnitModels.StableVariant(k.Substring(at + 1));
+            return k.Substring(0, at);
+        }
+
+        static UnitModel ModelOf(string k) => UnitModels.Get(ParseKey(k, out int v), v);
+
+        static void RenderRow(SheetImage img, int ox, int oy, int tile, int ss, string label, float speed, int ncol)
+        {
+            string key = ParseKey(label, out int variant);
+            var model = UnitModels.Get(key, variant);
             var tiles = new List<Tile>();
             foreach (var col in Columns.Take(ncol))
             {
                 var t = new Tile { Col = col, Root = new GameObject("Tile " + col.Label).transform };
                 // the game column is placed like SetFacing(+1) (static models face the camera); the 3/4 columns are fixed views
-                t.Unit = new UnitPoser(key, 0f, t.Root, Vector2.zero, col.Yaw, 0, col.View != View.Game);
+                t.Unit = new UnitPoser(key, 0f, t.Root, Vector2.zero, col.Yaw, variant, col.View != View.Game);
                 var u = t.Unit;
                 bool still = model.Static || model.Rig == UnitRigKind.Static;
                 switch (col.Pose)
@@ -204,7 +284,7 @@ namespace Lanternvale.Preview
                 img.Text(x0 + 4, oy + 4, col.Label);
                 if (c == 0)
                 {
-                    img.Text(x0 + 4, oy + tile - 26, key);
+                    img.Text(x0 + 4, oy + tile - 26, label);
                     img.Text(x0 + 4, oy + tile - 14, $"{model.Height:0.00}m {model.Rig.ToString().ToLowerInvariant()} {model.Mesh.T.Count / 3}t");
                 }
             }
