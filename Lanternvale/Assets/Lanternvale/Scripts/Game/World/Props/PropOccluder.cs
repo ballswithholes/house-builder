@@ -235,5 +235,51 @@ namespace Lanternvale.Game
             int spread = (cols & 1) + ((cols >> 1) & 1) + ((cols >> 2) & 1);
             return hidden >= FadeAt && spread >= 2;
         }
+
+        /// <summary>
+        /// Does the prop hide a ground point (the cursor's, the camera's focus)? The camera ray to a point a little above
+        /// it meets the prop's surface clearly before it.
+        /// </summary>
+        public bool HidesPoint(Vector3 cam, Vector3 point) => Blocks(cam, point + new Vector3(0f, 0f, -0.35f), 0.6f);
+
+        // ------------------------------------------------------------------ cut-outs (Lanternvale/LowPoly + Outline _Cut0..3)
+        //
+        // Instead of dissolving the whole prop, MapView cuts a soft round hole into it around what it hides: a unit, the
+        // hovered object, the cursor's ground point or the camera's focus. A cut is a world sphere (xyz centre, w radius in
+        // metres) that the shaders turn into a circle on screen; surfaces clearly behind its centre are kept.
+
+        /// <summary>Cut-out slots per renderer (_Cut0 … _Cut3).</summary>
+        public const int MaxCuts = 4;
+        public static readonly int[] CutIds =
+        {
+            Shader.PropertyToID("_Cut0"), Shader.PropertyToID("_Cut1"), Shader.PropertyToID("_Cut2"), Shader.PropertyToID("_Cut3"),
+        };
+        /// <summary>Radius of the hole around the cursor's ground point / the camera's focus (m).</summary>
+        public const float PointCutRadius = 1.35f;
+
+        /// <summary>
+        /// The cut around a unit: centred on its body, about 1.5 × its height (or its length: a four-legged body is
+        /// about 2.4 × its footprint diameter long) across, so the open core holds the whole unit.
+        /// </summary>
+        public static Vector4 UnitCut(Vector3 center, Vector3 head, float footprint)
+        {
+            var feet = new Vector3(center.x, center.y, 0f);
+            var axis = head - feet;
+            float h = Mathf.Max(0.4f, axis.magnitude);
+            var c = feet + axis * 0.5f;
+            float r = Mathf.Max(h, footprint * 2.4f) * 0.8f + 0.4f;
+            return new Vector4(c.x, c.y, c.z, r);
+        }
+
+        /// <summary>The cut around an object (a chest, a hovered prop) from its world bounds.</summary>
+        public static Vector4 BoundsCut(Bounds b)
+        {
+            var c = b.center;
+            float r = Mathf.Max(0.7f, Mathf.Max(b.extents.x, Mathf.Max(b.extents.y, b.extents.z)) * 1.3f) + 0.35f;
+            return new Vector4(c.x, c.y, c.z, r);
+        }
+
+        /// <summary>The cut around a ground point (cursor, camera focus).</summary>
+        public static Vector4 PointCut(Vector3 ground) => new Vector4(ground.x, ground.y, -0.4f, PointCutRadius);
     }
 }

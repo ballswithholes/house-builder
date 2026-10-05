@@ -2,7 +2,7 @@
 //   renderer.sharedMaterials = { LowPoly, Outline }  → Unity draws the (last) submesh again with this material.
 // The hull is pushed out along the smoothed normal that MeshBuilder stores in the tangent (so flat-shaded models get
 // a closed outline); wind and dither fade match Lanternvale/LowPoly.
-// Per-renderer: _OutlineColor, _OutlineWidth (pixels at 1080p), _Fade, _WindScale.
+// Per-renderer: _OutlineColor, _OutlineWidth (pixels at 1080p), _Fade, _WindScale, _Cut0.._Cut3 (as LowPoly).
 Shader "Lanternvale/Outline"
 {
     Properties
@@ -12,6 +12,10 @@ Shader "Lanternvale/Outline"
         _Fade ("Fade (1 = solid)", Range(0,1)) = 1
         _WindScale ("Wind scale", Float) = 1
         _FogScale ("Fog scale", Float) = 1
+        _Cut0 ("Cut-out 0 (xyz centre, w radius m)", Vector) = (0,0,0,0)
+        _Cut1 ("Cut-out 1", Vector) = (0,0,0,0)
+        _Cut2 ("Cut-out 2", Vector) = (0,0,0,0)
+        _Cut3 ("Cut-out 3", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -72,10 +76,11 @@ Shader "Lanternvale/Outline"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                if (_Fade < 0.999)
+                half cover = _Fade * LV_CutCoverage(i.worldPos, false);
+                if (cover < 0.999)
                 {
                     float2 pixel = (i.screenPos.xy / max(i.screenPos.w, 0.0001)) * _ScreenParams.xy;
-                    clip(_Fade - LV_Dither(pixel) - 0.001);
+                    clip(cover - LV_Dither(pixel) - 0.001);
                 }
                 half3 col = _OutlineColor.rgb;
                 col = lerp(col, _LV_FogColor.rgb, LV_FogAmount(i.worldPos, _FogScale));

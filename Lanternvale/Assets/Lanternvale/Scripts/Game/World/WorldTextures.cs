@@ -1,12 +1,13 @@
-// Small procedural textures used by the 3D world (sky discs, stars, glows, particles, water, markers). Generated once
-// on first use and kept for the session; owned by the world layer so it does not depend on other builders' art code.
+// Small procedural textures used by the 3D world (sky discs, stars, glows, particles, water, markers, the terrain's
+// gravel and leaf-litter detail layers). Generated once on first use and kept for the session; owned by the world layer
+// so it does not depend on other builders' art code.
 using UnityEngine;
 
 namespace Lanternvale.Game
 {
     internal static class WorldTextures
     {
-        static Texture2D glow, dot, star, moon, leaf, mist, streak, ring, chevron, water;
+        static Texture2D glow, dot, star, moon, leaf, mist, streak, ring, chevron, water, gravel, litter;
 
         /// <summary>Soft radial glow: white, alpha falls off to the rim (halos, fireflies, embers, sun).</summary>
         public static Texture2D Glow => glow != null ? glow : (glow = Radial("lv_world_glow", 64, d =>
@@ -186,6 +187,193 @@ namespace Lanternvale.Game
                 return water = Make("lv_world_water", n, n, px, TextureWrapMode.Repeat);
             }
         }
+
+        // ------------------------------------------------------------------ terrain detail layers (Lanternvale/Terrain _DetailTex)
+
+        /// <summary>
+        /// Tiling raked gravel (2.4 m per tile, opaque): small pale pebbles, warm and cool, in raked ripples running along
+        /// X (10 per tile) — the shrine's courtyard gravel beside its paving.
+        /// </summary>
+        public static Texture2D Gravel
+        {
+            get
+            {
+                if (gravel != null) return gravel;
+                const int n = 256;
+                var rng = new System.Random(4711);
+                float R() => (float)rng.NextDouble();
+                var col = new Color[n * n];
+                var lowN = TileNoise(n, 8, rng);
+                // the bed between the pebbles, shaded by the rake's ripples (16 per tile, gently wavering)
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float u = (float)x / n, v = (float)y / n;
+                        float rip = Ripple(u, v);
+                        float k = 0.9f + 0.1f * rip + 0.05f * (lowN[y * n + x] - 0.5f);
+                        col[y * n + x] = new Color(0.78f * k, 0.74f * k, 0.66f * k, 1f);
+                    }
+                var tones = new[]
+                {
+                    new Color(0.88f, 0.85f, 0.78f), new Color(0.85f, 0.80f, 0.72f), new Color(0.82f, 0.81f, 0.78f),
+                    new Color(0.90f, 0.87f, 0.80f), new Color(0.80f, 0.80f, 0.80f), new Color(0.84f, 0.78f, 0.70f),
+                };
+                for (int i = 0; i < 2400; i++)
+                {
+                    float cx = R() * n, cy = R() * n;
+                    float rx = 1.3f + R() * 1.9f, ry = rx * (0.65f + 0.3f * R());
+                    float ang = R() * Mathf.PI;
+                    // the rake leaves the crests lit and the furrows in shade
+                    float rip = Ripple(cx / n, cy / n);
+                    var tone = tones[rng.Next(tones.Length)] * (0.95f + 0.06f * R() + 0.08f * rip);
+                    float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+                    int x0 = Mathf.FloorToInt(cx - rx - 1), x1 = Mathf.CeilToInt(cx + rx + 1);
+                    int y0 = Mathf.FloorToInt(cy - rx - 1), y1 = Mathf.CeilToInt(cy + rx + 1);
+                    for (int y = y0; y <= y1; y++)
+                        for (int x = x0; x <= x1; x++)
+                        {
+                            float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                            float lx = (dx * ca + dy * sa) / rx, ly = (-dx * sa + dy * ca) / ry;
+                            float d = Mathf.Sqrt(lx * lx + ly * ly);
+                            if (d >= 1.1f) continue;
+                            float a = 1f - Smooth(0.75f, 1.1f, d);
+                            // lit from above-left, a darker rim where it sinks into the bed
+                            float lit = 1.02f + 0.06f * (-dx / rx * 0.5f + dy / rx * 0.7f) - 0.08f * Smooth(0.55f, 1f, d);
+                            int k = Wrap(y, n) * n + Wrap(x, n);
+                            col[k] = Color.Lerp(col[k], tone * lit, a);
+                        }
+                }
+                var px = new Color32[n * n];
+                for (int i = 0; i < px.Length; i++) { var c = col[i]; c.a = 1f; px[i] = c; }
+                return gravel = Make("lv_world_gravel", n, n, px, TextureWrapMode.Repeat);
+            }
+        }
+
+        /// <summary>
+        /// Tiling leaf litter (3.2 m per tile; alpha = the leaves): ochre, amber, olive and faded rust leaves in loose
+        /// drifts with a few twigs — the forest floor under its trees.
+        /// </summary>
+        public static Texture2D LeafLitter
+        {
+            get
+            {
+                if (litter != null) return litter;
+                const int n = 512;
+                var rng = new System.Random(1337);
+                float R() => (float)rng.NextDouble();
+                var col = new Color[n * n];
+                var bg = new Color(0.62f, 0.52f, 0.30f, 0f);   // the leaves' average: no dark fringe when filtered
+                for (int i = 0; i < col.Length; i++) col[i] = bg;
+                var tones = new[]
+                {
+                    new Color(0.80f, 0.60f, 0.26f), new Color(0.86f, 0.68f, 0.32f), new Color(0.72f, 0.66f, 0.30f),
+                    new Color(0.74f, 0.50f, 0.30f), new Color(0.60f, 0.44f, 0.26f), new Color(0.68f, 0.70f, 0.38f),
+                    new Color(0.90f, 0.76f, 0.40f),
+                };
+                // twigs first (under the leaves)
+                for (int i = 0; i < 14; i++)
+                {
+                    float cx = R() * n, cy = R() * n, ang = R() * Mathf.PI, len = 24f + R() * 40f;
+                    var c = new Color(0.40f, 0.30f, 0.22f) * (0.9f + 0.2f * R());
+                    StampStroke(col, n, cx, cy, ang, len, 1.3f, c);
+                }
+                // leaves in loose drifts
+                var centres = new Vector2[26];
+                for (int i = 0; i < centres.Length; i++) centres[i] = new Vector2(R() * n, R() * n);
+                for (int i = 0; i < 230; i++)
+                {
+                    Vector2 p;
+                    if (R() < 0.72f)
+                    {
+                        var cc = centres[rng.Next(centres.Length)];
+                        float a = R() * Mathf.PI * 2f, r = Mathf.Sqrt(R()) * 46f;
+                        p = cc + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
+                    }
+                    else p = new Vector2(R() * n, R() * n);
+                    float len = 16f + R() * 11f, wid = len * (0.36f + 0.14f * R());
+                    var tone = tones[rng.Next(tones.Length)] * (0.92f + 0.14f * R());
+                    StampLeaf(col, n, p.x, p.y, R() * Mathf.PI * 2f, len, wid, tone);
+                }
+                var px = new Color32[n * n];
+                for (int i = 0; i < px.Length; i++) px[i] = col[i];
+                return litter = Make("lv_world_litter", n, n, px, TextureWrapMode.Repeat);
+            }
+        }
+
+        /// <summary>The rake's ripples across a gravel tile (u, v in tile units): −1 furrow … 1 crest, gently wavering.</summary>
+        static float Ripple(float u, float v) =>
+            Mathf.Sin((v * 10f + 0.16f * Mathf.Sin(u * Mathf.PI * 4f) + 0.05f * Mathf.Sin(u * Mathf.PI * 10f)) * Mathf.PI * 2f);
+
+        static void StampLeaf(Color[] col, int n, float cx, float cy, float ang, float len, float wid, Color tone)
+        {
+            float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+            float ext = len * 0.6f + 2f;
+            int x0 = Mathf.FloorToInt(cx - ext), x1 = Mathf.CeilToInt(cx + ext), y0 = Mathf.FloorToInt(cy - ext), y1 = Mathf.CeilToInt(cy + ext);
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                    float along = dx * ca + dy * sa, across = -dx * sa + dy * ca;
+                    float t = along / len + 0.5f;           // 0 stem … 1 tip
+                    if (t < -0.08f || t > 1.02f) continue;
+                    float half = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI) * wid * 0.5f * (1f - 0.3f * t);
+                    float stem = t < 0.04f ? 1f - Smooth(0.5f, 1.1f, Mathf.Abs(across)) : 0f;
+                    float a = Mathf.Max(1f - Smooth(half - 0.9f, half + 0.4f, Mathf.Abs(across)), stem);
+                    if (a <= 0f) continue;
+                    // a darker midrib, one half a little lighter (the light catches the curl)
+                    float rib = 1f - 0.18f * (1f - Smooth(0.3f, 1.1f, Mathf.Abs(across)));
+                    float side = across > 0f ? 1.06f : 0.95f;
+                    var c = tone * (rib * side * (0.92f + 0.12f * t));
+                    int k = Wrap(y, n) * n + Wrap(x, n);
+                    var o = col[k];
+                    float oa = o.a;
+                    var rgb = Color.Lerp(oa > 0.01f ? o : c, c, a);
+                    col[k] = new Color(rgb.r, rgb.g, rgb.b, Mathf.Max(oa, a));
+                }
+        }
+
+        static void StampStroke(Color[] col, int n, float cx, float cy, float ang, float len, float w, Color tone)
+        {
+            float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+            float ext = len * 0.5f + w + 2f;
+            int x0 = Mathf.FloorToInt(cx - ext), x1 = Mathf.CeilToInt(cx + ext), y0 = Mathf.FloorToInt(cy - ext), y1 = Mathf.CeilToInt(cy + ext);
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                    float along = dx * ca + dy * sa, across = -dx * sa + dy * ca;
+                    if (Mathf.Abs(along) > len * 0.5f) continue;
+                    float a = (1f - Smooth(w * 0.5f, w * 0.5f + 0.9f, Mathf.Abs(across))) * (1f - Smooth(len * 0.42f, len * 0.5f, Mathf.Abs(along)));
+                    if (a <= 0f) continue;
+                    int k = Wrap(y, n) * n + Wrap(x, n);
+                    var o = col[k];
+                    var rgb = Color.Lerp(o.a > 0.01f ? o : tone, tone, a);
+                    col[k] = new Color(rgb.r, rgb.g, rgb.b, Mathf.Max(o.a, a * 0.9f));
+                }
+        }
+
+        /// <summary>Tiling value noise in [0,1] (cells per side), bilinear between random lattice values.</summary>
+        static float[] TileNoise(int n, int cells, System.Random rng)
+        {
+            var lat = new float[cells * cells];
+            for (int i = 0; i < lat.Length; i++) lat[i] = (float)rng.NextDouble();
+            var o = new float[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float fx = (float)x / n * cells, fy = (float)y / n * cells;
+                    int ix = (int)fx, iy = (int)fy;
+                    float tx = fx - ix, ty = fy - iy;
+                    tx = tx * tx * (3f - 2f * tx); ty = ty * ty * (3f - 2f * ty);
+                    int x1 = (ix + 1) % cells, y1 = (iy + 1) % cells;
+                    float a = Mathf.Lerp(lat[iy * cells + ix], lat[iy * cells + x1], tx);
+                    float b = Mathf.Lerp(lat[y1 * cells + ix], lat[y1 * cells + x1], tx);
+                    o[y * n + x] = Mathf.Lerp(a, b, ty);
+                }
+            return o;
+        }
+
+        static int Wrap(int i, int n) => ((i % n) + n) % n;
 
         // ------------------------------------------------------------------ helpers
 

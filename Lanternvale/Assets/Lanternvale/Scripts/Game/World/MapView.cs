@@ -5,8 +5,8 @@
 //            ground cover, a brook under the bridge, the painted decals: trails as soft ribbons (MapTerrain)
 //   backdrop from def.layers: mountains, clouds, distant village, forests, shrine cliffs (MapBackdrop)
 //   props and foreground (PropModels), chests (lid opens), transition waymarkers (Waymarker), regions (rects), prop
-//   lights (SceneLighting point lights with flicker / night-only), ambient particles; tall props dither out while
-//   they hide a unit (PropOccluder)
+//   lights (SceneLighting point lights with flicker / night-only), ambient particles; tall props get a soft round
+//   cut-out where they hide a unit, the hovered object, the cursor or the camera's focus (PropOccluder)
 //
 // Static props carry no scripts: this component's single LateUpdate drives the mood, sky, clouds, light flicker and
 // halos, occluder fades, highlights, chest lids, markers and particles, allocation-free.
@@ -66,6 +66,53 @@ namespace Lanternvale.Game
         internal bool groundShadow;
         internal Marker marker;
         internal PropOccluder occ;          // occluders: the model's voxelised surface (fade test)
+        internal OccluderCuts cuts;         // occluders: the cut-outs around what they hide (eased in/out)
+    }
+
+    /// <summary>
+    /// The cut-outs of one occluder (MapView.UpdateFades): a few slots, each following what the prop hides (a unit, the
+    /// hovered object, the cursor, the camera's focus) and easing its hole in and out; the four strongest go to the
+    /// renderers' _Cut0 … _Cut3.
+    /// </summary>
+    internal sealed class OccluderCuts
+    {
+        public const int Slots = 8;
+        public readonly object[] key = new object[Slots];
+        public readonly Vector4[] sphere = new Vector4[Slots];
+        public readonly float[] weight = new float[Slots];
+        public readonly bool[] on = new bool[Slots];
+        public readonly bool[] seen = new bool[Slots];
+        public readonly Vector4[] applied = new Vector4[PropOccluder.MaxCuts];
+        public bool any;
+
+        public int Find(object k)
+        {
+            for (int i = 0; i < Slots; i++) if (key[i] != null && ReferenceEquals(key[i], k)) return i;
+            return -1;
+        }
+
+        public int Alloc(object k)
+        {
+            int best = -1;
+            float bw = float.MaxValue;
+            for (int i = 0; i < Slots; i++)
+            {
+                if (key[i] == null) { best = i; break; }
+                if (!on[i] && weight[i] < bw) { bw = weight[i]; best = i; }
+            }
+            if (best < 0) return -1;
+            key[best] = k;
+            weight[best] = 0f;
+            on[best] = false;
+            return best;
+        }
+
+        public void Clear()
+        {
+            System.Array.Clear(key, 0, Slots);
+            System.Array.Clear(weight, 0, Slots);
+            System.Array.Clear(on, 0, Slots);
+        }
     }
 
     /// <summary>A prop's point light (lantern flame, lamp, fire, window glow) driven by the time of day.</summary>
@@ -113,8 +160,13 @@ namespace Lanternvale.Game
         public static float ForegroundParallax = 1.15f;
         /// <summary>Dither level of foreground props while a unit stands behind them.</summary>
         public static float ForegroundFadeAlpha = 0.35f;
-        /// <summary>Tall props (≥ 2.5 m) dither to this level when they hide a unit from the camera. 1 disables.</summary>
+        /// <summary>Tall props (≥ 2.5 m) dither to this level when they hide a unit from the camera (with
+        /// OccluderCutOuts off; 1 disables occluder handling altogether).</summary>
         public static float OccluderFadeAlpha = 0.35f;
+        /// <summary>Occluders open a soft round hole around what they hide (units, the hovered object, the cursor's
+        /// ground point, the camera's focus) instead of dissolving as a whole: the unit reads clearly and the tree keeps
+        /// its mass. Off = the whole prop dithers to OccluderFadeAlpha / ForegroundFadeAlpha while it hides a unit.</summary>
+        public static bool OccluderCutOuts = true;
         /// <summary>2D-era tunable (unused in 3D).</summary>
         public static float VerticalParallax = 0.4f;
         public static Color HighlightColor = new Color(1f, 0.88f, 0.52f, 1f);
@@ -151,15 +203,28 @@ namespace Lanternvale.Game
         // voxelised meshes for the occluder fade test, shared by the props using the same mesh (this map only)
         readonly Dictionary<Mesh, PropOccluder.Grid> occluderGrids = new Dictionary<Mesh, PropOccluder.Grid>();
         readonly List<UnitView> fadeUnits = new List<UnitView>();
+        readonly List<CutTarget> cutTargets = new List<CutTarget>();
+        static readonly object CursorKey = new object(), FocusKey = new object();
+
+        /// <summary>Something an occluder may hide: a unit (body samples), an object (its bounds) or a ground point.</summary>
+        struct CutTarget
+        {
+            public object key;
+            public int kind;                // 0 unit, 1 object, 2 ground point
+            public Vector3 center, head;    // unit / object: body centre and top; point: the ground point
+            public Vector4 sphere;          // the cut (PropOccluder.UnitCut / BoundsCut / PointCut)
+        }
         readonly List<MapObject> animated = new List<MapObject>();      // highlights, lids, pops (drained when idle)
         MeshFilter shadowFilter;
         Mesh shadowMesh;
         bool shadowsDirty;
         Color skyTopColor, skyBottomColor;
-        float fogStart = 30f, fogEnd = 150f, windStrength = 0.06f;
+        float fogStart = 30f, fogEnd = 150f, fogZenith = 0.22f, windStrength = 0.06f;
         bool disposed;
 
         static readonly MaterialPropertyBlock Mpb = new MaterialPropertyBlock();
+        static readonly int GradeId = Shader.PropertyToID("_LV_Grade");
+        readonly List<Rect> postObstacles = new List<Rect>();
 
         // ================================================================== building
 
@@ -189,7 +254,8 @@ namespace Lanternvale.Game
             skyTopColor = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
             skyBottomColor = Ui.Hex(string.IsNullOrEmpty(def.skyBottom) ? "#fdf1d6" : def.skyBottom);
             var amb = def.ambient ?? new AmbientDef();
-            if (amb.mist) { fogStart = 22f; fogEnd = 115f; }
+            // mist: a nearer haze, cooled towards the zenith (a dusk horizon alone would wash the scene sepia)
+            if (amb.mist) { fogStart = 24f; fogEnd = 120f; fogZenith = 0.38f; }
             windStrength = amb.leaves ? 0.075f : amb.embers ? 0.045f : 0.06f;
 
             sky = new MapSky(transform, skyTopColor, skyBottomColor, MapTerrain.StableHash(def.id), ownedMeshes);
@@ -282,6 +348,8 @@ namespace Lanternvale.Game
         static readonly int SidePlanarScaleId = Shader.PropertyToID("_SidePlanarScale");
         static readonly int MainAvgId = Shader.PropertyToID("_MainAvg");
         static readonly int SideAvgId = Shader.PropertyToID("_SideAvg");
+        static readonly int DetailTexId = Shader.PropertyToID("_DetailTex");
+        static readonly int DetailPlanarScaleId = Shader.PropertyToID("_DetailPlanarScale");
 
         static Material TerrainMaterial(MapDef def)
         {
@@ -305,6 +373,13 @@ namespace Lanternvale.Game
             m.SetFloat(SidePlanarScaleId, 1f / 8f);
             m.SetColor(MainAvgId, Average(ground, groundKey));
             m.SetColor(SideAvgId, Average(side, sideKey));
+            // raked gravel (shrine) / leaf litter (forest) over the ground where MapTerrain weights it in
+            var detail = MapTerrain.DetailTexture(def, out float detailScale);
+            if (detail != null)
+            {
+                m.SetTexture(DetailTexId, detail);
+                m.SetFloat(DetailPlanarScaleId, detailScale);
+            }
             TerrainMaterials[key] = m;
             return m;
         }
@@ -644,6 +719,17 @@ namespace Lanternvale.Game
                 else { mk.dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
             }
             span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
+            // a side exit's lantern posts stand clear of the trees and buildings beside the road
+            if (Mathf.Abs(mk.dir.x) > 0.5f)
+            {
+                postObstacles.Clear();
+                for (int i = 0; i < props.Count; i++)
+                {
+                    var po = props[i];
+                    if (po.hasBounds && po.Visible) postObstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
+                }
+                Waymarker.FitPosts(ref archAt, mk.dir, ref span, postObstacles, Mathf.Min(1.4f, size.y * 0.3f));
+            }
 
             holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
             // the model: an arch facing the camera, or lantern posts at a side exit (an arch there is seen edge-on)
@@ -833,13 +919,16 @@ namespace Lanternvale.Game
         {
             DayNight.ApplyTo();
             var horizon = sky.Horizon;
-            var fog = Color.Lerp(horizon, sky.Zenith, 0.22f);
+            var fog = Color.Lerp(horizon, sky.Zenith, fogZenith);
             HazeColor = fog;
             SceneLighting.FogColor = fog;
             SceneLighting.FogStart = fogStart;
             SceneLighting.FogEnd = fogEnd;
             SceneLighting.FogMax = 0.85f;
             SceneLighting.WindStrength = windStrength;
+            // night grade: moonlit colours cool towards blue-grey, lamplight keeps its warmth (LanternvaleCommon.cginc)
+            var gt = DayNight.NightGradeTint;
+            Shader.SetGlobalVector(GradeId, new Vector4(DayNight.NightGrade, gt.x, gt.y, gt.z));
             if (cam != null) cam.backgroundColor = horizon;
         }
 
@@ -874,19 +963,25 @@ namespace Lanternvale.Game
                     int want = night > 0.42f ? 1 : 0;
                     if (want != l.litState) { l.litState = want; l.setLit(want == 1); }
                 }
-                // lights read softly by day and carry the scene at night
+                // lights read softly by day and carry the scene at night, deepening to amber pools (DayNight.LampColor)
                 float k = gate * f * Mathf.Lerp(0.4f, 1f, night);
                 l.current = l.intensity * k;
                 var h = l.handle;
                 bool on = l.current > 0.005f;
+                var lc = DayNight.LampColor(l.color, night);
                 if (h != null)
                 {
                     if (h.Enabled != on) h.Enabled = on;
-                    if (on) h.Intensity = l.current;
+                    if (on)
+                    {
+                        h.Intensity = l.current;
+                        h.Color = lc;
+                        h.Range = DayNight.LampRange(l.range, night);
+                    }
                 }
                 if (!haveCam || !l.visible) continue;
                 float a = 0f;
-                Color hc = l.color;
+                Color hc = lc;
                 if (on) a = Mathf.Clamp01(l.current) * Mathf.Lerp(0.16f, 0.42f, night);
                 if (l.dormantGlow && l.level < 0.99f)
                 {
@@ -902,9 +997,12 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// Tall props (and foreground) dither out while they really hide a unit that fades occluders: camera rays to points
-        /// spread over the unit's body are marched through the prop's voxelised surface (PropOccluder), so only a prop
-        /// clearly between the camera and the unit counts — a tree behind a unit stays solid, a canopy in front fades.
+        /// Tall props (and foreground) open a soft round cut-out where they really hide something the player needs to see:
+        /// a unit that fades occluders (or is hovered), the hovered object, the cursor's ground point and the camera's
+        /// focus. Camera rays to points spread over the unit's body are marched through the prop's voxelised surface
+        /// (PropOccluder), so only a prop clearly between the camera and the unit counts — a tree behind a unit stays
+        /// solid, a canopy in front gets a hole around the unit and keeps the rest of its mass. With OccluderCutOuts off
+        /// the whole prop dithers instead (the 2.5D-era behaviour).
         /// </summary>
         void UpdateFades(Camera cam, float dt)
         {
@@ -918,10 +1016,11 @@ namespace Lanternvale.Game
             for (int u = 0; u < units.Count; u++)
             {
                 var uv = units[u];
-                if (uv == null || !uv.Visible || !uv.FadesOccluders) continue;
+                if (uv == null || !uv.Visible || !(uv.FadesOccluders || uv.IsHovered)) continue;
                 var vp = cam.WorldToViewportPoint(uv.CenterPosition);
                 if (vp.z > cam.nearClipPlane && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f) fadeUnits.Add(uv);
             }
+            if (OccluderCutOuts) { UpdateCuts(cp, right, dt); return; }
             for (int i = 0; i < occluders.Count; i++)
             {
                 var o = occluders[i];
@@ -931,13 +1030,128 @@ namespace Lanternvale.Game
                 {
                     bool fadedNow = o.fadeTarget < 0.999f;
                     for (int u = 0; u < fadeUnits.Count && !hides; u++)
-                        hides = o.occ.Hides(cp, right, fadeUnits[u].CenterPosition, fadeUnits[u].HeadPosition, fadedNow);
+                        hides = fadeUnits[u].FadesOccluders && o.occ.Hides(cp, right, fadeUnits[u].CenterPosition, fadeUnits[u].HeadPosition, fadedNow);
                 }
                 o.fadeTarget = hides ? o.occludedAlpha : 1f;
                 if (Mathf.Abs(o.fade - o.fadeTarget) < 0.001f) continue;
                 o.fade = Mathf.MoveTowards(o.fade, o.fadeTarget, dt * 3f);
                 o.lookDirty = true;
                 ApplyLook(o);
+            }
+        }
+
+        void UpdateCuts(Vector3 cp, Vector3 right, float dt)
+        {
+            // what may need seeing: the units in view, the hovered objects, the cursor's ground point, the camera's focus
+            cutTargets.Clear();
+            for (int u = 0; u < fadeUnits.Count; u++)
+            {
+                var uv = fadeUnits[u];
+                var c = uv.CenterPosition;
+                var h = uv.HeadPosition;
+                cutTargets.Add(new CutTarget { key = uv, kind = 0, center = c, head = h, sphere = PropOccluder.UnitCut(c, h, uv.Bounds.width) });
+            }
+            for (int i = 0; i < Objects.Count; i++)
+            {
+                var o = Objects[i];
+                if (!o.Highlighted || !o.Visible || !o.hasBounds || o.occluder || o.Kind == MapObjectKind.Region) continue;
+                var b = o.bounds;
+                cutTargets.Add(new CutTarget
+                {
+                    key = o, kind = 1, center = b.center, head = new Vector3(b.center.x, b.center.y, b.min.z),
+                    sphere = PropOccluder.BoundsCut(b),
+                });
+            }
+            var rig = CameraRig.Instance;
+            if (rig != null && rig.Cam != null)
+            {
+                var r = Bounds;
+                if (!GameInput.PointerOverUi)
+                {
+                    var m = rig.MouseWorld;
+                    if (r.Contains(m)) cutTargets.Add(new CutTarget { key = CursorKey, kind = 2, center = m, sphere = PropOccluder.PointCut(m) });
+                }
+                var f = rig.LookAtPoint;
+                if (r.Contains(new Vector2(f.x, f.y))) cutTargets.Add(new CutTarget { key = FocusKey, kind = 2, center = f, sphere = PropOccluder.PointCut(f) });
+            }
+
+            float ease = dt * 4.5f;
+            for (int i = 0; i < occluders.Count; i++)
+            {
+                var o = occluders[i];
+                var cs = o.cuts;
+                bool active = o.Visible && o.hasBounds && o.occ != null && o.occludedAlpha < 0.999f;
+                if (!active)
+                {
+                    if (cs != null && cs.any) { cs.Clear(); ApplyCuts(o); }
+                    continue;
+                }
+                if (cs == null) o.cuts = cs = new OccluderCuts();
+                for (int k = 0; k < OccluderCuts.Slots; k++) cs.seen[k] = false;
+                for (int t = 0; t < cutTargets.Count; t++)
+                {
+                    var tg = cutTargets[t];
+                    int s = cs.Find(tg.key);
+                    bool was = s >= 0 && cs.on[s];
+                    bool hides = tg.kind == 2 ? o.occ.HidesPoint(cp, tg.center) : o.occ.Hides(cp, right, tg.center, tg.head, was);
+                    if (hides && s < 0) s = cs.Alloc(tg.key);
+                    if (s < 0) continue;
+                    cs.seen[s] = true;
+                    cs.on[s] = hides;
+                    if (hides) cs.sphere[s] = tg.sphere;
+                }
+                bool any = false;
+                for (int k = 0; k < OccluderCuts.Slots; k++)
+                {
+                    if (cs.key[k] == null) continue;
+                    if (!cs.seen[k]) cs.on[k] = false;   // gone (hidden, despawned, the cursor left the map)
+                    cs.weight[k] = Mathf.Clamp01(cs.weight[k] + (cs.on[k] ? ease : -ease));
+                    if (cs.weight[k] <= 0f && !cs.on[k]) { cs.key[k] = null; continue; }
+                    any = true;
+                }
+                if (any || cs.any) ApplyCuts(o);
+            }
+        }
+
+        static readonly int[] CutOrder = new int[OccluderCuts.Slots];
+
+        /// <summary>Writes the four strongest cut-outs of an occluder to its renderers (only when they changed).</summary>
+        static void ApplyCuts(MapObject o)
+        {
+            var cs = o.cuts;
+            var m = o.model;
+            if (cs == null || m == null) return;
+            int n = 0;
+            for (int k = 0; k < OccluderCuts.Slots; k++)
+            {
+                if (cs.key[k] == null || cs.weight[k] <= 0f) continue;
+                // insertion by weight (strongest first)
+                int at = n++;
+                while (at > 0 && cs.weight[CutOrder[at - 1]] < cs.weight[k]) { CutOrder[at] = CutOrder[at - 1]; at--; }
+                CutOrder[at] = k;
+            }
+            bool changed = false;
+            for (int c = 0; c < PropOccluder.MaxCuts; c++)
+            {
+                var v = Vector4.zero;
+                if (c < n)
+                {
+                    int k = CutOrder[c];
+                    float w = cs.weight[k];
+                    v = cs.sphere[k];
+                    v.w *= w * w * (3f - 2f * w);
+                }
+                if (v != cs.applied[c]) { cs.applied[c] = v; changed = true; }
+            }
+            cs.any = n > 0;
+            if (!changed) return;
+            for (int i = 0; i < m.Renderers.Count; i++)
+            {
+                var r = m.Renderers[i];
+                if (r == null) continue;
+                r.GetPropertyBlock(Mpb);
+                for (int c = 0; c < PropOccluder.MaxCuts; c++) Mpb.SetVector(PropOccluder.CutIds[c], cs.applied[c]);
+                r.SetPropertyBlock(Mpb);
             }
         }
 
@@ -1253,7 +1467,11 @@ namespace Lanternvale.Game
             o.art = art;
             PlaceModel(o, o.root);
             SetFootprint(o);
-            if (o.occluder) o.occ = PropOccluder.Build(o.model.Renderers, occluderGrids);
+            if (o.occluder)
+            {
+                o.occ = PropOccluder.Build(o.model.Renderers, occluderGrids);
+                if (o.cuts != null) System.Array.Clear(o.cuts.applied, 0, PropOccluder.MaxCuts);   // the new renderers start uncut
+            }
             if (o.light != null && !o.IsLantern && o.model.SetLit != null)
             {
                 if (o.light.nightOnly) { o.light.setLit = o.model.SetLit; o.light.litState = -1; }
@@ -1400,7 +1618,11 @@ namespace Lanternvale.Game
                 if (ownedMeshes[i] != null) Destroy(ownedMeshes[i]);
             ownedMeshes.Clear();
             occluderGrids.Clear();
-            if (Current == this) Current = null;
+            if (Current == this)
+            {
+                Current = null;
+                Shader.SetGlobalVector(GradeId, Vector4.zero);   // no night grade outside a map
+            }
         }
 
         void OnDestroy() { Cleanup(); }

@@ -78,7 +78,7 @@ namespace Lanternvale.Preview
         MapBackdrop backdrop;
         MapSky sky;
         Transform propsRoot, decalsRoot, fgRoot, markersRoot, unitsRoot;
-        float fogStart = 30f, fogEnd = 150f, windStrength = 0.06f;
+        float fogStart = 30f, fogEnd = 150f, fogZenith = 0.22f, windStrength = 0.06f;
 
         public MapScene(GameDatabase db, MapDef def, Options options)
         {
@@ -100,7 +100,8 @@ namespace Lanternvale.Preview
             var skyTop = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
             var skyBottom = Ui.Hex(string.IsNullOrEmpty(def.skyBottom) ? "#fdf1d6" : def.skyBottom);
             var amb = def.ambient ?? new AmbientDef();
-            if (amb.mist) { fogStart = 22f; fogEnd = 115f; }
+            // mist: a nearer haze, cooled towards the zenith (a dusk horizon alone would wash the scene sepia)
+            if (amb.mist) { fogStart = 24f; fogEnd = 120f; fogZenith = 0.38f; }
             windStrength = amb.leaves ? 0.075f : amb.embers ? 0.045f : 0.06f;
 
             sky = new MapSky(Root, skyTop, skyBottom, MapTerrain.StableHash(def.id), owned);
@@ -154,6 +155,9 @@ namespace Lanternvale.Preview
             if (opt.Halos) BuildHalos();
             var focus = GroundFocus();
             Lighting = Lighting.FromScene(View.Pos, lightList, focus);
+            // as MapView.ApplyMood: the night grade (_LV_Grade)
+            Lighting.Grade = DayNight.NightGrade;
+            Lighting.GradeTint = new V3(DayNight.NightGradeTint.x, DayNight.NightGradeTint.y, DayNight.NightGradeTint.z);
             LightCount = Lighting.LightCount;
         }
 
@@ -196,6 +200,14 @@ namespace Lanternvale.Preview
             m.SetFloat(Shader.PropertyToID("_SidePlanarScale"), 1f / 8f);
             m.SetColor(Shader.PropertyToID("_MainAvg"), Average(ground, groundKey));
             m.SetColor(Shader.PropertyToID("_SideAvg"), Average(side, sideKey));
+            // as MapView: the detail layer (gravel / leaf litter); the rasterizer finds it through TerrainDetail
+            var detail = MapTerrain.DetailTexture(def, out float detailScale);
+            if (detail != null)
+            {
+                m.SetTexture(Shader.PropertyToID("_DetailTex"), detail);
+                m.SetFloat(Shader.PropertyToID("_DetailPlanarScale"), detailScale);
+            }
+            TerrainDetail.Register(ground, detail, detailScale);
             return m;
         }
 
@@ -378,6 +390,14 @@ namespace Lanternvale.Preview
                 else { dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
             }
             span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
+            // as MapView: a side exit's lantern posts stand clear of the props beside the road
+            if (Mathf.Abs(dir.x) > 0.5f)
+            {
+                var obstacles = new List<Rect>();
+                foreach (var po in props)
+                    if (po.hasBounds && po.visible) obstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
+                Waymarker.FitPosts(ref archAt, dir, ref span, obstacles, Mathf.Min(1.4f, size.y * 0.3f));
+            }
             var holder = new GameObject("Transition " + t.id).transform;
             holder.SetParent(markersRoot, false);
             holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
@@ -530,13 +550,13 @@ namespace Lanternvale.Preview
             return f.z > 0.01f ? View.Pos + f * (-View.Pos.z / f.z) : View.Pos + f * 15f;
         }
 
-        // ================================================================== occluder fades (as MapView.UpdateFades, settled)
+        // ================================================================== occluder cut-outs (as MapView.UpdateFades / UpdateCuts, settled)
 
         void UpdateFades()
         {
             var cp = View.Pos;
-            foreach (var o in props) Fade(o, cp);
-            foreach (var o in foreground) Fade(o, cp);
+            foreach (var o in props) Cut(o, cp);
+            foreach (var o in foreground) Cut(o, cp);
         }
 
         // as MapView: the voxelised meshes, shared by the props using the same mesh
@@ -552,14 +572,32 @@ namespace Lanternvale.Preview
             return Mathf.Abs(x) <= 1.1f && Mathf.Abs(y) <= 1.1f;
         }
 
-        void Fade(PObj o, Vector3 cp)
+        /// <summary>
+        /// As MapView.UpdateCuts with every hole fully open: a soft round cut-out around each unit the occluder hides and
+        /// around the camera's focus (the look-at point) when it hides that; no cursor here. The renderers get _Cut0.._Cut3
+        /// like MapView.ApplyCuts writes them (the preview's rasterizer finds them through CutRegistry).
+        /// </summary>
+        void Cut(PObj o, Vector3 cp)
         {
             if (!o.occluder || o.occ == null || o.occludedAlpha >= 0.999f) return;
-            bool hides = false;
+            var cuts = new List<Vector4>();
             foreach (var u in fadingUnits)
-                if (OnScreen(u.CenterPosition) && o.occ.Hides(cp, View.R, u.CenterPosition, u.HeadPosition, false)) { hides = true; break; }
-            if (!hides) return;
-            foreach (var r in o.model.Renderers) r?.Block.SetFloat(Materials3D.FadeId, o.occludedAlpha);
+            {
+                var c = u.CenterPosition;
+                var h = u.HeadPosition;
+                if (OnScreen(c) && o.occ.Hides(cp, View.R, c, h, false)) cuts.Add(PropOccluder.UnitCut(c, h, u.Model.Radius * u.Scale * 2f));
+            }
+            var focus = LookAt;
+            if (o.occ.HidesPoint(cp, focus)) cuts.Add(PropOccluder.PointCut(focus));
+            if (cuts.Count == 0) return;
+            var arr = new Vector4[PropOccluder.MaxCuts];
+            for (int i = 0; i < arr.Length && i < cuts.Count; i++) arr[i] = cuts[i];
+            foreach (var r in o.model.Renderers)
+            {
+                if (r == null) continue;
+                for (int i = 0; i < arr.Length; i++) r.Block.SetVector(PropOccluder.CutIds[i], arr[i]);
+                CutRegistry.Set(r, arr);
+            }
         }
 
         // ================================================================== mood and lights (as MapView.ApplyMood / UpdateLights at t = 0)
@@ -568,7 +606,7 @@ namespace Lanternvale.Preview
         {
             DayNight.ApplyTo();
             var horizon = sky.Horizon;
-            var fog = Color.Lerp(horizon, sky.Zenith, 0.22f);
+            var fog = Color.Lerp(horizon, sky.Zenith, fogZenith);
             SceneLighting.FogColor = fog;
             SceneLighting.FogStart = fogStart;
             SceneLighting.FogEnd = fogEnd;
@@ -591,7 +629,8 @@ namespace Lanternvale.Preview
                 l.setLit?.Invoke(night > 0.42f);
                 float k = gate * Mathf.Lerp(0.4f, 1f, night);   // flicker averages to 1
                 l.current = l.intensity * k;
-                if (l.current > 0.005f) result.Add((l.position, l.color, l.current, l.range));
+                // as MapView: lamplight deepens to amber and reaches a little further at night
+                if (l.current > 0.005f) result.Add((l.position, DayNight.LampColor(l.color, night), l.current, DayNight.LampRange(l.range, night)));
             }
             return result;
         }
@@ -605,7 +644,7 @@ namespace Lanternvale.Preview
             foreach (var l in lights)
             {
                 float a = 0f;
-                var hc = l.color;
+                var hc = DayNight.LampColor(l.color, night);
                 if (l.current > 0.005f) a = Mathf.Clamp01(l.current) * Mathf.Lerp(0.16f, 0.42f, night);
                 if (l.dormantGlow && l.level < 0.99f)
                 {

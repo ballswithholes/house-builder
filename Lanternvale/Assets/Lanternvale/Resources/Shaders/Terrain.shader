@@ -4,6 +4,9 @@
 //   uv0.x = blend: 0 = _MainTex (the map's ground) … 1 = _SideTex (the surroundings: meadow, hills)
 //   uv0.y = detail: 0 = the textures' average colour (far hills) … 1 = the full painted texture
 // _MainAvg / _SideAvg: the textures' average colours (measured by MapView), used where the detail fades out.
+//   uv1.x = weight of the optional detail layer _DetailTex (world-XY planar, _DetailPlanarScale) painted over the ground
+//           by its alpha: raked gravel at the shrine, leaf litter under the forest's trees. 0 / no uv1 / the default
+//           (transparent) texture = no detail, the ground exactly as before.
 Shader "Lanternvale/Terrain"
 {
     Properties
@@ -15,6 +18,8 @@ Shader "Lanternvale/Terrain"
         _MainAvg ("Ground average colour", Color) = (0.6, 0.6, 0.5, 1)
         _SideAvg ("Surroundings average colour", Color) = (0.6, 0.69, 0.45, 1)
         _FogScale ("Fog scale", Float) = 1
+        _DetailTex ("Detail layer (rgb, a = cover)", 2D) = "black" {}
+        _DetailPlanarScale ("Detail planar scale", Float) = 0.25
     }
     SubShader
     {
@@ -37,6 +42,8 @@ Shader "Lanternvale/Terrain"
             fixed4 _MainAvg;
             fixed4 _SideAvg;
             float _FogScale;
+            sampler2D _DetailTex;
+            float _DetailPlanarScale;
 
             struct appdata
             {
@@ -44,6 +51,7 @@ Shader "Lanternvale/Terrain"
                 float3 normal : NORMAL;
                 fixed4 color : COLOR;
                 float2 uv0 : TEXCOORD0;
+                float2 uv1 : TEXCOORD1;
             };
 
             struct v2f
@@ -52,7 +60,7 @@ Shader "Lanternvale/Terrain"
                 float3 worldPos : TEXCOORD0;
                 half3 normal : TEXCOORD1;
                 fixed4 color : COLOR;
-                float2 blend : TEXCOORD2;
+                float3 blend : TEXCOORD2;
             };
 
             v2f vert(appdata v)
@@ -63,7 +71,7 @@ Shader "Lanternvale/Terrain"
                 o.pos = UnityWorldToClipPos(wp);
                 o.normal = UnityObjectToWorldNormal(v.normal);
                 o.color = v.color;
-                o.blend = v.uv0;
+                o.blend = float3(v.uv0, v.uv1.x);
                 return o;
             }
 
@@ -74,6 +82,13 @@ Shader "Lanternvale/Terrain"
                 half b = saturate(i.blend.x);
                 half3 tex = lerp(g, s, b);
                 half3 avg = lerp(_MainAvg.rgb, _SideAvg.rgb, b);
+                if (i.blend.z > 0.001)
+                {
+                    half4 d = tex2D(_DetailTex, i.worldPos.xy * _DetailPlanarScale);
+                    half dw = saturate(i.blend.z) * d.a;
+                    tex = lerp(tex, d.rgb, dw);
+                    avg = lerp(avg, d.rgb, dw);
+                }
                 half3 albedo = LV_VertexColor(i.color.rgb) * lerp(avg, tex, saturate(i.blend.y));
                 half3 n = normalize(i.normal);
                 half3 col = LV_Shade(i.worldPos, n, albedo, i.color.a, 0.0, _FogScale);

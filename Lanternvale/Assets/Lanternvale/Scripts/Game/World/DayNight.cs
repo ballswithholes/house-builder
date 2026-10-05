@@ -3,8 +3,9 @@
 //
 //   dawn  peach and lavender, a low warm sun from the left
 //   day   high, soft white sun (the map's own sky colours)
-//   dusk  rose and amber, a low warm sun from the right
-//   night cool moonlight and deep blue ambient; lanterns, fireflies and spirit glows carry the scene
+//   gold  late afternoon: warm highlights over a cool sky fill, so the greens stay alive
+//   dusk  rose and amber, a low warm sun from the right, a cool violet-blue fill
+//   night a crisp blue moon over a deep blue fill; lamps and windows pool warm amber light (LampColor / LampRange)
 //
 // Maps either use a fixed time (ambient.timeOfDay) or the shared world clock (ambient.dayNightCycle),
 // which keeps running across maps through the static WorldHour.
@@ -167,15 +168,17 @@ namespace Lanternvale.Game
         static readonly Color NightTop = new Color(0.05f, 0.07f, 0.19f), NightBot = new Color(0.19f, 0.21f, 0.40f);
         static readonly Color NightOver = new Color(0.06f, 0.08f, 0.25f, 0.48f);
         static readonly Color NoOver = new Color(1f, 0.95f, 0.85f, 0f);
-        static readonly Color Moon = new Color(0.58f, 0.68f, 1.00f);
-        static readonly Color NightSky = new Color(0.32f, 0.38f, 0.66f), NightGround = new Color(0.16f, 0.16f, 0.26f);
+        // night: a crisp blue moon for clean highlights over a darker, deep blue fill (lamplight carries the warmth)
+        static readonly Color Moon = new Color(0.55f, 0.66f, 1.00f);
+        const float MoonI = 0.5f, NightAmbI = 0.6f;
+        static readonly Color NightSky = new Color(0.22f, 0.27f, 0.55f), NightGround = new Color(0.10f, 0.10f, 0.20f);
         static readonly Color DaySun = new Color(1.00f, 0.93f, 0.80f);
         static readonly Color DaySky = new Color(0.62f, 0.68f, 0.82f), DayGround = new Color(0.42f, 0.38f, 0.34f);
 
         static readonly Key[] Keys =
         {
-            new Key(0f,    NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
-            new Key(4.6f,  NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
+            new Key(0f,    NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, MoonI, NightSky, NightGround, NightAmbI, 1f),
+            new Key(4.6f,  NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, MoonI, NightSky, NightGround, NightAmbI, 1f),
             new Key(6.0f,  new Color(0.86f, 0.72f, 0.84f), 0.76f, new Color(0.44f, 0.47f, 0.72f), new Color(1.00f, 0.77f, 0.66f), 0.72f, new Color(0.55f, 0.36f, 0.52f, 0.22f), 0.55f,
                            new Color(1.00f, 0.68f, 0.54f), 0.58f, new Color(0.60f, 0.54f, 0.76f), new Color(0.40f, 0.30f, 0.34f), 0.74f, 0.55f),
             new Key(7.4f,  new Color(1.00f, 0.86f, 0.76f), 0.92f, new Color(0.62f, 0.74f, 0.90f), new Color(1.00f, 0.86f, 0.72f), 0.45f, new Color(1.00f, 0.74f, 0.58f, 0.10f), 0.12f,
@@ -185,12 +188,12 @@ namespace Lanternvale.Game
             new Key(15.5f, new Color(1.00f, 0.96f, 0.88f), 1.00f, Color.white, new Color(1.00f, 0.93f, 0.80f), 0.12f, NoOver, 0f,
                            new Color(1.00f, 0.91f, 0.76f), 0.93f, new Color(0.63f, 0.67f, 0.80f), new Color(0.43f, 0.38f, 0.33f), 0.75f, 0f),
             new Key(17.8f, new Color(1.00f, 0.80f, 0.66f), 0.90f, new Color(0.56f, 0.55f, 0.80f), new Color(1.00f, 0.70f, 0.50f), 0.60f, new Color(0.95f, 0.50f, 0.40f, 0.14f), 0.22f,
-                           new Color(1.00f, 0.72f, 0.50f), 0.86f, new Color(0.64f, 0.58f, 0.76f), new Color(0.48f, 0.35f, 0.31f), 0.82f, 0.25f),
+                           new Color(1.00f, 0.82f, 0.62f), 0.9f, new Color(0.58f, 0.64f, 0.86f), new Color(0.42f, 0.40f, 0.32f), 0.8f, 0.25f),
             new Key(19.4f, new Color(0.80f, 0.60f, 0.78f), 0.75f, new Color(0.30f, 0.27f, 0.55f), new Color(0.95f, 0.56f, 0.50f), 0.76f, new Color(0.40f, 0.25f, 0.46f, 0.28f), 0.60f,
-                           new Color(0.98f, 0.58f, 0.48f), 0.62f, new Color(0.52f, 0.46f, 0.70f), new Color(0.32f, 0.24f, 0.30f), 0.80f, 0.62f),
+                           new Color(1.00f, 0.66f, 0.50f), 0.66f, new Color(0.48f, 0.50f, 0.80f), new Color(0.28f, 0.26f, 0.30f), 0.76f, 0.62f),
             new Key(20.9f, new Color(0.50f, 0.53f, 0.86f), 0.64f, new Color(0.08f, 0.10f, 0.25f), new Color(0.25f, 0.25f, 0.48f), 0.90f, new Color(0.07f, 0.09f, 0.26f, 0.45f), 0.94f,
-                           Moon, 0.40f, NightSky, NightGround, 0.72f, 0.95f),
-            new Key(24f,   NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, 0.42f, NightSky, NightGround, 0.72f, 1f),
+                           Moon, MoonI * 0.95f, NightSky, NightGround, NightAmbI, 0.95f),
+            new Key(24f,   NightAmb, 0.62f, NightTop, NightBot, 0.92f, NightOver, 1f, Moon, MoonI, NightSky, NightGround, NightAmbI, 1f),
         };
 
         /// <summary>Sunrise / sunset hours of the sun's path (the disc is below the horizon outside them).</summary>
@@ -263,11 +266,15 @@ namespace Lanternvale.Game
             // the map's ambient multiplies the light; its intensity a little softened (2.5D maps were tuned against
             // pre-lit painted sprites — a dusk map at 0.75 would otherwise turn unreadably dark in 3D)
             float mai = Mathf.Lerp(1f, MapAmbientIntensity, 0.6f);
+            // ... and its hue a little softened too: a strongly tinted map ambient (the shrine's violet) would otherwise
+            // paint ground, stone and statues one colour
+            float ml = MapAmbient.r * 0.3f + MapAmbient.g * 0.59f + MapAmbient.b * 0.11f;
+            var mapLight = Color.Lerp(new Color(ml, ml, ml, 1f), MapAmbient, 0.65f);
             var sun = Color.Lerp(a.sun, b.sun, t);
-            LightColor = Mul(sun, MapAmbient);
+            LightColor = Mul(sun, mapLight);
             LightIntensity = Mathf.Lerp(a.sunI, b.sunI, t) * mai;
-            SkyAmbient = Mul(Color.Lerp(a.skyAmb, b.skyAmb, t), MapAmbient);
-            GroundAmbient = Mul(Color.Lerp(a.groundAmb, b.groundAmb, t), MapAmbient);
+            SkyAmbient = Mul(Color.Lerp(a.skyAmb, b.skyAmb, t), mapLight);
+            GroundAmbient = Mul(Color.Lerp(a.groundAmb, b.groundAmb, t), mapLight);
             SceneAmbientIntensity = Mathf.Lerp(a.ambI, b.ambI, t) * mai;
             NightGlow = Mathf.Lerp(a.glow, b.glow, t);
 
@@ -277,6 +284,39 @@ namespace Lanternvale.Game
                         + (sk.r * 0.3f + sk.g * 0.55f + sk.b * 0.15f) * SceneAmbientIntensity;
             LightLevel = Mathf.Clamp01(lit);
         }
+
+        // ------------------------------------------------------------------ lamplight
+
+        static readonly Color Amber = new Color(1f, 0.68f, 0.38f);
+
+        /// <summary>
+        /// A lamp's / window's light colour at a night factor: warm whites and yellows deepen towards amber as night
+        /// falls, so their pools read warm against the blue night (coloured lights — violet crystals, a locked
+        /// waymarker's glow, a fire's orange — keep their hue). MapView and the preview tool use it alike.
+        /// </summary>
+        public static Color LampColor(Color authored, float night)
+        {
+            if (night <= 0f) return authored;
+            Color.RGBToHSV(authored, out float h, out float sat, out float v);
+            // warm hues (red-orange … yellow) of soft saturation only
+            float warm = (1f - Mathf.Clamp01(Mathf.Abs(h * 360f - 40f) / 30f)) * (1f - Mathf.Clamp01((sat - 0.5f) / 0.25f));
+            if (sat < 0.05f) warm = 1f;
+            float k = Mathf.Clamp01(night) * warm * 0.7f;
+            var c = Color.Lerp(authored, Amber, k);
+            c.a = authored.a;
+            return c;
+        }
+
+        /// <summary>
+        /// The night grade (shader global _LV_Grade, set by MapView): how far moon- and sky-lit colours drift towards a
+        /// cool blue-grey (0 by day … 0.38 deep in the night); lamplight keeps the full colour.
+        /// </summary>
+        public float NightGrade => 0.38f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.5f) / 0.42f));
+        /// <summary>The blue-grey a fully graded colour's luma takes (linear multiplier).</summary>
+        public static readonly Vector3 NightGradeTint = new Vector3(0.8f, 0.92f, 1.22f);
+
+        /// <summary>A lamp's reach at a night factor: a little wider at night, so the warm pools read on the ground.</summary>
+        public static float LampRange(float range, float night) => range * (1f + 0.22f * Mathf.Clamp01(night));
 
         /// <summary>
         /// Pushes the mood into SceneLighting (sun, ambient, rim, night glow). Fog is the map's business (sky colours):

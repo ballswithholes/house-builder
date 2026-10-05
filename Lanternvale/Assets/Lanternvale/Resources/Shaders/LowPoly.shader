@@ -2,7 +2,8 @@
 //   vertex colour rgb = albedo, alpha = emission (0 lit … 1 unlit glow, boosted at night)
 //   uv0 = texture coordinates (optional painted texture, white by default); uv1.x = wind weight
 //   _PlanarScale > 0 maps _MainTex onto the ground plane by world XY instead (terrain)
-// Per-renderer (MaterialPropertyBlock): _Tint, _Flash (rgb + amount), _Fade (dither dissolve), _Rim, _FogScale, _WindScale.
+// Per-renderer (MaterialPropertyBlock): _Tint, _Flash (rgb + amount), _Fade (dither dissolve), _Rim, _FogScale, _WindScale,
+// _Cut0.._Cut3 (soft dithered holes around hidden units, LanternvaleCommon.cginc; zero = none).
 Shader "Lanternvale/LowPoly"
 {
     Properties
@@ -18,6 +19,10 @@ Shader "Lanternvale/LowPoly"
         _FogScale ("Fog scale", Float) = 1
         _WindScale ("Wind scale", Float) = 1
         _Cull ("Cull", Float) = 2
+        _Cut0 ("Cut-out 0 (xyz centre, w radius m)", Vector) = (0,0,0,0)
+        _Cut1 ("Cut-out 1", Vector) = (0,0,0,0)
+        _Cut2 ("Cut-out 2", Vector) = (0,0,0,0)
+        _Cut3 ("Cut-out 3", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -80,10 +85,11 @@ Shader "Lanternvale/LowPoly"
 
             fixed4 frag(v2f i, fixed facing : VFACE) : SV_Target
             {
-                if (_Fade < 0.999)
+                half cover = _Fade * LV_CutCoverage(i.worldPos, true);
+                if (cover < 0.999)
                 {
                     float2 pixel = (i.screenPos.xy / max(i.screenPos.w, 0.0001)) * _ScreenParams.xy;
-                    clip(_Fade - LV_Dither(pixel) - 0.001);
+                    clip(cover - LV_Dither(pixel) - 0.001);
                 }
                 half3 n = normalize(i.normal) * (facing > 0 ? 1.0 : -1.0);
                 half3 albedo = LV_VertexColor(i.color.rgb) * _Color.rgb * _Tint.rgb;

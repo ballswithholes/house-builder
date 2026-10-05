@@ -2,8 +2,13 @@
 // hills behind (y > depth), gentle banks and meadows in front (y < 0) and continuing far to the left and right so a
 // yawed camera never sees the world's edge. Rendered as a few chunked, faceted (low-poly) meshes with the map's ground
 // texture blending softly into the surrounding meadow (Lanternvale/Terrain), vertex-colour variation (meadow swathes,
-// worn paths, shade under trees and buildings, sunny crests, field patches on far hills), ground cover (grass tufts,
-// flowers, stones, bushes, sparse trees) outside the walkable area, and, when the map has a bridge, a brook under it.
+// worn paths, shade under trees and buildings, sunny crests, field patches on far hills), a detail layer painted over
+// the ground by a per-vertex weight (raked gravel around the shrine's paving, leaf litter under the forest's trees),
+// ground cover (grass tufts, flowers, stones, outlined bushes, sparse trees) outside the walkable area, and, when the
+// map has a bridge, a brook under it.
+//
+// Paved maps (the shrine): the flagstones are only a processional walkway along the trail and forecourts around the
+// gate, lanterns and statues; pale raked gravel borders them and moss / short grass covers the rest.
 //
 // Heights are metres above the ground plane (world z = −height). Inside the walkable rect the height is exactly 0.
 using System.Collections.Generic;
@@ -41,6 +46,20 @@ namespace Lanternvale.Game
         /// <summary>The map's ground is the dirt-and-grass village texture: inside the map it becomes meadow, worn to dirt
         /// only along the paths, at doorsteps and around the plaza's furniture.</summary>
         bool meadowInside;
+        /// <summary>The map's ground is paving (the shrine's flagstones): inside the map it is laid only on a
+        /// processional walkway and forecourts, bordered by raked gravel (the detail layer), moss elsewhere.</summary>
+        bool pavedInside;
+        bool forest;
+        Color mossTint = Color.white, gravelTint = Color.white;
+        // shrine: the walkway's centreline, forecourts around the gate / lanterns / statues, lanes joining them to it
+        readonly List<Vector2> walk = new List<Vector2>();
+        const float WalkHalf = 2.4f;
+        struct Pad { public Vector2 p; public float rx, ry; }
+        readonly List<Pad> pads = new List<Pad>();
+        readonly List<Lane> padLanes = new List<Lane>();
+        // forest: leaf litter gathers under the trees (detail layer)
+        struct Litter { public Vector2 p; public float r, k; }
+        readonly List<Litter> litter = new List<Litter>();
 
         // brook (maps with a bridge)
         public bool HasStream { get; private set; }
@@ -50,6 +69,20 @@ namespace Lanternvale.Game
 
         public Material Material { get; private set; }
         public Color GroundAverage { get; private set; }
+
+        /// <summary>
+        /// The terrain's detail layer for a map (Lanternvale/Terrain _DetailTex, world-planar at planarScale), painted
+        /// over the ground by MapTerrain's per-vertex weight: raked gravel around the shrine's paving, leaf litter under
+        /// the forest's trees; null when the map has none.
+        /// </summary>
+        public static Texture2D DetailTexture(MapDef def, out float planarScale)
+        {
+            string g = def != null && !string.IsNullOrEmpty(def.ground) ? def.ground : "";
+            if (g.Contains("shrine")) { planarScale = 1f / 2.4f; return WorldTextures.Gravel; }
+            if (g.Contains("forest")) { planarScale = 1f / 3.2f; return WorldTextures.LeafLitter; }
+            planarScale = 0.25f;
+            return null;
+        }
 
         public MapTerrain(MapDef def, Transform parent, List<Mesh> owned)
         {
@@ -92,12 +125,20 @@ namespace Lanternvale.Game
             innerTint = gt * 0.86f;
             if (ground.Contains("forest"))
             {
-                sideTint = new Color(0.66f, 0.8f, 0.64f);
+                // a sun-dappled wood: the painted moss a little brighter, the surroundings a fresh, lighter green
+                forest = true;
+                innerTint = gt * 0.93f;
+                sideTint = new Color(0.76f, 0.88f, 0.68f);
                 blendStart = 4f; blendEnd = 15f;
             }
             else if (ground.Contains("shrine"))
             {
-                sideTint = Color.Lerp(gt, new Color(0.82f, 0.9f, 0.78f), 0.5f) * 0.82f;
+                pavedInside = true;
+                innerTint = gt * 0.9f;
+                // moss and short grass (the meadow texture, deepened), pale raked gravel (the detail layer)
+                mossTint = new Color(0.66f, 0.86f, 0.56f);
+                gravelTint = new Color(0.94f, 0.92f, 0.82f);
+                sideTint = new Color(0.7f, 0.86f, 0.62f);
                 blendStart = 1.2f; blendEnd = 6f;
             }
             else
@@ -128,10 +169,15 @@ namespace Lanternvale.Game
                 if (a.StartsWith("decal_")) continue;
                 if (a.Contains("tree_great")) blots.Add(new Blot { p = pos + new Vector2(0f, 1f), r = 10f * sc, tint = new Color(0.66f, 0.74f, 0.78f), k = 0.75f });
                 else if (a.Contains("tree_dead")) blots.Add(new Blot { p = pos, r = 2f * sc, tint = new Color(0.8f, 0.8f, 0.84f), k = 0.5f });
-                else if (a.Contains("tree")) blots.Add(new Blot { p = pos + new Vector2(0f, 0.3f), r = 3.6f * sc, tint = new Color(0.68f, 0.76f, 0.78f), k = 0.7f });
+                // under a forest's canopies the shade stays soft (the floor is already a deep green)
+                else if (a.Contains("tree")) blots.Add(new Blot { p = pos + new Vector2(0f, 0.3f), r = 3.6f * sc, tint = new Color(0.68f, 0.76f, 0.78f), k = forest ? 0.45f : 0.7f });
                 else if (a.Contains("bush")) blots.Add(new Blot { p = pos, r = 1.7f * sc, tint = new Color(0.78f, 0.84f, 0.84f), k = 0.55f });
                 else if (p.collider != null && p.collider.w >= 2.5f)   // buildings, tents, carts: a little contact darkening
                     blots.Add(new Blot { p = pos + new Vector2(0f, p.collider.h * 0.3f), r = p.collider.w * 0.62f * sc, tint = new Color(0.82f, 0.8f, 0.84f), k = 0.5f });
+                if (forest && a.Contains("tree"))
+                    litter.Add(new Litter { p = pos + new Vector2(0f, 0.3f), r = (a.Contains("tree_dead") ? 2.2f : 3.4f) * sc, k = a.Contains("tree_dead") ? 0.55f : 1f });
+                else if (forest && (a.Contains("stump") || a.Contains("log") || a.Contains("rock_large")))
+                    litter.Add(new Litter { p = pos, r = 1.6f * sc, k = 0.6f });
                 if (a.Contains("bridge") && !HasStream)
                 {
                     HasStream = true;
@@ -147,6 +193,102 @@ namespace Lanternvale.Game
             }
             AnalysePaths();
             if (meadowInside) AnalyseWear();
+            if (pavedInside) AnalyseShrine();
+        }
+
+        /// <summary>
+        /// The shrine's paving: a processional walkway about 5 m wide along the painted trail (through its decals'
+        /// centres, without the painted wave) and forecourts around the gate, the lanterns, statues and the ruined arch,
+        /// each joined to the walkway by a short paved lane.
+        /// </summary>
+        void AnalyseShrine()
+        {
+            PathChain main = null;
+            foreach (var ch in chains) if (main == null || ch.x1 - ch.x0 > main.x1 - main.x0) main = ch;
+            if (main != null)
+            {
+                var d = main.decals;
+                walk.Add(new Vector2(main.x0, d[0].pos.y));
+                for (int i = 0; i < d.Count; i++) walk.Add(new Vector2(d[i].pos.x, d[i].pos.y));
+                walk.Add(new Vector2(main.x1, d[d.Count - 1].pos.y));
+            }
+            else
+            {
+                walk.Add(new Vector2(-3f, D * 0.45f));
+                walk.Add(new Vector2(W + 3f, D * 0.45f));
+            }
+            foreach (var p in def.props)
+            {
+                if (p == null || string.IsNullOrEmpty(p.art) || p.art.StartsWith("decal_")) continue;
+                string a = p.art;
+                var pos = new Vector2(p.pos.x, p.pos.y);
+                float sc = p.scale > 0f ? p.scale : 1f;
+                float wd = WalkDistance(pos.x, pos.y, out var onWalk);
+                if (a.Contains("shrine_gate"))
+                {
+                    // the gate's forecourt reaches from the walkway up to the gate
+                    var mid = (pos + onWalk) * 0.5f;
+                    pads.Add(new Pad { p = mid + new Vector2(0f, 0.3f), rx = 3.1f * sc, ry = Mathf.Abs(pos.y - onWalk.y) * 0.5f + 1.4f });
+                    continue;
+                }
+                float r = a.Contains("spirit_lantern") ? 1.3f : a.Contains("spirit_statue") ? 1.05f : a.Contains("ruin_arch") ? 2.1f : 0f;
+                if (r <= 0f) continue;
+                pads.Add(new Pad { p = pos + new Vector2(0f, -0.15f), rx = r * sc, ry = r * sc * 0.85f });
+                if (wd - WalkHalf < 7f && wd > WalkHalf) padLanes.Add(new Lane { a = pos, b = onWalk, half = Mathf.Min(1.05f, 0.75f * sc) });
+            }
+        }
+
+        /// <summary>Distance (m) from a ground point to the shrine walkway's centreline, and the nearest point on it.</summary>
+        float WalkDistance(float x, float y, out Vector2 nearest)
+        {
+            float best = float.MaxValue;
+            nearest = new Vector2(x, y);
+            var q = new Vector2(x, y);
+            for (int i = 0; i + 1 < walk.Count; i++)
+            {
+                var a = walk[i];
+                var ab = walk[i + 1] - a;
+                float l2 = ab.sqrMagnitude;
+                float t = l2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / l2) : 0f;
+                var c = a + ab * t;
+                float d = Vector2.Distance(q, c);
+                if (d < best) { best = d; nearest = c; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The shrine's ground at a point: paved (0..1: walkway, forecourts, lanes) and gravel (0..1: the raked border
+        /// beside the paving; moss beyond it and under the trees).
+        /// </summary>
+        void ShrineGround(float x, float y, float ragged, out float paved, out float gravel)
+        {
+            // metres outside the nearest paved shape (negative inside it)
+            float dist = WalkDistance(x, y, out _) - WalkHalf;
+            for (int i = 0; i < pads.Count; i++)
+            {
+                var pd = pads[i];
+                float ex = (x - pd.p.x) / pd.rx, ey = (y - pd.p.y) / pd.ry;
+                float e = Mathf.Sqrt(ex * ex + ey * ey);
+                dist = Mathf.Min(dist, (e - 1f) * Mathf.Min(pd.rx, pd.ry));
+            }
+            for (int i = 0; i < padLanes.Count; i++)
+            {
+                var ln = padLanes[i];
+                dist = Mathf.Min(dist, SegmentDistance(new Vector2(x, y), ln.a, ln.b) - ln.half);
+            }
+            float jag = Mathf.PerlinNoise(x * 0.9f + s1, y * 0.9f + s5) - 0.5f;
+            paved = 1f - Smooth(-0.22f, 0.18f, dist + ragged * 0.3f + jag * 0.18f);
+            float wide = Mathf.PerlinNoise(x * 0.19f + s6, y * 0.19f + s2) - 0.5f;
+            gravel = 1f - Smooth(1.3f, 2.9f, dist + wide * 1.8f + ragged * 0.5f);
+            // moss creeps over the gravel under the trees and around the old stones
+            for (int i = 0; i < blots.Count; i++)
+            {
+                var b = blots[i];
+                float dx = x - b.p.x, dy = (y - b.p.y) * 1.25f;
+                float d2 = (dx * dx + dy * dy) / (b.r * b.r * 0.8f);
+                if (d2 < 1f) gravel *= Mathf.Lerp(1f, 0.25f, (1f - d2) * (1f - d2));
+            }
         }
 
         /// <summary>
@@ -305,8 +447,9 @@ namespace Lanternvale.Game
 
         // ================================================================== colours
 
-        void Sample(float x, float y, float h, out Color tint, out Vector2 blendDetail)
+        void Sample(float x, float y, float h, out Color tint, out Vector2 blendDetail, out float detail)
         {
+            detail = 0f;
             float dOut = DistanceOutside(x, y);
             float edge = Mathf.PerlinNoise(x * 0.15f + s5, y * 0.15f + s6);
             float blend = Smooth(blendStart, blendEnd, dOut + (edge - 0.5f) * 3.2f);
@@ -387,9 +530,41 @@ namespace Lanternvale.Game
                 inner = Color.Lerp(inner, lush, meadow);
                 blend = Mathf.Max(blend, meadow);
             }
-            var c = Color.Lerp(inner, side, blend);
-            // warm, slightly lighter trodden ground beside the paths
-            if (halo > 0f && dOut < 6f)
+            if (pavedInside)
+            {
+                // flagstones only on the walkway and forecourts; raked gravel beside them, moss and short grass beyond
+                ShrineGround(x, y, ragged, out float paved, out float gravel);
+                float mv = Mathf.PerlinNoise(x * 0.23f + s2, y * 0.23f + s6);
+                var moss = mossTint * (0.86f + 0.2f * v) * Mathf.Lerp(0.93f, 1.07f, mv);
+                var grav = gravelTint * (0.95f + 0.08f * v);
+                var floor = Color.Lerp(moss, grav, gravel);
+                // a little moss in the paving's joints where it meets the grass
+                var stone = Color.Lerp(inner, new Color(inner.r * 0.9f, inner.g * 0.98f, inner.b * 0.86f), (1f - paved) * 0.5f);
+                inner = Color.Lerp(stone, floor, 1f - paved);
+                float open = 1f - paved;
+                detail = gravel * open * (1f - blendOut);
+                blend = Mathf.Max(blendOut, open);
+            }
+            if (forest)
+            {
+                // leaf litter (detail layer) drifts under the trees and along the trail's edges, sparse elsewhere
+                float lit = 0f;
+                for (int i = 0; i < litter.Count; i++)
+                {
+                    var l = litter[i];
+                    float dx = x - l.p.x, dy = (y - l.p.y) * 1.2f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) / l.r;
+                    if (d < 1.3f) lit = Mathf.Max(lit, (1f - Smooth(0.3f, 1.05f, d + ragged * 0.35f)) * l.k);
+                }
+                if (pathD < pathHalf + 3f)
+                    lit = Mathf.Max(lit, 0.55f * (1f - Smooth(0.2f, 1.3f, Mathf.Abs(pathD - pathHalf * 1.08f) + ragged * 0.7f)));
+                float drift = Mathf.PerlinNoise(x * 0.17f + s4, y * 0.17f + s2);
+                lit = Mathf.Max(lit, Smooth(0.66f, 0.84f, drift) * 0.28f);
+                detail = lit * (1f - Smooth(3f, 12f, dOut));
+            }
+            var c = Color.Lerp(inner, side, pavedInside ? blendOut : blend);
+            // warm, slightly lighter trodden ground beside the paths (not on paving: the walkway is the path there)
+            if (halo > 0f && dOut < 6f && !pavedInside)
             {
                 float f = halo * 0.35f;
                 c = new Color(c.r * Mathf.Lerp(1f, pathTint.r, f), c.g * Mathf.Lerp(1f, pathTint.g, f), c.b * Mathf.Lerp(1f, pathTint.b, f));
@@ -756,7 +931,11 @@ namespace Lanternvale.Game
                 var tex = ArtLibrary.Texture(art);
                 int ord = DecalOrder(art);
                 if (chainsByArt.TryGetValue(art, out var trail))
+                {
+                    // on paved ground the walkway is the path: a painted trail on top would read as a stain
+                    if (pavedInside) continue;
                     for (int i = 0; i < trail.Count; i++) AddTrail(trail[i], ord, verts, norms, uvs, cols, tris);
+                }
                 else AddPatches(quads[art], tex, ord, verts, norms, uvs, cols, tris);
                 if (verts.Count == 0) continue;
                 var m = new Mesh { name = "lv_decals_" + art };
@@ -772,7 +951,8 @@ namespace Lanternvale.Game
                 go.AddComponent<MeshFilter>().sharedMesh = m;
                 var r = go.AddComponent<MeshRenderer>();
                 var mat = Materials3D.LitTransparent(tex);
-                if (art.Contains("blight")) mat.SetFloat(Materials3D.EmissionId, 0.18f);
+                // the blight's veins glow (its art is only veins on a soft violet halo over a faint dark heart)
+                if (art.Contains("blight")) mat.SetFloat(Materials3D.EmissionId, 0.45f);
                 r.sharedMaterial = mat;
                 r.sortingOrder = DecalSortingBase + ord;
                 Quiet(r);
@@ -851,10 +1031,22 @@ namespace Lanternvale.Game
             }
         }
 
-        // rings of a painted patch (flower bed, blight): radius in texture units from the centre, opacity
+        // rings of a painted patch: radius in texture units from the centre, opacity — per art, so each painting's own
+        // soft edge is what fades out (the blight is a glow around its veins, the flower bed a loose drift of blooms)
         static readonly float[] PatchR = { 0.3f, 0.42f, 0.53f };
         static readonly float[] PatchA = { 1f, 0.62f, 0f };
+        static readonly float[] BlightR = { 0.1f, 0.2f, 0.3f, 0.4f, 0.47f };
+        static readonly float[] BlightA = { 1f, 1f, 0.85f, 0.4f, 0f };
+        static readonly float[] FlowerR = { 0.2f, 0.3f, 0.38f, 0.46f };
+        static readonly float[] FlowerA = { 1f, 0.9f, 0.5f, 0f };
         const int PatchSides = 18;
+
+        static void PatchRings(string art, out float[] radii, out float[] alphas)
+        {
+            if (art.Contains("blight")) { radii = BlightR; alphas = BlightA; }
+            else if (art.Contains("flower")) { radii = FlowerR; alphas = FlowerA; }
+            else { radii = PatchR; alphas = PatchA; }
+        }
 
         /// <summary>Round painted patches (flower beds, blight): a disc whose rim fades out, so the art's own hard,
         /// darker edge melts into the ground instead of reading as a stain.</summary>
@@ -864,7 +1056,8 @@ namespace Lanternvale.Game
             string art = list[0].art;
             float aspect = tex != null && tex.height > 0 ? (float)tex.width / tex.height : 1f;
             float baseH = ArtLibrary.Height(art, 4f);
-            int rings = PatchR.Length;
+            PatchRings(art, out var ringR, out var ringA);
+            int rings = ringR.Length;
             for (int i = 0; i < list.Count; i++)
             {
                 var p = list[i];
@@ -885,11 +1078,11 @@ namespace Lanternvale.Game
                     float wob = 1f + 0.08f * Mathf.Sin(ang * 3f + phase) + 0.05f * Mathf.Sin(ang * 5f + phase * 1.7f);
                     for (int r = 0; r < rings; r++)
                     {
-                        float rr = PatchR[r] * (r == 0 ? 1f : wob);
+                        float rr = ringR[r] * (r == 0 ? 1f : wob);
                         verts.Add(new Vector3(c.x + dir.x * rr * w, c.y + dir.y * rr * h, z));
                         float u = 0.5f + dir.x * rr;
                         uvs.Add(new Vector2(p.flip ? 1f - u : u, 0.5f + dir.y * rr));
-                        cols.Add(DecalColor(p.tint, PatchA[r]));
+                        cols.Add(DecalColor(p.tint, ringA[r]));
                         norms.Add(World3D.Up);
                     }
                 }
@@ -929,13 +1122,14 @@ namespace Lanternvale.Game
         {
             Material = material;
             // the village's dirt is worn into the meadow by vertex blend: a finer grid on the flat ground keeps it soft
-            float step = meadowInside ? 0.5f : 1f;
+            float step = meadowInside || pavedInside ? 0.5f : 1f;
             var xs = Lines(-8f, W + 8f, -170f, W + 170f, 1.12f, 10f, step);
             var ys = Lines(-5f, D + 6f, -52f, D + 215f, 1.12f, 10f, step);
             int nx = xs.Count, ny = ys.Count;
             var pos = new Vector3[nx * ny];
             var col = new Color32[nx * ny];
             var bd = new Vector2[nx * ny];
+            var dw = new Vector2[nx * ny];
             for (int j = 0; j < ny; j++)
                 for (int i = 0; i < nx; i++)
                 {
@@ -943,9 +1137,10 @@ namespace Lanternvale.Game
                     float h = Height(x, y);
                     int k = j * nx + i;
                     pos[k] = new Vector3(x, y, -h);
-                    Sample(x, y, h, out var c, out var b);
+                    Sample(x, y, h, out var c, out var b, out float d);
                     col[k] = c;
                     bd[k] = b;
+                    dw[k] = new Vector2(d, 0f);
                 }
 
             int chunkCols = Mathf.Max(8, Mathf.CeilToInt((nx - 1) / 6f));
@@ -953,11 +1148,12 @@ namespace Lanternvale.Game
             var norms = new List<Vector3>(chunkCols * ny * 6);
             var cols = new List<Color32>(chunkCols * ny * 6);
             var uvs = new List<Vector2>(chunkCols * ny * 6);
+            var uv1s = new List<Vector2>(chunkCols * ny * 6);
             var tris = new List<int>(chunkCols * ny * 6);
             for (int c0 = 0; c0 < nx - 1; c0 += chunkCols)
             {
                 int c1 = Mathf.Min(nx - 1, c0 + chunkCols);
-                verts.Clear(); norms.Clear(); cols.Clear(); uvs.Clear(); tris.Clear();
+                verts.Clear(); norms.Clear(); cols.Clear(); uvs.Clear(); uv1s.Clear(); tris.Clear();
                 for (int j = 0; j < ny - 1; j++)
                     for (int i = c0; i < c1; i++)
                     {
@@ -965,13 +1161,13 @@ namespace Lanternvale.Game
                         // alternate the diagonal: a faceted, hand-cut look on the hills
                         if (((i + j) & 1) == 0)
                         {
-                            Tri(pos, col, bd, k00, k01, k11, verts, norms, cols, uvs, tris);
-                            Tri(pos, col, bd, k00, k11, k10, verts, norms, cols, uvs, tris);
+                            Tri(pos, col, bd, dw, k00, k01, k11, verts, norms, cols, uvs, uv1s, tris);
+                            Tri(pos, col, bd, dw, k00, k11, k10, verts, norms, cols, uvs, uv1s, tris);
                         }
                         else
                         {
-                            Tri(pos, col, bd, k00, k01, k10, verts, norms, cols, uvs, tris);
-                            Tri(pos, col, bd, k01, k11, k10, verts, norms, cols, uvs, tris);
+                            Tri(pos, col, bd, dw, k00, k01, k10, verts, norms, cols, uvs, uv1s, tris);
+                            Tri(pos, col, bd, dw, k01, k11, k10, verts, norms, cols, uvs, uv1s, tris);
                         }
                     }
                 var m = new Mesh { name = "lv_terrain_" + c0 };
@@ -980,6 +1176,7 @@ namespace Lanternvale.Game
                 m.SetNormals(norms);
                 m.SetColors(cols);
                 m.SetUVs(0, uvs);
+                m.SetUVs(1, uv1s);
                 m.SetTriangles(tris, 0, true);
                 m.UploadMeshData(true);
                 owned.Add(m);
@@ -992,8 +1189,8 @@ namespace Lanternvale.Game
             }
         }
 
-        static void Tri(Vector3[] pos, Color32[] col, Vector2[] bd, int a, int b, int c,
-                        List<Vector3> verts, List<Vector3> norms, List<Color32> cols, List<Vector2> uvs, List<int> tris)
+        static void Tri(Vector3[] pos, Color32[] col, Vector2[] bd, Vector2[] dw, int a, int b, int c,
+                        List<Vector3> verts, List<Vector3> norms, List<Color32> cols, List<Vector2> uvs, List<Vector2> uv1s, List<int> tris)
         {
             var pa = pos[a]; var pb = pos[b]; var pc = pos[c];
             // vertices in grid order (x right, y into the scene) wind clockwise seen from above: the normal points up (−Z)
@@ -1005,6 +1202,7 @@ namespace Lanternvale.Game
             norms.Add(n); norms.Add(n); norms.Add(n);
             cols.Add(col[a]); cols.Add(col[b]); cols.Add(col[c]);
             uvs.Add(bd[a]); uvs.Add(bd[b]); uvs.Add(bd[c]);
+            uv1s.Add(dw[a]); uv1s.Add(dw[b]); uv1s.Add(dw[c]);
             tris.Add(i0); tris.Add(i0 + 1); tris.Add(i0 + 2);
         }
 
@@ -1021,7 +1219,10 @@ namespace Lanternvale.Game
         /// <summary>Local Y-up point (x, height, depth) of a ground point: geometry built for a World3D.Upright root.</summary>
         Vector3 Local(float x, float y, float lift = 0f) => new Vector3(x, Height(x, y) + lift, y);
 
-        /// <summary>Grass, flowers, stones and bushes outside the walkable area, sparse trees on the hills.</summary>
+        /// <summary>
+        /// Grass, flowers, stones and (outlined, like the prop bushes) bushes outside the walkable area, a sprinkle of
+        /// flower tufts in the village meadow away from its paths, sparse trees on the hills.
+        /// </summary>
         public void BuildGroundCover(bool hillTrees)
         {
             var rng = new System.Random(StableHash(def.id) * 7 + 11);
@@ -1030,13 +1231,15 @@ namespace Lanternvale.Game
             const float chunkW = 34f;
             var grass = Ui.Hex("#7fa35a");
             var grassDark = Ui.Hex("#5e8445");
-            if (def.ground != null && def.ground.Contains("forest")) { grass = Ui.Hex("#5f8a4c"); grassDark = Ui.Hex("#456f3d"); }
-            if (def.ground != null && def.ground.Contains("shrine")) { grass = Ui.Hex("#86a070"); grassDark = Ui.Hex("#5f7a5c"); }
+            var bushLeaf = Ui.Hex("#6e9a4e");
+            if (def.ground != null && def.ground.Contains("forest")) { grass = Ui.Hex("#5f8a4c"); grassDark = Ui.Hex("#456f3d"); bushLeaf = Ui.Hex("#5f8f4a"); }
+            if (def.ground != null && def.ground.Contains("shrine")) { grass = Ui.Hex("#86a070"); grassDark = Ui.Hex("#5f7a5c"); bushLeaf = Ui.Hex("#6a9256"); }
             var flowers = new[] { Ui.Hex("#fff6e6"), Ui.Hex("#ffd86b"), Ui.Hex("#f2a7c3"), Ui.Hex("#b9a6f0"), Ui.Hex("#ffb38a") };
 
             for (float cx = x0; cx < x1; cx += chunkW)
             {
                 var mb = new MeshBuilder(StableHash(def.id) + (int)cx) { Jitter = 0.06f };
+                var bushes = new MeshBuilder(StableHash(def.id) + (int)cx + 7) { Jitter = 0.06f };
                 float cxe = Mathf.Min(x1, cx + chunkW);
                 // density: lush along the front bank (closest to the camera), lighter elsewhere
                 for (float gx = cx; gx < cxe; gx += 1.4f)
@@ -1044,7 +1247,15 @@ namespace Lanternvale.Game
                     {
                         float x = gx + R() * 1.4f, y = gy + R() * 1.4f;
                         float dOut = DistanceOutside(x, y);
-                        if (dOut < 0.9f) continue;
+                        if (dOut < 0.9f)
+                        {
+                            // inside the village: now and then a flower tuft in the meadow, clear of paths and props
+                            if (!meadowInside || R() > 0.075f || !OpenMeadow(x, y)) continue;
+                            float clumpIn = Mathf.PerlinNoise(x * 0.3f + s3, y * 0.3f + s1);
+                            if (clumpIn < 0.42f) continue;
+                            Tuft(mb, rng, Local(x, y), Mathf.Lerp(0.26f, 0.42f, R()), grass, grassDark, R() < 0.75f ? flowers : null);
+                            continue;
+                        }
                         if (Reserved(x, y, 0.2f)) continue;
                         float density = y < 0f ? Mathf.Lerp(0.55f, 0.18f, Smooth(2f, 22f, dOut)) : Mathf.Lerp(0.32f, 0.08f, Smooth(2f, 20f, dOut));
                         float clump = Mathf.PerlinNoise(x * 0.21f + s2, y * 0.21f + s5);
@@ -1055,9 +1266,10 @@ namespace Lanternvale.Game
                         if (pick < 0.68f) Tuft(mb, rng, Local(x, y), Mathf.Lerp(0.32f, 0.72f, R()), grass, grassDark, null);
                         else if (pick < 0.86f) Tuft(mb, rng, Local(x, y), Mathf.Lerp(0.3f, 0.55f, R()), grass, grassDark, flowers);
                         else if (pick < 0.95f) Stone(mb, rng, Local(x, y, -0.04f), Mathf.Lerp(0.14f, 0.42f, R()));
-                        else if (dOut > 3f) Bush(mb, rng, Local(x, y), Mathf.Lerp(0.5f, 0.95f, R()), grassDark);
+                        else if (dOut > 3f) Bush(bushes, rng, Local(x, y), Mathf.Lerp(0.5f, 0.9f, R()), bushLeaf);
                     }
                 Emit(mb, "Ground Cover " + cx);
+                Emit(bushes, "Ground Bushes " + cx, true);
             }
 
             if (!hillTrees) return;
@@ -1083,7 +1295,7 @@ namespace Lanternvale.Game
             Emit(trees, "Hill Trees");
         }
 
-        void Emit(MeshBuilder mb, string name)
+        void Emit(MeshBuilder mb, string name, bool outlined = false)
         {
             if (mb.IsEmpty) return;
             var m = mb.ToMesh("lv_" + name.Replace(' ', '_').ToLowerInvariant());
@@ -1093,8 +1305,37 @@ namespace Lanternvale.Game
             go.transform.localRotation = World3D.Upright;
             go.AddComponent<MeshFilter>().sharedMesh = m;
             var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = Materials3D.LowPoly;
+            if (outlined) r.sharedMaterials = Materials3D.WithOutline();
+            else r.sharedMaterial = Materials3D.LowPoly;
             Quiet(r);
+        }
+
+        /// <summary>Open village meadow: clear of the trails and lanes, worn spots, props, transitions and spawns.</summary>
+        bool OpenMeadow(float x, float y)
+        {
+            if (x < 0.6f || x > W - 0.6f || y < 0.4f || y > D - 0.6f) return false;
+            if (PathDistance(x, y, out float half) < half + 1.5f) return false;
+            for (int i = 0; i < wear.Count; i++)
+            {
+                var wr = wear[i];
+                float r = Mathf.Max(wr.rx, wr.gather > 0f ? 2.6f : 0f) + 0.8f;
+                if ((new Vector2(x, y) - wr.p).sqrMagnitude < r * r) return false;
+            }
+            for (int i = 0; i < lanes.Count; i++)
+                if (SegmentDistance(new Vector2(x, y), lanes[i].a, lanes[i].b) < lanes[i].half + 0.9f) return false;
+            foreach (var p in def.props)
+            {
+                if (p == null || string.IsNullOrEmpty(p.art)) continue;
+                float sc = p.scale > 0f ? p.scale : 1f;
+                float r = p.art.StartsWith("decal_") ? 1.6f * sc : p.collider != null ? Mathf.Max(p.collider.w, p.collider.h) * 0.6f * sc + 0.9f : 1.3f * sc;
+                float dx = x - p.pos.x, dy = y - p.pos.y;
+                if (dx * dx + dy * dy < r * r) return false;
+            }
+            foreach (var t in def.transitions)
+                if (t != null && Mathf.Abs(x - t.pos.x) < t.size.x * 0.5f + 1f && Mathf.Abs(y - t.pos.y) < t.size.y * 0.5f + 1f) return false;
+            foreach (var sp in def.spawns)
+                if (sp != null && (new Vector2(x - sp.pos.x, y - sp.pos.y)).sqrMagnitude < 2.2f) return false;
+            return true;
         }
 
         internal static void Tuft(MeshBuilder mb, System.Random rng, Vector3 b, float height, Color col, Color dark, Color[] flowers)
@@ -1137,16 +1378,48 @@ namespace Lanternvale.Game
             mb.Blob(b + new Vector3(0f, size * 0.32f, 0f), new Vector3(size, size * 0.62f, size * (0.7f + 0.3f * R())), 0, 0.22f, rng.Next(1000), 0.55f);
         }
 
+        /// <summary>
+        /// A ground-cover bush in the prop bushes' look (drawn outlined): a scalloped mound of small leafy lumps around a
+        /// lighter crown, now and then dotted with blossoms or berries.
+        /// </summary>
         internal static void Bush(MeshBuilder mb, System.Random rng, Vector3 b, float size, Color col)
         {
             float R() => (float)rng.NextDouble();
             mb.Wind = 0.18f; mb.WindGradient = true; mb.WindY0 = b.y; mb.WindY1 = b.y + size * 1.4f;
-            int n = 2 + rng.Next(2);
+            var light = Color.Lerp(col, new Color(0.78f, 0.86f, 0.46f), 0.35f);
+            int n = 4 + rng.Next(3);
+            float turn = R() * Mathf.PI * 2f;
+            var lumps = new Vector4[n + 1];
             for (int i = 0; i < n; i++)
             {
-                var off = new Vector3((R() - 0.5f) * size * 1.1f, size * (0.55f + 0.3f * R()), (R() - 0.5f) * size * 0.8f);
-                mb.Color = Paint.Shade(col, 0.85f + 0.3f * R());
-                mb.Blob(b + off, new Vector3(size, size * 0.8f, size) * (0.75f + 0.3f * R()), 1, 0.16f, rng.Next(1000), 0.3f);
+                float a = turn + i * Mathf.PI * 2f / n + (R() - 0.5f) * 0.5f;
+                float d = size * (0.42f + 0.18f * R());
+                float r = size * (0.36f + 0.14f * R());
+                var c = b + new Vector3(Mathf.Cos(a) * d, r * 0.82f, Mathf.Sin(a) * d * 0.8f);
+                lumps[i] = new Vector4(c.x, c.y, c.z, r);
+                mb.Color = Paint.Shade(col, 0.9f + 0.16f * R());
+                mb.Blob(c, new Vector3(r, r * 0.88f, r), 1, 0.12f, rng.Next(1000), 0.35f);
+            }
+            // the crown: lighter, catching the light
+            float cr = size * (0.5f + 0.1f * R());
+            var top = b + new Vector3((R() - 0.5f) * size * 0.2f, size * 0.62f + cr * 0.45f, (R() - 0.5f) * size * 0.15f);
+            lumps[n] = new Vector4(top.x, top.y, top.z, cr);
+            mb.Color = Paint.Shade(light, 0.98f + 0.08f * R());
+            mb.Blob(top, new Vector3(cr, cr * 0.85f, cr), 1, 0.12f, rng.Next(1000), 0.2f);
+            if (R() < 0.4f)
+            {
+                var dots = new[] { new Color(0.96f, 0.66f, 0.76f), new Color(1f, 0.96f, 0.88f), new Color(0.86f, 0.3f, 0.32f), new Color(0.72f, 0.62f, 0.94f) };
+                var dc = dots[rng.Next(dots.Length)];
+                int k = 5 + rng.Next(4);
+                for (int i = 0; i < k; i++)
+                {
+                    var l = lumps[rng.Next(lumps.Length)];
+                    float a = R() * Mathf.PI * 2f, e = Mathf.Lerp(0.2f, 1.2f, R());
+                    var dir = new Vector3(Mathf.Cos(a) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Sin(a) * Mathf.Cos(e));
+                    if (dir.z > 0.3f) dir.z = -dir.z;   // on the side facing the camera (−Z in model space)
+                    mb.Color = Paint.Shade(dc, 0.95f + 0.1f * R());
+                    mb.Blob(new Vector3(l.x, l.y, l.z) + dir * (l.w * 0.98f), new Vector3(0.055f, 0.05f, 0.055f), 0, 0.1f, rng.Next(1000));
+                }
             }
             mb.Wind = 0f; mb.WindGradient = false;
         }

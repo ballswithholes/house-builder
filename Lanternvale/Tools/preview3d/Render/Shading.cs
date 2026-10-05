@@ -46,6 +46,9 @@ namespace Lanternvale.Preview
         public static bool Linear = true;
         public V3 SunDir, SunCol, SkyAmb, GroundAmb, FogCol, RimCol, CamPos;
         public float FogStart, FogEnd, FogMax, RimPower, NightGlow;
+        /// <summary>_LV_Grade (MapView): night grade amount and the tint the graded luma takes.</summary>
+        public float Grade;
+        public V3 GradeTint = new V3(1, 1, 1);
         public int LightCount;
         public readonly V3[] LPos = new V3[MaxLights];
         public readonly V3[] LCol = new V3[MaxLights];
@@ -103,12 +106,20 @@ namespace Lanternvale.Preview
         /// <summary>LV_Light: wrapped sun, hemisphere ambient (up = −Z), point lights.</summary>
         public V3 Light(V3 wp, V3 n)
         {
+            var b = LightSplit(wp, n, out var pts);
+            return b + pts;
+        }
+
+        /// <summary>LV_LightSplit: sun and hemisphere ambient; the point lights separately.</summary>
+        public V3 LightSplit(V3 wp, V3 n, out V3 points)
+        {
             float ndl = V3.Dot(n, SunDir);
             float wrap = Mathf.Clamp01((ndl + 0.45f) / 1.45f);
             float ramp = wrap * wrap * (3f - 2f * wrap);
             var light = SunCol * ramp;
             float hemi = -n.z * 0.5f + 0.5f;
             light = light + V3.Lerp(GroundAmb, SkyAmb, hemi);
+            points = new V3(0, 0, 0);
             for (int i = 0; i < LightCount; i++)
             {
                 var d = LPos[i] - wp;
@@ -118,7 +129,7 @@ namespace Lanternvale.Preview
                 if (att <= 0f) continue;
                 att *= att;
                 float pl = Mathf.Clamp01((V3.Dot(n, d) / (float)Math.Sqrt(dist2) + 0.6f) / 1.6f);
-                light = light + LCol[i] * (att * pl);
+                points = points + LCol[i] * (att * pl);
             }
             return light;
         }
@@ -129,8 +140,16 @@ namespace Lanternvale.Preview
             var v = CamPos - wp;
             float dist = (float)Math.Sqrt(V3.Dot(v, v));
             var view = dist > 1e-5f ? v * (1f / dist) : new V3(0, 0, -1);
-            var light = Light(wp, n);
-            var col = albedo * light;
+            var b = LightSplit(wp, n, out var pts);
+            var light = b + pts;
+            var moonlit = albedo;
+            if (Grade > 0f)
+            {
+                // the night grade: moon / sky-lit colours towards a cool blue-grey, lamplight keeps the full colour
+                float l = albedo.x * 0.3f + albedo.y * 0.59f + albedo.z * 0.11f;
+                moonlit = V3.Lerp(albedo, GradeTint * l, Mathf.Clamp01(Grade));
+            }
+            var col = moonlit * b + albedo * pts;
             float rim = Mathf.Pow(1f - Mathf.Clamp01(V3.Dot(n, view)), Math.Max(RimPower, 0.5f));
             float lum = light.x * 0.3f + light.y * 0.59f + light.z * 0.11f;
             col = col + RimCol * (rim * (0.22f * Mathf.Clamp01(lum) + rimBoost));

@@ -56,7 +56,46 @@ inline float LV_Dither(float2 pixel)
     return frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
 }
 
-inline half3 LV_Light(float3 worldPos, half3 n, half3 viewDir)
+// Cut-outs (MapView: a tall prop hiding a unit, the hovered object, the cursor or the camera's focus point): up to four
+// soft dithered holes per renderer, round on screen around a world point. Per renderer (MaterialPropertyBlock):
+//   _CutN.xyz = the centre (world), _CutN.w = the hole's radius in metres at that centre (0 = no cut, the default).
+// Inside half the radius the surface is gone, towards the rim it dithers back in. Surfaces (keepBehind) clearly
+// behind the centre — further along the view ray than centre + 0.35 radius — are kept, so a trunk behind a unit stays
+// solid; the ink hull (Outline: the model's back faces) is cut at any depth, or the far inside of a hollowed canopy
+// would show through the hole as solid ink.
+float4 _Cut0, _Cut1, _Cut2, _Cut3;
+
+inline half LV_CutKeep(float4 cut, float3 toFrag, bool keepBehind)
+{
+    if (cut.w <= 0.0) return 1.0;
+    float3 c = cut.xyz - _WorldSpaceCameraPos.xyz;
+    float dc = max(length(c), 0.0001);
+    float3 dir = c / dc;
+    float along = dot(toFrag, dir);
+    if (along <= 0.0001) return 1.0;
+    if (keepBehind && along > dc + 0.35 * cut.w) return 1.0;
+    // angular distance from the centre, relative to the hole's angular radius (≈ a circle on screen)
+    float perp = length(toFrag - dir * along);
+    float r = (perp / along) * dc / cut.w;
+    return smoothstep(0.5, 1.0, r);
+}
+
+// Coverage the cut-outs leave at a surface point (1 = solid, 0 = cut away).
+inline half LV_CutCoverage(float3 worldPos, bool keepBehind)
+{
+    if (_Cut0.w <= 0.0 && _Cut1.w <= 0.0 && _Cut2.w <= 0.0 && _Cut3.w <= 0.0) return 1.0;
+    float3 v = worldPos - _WorldSpaceCameraPos.xyz;
+    return min(min(LV_CutKeep(_Cut0, v, keepBehind), LV_CutKeep(_Cut1, v, keepBehind)),
+               min(LV_CutKeep(_Cut2, v, keepBehind), LV_CutKeep(_Cut3, v, keepBehind)));
+}
+
+// Night grade (MapView, Shader.SetGlobalVector; zero = off, the default): under moon and sky light, colours drift
+// towards a cool blue-grey (x = amount, yzw = the tint the albedo's luma takes), while lamplight and fire (the point
+// lights) keep the full colour — warm pools stand out of a deep blue night instead of washing into teal.
+float4 _LV_Grade;
+
+// Sun and hemisphere ambient; the point lights' contribution separately (points).
+inline half3 LV_LightSplit(float3 worldPos, half3 n, out half3 points)
 {
     // sun: wrapped diffuse eased into a soft painterly ramp
     half ndl = dot(n, _LV_SunDir.xyz);
@@ -69,6 +108,7 @@ inline half3 LV_Light(float3 worldPos, half3 n, half3 viewDir)
     light += lerp(_LV_GroundAmb.rgb, _LV_SkyAmb.rgb, hemi);
 
     // point lights
+    points = half3(0.0, 0.0, 0.0);
     int count = (int)_LV_LightCount;
     for (int i = 0; i < LV_MAX_LIGHTS; i++)
     {
@@ -80,10 +120,17 @@ inline half3 LV_Light(float3 worldPos, half3 n, half3 viewDir)
             float att = saturate(1.0 - dist2 / (r * r));
             att *= att;
             half pl = saturate((dot(n, d * rsqrt(dist2)) + 0.6) / 1.6);
-            light += _LV_LightCol[i].rgb * (att * pl);
+            points += _LV_LightCol[i].rgb * (att * pl);
         }
     }
     return light;
+}
+
+inline half3 LV_Light(float3 worldPos, half3 n, half3 viewDir)
+{
+    half3 points;
+    half3 light = LV_LightSplit(worldPos, n, points);
+    return light + points;
 }
 
 // Full surface shade: lit albedo + rim + emission, then fog. rimBoost adds a highlight rim (hover / selection);
@@ -91,8 +138,13 @@ inline half3 LV_Light(float3 worldPos, half3 n, half3 viewDir)
 inline half3 LV_Shade(float3 worldPos, half3 n, half3 albedo, half emission, half rimBoost, half fogScale)
 {
     half3 viewDir = normalize(_WorldSpaceCameraPos.xyz - worldPos);
-    half3 light = LV_Light(worldPos, n, viewDir);
-    half3 col = albedo * light;
+    half3 points;
+    half3 base = LV_LightSplit(worldPos, n, points);
+    half3 light = base + points;
+    half3 moonlit = albedo;
+    if (_LV_Grade.x > 0.0)
+        moonlit = lerp(albedo, dot(albedo, half3(0.3, 0.59, 0.11)) * _LV_Grade.yzw, saturate(_LV_Grade.x));
+    half3 col = moonlit * base + albedo * points;
     half rim = pow(1.0 - saturate(dot(n, viewDir)), max(_LV_RimColor.a, 0.5));
     half lum = dot(light, half3(0.3, 0.59, 0.11));
     col += _LV_RimColor.rgb * rim * (0.22 * saturate(lum) + rimBoost);

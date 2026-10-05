@@ -104,6 +104,55 @@ namespace Lanternvale.Game
             return w;
         }
 
+        /// <summary>
+        /// Places a side exit's lantern posts clear of the props around them (a post must not stand inside a tree's
+        /// canopy or a building): narrows the road between them (down to the narrowest post pair) and, where that is not
+        /// enough, slides the pair along the edge by up to shiftMax — the smallest change, keeping the road as centred
+        /// between the posts as it can. obstacles: the props' ground footprints (world bounds, x/y). at: the posts' centre
+        /// on the edge; span: the road width. MapView and the preview tool call it before Build.
+        /// </summary>
+        public static void FitPosts(ref Vector2 at, Vector2 dir, ref float span, IList<Rect> obstacles, float shiftMax)
+        {
+            if (Mathf.Abs(dir.x) <= 0.5f || obstacles == null || obstacles.Count == 0) return;
+            float half0 = Mathf.Clamp(span * 0.5f, 1.1f, 2.4f);
+            float inward = dir.x < 0f ? 1f : -1f;   // the lantern arms reach into the map
+            float bestScore = float.MaxValue, bestHalf = half0, bestShift = 0f;
+            for (float half = half0; half >= 1.1f - 1e-4f; half -= 0.05f)
+                for (int si = 0; si <= 48; si++)
+                {
+                    // 0, +0.05, −0.05, +0.1, …
+                    float shift = (si + 1) / 2 * 0.05f * (si % 2 == 1 ? 1f : -1f);
+                    if (Mathf.Abs(shift) > shiftMax + 1e-4f) break;
+                    float overlap = 0f;
+                    for (int k = -1; k <= 1; k += 2)
+                    {
+                        var post = new Vector2(at.x, at.y + shift + k * half);
+                        overlap += Intrusion(post, obstacles, 0.45f) + Intrusion(post + new Vector2(0.56f * inward, 0f), obstacles, 0.4f);
+                    }
+                    // keep the road centred between the posts: narrowing is cheaper than sliding off the road
+                    float score = overlap * 100f + (half0 - half) + Mathf.Abs(shift) * 2.2f;
+                    if (score < bestScore) { bestScore = score; bestHalf = half; bestShift = shift; }
+                    if (overlap <= 0f) break;   // the smallest shift for this span is found
+                }
+            at = new Vector2(at.x, at.y + bestShift);
+            span = Mathf.Min(span, bestHalf * 2f);
+        }
+
+        /// <summary>How deep (m) a point with a clearance radius reaches into the obstacles' rects.</summary>
+        static float Intrusion(Vector2 p, IList<Rect> obstacles, float clear)
+        {
+            float sum = 0f;
+            for (int i = 0; i < obstacles.Count; i++)
+            {
+                var r = obstacles[i];
+                float dx = Mathf.Max(0f, Mathf.Max(r.xMin - p.x, p.x - r.xMax));
+                float dy = Mathf.Max(0f, Mathf.Max(r.yMin - p.y, p.y - r.yMax));
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                if (d < clear) sum += clear - d;
+            }
+            return sum;
+        }
+
         /// <summary>Glowing (lit) or dark paper lanterns.</summary>
         public void SetLit(bool on)
         {

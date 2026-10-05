@@ -25,8 +25,10 @@ namespace Lanternvale.Preview
         public V3 ColorRgb = new V3(1, 1, 1);
         public float ColorA = 1f;
         public float Emission, FogScale = 1f, Rim, Softness = 0.65f, Fade = 1f;
-        public Sampler Tex, Tex2;
-        public float Planar, Planar2, TexStrength = 1f;
+        public Sampler Tex, Tex2, Tex3;
+        public float Planar, Planar2, Planar3, TexStrength = 1f;
+        /// <summary>Cut-outs (_Cut0.._Cut3: xyz centre, w radius), null = none (LanternvaleCommon.cginc LV_CutCoverage).</summary>
+        public Vector4[] Cuts;
         public V3 Avg1, Avg2;
         public Vector2 TexOffset;
         public int Queue = 2000, Order;
@@ -45,6 +47,7 @@ namespace Lanternvale.Preview
         public readonly int[] Obj;          // renderer id of the front opaque surface (−1 = none / unlit)
         readonly List<bool> outlined = new List<bool>();
         readonly List<float> fades = new List<float>();
+        readonly List<Vector4[]> cuts = new List<Vector4[]>();
         public int Triangles, Fragments;
 
         public Frame(ViewCam cam, Lighting l)
@@ -59,7 +62,36 @@ namespace Lanternvale.Preview
             Array.Fill(Obj, -1);
         }
 
-        public int NewObject(bool isOutlined, float fade = 1f) { outlined.Add(isOutlined); fades.Add(fade); return outlined.Count - 1; }
+        public int NewObject(bool isOutlined, float fade = 1f) { outlined.Add(isOutlined); fades.Add(fade); cuts.Add(null); return outlined.Count - 1; }
+
+        /// <summary>The renderer's cut-outs (its ink hull is cut with them too).</summary>
+        public void SetCuts(int obj, Vector4[] c) { if (obj >= 0 && obj < cuts.Count) cuts[obj] = c; }
+
+        /// <summary>
+        /// LV_CutCoverage: what the cut-outs leave of a surface point (1 = solid). keepBehind keeps points clearly behind a
+        /// cut's centre (LowPoly); the ink hull is cut at any depth (Outline).
+        /// </summary>
+        public static float CutCoverage(Vector4[] cuts, V3 cam, float wx, float wy, float wz, bool keepBehind)
+        {
+            if (cuts == null) return 1f;
+            float vx = wx - cam.x, vy = wy - cam.y, vz = wz - cam.z, cover = 1f;
+            for (int i = 0; i < cuts.Length; i++)
+            {
+                var c = cuts[i];
+                if (c.w <= 0f) continue;
+                float cx = c.x - cam.x, cy = c.y - cam.y, cz = c.z - cam.z;
+                float dc = Math.Max((float)Math.Sqrt(cx * cx + cy * cy + cz * cz), 1e-4f);
+                cx /= dc; cy /= dc; cz /= dc;
+                float along = vx * cx + vy * cy + vz * cz;
+                if (along <= 1e-4f) continue;
+                if (keepBehind && along > dc + 0.35f * c.w) continue;
+                float px = vx - cx * along, py = vy - cy * along, pz = vz - cz * along;
+                float r = (float)Math.Sqrt(px * px + py * py + pz * pz) / along * dc / c.w;
+                float t = Mathf.Clamp01((r - 0.5f) / 0.5f);
+                cover = Math.Min(cover, t * t * (3f - 2f * t));
+            }
+            return cover;
+        }
 
         /// <summary>LV_Dither: interleaved gradient noise of a pixel (the dither dissolve of _Fade).</summary>
         public static float Dither(float px, float py)
@@ -74,7 +106,7 @@ namespace Lanternvale.Preview
 
         struct CV
         {
-            public float wx, wy, wz, nx, ny, nz, r, g, b, a, u, v, vx, vy, vz;
+            public float wx, wy, wz, nx, ny, nz, r, g, b, a, u, v, u1, vx, vy, vz;
 
             public static CV Lerp(in CV p, in CV q, float t)
             {
@@ -82,7 +114,7 @@ namespace Lanternvale.Preview
                 o.wx = p.wx + (q.wx - p.wx) * t; o.wy = p.wy + (q.wy - p.wy) * t; o.wz = p.wz + (q.wz - p.wz) * t;
                 o.nx = p.nx + (q.nx - p.nx) * t; o.ny = p.ny + (q.ny - p.ny) * t; o.nz = p.nz + (q.nz - p.nz) * t;
                 o.r = p.r + (q.r - p.r) * t; o.g = p.g + (q.g - p.g) * t; o.b = p.b + (q.b - p.b) * t; o.a = p.a + (q.a - p.a) * t;
-                o.u = p.u + (q.u - p.u) * t; o.v = p.v + (q.v - p.v) * t;
+                o.u = p.u + (q.u - p.u) * t; o.v = p.v + (q.v - p.v) * t; o.u1 = p.u1 + (q.u1 - p.u1) * t;
                 o.vx = p.vx + (q.vx - p.vx) * t; o.vy = p.vy + (q.vy - p.vy) * t; o.vz = p.vz + (q.vz - p.vz) * t;
                 return o;
             }
@@ -99,7 +131,7 @@ namespace Lanternvale.Preview
             bool mirrored = M.determinant < 0f;
             var cv = new CV[nv];
             var cam = Cam;
-            bool hasN = mesh.N.Count == nv, hasC = mesh.C.Count == nv, hasUV = mesh.UV0.Count == nv;
+            bool hasN = mesh.N.Count == nv, hasC = mesh.C.Count == nv, hasUV = mesh.UV0.Count == nv, hasUV1 = mesh.UV1.Count == nv;
             for (int i = 0; i < nv; i++)
             {
                 var w = M.MultiplyPoint3x4(V[i]);
@@ -110,6 +142,7 @@ namespace Lanternvale.Preview
                 cv[i] = new CV
                 {
                     wx = w.x, wy = w.y, wz = w.z, nx = n.x, ny = n.y, nz = n.z, r = c.r, g = c.g, b = c.b, a = c.a, u = uv.x + d.TexOffset.x, v = uv.y + d.TexOffset.y,
+                    u1 = hasUV1 ? mesh.UV1[i].x : 0f,
                     vx = Vector3.Dot(rel, cam.R), vy = Vector3.Dot(rel, cam.U), vz = Vector3.Dot(rel, cam.F),
                 };
             }
@@ -199,14 +232,16 @@ namespace Lanternvale.Preview
                     float z = 1f / iz;
                     int idx = y * W + x;
                     if (d.Kind != DrawKind.Sky && z >= Depth[idx]) continue;
-                    if (d.Fade < 0.999f && d.Fade - Dither(px, H - py) - 0.001f < 0f) continue;   // clip(_Fade − dither)
                     float p0 = w0 * ia * z, p1 = w1 * ib * z, p2 = w2 * ic * z;
                     float wx = p0 * a.wx + p1 * b.wx + p2 * c.wx, wy = p0 * a.wy + p1 * b.wy + p2 * c.wy, wz = p0 * a.wz + p1 * b.wz + p2 * c.wz;
+                    float cover = d.Fade;
+                    if (d.Cuts != null) cover *= CutCoverage(d.Cuts, L.CamPos, wx, wy, wz, true);
+                    if (cover < 0.999f && cover - Dither(px, H - py) - 0.001f < 0f) continue;   // clip(_Fade × cuts − dither)
                     float nx = p0 * a.nx + p1 * b.nx + p2 * c.nx, ny = p0 * a.ny + p1 * b.ny + p2 * c.ny, nz = p0 * a.nz + p1 * b.nz + p2 * c.nz;
                     float nl = (float)Math.Sqrt(nx * nx + ny * ny + nz * nz);
                     if (nl > 1e-6f) { nx *= sgn / nl; ny *= sgn / nl; nz *= sgn / nl; }
                     float cr = p0 * a.r + p1 * b.r + p2 * c.r, cg = p0 * a.g + p1 * b.g + p2 * c.g, cb = p0 * a.b + p1 * b.b + p2 * c.b, ca = p0 * a.a + p1 * b.a + p2 * c.a;
-                    float u = p0 * a.u + p1 * b.u + p2 * c.u, v = p0 * a.v + p1 * b.v + p2 * c.v;
+                    float u = p0 * a.u + p1 * b.u + p2 * c.u, v = p0 * a.v + p1 * b.v + p2 * c.v, u1 = p0 * a.u1 + p1 * b.u1 + p2 * c.u1;
                     Fragments++;
                     switch (d.Kind)
                     {
@@ -229,6 +264,14 @@ namespace Lanternvale.Preview
                                 float bl = Mathf.Clamp01(u), st = Mathf.Clamp01(v);
                                 float tr = gr + (sr - gr) * bl, tg = gg + (sg - gg) * bl, tb = gb + (sb - gb) * bl;
                                 float vr = d.Avg1.x + (d.Avg2.x - d.Avg1.x) * bl, vg = d.Avg1.y + (d.Avg2.y - d.Avg1.y) * bl, vb = d.Avg1.z + (d.Avg2.z - d.Avg1.z) * bl;
+                                if (d.Tex3 != null && u1 > 0.001f)
+                                {
+                                    // the detail layer (uv1.x = weight, painted by its alpha)
+                                    d.Tex3.Sample(wx * d.Planar3, wy * d.Planar3, pix * d.Tex3.Width * d.Planar3, out var dr, out var dg, out var db, out var da);
+                                    float dw = Mathf.Clamp01(u1) * da;
+                                    tr += (dr - tr) * dw; tg += (dg - tg) * dw; tb += (db - tb) * dw;
+                                    vr += (dr - vr) * dw; vg += (dg - vg) * dw; vb += (db - vb) * dw;
+                                }
                                 ar *= vr + (tr - vr) * st; ag *= vg + (tg - vg) * st; ab *= vb + (tb - vb) * st;
                                 em = ca;
                             }
@@ -344,6 +387,10 @@ namespace Lanternvale.Preview
             var newC = (float[])C.Clone();
             var ol = outlined.ToArray();
             var fd = fades.ToArray();
+            var cu = cuts.ToArray();
+            var cam = Cam;
+            float hw = W * 0.5f, hh = H * 0.5f;
+            float kx = hw / (cam.TanHalf * cam.Aspect), ky = hh / cam.TanHalf;
             Parallel.For(0, H, y =>
             {
                 for (int x = 0; x < W; x++)
@@ -366,7 +413,15 @@ namespace Lanternvale.Preview
                         else if (dp - dq > 0.12f * dq + 0.25f) { best = dq; bestObj = oq; }   // crease inside one model
                     }
                     if (float.IsPositiveInfinity(best)) continue;
-                    if (fd[bestObj] < 0.999f && fd[bestObj] - Dither(x + 0.5f, H - y - 0.5f) - 0.001f < 0f) continue;   // the hull dithers too
+                    float hull = fd[bestObj];
+                    if (cu[bestObj] != null)
+                    {
+                        // the hull is cut along this pixel's view ray at any depth (Outline: LV_CutCoverage(…, false))
+                        float rx = (x + 0.5f - hw) / kx, ry = (hh - y - 0.5f) / ky;
+                        var dir = cam.F + cam.R * rx + cam.U * ry;
+                        hull *= CutCoverage(cu[bestObj], L.CamPos, L.CamPos.x + dir.x, L.CamPos.y + dir.y, L.CamPos.z + dir.z, false);
+                    }
+                    if (hull < 0.999f && hull - Dither(x + 0.5f, H - y - 0.5f) - 0.001f < 0f) continue;   // the hull dithers too
                     // the hull's fog: at the outlined surface's distance (view depth ≈ distance near the centre)
                     float fog = L.FogAmount(best, 1f);
                     var c = V3.Lerp(inkLin, L.FogCol, fog);
