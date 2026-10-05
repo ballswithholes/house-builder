@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>战略地图测试</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dbd6c7; }
+  #app { position: fixed; inset: 0; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .lbl { position: absolute; transform: translate(-50%, -100%); padding: 2px 8px; border-radius: 6px;
+    background: rgba(18,18,26,.82); border: 1px solid rgba(243,201,105,.6); color: #f3e7c9; white-space: nowrap;
+    font: 600 13px "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC","WenQuanYi Zen Hei",serif; }
+  .lbl i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+  #hud { position: fixed; left: 8px; bottom: 8px; color: #222; font: 12px monospace; background: rgba(255,255,255,.6); padding: 4px 8px; border-radius: 4px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="hud"></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/map-view.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG;
+  const params = new URLSearchParams(location.search);
+  SG.Random.seed(Number(params.get('seed') || 1));
+
+  // ------------------------------------------------ 伪造的游戏状态（只含 MapView 需要的字段）
+  const CITY = [
+    ['beiping','北平',116.4,39.9,320], ['nanpi','南皮',116.7,38.0,360], ['jinyang','晋阳',112.5,37.9,300],
+    ['ye','邺',114.3,36.3,480], ['pingyuan','平原',116.4,37.2,240], ['beihai','北海',118.8,36.7,300],
+    ['puyang','濮阳',115.0,35.7,320], ['chenliu','陈留',114.6,34.8,340], ['xiaopei','小沛',116.9,34.7,240],
+    ['xiapi','下邳',118.0,34.3,400], ['xuchang','许昌',113.8,34.0,420], ['luoyang','洛阳',112.4,34.6,640],
+    ['changan','长安',108.9,34.3,600], ['tianshui','天水',105.7,34.6,260], ['wuwei','武威',102.6,37.9,240],
+    ['hanzhong','汉中',107.0,33.1,320], ['wan','宛',112.5,33.0,400], ['runan','汝南',114.4,33.0,360],
+    ['shouchun','寿春',116.8,32.6,380], ['guangling','广陵',119.4,32.4,320], ['lujiang','庐江',117.3,31.5,300],
+    ['jianye','建业',118.8,32.0,400], ['wu','吴',120.6,31.3,360], ['kuaiji','会稽',120.6,30.0,300],
+    ['xiangyang','襄阳',112.1,32.0,480], ['jiangxia','江夏',114.3,30.6,320], ['jiangling','江陵',112.2,30.3,400],
+    ['changsha','长沙',113.0,28.2,320], ['wuling','武陵',111.7,29.0,240], ['lingling','零陵',111.6,26.4,220],
+    ['guiyang','桂阳',113.0,25.8,200], ['yuzhang','豫章',115.9,28.7,280], ['zitong','梓潼',105.1,31.6,260],
+    ['chengdu','成都',104.1,30.7,520], ['jiangzhou','江州',106.5,29.6,300], ['yongan','永安',109.5,31.0,240],
+    ['jianning','建宁',103.8,25.5,200], ['yunnan','云南',101.5,24.5,180],
+  ];
+  const LINKS = 'beiping-nanpi beiping-jinyang nanpi-pingyuan nanpi-ye jinyang-ye jinyang-luoyang jinyang-changan ye-pingyuan ye-puyang ye-luoyang pingyuan-beihai pingyuan-puyang beihai-xiapi puyang-chenliu puyang-xiaopei chenliu-luoyang chenliu-xuchang chenliu-xiaopei xiaopei-xiapi xiaopei-runan xiapi-guangling xiapi-shouchun xuchang-luoyang xuchang-wan xuchang-runan luoyang-changan luoyang-wan changan-tianshui changan-hanzhong tianshui-wuwei tianshui-hanzhong hanzhong-zitong zitong-chengdu chengdu-jiangzhou chengdu-jianning jiangzhou-yongan jiangzhou-jianning jianning-yunnan yongan-jiangling wan-xiangyang runan-shouchun runan-jiangxia shouchun-lujiang shouchun-guangling guangling-jianye lujiang-jianye lujiang-jiangxia lujiang-yuzhang jianye-wu wu-kuaiji kuaiji-yuzhang xiangyang-jiangling xiangyang-jiangxia jiangling-jiangxia jiangling-wuling jiangling-changsha jiangxia-changsha changsha-yuzhang changsha-guiyang changsha-lingling wuling-lingling lingling-guiyang guiyang-yuzhang'.split(' ');
+  const FACTIONS = [
+    ['dong', '#7a2a3a', ['luoyang', 'changan']], ['yuanshao', '#2f6db5', ['nanpi']], ['cao', '#2c3d8f', ['chenliu']],
+    ['liubei', '#2f9a55', ['pingyuan']], ['sunjian', '#c8382c', ['changsha']], ['yuanshu', '#c99a2e', ['wan', 'runan']],
+    ['gongsun', '#e0e0e8', ['beiping']], ['liubiao', '#3aa5a0', ['xiangyang', 'jiangling']], ['liuyan', '#8a5fc0', ['chengdu', 'jiangzhou']],
+    ['mateng', '#c2702a', ['wuwei', 'tianshui']], ['taoqian', '#6f8f3a', ['xiapi', 'xiaopei']], ['kongrong', '#b05a8a', ['beihai']],
+    ['hanfu', '#5a7a9a', ['ye']], ['zhanglu', '#a08a5a', ['hanzhong']], ['zhangyang', '#7a6a8a', ['jinyang']],
+    ['liuyao', '#4a8aa8', ['jianye']], ['lukang', '#5aa070', ['lujiang']], ['menghuo', '#9a6a3a', ['yunnan']],
+  ];
+  const cities = CITY.map((r, id) => ({ id, key: r[0], name: r[1], lon: r[2], lat: r[3], town: r[4], owner: -1, links: [] }));
+  const byKey = k => cities.find(c => c.key === k);
+  for (const l of LINKS) { const [a, b] = l.split('-').map(byKey); a.links.push(b.id); b.links.push(a.id); }
+  const factions = FACTIONS.map((f, id) => { for (const k of f[2]) byKey(k).owner = id; return { id, key: f[0], color: f[1] }; });
+  const state = { cities, factions, player: 3 };
+
+  // ------------------------------------------------ 启动
+  const app = document.getElementById('app');
+  SG.Gfx.init(app);
+  // 截图 / 计时需要固定画质（?auto=1 打开自适应画质）
+  SG.Gfx.autoQuality = params.get('auto') === '1';
+  const rig = new SG.CameraRig();
+  rig.focusMap(60, 50, 95, true);
+  const map = new SG.MapView();
+  const t0 = performance.now();
+  map.build(state);
+  const buildMs = performance.now() - t0;
+  rig.onTap.push((x, y) => { const id = map.pick(x, y); map.select(id); window.__lastPick = id; });
+
+  // 测试用城名标签
+  const labels = document.getElementById('labels');
+  const lbls = [];
+  for (const cv of map.cities.values()) {
+    const el = document.createElement('div');
+    el.className = 'lbl';
+    const own = cv.city.owner >= 0 ? factions[cv.city.owner].color : '#999';
+    el.innerHTML = `<i style="background:${own}"></i>${cv.city.name}`;
+    labels.appendChild(el);
+    lbls.push({ el, cv });
+  }
+  function updateLabels() {
+    for (const l of lbls) {
+      const s = SG.Gfx.worldToScreen(l.cv.labelPos);
+      if (!s.visible || s.dist > 170) { l.el.style.display = 'none'; continue; }
+      l.el.style.display = '';
+      l.el.style.left = s.x + 'px'; l.el.style.top = s.y + 'px';
+    }
+  }
+
+  // ------------------------------------------------ 主循环
+  let last = performance.now();
+  const frameTimes = [];
+  let recording = false;
+  function loop(now) {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    if (recording) frameTimes.push(now - last);
+    last = now;
+    rig.update(dt);
+    map.update(dt);
+    SG.Gfx.setShadowFocus(rig.target);
+    updateLabels();
+    SG.Gfx.render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  const info = SG.Gfx.renderer.info;
+  document.getElementById('hud').textContent = `build ${buildMs.toFixed(0)} ms · trees ${map.treeCount}`;
+
+  window.__test = {
+    state, map, rig, buildMs,
+    view(mapX, mapY, dist, yaw) {
+      rig.yaw = rig.desiredYaw = yaw || 0;
+      rig.focusMap(mapX, mapY, dist, true);
+      rig.update(0);
+    },
+    async measure(seconds) {
+      frameTimes.length = 0; recording = true;
+      await SG.wait(seconds);
+      recording = false;
+      const a = frameTimes.slice().sort((x, y) => x - y);
+      const avg = a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
+      return { frames: a.length, avgMs: avg, medianMs: a[a.length >> 1], p95Ms: a[Math.floor(a.length * 0.95)] };
+    },
+    stats() {
+      return { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, programs: info.programs.length };
+    },
+  };
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

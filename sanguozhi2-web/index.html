@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#12121a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="霸王的大陆">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="三国志II 霸王的大陆 · 网页版">
+<title>霸王的大陆</title>
+<style>
+  /* 关键样式（css/style.css 在其后载入，可覆盖） */
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #12121a;
+    overscroll-behavior: none; touch-action: manipulation; -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  body { position: fixed; inset: 0; }
+  #app { position: fixed; inset: 0; z-index: 0; background: #dbd6c7; }
+  #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+  #loading { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    background: radial-gradient(ellipse at 50% 42%, #2a2531 0%, #16151d 55%, #0c0c11 100%);
+    color: #f5eddb; transition: opacity .6s ease; pointer-events: auto;
+    font-family: "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; }
+  #loading .sg-loading-seal { width: 84px; height: 84px; border-radius: 16px; background: #c8382c; color: #fff2e0;
+    display: flex; align-items: center; justify-content: center; font-size: 56px; line-height: 1;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,220,170,.25);
+    animation: sg-seal 2.4s ease-in-out infinite; }
+  #loading .sg-loading-title { font-size: 40px; color: #f3c969; letter-spacing: .12em;
+    text-shadow: 0 2px 0 #4d1f05, 0 6px 14px rgba(0,0,0,.6); }
+  #loading .sg-loading-text { font-size: 18px; color: #d8cfbb; letter-spacing: .3em; }
+  #loading .sg-loading-bar { width: 220px; height: 3px; border-radius: 2px; background: rgba(243,201,105,.15); overflow: hidden; }
+  #loading .sg-loading-bar i { display: block; width: 40%; height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(243,201,105,0), #f3c969, rgba(243,201,105,0)); animation: sg-sweep 1.4s ease-in-out infinite; }
+  #loading.sg-error .sg-loading-text { color: #ff8c73; letter-spacing: .05em; max-width: 80vw; text-align: center; }
+  #loading.sg-error .sg-loading-bar { display: none; }
+  @keyframes sg-seal { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  @keyframes sg-sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
+
+  /* 手机竖屏提示：本游戏为横屏设计 */
+  #rotate-hint { display: none; position: fixed; inset: 0; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: rgba(12,12,17,.94); color: #f5eddb; text-align: center; padding: 24px;
+    font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei"; }
+  #rotate-hint .sg-rot-icon { width: 46px; height: 76px; border: 3px solid #f3c969; border-radius: 9px; animation: sg-rot 2.2s ease-in-out infinite; }
+  #rotate-hint .sg-rot-title { font-family: "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; font-size: 26px; color: #f3c969; }
+  #rotate-hint .sg-rot-sub { font-size: 14px; color: #a8a194; }
+  @keyframes sg-rot { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+  @media (orientation: portrait) and (max-width: 600px) and (pointer: coarse) {
+    #rotate-hint:not(.sg-dismissed) { display: flex; }
+  }
+</style>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+
+<div id="loading" role="status" aria-live="polite">
+  <div class="sg-loading-seal">霸</div>
+  <div class="sg-loading-title">霸王的大陆</div>
+  <div class="sg-loading-text">正在绘制山河……</div>
+  <div class="sg-loading-bar"><i></i></div>
+</div>
+
+<div id="rotate-hint">
+  <div class="sg-rot-icon"></div>
+  <div class="sg-rot-title">请横置设备</div>
+  <div class="sg-rot-sub">本游戏为横屏设计 · 轻触此处仍以竖屏继续</div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/strategy-ai.js"></script>
+<script src="js/battle-model.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/art.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/map-view.js"></script>
+<script src="js/battle-view.js"></script>
+<script src="js/battle-controller.js"></script>
+<script src="js/strategy-screen.js"></script>
+<script src="js/game.js"></script>
+<script>
+  'use strict';
+  (function () {
+    var hint = document.getElementById('rotate-hint');
+    if (hint) hint.addEventListener('click', function () { hint.classList.add('sg-dismissed'); });
+    if (!window.SG || !SG.Game) {
+      var t = document.querySelector('#loading .sg-loading-text');
+      if (t) t.textContent = '脚本载入失败，请刷新重试。';
+      document.getElementById('loading').classList.add('sg-error');
+      return;
+    }
+    SG.Game.boot();
+  })();
+</script>
+</body>
+</html>

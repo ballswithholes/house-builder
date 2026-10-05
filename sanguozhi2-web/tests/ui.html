@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>界面组件测试 · 三国志II</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  /* 测试页专用：模拟地图背景与演示菜单按钮 */
+  #bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #demoBtn { position: fixed; left: calc(env(safe-area-inset-left, 0px) + 10px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); z-index: 20; }
+</style>
+</head>
+<body>
+<div id="app"><canvas id="bg"></canvas></div>
+<div id="ui"></div>
+<button id="demoBtn" class="sg-btn small" type="button">演示</button>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG, UI = SG.UI, M = SG.M;
+  const params = new URLSearchParams(location.search);
+
+  // ------------------------------------------------------------ 示例数据 --
+  const FACTIONS = [
+    { id: 0, name: '刘备', color: '#2f9a55' }, { id: 1, name: '曹操', color: '#2c3d8f' },
+    { id: 2, name: '袁绍', color: '#2f6db5' }, { id: 3, name: '孙坚', color: '#c8382c' },
+    { id: 4, name: '董卓', color: '#7a2a3a' }, { id: 5, name: '刘表', color: '#3aa5a0' },
+    { id: 6, name: '刘焉', color: '#8a5fc0' }, { id: 7, name: '袁术', color: '#c99a2e' },
+  ];
+  const CITIES = [
+    ['北平', 116.4, 39.9, 2], ['南皮', 116.7, 38.0, 2], ['晋阳', 112.5, 37.9, 4], ['邺', 114.3, 36.3, 2],
+    ['平原', 116.4, 37.2, 0], ['北海', 118.8, 36.7, -1], ['濮阳', 115.0, 35.7, 1], ['陈留', 114.6, 34.8, 1],
+    ['小沛', 116.9, 34.7, 0], ['下邳', 118.0, 34.3, 0], ['许昌', 113.8, 34.0, 1], ['洛阳', 112.4, 34.6, 4],
+    ['长安', 108.9, 34.3, 4], ['汉中', 107.0, 33.1, 6], ['宛', 112.5, 33.0, 7], ['寿春', 116.8, 32.6, 7],
+    ['襄阳', 112.1, 32.0, 5], ['建业', 118.8, 32.0, 3], ['江夏', 114.3, 30.6, 5], ['长沙', 113.0, 28.2, 3],
+    ['成都', 104.1, 30.7, 6], ['江陵', 112.2, 30.3, 5], ['吴', 120.6, 31.3, 3], ['天水', 105.7, 34.6, 4],
+  ].map((c, i) => ({ id: i, name: c[0], x: (c[1] - 100) * 5, y: (c[2] - 23) * 5.6, owner: c[3], troops: 3000 + ((i * 7919) % 9000) }));
+
+  // ------------------------------------------------- 地图投影（SG.Gfx 桩） --
+  // 世界坐标 three = (mapX, h, -mapY)。投影到当前视口。
+  const view = { x0: 0, y0: 0, k: 1 };
+  function fitView() {
+    const W = innerWidth, H = innerHeight;
+    // 地图范围 mapX 5..110, mapY 5..95
+    const k = Math.min(W / 120, H / 98) * 1.25;
+    view.k = k; view.x0 = W * 0.5 - 62 * k; view.y0 = H * 0.5 + 56 * k;
+  }
+  function mapToScreen(mx, my, h) { return { x: view.x0 + mx * view.k, y: view.y0 - my * view.k * 0.92 - (h || 0) * view.k * 0.9 }; }
+  SG.Gfx = {
+    camera: { isStub: true },
+    worldToScreen(p) {
+      const s = mapToScreen(p.x, -p.z, p.y);
+      const vis = s.x > -200 && s.x < innerWidth + 200 && s.y > -200 && s.y < innerHeight + 200;
+      return { x: s.x, y: s.y, visible: vis, dist: 60 };
+    },
+  };
+
+  // ------------------------------------------------------- 背景：模拟地图 --
+  const cv = document.getElementById('bg');
+  function drawMap() {
+    fitView();
+    const dpr = Math.min(2, devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // 天空 / 远景雾
+    let gr = g.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, '#cfd8dc'); gr.addColorStop(0.18, '#c9cbb4'); gr.addColorStop(1, '#7c8f55');
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    // 大地色块
+    const rnd = SG.SeededRandom(7);
+    for (let i = 0; i < 260; i++) {
+      const x = rnd.nextDouble() * W, y = H * 0.12 + rnd.nextDouble() * H * 0.95, r = 20 + rnd.nextDouble() * 90 * (y / H + 0.3);
+      const hue = 70 + rnd.nextDouble() * 40, l = 34 + rnd.nextDouble() * 18;
+      g.fillStyle = `hsla(${hue}, 32%, ${l}%, .35)`;
+      g.beginPath(); g.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2); g.fill();
+    }
+    // 山
+    for (let i = 0; i < 70; i++) {
+      const mx = rnd.nextDouble() < 0.6 ? 2 + rnd.nextDouble() * 22 : 40 + rnd.nextDouble() * 60;
+      const my = rnd.nextDouble() * 90;
+      const s = mapToScreen(mx, my, 0), h = (14 + rnd.nextDouble() * 26) * view.k / 6;
+      g.fillStyle = '#6d6a55'; g.beginPath(); g.moveTo(s.x - h, s.y); g.lineTo(s.x, s.y - h * 1.2); g.lineTo(s.x + h, s.y); g.fill();
+      g.fillStyle = '#8f8a6e'; g.beginPath(); g.moveTo(s.x, s.y - h * 1.2); g.lineTo(s.x + h, s.y); g.lineTo(s.x + h * 0.2, s.y); g.fill();
+      g.fillStyle = 'rgba(245,245,240,.85)'; g.beginPath(); g.moveTo(s.x, s.y - h * 1.2); g.lineTo(s.x - h * 0.25, s.y - h * 0.9); g.lineTo(s.x + h * 0.25, s.y - h * 0.9); g.fill();
+    }
+    // 河流：黄河、长江
+    function river(pts, w) {
+      g.strokeStyle = '#4d89a8'; g.lineWidth = w * view.k / 6; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach((p, i) => { const s = mapToScreen(p[0], p[1], 0); if (i) g.lineTo(s.x, s.y); else g.moveTo(s.x, s.y); });
+      g.stroke();
+      g.strokeStyle = 'rgba(190,225,240,.5)'; g.lineWidth = w * view.k / 18; g.stroke();
+    }
+    river([[0, 72], [20, 68], [38, 70], [52, 82], [62, 70], [75, 64], [92, 66], [110, 78]], 7);
+    river([[0, 40], [20, 42], [35, 38], [55, 42], [65, 40], [80, 46], [95, 52], [112, 50]], 9);
+    // 城
+    CITIES.forEach(c => {
+      const s = mapToScreen(c.x, c.y, 0), r = 4 * view.k / 6;
+      const col = c.owner >= 0 ? FACTIONS[c.owner].color : '#999';
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(s.x + 3, s.y + 2, r * 1.6, r * 0.7, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#d9cfb4'; g.fillRect(s.x - r, s.y - r * 1.1, r * 2, r * 1.1);
+      g.fillStyle = '#4a3a2a'; g.beginPath(); g.moveTo(s.x - r * 1.35, s.y - r * 1.05); g.lineTo(s.x, s.y - r * 1.9); g.lineTo(s.x + r * 1.35, s.y - r * 1.05); g.fill();
+      g.fillStyle = col; g.fillRect(s.x + r * 0.9, s.y - r * 3.2, r * 0.9, r * 0.6);
+      g.fillStyle = '#3a2a1a'; g.fillRect(s.x + r * 0.85, s.y - r * 3.2, 1.2, r * 2.2);
+    });
+    // 远处雾
+    gr = g.createLinearGradient(0, 0, 0, H * 0.4);
+    gr.addColorStop(0, 'rgba(219,214,199,.9)'); gr.addColorStop(1, 'rgba(219,214,199,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, W, H * 0.4);
+  }
+  drawMap();
+  addEventListener('resize', drawMap);
+
+  // ------------------------------------------------------------ 主循环 --
+  function loop() { UI.updateFollowers(SG.Gfx.camera); requestAnimationFrame(loop); }
+
+  SG.Sfx.init();
+  UI.init();
+  requestAnimationFrame(loop);
+
+  // ---------------------------------------------------------- 画面构建 --
+  let current = null;
+  const labels = [];
+  function clearScreen() {
+    if (current) { current.remove(); current = null; }
+    labels.splice(0).forEach(h => h.remove());
+  }
+
+  function buildTitle() {
+    clearScreen();
+    const t = UI.screen('sg-title');
+    const hero = UI.el('div', 'sg-title-hero');
+    hero.appendChild(UI.el('div', 'sg-title-seal', '霸'));
+    hero.appendChild(UI.el('div', 'sg-title-sub0', '三国志 II'));
+    hero.appendChild(UI.el('div', 'sg-title-main', '霸王的大陆'));
+    hero.appendChild(UI.el('div', 'sg-title-sub', '群雄逐鹿 · 一统天下'));
+    t.appendChild(hero);
+    const menu = UI.el('div', 'sg-title-menu');
+    UI.button(menu, '新的征程', () => UI.toast('新的征程'), { primary: true });
+    UI.button(menu, '继续征程', () => {}, { disabled: true });
+    UI.button(menu, '操作说明', () => UI.say('【操作】拖动平移地图，滚轮或双指缩放，点击城池查看情报。\n【令牌】每月可下达的指令数量取决于所领城池数。\n【出征】选择相邻的敌城与至多五名武将；可亲自指挥战斗或委任电脑。\n【战斗】点选部队移动，相邻时可攻击、施展策略或单挑。击败敌军主将或攻入本城即可获胜，三十日内未能攻下则撤退。'));
+    t.appendChild(menu);
+    current = t;
+    return t;
+  }
+
+  function cityLabels(selected) {
+    CITIES.forEach(c => {
+      const e = UI.el('div', 'sg-citylabel');
+      const col = c.owner >= 0 ? FACTIONS[c.owner].color : '#b3b3b3';
+      const mine = c.owner === 0;
+      e.innerHTML = `<span class="sg-dot" style="color:${col}">●</span>${c.name}${mine ? `<small>${c.troops}</small>` : ''}`;
+      if (mine) e.classList.add('is-mine');
+      if (c.id === selected) e.classList.add('is-selected');
+      const pos = new THREE.Vector3(c.x, 5.5, -c.y);
+      labels.push(UI.follow(e, () => pos, { hideBeyond: 170 }));
+    });
+  }
+
+  function buildStrategy() {
+    clearScreen();
+    const s = UI.screen('sg-strategy');
+    // 顶栏
+    const top = UI.panel(s, 'sg-topbar');
+    top.appendChild(UI.el('div', 'sg-topbar-left', '<span class="sg-dot" style="color:#2f9a55">■</span>刘备军'));
+    top.appendChild(UI.el('div', 'sg-topbar-center',
+      '<span><b>190</b>年 <b>3</b>月</span>' +
+      '<span class="sg-chip"><i>令牌</i><span class="sg-tokens">●●○</span></span>' +
+      '<span class="sg-chip"><i>城</i><b>3</b></span>' +
+      '<span class="sg-chip"><i>金</i><b>1,860</b></span>' +
+      '<span class="sg-chip"><i>粮</i><b>31,200</b></span>'));
+    const act = UI.el('div', 'sg-topbar-actions');
+    UI.button(act, '势力', () => demoFactions());
+    UI.button(act, '记录', () => UI.toast('✦ 进度已记录'));
+    UI.button(act, '音乐', () => { SG.Sfx.setMusic(!SG.Sfx.musicOn); UI.toast(SG.Sfx.musicOn ? '音乐 开' : '音乐 关'); });
+    UI.button(act, '结束本月', () => UI.confirm('还剩 2 枚令牌，确定结束本月？', '结束', '继续'), { primary: true });
+    top.appendChild(act);
+    // 城池面板
+    const cp = UI.panel(s, 'sg-citypanel');
+    const head = UI.el('div', 'sg-citypanel-head');
+    head.appendChild(UI.el('div', 'sg-citypanel-title', '下邳<small><span style="color:#2f9a55">刘备</span></small>'));
+    UI.button(head, '×', () => cp.classList.add('sg-hidden'), { className: 'sg-close', ariaLabel: '关闭' });
+    cp.appendChild(head);
+    const body = UI.el('div', 'sg-citypanel-body');
+    body.appendChild(UI.el('div', 'sg-citystats',
+      '太守 <b>刘备</b>　　人口 560,000\n土地 <b>500</b>　产业 <b>460</b>　町 <b>400</b>\n金 <b>900</b>　粮 <b>13000</b>　防御 53\n兵力 <b>14200</b>　武将 6 人　<span class="sg-good">在野 1 人</span>'));
+    const gl = UI.el('div', 'sg-genlist');
+    [
+      ['ruler', '刘备', false, 79, 75, 78, 5000, 70, 100],
+      ['gov', '关羽', false, 98, 75, 62, 4800, 80, 100],
+      ['', '张飞', true, 99, 30, 22, 4600, 75, 100],
+      ['', '简雍', false, 32, 70, 74, 800, 40, 92],
+      ['', '孙乾', false, 30, 72, 76, 600, 40, 95],
+      ['', '糜竺', false, 28, 64, 80, 400, 30, 98],
+    ].forEach(r => {
+      const row = UI.el('div', 'sg-genrow');
+      const tag = r[0] === 'ruler' ? '<span class="sg-tag sg-tag-ruler">君</span>' : r[0] === 'gov' ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
+      row.appendChild(UI.el('div', 'sg-genrow-name', `${tag}<b>${r[1]}</b>${r[2] ? '<span class="sg-moved">已行动</span>' : ''}`));
+      row.appendChild(UI.el('div', 'sg-genrow-stats', `武${r[3]} 智${r[4]} 政${r[5]}\n兵${r[6]} 训${r[7]} 忠${r[8]}`));
+      gl.appendChild(row);
+    });
+    body.appendChild(gl);
+    cp.appendChild(body);
+    const grid = UI.el('div', 'sg-cmdgrid');
+    const cmds = [['开发', 1], ['征兵', 1], ['训练', 1], ['搜索', 1], ['登用', 1], ['移动', 1], ['输送', 1], ['外交', 1], ['出征', 1, true], ['赏赐', 1], ['交易', 1], ['任命', 0]];
+    cmds.forEach(c => UI.button(grid, c[0], () => demoForCmd(c[0]), { primary: !!c[2], disabled: !c[1] }));
+    cp.appendChild(grid);
+    current = s;
+    cityLabels(9);
+    return s;
+  }
+
+  function sideColor(s) { return s === 0 ? '#73bfff' : '#ff806b'; }
+
+  function buildBattle() {
+    clearScreen();
+    const s = UI.screen('sg-battle');
+    s.appendChild(UI.panel(null, 'sg-battle-top'));
+    s.lastChild.innerHTML =
+      '<span>第 <b>3</b>/30 日</span><span><span class="sg-side0">攻方</span>行动</span>' +
+      '<span>行动力 <span class="sg-tokens">●●●○○</span></span><span class="sg-sep">｜</span>' +
+      '<span class="sg-chip"><i class="sg-side0">攻</i><b>12,400</b><i>粮</i><b>2,600</b></span>' +
+      '<span class="sg-chip"><i class="sg-side1">守</i><b>9,800</b><i>粮</i><b>4,200</b></span>';
+    const card = UI.panel(s, 'sg-battle-card');
+    card.innerHTML = '<div><span class="sg-card-name">关羽</span><span class="sg-card-sub">攻方·主将</span></div>' +
+      '兵力 <b>4800</b>　士气 82　训练 80<br>武力 98　智力 75<br>阵型 <span class="sg-goldc">锋矢</span>（攻×1.20 防×0.90）<br>地形 平原　<span style="color:#c79bff">混乱中</span>';
+    const actions = UI.el('div', 'sg-battle-actions');
+    UI.button(actions, '委任作战', b => UI.toast('委任作战'));
+    UI.button(actions, '结束回合', () => UI.toast('结束回合'), { primary: true });
+    s.appendChild(actions);
+    current = s;
+    // 部队标签
+    const units = [
+      ['关羽', 4800, 6000, 0, true, 50, 60], ['张飞', 3900, 6100, 0, false, 46, 56], ['赵云', 2600, 5800, 0, false, 54, 52],
+      ['吕布', 5200, 6200, 1, true, 64, 62], ['张辽', 2100, 5400, 1, false, 66, 55], ['高顺', 900, 4800, 1, false, 60, 50],
+    ];
+    units.forEach(u => {
+      const e = UI.el('div', 'sg-unitinfo' + (u[4] ? ' is-commander' : ''));
+      e.style.setProperty('--c', sideColor(u[3]));
+      e.innerHTML = '<i class="sg-stripe"></i><div class="sg-unitinfo-name">' + (u[4] ? '<span class="sg-star">★</span>' : '') + u[0] + '<span class="sg-unitinfo-troops">' + u[1] + '</span></div>';
+      e.appendChild(UI.bar(u[1] / u[2], sideColor(u[3])));
+      const pos = new THREE.Vector3(u[5], 3, -u[6]);
+      labels.push(UI.follow(e, () => pos, { hideBeyond: 90, align: 'bottom' }));
+    });
+    return s;
+  }
+
+  // ------------------------------------------------------------ 对话演示 --
+  async function demoFactions() {
+    const items = FACTIONS.map((f, i) => UI.item(`<span class="sg-dot" style="color:${f.color}">■</span> ${f.name}${i === 0 ? '（我方）' : i === 5 ? '（同盟）' : ''}`,
+      `城 ${8 - i}　将 ${20 - i * 2}　兵 ${(9 - i) * 7400}`));
+    return UI.choose('天下势力', items, null, 760);
+  }
+  async function demoRuler() {
+    const items = FACTIONS.map((f, i) => UI.item(`<span style="color:${f.color}">■</span> ${f.name}`,
+      `城 ${8 - i}　将 ${20 - i * 2}　德 ${90 - i * 7}　人望 ${85 - i * 4}`));
+    return UI.choose('选择君主　190年 · 董卓专横', items, '德越高越易登用人才；人望决定战场上的行动力。', 820);
+  }
+  function demoDevelop() {
+    return UI.choose('开发（花费 50 金）', [
+      UI.item('土地', '500 / 999', true, '增加秋收的粮食'),
+      UI.item('产业', '460 / 999', true, '增加每月的金收入'),
+      UI.item('町', '400 / 999', false, '增加人口与城防'),
+    ], '金 900');
+  }
+  function demoSortie() {
+    const gens = [['关羽', 4800, 98, 75, 80], ['张飞', 4600, 99, 30, 75], ['赵云', 3000, 96, 76, 70], ['简雍', 800, 32, 70, 40], ['孙乾', 600, 30, 72, 40], ['糜竺', 400, 28, 64, 30], ['糜芳', 1200, 52, 38, 45]];
+    const items = gens.map(g => UI.item(g[0], `兵${g[1]} 武${g[2]} 智${g[3]} 训${g[4]}`));
+    items[0].selected = true;
+    return UI.chooseMany('出征武将（至多 5 名）', items, 5, '第一位选中的武将为主将；主将败走则全军撤退。');
+  }
+  function demoRecruit() {
+    return UI.pickNumber('征兵人数', 100, 1300, 100, 1300, v => '花费 ' + Math.ceil(v / 10) + ' 金（现有 900）');
+  }
+  function demoFormation() {
+    const f = [['鱼鳞', '攻×1.00 防×1.00 机动+0', '均衡的阵型'], ['锋矢', '攻×1.20 防×0.90 机动+1', '突击，适合进攻'], ['鹤翼', '攻×1.10 防×1.05 机动+0', '包围敌军'], ['方圆', '需智力 60', '全方位防御'], ['长蛇', '攻×0.95 防×1.00 机动+2', '行军迅速'], ['雁行', '需武力 80', '远程压制'], ['偃月', '需武力 85', '主将突击'], ['衡轭', '攻×0.90 防×1.25 机动-1', '坚守阵地']];
+    return UI.choose('变换阵型（消耗本回合行动）', f.map((x, i) => UI.item(x[0] + (i === 0 ? '（当前）' : ''), x[1], !x[1].startsWith('需'), x[2])), null, 760);
+  }
+  async function demoDuel() {
+    const m = UI.openModal('sg-duel', { width: 980 });
+    m.panel.appendChild(UI.el('div', 'sg-duel-title', '单　挑'));
+    const arena = UI.el('div', 'sg-duel-arena');
+    function side(name, war, s) {
+      const d = UI.el('div', 'sg-duel-side');
+      d.appendChild(UI.medal(name.charAt(0), sideColor(s), 130));
+      d.appendChild(UI.el('div', 'sg-duel-name', name + '<small>武力 ' + war + '</small>'));
+      const b = UI.bar(1, sideColor(s)); d.appendChild(b);
+      d.bar = b;
+      return d;
+    }
+    const a = side('关羽', 98, 0), b = side('吕布', 100, 1);
+    const vs = UI.el('div', 'sg-duel-vs', 'VS');
+    arena.appendChild(a); arena.appendChild(vs); arena.appendChild(b);
+    m.panel.appendChild(arena);
+    const log = UI.el('div', 'sg-duel-log', '');
+    m.panel.appendChild(log);
+    window.__duel = { m, a, b, vs, log };
+    let hpA = 100, hpB = 100;
+    for (let r = 1; r <= 6; r++) {
+      await SG.wait(0.45);
+      const who = r % 2;
+      const dmg = 9 + ((r * 37) % 13);
+      if (who) hpA = Math.max(0, hpA - dmg); else hpB = Math.max(0, hpB - dmg);
+      a.bar.setValue(hpA / 100); b.bar.setValue(hpB / 100);
+      UI.pulse(vs, 'is-hit'); UI.pulse(who ? a : b, 'is-struck');
+      SG.Sfx.play('duel');
+      log.innerHTML = `第 ${r} 合　${who ? '吕布' : '关羽'}一击，造成 ${dmg} 伤害`;
+    }
+    log.innerHTML = '<b>关羽</b>击败了吕布！';
+    if (!params.has('hold')) { await SG.wait(1.4); m.close(); }
+  }
+  function demoBanner() { UI.banner('190年 3月', '刘备军'); }
+  function demoToasts() {
+    UI.toast('✦ 进度已记录');
+    setTimeout(() => UI.toast('关羽施展「火计」！', 2.5), 250);
+    setTimeout(() => UI.toast('第 <b>4</b> 日', 2.5), 500);
+  }
+  function demoFloat() {
+    const pts = [[50, 3, 60], [64, 3, 62], [46, 3, 56]];
+    pts.forEach((p, i) => setTimeout(() => UI.floatText(new THREE.Vector3(p[0], p[1], -p[2]), i === 1 ? '识破' : '-' + (300 + i * 211), i === 1 ? '#ada392' : '#ff7361', Math.round(34 * UI.scale())), i * 200));
+  }
+  async function demoForCmd(name) {
+    if (name === '开发') { const r = await demoDevelop(); if (r >= 0) await UI.say('土地开发成功。土地 500 → 518', null); }
+    else if (name === '征兵') { const n = await demoRecruit(); if (n > 0) UI.toast('征得士兵 ' + n + ' 人'); }
+    else if (name === '出征') { const s = await demoSortie(); if (s) UI.toast('出征：' + s.join(',')); }
+    else if (name === '登用') { const ok = await UI.confirm('登用诸葛亮？（武38 智100 政95，成功率约 35%）', '登用', '暂且作罢'); if (ok) await UI.say('诸葛亮：久闻明公大名，愿效犬马之劳！\n（诸葛亮加入了我军）', '诸葛亮', '#c8382c'); }
+    else if (name === '外交') await UI.choose('外交策略', [UI.item('同盟', null, true, '与他国缔结 12 个月的同盟'), UI.item('离间', null, true, '降低敌将的忠诚'), UI.item('拉拢', null, true, '劝诱敌将倒戈')]);
+    else if (name === '交易') await UI.choose('交易　（每 100 粮 12 金）', [UI.item('买粮', '金 900'), UI.item('卖粮', '粮 13000')]);
+    else await UI.say(name + '：本演示仅展示界面。');
+  }
+
+  const demos = {
+    title: buildTitle, strategy: buildStrategy, battle: buildBattle,
+    say: () => UI.say('中平六年，灵帝驾崩。西凉董卓率军入京，废少帝、立献帝，专擅朝政。\n关东诸侯愤然而起，天下群雄并立。\n你将选择一位君主，逐鹿中原，一统天下。'),
+    sayspeaker: () => UI.say('关羽：吕布，可敢与我一战？', '关羽', '#73bfff'),
+    ruler: demoRuler, develop: demoDevelop, factions: demoFactions, formation: demoFormation,
+    sortie: demoSortie, recruit: demoRecruit,
+    confirm: () => UI.confirm('以刘备开始？', '出阵', '再想想'),
+    toast: demoToasts, banner: demoBanner, duel: demoDuel, float: demoFloat,
+    fight: () => UI.choose('下邳之战', [UI.item('亲自指挥', '在战场上调兵遣将'), UI.item('委任', '由部将自行作战，立即得出结果')], null, 560),
+    action: () => UI.choose('关羽 的行动', [UI.item('攻击', '1 支敌军相邻'), UI.item('策略', '智力 75'), UI.item('单挑', '武力 98'), UI.item('阵型', '锋矢'), UI.item('待机')], null, 520),
+    notenough: () => UI.pickNumber('输送金', 10, 0, 50, 0),
+  };
+  window.demo = demos;
+  window.demoBuild = { title: buildTitle, strategy: buildStrategy, battle: buildBattle, clear: clearScreen };
+
+  document.getElementById('demoBtn').addEventListener('click', async () => {
+    if (UI.anyModal()) return;
+    const keys = Object.keys(demos);
+    const r = await UI.choose('界面演示', keys.map(k => UI.item(k)), '选择一个画面或对话框。键盘：↑↓ 选择，Enter 确认，Esc 取消。', 520);
+    if (r >= 0) {
+      const res = await demos[keys[r]]();
+      if (res !== undefined && typeof res !== 'object') UI.toast('结果：' + JSON.stringify(res));
+      else if (Array.isArray(res) || res === null) UI.toast('结果：' + JSON.stringify(res));
+    }
+  });
+
+  const scene = params.get('scene') || 'strategy';
+  if (demos[scene]) demos[scene]();
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

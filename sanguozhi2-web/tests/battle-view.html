@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BattleView 测试</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a20; }
+  #app { position: fixed; inset: 0; }
+  #ui { position: fixed; inset: 0; pointer-events: none; }
+  #hud { position: fixed; left: 12px; top: 10px; z-index: 50; font: 13px/1.4 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei";
+         color: #f5eddb; background: rgba(18,18,26,.75); border: 1px solid rgba(243,201,105,.4); border-radius: 8px; padding: 6px 10px; pointer-events: auto; }
+  #hud button { margin: 2px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<div id="hud"></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script>
+'use strict';
+/* BattleView 独立测试页。
+   参数：?real=1 使用真实的 GameState + BattleModel（需要 data/model/strategy-ai/battle-model）
+         ?fx=1   自动播放全部动画与特效
+         ?atk=cao&def=liubei  指定双方势力（仅假模型） */
+(function () {
+  const Q = new URLSearchParams(location.search);
+  const optional = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js', '../js/camera.js', '../js/battle-view.js'];
+  const loaded = {};
+  function load(src) {
+    return new Promise(res => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => { loaded[src] = true; res(true); };
+      s.onerror = () => { loaded[src] = false; res(false); };
+      document.body.appendChild(s);
+    });
+  }
+  (async function () {
+    for (const f of optional) await load(f);
+    window.__loaded = loaded;
+    try { start(); } catch (e) { console.error(e); window.__error = String(e && e.stack || e); }
+  })();
+
+  // -------------------------------------------------- 测试桩（仅在缺失时） --
+  function stubs() {
+    if (!SG.Terrain) SG.Terrain = { Plain: 0, Forest: 1, Hill: 2, Mountain: 3, River: 4, Wall: 5, Gate: 6, Castle: 7 };
+    if (!SG.UI || !SG.UI.follow) {
+      const layer = document.createElement('div');
+      layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;';
+      document.getElementById('ui').appendChild(layer);
+      const followers = new Set();
+      const UI = SG.UI = SG.UI || {};
+      UI.follow = function (el, getPos, opts) {
+        opts = opts || {};
+        el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0'; el.style.pointerEvents = 'none';
+        layer.appendChild(el);
+        const h = { el, alpha: 1, getPos, offsetY: opts.offsetY || 0, hideBeyond: opts.hideBeyond || 9999,
+          remove() { followers.delete(h); if (el.parentNode) el.parentNode.removeChild(el); } };
+        followers.add(h);
+        return h;
+      };
+      UI.updateFollowers = function () {
+        for (const h of followers) {
+          const s = SG.Gfx.worldToScreen(h.getPos());
+          const vis = s.visible && s.dist < h.hideBeyond;
+          h.el.style.opacity = vis ? h.alpha : 0;
+          if (vis) h.el.style.transform = `translate(${s.x.toFixed(1)}px, ${(s.y - h.offsetY).toFixed(1)}px)`;
+        }
+      };
+      UI.floatText = function (pos, text, color, size) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText = `position:absolute;left:0;top:0;white-space:nowrap;font:700 ${size}px "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei";color:${color};text-shadow:0 2px 0 rgba(0,0,0,.8),0 0 6px rgba(0,0,0,.6);`;
+        const inner = document.createElement('div');
+        inner.style.cssText = 'position:absolute;left:0;top:0;';
+        el.style.transform = 'translate(-50%,-50%)';
+        inner.appendChild(el);
+        const h = UI.follow(inner, () => pos, {});
+        const t0 = performance.now();
+        (function tick() {
+          const t = (performance.now() - t0) / 1000;
+          el.style.transform = `translate(-50%, calc(-50% - ${t * 70}px))`;
+          el.style.opacity = Math.max(0, Math.min(1, 1.6 - t * 1.4));
+          if (t > 1.2) { h.remove(); return; }
+          requestAnimationFrame(tick);
+        })();
+      };
+      window.__uiStub = true;
+    }
+  }
+
+  // ------------------------------------------------------------ 假模型 --
+  // 与 BattleModel.Generate 相同的生成方式（W=14, H=10，右侧城池），并保证各种地形都出现
+  function fakeModel() {
+    const Tn = SG.Terrain, M = SG.M;
+    const W = 14, H = 10;
+    const grid = v => Array.from({ length: W }, () => Array.from({ length: H }, () => v));
+    const map = grid(Tn.Plain), height = grid(0), burning = grid(0);
+    const rnd = SG.SeededRandom(7 * 31 + 189);
+    const ox = rnd.nextDouble() * 100, oy = rnd.nextDouble() * 100;
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+      const n = M.perlinNoise(ox + x * 0.28, oy + y * 0.28);
+      const m = M.perlinNoise(ox + 50 + x * 0.22, oy + 50 + y * 0.22);
+      let t = Tn.Plain;
+      if (n > 0.72) t = Tn.Mountain; else if (n > 0.6) t = Tn.Hill; else if (m > 0.62) t = Tn.Forest;
+      map[x][y] = t;
+      height[x][y] = t === Tn.Mountain ? 1.1 : t === Tn.Hill ? 0.45 : n * 0.12;
+    }
+    // 保证地形齐全
+    const put = (x, y, t, h) => { map[x][y] = t; height[x][y] = h; };
+    put(3, 1, Tn.Mountain, 1.1); put(2, 1, Tn.Mountain, 1.1); put(3, 0, Tn.Hill, 0.45);
+    put(2, 7, Tn.Forest, 0.05); put(3, 7, Tn.Forest, 0.05); put(2, 8, Tn.Forest, 0.05); put(3, 8, Tn.Forest, 0.06);
+    put(7, 2, Tn.Hill, 0.45); put(8, 2, Tn.Hill, 0.45); put(7, 8, Tn.Hill, 0.45);
+    put(8, 7, Tn.Forest, 0.05); put(8, 8, Tn.Forest, 0.05); put(1, 3, Tn.Forest, 0.05);
+    put(6, 0, Tn.Mountain, 1.1); put(7, 0, Tn.Mountain, 1.1);
+    // 河流
+    let rx = 4 + rnd.next(3);
+    for (let y = 0; y < H; y++) {
+      put(rx, y, Tn.River, -0.15);
+      if (rnd.nextDouble() < 0.3) rx = M.clamp(rx + (rnd.nextDouble() < 0.5 ? -1 : 1), 3, 7);
+      if (y < H - 1 && map[rx][y] !== Tn.River) put(rx, y, Tn.River, -0.15);
+    }
+    // 城池
+    const castle = { x: W - 3, y: H >> 1 };
+    for (let x = W - 5; x < W; x++)
+      for (let y = castle.y - 2; y <= castle.y + 2; y++) {
+        const edge = x === W - 5 || y === castle.y - 2 || y === castle.y + 2 || x === W - 1;
+        put(x, y, edge ? Tn.Wall : Tn.Plain, 0.05);
+      }
+    map[W - 5][castle.y] = Tn.Gate;
+    map[W - 3][castle.y - 2] = Tn.Gate;
+    map[W - 3][castle.y + 2] = Tn.Gate;
+    map[castle.x][castle.y] = Tn.Castle;
+    for (let y = 0; y < H; y++) for (let x = 0; x < 2; x++) if (map[x][y] === Tn.Mountain) put(x, y, Tn.Plain, 0.05);
+
+    const gen = (name, troops, war, intel) => ({ name, troops, war, intel, pol: 60, training: 70, loyalty: 90, faction: 0 });
+    const U = (g, side, x, y, extra) => Object.assign({ gen: g, side, x, y, morale: 70, formation: 0, acted: false, confused: 0, commander: false, alive: true,
+      get troops() { return this.gen.troops; }, set troops(v) { this.gen.troops = Math.max(0, v); } }, extra || {});
+    const units = [
+      U(gen('刘备', 5200, 75, 78), 0, 1, 5, { commander: true }),
+      U(gen('关羽', 6800, 98, 80), 0, 2, 4),
+      U(gen('张飞', 4100, 99, 30), 0, 1, 6, { acted: true }),
+      U(gen('赵云', 2600, 96, 76), 0, 3, 5),
+      U(gen('曹仁', 6000, 86, 62), 1, castle.x, castle.y, { commander: true }),
+      U(gen('夏侯惇', 3900, 90, 58), 1, W - 4, castle.y),
+      U(gen('于禁', 1200, 78, 64), 1, W - 6, castle.y, { confused: 2 }),
+      U(gen('乐进', 700, 80, 50), 1, W - 4, castle.y + 1),
+    ];
+    for (const u of units) if (map[u.x][u.y] !== Tn.Plain && map[u.x][u.y] !== Tn.Castle && map[u.x][u.y] !== Tn.Gate) put(u.x, u.y, Tn.Plain, 0.05);
+    if (!SG.maxTroops) SG.maxTroops = g => 1000 + g.war * 60;
+    const facs = [
+      { name: '刘备', color: '#2f9a55' }, { name: '曹操', color: '#2c3d8f' }, { name: '孙坚', color: '#c8382c' }, { name: '董卓', color: '#7a2a3a' },
+      { name: '袁术', color: '#c99a2e' }, { name: '公孙瓒', color: '#e0e0e8' },
+    ];
+    const keys = { liubei: 0, cao: 1, sunjian: 2, dong: 3, yuanshu: 4, gongsun: 5 };
+    SG.G = { factions: facs };
+    const atk = keys[Q.get('atk') || 'liubei'], def = keys[Q.get('def') || 'cao'];
+    return {
+      setup: { attacker: atk, defender: def, target: { id: 7, name: '许昌' } },
+      W, H, map, height, burning, units, day: 1, side: 0, ap: 3, food: [3000, 3000], castle, result: 0,
+      inBounds(x, y) { return x >= 0 && y >= 0 && x < W && y < H; },
+    };
+  }
+
+  function realModel() {
+    const g = SG.G = SG.GameState.newGame('cao');
+    const src = g.cities.find(c => c.owner === g.player);
+    const tgt = src.links.map(id => g.cities[id]).find(c => c.owner >= 0 && c.owner !== g.player) || g.cities.find(c => c.owner >= 0 && c.owner !== g.player);
+    const atk = g.generalsIn(src.id, g.player).slice(0, 5);
+    const s = SG.Conquest.prepare(g.player, src, tgt, atk, Math.min(src.food, 3000), 0);
+    return new SG.BattleModel(s);
+  }
+
+  // ------------------------------------------------------------ 启动 --
+  function start() {
+    stubs();
+    SG.Gfx.init(document.getElementById('app'));
+    if (SG.UI.init && !window.__uiStub) { try { SG.UI.init(); } catch (e) { console.error(e); } }
+    if (SG.Sfx && SG.Sfx.init) { try { SG.Sfx.init(); } catch (e) { console.error(e); } }
+    const model = Q.get('real') ? realModel() : fakeModel();
+    const view = new SG.BattleView(model);
+    if (!view.group.parent) SG.Gfx.scene.add(view.group);
+    const rig = new SG.CameraRig(SG.Gfx.camera, SG.Gfx.renderer.domElement);
+    rig.bounds = { xMin: 400, yMin: 0, xMax: 400 + model.W * 2, yMax: model.H * 2 };
+    rig.minDist = 12; rig.maxDist = 62;
+    const c = view.boardCenter; c.z += 2;     // C#：BoardCenter - (0,0,2)
+    rig.focusWorld(c, 40, true);
+    rig.onTap.push((x, y) => {
+      const t = view.tileFromScreen(x, y);
+      document.getElementById('hud').firstChild.textContent = t ? `点击格子 (${t.x}, ${t.y})` : '棋盘外';
+      const u = t && model.units.find(q => q.alive && q.x === t.x && q.y === t.y);
+      view.clearHighlights();
+      view.setCursor(u || null);
+      if (t) view.highlight([t], 'rgba(255,217,89,0.7)');
+    });
+
+    let last = performance.now();
+    window.__frames = 0;
+    let manual = !!Q.get('manual');
+    function tick(dt, draw) {
+      rig.update(dt);
+      view.update(dt);
+      if (!draw) return;
+      SG.Gfx.setShadowFocus(rig.target, Math.max(30, rig.distance * 0.95));
+      if (SG.UI.updateFollowers) SG.UI.updateFollowers(SG.Gfx.camera);
+      SG.Gfx.render();
+    }
+    function frame() {
+      const n = performance.now();
+      const dt = Math.min(0.1, (n - last) / 1000);
+      last = n;
+      if (!manual) tick(dt, true);
+      window.__frames++;
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    const hud = document.getElementById('hud');
+    hud.appendChild(document.createTextNode('BattleView 测试'));
+    const U = model.units;
+    const T = window.T = {
+      view, model, rig,
+      // 手动步进（固定 dt，便于截取特效的某一瞬间）：?manual=1 或 T.setManual(true)
+      setManual(on) { manual = on; },
+      step(n, dt) { dt = dt || 1 / 60; for (let i = 0; i < n; i++) tick(dt, i === n - 1); },
+      moveTargets(u) {
+        const out = [];
+        for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) {
+          const x = u.x + dx, y = u.y + dy;
+          if (Math.abs(dx) + Math.abs(dy) <= 3 && (dx || dy) && model.inBounds(x, y) && model.map[x][y] !== SG.Terrain.Wall && model.map[x][y] !== SG.Terrain.Mountain && !U.some(q => q.alive && q.x === x && q.y === y)) out.push({ x, y });
+        }
+        return out;
+      },
+      showSelect() {
+        const u = U[1];
+        view.clearHighlights();
+        view.setCursor(u);
+        view.highlight(T.moveTargets(u), 'rgba(89,179,255,0.55)');
+        view.highlight([{ x: U[6].x, y: U[6].y }], 'rgba(255,77,64,0.7)');
+      },
+      async move() {
+        const u = U[1];
+        const path = [{ x: u.x, y: u.y }, { x: u.x + 1, y: u.y }, { x: u.x + 2, y: u.y }, { x: u.x + 2, y: u.y + 1 }];
+        await view.moveUnit(u, path);
+        u.x = path[path.length - 1].x; u.y = path[path.length - 1].y;
+        view.setCursor(u);
+      },
+      async attack() {
+        const a = U[0], t = U[3];
+        await view.lunge(a, t);
+        t.troops -= 830;
+        view.hit(t, 830);
+        await SG.wait(0.15);
+        a.troops -= 240;
+        view.hit(a, 240);
+        view.refresh(a); view.refresh(t);
+      },
+      async fire() { const t = U[5]; model.burning[t.x][t.y] = 2; await view.fireFx(t); t.troops -= 1300; view.hit(t, 1300, true); view.refresh(t); },
+      async rock() { const t = U[4]; await view.rockFx(t); t.troops -= 900; view.hit(t, 900, true); view.refresh(t); },
+      async confuse() { const t = U[7]; await view.magicFx(t, '#bf80ff'); t.confused = 2; view.floatText(view.tile(t.x, t.y).add(new THREE.Vector3(0, 1.6, 0)), '混乱', '#cc99ff', 38); view.refresh(t); },
+      async inspire() { const u = U[0]; await view.magicFx(u, 'rgb(255,217,102)'); view.floatText(view.tile(u.x, u.y).add(new THREE.Vector3(0, 1.6, 0)), '士气高涨', '#73d98c', 34); },
+      async routIt() { const t = U[7]; t.troops = 0; t.alive = false; view.refresh(t); await view.rout(t); },
+      async all() {
+        T.showSelect(); await SG.wait(0.8);
+        view.clearHighlights(); await T.move(); await SG.wait(0.3);
+        await T.attack(); await SG.wait(0.5);
+        await T.fire(); await SG.wait(0.4);
+        await T.rock(); await SG.wait(0.4);
+        await T.confuse(); await SG.wait(0.3);
+        await T.inspire(); await SG.wait(0.3);
+        await T.routIt();
+        return 'done';
+      },
+    };
+    for (const k of ['showSelect', 'move', 'attack', 'fire', 'rock', 'confuse', 'inspire', 'routIt', 'all']) {
+      const b = document.createElement('button');
+      b.textContent = k;
+      b.onclick = () => T[k]();
+      hud.appendChild(b);
+    }
+    window.__ready = true;
+    if (Q.get('fx')) T.all();
+  }
+})();
+</script>
+</body>
+</html>
