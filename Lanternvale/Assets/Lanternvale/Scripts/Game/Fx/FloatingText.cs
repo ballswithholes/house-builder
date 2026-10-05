@@ -18,7 +18,7 @@ namespace Lanternvale.Game
 
         sealed class Entry
         {
-            public Vector2 world;
+            public Vector3 world;
             public string text;
             public Color color;
             public float scale, age, life, stack, drift;
@@ -44,40 +44,40 @@ namespace Lanternvale.Game
         // ------------------------------------------------------------------ API
 
         /// <summary>Spawns a floating text at a world position (typically UnitView.HeadPosition).</summary>
-        public static void Spawn(Vector2 worldPos, string text, Color color, float scale = 1f, bool crit = false)
+        public static void Spawn(Vector3 worldPos, string text, Color color, float scale = 1f, bool crit = false)
         {
             if (string.IsNullOrEmpty(text)) return;
             Get().Add(worldPos, text, color, scale, crit);
         }
 
         /// <summary>Damage number: white (school-tinted for spells), crits yellow, bigger and popping.</summary>
-        public static void Damage(Vector2 worldPos, int amount, bool crit = false, School school = School.Physical)
+        public static void Damage(Vector3 worldPos, int amount, bool crit = false, School school = School.Physical)
         {
             Color c = crit ? new Color(1f, 0.86f, 0.32f) : school == School.Physical ? Color.white : Color.Lerp(Color.white, Ui.SchoolColor(school), 0.55f);
             Spawn(worldPos, crit ? amount + "!" : amount.ToString(), c, crit ? 1.25f : 1f, crit);
         }
 
         /// <summary>Heal number in green with a plus.</summary>
-        public static void Heal(Vector2 worldPos, int amount, bool crit = false)
+        public static void Heal(Vector3 worldPos, int amount, bool crit = false)
         {
             Spawn(worldPos, "+" + amount, crit ? new Color(0.7f, 1f, 0.55f) : Ui.Good, crit ? 1.2f : 1f, crit);
         }
 
         /// <summary>"Miss", "Dodge", "Parry", "Block", "Resist", "Immune", "Absorb", "Evade"…</summary>
-        public static void Miss(Vector2 worldPos, string word)
+        public static void Miss(Vector3 worldPos, string word)
         {
             Spawn(worldPos, word, new Color(0.88f, 0.86f, 0.95f), 0.85f);
         }
 
         /// <summary>Resource gain such as "+20 Rage" coloured by resource.</summary>
-        public static void Resource(Vector2 worldPos, int amount, ResourceType type)
+        public static void Resource(Vector3 worldPos, int amount, ResourceType type)
         {
             string name = type == ResourceType.Mana ? "Mana" : type.ToString();
             Spawn(worldPos, (amount >= 0 ? "+" : "") + amount + " " + name, Color.Lerp(Ui.ResourceColor(type), Color.white, 0.25f), 0.8f);
         }
 
         /// <summary>Status word ("Stunned", "Polymorphed", "Level Up!").</summary>
-        public static void Status(Vector2 worldPos, string word, Color color)
+        public static void Status(Vector3 worldPos, string word, Color color)
         {
             Spawn(worldPos, word, color, 0.9f);
         }
@@ -89,7 +89,7 @@ namespace Lanternvale.Game
             Instance.entries.Clear();
         }
 
-        void Add(Vector2 world, string text, Color color, float scale, bool crit)
+        void Add(Vector3 world, string text, Color color, float scale, bool crit)
         {
             // stack above texts recently spawned near the same spot
             float stack = 0f;
@@ -156,12 +156,14 @@ namespace Lanternvale.Game
                 var e = entries[i];
                 float t = e.age / e.life;
                 float rise = 1f - (1f - t) * (1f - t);
-                var w = e.world + new Vector2(e.drift * rise, 0.15f + e.stack + rise * 0.95f);
+                // rises (world up is −Z) and drifts sideways along x
+                var w = e.world + new Vector3(e.drift * rise, 0f, 0f) + World3D.Up * (0.15f + e.stack + rise * 0.95f);
                 Vector2 gui;
                 if (rig != null) gui = rig.WorldToGui(w);
                 else
                 {
-                    var sp = cam.WorldToScreenPoint(new Vector3(w.x, w.y, 0f));
+                    var sp = cam.WorldToScreenPoint(w);
+                    if (sp.z <= 0f) continue;   // behind the camera
                     gui = new Vector2(sp.x, Screen.height - sp.y);
                 }
                 gui *= inv;

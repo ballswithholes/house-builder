@@ -45,7 +45,7 @@ namespace Lanternvale.Game
         void Start()
         {
             started = true;
-            if (!HasGame && !DioramaPreview.Active) BuildBackdrop();
+            if (!HasGame) BuildBackdrop();
         }
 
         void OnDestroy()
@@ -320,7 +320,7 @@ namespace Lanternvale.Game
         {
             if (!backdropActive)
             {
-                if (started && !backdropTried && !DioramaPreview.Active && MapView.Current == null && Db != null && Session == null) BuildBackdrop();
+                if (started && !backdropTried && MapView.Current == null && Db != null && Session == null) BuildBackdrop();
                 return;
             }
             menuTime += dt;
@@ -501,7 +501,7 @@ namespace Lanternvale.Game
                 UiRoot.CloseAll();
                 ResetTimeScale();   // the combat presenter (if any) is gone: never leave its pause or fast-forward behind
                 backdropTried = false;
-                if (!DioramaPreview.Active) BuildBackdrop();
+                BuildBackdrop();
             }
             catch (Exception e) { Debug.LogException(e); }
         }

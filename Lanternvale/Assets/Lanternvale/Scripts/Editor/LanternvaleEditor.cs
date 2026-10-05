@@ -1,4 +1,4 @@
-// Editor tooling: art import settings, scene creation, data validation and URP 2D setup.
+// Editor tooling: art import settings, scene creation, data validation and rendering setup.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -59,6 +59,7 @@ namespace Lanternvale.EditorTools
         public static void CreateScene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Configure3D(interactive: false);
             EnsureGameScene();
             Debug.Log($"[Lanternvale] Created {ScenePath} and added it to Build Settings. Press Play!");
         }
@@ -66,6 +67,7 @@ namespace Lanternvale.EditorTools
         /// <summary>Command-line entry point (-executeMethod): creates the game scene if needed and opens it.</summary>
         public static void OpenGameScene()
         {
+            Configure3D(interactive: false);
             var path = File.Exists(ScenePath) ? ScenePath : EnsureGameScene();
             EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
             Debug.Log("[Lanternvale] Game scene open. Press Play!");
@@ -115,72 +117,38 @@ namespace Lanternvale.EditorTools
         }
 
         /// <summary>
-        /// Installs URP if needed and creates/assigns a URP asset that uses the 2D Renderer, so sprites
-        /// react to Light2D. (Projects created from the "Universal 2D" template already have this.)
+        /// The 3D presentation renders with its own shaders (Resources/Shaders, own lighting), which are written for the
+        /// built-in render pipeline's forward path. Projects created from a URP template (e.g. "Universal 2D") get their
+        /// render pipeline asset unassigned — URP stays installed but unused — so every camera renders built-in.
         /// </summary>
-        [MenuItem("Lanternvale/Setup/Configure URP 2D Renderer", priority = 40)]
-        public static void SetupUrp2D() => ConfigureUrp2D(interactive: true);
+        [MenuItem("Lanternvale/Setup/Use the Built-in Render Pipeline (3D)", priority = 40)]
+        public static void SetupRendering() => Configure3D(interactive: true);
 
-        /// <summary>Batch-safe URP 2D setup (no dialogs when <paramref name="interactive"/> is false). Returns true when configured.</summary>
-        public static bool ConfigureUrp2D(bool interactive)
+        /// <summary>Batch-safe rendering setup. Returns true when something changed.</summary>
+        public static bool Configure3D(bool interactive)
         {
-            // UniversalRenderPipelineAsset lives in the main URP runtime assembly; Renderer2DData moved to
-            // Unity.RenderPipelines.Universal.2D.Runtime in URP 17 / Unity 6 (2023.2+), so look in both.
-            var pipelineType = FindType("UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset",
-                UrpRuntimeAssembly);
-            if (pipelineType == null)
+            bool changed = false;
+            if (GraphicsSettings.defaultRenderPipeline != null)
             {
-                if (!interactive) { Debug.LogError("[Lanternvale] URP is not installed; add com.unity.render-pipelines.universal to Packages/manifest.json."); return false; }
-                if (EditorUtility.DisplayDialog("Lanternvale", "The Universal Render Pipeline package is not installed. Install it now? Run this menu again after Unity finishes importing.", "Install URP", "Cancel"))
-                    UnityEditor.PackageManager.Client.Add("com.unity.render-pipelines.universal");
-                return false;
+                Debug.Log($"[Lanternvale] Unassigning the render pipeline asset '{GraphicsSettings.defaultRenderPipeline.name}' (Lanternvale renders with the built-in pipeline).");
+                GraphicsSettings.defaultRenderPipeline = null;
+                changed = true;
             }
-            var rendererDataType = FindType("UnityEngine.Rendering.Universal.Renderer2DData",
-                Urp2DRuntimeAssembly, UrpRuntimeAssembly);
-            if (rendererDataType == null)
-            {
-                const string msg = "URP is installed, but its 2D Renderer (Renderer2DData) could not be found in this URP version. Create a URP asset with a 2D Renderer manually (Assets > Create > Rendering > URP Asset (with 2D Renderer)) and assign it in Project Settings > Graphics.";
-                if (interactive) EditorUtility.DisplayDialog("Lanternvale", msg, "OK"); else Debug.LogError("[Lanternvale] " + msg);
-                return false;
-            }
-            Directory.CreateDirectory(SettingsDir);
-            var dataPath = SettingsDir + "/Lanternvale_2DRenderer.asset";
-            var pipePath = SettingsDir + "/Lanternvale_URP2D.asset";
-            var data = AssetDatabase.LoadAssetAtPath(dataPath, rendererDataType);
-            if (data == null)
-            {
-                data = ScriptableObject.CreateInstance(rendererDataType);
-                AssetDatabase.CreateAsset(data, dataPath);
-            }
-            var pipeline = AssetDatabase.LoadAssetAtPath(pipePath, pipelineType) as RenderPipelineAsset;
-            if (pipeline == null)
-            {
-                var create = pipelineType.GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .FirstOrDefault(mi => mi.Name == "Create" && mi.GetParameters().Length == 1);
-                if (create == null) { Debug.LogError("[Lanternvale] UniversalRenderPipelineAsset.Create not found in this URP version. Create a URP asset with a 2D Renderer manually."); return false; }
-                pipeline = (RenderPipelineAsset)create.Invoke(null, new object[] { data });
-                AssetDatabase.CreateAsset(pipeline, pipePath);
-            }
-            // GraphicsSettings.defaultRenderPipeline (2021.2+) or renderPipelineAsset (older/obsolete in Unity 6)
-            var gp = typeof(GraphicsSettings).GetProperty("defaultRenderPipeline", BindingFlags.Public | BindingFlags.Static)
-                     ?? typeof(GraphicsSettings).GetProperty("renderPipelineAsset", BindingFlags.Public | BindingFlags.Static);
-            gp?.SetValue(null, pipeline, null);
             int current = QualitySettings.GetQualityLevel();
             for (int i = 0; i < QualitySettings.names.Length; i++)
             {
                 QualitySettings.SetQualityLevel(i, false);
-                QualitySettings.renderPipeline = pipeline;
+                if (QualitySettings.renderPipeline != null) { QualitySettings.renderPipeline = null; changed = true; }
+                if (QualitySettings.antiAliasing < 4) { QualitySettings.antiAliasing = 4; changed = true; }
             }
             QualitySettings.SetQualityLevel(current, false);
-            AssetDatabase.SaveAssets();
-            Lighting2D.Reset();
-            LanternvaleShaderIncludes.Ensure();
-            Debug.Log("[Lanternvale] URP with the 2D Renderer is configured. Sprites now react to 2D lights.");
-            return true;
+            if (changed) AssetDatabase.SaveAssets();
+            if (interactive)
+                EditorUtility.DisplayDialog("Lanternvale", changed
+                    ? "Rendering set up: built-in render pipeline, 4x MSAA. Press Play."
+                    : "Rendering was already set up (built-in render pipeline).", "OK");
+            return changed;
         }
-
-        const string UrpRuntimeAssembly = "Unity.RenderPipelines.Universal.Runtime";
-        const string Urp2DRuntimeAssembly = "Unity.RenderPipelines.Universal.2D.Runtime";
 
         /// <summary>
         /// Resolves <paramref name="fullName"/> from the named assemblies (in order), then from any loaded
@@ -205,54 +173,5 @@ namespace Lanternvale.EditorTools
 
         [MenuItem("Lanternvale/Open Save Folder", priority = 60)]
         public static void OpenSaveFolder() => EditorUtility.RevealInFinder(Application.persistentDataPath);
-    }
-}
-
-namespace Lanternvale.EditorTools
-{
-    /// <summary>
-    /// Sprites are created at runtime, so nothing in a scene references URP's 2D sprite shaders and a player
-    /// build could strip them (sprites would then ignore Light2D). Before every build, and from the URP setup
-    /// menu, both shaders are added to Project Settings > Graphics > Always Included Shaders when URP is present.
-    /// </summary>
-    public sealed class LanternvaleShaderIncludes : UnityEditor.Build.IPreprocessBuildWithReport
-    {
-        static readonly string[] Shaders =
-        {
-            "Universal Render Pipeline/2D/Sprite-Lit-Default",
-            "Universal Render Pipeline/2D/Sprite-Unlit-Default",
-        };
-
-        public int callbackOrder => 0;
-
-        public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report) => Ensure();
-
-        [MenuItem("Lanternvale/Setup/Include 2D Sprite Shaders in Builds", priority = 41)]
-        public static void Ensure()
-        {
-            var settings = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
-            if (settings == null || settings.Length == 0 || settings[0] == null) return;
-            var so = new SerializedObject(settings[0]);
-            var list = so.FindProperty("m_AlwaysIncludedShaders");
-            if (list == null || !list.isArray) return;
-            bool changed = false;
-            foreach (var name in Shaders)
-            {
-                var shader = Shader.Find(name);
-                if (shader == null) continue; // URP not installed: nothing to include
-                bool present = false;
-                for (int i = 0; i < list.arraySize; i++)
-                    if (list.GetArrayElementAtIndex(i).objectReferenceValue == shader) { present = true; break; }
-                if (present) continue;
-                int idx = list.arraySize;
-                list.InsertArrayElementAtIndex(idx);
-                list.GetArrayElementAtIndex(idx).objectReferenceValue = shader;
-                changed = true;
-            }
-            if (!changed) return;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            AssetDatabase.SaveAssets();
-            Debug.Log("[Lanternvale] Added URP 2D sprite shaders to Always Included Shaders so runtime sprites stay lit in builds.");
-        }
     }
 }

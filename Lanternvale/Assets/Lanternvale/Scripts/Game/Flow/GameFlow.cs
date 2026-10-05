@@ -170,7 +170,7 @@ namespace Lanternvale.Game
         /// colour tag ("Mossling  &lt;color=#ffe14a&gt;Lv 3-4&lt;/color&gt;  (x3)"): draw it with a richText style.</summary>
         public string HoveredLabel { get; private set; } = "";
         /// <summary>World position to anchor HoveredLabel.</summary>
-        public Vector2 HoveredLabelWorld { get; private set; }
+        public Vector3 HoveredLabelWorld { get; private set; }
         /// <summary>What kind of thing is hovered (party member, NPC, enemy — exploration encounter or battle unit —, map object).</summary>
         public HoverKind HoveredKind { get; private set; }
 

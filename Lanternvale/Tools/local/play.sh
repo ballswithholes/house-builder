@@ -5,9 +5,10 @@
 #   Lanternvale/Tools/local/play.sh --editor   open the project in the Unity editor instead (then press Play)
 #   Lanternvale/Tools/local/play.sh --tour     launch with the autopilot tour (screenshots in Tools/.cache/local/shots)
 #
-# It finds the newest Unity 6 (or 2022.3) editor installed by Unity Hub, creates a project from the
-# "Universal 2D" template next to the repo (Tools/.cache/local/LanternvaleProject), copies Assets/Lanternvale
-# into it, builds a player for this computer and starts it. Override the editor with UNITY_EDITOR=/path/to/Unity.
+# It finds the newest Unity 6 (or 2022.3) editor installed by Unity Hub, creates a project next to the repo
+# (Tools/.cache/local/LanternvaleProject; an existing one is reused and switched to the built-in render pipeline by
+# the build step), copies Assets/Lanternvale into it, builds a player for this computer and starts it.
+# Override the editor with UNITY_EDITOR=/path/to/Unity.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 WORK="$ROOT/Tools/.cache/local"
@@ -35,30 +36,14 @@ find_editor() {
     | sort -t$'\t' -k1,1nr -k2,2r | head -1 | cut -f2
 }
 
-template_for() { # editor binary -> path of the bundled Universal 2D template .tgz, if any
-  local root
-  case "$(uname -s)" in
-    Darwin) root="$(cd "$(dirname "$1")/../.." && pwd)" ;;   # .../Unity.app (templates live in Contents/Resources)
-    *) root="$(dirname "$1")" ;;                              # .../Editor (templates live in Data/Resources)
-  esac
-  find "$root" -maxdepth 6 -path "*ProjectTemplates*" -name "*universal-2d*.tgz" 2>/dev/null | sort | tail -1 || true
-}
-
 EDITOR_BIN="$(find_editor)" || die "No Unity editor found. Install Unity 6 with Unity Hub (or set UNITY_EDITOR=/path/to/Unity)."
 log "Unity editor: $EDITOR_BIN"
 mkdir -p "$WORK"
 
 if [ ! -f "$PROJECT/ProjectSettings/ProjectVersion.txt" ]; then
-  tpl="$(template_for "$EDITOR_BIN")"
-  if [ -n "$tpl" ]; then
-    log "Creating the project from the Universal 2D template (one time)"
-    "$EDITOR_BIN" -batchmode -quit -createProject "$PROJECT" -cloneFromTemplate "$tpl" -logFile "$WORK/create.log" \
-      || die "Project creation failed, see $WORK/create.log"
-  else
-    log "Universal 2D template not found; creating a plain project (the build step configures URP if it is installed)"
-    "$EDITOR_BIN" -batchmode -quit -createProject "$PROJECT" -logFile "$WORK/create.log" \
-      || die "Project creation failed, see $WORK/create.log"
-  fi
+  log "Creating the Unity project (one time)"
+  "$EDITOR_BIN" -batchmode -quit -createProject "$PROJECT" -logFile "$WORK/create.log" \
+    || die "Project creation failed, see $WORK/create.log"
 fi
 
 log "Copying Assets/Lanternvale into the project"
@@ -66,7 +51,7 @@ rm -rf "$PROJECT/Assets/Lanternvale"
 cp -R "$ROOT/Assets/Lanternvale" "$PROJECT/Assets/Lanternvale"
 
 if [ "$MODE" = "--editor" ]; then
-  log "Opening the Unity editor — choose Lanternvale > Create Game Scene, then press Play"
+  log "Opening the Unity editor — the game scene opens by itself, then press Play"
   "$EDITOR_BIN" -projectPath "$PROJECT" -executeMethod Lanternvale.EditorTools.LanternvaleMenu.OpenGameScene &
   exit 0
 fi

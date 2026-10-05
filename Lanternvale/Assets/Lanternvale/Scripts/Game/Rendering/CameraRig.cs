@@ -99,19 +99,29 @@ namespace Lanternvale.Game
 
         public Vector2 MouseWorld => ScreenToWorld(GameInput.MousePosition);
 
-        public Vector2 WorldToScreen(Vector2 world)
+        /// <summary>World point (a Vector2 is a ground point; z = −height) → screen pixels (bottom-left origin).</summary>
+        public Vector2 WorldToScreen(Vector3 world)
         {
             if (Cam == null) return Vector2.zero;
-            var p = Cam.WorldToScreenPoint(new Vector3(world.x, world.y, 0));
+            var p = Cam.WorldToScreenPoint(world);
             return new Vector2(p.x, p.y);
         }
 
         /// <summary>World point → IMGUI coordinates (top-left origin, unscaled pixels).</summary>
-        public Vector2 WorldToGui(Vector2 world)
+        public Vector2 WorldToGui(Vector3 world)
         {
             var s = WorldToScreen(world);
             return new Vector2(s.x, Screen.height - s.y);
         }
+
+        /// <summary>True when the world point is in front of the camera (projected points behind it are meaningless).</summary>
+        public bool IsInFront(Vector3 world) => Cam != null && Cam.WorldToScreenPoint(world).z > 0f;
+
+        /// <summary>Camera ray through a screen position (pixels, bottom-left origin).</summary>
+        public Ray ScreenRay(Vector2 screen) => Cam != null ? Cam.ScreenPointToRay(new Vector3(screen.x, screen.y, 0f)) : new Ray(Vector3.zero, Vector3.forward);
+
+        /// <summary>The ground point at the centre of the view (what the camera looks at).</summary>
+        public Vector3 LookAtPoint => Cam != null ? (Vector3)ScreenToWorld(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) : Vector3.zero;
 
         /// <summary>The view centre before manual pan: focus point or follow target plus the look-ahead, else the current centre.</summary>
         Vector2 AnchorCenter()

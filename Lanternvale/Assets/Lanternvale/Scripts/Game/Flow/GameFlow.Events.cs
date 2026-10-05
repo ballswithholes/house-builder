@@ -308,7 +308,7 @@ namespace Lanternvale.Game
             var v = ViewOf(u);
             if (v == null) { var ne = FindNpcEntry(e.Id); v = ne != null ? ne.View : null; }
             if (v == null) return;
-            FloatingText.Status(v.HeadPosition + new Vector2(0f, 0.15f), e.Amount > 0 ? "Approves" : "Disapproves",
+            FloatingText.Status(v.HeadPosition + World3D.Up * 0.15f, e.Amount > 0 ? "Approves" : "Disapproves",
                 e.Amount > 0 ? new Color(0.62f, 0.95f, 0.6f) : new Color(1f, 0.55f, 0.5f));
         }
 
@@ -323,7 +323,7 @@ namespace Lanternvale.Game
             if (v == null) return;
             var col = c.Success ? Ui.Good : Ui.Bad;
             string word = c.Critical ? "Critical success!" : c.Fumble ? "Critical failure" : c.Success ? "Success" : "Failed";
-            FloatingText.Spawn(v.HeadPosition + new Vector2(0f, 0.2f), $"{c.Total} vs {c.Dc} · {word}", col, 0.9f, c.Critical);
+            FloatingText.Spawn(v.HeadPosition + World3D.Up * 0.2f, $"{c.Total} vs {c.Dc} · {word}", col, 0.9f, c.Critical);
             Sfx.Play(c.Success ? "buff" : "debuff", v.FeetPosition, 0.7f, 1f);
         }
 

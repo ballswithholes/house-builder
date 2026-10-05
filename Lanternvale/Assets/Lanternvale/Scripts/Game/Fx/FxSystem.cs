@@ -24,6 +24,9 @@ namespace Lanternvale.Game
         /// <summary>Global multiplier on particle counts (graphics option).</summary>
         public static float ParticleDensity = 1f;
 
+        /// <summary>Interim: a 3D world point drawn by the 2.5D sprite effects (height lifts it up the screen).</summary>
+        static Vector2 Legacy(Vector3 p) => new Vector2(p.x, p.y - p.z);
+
         public static FxSystem Get()
         {
             if (Instance == null) Instance = PresentationHost.Ensure<FxSystem>();
@@ -184,8 +187,8 @@ namespace Lanternvale.Game
         /// arc; bolts fly almost straight with a glowing trail. onHit runs on arrival (after this
         /// frame's FX update). Returns the flight time in seconds.
         /// </summary>
-        public static float Projectile(Vector2 from, Vector2 to, School school, string artKey = "", float speed = 14f, System.Action onHit = null)
-            => Get().FireProjectile(from, to, school, artKey, speed, onHit);
+        public static float Projectile(Vector3 from, Vector3 to, School school, string artKey = "", float speed = 14f, System.Action onHit = null)
+            => Get().FireProjectile(Legacy(from), Legacy(to), school, artKey, speed, onHit);
 
         float FireProjectile(Vector2 from, Vector2 to, School school, string artKey, float speed, System.Action onHit)
         {
@@ -287,7 +290,7 @@ namespace Lanternvale.Game
         int nextBeamId = 1;
 
         /// <summary>Channel beam from → to for duration seconds. Returns a handle for StopBeam/MoveBeam.</summary>
-        public static int Beam(Vector2 from, Vector2 to, School school, float duration) => Get().StartBeam(from, to, school, duration);
+        public static int Beam(Vector3 from, Vector3 to, School school, float duration) => Get().StartBeam(Legacy(from), Legacy(to), school, duration);
 
         /// <summary>Ends a beam early (fades out).</summary>
         public static void StopBeam(int handle)
@@ -298,11 +301,11 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Moves the beam's endpoints (units moved while channelling).</summary>
-        public static void MoveBeam(int handle, Vector2 from, Vector2 to)
+        public static void MoveBeam(int handle, Vector3 from, Vector3 to)
         {
             if (Instance == null) return;
             foreach (var b in Instance.beams)
-                if (b.id == handle) { b.from = from; b.to = to; }
+                if (b.id == handle) { b.from = Legacy(from); b.to = Legacy(to); }
         }
 
         int StartBeam(Vector2 from, Vector2 to, School school, float duration)
@@ -362,7 +365,7 @@ namespace Lanternvale.Game
         // ================================================================== one-shot effects
 
         /// <summary>Small hit: flash, ring and school-flavoured particles.</summary>
-        public static void Impact(Vector2 pos, School school) => Get().DoImpact(pos, school, 1f);
+        public static void Impact(Vector3 pos, School school) => Get().DoImpact(Legacy(pos), school, 1f);
 
         void DoImpact(Vector2 pos, School school, float scale)
         {
@@ -470,7 +473,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Weapon slash arc at pos swinging towards dir.</summary>
-        public static void Slash(Vector2 pos, Vector2 dir) => Get().DoSlash(pos, dir);
+        public static void Slash(Vector3 pos, Vector3 dir) => Get().DoSlash(Legacy(pos), new Vector2(dir.x, dir.y - dir.z));
 
         void DoSlash(Vector2 pos, Vector2 dir)
         {
@@ -525,7 +528,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Twinkling star sparkles (chest opened, polymorph, lantern rekindled, level up).</summary>
-        public static void Sparkles(Vector2 pos, Color color, int count = 12) => Get().DoSparkles(pos, color, count);
+        public static void Sparkles(Vector3 pos, Color color, int count = 12) => Get().DoSparkles(Legacy(pos), color, count);
 
         void DoSparkles(Vector2 pos, Color color, int count)
         {
@@ -541,7 +544,7 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Soft smoke puff (blink, vanish, landing dust).</summary>
-        public static void Puff(Vector2 pos, Color color, float size = 1f) => Get().DoPuff(pos, color, size);
+        public static void Puff(Vector3 pos, Color color, float size = 1f) => Get().DoPuff(Legacy(pos), color, size);
 
         void DoPuff(Vector2 pos, Color color, float size)
         {

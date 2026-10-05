@@ -254,7 +254,7 @@ namespace Lanternvale.Game
 
             if (target != null && target != actor) FocusIfNeeded(Center(target, tv));
             if (a != null && ShouldAnnounce(actor, a))
-                FloatingText.Spawn(Head(actor, av) + new Vector2(0f, 0.45f), a.name, Color.Lerp(col, Color.white, 0.55f), 0.85f);
+                FloatingText.Spawn(Head(actor, av) + World3D.Up * 0.45f, a.name, Color.Lerp(col, Color.white, 0.55f), 0.85f);
 
             // a cast that does not fit this turn: telegraph it and keep the glow until it resolves or is interrupted
             if (castStart != null && castStart.Reason != "channel" && castComplete == null && castStop == null)
@@ -422,7 +422,7 @@ namespace Lanternvale.Game
                     float r = Mathf.Max(1.5f, AreaRadius(actor, a));
                     var mid = actorFeet + dir * (r * 0.5f);
                     FxSystem.Burst(mid, r * (d == Delivery.Cone ? 0.45f : 0.3f), school);
-                    if (physical) FxSystem.Slash(mid + new Vector2(0f, 0.6f), dir);
+                    if (physical) FxSystem.Slash(World3D.At(mid, 0.6f), dir);
                     Sfx.Impact(school, mid, false);
                     ShowAll(b);
                     yield return 0.5f;
@@ -499,14 +499,14 @@ namespace Lanternvale.Game
             switch (Battle.Outcome)
             {
                 case BattleOutcome.Victory:
-                    FxSystem.Sparkles(pos - new Vector2(0f, 0.6f), GoldText, 18);
+                    FxSystem.Sparkles(World3D.Raise(pos, -0.6f), GoldText, 18);
                     Sfx.Play("quest");
                     break;
                 case BattleOutcome.Defeat:
                     Sfx.Play("death", null, 0.9f, 0.7f);
                     break;
                 default:
-                    FxSystem.Puff(pos - new Vector2(0f, 0.6f), new Color(0.85f, 0.82f, 0.95f), 0.8f);
+                    FxSystem.Puff(World3D.Raise(pos, -0.6f), new Color(0.85f, 0.82f, 0.95f), 0.8f);
                     Sfx.Play("ui_close");
                     break;
             }
@@ -607,7 +607,7 @@ namespace Lanternvale.Game
                     break;
                 }
                 case CombatEventType.SwingQueued:
-                    FloatingText.Spawn(Head(e.Source, V(e.Source)) + new Vector2(0f, 0.3f), e.Name, GoldText, 0.75f);
+                    FloatingText.Spawn(Head(e.Source, V(e.Source)) + World3D.Up * 0.3f, e.Name, GoldText, 0.75f);
                     break;
                 case CombatEventType.AutoAttackToggled:
                     if (e.Amount > 0f && e.Target != null)
@@ -818,11 +818,10 @@ namespace Lanternvale.Game
             var from = ToV(e.From);
             var to = ToV(e.To);
             var col = Ui.SchoolColor(School.Arcane);
-            var up = new Vector2(0f, 0.7f);
-            FxSystem.Puff(from + up, col, 1f);
-            FxSystem.Sparkles(from + up, col, 8);
+            FxSystem.Puff(World3D.At(from, 0.7f), col, 1f);
+            FxSystem.Sparkles(World3D.At(from, 0.7f), col, 8);
             if (v != null) v.Teleport(to);
-            FxSystem.Puff(to + up, col, 1f);
+            FxSystem.Puff(World3D.At(to, 0.7f), col, 1f);
             Sfx.Play("cast_start", to, 0.5f, 1.45f);
         }
 
@@ -842,8 +841,8 @@ namespace Lanternvale.Game
                 v.PlayRevive();
                 if (Mathf.Abs(u.Facing.x) > 0.1f) v.SetFacing(u.Facing.x >= 0f ? 1 : -1);
             }
-            FxSystem.Puff(p + new Vector2(0f, 0.5f), col, 1.2f);
-            FxSystem.Sparkles(p + new Vector2(0f, 0.8f), col, 10);
+            FxSystem.Puff(World3D.At(p, 0.5f), col, 1.2f);
+            FxSystem.Sparkles(World3D.At(p, 0.8f), col, 10);
             if (e.Reason == "totem") FxSystem.GroundRing(p, 1.1f, col, 0.8f);
             Sfx.Play("buff", p);
             RefreshStateVisuals(u);
@@ -1131,7 +1130,7 @@ namespace Lanternvale.Game
             casting[u] = c;
             var v = V(u);
             if (v != null) v.SetCasting(c.Color, Mathf.Max(0.15f, c.Progress));
-            FloatingText.Status(Head(u, v) + new Vector2(0f, 0.35f), (channel ? "Channeling " : "Casting ") + c.Name + "...",
+            FloatingText.Status(Head(u, v) + World3D.Up * 0.35f, (channel ? "Channeling " : "Casting ") + c.Name + "...",
                 Color.Lerp(c.Color, Color.white, 0.45f));
         }
 
@@ -1149,7 +1148,7 @@ namespace Lanternvale.Game
             c.Progress = Mathf.Clamp01(1f - e.Seconds / Mathf.Max(c.Total, e.Seconds + 0.01f));
             var v = V(u);
             if (v != null) v.SetCasting(c.Color, Mathf.Max(0.15f, c.Progress));
-            FloatingText.Status(Head(u, v) + new Vector2(0f, 0.35f), "Casting " + c.Name + "... (" + e.Seconds.ToString("0.#") + " s)",
+            FloatingText.Status(Head(u, v) + World3D.Up * 0.35f, "Casting " + c.Name + "... (" + e.Seconds.ToString("0.#") + " s)",
                 Color.Lerp(c.Color, Color.white, 0.45f));
         }
 
@@ -1360,14 +1359,18 @@ namespace Lanternvale.Game
         // ================================================================ positions & camera
 
         static Vector2 Feet(Unit u, UnitView v) => v != null ? v.FeetPosition : (u != null ? ToV(u.Position) : Vector2.zero);
-        static Vector2 Center(Unit u, UnitView v) => v != null ? v.CenterPosition : Feet(u, null) + new Vector2(0f, 0.9f);
-        static Vector2 Head(Unit u, UnitView v) => v != null ? v.HeadPosition : Feet(u, null) + new Vector2(0f, 1.8f);
+        // world points in the air are Vector3 (z = −height, see World3D); feet are ground Vector2s
+        static Vector3 Center(Unit u, UnitView v) => v != null ? v.CenterPosition : World3D.At(Feet(u, null), 0.9f);
+        static Vector3 Head(Unit u, UnitView v) => v != null ? v.HeadPosition : World3D.At(Feet(u, null), 1.8f);
 
-        static Vector2 Hand(Unit u, UnitView v, Vector2 towards)
+        /// <summary>Where a spell or shot leaves the body: a little in front of the chest, towards the target.</summary>
+        static Vector3 Hand(Unit u, UnitView v, Vector2 towards)
         {
             var c = Center(u, v);
-            float dir = towards.x >= c.x ? 1f : -1f;
-            return c + new Vector2(dir * 0.3f, 0.12f);
+            var dir = new Vector2(towards.x - c.x, towards.y - c.y);
+            if (dir.sqrMagnitude < 1e-6f) dir = Vector2.right;
+            dir.Normalize();
+            return c + new Vector3(dir.x * 0.3f, dir.y * 0.3f, 0f) + World3D.Up * 0.12f;
         }
 
         static float PathLength(List<Vec2> path)
@@ -1377,9 +1380,9 @@ namespace Lanternvale.Game
             return len;
         }
 
-        Vector2 BannerPosition()
+        Vector3 BannerPosition()
         {
-            Vector2 sum = Vector2.zero;
+            Vector3 sum = Vector3.zero;
             int n = 0;
             foreach (var u in Battle.Units)
             {
@@ -1387,10 +1390,10 @@ namespace Lanternvale.Game
                 sum += Head(u, V(u));
                 n++;
             }
-            if (n > 0) return sum / n + new Vector2(0f, 0.9f);
+            if (n > 0) return sum / n + World3D.Up * 0.9f;
             var rig = CameraRig.Instance;
-            if (rig != null) return (Vector2)rig.transform.position;
-            return Vector2.zero;
+            if (rig != null) return rig.LookAtPoint;
+            return Vector3.zero;
         }
 
         static void FocusOn(Vector2 p)

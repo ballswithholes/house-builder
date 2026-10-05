@@ -21,7 +21,7 @@ namespace Lanternvale.Game.Panels
             get
             {
                 var root = GameRoot.Instance;
-                if (root == null || GameFlow.Instance == null || GameFlow.HasGame || DioramaPreview.Active) return false;
+                if (root == null || GameFlow.Instance == null || GameFlow.HasGame) return false;
                 return root.Mode != GameMode.CharacterCreation;
             }
         }

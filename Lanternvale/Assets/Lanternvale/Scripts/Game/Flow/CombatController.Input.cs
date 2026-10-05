@@ -147,7 +147,7 @@ namespace Lanternvale.Game
             if (rig == null) return;
             bool overUi = blocked || GameInput.PointerOverUi;
             var mouse = rig.MouseWorld;
-            var hover = overUi ? null : PickUnit(mouse);
+            var hover = overUi ? null : PickUnit(GameInput.MousePosition);
             HoveredTarget = hover;
 
             UpdateMoveRange(u);
@@ -202,28 +202,30 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// Front-most battle unit whose body contains the point. Views that are not part of this fight (map NPCs, other
-        /// encounters' enemies) are skipped instead of hiding the battle unit behind them. Dead bodies count only while
-        /// targeting an ability for dead allies (resurrection).
+        /// Front-most battle unit whose body is under the screen position (pixels, bottom-left origin). Views that are not
+        /// part of this fight (map NPCs, other encounters' enemies) are skipped instead of hiding the battle unit behind
+        /// them. Dead bodies count only while targeting an ability for dead allies (resurrection).
         /// </summary>
-        Unit PickUnit(Vector2 world)
+        Unit PickUnit(Vector2 screen)
         {
             var ta = TargetingAbility;
             bool includeDead = ta != null && ta.target == TargetType.DeadAlly;
             var all = UnitView.All;
             UnitView best = null;
             Unit bestUnit = null;
+            float bestDepth = float.MaxValue;
             for (int i = 0; i < all.Count; i++)
             {
                 var v = all[i];
                 if (v == null || !v.Visible || (!includeDead && v.IsDead)) continue;
-                if (best != null && v.FeetPosition.y >= best.FeetPosition.y) continue;
-                if (!v.Bounds.Contains(world)) continue;
+                if (!v.HitTestScreen(screen, out float depth)) continue;
+                if (best != null && depth >= bestDepth) continue;
                 var u = UnitOfView(v);
                 if (u == null || !Battle.Units.Contains(u)) continue;
                 if (v.IsDead && (Battle.ActiveUnit == null || !u.IsFriendlyTo(Battle.ActiveUnit))) continue;   // enemy corpses
                 best = v;
                 bestUnit = u;
+                bestDepth = depth;
             }
             return bestUnit;
         }
@@ -1051,7 +1053,7 @@ namespace Lanternvale.Game
                 Battle.CancelQueuedSwing(u);
                 QueueVersion++;
                 InvalidateTurnCaches();
-                FloatingText.Spawn(Head(u, V(u)) + new Vector2(0f, 0.3f), a.name + " cancelled", MutedText, 0.75f);
+                FloatingText.Spawn(Head(u, V(u)) + World3D.Up * 0.3f, a.name + " cancelled", MutedText, 0.75f);
                 return null;
             }
 

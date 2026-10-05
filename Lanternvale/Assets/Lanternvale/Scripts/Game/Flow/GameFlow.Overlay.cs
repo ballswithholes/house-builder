@@ -185,7 +185,7 @@ namespace Lanternvale.Game
                 if (b.Height < 0f) b.Height = barkStyle.CalcHeight(b.Content, BarkWidth - 28f) + 18f;
                 float a = Mathf.Clamp01(b.Age / 0.2f) * Mathf.Clamp01((b.Life - b.Age) / 0.45f);
                 if (a <= 0.01f) continue;
-                var gui = rig.WorldToGui(b.View.NameplatePosition + new Vector2(0f, 0.3f)) / scale;
+                var gui = rig.WorldToGui(b.View.NameplatePosition + World3D.Up * 0.3f) / scale;
                 float rise = (1f - Mathf.Clamp01(b.Age / 0.25f)) * 8f;
                 var r = new Rect(gui.x - BarkWidth * 0.5f, gui.y - b.Height - 6f + rise, BarkWidth, b.Height);
                 // keep it on screen

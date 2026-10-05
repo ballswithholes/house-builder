@@ -52,7 +52,7 @@ namespace Lanternvale.Game
             catch (Exception e) { Hud.LogOnce("plates:" + e.GetType().Name, "Nameplates: " + e); }
         }
 
-        Vector2 ToGui(CameraRig rig, Vector2 world)
+        Vector2 ToGui(CameraRig rig, Vector3 world)
         {
             var g = rig.WorldToGui(world);
             float s = Ui.Scale <= 0f ? 1f : Ui.Scale;

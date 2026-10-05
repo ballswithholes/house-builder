@@ -773,10 +773,10 @@ namespace Lanternvale.Game
             var map = MapView.Current;
             if (allow)
             {
-                var mw = rig.MouseWorld;
-                uv = UnitView.Pick(mw);
+                var ms = GameInput.MousePosition;
+                uv = UnitView.PickScreen(ms);
                 if (uv != null && IsBeingRemoved(uv)) uv = null;
-                if (uv == null && mode == SessionMode.Exploration && map != null) mo = map.Pick(mw);
+                if (uv == null && mode == SessionMode.Exploration && map != null) mo = map.PickScreen(ms);
             }
 
             if (!ReferenceEquals(uv, hoveredView))

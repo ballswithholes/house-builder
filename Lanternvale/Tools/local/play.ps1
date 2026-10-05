@@ -4,9 +4,10 @@
 #   powershell -ExecutionPolicy Bypass -File Lanternvale\Tools\local\play.ps1 -Editor    open the project in the Unity editor
 #   powershell -ExecutionPolicy Bypass -File Lanternvale\Tools\local\play.ps1 -Tour      launch with the autopilot tour
 #
-# Finds the newest Unity 6 (or 2022.3) editor installed by Unity Hub, creates a project from the "Universal 2D"
-# template (Tools\.cache\local\LanternvaleProject), copies Assets\Lanternvale into it, builds a Windows player
-# and starts it. Override the editor with $env:UNITY_EDITOR = "C:\...\Unity.exe".
+# Finds the newest Unity 6 (or 2022.3) editor installed by Unity Hub, creates a project (Tools\.cache\local\
+# LanternvaleProject; an existing one is reused and switched to the built-in render pipeline by the build step),
+# copies Assets\Lanternvale into it, builds a Windows player and starts it.
+# Override the editor with $env:UNITY_EDITOR = "C:\...\Unity.exe".
 param([switch]$Editor, [switch]$Tour)
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
@@ -40,11 +41,8 @@ Log "Unity editor: $UnityExe"
 New-Item -ItemType Directory -Force -Path $Work | Out-Null
 
 if (-not (Test-Path (Join-Path $Project "ProjectSettings\ProjectVersion.txt"))) {
-    $tpl = Get-ChildItem (Split-Path $UnityExe) -Recurse -Filter "*universal-2d*.tgz" -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -like "*ProjectTemplates*" } | Sort-Object Name | Select-Object -Last 1
+    Log "Creating the Unity project (one time)"
     $createArgs = @("-batchmode", "-quit", "-createProject", "`"$Project`"", "-logFile", "`"$(Join-Path $Work 'create.log')`"")
-    if ($tpl) { Log "Creating the project from the Universal 2D template (one time)"; $createArgs += @("-cloneFromTemplate", "`"$($tpl.FullName)`"") }
-    else { Log "Universal 2D template not found; creating a plain project" }
     $p = Start-Process -FilePath $UnityExe -ArgumentList $createArgs -Wait -PassThru -NoNewWindow
     if ($p.ExitCode -ne 0) { Die "Project creation failed, see $Work\create.log" }
 }
@@ -55,7 +53,7 @@ if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
 Copy-Item (Join-Path $Root "Assets\Lanternvale") $dest -Recurse
 
 if ($Editor) {
-    Log "Opening the Unity editor - choose Lanternvale > Create Game Scene, then press Play"
+    Log "Opening the Unity editor - the game scene opens by itself, then press Play"
     Start-Process -FilePath $UnityExe -ArgumentList @("-projectPath", "`"$Project`"", "-executeMethod", "Lanternvale.EditorTools.LanternvaleMenu.OpenGameScene")
     exit 0
 }

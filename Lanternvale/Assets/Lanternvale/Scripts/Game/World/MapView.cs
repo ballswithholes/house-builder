@@ -29,8 +29,8 @@ namespace Lanternvale.Game
         public Vector2 Position;
         /// <summary>World rect: painted (opaque) sprite bounds for props/chests, ground footprint for transitions/regions.</summary>
         public Rect Rect;
-        /// <summary>Where the UI should draw a label/prompt (above the sprite or marker).</summary>
-        public Vector2 LabelPosition;
+        /// <summary>Where the UI should draw a label/prompt: a world point above the object (z = −height).</summary>
+        public Vector3 LabelPosition;
         public string Label = "";
         public PropDef Prop;
         public ChestDef Chest;
@@ -900,6 +900,17 @@ namespace Lanternvale.Game
         /// Front-most visible interactable under a world point: props/chests by sprite rect (lowest y
         /// wins), then transitions by ground rect, then (optionally) regions.
         /// </summary>
+        /// <summary>
+        /// The object under a SCREEN position (pixels, bottom-left origin): the front-most prop/chest whose model is under
+        /// it, else a transition (ground rect under the cursor), else (includeRegions) a region.
+        /// </summary>
+        public MapObject PickScreen(Vector2 screen, bool includeRegions = false)
+        {
+            var rig = CameraRig.Instance;
+            if (rig == null) return null;
+            return Pick(rig.ScreenToWorld(screen), includeRegions);
+        }
+
         public MapObject Pick(Vector2 world, bool includeRegions = false)
         {
             MapObject best = null;

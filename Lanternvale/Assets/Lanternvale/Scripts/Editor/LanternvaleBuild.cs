@@ -1,8 +1,7 @@
 // Command-line builds (CI / cloud runs). Example:
 //   Unity -batchmode -quit -nographics -projectPath <project> \
 //     -executeMethod Lanternvale.EditorTools.LanternvaleBuild.BuildLinuxPlayer -buildPath Build/Linux/Lanternvale.x86_64
-// Configures URP with the 2D renderer (when URP is installed), creates the game scene, and builds a
-// windowed 1600x900 player. Exits with code 1 when anything fails so scripts can detect it.
+// Sets up rendering (built-in pipeline, MSAA), creates the game scene, and builds a windowed 1600x900 player. Exits with code 1 when anything fails so scripts can detect it.
 using System;
 using System.IO;
 using UnityEditor;
@@ -31,9 +30,7 @@ namespace Lanternvale.EditorTools
         {
             try
             {
-                bool urp = LanternvaleMenu.ConfigureUrp2D(interactive: false);
-                Debug.Log(urp ? "[Lanternvale] Build: URP 2D renderer configured." : "[Lanternvale] Build: no URP — the player uses the unlit fallback lighting.");
-                LanternvaleShaderIncludes.Ensure();
+                LanternvaleMenu.Configure3D(interactive: false);
                 var scene = LanternvaleMenu.EnsureGameScene();
 
                 PlayerSettings.productName = "Lanternvale";

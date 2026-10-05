@@ -292,7 +292,7 @@ namespace Lanternvale.Game
                     var v = ViewOf(u);
                     if (v == null) break;
                     if (Session != null && u == Session.Leader) StopPartyMove(false);
-                    FxSystem.Puff(ToUnity(e.From) + new Vector2(0f, v.Height * 0.5f), new Color(0.85f, 0.8f, 1f), 0.8f);
+                    FxSystem.Puff(World3D.At(ToUnity(e.From), v.Height * 0.5f), new Color(0.85f, 0.8f, 1f), 0.8f);
                     v.Teleport(ToUnity(e.To));
                     FxSystem.Sparkles(v.CenterPosition, Ui.SchoolColor(School.Arcane), 10);
                     break;

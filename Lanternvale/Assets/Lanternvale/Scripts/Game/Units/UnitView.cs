@@ -23,18 +23,34 @@ namespace Lanternvale.Game
         /// <summary>Every live UnitView (used by picking, foreground fades and occluder fades).</summary>
         public static IReadOnlyList<UnitView> All => all;
 
-        /// <summary>Front-most visible unit whose body contains the world point (or null).</summary>
-        public static UnitView Pick(Vector2 world, bool includeDead = false)
+        /// <summary>Front-most visible unit under a SCREEN position (pixels, bottom-left origin, e.g. GameInput.MousePosition).</summary>
+        public static UnitView PickScreen(Vector2 screen, bool includeDead = false)
         {
             UnitView best = null;
+            float bestDepth = float.MaxValue;
             for (int i = 0; i < all.Count; i++)
             {
                 var u = all[i];
                 if (u == null || !u.Visible || (!includeDead && u.IsDead)) continue;
-                if (!u.Bounds.Contains(world)) continue;
-                if (best == null || u.pos.y < best.pos.y) best = u;
+                if (!u.HitTestScreen(screen, out float depth)) continue;
+                if (best == null || depth < bestDepth) { best = u; bestDepth = depth; }
             }
             return best;
+        }
+
+        /// <summary>
+        /// True when the body is under the screen position; depth = distance from the camera (smaller = in front), for
+        /// choosing the front-most of several hits.
+        /// </summary>
+        public bool HitTestScreen(Vector2 screen, out float depth)
+        {
+            depth = float.MaxValue;
+            var rig = CameraRig.Instance;
+            if (rig == null) return false;
+            var w = rig.ScreenToWorld(screen);
+            if (!Bounds.Contains(w)) return false;
+            depth = pos.y;
+            return true;
         }
 
         // timing constants for callers (seconds from the start of the animation)
@@ -70,28 +86,28 @@ namespace Lanternvale.Game
         public bool IsActiveTurn => activeTurn;
         public bool IsPolymorphed => polymorphed;
 
-        /// <summary>Approximate centre of the body (follows bob/hover; lowered when lying).</summary>
-        public Vector2 CenterPosition
+        /// <summary>Approximate centre of the body in the world (z = −height; follows bob/hover; lowered when lying).</summary>
+        public Vector3 CenterPosition
         {
             get
             {
                 float lie = poseAngle01;
-                return pos + new Vector2(offset.x, offset.y + Mathf.Lerp(CurrentHeight * 0.5f, CurrentHeight * 0.18f, lie));
+                return World3D.At(pos + new Vector2(offset.x, 0f), offset.y + Mathf.Lerp(CurrentHeight * 0.5f, CurrentHeight * 0.18f, lie));
             }
         }
 
-        /// <summary>Top of the head (nameplates, floating text, status icons).</summary>
-        public Vector2 HeadPosition
+        /// <summary>Top of the head in the world (floating text, status icons).</summary>
+        public Vector3 HeadPosition
         {
             get
             {
                 float lie = poseAngle01;
-                return pos + new Vector2(offset.x, offset.y + Mathf.Lerp(CurrentHeight * 0.97f, CurrentHeight * 0.35f, lie));
+                return World3D.At(pos + new Vector2(offset.x, 0f), offset.y + Mathf.Lerp(CurrentHeight * 0.97f, CurrentHeight * 0.35f, lie));
             }
         }
 
         /// <summary>Where a nameplate/health bar should be anchored (a little above the head).</summary>
-        public Vector2 NameplatePosition => HeadPosition + new Vector2(0f, 0.28f);
+        public Vector3 NameplatePosition => HeadPosition + World3D.Up * 0.28f;
 
         /// <summary>World rect of the body for mouse picking.</summary>
         public Rect Bounds

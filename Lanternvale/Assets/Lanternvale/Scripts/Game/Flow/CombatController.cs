@@ -339,7 +339,7 @@ namespace Lanternvale.Game
             // waiting emits no event: drop every cache keyed on the event count (move range, valid targets, hover)
             InvalidateTurnCaches();
             if (!r.Ok) return Fail(r.Reason);
-            FloatingText.Spawn(Head(u, V(u)) + new Vector2(0f, 0.3f), "Waits " + seconds.ToString("0.#") + " s", MutedText, 0.75f);
+            FloatingText.Spawn(Head(u, V(u)) + World3D.Up * 0.3f, "Waits " + seconds.ToString("0.#") + " s", MutedText, 0.75f);
             return null;
         }
 
