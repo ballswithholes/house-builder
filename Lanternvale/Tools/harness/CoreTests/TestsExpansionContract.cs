@@ -26,12 +26,14 @@ namespace Lanternvale.Tests
     {""id"": ""xt_badfx"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Head"", ""armorType"": ""Cloth"", ""equipEffects"": [{""type"": ""Bogus""}]},
     {""id"": ""xt_a"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Head"", ""armorType"": ""Cloth""},
     {""id"": ""xt_b"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Chest"", ""armorType"": ""Cloth""},
-    {""id"": ""xt_c"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Legs"", ""armorType"": ""Cloth""}
+    {""id"": ""xt_c"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Legs"", ""armorType"": ""Cloth""},
+    {""id"": ""xt_d"", ""name"": ""X"", ""kind"": ""Armor"", ""equip"": ""Feet"", ""armorType"": ""Cloth""}
   ],
   ""itemSets"": [
     {""id"": ""set_x1"", ""name"": ""Set One"", ""items"": [""xt_a"", ""xt_b""], ""bonuses"": [{""pieces"": 2}]},
     {""id"": ""set_x2"", ""name"": """", ""items"": [""xt_a"", ""xt_c"", ""potion_minor_healing""],
-     ""bonuses"": [{""pieces"": 3}, {""pieces"": 2}, {""pieces"": 5, ""equipEffects"": [{""type"": ""GrantAbility"", ""ability"": ""attack""}]}]}
+     ""bonuses"": [{""pieces"": 3}, {""pieces"": 2}, {""pieces"": 5, ""equipEffects"": [{""type"": ""GrantAbility"", ""ability"": ""attack""}]}]},
+    {""id"": ""set_x3"", ""name"": ""Set Three"", ""items"": [""xt_d"", ""potion_minor_healing""]}
   ],
   ""lootTables"": [
     {""id"": ""lt_xt"", ""entries"": [
@@ -71,10 +73,12 @@ namespace Lanternvale.Tests
      ""regions"": [{""id"": ""xt_dup"", ""pos"": [5, 5], ""size"": [2, 2], ""check"": {""skill"": ""Perception"", ""dc"": 12}}],
      ""props"": [{""art"": ""prop_rock"", ""pos"": [3, 3], ""interact"": ""xt_p1"", ""dialogue"": ""xt_dlg_missing""}],
      ""paths"": [{""points"": [[1, 1]]}],
-     ""water"": [{""points"": [[1, 1], [2, 2]], ""closed"": true}],
+     ""water"": [{""points"": [[1, 1], [2, 2]], ""closed"": true}, {""points"": [[1, 1]]}],
      ""encounters"": [{""id"": ""enc_training_dummy"", ""pos"": [8, 8]}]
     },
     {""id"": ""xt_raid"", ""width"": 20, ""depth"": 20, ""raidSize"": 10, ""raidReturnMap"": ""lanternvale"", ""raidReturnSpawn"": ""xt_nowhere"",
+     ""spawns"": [{""id"": ""default"", ""pos"": [2, 2]}]},
+    {""id"": ""xt_raid2"", ""width"": 20, ""depth"": 20, ""raidSize"": 10, ""raidReturnMap"": ""xt_nowhere"", ""raidReturnSpawn"": ""default"",
      ""spawns"": [{""id"": ""default"", ""pos"": [2, 2]}]}
   ]
 }";
@@ -122,6 +126,9 @@ namespace Lanternvale.Tests
             Expect(p, "map xt_raid", "raidReturnMap 'lanternvale' has no spawn 'xt_nowhere'");
             Expect(p, "map xt_map_a", "paths[0] needs at least 2 points");
             Expect(p, "map xt_map_a", "water[0] needs at least 3 points (closed)");
+            Expect(p, "map xt_map_a", "water[1] needs at least 2 points");
+            Expect(p, "map xt_raid2", "raid needs a valid raidReturnMap (got 'xt_nowhere')");
+            Assert(!p.Any(x => x.StartsWith("map xt_raid:") && x.Contains("raid needs a valid raidReturnMap")), "a known raidReturnMap passes the map check");
             Expect(p, "map xt_map_a", "region xt_dup: a check needs a checkFlag");
             Expect(p, "map xt_map_a", "unknown dialogue 'xt_dlg_missing'");
             Expect(p, "map xt_map_a", "id 'xt_dup' is used by a transition and a region");
@@ -146,6 +153,9 @@ namespace Lanternvale.Tests
             Expect(p, "item set set_x2.bonuses[1]", "pieces must be strictly increasing");
             Expect(p, "item set set_x2.bonuses[2]", "pieces 5 must be in [1, 3]");
             Expect(p, "item set set_x2.bonuses[2]", "effect type 'GrantAbility' is not allowed in a set bonus");
+            Expect(p, "item set set_x3", "needs at least 2 equipable items");
+            Expect(p, "item set set_x3", "item 'potion_minor_healing' is not equipable");
+            Assert(!p.Any(x => x.StartsWith("item set set_x2") && x.Contains("needs at least 2 equipable")), "a set with 2 equipable items meets the minimum");
             Assert(!p.Any(x => x.StartsWith("item set set_x1")), "a valid set passes");
         }
 
