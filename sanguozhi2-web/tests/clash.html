@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>攻击画面测试</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #12121a; }
+  #app { position: fixed; inset: 0; z-index: 0; background: #dbd6c7; }
+  #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  #panel { position: fixed; left: 10px; bottom: 10px; z-index: 5; max-width: min(760px, calc(100vw - 20px)); max-height: calc(100vh - 20px); overflow: auto;
+    font: 13px/1.45 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei"; color: #f5eddb;
+    background: rgba(18,18,26,.86); border: 1px solid rgba(243,201,105,.45); border-radius: 10px; padding: 8px 10px; }
+  #panel h3 { margin: 4px 0 6px; font-size: 14px; color: #f3c969; font-weight: 600; }
+  #panel table { border-collapse: collapse; }
+  #panel td, #panel th { padding: 2px 3px; text-align: left; white-space: nowrap; }
+  #panel th { color: #ada392; font-weight: 500; }
+  #panel button { font: inherit; color: #f5eddb; background: #2a2734; border: 1px solid rgba(243,201,105,.35); border-radius: 6px; padding: 3px 8px; margin: 1px; cursor: pointer; min-height: 28px; }
+  #panel button:hover { background: #3a3546; }
+  #panel button.on { background: #c8382c; border-color: #f3c969; }
+  #panel .row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+  #log { color: #a8e0b0; white-space: pre-wrap; font-size: 12px; margin-top: 4px; }
+  #hide { position: absolute; right: 8px; top: 6px; }
+  body.embed #panel { display: none; }
+  #phone { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.75); }
+  #phone.on { display: flex; }
+  #phone .frame { position: relative; border: 10px solid #111; border-radius: 34px; box-shadow: 0 10px 40px rgba(0,0,0,.6); overflow: hidden; background: #000; }
+  #phone iframe { border: 0; display: block; width: 844px; height: 390px; transform-origin: 0 0; }
+  #phone .close { position: absolute; top: 14px; right: 18px; font: 600 15px sans-serif; color: #fff; background: #c8382c; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<div id="panel">
+  <button id="hide" title="收起">—</button>
+  <h3>攻击画面 SG.Clash 测试</h3>
+  <div id="grid"></div>
+  <div class="row"><b>必杀：</b><span id="specials"></span></div>
+  <div class="row"><b>特写：</b><span id="cuts"></span></div>
+  <div class="row"><b>设置：</b><span id="opts"></span></div>
+  <div id="log"></div>
+</div>
+<div id="phone"><div class="frame"><iframe id="phoneFrame" title="手机预览"></iframe></div><button class="close" id="phoneClose">关闭预览</button></div>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/strategy-ai.js"></script>
+<script src="../js/battle-model.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/battle-view.js"></script>
+<script>
+  // 头像模块（B）完成后可用 ?portrait=1 一并载入（按游戏的载入顺序先于 clash.js）；缺省用姓氏徽章
+  if (/[?&]portrait=1/.test(location.search)) document.write('<script src="../js/portrait-data.js"><\/script><script src="../js/portrait.js"><\/script>');
+</script>
+<script src="../js/clash.js"></script>
+<script>
+'use strict';
+/* 攻击画面独立测试页
+   参数：?case=plain-even      载入后自动播放某个用例（地形-兵力比；见下方表格）
+         ?special=smite|blaze|storm|volley   附带必杀技
+         ?cut=0|1             载入后播放特写
+         ?freeze=1.7          动画停在该时刻（截图用，SG.Clash.debug.freezeAt）
+         ?board=0             不搭建背景战场（更快）
+         ?embed=1             隐藏控制面板（手机预览用）
+         ?portrait=1          载入 js/portrait.js（头像模块就绪后）
+         ?speed=2             速度
+   window.T：play(caseKey, extra) / cut(side) / memTest(n) / info() */
+(function () {
+  const Q = new URLSearchParams(location.search);
+  if (Q.get('embed')) document.body.classList.add('embed');
+  const logEl = document.getElementById('log');
+  function log(s) { logEl.textContent = s; window.__log = s; }
+
+  // ------------------------------------------------------------ 测试数据 --
+  const G = (name, war, intel, extra) => Object.assign({ name, war, intel, pol: 60, troops: 0, formation: 0 }, extra || {});
+  const GEN = {
+    关羽: G('关羽', 98, 80), 张飞: G('张飞', 99, 30), 赵云: G('赵云', 96, 76), 刘备: G('刘备', 75, 78), 黄忠: G('黄忠', 93, 60),
+    曹仁: G('曹仁', 86, 62), 夏侯惇: G('夏侯惇', 90, 58), 曹操: G('曹操', 85, 96), 吕布: G('吕布', 100, 26), 张辽: G('张辽', 92, 78),
+    孙策: G('孙策', 94, 70), 周瑜: G('周瑜', 76, 97), 黄祖: G('黄祖', 70, 52), 纪灵: G('纪灵', 82, 40), 孟获: G('孟获', 87, 42, { culture: 'nanman' }),
+    诸葛亮: G('诸葛亮', 38, 100), 陆逊: G('陆逊', 70, 95), 公孙瓒: G('公孙瓒', 84, 60), 颜良: G('颜良', 93, 42),
+    塞维鲁: G('塞维鲁', 80, 82, { culture: 'roman' }), 沃洛吉斯: G('沃洛吉斯', 74, 70, { culture: 'persia' }),
+  };
+  const FAC = { liubei: '#2f9a55', cao: '#2c3d8f', sun: '#c8382c', dong: '#7a2a3a', yuanshu: '#c99a2e', gongsun: '#e0e0e8', yuanshao: '#2f6db5', nanman: '#8a5a2a', roman: '#9c1b2a', persia: '#3c7a8a', liubiao: '#3aa5a0' };
+  // 地形 → 对阵
+  const MATCH = {
+    plain: ['关羽', 'liubei', '曹仁', 'cao'],
+    forest: ['孙策', 'sun', '黄祖', 'liubiao'],
+    hill: ['张飞', 'liubei', '吕布', 'dong'],
+    mountain: ['赵云', 'gongsun', '颜良', 'yuanshao'],
+    river: ['周瑜', 'sun', '曹操', 'cao'],
+    gate: ['夏侯惇', 'cao', '纪灵', 'yuanshu'],
+    castle: ['曹操', 'cao', '吕布', 'dong'],
+    wall: ['孟获', 'nanman', '诸葛亮', 'liubei'],
+  };
+  const TERR = { plain: 0, forest: 1, hill: 2, mountain: 3, river: 4, wall: 5, gate: 6, castle: 7 };
+  const TNAME = { plain: '平原', forest: '森林', hill: '山丘', mountain: '山岳', river: '河川', gate: '城门', castle: '本城', wall: '城墙' };
+  // 兵力比：[攻前, 攻后], [守前, 守后], 阵型
+  const RATIO = {
+    even: { n: '均势', a: [6200, 5420], d: [5800, 4870], fa: '鱼鳞', fd: '鹤翼' },
+    big: { n: '以众击寡', a: [8400, 8190], d: [2600, 1180], fa: '锋矢', fd: '方圆' },
+    small: { n: '以寡击众', a: [1800, 1160], d: [7600, 7390], fa: '长蛇', fd: '衡轭' },
+    rout: { n: '击溃', a: [5200, 5050], d: [1300, 0], fa: '偃月', fd: '雁行' },
+  };
+  const SPECIAL = {
+    smite: { gen: '关羽', name: '青龙偃月斩', color: '#38d39a', kind: 'smite', fac: 'liubei' },
+    storm: { gen: '诸葛亮', name: '借东风', color: '#8fd3ff', kind: 'storm', fac: 'liubei' },
+    volley: { gen: '黄忠', name: '百步穿杨', color: '#ffd24d', kind: 'volley', fac: 'liubei' },
+    blaze: { gen: '陆逊', name: '火烧连营', color: '#ff7a2a', kind: 'blaze', fac: 'sun' },
+  };
+
+  function makeOpts(key, extra) {
+    extra = extra || {};
+    const [tk, rk] = key.split('-');
+    const m = MATCH[tk] || MATCH.plain, r = RATIO[rk] || RATIO.even;
+    let an = m[0], af = m[1];
+    const sp = extra.special && SPECIAL[extra.special];
+    if (sp) { an = sp.gen; af = sp.fac; }
+    const o = {
+      attacker: { gen: GEN[an], side: extra.swap ? 1 : 0, color: FAC[af], troopsBefore: r.a[0], troopsAfter: r.a[1], formation: r.fa, culture: GEN[an].culture },
+      defender: { gen: GEN[m[2]], side: extra.swap ? 0 : 1, color: FAC[m[3]], troopsBefore: r.d[0], troopsAfter: r.d[1], formation: r.fd, culture: GEN[m[2]].culture },
+      terrain: SG.Terrain ? SG.Terrain[{ plain: 'Plain', forest: 'Forest', hill: 'Hill', mountain: 'Mountain', river: 'River', wall: 'Wall', gate: 'Gate', castle: 'Castle' }[tk]] : TERR[tk],
+      special: sp ? { name: sp.name, color: sp.color, kind: sp.kind } : null,
+      playerSide: extra.playerSide === undefined ? 0 : extra.playerSide,
+    };
+    if (extra.culture) {
+      o.attacker.gen = GEN.塞维鲁; o.attacker.culture = 'roman'; o.attacker.color = FAC.roman;
+      o.defender.gen = GEN.沃洛吉斯; o.defender.culture = 'persia'; o.defender.color = FAC.persia;
+    }
+    return o;
+  }
+
+  // ------------------------------------------------------------ 背景战场 --
+  function fakeBoard() {
+    const Tn = SG.Terrain, W = 14, H = 10;
+    const grid = v => Array.from({ length: W }, () => Array.from({ length: H }, () => v));
+    const map = grid(Tn.Plain), height = grid(0), burning = grid(0);
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+      const n = SG.M.perlinNoise(x * 0.3 + 3, y * 0.3 + 5);
+      map[x][y] = n > 0.66 ? Tn.Hill : n < 0.3 ? Tn.Forest : Tn.Plain;
+      height[x][y] = map[x][y] === Tn.Hill ? 0.45 : n * 0.1;
+    }
+    for (let y = 0; y < H; y++) map[6][y] = Tn.River;
+    const gen = (name, troops) => Object.assign({}, GEN[name] || G(name, 70, 60), { troops });
+    const U = (g, side, x, y, extra) => Object.assign({ gen: g, side, x, y, morale: 70, formation: 0, acted: false, confused: 0, commander: false, alive: true,
+      get troops() { return this.gen.troops; }, set troops(v) { this.gen.troops = Math.max(0, v); }, get form() { return SG.Defs.formations[this.formation]; } }, extra || {});
+    const units = [U(gen('关羽', 6200), 0, 5, 4, { commander: true }), U(gen('张飞', 4100), 0, 4, 6), U(gen('曹仁', 5800), 1, 7, 4, { commander: true }), U(gen('夏侯惇', 3900), 1, 8, 6)];
+    for (const u of units) map[u.x][u.y] = Tn.Plain;
+    SG.G = { factions: [{ name: '刘备', color: FAC.liubei }, { name: '曹操', color: FAC.cao }] };
+    return { setup: { attacker: 0, defender: 1, target: { id: 3 } }, W, H, map, height, burning, units, day: 1, side: 0, ap: 3, food: [3000, 3000], castle: { x: 12, y: 5 }, result: 0,
+      inBounds(x, y) { return x >= 0 && y >= 0 && x < W && y < H; } };
+  }
+
+  // ------------------------------------------------------------ 启动 --
+  SG.Gfx.init(document.getElementById('app'));
+  SG.UI.init();
+  try { SG.Sfx.init(); } catch (e) { /* 无音频 */ }
+  window.addEventListener('pointerdown', () => { try { SG.Sfx.unlock(); } catch (e) { /* 忽略 */ } }, true);
+  let view = null;
+  if (Q.get('board') !== '0') {
+    const model = fakeBoard();
+    view = new SG.BattleView(model);
+    const c = view.boardCenter;
+    SG.Gfx.camera.position.set(c.x - 2, 26, c.z + 24);
+    SG.Gfx.camera.lookAt(c.x, 0, c.z);
+    SG.Gfx.setShadowFocus(c, 30);
+  }
+  if (Q.get('freeze')) SG.Clash.debug.freezeAt = parseFloat(Q.get('freeze'));
+  if (Q.get('speed')) SG.Clash.speed = parseFloat(Q.get('speed'));
+
+  // 与 game.js 相同的主循环：栈顶全屏场景 update(dt) → Gfx.render()
+  let last = performance.now();
+  window.__frames = 0;
+  function frame(nowT) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.1, Math.max(0, (nowT - last) / 1000));
+    last = nowT;
+    try {
+      if (view) view.update(dt);
+      const top = SG.Gfx.topScreen();
+      if (top && typeof top.update === 'function') top.update(dt);
+      SG.UI.updateFollowers(SG.Gfx.camera);
+      SG.Gfx.render();
+    } catch (e) { console.error(e); }
+    window.__frames++;
+  }
+  requestAnimationFrame(frame);
+
+  // ------------------------------------------------------------ 接口 --
+  let busy = false;
+  const T = window.T = {
+    async play(key, extra) {
+      if (busy) return 'busy';
+      busy = true;
+      const t0 = performance.now();
+      try {
+        const res = await SG.Clash.play(makeOpts(key, extra));
+        const s = `${key}${extra && extra.special ? ' + ' + extra.special : ''}：${((performance.now() - t0) / 1000).toFixed(2)} 秒${res.skipped ? '（跳过）' : ''}${res.disabled ? '（未播放）' : ''}\n` + T.info();
+        log(s);
+        return res;
+      } finally { busy = false; }
+    },
+    async cut(side) {
+      const sp = side ? SPECIAL.blaze : SPECIAL.smite;
+      await SG.Clash.cutIn({ gen: GEN[sp.gen], name: sp.name, color: sp.color, side: side ? 1 : 0 });
+      return 'ok';
+    },
+    info() {
+      const m = SG.Gfx.renderer.info.memory, r = SG.Gfx.renderer.info;
+      return `geometries ${m.geometries}  textures ${m.textures}  programs ${r.programs ? r.programs.length : '?'}  screens ${SG.Gfx._screens.length}  dom .sg-clash ${document.querySelectorAll('.sg-clash').length}`;
+    },
+    _opts: makeOpts,
+    mem() { const m = SG.Gfx.renderer.info.memory; return { geometries: m.geometries, textures: m.textures, programs: SG.Gfx.renderer.info.programs.length }; },
+    // 连播 n 次（每次播一小段后跳过），比较前后显存计数
+    async memTest(n) {
+      n = n || 10;
+      const keys = Object.keys(MATCH).flatMap(t => Object.keys(RATIO).map(r => t + '-' + r));
+      const before = T.mem();
+      const series = [];
+      const sp = ['smite', null, 'blaze', null, 'storm', null, 'volley'];
+      for (let i = 0; i < n; i++) {
+        const p = SG.Clash.play(makeOpts(keys[(i * 5) % keys.length], { special: sp[i % sp.length] }));
+        // 让它渲染若干帧后跳过
+        await new Promise(r => setTimeout(r, 900));
+        if (SG.Clash._cut) SG.Clash._cut.skip();
+        await new Promise(r => setTimeout(r, 300));
+        if (SG.Clash.active) SG.Clash.active.skip();
+        await p;
+        await new Promise(r => setTimeout(r, 120));
+        series.push(T.mem());
+      }
+      const after = T.mem();
+      const s = `memTest ${n}：前 ${JSON.stringify(before)}\n后 ${JSON.stringify(after)}\n` + series.map(x => x.geometries + '/' + x.textures).join(' ');
+      log(s);
+      return { before, after, series };
+    },
+  };
+
+  // ------------------------------------------------------------ 面板 --
+  const grid = document.getElementById('grid');
+  const tbl = document.createElement('table');
+  tbl.innerHTML = '<tr><th></th>' + Object.keys(RATIO).map(k => `<th>${RATIO[k].n}</th>`).join('') + '</tr>';
+  for (const tk of Object.keys(MATCH)) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<th>${TNAME[tk]}</th>`;
+    for (const rk of Object.keys(RATIO)) {
+      const td = document.createElement('td');
+      const b = document.createElement('button');
+      b.textContent = MATCH[tk][0] + '→' + MATCH[tk][2];
+      b.onclick = () => T.play(tk + '-' + rk);
+      td.appendChild(b); tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  grid.appendChild(tbl);
+  const btn = (parent, text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; document.getElementById(parent).appendChild(b); return b; };
+  for (const k of Object.keys(SPECIAL)) btn('specials', SPECIAL[k].gen + '「' + SPECIAL[k].name + '」', () => T.play(k === 'blaze' ? 'forest-even' : k === 'storm' ? 'river-big' : 'plain-even', { special: k }));
+  btn('specials', '异域文化（罗马 vs 安息）', () => T.play('plain-even', { culture: true }));
+  btn('specials', '守方反击（攻方为第二方）', () => T.play('gate-small', { swap: true, playerSide: 1 }));
+  btn('cuts', '特写·左', () => T.cut(0));
+  btn('cuts', '特写·右', () => T.cut(1));
+  const spd = btn('opts', '速度 ×1', () => { SG.Clash.speed = SG.Clash.speed > 1 ? 1 : 2; spd.textContent = '速度 ×' + SG.Clash.speed; });
+  const en = btn('opts', '已启用', () => { SG.Clash.enabled = !SG.Clash.enabled; en.textContent = SG.Clash.enabled ? '已启用' : '已关闭（play 立即返回）'; });
+  btn('opts', '显存测试 ×10', () => T.memTest(10));
+  btn('opts', '手机尺寸预览', () => {
+    const ph = document.getElementById('phone'), fr = document.getElementById('phoneFrame');
+    const k = Math.min(1, (window.innerWidth - 60) / 844, (window.innerHeight - 90) / 390);
+    fr.style.transform = `scale(${k})`;
+    fr.parentElement.style.width = (844 * k) + 'px'; fr.parentElement.style.height = (390 * k) + 'px';
+    fr.src = 'clash.html?embed=1&board=1&case=river-even';
+    ph.classList.add('on');
+  });
+  document.getElementById('phoneClose').onclick = () => { const ph = document.getElementById('phone'); ph.classList.remove('on'); document.getElementById('phoneFrame').src = 'about:blank'; };
+  document.getElementById('hide').onclick = () => { const p = document.getElementById('panel'); const h = p.classList.toggle('mini'); for (const c of p.children) if (c.id !== 'hide') c.style.display = h ? 'none' : ''; };
+  log(T.info());
+  window.__ready = true;
+  if (Q.get('case')) setTimeout(() => T.play(Q.get('case'), { special: Q.get('special') || null }), 300);
+  if (Q.get('cut')) setTimeout(() => T.cut(Q.get('cut') === '1' ? 1 : 0), 300);
+})();
+</script>
+</body>
+</html>

@@ -3,6 +3,11 @@
    三国志II 霸王的大陆 · 网页版 · 战略画面
    ← Strategy/StrategyScreen.cs：顶栏、城池情报、指令与月份循环
    协程 → async 函数。new SG.StrategyScreen().run() → Promise（游戏结束时重载页面）。
+   第二版 §4F 调动武将：
+     「移动」「输送」的目的地 = 经由己方城池相连可达的所有己方城（SG.Commands.moveTargets），
+     列表注明路程（相邻 / 经 N 城）与途经城名，行军动画沿路线逐城前进；
+     灰色指令按钮被点按时以提示说明原因（addCmd(name, why, …)、explainCmd）；
+     第一次占领新城后弹一次「移动」提示（firstConquestTip，本机只弹一次）并让「移动」按钮闪烁（hintCmd）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -47,6 +52,56 @@
     return SG.rgbToHex(c[0] + (1 - c[0]) * k, c[1] + (1 - c[1]) * k, c[2] + (1 - c[2]) * k);
   }
   function dot(color, glyph) { return `<span class="sg-dot" style="color:${color}">${glyph || '●'}</span>`; }
+
+  // ---------------------------------------------------------- 调动武将（第二版 §4F）--
+  // 路程文字：相邻 / 经 N 城（N = 途经的己方城数）
+  function routeText(rt) { return rt.hops <= 1 ? '相邻' : '经 ' + (rt.hops - 1) + ' 城'; }
+  // 途经城名（最多列 4 座）
+  function viaText(g, rt) {
+    if (rt.hops <= 1) return null;
+    const mid = rt.path.slice(1, -1).map(i => SG.esc(g.cities[i].name));
+    return '途经 ' + (mid.length > 4 ? mid.slice(0, 4).join('、') + ' 等 ' + mid.length + ' 城' : mid.join('、'));
+  }
+  // 第一次占领新城后的提示只弹一次（存于本机；无存储时本次会话内只弹一次）
+  const TIP_KEY = 'sanguozhi2_tip_move';
+  let tipShownMem = false;
+  function tipShown() {
+    if (tipShownMem) return true;
+    try { return !!(window.localStorage && window.localStorage.getItem(TIP_KEY)); } catch (e) { return false; }
+  }
+  function markTipShown() {
+    tipShownMem = true;
+    try { if (window.localStorage) window.localStorage.setItem(TIP_KEY, '1'); } catch (e) { /* 忽略 */ }
+  }
+  // 灰色指令按钮不用原生 disabled（原生禁用的按钮收不到点按，触屏上轻点还会被“触摸校正”吸到相邻的可用按钮），
+  // 而用 aria-disabled="true"：外观与 .sg-btn:disabled 相同，悬停 / 按下无反应，但能接住点按并说明原因。
+  function injectStyle() {
+    if (typeof document === 'undefined' || document.getElementById('sg-strategy-cmd-style')) return;
+    const st = document.createElement('style');
+    st.id = 'sg-strategy-cmd-style';
+    st.textContent = `
+.sg-cmdgrid .sg-btn[aria-disabled="true"],
+.sg-cmdgrid .sg-btn[aria-disabled="true"]:hover,
+.sg-cmdgrid .sg-btn[aria-disabled="true"]:active {
+  cursor: default;
+  opacity: .5;
+  color: rgba(245, 237, 219, .8);
+  filter: grayscale(.6) brightness(.85);
+  box-shadow: none;
+  transform: none;
+}
+.sg-cmdgrid .sg-btn[aria-disabled="true"]:hover { border-color: rgba(243, 201, 105, .34); }
+.sg-cmdgrid .sg-btn.primary[aria-disabled="true"]:hover { border-color: rgba(243, 201, 105, .9); }
+.sg-cmdgrid .sg-btn.sg-cmd-deny { animation: sg-cmd-deny .38s ease; }
+@keyframes sg-cmd-deny { 0%, 100% { translate: 0 0; } 20% { translate: -5px 0; } 40% { translate: 5px 0; } 60% { translate: -3px 0; } 80% { translate: 2px 0; } }
+.sg-cmdgrid .sg-btn.sg-cmd-hint { animation: sg-cmd-hint 1.1s ease-in-out 4; }
+@keyframes sg-cmd-hint {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 201, 105, 0); }
+  50% { border-color: #f3c969; box-shadow: 0 0 0 2px rgba(243, 201, 105, .95), 0 0 1.4rem rgba(243, 201, 105, .65); }
+}
+.sg-toast .sg-cmd-name { color: #f3c969; font-weight: 700; margin-right: .5em; }`;
+    document.head.appendChild(st);
+  }
 
   function layer(name) {
     const ui = SG.UI;
@@ -174,6 +229,7 @@
       this.cityStats = h('div', 'sg-citystats', '', body);
       this.genList = h('div', 'sg-genlist', null, body);
       this.cmdGrid = h('div', 'sg-cmdgrid', null, cp);
+      injectStyle();
       cp.style.display = 'none';
 
       // 顶栏若因窄屏换行变高，城池面板下移到顶栏之下
@@ -381,26 +437,63 @@
 
       this.cmdGrid.innerHTML = '';
       if (!mine) return;
-      const tok = g.tokens > 0 && !this.busy;
-      const hasOwnLink = c.links.some(i => g.cities[i].owner === g.player);
-      this.addCmd('开发', tok, () => this.do(() => this.cmdDevelop(c)));
-      this.addCmd('征兵', tok, () => this.do(() => this.cmdRecruit(c)));
-      this.addCmd('训练', tok, () => this.do(() => this.cmdTrain(c)));
-      this.addCmd('搜索', tok, () => this.do(() => this.cmdSearch(c)));
-      this.addCmd('登用', tok && free.length > 0, () => this.do(() => this.cmdHire(c)));
-      this.addCmd('移动', tok && hasOwnLink, () => this.do(() => this.cmdMove(c)));
-      this.addCmd('输送', tok && hasOwnLink, () => this.do(() => this.cmdTransport(c)));
-      this.addCmd('外交', tok, () => this.do(() => this.cmdDiplomacy(c)));
-      this.addCmd('出征', tok && c.links.some(i => g.cities[i].owner !== g.player && !g.allied(g.cities[i].owner, g.player)), () => this.do(() => this.cmdAttack(c)), true);
-      this.addCmd('赏赐', !this.busy, () => this.do(() => this.cmdReward(c)));
-      this.addCmd('交易', !this.busy, () => this.do(() => this.cmdTrade(c)));
-      this.addCmd('任命', !this.busy, () => this.do(() => this.cmdAppoint(c)));
+      // 每个指令给出“不能用的原因”（null = 可用）：先看是否忙碌，再看规则（城池、武将），最后看令牌
+      const C = SG.Commands;
+      const busy = this.busy ? (this.endMonth ? '诸侯行动中，请稍候。' : '指令执行中，请稍候。') : null;
+      const noTok = g.tokens > 0 ? null : '本月令牌已用完——点「结束本月」进入下个月。';
+      const first = (...whys) => { for (const w of whys) if (w) return w; return null; };
+      const canAttack = c.links.some(i => g.cities[i].owner !== g.player && !g.allied(g.cities[i].owner, g.player));
+      this.addCmd('开发', first(busy, noTok), () => this.do(() => this.cmdDevelop(c)));
+      this.addCmd('征兵', first(busy, noTok), () => this.do(() => this.cmdRecruit(c)));
+      this.addCmd('训练', first(busy, noTok), () => this.do(() => this.cmdTrain(c)));
+      this.addCmd('搜索', first(busy, noTok), () => this.do(() => this.cmdSearch(c)));
+      this.addCmd('登用', first(busy, free.length > 0 ? null : '城中没有已发现的在野人才——先用「搜索」寻访。', noTok), () => this.do(() => this.cmdHire(c)));
+      this.addCmd('移动', first(busy, C.moveBlocked(c), noTok), () => this.do(() => this.cmdMove(c)));
+      this.addCmd('输送', first(busy, C.transportBlocked(c), noTok), () => this.do(() => this.cmdTransport(c)));
+      this.addCmd('外交', first(busy, noTok), () => this.do(() => this.cmdDiplomacy(c)));
+      this.addCmd('出征', first(busy, canAttack ? null : c.name + '周围没有可攻打的城池（只能攻打相邻的敌城或空城，同盟势力除外）。', noTok), () => this.do(() => this.cmdAttack(c)), true);
+      this.addCmd('赏赐', busy, () => this.do(() => this.cmdReward(c)));
+      this.addCmd('交易', busy, () => this.do(() => this.cmdTrade(c)));
+      this.addCmd('任命', busy, () => this.do(() => this.cmdAppoint(c)));
     }
 
-    addCmd(name, enabled, action, primary) {
-      const b = SG.UI.button(this.cmdGrid, name, action, primary ? { primary: true } : undefined);
-      b.disabled = !enabled;
+    // why：不可用的原因（字符串）——按钮显示为灰色（aria-disabled，见 injectStyle），点按时说明原因而不执行；
+    // null 为可用。按钮带 data-cmd（指令名），灰色时另带 data-why（原因）。
+    addCmd(name, why, action, primary) {
+      const b = SG.UI.button(this.cmdGrid, name, () => { if (b._why) this.explainCmd(b); else action(); }, primary ? { primary: true } : undefined);
+      b.dataset.cmd = name;
+      if (why) {
+        b._why = why;
+        b.dataset.why = why;
+        b.title = why.replace(/<[^>]*>/g, '');
+        b.setAttribute('aria-disabled', 'true');
+      }
+      if (this._hint && this._hint.name === name && performance.now() < this._hint.until) b.classList.add('sg-cmd-hint');
       return b;
+    }
+
+    explainCmd(b) {
+      if (!b || !b._why) return;
+      SG.UI.pulse(b, 'sg-cmd-deny');
+      // 同一时间只留一条说明，连点不会堆叠
+      if (this._denyToast && this._denyToast.parentNode) this._denyToast.parentNode.removeChild(this._denyToast);
+      this._denyToast = UI().toast(`<span class="sg-cmd-name">${SG.esc(b.dataset.cmd || '')}</span>${b._why}`, 3.4);
+    }
+    // 让某个指令按钮闪烁数次以引起注意（提示用）
+    hintCmd(name) {
+      this._hint = { name, until: performance.now() + 4400 };   // 面板重建时继续闪烁，直到时间到
+      if (!this.cmdGrid) return;
+      for (const b of this.cmdGrid.children) if (b.dataset && b.dataset.cmd === name) SG.UI.pulse(b, 'sg-cmd-hint');
+    }
+
+    // 第一次占领新城后弹一次提示：可用「移动」把武将调往其他城池
+    async firstConquestTip() {
+      if (tipShown()) return false;
+      markTipShown();
+      await UI().say('【提示】占领了新的城池！\n' +
+        '现在可以用「移动」把武将调往其他己方城池——只要经由己方城池相连即可，不必相邻（每次消耗 1 枚令牌，可一次调动多人）。\n' +
+        '「输送」可以同样在己方城池之间调拨金粮。');
+      return true;
     }
 
     do(routine) {
@@ -408,10 +501,21 @@
       this._wrap(routine);
     }
     async _wrap(routine) {
+      const cities0 = G().cityCount(G().player);
+      let tip = false;
       this.busy = true; this.refreshAll();
-      try { await routine(); } catch (e) { console.error(e); }
+      try {
+        await routine();
+        // 出征攻下 / 敌将献城等使城池增加：第一次时提示「移动」
+        if (G().playerFaction.alive && G().cityCount(G().player) > cities0) {
+          SG.Game.map.refresh(G());
+          this.refreshAll();
+          tip = await this.firstConquestTip();
+        }
+      } catch (e) { console.error(e); }
       this.busy = false;
       SG.Game.map.refresh(G());
+      if (tip) this.hintCmd('移动');
       this.refreshAll();
     }
     useToken() { G().tokens = Math.max(0, G().tokens - 1); }
@@ -520,33 +624,53 @@
       UI().toast(who.name + '出任' + c.name + '太守');
     }
 
+    // 移动：目的地为经由己方城池相连可达的所有己方城（不必相邻），列表注明路程
     async cmdMove(c) {
-      const g = G();
-      const dests = c.links.map(i => g.cities[i]).filter(x => x.owner === g.player);
-      const r = await UI().choose('移往何处？', dests.map(d => item(SG.esc(d.name), '武将 ' + g.officersIn(d).length + '　兵 ' + g.troopsIn(d))));
+      const g = G(), C = SG.Commands;
+      const blocked = C.moveBlocked(c);
+      if (blocked) { await UI().say(blocked); return; }
+      const routes = C.moveTargets(c);
+      const r = await UI().choose('移往何处？', routes.map(rt => item(SG.esc(rt.city.name),
+        routeText(rt) + '　武将 ' + g.officersIn(rt.city).length + '　兵 ' + g.troopsIn(rt.city), true, viaText(g, rt))),
+        '经由己方城池相连即可前往，不必相邻（1 枚令牌）');
       if (r < 0) return;
-      const dest = dests[r];
+      const rt = routes[r], dest = rt.city;
       const gens = this.available(c);
       if (gens.length === 0) { await UI().say('本月已无可调动的武将。'); return; }
-      const sel = await UI().chooseMany('调动武将至' + dest.name, gens.map(x => item(SG.esc(x.name), '兵 ' + x.troops)), 10, '可一次调动多名武将（消耗 1 枚令牌）');
+      const sel = await UI().chooseMany('调动武将至' + dest.name + '（' + routeText(rt) + '）', gens.map(x => item(SG.esc(x.name), '兵 ' + x.troops)), 10, '可一次调动多名武将（消耗 1 枚令牌）');
       if (!sel || sel.length === 0) return;
       this.useToken();
-      await SG.Game.map.march(c, dest, g.playerFaction.color, 1.2);
-      for (const i of sel) SG.Commands.move(gens[i], dest);
-      UI().toast(sel.length + ' 名武将移驻' + dest.name);
+      await this.marchRoute(rt.path, g.playerFaction.color);
+      let n = 0;
+      for (const i of sel) { C.move(gens[i], dest); if (gens[i].city === dest.id) n++; }
+      UI().toast(n + ' 名武将移驻' + dest.name);
+    }
+
+    // 沿己方路线逐城行军：相邻 1.2 秒；路线越长每段越快，总长不超过约 2.6 秒
+    async marchRoute(path, color) {
+      const hops = path.length - 1;
+      if (hops <= 0) return;
+      const per = Math.min(1.2, 2.6 / hops);
+      for (let i = 0; i < hops; i++) await SG.Game.map.march(path[i], path[i + 1], color, per);
     }
 
     async cmdTransport(c) {
-      const g = G();
-      const dests = c.links.map(i => g.cities[i]).filter(x => x.owner === g.player);
-      const r = await UI().choose('输送至何处？', dests.map(d => item(SG.esc(d.name), '金 ' + d.gold + '　粮 ' + d.food)));
+      const g = G(), C = SG.Commands;
+      const blocked = C.transportBlocked(c);
+      if (blocked) { await UI().say(blocked); return; }
+      const routes = C.transportTargets(c);
+      const r = await UI().choose('输送至何处？', routes.map(rt => item(SG.esc(rt.city.name),
+        routeText(rt) + '　金 ' + rt.city.gold + '　粮 ' + rt.city.food, true, viaText(g, rt))),
+        '经由己方城池相连即可送达，不必相邻（1 枚令牌）');
       if (r < 0) return;
+      const dest = routes[r].city;
       const gold = await UI().pickNumber('输送金', 0, c.gold, 50, M.idiv(c.gold, 2), null);
       if (gold < 0) return;
       const food = await UI().pickNumber('输送粮', 0, c.food, 500, M.idiv(c.food, 2), null);
       if (food < 0) return;
+      if (gold === 0 && food === 0) { UI().toast('未输送任何金粮。'); return; }
       this.useToken();
-      UI().toast(SG.Commands.transport(c, dests[r], gold, food));
+      UI().toast(C.transport(c, dest, gold, food));
     }
 
     async cmdTrade(c) {

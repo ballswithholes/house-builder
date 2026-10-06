@@ -9,6 +9,8 @@
    动画（移动、冲锋、溃散、计策特效）为 async 函数，按帧推进，返回 Promise。
    粒子：自带的轻量系统（THREE.Points + 自定义着色器），在 update(dt) 中推进；
    火焰带点光源闪烁。
+   第二版新增：specialFx(u, targets, fx, info) → Promise —— 必杀技特效（风格列表见文件末尾「必杀技特效」一节），
+   UnitVisual.tint(color, k) 着色光，以及限时加成的光环与名牌小字。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -385,6 +387,7 @@ void main() {
         this.confuseRing.material.dispose();
         this.confuseRing = null;
       }
+      this._spRefresh();          // 必杀技的限时加成（光环 + 名牌小字）
     }
 
     // dir 为 three 世界向量
@@ -424,6 +427,7 @@ void main() {
       this.material.flash = Math.max(this.flash, burn);
       this.group.position.set(this.pos.x + shake, this.pos.y, this.pos.z);
       if (this.confuseRing) this.confuseRing.rotation.y -= 200 * M.deg2rad * dt;
+      this._spUpdate(dt, time);   // 必杀技：加成光环、着色光
       this.labelAlpha = ((u.alive || this.holdLabel) && this.group.visible) ? (u.acted && u.side === this.view.model.side ? 0.55 : 1) : 0;
       if (this.follow) {
         this._updateLabelPos();
@@ -438,6 +442,7 @@ void main() {
       if (this.mesh.geometry) this.mesh.geometry.dispose();
       this.material.dispose();
       if (this.confuseRing) this.confuseRing.material.dispose();
+      this._spDispose();
       if (this.group.parent) this.group.parent.remove(this.group);
     }
   }
@@ -816,6 +821,7 @@ void main() {
       this.flame.update(dt, scale);
       this.heat.update(dt, scale);
       this.dust.update(dt, scale);
+      this._spUpdate(dt);         // 必杀技：镜头震动、花瓣粒子
     }
 
     // ------------------------------------------------------ 标签避让 --
@@ -1278,6 +1284,11 @@ void main() {
       this.emitters.length = 0;
       this.burnFx.clear();
       this.glow.dispose(); this.flame.dispose(); this.heat.dispose(); this.dust.dispose();
+      if (this._petals) { this._petals.dispose(); this._petals = null; }
+      for (const el of [this._flashEl, this._dimEl]) if (el && el.parentNode) el.parentNode.removeChild(el);
+      this._flashEl = this._dimEl = null;
+      if (this._shkLast && SG.Gfx && SG.Gfx.camera && SG.Gfx.camera.position.equals(this._shkLast.pos)) SG.Gfx.camera.position.sub(this._shkLast.off);
+      this._shk = this._shkLast = null;
       for (const l of this.lights) { l.intensity = 0; if (l.dispose) l.dispose(); }
       const shared = new Set([SG.Gfx.lowPoly(), SG.Gfx.water()]);
       this.group.traverse(o => {
@@ -1290,6 +1301,1451 @@ void main() {
     }
   }
   function discCacheHas(g) { for (const v of discCache.values()) if (v === g) return true; return false; }
+
+
+  // ======================================================== 必杀技特效 --
+  // 第二版新增（DESIGN-V2 §4D），只增不改：
+  //   V.specialFx(u, targets, fx, info) → Promise（约 1–1.5 秒）
+  //     u：施展者；targets：受影响的部队（主目标在前）；fx：风格名或 { style, color }；
+  //     info（可省略）：{ sp, res（Mdl.useSpecial 的结果）, color, target, onHit(i) }。
+  //     命中瞬间调用 info.onHit(i)（i 为 res.hits 的下标）——控制层借此在命中时显示伤害数字；
+  //     突击 / 击退的位移按 res.moved / res.pushed 播放，结束时部队已在新格。
+  //   风格：slash 斩击弧光 · dragon 青龙 · havoc 无双 · sweep 横扫 · dash 突击残影 · whirl 往来连斩 ·
+  //         arrows 箭雨 · arrow 一箭穿杨 · fire 火海 · wind 风助火势 · lightning 雷击 · water 水淹 ·
+  //         shock 怒吼冲击波 · aura 金光 · blossom 桃花 · spirit 符阵 · shield 护盾 · heal 治愈之光 ·
+  //         poison 毒雾 · shadow 暗影刺杀 · drain 吸魂 · haste 疾风（未知风格按 slash）
+  //   UnitVisual 另显示限时加成：脚下彩色光环 + 名牌上的小字（守 / 攻 / 毒 / 疾）。
+  const SP_GLYPH = {
+    slash: '斩', dragon: '龙', havoc: '霸', sweep: '扫', dash: '突', whirl: '闪', arrows: '箭', arrow: '穿', fire: '火', wind: '风',
+    lightning: '雷', water: '水', shock: '喝', aura: '令', blossom: '义', spirit: '谋', shield: '守', heal: '愈', poison: '毒',
+    shadow: '杀', drain: '收', haste: '疾',
+  };
+  const SP_FONT = '"STKaiti","KaiTi","Kaiti SC","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"';
+  const spTexCache = {};
+  function spCanvasTex(key, w, h, draw) {
+    if (spTexCache[key]) return spTexCache[key];
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.generateMipmaps = true;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.needsUpdate = true;
+    spTexCache[key] = t;
+    return t;
+  }
+  // 书法大字：墨色描边 + 白色字芯（材质颜色着色）
+  function spGlyphTex(ch) {
+    return spCanvasTex('glyph:' + ch, 256, 256, (g, w, h) => {
+      g.font = '700 196px ' + SP_FONT;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineJoin = 'round';
+      g.strokeStyle = 'rgba(20,10,6,0.92)'; g.lineWidth = 22;
+      g.strokeText(ch, w / 2, h / 2 + 8);
+      g.fillStyle = '#ffffff';
+      g.fillText(ch, w / 2, h / 2 + 8);
+    });
+  }
+  function spGlyphGlowTex(ch) {
+    return spCanvasTex('glow:' + ch, 256, 256, (g, w, h) => {
+      g.font = '700 196px ' + SP_FONT;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.shadowColor = '#ffffff'; g.shadowBlur = 34;
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < 3; i++) g.fillText(ch, w / 2, h / 2 + 8);
+    });
+  }
+  // 符阵：同心圆 + 八卦短划 + 星形
+  function spCircleTex() {
+    return spCanvasTex('circle', 512, 512, (g, w) => {
+      const c = w / 2;
+      g.strokeStyle = '#fff'; g.fillStyle = '#fff';
+      g.shadowColor = '#fff'; g.shadowBlur = 8;
+      const ring = (r, lw) => { g.lineWidth = lw; g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.stroke(); };
+      ring(240, 6); ring(222, 2.5); ring(150, 4); ring(92, 2.5);
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        for (let k = 0; k < 3; k++) {
+          const r0 = 168 + k * 16, broken = ((i >> k) & 1) === 1;
+          const half = broken ? 0.07 : 0.16;
+          g.lineWidth = 7;
+          g.beginPath(); g.arc(c, c, r0, a - 0.16, a - 0.16 + (broken ? half : half * 2)); g.stroke();
+          if (broken) { g.beginPath(); g.arc(c, c, r0, a + 0.16 - half, a + 0.16); g.stroke(); }
+        }
+      }
+      g.lineWidth = 3;
+      g.beginPath();
+      for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + i * Math.PI * 4 / 5; const x = c + Math.cos(a) * 140, y = c + Math.sin(a) * 140; if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); }
+      g.stroke();
+    });
+  }
+  // 花瓣（点精灵）
+  function spPetalTex() {
+    return spCanvasTex('petal', 64, 64, (g) => {
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.moveTo(32, 6);
+      g.bezierCurveTo(56, 18, 54, 46, 32, 58);
+      g.bezierCurveTo(10, 46, 8, 18, 32, 6);
+      g.fill();
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath(); g.moveTo(32, 4); g.lineTo(27, 14); g.lineTo(37, 14); g.fill();
+    });
+  }
+  // 十字光（治愈）
+  function spPlusTex() {
+    return spCanvasTex('plus', 64, 64, (g) => {
+      const grd = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+      grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd;
+      g.fillRect(26, 6, 12, 52); g.fillRect(6, 26, 52, 12);
+    });
+  }
+
+  const SP_RIBBON_VS = `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+  // 弧光：月牙形刀光（两端尖、中段厚），外缘白热；uSoft > 0 时为柔和的外层辉光
+  const SP_ARC_FS = `
+uniform vec3 uColor; uniform float uHead; uniform float uLen; uniform float uOpacity; uniform float uSoft;
+varying vec2 vUv;
+void main() {
+  float d = uHead - vUv.x;
+  if (d < 0.0 || d > uLen) discard;
+  float rel = 1.0 - d / uLen;
+  float th = pow(sin(rel * 3.14159), 0.75) * 0.92;
+  float y = vUv.y;
+  float e = 0.04 + uSoft * 0.35;
+  float inside = smoothstep(1.0 - th - e, 1.0 - th + e * 0.5, y) * smoothstep(1.0, 1.0 - e - 0.02, y);
+  float hot = smoothstep(1.0 - th * 0.4, 1.0, y) * (1.0 - uSoft);
+  float a = inside * uOpacity * (0.6 + 0.4 * rel);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), hot * 0.9), a);
+}`;
+  // 闪电 / 拖尾：横向高斯，芯白
+  const SP_BOLT_FS = `
+uniform vec3 uColor; uniform float uOpacity;
+varying vec2 vUv;
+void main() {
+  float x = (vUv.y - 0.5) * 2.0;
+  float core = exp(-x * x * 26.0);
+  float glow = exp(-x * x * 3.0) * 0.55;
+  float along = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x);
+  float a = (core + glow) * uOpacity * mix(0.6, 1.0, along);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), core), a);
+}`;
+  // 光柱：自下而上渐隐，螺旋条纹流动
+  const SP_PILLAR_FS = `
+uniform vec3 uColor; uniform float uOpacity; uniform float uTime;
+varying vec2 vUv;
+void main() {
+  float fade = pow(1.0 - vUv.y, 1.5) * smoothstep(0.0, 0.05, vUv.y);
+  float st = 0.6 + 0.4 * sin(vUv.x * 6.2831 * 5.0 + vUv.y * 9.0 - uTime * 7.0);
+  float a = fade * st * uOpacity;
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.45 * fade), a);
+}`;
+  // 水墙：浪身半透明、浪尖泛白
+  const SP_WAVE_FS = `
+uniform vec3 uColor; uniform float uOpacity; uniform float uTime;
+varying vec2 vUv;
+void main() {
+  float y = vUv.y + 0.06 * sin(vUv.x * 40.0 + uTime * 9.0);
+  float crest = smoothstep(0.62, 0.9, y) * (1.0 - smoothstep(0.93, 1.0, y));
+  float body = smoothstep(0.0, 0.2, y) * (1.0 - smoothstep(0.85, 1.0, y)) * (0.55 + 0.25 * sin(vUv.x * 70.0 - uTime * 6.0));
+  float edge = sin(clamp(vUv.x, 0.0, 1.0) * 3.14159);
+  float a = (body * 0.6 + crest) * edge * uOpacity;
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), crest * 0.85), a);
+}`;
+  // 护盾：菲涅耳边缘 + 上升扫描环 + 六角网格
+  const SP_DOME_VS = `
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vP = position;
+  gl_Position = projectionMatrix * mv;
+}`;
+  const SP_DOME_FS = `
+uniform vec3 uColor; uniform float uOpacity; uniform float uScan;
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+void main() {
+  float f = pow(1.0 - abs(dot(vN, vV)), 2.0);
+  float band = exp(-pow((vP.y - uScan) * 10.0, 2.0));
+  float ang = atan(vP.z, vP.x) * 6.0 / 3.14159;
+  float lat = vP.y * 9.0;
+  float hex = max(smoothstep(0.86, 1.0, abs(fract(ang + floor(lat) * 0.5) * 2.0 - 1.0)), smoothstep(0.82, 1.0, abs(fract(lat) * 2.0 - 1.0)));
+  float a = (0.08 + f * 0.85 + band * 0.9 + hex * 0.22 * (0.4 + f)) * uOpacity;
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(band * 0.7 + f * 0.3, 0.0, 1.0)), a);
+}`;
+
+  // normal = true 时用普通混合：白天明亮的草地上，纯叠加的光会被洗成一片白，实色笔触才看得清
+  function spShader(fs, color, extra, vs, normal) {
+    const uniforms = Object.assign({ uColor: { value: color.clone() }, uOpacity: { value: 1 }, uTime: { value: 0 } }, extra || {});
+    return new THREE.ShaderMaterial({
+      uniforms, vertexShader: vs || SP_RIBBON_VS, fragmentShader: fs,
+      transparent: true, depthWrite: false, blending: normal ? THREE.NormalBlending : THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    });
+  }
+  // 弧形带（局部 XY 平面，法线 +z；uv.x 沿弧 0..1，uv.y 内缘 0 → 外缘 1）
+  function spArcGeometry(radius, width, start, sweep, segs) {
+    const n = segs || 40;
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, a = start + sweep * t;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const r0 = radius - width * 0.5, r1 = radius + width * 0.5;
+      pos.push(ca * r0, sa * r0, 0, ca * r1, sa * r1, 0);
+      uv.push(t, 0, t, 1);
+      if (i < n) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
+  }
+  // 竖直的弧形墙（局部 XZ 平面上的弧向上拉伸；uv.x 沿弧，uv.y 自下而上）
+  function spWallGeometry(radius, height, start, sweep, segs) {
+    const n = segs || 40;
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, a = start + sweep * t;
+      const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+      pos.push(x, 0, z, x, height, z);
+      uv.push(t, 0, t, 1);
+      if (i < n) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
+  }
+  // 沿折线的带子，朝向镜头（uv.x 沿线，uv.y 横向）
+  function spRibbonGeometry(points, width) {
+    const cam = SG.Gfx && SG.Gfx.camera ? SG.Gfx.camera.position : new THREE.Vector3(0, 40, 40);
+    const pos = [], uv = [], idx = [];
+    let len = 0;
+    const L = [0];
+    for (let i = 1; i < points.length; i++) { len += points[i].distanceTo(points[i - 1]); L.push(len); }
+    const tan = new THREE.Vector3(), view = new THREE.Vector3(), side = new THREE.Vector3();
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      tan.subVectors(points[Math.min(points.length - 1, i + 1)], points[Math.max(0, i - 1)]).normalize();
+      view.subVectors(cam, p).normalize();
+      side.crossVectors(tan, view).normalize().multiplyScalar(width * 0.5);
+      pos.push(p.x - side.x, p.y - side.y, p.z - side.z, p.x + side.x, p.y + side.y, p.z + side.z);
+      const t = len > 0 ? L[i] / len : 0;
+      uv.push(t, 0, t, 1);
+      if (i < points.length - 1) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
+  }
+  function spEase(t) { t = M.clamp01(t); return 1 - Math.pow(1 - t, 3); }
+  function spBezier(a, b, c, t) {
+    const u = 1 - t;
+    return new THREE.Vector3(u * u * a.x + 2 * u * t * b.x + t * t * c.x, u * u * a.y + 2 * u * t * b.y + t * t * c.y, u * u * a.z + 2 * u * t * b.z + t * t * c.z);
+  }
+  function spInjectStyle() {
+    if (typeof document === 'undefined' || document.getElementById('sg-spfx-style')) return;
+    const s = document.createElement('style');
+    s.id = 'sg-spfx-style';
+    s.textContent = `
+.sg-spfx-flash{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;}
+.sg-uinfo .sg-spbs{position:absolute;right:-.45em;top:-.62em;display:flex;gap:.12em;pointer-events:none;}
+.sg-uinfo .sg-spb{display:block;padding:0 .26em;border-radius:.3em;font-size:.7em;line-height:1.35;font-weight:700;
+  color:#14121a;text-shadow:none;box-shadow:0 0 .35em rgba(0,0,0,.55);}
+`;
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  // ---------------------------------------------------- UnitVisual：加成显示 --
+  const SP_BUFF = {      // 加成种类 → 名牌小字与光环颜色
+    def: { ch: '守', col: '#8cc8ff' }, atk: { ch: '攻', col: '#ffcf5a' }, dot: { ch: '毒', col: '#9be06a' }, move: { ch: '疾', col: '#7affd9' },
+  };
+  function spBuffKinds(u) {
+    const out = [];
+    for (const m of u.mods || []) {
+      if (m.dot > 0 && out.indexOf('dot') < 0) out.push('dot');
+      if ((m.def > 1 || m.counter > 1) && out.indexOf('def') < 0) out.push('def');
+      if (m.atk > 1 && out.indexOf('atk') < 0) out.push('atk');
+      if (m.move > 0 && out.indexOf('move') < 0) out.push('move');
+    }
+    return out;
+  }
+  UnitVisual.prototype._spRefresh = function () {
+    const u = this.u;
+    const kinds = u.alive ? spBuffKinds(u) : [];
+    const key = kinds.join(',');
+    if (key === (this._spKey || '')) return;
+    this._spKey = key;
+    if (this.info) {
+      spInjectStyle();
+      const I = this.info;
+      if (!I.spb) { I.spb = document.createElement('span'); I.spb.className = 'sg-spbs'; I.card.appendChild(I.spb); }
+      I.spb.innerHTML = kinds.map(k => '<span class="sg-spb" style="background:' + SP_BUFF[k].col + '">' + SP_BUFF[k].ch + '</span>').join('');
+      I.spb.style.display = kinds.length ? '' : 'none';
+    }
+    if (this.buffRing) {
+      this.group.remove(this.buffRing);
+      this.buffRing.material.dispose();
+      this.buffRing = null;
+    }
+    if (kinds.length) {
+      const col = new THREE.Color(SP_BUFF[kinds[0]].col);
+      const ring = SG.Gfx.mesh(flatDisc(1.05), SG.Gfx.unlit(col, SG.Gfx.ringTexture, 0.85), { castShadow: false, receiveShadow: false });
+      ring.position.y = 0.07;
+      ring.renderOrder = 3;
+      this.group.add(ring);
+      this.buffRing = ring;
+    }
+  };
+  UnitVisual.prototype._spUpdate = function (dt, time) {
+    if (this.buffRing) {
+      this.buffRing.rotation.y += 60 * M.deg2rad * dt;
+      const s = 1 + Math.sin(time * 3 + this.heatSeed) * 0.05;
+      this.buffRing.scale.set(s, 1, s);
+    }
+    // 必杀技的着色光（金光、护盾等）：1 → 0 渐退，盖过受击闪白
+    if (this.spTint > 0) {
+      this.spTint = Math.max(0, this.spTint - dt * 1.1);
+      const k = M.smoothStep(0, 1, this.spTint) * 0.6;
+      const fc = this.material.flashColor;
+      if (k > this.material.flash && fc && fc.isColor && this.spTintColor) { fc.copy(this.spTintColor); this.material.flash = k; }
+    }
+  };
+  UnitVisual.prototype.tint = function (cssColor, k) {
+    this.spTintColor = parseColor(cssColor).color;
+    this.spTint = k === undefined ? 1 : k;
+  };
+  UnitVisual.prototype._spDispose = function () {
+    if (this.buffRing) { this.buffRing.material.dispose(); this.buffRing = null; }
+  };
+
+  // ---------------------------------------------------- BattleView：工具 --
+  const BV = BattleView.prototype;
+  BV._spAdd = function (obj, order) {
+    if (order !== undefined) obj.renderOrder = order;
+    this.group.add(obj);
+    this.temp.push(obj);
+    return obj;
+  };
+  BV._spFree = function (obj) {
+    if (!obj) return;
+    if (obj.parent) obj.parent.remove(obj);
+    const i = this.temp.indexOf(obj);
+    if (i >= 0) this.temp.splice(i, 1);
+    if (obj.geometry && !obj.userData.keepGeo && !discCacheHas(obj.geometry)) obj.geometry.dispose();
+    if (obj.material && !obj.userData.keepMat) obj.material.dispose();
+  };
+  // 按帧推进（与 _loop 相同，但保证最后一帧 fn(1)）
+  BV._spAnim = async function (seconds, fn) {
+    await this._loop(seconds, fn);
+    if (!this.disposed) fn(1);
+  };
+  BV._spPos = function (u, y) {
+    const v = this.vis(u);
+    const p = v ? v.pos.clone() : this.tile(u.x, u.y);
+    if (y) p.y += y;
+    return p;
+  };
+  BV._spColor = function (c) { return parseColor(c).color; };
+  // 镜头震动（在 update 里叠加到相机位置上；相机由 CameraRig 每帧重新摆位）
+  BV._spShake = function (amp, dur) {
+    if (!this._shk || this._shk.amp * (1 - this._shk.t / this._shk.dur) < amp) this._shk = { amp, dur, t: 0 };
+  };
+  // 全屏闪光（画布之上、界面之下）
+  BV._spFlash = function (cssColor, alpha, dur) {
+    if (typeof document === 'undefined') return;
+    spInjectStyle();
+    if (!this._flashEl) {
+      this._flashEl = document.createElement('div');
+      this._flashEl.className = 'sg-spfx-flash';
+      document.body.appendChild(this._flashEl);
+    }
+    const el = this._flashEl;
+    el.style.background = cssColor;
+    if (el.animate) el.animate([{ opacity: alpha }, { opacity: 0 }], { duration: (dur || 0.3) * 1000, easing: 'ease-out' });
+  };
+  // 场景压暗（雷击、暗杀）：hold 秒后恢复
+  BV._spDim = function (alpha, hold) {
+    if (typeof document === 'undefined') return;
+    spInjectStyle();
+    if (!this._dimEl) {
+      this._dimEl = document.createElement('div');
+      this._dimEl.className = 'sg-spfx-flash';
+      this._dimEl.style.background = 'radial-gradient(ellipse at 50% 45%, rgba(10,12,30,.55), rgba(4,4,12,.92))';
+      document.body.appendChild(this._dimEl);
+    }
+    const el = this._dimEl;
+    if (el.animate) el.animate([{ opacity: 0 }, { opacity: alpha, offset: 0.15 }, { opacity: alpha, offset: 0.8 }, { opacity: 0 }], { duration: (hold || 1) * 1000, easing: 'ease-in-out' });
+  };
+  // 点光源一闪（借用空闲的火光灯；没有空闲的就不闪）
+  BV._spLight = function (pos, cssColor, peak, dur) {
+    const l = this.lights.find(x => !x.userData.busy);
+    if (!l) return;
+    l.userData.busy = true;
+    const token = l.userData.token = {};
+    const old = l.color.clone();
+    l.color.copy(this._spColor(cssColor));
+    l.position.copy(pos);
+    l.userData.base = peak;
+    l.userData.cur = peak;
+    setTimeout(() => {
+      if (l.userData.token !== token) return;
+      l.userData.busy = false;
+      l.color.copy(old);          // 立即还原颜色：随后若被火计借用，火光仍是橙色
+    }, (dur || 0.3) * 1000);
+  };
+  BV._spGlyph = function (pos, ch, cssColor, size) {
+    if (typeof document === 'undefined' || !ch) return;
+    const col = this._spColor(cssColor);
+    const s = (size || 3.4) * 0.72;
+    pos = pos.clone();
+    pos.y += 0.6;
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: spGlyphGlowTex(ch), color: col, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, fog: false }));
+    const ink = new THREE.Sprite(new THREE.SpriteMaterial({ map: spGlyphTex(ch), color: SG.Gfx.shade(col, 0.35), transparent: true, depthTest: false, depthWrite: false, fog: false }));
+    glow.position.copy(pos); ink.position.copy(pos);
+    this._spAdd(glow, 30); this._spAdd(ink, 31);
+    this._spAnim(1.0, t => {
+      const pop = t < 0.14 ? 1.5 - 0.5 * spEase(t / 0.14) : 1 + (t - 0.14) * 0.12;
+      glow.scale.set(s * pop * 1.15, s * pop * 1.15, 1); ink.scale.set(s * pop, s * pop, 1);
+      const a = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+      ink.material.opacity = a * 0.95; glow.material.opacity = a * 0.55 * (t < 0.14 ? 1 : 0.6);
+      glow.position.y = ink.position.y = pos.y + t * 0.5;
+    }).then(() => { this._spFree(glow); this._spFree(ink); });
+  };
+  // 地面光环：r0 → r1 扩散并淡出
+  BV._spRing = function (pos, cssColor, r0, r1, dur, opts) {
+    const o = opts || {};
+    const col = this._spColor(cssColor);
+    const ring = SG.Gfx.mesh(flatDisc(1), o.additive ? SG.Gfx.additive(col) : SG.Gfx.unlit(col, o.tex || SG.Gfx.ringTexture, 1), { castShadow: false, receiveShadow: false });
+    ring.material.blending = THREE.AdditiveBlending;
+    ring.position.copy(pos);
+    ring.position.y += o.y === undefined ? 0.12 : o.y;
+    if (o.vertical) { ring.rotation.x = Math.PI / 2 - 0.85; }
+    this._spAdd(ring, 6);
+    return this._spAnim(dur || 0.5, t => {
+      const k = spEase(t);
+      const r = r0 + (r1 - r0) * k;
+      ring.scale.set(r, 1, r);
+      if (o.spin) ring.rotation.y = t * o.spin;
+      ring.material.opacity = (o.alpha === undefined ? 1 : o.alpha) * (1 - Math.pow(t, o.hold ? 3 : 1.4));
+    }).then(() => this._spFree(ring));
+  };
+  // 斩击弧光：在 pos 处、绕镜头方向的平面内扫过（tilt 为弧面倾角，弧度）
+  BV._spArc = function (pos, cssColor, o) {
+    o = o || {};
+    const col = this._spColor(cssColor);
+    const r = o.radius || 1.4, w = o.width || 0.5, st = o.start === undefined ? -0.4 : o.start, sw = o.sweep || 2.6;
+    // 实色刀光（普通混合）+ 外层叠加辉光
+    const mat = spShader(SP_ARC_FS, col, { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 0 } }, null, !o.glowOnly);
+    const m = new THREE.Mesh(spArcGeometry(r, w, st, sw, 48), mat);
+    const gmat = spShader(SP_ARC_FS, SG.Gfx.shade(col, 0.25), { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 1 } });
+    const gm = new THREE.Mesh(spArcGeometry(r + w * 0.3, w * 1.9, st, sw, 48), gmat);
+    const cam = SG.Gfx.camera;
+    for (const x of [m, gm]) {
+      x.position.copy(pos);
+      if (o.flat) { x.rotation.x = -Math.PI / 2; x.rotation.z = o.tilt || 0; }
+      else {
+        if (cam) x.lookAt(cam.position);
+        x.rotateZ(o.tilt || 0);
+        if (o.lean) x.rotateX(o.lean);
+      }
+    }
+    // 刀光压在部队之上（不做深度测试），像画面上的一笔
+    mat.depthTest = gmat.depthTest = false;
+    this._spAdd(gm, 32);
+    this._spAdd(m, 33);
+    const dur = o.dur || 0.42;
+    return this._spAnim(dur, t => {
+      const head = Math.min(1, t / 0.55) * (1 + mat.uniforms.uLen.value);
+      mat.uniforms.uHead.value = head;
+      gmat.uniforms.uHead.value = head;
+      const a = t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45;
+      mat.uniforms.uOpacity.value = a;
+      gmat.uniforms.uOpacity.value = a * 0.55;
+      if (o.grow) { const s = 1 + t * o.grow; m.scale.set(s, s, s); gm.scale.set(s, s, s); }
+    }).then(() => { this._spFree(m); this._spFree(gm); });
+  };
+  // 闪电：从 a 到 b 的折线（每 0.06 秒重新生成一次形状）
+  BV._spBolt = function (a, b, cssColor, dur, width) {
+    const col = this._spColor(cssColor);
+    const mat = spShader(SP_BOLT_FS, col);
+    const mk = () => {
+      const pts = [a.clone()];
+      const n = 12;
+      const dir = b.clone().sub(a);
+      const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+      for (let i = 1; i < n; i++) {
+        const t = i / n;
+        const p = a.clone().lerp(b, t);
+        const j = (1 - Math.abs(t - 0.5) * 1.2) * 0.9;
+        p.addScaledVector(perp, (Math.random() - 0.5) * j);
+        p.x += (Math.random() - 0.5) * 0.25 * j; p.z += (Math.random() - 0.5) * 0.25 * j;
+        pts.push(p);
+      }
+      pts.push(b.clone());
+      return spRibbonGeometry(pts, width || 0.55);
+    };
+    const m = new THREE.Mesh(mk(), mat);
+    this._spAdd(m, 26);
+    let lastSwap = 0;
+    return this._spAnim(dur || 0.32, t => {
+      if (t - lastSwap > 0.18) { lastSwap = t; const old = m.geometry; m.geometry = mk(); old.dispose(); }
+      mat.uniforms.uOpacity.value = (t < 0.15 ? 1.4 : 1 - (t - 0.15) / 0.85) * (0.75 + Math.random() * 0.5);
+    }).then(() => this._spFree(m));
+  };
+  // 光柱
+  BV._spPillar = function (pos, cssColor, r, h, dur, alpha) {
+    const col = this._spColor(cssColor);
+    const g = new THREE.CylinderGeometry(r, r * 1.15, h, 28, 1, true);
+    g.translate(0, h / 2, 0);
+    const mat = spShader(SP_PILLAR_FS, col);
+    const m = new THREE.Mesh(g, mat);
+    m.position.copy(pos);
+    this._spAdd(m, 22);
+    const a0 = alpha === undefined ? 1 : alpha;
+    return this._spAnim(dur || 1, t => {
+      mat.uniforms.uTime.value = t * (dur || 1);
+      const k = t < 0.2 ? spEase(t / 0.2) : 1;
+      m.scale.set(0.4 + 0.6 * k + t * 0.15, k, 0.4 + 0.6 * k + t * 0.15);
+      mat.uniforms.uOpacity.value = a0 * (t < 0.65 ? 1 : 1 - (t - 0.65) / 0.35);
+    }).then(() => this._spFree(m));
+  };
+  // 残影（共享部队网格，只建一个叠加材质）
+  BV._spGhost = function (v, cssColor, life, alpha) {
+    if (!v) return;
+    const mat = new THREE.MeshBasicMaterial({ color: this._spColor(cssColor), transparent: true, opacity: alpha || 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const m = new THREE.Mesh(v.mesh.geometry, mat);
+    m.userData.keepGeo = true;
+    m.position.copy(v.group.position);
+    m.rotation.copy(v.group.rotation);
+    this._spAdd(m, 9);
+    const a0 = mat.opacity;
+    this._spAnim(life || 0.4, t => { mat.opacity = a0 * (1 - t); }).then(() => this._spFree(m));
+  };
+  // 沿路径移动的发射头：path(t) → 位置；每帧在头部喷粒子
+  BV._spTrail = function (path, dur, perFrame, o) {
+    const pool = o.pool || this.glow;
+    return this._spAnim(dur, t => {
+      const p = path(o.linear ? t : spEase(t));
+      this._emit(pool, p, perFrame, o);
+      if (o.head) this._emit(this.glow, p, 1, { color: o.headColor || o.color, alpha: 0.9, life: 0.12, speed: 0, size: o.head, sizeEnd: 0.6, gravity: 0, radius: 0.02 });
+    });
+  };
+  // 地面范围格子发光
+  BV._spTiles = function (tiles, cssColor, dur, alpha) {
+    if (!tiles || !tiles.length) return Promise.resolve();
+    const col = this._spColor(cssColor);
+    const mat = SG.Gfx.unlit(col, tileTexture(), 0);
+    mat.blending = THREE.AdditiveBlending;
+    const ms = [];
+    for (const t of tiles) {
+      if (!this._inBounds(t.x, t.y)) continue;
+      const m = new THREE.Mesh(this.hlGeo, mat);
+      m.userData.keepGeo = true; m.userData.keepMat = true;
+      m.position.copy(this.tile(t.x, t.y)); m.position.y += 0.09;
+      this._spAdd(m, 5);
+      ms.push(m);
+    }
+    const a0 = alpha === undefined ? 0.7 : alpha;
+    return this._spAnim(dur || 1, t => { mat.opacity = a0 * (t < 0.15 ? t / 0.15 : t > 0.7 ? (1 - t) / 0.3 : 1); })
+      .then(() => { for (const m of ms) this._spFree(m); mat.dispose(); });
+  };
+  BV._spSparks = function (pos, cssColor, n, speed, size) {
+    const col = this._spColor(cssColor);
+    this._emit(this.glow, pos, n || 24, { color: col, color2: C(1, 1, 1), mix: 0.35, colorEnd: SG.Gfx.shade(col, -0.2), alpha: 1, life: 0.6, speed: speed || 4, size: size || 0.2, sizeEnd: 0.2, gravity: 0.7, radius: 0.25, lifeVar: 0.4, speedVar: 0.5 });
+    this._emit(this.glow, pos, 2, { color: col, alpha: 0.9, life: 0.22, speed: 0, size: 2.2, sizeEnd: 0.4, gravity: 0, radius: 0.05 });
+  };
+  BV._spDust = function (pos, n, speed, col) {
+    this._emit(this.dust, pos, n || 12, {
+      color: col || C(0.62, 0.56, 0.45), alpha: 0.5, life: 0.9, speed: speed || 2.2, size: 0.7, sizeEnd: 2.2, gravity: 0.05, radius: 0.4,
+      lifeVar: 0.3, drag: 2.2, fadeIn: 0.05,
+    });
+  };
+  BV._spUpdate = function (dt) {
+    if (this._petals) this._petals.update(dt, this._pointScale());
+    const cam = SG.Gfx && SG.Gfx.camera;
+    if (!cam) return;
+    // 上一帧的震动偏移若没被相机控制器覆盖，先撤回，避免累积
+    if (this._shkLast && cam.position.equals(this._shkLast.pos)) cam.position.sub(this._shkLast.off);
+    this._shkLast = null;
+    const s = this._shk;
+    if (s) {
+      s.t += dt;
+      if (s.t >= s.dur) { this._shk = null; return; }
+      const k = s.amp * Math.pow(1 - s.t / s.dur, 2);
+      const tt = this.time;
+      const off = new THREE.Vector3(Math.sin(tt * 61) * k, Math.sin(tt * 47 + 1.3) * k * 0.6, Math.cos(tt * 53) * k);
+      cam.position.add(off);
+      this._shkLast = { pos: cam.position.clone(), off };
+    }
+  };
+  BV._spPetalPool = function () {
+    if (!this._petals) {
+      this._petals = new ParticlePool(500, THREE.NormalBlending, 1.0, 16, spPetalTex());
+      this.group.add(this._petals.points);
+    }
+    return this._petals;
+  };
+
+  // ---------------------------------------------------- 必杀技特效：入口 --
+  BV.specialFx = async function (u, targets, fx, info) {
+    if (this.disposed) return;
+    info = info || {};
+    const style = typeof fx === 'string' ? fx : (fx && fx.style) || (info.sp && info.sp.fx) || 'slash';
+    const color = (fx && typeof fx === 'object' && fx.color) || info.color || (info.sp && info.sp.color) || '#ffd36b';
+    const res = info.res || null;
+    targets = (targets || []).filter(Boolean);
+    const hits = res ? res.hits : [];
+    const ctx = {
+      u, v: this.vis(u), style, color, res, info, targets,
+      target: info.target || targets[0] || u,
+      hits,
+      hit: i => { if (typeof info.onHit === 'function') { try { info.onHit(i); } catch (e) { console.error(e); } } },
+      hitUnit: x => { for (let i = 0; i < hits.length; i++) if (hits[i].unit === x) ctx.hit(i); },
+      hitAll: () => { for (let i = 0; i < hits.length; i++) ctx.hit(i); },
+      glyph: SP_GLYPH[style] || '斩',
+    };
+    if (res && res.kind === 'rally' && style === 'aura') ctx.glyph = '励';
+    if (res && res.kind === 'command' && style === 'aura') ctx.glyph = '令';
+    const fn = this['_sp_' + style] || this._sp_slash;
+    try { await fn.call(this, ctx); }
+    catch (e) { console.error(e); }
+    finally {
+      // 位移收尾：突击者与被击退者落到模型所在的格子
+      if (res && !this.disposed) {
+        const fixPos = x => { const v = this.vis(x); if (v) { v.pos.copy(this.tile(x.x, x.y)); } };
+        if (res.moved) fixPos(u);
+        for (const p of res.pushed || []) fixPos(p.unit);
+      }
+    }
+  };
+
+  // 受击的通用表现：闪白、火花、轻微震动
+  BV._spImpact = function (x, cssColor, big) {
+    const v = this.vis(x);
+    if (v) v.flashHit();
+    const p = this._spPos(x, 0.7);
+    this._spSparks(p, cssColor, big ? 34 : 20, big ? 5 : 3.5, big ? 0.26 : 0.2);
+    if (big) this._spDust(this._spPos(x, 0.2), 10, 2.6);
+  };
+  // 施展者的蓄势：脚下光环收缩 + 光点向内聚集
+  BV._spCharge = async function (ctx, dur) {
+    const p = this._spPos(ctx.u);
+    const col = this._spColor(ctx.color);
+    if (ctx.v) ctx.v.tint(ctx.color, 0.9);
+    this._spRing(p, ctx.color, 2.4, 0.6, dur || 0.3, { alpha: 0.9 });
+    for (let i = 0; i < 18; i++) {
+      const a = Math.random() * Math.PI * 2, r = 1.6 + Math.random() * 0.8;
+      const sp = 1 / (dur || 0.3);
+      this.glow.add({
+        x: p.x + Math.cos(a) * r, y: p.y + 0.3 + Math.random() * 1.2, z: p.z + Math.sin(a) * r,
+        vx: -Math.cos(a) * r * sp, vy: 0.2, vz: -Math.sin(a) * r * sp, age: 0, life: dur || 0.3,
+        r: col.r, g: col.g, b: col.b, r1: 1, g1: 1, b1: 1, a: 1, size: 0.22, sizeEnd: 0.5, grav: 0, drag: 0, fadeIn: 0.2, ac: 1,
+      });
+    }
+    await this._sleep(dur || 0.3);
+  };
+  // 冲向目标再回位（返回命中时刻的 Promise）
+  BV._spLunge = async function (ctx, k, dur) {
+    const v = ctx.v;
+    if (!v || !ctx.target || ctx.target === ctx.u) return;
+    const from = v.pos.clone(), to = this._spPos(ctx.target);
+    v.face(to.clone().sub(from));
+    await this._spAnim(dur || 0.16, t => { v.pos.lerpVectors(from, to, spEase(t) * (k || 0.45)); });
+    this._spAnim(0.22, t => { v.pos.lerpVectors(from, to, (1 - t) * (k || 0.45)); }).then(() => v.pos.copy(from));
+  };
+
+  // ---- slash 斩击弧光（单体重击）----
+  BV._sp_slash = async function (ctx) {
+    const t = ctx.target;
+    await this._spCharge(ctx, 0.22);
+    await this._spLunge(ctx, 0.5, 0.14);
+    const p = this._spPos(t, 0.9);
+    sfx('hit', 0.9);
+    this._spArc(p, ctx.color, { radius: 1.5, width: 0.55, tilt: -0.75, sweep: 2.5, start: -0.2, dur: 0.42 });
+    await this._sleep(0.08);
+    this._spArc(p, ctx.color, { radius: 1.3, width: 0.45, tilt: 0.9, sweep: 2.3, start: 0.4, dur: 0.4 });
+    await this._sleep(0.06);
+    this._spImpact(t, ctx.color, true);
+    this._spRing(this._spPos(t), ctx.color, 0.4, 2.6, 0.5);
+    this._spLight(p, ctx.color, 6, 0.25);
+    this._spShake(0.22, 0.3);
+    this._spFlash('rgba(255,255,255,1)', 0.18, 0.18);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.55);
+  };
+
+  // ---- dragon 青龙：盘旋的龙气自施展者升起扑向敌军，再一记巨大的弧光 ----
+  BV._sp_dragon = async function (ctx) {
+    const t = ctx.target;
+    const col = this._spColor(ctx.color);
+    const a = this._spPos(ctx.u, 0.6), b = this._spPos(t, 1.0);
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    this._spRing(this._spPos(ctx.u), ctx.color, 0.5, 2.4, 0.5);
+    sfx('magic', 0.5);
+    const side = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x).normalize();
+    // 螺旋盘升再俯冲：两圈半的盘绕，越近目标盘得越紧
+    const path = k => {
+      const base = a.clone().lerp(b, k);
+      base.y += Math.sin(k * Math.PI) * 2.4;
+      const ang = k * Math.PI * 5, rr = 1.3 * (1 - k * 0.75);
+      base.addScaledVector(side, Math.sin(ang) * rr);
+      base.y += Math.cos(ang) * rr * 0.6;
+      return base;
+    };
+    // 龙身：沿螺旋路径生长的发光长带（头粗尾细），身后洒落龙鳞光点
+    const body = new THREE.Mesh(new THREE.BufferGeometry(), spShader(SP_BOLT_FS, col, null, null, true));
+    this._spAdd(body, 24);
+    const glowBody = new THREE.Mesh(new THREE.BufferGeometry(), spShader(SP_BOLT_FS, C(0.85, 1, 0.92)));
+    this._spAdd(glowBody, 25);
+    await this._spAnim(0.55, k => {
+      const head = spEase(k), tail = Math.max(0, head - 0.55);
+      const pts = [];
+      for (let i = 0; i <= 28; i++) pts.push(path(tail + (head - tail) * i / 28));
+      const og = body.geometry, og2 = glowBody.geometry;
+      body.geometry = spRibbonGeometry(pts, 1.25); glowBody.geometry = spRibbonGeometry(pts, 0.42);
+      og.dispose(); og2.dispose();
+      body.material.uniforms.uOpacity.value = 1.1; glowBody.material.uniforms.uOpacity.value = 0.9;
+      const hp = path(head);
+      this._emit(this.glow, hp, 6, { color: col, color2: C(0.85, 1, 0.9), mix: 0.3, colorEnd: SG.Gfx.shade(col, -0.3), alpha: 1, life: 0.5, speed: 1.2, size: 0.45, sizeEnd: 0.15, gravity: 0.2, radius: 0.3, lifeVar: 0.3 });
+      this._emit(this.glow, hp, 1, { color: C(0.9, 1, 0.95), alpha: 1, life: 0.12, speed: 0, size: 2.2, sizeEnd: 0.6, gravity: 0, radius: 0.02 });
+    });
+    this._spAnim(0.3, k => { body.material.uniforms.uOpacity.value = 1.1 * (1 - k); glowBody.material.uniforms.uOpacity.value = 0.9 * (1 - k); })
+      .then(() => { this._spFree(body); this._spFree(glowBody); });
+    sfx('hit', 1);
+    this._spArc(b, ctx.color, { radius: 2.1, width: 0.95, tilt: -0.6, sweep: 2.9, start: -0.5, dur: 0.5, len: 0.9 });
+    this._spArc(b, '#ffffff', { radius: 1.9, width: 0.25, tilt: -0.6, sweep: 2.7, start: -0.45, dur: 0.38, len: 0.5 });
+    this._spImpact(t, ctx.color, true);
+    this._spRing(this._spPos(t), ctx.color, 0.5, 3.2, 0.6);
+    this._spRing(this._spPos(t), '#ffffff', 0.3, 1.8, 0.35);
+    this._spLight(b, ctx.color, 8, 0.35);
+    this._spShake(0.3, 0.4);
+    this._spFlash('rgba(200,255,220,1)', 0.22, 0.22);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.2), ctx.glyph, ctx.color, 3.8);
+    await this._sleep(0.6);
+  };
+
+  // ---- havoc 无双：血色巨刃 + 双重冲击波 ----
+  BV._sp_havoc = async function (ctx) {
+    const t = ctx.target;
+    await this._spCharge(ctx, 0.32);
+    this._spBolt(this._spPos(ctx.u, 0.2), this._spPos(ctx.u, 3.4), ctx.color, 0.3, 0.5);
+    await this._spLunge(ctx, 0.55, 0.12);
+    const p = this._spPos(t, 0.9);
+    sfx('hit', 1); sfx('rock', 0.5);
+    this._spArc(p, ctx.color, { radius: 2.5, width: 1.1, tilt: 0.25, sweep: 3.4, start: -0.9, dur: 0.55, len: 1.0 });
+    this._spArc(p, '#ffffff', { radius: 2.3, width: 0.25, tilt: 0.25, sweep: 3.1, start: -0.85, dur: 0.4, len: 0.6 });
+    await this._sleep(0.07);
+    this._spArc(p, ctx.color, { radius: 1.6, width: 0.6, tilt: -1.2, sweep: 2.4, start: 0.2, dur: 0.45 });
+    this._spImpact(t, ctx.color, true);
+    const g = this._spPos(t);
+    this._spRing(g, ctx.color, 0.4, 3.6, 0.6);
+    setTimeout(() => { if (!this.disposed) this._spRing(g, '#ffd0d8', 0.4, 2.6, 0.5); }, 120);
+    this._spDust(this._spPos(t, 0.2), 22, 4);
+    this._spLight(p, ctx.color, 9, 0.4);
+    this._spShake(0.42, 0.55);
+    this._spFlash('rgba(255,40,60,1)', 0.3, 0.35);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.3), ctx.glyph, ctx.color, 4.2);
+    await this._sleep(0.65);
+  };
+
+  // ---- sweep 横扫：贴地的一圈回旋刀光，扫到谁打谁 ----
+  BV._sp_sweep = async function (ctx) {
+    const c = this._spPos(ctx.u, 0.6);
+    await this._spCharge(ctx, 0.2);
+    sfx('hit', 0.8);
+    const others = ctx.targets.filter(x => x !== ctx.u);
+    // 每个目标相对施展者的角度（弧面平躺，绕 y 轴扫过）
+    const angle = x => { const p = this._spPos(x); return Math.atan2(-(p.z - c.z), p.x - c.x); };
+    const start = others.length ? angle(others[0]) - 0.9 : 0;
+    this._spArc(c, ctx.color, { flat: true, radius: 1.7, width: 0.9, start, sweep: Math.PI * 2, dur: 0.6, len: 0.5, grow: 0.25 });
+    this._spArc(c, '#ffffff', { flat: true, radius: 1.75, width: 0.25, start, sweep: Math.PI * 2, dur: 0.5, len: 0.3, grow: 0.25 });
+    this._spDust(this._spPos(ctx.u, 0.2), 16, 3.4);
+    const done = new Set();
+    await this._spAnim(0.36, k => {
+      const head = start + k * Math.PI * 2;
+      for (const x of others) {
+        if (done.has(x)) continue;
+        let d = angle(x) - start; while (d < 0) d += Math.PI * 2;
+        if (head - start >= d) { done.add(x); this._spImpact(x, ctx.color, false); ctx.hitUnit(x); }
+      }
+    });
+    for (const x of others) if (!done.has(x)) { this._spImpact(x, ctx.color, false); ctx.hitUnit(x); }
+    ctx.hitAll();
+    this._spRing(this._spPos(ctx.u), ctx.color, 0.6, 3.4, 0.5);
+    this._spShake(0.2, 0.3);
+    this._spGlyph(this._spPos(ctx.u, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.5);
+  };
+
+  // ---- dash 突击：残影 + 冲击 + 击退 ----
+  BV._sp_dash = async function (ctx) {
+    const v = ctx.v, t = ctx.target, res = ctx.res;
+    await this._spCharge(ctx, 0.22);
+    const from = v ? v.pos.clone() : this._spPos(ctx.u);
+    const to = res && res.moved ? this.tile(res.moved.to.x, res.moved.to.y) : from.clone();
+    const tp = this._spPos(t);
+    if (v) v.face(tp.clone().sub(from));
+    sfx('march', 0.7);
+    const trail = [];
+    let lastGhost = -1;
+    await this._spAnim(0.3, k => {
+      const e = k * k;
+      if (v) v.pos.lerpVectors(from, to, e);
+      const cur = v ? v.pos.clone() : from.clone().lerp(to, e);
+      trail.push(cur.clone().add(new THREE.Vector3(0, 0.5, 0)));
+      if (k - lastGhost > 0.12 && v) { lastGhost = k; this._spGhost(v, ctx.color, 0.45, 0.55); }
+      this._spDust(cur.clone().add(new THREE.Vector3(0, 0.15, 0)), 2, 1.2);
+      this._emit(this.glow, cur.clone().add(new THREE.Vector3(0, 0.6, 0)), 3, { color: this._spColor(ctx.color), alpha: 0.9, life: 0.35, speed: 0.6, size: 0.35, sizeEnd: 0.1, gravity: 0, radius: 0.35 });
+    });
+    if (trail.length > 1) {
+      const m = new THREE.Mesh(spRibbonGeometry(trail, 1.1), spShader(SP_BOLT_FS, this._spColor(ctx.color)));
+      this._spAdd(m, 24);
+      this._spAnim(0.4, k => { m.material.uniforms.uOpacity.value = 0.9 * (1 - k); }).then(() => this._spFree(m));
+    }
+    // 冲击
+    const tv = this.vis(t);
+    const hitP = from.clone().lerp(tp, 0.5).lerp(tp, 0.5);
+    if (v) { const back = v.pos.clone(); await this._spAnim(0.08, k => { v.pos.lerpVectors(back, tp, k * 0.35); }); this._spAnim(0.18, k => { v.pos.lerpVectors(tp, back, 0.65 + 0.35 * k); }).then(() => v.pos.copy(back)); }
+    sfx('hit', 1); sfx('rock', 0.4);
+    this._spImpact(t, ctx.color, true);
+    this._spRing(tp, ctx.color, 0.4, 3, 0.55);
+    this._spRing(hitP.setY(tp.y), '#ffffff', 0.3, 1.6, 0.3);
+    this._spLight(this._spPos(t, 1), ctx.color, 7, 0.3);
+    this._spShake(0.35, 0.4);
+    this._spFlash('rgba(255,255,255,1)', 0.18, 0.2);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.1), ctx.glyph, ctx.color);
+    const push = res && res.pushed && res.pushed.find(p => p.unit === t);
+    if (push && tv) {
+      const a = tv.pos.clone(), b = this.tile(push.to.x, push.to.y);
+      await this._spAnim(0.25, k => { tv.pos.lerpVectors(a, b, spEase(k)); tv.pos.y += Math.sin(k * Math.PI) * 0.35; this._spDust(tv.pos.clone().add(new THREE.Vector3(0, 0.1, 0)), 1, 1); });
+      tv.pos.copy(b);
+    } else if (res && res.blocked && tv) {
+      this._spSparks(this._spPos(t, 0.5), '#ffb04a', 26, 4.5);
+    }
+    await this._sleep(0.45);
+  };
+
+  // ---- whirl 往来连斩：在敌军之间瞬移连斩，最后回到原位 ----
+  BV._sp_whirl = async function (ctx) {
+    const v = ctx.v;
+    const home = v ? v.pos.clone() : this._spPos(ctx.u);
+    await this._spCharge(ctx, 0.2);
+    const n = ctx.hits.length || 1;
+    const step = M.clamp(0.95 / n, 0.1, 0.22);
+    let cur = home.clone();
+    for (let i = 0; i < n; i++) {
+      const x = ctx.hits[i] ? ctx.hits[i].unit : ctx.target;
+      const tp = this._spPos(x);
+      const dir = tp.clone().sub(cur); dir.y = 0;
+      const off = dir.lengthSq() > 0.01 ? dir.clone().normalize().multiplyScalar(-0.75) : new THREE.Vector3(0.75, 0, 0);
+      const side = new THREE.Vector3(-off.z, 0, off.x).multiplyScalar(i % 2 ? 0.7 : -0.7);
+      const dest = tp.clone().add(off).add(side);
+      const a = cur.clone();
+      if (v) { this._spGhost(v, ctx.color, 0.35, 0.5); v.face(tp.clone().sub(dest)); }
+      await this._spAnim(step * 0.45, k => {
+        const p = a.clone().lerp(dest, spEase(k));
+        if (v) v.pos.copy(p);
+        this._emit(this.glow, p.clone().add(new THREE.Vector3(0, 0.6, 0)), 2, { color: this._spColor(ctx.color), alpha: 0.9, life: 0.3, speed: 0.3, size: 0.3, sizeEnd: 0.1, gravity: 0, radius: 0.2 });
+      });
+      cur = dest;
+      sfx('hit', 0.7);
+      this._spArc(this._spPos(x, 0.9), ctx.color, { radius: 1.1, width: 0.38, tilt: (i % 2 ? 0.8 : -0.8) + (Math.random() - 0.5) * 0.4, sweep: 2.2, start: -0.2, dur: 0.3, len: 0.6 });
+      this._spImpact(x, ctx.color, false);
+      this._spShake(0.12, 0.15);
+      ctx.hit(i);
+      await this._sleep(step * 0.55);
+    }
+    if (v) {
+      this._spGhost(v, ctx.color, 0.35, 0.5);
+      const a = v.pos.clone();
+      await this._spAnim(0.18, k => { v.pos.lerpVectors(a, home, spEase(k)); });
+      v.pos.copy(home);
+      v.face(this._spPos(ctx.target).sub(home));
+    }
+    this._spRing(this._spPos(ctx.u), ctx.color, 0.5, 2.6, 0.45);
+    this._spGlyph(this._spPos(ctx.u, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.4);
+  };
+
+  // ---- arrows 箭雨：扇形齐射，抛物线落入范围 ----
+  BV._sp_arrows = async function (ctx) {
+    const src = this._spPos(ctx.u, 1.0);
+    const col = this._spColor(ctx.color);
+    const area = ctx.res && ctx.res.area && ctx.res.area.length ? ctx.res.area : [{ x: ctx.target.x, y: ctx.target.y }];
+    this._spTiles(area, ctx.color, 1.2, 0.45);
+    await this._spCharge(ctx, 0.18);
+    sfx('march', 0.5);
+    const N = 42;
+    const geo = new THREE.BoxGeometry(0.06, 0.06, 0.95);
+    const mat = new THREE.MeshBasicMaterial({ color: SG.Gfx.shade(col, 0.4), transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const inst = new THREE.InstancedMesh(geo, mat, N);
+    inst.frustumCulled = false;
+    this._spAdd(inst, 24);
+    const arrows = [];
+    for (let i = 0; i < N; i++) {
+      const tl = area[i % area.length];
+      const dst = this.tile(tl.x, tl.y).add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0.15, (Math.random() - 0.5) * 1.5));
+      const s = src.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, Math.random() * 0.4, (Math.random() - 0.5) * 1.2));
+      arrows.push({ s, d: dst, t0: Math.random() * 0.3, dur: 0.5 + Math.random() * 0.15, h: 4 + Math.random() * 1.5, landed: false });
+    }
+    const dummy = new THREE.Object3D();
+    const firstHit = new Set();
+    let elapsed = 0;
+    await this._loop(1.15, k => {
+      elapsed = k * 1.15;
+      for (let i = 0; i < N; i++) {
+        const a = arrows[i];
+        const q = M.clamp01((elapsed - a.t0) / a.dur);
+        const p = a.s.clone().lerp(a.d, q); p.y += Math.sin(q * Math.PI) * a.h;
+        const q2 = Math.min(1, q + 0.02);
+        const p2 = a.s.clone().lerp(a.d, q2); p2.y += Math.sin(q2 * Math.PI) * a.h;
+        dummy.position.copy(p);
+        if (q > 0 && q < 1) dummy.lookAt(p2);
+        dummy.scale.setScalar(q <= 0 ? 0.0001 : q >= 1 ? 0.0001 : 1);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+        if (q > 0 && q < 1 && Math.random() < 0.3) this._emit(this.glow, p, 1, { color: col, alpha: 0.6, life: 0.2, speed: 0, size: 0.18, sizeEnd: 0.2, gravity: 0, radius: 0.02 });
+        if (q >= 1 && !a.landed) {
+          a.landed = true;
+          this._emit(this.glow, a.d, 3, { color: col, color2: C(1, 1, 1), mix: 0.4, alpha: 1, life: 0.3, speed: 1.6, size: 0.14, gravity: 0.6, radius: 0.1 });
+          if (Math.random() < 0.4) this._dustPuff(a.d, 0.8);
+          for (const h of ctx.hits) {
+            if (firstHit.has(h.unit)) continue;
+            if (Math.abs(h.unit.x * T - (a.d.x - ORIGIN.x - T / 2)) < T && Math.abs(h.unit.y * T - (-a.d.z - ORIGIN.z - T / 2)) < T) {
+              firstHit.add(h.unit); const vv = this.vis(h.unit); if (vv) vv.flashHit(); ctx.hitUnit(h.unit); sfx('hit', 0.5);
+            }
+          }
+        }
+      }
+      inst.instanceMatrix.needsUpdate = true;
+    });
+    this._spFree(inst);
+    ctx.hitAll();
+    this._spShake(0.12, 0.2);
+    this._spGlyph(this._spPos(ctx.target, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.35);
+  };
+
+  // ---- arrow 一箭穿杨：蓄力、一道金光直贯敌阵 ----
+  BV._sp_arrow = async function (ctx) {
+    const v = ctx.v, t = ctx.target;
+    const a = this._spPos(ctx.u, 1.0), b = this._spPos(t, 0.8);
+    if (v) v.face(b.clone().sub(a));
+    await this._spCharge(ctx, 0.4);
+    sfx('duel', 0.6);
+    const col = this._spColor(ctx.color);
+    const mid = a.clone().lerp(b, 0.5); mid.y += 0.8;
+    const pts = [];
+    for (let i = 0; i <= 20; i++) pts.push(spBezier(a, mid, b, i / 20));
+    const m = new THREE.Mesh(spRibbonGeometry(pts, 0.42), spShader(SP_BOLT_FS, col));
+    const mat = m.material;
+    mat.uniforms.uOpacity.value = 0;
+    this._spAdd(m, 24);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.3), new THREE.MeshBasicMaterial({ color: SG.Gfx.shade(col, 0.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    this._spAdd(head, 25);
+    await this._spAnim(0.22, k => {
+      const p = spBezier(a, mid, b, k), p2 = spBezier(a, mid, b, Math.min(1, k + 0.05));
+      head.position.copy(p); head.lookAt(p2);
+      mat.uniforms.uOpacity.value = 1.2 * k;
+      this._emit(this.glow, p, 4, { color: col, color2: C(1, 1, 1), mix: 0.5, alpha: 1, life: 0.35, speed: 0.5, size: 0.3, sizeEnd: 0.1, gravity: 0, radius: 0.08 });
+    });
+    this._spFree(head);
+    this._spAnim(0.5, k => { mat.uniforms.uOpacity.value = 1.2 * (1 - k); }).then(() => this._spFree(m));
+    sfx('hit', 1);
+    const dir = b.clone().sub(a).normalize();
+    this._emit(this.glow, b, 30, { color: col, color2: C(1, 1, 1), mix: 0.4, alpha: 1, life: 0.5, speed: 5, size: 0.2, gravity: 0.3, radius: 0.15, speedVar: 0.6 });
+    this._emit(this.glow, b.clone().addScaledVector(dir, 0.8), 12, { color: C(1, 1, 1), alpha: 1, life: 0.3, speed: 6, size: 0.16, gravity: 0, radius: 0.05 });
+    const tv = this.vis(t); if (tv) tv.flashHit();
+    this._spRing(this._spPos(t), ctx.color, 0.3, 2.4, 0.45);
+    this._spLight(b, ctx.color, 7, 0.25);
+    this._spShake(0.22, 0.3);
+    this._spFlash('rgba(255,240,200,1)', 0.16, 0.18);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.55);
+  };
+
+  // 火海（blaze / wind 共用）：范围内各格同时起火
+  BV._spFireField = function (tiles, cssColor, big) {
+    const col = this._spColor(cssColor);
+    for (const tl of tiles) {
+      if (!this._inBounds(tl.x, tl.y)) continue;
+      const p = this.tile(tl.x, tl.y);
+      const base = p.clone().add(new THREE.Vector3(0, 0.2, 0));
+      this._emit(this.glow, p.clone().add(new THREE.Vector3(0, 0.6, 0)), 1, { color: col, alpha: 0.75, life: 0.35, speed: 0, size: 2.6, sizeEnd: 0.7, gravity: 0, radius: 0.1 });
+      this._emitter(this.flame, base, big ? 70 : 50, {
+        color: C(1, 0.66, 0.16), color2: C(1, 0.84, 0.36), mix: 0.3, colorEnd: C(0.72, 0.12, 0.03), alpha: 1,
+        life: 0.8, speed: 1.8, size: 1.1, sizeEnd: 0.3, gravity: -0.25, box: { x: 1.6, y: 0.2, z: 1.6 }, jitter: 0.3, lifeVar: 0.35, sizeVar: 0.3, alphaCurve: 2,
+      }, 1.1);
+      this._emitter(this.heat, base, 20, {
+        color: C(1, 0.56, 0.16), colorEnd: C(0.95, 0.24, 0.04), alpha: 0.9, life: 0.6, speed: 0.9, size: 1.4, sizeEnd: 0.7, gravity: -0.1,
+        box: { x: 1.4, y: 0.15, z: 1.4 }, jitter: 0.15, lifeVar: 0.3, alphaCurve: 2,
+      }, 1.1);
+      this._emitter(this.glow, base, 10, {
+        color: C(1, 0.8, 0.4), colorEnd: C(1, 0.35, 0.1), alpha: 1, life: 1.0, speed: 2.8, size: 0.14, sizeEnd: 0.4, gravity: -0.1,
+        box: { x: 1.4, y: 0.2, z: 1.4 }, jitter: 0.6, lifeVar: 0.4,
+      }, 1.1);
+      this._emitter(this.dust, p.clone().add(new THREE.Vector3(0, 1.4, 0)), 7, {
+        color: C(0.15, 0.13, 0.12), colorEnd: C(0.4, 0.38, 0.36), alpha: 0.5, life: 2.0, speed: 1.3, size: 1.0, sizeEnd: 3.0, gravity: -0.03,
+        box: { x: 1.0, y: 0.3, z: 1.0 }, jitter: 0.25, lifeVar: 0.3, drag: 0.3, fadeIn: 0.12,
+      }, 1.1);
+    }
+  };
+  BV._spAreaTiles = function (ctx, r) {
+    if (ctx.res && ctx.res.area && ctx.res.area.length) return ctx.res.area;
+    const c = ctx.target, out = [];
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) if (Math.abs(dx) + Math.abs(dy) <= r && this._inBounds(c.x + dx, c.y + dy)) out.push({ x: c.x + dx, y: c.y + dy });
+    return out;
+  };
+
+  // ---- fire 火海：火球抛射 → 爆燃 → 范围火海 ----
+  BV._sp_fire = async function (ctx) {
+    const a = this._spPos(ctx.u, 1.2), b = this._spPos(ctx.target, 0.5);
+    const area = this._spAreaTiles(ctx, 1);
+    this._spTiles(area, ctx.color, 1.4, 0.55);
+    await this._spCharge(ctx, 0.25);
+    sfx('fire', 0.8);
+    const mid = a.clone().lerp(b, 0.5); mid.y += 4;
+    await this._spTrail(k => spBezier(a, mid, b, k), 0.42, 6, {
+      pool: this.flame, color: C(1, 0.7, 0.2), color2: C(1, 0.9, 0.5), mix: 0.4, colorEnd: C(0.8, 0.15, 0.03), alpha: 1, life: 0.45, speed: 0.6,
+      size: 0.9, sizeEnd: 0.2, gravity: -0.2, radius: 0.2, lifeVar: 0.3, alphaCurve: 2, head: 1.5, headColor: C(1, 0.85, 0.5),
+    });
+    sfx('rock', 0.6); sfx('fire', 0.8);
+    this._spSparks(b, '#ffb347', 40, 6, 0.24);
+    this._spRing(this._spPos(ctx.target), '#ff9a3c', 0.5, 4, 0.6);
+    this._spLight(b, '#ff8030', 10, 0.6);
+    this._spShake(0.3, 0.45);
+    this._spFlash('rgba(255,140,40,1)', 0.25, 0.35);
+    this._spFireField(area, ctx.color, true);
+    for (const x of ctx.targets) { const vv = this.vis(x); if (vv && x.side !== ctx.u.side) { vv.burn(); vv.flashHit(); } }
+    ctx.hitAll();
+    this._spGlyph(this._spPos(ctx.target, 3.2), ctx.glyph, ctx.color, 3.8);
+    await this._sleep(0.75);
+  };
+
+  // ---- wind 风助火势（借东风）：东风卷过战场，敌阵燃起大火 ----
+  BV._sp_wind = async function (ctx) {
+    const c = this._spPos(ctx.target, 0.6);
+    const area = this._spAreaTiles(ctx, 2);
+    this._spTiles(area, '#bfe8ff', 1.6, 0.4);
+    if (ctx.v) ctx.v.tint('#bfe8ff', 1);
+    this._spPillar(this._spPos(ctx.u), '#bfe8ff', 0.8, 5, 0.9, 0.7);
+    sfx('magic', 0.6);
+    // 风：自东南向目标的流线
+    const wcol = C(0.85, 0.95, 1);
+    const from = c.clone().add(new THREE.Vector3(9, 1.5, 5));
+    await this._spAnim(0.55, k => {
+      for (let i = 0; i < 6; i++) {
+        const s = from.clone().add(new THREE.Vector3((Math.random() - 0.5) * 6, Math.random() * 2.5, (Math.random() - 0.5) * 8));
+        const vel = c.clone().sub(s).normalize().multiplyScalar(14 + Math.random() * 6);
+        this.glow.add({ x: s.x, y: s.y, z: s.z, vx: vel.x, vy: vel.y * 0.3, vz: vel.z, age: 0, life: 0.55, r: wcol.r, g: wcol.g, b: wcol.b, r1: 1, g1: 0.8, b1: 0.5, a: 0.75, size: 0.28, sizeEnd: 0.9, grav: 0, drag: 0.3, fadeIn: 0.1, ac: 1 });
+      }
+      // 漩涡
+      for (let i = 0; i < 3; i++) {
+        const ang = k * 18 + i * 2.1, r = 2.6 - k * 1.4;
+        this._emit(this.glow, c.clone().add(new THREE.Vector3(Math.cos(ang) * r, k * 2.2, Math.sin(ang) * r)), 1, { color: wcol, alpha: 0.8, life: 0.4, speed: 0.4, size: 0.4, sizeEnd: 0.2, gravity: 0, radius: 0.1 });
+      }
+    });
+    sfx('fire', 0.9); sfx('rock', 0.5);
+    this._spRing(this._spPos(ctx.target), '#ffae42', 0.6, 5.5, 0.7);
+    this._spRing(this._spPos(ctx.target), '#ffffff', 0.4, 3.0, 0.4);
+    this._spLight(c, '#ff8030', 12, 0.7);
+    this._spShake(0.32, 0.5);
+    this._spFlash('rgba(255,150,50,1)', 0.28, 0.4);
+    const fireTiles = ctx.res && ctx.res.burned && ctx.res.burned.length ? ctx.res.burned : ctx.targets.filter(x => x.side !== ctx.u.side).map(x => ({ x: x.x, y: x.y }));
+    this._spFireField(fireTiles, ctx.color, true);
+    for (const x of ctx.targets) { const vv = this.vis(x); if (vv && x.side !== ctx.u.side) { vv.burn(); vv.flashHit(); } }
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 2.8, 0)), ctx.glyph, '#bfe8ff', 4.2);
+    await this._sleep(0.8);
+  };
+
+  // ---- lightning 雷击：天色骤暗，乌云压顶，雷霆逐一劈落 ----
+  BV._sp_lightning = async function (ctx) {
+    const area = this._spAreaTiles(ctx, 2);
+    const c = this._spPos(ctx.target);
+    this._spDim(0.5, 1.5);
+    this._spTiles(area, ctx.color, 1.4, 0.4);
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    for (let i = 0; i < 26; i++) {
+      this._emit(this.dust, c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 9, 8 + Math.random() * 1.5, (Math.random() - 0.5) * 7)), 1, {
+        color: C(0.16, 0.17, 0.24), colorEnd: C(0.3, 0.32, 0.4), alpha: 0.75, life: 1.6, speed: 0.4, size: 3.2, sizeEnd: 4.5, gravity: 0, radius: 0.5, fadeIn: 0.25, drag: 1,
+      });
+    }
+    sfx('magic', 0.5);
+    await this._sleep(0.3);
+    const strike = ctx.targets.filter(x => x.side !== ctx.u.side);
+    if (!strike.length) strike.push(ctx.target);
+    for (const x of strike) {
+      const g = this._spPos(x, 0.3);
+      const top = g.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 10, (Math.random() - 0.5) * 2));
+      sfx('rock', 0.7);
+      this._spBolt(top, g, ctx.color, 0.36, 0.7);
+      this._spBolt(top.clone().add(new THREE.Vector3(0.5, 0, 0.3)), g, '#ffffff', 0.22, 0.32);
+      this._spSparks(g, ctx.color, 26, 5, 0.22);
+      this._spRing(this._spPos(x), ctx.color, 0.3, 2.4, 0.45);
+      this._spLight(g.clone().add(new THREE.Vector3(0, 1.5, 0)), '#cfe6ff', 12, 0.18);
+      this._spFlash('rgba(225,240,255,1)', 0.35, 0.16);
+      this._spShake(0.25, 0.25);
+      const vv = this.vis(x); if (vv) vv.flashHit();
+      ctx.hitUnit(x);
+      await this._sleep(0.16);
+    }
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.2, 0)), ctx.glyph, ctx.color, 4);
+    await this._sleep(0.55);
+  };
+
+  // ---- water 水淹：浪墙席卷范围，水花四溅 ----
+  BV._sp_water = async function (ctx) {
+    const area = this._spAreaTiles(ctx, 1);
+    const c = this._spPos(ctx.target);
+    const col = this._spColor(ctx.color);
+    this._spTiles(area, ctx.color, 1.5, 0.5);
+    await this._spCharge(ctx, 0.25);
+    sfx('fire', 0.4);
+    const geo = spWallGeometry(1, 1, 0, Math.PI * 2, 64);
+    const mat = spShader(SP_WAVE_FS, col);
+    mat.blending = THREE.NormalBlending;
+    const wall = new THREE.Mesh(geo, mat);
+    wall.position.copy(c);
+    this._spAdd(wall, 20);
+    const pool = new THREE.Mesh(flatDisc(1), SG.Gfx.unlit(col, SG.Gfx.softDotTexture, 0));
+    pool.position.copy(c); pool.position.y += 0.15;
+    this._spAdd(pool, 19);
+    const R = (ctx.res && ctx.res.sp ? ctx.res.sp.radius : 1) * T + 1.4;
+    const done = new Set();
+    await this._spAnim(0.85, k => {
+      const r = 0.3 + spEase(k) * R;
+      const h = 1.6 * Math.sin(Math.min(1, k * 1.4) * Math.PI) + 0.2;
+      wall.scale.set(r, h, r);
+      mat.uniforms.uTime.value = k * 2;
+      mat.uniforms.uOpacity.value = k < 0.7 ? 1 : (1 - k) / 0.3;
+      pool.scale.set(r * 1.1, 1, r * 1.1);
+      pool.material.opacity = 0.55 * Math.sin(k * Math.PI);
+      if (Math.random() < 0.9) {
+        const ang = Math.random() * Math.PI * 2;
+        const p = c.clone().add(new THREE.Vector3(Math.cos(ang) * r, h * 0.8, Math.sin(ang) * r));
+        this._emit(this.glow, p, 3, { color: C(0.85, 0.95, 1), alpha: 0.9, life: 0.5, speed: 2.4, size: 0.22, gravity: 1.2, radius: 0.2 });
+      }
+      for (const x of ctx.targets) {
+        if (done.has(x) || x.side === ctx.u.side) continue;
+        if (this._spPos(x).distanceTo(c) <= r) { done.add(x); this._emit(this.glow, this._spPos(x, 0.6), 18, { color: C(0.8, 0.92, 1), alpha: 1, life: 0.6, speed: 3.5, size: 0.24, gravity: 1.4, radius: 0.3 }); const vv = this.vis(x); if (vv) vv.flashHit(); ctx.hitUnit(x); sfx('hit', 0.5); }
+      }
+    });
+    this._spFree(wall); this._spFree(pool);
+    ctx.hitAll();
+    this._spShake(0.18, 0.3);
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.0, 0)), ctx.glyph, ctx.color);
+    await this._sleep(0.4);
+  };
+
+  // ---- shock 怒吼：吸气 → 三重冲击波 + 竖直声浪，扬尘四散 ----
+  BV._sp_shock = async function (ctx) {
+    const c = this._spPos(ctx.u);
+    const R = (ctx.res && ctx.res.sp ? ctx.res.sp.radius : 2) * T + 1;
+    await this._spCharge(ctx, 0.28);
+    sfx('horn', 0.9); sfx('rock', 0.6);
+    this._spFlash('rgba(255,170,90,1)', 0.22, 0.3);
+    this._spShake(0.5, 0.7);
+    for (let i = 0; i < 3; i++) setTimeout(() => {
+      if (this.disposed) return;
+      this._spRing(c, i === 1 ? '#ffffff' : ctx.color, 0.6, R + i * 0.6, 0.6, { alpha: 1 });
+      this._spRing(c.clone().add(new THREE.Vector3(0, 1.2, 0)), ctx.color, 0.4, R * 0.7 + i * 0.4, 0.5, { vertical: true, y: 0, alpha: 0.7 });
+    }, i * 110);
+    for (let i = 0; i < 36; i++) {
+      const a = i / 36 * Math.PI * 2;
+      this.dust.add({
+        x: c.x + Math.cos(a) * 0.8, y: c.y + 0.25, z: c.z + Math.sin(a) * 0.8, vx: Math.cos(a) * 7, vy: 0.4, vz: Math.sin(a) * 7, age: 0, life: 0.9,
+        r: 0.66, g: 0.58, b: 0.46, r1: 0.7, g1: 0.65, b1: 0.58, a: 0.55, size: 0.9, sizeEnd: 2.4, grav: 0, drag: 2.6, fadeIn: 0.05, ac: 1,
+      });
+    }
+    const done = new Set();
+    await this._spAnim(0.55, k => {
+      const r = 0.6 + spEase(k) * R;
+      for (const x of ctx.targets) {
+        if (done.has(x) || x === ctx.u) continue;
+        if (this._spPos(x).distanceTo(c) <= r) { done.add(x); const vv = this.vis(x); if (vv) vv.flashHit(); this._spSparks(this._spPos(x, 0.7), ctx.color, 12, 2.5, 0.18); ctx.hitUnit(x); }
+      }
+    });
+    ctx.hitAll();
+    this._spGlyph(this._spPos(ctx.u, 3.1), ctx.glyph, ctx.color, 4);
+    await this._sleep(0.55);
+  };
+
+  // ---- aura 金光：光柱冲天，脚下光阵展开，友军金光加身 ----
+  BV._sp_aura = async function (ctx) {
+    const c = this._spPos(ctx.u);
+    const col = this._spColor(ctx.color);
+    const R = (ctx.res && ctx.res.sp ? ctx.res.sp.radius || 1 : 2) * T + 0.6;
+    sfx('horn', 0.7); sfx('magic', 0.5);
+    this._spPillar(c, ctx.color, 0.9, 7, 1.2, 1);
+    this._spRing(c, ctx.color, 0.5, R, 1.1, { tex: spCircleTex(), spin: 2.2, hold: true, alpha: 0.85 });
+    this._spRing(c, ctx.color, 0.3, R + 0.8, 0.7);
+    this._spLight(c.clone().add(new THREE.Vector3(0, 2, 0)), ctx.color, 7, 0.8);
+    this._spFlash('rgba(255,230,150,1)', 0.15, 0.4);
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    await this._sleep(0.25);
+    const allies = ctx.targets.filter(x => x.side === ctx.u.side);
+    for (const x of allies) {
+      const p = this._spPos(x);
+      const vv = this.vis(x); if (vv) vv.tint(ctx.color, 1);
+      if (x !== ctx.u) this._spPillar(p, ctx.color, 0.55, 3.2, 0.8, 0.7);
+      this._spRing(p, ctx.color, 0.2, 1.6, 0.5);
+      this._emitter(this.glow, p.clone().add(new THREE.Vector3(0, 0.2, 0)), 30, { color: col, color2: C(1, 1, 0.9), mix: 0.4, alpha: 1, life: 0.9, speed: 1.6, size: 0.2, sizeEnd: 0.4, gravity: -0.15, box: { x: 1.2, y: 0.2, z: 1.2 }, jitter: 0.2, lifeVar: 0.3 }, 0.7);
+    }
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.4, 0)), ctx.glyph, ctx.color, 4);
+    await this._sleep(0.85);
+  };
+
+  // ---- blossom 桃花（桃园结义）：桃花纷飞，金光加身 ----
+  BV._sp_blossom = async function (ctx) {
+    const c = this._spPos(ctx.u);
+    const petals = this._spPetalPool();
+    const pink = this._spColor(ctx.color);
+    sfx('magic', 0.6);
+    this._spPillar(c, '#ffe7a8', 0.9, 6, 1.2, 0.7);
+    this._spRing(c, ctx.color, 0.5, (ctx.res && ctx.res.sp ? ctx.res.sp.radius : 2) * T + 0.6, 1.1, { tex: spCircleTex(), spin: 1.6, hold: true, alpha: 0.7 });
+    this._spLight(c.clone().add(new THREE.Vector3(0, 2, 0)), '#ffc0d8', 6, 0.9);
+    if (ctx.v) ctx.v.tint('#ffd0e0', 1);
+    await this._spAnim(0.6, k => {
+      for (let i = 0; i < 6; i++) {
+        const a = Math.random() * Math.PI * 2, r = 0.5 + Math.random() * 3.5;
+        const sw = 2.2;
+        const shade = Math.random();
+        petals.add({
+          x: c.x + Math.cos(a) * r, y: c.y + 0.3 + Math.random() * 3, z: c.z + Math.sin(a) * r,
+          vx: -Math.sin(a) * sw + (Math.random() - 0.5), vy: 0.6 + Math.random() * 0.8, vz: Math.cos(a) * sw + (Math.random() - 0.5),
+          age: 0, life: 1.4 + Math.random() * 0.6, r: M.lerp(pink.r, 1, shade * 0.6), g: M.lerp(pink.g, 1, shade * 0.6), b: M.lerp(pink.b, 1, shade * 0.6),
+          r1: 1, g1: 0.75, b1: 0.85, a: 1, size: 0.34 + Math.random() * 0.18, sizeEnd: 0.8, grav: 0.05, drag: 0.6, fadeIn: 0.15, ac: 3,
+        });
+      }
+    });
+    const allies = ctx.targets.filter(x => x.side === ctx.u.side);
+    for (const x of allies) {
+      const p = this._spPos(x);
+      const vv = this.vis(x); if (vv) vv.tint('#ffe0a0', 1);
+      this._spRing(p, '#ffe0a0', 0.2, 1.6, 0.5);
+      this._emit(this.glow, p.clone().add(new THREE.Vector3(0, 0.8, 0)), 16, { color: C(1, 0.88, 0.6), alpha: 1, life: 0.8, speed: 1.4, size: 0.22, gravity: -0.3, radius: 0.5 });
+    }
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.4, 0)), ctx.glyph, ctx.color, 4);
+    await this._sleep(0.7);
+  };
+
+  // ---- spirit 符阵（奇谋 / 混乱）：敌阵脚下展开旋转的八卦符阵 ----
+  BV._sp_spirit = async function (ctx) {
+    const c = this._spPos(ctx.target);
+    const col = this._spColor(ctx.color);
+    const r = ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 1) + 0.5) * T;
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    sfx('magic', 0.7);
+    this._spRing(c, ctx.color, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.95 });
+    this._spRing(c, ctx.color, r * 0.9, r * 0.6, 1.2, { tex: spCircleTex(), spin: 4, hold: true, alpha: 0.5, y: 0.16 });
+    await this._spAnim(0.6, k => {
+      for (let i = 0; i < 4; i++) {
+        const a = k * 12 + i * Math.PI / 2, rr = r * (1 - k * 0.7);
+        this._emit(this.glow, c.clone().add(new THREE.Vector3(Math.cos(a) * rr, 0.3 + k * 2, Math.sin(a) * rr)), 1, { color: col, color2: C(1, 1, 1), mix: 0.3, alpha: 1, life: 0.5, speed: 0.3, size: 0.32, sizeEnd: 0.2, gravity: 0, radius: 0.05 });
+      }
+    });
+    for (const x of ctx.targets) {
+      if (x.side === ctx.u.side) continue;
+      const vv = this.vis(x); if (vv) { vv.flashHit(); vv.tint(ctx.color, 1); }
+      this._emit(this.glow, this._spPos(x, 1.2), 20, { color: col, alpha: 1, life: 0.8, speed: 1.2, size: 0.28, gravity: -0.4, radius: 0.5 });
+    }
+    this._spFlash('rgba(190,140,255,1)', 0.16, 0.3);
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.0, 0)), ctx.glyph, ctx.color);
+    await this._sleep(0.6);
+  };
+
+  // ---- shield 护盾：每支受益部队升起六角光罩 ----
+  BV._sp_shield = async function (ctx) {
+    const col = this._spColor(ctx.color);
+    sfx('horn', 0.5); sfx('duel', 0.5);
+    await this._spCharge(ctx, 0.2);
+    const allies = ctx.targets.filter(x => x.side === ctx.u.side);
+    if (!allies.length) allies.push(ctx.u);
+    const domes = [];
+    for (const x of allies) {
+      const g = new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2);
+      const mat = spShader(SP_DOME_FS, col, { uScan: { value: 0 } }, SP_DOME_VS);
+      mat.side = THREE.FrontSide;
+      const d = new THREE.Mesh(g, mat);
+      d.position.copy(this._spPos(x, 0.05));
+      this._spAdd(d, 21);
+      domes.push(d);
+      this._spRing(this._spPos(x), ctx.color, 0.4, 1.9, 0.5);
+      const vv = this.vis(x); if (vv) vv.tint(ctx.color, 0.9);
+    }
+    await this._spAnim(1.0, k => {
+      const s = (k < 0.2 ? spEase(k / 0.2) : 1) * 1.45;
+      for (const d of domes) {
+        d.scale.set(s, s * 0.95, s);
+        d.material.uniforms.uScan.value = (k * 1.6) % 1.1;
+        d.material.uniforms.uOpacity.value = k < 0.65 ? 1 : (1 - k) / 0.35;
+      }
+      if (k > 0.15 && k < 0.2) { for (const x of allies) this._spSparks(this._spPos(x, 1.3), '#ffffff', 10, 2, 0.15); }
+    });
+    for (const d of domes) this._spFree(d);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(ctx.u, 3.2), ctx.glyph, ctx.color, 3.8);
+    await this._sleep(0.3);
+  };
+
+  // ---- heal 治愈之光：柔和光柱与上升的十字光点 ----
+  BV._sp_heal = async function (ctx) {
+    const col = this._spColor(ctx.color);
+    const area = this._spAreaTiles(ctx, 1);
+    this._spTiles(area, ctx.color, 1.4, 0.4);
+    sfx('magic', 0.6);
+    if (ctx.v) ctx.v.tint(ctx.color, 0.8);
+    // 施展者撒出一道药光飞向目标
+    const a = this._spPos(ctx.u, 1), b = this._spPos(ctx.target, 1);
+    if (ctx.target !== ctx.u) {
+      const mid = a.clone().lerp(b, 0.5); mid.y += 2.2;
+      await this._spTrail(k => spBezier(a, mid, b, k), 0.35, 4, { color: col, color2: C(1, 1, 1), mix: 0.4, alpha: 1, life: 0.45, speed: 0.3, size: 0.32, sizeEnd: 0.1, gravity: 0, radius: 0.08, head: 0.9 });
+    }
+    const allies = ctx.targets.filter(x => x.side === ctx.u.side);
+    if (!allies.length) allies.push(ctx.target);
+    for (const x of allies) {
+      const p = this._spPos(x);
+      this._spPillar(p, ctx.color, 0.7, 4, 1.0, 0.6);
+      this._spRing(p, ctx.color, 0.3, 1.7, 0.7);
+      const vv = this.vis(x); if (vv) vv.tint(ctx.color, 1);
+      this._emitter(this.glow, p.clone().add(new THREE.Vector3(0, 0.2, 0)), 18, { color: col, color2: C(1, 1, 1), mix: 0.5, alpha: 1, life: 1.0, speed: 1.3, size: 0.3, sizeEnd: 0.5, gravity: -0.15, box: { x: 1.2, y: 0.2, z: 1.2 }, jitter: 0.15, lifeVar: 0.3 }, 0.8);
+    }
+    this._spLight(b, ctx.color, 5, 0.8);
+    ctx.hitAll();
+    this._spGlyph(b.clone().add(new THREE.Vector3(0, 2.4, 0)), ctx.glyph, ctx.color);
+    await this._sleep(0.95);
+  };
+
+  // ---- poison 毒雾：毒瓶抛出，绿雾翻滚 ----
+  BV._sp_poison = async function (ctx) {
+    const area = this._spAreaTiles(ctx, 1);
+    const col = this._spColor(ctx.color);
+    const a = this._spPos(ctx.u, 1.1), b = this._spPos(ctx.target, 0.4);
+    const mid = a.clone().lerp(b, 0.5); mid.y += 3.2;
+    await this._spCharge(ctx, 0.2);
+    await this._spTrail(k => spBezier(a, mid, b, k), 0.4, 3, { color: col, alpha: 1, life: 0.4, speed: 0.2, size: 0.3, sizeEnd: 0.1, gravity: 0, radius: 0.05, head: 0.8, headColor: C(0.75, 1, 0.5) });
+    sfx('fire', 0.4);
+    this._spTiles(area, ctx.color, 1.3, 0.5);
+    this._spRing(this._spPos(ctx.target), ctx.color, 0.4, 3.4, 0.7);
+    for (const tl of area) {
+      const p = this.tile(tl.x, tl.y);
+      this._emitter(this.dust, p.clone().add(new THREE.Vector3(0, 0.4, 0)), 14, {
+        color: C(0.42, 0.75, 0.25), color2: C(0.5, 0.32, 0.6), mix: 0.3, colorEnd: C(0.25, 0.4, 0.18), alpha: 0.55, life: 1.3, speed: 0.7, size: 1.2, sizeEnd: 2.6, gravity: -0.02,
+        box: { x: 1.6, y: 0.3, z: 1.6 }, jitter: 0.5, lifeVar: 0.3, drag: 0.6, fadeIn: 0.15,
+      }, 0.9);
+      this._emitter(this.glow, p.clone().add(new THREE.Vector3(0, 0.2, 0)), 10, { color: C(0.7, 1, 0.4), alpha: 0.9, life: 0.8, speed: 1.0, size: 0.16, sizeEnd: 0.4, gravity: -0.2, box: { x: 1.4, y: 0.2, z: 1.4 }, jitter: 0.1 }, 0.9);
+    }
+    for (const x of ctx.targets) { if (x.side === ctx.u.side) continue; const vv = this.vis(x); if (vv) { vv.flashHit(); vv.tint(ctx.color, 1); } }
+    ctx.hitAll();
+    this._spGlyph(this._spPos(ctx.target, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.85);
+  };
+
+  // ---- shadow 暗影刺杀：施展者化作黑烟，一道暗光掠过，血色十字 ----
+  BV._sp_shadow = async function (ctx) {
+    const v = ctx.v, t = ctx.target, res = ctx.res;
+    const a = this._spPos(ctx.u, 0.6), b = this._spPos(t, 0.8);
+    this._spDim(0.45, 1.3);
+    sfx('magic', 0.5);
+    const dark = C(0.12, 0.08, 0.16);
+    this._emit(this.dust, a, 26, { color: dark, colorEnd: C(0.25, 0.2, 0.3), alpha: 0.8, life: 0.9, speed: 1.4, size: 0.9, sizeEnd: 2.0, gravity: -0.05, radius: 0.6, drag: 1.6 });
+    if (v) v.group.visible = false;
+    try {
+    await this._sleep(0.18);
+    await this._spTrail(k => a.clone().lerp(b, k), 0.16, 5, { color: this._spColor(ctx.color), alpha: 1, life: 0.3, speed: 0.2, size: 0.45, sizeEnd: 0.1, gravity: 0, radius: 0.1, head: 1.0, headColor: C(1, 0.5, 0.7), linear: true });
+    sfx('hit', 1);
+    this._spArc(b, '#ff2a4a', { radius: 1.2, width: 0.3, tilt: -0.8, sweep: 2.2, start: -0.1, dur: 0.35, len: 0.5 });
+    this._spArc(b, '#ff2a4a', { radius: 1.2, width: 0.3, tilt: 0.8, sweep: 2.2, start: 0.9, dur: 0.35, len: 0.5 });
+    const killed = res && res.killed === t;
+    if (killed) {
+      this._emit(this.dust, this._spPos(t, 0.6), 30, { color: C(0.15, 0.05, 0.08), colorEnd: C(0.3, 0.2, 0.25), alpha: 0.8, life: 1.2, speed: 2, size: 1, sizeEnd: 2.4, gravity: -0.05, radius: 0.5, drag: 1.4 });
+      this._spFlash('rgba(255,20,40,1)', 0.35, 0.4);
+      this._spShake(0.35, 0.45);
+    } else {
+      this._spSparks(b, '#ffffff', 18, 3, 0.16);
+      this._spShake(0.15, 0.2);
+    }
+    const tv = this.vis(t); if (tv) tv.flashHit();
+    this._spRing(this._spPos(t), ctx.color, 0.3, 2.2, 0.45);
+    ctx.hitAll();
+    await this._sleep(0.22);
+    } finally {
+      if (v && !this.disposed) { v.group.visible = true; this._spGhost(v, ctx.color, 0.4, 0.6); this._emit(this.dust, a, 14, { color: dark, alpha: 0.7, life: 0.6, speed: 1, size: 0.7, sizeEnd: 1.6, gravity: 0, radius: 0.5, drag: 2 }); }
+    }
+    this._spGlyph(this._spPos(t, 3.0), ctx.glyph, killed ? '#ff3355' : ctx.color, killed ? 4 : 3.2);
+    await this._sleep(0.5);
+  };
+
+  // ---- drain 吸魂：重击后，敌军的魂光汇入施展者 ----
+  BV._sp_drain = async function (ctx) {
+    const t = ctx.target;
+    const col = this._spColor(ctx.color);
+    await this._spCharge(ctx, 0.2);
+    await this._spLunge(ctx, 0.45, 0.13);
+    const b = this._spPos(t, 0.9);
+    sfx('hit', 0.9);
+    this._spArc(b, ctx.color, { radius: 1.3, width: 0.5, tilt: -0.7, sweep: 2.4, start: -0.2, dur: 0.4 });
+    this._spImpact(t, ctx.color, true);
+    this._spShake(0.2, 0.25);
+    ctx.hitAll();
+    await this._sleep(0.15);
+    const a = this._spPos(ctx.u, 0.9);
+    sfx('magic', 0.6);
+    for (let s = 0; s < 3; s++) {
+      const mid = a.clone().lerp(b, 0.5); mid.y += 1.5 + s * 0.6; mid.x += (s - 1) * 1.2;
+      this._spTrail(k => spBezier(b, mid, a, k), 0.45, 3, { color: col, color2: C(1, 0.85, 0.9), mix: 0.4, alpha: 1, life: 0.4, speed: 0.2, size: 0.32, sizeEnd: 0.1, gravity: 0, radius: 0.06, head: 0.7 });
+    }
+    await this._sleep(0.45);
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    this._spRing(this._spPos(ctx.u), ctx.color, 1.8, 0.4, 0.35);
+    this._spPillar(this._spPos(ctx.u), ctx.color, 0.6, 3, 0.6, 0.6);
+    this._spGlyph(this._spPos(ctx.u, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.4);
+  };
+
+  // ---- haste 疾风：青色旋风环绕友军 ----
+  BV._sp_haste = async function (ctx) {
+    const c = this._spPos(ctx.u);
+    const col = this._spColor(ctx.color);
+    sfx('march', 0.6); sfx('magic', 0.4);
+    this._spRing(c, ctx.color, 0.5, ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 2) * T) + 0.6, 0.7);
+    if (ctx.v) ctx.v.tint(ctx.color, 1);
+    const allies = ctx.targets.filter(x => x.side === ctx.u.side && x !== ctx.u);
+    const list = allies.length ? allies : [ctx.u];
+    await this._spAnim(0.8, k => {
+      for (const x of list) {
+        const p = this._spPos(x);
+        for (let i = 0; i < 2; i++) {
+          const a = k * 22 + i * Math.PI, r = 1.0 + 0.2 * Math.sin(k * 9);
+          this._emit(this.glow, p.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.2 + k * 2.2, Math.sin(a) * r)), 1, { color: col, color2: C(1, 1, 1), mix: 0.3, alpha: 1, life: 0.45, speed: 0.2, size: 0.3, sizeEnd: 0.1, gravity: 0, radius: 0.03 });
+        }
+      }
+    });
+    for (const x of list) {
+      const vv = this.vis(x); if (vv) { vv.tint(ctx.color, 1); this._spGhost(vv, ctx.color, 0.5, 0.5); }
+      this._spRing(this._spPos(x), ctx.color, 0.3, 1.8, 0.45);
+    }
+    ctx.hitAll();
+    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.1, 0)), ctx.glyph, ctx.color);
+    await this._sleep(0.5);
+  };
 
   BattleView.Origin = ORIGIN;
   BattleView.T = T;

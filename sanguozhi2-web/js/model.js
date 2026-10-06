@@ -3,6 +3,12 @@
    三国志II 霸王的大陆 · 游戏状态与战略指令
    移植自 Model/GameState.cs 与 Model/Commands.cs。
    城 / 武将 / 势力为普通对象，字段名与 C# 相同。当前游戏为 SG.G。
+   第二版（调动武将）新增：
+     G.routesFrom(city, f?) → [{ city, hops, path }]   经由己方城池链可达的己方城（BFS）
+     G.routeBetween(from, to, f?) → 城编号数组 | null
+     Commands.moveTargets(c) / transportTargets(c)       移动 / 输送的目的地（= routesFrom）
+     Commands.moveBlocked(c) / transportBlocked(c)       不能使用的原因（中文）或 null
+     Commands.move / transport 拒绝不可达的目的地（返回说明文字，不改变状态）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -153,6 +159,41 @@
     isRuler(g) { return g.faction >= 0 && this.factions[g.faction].ruler === g.id; }
     ruler(f) { return this.generals[this.factions[f].ruler]; }
     cityCount(f) { let n = 0; for (const c of this.cities) if (c.owner === f) n++; return n; }
+
+    // 经由 f 方城池相连可达的所有 f 方城（广度优先；不含出发城，不穿过他国或空城）。
+    // → [{ city, hops, path }]：hops 为路程（相邻 = 1，途经城数 = hops − 1），
+    //   path 为城编号数组（含起点与终点）。按路程、再按发现顺序（links 顺序）排列，结果确定。
+    // from 不属于 f 时返回空数组。f 缺省为 from.owner。
+    routesFrom(from, f) {
+      if (f === undefined) f = from ? from.owner : -1;
+      const out = [];
+      if (!from || f < 0 || from.owner !== f) return out;
+      const prev = new Map();
+      prev.set(from.id, -1);
+      let frontier = [from.id];
+      for (let hops = 1; frontier.length > 0; hops++) {
+        const next = [];
+        for (const id of frontier) {
+          for (const j of this.cities[id].links) {
+            if (prev.has(j) || this.cities[j].owner !== f) continue;
+            prev.set(j, id);
+            next.push(j);
+            const path = [];
+            for (let k = j; k >= 0; k = prev.get(k)) path.push(k);
+            path.reverse();
+            out.push({ city: this.cities[j], hops, path });
+          }
+        }
+        frontier = next;
+      }
+      return out;
+    }
+    // from → to 的最短己方路线（城编号数组，含两端）；不可达或 to 即 from 时为 null
+    routeBetween(from, to, f) {
+      if (!from || !to || from.id === to.id) return null;
+      const r = this.routesFrom(from, f).find(x => x.city.id === to.id);
+      return r ? r.path : null;
+    }
 
     tokensFor(f) {
       const n = this.cityCount(f);
@@ -349,13 +390,42 @@
     },
 
     // ---------------------------------------------------------- 移动 / 输送 --
+    // 第二版：目的地不必相邻——经由己方城池链可达的己方城都可前往（GameState.routesFrom）。
+    // 每次仍只消耗 1 枚令牌（由界面扣除）。
+    moveTargets(c) { return G().routesFrom(c, c.owner); },
+    transportTargets(c) { return G().routesFrom(c, c.owner); },
+
+    // 不能从 c 调动武将的原因（规则层面；令牌、忙碌等界面状态不在此列）。null = 可以
+    moveBlocked(c) {
+      const g = G();
+      if (c.owner < 0) return '这座城不属于任何势力。';
+      if (g.cityCount(c.owner) <= 1) return '只有一座城池——攻下第二座城后即可调动武将。';
+      if (g.routesFrom(c, c.owner).length === 0) return `${c.name}与其他己方城池之间隔着他国或空城，无法调动（须经由己方城池相连）。`;
+      const offs = g.officersIn(c);
+      if (offs.length === 0) return `${c.name}没有武将。`;
+      if (offs.every(x => x.moved)) return '本城武将本月都已行动，没有可调动的武将。';
+      return null;
+    },
+    // 不能从 c 输送金粮的原因。null = 可以
+    transportBlocked(c) {
+      const g = G();
+      if (c.owner < 0) return '这座城不属于任何势力。';
+      if (g.cityCount(c.owner) <= 1) return '只有一座城池——攻下第二座城后即可输送金粮。';
+      if (g.routesFrom(c, c.owner).length === 0) return `${c.name}与其他己方城池之间隔着他国或空城，无法输送（须经由己方城池相连）。`;
+      if (c.gold <= 0 && c.food <= 0) return `${c.name}没有可输送的金粮。`;
+      return null;
+    },
+
     move(g, to) {
       const from = G().cities[g.city];
+      // 只能经由己方城池移往己方城（不可达时不做任何改变）
+      if (!G().routeBetween(from, to, g.faction)) return `${to.name}与${from.name}之间没有己方城池相连，${g.name}无法移驻。`;
       g.city = to.id; g.moved = true;
       G().autoGovernor(from); G().autoGovernor(to);
       return `${g.name}率兵 ${g.troops} 人移驻${to.name}。`;
     },
     transport(from, to, gold, food) {
+      if (!G().routeBetween(from, to, from.owner)) return `${to.name}与${from.name}之间没有己方城池相连，无法输送。`;
       gold = M.clamp(gold, 0, from.gold); food = M.clamp(food, 0, from.food);
       from.gold -= gold; from.food -= food; to.gold += gold; to.food += food;
       return `自${from.name}向${to.name}输送金 ${gold}、粮 ${food}。`;

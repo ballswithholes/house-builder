@@ -1,20 +1,28 @@
 'use strict';
 /* ==========================================================================
-   音效与背景音乐（移植自 Core/Sfx.cs）
-   全部为程序合成：先按 C# 的公式算出 PCM（22050 Hz 单声道），
-   再装入 WebAudio 的 AudioBuffer 播放。无需任何音频文件。
-   - 合成函数是纯计算（不依赖 AudioContext），可在 Node 下测试：
-     SG.Sfx.render(name) → Float32Array，SG.Sfx.renderMusic(kind) → Float32Array
-   - AudioContext 在第一次用户手势时创建 / 恢复（unlock）。
-   - 任何情况下（无 WebAudio、被浏览器禁止等）都不会抛出异常。
+   音效与背景音乐（移植自 Core/Sfx.cs；第二版重做音乐）
+   - 音效：按 C# 的公式算出 PCM（22050 Hz 单声道），装入 AudioBuffer 播放。
+     合成函数是纯计算（不依赖 AudioContext），可在 Node 下测试：SG.Sfx.render(name) → Float32Array
+   - 背景音乐：由 SG.Music（js/music.js、music-inst.js、music-han.js、music-world.js）
+     实时合成——全新创作的曲目、合成民乐 / 管弦乐音色、前瞻调度、交叉淡入淡出、地域变奏。
+     若页面没有用 <script> 载入这些文件，init() 会按 audio.js 自身的路径自动补载。
+   - AudioContext 在第一次用户手势时创建 / 恢复（unlock）；之前调用 music(kind) 只记住曲目，解锁后自动开始。
+   - 任何情况下（无 WebAudio、被浏览器禁止、音乐模块缺失等）都不会抛出异常。
+
+   接口：init() unlock() click() play(name, vol) setSound(on) soundOn
+         music(kind[, culture]) setMusic(on) musicOn musicKind
+         setCulture(culture) culture  setMusicVolume(v)  stinger(kind)
+   曲目 kind：title map battle battle-defend duel victory defeat ending council clash
+         （victory / defeat 为一次性短曲；clash 为叠加在当前曲目上的冲锋乐句，结束后主曲自动恢复）
    ========================================================================== */
 (function () {
   const SG = window.SG;
   const M = SG.M;
 
+
   const Rate = 22050;
   const TWO_PI = 2 * Math.PI;
-  const MUSIC_VOLUME = 0.32;
+  const MUSIC_VOLUME = 0.42;       // 背景音乐总音量（相对音效）
 
   // C# string.GetHashCode() 的替代：稳定的字符串哈希（用于 System.Random 种子）
   function hashString(s) {
@@ -33,26 +41,6 @@
     return (Math.sin(t * TWO_PI * f)
       + 0.45 * Math.sin(t * 2 * TWO_PI * f) * Math.exp(-t * 6)
       + 0.2 * Math.sin(t * 3 * TWO_PI * f) * Math.exp(-t * 9)) * e * 0.4;
-  }
-
-  // 与 pluck 数学上完全相同，但用递推代替逐点的 sin / exp，用于长曲目的快速合成。
-  // 把 len 个采样累加进 d[start..]
-  function addPluck(d, start, len, f) {
-    const w1 = TWO_PI * f / Rate, w2 = 2 * w1, w3 = 3 * w1;
-    const c1 = 2 * Math.cos(w1), c2 = 2 * Math.cos(w2), c3 = 2 * Math.cos(w3);
-    // sin(n·w) 的二阶递推：s[n+1] = 2cos(w)·s[n] − s[n−1]
-    let a0 = 0, a1 = Math.sin(w1), b0 = 0, b1 = Math.sin(w2), g0 = 0, g1 = Math.sin(w3);
-    const k0 = Math.exp(-3.2 / Rate), k2 = Math.exp(-6 / Rate), k3 = Math.exp(-9 / Rate);
-    let e0 = 1, e2 = 1, e3 = 1;
-    for (let i = 0; i < len; i++) {
-      const ramp = i * 400 / Rate;
-      const e = e0 * (ramp < 1 ? ramp : 1);
-      d[start + i] += (a0 + 0.45 * b0 * e2 + 0.2 * g0 * e3) * e * 0.4;
-      let n = c1 * a1 - a0; a0 = a1; a1 = n;
-      n = c2 * b1 - b0; b0 = b1; b1 = n;
-      n = c3 * g1 - g0; g0 = g1; g1 = n;
-      e0 *= k0; e2 *= k2; e3 *= k3;
-    }
   }
 
   // ---------------------------------------------------------- 音效合成 --
@@ -91,86 +79,10 @@
     return d;
   }
 
-  // ---------------------------------------------------------- 音乐合成 --
-  // 五声音阶的古筝旋律 + 低音（战斗曲另加战鼓）。返回 Promise<Float32Array>；
-  // 分片计算，避免长时间阻塞主线程。sync = true 时同步计算（测试用）。
-  function musicPlan(kind) {
-    const battle = kind === 'battle';
-    const beat = battle ? 0.2 : kind === 'title' ? 0.42 : 0.32;
-    const bars = 16, stepsPerBar = 8;
-    const dur = bars * stepsPerBar * beat;
-    const n = Math.trunc(dur * Rate);
-    // 五声音阶：宫商角徵羽
-    const root = battle ? 220 : kind === 'title' ? 196 : 261.6;
-    const scale = battle ? [0, 3, 5, 7, 10, 12, 15] : [0, 2, 4, 7, 9, 12, 14, 16];
-    const rnd = SG.SeededRandom(hashString(kind));
-    let idx = 3;
-    const notes = [];
-    for (let s = 0; s < bars * stepsPerBar; s++) {
-      if (rnd.nextDouble() < (battle ? 0.22 : 0.38)) continue;
-      idx = M.clamp(idx + rnd.next(-2, 3), 0, scale.length - 1);
-      notes.push([s * beat, root * 2 * Math.pow(2, scale[idx] / 12)]);
-    }
-    const bass = battle ? [0, 0, 3, 5] : [0, 5, 7, 4];
-    for (let b = 0; b < bars * 2; b++) notes.push([M.idiv(b * stepsPerBar, 2) * beat, root * 0.5 * Math.pow(2, bass[M.idiv(b, 2) % 4] / 12)]);
-    return { battle, beat, bars, stepsPerBar, n, notes, rnd };
-  }
-
-  function musicNotes(p, d, from, to) {
-    for (let k = from; k < to; k++) {
-      const nt = p.notes[k];
-      const start = Math.trunc(nt[0] * Rate);
-      const len = Math.min(p.n - start, Math.trunc(Rate * 1.6));
-      if (len > 0) addPluck(d, start, len, nt[1]);
-    }
-  }
-
-  function musicDrums(p, d) {
-    if (!p.battle) return;
-    // 战鼓
-    const rnd = p.rnd, n = p.n;
-    for (let b = 0; b < p.bars * p.stepsPerBar; b += 2) {
-      const start = Math.trunc(b * p.beat * Rate); let lp = 0;
-      for (let i = 0; i < Rate * 0.3 && start + i < n; i++) {
-        const t = i / Rate; lp += ((rnd.nextDouble() * 2 - 1) - lp) * 0.06;
-        d[start + i] += (Math.sin(t * TWO_PI * (90 - t * 120)) * 0.7 + lp) * Math.exp(-t * 14) * (b % 8 === 0 ? 0.9 : 0.45);
-      }
-    }
-  }
-
-  function musicFinish(d) {
-    for (let i = 0; i < d.length; i++) d[i] = M.clamp(d[i] * 0.6, -1, 1);
-    return d;
-  }
-
-  function renderMusicSync(kind) {
-    const p = musicPlan(kind);
-    const d = new Float32Array(p.n);
-    musicNotes(p, d, 0, p.notes.length);
-    musicDrums(p, d);
-    return musicFinish(d);
-  }
-
-  function yieldTask() { return new Promise(r => setTimeout(r, 0)); }
-
-  async function renderMusic(kind) {
-    const p = musicPlan(kind);
-    const d = new Float32Array(p.n);
-    const CHUNK = 24;
-    for (let k = 0; k < p.notes.length; k += CHUNK) {
-      musicNotes(p, d, k, Math.min(p.notes.length, k + CHUNK));
-      await yieldTask();
-    }
-    musicDrums(p, d);
-    return musicFinish(d);
-  }
-
   // ---------------------------------------------------------- 播放 --
   const pcm = new Map();          // name → Float32Array（音效）
-  const musicPcm = new Map();     // kind → Promise<Float32Array>
   const buffers = new Map();      // key → AudioBuffer（需要 AudioContext）
-  let ctx = null, master = null, sfxBus = null, musicBus = null;
-  let musicSrc = null, musicSrcKind = null;
+  let ctx = null, master = null, sfxBus = null;
   let inited = false, gestureHooked = false;
 
   function AC() {
@@ -190,7 +102,6 @@
     try {
       master = ctx.createGain(); master.gain.value = 1; master.connect(ctx.destination);
       sfxBus = ctx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
-      musicBus = ctx.createGain(); musicBus.gain.value = MUSIC_VOLUME; musicBus.connect(master);
       ctx.onstatechange = () => { if (ctx && ctx.state === 'running') startMusicIfReady(); };
     } catch (e) { ctx = null; return null; }
     return ctx;
@@ -214,55 +125,79 @@
     return d;
   }
 
-  function getMusicPcm(kind) {
-    let p = musicPcm.get(kind);
-    if (!p) {
-      p = renderMusic(kind).catch(e => { console.warn('音乐合成失败', e); return null; });
-      musicPcm.set(kind, p);
-    }
-    return p;
+  // ---------------------------------------------------------- 背景音乐 --
+  const MUSIC_FILES = ['music.js', 'music-inst.js', 'music-han.js', 'music-world.js'];
+  const ONE_SHOT = { victory: 1, defeat: 1 };
+  const OVERLAY = { clash: 1 };
+  const scriptBase = (function () {
+    try {
+      const s = document.currentScript && document.currentScript.src;
+      if (s) return s.replace(/audio\.js(\?.*)?$/, '');
+    } catch (e) { /* 忽略 */ }
+    return null;
+  })();
+  let musicLoading = false;
+  let engine = null;
+  let playingKey = null;          // 已交给引擎播放（或准备中）的曲目 key
+  let musicVol = 1;
+
+  // 页面未用 <script> 载入音乐模块时，按 audio.js 的位置依次补载
+  function loadMusicScripts() {
+    if (SG.Music || musicLoading || !scriptBase || typeof document === 'undefined') return;
+    musicLoading = true;
+    let i = 0;
+    const next = () => {
+      if (i >= MUSIC_FILES.length) { musicLoading = false; prewarm(); startMusicIfReady(); return; }
+      const el = document.createElement('script');
+      el.src = scriptBase + MUSIC_FILES[i++];
+      el.async = false;
+      el.onload = next;
+      el.onerror = () => { console.warn('音乐模块载入失败：' + el.src); musicLoading = false; };
+      (document.head || document.documentElement).appendChild(el);
+    };
+    next();
   }
 
-  function stopMusicSource() {
-    if (!musicSrc) return;
-    const src = musicSrc;
-    musicSrc = null; musicSrcKind = null;
+  // 空闲时预渲染标题曲与地图曲需要的采样（分片，不卡顿）
+  function prewarm() {
     try {
-      // 短暂淡出，避免爆音
-      const g = src._gain;
-      if (g && ctx) {
-        const now = ctx.currentTime;
-        g.gain.cancelScheduledValues(now);
-        g.gain.setValueAtTime(g.gain.value, now);
-        g.gain.linearRampToValueAtTime(0, now + 0.25);
-        src.stop(now + 0.3);
-      } else src.stop();
-    } catch (e) { /* 已停止 */ }
+      if (!SG.Music) return;
+      const k = SG.Music.resolve(Sfx.musicKind || 'title', Sfx.culture);
+      if (k) SG.Music.prepare(k);
+    } catch (e) { /* 忽略 */ }
+  }
+
+  function ensureEngine() {
+    if (engine) return engine;
+    if (!ctx || !master || !SG.Music || !SG.Music.Engine) return null;
+    try {
+      engine = new SG.Music.Engine(ctx, master, { volume: MUSIC_VOLUME * musicVol });
+      engine.onEnded = (key, overlay) => {
+        if (!overlay && key === playingKey) { playingKey = null; Sfx.musicFinished = true; }
+      };
+    } catch (e) { console.warn('音乐引擎创建失败', e); engine = null; }
+    return engine;
+  }
+
+  function stopMusic(fade) {
+    playingKey = null;
+    try { if (engine) engine.stop(fade === undefined ? 0.8 : fade); } catch (e) { /* 忽略 */ }
   }
 
   function startMusicIfReady() {
     try {
       const kind = Sfx.musicKind;
       if (!kind || !Sfx.musicOn || !ctx || ctx.state !== 'running') return;
-      if (musicSrc && musicSrcKind === kind) return;
-      getMusicPcm(kind).then(data => {
-        if (!data || !ctx || ctx.state !== 'running') return;
-        if (Sfx.musicKind !== kind || !Sfx.musicOn) return;
-        if (musicSrc && musicSrcKind === kind) return;
-        const buf = toBuffer('music_' + kind, data);
-        if (!buf) return;
-        stopMusicSource();
-        const src = ctx.createBufferSource();
-        src.buffer = buf; src.loop = true;
-        const g = ctx.createGain();
-        const now = ctx.currentTime;
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(1, now + 0.4);
-        src.connect(g); g.connect(musicBus);
-        src._gain = g;
-        src.start(now);
-        musicSrc = src; musicSrcKind = kind;
-      }).catch(e => console.warn(e));
+      if (!SG.Music) { loadMusicScripts(); return; }
+      if (Sfx.musicFinished && ONE_SHOT[kind]) return;
+      const key = SG.Music.resolve(kind, Sfx.culture);
+      if (!key) { stopMusic(); return; }
+      if (key === playingKey) return;
+      const e = ensureEngine();
+      if (!e) return;
+      playingKey = key;
+      Sfx.musicFinished = false;
+      e.play(key, { fade: 0.8 }).catch(err => console.warn(err));
     } catch (e) { console.warn(e); }
   }
 
@@ -287,6 +222,8 @@
     musicOn: true,
     soundOn: true,
     musicKind: null,
+    musicFinished: false,
+    culture: 'han',
     unlocked: false,
     Rate,
 
@@ -295,9 +232,12 @@
       inited = true;
       try {
         hookGestures();
-        // 预先在后台合成标题音乐与常用音效，第一次播放时无需等待
+        // 预先在后台合成常用音效与标题曲采样，第一次播放时无需等待
         setTimeout(() => {
-          try { getMusicPcm('title'); ['click', 'coin', 'horn', 'hit'].forEach(getPcm); } catch (e) { /* 忽略 */ }
+          try {
+            ['click', 'coin', 'horn', 'hit'].forEach(getPcm);
+            if (SG.Music) prewarm(); else loadMusicScripts();
+          } catch (e) { /* 忽略 */ }
         }, 0);
       } catch (e) { console.warn(e); }
     },
@@ -339,31 +279,69 @@
       } catch (e) { /* 无音频 */ }
     },
 
-    // kinds: 'title' | 'map' | 'battle'
-    music(kind) {
+    // 切换背景音乐。kind 见文件头；culture 可选（同 setCulture）。
+    // 音频未解锁时只记住 kind，解锁后自动开始。
+    music(kind, culture) {
       try {
-        if (Sfx.musicKind === kind) return;
+        if (OVERLAY[kind]) { Sfx.stinger(kind); return; }
+        if (culture) Sfx.culture = culture;
+        if (Sfx.musicKind === kind && !(ONE_SHOT[kind] && Sfx.musicFinished)) {
+          if (culture) startMusicIfReady();    // 同一曲目但地域可能变了
+          return;
+        }
         Sfx.musicKind = kind;
-        getMusicPcm(kind);
-        stopMusicSource();
+        Sfx.musicFinished = false;
+        if (ONE_SHOT[kind]) playingKey = null; // 一次性短曲每次都从头播放
         if (Sfx.musicOn) startMusicIfReady();
+      } catch (e) { /* 无音频 */ }
+    },
+
+    // 设定当前地域（见 DESIGN-V2 §6 文化代号）：map / battle 随之换成该地域的变奏
+    setCulture(culture) {
+      try {
+        Sfx.culture = culture || 'han';
+        if (Sfx.musicOn) startMusicIfReady();
+      } catch (e) { /* 无音频 */ }
+    },
+
+    // 叠加在当前曲目上的短乐句（如攻击画面的冲锋号）：主曲压低，乐句结束后恢复
+    stinger(kind) {
+      try {
+        if (!Sfx.musicOn || !ctx || ctx.state !== 'running' || !SG.Music) return;
+        const key = SG.Music.resolve(kind, Sfx.culture);
+        const e = ensureEngine();
+        if (!key || !e) return;
+        e.play(key, { overlay: true, fade: 0.2 }).catch(err => console.warn(err));
       } catch (e) { /* 无音频 */ }
     },
 
     setMusic(on) {
       try {
         Sfx.musicOn = !!on;
-        if (Sfx.musicOn) startMusicIfReady(); else stopMusicSource();
+        if (Sfx.musicOn) startMusicIfReady(); else stopMusic(0.8);
       } catch (e) { /* 无音频 */ }
+    },
+
+    // 音乐音量（0..1，默认 1；与音效音量无关）
+    setMusicVolume(v) {
+      try {
+        musicVol = Math.max(0, Math.min(1.5, +v || 0));
+        if (engine) engine.setVolume(MUSIC_VOLUME * musicVol);
+      } catch (e) { /* 忽略 */ }
     },
 
     setSound(on) { Sfx.soundOn = !!on; },
 
     // 纯计算接口（测试 / 调试用）
     render(name) { return render(name).slice(); },
-    renderMusic(kind) { return renderMusicSync(kind); },
+    // 离线渲染一段音乐（测试用）→ Promise<{ buffer, peak, rms, ... }>
+    renderMusic(kind, seconds) {
+      if (!SG.Music) return Promise.resolve(null);
+      return SG.Music.renderOffline(SG.Music.resolve(kind, Sfx.culture) || kind, seconds || 20);
+    },
     get context() { return ctx; },
-    get playingMusic() { return musicSrcKind; },
+    get playingMusic() { return playingKey; },
+    get musicEngine() { return engine; },
   };
 
   // 供测试比较：逐点版本的拨弦

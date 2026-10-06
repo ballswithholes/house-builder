@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>必杀技 测试</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a20; }
+  #app { position: fixed; inset: 0; }
+  #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  #panel { position: fixed; z-index: 20; left: 0; top: 0; bottom: 0; width: min(560px, 48vw); display: flex; flex-direction: column;
+    background: rgba(14,14,20,.9); border-right: 1px solid rgba(243,201,105,.35); color: #f5eddb;
+    font: 13px/1.45 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei";
+    transition: transform .25s ease; padding-left: env(safe-area-inset-left); }
+  #panel.hide { transform: translateX(-100%); }
+  #panel h1 { margin: 0; font: 700 20px/1.2 "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; color: #f3c969; }
+  #head { padding: 10px 12px 8px; border-bottom: 1px solid rgba(243,201,105,.2); }
+  #check { margin-top: 6px; font-size: 12.5px; }
+  #check .ok { color: #73d98c; font-weight: 700; } #check .bad { color: #ff7361; font-weight: 700; }
+  #check details { margin-top: 4px; } #check summary { cursor: pointer; color: #d8cfbb; }
+  #check pre { white-space: pre-wrap; margin: 4px 0; font-size: 11.5px; color: #d8cfbb; max-height: 30vh; overflow: auto; }
+  #tools { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  #tools input { flex: 1; min-width: 120px; height: 34px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(243,201,105,.35);
+    background: rgba(0,0,0,.35); color: #f5eddb; font: inherit; }
+  .tb { min-height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(243,201,105,.45); background: rgba(40,36,48,.9); color: #f5eddb; font: inherit; cursor: pointer; }
+  .tb.on, .tb:active { background: #c8382c; border-color: #f3c969; }
+  #list { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 4px 8px 12px; }
+  .row { display: grid; grid-template-columns: 5.4em 1fr auto; gap: 2px 8px; padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,.06); align-items: start; }
+  .row:hover { background: rgba(243,201,105,.06); }
+  .row .gen { font-weight: 700; color: #f5eddb; } .row .gen small { display: block; color: #a8a194; font-weight: 400; font-size: 11px; }
+  .row .sp { font: 700 15px/1.3 "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; }
+  .row .sp .tag { font: 600 10.5px/1 system-ui,sans-serif; color: #14121a; background: #f3c969; border-radius: 4px; padding: 2px 4px; margin-left: 6px; vertical-align: 2px; }
+  .row .sp .tag.auto { background: #6b6576; color: #f5eddb; }
+  .row .rules { grid-column: 2 / 4; color: #d8cfbb; font-size: 11.5px; }
+  .row .desc { grid-column: 2 / 4; color: #b9b0a0; font-size: 12px; }
+  .row .sig { grid-column: 2 / 4; color: #6f6a78; font-size: 10.5px; font-family: ui-monospace,monospace; word-break: break-all; }
+  .row .tb { min-height: 32px; padding: 0 10px; }
+  #toggle { position: fixed; z-index: 21; top: 8px; left: calc(min(560px, 48vw) + 8px); transition: left .25s ease; min-height: 40px; }
+  #panel.hide + #toggle { left: calc(8px + env(safe-area-inset-left)); }
+  #card { position: fixed; z-index: 15; right: 10px; bottom: 10px; max-width: 320px; pointer-events: none; color: #f5eddb;
+    background: rgba(14,14,20,.82); border: 1px solid rgba(243,201,105,.4); border-radius: 10px; padding: 8px 10px; font: 12.5px/1.45 system-ui,"WenQuanYi Zen Hei",sans-serif; }
+  #card b { color: #f3c969; } #card .sp { font: 700 16px/1.3 "STKaiti","KaiTi",serif,"WenQuanYi Zen Hei"; }
+  @media (max-height: 540px) {
+    #panel { width: min(470px, 56vw); font-size: 12px; }
+    #toggle { left: calc(min(470px, 56vw) + 6px); }
+    #head { padding: 6px 10px; } #panel h1 { font-size: 16px; }
+    .row { grid-template-columns: 4em 1fr auto; padding: 5px 4px; }
+    .row .sig { display: none; }
+    #card { max-width: 240px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<div id="panel">
+  <div id="head">
+    <h1>必杀技 · 全武将一览</h1>
+    <div id="check">自检中…</div>
+    <div id="tools">
+      <input id="q" placeholder="筛选：武将 / 招式 / 机制（如 smite、火攻）" autocomplete="off">
+      <button class="tb" id="handOnly">只看手写</button>
+      <button class="tb" id="demoAll">连播手写招式</button>
+    </div>
+  </div>
+  <div id="list"></div>
+</div>
+<button class="tb" id="toggle">列表</button>
+<div id="card" style="display:none"></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script>
+'use strict';
+/* 必杀技测试页（DESIGN-V2 §4D）
+   页首：全部武将的招式一览与唯一性自检（名称、(机制, 参数) 组合、数据问题）。
+   右侧：小战场，点「演示」即由该武将施展必杀技（真实 BattleModel + BattleView + SG.Specials.perform）。
+   参数：?demo=关羽      载入后自动演示该武将
+         ?all=1         连播全部手写招式
+         ?nogl=1        只显示列表（不建三维场景）
+         ?clash=1       同时载入 js/clash.js / portrait（若存在），特写改用 SG.Clash.cutIn
+         ?seed=N        随机数种子（默认 7）
+         ?vt=1          虚拟时钟：每帧固定推进 1/30 秒（软件渲染下截图逐帧检查特效用） */
+(function () {
+  const Q = new URLSearchParams(location.search);
+  // 虚拟时钟：performance.now() 只随渲染帧推进，动画在慢速渲染下也不跳帧
+  let vtNow = null;
+  if (Q.get('vt')) {
+    const real = performance.now.bind(performance);
+    vtNow = real();
+    performance.now = () => vtNow;
+    window.__vt = () => vtNow;
+  }
+  const files = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/specials-data.js', '../js/specials.js',
+    '../js/audio.js', '../js/ui.js', '../js/art.js', '../js/camera.js', '../js/battle-view.js'];
+  const optional = Q.get('clash') ? ['../js/portrait-data.js', '../js/portrait.js', '../js/clash.js'] : [];
+  function load(src, opt) {
+    return new Promise(res => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => res(true);
+      s.onerror = () => { if (!opt) console.warn('missing ' + src); res(false); };
+      document.body.appendChild(s);
+    });
+  }
+  (async function () {
+    for (const f of files) await load(f);
+    for (const f of optional) await load(f, true);
+    SG.Random.seed(+(Q.get('seed') || 7));
+    try { buildList(); } catch (e) { console.error(e); }
+    if (!Q.get('nogl')) { try { await startField(); } catch (e) { console.error(e); window.__error = String(e && e.stack || e); } }
+    window.__ready = true;
+    if (Q.get('demo')) demo(Q.get('demo'));
+    else if (Q.get('all')) demoAll();
+  })();
+
+  const esc = s => SG.esc(String(s));
+  const $ = id => document.getElementById(id);
+
+  // ------------------------------------------------------------ 一览与自检 --
+  let roster = [];
+  function buildList() {
+    const S = SG.Specials;
+    roster = SG.ScenarioData.Generals.map(l => { const p = l.split('|'); return { name: p[0], war: +p[1], intel: +p[2], pol: +p[3], fk: p[4] }; });
+    const rep = S.check(roster);
+    window.__check = rep;
+    const kinds = {};
+    for (const sp of S.all(roster)) kinds[sp.kind] = (kinds[sp.kind] || 0) + 1;
+    const mark = ok => ok ? '<span class="ok">✔</span>' : '<span class="bad">✘</span>';
+    const missing = rep.missing.length;
+    $('check').innerHTML =
+      `<div>${mark(rep.ok)} <b>${rep.total}</b> 名武将的必杀技：手写 <b>${rep.hand}</b>，兜底生成 <b>${rep.auto}</b></div>` +
+      `<div>${mark(missing === 0)} 每位武将都有招式　${mark(rep.dupNames.length === 0)} 名称唯一（重名 ${rep.dupNames.length}）　` +
+      `${mark(rep.dupSigs.length === 0)} (机制, 参数) 唯一（重复 ${rep.dupSigs.length}）　${mark(rep.problems.length === 0)} 数据问题 ${rep.problems.length}</div>` +
+      `<details><summary>机制分布与参数表</summary><pre>${esc(Object.keys(kinds).sort().map(k => S.kindName(k) + ' ' + k + ' ×' + kinds[k]).join('　'))}\n\n` +
+      esc(Object.keys(S.KINDS).map(k => { const K = S.KINDS[k]; return k + '（' + K.label + '，依' + ({ war: '武力', intel: '智力', pol: '政治' }[K.stat]) + '，' + K.fx + '）: ' + Object.keys(K.params).map(p => p + ' ' + K.params[p][0] + ' [' + K.params[p][1] + ',' + K.params[p][2] + ']').join(' · '); }).join('\n')) +
+      `\n\n特效风格：${esc(S.FX.join(' '))}</pre></details>` +
+      (rep.ok ? '' : `<details open><summary>问题明细</summary><pre>${esc(rep.dupNames.map(d => '重名 ' + d.name + '：' + d.gens.join('、')).concat(rep.dupSigs.map(d => '参数重复 ' + d.gens.join('、') + '：' + d.sig), rep.problems).join('\n'))}</pre></details>`);
+    renderRows();
+    $('q').addEventListener('input', renderRows);
+    $('handOnly').addEventListener('click', () => { $('handOnly').classList.toggle('on'); renderRows(); });
+    $('demoAll').addEventListener('click', () => demoAll());
+    $('toggle').addEventListener('click', () => $('panel').classList.toggle('hide'));
+    if (Q.get('demo') || Q.get('all') || Q.get('hide')) $('panel').classList.add('hide');
+  }
+  function renderRows() {
+    const S = SG.Specials;
+    const q = $('q').value.trim().toLowerCase();
+    const handOnly = $('handOnly').classList.contains('on');
+    const rows = [];
+    for (const g of roster) {
+      const sp = S.of(g);
+      if (handOnly && sp.auto) continue;
+      const hay = (g.name + sp.name + sp.kind + S.kindName(sp.kind) + sp.desc).toLowerCase();
+      if (q && hay.indexOf(q) < 0) continue;
+      rows.push(`<div class="row"><div class="gen">${esc(g.name)}<small>武${g.war} 智${g.intel} 政${g.pol}</small></div>` +
+        `<div class="sp" style="color:${sp.color}">「${esc(sp.name)}」<span class="tag${sp.auto ? ' auto' : ''}">${sp.auto ? '生成' : '手写'}</span></div>` +
+        `<button class="tb" data-demo="${esc(g.name)}">演示</button>` +
+        `<div class="rules">${esc(S.rules(sp))}　· 特效 ${esc(sp.fx)}</div><div class="desc">${esc(sp.desc)}</div>` +
+        `<div class="sig">${esc(S.signature(sp))}</div></div>`);
+    }
+    $('list').innerHTML = rows.join('') || '<div style="padding:12px;color:#a8a194">无匹配</div>';
+    for (const b of $('list').querySelectorAll('[data-demo]')) b.addEventListener('click', () => { if (window.innerHeight <= 540) $('panel').classList.add('hide'); demo(b.getAttribute('data-demo')); });
+  }
+
+  // ------------------------------------------------------------ 小战场 --
+  let F = null;            // { Mdl, view, rig, units, base }
+  async function startField() {
+    SG.Gfx.init($('app'));
+    try { SG.UI.init(); } catch (e) { console.error(e); }
+    try { if (SG.Sfx && SG.Sfx.init) SG.Sfx.init(); } catch (e) { console.error(e); }
+    document.addEventListener('pointerdown', () => { try { SG.Sfx && SG.Sfx.unlock && SG.Sfx.unlock(); } catch (e) { /* 无音频 */ } }, { once: true });
+    const g = SG.G = SG.GameState.newGame('liubei');
+    const src = g.cityByKey('pingyuan'), tgt = g.cityByKey('nanpi');
+    const pick = names => names.map(n => g.generals.find(x => x.name === n));
+    const atk = pick(['刘备', '简雍', '关平']);
+    const def = pick(['颜良', '文丑', '高览', '审配']);
+    for (const x of atk.concat(def)) { x.troops = SG.maxTroops(x); x.training = 70; }
+    const s = SG.Conquest.prepare(src.owner, src, tgt, atk, 2000, 0);
+    s.def = def;
+    const Mdl = new SG.BattleModel(s);
+    // 演示场地：左侧 8 列平原（几处林地），第 8 列为河
+    const Tn = SG.Terrain;
+    for (let x = 0; x < 8; x++) for (let y = 0; y < Mdl.H; y++) { Mdl.map[x][y] = Tn.Plain; Mdl.height[x][y] = 0.02 + ((x * 7 + y * 3) % 5) * 0.012; }
+    for (const [x, y] of [[6, 6], [7, 6], [6, 7], [7, 3], [1, 8], [0, 1]]) { Mdl.map[x][y] = Tn.Forest; Mdl.height[x][y] = 0.04; }
+    for (let y = 0; y < Mdl.H; y++) { Mdl.map[8][y] = Tn.River; Mdl.height[8][y] = -0.15; }
+    const units = Mdl.units;
+    const base = units.map(u => ({ gen: u.gen, troops: u.troops, morale: 80 }));
+    const view = new SG.BattleView(Mdl);
+    if (!view.group.parent) SG.Gfx.scene.add(view.group);
+    const rig = new SG.CameraRig(SG.Gfx.camera, SG.Gfx.renderer.domElement);
+    rig.bounds = { xMin: 400, yMin: 0, xMax: 400 + Mdl.W * 2, yMax: Mdl.H * 2 };
+    rig.minDist = 12; rig.maxDist = 62;
+    F = { Mdl, view, rig, units, base, busy: false };
+    window.F = F;
+    arrange('smite');
+    focus();
+    let last = performance.now();
+    function frame() {
+      if (vtNow !== null) vtNow += 1000 / 30;
+      const n = performance.now();
+      const dt = Math.min(0.1, (n - last) / 1000);
+      last = n;
+      rig.update(dt);
+      view.update(dt);
+      SG.Gfx.setShadowFocus(rig.target, Math.max(30, rig.distance * 0.95));
+      SG.UI.updateFollowers(SG.Gfx.camera);
+      SG.Gfx.render();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    window.addEventListener('resize', focus);
+  }
+  function focus() {
+    if (!F) return;
+    const phone = window.innerHeight <= 540;
+    const p = F.view.tile(4, 5);
+    // 列表面板占左侧时，把镜头目标往左移，让战场落在右侧空白处
+    const hidden = $('panel').classList.contains('hide');
+    if (!hidden) p.x -= phone ? 5 : 6;
+    F.rig.focusWorld(p, phone ? 30 : 34, true);
+  }
+
+  // 按招式类型摆放：施展者 C、友军 A1 A2、敌军 E1–E4
+  const LAYOUT = {
+    melee: { C: [3, 5], A: [[2, 3], [2, 7]], E: [[4, 5], [4, 6], [5, 5], [3, 6]] },
+    ranged: { C: [2, 5], A: [[1, 3], [1, 7]], E: [[5, 5], [5, 6], [6, 5], [5, 4]] },
+    line: { C: [2, 5], A: [[1, 3], [1, 7]], E: [[5, 5], [5, 7], [6, 6], [5, 3]] },
+    support: { C: [3, 5], A: [[3, 4], [2, 6]], E: [[5, 5], [5, 4], [6, 5], [5, 6]] },
+  };
+  function layoutFor(kind) {
+    if (kind === 'charge') return LAYOUT.line;
+    if (['volley', 'blaze', 'storm', 'flood', 'scheme', 'poison', 'assassinate'].indexOf(kind) >= 0) return LAYOUT.ranged;
+    if (['rally', 'command', 'fortify', 'haste', 'heal'].indexOf(kind) >= 0) return LAYOUT.support;
+    return LAYOUT.melee;
+  }
+  function arrange(kind, casterGen) {
+    const { Mdl, view, units, base } = F;
+    const L = layoutFor(kind);
+    const atk = units.filter(u => u.side === 0), def = units.filter(u => u.side === 1);
+    units.forEach((u, i) => {
+      u.gen = base[i].gen;
+      u.gen.troops = base[i].troops;
+      u.morale = base[i].morale; u.alive = true; u.confused = 0; u.acted = false; u.specialUsed = false; u.mods = [];
+    });
+    if (casterGen) { atk[0].gen = casterGen; casterGen.troops = SG.maxTroops(casterGen); casterGen.training = 70; }
+    const C = atk[0];
+    C.x = L.C[0]; C.y = L.C[1];
+    atk.slice(1).forEach((u, i) => { u.x = L.A[i][0]; u.y = L.A[i][1]; });
+    def.forEach((u, i) => { u.x = L.E[i][0]; u.y = L.E[i][1]; });
+    if (kind === 'haste') atk.slice(1).forEach(u => { u.acted = true; });
+    if (kind === 'heal' || kind === 'rally') atk.forEach(u => { u.gen.troops = Math.round(SG.maxTroops(u.gen) * 0.55); u.morale = 45; });
+    for (let x = 0; x < Mdl.W; x++) for (let y = 0; y < Mdl.H; y++) Mdl.burning[x][y] = 0;
+    Mdl.side = 0; Mdl.ap = 5; Mdl.result = 0; Mdl.resultReason = ''; Mdl.day = 3;
+    for (const u of units) {
+      const v = view.vis(u);
+      if (!v) continue;
+      v.pos.copy(view.tile(u.x, u.y));
+      v.group.visible = true;
+      v.facing = u.side === 0 ? 90 : -90;
+      v.refresh();
+    }
+    view.clearHighlights();
+    view.setCursor(null);
+  }
+  function showCard(u) {
+    const c = $('card');
+    if (!u) { c.style.display = 'none'; return; }
+    const sp = SG.Specials.of(u.gen);
+    c.style.display = '';
+    c.innerHTML = `<div><b>${esc(u.gen.name)}</b>　兵 ${u.troops}　士气 ${u.morale}　武${u.gen.war} 智${u.gen.intel} 政${u.gen.pol}</div>` +
+      `<div class="sp" style="color:${sp.color}">「${esc(sp.name)}」</div><div>${esc(SG.Specials.rules(sp))}</div>`;
+  }
+
+  async function demo(name) {
+    if (!F || F.busy) return;
+    const g = SG.G.generals.find(x => x.name === name) || roster.find(x => x.name === name);
+    if (!g) return;
+    // 施展者用一份副本（被演示的武将可能正站在敌方阵中）
+    const gen = Object.assign({ faction: -1, training: 70, troops: 4000 }, SG.G.generals.find(x => x.name === name) || g, { id: 8000 });
+    F.busy = true;
+    try {
+      const sp = SG.Specials.of(gen);
+      arrange(sp.kind, gen);
+      focus();
+      await SG.wait(0.35);
+      const Mdl = F.Mdl, u = F.units.filter(x => x.side === 0)[0];
+      const cands = Mdl.specialTargets(u);
+      let best = cands[0] || null, bv = -1;
+      for (const t of cands) { const v = Mdl.specialValue(u, Mdl.specialPlan(u, t)); if (v > bv) { bv = v; best = t; } }
+      const bc = {
+        M: Mdl, V: F.view, showCard, updateHud() {}, pickEnemy: async list => list[0],
+      };
+      showCard(u);
+      window.__lastRes = await SG.Specials.perform(bc, u, best, { rig: F.rig });
+      window.__demoDone = (window.__demoDone || 0) + 1;
+      await SG.wait(0.6);
+      showCard(u);
+    } catch (e) { console.error(e); }
+    finally { F.busy = false; }
+  }
+  window.demo = demo;
+  async function demoAll() {
+    const names = roster.filter(g => !SG.Specials.of(g).auto).map(g => g.name);
+    for (const n of names) { await demo(n); await SG.wait(0.8); }
+    window.__allDone = true;
+  }
+  window.demoAll = demoAll;
+})();
+</script>
+</body>
+</html>

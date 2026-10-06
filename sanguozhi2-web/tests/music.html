@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>音乐测试 · 三国志II</title>
+<style>
+  :root { --bg: #12121a; --panel: rgba(28,27,38,.95); --gold: #f3c969; --red: #c8382c; --text: #f0e8d6; --dim: #a59d8c; --ok: #6fcf7a; --bad: #ff7a6a; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei"; }
+  body { padding: 14px max(14px, env(safe-area-inset-right)) 40px max(14px, env(safe-area-inset-left)); }
+  h1 { font-family: "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif; color: var(--gold); font-weight: normal; margin: 4px 0 10px; font-size: 26px; letter-spacing: .08em; }
+  h2 { font-size: 16px; color: var(--gold); margin: 18px 0 8px; font-weight: normal; letter-spacing: .1em; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button { min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(243,201,105,.45);
+    background: #23212d; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+  button:hover { border-color: var(--gold); }
+  button.on { background: var(--red); border-color: #ffb199; }
+  button.sm { min-height: 34px; font-size: 12px; padding: 0 8px; }
+  .panel { background: var(--panel); border: 1px solid rgba(243,201,105,.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  #now { font-size: 14px; color: var(--dim); margin-top: 8px; min-height: 20px; }
+  #now b { color: var(--gold); font-weight: normal; }
+  .lbl { color: var(--dim); font-size: 13px; margin-right: 4px; }
+  input[type=range] { width: 160px; }
+  table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  td, th { border-bottom: 1px solid rgba(255,255,255,.08); padding: 4px 6px; text-align: left; vertical-align: top; white-space: nowrap; }
+  th { color: var(--dim); font-weight: normal; }
+  td.ok { color: var(--ok); } td.bad { color: var(--bad); }
+  canvas.viz { display: block; width: 100%; max-width: 980px; height: auto; border-radius: 6px; background: #000; margin: 4px 0 2px; }
+  .errs { color: var(--bad); font-size: 12px; white-space: pre-wrap; }
+  #summary { font-size: 15px; margin: 6px 0; }
+  .card { margin: 8px 0 14px; }
+  .card .t { font-size: 14px; color: var(--gold); }
+  .card .s { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+<h1>音乐测试 · 霸王的大陆</h1>
+
+<div class="panel">
+  <h2>曲目</h2>
+  <div class="row" id="kinds"></div>
+  <h2>地域</h2>
+  <div class="row" id="cultures"></div>
+  <div class="row" style="margin-top:10px">
+    <button id="stop">停止</button>
+    <button id="clashBtn">冲锋乐句（叠加）</button>
+    <span class="lbl">音量</span><input id="vol" type="range" min="0" max="150" value="100">
+    <button id="sfxBtn">音效：hit</button>
+  </div>
+  <div id="now">轻点任一曲目开始（首次点击解锁音频）</div>
+</div>
+
+<div class="panel">
+  <h2>乐器试听</h2>
+  <div class="row" id="insts"></div>
+</div>
+
+<div class="panel">
+  <h2>离线检查（OfflineAudioContext，每首前 <span id="secs">20</span> 秒）</h2>
+  <div class="row"><button id="runAll">全部检查</button><span class="lbl" id="prog"></span></div>
+  <div id="summary"></div>
+  <table id="tbl"><thead><tr><th>曲目</th><th>标题</th><th>循环</th><th>峰值</th><th>RMS</th><th>NaN</th><th>渲染</th><th>采样</th><th>记谱</th></tr></thead><tbody></tbody></table>
+  <div id="cards"></div>
+</div>
+
+<script src="../js/core.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/music-inst.js"></script>
+<script src="../js/music-han.js"></script>
+<script src="../js/music-world.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG, MU = SG.Music, Sfx = SG.Sfx;
+  const q = new URLSearchParams(location.search);
+  const SECS = +(q.get('sec') || 20);
+  document.getElementById('secs').textContent = SECS;
+  const $ = id => document.getElementById(id);
+  function btn(parent, html, fn, cls) { const b = document.createElement('button'); b.innerHTML = html; if (cls) b.className = cls; b.onclick = fn; parent.appendChild(b); return b; }
+
+  Sfx.init();
+  const KINDS = [['title', '标题'], ['map', '战略地图'], ['battle', '战场'], ['battle-defend', '守城'], ['duel', '单挑'], ['council', '外交'],
+    ['victory', '胜利'], ['defeat', '战败'], ['ending', '一统天下']];
+  const CULTURES = [['han', '汉'], ['wa', '倭'], ['korea', '高句丽'], ['steppe', '草原'], ['seasia', '林邑 / 扶南'], ['kushan', '贵霜'],
+    ['persia', '安息'], ['arab', '阿拉伯'], ['roman', '罗马'], ['celt', '凯尔特'], ['german', '日耳曼']];
+  const kindBtns = {}, cultBtns = {};
+  KINDS.forEach(([k, n]) => { kindBtns[k] = btn($('kinds'), n + ' <small style="color:#a59d8c">' + k + '</small>', () => { Sfx.unlock(); Sfx.setMusic(true); Sfx.music(k); mark(); }); });
+  CULTURES.forEach(([c, n]) => { cultBtns[c] = btn($('cultures'), n + ' <small style="color:#a59d8c">' + c + '</small>', () => { Sfx.unlock(); Sfx.setCulture(c); mark(); }); });
+  $('stop').onclick = () => { Sfx.setMusic(false); mark(); };
+  $('clashBtn').onclick = () => { Sfx.unlock(); Sfx.music('clash'); };
+  $('vol').oninput = e => Sfx.setMusicVolume(e.target.value / 100);
+  $('sfxBtn').onclick = () => { Sfx.unlock(); Sfx.play('hit'); };
+  function mark() {
+    for (const k in kindBtns) kindBtns[k].classList.toggle('on', Sfx.musicKind === k && Sfx.musicOn);
+    for (const c in cultBtns) cultBtns[c].classList.toggle('on', Sfx.culture === c);
+  }
+  mark();
+  // 当前播放信息：曲目 key、段落、时间
+  setInterval(() => {
+    const e = Sfx.musicEngine;
+    if (!e || !Sfx.context) return;
+    const tr = e.tracks.filter(t => !t.stopping);
+    const parts = tr.map(t => {
+      const sec = t.seg ? t.C.form[t.segIndex] : '（尾声）';
+      const p = t.C.piece;
+      return '<b>' + t.key + '</b> ' + (p.title || '') + ' · 段 ' + sec + ' · 第 ' + (t.loopCount + 1) + ' 遍 · ' + (Sfx.context.currentTime - t.t0).toFixed(1) + 's';
+    });
+    const st = MU.sampleStats;
+    $('now').innerHTML = (parts.join('<br>') || '静音') + '<br><span style="font-size:12px">采样缓存 ' + st.count + ' 个 / ' + (st.floats * 4 / 1048576).toFixed(1) + ' MB，待渲染 ' + st.jobs + '</span>';
+  }, 250);
+
+  // ------------------------------------------------------------ 乐器试听 --
+  const DEMO = {
+    pluck: '!mf 1 2 3 5 | 6 5 3 2 | 1+5 - 6,* - | 1@ - - - |',
+    melodic: '!mp 5, 6, 1 2_ 3_ | 5 - 6_ 5_ 3 | 2. 3_ 2 1~ | 1 - - 0 |',
+    drum: null,
+  };
+  function demoPiece(name) {
+    const d = MU.INST[name];
+    const P = { title: '试听 ' + (d.label || name), key: 'D', bpm: 84, scale: '1 2 3 5 6', loop: false, voices: {}, kit: {}, pats: {}, sections: {}, form: ['A'] };
+    if (d.type === 'sample' && d.pitchless) {
+      P.kit = { a: { inst: name, art: 0 }, b: { inst: name, art: 1 }, c: { inst: name, art: 2 } };
+      P.pats = { p: { a: 'X...x...x.x.X...', b: '....X.......x.x.', c: '..........x....x' } };
+      P.sections.A = { dr: 'p*2' };
+    } else {
+      const low = /^(pizz|lowstr|sub|timpani|kargyraa|drones|cello|morin|horn|horns)$/.test(name);
+      const mid = /^(ruan|oud|harp|tanpura|gongageng|kempul|kenong|choir|choirOo|cornu)$/.test(name);
+      P.voices.m = { inst: name, oct: low ? -2 : mid ? -1 : 0, drone: '1,,' };
+      if (d.type === 'poly') P.sections.A = { m: '1+5+3\':4 | 6,+3+1\':4 | 4,+1+6:4 | 5,+2+7:4 |' };
+      else P.sections.A = { m: d.type === 'sample' ? DEMO.pluck : DEMO.melodic };
+    }
+    return MU.add('_demo_' + name, P);
+  }
+  Object.keys(MU.INST).sort().forEach(name => {
+    const d = MU.INST[name];
+    btn($('insts'), (d.label || name) + ' <small style="color:#a59d8c">' + name + '</small>', () => {
+      Sfx.unlock();
+      demoPiece(name);
+      const e = Sfx.musicEngine || (Sfx.music('title'), Sfx.musicEngine);
+      setTimeout(() => { const en = Sfx.musicEngine; if (en) en.play('_demo_' + name, { fade: 0.3 }); }, 60);
+    }, 'sm');
+  });
+
+  // ------------------------------------------------------------ 离线检查 --
+  function fft(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2;
+          const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+          const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+        }
+      }
+    }
+  }
+  function colorRamp(v) {   // 0..1 → 深紫 → 红 → 橙 → 淡黄
+    const s = [[0, 0, 4], [40, 11, 84], [101, 21, 110], [159, 42, 99], [212, 72, 66], [245, 125, 21], [250, 193, 39], [252, 255, 164]];
+    const x = Math.max(0, Math.min(1, v)) * (s.length - 1), i = Math.min(s.length - 2, Math.floor(x)), f = x - i;
+    return [0, 1, 2].map(k => Math.round(s[i][k] + (s[i + 1][k] - s[i][k]) * f));
+  }
+  // 波形（上）+ 对数频率声谱（下）
+  function drawViz(canvas, buffer, title, opts) {
+    opts = opts || {};
+    const W = opts.width || 980, WH = 70, SH = opts.height || 190, AX = 16;
+    canvas.width = W; canvas.height = WH + SH + AX;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, canvas.height);
+    const sr = buffer.sampleRate;
+    const s0 = Math.max(0, Math.round((opts.t0 || 0) * sr));
+    const s1 = Math.min(buffer.length, opts.t1 ? Math.round(opts.t1 * sr) : buffer.length);
+    const L = buffer.getChannelData(0).subarray(s0, s1), R = (buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0)).subarray(s0, s1);
+    const n = L.length, tOff = s0 / sr;
+    // 波形：每列最小 / 最大值 + RMS
+    for (let x = 0; x < W; x++) {
+      const a = Math.floor(x * n / W), b = Math.floor((x + 1) * n / W);
+      let mn = 1, mx = -1, s2 = 0;
+      for (let i = a; i < b; i++) { const v = (L[i] + R[i]) * 0.5; if (v < mn) mn = v; if (v > mx) mx = v; s2 += v * v; }
+      const rms = Math.sqrt(s2 / Math.max(1, b - a));
+      g.fillStyle = '#7a6a3a'; g.fillRect(x, WH / 2 - mx * WH / 2, 1, Math.max(1, (mx - mn) * WH / 2));
+      g.fillStyle = '#f3c969'; g.fillRect(x, WH / 2 - rms * WH / 2, 1, Math.max(1, rms * WH));
+    }
+    g.strokeStyle = 'rgba(255,90,70,.5)'; g.beginPath(); g.moveTo(0, WH / 2 - 0.98 * WH / 2); g.lineTo(W, WH / 2 - 0.98 * WH / 2); g.stroke();
+    // 声谱
+    const N = 2048, hann = new Float32Array(N);
+    for (let i = 0; i < N; i++) hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    const img = g.createImageData(W, SH);
+    const fLo = 35, fHi = Math.min(16000, sr / 2);
+    const rows = new Float32Array(SH);
+    for (let y = 0; y < SH; y++) { const f = fLo * Math.pow(fHi / fLo, 1 - y / (SH - 1)); rows[y] = f * N / sr; }
+    const re = new Float32Array(N), im = new Float32Array(N);
+    const dbs = new Float32Array(W * SH);
+    for (let x = 0; x < W; x++) {
+      const c = Math.floor((x + 0.5) * n / W) - N / 2;
+      for (let i = 0; i < N; i++) { const k = c + i; re[i] = k >= 0 && k < n ? (L[k] + R[k]) * 0.5 * hann[i] : 0; im[i] = 0; }
+      fft(re, im);
+      for (let y = 0; y < SH; y++) {
+        const bin = rows[y], b0 = Math.floor(bin), b1 = Math.min(N / 2 - 1, Math.ceil(bin * Math.pow(fHi / fLo, 1 / SH)));
+        let m = 0;
+        for (let b = b0; b <= Math.max(b0, b1); b++) { const p = re[b] * re[b] + im[b] * im[b]; if (p > m) m = p; }
+        // 显示加 +4 dB/倍频程的倾斜（类似粉红噪声加权），中高频细节更清楚
+        dbs[y * W + x] = 10 * Math.log10(m + 1e-12) - 20 * Math.log10(N / 4) + 4 * Math.log2(Math.max(20, bin * sr / N) / 1000);
+      }
+    }
+    // 自动色阶：以 99.5 百分位为顶，向下 60 dB
+    const sorted = Array.from(dbs).sort((a, b) => a - b);
+    const top = sorted[Math.floor(sorted.length * 0.995)];
+    for (let i = 0; i < dbs.length; i++) {
+      const [cr, cg, cb] = colorRamp((dbs[i] - top + 60) / 60);
+      const o = i * 4;
+      img.data[o] = cr; img.data[o + 1] = cg; img.data[o + 2] = cb; img.data[o + 3] = 255;
+    }
+    g.putImageData(img, 0, WH);
+    // 坐标
+    g.fillStyle = '#a59d8c'; g.font = '11px sans-serif';
+    for (const f of [100, 300, 1000, 3000, 10000]) {
+      const y = WH + (1 - Math.log(f / fLo) / Math.log(fHi / fLo)) * (SH - 1);
+      g.fillText(f >= 1000 ? f / 1000 + 'k' : String(f), 2, y + 4);
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(28, y, W - 28, 1); g.fillStyle = '#a59d8c';
+    }
+    const secs = n / sr;
+    const tick = secs > 60 ? 10 : secs > 24 ? 4 : 2;
+    for (let s = 0; s <= secs; s += tick) { const x = s / secs * W; g.fillText(Math.round(s + tOff) + 's', Math.min(W - 26, x + 2), WH + SH + 12); g.fillRect(x, WH + SH, 1, 4); }
+    g.fillStyle = '#f3c969'; g.fillText(title, W - 8 - g.measureText(title).width, 12);
+  }
+
+  const results = [];
+  window.__musicResults = results;
+  function db(v) { return v > 0 ? (20 * Math.log10(v)).toFixed(1) : '-∞'; }
+  async function checkOne(key) {
+    const C = MU.compile(key);
+    const errs = MU.validate(key);
+    const dur = MU.duration(key);
+    let r;
+    try { r = await MU.renderOffline(key, SECS, {}); }
+    catch (e) { r = { error: String(e && e.stack || e) }; }
+    const row = { key, title: C && C.piece.title, errors: errs, loop: dur ? +dur.loop.toFixed(1) : 0, intro: dur ? +dur.intro.toFixed(1) : 0, oneShot: C && !C.loop,
+      peak: r.peak, rms: r.rms, rmsDb: r.rms ? +db(r.rms) : -999, nan: r.nan, ms: r.ms, prepMs: r.prepMs, schedMs: r.schedMs, error: r.error };
+    const pass = !r.error && r.nan === 0 && r.peak <= 0.98 && r.rms > 0.01 && r.rms < 0.35 && errs.length === 0;
+    row.pass = pass;
+    results.push(row);
+    const tr = document.createElement('tr');
+    const cls = ok => ok ? 'ok' : 'bad';
+    tr.innerHTML = `<td class="${cls(pass)}">${key}</td><td>${row.title || ''}</td><td>${row.oneShot ? '一次 ' + (row.intro + row.loop).toFixed(1) : row.intro.toFixed(1) + ' + ' + row.loop.toFixed(1)}s</td>` +
+      `<td class="${cls(r.peak <= 0.98)}">${r.peak !== undefined ? r.peak.toFixed(3) : '—'}</td><td class="${cls(r.rms > 0.01 && r.rms < 0.35)}">${r.rms ? db(r.rms) + ' dB' : '—'}</td>` +
+      `<td class="${cls(r.nan === 0)}">${r.nan === undefined ? '—' : r.nan}</td><td>${r.ms ? r.ms.toFixed(0) + ' ms' : '—'}</td><td>${r.prepMs !== undefined ? r.prepMs.toFixed(0) + ' ms' : '—'}</td>` +
+      `<td class="${cls(!errs.length)}">${errs.length ? errs.length + ' 处' : '无误'}</td>`;
+    $('tbl').querySelector('tbody').appendChild(tr);
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `<div class="t">${key} · ${row.title || ''}</div><div class="s">峰值 ${r.peak !== undefined ? r.peak.toFixed(3) : '—'} · RMS ${r.rms ? db(r.rms) : '—'} dBFS · 渲染 ${r.ms ? r.ms.toFixed(0) : '—'} ms</div>`;
+    if (errs.length || r.error) { const e = document.createElement('div'); e.className = 'errs'; e.textContent = (r.error ? r.error + '\n' : '') + errs.slice(0, 12).join('\n'); card.appendChild(e); }
+    if (r.buffer) { const cv = document.createElement('canvas'); cv.className = 'viz'; card.appendChild(cv); drawViz(cv, r.buffer, key); }
+    $('cards').appendChild(card);
+    return row;
+  }
+  async function runAll() {
+    results.length = 0;
+    $('tbl').querySelector('tbody').innerHTML = ''; $('cards').innerHTML = '';
+    const only = q.get('only');
+    const keys = MU.keys().filter(k => k[0] !== '_' && (!only || only.split(',').indexOf(k) >= 0));
+    const t0 = performance.now();
+    for (let i = 0; i < keys.length; i++) {
+      $('prog').textContent = (i + 1) + ' / ' + keys.length + ' ' + keys[i];
+      await checkOne(keys[i]);
+    }
+    const bad = results.filter(r => !r.pass);
+    $('summary').innerHTML = bad.length ? `<span style="color:#ff7a6a">${bad.length} 首未通过：${bad.map(r => r.key).join('、')}</span>` : `<span style="color:#6fcf7a">全部 ${results.length} 首通过</span>`;
+    $('prog').textContent = '完成，用时 ' + ((performance.now() - t0) / 1000).toFixed(1) + ' 秒';
+    window.__musicDone = true;
+  }
+  $('runAll').onclick = runAll;
+
+  // Playwright：渲染指定曲目并返回 16 位立体声 PCM（base64）
+  window.__renderPcm = async function (key, seconds, opts) {
+    const r = await MU.renderOffline(key, seconds, opts || {});
+    const L = r.buffer.getChannelData(0), R = r.buffer.getChannelData(1);
+    const n = L.length, out = new Int16Array(n * 2);
+    for (let i = 0; i < n; i++) { out[2 * i] = Math.max(-32767, Math.min(32767, Math.round(L[i] * 32767))); out[2 * i + 1] = Math.max(-32767, Math.min(32767, Math.round(R[i] * 32767))); }
+    const u8 = new Uint8Array(out.buffer);
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return { b64: btoa(s), sr: r.sr, peak: r.peak, rms: r.rms, nan: r.nan, ms: r.ms };
+  };
+  window.__drawViz = drawViz;
+  window.__demoPiece = name => demoPiece(name).key_;
+  if (q.get('auto')) setTimeout(runAll, 100);
+})();
+</script>
+</body>
+</html>

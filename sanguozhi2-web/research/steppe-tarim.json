@@ -1,0 +1,1793 @@
+{
+  "region": "steppe-tarim",
+  "summary": "公元190年，北方草原在檀石槐（181年卒）死后已经分裂：其孙魁头据弹汗山旧庭，与和连之子骞曼争国，弟步度根、扶罗韩各拥部众，小种鲜卑轲比能尚未崛起；东部大人素利、弥加、阙机散处辽西、右北平、渔阳塞外，自成一系。乌桓辽西大人丘力居刚因幽州牧刘虞招抚，结束了与张纯、张举的叛乱，不久（初平中）死去，从子蹋顿代立，总摄三郡乌桓；上谷乌桓难楼拥众九千余落，自称为王。南匈奴新立的单于於夫罗被国人拒于门外，流寓河东平阳，与白波军、张杨、袁绍时合时离；美稷单于庭则由老王摄政，单于之位空缺。西域方面，东汉自170年代以后已无力控制，西域长史名存实亡，于阗、疏勒、车师诸王相互攻杀，鄯善用佉卢文治国、王号仿照贵霜，龟兹、焉耆、乌孙、康居、大宛这一时期的国王名字均已失载；敦煌郡孤悬河西，此后约二十年间甚至没有太守。",
+  "factions": [
+    {
+      "key": "xianbei",
+      "name": "鲜卑",
+      "full": "鲜卑（檀石槐系·魁头部）",
+      "orig": "Xianbei (Kuitou)",
+      "ruler": "魁头",
+      "capital": "danhan",
+      "culture": "steppe",
+      "virtue": 45,
+      "fame": 60,
+      "color": "#4b5320",
+      "note": "檀石槐之孙魁头承袭弹汗山旧庭，但部众已离散；骞曼争国、扶罗韩别拥众数万，内部不稳。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E9%AD%81%E9%A0%AD",
+        "https://zh.wikipedia.org/zh-hans/%E5%92%8C%E9%80%A3",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+        "https://houhanshu.5000yan.com/wuhuanxianbei/2428.html"
+      ]
+    },
+    {
+      "key": "dongxianbei",
+      "name": "东部鲜卑",
+      "full": "东部鲜卑（素利、弥加、厥机诸部）",
+      "orig": "Eastern Xianbei",
+      "ruler": "素利",
+      "capital": "raole",
+      "culture": "steppe",
+      "virtue": 58,
+      "fame": 50,
+      "color": "#8fbc8f",
+      "note": "檀石槐时东部大人素利、弥加、阙机诸部，在辽西、右北平、渔阳塞外；种众多于轲比能，但“道远初不为边患”。游戏中以素利为盟主。",
+      "sources": [
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+        "https://www.cssn.cn/dkzgxp/zgxp_zgshkx/2023nd3q/202305/t20230510_5637246.shtml",
+        "https://www.sohu.com/a/796857217_100294330"
+      ]
+    },
+    {
+      "key": "wuhuan",
+      "name": "乌桓",
+      "full": "三郡乌桓（辽西乌丸）",
+      "orig": "Wuhuan",
+      "ruler": "丘力居",
+      "capital": "liucheng",
+      "culture": "steppe",
+      "virtue": 38,
+      "fame": 62,
+      "color": "#e9967a",
+      "note": "辽西大人丘力居刚结束张纯之乱、受刘虞招抚；初平中卒，从子蹋顿总摄辽西、辽东属国、右北平三郡乌桓。上谷难楼本自立为王，此处并入。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E4%B8%98%E5%8A%9B%E5%B1%85",
+        "https://zh.wikipedia.org/zh-hans/%E8%B9%8B%E9%A0%93",
+        "https://zh.wikipedia.org/zh-hans/%E9%9B%A3%E6%A8%93",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "key": "xiongnu",
+      "name": "南匈奴",
+      "full": "南匈奴（持至尸逐侯单于於夫罗）",
+      "orig": "Southern Xiongnu",
+      "ruler": "於夫罗",
+      "capital": "pingyang",
+      "culture": "steppe",
+      "virtue": 40,
+      "fame": 48,
+      "color": "#2f4f4f",
+      "note": "188年即位的於夫罗被国人拒纳，率数千骑流寓河东平阳；美稷单于庭由老王行国事，单于之位空缺。195年於夫罗死，弟呼厨泉立。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E6%8C%81%E8%87%B3%E5%B0%B8%E9%80%90%E4%BE%AF%E5%96%AE%E4%BA%8E",
+        "https://en.wikipedia.org/wiki/Chizhishizhuhou_Chanyu",
+        "https://houhanshu.5000yan.com/nanxiongnu/2440.html",
+        "https://zh.wikisource.org/zh-hans/%E5%BE%8C%E6%BC%A2%E6%9B%B8/%E5%8D%B789"
+      ]
+    },
+    {
+      "key": "kroraina",
+      "name": "鄯善",
+      "full": "鄯善国（Kroraina，楼兰）",
+      "orig": "Kroraina",
+      "ruler": "童格罗伽",
+      "capital": "shanshan",
+      "culture": "tarim",
+      "virtue": 62,
+      "fame": 45,
+      "color": "#e6c86e",
+      "note": "佉卢文书显示鄯善诸王自称“大王、众王之王、天子”，仿照贵霜王号。童格罗伽是文书所见最早的国王，确切年代未定（约2世纪末至3世纪初），游戏中提前放在190年。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Shanshan",
+        "https://www.whb.cn/zhuzhan/bihui/20150123/22858.html",
+        "https://reader.book.qq.com/read/1024905687/6"
+      ]
+    },
+    {
+      "key": "khotan",
+      "name": "于阗",
+      "full": "于阗国",
+      "orig": "Khotan",
+      "ruler": "安国",
+      "capital": "yutian",
+      "culture": "tarim",
+      "virtue": 40,
+      "fame": 48,
+      "color": "#8ecae6",
+      "note": "152年于阗王建被西域长史王敬所杀，国人立其子安国；175年安国攻破拘弥。此后史书不载于阗王名，游戏沿用安国。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%AE%89%E5%9B%BD_(%E4%BA%8E%E9%98%97)",
+        "https://news.qq.com/rain/a/20220108A04G2400"
+      ]
+    },
+    {
+      "key": "kashgar",
+      "name": "疏勒",
+      "full": "疏勒国",
+      "orig": "Kashgar (Shule)",
+      "ruler": "和得",
+      "capital": "shule",
+      "culture": "tarim",
+      "virtue": 15,
+      "fame": 40,
+      "color": "#ff8c00",
+      "note": "168年和得射杀侄子、疏勒王臣磐后自立，170年汉军三万余人攻他不下；此后“疏勒王连相杀害”，游戏沿用和得。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E5%92%8C%E5%BE%97",
+        "https://en.wikipedia.org/wiki/Shule_Kingdom"
+      ]
+    },
+    {
+      "key": "jushi",
+      "name": "车师",
+      "full": "车师后部",
+      "orig": "Jushi (Further Kingdom)",
+      "ruler": "阿罗多",
+      "capital": "wutugu",
+      "culture": "tarim",
+      "virtue": 35,
+      "fame": 35,
+      "color": "#bc8f8f",
+      "note": "车师后部王阿罗多153年反叛，后被汉朝复立。车师前部（交河）此期王名失载，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%8D%91%E5%90%9B",
+        "https://zh.wikipedia.org/zh-hant/%E8%BD%A6%E5%B8%88"
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "key": "danhan",
+      "name": "弹汗山",
+      "full": "弹汗山·歠仇水（鲜卑王庭）",
+      "orig": "Danhan Mountain",
+      "modern": "河北尚义—内蒙古商都、兴和一带（东洋河上源）",
+      "lon": 113.9,
+      "lat": 41.2,
+      "owner": "xianbei",
+      "culture": "steppe",
+      "land": 300,
+      "industry": 250,
+      "town": 260,
+      "population": 320000,
+      "gold": 600,
+      "food": 9000,
+      "note": "檀石槐“立庭于弹汗山歠仇水上，去高柳北三百余里”；具体位置有尚义大青山、商都等说法。魁头时期是否仍以此为庭，史无明文。",
+      "sources": [
+        "https://baike.baidu.com/item/%E5%BC%B9%E6%B1%97%E5%B1%B1/10179678",
+        "https://zh.wikipedia.org/wiki/%E6%AA%80%E7%9F%B3%E6%A7%90"
+      ]
+    },
+    {
+      "key": "raole",
+      "name": "饶乐水",
+      "full": "饶乐水（东部鲜卑牧地）",
+      "orig": "Raole River (Xar Moron)",
+      "modern": "内蒙古赤峰一带，西拉木伦河—老哈河流域",
+      "lon": 119.0,
+      "lat": 42.8,
+      "owner": "dongxianbei",
+      "culture": "steppe",
+      "land": 300,
+      "industry": 250,
+      "town": 250,
+      "population": 280000,
+      "gold": 500,
+      "food": 8000,
+      "note": "《后汉书》说鲜卑“以季春月大会于饶乐水上”。素利、弥加、厥机在辽西、右北平、渔阳塞外，取这一带作为节点。",
+      "sources": [
+        "https://zh.wikisource.org/wiki/%E5%BE%8C%E6%BC%A2%E6%9B%B8/%E5%8D%B790",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "key": "liucheng",
+      "name": "柳城",
+      "full": "辽西柳城（乌桓王庭）",
+      "orig": "Liucheng",
+      "modern": "辽宁朝阳",
+      "lon": 120.4,
+      "lat": 41.5,
+      "owner": "wuhuan",
+      "culture": "steppe",
+      "land": 340,
+      "industry": 270,
+      "town": 280,
+      "population": 260000,
+      "gold": 600,
+      "food": 9000,
+      "note": "三郡乌桓以柳城为政治中心；207年曹操在柳城附近的白狼山斩杀蹋顿。",
+      "sources": [
+        "http://epaper.lnd.com.cn/lswbepaper/pc/con/202011/06/content_91673.html",
+        "https://baike.baidu.com/item/%E7%99%BD%E7%8B%BC%E5%B1%B1%E4%B9%8B%E6%88%98/3643544"
+      ]
+    },
+    {
+      "key": "ningcheng",
+      "name": "宁城",
+      "full": "上谷宁城（护乌桓校尉府·胡市）",
+      "orig": "Ningcheng (Shanggu)",
+      "modern": "河北张家口（一说怀来）",
+      "lon": 114.9,
+      "lat": 40.7,
+      "owner": "wuhuan",
+      "culture": "han",
+      "land": 330,
+      "industry": 300,
+      "town": 300,
+      "population": 240000,
+      "gold": 700,
+      "food": 8000,
+      "note": "东汉护乌桓校尉的治所，也是与乌桓、鲜卑互市的地方；上谷乌桓难楼九千余落聚居在这一带塞内外。城本身是汉式城郭。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hant/%E6%8A%A4%E4%B9%8C%E6%A1%93%E6%A0%A1%E5%B0%89",
+        "https://k.sina.cn/article_7475940494_1bd99cc8e02000zqf7.html",
+        "https://zh.wikipedia.org/zh-hans/%E9%9B%A3%E6%A8%93"
+      ]
+    },
+    {
+      "key": "meiji",
+      "name": "美稷",
+      "full": "西河美稷（南匈奴单于庭）",
+      "orig": "Meiji",
+      "modern": "内蒙古准格尔旗纳林古城",
+      "lon": 111.0,
+      "lat": 39.7,
+      "owner": "xiongnu",
+      "culture": "steppe",
+      "land": 320,
+      "industry": 260,
+      "town": 270,
+      "population": 220000,
+      "gold": 400,
+      "food": 7000,
+      "note": "50年南单于庭迁到美稷；140年西河郡治南迁离石后，单于庭是否随迁有争议。189年后由老王摄政，於夫罗未能入主。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E7%BE%8E%E7%A8%B7%E5%8E%BF",
+        "http://www.silkroads.org.cn/portal.php?mod=view&aid=86074",
+        "http://www.silkroads.org.cn/portal.php/portal.php?mod=view&aid=32862"
+      ]
+    },
+    {
+      "key": "pingyang",
+      "name": "平阳",
+      "full": "河东平阳（於夫罗驻地）",
+      "orig": "Pingyang",
+      "modern": "山西临汾",
+      "lon": 111.5,
+      "lat": 36.1,
+      "owner": "xiongnu",
+      "culture": "han",
+      "land": 400,
+      "industry": 320,
+      "town": 300,
+      "population": 320000,
+      "gold": 500,
+      "food": 9000,
+      "note": "於夫罗“复欲归国，国人不受，乃止河东平阳”；此后数十年这里一直是南匈奴的中心。属于中国本部，合并时请留意（另一个可选位置是离石）。",
+      "sources": [
+        "https://houhanshu.5000yan.com/nanxiongnu/2440.html",
+        "https://en.wikipedia.org/wiki/Chizhishizhuhou_Chanyu"
+      ]
+    },
+    {
+      "key": "yinshan",
+      "name": "阴山",
+      "full": "阴山北麓（西部鲜卑牧地）",
+      "orig": "Yin Mountains",
+      "modern": "内蒙古包头以北、达茂—固阳一带",
+      "lon": 110.0,
+      "lat": 41.6,
+      "owner": "-",
+      "culture": "steppe",
+      "land": 280,
+      "industry": 250,
+      "town": 250,
+      "population": 200000,
+      "gold": 400,
+      "food": 6000,
+      "note": "檀石槐时“从上谷以西至敦煌、乌孙”是西部，大人有置鞬落罗、日律推演、宴荔游等；190年时的首领不详，设为空城。拓跋部后来也从这一带南下。",
+      "sources": [
+        "https://www.cssn.cn/dkzgxp/zgxp_zgshkx/2023nd3q/202305/t20230510_5637246.shtml",
+        "https://baike.baidu.com/item/%E6%8B%93%E8%B7%8B%E5%8A%9B%E5%BE%AE/10601676"
+      ]
+    },
+    {
+      "key": "dingling",
+      "name": "丁零",
+      "full": "丁零（贝加尔湖以南、色楞格河流域）",
+      "orig": "Dingling",
+      "modern": "俄罗斯布里亚特—蒙古北部色楞格河流域",
+      "lon": 107.5,
+      "lat": 51.0,
+      "owner": "-",
+      "culture": "steppe",
+      "land": 260,
+      "industry": 250,
+      "town": 250,
+      "population": 180000,
+      "gold": 300,
+      "food": 5000,
+      "note": "85年丁零与鲜卑、南匈奴合击北匈奴；《魏略》记有丁令国“胜兵六万人”。这一时期没有见于记载的人名，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E6%95%95%E5%8B%92",
+        "https://www.sxlib.org.cn/dfzy/sczl/slgs_1/zqsczltw/201808/t20180806_928547.html"
+      ]
+    },
+    {
+      "key": "jiankun",
+      "name": "坚昆",
+      "full": "坚昆（叶尼塞河上游）",
+      "orig": "Jiankun (Kyrgyz)",
+      "modern": "俄罗斯米努辛斯克盆地",
+      "lon": 91.5,
+      "lat": 53.7,
+      "owner": "-",
+      "culture": "steppe",
+      "land": 260,
+      "industry": 280,
+      "town": 250,
+      "population": 160000,
+      "gold": 300,
+      "food": 5000,
+      "note": "《魏略》说坚昆国“胜兵三万人”；汉代坚昆在叶尼塞河上游，以铁器著称。没有见于记载的人名，设为空城。",
+      "sources": [
+        "https://www.sxlib.org.cn/dfzy/sczl/slgs_1/zqsczltw/201808/t20180806_928547.html",
+        "https://m.gushiwen.cn/guwen/bookv_944a1c6a2b99.aspx"
+      ]
+    },
+    {
+      "key": "dunhuang",
+      "name": "敦煌",
+      "full": "敦煌郡",
+      "orig": "Dunhuang",
+      "modern": "甘肃敦煌",
+      "lon": 94.7,
+      "lat": 40.1,
+      "owner": "-",
+      "culture": "han",
+      "land": 380,
+      "industry": 300,
+      "town": 340,
+      "population": 200000,
+      "gold": 700,
+      "food": 9000,
+      "note": "汉郡，190年太守名字不详，凉州诸郡在羌乱中与朝廷隔绝；《仓慈传》说“郡在西陲，以丧乱隔绝，旷无太守二十岁，大姓雄张”。马腾、韩遂并没有控制这里，因此设为空城。",
+      "sources": [
+        "https://5000yan.com/wgg/sanguozhi/rensuduzhengcang/46925.html",
+        "https://zh.wikipedia.org/zh-hans/%E5%BC%A0%E6%81%AD_(%E4%B8%89%E5%9B%BD)"
+      ]
+    },
+    {
+      "key": "yiwu",
+      "name": "伊吾",
+      "full": "伊吾（宜禾都尉屯田）",
+      "orig": "Yiwu (Hami)",
+      "modern": "新疆哈密",
+      "lon": 93.5,
+      "lat": 42.8,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 280,
+      "industry": 250,
+      "town": 260,
+      "population": 150000,
+      "gold": 400,
+      "food": 6000,
+      "note": "东汉北道上的要冲，曾设伊吾司马、宜禾都尉屯田；190年时无人驻守的记载，设为空城。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Battle_of_Yiwulu"
+      ]
+    },
+    {
+      "key": "loulan",
+      "name": "楼兰",
+      "full": "楼兰城（海头，魏晋西域长史府）",
+      "orig": "Kroraina (LA)",
+      "modern": "新疆若羌县罗布泊西北楼兰古城",
+      "lon": 89.9,
+      "lat": 40.5,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 280,
+      "industry": 250,
+      "town": 280,
+      "population": 150000,
+      "gold": 500,
+      "food": 5000,
+      "note": "东汉、魏晋时西域长史的驻地之一（222年曹魏任命西域长史，设府于楼兰海头），属鄯善国境。190年无人驻守的记载，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E8%A5%BF%E5%9F%9F%E9%95%BF%E5%8F%B2%E5%BA%9C",
+        "https://www11.ihp.sinica.edu.tw/storage/w2_file/4664FgNcByp.pdf"
+      ]
+    },
+    {
+      "key": "shanshan",
+      "name": "鄯善",
+      "full": "鄯善国都扜泥城",
+      "orig": "Kuhani / Yuni",
+      "modern": "新疆若羌县（扜泥城的位置有若羌、楼兰LA、米兰等说）",
+      "lon": 88.2,
+      "lat": 39.0,
+      "owner": "kroraina",
+      "culture": "tarim",
+      "land": 300,
+      "industry": 260,
+      "town": 300,
+      "population": 180000,
+      "gold": 600,
+      "food": 6000,
+      "note": "鄯善在东汉吞并了小宛、精绝、戎卢、且末，成为南道大国；扜泥城的具体位置有争议。",
+      "sources": [
+        "https://baike.baidu.com/item/%E6%89%9C%E6%B3%A5%E5%9F%8E/23172444",
+        "http://culture.people.com.cn/BIG5/n1/2019/0317/c1013-30979636.html",
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
+      ]
+    },
+    {
+      "key": "jingjue",
+      "name": "精绝",
+      "full": "精绝（Cadota，尼雅遗址）",
+      "orig": "Cadota (Niya)",
+      "modern": "新疆民丰县北尼雅遗址",
+      "lon": 82.7,
+      "lat": 38.0,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 300,
+      "industry": 250,
+      "town": 270,
+      "population": 160000,
+      "gold": 400,
+      "food": 6000,
+      "note": "东汉时已被鄯善吞并；3世纪大批佉卢文书出土于此。游戏中设为空城，等待鄯善收复。",
+      "sources": [
+        "https://depts.washington.edu/silkroad/texts/niyadocts.html",
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
+      ]
+    },
+    {
+      "key": "yutian",
+      "name": "于阗",
+      "full": "于阗国都西城",
+      "orig": "Khotan",
+      "modern": "新疆和田（约特干遗址）",
+      "lon": 79.9,
+      "lat": 37.1,
+      "owner": "khotan",
+      "culture": "tarim",
+      "land": 400,
+      "industry": 340,
+      "town": 360,
+      "population": 260000,
+      "gold": 900,
+      "food": 10000,
+      "note": "南道大国，《后汉书》记载“户三万二千，口八万三千，胜兵三万余人”；以出产美玉闻名。",
+      "sources": [
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html",
+        "http://www.silkroads.org.cn/portal.php?mod=view&aid=3821"
+      ]
+    },
+    {
+      "key": "shule",
+      "name": "疏勒",
+      "full": "疏勒国都",
+      "orig": "Kashgar",
+      "modern": "新疆喀什",
+      "lon": 76.0,
+      "lat": 39.5,
+      "owner": "kashgar",
+      "culture": "tarim",
+      "land": 380,
+      "industry": 320,
+      "town": 340,
+      "population": 240000,
+      "gold": 800,
+      "food": 9000,
+      "note": "葱岭以东的门户，向西通大宛、大月氏；170年汉军围攻桢中城失败。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Shule_Kingdom",
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
+      ]
+    },
+    {
+      "key": "qiuci",
+      "name": "龟兹",
+      "full": "龟兹国都延城",
+      "orig": "Kucha",
+      "modern": "新疆库车（皮朗古城）",
+      "lon": 83.0,
+      "lat": 41.7,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 400,
+      "industry": 350,
+      "town": 360,
+      "population": 260000,
+      "gold": 800,
+      "food": 10000,
+      "note": "北道大国，冶铁发达。白英（约110–127年在位）之后，到西晋白山（约280年）之间的国王名字均失载，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E9%BE%9F%E5%85%B9",
+        "https://zh.wikipedia.org/zh-hans/%E7%99%BD%E8%8B%B1"
+      ]
+    },
+    {
+      "key": "yanqi",
+      "name": "焉耆",
+      "full": "焉耆国都员渠城",
+      "orig": "Karasahr (Agni)",
+      "modern": "新疆焉耆（博格达沁古城）",
+      "lon": 86.5,
+      "lat": 42.0,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 340,
+      "industry": 280,
+      "town": 300,
+      "population": 200000,
+      "gold": 600,
+      "food": 8000,
+      "note": "元孟（94–127年）之后，到西晋龙安（约285年）之间的国王名字均失载，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E7%84%89%E8%80%86",
+        "https://zh.wikipedia.org/zh-hans/%E5%85%83%E5%AD%9F",
+        "https://zh.wikipedia.org/zh-cn/%E9%BE%99%E5%AE%89"
+      ]
+    },
+    {
+      "key": "jiaohe",
+      "name": "交河",
+      "full": "交河城（车师前部王庭）",
+      "orig": "Jiaohe (Yarkhoto)",
+      "modern": "新疆吐鲁番交河故城",
+      "lon": 89.1,
+      "lat": 43.0,
+      "owner": "-",
+      "culture": "tarim",
+      "land": 320,
+      "industry": 260,
+      "town": 280,
+      "population": 170000,
+      "gold": 500,
+      "food": 7000,
+      "note": "车师前王治交河城，附近的高昌壁是戊己校尉驻地。此期前部王名失载，设为空城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E4%BA%A4%E6%B2%B3%E6%95%85%E5%9F%8E",
+        "https://zh.wikipedia.org/zh-hant/%E8%BD%A6%E5%B8%88"
+      ]
+    },
+    {
+      "key": "wutugu",
+      "name": "车师后部",
+      "full": "车师后部王庭（务涂谷 / 于赖城）",
+      "orig": "Jushi Further Kingdom",
+      "modern": "新疆吉木萨尔县南",
+      "lon": 89.2,
+      "lat": 43.8,
+      "owner": "jushi",
+      "culture": "tarim",
+      "land": 300,
+      "industry": 250,
+      "town": 260,
+      "population": 160000,
+      "gold": 400,
+      "food": 6000,
+      "note": "《后汉书》说后部王居务涂谷，《魏略》作于赖城；车师古道向南翻越天山可到交河。",
+      "sources": [
+        "https://baike.baidu.com/item/%E8%BD%A6%E5%B8%88%E5%90%8E%E5%9B%BD/6059499",
+        "https://zhuanlan.zhihu.com/p/524256185"
+      ]
+    },
+    {
+      "key": "wusun",
+      "name": "乌孙",
+      "full": "乌孙国都赤谷城",
+      "orig": "Wusun (Chigu)",
+      "modern": "吉尔吉斯斯坦伊塞克湖东岸（一说纳伦河上游）",
+      "lon": 78.4,
+      "lat": 42.5,
+      "owner": "-",
+      "culture": "steppe",
+      "land": 320,
+      "industry": 250,
+      "town": 260,
+      "population": 400000,
+      "gold": 500,
+      "food": 8000,
+      "note": "汉代口数六十三万，是西域人口最多的国家；东汉以后大小昆弥分治，国势衰弱，此期王名失载，设为空城。",
+      "sources": [
+        "http://www.silkroads.org.cn/portal.php?mod=view&aid=41044",
+        "https://xianxiao.ssap.com.cn/catalog/7319456/bookid/1883712.html",
+        "https://zh.wikipedia.org/zh-hans/%E7%83%8F%E5%AD%AB"
+      ]
+    },
+    {
+      "key": "kangju",
+      "name": "康居",
+      "full": "康居国（卑阗城）",
+      "orig": "Kangju",
+      "modern": "乌兹别克斯坦塔什干一带（卑阗城的位置未定）",
+      "lon": 69.2,
+      "lat": 41.3,
+      "owner": "-",
+      "culture": "kushan",
+      "land": 320,
+      "industry": 280,
+      "town": 300,
+      "population": 300000,
+      "gold": 700,
+      "food": 8000,
+      "note": "《魏略》说康居“本国无增损”；北匈奴余部约160–260年在康居境内活动。王名失载，设为空城。可能与贵霜区重复，请按 key 合并。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Kangju",
+        "https://baike.baidu.com/item/%E5%BA%B7%E5%B1%85"
+      ]
+    },
+    {
+      "key": "dayuan",
+      "name": "大宛",
+      "full": "大宛国都贵山城",
+      "orig": "Dayuan (Ferghana)",
+      "modern": "费尔干纳盆地（卡散赛或苦盏）",
+      "lon": 71.5,
+      "lat": 41.2,
+      "owner": "-",
+      "culture": "kushan",
+      "land": 400,
+      "industry": 320,
+      "town": 360,
+      "population": 300000,
+      "gold": 800,
+      "food": 11000,
+      "note": "出产汗血马，有七十余城；晋太康六年（285年）才有大宛王蓝庾的记载，此期王名失载，设为空城。可能与贵霜区重复。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%A4%A7%E5%AE%9B",
+        "https://en.wikipedia.org/wiki/Dayuan"
+      ]
+    }
+  ],
+  "links": [
+    [
+      "danhan",
+      "ningcheng",
+      "land"
+    ],
+    [
+      "danhan",
+      "yinshan",
+      "land"
+    ],
+    [
+      "danhan",
+      "raole",
+      "land"
+    ],
+    [
+      "raole",
+      "liucheng",
+      "land"
+    ],
+    [
+      "raole",
+      "ningcheng",
+      "land"
+    ],
+    [
+      "yinshan",
+      "meiji",
+      "land"
+    ],
+    [
+      "meiji",
+      "pingyang",
+      "land"
+    ],
+    [
+      "yinshan",
+      "dingling",
+      "land"
+    ],
+    [
+      "dingling",
+      "jiankun",
+      "land"
+    ],
+    [
+      "jiankun",
+      "wusun",
+      "land"
+    ],
+    [
+      "dunhuang",
+      "loulan",
+      "land"
+    ],
+    [
+      "dunhuang",
+      "shanshan",
+      "land"
+    ],
+    [
+      "dunhuang",
+      "yiwu",
+      "land"
+    ],
+    [
+      "yiwu",
+      "jiaohe",
+      "land"
+    ],
+    [
+      "yiwu",
+      "wutugu",
+      "land"
+    ],
+    [
+      "jiaohe",
+      "wutugu",
+      "land"
+    ],
+    [
+      "jiaohe",
+      "yanqi",
+      "land"
+    ],
+    [
+      "loulan",
+      "yanqi",
+      "land"
+    ],
+    [
+      "loulan",
+      "shanshan",
+      "land"
+    ],
+    [
+      "shanshan",
+      "jingjue",
+      "land"
+    ],
+    [
+      "jingjue",
+      "yutian",
+      "land"
+    ],
+    [
+      "yutian",
+      "shule",
+      "land"
+    ],
+    [
+      "shule",
+      "qiuci",
+      "land"
+    ],
+    [
+      "qiuci",
+      "yanqi",
+      "land"
+    ],
+    [
+      "qiuci",
+      "wusun",
+      "land"
+    ],
+    [
+      "wutugu",
+      "wusun",
+      "land"
+    ],
+    [
+      "shule",
+      "dayuan",
+      "land"
+    ],
+    [
+      "dayuan",
+      "kangju",
+      "land"
+    ],
+    [
+      "wusun",
+      "kangju",
+      "land"
+    ]
+  ],
+  "crossLinks": [
+    {
+      "from": "dunhuang",
+      "toKey": "wuwei",
+      "toName": "武威",
+      "kind": "land",
+      "why": "河西走廊：敦煌经酒泉、张掖到武威"
+    },
+    {
+      "from": "pingyang",
+      "toKey": "jinyang",
+      "toName": "晋阳",
+      "kind": "land",
+      "why": "沿汾水北上到太原"
+    },
+    {
+      "from": "pingyang",
+      "toKey": "luoyang",
+      "toName": "洛阳",
+      "kind": "land",
+      "why": "经轵关、河内南下到洛阳"
+    },
+    {
+      "from": "pingyang",
+      "toKey": "changan",
+      "toName": "长安",
+      "kind": "land",
+      "why": "经安邑、蒲坂渡河到关中"
+    },
+    {
+      "from": "meiji",
+      "toKey": "jinyang",
+      "toName": "晋阳",
+      "kind": "land",
+      "why": "西河郡经离石到太原"
+    },
+    {
+      "from": "danhan",
+      "toKey": "jinyang",
+      "toName": "晋阳",
+      "kind": "land",
+      "why": "鲜卑经高柳、雁门进入并州（屡次寇边的路线）"
+    },
+    {
+      "from": "ningcheng",
+      "toKey": "beiping",
+      "toName": "北平",
+      "kind": "land",
+      "why": "上谷经居庸关到蓟、幽州腹地"
+    },
+    {
+      "from": "raole",
+      "toKey": "beiping",
+      "toName": "北平",
+      "kind": "land",
+      "why": "渔阳塞外经古北口南下"
+    },
+    {
+      "from": "liucheng",
+      "toKey": "beiping",
+      "toName": "北平",
+      "kind": "land",
+      "why": "经卢龙塞、白檀道（207年曹操北征的路线）"
+    },
+    {
+      "from": "liucheng",
+      "toKey": "liaodong",
+      "toName": "辽东（襄平）",
+      "kind": "land",
+      "why": "辽西到辽东；207年乌桓余部投奔公孙康（属朝鲜／辽东研究区）"
+    },
+    {
+      "from": "raole",
+      "toKey": "fuyu",
+      "toName": "夫余",
+      "kind": "land",
+      "why": "东部鲜卑东邻夫余（属朝鲜研究区）"
+    },
+    {
+      "from": "shule",
+      "toKey": "bactra",
+      "toName": "蓝氏城（大夏／巴克特拉）",
+      "kind": "land",
+      "why": "翻越葱岭到大月氏（贵霜）；臣磐曾被流放到月氏，又由月氏送回（属贵霜研究区）"
+    },
+    {
+      "from": "yutian",
+      "toKey": "jibin",
+      "toName": "罽宾",
+      "kind": "land",
+      "why": "经皮山、悬度到罽宾（属贵霜研究区）"
+    },
+    {
+      "from": "dayuan",
+      "toKey": "samarkand",
+      "toName": "撒马尔罕（康国）",
+      "kind": "land",
+      "why": "费尔干纳向西到粟特（属贵霜研究区，若已有该城）"
+    },
+    {
+      "from": "kangju",
+      "toKey": "yancai",
+      "toName": "奄蔡（阿兰）",
+      "kind": "land",
+      "why": "康居西北接奄蔡（阿兰，属萨尔马提亚研究区）"
+    }
+  ],
+  "generals": [
+    {
+      "name": "魁头",
+      "full": "魁头",
+      "orig": "Kuitou",
+      "war": 72,
+      "intel": 50,
+      "pol": 44,
+      "faction": "xianbei",
+      "city": "danhan",
+      "loyalty": 100,
+      "troops": 5000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "鲜卑大人（檀石槐之孙、和连兄子）",
+      "note": "灵帝末年和连进攻北地时中弩身亡，儿子骞曼年幼，由兄子魁头继立；骞曼长大后与他争国，部众离散。能守住旧地却不能重新整合，数值取武力中上、政略一般。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E9%AD%81%E9%A0%AD",
+        "https://zh.wikipedia.org/zh-hans/%E5%92%8C%E9%80%A3",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "骞曼",
+      "full": "骞曼",
+      "orig": "Qianman",
+      "war": 64,
+      "intel": 40,
+      "pol": 34,
+      "faction": "xianbei",
+      "city": "danhan",
+      "loyalty": 60,
+      "troops": 3000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "鲜卑王子（和连之子）",
+      "note": "和连之子，长大后与魁头争夺鲜卑共主之位，导致“众遂离散”；忠诚设低。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hant/%E9%A8%AB%E6%9B%BC",
+        "https://zh.wikipedia.org/zh-hans/%E5%92%8C%E9%80%A3"
+      ]
+    },
+    {
+      "name": "步度根",
+      "full": "步度根",
+      "orig": "Budugen",
+      "war": 74,
+      "intel": 60,
+      "pol": 54,
+      "faction": "xianbei",
+      "city": "danhan",
+      "loyalty": 92,
+      "troops": 4000,
+      "hidden": 0,
+      "born": null,
+      "died": 233,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "鲜卑大人（魁头之弟，后继立）",
+      "note": "魁头死后继立，但“众稍衰弱”；建安年间通过阎柔向曹操进贡，魏初受封为王；233年被轲比能诱使叛魏，兵败后被比能所杀。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E6%AD%A5%E5%BA%A6%E6%A0%B9",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "扶罗韩",
+      "full": "扶罗韩",
+      "orig": "Fuluohan",
+      "war": 76,
+      "intel": 42,
+      "pol": 38,
+      "faction": "xianbei",
+      "city": "danhan",
+      "loyalty": 80,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 218,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "鲜卑大人（步度根中兄，别拥众数万）",
+      "note": "另外拥有部众数万，自为大人；218年领万余骑到桑干迎接叛乱的代郡乌丸能臣氐，却在盟会上被轲比能杀死。勇猛而少谋。",
+      "sources": [
+        "https://www.sohu.com/a/553767471_120602892",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "轲比能",
+      "full": "轲比能",
+      "orig": "Kebineng",
+      "war": 88,
+      "intel": 82,
+      "pol": 76,
+      "faction": "-",
+      "city": "danhan",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 235,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "小种鲜卑大人（后为漠南霸主）",
+      "note": "以“勇健，断法平端，不贪财物”被推为大人；袁绍据河北后，大批汉人投奔他，教作兵器铠楯，部众颇学文字，“勒御部众，拟则中国”。后来控弦十余万骑，235年被幽州刺史王雄派韩龙刺杀。190年尚未崛起，设为在野。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E8%BB%BB%E6%AF%94%E8%83%BD",
+        "https://www.sohu.com/a/553767471_120602892",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "泄归泥",
+      "full": "泄归泥",
+      "orig": "Xieguini",
+      "war": 70,
+      "intel": 48,
+      "pol": 40,
+      "faction": "-",
+      "city": "danhan",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "鲜卑大人（扶罗韩之子）",
+      "note": "218年父亲被轲比能所杀后，率部众归附比能；233年秦朗北征时，他叛离步度根、比能，归降魏朝。",
+      "sources": [
+        "https://www.sohu.com/a/553767471_120602892",
+        "https://zh.wikipedia.org/zh-hans/%E6%AD%A5%E5%BA%A6%E6%A0%B9"
+      ]
+    },
+    {
+      "name": "素利",
+      "full": "素利",
+      "orig": "Suli",
+      "war": 68,
+      "intel": 62,
+      "pol": 60,
+      "faction": "dongxianbei",
+      "city": "raole",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 228,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "东部鲜卑大人（后为魏归义王）",
+      "note": "檀石槐时已是东部大人；建安年间通过阎柔进贡、通市，曹操表奏封王，魏文帝立为归义王；与轲比能长期相攻，太和二年（228年）去世。部众比轲比能还多，却“道远初不为边患”，数值偏向守成。",
+      "sources": [
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+        "https://www.cssn.cn/dkzgxp/zgxp_zgshkx/2023nd3q/202305/t20230510_5637246.shtml"
+      ]
+    },
+    {
+      "name": "弥加",
+      "full": "弥加",
+      "orig": "Mijia",
+      "war": 70,
+      "intel": 48,
+      "pol": 44,
+      "faction": "dongxianbei",
+      "city": "raole",
+      "loyalty": 88,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "东部鲜卑大人（后为魏归义王）",
+      "note": "檀石槐所置东部大人之一，后来与素利同被魏文帝立为归义王。",
+      "sources": [
+        "https://www.cssn.cn/dkzgxp/zgxp_zgshkx/2023nd3q/202305/t20230510_5637246.shtml",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "阙机",
+      "full": "阙机（厥机）",
+      "orig": "Queji",
+      "war": 68,
+      "intel": 46,
+      "pol": 40,
+      "faction": "dongxianbei",
+      "city": "raole",
+      "loyalty": 88,
+      "troops": 3000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "东部鲜卑大人",
+      "note": "《魏书》作阙机，《三国志》作厥机；建安年间受曹操表奏封王，去世后儿子沙末汗嗣立为亲汉王（220年以前）。",
+      "sources": [
+        "https://www.cssn.cn/dkzgxp/zgxp_zgshkx/2023nd3q/202305/t20230510_5637246.shtml",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "沙末汗",
+      "full": "沙末汗",
+      "orig": "Shamohan",
+      "war": 64,
+      "intel": 44,
+      "pol": 42,
+      "faction": "-",
+      "city": "raole",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "东部鲜卑亲汉王（厥机之子）",
+      "note": "厥机死后被立为亲汉王，延康初年（220年）与素利、弥加各自遣使献马。",
+      "sources": [
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+        "https://www.sohu.com/a/796857217_100294330"
+      ]
+    },
+    {
+      "name": "成律归",
+      "full": "成律归",
+      "orig": "Chengliugui",
+      "war": 58,
+      "intel": 48,
+      "pol": 46,
+      "faction": "-",
+      "city": "raole",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "东部鲜卑王（素利之弟，摄政）",
+      "note": "太和二年（228年）素利去世，儿子年幼，由弟弟成律归为王，代管部众。",
+      "sources": [
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "莫护跋",
+      "full": "慕容莫护跋",
+      "orig": "Muhuba",
+      "war": 74,
+      "intel": 66,
+      "pol": 62,
+      "faction": "-",
+      "city": "raole",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "慕容部首领（魏率义王）",
+      "note": "魏初率诸部从塞外迁入辽西；238年随司马懿讨伐公孙渊立功，拜率义王，在棘城之北立国；因喜好步摇冠，被称为“步摇”，音讹为“慕容”。生年不详，推测约生于190年代。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E8%8E%AB%E8%AD%B7%E8%B7%8B",
+        "https://zh.wikipedia.org/zh-hans/%E6%85%95%E5%AE%B9%E9%83%A8"
+      ]
+    },
+    {
+      "name": "丘力居",
+      "full": "丘力居",
+      "orig": "Qiuliju",
+      "war": 78,
+      "intel": 64,
+      "pol": 50,
+      "faction": "wuhuan",
+      "city": "liucheng",
+      "loyalty": 100,
+      "troops": 5000,
+      "hidden": 0,
+      "born": null,
+      "died": 191,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "辽西乌丸大人（自称王）",
+      "note": "统辖五千余落，“皆有计策勇健”；187年与张纯、张举一同叛乱，寇掠青、徐、幽、冀四州，在辽西管子城围困公孙瓒二百余日；189年接受刘虞招抚归降。初平年间（190–193）去世，卒年按191年计。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E4%B8%98%E5%8A%9B%E5%B1%85",
+        "https://zh.wikipedia.org/zh-hans/%E5%BC%B5%E7%B4%94_(%E5%AE%89%E5%AE%9A%E7%8E%8B)",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "蹋顿",
+      "full": "蹋顿",
+      "orig": "Tadun",
+      "war": 86,
+      "intel": 70,
+      "pol": 54,
+      "faction": "wuhuan",
+      "city": "liucheng",
+      "loyalty": 95,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 207,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "乌丸大人（丘力居从子，后总摄三郡乌桓、称单于）",
+      "note": "“有武略”，代丘力居而立，总摄三郡乌桓；出兵助袁绍击破公孙瓒，被袁绍假托诏命授予单于印绶；207年白狼山之战中被张辽斩杀。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E8%B9%8B%E9%A0%93",
+        "https://baike.baidu.com/item/%E7%99%BD%E7%8B%BC%E5%B1%B1%E4%B9%8B%E6%88%98/3643544"
+      ]
+    },
+    {
+      "name": "苏仆延",
+      "full": "苏仆延（速仆丸）",
+      "orig": "Supuyan",
+      "war": 72,
+      "intel": 60,
+      "pol": 44,
+      "faction": "wuhuan",
+      "city": "liucheng",
+      "loyalty": 75,
+      "troops": 2500,
+      "hidden": 0,
+      "born": null,
+      "died": 207,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "辽东属国乌丸大人（峭王）",
+      "note": "统辖千余落，自称峭王；后来与难楼共奉楼班为单于；207年随袁尚、袁熙投奔辽东，被公孙康所杀。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E8%98%87%E5%83%95%E5%BB%B6",
+        "https://baike.baidu.com/item/%E8%8B%8F%E4%BB%86%E5%BB%B6/5022246"
+      ]
+    },
+    {
+      "name": "乌延",
+      "full": "乌延",
+      "orig": "Wuyan",
+      "war": 70,
+      "intel": 54,
+      "pol": 40,
+      "faction": "wuhuan",
+      "city": "liucheng",
+      "loyalty": 75,
+      "troops": 2000,
+      "hidden": 0,
+      "born": null,
+      "died": 207,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "右北平乌丸大人（汗鲁王）",
+      "note": "统辖八百余落，自称汗鲁王，受袁绍单于印绶；207年在辽东被公孙康所杀。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E7%83%8F%E5%BB%B6",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "难楼",
+      "full": "难楼（那楼）",
+      "orig": "Nanlou",
+      "war": 72,
+      "intel": 62,
+      "pol": 56,
+      "faction": "wuhuan",
+      "city": "ningcheng",
+      "loyalty": 65,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "上谷乌丸大人（自称王，后称单于）",
+      "note": "统辖九千余落，是诸部中最大的一支；受袁绍单于印绶，后与苏仆延共奉楼班为单于；216年以“上谷乌丸行单于那楼”的身份朝贺曹操。190年时并不隶属丘力居，因此忠诚设低。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E9%9B%A3%E6%A8%93",
+        "https://zh.wikipedia.org/zh-cn/%E5%BB%BA%E5%AE%89_(%E4%B8%9C%E6%B1%89)"
+      ]
+    },
+    {
+      "name": "楼班",
+      "full": "楼班",
+      "orig": "Louban",
+      "war": 56,
+      "intel": 44,
+      "pol": 40,
+      "faction": "-",
+      "city": "liucheng",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 207,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "乌丸单于（丘力居之子）",
+      "note": "丘力居死时年纪尚小，由蹋顿代立；长大后被难楼、苏仆延奉为单于，蹋顿退为王；207年在辽东被公孙康所杀。",
+      "sources": [
+        "https://baike.baidu.com/item/%E6%A8%93%E7%8F%AD/9382445",
+        "https://zh.wikipedia.org/zh-hans/%E8%B9%8B%E9%A0%93"
+      ]
+    },
+    {
+      "name": "寇娄敦",
+      "full": "寇娄敦",
+      "orig": "Kouloudun",
+      "war": 64,
+      "intel": 50,
+      "pol": 50,
+      "faction": "-",
+      "city": "liucheng",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "右北平乌丸单于（魏时）",
+      "note": "曹魏时的右北平乌丸单于，派弟弟阿罗槃入朝进贡；景初元年（237年）毌丘俭征辽东时，与辽西乌丸都督护留等率五千余人归降。",
+      "sources": [
+        "https://baike.baidu.com/item/%E5%AF%87%E5%A8%84%E6%95%A6/171148",
+        "https://zh-yue.wikipedia.org/wiki/%E9%98%BF%E7%BE%85%E6%A7%83"
+      ]
+    },
+    {
+      "name": "阎柔",
+      "full": "阎柔",
+      "orig": "Yan Rou",
+      "war": 70,
+      "intel": 74,
+      "pol": 72,
+      "faction": "-",
+      "city": "ningcheng",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "han",
+      "attested": "yes",
+      "role": "汉人豪杰（后为护乌丸校尉）",
+      "note": "广阳人，少年时陷没在乌丸、鲜卑中，深得胡人信任；195年借鲜卑之力杀护乌桓校尉邢举而代之，与鲜于辅合兵在鲍丘大破公孙瓒；官渡之战时归附曹操，拜护乌丸校尉、关内侯。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E9%96%BB%E6%9F%94",
+        "https://baike.baidu.com/item/%E9%98%8E%E6%9F%94/4469978"
+      ]
+    },
+    {
+      "name": "普富卢",
+      "full": "普富卢",
+      "orig": "Pufulu",
+      "war": 62,
+      "intel": 44,
+      "pol": 42,
+      "faction": "-",
+      "city": "ningcheng",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "代郡乌丸行单于",
+      "note": "216年率领本部侯王朝见曹操。代郡与上谷相邻，放在宁城。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E5%BB%BA%E5%AE%89_(%E4%B8%9C%E6%B1%89)",
+        "https://www.thepaper.cn/newsDetail_forward_1342244"
+      ]
+    },
+    {
+      "name": "能臣氐",
+      "full": "能臣氐（无臣氐）",
+      "orig": "Nengchendi",
+      "war": 66,
+      "intel": 38,
+      "pol": 30,
+      "faction": "-",
+      "city": "ningcheng",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "代郡乌丸首领",
+      "note": "218年叛魏，先求依附扶罗韩，又改招轲比能，导致扶罗韩在盟会上被杀。",
+      "sources": [
+        "https://www.sohu.com/a/553767471_120602892",
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+      ]
+    },
+    {
+      "name": "於夫罗",
+      "full": "持至尸逐侯单于 於夫罗（於扶罗）",
+      "orig": "Yufuluo",
+      "war": 76,
+      "intel": 52,
+      "pol": 42,
+      "faction": "xiongnu",
+      "city": "pingyang",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 195,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "南匈奴单于（流亡中）",
+      "note": "羌渠单于之子；188年父亲被国人所杀后即位，国人却另立须卜骨都侯，拒不接纳他；他赴洛阳申诉，灵帝死后与白波军合兵寇掠河内，回国不成，只好留在河东平阳；190–191年与张杨屯驻漳水，后劫持张杨背叛袁绍、屯兵黎阳；193年随袁术出兵，在内黄、匡亭被曹操击败；195年去世。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E6%8C%81%E8%87%B3%E5%B0%B8%E9%80%90%E4%BE%AF%E5%96%AE%E4%BA%8E",
+        "https://en.wikipedia.org/wiki/Chizhishizhuhou_Chanyu",
+        "https://zh.wikipedia.org/zh-hans/%E5%B0%81%E4%B8%98%E4%B9%8B%E6%88%98",
+        "https://zh.wikipedia.org/zh-cn/%E5%BC%B5%E6%A5%8A_(%E6%9D%B1%E6%BC%A2)"
+      ]
+    },
+    {
+      "name": "呼厨泉",
+      "full": "呼厨泉单于",
+      "orig": "Huchuquan",
+      "war": 66,
+      "intel": 58,
+      "pol": 56,
+      "faction": "xiongnu",
+      "city": "pingyang",
+      "loyalty": 95,
+      "troops": 3000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "南匈奴王族（於夫罗之弟，195年继为单于）",
+      "note": "於夫罗死后继任单于；216年入朝曹操，被留在邺城，南匈奴就此分为五部。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%91%BC%E5%BB%9A%E6%B3%89",
+        "https://en.wikipedia.org/wiki/Huchuquan"
+      ]
+    },
+    {
+      "name": "去卑",
+      "full": "右贤王 去卑",
+      "orig": "Qubei",
+      "war": 74,
+      "intel": 64,
+      "pol": 58,
+      "faction": "xiongnu",
+      "city": "meiji",
+      "loyalty": 90,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "南匈奴右贤王（呼厨泉之叔）",
+      "note": "195–196年护送汉献帝东归洛阳；216年呼厨泉被留在邺城后，他奉命回国监国。",
+      "sources": [
+        "https://zh.wikipedia.org/wiki/%E5%8E%BB%E5%8D%91",
+        "https://en.wikipedia.org/wiki/Liu_Bao"
+      ]
+    },
+    {
+      "name": "刘豹",
+      "full": "刘豹",
+      "orig": "Liu Bao",
+      "war": 70,
+      "intel": 66,
+      "pol": 62,
+      "faction": "-",
+      "city": "pingyang",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 279,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "南匈奴左贤王（於夫罗之子，刘渊之父）",
+      "note": "195年任左贤王；216年为左部帅，居住在太原兹氏；279年去世。他的世系和年寿有学者存疑。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%8A%89%E8%B1%B9_(%E5%8C%88%E5%A5%B4)",
+        "https://en.wikipedia.org/wiki/Liu_Bao"
+      ]
+    },
+    {
+      "name": "拓跋力微",
+      "full": "拓跋力微（北魏始祖神元皇帝）",
+      "orig": "Tuoba Liwei",
+      "war": 80,
+      "intel": 78,
+      "pol": 76,
+      "faction": "-",
+      "city": "yinshan",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 174,
+      "died": 277,
+      "culture": "steppe",
+      "attested": "yes",
+      "role": "索头鲜卑拓跋部首领",
+      "note": "《魏书·序纪》记载他生于174年、220年继立；起初依附没鹿回部窦宾，后来北居长川，258年迁到盛乐，诸部尽数归附；261年派儿子沙漠汗入魏为质，277年因卫瓘的离间忧愤而死。《魏书》称他享年104岁，带有传说成分。",
+      "sources": [
+        "https://baike.baidu.com/item/%E6%8B%93%E8%B7%8B%E5%8A%9B%E5%BE%AE/10601676",
+        "https://zh.wikipedia.org/zh-hans/%E6%8B%93%E8%B7%8B%E5%8A%9B%E5%BE%AE",
+        "https://zh.wikipedia.org/wiki/261%E5%B9%B4"
+      ]
+    },
+    {
+      "name": "童格罗伽",
+      "full": "童格罗伽天子",
+      "orig": "Tomgraka",
+      "war": 48,
+      "intel": 66,
+      "pol": 72,
+      "faction": "kroraina",
+      "city": "shanshan",
+      "loyalty": 100,
+      "troops": 3000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "鄯善王（佉卢文书称“大王、众王之王、天子”）",
+      "note": "林梅村释读出佉卢文书中最早的鄯善王，文书有“36年”的纪年，可见在位很久，王号与2世纪的贵霜碑铭几乎相同；确切年代未定。数值取守成之君。",
+      "sources": [
+        "https://www.whb.cn/zhuzhan/bihui/20150123/22858.html",
+        "https://en.wikipedia.org/wiki/Shanshan"
+      ]
+    },
+    {
+      "name": "陀阇迦",
+      "full": "陀阇迦",
+      "orig": "Tajaka",
+      "war": 50,
+      "intel": 58,
+      "pol": 62,
+      "faction": "-",
+      "city": "shanshan",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "鄯善王（佉卢文书）",
+      "note": "佉卢文书所见的鄯善王，在位约3年；Brough推定他的元年约在230–235年（长泽和俊的推定更早）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Shanshan",
+        "https://reader.book.qq.com/read/1024905687/6"
+      ]
+    },
+    {
+      "name": "贝比耶",
+      "full": "贝比耶",
+      "orig": "Pepiya",
+      "war": 54,
+      "intel": 60,
+      "pol": 64,
+      "faction": "-",
+      "city": "loulan",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "鄯善王（佉卢文书）",
+      "note": "佉卢文书所见的鄯善王，在陀阇迦之后、安归迦之前，在位约8年。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Shanshan"
+      ]
+    },
+    {
+      "name": "安归迦",
+      "full": "安归迦",
+      "orig": "Aṃgoka",
+      "war": 62,
+      "intel": 74,
+      "pol": 84,
+      "faction": "-",
+      "city": "jingjue",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "鄯善王（鄯善最强盛之君）",
+      "note": "尼雅佉卢文书大多出自他在位时期，安迪尔题记称他信奉大乘；在位36年以上。在位第17年起，王号由“众王之王”降为相当于“侍中/大侯”的称号，一般认为是臣属了中原王朝（长泽和俊定在魏太和四年，即230年；其他学者推定在位约247–282或267–303年）。生年可能晚于205年。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Shanshan",
+        "https://reader.book.qq.com/read/1024905687/6",
+        "https://sxlib.org.cn/dfzy/sczl/slgs_1/sczlxs/201808/t20180806_930679.html"
+      ]
+    },
+    {
+      "name": "安国",
+      "full": "于阗王 安国",
+      "orig": "Anguo",
+      "war": 70,
+      "intel": 56,
+      "pol": 52,
+      "faction": "khotan",
+      "city": "yutian",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "于阗王",
+      "note": "于阗王建之子；152年西域长史王敬杀死建，侯将输僰又杀王敬，国人杀输僰后拥立安国；175年进攻拘弥，大破其国并杀死拘弥王，戊己校尉与西域长史只得发兵另立定兴。此后史书再无记载，190年是否在世不详。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%AE%89%E5%9B%BD_(%E4%BA%8E%E9%98%97)",
+        "https://news.qq.com/rain/a/20220108A04G2400"
+      ]
+    },
+    {
+      "name": "和得",
+      "full": "疏勒王 和得",
+      "orig": "Hede",
+      "war": 72,
+      "intel": 58,
+      "pol": 38,
+      "faction": "kashgar",
+      "city": "shule",
+      "loyalty": 100,
+      "troops": 4000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "疏勒王（篡位）",
+      "note": "168年在狩猎时射杀侄子、疏勒王兼汉大都尉臣磐，自立为王；170年凉州刺史孟佗派任涉、曹宽、张晏率焉耆、龟兹、车师前后部兵三万余人讨伐，围攻桢中城四十余日不能攻下。最后见于170年。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-cn/%E5%92%8C%E5%BE%97",
+        "https://en.wikipedia.org/wiki/Shule_Kingdom"
+      ]
+    },
+    {
+      "name": "阿罗多",
+      "full": "车师后部王 阿罗多",
+      "orig": "Aluoduo",
+      "war": 70,
+      "intel": 48,
+      "pol": 42,
+      "faction": "jushi",
+      "city": "wutugu",
+      "loyalty": 100,
+      "troops": 2500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "车师后部王",
+      "note": "153年与戊部候严皓不和，起兵围攻汉朝屯田，兵败逃入北匈奴；后来从匈奴返回，与卑君争国，汉朝又立他为王。最后见于153年前后，190年是否在世不详。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hant/%E8%BD%A6%E5%B8%88",
+        "https://zh.wikipedia.org/zh-hans/%E5%8D%91%E5%90%9B"
+      ]
+    },
+    {
+      "name": "壹多杂",
+      "full": "壹多杂",
+      "orig": "Yiduoza",
+      "war": 58,
+      "intel": 56,
+      "pol": 62,
+      "faction": "-",
+      "city": "wutugu",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "车师后部王（曹魏时）",
+      "note": "《魏略·西戎传》记载：车师后部王治于赖城，魏赐其王壹多杂守魏侍中，号大都尉，并授魏王印。",
+      "sources": [
+        "https://zhuanlan.zhihu.com/p/524256185",
+        "https://zh.wikipedia.org/zh-hans/%E9%AD%8F%E7%95%A5"
+      ]
+    },
+    {
+      "name": "卑君",
+      "full": "卑君",
+      "orig": "Beijun",
+      "war": 50,
+      "intel": 46,
+      "pol": 48,
+      "faction": "-",
+      "city": "dunhuang",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "tarim",
+      "attested": "yes",
+      "role": "车师后部故王（迁居敦煌）",
+      "note": "后部故王军就的质子；153年被敦煌太守宋亮奏立为后部王，阿罗多复位后，汉朝把他迁回敦煌，另拨后部人三百帐归他役使。同样是较早的人物，190年是否在世不详。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%8D%91%E5%90%9B"
+      ]
+    },
+    {
+      "name": "张恭",
+      "full": "张恭",
+      "orig": "Zhang Gong",
+      "war": 50,
+      "intel": 78,
+      "pol": 84,
+      "faction": "-",
+      "city": "dunhuang",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "han",
+      "attested": "yes",
+      "role": "敦煌郡功曹（后为西域戊己校尉）",
+      "note": "敦煌人，素有学行，任郡功曹；建安末年太守马艾死在任上，郡人推举他代行长史之事；他派儿子张就向曹操请派太守，并抵御酒泉黄华、张掖张进之乱；魏文帝拜他为西域戊己校尉、关内侯。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E5%BC%A0%E6%81%AD_(%E4%B8%89%E5%9B%BD)",
+        "https://zh.wikipedia.org/zh-my/%E5%BC%B5%E5%B0%B1"
+      ]
+    }
+  ],
+  "notes": [
+    "魁头在190年是否仍以弹汗山为王庭，史书没有明文；弹汗山的今地也有尚义大青山、商都等不同说法，坐标取两者之间。",
+    "东部大人中的“槐头”可能就是魁头（同名异写），这里不重复收录。檀石槐时的中部大人柯最、阙居、慕容，西部大人置鞬落罗、日律推演（或即拓跋推寅）、宴荔游等，只见于约160–170年代，190年是否在世不详，未收录。",
+    "丘力居死于“初平中”，卒年按191年计；蹋顿接位的确切年份不详。",
+    "难楼在190年是独立的上谷乌丸王，游戏中并入乌桓势力，忠诚设为65，以体现他的离心；建安初（约196–199年）以后，他确实与蹋顿、苏仆延同受袁绍所授单于印绶，并共奉楼班。",
+    "普富卢、能臣氐属代郡乌丸，代郡与上谷相邻，因此放在宁城；宁城本身是汉式城郭（护乌桓校尉府），城池文化标为 han。",
+    "南匈奴：190年时美稷单于庭由一位未留名的“老王”摄政，单于位空缺；於夫罗则流亡在河东平阳。为了便于游玩，把美稷也划给於夫罗势力，并让去卑驻守。平阳位于中国本部（晋阳、洛阳、长安之间），合并时如果不希望在本部加城，可以改用离石（111.1E, 37.5N）。",
+    "刘豹的生年、他是否真是於夫罗之子，以及“279年卒”是否可信，学界都有争议。",
+    "于阗安国（最后见于175年）、疏勒和得（最后见于170年）、车师后部阿罗多（最后见于153年）都只是在150–260年的放宽时间窗内有记载，游戏中假定他们190年仍然在位。卑君（153年）同样如此。",
+    "鄯善的佉卢文书王统年代分歧很大：Brough把陀阇迦元年定在约230–235年；长泽和俊把安归迦第17年定在230年，即约214年即位；也有人推定安归迦在位247–282年或267–303年。童格罗伽排在陀阇迦之前，有一说约200年即位、在位36年以上（这一说未能找到可靠出处）。游戏把童格罗伽作为190年的鄯善王，陀阇迦、贝比耶、安归迦作为在野人才；按晚期年代，安归迦可能生于205年以后。",
+    "鄯善王名采用中文学界常用的音译：童格罗伽、陀阇迦（又作陀阇伽）、贝比耶、安归迦；尚未找到统一的标准写法。",
+    "龟兹（白英约110–127年；白山约280年）、焉耆（元孟94–127年；龙安约285年）、大宛（蓝庾285年）、乌孙、康居、丁零、坚昆、车师前部，在150–260年之间都没有找到具名人物，按规则设为空城、不配武将。",
+    "西域长史、戊己校尉：最后可考的任职者是170年的西域长史张晏、戊己司马曹宽，以及175年参与扶立拘弥王的未具名长史与校尉；献帝时这两个官职已名存实亡，222年曹魏才重新设置（西域长史驻楼兰海头）。190年的任职者无考，未收录。",
+    "敦煌：190年的太守名字无考，此后约二十年无太守，马腾、韩遂并没有控制敦煌，因此设为空城；张恭作为在野人才放在这里。",
+    "拓跋诘汾、拓跋邻（第二推寅）只见于《魏书·序纪》的传说世系，未收录；拓跋力微（174–277年）也有“享年104岁”之类的传说成分，作为在野人才放在阴山。",
+    "莫护跋生年不详，按他238年仍在领兵推测约生于190年代，作为在野人才收录。",
+    "已死或未收录的人物：檀石槐（181年卒）、和连（灵帝末年卒）、张纯（189年为门客王政所杀）、张举（下落不明）、羌渠单于（188年被杀）、须卜骨都侯（189年卒）、疏勒王臣磐（168年被杀）、拘弥王定兴（175年被立，之后无记载）。",
+    "康居、大宛的文化标为 kushan（按DESIGN-V2 §6），可能与贵霜研究区重复，合并时请按 key（kangju / dayuan）去重；跨区连线中的 bactra / jibin / samarkand / yancai / liaodong / fuyu 等 key 都是猜测，需要合并时核对。",
+    "白波军（郭太、杨奉、韩暹、李乐、胡才）是在河东活动、与於夫罗合兵的汉人起义军，属于中国本部，不在本区收录。"
+  ]
+}

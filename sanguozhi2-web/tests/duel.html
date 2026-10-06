@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>单挑格斗 测试</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14121a; }
+  #app { position: fixed; inset: 0; }
+  #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  #panel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 50; width: min(94vw, 640px); max-height: 94vh; overflow: auto;
+    font: 14px/1.5 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei"; color: #f5eddb;
+    background: rgba(18,18,26,.92); border: 1px solid rgba(243,201,105,.55); border-radius: 12px; padding: 14px 18px; box-sizing: border-box; }
+  #panel h1 { margin: 0 0 8px; font: 700 22px/1.2 "STKaiti","Kaiti SC","KaiTi","Noto Serif SC",serif,"WenQuanYi Zen Hei"; color: #f3c969; letter-spacing: .2em; }
+  #panel .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 6px 0; }
+  #panel label { display: flex; gap: 6px; align-items: center; }
+  #panel select, #panel input { font: inherit; background: #26222e; color: #f5eddb; border: 1px solid rgba(243,201,105,.4); border-radius: 6px; padding: 6px 8px; min-height: 36px; }
+  #panel button { font: inherit; font-weight: 700; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(243,201,105,.6); background: #2a2430; color: #f5eddb; cursor: pointer; }
+  #panel button.primary { background: #c8382c; border-color: #ffb09a; }
+  #out { white-space: pre-wrap; font: 12px/1.45 ui-monospace, Menlo, monospace; color: #d8cfbb; background: rgba(0,0,0,.3); border-radius: 6px; padding: 8px; margin-top: 8px; max-height: 32vh; overflow: auto; }
+  body.fighting #panel { display: none; }
+  @media (max-height: 520px) { #panel { padding: 8px 12px; } #panel h1 { font-size: 18px; margin-bottom: 4px; } #panel .row { margin: 3px 0; } #out { max-height: 22vh; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<div id="panel">
+  <h1>单挑格斗 · 测试</h1>
+  <div class="row">
+    <label>挑战者 <select id="selA"></select></label>
+    <label>应战者 <select id="selB"></select></label>
+  </div>
+  <div class="row">
+    <label>操作 <select id="selSide">
+      <option value="0">玩家操作挑战者（左）</option>
+      <option value="1">玩家操作应战者（右）</option>
+      <option value="watch">电脑对电脑（观战）</option>
+      <option value="auto">自动（玩家一方交给电脑）</option>
+    </select></label>
+    <label>地形 <select id="selTerrain">
+      <option value="0">平原</option><option value="1">森林</option><option value="2">丘陵</option><option value="3">山地</option>
+      <option value="4">河川</option><option value="5">城墙</option><option value="6">城门</option><option value="7">本城</option>
+    </select></label>
+  </div>
+  <div class="row">
+    <button class="primary" id="btnGo">开　战</button>
+    <button id="btnTally">20 场模拟</button>
+    <button id="btnMem">5 连战内存</button>
+  </div>
+  <div id="out"></div>
+</div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script>
+'use strict';
+/* 单挑格斗（js/duel-game.js）独立测试页。
+   URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
+             &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子
+   测试钩子：window.runDuel(opts) → Promise<结果> · window.tally(n, a, b) · window.memTest(n) · window.__log */
+(function () {
+  const Q = new URLSearchParams(location.search);
+  const optional = ['../js/data.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
+    '../js/portrait-data.js', '../js/portrait.js', '../js/specials-data.js', '../js/specials.js', '../js/duel-game.js'];
+  const loaded = {};
+  function load(src) {
+    return new Promise(res => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => { loaded[src] = true; res(true); };
+      s.onerror = () => { loaded[src] = false; s.remove(); res(false); };
+      document.body.appendChild(s);
+    });
+  }
+  const out = document.getElementById('out');
+  function log(s) { out.textContent += s + '\n'; out.scrollTop = out.scrollHeight; (window.__log = window.__log || []).push(s); console.log(s); }
+
+  (async function () {
+    for (const f of optional) await load(f);
+    window.__loaded = loaded;
+    try { start(); } catch (e) { console.error(e); window.__error = String(e && e.stack || e); }
+  })();
+
+  function start() {
+    const SG = window.SG;
+    if (Q.has('seed')) SG.Random.seed(parseInt(Q.get('seed'), 10) || 1);
+    if (Q.has('speed')) SG.DuelGame.speed = parseFloat(Q.get('speed')) || 1;
+    SG.Gfx.init(document.getElementById('app'));
+    try { SG.Sfx && SG.Sfx.init(); } catch (e) { /* 无音频 */ }
+    SG.UI.init();
+    const unlock = () => { try { SG.Sfx && SG.Sfx.unlock(); } catch (e) { /* 忽略 */ } };
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
+    // 武将与势力色
+    const facColor = {};
+    for (const s of SG.ScenarioData.Factions) { const p = s.split('|'); facColor[p[0]] = p[3]; }
+    const gens = SG.ScenarioData.Generals.map((s, i) => {
+      const p = s.split('|');
+      return { id: i, name: p[0], war: +p[1], intel: +p[2], pol: +p[3], fkey: p[4], color: facColor[p[4]] || '#8a8a92' };
+    }).sort((a, b) => b.war - a.war);
+    window.__gens = gens;
+    const byName = n => gens.find(g => g.name === n);
+    for (const id of ['selA', 'selB']) {
+      const sel = document.getElementById(id);
+      for (const g of gens) { const o = document.createElement('option'); o.value = g.name; o.textContent = g.name + '（武力 ' + g.war + '）'; sel.appendChild(o); }
+    }
+    const selA = document.getElementById('selA'), selB = document.getElementById('selB'), selSide = document.getElementById('selSide'), selT = document.getElementById('selTerrain');
+    selA.value = Q.get('a') || '关羽'; selB.value = Q.get('b') || '张飞';
+    if (Q.has('side')) selSide.value = Q.get('side');
+    else if (Q.get('duelauto') === '1') selSide.value = 'auto';
+    if (Q.has('terrain')) selT.value = Q.get('terrain');
+    // 背景：未进入单挑时渲染主场景（只有天空）
+    (function idle() { if (!SG.DuelGame.active) SG.Gfx.render(); requestAnimationFrame(idle); })();
+
+    async function runDuel(o) {
+      o = o || {};
+      const A = byName(o.a || selA.value) || gens[0], B = byName(o.b || selB.value) || gens[1];
+      const side = o.side !== undefined ? String(o.side) : selSide.value;
+      SG.DuelGame.auto = side === 'auto' || Q.get('duelauto') === '1' || !!o.auto;
+      const playerSide = side === 'watch' ? null : side === '1' ? 1 : 0;
+      const terrain = o.terrain !== undefined ? +o.terrain : +selT.value;
+      const sp = SG.Specials && SG.Specials.of ? { a: SG.Specials.of(A), b: SG.Specials.of(B) } : null;
+      document.body.classList.add('fighting');
+      const t0 = performance.now();
+      const res = await SG.DuelGame.play({ a: { gen: A, side: 0, color: A.color }, b: { gen: B, side: 1, color: B.color }, playerSide, terrain, special: sp });
+      document.body.classList.remove('fighting');
+      const w = res.winner === 0 ? A : B;
+      log(`${A.name}(${A.war}) vs ${B.name}(${B.war}) → ${w.name} 胜 [${res.kind}] 体力 ${res.hpA}:${res.hpB} 命中 ${res.log.length} 次，用时 ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+      window.__last = res;
+      return res;
+    }
+    window.runDuel = runDuel;
+    // 无画面快速模拟（与实战同一套逻辑与电脑）
+    window.tally = function (n, a, b) {
+      n = n || 20;
+      const A = byName(a || selA.value), B = byName(b || selB.value);
+      let wa = 0, ko = 0, T = 0;
+      for (let i = 0; i < n; i++) { const r = SG.DuelGame.simulate(A, B); if (r.winner === 0) wa++; if (r.kind === 'ko') ko++; T += r.time; }
+      const s = `${A.name}(${A.war}) vs ${B.name}(${B.war})：${n} 场 ${A.name} 胜 ${wa} / ${B.name} 胜 ${n - wa}，KO ${ko}，平均 ${(T / n).toFixed(1)} 秒`;
+      log(s);
+      return { a: A.name, b: B.name, winsA: wa, winsB: n - wa, ko, avg: T / n };
+    };
+    window.memTest = async function (n) {
+      n = n || 5;
+      const info = () => { const m = SG.Gfx.renderer.info.memory; return { geometries: m.geometries, textures: m.textures, programs: SG.Gfx.renderer.info.programs ? SG.Gfx.renderer.info.programs.length : 0 }; };
+      const before = info(), rows = [];
+      log('内存（开始前）' + JSON.stringify(before));
+      const prevSpeed = SG.DuelGame.speed;
+      SG.DuelGame.speed = Math.max(prevSpeed, 4);
+      const pairs = [['吕布', '张辽', 0], ['赵云', '张郃', 1], ['孟获', '祝融', 2], ['马超', '许褚', 4], ['关羽', '华雄', 7]];
+      for (let i = 0; i < n; i++) {
+        const p = pairs[i % pairs.length];
+        await runDuel({ a: p[0], b: p[1], side: 'watch', terrain: p[2] });
+        const m = info(); rows.push(m);
+        log(`第 ${i + 1} 场后 ` + JSON.stringify(m));
+      }
+      SG.DuelGame.speed = prevSpeed;
+      return { before, rows };
+    };
+    document.getElementById('btnGo').onclick = () => runDuel();
+    document.getElementById('btnTally').onclick = () => {
+      window.tally(20);
+      window.tally(20, '吕布', '华雄');
+      window.tally(20, '典韦', '李典');
+      window.tally(20, '黄忠', '刘备');
+    };
+    document.getElementById('btnMem').onclick = () => window.memTest(5);
+    window.__ready = true;
+    log('载入：' + Object.keys(loaded).filter(k => loaded[k]).map(k => k.replace('../js/', '')).join(' '));
+    if (Q.get('go') === '1') runDuel();
+  }
+})();
+</script>
+</body>
+</html>
