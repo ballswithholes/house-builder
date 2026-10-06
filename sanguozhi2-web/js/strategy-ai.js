@@ -30,6 +30,8 @@
 
   // ================================================================ Conquest --
   const Conquest = {
+    // 本场战斗中被俘、尚待处置的武将（C# 声明了此集合却从未写入，致使 IsCaptive 恒为假；
+    // 此处按其本意在 capture() 中登记，于释放/处斩/处置完毕时移除，并在每场结算开始时清空）
     pendingCaptives: new Set(),
 
     prepare(attacker, src, target, atk, food, gold) {
@@ -73,6 +75,7 @@
     apply(s) {
       const g = G();
       const A = s.attacker; const D = s.defender;
+      Conquest.pendingCaptives.clear();
       if (s.attackerWon) {
         // 守军撤退或被俘
         const retreatTo = D >= 0 ? Seq.first(s.target.links.map(i => g.cities[i]), c => c.owner === D) : null;
@@ -147,10 +150,12 @@
         }
         if (!Commands.hire(c, recruiter, winner, s.target.id)) Conquest.release(c);
       }
+      for (const c of s.captives) Conquest.pendingCaptives.delete(c.id);
     },
 
     release(c) {
       const g = G();
+      Conquest.pendingCaptives.delete(c.id);
       const oldF = c.faction;
       const wasRuler = oldF >= 0 && g.factions[oldF].ruler === c.id;
       const home = oldF >= 0 ? Seq.first(g.citiesOf(oldF)) : null;
@@ -161,11 +166,15 @@
 
     execute(c) {
       const g = G();
+      Conquest.pendingCaptives.delete(c.id);
       const oldF = c.faction;
       const wasRuler = oldF >= 0 && g.factions[oldF].ruler === c.id;
       c.dead = true; c.troops = 0; c.faction = -1;
       g.addLog(c.name + '被处斩。');
       if (wasRuler) Conquest.succession(oldF);
+      // 处斩者不得仍挂太守之职；新君主坐镇其所在之城
+      for (const city of g.cities) if (city.governor === c.id) g.autoGovernor(city);
+      if (wasRuler && g.factions[oldF].alive) g.autoGovernor(g.cities[g.ruler(oldF).city]);
     },
   };
 
@@ -175,6 +184,7 @@
     gen.troops = 0;
     s.captives.push(gen);
     gen.city = s.target.id;
+    Conquest.pendingCaptives.add(gen.id);
   }
 
   // ============================================================== StrategyAI --

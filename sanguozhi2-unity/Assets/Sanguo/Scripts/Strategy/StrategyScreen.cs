@@ -504,7 +504,8 @@ namespace Sanguo
         IEnumerator HandleCaptives(BattleSetup s, bool playerDecides)
         {
             if (!playerDecides) { Conquest.AiDecideCaptives(s, s.attackerWon ? s.attacker : s.defender); yield break; }
-            var holderCity = s.attackerWon ? s.target : s.src;
+            // 玩家只在获胜后处置俘虏，胜方必然据有 s.target（攻方刚攻下 / 守方守住），降将应编入该城
+            var holderCity = s.target;
             var recruiter = G.Ruler(G.player);
             foreach (var cap in s.captives.ToList())
             {

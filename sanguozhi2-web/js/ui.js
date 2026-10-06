@@ -609,10 +609,21 @@
         const stop = () => { clearTimeout(timer); clearInterval(rep); timer = 0; rep = 0; };
         btn.addEventListener('pointerdown', e => {
           if (e.button !== undefined && e.button !== 0) return;
+          // 触摸指针默认被按钮隐式捕获，手指滑出后不会触发 pointerleave；释放捕获以便滑出即停止
+          try { if (btn.hasPointerCapture && btn.hasPointerCapture(e.pointerId)) btn.releasePointerCapture(e.pointerId); } catch (_) { /* 忽略 */ }
           sfxClick();
           fn();
           stop();
           timer = setTimeout(() => { rep = setInterval(fn, 70); }, 380);
+          // 在任意位置抬起手指（或对话框已关闭、按钮已移除）时同样停止
+          window.addEventListener('pointerup', stop, { once: true });
+          window.addEventListener('pointercancel', stop, { once: true });
+        });
+        // 兜底：指针移出按钮矩形即停止（捕获未能释放时 pointerleave 不可靠）
+        btn.addEventListener('pointermove', e => {
+          if (!timer && !rep) return;
+          const r = btn.getBoundingClientRect();
+          if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) stop();
         });
         ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, stop));
         btn.addEventListener('click', e => {
@@ -719,6 +730,16 @@
     return t;
   };
 
+  // 横幅显示期间压暗世界标签层，避免单位信息卡片透出在横幅文字后面
+  let liveBanners = 0;
+  function bannerDim(on) {
+    liveBanners = Math.max(0, liveBanners + (on ? 1 : -1));
+    const dim = liveBanners > 0;
+    L.root.classList.toggle('has-banner', dim);
+    L.labels.style.transition = 'opacity .2s ease';
+    L.labels.style.opacity = dim ? '0.15' : '';
+  }
+
   // 屏幕中央的大字横幅
   UI.banner = function (text, sub, seconds) {
     ensure();
@@ -730,8 +751,13 @@
     b.appendChild(el('div', 'sg-banner-line'));
     L.toasts.appendChild(b);
     const life = Math.max(0.3, seconds);
+    // 标签层随横幅淡出开始时恢复（与 AutoFade 的最后 1/3 秒同步）
+    let dimmed = true;
+    bannerDim(true);
+    const undim = () => { if (!dimmed) return; dimmed = false; bannerDim(false); };
+    setTimeout(undim, Math.max(0, life - Math.min(1 / 3, life / 3)) * 1000);
     let removed = false;
-    const remove = () => { if (removed) return; removed = true; if (b.parentNode) b.parentNode.removeChild(b); };
+    const remove = () => { if (removed) return; removed = true; undim(); if (b.parentNode) b.parentNode.removeChild(b); };
     try {
       if (b.animate) {
         // 外层淡入淡出，文字 PopIn（0.94 → 1）

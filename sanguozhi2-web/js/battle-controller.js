@@ -235,7 +235,9 @@
         this.awaitingInput = false;
         if (this.endTurn) break;
         const tp = this.tap;
-        const t = V.tileFromScreen(tp.x, tp.y);
+        // 先看是否点在部队头顶的名牌上（窄屏上名牌比部队本身更显眼，常被当作点选目标），否则按地面取格
+        const lu = this.unitFromLabel(tp.x, tp.y);
+        const t = lu ? { x: lu.x, y: lu.y } : V.tileFromScreen(tp.x, tp.y);
         if (!t) continue;
         const at = Mdl.unitAt(t.x, t.y);
         if (sel == null) {
@@ -267,6 +269,29 @@
         sel = null; V.clearHighlights(); V.setCursor(null);
       }
       V.clearHighlights(); V.setCursor(null); this.showCard(null);
+    }
+
+    // 屏幕点 (x, y) 落在哪支部队的名牌（.sg-uinfo）上：按名牌当前层级从上往下找
+    // （与 BattleView._layoutLabels 的排布一致：选中部队 > 主将 > 其他），只认清晰显示的名牌——
+    // 因避让失败而淡化压到下层的名牌不拦截点击，免得挡住它下面的地块。没有命中返回 null。
+    unitFromLabel(x, y) {
+      const Mdl = this.M, V = this.V;
+      if (!V || !V.visuals || typeof document === 'undefined') return null;
+      const cands = [];
+      for (const v of V.visuals.values()) {
+        const I = v.info, L = v.lbl, u = v.u;
+        if (!I || !I.card || !L || !L.shown || !v.follow || !u || !u.alive) continue;
+        if (Mdl.unitAt(u.x, u.y) !== u) continue;
+        if (!(v.labelAlpha * L.fade >= 0.45)) continue;
+        if (I.anchor && (I.anchor.style.visibility === 'hidden' || !I.anchor.isConnected)) continue;
+        cands.push({ u, z: typeof L.z === 'number' ? L.z : -1e9 });
+      }
+      cands.sort((a, b) => b.z - a.z);
+      for (const c of cands) {
+        const r = V.visuals.get(c.u).info.card.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return c.u;
+      }
+      return null;
     }
 
     showRange(u) {

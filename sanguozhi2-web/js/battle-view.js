@@ -167,7 +167,7 @@
 .sg-uinfo .sg-bar>i{display:block;height:100%;border-radius:.2em;transition:width .35s ease;}
 .sg-uinfo.sel{border-color:rgba(255,226,140,.95);box-shadow:0 .3em .9em rgba(0,0,0,.38),0 0 0 1px rgba(243,201,105,.35),inset 0 1px 0 rgba(255,255,255,.09);}
 @media (max-height:540px){
-  .sg-uinfo{font-size:10.5px;min-width:0;padding:.22em .5em .34em .9em;border-radius:.45em;
+  .sg-uinfo{font-size:11px;min-width:0;padding:.22em .5em .34em .9em;border-radius:.45em;
     box-shadow:0 .2em .5em rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);}
   .sg-uinfo .sg-stripe{left:.22em;top:.22em;bottom:.22em;width:.3em;}
   .sg-uinfo .sg-star{margin-right:.08em;}

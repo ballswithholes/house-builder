@@ -683,7 +683,8 @@
     async handleCaptives(s, playerDecides) {
       const g = G(), Cq = SG.Conquest, C = SG.Commands;
       if (!playerDecides) { Cq.aiDecideCaptives(s, s.attackerWon ? s.attacker : s.defender); return; }
-      const holderCity = s.attackerWon ? s.target : s.src;
+      // 玩家只在获胜后处置俘虏，胜方必然据有 s.target（攻方刚攻下 / 守方守住），降将应编入该城
+      const holderCity = s.target;
       const recruiter = g.ruler(g.player);
       for (const cap of s.captives.slice()) {
         const isRuler = cap.faction >= 0 && g.factions[cap.faction].ruler === cap.id;

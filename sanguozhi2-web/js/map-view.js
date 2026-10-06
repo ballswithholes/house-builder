@@ -143,6 +143,39 @@
     mat.name = name;
     return mat;
   }
+  // ---------------------------------------------------------- 云的淡出 --
+  // 网页版补充（C# 的云始终不透明）：云离镜头越近越透明，镜头距离 ≥ CLOUD_FADE_FAR 时不透明，≤ CLOUD_FADE_NEAR 时完全隐去。
+  // 标题 / 全图视角（镜头距离 85 以上）视野里的云离镜头 51 以上，几乎不透明；战略视角（45～48）视野里的云离镜头约 15～46，
+  // 除画面最上缘远处的淡影外全部隐去，城池上方不再留下半透明的灰色多边形。
+  const CLOUD_FADE_NEAR = 41, CLOUD_FADE_FAR = 55;
+  // 云影随云体一起淡出：阴影深度遍按 3×3 有序抖动矩阵丢弃片元（按阴影贴图像素），隐去的云不再在地面上投下看不到来源的暗斑。
+  // 用 3×3 是因为 three 的 PCFSoftShadowMap 恰好对周围 3×3 个阴影像素做盒式平均（两端按亚像素比例分摊权重），
+  // 周期为 3 的图案在任何位置都正好平均成 保留数 / 9，接收面上是平滑的浅影而不是网点（10 级浓淡）。
+  const CLOUD_SHADOW_PARS =
+    'uniform float sgShadowDensity;\n' +
+    'float sgDither3( vec2 p ) {\n' +
+    '\tvec2 c = floor( p ) - 3.0 * floor( p / 3.0 );\n' + // gl_FragCoord 在像素中心（k + 0.5），取模不会落在边界上
+    '\tvec3 row = c.y < 0.5 ? vec3( 0.0, 7.0, 3.0 ) : ( c.y < 1.5 ? vec3( 6.0, 5.0, 2.0 ) : vec3( 4.0, 1.0, 8.0 ) );\n' +
+    '\tfloat m = c.x < 0.5 ? row.x : ( c.x < 1.5 ? row.y : row.z );\n' +
+    '\treturn ( m + 0.5 ) / 9.0;\n' +
+    '}\n';
+  const CLOUD_SHADOW_DISCARD =
+    '#include <clipping_planes_fragment>\n' +
+    '\tif ( sgDither3( gl_FragCoord.xy ) >= sgShadowDensity ) discard;';
+  function cloudShadowMaterial() {
+    const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    mat.name = 'CloudShadowDepth';
+    const density = { value: 1 };
+    mat.userData.shadowDensity = density;
+    // 所有云共用同一函数源码 → 同一着色器程序；uniform 对象每朵云各自一份
+    mat.onBeforeCompile = function cloudShadowCompile(shader) {
+      shader.uniforms.sgShadowDensity = density;
+      shader.fragmentShader = CLOUD_SHADOW_PARS +
+        shader.fragmentShader.replace('#include <clipping_planes_fragment>', CLOUD_SHADOW_DISCARD);
+    };
+    return mat;
+  }
+
   let _terrainMat = null;
   function terrainMaterial() {
     if (!_terrainMat) _terrainMat = shoulderMaterial('TerrainLowPoly');
@@ -248,6 +281,12 @@
       for (const m of this._marchers) m.cancelled = true;
       SG.Gfx.disposeTree(this.root);
       this.root = null;
+      // 云的材质每次构建新建（每朵云的主材质、阴影深度材质，以及九朵云共用的 CloudDepth 前置遍材质），随云一起释放
+      for (const c of this._clouds) {
+        c.material.dispose();
+        if (c.customDepthMaterial) c.customDepthMaterial.dispose();
+        for (const ch of c.children) if (ch.material) ch.material.dispose();
+      }
       this._clouds = [];
       this._flags = null; this._rings = null; this._selectRing = null;
     }
@@ -623,7 +662,8 @@
           mb.blob(V(ox, oy, oz), V(r, r * 0.6, r * 0.85), new THREE.Color(1, 1, 1), k);
         }
         // 白云（C# _Emission 0.35）：向阳面的亮度超过 1，同样走高光肩部，云顶不会截断成一整片纯白。
-        // 每朵云一个材质：镜头拉近（战略视角）时离镜头近的云淡成半透明，不再整片挡住城池（见 update）
+        // 每朵云一个材质与一个阴影深度材质：镜头拉近（战略视角）时离镜头近的云连同云影一起淡出隐去，
+        // 不再整片挡住城池（见 update 与 CLOUD_FADE_NEAR / CLOUD_FADE_FAR）
         const mat = shoulderMaterial('CloudLowPoly');
         mat.emission = 0.35;
         mat.color.setRGB(0.74, 0.75, 0.78); // _Color：略压暗，让云的明暗面不被截断成一片白
@@ -631,6 +671,7 @@
         const geo = mb.toGeometry();
         const m = SG.Gfx.mesh(geo, mat, { castShadow: true, receiveShadow: false });
         m.name = 'Cloud';
+        m.customDepthMaterial = cloudShadowMaterial();
         m.renderOrder = 21;
         const pre = new THREE.Mesh(geo, depthMat);
         pre.name = 'CloudDepth';
@@ -743,11 +784,17 @@
         c.position.z -= 0.15 * dt;
         if (c.position.x > MapW + 30) c.position.x = -30;
         if (-c.position.z > MapH + 30) c.position.z = 30;
-        // 离镜头越近越透明：标题 / 全图视角（镜头距离 85 以上）几乎不透明，战略视角（45～48）约 0.35
+        // 离镜头越近越透明：标题 / 全图视角几乎不透明，战略视角里离镜头近的云完全隐去（不留半透明的灰色残影）。
+        // 云影浓度取不透明度的平方：云体半透明时影子已很淡，隐去时影子同时消失，不在地面上留下无来由的暗斑
         if (cam) {
           c.getWorldPosition(_cloudPos);
-          const f = M.clamp01((_cloudPos.distanceTo(cam.position) - 28) / 30);
-          c.material.opacity = 0.35 + 0.65 * f * f * (3 - 2 * f);
+          const f = M.clamp01((_cloudPos.distanceTo(cam.position) - CLOUD_FADE_NEAR) / (CLOUD_FADE_FAR - CLOUD_FADE_NEAR));
+          const a = f * f * (3 - 2 * f);
+          const shown = a > 0.01;
+          c.material.opacity = a;
+          c.visible = shown;
+          c.castShadow = a * a > 1 / 18; // 浓度不足半格时 3×3 抖动图案已全部丢弃，不必再画
+          c.customDepthMaterial.userData.shadowDensity.value = a * a;
         }
       }
       this._updateFlags();

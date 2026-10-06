@@ -704,13 +704,17 @@ body {
 
 .sg-item:disabled { cursor: default; opacity: .4; filter: grayscale(.4); }
 
-.sg-item-main { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .7rem; row-gap: .1rem; }
-.sg-item-label { min-width: 0; }
-.sg-item-desc { font-size: .74em; color: var(--sg-muted2); }
+/* 右列以自身单行宽度为基准、占用标签之外的全部剩余空间，只在真正放不下时才折行
+   （不再设固定百分比上限）；主列基准为 0，吃掉余下空间，描述在主列内折到标签下方；
+   标签不折行，主列 min-width:auto 保证最窄也能完整显示标签，不会被右列挤压 */
+.sg-item-main { flex: 1 1 0; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .7rem; row-gap: .1rem; }
+.sg-item-label { white-space: nowrap; }
+.sg-item-desc { min-width: 0; font-size: .74em; color: var(--sg-muted2); }
 .sg-item-right {
   flex: 0 1 auto;
-  max-width: 62%;
+  min-width: 0;
   word-break: keep-all;
+  overflow-wrap: anywhere;
   font-size: .85em;
   color: var(--sg-muted);
   text-align: right;

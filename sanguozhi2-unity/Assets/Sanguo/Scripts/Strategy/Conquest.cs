@@ -55,6 +55,7 @@ namespace Sanguo
         public static void Apply(BattleSetup s)
         {
             var A = s.attacker; var D = s.defender;
+            pendingCaptives.Clear();
             if (s.attackerWon)
             {
                 // 守军撤退或被俘
@@ -96,6 +97,7 @@ namespace Sanguo
             g.troops = 0;
             s.captives.Add(g);
             g.city = s.target.id;
+            pendingCaptives.Add(g.id);
         }
 
         // 君主被俘或身亡后的继承
@@ -113,6 +115,7 @@ namespace Sanguo
             }
         }
         public static bool IsCaptive(General g) { return pendingCaptives.Contains(g.id); }
+        // 本场战斗中被俘、尚待处置的武将：Capture 时登记，释放 / 处斩 / 处置完毕时移除，每场结算开始时清空
         public static HashSet<int> pendingCaptives = new HashSet<int>();
 
         public static void Succession(int f)
@@ -145,10 +148,12 @@ namespace Sanguo
                 }
                 if (!Commands.Hire(c, recruiter, winner, s.target.id)) Release(c);
             }
+            foreach (var c in s.captives) pendingCaptives.Remove(c.id);
         }
 
         public static void Release(General c)
         {
+            pendingCaptives.Remove(c.id);
             int oldF = c.faction;
             bool wasRuler = oldF >= 0 && G.factions[oldF].ruler == c.id;
             var home = oldF >= 0 ? G.CitiesOf(oldF).FirstOrDefault() : null;
@@ -164,6 +169,9 @@ namespace Sanguo
             c.dead = true; c.troops = 0; c.faction = -1;
             G.Log(c.name + "被处斩。");
             if (wasRuler) Succession(oldF);
+            // 处斩者不得仍挂太守之职；新君主坐镇其所在之城
+            foreach (var city in G.cities) if (city.governor == c.id) G.AutoGovernor(city);
+            if (wasRuler && G.factions[oldF].alive) G.AutoGovernor(G.cities[G.Ruler(oldF).city]);
         }
     }
 }

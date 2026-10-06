@@ -164,6 +164,13 @@
       if (!p) return;
       this._pointers.delete(e.pointerId);
       try { if (this.dom.hasPointerCapture && this.dom.hasPointerCapture(e.pointerId)) this.dom.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+      if (this._pointers.size >= 2) {
+        // 三指变双指：以新的两指重新取缩放基准与中点，避免缩放 / 平移跳变
+        this._lastPinch = this._pinchDist();
+        const m = this._mid();
+        this._lastMid = this.groundPoint(m.x, m.y);
+        return;
+      }
       if (this._pointers.size === 1) {
         // 双指变单指：剩下的手指继续拖动（不触发点击）
         const [id, q] = this._pointers.entries().next().value;
