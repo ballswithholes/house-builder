@@ -108,13 +108,17 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   from stealth (attacking with an Opener) grants a **surprise round**: enemies lose their first turn.
 * **Death**: party members at 0 HP are **Downed**. An adjacent ally can spend 1.5 s to *Help* them up at 1 HP
   (BG3). Resurrection spells work in and out of combat (WoW classic: only out of combat for most). If the
-  whole party is downed the game is over (load last save).
+  whole party is downed the game is over (load last save) — except in a raid: a wipe sends the party, healed, back
+  to the raid's entrance zone (no lockouts; try again).
 * **Resting**: Long rest at an inn/camp restores everything and advances time. Out of combat, characters
   regenerate quickly; Food/Drink items restore faster (WoW style).
 
 ## 4. Combat flow
 
-1. An encounter triggers (party walks into aggro radius, dialogue outcome, or the player attacks).
+1. An encounter triggers (party walks into aggro radius, dialogue outcome, or the player attacks). The party steps
+   into a **battle formation** facing the enemies: tanks in front (about 2.5 m short of the nearest enemy), melee
+   just behind, ranged, then healers at the back, pets beside their owners. Not when a stealthed attacker or an
+   opener (Charge, Cheap Shot…) starts the fight — there the positions are the plan — and not at training dummies.
 2. All combatants roll initiative: `d20 + (Agi − 20) / 10` (ties: higher Agi). Surprised units skip round 1.
 3. Rounds proceed in initiative order. Pets act right after their owner. On a unit's turn:
    start-of-turn processing → actions (abilities, movement, item use, end turn) → end-of-turn auto attacks
@@ -142,6 +146,13 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   Intimidation; Shaman: Nature, Insight). The party member with the best modifier rolls. Natural 20 always
   succeeds, natural 1 always fails. A rogue picking a lock adds level / 5.
 * **Quests** with stages and objectives; companion approval.
+* **Party and raids.** The active party holds up to 5 characters (`config.partySize`); other recruits wait at camp.
+  Ordinary encounters grow tougher with a bigger party: enemy health × `1 + 0.2 · max(0, n − 4)` for n party
+  characters (×1.2 at 5). A **raid** map (`MapDef.raidSize`, 10) is entered with a party the player picks from
+  everyone recruited (a picker opens at the raid's door; companions auto-play by default). Raid creatures are
+  tuned in data (Elite trash, Boss bosses, no health scale). Leaving the raid brings the previous party, leader and
+  auto-play back; a wipe sends everyone home healed. In big fights DPS companions assist the tank nearest to them,
+  and two companion healers never heal the same target in one round.
 
 ## 7. Content of the vertical slice
 

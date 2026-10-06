@@ -1,8 +1,10 @@
 // Companion auto-play: role-aware scoring of every known ability on candidate targets.
 // Tanks taunt and hold threat; healers heal by deficit; DPS respect the tank's threat, keep buffs/debuffs up,
 // rogues build then finish, hunters stay out of the dead zone, shamans drop totems, paladins keep seals.
+// Raid scale: DPS assist the tank nearest to them; two AI healers never heal the same target in one round.
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Lanternvale.Data;
 using Lanternvale.Util;
 
@@ -83,7 +85,13 @@ namespace Lanternvale.Rules
             }
             if (best != null)
             {
-                if (!best.NeedsMove) { var step = Use(u, best.Ability, best.Target, best.Point, best.Why); step.Rank = best.Rank; return step; }
+                if (!best.NeedsMove)
+                {
+                    var step = Use(u, best.Ability, best.Target, best.Point, best.Why);
+                    step.Rank = best.Rank;
+                    if (role == UnitRole.Healer && HintOf(best.Ability) == "Heal") ClaimHeal(b, u, best.Target, best.Ability);
+                    return step;
+                }
                 var mods = AbilityMods.For(u, best.Ability);
                 float range = AbilityRules.RangeMetres(u, best.Ability, best.Target, mods, b.Config) - best.Target.Radius;
                 bool behind = best.Ability.requires != null && best.Ability.requires.behindTarget;
@@ -106,13 +114,12 @@ namespace Lanternvale.Rules
             t.HasStateAura(UnitState.Polymorph) || t.HasStateAura(UnitState.Incapacitate) || t.HasStateAura(UnitState.Sleep);
 
         /// <summary>Main enemy for the unit: tanks pick enemies hitting others, DPS assist the tank.</summary>
-        static Unit FocusTarget(Battle b, Unit u, List<Unit> enemies, UnitRole role)
+        internal static Unit FocusTarget(Battle b, Unit u, List<Unit> enemies, UnitRole role)
         {
             // never focus a crowd-controlled enemy while another one is free
             var free = enemies.FindAll(e => !SoftControlled(e));
             if (free.Count > 0 && free.Count < enemies.Count) enemies = free;
-            Unit tank = null;
-            foreach (var a in b.AlliesOf(u, false)) if (a.IsCharacter && a.Role == UnitRole.Tank && a.IsAlive) { tank = a; break; }
+            var tank = AssistTank(b, u);
             if (role == UnitRole.Tank)
             {
                 // an enemy beating on a non-tank, closest first
@@ -137,6 +144,62 @@ namespace Lanternvale.Rules
             Unit low = null; float lh = float.MaxValue;
             foreach (var e in enemies) if (!e.IsTotem && e.HealthPct < lh) { lh = e.HealthPct; low = e; }
             return low ?? Nearest(u, enemies);
+        }
+
+        /// <summary>
+        /// The tank a companion follows: the living character tank (other than itself) nearest to it, the first in battle
+        /// order on a tie; null without one. With two or more tanks (raids) each DPS assists the tank fighting next to it
+        /// instead of every DPS following the first tank in the list.
+        /// </summary>
+        internal static Unit AssistTank(Battle b, Unit u)
+        {
+            Unit tank = null;
+            float best = float.MaxValue;
+            foreach (var a in b.AlliesOf(u, false))
+            {
+                if (!a.IsCharacter || !a.IsAlive || a.Role != UnitRole.Tank) continue;
+                float d = u.DistanceTo(a);
+                if (d < best) { best = d; tank = a; }
+            }
+            return tank;
+        }
+
+        // ---- heal claims: no two AI healers on the same target in one round
+
+        sealed class HealClaims
+        {
+            public int Round = -1;
+            public readonly Dictionary<Unit, KeyValuePair<Unit, string>> ByTarget = new Dictionary<Unit, KeyValuePair<Unit, string>>();
+        }
+
+        /// <summary>Per battle (weakly held: a finished battle takes its claims with it).</summary>
+        static readonly ConditionalWeakTable<Battle, HealClaims> healClaims = new ConditionalWeakTable<Battle, HealClaims>();
+
+        static HealClaims ClaimsOf(Battle b)
+        {
+            var c = healClaims.GetValue(b, _ => new HealClaims());
+            if (c.Round != b.Round) { c.Round = b.Round; c.ByTarget.Clear(); }
+            return c;
+        }
+
+        /// <summary>A companion healer chose a heal on <paramref name="target"/> this round (CompanionStep).</summary>
+        internal static void ClaimHeal(Battle b, Unit healer, Unit target, AbilityDef a)
+        {
+            if (b == null || healer == null || target == null || a == null) return;
+            ClaimsOf(b).ByTarget[target] = new KeyValuePair<Unit, string>(healer, a.id);
+        }
+
+        /// <summary>
+        /// Another AI healer has already healed <paramref name="target"/> this round: a claim of this round whose healer
+        /// really used that heal (AITurnMemory: a heal that failed to cast claims nothing). Healers then pick someone else;
+        /// emergency heals (Lay on Hands) ignore claims.
+        /// </summary>
+        internal static bool HealClaimedByOther(Battle b, Unit healer, Unit target)
+        {
+            if (b == null || target == null) return false;
+            var c = ClaimsOf(b);
+            if (!c.ByTarget.TryGetValue(target, out var claim) || claim.Key == healer || claim.Key == null) return false;
+            return claim.Key.IsAlive && claim.Key.AIMemory.UsedCount(claim.Value) > 0;
         }
 
         static Unit Nearest(Unit u, List<Unit> list)
@@ -279,8 +342,7 @@ namespace Lanternvale.Rules
                     if (t.Pending != null && !t.IsTotem && IsBigCast(t.Pending) && CancelsCast(b, a, t))
                         yield return new Candidate { Ability = a, Target = t, Score = 24f, Why = "stop " + t.Pending.Ability.name };
             bool manaLow = u.MaxMana > 0 && u.ManaPct < 25f;
-            Unit tank = null;
-            foreach (var x in allies) if (x != u && x.IsCharacter && x.Role == UnitRole.Tank) { tank = x; break; }
+            var tank = AssistTank(b, u);
 
             // ---- totems
             if (IsTotemAbility(a))
@@ -306,6 +368,7 @@ namespace Lanternvale.Rules
                         float deficit = t.MaxHealth - t.Health;
                         if (deficit < expected * 0.5f && t.HealthPct > 50f) continue;
                         if (hot && AlreadyHasAny(a, t, u)) continue;
+                        if (role == UnitRole.Healer && !emergency && HealClaimedByOther(b, u, t)) continue;
                         float urgency = 1f - t.HealthPct / 100f;
                         float s = basePri * (1f + 5f * urgency) * (role == UnitRole.Healer ? 1.5f : 1f) * (t.Role == UnitRole.Tank ? 1.2f : 1f) * castPenalty;
                         if (deficit < expected) s *= 0.7f;

@@ -32,6 +32,7 @@ Everything the UI should react to is also announced as a `SessionEvent` (§2).
 | `GameSession.World.cs` | maps, movement, triggers, interactions, dialogue, `IDialogueContext`, content specials |
 | `GameSession.Combat.cs` | encounters → `Battle`, openers, AI stepping, leave combat, `FinishBattle` |
 | `GameSession.Time.cs` | `Tick`, clock / time of day, resting |
+| `GameSession.Raid.cs` | raids (gate, `EnterRaid`, leaving, wipe, raid save state), the battle formation, the encounter health scale |
 | `GameSession.Save.cs`, `SaveData.cs` | save/load and the versioned DTOs |
 | `SessionTypes.cs` | `SessionMode`, `SessionEvent(Kind)`, `NewGameOptions`, `SessionSettings`, `LootWindow`, `BattleSummary`, `InteractResult`, `TriggerResult`, `MoveResult`, `PartyMovePlan`, `EncounterEnemyPreview`, `SaveHeader` |
 | `NavGridPathfinder.cs` | `IPathfinder` adapter over `World.NavGrid` (every battle uses it) |
@@ -132,6 +133,9 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 | `SpecialOutcome` | `Id` special id (`Id2` argument). **`RekindleLanterns`**: `Amount` 1 = the story moment (`MapView.SetLanternLit(id, true, animate: true)` for every lantern + banner `Text`); `Amount` 0 = raised after every `MapEntered` while flag `lanterns_rekindled` is set (relight silently) |
 | `TimeOfDayChanged` | `Id`/`Text` new phase (`dawn` `day` `dusk` `night`) |
 | `SecretFound` | a hidden transition (any map) became visible: `Id` its `revealFlag`, `Id2` the transition id, `Text` "You discovered a hidden passage: <label, else the target map's name>". Once per passage per game, whatever set the flag (region check, dialogue, NPC hint); never on `LoadGame` for passages the save already knew (§5 Discovery) |
+| `RaidPartyRequested` | the party tried to travel into a raid map without a raid party (walking, clicking the exit, `EnterMap`, a dialogue `Teleport` once the conversation ends): `Id` raid map, `Id2` spawn, `Amount` its `raidSize` — open the raid picker, answer with `EnterRaid(Id, Id2, …)`. Nobody travelled (§3 "Raids") |
+| `RaidStarted` | `EnterRaid` formed the raid and arrived (after `MapEntered`): `Id` map, `Amount` raid size, `Text` |
+| `RaidEnded` | the raid party was dissolved on arrival in a non-raid map (after `MapEntered`): `Id` the raid map left, `Amount` 1 after a wipe, `Text` |
 
 ---
 
@@ -139,7 +143,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 
 ```csharp
 Unit Main                              // main character, member id "player" (GameSession.MainId)
-IReadOnlyList<Unit> Party              // active characters, Party[0] == Main, at most PartySize (config.partySize)
+IReadOnlyList<Unit> Party              // active characters, Party[0] == Main, at most PartySize (config.partySize; the raid's size in a raid)
 IReadOnlyList<Unit> Roster             // Main + every companion ever recruited
 List<Unit> Camp()                      // recruited, waiting at camp
 List<Unit> PartyUnits()                // active characters + their persistent pets — spawn a UnitView for each
@@ -172,6 +176,41 @@ free (`Settings.CompanionAutoTrain`) and spend talent points on their build
 (`Settings.AutoAllocateCompanionTalents`). Newly recruited companions get `AutoPlay = Settings.CompanionAutoPlay` (default false — BG3-style, the player controls every member; the main character is
 always player-controlled unless `SetAutoPlay(Main, true)`). `Settings` (auto-play, auto-train, clock speed) survive
 `NewGame` and are saved with the game.
+
+**Raids.** A map with `MapDef.raidSize > 0` is a raid (10 players). It is entered only with a raid party:
+
+```csharp
+bool InRaid; int RaidSize                        // a raid party is active (0 when not)
+int MaxPartySizeOn(string mapId)                 // the map's raidSize for a raid map, else config.partySize
+List<Unit> RaidCandidates()                      // Main, the active party in its order, then the camp in roster order (never Away)
+string CannotEnterRaidReason(string mapId, IReadOnlyList<string> ids)   // null = OK (member ids, Main included)
+string EnterRaid(string mapId, string spawnId, IReadOnlyList<string> ids, bool companionsAutoPlay)   // null = entered
+```
+
+* **The gate.** Travelling to a raid map without a raid party — walking into its exit (`CheckTriggers` returns
+  `Stop`, `Kind = RaidGate`, `Id` = the map), clicking it (`UseTransition`: `Ok`, `Kind = None`), `EnterMap`, or a
+  dialogue `Teleport` (deferred until the conversation ends, like any teleport) — raises `RaidPartyRequested` and
+  does **not** travel. The leader stays in the exit rectangle, so walking in again asks again only after stepping
+  out. The picker answers with `EnterRaid(e.Id, e.Id2, ids, autoPlay)`.
+* **Forming.** `CannotEnterRaidReason` refuses in combat, in a conversation, after game over, for an unknown or
+  non-raid map, while a raid is already formed, for no ids, without Main, for an unknown, duplicated or Away
+  member, and for more than `raidSize` ids. `EnterRaid` remembers the party (order), leader and every recruited
+  character's auto-play, makes the party Main + the chosen ids in their order (camp companions join, unchosen
+  members wait at camp), keeps the leader when chosen (else Main), turns auto-play on for the companions when
+  asked (the picker's default), travels (`MapEntered`) and raises `RaidStarted` + `PartyChanged`. Main is never
+  switched to auto-play. `PartySize` is the raid's size meanwhile: `SetPartyMemberActive` and `Recruit` fill the
+  raid up to it (a recruit's own auto-play is the one it keeps afterwards). Moving between two raid maps keeps the
+  raid.
+* **Leaving.** Arriving in a non-raid map (exit, `EnterMap`, teleport, a wipe) restores the party from before the
+  raid — its members in order, minus companions dismissed meanwhile (Away), at most `config.partySize` — its leader
+  (else Main) and every recruited character's auto-play; raid-only members go back to camp. `RaidEnded` +
+  `PartyChanged` follow `MapEntered`.
+* **Wipe.** A defeat on a raid map is not game over: `CombatEnded` (`Defeat`) is raised, the encounter is reset (no
+  lockouts), the party travels to `raidReturnMap`/`raidReturnSpawn` (the raid ends: `RaidEnded`, `Amount` 1), every
+  recruited character is revived and fully restored like a long rest without the clock (dead hunter pets too), and
+  `PartyHealed` carries the notice ("The raid has wiped…"). `BattleSummary.Outcome` is `Defeat`, no XP, no loot.
+* **Saves** keep the raid (`SessionSaveData.raid`: size, the normal party in order, its leader, the sorted ids
+  with auto-play on; null when not in a raid). A raid saved on a map that is no longer a raid map ends on load.
 
 **Pets.** Hunter pets (Call Pet) and warlock demons are summoned with abilities (in the field or in battle) and stay
 as the owner's `Unit.Pet`: listed in `PartyUnits()`, following in formation, joining every battle right after their
@@ -270,9 +309,10 @@ string SetPartyPositions(Vec2 leaderPos, IReadOnlyList<Vec2> others = null)
    // the same placement WITHOUT any trigger (regions, encounters, transitions): scripted placement, snapping views after a
    // cutscene/load. Null = OK; refused during combat. A leader placed inside a transition must step out before it travels.
 TriggerResult CheckTriggers()      // region first entries, encounter triggers, transitions
-   // TriggerResult { Stop, Kind (None | Dialogue | Combat | Travel | Locked), Id } — Stop: stop animating
+   // TriggerResult { Stop, Kind (None | Dialogue | Combat | Travel | Locked | RaidGate), Id } — Stop: stop animating
+   // (RaidGate: a raid map's exit without a raid party, Id = the raid map; see §3 "Raids")
 MoveResult MoveLeader(Vec2 destination)   // instant walk in 0.25 m steps (tests, fast travel); stops at a trigger
-List<Vec2> FormationSlots(Vec2 leaderPos, Vec2 facing, int count)   // GameSession.FormationOffsets behind the leader
+List<Vec2> FormationSlots(Vec2 leaderPos, Vec2 facing, int count)   // GameSession.FormationOffsets (14 slots) behind the leader
 ```
 
 **Encounters.** The first available encounter with an active party member inside its radius triggers; stealthed
@@ -287,7 +327,8 @@ InteractResult TalkTo(string npcId)             // npc or companion → dialogue
 InteractResult OpenChest(string chestId)        // Kind Loot (LootOpened); Kind Locked (Ok false, Message "Locked (Sleight of Hand DC 13).")
 CheckResult TryUnlockChest(string chestId)      // best member's lock check (retries allowed); success opens the chest
 CheckResult PickLock(string chestId, Unit rogue = null)   // rogue_pick_lock: + floor(level/5); falls back to TryUnlockChest
-InteractResult UseTransition(string transitionId)          // Kind Travel, or Kind Locked + TransitionLocked event;
+InteractResult UseTransition(string transitionId)          // Kind Travel, or Kind Locked + TransitionLocked event, or
+                                                           // (raid exit without a raid party) Ok + Kind None + RaidPartyRequested;
                                                            // a hidden, unrevealed one fails: "There is no way through here."
 InteractResult InteractProp(string interactId)  // a prop with PropDef.dialogue starts it (owner = the interact id,
                                                 // exploration only) → Kind Dialogue; else its text (Toast) → Kind Text,
@@ -364,7 +405,16 @@ void ResetEncounter(string encounterId); bool IsPracticeEncounter(EncounterDef e
 Battles contain the active party (by reference — the same `Unit`s as in exploration), their pets and owned
 totems/summons, and **new** enemy `Unit`s built from the `EncounterDef` (`UnitFactory.CreatureLevel`: explicit level,
 or `scaleToParty` + `levelOffset`, or the creature's range) at the encounter's positions; replace the encounter's
-placeholder enemy views on `CombatStarted`. Overlapping units are moved to free walkable spots. The pathfinder is
+placeholder enemy views on `CombatStarted`. **Encounter health scale**: on ordinary maps every enemy's health is
+× `GameSession.EncounterHealthScale(n, false)` = `1 + 0.2 · max(0, n − 4)` for the n party characters joining (×1.2
+for a party of 5); raid maps use ×1 (raid creatures are tuned in data). **Battle formation**: the party (characters
+and their pets; totems and summons stay put) steps into rows facing the enemies along the party → enemies axis —
+tanks `FormationFrontGap` (2.5 m) short of the nearest enemy (the party moves at most `FormationMaxAdvance`, 4 m,
+forward), melee 1 m behind them, ranged 3.5 m, healers 5 m; each row is centred on the axis, 1.5 m apart in party
+order; pets beside their owner — each unit on the free walkable spot nearest its slot (`NavGrid.FindStandingSpots`,
+never on another unit; a unit keeps its place when that spot is not connected to the leader's ground). It is
+skipped when a stealthed attacker or an opener starts the fight (`EngageEncounter`), and at training dummies. The
+views walk to the new positions on `CombatStarted`. Overlapping units are moved to free walkable spots. The pathfinder is
 `NavGridPathfinder` over the map's `NavGrid`. Player input goes straight to the `Battle` (`UseAbility`, `UseItem`,
 `Move`, `EndTurn`, …) or through `session.UseAbility/UseItem`.
 
@@ -375,7 +425,7 @@ placeholder enemy views on `CombatStarted`. Overlapping units are moved to free 
   Practice encounters (every enemy Passive: `enc_training_dummy`) are reset instead of marked done.
 * **Left** (`LeaveCombat`, or a battle that ended `Fled`): no XP/loot for the passive targets; the encounter is
   reset (fight it again later; it does not re-trigger while you stand in it).
-* **Defeat**: `Mode = GameOver`, `CombatEnded` + `GameOver` events.
+* **Defeat**: `Mode = GameOver`, `CombatEnded` + `GameOver` events — except on a raid map (a wipe, §3 "Raids").
 
 After any battle the party stands where it fought; the field context is rebuilt. A leader who finished the fight inside a
 transition rectangle must step out of it before it travels (as on map entry), so the first step after a battle never
@@ -422,7 +472,8 @@ items with their whole `ItemDef`, random suffix id/name/stats — non-passive au
 charges and caster (party member refs), cooldowns, lockouts, auto-play, position/facing, hunter pet state, the
 persistent pet with its own state), roster order, active party, leader, approval, bags and gold, vendor stock and
 buyback, an open loot window, `WorldSaveData` (flags, quests, dialogue memory, map runtimes), map id, clock, play
-time, RNG state and `Settings`. `SessionSaveData.version` = `GameSession.SaveVersion` (1); newer versions are
+time, RNG state, `Settings` and the raid in progress (`raid`, §3). Party characters and pets saved on ground that
+is not walkable any more (maps changed) load on the nearest walkable cell. `SessionSaveData.version` = `GameSession.SaveVersion` (1); newer versions are
 refused. Save → load → save is byte-identical. A save that cannot be read or validated leaves the session unchanged
 (if applying a valid-looking save throws, the previous state is restored when it was saveable). The Unity layer owns
 files (`Application.persistentDataPath`).

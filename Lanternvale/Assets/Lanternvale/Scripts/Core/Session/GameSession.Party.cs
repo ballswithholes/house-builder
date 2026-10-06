@@ -16,11 +16,13 @@ namespace Lanternvale.Session
         readonly Dictionary<string, int> approval = new Dictionary<string, int>(StringComparer.Ordinal);
         readonly List<PartyMemberInfo> partyInfo = new List<PartyMemberInfo>();
 
-        /// <summary>Formation slots behind the leader: (metres behind, metres to the side).</summary>
+        /// <summary>Formation slots behind the leader: (metres behind, metres to the side). 14 slots: a raid of 10 with
+        /// its pets follows without falling back to the stretched overflow rule of <see cref="FormationSlots"/>.</summary>
         public static readonly Vec2[] FormationOffsets =
         {
             new Vec2(1.3f, 0.9f), new Vec2(1.3f, -0.9f), new Vec2(2.5f, 0f), new Vec2(2.5f, 1.7f), new Vec2(2.5f, -1.7f),
             new Vec2(3.7f, 0.85f), new Vec2(3.7f, -0.85f), new Vec2(4.9f, 0f), new Vec2(4.9f, 1.7f), new Vec2(4.9f, -1.7f),
+            new Vec2(6.1f, 0.85f), new Vec2(6.1f, -0.85f), new Vec2(7.3f, 0f), new Vec2(7.3f, 1.7f),
         };
 
         // ================================================================= queries
@@ -35,7 +37,8 @@ namespace Lanternvale.Session
         public Unit Leader => leader != null && party.Contains(leader) ? leader : Main;
         /// <summary>Companions are level-synced with the main character.</summary>
         public int PartyLevel => Main != null ? Main.Level : 1;
-        public int PartySize => Math.Max(1, Db.Config.partySize);
+        /// <summary>The most active characters: config.partySize, or the raid's size while in a raid (GameSession.Raid.cs).</summary>
+        public int PartySize => InRaid ? RaidSize : Math.Max(1, Db.Config.partySize);
 
         public string MemberId(Unit u)
         {
@@ -144,6 +147,7 @@ namespace Lanternvale.Session
             {
                 u = CreateCompanionUnit(def);
                 roster.Add(u);
+                NoteRecruitedInRaid(u);
             }
             bool joined = party.Contains(u);
             if (!joined && party.Count < PartySize && Battle == null)
@@ -373,7 +377,7 @@ namespace Lanternvale.Session
             var l = Leader;
             if (l == null || l == u) return;
             var spots = new List<Vec2>();
-            if (Nav != null) Nav.FindStandingSpots(l.Position, 8, 1.0f, ExploreAgent, spots);
+            if (Nav != null) Nav.FindStandingSpots(l.Position, 16, 1.0f, ExploreAgent, spots);   // 16: room for a raid of 10 and pets
             foreach (var s in spots)
             {
                 bool free = true;

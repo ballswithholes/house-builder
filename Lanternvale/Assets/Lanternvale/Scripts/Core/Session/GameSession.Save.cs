@@ -93,6 +93,7 @@ namespace Lanternvale.Session
             d.suppressedEncounters = new List<string>(suppressedEncounters);
             d.suppressedEncounters.Sort(StringComparer.Ordinal);
             d.soothedEncounters = SortedFloats(soothedEncounters);
+            d.raid = SaveRaid();   // null when not in a raid (GameSession.Raid.cs)
             return d;
         }
 
@@ -429,6 +430,20 @@ namespace Lanternvale.Session
             if (d.soothedEncounters != null)
                 foreach (var kv in d.soothedEncounters)
                     if (kv.Value > 0f && Map.FindEncounter(kv.Key) != null) soothedEncounters[kv.Key] = kv.Value;
+            LoadRaid(d.raid);   // after the party and the map: a raid saved on a map that is no longer one ends here
+            ClampPartyToWalkable();
+        }
+
+        /// <summary>
+        /// Party characters and pets saved on ground that is not walkable now (maps deepened, water and flag-filtered
+        /// obstacles block, a prop moved) stand on the nearest walkable cell instead; positions that are fine stay
+        /// bit-identical (save → load → save is unchanged).
+        /// </summary>
+        void ClampPartyToWalkable()
+        {
+            if (Nav == null) return;
+            foreach (var u in PartyUnits())
+                if (!Nav.IsWalkable(u.Position, ExploreAgent)) u.Position = Nav.ClampToWalkable(Nav.ClampToBounds(u.Position), ExploreAgent);
         }
 
         /// <summary>Suppresses every available encounter with a living party member within its radius + 1 m (the release rule

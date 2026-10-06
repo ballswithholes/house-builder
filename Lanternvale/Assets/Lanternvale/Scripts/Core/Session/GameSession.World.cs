@@ -41,12 +41,14 @@ namespace Lanternvale.Session
             if (Dialogue.IsActive) { afterDialogue.Add(() => EnterMap(mapId, spawnId)); return; }
             var rt = World.GetMap(mapId);
             if (rt == null) { LastError = $"Unknown map '{mapId}'."; return; }
+            if (RaidGate(rt.Id, spawnId)) return;   // a raid map without a raid party: RaidPartyRequested (GameSession.Raid.cs)
             if (PendingLoot != null) CloseLoot(true);
             CloseVendor();
             CloseTrainer();
             CloseRespec();
             DetachField();
             ClearOwnedSummons();
+            string raidLeft = LeaveRaidFor(rt.Def);   // leaving a raid: the normal party comes back before it is placed
             SetMap(rt);
             if (string.IsNullOrEmpty(spawnId)) spawnId = "default";
             var spawn = rt.SpawnPosition(spawnId);
@@ -56,6 +58,7 @@ namespace Lanternvale.Session
             Map.OnEnterMap();
             RebuildField();
             Raise(new SessionEvent { Kind = SessionEventKind.MapEntered, Id = rt.Id, Id2 = spawnId, Text = rt.Def.name });
+            if (raidLeft != null) RaiseRaidEnded(raidLeft);
             if (LanternsRekindled)
                 Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
             CheckTimeOfDay();
@@ -391,6 +394,7 @@ namespace Lanternvale.Session
                 Raise(new SessionEvent { Kind = SessionEventKind.TransitionLocked, Id = t.id, Text = string.IsNullOrEmpty(t.lockedText) ? "The way is blocked." : t.lockedText });
                 return new TriggerResult { Stop = true, Kind = TriggerKind.Locked, Id = t.id };
             }
+            if (RaidGate(t.targetMap, t.targetSpawn)) return new TriggerResult { Stop = true, Kind = TriggerKind.RaidGate, Id = t.targetMap };
             EnterMap(t.targetMap, t.targetSpawn);
             return new TriggerResult { Stop = true, Kind = TriggerKind.Travel, Id = t.targetMap };
         }
@@ -714,6 +718,8 @@ namespace Lanternvale.Session
                 Raise(new SessionEvent { Kind = SessionEventKind.TransitionLocked, Id = t.id, Text = text });
                 return new InteractResult { Ok = false, Kind = InteractKind.Locked, Id = t.id, Message = text };
             }
+            if (RaidGate(t.targetMap, t.targetSpawn))   // no travel: the raid picker opens (RaidPartyRequested)
+                return new InteractResult { Ok = true, Kind = InteractKind.None, Id = t.targetMap, Message = LastError };
             EnterMap(t.targetMap, t.targetSpawn);
             return new InteractResult { Ok = true, Kind = InteractKind.Travel, Id = t.targetMap };
         }

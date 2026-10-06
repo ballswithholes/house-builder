@@ -54,7 +54,7 @@ namespace Lanternvale.Session
                 return null;
             }
             bool stealth = attacker != null && attacker.IsStealthed;
-            var b = PrepareEncounter(encounterId, out var enemies, stealth);
+            var b = PrepareEncounter(encounterId, out var enemies, stealth, stealth || !string.IsNullOrEmpty(openerAbilityId));
             if (b == null) return null;
             if (!string.IsNullOrEmpty(openerAbilityId) && attacker != null && b.Units.Contains(attacker))
             {
@@ -69,8 +69,9 @@ namespace Lanternvale.Session
         }
 
         /// <summary>Builds (but does not begin) the battle for an encounter; null + LastError when not possible.
-        /// <paramref name="unaware"/>: a stealthed attacker opens the fight, the enemies keep their idle facing.</summary>
-        Battle PrepareEncounter(string encounterId, out List<Unit> enemies, bool unaware = false)
+        /// <paramref name="unaware"/>: a stealthed attacker opens the fight, the enemies keep their idle facing.
+        /// <paramref name="keepPositions"/>: no battle formation (stealth or an armed opener: positions matter).</summary>
+        Battle PrepareEncounter(string encounterId, out List<Unit> enemies, bool unaware = false, bool keepPositions = false)
         {
             enemies = new List<Unit>();
             LastError = "";
@@ -93,12 +94,21 @@ namespace Lanternvale.Session
             foreach (var x in OwnedSummons()) if (!units.Contains(x)) units.Add(x);   // totems placed before the pull
 
             int lvl = PartyLevel;
+            int characters = 0;
+            foreach (var u in units) if (u.IsCharacter) characters++;
+            float healthScale = EncounterHealthScale(characters, MapDef != null && MapDef.raidSize > 0);   // GameSession.Raid.cs
             foreach (var ed in enc.enemies)
             {
                 var def = Db.Creature(ed.creature);
                 if (def == null) { Log.Warn($"GameSession: encounter {enc.id}: unknown creature '{ed.creature}'"); continue; }
                 int level = UnitFactory.CreatureLevel(def, ed.level, lvl, Rng);
                 var e = UnitFactory.CreateCreature(Db, def, level, Team.Enemy);
+                if (healthScale != 1f)
+                {
+                    e.MaxHealthMult *= healthScale;
+                    e.InvalidateStats();
+                    e.RestoreFull();
+                }
                 e.Position = ed.pos;
                 e.Facing = EncounterIdleFacing(enc, ed);
                 enemies.Add(e);
@@ -110,7 +120,8 @@ namespace Lanternvale.Session
             CloseTrainer();
             CloseRespec();
 
-            // stand everyone on free walkable spots
+            // the party takes its battle formation by role (GameSession.Raid.cs), then everyone stands on free walkable spots
+            if (!keepPositions && !IsPracticeEncounter(enc)) ArrangeBattleFormation(units, enemies);
             Nav.ClearUnits();
             var all = new List<Unit>(units);
             all.AddRange(enemies);
@@ -261,6 +272,7 @@ namespace Lanternvale.Session
             if (b.Outcome == BattleOutcome.Defeat)
             {
                 s.Outcome = CombatEndKind.Defeat;
+                if (TryRaidWipe(b, enc, s)) return s;   // a raid wipe: home, healed, no game over (GameSession.Raid.cs)
                 gameOver = true;
                 Raise(new SessionEvent { Kind = SessionEventKind.CombatEnded, Outcome = CombatEndKind.Defeat, Id = s.EncounterId, Battle = b, Text = "Defeat..." });
                 Raise(new SessionEvent { Kind = SessionEventKind.GameOver, Text = "The party has fallen." });
