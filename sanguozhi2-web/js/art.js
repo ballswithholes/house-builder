@@ -341,6 +341,31 @@ void main() {
     // 自适应画质：持续掉帧（平均 > 28ms）时依次降低像素比、阴影贴图尺寸。设为 false 关闭
     autoQuality: true, maxPixelRatio: 2,
     _lowPoly: null, _water: null, _t0: 0, _perf: { last: 0, acc: 0, n: 0 },
+    _screens: [],
+
+    // ---- 全屏场景栈（攻击画面、单挑等）----
+    // screen = { scene, camera, update?(dt), render?(renderer), resize?(w, h) }
+    // 栈顶有场景时只渲染栈顶场景（主场景暂停绘制），并隐藏世界标签层（城名、部队名牌）。
+    pushScreen(screen) {
+      this._screens.push(screen);
+      this._fitScreen(screen);
+      this._syncScreenClass();
+      return screen;
+    },
+    popScreen(screen) {
+      const i = this._screens.indexOf(screen);
+      if (i >= 0) this._screens.splice(i, 1);
+      this._syncScreenClass();
+    },
+    topScreen() { return this._screens.length ? this._screens[this._screens.length - 1] : null; },
+    _fitScreen(s) {
+      const cam = s && s.camera;
+      if (cam && cam.isPerspectiveCamera) { cam.aspect = this.width / this.height; cam.updateProjectionMatrix(); }
+      if (s && typeof s.resize === 'function') s.resize(this.width, this.height);
+    },
+    _syncScreenClass() {
+      try { document.documentElement.classList.toggle('sg-screen-active', this._screens.length > 0); } catch (e) { /* 无 DOM */ }
+    },
 
     init(container) {
       container = container || document.body;
@@ -436,6 +461,7 @@ void main() {
         this.width = w; this.height = h;
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
+        for (const s of this._screens) this._fitScreen(s);
       }
       this._updateRect();
     },
@@ -498,6 +524,13 @@ void main() {
       this.time = (performance.now() - this._t0) / 1000;
       shared.time.value = this.time;
       shared.equator.value.copy(this.equatorColor).multiplyScalar(this.hemi.intensity);
+      const top = this.topScreen();
+      if (top) {
+        if (typeof top.render === 'function') top.render(this.renderer);
+        else this.renderer.render(top.scene, top.camera);
+        this._trackPerf();
+        return;
+      }
       this.sky.position.copy(this.camera.position);
       this.renderer.render(this.scene, this.camera);
       this._trackPerf();

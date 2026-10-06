@@ -146,6 +146,8 @@ body {
   z-index: 1;
   contain: strict;
 }
+/* 全屏场景（攻击画面、单挑）期间隐藏世界标签 */
+.sg-screen-active .sg-labels { visibility: hidden; }
 
 .sg-screens {
   top: var(--sg-sat);

@@ -157,6 +157,8 @@
         rig.update(dt);
         if (this.map) this.map.update(dt);
         if (this.battleView) this.battleView.update(dt);
+        const top = SG.Gfx.topScreen && SG.Gfx.topScreen();
+        if (top && typeof top.update === 'function') top.update(dt);
         SG.Gfx.setShadowFocus(rig.target, rig.distance * 0.85 + 8);
         SG.UI.updateFollowers(SG.Gfx.camera);
         SG.Gfx.render();
