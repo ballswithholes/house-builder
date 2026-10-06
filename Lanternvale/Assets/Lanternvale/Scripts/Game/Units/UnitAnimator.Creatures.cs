@@ -10,6 +10,8 @@ namespace Lanternvale.Game
         float qJaw;
         readonly float[] qLift = new float[8];
         readonly Vector3[] qFootOff = new Vector3[8];
+        // winged quads: spread 0 (folded) … 1 (spread) as a spring, the wing-beat phase, and the action layers
+        float qwSpread = -1f, qwSpreadV, qwPhase, qwSpreadAdd, qwRaiseAdd;
 
         // ================================================================== quadruped
 
@@ -40,10 +42,28 @@ namespace Lanternvale.Game
             phase = Frac(phase + inp.MoveDist / g.S + Mathf.Min(1.8f, turn * 0.4f) * dt * (1f - g.Walk));
             float liftK = Mathf.Max(g.Walk, turnW * 0.6f) * (1f + heavy * 0.3f);
             float wi = Mathf.Clamp01(w * 1.5f);
+            // a hovering winged quad (FloatHeight > 0) beats its wings and lets its legs dangle instead of stepping
+            bool hover = m.FloatHeight > 0f;
+            if (m.Wings) qwPhase = Frac(qwPhase + dt * m.WingBeat * (hover ? 1f + 0.3f * Mathf.Clamp01(vs / Mathf.Max(0.2f, 2f * L)) : 1f));
 
             for (int i = 0; i < legs; i++)
             {
                 var leg = m.Legs[i];
+                if (hover)
+                {
+                    // dangling: front paws tucked under the chest, hind legs trailing; they swing a little with the beat
+                    bool fr = leg.Root == QB.Chest;
+                    float ch = leg.A + leg.B;
+                    float sw = Mathf.Sin(qwPhase * Mathf.PI * 2f - (fr ? 0.6f : 1.4f));
+                    var j0 = m.Bind[leg.Upper];
+                    var dn = fr ? new Vector3(0f, -0.72f, 0.18f + 0.05f * sw) : new Vector3(0f, -0.78f, -0.42f - 0.08f * sw - 0.2f * Mathf.Clamp01(vs / Mathf.Max(0.2f, 2f * L)));
+                    footT[i] = j0 + Vector3.up * m.FloatHeight + dn.normalized * (ch * 0.86f);
+                    footPitch[i] = fr ? -30f : 40f;
+                    wasStance[i] = true;
+                    qLift[i] = 0f;
+                    qFootOff[i] = Vector3.zero;
+                    continue;
+                }
                 float p = Frac(phase + leg.Phase);
                 FootPath(p, g, g.Lift * liftK, leg.Rest.y, 0f, 0f, false, out float along, out float fix, out float y, out float pitch, out bool stance);
                 var gaitPos = new Vector3(leg.Rest.x, y, leg.Rest.z) + moveDir * (along * w);
@@ -71,6 +91,16 @@ namespace Lanternvale.Game
             float bend = Mathf.Clamp(inp.YawRate * 0.06f, -18f, 18f);
             qHipsE = new Vector3((2f + 2f * g.Run) * w, hipYaw - bend * 0.3f, hipRoll);
             qChestE = new Vector3(Mathf.Sin(bobPh) * 1.5f * w + breathe * 0.8f, -hipYaw * 1.3f + bend, -hipRoll * 0.8f);
+            if (hover)
+            {
+                // held up by the wings: the body rises on each downstroke, leans into forward flight, rolls in turns
+                float beat = qwPhase * Mathf.PI * 2f;
+                float fwd = Mathf.Clamp01(vs / Mathf.Max(0.2f, 2f * L));
+                qHipsPos = new Vector3(0f, m.HipY + m.FloatHeight * (1f + 0.09f * Mathf.Sin(beat - 1.3f)) + breathe * 0.004f * L, Rest(QB.Hips).z);
+                qHipsE = new Vector3(4f + 12f * fwd + 2.5f * Mathf.Sin(beat - 0.4f), Mathf.Sin(time * 0.7f) * 4f - bend * 0.3f, Mathf.Clamp(-inp.YawRate * 0.08f, -20f, 20f) + Mathf.Sin(time * 0.9f) * 3f);
+                qChestE = new Vector3(-3f * Mathf.Sin(beat - 0.2f) + breathe * 0.8f, bend * 0.6f, 0f);
+                w = 0f;
+            }
 
             // idle glance / sniff
             glanceTimer -= dt;
@@ -107,6 +137,7 @@ namespace Lanternvale.Game
             var dir = inp.ActionDir; dir.y = 0f;
             if (dir.sqrMagnitude < 1e-4f) dir = Vector3.forward;
             dir.Normalize();
+            qwSpreadAdd = 0f; qwRaiseAdd = 0f;
             switch (inp.Action)
             {
                 case UnitAction.Attack:
@@ -116,6 +147,9 @@ namespace Lanternvale.Game
                     {
                         float rear = Bump(t, 0.0f, 0.14f, 0.2f, 0.26f);
                         float slam = Win(t, 0.17f, 0.23f) * (1f - Win(t, 0.3f, dur));
+                        // wings: thrown open and up as it rears, beaten down with the slam
+                        qwSpreadAdd += 0.9f * rear + 0.7f * slam;
+                        qwRaiseAdd += 42f * rear - 34f * slam;
                         float pitch = st == UnitStrike.Stomp ? 34f : 26f;
                         qHipsE.x -= pitch * rear;
                         qHipsPos.y += L * 0.04f * rear - L * 0.05f * slam;
@@ -136,6 +170,8 @@ namespace Lanternvale.Game
                     {
                         float back = Bump(t, 0f, 0.09f, 0.11f, 0.19f);
                         float lunge = Win(t, 0.1f, 0.22f) * (1f - Win(t, 0.3f, dur));
+                        qwSpreadAdd += 0.25f * back + 0.5f * lunge;
+                        qwRaiseAdd += 22f * back - 18f * lunge;
                         float reach = st == UnitStrike.Charge ? 0.75f : (st == UnitStrike.Bump ? 0.3f : 0.45f);
                         BodyOffset += dir * (bodyLen * (reach * lunge - 0.1f * back));
                         qHipsPos.y -= L * (0.07f * back + 0.03f * lunge);
@@ -168,6 +204,9 @@ namespace Lanternvale.Game
                     qHipsPos.y -= L * 0.03f * up * env;
                     qJaw = Mathf.Max(qJaw, (34f * up + 22f * snap) * env);
                     BodyOffset += dir * (bodyLen * 0.08f * snap);
+                    // wings: spread wide and raised for the roar / breath, a downbeat on the release
+                    qwSpreadAdd += (1.1f * up + 0.8f * snap) * env;
+                    qwRaiseAdd += (20f * up - 24f * snap) * env;
                     break;
                 }
                 case UnitAction.Dodge:
@@ -177,6 +216,7 @@ namespace Lanternvale.Game
                     float side = inp.DodgeSide >= 0 ? 1f : -1f;
                     BodyOffset += new Vector3(side * m.Radius * 1.2f * S01(u * 1.6f) * (1f - Win(u, 0.55f, 1f)), 0.12f * L * k, 0f);
                     qHipsE.z -= side * 14f * k;
+                    qwSpreadAdd += 0.5f * k; qwRaiseAdd += 26f * k;
                     for (int i = 0; i < m.Legs.Length; i++) qLift[i] += 0.12f * L * k;
                     break;
                 }
@@ -196,11 +236,13 @@ namespace Lanternvale.Game
                 qHipsPos.y -= 0.04f * L * k;
                 qNeckE.x += 14f * k;
                 qChestE.z += 6f * k;
+                qwSpreadAdd += 0.2f * k; qwRaiseAdd += 16f * k;
             }
             if (inp.Casting && inp.Action == UnitAction.None)
             {
                 qNeckE.x -= 18f;
                 qJaw = Mathf.Max(qJaw, 10f + 6f * Mathf.Sin(inp.Time * 5f));
+                qwSpreadAdd += 0.55f; qwRaiseAdd += 14f + 5f * Mathf.Sin(inp.Time * 3f);
             }
         }
 
@@ -249,7 +291,7 @@ namespace Lanternvale.Game
 
             // keep the front legs reachable: pitch the body down at the front if needed
             float L = m.LegLength;
-            if (LieAmount < 0.5f)
+            if (LieAmount < 0.5f && m.FloatHeight <= 0f)
             {
                 float worst = 0f;
                 for (int i = 0; i < m.Legs.Length; i++)
@@ -327,10 +369,68 @@ namespace Lanternvale.Game
             float wag = Mathf.Sin(time * wagSpeed) * (14f + 8f * (1f - speedK));
             Spring(ref tailA, ref tailV, 10f + 25f * speedK - 30f * LieAmount, 50f, 7f, dt);
             Spring(ref tailYaw, ref tailYawV, wag, 80f, 6f, dt);
-            SetRot(QB.Tail1, E(Mathf.Clamp(tailA, -40f, 60f), tailYaw, 0f));
-            SetRot(QB.Tail2, E(8f + speedK * 8f, tailYaw * 0.8f + Mathf.Sin(time * wagSpeed - 1f) * 10f, 0f));
+            // long tails (QuadKit.LongTail: Tail3 is the tip) are carried low and sweep side to side instead of being
+            // cocked up; short tails keep the original wag (their Tail3 has no vertices)
+            if (m.LongTail)
+            {
+                SetRot(QB.Tail1, E(Mathf.Clamp(tailA * 0.2f - 3f, -20f, 12f), tailYaw * 0.55f, 0f));
+                SetRot(QB.Tail2, E(-3f + speedK * 3f + 6f * LieAmount, tailYaw * 0.6f + Mathf.Sin(time * wagSpeed - 1f) * 7f, 0f));
+                SetRot(QB.Tail3, E(-2f + speedK * 4f + 6f * LieAmount, tailYaw * 0.6f + Mathf.Sin(time * wagSpeed - 2f) * 10f, 0f));
+            }
+            else
+            {
+                SetRot(QB.Tail1, E(Mathf.Clamp(tailA, -40f, 60f), tailYaw, 0f));
+                SetRot(QB.Tail2, E(8f + speedK * 8f, tailYaw * 0.8f + Mathf.Sin(time * wagSpeed - 1f) * 10f, 0f));
+            }
             Spring(ref capeA, ref capeV, 6f * speedK + Mathf.Sin(time * 2.4f) * 2f, 40f, 6f, dt);
             SetRot(QB.Back, E(capeA, 0f, Mathf.Sin(time * 1.8f) * 2f));
+
+            if (m.Wings) SolveQuadWings(time, dt, w);
+        }
+
+        /// <summary>
+        /// Winged quads: each wing is the inner bone (raised about the body's long axis, swept back about the vertical)
+        /// and the outer bone (the fingers, folded back about the wing's own normal at the wrist). At rest the wings are
+        /// folded up over the back (UnitModel.WingFold), they open in roars, casts, rearing attacks and dodges
+        /// (qwSpreadAdd / qwRaiseAdd from QuadActions) and beat continuously while hovering (FloatHeight &gt; 0).
+        /// </summary>
+        void SolveQuadWings(float time, float dt, float w)
+        {
+            bool hover = m.FloatHeight > 0f;
+            float target = hover ? 1f : (1f - m.WingFold) + 0.12f * w;
+            target = Mathf.Clamp(target + qwSpreadAdd, 0f, 1.08f);
+            target = Mathf.Lerp(target, 0.5f, LieAmount);
+            if (qwSpread < 0f) qwSpread = target;
+            Spring(ref qwSpread, ref qwSpreadV, target, 120f, 16f, dt);
+            float sp = Mathf.Clamp(qwSpread, 0f, 1.1f);
+            float beat = qwPhase * Mathf.PI * 2f;
+            float flap, lag;
+            if (hover && LieAmount < 0.5f)
+            {
+                // power downstroke, quicker upstroke; the hand trails the arm
+                float sn = Mathf.Sin(beat);
+                flap = (sn > 0f ? sn : sn * 0.85f) * 50f + 12f;
+                lag = Mathf.Sin(beat - 1.1f) * 26f;
+            }
+            else
+            {
+                // grounded: the folded wings settle and lift with the breath, flutter a little at a trot
+                flap = Mathf.Sin(time * 1.15f) * 3f + w * Mathf.Sin(phase * Mathf.PI * 4f) * 4f;
+                lag = flap * 0.5f;
+            }
+            flap *= 1f - LieAmount;
+            float sc = Mathf.Clamp01(sp);
+            float raise = Mathf.Lerp(48f, 4f, sc) + flap + qwRaiseAdd - 50f * LieAmount;
+            float sweep = Mathf.Lerp(40f, -4f, sc);
+            float fold = Mathf.Lerp(128f, 0f, sc);
+            float droop = Mathf.Lerp(40f, 0f, sc);
+            float pitch = Mathf.Lerp(-10f, 0f, sc);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                SetRot(QB.Wing(s), E(pitch, s * sweep, s * raise));
+                // the hand folds back along the arm (about the wing's normal) and hangs down beside the flank
+                SetRot(QB.Wing2(s), Quaternion.AngleAxis(-droop, Vector3.right) * Quaternion.AngleAxis(s * fold, Vector3.up) * Quaternion.AngleAxis(s * lag, Vector3.forward));
+            }
         }
 
         // ================================================================== spider
@@ -444,6 +544,24 @@ namespace Lanternvale.Game
                     footT[i] = Vector3.Lerp(footT[i], curled, S01(curl));
                     qLift[i] *= 1f - curl;
                 }
+            }
+
+            if (m.HeartBeat > 0f)
+            {
+                // a rooted boss (the Hollow Heart): the body stays put and sways; the heart (Abdomen) beats lub-dub,
+                // harder in casts, attacks and channels; the tendrils (legs) still rear and lash in attacks
+                bodyPos.y = Mathf.Lerp(Mathf.Lerp(m.HipY, bodyPos.y, 0.1f), bodyPos.y, curl) + Mathf.Sin(time * 0.8f) * 0.012f * L;
+                bodyE = bodyE * 0.3f + new Vector3(Mathf.Sin(time * 0.6f) * 2f, Mathf.Sin(time * 0.45f) * 4f, Mathf.Sin(time * 0.7f + 1f) * 2f);
+                BodyOffset *= 0.25f;
+                abdE = new Vector3(Mathf.Sin(time * 0.9f) * 3f, Mathf.Sin(time * 0.5f) * 5f, 0f);
+                float bp = Frac(time * m.HeartBeat);
+                float lub = Mathf.Exp(-((bp - 0.06f) / 0.05f) * ((bp - 0.06f) / 0.05f));
+                float dub = Mathf.Exp(-((bp - 0.26f) / 0.06f) * ((bp - 0.26f) / 0.06f)) * 0.6f;
+                float act = (inp.Action == UnitAction.Cast || inp.Action == UnitAction.Shoot || inp.Action == UnitAction.Attack)
+                    ? Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / dur)) : 0f;
+                if (inp.Casting) act = Mathf.Max(act, 0.4f);
+                float sc = (1f + 0.07f * (lub + dub) + 0.14f * act) * (1f - 0.25f * curl);
+                if (n > SB.Abdomen) this.t[SB.Abdomen].localScale = new Vector3(sc, sc, sc);
             }
 
             var bodyQ = E(bodyE);

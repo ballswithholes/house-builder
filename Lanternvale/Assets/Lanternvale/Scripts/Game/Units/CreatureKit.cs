@@ -40,6 +40,9 @@ namespace Lanternvale.Game
             Bind[QB.Tail1] = new Vector3(0f, hipY + bodyR * 0.45f, zh - bodyR * 0.9f);
             Bind[QB.Tail2] = Bind[QB.Tail1] + new Vector3(0f, -bodyR * 0.3f, -bodyR * 0.9f);
             Bind[QB.Back] = new Vector3(0f, Mathf.Lerp(hipY, chestY, 0.5f) + bodyR * 0.85f, 0f);
+            // wing and tail-tip bones (QB.WingL/R, WingL2/R2, Tail3) carry nothing unless Wings / LongTail author them
+            Bind[QB.WingL] = Bind[QB.WingR] = Bind[QB.WingL2] = Bind[QB.WingR2] = Bind[QB.Chest];
+            Bind[QB.Tail3] = Bind[QB.Tail2];
         }
 
         void SetLeg(int u, int l, int f, int side, float jointY, float z, float midFrac, float bend)
@@ -384,6 +387,178 @@ namespace Lanternvale.Game
             if (tip.HasValue) { M.Color = tip.Value; M.Sphere(p3, r * 0.55f, 6, 4); }
         }
 
+        /// <summary>
+        /// Dragon wings on QB.WingL/R (the arm from the shoulder to the wrist and the membrane from it down to the flank)
+        /// and QB.WingL2/R2 (the fingers fanning from the wrist and the scalloped membrane between them), authored spread:
+        /// `span` metres from the shoulder to the leading finger tip, `chord` stretches the wing towards the tail. Both
+        /// faces of the membrane are drawn with a little thickness (top `membrane`, underside `under`) so the ink outline
+        /// keeps it one shape edge-on; `tatter` (0 … 1) notches the trailing edge (old, battle-torn wings). The animator
+        /// folds them at rest (UnitModel.WingFold), spreads them in roars and rearing attacks and beats them when the
+        /// model hovers (FloatHeight &gt; 0). Call after Body (the shoulders sit on the torso).
+        /// </summary>
+        public void Wings(float span, Color arm, Color membrane, Color under, Color claw, int fingers = 4, float chord = 1f,
+                          float tatter = 0f, float armR = 0.035f, Color? edge = null)
+        {
+            fingers = Mathf.Clamp(fingers, 2, 5);
+            float zc = Bind[QB.Chest].z - BodyR * 0.1f;
+            float zr = Bind[QB.Hips].z + BodyR * 0.15f;
+            float keepJ = M.Jitter;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                int wb = QB.Wing(s), wo = QB.Wing2(s);
+                var w0 = new Vector3(s * BodyR * 0.42f, TopY(zc) - BodyR * 0.12f, zc);
+                Vector3 P(float x, float y, float z) => w0 + new Vector3(s * x * span, y * span, z * span);
+                var elbow = P(0.3f, 0.17f, 0.1f);
+                var wrist = P(0.56f, 0.26f, 0.06f);
+                Bind[wb] = w0;
+                Bind[wo] = wrist;
+                var tips = new Vector3[fingers];
+                for (int i = 0; i < fingers; i++)
+                {
+                    float t = (float)i / (fingers - 1);
+                    tips[i] = P(Mathf.Lerp(1.0f, 0.42f, t * t * 0.6f + t * 0.4f), Mathf.Lerp(0.3f, -0.07f, Mathf.Sqrt(t)), -Mathf.Lerp(0.04f, 0.82f, t) * chord);
+                }
+                var root = new Vector3(s * BodyR * 0.62f, TopY(zr) - BodyR * 0.3f, zr);
+                var last = Vector3.Lerp(wrist, tips[fingers - 1], 0.58f);
+
+                // membrane (two faces with a little thickness, plus the rim)
+                M.Jitter = keepJ * 0.4f;
+                float th = span * 0.012f;
+                void Tri(Vector3 a, Vector3 b, Vector3 c)
+                {
+                    var n = Vector3.Cross(b - a, c - a);
+                    if (n.sqrMagnitude < 1e-12f) return;
+                    n.Normalize();
+                    if (n.y < 0f) n = -n;
+                    var h = n * th;
+                    M.Color = membrane; M.TriangleFacing(a + h, b + h, c + h, n);
+                    M.Color = under; M.TriangleFacing(a - h, b - h, c - h, -n);
+                }
+                void Rim(Vector3 a, Vector3 b, Vector3 inside)
+                {
+                    var n = Vector3.Cross(b - a, inside - a);
+                    if (n.sqrMagnitude < 1e-12f) return;
+                    n.Normalize();
+                    if (n.y < 0f) n = -n;
+                    var h = n * th;
+                    var o = Vector3.Cross(b - a, n);
+                    if (Vector3.Dot(o, inside - a) > 0f) o = -o;
+                    M.Color = edge ?? under;
+                    M.Quad(a + h, b + h, b - h, a - h, o);
+                }
+                Vector3 Scallop(Vector3 a, Vector3 b, Vector3 towards, float k) => Vector3.Lerp(Vector3.Lerp(a, b, 0.5f), towards, k);
+
+                // inner membrane: shoulder → elbow → wrist → along the last finger → scalloped edge → flank
+                M.Bone = wb;
+                var midIn = Scallop(last, root, elbow, 0.22f);
+                var midIn2 = Scallop(midIn, root, elbow, 0.12f);
+                Tri(w0, elbow, wrist);
+                Tri(w0, wrist, last);
+                Tri(w0, last, midIn);
+                Tri(w0, midIn, midIn2);
+                Tri(w0, midIn2, root);
+                Rim(last, midIn, w0); Rim(midIn, midIn2, w0); Rim(midIn2, root, w0);
+                // arm: humerus, forearm, the wrist knuckle and its thumb claw
+                M.Jitter = keepJ;
+                M.Color = arm;
+                float r = armR * span;
+                M.Segment(w0 - (elbow - w0).normalized * r, elbow, r * 1.25f, r, 6);
+                M.Sphere(elbow, r * 1.05f, 6, 4);
+                M.Segment(elbow, wrist, r, r * 0.8f, 6);
+                M.Color = claw;
+                M.Spike(wrist, (wrist - elbow).normalized + Vector3.up * 0.6f + Vector3.forward * 0.4f, r * 0.7f, r * 3.2f, 5);
+
+                // outer membrane: a fan between the fingers, each gap scalloped (and torn when tattered)
+                M.Bone = wo;
+                M.Jitter = keepJ * 0.4f;
+                for (int i = 0; i + 1 < fingers; i++)
+                {
+                    float k = 0.3f + (tatter > 0f && (i & 1) == 1 ? 0.18f * tatter : 0f);
+                    var mid = Scallop(tips[i], tips[i + 1], wrist, k);
+                    Tri(wrist, tips[i], mid);
+                    Tri(wrist, mid, tips[i + 1]);
+                    Rim(tips[i], mid, wrist); Rim(mid, tips[i + 1], wrist);
+                    if (tatter > 0f && (i & 1) == 0)
+                    {
+                        // a torn notch: a small dark triangle on the edge reads as a hole from above
+                        M.Color = Paint.Shade(under, 0.55f);
+                        var n0 = Vector3.Lerp(tips[i], mid, 0.45f);
+                        var n1 = Vector3.Lerp(n0, wrist, 0.12f * tatter);
+                        var n2 = Vector3.Lerp(tips[i], mid, 0.7f);
+                        var nn = Vector3.Cross(n1 - n0, n2 - n0).normalized;
+                        if (nn.y < 0f) nn = -nn;
+                        M.TriangleFacing(n0 + nn * th * 1.6f, n1 + nn * th * 1.6f, n2 + nn * th * 1.6f, nn);
+                    }
+                }
+                M.Jitter = keepJ;
+                M.Color = arm;
+                M.Sphere(wrist, r * 0.95f, 6, 4);
+                for (int i = 0; i < fingers; i++)
+                {
+                    var bend = Vector3.Lerp(wrist, tips[i], 0.5f) + Vector3.up * span * 0.03f;
+                    M.Curve(wrist, bend, tips[i], r * (i == 0 ? 0.85f : 0.62f), r * 0.16f, 3, 5);
+                }
+                M.Color = claw;
+                M.Spike(tips[0], (tips[0] - wrist).normalized, r * 0.4f, r * 2.2f, 4);
+            }
+            M.Jitter = keepJ;
+            Model.Wings = true;
+        }
+
+        /// <summary>
+        /// A long tail on three bones (Tail1 root in the rump, Tail2, Tail3 tip) sweeping back and down towards the ground
+        /// and lifting a little at the tip; returns the tip point. `r` is the root radius; `flat` &gt; 1 widens it sideways
+        /// (crocolisks). Optional `ridge` scutes/spines run along its top, `under` is a paler belly strip.
+        /// </summary>
+        public Vector3 LongTail(Color c, float len, float r, float flat = 1f, float droop = 0.5f, Color? ridge = null, float ridgeH = 0f, Color? under = null)
+        {
+            var a = Bind[QB.Tail1];
+            var dir = new Vector3(0f, -Mathf.Clamp01(droop) * 0.55f, -1f).normalized;
+            var b = a + dir * len * 0.34f;
+            var dir2 = new Vector3(0f, -Mathf.Clamp01(droop) * 0.35f, -1f).normalized;
+            var cpt = b + dir2 * len * 0.33f;
+            cpt.y = Mathf.Max(cpt.y, r * 0.55f);
+            var tip = cpt + new Vector3(0f, r * 0.4f, -len * 0.33f);
+            tip.y = Mathf.Max(tip.y, r * 0.45f);
+            Bind[QB.Tail2] = b;
+            Bind[QB.Tail3] = cpt;
+            Model.LongTail = true;
+            float[] rs = { r, r * 0.72f, r * 0.45f, r * 0.08f };
+            Vector3[] ps = { a - dir * r * 0.9f, b, cpt, tip };
+            int[] bones = { QB.Tail1, QB.Tail2, QB.Tail3 };
+            for (int i = 0; i < 3; i++)
+            {
+                M.Bone = bones[i];
+                M.Color = c;
+                var mid = Vector3.Lerp(ps[i], ps[i + 1], 0.5f);
+                M.Push().Translate(mid).Scale(new Vector3(flat, 1f, 1f)).Translate(-mid);
+                M.Segment(ps[i], ps[i + 1], rs[i], rs[i + 1], 7);
+                if (i < 2) M.Sphere(ps[i + 1], rs[i + 1], 7, 4);
+                M.Pop();
+                if (under.HasValue)
+                {
+                    M.Color = under.Value;
+                    M.Segment(ps[i] + Vector3.down * rs[i] * 0.35f, ps[i + 1] + Vector3.down * rs[i + 1] * 0.35f, rs[i] * 0.78f * flat, rs[i + 1] * 0.78f * flat, 6);
+                }
+                if (ridge.HasValue && ridgeH > 0f)
+                {
+                    M.Color = ridge.Value;
+                    for (int j = 0; j < 3; j++)
+                    {
+                        float t = (j + 0.5f) / 3f;
+                        var p = Vector3.Lerp(ps[i], ps[i + 1], t);
+                        float rr = Mathf.Lerp(rs[i], rs[i + 1], t);
+                        M.Aim(p + Vector3.up * rr * 0.8f, new Vector3(0f, 1f, -0.6f));
+                        M.Push().Scale(new Vector3(0.45f, 1f, 1.3f));
+                        M.Cone(Vector3.zero, rr * 0.5f + ridgeH * 0.2f, ridgeH * Mathf.Lerp(1f, 0.4f, (i + t) / 3f), 4);
+                        M.Pop();
+                        M.Pop();
+                    }
+                }
+            }
+            return tip;
+        }
+
         public void Finish(string key, float height, UnitStrike strike = UnitStrike.Bite, UnitRanged ranged = UnitRanged.Howl)
         {
             var m = Model;
@@ -405,7 +580,9 @@ namespace Lanternvale.Game
             m.MaxCadence = 3.4f;
             m.CenterBone = QB.Chest;
             m.CenterOffset = new Vector3(0f, 0f, -BodyLen * 0.35f);
-            m.PickBones = new[] { QB.Head, QB.Chest, QB.Hips, QB.FLF, QB.FRF, QB.BLF, QB.BRF, QB.Tail2 };
+            m.PickBones = m.Wings
+                ? new[] { QB.Head, QB.Chest, QB.Hips, QB.FLF, QB.FRF, QB.BLF, QB.BRF, QB.Tail2, QB.WingL2, QB.WingR2 }
+                : new[] { QB.Head, QB.Chest, QB.Hips, QB.FLF, QB.FRF, QB.BLF, QB.BRF, QB.Tail2 };
             m.PickPad = BodyR * 0.6f;
             int[,] legs = { { QB.FLU, QB.FLL, QB.FLF, QB.Chest, -1 }, { QB.FRU, QB.FRL, QB.FRF, QB.Chest, 1 }, { QB.BLU, QB.BLL, QB.BLF, QB.Hips, -1 }, { QB.BRU, QB.BRL, QB.BRF, QB.Hips, 1 } };
             m.Legs = new UnitLeg[4];

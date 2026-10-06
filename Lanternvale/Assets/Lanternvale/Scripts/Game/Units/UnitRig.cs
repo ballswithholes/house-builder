@@ -9,7 +9,8 @@
 // Rig families (bone index constants below):
 //   Biped  — humanoids, mosslings, treant, imps, succubus, infernal; also floaters (wisp, hollow spirit, voidwalker,
 //            forest spirit) and the owl, which simply leave the leg bones empty.
-//   Quad   — wolves, boars, cat, bear, felhunter, the warden stag, the polymorph sheep.
+//   Quad   — wolves, boars, cat, bear, felhunter, the warden stag, the polymorph sheep; with QB wing bones the
+//            winged quads (drake whelps, drakes, the Ashwyrm), which flap, fold their wings and may hover.
 //   Spider — eight legs.
 //   Static — totems, training dummy, traps, lightwell (base + wobbling top).
 using UnityEngine;
@@ -83,7 +84,18 @@ namespace Lanternvale.Game
         public const int FLU = 5, FLL = 6, FLF = 7, FRU = 8, FRL = 9, FRF = 10;
         public const int BLU = 11, BLL = 12, BLF = 13, BRU = 14, BRL = 15, BRF = 16;
         public const int Tail1 = 17, Tail2 = 18, Back = 19;
-        public const int Count = 20;
+        /// <summary>
+        /// Winged quads (drakes, whelps, the Ashwyrm; QuadKit.Wings): the inner wing (shoulder → wrist: the arm and the
+        /// membrane down to the flank) on WingL/WingR, children of the Chest; the outer wing (the fingers and the membrane
+        /// between them) on WingL2/WingR2, children of the inner wing at the wrist, so the wing folds at the wrist.
+        /// Tail3 (child of Tail2) is the tip of a long tail (QuadKit.LongTail: crocolisks, dragons).
+        /// Unwinged quads leave these bones without vertices: their bind is the chest / tail tip and nothing moves.
+        /// </summary>
+        public const int WingL = 20, WingR = 21, WingL2 = 22, WingR2 = 23, Tail3 = 24;
+        public const int Count = 25;
+
+        public static int Wing(int side) => side < 0 ? WingL : WingR;
+        public static int Wing2(int side) => side < 0 ? WingL2 : WingR2;
 
         public static readonly int[] Parent =
         {
@@ -91,12 +103,14 @@ namespace Lanternvale.Game
             Chest, FLU, FLL, Chest, FRU, FRL,
             Hips, BLU, BLL, Hips, BRU, BRL,
             Hips, Tail1, Chest,
+            Chest, Chest, WingL, WingR, Tail2,
         };
 
         public static readonly string[] Names =
         {
             "Hips", "Chest", "Neck", "Head", "Jaw", "FLU", "FLL", "FLF", "FRU", "FRL", "FRF",
             "BLU", "BLL", "BLF", "BRU", "BRL", "BRF", "Tail1", "Tail2", "Back",
+            "WingL", "WingR", "WingL2", "WingR2", "Tail3",
         };
     }
 
@@ -210,9 +224,22 @@ namespace Lanternvale.Game
         public bool Static;
         /// <summary>Totems/traps pop in with a little bounce when created.</summary>
         public bool SpawnPop;
-        /// <summary>Wings flap (owl, imp, succubus).</summary>
+        /// <summary>Wings flap (owl, imp, succubus; winged quads: QB.WingL/R + WingL2/R2).</summary>
         public bool Wings;
         public bool WingsFlap;
+        /// <summary>
+        /// Winged quads: wing beats per second while hovering or flapping (big wings beat slowly), and how far the wings
+        /// are folded at rest (0 = held spread as authored … 1 = folded tight along the flanks).
+        /// </summary>
+        public float WingBeat = 1.6f;
+        public float WingFold = 0.7f;
+        /// <summary>
+        /// Rooted spider-rig bosses (the Hollow Heart): heartbeats per second of the SB.Abdomen part (a lub-dub scale
+        /// pulse, stronger while casting); the body stays rooted (no lunges or rearing). 0 = an ordinary spider.
+        /// </summary>
+        public float HeartBeat;
+        /// <summary>A three-bone tail (QuadKit.LongTail, QB.Tail3): carried low and swept instead of cocked and wagged.</summary>
+        public bool LongTail;
 
         // anchors (bone + local offset in bone space, model units)
         public int CastBone = -1;
