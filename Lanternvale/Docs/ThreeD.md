@@ -185,6 +185,22 @@ Keep every public member (see `Docs/PresentationAPI.md` §3), now in 3D:
 * Performance: ≤ 2 draw calls per unit body (e.g. one rigidly-skinned `SkinnedMeshRenderer` + outline material, or
   a few `MeshRenderer` parts sharing the LowPoly material); meshes cached per recipe; no per-frame allocations.
 
+### Quest markers (`Scripts/Game/Units/QuestMarker3D.cs`, `GameFlow.QuestMarkers.cs`)
+
+* `QuestMarker3D.Create(parent, phase)` → a hidden marker under an NPC view; `Place(headHeight)` (HeadGap 0.34 m above
+  the model), `Set(QuestMarker kind, bool main)`, `SetVisible`, `Animate(time, cameraYaw, cameraPitch, scale)`, `Dispose`.
+* A chunky low-poly "!" (tapered bar + octagonal dot) or "?" (a ribbon hook + stem + dot), 0.56 m, 0.11 m deep, in the
+  XY plane readable from local −Z, ink outline (`Materials3D.WithOutline`, outline 2.6), vertex emission (yellow
+  `#ffd23a` 0.8, grey 0.3), fog scale 0.3 so far markers stay bright, no shadows. Main-story quests: ×1.15 inside a
+  thin gold torus. Meshes are cached per kind.
+* Animation: bob ±0.06 m at 1.6 Hz, ±6° sway, turned to the camera yaw and leaned back by 45 % of its pitch;
+  GameFlow scales them up to ×1.35 as the camera zooms out.
+* GameFlow attaches one per NPC view (`npcEntries`) that has a marker, re-reads kinds when
+  `Session.QuestMarkersVersion` moves, prunes entries whose view is gone, and hides them in combat, while a battle is
+  presented, at game over and over the dialogue's speaker (one call in `UpdateWorldTimers`).
+* Preview-safe (UnityEngine + Rendering3D + Core only): `preview3d.sh map lanternvale out.png --markers auto` (the
+  real rules against `--flags`, `--quests q,q=stage,q=done`, `--level N`) or `--markers elder_maru:ready+main,…`.
+
 ## 6. MapView (World)
 
 Keep the public API (`Docs/PresentationAPI.md` §1–2): `MapView.Build(def, flagTest)`, `Current`, `Def`, `DayNight`,

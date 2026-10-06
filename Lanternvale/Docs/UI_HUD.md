@@ -101,6 +101,9 @@ Travel, Inspect, Attack, "Open with Cheap Shot (Pip)"). **Encounter enemies** ge
 (`GameFlow.HoveredEnemy` / `HoveredEncounter`): name, a level badge in WoW difficulty colours for the level the battle
 will scale it to (a range for rolled levels, `12+` elite, `??` + red for bosses or 10+ levels above the party), a gold
 winged mark for elites (silver for rares) or a skull for bosses, and "pack of 3" / "group of 4 · Boss" / "passive".
+A hovered **NPC with a quest marker** gets a slim plate above its name: the "!" / "?" in its colour and the quest line
+("Quest: Wolves at the Fold", "Turn in: …", "In progress: …", "Quest (level 18): …", "+N" for more quests; gold rim for
+the main story) — `GameFlow.HoveredNpcId` → `Session.QuestMarkerOf`, cached per `QuestMarkersVersion`.
 
 **Toasts — the single toast lane** (centre top; below the target frame in combat; at the top in dialogue and menus),
 drawn by `ToastLaneHud` at Order 480 so it is seen above windows and menus: every `SessionEvent` worth telling — quests
@@ -122,7 +125,9 @@ level-up card, bottom right; the world only gets sparkles and the chime), Combat
 no world text), story moments (`SpecialOutcome` with Amount 1).
 
 **Quest tracker** (top right, exploration): active quests from `Session.Journal(false)` (main quests starred), objectives
-with progress (`ObjectiveView.Display`), stage text when there are no objectives, "+N more"; click a quest → Journal;
+with progress (`ObjectiveView.Display`), stage text when there are no objectives, "» Return to <NPC>" in gold when someone
+can take the current step now (`QuestTrackerHud.ReturnLine` ← `Session.QuestTurnInOf`; left out when an objective already
+names them; rebuilt when `QuestMarkersVersion` moves), "+N more"; click a quest → Journal;
 the header collapses the list (saved). Above it: day, time (5-minute steps), phase (sun/moon) and the party's gold; on
 rest-area maps (`MapDef.restArea`: Whisperwood, the Shrine) a moon button left of the clock makes camp
 (`GameFlow.TryRest`, disabled with `Session.CannotRestReason()` in its tooltip).

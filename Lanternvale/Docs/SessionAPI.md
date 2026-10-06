@@ -84,6 +84,10 @@ Helpers: `HasGame`, `IsExploring`, `InCombat`, `IsGameOver`.
 `int FlagsVersion` — incremented on every story-flag change (and when `NewGame`/`LoadGame` replace the flags): cache
 anything derived from flags and rebuild it when the number differs (cheaper than listening to every change).
 
+`int QuestMarkersVersion` — moves whenever a quest marker may have changed: quest progress, flags, bags, gold, dialogue
+choices, level, party, approval, time of day, map, dialogue end, new game and **load** (QuestLog.Load raises nothing).
+It never touches `FlagsVersion` (that would rebuild the whole world view on every kill). Poll it; see "Quest markers".
+
 ---
 
 ## 2. Events
@@ -355,6 +359,20 @@ const float InteractionRange = 2.5f; bool InInteractionRange(Vec2 p)   // the UI
   appear or vanish out of combat, `Nav` is rebuilt in place (the **same** instance, `Nav.Version++`); during a battle
   the change waits until the battle ends (or the next position update). `MapDef.water` blocks movement (except at
   its crossings).
+
+**Quest markers** (`GameSession.Markers.cs`; rules in WorldAPI §5 "Quest markers"), cached per `QuestMarkersVersion`:
+
+```csharp
+QuestMarkerIndex QuestMarkerIndex                           // static hand-in index of this database
+QuestMarkerInfo QuestMarkerOf(string npcId)                 // the NPC's best marker (Kind None: nothing); any map
+IReadOnlyList<QuestMarkerInfo> QuestMarkersOf(string npcId) // all of them, best first; empty for recruited companions
+IReadOnlyList<QuestMarkerInfo> QuestMarkersOnMap()          // non-None markers of VisibleNpcs() on the current map
+QuestMarkerInfo QuestTurnInOf(string questId)               // where an active quest goes next: ReadyToTurnIn (hand it
+                                                            // in now: "» Return to …"), InProgress (its hand-in NPC
+                                                            // waits for later steps) or None
+IReadOnlyList<QuestMapHint> QuestHintsOnMap()               // visible encounters with a Kill/Defeat target, Reach
+                                                            // regions and exits, unopened chests with a Collect item
+```
 
 ---
 

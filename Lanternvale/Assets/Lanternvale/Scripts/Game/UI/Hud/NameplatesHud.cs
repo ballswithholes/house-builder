@@ -3,8 +3,9 @@
 //    a slim bar over hovered allies, the framed target outlined;
 //  * exploration: GameFlow.HoveredLabel near HoveredLabelWorld coloured by HoveredKind with an interaction prompt
 //    ("Talk", "Open", "Travel", "Attack" — or the armed opener), party member names on hover ("Select"; "Talk" over the
-//    selected companion, GameFlow.CanTalkTo). Encounter enemies get a plate from Session.PreviewEncounter
-//    (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the level the battle will scale it to;
+//    selected companion, GameFlow.CanTalkTo); a hovered NPC with a quest marker gets a quest line above its name
+//    ("Quest: …", "Turn in: …"; GameFlow.HoveredNpcId → Session.QuestMarkerOf). Encounter enemies get a plate from
+//    Session.PreviewEncounter (GameFlow.HoveredEnemy/HoveredEncounter): name, WoW-coloured level badge (the level the battle will scale it to;
 //    "??" for bosses), elite/rare winged mark or boss skull, and the group size.
 // Anchors: UnitView.NameplatePosition (3D world point) → CameraRig.WorldToGui / Ui.Scale; anchors behind the
 // perspective camera (CameraRig.IsInFront false) get no plate.
@@ -13,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
 using Lanternvale.Rules;
+using Lanternvale.World;
 using UnityEngine;
 
 namespace Lanternvale.Game
@@ -152,6 +154,7 @@ namespace Lanternvale.Game
             string label = f.HoveredLabel;
             Color col;
             string prompt;
+            QuestMarkerInfo quest = null;
             switch (kind)
             {
                 case HoverKind.PartyMember:
@@ -168,6 +171,7 @@ namespace Lanternvale.Game
                 case HoverKind.Npc:
                     col = Hud.C("#ffe08a");
                     prompt = "Talk";
+                    quest = QuestOf(f.HoveredNpcId);
                     break;
                 case HoverKind.Enemy:
                     col = Hud.C("#ff9a88");
@@ -199,6 +203,47 @@ namespace Lanternvale.Game
                 HudDraw.Glyph(new Rect(pr.x + 6f, pr.y + 3f, 14f, 14f), "glyph_hand", new Color(1f, 1f, 1f, 0.8f));
                 HudDraw.Text(new Rect(pr.x + 20f, pr.y, pr.width - 24f, pr.height), prompt, HudStyles.SmallCenter, Hud.Muted);
             }
+            if (quest != null) DrawQuestLine(r, quest);
+        }
+
+        // ---------------------------------------------------------------- NPC quest line ("Quest: …" / "Turn in: …")
+
+        string questNpc = "", questText = "";
+        int questVersion = -1;
+        QuestMarkerInfo questInfo;
+
+        /// <summary>The hovered NPC's best quest marker (cached per QuestMarkersVersion), or null when it has none.</summary>
+        QuestMarkerInfo QuestOf(string npcId)
+        {
+            var s = Hud.Session;
+            if (s == null || string.IsNullOrEmpty(npcId)) return null;
+            int v = s.QuestMarkersVersion;
+            if (npcId != questNpc || v != questVersion)
+            {
+                questNpc = npcId;
+                questVersion = v;
+                var m = s.QuestMarkerOf(npcId);
+                questInfo = m.IsNone ? null : m;
+                questText = questInfo != null ? questInfo.Describe() : "";
+                int more = questInfo != null ? s.QuestMarkersOf(npcId).Count - 1 : 0;
+                if (more > 0) questText += "  (+" + more + ")";
+            }
+            return questInfo;
+        }
+
+        /// <summary>A slim plate above the name: the marker glyph in its colour, then the quest line.</summary>
+        void DrawQuestLine(Rect nameRect, QuestMarkerInfo q)
+        {
+            if (string.IsNullOrEmpty(questText)) return;
+            var gc = q.Yellow ? Hud.C("#ffd23a") : Hud.C("#b4b4b8");
+            float w = Measure(questText, HudStyles.Small) + 34f;
+            var qr = new Rect(Mathf.Round(nameRect.center.x - w * 0.5f), nameRect.y - 24f, w, 21f);
+            qr.x = Mathf.Clamp(qr.x, 6f, Ui.Width - qr.width - 6f);
+            qr.y = Mathf.Max(2f, qr.y);
+            HudDraw.Fill(qr, new Color(0.09f, 0.07f, 0.15f, 0.72f), 8);
+            if (q.Main) HudDraw.Ring(qr, new Color(1f, 0.82f, 0.4f, 0.6f), 8);
+            HudDraw.Text(new Rect(qr.x + 8f, qr.y, 16f, qr.height), q.Glyph, HudStyles.SmallCenter, gc);
+            HudDraw.Text(new Rect(qr.x + 24f, qr.y, qr.width - 28f, qr.height), questText, HudStyles.Small, q.Yellow ? gc : Hud.Muted);
         }
 
         // ---------------------------------------------------------------- exploration enemy plate (PreviewEncounter)

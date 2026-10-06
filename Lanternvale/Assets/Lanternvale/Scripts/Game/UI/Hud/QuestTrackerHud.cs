@@ -1,5 +1,6 @@
 // Top-right: the clock (day, time, phase with sun/moon) and the party's gold, and below it (exploration only)
-// a quest tracker listing active quests from the session's journal with their objectives and progress.
+// a quest tracker listing active quests from the session's journal with their objectives and progress, and
+// "» Return to <NPC>" when someone can take the current step now (Session.QuestTurnInOf; refreshed on QuestMarkersVersion).
 // Quest events flash the updated quest; clicking a quest opens the journal; the header collapses the list.
 // The menu buttons (MenuBarHud) sit between the clock and the tracker (HudLayout.MenuBar).
 using System;
@@ -56,6 +57,7 @@ namespace Lanternvale.Game
         bool collapsed;
         bool prefsLoaded;
         GameSession lastSession;
+        int markersSeen = -1;
 
         // camp (long rest) button: shown on rest-area maps while exploring; reason refreshed twice a second
         bool campShown;
@@ -81,6 +83,8 @@ namespace Lanternvale.Game
             var s = Hud.Session;
             if (!GameFlow.HasGame || s == null) { if (lines.Count > 0) lines.Clear(); return; }
             if (s != lastSession) { lastSession = s; dirty = true; }
+            // the "» Return to …" lines follow the quest markers (items, flags, level… change them without a quest event)
+            if (s.QuestMarkersVersion != markersSeen) { markersSeen = s.QuestMarkersVersion; dirty = true; }
             campTimer -= dt;
             if (campTimer <= 0f)
             {
@@ -125,8 +129,35 @@ namespace Lanternvale.Game
                     }
                 if (!any && !string.IsNullOrEmpty(q.StageText))
                     lines.Add(new Line { Text = q.StageText, QuestId = q.Id, Color = Hud.Muted });
+                string back = ReturnLine(s, q);
+                if (back.Length > 0) lines.Add(new Line { Text = back, QuestId = q.Id, Color = Hud.C("#ffd23a") });
             }
             layoutDirty = true;
+        }
+
+        /// <summary>
+        /// "» Return to Bram" when someone can resolve the quest's current step now (Session.QuestTurnInOf), unless an
+        /// objective already names them ("Return to Bram", "Speak with Bram"). Shared with the journal.
+        /// </summary>
+        public static string ReturnLine(GameSession s, QuestJournalEntry q)
+        {
+            if (s == null || q == null || q.Status != QuestStatus.Active) return "";
+            var t = s.QuestTurnInOf(q.Id);
+            if (t.Kind != QuestMarker.ReadyToTurnIn || string.IsNullOrEmpty(t.NpcId)) return "";
+            string name = s.NpcName(t.NpcId);
+            if (q.Objectives != null)
+                foreach (var o in q.Objectives)
+                    if (o != null && !o.Complete && Names(o.Text, name)) return "";
+            return "»  Return to " + name;   // the UI fonts have no "→"
+        }
+
+        // the objective text names the person (full name, or without its honorific: "Tobben" for "Old Tobben")
+        static bool Names(string text, string name)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(name)) return false;
+            if (text.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            string bare = MapLabels.StripHonorific(name);
+            return bare.Length >= 3 && text.IndexOf(bare, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         void Layout(float width)

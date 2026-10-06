@@ -29,6 +29,11 @@ namespace Lanternvale.Preview
             /// <summary>Story flags treated as set (content behind requireFlag appears; "*" = every flag).</summary>
             public HashSet<string> Flags = new HashSet<string>();
             public bool Has(string flag) => string.IsNullOrEmpty(flag) || Flags.Contains("*") || Flags.Contains(flag);
+            /// <summary>Quest markers over the NPCs: "" none, "auto" (the game's rules), or "npc:kind[+main],…" (Scene/PreviewMarkers).</summary>
+            public string Markers = "";
+            /// <summary>--markers auto: quests to start (q), set to a stage (q=stage) or complete (q=done); the main character's level.</summary>
+            public List<string> Quests = new List<string>();
+            public int Level = 5;
         }
 
         sealed class PObj
@@ -146,6 +151,7 @@ namespace Lanternvale.Preview
             cam.fieldOfView = CameraMath.FieldOfView;
             camGo.transform.SetPositionAndRotation(View.Pos, Quaternion.LookRotation(View.F, World3D.Up));
             PresentationHost.Cam = cam;
+            if (opt.Units && !string.IsNullOrEmpty(opt.Markers)) Guard("quest markers", () => PreviewMarkers.Build(this, opt));
             sky.Update(cam, DayNight, 0f);
             ApplyMood(cam);
             backdrop.Update(0f, 0f, DayNight);
@@ -435,6 +441,8 @@ namespace Lanternvale.Preview
         // ------------------------------------------------------------------ units (GameFlow.Views: CreateUnitView / CreateNpcView / CreateEncounterViews)
 
         public readonly List<UnitPoser> Units = new List<UnitPoser>();
+        /// <summary>NPC id → its poser (quest markers).</summary>
+        public readonly Dictionary<string, UnitPoser> NpcPosers = new Dictionary<string, UnitPoser>(StringComparer.Ordinal);
 
         void BuildUnits()
         {
@@ -449,6 +457,7 @@ namespace Lanternvale.Preview
                 if (npc == null || !opt.Has(npc.requireFlag)) continue;
                 // as CreateNpcView: generic villagers / children get a stable look per NPC id (SetVariant)
                 AddUnit(NpcSprite(npc.npc), 0f, new Vector2(npc.pos.x, npc.pos.y), npc.flip ? -1 : 1, false, n++, UnitModels.StableVariant(npc.npc ?? ""));
+                if (!string.IsNullOrEmpty(npc.npc)) NpcPosers[npc.npc] = Units[Units.Count - 1];
             }
             foreach (var e in Def.encounters)
             {

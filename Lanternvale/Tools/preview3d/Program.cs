@@ -5,6 +5,7 @@
 //                          [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
 //   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size WxH] [--ss N] [--spawn id]
 //                          [--player key] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
+//                          [--markers auto|npc:kind,...] [--quests q,q=stage,q=done] [--level N]
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -57,6 +58,7 @@ namespace Lanternvale.Preview
       groups: chars comps npcs trainers foes beasts pets demons static (all = one page per group, <out>_<group>.png)
   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size 1600x900] [--ss 2] [--spawn id]
                         [--player char_warrior] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
+                        [--markers auto|npc:ready|available|progress|later[+main],...] [--quests q,q=stage,q=done] [--level 5]
       the player's view of a map: look-at = the spawn (or --at), Zoom = CameraRig zoom (2.6 … 10.4, default 6.2),
       yaw ±45, hour 0..24 (default: the map's own time / the world clock 12.5)");
             return 2;
@@ -120,6 +122,9 @@ namespace Lanternvale.Preview
                     case "--spawn": opt.Spawn = Next(); break;
                     case "--player": opt.Player = Next(); break;
                     case "--flags": foreach (var f in Next().Split(',', StringSplitOptions.RemoveEmptyEntries)) opt.Flags.Add(f.Trim()); break;
+                    case "--markers": opt.Markers = Next(); break;
+                    case "--quests": foreach (var q in Next().Split(',', StringSplitOptions.RemoveEmptyEntries)) opt.Quests.Add(q.Trim()); break;
+                    case "--level": opt.Level = int.Parse(Next(), CultureInfo.InvariantCulture); break;
                     case "--no-units": opt.Units = false; break;
                     case "--no-halos": opt.Halos = false; break;
                     case "--no-ink": ink = false; break;

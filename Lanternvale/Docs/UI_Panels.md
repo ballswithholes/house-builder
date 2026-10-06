@@ -86,11 +86,23 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   requirement, prerequisite arrows (gold when met), tooltips (`UiText.Talent` + why not), left click learns
   (`Session.LearnTalent`), "Recommended build" (`AutoAllocateTalents`, confirm), "Reset talents" only while a trainer's
   respec is open (`Session.Respec`, confirm).
-* **Journal** — active (main first), completed and failed (collapsible) quests; detail: giver, level, summary, current
-  stage, objectives with ticks, history, rewards (XP after `xpRate`, coins, items, pick-one choices). "Party & camp"
-  opens the roster: lead, to camp / join, auto-play toggle, dismiss (confirm).
-* **Map** — ground painted once per map from the nav grid; live party (leader ringed), NPC names, enemies, chests,
-  lanterns (lit glow), signs and exits with labels/tooltips.
+* **Journal** — active (main first), completed and failed (collapsible) quests; detail: giver, level, the quest's zone
+  and its level band (`QuestDef.zone`), summary, current stage, objectives with ticks, "» Return to <NPC>" when the
+  step can be handed in now (`Session.QuestTurnInOf`, shared with the tracker), history, rewards (XP as granted:
+  `Progression.QuestXp(db, xp, PartyLevel)`, coins, items, pick-one choices). "Party & camp" opens the roster: lead, to
+  camp / join, auto-play toggle, dismiss (confirm).
+* **Map** — ground painted once per map from the nav grid; live party (leader ringed), NPC dots with **quest glyphs**
+  above them ("!" / "?", yellow or grey, main quests in a gold ring; `Session.QuestMarkerOf`), enemies, chests, lanterns
+  (lit glow), signs, exits (hidden transitions only once `MapRuntime.IsTransitionVisible`) and **objective hints**
+  (pulsing gold rings on encounters holding a Kill target, Reach regions and exits, chests with a Collect item;
+  `Session.QuestHintsOnMap`). **Labels** never overlap (Core `MapLabels.Plan` / `LabelLayout`, re-planned only when the
+  map, flags, markers, view or rect change): short names (`NpcDef.shortName`, else the honorific stripped), quest NPCs
+  first, then exits, then service crowds — named one by one when they fit, else one label with the region's name
+  (`RegionDef.name`, else "Training Yard" from `reg_training_yard`) — then everyone else; labels that fit nowhere and
+  crowd members show their name on hover; tooltips give full names, titles and quest lines. Mouse wheel zooms 1–3×
+  around the cursor, drag pans when zoomed, "Whole map" resets. The title shows the subtitle, the zone band
+  ("Levels 12–18") and a "Hidden dungeon" / "Raid (10)" badge. Legend: party, folk, enemies, lantern, chest, exit,
+  "!" quest, "?" turn in, objective (wraps to two rows).
 * **Pause** — Resume, Save (disabled with the reason), Load, Settings, Help, Main Menu (confirm), Quit (confirm).
   Loading a save or returning to the main menu from here resumes in real time (`Time.timeScale = 1`, no pause, no
   fast-forward rate left behind — GameFlow.md §1).

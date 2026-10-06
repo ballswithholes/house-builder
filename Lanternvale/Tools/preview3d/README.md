@@ -34,6 +34,7 @@ finds `Assets/Lanternvale/Resources` by searching upwards, or you can pass `--ro
 | `--size WxH`, `--ss N` | output size (default 1600x900) and supersampling (1–4, default 2). |
 | `--player key` | the party leader's model at the spawn (default `char_warrior`). |
 | `--flags a,b` / `--flags '*'` | story flags to treat as set, which shows NPCs, encounters and chests gated by `requireFlag`. |
+| `--markers auto` / `--markers npc:kind[+main],…` | quest markers (`QuestMarker3D`) over the NPCs: `auto` runs the game's marker rules against `--flags`, `--quests q,q=stage,q=done` and `--level N` (default 5); a list names `ready`, `available`, `progress` or `later` per NPC. |
 | `--no-units`, `--no-halos`, `--no-ink` | leave those out. |
 | `--gamma` | use the gamma colour pipeline instead of linear. |
 

@@ -192,6 +192,7 @@ namespace Lanternvale.Game
             // flags change from many places (dialogue outcomes, quests, battles): the session counts every change
             // (FlagsVersion, announced by FlagsChanged) — rebuild the flag-driven world only when it moved
             RefreshWorldIfFlagsChanged();
+            UpdateQuestMarkers();   // NPC "!" / "?" (GameFlow.QuestMarkers.cs)
         }
 
         void UpdateClock()

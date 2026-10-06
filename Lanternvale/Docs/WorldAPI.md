@@ -473,6 +473,57 @@ Rules:
   text). Missing objective text defaults to "Slay Grey Wolf", "Collect Wolf Pelt", "Speak with Brann",
   "Reach Whisperwood", "Defeat <id>".
 
+### Quest markers — `QuestMarkers` (`World/Quests/QuestMarkers.cs`)
+
+The WoW-style "!" / "?" over NPCs and on the Map panel (Docs/Expansion.md §3). Pure and read-only.
+
+```csharp
+enum QuestMarker { None, AvailableLater /* grey ! */, InProgress /* grey ? */, Available /* yellow ! */, ReadyToTurnIn /* yellow ? */ }
+class QuestMarkerInfo { string NpcId, QuestId, QuestName; QuestMarker Kind; bool Main; int Level;
+                        bool Yellow, Question, IsNone; string Glyph /* "!" "?" "" */; string Describe() /* "Quest: …", "Turn in: …" */ }
+
+// dry run of a dialogue graph: every outcome a conversation could reach now (no outcome runs, no dice, memory read only)
+List<ReachedOutcome> DialogueReach.Collect(DialogueDef d, IDialogueContext ctx, DialogueMemory memory, ReachMode mode = Normal)
+   // ReachedOutcome { OutcomeDef Outcome; int LevelGate /* max Level condition on the path */; string NodeId }
+   // ReachMode.IgnoreLevel treats Level conditions as met (what the NPC will offer at a higher level)
+
+var index = new QuestMarkerIndex(db);          // static facts, built once (GameSession.QuestMarkerIndex)
+index.DialogueOf(personId); index.People; index.Offers(personId)
+index.Starters(q); index.Completers(q); index.FlagSetters(flag); index.Enders(q); index.Touching(q)
+index.DirectHandIn(q, stage)                    // who resolves this stage (empty: it resolves on its own)
+index.HandIn(q, stage)                          // ... with lookahead along `next` (16 hops)
+index.TurnInOf(q, stage)                        // HandIn, else the first ender, else the giver
+
+List<QuestMarkerInfo> QuestMarkers.Evaluate(index, ctx, memory, npcId)   // best first, one per quest
+QuestMarkerInfo QuestMarkers.Best(list, npcId)
+```
+
+* The walk follows `EnterNode` exactly: node conditions with fallback chains (64 hops), visible choices (conditions
+  met; used `once` choices hidden), both branches of a check, `next` links; `EndDialogue` stops the path. Outcomes
+  on a path do not change later conditions.
+* Hand-in of a stage: its `turnIn`; else the union of its Talk targets, the setters of its Flag targets, the
+  completers (last stage only) and whoever sets exactly its `next` stage. Kill / Collect / Reach stages look ahead.
+* **ReadyToTurnIn** — an active quest whose current stage this NPC can resolve now: every incomplete objective is a
+  Talk objective on the NPC (it has a dialogue) or a Flag objective its conversation can set, or the conversation
+  reaches `CompleteQuest` or a `SetQuestStage` to a later stage. **Available** — a not-started quest its
+  conversation can start now (`StartQuest`, or `SetQuestStage`, which starts it) with `minLevel` ≤ the main
+  character's level. **InProgress** — an active quest whose `TurnInOf` is this NPC. **AvailableLater** — an offer
+  behind `minLevel` or Level conditions, missed by at most `QuestMarkers.LaterLevelWindow` (3) levels. Priority:
+  ReadyToTurnIn > Available > InProgress > AvailableLater; ties: main quests, then data order.
+* `QuestMapHint { Kind (Encounter | Region | Chest | Transition), Id, Pos, Size, QuestId, QuestName, Main, Text }`
+  — an objective on the current map (`GameSession.QuestHintsOnMap`).
+
+### Map labels — `MapLabels`, `LabelLayout` (`World/Map/MapLabels.cs`, `Util/LabelLayout.cs`)
+
+The Map panel's geometry and label plan, pure so tests check every map. `MapViewport` maps metres to the map rect
+with zoom 1–3× (`ZoomAt` keeps the point under the cursor, `PanBy`, `Clamp`). `MapLabels.MapSize(uiW, uiH, w, d)`
+is the panel's map rect; `ShortName` (NpcDef.shortName, else the name without its honorific, first word when longer
+than 16), `RegionName` (RegionDef.name, else the id made readable), `Plan(MapLabelInput)` → `MapLabelPlan`
+(`Labels`, `ByNpc`, `Glyphs`). Order: quest NPCs (by marker), exits, service crowds (all members named when they
+fit, else one label with the region's name), everyone else. `LabelLayout` places each label at the first free
+candidate round its anchor (8 directions, growing rings, leader line beyond the first) inside the bounds, never over
+an obstacle or an earlier label; a label that fits nowhere is left out (the panel shows it on hover).
+
 ---
 
 ## 6. Map runtime — `MapRuntime`

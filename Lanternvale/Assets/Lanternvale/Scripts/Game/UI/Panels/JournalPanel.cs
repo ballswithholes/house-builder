@@ -1,6 +1,7 @@
 // Journal (J): quests on the left (active — main quests first —, completed, failed; collapsible), the selected quest on
-// the right: giver and level, summary, the current stage, objectives with progress and ticks, earlier stages, rewards
-// (XP, coins, items with tooltips, pick-one choices) and "Choose your reward" when a choice is pending.
+// the right: giver, level and zone band, summary, the current stage, objectives with progress and ticks, "» Return to
+// <NPC>" when the step can be handed in now (QuestTrackerHud.ReturnLine), earlier stages, rewards (XP at the party
+// level, coins, items with tooltips, pick-one choices) and "Choose your reward" when a choice is pending.
 // A button opens the Party & camp window.
 using System;
 using System.Collections.Generic;
@@ -45,7 +46,7 @@ namespace Lanternvale.Game.Panels
 
         sealed class EntryText
         {
-            public string Sub = "", Level = "", Meta = "";
+            public string Sub = "", Level = "", Meta = "", Return = "";
         }
 
         readonly Dictionary<QuestJournalEntry, EntryText> texts = new Dictionary<QuestJournalEntry, EntryText>();
@@ -60,10 +61,21 @@ namespace Lanternvale.Game.Panels
                     ? (q.RewardChoicePending ? Ui.Rich("Reward waiting!", PanelKit.GoodDark) : Short(q.StageText))
                     : q.Status == QuestStatus.Completed ? (q.RewardChoicePending ? Ui.Rich("Choose your reward", PanelKit.GoodDark) : "Completed") : "Failed",
                 Meta = $"Level {q.Level}" + (string.IsNullOrEmpty(q.GiverName) ? "" : "  ·  from " + q.GiverName) + (q.Main ? "  ·  main story" : "") +
+                       ZoneText(q) +
                        (q.Status == QuestStatus.Completed ? "  ·  " + Ui.Rich("completed", PanelKit.GoodDark) : q.Status == QuestStatus.Failed ? "  ·  " + Ui.Rich("failed", PanelKit.BadDark) : ""),
+                Return = QuestTrackerHud.ReturnLine(PanelKit.Sess, q),
             };
             texts[q] = t;
             return t;
+        }
+
+        /// <summary>"  ·  Amberfield Downs (12–18)" for a quest with a zone (QuestDef.zone, MapDef.levelMin/levelMax).</summary>
+        static string ZoneText(QuestJournalEntry q)
+        {
+            var db = PanelKit.Db;
+            if (db == null || !db.Quests.TryGetValue(q.Id ?? "", out var def) || string.IsNullOrEmpty(def.zone) || !db.Maps.TryGetValue(def.zone, out var m)) return "";
+            string band = m.levelMin > 0 && m.levelMax > 0 ? " (" + m.levelMin + "–" + m.levelMax + ")" : m.levelMin > 0 ? " (" + m.levelMin + "+)" : "";
+            return "  ·  " + (string.IsNullOrEmpty(m.name) ? m.id : m.name) + band;
         }
 
         public JournalPanel()
@@ -262,6 +274,12 @@ namespace Lanternvale.Game.Panels
                             PanelKit.Label(new Rect(36f, y + 2f, cw - 36f, 28f), o.Display, PanelKit.Text, o.Complete ? Ui.InkSoft : Ui.Ink);
                             y += 32f;
                         }
+                    string back = TextOf(q).Return;
+                    if (back.Length > 0)
+                    {
+                        PanelKit.Label(new Rect(36f, y + 2f, cw - 36f, 28f), back, PanelKit.TextBold, PanelKit.GoldInk);
+                        y += 32f;
+                    }
                     y += 16f;
                 }
                 if (hHist > 0f)
@@ -288,7 +306,9 @@ namespace Lanternvale.Game.Panels
                     {
                         int xp = rw.xp;
                         var db = PanelKit.Db;
-                        if (db != null) try { xp = Progression.QuestXp(db, rw.xp); } catch (Exception) { }
+                        // as the session grants it: config.xpRateByLevel at the party's level
+                        var sess = PanelKit.Sess;
+                        if (db != null) try { xp = Progression.QuestXp(db, rw.xp, sess != null ? sess.PartyLevel : 1); } catch (Exception) { }
                         var plate = new Rect(x, y + 4f, 150f, 34f);
                         PanelKit.Rounded(plate, new Color(0.69f, 0.48f, 0.88f, 0.3f));
                         if (xp != xpShown) { xpShown = xp; xpText = "<b>" + xp + "</b> XP"; }
