@@ -1,0 +1,2067 @@
+{
+  "region": "europe",
+  "summary": "公元190年初，罗马帝国在康茂德治下表面承平：马可·奥勒留时代的马科曼尼战争已于180年以和约告终，北方边境由不列颠、莱茵两日耳曼、潘诺尼亚、默西亚与达契亚诸军团镇守。宫廷却由释奴出身的宠臣克里安德把持、卖官鬻爵，190年罗马城粮荒引发暴动，康茂德把克里安德交给民众处死，此后由情妇玛琪亚、侍从长埃克莱图斯与禁卫军长官莱图斯组成小圈子执政。老将佩蒂纳克斯坐镇罗马任城市长官，塞维鲁、尼格尔、阿尔拜努斯这几位日后“五帝之年”的主角正被陆续派往潘诺尼亚、叙利亚、不列颠的大军区——192年末康茂德遇刺后，他们将为帝位兵戎相见。边境之外，喀里多尼亚人、马科曼尼—夸迪诸部与雅济吉斯人在战败后与罗马维持和约，哥特人正从维斯瓦河流域向黑海北岸南迁，罗马藩属博斯普鲁斯王国的撒罗玛提斯二世则在与斯基泰人、西拉奇人作战（193年告捷）。",
+  "factions": [
+    {
+      "key": "roma",
+      "name": "罗马",
+      "full": "罗马帝国（安敦尼王朝）",
+      "orig": "Imperium Romanum",
+      "ruler": "康茂德",
+      "capital": "roma",
+      "culture": "roman",
+      "virtue": 15,
+      "fame": 65,
+      "color": "#b0103c",
+      "note": "180年起由康茂德独自统治。190年初朝政由宠臣克里安德把持，当年粮荒暴动后克里安德被处死；191年起禁卫军长官莱图斯、侍从长埃克莱图斯与情妇玛琪亚掌权，192年12月31日三人合谋将康茂德刺杀，次年即“五帝之年”。15座城须各有一名在任武将才能归属本势力，故在任武将多于建议值。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Commodus",
+        "https://zh.wikipedia.org/zh-hans/%E5%BA%B7%E8%8C%82%E5%BE%B7",
+        "https://en.wikipedia.org/wiki/Year_of_the_Five_Emperors",
+        "https://zh.wikipedia.org/zh-hans/%E4%BA%94%E5%B8%9D%E4%B9%8B%E5%B9%B4"
+      ]
+    },
+    {
+      "key": "caledonia",
+      "name": "喀里多",
+      "full": "喀里多尼亚人（不列颠北部诸部）",
+      "orig": "Caledonii",
+      "ruler": "阿根托科",
+      "capital": "caledonia",
+      "culture": "celt",
+      "virtue": 55,
+      "fame": 30,
+      "color": "#1d7874",
+      "note": "哈德良长城以北的不列颠诸部。狄奥把他们分为喀里多尼亚人与迈阿泰人两大群；180年代曾越过长城，被乌尔皮乌斯·马克塞卢斯击退。190年前后无可考首领，按规则放宽到208—210年，以狄奥记载的首领阿根托科为君主（只此一人）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Argentocoxos",
+        "https://imperiumromanum.pl/en/curiosities/discussion-of-julia-domna-and-wife-of-argentocoxus/",
+        "https://stirlingarchaeology.substack.com/p/the-maeatae"
+      ]
+    },
+    {
+      "key": "marcomanni",
+      "name": "马科曼尼",
+      "full": "马科曼尼—夸迪联盟（苏维汇诸部）",
+      "orig": "Marcomanni & Quadi",
+      "ruler": "巴洛马尔",
+      "capital": "marcomannia",
+      "culture": "german",
+      "virtue": 50,
+      "fame": 60,
+      "color": "#5cc028",
+      "note": "166/167年巴洛马尔代表十一个部族与潘诺尼亚总督伊阿利乌斯·巴苏斯议和，随后领导了167—170年入侵意大利的联军；马科曼尼与夸迪在马科曼尼战争中协同作战，180年与康茂德订约。为凑成“小国”规模把两族合为一个势力，夸迪由富尔提乌斯驻守。人物年代均放宽（166—213年），见各人 note。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ballomar",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars",
+        "https://en.wikipedia.org/wiki/Furtius",
+        "https://en.wikipedia.org/wiki/Ariogaesus"
+      ]
+    },
+    {
+      "key": "iazyges",
+      "name": "雅济吉斯",
+      "full": "雅济吉斯人（萨尔马提亚）",
+      "orig": "Iazyges",
+      "ruler": "赞提库斯",
+      "capital": "iazyges",
+      "culture": "sarmatian",
+      "virtue": 45,
+      "fame": 50,
+      "color": "#72533f",
+      "note": "居多瑙河与蒂萨河之间平原的萨尔马提亚骑马民族。175年国王赞提库斯向马可·奥勒留乞和，归还十万罗马俘虏、提供八千骑兵（其中5500人被派往不列颠）。前王巴纳达斯普斯因私通罗马被本族囚禁。年代放宽到约174—175年。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Banadaspus",
+        "http://romanatoz.blogspot.com/2011/03/zanticus-iazyges-leader.html",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars"
+      ]
+    },
+    {
+      "key": "goths",
+      "name": "哥特",
+      "full": "哥特人",
+      "orig": "Gutones / Gothi",
+      "ruler": "菲利默",
+      "capital": "gothia",
+      "culture": "german",
+      "virtue": 50,
+      "fame": 40,
+      "color": "#5a3fd0",
+      "note": "约达尼斯《哥特史》说哥特人自斯堪札出发后第五代王菲利默率众南迁，到达斯基泰的“奥伊姆”；考古上维尔巴克文化在2世纪末扩展到维斯瓦河以东（马斯沃门奇集团）。菲利默为传说人物（attested: legendary）。250—251年击杀德西乌斯的哥特王尼瓦（克尼瓦）超出150—230年的蛮族首领窗口、生年不详，不收。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Oium",
+        "https://people.ucalgary.ca/~vandersp/Courses/texts/jordgeti.html",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12924530/"
+      ]
+    },
+    {
+      "key": "bosporus",
+      "name": "博斯普鲁",
+      "full": "博斯普鲁斯王国（辛梅里安博斯普鲁斯）",
+      "orig": "Regnum Bospori",
+      "ruler": "撒罗玛提斯",
+      "capital": "panticapaeum",
+      "culture": "sarmatian",
+      "virtue": 60,
+      "fame": 50,
+      "color": "#ff80c0",
+      "note": "以潘提卡彭（今刻赤）为都的希腊—萨尔马提亚王国，罗马藩属（国王号称“凯撒之友、罗马之友”）。撒罗玛提斯二世（约172—210年在位）约自186年起与斯基泰人、西拉奇人及海盗作战，193年塔奈斯铭文记其大胜。势力名取前四字。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Sauromates_II",
+        "https://en.wikipedia.org/wiki/Rhescuporis_III",
+        "https://zh.wikipedia.org/zh-hans/%E5%8D%9A%E6%96%AF%E6%99%AE%E9%B2%81%E6%96%AF%E7%8E%8B%E5%9B%BD"
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "key": "roma",
+      "name": "罗马",
+      "full": "罗马（永恒之城）",
+      "orig": "Roma",
+      "modern": "意大利罗马",
+      "lon": 12.49,
+      "lat": 41.89,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 600,
+      "industry": 700,
+      "town": 640,
+      "population": 900000,
+      "gold": 2000,
+      "food": 20000,
+      "note": "帝国首都，人口约百万，靠埃及与阿非利加的海运谷物供养；按题目与洛阳同级。190年在此爆发粮荒暴动。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ancient_Rome",
+        "https://www.ostia-antica.org/dict/topics/severan-emperors/severan-emperors-1.htm"
+      ]
+    },
+    {
+      "key": "lugdunum",
+      "name": "卢格杜努姆",
+      "full": "卢格杜努姆（高卢首府）",
+      "orig": "Lugdunum",
+      "modern": "法国里昂",
+      "lon": 4.83,
+      "lat": 45.76,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 480,
+      "industry": 460,
+      "town": 420,
+      "population": 420000,
+      "gold": 1000,
+      "food": 13000,
+      "note": "卢格杜努姆高卢行省首府、“三高卢”议事会所在地与帝国铸币厂；塞维鲁186—189年在此任总督，卡拉卡拉188年生于此。197年塞维鲁与阿尔拜努斯在城外决战。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Lugdunum",
+        "https://en.wikipedia.org/wiki/Battle_of_Lugdunum",
+        "https://www.thecollector.com/roman-lugdunum-second-century/"
+      ]
+    },
+    {
+      "key": "colonia",
+      "name": "科洛尼亚",
+      "full": "科洛尼亚·阿格里皮嫩西姆（科隆）",
+      "orig": "Colonia Claudia Ara Agrippinensium",
+      "modern": "德国科隆",
+      "lon": 6.96,
+      "lat": 50.94,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 420,
+      "industry": 380,
+      "town": 320,
+      "population": 300000,
+      "gold": 700,
+      "food": 11000,
+      "note": "下日耳曼行省首府，莱茵河下游舰队与两个军团（波恩、克桑滕）所在；对岸即自由日耳曼尼亚。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Germania_Inferior",
+        "https://www.livius.org/articles/place/germania-inferior/"
+      ]
+    },
+    {
+      "key": "londinium",
+      "name": "伦迪尼乌姆",
+      "full": "伦迪尼乌姆（不列颠首府）",
+      "orig": "Londinium",
+      "modern": "英国伦敦",
+      "lon": -0.09,
+      "lat": 51.51,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 400,
+      "industry": 380,
+      "town": 340,
+      "population": 300000,
+      "gold": 700,
+      "food": 10000,
+      "note": "不列颠行省首府与最大港口，总督驻地；统辖三个军团，是阿尔拜努斯195—197年称帝的本钱。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Londinium",
+        "https://en.wikipedia.org/wiki/List_of_governors_of_Roman_Britain"
+      ]
+    },
+    {
+      "key": "eboracum",
+      "name": "埃博拉库姆",
+      "full": "埃博拉库姆（约克）",
+      "orig": "Eboracum",
+      "modern": "英国约克",
+      "lon": -1.08,
+      "lat": 53.96,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 340,
+      "industry": 260,
+      "town": 250,
+      "population": 200000,
+      "gold": 400,
+      "food": 8000,
+      "note": "第六胜利军团大本营，北方边防重镇；塞维鲁208—211年北征喀里多尼亚时以此为行在，并病逝于此。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Eboracum",
+        "https://en.wikipedia.org/wiki/Legio_VI_Victrix"
+      ]
+    },
+    {
+      "key": "carnuntum",
+      "name": "卡农图姆",
+      "full": "卡农图姆（上潘诺尼亚首府）",
+      "orig": "Carnuntum",
+      "modern": "奥地利彼得罗内尔—卡农图姆",
+      "lon": 16.86,
+      "lat": 48.11,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 400,
+      "industry": 320,
+      "town": 300,
+      "population": 260000,
+      "gold": 600,
+      "food": 10000,
+      "note": "上潘诺尼亚行省首府、第十四双子军团驻地，多瑙河“琥珀之路”渡口；马可·奥勒留曾在此指挥马科曼尼战争，193年4月塞维鲁在此被拥立为帝。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Carnuntum",
+        "https://en.wikipedia.org/wiki/Septimius_Severus"
+      ]
+    },
+    {
+      "key": "sirmium",
+      "name": "西尔米乌姆",
+      "full": "西尔米乌姆（下潘诺尼亚）",
+      "orig": "Sirmium",
+      "modern": "塞尔维亚斯雷姆斯卡米特罗维察",
+      "lon": 19.61,
+      "lat": 44.97,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 420,
+      "industry": 340,
+      "town": 300,
+      "population": 260000,
+      "gold": 600,
+      "food": 11000,
+      "note": "萨瓦河畔重镇，属下潘诺尼亚行省，扼多瑙河中游与巴尔干大道；马可·奥勒留在此接见雅济吉斯使节。下潘诺尼亚总督本驻阿昆库姆（布达佩斯），本图合并于此。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Sirmium",
+        "https://en.wikipedia.org/wiki/Pannonia_Inferior"
+      ]
+    },
+    {
+      "key": "byzantium",
+      "name": "拜占庭",
+      "full": "拜占庭",
+      "orig": "Byzantium",
+      "modern": "土耳其伊斯坦布尔",
+      "lon": 28.98,
+      "lat": 41.01,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 380,
+      "industry": 420,
+      "town": 380,
+      "population": 320000,
+      "gold": 900,
+      "food": 9000,
+      "note": "扼博斯普鲁斯海峡的色雷斯希腊城市；193年站在尼格尔一方，被塞维鲁军围困两年多后攻陷。本图同时代表色雷斯与下默西亚方向。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Byzantium",
+        "https://www.thecollector.com/siege-byzantium-septemius-severus/"
+      ]
+    },
+    {
+      "key": "ancyra",
+      "name": "安基拉",
+      "full": "安基拉（加拉太首府）",
+      "orig": "Ancyra",
+      "modern": "土耳其安卡拉",
+      "lon": 32.86,
+      "lat": 39.94,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 400,
+      "industry": 320,
+      "town": 300,
+      "population": 300000,
+      "gold": 600,
+      "food": 10000,
+      "note": "加拉太行省首府，小亚细亚内陆交通枢纽；东通卡帕多细亚与萨塔拉军团营地、亚美尼亚。法比乌斯·奇洛约189—192年任加拉太总督。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ancyra_(Galatia)",
+        "https://en.wikipedia.org/wiki/Lucius_Fabius_Cilo"
+      ]
+    },
+    {
+      "key": "ephesus",
+      "name": "以弗所",
+      "full": "以弗所（亚细亚行省首府）",
+      "orig": "Ephesus",
+      "modern": "土耳其塞尔丘克",
+      "lon": 27.34,
+      "lat": 37.94,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 460,
+      "industry": 540,
+      "town": 520,
+      "population": 500000,
+      "gold": 1300,
+      "food": 11000,
+      "note": "亚细亚行省首府与爱琴海东岸最大商港，阿尔忒弥斯神庙所在；元老院行省，由资深执政官任总督。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ephesus",
+        "https://en.wikipedia.org/wiki/Tiberius_Claudius_Candidus"
+      ]
+    },
+    {
+      "key": "antioch",
+      "name": "安条克",
+      "full": "奥龙特斯河畔安条克（叙利亚首府）",
+      "orig": "Antiochia ad Orontem",
+      "modern": "土耳其安塔基亚",
+      "lon": 36.16,
+      "lat": 36.2,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 520,
+      "industry": 580,
+      "town": 560,
+      "population": 600000,
+      "gold": 1500,
+      "food": 14000,
+      "note": "叙利亚行省首府、帝国东方第一大城与对安息作战的大本营；总督统辖三个军团。193年尼格尔在此称帝。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Antioch",
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Syria"
+      ]
+    },
+    {
+      "key": "palmyra",
+      "name": "帕尔米拉",
+      "full": "帕尔米拉（塔德莫尔）",
+      "orig": "Palmyra / Tadmor",
+      "modern": "叙利亚塔德穆尔",
+      "lon": 38.27,
+      "lat": 34.55,
+      "owner": "roma",
+      "culture": "arab",
+      "land": 260,
+      "industry": 460,
+      "town": 420,
+      "population": 220000,
+      "gold": 1400,
+      "food": 5000,
+      "note": "叙利亚沙漠中的绿洲商城，属罗马叙利亚行省但享有自治；商队经杜拉—欧罗普斯沿幼发拉底河通往安息的沃洛加西亚与查拉克斯，城中“将军”率骑射手护卫商路。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Palmyra",
+        "https://philipharland.com/greco-roman-associations/honors-by-tribes-and-merchants-for-ogeilu-199-ce/"
+      ]
+    },
+    {
+      "key": "alexandria",
+      "name": "亚历山大",
+      "full": "亚历山大里亚（埃及首府）",
+      "orig": "Alexandria",
+      "modern": "埃及亚历山大港",
+      "lon": 29.92,
+      "lat": 31.2,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 600,
+      "industry": 660,
+      "town": 620,
+      "population": 800000,
+      "gold": 1800,
+      "food": 24000,
+      "note": "帝国第二大城、埃及长官驻地；埃及谷物经此海运罗马。红海诸港（贝勒尼基、米奥斯霍尔莫斯）通阿克苏姆、阿拉伯与印度，本图并入此城。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Alexandria",
+        "https://www.wikiwand.com/en/List_of_governors_of_Roman_Egypt"
+      ]
+    },
+    {
+      "key": "carthago",
+      "name": "迦太基",
+      "full": "迦太基（阿非利加首府）",
+      "orig": "Carthago",
+      "modern": "突尼斯迦太基",
+      "lon": 10.32,
+      "lat": 36.85,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 580,
+      "industry": 520,
+      "town": 480,
+      "population": 560000,
+      "gold": 1300,
+      "food": 20000,
+      "note": "阿非利加资深执政官行省首府，帝国粮仓之一；佩蒂纳克斯、尤利安努斯、阿努利努斯先后在此任总督。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Carthage",
+        "https://en.wikipedia.org/wiki/Didius_Julianus"
+      ]
+    },
+    {
+      "key": "tarraco",
+      "name": "塔拉科",
+      "full": "塔拉科（近西班牙首府）",
+      "orig": "Tarraco",
+      "modern": "西班牙塔拉戈纳",
+      "lon": 1.25,
+      "lat": 41.12,
+      "owner": "roma",
+      "culture": "roman",
+      "land": 440,
+      "industry": 400,
+      "town": 360,
+      "population": 320000,
+      "gold": 800,
+      "food": 12000,
+      "note": "塔拉科西班牙行省首府，总督兼领驻莱昂的第七双子军团。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Tarraco",
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Hispania_Tarraconensis"
+      ]
+    },
+    {
+      "key": "caledonia",
+      "name": "喀里多尼亚",
+      "full": "喀里多尼亚（泰河以北）",
+      "orig": "Caledonia",
+      "modern": "英国苏格兰泰赛德—斯特拉思莫尔一带",
+      "lon": -3.4,
+      "lat": 56.55,
+      "owner": "caledonia",
+      "culture": "celt",
+      "land": 300,
+      "industry": 250,
+      "town": 250,
+      "population": 160000,
+      "gold": 300,
+      "food": 6000,
+      "note": "安东尼长城以北的高地与泰河流域，喀里多尼亚人的地盘；无固定都城，坐标取泰河流域（因赫图希尔罗马旧营附近）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Caledonians",
+        "https://en.wikipedia.org/wiki/Argentocoxos"
+      ]
+    },
+    {
+      "key": "maeatae",
+      "name": "迈阿泰",
+      "full": "迈阿泰人之地（福斯河—安东尼长城一带）",
+      "orig": "Maeatae",
+      "modern": "英国苏格兰斯特灵附近（杜迈亚特山堡）",
+      "lon": -3.86,
+      "lat": 56.16,
+      "owner": "-",
+      "culture": "celt",
+      "land": 260,
+      "industry": 250,
+      "town": 250,
+      "population": 150000,
+      "gold": 300,
+      "food": 5000,
+      "note": "狄奥说迈阿泰人住在“分隔岛屿的长城附近”，喀里多尼亚人在其北；约197年起威胁北方边境，维里乌斯·卢普斯曾以重金买和，208年起遭塞维鲁征讨。无可考首领，设为空城。",
+      "sources": [
+        "https://stirlingarchaeology.substack.com/p/the-maeatae",
+        "https://en.wikipedia.org/wiki/Maeatae"
+      ]
+    },
+    {
+      "key": "marcomannia",
+      "name": "马科曼尼",
+      "full": "马科曼尼人之地（波希米亚）",
+      "orig": "Marcomanni (Boiohaemum)",
+      "modern": "捷克波希米亚中部",
+      "lon": 14.4,
+      "lat": 50.1,
+      "owner": "marcomanni",
+      "culture": "german",
+      "land": 400,
+      "industry": 300,
+      "town": 270,
+      "population": 300000,
+      "gold": 450,
+      "food": 11000,
+      "note": "波希米亚盆地，马科曼尼人自公元前后定居于此；无可考都城，坐标取波希米亚中部。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Marcomanni",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars"
+      ]
+    },
+    {
+      "key": "quadia",
+      "name": "夸迪",
+      "full": "夸迪人之地（摩拉维亚—斯洛伐克西部）",
+      "orig": "Quadi",
+      "modern": "斯洛伐克西部瓦赫河谷",
+      "lon": 17.6,
+      "lat": 48.6,
+      "owner": "marcomanni",
+      "culture": "german",
+      "land": 380,
+      "industry": 280,
+      "town": 260,
+      "population": 260000,
+      "gold": 400,
+      "food": 10000,
+      "note": "多瑙河以北、正对卡农图姆与布里格提奥的夸迪人地盘；179年罗马军曾深入至劳加里西奥（今特伦钦）越冬。坐标为大致位置。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Quadi",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars"
+      ]
+    },
+    {
+      "key": "iazyges",
+      "name": "雅济吉斯",
+      "full": "雅济吉斯人之地（多瑙河—蒂萨河间）",
+      "orig": "Iazyges",
+      "modern": "匈牙利大平原（多瑙河—蒂萨河之间）",
+      "lon": 20.0,
+      "lat": 46.8,
+      "owner": "iazyges",
+      "culture": "sarmatian",
+      "land": 420,
+      "industry": 250,
+      "town": 250,
+      "population": 240000,
+      "gold": 400,
+      "food": 11000,
+      "note": "潘诺尼亚与达契亚之间的大平原，萨尔马提亚骑兵的牧地；175年和约要求他们远离多瑙河。坐标为大致位置。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Iazyges",
+        "https://en.wikipedia.org/wiki/Banadaspus"
+      ]
+    },
+    {
+      "key": "gothia",
+      "name": "哥特",
+      "full": "哥特人之地（维斯瓦河以东）",
+      "orig": "Gothi (Wielbark / Masłomęcz group)",
+      "modern": "波兰赫鲁别舒夫盆地（马斯沃门奇）",
+      "lon": 23.87,
+      "lat": 50.7,
+      "owner": "goths",
+      "culture": "german",
+      "land": 360,
+      "industry": 260,
+      "town": 250,
+      "population": 220000,
+      "gold": 350,
+      "food": 9000,
+      "note": "2世纪末维尔巴克文化（哥特人）从波美拉尼亚南迁，在赫鲁别舒夫盆地形成马斯沃门奇集团，是南下黑海北岸的前哨；坐标取马斯沃门奇遗址。",
+      "sources": [
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12924530/",
+        "http://www.mpov.uw.edu.pl/en/thesaurus/archaeological-cultures/wielbark-culture-"
+      ]
+    },
+    {
+      "key": "costoboci",
+      "name": "科斯托博契",
+      "full": "科斯托博契与自由达契亚人之地",
+      "orig": "Costoboci / Dacia libera",
+      "modern": "罗马尼亚摩尔达维亚北部",
+      "lon": 26.2,
+      "lat": 47.6,
+      "owner": "-",
+      "culture": "celt",
+      "land": 300,
+      "industry": 250,
+      "town": 250,
+      "population": 170000,
+      "gold": 300,
+      "food": 7000,
+      "note": "喀尔巴阡山以东的达契亚系部族；170年科斯托博契人一路劫掠到希腊厄琉息斯，约171年又遭阿斯丁吉汪达尔人重创。182—183年罗马还与“自由达契亚人”作战（尼格尔、阿尔拜努斯在此立功）。无190年可考首领，设空城；国王皮耶波鲁斯为在野。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Costoboci",
+        "https://proseleusis.com/en/the-fatal-tour-of-the-costoboci/"
+      ]
+    },
+    {
+      "key": "panticapaeum",
+      "name": "潘提卡彭",
+      "full": "潘提卡彭（博斯普鲁斯王都）",
+      "orig": "Panticapaeum",
+      "modern": "克里米亚刻赤",
+      "lon": 36.47,
+      "lat": 45.35,
+      "owner": "bosporus",
+      "culture": "sarmatian",
+      "land": 400,
+      "industry": 440,
+      "town": 400,
+      "population": 260000,
+      "gold": 1000,
+      "food": 12000,
+      "note": "刻赤海峡西岸的希腊古城、博斯普鲁斯王都，向罗马军队与黑海南岸输出谷物与鱼；顿河口的塔奈斯也属本国，未单设。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Panticapaeum",
+        "https://en.wikipedia.org/wiki/Sauromates_II"
+      ]
+    },
+    {
+      "key": "yancai",
+      "name": "奄蔡",
+      "full": "奄蔡（阿兰聊，阿兰人之地）",
+      "orig": "Alani",
+      "modern": "俄罗斯顿河—伏尔加河间草原（卡尔梅克一带）",
+      "lon": 44.0,
+      "lat": 45.8,
+      "owner": "-",
+      "culture": "sarmatian",
+      "land": 320,
+      "industry": 250,
+      "town": 250,
+      "population": 200000,
+      "gold": 350,
+      "food": 8000,
+      "note": "《后汉书》：“奄蔡国改名阿兰聊国”。阿兰人135年曾越高加索劫掠亚美尼亚、卡帕多细亚，被阿里安击退；150—230年无可考首领，设为空城。坐标只是大致位置；键名沿用草原区与西亚区已引用的 yancai。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Alans",
+        "https://depts.washington.edu/silkroad/texts/hhshu/hou_han_shu.html"
+      ]
+    }
+  ],
+  "links": [
+    [
+      "roma",
+      "lugdunum",
+      "land"
+    ],
+    [
+      "roma",
+      "carnuntum",
+      "land"
+    ],
+    [
+      "roma",
+      "carthago",
+      "sea"
+    ],
+    [
+      "roma",
+      "tarraco",
+      "sea"
+    ],
+    [
+      "roma",
+      "alexandria",
+      "sea"
+    ],
+    [
+      "roma",
+      "byzantium",
+      "sea"
+    ],
+    [
+      "lugdunum",
+      "colonia",
+      "land"
+    ],
+    [
+      "lugdunum",
+      "tarraco",
+      "land"
+    ],
+    [
+      "colonia",
+      "londinium",
+      "sea"
+    ],
+    [
+      "londinium",
+      "eboracum",
+      "land"
+    ],
+    [
+      "colonia",
+      "carnuntum",
+      "land"
+    ],
+    [
+      "carnuntum",
+      "sirmium",
+      "land"
+    ],
+    [
+      "sirmium",
+      "byzantium",
+      "land"
+    ],
+    [
+      "byzantium",
+      "ancyra",
+      "land"
+    ],
+    [
+      "byzantium",
+      "ephesus",
+      "sea"
+    ],
+    [
+      "ephesus",
+      "ancyra",
+      "land"
+    ],
+    [
+      "ephesus",
+      "alexandria",
+      "sea"
+    ],
+    [
+      "ancyra",
+      "antioch",
+      "land"
+    ],
+    [
+      "antioch",
+      "palmyra",
+      "land"
+    ],
+    [
+      "antioch",
+      "alexandria",
+      "sea"
+    ],
+    [
+      "carthago",
+      "alexandria",
+      "sea"
+    ],
+    [
+      "carthago",
+      "tarraco",
+      "sea"
+    ],
+    [
+      "eboracum",
+      "maeatae",
+      "land"
+    ],
+    [
+      "maeatae",
+      "caledonia",
+      "land"
+    ],
+    [
+      "colonia",
+      "marcomannia",
+      "land"
+    ],
+    [
+      "carnuntum",
+      "marcomannia",
+      "land"
+    ],
+    [
+      "carnuntum",
+      "quadia",
+      "land"
+    ],
+    [
+      "marcomannia",
+      "quadia",
+      "land"
+    ],
+    [
+      "quadia",
+      "iazyges",
+      "land"
+    ],
+    [
+      "sirmium",
+      "iazyges",
+      "land"
+    ],
+    [
+      "quadia",
+      "gothia",
+      "land"
+    ],
+    [
+      "iazyges",
+      "costoboci",
+      "land"
+    ],
+    [
+      "costoboci",
+      "gothia",
+      "land"
+    ],
+    [
+      "costoboci",
+      "byzantium",
+      "land"
+    ],
+    [
+      "costoboci",
+      "panticapaeum",
+      "land"
+    ],
+    [
+      "panticapaeum",
+      "byzantium",
+      "sea"
+    ],
+    [
+      "panticapaeum",
+      "yancai",
+      "land"
+    ]
+  ],
+  "crossLinks": [
+    {
+      "from": "antioch",
+      "toKey": "edessa",
+      "toName": "埃德萨（奥斯若恩）",
+      "kind": "land",
+      "why": "安条克经宙格玛渡幼发拉底河至埃德萨，是罗马对安息作战的主干道（西亚区已列 edessa→antioch）。"
+    },
+    {
+      "from": "palmyra",
+      "toKey": "ctesiphon",
+      "toName": "泰西封",
+      "kind": "land",
+      "why": "帕尔米拉商队沿幼发拉底河经杜拉—欧罗普斯南下，到安息的沃洛加西亚—泰西封一带。"
+    },
+    {
+      "from": "palmyra",
+      "toKey": "charax",
+      "toName": "查拉克斯（梅塞内）",
+      "kind": "land",
+      "why": "帕尔米拉商队的终点港，转海路往印度（西亚区已列 charax→palmyra）。"
+    },
+    {
+      "from": "antioch",
+      "toKey": "hatra",
+      "toName": "哈特拉",
+      "kind": "land",
+      "why": "哈特拉193年援助尼格尔，198—199年塞维鲁两度从叙利亚出兵围攻。"
+    },
+    {
+      "from": "ancyra",
+      "toKey": "artaxata",
+      "toName": "阿尔塔沙特（亚美尼亚）",
+      "kind": "land",
+      "why": "经卡帕多细亚与萨塔拉军团营地入亚美尼亚。西亚区的 artaxata→satala 请改连 ancyra。"
+    },
+    {
+      "from": "yancai",
+      "toKey": "mtskheta",
+      "toName": "姆茨赫塔（伊比利亚）",
+      "kind": "land",
+      "why": "阿兰人经达里亚尔山口南下伊比利亚（西亚区已列 mtskheta→yancai）。"
+    },
+    {
+      "from": "yancai",
+      "toKey": "kangju",
+      "toName": "康居",
+      "kind": "land",
+      "why": "《后汉书》称奄蔡“属康居”，经里海、咸海以北草原相通（草原区已列 kangju→yancai）。"
+    },
+    {
+      "from": "alexandria",
+      "toKey": "aksum",
+      "toName": "阿克苏姆（阿杜利斯港）",
+      "kind": "sea",
+      "why": "红海航线：贝勒尼基—阿杜利斯（西亚区已列 aksum→alexandria）。"
+    },
+    {
+      "from": "alexandria",
+      "toKey": "barygaza",
+      "toName": "巴里加扎",
+      "kind": "sea",
+      "why": "《厄立特里亚海周航记》的印度航线，乘季风自红海直航（西亚区已列 barygaza→alexandria）。"
+    },
+    {
+      "from": "alexandria",
+      "toKey": "marib",
+      "toName": "马里卜（萨巴）",
+      "kind": "sea",
+      "why": "红海—也门乳香航线；西亚区的 marib→petra 请改连此处（本区未设佩特拉/波斯特拉）。"
+    }
+  ],
+  "generals": [
+    {
+      "name": "康茂德",
+      "full": "卢基乌斯·奥勒留·康茂德",
+      "orig": "Lucius Aurelius Commodus",
+      "war": 74,
+      "intel": 28,
+      "pol": 18,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 100,
+      "troops": 6000,
+      "hidden": 0,
+      "born": 161,
+      "died": 192,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "皇帝（奥古斯都，180—192年在位）",
+      "note": "体格强健、以亲自下场角斗与射杀猛兽自诩，故武力偏高；荒于政事、任用宠臣，智政极低；192年末遇刺。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Commodus",
+        "https://zh.wikipedia.org/zh-hans/%E5%BA%B7%E8%8C%82%E5%BE%B7"
+      ]
+    },
+    {
+      "name": "克里安德",
+      "full": "马可·奥勒留·克里安德",
+      "orig": "Marcus Aurelius Cleander",
+      "war": 22,
+      "intel": 66,
+      "pol": 38,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 80,
+      "troops": 2000,
+      "hidden": 0,
+      "born": null,
+      "died": 190,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "宫廷侍从长、禁卫军长官（被释奴）",
+      "note": "佩伦尼斯死后独揽大权，大肆卖官（一年出现二十五位执政官）；190年粮荒暴动中被康茂德交给民众处死——剧本开局时仍在位。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Marcus_Aurelius_Cleander",
+        "https://en.wikipedia.org/wiki/Papirius_Dionysius",
+        "https://zh.wikipedia.org/zh-hans/%E5%BA%B7%E8%8C%82%E5%BE%B7"
+      ]
+    },
+    {
+      "name": "佩蒂纳克斯",
+      "full": "普布利乌斯·赫尔维乌斯·佩蒂纳克斯",
+      "orig": "Publius Helvius Pertinax",
+      "war": 76,
+      "intel": 82,
+      "pol": 88,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 72,
+      "troops": 4500,
+      "hidden": 0,
+      "born": 126,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "罗马城市长官（189年起）",
+      "note": "被释奴之子出身，马科曼尼战争名将，历任默西亚、达契亚、叙利亚、不列颠总督（185年平定兵变）、188—189年阿非利加总督；193年继位后整顿财政，87天后被禁卫军所杀。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Pertinax",
+        "https://zh.wikipedia.org/zh-hans/%E4%BD%A9%E8%92%82%E7%BA%B3%E5%85%8B%E6%96%AF",
+        "https://www.livius.org/articles/person/pertinax/pertinax-2/"
+      ]
+    },
+    {
+      "name": "莱图斯",
+      "full": "昆图斯·埃米利乌斯·莱图斯",
+      "orig": "Quintus Aemilius Laetus",
+      "war": 52,
+      "intel": 78,
+      "pol": 62,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 62,
+      "troops": 4000,
+      "hidden": 0,
+      "born": null,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "禁卫军长官（190/191—193年）",
+      "note": "阿非利加人，克里安德倒台后掌禁卫军，举荐阿非利加同乡塞维鲁出镇上潘诺尼亚；主谋刺杀康茂德并拥立佩蒂纳克斯，193年被尤利安努斯处死。忠诚偏低。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Quintus_Aemilius_Laetus",
+        "https://oxfordre.com/classics/display/10.1093/acrefore/9780199381135.001.0001/acrefore-9780199381135-e-111"
+      ]
+    },
+    {
+      "name": "埃克莱图斯",
+      "full": "埃克莱克图斯",
+      "orig": "Eclectus",
+      "war": 18,
+      "intel": 68,
+      "pol": 60,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 62,
+      "troops": 1000,
+      "hidden": 0,
+      "born": null,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "宫廷侍从长（被释奴）",
+      "note": "先后侍奉维鲁斯与康茂德，与玛琪亚、莱图斯合谋弑君；193年禁卫军哗变时唯一留在佩蒂纳克斯身边抵抗而死。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Commodus",
+        "https://www.163.com/dy/article/IUC3OBG90553FR3W.html"
+      ]
+    },
+    {
+      "name": "玛琪亚",
+      "full": "玛琪亚·奥雷利亚·凯奥尼娅·德米特里亚斯",
+      "orig": "Marcia Aurelia Ceionia Demetrias",
+      "war": 12,
+      "intel": 72,
+      "pol": 48,
+      "faction": "roma",
+      "city": "roma",
+      "loyalty": 60,
+      "troops": 1000,
+      "hidden": 0,
+      "born": null,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "康茂德的情妇",
+      "note": "182年起为康茂德宠姬，曾为撒丁岛矿场的基督徒求得赦免；发现自己在处死名单上后下毒弑君，193年被尤利安努斯处死。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Marcia_(mistress_of_Commodus)",
+        "https://zh.wikipedia.org/zh-hans/%E5%BA%B7%E8%8C%82%E5%BE%B7"
+      ]
+    },
+    {
+      "name": "塞维鲁",
+      "full": "卢基乌斯·塞普蒂米乌斯·塞维鲁",
+      "orig": "Lucius Septimius Severus",
+      "war": 84,
+      "intel": 90,
+      "pol": 86,
+      "faction": "roma",
+      "city": "carnuntum",
+      "loyalty": 72,
+      "troops": 6000,
+      "hidden": 0,
+      "born": 145,
+      "died": 211,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "上潘诺尼亚总督（191—193年；190年为执政官）",
+      "note": "大莱普提斯人，186—189年卢格杜努姆总督，189年西西里总督，190年执政官，191年出镇上潘诺尼亚；193年起兵，先后击败尤利安努斯、尼格尔、阿尔拜努斯并东征安息，开创塞维鲁王朝。放在卡农图姆以体现其起兵根据地。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Septimius_Severus",
+        "https://www.worldhistory.org/Septimius_Severus/",
+        "https://zh.wikipedia.org/zh-hans/%E5%A1%9E%E6%99%AE%E8%92%82%E7%B1%B3%E7%83%8F%E6%96%AF%C2%B7%E5%A1%9E%E7%B6%AD%E9%AD%AF"
+      ]
+    },
+    {
+      "name": "多姆娜",
+      "full": "尤利娅·多姆娜",
+      "orig": "Julia Domna",
+      "war": 10,
+      "intel": 88,
+      "pol": 84,
+      "faction": "roma",
+      "city": "carnuntum",
+      "loyalty": 85,
+      "troops": 1000,
+      "hidden": 0,
+      "born": 160,
+      "died": 217,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "塞维鲁之妻",
+      "note": "叙利亚埃梅萨祭司王族之女，187年嫁塞维鲁；后为皇后，聚集哲学家与文人，卡拉卡拉在位时代理大量政务。生年约160（一说170）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Julia_Domna"
+      ]
+    },
+    {
+      "name": "尤·莱图斯",
+      "full": "尤利乌斯·莱图斯",
+      "orig": "Julius Laetus",
+      "war": 86,
+      "intel": 62,
+      "pol": 42,
+      "faction": "roma",
+      "city": "carnuntum",
+      "loyalty": 74,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 198,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "塞维鲁麾下将领（骑兵统帅）",
+      "note": "193年起随塞维鲁作战；197年卢格杜努姆会战率骑兵杀出定胜负，同年死守尼西比斯；因深得军心遭忌，约198年被塞维鲁处死。190年职务不详，按其后来的从属放在潘诺尼亚。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Julius_Laetus",
+        "https://en.wikipedia.org/wiki/Battle_of_Lugdunum"
+      ]
+    },
+    {
+      "name": "尼格尔",
+      "full": "盖乌斯·佩斯切尼乌斯·尼格尔",
+      "orig": "Gaius Pescennius Niger",
+      "war": 82,
+      "intel": 66,
+      "pol": 70,
+      "faction": "roma",
+      "city": "antioch",
+      "loyalty": 68,
+      "troops": 5500,
+      "hidden": 0,
+      "born": 135,
+      "died": 194,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "叙利亚总督（190/191—193年）",
+      "note": "意大利骑士家族出身，183年在达契亚击败萨尔马提亚人与自由达契亚人而成名，素有清名、深得罗马民众拥护；193年在安条克称帝，194年伊苏斯战败被杀。中文维基作“奈哲尔”。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Pescennius_Niger",
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Syria",
+        "https://www.livius.org/articles/person/pescennius-niger/"
+      ]
+    },
+    {
+      "name": "阿塞利乌斯",
+      "full": "阿塞利乌斯·埃米利亚努斯",
+      "orig": "Asellius Aemilianus",
+      "war": 62,
+      "intel": 72,
+      "pol": 74,
+      "faction": "roma",
+      "city": "antioch",
+      "loyalty": 70,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "叙利亚总督（187—190年），后任亚细亚资深执政官",
+      "note": "历任多省的资深元老；193年为尼格尔镇守拜占庭与马尔马拉海南岸，在基齐库斯被坎迪杜斯击败、被俘处死。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Syria",
+        "https://en.wikipedia.org/wiki/Battle_of_Cyzicus_(193)"
+      ]
+    },
+    {
+      "name": "阿尔拜努斯",
+      "full": "德基姆斯·克劳狄乌斯·阿尔拜努斯",
+      "orig": "Decimus Clodius Albinus",
+      "war": 80,
+      "intel": 68,
+      "pol": 68,
+      "faction": "roma",
+      "city": "londinium",
+      "loyalty": 66,
+      "troops": 5500,
+      "hidden": 0,
+      "born": 150,
+      "died": 197,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "不列颠总督（191/192—197年）",
+      "note": "阿非利加哈德鲁梅图姆人，182—183年在达契亚立功，约185年执政官，189年前后任下日耳曼总督；193年受塞维鲁“凯撒”名号，195年称帝，197年卢格杜努姆败死。中文维基译名，亦作阿尔比努斯。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Clodius_Albinus",
+        "https://en.wikipedia.org/wiki/List_of_governors_of_Roman_Britain",
+        "https://zh.wikipedia.org/zh-hans/%E4%BA%94%E5%B8%9D%E4%B9%8B%E5%B9%B4"
+      ]
+    },
+    {
+      "name": "尤利安努斯",
+      "full": "马库斯·狄狄乌斯·尤利安努斯",
+      "orig": "Marcus Didius Severus Julianus",
+      "war": 56,
+      "intel": 62,
+      "pol": 70,
+      "faction": "roma",
+      "city": "carthago",
+      "loyalty": 76,
+      "troops": 3500,
+      "hidden": 0,
+      "born": 133,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "阿非利加资深执政官（189—190年）",
+      "note": "由马可·奥勒留之母抚养，任比利时高卢总督时击退考契人，历任达尔马提亚、下日耳曼、比提尼亚总督；189年接替佩蒂纳克斯治阿非利加；193年在禁卫军“拍卖”中出价买得帝位，66天后被杀。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Didius_Julianus",
+        "https://zh.wikipedia.org/zh-hans/%E7%8B%84%E7%8B%84%E7%83%8F%E6%96%AF%C2%B7%E5%B0%A4%E5%88%A9%E5%AE%89%E5%8A%AA%E6%96%AF"
+      ]
+    },
+    {
+      "name": "阿努利努斯",
+      "full": "普布利乌斯·科尔内利乌斯·阿努利努斯",
+      "orig": "Publius Cornelius Anullinus",
+      "war": 80,
+      "intel": 72,
+      "pol": 66,
+      "faction": "roma",
+      "city": "lugdunum",
+      "loyalty": 80,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "资深元老、塞维鲁的老上司",
+      "note": "西班牙伊利贝里斯人，约170年任贝提卡总督时塞维鲁是其财务官，约175年执政官、上日耳曼总督，192/193年阿非利加总督；194年伊苏斯会战大败尼格尔，199年再任执政官。190年职务不详，放在卢格杜努姆只为高卢配守将。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Publius_Cornelius_Anullinus",
+        "https://en.wikipedia.org/wiki/Battle_of_Issus_(194)"
+      ]
+    },
+    {
+      "name": "坎迪杜斯",
+      "full": "提比略·克劳狄乌斯·坎迪杜斯",
+      "orig": "Tiberius Claudius Candidus",
+      "war": 78,
+      "intel": 62,
+      "pol": 58,
+      "faction": "roma",
+      "city": "ephesus",
+      "loyalty": 84,
+      "troops": 4000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "尼科米底亚与以弗所城市监理",
+      "note": "骑士出身的军需官，康茂德时破格擢入元老院，在亚细亚任职并监理尼科米底亚、以弗所；193年为塞维鲁先锋，在基齐库斯、尼西亚两败尼格尔军，后任近西班牙总督。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Tiberius_Claudius_Candidus"
+      ]
+    },
+    {
+      "name": "卢普斯",
+      "full": "维里乌斯·卢普斯",
+      "orig": "Virius Lupus",
+      "war": 60,
+      "intel": 64,
+      "pol": 72,
+      "faction": "roma",
+      "city": "colonia",
+      "loyalty": 82,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "下日耳曼总督（约196年在任）",
+      "note": "196年率莱茵军团阻击阿尔拜努斯失利；197年起任不列颠总督，向迈阿泰人重金买和并修复北方要塞。190年职务不详（下日耳曼当时总督资料极少），提前放在科洛尼亚。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Virius_Lupus",
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Germania_Inferior"
+      ]
+    },
+    {
+      "name": "普登斯",
+      "full": "盖乌斯·瓦勒里乌斯·普登斯",
+      "orig": "Gaius Valerius Pudens",
+      "war": 60,
+      "intel": 62,
+      "pol": 72,
+      "faction": "roma",
+      "city": "sirmium",
+      "loyalty": 82,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "下潘诺尼亚总督（192—193年）",
+      "note": "193年随塞维鲁起兵；之后历任下日耳曼、不列颠（约202—205年，修建要塞）与阿非利加总督（211/212年），生平几乎全靠铭文。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Gaius_Valerius_Pudens"
+      ]
+    },
+    {
+      "name": "马克西穆斯",
+      "full": "卢基乌斯·马略·马克西穆斯",
+      "orig": "Lucius Marius Maximus Perpetuus Aurelianus",
+      "war": 68,
+      "intel": 82,
+      "pol": 74,
+      "faction": "roma",
+      "city": "byzantium",
+      "loyalty": 84,
+      "troops": 3500,
+      "hidden": 0,
+      "born": 160,
+      "died": 230,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "下默西亚第一意大利军团长（193年）",
+      "note": "193年率默西亚军围攻拜占庭，197年任默西亚与卢格杜努姆方面军统帅，后任比利时高卢、叙利亚总督，217年罗马城市长官；又是续写苏埃托尼乌斯的皇帝传记作家。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Marius_Maximus"
+      ]
+    },
+    {
+      "name": "奇洛",
+      "full": "卢基乌斯·法比乌斯·奇洛",
+      "orig": "Lucius Fabius Cilo",
+      "war": 62,
+      "intel": 72,
+      "pol": 80,
+      "faction": "roma",
+      "city": "ancyra",
+      "loyalty": 86,
+      "troops": 3000,
+      "hidden": 0,
+      "born": 153,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "加拉太总督（约189—192年）",
+      "note": "曾任第十六弗拉维亚军团长、纳博高卢总督与军库长官；193年率军守佩林图斯，后任本都—比提尼亚、上默西亚、上潘诺尼亚总督与罗马城市长官，是塞维鲁的心腹。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Lucius_Fabius_Cilo"
+      ]
+    },
+    {
+      "name": "卡斯图斯",
+      "full": "卢基乌斯·阿尔托留斯·卡斯图斯",
+      "orig": "Lucius Artorius Castus",
+      "war": 76,
+      "intel": 56,
+      "pol": 50,
+      "faction": "roma",
+      "city": "eboracum",
+      "loyalty": 86,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "第六胜利军团长官（年代不确定）",
+      "note": "只见于达尔马提亚波德斯特拉纳的墓志铭：曾任驻埃博拉库姆的第六胜利军团长官，并率不列颠军团与骑兵讨伐阿莫里卡人。克罗地亚学者坎比定为2世纪下半叶，但也有3世纪初之说；常被附会为亚瑟王原型。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Lucius_Artorius_Castus",
+        "https://visitpodstrana.hr/en/artorius/"
+      ]
+    },
+    {
+      "name": "提尼乌斯",
+      "full": "昆图斯·提尼乌斯·德米特里乌斯",
+      "orig": "Quintus Tineius Demetrius",
+      "war": 28,
+      "intel": 62,
+      "pol": 72,
+      "faction": "roma",
+      "city": "alexandria",
+      "loyalty": 80,
+      "troops": 2500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "埃及长官（189年8月—190年8月在任）",
+      "note": "骑士出身的埃及长官，纸草文书证实其在任时间；190年由克劳狄乌斯·卢基利亚努斯接替。事迹不多，按行政官评定。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Quintus_Tineius_Demetrius",
+        "https://www.wikiwand.com/en/List_of_governors_of_Roman_Egypt"
+      ]
+    },
+    {
+      "name": "鲁弗斯",
+      "full": "卢基乌斯·诺维乌斯·鲁弗斯",
+      "orig": "Lucius Novius Rufus",
+      "war": 58,
+      "intel": 54,
+      "pol": 60,
+      "faction": "roma",
+      "city": "tarraco",
+      "loyalty": 74,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": 197,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "近西班牙（塔拉科）总督（约192—197年）",
+      "note": "197年率第七双子军团投奔阿尔拜努斯，战败后被塞维鲁处死。190年在任是提前两年的安排。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Hispania_Tarraconensis",
+        "https://dbe.rah.es/biografias/21857/lucius-novius-rufus"
+      ]
+    },
+    {
+      "name": "奥盖卢",
+      "full": "奥盖卢·巴尔·马凯",
+      "orig": "Ogeilu son of Maqqai",
+      "war": 68,
+      "intel": 54,
+      "pol": 60,
+      "faction": "roma",
+      "city": "palmyra",
+      "loyalty": 75,
+      "troops": 3000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "arab",
+      "attested": "yes",
+      "role": "帕尔米拉将军（商队护卫）",
+      "note": "199年帕尔米拉议会与四部落为他立像，表彰他多次出任将军、征讨游牧民并自掏腰包保护商队。190年已在任的可能性大但无直接证据。中文译名自拟。",
+      "sources": [
+        "https://philipharland.com/greco-roman-associations/honors-by-tribes-and-merchants-for-ogeilu-199-ce/"
+      ]
+    },
+    {
+      "name": "卡拉卡拉",
+      "full": "马可·奥勒留·安东尼努斯（卡拉卡拉）",
+      "orig": "Caracalla (Lucius Septimius Bassianus)",
+      "war": 84,
+      "intel": 42,
+      "pol": 34,
+      "faction": "-",
+      "city": "lugdunum",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 188,
+      "died": 217,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "塞维鲁长子（190年两岁）",
+      "note": "188年4月生于卢格杜努姆；211年杀弟独掌帝国，212年颁布敕令授予全体自由民罗马公民权；好武、残暴，217年遇刺。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Caracalla",
+        "https://zh.wikipedia.org/zh-hans/%E5%8D%A1%E6%8B%89%E5%8D%A1%E6%8B%89"
+      ]
+    },
+    {
+      "name": "盖塔",
+      "full": "普布利乌斯·塞普蒂米乌斯·盖塔",
+      "orig": "Publius Septimius Geta",
+      "war": 54,
+      "intel": 52,
+      "pol": 56,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 189,
+      "died": 211,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "塞维鲁次子（190年一岁）",
+      "note": "189年3月生于罗马；211年与兄长共治，同年被卡拉卡拉杀害于母亲怀中。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Geta_(emperor)"
+      ]
+    },
+    {
+      "name": "马克里努斯",
+      "full": "马库斯·奥佩利乌斯·马克里努斯",
+      "orig": "Marcus Opellius Macrinus",
+      "war": 42,
+      "intel": 74,
+      "pol": 76,
+      "faction": "-",
+      "city": "carthago",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 165,
+      "died": 218,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "律师（日后禁卫军长官、皇帝）",
+      "note": "毛里塔尼亚凯撒利亚人，以律师与财务管理起家，212年任禁卫军长官，217年谋杀卡拉卡拉后称帝，次年败给埃拉伽巴路斯。",
+      "sources": [
+        "https://zh.wikipedia.org/zh-hans/%E9%A9%AC%E5%85%8B%E9%87%8C%E5%8A%AA%E6%96%AF",
+        "https://en.wikipedia.org/wiki/Macrinus"
+      ]
+    },
+    {
+      "name": "普劳提安",
+      "full": "盖乌斯·富尔维乌斯·普劳提亚努斯",
+      "orig": "Gaius Fulvius Plautianus",
+      "war": 54,
+      "intel": 78,
+      "pol": 68,
+      "faction": "-",
+      "city": "carthago",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 150,
+      "died": 205,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "塞维鲁的同乡与亲戚",
+      "note": "大莱普提斯人，197—205年任禁卫军长官、权倾一时，女儿嫁卡拉卡拉；205年被指控谋反处死。百度百科作“普罗汀纳斯”。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Gaius_Fulvius_Plautianus",
+        "https://www.livius.org/articles/person/plautianus/"
+      ]
+    },
+    {
+      "name": "盖伦",
+      "full": "克劳狄乌斯·盖伦",
+      "orig": "Aelius (Claudius) Galenus",
+      "war": 10,
+      "intel": 94,
+      "pol": 62,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 129,
+      "died": 216,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "宫廷御医、医学家",
+      "note": "帕加马人，先后为马可·奥勒留、康茂德、塞维鲁诊病，其解剖学与医学著作统治西方医学一千多年；与华佗同为“神医”类人才。卒年旧说199/200，今多取约216年。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Galen",
+        "https://baike.baidu.com/item/%E5%85%8B%E5%8A%B3%E8%BF%AA%E4%BA%9A%E6%96%AF%C2%B7%E7%9B%96%E4%BC%A6/59012435"
+      ]
+    },
+    {
+      "name": "帕比尼安",
+      "full": "埃米利乌斯·帕比尼安",
+      "orig": "Aemilius Papinianus",
+      "war": 14,
+      "intel": 92,
+      "pol": 97,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 142,
+      "died": 212,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "法学家（日后禁卫军长官）",
+      "note": "罗马五大法学家之首，可能出身叙利亚；203—212年任禁卫军长官，因拒绝为卡拉卡拉弑弟辩护被处死。中文维基作“帕皮尼亚努斯”。对应张昭一类的内政之才。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Papinian",
+        "https://zh.wikipedia.org/wiki/%E5%B8%95%E7%9A%AE%E5%B0%BC%E4%BA%9A%E5%8A%AA%E6%96%AF"
+      ]
+    },
+    {
+      "name": "乌尔比安",
+      "full": "多米提乌斯·乌尔比安",
+      "orig": "Gnaeus Domitius Annius Ulpianus",
+      "war": 12,
+      "intel": 90,
+      "pol": 94,
+      "faction": "-",
+      "city": "antioch",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 170,
+      "died": 223,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "法学家（日后禁卫军长官）",
+      "note": "腓尼基推罗人，帕比尼安的助手，222年起任亚历山大·塞维鲁的禁卫军长官，223年（一说228年）被禁卫军所杀；其著作占《学说汇纂》约三分之一。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ulpian",
+        "https://baike.baidu.com/item/%E4%B9%8C%E5%B0%94%E6%AF%94%E5%AE%89/10028718"
+      ]
+    },
+    {
+      "name": "狄奥",
+      "full": "卢基乌斯·卡西乌斯·狄奥",
+      "orig": "Lucius Cassius Dio",
+      "war": 32,
+      "intel": 88,
+      "pol": 82,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 155,
+      "died": 235,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "元老、史学家",
+      "note": "比提尼亚尼西亚人，康茂德时入元老院，194/195年任大法官，后任阿非利加、达尔马提亚、上潘诺尼亚总督，229年与亚历山大·塞维鲁同任执政官；所著《罗马史》是本区人物最主要的史源。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Cassius_Dio"
+      ]
+    },
+    {
+      "name": "马克西明",
+      "full": "盖乌斯·尤利乌斯·维鲁斯·马克西米努斯（色雷克斯）",
+      "orig": "Maximinus Thrax",
+      "war": 96,
+      "intel": 32,
+      "pol": 22,
+      "faction": "-",
+      "city": "byzantium",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 173,
+      "died": 238,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "色雷斯农家子（日后皇帝）",
+      "note": "身材魁梧，在塞维鲁为盖塔庆生举办的竞技中连胜十六人而入伍；235年被拥立为第一位“军人皇帝”，238年被部下所杀。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Maximinus_Thrax"
+      ]
+    },
+    {
+      "name": "戈尔迪安",
+      "full": "马库斯·安东尼乌斯·戈尔迪安努斯（戈尔迪安一世）",
+      "orig": "Gordian I",
+      "war": 40,
+      "intel": 74,
+      "pol": 80,
+      "faction": "-",
+      "city": "carthago",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 159,
+      "died": 238,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "富有元老（日后皇帝）",
+      "note": "216年任下不列颠总督，237年任阿非利加资深执政官，238年在提斯德鲁斯被拥立为帝，在位仅二十余日。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Gordian_I",
+        "https://www.britannica.com/biography/Gordian-I"
+      ]
+    },
+    {
+      "name": "德西乌斯",
+      "full": "盖乌斯·墨西乌斯·昆图斯·德西乌斯",
+      "orig": "Decius",
+      "war": 76,
+      "intel": 68,
+      "pol": 72,
+      "faction": "-",
+      "city": "sirmium",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 201,
+      "died": 251,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "潘诺尼亚人（日后皇帝）",
+      "note": "约201年生于西尔米乌姆附近的布达利亚；249年称帝，251年在阿伯里图斯败给哥特王尼瓦战死，是第一位死于外敌之手的罗马皇帝。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Decius",
+        "https://zh.wikipedia.org/zh-hans/%E5%BE%B7%E8%A5%BF%E4%B9%8C%E6%96%AF"
+      ]
+    },
+    {
+      "name": "菲利普",
+      "full": "马库斯·尤利乌斯·菲利普斯（阿拉伯人菲利普）",
+      "orig": "Philip the Arab",
+      "war": 66,
+      "intel": 74,
+      "pol": 70,
+      "faction": "-",
+      "city": "palmyra",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 204,
+      "died": 249,
+      "culture": "arab",
+      "attested": "yes",
+      "role": "阿拉伯行省人（日后皇帝）",
+      "note": "约204年生于特拉可尼的沙赫巴；244—249年在位，248年主持罗马建城千年庆典。放在最近的叙利亚城市帕尔米拉。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Philip_the_Arab"
+      ]
+    },
+    {
+      "name": "瓦勒良",
+      "full": "普布利乌斯·李锡尼乌斯·瓦勒良",
+      "orig": "Valerian",
+      "war": 70,
+      "intel": 68,
+      "pol": 70,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 199,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "元老世家（日后皇帝）",
+      "note": "约199年生；253—260年在位，260年埃德萨之战被萨珊沙普尔一世俘虏，死于囚中（约264年后）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Valerian_(emperor)"
+      ]
+    },
+    {
+      "name": "玛伊莎",
+      "full": "尤利娅·玛伊莎",
+      "orig": "Julia Maesa",
+      "war": 10,
+      "intel": 88,
+      "pol": 82,
+      "faction": "-",
+      "city": "antioch",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 160,
+      "died": 224,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "多姆娜之姊",
+      "note": "埃梅萨祭司王族，218年以重金收买军队，扶立外孙埃拉伽巴路斯推翻马克里努斯，222年又改立亚历山大·塞维鲁；生年在约160年之前。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Julia_Maesa"
+      ]
+    },
+    {
+      "name": "庞培亚努斯",
+      "full": "提比略·克劳狄乌斯·庞培亚努斯",
+      "orig": "Tiberius Claudius Pompeianus",
+      "war": 72,
+      "intel": 74,
+      "pol": 76,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": 125,
+      "died": null,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "马可·奥勒留之婿、退隐老将",
+      "note": "马科曼尼战争中马可最倚重的将领；182年其妻路基拉谋刺康茂德失败后，以年老为由退隐意大利庄园。193年回元老院，两度拒绝佩蒂纳克斯等人让给他的帝位。按退隐状态作为在野。此后不见于史，卒年不详（193年后）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Tiberius_Claudius_Pompeianus"
+      ]
+    },
+    {
+      "name": "纳尔奇苏斯",
+      "full": "纳尔奇苏斯",
+      "orig": "Narcissus",
+      "war": 88,
+      "intel": 18,
+      "pol": 8,
+      "faction": "-",
+      "city": "roma",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 193,
+      "culture": "roman",
+      "attested": "yes",
+      "role": "摔跤手、康茂德的陪练",
+      "note": "192年12月31日奉玛琪亚、莱图斯之命在浴室中勒死康茂德；193年被塞维鲁处死。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Narcissus_(wrestler)",
+        "https://zh.wikipedia.org/zh-hans/%E5%BA%B7%E8%8C%82%E5%BE%B7"
+      ]
+    },
+    {
+      "name": "阿根托科",
+      "full": "阿根托科克苏斯",
+      "orig": "Argentocoxos",
+      "war": 74,
+      "intel": 50,
+      "pol": 42,
+      "faction": "caledonia",
+      "city": "caledonia",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "celt",
+      "attested": "yes",
+      "role": "喀里多尼亚首领（约208—210年）",
+      "note": "狄奥记其210年议和后，其妻与尤利娅·多姆娜就两地风俗互相讥讽。190年前后无可考首领，按放宽年代规则收录；名意为“银腿”。中文无通行译名，自拟音译。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Argentocoxos",
+        "https://imperiumromanum.pl/en/curiosities/discussion-of-julia-domna-and-wife-of-argentocoxus/"
+      ]
+    },
+    {
+      "name": "巴洛马尔",
+      "full": "巴洛马尔",
+      "orig": "Ballomar",
+      "war": 82,
+      "intel": 66,
+      "pol": 58,
+      "faction": "marcomanni",
+      "city": "marcomannia",
+      "loyalty": 100,
+      "troops": 5000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "german",
+      "attested": "yes",
+      "role": "马科曼尼王（见于166—约172年）",
+      "note": "166/167年代表十一族与罗马议和，随后领导联军翻越阿尔卑斯、围攻阿奎莱亚，是自辛布里人以来首支攻入意大利的外敌。卒年史无明文（英文维基推测170—180年），见 notes。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ballomar",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars"
+      ]
+    },
+    {
+      "name": "富尔提乌斯",
+      "full": "富尔提乌斯",
+      "orig": "Furtius",
+      "war": 62,
+      "intel": 46,
+      "pol": 48,
+      "faction": "marcomanni",
+      "city": "quadia",
+      "loyalty": 70,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "german",
+      "attested": "yes",
+      "role": "夸迪王（约172年）",
+      "note": "与马可·奥勒留订约的亲罗马夸迪王，后被族人废黜、改立阿里奥盖苏斯；190年下落不详，按放宽年代规则收录。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Furtius",
+        "https://en.wikipedia.org/wiki/Ariogaesus"
+      ]
+    },
+    {
+      "name": "伽约博马",
+      "full": "伽约博马鲁斯",
+      "orig": "Gaiobomarus",
+      "war": 74,
+      "intel": 48,
+      "pol": 46,
+      "faction": "-",
+      "city": "quadia",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 213,
+      "culture": "german",
+      "attested": "yes",
+      "role": "夸迪王（213年）",
+      "note": "狄奥记卡拉卡拉以其“被控有罪”为由将这位夸迪王处死并以此自夸（213年潘诺尼亚之役）。190年时应已成年，作为在野人才。",
+      "sources": [
+        "https://www.ostia-antica.org/caracalla/historians/cassius-dio.htm",
+        "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Cassius_Dio/78*.html"
+      ]
+    },
+    {
+      "name": "阿里奥盖斯",
+      "full": "阿里奥盖苏斯",
+      "orig": "Ariogaesus",
+      "war": 72,
+      "intel": 56,
+      "pol": 50,
+      "faction": "-",
+      "city": "alexandria",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "german",
+      "attested": "yes",
+      "role": "前夸迪王（约172—174年），流放者",
+      "note": "夸迪人废富尔提乌斯而立他为王，马可悬赏千金活捉；被俘后未加杀害，只流放到亚历山大里亚——故作为在野人才放在 alexandria。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Ariogaesus"
+      ]
+    },
+    {
+      "name": "赞提库斯",
+      "full": "赞提库斯",
+      "orig": "Zanticus",
+      "war": 80,
+      "intel": 54,
+      "pol": 46,
+      "faction": "iazyges",
+      "city": "iazyges",
+      "loyalty": 100,
+      "troops": 5000,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "sarmatian",
+      "attested": "yes",
+      "role": "雅济吉斯王（约174—175年）",
+      "note": "175年亲自向马可·奥勒留乞和，交还十万俘虏、出骑兵八千；骑射与冰上作战是雅济吉斯人所长。190年是否在位不详，按放宽年代规则收录。",
+      "sources": [
+        "http://romanatoz.blogspot.com/2011/03/zanticus-iazyges-leader.html",
+        "https://en.wikipedia.org/wiki/Marcomannic_Wars"
+      ]
+    },
+    {
+      "name": "巴纳达斯普",
+      "full": "巴纳达斯普斯",
+      "orig": "Banadaspus",
+      "war": 66,
+      "intel": 50,
+      "pol": 50,
+      "faction": "iazyges",
+      "city": "iazyges",
+      "loyalty": 60,
+      "troops": 3500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "sarmatian",
+      "attested": "yes",
+      "role": "前雅济吉斯王（至174年）",
+      "note": "因私下向马可·奥勒留求和被本族废黜囚禁，由赞提库斯继位；忠诚偏低。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Banadaspus"
+      ]
+    },
+    {
+      "name": "菲利默",
+      "full": "菲利默（加达里克之子）",
+      "orig": "Filimer",
+      "war": 76,
+      "intel": 58,
+      "pol": 52,
+      "faction": "goths",
+      "city": "gothia",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": null,
+      "culture": "german",
+      "attested": "legendary",
+      "role": "哥特王（传说，约2世纪后期）",
+      "note": "约达尼斯《哥特史》：自贝里格以来第五代王，率哥特人南迁到斯基泰的“奥伊姆”，过河时桥断，半数族人留在对岸；又击败斯帕利人。只见于6世纪的传说史。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Oium",
+        "https://people.ucalgary.ca/~vandersp/Courses/texts/jordgeti.html"
+      ]
+    },
+    {
+      "name": "撒罗玛提斯",
+      "full": "提比略·尤利乌斯·撒罗玛提斯二世（萨夫罗马特斯二世）",
+      "orig": "Tiberius Julius Sauromates II",
+      "war": 72,
+      "intel": 64,
+      "pol": 68,
+      "faction": "bosporus",
+      "city": "panticapaeum",
+      "loyalty": 100,
+      "troops": 4500,
+      "hidden": 0,
+      "born": null,
+      "died": 210,
+      "culture": "sarmatian",
+      "attested": "yes",
+      "role": "博斯普鲁斯王（约172—210年）",
+      "note": "罗马藩属王；约186年起与斯基泰人、西拉奇人及海盗作战，193年塔奈斯铭文称其肃清黑海航路、远达本都与比提尼亚。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Sauromates_II",
+        "https://www.wildwinds.com/coins/greece/bosporos/kings/sauromates_II/i.html"
+      ]
+    },
+    {
+      "name": "雷斯库波",
+      "full": "提比略·尤利乌斯·雷斯库波利斯三世",
+      "orig": "Tiberius Julius Rhescuporis III",
+      "war": 60,
+      "intel": 54,
+      "pol": 58,
+      "faction": "-",
+      "city": "panticapaeum",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": 228,
+      "culture": "sarmatian",
+      "attested": "yes",
+      "role": "撒罗玛提斯二世之子（211—228年在位）",
+      "note": "铭文证实为撒罗玛提斯二世之子，在位事迹几乎只见于钱币。作为在野人才（王子）。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Rhescuporis_III"
+      ]
+    },
+    {
+      "name": "皮耶波鲁斯",
+      "full": "皮耶波鲁斯",
+      "orig": "Pieporus",
+      "war": 66,
+      "intel": 44,
+      "pol": 42,
+      "faction": "-",
+      "city": "costoboci",
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
+      "born": null,
+      "died": null,
+      "culture": "celt",
+      "attested": "yes",
+      "role": "科斯托博契王（2世纪，年代不确定）",
+      "note": "只见于罗马城一块已佚的墓碑（CIL VI 1801）：其妻、达契亚女子齐娅由孙辈在罗马安葬，家人可能是人质。年代一般放在马科曼尼战争前后。",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Costoboci"
+      ]
+    }
+  ],
+  "notes": [
+    "【资料核实】WebFetch 访问 livius.org、penelope.uchicago.edu（狄奥译本）、corvinus.nl 均被代理拦截，本区全部依据网络搜索摘要与已有知识整理；英文维基链接为搜索结果中出现的标准页面。",
+    "【规模】罗马在任武将23人，超过“大帝国10—18人”的建议。原因：现有引擎由在任武将推出城池归属（model.js 第129行），15座城每城至少要有一名在任武将，否则会变成空城。若要压缩，可把罗马城的埃克莱图斯、玛琪亚、克里安德改为在野或删去。",
+    "【克里安德】190年（月份有189/190年之争）因粮荒暴动被处死。开局时他仍掌权，故收为罗马在任武将；合并时可考虑做成开局数月后的“处决”事件。同年被杀的粮政长官帕皮里乌斯·狄奥尼修斯、继任禁卫军长官尤利乌斯·维希利乌斯·格拉图斯·尤利安努斯与雷吉卢斯未收。",
+    "【190年的实际职务与“预置”】塞维鲁190年实为执政官（在罗马），191年才出镇上潘诺尼亚；阿尔拜努斯约189年任下日耳曼总督（另说185/186年），191/192年才任不列颠总督；尼格尔190或191年接任叙利亚总督；诺维乌斯·鲁弗斯约192年起任塔拉科总督；维里乌斯·卢普斯约196年才见于下日耳曼总督任上。以上都按“即将到任的军区”放置，以体现五帝之年的格局；阿努利努斯、尤·莱图斯190年职务不详。",
+    "【空缺的总督】不列颠188—191年总督不详（维基列表有空缺，另有约192年的尤尼乌斯·塞维鲁斯）；下日耳曼约190—192年总督可能是盖乌斯·阿利乌斯·富斯库斯，资料过少未收；卢格杜努姆高卢190年总督不详。",
+    "【叙利亚】前任总督阿塞利乌斯·埃米利亚努斯（187—190年）与继任者尼格尔同置安条克。",
+    "【卡斯图斯】阿尔托留斯·卡斯图斯的年代只能定在2世纪中后期至3世纪初，放在埃博拉库姆证据最弱；若删去，埃博拉库姆会成为空城。",
+    "【埃及】提尼乌斯·德米特里乌斯任埃及长官至190年8月，继任的克劳狄乌斯·卢基利亚努斯（190年）与拉尔基乌斯·梅莫尔（192年）未收。",
+    "【帕尔米拉】奥盖卢见于199年铭文；奥登纳图斯家族（纳索尔—瓦巴拉图斯—海兰）在190年代获罗马公民权，但各人无确切年代，奥登纳图斯本人约220年生，晚于205年，未收。",
+    "【巴洛马尔】狄奥只记载他166/167年及其后几年的事迹，卒年史无明文；英文维基信息框的“约140—170/180年”属推测。若严格执行“189年前已故者不收”，可改由在野的伽约博马鲁斯（213年的夸迪王）任君主。富尔提乌斯、阿里奥盖苏斯、赞提库斯、巴纳达斯普斯的事迹都在172—175年，190年是否在世同样不详，均按“蛮族首领放宽到约150—230年”的规则收录。",
+    "【马科曼尼与夸迪合并】二族各有国王，但在战争中协同、由巴洛马尔牵头议和，为凑成“小国”规模合为一个势力；如需分开，夸迪可由富尔提乌斯为君主、伽约博马鲁斯为在野。",
+    "【哥特】菲利默只见于约达尼斯（6世纪），标为 legendary；城址取考古上2世纪末出现的马斯沃门奇哥特聚落。尼瓦（克尼瓦）250—251年在位，超出150—230年的蛮族首领窗口，生年不详，核查时已删去。半传说的奥斯特罗哥塔（约250年）未收。",
+    "【科斯托博契】皮耶波鲁斯只见于一块年代不明的墓碑（2世纪）；该族约171年遭阿斯丁吉汪达尔人重创，故城池设为空城、国王作为在野。阿斯丁吉首领劳斯与拉普图斯（约171年）、狄奥提到的少年首领巴塔里乌斯与塔尔布斯（约174年，部族不明）未收。",
+    "【阿兰／迈阿泰】150—230年都没有可考首领，设空城。奄蔡坐标只是顿河—伏尔加河间草原的大致位置。",
+    "【文化代号】科斯托博契是达契亚系，DESIGN-V2 没有对应代号，暂用 celt，建议新增 dacian。帕尔米拉城、奥盖卢、阿拉伯人菲利普用 arab；多姆娜、玛伊莎虽出身埃梅萨阿拉伯祭司王族，按罗马皇后装束用 roman。",
+    "【译名】尼格尔从 DESIGN-V2 写法（中文维基作“奈哲尔”）；阿尔拜努斯、狄狄乌斯·尤利安努斯、玛琪亚、纳尔奇苏斯从中文维基；帕比尼安取中国法学界通行译名（中文维基作“帕皮尼亚努斯”）。显示名去重：两位莱图斯→“莱图斯”“尤·莱图斯”；两位尤利娅→“多姆娜”“玛伊莎”；马略·马克西穆斯→“马克西穆斯”，马克西米努斯·色雷克斯→“马克西明”。蛮族人名、奥盖卢、提尼乌斯等无通行中译，按音译自拟。博斯普鲁斯、喀里多尼亚的势力名截为“博斯普鲁”“喀里多”以满足4字限制。",
+    "【未收人物】马可·瓦勒里乌斯·马克西米亚努斯（约186年执政官、努米底亚总督，此后下落不明）；塞维鲁之兄普布利乌斯·塞普蒂米乌斯·盖塔（185年第一意大利军团长、193年下默西亚总督，显示名会与皇子盖塔冲突）；伊苏斯会战的骑兵将领瓦勒里亚努斯（只知其名，且与皇帝瓦勒良同名）；乌尔皮乌斯·马克塞卢斯（180年代不列颠总督）；弗拉维乌斯·苏尔皮基亚努斯（佩蒂纳克斯岳父）；希罗狄安、德尔图良、奥利金等文人；马科曼尼王阿塔卢斯（约254—258年，生年恐晚于205年）。189年前已故未收：佩伦尼斯（185年）、路基拉（182年）、塔鲁特尼乌斯·帕特尔努斯（182年）、克里斯皮娜（约188年）、阿里乌斯·安东尼努斯（约188年）。",
+    "【跨区键名】本区安条克键名为 antioch（西亚区 edessa→antioch 可直接对上）；西亚区的 artaxata→satala 请改连 ancyra；marib→petra 请改连 alexandria（本区未设阿拉伯行省的佩特拉/波斯特拉）；奄蔡沿用草原区、西亚区已用的 yancai。欧洲与中国本部相距太远，不设与中国城池的连线。",
+    "【生卒年】多为约数：多姆娜约160（一说170）、尼格尔约135/140、阿尔拜努斯约150、马略·马克西穆斯约160—230、奇洛约153、马克里努斯约165、普劳提亚努斯约150、乌尔比安约170—223（一说228）、狄奥约155—235后、马克西明约173、戈尔迪安约159、德西乌斯约201、菲利普约204、瓦勒良约199、玛伊莎约160前、庞培亚努斯约125—193年后。"
+  ]
+}

@@ -48,7 +48,7 @@
       "culture": "persia",
       "virtue": 55,
       "fame": 80,
-      "color": "#4b0082",
+      "color": "#a020f0",
       "note": "沃洛吉斯四世（147—191年在位）于191年卒，子沃洛吉斯五世（即亚美尼亚王瓦加尔什二世）继位。为符合“大帝国”规模并反映藩属关系，亚美尼亚（安息王储镇守）与波西斯（巴兹兰吉藩王）并入本势力；奥斯罗埃斯、帕佩克忠诚偏低，为日后萨珊崛起埋伏笔。",
       "sources": [
         "https://en.wikipedia.org/wiki/Vologases_IV",
@@ -85,7 +85,7 @@
       "virtue": 60,
       "fame": 58,
       "color": "#806000",
-      "note": "哈特拉统治者自萨纳特鲁克一世起称“阿拉伯人之王”，名义上是安息藩属。193年援助尼格尔，198—199年两度挫败塞维鲁的围攻。",
+      "note": "哈特拉统治者自萨纳特鲁克一世起称“阿拉伯人之王”，名义上是安息藩属。193年援助尼格尔，约197—199年间两度挫败塞维鲁的围攻。",
       "sources": [
         "https://en.wikipedia.org/wiki/Hatra",
         "https://en.wikipedia.org/wiki/Herodian"
@@ -119,10 +119,11 @@
       "virtue": 60,
       "fame": 62,
       "color": "#b30000",
-      "note": "2世纪末萨巴王阿勒汗·纳赫凡与其子沙伊鲁姆·奥塔尔共治，与阿克苏姆王加达拉特订盟；沙伊鲁姆后来四出征战，是萨巴最后一位强王。南阿拉伯诸王年代学误差约二十年。",
+      "note": "约200年前后萨巴王阿勒汗·纳赫凡与其子沙伊鲁姆·奥塔尔共治，与阿克苏姆王加达拉特订盟；沙伊鲁姆约210年后独掌王权、四出征战，是萨巴最后一位强王。南阿拉伯诸王年代学误差约二十年，阿勒汗190年是否已即位不能确定。",
       "sources": [
         "https://en.wikipedia.org/wiki/Sabaeans",
-        "https://en.wikipedia.org/wiki/GDRT"
+        "https://en.wikipedia.org/wiki/GDRT",
+        "https://de.wikipedia.org/wiki/%E2%80%99Alhan_Nahfan"
       ]
     },
     {
@@ -130,15 +131,17 @@
       "name": "希木叶尔",
       "full": "希木叶尔王国（祖赖丹）",
       "orig": "Ḥimyarite Kingdom",
-      "ruler": "达马尔阿里",
+      "ruler": "塔兰",
       "capital": "zafar",
       "culture": "arab",
       "virtue": 55,
       "fame": 52,
       "color": "#66ffcc",
-      "note": "以扎法尔为都、与萨巴争夺“萨巴与祖赖丹王”称号的高原王国。所用两王见于著名的纳赫拉·哈姆拉青铜像，绝对年代有争议（约2世纪后期至3世纪初），按规则放宽年代采用。",
+      "note": "以扎法尔为都、与萨巴争夺“萨巴与祖赖丹王”称号的高原王国。按维基百科年表，达马尔阿里·尤哈比尔约175年传位其子塔兰·亚乌布·尤汉阿姆，塔兰独治到约214年，故190年的君主取塔兰。只有一名在任武将。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Himyarite_Kingdom"
+        "https://en.wikipedia.org/wiki/Himyarite_Kingdom",
+        "https://en.wikipedia.org/wiki/Tharan_Yaub_Yuhanim",
+        "https://en.wikipedia.org/wiki/Dhamar_Ali_Yahbur"
       ]
     },
     {
@@ -468,8 +471,8 @@
       "full": "查拉克斯·斯帕西努（卡拉塞尼／梅塞内都城）",
       "orig": "Charax Spasinou",
       "modern": "伊拉克巴士拉以北（杰贝勒海亚巴尔）",
-      "lon": 47.6,
-      "lat": 31.0,
+      "lon": 47.58,
+      "lat": 30.89,
       "owner": "-",
       "culture": "arab",
       "land": 360,
@@ -588,7 +591,7 @@
       "population": 180000,
       "gold": 1000,
       "food": 6000,
-      "note": "沙漠中的圆形要塞与太阳神庙之城；117年图拉真、198—199年塞维鲁围攻均告失败，240/241年为萨珊沙普尔一世所破。",
+      "note": "沙漠中的圆形要塞与太阳神庙之城；117年图拉真、约197—199年间塞维鲁两度围攻均告失败，240/241年为萨珊沙普尔一世所破。",
       "sources": [
         "https://en.wikipedia.org/wiki/Hatra"
       ]
@@ -955,38 +958,52 @@
     },
     {
       "from": "artaxata",
-      "toKey": "satala",
-      "toName": "萨塔拉（小亚美尼亚）",
+      "toKey": "ancyra",
+      "toName": "安基拉",
       "kind": "land",
-      "why": "罗马第十五军团驻地，罗马干预亚美尼亚的出发点；若欧洲研究区无此城，可改连卡帕多细亚的 caesarea 或 melitene。"
+      "why": "经卡帕多细亚与萨塔拉军团营地入亚美尼亚，罗马干预亚美尼亚的道路。欧洲研究区没有萨塔拉，按其建议改连 ancyra。"
     },
     {
       "from": "mtskheta",
       "toKey": "yancai",
       "toName": "奄蔡（阿兰）",
       "kind": "land",
-      "why": "北经达里尔山口通北高加索草原，阿兰人曾由此南侵（键名沿用草原西域研究区）。"
+      "why": "北经达里尔山口通北高加索草原，阿兰人曾由此南侵（yancai 城设在欧洲研究区）。"
     },
     {
       "from": "marib",
-      "toKey": "petra",
-      "toName": "佩特拉",
-      "kind": "land",
-      "why": "乳香之路：马里卜—纳季兰—德丹—赫格拉—佩特拉（纳巴泰此时已是罗马阿拉伯行省）。"
+      "toKey": "alexandria",
+      "toName": "亚历山大",
+      "kind": "sea",
+      "why": "乳香经红海港口北运罗马埃及。欧洲研究区未设佩特拉（纳巴泰已是罗马阿拉伯行省），按其建议改连 alexandria。"
     },
     {
       "from": "aksum",
       "toKey": "alexandria",
-      "toName": "亚历山大里亚",
+      "toName": "亚历山大",
       "kind": "sea",
       "why": "阿杜利斯经红海到贝勒尼基、米奥斯霍尔莫斯，再陆运尼罗河至亚历山大里亚；若欧洲研究区另设红海港口，请改连该港。"
     },
     {
       "from": "barygaza",
       "toKey": "alexandria",
-      "toName": "亚历山大里亚",
+      "toName": "亚历山大",
       "kind": "sea",
       "why": "《周航记》记载的季风航线：罗马埃及—红海—巴里加扎（可选，若嫌过长可删）。"
+    },
+    {
+      "from": "ctesiphon",
+      "toKey": "palmyra",
+      "toName": "帕尔米拉",
+      "kind": "land",
+      "why": "安息与罗马叙利亚之间的商路：帕尔米拉商队沿幼发拉底河经杜拉—欧罗普斯到沃洛加西亚—泰西封（与欧洲研究区 palmyra→ctesiphon 对应）。"
+    },
+    {
+      "from": "hatra",
+      "toKey": "antioch",
+      "toName": "安条克",
+      "kind": "land",
+      "why": "哈特拉193年援助尼格尔，约197—199年间塞维鲁两度从叙利亚出兵围攻（与欧洲研究区 antioch→hatra 对应）。"
     }
   ],
   "generals": [
@@ -1055,8 +1072,8 @@
       "died": null,
       "culture": "kushan",
       "attested": "yes",
-      "role": "贵霜皇帝（约230—247年）",
-      "note": "波调的继承者，钱币显示其仍维持北印度统治，巴克特里亚大概在他在位时落入萨珊之手。生年不详（以约230年即位推算应生于205年前），作为在野人才放在塔克西拉。",
+      "role": "贵霜皇帝（约232—247年）",
+      "note": "波调的继承者，钱币显示其仍维持北印度统治，巴克特里亚大概在他在位时落入萨珊之手。生年不详（以约232年即位推算应生于205年前），作为在野人才放在塔克西拉。",
       "sources": [
         "https://en.wikipedia.org/wiki/Kanishka_II"
       ]
@@ -1101,7 +1118,7 @@
       "culture": "kushan",
       "attested": "yes",
       "role": "西部总督王族（前大总督）",
-      "note": "达摩阇陀室利一世之子、鲁德拉辛哈之侄，约178年和197—199年两度称大总督，其间由叔父掌权，故忠诚偏低；驻地为游戏安排。",
+      "note": "达摩阇陀室利一世之子、鲁德拉辛哈之侄，约178—181年和197—199年两度称大总督，其间由叔父掌权，故忠诚偏低；驻地为游戏安排。",
       "sources": [
         "https://en.wikipedia.org/wiki/Jivadaman",
         "https://en.wikipedia.org/wiki/Western_Satraps"
@@ -1124,9 +1141,9 @@
       "culture": "kushan",
       "attested": "yes",
       "role": "西部总督王朝大总督（约200—222年）",
-      "note": "鲁德拉辛哈一世之子，约199年称总督，200—222年为大总督，在位二十余年。生年不详，作为在野人才。",
+      "note": "鲁德拉辛哈一世之子，约199年称总督，200—222年为大总督，继承无子的堂兄吉瓦达曼，在位二十余年。生年不详，作为在野人才。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Rudrasena_I",
+        "https://en.wikipedia.org/wiki/Rudrasena_I_(Saka_king)",
         "https://en.wikipedia.org/wiki/Western_Satraps"
       ]
     },
@@ -1241,7 +1258,7 @@
       "note": "据塔巴里，巴兹兰吉王戈契赫尔居白城，帕佩克曾请他把七岁的阿尔达希尔送到达拉布格尔德的提里处；约205/206年被帕佩克推翻。在位起讫不详。",
       "sources": [
         "https://en.wikipedia.org/wiki/Gochihr",
-        "https://en.wikipedia.org/wiki/Bazrangids"
+        "https://en.wikipedia.org/wiki/Bazrangi"
       ]
     },
     {
@@ -1283,10 +1300,11 @@
       "died": null,
       "culture": "persia",
       "attested": "yes",
-      "role": "达拉布格尔德城堡长官（argbed）",
-      "note": "据塔巴里，阿尔达希尔约七岁时被送到他那里抚养；提里死后阿尔达希尔继任其职。数值按地方守将设定。",
+      "role": "达拉布格尔德城堡长官（argbed），宦官",
+      "note": "据塔巴里，提里是巴兹兰吉王戈契赫尔手下的宦官，任达拉布格尔德城堡长官；阿尔达希尔约七岁时被送到他那里抚养，提里死后阿尔达希尔继任其职。数值按地方守将设定。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Ardashir_I"
+        "https://en.wikipedia.org/wiki/Ardashir_I",
+        "https://www.iranicaonline.org/articles/bazrangi/"
       ]
     },
     {
@@ -1463,8 +1481,10 @@
       "culture": "arab",
       "attested": "yes",
       "role": "哈特拉王（阿拉伯人之王）",
-      "note": "萨纳特鲁克一世之子；赫罗狄安记载193年“哈特拉王巴尔塞米乌斯”派弓箭手援助尼格尔，一般认为就是他；198—199年塞维鲁两次围攻哈特拉都未能攻下。190年时是否已即位（或仍是萨纳特鲁克一世）不能完全确定。",
+      "note": "萨纳特鲁克一世（约140—180年）之子，约180—205年在位，故190年的哈特拉王是他；赫罗狄安记载193年“哈特拉王巴尔塞米乌斯”援助尼格尔，一般认为就是他；塞维鲁第二次东征时（约197—199年间）两次围攻哈特拉都未能攻下。",
       "sources": [
+        "https://en.wikipedia.org/wiki/Abdsamiya",
+        "https://en.wikipedia.org/wiki/Sanatruq_I",
         "https://en.wikipedia.org/wiki/Hatra",
         "https://en.wikipedia.org/wiki/Herodian"
       ]
@@ -1476,18 +1496,20 @@
       "war": 74,
       "intel": 62,
       "pol": 70,
-      "faction": "hatra",
+      "faction": "-",
       "city": "hatra",
-      "loyalty": 95,
-      "troops": 4000,
-      "hidden": 0,
+      "loyalty": 0,
+      "troops": 0,
+      "hidden": 1,
       "born": null,
       "died": null,
       "culture": "arab",
       "attested": "yes",
-      "role": "哈特拉王子，后为哈特拉王（约200—240年）",
-      "note": "阿卜德萨米亚之子，铭文称“阿拉伯人之王”，在位期间与罗马结盟、引入罗马驻军抵御萨珊；240/241年哈特拉被沙普尔一世攻陷。",
+      "role": "哈特拉王（约205—240/241年）",
+      "note": "阿卜德萨米亚之子，约205年继位，有九件铭文，称“阿拉伯人之王”；在位期间哈特拉转为罗马藩属，235年已有罗马驻军；240/241年哈特拉被沙普尔一世攻陷。生年不详，但在位到241年，190年当尚年幼，故作为在野人才（原设为在任王子）。",
       "sources": [
+        "https://en.wikipedia.org/wiki/Sanatruq_II",
+        "https://en.wikipedia.org/wiki/Abdsamiya",
         "https://en.wikipedia.org/wiki/Hatra"
       ]
     },
@@ -1600,7 +1622,7 @@
       "role": "伊比利亚王（216—234年）",
       "note": "列夫一世之子，216—234年在位，同样仅见于格鲁吉亚编年史。生年不详，作为在野人才。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Vache_I_of_Iberia"
+        "https://en.wikipedia.org/wiki/Vache_of_Iberia"
       ]
     },
     {
@@ -1620,10 +1642,11 @@
       "culture": "arab",
       "attested": "yes",
       "role": "萨巴与祖赖丹王",
-      "note": "雅里姆·艾曼之子，2世纪末的萨巴王，与其子沙伊鲁姆·奥塔尔共治；铭文记其与“阿比西尼亚人之王”加达拉特订立盟约。在位年代约在180—200年之间，误差较大。",
+      "note": "雅里姆·艾曼之子；萨巴王，与其子沙伊鲁姆·奥塔尔、雅里姆·艾曼共治（CIH 308，约200年）；里亚姆山十余件铭文记其与“阿比西尼亚人之王”加达拉特订立盟约。在位年代一般作约200年前后（一说约195—210年，德文维基说卒于约220年），190年是否已即位不能确定，按题目放宽年代采用。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Sabaeans",
-        "https://en.wikipedia.org/wiki/GDRT"
+        "https://de.wikipedia.org/wiki/%E2%80%99Alhan_Nahfan",
+        "https://en.wikipedia.org/wiki/GDRT",
+        "https://en.wikipedia.org/wiki/Sabaeans"
       ]
     },
     {
@@ -1643,17 +1666,18 @@
       "culture": "arab",
       "attested": "yes",
       "role": "萨巴王子（共治者），后为萨巴与祖赖丹王",
-      "note": "阿勒汗之子，约3世纪初独掌萨巴；铭文记其与哈德拉毛王伊勒阿兹·雅卢特先联姻后交战、攻入沙布瓦，又北伐卡里亚特法奥的金达人，并与阿比西尼亚军、希木叶尔交战，是萨巴最后的强王之一。",
+      "note": "阿勒汗之子，约200年已与父共治，约210年（一说约220年）独掌萨巴；先介入哈德拉毛平定反对其妹夫伊勒阿兹·雅卢特的叛乱，约225年又攻入哈德拉毛、俘伊勒阿兹、占沙布瓦；又北伐卡里亚特法奥的金达人，并与阿比西尼亚军交战，是萨巴最后的强王之一。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Sha%27irum_Awtar",
+        "https://en.wikipedia.org/wiki/Sha%27r_Awtar",
+        "https://en.wikipedia.org/wiki/GDRT",
         "https://en.wikipedia.org/wiki/Sabaeans"
       ]
     },
     {
-      "name": "达马尔阿里",
-      "full": "达马尔阿里·尤哈比尔",
-      "orig": "Dhamarʿalī Yuhabirr",
-      "war": 62,
+      "name": "塔兰",
+      "full": "塔兰·亚乌布·尤汉阿姆",
+      "orig": "Thaʾrān Yaʿūb Yuhanʿim",
+      "war": 66,
       "intel": 58,
       "pol": 64,
       "faction": "himyar",
@@ -1665,31 +1689,11 @@
       "died": null,
       "culture": "arab",
       "attested": "yes",
-      "role": "希木叶尔王（萨巴与祖赖丹王）",
-      "note": "与其子塔兰的真人大小青铜像出土于萨那附近的纳赫拉·哈姆拉，今藏萨那国立博物馆；绝对年代有争议（约2世纪后期至3世纪初），按放宽年代的规则采用。",
+      "role": "希木叶尔王（萨巴与祖赖丹王，约175—214年独治）",
+      "note": "达马尔阿里·尤哈比尔之子，约155年起与父共治，约175年继位，独治到约214年。父子二人的真人大小青铜像（希腊工匠福卡斯参与铸造）出土于扎玛尔省的纳赫拉·哈姆拉，今藏萨那国立博物馆。另有学者把父子年代推后到约180—220年，误差较大。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Himyarite_Kingdom"
-      ]
-    },
-    {
-      "name": "塔兰",
-      "full": "塔兰·亚乌布·尤汉阿姆",
-      "orig": "Thaʾrān Yaʿūb Yuhanʿim",
-      "war": 66,
-      "intel": 56,
-      "pol": 58,
-      "faction": "himyar",
-      "city": "zafar",
-      "loyalty": 95,
-      "troops": 3500,
-      "hidden": 0,
-      "born": null,
-      "died": null,
-      "culture": "arab",
-      "attested": "yes",
-      "role": "希木叶尔王子，后为希木叶尔王",
-      "note": "达马尔阿里·尤哈比尔之子，与父亲同见于纳赫拉·哈姆拉青铜像铭文，后继为王。年代同样有争议。",
-      "sources": [
+        "https://en.wikipedia.org/wiki/Tharan_Yaub_Yuhanim",
+        "https://en.wikipedia.org/wiki/Dhamar_Ali_Yahbur",
         "https://en.wikipedia.org/wiki/Himyarite_Kingdom"
       ]
     },
@@ -1709,11 +1713,12 @@
       "died": null,
       "culture": "arab",
       "attested": "yes",
-      "role": "哈德拉毛王（约200—230年）",
-      "note": "安姆达哈尔之子；乌格拉山的即位铭文记有来自帕尔米拉、迦勒底与印度的使节；与萨巴王沙伊鲁姆·奥塔尔先联姻后交战，沙布瓦一度被攻破。190年前后的哈德拉毛王名不详，按规则放宽年代采用他。",
+      "role": "哈德拉毛王（约3世纪初，约225年被萨巴所俘）",
+      "note": "乌格拉山（沙布瓦附近）的铭文记其举行王室典礼与狩猎时有帕尔米拉、迦勒底与印度使节各两人在场；娶萨巴王沙伊鲁姆·奥塔尔之妹，沙伊鲁姆先曾助他平叛，约225年又因他入侵卡塔班而攻入哈德拉毛、将他俘虏并占领沙布瓦。190年前后的哈德拉毛王名不详，按规则放宽年代采用他。",
       "sources": [
-        "https://en.wikipedia.org/wiki/Shabwa",
-        "https://en.wikipedia.org/wiki/Hadhramaut"
+        "https://en.wikipedia.org/wiki/Kingdom_of_Hadhramaut",
+        "https://en.wikipedia.org/wiki/Sha%27r_Awtar",
+        "https://en.wikipedia.org/wiki/Shabwa"
       ]
     },
     {
@@ -1756,7 +1761,7 @@
       "culture": "arab",
       "attested": "yes",
       "role": "阿克苏姆王子（“奈加什之子”）",
-      "note": "萨巴铭文中的“奈加什之子 BYGT”，率阿比西尼亚军驻在也门，与沙伊鲁姆·奥塔尔交战；或为加达拉特之子。生年不详，作为在野人才。",
+      "note": "萨巴铭文（Ja 631）记“奈加什之子贝加特”与阿比西尼亚军进逼希木叶尔都城扎法尔，时在沙伊鲁姆·奥塔尔与阿克苏姆关系破裂之际；一般认为是加达拉特之子。生年不详，作为在野人才。",
       "sources": [
         "https://en.wikipedia.org/wiki/GDRT"
       ]
@@ -1772,14 +1777,15 @@
     "戈契赫尔的在位起讫不详；依塔巴里所述（阿尔达希尔七岁时，即约187年，他已在位），190年他应是波西斯王。其驻地白城（拜达）离伊斯塔克尔很近，合并在伊斯塔克尔。萨珊是否活到190年不详，若严格执行“189年前已故者不收”，可删去。帕佩克卒年在207—210年之间，取208。",
     "查拉塞尼（梅塞内）、埃利迈斯、阿迪亚贝纳、木鹿诸藩王：190年在位者的名字在钱币学上无法可靠确定（查拉塞尼有阿比奈尔加奥斯、阿坦贝洛斯、马加等候选，埃利迈斯有奥罗德斯诸王），一律不设人物，城池为空城。《阿尔贝拉编年史》所载阿迪亚贝纳王真伪有争议，未采用。",
     "塔巴里所记被阿尔达希尔消灭的藩王（克尔曼王巴拉什、阿巴尔萨斯王米赫拉克、伊斯法罕王沙德沙普尔、阿瓦士王尼罗法尔、梅森王班杜、阿尔达班的书记达德本达德等）都活跃于220年代，可作为在野人才补充，但本次未能核实译名与细节，暂未收入。",
-    "哈特拉：190年在位者可能仍是萨纳特鲁克一世（最晚纪年约176/177年），也可能已是阿卜德萨米亚；后者即赫罗狄安的巴尔塞米乌斯（193年），此处取后者。",
+    "哈特拉：萨纳特鲁克一世约140—180年在位，阿卜德萨米亚约180—205年在位（即赫罗狄安的巴尔塞米乌斯，193年），故190年的君主是阿卜德萨米亚；其子萨纳特鲁克二世约205年才继位、在位到240/241年，190年当尚年幼，改为在野人才。",
     "奥斯若恩：阿布加尔九世（塞维鲁·阿布加尔，212—214年）年龄不详，且显示名会与其父冲突，未收；如需可作为在野人才“小阿布加尔”。尼西比斯（194/195年被奥斯若恩、阿迪亚贝纳围攻，190年归属不明）未单独设城。",
     "伊比利亚：列夫一世与瓦切一世只见于中世纪格鲁吉亚编年史（图曼诺夫年表），可信度低于同期罗马史料；阿马扎斯普二世189年已被推翻、身亡，未收。高加索阿尔巴尼亚此期无可考国王，未设城。",
     "西部总督：阿毗罗人伊湿伐罗达多（大总督）的年代有约188—190年与约236—239年两说，若取前说则190年初的大总督是他而非鲁德拉辛哈；因年代不定未收。德干的百乘王朝（娑多婆诃那，耶若·室利·娑多迦尼约170—199年）不在本区题目内，若有印度研究区可补入。",
-    "南阿拉伯诸王的绝对年代普遍有正负二十年以上的误差：阿勒汗约180—200年、沙伊鲁姆约200—230年、伊勒阿兹约200—230年、达马尔阿里父子约2世纪后期至3世纪初。金达王拉比阿（被沙伊鲁姆俘获于卡里亚特法奥）与萨巴王子海尤阿塔尔等未收。",
+    "南阿拉伯诸王的绝对年代普遍有正负二十年以上的误差：阿勒汗约200年前后（一说195—210年）、沙伊鲁姆约210—230年、伊勒阿兹约3世纪初（约225年被俘）。希木叶尔按维基百科年表，达马尔阿里·尤哈比尔约135—175年在位，190年在位的是其子塔兰（约175—214年独治），故删去达马尔阿里、以塔兰为君主；另有学者（Yule）把父子年代推后到约180—220年，若采用该说可恢复达马尔阿里为君主。金达王拉比阿（被沙伊鲁姆俘获于卡里亚特法奥）与萨巴王子雅里姆·艾曼等未收。",
     "阿克苏姆：DESIGN-V2 文化表没有非洲代号，暂用 arab；贝加特的年代与身份（是否为加达拉特之子）不确定。阿杜利斯港并入阿克苏姆城，不另设。",
     "帕尔米拉（罗马属地）可考的名人：塞普蒂米乌斯·海兰（奥登纳图斯之父，约230年代任元老）、奥登纳图斯（约220年生，晚于205年）——均不在本区收录，留给欧洲研究区。纳巴泰已于106年并入罗马。",
     "城池数值按中国剧本比例估计：泰西封略低于洛阳（165年焚掠后仍在恢复），秣菟罗、富楼沙对应大州郡，哈特拉、沙布瓦、巴里加扎等商业城金多粮少。",
-    "跨区连线：草原西域研究区的 jibin（罽宾）请并到 taxila；samarkand 已设；kangju、dayuan、yancai 沿用该区键名；antioch、palmyra、satala、petra、alexandria 待欧洲研究区确认键名。"
+    "跨区连线：草原西域研究区的 jibin（罽宾）请并到 taxila；samarkand 已设；kangju、dayuan 沿用草原西域研究区键名，yancai、antioch、palmyra、ancyra、alexandria 沿用欧洲研究区键名（欧洲区没有 satala、petra，相应连线已改连 ancyra、alexandria）。",
+    "【核查】核查时又以网络搜索核对了大部分人物与城池，改正处见 west-asia.md 的“核查记录”。"
   ]
 }

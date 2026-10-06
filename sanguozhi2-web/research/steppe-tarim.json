@@ -1,6 +1,6 @@
 {
   "region": "steppe-tarim",
-  "summary": "公元190年，北方草原在檀石槐（181年卒）死后已经分裂：其孙魁头据弹汗山旧庭，与和连之子骞曼争国，弟步度根、扶罗韩各拥部众，小种鲜卑轲比能尚未崛起；东部大人素利、弥加、阙机散处辽西、右北平、渔阳塞外，自成一系。乌桓辽西大人丘力居刚因幽州牧刘虞招抚，结束了与张纯、张举的叛乱，不久（初平中）死去，从子蹋顿代立，总摄三郡乌桓；上谷乌桓难楼拥众九千余落，自称为王。南匈奴新立的单于於夫罗被国人拒于门外，流寓河东平阳，与白波军、张杨、袁绍时合时离；美稷单于庭则由老王摄政，单于之位空缺。西域方面，东汉自170年代以后已无力控制，西域长史名存实亡，于阗、疏勒、车师诸王相互攻杀，鄯善用佉卢文治国、王号仿照贵霜，龟兹、焉耆、乌孙、康居、大宛这一时期的国王名字均已失载；敦煌郡孤悬河西，此后约二十年间甚至没有太守。",
+  "summary": "公元190年，北方草原在檀石槐（181年卒）死后已经分裂：其孙魁头据弹汗山旧庭，与和连之子骞曼争国，弟步度根、扶罗韩各拥部众，小种鲜卑轲比能尚未崛起；东部大人素利、弥加、阙机散处辽西、右北平、渔阳塞外，自成一系。乌桓辽西大人丘力居刚因幽州牧刘虞招抚，结束了与张纯、张举的叛乱，不久（初平中）死去，从子蹋顿代立，总摄三郡乌桓；上谷乌桓难楼拥众九千余落，自称为王。南匈奴新立的单于於夫罗被国人拒于门外，流寓河东平阳，与白波军、张杨、袁绍时合时离；美稷单于庭则由老王摄政，单于之位空缺。西域方面，东汉自170年代以后已无力控制，西域长史名存实亡，于阗攻杀拘弥王，疏勒“王连相杀害”，车师后部王位屡经争夺；鄯善在3世纪才大量使用佉卢文书、王号仿照贵霜，龟兹、焉耆、乌孙、康居、大宛这一时期的国王名字均已失载；敦煌郡孤悬河西，与朝廷隔绝，汉末曾“旷无太守二十岁”。",
   "factions": [
     {
       "key": "xianbei",
@@ -50,7 +50,7 @@
       "virtue": 38,
       "fame": 62,
       "color": "#e9967a",
-      "note": "辽西大人丘力居刚结束张纯之乱、受刘虞招抚；初平中卒，从子蹋顿总摄辽西、辽东属国、右北平三郡乌桓。上谷难楼本自立为王，此处并入。",
+      "note": "辽西大人丘力居刚结束张纯之乱、受刘虞招抚；初平中卒，从子蹋顿代立，“总摄三王部”。190年时上谷难楼、辽东属国苏仆延（峭王）、右北平乌延（汗鲁王）都各自称王，并不隶属丘力居，此处一并并入。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E4%B8%98%E5%8A%9B%E5%B1%85",
         "https://zh.wikipedia.org/zh-hans/%E8%B9%8B%E9%A0%93",
@@ -69,7 +69,7 @@
       "virtue": 40,
       "fame": 48,
       "color": "#2f4f4f",
-      "note": "188年即位的於夫罗被国人拒纳，率数千骑流寓河东平阳；美稷单于庭由老王行国事，单于之位空缺。195年於夫罗死，弟呼厨泉立。",
+      "note": "188年即位的於夫罗被国人拒纳，率数千骑流寓河东平阳；美稷单于庭由反对他的“老王”行国事，单于之位空缺，因此美稷不归於夫罗。195年於夫罗死，弟呼厨泉立。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E6%8C%81%E8%87%B3%E5%B0%B8%E9%80%90%E4%BE%AF%E5%96%AE%E4%BA%8E",
         "https://en.wikipedia.org/wiki/Chizhishizhuhou_Chanyu",
@@ -177,7 +177,7 @@
       "orig": "Raole River (Xar Moron)",
       "modern": "内蒙古赤峰一带，西拉木伦河—老哈河流域",
       "lon": 119.0,
-      "lat": 42.8,
+      "lat": 43.3,
       "owner": "dongxianbei",
       "culture": "steppe",
       "land": 300,
@@ -186,10 +186,11 @@
       "population": 280000,
       "gold": 500,
       "food": 8000,
-      "note": "《后汉书》说鲜卑“以季春月大会于饶乐水上”。素利、弥加、厥机在辽西、右北平、渔阳塞外，取这一带作为节点。",
+      "note": "《后汉书》说鲜卑“以季春月大会于饶乐水上”；饶乐水即西拉木伦河，在北纬43.3°上下东流，至翁牛特旗与奈曼旗交界处汇老哈河。素利、弥加、厥机在辽西、右北平、渔阳塞外，取这一带作为节点。",
       "sources": [
         "https://zh.wikisource.org/wiki/%E5%BE%8C%E6%BC%A2%E6%9B%B8/%E5%8D%B790",
-        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+        "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+        "https://zh.wikipedia.org/zh-hans/%E8%A5%BF%E6%8B%89%E6%9C%A8%E4%BC%A6%E6%B2%B3"
       ]
     },
     {
@@ -228,8 +229,8 @@
       "industry": 300,
       "town": 300,
       "population": 240000,
-      "gold": 700,
-      "food": 8000,
+      "gold": 500,
+      "food": 7000,
       "note": "东汉护乌桓校尉的治所，也是与乌桓、鲜卑互市的地方；上谷乌桓难楼九千余落聚居在这一带塞内外。城本身是汉式城郭。",
       "sources": [
         "https://zh.wikipedia.org/zh-hant/%E6%8A%A4%E4%B9%8C%E6%A1%93%E6%A0%A1%E5%B0%89",
@@ -245,7 +246,7 @@
       "modern": "内蒙古准格尔旗纳林古城",
       "lon": 111.0,
       "lat": 39.7,
-      "owner": "xiongnu",
+      "owner": "-",
       "culture": "steppe",
       "land": 320,
       "industry": 260,
@@ -253,7 +254,7 @@
       "population": 220000,
       "gold": 400,
       "food": 7000,
-      "note": "50年南单于庭迁到美稷；140年西河郡治南迁离石后，单于庭是否随迁有争议。189年后由老王摄政，於夫罗未能入主。",
+      "note": "50年南单于庭迁到美稷；140年西河郡治南迁离石后，单于庭是否随迁有争议。189年须卜骨都侯死后由“老王”行国事，拒不接纳於夫罗，因此190年设为空城（不归於夫罗）。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E7%BE%8E%E7%A8%B7%E5%8E%BF",
         "http://www.silkroads.org.cn/portal.php?mod=view&aid=86074",
@@ -358,16 +359,17 @@
       "lat": 40.1,
       "owner": "-",
       "culture": "han",
-      "land": 380,
-      "industry": 300,
-      "town": 340,
-      "population": 200000,
-      "gold": 700,
-      "food": 9000,
-      "note": "汉郡，190年太守名字不详，凉州诸郡在羌乱中与朝廷隔绝；《仓慈传》说“郡在西陲，以丧乱隔绝，旷无太守二十岁，大姓雄张”。马腾、韩遂并没有控制这里，因此设为空城。",
+      "land": 300,
+      "industry": 240,
+      "town": 260,
+      "population": 160000,
+      "gold": 500,
+      "food": 6000,
+      "note": "汉郡，《郡国志》户748、口29170（少于武威郡的口34226）。190年太守名字不详，凉州诸郡在羌乱中与朝廷隔绝；《仓慈传》说“郡在西陲，以丧乱隔绝，旷无太守二十岁，大姓雄张”。马腾、韩遂并没有控制这里，因此设为空城。",
       "sources": [
         "https://5000yan.com/wgg/sanguozhi/rensuduzhengcang/46925.html",
-        "https://zh.wikipedia.org/zh-hans/%E5%BC%A0%E6%81%AD_(%E4%B8%89%E5%9B%BD)"
+        "https://zh.wikipedia.org/zh-hans/%E5%BC%A0%E6%81%AD_(%E4%B8%89%E5%9B%BD)",
+        "https://ctext.org/hou-han-shu/jun-guo-si/zhs"
       ]
     },
     {
@@ -380,12 +382,12 @@
       "lat": 42.8,
       "owner": "-",
       "culture": "tarim",
-      "land": 280,
-      "industry": 250,
-      "town": 260,
-      "population": 150000,
-      "gold": 400,
-      "food": 6000,
+      "land": 260,
+      "industry": 200,
+      "town": 200,
+      "population": 50000,
+      "gold": 200,
+      "food": 3000,
       "note": "东汉北道上的要冲，曾设伊吾司马、宜禾都尉屯田；190年时无人驻守的记载，设为空城。",
       "sources": [
         "https://en.wikipedia.org/wiki/Battle_of_Yiwulu"
@@ -401,13 +403,13 @@
       "lat": 40.5,
       "owner": "-",
       "culture": "tarim",
-      "land": 280,
-      "industry": 250,
-      "town": 280,
-      "population": 150000,
-      "gold": 500,
-      "food": 5000,
-      "note": "东汉、魏晋时西域长史的驻地之一（222年曹魏任命西域长史，设府于楼兰海头），属鄯善国境。190年无人驻守的记载，设为空城。",
+      "land": 240,
+      "industry": 200,
+      "town": 220,
+      "population": 50000,
+      "gold": 300,
+      "food": 3000,
+      "note": "东汉、魏晋时西域长史的驻地之一（一般认为曹魏于222年前后重置西域长史，治楼兰海头；但《文帝纪》只明载222年置戊己校尉），属鄯善国境。190年无人驻守的记载，设为空城。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E8%A5%BF%E5%9F%9F%E9%95%BF%E5%8F%B2%E5%BA%9C",
         "https://www11.ihp.sinica.edu.tw/storage/w2_file/4664FgNcByp.pdf"
@@ -424,12 +426,12 @@
       "owner": "kroraina",
       "culture": "tarim",
       "land": 300,
-      "industry": 260,
-      "town": 300,
-      "population": 180000,
-      "gold": 600,
-      "food": 6000,
-      "note": "鄯善在东汉吞并了小宛、精绝、戎卢、且末，成为南道大国；扜泥城的具体位置有争议。",
+      "industry": 240,
+      "town": 260,
+      "population": 100000,
+      "gold": 400,
+      "food": 5000,
+      "note": "鄯善在东汉吞并了小宛、精绝、戎卢、且末，成为南道大国（《汉书》时本国仅口14100）；扜泥城的具体位置有争议。",
       "sources": [
         "https://baike.baidu.com/item/%E6%89%9C%E6%B3%A5%E5%9F%8E/23172444",
         "http://culture.people.com.cn/BIG5/n1/2019/0317/c1013-30979636.html",
@@ -446,13 +448,13 @@
       "lat": 38.0,
       "owner": "-",
       "culture": "tarim",
-      "land": 300,
-      "industry": 250,
-      "town": 270,
-      "population": 160000,
-      "gold": 400,
-      "food": 6000,
-      "note": "东汉时已被鄯善吞并；3世纪大批佉卢文书出土于此。游戏中设为空城，等待鄯善收复。",
+      "land": 240,
+      "industry": 200,
+      "town": 200,
+      "population": 50000,
+      "gold": 200,
+      "food": 3000,
+      "note": "《汉书》记精绝户480、口3360，东汉时已被鄯善吞并；3世纪大批佉卢文书出土于此。游戏中设为空城，等待鄯善收复。",
       "sources": [
         "https://depts.washington.edu/silkroad/texts/niyadocts.html",
         "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
@@ -468,12 +470,12 @@
       "lat": 37.1,
       "owner": "khotan",
       "culture": "tarim",
-      "land": 400,
-      "industry": 340,
-      "town": 360,
+      "land": 380,
+      "industry": 300,
+      "town": 320,
       "population": 260000,
-      "gold": 900,
-      "food": 10000,
+      "gold": 600,
+      "food": 8000,
       "note": "南道大国，《后汉书》记载“户三万二千，口八万三千，胜兵三万余人”；以出产美玉闻名。",
       "sources": [
         "https://houhanshu.5000yan.com/xiyuzhuan/2405.html",
@@ -490,12 +492,12 @@
       "lat": 39.5,
       "owner": "kashgar",
       "culture": "tarim",
-      "land": 380,
-      "industry": 320,
-      "town": 340,
-      "population": 240000,
-      "gold": 800,
-      "food": 9000,
+      "land": 360,
+      "industry": 280,
+      "town": 300,
+      "population": 220000,
+      "gold": 600,
+      "food": 7000,
       "note": "葱岭以东的门户，向西通大宛、大月氏；170年汉军围攻桢中城失败。",
       "sources": [
         "https://en.wikipedia.org/wiki/Shule_Kingdom",
@@ -512,12 +514,12 @@
       "lat": 41.7,
       "owner": "-",
       "culture": "tarim",
-      "land": 400,
-      "industry": 350,
-      "town": 360,
-      "population": 260000,
-      "gold": 800,
-      "food": 10000,
+      "land": 380,
+      "industry": 300,
+      "town": 320,
+      "population": 240000,
+      "gold": 600,
+      "food": 8000,
       "note": "北道大国，冶铁发达。白英（约110–127年在位）之后，到西晋白山（约280年）之间的国王名字均失载，设为空城。",
       "sources": [
         "https://zh.wikipedia.org/zh-cn/%E9%BE%9F%E5%85%B9",
@@ -534,13 +536,13 @@
       "lat": 42.0,
       "owner": "-",
       "culture": "tarim",
-      "land": 340,
-      "industry": 280,
-      "town": 300,
-      "population": 200000,
-      "gold": 600,
-      "food": 8000,
-      "note": "元孟（94–127年）之后，到西晋龙安（约285年）之间的国王名字均失载，设为空城。",
+      "land": 320,
+      "industry": 260,
+      "town": 280,
+      "population": 180000,
+      "gold": 500,
+      "food": 6000,
+      "note": "《后汉书》记焉耆户15000、口52000、胜兵二万余。元孟（94–127年）之后，到西晋龙安（约285年）之间的国王名字均失载，设为空城。",
       "sources": [
         "https://zh.wikipedia.org/zh-cn/%E7%84%89%E8%80%86",
         "https://zh.wikipedia.org/zh-hans/%E5%85%83%E5%AD%9F",
@@ -557,16 +559,17 @@
       "lat": 43.0,
       "owner": "-",
       "culture": "tarim",
-      "land": 320,
-      "industry": 260,
-      "town": 280,
-      "population": 170000,
-      "gold": 500,
-      "food": 7000,
-      "note": "车师前王治交河城，附近的高昌壁是戊己校尉驻地。此期前部王名失载，设为空城。",
+      "land": 280,
+      "industry": 220,
+      "town": 220,
+      "population": 50000,
+      "gold": 300,
+      "food": 3000,
+      "note": "车师前王治交河城，《后汉书》记其户1500余、口4000余、胜兵2000；附近的高昌壁是戊己校尉驻地。此期前部王名失载，设为空城。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E4%BA%A4%E6%B2%B3%E6%95%85%E5%9F%8E",
-        "https://zh.wikipedia.org/zh-hant/%E8%BD%A6%E5%B8%88"
+        "https://zh.wikipedia.org/zh-hant/%E8%BD%A6%E5%B8%88",
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
       ]
     },
     {
@@ -579,16 +582,17 @@
       "lat": 43.8,
       "owner": "jushi",
       "culture": "tarim",
-      "land": 300,
-      "industry": 250,
-      "town": 260,
-      "population": 160000,
-      "gold": 400,
-      "food": 6000,
-      "note": "《后汉书》说后部王居务涂谷，《魏略》作于赖城；车师古道向南翻越天山可到交河。",
+      "land": 280,
+      "industry": 220,
+      "town": 220,
+      "population": 60000,
+      "gold": 300,
+      "food": 4000,
+      "note": "《后汉书》说后部王居务涂谷，户4000余、口15000余、胜兵3000余；《魏略》作于赖城；车师古道向南翻越天山可到交河。",
       "sources": [
         "https://baike.baidu.com/item/%E8%BD%A6%E5%B8%88%E5%90%8E%E5%9B%BD/6059499",
-        "https://zhuanlan.zhihu.com/p/524256185"
+        "https://zhuanlan.zhihu.com/p/524256185",
+        "https://houhanshu.5000yan.com/xiyuzhuan/2405.html"
       ]
     },
     {
@@ -872,10 +876,10 @@
     },
     {
       "from": "liucheng",
-      "toKey": "liaodong",
-      "toName": "辽东（襄平）",
+      "toKey": "xiangping",
+      "toName": "襄平（辽东）",
       "kind": "land",
-      "why": "辽西到辽东；207年乌桓余部投奔公孙康（属朝鲜／辽东研究区）"
+      "why": "辽西到辽东；207年乌桓余部投奔公孙康（东亚研究区城键为 xiangping）"
     },
     {
       "from": "raole",
@@ -893,10 +897,10 @@
     },
     {
       "from": "yutian",
-      "toKey": "jibin",
-      "toName": "罽宾",
+      "toKey": "taxila",
+      "toName": "塔克西拉（呾叉始罗）",
       "kind": "land",
-      "why": "经皮山、悬度到罽宾（属贵霜研究区）"
+      "why": "经皮山、悬度入罽宾、犍陀罗（西亚研究区没有 jibin，已有 taxila→yutian）"
     },
     {
       "from": "dayuan",
@@ -1011,9 +1015,9 @@
       "name": "轲比能",
       "full": "轲比能",
       "orig": "Kebineng",
-      "war": 88,
-      "intel": 82,
-      "pol": 76,
+      "war": 86,
+      "intel": 74,
+      "pol": 68,
       "faction": "-",
       "city": "danhan",
       "loyalty": 0,
@@ -1301,10 +1305,11 @@
       "culture": "steppe",
       "attested": "yes",
       "role": "上谷乌丸大人（自称王，后称单于）",
-      "note": "统辖九千余落，是诸部中最大的一支；受袁绍单于印绶，后与苏仆延共奉楼班为单于；216年以“上谷乌丸行单于那楼”的身份朝贺曹操。190年时并不隶属丘力居，因此忠诚设低。",
+      "note": "统辖九千余落，是诸部中最大的一支；受袁绍单于印绶，后与苏仆延共奉楼班为单于；207年十一月曹操自柳城还至易水，“上郡乌丸行单于那楼”率名王来贺（“上郡”一般认为即上谷，那楼即难楼）。190年时并不隶属丘力居，因此忠诚设低。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E9%9B%A3%E6%A8%93",
-        "https://zh.wikipedia.org/zh-cn/%E5%BB%BA%E5%AE%89_(%E4%B8%9C%E6%B1%89)"
+        "https://zh.wikipedia.org/zh-cn/%E5%BB%BA%E5%AE%89_(%E4%B8%9C%E6%B1%89)",
+        "https://ctext.org/text.pl?node=601875&if=en"
       ]
     },
     {
@@ -1393,10 +1398,11 @@
       "culture": "steppe",
       "attested": "yes",
       "role": "代郡乌丸行单于",
-      "note": "216年率领本部侯王朝见曹操。代郡与上谷相邻，放在宁城。",
+      "note": "207年十一月曹操北征乌桓还至易水，以代郡乌丸行单于身份率名王来贺；216年五月又与其侯王来朝。代郡与上谷相邻，放在宁城。",
       "sources": [
         "https://zh.wikipedia.org/zh-cn/%E5%BB%BA%E5%AE%89_(%E4%B8%9C%E6%B1%89)",
-        "https://www.thepaper.cn/newsDetail_forward_1342244"
+        "https://www.thepaper.cn/newsDetail_forward_1342244",
+        "https://ctext.org/text.pl?node=601875&if=en"
       ]
     },
     {
@@ -1439,12 +1445,13 @@
       "culture": "steppe",
       "attested": "yes",
       "role": "南匈奴单于（流亡中）",
-      "note": "羌渠单于之子；188年父亲被国人所杀后即位，国人却另立须卜骨都侯，拒不接纳他；他赴洛阳申诉，灵帝死后与白波军合兵寇掠河内，回国不成，只好留在河东平阳；190–191年与张杨屯驻漳水，后劫持张杨背叛袁绍、屯兵黎阳；193年随袁术出兵，在内黄、匡亭被曹操击败；195年去世。",
+      "note": "羌渠单于之子；188年父亲被国人所杀后即位，国人却另立须卜骨都侯，拒不接纳他；他赴洛阳申诉，灵帝死后与白波军合兵寇掠河内，回国不成，只好留在河东平阳；190–191年与张杨屯驻漳水，后劫持张杨背叛袁绍、屯兵黎阳；192年在内黄被曹操击破，193年随袁术屯封丘，匡亭之战再败；195年去世。",
       "sources": [
         "https://zh.wikipedia.org/zh-hans/%E6%8C%81%E8%87%B3%E5%B0%B8%E9%80%90%E4%BE%AF%E5%96%AE%E4%BA%8E",
         "https://en.wikipedia.org/wiki/Chizhishizhuhou_Chanyu",
         "https://zh.wikipedia.org/zh-hans/%E5%B0%81%E4%B8%98%E4%B9%8B%E6%88%98",
-        "https://zh.wikipedia.org/zh-cn/%E5%BC%B5%E6%A5%8A_(%E6%9D%B1%E6%BC%A2)"
+        "https://zh.wikipedia.org/zh-cn/%E5%BC%B5%E6%A5%8A_(%E6%9D%B1%E6%BC%A2)",
+        "https://zh.wikipedia.org/zh-hans/%E6%9B%B9%E6%93%8D"
       ]
     },
     {
@@ -1478,7 +1485,7 @@
       "intel": 64,
       "pol": 58,
       "faction": "xiongnu",
-      "city": "meiji",
+      "city": "pingyang",
       "loyalty": 90,
       "troops": 3500,
       "hidden": 0,
@@ -1487,10 +1494,11 @@
       "culture": "steppe",
       "attested": "yes",
       "role": "南匈奴右贤王（呼厨泉之叔）",
-      "note": "195–196年护送汉献帝东归洛阳；216年呼厨泉被留在邺城后，他奉命回国监国。",
+      "note": "据《北史·破六韩常传》为羌渠单于之弟、呼厨泉之叔。195–196年护送汉献帝东归洛阳；216年呼厨泉被留在邺城后，他奉命回国监国。美稷单于庭190年不归於夫罗，因此放在平阳。",
       "sources": [
         "https://zh.wikipedia.org/wiki/%E5%8E%BB%E5%8D%91",
-        "https://en.wikipedia.org/wiki/Liu_Bao"
+        "https://en.wikipedia.org/wiki/Liu_Bao",
+        "https://zh.wikipedia.org/zh-hans/%E5%8E%BB%E5%8D%91"
       ]
     },
     {
@@ -1520,9 +1528,9 @@
       "name": "拓跋力微",
       "full": "拓跋力微（北魏始祖神元皇帝）",
       "orig": "Tuoba Liwei",
-      "war": 80,
-      "intel": 78,
-      "pol": 76,
+      "war": 78,
+      "intel": 72,
+      "pol": 70,
       "faction": "-",
       "city": "yinshan",
       "loyalty": 0,
@@ -1557,7 +1565,7 @@
       "culture": "tarim",
       "attested": "yes",
       "role": "鄯善王（佉卢文书称“大王、众王之王、天子”）",
-      "note": "林梅村释读出佉卢文书中最早的鄯善王，文书有“36年”的纪年，可见在位很久，王号与2世纪的贵霜碑铭几乎相同；确切年代未定。数值取守成之君。",
+      "note": "佉卢文书王统中排在陀阇迦之前的鄯善王（英文文献作 Tomgraka），王号“大王、众王之王、天子”与贵霜王号相近；确切年代未定，中文译名“童格罗伽”未找到统一写法。数值取守成之君。",
       "sources": [
         "https://www.whb.cn/zhuzhan/bihui/20150123/22858.html",
         "https://en.wikipedia.org/wiki/Shanshan"
@@ -1580,7 +1588,7 @@
       "culture": "tarim",
       "attested": "yes",
       "role": "鄯善王（佉卢文书）",
-      "note": "佉卢文书所见的鄯善王，在位约3年；Brough推定他的元年约在230–235年（长泽和俊的推定更早）。",
+      "note": "佉卢文书所见的鄯善王，在位约3年；Brough推定他的元年约在230–235年（长泽和俊的推定更早）。按此年代生年可能接近205年，属勉强收录。",
       "sources": [
         "https://en.wikipedia.org/wiki/Shanshan",
         "https://reader.book.qq.com/read/1024905687/6"
@@ -1603,33 +1611,9 @@
       "culture": "tarim",
       "attested": "yes",
       "role": "鄯善王（佉卢文书）",
-      "note": "佉卢文书所见的鄯善王，在陀阇迦之后、安归迦之前，在位约8年。",
+      "note": "佉卢文书所见的鄯善王，在陀阇迦之后、安归迦之前，在位约8年；按Brough年代约在230年代末至240年代，另一说约245–253年在位，生年可能接近或略晚于205年，属勉强收录。",
       "sources": [
         "https://en.wikipedia.org/wiki/Shanshan"
-      ]
-    },
-    {
-      "name": "安归迦",
-      "full": "安归迦",
-      "orig": "Aṃgoka",
-      "war": 62,
-      "intel": 74,
-      "pol": 84,
-      "faction": "-",
-      "city": "jingjue",
-      "loyalty": 0,
-      "troops": 0,
-      "hidden": 1,
-      "born": null,
-      "died": null,
-      "culture": "tarim",
-      "attested": "yes",
-      "role": "鄯善王（鄯善最强盛之君）",
-      "note": "尼雅佉卢文书大多出自他在位时期，安迪尔题记称他信奉大乘；在位36年以上。在位第17年起，王号由“众王之王”降为相当于“侍中/大侯”的称号，一般认为是臣属了中原王朝（长泽和俊定在魏太和四年，即230年；其他学者推定在位约247–282或267–303年）。生年可能晚于205年。",
-      "sources": [
-        "https://en.wikipedia.org/wiki/Shanshan",
-        "https://reader.book.qq.com/read/1024905687/6",
-        "https://sxlib.org.cn/dfzy/sczl/slgs_1/sczlxs/201808/t20180806_930679.html"
       ]
     },
     {
@@ -1657,7 +1641,7 @@
     },
     {
       "name": "和得",
-      "full": "疏勒王 和得",
+      "full": "疏勒王 和得（和德）",
       "orig": "Hede",
       "war": 72,
       "intel": 58,
@@ -1672,10 +1656,11 @@
       "culture": "tarim",
       "attested": "yes",
       "role": "疏勒王（篡位）",
-      "note": "168年在狩猎时射杀侄子、疏勒王兼汉大都尉臣磐，自立为王；170年凉州刺史孟佗派任涉、曹宽、张晏率焉耆、龟兹、车师前后部兵三万余人讨伐，围攻桢中城四十余日不能攻下。最后见于170年。",
+      "note": "《后汉书》：168年疏勒王（汉大都尉，一般认为即臣磐）在狩猎时被季父和得射杀，和得自立为王；170年凉州刺史孟佗派任涉、曹宽、张晏率焉耆、龟兹、车师前后部兵三万余人讨伐，围攻桢中城四十余日不能攻下。《曹全碑》则说“和德弑父篡位”，被曹全征讨后“面缚归死”。此后“疏勒王连相杀害”，190年是否仍在位甚至是否在世都很可疑。",
       "sources": [
         "https://zh.wikipedia.org/zh-cn/%E5%92%8C%E5%BE%97",
-        "https://en.wikipedia.org/wiki/Shule_Kingdom"
+        "https://en.wikipedia.org/wiki/Shule_Kingdom",
+        "https://baike.baidu.com/item/%E6%9B%B9%E5%85%A8%E7%A2%91/888835"
       ]
     },
     {
@@ -1725,34 +1710,12 @@
       ]
     },
     {
-      "name": "卑君",
-      "full": "卑君",
-      "orig": "Beijun",
-      "war": 50,
-      "intel": 46,
-      "pol": 48,
-      "faction": "-",
-      "city": "dunhuang",
-      "loyalty": 0,
-      "troops": 0,
-      "hidden": 1,
-      "born": null,
-      "died": null,
-      "culture": "tarim",
-      "attested": "yes",
-      "role": "车师后部故王（迁居敦煌）",
-      "note": "后部故王军就的质子；153年被敦煌太守宋亮奏立为后部王，阿罗多复位后，汉朝把他迁回敦煌，另拨后部人三百帐归他役使。同样是较早的人物，190年是否在世不详。",
-      "sources": [
-        "https://zh.wikipedia.org/zh-hans/%E5%8D%91%E5%90%9B"
-      ]
-    },
-    {
       "name": "张恭",
       "full": "张恭",
       "orig": "Zhang Gong",
-      "war": 50,
-      "intel": 78,
-      "pol": 84,
+      "war": 44,
+      "intel": 72,
+      "pol": 78,
       "faction": "-",
       "city": "dunhuang",
       "loyalty": 0,
@@ -1776,11 +1739,11 @@
     "丘力居死于“初平中”，卒年按191年计；蹋顿接位的确切年份不详。",
     "难楼在190年是独立的上谷乌丸王，游戏中并入乌桓势力，忠诚设为65，以体现他的离心；建安初（约196–199年）以后，他确实与蹋顿、苏仆延同受袁绍所授单于印绶，并共奉楼班。",
     "普富卢、能臣氐属代郡乌丸，代郡与上谷相邻，因此放在宁城；宁城本身是汉式城郭（护乌桓校尉府），城池文化标为 han。",
-    "南匈奴：190年时美稷单于庭由一位未留名的“老王”摄政，单于位空缺；於夫罗则流亡在河东平阳。为了便于游玩，把美稷也划给於夫罗势力，并让去卑驻守。平阳位于中国本部（晋阳、洛阳、长安之间），合并时如果不希望在本部加城，可以改用离石（111.1E, 37.5N）。",
+    "南匈奴：190年时美稷单于庭由一位未留名的“老王”摄政，单于位空缺，且拒不接纳於夫罗；因此美稷设为空城，去卑随於夫罗放在平阳。平阳位于中国本部（晋阳、洛阳、长安之间），合并时如果不希望在本部加城，可以改用离石（111.1E, 37.5N）。",
     "刘豹的生年、他是否真是於夫罗之子，以及“279年卒”是否可信，学界都有争议。",
-    "于阗安国（最后见于175年）、疏勒和得（最后见于170年）、车师后部阿罗多（最后见于153年）都只是在150–260年的放宽时间窗内有记载，游戏中假定他们190年仍然在位。卑君（153年）同样如此。",
-    "鄯善的佉卢文书王统年代分歧很大：Brough把陀阇迦元年定在约230–235年；长泽和俊把安归迦第17年定在230年，即约214年即位；也有人推定安归迦在位247–282年或267–303年。童格罗伽排在陀阇迦之前，有一说约200年即位、在位36年以上（这一说未能找到可靠出处）。游戏把童格罗伽作为190年的鄯善王，陀阇迦、贝比耶、安归迦作为在野人才；按晚期年代，安归迦可能生于205年以后。",
-    "鄯善王名采用中文学界常用的音译：童格罗伽、陀阇迦（又作陀阇伽）、贝比耶、安归迦；尚未找到统一的标准写法。",
+    "于阗安国（最后见于175年）、疏勒和得（最后见于170年，《曹全碑》称其“面缚归死”）、车师后部阿罗多（最后见于153年）都只是在150–260年的放宽时间窗内有记载，游戏中假定他们190年仍然在位。卑君（153年）已在190年前活跃且190年是否在世不明，不符合在野隐士“190年尚年轻”的规则，已删除。",
+    "鄯善的佉卢文书王统年代分歧很大：Brough把陀阇迦元年定在约230–235年、把安归迦第17年定在263年（即约246年即位）；另一说贝比耶约245–253年、安归迦约253–289年在位；长泽和俊的年代较早（安归迦约214年即位）。佉卢文在鄯善大量使用约始于3世纪30年代。游戏把童格罗伽作为190年的鄯善王（明知提前），陀阇迦、贝比耶作为在野人才；安归迦按主流年代生于205年以后，已删除。",
+    "鄯善王名采用中文学界常用的音译：陀阇迦、贝比耶、安归迦、马希利、伐色摩那见于尼雅简牍研究的中文著作；“童格罗伽”（Tomgraka）未找到统一写法。",
     "龟兹（白英约110–127年；白山约280年）、焉耆（元孟94–127年；龙安约285年）、大宛（蓝庾285年）、乌孙、康居、丁零、坚昆、车师前部，在150–260年之间都没有找到具名人物，按规则设为空城、不配武将。",
     "西域长史、戊己校尉：最后可考的任职者是170年的西域长史张晏、戊己司马曹宽，以及175年参与扶立拘弥王的未具名长史与校尉；献帝时这两个官职已名存实亡，222年曹魏才重新设置（西域长史驻楼兰海头）。190年的任职者无考，未收录。",
     "敦煌：190年的太守名字无考，此后约二十年无太守，马腾、韩遂并没有控制敦煌，因此设为空城；张恭作为在野人才放在这里。",
