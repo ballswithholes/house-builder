@@ -89,11 +89,28 @@ nav.Rebuild();                                               // after adding sta
 ```
 
 **Static walkability** (built once): a cell is walkable when its centre is inside the ground rect shrunk by
-`EdgeMargin`, inside the optional `walkable` polygon, and outside every prop collider and chest footprint.
+`EdgeMargin`, inside the optional `walkable` polygon, not under blocking water, and outside every prop collider and
+chest footprint.
 Prop colliders: ellipse `w × h` (full extents) × `prop.scale`, centred at `pos + offset × scale`, `offset.x`
 mirrored when `flip`. A missing axis defaults to `h = w/2` (or `w = 2h`). The cell containing a collider's centre is
 always blocked (tiny colliders still block). `foreground` props are ignored. NPCs are *not* static obstacles:
 register them as units if they should block.
+
+**Water** (`MapDef.water`, only entries with `blocksMovement`): cells whose centre lies within `halfWidth` of an open
+polyline, or inside a `closed` polygon, are blocked — except inside that water's `crossings` rects (fords, bridges).
+
+**Flag-gated props and chests.** The plain `NavGrid(mapDef)` blocks every prop and chest, whatever its flags. The
+session builds `new NavGrid(mapDef, null, flags.Test)`: a prop whose `requireFlag` fails or whose `hideFlag` holds, and a
+chest whose `requireFlag` fails, is not there. After flags change, `RefreshFlags()` re-tests them and rebuilds the
+**same instance** in place (`Version++`) only when one appeared or vanished (the map panel repaints on `Version`).
+
+```csharp
+var nav = new NavGrid(mapDef, options, flagTest);            // flagTest: Func<string, bool> (FlagStore.Test); null = all block
+bool nav.RefreshFlags()                                      // true = rebuilt (Version++); false = nothing changed
+bool nav.IsPropPresent(PropDef p); bool nav.IsChestPresent(ChestDef c)   // under FlagTest
+bool nav.IsWater(Vec2 p); bool nav.IsCellWater(cx, cy)      // blocking water (crossings excluded)
+// ClearObstacles() also drops the map's props, chests and water; RefreshFlags is a no-op afterwards
+```
 
 **Agent radius**: an exact Euclidean distance transform gives every cell a `Clearance` (metres from its centre
 to the nearest blocked cell edge or the ground edge). A cell is usable by an agent of radius `r` when
@@ -489,13 +506,31 @@ void MarkChestUnlocked(id)
 CheckResult TryUnlockChest(ChestDef c, IDialogueContext ctx, Rng rng)   // null if not locked; success unlocks; retries allowed
 // transitions & regions
 bool IsTransitionUnlocked(TransitionDef t)        // Flags.Test(requireFlag); show t.lockedText otherwise
-TransitionDef TransitionAt(Vec2 p)                // size axes <= 0 default to 2 m (like MapView)
+bool IsTransitionVisible(TransitionDef t)         // !hidden || Flags.Test(revealFlag) (a hidden one needs a revealFlag)
+static bool IsTransitionVisible(TransitionDef t, FlagStore flags)   // the same for any map's transitions
+TransitionDef TransitionAt(Vec2 p)                // first VISIBLE transition containing p; size axes <= 0 default to 2 m
+TransitionDef FindTransition(string id)
 static Vec2 TransitionSize(TransitionDef t); static bool RectContains(center, size, p)
 IReadOnlyList<RegionDef> UpdatePartyPosition(Vec2 leaderPos)
    // Quests.OnReach(map id + every region containing the leader), sets enterFlags, returns regions entered
    // for the FIRST time (toast r.text). The list is reused: valid until the next call.
 bool HasEnteredRegion(id); IEnumerable<RegionDef> RegionsAt(Vec2 p)
+// props
+bool IsPropVisible(PropDef p)                     // Flags.Test(requireFlag) && !(hideFlag != "" && Flags.Test(hideFlag))
+PropDef FindProp(string interactId, bool visibleOnly = true)   // props, then foreground; the first visible one by default
+// passive region checks (RegionDef.check: skill + dc; checkFlag; successText/failText; requireFlag)
+bool IsRegionChecked(id); void MarkRegionChecked(id)           // State.checkedRegions (saved: once per save)
+bool IsRegionCheckDue(RegionDef r, Vec2 leaderPos)  // has a check, not checked yet, Flags.Test(requireFlag), leader inside
+CheckResult RollRegionCheck(RegionDef r, IDialogueContext ctx, Rng rng)
+   // marks it checked; null without a roll when checkFlag already holds (found another way); else the best party
+   // member's SkillChecks.Roll, success sets checkFlag. GameSession rolls it and raises the events (SessionAPI §5).
 ```
+
+**Hidden passages.** A `hidden` transition does not exist until `Flags.Test(revealFlag)`: `TransitionAt` skips it,
+`GameSession.UseTransition` refuses it ("There is no way through here."), the UI does not hover, click or draw it.
+Ways to set the reveal flag: a region `check` (`checkFlag`), a region `enterFlag`, a dialogue `SetFlag` (an NPC hint
+or a prop dialogue with an Investigation check, `PropDef.dialogue`), any other flag source. The session announces each
+passage once (`SessionEventKind.SecretFound`).
 
 Loot generation, combat setup and actually moving between maps are the session's job.
 

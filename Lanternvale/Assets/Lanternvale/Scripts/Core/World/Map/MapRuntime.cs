@@ -232,12 +232,38 @@ namespace Lanternvale.World
         public bool IsTransitionUnlocked(TransitionDef t) => t != null && Flags.Test(t.requireFlag);
 
         /// <summary>A transition is visible (and usable) unless it is hidden and its revealFlag does not hold yet.</summary>
-        public bool IsTransitionVisible(TransitionDef t) =>
-            t != null && (!t.hidden || (!string.IsNullOrEmpty(t.revealFlag) && Flags.Test(t.revealFlag)));
+        public bool IsTransitionVisible(TransitionDef t) => IsTransitionVisible(t, Flags);
+
+        /// <summary><see cref="IsTransitionVisible(TransitionDef)"/> against any flag store (transitions of other maps).</summary>
+        public static bool IsTransitionVisible(TransitionDef t, FlagStore flags) =>
+            t != null && (!t.hidden || (!string.IsNullOrEmpty(t.revealFlag) && flags != null && flags.Test(t.revealFlag)));
 
         /// <summary>A prop is visible while its requireFlag holds and its hideFlag (if any) does not.</summary>
         public bool IsPropVisible(PropDef p) =>
             p != null && Flags.Test(p.requireFlag) && !(!string.IsNullOrEmpty(p.hideFlag) && Flags.Test(p.hideFlag));
+
+        public TransitionDef FindTransition(string id)
+        {
+            if (Def.transitions == null || string.IsNullOrEmpty(id)) return null;
+            foreach (var t in Def.transitions) if (t != null && t.id == id) return t;
+            return null;
+        }
+
+        /// <summary>
+        /// The prop (or foreground item) with this interact id. With visibleOnly, the first one that is visible now
+        /// (<see cref="IsPropVisible"/>): two variants of a prop may share an id behind opposite flags.
+        /// </summary>
+        public PropDef FindProp(string interactId, bool visibleOnly = true)
+        {
+            if (string.IsNullOrEmpty(interactId)) return null;
+            foreach (var list in new[] { Def.props, Def.foreground })
+            {
+                if (list == null) continue;
+                foreach (var p in list)
+                    if (p != null && p.interact == interactId && (!visibleOnly || IsPropVisible(p))) return p;
+            }
+            return null;
+        }
 
         /// <summary>Transition rectangle size (axes ≤ 0 default to 2 m, as in the presentation layer).</summary>
         public static Vec2 TransitionSize(TransitionDef t) =>
@@ -261,6 +287,39 @@ namespace Lanternvale.World
         }
 
         public bool HasEnteredRegion(string id) => State.enteredRegions.Contains(id);
+
+        // ------------------------------------------------------------------ region checks (passive discovery)
+
+        /// <summary>The region's passive check has been rolled (or made moot) in this save.</summary>
+        public bool IsRegionChecked(string id) => !string.IsNullOrEmpty(id) && State.checkedRegions.Contains(id);
+
+        public void MarkRegionChecked(string id)
+        {
+            if (!string.IsNullOrEmpty(id) && !State.checkedRegions.Contains(id)) State.checkedRegions.Add(id);
+        }
+
+        /// <summary>
+        /// True when the region's passive check (RegionDef.check) should roll now: it has one, it has not been rolled in
+        /// this save, its requireFlag holds and the leader stands inside it.
+        /// </summary>
+        public bool IsRegionCheckDue(RegionDef r, Vec2 leaderPos) =>
+            r?.check != null && !string.IsNullOrEmpty(r.id) && !IsRegionChecked(r.id) && Flags.Test(r.requireFlag)
+            && RectContains(r.pos, r.size, leaderPos);
+
+        /// <summary>
+        /// Rolls a region's passive check for the best party member (once per save: the region is marked checked) and
+        /// sets its checkFlag on success. Returns null without rolling when the checkFlag already holds (found another way:
+        /// the region is marked checked) or the region has no check.
+        /// </summary>
+        public CheckResult RollRegionCheck(RegionDef r, IDialogueContext ctx, Rng rng)
+        {
+            if (r?.check == null || string.IsNullOrEmpty(r.id)) return null;
+            MarkRegionChecked(r.id);
+            if (!string.IsNullOrEmpty(r.checkFlag) && Flags.IsSet(r.checkFlag)) return null;
+            var res = SkillChecks.Roll(ctx, r.check.skill, r.check.dc, rng);
+            if (res.Success && !string.IsNullOrEmpty(r.checkFlag)) Flags.Set(r.checkFlag, 1);
+            return res;
+        }
 
         /// <summary>
         /// Call whenever the party leader moves. Notifies Reach objectives for the map and every region the leader is

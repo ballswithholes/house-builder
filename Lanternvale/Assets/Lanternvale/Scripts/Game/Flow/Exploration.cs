@@ -459,11 +459,13 @@ namespace Lanternvale.Game
                     }
                     case PendingKind.Prop:
                     {
-                        var text = s.InspectProp(id);
+                        // a prop with a dialogue (a carved stone to study, a grate to pry) starts it; others show their text
+                        var r = s.InteractProp(id);
                         var map = MapView.Current;
                         var o = map != null ? map.Find(id) : null;
                         if (o != null && o.IsLantern) FxSystem.Sparkles(o.LabelPosition, new Color(1f, 0.9f, 0.6f), 8);
-                        if (string.IsNullOrEmpty(text)) Toast("Nothing of note.");
+                        if (r == null || !r.Ok) Toast(r != null && !string.IsNullOrEmpty(r.Message) ? r.Message : "Nothing of note.");
+                        else if (r.Kind == InteractKind.Text && string.IsNullOrEmpty(r.Message)) Toast("Nothing of note.");
                         break;
                     }
                     case PendingKind.Engage:
@@ -777,6 +779,7 @@ namespace Lanternvale.Game
                 uv = UnitView.PickScreen(ms);
                 if (uv != null && IsBeingRemoved(uv)) uv = null;
                 if (uv == null && mode == SessionMode.Exploration && map != null) mo = map.PickScreen(ms);
+                if (mo != null && !IsPresent(mo)) mo = null;
             }
 
             if (!ReferenceEquals(uv, hoveredView))
@@ -1015,6 +1018,17 @@ namespace Lanternvale.Game
             encounterPreviews.Clear();
         }
 
+        /// <summary>The session's word on whether a map object is there now: a hidden transition stays unhoverable and
+        /// unclickable until its revealFlag holds, a flag-hidden prop until its flags allow it (whatever the view shows).</summary>
+        bool IsPresent(MapObject o)
+        {
+            var rt = Session != null ? Session.Map : null;
+            if (rt == null || o == null) return o != null;
+            if (o.Kind == MapObjectKind.Transition && o.Transition != null) return rt.IsTransitionVisible(o.Transition);
+            if (o.Kind == MapObjectKind.Prop && o.Prop != null) return rt.IsPropVisible(o.Prop);
+            return true;
+        }
+
         /// <summary>Short label for a map object ("Chest", "Locked chest", "To Whisperwood", "Spirit Lantern").</summary>
         string ObjectLabel(MapObject o)
         {
@@ -1055,6 +1069,78 @@ namespace Lanternvale.Game
             { "prop_lamp_post", "Lamp Post" },
             { "prop_blight_crystal", "Blight Crystal" },
             { "prop_campfire", "Campfire" },
+            // expansion props (Docs/Expansion.md §10): highlands
+            { "prop_standing_stone", "Standing Stone" },
+            { "prop_scarecrow", "Scarecrow" },
+            { "prop_beehive", "Beehive" },
+            { "prop_wheat", "Wheat" },
+            { "prop_watchtower_ruin", "Ruined Watchtower" },
+            { "prop_gnoll_tent", "Gnoll Tent" },
+            { "prop_gnoll_totem", "Gnoll Totem" },
+            { "prop_bonepile", "Pile of Bones" },
+            { "prop_tree_golden", "Golden Tree" },
+            { "prop_cairn", "Cairn" },
+            { "prop_farmhouse", "Farmhouse" },
+            { "prop_quarry_cart", "Quarry Cart" },
+            // fen
+            { "prop_reeds", "Reeds" },
+            { "prop_cattails", "Cattails" },
+            { "prop_mangrove", "Mangrove" },
+            { "prop_willow", "Willow" },
+            { "prop_lilypads", "Lily Pads" },
+            { "prop_stilt_hut", "Stilt Hut" },
+            { "prop_boardwalk", "Boardwalk" },
+            { "prop_fen_lantern", "Fen Lantern" },
+            { "prop_mire_totem", "Mire Totem" },
+            { "prop_sunken_statue", "Sunken Statue" },
+            { "prop_mushroom_giant", "Giant Mushroom" },
+            { "prop_fishing_rack", "Fishing Rack" },
+            // peaks
+            { "prop_pine_snow", "Snowy Pine" },
+            { "prop_rock_snow", "Snowy Rock" },
+            { "prop_ice_spire", "Ice Spire" },
+            { "prop_snowdrift", "Snowdrift" },
+            { "prop_mountain_hut", "Mountain Hut" },
+            { "prop_prayer_flags", "Prayer Flags" },
+            { "prop_ruined_tower", "Ruined Tower" },
+            { "prop_dragon_bones", "Dragon Bones" },
+            // town
+            { "prop_dock", "Dock" },
+            { "prop_boat", "Boat" },
+            { "prop_river_house", "River House" },
+            { "prop_town_hall", "Town Hall" },
+            { "prop_fountain", "Fountain" },
+            { "prop_bridge_stone", "Stone Bridge" },
+            { "prop_market_awning", "Market Awning" },
+            // caves and crypts
+            { "prop_cave_mouth", "Cave Mouth" },
+            { "prop_stalagmite", "Stalagmite" },
+            { "prop_crystal_cluster", "Crystal Cluster" },
+            { "prop_glow_mushroom", "Glowing Mushroom" },
+            { "prop_root_column", "Root Column" },
+            { "prop_cave_wall", "Cave Wall" },
+            { "prop_bones", "Bones" },
+            { "prop_rubble", "Rubble" },
+            { "prop_brazier", "Brazier" },
+            { "prop_torch_sconce", "Torch Sconce" },
+            { "prop_coffin", "Coffin" },
+            { "prop_sarcophagus", "Sarcophagus" },
+            { "prop_crypt_pillar", "Crypt Pillar" },
+            { "prop_crypt_door", "Crypt Door" },
+            { "prop_stairs_down", "Stairs Down" },
+            { "prop_ice_pillar", "Ice Pillar" },
+            { "prop_frozen_statue", "Frozen Statue" },
+            { "prop_drowned_arch", "Drowned Arch" },
+            { "prop_treasure_pile", "Treasure Pile" },
+            // raids
+            { "prop_raid_portal", "Raid Portal" },
+            { "prop_hollow_heart_core", "Heart of the Hollow" },
+            { "prop_thorn_wall", "Wall of Thorns" },
+            { "prop_root_arch", "Root Arch" },
+            { "prop_dragon_skull", "Dragon Skull" },
+            { "prop_roost_nest", "Dragon's Nest" },
+            { "prop_ash_banner", "Ash Banner" },
+            { "prop_altar", "Altar" },
         };
 
         static string PropName(string art)

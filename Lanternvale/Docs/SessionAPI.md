@@ -131,6 +131,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 | `Rested` / `PartyHealed` | `Text` |
 | `SpecialOutcome` | `Id` special id (`Id2` argument). **`RekindleLanterns`**: `Amount` 1 = the story moment (`MapView.SetLanternLit(id, true, animate: true)` for every lantern + banner `Text`); `Amount` 0 = raised after every `MapEntered` while flag `lanterns_rekindled` is set (relight silently) |
 | `TimeOfDayChanged` | `Id`/`Text` new phase (`dawn` `day` `dusk` `night`) |
+| `SecretFound` | a hidden transition (any map) became visible: `Id` its `revealFlag`, `Id2` the transition id, `Text` "You discovered a hidden passage: <label, else the target map's name>". Once per passage per game, whatever set the flag (region check, dialogue, NPC hint); never on `LoadGame` for passages the save already knew (§5 Discovery) |
 
 ---
 
@@ -286,12 +287,33 @@ InteractResult TalkTo(string npcId)             // npc or companion → dialogue
 InteractResult OpenChest(string chestId)        // Kind Loot (LootOpened); Kind Locked (Ok false, Message "Locked (Sleight of Hand DC 13).")
 CheckResult TryUnlockChest(string chestId)      // best member's lock check (retries allowed); success opens the chest
 CheckResult PickLock(string chestId, Unit rogue = null)   // rogue_pick_lock: + floor(level/5); falls back to TryUnlockChest
-InteractResult UseTransition(string transitionId)          // Kind Travel, or Kind Locked + TransitionLocked event
-string InspectProp(string interactId)           // sign/shrine text (also a Toast)
+InteractResult UseTransition(string transitionId)          // Kind Travel, or Kind Locked + TransitionLocked event;
+                                                           // a hidden, unrevealed one fails: "There is no way through here."
+InteractResult InteractProp(string interactId)  // a prop with PropDef.dialogue starts it (owner = the interact id,
+                                                // exploration only) → Kind Dialogue; else its text (Toast) → Kind Text,
+                                                // Message = text ("" = none: the UI says "Nothing of note."); a flag-hidden
+                                                // or unknown prop fails
+string InspectProp(string interactId)           // sign/shrine text (also a Toast); starts a prop's dialogue and returns ""
 const float InteractionRange = 2.5f; bool InInteractionRange(Vec2 p)   // the UI walks there first; not enforced
 ```
 
 `InteractResult`: `Ok`, `Kind` (`None` `Dialogue` `Loot` `Locked` `Travel` `Text`), `Message`, `Id`.
+
+**Discovery** (`GameSession.Discovery.cs`, Docs/Expansion.md §2.2):
+
+* **Region checks.** A region with a `check` rolls it the first time the leader stands inside it while its
+  `requireFlag` holds (map arrival or any position update; once per save, `MapRuntimeState.checkedRegions`). The best
+  party member rolls (`SkillChecks.Roll`); the session raises `SkillCheck` (`Id` = region id) and toasts `successText`
+  or `failText`; success sets `checkFlag`. A region whose `checkFlag` already holds is marked checked without a roll.
+* **Hidden passages.** Every flag change re-tests the hidden transitions of every map; one that became visible raises
+  `SecretFound` (after the roll and its text, when a region check revealed it). Passages already visible when a game
+  starts or loads are not announced. A passage revealed under the leader's feet does not travel until the leader
+  steps out and back in. `bool IsPassageRevealed(mapId, transitionId)`; `string SecretFoundText(TransitionDef t)`;
+  `const string SecretFoundPrefix`.
+* **Navigation.** `Nav` honours prop `requireFlag`/`hideFlag` and chest `requireFlag`. When a flag change makes one
+  appear or vanish out of combat, `Nav` is rebuilt in place (the **same** instance, `Nav.Version++`); during a battle
+  the change waits until the battle ends (or the next position update). `MapDef.water` blocks movement (except at
+  its crossings).
 
 ---
 

@@ -60,13 +60,15 @@ namespace Lanternvale.Session
                 Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
             CheckTimeOfDay();
             foreach (var r in Map.UpdatePartyPosition(Leader.Position)) RaiseRegion(r);
+            UpdateDiscovery();
         }
 
         void SetMap(MapRuntime rt)
         {
+            OnDiscoveryMapSet(Nav == null);   // ResetState clears Nav: the first map of a new or loaded game
             Map = rt;
             MapId = rt.Id;
-            Nav = new NavGrid(rt.Def);
+            Nav = new NavGrid(rt.Def, null, World.Flags.Test);   // flag-hidden props/chests do not block (GameSession.Discovery)
             pathfinder = new NavGridPathfinder(Nav);
             fieldPathfinder = new NavGridPathfinder(Nav) { AcceptPartial = true, TrackUnits = false };
             suppressedEncounters.Clear();
@@ -77,6 +79,7 @@ namespace Lanternvale.Session
         void RebuildField()
         {
             if (Battle != null) return;
+            RefreshNavIfDirty();
             var old = Field;
             DetachField();
             if (!hasGame || roster.Count == 0) return;
@@ -371,6 +374,7 @@ namespace Lanternvale.Session
             if (!IsExploring || Map == null || Leader == null) return TriggerResult.Nothing;
             var l = Leader;
             foreach (var r in Map.UpdatePartyPosition(l.Position)) RaiseRegion(r);
+            UpdateDiscovery();   // passive region checks (may reveal a hidden transition); nav refresh after combat
 
             // encounters
             UpdateSuppression();
@@ -714,21 +718,13 @@ namespace Lanternvale.Session
             return new InteractResult { Ok = true, Kind = InteractKind.Travel, Id = t.targetMap };
         }
 
-        /// <summary>Text of a prop with an interact id (signs, shrines). Also raised as a Toast.</summary>
+        /// <summary>Text of a prop with an interact id (signs, shrines). Also raised as a Toast. A prop with a dialogue
+        /// (PropDef.dialogue) starts it instead (owner = the interact id) and returns ""; a hidden prop returns "".
+        /// <see cref="InteractProp"/> tells the cases apart.</summary>
         public string InspectProp(string interactId)
         {
-            if (Map?.Def == null || string.IsNullOrEmpty(interactId)) return "";
-            foreach (var list in new[] { Map.Def.props, Map.Def.foreground })
-            {
-                if (list == null) continue;
-                foreach (var p in list)
-                    if (p != null && p.interact == interactId)
-                    {
-                        Toast(p.text);
-                        return p.text ?? "";
-                    }
-            }
-            return "";
+            var r = InteractProp(interactId);
+            return r.Ok && r.Kind == InteractKind.Text ? r.Message : "";
         }
 
         public bool InInteractionRange(Vec2 p) => Leader != null && Vec2.Distance(Leader.Position, p) <= InteractionRange;

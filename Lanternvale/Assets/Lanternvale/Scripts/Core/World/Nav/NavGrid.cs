@@ -2,8 +2,10 @@
 //
 // World metres: x in [0, width], y in [0, depth] (y = 0 nearest the camera). The grid covers the map's ground
 // rectangle with square cells (default 0.5 m). Static walkability comes from the ground rect (minus a margin),
-// the optional walkable polygon, prop collider ellipses and chest footprints. A clearance field (exact Euclidean
-// distance transform) lets one grid serve agents of any radius. Dynamic unit circles are stamped per query.
+// the optional walkable polygon, blocking water (MapDef.water minus its crossings), prop collider ellipses and chest
+// footprints. With a flag test (GameSession passes FlagStore.Test), flag-hidden props and chests do not block, and
+// RefreshFlags re-derives them in place (same instance, Version++) when flags change. A clearance field (exact
+// Euclidean distance transform) lets one grid serve agents of any radius. Dynamic unit circles are stamped per query.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -55,6 +57,17 @@ namespace Lanternvale.World
         readonly List<Ellipse> losBlockers = new List<Ellipse>();
         readonly List<Vec2> polygon = new List<Vec2>();
 
+        // derived from Map (props, chests, water): re-derived in place by RefreshFlags; ClearObstacles drops them for good
+        readonly List<Ellipse> mapEllipses = new List<Ellipse>();
+        readonly List<Ellipse> mapLosBlockers = new List<Ellipse>();
+        readonly List<bool> flagGateState = new List<bool>();   // presence of each flag-gated prop/chest at the last derive
+        bool deriveFromMap;
+        bool[] water;                                            // cells under blocking water (crossings excluded); null = none
+
+        /// <summary>Flag-expression test for prop requireFlag/hideFlag and chest requireFlag (null = every prop and chest
+        /// blocks whatever its flags, the behaviour of <see cref="NavGrid(MapDef, NavGridOptions)"/>).</summary>
+        public Func<string, bool> FlagTest { get; }
+
         // ------------------------------------------------------------------ construction
 
         /// <summary>Empty rectangular field (tests, arenas). Call <see cref="Rebuild"/> after adding obstacles.</summary>
@@ -73,34 +86,96 @@ namespace Lanternvale.World
             if (build) Rebuild();
         }
 
-        /// <summary>Builds the grid from a map's ground, walkable polygon, prop colliders and chests.</summary>
-        public NavGrid(MapDef map, NavGridOptions options = null) : this(map?.width ?? 60f, map?.depth ?? 20f, options, false)
+        /// <summary>Builds the grid from a map's ground, walkable polygon, water, prop colliders and chests (every prop and
+        /// chest blocks, whatever its flags).</summary>
+        public NavGrid(MapDef map, NavGridOptions options = null) : this(map, options, null) { }
+
+        /// <summary>
+        /// Builds the grid from a map. With a <paramref name="flagTest"/> (e.g. FlagStore.Test), props whose requireFlag
+        /// fails or whose hideFlag holds, and chests whose requireFlag fails, are not obstacles: call
+        /// <see cref="RefreshFlags"/> after flags change.
+        /// </summary>
+        public NavGrid(MapDef map, NavGridOptions options, Func<string, bool> flagTest) : this(map?.width ?? 60f, map?.depth ?? 20f, options, false)
         {
             Map = map;
+            FlagTest = flagTest;
             if (map == null) { Rebuild(); return; }
             if (map.walkable != null && map.walkable.Count >= 3) polygon.AddRange(map.walkable);
+            deriveFromMap = true;
+            DeriveMapObstacles();
+            RasterWater();
+            Rebuild();
+        }
+
+        /// <summary>
+        /// Re-tests the flag-gated props and chests of <see cref="Map"/> with <see cref="FlagTest"/>. When any of them
+        /// appeared or vanished since the last build, rebuilds static walkability in place (Version++) and returns true;
+        /// otherwise changes nothing (Version unchanged). No-op without a map or a flag test, or after ClearObstacles.
+        /// </summary>
+        public bool RefreshFlags()
+        {
+            if (!deriveFromMap || FlagTest == null || Map == null) return false;
+            int i = 0;
+            foreach (var present in FlagGates())
+            {
+                if (i >= flagGateState.Count || flagGateState[i] != present) { i = -1; break; }
+                i++;
+            }
+            if (i == flagGateState.Count) return false;
+            DeriveMapObstacles();
+            Rebuild();
+            return true;
+        }
+
+        /// <summary>True when a prop stands (and its collider blocks) under <see cref="FlagTest"/>.</summary>
+        public bool IsPropPresent(PropDef p) =>
+            p != null && (FlagTest == null || (FlagTest(p.requireFlag ?? "") && !(!string.IsNullOrEmpty(p.hideFlag) && FlagTest(p.hideFlag))));
+
+        /// <summary>True when a chest stands (and blocks) under <see cref="FlagTest"/>.</summary>
+        public bool IsChestPresent(ChestDef c) => c != null && (FlagTest == null || FlagTest(c.requireFlag ?? ""));
+
+        static bool HasCollider(PropDef p) => p?.collider != null && (p.collider.w > 0 || p.collider.h > 0);
+
+        // presence of every flag-gated obstacle in map order (props with a collider, then chests)
+        IEnumerable<bool> FlagGates()
+        {
+            if (FlagTest == null || Map == null) yield break;
+            if (Map.props != null)
+                foreach (var p in Map.props)
+                    if (HasCollider(p) && (!string.IsNullOrEmpty(p.requireFlag) || !string.IsNullOrEmpty(p.hideFlag)))
+                        yield return IsPropPresent(p);
+            if (Options.IncludeChests && Map.chests != null)
+                foreach (var c in Map.chests)
+                    if (c != null && !string.IsNullOrEmpty(c.requireFlag)) yield return IsChestPresent(c);
+        }
+
+        void DeriveMapObstacles()
+        {
+            mapEllipses.Clear();
+            mapLosBlockers.Clear();
+            flagGateState.Clear();
+            flagGateState.AddRange(FlagGates());
+            var map = Map;
             if (map.props != null)
             {
                 foreach (var prop in map.props)
                 {
-                    if (prop?.collider == null) continue;
+                    if (!HasCollider(prop) || !IsPropPresent(prop)) continue;
                     float w = prop.collider.w, h = prop.collider.h;
-                    if (w <= 0 && h <= 0) continue;
                     if (h <= 0) h = w * 0.5f;
                     if (w <= 0) w = h * 2f;
                     float scale = prop.scale > 0 ? prop.scale : 1f;
                     var off = prop.collider.offset * scale;
                     if (prop.flip) off.x = -off.x;
                     var c = prop.pos + off;
-                    AddObstacleEllipseNoRebuild(c, w * scale, h * scale);
+                    AddEllipse(mapEllipses, c, w * scale, h * scale);
                     if (Options.LineOfSight && Math.Max(w, h) * scale >= Options.LosBlockerMinSize)
-                        AddLosBlocker(c, w * scale, h * scale);
+                        AddEllipse(mapLosBlockers, c, w * scale, h * scale);
                 }
             }
             if (Options.IncludeChests && map.chests != null)
                 foreach (var chest in map.chests)
-                    if (chest != null) AddObstacleEllipseNoRebuild(chest.pos, Options.ChestFootprint.x, Options.ChestFootprint.y);
-            Rebuild();
+                    if (chest != null && IsChestPresent(chest)) AddEllipse(mapEllipses, chest.pos, Options.ChestFootprint.x, Options.ChestFootprint.y);
         }
 
         /// <summary>Adds an elliptical static obstacle (full width w × depth h). Call <see cref="Rebuild"/> afterwards.</summary>
@@ -130,19 +205,97 @@ namespace Lanternvale.World
             if (points != null && points.Count >= 3) polygon.AddRange(points);
         }
 
-        /// <summary>Removes all static obstacles, LOS blockers and the polygon. Call <see cref="Rebuild"/> afterwards.</summary>
+        /// <summary>Removes all static obstacles (the map's props, chests and water included), LOS blockers and the polygon;
+        /// <see cref="RefreshFlags"/> no longer re-derives the map's obstacles. Call <see cref="Rebuild"/> afterwards.</summary>
         public void ClearObstacles()
         {
             obstacleEllipses.Clear();
             obstacleRects.Clear();
             losBlockers.Clear();
             polygon.Clear();
+            mapEllipses.Clear();
+            mapLosBlockers.Clear();
+            flagGateState.Clear();
+            water = null;
+            deriveFromMap = false;
         }
 
-        void AddObstacleEllipseNoRebuild(Vec2 center, float w, float h)
+        void AddObstacleEllipseNoRebuild(Vec2 center, float w, float h) => AddEllipse(obstacleEllipses, center, w, h);
+
+        static void AddEllipse(List<Ellipse> into, Vec2 center, float w, float h)
         {
             if (w <= 0 || h <= 0) return;
-            obstacleEllipses.Add(new Ellipse { c = center, rx = w * 0.5f, ry = h * 0.5f });
+            into.Add(new Ellipse { c = center, rx = w * 0.5f, ry = h * 0.5f });
+        }
+
+        // ------------------------------------------------------------------ water
+
+        /// <summary>True when blocking water (MapDef.water with blocksMovement, outside its crossings) covers the cell.</summary>
+        public bool IsCellWater(int cx, int cy) => water != null && InBounds(cx, cy) && water[cy * Width + cx];
+
+        /// <summary>True when blocking water covers the cell containing p.</summary>
+        public bool IsWater(Vec2 p) => WorldToCell(p, out int cx, out int cy) && IsCellWater(cx, cy);
+
+        // Marks the cells under every blocking water: centres within halfWidth of an open polyline, or inside a closed
+        // polygon. Centres inside one of that water's crossing rects (fords, bridges) stay dry.
+        void RasterWater()
+        {
+            water = null;
+            if (Map?.water == null) return;
+            foreach (var w in Map.water)
+            {
+                if (w == null || !w.blocksMovement || w.points == null) continue;
+                bool closed = w.closed && w.points.Count >= 3;
+                if (!closed && (w.closed || w.points.Count < 2 || w.halfWidth <= 0f)) continue;
+                float hw = closed ? 0f : w.halfWidth;
+                float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+                foreach (var q in w.points)
+                {
+                    minX = Math.Min(minX, q.x); maxX = Math.Max(maxX, q.x);
+                    minY = Math.Min(minY, q.y); maxY = Math.Max(maxY, q.y);
+                }
+                int x0 = Math.Max(0, (int)Math.Floor((minX - hw) * invCs));
+                int x1 = Math.Min(Width - 1, (int)Math.Floor((maxX + hw) * invCs));
+                int y0 = Math.Max(0, (int)Math.Floor((minY - hw) * invCs));
+                int y1 = Math.Min(Height - 1, (int)Math.Floor((maxY + hw) * invCs));
+                if (x0 > x1 || y0 > y1) continue;
+                water ??= new bool[Width * Height];
+                float hw2 = hw * hw;
+                for (int cy = y0; cy <= y1; cy++)
+                {
+                    float y = (cy + 0.5f) * CellSize;
+                    for (int cx = x0; cx <= x1; cx++)
+                    {
+                        float x = (cx + 0.5f) * CellSize;
+                        bool wet = closed ? PointInPolygon(w.points, x, y) : SqrDistanceToPolyline(w.points, x, y) <= hw2;
+                        if (wet && !InCrossing(w, x, y)) water[cy * Width + cx] = true;
+                    }
+                }
+            }
+        }
+
+        static bool InCrossing(WaterDef w, float x, float y)
+        {
+            if (w.crossings == null) return false;
+            foreach (var r in w.crossings)
+                if (r != null && Math.Abs(x - r.pos.x) <= r.size.x * 0.5f && Math.Abs(y - r.pos.y) <= r.size.y * 0.5f) return true;
+            return false;
+        }
+
+        static float SqrDistanceToPolyline(List<Vec2> pts, float x, float y)
+        {
+            float best = float.MaxValue;
+            for (int i = 1; i < pts.Count; i++)
+            {
+                var a = pts[i - 1];
+                var b = pts[i];
+                float dx = b.x - a.x, dy = b.y - a.y;
+                float len2 = dx * dx + dy * dy;
+                float t = len2 > 1e-12f ? MathUtil.Clamp(((x - a.x) * dx + (y - a.y) * dy) / len2, 0f, 1f) : 0f;
+                float px = a.x + dx * t - x, py = a.y + dy * t - y;
+                best = Math.Min(best, px * px + py * py);
+            }
+            return best;
         }
 
         /// <summary>Recomputes static walkability and the clearance field.</summary>
@@ -162,9 +315,11 @@ namespace Lanternvale.World
                     bool b = x < margin - 1e-4f || y < margin - 1e-4f ||
                              x > WorldWidth - margin + 1e-4f || y > WorldDepth - margin + 1e-4f;
                     if (!b && usePoly && !PointInPolygon(polygon, x, y)) b = true;
+                    if (!b && water != null && water[cy * Width + cx]) b = true;
                     blocked[cy * Width + cx] = b;
                 }
             }
+            foreach (var e in mapEllipses) RasterEllipse(e);
             foreach (var e in obstacleEllipses) RasterEllipse(e);
             foreach (var r in obstacleRects) RasterRect(r);
             ComputeClearance();
@@ -559,8 +714,13 @@ namespace Lanternvale.World
         /// </summary>
         public bool HasLineOfSight(Vec2 a, Vec2 b)
         {
-            if (!Options.LineOfSight || losBlockers.Count == 0) return true;
-            foreach (var e in losBlockers)
+            if (!Options.LineOfSight || (losBlockers.Count == 0 && mapLosBlockers.Count == 0)) return true;
+            return LosClear(mapLosBlockers, a, b) && LosClear(losBlockers, a, b);
+        }
+
+        static bool LosClear(List<Ellipse> blockers, Vec2 a, Vec2 b)
+        {
+            foreach (var e in blockers)
             {
                 float rx = e.rx * 0.8f, ry = e.ry * 0.8f;
                 if (rx <= 0 || ry <= 0) continue;

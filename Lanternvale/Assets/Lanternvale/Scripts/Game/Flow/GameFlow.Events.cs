@@ -12,6 +12,7 @@ namespace Lanternvale.Game
     public sealed partial class GameFlow
     {
         static readonly Color LevelGold = new Color(1f, 0.85f, 0.42f);
+        static readonly Color SecretGold = new Color(1f, 0.82f, 0.36f);
         readonly Dictionary<Unit, int> levelFxFrame = new Dictionary<Unit, int>();
 
         // dialogue camera
@@ -102,6 +103,10 @@ namespace Lanternvale.Game
                 case SessionEventKind.FlagsChanged:
                     // at most once per Tick / dialogue step; exploration rebuilds now, dialogue/combat when they end
                     RefreshWorldIfFlagsChanged();
+                    break;
+                case SessionEventKind.SecretFound:
+                    // "You discovered a hidden passage: …" in gold (MapView sparkles the revealed marker, Sfx plays the cue)
+                    if (!string.IsNullOrEmpty(e.Text)) Toast(e.Text, SecretGold);
                     break;
             }
         }
@@ -265,6 +270,8 @@ namespace Lanternvale.Game
             {
                 var enc = s.Map.FindEncounter(speakerId);
                 if (enc != null) return ToUnity(enc.pos);
+                var prop = s.Map.FindProp(speakerId);   // a prop's dialogue (owner = its interact id)
+                if (prop != null) return ToUnity(prop.pos);
             }
             return null;
         }
