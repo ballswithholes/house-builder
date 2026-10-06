@@ -5,7 +5,7 @@
       "name": "Lanternvale",
       "subtitle": "A village beneath the great camphor tree",
       "width": 90,
-      "depth": 14,
+      "depth": 44,
       "skyTop": "#9fd3f0",
       "skyBottom": "#fdf1d6",
       "layers": [
@@ -290,9 +290,28 @@
           "targetMap": "whisperwood",
           "targetSpawn": "from_village",
           "label": "Whisperwood"
+        },
+        {
+          "id": "to_amberfield",
+          "pos": [0.7, 32.0],
+          "size": [1.4, 6.0],
+          "targetMap": "amberfield",
+          "targetSpawn": "from_lanternvale",
+          "label": "Amberfield Downs"
+        },
+        {
+          "id": "to_dgn_root_hollows",
+          "pos": [20.0, 19.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_root_hollows",
+          "targetSpawn": "from_lanternvale",
+          "label": "The Root Hollows",
+          "hidden": true,
+          "revealFlag": "found_root_hollows",
+          "marker": "cave"
         }
       ],
-      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [23.2, 5.4]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}],
+      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [23.2, 5.4]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}, {"id": "from_amberfield", "pos": [3.4, 32.0]}, {"id": "from_dgn_root_hollows", "pos": [20.0, 16.5]}],
       "regions": [
         {
           "id": "reg_old_kusu",

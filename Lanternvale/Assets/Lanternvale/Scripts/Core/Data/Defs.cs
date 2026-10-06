@@ -30,6 +30,8 @@ namespace Lanternvale.Data
         public List<QuestDef> quests = new List<QuestDef>();
         public List<MapDef> maps = new List<MapDef>();
         public List<SpecialDoc> specials = new List<SpecialDoc>();
+        /// <summary>Item sets (Docs/Expansion.md §2.5). A set's <c>items</c> list is the only source of membership.</summary>
+        public List<ItemSetDef> itemSets = new List<ItemSetDef>();
         public GameConfigDef config;
     }
 
@@ -359,6 +361,8 @@ namespace Lanternvale.Data
         public string ability = "";
         // Special
         public string special = "";
+        /// <summary>Optional tooltip text; used first when set (items, set bonuses).</summary>
+        public string description = "";
     }
 
     [Serializable]
@@ -428,15 +432,39 @@ namespace Lanternvale.Data
         public float[] weights = new float[0];
     }
 
+    /// <summary>One bonus of an item set: active while at least <see cref="pieces"/> distinct set items are equipped.</summary>
+    [Serializable]
+    public class SetBonusDef
+    {
+        public int pieces = 2;
+        public List<StatModDef> stats = new List<StatModDef>();
+        public List<PassiveDef> equipEffects = new List<PassiveDef>();  // Stat / AbilityMod / Proc / Special only
+        public string description = "";                  // optional tooltip text; else generated
+    }
+
+    [Serializable]
+    public class ItemSetDef
+    {
+        public string id = "";
+        public string name = "";
+        public string[] items = new string[0];           // item ids (the only source of set membership)
+        public List<SetBonusDef> bonuses = new List<SetBonusDef>();
+    }
+
     [Serializable]
     public class LootEntryDef
     {
-        public string item = "";                         // item id (empty when random)
+        public string item = "";                         // item id (empty when random or pooled)
         public float chance = 100f;
         public int min = 1, max = 1;
         public bool random;                              // generate a random equipable item
         public Quality quality = Quality.Uncommon;       // random item quality
         public int itemLevelOffset;                      // random item level relative to creature level
+        public string[] pool = new string[0];            // pick one item id from this pool (exclusive with item)
+        public float[] weights = new float[0];           // optional pool weights (empty = equal; else one per pool id)
+        public bool skipOwned;                           // pool: skip ids the party already owns (bags or equipped)
+        public int perMembers;                           // > 0: roll once more per this many party members (ceil(n / perMembers) rolls)
+        public bool partyUsable;                         // pool: only ids some party member can equip
     }
 
     [Serializable]
@@ -493,6 +521,9 @@ namespace Lanternvale.Data
         public bool tameable;                            // hunters can tame it
         public string totemElement = "";                 // totems: Earth/Fire/Water/Air
         public string bark = "";                         // one-liner when combat starts
+        public int levelFloor, levelCap;                 // scaleToParty clamp: [max(1, floor), cap > 0 ? cap : 63]; 0 = none
+        public string material = "";                     // impact sound: plate|mail|leather|cloth|flesh|fur|chitin|bone|wood|stone|ether|ice|scale|wet ("" = infer)
+        public string voice = "";                        // death/vocal sound: beast|humanoid|spirit|wood|stone|dragon|frog|gnoll|none ("" = infer)
     }
 
     // ---------------------------------------------------------- npcs & companions
@@ -518,6 +549,7 @@ namespace Lanternvale.Data
         public bool innkeeper;                           // can long rest here
         public string bark = "";                         // hover/ambient line
         public bool wanders;
+        public string shortName = "";                    // Map panel label ("" = name)
     }
 
     [Serializable]
@@ -618,6 +650,7 @@ namespace Lanternvale.Data
         public List<ObjectiveDef> objectives = new List<ObjectiveDef>();
         public string next = "";                         // stage id when objectives complete ("" = quest complete)
         public List<OutcomeDef> onComplete = new List<OutcomeDef>();
+        public string turnIn = "";                       // npc or companion id the quest marker points at ("" = infer)
     }
 
     [Serializable]
@@ -640,6 +673,8 @@ namespace Lanternvale.Data
         public bool main;
         public List<QuestStageDef> stages = new List<QuestStageDef>();
         public QuestRewardDef rewards = new QuestRewardDef();
+        public int minLevel;                             // main character level needed to be offered (0 = none; grey "!" marker)
+        public string zone = "";                         // map id that groups the quest in the journal ("" = none)
     }
 
     // --------------------------------------------------------------------- maps
@@ -675,6 +710,9 @@ namespace Lanternvale.Data
         public bool sway;                                // gentle wind sway (grass, trees)
         public string interact = "";                     // optional interaction id (sign text, shrine, etc.)
         public string text = "";                         // sign/inspect text
+        public string requireFlag = "";                  // shown only while this flag expression holds ("" = always)
+        public string hideFlag = "";                     // hidden while this flag expression holds ("" = never)
+        public string dialogue = "";                     // dialogue started when the prop is clicked (owner = interact id)
     }
 
     [Serializable]
@@ -751,12 +789,16 @@ namespace Lanternvale.Data
         public string label = "";
         public string requireFlag = "";
         public string lockedText = "";
+        public bool hidden;                              // invisible and unusable until Flags.Test(revealFlag)
+        public string revealFlag = "";
+        public string marker = "";                       // "" auto | none | cave | door | stairs | portal
     }
 
     [Serializable]
     public class AmbientDef
     {
         public bool fireflies, leaves, pollen, mist, rain, embers;
+        public bool snow, ash, dust, drips;
         public string timeOfDay = "day";                 // dawn, day, dusk, night
         public bool dayNightCycle;
         public string ambientColor = "#ffffff";
@@ -771,6 +813,39 @@ namespace Lanternvale.Data
         public Vec2 size;
         public string enterFlag = "";                    // flag set on entering (quest Reach objectives)
         public string text = "";                         // toast shown on first entry
+        public string name = "";                         // Map panel cluster label
+        public CheckDef check;                           // passive check on first entry (skill + dc only; null = none)
+        public string checkFlag = "";                    // set when the check succeeds
+        public string successText = "", failText = "";
+        public string requireFlag = "";                  // the check rolls only while this holds (once per save)
+    }
+
+    /// <summary>A painted path polyline (any direction).</summary>
+    [Serializable]
+    public class PathDef
+    {
+        public string art = "decal_path_dirt";
+        public List<Vec2> points = new List<Vec2>();
+        public float width = 2.2f;
+    }
+
+    /// <summary>An axis-aligned rectangle (pos = centre, size = full extents).</summary>
+    [Serializable]
+    public class RectDef
+    {
+        public Vec2 pos;
+        public Vec2 size;
+    }
+
+    /// <summary>A stream polyline, or a pond when closed. Crossings are walkable rects (fords, bridges).</summary>
+    [Serializable]
+    public class WaterDef
+    {
+        public List<Vec2> points = new List<Vec2>();
+        public float halfWidth = 1.5f;
+        public bool closed;
+        public List<RectDef> crossings = new List<RectDef>();
+        public bool blocksMovement = true;
     }
 
     [Serializable]
@@ -797,6 +872,15 @@ namespace Lanternvale.Data
         public AmbientDef ambient = new AmbientDef();
         public bool restArea;                            // camp/long rest allowed
         public string music = "";
+        public string biome = "";                        // meadow|village|forest|shrine|highlands|fen|peaks|cave|ice_cave|crypt|hollow_heart|roost ("" = keyword fallback)
+        public string environment = "";                  // "" / outdoor | cave | crypt (indoor: no sky, sun or hills)
+        public List<PathDef> paths = new List<PathDef>();
+        public List<WaterDef> water = new List<WaterDef>();
+        public float fill;                               // 0..1 procedural interior ground cover (0 = none)
+        public int levelMin, levelMax;                   // zone level band (0 = none)
+        public int raidSize;                             // > 0: a raid map (party up to raidSize)
+        public string raidReturnMap = "", raidReturnSpawn = "";
+        public bool dungeon;                             // a hidden dungeon
     }
 
     // ------------------------------------------------------------------- config
@@ -810,11 +894,21 @@ namespace Lanternvale.Data
         public float xpRate = 4f;                        // multiplier over WoW Classic XP
         public int maxLevel = 60;
         public int partySize = 4;
+        public int maxRaidSize = 10;
+        /// <summary>XP rate by the receiving character's level, linearly interpolated (empty = xpRate).</summary>
+        public List<XpRatePoint> xpRateByLevel = new List<XpRatePoint>();
         public float baseMoveMetres = 9f;                // movement per turn
         public float meleeReachMetres = 2.2f;            // centre-to-centre melee reach
         public int startingGold = 500;                   // copper
         public string[] startingItems = new string[0];
         public int[] xpToLevel = new int[0];             // xp needed to go from level i+1 to i+2 (WoW table)
+    }
+
+    [Serializable]
+    public class XpRatePoint
+    {
+        public int level;
+        public float rate;
     }
 
     /// <summary>Documentation of a named special handler requested by data authors.</summary>

@@ -6,7 +6,16 @@
     "startDialogue": "dlg_opening",
     "xpRate": 4,
     "maxLevel": 60,
-    "partySize": 4,
+    "partySize": 5,
+    "maxRaidSize": 10,
+    "xpRateByLevel": [
+      {"level": 1, "rate": 4},
+      {"level": 12, "rate": 4},
+      {"level": 18, "rate": 6},
+      {"level": 24, "rate": 8},
+      {"level": 30, "rate": 9},
+      {"level": 60, "rate": 9}
+    ],
     "baseMoveMetres": 9,
     "meleeReachMetres": 2.2,
     "startingGold": 1000,

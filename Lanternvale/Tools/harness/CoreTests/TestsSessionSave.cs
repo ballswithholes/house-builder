@@ -20,6 +20,8 @@ namespace Lanternvale.Tests
             s.Recruit("seren");
             s.Recruit("kael");
             s.Recruit("lys");
+            s.Recruit("aldric");   // the party of 5 is full
+            Harness.Assert(s.Party.Count == s.PartySize, "the rich session fills the party");
             s.Recruit("pip");      // camp (party full)
             s.Recruit("torvan");
             s.Dismiss("torvan");   // away

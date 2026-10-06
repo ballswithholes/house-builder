@@ -1,0 +1,94 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: skyreach. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "skyreach",
+      "name": "Skyreach Peaks",
+      "subtitle": "Snow, pines and the old dragon roads",
+      "width": 120,
+      "depth": 60,
+      "skyTop": "#b8d4ee",
+      "skyBottom": "#f2f4f8",
+      "ground": "ground_meadow",
+      "groundTile": 8,
+      "groundTint": "#eef2f8",
+      "biome": "peaks",
+      "environment": "outdoor",
+      "levelMin": 24,
+      "levelMax": 30,
+      "npcs": [],
+      "transitions": [
+        {
+          "id": "to_brightwater",
+          "pos": [119.3, 10.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_skyreach",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_frozen_sanctum",
+          "pos": [86.0, 50.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_frozen_sanctum",
+          "targetSpawn": "from_skyreach",
+          "label": "The Frozen Sanctum",
+          "hidden": true,
+          "revealFlag": "found_frozen_sanctum",
+          "marker": "cave"
+        },
+        {
+          "id": "to_raid_ashwyrm_roost",
+          "pos": [20.0, 56.0],
+          "size": [3.0, 3.0],
+          "targetMap": "raid_ashwyrm_roost",
+          "targetSpawn": "from_skyreach",
+          "label": "Ashwyrm's Roost",
+          "marker": "portal"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [116.0, 10.0]},
+        {"id": "from_brightwater", "pos": [116.0, 10.0]},
+        {"id": "from_dgn_frozen_sanctum", "pos": [86.0, 47.5]},
+        {"id": "from_raid_ashwyrm_roost", "pos": [20.0, 53.5]}
+      ],
+      "ambient": {"timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#eef4ff", "ambientIntensity": 1.0, "snow": true},
+      "restArea": true,
+      "music": "music_peaks"
+    }
+  ],
+  "quests": [
+    {
+      "id": "mq2_ash_on_the_wind",
+      "name": "Ash on the Wind",
+      "giver": "bw_archivist_penhallow",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "main": true,
+      "summary": "The ash comes from the peaks. Climb into Skyreach and learn who serves the sleeping Ashwyrm.",
+      "stages": [
+        {
+          "id": "peaks",
+          "description": "Climb north-west from Brightwater into Skyreach Peaks.",
+          "objectives": [
+            {"type": "Reach", "target": "skyreach", "text": "Travel to Skyreach Peaks"}
+          ],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Bring word back to Archivist Penhallow in Brightwater.",
+          "objectives": [
+            {"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}
+          ],
+          "onComplete": [
+            {"type": "SetFlag", "key": "mq2_ash_on_the_wind_done"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 2000, "gold": 2000}
+    }
+  ]
+}

@@ -17,7 +17,7 @@ namespace Lanternvale.Tests
             var db = Harness.Db;
             var s = SessionTest.NewGame(ClassId.Paladin, 1, seed: 11);
             var ids = new List<string>(db.Companions.Keys);
-            Harness.Assert(ids.Count == 8, "8 companions in the data");
+            Harness.Assert(ids.Count == 12, "12 companions in the data");
             foreach (var id in ids)
             {
                 s.Recruit(id);
@@ -36,8 +36,8 @@ namespace Lanternvale.Tests
             }
             int size = db.Config.partySize;
             Harness.Assert(s.Party.Count == size, $"active party capped at {size}");
-            Harness.Assert(s.Roster.Count == 9, "roster: main + 8");
-            Harness.Assert(s.Camp().Count == 8 - (size - 1), "the rest wait at camp");
+            Harness.Assert(s.Roster.Count == ids.Count + 1, $"roster: main + {ids.Count}");
+            Harness.Assert(s.Camp().Count == ids.Count - (size - 1), "the rest wait at camp");
             foreach (var u in s.Camp()) Harness.Assert(s.CompanionStatusOf(u.Companion.id) == CompanionStatus.Camp, "camp status");
             // recruited companions' map NPCs are hidden
             foreach (var n in s.VisibleNpcs()) Harness.Assert(!db.Companions.ContainsKey(n.npc), $"companion npc {n.npc} hidden after recruit");
@@ -115,7 +115,7 @@ namespace Lanternvale.Tests
             // dialogue/quest XP applies xpRate
             int xp = s.Main.Xp;
             s.GiveXP(10);
-            Harness.Assert(s.Main.Xp == xp + Progression.QuestXp(Harness.Db, 10), "quest xp scaled by xpRate");
+            Harness.Assert(s.Main.Xp == xp + Progression.QuestXp(Harness.Db, 10, s.Main.Level), "quest xp scaled by the main character's XP rate");
         }
 
         [Test]

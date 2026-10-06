@@ -1340,6 +1340,182 @@
           "outcomes": [{"type": "Recruit", "key": "morwen"}, {"type": "SetFlag", "key": "morwen_met"}]
         }
       ]
+    },
+    {
+      "id": "dlg_recruit_bruna",
+      "start": "bru_party",
+      "nodes": [
+        {
+          "id": "bru_party",
+          "speaker": "bruna",
+          "text": "Lead on. I'm right behind you.",
+          "conditions": [
+            {"type": "InParty", "key": "bruna"}
+          ],
+          "fallback": "bru_hello",
+          "choices": [
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "bru_dismissed",
+              "outcomes": [
+                {"type": "Dismiss", "key": "bruna"},
+                {"type": "ClearFlag", "key": "recruited_bruna"}
+              ]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "bru_dismissed", "speaker": "bruna", "text": "I'll be at the camp. Send for me when you need me."},
+        {
+          "id": "bru_hello",
+          "speaker": "bruna",
+          "text": "Well met, traveller. They call me Bruna. The roads are dangerous these days; you look like you could use a hand.",
+          "choices": [
+            {"text": "Come with me.", "next": "bru_join"},
+            {"text": "Just passing by."}
+          ]
+        },
+        {
+          "id": "bru_join",
+          "speaker": "narrator",
+          "text": "*Bruna shoulders a pack and falls in beside you.*",
+          "outcomes": [
+            {"type": "Recruit", "key": "bruna"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_ysolde",
+      "start": "yso_party",
+      "nodes": [
+        {
+          "id": "yso_party",
+          "speaker": "ysolde",
+          "text": "Lead on. I'm right behind you.",
+          "conditions": [
+            {"type": "InParty", "key": "ysolde"}
+          ],
+          "fallback": "yso_hello",
+          "choices": [
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "yso_dismissed",
+              "outcomes": [
+                {"type": "Dismiss", "key": "ysolde"},
+                {"type": "ClearFlag", "key": "recruited_ysolde"}
+              ]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "yso_dismissed", "speaker": "ysolde", "text": "I'll be at the camp. Send for me when you need me."},
+        {
+          "id": "yso_hello",
+          "speaker": "ysolde",
+          "text": "Well met, traveller. They call me Ysolde. The roads are dangerous these days; you look like you could use a hand.",
+          "choices": [
+            {"text": "Come with me.", "next": "yso_join"},
+            {"text": "Just passing by."}
+          ]
+        },
+        {
+          "id": "yso_join",
+          "speaker": "narrator",
+          "text": "*Ysolde shoulders a pack and falls in beside you.*",
+          "outcomes": [
+            {"type": "Recruit", "key": "ysolde"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_liora",
+      "start": "lio_party",
+      "nodes": [
+        {
+          "id": "lio_party",
+          "speaker": "liora",
+          "text": "Lead on. I'm right behind you.",
+          "conditions": [
+            {"type": "InParty", "key": "liora"}
+          ],
+          "fallback": "lio_hello",
+          "choices": [
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "lio_dismissed",
+              "outcomes": [
+                {"type": "Dismiss", "key": "liora"},
+                {"type": "ClearFlag", "key": "recruited_liora"}
+              ]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "lio_dismissed", "speaker": "liora", "text": "I'll be at the camp. Send for me when you need me."},
+        {
+          "id": "lio_hello",
+          "speaker": "liora",
+          "text": "Well met, traveller. They call me Liora. The roads are dangerous these days; you look like you could use a hand.",
+          "choices": [
+            {"text": "Come with me.", "next": "lio_join"},
+            {"text": "Just passing by."}
+          ]
+        },
+        {
+          "id": "lio_join",
+          "speaker": "narrator",
+          "text": "*Liora shoulders a pack and falls in beside you.*",
+          "outcomes": [
+            {"type": "Recruit", "key": "liora"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_recruit_nanami",
+      "start": "nan_party",
+      "nodes": [
+        {
+          "id": "nan_party",
+          "speaker": "nanami",
+          "text": "Lead on. I'm right behind you.",
+          "conditions": [
+            {"type": "InParty", "key": "nanami"}
+          ],
+          "fallback": "nan_hello",
+          "choices": [
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "nan_dismissed",
+              "outcomes": [
+                {"type": "Dismiss", "key": "nanami"},
+                {"type": "ClearFlag", "key": "recruited_nanami"}
+              ]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {"id": "nan_dismissed", "speaker": "nanami", "text": "I'll be at the camp. Send for me when you need me."},
+        {
+          "id": "nan_hello",
+          "speaker": "nanami",
+          "text": "Well met, traveller. They call me Nanami. The roads are dangerous these days; you look like you could use a hand.",
+          "choices": [
+            {"text": "Come with me.", "next": "nan_join"},
+            {"text": "Just passing by."}
+          ]
+        },
+        {
+          "id": "nan_join",
+          "speaker": "narrator",
+          "text": "*Nanami shoulders a pack and falls in beside you.*",
+          "outcomes": [
+            {"type": "Recruit", "key": "nanami"}
+          ]
+        }
+      ]
     }
   ]
 }

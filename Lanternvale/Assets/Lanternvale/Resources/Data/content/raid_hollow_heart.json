@@ -1,0 +1,48 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: r1. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "raid_hollow_heart",
+      "name": "The Hollow Heart",
+      "subtitle": "Raid: a corrupted spirit-grove cavern",
+      "width": 110,
+      "depth": 60,
+      "skyTop": "#16141c",
+      "skyBottom": "#2e2a36",
+      "ground": "ground_forest",
+      "groundTile": 8,
+      "biome": "hollow_heart",
+      "environment": "cave",
+      "levelMin": 21,
+      "levelMax": 23,
+      "raidSize": 10,
+      "raidReturnMap": "mirefen",
+      "raidReturnSpawn": "from_raid_hollow_heart",
+      "npcs": [],
+      "transitions": [
+        {
+          "id": "to_mirefen",
+          "pos": [0.7, 30.0],
+          "size": [1.4, 6.0],
+          "targetMap": "mirefen",
+          "targetSpawn": "from_raid_hollow_heart",
+          "label": "Mirefen"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [3.4, 30.0]},
+        {"id": "from_mirefen", "pos": [3.4, 30.0]}
+      ],
+      "ambient": {
+        "timeOfDay": "night",
+        "dayNightCycle": false,
+        "ambientColor": "#a890b8",
+        "ambientIntensity": 0.6,
+        "mist": true,
+        "fireflies": true
+      },
+      "restArea": false,
+      "music": "music_raid"
+    }
+  ]
+}

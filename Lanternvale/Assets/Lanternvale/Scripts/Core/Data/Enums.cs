@@ -239,6 +239,7 @@ namespace Lanternvale.Data
         Religion,      // Spirit
         Nature,        // Spirit
         Survival,      // Spirit
+        Perception,    // Spirit
     }
 
     public enum ObjectiveType { Kill, Collect, Talk, Reach, Flag, Defeat }

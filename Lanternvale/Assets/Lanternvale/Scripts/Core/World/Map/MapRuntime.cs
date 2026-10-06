@@ -16,6 +16,8 @@ namespace Lanternvale.World
         public List<string> enteredRegions = new List<string>();
         /// <summary>Encounters whose combat started but has not been won (hidden ambushes stay revealed).</summary>
         public List<string> triggeredEncounters = new List<string>();
+        /// <summary>Regions whose passive check (RegionDef.check) has been rolled (once per save).</summary>
+        public List<string> checkedRegions = new List<string>();
     }
 
     public sealed class MapRuntime
@@ -50,6 +52,7 @@ namespace Lanternvale.World
             State.unlockedChests ??= new List<string>();
             State.enteredRegions ??= new List<string>();
             State.triggeredEncounters ??= new List<string>();
+            State.checkedRegions ??= new List<string>();
             inside.Clear();
         }
 
@@ -228,16 +231,25 @@ namespace Lanternvale.World
 
         public bool IsTransitionUnlocked(TransitionDef t) => t != null && Flags.Test(t.requireFlag);
 
+        /// <summary>A transition is visible (and usable) unless it is hidden and its revealFlag does not hold yet.</summary>
+        public bool IsTransitionVisible(TransitionDef t) =>
+            t != null && (!t.hidden || (!string.IsNullOrEmpty(t.revealFlag) && Flags.Test(t.revealFlag)));
+
+        /// <summary>A prop is visible while its requireFlag holds and its hideFlag (if any) does not.</summary>
+        public bool IsPropVisible(PropDef p) =>
+            p != null && Flags.Test(p.requireFlag) && !(!string.IsNullOrEmpty(p.hideFlag) && Flags.Test(p.hideFlag));
+
         /// <summary>Transition rectangle size (axes ≤ 0 default to 2 m, as in the presentation layer).</summary>
         public static Vec2 TransitionSize(TransitionDef t) =>
             t == null ? default : new Vec2(t.size.x > 0f ? t.size.x : 2f, t.size.y > 0f ? t.size.y : 2f);
 
-        /// <summary>First transition whose rectangle contains p (locked or not), or null.</summary>
+        /// <summary>First visible transition whose rectangle contains p (locked or not), or null. Hidden transitions
+        /// are skipped until their revealFlag holds (<see cref="IsTransitionVisible"/>).</summary>
         public TransitionDef TransitionAt(Vec2 p)
         {
             if (Def.transitions == null) return null;
             foreach (var t in Def.transitions)
-                if (t != null && RectContains(t.pos, TransitionSize(t), p)) return t;
+                if (t != null && RectContains(t.pos, TransitionSize(t), p) && IsTransitionVisible(t)) return t;
             return null;
         }
 

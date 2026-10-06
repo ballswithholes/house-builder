@@ -14,7 +14,7 @@ This document is the contract between the rules engine, the data files and the U
 1. **WoW Classic class fantasy, turn-based.** Rage builds from hitting and being hit, energy ticks up and
    combo points feed finishers, mana is governed by Spirit and the five-second rule, Warlocks juggle soul
    shards, Hunters fight alongside a pet with a dead zone at close range, Shamans drop one totem per element.
-2. **BG3 party tactics.** Party of up to 4 (+ pets/totems), initiative, movement in metres, positioning,
+2. **BG3 party tactics.** Party of up to 5 (+ pets/totems; raids up to 10), initiative, movement in metres, positioning,
    flanking (behind-target abilities), surprise from stealth, skill checks in dialogue with a d20.
 3. **Threat matters.** Enemies use a WoW threat table. Tanks taunt and hold aggro; healers draw threat.
 4. **Cosy, readable presentation.** Soft 2D lights, parallax layers, clean silhouettes, clear UI.

@@ -1,6 +1,6 @@
 // `props` mode: contact sheets of the prop library (PNG) with per-model stats and nav-collider footprint checks.
 // Each tile: the model, its collider ellipse (red, on the ground), light anchors (magenta) and a 1.75 m person.
-//   props <out.png> [key[,key@seed...]|all] [seed] [--views gqtfb] [--tile px] [--lit 0|1] [--open] [--stats]
+//   props <out.png> [key[,key@seed...]|all|wild|dungeon] [seed] [--views gqtfb] [--tile px] [--lit 0|1] [--open] [--stats]
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -43,6 +43,35 @@ static class PropSheet
         "fg_ferns", "fg_grass_a", "fg_grass_b", "fg_stones_a", "fg_stones_b", "fg_flowers_a", "fg_flowers_b",
     };
 
+    /// <summary>Expansion prop keys (Docs/Expansion.md §10), by builder: `props <out.png> wild|dungeon`. Unknown keys show
+    /// the fallback model until their builder lands.</summary>
+    public static readonly (string name, string[] keys)[] Groups =
+    {
+        ("wild", new[] {
+            // highlands
+            "prop_standing_stone", "prop_scarecrow", "prop_beehive", "prop_wheat", "prop_watchtower_ruin", "prop_gnoll_tent",
+            "prop_gnoll_totem", "prop_bonepile", "prop_tree_golden", "prop_cairn", "prop_farmhouse", "prop_quarry_cart",
+            // fen
+            "prop_reeds", "prop_cattails", "prop_mangrove", "prop_willow", "prop_lilypads", "prop_stilt_hut", "prop_boardwalk",
+            "prop_fen_lantern", "prop_mire_totem", "prop_sunken_statue", "prop_mushroom_giant", "prop_fishing_rack",
+            // peaks
+            "prop_pine_snow", "prop_rock_snow", "prop_ice_spire", "prop_snowdrift", "prop_mountain_hut", "prop_prayer_flags",
+            "prop_ruined_tower", "prop_dragon_bones",
+            // town
+            "prop_dock", "prop_boat", "prop_river_house", "prop_town_hall", "prop_fountain", "prop_bridge_stone", "prop_market_awning",
+        }),
+        ("dungeon", new[] {
+            // caves
+            "prop_cave_mouth", "prop_stalagmite", "prop_crystal_cluster", "prop_glow_mushroom", "prop_root_column", "prop_cave_wall",
+            // crypts
+            "prop_bones", "prop_rubble", "prop_brazier", "prop_torch_sconce", "prop_coffin", "prop_sarcophagus", "prop_crypt_pillar",
+            "prop_crypt_door", "prop_stairs_down", "prop_ice_pillar", "prop_frozen_statue", "prop_drowned_arch", "prop_treasure_pile",
+            // raids
+            "prop_raid_portal", "prop_hollow_heart_core", "prop_thorn_wall", "prop_root_arch", "prop_dragon_skull", "prop_roost_nest",
+            "prop_ash_banner", "prop_altar",
+        }),
+    };
+
     // Ground = a child renderer the model leaves out of PropModel.Renderers on purpose (the Kusu plaza paving): it never
     // fades or tints with the prop and is not part of its solid footprint.
     sealed class Part { public Mesh Mesh; public Matrix4x4 M; public bool Outline; public string Name; public bool Ground; }
@@ -62,7 +91,8 @@ static class PropSheet
             else if (args[i] == "--stats") statsOnly = true;
         }
         if (outPath.Length == 0) statsOnly = true;
-        var keys = keysArg == "all" ? AllKeys : keysArg.Split(',');
+        var group = Groups.FirstOrDefault(g => g.name == keysArg);
+        var keys = keysArg == "all" ? AllKeys : group.keys ?? keysArg.Split(',');
         var seeds = new List<(string key, int seed)>();
         foreach (var k in keys)
         {

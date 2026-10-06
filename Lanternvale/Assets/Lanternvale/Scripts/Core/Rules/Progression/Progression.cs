@@ -61,12 +61,36 @@ namespace Lanternvale.Rules
         {
             if (mob == null || mob.Creature == null || mob.Kind != UnitKind.Creature) return 0;
             if (charLevel >= db.Config.maxLevel) return 0;
-            float xp = Formulas.MobXp(charLevel, mob.Level) * XpRankMult(mob.Creature.rank) * mob.Creature.xpMult * db.Config.xpRate;
+            float xp = Formulas.MobXp(charLevel, mob.Level) * XpRankMult(mob.Creature.rank) * mob.Creature.xpMult * XpRate(db, charLevel);
             return Math.Max(0, (int)Math.Round(xp));
         }
 
-        /// <summary>Quest XP (data amount × xpRate).</summary>
-        public static int QuestXp(GameDatabase db, int amount) => Math.Max(0, (int)Math.Round(amount * db.Config.xpRate));
+        /// <summary>
+        /// XP multiplier for a character of <paramref name="level"/>: config.xpRateByLevel linearly interpolated by level
+        /// (clamped to the first/last point), or config.xpRate when that list is empty.
+        /// </summary>
+        public static float XpRate(GameDatabase db, int level)
+        {
+            var cfg = db.Config;
+            var pts = cfg.xpRateByLevel;
+            if (pts == null || pts.Count == 0) return cfg.xpRate;
+            XpRatePoint lo = null, hi = null;
+            foreach (var p in pts)
+            {
+                if (p == null) continue;
+                if (p.level <= level && (lo == null || p.level >= lo.level)) lo = p;
+                if (p.level >= level && (hi == null || p.level < hi.level)) hi = p;
+            }
+            if (lo == null && hi == null) return cfg.xpRate;
+            if (lo == null) return hi.rate;
+            if (hi == null || hi.level == lo.level) return lo.rate;
+            float t = (level - lo.level) / (float)(hi.level - lo.level);
+            return lo.rate + (hi.rate - lo.rate) * t;
+        }
+
+        /// <summary>Quest XP (data amount × the XP rate of a character of <paramref name="level"/>; level ≤ 0 = level 1).</summary>
+        public static int QuestXp(GameDatabase db, int amount, int level = 1) =>
+            Math.Max(0, (int)Math.Round(amount * XpRate(db, Math.Max(1, level))));
 
         /// <summary>Adds XP, levelling up as needed. Returns one entry per level gained.</summary>
         public static List<LevelUpInfo> GiveXp(Unit u, int amount)

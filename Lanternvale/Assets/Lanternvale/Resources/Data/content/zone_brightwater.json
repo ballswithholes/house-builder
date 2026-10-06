@@ -1,0 +1,188 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: brightwater. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "brightwater",
+      "name": "Brightwater",
+      "subtitle": "A river trade town",
+      "width": 84,
+      "depth": 44,
+      "skyTop": "#9fd3f0",
+      "skyBottom": "#fdf1d6",
+      "ground": "ground_village",
+      "groundTile": 8,
+      "biome": "village",
+      "environment": "outdoor",
+      "levelMin": 12,
+      "levelMax": 30,
+      "npcs": [
+        {"npc": "bw_archivist_penhallow", "pos": [46.0, 22.0]},
+        {"npc": "ysolde", "pos": [40.0, 26.0], "hideFlag": "recruited_ysolde"},
+        {"npc": "liora", "pos": [52.0, 18.0], "hideFlag": "recruited_liora"}
+      ],
+      "transitions": [
+        {
+          "id": "to_amberfield",
+          "pos": [83.3, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "amberfield",
+          "targetSpawn": "from_brightwater",
+          "label": "Amberfield Downs"
+        },
+        {
+          "id": "to_mirefen",
+          "pos": [0.7, 12.0],
+          "size": [1.4, 6.0],
+          "targetMap": "mirefen",
+          "targetSpawn": "from_brightwater",
+          "label": "Mirefen"
+        },
+        {
+          "id": "to_skyreach",
+          "pos": [0.7, 34.0],
+          "size": [1.4, 6.0],
+          "targetMap": "skyreach",
+          "targetSpawn": "from_brightwater",
+          "label": "Skyreach Peaks"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [80.0, 22.0]},
+        {"id": "from_amberfield", "pos": [80.0, 22.0]},
+        {"id": "from_mirefen", "pos": [3.4, 12.0]},
+        {"id": "from_skyreach", "pos": [3.4, 34.0]}
+      ],
+      "ambient": {
+        "timeOfDay": "day",
+        "dayNightCycle": true,
+        "ambientColor": "#fff6e8",
+        "ambientIntensity": 1.0,
+        "fireflies": true
+      },
+      "restArea": true,
+      "music": "music_town"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "bw_archivist_penhallow",
+      "name": "Archivist Penhallow",
+      "shortName": "Penhallow",
+      "title": "Keeper of the Brightwater Archive",
+      "sprite": "npc_archivist",
+      "portrait": "portrait_trainer",
+      "dialogue": "dlg_bw_penhallow",
+      "bark": "Mind the scrolls. Some of them are older than the river."
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_bw_penhallow",
+      "start": "p_hub",
+      "nodes": [
+        {
+          "id": "p_hub",
+          "speaker": "bw_archivist_penhallow",
+          "text": "*A stooped man peers at you over a tower of scrolls.* Visitors! Real ones, with mud on their boots. What brings you to the archive?",
+          "choices": [
+            {
+              "text": "Elder Maru sent me. The Heart Lantern showed ash, drifting down from the north.",
+              "next": "p_ember",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_ember_road", "value": "archivist"}
+              ],
+              "outcomes": [
+                {"type": "CompleteQuest", "key": "mq2_ember_road"}
+              ]
+            },
+            {
+              "text": "I've been to Mirefen. The drowned lanterns are dark no longer.",
+              "next": "p_fen_done",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "report"}
+              ],
+              "outcomes": [
+                {"type": "CompleteQuest", "key": "mq2_drowned_lanterns"}
+              ]
+            },
+            {
+              "text": "I've been to Skyreach. Someone up there serves the Ashwyrm.",
+              "next": "p_peaks_done",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "report"}
+              ],
+              "outcomes": [
+                {"type": "CompleteQuest", "key": "mq2_ash_on_the_wind"}
+              ]
+            },
+            {
+              "text": "What do your records say about the fens?",
+              "next": "p_fen",
+              "conditions": [
+                {"type": "Flag", "key": "mq2_ember_road_done"},
+                {"type": "QuestNotStarted", "key": "mq2_drowned_lanterns"},
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mq2_drowned_lanterns"}
+              ]
+            },
+            {
+              "text": "Where does the ash come from?",
+              "next": "p_peaks",
+              "conditions": [
+                {"type": "Flag", "key": "mq2_drowned_lanterns_done"},
+                {"type": "QuestNotStarted", "key": "mq2_ash_on_the_wind"},
+                {"type": "Level", "amount": 24}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mq2_ash_on_the_wind"}
+              ]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_ember",
+          "speaker": "bw_archivist_penhallow",
+          "text": "Ash from the north... *He pulls down a cracked map.* Then the old songs were right. Something drowses beneath Skyreach, and it breathes in its sleep. Rest here a while. When you are ready, I will have more for you.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_fen",
+          "speaker": "bw_archivist_penhallow",
+          "text": "The fens of Mirefen were lantern country once. Then the water rose, and the lanterns went under, one by one. Go and see what keeps them down.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_fen_done",
+          "speaker": "bw_archivist_penhallow",
+          "text": "Then the fens can breathe again. And the coven's trail leads underground, to a heart that should not beat. Be careful.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_peaks",
+          "speaker": "bw_archivist_penhallow",
+          "text": "Every flake of that ash fell from Skyreach. Climb, and find out who tends the fire.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_peaks_done",
+          "speaker": "bw_archivist_penhallow",
+          "text": "Highlord Varkas and his Dragonsworn... and above them, the Roost. So she wakes. *He rolls up the map with shaking hands.* Go carefully.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    }
+  ]
+}

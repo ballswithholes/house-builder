@@ -1,0 +1,47 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: ww. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "dgn_mossdeep",
+      "name": "Mossdeep Grotto",
+      "subtitle": "A dripping grotto under the old forest",
+      "width": 60,
+      "depth": 40,
+      "skyTop": "#16141c",
+      "skyBottom": "#2e2a36",
+      "ground": "ground_shrine",
+      "groundTile": 8,
+      "groundTint": "#8c8698",
+      "biome": "cave",
+      "environment": "cave",
+      "levelMin": 12,
+      "levelMax": 14,
+      "dungeon": true,
+      "npcs": [],
+      "transitions": [
+        {
+          "id": "to_whisperwood",
+          "pos": [0.7, 20.0],
+          "size": [1.4, 6.0],
+          "targetMap": "whisperwood",
+          "targetSpawn": "from_dgn_mossdeep",
+          "label": "Whisperwood"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [3.4, 20.0]},
+        {"id": "from_whisperwood", "pos": [3.4, 20.0]}
+      ],
+      "ambient": {
+        "timeOfDay": "night",
+        "dayNightCycle": false,
+        "ambientColor": "#9ab09a",
+        "ambientIntensity": 0.55,
+        "drips": true,
+        "mist": true
+      },
+      "restArea": false,
+      "music": "music_dungeon"
+    }
+  ]
+}

@@ -34,6 +34,9 @@ namespace Lanternvale.Game
                 RegisterShrine(r);
                 RegisterForeground(r);
                 RegisterGarden(r);
+                // expansion props (Docs/Expansion.md §2.8, §10): each implemented in its builder's own partial file
+                RegisterWild(r);
+                RegisterDungeon(r);
                 recipes = r;
             }
             if (recipes.TryGetValue(artKey, out var recipe)) return recipe;
@@ -41,6 +44,11 @@ namespace Lanternvale.Game
             if (artKey.StartsWith("prop_chest", StringComparison.Ordinal) && recipes.TryGetValue("prop_chest", out recipe)) return recipe;
             return null;
         }
+
+        /// <summary>Expansion hook: highland, fen, peak and town props (props-wild builder, PropWild*.cs).</summary>
+        static partial void RegisterWild(Dictionary<string, Recipe> r);
+        /// <summary>Expansion hook: cave, crypt and raid props (props-dungeon builder, PropDungeon*.cs).</summary>
+        static partial void RegisterDungeon(Dictionary<string, Recipe> r);
 
         static partial void TryHas(string artKey, ref bool has)
         {

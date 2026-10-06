@@ -5,7 +5,7 @@
       "name": "The Old Lantern Shrine",
       "subtitle": "Where the Heart Lantern sleeps",
       "width": 70,
-      "depth": 14,
+      "depth": 40,
       "skyTop": "#3b3a63",
       "skyBottom": "#e8a77c",
       "layers": [
@@ -242,9 +242,20 @@
           "targetMap": "whisperwood",
           "targetSpawn": "from_shrine",
           "label": "Whisperwood"
+        },
+        {
+          "id": "to_dgn_lantern_catacombs",
+          "pos": [36.0, 32.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_lantern_catacombs",
+          "targetSpawn": "from_shrine",
+          "label": "The Lantern Catacombs",
+          "hidden": true,
+          "revealFlag": "found_lantern_catacombs",
+          "marker": "stairs"
         }
       ],
-      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_whisperwood", "pos": [3.6, 6.0]}, {"id": "sanctum", "pos": [54.0, 6.0]}],
+      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_whisperwood", "pos": [3.6, 6.0]}, {"id": "sanctum", "pos": [54.0, 6.0]}, {"id": "from_dgn_lantern_catacombs", "pos": [36.0, 29.5]}],
       "regions": [
         {
           "id": "reg_shrine_approach",

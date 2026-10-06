@@ -116,6 +116,9 @@ namespace Lanternvale.Game
                 case "fx_rune_circle": return Trap(key);
                 case "prop_spirit_lantern": return Lightwell(key);
             }
+            // expansion models (Docs/Expansion.md §2.8, §9) win over the family fallbacks below
+            var expansionModel = TryBuildExpansion(key);
+            if (expansionModel != null) return expansionModel;
             // unknown keys: a sensible generic model of the right family
             if (key.StartsWith("cr_owl")) return Owl(key);
             if (key.StartsWith("cr_wolf") || key.StartsWith("pet_") || key.StartsWith("cr_beast")) return Wolf(key, WolfKind.Grey);
@@ -129,6 +132,35 @@ namespace Lanternvale.Game
             if (key.StartsWith("cr_")) return Wolf(key, WolfKind.Grey);
             return VillagerB(key);
         }
+
+        // ------------------------------------------------------------------ expansion hooks (Docs/Expansion.md §2.8)
+
+        static System.Collections.Generic.Dictionary<string, System.Func<UnitModel>> expansionRecipes;
+
+        /// <summary>The expansion model registered for <paramref name="key"/>, or null. The registry is filled once by the
+        /// partial methods below; each is implemented by its builder in a new UnitRecipes.&lt;Group&gt;.cs file.</summary>
+        static UnitModel TryBuildExpansion(string key)
+        {
+            if (expansionRecipes == null)
+            {
+                var d = new System.Collections.Generic.Dictionary<string, System.Func<UnitModel>>(System.StringComparer.Ordinal);
+                RegisterCreaturesA(d);
+                RegisterCreaturesB(d);
+                RegisterCreaturesC(d);
+                RegisterPeopleX(d);
+                expansionRecipes = d;
+            }
+            return key != null && expansionRecipes.TryGetValue(key, out var recipe) && recipe != null ? recipe() : null;
+        }
+
+        /// <summary>models-a: humanoid bipeds (gnolls, tunnelers, mirelings, hags, ogres, Dragonsworn, the mossling king).</summary>
+        static partial void RegisterCreaturesA(System.Collections.Generic.Dictionary<string, System.Func<UnitModel>> d);
+        /// <summary>models-b: undead, elementals and humanoid bosses.</summary>
+        static partial void RegisterCreaturesB(System.Collections.Generic.Dictionary<string, System.Func<UnitModel>> d);
+        /// <summary>models-c: beasts, fliers, giants and dragons.</summary>
+        static partial void RegisterCreaturesC(System.Collections.Generic.Dictionary<string, System.Func<UnitModel>> d);
+        /// <summary>models-people: the four new companions and the new NPCs.</summary>
+        static partial void RegisterPeopleX(System.Collections.Generic.Dictionary<string, System.Func<UnitModel>> d);
 
         static UnitModel Done(BipedKit k, string key, UnitGait gait = UnitGait.Humanoid)
         {

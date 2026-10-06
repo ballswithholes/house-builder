@@ -47,6 +47,20 @@ namespace Lanternvale.Session
         public List<string> suppressedEncounters;
         /// <summary>Mind Soothe: encounter id -> real seconds left of its reduced trigger radius (sorted keys; null = none).</summary>
         public Dictionary<string, float> soothedEncounters;
+        /// <summary>Raid state (null when not in a raid, and in saves made before raids existed).</summary>
+        public RaidSaveData raid;
+    }
+
+    /// <summary>The raid in progress and the normal party to restore when it ends (lists sorted, see Docs/Expansion.md §2.7).</summary>
+    [Serializable]
+    public sealed class RaidSaveData
+    {
+        public int size;
+        /// <summary>Member ids of the party before the raid.</summary>
+        public List<string> normalParty = new List<string>();
+        public string normalLeader = "";
+        /// <summary>Member ids that had auto-play on before the raid.</summary>
+        public List<string> normalAutoPlay = new List<string>();
     }
 
     [Serializable]

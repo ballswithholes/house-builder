@@ -74,7 +74,7 @@ namespace Lanternvale.World
                 case SkillCheck.Investigation:
                     return StatKind.Intellect;
                 default:
-                    return StatKind.Spirit; // Insight, Persuasion, Religion, Nature, Survival
+                    return StatKind.Spirit; // Insight, Persuasion, Religion, Nature, Survival, Perception
             }
         }
 
@@ -87,9 +87,10 @@ namespace Lanternvale.World
                 case ClassId.Paladin:
                     return skill == SkillCheck.Athletics || skill == SkillCheck.Intimidation;
                 case ClassId.Rogue:
-                    return skill == SkillCheck.Stealth || skill == SkillCheck.SleightOfHand || skill == SkillCheck.Acrobatics;
+                    return skill == SkillCheck.Stealth || skill == SkillCheck.SleightOfHand || skill == SkillCheck.Acrobatics
+                        || skill == SkillCheck.Perception;
                 case ClassId.Hunter:
-                    return skill == SkillCheck.Survival || skill == SkillCheck.Nature;
+                    return skill == SkillCheck.Survival || skill == SkillCheck.Nature || skill == SkillCheck.Perception;
                 case ClassId.Mage:
                     return skill == SkillCheck.Arcana || skill == SkillCheck.History;
                 case ClassId.Priest:

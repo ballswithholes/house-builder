@@ -1,0 +1,102 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: mirefen. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "mirefen",
+      "name": "Mirefen",
+      "subtitle": "Misty fen of boardwalks and stilt villages",
+      "width": 120,
+      "depth": 56,
+      "skyTop": "#9fb8a8",
+      "skyBottom": "#e6e3c8",
+      "ground": "ground_forest",
+      "groundTile": 8,
+      "biome": "fen",
+      "environment": "outdoor",
+      "levelMin": 18,
+      "levelMax": 24,
+      "npcs": [
+        {"npc": "nanami", "pos": [96.0, 30.0], "hideFlag": "recruited_nanami"}
+      ],
+      "transitions": [
+        {
+          "id": "to_brightwater",
+          "pos": [119.3, 16.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_mirefen",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_drowned_vault",
+          "pos": [30.0, 44.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_drowned_vault",
+          "targetSpawn": "from_mirefen",
+          "label": "The Drowned Vault",
+          "hidden": true,
+          "revealFlag": "found_drowned_vault",
+          "marker": "stairs"
+        },
+        {
+          "id": "to_raid_hollow_heart",
+          "pos": [12.0, 48.0],
+          "size": [3.0, 3.0],
+          "targetMap": "raid_hollow_heart",
+          "targetSpawn": "from_mirefen",
+          "label": "The Hollow Heart",
+          "marker": "portal"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [116.0, 16.0]},
+        {"id": "from_brightwater", "pos": [116.0, 16.0]},
+        {"id": "from_dgn_drowned_vault", "pos": [30.0, 41.5]},
+        {"id": "from_raid_hollow_heart", "pos": [12.0, 45.5]}
+      ],
+      "ambient": {
+        "timeOfDay": "day",
+        "dayNightCycle": true,
+        "ambientColor": "#e0ecd8",
+        "ambientIntensity": 0.9,
+        "mist": true,
+        "fireflies": true
+      },
+      "restArea": true,
+      "music": "music_fen"
+    }
+  ],
+  "quests": [
+    {
+      "id": "mq2_drowned_lanterns",
+      "name": "The Drowned Lanterns",
+      "giver": "bw_archivist_penhallow",
+      "level": 18,
+      "minLevel": 18,
+      "zone": "mirefen",
+      "main": true,
+      "summary": "Penhallow's records speak of lanterns sunk in the fens of Mirefen. Find out what drowned them.",
+      "stages": [
+        {
+          "id": "fen",
+          "description": "Go south-west from Brightwater into the fens of Mirefen.",
+          "objectives": [
+            {"type": "Reach", "target": "mirefen", "text": "Travel to Mirefen"}
+          ],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Bring word back to Archivist Penhallow in Brightwater.",
+          "objectives": [
+            {"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}
+          ],
+          "onComplete": [
+            {"type": "SetFlag", "key": "mq2_drowned_lanterns_done"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 2000, "gold": 2000}
+    }
+  ]
+}

@@ -2,8 +2,8 @@
 
 All game data lives in `Assets/Lanternvale/Resources/Data/**.json`. Every file is a **DataBundle** — an
 object with any of these arrays: `classes`, `abilities`, `auras`, `talentTrees`, `items`, `itemSuffixes`,
-`lootTables`, `creatures`, `npcs`, `companions`, `dialogues`, `quests`, `maps`, `specials`, and an optional
-`config` object. The loader merges all files. **The C# definitions in
+`lootTables`, `creatures`, `npcs`, `companions`, `dialogues`, `quests`, `maps`, `specials`, `itemSets`, and an
+optional `config` object. The loader merges all files. **The C# definitions in
 `Scripts/Core/Data/Defs.cs` and `Enums.cs` are the source of truth** — field names are JSON keys, enums are
 written by name (case-insensitive). Unknown keys are reported as errors (prefix a key with `_` for comments,
 e.g. `"_note": "..."`). `//` comments and trailing commas are allowed.
@@ -206,3 +206,92 @@ drink star sparkle clock hourglass feather bandage crown
 ```
 
 Unknown glyphs fall back to the ability's initial letter.
+
+## Expansion fields ("The Ember Road", `Docs/Expansion.md` §2)
+
+Every field below is optional; its default keeps the 1–12 slice's behaviour. The validator rules of
+`Docs/Expansion.md` §2.9 (in `DataValidator.cs`) check them; `Tools/harness/CoreTests/TestsExpansionContract.cs`
+shows one mistake per rule.
+
+### Quests, NPCs, regions (markers and the journal)
+
+| Def.field | Type, default | Meaning |
+|---|---|---|
+| `QuestDef.minLevel` | int, 0 | Main character level needed to be offered the quest (grey `!` below it). When > 1, every dialogue choice or node whose outcomes `StartQuest` it must carry a `Level` condition ≥ minLevel (on the choice or its node). |
+| `QuestDef.zone` | map id, "" | Groups the quest in the journal. Must be a known map. |
+| `QuestStageDef.turnIn` | npc/companion id, "" | The NPC the quest marker points at for this stage ("" = inferred). Also excuses a `Flag` stage whose flag no data sets (set by code). |
+| `NpcDef.shortName` | string, "" | Map panel label ("" = `name`). |
+| `RegionDef.name` | string, "" | Map panel cluster label. |
+
+Quest rules: `giver` is a known npc or companion; something starts every quest (a `StartQuest`/`SetQuestStage`
+outcome in a dialogue or a quest's `onComplete`); a `Talk` objective's target has a dialogue (an npc's `dialogue` or a
+companion's `recruitDialogue`; the objective completes when that dialogue ends); a `Flag` objective's flag is set by
+data (`SetFlag`, region `enterFlag`/`checkFlag`, an encounter's done flag, `Recruit` → `recruited_<id>`) or the stage
+has a `turnIn`.
+
+### Hidden things and discovery
+
+| Def.field | Type, default | Meaning |
+|---|---|---|
+| `TransitionDef.hidden` | bool, false | Invisible and unusable (`MapRuntime.TransitionAt` skips it) until `Flags.Test(revealFlag)`. Needs a `revealFlag`. |
+| `TransitionDef.revealFlag` | flag expression, "" | Reveals a hidden transition. |
+| `TransitionDef.marker` | `""` (auto) \| `none` \| `cave` \| `door` \| `stairs` \| `portal` | How the exit is drawn. |
+| `PropDef.requireFlag` / `hideFlag` | flag expressions, "" | Prop shown only while `requireFlag` holds and `hideFlag` does not (`MapRuntime.IsPropVisible`). |
+| `PropDef.dialogue` | dialogue id, "" | Started when the prop is clicked; the owner is the prop's `interact` id. |
+| `RegionDef.check` | `CheckDef`, null | A passive check rolled once per save on the first entry while `requireFlag` holds, by the best party member. Only `skill` and `dc` are used. Needs a `checkFlag`. |
+| `RegionDef.checkFlag` | flag, "" | Set when the check succeeds. |
+| `RegionDef.successText` / `failText` | string, "" | Toasts for the roll. |
+| `RegionDef.requireFlag` | flag expression, "" | Gate for the check. |
+| `SkillCheck.Perception` | enum value | Spirit; Hunters and Rogues are proficient. |
+
+Ids are unique per map across prop `interact`, chest, transition and region ids, and **encounter ids are unique
+across all maps** (the done flag `enc_<id>` is global).
+
+### Map look and terrain
+
+| Def.field | Type, default | Meaning |
+|---|---|---|
+| `MapDef.biome` | "", `meadow` `village` `forest` `shrine` `highlands` `fen` `peaks` `cave` `ice_cave` `crypt` `hollow_heart` `roost` | Terrain/backdrop style ("" = the old keyword fallback on `ground`/layers). |
+| `MapDef.environment` | "" (= `outdoor`), `cave`, `crypt` | Indoor maps: no sky, sun or hills; rock or masonry walls, indoor light, near dark fog. |
+| `MapDef.paths` | list of `PathDef {art = "decal_path_dirt", points (≥ 2), width = 2.2}` | Painted path polylines in any direction. |
+| `MapDef.water` | list of `WaterDef {points, halfWidth = 1.5, closed, crossings: [RectDef {pos, size}], blocksMovement = true}` | Streams (≥ 2 points) or ponds (`closed`, ≥ 3 points). Crossings are walkable fords and bridges. |
+| `MapDef.fill` | float 0–1, 0 | Density of procedural interior ground cover. |
+| `MapDef.levelMin` / `levelMax` | int, 0 | The zone's level band (Map panel, journal). |
+| `MapDef.raidSize` | int 0..`config.maxRaidSize`, 0 | > 0: a raid map; the party may hold up to raidSize characters there. A raid needs `raidReturnMap` + `raidReturnSpawn` (a known map and one of its spawns). |
+| `MapDef.dungeon` | bool, false | A hidden dungeon (UI badge). |
+| `AmbientDef.snow` / `ash` / `dust` / `drips` | bool, false | New ambient particle kinds. |
+
+### Creatures and loot
+
+| Def.field | Type, default | Meaning |
+|---|---|---|
+| `CreatureDef.levelFloor` / `levelCap` | int, 0 | Clamp of `scaleToParty` levels: `clamp(partyLevel + levelOffset, max(1, floor), cap > 0 ? cap : 63)`. floor ≤ cap when both are set. Explicit encounter levels and non-scaling creatures are unaffected. |
+| `CreatureDef.material` | "", `plate mail leather cloth flesh fur chitin bone wood stone ether ice scale wet` | Impact sound ("" = inferred). |
+| `CreatureDef.voice` | "", `beast humanoid spirit wood stone dragon frog gnoll none` | Death and vocal sounds ("" = inferred). |
+| `LootEntryDef.pool` | item ids, [] | The entry picks one id from the pool. Exclusive with `item` and `random`. |
+| `LootEntryDef.weights` | floats, [] | Pool weights: empty (equal) or one per pool id. |
+| `LootEntryDef.skipOwned` | bool, false | Pool: skip ids the party already owns. |
+| `LootEntryDef.perMembers` | int ≥ 0, 0 | > 0: one roll per `perMembers` party members (a raid of 10 with 5 rolls twice). |
+| `LootEntryDef.partyUsable` | bool, false | Pool: only ids some party member can equip. |
+
+`random: true` with `quality` Epic or Legendary is an error: author epics and legendaries and drop them from a pool.
+
+### Items, sets and legendaries
+
+| Def.field | Type, default | Meaning |
+|---|---|---|
+| `PassiveDef.description` | string, "" | Tooltip text of an equip effect / set bonus effect, used first when set. |
+| `DataBundle.itemSets` | list of `ItemSetDef {id, name, items[], bonuses[]}` | Item sets. A set's `items` list is the only source of membership; an item belongs to at most one set. |
+| `SetBonusDef` | `{pieces = 2, stats: [StatModDef], equipEffects: [PassiveDef], description}` | Active while ≥ `pieces` distinct set items are equipped. `pieces` strictly increasing, in [1, items]. Effect types: Stat, AbilityMod, Proc or Special (no GrantAbility). |
+
+A set needs a name and at least 2 equipable items. `quality: Legendary` ⇒ `unique: true`. Item `equipEffects[].type`
+must be Stat, AbilityMod, Proc, GrantAbility or Special.
+
+### Config, XP and party
+
+| Field | Default (shipped) | Meaning |
+|---|---|---|
+| `config.partySize` | 4 (5) | Active party size outside raids. |
+| `config.maxRaidSize` | 10 | Upper bound of `MapDef.raidSize`. |
+| `config.xpRateByLevel` | [] (`[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`) | `XpRatePoint {level, rate}` list, linearly interpolated by the receiving character's level (clamped to the end points) and applied to kill and quest XP (`Progression.XpRate`). Empty = `xpRate` for every level. |
+

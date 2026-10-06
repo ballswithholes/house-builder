@@ -32,6 +32,18 @@ namespace Lanternvale.Preview
             ("pets", new[] { "pet_wolf", "pet_boar", "pet_cat", "pet_bear", "pet_owl" }),
             ("demons", new[] { "demon_imp", "demon_voidwalker", "demon_succubus", "demon_infernal", "demon_felhunter" }),
             ("static", new[] { "totem_earth", "totem_fire", "totem_water", "totem_air", "cr_training_dummy" }),
+            // expansion keys (Docs/Expansion.md §9); unknown keys show their fallback model until their builder lands
+            ("exp_a", new[] { "cr_gnoll", "cr_gnoll_archer", "cr_gnoll_mystic", "cr_gnoll_chief", "cr_tunneler", "cr_tunneler_geomancer",
+                              "cr_mireling", "cr_mireling_hunter", "cr_mireling_oracle", "cr_mire_hag", "cr_ogre", "cr_ogre_mage",
+                              "cr_dragonsworn", "cr_mossling_king" }),
+            ("exp_b", new[] { "cr_skeleton", "cr_skeleton_archer", "cr_barrow_wight", "cr_bog_ghoul", "cr_hollow_knight", "cr_lantern_lich",
+                              "cr_drowned_sentinel", "cr_tidewitch", "cr_dg4_king_aldwin", "cr_ice_elemental", "cr_ash_elemental",
+                              "cr_fen_wisp", "cr_rimeheart", "cr_r1_twin", "cr_r1_mother_mire", "cr_r2_varkas" }),
+            ("exp_c", new[] { "cr_hawk", "cr_harpy", "cr_crocolisk", "cr_wolf_frost", "cr_yeti", "cr_rootling", "cr_blight_hound",
+                              "cr_spider_giant", "cr_rootwarden", "cr_drake_whelp", "cr_frost_drake", "cr_r1_thornmaw", "cr_r1_hollow_heart",
+                              "cr_r2_frostclaw", "cr_r2_cinder_drake", "cr_r2_vyrmathra" }),
+            ("exp_people", new[] { "comp_bruna", "comp_ysolde", "comp_liora", "comp_nanami", "npc_archivist", "npc_ferryman",
+                                   "npc_fen_villager", "npc_mountain_guide", "npc_quartermaster", "npc_town_guard", "npc_dockhand" }),
         };
 
         enum View { Game, Quarter }

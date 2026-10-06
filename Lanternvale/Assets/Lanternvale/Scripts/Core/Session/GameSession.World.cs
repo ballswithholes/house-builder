@@ -703,7 +703,7 @@ namespace Lanternvale.Session
             TransitionDef t = null;
             if (Map?.Def?.transitions != null)
                 foreach (var x in Map.Def.transitions) if (x != null && x.id == transitionId) { t = x; break; }
-            if (t == null) return InteractResult.Fail("There is no way through here.");
+            if (t == null || !Map.IsTransitionVisible(t)) return InteractResult.Fail("There is no way through here.");
             if (!Map.IsTransitionUnlocked(t))
             {
                 var text = string.IsNullOrEmpty(t.lockedText) ? "The way is blocked." : t.lockedText;

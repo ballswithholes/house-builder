@@ -25,6 +25,8 @@ namespace Lanternvale.Data
         public readonly Dictionary<string, QuestDef> Quests = new Dictionary<string, QuestDef>();
         public readonly Dictionary<string, MapDef> Maps = new Dictionary<string, MapDef>();
         public readonly Dictionary<string, SpecialDoc> Specials = new Dictionary<string, SpecialDoc>();
+        /// <summary>Item sets by id (DataBundle.itemSets).</summary>
+        public readonly Dictionary<string, ItemSetDef> ItemSets = new Dictionary<string, ItemSetDef>();
         public GameConfigDef Config = new GameConfigDef();
 
         /// <summary>Problems found while parsing/mapping (unknown keys, bad enums, duplicate ids).</summary>
@@ -76,6 +78,7 @@ namespace Lanternvale.Data
             foreach (var q in bundle.quests) AddUnique(Quests, q.id, q, name, "quest");
             foreach (var m in bundle.maps) AddUnique(Maps, m.id, m, name, "map");
             foreach (var s in bundle.specials) AddUnique(Specials, s.id, s, name, "special");
+            foreach (var s in bundle.itemSets) AddUnique(ItemSets, s.id, s, name, "item set");
             if (bundle.config != null) Config = bundle.config;
         }
 

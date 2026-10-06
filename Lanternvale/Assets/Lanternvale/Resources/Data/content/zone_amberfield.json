@@ -1,0 +1,93 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: amberfield. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "amberfield",
+      "name": "Amberfield Downs",
+      "subtitle": "Golden downs on the west road",
+      "width": 130,
+      "depth": 56,
+      "skyTop": "#a9d8f5",
+      "skyBottom": "#fbe9c4",
+      "ground": "ground_meadow",
+      "groundTile": 8,
+      "biome": "highlands",
+      "environment": "outdoor",
+      "levelMin": 12,
+      "levelMax": 18,
+      "npcs": [
+        {"npc": "bruna", "pos": [100.0, 20.0], "hideFlag": "recruited_bruna"}
+      ],
+      "transitions": [
+        {
+          "id": "to_lanternvale",
+          "pos": [129.3, 30.0],
+          "size": [1.4, 6.0],
+          "targetMap": "lanternvale",
+          "targetSpawn": "from_amberfield",
+          "label": "Lanternvale"
+        },
+        {
+          "id": "to_brightwater",
+          "pos": [0.7, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_amberfield",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_barrow",
+          "pos": [64.0, 46.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_barrow",
+          "targetSpawn": "from_amberfield",
+          "label": "The Barrow of King Aldwin",
+          "hidden": true,
+          "revealFlag": "found_barrow",
+          "marker": "door"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [126.0, 30.0]},
+        {"id": "from_lanternvale", "pos": [126.0, 30.0]},
+        {"id": "from_brightwater", "pos": [3.4, 22.0]},
+        {"id": "from_dgn_barrow", "pos": [64.0, 43.5]}
+      ],
+      "ambient": {"timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#fff6e8", "ambientIntensity": 1.0, "pollen": true},
+      "restArea": true,
+      "music": "music_highlands"
+    }
+  ],
+  "quests": [
+    {
+      "id": "mq2_ember_road",
+      "name": "The Ember Road",
+      "giver": "elder_maru",
+      "level": 12,
+      "zone": "amberfield",
+      "main": true,
+      "summary": "The Heart Lantern showed ash drifting down from the north. Elder Maru sends you west over Amberfield Downs to the archive in Brightwater.",
+      "stages": [
+        {
+          "id": "road",
+          "description": "Take the west road out of Lanternvale to Amberfield Downs.",
+          "objectives": [
+            {"type": "Reach", "target": "amberfield", "text": "Travel to Amberfield Downs"}
+          ],
+          "next": "archivist"
+        },
+        {
+          "id": "archivist",
+          "description": "Bring word back to Archivist Penhallow in Brightwater.",
+          "objectives": [
+            {"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}
+          ],
+          "onComplete": [
+            {"type": "SetFlag", "key": "mq2_ember_road_done"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 1000, "gold": 2000}
+    }
+  ]
+}

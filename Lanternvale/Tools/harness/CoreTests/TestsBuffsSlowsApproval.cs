@@ -158,7 +158,9 @@ namespace Lanternvale.Tests
             Assert(ev != null && ev.Amount == -3 && ev.Text.Contains("disapproves"), "approval toast for a witness");
 
             // at camp: unaffected
-            s.Recruit("kael"); s.Recruit("lys"); s.Recruit("pip");
+            foreach (var c in new[] { "kael", "lys", "rook", "torvan" })
+                if (s.Party.Count < s.PartySize) s.Recruit(c);   // fill the party (config.partySize)
+            s.Recruit("pip");
             Assert(s.CompanionStatusOf("pip") == CompanionStatus.Camp, "Pip waits at camp (party full)");
             s.TakeEvents();
             s.ChangeApproval("pip", 5);

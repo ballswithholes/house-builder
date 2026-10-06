@@ -170,8 +170,20 @@
             },
             {"text": "How is everyone?", "next": "e_post2"},
             {"text": "Keeper Ishiro is at peace now.", "next": "e_ishiro", "conditions": [{"type": "Flag", "key": "ishiro_at_peace"}], "once": true},
-            {"text": "Goodbye."}
+            {"text": "Goodbye."},
+            {
+              "text": "When the Heart Lantern flared, it showed me something. Ash, drifting down from the north.",
+              "next": "e_ember",
+              "conditions": [{"type": "QuestComplete", "key": "mq_lanterns"}, {"type": "QuestNotStarted", "key": "mq2_ember_road"}],
+              "outcomes": [{"type": "StartQuest", "key": "mq2_ember_road"}]
+            }
           ]
+        },
+        {
+          "id": "e_ember",
+          "speaker": "elder_maru",
+          "text": "*The Elder's pipe goes still.* Ash. Then the Hollow did not grow here at all — it was carried, like a seed on the wind. If you mean to follow it, take the west road over Amberfield Downs to Brightwater. Archivist Penhallow keeps the old records there. If anyone knows what sleeps in the north, it is him.",
+          "choices": [{"text": "I'll take the west road."}]
         },
         {
           "id": "e_ishiro",

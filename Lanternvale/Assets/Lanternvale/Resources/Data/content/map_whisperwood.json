@@ -5,7 +5,7 @@
       "name": "Whisperwood",
       "subtitle": "The old pilgrim road",
       "width": 100,
-      "depth": 15,
+      "depth": 46,
       "skyTop": "#a8d8c8",
       "skyBottom": "#f4f0d0",
       "layers": [
@@ -386,9 +386,20 @@
           "label": "The Old Lantern Shrine",
           "requireFlag": "rotheart_defeated",
           "lockedText": "A wall of grey, thorned roots chokes the pilgrim stair. Something huge breathes behind it."
+        },
+        {
+          "id": "to_dgn_mossdeep",
+          "pos": [46.0, 38.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_mossdeep",
+          "targetSpawn": "from_whisperwood",
+          "label": "Mossdeep Grotto",
+          "hidden": true,
+          "revealFlag": "found_mossdeep",
+          "marker": "cave"
         }
       ],
-      "spawns": [{"id": "default", "pos": [5.4, 6.6]}, {"id": "from_village", "pos": [5.4, 6.6]}, {"id": "from_shrine", "pos": [97.6, 3.6]}],
+      "spawns": [{"id": "default", "pos": [5.4, 6.6]}, {"id": "from_village", "pos": [5.4, 6.6]}, {"id": "from_shrine", "pos": [97.6, 3.6]}, {"id": "from_dgn_mossdeep", "pos": [46.0, 35.5]}],
       "regions": [
         {
           "id": "reg_whisperwood_edge",

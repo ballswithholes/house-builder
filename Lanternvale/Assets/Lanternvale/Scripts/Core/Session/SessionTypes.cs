@@ -35,6 +35,14 @@ namespace Lanternvale.Session
         TimeOfDayChanged,
         /// <summary>Story flags changed (Amount = GameSession.FlagsVersion); at most once per Tick / dialogue step.</summary>
         FlagsChanged,
+        /// <summary>The party tried to enter a raid map: open the raid picker (Id = map, Id2 = spawn, Amount = raidSize).</summary>
+        RaidPartyRequested,
+        /// <summary>A raid party was formed and entered its raid map (Id = map, Amount = raid size).</summary>
+        RaidStarted,
+        /// <summary>The raid ended: the previous party, leader and auto-play were restored (Id = map left).</summary>
+        RaidEnded,
+        /// <summary>A secret was discovered (Id = the flag, Text = the banner text).</summary>
+        SecretFound,
     }
 
     /// <summary>A notification for the UI (toasts, window requests, state changes). See Docs/SessionAPI.md §2.</summary>
@@ -134,7 +142,7 @@ namespace Lanternvale.Session
         public override string ToString() => Ok ? $"{Kind} {Id}" : "fail: " + Message;
     }
 
-    public enum TriggerKind { None, Dialogue, Combat, Travel, Locked }
+    public enum TriggerKind { None, Dialogue, Combat, Travel, Locked, RaidGate }
 
     /// <summary>Result of a position update: Stop = the UI should stop animating movement.</summary>
     public sealed class TriggerResult

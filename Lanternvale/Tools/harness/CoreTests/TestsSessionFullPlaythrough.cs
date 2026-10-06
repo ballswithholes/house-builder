@@ -2,7 +2,7 @@
 // through every main-quest stage to the Hollow Warden's defeat, the RekindleLanterns outcome and the return to Elder
 // Maru, plus every side quest's completion path — all through the public GameSession API:
 //   * the opening and every quest step are played as dialogues (choices picked by their text, no flags poked);
-//   * companions are recruited through their dialogues (party of 4, later recruits wait at camp);
+//   * companions are recruited through their dialogues (party of config.partySize = 5, later recruits wait at camp);
 //   * the party walks between maps through transitions and triggers encounters by walking into them;
 //   * every fight is played to the end by the party AI (AutoPlay on everyone) — a defeat fails the test;
 //   * between fights: loot is taken, level-ups are applied, the main character trains at the class trainer and
@@ -36,6 +36,9 @@ namespace Lanternvale.Tests
         public enum BridgeRoute { Fight, Intimidate, Pay, Paladin }
         public enum WicksRoute { Fight, Shaman }
         public enum KeeperRoute { Letter, Priest, Fight }
+
+        /// <summary>The quests of the 1-12 slice this playthrough completes (expansion quests live in other zones).</summary>
+        public static readonly string[] SliceQuests = { "mq_lanterns", "sq_shepherd", "sq_spirit_friend", "sq_wicks", "sq_satchel", "sq_bridge" };
 
         /// <summary>Balance report (--sim): every class through the whole slice with many seeds; where do runs fail?</summary>
         [Sim]
@@ -240,15 +243,17 @@ namespace Lanternvale.Tests
                 Assert(S.Flags.IsSet("moppet_found") && Stage("sq_spirit_friend") == "return", "Moppet found");
                 OpenChest("chest_moppet_stump");
 
-                // the Wayside Shrine → Komorebi; Seren joins (the party is now full)
-                Go(new Vec2(41f, 9.5f));
+                // the Wayside Shrine → Komorebi; Seren and Rook join (the party of 5 is now full)
+                Go(RegionPos("reg_wayshrine"));
                 Assert(Stage("mq_lanterns") == "komorebi", "main quest: komorebi (" + Stage("mq_lanterns") + ")");
                 TalkTo("komorebi", "How can I help", "I'll bring them", "Goodbye");
                 Assert(Stage("mq_lanterns") == "embers" && S.Flags.IsSet("met_komorebi"), "main quest: embers");
                 TalkTo("seren", "I'm going up to the Old Shrine too", "I'd be honoured");
-                Assert(S.CompanionStatusOf("seren") == CompanionStatus.Active && S.Party.Count == 4, "Seren joins, party of 4");
+                Assert(S.CompanionStatusOf("seren") == CompanionStatus.Active && S.Party.Count == Math.Min(4, S.PartySize), "Seren joins, party of 4");
+                bool roomForRook = S.Party.Count < S.PartySize;
                 TalkTo("rook", "The Hollow's spreading", "Welcome aboard");
-                Assert(S.CompanionStatusOf("rook") == CompanionStatus.Camp, "Rook waits at camp (party full)");
+                if (roomForRook) Assert(S.CompanionStatusOf("rook") == CompanionStatus.Active && S.Party.Count == Math.Min(5, S.PartySize), "Rook joins, party of 5");
+                else Assert(S.CompanionStatusOf("rook") == CompanionStatus.Camp, "Rook waits at camp (party full)");
 
                 // Mosslings: the scamps, then Puddlecap Hollow (wicks)
                 WalkInto("enc_mossling_scamps");
@@ -267,7 +272,7 @@ namespace Lanternvale.Tests
 
                 // the spiders' hollow (hidden ambush) and Fennick's satchel
                 WalkInto("enc_boars_road");
-                Go(new Vec2(70.4f, 10.8f));
+                Go(S.Map.FindEncounter("enc_spiders").pos);
                 Assert(S.Map.IsEncounterDone(S.Map.FindEncounter("enc_spiders")), "the spiders ambushed us and lost");
                 OpenChest("chest_satchel");
                 Assert(S.CountItem("fennicks_satchel") == 1 && Stage("sq_satchel") == "return", "satchel recovered");
@@ -311,6 +316,7 @@ namespace Lanternvale.Tests
                 Travel("to_shrine", "shrine");
                 Go(S.Leader.Position + new Vec2(2f, 0f));
                 Assert(Stage("mq_lanterns") == "warden", "main quest: warden (" + Stage("mq_lanterns") + ")");
+                Assert(S.Party.Count == S.PartySize, $"the party is full ({S.Party.Count}/{S.PartySize})");
                 TalkTo("torvan", "We're here to free the Warden", "Climb with us");
                 Assert(S.CompanionStatusOf("torvan") == CompanionStatus.Camp, "Torvan waits at camp");
                 WalkInto("enc_hollow_pilgrims");
@@ -339,7 +345,7 @@ namespace Lanternvale.Tests
                 Assert(S.Quests.IsCompleted("mq_lanterns"), "The Lanterns Go Dark complete");
                 ClaimRewards();
 
-                foreach (var q in Db.Quests.Keys) Assert(S.Quests.IsCompleted(q), $"quest {q} complete");
+                foreach (var q in SliceQuests) Assert(S.Quests.IsCompleted(q), $"quest {q} complete");
                 // the party grew on the way: levels, trained abilities, talents, loot, gold
                 Assert(S.Main.Level >= 10, $"levelled from 1 to {S.Main.Level}");
                 Assert(S.Main.Abilities.Count > startAbilities, $"the main character trained ({startAbilities} → {S.Main.Abilities.Count} abilities)");
@@ -350,6 +356,14 @@ namespace Lanternvale.Tests
                 Assert(S.Mode == SessionMode.Exploration && !S.IsGameOver, "still playing");
                 Assert(S.TrySaveGame(out var json, out var why), "save at the end: " + why);
                 Assert(S.LoadGame(json, out var err) && S.LanternsRekindled && S.Quests.IsCompleted("mq_lanterns"), "the finished game reloads: " + err);
+            }
+
+            /// <summary>Centre of a region of the current map (looked up in data, so maps can be re-laid out).</summary>
+            Vec2 RegionPos(string regionId)
+            {
+                var r = S.Map.Def.regions.Find(x => x.id == regionId);
+                Assert(r != null, $"region {regionId} on {S.MapId}");
+                return r.pos;
             }
 
             /// <summary>In the bags or worn by a roster member.</summary>

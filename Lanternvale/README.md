@@ -456,6 +456,7 @@ whole jobs of PNGs (§9 explains which).
 | `Docs/PresentationAPI.md` | the presentation APIs' semantics (2D-era wording; ThreeD.md wins where they differ), audio |
 | `Docs/UI_HUD.md`, `Docs/UI_Panels.md` | every HUD layer and window, UI conventions |
 | `Docs/ArtKeys.md`, `Docs/ArtPrompts.md` | art key catalog and production prompts |
+| `Docs/Expansion.md` | **the expansion contract** ("The Ember Road": quest markers, combat sound, deeper maps and hidden dungeons, zones 12–30, party of 5, raids of 10, sets and legendaries) |
 
 ---
 

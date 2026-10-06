@@ -1,0 +1,15 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: raidloot. Expand freely; keep every id, transition and spawn of §1. Boss tables: gold only until the raid loot lands.",
+  "lootTables": [
+    {"id": "lt_r1_thornmaw", "goldMin": 2000, "goldMax": 3000},
+    {"id": "lt_r1_twins", "goldMin": 2000, "goldMax": 3000},
+    {"id": "lt_r1_mother_mire", "goldMin": 2500, "goldMax": 3500},
+    {"id": "lt_r1_hollow_heart", "goldMin": 4000, "goldMax": 6000},
+    {"id": "lt_r1_trash", "goldMin": 300, "goldMax": 600},
+    {"id": "lt_r2_frostclaw", "goldMin": 4000, "goldMax": 5000},
+    {"id": "lt_r2_cinder_drakes", "goldMin": 4000, "goldMax": 5000},
+    {"id": "lt_r2_varkas", "goldMin": 4500, "goldMax": 6000},
+    {"id": "lt_r2_vyrmathra", "goldMin": 8000, "goldMax": 12000},
+    {"id": "lt_r2_trash", "goldMin": 500, "goldMax": 900}
+  ]
+}

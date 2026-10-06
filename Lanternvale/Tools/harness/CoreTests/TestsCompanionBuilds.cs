@@ -15,6 +15,11 @@ namespace Lanternvale.Tests
         /// <summary>The role each companion's build is meant to give the companion AI (RoleInference from the dominant tree).</summary>
         static readonly Dictionary<string, UnitRole> ExpectedRoles = new Dictionary<string, UnitRole>
         {
+            // expansion companions (Docs/Expansion.md §8; contract stubs, refined by the companions builder)
+            { "bruna", UnitRole.Tank },       // Warrior: Protection
+            { "ysolde", UnitRole.Tank },      // Paladin: Protection (a tree role needs 5 talent points: from level 14)
+            { "liora", UnitRole.Healer },     // Priest: Holy
+            { "nanami", UnitRole.Healer },    // Shaman: Restoration (from level 14)
             { "kael", UnitRole.Tank },        // Warrior: Protection
             { "seren", UnitRole.Healer },     // Priest: Holy, then Discipline
             { "aldric", UnitRole.MeleeDps },  // Paladin: sword-and-board Retribution
@@ -23,6 +28,14 @@ namespace Lanternvale.Tests
             { "pip", UnitRole.MeleeDps },
             { "torvan", UnitRole.MeleeDps },
             { "morwen", UnitRole.RangedDps },
+        };
+
+        /// <summary>Lowest level at which a companion's expected role is asserted. RoleInference reads the dominant talent
+        /// tree only from 5 points (level 14); below that a Paladin or Shaman falls back to its class role (melee).</summary>
+        static readonly Dictionary<string, int> RoleFromLevel = new Dictionary<string, int>
+        {
+            { "ysolde", 14 },
+            { "nanami", 14 },
         };
 
         /// <summary>Talent ranks after spending the first <paramref name="points"/> entries of a build.</summary>
@@ -97,6 +110,7 @@ namespace Lanternvale.Tests
                     Harness.Assert(Progression.TalentPointsAvailable(u) == 0, $"{tag}: all talent points spent");
                     var build = u.Companion.preferredTalents.Length > 0 ? u.Companion.preferredTalents : u.Class.defaultBuild;
                     Harness.Assert(SameTalents(u, Prefix(build, Progression.TalentPointsTotal(level))), $"{tag}: talents follow the build in order ({Describe(u)})");
+                    if (RoleFromLevel.TryGetValue(kv.Key, out var from) && level < from) continue;
                     Harness.Assert(u.Role == kv.Value, $"{tag}: role {u.Role}, expected {kv.Value} ({Describe(u)})");
                 }
             }

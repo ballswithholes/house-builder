@@ -1,0 +1,48 @@
+{
+  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: r2. Expand freely; keep every id, transition and spawn of §1.",
+  "maps": [
+    {
+      "id": "raid_ashwyrm_roost",
+      "name": "Ashwyrm's Roost",
+      "subtitle": "Raid: the dragon's mountain-top roost",
+      "width": 110,
+      "depth": 64,
+      "skyTop": "#5a4a5e",
+      "skyBottom": "#e8a77c",
+      "ground": "ground_shrine",
+      "groundTile": 8,
+      "biome": "roost",
+      "environment": "outdoor",
+      "levelMin": 31,
+      "levelMax": 33,
+      "raidSize": 10,
+      "raidReturnMap": "skyreach",
+      "raidReturnSpawn": "from_raid_ashwyrm_roost",
+      "npcs": [],
+      "transitions": [
+        {
+          "id": "to_skyreach",
+          "pos": [0.7, 32.0],
+          "size": [1.4, 6.0],
+          "targetMap": "skyreach",
+          "targetSpawn": "from_raid_ashwyrm_roost",
+          "label": "Skyreach Peaks"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [3.4, 32.0]},
+        {"id": "from_skyreach", "pos": [3.4, 32.0]}
+      ],
+      "ambient": {
+        "timeOfDay": "dusk",
+        "dayNightCycle": false,
+        "ambientColor": "#f0c8a8",
+        "ambientIntensity": 0.85,
+        "ash": true,
+        "embers": true
+      },
+      "restArea": false,
+      "music": "music_raid"
+    }
+  ]
+}

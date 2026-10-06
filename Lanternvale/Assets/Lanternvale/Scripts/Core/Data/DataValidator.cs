@@ -11,6 +11,18 @@ namespace Lanternvale.Data
         /// <summary>Special handler names implemented by the rules engine. The rules layer registers these at startup.</summary>
         public static Func<string, bool> IsSpecialImplemented = _ => true;
 
+        /// <summary>Flags set by code rather than data (specials). Quest Flag objectives on these need no data setter.</summary>
+        public static readonly HashSet<string> CodeSetFlags = new HashSet<string>(StringComparer.Ordinal) { "lanterns_rekindled" };
+
+        // Value sets of string-typed fields (Docs/Expansion.md §2).
+        public static readonly string[] TransitionMarkers = { "", "none", "cave", "door", "stairs", "portal" };
+        public static readonly string[] Biomes = { "", "meadow", "village", "forest", "shrine", "highlands", "fen", "peaks", "cave", "ice_cave", "crypt", "hollow_heart", "roost" };
+        public static readonly string[] Environments = { "", "outdoor", "cave", "crypt" };
+        public static readonly string[] CreatureMaterials = { "", "plate", "mail", "leather", "cloth", "flesh", "fur", "chitin", "bone", "wood", "stone", "ether", "ice", "scale", "wet" };
+        public static readonly string[] CreatureVoices = { "", "beast", "humanoid", "spirit", "wood", "stone", "dragon", "frog", "gnoll", "none" };
+        public static readonly string[] PassiveTypes = { "Stat", "AbilityMod", "Proc", "GrantAbility", "Special" };
+        public static readonly string[] SetBonusTypes = { "Stat", "AbilityMod", "Proc", "Special" };
+
         public static List<string> Validate(GameDatabase db)
         {
             var p = new List<string>(db.Problems);
@@ -209,14 +221,80 @@ namespace Lanternvale.Data
                     Err(w, "equipable item needs equip slot");
                 foreach (var e in i.equipEffects)
                 {
+                    if (!PassiveTypes.Contains(e.type)) Err(w, $"unknown equipEffects type '{e.type}' ({string.Join(", ", PassiveTypes)})");
                     if (e.type == "Proc" && e.proc != null) CheckEffects(e.proc.effects, w + ".proc");
                     if (e.type == "GrantAbility" && !HasAbility(e.ability)) Err(w, $"grants unknown ability '{e.ability}'");
                     UseSpecial(e.special, w);
                 }
+                if (i.quality == Quality.Legendary && !i.unique) Err(w, "a Legendary item must be unique");
             }
+
+            // item sets
+            bool IsEquipable(ItemDef it) =>
+                it != null && (it.kind == ItemKind.Weapon || it.kind == ItemKind.Armor || it.kind == ItemKind.Accessory) && it.equip != EquipType.None;
+            var setOfItem = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var set in db.ItemSets.Values)
+            {
+                var w = $"item set {set.id}";
+                if (string.IsNullOrEmpty(set.name)) Err(w, "missing name");
+                var items = set.items ?? new string[0];
+                int equipable = 0;
+                foreach (var id in items.Distinct())
+                {
+                    if (!HasItem(id)) { Err(w, $"unknown item '{id}'"); continue; }
+                    if (!IsEquipable(db.Items[id])) Err(w, $"item '{id}' is not equipable");
+                    else equipable++;
+                    if (setOfItem.TryGetValue(id, out var other)) Err(w, $"item '{id}' already belongs to set '{other}'");
+                    else setOfItem[id] = set.id;
+                }
+                if (items.Length != items.Distinct().Count()) Err(w, "lists an item twice");
+                if (equipable < 2) Err(w, "needs at least 2 equipable items");
+                int prev = 0;
+                for (int b = 0; b < set.bonuses.Count; b++)
+                {
+                    var bonus = set.bonuses[b];
+                    var bw = $"{w}.bonuses[{b}]";
+                    if (bonus.pieces < 1 || bonus.pieces > items.Length) Err(bw, $"pieces {bonus.pieces} must be in [1, {items.Length}]");
+                    if (bonus.pieces <= prev) Err(bw, "pieces must be strictly increasing (and unique)");
+                    prev = Math.Max(prev, bonus.pieces);
+                    foreach (var e in bonus.equipEffects)
+                    {
+                        if (!SetBonusTypes.Contains(e.type)) Err(bw, $"effect type '{e.type}' is not allowed in a set bonus ({string.Join(", ", SetBonusTypes)})");
+                        if (e.type == "Proc")
+                        {
+                            if (e.proc == null) Err(bw, "Proc effect without proc");
+                            else CheckEffects(e.proc.effects, bw + ".proc");
+                        }
+                        if (e.type == "AbilityMod") foreach (var x in e.abilities) if (!HasAbility(x)) Err(bw, $"AbilityMod unknown ability '{x}'");
+                        UseSpecial(e.special, bw);
+                    }
+                }
+            }
+
+            // loot tables
             foreach (var l in db.LootTables.Values)
+            {
+                var lw = $"loot {l.id}";
                 foreach (var e in l.entries)
-                    if (!e.random && !HasItem(e.item)) Err($"loot {l.id}", $"unknown item '{e.item}'");
+                {
+                    var pool = e.pool ?? new string[0];
+                    var weights = e.weights ?? new float[0];
+                    if (pool.Length > 0)
+                    {
+                        if (!string.IsNullOrEmpty(e.item)) Err(lw, $"entry has both item '{e.item}' and a pool (they are exclusive)");
+                        if (e.random) Err(lw, "entry is both random and pooled (they are exclusive)");
+                        foreach (var id in pool) if (!HasItem(id)) Err(lw, $"pool: unknown item '{id}'");
+                        if (weights.Length > 0 && weights.Length != pool.Length) Err(lw, $"weights has {weights.Length} entries but the pool has {pool.Length}");
+                    }
+                    else
+                    {
+                        if (!e.random && !HasItem(e.item)) Err(lw, $"unknown item '{e.item}'");
+                        if (weights.Length > 0) Err(lw, "weights without a pool");
+                    }
+                    if (e.perMembers < 0) Err(lw, "perMembers must be >= 0");
+                    if (e.random && e.quality >= Quality.Epic) Err(lw, $"random {e.quality} drops are not allowed (author Epic and Legendary items, use a pool)");
+                }
+            }
 
             // creatures
             foreach (var c in db.Creatures.Values)
@@ -226,6 +304,10 @@ namespace Lanternvale.Data
                 foreach (var a in c.passives) if (!HasAura(a)) Err(w, $"unknown passive aura '{a}'");
                 if (!string.IsNullOrEmpty(c.lootTable) && !db.LootTables.ContainsKey(c.lootTable)) Err(w, $"unknown loot table '{c.lootTable}'");
                 if (c.levelMax < c.levelMin) Err(w, "levelMax < levelMin");
+                if (c.levelFloor < 0 || c.levelCap < 0) Err(w, "levelFloor/levelCap must be >= 0");
+                if (c.levelFloor > 0 && c.levelCap > 0 && c.levelFloor > c.levelCap) Err(w, $"levelFloor {c.levelFloor} > levelCap {c.levelCap}");
+                if (!CreatureMaterials.Contains(c.material ?? "")) Err(w, $"unknown material '{c.material}' ({string.Join("|", CreatureMaterials.Skip(1))})");
+                if (!CreatureVoices.Contains(c.voice ?? "")) Err(w, $"unknown voice '{c.voice}' ({string.Join("|", CreatureVoices.Skip(1))})");
             }
 
             // npcs & companions
@@ -336,11 +418,49 @@ namespace Lanternvale.Data
                 }
             }
 
+            // quest sources: who starts quests and who sets flags (dialogue nodes and choices, quest onComplete, map data)
+            var questStarters = new HashSet<string>(StringComparer.Ordinal);
+            var settableFlags = new HashSet<string>(CodeSetFlags, StringComparer.Ordinal);
+            void IndexOutcomes(IEnumerable<OutcomeDef> outs)
+            {
+                foreach (var o in outs)
+                {
+                    if (o.type == OutcomeType.StartQuest || o.type == OutcomeType.SetQuestStage) questStarters.Add(o.key ?? "");
+                    if (o.type == OutcomeType.SetFlag && !string.IsNullOrEmpty(o.key)) settableFlags.Add(o.key);
+                }
+            }
+            foreach (var d in db.Dialogues.Values)
+                foreach (var n in d.nodes)
+                {
+                    IndexOutcomes(n.outcomes);
+                    foreach (var c in n.choices) IndexOutcomes(c.outcomes);
+                }
+            foreach (var q in db.Quests.Values)
+                foreach (var s in q.stages) IndexOutcomes(s.onComplete);
+            foreach (var c in db.Companions.Keys) settableFlags.Add("recruited_" + c);
+            foreach (var m in db.Maps.Values)
+            {
+                foreach (var r in m.regions)
+                {
+                    if (!string.IsNullOrEmpty(r.enterFlag)) settableFlags.Add(r.enterFlag);
+                    if (!string.IsNullOrEmpty(r.checkFlag)) settableFlags.Add(r.checkFlag);
+                }
+                foreach (var e in m.encounters) settableFlags.Add(!string.IsNullOrEmpty(e.doneFlag) ? e.doneFlag : "enc_" + e.id);
+            }
+            bool IsPerson(string id) => !string.IsNullOrEmpty(id) && (db.Npcs.ContainsKey(id) || db.Companions.ContainsKey(id));
+            bool HasTalkDialogue(string id) =>
+                db.Npcs.TryGetValue(id ?? "", out var npc) ? !string.IsNullOrEmpty(npc.dialogue)
+                : db.Companions.TryGetValue(id ?? "", out var comp) && !string.IsNullOrEmpty(comp.recruitDialogue);
+
             // quests
             foreach (var q in db.Quests.Values)
             {
                 var w = $"quest {q.id}";
                 if (q.stages.Count == 0) Err(w, "no stages");
+                if (!IsPerson(q.giver)) Err(w, $"giver '{q.giver}' is not a known npc or companion");
+                if (!questStarters.Contains(q.id)) Err(w, "nothing starts it (no StartQuest/SetQuestStage outcome in any dialogue or quest)");
+                if (q.minLevel < 0) Err(w, "minLevel must be >= 0");
+                if (!string.IsNullOrEmpty(q.zone) && !db.Maps.ContainsKey(q.zone)) Err(w, $"zone '{q.zone}' is not a known map");
                 var stageIds = new HashSet<string>(q.stages.Select(s => s.id));
                 foreach (var s in q.stages)
                 {
@@ -350,16 +470,85 @@ namespace Lanternvale.Data
                         if (o.type == ObjectiveType.Kill && !HasCreature(o.target)) Err(w, $"kill objective unknown creature '{o.target}'");
                         if (o.type == ObjectiveType.Collect && !HasItem(o.target)) Err(w, $"collect objective unknown item '{o.target}'");
                         if (o.type == ObjectiveType.Talk && !db.Npcs.ContainsKey(o.target) && !db.Companions.ContainsKey(o.target)) Err(w, $"talk objective unknown npc '{o.target}'");
+                        else if (o.type == ObjectiveType.Talk && !HasTalkDialogue(o.target)) Err(w, $"stage {s.id}: talk target '{o.target}' has no dialogue (a Talk objective completes when its dialogue ends)");
+                        if (o.type == ObjectiveType.Flag && string.IsNullOrEmpty(s.turnIn) && !settableFlags.Contains(o.target ?? ""))
+                            Err(w, $"stage {s.id}: nothing sets flag '{o.target}' (no SetFlag, region enterFlag/checkFlag, encounter doneFlag or Recruit) and the stage has no turnIn");
                     }
+                    if (!string.IsNullOrEmpty(s.turnIn) && !IsPerson(s.turnIn)) Err(w, $"stage {s.id}: turnIn '{s.turnIn}' is not a known npc or companion");
                     CheckOutcomes(s.onComplete, w);
                 }
                 foreach (var i in q.rewards.items.Concat(q.rewards.choiceItems)) if (!HasItem(i)) Err(w, $"reward unknown item '{i}'");
             }
 
+            // minLevel > 1: every dialogue StartQuest of the quest is gated by Level >= minLevel (on the choice or its node)
+            int LevelGate(IEnumerable<ConditionDef> conds) =>
+                conds.Where(c => c.type == ConditionType.Level).Select(c => c.amount).DefaultIfEmpty(0).Max();
+            void CheckStartLevel(IEnumerable<OutcomeDef> outs, int gate, string where)
+            {
+                foreach (var o in outs)
+                    if (o.type == OutcomeType.StartQuest && db.Quests.TryGetValue(o.key ?? "", out var sq) && sq.minLevel > 1 && gate < sq.minLevel)
+                        Err(where, $"StartQuest {sq.id} needs a Level >= {sq.minLevel} condition (quest minLevel)");
+            }
+            foreach (var d in db.Dialogues.Values)
+                foreach (var n in d.nodes)
+                {
+                    int nodeGate = LevelGate(n.conditions);
+                    CheckStartLevel(n.outcomes, nodeGate, $"dialogue {d.id}.{n.id}");
+                    foreach (var c in n.choices)
+                        CheckStartLevel(c.outcomes, Math.Max(nodeGate, LevelGate(c.conditions)), $"dialogue {d.id}.{n.id} choice '{c.text}'");
+                }
+
             // maps
+            var encounterMap = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var m in db.Maps.Values)
             {
                 var w = $"map {m.id}";
+                if (!Biomes.Contains(m.biome ?? "")) Err(w, $"unknown biome '{m.biome}' ({string.Join("|", Biomes.Skip(1))})");
+                if (!Environments.Contains(m.environment ?? "")) Err(w, $"unknown environment '{m.environment}' ({string.Join("|", Environments.Skip(1))})");
+                if (m.raidSize < 0 || m.raidSize > db.Config.maxRaidSize) Err(w, $"raidSize {m.raidSize} must be in [0, {db.Config.maxRaidSize}]");
+                if (m.raidSize > 0)
+                {
+                    if (!db.Maps.TryGetValue(m.raidReturnMap ?? "", out var rm)) Err(w, $"raid needs a valid raidReturnMap (got '{m.raidReturnMap}')");
+                    else if (!rm.spawns.Any(sp => sp.id == m.raidReturnSpawn)) Err(w, $"raidReturnMap '{m.raidReturnMap}' has no spawn '{m.raidReturnSpawn}'");
+                }
+                if (m.levelMin < 0 || m.levelMax < 0 || (m.levelMax > 0 && m.levelMax < m.levelMin)) Err(w, $"bad level band {m.levelMin}-{m.levelMax}");
+                if (m.fill < 0f || m.fill > 1f) Err(w, "fill must be in [0, 1]");
+                for (int i = 0; i < m.paths.Count; i++)
+                    if (m.paths[i].points == null || m.paths[i].points.Count < 2) Err(w, $"paths[{i}] needs at least 2 points");
+                for (int i = 0; i < m.water.Count; i++)
+                {
+                    var wd = m.water[i];
+                    int need = wd.closed ? 3 : 2;
+                    if (wd.points == null || wd.points.Count < need) Err(w, $"water[{i}] needs at least {need} points{(wd.closed ? " (closed)" : "")}");
+                }
+                foreach (var t in m.transitions)
+                {
+                    if (t.hidden && string.IsNullOrEmpty(t.revealFlag)) Err(w, $"transition {t.id}: hidden needs a revealFlag");
+                    if (!TransitionMarkers.Contains(t.marker ?? "")) Err(w, $"transition {t.id}: unknown marker '{t.marker}' ({string.Join("|", TransitionMarkers.Skip(1))})");
+                }
+                foreach (var r in m.regions)
+                    if (r.check != null && string.IsNullOrEmpty(r.checkFlag)) Err(w, $"region {r.id}: a check needs a checkFlag");
+                foreach (var list in new[] { m.props, m.foreground })
+                    foreach (var pr in list)
+                        if (!string.IsNullOrEmpty(pr.dialogue) && !db.Dialogues.ContainsKey(pr.dialogue)) Err(w, $"prop {pr.art} '{pr.interact}': unknown dialogue '{pr.dialogue}'");
+                var ids = new Dictionary<string, string>(StringComparer.Ordinal);
+                void UniqueId(string id, string kind)
+                {
+                    if (string.IsNullOrEmpty(id)) return;
+                    if (ids.TryGetValue(id, out var prevKind)) Err(w, $"id '{id}' is used by a {prevKind} and a {kind} (ids are unique per map across interact, chest, transition and region ids)");
+                    else ids[id] = kind;
+                }
+                foreach (var list in new[] { m.props, m.foreground })
+                    foreach (var pr in list) UniqueId(pr.interact, "prop");
+                foreach (var c in m.chests) UniqueId(c.id, "chest");
+                foreach (var t in m.transitions) UniqueId(t.id, "transition");
+                foreach (var r in m.regions) UniqueId(r.id, "region");
+                foreach (var e in m.encounters)
+                {
+                    if (string.IsNullOrEmpty(e.id)) continue;
+                    if (encounterMap.TryGetValue(e.id, out var other)) Err(w, $"encounter id '{e.id}' is also used on map '{other}' (encounter ids are global)");
+                    else encounterMap[e.id] = m.id;
+                }
                 foreach (var n in m.npcs) if (!db.Npcs.ContainsKey(n.npc) && !db.Companions.ContainsKey(n.npc)) Err(w, $"unknown npc '{n.npc}'");
                 foreach (var e in m.encounters)
                 {

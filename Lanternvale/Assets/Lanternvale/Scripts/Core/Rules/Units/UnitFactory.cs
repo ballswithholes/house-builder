@@ -218,11 +218,18 @@ namespace Lanternvale.Rules
             Specials.OnModValuesRefreshed(a);
         }
 
-        /// <summary>Level used for a creature in an encounter (explicit, scaled to party, or random in its range).</summary>
+        /// <summary>Level used for a creature in an encounter (explicit, scaled to party, or random in its range).
+        /// Scaled levels are clamped to [max(1, levelFloor), levelCap &gt; 0 ? levelCap : 63].</summary>
         public static int CreatureLevel(CreatureDef def, int explicitLevel, int partyLevel, Rng rng)
         {
             if (explicitLevel > 0) return explicitLevel;
-            if (def.scaleToParty) return MathUtil.Clamp(partyLevel + def.levelOffset, 1, 63);
+            if (def.scaleToParty)
+            {
+                int lo = Math.Max(1, def.levelFloor);
+                int hi = def.levelCap > 0 ? def.levelCap : 63;
+                if (hi < lo) hi = lo;
+                return MathUtil.Clamp(partyLevel + def.levelOffset, lo, hi);
+            }
             return rng != null ? rng.Range(def.levelMin, Math.Max(def.levelMin, def.levelMax)) : def.levelMin;
         }
     }
