@@ -69,6 +69,16 @@ done
 "$tool" map whisperwood "$out/whisperwood_tamsin_dusk.png" --at 10,37 --hour 19
 "$tool" map dgn_mossdeep "$out/dgn_mossdeep_pools.png" --at 26,31
 "$tool" map dgn_mossdeep "$out/dgn_mossdeep_throne.png" --at 54,21
+# ---- sh: the shrine's terraced climb (sh2) and the Lantern Catacombs (dg3)
+"$tool" map shrine "$out/shrine_lantern_steps.png" --at 24,18 --flags heart_lantern_lit
+"$tool" map shrine "$out/shrine_pilgrims_rest.png" --at 13,26 --flags heart_lantern_lit --level 13 --markers auto
+"$tool" map shrine "$out/shrine_keepers_lodge.png" --at 56,25 --flags heart_lantern_lit
+"$tool" map shrine "$out/shrine_high_terrace.png" --at 36,33 --flags heart_lantern_lit,found_lantern_catacombs
+"$tool" map shrine "$out/shrine_lookout.png" --at 8,34 --yaw -30 --flags heart_lantern_lit
+"$tool" map shrine "$out/shrine_terraces_far.png" --at 35,26 --zoom 10.4 --flags heart_lantern_lit
+"$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_hall.png" --at 23,36
+"$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_ossuary.png" --at 25,8 --yaw 15
+"$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_chapel.png" --at 48,18 --yaw -15
 # ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null

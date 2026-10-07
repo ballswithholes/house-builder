@@ -1,0 +1,1096 @@
+{
+  "_note": "The Lantern Catacombs (prefix dg3): undead of the First Keeper's vigil and Hazama, the Lantern Lich, who relights dark lanterns (Rekindled Soul-Lanterns, static healers: put them out, or interrupt the cast) to heal. Levels 13-16 (floor 13, cap 16). Boss loot: one guaranteed Rare from the dg3 pool (party usable), an 18% Epic pool, gold and randoms.",
+  "creatures": [
+    {
+      "id": "cr_dg3_skeleton",
+      "name": "Catacomb Skeleton",
+      "description": "Bones in a dented helm, still standing the watch it was given three hundred years ago. Nobody ever came to relieve it.",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "attackSpeed": 2.2,
+      "moveSpeed": 7,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg3_rusted_cleave", "priority": 5, "chance": 70},
+        {"ability": "cr_dg3_shield_bash", "priority": 6, "condition": "targetCasting"}
+      ],
+      "immune": ["Fear"],
+      "lootTable": "lt_dg3_skeleton",
+      "faction": "Hollow",
+      "material": "bone",
+      "voice": "none",
+      "bark": "*The skeleton raises its notched sword in a salute it no longer understands.*"
+    },
+    {
+      "id": "cr_dg3_skeleton_archer",
+      "name": "Catacomb Bowman",
+      "description": "A skeleton under a mossy hood, its bowstring restrung with what looks like a candle wick.",
+      "sprite": "cr_skeleton_archer",
+      "portrait": "cr_bandit_archer",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 0.85,
+      "attackSpeed": 2.4,
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_arrow",
+      "moveSpeed": 7,
+      "size": 1.8,
+      "ai": "Ranged",
+      "abilities": [{"ability": "cr_dg3_grave_arrow", "priority": 5, "chance": 70}, {"ability": "cr_crippling_shot", "priority": 4, "chance": 50}],
+      "immune": ["Fear"],
+      "lootTable": "lt_dg3_skeleton",
+      "faction": "Hollow",
+      "material": "bone",
+      "voice": "none"
+    },
+    {
+      "id": "cr_dg3_drowned_dead",
+      "name": "Drowned Bones",
+      "description": "Ossuary dead that slid into the black water when the channel broke through. They have been waiting under it, very patiently, for company.",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 0.9,
+      "attackSpeed": 2.4,
+      "moveSpeed": 6,
+      "size": 1.85,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg3_drag_under", "priority": 6, "chance": 70, "condition": "targetNoAura:cr_dg3_drowning"},
+        {"ability": "cr_dg3_rusted_cleave", "priority": 4, "chance": 60}
+      ],
+      "immune": ["Fear"],
+      "lootTable": "lt_dg3_skeleton",
+      "faction": "Hollow",
+      "material": "wet",
+      "voice": "none",
+      "bark": "*The black water heaves, and bony hands come up out of it.*"
+    },
+    {
+      "id": "cr_dg3_hollow_knight",
+      "name": "Hollow Knight of the Vigil",
+      "description": "One of the shrine's lantern-knights, sworn to guard the keepers' rest. The First Keeper bound them to guard his vigil instead, and their lanterns burn violet now.",
+      "sprite": "cr_hollow_knight",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Elite",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 1.0,
+      "damageMult": 0.85,
+      "attackSpeed": 2.6,
+      "moveSpeed": 7,
+      "size": 2.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg3_vigil_ward", "priority": 8, "condition": "selfHpBelow:60"},
+        {"ability": "cr_dg3_knights_sweep", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg3_lanternbrand", "priority": 6, "chance": 70}
+      ],
+      "immune": ["Fear"],
+      "stats": [{"stat": "Resistance", "value": 10, "school": "Shadow"}],
+      "lootTable": "lt_dg3_hollow_knight",
+      "faction": "Hollow",
+      "material": "plate",
+      "voice": "spirit",
+      "bark": "NONE... PASS..."
+    },
+    {
+      "id": "cr_dg3_lantern_acolyte",
+      "name": "Hollowed Acolyte",
+      "description": "A novice of the old shrine who never finished the evening prayer. It is still trying. It keeps losing its place.",
+      "sprite": "cr_hollow_keeper",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 0.85,
+      "resource": "Mana",
+      "attackSpeed": 2.2,
+      "meleeSchool": "Shadow",
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_bolt",
+      "moveSpeed": 7,
+      "size": 1.9,
+      "ai": "Healer",
+      "abilities": [
+        {"ability": "cr_dg3_soulfire_mend", "priority": 8, "condition": "allyHpBelow:70"},
+        {"ability": "cr_dg3_dim_the_light", "priority": 5, "chance": 60, "condition": "targetNoAura:cr_hollowed"},
+        {"ability": "cr_dg3_soulfire_bolt", "priority": 3}
+      ],
+      "stats": [{"stat": "Resistance", "value": 10, "school": "Shadow"}],
+      "lootTable": "lt_dg3_acolyte",
+      "faction": "Hollow",
+      "material": "cloth",
+      "voice": "spirit",
+      "bark": "...as the lanterns keep the stair... as the stair keeps the... the... *It starts again from the beginning.*"
+    },
+    {
+      "id": "cr_dg3_soulfire_lantern",
+      "name": "Rekindled Soul-Lantern",
+      "description": "A dark lantern the First Keeper has lit again with somebody else's light. It pours that light into him, a little at a time.",
+      "sprite": "cr_hollow_wisp",
+      "portrait": "cr_hollow_wisp",
+      "type": "Undead",
+      "rank": "Minion",
+      "levelMin": 13,
+      "levelMax": 16,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 1.4,
+      "damageMult": 0.5,
+      "resource": "Mana",
+      "attackSpeed": 2.0,
+      "meleeSchool": "Shadow",
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_bolt",
+      "moveSpeed": 0,
+      "size": 1.0,
+      "ai": "Healer",
+      "abilities": [{"ability": "cr_dg3_lantern_tithe", "priority": 8}],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Stun", "Root"],
+      "xpMult": 0,
+      "faction": "Hollow",
+      "material": "ether",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg3_lantern_lich",
+      "name": "Hazama, the Lantern Lich",
+      "description": "The First Keeper of the Old Shrine. Three hundred years ago he was so afraid of the dark that he would not let his own light go out, and then he would not let anyone's go out.",
+      "sprite": "cr_lantern_lich",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Boss",
+      "levelMin": 15,
+      "levelMax": 16,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 13,
+      "levelCap": 16,
+      "healthMult": 1.25,
+      "damageMult": 1.6,
+      "resource": "Mana",
+      "attackSpeed": 2.4,
+      "meleeSchool": "Shadow",
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_bolt",
+      "moveSpeed": 6,
+      "size": 3.4,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_dg3_last_vigil", "priority": 10, "condition": "selfHpBelow:25"},
+        {"ability": "cr_dg3_rekindle", "priority": 9, "condition": "roundAtLeast:2"},
+        {"ability": "cr_dg3_drink_the_flame", "priority": 8, "condition": "selfHpBelow:60"},
+        {"ability": "cr_dg3_candle_requiem", "priority": 7, "condition": "roundAtLeast:3"},
+        {"ability": "cr_dg3_pinch_out", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg3_soulfire_bolt", "priority": 3}
+      ],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
+      "stats": [{"stat": "Resistance", "value": 15, "school": "Shadow"}],
+      "lootTable": "lt_dg3_lantern_lich",
+      "xpMult": 1.3,
+      "faction": "Hollow",
+      "material": "cloth",
+      "voice": "spirit",
+      "bark": "Shh. Can you hear them singing? Three hundred years, and not one light gone out."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_dg3_rusted_cleave",
+      "name": "Rusted Cleave",
+      "icon": "sword",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "description": "A notched old sword swung with three hundred years of grudge: weapon damage plus {0}.",
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110, "min": 4, "max": 6, "perLevel": 0.6}],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg3_shield_bash",
+      "name": "Rattling Bash",
+      "icon": "shield_bash",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 18,
+      "description": "A bash with a rusted shield that interrupts spellcasting.",
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 50}, {"type": "Interrupt", "lockout": 4}],
+      "tags": ["Interrupt"],
+      "aiHint": "Interrupt",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg3_grave_arrow",
+      "name": "Grave Arrow",
+      "icon": "arrow",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 9,
+      "description": "A black-fletched arrow for ranged weapon damage plus {0}.",
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110, "min": 3, "max": 5, "perLevel": 0.5, "ranged": true}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg3_drag_under",
+      "name": "Drag Under",
+      "icon": "water_drop",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 18,
+      "description": "Bony hands seize the target: weapon damage, and it cannot move for 6 sec.",
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 80}, {"type": "ApplyAura", "aura": "cr_dg3_drowning"}],
+      "aiHint": "Debuff",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg3_lanternbrand",
+      "name": "Lanternbrand",
+      "icon": "fire",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 12,
+      "description": "A blow with the knight's lantern-fist: weapon damage, and violet soulfire burns the target over 9 sec.",
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 115}, {"type": "ApplyAura", "aura": "cr_dg3_lanternbrand"}],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg3_knights_sweep",
+      "name": "Vigil Sweep",
+      "icon": "swords",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 14,
+      "description": "A wide sweep that hits up to 3 enemies in front for weapon damage plus {0}.",
+      "target": "Enemy",
+      "melee": true,
+      "area": {"shape": "Cone", "radius": 6, "angle": 120, "maxTargets": 3, "affects": "Enemies"},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 90, "min": 4, "max": 6, "perLevel": 0.6}],
+      "aiHint": "AoE",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg3_vigil_ward",
+      "name": "Ward of the Vigil",
+      "icon": "shield",
+      "school": "Holy",
+      "hidden": true,
+      "cooldown": 30,
+      "description": "The knight plants its feet and raises its lantern: damage taken reduced by 30% for 12 sec.",
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg3_vigil", "target": "Self"}],
+      "aiHint": "Defensive",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg3_soulfire_bolt",
+      "name": "Soulfire Bolt",
+      "icon": "void",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 2.0,
+      "description": "A bolt of violet soulfire for {0} Shadow damage.",
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 16, "max": 22, "perLevel": 1.6}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg3_soulfire_mend",
+      "name": "Soulfire Mend",
+      "icon": "shadow",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 6,
+      "description": "Pours a borrowed light into an ally's wounds, healing {0}.",
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Heal", "min": 26, "max": 32, "perLevel": 3}],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg3_dim_the_light",
+      "name": "Dim the Light",
+      "icon": "eye",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 15,
+      "description": "Turns the wick of the target's light down: healing taken reduced by 50% for 15 sec.",
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "cr_hollowed"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg3_lantern_tithe",
+      "name": "Lantern Tithe",
+      "icon": "drain",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 6,
+      "description": "The rekindled lantern pours its stolen light into the First Keeper, healing {0}.",
+      "target": "AllyOther",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 50, "max": 60, "perLevel": 4}],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg3_rekindle",
+      "name": "Rekindle the Dark Lanterns",
+      "icon": "fire",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 24,
+      "description": "Hazama relights two of his dark lanterns with stolen light. Each pours that light into him until it is put out. Interrupt the cast to stop it.",
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg3_soulfire_lantern", "count": 2, "target": "Self"}],
+      "tags": ["Telegraph"],
+      "aiHint": "Summon",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg3_drink_the_flame",
+      "name": "Drink the Flame",
+      "icon": "drain",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 3.0,
+      "cooldown": 18,
+      "description": "Hazama drinks from his crook's great lantern, healing himself for 8% of his health. Interrupt it!",
+      "target": "Self",
+      "effects": [{"type": "Heal", "pctOfMax": 8, "target": "Self"}],
+      "tags": ["Telegraph"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg3_candle_requiem",
+      "name": "Requiem of Seven Candles",
+      "icon": "skull",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 3.5,
+      "cooldown": 18,
+      "description": "The seven candles of Hazama's halo flare at once: {0} Shadow damage to enemies within 20 yards, and their healing taken is halved for 15 sec.",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 22, "max": 30, "perLevel": 2.2}, {"type": "ApplyAura", "aura": "cr_hollowed"}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg3_pinch_out",
+      "name": "Pinch Out the Wicks",
+      "icon": "void",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 30,
+      "description": "Hazama pinches the air. Enemies within 10 yards are silenced for 6 sec.",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true, "affects": "Enemies", "maxTargets": 3},
+      "effects": [{"type": "ApplyAura", "aura": "cr_snuffed"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg3_last_vigil",
+      "name": "The Last Vigil",
+      "icon": "fire",
+      "school": "Shadow",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "description": "Below 25% health the First Keeper refuses, absolutely, to go out.",
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg3_last_vigil", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_dg3_lanternbrand",
+      "name": "Lanternbrand",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 9,
+      "tickInterval": 3,
+      "description": "Burning with cold violet soulfire: Shadow damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 4, "max": 6, "perLevel": 0.5}]
+    },
+    {
+      "id": "cr_dg3_vigil",
+      "name": "Ward of the Vigil",
+      "icon": "shield",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 12,
+      "description": "Damage taken reduced by 30%.",
+      "mods": [{"stat": "DamageTaken", "value": -30, "pct": true}]
+    },
+    {
+      "id": "cr_dg3_drowning",
+      "name": "Dragged Under",
+      "icon": "water_drop",
+      "kind": "Debuff",
+      "duration": 6,
+      "states": ["Root"],
+      "description": "Held under by bony hands. Cannot move."
+    },
+    {
+      "id": "cr_dg3_last_vigil",
+      "name": "The Last Vigil",
+      "icon": "fire",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 0,
+      "description": "The First Keeper burns every light he has left. Damage dealt increased by 25%.",
+      "mods": [{"stat": "DamageDone", "value": 25, "pct": true}]
+    }
+  ],
+  "items": [
+    {
+      "id": "dg3_crook_of_the_first_keeper",
+      "name": "Crook of the First Keeper",
+      "icon": "staff",
+      "description": "Hazama's shepherd's crook, from which hung the great caged lantern. Without it, it is just a very old stick that hums a little at dusk.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 37,
+      "maxDamage": 56,
+      "speed": 3.0,
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 4}, {"stat": "Stamina", "value": 4}, {"stat": "SpellDamage", "value": 4}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_hollow_knight_greathelm",
+      "name": "Greathelm of the Vigil",
+      "icon": "armor",
+      "description": "An ashen barrel helm with a cross slit. Whatever looked out of it has gone home; it smells, oddly, of honey.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Head",
+      "armorType": "Mail",
+      "armor": 126,
+      "stats": [{"stat": "Strength", "value": 8}, {"stat": "Stamina", "value": 8}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_vigil_keepers_hood",
+      "name": "Vigil-Keeper's Hood",
+      "icon": "mask",
+      "description": "A deep leather hood for long nights on the stair. The inside is stitched with the keepers' evening prayer, in case you forget.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Head",
+      "armorType": "Leather",
+      "armor": 60,
+      "stats": [{"stat": "Agility", "value": 8}, {"stat": "Stamina", "value": 8}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_lanternguard_longsword",
+      "name": "Lanternguard Longsword",
+      "icon": "sword",
+      "description": "A lantern-knight's blade, its fuller etched with a row of tiny flames. It was always meant to guard the keepers, not their chains.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "OneHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 25,
+      "maxDamage": 37,
+      "speed": 2.6,
+      "stats": [{"stat": "Strength", "value": 4}, {"stat": "Stamina", "value": 4}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_mantle_of_small_flames",
+      "name": "Mantle of Small Flames",
+      "icon": "armor",
+      "description": "Indigo shoulders hung with seven tiny candle-charms. They flicker when you are about to say something kind.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Shoulder",
+      "armorType": "Cloth",
+      "armor": 28,
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 4}, {"stat": "Stamina", "value": 2}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_soulfire_censer",
+      "name": "Soulfire Censer",
+      "icon": "fire",
+      "description": "A brass censer that once held stolen light. It holds only incense now, and is much happier for it.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [{"stat": "Spirit", "value": 2}, {"stat": "Intellect", "value": 1}, {"stat": "HealingPower", "value": 13}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_grave_yew_longbow",
+      "name": "Grave-Yew Longbow",
+      "icon": "bow",
+      "description": "Cut from the yew that grows over the keepers' stair. Its string was restrung with a candle wick, and it has never once misfired.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Ranged",
+      "weaponType": "Bow",
+      "minDamage": 25,
+      "maxDamage": 39,
+      "speed": 2.8,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 2}],
+      "price": 3970
+    },
+    {
+      "id": "dg3_halo_of_seven_candles",
+      "name": "Halo of Seven Candles",
+      "icon": "halo",
+      "description": "Seven tiny flames on a gold ring, taken from the First Keeper's halo. They were afraid of the dark. With you, they don't seem to be.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 21,
+      "requiredLevel": 16,
+      "equip": "Neck",
+      "stats": [{"stat": "Intellect", "value": 3}, {"stat": "Spirit", "value": 3}, {"stat": "Stamina", "value": 3}, {"stat": "SpellDamage", "value": 4}],
+      "price": 7055
+    },
+    {
+      "id": "dg3_vigils_end",
+      "name": "Vigil's End",
+      "icon": "sword",
+      "description": "The greatsword of the lantern-knights' captain. When the last vigil ended it simply stopped being heavy.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 21,
+      "requiredLevel": 16,
+      "equip": "TwoHand",
+      "weaponType": "TwoHandSword",
+      "minDamage": 57,
+      "maxDamage": 86,
+      "speed": 3.5,
+      "stats": [{"stat": "Strength", "value": 10}, {"stat": "Stamina", "value": 10}, {"stat": "Agility", "value": 5}],
+      "price": 7055
+    },
+    {
+      "id": "dg3_junk_candle_stub",
+      "name": "Candle Stub of the Long Vigil",
+      "icon": "fire",
+      "description": "Burnt exactly halfway. Someone was in the middle of a prayer.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 220
+    },
+    {
+      "id": "dg3_junk_knucklebone",
+      "name": "Lucky Knucklebone",
+      "icon": "skull",
+      "description": "It is not lucky. Its previous owner can confirm.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 260
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_dg3_skeleton",
+      "goldMin": 90,
+      "goldMax": 200,
+      "entries": [
+        {"item": "dg3_junk_knucklebone", "chance": 35},
+        {"item": "dg3_junk_candle_stub", "chance": 25},
+        {"random": true, "chance": 10, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_dg3_acolyte",
+      "goldMin": 150,
+      "goldMax": 300,
+      "entries": [
+        {"item": "dg3_junk_candle_stub", "chance": 50},
+        {"item": "potion_lesser_mana", "chance": 25},
+        {"random": true, "chance": 15, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_dg3_hollow_knight",
+      "goldMin": 350,
+      "goldMax": 650,
+      "entries": [
+        {"item": "potion_healing", "chance": 30},
+        {"random": true, "chance": 35, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 8, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg3_lantern_lich",
+      "goldMin": 4500,
+      "goldMax": 6500,
+      "entries": [
+        {
+          "pool": [
+            "dg3_crook_of_the_first_keeper",
+            "dg3_hollow_knight_greathelm",
+            "dg3_vigil_keepers_hood",
+            "dg3_lanternguard_longsword",
+            "dg3_mantle_of_small_flames",
+            "dg3_soulfire_censer",
+            "dg3_grave_yew_longbow"
+          ],
+          "partyUsable": true,
+          "skipOwned": true
+        },
+        {"pool": ["dg3_halo_of_seven_candles", "dg3_vigils_end"], "chance": 18, "partyUsable": true, "skipOwned": true},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 25, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg3_chest_reliquary",
+      "goldMin": 1200,
+      "goldMax": 2000,
+      "entries": [
+        {"item": "elixir_wisdom", "chance": 60},
+        {"item": "potion_healing", "min": 1, "max": 2},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 2},
+        {"random": true, "chance": 45, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg3_chest_ossuary",
+      "goldMin": 800,
+      "goldMax": 1400,
+      "entries": [
+        {"item": "potion_lesser_mana", "min": 1, "max": 2},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 30, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg3_chest_hoard",
+      "goldMin": 3000,
+      "goldMax": 5000,
+      "entries": [
+        {"item": "elixir_lantern_oil", "min": 2, "max": 2},
+        {"random": true, "chance": 100, "quality": "Rare"},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 2}
+      ]
+    }
+  ],
+  "npcs": [{"id": "dg3_hazama", "name": "Hazama, the First Keeper", "sprite": "cr_lantern_lich", "portrait": "cr_hollow_spirit"}],
+  "dialogues": [
+    {
+      "id": "dlg_dg3_lantern_hana",
+      "start": "done",
+      "nodes": [
+        {
+          "id": "done",
+          "speaker": "narrator",
+          "text": "*The lantern burns a calm gold now, and it is empty.*",
+          "conditions": [{"type": "Flag", "key": "dg3_keeper_hana_freed"}],
+          "fallback": "l1",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "l1",
+          "speaker": "narrator",
+          "text": "*A stone lantern burns with cold violet fire. Inside it something like a woman's shape keeps lifting a smoker to a hive that isn't there. The plaque on its foot reads: KEEPER HANA. SHE KEPT THE BEES.*",
+          "choices": [{"text": "(Open the lantern's little door and let the light out.)", "next": "free"}, {"text": "(Leave it.)"}]
+        },
+        {
+          "id": "free",
+          "speaker": "narrator",
+          "text": "*The violet flame shivers, and turns gold. A warm draught that smells of honey and warm wax brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_hana_freed"}, {"type": "GiveXP", "amount": 80}],
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg3_lantern_tomo",
+      "start": "done",
+      "nodes": [
+        {
+          "id": "done",
+          "speaker": "narrator",
+          "text": "*The lantern burns a calm gold now, and it is empty.*",
+          "conditions": [{"type": "Flag", "key": "dg3_keeper_tomo_freed"}],
+          "fallback": "l1",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "l1",
+          "speaker": "narrator",
+          "text": "*A stone lantern burns with cold violet fire. Inside it something like a man's shape keeps setting a stone that never settles. The plaque on its foot reads: KEEPER TOMO. HE MENDED THE STAIR.* *The lantern's little door is rusted shut.*",
+          "choices": [
+            {
+              "text": "(Wrench the door open.)",
+              "check": {"skill": "Athletics", "dc": 12, "success": "free", "failure": "stuck"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Work the hinge pins loose.)",
+              "check": {"skill": "SleightOfHand", "dc": 12, "success": "free", "failure": "stuck"},
+              "once": true,
+              "tag": "SLEIGHT OF HAND"
+            },
+            {
+              "text": "(Tell Keeper Tomo his stair is mended, and every step of it holds.)",
+              "next": "free",
+              "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}]
+            },
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "stuck",
+          "speaker": "narrator",
+          "text": "*The door doesn't budge. Inside, the shape stops setting its stone and looks at you, a little reproachfully.*",
+          "choices": [{"text": "(Keep working at it, gently, until it gives.)", "next": "free"}, {"text": "(Leave it.)"}]
+        },
+        {
+          "id": "free",
+          "speaker": "narrator",
+          "text": "*The violet flame shivers, and turns gold. A warm draught that smells of cut stone and rain brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_tomo_freed"}, {"type": "GiveXP", "amount": 80}],
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg3_lantern_rin",
+      "start": "done",
+      "nodes": [
+        {
+          "id": "done",
+          "speaker": "narrator",
+          "text": "*The lantern burns a calm gold now, and it is empty.*",
+          "conditions": [{"type": "Flag", "key": "dg3_keeper_rin_freed"}],
+          "fallback": "l1",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "l1",
+          "speaker": "narrator",
+          "text": "*A stone lantern burns with cold violet fire. Inside it something like a woman's shape keeps counting on her fingers and starting over. The plaque on its foot reads: KEEPER RIN. SHE TAUGHT THE NOVICES TO COUNT.* *Above the door, a row of novices' tally marks has been scratched into the stone, with one gap in it.*",
+          "choices": [
+            {
+              "text": "(Count the marks and scratch in the missing one.)",
+              "check": {"skill": "Investigation", "dc": 12, "success": "free", "failure": "miscount"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Count aloud, the way Aiko counts the steps.)",
+              "next": "free",
+              "conditions": [{"type": "QuestActive", "key": "sh2_keepers_rest"}]
+            },
+            {"text": "(Open the lantern's little door.)", "next": "free"},
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "miscount",
+          "speaker": "narrator",
+          "text": "*You lose count somewhere around forty. Inside the lantern, the shape sighs and holds up nine fingers, very patiently.*",
+          "choices": [{"text": "(Open the lantern's little door.)", "next": "free"}, {"text": "(Leave it.)"}]
+        },
+        {
+          "id": "free",
+          "speaker": "narrator",
+          "text": "*The violet flame shivers, and turns gold. A warm draught that smells of chalk and orange peel brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_rin_freed"}, {"type": "GiveXP", "amount": 80}],
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg3_chapel_guard",
+      "start": "g1",
+      "nodes": [
+        {
+          "id": "g1",
+          "speaker": "narrator",
+          "text": "*Two knights in ashen plate stand at the black channel's ford, lanterns hanging from their fists. Their helms turn toward you together, slow as millstones, and a robed acolyte waits behind them on the far bank, murmuring.* NONE PASS. THE FIRST KEEPER IS AT HIS DEVOTIONS.",
+          "choices": [
+            {
+              "text": "Your keepers are free. Hana, Tomo, Rin: they went home. You can too.",
+              "next": "g_peace",
+              "conditions": [
+                {"type": "Flag", "key": "dg3_keeper_hana_freed"},
+                {"type": "Flag", "key": "dg3_keeper_tomo_freed"},
+                {"type": "Flag", "key": "dg3_keeper_rin_freed"}
+              ]
+            },
+            {
+              "text": "(Recite the keepers' evening prayer.)",
+              "check": {"skill": "Religion", "dc": 14, "success": "g_peace", "failure": "g_fight"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "You were sworn to guard the keepers' sleep, not their chains.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "g_peace", "failure": "g_fight"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "(Raise your blade in the old knights' salute.)",
+              "next": "g_peace",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Then we'll go through you.", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g_peace",
+          "speaker": "narrator",
+          "text": "*The knights look at one another. Very slowly they lower their lanterns, and the violet flames inside turn gold. They kneel, and keep kneeling, until there is only empty armour on the flagstones and two warm motes drifting up toward the stair. On the far bank, the acolyte drops its candle and simply... stops, mid-prayer, with a look of enormous relief.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg3_chapel_guard_done"}, {"type": "GiveXP", "amount": 450}],
+          "choices": [{"text": "(Cross the ford.)"}]
+        },
+        {
+          "id": "g_fight",
+          "speaker": "narrator",
+          "text": "*The knights raise their lanterns. Violet fire runs down their blades like water.* THEN KEEP THE VIGIL WITH US.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg3_chapel_guard"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg3_lich",
+      "start": "l1",
+      "nodes": [
+        {
+          "id": "l1",
+          "speaker": "narrator",
+          "text": "*The chapel is a forest of candles. At its heart a tall figure floats above the flagstones, robed in indigo, a halo of seven candles burning behind a skull that was once a kind face. Around him a ring of lanterns gutters violet.*",
+          "next": "l2"
+        },
+        {
+          "id": "l2",
+          "speaker": "dg3_hazama",
+          "text": "Shh. Do you hear them? Three hundred years of keepers, and not one of them has gone out. *The skull tilts, curious.* You let the light out of my lanterns. Why would you do that? It is so DARK out there.",
+          "choices": [
+            {
+              "text": "They wanted to go home, Hazama. You can come too.",
+              "next": "l_soft",
+              "conditions": [
+                {"type": "Flag", "key": "dg3_keeper_hana_freed"},
+                {"type": "Flag", "key": "dg3_keeper_tomo_freed"},
+                {"type": "Flag", "key": "dg3_keeper_rin_freed"}
+              ]
+            },
+            {
+              "text": "Ishiro kept every lantern up top burning for forty years, so your keepers would have something warm to look at.",
+              "next": "l_ishiro",
+              "conditions": [{"type": "Flag", "key": "sh2_ledger_given"}]
+            },
+            {"text": "(Let Seren speak.)", "next": "l_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {
+              "text": "(Recite the keepers' evening prayer, all the way to the end.)",
+              "check": {"skill": "Religion", "dc": 15, "success": "l_soft", "failure": "l_fight"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {"text": "Your vigil's over, Keeper.", "next": "l_fight"}
+          ]
+        },
+        {
+          "id": "l_soft",
+          "speaker": "dg3_hazama",
+          "text": "...Home. *The candles in his halo flicker, and for a heartbeat they burn gold.* No. No, home is dark, and the dark is where you lose people, and I will NOT— *The gold gutters out.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg3_hazama_remembers"}, {"type": "GiveXP", "amount": 150}],
+          "next": "l_fight"
+        },
+        {
+          "id": "l_ishiro",
+          "speaker": "dg3_hazama",
+          "text": "...Ishiro. The little one who made such terrible tea. *A long silence.* He never came down. He never needed to. *His crook trembles.* He was braver than me.",
+          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "next": "l_fight"
+        },
+        {
+          "id": "l_seren",
+          "speaker": "seren",
+          "text": "*Seren steps forward, staff chiming.* My mother gave her light to the Warden so the valley wouldn't go dark. She was frightened too. She did it anyway, and the dark was not the end of her. It doesn't have to be the end of you.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}],
+          "next": "l_fight"
+        },
+        {
+          "id": "l_fight",
+          "speaker": "narrator",
+          "text": "*Hazama lifts his crook, and the great caged lantern on it blazes violet. One by one, the dark lanterns around the chapel flare back to life.* THEN I WILL KEEP YOU TOO.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg3_lantern_lich"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg3_first_lantern",
+      "start": "f0",
+      "nodes": [
+        {
+          "id": "f0",
+          "speaker": "narrator",
+          "text": "*The lantern stands quiet.*",
+          "conditions": [{"type": "Flag", "key": "sh2_first_lantern_choice"}],
+          "fallback": "f1",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "f1",
+          "speaker": "narrator",
+          "text": "*Where Hazama fell, his great caged lantern lies on its side, still burning. Inside, the violet flame is made of hundreds of tiny lights pressed close together, like sparrows in the snow: every keeper the shrine ever had. Hazama's is the smallest. It is shaking.*",
+          "next": "f_menu"
+        },
+        {
+          "id": "f_menu",
+          "speaker": "narrator",
+          "text": "*The lantern is warm in your hands.*",
+          "choices": [
+            {
+              "text": "(Read the inscription around the lantern's base.)",
+              "check": {"skill": "Investigation", "dc": 12, "success": "f_read", "failure": "f_read_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Open the cage and let them all go.)",
+              "next": "f_free",
+              "outcomes": [
+                {"type": "SetFlag", "key": "sh2_keepers_freed"},
+                {"type": "SetFlag", "key": "sh2_first_lantern_choice"},
+                {"type": "GiveItem", "key": "sh2_keepers_last_light", "amount": 1},
+                {"type": "GiveXP", "amount": 200},
+                {"type": "Approval", "key": "seren", "amount": 10},
+                {"type": "Approval", "key": "torvan", "amount": 5}
+              ]
+            },
+            {
+              "text": "(Keep the lantern. They'll be safe, and warm, with you.)",
+              "next": "f_keep",
+              "outcomes": [
+                {"type": "SetFlag", "key": "sh2_lantern_kept"},
+                {"type": "SetFlag", "key": "sh2_first_lantern_choice"},
+                {"type": "GiveItem", "key": "sh2_everburning_lantern", "amount": 1},
+                {"type": "GiveXP", "amount": 200},
+                {"type": "Approval", "key": "seren", "amount": -10},
+                {"type": "Approval", "key": "morwen", "amount": 10}
+              ]
+            },
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "f_read",
+          "speaker": "narrator",
+          "text": "*Tiny letters, cut with great care: 'LET NO LIGHT OF THIS SHRINE EVER GO OUT.' Below, in a different, shakier hand, much later: 'I am sorry. I did not know how to stop.'*",
+          "outcomes": [{"type": "GiveXP", "amount": 60}],
+          "next": "f_menu"
+        },
+        {
+          "id": "f_read_f",
+          "speaker": "narrator",
+          "text": "*The letters are too small and the light too strange. You make out the word OUT, and nothing else.*",
+          "next": "f_menu"
+        },
+        {
+          "id": "f_free",
+          "speaker": "narrator",
+          "text": "*The cage door creaks. For a heartbeat nothing happens. Then the lights pour out, gold now, hundreds of them, rising through the chapel like sparks from a bonfire, up the stair and up toward the dusk. The last little light hesitates at the door. It looks, you'd swear it looks, back at you. Then it goes too.* *In the empty cage something small remains: a single warm ember on a cord.*",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "f_keep",
+          "speaker": "narrator",
+          "text": "*You close your hand around the handle. The lantern is warm, and the little lights inside settle against the glass on your side, like cats against a window. You could swear they're relieved. You could swear they're not.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    }
+  ]
+}

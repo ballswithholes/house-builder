@@ -162,7 +162,418 @@
           "collider": {"w": 1.2, "h": 0.7},
           "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
         },
-        {"art": "prop_spirit_statue", "pos": [69.0, 9.4], "collider": {"w": 0.8, "h": 0.5}}
+        {"art": "prop_spirit_statue", "pos": [69.0, 9.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_stone_wall", "pos": [15.3, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [18.7, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [22.1, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [25.5, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [28.9, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [32.3, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [35.7, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [39.1, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [48.9, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [52.3, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [55.7, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [59.1, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [62.5, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [65.9, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [69.3, 21.6], "collider": {"w": 3.4, "h": 0.6}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [16.0, 20.65],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_61",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [21.0, 20.65],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_62",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [26.0, 20.65],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_63",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [31.0, 20.65],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_64",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [36.0, 20.65],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_65",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [29.4, 15.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_66",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [24.0, 15.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_67",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [18.6, 16.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_68",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [13.2, 16.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_69",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [9.0, 17.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_70",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [42.6, 21.7],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_71",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [45.4, 21.7],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_72",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_shrine_gate",
+          "pos": [44.0, 23.2],
+          "scale": 0.62,
+          "text": "A small vermilion gate over the pilgrim stair. Pilgrims duck under it out of politeness; it is not that low."
+        },
+        {"art": "prop_tree_pine", "pos": [2.2, 16.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [1.0, 20.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [3.4, 14.8], "collider": {"w": 2.0, "h": 1.0}},
+        {
+          "art": "prop_cairn",
+          "pos": [4.4, 19.8],
+          "collider": {"w": 1.1, "h": 0.8},
+          "text": "A cairn of pilgrims' stones. Each one carried up from the valley in a pocket."
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [11.4, 21.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "sh2_sign_steps",
+          "text": "Up: the Pilgrims' Rest, the Keeper's Lodge, the High Terrace. Down: the world, and all its stairs."
+        },
+        {"art": "prop_bush_a", "pos": [12.6, 15.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [7.0, 14.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [5.8, 21.0]},
+        {
+          "art": "prop_spirit_statue",
+          "pos": [34.2, 15.4],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A stone fox with a pilgrim's hat carved on its head. Someone has added a real hat."
+        },
+        {"art": "prop_bush_b", "pos": [38.6, 16.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [33.0, 19.8]},
+        {"art": "prop_mushrooms", "pos": [39.6, 19.8]},
+        {"art": "prop_tree_birch", "pos": [40.2, 17.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_rock_large", "pos": [45.6, 15.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_a", "pos": [47.4, 18.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "decal_flowers", "pos": [27.6, 20.0]},
+        {"art": "decal_flowers", "pos": [14.6, 19.6]},
+        {"art": "prop_lilypads", "pos": [53.8, 17.2]},
+        {"art": "prop_lilypads", "pos": [57.4, 18.6]},
+        {"art": "prop_lilypads", "pos": [55.2, 19.4]},
+        {"art": "prop_willow", "pos": [61.6, 19.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_spirit_statue",
+          "pos": [50.0, 15.2],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A stone heron, one leg tucked up, watching the pool for fish that were never there."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [50.2, 19.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_73",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [59.8, 15.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_74",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {"art": "prop_rock_large", "pos": [64.6, 16.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [66.6, 18.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [68.6, 16.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [52.0, 14.6]},
+        {
+          "art": "prop_bench",
+          "pos": [48.2, 17.4],
+          "collider": {"w": 1.4, "h": 0.4},
+          "text": "A stone bench by the Moon Pool. On still evenings the lanterns float in the water twice."
+        },
+        {"art": "prop_stone_wall", "pos": [1.7, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [5.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [8.5, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [11.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [15.3, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [18.7, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [22.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [26.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [29.5, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [32.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [36.3, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [39.7, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [43.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [46.5, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [49.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [21.0, 29.5],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_75",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [24.0, 29.5],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_76",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [6.6, 27.4],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 5.0, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [4.2, 26.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_bench", "pos": [8.8, 28.4], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_tent", "pos": [2.4, 28.0], "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_prayer_flags", "pos": [13.6, 28.6], "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [11.0, 23.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffd28a", "radius": 4.5, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_well",
+          "pos": [15.8, 23.4],
+          "collider": {"w": 1.8, "h": 0.9},
+          "text": "The pilgrims' well. The water tastes of stone and, faintly, of somebody's tea."
+        },
+        {
+          "art": "prop_noticeboard",
+          "pos": [18.6, 27.8],
+          "collider": {"w": 1.6, "h": 0.5},
+          "interact": "sh2_pilgrim_notes",
+          "text": "Pilgrims' notes: 'Climbed it. Knees hate me.' — 'The fox has a hat now.' — 'Lanterns are back!!!' — 'Bento was here (51 years).'"
+        },
+        {"art": "prop_barrel", "pos": [1.2, 25.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [1.4, 24.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bush_a", "pos": [3.0, 22.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_cairn", "pos": [27.8, 23.4], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [31.6, 28.2], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [36.4, 23.0], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [47.6, 28.2], "collider": {"w": 1.1, "h": 0.8}},
+        {
+          "art": "prop_standing_stone",
+          "pos": [33.8, 28.4],
+          "collider": {"w": 1.0, "h": 0.7},
+          "text": "A menhir carved with a ring and a stave: the old sign for 'a light that stays'."
+        },
+        {"art": "prop_standing_stone", "pos": [40.2, 23.0], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_tree_birch", "pos": [26.6, 28.2], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [28.4, 28.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_tree_golden",
+          "pos": [43.4, 28.4],
+          "collider": {"w": 1.2, "h": 0.8},
+          "text": "An old ginkgo, gold all year round. The keepers say it forgot how to be green and nobody had the heart to remind it."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [49.6, 22.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffd28a", "radius": 4.5, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [60.4, 30.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffd28a", "radius": 4.5, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "decal_flowers", "pos": [30.0, 23.4]},
+        {"art": "decal_flowers", "pos": [38.6, 28.0]},
+        {"art": "decal_flowers", "pos": [45.6, 23.2]},
+        {"art": "prop_mushrooms", "pos": [29.4, 28.6]},
+        {"art": "prop_spirit_statue", "pos": [37.6, 28.6], "collider": {"w": 0.8, "h": 0.5}, "text": "A stone deer, very small, very patient."},
+        {
+          "art": "prop_cottage_b",
+          "pos": [56.4, 28.0],
+          "collider": {"w": 4.4, "h": 2.0},
+          "text": "The Keeper's Lodge. A blue door, a crooked chimney, and a stone cat on the step with a very judgemental face."
+        },
+        {
+          "art": "prop_veg_patch",
+          "pos": [50.6, 27.4],
+          "collider": {"w": 3.6, "h": 1.8},
+          "text": "Ishiro's vegetable bed: radishes gone to seed and one enormous, defiant pumpkin."
+        },
+        {"art": "prop_log", "pos": [61.2, 28.9], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [61.4, 27.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [59.6, 28.9], "collider": {"w": 0.9, "h": 0.6}},
+        {
+          "art": "prop_washing_line",
+          "pos": [66.0, 22.8],
+          "collider": {"w": 3.4, "h": 0.3},
+          "sway": true,
+          "text": "A line of faded prayer strips, pegged out to dry and long since forgotten."
+        },
+        {
+          "art": "prop_spirit_statue",
+          "pos": [53.4, 28.6],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A stone cat on the lodge step. It is judging you, and it is right."
+        },
+        {"art": "prop_tree_pine", "pos": [68.6, 27.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [67.0, 23.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [60.6, 22.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_77",
+          "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
+        },
+        {
+          "art": "prop_shrine_gate",
+          "pos": [64.4, 30.2],
+          "text": "A weathered vermilion gate at the turn of the stair. Its paint is mostly prayers now."
+        },
+        {"art": "prop_rock_large", "pos": [68.4, 31.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [58.6, 30.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [55.0, 30.2]},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [13.8, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_78",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {"art": "prop_spirit_statue", "pos": [16.0, 38.9], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [18.2, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_79",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [22.6, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_80",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {"art": "prop_spirit_statue", "pos": [24.8, 38.9], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [27.0, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_81",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [31.0, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_82",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {"art": "prop_spirit_statue", "pos": [33.2, 38.9], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [41.0, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_83",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [50.4, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_84",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {"art": "prop_spirit_statue", "pos": [52.6, 38.9], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [54.8, 38.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "lantern_shrine_85",
+          "text": "A keeper's lantern on the High Terrace. A name is cut into its foot, worn almost smooth by three hundred years of rain."
+        },
+        {
+          "art": "prop_ruin_pillar",
+          "pos": [33.0, 36.4],
+          "collider": {"w": 1.1, "h": 0.6},
+          "interact": "sh2_cracked_plinth",
+          "text": "A cracked lantern plinth. Its lantern is long gone, and a cold draught breathes from the crack.",
+          "dialogue": "dlg_sh2_cracked_plinth"
+        },
+        {"art": "prop_rock_small", "pos": [31.8, 35.6]},
+        {"art": "prop_mushrooms", "pos": [38.6, 37.0]},
+        {"art": "decal_blight", "pos": [36.0, 37.4]},
+        {"art": "prop_ruin_pillar", "pos": [48.8, 37.6], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_rock_large", "pos": [42.6, 37.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_dead", "pos": [52.6, 35.6], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_pine", "pos": [61.6, 38.8], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [65.8, 38.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [68.8, 35.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [59.0, 36.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [63.6, 35.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_bench",
+          "pos": [4.6, 34.6],
+          "collider": {"w": 1.4, "h": 0.4},
+          "text": "Bento's bench. From here the whole valley spreads out below like a quilt someone forgot to fold."
+        },
+        {"art": "prop_prayer_flags", "pos": [6.2, 38.6], "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [9.8, 37.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffd28a", "radius": 4.5, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_cairn", "pos": [1.6, 36.8], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_tree_pine", "pos": [1.0, 32.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [2.0, 39.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [11.0, 31.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "decal_flowers", "pos": [7.8, 32.8]}
       ],
       "foreground": [
         {"art": "fg_stones_a", "pos": [3, -0.5]},
@@ -177,7 +588,11 @@
       "npcs": [
         {"npc": "torvan", "pos": [12.6, 7.6], "flip": true, "hideFlag": "recruited_torvan"},
         {"npc": "morwen", "pos": [18.8, 11.0], "hideFlag": "recruited_morwen"},
-        {"npc": "warden_spirit", "pos": [62.0, 9.4], "requireFlag": "warden_defeated"}
+        {"npc": "warden_spirit", "pos": [62.0, 9.4], "requireFlag": "warden_defeated"},
+        {"npc": "sh2_novice_aiko", "pos": [11.4, 27.2], "requireFlag": "heart_lantern_lit"},
+        {"npc": "sh2_pilgrim_bento", "pos": [4.6, 33.6]},
+        {"npc": "sh2_pilgrim_mei", "pos": [32.6, 23.6]},
+        {"npc": "sh2_ishiro_spirit", "pos": [51.6, 3.6], "flip": true, "requireFlag": "sh2_keepers_freed"}
       ],
       "encounters": [
         {
@@ -222,6 +637,42 @@
           "requireFlag": "reg_shrine_approach",
           "doneFlag": "warden_defeated",
           "dialogue": "dlg_warden_confront"
+        },
+        {
+          "id": "enc_sh2_stair_wisps",
+          "pos": [20.6, 18.4],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_hollow_wisp", "pos": [19.4, 19.8]},
+            {"creature": "cr_hollow_wisp", "pos": [22.2, 19.6]},
+            {"creature": "cr_hollow_spirit", "pos": [20.8, 17.0]}
+          ]
+        },
+        {
+          "id": "enc_sh2_lodge_pilgrims",
+          "pos": [47.4, 25.2],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_hollow_spirit", "pos": [46.4, 26.6]},
+            {"creature": "cr_hollow_spirit", "pos": [48.6, 26.2]},
+            {"creature": "cr_hollow_wisp", "pos": [47.6, 23.6]}
+          ]
+        },
+        {
+          "id": "enc_sh2_bone_watch",
+          "pos": [45.6, 35.6],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_sh2_restless_bones", "pos": [44.4, 36.4]},
+            {"creature": "cr_sh2_restless_bones", "pos": [46.8, 36.2]},
+            {"creature": "cr_sh2_restless_bones", "pos": [45.6, 37.4]}
+          ]
+        },
+        {
+          "id": "enc_sh2_owl_pines",
+          "pos": [63.4, 36.6],
+          "radius": 2.6,
+          "enemies": [{"creature": "cr_owl", "pos": [62.4, 37.4]}, {"creature": "cr_owl", "pos": [64.6, 37.0]}]
         }
       ],
       "chests": [
@@ -232,6 +683,20 @@
           "art": "prop_chest",
           "lootTable": "lt_chest_offering",
           "lockCheck": {"skill": "SleightOfHand", "dc": 16}
+        },
+        {
+          "id": "chest_sh2_keepers_lodge",
+          "pos": [59.4, 26.8],
+          "art": "prop_chest",
+          "lootTable": "lt_sh2_keepers_lodge",
+          "items": ["sh2_ishiros_ledger"]
+        },
+        {
+          "id": "chest_sh2_pilgrims_cache",
+          "pos": [3.6, 39.0],
+          "art": "prop_chest",
+          "lootTable": "lt_sh2_pilgrims_cache",
+          "requireFlag": "sh2_cache_spotted"
         }
       ],
       "transitions": [
@@ -245,7 +710,7 @@
         },
         {
           "id": "to_dgn_lantern_catacombs",
-          "pos": [36.0, 32.0],
+          "pos": [36.0, 35.0],
           "size": [2.0, 2.0],
           "targetMap": "dgn_lantern_catacombs",
           "targetSpawn": "from_shrine",
@@ -255,32 +720,122 @@
           "marker": "stairs"
         }
       ],
-      "spawns": [{"id": "default", "pos": [3.6, 6.0]}, {"id": "from_whisperwood", "pos": [3.6, 6.0]}, {"id": "sanctum", "pos": [54.0, 6.0]}, {"id": "from_dgn_lantern_catacombs", "pos": [36.0, 29.5]}],
+      "spawns": [
+        {"id": "default", "pos": [3.6, 6.0]},
+        {"id": "from_whisperwood", "pos": [3.6, 6.0]},
+        {"id": "sanctum", "pos": [54.0, 6.0]},
+        {"id": "from_dgn_lantern_catacombs", "pos": [36.0, 32.4]}
+      ],
       "regions": [
         {
           "id": "reg_shrine_approach",
           "pos": [8.0, 7.0],
           "size": [14, 14],
           "enterFlag": "reg_shrine_approach",
-          "text": "The Old Lantern Shrine. Above you, a hundred dark lanterns climb the cliffs like a stair of sleeping stars."
+          "text": "The Old Lantern Shrine. Above you, a hundred dark lanterns climb the cliffs like a stair of sleeping stars.",
+          "name": "Shrine Gate"
         },
         {
           "id": "reg_pilgrim_terraces",
           "pos": [31.0, 7.0],
           "size": [16, 14],
-          "text": "The Pilgrim Terraces. Grey shapes walk here, still on pilgrimage, long after forgetting why."
+          "text": "The Pilgrim Terraces. Grey shapes walk here, still on pilgrimage, long after forgetting why.",
+          "name": "Pilgrim Terraces"
         },
         {
           "id": "reg_keepers_hall",
           "pos": [44.6, 8.0],
           "size": [10, 12],
-          "text": "The Keeper's Hall. Every lantern here has been pinched out by hand."
+          "text": "The Keeper's Hall. Every lantern here has been pinched out by hand.",
+          "name": "Keeper's Hall"
         },
-        {"id": "reg_sanctum", "pos": [62.0, 7.5], "size": [16, 14], "text": "The Sanctum of the Heart Lantern."}
+        {"id": "reg_sanctum", "pos": [62.0, 7.5], "size": [16, 14], "text": "The Sanctum of the Heart Lantern.", "name": "Sanctum"},
+        {
+          "id": "reg_sh2_lantern_steps",
+          "pos": [22.0, 18.2],
+          "size": [40, 6.6],
+          "name": "Lantern Steps",
+          "text": "The Lantern Steps. The pilgrim stair zig-zags up the cliff, one lantern for every turn, so nobody ever climbs in the dark."
+        },
+        {
+          "id": "reg_sh2_moon_pool",
+          "pos": [55.4, 17.6],
+          "size": [13, 6.4],
+          "name": "Moon Pool",
+          "text": "The Moon Pool. Keepers used to say a lantern seen twice is a lantern lit twice."
+        },
+        {
+          "id": "reg_sh2_pilgrims_rest",
+          "pos": [9.4, 25.8],
+          "size": [18, 7],
+          "name": "Pilgrims' Rest",
+          "text": "The Pilgrims' Rest. A fire, a well and a bench: everything a tired pilgrim needs, and two things they did not know they did."
+        },
+        {
+          "id": "reg_sh2_small_stones",
+          "pos": [36.0, 25.8],
+          "size": [22, 7],
+          "name": "Garden of Small Stones",
+          "text": "The Garden of Small Stones. Every cairn is one pilgrim's 'I was here'."
+        },
+        {
+          "id": "reg_sh2_keepers_lodge",
+          "pos": [58.6, 25.8],
+          "size": [13, 7],
+          "name": "Keeper's Lodge",
+          "text": "The Keeper's Lodge. The door is unlocked. Keepers never lock anything; it would be rude to the lanterns."
+        },
+        {
+          "id": "reg_sh2_high_terrace",
+          "pos": [36.0, 34.6],
+          "size": [16, 8.6],
+          "name": "High Terrace",
+          "text": "The High Terrace. A row of lanterns, one for every keeper the shrine ever had.",
+          "check": {"skill": "Perception", "dc": 14},
+          "checkFlag": "found_lantern_catacombs",
+          "requireFlag": "heart_lantern_lit",
+          "successText": "Every lantern on the High Terrace burns now, except one: a cracked plinth breathes cold air, and the stone around it rings hollow underfoot. A stair!",
+          "failText": "The High Terrace glows with lanterns. Something about one dark plinth bothers you, but you can't say what."
+        },
+        {
+          "id": "reg_sh2_lookout",
+          "pos": [6.0, 36.0],
+          "size": [11, 7],
+          "name": "Pilgrim's Lookout",
+          "text": "The Pilgrim's Lookout. Below, the whole valley: Whisperwood's green sea, the silver river, and Lanternvale, small as a thumbprint.",
+          "check": {"skill": "Perception", "dc": 13},
+          "checkFlag": "sh2_cache_spotted",
+          "successText": "Behind the lookout's rocks, a pilgrim's cache is wedged under a stone, wrapped in oilcloth and labelled 'FOR EMERGENCIES (OR CAKE)'.",
+          "failText": "The view is very good. You look at it for a while."
+        }
       ],
       "ambient": {"embers": true, "mist": true, "timeOfDay": "dusk", "dayNightCycle": false, "ambientColor": "#c8b8e0", "ambientIntensity": 0.75},
       "restArea": true,
-      "music": "music_shrine"
+      "music": "music_shrine",
+      "paths": [
+        {
+          "art": "decal_path_stone",
+          "points": [[31.8, 9.0], [32.0, 13.0], [30.6, 16.8], [25.0, 18.2], [17.0, 18.6], [10.0, 19.6], [7.0, 22.6], [8.4, 25.4]],
+          "width": 2.4
+        },
+        {
+          "art": "decal_path_stone",
+          "points": [[8.4, 25.4], [14.0, 25.8], [24.0, 25.6], [34.0, 25.8], [44.0, 25.4], [52.0, 24.0], [60.0, 24.6], [64.2, 26.6], [64.6, 30.0], [62.0, 32.4]],
+          "width": 2.4
+        },
+        {
+          "art": "decal_path_stone",
+          "points": [[62.0, 32.4], [54.0, 33.2], [44.0, 33.0], [36.0, 32.6], [28.0, 33.4], [18.0, 34.2], [10.0, 35.6], [5.6, 36.4]],
+          "width": 2.4
+        },
+        {"art": "decal_path_stone", "points": [[44.0, 18.6], [44.0, 25.4]], "width": 1.6},
+        {"art": "decal_path_stone", "points": [[22.5, 25.8], [22.5, 33.8]], "width": 1.6}
+      ],
+      "water": [{"points": [[50.8, 17.0], [52.6, 15.4], [56.0, 15.0], [59.0, 15.9], [59.8, 17.6], [58.6, 19.6], [55.0, 20.4], [51.8, 19.6]], "closed": true}],
+      "fill": 0.35,
+      "biome": "shrine",
+      "levelMin": 9,
+      "levelMax": 12
     }
   ]
 }
