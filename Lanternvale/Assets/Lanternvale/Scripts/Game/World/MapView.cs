@@ -7,6 +7,11 @@
 //   props and foreground (PropModels), chests (lid opens), transition waymarkers (Waymarker), regions (rects), prop
 //   lights (SceneLighting point lights with flicker / night-only), ambient particles; tall props get a soft round
 //   cut-out where they hide a unit, the hovered object, the cursor or the camera's focus (PropOccluder)
+//   flags: chests (requireFlag), props (requireFlag / hideFlag), transitions (requireFlag = locked; hidden until the
+//          revealFlag holds, then revealed with a sparkle); transition markers by TransitionDef.marker (waymarker in the
+//          map's style, cave / door / stairs / portal entrances, none)
+//   indoors (environment cave / crypt): the vault's dark dome, DayNight's indoor preset, fog following the zoom, no
+//          backdrop, stone waymarkers, CameraRig kept inside the walls
 //
 // Static props carry no scripts: this component's single LateUpdate drives the mood, sky, clouds, light flicker and
 // halos, occluder fades, highlights, chest lids, markers and particles, allocation-free.
@@ -134,11 +139,16 @@ namespace Lanternvale.Game
 
     /// <summary>
     /// Transition waymarker (World/Props/Waymarker.cs): an arch (front / back / mid-map exits) or a pair of lantern posts
-    /// (side exits), lanterns lit at night with warm lights, chevrons on the ground.
+    /// (side exits), lanterns lit at night with warm lights, chevrons on the ground; or a styled entrance (cave, door,
+    /// stairs, portal) with chevrons flowing into it; or nothing (marker "none").
     /// </summary>
     internal sealed class Marker
     {
-        public Waymarker model;
+        public Waymarker model;             // null for marker "none"
+        public string style = "";           // TransitionDef.marker
+        public bool flowIn;                 // chevrons flow into the entrance from the front (styled entrances)
+        public bool alwaysLit;              // a portal: its glow burns day and night
+        public Color glowColor = new Color(1f, 0.82f, 0.52f);   // a portal's glow
         public readonly Materials3D.Look archLook = new Materials3D.Look();
         public readonly Materials3D.Look lanternLook = new Materials3D.Look();
         public readonly List<WorldLight> lights = new List<WorldLight>();
@@ -170,6 +180,8 @@ namespace Lanternvale.Game
         /// <summary>2D-era tunable (unused in 3D).</summary>
         public static float VerticalParallax = 0.4f;
         public static Color HighlightColor = new Color(1f, 0.88f, 0.52f, 1f);
+        /// <summary>Light halos drawn per frame (the nearest lights past the cap are silently dropped).</summary>
+        public const int MaxHalos = 128;
 
         public MapDef Def { get; private set; }
         public DayNight DayNight { get; private set; }
@@ -230,8 +242,9 @@ namespace Lanternvale.Game
         // ================================================================== building
 
         /// <summary>
-        /// Builds the map for def. flagTest (optional) evaluates requireFlag strings
-        /// (e.g. FlagStore.Test): hidden chests and locked transitions.
+        /// Builds the map for def. flagTest (optional) evaluates flag expressions (e.g. FlagStore.Test): hidden chests,
+        /// locked and hidden transitions, props behind requireFlag / hideFlag. Without one, nothing flag-gated shows
+        /// (a hidden transition stays hidden) and nothing is locked.
         /// </summary>
         public static MapView Build(MapDef def, Func<string, bool> flagTest = null)
         {
@@ -242,6 +255,15 @@ namespace Lanternvale.Game
             return view;
         }
 
+        /// <summary>
+        /// An indoor map (environment cave or crypt, Docs/Expansion.md §2.3): no sky, sun, moon or backdrop, an indoor
+        /// light preset (DayNight.Indoor), near dark fog, stone waymarkers and a camera kept inside the walls.
+        /// </summary>
+        public static bool IsIndoor(MapDef def) => DayNight.IsIndoor(def);
+
+        /// <summary>True while this map is indoors (IsIndoor).</summary>
+        public bool Indoor { get; private set; }
+
         void BuildAll(MapDef def, Func<string, bool> flagTest)
         {
             Def = def;
@@ -250,7 +272,8 @@ namespace Lanternvale.Game
             SceneLighting.Ensure();
             // painted textures aren't CPU-readable: the terrain measures the path art through a GPU read-back
             if (MapTerrain.ReadPixels == null) MapTerrain.ReadPixels = ReadBack;
-            DayNight = new DayNight(def.ambient);
+            Indoor = IsIndoor(def);
+            DayNight = new DayNight(def.ambient, Indoor);
 
             skyTopColor = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
             skyBottomColor = Ui.Hex(string.IsNullOrEmpty(def.skyBottom) ? "#fdf1d6" : def.skyBottom);
@@ -258,8 +281,10 @@ namespace Lanternvale.Game
             // mist: a nearer haze, cooled towards the zenith (a dusk horizon alone would wash the scene sepia)
             if (amb.mist) { fogStart = 24f; fogEnd = 120f; fogZenith = 0.38f; }
             windStrength = amb.leaves ? 0.075f : amb.embers ? 0.045f : 0.06f;
+            // indoors: near, dark fog in the vault's colour; barely a draught
+            if (Indoor) { fogZenith = 0.12f; windStrength = 0.015f; }
 
-            sky = new MapSky(transform, skyTopColor, skyBottomColor, MapTerrain.StableHash(def.id), ownedMeshes);
+            sky = new MapSky(transform, skyTopColor, skyBottomColor, MapTerrain.StableHash(def.id), ownedMeshes, Indoor);
             terrain = new MapTerrain(def, transform, ownedMeshes);
             terrain.Build(TerrainMaterial(def), def.groundTile > 0f ? def.groundTile : 8f);
             backdrop = new MapBackdrop(def, terrain, transform, ownedMeshes);
@@ -273,8 +298,9 @@ namespace Lanternvale.Game
             fgRoot = Child("Foreground");
             markersRoot = Child("Markers");
             fxRoot = Child("Glows");
-            halos = new BillboardBatch("Light Halos", fxRoot, Materials3D.AdditiveFor(WorldTextures.Glow), 64, 20);
-            chevrons = new BillboardBatch("Waymarker Chevrons", fxRoot, Materials3D.AdditiveFor(WorldTextures.Chevron), 48, 10);
+            // deep maps carry up to ~3× the lights and exits of the first slice
+            halos = new BillboardBatch("Light Halos", fxRoot, Materials3D.AdditiveFor(WorldTextures.Glow), MaxHalos, 20);
+            chevrons = new BillboardBatch("Waymarker Chevrons", fxRoot, Materials3D.AdditiveFor(WorldTextures.Chevron), 64, 10);
 
             Guard("decals", () => terrain.BuildDecals(decalsRoot));
             for (int i = 0; i < def.props.Count; i++)
@@ -291,8 +317,13 @@ namespace Lanternvale.Game
                 int index = i;
                 Guard(p.art, () => BuildForeground(p, index));
             }
+            // props behind requireFlag / hideFlag (PropDef): built either way, shown while their flags allow (without a
+            // flag test: as on a fresh save, no flag set)
+            var flags = flagTest ?? new Lanternvale.World.FlagStore().Test;
+            for (int i = 0; i < props.Count; i++) ApplyPropFlags(props[i], flags, false);
+            for (int i = 0; i < foreground.Count; i++) ApplyPropFlags(foreground[i], flags, false);
             foreach (var c in def.chests) if (c != null) Guard("chest " + c.id, () => BuildChest(c, flagTest));
-            foreach (var t in def.transitions) if (t != null) Guard("transition " + t.id, () => BuildTransition(t, flagTest));
+            foreach (var t in def.transitions) if (t != null) Guard("transition " + t.id, () => BuildTransition(t, flagTest, flags));
             foreach (var r in def.regions) if (r != null) BuildRegion(r);
             shadowsDirty = true;
             UpdateCliffLanterns(false);
@@ -300,7 +331,12 @@ namespace Lanternvale.Game
             particles = new AmbientParticles(this, transform);
 
             Bounds = new Rect(-2f, -2f, Mathf.Max(1f, def.width) + 4f, Mathf.Max(1f, def.depth) + 4f);
-            if (CameraRig.Instance != null) CameraRig.Instance.Bounds = Bounds;
+            if (CameraRig.Instance != null)
+            {
+                // indoors the camera keeps inside the walls (CameraRig.SetIndoor: a nearer zoom limit, an inset rect)
+                CameraRig.Instance.SetIndoor(Indoor, def.width, def.depth);
+                CameraRig.Instance.Bounds = Indoor ? CameraRig.IndoorBounds(def.width, def.depth) : Bounds;
+            }
 
             DayNight.MarkDirty();
             sky.MarkDirty();
@@ -688,7 +724,13 @@ namespace Lanternvale.Game
             return "prop_chest_open";
         }
 
-        void BuildTransition(TransitionDef t, Func<string, bool> flagTest)
+        /// <summary>
+        /// A transition's marker: by TransitionDef.marker — "" (auto) the waymarker (posts at a side exit, an arch at the
+        /// front / back edge or, smaller, mid-map; WaymarkerStyle by the map), cave / door / stairs / portal a styled
+        /// entrance (Waymarker.BuildEntrance), none nothing but the ground rect. A hidden transition is built either way
+        /// and shown once its revealFlag holds (RefreshFlags reveals it with a sparkle).
+        /// </summary>
+        void BuildTransition(TransitionDef t, Func<string, bool> flagTest, Func<string, bool> flags)
         {
             var size = new Vector2(t.size.x > 0f ? t.size.x : 2f, t.size.y > 0f ? t.size.y : 2f);
             var pos = new Vector2(t.pos.x, t.pos.y);
@@ -705,74 +747,105 @@ namespace Lanternvale.Game
                 root = holder,
             };
             o.Locked = !string.IsNullOrEmpty(t.requireFlag) && flagTest != null && !flagTest(t.requireFlag);
+            o.Visible = TransitionShown(t, flags);
+            string style = t.marker ?? "";
+            var mk = new Marker { center = pos, size = Mathf.Max(size.x, size.y), style = style };
+            Waymarker wm = null;
+            Vector2 at = pos;
 
-            // outward direction: towards the nearest map edge (a ring of chevrons when it's in the middle of the map)
-            float W = Def.width, D = Def.depth;
-            float dl = pos.x, dr = W - pos.x, df = pos.y, db = D - pos.y;
-            float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
-            var mk = new Marker { center = pos, size = Mathf.Max(size.x, size.y) };
-            Vector2 archAt = pos;
-            float span = 3f;
-            if (min <= 3.5f)
+            if (Waymarker.IsEntrance(style))
             {
-                if (min == dl) { mk.dir = new Vector2(-1f, 0f); archAt = new Vector2(-0.3f, pos.y); span = size.y; }
-                else if (min == dr) { mk.dir = new Vector2(1f, 0f); archAt = new Vector2(W + 0.3f, pos.y); span = size.y; }
-                else if (min == df) { mk.dir = new Vector2(0f, -1f); archAt = new Vector2(pos.x, -0.3f); span = size.x; }
-                else { mk.dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
+                // a cave mouth, crypt door, stair or portal facing the camera; chevrons flow into it from the front
+                at = Waymarker.EntranceAt(style, pos, size);
+                holder.localPosition = new Vector3(at.x, at.y, 0f);
+                mk.glowColor = style == "portal" ? Waymarker.PortalGlow(t.targetMap) : new Color(1f, 0.82f, 0.52f);
+                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), mk.glowColor);
+                mk.flowIn = true;
             }
-            span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
-            // a side exit's lantern posts stand clear of the trees and buildings beside the road
-            if (Mathf.Abs(mk.dir.x) > 0.5f)
+            else if (style != "none")
             {
-                postObstacles.Clear();
-                for (int i = 0; i < props.Count; i++)
+                // outward direction: towards the nearest map edge (a ring of chevrons when it's in the middle of the map)
+                float W = Def.width, D = Def.depth;
+                float dl = pos.x, dr = W - pos.x, df = pos.y, db = D - pos.y;
+                float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
+                float span = 3f;
+                if (min <= 3.5f)
                 {
-                    var po = props[i];
-                    if (po.hasBounds && po.Visible) postObstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
+                    if (min == dl) { mk.dir = new Vector2(-1f, 0f); at = new Vector2(-0.3f, pos.y); span = size.y; }
+                    else if (min == dr) { mk.dir = new Vector2(1f, 0f); at = new Vector2(W + 0.3f, pos.y); span = size.y; }
+                    else if (min == df) { mk.dir = new Vector2(0f, -1f); at = new Vector2(pos.x, -0.3f); span = size.x; }
+                    else { mk.dir = new Vector2(0f, 1f); at = new Vector2(pos.x, D + 0.3f); span = size.x; }
                 }
-                Waymarker.FitPosts(ref archAt, mk.dir, ref span, postObstacles, Mathf.Min(1.4f, size.y * 0.3f));
-            }
-
-            holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
-            // the model: an arch facing the camera, or lantern posts at a side exit (an arch there is seen edge-on)
-            var wm = Waymarker.Build(holder, mk.dir, span);
-            for (int i = 0; i < wm.Frame.Count; i++) Quiet(wm.Frame[i]);
-            for (int i = 0; i < wm.Lanterns.Count; i++) Quiet(wm.Lanterns[i]);
-            mk.model = wm;
-
-            // warm lanterns that light the road at night only (by day they'd paint a glowing disc on the ground)
-            bool pair = wm.Lamps.Count > 1;
-            for (int i = 0; i < wm.Lamps.Count; i++)
-            {
-                var lamp = wm.Lamps[i];
-                var light = new WorldLight
+                span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
+                // a side exit's lantern posts stand clear of the trees and buildings beside the road
+                if (Mathf.Abs(mk.dir.x) > 0.5f)
                 {
-                    position = lamp,
-                    range = pair ? 4.6f : 5.2f,
-                    nightOnly = true,
-                    seed = UnityEngine.Random.value * 100f,
-                    haloSize = pair ? 1.0f : 1.3f,
-                    setLit = i == 0 ? (Action<bool>)wm.SetLit : null,
-                };
-                light.handle = SceneLighting.Add(lamp, Color.white, 0f, light.range);
-                light.handle.Enabled = false;
-                lights.Add(light);
-                mk.lights.Add(light);
+                    postObstacles.Clear();
+                    for (int i = 0; i < props.Count; i++)
+                    {
+                        var po = props[i];
+                        if (po.hasBounds && po.Visible) postObstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
+                    }
+                    Waymarker.FitPosts(ref at, mk.dir, ref span, postObstacles, Mathf.Min(1.4f, size.y * 0.3f));
+                }
+                holder.localPosition = new Vector3(at.x, at.y, 0f);
+                // the model: an arch facing the camera, or lantern posts at a side exit (an arch there is seen edge-on)
+                wm = Waymarker.Build(holder, mk.dir, span, Waymarker.StyleFor(Def, Indoor));
+            }
+            else holder.localPosition = new Vector3(pos.x, pos.y, 0f);
+
+            if (wm != null)
+            {
+                for (int i = 0; i < wm.Frame.Count; i++) Quiet(wm.Frame[i]);
+                for (int i = 0; i < wm.Lanterns.Count; i++) Quiet(wm.Lanterns[i]);
+                mk.model = wm;
+                mk.alwaysLit = wm.AlwaysLit;
+                // warm lanterns that light the road at night only (by day they'd paint a glowing disc on the ground); a
+                // portal glows day and night
+                bool pair = wm.Lamps.Count > 1;
+                for (int i = 0; i < wm.Lamps.Count; i++)
+                {
+                    var lamp = wm.Lamps[i];
+                    var light = new WorldLight
+                    {
+                        position = lamp,
+                        range = mk.alwaysLit ? 6.5f : pair ? 4.6f : 5.2f,
+                        nightOnly = !mk.alwaysLit,
+                        seed = UnityEngine.Random.value * 100f,
+                        haloSize = mk.alwaysLit ? 1.9f : pair ? 1.0f : 1.3f,
+                        setLit = i == 0 && !mk.alwaysLit ? (Action<bool>)wm.SetLit : null,
+                    };
+                    light.handle = SceneLighting.Add(lamp, Color.white, 0f, light.range);
+                    light.handle.Enabled = false;
+                    lights.Add(light);
+                    mk.lights.Add(light);
+                }
             }
             o.light = mk.lights.Count > 0 ? mk.lights[0] : null;
-            o.lampPoint = wm.Lamps.Count > 0 ? wm.Lamps[0] : World3D.At(archAt, 2f);
+            o.lampPoint = wm != null && wm.Lamps.Count > 0 ? wm.Lamps[0] : World3D.At(at, 2f);
             o.marker = mk;
             ApplyTransitionColor(o);
 
             // picking / labels: the marker's projected bounds plus the authored ground rect
-            o.bounds = wm.Bounds;
+            o.bounds = wm != null ? wm.Bounds : new Bounds(World3D.At(pos, 0.6f), new Vector3(size.x, size.y, 1.2f));
             o.hasBounds = true;
-            o.LabelPosition = World3D.At(archAt, TopOf(o) + 0.45f);
+            o.LabelPosition = World3D.At(wm != null ? at : pos, TopOf(o) + 0.45f);
+            holder.gameObject.SetActive(o.Visible);
+            for (int i = 0; i < mk.lights.Count; i++) mk.lights[i].visible = o.Visible;
 
             Transitions.Add(o);
             Objects.Add(o);
             Register(o);
         }
+
+        /// <summary>A transition is shown unless it is hidden and its revealFlag does not hold (MapRuntime.IsTransitionVisible).</summary>
+        public static bool TransitionShown(TransitionDef t, Func<string, bool> flags) =>
+            t != null && (!t.hidden || (!string.IsNullOrEmpty(t.revealFlag) && flags != null && flags(t.revealFlag)));
+
+        /// <summary>A prop's flags allow it (MapRuntime.IsPropVisible): its requireFlag holds and its hideFlag does not.</summary>
+        public static bool PropShown(PropDef p, Func<string, bool> flags) =>
+            p == null || flags == null
+            || ((string.IsNullOrEmpty(p.requireFlag) || flags(p.requireFlag)) && !(!string.IsNullOrEmpty(p.hideFlag) && flags(p.hideFlag)));
 
         static void ApplyTransitionColor(MapObject o)
         {
@@ -783,9 +856,19 @@ namespace Lanternvale.Game
             for (int i = 0; i < mk.lights.Count; i++)
             {
                 var l = mk.lights[i];
-                l.color = o.Locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f);
-                l.intensity = (o.Locked ? 0.38f : 0.85f) * share;
-                l.flicker = !o.Locked;
+                if (mk.alwaysLit)
+                {
+                    // a portal: its own glow (dimmed and cooled while sealed)
+                    l.color = o.Locked ? Color.Lerp(mk.glowColor, new Color(0.62f, 0.55f, 0.88f), 0.6f) : mk.glowColor;
+                    l.intensity = o.Locked ? 0.45f : 1.15f;
+                    l.flicker = true;
+                }
+                else
+                {
+                    l.color = o.Locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f);
+                    l.intensity = (o.Locked ? 0.38f : 0.85f) * share;
+                    l.flicker = !o.Locked;
+                }
                 if (l.handle != null) l.handle.Color = l.color;
             }
             mk.lanternLook.Tint = o.Locked ? new Color(0.5f, 0.46f, 0.72f) : Color.white;
@@ -929,6 +1012,15 @@ namespace Lanternvale.Game
             SceneLighting.FogColor = fog;
             SceneLighting.FogStart = Mathf.Lerp(fogStart, fogStart * 0.7f, gold);
             SceneLighting.FogEnd = fogEnd;
+            if (Indoor)
+            {
+                // indoors the fog follows the zoom: the floor around the look-at point stays clear, the far end of the
+                // vault closes into its dark
+                var cr = CameraRig.Instance;
+                var f = DayNight.IndoorFog(cr != null ? cr.Distance : 18f);
+                SceneLighting.FogStart = f.x;
+                SceneLighting.FogEnd = f.y;
+            }
             SceneLighting.FogMax = 0.85f;
             SceneLighting.WindStrength = windStrength;
             // night grade: moonlit colours cool towards blue-grey, lamplight keeps its warmth (LanternvaleCommon.cginc)
@@ -1226,18 +1318,51 @@ namespace Lanternvale.Game
                 if (Mathf.Abs(hl - mk.appliedGlow) > 0.001f)
                 {
                     mk.appliedGlow = hl;
-                    float s = 1f + 0.06f * hl;
+                    // an entrance is bigger: it swells less
+                    float s = 1f + (mk.flowIn ? 0.03f : 0.06f) * hl;
                     o.root.localScale = new Vector3(s, s, s);
                     // arch look: gold outline when hovered
                     mk.archLook.Rim = 0.3f * hl;
                     mk.archLook.OutlineColor = Color.Lerp(Materials3D.Ink, HighlightColor, hl);
                     mk.archLook.OutlineWidth = 2.2f + 1.4f * hl;
-                    var frame = mk.model.Frame;
-                    for (int r = 0; r < frame.Count; r++) mk.archLook.Apply(frame[r]);
+                    if (mk.model != null)
+                    {
+                        var frame = mk.model.Frame;
+                        for (int r = 0; r < frame.Count; r++) mk.archLook.Apply(frame[r]);
+                    }
                 }
                 // chevrons flowing towards the exit
                 var c = o.Locked ? new Color(0.62f, 0.56f, 0.85f) : new Color(1f, 0.84f, 0.52f);
-                if (mk.dir != Vector2.zero)
+                if (mk.model == null)
+                {
+                    // marker "none": only a faint ring while hovered
+                    if (hl < 0.02f) continue;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float ang = time * 0.4f + k * Mathf.PI * 0.5f;
+                        var dir = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f);
+                        var p = new Vector3(o.Position.x, o.Position.y, -0.03f) + dir * 0.9f;
+                        chevrons.Add(p, new Vector3(-dir.y, dir.x, 0f) * 0.45f, dir * 0.45f, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), (byte)(Mathf.Clamp01(0.45f * hl) * 255f)));
+                    }
+                }
+                else if (mk.flowIn)
+                {
+                    // into the entrance: three chevrons rising out of the front of the walk-in area, the portal's in its glow
+                    if (mk.alwaysLit && !o.Locked) c = Color.Lerp(mk.glowColor, Color.white, 0.25f);
+                    var dir = new Vector3(0f, 1f, 0f);
+                    var side = new Vector3(1f, 0f, 0f);
+                    float front = o.Position.y - o.Rect.height * 0.5f;
+                    const int n = 3;
+                    for (int k = 0; k < n; k++)
+                    {
+                        float phase = Mathf.Repeat(time * (o.Locked ? 0.35f : 0.7f) - k / (float)n, 1f);
+                        float a = o.Locked ? 0.28f : (0.25f + 0.55f * Mathf.Sin(phase * Mathf.PI)) * 0.85f + 0.3f * hl;
+                        var p = new Vector3(o.Position.x, front, -0.03f) + dir * (-1.25f + k * 0.85f);
+                        float sz = 0.55f + 0.08f * hl;
+                        chevrons.Add(p, side * sz, dir * sz, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), (byte)(Mathf.Clamp01(a) * 255f)));
+                    }
+                }
+                else if (mk.dir != Vector2.zero)
                 {
                     var dir = new Vector3(mk.dir.x, mk.dir.y, 0f);
                     var side = new Vector3(-mk.dir.y, mk.dir.x, 0f);
@@ -1489,17 +1614,46 @@ namespace Lanternvale.Game
         }
 
         /// <summary>Shows/hides a chest, prop or transition (e.g. after a flag changes).</summary>
-        public void SetVisible(string id, bool visible)
+        public void SetVisible(string id, bool visible) => SetVisible(Find(id), visible);
+
+        void SetVisible(MapObject o, bool visible)
         {
-            var o = Find(id);
-            if (o == null) return;
-            if (o.Visible == visible) return;
+            if (o == null || o.Visible == visible) return;
             o.Visible = visible;
             if (o.root != null) o.root.gameObject.SetActive(visible);
             if (o.light != null) o.light.visible = visible;
             if (o.marker != null)
                 for (int i = 0; i < o.marker.lights.Count; i++) o.marker.lights[i].visible = visible;
+            if (!visible && o.Highlighted) SetHighlighted(o.Id, false);
             if (o.groundShadow) shadowsDirty = true;
+        }
+
+        /// <summary>Shows or hides a prop by its flags (PropShown); animate: a soft sparkle where it appears.</summary>
+        void ApplyPropFlags(MapObject o, Func<string, bool> flags, bool animate)
+        {
+            var p = o.Prop;
+            if (p == null || (string.IsNullOrEmpty(p.requireFlag) && string.IsNullOrEmpty(p.hideFlag))) return;
+            bool show = PropShown(p, flags);
+            if (show == o.Visible) return;
+            SetVisible(o, show);
+            if (show && animate) FxSystem.Sparkles(World3D.At(o.Position, TopOf(o) * 0.6f), new Color(1f, 0.92f, 0.7f), 8);
+        }
+
+        /// <summary>
+        /// A hidden passage appears (its revealFlag now holds): the marker fades in with a burst of gold sparkles and a
+        /// ring of light on the ground; the game flow adds the banner and the cue (SessionEventKind.SecretFound).
+        /// </summary>
+        void Reveal(MapObject o)
+        {
+            SetVisible(o, true);
+            o.pop = 0.4f;
+            if (!animated.Contains(o)) animated.Add(o);
+            var mk = o.marker;
+            var glow = mk != null && mk.alwaysLit ? mk.glowColor : new Color(1f, 0.86f, 0.55f);
+            float top = o.hasBounds ? Mathf.Max(1.2f, -o.bounds.min.z) : 2f;
+            FxSystem.Sparkles(World3D.At(o.Position, top * 0.55f), glow, 22);
+            FxSystem.Sparkles(World3D.At(o.Position, 0.4f), new Color(1f, 0.95f, 0.8f), 10);
+            FxSystem.AuraPulse(o.Position, Mathf.Clamp(Mathf.Max(o.Rect.width, o.Rect.height) * 1.1f, 2.2f, 3.6f), new Color(glow.r, glow.g, glow.b, 0.85f));
         }
 
         /// <summary>Locks/unlocks a transition (dim violet waymarker when locked) or a chest.</summary>
@@ -1511,14 +1665,25 @@ namespace Lanternvale.Game
             if (o.Kind == MapObjectKind.Transition) ApplyTransitionColor(o);
         }
 
-        /// <summary>Re-evaluates requireFlag on chests (visibility) and transitions (locked).</summary>
+        /// <summary>
+        /// Re-evaluates the flags: chests (requireFlag: visibility), transitions (requireFlag: locked; hidden: shown once
+        /// the revealFlag holds, with the reveal sparkle) and props (requireFlag / hideFlag: visibility).
+        /// </summary>
         public void RefreshFlags(Func<string, bool> flagTest)
         {
             if (flagTest == null) return;
             foreach (var c in Chests)
-                if (!string.IsNullOrEmpty(c.Chest.requireFlag)) SetVisible(c.Id, flagTest(c.Chest.requireFlag));
+                if (!string.IsNullOrEmpty(c.Chest.requireFlag)) SetVisible(c, flagTest(c.Chest.requireFlag));
             foreach (var t in Transitions)
+            {
                 if (!string.IsNullOrEmpty(t.Transition.requireFlag)) SetLocked(t.Id, !flagTest(t.Transition.requireFlag));
+                if (!t.Transition.hidden) continue;
+                bool show = TransitionShown(t.Transition, flagTest);
+                if (show && !t.Visible) Reveal(t);
+                else if (!show && t.Visible) SetVisible(t, false);
+            }
+            for (int i = 0; i < props.Count; i++) ApplyPropFlags(props[i], flagTest, true);
+            for (int i = 0; i < foreground.Count; i++) ApplyPropFlags(foreground[i], flagTest, true);
         }
 
         /// <summary>Replaces the model of a prop (by interact id); highlight, lights and labels follow.</summary>

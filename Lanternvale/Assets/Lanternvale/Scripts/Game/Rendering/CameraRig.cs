@@ -9,6 +9,9 @@
 // (the camera distance is Zoom / tan(fov / 2)), so the game's zoom values (default 6.2, dialogue 5.3, menu 6.6) frame
 // about as much as they used to.
 //
+// Indoor maps (caves, crypts; MapView calls SetIndoor): a nearer zoom limit and a look-at rect inset from the side walls,
+// so the camera never sinks into the rock or looks past the walls into the void.
+//
 // Controls (when AllowManualPan and no modal screen is up):
 //   mouse wheel                zoom (towards the look-at point)
 //   middle mouse drag          rotate (left / right); with Shift or Ctrl held: drag the ground (pan)
@@ -135,6 +138,38 @@ namespace Lanternvale.Game
         }
 
         public void ResetPan() { panOffset = Vector2.zero; }
+
+        // ------------------------------------------------------------------ indoor maps
+
+        /// <summary>Outdoor zoom-in limit (MinSize) and the indoor one: a closer camera stands low (pitch 24°) and at
+        /// yaw ±45° would sink into the side walls; at 3.4 it stands ~10 m off at 32°, above the rock beside the floor.</summary>
+        public const float OutdoorMinSize = 2.6f, IndoorMinSize = 3.4f;
+        /// <summary>How far inside the floor's side edges the look-at point stays indoors (the camera then stays above the
+        /// side walls' lower slopes at every zoom and yaw).</summary>
+        public const float IndoorSideInset = 2f;
+
+        /// <summary>True on an indoor map (MapView.IsIndoor): zoom and look-at kept inside the walls.</summary>
+        public bool Indoor { get; private set; }
+
+        /// <summary>
+        /// Indoor maps (caves, crypts): the camera never sinks into the walls or looks past them into the void — a nearer
+        /// zoom limit (IndoorMinSize) and an inset look-at rect (IndoorBounds, set by MapView). Outdoors: the defaults.
+        /// </summary>
+        public void SetIndoor(bool indoor, float width, float depth)
+        {
+            Indoor = indoor;
+            MinSize = indoor ? IndoorMinSize : OutdoorMinSize;
+            targetSize = Mathf.Clamp(targetSize, MinSize, MaxSize);
+            size = Mathf.Clamp(size, MinSize, MaxSize);
+        }
+
+        /// <summary>The look-at rect of an indoor map: the floor, inset from its side walls, the front edge to the back wall's foot.</summary>
+        public static Rect IndoorBounds(float width, float depth)
+        {
+            float w = Mathf.Max(1f, width), d = Mathf.Max(1f, depth);
+            float inset = Mathf.Min(IndoorSideInset, w * 0.25f);
+            return Rect.MinMaxRect(inset, 0f, w - inset, d);
+        }
 
         /// <summary>Jumps to the target framing at once (map entry, menu): zoom, rotation and position.</summary>
         public void SnapToTarget()

@@ -28,12 +28,13 @@ finds `Assets/Lanternvale/Resources` by searching upwards, or you can pass `--ro
 | option | meaning |
 |---|---|
 | `--hour H` | time of day 0–24. Fixed-time maps (the shrine is at dusk) keep their own hour unless you set this. Default is the world clock, 12.5. |
-| `--zoom Z` | CameraRig zoom, i.e. half the view height at the look-at point: 2.6 … 10.4, default 6.2. |
+| `--zoom Z` | CameraRig zoom, i.e. half the view height at the look-at point: 2.6 … 10.4, default 6.2 (indoor maps: 3.4 … 10.4, as CameraRig.SetIndoor). |
+| `--pitch deg` | a fixed pitch instead of the rig's eased one: a **vista** of the backdrop (not a player view; e.g. `--at x,D --zoom 7 --pitch 10`). |
 | `--yaw D` | camera yaw, ±45°. |
 | `--at x,y` | look-at point in map metres. Default: the spawn given by `--spawn id`, else `default`. |
 | `--size WxH`, `--ss N` | output size (default 1600x900) and supersampling (1–4, default 2). |
 | `--player key` | the party leader's model at the spawn (default `char_warrior`). |
-| `--flags a,b` / `--flags '*'` | story flags to treat as set, which shows NPCs, encounters and chests gated by `requireFlag`. |
+| `--flags a,b` / `--flags '*'` | story flags to treat as set, which shows NPCs, encounters and chests gated by `requireFlag`, hidden transitions whose `revealFlag` holds, and props by `requireFlag` / `hideFlag` (flag expressions `a&!b` as FlagStore.Test reads them). |
 | `--markers auto` / `--markers npc:kind[+main],…` | quest markers (`QuestMarker3D`) over the NPCs: `auto` runs the game's marker rules against `--flags`, `--quests q,q=stage,q=done` and `--level N` (default 5); a list names `ready`, `available`, `progress` or `later` per NPC. |
 | `--no-units`, `--no-halos`, `--no-ink` | leave those out. |
 | `--gamma` | use the gamma colour pipeline instead of linear. |
@@ -88,13 +89,18 @@ anchors (magenta) and a 1.75 m person.
 
 **Faithful:**
 - Map building follows MapView.BuildAll: seeds, transforms, tints, light anchors, night gating, halos, merged
-  shadows, decals (the real MapTerrain.BuildDecals), waymarkers (the shared Waymarker, side-exit posts fitted clear of
-  props with Waymarker.FitPosts) and occluder cut-outs (the shared PropOccluder): every hole fully open, around each
+  shadows, decals (the real MapTerrain.BuildDecals), waymarkers (the shared Waymarker in the map's style: wood, snow
+  or, indoors, stone; side-exit posts fitted clear of props with Waymarker.FitPosts), styled entrances
+  (`TransitionDef.marker` cave / door / stairs / portal: the prop library's model or the stand-in, Waymarker.BuildEntrance;
+  a portal's always-on glow), hidden transitions (shown once `--flags` reveals them), prop flags and occluder cut-outs (the shared PropOccluder): every hole fully open, around each
   unit an occluder hides and around the camera's look-at point; there is no cursor, so no cursor or hover cut.
 - The terrain's detail layer (`_DetailTex`: shrine gravel, Whisperwood leaf litter; MapTerrain.DetailTexture).
 - Units are placed like GameFlow.Views (NPC sprite/flip and look variant, enemy size and facing towards the leader;
   SetFacing is screen-right/left for `--yaw`, via UnitFacing.SideYaw).
-- Terrain, backdrop and sky come from the real classes.
+- Terrain, backdrop and sky come from the real classes, including the biome backdrops (MapBackdrop.Biomes.cs: a map
+  without layers gets its biome's defaults) and indoor maps (environment cave / crypt: DayNight's indoor preset, the
+  dark vault dome with no sun, moon or stars, no backdrop, fog following the zoom, CameraRig's indoor zoom limit and
+  inset look-at rect from Scene/CameraMath.cs).
 - Lighting is DayNight.ApplyTo → SceneLighting (the 16 strongest point lights near the focus), with the night grade
   (`_LV_Grade` from DayNight.NightGrade) and amber, wider lamplight at night (DayNight.LampColor / LampRange).
 - Warmth (`_LV_Warmth` from DayNight.Warmth: x = golden-hour saturation lift of sunlit colours, y = lamplit colours
@@ -131,4 +137,6 @@ anchors (magenta) and a 1.75 m person.
 | `Stubs/` | UnityEngine and game stand-ins |
 
 The committed previews in `Docs/previews3d/` are re-rendered by `Tools/preview3d/render_previews.sh`, which takes
-an optional output directory.
+an optional output directory. It covers every map: a default view, spots in the deep maps' northern bands, the hidden
+entrances revealed, the zones of levels 12-30 at noon, dusk and night, the dungeons and raids (near and far), and the
+units and props sheets.

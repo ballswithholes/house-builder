@@ -328,6 +328,10 @@ namespace Lanternvale.Game
             PlaceMenuCamera(menuTime);
         }
 
+        /// <summary>The ground row the title camera drifts along: the village's lanes (the first slice's 14 m deep strip;
+        /// the valley now reaches far deeper north, but the cosy village front stays the title's picture).</summary>
+        const float MenuCameraY = 14f * 0.32f;
+
         /// <summary>Slow cinematic drift: an eased back-and-forth pan along the village with a gentle bob.</summary>
         void PlaceMenuCamera(float t)
         {
@@ -337,7 +341,7 @@ namespace Lanternvale.Game
             const float period = 140f;
             float u = 0.5f - 0.5f * Mathf.Cos(t * Mathf.PI * 2f / period);
             float x = Mathf.Lerp(w * 0.16f, w * 0.84f, u);
-            float y = d * 0.32f + Mathf.Sin(t * 0.11f) * 0.45f;
+            float y = Mathf.Min(d * 0.32f, MenuCameraY) + Mathf.Sin(t * 0.11f) * 0.45f;
             menuCameraTarget.position = new Vector3(x, y, 0f);
         }
 

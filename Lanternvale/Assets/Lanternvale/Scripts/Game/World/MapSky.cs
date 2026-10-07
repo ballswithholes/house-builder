@@ -2,6 +2,8 @@
 // gradient tinted by the time of day, a warm glow around a low sun, sun / moon discs and twinkling stars (additive).
 // Everything follows the camera position (never its rotation), so the sky is "at infinity"; terrain and backdrop draw
 // over it (the dome is in the Background queue and writes no depth). The horizon colour doubles as the fog colour.
+// Indoors (a cave or crypt map) the dome is the dark of the vault: the authored colours as painted, darkening upwards,
+// with no sun, moon or stars, whatever the hour.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -23,6 +25,7 @@ namespace Lanternvale.Game
         readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
         readonly List<Mesh> owned;
         Color authoredTop, authoredBottom;
+        readonly bool indoor;
         float lastHour = -100f;
         bool dirty = true;
 
@@ -30,9 +33,10 @@ namespace Lanternvale.Game
         public Color Horizon { get; private set; }
         public Color Zenith { get; private set; }
 
-        public MapSky(Transform parent, Color skyTop, Color skyBottom, int seed, List<Mesh> owned)
+        public MapSky(Transform parent, Color skyTop, Color skyBottom, int seed, List<Mesh> owned, bool indoor = false)
         {
             this.owned = owned;
+            this.indoor = indoor;
             authoredTop = skyTop;
             authoredBottom = skyBottom;
             root = new GameObject("Sky").transform;
@@ -171,6 +175,7 @@ namespace Lanternvale.Game
             if (cam == null) return;
             var cp = cam.transform.position;
             root.position = cp;
+            if (indoor) return;   // no sun, moon or stars under the vault (they start disabled)
 
             float night = dn.NightFactor;
             // ---- sun
@@ -221,6 +226,7 @@ namespace Lanternvale.Game
 
         void Recolor(DayNight dn)
         {
+            if (indoor) { RecolorIndoor(); return; }
             var top = dn.SkyColor(authoredTop, true);
             var bottom = dn.SkyColor(authoredBottom, false);
             Zenith = top;
@@ -245,6 +251,23 @@ namespace Lanternvale.Game
                     float w = s * s * s * s * glow.a * (1f - Mathf.Clamp01(e * 1.6f));
                     c = Color.Lerp(c, glow, Mathf.Clamp01(w));
                 }
+                colors[i] = c;
+            }
+            dome.colors32 = colors;
+        }
+
+        /// <summary>The vault: the authored bottom colour around the horizon, deepening to the top colour and then to
+        /// near-black overhead (no time-of-day tint, no sun glow).</summary>
+        void RecolorIndoor()
+        {
+            Zenith = authoredTop;
+            Horizon = authoredBottom;
+            var deep = authoredTop * 0.45f;
+            deep.a = 1f;
+            for (int i = 0; i < dirs.Length; i++)
+            {
+                float e = -dirs[i].z;
+                Color c = e < 0f ? authoredBottom : Color.Lerp(Color.Lerp(authoredBottom, authoredTop, Mathf.Clamp01(e * 2.2f)), deep, Mathf.Clamp01((e - 0.45f) / 0.55f));
                 colors[i] = c;
             }
             dome.colors32 = colors;

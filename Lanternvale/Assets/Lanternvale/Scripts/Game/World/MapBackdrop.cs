@@ -8,7 +8,10 @@
 //   bg_shrine_cliffs → tall columns of grey-violet stone with a stair climbing to a vermilion gate, dark stone lanterns
 //                      up the stair and on the ledges (they wake, lowest first, as the map's spirit lanterns are lit)
 //   bg_clouds        → soft cloud banks drifting across the sky (scrollSpeed)
-// A layer's tint tints its geometry. Everything is built in Y-up model space under one World3D.Upright root
+// A layer's tint tints its geometry. A map without layers gets its biome's defaults (DefaultLayers), and the new biomes
+// add their own scenery (MapBackdrop.Biomes.cs): highlands → rolling golden downs, windmills and standing stones; fen →
+// rows of dead trees and reed banks in the mist; peaks → snowy ridges and snow-laden pines; roost → the jagged crown
+// of the summit over a sea of cloud. Indoors (a cave or crypt) there is no backdrop at all. Everything is built in Y-up model space under one World3D.Upright root
 // (local x = world x, local y = height, local z = world depth y), merged into a few meshes.
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -17,7 +20,7 @@ using UnityEngine.Rendering;
 
 namespace Lanternvale.Game
 {
-    internal sealed class MapBackdrop
+    internal sealed partial class MapBackdrop
     {
         readonly MapDef def;
         readonly MapTerrain terrain;
@@ -35,7 +38,7 @@ namespace Lanternvale.Game
         // night windows of the distant village
         Renderer windows;
         float windowGlow = -1f;
-        Transform sails;
+        readonly List<Transform> sails = new List<Transform>();
 
         // shrine cliff lanterns: groups lit lowest first
         const int LanternGroups = 8;
@@ -59,9 +62,12 @@ namespace Lanternvale.Game
             root = new GameObject("Backdrop").transform;
             root.SetParent(parent, false);
             root.localRotation = World3D.Upright;
-            foreach (var l in def.layers)
+            foreach (var l in Layers())
                 if (l != null && l.art != null && l.art.Contains("forest")) HasForest = true;
         }
+
+        /// <summary>The map's layers, or (none authored) its biome's defaults.</summary>
+        List<ParallaxLayerDef> Layers() => def.layers != null && def.layers.Count > 0 ? def.layers : DefaultLayers(def.biome);
 
         float R() => (float)rng.NextDouble();
         float Range(float a, float b) => a + (b - a) * (float)rng.NextDouble();
@@ -81,7 +87,9 @@ namespace Lanternvale.Game
 
         public void Build()
         {
-            foreach (var l in def.layers)
+            // indoors there is nothing beyond the walls but the dark of the vault
+            if (DayNight.IsIndoor(def)) return;
+            foreach (var l in Layers())
             {
                 if (l == null || string.IsNullOrEmpty(l.art)) continue;
                 string a = l.art;
@@ -94,6 +102,7 @@ namespace Lanternvale.Game
                 else if (a.Contains("cliff")) BuildCliffs(tint);
                 // bg_hills_*: the terrain's own hills
             }
+            BuildBiome();
         }
 
         GameObject Emit(MeshBuilder mb, string name, float fogScale, Material material = null)
@@ -297,8 +306,8 @@ namespace Lanternvale.Game
             smb.Box(Vector3.zero, new Vector3(0.6f, 0.6f, 0.4f));
             var go = Emit(smb, "Village Windmill Sails", 0.85f);
             if (go == null) return;
-            sails = go.transform;
-            sails.localPosition = b + new Vector3(0f, 7.6f, -1.9f);
+            go.transform.localPosition = b + new Vector3(0f, 7.6f, -1.9f);
+            sails.Add(go.transform);
         }
 
         // ------------------------------------------------------------------ forests
@@ -617,7 +626,7 @@ namespace Lanternvale.Game
                 cloudScroll += cloudSpeed * 18f * dt;
                 PlaceClouds();
             }
-            if (sails != null) sails.localRotation = Quaternion.Euler(0f, 0f, time * 14f);
+            for (int i = 0; i < sails.Count; i++) sails[i].localRotation = Quaternion.Euler(0f, 0f, time * (14f - 2.5f * (i % 3)) + i * 37f);
             if (windows != null && Mathf.Abs(dn.NightGlow - windowGlow) > 0.01f)
             {
                 windowGlow = dn.NightGlow;

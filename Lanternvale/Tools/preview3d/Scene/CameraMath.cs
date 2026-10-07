@@ -14,6 +14,16 @@ namespace Lanternvale.Preview
         public const float DistanceNear = 7f, DistanceFar = 30f;
         public const float LookAhead = 0.9f;
         public const float MinSize = 2.6f, MaxSize = 10.4f, DefaultSize = 6.2f;
+        /// <summary>Indoor maps (CameraRig.SetIndoor / IndoorBounds): the nearer zoom limit and the look-at rect's side inset.</summary>
+        public const float IndoorMinSize = 3.4f, IndoorSideInset = 2f;
+
+        /// <summary>As CameraRig.IndoorBounds: the floor, inset from its side walls, front edge to the back wall's foot.</summary>
+        public static Rect IndoorBounds(float width, float depth)
+        {
+            float w = Mathf.Max(1f, width), d = Mathf.Max(1f, depth);
+            float inset = Mathf.Min(IndoorSideInset, w * 0.25f);
+            return Rect.MinMaxRect(inset, 0f, w - inset, d);
+        }
 
         static float TanHalfFov => Mathf.Tan(Mathf.Clamp(FieldOfView, 10f, 120f) * 0.5f * Mathf.Deg2Rad);
 
@@ -38,10 +48,10 @@ namespace Lanternvale.Preview
         /// puts the look-at point on the anchor itself instead of the follow framing.
         /// </summary>
         public static void Place(Vector2 anchor, bool exactLookAt, float zoom, float yaw, Rect bounds,
-                                 out Vector3 pos, out Quaternion rot, out Vector3 lookAt, out float pitch, out float dist)
+                                 out Vector3 pos, out Quaternion rot, out Vector3 lookAt, out float pitch, out float dist, float? pitchOverride = null)
         {
             dist = zoom / TanHalfFov;
-            pitch = PitchFor(dist);
+            pitch = pitchOverride ?? PitchFor(dist);
             Vector2 at = anchor;
             if (!exactLookAt)
             {

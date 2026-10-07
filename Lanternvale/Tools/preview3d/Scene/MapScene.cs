@@ -20,6 +20,8 @@ namespace Lanternvale.Preview
             public float? Hour;
             public float Yaw;
             public float Zoom = 6.2f;
+            /// <summary>A pitch (degrees below the horizon) instead of the rig's eased one: a vista of the backdrop (not a player view).</summary>
+            public float? Pitch;
             public Vector2? At;
             public bool Units = true;
             public bool Halos = true;
@@ -29,6 +31,20 @@ namespace Lanternvale.Preview
             /// <summary>Story flags treated as set (content behind requireFlag appears; "*" = every flag).</summary>
             public HashSet<string> Flags = new HashSet<string>();
             public bool Has(string flag) => string.IsNullOrEmpty(flag) || Flags.Contains("*") || Flags.Contains(flag);
+            /// <summary>A flag expression as FlagStore.Test reads it ("a&amp;!b"), against these flags ("*": every flag set).</summary>
+            public bool Test(string expr)
+            {
+                if (string.IsNullOrEmpty(expr)) return true;
+                foreach (var part in expr.Split('&'))
+                {
+                    var term = part.Trim();
+                    if (term.Length == 0) continue;
+                    bool neg = term[0] == '!';
+                    bool set = Has(neg ? term.Substring(1).Trim() : term);
+                    if (neg == set) return false;
+                }
+                return true;
+            }
             /// <summary>Quest markers over the NPCs: "" none, "auto" (the game's rules), or "npc:kind[+main],…" (Scene/PreviewMarkers).</summary>
             public string Markers = "";
             /// <summary>--markers auto: quests to start (q), set to a stage (q=stage) or complete (q=done); the main character's level.</summary>
@@ -95,11 +111,15 @@ namespace Lanternvale.Preview
 
         // ================================================================== build (as MapView.BuildAll)
 
+        /// <summary>As MapView.Indoor (DayNight.IsIndoor): a cave or crypt map.</summary>
+        public bool Indoor { get; private set; }
+
         public void Build(int width, int height)
         {
             var def = Def;
             ArtLibrary.Init();
-            DayNight = new DayNight(def.ambient);
+            Indoor = DayNight.IsIndoor(def);
+            DayNight = new DayNight(def.ambient, Indoor);
             if (opt.Hour.HasValue) DayNight.SetHour(opt.Hour.Value);
 
             var skyTop = Ui.Hex(string.IsNullOrEmpty(def.skyTop) ? "#9fd3f0" : def.skyTop);
@@ -108,8 +128,10 @@ namespace Lanternvale.Preview
             // mist: a nearer haze, cooled towards the zenith (a dusk horizon alone would wash the scene sepia)
             if (amb.mist) { fogStart = 24f; fogEnd = 120f; fogZenith = 0.38f; }
             windStrength = amb.leaves ? 0.075f : amb.embers ? 0.045f : 0.06f;
+            // as MapView: indoors, near dark fog in the vault's colour
+            if (Indoor) { fogZenith = 0.12f; windStrength = 0.015f; }
 
-            sky = new MapSky(Root, skyTop, skyBottom, MapTerrain.StableHash(def.id), owned);
+            sky = new MapSky(Root, skyTop, skyBottom, MapTerrain.StableHash(def.id), owned, Indoor);
             terrain = new MapTerrain(def, Root, owned);
             terrain.Build(TerrainMaterial(def), def.groundTile > 0f ? def.groundTile : 8f);
             backdrop = new MapBackdrop(def, terrain, Root, owned);
@@ -269,8 +291,12 @@ namespace Lanternvale.Preview
 
         static float TopOf(PObj o) => o.hasBounds ? Mathf.Max(0.3f, -o.bounds.min.z) : 1.5f;
 
+        /// <summary>As MapView.PropShown: the prop's requireFlag holds and its hideFlag does not (--flags).</summary>
+        bool PropShown(PropDef p) => opt.Test(p.requireFlag) && !(!string.IsNullOrEmpty(p.hideFlag) && opt.Test(p.hideFlag));
+
         void BuildProp(PropDef p, int index)
         {
+            if (!PropShown(p)) return;   // as MapView: built hidden (no model, light or shadow shows)
             var holder = new GameObject(p.art).transform;
             holder.SetParent(propsRoot, false);
             holder.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
@@ -302,6 +328,7 @@ namespace Lanternvale.Preview
 
         void BuildForeground(PropDef p, int index)
         {
+            if (!PropShown(p)) return;
             var holder = new GameObject("FG " + p.art).transform;
             holder.SetParent(fgRoot, false);
             holder.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
@@ -383,47 +410,79 @@ namespace Lanternvale.Preview
 
         void BuildTransition(TransitionDef t)
         {
+            // as MapView: a hidden transition shows once its revealFlag holds (--flags)
+            if (t.hidden && (string.IsNullOrEmpty(t.revealFlag) || !opt.Test(t.revealFlag))) return;
             var size = new Vector2(t.size.x > 0f ? t.size.x : 2f, t.size.y > 0f ? t.size.y : 2f);
             var pos = new Vector2(t.pos.x, t.pos.y);
-            bool locked = !opt.Has(t.requireFlag);
-            float W = Def.width, D = Def.depth;
-            float dl = pos.x, dr = W - pos.x, df = pos.y, db = D - pos.y;
-            float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
-            Vector2 dir = Vector2.zero, archAt = pos;
-            float span = 3f;
-            if (min <= 3.5f)
-            {
-                if (min == dl) { dir = new Vector2(-1f, 0f); archAt = new Vector2(-0.3f, pos.y); span = size.y; }
-                else if (min == dr) { dir = new Vector2(1f, 0f); archAt = new Vector2(W + 0.3f, pos.y); span = size.y; }
-                else if (min == df) { dir = new Vector2(0f, -1f); archAt = new Vector2(pos.x, -0.3f); span = size.x; }
-                else { dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
-            }
-            span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
-            // as MapView: a side exit's lantern posts stand clear of the props beside the road
-            if (Mathf.Abs(dir.x) > 0.5f)
-            {
-                var obstacles = new List<Rect>();
-                foreach (var po in props)
-                    if (po.hasBounds && po.visible) obstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
-                Waymarker.FitPosts(ref archAt, dir, ref span, obstacles, Mathf.Min(1.4f, size.y * 0.3f));
-            }
+            bool locked = !opt.Test(t.requireFlag);
+            string style = t.marker ?? "";
+            if (style == "none") return;
             var holder = new GameObject("Transition " + t.id).transform;
             holder.SetParent(markersRoot, false);
-            holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
-            // as MapView.BuildTransition: the shared waymarker model, night-only lanterns
-            var wm = Waymarker.Build(holder, dir, span);
+            Waymarker wm;
+            var glow = new Color(1f, 0.82f, 0.52f);
+            if (Waymarker.IsEntrance(style))
+            {
+                // as MapView: a styled entrance facing the camera (the prop library's model, else the stand-in)
+                var at = Waymarker.EntranceAt(style, pos, size);
+                holder.localPosition = new Vector3(at.x, at.y, 0f);
+                if (style == "portal") glow = Waymarker.PortalGlow(t.targetMap);
+                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), glow);
+            }
+            else
+            {
+                float W = Def.width, D = Def.depth;
+                float dl = pos.x, dr = W - pos.x, df = pos.y, db = D - pos.y;
+                float min = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(df, db));
+                Vector2 dir = Vector2.zero, archAt = pos;
+                float span = 3f;
+                if (min <= 3.5f)
+                {
+                    if (min == dl) { dir = new Vector2(-1f, 0f); archAt = new Vector2(-0.3f, pos.y); span = size.y; }
+                    else if (min == dr) { dir = new Vector2(1f, 0f); archAt = new Vector2(W + 0.3f, pos.y); span = size.y; }
+                    else if (min == df) { dir = new Vector2(0f, -1f); archAt = new Vector2(pos.x, -0.3f); span = size.x; }
+                    else { dir = new Vector2(0f, 1f); archAt = new Vector2(pos.x, D + 0.3f); span = size.x; }
+                }
+                span = Mathf.Clamp(span * 0.72f, 2.4f, 4.6f);
+                // as MapView: a side exit's lantern posts stand clear of the props beside the road
+                if (Mathf.Abs(dir.x) > 0.5f)
+                {
+                    var obstacles = new List<Rect>();
+                    foreach (var po in props)
+                        if (po.hasBounds && po.visible) obstacles.Add(Rect.MinMaxRect(po.bounds.min.x, po.bounds.min.y, po.bounds.max.x, po.bounds.max.y));
+                    Waymarker.FitPosts(ref archAt, dir, ref span, obstacles, Mathf.Min(1.4f, size.y * 0.3f));
+                }
+                holder.localPosition = new Vector3(archAt.x, archAt.y, 0f);
+                // as MapView.BuildTransition: the shared waymarker model in the map's style, night-only lanterns
+                wm = Waymarker.Build(holder, dir, span, Waymarker.StyleFor(Def, Indoor));
+            }
             if (locked) foreach (var lr in wm.Lanterns) lr.Block.SetColor(Materials3D.TintId, new Color(0.5f, 0.46f, 0.72f));
+            bool pair = wm.Lamps.Count > 1;
             for (int i = 0; i < wm.Lamps.Count; i++)
             {
+                // as MapView.ApplyTransitionColor: a portal glows day and night in its own colour
+                if (wm.AlwaysLit)
+                {
+                    lights.Add(new WLight
+                    {
+                        position = wm.Lamps[i],
+                        color = locked ? Color.Lerp(glow, new Color(0.62f, 0.55f, 0.88f), 0.6f) : glow,
+                        intensity = locked ? 0.45f : 1.15f,
+                        range = 6.5f,
+                        flicker = true,
+                        haloSize = 1.9f,
+                    });
+                    continue;
+                }
                 lights.Add(new WLight
                 {
                     position = wm.Lamps[i],
                     color = locked ? new Color(0.62f, 0.55f, 0.88f) : new Color(1f, 0.82f, 0.52f),
-                    intensity = (locked ? 0.38f : 0.85f) * (wm.Lamps.Count > 1 ? 0.7f : 1f),
-                    range = wm.Lamps.Count > 1 ? 4.6f : 5.2f,
+                    intensity = (locked ? 0.38f : 0.85f) * (pair ? 0.7f : 1f),
+                    range = pair ? 4.6f : 5.2f,
                     flicker = !locked,
                     nightOnly = true,
-                    haloSize = wm.Lamps.Count > 1 ? 1.0f : 1.3f,
+                    haloSize = pair ? 1.0f : 1.3f,
                     setLit = i == 0 ? wm.SetLit : null,
                 });
             }
@@ -550,7 +609,14 @@ namespace Lanternvale.Preview
             float zoom = Mathf.Clamp(opt.Zoom, 0.5f, 40f);
             var anchor = opt.At ?? SpawnPoint();
             var bounds = new Rect(-2f, -2f, Mathf.Max(1f, Def.width) + 4f, Mathf.Max(1f, Def.depth) + 4f);
-            CameraMath.Place(anchor, opt.At.HasValue, zoom, opt.Yaw, bounds, out var pos, out var rot, out var lookAt, out float pitch, out float dist);
+            if (Indoor)
+            {
+                // as CameraRig.SetIndoor / IndoorBounds: a nearer zoom limit, the look-at kept inside the walls
+                zoom = Mathf.Clamp(zoom, CameraMath.IndoorMinSize, CameraMath.MaxSize);
+                opt.Zoom = zoom;
+                bounds = CameraMath.IndoorBounds(Def.width, Def.depth);
+            }
+            CameraMath.Place(anchor, opt.At.HasValue, zoom, opt.Yaw, bounds, out var pos, out var rot, out var lookAt, out float pitch, out float dist, opt.Pitch);
             LookAt = lookAt;
             Pitch = pitch;
             Distance = dist;
@@ -626,6 +692,13 @@ namespace Lanternvale.Preview
             SceneLighting.FogColor = fog;
             SceneLighting.FogStart = Mathf.Lerp(fogStart, fogStart * 0.7f, gold);
             SceneLighting.FogEnd = fogEnd;
+            if (Indoor)
+            {
+                // as MapView: indoors the fog follows the zoom (the camera's distance from its look-at point)
+                var f = DayNight.IndoorFog(Distance);
+                SceneLighting.FogStart = f.x;
+                SceneLighting.FogEnd = f.y;
+            }
             SceneLighting.FogMax = 0.85f;
             SceneLighting.WindStrength = windStrength;
             cam.backgroundColor = horizon;

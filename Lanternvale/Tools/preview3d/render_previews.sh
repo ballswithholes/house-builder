@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Re-renders the committed preview set (Docs/previews3d/), or into another directory given as $1.
+# Every map gets a default view; the deep maps get spots in their northern band; the hidden entrances are shown
+# revealed (--flags); outdoor zones at noon, dusk and night; indoor maps at their one (indoor) light.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 tool="$here/preview3d.sh"
 out="${1:-$here/../../Docs/previews3d}"
 mkdir -p "$out"
+# ---- the first slice (deepened)
 "$tool" map lanternvale "$out/lanternvale_noon.png"
 "$tool" map lanternvale "$out/lanternvale_golden.png" --hour 18
 "$tool" map lanternvale "$out/lanternvale_night.png" --hour 22.5
@@ -12,10 +15,40 @@ mkdir -p "$out"
 "$tool" map lanternvale "$out/lanternvale_close.png" --zoom 3 --yaw 30
 "$tool" map lanternvale "$out/lanternvale_kusu.png" --spawn camphor --hour 17.5 --flags moppet_found
 "$tool" map lanternvale "$out/lanternvale_pasture.png" --at 84,9 --hour 9 --flags shepherd_quest,bandits_peaceful
+"$tool" map lanternvale "$out/lanternvale_north.png" --at 45,30 --hour 11
+"$tool" map lanternvale "$out/lanternvale_hollows_entrance.png" --at 20,16 --hour 15 --flags found_root_hollows
 "$tool" map whisperwood "$out/whisperwood_noon.png" --hour 12.5
 "$tool" map whisperwood "$out/whisperwood_greymane.png" --at 25,9 --hour 12.5 --flags shepherd_hunt
+"$tool" map whisperwood "$out/whisperwood_north.png" --at 50,32 --hour 12.5
+"$tool" map whisperwood "$out/whisperwood_mossdeep_entrance.png" --at 46,35 --hour 16 --flags found_mossdeep
 "$tool" map shrine "$out/shrine_dusk.png"
 "$tool" map shrine "$out/shrine_keeper.png" --at 44,8
+"$tool" map shrine "$out/shrine_north.png" --at 35,28
+"$tool" map shrine "$out/shrine_catacombs_entrance.png" --at 36,29 --flags found_lantern_catacombs
+# ---- the zones of levels 12-30: the default view at noon, dusk and night, a spot in the north, the entrances
+for z in amberfield brightwater mirefen skyreach; do
+  "$tool" map "$z" "$out/${z}_noon.png" --hour 12.5
+  "$tool" map "$z" "$out/${z}_dusk.png" --hour 18.6
+  "$tool" map "$z" "$out/${z}_night.png" --hour 22.5
+done
+"$tool" map amberfield "$out/amberfield_north.png" --at 65,46 --hour 15
+"$tool" map amberfield "$out/amberfield_barrow_entrance.png" --at 64,43 --hour 16 --flags found_barrow
+"$tool" map brightwater "$out/brightwater_north.png" --at 42,36 --hour 10
+"$tool" map mirefen "$out/mirefen_north.png" --at 60,46 --hour 11
+"$tool" map mirefen "$out/mirefen_vault_entrance.png" --at 30,41 --hour 17 --flags found_drowned_vault
+"$tool" map mirefen "$out/mirefen_raid_portal.png" --at 12,45 --hour 21
+"$tool" map skyreach "$out/skyreach_north.png" --at 60,50 --hour 12.5
+"$tool" map skyreach "$out/skyreach_sanctum_entrance.png" --at 86,47 --hour 14 --flags found_frozen_sanctum
+"$tool" map skyreach "$out/skyreach_raid_portal.png" --at 20,53 --hour 19
+# ---- hidden dungeons and raids
+for m in dgn_root_hollows dgn_mossdeep dgn_lantern_catacombs dgn_barrow dgn_drowned_vault dgn_frozen_sanctum raid_hollow_heart; do
+  "$tool" map "$m" "$out/${m}.png"
+  "$tool" map "$m" "$out/${m}_far.png" --at 30,22 --zoom 10.4 --yaw 25
+done
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost.png"
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_north.png" --at 55,58 --zoom 5 --yaw -20
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_night.png" --hour 22.5
+# ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null
 # keep the committed set light: JPEG (quality 88) instead of PNG when Pillow is available

@@ -8,7 +8,8 @@
 //   night a crisp blue moon over a deep blue fill; lamps and windows pool warm amber light (LampColor / LampRange)
 //
 // Maps either use a fixed time (ambient.timeOfDay) or the shared world clock (ambient.dayNightCycle),
-// which keeps running across maps through the static WorldHour.
+// which keeps running across maps through the static WorldHour. Indoor maps (caves, crypts) ignore both: a fixed preset
+// of a low cool fill with warm point lights (Indoor).
 using System;
 using UnityEngine;
 
@@ -77,17 +78,40 @@ namespace Lanternvale.Game
         /// <summary>The warm haze golden hour lends the distance (fog colour blend, MapView.ApplyMood).</summary>
         public static readonly Color GoldenHaze = new Color(1f, 0.80f, 0.55f);
 
+        /// <summary>
+        /// Indoors (a cave or crypt map): no sun, moon or sky — a fixed preset of a low, cool fill from above with the
+        /// warm point lights (torches, braziers, crystals) carrying the scene at full night strength. The hour (fixed or
+        /// the world clock) is still reported but changes nothing.
+        /// </summary>
+        public bool Indoor { get; private set; }
+
+        /// <summary>Indoor fog (MapView): from a little past the camera's look-at point (its distance + IndoorFogStart)
+        /// to IndoorFogEnd metres further, closing the far end of the vault into its dark at every zoom.</summary>
+        public const float IndoorFogStart = 4f, IndoorFogEnd = 40f;
+
+        /// <summary>Indoor fog start and end (metres from the camera) for a camera distance from its look-at point.</summary>
+        public static Vector2 IndoorFog(float cameraDistance) =>
+            new Vector2(cameraDistance + IndoorFogStart, cameraDistance + IndoorFogStart + IndoorFogEnd);
+
+        /// <summary>An indoor map: MapDef.environment cave or crypt (Docs/Expansion.md §2.3; "" / outdoor = outdoors).</summary>
+        public static bool IsIndoor(Lanternvale.Data.MapDef def)
+        {
+            string env = def != null ? def.environment ?? "" : "";
+            return env == "cave" || env == "crypt";
+        }
+
         public DayNight() { }
 
-        public DayNight(Lanternvale.Data.AmbientDef ambient)
+        public DayNight(Lanternvale.Data.AmbientDef ambient, bool indoor = false)
         {
+            Indoor = indoor;
             Configure(ambient);
         }
 
         public void Configure(Lanternvale.Data.AmbientDef ambient)
         {
             ambient = ambient ?? new Lanternvale.Data.AmbientDef();
-            Cycle = ambient.dayNightCycle;
+            Cycle = ambient.dayNightCycle && !Indoor;
             FixedHour = HourOf(ambient.timeOfDay);
             MapAmbient = string.IsNullOrEmpty(ambient.ambientColor) ? Color.white : Ui.Hex(ambient.ambientColor);
             MapAmbientIntensity = ambient.ambientIntensity > 0f ? ambient.ambientIntensity : 1f;
@@ -135,7 +159,7 @@ namespace Lanternvale.Game
         public void ClearOverride() { overrideHour = null; }
 
         /// <summary>True when the map shows its authored time (fixed map, no override): its authored sky is kept.</summary>
-        public bool UsesAuthoredSky => !Cycle && overrideHour == null;
+        public bool UsesAuthoredSky => Indoor || (!Cycle && overrideHour == null);
 
         float EffectiveHour() => overrideHour ?? (Cycle ? WorldHour : FixedHour);
 
@@ -265,8 +289,47 @@ namespace Lanternvale.Game
             }
             Overlay = o;
 
-            EvaluateLight(a, b, t);
+            if (Indoor) EvaluateIndoor();
+            else EvaluateLight(a, b, t);
             Changed?.Invoke(this);
+        }
+
+        // ------------------------------------------------------------------ indoors
+
+        /// <summary>The indoor fill: a dim cool light falling from high above (a crack in the vault), a deep blue-violet
+        /// sky fill and an almost black bounce from the floor.</summary>
+        static readonly Color IndoorFill = new Color(0.66f, 0.74f, 1.00f);
+        static readonly Color IndoorSky = new Color(0.46f, 0.5f, 0.74f), IndoorGround = new Color(0.22f, 0.19f, 0.21f);
+        const float IndoorFillI = 0.5f, IndoorAmbI = 0.8f;
+        /// <summary>Indoors the night grade is gentler: the stone keeps some of its own colour under the cool fill.</summary>
+        const float IndoorGrade = 0.2f;
+
+        void EvaluateIndoor()
+        {
+            // lamps, fires, crystals and lit windows burn at full night strength (UpdateLights, nightOnly gates)
+            NightFactor = 1f;
+            Golden = 0f;
+            SunVisibility = 0f;
+            MoonVisibility = 0f;
+            SunGlow = new Color(1f, 0.8f, 0.6f, 0f);
+            LightDirection = new Vector3(0.22f, -0.3f, -0.93f).normalized;
+            // the map's ambient (ambientColor × ambientIntensity) tints and scales the preset, a little softened like
+            // outdoors so a dark map stays readable
+            float mai = Mathf.Lerp(1f, MapAmbientIntensity, 0.6f);
+            float ml = MapAmbient.r * 0.3f + MapAmbient.g * 0.59f + MapAmbient.b * 0.11f;
+            var mapLight = Color.Lerp(new Color(ml, ml, ml, 1f), MapAmbient, 0.75f);
+            LightColor = Mul(IndoorFill, mapLight);
+            LightIntensity = IndoorFillI * mai;
+            SkyAmbient = Mul(IndoorSky, mapLight);
+            GroundAmbient = Mul(IndoorGround, mapLight);
+            SceneAmbientIntensity = IndoorAmbI * mai;
+            NightGlow = 1f;
+            // amber lamp pools, and under them the cool fill gives way to the fire's warmth
+            Warmth = new Vector4(0f, LampAmberPull, LampMoonMask * 0.85f, 0f);
+            var lc = LightColor;
+            var sk = SkyAmbient;
+            LightLevel = Mathf.Clamp01((lc.r * 0.3f + lc.g * 0.55f + lc.b * 0.15f) * LightIntensity * 0.7f
+                                       + (sk.r * 0.3f + sk.g * 0.55f + sk.b * 0.15f) * SceneAmbientIntensity);
         }
 
         void EvaluateLight(Key a, Key b, float t)
@@ -354,7 +417,7 @@ namespace Lanternvale.Game
         /// The night grade (shader global _LV_Grade, set by MapView): how far moon- and sky-lit colours drift towards a
         /// cool blue-grey (0 by day … 0.38 deep in the night); lamplight keeps the full colour.
         /// </summary>
-        public float NightGrade => 0.38f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.5f) / 0.42f));
+        public float NightGrade => Indoor ? IndoorGrade : 0.38f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((NightFactor - 0.5f) / 0.42f));
         /// <summary>The blue-grey a fully graded colour's luma takes (linear multiplier).</summary>
         public static readonly Vector3 NightGradeTint = new Vector3(0.8f, 0.92f, 1.22f);
 
@@ -385,7 +448,7 @@ namespace Lanternvale.Game
         /// </summary>
         public Color SkyColor(Color authored, bool top)
         {
-            if (!Cycle && overrideHour == null) return authored;
+            if (Indoor || (!Cycle && overrideHour == null)) return authored;
             var key = top ? SkyTopTint : SkyBottomTint;
             return Color.Lerp(authored, key, SkyBlend);
         }

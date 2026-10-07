@@ -3,7 +3,7 @@
 //   props <out.png> [keys|all] [seed] [--views gqtfb] [--tile px] [--lit 0|1] [--open] [--stats]
 //   units <out.png> [keys|group|all] [--tile px] [--ss N] [--hour H] [--speed m/s]
 //                          [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
-//   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size WxH] [--ss N] [--spawn id]
+//   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--pitch deg] [--at x,y] [--size WxH] [--ss N] [--spawn id]
 //                          [--player key] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
 //                          [--markers auto|npc:kind,...] [--quests q,q=stage,q=done] [--level N]
 using System;
@@ -56,11 +56,12 @@ namespace Lanternvale.Preview
       --view game: every column at the game camera (idle/walk facing right and left, actions facing --facing);
       --view spin: one --pose at nine facings; a key may name a look variant (npc_child#2, npc_child@child_nell);
       groups: chars comps npcs trainers foes beasts pets demons static (all = one page per group, <out>_<group>.png)
-  map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--at x,y] [--size 1600x900] [--ss 2] [--spawn id]
+  map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--pitch deg] [--at x,y] [--size 1600x900] [--ss 2] [--spawn id]
                         [--player char_warrior] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
                         [--markers auto|npc:ready|available|progress|later[+main],...] [--quests q,q=stage,q=done] [--level 5]
       the player's view of a map: look-at = the spawn (or --at), Zoom = CameraRig zoom (2.6 … 10.4, default 6.2),
-      yaw ±45, hour 0..24 (default: the map's own time / the world clock 12.5)");
+      yaw ±45, hour 0..24 (default: the map's own time / the world clock 12.5); --pitch: a vista of the backdrop
+      (a fixed pitch instead of the rig's, not a player view)");
             return 2;
         }
 
@@ -106,6 +107,7 @@ namespace Lanternvale.Preview
                     case "--hour": opt.Hour = float.Parse(Next(), CultureInfo.InvariantCulture); break;
                     case "--yaw": opt.Yaw = Mathf.Clamp(float.Parse(Next(), CultureInfo.InvariantCulture), -45f, 45f); break;
                     case "--zoom": opt.Zoom = float.Parse(Next(), CultureInfo.InvariantCulture); break;
+                    case "--pitch": opt.Pitch = Mathf.Clamp(float.Parse(Next(), CultureInfo.InvariantCulture), 2f, 89f); break;
                     case "--at":
                     {
                         var p = Next().Split(',');

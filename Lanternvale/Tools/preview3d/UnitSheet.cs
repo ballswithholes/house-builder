@@ -175,8 +175,9 @@ namespace Lanternvale.Preview
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 int header = 22;
-                // pages of static models (totems, dummy) only have the two idle columns
-                bool allStatic = page.keys.All(k => { var m = ModelOf(k); return m != null && (m.Static || m.Rig == UnitRigKind.Static); });
+                // pages of unrigged static models (totems, dummy) only have the two idle columns; a rooted rigged model (a
+                // static boss) never walks, but strikes, shoots and casts
+                bool allStatic = page.keys.All(k => { var m = ModelOf(k); return m != null && m.Rig == UnitRigKind.Static; });
                 int ncol = allStatic && view == "sheet" ? 2 : Columns.Length;
                 var img = new SheetImage(Math.Max(tile * ncol, 640), header + tile * page.keys.Length);
                 img.Fill(0, 0, Math.Max(tile * ncol, 640), header + tile * page.keys.Length, new Vector3(0.93f, 0.92f, 0.88f));
@@ -228,6 +229,7 @@ namespace Lanternvale.Preview
                 t.Unit = new UnitPoser(key, 0f, t.Root, Vector2.zero, col.Yaw, variant, col.View != View.Game);
                 var u = t.Unit;
                 bool still = model.Static || model.Rig == UnitRigKind.Static;
+                bool rooted = model.Rig == UnitRigKind.Static;   // no bones to act with (a rigged static model acts)
                 switch (col.Pose)
                 {
                     case PoseKind.Idle: u.Idle(1.4f); break;
@@ -235,7 +237,7 @@ namespace Lanternvale.Preview
                         if (still) t.Skip = true; else u.Walk(speed);
                         break;
                     case PoseKind.Act:
-                        if (still) t.Skip = true; else u.Act(col.Action, col.Dur, col.At);
+                        if (rooted) t.Skip = true; else u.Act(col.Action, col.Dur, col.At);
                         break;
                 }
                 if (t.Skip) { tiles.Add(t); continue; }
