@@ -107,9 +107,16 @@ namespace Lanternvale.Game
             foreach (var kv in SfxIds.Group(pcm.Keys))
             {
                 var list = new List<AudioClip>(kv.Value.Count);
+                var seen = new List<float[]>(kv.Value.Count);
                 foreach (var key in kv.Value)
-                    if (pcm.TryGetValue(key, out var data) && data != null && data.Length > 0)
+                    // SfxSynth publishes the plain id as the same buffer as "id#1": one clip per buffer, so variant 1
+                    // is not weighted twice nor able to repeat back to back
+                    if (pcm.TryGetValue(key, out var data) && data != null && data.Length > 0
+                        && !seen.Exists(b => ReferenceEquals(b, data)))
+                    {
+                        seen.Add(data);
                         list.Add(SynthBuffer.ToClip("sfx_" + key, data));
+                    }
                 if (list.Count == 0) continue;
                 d[kv.Key] = list.ToArray();
                 variants += list.Count;
