@@ -353,7 +353,9 @@ namespace Lanternvale.Tests
             Assert(!Offered(), "offered once");
 
             s.EnterMap("amberfield", "from_lanternvale");
-            Assert(s.Quests.GetStage("mq2_ember_road") == "archivist", "reaching Amberfield advances to 'archivist'");
+            // the amberfield builder adds the Amberfield stages between 'road' and 'archivist' (TestsContentAm plays them)
+            Assert(s.Quests.IsActive("mq2_ember_road") && s.Quests.GetStage("mq2_ember_road") != "road", "reaching Amberfield advances past 'road'");
+            Assert(s.Quests.SetStage("mq2_ember_road", "archivist"), "skip to the last stage, 'archivist'");
             s.EnterMap("brightwater", "from_amberfield");
             Assert(s.VisibleNpcs().Any(n => n.npc == "bw_archivist_penhallow"), "Penhallow stands in Brightwater");
             Assert(s.StartDialogue("dlg_bw_penhallow", "bw_archivist_penhallow"), "talk to Penhallow");

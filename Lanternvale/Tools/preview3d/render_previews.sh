@@ -33,6 +33,16 @@ for z in amberfield brightwater mirefen skyreach; do
 done
 "$tool" map amberfield "$out/amberfield_north.png" --at 65,46 --hour 15
 "$tool" map amberfield "$out/amberfield_barrow_entrance.png" --at 64,43 --hour 16 --flags found_barrow
+"$tool" map amberfield "$out/amberfield_haybright.png" --at 104,12.5 --hour 10 --markers auto --level 12
+"$tool" map amberfield "$out/amberfield_cross_quests.png" --at 84,32 --hour 11 --zoom 8 --markers auto --level 14
+"$tool" map amberfield "$out/amberfield_cross_harvest_night.png" --at 84,32 --hour 22.5 --zoom 8 --flags am_lamp_1,am_lamp_2,am_lamp_3,am_lamp_4,am_harvest_home,am_corlan_banner_home
+"$tool" map amberfield "$out/amberfield_warcamp_dusk.png" --at 21,46 --hour 19.5 --zoom 8
+"$tool" map amberfield "$out/amberfield_quarry.png" --at 15,10 --hour 11 --zoom 8
+"$tool" map amberfield "$out/amberfield_watch.png" --at 64,12 --hour 14 --zoom 8
+"$tool" map amberfield "$out/amberfield_bridge_dawn.png" --at 50,24 --hour 7
+"$tool" map dgn_barrow "$out/dgn_barrow_tomb.png" --at 50,22
+"$tool" map dgn_barrow "$out/dgn_barrow_hearth.png" --at 40,35
+"$tool" map amberfield "$out/amberfield_kings_ring_door.png" --at 64,45 --hour 16 --flags found_barrow
 "$tool" map brightwater "$out/brightwater_north.png" --at 42,36 --hour 10
 "$tool" map brightwater "$out/brightwater_market.png" --at 55,18 --hour 11 --markers auto
 "$tool" map brightwater "$out/brightwater_bridge_dusk.png" --at 33,20 --hour 18.6 --yaw 20

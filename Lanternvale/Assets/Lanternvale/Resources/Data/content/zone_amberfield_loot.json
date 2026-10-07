@@ -1,0 +1,111 @@
+{
+  "lootTables": [
+    {
+      "id": "lt_am_hawk",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "am_junk_hawk_feather", "chance": 50},
+        {"item": "am_junk_hawk_talon", "chance": 25},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_am_redwing",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "am_redwing_cloak"}, {"item": "am_junk_hawk_feather", "min": 2, "max": 3}, {"random": true, "chance": 30, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_am_gnoll",
+      "goldMin": 40,
+      "goldMax": 160,
+      "entries": [
+        {"item": "am_junk_gnoll_fang", "chance": 40},
+        {"item": "am_junk_stolen_spoon", "chance": 25},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_am_gnoll_mystic",
+      "goldMin": 40,
+      "goldMax": 180,
+      "entries": [
+        {"item": "am_junk_bone_fetish", "chance": 45},
+        {"item": "am_junk_stolen_spoon", "chance": 30},
+        {"random": true, "chance": 5, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_am_packmaster",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [{"item": "am_duskmane_tally"}, {"item": "am_junk_gnoll_fang"}, {"random": true, "chance": 30, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_am_skarra",
+      "goldMin": 900,
+      "goldMax": 1600,
+      "entries": [
+        {"item": "am_ember_letter"},
+        {"pool": ["am_skarras_supper", "am_duskmane_bonecrown", "am_laughing_hex_fetish"], "partyUsable": true},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 35, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_am_tunneler",
+      "goldMin": 20,
+      "goldMax": 90,
+      "entries": [
+        {"item": "am_junk_shiny_pebble", "chance": 40},
+        {"item": "am_junk_candle_stub", "chance": 30},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_am_burrowmaster",
+      "goldMin": 200,
+      "goldMax": 400,
+      "entries": [{"item": "am_mudpaw_geode_charm"}, {"item": "am_junk_candle_stub"}, {"random": true, "chance": 30, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_am_highwayman",
+      "goldMin": 80,
+      "goldMax": 260,
+      "entries": [
+        {"item": "am_junk_tea_towel_mask", "chance": 35},
+        {"item": "am_junk_stolen_spoon", "chance": 20},
+        {"random": true, "chance": 5, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_am_jory",
+      "goldMin": 400,
+      "goldMax": 800,
+      "entries": [{"item": "am_jorys_lucky_coin"}, {"random": true, "chance": 35, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_am_chest_strongbox",
+      "goldMin": 400,
+      "goldMax": 900,
+      "entries": [{"random": true, "quality": "Uncommon", "itemLevelOffset": 1}, {"random": true, "chance": 15, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_am_chest_trophies",
+      "goldMin": 600,
+      "goldMax": 1100,
+      "entries": [{"random": true, "quality": "Uncommon", "itemLevelOffset": 1}, {"random": true, "chance": 25, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_am_chest_lookout",
+      "goldMin": 500,
+      "goldMax": 900,
+      "entries": [
+        {"item": "potion_healing", "min": 2, "max": 3},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 2},
+        {"random": true, "chance": 20, "quality": "Rare"}
+      ]
+    }
+  ]
+}

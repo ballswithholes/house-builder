@@ -1,0 +1,175 @@
+{
+  "npcs": [
+    {
+      "id": "am_biscuit",
+      "name": "Biscuit",
+      "title": "Haybright's Sheepdog (Retired)",
+      "sprite": "pet_wolf",
+      "portrait": "cr_wolf",
+      "dialogue": "dlg_am_biscuit",
+      "bark": "*thump, thump* (That is his tail. He is not getting up.)"
+    },
+    {
+      "id": "am_hedda_haybright",
+      "name": "Hedda Haybright",
+      "title": "Bruna's Mum",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_am_hedda",
+      "bark": "Wipe your feet! Not you, Biscuit. You can't."
+    },
+    {
+      "id": "am_tam_haybright",
+      "name": "Tam Haybright",
+      "shortName": "Tam",
+      "title": "The Smallest Haybright",
+      "sprite": "npc_child",
+      "portrait": "portrait_child",
+      "dialogue": "dlg_am_tam",
+      "bark": "The scarecrow WALKS. Nobody believes me."
+    },
+    {
+      "id": "am_nib",
+      "name": "Nib",
+      "title": "A Very Small Gnoll",
+      "sprite": "cr_gnoll",
+      "portrait": "cr_bandit",
+      "dialogue": "dlg_am_nib",
+      "bark": "Nib is not here. Nib is a scarecrow."
+    },
+    {
+      "id": "am_nib_farm",
+      "name": "Nib",
+      "title": "Haybright's Newest Farmhand",
+      "sprite": "cr_gnoll",
+      "portrait": "cr_bandit",
+      "dialogue": "dlg_am_nib_farm",
+      "bark": "Nib has a HAT. And a JOB. And a SPOON he did not steal."
+    },
+    {
+      "id": "am_reeve_hester",
+      "name": "Reeve Hester Applegarth",
+      "shortName": "Reeve Hester",
+      "title": "Reeve of Amberfield",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_am_hester",
+      "bark": "If it's about the oil, take a number. If it's about pie, take a seat."
+    },
+    {
+      "id": "am_miller_pell",
+      "name": "Tamsin Pell",
+      "shortName": "Miller Pell",
+      "title": "Miller of Amberfield",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_am_pell",
+      "bark": "Mill by day, oil-press by night. Well. Used to be."
+    },
+    {
+      "id": "am_ser_corlan",
+      "name": "Ser Corlan Hale",
+      "shortName": "Ser Corlan",
+      "title": "Heronguard (Retired)",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_am_corlan",
+      "bark": "Rows straight, beans staked, gate shut. Discipline."
+    },
+    {
+      "id": "am_hob_waxley",
+      "name": "Old Hob Waxley",
+      "shortName": "Old Hob",
+      "title": "Beekeeper",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_am_hob",
+      "bark": "Mind the bees. They don't mind you."
+    },
+    {
+      "id": "am_ida_crook",
+      "name": "Old Ida Crook",
+      "shortName": "Old Ida",
+      "title": "Shepherd of the Ring",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_am_ida",
+      "bark": "Count the stones, count the sheep. One of them's always missing."
+    },
+    {"id": "am_sheep_duchess", "name": "Duchess", "title": "A Sheep of Some Importance", "sprite": "sheep", "bark": "Baa.", "wanders": true},
+    {"id": "am_sheep_wobble", "name": "Wobble", "title": "A Sheep", "sprite": "sheep", "bark": "Meh-eh-eh.", "wanders": true},
+    {
+      "id": "am_constable_pip",
+      "name": "Constable Pip Harrow",
+      "shortName": "Constable Pip",
+      "title": "The Reeve's Constable",
+      "sprite": "npc_guard",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_am_pip",
+      "bark": "Halt! Er. Carry on. But carefully."
+    },
+    {
+      "id": "am_wat_turnbull",
+      "name": "Wat Turnbull",
+      "shortName": "Wat",
+      "title": "Turnip Farmer",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_am_wat",
+      "bark": "That was a turnip. Now it's a hole."
+    },
+    {
+      "id": "am_mother_delve",
+      "name": "Mother Delve",
+      "shortName": "Mother Delve",
+      "title": "Eldest of the Mudpaw",
+      "sprite": "cr_tunneler_geomancer",
+      "portrait": "cr_mossling_shaman",
+      "dialogue": "dlg_am_delve",
+      "bark": "Mind the roof, dear. It's our floor."
+    },
+    {
+      "id": "am_mudpaw_pebble",
+      "name": "Pebble",
+      "title": "Mudpaw Cart-Pusher",
+      "sprite": "cr_tunneler",
+      "portrait": "cr_mossling",
+      "dialogue": "dlg_am_pebble",
+      "bark": "Rocks! Rocks! Rocks! (He likes rocks.)"
+    },
+    {
+      "id": "am_jory_farmhand",
+      "name": "Jory Ditchwater",
+      "shortName": "Jory",
+      "title": "Harvest Hand (Reformed)",
+      "sprite": "cr_bandit_chief",
+      "portrait": "cr_bandit_chief",
+      "dialogue": "dlg_am_jory_farmhand",
+      "bark": "Stand and deliv— sorry. Habit. Lovely day for a harvest."
+    },
+    {
+      "id": "am_jory_highwayman",
+      "name": "Jory Ditchwater",
+      "title": "Captain of the Ditchwater Gang",
+      "sprite": "cr_bandit_chief",
+      "portrait": "cr_bandit_chief",
+      "bark": "Stand and deliver!"
+    },
+    {
+      "id": "am_grubb",
+      "name": "Burrowmaster Grubb",
+      "title": "Foreman of the Mudpaw",
+      "sprite": "cr_tunneler",
+      "portrait": "cr_mossling",
+      "bark": "Off our roof!"
+    },
+    {
+      "id": "am_skarra",
+      "name": "Warchief Skarra Duskmane",
+      "title": "Matriarch of the Duskmane",
+      "sprite": "cr_gnoll_chief",
+      "portrait": "cr_bandit_chief",
+      "bark": "Supper is served."
+    }
+  ]
+}
