@@ -177,7 +177,6 @@
         {"art": "prop_stone_wall", "pos": [59.1, 21.6], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [62.5, 21.6], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [65.9, 21.6], "collider": {"w": 3.4, "h": 0.6}},
-        {"art": "prop_stone_wall", "pos": [69.3, 21.6], "collider": {"w": 3.4, "h": 0.6}},
         {
           "art": "prop_spirit_lantern_dark",
           "pos": [16.0, 20.65],
@@ -341,7 +340,6 @@
         {"art": "prop_stone_wall", "pos": [11.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [15.3, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [18.7, 29.4], "collider": {"w": 3.4, "h": 0.6}},
-        {"art": "prop_stone_wall", "pos": [22.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [26.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [29.5, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [32.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
@@ -349,7 +347,6 @@
         {"art": "prop_stone_wall", "pos": [39.7, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [43.1, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {"art": "prop_stone_wall", "pos": [46.5, 29.4], "collider": {"w": 3.4, "h": 0.6}},
-        {"art": "prop_stone_wall", "pos": [49.9, 29.4], "collider": {"w": 3.4, "h": 0.6}},
         {
           "art": "prop_spirit_lantern_dark",
           "pos": [21.0, 29.5],
@@ -359,7 +356,7 @@
         },
         {
           "art": "prop_spirit_lantern_dark",
-          "pos": [24.0, 29.5],
+          "pos": [23.8, 29.5],
           "collider": {"w": 0.9, "h": 0.5},
           "interact": "lantern_shrine_76",
           "text": "A spirit-lantern on the pilgrim stair. Someone has polished its little roof, recently."
@@ -461,7 +458,7 @@
           "text": "A stone cat on the lodge step. It is judging you, and it is right."
         },
         {"art": "prop_tree_pine", "pos": [68.6, 27.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
-        {"art": "prop_bush_a", "pos": [67.0, 23.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [68.6, 24.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {
           "art": "prop_spirit_lantern_dark",
           "pos": [60.6, 22.8],

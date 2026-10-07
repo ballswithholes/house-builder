@@ -273,7 +273,7 @@
           "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
         },
         {"art": "prop_bones", "pos": [37.4, 24.6]},
-        {"art": "prop_rubble", "pos": [38.2, 14.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [38.4, 15.6], "collider": {"w": 1.8, "h": 1.0}},
         {
           "art": "prop_spirit_lantern",
           "pos": [49.4, 22.4],
@@ -325,7 +325,7 @@
         },
         {
           "art": "prop_brazier",
-          "pos": [45.4, 25.0],
+          "pos": [47.4, 24.2],
           "collider": {"w": 0.9, "h": 0.7},
           "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
         },
