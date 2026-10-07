@@ -12,6 +12,12 @@ A 3D low-poly Unity remake of Namco's Famicom strategy game 三国志II 霸王�
 (1992), in Chinese, for Windows/Mac and iPad/iPhone. See
 [`sanguozhi2-unity/README.md`](sanguozhi2-unity/README.md) for setup and rules.
 
+## 三国志II 霸王的大陆 · 网页版（`sanguozhi2-web/`）
+
+The browser version of the remake above, playable on desktop, iPad and iPhone.
+Open `sanguozhi2-web/index.html` — static files only, no build step. See
+[`sanguozhi2-web/README.md`](sanguozhi2-web/README.md) for what it contains.
+
 ## 吞食天地 web remake（`bawang/`）
 
 A browser remake of Capcom's Famicom RPG 吞食天地 (Destiny of an Emperor),
