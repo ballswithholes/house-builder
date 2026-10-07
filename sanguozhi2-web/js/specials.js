@@ -520,7 +520,18 @@
     const us = bc.M.specialUsable(u);
     if (!sp) return uiItem('必杀', '<span class="sg-muted">无</span>', false, null);
     const nm = '<span style="color:' + uiColor(sp) + '">「' + esc(sp.name) + '」</span>';
-    return uiItem('必杀', us.ok ? nm : nm + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(sp.desc));
+    return uiItem('必杀', us.ok ? nm : nm + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(menuDesc(sp)));
+  }
+  // 行动菜单里的说明：矮屏（横屏手机）只留一行（机制名 + 说明的第一句，截断），免得把「待机」挤出菜单；
+  // 完整说明在选择目标时的提示、部队卡片与武将详情里都有
+  function menuDesc(sp) {
+    const full = String(sp.desc || '');
+    const h = typeof window !== 'undefined' ? (window.innerHeight || 0) : 0;
+    if (!h || h >= 560) return full;
+    let first = full.split(/[。；！]/)[0] || full;
+    const MAX = 16;
+    if (first.length > MAX) first = first.slice(0, MAX) + '…';
+    return kindName(sp.kind) + '：' + first;
   }
 
   function cardLine(u) {

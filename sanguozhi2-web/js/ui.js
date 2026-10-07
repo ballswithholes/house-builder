@@ -88,9 +88,19 @@
     window.addEventListener('orientationchange', () => setTimeout(updateScale, 120));
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('keyup', onKeyUp, true);
+    // 记录最近一次输入方式：指针打开的模态关闭后不把焦点还给 HUD 按钮（否则 Space/Enter 会误触 动画 / 委任作战）
+    // 画布的指针处理会阻止默认的焦点转移：点在 HUD 之外时，像浏览器原生行为那样让 HUD 按钮失去焦点
+    window.addEventListener('pointerdown', e => {
+      lastInputPointer = true;
+      const a = document.activeElement, t = e.target;
+      if (a && a !== document.body && a.closest && a.closest(HUD_SEL) && !(t && t.closest && t.closest(HUD_SEL))) a.blur();
+    }, true);
+    window.addEventListener('keydown', e => { if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta') lastInputPointer = false; }, true);
     return UI;
   };
   function ensure() { if (!inited) UI.init(); }
+  let lastInputPointer = false;
+  const HUD_SEL = '.sg-battle-actions, .sg-topbar-actions';
 
   // ---------------------------------------------------------- DOM 构建 --
   function el(tag, className, html) {
@@ -132,6 +142,9 @@
     if (onClick) {
       b.addEventListener('click', e => {
         if (b.disabled) return;
+        // 鼠标 / 触摸点击（detail>0）后，模态层之外的按钮（战斗 HUD、顶栏）不保留键盘焦点，
+        // 否则之后的 Space/Enter（或长按 Enter 的自动重复）会再次触发它
+        if (e.detail > 0 && !(L.modals && L.modals.contains(b))) b.blur();
         sfxClick();
         onClick(e);
       });
@@ -194,7 +207,9 @@
     if (opts.height) panel.style.minHeight = 'min(' + rem(opts.height) + ', 100%)';
     blocker.appendChild(panel);
     L.modals.appendChild(blocker);
-    const prevFocus = document.activeElement;
+    let prevFocus = document.activeElement;
+    // 由指针操作打开时，不把焦点还给 HUD 按钮（见 UI.button）
+    if (lastInputPointer && prevFocus && prevFocus.closest && prevFocus.closest(HUD_SEL)) prevFocus = null;
     const rec = {
       blocker, panel, onKey: null, closed: false,
       close() {

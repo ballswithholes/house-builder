@@ -53,7 +53,8 @@
     if (!regs) return { items: fs.map(row), pick: i => fs[i] || null, heads: [] };
     const g = G();
     const mine = g.playerFaction ? g.playerFaction.region : null;
-    const order = regs.slice().sort((a, b) => (b.id === mine) - (a.id === mine));
+    const near = regionNearness(regs);
+    const order = regs.slice().sort((a, b) => ((b.id === mine) - (a.id === mine)) || (near[a.id] - near[b.id]));
     const items = [], map = [], heads = [];
     for (const r of order) {
       const list = fs.filter(f => f.region === r.id);
@@ -66,6 +67,31 @@
     const rest = fs.filter(f => !map.includes(f));
     for (const f of rest) { items.push(row(f)); map.push(f); }
     return { items, pick: i => map[i] || null, heads };
+  }
+  // 各地域离我方的远近：自我方城池沿连线到该地域势力所据城池的最少步数（并列时按地图上的直线距离），
+  // 使邻近的地域排在前面，而不是固定把中原十八路诸侯放在第二组
+  function regionNearness(regs) {
+    const g = G(), out = {};
+    const hops = new Array(g.cities.length).fill(Infinity);
+    let q = g.citiesOf(g.player).map(c => c.id);
+    for (const id of q) hops[id] = 0;
+    for (let d = 1; q.length; d++) {
+      const next = [];
+      for (const id of q) for (const j of g.cities[id].links) if (hops[j] === Infinity) { hops[j] = d; next.push(j); }
+      q = next;
+    }
+    const capC = g.playerFaction && g.ruler(g.player) ? g.cities[g.ruler(g.player).city] : null;
+    const cp = capC && SG.mapPos ? SG.mapPos(capC) : null;
+    for (const r of regs) {
+      let h = Infinity, dx = 0, n = 0;
+      for (const c of g.cities) {
+        if (c.owner < 0 || g.factions[c.owner].region !== r.id) continue;
+        h = Math.min(h, hops[c.id]);
+        if (cp) { const p = SG.mapPos(c); dx += Math.hypot(p.x - cp.x, p.y - cp.y); n++; }
+      }
+      out[r.id] = (h === Infinity ? 1e6 : h * 1e4) + (n ? dx / n : 0);
+    }
+    return out;
   }
   // 给最上层列表对话框的分组标题行加上样式类
   function markGroupHeads(heads) {
@@ -210,7 +236,12 @@
         const news = [];
         const battles = SG.StrategyAI.runAI(news);
         game.map.refresh(G()); this.refreshAll();
-        for (const b of battles) { await this.defend(b); if (!G().playerFaction.alive) break; }
+        for (const b of battles) {
+          // 同月先到的进攻可能已使该城易主：不再针对玩家的就按电脑之间结算（或撤兵），不再向玩家告急
+          if (!SG.StrategyAI.recheckBattle(b, news)) { game.map.refresh(G()); this.refreshAll(); continue; }
+          await this.defend(b);
+          if (!G().playerFaction.alive) break;
+        }
         if (G().playerFaction.alive) for (const n of SG.StrategyAI.endMonth()) news.push(n);
         game.map.refresh(G()); this.refreshAll();
         if (!G().playerFaction.alive) { await this.gameOver(false); return; }
@@ -234,7 +265,10 @@
       for (const f of g.factions) if (f.alive && f.region === me.region) names.add(f.name);
       for (const c of g.citiesOf(g.player)) for (const j of c.links) { const o = g.cities[j].owner; if (o >= 0) names.add(g.factions[o].name); }
       const near = n => { for (const k of names) if (n.indexOf(k) >= 0) return true; return false; };
-      const list = news.filter(near).concat(news.filter(n => !near(n))).slice(0, 6);
+      // 先挑与我方相关的，再按原先的先后顺序排列（同一座城的两次易手不致前后颠倒）
+      const idx = news.map((n, i) => i);
+      const pick = idx.filter(i => near(news[i])).concat(idx.filter(i => !near(news[i]))).slice(0, 6).sort((a, b) => a - b);
+      const list = pick.map(i => news[i]);
       return list.join('\n') + '\n<span class="sg-muted">（各地另有 ' + (news.length - list.length) + ' 条消息）</span>';
     }
 
@@ -852,7 +886,7 @@
       if (gens.length === 0) { await UI().say('没有可以出征的部队（需有兵力且本月未行动）。'); return; }
       const sel = await UI().chooseMany('出征武将（至多 ' + B.MaxSortieGenerals + ' 名）',
         gens.map(x => item(SG.esc(x.name), `兵${x.troops} 武${x.war} 智${x.intel} 训${x.training}`)), B.MaxSortieGenerals,
-        '第一位选中的武将为主将；主将败走则全军撤退。');
+        '君主出征时由君主任主将，否则为列表中最靠前的武将；主将败走则全军撤退。');
       if (!sel || sel.length === 0) return;
       const squad = sel.map(i => gens[i]);
       const troops = sum(squad, x => x.troops);
@@ -884,8 +918,12 @@
       if (s.def.length === 0 || s.def.every(d => d.troops <= 0)) {
         Cq.autoResolve(s);
         Cq.apply(s);
-        if (s.captives.length > 0) await this.handleCaptives(s, playerSide === 0);
+        SG.Game.map.refresh(g); this.refreshAll();
+        let fates = null;
+        if (s.captives.length > 0) fates = await this.handleCaptives(s, playerSide === 0);
+        SG.Game.map.refresh(g); this.refreshAll();
         await UI().say(s.summary);
+        await this.reportCaptives(fates, s.attackerWon ? s.attacker : s.defender);
         return;
       }
       const mode = await UI().choose(s.target.name + '之战', [item('亲自指挥', '在战场上调兵遣将'), item('委任', '由部将自行作战，立即得出结果')], null, 560);
@@ -904,10 +942,13 @@
         mapMusic();
       } else Cq.autoResolve(s);
       Cq.apply(s);
+      // 先刷新地图与城池面板（处置俘虏的对话期间显示战后兵力与归属）
+      SG.Game.map.refresh(g); this.refreshAll();
       const playerWon = s.attackerWon === (playerSide === 0);
+      let fates = null;
       if (s.captives.length > 0) {
         if (playerWon) await this.handleCaptives(s, true);
-        else Cq.aiDecideCaptives(s, playerSide === 0 ? s.defender : s.attacker);
+        else fates = Cq.aiDecideCaptives(s, playerSide === 0 ? s.defender : s.attacker);
       }
       for (const f of g.factions) if (f.alive && g.cityCount(f.id) === 0) g.checkFactionDeath(f.id);
       SG.Game.map.refresh(g);
@@ -916,12 +957,27 @@
         ? (s.attackerWon ? '我军攻陷了' + s.target.name + '！' : '攻城失利，全军撤回' + s.src.name + '。')
         : (s.attackerWon ? s.target.name + '失守了……' : '我军成功守住了' + s.target.name + '！');
       await UI().say(res);
+      await this.reportCaptives(fates, playerSide === 0 ? s.defender : s.attacker);
       if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(g.factions[s.defender].name + '势力就此灭亡。');
+    }
+
+    // 战败后我方被俘武将的下落（fates：Conquest.aiDecideCaptives 的结果；winner：处置俘虏的势力）
+    async reportCaptives(fates, winner) {
+      const g = G();
+      const mine = (fates || []).filter(x => x.from === g.player);
+      if (!mine.length || winner < 0) return;
+      const wn = g.factions[winner].name;
+      const lines = mine.map(({ gen, fate }) => {
+        if (fate === 'hired') { g.addLog(`${gen.name}被俘，归降了${wn}。`); return `${gen.name}被俘，归降了${wn}。`; }
+        if (fate === 'executed') return `${gen.name}被俘，遭${wn}处斩。`;
+        return gen.faction === g.player ? `${gen.name}被俘后获释，回到了${g.cities[gen.city].name}。` : `${gen.name}被俘后获释，流落在野。`;
+      });
+      await UI().say(lines.join('\n'));
     }
 
     async handleCaptives(s, playerDecides) {
       const g = G(), Cq = SG.Conquest, C = SG.Commands;
-      if (!playerDecides) { Cq.aiDecideCaptives(s, s.attackerWon ? s.attacker : s.defender); return; }
+      if (!playerDecides) return Cq.aiDecideCaptives(s, s.attackerWon ? s.attacker : s.defender);
       // 玩家只在获胜后处置俘虏，胜方必然据有 s.target（攻方刚攻下 / 守方守住），降将应编入该城
       const holderCity = s.target;
       const recruiter = g.ruler(g.player);
@@ -1016,7 +1072,7 @@
         swatch(f.color) + SG.esc(g.ruler(f.id).name) + (f.name !== g.ruler(f.id).name && regionsOf() ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : '') +
         (f.id === g.player ? '（我方）' : g.allied(f.id, g.player) ? '（同盟）' : ''),
         `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　兵 ${sum(g.citiesOf(f.id), c => g.troopsIn(c))}`));
-      const pr = UI().choose('天下势力', grp.items, regionsOf() ? '按地域分组（我方所在地域在前）；点选势力，镜头飞往其都城。' : null, 760);
+      const pr = UI().choose('天下势力', grp.items, regionsOf() ? '按地域分组（我方所在地域在前，其余由近及远）；点选势力，镜头飞往其都城。' : null, 760);
       markGroupHeads(grp.heads);
       const r = await pr;
       if (r < 0) return;

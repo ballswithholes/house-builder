@@ -181,6 +181,19 @@ for (const p of F.slice(nF)) check(SG.FactionInfo[p[0]] && SG.FactionInfo[p[0]].
     }
   }
   check(bad.length === 0, 'player-facing text has no research / merge leftovers: ' + bad.join(', '));
+  // 武将详情与选君主卡片里的“介绍”（note）只写史事：出处、译名说明、数值理由、规则取舍一律放进 liberty（「游戏取舍」）
+  const NOTE_META = /维基|文献作|英文文献|未找到|译名|自拟|数值|三维|按规则|放宽|游戏安排|游戏中|设为空城|在任武将|为凑成|校准|[武智政德望]极?[高低]|忠诚(?:偏|设)?低|故(?:武力|智力|政治|政略|智谋)/;
+  const noteBad = [];
+  for (const [tab, T] of [['WorldInfo', SG.WorldInfo], ['FactionInfo', SG.FactionInfo]]) {
+    for (const k in T) if (NOTE_META.test(T[k].note || '')) noteBad.push(tab + '.' + k + '「' + NOTE_META.exec(T[k].note)[0] + '」');
+  }
+  check(noteBad.length === 0, 'history notes carry no source / stat / rule remarks: ' + noteBad.join(', '));
+  let rare = [];
+  for (const T of [SG.WorldInfo, SG.FactionInfo]) for (const k in T) for (const f of ['full', 'role', 'note', 'liberty']) if (/[\u{20000}-\u{3FFFF}]/u.test(T[k][f] || '')) rare.push(k + '.' + f);
+  check(rare.length === 0, 'no CJK Extension B+ characters (most system fonts lack them): ' + rare.join(', '));
+  let dash = [];
+  for (const T of [SG.WorldInfo, SG.FactionInfo]) for (const k in T) for (const f of ['full', 'role', 'note', 'liberty']) if (/–/.test(T[k][f] || '')) dash.push(k + '.' + f);
+  check(dash.length === 0, 'date ranges use 「—」, not 「–」: ' + dash.join(', '));
 }
 for (const p of C.slice(nC)) check(SG.CityInfo[p[0]], 'CityInfo ' + p[0]);
 for (const n in SG.GeneralBorn) check(genByName[n] && genByName[n][10] === String(SG.GeneralBorn[n]), 'GeneralBorn ' + n);

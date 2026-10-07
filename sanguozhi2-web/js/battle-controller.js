@@ -39,39 +39,6 @@
     } catch (e) { /* 无地域资料 */ }
     return null;
   }
-  // 胜负乐曲（一次性短曲）播完之前，把回到地图时的 music('map') 请求暂缓，曲终再接地图曲。
-  // 其它曲目请求（下一场战斗、标题……）立即放行并取消暂缓。
-  function deferMapMusicAfterOneShot() {
-    const S = SG.Sfx;
-    if (!S || typeof S.music !== 'function' || S._sgMusicHold) return;
-    const kind = S.musicKind;
-    if (kind !== 'victory' && kind !== 'defeat') return;
-    let maxSec = 22;
-    try { const d = SG.Music.duration(SG.Music.resolve(kind, S.culture)); if (d && d.total > 0) maxSec = d.total + 4; } catch (e) { /* 默认 */ }
-    const orig = S.music, own = Object.prototype.hasOwnProperty.call(S, 'music');
-    const t0 = Date.now();
-    let pending = null, done = false, timer = 0;
-    const release = play => {
-      if (done) return;
-      done = true;
-      clearInterval(timer);
-      if (S.music === wrapped) { if (own) S.music = orig; else delete S.music; }
-      S._sgMusicHold = null;
-      if (play && pending) { try { orig.apply(S, pending); } catch (e) { /* 无音频 */ } }
-    };
-    const wrapped = function (k) {
-      if (!done && k === 'map') { pending = Array.prototype.slice.call(arguments); return; }
-      release(false);
-      return orig.apply(S, arguments);
-    };
-    S.music = wrapped;
-    S._sgMusicHold = release;
-    timer = setInterval(() => {
-      let busy = false;
-      try { const ctx = S.context; busy = S.musicOn && ctx && ctx.state === 'running' && S.musicKind === kind && !S.musicFinished; } catch (e) { busy = false; }
-      if (!busy || Date.now() - t0 > maxSec * 1000) release(true);
-    }, 250);
-  }
   const ANIM_NAME = { on: '开', fast: '快', off: '关' };
   function item(label, right, enabled, desc) {
     if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc);
@@ -218,8 +185,7 @@
         rig.bounds = oldBounds; rig.minDist = oldMin; rig.maxDist = oldMax;
         rig.focusWorld(oldTarget, oldDist, true);
         try { if (SG.Sfx && oldCulture) SG.Sfx.culture = oldCulture; } catch (e) { /* 无音频 */ }
-        deferMapMusicAfterOneShot();
-        music('map');
+        music('map');   // 胜负短曲未奏完时由 audio.js 暂缓（HOLD_AFTER_ONE_SHOT），曲终再接地图曲
       }
     }
 
@@ -658,7 +624,15 @@
         const arena = h('div', 'sg-duel-arena', null, panel);
         const side = u => {
           const col = h('div', 'sg-duel-side sg-side-' + u.side, null, arena);
-          col.appendChild(SG.UI.medal(u.gen.name.substring(0, 1), sideColor(u.side), 130));
+          // 头像（v2）：与单挑画面、切入特写同一套肖像；无肖像模块时退回单字徽章
+          let pic = null;
+          try {
+            if (SG.Portrait && typeof SG.Portrait.el === 'function') {
+              const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;   // 与 .sg-duel-side .sg-medal（6.5rem）同大
+              pic = SG.Portrait.el(u.gen, { size: Math.round(6.5 * rem), color: sideColor(u.side), mood: 'angry', flip: u === b });
+            }
+          } catch (e) { pic = null; }
+          col.appendChild(pic || SG.UI.medal(u.gen.name.substring(0, 1), sideColor(u.side), 130));
           h('div', 'sg-duel-name', SG.esc(u.gen.name) + '<small>武力 ' + u.gen.war + '</small>', col);
           const bar = SG.UI.bar(1, sideColor(u.side));
           col.appendChild(bar);

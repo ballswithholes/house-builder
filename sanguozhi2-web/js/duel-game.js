@@ -1014,6 +1014,11 @@
       this.c.push(col.r, col.g, col.b, col.r, col.g, col.b, col.r, col.g, col.b);
     }
     quad(a, b, c, d, col) { this.tri(a, b, c, col); this.tri(a, c, d, col); }
+    // 逐顶点着色的三角形（颜色在面内平滑过渡）
+    triV(a, b, c, ca, cb, cc) {
+      this._v(a[0], a[1], a[2]); this._v(b[0], b[1], b[2]); this._v(c[0], c[1], c[2]);
+      for (const k of [ca, cb, cc]) { const q = C(k); this.c.push(q.r, q.g, q.b); }
+    }
     // 任意凸六面体：P[i]，i = x位 + 2·y位 + 4·z位
     hex(P, col, top, bot) {
       const q = (i, j, k, l, c) => this.quad(P[i], P[j], P[k], P[l], c);
@@ -1723,7 +1728,7 @@
       c.jump = P({ hy: 0.96, lean: 0.05, fLx: 0.22, fLy: 0.42, fRx: -0.12, fRy: 0.3, gx: 0.05, gy: 1.22, wa: 60 });
       c.air = [[0, c.jump], [0.6, pose(c.jump, { gx: -0.02, gy: 1.48, wa: 115, lean: -0.1 })], [1, pose(c.jump, { gx: 0.45, gy: 0.98, wa: -35, lean: 0.35 })], [2, pose(c.jump, { gx: 0.42, gy: 0.9, wa: -42, lean: 0.32 })], [3, c.jump]];
       c.power = P({ gx: -0.18, gy: 1.62, wa: 150, twist: -0.9, lean: -0.12, hy: 0.86, head: -0.18, fLx: 0.42, fRx: -0.42, cape: 0.6 });
-      c.victory = [[0, I], [0.35, P({ gx: 0.2, gy: 1.42, wa: 200, twist: -0.25, lean: -0.02 })], [0.7, P({ gx: 0.1, gy: 1.86, wa: 78, lean: -0.12, head: -0.26, twist: -0.12, hy: 0.93 })], [1.6, P({ gx: 0.1, gy: 1.88, wa: 80, lean: -0.13, head: -0.24, twist: -0.12, hy: 0.93 })]];
+      c.victory = [[0, I], [0.35, P({ gx: 0.2, gy: 1.42, wa: 200, twist: -0.25, lean: -0.02 })], [0.7, P({ gx: 0.44, gy: 1.36, wa: 93, lean: -0.08, head: -0.12, twist: 0.04, hy: 0.93, cape: 0.2 })], [1.6, P({ gx: 0.46, gy: 1.38, wa: 94, lean: -0.1, head: -0.1, twist: 0.06, hy: 0.93, cape: 0.2 })]];
       c.defeat = [[0, I], [0.5, P({ hy: 0.55, lean: 0.4, head: 0.36, fLx: 0.36, fLy: 0.08, fRx: -0.34, fRy: 0.05, gx: 0.32, gy: 0.72, wa: -58, twist: -0.2 })]];
       c.dash = P({ lean: 0.42, hy: 0.84, fLx: 0.5, fLy: 0.12, fRx: -0.52, fRy: 0.1, gx: -0.06, gy: 0.98, wa: 12, twist: -0.62, cape: 0.8 });
     } else {
@@ -1744,7 +1749,7 @@
       c.jump = D({ hy: 0.96, lean: 0.05, fLx: 0.22, fLy: 0.42, fRx: -0.12, fRy: 0.3, gx: 0.15, gy: 1.4, wa: 90 });
       c.air = [[0, c.jump], [0.6, pose(c.jump, { gx: -0.06, gy: 1.52, wa: 145, lean: -0.1 })], [1, pose(c.jump, { gx: 0.42, gy: 0.95, wa: -40, lean: 0.35 })], [2, pose(c.jump, { gx: 0.38, gy: 0.88, wa: -50, lean: 0.32 })], [3, c.jump]];
       c.power = D({ gx: -0.1, gy: 1.7, wa: 120, ox: 0.25, oy: 1.25, wa2: 40, twist: -0.6, lean: -0.12, hy: 0.86, head: -0.18, fLx: 0.42, fRx: -0.42, cape: 0.6 });
-      c.victory = [[0, I], [0.35, D({ gx: 0.25, gy: 1.4, wa: 160, twist: -0.25 })], [0.7, D({ gx: 0.14, gy: 1.86, wa: 86, ox: 0.06, oy: 1.0, lean: -0.12, head: -0.26, hy: 0.93 })], [1.6, D({ gx: 0.14, gy: 1.88, wa: 88, ox: 0.06, oy: 1.0, lean: -0.13, head: -0.24, hy: 0.93 })]];
+      c.victory = [[0, I], [0.35, D({ gx: 0.25, gy: 1.4, wa: 160, twist: -0.25 })], [0.7, D({ gx: 0.25, gy: 1.86, wa: 86, ox: 0.06, oy: 1.0, lean: -0.12, head: -0.2, hy: 0.93 })], [1.6, D({ gx: 0.26, gy: 1.88, wa: 88, ox: 0.06, oy: 1.0, lean: -0.13, head: -0.18, hy: 0.93 })]];
       c.defeat = [[0, I], [0.5, D({ hy: 0.55, lean: 0.4, head: 0.36, fLx: 0.36, fLy: 0.08, fRx: -0.34, fRy: 0.05, gx: 0.36, gy: 0.62, wa: -80, ox: 0.2, oy: 0.8, twist: -0.1 })]];
       c.dash = D({ lean: 0.42, hy: 0.84, fLx: 0.5, fLy: 0.12, fRx: -0.52, fRy: 0.1, gx: 0.1, gy: 1.0, wa: 170, twist: -0.4, cape: 0.8 });
     }
@@ -2279,6 +2284,12 @@
         return back * 0.09 * hill + n * 1.6 * Math.min(1, back / 4) * hill + Math.max(0, Math.abs(x) - 13) * 0.05 * hill;
       };
       const gc = C(pal.ground), gc2 = C(pal.ground2), lane = C(pal.lane);
+      const colAt = (cx, cz) => {
+        let col = mixC(gc, gc2, M.clamp01(M.perlinNoise(cx * 0.15, cz * 0.15) * 1.2 - 0.1));
+        const laneK = 1 - M.smoothStep(0, 1, (Math.abs(cz) - 1.2) / 2.2);
+        if (Math.abs(cx) < 14) col = mixC(col, lane, laneK);
+        return col;
+      };
       for (let x = X0; x < X1; x += S) {
         for (let z = Z0; z < Z1; z += S) {
           const a = [x, h(x, z), z], b = [x, h(x, z + S), z + S], c = [x + S, h(x + S, z + S), z + S], d = [x + S, h(x + S, z), z];
@@ -2289,6 +2300,12 @@
           if (kind === 'castle' && Math.abs(cz) < 3.6 && Math.abs(cx) < 16) col = ((Math.floor(cx / 2) + Math.floor(cz / 2)) & 1) ? sh(lane, 0.05) : sh(lane, -0.06);
           if (kind === 'river' && cz < -3.4 && cz > -26) col = C('#5a6a5a');
           const j = (r.nextDouble() - 0.5) * 0.08;
+          // 比武道与前景（镜头前的地面）在画面上很大：改为逐顶点平滑着色，免得画面中线与下三分之一满是逐块接缝与色带
+          if (cz > -3 && !(kind === 'castle' && Math.abs(cz) < 3.6 && Math.abs(cx) < 16)) {
+            const ca = colAt(a[0], a[2]), cb = colAt(b[0], b[2]), cc = colAt(c[0], c[2]), cd = colAt(d[0], d[2]);
+            pb.triV(a, b, c, ca, cb, cc); pb.triV(a, c, d, ca, cc, cd);
+            continue;
+          }
           this.quadSplit(pb, a, b, c, d, sh(col, j), sh(col, j - 0.03));
         }
       }
@@ -2723,7 +2740,11 @@
 .sgd-tl .row{display:flex;align-items:center;gap:.6em;}
 .sgd-chip{display:inline-grid;place-items:center;min-width:2.6em;height:2.6em;border-radius:50%;border:2px solid rgba(243,201,105,.7);background:rgba(40,34,48,.8);font:700 .9em/1 ${KAI};color:#fff4dc;flex:none;}
 .sgd-chip.big{background:rgba(160,40,30,.85);border-color:rgba(255,140,110,.85);}
-.sgd-vs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:calc(3*var(--u));pointer-events:none;}
+.sgd-vs{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:calc(3*var(--u));pointer-events:none;padding-bottom:calc(var(--sab) + 4.5*var(--u));}
+/* VS 卡放在下三分之一、垫一层暗色渐变：不压住上方亮相的 3D 武将，武力 / 兵器一行也有底 */
+.sgd-vs::before{content:"";position:absolute;left:0;right:0;bottom:0;height:min(58%,calc(30*var(--u)));pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,6,10,.78) 0%,rgba(8,6,10,.5) 45%,rgba(8,6,10,0) 100%);animation:sgd-vsbg .4s ease-out both;}
+.sgd-vs .x{align-self:center;margin-bottom:calc(3.2*var(--u));}
 .sgd-vs .p{display:flex;flex-direction:column;align-items:center;gap:.4em;animation:sgd-vsl .55s cubic-bezier(.2,.8,.2,1) both;}
 .sgd-vs .p.b{animation-name:sgd-vsr;}
 .sgd-vs .p .sgd-port{width:calc(10*var(--u));height:calc(10*var(--u));border-width:3px;}
@@ -2759,10 +2780,14 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
 .sgd.sgd-compact .sgd-legend{font-size:max(11px,calc(.85*var(--u)));padding:.3em .7em;gap:calc(.25*var(--u)) calc(.6*var(--u));bottom:calc(var(--sab) + .4*var(--u));}
 .sgd.sgd-compact .sgd-skip{top:calc(var(--sat) + 6.8*var(--u));}
 @media (max-height:540px){
-  .sgd-card{padding:calc(.9*var(--u)) calc(1.3*var(--u));width:min(94vw,calc(64*var(--u)));}
+  .sgd-card{--u:12px;padding:calc(.9*var(--u)) calc(1.3*var(--u));width:min(94vw,calc(64*var(--u)));}
+  .sgd-card .sgd-chip{font-size:max(11px,.9em);}
   .sgd-card h2{margin-bottom:.3em;}
   .sgd-card .vs{margin-bottom:.4em;}
   .sgd-ann{top:30%;}
+  .sgd-vs{padding-bottom:calc(var(--sab) + 2.2*var(--u));}
+  .sgd-vs .p .sgd-port{width:calc(7.6*var(--u));height:calc(7.6*var(--u));}
+  .sgd-vs .x{font-size:calc(4.4*var(--u));margin-bottom:calc(2.4*var(--u));}
 }
 @keyframes sgd-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
 @keyframes sgd-low{from{filter:brightness(1)}to{filter:brightness(1.35)}}
@@ -2775,6 +2800,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
 @keyframes sgd-cardin{from{opacity:0;transform:translate(-50%,-44%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes sgd-vsl{from{opacity:0;transform:translateX(-40vw)}to{opacity:1;transform:none}}
 @keyframes sgd-vsr{from{opacity:0;transform:translateX(40vw)}to{opacity:1;transform:none}}
+@keyframes sgd-vsbg{from{opacity:0}to{opacity:1}}
 @keyframes sgd-vsx{from{opacity:0;transform:scale(3)}to{opacity:1;transform:scale(1)}}
 @keyframes sgd-cutl{0%{opacity:0;transform:translate(-30%,-50%) rotate(-4deg)}18%{opacity:1;transform:translate(0,-50%) rotate(-4deg)}82%{opacity:1;transform:translate(3%,-50%) rotate(-4deg)}100%{opacity:0;transform:translate(25%,-50%) rotate(-4deg)}}
 @keyframes sgd-cutr{0%{opacity:0;transform:translate(30%,-50%) rotate(-4deg)}18%{opacity:1;transform:translate(0,-50%) rotate(-4deg)}82%{opacity:1;transform:translate(-3%,-50%) rotate(-4deg)}100%{opacity:0;transform:translate(-25%,-50%) rotate(-4deg)}}
@@ -3030,6 +3056,17 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.disposed = false;
       this.introCam = 1;
       this.trailOn = [0, 0];
+      // 手机竖屏时 index.html 的「请横置设备」遮罩盖住画面：此时比试暂停（matchMedia.matches 不触发样式重算，可每帧读）
+      this._rotHint = typeof document !== 'undefined' ? document.getElementById('rotate-hint') : null;
+      try { this._rotMQ = window.matchMedia ? window.matchMedia('(orientation: portrait) and (max-width: 600px) and (pointer: coarse)') : null; } catch (e) { this._rotMQ = null; }
+      this._pause = false; this._resumeAt = 0;
+    }
+
+    // 遮罩可见或页面隐藏 → 暂停
+    get paused() {
+      if (typeof document !== 'undefined' && document.hidden) return true;
+      const h = this._rotHint || (this._rotHint = document.getElementById('rotate-hint'));
+      return !!(h && this._rotMQ && this._rotMQ.matches && !h.classList.contains('sg-dismissed'));
     }
 
     async build() {
@@ -3112,6 +3149,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const h = (cls, html, parent) => { const e = document.createElement('div'); if (cls) e.className = cls; if (html != null) e.innerHTML = html; (parent || root).appendChild(e); return e; };
       h('sgd-vig');
       const top = h('sgd-top');
+      this.topEl = top;
       this.hud = [];
       const sideEl = (i) => {
         const gen = i === 0 ? this.genA : this.genB, col = i === 0 ? this.colA : this.colB;
@@ -3193,7 +3231,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     }
 
     resize(w, h) {
-      this.rootRect = null;
+      this.rootRect = null; this.hudBot = null;
       this.compact = h < 540 || w < 700;
       if (this.root) this.root.classList.toggle('sgd-compact', this.compact);
       if (this.camera) { this.camera.aspect = Math.max(0.2, w / Math.max(1, h)); this.camera.updateProjectionMatrix(); }
@@ -3344,8 +3382,29 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const t0 = performance.now();
       const sim = this.sim;
       this.realT += dt;
-      if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slow = 1; }
-      const ts = DuelGame.speed * this.slow;
+      // 暂停（竖屏遮罩 / 页面隐藏）：模拟与计时停住，清掉按住的输入；恢复后「继续」倒数片刻再开打
+      let hold = false;
+      if (sim.running && !sim.result) {
+        if (this.paused) {
+          if (!this._pause) { this._pause = true; this._inWas = !!(this.input && this.input.enabled); if (this.input) this.input.setEnabled(false); }
+          this._resumeAt = 0;
+          hold = true;
+        } else if (this._pause) {
+          this._pause = false;
+          this._resumeAt = this.realT + 1.0;
+          this.announce('继　续', 'small', null, 1.0);
+        }
+        if (this._resumeAt) {
+          if (this.realT < this._resumeAt) hold = true;
+          else { this._resumeAt = 0; if (this.input && this._inWas) this.input.setEnabled(true); }
+        }
+      }
+      if (hold) {
+        this.acc = 0;
+        if (this.zoom) this.zoom.until += dt;
+        for (let i = 0; i < 2; i++) if (this.trailOn[i] > this.realT - dt) this.trailOn[i] += dt;
+      } else if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slow = 1; }
+      const ts = hold ? 0 : DuelGame.speed * this.slow;
       this.acc += dt * ts;
       let n = 0;
       while (this.acc >= DT && n < 24) { sim.step(DT); this.acc -= DT; n++; }
@@ -3451,7 +3510,11 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       if (z && this.realT < z.until) {
         const f = sim.f[z.who];
         mid = M.lerp(mid, f.x, z.ko ? 0.55 : 0.75);
-        dist *= z.ko ? 0.72 : 0.62; hc -= z.ko ? 0.35 : 0.1; ground = z.ko ? 0.3 : 0.38;
+        if (z.ko) {
+          // KO 慢镜：轻推近，镜头不压低——两人全身留在顶栏之下；被击飞者腾空时地平线下移，把他留在画面里
+          dist *= 0.84; hc += 0.1;
+          ground = (this.touch ? 0.48 : 0.5) + Math.min(0.28, 0.14 * Math.max(0, f.y));
+        } else { dist *= 0.62; hc -= 0.1; ground = 0.38; }
       } else this.zoom = null;
       // 开场：从侧后方推近
       if (this.introCam < 1) {
@@ -3519,8 +3582,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         if (d.t > 0.9) { d.el.remove(); this.dmgs.splice(i, 1); continue; }
         v.copy(d.p); v.x += d.vx * d.t; v.y += d.t * 0.9;
         v.project(this.camera);
-        const x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * Hh;
         const rr = this.root.getBoundingClientRect ? this.rootRect || (this.rootRect = this.root.getBoundingClientRect()) : { left: 0, top: 0 };
+        // 飘字不进顶栏（体力条 / 计时）：夹在顶栏下沿之下
+        if (this.hudBot == null) { const tb = this.topEl && this.topEl.getBoundingClientRect ? this.topEl.getBoundingClientRect() : null; this.hudBot = tb && tb.height ? tb.bottom + 18 : 0; }
+        const x = (v.x * 0.5 + 0.5) * W, y = Math.max(this.hudBot, (-v.y * 0.5 + 0.5) * Hh);
         const sc = d.t < 0.12 ? 1.5 - d.t * 4 : 1;
         d.el.style.transform = 'translate(' + (x - rr.left).toFixed(1) + 'px,' + (y - rr.top).toFixed(1) + 'px) translate(-50%,-50%) scale(' + sc.toFixed(2) + ')';
         d.el.style.opacity = String(M.clamp01((0.9 - d.t) * 3));
@@ -3594,7 +3659,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="row"><span class="sgd-chip">▲</span>跳跃（空中可轻击）</div></div><div>' +
           '<div class="row"><span class="sgd-chip big">轻击</span>连按三连击</div>' +
           '<div class="row"><span class="sgd-chip">重击</span>按住蓄力，满蓄破防</div>' +
-          '<div class="row"><span class="sgd-chip">格挡</span>按住减伤八成</div>' +
+          '<div class="row"><span class="sgd-chip">格挡</span>按住减伤八成，武力远胜可格开</div>' +
           '<div class="row"><span class="sgd-chip">绝技</span>怒气满时「' + SG.esc(sp.name) + '」</div></div></div>' +
           '<div class="go">轻触开始</div>';
       } else {
@@ -3603,7 +3668,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="keys">' + k('↑') + k('W') + k('空格') + '</div><div class="desc">跳跃<small>空中可轻击</small></div>' +
           '<div class="keys">' + k('J') + '</div><div class="desc">轻击<small>连按三连击</small></div>' +
           '<div class="keys">' + k('K') + '</div><div class="desc">重击<small>按住蓄力，满蓄破防</small></div>' +
-          '<div class="keys">' + k('L') + '<span style="opacity:.6">/</span>' + k('↓') + '</div><div class="desc">格挡<small>按住减伤八成</small></div>' +
+          '<div class="keys">' + k('L') + '<span style="opacity:.6">/</span>' + k('↓') + '</div><div class="desc">格挡<small>按住减伤八成；武力远胜时可格开连段</small></div>' +
           '<div class="keys"><b class="sgd-k r">I</b></div><div class="desc">绝技「' + SG.esc(sp.name) + '」<small>怒气满时</small></div>' +
           '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下 ◀ ▶ ▲ 移动，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
       }

@@ -1826,6 +1826,9 @@ body {
   .sg-say-speaker { flex-direction: row; width: auto; }
   .sg-say-speaker .sg-medal { --size: 3rem !important; }
   .sg-battle-card { width: calc(100% - 2.4rem); bottom: 5.6rem; }
+  /* 战斗操作栏：两个宽按钮 + 动画 在竖屏放不下，改为贴右、可换行、去掉最小宽度 */
+  .sg-battle-actions { left: .5rem; right: .5rem; bottom: max(.8rem, var(--sg-sab, 0px)); justify-content: flex-end; flex-wrap: wrap; gap: .5rem; }
+  .sg-battle-actions .sg-btn, .sg-battle-actions .sg-btn.primary { min-width: 0; padding-left: .9rem; padding-right: .9rem; letter-spacing: .06em; }
 }
 
 /* ================================================ 世界剧本（第二版 §4G）：选择剧本 / 地域 / 君主、武将详情 == */
@@ -1897,10 +1900,11 @@ body {
 .sg-geninfo-stat b { text-align: right; font-variant-numeric: tabular-nums; }
 .sg-geninfo-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .7rem; font-size: 1.05rem; line-height: 1.55; }
 .sg-geninfo-chips { display: flex; flex-wrap: wrap; gap: .4rem .9rem; }
+.sg-geninfo-chips .sg-chip > i { font-size: max(11px, .86em); }
 .sg-geninfo-special { padding: .55rem .75rem .6rem; border-radius: .6rem; border: 1px solid rgba(243, 201, 105, .25); background: rgba(255, 255, 255, .04); }
-.sg-geninfo-sp-head { display: flex; align-items: baseline; gap: .6rem; font-size: 1.25rem; font-family: var(--sg-font-title); }
-.sg-geninfo-sp-head small { font-family: inherit; font-size: .72em; color: var(--sg-muted); }
-.sg-geninfo-sp-label { font-size: .7em; padding: .05rem .4rem; border-radius: .3rem; background: var(--sg-cinnabar, #c8382c); color: #fff2e0; letter-spacing: .1em; }
+.sg-geninfo-sp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; font-size: 1.25rem; font-family: var(--sg-font-title); }
+.sg-geninfo-sp-head small { font-family: inherit; font-size: max(11px, .72em); color: var(--sg-muted); white-space: nowrap; }
+.sg-geninfo-sp-label { font-size: max(11px, .7em); white-space: nowrap; flex: none; padding: .05rem .4rem; border-radius: .3rem; background: var(--sg-cinnabar, #c8382c); color: #fff2e0; letter-spacing: .1em; }
 .sg-geninfo-sp-desc { margin-top: .25rem; }
 .sg-geninfo-sp-rules { margin-top: .2rem; font-size: .88em; color: var(--sg-muted); }
 .sg-geninfo-bio { display: flex; flex-direction: column; gap: .3rem; }

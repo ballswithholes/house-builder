@@ -85,6 +85,7 @@
       this.food[0] = s.atkFood; this.food[1] = s.target.food;
       for (let i = 0; i < s.atk.length; i++) {
         const u = new BUnit({ gen: s.atk[i], side: 0, x: 0, y: 0 });
+        u.troops0 = s.atk[i].troops;   // 出阵兵力：回复类必杀不得超过此数（非免费征兵）
         u.commander = i === 0 || g.isRuler(s.atk[i]);
         u.morale = 60 + M.idiv(s.atk[i].training, 5);
         this.units.push(u);
@@ -94,6 +95,7 @@
       }
       for (let i = 0; i < s.def.length; i++) {
         const u = new BUnit({ gen: s.def[i], side: 1 });
+        u.troops0 = s.def[i].troops;
         u.commander = i === 0;
         u.morale = 65 + M.idiv(s.def[i].training, 5);
         this.units.push(u);
@@ -513,7 +515,9 @@
       return out;
     }
     maxTroopsOf(u) { return SG.maxTroops ? SG.maxTroops(u.gen) : Balance.GeneralTroopBase + u.gen.war * Balance.GeneralTroopPerWar; }
-    needsHeal(b) { return b.alive && (b.troops < this.maxTroopsOf(b) * 0.95 || this.confusedPhases(b) > 0); }
+    // 回复上限：出阵时的兵力（且不超过统率上限）——必杀只能补回战损，不能凭空增兵
+    healCapOf(u) { return Math.min(this.maxTroopsOf(u), u.troops0 != null ? u.troops0 : u.troops); }
+    needsHeal(b) { return b.alive && (b.troops < this.healCapOf(b) * 0.95 || this.confusedPhases(b) > 0); }
     // 直线突击：t 须与 u 同行 / 同列、距离 1..range，中间各格可通行且无部队。返回落点（敌军前一格；相邻时为原地）
     chargeLanding(u, t, range) {
       if (u.x !== t.x && u.y !== t.y) return null;
@@ -613,10 +617,7 @@
           foeFx(e, { p: M.clamp(sp.confuse * (1 + diff / 120), 0, 0.9), turns: sp.turns });
         }
       };
-      const healAmt = a => {
-        const max = Math.max(this.maxTroopsOf(a), a.troops);
-        return Math.max(0, Math.min(max - a.troops, M.roundToInt(sp.heal * this.maxTroopsOf(a) * kS)));
-      };
+      const healAmt = a => Math.max(0, Math.min(this.healCapOf(a) - a.troops, M.roundToInt(sp.heal * this.maxTroopsOf(a) * kS)));
       const burnable = (x, y) => this.passable(x, y) && this.map[x][y] !== Terrain.River && !friends.some(a => a.x === x && a.y === y);
       const src = sp.id || sp.name;
       switch (sp.kind) {

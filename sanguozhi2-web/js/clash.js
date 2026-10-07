@@ -1299,12 +1299,12 @@ void main() {
     for (let i = -2; i <= 2; i++) mb.box(P(gx + i * 0.68, 4.4, Z + 0.06), V(0.12, 1.0, 0.1), shade(red, -0.25));
     mb.box(P(gx, 4.75, Z + 0.07), V(1.1, 0.34, 0.04), C(0.12, 0.1, 0.09));
     mb.box(P(gx, 4.75, Z + 0.09), V(0.9, 0.24, 0.02), GOLD);
-    mb.chineseRoof(P(gx, 4.9, zc), 4.0, 2.2, 1.15, C(0.22, 0.26, 0.34));
-    if (kind === 'castle') {
-      mb.box(P(gx, 5.6, zc), V(1.9, 0.7, 0.9), red);
-      mb.chineseRoof(P(gx, 5.95, zc), 2.9, 1.6, 0.95, C(0.85, 0.65, 0.2));
-      mb.flag(P(gx + 1.6, 4.9, Z), 2.4, 0.9, 0.6, defColor);
-      mb.flag(P(gx - 1.6, 4.9, Z), 2.4, 0.9, 0.6, defColor);
+    // 本城：金顶城楼 + 守方大旗（不再叠第二层楼——宽屏 / 手机上第二层会顶进上方 HUD；轮廓与城门同高）
+    const castle = kind === 'castle';
+    mb.chineseRoof(P(gx, 4.9, zc), 4.0, 2.2, 1.15, castle ? C(0.85, 0.65, 0.2) : C(0.22, 0.26, 0.34));
+    if (castle) {
+      mb.flag(P(gx + 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
+      mb.flag(P(gx - 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
     }
   }
 
@@ -2125,6 +2125,8 @@ void main() {
     onContact() {
       this.shake = 1;
       sfx('hit', 0.9); sfx('duel', 0.5);
+      // 交锋乐句：跟随当前战斗曲的调与速度（audio.js 内部限 15 秒一次、「快」档用短版）
+      if (!this.skipped) { try { if (SG.Sfx && SG.Sfx.stinger) SG.Sfx.stinger('clash', { speed: this.speed }); } catch (e) { /* 无音频 */ } }
       const o = {};
       const xc = this.contactLine(o);
       for (let i = 0; i < 9; i++) {
@@ -2299,10 +2301,41 @@ void main() {
         cam.position.x += Math.sin(this.real * 71) * k;
         cam.position.y += Math.sin(this.real * 57 + 1.3) * k * 0.7;
       }
-      cam.lookAt(lx, ly - kP * 0.35, lz);
+      let lookY = ly - kP * 0.35;
+      cam.lookAt(lx, lookY, lz);
+      // 城门 / 本城：城门楼屋脊不得顶进上方 HUD（宽屏、手机上会被遮成「无顶红楼」）——
+      // 投影屋脊，若高于 HUD 下沿就抬高注视点（画面整体下移，脚下空地有余量），最多抬 1.6
+      if (this.kind === 'gate' || this.kind === 'castle') {
+        const hb = this.hudLineNdc();
+        if (hb < 0.98) {
+          const tanV = Math.tan(cam.fov * M.deg2rad / 2);
+          const dl = Math.hypot(cam.position.x - lx, cam.position.y - lookY, cam.position.z - lz);
+          let up = 0;
+          for (let it = 0; it < 4; it++) {
+            cam.updateMatrixWorld();
+            const y = _v2.set(GATE_X, 6.2, WALL_Z - 0.7).project(cam).y;
+            const over = y - (hb - 0.03);
+            if (over <= 0.004 || up >= 1.6) break;
+            up = Math.min(1.6, up + over * tanV * dl * 0.9);
+            cam.lookAt(lx, lookY + up, lz);
+          }
+        }
+      }
       // 雾随机位远近平移，拉远时军阵不被雾吞掉
       const fog = this.scene && this.scene.fog;
       if (fog) { const extra = Math.max(0, dist - 19); fog.near = 34 + extra; fog.far = 135 + extra; }
+    }
+    // HUD 顶栏下沿在 NDC 中的 y（1 = 画面顶）；按视口尺寸缓存，避免每帧强制排版
+    hudLineNdc() {
+      const W = SG.Gfx.width || window.innerWidth, H = SG.Gfx.height || window.innerHeight, key = W + 'x' + H;
+      if (this._hbKey === key) return this._hb;
+      const bar = this.hud && this.hud.bar;
+      const r = bar && bar.getBoundingClientRect ? bar.getBoundingClientRect() : null;
+      if (!r || !r.height || !H) return 1;      // 尚未排版：不缓存，下帧再量
+      const cv = SG.Gfx.renderer && SG.Gfx.renderer.domElement && SG.Gfx.renderer.domElement.getBoundingClientRect ? SG.Gfx.renderer.domElement.getBoundingClientRect() : { top: 0, height: H };
+      this._hbKey = key;
+      this._hb = 1 - 2 * (r.bottom - cv.top) / (cv.height || H);
+      return this._hb;
     }
     // 武将 x（与 poseGeneral 同一公式；镜头取景用）
     generalX(A, t) {
@@ -2566,7 +2599,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 .sg-clash-side.s1 .sg-clash-name{flex-direction:row-reverse;}
 .sg-clash-name b{font-family:${KAI};font-weight:700;font-size:max(15px,calc(var(--u)*1.75));color:#fff4dc;letter-spacing:.04em;
   text-shadow:0 2px 0 rgba(0,0,0,.6);overflow:hidden;text-overflow:ellipsis;}
-.sg-clash-name em{font-style:normal;flex:none;font-size:max(10px,calc(var(--u)*.85));font-weight:700;padding:.12em .45em;border-radius:.35em;
+.sg-clash-name em{font-style:normal;flex:none;font-size:max(11px,calc(var(--u)*.85));font-weight:700;padding:.12em .45em;border-radius:.35em;
   color:#111;background:var(--c);}
 .sg-clash-name em.me{background:#f3c969;}
 .sg-clash-form{font-size:max(11px,calc(var(--u)*1.0));color:#d8cfbb;white-space:nowrap;}
@@ -2574,7 +2607,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 .sg-clash-tr{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*.2);min-width:calc(var(--u)*7.4);}
 .sg-clash-side.s1 .sg-clash-tr{align-items:flex-start;}
 .sg-clash-num{display:flex;align-items:baseline;gap:.25em;font-variant-numeric:tabular-nums;white-space:nowrap;}
-.sg-clash-num small{font-size:max(10px,calc(var(--u)*.85));color:#ada392;}
+.sg-clash-num small{font-size:max(11px,calc(var(--u)*.85));color:#ada392;}
 .sg-clash-num b{font-size:max(18px,calc(var(--u)*2.35));font-weight:800;color:#fff8e6;letter-spacing:.02em;
   text-shadow:0 2px 0 rgba(0,0,0,.6);transition:color .2s ease;}
 .sg-clash-num.is-hit b{color:#ff7a66;}
@@ -2594,7 +2627,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   background:radial-gradient(circle at 35% 30%,#e0523f,#b52a20 60%,#7d1610);color:#fff2e0;font-family:${KAI};font-weight:900;
   font-size:calc(var(--u)*2.4);line-height:1;transform:rotate(-6deg);
   box-shadow:0 0 0 2px rgba(255,220,170,.35) inset,0 calc(var(--u)*.3) calc(var(--u)*.9) rgba(0,0,0,.5);}
-.sg-clash-terr{font-size:max(10px,calc(var(--u)*.92));color:#f3c969;letter-spacing:.3em;padding-left:.3em;white-space:nowrap;
+.sg-clash-terr{font-size:max(11px,calc(var(--u)*.92));color:#f3c969;letter-spacing:.3em;padding-left:.3em;white-space:nowrap;
   text-shadow:0 1px 2px rgba(0,0,0,.8);}
 .sg-clash-pops{position:absolute;inset:0;pointer-events:none;}
 .sg-clash-pop{position:absolute;left:0;top:0;will-change:transform;}
@@ -2629,6 +2662,8 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 .sg-clash-mode b{color:#f3c969;font-weight:700;margin-left:.35em;}
 .sg-clash.is-live .sg-clash-mode{opacity:1;}
 .sg-clash.is-pre>.sg-clash-mode{visibility:hidden;}
+/* 触摸命中区 ≥ 44px：外观不变，四周透明扩展；点偏一点也落在本按钮上（其 pointerdown 不冒泡），不会误触「跳过」 */
+.sg-clash-mode::before{content:"";position:absolute;left:-10px;right:-10px;top:50%;height:max(48px,calc(100% + 16px));transform:translateY(-50%);}
 @media (hover:hover){.sg-clash-mode:hover{border-color:rgba(243,201,105,.75);color:#fff6e0;}}
 .sg-clash-flash{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;}
 .sg-clash-fade{position:absolute;inset:0;pointer-events:none;background:#0b0a0f;opacity:1;}
@@ -2671,6 +2706,8 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   background:linear-gradient(180deg,color-mix(in srgb,var(--c) 70%,#000) 0%,var(--c) 30%,color-mix(in srgb,var(--c) 75%,#fff) 50%,var(--c) 70%,color-mix(in srgb,var(--c) 70%,#000) 100%);
   box-shadow:0 0 0 2px rgba(255,236,190,.55),0 0 calc(var(--u)*4) color-mix(in srgb,var(--c) 70%,transparent);animation-name:sg-ci-band;}
 .sg-cutin.s1 .sg-cutin-band{animation-name:sg-ci-band1;}
+/* 浅色（白 / 米 / 浅金 / 粉）色带：中线不再提白，整体略压暗，让白字台词读得出 */
+.sg-cutin.is-light .sg-cutin-band{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 55%,#000) 0%,color-mix(in srgb,var(--c) 82%,#000) 30%,color-mix(in srgb,var(--c) 92%,#000) 50%,color-mix(in srgb,var(--c) 82%,#000) 70%,color-mix(in srgb,var(--c) 55%,#000) 100%);}
 .sg-cutin-band canvas{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:screen;}
 .sg-cutin-pic{position:absolute;top:21%;left:5%;height:58%;aspect-ratio:1;background:#14121a;border-radius:calc(var(--u)*.9);overflow:hidden;
   box-shadow:0 0 0 3px var(--c),0 0 0 5px rgba(243,201,105,.9),0 calc(var(--u)*.6) calc(var(--u)*2.2) rgba(0,0,0,.6);animation-name:sg-ci-pic;}
@@ -2682,7 +2719,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   animation-name:sg-ci-text;}
 .sg-cutin.s1 .sg-cutin-text{left:3%;right:calc(5% + 58vh + 3%);align-items:flex-end;}
 .sg-cutin-who{font-family:${KAI};font-weight:700;font-size:max(16px,calc(var(--u)*2.0));color:#fff3dc;letter-spacing:.3em;margin:0 0 .1em .2em;
-  text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 10px rgba(0,0,0,.5);}
+  text-shadow:0 0 2px rgba(10,6,4,.95),0 0 2px rgba(10,6,4,.95),0 2px 0 rgba(0,0,0,.8),0 0 calc(var(--u)*1.2) rgba(0,0,0,.7);}
 .sg-cutin-name{position:relative;padding:.08em .5em .16em .3em;white-space:nowrap;}
 .sg-cutin-name svg{position:absolute;left:-6%;top:-14%;width:112%;height:128%;overflow:visible;animation:sg-ci-swash var(--T) linear both;}
 .sg-cutin-name b{position:relative;display:block;font-family:${KAI};font-weight:700;line-height:1.08;letter-spacing:.08em;
@@ -2691,7 +2728,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   filter:drop-shadow(0 0 1px rgba(30,12,4,.95)) drop-shadow(0 0 1px rgba(30,12,4,.9)) drop-shadow(0 calc(var(--u)*.25) 0 rgba(20,8,2,.85)) drop-shadow(0 0 calc(var(--u)*1.1) var(--c));
   animation:sg-ci-name var(--T) linear both;}
 .sg-cutin-cry{margin:.35em 0 0 .4em;max-width:100%;font-family:${KAI};font-weight:700;font-size:max(13px,calc(var(--u)*1.55));line-height:1.3;color:#fff6e0;
-  letter-spacing:.06em;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 calc(var(--u)*.8) rgba(0,0,0,.6);animation:sg-ci-cry var(--T) linear both;}
+  letter-spacing:.06em;text-shadow:0 0 2px rgba(10,6,4,.95),0 0 2px rgba(10,6,4,.95),0 2px 0 rgba(0,0,0,.8),0 0 calc(var(--u)*1.2) rgba(0,0,0,.7);animation:sg-ci-cry var(--T) linear both;}
 .sg-cutin.s1 .sg-cutin-cry{margin:.35em .4em 0 0;text-align:right;}
 .sg-cutin-flash{position:absolute;inset:0;background:#fff;opacity:0;animation-name:sg-ci-flash;pointer-events:none;}
 @keyframes sg-ci-dim{0%{opacity:0}9%{opacity:1}84%{opacity:1}100%{opacity:0}}
@@ -2706,7 +2743,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 @keyframes sg-ci-text{0%,14%{opacity:0}18%{opacity:1}84%{opacity:1}100%{opacity:0}}
 @keyframes sg-ci-name{0%,15%{transform:scale(1.9);opacity:0;letter-spacing:.5em}30%{transform:scale(.95);opacity:1;letter-spacing:.08em}
   34%{transform:scale(1.04) translateX(-1%)}37%{transform:scale(1) translateX(1%)}40%{transform:none}84%{transform:scale(1.03)}100%{transform:scale(1.06)}}
-@keyframes sg-ci-swash{0%,13%{clip-path:inset(0 100% 0 0)}30%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@keyframes sg-ci-swash{0%,13%{clip-path:inset(-40% 110% -40% -10%)}30%,100%{clip-path:inset(-40% -15% -40% -10%)}}
 @keyframes sg-ci-flash{0%,80%{opacity:0}84%{opacity:.55}100%{opacity:0}}
 @keyframes sg-ci-cry{0%,26%{opacity:0;transform:translateY(.6em)}36%{opacity:1;transform:none}100%{opacity:1;transform:none}}
 .sg-cutin.is-skip>*{animation:none !important;opacity:0 !important;transition:opacity .12s;}
@@ -2770,6 +2807,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       el('div', 'sg-clash-vig', null, root);
       el('div', 'sg-clash-shade', null, root);
       const hud = el('div', 'sg-clash-hud', null, root);
+      this.bar = hud;
       const u = unitPx(root);
       this.sides = [];
       const mkSide = (info, k) => {
@@ -2967,17 +3005,22 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
     const N = 28;
     for (let i = 0; i <= N; i++) {
       const u = i / N, x = u * 1000;
-      const w = 40 * (0.55 + 0.45 * Math.sin(Math.min(1, u * 1.08) * Math.PI)) * (u < 0.06 ? 0.75 + u * 4 : 1);
-      top.push([x, 50 - w + (r.nextDouble() - 0.5) * 7]);
-      bot.push([x, 50 + w * (0.9 + r.nextDouble() * 0.2) + (r.nextDouble() - 0.5) * 7]);
+      // 收笔：最后 ~12% 平滑收细到笔尖（不再是方头）
+      const te = Math.min(1, (1 - u) / 0.12), tap = te * te * (3 - 2 * te);
+      const w = 40 * (0.55 + 0.45 * Math.sin(Math.min(1, u * 1.08) * Math.PI)) * (u < 0.05 ? 0.5 + u * 10 : 1) * tap;
+      const jit = 7 * Math.max(0.25, tap);
+      top.push([x, 50 - w + (r.nextDouble() - 0.5) * jit]);
+      bot.push([x, 50 + w * (0.9 + r.nextDouble() * 0.2) + (r.nextDouble() - 0.5) * jit]);
     }
     let d = 'M' + top.map(p => p[0].toFixed(0) + ' ' + p[1].toFixed(1)).join(' L');
     d += ' L' + bot.reverse().map(p => p[0].toFixed(0) + ' ' + p[1].toFixed(1)).join(' L') + ' Z';
     // 飞白：右端几道细笔触
     let streaks = '';
     for (let i = 0; i < 7; i++) {
-      const y = 16 + i * 11 + (r.nextDouble() - 0.5) * 6, x0 = 640 + r.nextDouble() * 200, x1 = 1000 + r.nextDouble() * 80;
-      streaks += `<path d="M${x0.toFixed(0)} ${y.toFixed(1)} L${x1.toFixed(0)} ${(y + (r.nextDouble() - 0.5) * 4).toFixed(1)}" stroke="#0c0806" stroke-width="${(2 + r.nextDouble() * 4).toFixed(1)}" stroke-linecap="round" opacity=".8"/>`;
+      // 飞白：笔毛散出，末端各自长短不一、向笔尖略收拢
+      const y = 16 + i * 11 + (r.nextDouble() - 0.5) * 6, x0 = 640 + r.nextDouble() * 200, x1 = 960 + r.nextDouble() * 130;
+      const y1 = y + (50 - y) * 0.4 + (r.nextDouble() - 0.5) * 4;
+      streaks += `<path d="M${x0.toFixed(0)} ${y.toFixed(1)} L${x1.toFixed(0)} ${y1.toFixed(1)}" stroke="#0c0806" stroke-width="${(2 + r.nextDouble() * 4).toFixed(1)}" stroke-linecap="round" opacity=".8"/>`;
     }
     return `<svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
 <path d="${d}" fill="#0c0806" opacity=".88"/>
@@ -2999,6 +3042,8 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       root.style.setProperty('--c', color);
       root.style.setProperty('--fc', color);
       root.style.setProperty('--T', dur + 's');
+      { const n = parseInt(color.slice(1), 16), lr = ((n >> 16) & 255) / 255, lg = ((n >> 8) & 255) / 255, lb = (n & 255) / 255;
+        if (0.3 * lr + 0.59 * lg + 0.11 * lb > 0.62) root.classList.add('is-light'); }
       el('div', 'sg-cutin-dim', null, root);
       const band = el('div', 'sg-cutin-band', null, root);
       this.canvas = el('canvas', null, null, band);
