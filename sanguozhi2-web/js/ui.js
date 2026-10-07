@@ -346,7 +346,10 @@
       const panel = m.panel;
       if (speaker) {
         const sp = el('div', 'sg-say-speaker');
-        sp.appendChild(UI.medal(String(speaker).charAt(0), speakerColor, 96));
+        // 有该武将时显示头像，否则退回姓氏徽章
+        const pg = SG.Portrait && SG.Portrait.find(speaker);
+        sp.appendChild(pg ? SG.Portrait.el(pg, { size: Math.round(96 * UI.scale()) })
+                          : UI.medal(String(speaker).charAt(0), speakerColor, 96));
         sp.appendChild(el('div', 'sg-say-name', SG.esc(speaker)));
         panel.appendChild(sp);
       }

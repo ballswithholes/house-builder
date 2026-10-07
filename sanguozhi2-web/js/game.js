@@ -10,6 +10,10 @@
   const HelpText = '【操作】拖动平移地图，滚轮或双指缩放，点击城池查看情报。\n【令牌】每月可下达的指令数量取决于所领城池数。灰色指令点按可查看原因。\n【出征】选择相邻的敌城与至多五名武将；可亲自指挥战斗或委任电脑。\n【移动 / 输送】调动武将、调拨金粮：经由己方城池相连的城都可前往，不必相邻（列表注明经过几城），每次 1 枚令牌。己方两城相连即可使用。\n【战斗】点选部队移动，相邻时可攻击、施展策略或单挑。击败敌军主将或攻入本城即可获胜，三十日内未能攻下则撤退。';
 
   function UI() { return SG.UI; }
+  // 空闲时分片预生成全部在世武将的头像（城池面板 40px、对话 96 参考像素）
+  function preloadPortraits() {
+    try { if (SG.Portrait && SG.G) SG.Portrait.preloadState(SG.G, [40, Math.round(96 * SG.UI.scale())]); } catch (e) { console.warn(e); }
+  }
   function music(kind) { try { if (SG.Sfx) SG.Sfx.music(kind); } catch (e) { /* 无音频 */ } }
   function h(tag, cls, html, parent) {
     const e = document.createElement(tag);
@@ -209,6 +213,7 @@
           try { loaded = SG.GameState.load(); } catch (e) { console.warn(e); loaded = null; }
           if (!loaded) { choice = -1; UI().toast('存档无法读取'); last = performance.now(); continue; }
           SG.G = loaded;
+          preloadPortraits();
           title.remove();
           break;
         }
@@ -230,6 +235,7 @@
         .sort((a, b) => (b.n - a.n) || (a.i - b.i)).map(o => o.f);
       for (;;) {
         const items = factions.map(f => item(
+          (SG.Portrait ? SG.Portrait.html(g.ruler(f.id), { size: 32 }) : '') +
           `<span style="color:${f.color}">■</span> ${SG.esc(g.ruler(f.id).name)}`,
           `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　德 ${f.virtue}　人望 ${f.fame}`));
         const r = await UI().choose('选择君主　' + SG.ScenarioData.StartYear + '年 · ' + SG.ScenarioData.Title, items, '德越高越易登用人才；人望决定战场上的行动力。', 820);
@@ -244,6 +250,7 @@
         const ok = await UI().confirm('以' + g.ruler(f0.id).name + '开始？', '出阵', '再想想');
         if (!ok) { this.map.select(-1); continue; }
         SG.G = SG.GameState.newGame(f0.key);
+        preloadPortraits();
         this.map.select(-1);
         break;
       }

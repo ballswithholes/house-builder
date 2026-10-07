@@ -210,6 +210,7 @@
         `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}</div>` +
         `<div>阵型 <span class="sg-goldc">${f.name}</span>（攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)}）</div>` +
         `<div>地形 ${SG.Defs.terrainName(this.M.map[u.x][u.y])}${u.confused > 0 ? '　<span style="color:#c79bff">混乱中</span>' : ''}</div>`;
+      if (SG.Portrait) this.card.prepend(SG.Portrait.el(u.gen, { size: 70, className: u.alive ? '' : 'is-dead' }));
     }
 
     // ---------------------------------------------------------- 玩家 --

@@ -437,6 +437,7 @@
         .sort((a, b) => (b.r - a.r) || (b.x.troops - a.x.troops) || (a.i - b.i)).map(o => o.x);
       for (const gen of offs) {
         const row = h('div', 'sg-genrow', null, this.genList);
+        if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: 40 }));
         const tag = g.isRuler(gen) ? '<span class="sg-tag sg-tag-ruler">君</span>' : gen.id === c.governor ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
         h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
         h('div', 'sg-genrow-stats', `武${gen.war} 智${gen.intel} 政${gen.pol}\n兵${gen.troops} 训${gen.training} 忠${g.isRuler(gen) ? 100 : gen.loyalty}`, row);
