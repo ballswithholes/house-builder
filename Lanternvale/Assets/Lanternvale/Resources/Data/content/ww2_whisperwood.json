@@ -1,0 +1,1546 @@
+{
+  "_note": "Whisperwood's old forest (Docs/Expansion.md §8, builder ww, prefix ww2): the north band's creatures, gear, loot, people, quests and dialogues. The map itself is map_whisperwood.json.",
+  "creatures": [
+    {
+      "id": "cr_ww2_glade_weaver",
+      "name": "Lanterncap Weaver",
+      "description": "A giant teal-black spider with moss on its back and glowing sea-green spots. It came up out of the ground following the glow, and it likes it here.",
+      "sprite": "cr_spider_giant",
+      "portrait": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "healthMult": 1.1,
+      "attackSpeed": 2.0,
+      "moveSpeed": 9,
+      "size": 1.5,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_web_spray", "priority": 5, "chance": 50, "condition": "targetNoAura:cr_webbed"},
+        {"ability": "cr_ww2_glowvenom_bite", "priority": 4, "chance": 60}
+      ],
+      "tameable": false,
+      "lootTable": "lt_ww2_weaver",
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*Something the size of a cart wheel shifts in the webs. All eight of its eyes are glowing.*"
+    },
+    {
+      "id": "cr_ww2_silk_lurker",
+      "name": "Silk Lurker",
+      "description": "A weaver's smaller cousin, all legs and opinions.",
+      "sprite": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": -1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "healthMult": 0.9,
+      "attackSpeed": 1.8,
+      "moveSpeed": 9,
+      "size": 0.9,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_venom_bite", "priority": 4, "chance": 60}],
+      "tameable": false,
+      "lootTable": "lt_ww2_lurker",
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*Click. Click-click.*"
+    },
+    {
+      "id": "cr_ww2_glowling",
+      "name": "Glow-Drunk Mossling",
+      "description": "A mossling who has been eating the lanterncaps. It glows faintly, giggles constantly and throws pebbles at anything that moves, including itself.",
+      "sprite": "cr_mossling",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "healthMult": 0.9,
+      "attackSpeed": 1.8,
+      "moveSpeed": 8,
+      "size": 0.95,
+      "ai": "Skirmisher",
+      "abilities": [
+        {"ability": "cr_mud_in_eye", "priority": 5, "chance": 50, "condition": "targetNoAura:cr_mud_blind"},
+        {"ability": "cr_pebble_toss", "priority": 3, "chance": 50}
+      ],
+      "lootTable": "lt_ww2_glowling",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "Shiny! SO shiny! Everything is shiny and also SPINNING!"
+    },
+    {
+      "id": "cr_ww2_glow_mudcaller",
+      "name": "Glow-Drunk Mudcaller",
+      "description": "A mossling mudcaller with a glowing nose and a very poor sense of direction.",
+      "sprite": "cr_mossling_shaman",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "healthMult": 0.85,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 1.0,
+      "ai": "Healer",
+      "abilities": [{"ability": "cr_mossling_mend", "priority": 8, "condition": "allyHpBelow:60"}, {"ability": "cr_thorn_bolt", "priority": 3}],
+      "resource": "Mana",
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 25,
+      "lootTable": "lt_ww2_mudcaller",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "The moss says you're... you're... *hic* ...TALL."
+    },
+    {
+      "id": "cr_ww2_old_mossback",
+      "name": "Old Mossback",
+      "description": "A boar so old that moss grows on his back and a sapling on his head. Tamsin says he has eaten three of her baskets and one of her hats. He is very proud of all four.",
+      "sprite": "cr_boar",
+      "type": "Beast",
+      "family": "Boar",
+      "rank": "Rare",
+      "levelMin": 11,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "healthMult": 2.6,
+      "damageMult": 1.1,
+      "attackSpeed": 2.2,
+      "moveSpeed": 10,
+      "size": 1.7,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_ww2_moss_wallow", "priority": 9, "condition": "selfHpBelow:50"},
+        {"ability": "cr_boar_charge", "priority": 6},
+        {"ability": "cr_ww2_tusk_toss", "priority": 5}
+      ],
+      "armorMult": 1.2,
+      "tameable": false,
+      "immune": ["Fear"],
+      "lootTable": "lt_ww2_mossback",
+      "material": "fur",
+      "voice": "beast",
+      "bark": "*An enormous mossy boar lifts his head out of the mud and looks at you with deep, personal dislike.*"
+    },
+    {
+      "id": "cr_ww2_thornback",
+      "name": "Thornback Wolf",
+      "description": "A big grey forest wolf with burrs and thorns caught all through its coat. The old forest's wolves are not hungry so much as territorial.",
+      "sprite": "cr_wolf",
+      "type": "Beast",
+      "family": "Wolf",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "attackSpeed": 2.0,
+      "moveSpeed": 11,
+      "size": 1.3,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_ravage", "priority": 5, "chance": 40}, {"ability": "cr_bite", "priority": 3, "chance": 50}],
+      "tameable": false,
+      "lootTable": "lt_ww2_thornback",
+      "material": "fur",
+      "voice": "beast",
+      "bark": "*A low growl from three directions at once.*"
+    },
+    {
+      "id": "cr_ww2_duskwing",
+      "name": "Elderwood Duskwing",
+      "description": "A great old owl of the deep wood, round as a pumpkin and twice as cross.",
+      "sprite": "pet_owl",
+      "portrait": "pet_owl",
+      "type": "Beast",
+      "family": "Owl",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 13,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "attackSpeed": 2.0,
+      "moveSpeed": 10,
+      "size": 1.0,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_owl_screech", "priority": 4, "chance": 50, "condition": "targetNoAura:cr_screeched"}],
+      "tameable": false,
+      "lootTable": "lt_ww2_duskwing",
+      "material": "fur",
+      "voice": "beast",
+      "bark": "*HOO. Hoo. (It sounds like an accusation.)*"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_ww2_glowvenom_bite",
+      "name": "Glowvenom Bite",
+      "icon": "spider",
+      "description": "A bite that leaves faintly glowing venom behind: weapon damage, then Nature damage over 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}, {"type": "ApplyAura", "aura": "cr_ww2_glowvenom"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_ww2_tusk_toss",
+      "name": "Tusk Toss",
+      "icon": "boar",
+      "description": "Scoops the target up on mossy tusks and flings it: heavy weapon damage and a knockback.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 130}, {"type": "Knockback", "distance": 6}],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_ww2_moss_wallow",
+      "name": "Moss Wallow",
+      "icon": "leaf",
+      "description": "Rolls in the cool moss, restoring health over 9 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_ww2_wallow", "target": "Self"}],
+      "aiHint": "Heal",
+      "aiPriority": 9
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_ww2_glowvenom",
+      "name": "Glowvenom",
+      "icon": "poison",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Poison",
+      "duration": 12,
+      "tickInterval": 3,
+      "description": "Nature damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 3, "perLevel": 0.4}]
+    },
+    {
+      "id": "cr_ww2_wallow",
+      "name": "Moss Wallow",
+      "icon": "leaf",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 9,
+      "tickInterval": 3,
+      "description": "Restoring health every 3 sec.",
+      "tickEffects": [{"type": "Heal", "min": 12, "perLevel": 2}]
+    }
+  ],
+  "items": [
+    {
+      "id": "ww2_heronguard_gauntlets",
+      "name": "Heronguard Squire's Gauntlets",
+      "icon": "fist",
+      "description": "Mail gauntlets with a little blue heron enamelled on each cuff. Pell polished them every evening for twelve years, in case.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 15,
+      "requiredLevel": 10,
+      "equip": "Hands",
+      "armorType": "Mail",
+      "armor": 80,
+      "stats": [{"stat": "Strength", "value": 5}, {"stat": "Stamina", "value": 5}],
+      "price": 1180,
+      "unique": true
+    },
+    {
+      "id": "ww2_watchfire_cloak",
+      "name": "Watchfire Cloak",
+      "icon": "armor",
+      "description": "A teal cloak that smells faintly of woodsmoke, however often it is washed. It is always warm on the side nearest the fire.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 15,
+      "requiredLevel": 10,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 15,
+      "stats": [{"stat": "Intellect", "value": 3}, {"stat": "Spirit", "value": 2}, {"stat": "Stamina", "value": 2}],
+      "price": 1180,
+      "unique": true
+    },
+    {
+      "id": "ww2_fordwalker_boots",
+      "name": "Fordwalker Boots",
+      "icon": "boot",
+      "description": "Patrol boots with hobnails for slippery stones. The left one still has a wobbly-stone-shaped scuff.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 15,
+      "requiredLevel": 10,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 43,
+      "stats": [{"stat": "Agility", "value": 5}, {"stat": "Stamina", "value": 4}],
+      "price": 1180,
+      "unique": true
+    },
+    {
+      "id": "ww2_sprigs_lucky_thimble",
+      "name": "Sprig's Lucky Thimble",
+      "icon": "star",
+      "description": "A brass thimble, polished to a shine and slightly dented. Sprig says it has saved his life eleven times, mostly from raindrops.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Trinket",
+      "stats": [{"stat": "Stamina", "value": 4}, {"stat": "Spirit", "value": 4}],
+      "price": 1513,
+      "unique": true
+    },
+    {
+      "id": "ww2_lanterncap_hood",
+      "name": "Lanterncap Hood",
+      "icon": "armor",
+      "description": "A soft hood dyed with lanterncap gills. It glows, very gently, when you're thinking hard.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Head",
+      "armorType": "Cloth",
+      "armor": 27,
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 5}, {"stat": "Stamina", "value": 5}],
+      "price": 1513,
+      "unique": true
+    },
+    {
+      "id": "ww2_mosswalker_jerkin",
+      "name": "Mosswalker Jerkin",
+      "icon": "armor",
+      "description": "Supple leather with living moss stitched into the seams. It needs watering once a week.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Chest",
+      "armorType": "Leather",
+      "armor": 68,
+      "stats": [{"stat": "Agility", "value": 8}, {"stat": "Stamina", "value": 7}],
+      "price": 1513,
+      "unique": true
+    },
+    {
+      "id": "ww2_thimble_guard_coif",
+      "name": "Coif of the Thimble Guard",
+      "icon": "armor",
+      "description": "Mossling mail, hundreds of tiny rings, re-sized for a big-folk head as a token of royal favour. Took them a week.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Head",
+      "armorType": "Mail",
+      "armor": 116,
+      "stats": [{"stat": "Strength", "value": 8}, {"stat": "Stamina", "value": 7}],
+      "price": 1513,
+      "unique": true
+    },
+    {
+      "id": "ww2_mossback_tusk_charm",
+      "name": "Mossback's Tusk Charm",
+      "icon": "fang",
+      "description": "A tusk tip from the oldest boar in Whisperwood, on a cord. Tamsin says to wear it 'so the next one knows'.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 14,
+      "requiredLevel": 9,
+      "equip": "Neck",
+      "stats": [{"stat": "Strength", "value": 2}, {"stat": "Agility", "value": 2}, {"stat": "Stamina", "value": 2}],
+      "price": 1029,
+      "unique": true
+    },
+    {
+      "id": "ww2_aubrics_dispatch",
+      "name": "Aubric's Dispatch",
+      "icon": "key",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "ww2_last_watch",
+      "description": "A letter in oilcloth, twelve winters old, sealed with a blue heron. Addressed: 'To the Heron Watch.'"
+    },
+    {
+      "id": "ww2_charcoal_heron",
+      "name": "Charcoal Heron",
+      "icon": "feather",
+      "kind": "Junk",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "description": "A child's charcoal drawing of a heron, folded small. On the back: 'FOR PELL. FOR LUCK.'"
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_ww2_weaver",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_sticky_web", "chance": 50},
+        {"item": "junk_chitin_fragment", "chance": 35},
+        {"random": true, "quality": "Uncommon", "chance": 4}
+      ]
+    },
+    {
+      "id": "lt_ww2_lurker",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_sticky_web", "chance": 40},
+        {"item": "junk_chitin_fragment", "chance": 20},
+        {"random": true, "quality": "Uncommon", "chance": 2}
+      ]
+    },
+    {
+      "id": "lt_ww2_glowling",
+      "goldMin": 10,
+      "goldMax": 30,
+      "entries": [
+        {"item": "junk_tiny_leaf_hat", "chance": 25},
+        {"item": "junk_damp_pebbles", "chance": 25},
+        {"item": "junk_nibbled_mushroom", "chance": 25},
+        {"item": "food_mushroom_skewer", "chance": 8},
+        {"item": "junk_shiny_button", "chance": 5},
+        {"random": true, "quality": "Uncommon", "chance": 3}
+      ]
+    },
+    {
+      "id": "lt_ww2_mudcaller",
+      "goldMin": 12,
+      "goldMax": 36,
+      "entries": [
+        {"item": "junk_tiny_leaf_hat", "chance": 20},
+        {"item": "junk_nibbled_mushroom", "chance": 25},
+        {"item": "potion_minor_mana", "chance": 8},
+        {"random": true, "quality": "Uncommon", "chance": 4}
+      ]
+    },
+    {
+      "id": "lt_ww2_mossback",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "ww2_mossback_tusk_charm"},
+        {"item": "junk_cracked_tusk"},
+        {"item": "junk_bristly_hide", "chance": 60},
+        {"random": true, "quality": "Uncommon", "chance": 40}
+      ]
+    },
+    {
+      "id": "lt_ww2_thornback",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "junk_broken_fang", "chance": 45}, {"item": "junk_ruined_pelt", "chance": 35}, {"random": true, "quality": "Uncommon", "chance": 3}]
+    },
+    {
+      "id": "lt_ww2_duskwing",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_ruffled_feather", "chance": 50},
+        {"item": "junk_ruined_pelt", "chance": 10},
+        {"random": true, "quality": "Uncommon", "chance": 2}
+      ]
+    },
+    {
+      "id": "lt_ww2_chest_glade",
+      "goldMin": 150,
+      "goldMax": 350,
+      "entries": [
+        {"item": "food_mushroom_skewer", "chance": 60, "max": 3},
+        {"item": "potion_lesser_healing", "chance": 50, "max": 2},
+        {"item": "elixir_wisdom", "chance": 20},
+        {"random": true, "quality": "Uncommon", "chance": 60}
+      ]
+    },
+    {
+      "id": "lt_ww2_chest_watch",
+      "goldMin": 300,
+      "goldMax": 700,
+      "entries": [
+        {"item": "potion_healing", "chance": 50},
+        {"item": "bandage_wool", "chance": 50, "max": 3},
+        {"item": "scroll_protection", "chance": 30},
+        {"random": true, "quality": "Uncommon"},
+        {"random": true, "quality": "Rare", "chance": 25}
+      ]
+    },
+    {
+      "id": "lt_ww2_chest_otter",
+      "goldMin": 120,
+      "goldMax": 420,
+      "entries": [
+        {"item": "junk_shiny_button"},
+        {"item": "junk_damp_pebbles", "chance": 50},
+        {"item": "elixir_lantern_oil", "chance": 30},
+        {"random": true, "quality": "Uncommon", "chance": 70}
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "ww2_sprig",
+      "name": "Sprig",
+      "title": "Royal Scout of the Moss Court (Self-Appointed)",
+      "shortName": "Sprig",
+      "sprite": "cr_mossling",
+      "portrait": "cr_mossling",
+      "dialogue": "dlg_ww2_sprig",
+      "bark": "Halt! Who goes— oh, it's you. Carry on, big-folk."
+    },
+    {
+      "id": "ww2_tamsin",
+      "name": "Tamsin Barrowleaf",
+      "title": "Forager",
+      "shortName": "Tamsin",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_ww2_tamsin",
+      "bark": "Mind the cap-beds, love. They bruise.",
+      "vendor": [
+        {"item": "food_mushroom_skewer"},
+        {"item": "food_lantern_stew"},
+        {"item": "drink_barley_tea"},
+        {"item": "drink_melon_juice"},
+        {"item": "potion_healing"},
+        {"item": "potion_lesser_mana"},
+        {"item": "potion_minor_rejuvenation", "stock": 4},
+        {"item": "bandage_wool"},
+        {"item": "elixir_wisdom", "stock": 3}
+      ]
+    },
+    {
+      "id": "ww2_pell",
+      "name": "Pell",
+      "title": "Squire of the Heron Watch",
+      "shortName": "Pell",
+      "sprite": "npc_guard",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_ww2_pell",
+      "bark": "Ford, Kestrel Stone, and home. Ford, Kestrel Stone, and home."
+    }
+  ],
+  "quests": [
+    {
+      "id": "ww2_last_watch",
+      "name": "The Last Watch",
+      "giver": "ww2_pell",
+      "level": 11,
+      "minLevel": 10,
+      "zone": "whisperwood",
+      "summary": "Pell, a squire of the Heronguard, still keeps the Heron Watch in the old forest, waiting for knights who rode north to Skyreach twelve years ago. Walk his evening patrol with him — and find out what became of them.",
+      "stages": [
+        {
+          "id": "ford",
+          "description": "Meet Pell at the Heron Ford, the first post of his evening patrol.",
+          "objectives": [{"type": "Flag", "target": "ww2_patrol_ford", "text": "Walk the ford with Pell"}],
+          "next": "stone",
+          "onComplete": [{"type": "GiveXP", "amount": 80}]
+        },
+        {
+          "id": "stone",
+          "description": "Pell has gone ahead to the Kestrel Stone, north-east of the Watch. The patrol always had trouble there.",
+          "objectives": [{"type": "Defeat", "target": "enc_ww2_kestrel_ambush", "text": "Drive off the ambush at the Kestrel Stone"}],
+          "next": "dispatch"
+        },
+        {
+          "id": "dispatch",
+          "description": "Search the dispatch cairn at the Kestrel Stone, where riders left word for the Heron Watch.",
+          "objectives": [{"type": "Collect", "target": "ww2_aubrics_dispatch", "text": "Aubric's Dispatch"}],
+          "next": "home",
+          "onComplete": [{"type": "GiveXP", "amount": 80}]
+        },
+        {
+          "id": "home",
+          "description": "Pell has gone back to the cold beacon at the Heron Watch. Bring him the Lord-Commander's dispatch.",
+          "objectives": [{"type": "Flag", "target": "ww2_pell_answered", "text": "Answer Pell"}]
+        }
+      ],
+      "rewards": {"xp": 450, "gold": 700, "choiceItems": ["ww2_heronguard_gauntlets", "ww2_watchfire_cloak", "ww2_fordwalker_boots"]}
+    },
+    {
+      "id": "ww2_kings_glow",
+      "name": "The Glow Under the Moss",
+      "giver": "ww2_sprig",
+      "level": 13,
+      "minLevel": 11,
+      "zone": "whisperwood",
+      "summary": "Sprig, a very small mossling scout, says the glow is leaking up out of the ground under the old forest — and giant weavers have followed it. The mosslings' old song says their King went down under the moss long ago to keep the glow safe.",
+      "stages": [
+        {
+          "id": "webs",
+          "description": "Clear the giant weavers out of the Lanterncap Glade.",
+          "objectives": [{"type": "Defeat", "target": "enc_ww2_glade_webs", "text": "Clear the Lanterncap Glade"}],
+          "next": "way",
+          "onComplete": [{"type": "GiveXP", "amount": 100}]
+        },
+        {
+          "id": "way",
+          "description": "Ask Sprig to show you the way under the moss.",
+          "objectives": [{"type": "Flag", "target": "found_mossdeep", "text": "Find the way into Mossdeep Grotto"}],
+          "next": "king",
+          "turnIn": "ww2_sprig"
+        },
+        {
+          "id": "king",
+          "description": "Find the Mossling King in the depths of Mossdeep Grotto.",
+          "objectives": [{"type": "Kill", "target": "cr_dg2_mossking", "text": "King Umbercap"}],
+          "next": "return",
+          "onComplete": [{"type": "GiveXP", "amount": 100}]
+        },
+        {
+          "id": "return",
+          "description": "Tell Sprig what became of his King.",
+          "objectives": [{"type": "Talk", "target": "ww2_sprig", "text": "Talk to Sprig"}]
+        }
+      ],
+      "rewards": {"xp": 500, "gold": 900, "choiceItems": ["ww2_sprigs_lucky_thimble", "ww2_lanterncap_hood", "ww2_mosswalker_jerkin", "ww2_thimble_guard_coif"]}
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_ww2_pell",
+      "start": "pe_lied",
+      "nodes": [
+        {
+          "id": "pe_lied",
+          "speaker": "ww2_pell",
+          "text": "Evening! No riders on the road yet. Any day now, though. *He holds his hands over the cold beacon as if it were warm.*",
+          "conditions": [{"type": "Flag", "key": "ww2_pell_lied"}, {"type": "NotFlag", "key": "ww2_pell_rest"}],
+          "fallback": "pe_home",
+          "choices": [
+            {
+              "text": "Pell. I lied to you. Let me read you the letter properly.",
+              "next": "pe_truth_late",
+              "conditions": [{"type": "HasItem", "key": "ww2_aubrics_dispatch", "amount": 1}]
+            },
+            {"text": "Goodbye, Pell."}
+          ]
+        },
+        {
+          "id": "pe_truth_late",
+          "speaker": "ww2_pell",
+          "text": "*He listens to every word with his eyes shut. Then he nods, very slowly.* I think I knew. I think I've known for a while, and I just... didn't want the fire to be for nobody. *He looks up.* Thank you for telling me. Will you help me light it? Just once?",
+          "choices": [{"text": "Of course.", "next": "pe_light_late"}]
+        },
+        {
+          "id": "pe_light_late",
+          "speaker": "narrator",
+          "text": "*Together you heap dry wood into the old iron beacon and lay the dispatch on top. The flame goes up tall and gold. Pell salutes the north, then you — and between one crackle and the next, there is only the fire.*",
+          "outcomes": [
+            {"type": "TakeItem", "key": "ww2_aubrics_dispatch", "amount": 1},
+            {"type": "SetFlag", "key": "ww2_beacon_lit"},
+            {"type": "SetFlag", "key": "ww2_pell_rest"},
+            {"type": "SetFlag", "key": "ww2_pell_away"},
+            {"type": "ClearFlag", "key": "ww2_pell_lied"},
+            {"type": "GiveXP", "amount": 200},
+            {"type": "Approval", "key": "kael", "amount": 3},
+            {"type": "Approval", "key": "ysolde", "amount": 3}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pe_home",
+          "speaker": "ww2_pell",
+          "text": "You're back! And you've got — is that the Lord-Commander's seal? *He straightens a tabard his hands don't quite touch.* Read it to me. Please. I never was quick with the long words.",
+          "conditions": [{"type": "QuestState", "key": "ww2_last_watch", "value": "home"}],
+          "fallback": "pe_dispatch",
+          "next": "pe_letter"
+        },
+        {
+          "id": "pe_letter",
+          "speaker": "narrator",
+          "text": "*The letter is brief. 'From Aubric, Lord-Commander of the Heronguard, at Skyreach, to the Heron Watch. Forty rode north. Eleven come home. Sir Corwin Vell fell at the Ashen Pass, holding the bridge while we crossed. Let the squire Pell be told he kept faith, and is released from the watch with honour.' Underneath, in a smudged second hand: 'Tell the boy I'm sorry. — A.'*",
+          "choices": [
+            {"text": "(Read him every word.)", "next": "pe_truth"},
+            {
+              "text": "Read it, then tell him what Sir Corwin would want.",
+              "check": {"skill": "Persuasion", "dc": 13, "success": "pe_pers_s", "failure": "pe_truth"},
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "(Kneel, and give him the Heronguard's release.)",
+              "next": "pe_rite_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Offer him a blessing for those who waited.)",
+              "next": "pe_rite_priest",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "Ysolde. This should come from you.", "next": "pe_ysolde", "conditions": [{"type": "InParty", "key": "ysolde"}], "tag": "YSOLDE"},
+            {"text": "Liora — the Chapel's blessing?", "next": "pe_liora", "conditions": [{"type": "InParty", "key": "liora"}], "tag": "LIORA"},
+            {
+              "text": "(Show him the charcoal heron first.)",
+              "next": "pe_drawing",
+              "conditions": [{"type": "HasItem", "key": "ww2_charcoal_heron", "amount": 1}]
+            },
+            {"text": "(Fold the letter away.) They're coming home, Pell. Any day now.", "next": "pe_lie"}
+          ]
+        },
+        {
+          "id": "pe_choose",
+          "speaker": "ww2_pell",
+          "text": "*Pell waits, very still, like a heron in the shallows.*",
+          "choices": [
+            {"text": "(Read him every word.)", "next": "pe_truth"},
+            {
+              "text": "Read it, then tell him what Sir Corwin would want.",
+              "check": {"skill": "Persuasion", "dc": 13, "success": "pe_pers_s", "failure": "pe_truth"},
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "(Kneel, and give him the Heronguard's release.)",
+              "next": "pe_rite_paladin",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Offer him a blessing for those who waited.)",
+              "next": "pe_rite_priest",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "Ysolde. This should come from you.", "next": "pe_ysolde", "conditions": [{"type": "InParty", "key": "ysolde"}], "tag": "YSOLDE"},
+            {"text": "Liora — the Chapel's blessing?", "next": "pe_liora", "conditions": [{"type": "InParty", "key": "liora"}], "tag": "LIORA"},
+            {
+              "text": "(Show him the charcoal heron first.)",
+              "next": "pe_drawing",
+              "conditions": [{"type": "HasItem", "key": "ww2_charcoal_heron", "amount": 1}]
+            },
+            {"text": "(Fold the letter away.) They're coming home, Pell. Any day now.", "next": "pe_lie"}
+          ]
+        },
+        {
+          "id": "pe_drawing",
+          "speaker": "ww2_pell",
+          "text": "*Pell takes the charcoal heron in both hands — and this time his fingers don't go through it.* My little sister drew this. She said it was for luck. *He tucks it inside his tabard, carefully.* ...All right. I think I'm ready to hear it now.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "ww2_charcoal_heron", "amount": 1},
+            {"type": "Approval", "key": "seren", "amount": 2},
+            {"type": "Approval", "key": "liora", "amount": 2}
+          ],
+          "next": "pe_choose"
+        },
+        {
+          "id": "pe_truth",
+          "speaker": "ww2_pell",
+          "text": "*He is quiet for a long time.* Eleven. *Quieter still.* Holding the bridge. That sounds like him. That sounds exactly like him. *He looks at the cold stones of the beacon.* I think I'd like to light it, once, for all of them. Will you help?",
+          "outcomes": [
+            {"type": "Approval", "key": "kael", "amount": 3},
+            {"type": "Approval", "key": "torvan", "amount": 2},
+            {"type": "Approval", "key": "liora", "amount": 2}
+          ],
+          "choices": [{"text": "We'll light it together.", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_pers_s",
+          "speaker": "ww2_pell",
+          "text": "*You tell him Corwin would never want a squire freezing beside a cold fire for his sake. You tell him he kept faith, and that faith kept is a thing to be proud of. Pell laughs, wet and startled.* He'd have clipped my ear for waiting this long, wouldn't he? *He wipes his eyes on a sleeve that isn't quite there.* One last fire, then. A proper one.",
+          "outcomes": [
+            {"type": "Approval", "key": "kael", "amount": 3},
+            {"type": "Approval", "key": "seren", "amount": 3},
+            {"type": "Approval", "key": "aldric", "amount": 3},
+            {"type": "GiveXP", "amount": 150}
+          ],
+          "choices": [{"text": "A proper one.", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_rite_paladin",
+          "speaker": "narrator",
+          "text": "*You kneel on the mossy flagstones and speak the old words — the ones every order of knights shares, near enough. Watch ended. Faith kept. Go home. Pell kneels too, and when he rises he is standing straighter than you have ever seen anyone stand.*",
+          "outcomes": [
+            {"type": "Approval", "key": "aldric", "amount": 5},
+            {"type": "Approval", "key": "ysolde", "amount": 5},
+            {"type": "Approval", "key": "torvan", "amount": 3},
+            {"type": "GiveXP", "amount": 150}
+          ],
+          "choices": [{"text": "(Light the beacon with him.)", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_rite_priest",
+          "speaker": "narrator",
+          "text": "*You speak a blessing for those who wait: for lamps left in windows, for kettles kept warm, for doors left unlatched. Pell bows his head through all of it. When you finish, the frost on his boots has melted.*",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}, {"type": "Approval", "key": "liora", "amount": 5}, {"type": "GiveXP", "amount": 150}],
+          "choices": [{"text": "(Light the beacon with him.)", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_ysolde",
+          "speaker": "ysolde",
+          "text": "*Ysolde takes the letter gently and goes down on one knee.* Squire Pell. I am Ysolde, of the Heronguard. Sir Corwin Vell's name is carved in the Heron Hall at Brightwater, among the twenty-nine who did not come home. Yours will be carved beside it, if I have to cut the letters myself. The watch is ended. You kept it well.",
+          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 8}, {"type": "GiveXP", "amount": 150}],
+          "next": "pe_ysolde2"
+        },
+        {
+          "id": "pe_ysolde2",
+          "speaker": "ww2_pell",
+          "text": "*Pell stares at the white heron on her breast as if it were the sun coming up.* ...Yes, Dame. Thank you, Dame. *His voice cracks on the second 'Dame', and neither of them mentions it.*",
+          "choices": [{"text": "(Light the beacon together.)", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_liora",
+          "speaker": "liora",
+          "text": "*Liora sets a small brass lantern on the beacon's edge.* At the Chapel of Small Lights, Mother Wren taught us a blessing for the ones who wait. It goes: 'You may set it down now. Someone else will carry it.' *She smiles at Pell.* Someone else will carry it, Pell.",
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 8}, {"type": "GiveXP", "amount": 150}],
+          "choices": [{"text": "(Light the beacon together.)", "next": "pe_light"}]
+        },
+        {
+          "id": "pe_light",
+          "speaker": "narrator",
+          "text": "*Together you heap dry wood into the old iron beacon and lay the dispatch on top. When the flame catches it goes up tall and gold, and for a moment every tree around the Heron Watch is lit like a hall at a feast. Pell salutes the north. Then he salutes you. Then, between one crackle and the next, there is only the fire.*",
+          "outcomes": [
+            {"type": "TakeItem", "key": "ww2_aubrics_dispatch", "amount": 1},
+            {"type": "SetFlag", "key": "ww2_beacon_lit"},
+            {"type": "SetFlag", "key": "ww2_pell_rest"},
+            {"type": "SetFlag", "key": "ww2_pell_away"},
+            {"type": "SetFlag", "key": "ww2_pell_answered"},
+            {"type": "CompleteQuest", "key": "ww2_last_watch"}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pe_lie",
+          "speaker": "narrator",
+          "text": "*You fold the letter away. 'They're coming home, Pell. Any day now. You did well.' His whole face lights up.* I KNEW it! I'll keep the fire for them — I'll get it going this time, you'll see. Any day now! *He turns back to the cold stones, humming the patrol song.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "ww2_pell_lied"},
+            {"type": "SetFlag", "key": "ww2_pell_answered"},
+            {"type": "CompleteQuest", "key": "ww2_last_watch"},
+            {"type": "Approval", "key": "kael", "amount": -4},
+            {"type": "Approval", "key": "ysolde", "amount": -4},
+            {"type": "Approval", "key": "pip", "amount": 2},
+            {"type": "Approval", "key": "morwen", "amount": -2}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pe_dispatch",
+          "speaker": "ww2_pell",
+          "text": "*Pell leans on the Kestrel Stone, breathing hard, which is odd, because he doesn't seem to need to.* Told you. Every patrol, wolves. Now — the cairn. Riders leave word under the top stone. My fingers are no good for it lately. Would you look?",
+          "conditions": [{"type": "QuestState", "key": "ww2_last_watch", "value": "dispatch"}],
+          "fallback": "pe_stone",
+          "choices": [{"text": "I'll check the cairn."}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "pe_stone",
+          "speaker": "ww2_pell",
+          "text": "Steady. They're close — I can smell wet wolf. They always come at the Kestrel Stone. Always.",
+          "conditions": [{"type": "QuestState", "key": "ww2_last_watch", "value": "stone"}],
+          "fallback": "pe_ford",
+          "choices": [{"text": "We're ready."}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "pe_ford",
+          "speaker": "ww2_pell",
+          "text": "*Pell is crouched on the bank, frowning at the stepping stones.* Third one wobbles. Always has. Sir Corwin used to say a knight is only as good as his footing — and then he'd fall in, every single time, on purpose, to make me laugh.",
+          "conditions": [{"type": "QuestState", "key": "ww2_last_watch", "value": "ford"}],
+          "fallback": "pe_after",
+          "choices": [
+            {
+              "text": "(Hop across and steady the wobbly stone.)",
+              "check": {"skill": "Athletics", "dc": 12, "success": "pe_f_ath_s", "failure": "pe_f_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Read the brook for the safest line.)",
+              "check": {"skill": "Survival", "dc": 12, "success": "pe_f_sur_s", "failure": "pe_f_sur_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {
+              "text": "There's an otter slide on the far bank. Look — fresh.",
+              "next": "pe_f_hunter",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "once": true,
+              "tag": "HUNTER"
+            },
+            {"text": "Tell me about Sir Corwin.", "next": "pe_f_corwin", "once": true},
+            {"text": "On to the Kestrel Stone.", "next": "pe_f_go"}
+          ]
+        },
+        {
+          "id": "pe_ford_b",
+          "speaker": "ww2_pell",
+          "text": "*Pell skims a pebble. It goes straight through his fingers, and he pretends very hard not to have noticed.*",
+          "choices": [
+            {
+              "text": "(Hop across and steady the wobbly stone.)",
+              "check": {"skill": "Athletics", "dc": 12, "success": "pe_f_ath_s", "failure": "pe_f_ath_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Read the brook for the safest line.)",
+              "check": {"skill": "Survival", "dc": 12, "success": "pe_f_sur_s", "failure": "pe_f_sur_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {
+              "text": "There's an otter slide on the far bank. Look — fresh.",
+              "next": "pe_f_hunter",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "once": true,
+              "tag": "HUNTER"
+            },
+            {"text": "Tell me about Sir Corwin.", "next": "pe_f_corwin", "once": true},
+            {"text": "On to the Kestrel Stone.", "next": "pe_f_go"}
+          ]
+        },
+        {
+          "id": "pe_f_corwin",
+          "speaker": "ww2_pell",
+          "text": "Tall. Loud. Snored like a bear in a barrel. He taught me my letters off the sides of supply crates — I can spell SALTED PORK better than any squire in the order. *He smiles at the water.* He said when he came home he'd put me forward for my spurs.",
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_ath_s",
+          "speaker": "narrator",
+          "text": "*You hop out to the third stone, find the loose wedge under it and stamp it home. The stone stops wobbling for the first time in twelve years. Pell applauds like a man watching a royal joust.*",
+          "outcomes": [{"type": "GiveXP", "amount": 100}, {"type": "Approval", "key": "rook", "amount": 2}, {"type": "Approval", "key": "bruna", "amount": 2}],
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_ath_f",
+          "speaker": "narrator",
+          "text": "*The third stone wobbles. You wobble. The brook is, as advertised, colder than it looks. Pell laughs so hard he has to sit down.* That's EXACTLY what Sir Corwin did!",
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_sur_s",
+          "speaker": "narrator",
+          "text": "*You read the current — the dark slick over the deep hole, the ripple over the gravel bar — and point out the line. Pell nods slowly.* That's the line he used to take. I'd forgotten. Thank you.",
+          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_sur_f",
+          "speaker": "narrator",
+          "text": "*The water all looks like water to you. Pell, kindly, pretends you've chosen the line he would have.*",
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_hunter",
+          "speaker": "ww2_pell",
+          "text": "*He peers.* An otter? Here? There's always been an otter at the Heron Ford. Sir Corwin called her the Quartermaster, because she stole everything that shone. *He grins.* Bet she's still got a stash under the old willow stump.",
+          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "Approval", "key": "rook", "amount": 3}],
+          "next": "pe_ford_b"
+        },
+        {
+          "id": "pe_f_go",
+          "speaker": "ww2_pell",
+          "text": "Kestrel Stone next — the high rock north-east of the Watch, where the riders leave dispatches. Wolves den near it in the cold months. *He grins.* Every patrol, wolves. You'd think they'd learn. I'll go ahead.",
+          "outcomes": [{"type": "SetFlag", "key": "ww2_patrol_ford"}, {"type": "ClearFlag", "key": "ww2_pell_ford"}, {"type": "SetFlag", "key": "ww2_pell_stone"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pe_after",
+          "speaker": "ww2_pell",
+          "text": "*Pell salutes.* Patrol's done for tonight. Thank you for walking it with me.",
+          "conditions": [{"type": "QuestComplete", "key": "ww2_last_watch"}],
+          "fallback": "pe_offer",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "pe_offer",
+          "speaker": "ww2_pell",
+          "text": "*A young man in a faded teal tabard snaps to attention beside a cold heap of stones. The evening light goes through him, just a little.* Halt! Who goes— oh. Travellers. Sorry. Have you come up from the Lord-Commander? Is the company back?",
+          "conditions": [{"type": "QuestNotStarted", "key": "ww2_last_watch"}, {"type": "Level", "amount": 10}],
+          "fallback": "pe_young",
+          "choices": [
+            {"text": "What company?", "next": "pe_o2"},
+            {"text": "You're... a ghost, aren't you?", "next": "pe_ghost"},
+            {
+              "text": "(Look at him more closely.)",
+              "check": {"skill": "Insight", "dc": 11, "success": "pe_ins_s", "failure": "pe_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "pe_ghost",
+          "speaker": "ww2_pell",
+          "text": "*He laughs, then stops, and looks at his hands for a long moment.* ...Don't be daft. Ghosts don't get chilblains. *He doesn't look at his hands again.*",
+          "next": "pe_o2"
+        },
+        {
+          "id": "pe_ins_s",
+          "speaker": "narrator",
+          "text": "*His tabard is twelve winters out of fashion. There's frost on his boots that never melts, and his breath doesn't fog in the cold. Whatever he is, he hasn't noticed — and he is very, very tired.*",
+          "next": "pe_o2"
+        },
+        {
+          "id": "pe_ins_f",
+          "speaker": "narrator",
+          "text": "*A cheerful young squire with a sunburnt nose. Nothing strange about him at all. Probably.*",
+          "next": "pe_o2"
+        },
+        {
+          "id": "pe_o2",
+          "speaker": "ww2_pell",
+          "text": "The Heronguard, of course! Forty of them rode north to Skyreach — Lord-Commander Aubric at the head, banners like a flock of herons. Sir Corwin left me the watch. 'Keep the fire, Pell. Walk the patrol. We'll be home before the first snow.'",
+          "next": "pe_o3"
+        },
+        {
+          "id": "pe_o3",
+          "speaker": "ww2_pell",
+          "text": "*He glances at the cold stones.* The fire's been hard to keep lately. My hands keep... missing the kindling. But the patrol I can still walk! Ford, Kestrel Stone and home. Only it's a lot of forest for one squire. Would you walk it with me tonight?",
+          "choices": [
+            {
+              "text": "Lead the way, squire.",
+              "next": "pe_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [
+                {"type": "StartQuest", "key": "ww2_last_watch"},
+                {"type": "SetFlag", "key": "ww2_pell_ford"},
+                {"type": "SetFlag", "key": "ww2_pell_away"}
+              ]
+            },
+            {"text": "How long have you been keeping watch?", "next": "pe_long"},
+            {"text": "Another time, Pell."}
+          ]
+        },
+        {
+          "id": "pe_long",
+          "speaker": "ww2_pell",
+          "text": "Since the autumn they rode. A long autumn. The leaves keep falling and coming back, falling and coming back. I stopped counting them.",
+          "choices": [
+            {
+              "text": "Lead the way, squire.",
+              "next": "pe_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [
+                {"type": "StartQuest", "key": "ww2_last_watch"},
+                {"type": "SetFlag", "key": "ww2_pell_ford"},
+                {"type": "SetFlag", "key": "ww2_pell_away"}
+              ]
+            },
+            {"text": "Another time, Pell."}
+          ]
+        },
+        {
+          "id": "pe_accept",
+          "speaker": "ww2_pell",
+          "text": "*He brightens so much that the stones around him catch a little colour.* Heron Ford first, west of here, where the brook runs shallow. I'll go ahead and check the stepping stones — they wobble. Don't fall in. Sir Corwin always said the brook is colder than it looks, and it looks very cold.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pe_young",
+          "speaker": "ww2_pell",
+          "text": "Evening! Mind the road north — the wolves have got bold. Come back when you've a few more scars, and I'll tell you about the patrol.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_ww2_kestrel_cairn",
+      "start": "kc_has",
+      "nodes": [
+        {
+          "id": "kc_has",
+          "speaker": "narrator",
+          "text": "*The cairn's top stone sits a little crooked, where you set it back.*",
+          "conditions": [{"type": "HasItem", "key": "ww2_aubrics_dispatch", "amount": 1}],
+          "fallback": "kc_quest",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "kc_quest",
+          "speaker": "narrator",
+          "text": "*A waist-high cairn of lichened stones. The top one lifts away. Beneath it, wrapped in oilcloth gone stiff with twelve winters, is a folded letter sealed with a blue heron.*",
+          "conditions": [{"type": "QuestState", "key": "ww2_last_watch", "value": "dispatch"}],
+          "fallback": "kc_plain",
+          "choices": [
+            {
+              "text": "(Search the whole cairn.)",
+              "check": {"skill": "Investigation", "dc": 13, "success": "kc_inv_s", "failure": "kc_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "(Take the dispatch.)", "next": "kc_take"}
+          ]
+        },
+        {
+          "id": "kc_inv_s",
+          "speaker": "narrator",
+          "text": "*Under the dispatch: a whetstone worn hollow in the middle, and a child's charcoal drawing of a heron, folded small. Someone left these here for Pell, a long time ago.*",
+          "outcomes": [{"type": "GiveItem", "key": "ww2_charcoal_heron", "amount": 1}, {"type": "GiveXP", "amount": 100}],
+          "next": "kc_quest"
+        },
+        {"id": "kc_inv_f", "speaker": "narrator", "text": "*Just stones, and a beetle who resents you.*", "next": "kc_quest"},
+        {
+          "id": "kc_take",
+          "speaker": "narrator",
+          "text": "*You tuck the letter away. When you turn round, the Kestrel Stone is empty. Somewhere back towards the ruin, very faintly, someone is whistling the patrol song.*",
+          "outcomes": [
+            {"type": "GiveItem", "key": "ww2_aubrics_dispatch", "amount": 1},
+            {"type": "ClearFlag", "key": "ww2_pell_stone"},
+            {"type": "ClearFlag", "key": "ww2_pell_away"}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "kc_plain",
+          "speaker": "narrator",
+          "text": "*A waist-high cairn of lichened stones, built where riders used to leave word for the Heron Watch. Nothing under the top stone now but beetles.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_ww2_sprig",
+      "start": "sp_after",
+      "nodes": [
+        {
+          "id": "sp_after",
+          "speaker": "ww2_sprig",
+          "text": "Big-folk! Sprig is teaching the whole glade the new verse. It goes: 'And then the big-folk came and HIT IT.' It is very popular.",
+          "conditions": [{"type": "QuestComplete", "key": "ww2_kings_glow"}],
+          "fallback": "sp_return",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "sp_return",
+          "speaker": "ww2_sprig",
+          "text": "Big-folk! You came back UP! Did you— is the King— *His leaf hat trembles.* Is there a King?",
+          "conditions": [{"type": "QuestState", "key": "ww2_kings_glow", "value": "return"}],
+          "fallback": "sp_king",
+          "choices": [
+            {"text": "Your King is free. The grey seed is broken, and he's... small again.", "next": "sp_r_free"},
+            {
+              "text": "He talked to us, before the end. Under all that grey, he was still in there.",
+              "next": "sp_r_soothed",
+              "conditions": [{"type": "Flag", "key": "dg2_king_soothed"}]
+            }
+          ]
+        },
+        {
+          "id": "sp_r_soothed",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig goes very still.* He talked? The King talked to big-folk? *He sniffs, enormously.* The song never said he'd still be nice. Songs leave out the important bits.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 3}, {"type": "Approval", "key": "nanami", "amount": 3}],
+          "next": "sp_r_free"
+        },
+        {
+          "id": "sp_r_free",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig's leaf hat flies straight up into the air.* SMALL? Small like a mossling? Small like ME? *He spins in a circle.* The old song was right! 'The King went down to keep the glow, and the glow kept him.' And you UN-kept him! Puddlecap is going to be SO jealous he wasn't here.",
+          "next": "sp_r2"
+        },
+        {
+          "id": "sp_r2",
+          "speaker": "ww2_sprig",
+          "text": "*He drags something out from under a fern: his most treasured possessions, laid out in a row.* Royal Scouts pay their debts. Pick one, big-folk. Not the button. The button is Sprig's.",
+          "outcomes": [{"type": "CompleteQuest", "key": "ww2_kings_glow"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sp_king",
+          "speaker": "ww2_sprig",
+          "text": "The King is down there. Under all the glow. Be careful of the big weavers — they're bigger downstairs. Everything is bigger downstairs. Except Sprig.",
+          "conditions": [{"type": "QuestState", "key": "ww2_kings_glow", "value": "king"}],
+          "fallback": "sp_way",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "sp_way",
+          "speaker": "ww2_sprig",
+          "text": "You cleared the webs! The glade can breathe! *He bounces.* Now — the way under the moss. Sprig knows it. Sprig has always known it. Sprig was just... waiting for a big-folk escort.",
+          "conditions": [{"type": "QuestState", "key": "ww2_kings_glow", "value": "way"}],
+          "fallback": "sp_webs",
+          "choices": [
+            {"text": "Show me the way under the moss.", "next": "sp_show"},
+            {"text": "Why did the King go down there?", "next": "sp_why", "once": true}
+          ]
+        },
+        {
+          "id": "sp_why",
+          "speaker": "ww2_sprig",
+          "text": "Long ago a grey star fell into the glade, all ash and no twinkle. Where it landed, the lanterncaps went sick. The King picked it up — very brave, very damp — and carried it down under the moss so it couldn't hurt anyone. Then he didn't come back up.",
+          "next": "sp_way2"
+        },
+        {
+          "id": "sp_way2",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig squares his tiny shoulders.* Sprig is ready. Mostly.",
+          "choices": [{"text": "Show me the way under the moss.", "next": "sp_show"}]
+        },
+        {
+          "id": "sp_show",
+          "speaker": "narrator",
+          "text": "*Sprig leads you north past the Grandmother Tree to a mossy hollow, and with great ceremony pulls aside a curtain of moss as thick as a quilt. Cold air breathes out, smelling of mushrooms and old stone. Far below, something glows.*",
+          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 100}],
+          "next": "sp_show2"
+        },
+        {
+          "id": "sp_show2",
+          "speaker": "ww2_sprig",
+          "text": "Mossdeep. Sprig will guard the door. From out here. Very bravely. Go on!",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sp_webs",
+          "speaker": "ww2_sprig",
+          "text": "The weavers are still in the glade! Sprig can hear them knitting. *He shudders.* They knit TERRIBLE things.",
+          "conditions": [{"type": "QuestState", "key": "ww2_kings_glow", "value": "webs"}],
+          "fallback": "sp_offer",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "sp_offer",
+          "speaker": "ww2_sprig",
+          "text": "*A mossling in a thimble helmet leaps out from behind a fern, brandishing a twig.* HALT, big-folk! Sprig, Royal Scout of the Moss Court! Self-appointed. ...Are you here about the spiders? Please say you're here about the spiders.",
+          "conditions": [{"type": "QuestNotStarted", "key": "ww2_kings_glow"}, {"type": "Level", "amount": 11}],
+          "fallback": "sp_low",
+          "choices": [
+            {"text": "What spiders?", "next": "sp_o2"},
+            {"text": "The Moss Court? I thought Puddlecap was chief.", "next": "sp_court", "once": true},
+            {
+              "text": "Puddlecap's a friend of mine.",
+              "next": "sp_friend",
+              "conditions": [{"type": "Flag", "key": "mosslings_befriended"}],
+              "once": true
+            },
+            {
+              "text": "(Show him Puddlecap's second-best hat.)",
+              "next": "sp_hat",
+              "conditions": [{"type": "HasItem", "key": "puddlecaps_mushroom_hat", "amount": 1}],
+              "once": true
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "sp_court",
+          "speaker": "ww2_sprig",
+          "text": "Puddlecap is chief of Puddlecap Hollow. The KING is king of everything under the moss. Nobody has seen him for a hundred years. Sprig has seen his footprint! Probably. It might have been a puddle.",
+          "next": "sp_o2"
+        },
+        {
+          "id": "sp_friend",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig's eyes go round.* You're THE big-folk? The lantern-promise big-folk? Puddlecap talks about you ALL the time. He says you're 'adequate'. That's the nicest word he knows!",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 2}],
+          "next": "sp_o2"
+        },
+        {
+          "id": "sp_hat",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig gasps and salutes the hat with his twig.* Uncle Puddlecap's SECOND-BEST HAT! He only gives that to people he'd share soup with! *He salutes you too, to be safe.*",
+          "next": "sp_o2"
+        },
+        {
+          "id": "sp_o2",
+          "speaker": "ww2_sprig",
+          "text": "Big weavers. Bigger than Sprig. Bigger than Uncle Puddlecap's hat. They came up out of the ground with the glow and webbed the whole Lanterncap Glade, and Sprig's lantern-caps are in there. Also Sprig's house. Also Sprig's other house.",
+          "next": "sp_o3"
+        },
+        {
+          "id": "sp_o3",
+          "speaker": "ww2_sprig",
+          "text": "*He lowers his voice.* The glow is coming UP, big-folk. Out of the hollow past the Grandmother Tree. The old song says the Mossling King went down there long ago to keep the glow safe. Sprig thinks the glow is not being kept very well.",
+          "choices": [
+            {
+              "text": "I'll clear the glade. Then you show me where the glow comes from.",
+              "next": "sp_acc",
+              "conditions": [{"type": "Level", "amount": 11}],
+              "outcomes": [{"type": "StartQuest", "key": "ww2_kings_glow"}]
+            },
+            {"text": "Sing me the old song.", "next": "sp_song", "once": true},
+            {"text": "Not today, Sprig."}
+          ]
+        },
+        {
+          "id": "sp_song",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig clears his throat and sings, very seriously, in a voice like a damp hinge:* 'The King went down to keep the glow, / the glow grew bright, the King grew slow, / and when the grey comes falling down, / who'll lift the moss and find the crown?' ...There's a second verse, but it's mostly about soup.",
+          "choices": [
+            {
+              "text": "I'll clear the glade. Then you show me where the glow comes from.",
+              "next": "sp_acc",
+              "conditions": [{"type": "Level", "amount": 11}],
+              "outcomes": [{"type": "StartQuest", "key": "ww2_kings_glow"}]
+            },
+            {"text": "Not today, Sprig."}
+          ]
+        },
+        {
+          "id": "sp_acc",
+          "speaker": "ww2_sprig",
+          "text": "*Sprig salutes so hard his thimble falls over his eyes.* Sprig will wait right here and supervise! Be careful — the weavers' webs are sticky and their opinions are worse.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sp_low",
+          "speaker": "ww2_sprig",
+          "text": "Big-folk! A bit-small big-folk. No offence. Come back when you're bigger — the weavers are VERY big.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_ww2_tamsin",
+      "start": "ta_1",
+      "nodes": [
+        {
+          "id": "ta_1",
+          "speaker": "ww2_tamsin",
+          "text": "*A sturdy woman with a basket of mushrooms on each hip and a third, somehow, on her head.* Visitors! All the way up here! Mind the cap-beds, they bruise. I'm Tamsin. I forage, I dry, I sell, and I talk too much, as you're about to find out.",
+          "choices": [
+            {"text": "What are you selling?", "next": "ta_shop"},
+            {"text": "You live all the way out here?", "next": "ta_home", "once": true},
+            {
+              "text": "Who's the boy at the old ruin across the brook?",
+              "next": "ta_pell",
+              "conditions": [{"type": "NotFlag", "key": "ww2_pell_rest"}],
+              "once": true
+            },
+            {
+              "text": "The beacon at the Heron Watch is lit.",
+              "next": "ta_pell_after",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}],
+              "once": true
+            },
+            {
+              "text": "Have you seen anything strange in the north woods lately?",
+              "next": "ta_glow",
+              "conditions": [{"type": "NotFlag", "key": "found_mossdeep"}],
+              "once": true
+            },
+            {
+              "text": "Old Mossback won't be eating any more of your hats.",
+              "next": "ta_mossback",
+              "conditions": [{"type": "Flag", "key": "enc_ww2_old_mossback"}],
+              "once": true
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "ta_1b",
+          "speaker": "ww2_tamsin",
+          "text": "Anything else, love?",
+          "choices": [
+            {"text": "What are you selling?", "next": "ta_shop"},
+            {"text": "You live all the way out here?", "next": "ta_home", "once": true},
+            {
+              "text": "Who's the boy at the old ruin across the brook?",
+              "next": "ta_pell",
+              "conditions": [{"type": "NotFlag", "key": "ww2_pell_rest"}],
+              "once": true
+            },
+            {
+              "text": "The beacon at the Heron Watch is lit.",
+              "next": "ta_pell_after",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}],
+              "once": true
+            },
+            {
+              "text": "Have you seen anything strange in the north woods lately?",
+              "next": "ta_glow",
+              "conditions": [{"type": "NotFlag", "key": "found_mossdeep"}],
+              "once": true
+            },
+            {
+              "text": "Old Mossback won't be eating any more of your hats.",
+              "next": "ta_mossback",
+              "conditions": [{"type": "Flag", "key": "enc_ww2_old_mossback"}],
+              "once": true
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "ta_shop",
+          "speaker": "ww2_tamsin",
+          "text": "Help yourself. The blue ones are for eating. The red ones are for looking at. The orange ones are for Gerald, and Gerald is a badger.",
+          "outcomes": [{"type": "OpenVendor", "key": "ww2_tamsin"}]
+        },
+        {
+          "id": "ta_home",
+          "speaker": "ww2_tamsin",
+          "text": "Thirty years. Folk in Lanternvale think I'm mad, and I think they've never tasted a lanterncap fried in butter, so we're even. The old wood takes care of you if you take care of it — and if you don't step on the spiders.",
+          "next": "ta_1b"
+        },
+        {
+          "id": "ta_pell",
+          "speaker": "ww2_tamsin",
+          "text": "Pell. Sweet lad. He's been keeping that cold fire for longer than I've had grey hairs. I leave him tea on the wall. He never drinks it, but the cup's always warm when I come back for it. *She looks away.* Somebody ought to tell him something, poor love. I never could.",
+          "next": "ta_1b"
+        },
+        {
+          "id": "ta_pell_after",
+          "speaker": "ww2_tamsin",
+          "text": "I saw it last night from my doorstep — the old beacon, burning gold for the first time in twelve years. I cried into a whole basket of chanterelles like a fool. *She smiles.* I'll keep taking tea up. Habit.",
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 2}],
+          "next": "ta_1b"
+        },
+        {
+          "id": "ta_glow",
+          "speaker": "ww2_tamsin",
+          "text": "The glow? The lanterncaps have been coming up bright as lamps this year — too bright, and too many. Something under the hollow past the Grandmother Tree is pushing it up. The mosslings know more than I do. Find the little one in the thimble hat — Sprig. He's been fretting round the glade all week.",
+          "next": "ta_1b"
+        },
+        {
+          "id": "ta_mossback",
+          "speaker": "ww2_tamsin",
+          "text": "You saw off Old Mossback? *She clasps her hands.* Three baskets that pig ate. Three baskets and my good hat. *Pause.* ...I'll miss him, the old devil. Here — take a stew for the road.",
+          "outcomes": [{"type": "GiveItem", "key": "food_lantern_stew", "amount": 2}],
+          "next": "ta_1b"
+        }
+      ]
+    },
+    {
+      "id": "dlg_ww2_kingstone",
+      "start": "ks_found",
+      "nodes": [
+        {
+          "id": "ks_found",
+          "speaker": "narrator",
+          "text": "*The crowned mossling carved on the stone points at the hidden cave mouth. It looks, somehow, smug.*",
+          "conditions": [{"type": "Flag", "key": "found_mossdeep"}],
+          "fallback": "ks_1",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "ks_1",
+          "speaker": "narrator",
+          "text": "*A standing stone swallowed in moss. Scraping some away reveals a carving: a round little figure in a mushroom crown, pointing down. Very insistently down.*",
+          "choices": [
+            {
+              "text": "(Follow where the carving points.)",
+              "check": {"skill": "Investigation", "dc": 13, "success": "ks_s", "failure": "ks_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Feel which way the moss grows.)",
+              "check": {"skill": "Nature", "dc": 14, "success": "ks_s", "failure": "ks_f2"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "ks_s",
+          "speaker": "narrator",
+          "text": "*You follow the line to the foot of the hollow's rock wall. Behind a curtain of moss as thick as a quilt, cold air breathes out, smelling of mushrooms and old stone. A cave! Far below, something glows.*",
+          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 100}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ks_f",
+          "speaker": "narrator",
+          "text": "*It points down. You look down. There is a beetle. The beetle looks back. Neither of you learns anything.*",
+          "next": "ks_1"
+        },
+        {
+          "id": "ks_f2",
+          "speaker": "narrator",
+          "text": "*The moss grows in every direction at once, with great enthusiasm. It is no help at all.*",
+          "next": "ks_1"
+        }
+      ]
+    },
+    {
+      "id": "dlg_ww2_otter_stump",
+      "start": "ot_found",
+      "nodes": [
+        {
+          "id": "ot_found",
+          "speaker": "narrator",
+          "text": "*The hollow stump has been thoroughly burgled. By you. Somewhere downstream, an otter is composing a strongly worded complaint.*",
+          "conditions": [{"type": "Flag", "key": "ww2_otter_stash"}],
+          "fallback": "ot_1",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "ot_1",
+          "speaker": "narrator",
+          "text": "*A hollow willow stump on the bank of the brook. It smells powerfully of fish, and there are little wet footprints going in and out of a gap among its roots.*",
+          "choices": [
+            {
+              "text": "(Look closer at the roots.)",
+              "check": {"skill": "Perception", "dc": 12, "success": "ot_s", "failure": "ot_f"},
+              "once": true,
+              "tag": "PERCEPTION"
+            },
+            {"text": "(Reach into the gap.)", "next": "ot_reach", "conditions": [{"type": "Class", "key": "Rogue"}], "tag": "ROGUE"},
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "ot_s",
+          "speaker": "narrator",
+          "text": "*Between the roots, behind a screen of fish-bones arranged with real care, something glints. Somebody's been hoarding shiny things here for years.*",
+          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 80}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ot_reach",
+          "speaker": "narrator",
+          "text": "*You slide a hand into the gap with professional delicacy and feel cold metal: buttons, buckles, a spoon. A hoard! A small, wet, extremely organised hoard.*",
+          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 80}, {"type": "Approval", "key": "pip", "amount": 3}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ot_f",
+          "speaker": "narrator",
+          "text": "*Fish. It smells of fish. That is the whole story the stump is prepared to tell you.*",
+          "next": "ot_1"
+        }
+      ]
+    }
+  ]
+}

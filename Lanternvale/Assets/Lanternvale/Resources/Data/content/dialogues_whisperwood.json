@@ -11,7 +11,14 @@
           "text": "*The Wayside lantern blazes gold, and Komorebi spins inside it like a leaf in a sunbeam.* You did it! I can feel the Heart from here, warm as a hand on my back. Thank you, little lights.",
           "conditions": [{"type": "Flag", "key": "lanterns_rekindled"}],
           "fallback": "k_after",
-          "choices": [{"text": "Goodbye."}]
+          "choices": [
+            {
+              "text": "Is something stirring in the old wood to the north?",
+              "next": "k_ww2_hint",
+              "conditions": [{"type": "NotFlag", "key": "found_mossdeep"}]
+            },
+            {"text": "Goodbye."}
+          ]
         },
         {
           "id": "k_after",
@@ -183,6 +190,19 @@
           "speaker": "komorebi",
           "text": "*A tiny spirit peeks out of the dark lantern and whispers:* A pilgrim? No taper... Go and see Maru in the village first, little light. She'll know what to do.",
           "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "k_ww2_hint",
+          "speaker": "komorebi",
+          "text": "The north wood? Oh, it's old, little light — older than me, older than the Shrine. *She dims thoughtfully.* The mosslings are singing about their King again, and the moss in the hollow past the Grandmother Tree glows when it shouldn't. A cold breath comes out of the rock there, behind the moss. Whatever is glowing lives under it.",
+          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}],
+          "next": "k_ww2_hint2"
+        },
+        {
+          "id": "k_ww2_hint2",
+          "speaker": "komorebi",
+          "text": "Be careful down there. Glow that bright is glow that something is hoarding.",
+          "choices": [{"text": "Thank you, Komorebi."}, {"text": "Goodbye."}]
         }
       ]
     },

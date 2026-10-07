@@ -3,7 +3,7 @@
     {
       "id": "whisperwood",
       "name": "Whisperwood",
-      "subtitle": "The old pilgrim road",
+      "subtitle": "The old pilgrim road and the old forest",
       "width": 100,
       "depth": 46,
       "skyTop": "#a8d8c8",
@@ -16,6 +16,52 @@
       ],
       "ground": "ground_forest",
       "groundTile": 8,
+      "biome": "forest",
+      "levelMin": 4,
+      "levelMax": 12,
+      "fill": 0.4,
+      "paths": [
+        {"points": [[19.6, 6.6], [19.3, 10.5], [18.4, 15.5], [17.6, 20.0], [18.6, 24.0]], "width": 1.6},
+        {"points": [[18.6, 24.0], [14.6, 28.4], [11.6, 32.8], [10.4, 35.4]], "width": 1.6},
+        {"points": [[18.6, 24.0], [24.0, 27.5], [30.0, 29.6], [36.0, 30.4], [41.6, 32.4], [46.0, 35.6]], "width": 1.6},
+        {"points": [[33.0, 30.0], [32.8, 33.8]], "width": 1.6},
+        {"points": [[45.4, 12.8], [44.6, 17.4], [42.8, 23.0], [41.2, 28.0], [41.6, 32.4]], "width": 1.6},
+        {
+          "points": [[44.6, 17.4], [50.0, 20.4], [55.0, 22.4], [59.0, 25.8], [62.0, 26.8], [65.0, 27.2], [69.0, 26.2], [74.0, 27.2], [77.2, 29.4]],
+          "width": 2.0
+        },
+        {"points": [[46.0, 35.6], [52.0, 36.4], [56.6, 36.8], [59.2, 36.8], [62.0, 36.6], [66.0, 35.0], [72.0, 33.2], [77.0, 31.6]], "width": 2.0},
+        {"points": [[85.4, 7.8], [85.6, 11.0], [84.8, 14.6], [84.4, 19.0], [83.0, 25.0], [81.0, 30.2]], "width": 1.6},
+        {"points": [[81.0, 30.2], [85.2, 33.0], [87.4, 36.4], [89.0, 38.4]], "width": 1.6}
+      ],
+      "water": [
+        {
+          "points": [
+            [56.8, 0.0],
+            [58.0, 3.0],
+            [59.0, 6.2],
+            [59.5, 9.0],
+            [60.0, 12.5],
+            [60.3, 16.0],
+            [60.2, 19.5],
+            [61.2, 22.8],
+            [62.0, 25.5],
+            [62.0, 28.2],
+            [60.8, 31.5],
+            [59.4, 34.6],
+            [59.1, 37.0],
+            [59.6, 40.0],
+            [60.8, 43.0],
+            [61.6, 46.0]
+          ],
+          "halfWidth": 1.3,
+          "crossings": [{"pos": [59.0, 6.2], "size": [6.4, 2.2]}, {"pos": [62.0, 26.8], "size": [5.0, 3.0]}, {"pos": [59.2, 36.8], "size": [5.0, 3.0]}]
+        },
+        {
+          "points": [[28.8, 39.8], [28.4, 40.9], [26.7, 41.6], [24.9, 41.6], [23.2, 40.9], [22.8, 39.8], [23.6, 38.7], [24.8, 38.0], [26.8, 38.0], [28.0, 38.7]],
+          "closed": true
+        }
+      ],
       "props": [
         {"art": "decal_path_dirt", "pos": [4, 6.0]},
         {"art": "decal_path_dirt", "pos": [12, 6.4]},
@@ -40,6 +86,20 @@
         {"art": "decal_blight", "pos": [92.5, 6.6]},
         {"art": "decal_blight", "pos": [96, 3.0]},
         {"art": "decal_blight", "pos": [75, 12.4]},
+        {"art": "decal_flowers", "pos": [20.2, 26.0]},
+        {"art": "decal_flowers", "pos": [9.2, 37.0]},
+        {"art": "decal_flowers", "pos": [28.6, 36.0]},
+        {"art": "decal_blight", "pos": [87.0, 18.6]},
+        {"art": "decal_blight", "pos": [92.4, 17.6]},
+        {"art": "decal_blight", "pos": [95.6, 23.4]},
+        {"art": "decal_blight", "pos": [89.2, 22.6]},
+        {"art": "decal_flowers", "pos": [93.9, 29.0]},
+        {"art": "decal_flowers", "pos": [27.3, 26.5]},
+        {"art": "decal_flowers", "pos": [37.1, 25.3]},
+        {"art": "decal_flowers", "pos": [85.6, 26.6]},
+        {"art": "decal_flowers", "pos": [34.5, 20.4]},
+        {"art": "decal_flowers", "pos": [68.3, 28.8]},
+        {"art": "decal_flowers", "pos": [37.3, 23.9]},
         {"art": "prop_tree_oak", "pos": [2.0, 12.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
         {"art": "prop_tree_birch", "pos": [5.4, 10.8], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
         {"art": "prop_tree_pine", "pos": [8.8, 13.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
@@ -136,7 +196,7 @@
         {"art": "prop_tree_pine", "pos": [68.0, 13.7], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_log", "pos": [70.0, 12.6], "collider": {"w": 2.2, "h": 0.6}},
         {"art": "prop_rock_large", "pos": [74.2, 13.0], "collider": {"w": 2.0, "h": 1.0}},
-        {"art": "prop_tree_pine", "pos": [62.8, 16.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [77.8, 15.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
         {"art": "prop_bush_a", "pos": [65.6, 0.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
         {"art": "prop_stump", "pos": [72.6, 1.6], "collider": {"w": 0.9, "h": 0.5}},
         {"art": "prop_tree_dead", "pos": [77.0, 13.0], "collider": {"w": 1.0, "h": 0.6}},
@@ -188,7 +248,447 @@
           "collider": {"w": 0.9, "h": 0.5},
           "interact": "lantern_whisperwood_87",
           "text": "A spirit-lantern, cold and dark. The stone still remembers being warm."
-        }
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [13.4, 30.4],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3.0, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [25.6, 30.8],
+          "flip": true,
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3.0, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [12.4, 23.6],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3.0, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [24.8, 35.6],
+          "flip": true,
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3.0, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [16.2, 32.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [23.8, 23.4],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [10.6, 27.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [27.8, 33.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {"art": "prop_mushrooms", "pos": [15.0, 26.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [20.6, 32.6]},
+        {"art": "prop_mushrooms", "pos": [11.4, 32.0], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [26.4, 24.4]},
+        {"art": "prop_mushrooms", "pos": [18.4, 33.8], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_log", "pos": [14.4, 33.6], "collider": {"w": 2.2, "h": 0.6}},
+        {
+          "art": "prop_stump",
+          "pos": [14.6, 20.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "text": "A stump with a tiny ladder up its side, and a lookout post on top made of three twigs and a lot of determination.",
+          "interact": "ww2_sprig_stump"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [15.2, 22.6],
+          "scale": 0.4,
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffe08a", "radius": 2.2, "intensity": 0.8, "offset": [0, 2.3], "flicker": true},
+          "interact": "ww2_sprig_lantern",
+          "text": "A thimble lantern hung on a twig. A label in very careful letters says: PROPERTY OF SPRIG, ROYAL SCOUT. DO NOT BLOW OUT."
+        },
+        {"art": "prop_bush_b", "pos": [8.2, 25.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [8.8, 30.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [27.6, 21.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [28.8, 22.8], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [17.0, 36.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [20.6, 37.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_bush_b", "pos": [22.6, 21.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_cottage_c",
+          "pos": [7.6, 40.6],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffc070", "radius": 3.5, "intensity": 0.8, "offset": [1.5, 2.6], "nightOnly": true},
+          "interact": "ww2_tamsins_cottage",
+          "text": "Tamsin's cottage. Strings of drying mushrooms hang under the eaves like bunting, and the doormat says WIPE YOUR SPORES."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [12.8, 35.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffe08a", "radius": 3.2, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_washing_line", "pos": [3.6, 36.4], "collider": {"w": 3.4, "h": 0.3}},
+        {
+          "art": "prop_veg_patch",
+          "pos": [13.8, 40.8],
+          "collider": {"w": 3.6, "h": 1.8},
+          "text": "Neat rows of leeks and turnips, and at the end a row of mushroom logs, each one labelled. 'Blewits.' 'Chanterelles.' 'Do NOT eat (Gerald).'",
+          "interact": "ww2_mushroom_beds"
+        },
+        {"art": "prop_beehive", "pos": [2.6, 40.6], "collider": {"w": 2.0, "h": 0.9}},
+        {"art": "prop_bench", "pos": [5.8, 37.4], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_barrel", "pos": [10.8, 39.0], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_log", "pos": [14.6, 37.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_mushrooms", "pos": [14.6, 37.2], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_fence", "pos": [13.8, 42.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_tree_oak", "pos": [2.6, 44.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [11.8, 44.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [17.4, 43.4], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [1.8, 32.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_tree_great",
+          "pos": [32.6, 37.4],
+          "scale": 1.3,
+          "collider": {"w": 3.4, "h": 2.6},
+          "interact": "ww2_grandmother_tree",
+          "text": "The Grandmother Tree. Seven people holding hands could not reach round her. Someone has tried: there are seven little ribbons tied to her bark, at seven different heights."
+        },
+        {
+          "art": "prop_shrine_gate",
+          "pos": [32.9, 32.4],
+          "text": "A small vermilion gate before the great tree. The tablet reads: 'She was here first. Be polite.'"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [35.8, 34.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd88a", "radius": 4.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [29.6, 34.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd88a", "radius": 4.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_statue",
+          "pos": [30.4, 32.6],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A stone fox with a moss bib, keeping one eye on the pool and one on you."
+        },
+        {
+          "art": "prop_spirit_statue",
+          "pos": [35.4, 32.6],
+          "flip": true,
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A stone fox, very slightly smug. Someone has left it an acorn cap full of rice."
+        },
+        {"art": "prop_mushrooms", "pos": [31.0, 35.2], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [34.8, 35.8]},
+        {"art": "prop_lilypads", "pos": [25.4, 39.6]},
+        {"art": "prop_lilypads", "pos": [27.0, 40.4]},
+        {"art": "prop_reeds", "pos": [22.6, 40.6], "sway": true},
+        {"art": "prop_reeds", "pos": [29.0, 38.6], "sway": true},
+        {"art": "prop_cattails", "pos": [24.0, 42.0], "sway": true},
+        {"art": "prop_reeds", "pos": [27.8, 42.0], "sway": true},
+        {"art": "prop_cave_wall", "pos": [41.4, 41.2], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [50.8, 41.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_rock_large", "pos": [43.0, 38.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [49.0, 38.6], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [45.4, 38.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true, "hideFlag": "found_mossdeep"},
+        {"art": "prop_bush_a", "pos": [46.9, 38.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true, "hideFlag": "found_mossdeep"},
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [49.8, 36.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [40.4, 38.4],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {"art": "prop_mushrooms", "pos": [44.6, 36.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {
+          "art": "prop_standing_stone",
+          "pos": [42.2, 35.0],
+          "collider": {"w": 1.0, "h": 0.7},
+          "interact": "ww2_kingstone",
+          "dialogue": "dlg_ww2_kingstone",
+          "text": "A standing stone swallowed in moss. Something is carved under it."
+        },
+        {"art": "prop_tree_pine", "pos": [44.2, 44.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [48.4, 44.8], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [53.0, 43.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [38.6, 43.8], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_log", "pos": [53.4, 27.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_stump", "pos": [48.2, 28.0], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_rock_small", "pos": [53.0, 24.2]},
+        {"art": "prop_mushrooms", "pos": [49.0, 23.8]},
+        {
+          "art": "prop_signpost",
+          "pos": [57.6, 24.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "HERON FORD. Mind the third stone. (Underneath, in a different hand: it still wobbles. — P.)"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [66.0, 24.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffe08a", "radius": 3.2, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true},
+          "interact": "ww2_ford_lamp",
+          "text": "An old ford lamp on an iron crook. The oil is fresh. Somebody still fills it."
+        },
+        {
+          "art": "prop_stump",
+          "pos": [57.4, 29.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "ww2_otter_stump",
+          "dialogue": "dlg_ww2_otter_stump",
+          "text": "A hollow willow stump on the bank. It smells powerfully of fish."
+        },
+        {"art": "prop_willow", "pos": [64.6, 31.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_signpost",
+          "pos": [55.8, 38.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "East across the Mossy Ford: the Heron Watch. West: the Grandmother Tree. (Someone has drawn a mossling in a crown, pointing at the ground.)"
+        },
+        {"art": "prop_reeds", "pos": [58.2, 22.6], "sway": true},
+        {"art": "prop_reeds", "pos": [63.8, 30.4], "sway": true},
+        {"art": "prop_cattails", "pos": [61.8, 33.8], "sway": true},
+        {"art": "prop_reeds", "pos": [57.2, 40.4], "sway": true},
+        {"art": "prop_cattails", "pos": [61.6, 41.0], "sway": true},
+        {"art": "prop_reeds", "pos": [62.6, 18.4], "sway": true},
+        {"art": "prop_reeds", "pos": [57.6, 15.6], "sway": true},
+        {"art": "prop_cattails", "pos": [62.4, 14.8], "sway": true},
+        {
+          "art": "prop_watchtower_ruin",
+          "pos": [83.0, 39.2],
+          "collider": {"w": 3.8, "h": 3.8},
+          "interact": "ww2_heron_tower",
+          "text": "The Heron Watch tower, split open by a hundred winters and one very determined oak. A faded blue pennant still flies from the top, out of sheer stubbornness."
+        },
+        {"art": "prop_root_column", "pos": [76.6, 38.8], "collider": {"w": 2.0, "h": 1.3}},
+        {
+          "art": "prop_ruin_arch",
+          "pos": [77.4, 29.8],
+          "text": "The Watch gate. A heron is carved in the keystone, wings spread, with moss for feathers."
+        },
+        {"art": "prop_ruin_pillar", "pos": [73.6, 33.2], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [87.2, 32.8], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [74.2, 37.0], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [85.4, 44.0], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [79.4, 43.2], "collider": {"w": 3.4, "h": 0.6}},
+        {
+          "art": "prop_cairn",
+          "pos": [80.4, 33.8],
+          "collider": {"w": 1.1, "h": 0.8},
+          "hideFlag": "ww2_beacon_lit",
+          "interact": "ww2_cold_beacon",
+          "text": "The watch beacon: an iron basket on a stone plinth, full of cold, damp ash. Someone has stacked fresh kindling beside it. It hasn't caught."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [80.4, 33.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 6.0, "intensity": 1.1, "offset": [0, 1.35], "flicker": true},
+          "requireFlag": "ww2_beacon_lit",
+          "interact": "ww2_lit_beacon",
+          "text": "The watch beacon burns tall and gold. Nobody tends it. It never seems to need it."
+        },
+        {
+          "art": "prop_noticeboard",
+          "pos": [75.4, 35.4],
+          "collider": {"w": 1.6, "h": 0.5},
+          "interact": "ww2_watch_roster",
+          "text": "The watch roster: forty names in faded ink, each with a tiny painted heron. At the very bottom, in a boy's careful hand: 'Pell — keeps the fire.'"
+        },
+        {"art": "prop_mushrooms", "pos": [78.6, 37.2], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_rubble", "pos": [85.6, 34.2], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [75.6, 41.6], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_bench",
+          "pos": [76.6, 34.6],
+          "collider": {"w": 1.4, "h": 0.4},
+          "interact": "ww2_tea_bench",
+          "text": "A stone bench by the beacon. On the end sits a cup of tea, still faintly warm. Tamsin's, by the mushroom painted on it."
+        },
+        {"art": "prop_tree_oak", "pos": [72.0, 40.6], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [88.4, 44.6], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {
+          "art": "prop_standing_stone",
+          "pos": [91.6, 42.4],
+          "collider": {"w": 1.0, "h": 0.7},
+          "interact": "ww2_kestrel_stone",
+          "text": "The Kestrel Stone. From up here the old forest rolls away like a green sea, and far to the north the snowy teeth of Skyreach catch the last of the light."
+        },
+        {"art": "prop_rock_large", "pos": [93.8, 43.0], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [89.6, 43.6]},
+        {
+          "art": "prop_cairn",
+          "pos": [87.8, 41.6],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "ww2_kestrel_cairn",
+          "dialogue": "dlg_ww2_kestrel_cairn",
+          "text": "A waist-high cairn of lichened stones, where riders once left word for the Heron Watch."
+        },
+        {"art": "prop_tree_pine", "pos": [96.6, 38.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [97.6, 44.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [85.0, 39.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_tree_great",
+          "pos": [68.8, 41.0],
+          "collider": {"w": 3.4, "h": 2.6},
+          "interact": "ww2_old_sentinel",
+          "text": "An enormous old tree, its roots knuckled over a boulder. A heron's nest the size of a cart sits in the crown, empty."
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [70.6, 36.8],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3.0, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {"art": "prop_rock_large", "pos": [74.0, 23.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_log", "pos": [68.8, 23.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [86.4, 17.6], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_bush_b", "pos": [94.6, 16.8], "collider": {"w": 1.2, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [97.4, 22.6], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [90.2, 25.2], "collider": {"w": 1.0, "h": 0.6}},
+        {
+          "art": "prop_blight_crystal",
+          "pos": [88.8, 20.0],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {
+          "art": "prop_blight_crystal",
+          "pos": [96.2, 19.2],
+          "collider": {"w": 1.2, "h": 0.7},
+          "light": {"color": "#b49cff", "radius": 2.6, "intensity": 0.6, "offset": [0, 1.0]}
+        },
+        {"art": "prop_tree_pine", "pos": [4.2, 17.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [9.8, 18.8], "flip": true, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_b", "pos": [13.4, 16.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [24.6, 18.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [28.8, 20.8], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [33.0, 18.0], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [36.4, 21.8], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_b", "pos": [49.6, 16.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [53.8, 17.6], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [56.8, 20.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [66.8, 17.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [76.2, 17.4], "flip": true, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_a", "pos": [21.4, 16.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [39.2, 17.0], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [64.6, 19.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [94.9, 33.0], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [98.2, 31.3], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_pine", "pos": [21.8, 43.9], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [1.3, 20.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [88.9, 27.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [45.0, 25.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [80.0, 21.5], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [77.3, 23.4], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [56.0, 42.9], "flip": true, "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_rock_large", "pos": [27.5, 45.3], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_a", "pos": [5.3, 23.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [32.6, 45.2], "scale": 1.25, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [97.9, 41.9], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [79.3, 18.9], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [3.6, 28.7], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_pine", "pos": [69.6, 30.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [39.3, 22.5], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [18.7, 40.0], "scale": 1.25, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_b", "pos": [95.9, 28.5], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [32.5, 23.3], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_a", "pos": [92.5, 30.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [35.6, 44.6], "scale": 1.5, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [75.3, 45.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [5.7, 33.9], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [45.8, 30.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [40.7, 19.5], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [36.2, 18.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [7.8, 20.6], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [97.9, 34.5], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [24.5, 45.1], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [1.4, 22.7], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_bush_a", "pos": [39.0, 25.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [98.7, 25.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [28.2, 18.1], "flip": true, "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_rock_large", "pos": [84.9, 29.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_oak", "pos": [82.4, 45.0], "scale": 1.25, "flip": true, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [87.3, 25.1], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [95.6, 25.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [46.6, 21.7], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [4.2, 20.6], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [8.3, 28.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [34.8, 25.1], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [8.5, 33.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [56.3, 18.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [78.4, 40.6], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_reeds", "pos": [56.2, 26.4], "flip": true, "sway": true},
+        {"art": "prop_bush_a", "pos": [32.9, 26.5], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [2.9, 25.7], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_reeds", "pos": [58.2, 45.0], "flip": true, "sway": true},
+        {"art": "prop_bush_b", "pos": [95.1, 35.5], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [5.5, 45.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [12.1, 19.9], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [92.0, 45.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [92.9, 27.2], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [15.1, 45.0], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_bush_b", "pos": [99.0, 18.0], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [29.2, 25.7], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_reeds", "pos": [55.6, 45.4], "flip": true, "sway": true},
+        {"art": "prop_bush_b", "pos": [77.3, 20.7], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [98.7, 20.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [38.3, 28.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [80.1, 24.7], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_reeds", "pos": [54.9, 40.9], "flip": true, "sway": true},
+        {"art": "prop_bush_a", "pos": [90.0, 31.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [20.5, 19.3], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [76.8, 25.8], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [86.5, 22.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [39.5, 34.8], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [45.2, 27.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [35.6, 27.5], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [99.0, 36.5], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [87.6, 29.9], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [5.6, 26.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_reeds", "pos": [64.3, 22.3], "sway": true},
+        {"art": "prop_bush_a", "pos": [4.8, 31.4], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [7.1, 17.5], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_a", "pos": [32.0, 20.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [1.1, 27.3], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [72.2, 30.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [46.6, 43.0], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [95.9, 40.9], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [81.9, 18.1], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_mushrooms", "pos": [8.5, 22.7], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [6.6, 29.8]},
+        {"art": "prop_mushrooms", "pos": [93.1, 33.4]},
+        {"art": "prop_mushrooms", "pos": [94.8, 30.9]},
+        {"art": "prop_mushrooms", "pos": [25.4, 20.6]},
+        {"art": "prop_mushrooms", "pos": [20.4, 41.8]},
+        {"art": "prop_mushrooms", "pos": [43.7, 29.6]},
+        {"art": "prop_mushrooms", "pos": [51.0, 18.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [93.9, 25.1]}
       ],
       "foreground": [
         {"art": "fg_ferns", "pos": [2, -0.4], "sway": true},
@@ -215,7 +715,12 @@
         {"npc": "moppet", "pos": [35.6, 13.0], "hideFlag": "moppet_found"},
         {"npc": "seren", "pos": [41.0, 10.6], "hideFlag": "recruited_seren"},
         {"npc": "komorebi", "pos": [43.4, 11.6], "flip": true},
-        {"npc": "lys", "pos": [78.6, 4.0], "flip": true, "hideFlag": "recruited_lys"}
+        {"npc": "lys", "pos": [78.6, 4.0], "flip": true, "hideFlag": "recruited_lys"},
+        {"npc": "ww2_sprig", "pos": [16.2, 21.4]},
+        {"npc": "ww2_tamsin", "pos": [10.8, 36.8], "flip": true},
+        {"npc": "ww2_pell", "pos": [78.8, 33.4], "hideFlag": "ww2_pell_away"},
+        {"npc": "ww2_pell", "pos": [65.4, 28.4], "flip": true, "requireFlag": "ww2_pell_ford"},
+        {"npc": "ww2_pell", "pos": [89.6, 38.8], "requireFlag": "ww2_pell_stone"}
       ],
       "encounters": [
         {
@@ -347,6 +852,56 @@
           "enemies": [{"creature": "cr_hollow_treant", "pos": [95.4, 8.6]}],
           "requireFlag": "embers_gathered",
           "doneFlag": "rotheart_defeated"
+        },
+        {
+          "id": "enc_ww2_glade_webs",
+          "pos": [19.6, 28.8],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_ww2_glade_weaver", "pos": [18.6, 30.0]},
+            {"creature": "cr_ww2_glade_weaver", "pos": [21.0, 29.8]},
+            {"creature": "cr_ww2_silk_lurker", "pos": [17.8, 28.4]},
+            {"creature": "cr_ww2_silk_lurker", "pos": [21.6, 28.0]}
+          ]
+        },
+        {
+          "id": "enc_ww2_glowlings",
+          "pos": [51.6, 31.4],
+          "radius": 2.6,
+          "enemies": [
+            {"creature": "cr_ww2_glowling", "pos": [50.8, 32.2]},
+            {"creature": "cr_ww2_glowling", "pos": [52.6, 32.0]},
+            {"creature": "cr_ww2_glow_mudcaller", "pos": [51.8, 33.0]}
+          ]
+        },
+        {"id": "enc_ww2_old_mossback", "pos": [50.6, 25.6], "radius": 2.8, "enemies": [{"creature": "cr_ww2_old_mossback", "pos": [50.8, 26.4]}]},
+        {
+          "id": "enc_ww2_thornwolves",
+          "pos": [71.4, 20.8],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_ww2_thornback", "pos": [70.4, 21.6]},
+            {"creature": "cr_ww2_thornback", "pos": [72.6, 21.8]},
+            {"creature": "cr_ww2_thornback", "pos": [71.6, 22.6]}
+          ]
+        },
+        {
+          "id": "enc_ww2_kestrel_ambush",
+          "pos": [90.0, 38.4],
+          "radius": 3.2,
+          "requireFlag": "ww2_pell_stone",
+          "hidden": true,
+          "enemies": [
+            {"creature": "cr_ww2_thornback", "pos": [88.2, 40.4]},
+            {"creature": "cr_ww2_thornback", "pos": [91.8, 40.2]},
+            {"creature": "cr_ww2_duskwing", "pos": [90.4, 41.0]}
+          ]
+        },
+        {
+          "id": "enc_ww2_grey_owls",
+          "pos": [93.4, 20.6],
+          "radius": 2.4,
+          "enemies": [{"creature": "cr_ww2_duskwing", "pos": [92.8, 21.4]}, {"creature": "cr_ww2_duskwing", "pos": [94.2, 21.0]}]
         }
       ],
       "chests": [
@@ -366,7 +921,16 @@
           "art": "prop_chest",
           "lootTable": "lt_chest_forest_locked",
           "lockCheck": {"skill": "SleightOfHand", "dc": 15}
-        }
+        },
+        {"id": "chest_ww2_glade_basket", "pos": [23.2, 33.8], "art": "prop_chest", "lootTable": "lt_ww2_chest_glade"},
+        {
+          "id": "chest_ww2_watch_strongbox",
+          "pos": [85.8, 41.6],
+          "art": "prop_chest",
+          "lootTable": "lt_ww2_chest_watch",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 14}
+        },
+        {"id": "chest_ww2_otter_stash", "pos": [56.4, 30.8], "art": "prop_chest", "lootTable": "lt_ww2_chest_otter", "requireFlag": "ww2_otter_stash"}
       ],
       "transitions": [
         {
@@ -399,7 +963,12 @@
           "marker": "cave"
         }
       ],
-      "spawns": [{"id": "default", "pos": [5.4, 6.6]}, {"id": "from_village", "pos": [5.4, 6.6]}, {"id": "from_shrine", "pos": [97.6, 3.6]}, {"id": "from_dgn_mossdeep", "pos": [46.0, 35.5]}],
+      "spawns": [
+        {"id": "default", "pos": [5.4, 6.6]},
+        {"id": "from_village", "pos": [5.4, 6.6]},
+        {"id": "from_shrine", "pos": [97.6, 3.6]},
+        {"id": "from_dgn_mossdeep", "pos": [46.0, 35.5]}
+      ],
       "regions": [
         {
           "id": "reg_whisperwood_edge",
@@ -423,9 +992,72 @@
           "size": [16, 15],
           "enterFlag": "reg_grey_grove",
           "text": "The Grey Grove. Colour drains from everything here. Even your breath looks grey."
+        },
+        {
+          "id": "reg_ww2_old_forest",
+          "pos": [50.0, 19.5],
+          "size": [96, 5],
+          "text": "The Old Forest — north of the pilgrim road the trees grow older, taller and quieter. Some of them were saplings when the Shrine was young."
+        },
+        {
+          "id": "reg_ww2_lanterncap_glade",
+          "pos": [19.5, 28.0],
+          "size": [14, 12],
+          "enterFlag": "reg_ww2_lanterncap_glade",
+          "name": "Lanterncap Glade",
+          "text": "Lanterncap Glade. The mushrooms here glow like paper lanterns — brighter than they should — and something has strung grey webs between them."
+        },
+        {
+          "id": "reg_ww2_tamsins_clearing",
+          "pos": [8.5, 39.0],
+          "size": [13, 9],
+          "name": "Tamsin's Clearing",
+          "text": "A clearing that smells of woodsmoke and drying mushrooms. Someone lives out here, and likes it."
+        },
+        {
+          "id": "reg_ww2_grandmother",
+          "pos": [31.5, 35.0],
+          "size": [13, 9],
+          "name": "The Grandmother Tree",
+          "text": "The Grandmother Tree. The air under her is cool and green and very still, like the inside of a held breath."
+        },
+        {
+          "id": "reg_ww2_mossy_hollow",
+          "pos": [46.0, 35.0],
+          "size": [10, 6],
+          "name": "Mossy Hollow",
+          "check": {"skill": "Perception", "dc": 14},
+          "checkFlag": "found_mossdeep",
+          "successText": "Cold air is breathing out of the rock behind that curtain of moss — and far below, something glows. A cave!",
+          "failText": "A mossy hollow under the rocks. Pretty, and damp, and very green."
+        },
+        {"id": "reg_ww2_heron_ford", "pos": [62.0, 26.8], "size": [9, 6], "name": "Heron Ford"},
+        {"id": "reg_ww2_mossy_ford", "pos": [59.2, 36.8], "size": [8, 5], "name": "Mossy Ford"},
+        {
+          "id": "reg_ww2_heron_watch",
+          "pos": [80.5, 36.0],
+          "size": [16, 12],
+          "enterFlag": "reg_ww2_heron_watch",
+          "name": "The Heron Watch",
+          "text": "The Heron Watch — a ruined outpost of the Heronguard, swallowed by moss. Its beacon is cold."
+        },
+        {
+          "id": "reg_ww2_kestrel_stone",
+          "pos": [91.0, 41.0],
+          "size": [12, 8],
+          "name": "Kestrel Stone",
+          "text": "The Kestrel Stone. The whole old forest lies below you, green on green, all the way to the mountains."
         }
       ],
-      "ambient": {"leaves": true, "mist": true, "timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#e8f4dc", "ambientIntensity": 0.95},
+      "ambient": {
+        "leaves": true,
+        "mist": true,
+        "timeOfDay": "day",
+        "dayNightCycle": true,
+        "ambientColor": "#e8f4dc",
+        "ambientIntensity": 0.95,
+        "fireflies": true
+      },
       "restArea": true,
       "music": "music_whisperwood"
     }

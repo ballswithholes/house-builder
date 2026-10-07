@@ -60,6 +60,15 @@ done
 "$tool" map dgn_root_hollows "$out/dgn_root_hollows_grove.png" --at 27,20 --zoom 5 --markers auto --level 12
 "$tool" map dgn_root_hollows "$out/dgn_root_hollows_gallery.png" --at 24,32
 "$tool" map dgn_root_hollows "$out/dgn_root_hollows_rootwarden.png" --at 49,21
+# ---- ww: Whisperwood's old forest (the brook, its fords and the Old Bridge) and Mossdeep Grotto
+"$tool" map whisperwood "$out/whisperwood_old_bridge.png" --at 60,8 --hour 12.5
+"$tool" map whisperwood "$out/whisperwood_lanterncap_glade.png" --at 19,27 --hour 18.6
+"$tool" map whisperwood "$out/whisperwood_grandmother_night.png" --at 32,34 --hour 21.5
+"$tool" map whisperwood "$out/whisperwood_heron_ford.png" --at 62,27 --hour 15 --flags ww2_pell_ford
+"$tool" map whisperwood "$out/whisperwood_heron_watch_night.png" --at 80,34 --hour 22 --flags ww2_beacon_lit
+"$tool" map whisperwood "$out/whisperwood_tamsin_dusk.png" --at 10,37 --hour 19
+"$tool" map dgn_mossdeep "$out/dgn_mossdeep_pools.png" --at 26,31
+"$tool" map dgn_mossdeep "$out/dgn_mossdeep_throne.png" --at 54,21
 # ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null
