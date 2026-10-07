@@ -171,6 +171,20 @@ group buffs · `Dispel` → "X removed" · `Summon` → view created, placed, re
 "Downed!" · `Revive` → stands up, sparkles · `Teleport` → puffs at both ends · `Knockback` → hop ·
 `Taunt` → "Taunted!" · `ComboPoints` → "3 combo" · big resource gains → "+20 Rage" · `ItemCreated` → "+Soul Shard".
 
+Sound (`CombatSfx`, PresentationAPI.md §6): a melee lunge whooshes by weapon weight (`Swing`) and the blow lands as a
+weapon layer plus the target's material layer (`Hit`: blade on plate, bite on fur, arrow on wood…), louder for bigger
+shares of the target's health, with a sweetener on crits and killing blows; spells land with their school impact
+(`impact_lightning` for Lightning-tagged spells). Ranged attacks sound **at release** (after `ShootReleaseTime`): bow,
+crossbow, gun pop, throw or wand zap — creature magic bolts zap, never twang — then an `arrow_flight` whoosh for
+physical projectiles. Casts wind up by school (`cast_fire`…, `cast_start` for physical). Area bursts: shouts blow a
+horn (no swing), Thunder Clap stomps, spells play their impact once (the 30 ms per-id limit folds the targets' hits),
+and only the first three targets of one moment add a material layer. `Miss/Dodge/Evade` whoosh, `Parry` clangs,
+`Block` (whole or partial) thunks on a wooden shield or rings on metal, `Resist` fizzles, `Immune` tinks, `Absorb`
+shimmers. Periodic ticks are quiet (bleeds squelch). `Death`/`Downed` play the creature's voice at once and the body
+fall (+ armour clatter for mail and plate) on scaled time when the animation lays the body down (0.62 s / 0.46 s);
+spirits fade without a fall. Moving units step on the map's ground (`Footstep`). The outcome cues stay: Victory
+`quest`, Defeat `death`, Disengage `ui_close`.
+
 Robustness: a beat that throws is logged once and skipped (its events are still announced); missing views are
 skipped; unknown event types are logged once; GameFlow failures (`ViewOf`, `EnsureView`, `Select`) fall back to
 `UnitView.All` (`Tag` / `UnitId`).

@@ -42,7 +42,7 @@ Unity layer under `Assets/Lanternvale/Scripts/Game/{World,Units,Fx,Audio,Renderi
 | `Units/UnitView.cs` | `UnitView` (any character/creature) + `UnitViewSystem` (single update loop) |
 | `Fx/FxSystem.cs`, `Fx/FxPreviews.cs` | pooled effects + persistent targeting previews |
 | `Fx/FloatingText.cs` | world-anchored combat text (IMGUI) |
-| `Audio/GameAudio.cs`, `Sfx.cs`, `SfxSynth.cs` | volumes, init, synthesized sound effects |
+| `Audio/GameAudio.cs`, `Sfx.cs`, `SfxSynth.cs`, `CombatSfx.cs` | volumes, init, synthesized sound effects (variants, voice rules, delayed play), combat/world sound semantics |
 | `Audio/Music.cs`, `MusicEngine.cs` | generative score (moods + crossfades) |
 
 ---
@@ -208,16 +208,87 @@ hooks `Ui.Sfx = id => Sfx.Play(id)` and adds an `AudioListener` to the camera if
 ```csharp
 GameAudio.MasterVolume / MusicVolume / SfxVolume (0..1), GameAudio.Muted; GameAudio.SavePrefs() / LoadPrefs()
 Sfx.Play("hit_crit", worldPos);                 // worldPos optional: gentle stereo pan + softer when off-screen
-Sfx.Play(id, worldPos, volume, pitch);
-Sfx.Impact(School.Fire, pos, crit);             // impact_<school>; Physical → hit_physical / hit_crit
+Sfx.Play(id, worldPos, volume, pitch);          // "id#n" plays that exact variant
+Sfx.PlayAfter(id, scaledDelay, worldPos, volume, pitch);   // scaled time: follows Time.timeScale, waits while paused
+Sfx.CancelDelayed(); Sfx.Ready; Sfx.Has(id); Sfx.Clip(id); Sfx.VariantCount(id); Sfx.Ids; Sfx.LoadedIds
+Sfx.Impact(School.Fire, pos, crit);             // legacy: impact_<school>; Physical → hit_physical / hit_crit
 Music.PlayForMap(map.music);                    // music_lanternvale→village, music_whisperwood→forest, music_shrine→shrine
 Music.Play("combat"); Music.Play("menu"); Music.Stop(2f); Music.Mood; Music.MoodForMap(mapDef)
+
+// combat and world semantics (Audio/CombatSfx.cs; id choices in Core/Rules/Combat/CombatSounds.cs)
+CombatSfx.Swing(actor, offHand, pos, volume);   // swing_light (daggers, fists, claws) / swing / swing_heavy (2H, staves, slams)
+CombatSfx.Release(actor, ability, school, pos, scaledDelay); // bow / xbow_release / gun_fire / throw_release / wand_zap
+CombatSfx.Flight(actor, ability, school, from, flightSeconds); // arrow_flight for arrows, bolts and throws
+CombatSfx.Hit(combatEvent, pos);                // weapon layer + material layer (physical) or the school impact; crit/kill sweetener
+CombatSfx.Tick(combatEvent, pos);               // DoT tick: mat_wet squelch for bleeds, quiet school impact otherwise
+CombatSfx.Avoid(combatEvent, pos);              // Miss/Dodge/Evade/Parry/Block/Resist/Immune/Absorb
+CombatSfx.CastWindup(ability, school, pos, volume);    // cast_<school>, cast_lightning (tag Lightning), cast_start (physical)
+CombatSfx.SpellImpact(ability, school, pos, crit, targets); // area burst: impact_<school>, impact_lightning, stomp, shout_horn
+CombatSfx.Shout(ability, pos);                  // shout_horn
+CombatSfx.Death(unit, pos, downed);             // vo_<voice> now, body_fall_light/heavy (+ armor_clatter) when the body lands
+CombatSfx.Footstep(unit, pos, mapDef, volume);  // footstep_<ground> by biome; mail/plate add armor_jingle every 2nd step
+CombatSfx.Loot(quality | itemInstance);         // loot_rare / loot_epic / loot_legendary, else the plain ui_open pickup
+CombatSfx.QuestCue(turnedIn); CombatSfx.SecretFound(); CombatSfx.RaidStarted(); CombatSfx.BattleStart(battle);
+CombatSfx.SessionCue(sessionEvent);             // RaidStarted and the "set_complete" set-bonus toast
 ```
 
-SFX ids: `ui_click ui_open ui_close hit_physical hit_crit swing bow cast_start impact_fire impact_frost impact_arcane
-impact_shadow impact_holy impact_nature heal buff debuff death level_up quest coin footstep_grass chest_open door`
-(aliases: click, open, close, hit, crit, footstep, gold/loot, levelup, chest, cast). Same id is rate-limited (30 ms,
-max 4 overlapping); hits/footsteps/coins get ±6% pitch variation.
+**Ids.** The original 24 stay: `ui_click ui_open ui_close hit_physical hit_crit swing bow cast_start impact_fire
+impact_frost impact_arcane impact_shadow impact_holy impact_nature heal buff debuff death level_up quest coin
+footstep_grass chest_open door` (aliases: click, open, close, hit, crit, footstep, gold/loot, levelup, chest, cast).
+The expansion's ids (Expansion.md §4; `CombatSounds.ExpansionIds`, all of them in `Sfx.Ids`):
+* weapon layers `hit_blade hit_axe hit_blunt hit_dagger hit_fist hit_bite hit_claw hit_slam hit_arrow hit_bolt hit_bullet`;
+* material layers `mat_plate mat_mail mat_leather mat_cloth mat_flesh mat_fur mat_chitin mat_bone mat_wood mat_stone
+  mat_ether mat_ice mat_scale mat_wet`;
+* defence `parry block_wood block_metal dodge miss resist immune absorb`; swings `swing_light swing swing_heavy`;
+* ranged `bow xbow_release gun_fire throw_release arrow_flight wand_zap`;
+* spells `cast_fire cast_frost cast_arcane cast_shadow cast_holy cast_nature cast_lightning impact_lightning shout_horn
+  stomp` (`cast_start` stays the fallback);
+* deaths `body_fall_light body_fall_heavy armor_clatter vo_beast_yelp vo_humanoid_grunt vo_spirit_fade vo_wood_creak
+  vo_stone_crumble vo_dragon_roar vo_frog_croak vo_gnoll_yip`;
+* footsteps `footstep_dirt footstep_leaves footstep_stone footstep_snow footstep_mud armor_jingle`;
+* hooks `loot_rare loot_epic loot_legendary set_complete secret_found door_stone boss_pull raid_warning quest_accept
+  quest_turnin portal_whoosh`.
+
+An unknown id warns once **by its own name**. While an expansion id has no clip yet, it plays its nearest original sound
+(`hit_*` → hit_physical, `cast_*` → cast_start, `footstep_*` → footstep_grass, `vo_*` → death, fanfares → quest…;
+material layers, body falls, armour clatter/jingle and arrow flight stay silent rather than sound wrong).
+
+**Variants and voices.** `SfxSynth.GeneratePcm` publishes variants as `"<id>#<n>"` (n = 1…K). `Sfx` groups them by base
+id and plays them round-robin in a fresh random order every cycle, never the same variant twice in a row, with ±3 %
+pitch and ±1.5 dB of jitter (UI chimes and stingers — `ui_*`, `level_up`, `quest*`, `loot_*`, `set_complete`,
+`secret_found`, `raid_warning`, `boss_pull` — play as authored). All voice rules key on the base id: a 30 ms rate limit
+(unscaled time), at most 4 overlapping voices of one id (the oldest is stolen), at most 6 new voices per frame (`ui_*`
+exempt), 24 pooled sources. The pure bookkeeping is `Core/Util/SfxBank.cs` (tested by `TestsSfxPlayback`).
+
+**Delayed play.** `Sfx.PlayAfter` queues on `Time.time` (scaled) in `SfxPlayer.Update`, so a delay shrinks at combat
+speed 2–8× and waits while the game is paused (`timeScale` 0). Used for the body fall (`CombatSounds.DeathFallDelay`
+0.62 s, `DownedFallDelay` 0.46 s — inside the lie window of `UnitAnimator` Death/Fall) and the raid warning.
+
+**Mapping (`CombatSounds`, tested by `TestsCombatSounds`).**
+* Weapon layer by `WeaponType` (swords and polearms → blade, axes → axe, maces/staves/shields → blunt, daggers and
+  thrown → dagger, fist/unarmed → fist, bow → arrow, crossbow → bolt, gun → bullet); creatures use their natural attack.
+* Material of a target: `CreatureDef.material` when set, else inference from the art key (every Expansion.md §9 key and
+  the original creatures; tint suffixes like `cr_r2_cinder_drake_emberjaw` match their key), then the creature id, then
+  words in either (gnoll, skeleton, wisp, drake…), then the family, then the creature type. Characters and companions
+  sound like their chest armour (else the heaviest piece worn; nothing = cloth). Voice: `CreatureDef.voice` first, the
+  same inference otherwise; characters are humanoid.
+* Loudness `lerp(0.65, 1, √clamp01(4·damage/maxHealth))`, ×1.15 crit, ×1.1 killing blow; bosses and big creatures play
+  5–10 % lower. On one AoE moment only the first three targets get a material layer (1/√n).
+* Ranged: characters' weapon attacks release by their ranged weapon (Arcane Shot still twangs), their ranged spells zap;
+  creatures release by projectile kind and **magic bolts never twang**. The release plays when the projectile leaves the
+  hand (after `UnitView.ShootReleaseTime`), not at draw start.
+* Area bursts: shouts (tag `Shout`) → horn (no weapon whoosh), Thunder Clap-like slams (`stomp|clap|slam|quake…`) →
+  stomp, Whirlwind-like weapon areas → nothing (each hit sounds), spells → their school impact.
+* Footsteps by `MapDef.biome` (village/highlands dirt, forest/hollow_heart leaves, shrine/cave/crypt/roost stone,
+  peaks/ice_cave snow, fen mud, meadow grass), else keywords in the ground key, map id and music key.
+
+**Recorded overrides.** Any `.wav`/`.ogg` under `Resources/Audio/Sfx/<id>/` (or a single `Resources/Audio/Sfx/<id>.wav`)
+replaces every synthesized variant of `<id>` (`Resources.LoadAll`, name order, probed once in `PollReady` for every
+known and synthesized id). The repository ships no samples: an absent folder changes nothing. Only CC0 or owned audio
+may go there, each file listed in [`SfxCredits.md`](SfxCredits.md); normalise overrides to the synthesized peaks.
+
+Music moods (Expansion.md §4, audio-synth): an explicit `music_<mood>` key wins over map-id keywords; the expansion adds
+`highlands town fen peaks dungeon raid`.
 
 Music moods (`Music.Moods`): **village** (F major 3/4 waltz, harp oom-pah-pah, music-box melody), **forest** (D dorian,
 airy pads, flute, sparse harp), **shrine** (A minor, slow, long reverb), **combat** (D minor, harp ostinato, soft

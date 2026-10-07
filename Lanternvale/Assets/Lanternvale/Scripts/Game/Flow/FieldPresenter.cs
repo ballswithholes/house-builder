@@ -180,7 +180,7 @@ namespace Lanternvale.Game
                     if (spell)
                     {
                         v.PlayCast(Ui.SchoolColor(school));
-                        Sfx.Play("cast_start", v.FeetPosition, 0.75f, 1f);
+                        CombatSfx.CastWindup(a, school, v.FeetPosition, 0.75f);
                     }
                     break;
                 }
@@ -203,7 +203,7 @@ namespace Lanternvale.Game
                     if (amt <= 0 && e.Periodic) break;
                     if (amt > 0) FloatingText.Damage(tv.HeadPosition, amt, e.Crit, e.School);
                     tv.PlayHit();
-                    Sfx.Impact(e.School, tv.FeetPosition, e.Crit);
+                    if (e.Periodic) CombatSfx.Tick(e, tv.FeetPosition); else CombatSfx.Hit(e, tv.FeetPosition);
                     break;
                 }
                 case CombatEventType.Miss:
@@ -217,6 +217,7 @@ namespace Lanternvale.Game
                 {
                     var tv = ViewOf(e.Target);
                     if (tv != null) FloatingText.Miss(tv.HeadPosition, e.Type.ToString());
+                    if (tv != null) CombatSfx.Avoid(e, tv.FeetPosition);
                     break;
                 }
                 case CombatEventType.AuraApplied:
@@ -266,7 +267,7 @@ namespace Lanternvale.Game
                     if (v == null || v.IsDead) break;
                     if (u.IsCharacter) { v.PlayDowned(); break; }
                     v.PlayDeath();
-                    Sfx.Play("death", v.FeetPosition, 0.7f, 1f);
+                    CombatSfx.Death(u, v.FeetPosition, false);
                     DetachUnitView(u);
                     ScheduleRemoval(v, 1.4f);
                     break;

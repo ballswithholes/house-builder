@@ -593,7 +593,7 @@ namespace Lanternvale.Game
                 if (footTimer <= 0f)
                 {
                     footTimer = 0.34f;
-                    Sfx.Play("footstep_grass", lv.FeetPosition, 0.32f, 1f);
+                    CombatSfx.Footstep(s.Leader, lv.FeetPosition, s.MapDef, 0.32f);   // ground by biome; mail/plate jingle
                 }
             }
             else footTimer = 0f;

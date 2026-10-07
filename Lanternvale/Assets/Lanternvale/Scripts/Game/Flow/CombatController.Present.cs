@@ -130,9 +130,11 @@ namespace Lanternvale.Game
             v.MoveAlong(e.Path, speed);
             float len = e.Amount > 0.01f ? e.Amount : PathLength(e.Path);
             float timeout = len / speed + 1.2f;
+            float stepIn = 0.12f;   // combat footsteps on the map's ground (scaled time, so they speed up with the fight)
             while (v != null && v.IsMoving && timeout > 0f)
             {
                 timeout -= FrameDt;
+                if ((stepIn -= FrameDt) <= 0f) { stepIn = 0.3f; if (!v.Floating) CombatSfx.Footstep(u, v.FeetPosition, flow != null && flow.Session != null ? flow.Session.MapDef : null, 0.22f); }
                 FocusOn(v.FeetPosition);
                 yield return 0f;
             }
@@ -176,10 +178,11 @@ namespace Lanternvale.Game
             if (head.Ranged)
             {
                 if (av != null) av.PlayShoot(tp);
-                Sfx.Play("bow", Feet(actor, av));
                 yield return UnitView.ShootReleaseTime;
                 var school = SwingSchool(b);
+                CombatSfx.Release(actor, null, school, Feet(actor, av));   // at release; casters zap, bows twang
                 float flight = target != null ? FxSystem.Projectile(Hand(actor, av, tp), Center(target, tv), school, "", 20f) : 0f;
+                CombatSfx.Flight(actor, null, school, Feet(actor, av), flight);
                 if (school != School.Physical) ctxImpactDrawnFor = target;
                 if (flight > 0f) yield return flight;
                 ShowAll(b);
@@ -189,7 +192,7 @@ namespace Lanternvale.Game
             else
             {
                 float dur = av != null ? av.PlayAttack(tp) : 0.5f;
-                Sfx.Play("swing", Feet(actor, av), 0.75f, 1f);
+                CombatSfx.Swing(actor, head.OffHand, Feet(actor, av), 0.75f);
                 yield return UnitView.AttackHitTime;
                 ShowAll(b);
                 lastSwingClock = presClock;
@@ -260,7 +263,7 @@ namespace Lanternvale.Game
             if (castStart != null && castStart.Reason != "channel" && castComplete == null && castStop == null)
             {
                 if (av != null) av.PlayCast(col);
-                Sfx.Play("cast_start", actorFeet);
+                CombatSfx.CastWindup(a, school, actorFeet);
                 ctxPendingCast = true;
                 ShowAll(b);
                 yield return 0.85f;
@@ -288,7 +291,7 @@ namespace Lanternvale.Game
             if (castStart != null && d != Delivery.Channel)
             {
                 ShowUpTo(b, castStart);
-                Sfx.Play("cast_start", actorFeet, 0.8f, 1f);
+                CombatSfx.CastWindup(a, school, actorFeet, 0.8f);
                 float t = 0f;
                 const float wind = 0.32f;
                 while (t < wind)
@@ -306,7 +309,7 @@ namespace Lanternvale.Game
                 {
                     var tp = Feet(target, tv);
                     float dur = av != null ? av.PlayAttack(tp) : 0.5f;
-                    Sfx.Play("swing", actorFeet);
+                    CombatSfx.Swing(actor, false, actorFeet);
                     yield return UnitView.AttackHitTime;
                     StopCastVis(actor);
                     ShowAll(b);
@@ -318,9 +321,8 @@ namespace Lanternvale.Game
                 {
                     var tp = Feet(target, tv);
                     if (av != null) av.PlayShoot(tp);
-                    if (d == Delivery.Wand) Sfx.Play("cast_start", actorFeet, 0.6f, 1.25f);
-                    else Sfx.Play("bow", actorFeet);
                     yield return UnitView.ShootReleaseTime;
+                    CombatSfx.Release(actor, a, school, actorFeet);   // at release: bow / crossbow / gun / throw / wand
                     StopCastVis(actor);
                     float flight = 0f;
                     if (target != null && target != actor)
@@ -328,6 +330,7 @@ namespace Lanternvale.Game
                         var ps = d == Delivery.Wand ? school : School.Physical;
                         flight = FxSystem.Projectile(Hand(actor, av, tp), Center(target, tv), ps, "", d == Delivery.Wand ? 15f : 20f);
                         if (ps != School.Physical) ctxImpactDrawnFor = target;
+                        CombatSfx.Flight(actor, a, school, actorFeet, flight);
                     }
                     if (flight > 0f) yield return flight;
                     ShowAll(b);
@@ -337,7 +340,7 @@ namespace Lanternvale.Game
                 case Delivery.Bolt:
                 {
                     if (av != null) av.PlayCast(col);
-                    if (castStart == null) Sfx.Play("cast_start", actorFeet, 0.7f, 1.1f);
+                    if (castStart == null) CombatSfx.CastWindup(a, school, actorFeet, 0.7f);
                     yield return UnitView.CastReleaseTime;
                     StopCastVis(actor);
                     float flight = 0f;
@@ -359,7 +362,7 @@ namespace Lanternvale.Game
                         if (target != null) av.FaceTowards(Feet(target, tv));
                         av.PlayCast(col);
                     }
-                    if (castStart == null) Sfx.Play("cast_start", actorFeet, 0.6f, 1.15f);
+                    if (castStart == null) CombatSfx.CastWindup(a, school, actorFeet, 0.6f);
                     yield return UnitView.CastReleaseTime;
                     StopCastVis(actor);
                     ShowAll(b);
@@ -385,11 +388,11 @@ namespace Lanternvale.Game
                         if (physical) av.PlayAttack(actorFeet + new Vector2(av.Facing * 0.6f, 0f));
                         else av.PlayCast(col);
                     }
-                    if (physical) Sfx.Play("swing", actorFeet);
+                    if (physical && !CombatSounds.IsShout(a)) CombatSfx.Swing(actor, false, actorFeet);
                     yield return physical ? UnitView.AttackHitTime : UnitView.CastReleaseTime;
                     StopCastVis(actor);
                     FxSystem.Burst(Feet(actor, av), AreaRadius(actor, a), school);
-                    Sfx.Impact(school, actorFeet, false);
+                    CombatSfx.SpellImpact(a, school, actorFeet);   // shouts: horn; Thunder Clap: stomp; Whirlwind: the hits
                     ShowAll(b);
                     yield return 0.48f;
                     break;
@@ -402,7 +405,7 @@ namespace Lanternvale.Game
                     StopCastVis(actor);
                     FocusIfNeeded(c);
                     FxSystem.Burst(c, AreaRadius(actor, a), school);
-                    Sfx.Impact(school, c, false);
+                    CombatSfx.SpellImpact(a, school, c);
                     ShowAll(b);
                     yield return 0.48f;
                     break;
@@ -423,7 +426,7 @@ namespace Lanternvale.Game
                     var mid = actorFeet + dir * (r * 0.5f);
                     FxSystem.Burst(mid, r * (d == Delivery.Cone ? 0.45f : 0.3f), school);
                     if (physical) FxSystem.Slash(World3D.At(mid, 0.6f), dir);
-                    Sfx.Impact(school, mid, false);
+                    CombatSfx.SpellImpact(a, school, mid);
                     ShowAll(b);
                     yield return 0.5f;
                     break;
@@ -431,7 +434,7 @@ namespace Lanternvale.Game
                 case Delivery.Channel:
                 {
                     if (av != null) av.PlayCast(col);
-                    if (castStart != null) { ShowUpTo(b, castStart); Sfx.Play("cast_start", actorFeet, 0.7f, 0.9f); }
+                    if (castStart != null) { ShowUpTo(b, castStart); CombatSfx.CastWindup(a, school, actorFeet, 0.7f); }
                     yield return UnitView.CastReleaseTime * 0.6f;
                     bool area = a != null && a.area.shape != AreaShape.None;
                     var areaC = area ? AreaCenter(b, a, actor, target) : Vector2.zero;
@@ -454,7 +457,7 @@ namespace Lanternvale.Game
                         {
                             if (!firstTick) yield return 0.32f;
                             firstTick = false;
-                            if (area) { FxSystem.Burst(areaC, rad * 0.75f, school); Sfx.Impact(school, areaC, false); }
+                            if (area) { FxSystem.Burst(areaC, rad * 0.75f, school); CombatSfx.SpellImpact(a, school, areaC); }
                         }
                         Show(e);
                     }
@@ -551,8 +554,7 @@ namespace Lanternvale.Game
                 case CombatEventType.Parry: VisAvoid(e, "Parry", true); break;
                 case CombatEventType.Evade: VisAvoid(e, "Evade", true); break;
                 case CombatEventType.Block:
-                    VisAvoid(e, "Block", false);
-                    Sfx.Play("hit_physical", Feet(e.Target, V(e.Target)), 0.6f, 1.35f);
+                    VisAvoid(e, "Block", false);   // the shield thunk is VisAvoid's CombatSfx.Avoid
                     break;
                 case CombatEventType.Resist: VisAvoid(e, "Resist", false); break;
                 case CombatEventType.Immune: VisAvoid(e, "Immune", false); break;
@@ -562,6 +564,7 @@ namespace Lanternvale.Game
                     int n = Mathf.RoundToInt(e.Amount);
                     FloatingText.Miss(Head(e.Target, tv), n > 0 ? "Absorb " + n : "Absorb");
                     FxSystem.Sparkles(Center(e.Target, tv), new Color(0.75f, 0.9f, 1f), 6);
+                    CombatSfx.Avoid(e, Feet(e.Target, tv));
                     break;
                 }
                 case CombatEventType.AuraApplied: VisAuraApplied(e); break;
@@ -647,7 +650,7 @@ namespace Lanternvale.Game
                     StopCastVis(u);
                     if (v != null) v.PlayDowned();
                     FloatingText.Status(Head(u, v), "Downed!", Ui.Bad);
-                    Sfx.Play("death", Feet(u, v), 0.6f, 1.2f);
+                    CombatSfx.Death(u, Feet(u, v), true);
                     break;
                 }
                 case CombatEventType.Revive: VisRevive(e); break;
@@ -743,7 +746,7 @@ namespace Lanternvale.Game
                 var pc = e.School == School.Physical ? new Color(1f, 0.88f, 0.84f) : Color.Lerp(Color.white, Ui.SchoolColor(e.School), 0.6f);
                 FloatingText.Spawn(head, amt.ToString(), pc, e.Crit ? 0.95f : 0.78f, e.Crit);
                 FxSystem.Puff(center, Ui.SchoolColor(e.School), 0.45f);
-                Sfx.Play(Sfx.ImpactId(e.School), center, 0.4f, 1.1f);
+                CombatSfx.Tick(e, center);
                 return;
             }
             FloatingText.Damage(head, amt, e.Crit, e.School);
@@ -754,7 +757,7 @@ namespace Lanternvale.Game
                 FxSystem.Slash(center, dir.sqrMagnitude > 1e-4f ? dir.normalized : Vector2.right);
             }
             else if (ctxImpactDrawnFor != t) FxSystem.Impact(center, e.School);
-            Sfx.Impact(e.School, center, e.Crit);
+            CombatSfx.Hit(e, center);   // weapon + material layers (or the school impact), crit/kill sweetener
             if (e.Crit)
             {
                 var rig = CameraRig.Instance;
@@ -786,6 +789,7 @@ namespace Lanternvale.Game
             if (t == null) return;
             var tv = V(t);
             FloatingText.Miss(Head(t, tv), word);
+            CombatSfx.Avoid(e, Feet(t, tv));   // whoosh / parry clang / shield thunk / fizzle / tink
             if (dodge)
             {
                 if (tv != null && !tv.IsDead && !tv.IsDowned) tv.PlayDodge();
@@ -822,7 +826,7 @@ namespace Lanternvale.Game
             FxSystem.Sparkles(World3D.At(from, 0.7f), col, 8);
             if (v != null) v.Teleport(to);
             FxSystem.Puff(World3D.At(to, 0.7f), col, 1f);
-            Sfx.Play("cast_start", to, 0.5f, 1.45f);
+            CombatSfx.CastWindup(Db?.Ability(e.AbilityId), School.Arcane, to, 0.55f);
         }
 
         void VisSummon(CombatEvent e)
@@ -875,7 +879,7 @@ namespace Lanternvale.Game
                 float d = v.PlayDeath();
                 if (!u.IsCharacter) Defer(d + 0.25f, DeferredKind.RemoveDead, u);
             }
-            Sfx.Play("death", Feet(u, v));
+            CombatSfx.Death(u, Feet(u, v), false);   // vocal now, body fall + armour clatter when it lands
         }
 
         void VisRevive(CombatEvent e)

@@ -30,6 +30,7 @@ namespace Lanternvale.Game
 
         void React(SessionEvent e)
         {
+            CombatSfx.SessionCue(e);   // sounds of events without a case here (RaidStarted, the set-bonus toast)
             switch (e.Kind)
             {
                 case SessionEventKind.GameStarted:
@@ -64,14 +65,14 @@ namespace Lanternvale.Game
                     OnLevelUp(e.Unit, e.Amount);
                     break;
                 case SessionEventKind.ItemReceived:
-                    Sfx.Play("ui_open", null, 0.7f, 1.08f);
+                    CombatSfx.Loot(e.Item);   // Rare / Epic / Legendary fanfare, the plain pickup otherwise
                     break;
                 case SessionEventKind.GoldChanged:
                     if (e.Amount != 0) Sfx.Play("coin");
                     break;
                 case SessionEventKind.QuestStarted:
                 case SessionEventKind.QuestCompleted:
-                    Sfx.Play("quest");
+                    CombatSfx.QuestCue(e.Kind == SessionEventKind.QuestCompleted);   // quest_accept / quest_turnin
                     break;
                 case SessionEventKind.QuestFailed:
                     Sfx.Play("debuff");
@@ -107,6 +108,7 @@ namespace Lanternvale.Game
                 case SessionEventKind.SecretFound:
                     // "You discovered a hidden passage: …" in gold (MapView sparkles the revealed marker, Sfx plays the cue)
                     if (!string.IsNullOrEmpty(e.Text)) Toast(e.Text, SecretGold);
+                    CombatSfx.SecretFound();
                     break;
             }
         }
@@ -454,6 +456,7 @@ namespace Lanternvale.Game
             foreach (var u in tmpUnits) RemoveView(u);
 
             Music.Play("combat", 1.5f);
+            CombatSfx.BattleStart(b);   // boss_pull when a Boss-rank enemy is in the fight
             combatFallbackLogged = false;
             try { Combat = new CombatController(this, b); }
             catch (Exception ex)

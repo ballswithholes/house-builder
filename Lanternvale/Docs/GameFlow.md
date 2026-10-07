@@ -239,6 +239,13 @@ whenever saving is allowed (they wait for a running conversation to end; failure
 * Camera: follows the leader's view; dialogue focuses between speakers (zoom ≤ 5.3, restored after); the combat
   controller takes over focus in battle; the title uses a slow eased pan (140 s period) with manual pan disabled.
 * Music: `menu` on the title, `Music.MoodForMap(map)` on maps, `combat` in battle, fade out on game over.
+* Sound cues (`CombatSfx`, PresentationAPI.md §6): the leader's footsteps every 0.34 s on the map's ground
+  (`footstep_dirt/leaves/stone/snow/mud/grass` by `MapDef.biome`, keyword fallback; mail and plate add `armor_jingle`);
+  `ItemReceived` plays `loot_rare` / `loot_epic` / `loot_legendary` by quality, the plain `ui_open` pickup otherwise;
+  `QuestStarted` → `quest_accept`, `QuestCompleted` → `quest_turnin`; `SecretFound` → `secret_found` (with the gold
+  toast); `RaidStarted` → `portal_whoosh`, then `raid_warning` 0.7 s later; a battle with a Boss-rank enemy opens with
+  `boss_pull`; the items builder's set-bonus toast (`Toast` with Id `set_complete`) plays `set_complete`. Field (out of
+  combat) damage, avoids and deaths use the same `CombatSfx` calls as battles.
 * NPCs with `NpcDef.wanders` stroll within 2.2 m of their spot; others glance around and turn towards the party when
   it comes within 3.6 m; beasts of visible encounters prowl within 1.4 m.
 
