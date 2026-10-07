@@ -48,6 +48,18 @@ done
 "$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost.png"
 "$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_north.png" --at 55,58 --zoom 5 --yaw -20
 "$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_night.png" --hour 22.5
+# ---- lv: Lanternvale's northern band (the Root Hollows mouth moved north of Kusu's canopy) and the Root Hollows
+"$tool" map lanternvale "$out/lanternvale_kusu_roots.png" --at 23.6,31 --hour 16 --flags found_root_hollows
+"$tool" map lanternvale "$out/lanternvale_kusu_roots_night.png" --at 23.6,31 --hour 22.5 --flags found_root_hollows
+"$tool" map lanternvale "$out/lanternvale_west_road.png" --at 9,28 --hour 11 --flags lv2_oil_hunt
+"$tool" map lanternvale "$out/lanternvale_millpond.png" --at 45,33 --zoom 10.4 --hour 17
+"$tool" map lanternvale "$out/lanternvale_meadow_night.png" --at 46,33 --zoom 8 --hour 22.5
+"$tool" map lanternvale "$out/lanternvale_orchard.png" --at 62,28 --zoom 7.5 --hour 16 --markers auto --level 12
+"$tool" map lanternvale "$out/lanternvale_farm.png" --at 78,27 --hour 14
+"$tool" map lanternvale "$out/lanternvale_lantern_hill.png" --at 84,37 --hour 17.5 --yaw 30
+"$tool" map dgn_root_hollows "$out/dgn_root_hollows_grove.png" --at 27,20 --zoom 5 --markers auto --level 12
+"$tool" map dgn_root_hollows "$out/dgn_root_hollows_gallery.png" --at 24,32
+"$tool" map dgn_root_hollows "$out/dgn_root_hollows_rootwarden.png" --at 49,21
 # ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null

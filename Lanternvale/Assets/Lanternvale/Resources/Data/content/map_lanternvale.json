@@ -222,7 +222,358 @@
           "collider": {"w": 0.4, "h": 0.3},
           "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
         },
-        {"art": "prop_rock_small", "pos": [77.0, 2.0]}
+        {"art": "prop_rock_small", "pos": [77.0, 2.0]},
+        {
+          "art": "prop_lamp_post",
+          "pos": [15.2, 19.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [11.0, 25.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [3.8, 34.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [7.6, 29.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "West: Amberfield Downs, and past them Brightwater on the river. North: Old Kusu's roots, the millpond and the orchards. East: home, and the inn."
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [2.6, 28.0],
+          "collider": {"w": 1.1, "h": 0.8},
+          "text": "A milestone of stacked river stones. Carved into the top one: AMBERFIELD 3 LEAGUES. Someone has scratched underneath: 'it is more like 4'."
+        },
+        {"art": "prop_tree_oak", "pos": [3.0, 21.0], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [1.2, 24.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_bush_a", "pos": [6.6, 22.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [14.2, 26.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [1.6, 38.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [5.2, 41.8], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [14.6, 36.0], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_rock_large", "pos": [16.6, 30.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_stone_wall", "pos": [9.0, 18.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [5.6, 18.4], "flip": true, "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_hay", "pos": [7.2, 20.4], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_ruin_pillar", "pos": [8.0, 36.4], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_arch", "pos": [12.0, 37.6]},
+        {"art": "prop_ruin_pillar", "pos": [13.8, 35.0], "collider": {"w": 1.1, "h": 0.6}},
+        {
+          "art": "prop_campfire",
+          "pos": [10.6, 33.2],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {
+          "art": "prop_barrel",
+          "pos": [8.6, 34.0],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A cask of Lanternvale lamp oil, stamped with Tobben's lantern mark. It has been dragged here through the grass."
+        },
+        {"art": "prop_barrel", "pos": [9.2, 35.2], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [12.4, 34.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_tent", "pos": [11.2, 39.6], "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_tree_oak", "pos": [17.4, 38.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {
+          "art": "prop_root_arch",
+          "pos": [24.6, 24.2],
+          "light": {"color": "#ffd28a", "radius": 3.0, "intensity": 0.6, "offset": [0, 2.7], "nightOnly": true},
+          "text": "One of Old Kusu's great roots, arching out of the ground and back in again. Someone hung two paper lanterns from it long ago; they are still lit."
+        },
+        {
+          "art": "prop_root_arch",
+          "pos": [23.8, 28.8],
+          "flip": true,
+          "light": {"color": "#ffd28a", "radius": 3.0, "intensity": 0.6, "offset": [0, 2.7], "nightOnly": true}
+        },
+        {
+          "art": "prop_root_column",
+          "pos": [18.8, 34.0],
+          "collider": {"w": 2.0, "h": 1.3},
+          "text": "An old boundary stone, older than the village, gripped by four of Kusu's roots as if the tree were holding on to it. A straw rope circles it."
+        },
+        {"art": "prop_root_column", "pos": [28.4, 33.8], "flip": true, "collider": {"w": 2.0, "h": 1.3}},
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [20.6, 31.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95], "nightOnly": true}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [27.0, 30.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.95], "nightOnly": true}
+        },
+        {"art": "prop_mushrooms", "pos": [22.0, 21.6]},
+        {"art": "prop_mushrooms", "pos": [28.4, 24.8]},
+        {
+          "art": "prop_log",
+          "pos": [20.0, 26.8],
+          "collider": {"w": 2.2, "h": 0.6},
+          "interact": "lv2_listening_root",
+          "dialogue": "dlg_lv2_listening_root",
+          "text": "A root of Old Kusu as thick as a barrel breaks the surface here, moss-soft and warm as a sleeping dog."
+        },
+        {
+          "art": "prop_spirit_statue",
+          "pos": [27.4, 26.8],
+          "collider": {"w": 0.8, "h": 0.5},
+          "text": "A little stone fox sits at the foot of the roots with its ear pressed to the ground, as if it is listening."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [21.6, 24.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "A spirit-lantern set among the roots, burning honey-gold."
+        },
+        {
+          "art": "prop_bush_a",
+          "pos": [22.4, 36.4],
+          "collider": {"w": 1.2, "h": 0.6},
+          "sway": true,
+          "hideFlag": "found_root_hollows",
+          "text": "A mound of moss and fern between the roots. A cool draught breathes out of it."
+        },
+        {"art": "prop_bush_b", "pos": [24.8, 36.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true, "hideFlag": "found_root_hollows"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [20.6, 35.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "A stone lantern, burning honey-gold beside a mound of moss. Its twin stands on the other side. Odd place for a pair of lanterns — unless they mark a door."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [26.8, 35.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+        },
+        {"art": "prop_rock_large", "pos": [19.6, 37.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [27.8, 37.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_oak", "pos": [16.2, 32.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [30.8, 31.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [21.6, 41.8], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [27.0, 41.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [17.4, 24.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_stump", "pos": [30.6, 18.6], "collider": {"w": 0.9, "h": 0.5}},
+        {
+          "art": "prop_dock",
+          "pos": [39.4, 30.4],
+          "light": {"color": "#ffd9a0", "radius": 3.5, "intensity": 0.8, "offset": [-0.95, 2.0], "nightOnly": true},
+          "text": "Teo's jetty. A tin of worms, a flask and a fishing rod that has clearly been mended more times than it has caught anything."
+        },
+        {"art": "prop_lilypads", "pos": [41.8, 33.4]},
+        {"art": "prop_lilypads", "pos": [37.2, 33.8]},
+        {"art": "prop_lilypads", "pos": [42.8, 31.0]},
+        {"art": "prop_reeds", "pos": [35.4, 34.4], "sway": true},
+        {"art": "prop_cattails", "pos": [36.0, 30.0], "sway": true},
+        {"art": "prop_reeds", "pos": [44.2, 33.6], "sway": true},
+        {"art": "prop_cattails", "pos": [43.8, 30.0], "sway": true},
+        {"art": "prop_cattails", "pos": [37.6, 37.4], "sway": true},
+        {"art": "prop_bench", "pos": [36.2, 27.6], "collider": {"w": 1.4, "h": 0.4}},
+        {
+          "art": "prop_cottage_b",
+          "pos": [31.4, 40.4],
+          "collider": {"w": 4.4, "h": 2.0},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.0, 3.0], "nightOnly": true},
+          "text": "Teo's cottage: a fishing net drying over the door and a carved wooden carp on the gable."
+        },
+        {"art": "prop_veg_patch", "pos": [31.2, 37.4], "collider": {"w": 3.6, "h": 1.8}, "sway": true},
+        {"art": "prop_washing_line", "pos": [35.0, 38.2], "collider": {"w": 3.4, "h": 0.3}, "sway": true},
+        {"art": "prop_barrel", "pos": [35.2, 41.2], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [35.6, 25.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_tree_birch", "pos": [41.0, 39.2], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [36.4, 43.0], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_noticeboard",
+          "pos": [52.6, 19.6],
+          "collider": {"w": 1.6, "h": 0.5},
+          "text": "NORTH MEADOW NOTICES — Apples going missing, one bite out of each: see Hana Pipp at the orchard. Lamp oil going missing, ALL of it: see Tobben. The roots behind Kusu are singing: see Nell (she insists). Walk Night honey cakes: order from Dorrit."
+        },
+        {
+          "art": "prop_tree_golden",
+          "pos": [50.6, 39.0],
+          "collider": {"w": 1.2, "h": 0.8},
+          "sway": true,
+          "text": "The Lantern Tree: the meadow's great golden beech. Every Walk Night the children hang a paper lantern on it for the Warden to find."
+        },
+        {"art": "prop_bench", "pos": [48.0, 35.6], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_bench", "pos": [53.4, 35.4], "collider": {"w": 1.4, "h": 0.4}},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [46.6, 33.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [54.6, 33.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_cottage_c",
+          "pos": [44.2, 41.4],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.5, 2.6], "nightOnly": true},
+          "text": "The Fernsbys' cottage. Seven pairs of boots by the door, all muddy, all small."
+        },
+        {"art": "prop_veg_patch", "pos": [46.8, 37.6], "collider": {"w": 3.6, "h": 1.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [44.8, 26.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [52.4, 27.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [49.6, 20.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_tree_oak", "pos": [56.0, 29.4], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [56.3, 33.2], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [56.0, 37.0], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [59.6, 29.4], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [59.9, 33.2], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [59.6, 37.0], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [63.2, 29.4], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [63.5, 33.2], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [63.2, 37.0], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [66.8, 29.4], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [67.1, 33.2], "scale": 0.56, "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [66.8, 37.0], "scale": 0.46, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_fence", "pos": [55.4, 26.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [58.4, 26.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [64.2, 26.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [67.2, 26.6], "collider": {"w": 3.0, "h": 0.35}},
+        {
+          "art": "prop_crate",
+          "pos": [61.4, 30.8],
+          "collider": {"w": 0.9, "h": 0.6},
+          "interact": "lv2_spilled_crate",
+          "dialogue": "dlg_lv2_spilled_crate",
+          "text": "An apple crate, tipped over. Every apple has exactly one neat bite out of it."
+        },
+        {"art": "prop_crate", "pos": [57.6, 35.2], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_cart", "pos": [62.0, 39.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_hay", "pos": [54.4, 39.6], "collider": {"w": 1.2, "h": 0.7}},
+        {
+          "art": "prop_cottage_a",
+          "pos": [58.2, 41.4],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.3, 2.4], "nightOnly": true},
+          "text": "The Pipps' cottage, half buried in apple boughs. It smells of cider and woodsmoke."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [60.0, 27.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_farmhouse",
+          "pos": [77.6, 35.4],
+          "collider": {"w": 8.4, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.35, 2.45], "nightOnly": true},
+          "text": "Hollyhock Farm: whitewashed walls, a turf roof with hollyhocks growing out of it, and a barn that leans companionably on the house."
+        },
+        {
+          "art": "prop_beehive",
+          "pos": [69.4, 30.4],
+          "collider": {"w": 2.0, "h": 0.9},
+          "text": "Ama Hollyhock's skeps. The bees are busy, and quite firm about it."
+        },
+        {"art": "prop_beehive", "pos": [69.6, 33.8], "collider": {"w": 2.0, "h": 0.9}},
+        {"art": "prop_hay", "pos": [81.6, 31.0], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [82.8, 29.6], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_cart", "pos": [71.4, 36.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [73.0, 37.8], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [74.6, 28.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_veg_patch", "pos": [70.2, 19.8], "collider": {"w": 3.6, "h": 1.8}, "sway": true, "text": "Pumpkins, fat and smug."},
+        {"art": "prop_veg_patch", "pos": [70.2, 22.0], "collider": {"w": 3.6, "h": 1.8}, "sway": true},
+        {"art": "prop_fence", "pos": [81.6, 17.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [84.6, 17.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [87.6, 17.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_wheat", "pos": [80.8, 19.6], "sway": true},
+        {"art": "prop_wheat", "pos": [80.8, 21.8], "sway": true},
+        {"art": "prop_wheat", "pos": [80.8, 24.0], "sway": true},
+        {"art": "prop_wheat", "pos": [80.8, 26.2], "sway": true},
+        {"art": "prop_wheat", "pos": [84.4, 19.6], "sway": true},
+        {"art": "prop_wheat", "pos": [84.4, 21.8], "sway": true},
+        {"art": "prop_wheat", "pos": [84.4, 24.0], "sway": true},
+        {"art": "prop_wheat", "pos": [84.4, 26.2], "sway": true},
+        {"art": "prop_wheat", "pos": [88.0, 19.6], "sway": true},
+        {"art": "prop_wheat", "pos": [88.0, 21.8], "sway": true},
+        {"art": "prop_wheat", "pos": [88.0, 24.0], "sway": true},
+        {"art": "prop_wheat", "pos": [88.0, 26.2], "sway": true},
+        {
+          "art": "prop_scarecrow",
+          "pos": [84.6, 27.8],
+          "collider": {"w": 0.6, "h": 0.4},
+          "sway": true,
+          "text": "A scarecrow in a patched coat. The crow on its arm is real, and unimpressed."
+        },
+        {"art": "prop_washing_line", "pos": [82.6, 39.6], "collider": {"w": 3.4, "h": 0.3}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [68.8, 40.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [72.4, 42.8], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [78.6, 42.4], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_bench",
+          "pos": [86.2, 41.8],
+          "collider": {"w": 1.4, "h": 0.4},
+          "text": "A bench someone carried all the way up here, for the view."
+        },
+        {
+          "art": "prop_standing_stone",
+          "pos": [88.6, 40.4],
+          "collider": {"w": 1.0, "h": 0.7},
+          "text": "An old standing stone. Carved on it: 'From here you can see everything that matters.' Underneath, smaller: 'and the inn'."
+        },
+        {"art": "prop_tree_birch", "pos": [83.0, 42.8], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_rock_large", "pos": [88.6, 36.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_bush_a", "pos": [82.6, 36.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_cairn",
+          "pos": [87.8, 37.4],
+          "collider": {"w": 1.1, "h": 0.8},
+          "text": "A little cairn of hill stones. Everyone who climbs Lantern Hill adds one, and makes a wish on it."
+        },
+        {"art": "prop_mushrooms", "pos": [85.0, 43.0]},
+        {"art": "prop_tree_pine", "pos": [10.4, 43.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [14.8, 42.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [24.8, 42.8], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [29.4, 43.4], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [47.6, 43.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [54.6, 43.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [64.4, 43.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_pine", "pos": [90.0, 43.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "decal_flowers", "pos": [8.0, 22.6]},
+        {"art": "decal_flowers", "pos": [15.0, 27.0]},
+        {"art": "decal_flowers", "pos": [44.0, 24.6]},
+        {"art": "decal_flowers", "pos": [55.0, 31.4]},
+        {"art": "decal_flowers", "pos": [65.0, 38.6]},
+        {"art": "decal_flowers", "pos": [79.0, 27.4]},
+        {"art": "decal_flowers", "pos": [86.0, 34.6]},
+        {"art": "decal_flowers", "pos": [12.6, 41.0]},
+        {"art": "decal_flowers", "pos": [46.4, 38.6]}
       ],
       "foreground": [
         {"art": "fg_grass_a", "pos": [3, -0.4], "sway": true},
@@ -262,7 +613,11 @@
         {"npc": "villager_hollis", "pos": [77.2, 10.6]},
         {"npc": "shepherd_bram", "pos": [76.6, 7.0]},
         {"npc": "rusk", "pos": [79.6, 7.2], "flip": true, "requireFlag": "bandits_peaceful"},
-        {"npc": "postman_fennick", "pos": [80.4, 4.0], "flip": true}
+        {"npc": "postman_fennick", "pos": [80.4, 4.0], "flip": true},
+        {"npc": "lv2_hana_pipp", "pos": [58.4, 25.4]},
+        {"npc": "lv2_teo", "pos": [39.4, 32.4], "flip": true},
+        {"npc": "lv2_ama_hollyhock", "pos": [72.0, 30.2]},
+        {"npc": "lv2_sprout", "pos": [65.0, 31.4], "flip": true, "requireFlag": "lv2_rootling_friend"}
       ],
       "encounters": [
         {
@@ -279,9 +634,53 @@
           "enemies": [{"creature": "cr_wolf", "pos": [84.8, 11.6]}, {"creature": "cr_wolf", "pos": [86.4, 12.6]}, {"creature": "cr_wolf", "pos": [86.8, 10.8]}],
           "requireFlag": "shepherd_quest",
           "doneFlag": "pasture_wolves_done"
+        },
+        {
+          "id": "enc_lv2_orchard_rootlings",
+          "pos": [61.6, 34.6],
+          "radius": 3.0,
+          "requireFlag": "lv2_orchard_hunt",
+          "enemies": [
+            {"creature": "cr_lv2_orchard_rootling", "pos": [60.8, 35.6]},
+            {"creature": "cr_lv2_orchard_rootling", "pos": [62.6, 35.2]},
+            {"creature": "cr_lv2_rootling_sapling", "pos": [61.6, 36.4]}
+          ]
+        },
+        {
+          "id": "enc_lv2_duskmane_scouts",
+          "pos": [10.4, 35.4],
+          "radius": 3.2,
+          "requireFlag": "lv2_oil_hunt",
+          "doneFlag": "lv2_scouts_dealt",
+          "dialogue": "dlg_lv2_duskmane_scouts",
+          "enemies": [
+            {"creature": "cr_lv2_duskmane_scout", "pos": [9.6, 36.2]},
+            {"creature": "cr_lv2_duskmane_scout", "pos": [11.6, 35.8]},
+            {"creature": "cr_lv2_duskmane_lookout", "pos": [10.8, 37.6]}
+          ]
+        },
+        {
+          "id": "enc_lv2_wheat_boars",
+          "pos": [84.4, 22.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_lv2_wheat_tusker", "pos": [83.6, 23.4]},
+            {"creature": "cr_lv2_wheat_tusker", "pos": [85.6, 22.2]},
+            {"creature": "cr_lv2_bristlesow", "pos": [84.8, 24.4]}
+          ]
         }
       ],
-      "chests": [{"id": "chest_village_oak", "pos": [3.3, 9.0], "art": "prop_chest", "lootTable": "lt_chest_village"}],
+      "chests": [
+        {"id": "chest_village_oak", "pos": [3.3, 9.0], "art": "prop_chest", "lootTable": "lt_chest_village"},
+        {"id": "chest_lv2_hill_basket", "pos": [84.6, 41.2], "art": "prop_chest", "lootTable": "lt_lv2_hill_basket"},
+        {
+          "id": "chest_lv2_root_hollow",
+          "pos": [17.6, 29.4],
+          "art": "prop_chest",
+          "lootTable": "lt_lv2_root_hollow",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 12}
+        }
+      ],
       "transitions": [
         {
           "id": "to_whisperwood",
@@ -301,7 +700,7 @@
         },
         {
           "id": "to_dgn_root_hollows",
-          "pos": [20.0, 19.0],
+          "pos": [23.6, 35.0],
           "size": [2.0, 2.0],
           "targetMap": "dgn_root_hollows",
           "targetSpawn": "from_lanternvale",
@@ -311,7 +710,13 @@
           "marker": "cave"
         }
       ],
-      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [23.2, 5.4]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}, {"id": "from_amberfield", "pos": [3.4, 32.0]}, {"id": "from_dgn_root_hollows", "pos": [20.0, 16.5]}],
+      "spawns": [
+        {"id": "default", "pos": [4.0, 5.0]},
+        {"id": "camphor", "pos": [23.2, 5.4]},
+        {"id": "from_whisperwood", "pos": [86.0, 4.6]},
+        {"id": "from_amberfield", "pos": [3.4, 32.0]},
+        {"id": "from_dgn_root_hollows", "pos": [23.6, 32.4]}
+      ],
       "regions": [
         {
           "id": "reg_old_kusu",
@@ -321,11 +726,115 @@
         },
         {"id": "reg_sleepy_lantern", "pos": [43.0, 8.0], "size": [10, 6], "text": "The Sleepy Lantern — beds, stew and gossip."},
         {"id": "reg_training_yard", "pos": [68.0, 6.0], "size": [12, 8], "text": "The Trainers' Hall and training yard."},
-        {"id": "reg_east_pasture", "pos": [83.5, 10.5], "size": [12, 7], "text": "Bram's pasture. The grass is greying at the tips."}
+        {"id": "reg_east_pasture", "pos": [83.5, 10.5], "size": [12, 7], "text": "Bram's pasture. The grass is greying at the tips."},
+        {
+          "id": "reg_lv2_kusu_roots",
+          "name": "Kusu's Roots",
+          "pos": [23.6, 30.0],
+          "size": [12.0, 10.0],
+          "text": "Behind Old Kusu the ground rises in great knuckled roots, moss-soft and warm. The air hums, very faintly, like a held note.",
+          "check": {"skill": "Perception", "dc": 13},
+          "checkFlag": "found_root_hollows",
+          "successText": "Under the hum there is a draught: cool air breathing out of a mound of moss between the roots. Something down there is hollow, and lit.",
+          "failText": "You listen for a while. Roots, moss, one bee. Nothing else... probably."
+        },
+        {
+          "id": "reg_lv2_west_road",
+          "name": "West Road",
+          "pos": [9.0, 27.0],
+          "size": [12.0, 10.0],
+          "text": "The west road. It climbs out of the valley towards Amberfield Downs, where the grass turns gold."
+        },
+        {
+          "id": "reg_lv2_oil_tracks",
+          "pos": [13.4, 21.8],
+          "size": [6.0, 5.0],
+          "text": "Lamp oil darkens the road here, as if a cask was rolled through it. Big four-toed paw prints lead off north-west, towards the old waystation."
+        },
+        {
+          "id": "reg_lv2_millpond",
+          "name": "Millpond",
+          "pos": [39.4, 32.0],
+          "size": [12.0, 9.0],
+          "text": "The millpond. Dragonflies, lily pads, and Teo, who has been fishing here since before the mill fell down."
+        },
+        {
+          "id": "reg_lv2_lantern_meadow",
+          "name": "Lantern Meadow",
+          "pos": [50.4, 35.0],
+          "size": [10.0, 10.0],
+          "text": "Lantern Meadow, the village green of the north quarter, under the great golden Lantern Tree."
+        },
+        {
+          "id": "reg_lv2_orchard",
+          "name": "Pipp Orchard",
+          "pos": [61.4, 33.4],
+          "size": [14.0, 13.0],
+          "text": "The Pipp orchard: crooked apple trees heavy with red fruit, and an awful lot of bitten apples on the grass."
+        },
+        {
+          "id": "reg_lv2_farm",
+          "name": "Hollyhock Farm",
+          "pos": [79.0, 27.0],
+          "size": [18.0, 18.0],
+          "text": "Hollyhock Farm. Wheat to the east, bees to the west, and a scarecrow that has given up."
+        },
+        {
+          "id": "reg_lv2_lantern_hill",
+          "name": "Lantern Hill",
+          "pos": [86.0, 40.0],
+          "size": [8.0, 7.0],
+          "text": "Lantern Hill. The whole valley folds out below you like a quilt: the square, the inn's smoke, Whisperwood dark in the east. And far to the north, past the mountains, a thin grey smudge hangs on the sky like a thumbprint of ash."
+        }
       ],
       "ambient": {"fireflies": true, "pollen": true, "timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#fff6e8", "ambientIntensity": 1.0},
       "restArea": false,
-      "music": "music_lanternvale"
+      "music": "music_lanternvale",
+      "biome": "village",
+      "environment": "outdoor",
+      "levelMin": 1,
+      "levelMax": 12,
+      "fill": 0.32,
+      "paths": [
+        {
+          "art": "decal_path_dirt",
+          "width": 2.2,
+          "points": [[18.6, 10.4], [18.2, 13.8], [16.8, 17.4], [13.4, 21.6], [9.4, 25.8], [5.4, 29.6], [2.0, 31.7], [0.0, 32.0]]
+        },
+        {"art": "decal_path_dirt", "width": 1.7, "points": [[16.8, 17.4], [21.6, 18.8], [27.4, 19.6], [33.0, 21.2], [40.0, 22.6], [47.2, 23.2]]},
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[25.6, 19.6], [24.6, 23.6], [23.8, 28.2], [23.6, 32.0], [23.6, 34.4]]},
+        {
+          "art": "decal_path_dirt",
+          "width": 2.0,
+          "points": [[50.8, 7.8], [51.0, 13.6], [49.6, 18.2], [47.2, 23.2], [47.0, 28.0], [48.0, 32.6], [49.6, 35.4]]
+        },
+        {"art": "decal_path_dirt", "width": 1.7, "points": [[47.2, 23.2], [54.0, 23.8], [61.0, 24.2], [67.0, 24.6], [73.2, 24.8]]},
+        {
+          "art": "decal_path_dirt",
+          "width": 2.0,
+          "points": [[75.6, 7.6], [75.8, 12.4], [75.0, 17.0], [73.6, 21.0], [73.2, 24.8], [73.8, 28.6], [76.6, 31.6]]
+        },
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[76.6, 31.6], [80.8, 30.6], [83.6, 33.6], [85.2, 37.4], [86.0, 40.0]]},
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[40.0, 22.6], [38.6, 25.6], [39.4, 27.0]]},
+        {
+          "art": "decal_path_dirt",
+          "width": 1.4,
+          "points": [[33.0, 21.2], [33.4, 26.0], [33.0, 31.0], [33.6, 36.4], [35.6, 40.6], [38.2, 41.0], [41.8, 41.6]]
+        }
+      ],
+      "water": [
+        {
+          "closed": true,
+          "halfWidth": 1.0,
+          "points": [[35.2, 32.6], [36.2, 30.0], [39.2, 29.0], [42.6, 29.6], [44.2, 32.0], [43.4, 34.8], [40.4, 36.2], [37.0, 35.4]],
+          "crossings": [{"pos": [39.4, 31.0], "size": [3.0, 4.6]}]
+        },
+        {
+          "halfWidth": 0.8,
+          "points": [[38.4, 44.0], [38.0, 41.0], [39.0, 38.4], [39.6, 36.0]],
+          "crossings": [{"pos": [38.1, 41.0], "size": [3.8, 2.2]}]
+        }
+      ]
     }
   ]
 }

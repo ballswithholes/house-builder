@@ -170,20 +170,75 @@
             },
             {"text": "How is everyone?", "next": "e_post2"},
             {"text": "Keeper Ishiro is at peace now.", "next": "e_ishiro", "conditions": [{"type": "Flag", "key": "ishiro_at_peace"}], "once": true},
-            {"text": "Goodbye."},
             {
               "text": "When the Heart Lantern flared, it showed me something. Ash, drifting down from the north.",
               "next": "e_ember",
-              "conditions": [{"type": "QuestComplete", "key": "mq_lanterns"}, {"type": "QuestNotStarted", "key": "mq2_ember_road"}],
+              "conditions": [
+                {"type": "QuestComplete", "key": "mq_lanterns"},
+                {"type": "QuestNotStarted", "key": "mq2_ember_road"},
+                {"type": "Level", "amount": 12}
+              ],
               "outcomes": [{"type": "StartQuest", "key": "mq2_ember_road"}]
-            }
+            },
+            {
+              "text": "I've brought something up from under Old Kusu's roots.",
+              "next": "e_dg1_seed",
+              "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
+            },
+            {"text": "Goodbye."}
           ]
         },
         {
           "id": "e_ember",
           "speaker": "elder_maru",
-          "text": "*The Elder's pipe goes still.* Ash. Then the Hollow did not grow here at all — it was carried, like a seed on the wind. If you mean to follow it, take the west road over Amberfield Downs to Brightwater. Archivist Penhallow keeps the old records there. If anyone knows what sleeps in the north, it is him.",
-          "choices": [{"text": "I'll take the west road."}]
+          "text": "*The Elder's pipe goes still.* Ash. Then the Hollow did not grow here at all — it was carried, like a seed on the wind. *She looks north, past Old Kusu, as if she could see through the mountains.* If you mean to follow it, take the west road over Amberfield Downs to Brightwater. Archivist Penhallow keeps the old records there. If anyone knows what sleeps in the north, it is him.",
+          "choices": [
+            {"text": "What lies north of the mountains?", "next": "e_ember_north"},
+            {"text": "Will the valley be safe while I'm gone?", "next": "e_ember_safe"},
+            {"text": "I'll take the west road.", "next": "e_ember_go"}
+          ]
+        },
+        {
+          "id": "e_ember_north",
+          "speaker": "elder_maru",
+          "text": "Skyreach. Peaks so high the snow never leaves them. Twelve years ago forty knights of the Heronguard rode up there under Lord-Commander Aubric, to see what was smoking in the mountains. Eleven came back. Not one of them would ever say what they found.",
+          "next": "e_ember"
+        },
+        {
+          "id": "e_ember_safe",
+          "speaker": "elder_maru",
+          "text": "Safe? We've a Warden walking again, a lamplighter with forty years of grudges, Sergeant Holt, and Dorrit's frying pan. We'll manage. *Softer.* Go on. Find out where the ash comes from, before any more of it does.",
+          "next": "e_ember"
+        },
+        {
+          "id": "e_ember_go",
+          "speaker": "elder_maru",
+          "text": "Then go with my blessing, and with these. Dorrit's stew doesn't travel, but potions do. *She presses two warm vials into your hands.* Brightwater's a river town. If you need a bed and a kind word, Mother Wren keeps the Chapel of Small Lights by the water. Tell her Maru sent you, and that I still have her teapot.",
+          "outcomes": [{"type": "GiveItem", "key": "potion_healing", "amount": 2}],
+          "choices": [{"text": "Goodbye, Elder."}]
+        },
+        {
+          "id": "e_dg1_seed",
+          "speaker": "elder_maru",
+          "text": "*You hold out the grey seed. The Elder doesn't take it. For a long moment she only looks at it, and her pipe goes out.* ...From under Kusu. And the Rootwarden swallowed it, to keep it from the tree. Oh, you stubborn old thing.",
+          "next": "e_dg1_seed2"
+        },
+        {
+          "id": "e_dg1_seed2",
+          "speaker": "elder_maru",
+          "text": "That's ash from the north, dear — the same ash the Heart Lantern showed you. The Hollow wasn't one seed. It was a handful, scattered on the wind, and one of them fell on us. *She wraps it in a paper charm and ties it with shimenawa straw.* It goes in Kusu's shrine box, under rope and prayer, until someone wiser than me knows what to do with it.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "dg1_ash_seed", "amount": 1},
+            {"type": "SetFlag", "key": "dg1_seed_shown"},
+            {"type": "CompleteQuest", "key": "dg1_heart_of_kusu"}
+          ],
+          "next": "e_dg1_seed3"
+        },
+        {
+          "id": "e_dg1_seed3",
+          "speaker": "elder_maru",
+          "text": "And the roots are singing properly again. I heard them this morning and thought I was dreaming. Thank you. Kusu thanks you — he's just slow about it.",
+          "choices": [{"text": "Goodbye."}]
         },
         {
           "id": "e_ishiro",
@@ -394,6 +449,11 @@
             {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
             {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
             {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {
+              "text": "I've brought something up from under Old Kusu's roots.",
+              "next": "e_dg1_seed",
+              "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
+            },
             {"text": "Goodbye."}
           ]
         },
@@ -443,6 +503,11 @@
             {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
             {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
             {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {
+              "text": "I've brought something up from under Old Kusu's roots.",
+              "next": "e_dg1_seed",
+              "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
+            },
             {"text": "Goodbye."}
           ]
         },
@@ -459,6 +524,11 @@
             {"text": "Tell me about the Hollow.", "next": "e_lore_hollow"},
             {"text": "Tell me about the Warden.", "next": "e_lore_warden"},
             {"text": "Tell me about Old Kusu.", "next": "e_lore_kusu"},
+            {
+              "text": "I've brought something up from under Old Kusu's roots.",
+              "next": "e_dg1_seed",
+              "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
+            },
             {"text": "Goodbye."}
           ]
         },
@@ -1465,6 +1535,97 @@
           "text": "Moppet says thank you! He says it in jingles. That one meant 'thank you'. That one meant 'cake'.",
           "conditions": [{"type": "QuestComplete", "key": "sq_spirit_friend"}],
           "fallback": "n_return",
+          "choices": [
+            {
+              "text": "Moppet looks worried. Is something wrong?",
+              "next": "n_lv2_offer",
+              "conditions": [{"type": "Level", "amount": 10}, {"type": "QuestNotStarted", "key": "lv2_singing_roots"}]
+            },
+            {"text": "Where do the roots sing, again?", "next": "n_lv2_hint", "conditions": [{"type": "QuestState", "key": "lv2_singing_roots", "value": "listen"}]},
+            {"text": "I listened to the roots behind Old Kusu.", "next": "n_lv2_ret", "conditions": [{"type": "QuestState", "key": "lv2_singing_roots", "value": "tell"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "n_lv2_offer",
+          "speaker": "child_nell",
+          "text": "*Moppet jingles very softly and hides behind Nell's hair.* He says the roots behind Old Kusu are singing. Not happy singing — the kind you do when something hurts and you don't want anyone to know. Grown-ups can't hear it. You're nearly a grown-up, but not the boring kind. Will you go and listen?",
+          "choices": [
+            {
+              "text": "I'll go and listen.",
+              "next": "n_lv2_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [{"type": "StartQuest", "key": "lv2_singing_roots"}]
+            },
+            {"text": "Roots don't sing, Nell.", "next": "n_lv2_doubt"},
+            {"text": "Maybe later."}
+          ]
+        },
+        {
+          "id": "n_lv2_doubt",
+          "speaker": "child_nell",
+          "text": "Old Kusu's do. Moppet says so, and Moppet is three hundred years old. *She folds her arms.* He says it like it's MY fault I'm only seven.",
+          "choices": [
+            {
+              "text": "All right. I'll go and listen.",
+              "next": "n_lv2_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [{"type": "StartQuest", "key": "lv2_singing_roots"}]
+            },
+            {"text": "Maybe later."}
+          ]
+        },
+        {
+          "id": "n_lv2_accept",
+          "speaker": "child_nell",
+          "text": "Put your ear right on the big root behind the tree, where it comes up out of the ground like a wooden sea serpent. And be quiet. REALLY quiet. Moppet says you have to listen with your whole self.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "n_lv2_hint",
+          "speaker": "child_nell",
+          "text": "Behind Old Kusu! Where the big root comes up out of the ground, by the little stone fox. Ear on the root. Whole self.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "n_lv2_ret",
+          "speaker": "child_nell",
+          "text": "Well? Was it sad singing? Moppet's been chewing his leaf ALL day.",
+          "choices": [
+            {
+              "text": "It was. And there's a hollow under the roots — a cave, under the moss.",
+              "next": "n_lv2_ret_found",
+              "conditions": [{"type": "Flag", "key": "found_root_hollows"}]
+            },
+            {
+              "text": "I heard it, but I couldn't tell where it was coming from.",
+              "next": "n_lv2_ret_moppet",
+              "conditions": [{"type": "NotFlag", "key": "found_root_hollows"}]
+            }
+          ]
+        },
+        {
+          "id": "n_lv2_ret_found",
+          "speaker": "child_nell",
+          "text": "A CAVE? Under Old Kusu? *Moppet jingles so hard he falls over.* He says somebody's crying down there. Not a person. Somebody big and old, who's trying to remember a song. You'll help him. You've got a helping face.",
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_told"}, {"type": "CompleteQuest", "key": "lv2_singing_roots"}],
+          "next": "n_lv2_end"
+        },
+        {
+          "id": "n_lv2_ret_moppet",
+          "speaker": "child_nell",
+          "text": "*Moppet jingles three times, very seriously.* He says there's a door under the moss between the two biggest roots, where the air comes out cold. He says that's where the singing lives. He says he is NOT going in. He says that very firmly.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "found_root_hollows"},
+            {"type": "SetFlag", "key": "lv2_roots_told"},
+            {"type": "CompleteQuest", "key": "lv2_singing_roots"}
+          ],
+          "next": "n_lv2_end"
+        },
+        {
+          "id": "n_lv2_end",
+          "speaker": "child_nell",
+          "text": "Take Moppet's spare bell. He has lots. He collects them. If it gets dark down there, ring it — somebody always comes.",
           "choices": [{"text": "Goodbye."}]
         },
         {
@@ -1557,7 +1718,20 @@
           "text": "I hung a lantern at the edge of Whisperwood, for the little thieves. Every morning there's a mushroom left on the post. Every morning I eat it. We've an understanding.",
           "conditions": [{"type": "QuestComplete", "key": "sq_wicks"}, {"type": "Flag", "key": "mosslings_befriended"}],
           "fallback": "t_done",
-          "choices": [{"text": "Goodbye."}]
+          "choices": [
+            {
+              "text": "Your lanterns look well. Is anything else going missing?",
+              "next": "t_lv2_offer",
+              "conditions": [{"type": "Level", "amount": 10}, {"type": "QuestNotStarted", "key": "lv2_lantern_oil"}]
+            },
+            {
+              "text": "Where was your oil taken from?",
+              "next": "t_lv2_hint",
+              "conditions": [{"type": "QuestActive", "key": "lv2_lantern_oil"}, {"type": "NotFlag", "key": "lv2_scouts_dealt"}]
+            },
+            {"text": "About your lamp oil...", "next": "t_lv2_ret", "conditions": [{"type": "QuestState", "key": "lv2_lantern_oil", "value": "return"}]},
+            {"text": "Goodbye."}
+          ]
         },
         {
           "id": "t_done",
@@ -1565,6 +1739,101 @@
           "text": "Every wick back in its lantern. Not that it matters while the Heart's dark... but it will matter, once it's lit. It will.",
           "conditions": [{"type": "QuestComplete", "key": "sq_wicks"}],
           "fallback": "t_return",
+          "choices": [
+            {
+              "text": "Your lanterns look well. Is anything else going missing?",
+              "next": "t_lv2_offer",
+              "conditions": [{"type": "Level", "amount": 10}, {"type": "QuestNotStarted", "key": "lv2_lantern_oil"}]
+            },
+            {
+              "text": "Where was your oil taken from?",
+              "next": "t_lv2_hint",
+              "conditions": [{"type": "QuestActive", "key": "lv2_lantern_oil"}, {"type": "NotFlag", "key": "lv2_scouts_dealt"}]
+            },
+            {"text": "About your lamp oil...", "next": "t_lv2_ret", "conditions": [{"type": "QuestState", "key": "lv2_lantern_oil", "value": "return"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_lv2_offer",
+          "speaker": "lamplighter_tobben",
+          "text": "Funny you should ask. Three casks of lamp oil, gone from my store on the west road! The week before Walk Night! Every lantern in the valley wants filling, and I am NOT lighting them with good intentions.",
+          "choices": [
+            {
+              "text": "I'll find your oil.",
+              "next": "t_lv2_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [{"type": "StartQuest", "key": "lv2_lantern_oil"}, {"type": "SetFlag", "key": "lv2_oil_hunt"}]
+            },
+            {"text": "Who would steal lamp oil?", "next": "t_lv2_who"},
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "t_lv2_who",
+          "speaker": "lamplighter_tobben",
+          "text": "Mosslings, I thought — but mosslings can't lift a cask, and they've been very polite since the wicks. No. Whoever this was left paw prints the size of my hand. Four toes. Claws.",
+          "choices": [
+            {
+              "text": "I'll find your oil.",
+              "next": "t_lv2_accept",
+              "conditions": [{"type": "Level", "amount": 10}],
+              "outcomes": [{"type": "StartQuest", "key": "lv2_lantern_oil"}, {"type": "SetFlag", "key": "lv2_oil_hunt"}]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "t_lv2_accept",
+          "speaker": "lamplighter_tobben",
+          "text": "My store's by the west road, just past Old Kusu. Look for spills — oil's a terrible liar, it goes everywhere. And take care. Paw prints that size come with teeth attached.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_lv2_hint",
+          "speaker": "lamplighter_tobben",
+          "text": "The west road, past Kusu. Oil all over the road, and paw prints heading north-west, towards the old waystation. Nobody's used that since my grandad's day.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_lv2_ret",
+          "speaker": "lamplighter_tobben",
+          "text": "You found it? All of it? *He is already reaching for a funnel.*",
+          "choices": [
+            {
+              "text": "Duskmane gnolls took it. They're frightened of a grey dark in the west — I let them keep one cask.",
+              "next": "t_lv2_ret_shared",
+              "conditions": [{"type": "Flag", "key": "lv2_gnolls_shared"}]
+            },
+            {
+              "text": "Duskmane gnolls took it. They won't be back, and the casks are on their way home.",
+              "next": "t_lv2_ret_back",
+              "conditions": [{"type": "NotFlag", "key": "lv2_gnolls_shared"}]
+            }
+          ]
+        },
+        {
+          "id": "t_lv2_ret_shared",
+          "speaker": "lamplighter_tobben",
+          "text": "Gnolls. Frightened of the dark. *He is quiet a moment, polishing a lantern that doesn't need it.* Well. That I understand better than most. One cask, then — call it a Walk Night gift from Lanternvale. Two will see us through if I trim the wicks short.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "lv2_oil_returned"},
+            {"type": "CompleteQuest", "key": "lv2_lantern_oil"},
+            {"type": "GiveXP", "amount": 100}
+          ],
+          "next": "t_lv2_end"
+        },
+        {
+          "id": "t_lv2_ret_back",
+          "speaker": "lamplighter_tobben",
+          "text": "Gnolls! In our valley! *He sits down heavily on a crate.* Thank you. Every lantern will be lit on Walk Night, and the Warden will see them all the way from the shrine.",
+          "outcomes": [{"type": "SetFlag", "key": "lv2_oil_returned"}, {"type": "CompleteQuest", "key": "lv2_lantern_oil"}],
+          "next": "t_lv2_end"
+        },
+        {
+          "id": "t_lv2_end",
+          "speaker": "lamplighter_tobben",
+          "text": "Gnolls this far east... they never came past Amberfield in my day. Something is pushing them out of the west. Here — lamplighter's wages. You've earned them.",
           "choices": [{"text": "Goodbye."}]
         },
         {

@@ -1,0 +1,331 @@
+{
+  "maps": [
+    {
+      "id": "lanternvale",
+      "name": "Lanternvale",
+      "subtitle": "A village beneath the great camphor tree",
+      "width": 90,
+      "depth": 44,
+      "skyTop": "#9fd3f0",
+      "skyBottom": "#fdf1d6",
+      "layers": [
+        {"art": "bg_clouds", "parallax": 0.05, "y": 15.5, "height": 6, "loop": true, "scrollSpeed": 0.15},
+        {"art": "bg_mountains_far", "parallax": 0.1, "y": 12.0, "height": 9, "loop": true},
+        {"art": "bg_hills_far", "parallax": 0.25, "y": 12.5, "height": 7, "loop": true},
+        {"art": "bg_village_far", "parallax": 0.4, "y": 13.0, "height": 6, "loop": true}
+      ],
+      "ground": "ground_village",
+      "groundTile": 8,
+      "props": [
+        {"art": "decal_path_dirt", "pos": [4, 4.8]},
+        {"art": "decal_path_dirt", "pos": [12, 5.3]},
+        {"art": "decal_path_dirt", "pos": [20, 4.8]},
+        {"art": "decal_path_dirt", "pos": [28, 5.3]},
+        {"art": "decal_path_dirt", "pos": [36, 4.8]},
+        {"art": "decal_path_dirt", "pos": [44, 5.3]},
+        {"art": "decal_path_dirt", "pos": [52, 4.8]},
+        {"art": "decal_path_dirt", "pos": [60, 5.3]},
+        {"art": "decal_path_dirt", "pos": [68, 4.8]},
+        {"art": "decal_path_dirt", "pos": [76, 5.3]},
+        {"art": "decal_path_dirt", "pos": [84, 4.8]},
+        {"art": "decal_path_dirt", "pos": [43, 7.4]},
+        {"art": "decal_path_dirt", "pos": [56.5, 7.6]},
+        {"art": "decal_path_dirt", "pos": [67, 7.4]},
+        {"art": "decal_flowers", "pos": [9, 9.6]},
+        {"art": "decal_flowers", "pos": [18, 10.8]},
+        {"art": "decal_flowers", "pos": [28.5, 7.4]},
+        {"art": "decal_flowers", "pos": [36, 10.2]},
+        {"art": "decal_flowers", "pos": [51, 9.8]},
+        {"art": "decal_flowers", "pos": [63.5, 10.6]},
+        {"art": "decal_flowers", "pos": [74, 9.2]},
+        {"art": "decal_flowers", "pos": [31, 2.0]},
+        {"art": "decal_flowers", "pos": [62, 2.2]},
+        {"art": "prop_tree_oak", "pos": [2.0, 9.4], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [0.8, 12.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {
+          "art": "prop_cottage_a",
+          "pos": [6.5, 11.6],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.3, 2.4], "nightOnly": true}
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [7.2, 3.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "East: Lanternvale Square, the Sleepy Lantern and Whisperwood. West: the long road home, which can wait."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [9.6, 7.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_bush_a", "pos": [11.6, 9.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_stone_wall", "pos": [1.7, 0.6], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [5.1, 0.45], "flip": true, "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_veg_patch", "pos": [3.1, 2.25], "collider": {"w": 3.6, "h": 1.8}, "sway": true},
+        {"art": "prop_washing_line", "pos": [9.9, 1.5], "collider": {"w": 3.4, "h": 0.3}, "sway": true},
+        {"art": "prop_fence", "pos": [13.7, 1.7], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_bench", "pos": [13.1, 3.45], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_barrel", "pos": [7.1, 1.3], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_cottage_b",
+          "pos": [13.8, 12.2],
+          "collider": {"w": 4.4, "h": 2.0},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.0, 3.0], "nightOnly": true}
+        },
+        {"art": "prop_barrel", "pos": [10.6, 10.6], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [15.2, 3.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_tree_great",
+          "pos": [25.0, 12.3],
+          "collider": {"w": 3.4, "h": 2.6},
+          "sway": true,
+          "text": "Old Kusu, the great camphor tree. A shimenawa rope circles its trunk, hung with paper charms that rustle without any wind."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [22.6, 9.8],
+          "scale": 1.15,
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "great_lantern",
+          "text": "The great lantern beneath Old Kusu. Its stone is cold, and smells faintly of ash."
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [27.4, 9.8],
+          "scale": 1.15,
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "great_lantern_twin",
+          "text": "A twin of the great lantern, dark as a closed eye."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [19.6, 9.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "lantern_lanternvale_39",
+          "text": "A spirit-lantern, still glowing honey-gold. For now."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [31.4, 9.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "lantern_lanternvale_40",
+          "text": "A spirit-lantern, still glowing honey-gold. For now."
+        },
+        {
+          "art": "prop_noticeboard",
+          "pos": [17.4, 8.8],
+          "collider": {"w": 1.6, "h": 0.5},
+          "text": "NOTICES — Wolves in the east pasture: see Bram. Wicks stolen (AGAIN): see Tobben. Bandits at the Old Bridge: see Sgt. Holt. LOST: one Moppet, small, jingly. See Nell. Reward: a very lucky acorn."
+        },
+        {"art": "prop_bench", "pos": [19.6, 7.6], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_bench", "pos": [30.0, 11.0], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_well", "pos": [33.6, 7.8], "collider": {"w": 1.8, "h": 0.9}},
+        {"art": "prop_bush_b", "pos": [35.6, 10.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [34.8, 3.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_fence", "pos": [21.0, 2.3], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_rock_small", "pos": [28.0, 2.6]},
+        {
+          "art": "prop_inn",
+          "pos": [43.0, 12.0],
+          "collider": {"w": 7.0, "h": 2.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.6, 3.2], "nightOnly": true},
+          "text": "The Sleepy Lantern. A painted sign shows a lantern wearing a nightcap."
+        },
+        {"art": "prop_barrel", "pos": [38.8, 9.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [39.6, 9.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [49.0, 10.0], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bench", "pos": [47.4, 9.6], "collider": {"w": 1.4, "h": 0.4}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [38.2, 7.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [49.6, 7.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_shop_stall", "pos": [40.0, 2.3], "collider": {"w": 3.0, "h": 1.1}},
+        {"art": "prop_shop_stall", "pos": [45.6, 2.3], "flip": true, "collider": {"w": 3.0, "h": 1.1}},
+        {"art": "prop_crate", "pos": [43.0, 1.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_cart", "pos": [52.0, 2.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_crate", "pos": [50.2, 1.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [53.8, 1.3], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_smithy",
+          "pos": [56.5, 11.4],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ff9a4a", "radius": 3.8, "intensity": 1.0, "offset": [0.8, 1.0], "flicker": true}
+        },
+        {"art": "prop_crate", "pos": [60.2, 9.8], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [52.6, 10.2], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_banner", "pos": [61.6, 10.6], "collider": {"w": 0.4, "h": 0.3}, "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [59.8, 3.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_cottage_c",
+          "pos": [67.0, 12.2],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.5, 2.6], "nightOnly": true},
+          "text": "The Trainers' Hall. Someone has carved 'ELBOWS UP' over the door."
+        },
+        {"art": "prop_banner", "pos": [63.4, 10.8], "collider": {"w": 0.4, "h": 0.3}, "sway": true},
+        {"art": "prop_banner", "pos": [71.0, 10.8], "collider": {"w": 0.4, "h": 0.3}, "sway": true},
+        {"art": "prop_tree_birch", "pos": [74.0, 9.6], "collider": {"w": 0.7, "h": 0.4}, "sway": true},
+        {"art": "prop_fence", "pos": [65.0, 2.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [71.0, 2.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_hay", "pos": [72.8, 1.2], "collider": {"w": 1.2, "h": 0.7}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [74.6, 3.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_windmill", "pos": [79.0, 13.7], "collider": {"w": 2.6, "h": 1.0}, "text": "Hollis's windmill. Its sails hang perfectly still."},
+        {"art": "prop_tree_pine", "pos": [72.4, 15.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_oak", "pos": [88.4, 13.2], "collider": {"w": 1.2, "h": 0.7}, "sway": true},
+        {"art": "prop_fence", "pos": [79.5, 8.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [82.5, 8.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_hay", "pos": [80.2, 11.0], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [83.4, 12.4], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_bush_a", "pos": [88.6, 9.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_signpost",
+          "pos": [82.4, 6.9],
+          "flip": true,
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "East: Whisperwood and the Pilgrim Road. Mind the boars. Mind the wolves. Mind yourself."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [86.0, 7.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_rock_small", "pos": [77.0, 2.0]}
+      ],
+      "foreground": [
+        {"art": "fg_grass_a", "pos": [3, -0.4], "sway": true},
+        {"art": "fg_flowers_a", "pos": [-0.6, 2.4], "sway": true},
+        {"art": "fg_flowers_b", "pos": [6.9, 2.9], "flip": true, "sway": true},
+        {"art": "fg_grass_b", "pos": [8.3, 0.2], "sway": true},
+        {"art": "fg_flowers_a", "pos": [11.6, 0.3], "flip": true, "sway": true},
+        {"art": "fg_grass_a", "pos": [15.8, 1.2], "sway": true},
+        {"art": "fg_flowers_a", "pos": [13, -0.2], "sway": true},
+        {"art": "fg_stones_a", "pos": [24, -0.6]},
+        {"art": "fg_grass_b", "pos": [33, -0.3], "sway": true},
+        {"art": "fg_flowers_b", "pos": [44, -0.5], "sway": true},
+        {"art": "fg_ferns", "pos": [57, -0.4], "sway": true},
+        {"art": "fg_grass_a", "pos": [66, -0.2], "flip": true, "sway": true},
+        {"art": "fg_stones_b", "pos": [77, -0.6]},
+        {"art": "fg_flowers_a", "pos": [86, -0.3], "flip": true, "sway": true}
+      ],
+      "npcs": [
+        {"npc": "villager_june", "pos": [11.0, 7.2]},
+        {"npc": "guard_holt", "pos": [16.2, 7.6]},
+        {"npc": "elder_maru", "pos": [25.0, 7.6]},
+        {"npc": "child_nell", "pos": [21.6, 6.6]},
+        {"npc": "moppet", "pos": [22.4, 7.0], "requireFlag": "moppet_found"},
+        {"npc": "lamplighter_tobben", "pos": [28.8, 9.0], "flip": true},
+        {"npc": "aldric", "pos": [30.0, 6.6], "flip": true, "hideFlag": "recruited_aldric"},
+        {"npc": "child_toby", "pos": [35.2, 6.4], "flip": true},
+        {"npc": "merchant_tilly", "pos": [40.0, 3.6]},
+        {"npc": "innkeeper_dorrit", "pos": [43.0, 8.8]},
+        {"npc": "kael", "pos": [47.4, 9.1], "flip": true, "hideFlag": "recruited_kael"},
+        {"npc": "pip", "pos": [52.0, 3.7], "hideFlag": "recruited_pip"},
+        {"npc": "smith_garrow", "pos": [55.2, 8.6]},
+        {"npc": "armorer_bess", "pos": [58.8, 8.6], "flip": true},
+        {"npc": "trainer_odo", "pos": [63.6, 8.2]},
+        {"npc": "trainer_quillon", "pos": [66.4, 9.2]},
+        {"npc": "trainer_wick", "pos": [69.4, 8.2], "flip": true},
+        {"npc": "trainer_fennel", "pos": [72.4, 9.2], "flip": true},
+        {"npc": "villager_hollis", "pos": [77.2, 10.6]},
+        {"npc": "shepherd_bram", "pos": [76.6, 7.0]},
+        {"npc": "rusk", "pos": [79.6, 7.2], "flip": true, "requireFlag": "bandits_peaceful"},
+        {"npc": "postman_fennick", "pos": [80.4, 4.0], "flip": true}
+      ],
+      "encounters": [
+        {
+          "id": "enc_training_dummy",
+          "pos": [68.0, 1.5],
+          "radius": 0.9,
+          "enemies": [{"creature": "cr_training_dummy", "pos": [68.0, 1.2]}],
+          "doneFlag": "training_dummy_done"
+        },
+        {
+          "id": "enc_pasture_wolves",
+          "pos": [85.2, 11.4],
+          "radius": 3.2,
+          "enemies": [{"creature": "cr_wolf", "pos": [84.8, 11.6]}, {"creature": "cr_wolf", "pos": [86.4, 12.6]}, {"creature": "cr_wolf", "pos": [86.8, 10.8]}],
+          "requireFlag": "shepherd_quest",
+          "doneFlag": "pasture_wolves_done"
+        }
+      ],
+      "chests": [{"id": "chest_village_oak", "pos": [3.3, 9.0], "art": "prop_chest", "lootTable": "lt_chest_village"}],
+      "transitions": [
+        {
+          "id": "to_whisperwood",
+          "pos": [89.3, 5.0],
+          "size": [1.4, 6.0],
+          "targetMap": "whisperwood",
+          "targetSpawn": "from_village",
+          "label": "Whisperwood"
+        },
+        {
+          "id": "to_amberfield",
+          "pos": [0.7, 32.0],
+          "size": [1.4, 6.0],
+          "targetMap": "amberfield",
+          "targetSpawn": "from_lanternvale",
+          "label": "Amberfield Downs"
+        },
+        {
+          "id": "to_dgn_root_hollows",
+          "pos": [20.0, 19.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_root_hollows",
+          "targetSpawn": "from_lanternvale",
+          "label": "The Root Hollows",
+          "hidden": true,
+          "revealFlag": "found_root_hollows",
+          "marker": "cave"
+        }
+      ],
+      "spawns": [{"id": "default", "pos": [4.0, 5.0]}, {"id": "camphor", "pos": [23.2, 5.4]}, {"id": "from_whisperwood", "pos": [86.0, 4.6]}, {"id": "from_amberfield", "pos": [3.4, 32.0]}, {"id": "from_dgn_root_hollows", "pos": [20.0, 16.5]}],
+      "regions": [
+        {
+          "id": "reg_old_kusu",
+          "pos": [25.0, 9.0],
+          "size": [14, 7],
+          "text": "Old Kusu — the great camphor tree. Four hundred years old, and still growing."
+        },
+        {"id": "reg_sleepy_lantern", "pos": [43.0, 8.0], "size": [10, 6], "text": "The Sleepy Lantern — beds, stew and gossip."},
+        {"id": "reg_training_yard", "pos": [68.0, 6.0], "size": [12, 8], "text": "The Trainers' Hall and training yard."},
+        {"id": "reg_east_pasture", "pos": [83.5, 10.5], "size": [12, 7], "text": "Bram's pasture. The grass is greying at the tips."}
+      ],
+      "ambient": {"fireflies": true, "pollen": true, "timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#fff6e8", "ambientIntensity": 1.0},
+      "restArea": false,
+      "music": "music_lanternvale"
+    }
+  ]
+}

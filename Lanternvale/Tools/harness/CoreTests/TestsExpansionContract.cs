@@ -297,7 +297,10 @@ namespace Lanternvale.Tests
             r = s.UseTransition("to_dgn_root_hollows");
             Assert(r.Ok && s.MapId == "dgn_root_hollows", "revealed: travel into the Root Hollows");
             r = s.UseTransition("to_lanternvale");
-            Assert(r.Ok && s.MapId == "lanternvale" && Vec2.Distance(s.Leader.Position, new Vec2(20f, 16.5f)) < 3f, "back out beside the entrance");
+            // the spawn beside the entrance (the lv builder placed both among Kusu's northern roots; look them up)
+            var besideEntrance = Db.Maps["lanternvale"].spawns.First(x => x.id == "from_dgn_root_hollows").pos;
+            Assert(Vec2.Distance(besideEntrance, hidden.pos) < 4f, "from_dgn_root_hollows stands beside the entrance");
+            Assert(r.Ok && s.MapId == "lanternvale" && Vec2.Distance(s.Leader.Position, besideEntrance) < 3f, "back out beside the entrance");
         }
 
         // ------------------------------------------------------------------ topology of §1
