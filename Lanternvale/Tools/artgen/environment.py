@@ -1210,6 +1210,309 @@ def ground_village(key="ground_village"):
     return finish(cv, 0.013)
 
 
+# ---- expansion biomes (Docs/Expansion.md §7: highlands, fen, peaks, caves, ice cave, crypts, Hollow Heart, roost)
+
+def wrap_field(cv, f):
+    """A (1024, 1024) periodic field laid over the padded canvas."""
+    W = f.shape[0]
+    iy = (np.arange(cv.PH) - cv.pady) % W
+    ix = (np.arange(cv.PW) - cv.padx) % W
+    return f[iy][:, ix]
+
+
+def swathes(cv, cols, cell=200, key="sw"):
+    """Soft sunlit / shaded swathes with watercolour edges (as the meadow)."""
+    for i, (c, op, th) in enumerate(cols):
+        sw = smoothstep(th, th + 0.03, cv.noise(cell, key + "%d" % i, 4))
+        sw = ragged(cv, sw.astype(F32), 0.4, 2, 10, key + "r%d" % i)
+        wash(cv, sw, c, op, pool=0.5, pool_w=4, gran=0.1, key=key + "w%d" % i)
+
+
+def crack_lines(cv, cell, key, width=0.012, where=None, col=P.STONE_DK, op=0.6):
+    ck = smoothstep(width, 0.0, np.abs(cv.noise(cell, key, 4) - 0.5))
+    if where is not None:
+        ck = ck * where
+    wash(cv, ck.astype(F32), col, op, pool=0, gran=0.2, key=key + "w")
+
+
+def specks(cv, r, n, rad, col, key, alpha=1.0):
+    polys = []
+    for i in range(n):
+        x, y = r.random() * cv.w, r.random() * cv.h
+        rr = rad * (0.6 + 0.8 * r.random())
+        for X, Y in each_copy(cv, x, y, rr):
+            polys.append(ellipse(X, Y, rr, rr * 0.8, r.random() * 3.0, 8))
+    if polys:
+        flat_fill(cv, cv.polys_mask(polys), col, alpha)
+
+
+def ground_highlands(key="ground_highlands"):
+    """Golden downs: sun-ripened grass over warm earth, sage hollows, poppies and cornflowers."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    straw = P.mix(P.THATCH, P.GRASS_LIGHT, 0.4)
+    grass_base(cv, P.mix(straw, P.CREAM_WARM, 0.12), P.mix(P.mix(P.THATCH_DK, P.SAGE, 0.45), straw, 0.4), key, dark=None)
+    swathes(cv, ((P.mix(P.HONEY, P.CREAM_WARM, 0.35), 0.32, 0.62), (P.mix(P.SAGE, P.MOSS, 0.4), 0.28, 0.66)), 220, "hsw")
+    blades(cv, r, 2400, 34, [P.mix(P.THATCH, P.HONEY, 0.3), P.THATCH, P.mix(P.THATCH_DK, P.SAGE, 0.3), P.mix(P.LEAF_YELLOW, P.CREAM_WARM, 0.3)],
+           key + "bl", width=3.6, alpha=0.85, lean=0.35,
+           cluster=[(r.random() * 1024, r.random() * 1024, 46) for _ in range(90)])
+    blades(cv, r, 700, 24, [P.mix(P.SAGE, P.MOSS, 0.3), P.SAGE], key + "bl2", width=3.2, alpha=0.7)
+    cols = [(P.VERMILION, P.INK), (P.VERMILION, P.INK), (P.DUSTY_BLUE, P.CREAM), (P.WHITE_WARM, P.HONEY)]
+    flower_patches(cv, r, 12, 7, cols, (6, 10), 46, key="hfl")
+    pebbles(cv, r, 26, 5, 11, P.STONE_WARM, "hpb")
+    return finish(cv, 0.013)
+
+
+def ground_fen(key="ground_fen"):
+    """Fen: dark peaty mud, cushions of moss, little wet pools catching the sky, flattened reeds."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    mud0 = P.mix(P.mix(P.mix(P.WOOD, P.MOSS_DK, 0.6), P.STONE_DK, 0.2), P.MOSS, 0.3)
+    mud1 = P.mix(mud0, P.mix(P.mix(P.WOOD_DK, P.FOREST_DK, 0.35), P.INK_SOFT, 0.15), 0.5)
+    grass_base(cv, mud0, mud1, key, dark=None)
+    # moss cushions
+    moss_m = smoothstep(0.48, 0.58, cv.noise(150, "fm", 4))
+    moss_m = ragged(cv, moss_m.astype(F32), 0.5, 2.5, 8, "fmr")
+    wash(cv, moss_m, P.mix(P.MOSS, P.SAGE, 0.2), 0.22, color2=P.mix(P.MOSS_DK, P.MOSS, 0.5), pool=0.3, pool_w=6, gran=0.3,
+         gran_cell=2, key="fmw", bloom=0.2)
+        # damp, darker peat between the cushions (the puddles themselves are the terrain's detail layer)
+    wet = smoothstep(0.6, 0.7, cv.noise(90, "fp", 3)) * (1.0 - moss_m)
+    wash(cv, cv.blur(wet.astype(F32), 4), P.mix(P.WOOD_DK, P.INK_SOFT, 0.4), 0.14, pool=0.3, gran=0.1, key="fpw")
+    # flattened reeds and sedge
+    blades(cv, r, 900, 40, [P.mix(P.THATCH_DK, P.MOSS, 0.4), P.mix(P.MOSS, P.SAGE, 0.3), P.mix(P.WOOD_LIGHT, P.THATCH_DK, 0.5)],
+           key + "rd", width=3.0, alpha=0.8, lean=1.2,
+           cluster=[(r.random() * 1024, r.random() * 1024, 60) for _ in range(30)])
+    blades(cv, r, 900, 24, [P.MOSS, P.mix(P.MOSS, P.GRASS_LIGHT, 0.3)], key + "bl", width=3.2, alpha=0.75)
+    cols = [(P.WHITE_WARM, P.CREAM), (P.LEAF_YELLOW, P.AMBER)]
+    flower_patches(cv, r, 5, 5, cols, (5, 8), 30, key="ffl")
+    return finish(cv, 0.013)
+
+
+def ground_snow(key="ground_snow"):
+    """Snow: wind-combed drifts with soft blue shadows, sparkle, a few rocks and dry grass poking through."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    s0 = P.mix(P.WHITE_WARM, P.MIST, 0.65)
+    s1 = P.mix(s0, P.mix(P.mix(P.MIST, P.DUSTY_BLUE, 0.16), P.WHITE_WARM, 0.35), 0.5)
+    field = colfield(s0, s1, smoothstep(0.35, 0.7, cv.noise(240, key + "b", 4)))
+    full = np.ones((cv.PH, cv.PW), F32)
+    wash(cv, full, s0, 1.0, field=field, pool=0, gran=0.03, var=0.02, var_cell=40, key=key)
+    # wind ripples: long soft blue shadows across the tile, each lit along its crest
+    for i in range(46):
+        x, y = r.random() * 1024, r.random() * 1024
+        L = 120 + r.random() * 180
+        a = 0.15 * r.normal()
+        pts = []
+        for k in range(7):
+            t = k / 6.0
+            pts.append((x + math.cos(a) * L * t, y + math.sin(a) * L * t + math.sin(t * 3.0 + i) * 8))
+        polys = []
+        for X, Y in each_copy(cv, x, y, L + 20):
+            q = [(px + X - x, py + Y - y) for px, py in pts]
+            polys.append(stroke(q, 9 + r.random() * 8, 2, n=12))
+        if polys:
+            m = cv.polys_mask(polys)
+            m = cv.blur(m, 3)
+            wash(cv, m, P.mix(P.DUSTY_BLUE, P.MIST, 0.55), 0.22, pool=0.2, gran=0, key="rp%d" % (i % 5))
+    # shadowed hollows
+    hol = smoothstep(0.62, 0.7, cv.noise(160, "sh", 4))
+    hol = ragged(cv, hol.astype(F32), 0.4, 3, 10, "shr")
+    wash(cv, cv.blur(hol, 4), P.mix(P.DUSTY_BLUE, P.VIOLET_FAR, 0.3), 0.08, pool=0.3, gran=0, key="shw")
+    # rocks and dry grass poking through, sparkle
+    rock_n = 0
+    polys = []
+    for i in range(10):
+        x, y = r.random() * 1024, r.random() * 1024
+        rad = 6 + r.random() * 9
+        seed = r.integers(1 << 30)
+        for X, Y in each_copy(cv, x, y, rad):
+            polys.append(blob(X, Y, rad, rad * 0.6, np.random.default_rng(seed), 0.2, 7))
+        rock_n += 1
+    if polys:
+        m = cv.polys_mask(polys)
+        paint(cv, m, P.mix(P.STONE_DK, P.DUSTY_BLUE_DK, 0.3), line=0.6, line_w=0.9, soft=2.5, key="srk", ao=0.2, hi=0.4)
+    blades(cv, r, 300, 22, [P.mix(P.THATCH_DK, P.WOOD, 0.3), P.THATCH_DK], key + "bl", width=2.6, alpha=0.8,
+           cluster=[(r.random() * 1024, r.random() * 1024, 26) for _ in range(12)])
+    specks(cv, r, 420, 1.3, P.WHITE_WARM, "spk", 0.9)
+    return finish(cv, 0.01)
+
+
+def ground_cave(key="ground_cave"):
+    """Cave floor: packed earth and worn stone slabs, grit, pebbles, damp darker patches and fine cracks."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    e0 = P.mix(P.mix(P.STONE_WARM, P.WOOD, 0.3), P.STONE_DK, 0.15)
+    e1 = P.mix(e0, P.mix(P.mix(P.STONE_DK, P.WOOD_DK, 0.35), P.INK_SOFT, 0.1), 0.4)
+    grass_base(cv, e0, e1, key, dark=None)
+    # worn bedrock showing through the earth in irregular, flat outcrops
+    slab = smoothstep(0.56, 0.62, cv.noise(110, "sm", 4))
+    slab = ragged(cv, slab.astype(F32), 0.5, 2.0, 7, "sr")
+    wash(cv, slab, P.mix(P.STONE, P.STONE_WARM, 0.5), 0.26, color2=P.mix(P.STONE, P.VIOLET_FAR, 0.2), pool=0.15, pool_w=3,
+         gran=0.2, key="slw")
+    crack_lines(cv, 70, "cck", 0.009, slab * smoothstep(0.45, 0.6, cv.noise(200, "ccm", 2)), P.STONE_DK, 0.3)
+    # damp patches
+    dm = smoothstep(0.6, 0.72, cv.noise(260, "dm", 4))
+    dm = ragged(cv, dm.astype(F32), 0.4, 2.5, 8, "dmr")
+    wash(cv, dm, P.mix(P.WOOD_DK, P.INK_SOFT, 0.4), 0.12, pool=0.5, pool_w=5, gran=0.2, key="dmw")
+    pebbles(cv, r, 120, 4, 10, P.mix(P.STONE, P.STONE_WARM, 0.5), "cpb")
+    pebbles(cv, r, 40, 6, 13, P.mix(P.STONE_DK, P.WOOD, 0.3), "cpb2")
+    specks(cv, r, 600, 1.5, P.mix(P.STONE_DK, P.INK_SOFT, 0.4), "cgr", 0.6)
+    return finish(cv, 0.014)
+
+
+def ground_ice(key="ground_ice"):
+    """Ice: pale blue sheets with white crazed cracks, frosted patches and deeper blue under the surface."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    i0 = P.mix(P.MIST, P.SKY_MID, 0.45)
+    i1 = P.mix(i0, P.mix(P.SKY_MID, P.DUSTY_BLUE, 0.4), 0.45)
+    field = colfield(i0, i1, smoothstep(0.3, 0.7, cv.noise(220, key + "b", 4)))
+    full = np.ones((cv.PH, cv.PW), F32)
+    wash(cv, full, i0, 1.0, field=field, pool=0, gran=0.04, var=0.03, var_cell=40, key=key)
+    # deep blue beneath
+    deep = smoothstep(0.6, 0.72, cv.noise(170, "dp", 4))
+    wash(cv, cv.blur(deep.astype(F32), 6), P.mix(P.DUSTY_BLUE_DK, P.TEAL, 0.25), 0.16, pool=0.3, gran=0, key="dpw")
+    # plates and crazing
+    d1, d2, ids = voronoi_tile(1024, 7, r)
+    edge = wrap_field(cv, d2 - d1)
+    plate = smoothstep(2.5, 0.5, edge + (cv.noise(10, "pe", 3) - 0.5) * 2.0)
+    wash(cv, plate.astype(F32), P.WHITE_WARM, 0.45, pool=0, gran=0.1, key="plw")
+    crack_lines(cv, 50, "ick", 0.008, None, P.WHITE_WARM, 0.5)
+    # frost and snow dust
+    fr = smoothstep(0.58, 0.7, cv.noise(120, "fr", 4))
+    fr = ragged(cv, fr.astype(F32), 0.5, 3, 8, "frr")
+    wash(cv, cv.blur(fr, 3), P.WHITE_WARM, 0.32, pool=0.2, gran=0.3, gran_cell=1.5, key="frw")
+    specks(cv, r, 300, 1.3, P.WHITE_WARM, "isp", 0.85)
+    return finish(cv, 0.01)
+
+
+def ground_crypt(key="ground_crypt"):
+    """Crypt floor: old flagstones in running courses, dark grout, dust drifts, chips and cracks."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    W = 1024
+    rows = 6
+    rh = W / rows
+    yy = (np.arange(W, dtype=F32) + 0.5)[:, None] * np.ones((1, W), F32)
+    xx = (np.arange(W, dtype=F32) + 0.5)[None, :] * np.ones((W, 1), F32)
+    row = np.floor(yy / rh).astype(int)
+    edge = np.minimum(yy - row * rh, (row + 1) * rh - yy)
+    ids = np.zeros((W, W), np.int32)
+    ex = np.full((W, W), 1e9, F32)
+    for j in range(rows):
+        # random block widths summing to the tile, so every course wraps
+        ws = []
+        while sum(ws) < W - 120:
+            ws.append(150 + r.random() * 120)
+        ws.append(W - sum(ws))
+        bounds = np.cumsum([0.0] + ws)
+        off = r.random() * W
+        sel = row == j
+        xs = (xx[sel] + off) % W
+        d = np.full(xs.shape, 1e9, F32)
+        bi = np.zeros(xs.shape, np.int32)
+        for k in range(len(bounds) - 1):
+            inside = (xs >= bounds[k]) & (xs < bounds[k + 1])
+            d = np.where(inside, np.minimum(xs - bounds[k], bounds[k + 1] - xs), d)
+            bi = np.where(inside, k, bi)
+        ex[sel] = d
+        ids[sel] = j * 16 + bi
+    edge = np.minimum(edge, ex)
+    edge = wrap_field(cv, edge)
+    ids = wrap_field(cv, ids)
+    grout = np.ones((cv.PH, cv.PW), F32)
+    wash(cv, grout, P.mix(P.INK_SOFT, P.STONE_DK, 0.4), 1.0, color2=P.INK_SOFT, pool=0, gran=0.2, key="cg")
+    nz = cv.noise(12, "ce", 3)
+    stone = smoothstep(4.0, 8.0, edge + (nz - 0.5) * 5)
+    tints = np.random.default_rng(11).random(16 * 16)
+    base = np.asarray(P.mix(P.STONE, P.STONE_DK, 0.35), F32)
+    cool = np.asarray(P.mix(P.STONE_DK, P.VIOLET_FAR, 0.3), F32)
+    t = tints[ids][..., None]
+    fieldc = base + (cool - base) * t
+    hgt = np.clip(edge / 22.0, 0, 1)
+    gy, gx = np.gradient(cv.blur(hgt.astype(F32), 2))
+    L = -(gx * P.LIGHT_DIR[0] + gy * P.LIGHT_DIR[1]) * 12
+    fieldc = fieldc * (1.0 + np.clip(L, -0.3, 0.3))[..., None]
+    fieldc = fieldc * (0.86 + 0.26 * cv.noise(40, "cst", 4))[..., None]
+    drop_shadow(cv, stone, 2, 3, 3, 0.4)
+    wash(cv, stone, P.STONE, 1.0, field=fieldc, pool=0.35, pool_w=2, gran=0.15, var=0.04, key="csw")
+    crack_lines(cv, 60, "crk", 0.011, stone * smoothstep(0.45, 0.6, cv.noise(200, "crm", 2)), P.INK_SOFT, 0.6)
+    # dust drifts and grit
+    du = smoothstep(0.6, 0.72, cv.noise(140, "du", 4))
+    du = ragged(cv, du.astype(F32), 0.5, 3, 8, "dur")
+    wash(cv, cv.blur(du, 3), P.mix(P.STONE_WARM, P.CREAM, 0.2), 0.32, pool=0.2, gran=0.3, gran_cell=1.5, key="duw")
+    pebbles(cv, r, 50, 3, 8, P.mix(P.STONE, P.STONE_WARM, 0.3), "cr1")
+    specks(cv, r, 500, 1.4, P.mix(P.STONE_DK, P.INK_SOFT, 0.4), "cgr", 0.5)
+    return finish(cv, 0.014)
+
+
+def ground_hollow(key="ground_hollow"):
+    """The Hollow Heart: dark, rich soil under violet-tinged moss, pale roots, fallen petals and glowing spores."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    s0 = P.mix(P.mix(P.WOOD_DK, P.INK_SOFT, 0.45), P.VIOLET, 0.12)
+    s1 = P.mix(s0, P.mix(P.INK, P.WOOD_DK, 0.35), 0.5)
+    grass_base(cv, s0, s1, key, dark=None)
+    moss_m = smoothstep(0.5, 0.6, cv.noise(150, "hm", 4))
+    moss_m = ragged(cv, moss_m.astype(F32), 0.5, 2.5, 8, "hmr")
+    wash(cv, moss_m, P.mix(P.MOSS_DK, P.VIOLET, 0.35), 0.26, color2=P.mix(P.FOREST_DK, P.BLIGHT_VIOLET, 0.3), pool=0.45, pool_w=6,
+         gran=0.3, gran_cell=2, key="hmw", bloom=0.25)
+    # pale roots wandering over the soil
+    polys = []
+    for i in range(26):
+        x, y = r.random() * 1024, r.random() * 1024
+        a = r.random() * 6.28
+        pts = [(x, y)]
+        for k in range(8):
+            a += r.normal() * 0.45
+            x += math.cos(a) * 28
+            y += math.sin(a) * 28
+            pts.append((x, y))
+        w0 = 5 + r.random() * 4
+        for ox in cv.copies_x():
+            for oy in cv.copies_y():
+                polys.append(stroke([(px + ox, py + oy) for px, py in pts], w0, 1.0, n=24))
+    m = cv.polys_mask(polys)
+    drop_shadow(cv, m, 1.5, 2.5, 2, 0.45)
+    paint(cv, m, P.mix(P.WOOD_LIGHT, P.LAVENDER, 0.35), line=0.6, line_w=0.8, soft=1.5, key="hrt", ao=0.1, hi=0.45, var=0.1)
+    # petals and spores
+    for i in range(60):
+        x, y = r.random() * 1024, r.random() * 1024
+        a = r.random() * 6.28
+        for X, Y in each_copy(cv, x, y, 8):
+            paint(cv, cv.mask(leaf_poly(X, Y, 8, a, 0.7)), P.BLIGHT_VIOLET, line=0.3, line_w=0.6, soft=1, key="hpt", ao=0)
+    specks(cv, r, 160, 1.6, P.BLIGHT_GLOW, "hsp", 0.85)
+    specks(cv, r, 70, 1.4, P.mix(P.TEAL, P.MIST, 0.5), "hsp2", 0.8)
+    return finish(cv, 0.014)
+
+
+def ground_roost(key="ground_roost"):
+    """The dragon's summit: weathered ash-grey rock, fine cracks, drifts of pale ash, a few soot smudges and embers.
+    Calm on purpose: the big scorch marks are the terrain's (MapTerrain, vertex colour, never repeating)."""
+    cv = tile_canvas(key)
+    r = rng(key)
+    g0 = P.mix(P.STONE, P.STONE_DK, 0.3)
+    g1 = P.mix(g0, P.mix(P.STONE_DK, P.VIOLET_FAR, 0.2), 0.45)
+    grass_base(cv, g0, g1, key, dark=None)
+    swathes(cv, ((P.mix(P.STONE_WARM, P.CREAM, 0.2), 0.2, 0.62), (P.mix(P.STONE_DK, P.INK_SOFT, 0.2), 0.18, 0.66)), 240, "rsw")
+    crack_lines(cv, 90, "rck", 0.008, smoothstep(0.4, 0.6, cv.noise(220, "rcm", 2)), P.INK_SOFT, 0.35)
+    crack_lines(cv, 45, "rck2", 0.006, smoothstep(0.5, 0.65, cv.noise(160, "rcm2", 2)), P.INK_SOFT, 0.25)
+    ash = smoothstep(0.62, 0.72, cv.noise(120, "as", 4))
+    ash = ragged(cv, ash.astype(F32), 0.5, 3, 8, "asr")
+    wash(cv, cv.blur(ash, 3), P.mix(P.STONE_WARM, P.CREAM, 0.35), 0.25, pool=0.2, gran=0.35, gran_cell=1.5, key="asw")
+    soot = smoothstep(0.7, 0.78, cv.noise(70, "sc", 3))
+    wash(cv, cv.blur(soot.astype(F32), 4), P.mix(P.INK, P.WOOD_DK, 0.3), 0.22, pool=0.3, gran=0.3, key="scw")
+    pebbles(cv, r, 60, 4, 10, P.mix(P.STONE, P.STONE_DK, 0.35), "rpb")
+    specks(cv, r, 400, 1.3, P.mix(P.STONE_DK, P.INK_SOFT, 0.4), "rgr", 0.45)
+    specks(cv, r, 18, 1.3, P.AMBER, "rem", 0.55)
+    return finish(cv, 0.014)
+
+
+EXPANSION_GROUNDS = (("ground_highlands", ground_highlands), ("ground_fen", ground_fen), ("ground_snow", ground_snow),
+                     ("ground_cave", ground_cave), ("ground_ice", ground_ice), ("ground_crypt", ground_crypt),
+                     ("ground_hollow", ground_hollow), ("ground_roost", ground_roost))
+
+
 # ----------------------------------------------------------------------------------------
 # decals (flat on the ground)
 # ----------------------------------------------------------------------------------------
@@ -1520,7 +1823,7 @@ def register(reg):
         reg.spec(k, "Background", size=size, height=h, pivot=(0.5, 0.0), loop=True)
         reg.job([k], _one, fn, k)
     for k, fn in (("ground_meadow", ground_meadow), ("ground_forest", ground_forest), ("ground_shrine", ground_shrine),
-                  ("ground_village", ground_village)):
+                  ("ground_village", ground_village)) + EXPANSION_GROUNDS:
         reg.spec(k, "Ground", size=(1024, 1024), height=GROUND_TILE_METRES, pivot=(0.5, 0.0), tile_y=True, loop=False)
         reg.job([k], _one, fn, k)
     # decals: flat on the ground; height = world size of the image's vertical axis

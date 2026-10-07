@@ -199,8 +199,8 @@ namespace Lanternvale.Preview
 
         static Material TerrainMaterial(MapDef def)
         {
-            string groundKey = string.IsNullOrEmpty(def.ground) ? "ground_meadow" : def.ground;
-            const string sideKey = "ground_meadow";
+            string groundKey = Biomes.GroundKey(def);
+            string sideKey = Biomes.SideKey(def);
             float tile = def.groundTile > 0f ? def.groundTile : 8f;
             var ground = ArtLibrary.Texture(groundKey);
             var side = ArtLibrary.Texture(sideKey);
@@ -208,7 +208,7 @@ namespace Lanternvale.Preview
             m.SetTexture(Materials3D.MainTexId, ground);
             m.SetTexture(Shader.PropertyToID("_SideTex"), side);
             m.SetFloat(Materials3D.PlanarScaleId, 1f / tile);
-            m.SetFloat(Shader.PropertyToID("_SidePlanarScale"), 1f / 8f);
+            m.SetFloat(Shader.PropertyToID("_SidePlanarScale"), Biomes.SidePlanarScale(def));
             m.SetColor(Shader.PropertyToID("_MainAvg"), Average(ground, groundKey));
             m.SetColor(Shader.PropertyToID("_SideAvg"), Average(side, sideKey));
             // as MapView: the detail layer (gravel / leaf litter), read back by the Collector
@@ -224,8 +224,7 @@ namespace Lanternvale.Preview
         /// <summary>The texture's average sRGB colour (MapView reads it back from the GPU; same result).</summary>
         static Color Average(Texture2D tex, string key)
         {
-            Color fallback = key.Contains("forest") ? new Color(0.36f, 0.38f, 0.25f) : key.Contains("shrine") ? new Color(0.66f, 0.65f, 0.6f)
-                           : key.Contains("village") ? new Color(0.74f, 0.66f, 0.5f) : new Color(0.6f, 0.69f, 0.45f);
+            Color fallback = Biomes.AverageFallback(key);
             if (tex == null || tex.Pixels == null || tex.width < 8) return fallback;
             double r = 0, g = 0, b = 0;
             foreach (var p in tex.Pixels) { r += p.r; g += p.g; b += p.b; }

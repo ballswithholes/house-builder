@@ -354,12 +354,14 @@ namespace Lanternvale.Game
 
         static Material TerrainMaterial(MapDef def)
         {
-            string groundKey = string.IsNullOrEmpty(def.ground) ? "ground_meadow" : def.ground;
-            const string sideKey = "ground_meadow";
+            // the ground and the surroundings by biome (Biomes: a biome's own ground replaces a placeholder key)
+            string groundKey = Biomes.GroundKey(def);
+            string sideKey = Biomes.SideKey(def);
             float tile = def.groundTile > 0f ? def.groundTile : 8f;
             var ground = ArtLibrary.Texture(groundKey);
             var side = ArtLibrary.Texture(sideKey);
-            string key = groundKey + "|" + sideKey + "|" + tile.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            string key = groundKey + "|" + sideKey + "|" + tile.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+                       + "|" + MapTerrain.StyleOf(def).Detail;
             if (TerrainMaterials.TryGetValue(key, out var m) && m != null) return m;
             var shader = Shader.Find("Lanternvale/Terrain");
             if (shader == null || !shader.isSupported)
@@ -371,7 +373,7 @@ namespace Lanternvale.Game
             m.SetTexture(Materials3D.MainTexId, ground);
             m.SetTexture(SideTexId, side);
             m.SetFloat(Materials3D.PlanarScaleId, 1f / tile);
-            m.SetFloat(SidePlanarScaleId, 1f / 8f);
+            m.SetFloat(SidePlanarScaleId, Biomes.SidePlanarScale(def));
             m.SetColor(MainAvgId, Average(ground, groundKey));
             m.SetColor(SideAvgId, Average(side, sideKey));
             // raked gravel (shrine) / leaf litter (forest) over the ground where MapTerrain weights it in
@@ -388,8 +390,7 @@ namespace Lanternvale.Game
         /// <summary>Average colour of a painted texture (GPU downsample + readback once; known fallbacks without a GPU).</summary>
         static Color Average(Texture2D tex, string key)
         {
-            Color fallback = key.Contains("forest") ? new Color(0.36f, 0.38f, 0.25f) : key.Contains("shrine") ? new Color(0.66f, 0.65f, 0.6f)
-                           : key.Contains("village") ? new Color(0.74f, 0.66f, 0.5f) : new Color(0.6f, 0.69f, 0.45f);
+            Color fallback = Biomes.AverageFallback(key);
             if (tex == null) return fallback;
             if (TextureAverages.TryGetValue(tex, out var c)) return c;
             c = fallback;

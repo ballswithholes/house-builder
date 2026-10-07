@@ -33,7 +33,8 @@
     <Compile Include="$(Game)/Game/Rendering3D/Materials3D.cs" />
     <Compile Include="$(Game)/Game/Rendering3D/SceneLighting.cs" />
     <Compile Include="$(Game)/Game/World/Props/*.cs" />
-    <Compile Include="$(Game)/Game/World/MapTerrain.cs" />
+    <Compile Include="$(Game)/Game/World/MapTerrain*.cs" />
+    <Compile Include="$(Game)/Game/World/Biomes.cs" />
     <Compile Include="$(Game)/Game/World/MapBackdrop.cs" />
     <Compile Include="$(Game)/Game/World/MapSky.cs" />
     <Compile Include="$(Game)/Game/World/DayNight.cs" />

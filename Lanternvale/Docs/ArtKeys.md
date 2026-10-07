@@ -48,7 +48,37 @@ Scale reference: a human is 1.8 m tall; a cottage ~6 m; the camera shows ~12 m v
 ## Ground (category Ground, tiling 1024×1024)
 
 `ground_meadow` (grass with tiny flowers), `ground_forest` (moss, leaf litter), `ground_shrine` (mossy
-flagstones), `ground_village` (packed earth and grass). Decals (Prop, flat on ground, no collider):
+flagstones), `ground_village` (packed earth and grass). Expansion biomes (`MapDef.biome`, `Game/World/Biomes.cs`; a
+biome's ground replaces a placeholder `ground` key): `ground_highlands` (golden grass, poppies and cornflowers),
+`ground_fen` (peaty mud, moss cushions, little sky-lit pools, flattened reeds), `ground_snow` (wind-combed snow, blue
+shadows, rocks and dry grass poking through), `ground_cave` (packed earth, worn bedrock slabs, grit, damp patches),
+`ground_ice` (pale blue ice plates, white crazing, frost), `ground_crypt` (flagstones in running courses, dust, cracks),
+`ground_hollow` (dark soil, violet moss, pale roots, petals, glowing spores), `ground_roost` (ash-grey rock, soot
+scorch marks, ash drifts, ember flecks).
+
+Terrain authoring notes for the expansion maps (MapTerrain, `Game/World/MapTerrain.*.cs`):
+* **Biome looks.** highlands: rolling golden downs, wheat and poppies, round golden trees on the hills; fen: flat
+  hummocks with peat pools in the surroundings, reeds and cattails, willows and dead snags, will-o'-wisp motes; peaks:
+  snow, snow-capped stones and drifts, ridges of bare rock climbing to snowy pines; roost: ash-grey summit, broken crags,
+  soot scorches with a faint ember glow, the land falling away in front. Indoors (cave, ice_cave, crypt, hollow_heart,
+  or any map with `environment` cave/crypt): the back wall is two tiers of outlined rock columns (about 4-6 m, then
+  9-13 m), the sides are lower rows the camera looks over at yaw ±45°, the front edge drops into a dark pit past a low
+  rubble lip; a crypt stands dressed masonry (7.6 m back wall with pilasters and alcoves, 2.4 m side walls) in front of
+  the rock. Keep content at least 0.5 m inside the walkable rect at the back and sides of an indoor map.
+* **Fill** (`MapDef.fill`): 0.3-0.5 outdoors, 0.4-0.6 indoors (rubble, stalagmites, crystals, bones, roots and glowing
+  fungus); cover keeps clear of paths, water, props, exits, spawns, NPCs and chests on its own. Stub maps default to 0.
+* **Paths** (`MapDef.paths`): smoothed through their points; a path that ends within 3 m of an edge runs on over the
+  margin (3.4 m at an exit), and fades out into a ford's shallows. Width 2-2.6 for roads, 1.4-1.8 for trails.
+* **Water** (`MapDef.water`): rivers are smoothed through their points and run on out of the map when they reach an
+  edge; ponds are closed polygons with soft shores. A crossing with a bridge prop over it is a bridge (deep bed);
+  any other crossing is a ford (a gravel bar with stepping stones). Make a ford's rect cover the river's full width
+  plus 1 m on each bank. Banks get reeds (fen) or tall grass (highlands/meadow) from the fill.
+* **Exits**: side exits get roads through the hills; back- and front-edge exits (within 3.5 m of y = D or y = 0) get a
+  road or, indoors, a passage through the wall (back/sides) or a ramp across the pit (front). Hidden transitions get none.
+* **Ambient** (`ambient`): `snow`, `ash` (with a few glowing flecks), `dust` (motes hanging in the air), `drips` (drops
+  from the roof with ripples); fen maps get wisp motes automatically; `mist` now scales with the map's depth.
+
+Decals (Prop, flat on ground, no collider):
 `decal_path_dirt` (curved dirt path segment 8 m), `decal_path_stone` (flagstone path segment 8 m),
 `decal_flowers` (flower patch 3 m), `decal_blight` (grey creeping blight stain 4 m).
 

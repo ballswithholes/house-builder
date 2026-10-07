@@ -305,8 +305,10 @@ namespace Lanternvale.Game
 
         void BuildForest(bool near, Color tint)
         {
-            var leafNear = new[] { Ui.Hex("#3f6b45"), Ui.Hex("#4c7a4a"), Ui.Hex("#365f40"), Ui.Hex("#5a8650") };
-            var leafFar = new[] { Ui.Hex("#5d8770"), Ui.Hex("#6b9478"), Ui.Hex("#557f6c") };
+            // the biome's woods (Biomes: green for the original maps, golden, fen-dark or snowy-pine for the new ones)
+            var biome = Biomes.For(def);
+            var leafNear = biome.BackdropLeafNear;
+            var leafFar = biome.BackdropLeafFar;
             var pal = near ? leafNear : leafFar;
             float[] rows = near ? new[] { 8.5f, 11f, 14f, 17.5f, 22f } : new[] { 34f, 42f, 52f, 64f, 78f };
             float span = near ? 75f : 165f;

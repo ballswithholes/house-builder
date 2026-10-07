@@ -1,5 +1,7 @@
 // Cosy ambient particles for a map (AmbientDef flags): fireflies, drifting leaves, pollen, mist banks, rain (with
-// splashes) and embers — 3D billboards in a few pooled batches (one draw call per kind of material). Camera-near
+// splashes), embers, snow, falling ash (with a few still-glowing flecks), dust motes hanging in the air, drips from a
+// cave's roof (with ripples where they land) and, in the fen, will-o'-wisp motes low over the ground — 3D billboards in
+// a few pooled batches (one draw call per kind of material). Camera-near
 // particles live in a box around the camera's look-at point and wrap around it, so the density stays constant while
 // the camera pans; mist banks drift across the whole map; embers rise from fires and forges. Glowing ones are additive,
 // leaves / mist / rain are lit (Lanternvale/LitTransparent) so they follow the mood. Simulated on the CPU by MapView's
@@ -15,7 +17,7 @@ namespace Lanternvale.Game
         /// <summary>Global density multiplier (graphics option).</summary>
         public static float Density = 1f;
 
-        enum Kind { Firefly, Pollen, Leaf, Mist, Rain, Ember }
+        enum Kind { Firefly, Pollen, Leaf, Mist, Rain, Ember, Snow, Ash, Spark, Dust, Drip, Wisp }
 
         sealed class P
         {
@@ -35,7 +37,7 @@ namespace Lanternvale.Game
         readonly MapView map;
         readonly Transform root;
         readonly System.Random rng;
-        BillboardBatch glow, leaves, mist, rain, rings;
+        BillboardBatch glow, leaves, mist, rain, rings, flakes;
         int splashNext;
 
         static readonly Color[] LeafColors =
@@ -95,7 +97,8 @@ namespace Lanternvale.Game
             int mistCount = 0;
             if (a.mist)
             {
-                int n = Mathf.RoundToInt(Mathf.Clamp(4 + W / 9f, 4, 16) * d);
+                // as many banks per square metre on a deep map as on the original 15 m strips
+                int n = Mathf.RoundToInt(Mathf.Clamp((4 + W / 9f) * Mathf.Max(1f, D / 15f), 4, 40) * d);
                 for (int i = 0; i < n; i++)
                 {
                     var p = Add(Kind.Mist);
@@ -109,7 +112,82 @@ namespace Lanternvale.Game
                     mistCount++;
                 }
             }
+            int flakeCount = 0;
+            if (a.snow)
+                for (int i = 0; i < Mathf.RoundToInt(130 * d); i++)
+                {
+                    var p = Add(Kind.Snow);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 9f));
+                    p.size = R(0.05f, 0.12f);
+                    p.color = new Color(0.97f, 0.98f, 1f);
+                    p.phase = R(0f, 100f);
+                    p.vel = new Vector3(R(0.15f, 0.4f), R(-0.1f, 0.1f), R(0.55f, 1.0f));   // +z = falling
+                    p.baseAlpha = R(0.7f, 0.95f);
+                    flakeCount++;
+                }
+            if (a.ash)
+            {
+                for (int i = 0; i < Mathf.RoundToInt(70 * d); i++)
+                {
+                    var p = Add(Kind.Ash);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 8f));
+                    p.size = R(0.06f, 0.13f);
+                    float g = R(0.38f, 0.62f);
+                    p.color = new Color(g, g * 0.97f, g * 0.95f);
+                    p.phase = R(0f, 100f);
+                    p.vel = new Vector3(R(0.2f, 0.5f), R(-0.15f, 0.15f), R(0.25f, 0.5f));
+                    p.spin = R(-200f, 200f);
+                    p.baseAlpha = R(0.6f, 0.9f);
+                    flakeCount++;
+                }
+                // a few flecks still glowing as they drift down
+                for (int i = 0; i < Mathf.RoundToInt(14 * d); i++)
+                {
+                    var p = Add(Kind.Spark);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 8f));
+                    p.size = R(0.05f, 0.09f);
+                    p.phase = R(0f, 100f);
+                    p.vel = new Vector3(R(0.2f, 0.5f), R(-0.15f, 0.15f), R(0.3f, 0.55f));
+                    glowCount++;
+                }
+            }
+            if (a.dust)
+                for (int i = 0; i < Mathf.RoundToInt(44 * d); i++)
+                {
+                    var p = Add(Kind.Dust);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0.4f, 4.5f));
+                    p.size = R(0.04f, 0.08f);
+                    p.color = new Color(1f, 0.93f, 0.8f);
+                    p.phase = R(0f, 100f);
+                    glowCount++;
+                }
+            if (Biomes.IdOf(view.Def) == Biomes.Fen)
+                for (int i = 0; i < Mathf.RoundToInt(20 * d); i++)
+                {
+                    // will-o'-wisp motes: pale green-blue lights wandering low over the bog, brighter at night
+                    var p = Add(Kind.Wisp);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0.3f, 1.4f));
+                    p.size = R(0.14f, 0.24f);
+                    p.color = i % 3 == 0 ? new Color(0.72f, 0.95f, 1f) : new Color(0.66f, 1f, 0.78f);
+                    p.phase = R(0f, 100f);
+                    glowCount++;
+                }
             int rainCount = 0;
+            if (a.drips)
+            {
+                // drops falling from the roof of a cave, now and then
+                for (int i = 0; i < Mathf.RoundToInt(18 * d); i++)
+                {
+                    var p = Add(Kind.Drip);
+                    p.pos = c + new Vector3(R(-Reach, Reach), R(-Reach, Reach), -R(0f, 9f));
+                    p.vel = new Vector3(0f, 0f, R(7f, 9f));
+                    p.size = R(0.16f, 0.24f);
+                    p.color = new Color(0.8f, 0.9f, 1f);
+                    p.baseAlpha = R(0.45f, 0.7f);
+                    p.life = R(0.5f, 3.5f);   // the wait before it falls again
+                    rainCount++;
+                }
+            }
             if (a.rain)
             {
                 for (int i = 0; i < Mathf.RoundToInt(170 * d); i++)
@@ -122,8 +200,9 @@ namespace Lanternvale.Game
                     p.baseAlpha = R(0.3f, 0.5f);
                     rainCount++;
                 }
-                for (int i = 0; i < 24; i++) splashes.Add(new Splash());
             }
+            if (a.rain || a.drips)
+                for (int i = 0; i < 24; i++) splashes.Add(new Splash());
             if (a.embers)
             {
                 foreach (var prop in view.Def.props)
@@ -143,6 +222,7 @@ namespace Lanternvale.Game
             if (glowCount > 0) glow = new BillboardBatch("Glow Motes", root, Materials3D.AdditiveFor(WorldTextures.Glow), glowCount);
             if (leafCount > 0) leaves = new BillboardBatch("Leaves", root, Materials3D.LitTransparent(WorldTextures.Leaf), leafCount, 5);
             if (mistCount > 0) mist = new BillboardBatch("Mist", root, Materials3D.LitTransparent(WorldTextures.Mist), mistCount, 6);
+            if (flakeCount > 0) flakes = new BillboardBatch("Flakes", root, Materials3D.LitTransparent(WorldTextures.Dot), flakeCount, 5);
             if (rainCount > 0)
             {
                 rain = new BillboardBatch("Rain", root, Materials3D.LitTransparent(WorldTextures.Streak), rainCount, 7);
@@ -204,6 +284,7 @@ namespace Lanternvale.Game
             if (leaves != null) leaves.Begin();
             if (mist != null) mist.Begin();
             if (rain != null) rain.Begin();
+            if (flakes != null) flakes.Begin();
 
             for (int i = 0; i < ps.Count; i++)
             {
@@ -293,6 +374,97 @@ namespace Lanternvale.Game
                         rain.Add(p.pos, side, axis * (p.size * 0.5f), C(p.color, p.baseAlpha));
                         break;
                     }
+                    case Kind.Snow:
+                    {
+                        // slow flakes, swaying as they fall; landed ones start again high above a spot near the view
+                        float sway = Mathf.Sin(time * 0.9f + p.phase) * 0.35f;
+                        p.pos += new Vector3((p.vel.x + sway) * (0.5f + 0.5f * wind), p.vel.y + Mathf.Cos(time * 0.7f + p.phase) * 0.12f, p.vel.z) * dt;
+                        if (p.pos.z > -0.02f) p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(7f, 9f));
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        float fadeIn = Mathf.Clamp01((-p.pos.z) / 0.25f);
+                        flakes.Add(p.pos, right * p.size, up * p.size, C(p.color, p.baseAlpha * fadeIn));
+                        break;
+                    }
+                    case Kind.Ash:
+                    {
+                        // grey flakes tumbling down on the wind (a flat flake turning: its width flickers)
+                        float sway = Mathf.Sin(time * 1.1f + p.phase) * 0.45f;
+                        p.pos += new Vector3((p.vel.x + sway) * (0.4f + 0.6f * wind), p.vel.y + Mathf.Cos(time * 0.8f + p.phase) * 0.15f,
+                                             p.vel.z + Mathf.Cos(time * 1.7f + p.phase) * 0.1f) * dt;
+                        if (p.pos.z > -0.02f) p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(6f, 8f));
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        p.rot += p.spin * dt;
+                        float a = p.rot * Mathf.Deg2Rad;
+                        float cs = Mathf.Cos(a), sn = Mathf.Sin(a);
+                        float tumble = 0.3f + 0.7f * Mathf.Abs(Mathf.Cos(time * 2.4f + p.phase));
+                        var r = (right * cs + up * sn) * (p.size * tumble);
+                        var u = (up * cs - right * sn) * (p.size * 0.7f);
+                        flakes.Add(p.pos, r, u, C(p.color, p.baseAlpha * Mathf.Clamp01((-p.pos.z) / 0.3f)));
+                        break;
+                    }
+                    case Kind.Spark:
+                    {
+                        p.pos += new Vector3(p.vel.x * (0.4f + 0.6f * wind) + Mathf.Sin(time * 1.3f + p.phase) * 0.3f, p.vel.y, p.vel.z) * dt;
+                        if (p.pos.z > -0.05f) p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(6f, 8f));
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        // cooling as it falls: bright orange high up, a dull red near the ground
+                        float hot = Mathf.Clamp01((-p.pos.z) / 6f);
+                        float flick = 0.7f + 0.3f * Mathf.Sin(time * 9f + p.phase);
+                        var col = Color.Lerp(new Color(0.9f, 0.3f, 0.12f), new Color(1f, 0.66f, 0.28f), hot);
+                        glow.Add(p.pos, right * p.size, up * p.size, C(col, (0.35f + 0.55f * hot) * flick));
+                        break;
+                    }
+                    case Kind.Dust:
+                    {
+                        // motes hanging in the still air, wandering slowly; they glint as they turn
+                        float ang = Mathf.PerlinNoise(time * 0.07f + p.phase, p.phase * 0.53f) * Mathf.PI * 4f;
+                        p.pos += new Vector3(Mathf.Cos(ang) * 0.07f, Mathf.Sin(ang) * 0.07f, Mathf.Sin(time * 0.4f + p.phase) * 0.03f) * dt;
+                        p.pos.z = Mathf.Clamp(p.pos.z, -4.8f, -0.3f);
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        float glint = 0.5f + 0.5f * Mathf.Sin(time * 1.3f + p.phase * 5f);
+                        glow.Add(p.pos, right * p.size, up * p.size, C(p.color, 0.1f + 0.32f * glint * glint));
+                        break;
+                    }
+                    case Kind.Wisp:
+                    {
+                        float ang = Mathf.PerlinNoise(time * 0.1f + p.phase, p.phase * 0.41f) * Mathf.PI * 4f;
+                        float bob = Mathf.Sin(time * 0.6f + p.phase) * 0.08f;
+                        p.pos += new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), bob) * (0.22f * dt);
+                        p.pos.z = Mathf.Clamp(p.pos.z, -1.6f, -0.25f);
+                        p.pos.x = Wrap(p.pos.x, lookAt.x, Reach);
+                        p.pos.y = Wrap(p.pos.y, lookAt.y, Reach);
+                        float pulse = 0.5f + 0.5f * Mathf.Sin(time * 0.8f + p.phase * 2f);
+                        float vis = Mathf.Lerp(0.18f, 0.95f, night);
+                        float s = p.size * (0.85f + 0.3f * pulse);
+                        glow.Add(p.pos, right * s, up * s, C(p.color, vis * (0.35f + 0.65f * pulse)));
+                        break;
+                    }
+                    case Kind.Drip:
+                    {
+                        if (p.life > 0f)
+                        {
+                            // gathering on the roof: wait, then fall from high above a spot near the view
+                            p.life -= dt;
+                            if (p.life <= 0f) p.pos = new Vector3(lookAt.x + R(-Reach, Reach), lookAt.y + R(-Reach, Reach), -R(7f, 9.5f));
+                            break;
+                        }
+                        p.pos += p.vel * dt;
+                        if (p.pos.z > 0f)
+                        {
+                            SpawnSplash(new Vector3(p.pos.x, p.pos.y, -0.02f));
+                            p.life = R(0.8f, 4f);
+                            break;
+                        }
+                        var axis = p.vel.normalized;
+                        var side = Vector3.Cross(axis, camPos - p.pos);
+                        side = side.sqrMagnitude > 1e-6f ? side.normalized * 0.02f : right * 0.02f;
+                        rain.Add(p.pos, side, axis * (p.size * 0.5f), C(p.color, p.baseAlpha));
+                        break;
+                    }
                     case Kind.Ember:
                     {
                         p.age += dt;
@@ -327,6 +499,7 @@ namespace Lanternvale.Game
             if (leaves != null) leaves.End();
             if (mist != null) mist.End();
             if (rain != null) rain.End();
+            if (flakes != null) flakes.End();
         }
 
         void SpawnSplash(Vector3 at)
@@ -347,6 +520,7 @@ namespace Lanternvale.Game
             if (mist != null) mist.Dispose();
             if (rain != null) rain.Dispose();
             if (rings != null) rings.Dispose();
+            if (flakes != null) flakes.Dispose();
         }
     }
 }

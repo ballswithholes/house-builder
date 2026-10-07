@@ -300,6 +300,218 @@ namespace Lanternvale.Game
             }
         }
 
+        // ------------------------------------------------------------------ the expansion biomes' detail layers (alpha = cover)
+
+        static Texture2D scree, puddles, snowDust, roots, ash;
+
+        /// <summary>
+        /// Tiling scree (3 m per tile; alpha = the stones): angular grey-brown stones and grit, lit from above-left, with
+        /// dark gaps — rubble at the foot of cave and crypt walls.
+        /// </summary>
+        public static Texture2D Scree
+        {
+            get
+            {
+                if (scree != null) return scree;
+                const int n = 256;
+                var rng = new System.Random(2027);
+                float R() => (float)rng.NextDouble();
+                var col = new Color[n * n];
+                var bg = new Color(0.46f, 0.43f, 0.4f, 0f);
+                for (int i = 0; i < col.Length; i++) col[i] = bg;
+                // grit first, then stones on top (bigger ones last)
+                for (int i = 0; i < 900; i++)
+                    StampStone(col, n, R() * n, R() * n, 1.2f + R() * 1.6f, R() * Mathf.PI, 5, Tone(rng, 0.42f, 0.4f, 0.38f, 0.14f), 0.8f);
+                for (int i = 0; i < 170; i++)
+                    StampStone(col, n, R() * n, R() * n, 3f + R() * 6f, R() * Mathf.PI, 4 + rng.Next(3), Tone(rng, 0.56f, 0.53f, 0.5f, 0.16f), 1f);
+                return scree = Finish("lv_world_scree", n, col);
+            }
+        }
+
+        /// <summary>
+        /// Tiling puddles (5 m per tile; alpha = the water): still, sky-tinted pools with a darker muddy rim and a pale
+        /// glint along their far edge — the fen's wet ground.
+        /// </summary>
+        public static Texture2D Puddles
+        {
+            get
+            {
+                if (puddles != null) return puddles;
+                const int n = 256;
+                var rng = new System.Random(3301);
+                float R() => (float)rng.NextDouble();
+                var field = new float[n * n];
+                // a few soft blobs per tile, summed (wrapping), thresholded into puddle shapes
+                for (int i = 0; i < 9; i++)
+                {
+                    float cx = R() * n, cy = R() * n, rx = 14f + R() * 26f, ry = rx * (0.45f + 0.35f * R()), ang = R() * Mathf.PI;
+                    float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+                    int ext = Mathf.CeilToInt(rx * 1.6f);
+                    for (int y = -ext; y <= ext; y++)
+                        for (int x = -ext; x <= ext; x++)
+                        {
+                            float lx = (x * ca + y * sa) / rx, ly = (-x * sa + y * ca) / ry;
+                            float d = lx * lx + ly * ly;
+                            if (d > 2.5f) continue;
+                            int k = Wrap(Mathf.RoundToInt(cy) + y, n) * n + Wrap(Mathf.RoundToInt(cx) + x, n);
+                            field[k] += Mathf.Exp(-d * 1.6f);
+                        }
+                }
+                var lowN = TileNoise(n, 16, rng);
+                var col = new Color[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        int k = y * n + x;
+                        float f = field[k] + (lowN[k] - 0.5f) * 0.35f;
+                        float water = Smooth(0.42f, 0.5f, f);
+                        float rim = Smooth(0.28f, 0.42f, f) * (1f - water);
+                        // the far (+v) edge catches the sky
+                        float glint = water * (1f - Smooth(0.5f, 0.62f, f)) * 0.6f;
+                        var w = Color.Lerp(new Color(0.16f, 0.21f, 0.21f), new Color(0.26f, 0.32f, 0.31f), lowN[k]);
+                        w = Color.Lerp(w, new Color(0.7f, 0.76f, 0.74f), glint);
+                        var mud = new Color(0.27f, 0.25f, 0.18f);
+                        var c = Color.Lerp(mud, w, water);
+                        c.a = Mathf.Max(water, rim * 0.75f);
+                        col[k] = c;
+                    }
+                return puddles = Finish("lv_world_puddles", n, col);
+            }
+        }
+
+        /// <summary>Tiling snow dust (4 m per tile; alpha = the snow): soft drifts with a few sparkling grains.</summary>
+        public static Texture2D SnowDust
+        {
+            get
+            {
+                if (snowDust != null) return snowDust;
+                const int n = 256;
+                var rng = new System.Random(4409);
+                float R() => (float)rng.NextDouble();
+                var a = TileNoise(n, 6, rng);
+                var b = TileNoise(n, 20, rng);
+                var col = new Color[n * n];
+                for (int i = 0; i < col.Length; i++)
+                {
+                    float f = a[i] * 0.7f + b[i] * 0.3f;
+                    float cover = Smooth(0.48f, 0.66f, f);
+                    float shade = 0.9f + 0.1f * b[i];
+                    col[i] = new Color(0.84f * shade, 0.91f * shade, 1f * shade, cover);
+                }
+                for (int i = 0; i < 260; i++)
+                {
+                    int k = rng.Next(n) * n + rng.Next(n);
+                    col[k] = new Color(1f, 1f, 1f, Mathf.Max(col[k].a, 0.6f + 0.4f * R()));
+                }
+                return snowDust = Finish("lv_world_snowdust", n, col);
+            }
+        }
+
+        /// <summary>Tiling roots (5 m per tile; alpha = the roots): dark, branching roots with a violet sheen.</summary>
+        public static Texture2D Roots
+        {
+            get
+            {
+                if (roots != null) return roots;
+                const int n = 512;
+                var rng = new System.Random(5521);
+                float R() => (float)rng.NextDouble();
+                var col = new Color[n * n];
+                var bg = new Color(0.26f, 0.2f, 0.24f, 0f);
+                for (int i = 0; i < col.Length; i++) col[i] = bg;
+                for (int r = 0; r < 9; r++)
+                    Root(col, n, rng, R() * n, R() * n, R() * Mathf.PI * 2f, 7f + R() * 5f, 3);
+                return roots = Finish("lv_world_roots", n, col);
+            }
+        }
+
+        static void Root(Color[] col, int n, System.Random rng, float x, float y, float ang, float w, int depth)
+        {
+            float R() => (float)rng.NextDouble();
+            int steps = 18 + rng.Next(18);
+            var tone = new Color(0.3f, 0.22f, 0.26f) * (0.9f + 0.25f * R());
+            for (int i = 0; i < steps && w > 0.8f; i++)
+            {
+                float len = 6f + R() * 6f;
+                ang += (R() - 0.5f) * 0.7f;
+                float nx = x + Mathf.Cos(ang) * len, ny = y + Mathf.Sin(ang) * len;
+                // a pale top-light along the root
+                StampStroke(col, n, (x + nx) * 0.5f, (y + ny) * 0.5f, ang, len + w * 0.5f, w, tone);
+                StampStroke(col, n, (x + nx) * 0.5f - Mathf.Sin(ang) * w * 0.18f, (y + ny) * 0.5f + Mathf.Cos(ang) * w * 0.18f, ang, len, w * 0.3f, tone * 1.45f);
+                x = nx; y = ny;
+                w *= 0.95f;
+                if (depth > 0 && R() < 0.14f) Root(col, n, rng, x, y, ang + (R() < 0.5f ? 0.9f : -0.9f), w * 0.65f, depth - 1);
+            }
+        }
+
+        /// <summary>Tiling ash (4.5 m per tile; alpha = the ash): grey drifts, soot-black smudges and charred flecks.</summary>
+        public static Texture2D Ash
+        {
+            get
+            {
+                if (ash != null) return ash;
+                const int n = 256;
+                var rng = new System.Random(6607);
+                var a = TileNoise(n, 5, rng);
+                var b = TileNoise(n, 18, rng);
+                var c2 = TileNoise(n, 9, rng);
+                var col = new Color[n * n];
+                for (int i = 0; i < col.Length; i++)
+                {
+                    float f = a[i] * 0.65f + b[i] * 0.35f;
+                    float cover = Smooth(0.45f, 0.65f, f) * 0.8f;
+                    float soot = Smooth(0.68f, 0.8f, c2[i]);
+                    var g = Color.Lerp(new Color(0.62f, 0.6f, 0.58f), new Color(0.2f, 0.18f, 0.18f), soot) * (0.92f + 0.12f * b[i]);
+                    g.a = Mathf.Max(cover, soot * 0.35f);
+                    col[i] = g;
+                }
+                for (int i = 0; i < 400; i++)
+                {
+                    int x = rng.Next(n), y = rng.Next(n);
+                    StampStone(col, n, x, y, 0.8f + (float)rng.NextDouble() * 1.4f, (float)rng.NextDouble() * Mathf.PI, 4, new Color(0.14f, 0.12f, 0.12f), 0.9f);
+                }
+                return ash = Finish("lv_world_ash", n, col);
+            }
+        }
+
+        static Color Tone(System.Random rng, float r, float g, float b, float spread)
+        {
+            float k = 1f + ((float)rng.NextDouble() - 0.5f) * 2f * spread;
+            float warm = ((float)rng.NextDouble() - 0.5f) * 0.06f;
+            return new Color(r * k + warm, g * k, b * k - warm);
+        }
+
+        /// <summary>An angular stone (a jittered polygon) lit from above-left, with a dark contact rim.</summary>
+        static void StampStone(Color[] col, int n, float cx, float cy, float rad, float rot, int sides, Color tone, float alpha)
+        {
+            int ext = Mathf.CeilToInt(rad * 1.5f) + 1;
+            for (int y = -ext; y <= ext; y++)
+                for (int x = -ext; x <= ext; x++)
+                {
+                    float dx = x + 0.5f, dy = y + 0.5f;
+                    float ang = Mathf.Atan2(dy, dx) - rot;
+                    // distance to a regular polygon's edge (angular silhouette)
+                    float sector = Mathf.PI * 2f / sides;
+                    float local = Mathf.Repeat(ang, sector) - sector * 0.5f;
+                    float edge = rad * Mathf.Cos(sector * 0.5f) / Mathf.Cos(local);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) / edge;
+                    if (d > 1.15f) continue;
+                    float a = (1f - Smooth(0.85f, 1.1f, d)) * alpha;
+                    float lit = 1.05f - 0.25f * (dx / rad * 0.5f - dy / rad * 0.7f) * 0.5f - 0.25f * Smooth(0.6f, 1f, d);
+                    int k = Wrap(Mathf.RoundToInt(cy) + y, n) * n + Wrap(Mathf.RoundToInt(cx) + x, n);
+                    var o = col[k];
+                    var rgb = Color.Lerp(o.a > 0.01f ? o : tone, tone * lit, a);
+                    col[k] = new Color(rgb.r, rgb.g, rgb.b, Mathf.Max(o.a, a));
+                }
+        }
+
+        static Texture2D Finish(string name, int n, Color[] col)
+        {
+            var px = new Color32[n * n];
+            for (int i = 0; i < px.Length; i++) px[i] = col[i];
+            return Make(name, n, n, px, TextureWrapMode.Repeat);
+        }
+
         /// <summary>The rake's ripples across a gravel tile (u, v in tile units): −1 furrow … 1 crest, gently wavering.</summary>
         static float Ripple(float u, float v) =>
             Mathf.Sin((v * 10f + 0.16f * Mathf.Sin(u * Mathf.PI * 4f) + 0.05f * Mathf.Sin(u * Mathf.PI * 10f)) * Mathf.PI * 2f);

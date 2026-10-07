@@ -5,7 +5,13 @@
 // worn paths, shade under trees and buildings, sunny crests, field patches on far hills), a detail layer painted over
 // the ground by a per-vertex weight (raked gravel around the shrine's paving, leaf litter under the forest's trees),
 // ground cover (grass tufts, flowers, stones, outlined bushes, sparse trees) outside the walkable area, and, when the
-// map has a bridge, a brook under it.
+// map has a bridge, a brook under it (or, with MapDef.water, its rivers, ponds, fords and bridges: MapTerrain.Water.cs).
+//
+// The look comes from the map's biome (Biomes.cs): ground and surroundings textures and tints, relief (hills, rolling
+// downs, a flat fen with pools, mountains, summit crags, or the walls of an indoor map), detail layer, ground cover and
+// hill trees. MapDef.paths are painted trails in any direction (MapTerrain.Paths.cs); MapDef.fill dresses the inside
+// of the map with the biome's ground cover (MapTerrain.Cover.cs); indoor maps (caves, crypts, the Hollow Heart) rise
+// into rock or masonry walls at the back and sides and fall into darkness at the front (MapTerrain.Indoor.cs).
 //
 // Paved maps (the shrine): the flagstones are only a processional walkway along the trail and forecourts around the
 // gate, lanterns and statues; pale raked gravel borders them and moss / short grass covers the rest.
@@ -18,7 +24,7 @@ using UnityEngine.Rendering;
 
 namespace Lanternvale.Game
 {
-    internal sealed class MapTerrain
+    internal sealed partial class MapTerrain
     {
         // flat margins around the walkable rect (props and building backs sit there)
         public const float FlatSide = 4f, FlatBack = 4.5f, FlatFront = 3f;
@@ -33,6 +39,8 @@ namespace Lanternvale.Game
         struct Blot { public Vector2 p; public float r; public Color tint; public float k; public bool dapple; }
         readonly List<Blot> blots = new List<Blot>();
         readonly List<Vector2> corridors = new List<Vector2>();   // x: −1 left / +1 right, y: centre
+        // exits on the back (y ≈ D) and front (y ≈ 0) edges: the x centres of their roads through the hills
+        readonly List<float> backExits = new List<float>(), frontExits = new List<float>();
 
         // worn ground (village): doorsteps and the plaza's furniture (ellipses), little lanes from doors to the paths
         struct Wear { public Vector2 p; public float rx, ry, gather; }   // rx = 0: no spot of its own
@@ -41,6 +49,9 @@ namespace Lanternvale.Game
         readonly List<Lane> lanes = new List<Lane>();
 
         // style
+        BiomeStyle style;
+        /// <summary>Indoors: walls instead of hills (MapTerrain.Indoor.cs).</summary>
+        bool walled;
         Color innerTint = Color.white, sideTint = Color.white, meadowTint = Color.white, pathTint = new Color(1.08f, 0.97f, 0.86f);
         float blendStart = 1.5f, blendEnd = 7f;
         bool fields, forestBehind, cliffsBehind;
@@ -53,7 +64,7 @@ namespace Lanternvale.Game
         bool forest;
         Color mossTint = Color.white, gravelTint = Color.white;
         // shrine: the walkway's centreline, forecourts around the gate / lanterns / statues, lanes joining them to it
-        readonly List<Vector2> walk = new List<Vector2>();
+        readonly List<List<Vector2>> walks = new List<List<Vector2>>();
         const float WalkHalf = 2.4f;
         struct Pad { public Vector2 p; public float rx, ry; }
         readonly List<Pad> pads = new List<Pad>();
@@ -78,11 +89,30 @@ namespace Lanternvale.Game
         /// </summary>
         public static Texture2D DetailTexture(MapDef def, out float planarScale)
         {
-            string g = def != null && !string.IsNullOrEmpty(def.ground) ? def.ground : "";
-            if (g.Contains("shrine")) { planarScale = 1f / 2.4f; return WorldTextures.Gravel; }
-            if (g.Contains("forest")) { planarScale = 1f / 3.2f; return WorldTextures.LeafLitter; }
+            var st = StyleOf(def);
             planarScale = 0.25f;
-            return null;
+            Texture2D tex;
+            switch (st.Detail)
+            {
+                case BiomeDetail.Gravel: tex = WorldTextures.Gravel; break;
+                case BiomeDetail.LeafLitter: tex = WorldTextures.LeafLitter; break;
+                case BiomeDetail.Scree: tex = WorldTextures.Scree; break;
+                case BiomeDetail.Puddles: tex = WorldTextures.Puddles; break;
+                case BiomeDetail.SnowDust: tex = WorldTextures.SnowDust; break;
+                case BiomeDetail.Roots: tex = WorldTextures.Roots; break;
+                case BiomeDetail.Ash: tex = WorldTextures.Ash; break;
+                default: return null;
+            }
+            planarScale = 1f / st.DetailTile;
+            return tex;
+        }
+
+        /// <summary>The map's biome style; an indoor environment on an outdoor biome gets the cave (or crypt) style.</summary>
+        internal static BiomeStyle StyleOf(MapDef def)
+        {
+            var st = Biomes.For(def);
+            if (!st.Indoor && Biomes.IsIndoor(def)) st = Biomes.ById(def.environment == "crypt" ? Biomes.Crypt : Biomes.Cave);
+            return st;
         }
 
         public MapTerrain(MapDef def, Transform parent, List<Mesh> owned)
@@ -120,39 +150,24 @@ namespace Lanternvale.Game
 
         void Analyse()
         {
-            string ground = string.IsNullOrEmpty(def.ground) ? "ground_meadow" : def.ground;
-            var gt = string.IsNullOrEmpty(def.groundTint) ? Color.white : Ui.Hex(def.groundTint);
+            style = StyleOf(def);
+            walled = style.Indoor;
+            string tintHex = Biomes.GroundTint(def);
+            var gt = string.IsNullOrEmpty(tintHex) ? Color.white : Ui.Hex(tintHex);
             // the lights are bright on up-facing ground: a little under white keeps the painted ground as painted
-            innerTint = gt * 0.86f;
-            if (ground.Contains("forest"))
-            {
-                // a sun-dappled wood: the painted moss a little brighter, the surroundings a fresh, lighter green
-                forest = true;
-                innerTint = gt * 0.93f;
-                sideTint = new Color(0.76f, 0.88f, 0.68f);
-                blendStart = 4f; blendEnd = 15f;
-            }
-            else if (ground.Contains("shrine"))
-            {
-                pavedInside = true;
-                innerTint = gt * 0.9f;
-                // moss and short grass (the meadow texture, deepened), pale raked gravel (the detail layer)
-                mossTint = new Color(0.66f, 0.86f, 0.56f);
-                gravelTint = new Color(0.94f, 0.92f, 0.82f);
-                sideTint = new Color(0.7f, 0.86f, 0.62f);
-                blendStart = 1.2f; blendEnd = 6f;
-            }
-            else
-            {
-                sideTint = new Color(0.94f, 0.98f, 0.88f);
-                blendStart = 1.5f; blendEnd = 7.5f;
-            }
-            if (ground.Contains("village"))
-            {
-                meadowInside = true;
-                // a touch under the surroundings' exposure, like the map's own ground (lit from straight above)
-                meadowTint = new Color(0.9f, 0.95f, 0.84f);
-            }
+            innerTint = gt * style.Inner;
+            // forest: a sun-dappled wood, the painted moss a little brighter, the surroundings a fresh, lighter green;
+            // shrine: paving with moss and short grass (the meadow texture, deepened) and pale raked gravel (detail)
+            forest = style.Forest;
+            pavedInside = style.Paved;
+            mossTint = style.MossTint;
+            gravelTint = style.GravelTint;
+            sideTint = style.SideTint;
+            blendStart = style.BlendStart; blendEnd = style.BlendEnd;
+            // village: a meadow, a touch under the surroundings' exposure (lit from straight above), worn where feet go
+            meadowInside = style.MeadowInside;
+            meadowTint = style.MeadowTint;
+            fields = style.Fields;
             foreach (var l in def.layers)
             {
                 if (l == null || string.IsNullOrEmpty(l.art)) continue;
@@ -180,7 +195,7 @@ namespace Lanternvale.Game
                     litter.Add(new Litter { p = pos + new Vector2(0f, 0.3f), r = (a.Contains("tree_dead") ? 2.2f : 3.4f) * sc, k = a.Contains("tree_dead") ? 0.55f : 1f });
                 else if (forest && (a.Contains("stump") || a.Contains("log") || a.Contains("rock_large")))
                     litter.Add(new Litter { p = pos, r = 1.6f * sc, k = 0.6f });
-                if (a.Contains("bridge") && !HasStream)
+                if (a.Contains("bridge") && !HasStream && def.water.Count == 0)
                 {
                     HasStream = true;
                     streamX = pos.x;
@@ -189,11 +204,16 @@ namespace Lanternvale.Game
             }
             foreach (var t in def.transitions)
             {
-                if (t == null) continue;
+                // a hidden entrance gets no road (it would give the secret away)
+                if (t == null || t.hidden) continue;
                 if (t.pos.x <= 3.5f) corridors.Add(new Vector2(-1f, t.pos.y));
                 else if (t.pos.x >= W - 3.5f) corridors.Add(new Vector2(1f, t.pos.y));
+                else if (t.pos.y >= D - 3.5f) backExits.Add(t.pos.x);
+                else if (t.pos.y <= 3.5f) frontExits.Add(t.pos.x);
             }
             AnalysePaths();
+            AnalyseDataPaths();
+            AnalyseWater();
             if (meadowInside) AnalyseWear();
             if (pavedInside) AnalyseShrine();
         }
@@ -206,18 +226,30 @@ namespace Lanternvale.Game
         void AnalyseShrine()
         {
             PathChain main = null;
-            foreach (var ch in chains) if (main == null || ch.x1 - ch.x0 > main.x1 - main.x0) main = ch;
+            foreach (var ch in chains) if (!ch.data && (main == null || ch.x1 - ch.x0 > main.x1 - main.x0)) main = ch;
+            var walk = new List<Vector2>();
             if (main != null)
             {
                 var d = main.decals;
                 walk.Add(new Vector2(main.x0, d[0].pos.y));
                 for (int i = 0; i < d.Count; i++) walk.Add(new Vector2(d[i].pos.x, d[i].pos.y));
                 walk.Add(new Vector2(main.x1, d[d.Count - 1].pos.y));
+                walks.Add(walk);
             }
-            else
+            // MapDef.paths are walkways too (a terraced climb in any direction), along their smoothed centrelines
+            foreach (var ch in chains)
+            {
+                if (!ch.data) continue;
+                var w = new List<Vector2>();
+                for (int i = 0; i < ch.pts.Count; i += 4) w.Add(ch.pts[i]);
+                w.Add(ch.pts[ch.pts.Count - 1]);
+                walks.Add(w);
+            }
+            if (walks.Count == 0)
             {
                 walk.Add(new Vector2(-3f, D * 0.45f));
                 walk.Add(new Vector2(W + 3f, D * 0.45f));
+                walks.Add(walk);
             }
             foreach (var p in def.props)
             {
@@ -246,15 +278,19 @@ namespace Lanternvale.Game
             float best = float.MaxValue;
             nearest = new Vector2(x, y);
             var q = new Vector2(x, y);
-            for (int i = 0; i + 1 < walk.Count; i++)
+            for (int k = 0; k < walks.Count; k++)
             {
-                var a = walk[i];
-                var ab = walk[i + 1] - a;
-                float l2 = ab.sqrMagnitude;
-                float t = l2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / l2) : 0f;
-                var c = a + ab * t;
-                float d = Vector2.Distance(q, c);
-                if (d < best) { best = d; nearest = c; }
+                var walk = walks[k];
+                for (int i = 0; i + 1 < walk.Count; i++)
+                {
+                    var a = walk[i];
+                    var ab = walk[i + 1] - a;
+                    float l2 = ab.sqrMagnitude;
+                    float t = l2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / l2) : 0f;
+                    var c = a + ab * t;
+                    float d = Vector2.Distance(q, c);
+                    if (d < best) { best = d; nearest = c; }
+                }
             }
             return best;
         }
@@ -362,6 +398,7 @@ namespace Lanternvale.Game
         public float Height(float x, float y)
         {
             float h = BaseHeight(x, y);
+            if (waters.Count > 0) h -= WaterCarve(x, y);
             if (HasStream)
             {
                 float f = StreamDepthFactor(y);
@@ -377,6 +414,7 @@ namespace Lanternvale.Game
         /// <summary>Height without the brook's bed.</summary>
         public float BaseHeight(float x, float y)
         {
+            if (walled) return IndoorHeight(x, y);
             float ox = Mathf.Max(0f, Mathf.Max(-FlatSide - x, x - (W + FlatSide)));
             float ob = Mathf.Max(0f, y - (D + FlatBack));
             float of = Mathf.Max(0f, -FlatFront - y);
@@ -391,6 +429,8 @@ namespace Lanternvale.Game
                 float hw = StreamHalfWidth(y);
                 valley = 1f - Smooth(hw + 1f, hw + 8f + ob * 0.25f, Mathf.Abs(x - StreamX(y)));
             }
+            if (waters.Count > 0) valley = Mathf.Max(valley, WaterValley(x, y, Mathf.Max(ox, Mathf.Max(ob, of))));
+            float hills = style.HillScale;
 
             float h = 0f;
             if (ob > 0f)
@@ -398,12 +438,18 @@ namespace Lanternvale.Game
                 float e = Smooth(0f, 12f, ob);
                 float a = 15f * (1f - Mathf.Exp(-ob / 26f)) + 26f * Smooth(45f, 150f, ob) * (0.4f + n2);
                 if (cliffsBehind) a *= 0.7f;
-                h += e * a * (0.5f + 0.95f * n1) * (1f - 0.8f * valley);
+                a *= hills;
+                float back = e * a * (0.5f + 0.95f * n1) * (1f - 0.8f * valley);
+                // roads through the hills at the back edge's exits
+                for (int i = 0; i < backExits.Count; i++)
+                    back *= 1f - 0.85f * (1f - Smooth(2.5f, 8f, Mathf.Abs(x - backExits[i]))) * (1f - Smooth(70f, 120f, ob));
+                h += back;
             }
             if (ox > 0f)
             {
                 float e = Smooth(0f, 16f, ox);
                 float a = 1.0f + 7f * Smooth(12f, 70f, ox) + 14f * Smooth(60f, 140f, ox) * (0.4f + n2);
+                a *= hills;
                 float side = e * a * (0.45f + 1.0f * n1);
                 for (int i = 0; i < corridors.Count; i++)
                 {
@@ -418,11 +464,63 @@ namespace Lanternvale.Game
                 float bank = -0.55f * Smooth(0f, 7f, of);
                 float rolls = (n1 - 0.5f) * 1.4f * Smooth(5f, 16f, of);
                 float rise = 5f * Smooth(16f, 48f, of) * (0.5f + n2);
-                h += (bank + rolls + rise) * (1f - 0.6f * valley);
+                if (style.Relief == BiomeRelief.Crags)
+                {
+                    // a summit: the land falls away in front, over a rocky lip
+                    rise = -14f * Smooth(8f, 40f, of) * (0.6f + 0.6f * n2);
+                    bank = -1.2f * Smooth(1f, 8f, of);
+                }
+                float front = (bank + rolls + rise * hills) * (1f - 0.6f * valley);
+                for (int i = 0; i < frontExits.Count; i++)
+                    front *= 1f - 0.85f * (1f - Smooth(2.5f, 8f, Mathf.Abs(x - frontExits[i])));
+                h += front;
             }
             float o = Mathf.Max(ox, Mathf.Max(ob, of));
             h += (n3 - 0.5f) * 0.6f * Smooth(0f, 8f, o);
+            if (style.Relief != BiomeRelief.Hills) h += ReliefDetail(x, y, ox, ob, of, o, valley);
             return h;
+        }
+
+        /// <summary>
+        /// The biome's own touch on the land around the map: rolling downs smoothed out, the fen's hummocks and pools
+        /// (around a water table just under the ground), the peaks' sharp ridges, the summit's broken crags.
+        /// </summary>
+        float ReliefDetail(float x, float y, float ox, float ob, float of, float o, float valley)
+        {
+            switch (style.Relief)
+            {
+                case BiomeRelief.Flat:
+                {
+                    // hummocks and hollows: where the land dips under the water table (FenWaterLevel) a pool shows
+                    float p = Mathf.PerlinNoise(x * 0.085f + s4, y * 0.085f + s2) * 0.7f + Mathf.PerlinNoise(x * 0.23f + s6, y * 0.23f + s1) * 0.3f;
+                    return (p - 0.5f) * 1.1f * Smooth(1.2f, 7f, o) * (1f - 0.7f * valley);
+                }
+                case BiomeRelief.Rolling:
+                {
+                    // long soft swells
+                    float sw = Mathf.PerlinNoise(x * 0.02f + s2, y * 0.02f + s5);
+                    return (sw - 0.4f) * 5f * Smooth(6f, 40f, o) * (1f - 0.8f * valley);
+                }
+                case BiomeRelief.Mountains:
+                {
+                    // ridges climbing to snowy peaks behind and at the sides
+                    float r1 = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x * 0.026f + s3, y * 0.026f + s1) - 1f);
+                    float r2 = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x * 0.071f + s5, y * 0.071f + s4) - 1f);
+                    float ridge = r1 * r1 * 0.75f + r2 * r2 * 0.25f;
+                    float far = Mathf.Max(ob, ox * 0.8f);
+                    return ridge * (6f * Smooth(4f, 30f, far) + 30f * Smooth(30f, 140f, far)) * (1f - 0.85f * valley);
+                }
+                case BiomeRelief.Crags:
+                {
+                    // broken rock: sharp creases and knuckles
+                    float r1 = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x * 0.06f + s2, y * 0.06f + s6) - 1f);
+                    float r2 = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x * 0.17f + s4, y * 0.17f + s3) - 1f);
+                    float crag = r1 * r1 * r1 * 0.7f + r2 * r2 * 0.3f;
+                    float far = Mathf.Max(ob, ox);
+                    return crag * (4f * Smooth(1f, 14f, far) + 16f * Smooth(14f, 90f, far)) * (1f - 0.8f * valley);
+                }
+            }
+            return 0f;
         }
 
         /// <summary>Distance (m) of a ground point outside the walkable rect (0 inside).</summary>
@@ -444,6 +542,11 @@ namespace Lanternvale.Game
                 bool side = c.x < 0f ? x < 1f : x > W - 1f;
                 if (side && Mathf.Abs(y - c.y) < 3.2f + margin) return true;
             }
+            for (int i = 0; i < backExits.Count; i++)
+                if (y > D - 1f && Mathf.Abs(x - backExits[i]) < 3.2f + margin) return true;
+            for (int i = 0; i < frontExits.Count; i++)
+                if (y < 1f && Mathf.Abs(x - frontExits[i]) < 3.2f + margin) return true;
+            if (waters.Count > 0 && WaterEdge(x, y) < 0.6f + margin) return true;
             return false;
         }
 
@@ -498,6 +601,16 @@ namespace Lanternvale.Game
                 float wob = Mathf.Sin(ox * 0.09f + s1) * 1.2f;
                 float band = 1f - Smooth(0.8f, 2.0f, Mathf.Abs(y - cr.y - wob) + ragged * 0.6f);
                 road = Mathf.Max(road, band * Smooth(1f, 4f, ox) * (1f - Smooth(40f, 80f, ox)) * 0.7f);
+            }
+            for (int i = 0; i < backExits.Count + frontExits.Count; i++)
+            {
+                bool back = i < backExits.Count;
+                float cx = back ? backExits[i] : frontExits[i - backExits.Count];
+                float oy = back ? y - D : -y;
+                if (oy < 1f) continue;
+                float wob = Mathf.Sin(oy * 0.09f + s1) * 1.2f;
+                float band = 1f - Smooth(0.8f, 2.0f, Mathf.Abs(x - cx - wob) + ragged * 0.6f);
+                road = Mathf.Max(road, band * Smooth(1f, 4f, oy) * (1f - Smooth(40f, 80f, oy)) * 0.7f);
             }
             if (meadowInside)
             {
@@ -564,6 +677,7 @@ namespace Lanternvale.Game
                 lit = Mathf.Max(lit, Smooth(0.66f, 0.84f, drift) * 0.28f);
                 detail = lit * (1f - Smooth(3f, 12f, dOut));
             }
+            else if (!pavedInside && style.Detail != BiomeDetail.None) detail = BiomeDetailWeight(x, y, h, dOut, ragged);
             var c = Color.Lerp(inner, side, pavedInside ? blendOut : blend);
             // warm, slightly lighter trodden ground beside the paths (not on paving: the walkway is the path there)
             if (halo > 0f && dOut < 6f && !pavedInside)
@@ -611,8 +725,100 @@ namespace Lanternvale.Game
             float hx = BaseHeight(x + 1f, y) - BaseHeight(x - 1f, y), hy = BaseHeight(x, y + 1f) - BaseHeight(x, y - 1f);
             float steep = Mathf.Sqrt(hx * hx + hy * hy) * 0.5f;
             strength *= Mathf.Lerp(1f, 0.5f, Smooth(0.35f, 1.1f, steep));
-            tint = new Color(Mathf.Clamp01(c.r), Mathf.Clamp01(c.g), Mathf.Clamp01(c.b), 0f);
+            float emission = 0f;
+            bool original = style.Id == Biomes.Meadow || style.Id == Biomes.Village || style.Id == Biomes.Forest || style.Id == Biomes.Shrine;
+            if (!original)
+            {
+                // broad, soft light-and-shade swathes over the new biomes' ground: the painted tile never reads as a grid
+                float macro = Mathf.PerlinNoise(x * 0.045f + s3, y * 0.045f + s6) * 0.65f + Mathf.PerlinNoise(x * 0.12f + s1, y * 0.12f + s4) * 0.35f;
+                float mk = Mathf.Lerp(0.84f, 1.1f, macro);
+                c = new Color(c.r * mk * style.Tint.r, c.g * mk * style.Tint.g, c.b * mk * style.Tint.b);
+            }
+            if (waters.Count > 0) c = WaterBankTint(x, y, c, ref strength);
+            if (walled) c = IndoorTint(x, y, h, steep, c, ref strength, ref detail);
+            else if (!original) c = OutdoorBiomeTint(x, y, h, dOut, steep, c, ref strength, ref emission);
+            tint = new Color(Mathf.Clamp01(c.r), Mathf.Clamp01(c.g), Mathf.Clamp01(c.b), emission);
             blendDetail = new Vector2(blend, strength);
+        }
+
+        /// <summary>
+        /// Weight of the biome's detail layer: the fen's puddles, rubble at the foot of cave and crypt walls and in
+        /// loose patches, snow dust in the ice cave, roots in the Hollow Heart, ash and soot on the dragon's summit.
+        /// </summary>
+        float BiomeDetailWeight(float x, float y, float h, float dOut, float ragged)
+        {
+            float patch = Mathf.PerlinNoise(x * 0.13f + s3, y * 0.13f + s5);
+            float fine = Mathf.PerlinNoise(x * 0.37f + s6, y * 0.37f + s2);
+            float inside = DistanceInside(x, y);
+            float k;
+            switch (style.Detail)
+            {
+                case BiomeDetail.Puddles:
+                    // puddles gather in the low, wet patches; fewer on the map (more with a denser fill)
+                    k = Smooth(0.56f, 0.7f, patch * 0.8f + fine * 0.2f) * (dOut > 0f ? 1f : Mathf.Lerp(0.55f, 1f, Mathf.Clamp01(def.fill)));
+                    return k * (1f - Smooth(6f, 20f, dOut));
+                case BiomeDetail.Scree:
+                case BiomeDetail.SnowDust:
+                    // fallen from the walls: heaped along their foot, a few loose patches further in
+                    k = 1f - Smooth(0.5f, 3.2f, inside + ragged * 1.2f);
+                    k = Mathf.Max(k, Smooth(0.64f, 0.78f, patch) * 0.8f);
+                    if (dOut > 0f) k = Mathf.Max(k, 1f - Smooth(1.5f, 4f, dOut));
+                    return k;
+                case BiomeDetail.Roots:
+                    k = Smooth(0.5f, 0.66f, patch * 0.7f + fine * 0.3f);
+                    k = Mathf.Max(k, 1f - Smooth(0.5f, 3.5f, inside + ragged));
+                    return k * (dOut > 0f ? 1f - Smooth(2f, 5f, dOut) : 1f);
+                case BiomeDetail.Ash:
+                    k = Smooth(0.48f, 0.66f, patch * 0.75f + fine * 0.25f) * 0.85f;
+                    return k * (1f - Smooth(10f, 40f, dOut));
+            }
+            return 0f;
+        }
+
+        /// <summary>Distance (m) of a ground point inside the walkable rect from its nearest edge (0 outside).</summary>
+        float DistanceInside(float x, float y) => Mathf.Max(0f, Mathf.Min(Mathf.Min(x, W - x), Mathf.Min(y, D - y)));
+
+        /// <summary>
+        /// The new outdoor biomes' colours on the land: bare rock on steep slopes (peaks, the summit), the fen's darker,
+        /// wet hollows by the water table, scorched ground on the dragon's summit (embers glowing at their hearts).
+        /// </summary>
+        Color OutdoorBiomeTint(float x, float y, float h, float dOut, float steep, Color c, ref float strength, ref float emission)
+        {
+            if (style.Rock.a > 0f)
+            {
+                float rk = Smooth(0.45f, 1.05f, steep + (Mathf.PerlinNoise(x * 0.2f + s1, y * 0.2f + s4) - 0.5f) * 0.4f) * style.Rock.a;
+                if (rk > 0f)
+                {
+                    float band = 0.9f + 0.12f * Mathf.Sin(h * 2.3f + Mathf.PerlinNoise(x * 0.1f + s2, y * 0.1f + s6) * 4f);
+                    var rock = new Color(style.Rock.r * band, style.Rock.g * band, style.Rock.b * band);
+                    c = Color.Lerp(c, rock, rk);
+                    strength *= 1f - 0.6f * rk;
+                }
+            }
+            if (style.WaterTable && dOut > 0.5f)
+            {
+                // wet mud down by the pools, greener on the hummocks
+                float wet = 1f - Smooth(FenWaterLevel - 0.05f, FenWaterLevel + 0.35f, h);
+                c = new Color(c.r * Mathf.Lerp(1f, 0.72f, wet), c.g * Mathf.Lerp(1f, 0.76f, wet), c.b * Mathf.Lerp(1f, 0.7f, wet));
+            }
+            if (style.Id == Biomes.Roost)
+            {
+                // scorched patches: soot-black rings, still warm at the heart
+                // smaller, crisper scorches with ragged rims (a dragon's breath, not a cloud's shadow)
+                float sc = Mathf.PerlinNoise(x * 0.11f + s5, y * 0.11f + s1);
+                float burn = Smooth(0.68f, 0.72f, sc + (Mathf.PerlinNoise(x * 0.6f + s2, y * 0.6f + s3) - 0.5f) * 0.1f) * 0.85f;
+                if (burn > 0f)
+                {
+                    c = new Color(c.r * Mathf.Lerp(1f, 0.3f, burn), c.g * Mathf.Lerp(1f, 0.27f, burn), c.b * Mathf.Lerp(1f, 0.26f, burn));
+                    float heart = Smooth(0.79f, 0.84f, sc);
+                    if (heart > 0f)
+                    {
+                        c = Color.Lerp(c, new Color(0.62f, 0.26f, 0.12f), heart * 0.6f);
+                        emission = heart * 0.35f;
+                    }
+                }
+            }
+            return c;
         }
 
         // ================================================================== painted paths (decal_path_*)
@@ -732,18 +938,46 @@ namespace Lanternvale.Game
             return true;
         }
 
-        /// <summary>A trail of chained path decals: its centreline sampled every PathStep metres along x.</summary>
+        /// <summary>
+        /// A trail: chained path decals (its centreline sampled every PathStep metres along x), or a MapDef.paths
+        /// polyline (data: smoothed, sampled every DataPathStep metres along its length, in any direction).
+        /// </summary>
         sealed class PathChain
         {
             public string art;
             public Texture2D tex;
             public PathProfile profile;
             public int order;
+            public bool data;
             public float tile, texH;                   // art tile length along the trail, art height across it (m)
             public float x0, x1, yMin, yMax;
             public readonly List<PropDef> decals = new List<PropDef>();
             public readonly List<Vector2> pts = new List<Vector2>();
             public readonly List<float> half = new List<float>();   // half-width (m) of the trail itself
+            public readonly List<float> endD = new List<float>();   // distance (m) to the trail's nearer end
+            public readonly List<Rect> blocks = new List<Rect>();   // bounds of every BlockSize samples (nearest search)
+        }
+
+        const int BlockSize = 24;
+
+        /// <summary>The bounds of each run of BlockSize samples (NearestPath skips runs out of reach).</summary>
+        static void BuildBlocks(PathChain ch)
+        {
+            ch.blocks.Clear();
+            for (int b = 0; b < ch.pts.Count; b += BlockSize)
+            {
+                int e = Mathf.Min(ch.pts.Count, b + BlockSize + 1);
+                float xa = float.MaxValue, xb = float.MinValue, ya = float.MaxValue, yb = float.MinValue;
+                for (int i = b; i < e; i++)
+                {
+                    var p = ch.pts[i];
+                    if (p.x < xa) xa = p.x;
+                    if (p.x > xb) xb = p.x;
+                    if (p.y < ya) ya = p.y;
+                    if (p.y > yb) yb = p.y;
+                }
+                ch.blocks.Add(Rect.MinMaxRect(xa, ya, xb, yb));
+            }
         }
 
         const float PathStep = 0.1f;
@@ -842,9 +1076,11 @@ namespace Lanternvale.Game
                 y += shape * amp + (Mathf.PerlinNoise(x * 0.11f + phase, 0.37f) - 0.5f) * 0.45f;
                 ch.pts.Add(new Vector2(x, y));
                 ch.half.Add(meanHalf * ch.texH * (0.9f + 0.22f * Mathf.PerlinNoise(x * 0.17f + phase, 7.7f)));
+                ch.endD.Add(Mathf.Min(x - ch.x0, ch.x1 - x));
                 ch.yMin = Mathf.Min(ch.yMin, y);
                 ch.yMax = Mathf.Max(ch.yMax, y);
             }
+            BuildBlocks(ch);
         }
 
         /// <summary>The decal's painted trail offset (m, along y) from its centre at x — periodic beyond its own tile.</summary>
@@ -871,24 +1107,29 @@ namespace Lanternvale.Game
             float best = float.MaxValue;
             nearest = new Vector2(x, y);
             half = 1f;
+            // every sample within reach is visited (the nearest one wins); callers only care about trails within reach
             const float reach = 9f;
+            const float reach2 = reach * reach;
             for (int c = 0; c < chains.Count; c++)
             {
                 var ch = chains[c];
                 if (x < ch.x0 - reach || x > ch.x1 + reach || y < ch.yMin - reach || y > ch.yMax + reach) continue;
-                int last = ch.pts.Count - 1;
-                int i0 = Mathf.Clamp(Mathf.FloorToInt((x - reach - ch.x0) / PathStep), 0, last);
-                int i1 = Mathf.Clamp(Mathf.CeilToInt((x + reach - ch.x0) / PathStep), 0, last);
-                for (int i = i0; i <= i1; i++)
+                int n = ch.pts.Count;
+                for (int b = 0; b < ch.blocks.Count; b++)
                 {
-                    var p = ch.pts[i];
-                    float dx = p.x - x, dy = p.y - y, d2 = dx * dx + dy * dy;
-                    if (d2 >= best) continue;
-                    best = d2;
-                    nearest = p;
-                    // the trail narrows to nothing at its faded ends
-                    float endDist = Mathf.Min(p.x - ch.x0, ch.x1 - p.x);
-                    half = ch.half[i] * Mathf.Lerp(0.3f, 1f, Smooth(0f, 2.2f, endDist));
+                    var r = ch.blocks[b];
+                    if (x < r.xMin - reach || x > r.xMax + reach || y < r.yMin - reach || y > r.yMax + reach) continue;
+                    int i1 = Mathf.Min(n, (b + 1) * BlockSize);
+                    for (int i = b * BlockSize; i < i1; i++)
+                    {
+                        var p = ch.pts[i];
+                        float dx = p.x - x, dy = p.y - y, d2 = dx * dx + dy * dy;
+                        if (d2 >= best || d2 > reach2) continue;
+                        best = d2;
+                        nearest = p;
+                        // the trail narrows to nothing at its faded ends
+                        half = ch.half[i] * Mathf.Lerp(0.3f, 1f, Smooth(0f, 2.2f, ch.endD[i]));
+                    }
                 }
             }
             return best < float.MaxValue ? Mathf.Sqrt(best) : float.MaxValue;
@@ -996,7 +1237,7 @@ namespace Lanternvale.Game
             float z = -(0.006f + ord * 0.002f + (ch.order % 8) * 0.0003f);
             float fadeLen = Mathf.Clamp(tile * 0.14f, 0.6f, 1.6f);
             float phase = s5 + ch.order * 11.1f;
-            var tint = ch.decals[0].tint;
+            var tint = ch.decals.Count > 0 ? ch.decals[0].tint : "";
             int rows = RowT.Length;
             int b0 = verts.Count;
             int seg = 0;
@@ -1023,7 +1264,15 @@ namespace Lanternvale.Game
                     float jitter = Mathf.PerlinNoise(r * 1.7f + phase, (s < L * 0.5f ? 0.5f : 9.5f)) * 0.7f;
                     float fade = Smooth(0f, fadeLen, endDist - jitter);
                     var q = p + nrm * (RowT[r] * halfW);
-                    verts.Add(new Vector3(q.x, q.y, z));
+                    float lift = 0f;
+                    if (ch.data)
+                    {
+                        // a data trail follows the land (an indoor passage, a ford's banks) and gives way to water: it fades
+                        // into a ford, so the shallows and stepping stones show (a bridge carries the way over a river)
+                        lift = Mathf.Max(0f, Height(q.x, q.y));
+                        if (waters.Count > 0) fade *= Smooth(-0.7f, 0.05f, WaterEdge(q.x, q.y));
+                    }
+                    verts.Add(new Vector3(q.x, q.y, z - lift));
                     norms.Add(World3D.Up);
                     uvs.Add(new Vector2(u, cv + RowT[r] * hv));
                     cols.Add(DecalColor(tint, RowA[r] * fade));
@@ -1131,7 +1380,8 @@ namespace Lanternvale.Game
         {
             Material = material;
             // the village's dirt is worn into the meadow by vertex blend: a finer grid on the flat ground keeps it soft
-            float step = meadowInside || pavedInside ? 0.5f : 1f;
+            bool original = style.Id == Biomes.Meadow || style.Id == Biomes.Village || style.Id == Biomes.Forest || style.Id == Biomes.Shrine;
+            float step = meadowInside || pavedInside || !original || waters.Count > 0 ? 0.5f : 1f;
             var xs = Lines(-8f, W + 8f, -170f, W + 170f, 1.12f, 10f, step);
             var ys = Lines(-5f, D + 6f, -52f, D + 215f, 1.12f, 10f, step);
             int nx = xs.Count, ny = ys.Count;
@@ -1234,16 +1484,34 @@ namespace Lanternvale.Game
         /// </summary>
         public void BuildGroundCover(bool hillTrees)
         {
+            if (walled)
+            {
+                // indoors: rubble, spikes and the walls' dressing, no grass or trees
+                BuildBiomeCover();
+                BuildFill();
+                BuildWalls();
+                return;
+            }
+            if (style.Cover == BiomeCover.Meadow) BuildMeadowCover(hillTrees && style.HillTrees);
+            else
+            {
+                BuildBiomeCover();
+                if (hillTrees && style.HillTrees) BuildBiomeHillTrees();
+            }
+            BuildFill();
+        }
+
+        /// <summary>The original maps' ground cover (meadow, village, forest, shrine palettes) and hill trees.</summary>
+        void BuildMeadowCover(bool hillTrees)
+        {
             var rng = new System.Random(StableHash(def.id) * 7 + 11);
             float R() => (float)rng.NextDouble();
             float x0 = -46f, x1 = W + 46f;
             const float chunkW = 34f;
-            var grass = Ui.Hex("#7fa35a");
-            var grassDark = Ui.Hex("#5e8445");
-            var bushLeaf = Ui.Hex("#6e9a4e");
-            if (def.ground != null && def.ground.Contains("forest")) { grass = Ui.Hex("#5f8a4c"); grassDark = Ui.Hex("#456f3d"); bushLeaf = Ui.Hex("#5f8f4a"); }
-            if (def.ground != null && def.ground.Contains("shrine")) { grass = Ui.Hex("#86a070"); grassDark = Ui.Hex("#5f7a5c"); bushLeaf = Ui.Hex("#6a9256"); }
-            var flowers = new[] { Ui.Hex("#fff6e6"), Ui.Hex("#ffd86b"), Ui.Hex("#f2a7c3"), Ui.Hex("#b9a6f0"), Ui.Hex("#ffb38a") };
+            var grass = style.Grass;
+            var grassDark = style.GrassDark;
+            var bushLeaf = style.Bush;
+            var flowers = style.Flowers;
 
             for (float cx = x0; cx < x1; cx += chunkW)
             {
@@ -1284,7 +1552,7 @@ namespace Lanternvale.Game
             if (!hillTrees) return;
             // sparse clumps of trees on the hills (behind and to the sides), never on the walkable strip's doorstep
             var trees = new MeshBuilder(StableHash(def.id) + 99) { Jitter = 0.07f };
-            var leaf = new[] { Ui.Hex("#6f9a52"), Ui.Hex("#5d8c4c"), Ui.Hex("#83a85a"), Ui.Hex("#4f7b4a") };
+            var leaf = style.HillLeaf;
             int count = 0;
             for (float gx = -120f; gx < W + 120f; gx += 7f)
                 for (float gy = -40f; gy < D + 150f; gy += 7f)
@@ -1297,7 +1565,7 @@ namespace Lanternvale.Game
                     float clump = Mathf.PerlinNoise(x * 0.035f + s6, y * 0.035f + s3);
                     if (clump < 0.52f || R() > (clump - 0.45f) * 1.6f) continue;
                     float size = Mathf.Lerp(0.7f, 1.25f, R()) * Mathf.Lerp(1f, 1.5f, Smooth(30f, 120f, dOut));
-                    if (R() < 0.3f) Pine(trees, rng, Local(x, y, -0.2f), size * 7f, Paint.Shade(leaf[3], 0.9f));
+                    if (R() < style.PineShare) Pine(trees, rng, Local(x, y, -0.2f), size * 7f, Paint.Shade(leaf[3], 0.9f));
                     else RoundTree(trees, rng, Local(x, y, -0.2f), size * 5.5f, leaf[rng.Next(leaf.Length)]);
                     if (++count > 260) break;
                 }
@@ -1476,7 +1744,11 @@ namespace Lanternvale.Game
         /// <summary>The brook (maps with a bridge): a translucent, gently flowing ribbon lying in its carved bed.</summary>
         public void BuildStream(Color horizon)
         {
-            if (!HasStream) return;
+            if (!HasStream)
+            {
+                if (waters.Count > 0 || style.WaterTable) BuildWaters(horizon);
+                return;
+            }
             var verts = new List<Vector3>();
             var cols = new List<Color32>();
             var uvs = new List<Vector2>();
@@ -1540,6 +1812,13 @@ namespace Lanternvale.Game
         /// <summary>Flows the brook's ripples (one material property per frame).</summary>
         public void Update(float dt)
         {
+            if (riverMat != null)
+            {
+                riverScroll = Mathf.Repeat(riverScroll - dt * 0.12f, 1f);
+                riverMat.mainTextureOffset = new Vector2(Mathf.Sin(Time.time * 0.3f) * 0.02f, riverScroll);
+            }
+            // still water: only a slow sway of its ripples
+            if (stillMat != null) stillMat.mainTextureOffset = new Vector2(Mathf.Sin(Time.time * 0.11f) * 0.05f, Mathf.Cos(Time.time * 0.09f) * 0.05f);
             if (waterMat == null) return;
             waterScroll = Mathf.Repeat(waterScroll - dt * 0.12f, 1f);
             waterMat.mainTextureOffset = new Vector2(Mathf.Sin(Time.time * 0.3f) * 0.02f, waterScroll);
