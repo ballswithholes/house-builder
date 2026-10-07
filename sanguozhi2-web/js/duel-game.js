@@ -96,6 +96,11 @@
     twinsword: { name: '双股剑', style: 'dual', reach: 1.72, pow: 0.96 },
     twinji: { name: '双铁戟', style: 'dual', reach: 1.75, pow: 0.97 },
     twindao: { name: '双刀', style: 'dual', reach: 1.68 },
+    // 异域兵器（DESIGN-V2 §6）
+    gladius: { name: '短剑', style: 'one', reach: 1.66, pow: 1.03 },        // 罗马
+    lance: { name: '长矛', style: 'pole', reach: 2.12 },                    // 萨尔马提亚 / 安息 / 贵霜的骑矛
+    handaxe: { name: '战斧', style: 'one', reach: 1.7, pow: 1.03 },        // 日耳曼
+    tachi: { name: '直刀', style: 'one', reach: 1.76 },                     // 倭
   };
 
   // 知名武将的外观（未列出的按能力值与姓名哈希确定性生成）
@@ -150,23 +155,24 @@
     '沙摩柯': { culture: 'nanman', weapon: 'mace', weaponName: '铁蒺藜骨朵', skin: '#8a4a34' },
   };
 
-  // 文化缺省外观（DESIGN-V2 §6）
+  // 文化缺省外观（DESIGN-V2 §6）：冠帽 helm、甲胄 torso（zha 札甲 / segm 环片甲 / scale 鱼鳞甲 / coat 袍服 / bare 赤膊）、
+  // 袍色 coat（与势力色相混）、兵器 weapons（按姓名哈希挑选）、盾 shield（单手兵器时左手持盾）、饰物
   const CULTURE = {
     han: { helm: 'han', skin: '#e8b996', hair: '#16120f' },
     nanman: { helm: 'topknot', skin: '#a9714c', hair: '#120e0b', bareArms: true, hide: true },
-    yi: { helm: 'topknot', skin: '#a9714c', hair: '#120e0b', bareArms: true, hide: true },
-    wa: { helm: 'mizura', skin: '#e2b48e', hair: '#141010' },
-    korea: { helm: 'feather', skin: '#e8bb98', hair: '#151111' },
-    steppe: { helm: 'fur', skin: '#d9a77e', hair: '#1b1410' },
-    seasia: { helm: 'topknot', skin: '#9b6a48', hair: '#120e0b', bareArms: true },
-    tarim: { helm: 'fur', skin: '#e3b494', hair: '#3a2416' },
-    kushan: { helm: 'fur', skin: '#d6a07a', hair: '#24170f' },
-    persia: { helm: 'tiara', skin: '#d9a47c', hair: '#1a110c' },
-    arab: { helm: 'scarf', helmColor: '#e8e0cc', skin: '#c58f66', hair: '#1a110c' },
-    roman: { helm: 'galea', skin: '#e4b48e', hair: '#3a2618' },
-    celt: { helm: 'bald', skin: '#f0c8a6', hair: '#a8562a' },
-    german: { helm: 'bald', skin: '#efc6a4', hair: '#c49a4c' },
-    sarmatian: { helm: 'han', skin: '#e2b08a', hair: '#2a1a10' },
+    yi: { helm: 'yifeather', skin: '#a9714c', hair: '#120e0b', bareArms: true, paint: '#1e2c48', shells: true, weapons: ['spear', 'mace'] },
+    wa: { helm: 'mizura', skin: '#e2b48e', hair: '#141010', torso: 'coat', coat: '#d8ccb0', weapons: ['tachi', 'tachi', 'spear'], shield: 'wood', magatama: true, beard: 'short' },
+    korea: { helm: 'feather', skin: '#e8bb98', hair: '#151111', weapons: ['dao', 'spear', 'dao', 'shortji'] },
+    steppe: { helm: 'fur', skin: '#d9a77e', hair: '#1b1410', torso: 'coat', coat: '#7a5634', fur: true, weapons: ['dao', 'spear', 'mace'], bow: true },
+    seasia: { helm: 'goldcrown', skin: '#9b6a48', hair: '#120e0b', bareArms: true, gold: true, weapons: ['spear', 'dao'], shield: 'round', beard: 'none' },
+    tarim: { helm: 'hutmao', skin: '#e3b494', hair: '#3a2416', torso: 'coat', coat: '#9a4a4a', weapons: ['sword', 'spear'] },
+    kushan: { helm: 'pointed', skin: '#d6a07a', hair: '#24170f', torso: 'coat', coat: '#5a4a86', weapons: ['sword', 'lance'], gold: true },
+    persia: { helm: 'tiara', skin: '#d9a47c', hair: '#1a110c', torso: 'scale', weapons: ['lance', 'mace', 'sword'], beard: 'bushy' },
+    arab: { helm: 'kufiya', helmColor: '#ece4d0', skin: '#c58f66', hair: '#1a110c', torso: 'coat', coat: '#e8dfc8', weapons: ['spear', 'sword'], shield: 'round', beard: 'bushy' },
+    roman: { helm: 'galea', skin: '#e4b48e', hair: '#3a2618', torso: 'segm', armor: '#b9bec6', weapons: ['gladius', 'gladius', 'sword'], shield: 'scutum', beard: 'none' },
+    celt: { helm: 'celtic', skin: '#f0c8a6', hair: '#c0682e', torso: 'bare', paint: '#2a58b0', plaid: true, weapons: ['sword'], shield: 'oval', beard: 'long' },
+    german: { helm: 'suebian', skin: '#efc6a4', hair: '#c49a4c', torso: 'coat', coat: '#6a5a46', fur: true, weapons: ['handaxe', 'spear', 'handaxe'], shield: 'round', beard: 'bushy' },
+    sarmatian: { helm: 'conical', skin: '#e2b08a', hair: '#2a1a10', torso: 'scale', weapons: ['lance', 'lance', 'sword'] },
   };
 
   function hashStr(s) {
@@ -180,7 +186,12 @@
   function lookOf(gen, culture) {
     const name = (gen && gen.name) || '无名';
     const fix = LOOKS[name] || {};
-    const cul = culture || (gen && gen.culture) || fix.culture || 'han';
+    const WD = SG.WorldData;
+    let cul = culture || fix.culture || (gen && gen.culture);
+    if (!cul && WD && typeof WD.cultureOfGeneral === 'function') { try { cul = WD.cultureOfGeneral(name); } catch (e) { cul = null; } }
+    if (!CULTURE[cul]) cul = 'han';
+    let female = !!fix.female || (gen && (gen.sex === 'f' || gen.female === true));
+    if (!female && !fix.culture && WD && typeof WD.sexOf === 'function' && SG.WorldInfo && SG.WorldInfo[name]) { try { female = WD.sexOf(name) === 'f'; } catch (e) { /* 忽略 */ } }
     const base = CULTURE[cul] || CULTURE.han;
     const war = warOf(gen), intel = Number(gen && gen.intel) || 50;
     const h = hashStr(name);
@@ -189,7 +200,8 @@
       if (war >= 85) weapon = ['poleblade', 'spear', 'ji', 'spear', 'axe', 'poleblade'][h % 6];
       else if (intel > war + 15) weapon = 'sword';
       else weapon = ['spear', 'sword', 'dao', 'spear', 'shortji'][h % 5];
-      if (cul === 'nanman' || cul === 'yi') weapon = war >= 80 ? 'bigblade' : 'mace';
+      if (cul === 'nanman') weapon = war >= 80 ? 'bigblade' : 'mace';
+      else if (base.weapons) weapon = base.weapons[(h >>> 5) % base.weapons.length];
     }
     const beards = ['none', 'short', 'short', 'long', 'bushy'];
     const look = {
@@ -199,18 +211,22 @@
       helm: fix.helm || (cul === 'han' && intel > war + 25 && war < 55 ? 'guan' : base.helm),
       helmColor: fix.helmColor || base.helmColor || null,
       plume: fix.plume || null,
-      armor: fix.armor || null,          // null = 势力色
+      armor: fix.armor || base.armor || null,          // null = 势力色
+      torso: fix.torso || (fix.bare ? 'bare' : base.torso) || 'zha',
+      coat: fix.coat || base.coat || null,
+      shield: WEAPONS[weapon].style === 'one' ? (fix.shield !== undefined ? fix.shield : base.shield || null) : null,
+      paint: fix.paint || base.paint || null, plaid: !!base.plaid, fur: !!base.fur, magatama: !!base.magatama, shells: !!base.shells, gold: !!base.gold,
       metal: fix.metal || (war >= 90 ? '#c9a24e' : '#8e939c'),
       cape: fix.cape || null,
       robe: fix.robe || null,
       skin: fix.skin || base.skin,
       hair: fix.hair || base.hair,
-      beard: fix.beard || (fix.female ? 'none' : beards[(h >>> 3) % beards.length]),
+      beard: female ? 'none' : fix.beard || (base.beard && (h >>> 3) % 4 ? base.beard : beards[(h >>> 3) % beards.length]),
       bulk: fix.bulk || M.clamp(0.95 + (war - 50) / 100 * 0.14 + ((h >>> 7) % 7 - 3) * 0.01, 0.9, 1.12),
       height: fix.height || (1 + ((h >>> 11) % 5 - 2) * 0.012),
-      bare: !!fix.bare, belly: !!fix.belly, bareArms: !!(fix.bareArms || base.bareArms),
+      bare: !!fix.bare || (!fix.torso && base.torso === 'bare'), belly: !!fix.belly, bareArms: !!(fix.bareArms || base.bareArms),
       hide: !!(fix.hide || base.hide || (cul === 'nanman' && !fix.rattan)), rattan: !!fix.rattan,
-      eyepatch: !!fix.eyepatch, bow: !!fix.bow, bells: !!fix.bells, female: !!fix.female, goldTip: !!fix.goldTip,
+      eyepatch: !!fix.eyepatch, bow: !!(fix.bow || (base.bow && !LOOKS[name])), bells: !!fix.bells, female, goldTip: !!fix.goldTip,
     };
     return look;
   }
@@ -223,6 +239,7 @@
   const STYLE_SPECIAL = {
     guandao: '偃月斩', snake: '蛇矛乱刺', ji: '画戟横扫', spear: '百鸟朝凤', poleblade: '力劈华山', axe: '开山裂石', bigblade: '斩马横行',
     sword: '剑气纵横', dao: '旋风刀', shortji: '短戟连环', mace: '碎岳一击', twinsword: '双龙乱舞', twinji: '双戟乱舞', twindao: '双刀旋斩',
+    gladius: '盾阵突刺', lance: '铁骑冲阵', handaxe: '旋斧劈', tachi: '直刀一闪',
   };
   function specialOf(gen, given, look) {
     let s = given || null;
@@ -380,6 +397,7 @@
       }
       if (h.dash) { f.buf.dash = now; f.dashDir = h.dash; }
       if (taps) { taps.light = 0; taps.up = 0; taps.special = 0; taps.heavy = 0; taps.dir = 0; }
+      f.holdGuard = !!h.guard;
       p.x = h.x; p.up = h.up; p.light = h.light; p.heavy = h.heavy; p.special = h.special;
       return h;
     }
@@ -400,7 +418,7 @@
           if (this.fresh(f, 'dash') && f.dashDir) { this.use(f, 'dash'); this.setState(f, 'dash'); this.emit({ type: 'dash', who: f.idx }); break; }
           if (this.fresh(f, 'jump')) {
             this.use(f, 'jump');
-            this.setState(f, 'jump'); f.vy = JUMP_V; f.airUsed = false;
+            this.setState(f, 'jump'); f.vy = JUMP_V; f.airUsed = false; f.airHit = false;
             f.vx = h.x * f.walk * 0.95;
             this.emit({ type: 'jump', who: f.idx });
             break;
@@ -469,10 +487,12 @@
           break;
         }
         case 'land':
-          if (f.t >= 0.07) this.setState(f, 'idle');
+          // 落地硬直：空中出过招则较长（命中 / 被挡 0.2 秒，挥空 0.3 秒），跳入后可被反击
+          if (f.t >= (f.landT || 0.07)) this.setState(f, h.guard ? 'guard' : 'idle');
           break;
         case 'hitstun':
-          if (f.t >= f.stun) { this.setState(f, 'idle'); f.combo = 0; o.combo = 0; }
+          // 硬直结束时若按住格挡，直接进入格挡（无空隙）
+          if (f.t >= f.stun) { this.setState(f, h.guard && f.grounded ? 'guard' : 'idle'); f.combo = 0; o.combo = 0; }
           break;
         case 'knockdown':
           break;   // 落地在 physics 里处理
@@ -481,7 +501,7 @@
           break;
         case 'getup':
           f.invuln = Math.max(f.invuln, 0.05);
-          if (f.t >= 0.42) { this.setState(f, 'idle'); f.invuln = 0.2; o.combo = 0; }
+          if (f.t >= 0.42) { this.setState(f, h.guard ? 'guard' : 'idle'); f.invuln = 0.2; o.combo = 0; }
           break;
         default: break;
       }
@@ -516,7 +536,11 @@
         if (f.y <= 0) {
           f.y = 0; f.vy = 0;
           if (f.state === 'knockdown') { this.setState(f, 'down'); f.vx *= 0.35; this.emit({ type: 'down', who: f.idx, x: f.x }); }
-          else if (f.state === 'jump' || f.state === 'air') { this.setState(f, 'land'); f.vx *= 0.3; this.emit({ type: 'land', who: f.idx, x: f.x }); }
+          else if (f.state === 'jump' || f.state === 'air') {
+            this.setState(f, 'land'); f.vx *= 0.3;
+            f.landT = f.airUsed ? (f.airHit ? 0.2 : 0.3) : 0.07;
+            this.emit({ type: 'land', who: f.idx, x: f.x });
+          }
           else if (f.state === 'hitstun') f.vx *= 0.5;
         }
       } else if (f.state !== 'walk' && f.state !== 'dash' && !(f.state === 'special' && f.vx !== 0) && !(MOVES[f.state] && MOVES[f.state].lunge && f.t < MOVES[f.state].startup + MOVES[f.state].active)) {
@@ -603,7 +627,13 @@
       const counter = o.state === 'charge' || (MOVES[o.state] && o.phase === 'startup' && o.state !== 'special');
       if (counter) base *= 1.2;
       let dmg = damage(base, f.war, o.war) * SG.Random.rangeFloat(0.92, 1.08);
-      const guarded = (o.state === 'guard' || o.state === 'guardstun') && o.grounded;
+      let guarded = (o.state === 'guard' || o.state === 'guardstun') && o.grounded;
+      // 格开：连段中的后续一击，受击方按住格挡且武力远高于攻方时，有机会格开（武力差 30 → 18%，70 → 50%）
+      let parry = false;
+      if (!guarded && o.state === 'hitstun' && o.holdGuard && o.grounded && o.hp > 0 && name !== 'special') {
+        const p = M.clamp((o.war - f.war - 12) / 100, 0, 0.5);
+        if (p > 0 && rnd() < p) { guarded = true; parry = true; }
+      }
       const charged = name === 'heavy' && chg >= 0.85;
       const breaks = guarded && (charged || (name === 'special' && finisher));
       if (guarded) dmg *= 0.2;
@@ -613,6 +643,7 @@
       const big = !!mv.big || charged;
       let hs = mv.hitstop * (guarded ? 0.6 : 1) * (charged ? 1.3 : 1);
       f.stats.hits++;
+      if (name === 'air') f.airHit = true;
       if (guarded) f.stats.guarded++;
       o.stats.taken++;
 
@@ -620,7 +651,7 @@
       if (o.hp <= 0) {
         knock = true; o.ko = true;
       } else if (guarded) {
-        if (breaks) { this.setState(o, 'guardbreak'); o.stun = 0.55 * o.stunK; this.emit({ type: 'guardbreak', who: o.idx }); }
+        if (breaks) { this.setState(o, 'guardbreak'); o.stun = 0.8 * o.stunK; this.emit({ type: 'guardbreak', who: o.idx }); }
         else { this.setState(o, 'guardstun'); o.stun = (0.12 + mv.stun * 0.35) * o.stunK; }
         o.vx = dir * mv.push * 0.85;
         o.rage = Math.min(100, o.rage + 2 + dmg);
@@ -649,7 +680,7 @@
       this.hitstop = Math.max(this.hitstop, hs);
       const entry = { who: f.idx, dmg, hpA: this.f[0].hp, hpB: this.f[1].hp, move: name, guarded, t: Math.round(this.time * 100) / 100 };
       this.log.push(entry);
-      this.emit({ type: 'hit', att: f.idx, def: o.idx, dmg, guarded, move: name, big, counter, breaks, charge: chg, arrow: !!h.arrow,
+      this.emit({ type: 'hit', att: f.idx, def: o.idx, dmg, guarded, parry, move: name, big, counter, breaks, charge: chg, arrow: !!h.arrow,
         finisher, combo: guarded ? 0 : f.combo,
         x: h.px !== undefined ? h.px : f.x + dir * Math.min(Math.abs(o.x - f.x) * 0.75, f.reach * 0.8),
         y: h.py !== undefined ? h.py : o.y + (mv.kind === 'air' ? 1.1 : 1.25) });
@@ -689,32 +720,64 @@
       this.me = me;
       const s = M.clamp((me.war - 20) / 80, 0, 1);
       this.s = s;
-      this.react = 0.44 - 0.31 * s;      // 反应时间：武力 100 → 0.13 秒，武力 20 → 0.44 秒
-      this.guardP = 0.10 + 0.66 * s;     // 看见来招时举防的概率
-      this.comboP = 0.30 + 0.62 * s;     // 命中后接续连段
-      this.aggr = 0.26 + 0.30 * s;       // 进入距离后出手的积极度
-      this.period = 0.30 - 0.14 * s;     // 决策间隔
+      this.react = 0.44 - 0.29 * s;      // 反应时间：武力 100 → 0.15 秒，武力 20 → 0.44 秒
+      this.guardP = 0.10 + 0.70 * s;     // 看见来招时举防的概率
+      this.comboP = 0.30 + 0.65 * s;     // 命中后接续连段
+      this.aggr = 0.28 + 0.40 * s;       // 进入距离后出手的积极度
+      this.period = 0.30 - 0.16 * s;     // 决策间隔
       this.whiffP = 0.32 * (1 - s);
+      this.antiP = 0.06 + 0.86 * s;      // 识破跳入（对空 / 挡下后反击落地硬直）
+      this.punishP = 0.12 + 0.78 * s;    // 抓对手收招的破绽
+      this.pokeP = 0.08 + 0.52 * s;      // 对手走进攻击距离时迎击
+      this.stunGuardP = 0.08 + 0.84 * s; // 受击 / 倒地后一恢复就举防
       this.held = { x: 0, up: false, light: false, heavy: false, guard: false, special: false, dash: 0 };
       this.taps = { light: 0, up: 0, special: 0, heavy: 0, dir: 0 };
       this.next = 0; this.planX = 0; this.guardUntil = 0; this.seenSeq = -1; this.comboSeq = -1; this.comboGo = false;
       this.chargeTo = 0; this.backUntil = 0;
+      this.stunSeq = -1; this.stunGuard = false; this.stunHold = 0;
+      this.aa = null; this.punSeq = -1; this.pokeAt = 0; this.lastGuarded = 0; this.zone = false; this.caut = false; this.cautAt = 0; this.patSeq = -1; this.patient = false;
     }
     press(k) { this.taps[k] = (this.taps[k] || 0) + 1; }
+    // 重击：同时按住，蓄力到 to 秒后松开（只点按会被当作轻点重击）
+    heavy(to) { this.press('heavy'); this.held.heavy = true; this.chargeTo = to; }
 
     update(dt, sim) {
+      this.think(dt, sim);
+      // 逼近过滤：向前走将进入对手的攻击距离、而对手正在逼近或出招时，高武力改为举防停步（不硬闯）
+      const me = this.me, foe = sim.other(me), H = this.held, T = this.taps;
+      const dist = Math.abs(foe.x - me.x), foeR = foe.reach * MOVES.light2.reachK + BODY * 0.5;
+      if (dist >= foeR + 0.6) this.zone = false;
+      if (H.x === me.face && !H.guard && !H.dash && !T.light && !T.heavy && !T.up && !T.special && sim.actionable(me) && dist < foeR + 0.4) {
+        const seen = sim.seen(foe.idx, this.react);
+        const pushy = seen && (seen.state === 'walk' || seen.state === 'dash' || MOVES[seen.state]);
+        if (!this.zone || sim.clock >= this.cautAt) { this.zone = true; this.cautAt = sim.clock + 0.35; this.caut = rnd() < 0.1 + 0.75 * this.s; }
+        if (pushy && this.caut) {
+          H.x = 0; this.planX = 0; H.guard = true;
+          this.guardUntil = Math.max(this.guardUntil, sim.clock + 0.25 + rnd() * 0.2);
+        }
+      }
+    }
+
+    think(dt, sim) {
       const me = this.me, foe = sim.other(me), now = sim.clock, H = this.held, s = this.s;
       H.dash = 0;
       const dist = Math.abs(foe.x - me.x);
-      const reach = me.reach + BODY * 0.5;
+      const reach = me.reach * MOVES.light1.reachK + BODY * 0.5 - 0.03;   // 轻击实际判定距离（略保守）
       const seen = sim.seen(foe.idx, this.react);
 
       // 蓄力：到达预定蓄力量后松开
       if (me.state === 'charge') { H.heavy = me.t < this.chargeTo; H.x = 0; H.guard = false; return; }
       H.heavy = false;
+      // 受击 / 被挡 / 倒地：高武力会按住格挡，一恢复就举防（并有机会格开弱者的连段）
+      if (me.state === 'hitstun' || me.state === 'guardstun' || me.state === 'guardbreak' || me.state === 'knockdown' || me.state === 'down' || me.state === 'getup') {
+        if (this.stunSeq !== me.seq) { this.stunSeq = me.seq; this.stunGuard = rnd() < this.stunGuardP; this.stunHold = 0.1 + rnd() * 0.22; }
+        H.guard = this.stunGuard; H.x = 0;
+        if (this.stunGuard) this.guardUntil = Math.max(this.guardUntil, now + this.stunHold);
+        return;
+      }
       // 连段：高武力只在命中时继续（命中确认），低武力随机
       if (me.state === 'light1' || me.state === 'light2') {
-        if (this.comboSeq !== me.seq) { this.comboSeq = me.seq; this.comboRoll = rnd(); }
+        if (this.comboSeq !== me.seq) { this.comboSeq = me.seq; this.comboRoll = rnd(); this.comboDone = false; }   // 每一段各自判定
         const mv = MOVES[me.state];
         if (me.t >= mv.startup + mv.active * 0.3 && !this.comboDone) {
           const landed = me.hitIdx > 0 && foe.state === 'hitstun';
@@ -726,25 +789,96 @@
         return;
       }
       this.comboDone = false;
+      const free = sim.actionable(me) || me.state === 'guard';
+      // 自己的攻击被挡：高武力预料对手会反击，收招后先举防
+      if (me.stats.guarded !== this.lastGuarded) {
+        this.lastGuarded = me.stats.guarded;
+        const mv = MOVES[me.state];
+        const left = mv ? (mv.startup + mv.active + mv.recovery - me.t) / (me.state === 'special' ? 1 : me.spd) : 0;
+        if (rnd() < 0.1 + 0.7 * s) this.guardUntil = Math.max(this.guardUntil, now + left + 0.18 + rnd() * 0.25);
+      }
+      // 对手被破防：立即追击
+      if (foe.state === 'guardbreak' && free && foe.t < foe.stun - MOVES.light1.startup / me.spd) {
+        this.guardUntil = 0; H.guard = false;
+        if (dist <= reach) { this.press('light'); H.x = 0; return; }
+        if (dist <= reach + 1.2 && me.state !== 'guard') { H.dash = me.face; this.press('light'); return; }
+        H.x = me.face; return;
+      }
+
+      // 对空：看见对手跳向自己（有反应延迟）→ 按武力决定是否识破：迎击下落中的对手，或挡下空中斩再反击落地硬直
+      const foeAir = foe.y > 0.02 || foe.state === 'jump' || foe.state === 'air';
+      if (!foeAir && foe.state !== 'land') this.aa = null;
+      if (!this.aa && foeAir && seen && (seen.state === 'jump' || seen.state === 'air')) {
+        const toward = (me.x - foe.x) * foe.vx > 0.2 || dist < 1.4;
+        if (toward && dist < foe.reach + 3) this.aa = rnd() < this.antiP ? (rnd() < 0.5 ? 'strike' : 'guard') : 'miss';
+      }
+      if ((this.aa === 'strike' || this.aa === 'guard') && free) {
+        if (foeAir) {
+          if (this.aa === 'strike') {
+            const lead = MOVES.light1.startup / me.spd + DT;
+            const ty = foe.y + foe.vy * lead - 0.5 * GRAV * lead * lead;
+            const dx = (foe.x + foe.vx * lead - me.x) * me.face;
+            if (foe.vy < 1.5 && ty < 0.8 && ty > -0.2 && dx > -0.1 && dx <= me.reach * MOVES.light1.reachK + BODY * 0.5 - 0.05) {
+              this.press('light'); this.aa = 'done'; H.guard = false; H.x = 0; return;
+            }
+            if (Math.abs(foe.x - me.x) < 0.9 && foe.y > 0.7) this.aa = 'guard';   // 太近 / 越过头顶：改为格挡
+            else { H.guard = false; H.x = 0; return; }
+          }
+          H.guard = true; H.x = 0; return;
+        }
+        if (foe.state === 'land') {      // 落地硬直：反击
+          if (dist <= reach * 1.05) { this.press('light'); this.aa = 'done'; H.guard = false; H.x = 0; return; }
+          if (dist <= reach + 1.2) { H.dash = me.face; this.press('light'); this.aa = 'done'; H.guard = false; return; }
+        }
+      }
+
       // 看见对手出招：按格挡率决定是否举防
       if (seen && seen.atk && seen.seq !== this.seenSeq) {
         this.seenSeq = seen.seq;
         const threat = Math.abs(seen.x - me.x) <= foe.reach + BODY + 0.5;
         if (threat && rnd() < this.guardP) this.guardUntil = now + 0.2 + rnd() * 0.25;
       }
+      // 看见对手收招破绽（挥空 / 被挡）：抢攻，距离稍远则冲刺斩
+      if (seen && seen.phase === 'recovery' && seen.state !== 'air' && seen.seq !== this.punSeq && free && dist <= reach + 1.1) {
+        this.punSeq = seen.seq;
+        // 对手收招还剩多少时间（熟知招式节奏）：来不及冲过去就不冒险
+        const fm = MOVES[foe.state];
+        const left = fm && foe.seq === seen.seq ? (fm.startup + fm.active + fm.recovery - foe.t) / (foe.state === 'special' ? 1 : foe.spd) : 0;
+        const need = MOVES.light1.startup / me.spd + (dist <= reach ? 0 : 0.07 + (dist - reach) / 7.4);
+        if (left > need - 0.03 && rnd() < this.punishP) {
+          this.guardUntil = 0; H.guard = false;
+          if (dist <= reach) { this.press('light'); H.x = 0; return; }
+          if (me.state !== 'guard') { H.dash = me.face; this.press('light'); return; }
+        }
+      }
+      // 迎击：按看到的对手位置与速度预判，对手将进入自己的攻击距离时抢先出手（兵器长者占便宜）
+      if (seen && sim.actionable(me) && now >= this.pokeAt && (seen.state === 'walk' || seen.state === 'dash' || seen.state === 'idle')) {
+        const prev = sim.seen(foe.idx, this.react + 0.05);
+        const vx = prev && seen.clock > prev.clock ? (seen.x - prev.x) / (seen.clock - prev.clock) : 0;
+        const lead = MOVES.light1.startup / me.spd;
+        const pd = Math.abs(seen.x + vx * (this.react + lead) - (me.x + me.vx * lead * 0.3));
+        if (pd <= reach) {
+          this.pokeAt = now + 0.3;
+          if (rnd() < this.pokeP) { this.press('light'); H.x = 0; this.planX = 0; return; }
+        }
+      }
       // 看见对手蓄力：高武力抢攻（反击判定）或后撤，低武力傻站
-      if (seen && seen.state === 'charge' && dist < foe.reach + 0.8 && now >= this.next) {
+      // 看见对手蓄力：高武力抢攻（打断蓄力）；蓄得浅就举防，蓄得深（将破防）就后撤；低武力傻站
+      if (seen && seen.state === 'charge' && dist < foe.reach * 1.08 + BODY * 0.5 + 0.9 && now >= this.next) {
         this.next = now + this.period;
         const r = rnd();
-        if (r < s * 0.55 && dist <= reach * 1.05 && sim.actionable(me)) { this.press('light'); return; }
-        if (r < s * 0.85) { this.backUntil = now + 0.35; this.guardUntil = 0; }
+        if (r < s * 0.6 && dist <= reach && sim.actionable(me)) { this.press('light'); return; }
+        if (r < s * 0.9) {
+          if (seen.charge > 0.55) { this.backUntil = now + 0.4; this.guardUntil = 0; }
+          else this.guardUntil = Math.max(this.guardUntil, now + 0.3);
+        }
       }
       // 看见对手冲刺切入：兵器较长者迎头一击（抢先出手）
       if (seen && seen.state === 'dash' && seen.seq !== this.dashSeq && sim.actionable(me)) {
         this.dashSeq = seen.seq;
         if (dist <= reach + 0.5 && me.reach >= foe.reach && rnd() < 0.15 + 0.45 * s) { this.press('light'); return; }
       }
-      const canGuard = sim.actionable(me) || me.state === 'guard' || me.state === 'guardstun';
+      const canGuard = free || me.state === 'guardstun';
       if (now < this.guardUntil && canGuard) { H.guard = true; H.x = 0; return; }
       H.guard = false;
       if (now < this.backUntil && sim.actionable(me)) { H.x = -me.face; return; }
@@ -754,9 +888,12 @@
         H.x = dist > reach * 0.7 ? me.face : 0;
         return;
       }
-      // 格挡后反击：对手收招破绽
-      if (me.state === 'guard' && seen && seen.phase === 'recovery' && dist <= reach && rnd() < s * 0.5) { this.press('light'); return; }
       if (!sim.actionable(me) && me.state !== 'guard') { H.x = 0; return; }
+      // 对手正在出招、自己在其攻击距离边缘：高武力不硬闯，停步等其收招再反击
+      if (seen && MOVES[seen.state] && seen.phase !== 'recovery' && seen.state !== 'special' && dist < foe.reach + BODY * 0.5 + 0.7) {
+        if (this.patSeq !== seen.seq) { this.patSeq = seen.seq; this.patient = rnd() < 0.15 + 0.8 * s; }
+        if (this.patient) { this.planX = 0; H.x = 0; return; }
+      }
       if (now < this.next) {
         // 走进攻击距离即停步，避免贴身
         if (this.planX === me.face && dist <= reach * 0.92) this.planX = 0;
@@ -771,13 +908,20 @@
       if (foe.state === 'knockdown' || foe.state === 'down' || foe.state === 'getup') {
         if (dist > reach * 1.1) this.planX = me.face;
         else if (dist < reach * 0.6) this.planX = -me.face;
-        else if (rnd() < 0.3 * s) { this.press('heavy'); this.chargeTo = 0.3 + rnd() * 0.5; }
+        else if (rnd() < 0.3 * s) this.heavy(0.3 + rnd() * 0.5);
         H.x = this.planX;
         return;
       }
       // 绝技
       if (me.rage >= 100 && (me.bow ? dist > reach * 0.6 : dist <= reach + 1.8) && rnd() < 0.3 + 0.55 * s) { this.press('special'); return; }
       if (dist > reach * 1.02) {
+        // 高武力：对手兵器够得着时不贸然闯入，在其攻击距离外踱步，等对手先出手露出破绽
+        const foeR = foe.reach + BODY * 0.5 + 0.15;
+        const pushy = seen && (seen.state === 'walk' || seen.state === 'dash' || MOVES[seen.state]);
+        if (pushy && dist < foeR + 0.5 && rnd() < 0.1 + 0.65 * s) {
+          this.planX = dist < foeR + 0.12 ? -me.face : 0; H.x = this.planX;
+          return;
+        }
         // 兵器较短：抓对手收招的破绽，或冲刺切入（冲刺中轻击 = 突进斩）
         const gap = foe.reach - me.reach;
         if (gap > 0.03 && dist < reach + 0.85) {
@@ -794,14 +938,14 @@
       // 贴得太近：长兵器施展不开，拉开距离
       if (dist < reach * 0.55 && rnd() < 0.35 + 0.4 * s) { this.planX = -me.face; H.x = this.planX; this.next = now + 0.18 + rnd() * 0.15; return; }
       // 进入攻击距离：高武力会预判举防
-      if (dist <= foe.reach + BODY && rnd() < this.guardP * 0.35) { this.guardUntil = now + 0.25 + rnd() * 0.3; H.guard = true; return; }
+      if (dist <= foe.reach + BODY && rnd() < this.guardP * 0.45) { this.guardUntil = now + 0.25 + rnd() * 0.3; H.guard = true; return; }
       const st = me.stats;
-      const foeTurtles = st.hits >= 4 && st.guarded / st.hits > 0.45;
-      if (foeTurtles && rnd() < 0.25 + 0.4 * s) { this.press('heavy'); this.chargeTo = CHARGE_MAX + 0.05; return; }
+      const foeTurtles = (st.hits >= 4 && st.guarded / st.hits > 0.45) || (seen && seen.state === 'guard' && foe.state === 'guard');
+      if (foeTurtles && rnd() < 0.25 + 0.4 * s) { this.heavy(CHARGE_MAX + 0.05); return; }
       const r = rnd();
       if (r < this.aggr) {
         if (rnd() < 0.74) this.press('light');
-        else { this.press('heavy'); this.chargeTo = 0.12 + rnd() * (0.25 + 0.45 * s); }
+        else this.heavy(0.12 + rnd() * (0.25 + 0.45 * s));
       } else if (r < this.aggr + 0.3) {
         // 进退试探
         this.planX = dist < reach * 0.75 || rnd() < 0.6 ? -me.face : me.face;
@@ -1076,11 +1220,66 @@
         pb.rod([0, 0.76, 0], [0, 0.88, 0], 0.03, 0, 4, '#8e939c');
         tip = 0.86; len = 0.3;
         break;
+      case 'gladius':   // 罗马短剑：宽刃尖头、圆柄头、骨柄
+        pb.prism(0, 0, -0.11, 0.05, 0.022, 0.02, 6, '#e8dcc0');
+        pb.blob(0, -0.13, 0, 0.04, 0.035, 0.04, '#c8a050', 3);
+        pb.box(0, 0.065, 0, 0.1, 0.035, 0.05, '#c8a050');
+        pb.slab([[-0.03, 0.08], [0.03, 0.08], [0.028, 0.5], [0.033, 0.58], [0, 0.7], [-0.033, 0.58], [-0.028, 0.5]], -0.008, 0.008, STEEL, EDGE);
+        tip = 0.7; len = 0.6;
+        break;
+      case 'tachi':     // 倭直刀：单刃直身、圆镡、长柄
+        pb.prism(0, 0, -0.2, 0.04, 0.02, 0.02, 6, '#2a1c14');
+        pb.prism(0, 0, 0.04, 0.06, 0.06, 0.06, 8, '#4a4a50');
+        pb.slab([[-0.018, 0.06], [0.024, 0.06], [0.024, 0.8], [-0.005, 0.9], [-0.018, 0.82]], -0.006, 0.006, STEEL, EDGE);
+        tip = 0.9; len = 0.84;
+        break;
+      case 'handaxe':   // 日耳曼战斧：短柄 + 胡形斧头
+        pb.prism(0, 0, -0.25, 0.66, 0.022, 0.02, 6, '#5a3a22');
+        pb.slab([[0.0, 0.44], [0.12, 0.38], [0.2, 0.36], [0.22, 0.52], [0.18, 0.66], [0.1, 0.62], [0.0, 0.62]], -0.012, 0.012, STEEL, EDGE);
+        pb.prism(0, 0, 0.42, 0.66, 0.03, 0.03, 6, '#5c5c64');
+        tip = 0.7; len = 0.3;
+        break;
+      case 'lance':     // 骑矛：更长的矛杆、小矛头、三角旗
+        shaft(pb, -0.7, 1.62, '#6a4a2a', 0.022);
+        pb.prism(0, 0, 1.58, 1.65, 0.028, 0.024, 6, '#5c5c64');
+        leaf(pb, 1.64, 0.36, 0.042, blade);
+        pb.slab([[0, 1.32], [0.3, 1.4], [0, 1.52]], -0.004, 0.004, RED);
+        tip = 2.0; len = 0.36;
+        break;
       default:
         pb.box(0, 0.4, 0, 0.04, 0.8, 0.02, STEEL);
         tip = 0.8; len = 0.6;
     }
     return { pb, tip, len };
+  }
+
+  // 盾（左手持；局部 +x 为盾面朝向，原点在握把）。shape：scutum 罗马长方弧盾 / round 圆盾 / oval 椭圆盾 / wood 倭木盾
+  function buildShield(shape, team) {
+    const pb = new PB();
+    const face = C(team), rim = C(GOLD);
+    if (shape === 'scutum') {
+      for (const k of [-1, 0, 1]) {   // 三片拼出弧面
+        pb.at(-0.02 * Math.abs(k), 0, k * 0.15, 0, k * 0.32, 0);
+        pb.box(0.0, 0, 0, 0.03, 0.78, 0.155, face);
+        pb.box(0.017, 0.37, 0, 0.012, 0.03, 0.16, rim); pb.box(0.017, -0.37, 0, 0.012, 0.03, 0.16, rim);
+        pb.at();
+      }
+      pb.blob(0.035, 0, 0, 0.06, 0.06, 0.06, rim, 71);
+      for (const y of [-0.22, 0.22]) pb.box(0.018, y, 0, 0.012, 0.025, 0.4, sh(face, 0.35));
+    } else if (shape === 'oval' || shape === 'round' || shape === 'wood') {
+      const R = shape === 'round' ? 0.27 : 0.25, ry = shape === 'oval' ? 1.7 : shape === 'wood' ? 1.9 : 1;
+      const pts = [];
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; pts.push([Math.cos(a) * R * (shape === 'wood' ? 0.85 : 1), Math.sin(a) * R * ry]); }
+      if (shape === 'wood') { pts.length = 0; pts.push([-0.2, -0.45], [0.2, -0.45], [0.22, 0.45], [-0.22, 0.45]); }
+      // slab 在 xy 平面挤出 z；绕 y 转 90° 让盾面朝 +x
+      pb.at(0, 0, 0, 0, Math.PI / 2, 0);
+      pb.slab(pts, -0.02, 0.02, shape === 'wood' ? C('#8a6038') : face, shape === 'wood' ? '#5a3a20' : sh(face, 0.3));
+      if (shape === 'wood') { for (const y of [-0.25, 0, 0.25]) pb.box(0, y, 0.024, 0.4, 0.03, 0.01, '#3a2a1a'); pb.box(0, 0, 0.026, 0.05, 0.86, 0.01, '#c8382c'); }
+      pb.at();
+      if (shape !== 'wood') pb.blob(0.04, 0, 0, 0.065, 0.065, 0.065, rim, 73);
+      if (shape === 'oval') pb.box(0.03, 0, 0, 0.012, 0.7, 0.04, sh(face, 0.4));
+    }
+    return pb;
   }
 
   // 手持的弓（握把在原点，弓臂沿 ±y，弓背朝 +x；弦另画）。返回弓梢位置供挂弦
@@ -1122,11 +1321,12 @@
     const armorD = sh(armor, -0.42);
     const metal = C(look.metal);
     const trim = C(war >= 90 ? '#dcb85c' : '#b89a58');
-    const cloth = look.robe ? sh(look.robe, -0.25) : mixC(sh(teamC, -0.6), C('#3a2e28'), 0.5);
+    // 袍服文化：袍色与势力色相混，保证两边仍可分辨
+    const robe = look.robe ? C(look.robe) : look.coat && look.torso === 'coat' ? mixC(C(look.coat), teamC, 0.2) : null;
+    const cloth = robe ? sh(robe, -0.25) : look.torso === 'segm' ? sh(teamC, -0.08) : mixC(sh(teamC, -0.6), C('#3a2e28'), 0.5);
     const skin = C(look.skin), hair = C(look.hair);
     const leather = C('#4a3222'), boot = C('#241b16');
     const capeC = look.cape ? C(look.cape) : sh(teamC, -0.18);
-    const robe = look.robe ? C(look.robe) : null;
     const nan = look.culture === 'nanman' || look.culture === 'yi' || look.culture === 'seasia';
     const P = {};
 
@@ -1167,6 +1367,18 @@
       pb.at(0.0, 0.3, 0.02, -0.55, 0, 0); pb.box(0, 0, 0, 0.29 * bk, 0.14, 0.47 * bk, '#a07a44'); pb.at();
       for (let i = 0; i < 4; i++) pb.blob(0.1 * bk + (i % 2) * 0.01, 0.2 + i * 0.07, 0.06 - i * 0.04, 0.02, 0.02, 0.02, '#5a3a20', 11 + i);
       for (let i = -3; i <= 3; i++) pb.rod([0.12 * bk, 0.47, i * 0.035], [0.14 * bk, 0.4 - Math.abs(i) * 0.005, i * 0.04], 0.012, 0.002, 3, '#efe6d0');
+    } else if (look.torso === 'segm' && !robe) {
+      // 罗马环片甲：钢片横带（深色接缝）+ 胸前搭扣
+      for (let y = 0.04; y < 0.44; y += 0.055) pb.taper(0, 0, y, y + 0.01, 0.226 * bk + y * 0.06, 0.3 * bk + y * 0.3, 0.226 * bk + y * 0.06, 0.3 * bk + y * 0.3, armorD);
+      for (const z of [-0.05, 0.05]) pb.box(0.13 * bk, 0.34, z * bk, 0.012, 0.16, 0.02, GOLD);
+      pb.box(0.125 * bk, 0.02, 0, 0.012, 0.05, 0.27 * bk, leather);
+    } else if (look.torso === 'scale' && !robe) {
+      // 鱼鳞甲：错位的小甲片
+      for (let r = 0; r < 6; r++) {
+        const y = 0.06 + r * 0.065, x = 0.115 * bk + r * 0.005;
+        for (let k = -2; k <= 2; k++) pb.box(x, y, (k + (r % 2) * 0.5 - 0.25) * 0.055 * bk, 0.014, 0.05, 0.045, (k + r) % 2 ? metal : armorD);
+      }
+      pb.box(0.125 * bk, 0.02, 0, 0.012, 0.05, 0.27 * bk, leather);
     } else {
       // 札甲：横向甲片带 + 护心镜
       for (const y of [0.05, 0.12, 0.24, 0.31, 0.38]) pb.taper(0, 0, y, y + 0.012, 0.226 * bk + y * 0.06, 0.3 * bk + y * 0.3, 0.226 * bk + y * 0.06, 0.3 * bk + y * 0.3, robe ? sh(robe, -0.2) : armorD);
@@ -1177,7 +1389,17 @@
       }
     }
     pb.prism(0, 0, 0.48, 0.58, 0.058, 0.052, 6, skin);
-    if (!look.bare && !nan) pb.taper(0, 0, 0.46, 0.53, 0.17 * bk, 0.21 * bk, 0.14, 0.17, look.robe ? robe : C('#8a2a20'));
+    if (!look.bare && !nan) pb.taper(0, 0, 0.46, 0.53, 0.17 * bk, 0.21 * bk, 0.14, 0.17, robe ? robe : look.torso === 'segm' ? cloth : C('#8a2a20'));
+    // 文化饰物：彩绘 / 毛皮领 / 勾玉 / 金饰
+    if (look.paint) {
+      const pc = C(look.paint);
+      for (const z of [-0.07, 0.07]) { pb.at(0.148 * bk, 0.26, z * bk, 0, 0, 0); pb.box(0, 0, 0, 0.014, 0.2, 0.025, pc); pb.box(0, 0.06, z > 0 ? 0.03 : -0.03, 0.014, 0.025, 0.07, pc); pb.at(); }
+      pb.box(0.14 * bk, 0.12, 0, 0.014, 0.03, 0.2 * bk, pc);
+      for (const y of [0.32, 0.38]) pb.box(0.0, y, 0.15 * bk, 0.12, 0.022, 0.014, pc);
+    }
+    if (look.fur) { pb.taper(0, 0, 0.42, 0.52, 0.29 * bk, 0.46 * bk, 0.24 * bk, 0.34 * bk, '#8a6a46'); pb.blob(-0.02, 0.48, 0, 0.16 * bk, 0.06, 0.24 * bk, '#a08058', 41); }
+    if (look.magatama || look.shells) for (let i = -2; i <= 2; i++) pb.blob(0.14 * bk, 0.4 - Math.abs(i) * 0.025, i * 0.045, 0.018, 0.026, 0.016, look.shells ? (i % 2 ? '#d8703a' : '#f4ece0') : i % 2 ? '#e8dcc0' : '#3aa060', 43 + i);
+    if (look.gold) { pb.taper(0, 0, 0.44, 0.49, 0.29 * bk, 0.45 * bk, 0.25 * bk, 0.36 * bk, GOLD); pb.box(0.135 * bk, 0.38, 0, 0.014, 0.06, 0.1, GOLD); }
     if (look.bow) {   // 箭囊（背弓单独成件，放箭时取到手上）
       pb.at(-0.17 * bk, 0.28, 0.1, 0.4, 0, 0); pb.box(0, 0, 0, 0.08, 0.36, 0.08, '#6a4a2a'); for (let i = 0; i < 3; i++) pb.rod([0, 0.18, -0.02 + i * 0.02], [0, 0.3, -0.02 + i * 0.02], 0.006, 0.006, 3, '#e8dcc0'); pb.at();
       const bb = new PB();
@@ -1268,7 +1490,17 @@
       P[sd > 0 ? 'footR' : 'footL'] = pb;
     }
     // ---- 披风（两段，分别摆动）
-    if (!nan && !look.bare) {
+    if (look.plaid) {   // 方格斗篷（凯尔特）：赤膊也披
+      const lc = sh(capeC, 0.35), dc = sh(capeC, -0.35);
+      pb = new PB(); pb.taper(-0.015, 0, -0.5, 0.0, 0.03, 0.46 * bk, 0.03, 0.4 * bk, capeC);
+      for (const z of [-0.12, 0.0, 0.12]) pb.box(-0.032, -0.25, z * bk, 0.012, 0.5, 0.03, lc);
+      for (const y of [-0.1, -0.3]) pb.box(-0.034, y, 0, 0.012, 0.03, 0.42 * bk, dc);
+      P.cape1 = pb;
+      pb = new PB(); pb.taper(0, 0, -0.42, 0.0, 0.025, 0.5 * bk, 0.03, 0.46 * bk, sh(capeC, -0.12));
+      for (const z of [-0.12, 0.0, 0.12]) pb.box(-0.018, -0.21, z * bk, 0.012, 0.42, 0.03, lc);
+      pb.box(-0.02, -0.2, 0, 0.012, 0.03, 0.46 * bk, dc);
+      P.cape2 = pb;
+    } else if (!nan && !look.bare) {
       pb = new PB(); pb.taper(-0.015, 0, -0.5, 0.0, 0.03, 0.46 * bk, 0.03, 0.4 * bk, capeC); P.cape1 = pb;
       pb = new PB(); pb.taper(0, 0, -0.42, 0.0, 0.025, 0.5 * bk, 0.03, 0.46 * bk, sh(capeC, -0.12)); P.cape2 = pb;
     }
@@ -1372,12 +1604,82 @@
         pb.taper(0, 0, 0.22, 0.25, 0.205, 0.188, 0.205, 0.188, '#e8e0cc');
         break;
       case 'galea':
+        // 罗马头盔：铜盔 + 横向红缨 + 护颊 + 护颈
         pb.taper(0, 0, 0.19, 0.32, 0.22, 0.2, 0.16, 0.15, '#c8a050');
         pb.slab([[0.08, 0.32], [0.02, 0.44], [-0.08, 0.46], [-0.16, 0.38], [-0.1, 0.32]], -0.02, 0.02, RED);
+        pb.box(0.11, 0.21, 0, 0.03, 0.02, 0.2, '#b08a40');
+        for (const z of [-0.1, 0.1]) pb.box(0.05, 0.12, z, 0.1, 0.13, 0.018, '#c8a050');
+        pb.at(-0.1, 0.2, 0, 0, 0, -0.5); pb.box(0, -0.04, 0, 0.02, 0.1, 0.24, '#b08a40'); pb.at();
         break;
       case 'tiara':
+        // 安息提亚拉冠：高圆冠 + 金箍 + 护颈垂巾；冠下露出卷发
         pb.taper(0, 0, 0.19, 0.42, 0.21, 0.19, 0.12, 0.12, '#e0d8c8', 0.03, 0);
         pb.taper(0, 0, 0.19, 0.23, 0.22, 0.2, 0.22, 0.2, GOLD);
+        for (let i = 0; i < 4; i++) pb.blob(0.0, 0.3 + i * 0.03, 0, 0.012, 0.012, 0.012, i % 2 ? RED : GOLD, 51 + i);
+        pb.at(-0.1, 0.2, 0, 0, 0, -0.25); pb.taper(0, 0, -0.16, 0, 0.03, 0.24, 0.03, 0.2, '#d8ccb0'); pb.at();
+        for (const s of [-1, 1]) pb.blob(-0.02, 0.15, s * 0.1, 0.05, 0.07, 0.035, K.hair, 53);
+        break;
+      case 'yifeather': {
+        // 夷洲：长发 + 编织头带插一圈羽毛
+        pb.taper(0, 0, 0.19, 0.3, 0.205, 0.19, 0.18, 0.17, K.hair);
+        pb.box(-0.09, 0.08, 0, 0.08, 0.26, 0.17, K.hair);
+        pb.taper(0, 0, 0.21, 0.25, 0.212, 0.196, 0.212, 0.196, '#d8b060');
+        for (let i = 0; i < 7; i++) {
+          const a = -1.25 + i * 0.42;
+          pb.rod([-0.02, 0.26, Math.sin(a) * 0.1], [-0.06 - Math.cos(a) * 0.02, 0.5 + Math.cos(a) * 0.06, Math.sin(a) * 0.2], 0.022, 0.004, 4, i % 2 ? '#f4f0e8' : '#1a1a1a');
+        }
+        break;
+      }
+      case 'goldcrown':
+        // 林邑 / 扶南：尖塔形金高冠 + 耳饰
+        pb.taper(0, 0, 0.2, 0.28, 0.2, 0.18, 0.18, 0.165, GOLD);
+        pb.taper(0, 0, 0.28, 0.52, 0.16, 0.15, 0.02, 0.02, '#e8c060');
+        for (let i = 0; i < 3; i++) pb.taper(0, 0, 0.32 + i * 0.06, 0.34 + i * 0.06, 0.15 - i * 0.04, 0.14 - i * 0.04, 0.14 - i * 0.04, 0.13 - i * 0.04, sh(C(GOLD), -0.2));
+        for (const z of [-0.11, 0.11]) pb.blob(0.0, 0.1, z, 0.02, 0.03, 0.02, GOLD, 57);
+        break;
+      case 'hutmao':
+        // 西域胡帽：翻檐尖顶毡帽
+        pb.taper(0, 0, 0.19, 0.25, 0.235, 0.22, 0.225, 0.21, '#e8dcc0');
+        pb.taper(0.0, 0, 0.24, 0.5, 0.19, 0.18, 0.03, 0.03, helmC === K.metal ? C('#a0383a') : helmC, -0.05, 0);
+        pb.box(0.11, 0.23, 0, 0.03, 0.08, 0.12, '#e8dcc0');
+        break;
+      case 'pointed':
+        // 贵霜 / 康居：高尖帽（顶向后弯）+ 金箍
+        pb.taper(0, 0, 0.19, 0.24, 0.215, 0.2, 0.21, 0.195, GOLD);
+        pb.taper(0, 0, 0.24, 0.44, 0.2, 0.19, 0.08, 0.08, '#e8d8b0', -0.03, 0);
+        pb.rod([-0.03, 0.44, 0], [-0.12, 0.6, 0], 0.04, 0.012, 5, '#e8d8b0');
+        break;
+      case 'kufiya':
+        // 阿拉伯头巾：裹头 + 垂到肩后的头巾 + 黑色头箍
+        pb.taper(0, 0, 0.19, 0.31, 0.225, 0.21, 0.2, 0.19, helmC);
+        pb.blob(-0.01, 0.31, 0, 0.1, 0.05, 0.1, helmC, 59);
+        pb.taper(0, 0, 0.24, 0.27, 0.232, 0.216, 0.232, 0.216, '#1a1414');
+        pb.at(-0.11, 0.26, 0, 0, 0, -0.18); pb.taper(0, 0, -0.3, 0, 0.03, 0.24, 0.03, 0.2, sh(helmC, -0.08)); pb.at();
+        for (const sd of [-1, 1]) { pb.at(-0.02, 0.24, sd * 0.11, sd * 0.1, 0, 0); pb.box(0, -0.12, 0, 0.12, 0.24, 0.02, sh(helmC, -0.05)); pb.at(); }
+        break;
+      case 'celtic':
+        // 凯尔特：石灰硬化的蓬乱长发，向后刺出
+        pb.taper(0, 0, 0.19, 0.3, 0.205, 0.19, 0.18, 0.17, K.hair);
+        for (let i = 0; i < 7; i++) {
+          const a = -1.2 + i * 0.4;
+          pb.rod([-0.02, 0.28, Math.sin(a) * 0.06], [-0.2 - Math.cos(a) * 0.04, 0.4 + Math.cos(a) * 0.06, Math.sin(a) * 0.16], 0.04, 0.0, 4, sh(K.hair, 0.15 * (i % 2)));
+        }
+        pb.box(-0.09, 0.06, 0, 0.08, 0.26, 0.17, K.hair);   // 披肩长发
+        break;
+      case 'suebian':
+        // 苏维汇发髻：长发向一侧束成结
+        pb.taper(0, 0, 0.19, 0.31, 0.21, 0.195, 0.17, 0.16, K.hair);
+        pb.blob(-0.02, 0.3, 0.12, 0.06, 0.06, 0.05, K.hair, 61);
+        pb.blob(-0.03, 0.34, 0.15, 0.035, 0.05, 0.03, sh(K.hair, -0.15), 63);
+        pb.box(-0.09, 0.08, 0, 0.08, 0.24, 0.17, K.hair);
+        break;
+      case 'conical':
+        // 萨尔马提亚尖盔：分片铆合尖顶盔 + 护鼻 + 锁子护颈
+        pb.taper(0, 0, 0.19, 0.3, 0.22, 0.205, 0.17, 0.16, K.metal);
+        pb.taper(0, 0, 0.3, 0.5, 0.17, 0.16, 0.0, 0.0, sh(K.metal, 0.06));
+        for (const z of [-0.06, 0.06]) pb.rod([0.06, 0.2, z], [0.0, 0.48, 0], 0.012, 0.006, 3, K.trim);
+        pb.box(0.112, 0.15, 0, 0.012, 0.11, 0.022, K.metal);
+        pb.at(-0.1, 0.2, 0, 0, 0, -0.2); pb.taper(0, 0, -0.17, 0, 0.03, 0.24, 0.03, 0.22, sh(K.metal, -0.25)); pb.at();
         break;
       default: hanHelm(helmC);
     }
@@ -1595,6 +1897,11 @@
       };
       this.wpn = mkW();
       if (this.style === 'dual') this.wpn2 = mkW();
+      if (this.look.shield && this.style === 'one') {
+        const sg = buildShield(this.look.shield, team).geo(); this.geos.push(sg);
+        this.shield = new THREE.Mesh(sg, this.mat); this.shield.castShadow = true; this.shield.rotation.order = 'YZX';
+        this.body.add(this.shield);
+      }
       this.tipLen = w.tip; this.bladeLen = w.len;
       // 弓将：背弓 + 手持弓（弦为折线，满弓时随右手拉开）+ 搭在弦上的箭
       this.mats = [];
@@ -1798,6 +2105,10 @@
       if (this.wpn2) {
         this.wpn2.position.copy(O);
         this.wpn2.rotation.set(0, 0, P[PI_.wa2] * M.deg2rad - Math.PI / 2);
+      }
+      if (this.shield) {   // 盾挂在左手前方，盾面朝前并略转向镜头
+        this.shield.position.set(O.x + 0.07, O.y - 0.02, O.z + 0.02);
+        this.shield.rotation.set(0, -0.5 + tw * 0.4, -P[PI_.lean] * 0.4);
       }
       // 手臂 IK
       for (const sd of [1, -1]) {
@@ -2300,7 +2611,7 @@
     s.id = 'sg-duel-game-style';
     s.textContent = `
 .sgd{position:absolute;inset:0;pointer-events:none;overflow:hidden;color:#f5eddb;font-family:${SANS};
-  --u:clamp(10px,min(1.2vw,2.15vh),18px);--b:clamp(54px,15.5vh,86px);--sal:0px;--sar:0px;--sab:0px;--sat:0px;
+  --u:clamp(10px,min(1.2vw,2.15vh),18px);--b:clamp(54px,min(15.5vh,18vw),86px);--sal:0px;--sar:0px;--sab:0px;--sat:0px;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;z-index:5;}
 .sgd.sgd-fixed{position:fixed;z-index:60;--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sat:env(safe-area-inset-top,0px);}
 .sgd *{box-sizing:border-box;}
@@ -2322,10 +2633,10 @@
 .sgd-name{display:flex;align-items:baseline;gap:calc(.6*var(--u));white-space:nowrap;}
 .sgd-side.b .sgd-name{flex-direction:row-reverse;}
 .sgd-name b{font:700 calc(1.7*var(--u))/1.05 ${KAI};color:#fff4dc;letter-spacing:.06em;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 10px rgba(0,0,0,.6);}
-.sgd-war{font:700 calc(.95*var(--u))/1 ${SANS};color:#1a1208;background:linear-gradient(180deg,#ffe7a0,#d9a640);padding:.18em .45em;border-radius:.3em;
+.sgd-war{font:700 max(11px,calc(.95*var(--u)))/1 ${SANS};color:#1a1208;background:linear-gradient(180deg,#ffe7a0,#d9a640);padding:.18em .45em;border-radius:.3em;
   box-shadow:0 1px 0 rgba(0,0,0,.6);letter-spacing:.04em;}
 .sgd-war i{font-style:normal;opacity:.75;margin-right:.2em;}
-.sgd-tag{font:600 calc(.85*var(--u))/1 ${SANS};color:#ffd98a;opacity:.9;}
+.sgd-tag{font:600 max(11px,calc(.85*var(--u)))/1 ${SANS};color:#ffd98a;opacity:.9;}
 .sgd-hp{position:relative;width:100%;height:calc(1.55*var(--u));transform:skewX(-22deg);background:linear-gradient(180deg,#120a0c,#2a1618);
   border:1px solid rgba(243,201,105,.75);box-shadow:0 0 0 1px rgba(0,0,0,.8),0 .2em .6em rgba(0,0,0,.5);overflow:hidden;}
 .sgd-side.b .sgd-hp{transform:skewX(22deg);}
@@ -2344,14 +2655,14 @@
 .sgd-rage.full i{background:linear-gradient(90deg,#ffd040,#fff2b0,#ffb020);background-size:200% 100%;animation:sgd-sweep .7s linear infinite;}
 .sgd-ragerow{display:flex;align-items:center;gap:calc(.5*var(--u));width:100%;}
 .sgd-side.b .sgd-ragerow{flex-direction:row-reverse;}
-.sgd-ragelbl{font:700 calc(.85*var(--u))/1 ${KAI};color:#d8a8ff;white-space:nowrap;text-shadow:0 1px 0 #000;}
+.sgd-ragelbl{font:700 max(11px,calc(.85*var(--u)))/1 ${KAI};color:#d8a8ff;white-space:nowrap;text-shadow:0 1px 0 #000;}
 .sgd-ragelbl.full{color:#ffe08a;animation:sgd-blink .6s ease-in-out infinite alternate;}
 .sgd-timer{position:relative;display:flex;flex-direction:column;align-items:center;gap:calc(.2*var(--u));}
 .sgd-timer b{display:grid;place-items:center;width:calc(4.8*var(--u));height:calc(4.8*var(--u));border-radius:50%;
   background:radial-gradient(circle at 50% 35%,#3a2c34,#120c12 70%);border:2px solid #f3c969;box-shadow:0 0 0 2px rgba(0,0,0,.7),0 .3em 1em rgba(0,0,0,.6),inset 0 0 .8em rgba(243,201,105,.25);
   font:700 calc(2.35*var(--u))/1 ${KAI};color:#ffe9b0;text-shadow:0 2px 0 #4d1f05;font-variant-numeric:tabular-nums;}
 .sgd-timer.low b{color:#ff8c73;animation:sgd-pulse .5s ease-in-out infinite alternate;}
-.sgd-timer small{font:700 calc(.85*var(--u))/1 ${KAI};color:#f3c969;letter-spacing:.3em;text-shadow:0 1px 0 #000;padding-left:.3em;}
+.sgd-timer small{font:700 max(11px,calc(.85*var(--u)))/1 ${KAI};color:#f3c969;letter-spacing:.3em;text-shadow:0 1px 0 #000;padding-left:.3em;}
 .sgd-combo{position:absolute;top:28%;display:flex;flex-direction:column;align-items:flex-start;opacity:0;transition:opacity .25s ease;}
 .sgd-combo.a{left:calc(var(--sal) + 2.2*var(--u));}
 .sgd-combo.b{right:calc(var(--sar) + 2.2*var(--u));align-items:flex-end;}
@@ -2372,11 +2683,12 @@
 .sgd-k{display:inline-grid;place-items:center;min-width:1.7em;height:1.7em;padding:0 .35em;border-radius:.3em;background:linear-gradient(180deg,#f5ecd8,#cfc3a6);color:#1a1410;
   font:700 .9em/1 ${SANS};box-shadow:0 2px 0 #6a5a40,0 3px 3px rgba(0,0,0,.4);}
 .sgd-k.r{background:linear-gradient(180deg,#ffb0a0,#e0503a);color:#fff;box-shadow:0 2px 0 #7a1a10,0 3px 3px rgba(0,0,0,.4);}
-.sgd-touchhint{position:absolute;left:50%;bottom:calc(var(--sab) + .5*var(--u));transform:translateX(-50%);font:600 calc(.9*var(--u))/1.2 ${SANS};color:rgba(245,237,219,.75);
+.sgd-touchhint{position:absolute;left:50%;bottom:calc(var(--sab) + .5*var(--u));transform:translateX(-50%);font:600 max(11px,calc(.9*var(--u)))/1.2 ${SANS};color:rgba(245,237,219,.75);
   white-space:nowrap;text-shadow:0 1px 2px #000;}
 .sgd-pad,.sgd-btns{position:absolute;bottom:calc(var(--sab) + .9*var(--u));pointer-events:auto;touch-action:none;transition:opacity .3s ease;}
 .sgd-pad{left:calc(var(--sal) + 1.3*var(--u));width:calc(var(--b)*2.25);height:calc(var(--b)*2.05);}
-.sgd-btns{right:calc(var(--sar) + 1.3*var(--u));width:calc(var(--b)*2.45);height:calc(var(--b)*2.2);}
+.sgd-btns{right:calc(var(--sar) + 1.3*var(--u));width:calc(var(--b)*2.45);height:calc(var(--b)*2.2);pointer-events:none;}
+.sgd-btns .sgd-tb{pointer-events:auto;}
 .sgd-tb{position:absolute;display:grid;place-items:center;width:var(--b);height:var(--b);border-radius:50%;
   background:radial-gradient(circle at 50% 35%,rgba(70,60,80,.55),rgba(14,12,20,.55));border:2px solid rgba(243,201,105,.6);
   box-shadow:0 .2em .6em rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.15);color:#fff4dc;font:700 calc(var(--b)*.3)/1 ${KAI};
@@ -2437,7 +2749,7 @@
 .sgd-fade.off{pointer-events:none;}
 html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
 .sgd.sgd-compact .sgd-name b{font-size:calc(1.55*var(--u));}
-.sgd.sgd-compact .sgd-legend{font-size:calc(.85*var(--u));padding:.3em .7em;gap:calc(.25*var(--u)) calc(.6*var(--u));bottom:calc(var(--sab) + .4*var(--u));}
+.sgd.sgd-compact .sgd-legend{font-size:max(11px,calc(.85*var(--u)));padding:.3em .7em;gap:calc(.25*var(--u)) calc(.6*var(--u));bottom:calc(var(--sab) + .4*var(--u));}
 .sgd.sgd-compact .sgd-skip{top:calc(var(--sat) + 6.8*var(--u));}
 @media (max-height:540px){
   .sgd-card{padding:calc(.9*var(--u)) calc(1.3*var(--u));width:min(94vw,calc(64*var(--u)));}
@@ -2612,6 +2924,13 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       h.x = this.enabled ? (R ? 1 : 0) - (L ? 1 : 0) : 0;
       for (const k of ['up', 'light', 'heavy', 'guard', 'special']) h[k] = this.enabled && !!(K.has(k) || T[k]);
     }
+    // 启用 / 停用：停用期间的按键与触摸一律丢弃，启用时清空残留的点击与按住状态
+    setEnabled(on) {
+      this.enabled = !!on;
+      this.keys.clear(); this.touch = {};
+      for (const k in this.taps) this.taps[k] = 0;
+      this.recompute();
+    }
     dispose() {
       window.removeEventListener('keydown', this._down, true);
       window.removeEventListener('keyup', this._up, true);
@@ -2690,6 +3009,9 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.spA = specialOf(this.genA, sp.a, this.lookA);
       this.spB = specialOf(this.genB, sp.b, this.lookB);
       this.player = opts.playerSide === 0 || opts.playerSide === 1 ? opts.playerSide : null;
+      // 触摸屏笔记本：既有触摸也有精确指针（鼠标 / 触控板）→ 同时给键盘说明与触摸按键
+      this.hybrid = false;
+      try { this.hybrid = !!SG.isTouch && !!window.matchMedia && window.matchMedia('(any-pointer: fine)').matches && window.matchMedia('(any-hover: hover)').matches; } catch (e) { this.hybrid = false; }
       this.kind = terrainKind(opts.terrain);
       this.sim = new Sim(this.genA, this.genB, this.lookA, this.lookB);
       this.slow = 1; this.slowT = 0;
@@ -2708,6 +3030,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       // 操作者
       // 玩家一方：键盘 / 触摸；自动测试（DuelGame.auto）时仍显示操作界面，但交给电脑
       this.input = this.player !== null ? new PlayerInput() : null;
+      if (this.input) this.input.setEnabled(false);       // 开场 / 操作说明期间不接受出招（开战时才启用）
       for (const f of sim.f) f.ctrl = (this.player === f.idx && !DuelGame.auto) ? this.input : new AI(f);
       // 场景
       const scene = new THREE.Scene();
@@ -2810,16 +3133,18 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.dmgLayer = h(null);
       this.dmgLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
       this.flashEl = h('sgd-flash');
-      if (this.player !== null && !SG.isTouch) {
+      if (this.player !== null && (!SG.isTouch || this.hybrid)) {
         this.legend = h('sgd-legend', '<span><b class="sgd-k">←</b><b class="sgd-k">→</b>移动</span><span><b class="sgd-k">↑</b>跳</span><span><b class="sgd-k">J</b>轻击</span>' +
           '<span><b class="sgd-k">K</b>重击·按住蓄力</span><span><b class="sgd-k">L</b>格挡</span><span><b class="sgd-k r">I</b>绝技</span>');
         this.legend.style.opacity = '0';
       }
       if (this.player !== null && SG.isTouch && this.input) {
         this.touch = buildTouch(root, this.input);
-        this.touch.pad.style.opacity = this.touch.btns.style.opacity = '0';
-        this.touchHint = h('sgd-touchhint', '双击 ◀ ▶ 冲刺 · 按住「重击」蓄力');
-        this.touchHint.style.opacity = '0';
+        for (const el of [this.touch.pad, this.touch.btns]) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
+        if (!this.hybrid) {
+          this.touchHint = h('sgd-touchhint', '双击 ◀ ▶ 冲刺 · 按住「重击」蓄力');
+          this.touchHint.style.opacity = '0';
+        }
       }
       if (this.player === null) {
         this.watch = h('sgd-watch', '观　战');
@@ -2832,7 +3157,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     showControls(on) {
       const v = on ? '1' : '0';
       if (this.legend) this.legend.style.opacity = v;
-      if (this.touch) { this.touch.pad.style.opacity = v; this.touch.btns.style.opacity = v; }
+      if (this.touch) for (const el of [this.touch.pad, this.touch.btns]) { el.style.opacity = v; el.style.visibility = on ? 'visible' : 'hidden'; }
       if (this.touchHint) this.touchHint.style.opacity = on ? '1' : '0';
     }
     announce(text, cls, sub, sec) {
@@ -2923,7 +3248,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             this.star(e.x, e.y, e.guarded ? '#a8d0ff' : sp ? spc : e.big ? '#ffd27a' : '#ffffff', (e.guarded ? 0.9 : 1.1) + Math.min(1.6, e.dmg * 0.09));
             this.shake = Math.max(this.shake, e.guarded ? 0.04 : 0.05 + e.dmg * 0.012 + (e.big ? 0.06 : 0));
             if (!e.guarded) this.war[def.idx].flashHit(e.big ? '#ffd0a0' : '#ffffff', e.big ? 0.95 : 0.8);
-            if (e.guarded) { sfx('duel', 0.8); this.floatDmg(e.x, e.y + 0.3, e.dmg > 0 ? String(e.dmg) : '格', 'g'); }
+            if (e.guarded) { sfx('duel', 0.8); this.floatDmg(e.x, e.y + 0.3, e.dmg > 0 ? String(e.dmg) : '格', 'g'); if (e.parry) this.floatDmg(def.x, 2.4, '格开', 'lbl'); }
             else {
               sfx('hit', Math.min(1, 0.55 + e.dmg * 0.03));
               if (e.big) synth('thud', 0.5);
@@ -3256,7 +3581,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       card.className = 'sgd-card';
       const vs = '<div class="vs">攻击力与伤害取决于武力：<b>' + SG.esc(me.name) + ' ' + warOf(me) + '</b> 对 <b>' + SG.esc(foe.name) + ' ' + warOf(foe) + '</b></div>';
       const k = s => '<b class="sgd-k">' + s + '</b>';
-      if (SG.isTouch) {
+      if (SG.isTouch && !this.hybrid) {
         card.innerHTML = '<h2>操作方法</h2>' + vs + '<div class="sgd-tl"><div>' +
           '<div class="row"><span class="sgd-chip">◀</span><span class="sgd-chip">▶</span>移动（双击冲刺）</div>' +
           '<div class="row"><span class="sgd-chip">▲</span>跳跃（空中可轻击）</div></div><div>' +
@@ -3273,18 +3598,21 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="keys">' + k('K') + '</div><div class="desc">重击<small>按住蓄力，满蓄破防</small></div>' +
           '<div class="keys">' + k('L') + '<span style="opacity:.6">/</span>' + k('↓') + '</div><div class="desc">格挡<small>按住减伤八成</small></div>' +
           '<div class="keys"><b class="sgd-k r">I</b></div><div class="desc">绝技「' + SG.esc(sp.name) + '」<small>怒气满时</small></div>' +
-          '</div><div class="go">按任意键开始</div>';
+          '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下 ◀ ▶ ▲ 移动，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
       }
       this.root.appendChild(card);
       await new Promise(res => {
         let done = false;
         const go = () => { if (done) return; done = true; res(); };
         if (this.input) this.input.anyKey = go;
-        card.addEventListener('pointerdown', e => { e.preventDefault(); go(); });
+        // 轻触画面任意处即开始（不只卡片本身）
+        this._cardTap = e => { if (e.target && e.target.closest && e.target.closest('.sgd-skip')) return; e.preventDefault(); go(); };
+        window.addEventListener('pointerdown', this._cardTap, true);
         this.cardGo = go;
         if (DuelGame.auto) setTimeout(go, 700 / Math.max(0.1, DuelGame.speed));
       });
       if (this.input) this.input.anyKey = null;
+      if (this._cardTap) { window.removeEventListener('pointerdown', this._cardTap, true); this._cardTap = null; }
       card.style.transition = 'opacity .2s ease'; card.style.opacity = '0';
       setTimeout(() => card.remove(), 250);
     }
@@ -3384,6 +3712,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           sfx('duel', 0.9);
           await this.wait(0.45);
           this.showControls(true);
+          if (this.input) this.input.setEnabled(true);
           this.sim.running = true;
         }
         if (this.player === null && !this.skipped) {
@@ -3466,13 +3795,22 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     let terrain = 0;
     try { terrain = Mdl.map[b.x][b.y]; } catch (e) { terrain = 0; }
     const spOf = g => { try { return SG.Specials && typeof SG.Specials.of === 'function' ? SG.Specials.of(g) : null; } catch (e) { return null; } };
-    const res = await play(Object.assign({
-      a: { gen: a.gen, side: a.side, color: factionColorOf(a), culture: a.gen.culture },
-      b: { gen: b.gen, side: b.side, color: factionColorOf(b), culture: b.gen.culture },
-      playerSide: a.side === bc.playerSide ? 0 : 1,
-      terrain,
-      special: { a: spOf(a.gen), b: spOf(b.gen) },
-    }, extra || {}));
+    // 文化：武将自带 culture（世界剧本由 model.js 派生），否则查 SG.WorldData（lookOf 内亦有兜底）
+    const culOf = g => { if (g.culture) return g.culture; try { return SG.WorldData && SG.WorldData.cultureOfGeneral ? SG.WorldData.cultureOfGeneral(g.name) : undefined; } catch (e) { return undefined; } };
+    let res;
+    try {
+      res = await play(Object.assign({
+        a: { gen: a.gen, side: a.side, color: factionColorOf(a), culture: culOf(a.gen) },
+        b: { gen: b.gen, side: b.side, color: factionColorOf(b), culture: culOf(b.gen) },
+        playerSide: a.side === bc.playerSide ? 0 : 1,
+        terrain,
+        special: { a: spOf(a.gen), b: spOf(b.gen) },
+      }, extra || {}));
+    } catch (e) {
+      // 格斗画面出错：记录错误，改用无画面模拟（同一套规则）分出胜负，保证士气与溃散照常结算
+      console.error('单挑画面出错，改为直接结算：', e);
+      try { res = simulate(a.gen, b.gen); } catch (e2) { res = scriptedDuel(a.gen, b.gen); }
+    }
     const r = Mdl.duelFinish(a, b, res.winner === 0, res.log);
     const loser = res.winner === 0 ? b : a;
     // 败者的名牌留到溃散动画时再消失（与旧流程一致）
@@ -3484,6 +3822,19 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     if (UI && UI.toast) UI.toast((res.winner === 0 ? a : b).gen.name + '于单挑中击败了' + loser.gen.name + '！', 2);
     if (V && typeof V.rout === 'function') await V.rout(loser);
     return Object.assign(r, { kind: res.kind, hpA: res.hpA, hpB: res.hpB });
+  }
+
+  // 最后的兜底：旧版的体力交换（只用于格斗逻辑本身也出错时）
+  function scriptedDuel(ga, gb) {
+    let hpA = 100, hpB = 100;
+    const log = [];
+    for (let i = 0; i < 30 && hpA > 0 && hpB > 0; i++) {
+      const who = rnd() < warOf(ga) / (warOf(ga) + warOf(gb)) ? 0 : 1;
+      const dmg = Math.round((6 + Math.floor(rnd() * 11)) * (0.6 + warOf(who === 0 ? ga : gb) / 120));
+      if (who === 0) hpB = Math.max(0, hpB - dmg); else hpA = Math.max(0, hpA - dmg);
+      log.push({ who, dmg, hpA, hpB, move: 'light1', guarded: false, t: i });
+    }
+    return { winner: hpA >= hpB ? 0 : 1, kind: 'time', hpA, hpB, log };
   }
 
   const DuelGame = {

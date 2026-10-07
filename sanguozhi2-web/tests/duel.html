@@ -49,6 +49,7 @@
     <button id="btnTally">20 场模拟</button>
     <button id="btnMem">5 连战内存</button>
     <button id="btnWire">战场接线</button>
+    <button id="btnBots">人机强度</button>
   </div>
   <div id="out"></div>
 </div>
@@ -59,7 +60,8 @@
 /* 单挑格斗（js/duel-game.js）独立测试页。
    URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
              &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子 · &pr=N 最大像素比（软件渲染测试用）
-   测试钩子：window.runDuel(opts) → Promise<结果> · window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) · window.__log */
+             &bots=1 载入后立即跑「人机强度」回归
+   测试钩子：window.runDuel(opts) → Promise<结果> · window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) · window.botTally(n) · window.__log */
 (function () {
   const Q = new URLSearchParams(location.search);
   const optional = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
@@ -182,6 +184,53 @@
       log('接线：' + JSON.stringify(out));
       return out;
     };
+    // 人机强度回归：模拟玩家的脚本（固定节奏、无反应延迟）对战真实电脑，检查「武力决定胜负、强将难以取巧」
+    //   jumper：反复跳入空中斩（旧版漏洞：武力 30 能赢武力 100）；masher：走近连按轻击
+    const botCtl = kind => {
+      const c = { held: { x: 0, up: false, light: false, heavy: false, guard: false, special: false, dash: 0 }, taps: { light: 0, up: 0, special: 0, heavy: 0, dir: 0 } };
+      let nt = 0;
+      c.update = (dt, sim) => {
+        const me = sim.f[0], o = sim.f[1], d = Math.abs(o.x - me.x);
+        if (kind === 'jumper') {
+          c.held.x = me.face;
+          if (sim.clock < nt) return;
+          if (sim.actionable(me) && d < 3.2 && d > 1.2) { c.taps.up++; nt = sim.clock + 0.1; }
+          else if (me.state === 'jump' && d < me.reach + 0.3) { c.taps.light++; nt = sim.clock + 0.1; }
+          else if (me.state !== 'jump' && d < me.reach) { c.taps.light++; nt = sim.clock + 0.1; }
+        } else {
+          c.held.x = d > me.reach * 0.9 ? me.face : 0;
+          if (sim.clock > nt && d < me.reach * 1.1) { c.taps.light++; nt = sim.clock + 0.12; }
+          if (me.rage >= 100) c.taps.special++;
+        }
+      };
+      return c;
+    };
+    window.botTally = function (n) {
+      n = n || 24;
+      const D = SG.DuelGame, rows = [];
+      const cases = [
+        ['jumper', '孙乾', '吕布', 0, 10], ['jumper', '刘备', '吕布', 0, 40], ['jumper', '关羽', '关羽', 0, 75],
+        ['masher', '孙乾', '吕布', 0, 10], ['masher', '刘备', '吕布', 0, 40], ['masher', '关羽', '关羽', 25, 80], ['masher', '张飞', '刘备', 60, 100],
+      ];
+      let ok = true;
+      for (const [kind, p, a, lo, hi] of cases) {
+        const P = byName(p), A = byName(a);
+        let w = 0;
+        for (let i = 0; i < n; i++) {
+          const sim = new D._Sim(P, A, D.lookOf(P), D.lookOf(A));
+          sim.f[0].ctrl = botCtl(kind); sim.f[1].ctrl = new D._AI(sim.f[1]);
+          sim.runToEnd();
+          if (sim.outcome().winner === 0) w++;
+        }
+        const pct = Math.round(100 * w / n), pass = pct >= lo && pct <= hi;
+        if (!pass) ok = false;
+        rows.push({ kind, p, a, pct, lo, hi, pass });
+        log(`${pass ? '✓' : '✗'} ${kind} 玩家 ${p}(${P.war}) 对 电脑 ${a}(${A.war})：玩家胜 ${pct}%（期望 ${lo}–${hi}%）`);
+      }
+      log(ok ? '人机强度：全部通过' : '人机强度：有未通过项');
+      return { ok, rows };
+    };
+    document.getElementById('btnBots').onclick = () => window.botTally();
     document.getElementById('btnWire').onclick = () => window.wireTest();
     document.getElementById('btnGo').onclick = () => runDuel();
     document.getElementById('btnTally').onclick = () => {
@@ -194,6 +243,7 @@
     window.__ready = true;
     log('载入：' + Object.keys(loaded).filter(k => loaded[k]).map(k => k.replace('../js/', '')).join(' '));
     if (Q.get('go') === '1') runDuel();
+    if (Q.get('bots') === '1') window.botTally();
   }
 })();
 </script>

@@ -10,15 +10,38 @@
      Commands.moveBlocked(c) / transportBlocked(c)       不能使用的原因（中文）或 null
      Commands.move / transport 拒绝不可达的目的地（返回说明文字，不改变状态）
      Commands.aiMoveTargets(c, f)                        电脑调动武将可选的目的地（路程 ≤ 2；供 strategy-ai.js 接线用）
+   第二版 §4G 世界剧本：
+     SG.ScenarioData 在运行时可换（SG.Scenarios.classic / world）；本文件每次读取都取当前剧本。
+     GameState.newGame(playerKey, scenarioId?)  scenarioId 'classic' | 'world'（缺省 = 当前 SG.ScenarioData）
+     G.scenario = 'classic' | 'world'（存档带剧本键与版本号；读档时先切换 SG.ScenarioData）
+     剧本的附加列（城 culture；势力 culture / region；武将 culture / born）与 SG.WorldData 的查询
+       在 init() 里写到对象上，不进存档（不可枚举，由剧本数据重建）：
+       city.culture；faction.culture、faction.region；gen.culture、gen.born、gen.sex（'m' / 'f'）、gen.female
+     G.seaLinks = Set('小编号-大编号')（剧本 SeaLinks）；SG.linkIsSea(aId, bId)
+     SG.mapPos(c) = SG.project(c.lon, c.lat)（中国本部与旧版公式相同）
+     SAVE_KEY = 'sanguozhi2_save_v2'；GameState.loadError：最近一次读档失败的原因（中文）；
+       GameState.hasLegacySave()：只有旧版存档（键 'sanguozhi2_save'）
+     GameState.saveInfo() → { scenario, year, month, faction } | null（标题画面显示用）
    ========================================================================== */
 (function () {
   const SG = window.SG;
   const M = SG.M;
   const Balance = SG.Balance;
-  const ScenarioData = SG.ScenarioData;
+  // 当前剧本（选择剧本时 game.js 替换 SG.ScenarioData，这里始终读取最新的那一份）
+  const ScenarioData = new Proxy({}, { get: (t, k) => SG.ScenarioData[k] });
   const Seq = SG.Seq;
 
-  const SAVE_KEY = 'sanguozhi2_save';
+  const SAVE_KEY = 'sanguozhi2_save_v2';
+  const LEGACY_SAVE_KEY = 'sanguozhi2_save';
+  const SAVE_VERSION = 2;
+  // 当前剧本的键：'classic' | 'world'
+  function scenarioId() {
+    const S = SG.Scenarios;
+    if (S) for (const k of Object.keys(S)) if (S[k] === SG.ScenarioData) return k;
+    return 'classic';
+  }
+  // 由剧本数据重建、不进存档的字段（不可枚举：JSON.stringify / Object.assign 都不会带上）
+  function derived(o, k, v) { Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: false }); }
 
   // ------------------------------------------------------- 数据对象工厂 --
   function newCity(o) {
@@ -46,7 +69,10 @@
   }
 
   // C# 属性的替代
-  SG.mapPos = function (c) { return { x: (c.lon - 100) * 5, y: (c.lat - 23) * 5.6 }; };
+  // 第二版：经纬度 → 地图坐标与地形生成共用 SG.project（js/world-geo.js；中国本部与旧版公式完全相同）
+  SG.mapPos = function (c) { return SG.project ? SG.project(c.lon, c.lat) : { x: (c.lon - 100) * 5, y: (c.lat - 23) * 5.6 }; };
+  // 两城之间是否为海路（剧本 SeaLinks；地图据此画航线、行军沿航线前进）
+  SG.linkIsSea = function (a, b) { const g = SG.G; return !!(g && g.seaLinks && g.seaLinks.has(Math.min(a, b) + '-' + Math.max(a, b))); };
   SG.cityDefense = function (c) { return 20 + M.idiv(c.town, 12); };
   SG.maxTroops = function (g) { return Balance.GeneralTroopBase + g.war * Balance.GeneralTroopPerWar; };
   SG.isFree = function (g) { return g.faction < 0 && !g.dead; };
@@ -89,12 +115,15 @@
       this.factions = [];
       this.alliance = []; // n×n，值为同盟到期的月序号
       this.log = makeLog(this, []);
+      this.scenario = scenarioId();
+      this.seaLinks = new Set();
     }
 
     get monthIndex() { return this.year * 12 + this.month; }
 
     // ------------------------------------------------------------ 创建 --
-    static newGame(playerFactionKey) {
+    static newGame(playerFactionKey, scenario) {
+      if (scenario && SG.Scenarios && SG.Scenarios[scenario]) SG.ScenarioData = SG.Scenarios[scenario];
       const g = new GameState();
       g.year = ScenarioData.StartYear; g.month = ScenarioData.StartMonth; g.seed = SG.Random.rangeInt(1, 999999);
       for (const line of ScenarioData.Cities) {
@@ -137,13 +166,40 @@
       return g;
     }
 
-    // 读档或新建后重建非序列化数据
+    // 读档或新建后重建非序列化数据：连线、海路、文化 / 地域 / 生年 / 性别（剧本附加列与 SG.WorldData）
     init() {
+      const byKey = new Map(this.cities.map(c => [c.key, c]));
+      const city = k => { const c = byKey.get(k); if (!c) throw new Error('city not in scenario: ' + k); return c; };
       for (const c of this.cities) c.links = [];
       for (const l of ScenarioData.Links) {
         const p = l.split('-');
-        const a = this.cityByKey(p[0]); const b = this.cityByKey(p[1]);
+        const a = city(p[0]); const b = city(p[1]);
         a.links.push(b.id); b.links.push(a.id);
+      }
+      this.seaLinks = new Set();
+      for (const l of ScenarioData.SeaLinks || []) {
+        const p = l.split('-');
+        const a = city(p[0]).id, b = city(p[1]).id;
+        this.seaLinks.add(Math.min(a, b) + '-' + Math.max(a, b));
+      }
+      const WD = SG.WorldData, WI = SG.WorldInfo || {};
+      const cityCult = {}, facCult = {}, facReg = {}, genCult = {}, genBorn = {};
+      for (const l of ScenarioData.Cities) { const p = l.split('|'); if (p[10]) cityCult[p[0]] = p[10]; }
+      for (const l of ScenarioData.Factions) { const p = l.split('|'); if (p[6]) facCult[p[0]] = p[6]; if (p[7]) facReg[p[0]] = p[7]; }
+      for (const l of ScenarioData.Generals) { const p = l.split('|'); if (p[9]) genCult[p[0]] = p[9]; if (p[10]) genBorn[p[0]] = parseInt(p[10], 10); }
+      for (const c of this.cities) derived(c, 'culture', cityCult[c.key] || (WD ? WD.cultureOfCity(c.key) : 'han'));
+      for (const f of this.factions) {
+        derived(f, 'culture', facCult[f.key] || (WD ? WD.cultureOfFaction(f.key) : 'han'));
+        derived(f, 'region', facReg[f.key] || (WD ? WD.regionOfFaction(f.key) : 'zhongyuan'));
+      }
+      for (const x of this.generals) {
+        derived(x, 'culture', genCult[x.name] || (WD ? WD.cultureOfGeneral(x.name) : 'han'));
+        let born = genBorn[x.name];
+        if (!(born > 0) && WD) born = WD.bornOf(x.name);
+        derived(x, 'born', born > 0 ? born : null);
+        const sex = (WI[x.name] && WI[x.name].sex) || (WD ? WD.sexOf(x.name) : 'm');
+        derived(x, 'sex', sex === 'f' ? 'f' : 'm');
+        derived(x, 'female', sex === 'f');
       }
     }
 
@@ -239,6 +295,7 @@
     // ------------------------------------------------------------ 存档 --
     toJSON() {
       return {
+        version: SAVE_VERSION, scenario: this.scenario || 'classic',
         year: this.year, month: this.month, player: this.player, tokens: this.tokens, seed: this.seed,
         cities: this.cities.map(c => {
           const o = {};
@@ -261,15 +318,42 @@
       if (!st) return false;
       try { return !!st.getItem(SAVE_KEY); } catch (e) { return false; }
     }
+    // 只有旧版（第一版）存档：读不了，标题画面提示“新版本，旧存档无法读取”
+    static hasLegacySave() {
+      const st = storage();
+      if (!st) return false;
+      try { return !st.getItem(SAVE_KEY) && !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
+    }
+    // 存档摘要（不完整读档）：{ scenario, year, month, faction } | null
+    static saveInfo() {
+      const st = storage();
+      if (!st) return null;
+      try {
+        const d = JSON.parse(st.getItem(SAVE_KEY) || 'null');
+        if (!d || !Array.isArray(d.factions)) return null;
+        const f = d.factions[d.player];
+        return { scenario: d.scenario || 'classic', year: d.year | 0, month: d.month | 0, faction: f ? f.name : '' };
+      } catch (e) { return null; }
+    }
     static deleteSave() {
       const st = storage();
       if (!st) return;
       try { st.removeItem(SAVE_KEY); } catch (e) { /* 忽略 */ }
     }
+    // 不合格的存档抛出带中文说明的 Error（load() 把说明放进 GameState.loadError）
     static fromJSON(text) {
       const d = typeof text === 'string' ? JSON.parse(text) : text;
       if (!d || !Array.isArray(d.cities) || !Array.isArray(d.generals) || !Array.isArray(d.factions)) return null;
+      if (d.version !== SAVE_VERSION) throw new Error('新版本，旧存档无法读取。');
+      const sid = d.scenario || 'classic';
+      const scen = SG.Scenarios ? SG.Scenarios[sid] : (sid === 'classic' ? SG.ScenarioData : null);
+      if (!scen) throw new Error('存档所用的剧本（' + sid + '）不存在，无法读取。');
+      // 城池必须与剧本一致（连线、海路、文化都按剧本重建）
+      const keys = new Set(scen.Cities.map(l => l.slice(0, l.indexOf('|'))));
+      if (d.cities.length !== keys.size || d.cities.some(c => !c || !keys.has(c.key))) throw new Error('存档与当前版本的剧本数据不符，无法读取。');
+      SG.ScenarioData = scen;
       const g = new GameState();
+      g.scenario = sid;
       g.year = d.year | 0; g.month = d.month | 0; g.player = d.player == null ? -1 : d.player | 0;
       g.tokens = d.tokens | 0; g.seed = d.seed | 0;
       g.cities = d.cities.map(c => newCity(Object.assign({}, c, { links: [] })));
@@ -283,16 +367,31 @@
       return g;
     }
     static load() {
+      GameState.loadError = null;
       const st = storage();
-      if (!st) return null;
+      if (!st) { GameState.loadError = '浏览器不允许读取存档。'; return null; }
+      const prev = SG.ScenarioData;
       try {
         const text = st.getItem(SAVE_KEY);
-        if (!text) return null;
-        return GameState.fromJSON(text);
-      } catch (e) { console.log('load failed', e); return null; }
+        if (!text) {
+          GameState.loadError = st.getItem(LEGACY_SAVE_KEY) ? '新版本，旧存档无法读取。' : '没有存档。';
+          return null;
+        }
+        const g = GameState.fromJSON(text);
+        if (!g) GameState.loadError = '存档已损坏，无法读取。';
+        return g;
+      } catch (e) {
+        SG.ScenarioData = prev;
+        console.log('load failed', e);
+        GameState.loadError = e && /[\u4e00-\u9fff]/.test(e.message || '') ? e.message : '存档已损坏，无法读取。';
+        return null;
+      }
     }
   }
   GameState.SAVE_KEY = SAVE_KEY;
+  GameState.LEGACY_SAVE_KEY = LEGACY_SAVE_KEY;
+  GameState.SAVE_VERSION = SAVE_VERSION;
+  GameState.loadError = null;
 
   // ================================================================ Commands --
   const DevKind = Object.freeze({ Land: 0, Industry: 1, Town: 2 });

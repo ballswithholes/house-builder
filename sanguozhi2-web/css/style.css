@@ -1384,6 +1384,8 @@ body {
 }
 .sg-card-sub { color: var(--sg-muted2); font-size: .9em; margin-left: .5em; }
 .sg-battle-card .sg-bar { margin: .3rem 0 .35rem; }
+/* 中文按词组换行（「训练 63」不拆成「训 / 练」），只在全角空格处断行 */
+.sg-battle-card > div { word-break: keep-all; overflow-wrap: anywhere; }
 
 .sg-battle-actions {
   position: absolute;
@@ -1401,6 +1403,22 @@ body {
   border-radius: .8rem;
 }
 .sg-battle-actions .sg-btn.primary { min-width: 11rem; font-size: 1.4rem; }
+/* 攻击动画 开 / 快 / 关（紧凑按钮，快捷键 V） */
+.sg-battle-actions .sg-btn.sg-battle-anim {
+  min-width: 0;
+  padding-left: .9rem;
+  padding-right: .9rem;
+  font-size: 1.1rem;
+  letter-spacing: .06em;
+}
+.sg-battle-anim b {
+  display: inline-block;
+  min-width: 1.2em;
+  margin-left: .3em;
+  color: var(--sg-gold, #f3c969);
+  font-weight: 700;
+}
+.sg-battle-anim[data-mode="off"] b { color: var(--sg-muted2, #a8a194); }
 
 /* ---------------------------------------------------------------- 标题画面 -- */
 .sg-title {
@@ -1764,6 +1782,7 @@ body {
   .sg-battle-actions { right: .5rem; bottom: .5rem; gap: .5rem; }
   .sg-battle-actions .sg-btn { min-width: 7.5rem; font-size: 1.15rem; letter-spacing: .06em; }
   .sg-battle-actions .sg-btn.primary { min-width: 8.5rem; font-size: 1.2rem; }
+  .sg-battle-actions .sg-btn.sg-battle-anim { min-width: 0; padding-left: .6rem; padding-right: .6rem; font-size: 1rem; letter-spacing: 0; }
 
   /* 标题：左右分栏 */
   .sg-title {
@@ -1807,6 +1826,100 @@ body {
   .sg-say-speaker { flex-direction: row; width: auto; }
   .sg-say-speaker .sg-medal { --size: 3rem !important; }
   .sg-battle-card { width: calc(100% - 2.4rem); bottom: 5.6rem; }
+}
+
+/* ================================================ 世界剧本（第二版 §4G）：选择剧本 / 地域 / 君主、武将详情 == */
+/* 载入画面：确定进度的进度条（game.js 按地图构建进度设置宽度） */
+#loading .sg-loading-bar.is-det i { animation: none; transform: none; width: 0;
+  background: linear-gradient(90deg, rgba(243, 201, 105, .5), #f3c969); }
+#loading .sg-loading-text { min-width: 12em; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* 选择地域 / 君主与开局卡片：对话框靠左，地图（镜头飞往的地域、都城）留在右侧 */
+.sg-modal.sg-side-modal { justify-content: flex-start; padding-left: max(var(--sg-sal), 2vw); }
+.sg-modal.sg-side-modal::before { background: linear-gradient(90deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25) 55%, rgba(0, 0, 0, .04)); }
+
+/* 标题：存档摘要 */
+.sg-title-saveinfo { margin-top: -.25rem; text-align: center; font-size: max(11px, .85rem); color: rgba(245, 237, 219, .72);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85); letter-spacing: .05em; }
+
+/* 选择剧本 */
+.sg-scen-name { font-family: var(--sg-font-title); font-size: 1.15em; font-weight: 700; letter-spacing: .08em; color: var(--sg-gold); }
+.sg-choose .sg-item:has(.sg-scen-name) .sg-item-main { flex-direction: column; align-items: flex-start; }
+.sg-choose .sg-item:has(.sg-scen-name) .sg-item-desc { font-size: .8em; }
+
+/* 选择地域：名称 + 君主头像 */
+.sg-region-pick .sg-item-label { display: inline-flex; align-items: center; gap: .8rem; }
+.sg-region-name { display: inline-block; min-width: 5.6em; font-family: var(--sg-font-title); font-weight: 700; letter-spacing: .06em; }
+.sg-region-faces { display: inline-flex; align-items: center; gap: .25rem; }
+.sg-region-faces .sg-portrait-inline { margin-right: 0; border-radius: 4px; box-shadow: 0 0 0 1px rgba(243, 201, 105, .25); }
+.sg-region-more { font-size: .75em; color: var(--sg-muted); margin-left: .2rem; }
+.sg-faction-name { margin-left: .5em; font-size: .78em; color: var(--sg-muted); font-weight: 400; }
+
+/* 分组标题行（势力列表按地域分组） */
+.sg-item.sg-item-group, .sg-item.sg-item-group:disabled {
+  opacity: 1; filter: none; min-height: 0; margin-top: .35rem; padding: .25rem .6rem .1rem;
+  background: none; border-color: transparent; box-shadow: none; cursor: default;
+  border-bottom: 1px solid rgba(243, 201, 105, .28); border-radius: 0;
+}
+.sg-item.sg-item-group::before { display: none; }
+.sg-group-head { font-family: var(--sg-font-title); font-weight: 700; letter-spacing: .1em; color: var(--sg-gold); font-size: .95em; }
+.sg-item.sg-item-group .sg-item-right { font-size: .75em; }
+
+/* 开局确认卡片（世界剧本） */
+.sg-dialog.sg-faction-card { --w: 38rem; }
+.sg-fcard-body { display: flex; gap: 1.1rem; align-items: flex-start; padding: .4rem .5rem .2rem; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.sg-fcard-body > .sg-portrait { width: 7rem !important; height: 7rem !important; flex: none; }
+.sg-fcard-text { display: flex; flex-direction: column; gap: .45rem; min-width: 0; font-size: 1.05rem; line-height: 1.55; }
+.sg-fcard-full { font-size: 1.15rem; font-weight: 700; color: var(--sg-text); }
+.sg-fcard-stats { color: var(--sg-muted); font-variant-numeric: tabular-nums; }
+.sg-fcard-note { color: var(--sg-text); opacity: .92; }
+.sg-fcard-liberty, .sg-geninfo-liberty { padding: .35rem .6rem; border-left: 3px solid rgba(243, 201, 105, .6); background: rgba(243, 201, 105, .07);
+  border-radius: 0 .4rem .4rem 0; color: var(--sg-muted); font-size: .95em; }
+.sg-fcard-liberty b, .sg-geninfo-liberty b { color: var(--sg-gold); margin-right: .6em; }
+
+/* 武将行可点按（→ 详情） */
+.sg-genrow[role="button"] { cursor: pointer; }
+.sg-genrow[role="button"]:focus { outline: none; }
+.sg-genrow[role="button"]:focus-visible { border-color: rgba(243, 201, 105, .7); }
+.sg-genrow[role="button"]:active { background: rgba(243, 201, 105, .14); }
+
+/* 武将详情 */
+.sg-dlg-title .sg-tag { -webkit-text-fill-color: #1a1208; }
+.sg-dialog.sg-geninfo { --w: 47rem; }
+.sg-geninfo-body { display: flex; gap: 1.2rem; align-items: flex-start; padding: .5rem .5rem .2rem; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.sg-geninfo-side { flex: none; display: flex; flex-direction: column; gap: .6rem; width: 10.5rem; }
+.sg-geninfo-side > .sg-portrait { width: 10.5rem !important; height: 10.5rem !important; }
+.sg-geninfo-stats { display: flex; flex-direction: column; gap: .3rem; }
+.sg-geninfo-stat { display: grid; grid-template-columns: auto 2.2em 1fr; align-items: center; gap: .45rem; font-size: 1rem; }
+.sg-geninfo-stat span { color: var(--sg-muted); }
+.sg-geninfo-stat b { text-align: right; font-variant-numeric: tabular-nums; }
+.sg-geninfo-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .7rem; font-size: 1.05rem; line-height: 1.55; }
+.sg-geninfo-chips { display: flex; flex-wrap: wrap; gap: .4rem .9rem; }
+.sg-geninfo-special { padding: .55rem .75rem .6rem; border-radius: .6rem; border: 1px solid rgba(243, 201, 105, .25); background: rgba(255, 255, 255, .04); }
+.sg-geninfo-sp-head { display: flex; align-items: baseline; gap: .6rem; font-size: 1.25rem; font-family: var(--sg-font-title); }
+.sg-geninfo-sp-head small { font-family: inherit; font-size: .72em; color: var(--sg-muted); }
+.sg-geninfo-sp-label { font-size: .7em; padding: .05rem .4rem; border-radius: .3rem; background: var(--sg-cinnabar, #c8382c); color: #fff2e0; letter-spacing: .1em; }
+.sg-geninfo-sp-desc { margin-top: .25rem; }
+.sg-geninfo-sp-rules { margin-top: .2rem; font-size: .88em; color: var(--sg-muted); }
+.sg-geninfo-bio { display: flex; flex-direction: column; gap: .3rem; }
+.sg-geninfo-full { font-weight: 700; font-size: 1.1rem; }
+.sg-geninfo-orig { margin-left: .7em; font-weight: 400; font-style: italic; color: var(--sg-muted); font-size: .9em; }
+.sg-geninfo-role { color: var(--sg-gold); font-size: .98em; }
+.sg-geninfo-note { opacity: .92; }
+
+@media (max-height: 540px) {
+  .sg-region-faces .sg-portrait-inline { width: 26px !important; height: 26px !important; }
+  .sg-fcard-body > .sg-portrait { width: 5.4rem !important; height: 5.4rem !important; }
+  .sg-fcard-text { font-size: .98rem; line-height: 1.45; gap: .3rem; }
+  .sg-dialog.sg-geninfo { --w: 52rem; }
+  .sg-geninfo-body { gap: .9rem; padding-top: .3rem; }
+  .sg-geninfo-side { width: 7.6rem; gap: .4rem; }
+  .sg-geninfo-side > .sg-portrait { width: 7.6rem !important; height: 7.6rem !important; }
+  .sg-geninfo-stat { font-size: .92rem; gap: .3rem; }
+  .sg-geninfo-main { font-size: .98rem; line-height: 1.45; gap: .45rem; }
+  .sg-geninfo-sp-head { font-size: 1.12rem; }
 }
 
 /* 减少动态效果 */

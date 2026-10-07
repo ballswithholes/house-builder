@@ -9,6 +9,12 @@
      灰色指令按钮被点按时以提示说明原因（addCmd(name, why, …)、explainCmd）；
      第一次占领新城后弹一次「移动」提示并让「移动」按钮闪烁（moveTip / hintCmd，本机只弹一次）；
      只在「移动」此刻真能用时弹出（有令牌、某座己方城有未行动的武将可调），否则留到下个月月初。
+   第二版 §4G 世界剧本：
+     地图音乐按玩家势力的文化（SG.Sfx.setCulture）；点按城池面板的武将行 → 武将详情（大头像、能力、
+     必杀技名称与说明；世界武将另有全名、原名、身份、生卒与史实介绍，见 generalInfo）；
+     「势力」列表与外交的同盟对象在世界剧本中按地域分组（groupedFactions）。
+     世界地图的城名在远景（拉远到 340）也显示，距离超过约 175 时改为紧凑样式，由避让逻辑按优先级取舍；
+     月末消息优先显示与玩家相关的（我方、本地域与邻国），见 pickNews。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -17,6 +23,8 @@
   const CINNABAR = '#c8382c';
   const GREY_SPEAKER = '#666673';               // C# new Color(0.4, 0.4, 0.45)
   const LABEL_HIDE_BEYOND = 170;                // C# WorldFollow.hideBeyond = 170
+  const LABEL_HIDE_BEYOND_WORLD = 420;          // 世界地图可拉远到 340：远景也显示（避让后剩下的）城名
+  const LABEL_FAR_COMPACT = 175;                // 世界地图镜头距离超过约 175 时城名改为紧凑样式
   const LABEL_FADE = 0.18;                      // 城名标签避让时的淡入淡出时长（秒）
 
   // 屏幕矩形 { l, t, r, b } 是否相交
@@ -27,6 +35,47 @@
   function sfx(name, vol) { try { if (SG.Sfx) SG.Sfx.play(name, vol === undefined ? 0.8 : vol); } catch (e) { /* 无音频 */ } }
   function click() { try { if (SG.Sfx) SG.Sfx.click(); } catch (e) { /* 无音频 */ } }
   function music(kind) { try { if (SG.Sfx) SG.Sfx.music(kind); } catch (e) { /* 无音频 */ } }
+  // 地图音乐的地域风格 = 玩家势力的文化（世界剧本；经典剧本为 han）
+  function mapMusic() {
+    try { const g = G(); if (SG.Sfx && SG.Sfx.setCulture && g && g.playerFaction) SG.Sfx.setCulture(g.playerFaction.culture || 'han'); } catch (e) { /* 无音频 */ }
+    music('map');
+  }
+  // 世界剧本的地域表（经典剧本为 null）
+  function regionsOf() {
+    const g = G();
+    const R = g && g.scenario === 'world' && SG.ScenarioData && SG.ScenarioData.Regions;
+    return R && R.length ? R : null;
+  }
+  // 势力列表按地域分组：分组标题行（不可选）+ 各势力行。玩家所在地域排在最前。
+  // fs：势力数组（已排序）；row(f) → SG.UI.item。→ { items, pick: 列表下标 → 势力 | null, heads: 标题行下标 }
+  function groupedFactions(fs, row) {
+    const regs = regionsOf();
+    if (!regs) return { items: fs.map(row), pick: i => fs[i] || null, heads: [] };
+    const g = G();
+    const mine = g.playerFaction ? g.playerFaction.region : null;
+    const order = regs.slice().sort((a, b) => (b.id === mine) - (a.id === mine));
+    const items = [], map = [], heads = [];
+    for (const r of order) {
+      const list = fs.filter(f => f.region === r.id);
+      if (!list.length) continue;
+      heads.push(items.length);
+      items.push(item(`<span class="sg-group-head">${SG.esc(r.name)}</span>`, `势力 ${list.length}　城 ${sum(list, f => g.cityCount(f.id))}`, false));
+      map.push(null);
+      for (const f of list) { items.push(row(f)); map.push(f); }
+    }
+    const rest = fs.filter(f => !map.includes(f));
+    for (const f of rest) { items.push(row(f)); map.push(f); }
+    return { items, pick: i => map[i] || null, heads };
+  }
+  // 给最上层列表对话框的分组标题行加上样式类
+  function markGroupHeads(heads) {
+    if (!heads || !heads.length) return;
+    const ms = document.querySelectorAll('.sg-modals .sg-modal:not(.is-closing)');
+    const m = ms[ms.length - 1];
+    if (!m) return;
+    const bs = m.querySelectorAll('.sg-item');
+    for (const i of heads) if (bs[i]) { bs[i].classList.add('sg-item-group'); bs[i].tabIndex = -1; }
+  }
   function item(label, right, enabled, desc) {
     if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc);
     return { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : enabled, desc: desc === undefined ? null : desc, selected: false };
@@ -144,7 +193,7 @@
       const game = SG.Game;
       this.buildHud();
       game.rig.onTap.push(this._onMapTap);
-      music('map');
+      mapMusic();
       const cap = G().cities[G().ruler(G().player).city];
       const p = SG.mapPos(cap);
       game.rig.focusMap(p.x, p.y, 48);
@@ -166,7 +215,7 @@
         game.map.refresh(G()); this.refreshAll();
         if (!G().playerFaction.alive) { await this.gameOver(false); return; }
         if (G().cities.every(c => c.owner === G().player)) { await this.gameOver(true); return; }
-        if (news.length > 0) await UI().say(news.slice(0, 6).join('\n'));
+        if (news.length > 0) await UI().say(this.pickNews(news));
         try { G().save(); } catch (e) { console.warn(e); }
         UI().banner(G().year + '年 ' + G().month + '月', '令牌 ' + G().tokens + ' 枚', 1.8);
         // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初横幅之后补弹提示
@@ -174,6 +223,19 @@
         this.busy = false;
         if (this._tipPending) await this.moveTip(false);
       }
+    }
+
+    // 月末消息：世界剧本中先列与玩家相关的（提到我方、本地域势力或与我方接壤的势力），至多 6 条
+    pickNews(news) {
+      const g = G();
+      if (g.scenario !== 'world' || news.length <= 6) return news.slice(0, 6).join('\n');
+      const me = g.playerFaction;
+      const names = new Set([me.name]);
+      for (const f of g.factions) if (f.alive && f.region === me.region) names.add(f.name);
+      for (const c of g.citiesOf(g.player)) for (const j of c.links) { const o = g.cities[j].owner; if (o >= 0) names.add(g.factions[o].name); }
+      const near = n => { for (const k of names) if (n.indexOf(k) >= 0) return true; return false; };
+      const list = news.filter(near).concat(news.filter(n => !near(n))).slice(0, 6);
+      return list.join('\n') + '\n<span class="sg-muted">（各地另有 ' + (news.length - list.length) + ' 条消息）</span>';
     }
 
     async gameOver(won) {
@@ -255,9 +317,10 @@
       window.addEventListener('resize', relayout);
 
       // 地图上的城名
+      this._hideBeyond = G().scenario === 'world' ? LABEL_HIDE_BEYOND_WORLD : LABEL_HIDE_BEYOND;
       for (const cv of SG.Game.map.cities.values()) {
         const el = h('div', 'sg-citylabel', SG.esc(cv.city.name), null);
-        const handle = SG.UI.follow(el, () => cv.labelPos, { hideBeyond: LABEL_HIDE_BEYOND });
+        const handle = SG.UI.follow(el, () => cv.labelPos, { hideBeyond: this._hideBeyond });
         handle.alpha = 0;             // 首次避让计算后才显示，避免第一帧城名叠在一起
         this.labels.set(cv.city.id, { el, handle, cv, w: 0, h: 0, fade: -1, on: false, seen: false });
       }
@@ -316,7 +379,7 @@
       if (!g) return;
       // 紧凑模式：视口高度不足 540 且镜头距离超过约 90（带滞后，缩放时不来回切换）
       const dist = SG.Game && SG.Game.rig ? SG.Game.rig.distance : 0;
-      const compact = window.innerHeight < 540 && dist > (this._compact ? 86 : 92);
+      const compact = (window.innerHeight < 540 && dist > (this._compact ? 86 : 92)) || dist > LABEL_FAR_COMPACT - (this._compact ? 8 : 0);
       if (compact !== !!this._compact) {
         this._compact = compact;
         for (const [id, l] of this.labels) this.renderLabel(id, l);
@@ -328,7 +391,7 @@
       const cand = [];
       for (const [id, l] of this.labels) {
         const s = Gfx.worldToScreen(l.cv.labelPos);
-        if (!(s && s.visible && s.dist < LABEL_HIDE_BEYOND && isFinite(s.x) && isFinite(s.y)) || !(l.w > 0)) {
+        if (!(s && s.visible && s.dist < (this._hideBeyond || LABEL_HIDE_BEYOND) && isFinite(s.x) && isFinite(s.y)) || !(l.w > 0)) {
           // 不在画面内（由 follow 自行隐藏）；再次进入画面时直接取目标透明度，不闪现
           l.seen = false; l.on = false;
           continue;
@@ -437,6 +500,12 @@
         .sort((a, b) => (b.r - a.r) || (b.x.troops - a.x.troops) || (a.i - b.i)).map(o => o.x);
       for (const gen of offs) {
         const row = h('div', 'sg-genrow', null, this.genList);
+        // 点按武将行 → 武将详情
+        row.setAttribute('role', 'button');
+        row.tabIndex = 0;
+        row.title = gen.name + ' · 详情';
+        row.addEventListener('click', () => this.showGeneral(gen));
+        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.showGeneral(gen); } });
         if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: 40 }));
         const tag = g.isRuler(gen) ? '<span class="sg-tag sg-tag-ruler">君</span>' : gen.id === c.governor ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
         h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
@@ -740,14 +809,18 @@
       if (r < 0) return;
       if (r === 0) {
         const fs = g.factions.filter(f => f.alive && f.id !== g.player);
-        const fi = await UI().choose('与谁结盟？', fs.map(f => item(SG.esc(g.ruler(f.id).name),
+        const grp = groupedFactions(fs, f => item(SG.esc(g.ruler(f.id).name) + (regionsOf() && f.name !== g.ruler(f.id).name ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : ''),
           g.allied(f.id, g.player) ? '已同盟' : '城 ' + g.cityCount(f.id) + '　成功率约 ' + pct(C.allyChance(g.player, f.id, B.AllianceGift)),
-          !g.allied(f.id, g.player))));
-        if (fi < 0) return;
-        const gift = await UI().pickNumber('赠送礼金', 0, c.gold, 50, Math.min(c.gold, B.AllianceGift), v => '成功率约 ' + pct(C.allyChance(g.player, fs[fi].id, v)));
+          !g.allied(f.id, g.player)));
+        const p = UI().choose('与谁结盟？', grp.items);
+        markGroupHeads(grp.heads);
+        const fi = await p;
+        const ff = fi >= 0 ? grp.pick(fi) : null;
+        if (!ff) return;
+        const gift = await UI().pickNumber('赠送礼金', 0, c.gold, 50, Math.min(c.gold, B.AllianceGift), v => '成功率约 ' + pct(C.allyChance(g.player, ff.id, v)));
         if (gift < 0) return;
         this.useToken();
-        await UI().say(C.ally(c, g.player, fs[fi].id, gift));
+        await UI().say(C.ally(c, g.player, ff.id, gift));
         return;
       }
       const agent = await this.pickGeneral('派谁执行？', this.available(c), x => '智力 ' + x.intel);
@@ -828,7 +901,7 @@
         }
         this.hud.style.display = '';
         this.setMapLabelsVisible(true);
-        music('map');
+        mapMusic();
       } else Cq.autoResolve(s);
       Cq.apply(s);
       const playerWon = s.attackerWon === (playerSide === 0);
@@ -867,16 +940,89 @@
       }
     }
 
+    // ---------------------------------------------------------- 武将详情 --
+    // 大头像、能力、所属与所在、必杀技（SG.Specials.of）；世界武将另有全名 / 原名 / 身份 / 生卒 / 介绍（SG.WorldInfo）
+    showGeneral(gen) {
+      if (!gen || UI().anyModal() || this._genInfoOpen) return;
+      click();
+      this._genInfoOpen = true;
+      this.generalInfo(gen).catch(e => console.error(e)).then(() => { this._genInfoOpen = false; });
+    }
+    generalInfo(gen) {
+      const g = G();
+      const W = (SG.WorldInfo || {})[gen.name] || null;
+      const f = gen.faction >= 0 ? g.factions[gen.faction] : null;
+      const city = g.cities[gen.city];
+      const isRuler = g.isRuler(gen);
+      return new Promise(resolve => {
+        const m = UI().openModal('sg-geninfo', { width: 940 });
+        let done = false;
+        const finish = () => { if (done) return; done = true; m.close(); resolve(); };
+        m.blocker.addEventListener('click', e => { if (e.target === m.blocker) finish(); });
+        m.onKey = k => { if (k === 'Escape' || k === 'Enter' || k === 'Space') { finish(); return true; } return false; };
+        const head = h('div', 'sg-dlg-head', null, m.panel);
+        const tag = isRuler ? '<span class="sg-tag sg-tag-ruler">君</span>' : city && city.governor === gen.id ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
+        h('div', 'sg-dlg-title', tag + SG.esc(gen.name) +
+          '<small>' + (f ? `<span style="color:${readable(f.color)}">${SG.esc(f.name)}</span>` : '在野') + (city ? '　' + SG.esc(city.name) : '') + '</small>', head);
+        const close = SG.UI.button(head, '×', finish, { className: 'sg-close', ariaLabel: '关闭' });
+        const body = h('div', 'sg-geninfo-body', null, m.panel);
+        const side = h('div', 'sg-geninfo-side', null, body);
+        if (SG.Portrait) { try { side.appendChild(SG.Portrait.el(gen, { size: 168 })); } catch (e) { /* 无头像 */ } }
+        // 能力条
+        const stats = h('div', 'sg-geninfo-stats', null, side);
+        for (const [k, v, col] of [['武力', gen.war, '#ff8c73'], ['智力', gen.intel, '#73bfff'], ['政治', gen.pol, '#73d98c']]) {
+          const r = h('div', 'sg-geninfo-stat', `<span>${k}</span><b>${v}</b>`, stats);
+          r.appendChild(SG.UI.bar(M.clamp01(v / 100), col));
+        }
+        const main = h('div', 'sg-geninfo-main', null, body);
+        const chips = [];
+        if (f) chips.push(`<span class="sg-chip"><i>兵</i><b>${n0(gen.troops)}</b></span>`, `<span class="sg-chip"><i>训练</i><b>${gen.training}</b></span>`,
+          `<span class="sg-chip"><i>忠诚</i><b>${isRuler ? 100 : gen.loyalty}</b></span>`);
+        if (gen.born > 0) chips.push(`<span class="sg-chip"><i>生年</i><b>${gen.born}</b><i>${g.year >= gen.born ? (g.year - gen.born) + '岁' : ''}</i></span>`);
+        if (chips.length) h('div', 'sg-geninfo-chips', chips.join(''), main);
+        // 必杀技
+        let sp = null;
+        try { sp = SG.Specials ? SG.Specials.of(gen) : null; } catch (e) { sp = null; }
+        if (sp) {
+          const S = SG.Specials;
+          const col = S.uiColor ? S.uiColor(sp) : (sp.color || '#f3c969');
+          const box = h('div', 'sg-geninfo-special', null, main);
+          h('div', 'sg-geninfo-sp-head', `<span class="sg-geninfo-sp-label">必杀</span><b style="color:${col}">${SG.esc(sp.name)}</b>` +
+            (S.kindName ? `<small>${SG.esc(S.kindName(sp.kind))}</small>` : ''), box);
+          if (sp.desc) h('div', 'sg-geninfo-sp-desc', SG.esc(sp.desc), box);
+          let rules = '';
+          try { rules = S.rules ? S.rules(sp) : ''; } catch (e) { rules = ''; }
+          if (rules) h('div', 'sg-geninfo-sp-rules', SG.esc(rules), box);
+        }
+        // 世界武将：史实资料
+        if (W) {
+          const bio = h('div', 'sg-geninfo-bio', null, main);
+          const life = (W.born ? W.born : '?') + '—' + (W.died ? W.died : '?') + '年';
+          h('div', 'sg-geninfo-full', SG.esc(W.full || gen.name) + (W.orig ? `<span class="sg-geninfo-orig">${SG.esc(W.orig)}</span>` : ''), bio);
+          h('div', 'sg-geninfo-role', SG.esc(W.role || '') + (W.born || W.died ? `<span class="sg-muted">　${SG.esc(life)}</span>` : ''), bio);
+          if (W.note) h('div', 'sg-geninfo-note', SG.esc(W.note), bio);
+          if (W.liberty) h('div', 'sg-geninfo-liberty', '<b>游戏取舍</b>' + SG.esc(W.liberty), bio);
+        }
+        try { close.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ }
+      });
+    }
+
     // ---------------------------------------------------------- 情报 --
     async factionInfo() {
       const g = G();
       const fs = g.factions.filter(f => f.alive).map((f, i) => ({ f, n: g.cityCount(f.id), i }))
         .sort((a, b) => (b.n - a.n) || (a.i - b.i)).map(o => o.f);
-      const r = await UI().choose('天下势力', fs.map(f => item(
-        swatch(f.color) + SG.esc(g.ruler(f.id).name) + (f.id === g.player ? '（我方）' : g.allied(f.id, g.player) ? '（同盟）' : ''),
-        `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　兵 ${sum(g.citiesOf(f.id), c => g.troopsIn(c))}`)), null, 760);
+      const grp = groupedFactions(fs, f => item(
+        swatch(f.color) + SG.esc(g.ruler(f.id).name) + (f.name !== g.ruler(f.id).name && regionsOf() ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : '') +
+        (f.id === g.player ? '（我方）' : g.allied(f.id, g.player) ? '（同盟）' : ''),
+        `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　兵 ${sum(g.citiesOf(f.id), c => g.troopsIn(c))}`));
+      const pr = UI().choose('天下势力', grp.items, regionsOf() ? '按地域分组（我方所在地域在前）；点选势力，镜头飞往其都城。' : null, 760);
+      markGroupHeads(grp.heads);
+      const r = await pr;
       if (r < 0) return;
-      const cap = g.cities[g.ruler(fs[r].id).city];
+      const f0 = grp.pick(r);
+      if (!f0) return;
+      const cap = g.cities[g.ruler(f0.id).city];
       const p = SG.mapPos(cap);
       SG.Game.rig.focusMap(p.x, p.y, 45);
       this.selectCity(cap.id);

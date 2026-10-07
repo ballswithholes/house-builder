@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>世界武将头像 测试</title>
+<style>
+  :root { --gold: #f3c969; --ink: #f5eddb; --muted: #a8a194; }
+  body { margin: 0; background: #16141c; color: var(--ink);
+    font: 13px/1.45 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei";
+    padding: 0 max(12px, env(safe-area-inset-right)) 40px max(12px, env(safe-area-inset-left)); }
+  h1, h2 { font-family: "STKaiti","Kaiti SC","KaiTi","Noto Serif SC",serif,"WenQuanYi Zen Hei"; color: var(--gold); margin: 0; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin: 14px 0 6px; border-bottom: 1px solid rgba(243,201,105,.25); padding-bottom: 3px; }
+  h2 small { font: 12px/1 system-ui, sans-serif; color: var(--muted); }
+  header { padding: 8px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; border-bottom: 1px solid rgba(243,201,105,.2); }
+  .ok { color: #73d98c; font-weight: 700; } .bad { color: #ff7361; font-weight: 700; } .muted { color: var(--muted); }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .card { display: flex; flex-direction: column; align-items: center; min-width: 100px; text-align: center; }
+  .card .nm { font-weight: 700; font-size: 13px; line-height: 1.2; }
+  .card .st { font-size: 10px; color: var(--muted); line-height: 1.15; }
+  .card.hand .nm { color: var(--gold); }
+  a { color: var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <h1>世界武将头像</h1>
+  <span id="check" class="muted">生成中…</span>
+  <span class="muted">金色姓名 = 有手工外貌条目（js/portrait-data.js）；参数：?region=roma · ?size=128 · ?names=康茂德,塞维鲁</span>
+</header>
+<div id="out"></div>
+
+<script src="../js/core.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/portrait-data.js"></script>
+<script src="../js/portrait.js"></script>
+<script>
+'use strict';
+/* 世界剧本「天下大势」新增武将的头像总览：按地域 → 势力（君主在前）→ 在野，显示文化、性别与生年。
+   自检：每位女性（WorldInfo.sex = 'f'）解析后的外貌为女性；每位新增武将的文化与剧本一致。 */
+(function () {
+  const SG = window.SG;
+  const q = new URLSearchParams(location.search);
+  const size = +(q.get('size') || 92);
+  const onlyRegion = q.get('region');
+  const W = SG.Scenarios.world;
+  const classic = new Set(SG.ScenarioData.Generals.map(l => l.split('|')[0]));
+  const fac = {};
+  for (const l of W.Factions) { const p = l.split('|'); fac[p[0]] = { key: p[0], name: p[1], ruler: p[2], color: p[3], culture: p[6], region: p[7] }; }
+  const gens = [];
+  for (const l of W.Generals) {
+    const p = l.split('|');
+    if (classic.has(p[0])) continue;
+    const wi = SG.WorldInfo[p[0]] || {};
+    gens.push({ name: p[0], war: +p[1], intel: +p[2], pol: +p[3], factionKey: p[4], city: p[5], culture: p[9] || 'han', born: p[10] ? +p[10] : null, sex: wi.sex || 'm', orig: wi.orig || '' });
+  }
+  const hand = new Set(SG.PortraitData.worldHand || []);
+  const out = document.getElementById('out');
+  const problems = [];
+  function card(g) {
+    const f = fac[g.factionKey];
+    const d = document.createElement('div');
+    d.className = 'card' + (hand.has(g.name) ? ' hand' : '');
+    const el = SG.Portrait.el(g, { size, color: f ? f.color : '#6a6a6a' });
+    d.appendChild(el);
+    const sp = SG.Portrait.spec(g);
+    if (g.sex === 'f' && sp.sex !== 'f') problems.push(g.name + ' 应为女性');
+    if (sp.culture !== g.culture) problems.push(g.name + ' 文化 ' + sp.culture + ' ≠ ' + g.culture);
+    d.insertAdjacentHTML('beforeend', '<div class="nm">' + g.name + (g.sex === 'f' ? ' ♀' : '') + '</div><div class="st">' + g.culture + ' · ' + (g.born || '?') +
+      ' · ' + g.war + '/' + g.intel + '/' + g.pol + '<br>' + sp.hat.type + ' · ' + sp.outfit.type + '</div>');
+    d.title = g.orig;
+    return d;
+  }
+  const onlyNames = q.get('names');
+  if (onlyNames) {
+    const grid = document.createElement('div'); grid.className = 'grid';
+    for (const n of onlyNames.split(',')) { const g = gens.find(x => x.name === n); if (g) grid.appendChild(card(g)); }
+    out.appendChild(grid);
+  }
+  const regions = onlyNames ? [] : W.Regions.filter(r => r.id !== 'zhongyuan' && (!onlyRegion || r.id === onlyRegion));
+  const placed = new Set();
+  for (const r of regions) {
+    const h = document.createElement('h2');
+    h.innerHTML = r.name + ' <small>' + r.id + '</small>';
+    out.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'grid';
+    for (const fk of r.factions) {
+      const list = gens.filter(g => g.factionKey === fk).sort((a, b) => (b.name === fac[fk].ruler) - (a.name === fac[fk].ruler));
+      for (const g of list) { grid.appendChild(card(g)); placed.add(g.name); }
+    }
+    out.appendChild(grid);
+  }
+  const rest = onlyNames ? [] : gens.filter(g => !placed.has(g.name) && (!onlyRegion || regions.some(r => r.factions.some(k => fac[k].culture === g.culture))));
+  if (rest.length) {
+    const byC = {};
+    for (const g of rest) (byC[g.culture] = byC[g.culture] || []).push(g);
+    for (const c of Object.keys(byC)) {
+      const h = document.createElement('h2'); h.innerHTML = '在野 · ' + c + ' <small>' + byC[c].length + '</small>'; out.appendChild(h);
+      const grid = document.createElement('div'); grid.className = 'grid';
+      for (const g of byC[c]) grid.appendChild(card(g));
+      out.appendChild(grid);
+    }
+  }
+  const el = document.getElementById('check');
+  el.className = problems.length ? 'bad' : 'ok';
+  el.textContent = (problems.length ? '问题 ' + problems.length + '：' + problems.join('；') : '自检通过') + '（新增武将 ' + gens.length + ' 人，手工条目 ' +
+    gens.filter(g => hand.has(g.name)).length + ' 人）';
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

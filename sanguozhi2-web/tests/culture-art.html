@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>各文化城池模型 测试</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1a1c22; color: #f5eddb; overflow: hidden;
+    font: 13px/1.4 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei"; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #hud { position: fixed; left: 8px; top: 6px; right: 8px; pointer-events: none; }
+  #hud b { color: #f3c969; }
+  #stat { color: #a8a194; font-size: 12px; }
+  .lab { position: fixed; transform: translate(-50%, -100%); font-size: 12px; white-space: nowrap; pointer-events: none;
+    background: rgba(10,10,14,.6); padding: 1px 5px; border-radius: 4px; }
+  .lab i { color: #f3c969; font-style: normal; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud"><b>各文化城池模型</b>（js/culture-art.js）上排普通、下排都城；拖动旋转，滚轮缩放。参数：?size=1.2 · ?yaw=0 · ?only=roman
+  <div id="stat">…</div></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/culture-art.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG;
+  const q = new URLSearchParams(location.search);
+  const size = +(q.get('size') || 1.2);
+  const only = q.get('only');
+  const list = (only ? only.split(',') : ['han'].concat(SG.CultureArt.cultures));
+  const cv = document.getElementById('cv');
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0.55, 0.68, 0.8);
+  scene.add(new THREE.HemisphereLight(0xb8c4d8, 0x6a5a40, Math.PI * 0.62));
+  const sun = new THREE.DirectionalLight(0xfff2dc, Math.PI * 0.85);
+  sun.position.set(-6, 10, 6);
+  scene.add(sun);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ color: 0x5f6f3e }));
+  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01;
+  scene.add(ground);
+  const mat = SG.Gfx.lowPoly();
+  const gap = 3.4 * size;
+  const labels = [];
+  let tris = 0, maxTris = 0, maxName = '';
+  const n = list.length, cols = n;
+  list.forEach((cult, i) => {
+    for (const cap of [false, true]) {
+      const t0 = performance.now();
+      const geo = cult === 'han' ? SG.Models.city(size, null, cap) : SG.CultureArt.city(size, cult, cap, { key: cult === 'arab' && cap ? 'aksum' : '', town: cap ? 400 : 260 });
+      const ms = performance.now() - t0;
+      const m = new THREE.Mesh(geo, mat);
+      const x = (i - (cols - 1) / 2) * gap, z = cap ? gap * 0.55 : -gap * 0.55;
+      m.position.set(x, 0, z);
+      scene.add(m);
+      // 旗帜位置（map-view：本地 (0.9s, 0, -0.9s)，three 坐标）
+      const pole = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.2, 0.08), new THREE.MeshLambertMaterial({ color: 0x8a6a40 }));
+      pole.position.set(x + size * 0.9, 1.1, z - size * 0.9);
+      scene.add(pole);
+      const nt = geo.attributes.position.count / 3;
+      tris += nt;
+      if (nt > maxTris) { maxTris = nt; maxName = cult + (cap ? '（都）' : ''); }
+      const el = document.createElement('div');
+      el.className = 'lab';
+      el.innerHTML = (cap ? '<i>都</i> ' : '') + cult + ' <span style="color:#a8a194">' + nt + '△ ' + ms.toFixed(1) + 'ms</span>';
+      document.body.appendChild(el);
+      labels.push({ el, pos: new THREE.Vector3(x, size * 1.6 + 0.6, z) });
+    }
+  });
+  document.getElementById('stat').textContent = '共 ' + list.length * 2 + ' 座，三角形 ' + tris + '（最多 ' + maxTris + '：' + maxName + '）';
+  const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
+  let yaw = +(q.get('yaw') || 0) * Math.PI / 180, pitch = 0.75, dist = Math.max(10, n * gap * 0.62);
+  const target = new THREE.Vector3(0, 0, 0);
+  function place() {
+    cam.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+    cam.lookAt(target);
+  }
+  function resize() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.006; pitch = Math.max(0.15, Math.min(1.45, drag.pitch + (e.clientY - drag.y) * 0.005)); });
+  cv.addEventListener('pointerup', () => { drag = null; });
+  cv.addEventListener('wheel', e => { dist = Math.max(3, Math.min(200, dist * (e.deltaY > 0 ? 1.1 : 0.9))); e.preventDefault(); }, { passive: false });
+  window.view = (x, z, d, yw, p) => { target.set(x, 0, z); dist = d; if (yw !== undefined) yaw = yw; if (p !== undefined) pitch = p; };
+  window.cityX = i => (i - (cols - 1) / 2) * gap;
+  function frame() {
+    place();
+    renderer.render(scene, cam);
+    const w = innerWidth, h = innerHeight, v = new THREE.Vector3();
+    for (const l of labels) {
+      v.copy(l.pos).project(cam);
+      const vis = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+      l.el.style.display = vis ? '' : 'none';
+      if (vis) { l.el.style.left = ((v.x + 1) / 2 * w) + 'px'; l.el.style.top = ((1 - v.y) / 2 * h) + 'px'; }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

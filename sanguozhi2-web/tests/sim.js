@@ -617,7 +617,8 @@ try {
   // (d) 突击不能把本城 / 城门上的部队撞走（守将被撞出本城后，攻方踏入即破城）
   {
     let n = 0;
-    for (const sp of S.all().filter(q => q.kind === 'charge' && q.push)) {
+    // 只测本局（经典剧本）中的武将；世界剧本新增武将的条目也在 S.all() 里，但不在 g.generals 中
+    for (const sp of S.all().filter(q => q.kind === 'charge' && q.push && byName(q.gen))) {
       for (const tile of [SG.Terrain.Castle, SG.Terrain.Gate]) {
         const { Mdl, u, foes } = field(byName(sp.gen), 0, 1);
         const t = foes[0];
@@ -679,6 +680,69 @@ try {
 } catch (e) {
   fails++;
   console.log('specials rules FAILED: ' + (e.stack || e));
+}
+
+// ======================================== (5c) 世界剧本武将的必杀技 --
+// 载入 world-data.js（只定义 SG.Scenarios / SG.WorldInfo 等，不改 SG.ScenarioData），对经典 + 世界全体名单自检：
+// 名称与 (机制, 参数) 唯一、每位新增武将都有手写招式（不走兜底）、名称 2–5 字；
+// 再按 (5) 的参考局面计算新增武将伤害类招式的倍率（同样须在 1.2–3.0 之间）。
+console.log('== (5c) world scenario generals: hand-made, unique, reference damage ratios ==');
+try {
+  const S = SG.Specials;
+  if (!SG.Scenarios) vm.runInThisContext(fs.readFileSync(path.join(root, 'world-data.js'), 'utf8'), { filename: 'world-data.js' });
+  const classicNames = new Set(SG.ScenarioData.Generals.map(l => l.split('|')[0]));
+  const wroster = SG.Scenarios.world.Generals.map(l => { const p = l.split('|'); return { name: p[0], war: +p[1], intel: +p[2], pol: +p[3], culture: p[9] || 'han' }; });
+  SG.G = null;
+  const rep = S.check(wroster);
+  console.log(`world roster ${wroster.length}: specials ${rep.total}, hand-made ${rep.hand}, generated ${rep.auto}; duplicate names ${rep.dupNames.length}, duplicate (kind, params) ${rep.dupSigs.length}, data problems ${rep.problems.length}`);
+  for (const d of rep.dupNames) console.log('  dup name ' + d.name + ': ' + d.gens.join(', '));
+  for (const d of rep.dupSigs) console.log('  dup params ' + d.sig + ': ' + d.gens.join(', '));
+  for (const p of rep.problems) console.log('  problem: ' + p);
+  if (!rep.ok) throw new Error('world specials self-check failed');
+  const fresh = wroster.filter(g => !classicNames.has(g.name));
+  const autoW = fresh.filter(g => S.of(g).auto).map(g => g.name);
+  if (autoW.length) throw new Error('world generals without a hand-made special: ' + autoW.join(' '));
+  for (const g of fresh) { const n = S.of(g).name; if (n.length < 2 || n.length > 5) throw new Error('special name should be 2-5 chars: ' + g.name + ' ' + n); }
+  const kinds = {};
+  for (const g of fresh) kinds[S.of(g).kind] = (kinds[S.of(g).kind] || 0) + 1;
+  console.log(`${fresh.length} new world generals, all hand-made; kinds ${Object.keys(kinds).sort().map(k => k + ':' + kinds[k]).join(' ')}`);
+  // 参考伤害倍率（与 (5) 相同的局面；武将以独立对象代入）
+  SG.Random.seed(778);
+  const g = SG.G = GameState.newGame('cao');
+  const dummy = i => ({ id: 9000 + i, name: '靶' + i, war: 70, intel: 60, pol: 50, faction: -1, troops: 3500, training: 60, loyalty: 80 });
+  const DAMAGE_KINDS = ['smite', 'cleave', 'charge', 'rampage', 'volley', 'blaze', 'storm', 'flood', 'drain'];
+  const byKind = {};
+  fresh.forEach((w, i) => {
+    const gen = { id: 9600 + i, name: w.name, war: w.war, intel: w.intel, pol: w.pol, faction: -1, troops: 0, training: 70, loyalty: 90, culture: w.culture };
+    gen.troops = SG.maxTroops(gen);
+    const sp = S.of(gen);
+    if (DAMAGE_KINDS.indexOf(sp.kind) < 0) return;
+    const s = { attacker: 0, defender: 1, src: g.cities[0], target: g.cities[11], atk: [gen], def: [dummy(1), dummy(2), dummy(3), dummy(4)], atkFood: 3000, atkGold: 0, routed: new Set(), captives: [] };
+    const Mdl = new BattleModel(s);
+    for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) Mdl.map[x][y] = SG.Terrain.Plain;
+    const [u, e1, e2, e3, e4] = Mdl.units;
+    u.x = 4; u.y = 4; u.morale = 80;
+    [[5, 4], [5, 5], [4, 6], [4, 2]].forEach((p, k) => { const e = [e1, e2, e3, e4][k]; e.x = p[0]; e.y = p[1]; e.morale = 70; });
+    Mdl.side = 0;
+    const normal = refAction(Mdl, u, e1, sp);
+    let best = 0;
+    for (const t of Mdl.specialTargets(u)) {
+      const pl = Mdl.specialPlan(u, t);
+      const per = new Map();
+      for (const h of pl.dmg) per.set(h.unit, Math.min(h.unit.troops, (per.get(h.unit) || 0) + h.amt * (h.onFail && pl.kill ? 1 - pl.kill.p : 1)));
+      best = Math.max(best, [...per.values()].sort((a, b) => b - a).slice(0, sp.kind === 'rampage' ? 99 : 2).reduce((a, b) => a + b, 0));
+    }
+    (byKind[sp.kind] = byKind[sp.kind] || []).push({ name: w.name, r: best / Math.max(1, normal) });
+  });
+  console.log('world reference damage / normal action: ' + Object.keys(byKind).sort().map(k => {
+    const rs = byKind[k].map(o => o.r).sort((a, b) => a - b);
+    return `${k} ${rs[0].toFixed(1)}-${rs[rs.length - 1].toFixed(1)} (n${rs.length})`;
+  }).join('; '));
+  for (const k of Object.keys(byKind)) for (const o of byKind[k]) if (!(o.r > 1.2 && o.r < 3.0)) throw new Error('world reference ratio out of range: ' + o.name + ' ' + k + ' ' + o.r.toFixed(2));
+  console.log('world specials OK');
+} catch (e) {
+  fails++;
+  console.log('world specials FAILED: ' + (e.stack || e));
 }
 
 // ============================================== (6) duel() 拆分的随机数顺序 --

@@ -7,7 +7,8 @@
   const SG = window.SG;
   const M = SG.M;
   const Balance = SG.Balance;
-  const ScenarioData = SG.ScenarioData;
+  // 当前剧本（经典 / 世界，运行时可换）
+  const ScenarioData = new Proxy({}, { get: (t, k) => SG.ScenarioData[k] });
   const Seq = SG.Seq;
   const Commands = SG.Commands;
   const DevKind = SG.DevKind;
@@ -339,7 +340,8 @@
     if (lowTrain != null && used < 2) { Commands.train(lowTrain); used++; }
     // 6. 后方武将调往前线
     if (threat(c, f) <= 0 && offs.length > 1) {
-      const fronts = c.links.map(i => g.cities[i]).filter(n => n.owner === f);
+      // 路程 ≤ 2 的己方城（第二版 §4F：经由己方城池调动；电脑只看两步之内）
+      const fronts = Commands.aiMoveTargets(c, f);
       const front = fronts.length ? Seq.orderByDesc(fronts, n => threat(n, f))[0] : null;
       if (front != null && threat(front, f) > 0) {
         const movers = offs.filter(o => !g.isRuler(o) && o.id !== c.governor);

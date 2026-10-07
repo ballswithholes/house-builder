@@ -29,6 +29,14 @@
 (function () {
   const SG = window.SG;
   const M = SG.M;
+  // 各文化的城池模型在 js/culture-art.js（SG.CultureArt）。页面没有单独载入它时，在解析期于本文件之后同步补载
+  // （与 <script> 标签等效）；载不到时所有城池用原模型。
+  try {
+    const me = typeof document !== 'undefined' && document.currentScript;
+    if (!SG.CultureArt && me && me.src && document.readyState === 'loading') {
+      document.write('<script src="' + me.src.replace(/map-view\.js([?#].*)?$/, 'culture-art.js') + '"><\/script>');
+    }
+  } catch (e) { /* 非浏览器环境 */ }
 
   const MapW = 112, MapH = 100;
 
@@ -1591,14 +1599,18 @@
         const mx = this._cityX[c.id], mz = this._cityZ[c.id];
         const y = Math.max(0.3, this.height(mx, mz));
         const size = M.lerp(0.9, 1.5, M.inverseLerp(180, 650, c.town));
-        const capital = c.key === 'luoyang' || c.key === 'changan';
+        // 城池模型按文化（js/culture-art.js）；汉地与未知文化用原模型，都城变体：汉地为洛阳、长安，其他文化为各势力的初始都城
+        const CA = SG.CultureArt;
+        const culture = CA ? CA.cultureOfCity(c) : 'han';
+        const capital = CA ? CA.isCapital(c, culture) : (c.key === 'luoyang' || c.key === 'changan');
         const yaw = (c.id * 37) % 20 - 10;
         // 城体：烘焙到所在区块的合并网格中（Unity 坐标下的平移 × 绕 y 旋转）
         const tk = Math.floor((mx - T.x0) / tileSize) + ',' + Math.floor((mz - T.z0) / tileSize);
         let mb = bodies.get(tk);
         if (!mb) { mb = new SG.MeshBuilder(); bodies.set(tk, mb); }
         mb.M = new THREE.Matrix4().makeTranslation(mx, y, mz).multiply(rot.makeRotationY(yaw * M.deg2rad));
-        SG.Models.cityInto(mb, size, null, capital);
+        if (CA && culture !== 'han') CA.cityInto(mb, size, culture, capital, c);
+        else SG.Models.cityInto(mb, size, null, capital);
         mb.M = null;
 
         const group = new THREE.Group();

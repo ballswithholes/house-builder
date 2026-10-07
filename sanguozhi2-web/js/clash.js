@@ -15,11 +15,13 @@
        speed: 1,          // 可选：本次额外的时间倍率（与 SG.Clash.speed 相乘），如电脑回合传 1.6
      })                   → Promise<{ skipped, disabled, seconds }>（seconds：画面实际播放时长）
        · gen 至少含 name；color 为势力色 '#rrggbb'；formation 可为阵型名或 SG.Defs.formations 下标；
-         culture 缺省取 gen.culture，再缺省 'han'（见 DESIGN-V2 §6）。
+         culture 缺省取 gen.culture，再缺省 'han'（见 DESIGN-V2 §6）：士兵头饰 / 甲衣 / 盾 / 腿、武将头盔 / 披风按文化区分（CULT 表）。
+       · 两军势力色相近时自动拉开色相 / 明暗（separateColors），并各配一种识别色（pickAccents：肩甲、腰带、盾缘、盔缨、旗边）。
+       · special 可直接传 specials-data 的条目（kind / fx 映射到火、雷、箭雨，其余为斩击）。
        · 攻方永远在左。兵力数字从 troopsBefore 滚动到 troopsAfter；troopsAfter 为 0 视为溃散。
      await SG.Clash.cutIn({ gen, name, color, side, cry, speed })
-                          必杀技 / 单挑用的全屏特写（约 1.1 秒 ÷ 速度，轻点 / 空格 / 回车可跳过）：头像滑入 + 招式名大字；
-                          cry 为可选台词（显示在招式名下方），speed 为可选额外倍率。enabled 为 false 时立即返回。
+                          必杀技 / 单挑用的全屏特写（1.1 秒 ÷（SG.Clash.speed × speed），最短 0.7 秒；轻点 / 空格 / 回车可跳过）：
+                          头像滑入 + 招式名大字；cry 为可选台词（显示在招式名下方），speed 为可选额外倍率。enabled 为 false 时立即返回。
      SG.Clash.enabled     布尔，默认 true；false 时 play / cutIn 立即返回
      SG.Clash.speed       时间倍率，1 = 正常（全长约 3.7 秒），2 = 快
      SG.Clash.mode        'on' | 'fast' | 'off'（读写；写入时同步 enabled / speed，并存入 localStorage）
@@ -165,13 +167,14 @@
     quadOut(mb, A[0], A[1], A[2], A[3], shade(col, -0.1), mid);
     if (w1 > 1e-5) quadOut(mb, B[0], B[1], B[2], B[3], shade(col, 0.06), mid);
   }
-  // 沿 x 轴的扁圆盘（圆盾）：Unity 坐标，中心 c，半径 r，厚 t
-  function discX(mb, c, r, t, col, seg) {
+  // 沿 x 轴的扁圆盘（圆盾）：Unity 坐标，中心 c，半径 r（ry 为竖向半径，缺省同 r，椭圆盾用），厚 t
+  function discX(mb, c, r, t, col, seg, ry) {
     seg = seg || 8;
+    ry = ry || r;
     const ref = { x: c.x, y: c.y, z: c.z };
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      const p0 = [Math.cos(a0) * r, Math.sin(a0) * r], p1 = [Math.cos(a1) * r, Math.sin(a1) * r];
+      const p0 = [Math.cos(a0) * r, Math.sin(a0) * ry], p1 = [Math.cos(a1) * r, Math.sin(a1) * ry];
       const o0 = V(c.x - t / 2, c.y + p0[1], c.z + p0[0]), o1 = V(c.x - t / 2, c.y + p1[1], c.z + p1[0]);
       const i0 = V(c.x + t / 2, c.y + p0[1], c.z + p0[0]), i1 = V(c.x + t / 2, c.y + p1[1], c.z + p1[0]);
       quadOut(mb, o0, o1, i1, i0, shade(col, -0.2), ref);
@@ -190,140 +193,420 @@
   // ======================================================= 士兵模型 --
   // 全部以 Unity 坐标建模、面朝 +z（three 中朝 −z）。部件分开以便逐个摆动：
   // 腿（髋部为原点）、身体（含头盔、盾）、兵器（右手握点为原点）。
+  // 文化装束（DESIGN-V2 §6）：全部是参数化的方块 / 圆柱拼件，每方只建一次几何体（InstancedMesh 共用）。
+  //   hat 士兵头饰 / ghat 武将头盔 / shield 盾形 / armor 甲衣样式 / legs 腿（裤、裸腿、长靴、绑腿）
+  //   pants 裤色、hair 发色、beard 胡须、trim 默认镶边色、cloak 武将披风色（缺省为势力色暗部）
+  const HAIR_D = [0.12, 0.1, 0.09];
   const CULT = {
-    han: { skin: [0.95, 0.79, 0.62], hat: 'cone', shield: 'rect' },
-    nanman: { skin: [0.7, 0.5, 0.34], hat: 'bun', shield: 'round' },
-    wa: { skin: [0.93, 0.77, 0.6], hat: 'mizura', shield: 'rect' },
-    yi: { skin: [0.68, 0.48, 0.32], hat: 'band', shield: 'round' },
-    korea: { skin: [0.95, 0.8, 0.64], hat: 'plume', shield: 'rect' },
-    steppe: { skin: [0.86, 0.68, 0.5], hat: 'fur', shield: 'round' },
-    seasia: { skin: [0.66, 0.46, 0.3], hat: 'band', shield: 'round' },
-    tarim: { skin: [0.92, 0.76, 0.6], hat: 'tall', shield: 'round' },
-    kushan: { skin: [0.84, 0.64, 0.48], hat: 'tall', shield: 'round' },
-    persia: { skin: [0.84, 0.64, 0.48], hat: 'spike', shield: 'round' },
-    arab: { skin: [0.8, 0.6, 0.44], hat: 'turban', shield: 'round' },
-    roman: { skin: [0.95, 0.8, 0.66], hat: 'crest', shield: 'scutum' },
-    celt: { skin: [0.97, 0.84, 0.72], hat: 'hair', shield: 'round' },
-    german: { skin: [0.97, 0.84, 0.72], hat: 'hair', shield: 'round' },
-    sarmatian: { skin: [0.9, 0.74, 0.58], hat: 'spike', shield: 'round' },
+    han: { skin: [0.95, 0.79, 0.62], hat: 'cone', ghat: 'g_han', shield: 'rect', armor: 'lamellar', legs: 'trousers' },
+    nanman: { skin: [0.7, 0.5, 0.34], hat: 'bun', ghat: 'g_feather', shield: 'rattan', armor: 'rattan', legs: 'bare', trim: [0.92, 0.88, 0.76] },
+    wa: { skin: [0.93, 0.77, 0.6], hat: 'mizura', ghat: 'g_wa', shield: 'wood', armor: 'tanko', legs: 'wraps', pants: [0.86, 0.82, 0.72] },
+    yi: { skin: [0.68, 0.48, 0.32], hat: 'feather', ghat: 'g_feather', shield: 'round', armor: 'bare', legs: 'bare', trim: [0.95, 0.93, 0.86], tattoo: true },
+    korea: { skin: [0.95, 0.8, 0.64], hat: 'plume', ghat: 'g_plume', shield: 'rect', armor: 'lamellar', legs: 'trousers', pants: [0.84, 0.8, 0.7] },
+    steppe: { skin: [0.86, 0.68, 0.5], hat: 'fur', ghat: 'g_fur', shield: 'small', armor: 'furcoat', legs: 'boots', pants: [0.42, 0.32, 0.22] },
+    seasia: { skin: [0.62, 0.43, 0.28], hat: 'seband', ghat: 'g_crown', shield: 'oval', armor: 'bare', legs: 'bare' },
+    tarim: { skin: [0.92, 0.76, 0.6], hat: 'tall', ghat: 'tall', shield: 'round', armor: 'robe', legs: 'boots', pants: [0.5, 0.36, 0.26], trim: [0.85, 0.78, 0.6] },
+    kushan: { skin: [0.84, 0.64, 0.48], hat: 'kushan', ghat: 'g_kushan', shield: 'round', armor: 'robe', legs: 'boots', pants: [0.3, 0.24, 0.2] },
+    persia: { skin: [0.84, 0.64, 0.48], hat: 'phrygian', ghat: 'g_tiara', shield: 'spara', armor: 'scale', legs: 'boots', pants: [0.46, 0.2, 0.18], beard: true },
+    arab: { skin: [0.78, 0.58, 0.42], hat: 'kufiya', ghat: 'kufiya', shield: 'round', armor: 'robe', legs: 'bare', beard: true, trim: [0.93, 0.9, 0.82] },
+    roman: { skin: [0.95, 0.8, 0.66], hat: 'crest', ghat: 'g_roman', shield: 'scutum', armor: 'segmentata', legs: 'bare', cloak: [0.72, 0.12, 0.1] },
+    celt: { skin: [0.97, 0.84, 0.72], hat: 'limed', ghat: 'limed', shield: 'oval', armor: 'plaid', legs: 'trousers', pants: [0.4, 0.42, 0.3], hair: [0.62, 0.3, 0.12], beard: true },
+    german: { skin: [0.97, 0.84, 0.72], hat: 'knot', ghat: 'knot', shield: 'hex', armor: 'furcloak', legs: 'wraps', pants: [0.36, 0.3, 0.22], hair: [0.8, 0.64, 0.34], beard: true },
+    sarmatian: { skin: [0.9, 0.74, 0.58], hat: 'spike', ghat: 'g_spike', shield: 'small', armor: 'scale', legs: 'boots', pants: [0.3, 0.26, 0.22] },
   };
   function cultOf(c) { return CULT[c] || CULT.han; }
   const IRON = C(0.42, 0.43, 0.47), IRON_D = C(0.3, 0.31, 0.35), WOOD = C(0.43, 0.3, 0.17), RED = C(0.8, 0.16, 0.12), GOLD = C(0.88, 0.7, 0.28);
+  const BRONZE = C(0.7, 0.5, 0.26), FUR = C(0.46, 0.33, 0.2), TAN = C(0.74, 0.62, 0.4), WHITE = C(0.95, 0.94, 0.89);
+  function rgbC(a, dflt) { return a ? C(a[0], a[1], a[2]) : dflt; }
 
-  function headgear(mb, hat, team, y0, s) {
-    // y0 = 头顶；s = 尺寸倍数
-    const at = (x, y, z) => V(x * s, y0 + y * s, z * s);
+  // 头饰：y0 = 头顶，z0 = 头部中心 z，s = 尺寸倍数；acc = 识别色（近色对阵时的缨 / 羽 / 带，可为 null）
+  function headgear(mb, hat, team, y0, s, z0, acc, cu) {
+    z0 = z0 || 0;
+    const at = (x, y, z) => V(x * s, y0 + y * s, z0 + z * s);
     const sz = (x, y, z) => V(x * s, y * s, z * s);
-    const hair = C(0.12, 0.1, 0.09);
+    const hair = rgbC(cu && cu.hair, rgbC(HAIR_D));
+    const tassel = acc || RED;
+    const cap = () => mb.box(at(0, 0.0, -0.005), sz(0.17, 0.035, 0.165), hair);
     switch (hat) {
-      case 'bun':
-        mb.box(at(0, -0.03, 0), sz(0.17, 0.03, 0.16), RED);
+      case 'bun':      // 南中：椎髻 + 骨簪 + 红头带
+        mb.box(at(0, -0.03, 0), sz(0.17, 0.03, 0.16), acc || RED);
         mb.box(at(0, 0.03, -0.02), sz(0.08, 0.07, 0.08), hair);
+        mb.box(at(0, 0.05, -0.02), sz(0.17, 0.018, 0.018), C(0.94, 0.9, 0.78));
         break;
-      case 'mizura':
+      case 'mizura':   // 倭：美豆良（左右耳侧的发环）
         mb.box(at(0, 0.005, 0), sz(0.17, 0.035, 0.16), hair);
         mb.box(at(-0.1, -0.08, 0), sz(0.04, 0.09, 0.05), hair);
         mb.box(at(0.1, -0.08, 0), sz(0.04, 0.09, 0.05), hair);
+        mb.box(at(0, -0.025, 0), sz(0.175, 0.02, 0.165), acc || WHITE);
         break;
       case 'band':
-        mb.box(at(0, -0.03, 0), sz(0.17, 0.035, 0.16), shade(team, 0.2));
+        mb.box(at(0, -0.03, 0), sz(0.17, 0.035, 0.16), acc || shade(team, 0.2));
         mb.box(at(0, 0.005, 0), sz(0.155, 0.03, 0.15), hair);
         break;
-      case 'plume':
+      case 'feather':  // 夷洲：头带 + 竖羽
+        cap();
+        mb.box(at(0, -0.03, 0), sz(0.175, 0.035, 0.165), acc || shade(team, 0.15));
+        beam(mb, at(-0.04, -0.01, -0.06), at(-0.07, 0.17, -0.09), 0.035 * s, 0.012 * s, WHITE);
+        beam(mb, at(0.0, -0.01, -0.07), at(0.0, 0.2, -0.1), 0.035 * s, 0.012 * s, tassel);
+        beam(mb, at(0.04, -0.01, -0.06), at(0.07, 0.17, -0.09), 0.035 * s, 0.012 * s, WHITE);
+        break;
+      case 'seband':   // 林邑 / 扶南：金箍 + 顶髻
+        cap();
+        mb.box(at(0, -0.03, 0), sz(0.178, 0.03, 0.168), GOLD);
+        mb.cone(at(0, 0.0, -0.01), 0.05 * s, 0.09 * s, 5, hair);
+        mb.box(at(0, 0.05, -0.01), sz(0.03, 0.03, 0.03), GOLD);
+        break;
+      case 'plume':    // 高句丽 / 三韩：铁盔 + 白羽
         mb.cone(at(0, -0.035, 0), 0.115 * s, 0.12 * s, 6, IRON);
-        mb.box(at(0, 0.13, -0.01), sz(0.025, 0.14, 0.05), C(0.95, 0.95, 0.9));
+        mb.box(at(0, 0.13, -0.01), sz(0.025, 0.14, 0.05), acc || C(0.95, 0.95, 0.9));
+        mb.box(at(-0.09, -0.1, 0.02), sz(0.02, 0.08, 0.06), IRON_D);
+        mb.box(at(0.09, -0.1, 0.02), sz(0.02, 0.08, 0.06), IRON_D);
         break;
-      case 'fur':
-        mb.cylinder(at(0, -0.05, 0), 0.115 * s, 0.1 * s, 0.09 * s, 6, C(0.45, 0.32, 0.2));
+      case 'fur':      // 草原：毡帽 + 毛皮檐
+        mb.cylinder(at(0, -0.05, 0), 0.115 * s, 0.1 * s, 0.09 * s, 6, FUR);
         mb.cone(at(0, 0.035, 0), 0.08 * s, 0.07 * s, 6, shade(team, -0.1));
+        if (acc) mb.box(at(0, 0.1, 0), sz(0.03, 0.04, 0.03), acc);
+        mb.box(at(0, -0.12, -0.08), sz(0.06, 0.12, 0.03), hair);    // 辫
         break;
-      case 'tall':
+      case 'tall':     // 西域：白毡尖帽 + 帽檐
         mb.cylinder(at(0, -0.04, 0), 0.105 * s, 0.1 * s, 0.03 * s, 6, C(0.82, 0.76, 0.62));
         mb.cone(at(0, -0.01, 0), 0.095 * s, 0.24 * s, 6, C(0.86, 0.8, 0.66));
+        mb.box(at(0, -0.035, 0), sz(0.2, 0.012, 0.19), acc || shade(team, 0.1));
         break;
-      case 'spike':
+      case 'kushan':   // 贵霜：深色高尖帽 + 金箍
+        mb.cylinder(at(0, -0.045, 0), 0.11 * s, 0.11 * s, 0.035 * s, 6, acc || GOLD);
+        mb.cone(at(0, -0.01, -0.01), 0.1 * s, 0.27 * s, 6, shade(team, -0.42));
+        break;
+      case 'phrygian': // 安息：弗里吉亚软帽（帽尖前倾）+ 护耳垂片
+        mb.cylinder(at(0, -0.05, 0), 0.112 * s, 0.105 * s, 0.07 * s, 6, shade(team, -0.3));
+        beam(mb, at(0, 0.015, -0.01), at(0, 0.12, 0.07), 0.16 * s, 0.03 * s, shade(team, -0.22));
+        mb.box(at(-0.088, -0.12, 0.01), sz(0.02, 0.1, 0.07), shade(team, -0.3));
+        mb.box(at(0.088, -0.12, 0.01), sz(0.02, 0.1, 0.07), shade(team, -0.3));
+        if (acc) mb.box(at(0, -0.03, 0.002), sz(0.228, 0.02, 0.215), acc);
+        break;
+      case 'kufiya':   // 阿拉伯：头巾垂肩 + 深色头箍
+        mb.box(at(0, -0.01, 0), sz(0.185, 0.05, 0.175), WHITE);
+        mb.box(at(0, -0.12, -0.085), sz(0.19, 0.2, 0.025), C(0.9, 0.88, 0.82));
+        mb.box(at(-0.092, -0.1, -0.02), sz(0.02, 0.16, 0.12), C(0.9, 0.88, 0.82));
+        mb.box(at(0.092, -0.1, -0.02), sz(0.02, 0.16, 0.12), C(0.9, 0.88, 0.82));
+        mb.cylinder(at(0, 0.01, 0), 0.1 * s, 0.1 * s, 0.022 * s, 6, acc || C(0.15, 0.12, 0.1));
+        break;
+      case 'spike':    // 萨尔马提亚：尖顶铁盔 + 锁子护颈
         mb.cone(at(0, -0.04, 0), 0.112 * s, 0.2 * s, 6, IRON);
         mb.box(at(0, -0.1, -0.075), sz(0.16, 0.09, 0.025), IRON_D);
+        if (acc) mb.box(at(0, 0.165, 0), sz(0.03, 0.05, 0.03), acc);
+        break;
+      case 'crest':    // 罗马：高卢式铁盔 + 纵冠 + 护颊 + 宽护颈
+        mb.cone(at(0, -0.035, 0), 0.115 * s, 0.11 * s, 6, IRON);
+        mb.box(at(0, 0.09, 0), sz(0.03, 0.06, 0.2), tassel);
+        mb.box(at(-0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
+        mb.box(at(0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
+        mb.box(at(0, -0.075, -0.085), sz(0.2, 0.025, 0.06), IRON_D);
+        break;
+      case 'limed':    // 喀里多尼亚：石灰竖发 + 长发
+        cap();
+        for (let i = -1; i <= 1; i++) mb.cone(at(i * 0.05, 0.0, -0.01 - Math.abs(i) * 0.02), 0.035 * s, 0.09 * s, 4, shade(hair, 0.25));
+        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.17, 0.035), hair);
+        break;
+      case 'knot':     // 日耳曼：苏维汇发髻（右侧）+ 长发
+        cap();
+        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.18, 0.04), hair);
+        mb.box(at(0.075, 0.0, -0.01), sz(0.06, 0.06, 0.07), shade(hair, -0.1));
+        if (acc) mb.box(at(0, -0.035, 0), sz(0.178, 0.018, 0.168), acc);
+        break;
+      case 'hair':
+        mb.box(at(0, 0.0, -0.01), sz(0.17, 0.04, 0.17), hair);
+        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.18, 0.04), hair);
         break;
       case 'turban':
         mb.cylinder(at(0, -0.05, 0), 0.105 * s, 0.11 * s, 0.08 * s, 6, C(0.92, 0.9, 0.84));
         mb.cone(at(0, 0.03, 0), 0.07 * s, 0.05 * s, 6, C(0.9, 0.88, 0.8));
         break;
-      case 'crest':
-        mb.cone(at(0, -0.035, 0), 0.115 * s, 0.11 * s, 6, IRON);
-        mb.box(at(0, 0.09, 0), sz(0.03, 0.06, 0.2), RED);
-        mb.box(at(-0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
-        mb.box(at(0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
+      // ---- 武将专用 ----
+      case 'g_han':    // 汉：金盔 + 雉尾
+        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
+        mb.cone(at(0, -0.01, 0), 0.12, 0.14, 6, GOLD);
+        beam(mb, at(0, 0.12, -0.015), at(0, 0.36, -0.215), 0.035, 0.012, tassel);
+        beam(mb, at(0.03, 0.12, -0.015), at(0.06, 0.32, -0.235), 0.03, 0.01, shade(tassel, 0.2));
         break;
-      case 'hair':
-        mb.box(at(0, 0.0, -0.01), sz(0.17, 0.04, 0.17), C(0.55, 0.3, 0.14));
-        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.18, 0.04), C(0.55, 0.3, 0.14));
-        mb.box(at(0, -0.15, 0.07), sz(0.1, 0.06, 0.03), C(0.55, 0.3, 0.14));
+      case 'g_roman':  // 罗马：铁盔 + 横向红冠（百夫长式）+ 护颊
+        mb.cone(at(0, -0.035, 0), 0.122, 0.12, 6, IRON);
+        mb.box(at(0, 0.095, 0), V(0.3, 0.075, 0.035), tassel);
+        mb.box(at(0, 0.055, 0), V(0.04, 0.03, 0.04), GOLD);
+        mb.box(at(-0.09, -0.11, 0.045), V(0.02, 0.09, 0.07), IRON_D);
+        mb.box(at(0.09, -0.11, 0.045), V(0.02, 0.09, 0.07), IRON_D);
+        mb.box(at(0, -0.1, -0.075), V(0.17, 0.06, 0.03), IRON_D);
         break;
-      default:   // 'cone' 汉军铁胄：盔体、帽檐、红缨、顿项
+      case 'g_spike':  // 萨尔马提亚：鎏金尖顶分片盔 + 锁子护颈 + 两条飘带
+        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.03, 6, shade(GOLD, -0.25));
+        mb.cone(at(0, -0.02, 0), 0.118, 0.24, 6, GOLD);
+        for (let i = -1; i <= 1; i += 2) mb.box(at(i * 0.055, 0.04, 0), V(0.012, 0.11, 0.012), shade(GOLD, -0.35));
+        mb.box(at(0, -0.13, -0.085), V(0.19, 0.12, 0.03), IRON_D);
+        beam(mb, at(-0.04, -0.04, -0.105), at(-0.07, -0.24, -0.315), 0.03, 0.015, WHITE);
+        beam(mb, at(0.04, -0.04, -0.105), at(0.07, -0.21, -0.295), 0.03, 0.015, tassel);
+        break;
+      case 'g_plume':  // 高句丽 / 三韩：鎏金盔 + 高耸白羽
+        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
+        mb.cone(at(0, -0.01, 0), 0.115, 0.13, 6, GOLD);
+        beam(mb, at(0, 0.1, 0), at(0, 0.4, -0.03), 0.05, 0.02, acc || C(0.96, 0.95, 0.9));
+        beam(mb, at(0.035, 0.1, 0), at(0.07, 0.34, -0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
+        beam(mb, at(-0.035, 0.1, 0), at(-0.07, 0.34, -0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
+        break;
+      case 'g_tiara':  // 安息：高圆提亚拉冠（势力色暗部）+ 珠串金箍 + 背后飘带 + 披发
+        mb.cylinder(at(0, -0.045, 0), 0.118, 0.112, 0.17, 6, shade(team, -0.38));
+        mb.cylinder(at(0, 0.125, 0), 0.112, 0.06, 0.06, 6, shade(team, -0.3));
+        mb.cylinder(at(0, -0.045, 0), 0.124, 0.124, 0.035, 6, GOLD);
+        mb.cylinder(at(0, 0.09, 0), 0.116, 0.116, 0.022, 6, GOLD);
+        for (let i = -2; i <= 2; i++) mb.box(at(i * 0.035, 0.035, 0.11), V(0.018, 0.018, 0.014), WHITE);
+        mb.box(at(0, -0.14, -0.08), V(0.18, 0.2, 0.05), hair);
+        beam(mb, at(-0.04, -0.03, -0.11), at(-0.08, -0.25, -0.3), 0.03, 0.015, tassel);
+        beam(mb, at(0.04, -0.03, -0.11), at(0.08, -0.22, -0.3), 0.03, 0.015, GOLD);
+        break;
+      case 'g_wa':     // 倭：冲角付胄（前凸的铁盔）+ 宽护颈 + 立饰
+        mb.cylinder(at(0, -0.045, 0), 0.128, 0.122, 0.05, 6, IRON_D);
+        mb.cone(at(0, 0.0, 0), 0.12, 0.12, 6, IRON);
+        beam(mb, at(0, 0.02, 0.02), at(0, -0.02, 0.15), 0.08, 0.02, IRON);
+        mb.box(at(0, -0.1, -0.1), V(0.27, 0.035, 0.11), IRON_D);
+        mb.box(at(0, -0.14, -0.12), V(0.3, 0.035, 0.11), shade(IRON_D, -0.1));
+        mb.box(at(0, 0.13, 0), V(0.02, 0.07, 0.06), acc || GOLD);
+        break;
+      case 'g_fur':    // 草原：狐皮帽 + 护耳 + 势力色毡顶 + 双辫
+        mb.cylinder(at(0, -0.06, 0), 0.13, 0.12, 0.1, 6, FUR);
+        mb.cone(at(0, 0.04, 0), 0.1, 0.15, 6, shade(team, -0.05));
+        mb.box(at(-0.105, -0.13, 0.0), V(0.03, 0.12, 0.08), shade(FUR, 0.1));
+        mb.box(at(0.105, -0.13, 0.0), V(0.03, 0.12, 0.08), shade(FUR, 0.1));
+        mb.box(at(0, 0.2, 0), V(0.03, 0.05, 0.03), acc || GOLD);
+        mb.box(at(-0.05, -0.18, -0.09), V(0.04, 0.16, 0.03), hair);
+        mb.box(at(0.05, -0.18, -0.09), V(0.04, 0.16, 0.03), hair);
+        break;
+      case 'g_feather':// 南中 / 夷洲首领：金箍 + 扇形羽冠
+        mb.box(at(0, -0.03, 0), V(0.18, 0.04, 0.17), GOLD);
+        mb.box(at(0, 0.0, -0.005), V(0.17, 0.035, 0.165), hair);
+        for (let i = -2; i <= 2; i++) beam(mb, at(i * 0.03, 0.0, -0.06), at(i * 0.09, 0.26 - Math.abs(i) * 0.04, -0.1), 0.045, 0.015, i % 2 ? WHITE : (i ? tassel : shade(team, 0.25)));
+        break;
+      case 'g_crown':  // 林邑 / 扶南：多层金尖冠
+        mb.cylinder(at(0, -0.04, 0), 0.115, 0.11, 0.06, 6, GOLD);
+        mb.cylinder(at(0, 0.02, 0), 0.095, 0.075, 0.08, 6, shade(GOLD, 0.08));
+        mb.cylinder(at(0, 0.1, 0), 0.065, 0.045, 0.07, 6, GOLD);
+        mb.cone(at(0, 0.17, 0), 0.04, 0.14, 5, shade(GOLD, 0.12));
+        if (acc) mb.box(at(0, -0.01, 0.105), V(0.04, 0.04, 0.02), acc);
+        break;
+      case 'g_kushan': // 贵霜王冠：高尖帽 + 金冠带 + 飘带
+        mb.cylinder(at(0, -0.045, 0), 0.12, 0.12, 0.045, 6, GOLD);
+        mb.cone(at(0, 0.0, -0.01), 0.108, 0.3, 6, shade(team, -0.42));
+        beam(mb, at(-0.04, -0.03, -0.11), at(-0.08, -0.23, -0.3), 0.03, 0.015, acc || GOLD);
+        beam(mb, at(0.04, -0.03, -0.11), at(0.08, -0.2, -0.3), 0.03, 0.015, acc || GOLD);
+        break;
+      default:         // 'cone' 汉军铁胄：盔体、帽檐、红缨、顿项
         mb.cylinder(at(0, -0.045, 0), 0.118 * s, 0.118 * s, 0.03 * s, 6, IRON_D);
         mb.cone(at(0, -0.02, 0), 0.112 * s, 0.13 * s, 6, IRON);
-        mb.box(at(0, 0.12, 0), sz(0.035, 0.05, 0.035), RED);
+        mb.box(at(0, 0.12, 0), sz(0.035, 0.05, 0.035), tassel);
         mb.box(at(0, -0.1, -0.07), sz(0.17, 0.1, 0.03), IRON_D);
         break;
     }
   }
 
-  function bodyGeo(team, culture, archer) {
+  // 胡须（面朝 +z）：hc = 头部中心，hs = 头部尺寸
+  function beardOf(mb, cu, hc, hs) {
+    if (!cu.beard) return;
+    const hair = rgbC(cu.hair, rgbC(HAIR_D));
+    mb.box(V(hc.x, hc.y - hs * 0.36, hc.z + hs * 0.46), V(hs * 0.82, hs * 0.36, hs * 0.16), hair);
+    mb.box(V(hc.x, hc.y - hs * 0.16, hc.z + hs * 0.52), V(hs * 0.5, hs * 0.08, hs * 0.06), hair);
+  }
+
+  // 甲衣样式：F = 躯干 { y, z, w, h, d }（Unity 坐标，面朝 +z）；trim = 镶边 / 识别色
+  function torsoDeco(mb, cu, F, t, trim) {
+    const { y, z, w, h, d } = F;
+    const fz = z + d / 2 + 0.006, bz = z - d / 2 - 0.006;
+    const light = shade(t, 0.16);
+    const both = (cx, cy, sw, sh, col, dz) => { dz = dz || 0; mb.box(V(cx, cy, fz + dz), V(sw, sh, 0.02), col); mb.box(V(cx, cy, bz - dz), V(sw, sh, 0.02), shade(col, -0.08)); };
+    const OV = fz + 0.014;     // 贴在胸甲外的细节
+    switch (cu.armor) {
+      case 'scale':        // 鱼鳞甲：前后三排错色甲片
+        for (let r = 0; r < 3; r++) {
+          const yy = y + h * (0.26 - r * 0.21), ww = w * (0.8 - r * 0.04);
+          both(0, yy, ww, h * 0.2, r % 2 ? IRON : BRONZE);
+          for (let i = -1; i <= 1; i += 2) mb.box(V(i * ww * 0.25, yy - h * 0.09, OV), V(0.02, 0.02, 0.012), shade(r % 2 ? IRON : BRONZE, -0.3));
+        }
+        break;
+      case 'segmentata':   // 环片甲：铁条绕身（缝隙露出势力色）
+        for (let r = 0; r < 3; r++) mb.box(V(0, y + h * (0.32 - r * 0.25), z), V(w + 0.016, h * 0.15, d + 0.016), r % 2 ? IRON_D : IRON);
+        mb.box(V(0, y + h * 0.45, z), V(w * 0.55, h * 0.1, d + 0.02), IRON_D);
+        break;
+      case 'tanko':        // 短甲：铁胸板 + 势力色横带 + 勾玉项链
+        both(0, y + h * 0.08, w * 0.8, h * 0.62, IRON);
+        both(0, y + h * 0.08, w * 0.82, h * 0.1, light, 0.008);
+        for (let i = -2; i <= 2; i++) mb.box(V(i * 0.026, y + h * 0.4 - Math.abs(i) * 0.01, OV), V(0.018, 0.026, 0.014), C(0.2, 0.62, 0.45));
+        break;
+      case 'robe':         // 长袍：前襟镶边
+        both(0, y, w * 0.12, h * 0.95, trim);
+        break;
+      case 'furcoat':      // 皮袍：毛皮领与前襟
+        mb.box(V(0, y + h * 0.43, z), V(w * 0.78, h * 0.16, d + 0.02), FUR);
+        both(0, y - h * 0.05, w * 0.14, h * 0.8, FUR);
+        break;
+      case 'rattan':       // 藤甲：棕黄编织胸甲（纵横两色）
+        both(0, y + h * 0.05, w * 0.82, h * 0.7, TAN);
+        for (let i = -1; i <= 1; i++) mb.box(V(i * w * 0.24, y + h * 0.05, OV), V(0.014, h * 0.66, 0.012), shade(TAN, -0.25));
+        mb.box(V(0, y + h * 0.05, OV), V(w * 0.8, 0.014, 0.012), shade(TAN, -0.25));
+        break;
+      case 'bare':         // 短衣：金饰 / 贝珠项链
+        mb.box(V(0, y + h * 0.42, z + d * 0.2), V(w * 0.6, 0.03, d * 0.75), cu.tattoo ? WHITE : GOLD);
+        if (!cu.tattoo) mb.box(V(0, y + h * 0.3, fz), V(0.05, 0.05, 0.015), GOLD);
+        break;
+      case 'plaid':        // 方格衣 + 金项圈（torc）
+        for (let r = 0; r < 2; r++) for (let i = -1; i <= 1; i++) if ((r + i) % 2 === 0) both(i * w * 0.28, y + h * (0.2 - r * 0.36), w * 0.24, h * 0.3, shade(t, -0.32));
+        mb.box(V(0, y + h * 0.52, z + d * 0.15), V(w * 0.5, 0.03, d * 0.7), GOLD);
+        break;
+      case 'furcloak':     // 毛皮披肩（肩与背）
+        mb.box(V(0, y + h * 0.4, z - d * 0.1), V(w + 0.05, h * 0.22, d + 0.02), FUR);
+        mb.box(V(0, y + h * 0.05, bz - 0.01), V(w * 0.9, h * 0.7, 0.03), shade(FUR, -0.08));
+        break;
+      default:             // 'lamellar' 札甲：胸甲 + 两道甲片横缝
+        both(0, y + h * 0.08, w * 0.76, h * 0.62, light);
+        for (let r = 0; r < 2; r++) mb.box(V(0, y + h * (0.16 - r * 0.2), OV), V(w * 0.74, 0.012, 0.012), shade(t, -0.12));
+        break;
+    }
+  }
+
+  // 盾（左臂外侧，盾面法线沿 x）：c = 盾心，trim = 镶边 / 识别色（null 时用文化默认）
+  function shieldOf(mb, kind, c, t, trim) {
+    const face = shade(t, 0.06), dark = shade(t, -0.4);
+    const rim = trim || dark, boss = trim || GOLD;
+    const out = (dx) => V(c.x - dx, c.y, c.z);       // 向外（-x）偏移
+    switch (kind) {
+      case 'round':
+        discX(mb, V(c.x + 0.006, c.y, c.z), 0.185, 0.03, rim);
+        discX(mb, c, 0.17, 0.035, face);
+        mb.box(out(0.025), V(0.02, 0.06, 0.06), boss);
+        break;
+      case 'small':        // 小圆皮盾：皮色盾面 + 势力色盾心
+        discX(mb, c, 0.135, 0.03, C(0.4, 0.28, 0.16));
+        discX(mb, out(0.012), 0.09, 0.012, face);
+        mb.box(out(0.026), V(0.02, 0.045, 0.045), boss);
+        break;
+      case 'rattan':       // 藤牌：棕黄编织 + 势力色内圈
+        discX(mb, c, 0.18, 0.035, TAN);
+        discX(mb, out(0.012), 0.1, 0.012, face);
+        mb.box(out(0.028), V(0.02, 0.05, 0.05), trim || C(0.92, 0.88, 0.76));
+        break;
+      case 'oval':         // 长椭圆盾（凯尔特 / 南海）：竖脊 + 盾心
+        discX(mb, V(c.x + 0.006, c.y, c.z), 0.14, 0.03, rim, 10, 0.25);
+        discX(mb, c, 0.125, 0.035, face, 10, 0.235);
+        mb.box(out(0.022), V(0.015, 0.4, 0.03), boss);
+        mb.box(out(0.028), V(0.02, 0.07, 0.07), boss);
+        break;
+      case 'hex':          // 日耳曼六角盾
+        discX(mb, V(c.x + 0.006, c.y, c.z), 0.2, 0.03, rim, 6);
+        discX(mb, c, 0.18, 0.035, face, 6);
+        mb.box(out(0.026), V(0.02, 0.065, 0.065), boss);
+        break;
+      case 'scutum':       // 罗马长方大盾：势力色盾面 + 金色边框、竖脊、盾心
+        mb.box(c, V(0.04, 0.46, 0.3), face);
+        mb.box(out(0.022), V(0.008, 0.46, 0.022), boss);
+        mb.box(V(c.x - 0.022, c.y + 0.22, c.z), V(0.008, 0.022, 0.3), trim || GOLD);
+        mb.box(V(c.x - 0.022, c.y - 0.22, c.z), V(0.008, 0.022, 0.3), trim || GOLD);
+        mb.box(V(c.x - 0.022, c.y, c.z + 0.14), V(0.008, 0.46, 0.02), trim || GOLD);
+        mb.box(V(c.x - 0.022, c.y, c.z - 0.14), V(0.008, 0.46, 0.02), trim || GOLD);
+        mb.box(out(0.03), V(0.02, 0.08, 0.08), boss);
+        break;
+      case 'spara':        // 安息藤编立盾：浅黄编条 + 势力色横纹
+        mb.box(c, V(0.03, 0.46, 0.24), C(0.78, 0.68, 0.46));
+        for (let i = -1; i <= 1; i++) mb.box(V(c.x - 0.018, c.y + i * 0.13, c.z), V(0.008, 0.06, 0.24), face);
+        mb.box(V(c.x - 0.018, c.y, c.z + 0.115), V(0.01, 0.46, 0.02), rim);
+        mb.box(V(c.x - 0.018, c.y, c.z - 0.115), V(0.01, 0.46, 0.02), rim);
+        break;
+      case 'wood':         // 倭：木质立盾 + 势力色锯齿纹
+        mb.box(c, V(0.035, 0.44, 0.2), shade(WOOD, 0.12));
+        for (let i = -1; i <= 1; i++) mb.box(V(c.x - 0.02, c.y + i * 0.13, c.z + (i % 2 ? 0.04 : -0.04)), V(0.008, 0.07, 0.11), face);
+        mb.box(V(c.x - 0.02, c.y + 0.205, c.z), V(0.01, 0.03, 0.2), rim);
+        break;
+      default:             // 'rect' 汉：长方盾
+        mb.box(c, V(0.04, 0.4, 0.25), face);
+        mb.box(out(0.025), V(0.02, 0.3, 0.08), dark);
+        mb.box(out(0.03), V(0.02, 0.07, 0.07), boss);
+        mb.box(V(c.x, c.y + 0.205, c.z), V(0.045, 0.02, 0.25), rim);
+        mb.box(V(c.x, c.y - 0.205, c.z), V(0.045, 0.02, 0.25), rim);
+        break;
+    }
+  }
+
+  // 士兵身体：acc = 识别色（两军势力色相近时给出，用在肩、腰带、盾缘、盔缨上；否则 null）
+  function bodyGeo(team, culture, archer, acc) {
     const mb = new SG.MeshBuilder();
     const cu = cultOf(culture);
-    const t = team, mid = shade(t, -0.18), dark = shade(t, -0.4), light = shade(t, 0.16);
+    const t = team, mid = shade(t, -0.18), dark = shade(t, -0.4);
     const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
     const leather = C(0.32, 0.22, 0.13);
-    mb.box(V(0, 0.385, 0), V(0.31, 0.13, 0.2), mid);                 // 甲裙
-    mb.box(V(0, 0.335, 0.0), V(0.33, 0.04, 0.215), dark);             // 甲裙下缘
+    const trim = acc || rgbC(cu.trim, null);
+    const armBare = cu.armor === 'bare' || cu.armor === 'plaid' || cu.armor === 'rattan';
+    const arm = armBare ? skin : mid;
+    const robe = cu.armor === 'robe' || cu.armor === 'furcoat';
+    if (robe) {
+      const hem = cu.armor === 'robe' ? 0.2 : 0.27;
+      mb.box(V(0, (hem + 0.45) / 2, 0), V(0.31, 0.45 - hem, 0.205), mid);                         // 袍摆
+      mb.box(V(0, hem + 0.015, 0), V(0.33, 0.03, 0.215), cu.armor === 'furcoat' ? FUR : (trim || dark));
+    } else {
+      mb.box(V(0, 0.385, 0), V(0.31, 0.13, 0.2), mid);               // 甲裙
+      mb.box(V(0, 0.335, 0.0), V(0.33, 0.04, 0.215), trim || dark);   // 甲裙下缘
+    }
     mb.box(V(0, 0.565, 0), V(0.29, 0.26, 0.18), t);                   // 躯干
-    mb.box(V(0, 0.585, 0.093), V(0.22, 0.15, 0.02), light);           // 胸甲
-    mb.box(V(0, 0.585, -0.093), V(0.22, 0.17, 0.02), shade(t, -0.08));
-    mb.box(V(0, 0.455, 0), V(0.3, 0.045, 0.19), leather);             // 腰带
+    torsoDeco(mb, cu, { y: 0.565, z: 0, w: 0.29, h: 0.26, d: 0.18 }, t, trim || GOLD);
+    mb.box(V(0, 0.455, 0), V(0.3, 0.045, 0.19), acc || leather);      // 腰带
     mb.box(V(0, 0.455, 0.1), V(0.06, 0.05, 0.02), GOLD);              // 带扣
-    mb.box(V(-0.185, 0.655, 0), V(0.1, 0.075, 0.18), dark);           // 肩甲
-    mb.box(V(0.185, 0.655, 0), V(0.1, 0.075, 0.18), dark);
-    mb.box(V(-0.2, 0.53, 0.03), V(0.07, 0.19, 0.08), mid);            // 左臂
-    mb.box(V(0.2, 0.575, 0.04), V(0.07, 0.13, 0.08), mid);            // 右上臂
-    mb.box(V(0.2, 0.505, 0.12), V(0.065, 0.065, 0.16), mid);          // 右前臂（前伸到握点）
+    if (!armBare && cu.armor !== 'furcloak') {
+      const sh = acc || (cu.armor === 'segmentata' ? IRON : dark);
+      mb.box(V(-0.185, 0.655, 0), V(0.1, 0.075, 0.18), sh);            // 肩甲
+      mb.box(V(0.185, 0.655, 0), V(0.1, 0.075, 0.18), sh);
+    } else if (acc) {
+      mb.box(V(-0.185, 0.665, 0), V(0.09, 0.04, 0.17), acc);
+      mb.box(V(0.185, 0.665, 0), V(0.09, 0.04, 0.17), acc);
+    }
+    mb.box(V(-0.2, 0.53, 0.03), V(0.07, 0.19, 0.08), arm);            // 左臂
+    mb.box(V(0.2, 0.575, 0.04), V(0.07, 0.13, 0.08), arm);            // 右上臂
+    mb.box(V(0.2, 0.505, 0.12), V(0.065, 0.065, 0.16), arm);          // 右前臂（前伸到握点）
+    if (cu.tattoo) for (const sx of [-0.2, 0.2]) mb.box(V(sx, 0.56, 0.072), V(0.074, 0.018, 0.012), C(0.18, 0.22, 0.3));   // 文身
     mb.box(V(0, 0.71, 0), V(0.08, 0.04, 0.08), skin);                 // 颈
     mb.box(V(0, 0.795, 0.005), V(0.155, 0.145, 0.15), skin);          // 头
     mb.box(V(0, 0.79, 0.081), V(0.11, 0.025, 0.01), shade(skin, -0.45));   // 眉眼的阴影
-    headgear(mb, cu.hat, t, 0.87, 1);
+    beardOf(mb, cu, { x: 0, y: 0.795, z: 0.005 }, 0.15);
+    headgear(mb, cu.hat, t, 0.87, 1, 0, acc, cu);
     if (archer) {
       // 箭囊（背后）与箭羽
       mb.box(V(0.06, 0.6, -0.13), V(0.09, 0.3, 0.08), leather);
       for (let i = 0; i < 3; i++) mb.box(V(0.04 + i * 0.022, 0.78, -0.13), V(0.016, 0.07, 0.016), C(0.92, 0.9, 0.85));
-    } else {
-      // 盾（左臂）
-      const sc = shade(t, 0.06);
-      switch (cu.shield) {
-        case 'round':
-          discX(mb, V(-0.26, 0.52, 0.07), 0.17, 0.035, sc);
-          mb.box(V(-0.285, 0.52, 0.07), V(0.02, 0.06, 0.06), GOLD);
-          break;
-        case 'scutum':
-          mb.box(V(-0.265, 0.5, 0.07), V(0.04, 0.46, 0.3), RED);
-          mb.box(V(-0.29, 0.5, 0.07), V(0.02, 0.08, 0.08), GOLD);
-          mb.box(V(-0.29, 0.5, 0.07), V(0.015, 0.4, 0.025), GOLD);
-          break;
-        default:
-          mb.box(V(-0.265, 0.5, 0.07), V(0.04, 0.4, 0.25), sc);
-          mb.box(V(-0.29, 0.5, 0.07), V(0.02, 0.3, 0.08), dark);
-          mb.box(V(-0.295, 0.5, 0.07), V(0.02, 0.07, 0.07), GOLD);
-          mb.box(V(-0.265, 0.705, 0.07), V(0.045, 0.02, 0.25), dark);
-          mb.box(V(-0.265, 0.295, 0.07), V(0.045, 0.02, 0.25), dark);
-          break;
-      }
-    }
+    } else shieldOf(mb, cu.shield, V(-0.265, 0.51, 0.07), t, acc);
     return mb.toGeometry();
   }
-  function legGeo() {
+  // 腿（髋部为原点）：trousers 裤 + 绑腿 + 靴 / bare 裸腿 + 凉鞋 / boots 裤 + 高靴 / wraps 浅色裤 + 交叉绑带
+  function legGeo(culture) {
     const mb = new SG.MeshBuilder();
-    mb.box(V(0, -0.12, 0), V(0.105, 0.24, 0.115), C(0.27, 0.22, 0.19));
-    mb.box(V(0, -0.235, 0), V(0.11, 0.05, 0.12), C(0.72, 0.66, 0.55));   // 绑腿
-    mb.box(V(0, -0.31, 0.02), V(0.115, 0.1, 0.16), C(0.15, 0.11, 0.09));  // 靴
+    const cu = cultOf(culture);
+    const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
+    const pants = rgbC(cu.pants, C(0.27, 0.22, 0.19));
+    switch (cu.legs) {
+      case 'bare':
+        mb.box(V(0, -0.12, 0), V(0.095, 0.24, 0.1), skin);
+        mb.box(V(0, -0.25, 0), V(0.1, 0.03, 0.105), C(0.4, 0.27, 0.15));
+        mb.box(V(0, -0.33, 0.02), V(0.11, 0.06, 0.15), C(0.36, 0.24, 0.13));
+        break;
+      case 'boots':
+        mb.box(V(0, -0.1, 0), V(0.11, 0.2, 0.12), pants);
+        mb.box(V(0, -0.27, 0.01), V(0.12, 0.18, 0.135), C(0.2, 0.14, 0.1));
+        mb.box(V(0, -0.345, 0.035), V(0.12, 0.04, 0.17), C(0.15, 0.11, 0.09));
+        break;
+      case 'wraps':
+        mb.box(V(0, -0.12, 0), V(0.11, 0.24, 0.12), pants);
+        mb.box(V(0, -0.17, 0.0), V(0.115, 0.022, 0.125), C(0.3, 0.22, 0.14));
+        mb.box(V(0, -0.24, 0.0), V(0.115, 0.022, 0.125), C(0.3, 0.22, 0.14));
+        mb.box(V(0, -0.31, 0.02), V(0.115, 0.1, 0.16), C(0.24, 0.17, 0.11));
+        break;
+      default:
+        mb.box(V(0, -0.12, 0), V(0.105, 0.24, 0.115), pants);
+        mb.box(V(0, -0.235, 0), V(0.11, 0.05, 0.12), C(0.72, 0.66, 0.55));   // 绑腿
+        mb.box(V(0, -0.31, 0.02), V(0.115, 0.1, 0.16), C(0.15, 0.11, 0.09));  // 靴
+        break;
+    }
     return mb.toGeometry();
   }
   function spearGeo() {
@@ -364,13 +647,14 @@
     mb.box(V(0, -0.525, 0.015), V(0.075, 0.05, 0.09), C(0.28, 0.28, 0.28));
     return mb.toGeometry();
   }
-  // 武将骑马像：马身、马鞍披挂（势力色）、骑者、长柄刀、帅旗杆
-  function generalGeo(team, culture, horse, weapon) {
+  // 武将骑马像：马身、马鞍披挂（势力色）、骑者（按文化的头盔 / 甲衣 / 披风）、长柄刀、帅旗杆
+  function generalGeo(team, culture, horse, weapon, acc) {
     const mb = new SG.MeshBuilder();
     const cu = cultOf(culture);
     const t = team, dark = shade(t, -0.4), mid = shade(t, -0.18), light = shade(t, 0.18);
     const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
     const hd = shade(horse, -0.25), mane = luma(horse) > 0.6 ? C(0.85, 0.83, 0.8) : C(0.12, 0.1, 0.09);
+    const trim = acc || GOLD;
     // 马
     mb.box(V(0, 0.69, -0.02), V(0.3, 0.28, 0.86), horse);
     mb.box(V(0, 0.71, 0.36), V(0.32, 0.3, 0.2), shade(horse, 0.04));      // 胸
@@ -382,60 +666,39 @@
     mb.cone(V(0.045, 1.14, 0.6), 0.025, 0.07, 4, hd);
     beam(mb, V(0, 0.87, 0.4), V(0, 1.15, 0.58), 0.06, 0.05, mane);           // 鬃
     beam(mb, V(0, 0.76, -0.47), V(0, 0.4, -0.66), 0.09, 0.04, mane);         // 尾
-    // 鞍与披挂
+    // 鞍与披挂（草原 / 萨尔马提亚为毛皮鞍褥）
     mb.box(V(0, 0.85, -0.04), V(0.34, 0.06, 0.4), dark);
     mb.box(V(0, 0.7, -0.04), V(0.335, 0.26, 0.44), t);
-    mb.box(V(0, 0.575, -0.04), V(0.34, 0.03, 0.45), GOLD);
-    mb.box(V(0, 0.9, -0.12), V(0.2, 0.06, 0.16), C(0.36, 0.22, 0.12));
+    mb.box(V(0, 0.575, -0.04), V(0.34, 0.03, 0.45), trim);
+    mb.box(V(0, 0.9, -0.12), V(0.2, 0.06, 0.16), cu.armor === 'furcoat' ? FUR : C(0.36, 0.22, 0.12));
     // 骑者
-    mb.box(V(-0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), dark);                  // 腿
-    mb.box(V(0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), dark);
-    mb.box(V(-0.16, 0.68, 0.1), V(0.1, 0.07, 0.15), C(0.15, 0.11, 0.09));
-    mb.box(V(0.16, 0.68, 0.1), V(0.1, 0.07, 0.15), C(0.15, 0.11, 0.09));
+    const robe = cu.armor === 'robe' || cu.armor === 'furcoat';
+    const legC = cu.legs === 'bare' ? skin : (robe ? mid : dark);
+    mb.box(V(-0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), legC);                  // 腿
+    mb.box(V(0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), legC);
+    const boot = cu.legs === 'boots' ? C(0.2, 0.14, 0.1) : C(0.15, 0.11, 0.09);
+    mb.box(V(-0.16, 0.68, 0.1), V(0.1, 0.07 + (cu.legs === 'boots' ? 0.05 : 0), 0.15), boot);
+    mb.box(V(0.16, 0.68, 0.1), V(0.1, 0.07 + (cu.legs === 'boots' ? 0.05 : 0), 0.15), boot);
     mb.box(V(0, 1.1, -0.06), V(0.3, 0.32, 0.2), t);                          // 躯干
-    mb.box(V(0, 1.12, 0.045), V(0.24, 0.2, 0.02), light);                    // 胸甲
-    mb.box(V(0, 0.95, -0.06), V(0.32, 0.06, 0.21), GOLD);                    // 腰带
-    mb.box(V(-0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), GOLD);                 // 肩甲（金）
-    mb.box(V(0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), GOLD);
-    beam(mb, V(0, 1.24, -0.17), V(0, 0.84, -0.38), 0.3, 0.38, cu.hat === 'crest' ? RED : mid);   // 披风（罗马将领为红色 paludamentum）
-    mb.box(V(-0.2, 1.08, 0.0), V(0.075, 0.2, 0.08), mid);                    // 左臂（持缰）
-    mb.box(V(0.21, 1.1, 0.02), V(0.075, 0.18, 0.08), mid);                   // 右臂
-    mb.box(V(0.22, 1.0, 0.12), V(0.07, 0.07, 0.14), mid);
+    torsoDeco(mb, cu, { y: 1.1, z: -0.06, w: 0.3, h: 0.32, d: 0.2 }, t, trim);
+    mb.box(V(0, 0.95, -0.06), V(0.32, 0.06, 0.21), trim);                    // 腰带
+    if (cu.armor !== 'furcloak' && cu.armor !== 'bare') {
+      mb.box(V(-0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), cu.armor === 'segmentata' ? IRON : trim);   // 肩甲
+      mb.box(V(0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), cu.armor === 'segmentata' ? IRON : trim);
+    }
+    const cloak = rgbC(cu.cloak, cu.armor === 'furcloak' ? FUR : (cu.armor === 'plaid' ? shade(t, -0.3) : mid));
+    beam(mb, V(0, 1.24, -0.17), V(0, 0.84, -0.38), 0.3, 0.38, cloak);         // 披风（罗马将领为红色 paludamentum）
+    const arm = (cu.armor === 'bare' || cu.armor === 'plaid') ? skin : mid;
+    mb.box(V(-0.2, 1.08, 0.0), V(0.075, 0.2, 0.08), arm);                    // 左臂（持缰）
+    mb.box(V(0.21, 1.1, 0.02), V(0.075, 0.18, 0.08), arm);                   // 右臂
+    mb.box(V(0.22, 1.0, 0.12), V(0.07, 0.07, 0.14), arm);
     mb.box(V(0, 1.29, -0.05), V(0.09, 0.04, 0.09), skin);
     mb.box(V(0, 1.38, -0.045), V(0.165, 0.155, 0.16), skin);                 // 头
     mb.box(V(0, 1.375, 0.04), V(0.11, 0.025, 0.01), shade(skin, -0.45));
-    // 将盔：按文化区分（DESIGN-V2 §6）
-    const HZ = -0.045;
-    if (cu.hat === 'cone') {
-      // 汉：金盔 + 雉尾
-      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
-      mb.cone(V(0, 1.45, HZ), 0.12, 0.14, 6, GOLD);
-      beam(mb, V(0, 1.58, -0.06), V(0, 1.82, -0.26), 0.035, 0.012, RED);
-      beam(mb, V(0.03, 1.58, -0.06), V(0.06, 1.78, -0.28), 0.03, 0.01, shade(RED, 0.2));
-    } else if (cu.hat === 'crest') {
-      // 罗马：铁盔 + 横向红冠（百夫长式）+ 护颊
-      mb.cone(V(0, 1.425, HZ), 0.122, 0.12, 6, IRON);
-      mb.box(V(0, 1.555, HZ), V(0.3, 0.075, 0.035), RED);
-      mb.box(V(0, 1.515, HZ), V(0.04, 0.03, 0.04), GOLD);
-      mb.box(V(-0.09, 1.35, 0.0), V(0.02, 0.09, 0.07), IRON_D);
-      mb.box(V(0.09, 1.35, 0.0), V(0.02, 0.09, 0.07), IRON_D);
-      mb.box(V(0, 1.36, -0.12), V(0.17, 0.06, 0.03), IRON_D);
-    } else if (cu.hat === 'spike') {
-      // 帕提亚 / 萨尔马提亚：鎏金尖顶分片盔 + 锁子护颈 + 两条飘带
-      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.03, 6, shade(GOLD, -0.25));
-      mb.cone(V(0, 1.44, HZ), 0.118, 0.24, 6, GOLD);
-      for (let i = -1; i <= 1; i += 2) mb.box(V(i * 0.055, 1.5, HZ), V(0.012, 0.11, 0.012), shade(GOLD, -0.35));
-      mb.box(V(0, 1.33, -0.13), V(0.19, 0.12, 0.03), IRON_D);
-      beam(mb, V(-0.04, 1.42, -0.15), V(-0.07, 1.22, -0.36), 0.03, 0.015, C(0.95, 0.94, 0.88));
-      beam(mb, V(0.04, 1.42, -0.15), V(0.07, 1.25, -0.34), 0.03, 0.015, RED);
-    } else if (cu.hat === 'plume') {
-      // 高句丽 / 三韩：鎏金盔 + 高耸白羽
-      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
-      mb.cone(V(0, 1.45, HZ), 0.115, 0.13, 6, GOLD);
-      beam(mb, V(0, 1.56, HZ), V(0, 1.86, HZ - 0.03), 0.05, 0.02, C(0.96, 0.95, 0.9));
-      beam(mb, V(0.035, 1.56, HZ), V(0.07, 1.8, HZ - 0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
-      beam(mb, V(-0.035, 1.56, HZ), V(-0.07, 1.8, HZ - 0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
-    } else headgear(mb, cu.hat, t, 1.46, 1.05);
+    beardOf(mb, cu, { x: 0, y: 1.38, z: -0.045 }, 0.16);
+    // 将盔：按文化区分（DESIGN-V2 §6）；ghat 以 g_ 开头者为武将专用盔
+    const gh = cu.ghat || cu.hat;
+    headgear(mb, gh, t, 1.46, gh.indexOf('g_') === 0 ? 1 : 1.06, -0.045, acc, cu);
     // 兵器：长柄大刀（右手）
     const wx = 0.24, wz = 0.14;
     beam(mb, V(wx, 0.5, wz), V(wx, 1.95, wz), 0.035, 0.03, C(0.35, 0.22, 0.13));
@@ -453,7 +716,7 @@
       beam(mb, V(wx, 2.12, wz + 0.1), V(wx, 2.3, wz + 0.06), 0.06, 0.04, blade);
       beam(mb, V(wx, 2.3, wz + 0.06), V(wx, 2.38, wz - 0.04), 0.04, 0.0, blade);
     }
-    mb.box(V(wx, 1.9, wz), V(0.06, 0.05, 0.06), RED);
+    mb.box(V(wx, 1.9, wz), V(0.06, 0.05, 0.06), acc || RED);
     mb.box(V(wx, 1.0, wz + 0.02), V(0.06, 0.07, 0.07), skin);
     // 帅旗杆（背后左侧）
     beam(mb, V(-0.18, 0.78, -0.3), V(-0.18, 3.0, -0.3), 0.035, 0.03, C(0.3, 0.2, 0.12));
@@ -534,7 +797,8 @@
 
   // ======================================================= 旗帜 --
   // 旗面贴图：势力色底、犬牙边、中央圆徽与姓氏
-  function bannerTexture(glyph, colorHex, big) {
+  // accentHex：识别色（近色对阵时给出），用作犬牙边与内框，让两军旗帜一眼可辨
+  function bannerTexture(glyph, colorHex, big, accentHex) {
     const W = 128, H = big ? 168 : 104;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
@@ -544,7 +808,7 @@
     const css = c => '#' + c.getHexString();
     const tooth = big ? 12 : 10;
     // 犬牙边（左、右、下三边），颜色与旗面成对比
-    const edge = lum > 0.62 ? shade(base, -0.55) : (lum < 0.25 ? C(0.88, 0.72, 0.32) : shade(base, -0.45));
+    const edge = accentHex ? SG.Gfx.color(accentHex) : lum > 0.62 ? shade(base, -0.55) : (lum < 0.25 ? C(0.88, 0.72, 0.32) : shade(base, -0.45));
     g.fillStyle = css(edge);
     g.beginPath();
     const tw = tooth * 1.4;
@@ -1109,6 +1373,7 @@ void main() {
       color: hexOf(side.color || '#808080'),
       before, after, loss: before - after,
       formation: formIndex(side.formation !== undefined ? side.formation : gen.formation),
+      accent: null,     // 识别色，见 pickAccents
       culture: side.culture || gen.culture || (/^(孟获|孟优|祝融|兀突骨|木鹿|朵思|带来)/.test(gen.name || '') ? 'nanman' : 'han'),
     };
   }
@@ -1155,13 +1420,33 @@ void main() {
     return true;
   }
 
+  // 识别色：两军势力色相近（原始 RGB 距离 < ACC_DIST）时，各给一种与两军颜色都拉得开、彼此也不同的镶边色，
+  // 用在士兵的肩甲、腰带、盾缘 / 盾心、盔缨，武将的鞍边、腰带、盔羽，以及旗帜的犬牙边上——混战中也分得清敌我
+  const ACC_DIST = 130;
+  const ACCENTS = ['#f4ecd8', '#f0b42c', '#1b1815', '#d8342c', '#3cc0c8', '#9be05a'];
+  function colorDist(x, y) { const a = hexRgb(x), b = hexRgb(y); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+  function pickAccents(A, D) {
+    const best = (avoid) => {
+      let pick = ACCENTS[0], sc = -1;
+      for (const c of ACCENTS) {
+        const m = Math.min(...avoid.map(a => colorDist(c, a)));
+        if (m > sc) { sc = m; pick = c; }
+      }
+      return pick;
+    };
+    A.accent = best([A.color, D.color]);
+    D.accent = best([A.color, D.color, A.accent]);
+  }
+
   class ClashScene {
     constructor(opts) {
       this.opts = opts;
       this.kind = terrainKind(opts.terrain);
       this.A = norm(opts.attacker);
       this.D = norm(opts.defender);
+      const d0 = colorDist(this.A.color, this.D.color);
       this.recolored = separateColors(this.A, this.D);
+      if (d0 < ACC_DIST) pickAccents(this.A, this.D);
       this.special = opts.special && opts.special.name ? { name: String(opts.special.name), color: hexOf(opts.special.color || '#ffd24d'), kind: specKind(opts.special), cry: opts.special.cry || null } : null;
       this.playerSide = opts.playerSide === 0 || opts.playerSide === 1 ? opts.playerSide : null;
       this.speed = Math.max(0.1, (+SG.Clash.speed || 1) * (+opts.speed || 1));
@@ -1338,21 +1623,22 @@ void main() {
         this.instanced.push(m);
         return m;
       };
-      let nLeg = 0, nSpear = 0, nBow = 0;
+      let nSpear = 0, nBow = 0;
       for (const A of this.armies) {
         const team = SG.Gfx.color(A.info.color);
+        const acc = A.info.accent ? SG.Gfx.color(A.info.accent) : null;
         const infList = A.soldiers.filter(s => s.role !== 'arch'), archList = A.soldiers.filter(s => s.role === 'arch');
-        A.infMesh = inst(bodyGeo(team, A.info.culture, false), infList.length);
-        A.archMesh = inst(bodyGeo(team, A.info.culture, true), archList.length);
+        A.infMesh = inst(bodyGeo(team, A.info.culture, false, acc), infList.length);
+        A.archMesh = inst(bodyGeo(team, A.info.culture, true, acc), archList.length);
+        A.legMesh = inst(legGeo(A.info.culture), A.soldiers.length * 2);    // 腿按文化（裤 / 裸腿 / 长靴 / 绑腿），每方一组
         infList.forEach((s, i) => { s.bodyIdx = i; });
         archList.forEach((s, i) => { s.bodyIdx = i; });
         yield;
-        for (const s of A.soldiers) {
-          s.legIdx = nLeg; nLeg += 2;
+        A.soldiers.forEach((s, i) => {
+          s.legIdx = i * 2;
           if (s.role === 'arch') s.wIdx = nBow++; else s.wIdx = nSpear++;
-        }
+        });
       }
-      this.legMesh = inst(legGeo(), nLeg);
       this.spearMesh = inst(spearGeo(), nSpear);
       this.bowMesh = inst(bowGeo(), nBow);
       // 武将
@@ -1362,7 +1648,7 @@ void main() {
         const hc = horseColor(A.info.name);
         const g = A.general;
         g.horse = hc;
-        g.mesh = SG.Gfx.mesh(generalGeo(team, A.info.culture, hc, weaponOf(A.info.gen)), lp, { castShadow: true, receiveShadow: true });
+        g.mesh = SG.Gfx.mesh(generalGeo(team, A.info.culture, hc, weaponOf(A.info.gen), A.info.accent ? SG.Gfx.color(A.info.accent) : null), lp, { castShadow: true, receiveShadow: true });
         g.mesh.matrixAutoUpdate = false;
         g.mesh.frustumCulled = false;
         scene.add(g.mesh);
@@ -1370,8 +1656,8 @@ void main() {
         for (let i = 0; i < 4; i++) this.horseLegs.setColorAt(A.si * 4 + i, hc);
         // 帅旗与士兵旗
         const glyph = surname(A.info.gen);
-        const big = bannerTexture(glyph, A.info.color, true);
-        const small = bannerTexture(glyph, A.info.color, false);
+        const big = bannerTexture(glyph, A.info.color, true, A.info.accent);
+        const small = bannerTexture(glyph, A.info.color, false, A.info.accent);
         this.own.push(big, small);
         g.flag = new Flag(big, 0.74, 0.98, A.dir > 0, A.si * 3.1, true, A.si + 'B');
         scene.add(g.flag.mesh);
@@ -1617,7 +1903,7 @@ void main() {
             _q2.setFromAxisAngle(_X, k ? -swing : swing);
             _m2.compose(_p.set(k ? 0.065 : -0.065, HIP, 0), _q2, _one);
             _m2.premultiply(_m);
-            this.legMesh.setMatrixAt(s.legIdx + k, _m2);
+            A.legMesh.setMatrixAt(s.legIdx + k, _m2);
           }
           // 兵器
           let wp, thrust = 0;
@@ -1665,7 +1951,7 @@ void main() {
           const ck = darkK * (1 + Math.max(0, fl) * 0.75);
           _c.setRGB(ck, ck, ck);
           body.setColorAt(s.bodyIdx, _c);
-          this.legMesh.setColorAt(s.legIdx, _c); this.legMesh.setColorAt(s.legIdx + 1, _c);
+          A.legMesh.setColorAt(s.legIdx, _c); A.legMesh.setColorAt(s.legIdx + 1, _c);
           (s.role === 'arch' ? this.bowMesh : this.spearMesh).setColorAt(s.wIdx, _c);
         }
         this.poseGeneral(A, t);
@@ -2078,7 +2364,7 @@ void main() {
           this.cutDone = true;
           this.paused = true;
           const sp = this.special;
-          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, cry: sp.cry, speed: this.speed, _inClash: true }).then(() => { this.paused = false; });
+          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, cry: sp.cry, speed: Math.max(0.1, +this.opts.speed || 1), _inClash: true }).then(() => { this.paused = false; });
         }
         this.setTime(t, true);
         if (this.t >= TL.end) this.finish();
@@ -2702,9 +2988,10 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
     constructor(o) {
       injectStyle();
       this.o = o;
-      // 调用方给了 speed 时（specials.js 在「快」档自带 1.6）不再叠乘 SG.Clash.speed；最短 0.7 秒，保证招式名读得清
-      const spd = o.speed !== undefined && o.speed !== null ? (+o.speed || 1) : (+SG.Clash.speed || 1);
-      const dur = Math.max(0.7, 1.1 / Math.max(0.1, spd));
+      // 时长 = 1.1 秒 ÷（SG.Clash.speed × o.speed）——与 battle-controller.specialCutIn 的换算约定一致；
+      // 但最短 0.7 秒（「快」档下 specials.js 另传 1.6 时不会被压到 0.34 秒），保证招式名读得清
+      const spd = Math.max(0.1, (+SG.Clash.speed || 1) * (+o.speed || 1));
+      const dur = Math.max(0.7, 1.1 / spd);
       this.dur = dur;
       const color = hexOf(o.color || '#ffd24d');
       const side = o.side === 1 ? 1 : 0;

@@ -38,6 +38,7 @@
   <h3>攻击画面 SG.Clash 测试</h3>
   <div id="grid"></div>
   <div class="row"><b>必杀：</b><span id="specials"></span></div>
+  <div class="row"><b>文化：</b><span id="cults"></span></div>
   <div class="row"><b>特写：</b><span id="cuts"></span></div>
   <div class="row"><b>设置：</b><span id="opts"></span></div>
   <div id="log"></div>
@@ -65,6 +66,8 @@
 /* 攻击画面独立测试页
    参数：?case=plain-even      载入后自动播放某个用例（地形-兵力比；见下方表格）
          ?special=smite|blaze|storm|volley   附带必杀技
+         ?cult=wa-korea       文化对阵（wa-korea / steppe-han / seasia-nanman / tarim-kushan / persia-arab /
+                              roman-celt / german-sarmatian / yi-han），配合 case 使用
          ?cut=0|1             载入后播放特写
          ?freeze=1.7          动画停在该时刻（截图用，SG.Clash.debug.freezeAt）
          ?board=0             不搭建背景战场（更快）
@@ -87,6 +90,20 @@
     诸葛亮: G('诸葛亮', 38, 100), 陆逊: G('陆逊', 70, 95), 公孙瓒: G('公孙瓒', 84, 60), 颜良: G('颜良', 93, 42),
     袁绍: G('袁绍', 70, 68),
     塞维鲁: G('塞维鲁', 80, 82, { culture: 'roman' }), 沃洛吉斯: G('沃洛吉斯', 74, 70, { culture: 'persia' }),
+  };
+  // 文化 → [武将, 势力色]；CPAIR 为对阵（日耳曼 vs 萨尔马提亚、罗马 vs 凯尔特 故意用相近颜色，检验识别色）
+  const CGEN = {
+    han: [G('卫温', 72, 60), '#c8382c'], nanman: [GEN.孟获, '#8a5a2a'], wa: [G('难升米', 70, 62, { culture: 'wa' }), '#b8442e'],
+    yi: [G('夷洲酋', 66, 30, { culture: 'yi' }), '#4f8a3a'], korea: [G('乙巴素', 64, 88, { culture: 'korea' }), '#3a5ea8'],
+    steppe: [G('轲比能', 86, 64, { culture: 'steppe' }), '#7a5a2a'], seasia: [G('区连', 72, 58, { culture: 'seasia' }), '#c07a1c'],
+    tarim: [G('白霸', 62, 66, { culture: 'tarim' }), '#3aa5a0'], kushan: [G('波调', 74, 70, { culture: 'kushan' }), '#7a3a8a'],
+    persia: [GEN.沃洛吉斯, '#3c7a8a'], arab: [G('阿卜加尔', 70, 72, { culture: 'arab' }), '#c99a2e'],
+    roman: [GEN.塞维鲁, '#9c1b2a'], celt: [G('阿根托克', 78, 50, { culture: 'celt' }), '#b03a2a'],
+    german: [G('巴洛马尔', 84, 56, { culture: 'german' }), '#5a4a8a'], sarmatian: [G('赞提克', 82, 52, { culture: 'sarmatian' }), '#4a3a7a'],
+  };
+  const CPAIR = {
+    'wa-korea': ['wa', 'korea'], 'steppe-han': ['steppe', 'han'], 'seasia-nanman': ['seasia', 'nanman'], 'tarim-kushan': ['tarim', 'kushan'],
+    'persia-arab': ['persia', 'arab'], 'roman-celt': ['roman', 'celt'], 'german-sarmatian': ['german', 'sarmatian'], 'yi-han': ['yi', 'han'],
   };
   const FAC = { liubei: '#2f9a55', cao: '#2c3d8f', sun: '#c8382c', dong: '#7a2a3a', yuanshu: '#c99a2e', gongsun: '#e0e0e8', yuanshao: '#2f6db5', nanman: '#8a5a2a', roman: '#9c1b2a', persia: '#3c7a8a', liubiao: '#3aa5a0' };
   // 地形 → 对阵
@@ -138,6 +155,12 @@
       // 近色势力（袁绍 #2f6db5 对 曹操 #2c3d8f）：检验两军颜色拉开
       o.attacker.gen = GEN.袁绍; o.attacker.color = FAC.yuanshao; o.attacker.culture = 'han';
       o.defender.gen = GEN.曹操; o.defender.color = FAC.cao; o.defender.culture = 'han';
+    }
+    if (extra.cult && CPAIR[extra.cult]) {
+      // 各文化对阵（DESIGN-V2 §6）：士兵与武将的头饰 / 甲衣 / 盾 / 腿按文化区分
+      const [ca, cd] = CPAIR[extra.cult];
+      o.attacker.gen = CGEN[ca][0]; o.attacker.culture = ca; o.attacker.color = CGEN[ca][1];
+      o.defender.gen = CGEN[cd][0]; o.defender.culture = cd; o.defender.color = CGEN[cd][1];
     }
     if (extra.culture) {
       o.attacker.gen = GEN.塞维鲁; o.attacker.culture = 'roman'; o.attacker.color = FAC.roman;
@@ -248,7 +271,8 @@
       const series = [];
       const sp = ['smite', null, 'blaze', null, 'storm', null, 'volley'];
       for (let i = 0; i < n; i++) {
-        const p = SG.Clash.play(makeOpts(keys[(i * 5) % keys.length], { special: sp[i % sp.length] }));
+        const ck = Object.keys(CPAIR);
+        const p = SG.Clash.play(makeOpts(keys[(i * 5) % keys.length], { special: sp[i % sp.length], cult: i % 2 ? ck[(i >> 1) % ck.length] : null }));
         // 让它渲染若干帧后跳过
         await new Promise(r => setTimeout(r, 900));
         if (SG.Clash._cut) SG.Clash._cut.skip();
@@ -285,6 +309,7 @@
   const btn = (parent, text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; document.getElementById(parent).appendChild(b); return b; };
   for (const k of Object.keys(SPECIAL)) btn('specials', SPECIAL[k].gen + '「' + SPECIAL[k].name + '」', () => T.play(k === 'blaze' ? 'forest-even' : k === 'storm' ? 'river-big' : 'plain-even', { special: k }));
   btn('specials', '异域文化（罗马 vs 安息）', () => T.play('plain-even', { culture: true }));
+  for (const k of Object.keys(CPAIR)) btn('cults', CGEN[CPAIR[k][0]][0].name + '→' + CGEN[CPAIR[k][1]][0].name + '（' + k + '）', () => T.play('plain-even', { cult: k }));
   btn('specials', '官渡（近色：袁绍 vs 曹操）', () => T.play('plain-big', { guandu: true }));
   btn('specials', '守方反击（攻方为第二方）', () => T.play('gate-small', { swap: true, playerSide: 1 }));
   btn('specials', '电脑回合（speed 1.6 + 提示）', () => T.play('castle-even', { speed: 1.6, toast: true, playerSide: 1 }));
@@ -316,7 +341,7 @@
   document.getElementById('hide').onclick = () => { const p = document.getElementById('panel'); const h = p.classList.toggle('mini'); for (const c of p.children) if (c.id !== 'hide') c.style.display = h ? 'none' : ''; };
   log(T.info());
   window.__ready = true;
-  if (Q.get('case')) setTimeout(() => T.play(Q.get('case'), { special: Q.get('special') || null }), 300);
+  if (Q.get('case')) setTimeout(() => T.play(Q.get('case'), { special: Q.get('special') || null, cult: Q.get('cult') || null }), 300);
   if (Q.get('cut')) setTimeout(() => T.cut(Q.get('cut') === '1' ? 1 : 0), 300);
 })();
 </script>

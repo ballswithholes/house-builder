@@ -378,3 +378,277 @@
       outfit: { type: 'kantoui', color: '#ece6d8', color2: '#b0302a' }, acc: ['magatama', 'mirror'], expr: 'calm' },
   });
 })();
+
+/* ==========================================================================
+   第二阶段：世界剧本「天下大势」新增武将的外貌（DESIGN-V2 §4G）
+   (1) 自动：凡 SG.WorldInfo 中的新增武将（world-data.js 先于本文件载入），按资料补上
+       culture（文化）、sex（女性为 'f'）、role（世界剧本诸势力的君主为 'ruler'）与画像年龄
+       （生年可考者取 190 年时的年龄，限制在 22–72 岁；年幼者按成年后的样子画）。
+       这样即使游戏里的武将对象没有 culture / sex / born 字段，头像也按正确的文化与性别生成。
+   (2) 手工：知名人物的个别设定（写在 (1) 之上，同名字段以手工为准）。
+   SG.PortraitData.worldHand → 有手工条目的世界武将名（tests/world-portraits.html 用）。
+   ========================================================================== */
+(function () {
+  const SG = window.SG;
+  const PD = SG.PortraitData;
+  const W = '#ece8e0', GRAY = '#b8b4ac';
+  const HAND = {};
+  // 按文化分组书写；每条自动带上该文化代号
+  function group(culture, map) { for (const k in map) HAND[k] = Object.assign({ culture }, map[k]); }
+
+  // ------------------------------------------------------------- 罗马 --
+  group('roman', {
+    '康茂德': { role: 'ruler', age: 29, build: 1.12, face: { jaw: 1.06 }, eyes: { shape: 'sleepy', color: '#4a5a6a' }, brows: 'arched', hair: { style: 'curly', color: '#8a5a2a', vol: 1.1 },
+      beard: { style: 'short', len: 0.8, color: '#8a5a2a' }, mustache: 'thin', hat: { type: 'helmet', variant: 'lion', color: '#c89a48', plume: '#a02a24' },
+      outfit: { type: 'pelt', pelt: 'leopard' }, expr: 'sly' },
+    '塞维鲁': { role: 'ruler', age: 45, skin: '#d8a882', face: { len: 1.06, cheek: 0.5 }, eyes: { shape: 'sharp', color: '#2a1a10' }, brows: { shape: 'knit', thick: 1.1 }, nose: 'aquiline',
+      hair: { style: 'curly', color: '#2a2018', vol: 1.15 }, beard: { style: 'forked', len: 1.25, color: '#3a2e24', jaw: true }, mustache: 'thick',
+      hat: { type: 'laurel' }, outfit: { type: 'musculata', metal: '#b08a50', color: '#8a1a24', cape: 'faction' }, weapon: 'sword', expr: 'stern' },
+    '多姆娜': { sex: 'f', age: 30, skin: '#e2b48e', eyes: { shape: 'big', color: '#2a1a10', size: 1.08 }, brows: 'arched', nose: 'straight',
+      hair: { style: 'romanf', color: '#1e1614', vol: 1.2 }, hat: { type: 'diadem', color: '#d8b050', gem: '#7a2a8a' }, outfit: { type: 'tunic', color: '#6a2a6a', color2: '#d8b050' },
+      acc: ['earring'], expr: 'calm' },
+    '玛琪亚': { sex: 'f', age: 27, skin: '#f2d6be', eyes: { shape: 'big', color: '#3a5a4a' }, brows: 'thin', hair: { style: 'romanf', color: '#8a3a1e' },
+      outfit: { type: 'tunic', color: '#a8304a', color2: '#e8d8b0' }, acc: ['earring'], expr: 'sly' },
+    '玛伊莎': { sex: 'f', age: 36, skin: '#ddae88', eyes: { shape: 'narrow', color: '#2a1a10' }, brows: 'arched', nose: 'aquiline', hair: { style: 'romanf', color: '#221816' },
+      hat: { type: 'diadem', color: '#c8a040', gem: '#2a6a5a' }, outfit: { type: 'tunic', color: '#2a4a5a', color2: '#c8a050' }, acc: ['earring'], expr: 'sly' },
+    '佩蒂纳克斯': { age: 64, face: { len: 1.04, hollow: 0.3 }, eyes: 'gentle', brows: { shape: 'straight', color: GRAY }, hair: { style: 'curly', color: GRAY, recede: 0.4 },
+      beard: { style: 'full', len: 1.25, color: W }, mustache: 'thick', hat: 'none', outfit: { type: 'toga', color: '#ece6d8', color2: '#7a2a5a' }, expr: 'calm' },
+    '尼格尔': { age: 55, face: { jaw: 1.08 }, eyes: 'sharp', brows: 'straight', hair: { style: 'short', color: '#4a3a2a' }, beard: { style: 'short', len: 0.9, color: '#5a4a3a' }, mustache: 'thick',
+      hat: { type: 'galea', color: '#9aa0aa', plume: '#1a1a1a' }, outfit: { type: 'musculata', metal: '#9aa0aa', color: '#2a2a3a', cape: 'faction' }, weapon: 'sword', expr: 'stern' },
+    '阿尔拜努斯': { age: 40, skin: '#f8e6d6', eyes: { shape: 'normal', color: '#5a7a8a' }, brows: 'arched', hair: { style: 'curly', color: '#a8844a' }, beard: { style: 'short', len: 0.8, color: '#a8844a' },
+      mustache: 'thin', hat: 'none', outfit: { type: 'musculata', metal: '#c8b070', color: '#e8e0d0', cape: 'faction' }, expr: 'calm' },
+    '卡拉卡拉': { age: 24, build: 1.1, neck: 1.25, face: { jaw: 1.12, brow: 1.3 }, eyes: { shape: 'sharp', size: 0.92 }, brows: { shape: 'knit', thick: 1.3 },
+      hair: { style: 'curly', color: '#2a1e16', vol: 0.85 }, beard: { style: 'stubble' }, mustache: 'none', hat: 'none',
+      outfit: { type: 'musculata', metal: '#8a7048', color: '#8a1a1a', cape: '#5a1010' }, weapon: 'sword', expr: 'fierce' },
+    '盖塔': { age: 21, face: { w: 0.97, len: 1.04 }, eyes: 'gentle', brows: 'arched', hair: { style: 'curly', color: '#3a2a1c' }, beard: { style: 'stubble' }, mustache: 'none', hat: 'none',
+      outfit: { type: 'toga', color: '#ece6d8', color2: '#a02a24' }, expr: 'neutral' },
+    '盖伦': { age: 61, face: { len: 1.06, hollow: 0.4 }, eyes: 'gentle', brows: { shape: 'thin', color: GRAY }, hair: { style: 'short', color: GRAY, recede: 0.7 },
+      beard: { style: 'long', len: 1.2, color: W }, mustache: 'droop', hat: 'none', outfit: { type: 'toga', color: '#e8e0cc', color2: '#5a7a5a' }, expr: 'calm' },
+    '帕比尼安': { age: 48, eyes: 'narrow', brows: 'straight', hair: { style: 'short', color: '#3a2a1c', recede: 0.3 }, beard: { style: 'short', len: 0.7 }, mustache: 'thin', hat: 'none',
+      outfit: { type: 'toga', color: '#ece6d8', color2: '#2a3a6a' }, expr: 'stern' },
+    '乌尔比安': { age: 40, skin: '#e2b896', eyes: 'normal', brows: 'straight', hair: { style: 'curly', color: '#1e1614' }, beard: { style: 'short', len: 0.8 }, mustache: 'thick', hat: 'none',
+      outfit: { type: 'toga', color: '#ece6d8', color2: '#6a2a2a' }, expr: 'calm' },
+    '狄奥': { age: 35, eyes: 'normal', brows: 'arched', nose: 'aquiline', hair: { style: 'curly', color: '#4a3220' }, beard: { style: 'short', len: 0.9 }, mustache: 'thick', hat: 'none',
+      outfit: { type: 'toga', color: '#e8e0d0', color2: '#7a2a5a' }, expr: 'calm' },
+    '马克西明': { age: 30, build: 1.22, neck: 1.45, face: { w: 1.06, jaw: 1.25, chin: 1.2, len: 1.1, brow: 1.4 }, eyes: { shape: 'narrow', size: 0.88 }, brows: { shape: 'bushy', thick: 1.3 },
+      nose: 'bulb', hair: { style: 'short', color: '#4a3a2a' }, beard: { style: 'stubble' }, mustache: 'none', hat: { type: 'galea', color: '#7a808c', plume: '#a02a24' },
+      outfit: { type: 'segmentata', metal: '#7a808c', color: '#8a2a24' }, weapon: 'spear', expr: 'fierce' },
+    '纳尔奇苏斯': { age: 26, build: 1.2, neck: 1.4, face: { jaw: 1.18 }, eyes: 'round', brows: 'bushy', nose: 'broad', hair: { style: 'short', color: '#2a1e16' }, beard: 'stubble', mustache: 'none',
+      hat: 'none', outfit: { type: 'bare' }, expr: 'fierce', marks: ['scar'] },
+    '克里安德': { age: 45, skin: '#e8c4a2', face: { w: 0.95, hollow: 0.4 }, eyes: 'narrow', brows: 'thin', nose: 'aquiline', hair: { style: 'short', color: '#3a2a1c' }, beard: 'none', mustache: 'none',
+      hat: { type: 'phrygian', color: '#7a2a5a' }, outfit: { type: 'tunic', color: '#c8a050', color2: '#5a2a4a' }, acc: ['earring'], expr: 'sly' },
+    '莱图斯': { age: 50, eyes: 'narrow', brows: 'knit', hair: { style: 'short', color: '#3a2a1c', recede: 0.3 }, beard: { style: 'short', len: 0.7 }, mustache: 'thin',
+      hat: { type: 'galea', color: '#c8a050', plume: '#e8e0d0' }, outfit: { type: 'musculata', metal: '#c8a050', color: '#2a2a5a' }, expr: 'sly' },
+    '埃克莱图斯': { age: 50, eyes: 'worried', brows: 'worried', hair: { style: 'short', color: GRAY, recede: 0.5 }, beard: 'none', mustache: 'none', hat: 'none',
+      outfit: { type: 'tunic', color: '#5a4a3a' }, expr: 'neutral' },
+    '尤·莱图斯': { age: 35, build: 1.12, eyes: 'sharp', brows: 'angled', hair: { style: 'short', color: '#2a1e16' }, beard: { style: 'short', len: 0.7 }, mustache: 'thick',
+      hat: { type: 'galea', color: '#9aa0aa', plume: '#c0302a' }, outfit: { type: 'musculata', metal: '#9aa0aa', color: '#8a2a24' }, weapon: 'spear', expr: 'fierce' },
+    '阿努利努斯': { age: 58, face: { hollow: 0.3 }, eyes: 'sharp', brows: { shape: 'straight', color: GRAY }, hair: { style: 'short', color: GRAY }, beard: { style: 'short', color: GRAY }, mustache: 'thick',
+      hat: { type: 'galea', color: '#b08a50', plume: '#1a1a1a' }, outfit: { type: 'musculata', metal: '#b08a50', color: '#2a3a5a' }, expr: 'stern' },
+    '尤利安努斯': { age: 57, fat: 0.45, eyes: 'sleepy', brows: 'arched', hair: { style: 'short', color: GRAY, recede: 0.6 }, beard: { style: 'short', len: 0.6, color: GRAY }, mustache: 'thin', hat: 'none',
+      outfit: { type: 'toga', color: '#ece6d8', color2: '#6a2a5a' }, expr: 'sly' },
+    '马克里努斯': { age: 45, skin: '#c8966a', eyes: 'narrow', brows: 'straight', hair: { style: 'curly', color: '#1e1614' }, beard: { style: 'full', len: 1.0 }, mustache: 'thick', hat: 'none',
+      outfit: { type: 'toga', color: '#ece6d8', color2: '#2a5a3a' }, acc: ['earring'], expr: 'sly' },
+    '普劳提安': { age: 40, skin: '#d8a882', eyes: 'narrow', brows: 'angled', hair: { style: 'short', color: '#1e1614' }, beard: { style: 'short', len: 0.6 }, mustache: 'thin',
+      hat: { type: 'galea', color: '#c8a050', plume: '#5a2a6a' }, outfit: { type: 'musculata', metal: '#c8a050', color: '#5a2a6a' }, expr: 'sly' },
+    '庞培亚努斯': { age: 65, skin: '#ddb48e', face: { hollow: 0.4 }, eyes: 'gentle', brows: { shape: 'bushy', color: GRAY }, hair: { style: 'short', color: W, recede: 0.5 },
+      beard: { style: 'full', len: 1.0, color: W }, mustache: 'thick', hat: 'none', outfit: { type: 'musculata', metal: '#9aa0aa', color: '#2a3a5a', cape: 'faction' }, expr: 'calm' },
+    '戈尔迪安': { age: 66, fat: 0.35, eyes: 'gentle', brows: { shape: 'arched', color: GRAY }, hair: { style: 'short', color: W, recede: 0.6 }, beard: { style: 'short', len: 0.7, color: W }, mustache: 'thin',
+      hat: 'none', outfit: { type: 'toga', color: '#ece6d8', color2: '#7a2a5a' }, expr: 'smile' },
+    '德西乌斯': { age: 48, face: { len: 1.06, hollow: 0.5 }, eyes: 'worried', brows: { shape: 'worried', thick: 1.1 }, hair: { style: 'short', color: '#3a2a1c', recede: 0.4 }, beard: { style: 'stubble' },
+      mustache: 'none', hat: { type: 'galea', color: '#7a808c', plume: '#c0302a' }, outfit: { type: 'segmentata', metal: '#7a808c', color: '#8a2a24' }, expr: 'stern' },
+    '瓦勒良': { age: 55, eyes: 'normal', brows: 'straight', hair: { style: 'short', color: '#6a5a4a' }, beard: { style: 'short', len: 0.8, color: '#6a5a4a' }, mustache: 'thick',
+      hat: { type: 'laurel' }, outfit: { type: 'musculata', metal: '#b08a50', color: '#6a2a5a' }, expr: 'calm' },
+    '普登斯': { age: 42, build: 1.08, eyes: 'normal', brows: 'straight', beard: { style: 'short', len: 0.7 }, mustache: 'thick',
+      hat: { type: 'galea', color: '#9aa0aa', plume: '#c0302a' }, outfit: { type: 'segmentata', metal: '#9aa0aa', color: '#a02a24' }, weapon: 'spear', expr: 'stern' },
+    '卡斯图斯': { age: 40, eyes: 'sharp', brows: 'sword', hair: { style: 'short', color: '#6a4a2a' }, beard: { style: 'short', len: 0.7 }, mustache: 'thick',
+      hat: { type: 'galea', color: '#7a808c', plume: '#2a3a6a' }, outfit: { type: 'segmentata', metal: '#7a808c', color: '#2a3a6a' }, weapon: 'sword', expr: 'stern' },
+  });
+
+  // ---------------------------------------------- 安息、波西斯、亚美尼亚 --
+  group('persia', {
+    '沃洛吉斯': { role: 'ruler', age: 62, face: { len: 1.06 }, eyes: 'sharp', brows: { shape: 'bushy', color: GRAY }, nose: 'aquiline', hair: { style: 'bushy', color: '#6a6460' },
+      beard: { style: 'long', len: 1.35, color: '#7a7470' }, mustache: 'thick', hat: { type: 'tiara', color: '#d8b050', color2: '#2a3a6a', gem: '#c8382c' },
+      outfit: { type: 'tunic', color: '#7a2a5a', color2: '#d8b050' }, acc: ['torc', 'earring'], weapon: 'bow', expr: 'stern' },
+    '阿尔达希尔': { role: 'ruler', age: 44, build: 1.1, face: { jaw: 1.08, len: 1.04 }, eyes: { shape: 'sharp', size: 1.04 }, brows: { shape: 'arched', thick: 1.2 }, nose: 'aquiline',
+      hair: { style: 'curly', color: '#16131a', vol: 1.3 }, beard: { style: 'curled', len: 1.3 }, mustache: 'curl',
+      hat: { type: 'tiara', color: '#6a2a7a', color2: '#d8b050', gem: '#e8e0d0' }, outfit: { type: 'scale', metal: '#c8a040', color: '#5a2a6a', cape: 'faction' }, acc: ['earring'], weapon: 'sword', expr: 'stern' },
+    '阿尔达班': { age: 42, eyes: 'sharp', brows: 'knit', nose: 'aquiline', hair: { style: 'bushy', color: '#221a18' }, beard: { style: 'long', len: 1.2 }, mustache: 'thick',
+      hat: { type: 'tiara', color: '#b89048', color2: '#2a4a3a' }, outfit: { type: 'scale', metal: '#7a808c', color: '#2a4a3a' }, weapon: 'bow', expr: 'fierce' },
+    '瓦加尔什': { age: 38, eyes: 'normal', brows: 'straight', hair: { style: 'bushy', color: '#221a18' }, beard: { style: 'full', len: 1.0 }, mustache: 'curl',
+      hat: { type: 'diadem', color: '#d8b050' }, outfit: { type: 'scale', metal: '#8a7048', color: '#8a2a24' }, weapon: 'spear', expr: 'stern' },
+    '帕佩克': { age: 52, face: { hollow: 0.4 }, eyes: 'narrow', brows: 'angled', nose: 'aquiline', hair: { style: 'bushy', color: '#4a4440' }, beard: { style: 'forked', len: 1.2, color: '#4a4440' },
+      mustache: 'thick', hat: { type: 'phrygian', color: '#a02a24' }, outfit: { type: 'tunic', color: '#5a2a2a', color2: '#c8a040' }, expr: 'sly' },
+    '萨珊': { age: 72, face: { hollow: 0.5, len: 1.06 }, eyes: 'sleepy', brows: { shape: 'bushy', color: W }, hair: { style: 'long', color: W }, beard: { style: 'long', len: 1.5, color: W },
+      mustache: 'droop', hat: { type: 'tallhat', color: '#ece6d8' }, outfit: { type: 'tunic', color: '#ece6d8', color2: '#c87a2a' }, expr: 'calm' },
+    '提里': { age: 48, fat: 0.45, face: { w: 1.04, chin: 0.9 }, eyes: 'sleepy', brows: 'thin', hair: { style: 'bushy', color: '#2a2220' }, beard: 'none', mustache: 'none',
+      hat: { type: 'diadem', color: '#9aa0aa' }, outfit: { type: 'kaftan', color: '#3a5a4a' }, expr: 'neutral' },
+    '霍斯罗夫': { age: 25, eyes: 'sharp', brows: 'sword', hair: { style: 'curly', color: '#1a1614' }, beard: { style: 'short' }, mustache: 'thick',
+      hat: { type: 'tiara', color: '#a02a24', color2: '#d8b050' }, outfit: { type: 'scale', metal: '#7a808c', color: '#a02a24' }, weapon: 'spear', expr: 'fierce' },
+    '梯里达底': { age: 32, eyes: 'normal', brows: 'straight', hair: { style: 'curly', color: '#2a2018' }, beard: { style: 'full', len: 0.9 }, mustache: 'thick',
+      hat: { type: 'tiara', color: '#d86a2a', color2: '#2a2a3a' }, outfit: { type: 'scale', metal: '#8a7048', color: '#d86a2a' }, expr: 'stern' },
+    '列夫': { role: 'ruler', age: 40, skin: '#e8c4a0', eyes: 'gentle', brows: 'arched', hair: { style: 'curly', color: '#3a2a1c' }, beard: { style: 'full', len: 1.0, color: '#3a2a1c' }, mustache: 'thick',
+      hat: { type: 'diadem', color: '#d8b050', gem: '#2a6aa0' }, outfit: { type: 'tunic', color: '#2a5a8a', color2: '#e8d8b0' }, expr: 'calm' },
+  });
+
+  // ---------------------------------------------- 阿拉伯、哈特拉、阿克苏姆 --
+  group('arab', {
+    '阿布萨米亚': { role: 'ruler', age: 50, eyes: 'sharp', brows: 'bushy', hair: { style: 'curly', color: '#1a1614', vol: 1.2 }, beard: { style: 'full', len: 1.2 }, mustache: 'thick',
+      hat: { type: 'hatra', color: '#e8e0d0', color2: '#c8a040' }, outfit: { type: 'robea', color: '#e8e0d0', color2: '#8a2a24' }, expr: 'stern' },
+    '萨纳特鲁克': { age: 28, eyes: 'normal', brows: 'straight', hair: { style: 'curly', color: '#1a1614' }, beard: { style: 'short' }, mustache: 'thick',
+      hat: { type: 'hatra', color: '#c8a040', color2: '#2a3a5a' }, outfit: { type: 'scale', metal: '#8a7048', color: '#2a3a5a' }, expr: 'stern' },
+    '阿布加尔': { role: 'ruler', age: 46, eyes: 'gentle', brows: 'arched', nose: 'aquiline', hair: { style: 'long', color: '#1a1614' }, beard: { style: 'long', len: 1.3 }, mustache: 'thick',
+      hat: { type: 'tiara', color: '#e8dcc0', color2: '#5a2a6a', gem: '#d8b050' }, outfit: { type: 'robea', color: '#5a2a6a', color2: '#d8b050' }, expr: 'calm' },
+    '巴戴桑': { age: 36, face: { len: 1.06 }, eyes: { shape: 'gentle', size: 1.05 }, brows: 'thin', hair: { style: 'long', color: '#1a1614' }, beard: { style: 'long', len: 1.0 }, mustache: 'thin',
+      hat: { type: 'arabturban', color: '#ece6d8' }, outfit: { type: 'robea', color: '#2a3a5a', color2: '#ece6d8' }, weapon: 'bow', expr: 'calm' },
+    '沙伊鲁姆': { age: 32, build: 1.12, eyes: 'sharp', brows: 'sword', hair: { style: 'curly', color: '#141012' }, beard: { style: 'short' }, mustache: 'thick',
+      hat: { type: 'keffiyeh', color: '#c8a050', color2: '#8a2a24' }, outfit: { type: 'scale', metal: '#c8a050', color: '#8a2a24' }, weapon: 'spear', expr: 'fierce' },
+    '阿勒汗': { role: 'ruler', age: 55, eyes: 'normal', brows: { shape: 'bushy', color: GRAY }, hair: { style: 'curly', color: '#5a5450' }, beard: { style: 'full', len: 1.1, color: '#6a6460' }, mustache: 'thick',
+      hat: { type: 'arabturban', color: '#c8a050' }, outfit: { type: 'robea', color: '#c8a050', color2: '#2a3a5a' }, expr: 'calm' },
+    '塔兰': { role: 'ruler', age: 48, eyes: 'narrow', brows: 'straight', hair: { style: 'long', color: '#141012' }, beard: { style: 'curled', len: 1.0 }, mustache: 'thick',
+      hat: { type: 'keffiyeh', color: '#2a5a3a', color2: '#d8b050' }, outfit: { type: 'robea', color: '#2a5a3a', color2: '#d8b050' }, expr: 'stern' },
+    '加达拉特': { role: 'ruler', age: 45, skin: '#7a4a2e', eyes: 'sharp', brows: 'straight', nose: 'straight', hair: { style: 'curly', color: '#100c0c' }, beard: { style: 'short', len: 0.8 }, mustache: 'thin',
+      hat: { type: 'diadem', color: '#d8b050' }, outfit: { type: 'robea', color: '#e8e0d0', color2: '#a02a24' }, acc: ['goldcollar'], weapon: 'spear', expr: 'stern' },
+    '贝加特': { age: 24, skin: '#704428', eyes: 'sharp', brows: 'angled', hair: { style: 'curly', color: '#100c0c' }, beard: 'stubble', mustache: 'thin', hat: 'none',
+      outfit: { type: 'robea', color: '#a02a24', color2: '#e8e0d0' }, weapon: 'spear', expr: 'fierce' },
+    '奥盖卢': { age: 45, eyes: 'normal', brows: 'straight', hair: { style: 'curly', color: '#1a1614' }, beard: { style: 'full', len: 0.9 }, mustache: 'thick',
+      hat: { type: 'hatra', color: '#e8dcc0', color2: '#7a2a2a' }, outfit: { type: 'scale', metal: '#8a7048', color: '#7a2a2a' }, weapon: 'bow', expr: 'stern' },
+    '菲利普': { age: 40, eyes: 'narrow', brows: 'knit', hair: { style: 'short', color: '#1a1614' }, beard: { style: 'stubble' }, mustache: 'none', hat: 'none',
+      outfit: { type: 'musculata', metal: '#b08a50', color: '#7a2a5a', cape: 'faction' }, expr: 'stern' },
+  });
+
+  // ------------------------------------------------------- 贵霜、西部总督 --
+  group('kushan', {
+    '胡维色迦': { role: 'ruler', age: 58, fat: 0.35, face: { w: 1.05, jaw: 1.06 }, eyes: { shape: 'round', size: 1.05 }, brows: 'arched', nose: 'aquiline', hair: { style: 'long', color: '#2a2018' },
+      beard: { style: 'full', len: 1.1, color: '#4a4040' }, mustache: 'thick', hat: { type: 'tallhat', color: '#d8b050', color2: '#c8382c' },
+      outfit: { type: 'kaftan', color: '#8a2a2a', color2: '#d8b050' }, acc: ['earring'], expr: 'calm' },
+    '波调': { role: 'ruler', age: 34, eyes: 'normal', brows: 'straight', nose: 'aquiline', hair: { style: 'long', color: '#1a1614' }, beard: { style: 'short', len: 1.0 }, mustache: 'thick',
+      hat: { type: 'tallhat', color: '#e8dcc0', color2: '#2a3a6a' }, outfit: { type: 'kaftan', color: '#2a3a6a', color2: '#d8b050' }, acc: ['earring'], weapon: 'spear', expr: 'stern' },
+    '鲁德拉辛哈': { role: 'ruler', age: 45, eyes: 'narrow', brows: 'straight', hair: { style: 'long', color: '#1a1614' }, beard: 'none', mustache: 'thick',
+      hat: { type: 'pointcap', color: '#c8903a' }, outfit: { type: 'kaftan', color: '#c8903a', color2: '#5a2a2a' }, acc: ['earring'], expr: 'stern' },
+  });
+
+  // ------------------------------------------------------- 高句丽、三韩 --
+  group('korea', {
+    '故国川王': { role: 'ruler', age: 36, build: 1.22, neck: 1.3, face: { w: 1.04, jaw: 1.15, len: 1.04 }, eyes: 'sharp', brows: { shape: 'sword', thick: 1.2 },
+      beard: { style: 'goatee', len: 1.0 }, mustache: 'thick', hat: { type: 'birdfeather', color: '#c8382c', color2: '#d8b050' },
+      outfit: { type: 'lamellar', metal: '#7a808c', color: '#c8382c', cape: 'faction' }, weapon: 'bow', expr: 'stern' },
+    '乙巴素': { age: 50, face: { hollow: 0.4 }, eyes: 'gentle', brows: 'straight', beard: { style: 'long', len: 1.0 }, mustache: 'thin', hat: { type: 'jeolpung', color: '#5a4a3a' },
+      outfit: { type: 'jacket', color: '#e8e0d0', color2: '#5a4a3a' }, expr: 'calm' },
+    '伐休': { role: 'ruler', age: 52, eyes: 'narrow', brows: 'thin', beard: { style: 'long', len: 1.1, color: '#5a5450' }, mustache: 'thin',
+      hat: { type: 'goldcrown' }, outfit: { type: 'jacket', color: '#e8c84a', color2: '#8a2a2a' }, expr: 'calm' },
+    '首露王': { role: 'ruler', age: 72, face: { hollow: 0.4 }, eyes: 'sleepy', brows: { shape: 'bushy', color: W }, hair: { color: W }, beard: { style: 'flowing', len: 1.5, color: W },
+      mustache: 'droop', hat: { type: 'goldcrown' }, outfit: { type: 'jacket', color: '#3a5a8a', color2: '#d8b050' }, expr: 'calm' },
+    '肖古王': { role: 'ruler', age: 50, eyes: 'sharp', brows: 'angled', beard: { style: 'short', len: 0.9 }, mustache: 'thick', hat: { type: 'birdfeather', color: '#2a3a6a', color2: '#d8b050' },
+      outfit: { type: 'lamellar', metal: '#8a7048', color: '#2a3a6a' }, expr: 'sly' },
+    '昔于老': { age: 28, build: 1.1, eyes: 'sharp', brows: 'sword', beard: 'none', mustache: 'thin', hat: { type: 'helmet', variant: 'plume', color: '#8a7048', plume: '#e8c84a' },
+      outfit: { type: 'lamellar', metal: '#8a7048', color: '#e8c84a' }, weapon: 'spear', expr: 'fierce' },
+    '罽须': { age: 30, build: 1.15, eyes: 'round', brows: 'bushy', beard: { style: 'short' }, mustache: 'thick', hat: { type: 'helmet', variant: 'spike', color: '#5a5e68', plume: '#c8382c' },
+      outfit: { type: 'lamellar', metal: '#5a5e68', color: '#c8382c' }, weapon: 'spear', expr: 'fierce' },
+    '尉仇台': { role: 'ruler', age: 45, eyes: 'normal', brows: 'straight', beard: { style: 'short', len: 0.9 }, mustache: 'thick', hat: { type: 'jeolpung', color: '#d8b050' },
+      outfit: { type: 'jacket', color: '#8a2a2a', color2: '#d8b050' }, expr: 'calm' },
+  });
+
+  // ------------------------------------------------------------- 倭国 --
+  group('wa', {
+    '难升米': { age: 45, eyes: 'narrow', brows: 'straight', hair: { style: 'mizura' }, beard: { style: 'short', len: 0.8 }, mustache: 'thin', hat: { type: 'headband', color: '#d8b050' },
+      outfit: { type: 'kantoui', color: '#e6dcc4', color2: '#3a3a5a' }, acc: ['magatama'], expr: 'calm' },
+    '卑弥弓呼': { role: 'ruler', age: 40, build: 1.15, eyes: 'round', brows: 'bushy', hair: { style: 'mizura' }, beard: { style: 'full', len: 0.9 }, mustache: 'thick',
+      hat: { type: 'wahelm', color: '#4a4a50' }, outfit: { type: 'tanko', metal: '#4a4a50', color: '#9a3a2a' }, marks: ['tattoo-wa'], weapon: 'spear', expr: 'fierce' },
+    '狗古智卑狗': { age: 34, build: 1.12, eyes: 'sharp', brows: 'angled', hair: { style: 'mizura' }, beard: 'stubble', mustache: 'thick',
+      hat: { type: 'wahelm', color: '#7a6a48' }, outfit: { type: 'tanko', metal: '#7a6a48', color: '#3a3a5a' }, marks: ['tattoo-wa'], weapon: 'sword', expr: 'stern' },
+  });
+
+  // ------------------------------------------------------- 鲜卑、乌桓、匈奴 --
+  group('steppe', {
+    '轲比能': { age: 30, build: 1.12, eyes: 'sharp', brows: 'sword', hair: { style: 'kunfa' }, beard: { style: 'short' }, mustache: 'droop', hat: { type: 'fur', color: '#5a3a2a' },
+      outfit: { type: 'lamellar', metal: '#7a6a48', color: '#7a2a24' }, weapon: 'bow', expr: 'stern' },
+    '蹋顿': { age: 34, build: 1.15, eyes: 'round', brows: 'bushy', hair: { style: 'kunfa' }, beard: { style: 'full', len: 0.8 }, mustache: 'droop', hat: 'none',
+      outfit: { type: 'fur', color: '#8a5a3a' }, acc: ['earring'], weapon: 'axe', expr: 'fierce' },
+    '於夫罗': { role: 'ruler', age: 40, eyes: 'sharp', brows: 'knit', hair: { style: 'braids' }, beard: { style: 'goatee', len: 1.0 }, mustache: 'droop',
+      hat: { type: 'felt', color: '#a02a24' }, outfit: { type: 'kaftan', color: '#7a2a24', color2: '#d8b050' }, acc: ['earring'], weapon: 'bow', expr: 'stern' },
+    '丘力居': { role: 'ruler', age: 50, eyes: 'narrow', brows: 'angled', hair: { style: 'kunfa' }, beard: { style: 'short', color: '#4a4440' }, mustache: 'droop', hat: { type: 'fur', color: '#3a2a1c' },
+      outfit: { type: 'fur', color: '#5a3a2a' }, expr: 'sly' },
+    '魁头': { role: 'ruler', age: 34, eyes: 'normal', brows: 'straight', hair: { style: 'kunfa' }, beard: { style: 'goatee' }, mustache: 'droop', hat: { type: 'felt', color: '#3a4a5a' },
+      outfit: { type: 'kaftan', color: '#3a4a5a', color2: '#a8743a' }, weapon: 'bow', expr: 'stern' },
+    '素利': { role: 'ruler', age: 46, eyes: 'sleepy', brows: 'straight', hair: { style: 'kunfa' }, beard: { style: 'short' }, mustache: 'thin', hat: { type: 'fur', color: '#8a6a40' },
+      outfit: { type: 'kaftan', color: '#2a4a3a', color2: '#d8b050' }, expr: 'calm' },
+    '拓跋力微': { age: 24, eyes: 'sharp', brows: 'sword', hair: { style: 'braids', color: '#2a1e16' }, beard: 'none', mustache: 'thin', hat: 'none',
+      outfit: { type: 'kaftan', color: '#4a3a5a', color2: '#d8b050' }, weapon: 'bow', expr: 'stern' },
+    '莫护跋': { age: 40, eyes: 'normal', brows: 'arched', hair: { style: 'braids' }, beard: { style: 'short' }, mustache: 'droop', hat: { type: 'goldcrown' },
+      outfit: { type: 'kaftan', color: '#7a2a24', color2: '#d8b050' }, expr: 'smile' },
+  });
+
+  // ------------------------------------------------------- 林邑、扶南 --
+  group('seasia', {
+    '范师蔓': { age: 30, build: 1.2, neck: 1.3, eyes: 'sharp', brows: 'angled', beard: 'none', mustache: 'thin', hat: { type: 'flowerwrap', color: '#c8a030' },
+      outfit: { type: 'bare' }, acc: ['goldcollar', 'bigears'], weapon: 'spear', expr: 'fierce' },
+    '混盘况': { role: 'ruler', age: 78, face: { hollow: 0.5 }, eyes: 'sleepy', brows: { shape: 'thin', color: W }, hair: { color: W }, beard: { style: 'goatee', len: 0.9, color: W }, mustache: 'thin',
+      hat: { type: 'tallcrown' }, outfit: { type: 'sash', color: '#c8a030' }, acc: ['goldcollar', 'bigears'], expr: 'sly' },
+    '区连': { role: 'ruler', age: 36, build: 1.12, eyes: 'round', brows: 'bushy', beard: { style: 'stubble' }, mustache: 'thin', hat: { type: 'headband', color: '#a02a3a' },
+      outfit: { type: 'sash', color: '#a02a3a' }, acc: ['hoops'], weapon: 'sword', expr: 'fierce' },
+  });
+
+  // ------------------------------------------------------------- 西域 --
+  group('tarim', {
+    '童格罗伽': { role: 'ruler', age: 46, eyes: 'normal', brows: 'arched', hair: { style: 'bob', color: '#5a3a20' }, beard: { style: 'short' }, mustache: 'curl',
+      hat: { type: 'diadem', color: '#d8b050', gem: '#2a8a6a' }, outfit: { type: 'kaftan', color: '#2a5a6a', color2: '#d8b050' }, expr: 'calm' },
+    '安国': { role: 'ruler', age: 40, eyes: { shape: 'sharp', color: '#4a6a5a' }, brows: 'straight', hair: { style: 'bob', color: '#7a4a28' }, beard: { style: 'goatee' }, mustache: 'curl',
+      hat: { type: 'pointcap', color: '#e0d0b0' }, outfit: { type: 'scale', metal: '#7a808c', color: '#3a5a3a' }, weapon: 'sword', expr: 'stern' },
+  });
+
+  // ------------------------------------------------- 喀里多尼亚、日耳曼、萨尔马提亚 --
+  group('celt', {
+    '阿根托科克斯': { role: 'ruler', age: 38, build: 1.12, eyes: { shape: 'sharp', color: '#4a7aa0' }, brows: 'bushy', hair: { style: 'wild', color: '#b8541e' }, beard: 'none', mustache: 'droop',
+      hat: 'none', outfit: { type: 'plaid', color: '#3a6a3a', color2: '#7a2a24' }, marks: ['woad'], acc: ['torc'], weapon: 'spear', expr: 'fierce' },
+  });
+  group('german', {
+    '巴洛马尔': { role: 'ruler', age: 52, build: 1.15, eyes: { shape: 'sharp', color: '#5a8ab0' }, brows: { shape: 'bushy', color: '#c8b080' }, hair: { style: 'suebian', color: '#c8b080' },
+      beard: { style: 'full', len: 1.2, color: '#c8b080' }, mustache: 'thick', hat: 'none', outfit: { type: 'fur', color: '#5a4a3a' }, acc: ['armring'], weapon: 'axe', expr: 'stern' },
+    '菲利默': { role: 'ruler', age: 45, eyes: 'normal', brows: 'straight', hair: { style: 'long', color: '#d8b878' }, beard: { style: 'long', len: 1.1, color: '#d8b878' }, mustache: 'droop',
+      hat: { type: 'spangen', color: '#7a808c' }, outfit: { type: 'fur', color: '#3a4a3a' }, weapon: 'spear', expr: 'calm' },
+  });
+  group('sarmatian', {
+    '赞提库斯': { role: 'ruler', age: 40, eyes: 'sharp', brows: 'angled', hair: { style: 'long', color: '#5a3a22' }, beard: { style: 'long', len: 1.0 }, mustache: 'droop',
+      hat: { type: 'conical', color: '#7a808c' }, outfit: { type: 'scale', metal: '#7a808c', color: '#7a2a24' }, weapon: 'spear', expr: 'fierce' },
+    '撒罗玛提斯': { role: 'ruler', age: 45, eyes: 'gentle', brows: 'arched', hair: { style: 'curly', color: '#3a2a1c' }, beard: { style: 'full', len: 1.0 }, mustache: 'thick',
+      hat: { type: 'diadem', color: '#d8b050' }, outfit: { type: 'scale', metal: '#c8a050', color: '#2a4a5a', cape: 'faction' }, expr: 'calm' },
+  });
+
+  // ------------------------------------------------------- 辽东、交州的汉人 --
+  group('han', {
+    '公孙度': { role: 'ruler', age: 40, face: { jaw: 1.1 }, eyes: 'sharp', brows: 'knit', beard: { style: 'long', len: 0.9 }, mustache: 'thick',
+      hat: { type: 'crown', color: '#d8b050', gem: '#c0392b' }, outfit: { type: 'plate', metal: '#7a808c', color: '#5a2a2a', cape: 'faction' }, expr: 'stern' },
+    '士燮': { role: 'ruler', age: 53, face: { len: 1.04 }, eyes: 'gentle', brows: 'straight', beard: { style: 'long', len: 1.2, color: '#5a5450' }, mustache: 'thin',
+      hat: { type: 'jinxian', liang: 2 }, outfit: { type: 'robe', color: '#2a6a4a', color2: '#e8d8b0' }, expr: 'calm' },
+    '吕岱': { age: 40, eyes: 'sharp', brows: 'straight', beard: { style: 'long', len: 0.9 }, mustache: 'thick', hat: { type: 'helmet', variant: 'round', color: '#7a808c' },
+      outfit: { type: 'lamellar', metal: '#7a808c', color: '#c8382c' }, expr: 'stern' },
+    '管宁': { age: 32, eyes: 'gentle', brows: 'thin', beard: { style: 'goatee', len: 0.8 }, mustache: 'thin', hat: { type: 'futou', color: '#3a3a3a' }, outfit: { type: 'robe', color: '#d8d0c0', color2: '#3a3a3a' }, expr: 'calm' },
+    '阎柔': { age: 28, eyes: 'sharp', brows: 'sword', beard: { style: 'short' }, mustache: 'droop', hat: { type: 'felt', color: '#7a2a24' },
+      outfit: { type: 'kaftan', color: '#5a3a2a', color2: '#d8b050' }, weapon: 'bow', expr: 'stern' },
+  });
+
+  // ---------------------------------------------------------- (1) 自动 --
+  const auto = {};
+  const rulers = new Set();
+  try {
+    if (SG.Scenarios && SG.Scenarios.world) for (const l of SG.Scenarios.world.Factions) rulers.add(String(l).split('|')[2]);
+  } catch (e) { /* 无世界剧本 */ }
+  if (SG.WorldInfo) {
+    for (const name of Object.keys(SG.WorldInfo)) {
+      const wi = SG.WorldInfo[name] || {};
+      const e = {};
+      if (wi.culture) e.culture = wi.culture;
+      if (wi.sex === 'f') e.sex = 'f';
+      if (rulers.has(name) && wi.sex !== 'f') e.role = 'ruler';
+      // 已有手写年龄的（如第一阶段的卑弥呼）不覆盖
+      if (typeof wi.born === 'number' && !(PD.get(name) && PD.get(name).age != null)) e.age = Math.max(22, Math.min(72, 190 - wi.born));
+      auto[name] = e;
+    }
+  }
+  const merged = {};
+  for (const k of Object.keys(auto)) merged[k] = auto[k];
+  for (const k of Object.keys(HAND)) merged[k] = Object.assign({}, auto[k] || {}, HAND[k]);
+  PD.add(merged);
+  PD.worldHand = Object.keys(HAND);
+})();
