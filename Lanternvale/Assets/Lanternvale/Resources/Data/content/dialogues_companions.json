@@ -1348,40 +1348,241 @@
         {
           "id": "bru_party",
           "speaker": "bruna",
-          "text": "Lead on. I'm right behind you.",
-          "conditions": [
-            {"type": "InParty", "key": "bruna"}
-          ],
-          "fallback": "bru_hello",
+          "text": "*Bruna swings the sunflower shield onto her back with a clang that startles a crow out of the hedge.* Right! Where are we going, what are we hitting, and is there lunch after?",
+          "conditions": [{"type": "InParty", "key": "bruna"}],
+          "fallback": "bru_met",
           "choices": [
+            {"text": "How are you holding up?", "next": "bru_banter_post", "conditions": [{"type": "Flag", "key": "mq2_ember_road_done"}]},
+            {"text": "How are you holding up?", "next": "bru_banter", "conditions": [{"type": "NotFlag", "key": "mq2_ember_road_done"}]},
+            {"text": "Tell me about the farm.", "next": "bru_lore"},
+            {"text": "You look like you're chewing on something. Out with it.", "next": "bru_ask", "conditions": [{"type": "NotFlag", "key": "bruna_asked"}]},
+            {
+              "text": "(Share your last honey cake with her.)",
+              "next": "bru_gift",
+              "conditions": [{"type": "NotFlag", "key": "bruna_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "bruna_gifted"}, {"type": "Approval", "key": "bruna", "amount": 7}]
+            },
+            {
+              "text": "What really happened the night you held the gate?",
+              "next": "bru_story",
+              "conditions": [{"type": "Companion", "key": "bruna", "amount": 20}, {"type": "NotFlag", "key": "bruna_story_told"}]
+            },
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "bru_dismissed",
-              "outcomes": [
-                {"type": "Dismiss", "key": "bruna"},
-                {"type": "ClearFlag", "key": "recruited_bruna"}
-              ]
+              "outcomes": [{"type": "Dismiss", "key": "bruna"}, {"type": "ClearFlag", "key": "recruited_bruna"}]
             },
             {"text": "Let's keep moving."}
           ]
         },
-        {"id": "bru_dismissed", "speaker": "bruna", "text": "I'll be at the camp. Send for me when you need me."},
         {
-          "id": "bru_hello",
+          "id": "bru_banter_post",
           "speaker": "bruna",
-          "text": "Well met, traveller. They call me Bruna. The roads are dangerous these days; you look like you could use a hand.",
+          "text": "The Downs have their lamplight back. Mum wrote — well, Mum had the miller write, Mum spells like a hen walks — and she says the lanes glow so bright of an evening the moths have started queueing. *She grins, then wipes her eye with the back of a gauntlet.* Hay dust. Don't look at me.",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_banter",
+          "speaker": "bruna",
+          "text": "Honestly? Grand. My feet hurt, my shield arm's happy, and I haven't had to chase a single goat all week. *She squints west.* I'll be happier when those Duskmane thieves stop pinching lantern oil off every farm on the Downs. A farm without lamplight is just a dark field with opinions.",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_lore",
+          "speaker": "bruna",
+          "text": "Haybright Farm. Barley, beans, forty sheep, one dog, my mum and five little brothers, who are all louder than the sheep. *She smiles.* I was meant to take it on. I still might. But somebody's got to stand in the gate first, haven't they?",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_party_hub",
+          "speaker": "bruna",
+          "text": "*Bruna bumps your shoulder with hers, which nearly knocks you over.* Anything else, then?",
+          "choices": [
+            {"text": "Tell me about the farm.", "next": "bru_lore"},
+            {"text": "You look like you're chewing on something. Out with it.", "next": "bru_ask", "conditions": [{"type": "NotFlag", "key": "bruna_asked"}]},
+            {
+              "text": "(Share your last honey cake with her.)",
+              "next": "bru_gift",
+              "conditions": [{"type": "NotFlag", "key": "bruna_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "bruna_gifted"}, {"type": "Approval", "key": "bruna", "amount": 7}]
+            },
+            {
+              "text": "What really happened the night you held the gate?",
+              "next": "bru_story",
+              "conditions": [{"type": "Companion", "key": "bruna", "amount": 20}, {"type": "NotFlag", "key": "bruna_story_told"}]
+            },
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "bru_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "bruna"}, {"type": "ClearFlag", "key": "recruited_bruna"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "bru_dismissed",
+          "speaker": "bruna",
+          "text": "Right you are. I'll be back at the farm gate, keeping it warm. Bring me something to hit when you come."
+        },
+        {
+          "id": "bru_ask",
+          "speaker": "bruna",
+          "text": "*She frowns at the road.* Here's what's chewing me. Say we catch one of those Duskmane gnolls with a cart full of our lantern oil, and it drops its spear and begs. What do we do with it?",
+          "choices": [
+            {
+              "text": "Let it go, and send it home with a message: the Downs have a gate now.",
+              "next": "bru_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "bruna_asked"}, {"type": "Approval", "key": "bruna", "amount": 8}]
+            },
+            {
+              "text": "Ask it why gnolls need lantern oil in the first place.",
+              "next": "bru_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "bruna_asked"}, {"type": "Approval", "key": "bruna", "amount": 6}]
+            },
+            {
+              "text": "Make an example of it. Nobody steals from the Downs twice.",
+              "next": "bru_ask_bad",
+              "outcomes": [{"type": "SetFlag", "key": "bruna_asked"}, {"type": "Approval", "key": "bruna", "amount": -5}]
+            },
+            {"text": "I'd rather not say. Let's keep moving."}
+          ]
+        },
+        {
+          "id": "bru_ask_good",
+          "speaker": "bruna",
+          "text": "*Bruna nods slowly.* Aye. That's what I hoped you'd say. A frightened thing with a spear is still a frightened thing. My gran always said you can't plough a field by salting it.",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_ask_bad",
+          "speaker": "bruna",
+          "text": "*Her jaw sets.* We're not the sort who salt fields. I'll stand in front of anything that comes at you — but I won't stand behind anything cruel. Just so we're clear.",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_gift",
+          "speaker": "bruna",
+          "text": "*Bruna stares at the honey cake, then at you, as if you'd handed her a crown.* That's — you're sure? *It is gone in two bites.* Right. You're my favourite. Don't tell the dog.",
+          "next": "bru_party_hub"
+        },
+        {
+          "id": "bru_story",
+          "speaker": "bruna",
+          "text": "*She is quiet for so long you think she won't answer.* The songs say I held the gate three nights. I didn't. The first night the gnolls came over the hill with their torches, and I froze. Stood there with Dad's old barn door on my arm and couldn't move my feet.",
+          "outcomes": [{"type": "SetFlag", "key": "bruna_story_told"}, {"type": "Approval", "key": "bruna", "amount": 3}],
+          "next": "bru_story2"
+        },
+        {
+          "id": "bru_story2",
+          "speaker": "bruna",
+          "text": "It was Biscuit who held the gate. Our sheepdog. Eleven years old, half deaf, and he went at them like a thunderstorm in a fur coat. *Her voice catches.* He limps now. Every night after that I stood in the gate so he'd never have to again. That's all the legend is: a frightened girl making it up to a dog.",
+          "choices": [
+            {
+              "text": "You were afraid, and you came back the next night anyway. That's what brave means.",
+              "next": "bru_party_hub",
+              "outcomes": [{"type": "Approval", "key": "bruna", "amount": 5}]
+            },
+            {
+              "text": "Biscuit sounds like the finest knight on the Downs.",
+              "next": "bru_party_hub",
+              "outcomes": [{"type": "Approval", "key": "bruna", "amount": 3}]
+            },
+            {"text": "(Say nothing. Let's keep moving.)"}
+          ]
+        },
+        {
+          "id": "bru_met",
+          "speaker": "bruna",
+          "text": "Oi! You came back. Biscuit, look, it's the one with the good boots.",
+          "conditions": [{"type": "Flag", "key": "bruna_met"}],
+          "fallback": "bru_hello",
           "choices": [
             {"text": "Come with me.", "next": "bru_join"},
             {"text": "Just passing by."}
           ]
         },
         {
+          "id": "bru_hello",
+          "speaker": "narrator",
+          "text": "*A tall young woman stands square in a farm gate on the Downs: freckled, sunburnt, two straw-gold braids over a harvest-orange smock worn over mail. On her arm is an enormous round shield, quite clearly an old barn door, painted with a sunflower. An elderly sheepdog lies across her boots like a rug.*",
+          "outcomes": [{"type": "SetFlag", "key": "bruna_met"}],
+          "next": "bru2"
+        },
+        {
+          "id": "bru2",
+          "speaker": "bruna",
+          "text": "Afternoon! If you're a gnoll, you're very well dressed for one, so I'll guess not. Bruna Haybright. This is the gate, that's Biscuit, and I'm the reason nothing's come through it in a month.",
+          "choices": [
+            {"text": "Why guard a gate in the middle of an empty field?", "next": "bru_q"},
+            {
+              "text": "You keep watching that hill like you expect it to bite.",
+              "check": {"skill": "Insight", "dc": 12, "success": "bru_chk_s", "failure": "bru_chk_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "Your stance is wrong for a farmer and right for a shield-wall.",
+              "next": "bru_class",
+              "conditions": [{"type": "Class", "key": "Warrior"}],
+              "tag": "WARRIOR"
+            },
+            {"text": "Kael, meet a fellow wall.", "next": "bru_friend", "conditions": [{"type": "InParty", "key": "kael"}]},
+            {"text": "I'm following the Ember Road west. Want to come and stand in front of things for me?", "next": "bru_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "bru_q",
+          "speaker": "bruna",
+          "text": "Empty? *She looks genuinely offended on the field's behalf.* There's barley in there, and my mum, and five little brothers, and the lamp oil for half the lanes on the Downs. The Duskmane gnolls come for the oil. They don't come through here. *She pats the barn door.* Simple.",
+          "next": "bru_pitch"
+        },
+        {
+          "id": "bru_chk_s",
+          "speaker": "bruna",
+          "text": "*Her grin slips.* ...Aye. Because one night I didn't watch it, and it did bite, and somebody else paid for it. *She scratches the old dog's ears.* I don't talk about that. Not yet.",
+          "outcomes": [{"type": "SetFlag", "key": "bruna_confided"}, {"type": "Approval", "key": "bruna", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "bru_pitch"
+        },
+        {
+          "id": "bru_chk_f",
+          "speaker": "bruna",
+          "text": "The hill? *She laughs, a big honking laugh that sends a pheasant flapping.* It's a hill. It's mostly sheep. You've been on the road too long, friend.",
+          "next": "bru_pitch"
+        },
+        {
+          "id": "bru_class",
+          "speaker": "bruna",
+          "text": "*She looks you up and down, then plants her feet and lifts the shield, testing.* Ha! You see it too. Gran said I had a wall in my bones. Took me twenty years to work out it was a compliment.",
+          "outcomes": [{"type": "Approval", "key": "bruna", "amount": 5}],
+          "next": "bru_pitch"
+        },
+        {
+          "id": "bru_friend",
+          "speaker": "bruna",
+          "text": "*Bruna eyes Kael's greatsword, then the scar, then the greatcoat.* Ooh. You're the proper sort, aren't you? The 'I've seen things' sort. *Kael regards her barn-door shield for a long moment.* 'Good shield,' he says. 'Ugly. Good.' *Bruna beams as if he'd written her a sonnet.*",
+          "outcomes": [{"type": "Approval", "key": "bruna", "amount": 3}, {"type": "Approval", "key": "kael", "amount": 3}],
+          "next": "bru_pitch"
+        },
+        {
+          "id": "bru_pitch",
+          "speaker": "bruna",
+          "text": "*Bruna chews a stalk of barley and looks at the road.* Thing is, the gnolls have stopped coming here. They've just started going somewhere else. If you're walking out after the trouble... well. A gate's only any good if it's in the right place.",
+          "choices": [
+            {
+              "text": "Then come and be my gate. I'd be glad of you, Bruna.",
+              "next": "bru_join",
+              "outcomes": [{"type": "Approval", "key": "bruna", "amount": 5}]
+            },
+            {"text": "Fine. Keep up, and try not to slow me down.", "next": "bru_join", "outcomes": [{"type": "Approval", "key": "bruna", "amount": -3}]},
+            {"text": "Not yet. Never mind."}
+          ]
+        },
+        {
           "id": "bru_join",
           "speaker": "narrator",
-          "text": "*Bruna shoulders a pack and falls in beside you.*",
-          "outcomes": [
-            {"type": "Recruit", "key": "bruna"}
-          ]
+          "text": "*Bruna kisses Biscuit on his grey nose, tells him he's in charge of the gate now, and swings the barn-door shield onto her back. The old dog thumps his tail once, like a seal on a contract.*",
+          "outcomes": [{"type": "Recruit", "key": "bruna"}, {"type": "SetFlag", "key": "bruna_met"}]
         }
       ]
     },
@@ -1392,40 +1593,241 @@
         {
           "id": "yso_party",
           "speaker": "ysolde",
-          "text": "Lead on. I'm right behind you.",
-          "conditions": [
-            {"type": "InParty", "key": "ysolde"}
-          ],
-          "fallback": "yso_hello",
+          "text": "*Ysolde checks her shield strap, then checks it again.* Ready when you are. Readier, probably.",
+          "conditions": [{"type": "InParty", "key": "ysolde"}],
+          "fallback": "yso_met",
           "choices": [
+            {"text": "How are you holding up?", "next": "yso_banter_post", "conditions": [{"type": "Flag", "key": "mq2_ash_on_the_wind_done"}]},
+            {"text": "How are you holding up?", "next": "yso_banter", "conditions": [{"type": "NotFlag", "key": "mq2_ash_on_the_wind_done"}]},
+            {"text": "Tell me about the Heronguard.", "next": "yso_lore"},
+            {"text": "You've been quiet all morning. What's on your mind?", "next": "yso_ask", "conditions": [{"type": "NotFlag", "key": "ysolde_asked"}]},
+            {
+              "text": "(Help her mend the faded heron on her sash.)",
+              "next": "yso_gift",
+              "conditions": [{"type": "NotFlag", "key": "ysolde_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_gifted"}, {"type": "Approval", "key": "ysolde", "amount": 7}]
+            },
+            {
+              "text": "Why was the Heronguard really disbanded?",
+              "next": "yso_story",
+              "conditions": [{"type": "Companion", "key": "ysolde", "amount": 20}, {"type": "NotFlag", "key": "ysolde_story_told"}]
+            },
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "yso_dismissed",
-              "outcomes": [
-                {"type": "Dismiss", "key": "ysolde"},
-                {"type": "ClearFlag", "key": "recruited_ysolde"}
-              ]
+              "outcomes": [{"type": "Dismiss", "key": "ysolde"}, {"type": "ClearFlag", "key": "recruited_ysolde"}]
             },
             {"text": "Let's keep moving."}
           ]
         },
-        {"id": "yso_dismissed", "speaker": "ysolde", "text": "I'll be at the camp. Send for me when you need me."},
         {
-          "id": "yso_hello",
+          "id": "yso_banter_post",
           "speaker": "ysolde",
-          "text": "Well met, traveller. They call me Ysolde. The roads are dangerous these days; you look like you could use a hand.",
+          "text": "I have been back to Skyreach, and I walked down again on my own two feet. *She turns her sword over in her hands.* Twelve years I wondered whether I'd be brave enough to go back. It turns out it is a great deal easier with company.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_banter",
+          "speaker": "ysolde",
+          "text": "Well enough. *She tests the strap a third time.* Habit. The Heronguard drilled us to check our straps before every march, every meal and, on one memorable occasion, every wedding. *A pause.* It was a very well-strapped wedding.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_lore",
+          "speaker": "ysolde",
+          "text": "The Heronguard of Brightwater: knights who rode the great river-herons, for three hundred years. We kept the fords, carried the post through floods and rescued an astonishing number of cats from roofs. *A dry smile.* Sir Odo Brightwater taught me to hold a shield, back when he still pretended to be retired.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_party_hub",
+          "speaker": "ysolde",
+          "text": "*She waits, attentive, the way she must once have waited on a commander she hoped was a good one.* Anything else?",
+          "choices": [
+            {"text": "Tell me about the Heronguard.", "next": "yso_lore"},
+            {"text": "You've been quiet all morning. What's on your mind?", "next": "yso_ask", "conditions": [{"type": "NotFlag", "key": "ysolde_asked"}]},
+            {
+              "text": "(Help her mend the faded heron on her sash.)",
+              "next": "yso_gift",
+              "conditions": [{"type": "NotFlag", "key": "ysolde_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_gifted"}, {"type": "Approval", "key": "ysolde", "amount": 7}]
+            },
+            {
+              "text": "Why was the Heronguard really disbanded?",
+              "next": "yso_story",
+              "conditions": [{"type": "Companion", "key": "ysolde", "amount": 20}, {"type": "NotFlag", "key": "ysolde_story_told"}]
+            },
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "yso_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "ysolde"}, {"type": "ClearFlag", "key": "recruited_ysolde"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "yso_dismissed",
+          "speaker": "ysolde",
+          "text": "As you wish. I'll be on the river steps with Sir Wadsworth, glaring at the ferry. Send word, and I will come."
+        },
+        {
+          "id": "yso_ask",
+          "speaker": "ysolde",
+          "text": "A question, if you'll permit me. If a commander gives an order that will get everyone killed for nothing but glory — does a good knight obey?",
+          "choices": [
+            {
+              "text": "No. A good knight brings her people home.",
+              "next": "yso_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_asked"}, {"type": "Approval", "key": "ysolde", "amount": 8}]
+            },
+            {
+              "text": "She argues first. If that fails, she does whatever saves the most lives.",
+              "next": "yso_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_asked"}, {"type": "Approval", "key": "ysolde", "amount": 6}]
+            },
+            {
+              "text": "Orders are orders. Glory is what knights are for.",
+              "next": "yso_ask_bad",
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_asked"}, {"type": "Approval", "key": "ysolde", "amount": -5}]
+            },
+            {"text": "I'd rather not say. Let's keep moving."}
+          ]
+        },
+        {
+          "id": "yso_ask_good",
+          "speaker": "ysolde",
+          "text": "*Something in her shoulders loosens, just slightly.* ...Thank you. You have no idea how long I've wanted to hear someone say that without first checking who was listening.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_ask_bad",
+          "speaker": "ysolde",
+          "text": "*Her face goes very still and very courteous.* I see. Then I hope you never have to give such an order. And if you do, I hope someone near you has the courage to disobey it.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_gift",
+          "speaker": "ysolde",
+          "text": "*You hold the sash steady while she stitches. Neither of you is any good at sewing. The heron ends up looking faintly surprised.* She laughs — a real laugh, startled out of her. 'He looks exactly like Sir Wadsworth. Thank you. Truly.'",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_story",
+          "speaker": "ysolde",
+          "text": "*She sits on a low wall with her shield across her knees.* On the slopes of Skyreach, the drakes came down out of the cloud. Lord-Commander Aubric ordered the charge. Uphill. Into fire. *She breathes out slowly.* I was his standard-bearer. I blew the retreat instead.",
+          "outcomes": [{"type": "SetFlag", "key": "ysolde_story_told"}, {"type": "Approval", "key": "ysolde", "amount": 3}],
+          "next": "yso_story2"
+        },
+        {
+          "id": "yso_story2",
+          "speaker": "ysolde",
+          "text": "Eleven knights came home because I disobeyed him. Twenty-nine didn't, and he was one of them. The council called it cowardice and broke the order. *Her thumb rubs the faded heron on her sash.* I would blow that horn again. I only wish I knew whether the twenty-nine forgive me for it.",
+          "choices": [
+            {
+              "text": "Eleven knights are alive because you were brave enough to be called a coward.",
+              "next": "yso_party_hub",
+              "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 5}]
+            },
+            {
+              "text": "The ones who fell followed an order. You saved the ones you could. That's all any of us get to do.",
+              "next": "yso_party_hub",
+              "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 3}]
+            },
+            {"text": "(Say nothing. Let's keep moving.)"}
+          ]
+        },
+        {
+          "id": "yso_met",
+          "speaker": "ysolde",
+          "text": "You've returned. *The ancient heron beside her clacks his beak at you, which Ysolde assures you is a welcome.*",
+          "conditions": [{"type": "Flag", "key": "ysolde_met"}],
+          "fallback": "yso_hello",
           "choices": [
             {"text": "Come with me.", "next": "yso_join"},
             {"text": "Just passing by."}
           ]
         },
         {
+          "id": "yso_hello",
+          "speaker": "narrator",
+          "text": "*On the old river steps of Brightwater stands a tall woman in a faded river-blue surcoat over polished mail. A white heron is worked on her breast, its thread worn almost to nothing. Beside her an ancient grey heron balances on one leg, glaring at passers-by as if they owe him money.*",
+          "outcomes": [{"type": "SetFlag", "key": "ysolde_met"}],
+          "next": "yso2"
+        },
+        {
+          "id": "yso2",
+          "speaker": "ysolde",
+          "text": "Good day. Ysolde of the Heronguard — what remains of it. *A small, precise bow.* And this is Sir Wadsworth, who remains rather more completely. If you're waiting for the ferry, it's late. It's always late. It was late when there were knights to complain about it.",
+          "choices": [
+            {"text": "The Heronguard? I've never heard of them.", "next": "yso_q"},
+            {
+              "text": "The Heronguard kept the fords of Brightwater for three hundred years. I've read the chronicles.",
+              "check": {"skill": "History", "dc": 13, "success": "yso_chk_s", "failure": "yso_chk_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {
+              "text": "By the Light — a knight of an old order. I'd know that bearing anywhere.",
+              "next": "yso_class",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Aldric, you've gone very quiet.", "next": "yso_friend", "conditions": [{"type": "InParty", "key": "aldric"}]},
+            {"text": "I'm bound north, where the ash comes from. I could use a shield.", "next": "yso_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "yso_q",
+          "speaker": "ysolde",
+          "text": "*She doesn't seem surprised.* Few have, these days. We rode the great river-herons and kept the fords and the roads. Then we rode north, and most of us didn't ride back, and the town council decided a broken order was cheaper than a mended one.",
+          "next": "yso_pitch"
+        },
+        {
+          "id": "yso_chk_s",
+          "speaker": "ysolde",
+          "text": "*Her eyebrows rise.* You've read Hallam's Chronicle? Nobody reads Hallam. He spends forty pages on the correct way to fold a heron's saddle-blanket. *She is smiling, properly, for the first time.* Then you know what we were. Perhaps you'll help me remember it.",
+          "outcomes": [{"type": "SetFlag", "key": "ysolde_confided"}, {"type": "Approval", "key": "ysolde", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "yso_pitch"
+        },
+        {
+          "id": "yso_chk_f",
+          "speaker": "ysolde",
+          "text": "*She tilts her head.* The chronicles. Yes. They make us sound very grand. Mostly we escorted ducklings across the fords and fished the post out of the river. The chronicles are kinder than the truth.",
+          "next": "yso_pitch"
+        },
+        {
+          "id": "yso_class",
+          "speaker": "ysolde",
+          "text": "*She studies your hands, your stance, the faint light that clings to you.* ...Yes. Another oath-bearer. *She inclines her head, knight to knight.* It has been a long time since anyone greeted me as one of their own. Thank you.",
+          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 5}],
+          "next": "yso_pitch"
+        },
+        {
+          "id": "yso_friend",
+          "speaker": "aldric",
+          "text": "*Aldric has gone the colour of a ripe tomato.* You're — you're THE Heronguard. The real one! Chapter nine of Sir Gallant! The bridge and the flood and the forty herons! *Ysolde looks at him, then at you, with the weary patience of a woman who has met many Aldrics.* 'There were six herons,' she says. 'And the flood was mostly a puddle. But thank you.'",
+          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 3}, {"type": "Approval", "key": "aldric", "amount": 3}],
+          "next": "yso_pitch"
+        },
+        {
+          "id": "yso_pitch",
+          "speaker": "ysolde",
+          "text": "*She looks north, where the sky over the mountains has a faint, wrong colour.* The ash on the wind. I've watched it come down the river for weeks. The last time the sky looked like that, I rode north with forty knights. *She straightens.* I find I would rather not watch it from the steps this time. If you'll have me, my shield is yours.",
+          "choices": [
+            {"text": "I'd be honoured, Dame Ysolde.", "next": "yso_join", "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 5}]},
+            {
+              "text": "Fine. Keep up, knight, and leave your old ghosts on the steps.",
+              "next": "yso_join",
+              "outcomes": [{"type": "Approval", "key": "ysolde", "amount": -3}]
+            },
+            {"text": "Not yet. Never mind."}
+          ]
+        },
+        {
           "id": "yso_join",
           "speaker": "narrator",
-          "text": "*Ysolde shoulders a pack and falls in beside you.*",
-          "outcomes": [
-            {"type": "Recruit", "key": "ysolde"}
-          ]
+          "text": "*Ysolde lifts her shield, settles its strap and checks it twice. Sir Wadsworth gives a long-suffering croak and flaps up to the chapel roof to wait. 'He'll mind the steps,' she says. 'He always did.'*",
+          "outcomes": [{"type": "Recruit", "key": "ysolde"}, {"type": "SetFlag", "key": "ysolde_met"}]
         }
       ]
     },
@@ -1436,40 +1838,241 @@
         {
           "id": "lio_party",
           "speaker": "liora",
-          "text": "Lead on. I'm right behind you.",
-          "conditions": [
-            {"type": "InParty", "key": "liora"}
-          ],
-          "fallback": "lio_hello",
+          "text": "*Liora's lantern-censer sways at her side, painting the ground in slow, warm circles.* Yes, dear?",
+          "conditions": [{"type": "InParty", "key": "liora"}],
+          "fallback": "lio_met",
           "choices": [
+            {"text": "How are you holding up?", "next": "lio_banter_post", "conditions": [{"type": "Flag", "key": "mq2_drowned_lanterns_done"}]},
+            {"text": "How are you holding up?", "next": "lio_banter", "conditions": [{"type": "NotFlag", "key": "mq2_drowned_lanterns_done"}]},
+            {"text": "Tell me about the Chapel of Small Lights.", "next": "lio_lore"},
+            {"text": "You've been looking at me like you want to ask something.", "next": "lio_ask", "conditions": [{"type": "NotFlag", "key": "liora_asked"}]},
+            {
+              "text": "(Brew her a pot of tea, for once.)",
+              "next": "lio_gift",
+              "conditions": [{"type": "NotFlag", "key": "liora_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "liora_gifted"}, {"type": "Approval", "key": "liora", "amount": 7}]
+            },
+            {
+              "text": "Will you tell me about the basket you came down the river in?",
+              "next": "lio_story",
+              "conditions": [{"type": "Companion", "key": "liora", "amount": 20}, {"type": "NotFlag", "key": "liora_story_told"}]
+            },
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "lio_dismissed",
-              "outcomes": [
-                {"type": "Dismiss", "key": "liora"},
-                {"type": "ClearFlag", "key": "recruited_liora"}
-              ]
+              "outcomes": [{"type": "Dismiss", "key": "liora"}, {"type": "ClearFlag", "key": "recruited_liora"}]
             },
             {"text": "Let's keep moving."}
           ]
         },
-        {"id": "lio_dismissed", "speaker": "liora", "text": "I'll be at the camp. Send for me when you need me."},
         {
-          "id": "lio_hello",
+          "id": "lio_banter_post",
           "speaker": "liora",
-          "text": "Well met, traveller. They call me Liora. The roads are dangerous these days; you look like you could use a hand.",
+          "text": "The river brings the lanterns down lit again. Lit! Little drifting stars, all the way past the weir. *She presses her hands together.* The boatmen say it's the prettiest thing they've ever seen. They're wrong. It's the second prettiest. The prettiest was everyone coming home.",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_banter",
+          "speaker": "liora",
+          "text": "Well, thank you for asking. *She swings the censer in a slow arc, and warm light follows it like a tail.* The river has been bringing me drowned lanterns all season. Every one I fish out, I relight. I am running out of shelves.",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_lore",
+          "speaker": "liora",
+          "text": "Six pews, one bell, a roof that only leaks when it rains, and four hundred and twelve lanterns. *She counts on her fingers.* Four hundred and thirteen, counting the goat. Old Mother Wren raised me there — I came down the river myself, in a basket, but that's a longer story. Her grand-nephew is lighting the lanterns while I'm away. He's terrified of doing it wrong. He'll be fine.",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_party_hub",
+          "speaker": "liora",
+          "text": "*Liora tucks a stray silver hair behind her ear and gives you her whole attention, the way she gives it to everyone.* Anything else?",
+          "choices": [
+            {"text": "Tell me about the Chapel of Small Lights.", "next": "lio_lore"},
+            {"text": "You've been looking at me like you want to ask something.", "next": "lio_ask", "conditions": [{"type": "NotFlag", "key": "liora_asked"}]},
+            {
+              "text": "(Brew her a pot of tea, for once.)",
+              "next": "lio_gift",
+              "conditions": [{"type": "NotFlag", "key": "liora_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "liora_gifted"}, {"type": "Approval", "key": "liora", "amount": 7}]
+            },
+            {
+              "text": "Will you tell me about the basket you came down the river in?",
+              "next": "lio_story",
+              "conditions": [{"type": "Companion", "key": "liora", "amount": 20}, {"type": "NotFlag", "key": "liora_story_told"}]
+            },
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "lio_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "liora"}, {"type": "ClearFlag", "key": "recruited_liora"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "lio_dismissed",
+          "speaker": "liora",
+          "text": "Of course. I'll go back to my lanterns — they'll have missed me, and the boy will have lit them all upside down. You'll find me on the river steps."
+        },
+        {
+          "id": "lio_ask",
+          "speaker": "liora",
+          "text": "May I ask you something I ask everyone, sooner or later? When someone you love doesn't come home — is it kinder to keep a light burning for them, or to let it go out?",
+          "choices": [
+            {
+              "text": "Keep it burning. Remembering is a kind of love.",
+              "next": "lio_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "liora_asked"}, {"type": "Approval", "key": "liora", "amount": 8}]
+            },
+            {
+              "text": "Let it go out when you're ready, and not one day before.",
+              "next": "lio_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "liora_asked"}, {"type": "Approval", "key": "liora", "amount": 6}]
+            },
+            {
+              "text": "Neither. It's a waste of good lamp oil.",
+              "next": "lio_ask_bad",
+              "outcomes": [{"type": "SetFlag", "key": "liora_asked"}, {"type": "Approval", "key": "liora", "amount": -5}]
+            },
+            {"text": "I'd rather not say. Let's keep moving."}
+          ]
+        },
+        {
+          "id": "lio_ask_good",
+          "speaker": "liora",
+          "text": "*She smiles, and it's like a lamp turned up.* That's what I tell the boatmen's widows. It is nice to hear it said back to me, for once.",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_ask_bad",
+          "speaker": "liora",
+          "text": "*The smile stays, but something behind it closes, very gently, like a shutter.* Oil is cheap, dear. Grief is not. I'd ask you to remember the difference while you walk with me.",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_gift",
+          "speaker": "liora",
+          "text": "*She takes a sip, and her eyebrows climb.* Oh, this is dreadful. *Another sip.* Truly dreadful. Nobody has made me a cup of tea in thirty years. *She cradles the cup in both hands and doesn't put it down for a long time.*",
+          "next": "lio_party_hub"
+        },
+        {
+          "id": "lio_story",
+          "speaker": "liora",
+          "text": "*She draws a folded square of blanket from her sleeve: old reed-green wool, embroidered with a line of curling blue marks.* I was perhaps a year old. Mother Wren found me in the reeds below the weir, fast asleep, with this tucked around me. The marks are a tide-song from the fen. Nobody in Brightwater can read them.",
+          "outcomes": [{"type": "SetFlag", "key": "liora_story_told"}, {"type": "Approval", "key": "liora", "amount": 3}],
+          "next": "lio_story2"
+        },
+        {
+          "id": "lio_story2",
+          "speaker": "liora",
+          "text": "So I lit a lantern for whoever sent me down the river, and I have lit it every night since I was tall enough to reach the wick. *A small laugh.* Thirty-odd years of 'please come home' for someone who never left — it was me who left. I've never known whether they were waiting for me, or glad to be rid of me.",
+          "choices": [
+            {
+              "text": "Nobody stitches a song into a blanket for a child they want to be rid of.",
+              "next": "lio_party_hub",
+              "outcomes": [{"type": "Approval", "key": "liora", "amount": 5}]
+            },
+            {
+              "text": "Whoever they were, they sent you somewhere safe. And Brightwater would be lost without you.",
+              "next": "lio_party_hub",
+              "outcomes": [{"type": "Approval", "key": "liora", "amount": 3}]
+            },
+            {"text": "(Say nothing. Let's keep moving.)"}
+          ]
+        },
+        {
+          "id": "lio_met",
+          "speaker": "liora",
+          "text": "Ah, there you are. *She lifts a lantern in greeting.* I kept a light on.",
+          "conditions": [{"type": "Flag", "key": "liora_met"}],
+          "fallback": "lio_hello",
           "choices": [
             {"text": "Come with me.", "next": "lio_join"},
             {"text": "Just passing by."}
           ]
         },
         {
+          "id": "lio_hello",
+          "speaker": "narrator",
+          "text": "*A crooked little chapel leans over Brightwater's river steps, every ledge, sill and rafter crowded with lanterns. Among them moves a woman in layered white and plum robes, silver-grey hair in a loose braid, lighting each wick in turn with a brass censer on a long chain. Her lips move as she goes; she is saying a name for every one.*",
+          "outcomes": [{"type": "SetFlag", "key": "liora_met"}],
+          "next": "lio2"
+        },
+        {
+          "id": "lio2",
+          "speaker": "liora",
+          "text": "Welcome to the Chapel of Small Lights. I'm Liora. *She finishes the wick she is lighting before she turns.* Forgive me — if I stop halfway, I lose my place, and then somebody's grandfather spends the night in the dark. Are you lost, dear, or only looking?",
+          "choices": [
+            {"text": "Who are all these lanterns for?", "next": "lio_q"},
+            {
+              "text": "(Light the guttering lantern beside her and say the boatman's blessing.)",
+              "check": {"skill": "Religion", "dc": 12, "success": "lio_chk_s", "failure": "lio_chk_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "Light keep you, sister. Your lanterns burn like prayers.",
+              "next": "lio_class",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "Seren keeps lanterns too, in a way.", "next": "lio_friend", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {"text": "Something upriver is drowning lights. I mean to find out what.", "next": "lio_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "lio_q",
+          "speaker": "liora",
+          "text": "Everyone the river has borrowed. Fishermen, ferry-folk, one very adventurous goat. *She touches a lantern gently.* We light them so the river knows someone is still expecting them home. And most of them come home, you know. People forget that part.",
+          "next": "lio_pitch"
+        },
+        {
+          "id": "lio_chk_s",
+          "speaker": "liora",
+          "text": "*The words come to you, old and plain: 'Low water, safe crossing, light in the window.' The flame steadies and grows.* Liora's hand goes to her heart. 'Nobody says it properly any more. They rush the middle.' She looks at you as if you were a lantern that had come home.",
+          "outcomes": [{"type": "SetFlag", "key": "liora_confided"}, {"type": "Approval", "key": "liora", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "lio_pitch"
+        },
+        {
+          "id": "lio_chk_f",
+          "speaker": "liora",
+          "text": "*You mumble something hopeful and the wick sulks.* Liora relights it with a practised flick. 'It's the thought that counts,' she says kindly. 'Although the words help the wick.'",
+          "next": "lio_pitch"
+        },
+        {
+          "id": "lio_class",
+          "speaker": "liora",
+          "text": "*She laughs softly.* They are prayers. Very small ones, mostly 'please come home' and 'mind the weir'. *She lights another.* It is good to meet someone who hears them too.",
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 5}],
+          "next": "lio_pitch"
+        },
+        {
+          "id": "lio_friend",
+          "speaker": "liora",
+          "text": "*Liora notices Seren's ringed staff and summoner's robes, and her whole face softens.* A summoner of the valley. I've only ever read of you. Your shrines borrow their light from a Heart; mine borrow it from people. I suspect it is the same light. *Seren goes pink with delight.* 'I think so too,' she says.",
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 3}, {"type": "Approval", "key": "seren", "amount": 3}],
+          "next": "lio_pitch"
+        },
+        {
+          "id": "lio_pitch",
+          "speaker": "liora",
+          "text": "*She holds up a lantern from the windowsill. Its glass is full of murky fen-water.* The river has been bringing them back like this — drowned, dark, from upstream in Mirefen. Something up there is putting out lights that were never its to put out. *She sets it down very carefully.* I have kept this chapel most of my life without leaving it. I think it's time I went and asked why.",
+          "choices": [
+            {
+              "text": "Then walk with me, Liora. I'd welcome a light on the road.",
+              "next": "lio_join",
+              "outcomes": [{"type": "Approval", "key": "liora", "amount": 5}]
+            },
+            {"text": "Fine. But I won't slow down for prayers.", "next": "lio_join", "outcomes": [{"type": "Approval", "key": "liora", "amount": -3}]},
+            {"text": "Not yet. Never mind."}
+          ]
+        },
+        {
           "id": "lio_join",
           "speaker": "narrator",
-          "text": "*Liora shoulders a pack and falls in beside you.*",
-          "outcomes": [
-            {"type": "Recruit", "key": "liora"}
-          ]
+          "text": "*Liora lights one last lantern, the oldest one, and whispers a name to it that you don't quite catch. Then she gathers her censer chain and steps down from the river steps beside you, the warm light swinging at her side.*",
+          "outcomes": [{"type": "Recruit", "key": "liora"}, {"type": "SetFlag", "key": "liora_met"}]
         }
       ]
     },
@@ -1480,40 +2083,237 @@
         {
           "id": "nan_party",
           "speaker": "nanami",
-          "text": "Lead on. I'm right behind you.",
-          "conditions": [
-            {"type": "InParty", "key": "nanami"}
-          ],
-          "fallback": "nan_hello",
+          "text": "*Nanami is humming something with a great many verses. She stops mid-note.* Oh! Hello! Is this a talking stop or a walking stop?",
+          "conditions": [{"type": "InParty", "key": "nanami"}],
+          "fallback": "nan_met",
           "choices": [
+            {"text": "How are you holding up?", "next": "nan_banter_post", "conditions": [{"type": "Flag", "key": "mq2_drowned_lanterns_done"}]},
+            {"text": "How are you holding up?", "next": "nan_banter", "conditions": [{"type": "NotFlag", "key": "mq2_drowned_lanterns_done"}]},
+            {"text": "Tell me about tide-singing.", "next": "nan_lore"},
+            {"text": "You've stopped humming. Is something wrong?", "next": "nan_ask", "conditions": [{"type": "NotFlag", "key": "nanami_asked"}]},
+            {
+              "text": "(Teach her a walking song for stairs.)",
+              "next": "nan_gift",
+              "conditions": [{"type": "NotFlag", "key": "nanami_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "nanami_gifted"}, {"type": "Approval", "key": "nanami", "amount": 7}]
+            },
+            {
+              "text": "What happened to your grandmother's sending?",
+              "next": "nan_story",
+              "conditions": [{"type": "Companion", "key": "nanami", "amount": 20}, {"type": "NotFlag", "key": "nanami_story_told"}]
+            },
             {
               "text": "Wait here for now. I'll come back for you.",
               "next": "nan_dismissed",
-              "outcomes": [
-                {"type": "Dismiss", "key": "nanami"},
-                {"type": "ClearFlag", "key": "recruited_nanami"}
-              ]
+              "outcomes": [{"type": "Dismiss", "key": "nanami"}, {"type": "ClearFlag", "key": "recruited_nanami"}]
             },
             {"text": "Let's keep moving."}
           ]
         },
-        {"id": "nan_dismissed", "speaker": "nanami", "text": "I'll be at the camp. Send for me when you need me."},
         {
-          "id": "nan_hello",
+          "id": "nan_banter_post",
           "speaker": "nanami",
-          "text": "Well met, traveller. They call me Nanami. The roads are dangerous these days; you look like you could use a hand.",
+          "text": "The lanterns float again! Every one! I sang a sending last night, and the light went sailing off over the reeds like it had somewhere lovely to be. *She spins on the spot, bells chiming.* And it wasn't me. It never was me. *She stops spinning, a little dizzy and very quietly happy.*",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_banter",
+          "speaker": "nanami",
+          "text": "Wet! Happy! Mostly happy. *She hops from foot to foot.* Dry ground is so firm. It doesn't wobble back at you — how do you people tell if it likes you? *Quieter.* The lanterns are still sinking. I count them every night. Last night it was nine. Low water, high hopes, though!",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_lore",
+          "speaker": "nanami",
+          "text": "When the fen takes someone, a tide-singer dances out on the water at dusk — the water only holds you while you're singing, so no stopping — and sings their lantern out to the deep marsh, where all the lost lights gather. *She grins.* We also stitch tide-songs onto babies' blankets, so if the river ever borrows one, it knows whose they are.",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_party_hub",
+          "speaker": "nanami",
+          "text": "*Nanami's bells chime as she tilts her head.* Anything else? I have lots of answers. Some of them are even about the question.",
+          "choices": [
+            {"text": "Tell me about tide-singing.", "next": "nan_lore"},
+            {"text": "You've stopped humming. Is something wrong?", "next": "nan_ask", "conditions": [{"type": "NotFlag", "key": "nanami_asked"}]},
+            {
+              "text": "(Teach her a walking song for stairs.)",
+              "next": "nan_gift",
+              "conditions": [{"type": "NotFlag", "key": "nanami_gifted"}],
+              "outcomes": [{"type": "SetFlag", "key": "nanami_gifted"}, {"type": "Approval", "key": "nanami", "amount": 7}]
+            },
+            {
+              "text": "What happened to your grandmother's sending?",
+              "next": "nan_story",
+              "conditions": [{"type": "Companion", "key": "nanami", "amount": 20}, {"type": "NotFlag", "key": "nanami_story_told"}]
+            },
+            {
+              "text": "Wait here for now. I'll come back for you.",
+              "next": "nan_dismissed",
+              "outcomes": [{"type": "Dismiss", "key": "nanami"}, {"type": "ClearFlag", "key": "recruited_nanami"}]
+            },
+            {"text": "Let's keep moving."}
+          ]
+        },
+        {
+          "id": "nan_dismissed",
+          "speaker": "nanami",
+          "text": "Okay! I'll be on the boardwalks, singing to the frogs. They're a terrible audience. Come back soon!"
+        },
+        {
+          "id": "nan_ask",
+          "speaker": "nanami",
+          "text": "Can I ask you a big one? Granny Sen said the fen gives and the fen takes, and we mustn't be greedy about either. But if you could pull just one lost light back out of the deep marsh — would you?",
+          "choices": [
+            {
+              "text": "No. I'd let them go, and keep them in my songs instead.",
+              "next": "nan_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "nanami_asked"}, {"type": "Approval", "key": "nanami", "amount": 8}]
+            },
+            {
+              "text": "Only if they wanted to come back. I'd ask them first.",
+              "next": "nan_ask_good",
+              "outcomes": [{"type": "SetFlag", "key": "nanami_asked"}, {"type": "Approval", "key": "nanami", "amount": 6}]
+            },
+            {
+              "text": "In a heartbeat. I'd drain the whole fen if I had to.",
+              "next": "nan_ask_bad",
+              "outcomes": [{"type": "SetFlag", "key": "nanami_asked"}, {"type": "Approval", "key": "nanami", "amount": -5}]
+            },
+            {"text": "I'd rather not say. Let's keep moving."}
+          ]
+        },
+        {
+          "id": "nan_ask_good",
+          "speaker": "nanami",
+          "text": "*She nods so hard her water-lilies wobble.* That's what Granny Sen said! Well — she said it with more frogs. But that.",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_ask_bad",
+          "speaker": "nanami",
+          "text": "*Nanami's face falls.* Drain the fen? But everything lives in the fen. The frogs and the herons and the lights and Granny. *She hugs her staff.* Please don't say things like that near the water. It listens.",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_gift",
+          "speaker": "nanami",
+          "text": "*You make one up on the spot: one step, two step, don't look down, a stair's just a hill in a crown.* Nanami tries it on a step. Then another. 'It WORKS! Stairs are only hills wearing hats!' She sings it at every staircase for the rest of the week.",
+          "next": "nan_party_hub"
+        },
+        {
+          "id": "nan_story",
+          "speaker": "nanami",
+          "text": "*For once, Nanami is quiet. She sits on the edge of the boardwalk and lets her feet dangle in the water.* Granny Sen was the tide-singer before me. When she got old she asked me to sing her sending, when it was time. She said I had the best voice in the fen. *Her voice wobbles.* When it was time, I danced out and I sang, and I got to the last verse... and I couldn't. I couldn't sing goodbye to her.",
+          "outcomes": [{"type": "SetFlag", "key": "nanami_story_told"}, {"type": "Approval", "key": "nanami", "amount": 3}],
+          "next": "nan_story2"
+        },
+        {
+          "id": "nan_story2",
+          "speaker": "nanami",
+          "text": "Her lantern sank. Right in front of me. And ever since, all over the fen, the lanterns sink before the song is done. *She scrubs her eyes with her wrist.* Everybody says it's the Hollow, or Mother Mire, or something in the deep water. But it started with me. I think I broke the fen.",
+          "choices": [
+            {
+              "text": "You didn't break anything. You loved her too much to finish one song. The fen knows the difference.",
+              "next": "nan_party_hub",
+              "outcomes": [{"type": "Approval", "key": "nanami", "amount": 5}]
+            },
+            {
+              "text": "Then we find whatever's really drowning the lights, and you sing her the last verse when we do.",
+              "next": "nan_party_hub",
+              "outcomes": [{"type": "Approval", "key": "nanami", "amount": 3}]
+            },
+            {"text": "(Say nothing. Let's keep moving.)"}
+          ]
+        },
+        {
+          "id": "nan_met",
+          "speaker": "nanami",
+          "text": "You came back! *She waves both arms, nearly topples off the boardwalk and recovers with a twirl.* Ta-da! That was on purpose.",
+          "conditions": [{"type": "Flag", "key": "nanami_met"}],
+          "fallback": "nan_hello",
           "choices": [
             {"text": "Come with me.", "next": "nan_join"},
             {"text": "Just passing by."}
           ]
         },
         {
+          "id": "nan_hello",
+          "speaker": "narrator",
+          "text": "*At the end of a sagging boardwalk a young woman in a sea-green wrap skirt is dancing barefoot on the open water — not the boardwalk, the water itself — singing to a single lantern bobbing in the reeds. The lantern drifts, flickers... and sinks. She stops, ankle-deep and suddenly ordinary, and stares at the place it went down.*",
+          "outcomes": [{"type": "SetFlag", "key": "nanami_met"}],
+          "next": "nan2"
+        },
+        {
+          "id": "nan2",
+          "speaker": "nanami",
+          "text": "Oh! Hello! Sorry, sorry — I didn't see you, I was singing. *She wades back to the boardwalk, the bells on her driftwood staff jangling.* Nanami, tide-singer of Mirefen. Not a very good one this week. Did you see? It sank. They keep sinking.",
+          "choices": [
+            {"text": "Why do the lanterns sink?", "next": "nan_q"},
+            {
+              "text": "(Crouch and taste the water.) This fen's gone sour. That isn't your doing.",
+              "check": {"skill": "Nature", "dc": 13, "success": "nan_chk_s", "failure": "nan_chk_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "The water holds you while you sing. That's old tide-magic — I can feel it too.",
+              "next": "nan_class",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {"text": "Torvan, you're a long way from your snows.", "next": "nan_friend", "conditions": [{"type": "InParty", "key": "torvan"}]},
+            {"text": "I'm going after whatever is drowning the lights. Will you sing them home with me?", "next": "nan_pitch"},
+            {"text": "Never mind."}
+          ]
+        },
+        {
+          "id": "nan_q",
+          "speaker": "nanami",
+          "text": "Nobody knows! Granny Sen would have known. *A tiny pause.* The old folks blame the Hollow. The young folks blame Mother Mire and her coven out in the deep fen. The frogs blame me. *She sighs.* The frogs might be right.",
+          "next": "nan_pitch"
+        },
+        {
+          "id": "nan_chk_s",
+          "speaker": "nanami",
+          "text": "*You cup the water. It tastes faintly of ash and old pennies, wrong in a way the reeds clearly know about.* Nanami sniffs it too, and her eyes go round. 'Ash. There's ash in the fen. It's not me. It's something in the water!' She hugs you, very wetly.",
+          "outcomes": [{"type": "SetFlag", "key": "nanami_confided"}, {"type": "Approval", "key": "nanami", "amount": 5}, {"type": "GiveXP", "amount": 50}],
+          "next": "nan_pitch"
+        },
+        {
+          "id": "nan_chk_f",
+          "speaker": "nanami",
+          "text": "*You cup the water and taste it thoughtfully. It tastes of fen.* Nanami watches, fascinated. 'Is it telling you anything?' 'That it's wet,' you admit. She giggles so hard she has to sit down.",
+          "next": "nan_pitch"
+        },
+        {
+          "id": "nan_class",
+          "speaker": "nanami",
+          "text": "*Her whole face lights up.* You can feel it? Nobody from dry land ever feels it! The water's always singing back, you only have to listen. *She grabs both your hands and swings them.* Oh, we're going to be friends. I've decided.",
+          "outcomes": [{"type": "Approval", "key": "nanami", "amount": 5}],
+          "next": "nan_pitch"
+        },
+        {
+          "id": "nan_friend",
+          "speaker": "nanami",
+          "text": "*Torvan stoops to look at her, and she stares up — and up — at his great curled horns.* 'Little water-singer,' he rumbles. 'The snow melts and runs down to your fen. We sing to the same water.' *Nanami beams so brightly the frogs go quiet.* 'Then you're practically my uncle!' Torvan considers this. 'Yes,' he says gravely. 'I accept.'",
+          "outcomes": [{"type": "Approval", "key": "nanami", "amount": 3}, {"type": "Approval", "key": "torvan", "amount": 3}],
+          "next": "nan_pitch"
+        },
+        {
+          "id": "nan_pitch",
+          "speaker": "nanami",
+          "text": "*She looks out at the dark water where the lantern went down.* Granny Sen always said the fen gives and takes, and a tide-singer's job is to keep the two even. Something's taking more than its share. *She grips her staff.* I can heal — I'm good at healing, it's just singing with your hands — and I can talk to frogs. Will you take me with you?",
+          "choices": [
+            {"text": "Of course. The road could use a song.", "next": "nan_join", "outcomes": [{"type": "Approval", "key": "nanami", "amount": 5}]},
+            {"text": "Fine. Just don't slow us down, kid.", "next": "nan_join", "outcomes": [{"type": "Approval", "key": "nanami", "amount": -3}]},
+            {"text": "Not yet. Never mind."}
+          ]
+        },
+        {
           "id": "nan_join",
           "speaker": "narrator",
-          "text": "*Nanami shoulders a pack and falls in beside you.*",
-          "outcomes": [
-            {"type": "Recruit", "key": "nanami"}
-          ]
+          "text": "*Nanami splashes a farewell to the frogs, tucks a fresh water-lily behind her ear and hops onto the boardwalk beside you. 'Low water, high hopes!' she announces, to nobody in particular and to everybody.*",
+          "outcomes": [{"type": "Recruit", "key": "nanami"}, {"type": "SetFlag", "key": "nanami_met"}]
         }
       ]
     }

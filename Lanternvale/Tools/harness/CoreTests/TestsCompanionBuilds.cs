@@ -15,11 +15,11 @@ namespace Lanternvale.Tests
         /// <summary>The role each companion's build is meant to give the companion AI (RoleInference from the dominant tree).</summary>
         static readonly Dictionary<string, UnitRole> ExpectedRoles = new Dictionary<string, UnitRole>
         {
-            // expansion companions (Docs/Expansion.md §8; contract stubs, refined by the companions builder)
-            { "bruna", UnitRole.Tank },       // Warrior: Protection
-            { "ysolde", UnitRole.Tank },      // Paladin: Protection (a tree role needs 5 talent points: from level 14)
-            { "liora", UnitRole.Healer },     // Priest: Holy
-            { "nanami", UnitRole.Healer },    // Shaman: Restoration (from level 14)
+            // the Ember Road companions (Docs/Expansion.md §8): two tanks and two healers for raids
+            { "bruna", UnitRole.Tank },       // Warrior: sword-and-board Protection (Shield Slam)
+            { "ysolde", UnitRole.Tank },      // Paladin: Protection (Holy Shield); a tree role needs 5 talent points: from level 14
+            { "liora", UnitRole.Healer },     // Priest: Discipline (Power Infusion), then Holy
+            { "nanami", UnitRole.Healer },    // Shaman: deep Restoration (Mana Tide), from level 14
             { "kael", UnitRole.Tank },        // Warrior: Protection
             { "seren", UnitRole.Healer },     // Priest: Holy, then Discipline
             { "aldric", UnitRole.MeleeDps },  // Paladin: sword-and-board Retribution

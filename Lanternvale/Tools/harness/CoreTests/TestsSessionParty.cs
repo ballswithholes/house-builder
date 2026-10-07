@@ -1,6 +1,7 @@
 // GameSession: companions (recruit, camp, dismiss, re-recruit), level sync, approval, leader, pets.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Lanternvale.Data;
 using Lanternvale.Rules;
 using Lanternvale.Session;
@@ -30,7 +31,17 @@ namespace Lanternvale.Tests
                 foreach (var a in u.Class.startingAbilities) Harness.Assert(db.Ability(a) == null || u.Knows(a), $"{id}: knows {a}");
                 foreach (var kv in u.Equipment.Equipped)
                     Harness.Assert(EquipmentRules.CannotEquipReason(u, kv.Value.Def, kv.Key) == null, $"{id}: legal {kv.Value.Name}");
-                Harness.Assert(u.Equipment.Count >= 1, $"{id}: signature gear equipped");
+                // signature gear: worn when the level allows it, else kept in the shared bags (the Ember Road companions'
+                // gear needs the level of the zone they are met in; TestsContentCompanions wears it there)
+                bool anyWearable = def.startingItems.Length == 0;
+                foreach (var itemId in def.startingItems)
+                {
+                    var item = db.Item(itemId);
+                    if (item.requiredLevel <= u.Level) { anyWearable = true; continue; }
+                    Harness.Assert(!u.Equipment.Equipped.Any(kv => kv.Value.Def.id == itemId) && s.Inventory.Has(itemId),
+                        $"{id}: {itemId} (level {item.requiredLevel}) waits in the bags at level {u.Level}");
+                }
+                if (anyWearable) Harness.Assert(u.Equipment.Count >= 1, $"{id}: signature gear equipped");
                 Harness.Assert(Math.Abs(u.Health - u.MaxHealth) < 0.01f, $"{id}: full health");
                 Harness.Assert(u.AutoPlay == s.Settings.CompanionAutoPlay, $"{id}: auto-play default");
             }
