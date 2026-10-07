@@ -1,0 +1,4811 @@
+{
+ "_note": "Brightwater dialogues: services, trainers, townsfolk and the town quests (zone_brightwater_quests.json).",
+ "dialogues": [
+  {
+   "id": "dlg_bw_bertram",
+   "start": "tr_greet",
+   "nodes": [
+    {
+     "id": "tr_greet",
+     "speaker": "bw_trainer_bertram",
+     "text": "*A broad, grey-whiskered knight leans on a practice sword like a walking stick.* Sir Bertram Oakes, late of the Heronguard, now teaching the young to hold a shield the right way up. Warriors and paladins, mostly. The occasional baker.",
+     "choices": [
+      {
+       "text": "Teach me to hit harder.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Warrior"
+        }
+       ],
+       "tag": "WARRIOR"
+      },
+      {
+       "text": "I seek the Light's instruction.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Paladin"
+        }
+       ],
+       "tag": "PALADIN"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_bertram"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "Is something troubling you, Sir Bertram?",
+       "next": "be_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "Level",
+         "amount": 16
+        }
+       ]
+      },
+      {
+       "text": "About the lanterns for the memorial...",
+       "next": "be_gather",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_memorial_lit"
+        }
+       ]
+      },
+      {
+       "text": "The lanterns are lit before the stone. All of them.",
+       "next": "be_ret",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_forty_names",
+         "value": "return"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_forty_turned_in"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_forty_names"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about the Heronguard.",
+       "next": "be_lore"
+      },
+      {
+       "text": "Could I practise on the straw knight?",
+       "next": "be_dummy"
+      },
+      {
+       "text": "[INSIGHT] You favour that knee like it owes you money.",
+       "check": {
+        "skill": "Insight",
+        "dc": 12,
+        "success": "be_knee_s",
+        "failure": "be_knee_f"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_hub",
+     "speaker": "bw_trainer_bertram",
+     "text": "Anything else? Speak up: my left ear went deaf on the mountain and my right one has opinions.",
+     "choices": [
+      {
+       "text": "Teach me to hit harder.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Warrior"
+        }
+       ],
+       "tag": "WARRIOR"
+      },
+      {
+       "text": "I seek the Light's instruction.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Paladin"
+        }
+       ],
+       "tag": "PALADIN"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_bertram"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "Is something troubling you, Sir Bertram?",
+       "next": "be_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "Level",
+         "amount": 16
+        }
+       ]
+      },
+      {
+       "text": "About the lanterns for the memorial...",
+       "next": "be_gather",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_memorial_lit"
+        }
+       ]
+      },
+      {
+       "text": "The lanterns are lit before the stone. All of them.",
+       "next": "be_ret",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_forty_names",
+         "value": "return"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_forty_turned_in"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_forty_names"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about the Heronguard.",
+       "next": "be_lore"
+      },
+      {
+       "text": "Could I practise on the straw knight?",
+       "next": "be_dummy"
+      },
+      {
+       "text": "[INSIGHT] You favour that knee like it owes you money.",
+       "check": {
+        "skill": "Insight",
+        "dc": 12,
+        "success": "be_knee_s",
+        "failure": "be_knee_f"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_a",
+     "speaker": "bw_trainer_bertram",
+     "text": "Harder, eh? Feet planted, hips first, and shout as if you mean it. The shout is half the work.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_bertram"
+      }
+     ]
+    },
+    {
+     "id": "tr_b",
+     "speaker": "bw_trainer_bertram",
+     "text": "The Light's a fine thing to stand in. Shield up, chin down, and let it do the shining.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_bertram"
+      }
+     ]
+    },
+    {
+     "id": "tr_respec",
+     "speaker": "bw_trainer_bertram",
+     "text": "Unlearning? At my age I'd pay good coin to unlearn half of what I know. Shall we?",
+     "choices": [
+      {
+       "text": "Yes, wipe the slate.",
+       "outcomes": [
+        {
+         "type": "OpenRespec",
+         "key": "bw_trainer_bertram"
+        }
+       ]
+      },
+      {
+       "text": "On second thought, no.",
+       "next": "tr_hub"
+      }
+     ]
+    },
+    {
+     "id": "be_dummy",
+     "speaker": "bw_trainer_bertram",
+     "text": "Sir Strawsworth? He's taken more blows than any knight in the order and never once complained. Go on, then.",
+     "outcomes": [
+      {
+       "type": "StartCombat",
+       "key": "enc_bw_training_dummy"
+      }
+     ]
+    },
+    {
+     "id": "be_lore",
+     "speaker": "bw_trainer_bertram",
+     "text": "Three hundred years we kept the fords and the river roads, riding the great herons. Proud birds. Terrible tempers. Twelve years ago forty of us rode up the high road to Skyreach after the shepherds saw fire in the clouds. Eleven of us rode home. *He looks across at the memorial.* The council broke the order the next spring. Said a broken order was cheaper than a mended one. They were right about the cost, at least.",
+     "choices": [
+      {
+       "text": "Who led the ride?",
+       "next": "be_lore2"
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_lore2",
+     "speaker": "bw_trainer_bertram",
+     "text": "Lord-Commander Aubric. Brave as a bull and about as good at listening. He ordered the charge uphill, into drake-fire. Young Ysolde, his standard-bearer, blew the retreat instead. That's why there are eleven of us and not none. *Quietly.* Some folk in this town still call her a coward. Those folk weren't on the mountain.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_knee_s",
+     "speaker": "bw_trainer_bertram",
+     "text": "*He barks a laugh.* It does owe me money. A drake took a bite of it on the mountain and the healers charged me twice for the stitches. *He pats it.* It tells me when it's going to rain, and when something's coming down the high road. It's been aching all month.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 75
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_knee_f",
+     "speaker": "bw_trainer_bertram",
+     "text": "Favour it? Nonsense. Fit as a fiddle. *He winces, very quietly.*",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_offer",
+     "speaker": "bw_trainer_bertram",
+     "text": "*He lowers his voice.* Tomorrow is twelve years since the Ride. Every year the Eleven light a lantern each at Aubric's stone, for the twenty-nine. Few of us are left in town to do it: Old Gideon at the ferry, who held the herons at the ford; Captain Rowan, who was a squire then; and Nettie Sparrow on the docks, who carries her mother's lantern. Ysolde... Ysolde won't come to the stone. My knee won't take the ferry steps, and my pride won't take the asking. Would you gather their lanterns?",
+     "choices": [
+      {
+       "text": "I'll gather the lanterns.",
+       "next": "be_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 16
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_forty_names"
+        }
+       ]
+      },
+      {
+       "text": "Why won't Ysolde come to the stone?",
+       "next": "be_ysolde"
+      },
+      {
+       "text": "Not now, Sir Bertram."
+      }
+     ]
+    },
+    {
+     "id": "be_ysolde",
+     "speaker": "bw_trainer_bertram",
+     "text": "Because she thinks the stone blames her. Twenty-nine names, and she's the one who sounded the horn that left them on the mountain. *He shakes his head.* The stone doesn't blame anyone. Stones are sensible like that. People are the trouble.",
+     "choices": [
+      {
+       "text": "I'll gather the lanterns.",
+       "next": "be_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 16
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_forty_names"
+        }
+       ]
+      },
+      {
+       "text": "Not now, Sir Bertram."
+      }
+     ]
+    },
+    {
+     "id": "be_accept",
+     "speaker": "bw_trainer_bertram",
+     "text": "Good. Good! Gideon is on the harbour stage, Rowan at the Watch House by the east gate, Nettie on the docks. Bring the lanterns to the stone by the river steps and set them before Aubric's tomb. Then come and tell an old man it's done.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_gather",
+     "speaker": "bw_trainer_bertram",
+     "text": "Gideon at the harbour, Rowan at the Watch House, Nettie on the docks. Then the stone by the river steps. Take your time. They've waited twelve years; they'll wait an afternoon.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "be_ret",
+     "speaker": "bw_trainer_bertram",
+     "text": "*He closes his eyes for a moment.* Thank you. I watched from the yard; I saw them catch, one after another, all the way down the steps. *He clears his throat roughly.* Take something from the old armoury. The order can't use it, and you've earned it twice over.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_tidewell",
+   "start": "tr_greet",
+   "nodes": [
+    {
+     "id": "tr_greet",
+     "speaker": "bw_trainer_tidewell",
+     "text": "*A weathered woman in an oilskin coat is gutting a pike by the campfire without looking at it.* Mags Tidewell, river warden. I keep the banks, count the eels and teach hunters and shamans to listen. Sit if you like. Mind the fish.",
+     "choices": [
+      {
+       "text": "Teach me to track and shoot.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Hunter"
+        }
+       ],
+       "tag": "HUNTER"
+      },
+      {
+       "text": "I'd learn the river's spirits.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Shaman"
+        }
+       ],
+       "tag": "SHAMAN"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_tidewell"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "What's the news on the river?",
+       "next": "ti_news"
+      },
+      {
+       "text": "[NATURE] The river's running low for the season.",
+       "check": {
+        "skill": "Nature",
+        "dc": 13,
+        "success": "ti_nat_s",
+        "failure": "ti_nat_f"
+       },
+       "once": true,
+       "tag": "NATURE"
+      },
+      {
+       "text": "Is the fen road safe?",
+       "next": "ti_road"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_hub",
+     "speaker": "bw_trainer_tidewell",
+     "text": "What else?",
+     "choices": [
+      {
+       "text": "Teach me to track and shoot.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Hunter"
+        }
+       ],
+       "tag": "HUNTER"
+      },
+      {
+       "text": "I'd learn the river's spirits.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Shaman"
+        }
+       ],
+       "tag": "SHAMAN"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_tidewell"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "What's the news on the river?",
+       "next": "ti_news"
+      },
+      {
+       "text": "[NATURE] The river's running low for the season.",
+       "check": {
+        "skill": "Nature",
+        "dc": 13,
+        "success": "ti_nat_s",
+        "failure": "ti_nat_f"
+       },
+       "once": true,
+       "tag": "NATURE"
+      },
+      {
+       "text": "Is the fen road safe?",
+       "next": "ti_road"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_a",
+     "speaker": "bw_trainer_tidewell",
+     "text": "Patience first. Then the wind. Then the arrow. Most folk do it backwards.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_tidewell"
+      }
+     ]
+    },
+    {
+     "id": "tr_b",
+     "speaker": "bw_trainer_tidewell",
+     "text": "The river spirit's old and slow and kind, if you're polite. Let's start with polite.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_tidewell"
+      }
+     ]
+    },
+    {
+     "id": "tr_respec",
+     "speaker": "bw_trainer_tidewell",
+     "text": "Unlearn? The river forgets things every spring. I suppose you can too.",
+     "choices": [
+      {
+       "text": "Yes, wipe the slate.",
+       "outcomes": [
+        {
+         "type": "OpenRespec",
+         "key": "bw_trainer_tidewell"
+        }
+       ]
+      },
+      {
+       "text": "On second thought, no.",
+       "next": "tr_hub"
+      }
+     ]
+    },
+    {
+     "id": "ti_news",
+     "speaker": "bw_trainer_tidewell",
+     "text": "Eels are running. Crocolisks aren't, yet, which is the sort of news I like. And not one barge from Mirefen in six weeks. The fen-folk used to pole up every tenday with peat and eels and gossip, and Granny Sen always sent me a jar of her pickled lotus root. Now nothing. Not even the pickles. Captain Rowan's worried, and she doesn't worry for sport.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ti_nat_s",
+     "speaker": "bw_trainer_tidewell",
+     "text": "*She looks up properly for the first time.* You've an eye. Aye, it's low, and it's warm, and it tastes of ash in the mornings. Something up north is breathing on the snow-melt. *She spits into the fire.* Mark my words, that's not weather. That's a creature.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 75
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ti_nat_f",
+     "speaker": "bw_trainer_tidewell",
+     "text": "Low? It's the river. It goes up, it goes down. *She returns to the pike.* Mostly it goes downstream.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ti_road",
+     "speaker": "bw_trainer_tidewell",
+     "text": "Safe as a road through a bog ever is. Follow the reeds south-west, keep to the high ground, and don't follow any lights you see over the water at night. Not every lantern in the fen wants you home.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_vell",
+   "start": "tr_greet",
+   "nodes": [
+    {
+     "id": "tr_greet",
+     "speaker": "bw_trainer_vell",
+     "text": "*A thin man with three pairs of spectacles pushed up into his white hair consults a pocket watch, then the clock tower, then the watch again.* Magister Orrin Vell, Keeper of the Clock. I instruct mages and warlocks, punctually. You are four minutes late, but then so is the clock, so we shall say nothing about it.",
+     "choices": [
+      {
+       "text": "Teach me the arcane.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Mage"
+        }
+       ],
+       "tag": "MAGE"
+      },
+      {
+       "text": "I'd learn the darker arts.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Warlock"
+        }
+       ],
+       "tag": "WARLOCK"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_vell"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "Dockmaster Hobb sent a crate of clock springs.",
+       "next": "ve_parcel",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_springs_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_springs_done"
+        }
+       ]
+      },
+      {
+       "text": "Why is the clock four minutes slow?",
+       "next": "ve_clock"
+      },
+      {
+       "text": "[ARCANA] There's a ward woven into that clock tower.",
+       "check": {
+        "skill": "Arcana",
+        "dc": 13,
+        "success": "ve_arc_s",
+        "failure": "ve_arc_f"
+       },
+       "once": true,
+       "tag": "ARCANA"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_hub",
+     "speaker": "bw_trainer_vell",
+     "text": "Anything further? Quickly, please. The bell rings in nine minutes. Thirteen, by the clock.",
+     "choices": [
+      {
+       "text": "Teach me the arcane.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Mage"
+        }
+       ],
+       "tag": "MAGE"
+      },
+      {
+       "text": "I'd learn the darker arts.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Warlock"
+        }
+       ],
+       "tag": "WARLOCK"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_vell"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "Dockmaster Hobb sent a crate of clock springs.",
+       "next": "ve_parcel",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_springs_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_springs_done"
+        }
+       ]
+      },
+      {
+       "text": "Why is the clock four minutes slow?",
+       "next": "ve_clock"
+      },
+      {
+       "text": "[ARCANA] There's a ward woven into that clock tower.",
+       "check": {
+        "skill": "Arcana",
+        "dc": 13,
+        "success": "ve_arc_s",
+        "failure": "ve_arc_f"
+       },
+       "once": true,
+       "tag": "ARCANA"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_a",
+     "speaker": "bw_trainer_vell",
+     "text": "Splendid. Arcane theory is merely clockwork with the lid off. Do mind your fingers.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_vell"
+      }
+     ]
+    },
+    {
+     "id": "tr_b",
+     "speaker": "bw_trainer_vell",
+     "text": "Dark is such an unkind word. 'Underlit.' Let us begin, and please do not summon anything onto the carpet.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_vell"
+      }
+     ]
+    },
+    {
+     "id": "tr_respec",
+     "speaker": "bw_trainer_vell",
+     "text": "Unlearning is simply learning wound backwards. It costs rather more, I'm afraid.",
+     "choices": [
+      {
+       "text": "Yes, wipe the slate.",
+       "outcomes": [
+        {
+         "type": "OpenRespec",
+         "key": "bw_trainer_vell"
+        }
+       ]
+      },
+      {
+       "text": "On second thought, no.",
+       "next": "tr_hub"
+      }
+     ]
+    },
+    {
+     "id": "ve_parcel",
+     "speaker": "bw_trainer_vell",
+     "text": "My springs! *He cradles the ticking crate.* Six weeks late, which is nearly on time for Hobb. The great wheel has been limping since the frost. Thank you. Truly. Here: the clock and I owe you a minute each.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 50
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ve_clock",
+     "speaker": "bw_trainer_vell",
+     "text": "Because the man who built it wound it four minutes slow on purpose, and the town council refused to pay for the correction. That was a hundred and twelve years ago. Brightwater has been four minutes late ever since and is, I think, much happier for it.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ve_arc_s",
+     "speaker": "bw_trainer_vell",
+     "text": "*He takes off two pairs of spectacles.* ...Very few people notice. Yes. The clock is a flood-ward. If the river ever rises as it did in the great flood, the bell rings by itself, four minutes before the water arrives. Four minutes to get the children up the hill. *He polishes the third pair.* It has rung twice. Both times, every child was on the hill.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 100
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ve_arc_f",
+     "speaker": "bw_trainer_vell",
+     "text": "A ward? In a clock? What a whimsical idea. *He winds his watch rather too quickly.*",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_corwin",
+   "start": "tr_greet",
+   "nodes": [
+    {
+     "id": "tr_greet",
+     "speaker": "bw_trainer_corwin",
+     "text": "*A lean man in a verger's black coat is polishing a candlestick with the absent care of someone who once valued candlesticks for very different reasons.* Corwin Ashby, verger of the Chapel of Small Lights. I teach priests their prayers and rogues their... manners. You'd be surprised how much the two have in common.",
+     "choices": [
+      {
+       "text": "I'd learn the Light's prayers.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Priest"
+        }
+       ],
+       "tag": "PRIEST"
+      },
+      {
+       "text": "Teach me something quiet.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Rogue"
+        }
+       ],
+       "tag": "ROGUE"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_corwin"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "You don't look much like a verger.",
+       "next": "co_story"
+      },
+      {
+       "text": "[INSIGHT] You watch the door like a man who used to come in through the window.",
+       "check": {
+        "skill": "Insight",
+        "dc": 13,
+        "success": "co_ins_s",
+        "failure": "co_ins_f"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_hub",
+     "speaker": "bw_trainer_corwin",
+     "text": "Anything else, friend?",
+     "choices": [
+      {
+       "text": "I'd learn the Light's prayers.",
+       "next": "tr_a",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Priest"
+        }
+       ],
+       "tag": "PRIEST"
+      },
+      {
+       "text": "Teach me something quiet.",
+       "next": "tr_b",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Rogue"
+        }
+       ],
+       "tag": "ROGUE"
+      },
+      {
+       "text": "I'd like to train.",
+       "outcomes": [
+        {
+         "type": "OpenTrainer",
+         "key": "bw_trainer_corwin"
+        }
+       ]
+      },
+      {
+       "text": "I want to unlearn my talents.",
+       "next": "tr_respec"
+      },
+      {
+       "text": "You don't look much like a verger.",
+       "next": "co_story"
+      },
+      {
+       "text": "[INSIGHT] You watch the door like a man who used to come in through the window.",
+       "check": {
+        "skill": "Insight",
+        "dc": 13,
+        "success": "co_ins_s",
+        "failure": "co_ins_f"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "tr_a",
+     "speaker": "bw_trainer_corwin",
+     "text": "Kneel when you must, stand when you can, and always say thank you. The Light is very fond of manners.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_corwin"
+      }
+     ]
+    },
+    {
+     "id": "tr_b",
+     "speaker": "bw_trainer_corwin",
+     "text": "Quiet is easy. Quiet AND kind is the trick. Watch my hands. No, the other hand.",
+     "outcomes": [
+      {
+       "type": "OpenTrainer",
+       "key": "bw_trainer_corwin"
+      }
+     ]
+    },
+    {
+     "id": "tr_respec",
+     "speaker": "bw_trainer_corwin",
+     "text": "Unlearning? I've done a great deal of it. Mostly about locks.",
+     "choices": [
+      {
+       "text": "Yes, wipe the slate.",
+       "outcomes": [
+        {
+         "type": "OpenRespec",
+         "key": "bw_trainer_corwin"
+        }
+       ]
+      },
+      {
+       "text": "On second thought, no.",
+       "next": "tr_hub"
+      }
+     ]
+    },
+    {
+     "id": "co_story",
+     "speaker": "bw_trainer_corwin",
+     "text": "Twenty years ago I climbed through that chapel's window to steal its silver candlesticks. Mother Wren was sitting in the dark with a pot of tea and two cups. She said, 'You'll want milk, after a climb like that.' *He sets the candlestick down very gently.* I've been here ever since. Nobody ever asked me to give the candlesticks back. I just started polishing them.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "co_ins_s",
+     "speaker": "bw_trainer_corwin",
+     "text": "*He smiles crookedly.* Old habits. I still count the exits in every room. Four here, if you include the bell tower, which you shouldn't. *He leans closer.* And the Crane warehouse has a back door that opens at midnight, which is none of my business, and so I am telling you.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 75
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "co_ins_f",
+     "speaker": "bw_trainer_corwin",
+     "text": "The door? I'm watching for the bell-ringer. He's late. He's always late. It's the clock's fault.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "tr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_marigold",
+   "start": "mg_greet",
+   "nodes": [
+    {
+     "id": "mg_greet",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "*A round, rosy woman with flour to the elbows waves a ladle at you.* Welcome to the Lantern & Heron! Beds upstairs, pies downstairs, and the best view of the clock in Brightwater, for all the good it does anyone. What can I do you for?",
+     "choices": [
+      {
+       "text": "I'd like a room for the night.",
+       "next": "mg_room"
+      },
+      {
+       "text": "What's on the menu?",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_innkeeper_marigold"
+        }
+       ]
+      },
+      {
+       "text": "Heard any gossip?",
+       "next": "mg_gossip"
+      },
+      {
+       "text": "Why is it called the Lantern & Heron?",
+       "next": "mg_name"
+      },
+      {
+       "text": "[PERSUASION] Surely a weary traveller deserves a slice of pie on the house.",
+       "check": {
+        "skill": "Persuasion",
+        "dc": 13,
+        "success": "mg_pie_s",
+        "failure": "mg_pie_f"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "mg_hub",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "Anything else, pet?",
+     "choices": [
+      {
+       "text": "I'd like a room for the night.",
+       "next": "mg_room"
+      },
+      {
+       "text": "What's on the menu?",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_innkeeper_marigold"
+        }
+       ]
+      },
+      {
+       "text": "Heard any gossip?",
+       "next": "mg_gossip"
+      },
+      {
+       "text": "Why is it called the Lantern & Heron?",
+       "next": "mg_name"
+      },
+      {
+       "text": "[PERSUASION] Surely a weary traveller deserves a slice of pie on the house.",
+       "check": {
+        "skill": "Persuasion",
+        "dc": 13,
+        "success": "mg_pie_s",
+        "failure": "mg_pie_f"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "mg_room",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "Top of the stairs, third door. The bed's goose-down, the quilt's patchwork, and the window looks right at the clock, so you'll always know exactly how late you are. Sleep well.",
+     "outcomes": [
+      {
+       "type": "Rest"
+      }
+     ]
+    },
+    {
+     "id": "mg_gossip",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "Ooh, where to start. Tamsin Reed's lost that awful little heron again. Bo on the docks has decided the herring are up to something. Sir Bertram's been polishing his old helm, which means the anniversary of the Ride, bless him. And Ottoline says she's invented a potion that tastes nice, which I'll believe when I'm dead.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "mg_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "mg_name",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "My great-grandmother kept the lantern that guided the Heronguard home across the ford at night. The herons learned to fly to it. One of them used to sit on the sign and eat the customers' chips. *She points up.* That's his great-great-grandson on the roof. He still eats the chips.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "mg_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "mg_pie_s",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "*She narrows her eyes, then laughs.* Oh, go on, you've a honest face under all that road. Two slices. Don't tell the Watch, they'll all want one.",
+     "outcomes": [
+      {
+       "type": "GiveItem",
+       "key": "bw_food_heron_pie",
+       "amount": 2
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "mg_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "mg_pie_f",
+     "speaker": "bw_innkeeper_marigold",
+     "text": "On the house? Pet, if I gave pie away to every weary traveller, the house would be a hut. *She pats your arm.* It's very good pie, though. Worth every copper.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "mg_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_pell",
+   "start": "pe_greet",
+   "nodes": [
+    {
+     "id": "pe_greet",
+     "speaker": "bw_merchant_pell",
+     "text": "*A small, round man stands behind a stall so crowded it has a second, smaller stall growing out of its side.* Pell Underbough, General Goods! Bandages, powders, wands, poisons for the discerning rogue, and a very reasonable ankh. If I haven't got it, you don't need it. If you need it, I'll get it. If you don't need it, I'll sell it to you anyway.",
+     "choices": [
+      {
+       "text": "Show me your wares.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_merchant_pell"
+        }
+       ]
+      },
+      {
+       "text": "What's the strangest thing you've ever sold?",
+       "next": "pe_strange"
+      },
+      {
+       "text": "Do you sell maps?",
+       "next": "pe_maps"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "pe_hub",
+     "speaker": "bw_merchant_pell",
+     "text": "What else can I find for you?",
+     "choices": [
+      {
+       "text": "Show me your wares.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_merchant_pell"
+        }
+       ]
+      },
+      {
+       "text": "What's the strangest thing you've ever sold?",
+       "next": "pe_strange"
+      },
+      {
+       "text": "Do you sell maps?",
+       "next": "pe_maps"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "pe_strange",
+     "speaker": "bw_merchant_pell",
+     "text": "A heron's left boot. Don't ask me where the right one went. Don't ask me why a heron had boots. A Heronguard knight bought it and wept. I didn't charge him. *He sniffs.* I'm a merchant, not a monster.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "pe_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "pe_maps",
+     "speaker": "bw_merchant_pell",
+     "text": "Maps? Of what, the river? It goes that way. *He points south.* The roads go that way and that way. *West, then north-west.* The fen road to Mirefen, the high road to Skyreach. For anything more particular, ask Penhallow at the archive. He has maps of places that aren't there any more.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "pe_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_ottoline",
+   "start": "ot_greet",
+   "nodes": [
+    {
+     "id": "ot_greet",
+     "speaker": "bw_apothecary_ottoline",
+     "text": "*A brisk woman with a red bandana and a bandolier of glowing vials looks you up and down like a recipe.* Ottoline Sedge, apothecary! Healing draughts, mana tonics, elixirs for strength, wit and courage, and wards against fire, frost and fen. Everything tested. Mostly on me.",
+     "choices": [
+      {
+       "text": "Show me your potions.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_apothecary_ottoline"
+        }
+       ]
+      },
+      {
+       "text": "What's in the green one?",
+       "next": "ot_green"
+      },
+      {
+       "text": "[NATURE] Is that marsh-mint in your Fen-Ward Tonic?",
+       "check": {
+        "skill": "Nature",
+        "dc": 13,
+        "success": "ot_nat_s",
+        "failure": "ot_nat_f"
+       },
+       "once": true,
+       "tag": "NATURE"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ot_hub",
+     "speaker": "bw_apothecary_ottoline",
+     "text": "Anything else? I've a cauldron that needs stirring in roughly... now.",
+     "choices": [
+      {
+       "text": "Show me your potions.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_apothecary_ottoline"
+        }
+       ]
+      },
+      {
+       "text": "What's in the green one?",
+       "next": "ot_green"
+      },
+      {
+       "text": "[NATURE] Is that marsh-mint in your Fen-Ward Tonic?",
+       "check": {
+        "skill": "Nature",
+        "dc": 13,
+        "success": "ot_nat_s",
+        "failure": "ot_nat_f"
+       },
+       "once": true,
+       "tag": "NATURE"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ot_green",
+     "speaker": "bw_apothecary_ottoline",
+     "text": "The green one is a Fen-Ward Tonic. The OTHER green one is soup. Please don't confuse them; I did, once, and the soup was very disappointed in me.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ot_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ot_nat_s",
+     "speaker": "bw_apothecary_ottoline",
+     "text": "*She brightens.* It IS! Nobody ever notices. Picked fresh from the river steps under a waxing moon, which doesn't matter at all, but it makes the customers feel better. Here, take a pair, on the house. Tell everyone you know someone who knows marsh-mint.",
+     "outcomes": [
+      {
+       "type": "GiveItem",
+       "key": "bw_elixir_fen_ward",
+       "amount": 2
+      },
+      {
+       "type": "GiveXP",
+       "amount": 50
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ot_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ot_nat_f",
+     "speaker": "bw_apothecary_ottoline",
+     "text": "Marsh-mint? Goodness, no. That's gravel-wort. Marsh-mint would make your ears whistle. *She pauses.* ...It might be marsh-mint.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ot_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_dunstan",
+   "start": "du_greet",
+   "nodes": [
+    {
+     "id": "du_greet",
+     "speaker": "bw_weaponsmith_dunstan",
+     "text": "*A soot-streaked smith slams a hammer down on a glowing blade, then notices you.* Dunstan Hollowell, the elder Hollowell, weaponsmith. Swords, axes, maces, bows, the lot, and a few with a bit of extra love hammered in. If my sister tells you she's older, she's lying by four minutes.",
+     "choices": [
+      {
+       "text": "Show me your weapons.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_weaponsmith_dunstan"
+        }
+       ]
+      },
+      {
+       "text": "Four minutes?",
+       "next": "du_four"
+      },
+      {
+       "text": "[INSIGHT] You two argue like people who'd hate to stop.",
+       "check": {
+        "skill": "Insight",
+        "dc": 12,
+        "success": "du_ins_s",
+        "failure": "du_ins_f"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "du_hub",
+     "speaker": "bw_weaponsmith_dunstan",
+     "text": "Anything else? The forge won't wait. Well, it will, but it sulks.",
+     "choices": [
+      {
+       "text": "Show me your weapons.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_weaponsmith_dunstan"
+        }
+       ]
+      },
+      {
+       "text": "Four minutes?",
+       "next": "du_four"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "du_four",
+     "speaker": "bw_weaponsmith_dunstan",
+     "text": "We were born at the stroke of noon. By the clock tower, I came first. By the sun, she did. The clock's four minutes slow. *He folds his arms.* I maintain that the clock is the legal authority in this town.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "du_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "du_ins_s",
+     "speaker": "bw_weaponsmith_dunstan",
+     "text": "*He stops hammering.* ...Don't tell her. Here. Our cousin Garrow in Lanternvale sent a pair of his whetstones. He says they 'know what they're doing'. Take them before she does.",
+     "outcomes": [
+      {
+       "type": "GiveItem",
+       "key": "whetstone_garrow",
+       "amount": 2
+      },
+      {
+       "type": "GiveXP",
+       "amount": 50
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "du_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "du_ins_f",
+     "speaker": "bw_weaponsmith_dunstan",
+     "text": "Argue? We don't argue. We disagree loudly and accurately.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "du_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_dagny",
+   "start": "da_greet",
+   "nodes": [
+    {
+     "id": "da_greet",
+     "speaker": "bw_armourer_dagny",
+     "text": "*An identical soot-streaked smith adjusts the straps on a mail coat.* Dagny Hollowell, the ELDER Hollowell, armourer. Cloth, leather and mail for every body and budget. If my brother said he's older, he's going by that ridiculous clock.",
+     "choices": [
+      {
+       "text": "Show me your armour.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_armourer_dagny"
+        }
+       ]
+      },
+      {
+       "text": "Do you two ever agree on anything?",
+       "next": "da_agree"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "da_agree",
+     "speaker": "bw_armourer_dagny",
+     "text": "Twice. Once that the Heronguard were robbed by the council, and once that Marigold's pie is the best in the valley. *She sniffs.* He agreed second, which I count as a win.",
+     "choices": [
+      {
+       "text": "Show me your armour.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_armourer_dagny"
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_poppy",
+   "start": "po_greet",
+   "nodes": [
+    {
+     "id": "po_greet",
+     "speaker": "bw_greengrocer_poppy",
+     "text": "*A cheerful woman stacks apples into a pyramid that defies several laws.* Poppy Marsh, fruit, veg, cake and things in between! Mind the turnip shaped like Captain Rowan; I'm saving it for her birthday.",
+     "choices": [
+      {
+       "text": "Show me what you have.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_greengrocer_poppy"
+        }
+       ]
+      },
+      {
+       "text": "Is business good?",
+       "next": "po_biz"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "po_biz",
+     "speaker": "bw_greengrocer_poppy",
+     "text": "Good as ever, except the fen-folk haven't come up the river for weeks, so no marsh-cress and no fen-berries. And Silas next door has been grumpy as a wet cat. Grumpier. A wet cat with a grievance.",
+     "choices": [
+      {
+       "text": "Show me what you have.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_greengrocer_poppy"
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_wren",
+   "start": "wr_greet",
+   "nodes": [
+    {
+     "id": "wr_greet",
+     "speaker": "bw_mother_wren",
+     "text": "*A tiny old woman in a candle-coloured shawl sits on the chapel bench with a teapot balanced beside her, as though it had been there for a hundred years.* Hello, dear. I'm Mother Wren. I used to keep the lanterns; now I mostly keep the bench warm. Sit, if you like.",
+     "choices": [
+      {
+       "text": "I have a parcel of lamp wicks from Dockmaster Hobb.",
+       "next": "wr_parcel",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_wicks_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_wicks_done"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about Liora.",
+       "next": "wr_liora"
+      },
+      {
+       "text": "What is the Chapel of Small Lights?",
+       "next": "wr_chapel"
+      },
+      {
+       "text": "Would you like some company for a cup of tea?",
+       "next": "wr_tea",
+       "once": true
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_hub",
+     "speaker": "bw_mother_wren",
+     "text": "Anything else, dear? Take your time. The lanterns aren't going anywhere.",
+     "choices": [
+      {
+       "text": "I have a parcel of lamp wicks from Dockmaster Hobb.",
+       "next": "wr_parcel",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_wicks_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_wicks_done"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about Liora.",
+       "next": "wr_liora"
+      },
+      {
+       "text": "What is the Chapel of Small Lights?",
+       "next": "wr_chapel"
+      },
+      {
+       "text": "Would you like some company for a cup of tea?",
+       "next": "wr_tea",
+       "once": true
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_parcel",
+     "speaker": "bw_mother_wren",
+     "text": "Wicks! Bless that grumpy man. We were down to the last box, and Liora's lad has been trimming them so short they burn like birthday candles. *She tucks the parcel under her shawl.* Thank you, dear.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "wr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_liora",
+     "speaker": "bw_mother_wren",
+     "text": "I found her in the reeds below the weir, fast asleep in a basket, with a blanket stitched all over with a tide-song nobody here could read. *She smiles.* I lit a lantern for whoever sent her, and she's lit it every night since she could reach the wick.",
+     "choices": [
+      {
+       "text": "And now she's out on the road.",
+       "next": "wr_liora_away",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "recruited_liora"
+        }
+       ]
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "wr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_liora_away",
+     "speaker": "bw_mother_wren",
+     "text": "She is, isn't she. Good. A lantern isn't meant to sit on a shelf forever. *She pats your hand.* Bring her home sometimes. And make her eat something; she forgets.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "wr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_chapel",
+     "speaker": "bw_mother_wren",
+     "text": "Boatmen leave a lantern for anyone the river hasn't brought home yet, and we light them every dusk so the river knows someone is expecting them. Four hundred and twelve lanterns. Four hundred and thirteen, counting the goat. *She chuckles.* Most of them come home, you know. People forget that part.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "wr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wr_tea",
+     "speaker": "bw_mother_wren",
+     "text": "*She pours two cups without asking how you take it, and somehow gets it exactly right.* You look like someone who carries other people's lanterns, dear. It's heavy work. Drink up. *The tea is very strong and very sweet, and you feel the road go out of your shoulders.*",
+     "outcomes": [
+      {
+       "type": "HealParty"
+      },
+      {
+       "type": "GiveXP",
+       "amount": 50
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "wr_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_hobb",
+   "start": "ho_done",
+   "nodes": [
+    {
+     "id": "ho_done",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "*The dockmaster is chalking numbers onto a slate with an air of grievance.* Ah, my parcel-carrier. Everything floating that should float. What can I do for you?",
+     "conditions": [
+      {
+       "type": "QuestComplete",
+       "key": "bw_q_parcels"
+      }
+     ],
+     "fallback": "ho_return",
+     "choices": [
+      {
+       "text": "How's the river trade?",
+       "next": "ho_trade"
+      },
+      {
+       "text": "Anything strange on the river lately?",
+       "next": "ho_strange"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_return",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Well? Did my parcels arrive, or are they halfway to the sea?",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_parcels",
+       "value": "return"
+      }
+     ],
+     "fallback": "ho_deliver",
+     "choices": [
+      {
+       "text": "All three parcels delivered, dry and on time.",
+       "next": "ho_paid",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_parcels_paid"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_parcels"
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_deliver",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Still carrying my parcels? Wicks to Mother Wren on the chapel steps, across the bridge. Springs to Magister Vell at the town hall. The letter to Captain Rowan at the Watch House by the east gate.",
+     "conditions": [
+      {
+       "type": "QuestActive",
+       "key": "bw_q_parcels"
+      }
+     ],
+     "fallback": "ho_greet",
+     "choices": [
+      {
+       "text": "I've lost the lamp wicks.",
+       "next": "ho_regive",
+       "conditions": [
+        {
+         "type": "NotHasItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_wicks_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "I've lost the clock springs.",
+       "next": "ho_regive",
+       "conditions": [
+        {
+         "type": "NotHasItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_springs_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "I've lost the letter.",
+       "next": "ho_regive",
+       "conditions": [
+        {
+         "type": "NotHasItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_letter_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_regive",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "*He produces a second, identical parcel from under the counter with the weariness of long experience.* Things fall in the river. It's a river. Try to keep this one.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_greet",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "*A barrel-chested man in a dockmaster's coat glares at a slate covered in tallies.* Dockmaster Hobb. If it floats, I've taxed it. If it sinks, I've taxed it twice. What do you want?",
+     "choices": [
+      {
+       "text": "Need a hand on the docks?",
+       "next": "ho_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "Level",
+         "amount": 12
+        }
+       ]
+      },
+      {
+       "text": "How's the river trade?",
+       "next": "ho_trade"
+      },
+      {
+       "text": "Anything strange on the river lately?",
+       "next": "ho_strange"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_offer",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Do I! Three parcels in off the morning barge and not one of my lads willing to cross the bridge before lunch. Lamp wicks for Mother Wren at the chapel, clock springs for Magister Vell at the town hall, and a letter for Captain Rowan. Keep them dry. That's the whole job. Keep them dry.",
+     "choices": [
+      {
+       "text": "I'll carry them.",
+       "next": "ho_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 12
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_wicks",
+         "amount": 1
+        },
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_springs",
+         "amount": 1
+        },
+        {
+         "type": "GiveItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "Not today, Dockmaster."
+      }
+     ]
+    },
+    {
+     "id": "ho_accept",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Good. Wicks across the bridge to the chapel steps. Springs to the clock tower. The letter to the Watch House by the east gate. Back here when you're done and I'll see you right.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_paid",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "*He ticks three tallies with a flourish.* Dry, delivered and on time. You'd make a dockhand yet. Here: take your pick from the lost-and-found. Nobody's claimed any of it in a year, so legally it's mine, and generously it's yours.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_trade",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Grain down from Amberfield, wool and timber from the hills, and nothing at all up from Mirefen these six weeks. Not a barge, not an eel, not a word. *He taps the slate.* Six weeks of nothing is a number I don't like.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ho_greet"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ho_strange",
+     "speaker": "bw_dockmaster_hobb",
+     "text": "Strange? Boats at night with no lanterns, that's strange. Ask Bo; he's been muttering about it for a week. And the river's tasted of ash some mornings. Old Gideon says it did that twelve years ago too. Gideon says a lot of things.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ho_greet"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_gideon",
+   "start": "gi_greet",
+   "nodes": [
+    {
+     "id": "gi_greet",
+     "speaker": "bw_ferryman_gideon",
+     "text": "*An old ferryman puffs on a clay pipe, leaning on a punt pole with a lantern hooked to the top.* Ferry to the west bank, five copper. Bridge is free. Bridge doesn't have me, though, does it?",
+     "choices": [
+      {
+       "text": "Take me across to the chapel steps. (5 copper)",
+       "conditions": [
+        {
+         "type": "Gold",
+         "amount": 5
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeGold",
+         "amount": 5
+        },
+        {
+         "type": "Teleport",
+         "key": "brightwater",
+         "value": "bw_ferry_west"
+        }
+       ]
+      },
+      {
+       "text": "Gideon, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "gi_lantern",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_gideon"
+        }
+       ]
+      },
+      {
+       "text": "Were you one of the Heronguard?",
+       "next": "gi_hg"
+      },
+      {
+       "text": "Why is there a bridge AND a ferry?",
+       "next": "gi_why"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "gi_hub",
+     "speaker": "bw_ferryman_gideon",
+     "text": "Anything else? Tide's not waiting. River hasn't got a tide, mind, but it's the principle.",
+     "choices": [
+      {
+       "text": "Take me across to the chapel steps. (5 copper)",
+       "conditions": [
+        {
+         "type": "Gold",
+         "amount": 5
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeGold",
+         "amount": 5
+        },
+        {
+         "type": "Teleport",
+         "key": "brightwater",
+         "value": "bw_ferry_west"
+        }
+       ]
+      },
+      {
+       "text": "Gideon, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "gi_lantern",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_gideon"
+        }
+       ]
+      },
+      {
+       "text": "Were you one of the Heronguard?",
+       "next": "gi_hg"
+      },
+      {
+       "text": "Why is there a bridge AND a ferry?",
+       "next": "gi_why"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "gi_why",
+     "speaker": "bw_ferryman_gideon",
+     "text": "Bridge is for people in a hurry. Ferry's for people who'd like to sit down for a bit and hear about my knees. *He puffs.* You'd be surprised how many of the second kind there are.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "gi_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "gi_hg",
+     "speaker": "bw_ferryman_gideon",
+     "text": "Me? No. I was the heron-groom. Fed 'em, mucked 'em out, got bit by every one of 'em. When the Forty rode north I held the spare birds at the ford. *He looks at the water.* When the herons came back down the high road, I held them too. Twenty-nine of them without riders. They waited at the ford for a week. Wouldn't eat. *He nods toward the river steps.* Sir Wadsworth, Dame Ysolde's old bird, is the last of them. Fed him from a chick. He still bites me, out of tradition.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "gi_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "gi_lantern",
+     "speaker": "bw_ferryman_gideon",
+     "text": "*He's quiet a long while. Then he unhooks the lantern from his punt pole.* This one's lit the ford every night for twelve years. Never let it go out. Bertram knows that; that's why he sent you and didn't come himself, the old goat. *He presses it into your hands.* Light it at the stone. Tell 'em the herons waited.",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_lantern_gideon"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_memorial_lantern",
+       "amount": 1
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "gi_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_ferry_bell",
+   "start": "fb_ring",
+   "nodes": [
+    {
+     "id": "fb_ring",
+     "speaker": "narrator",
+     "text": "You ring the brass bell. Across the river, Old Gideon sighs loudly enough to hear over the water, knocks out his pipe, and poles the ferry over.",
+     "choices": [
+      {
+       "text": "(Ride back across to the harbour. 5 copper.)",
+       "conditions": [
+        {
+         "type": "Gold",
+         "amount": 5
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeGold",
+         "amount": 5
+        },
+        {
+         "type": "Teleport",
+         "key": "brightwater",
+         "value": "bw_ferry_east"
+        }
+       ]
+      },
+      {
+       "text": "(Leave the bell alone.)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_bo",
+   "start": "bo_bribed",
+   "nodes": [
+    {
+     "id": "bo_bribed",
+     "speaker": "bw_dockhand_bo",
+     "text": "*Bo won't quite meet your eye.* Silas's boat went out in the night. Didn't come back. Funny, that. *He coils a rope very carefully.* I thought you'd do right by the docks, is all.",
+     "conditions": [
+      {
+       "type": "QuestComplete",
+       "key": "bw_q_smugglers"
+      },
+      {
+       "type": "Flag",
+       "key": "bw_silas_bribed"
+      }
+     ],
+     "fallback": "bo_done",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_done",
+     "speaker": "bw_dockhand_bo",
+     "text": "*Bo grins and claps you on the shoulder hard enough to rattle teeth.* No more sloshing herring! The Watch carted off the jars, and the night boats have stopped. I can sleep again. Well. I could always sleep. Now I can sleep without feeling clever about it.",
+     "conditions": [
+      {
+       "type": "QuestComplete",
+       "key": "bw_q_smugglers"
+      }
+     ],
+     "fallback": "bo_report",
+     "choices": [
+      {
+       "text": "How's work on the docks?",
+       "next": "bo_work"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_report",
+     "speaker": "bw_dockhand_bo",
+     "text": "Silas sorted? Then go tell the Captain, quick. Watch House, by the east gate. Blue door. Big banners. Can't miss it.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_smugglers",
+       "value": "report"
+      }
+     ],
+     "fallback": "bo_confront",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_confront",
+     "speaker": "bw_dockhand_bo",
+     "text": "Lantern oil?! Under the herring? *He goes pale, then red.* Silas Crane. Those are his crates. He's at his stall in the square right now, selling trout like butter wouldn't melt. Go and have a word, would you? I'd only shout.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_smugglers",
+       "value": "confront"
+      }
+     ],
+     "fallback": "bo_inspect",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_inspect",
+     "speaker": "bw_dockhand_bo",
+     "text": "The crates are behind the Crane warehouse, the tall house by the harbour. Have a look when nobody's watching. Sloshing herring. I ask you.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_smugglers",
+       "value": "inspect"
+      }
+     ],
+     "fallback": "bo_greet",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_greet",
+     "speaker": "bw_dockhand_bo",
+     "text": "*A broad dockhand in a red knit cap is staring at a stack of crates with deep suspicion.* Morning. Bo Tiller. Don't mind me. I'm just... watching the herring.",
+     "choices": [
+      {
+       "text": "Something wrong with those crates?",
+       "next": "bo_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_smugglers"
+        },
+        {
+         "type": "Level",
+         "amount": 15
+        }
+       ]
+      },
+      {
+       "text": "How's work on the docks?",
+       "next": "bo_work"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_offer",
+     "speaker": "bw_dockhand_bo",
+     "text": "'Salted herring', it says on the side. Herring don't slosh, friend. And they don't come in at midnight on a boat with no lantern, and Silas Crane doesn't tip the dockhands double to not unload them. *He lowers his voice.* I'm not clever. But I know fish.",
+     "choices": [
+      {
+       "text": "I'll take a look at those crates.",
+       "next": "bo_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 15
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_smugglers"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_on"
+        }
+       ]
+      },
+      {
+       "text": "Not my business, Bo."
+      }
+     ]
+    },
+    {
+     "id": "bo_accept",
+     "speaker": "bw_dockhand_bo",
+     "text": "Behind the warehouse. The tall house with the fish sign. If anyone asks, you're... inspecting the herring for freshness. Very important job.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "bo_work",
+     "speaker": "bw_dockhand_bo",
+     "text": "Heavy, wet, smelly, and I love it. You lift a thing, you put it down somewhere better. Not many jobs are that honest. *He glances at the crates.* Most of the things I lift are honest, anyway.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_nettie",
+   "start": "ne_heron",
+   "nodes": [
+    {
+     "id": "ne_heron",
+     "speaker": "bw_dockhand_nettie",
+     "text": "The Admiral? Little grey thing, one wing on sideways, face like a disappointed magistrate? *She laughs.* He nicked a herring off Silas's stall this morning and flapped off upriver like a thief in a song. The reeds above the Heron Ford, on the west bank, I'd bet. Here: take a bucket of minnows. No heron alive can say no to minnows.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_lost_heron",
+       "value": "ask"
+      }
+     ],
+     "fallback": "ne_greet",
+     "outcomes": [
+      {
+       "type": "GiveItem",
+       "key": "bw_minnows",
+       "amount": 1
+      }
+     ],
+     "choices": [
+      {
+       "text": "Thanks, Nettie.",
+       "next": "ne_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_greet",
+     "speaker": "bw_dockhand_nettie",
+     "text": "*A wiry young woman in a striped shirt is splicing a rope with her teeth.* Mm. *She spits out the rope.* Nettie Sparrow. Dock-hand, rope-mender, gull-botherer. What d'you need?",
+     "choices": [
+      {
+       "text": "Nettie, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "ne_forty",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_nettie"
+        }
+       ]
+      },
+      {
+       "text": "Have you seen anything odd at night?",
+       "next": "ne_night"
+      },
+      {
+       "text": "What's it like on the docks?",
+       "next": "ne_docks"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_hub",
+     "speaker": "bw_dockhand_nettie",
+     "text": "Anything else? I've three ropes to mend and a gull to have words with.",
+     "choices": [
+      {
+       "text": "Nettie, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "ne_forty",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_nettie"
+        }
+       ]
+      },
+      {
+       "text": "Have you seen anything odd at night?",
+       "next": "ne_night"
+      },
+      {
+       "text": "What's it like on the docks?",
+       "next": "ne_docks"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_docks",
+     "speaker": "bw_dockhand_nettie",
+     "text": "Best job in Brightwater. You see every boat, every face, every heron that steals a fish. *She squints upriver.* You see who's coming home, too. And who isn't.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ne_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_night",
+     "speaker": "bw_dockhand_nettie",
+     "text": "Boats. No lanterns, midnight, tie up at the Crane warehouse, gone by the second bell. Nobody rows at midnight unless they don't want to be seen rowing. Bo's been chewing on it all week.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ne_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_forty",
+     "speaker": "bw_dockhand_nettie",
+     "text": "*Her hands go still on the rope.* My mother's name is on that stone. Elspeth Sparrow. Every year I carry her lantern to the memorial and every year Dame Ysolde watches from the river steps and doesn't come down. *Her jaw sets.* Why should I carry it for the Eleven, when one of the Eleven is the reason my mother's on that stone?",
+     "choices": [
+      {
+       "text": "[PERSUASION] Your mother rode so others could come home. Ysolde made sure some did.",
+       "check": {
+        "skill": "Persuasion",
+        "dc": 12,
+        "success": "ne_forty_s",
+        "failure": "ne_forty_f"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "Ysolde blew the retreat, Nettie. Without that horn, there'd be no one left to light any lanterns at all.",
+       "next": "ne_forty_soft"
+      },
+      {
+       "text": "Then carry it for your mother. I'll take it to the stone for you.",
+       "next": "ne_forty_soft"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_forty_s",
+     "speaker": "bw_dockhand_nettie",
+     "text": "*For a long moment she just looks at the river.* ...Mum always said the horn was the bravest sound she ever heard. Said it meant somebody was still thinking. *She unhooks a little brass lantern from her belt and presses it into your hands.* Take it to the stone. And... tell Dame Ysolde she can come down the steps. If she wants.",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_lantern_nettie"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_memorial_lantern",
+       "amount": 1
+      },
+      {
+       "type": "GiveXP",
+       "amount": 100
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ne_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_forty_f",
+     "speaker": "bw_dockhand_nettie",
+     "text": "*She turns back to her rope.* Pretty words. Everybody's got pretty words about the Ride. *A pause.* ...Ask me again. Properly, this time.",
+     "choices": [
+      {
+       "text": "Ysolde blew the retreat, Nettie. Without that horn, there'd be no one left to light any lanterns at all.",
+       "next": "ne_forty_soft"
+      },
+      {
+       "text": "Then carry it for your mother. I'll take it to the stone for you.",
+       "next": "ne_forty_soft"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ne_forty_soft",
+     "speaker": "bw_dockhand_nettie",
+     "text": "*She sighs, and it goes all the way down.* ...Yeah. Yeah, all right. *She unhooks a little brass lantern from her belt.* For Mum, then. Don't drop it in the river.",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_lantern_nettie"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_memorial_lantern",
+       "amount": 1
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ne_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_tamsin",
+   "start": "ta_done_hg",
+   "nodes": [
+    {
+     "id": "ta_done_hg",
+     "speaker": "bw_child_tamsin",
+     "text": "Dame Ysolde says the Admiral has 'the makings of a very poor knight'! *She bounces.* That's GOOD, it means he can learn. He's already learned to stand on one leg. He knew that before. But now he does it ON PURPOSE. And Sir Wadsworth glared at him for a whole hour and then let him share the river step, which Dame Ysolde says is practically a knighthood.",
+     "conditions": [
+      {
+       "type": "QuestComplete",
+       "key": "bw_q_lost_heron"
+      },
+      {
+       "type": "Flag",
+       "key": "bw_puddles_heronguard"
+      }
+     ],
+     "fallback": "ta_done",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_done",
+     "speaker": "bw_child_tamsin",
+     "text": "The Admiral's got a new crate with a ROOF. He hates it. He sits on top of it instead. *She beams.* That means he loves it.",
+     "conditions": [
+      {
+       "type": "QuestComplete",
+       "key": "bw_q_lost_heron"
+      }
+     ],
+     "fallback": "ta_return",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_return",
+     "speaker": "bw_child_tamsin",
+     "text": "*Tamsin spots the basket and goes very still.* Is that... is that... ADMIRAL!",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_lost_heron",
+       "value": "return"
+      }
+     ],
+     "fallback": "ta_find",
+     "choices": [
+      {
+       "text": "Here he is. Safe, damp and extremely cross.",
+       "next": "ta_ret2",
+       "conditions": [
+        {
+         "type": "HasItem",
+         "key": "bw_admiral_puddles",
+         "amount": 1
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_admiral_puddles",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_ret2",
+     "speaker": "bw_child_tamsin",
+     "text": "*She hugs the basket. The Admiral bites her hat. She doesn't seem to mind.* You found him! You FOUND him! *Then, worried:* Mum says he can't live in my room any more, because of the incident with the bath. Where should he live?",
+     "choices": [
+      {
+       "text": "Keep him close. Build him a crate with a roof this time.",
+       "next": "ta_keep",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_puddles_returned"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_puddles_home"
+        },
+        {
+         "type": "GiveItem",
+         "key": "bw_tamsins_lucky_button",
+         "amount": 1
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_lost_heron"
+        }
+       ]
+      },
+      {
+       "text": "There's a knight on the river steps who knows herons. Ask Dame Ysolde to teach him.",
+       "next": "ta_hg",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_puddles_returned"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_puddles_heronguard"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_lost_heron"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ta_keep",
+     "speaker": "bw_child_tamsin",
+     "text": "A crate with a ROOF. Yes. *She pulls a brass button on a string from her pocket and solemnly hands it over.* This is my lucky button. It's lucky because I found it, which was lucky. Now it's yours. Mum says you can choose something from the box too, for being a hero.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_hg",
+     "speaker": "bw_child_tamsin",
+     "text": "A real KNIGHT? For the Admiral? *She gasps.* He'll be the first heron knight in TWELVE YEARS. I'll ask her right now. I'll ask her politely. I'll ask her loudly and politely. *She grabs the basket and runs, then runs back.* Mum says you can choose something from the box, for being a hero!",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_find",
+     "speaker": "bw_child_tamsin",
+     "text": "Nettie says he went UPRIVER. To the reeds by the ford, on the other side. He doesn't even LIKE the other side. *She sniffs.* Please hurry. He'll be cold. And rude to the frogs.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_lost_heron",
+       "value": "find"
+      }
+     ],
+     "fallback": "ta_ask",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_ask",
+     "speaker": "bw_child_tamsin",
+     "text": "Ask Nettie on the docks! She sees everything that flies. She saw a goose steal a whole loaf once.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_lost_heron",
+       "value": "ask"
+      }
+     ],
+     "fallback": "ta_greet",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_greet",
+     "speaker": "bw_child_tamsin",
+     "text": "*A small girl in an enormous coat is checking under every bush along the lane, very thoroughly.* Have you seen a heron? He's this tall *(she holds a hand at her knee)* and grey, and one wing goes sideways, and he's GONE.",
+     "choices": [
+      {
+       "text": "Lost something?",
+       "next": "ta_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_lost_heron"
+        },
+        {
+         "type": "Level",
+         "amount": 12
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_offer",
+     "speaker": "bw_child_tamsin",
+     "text": "My heron. Admiral Puddles. I found him when he was an egg, sort of, and his wing's wonky so he can't fly far, and this morning his crate was EMPTY. *Her lip wobbles.* He's not good on his own. He's rude to everyone and he can't fish.",
+     "choices": [
+      {
+       "text": "I'll find your Admiral, Tamsin.",
+       "next": "ta_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 12
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_lost_heron"
+        }
+       ]
+      },
+      {
+       "text": "Herons can look after themselves.",
+       "next": "ta_no"
+      }
+     ]
+    },
+    {
+     "id": "ta_accept",
+     "speaker": "bw_child_tamsin",
+     "text": "*She wipes her nose on her enormous sleeve.* Promise? Ask Nettie on the docks first. She sees everything that flies.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ta_no",
+     "speaker": "bw_child_tamsin",
+     "text": "*She glares up at you with the full force of a seven-year-old's contempt.* HE can't. That's the POINT.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_heron_reeds",
+   "start": "hr_start",
+   "nodes": [
+    {
+     "id": "hr_start",
+     "speaker": "narrator",
+     "text": "*In the cattails stands a small grey heron, one wing folded slightly sideways, a stolen herring tail sticking out of his beak. He regards you with the cold fury of a very small admiral.*",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_lost_heron",
+       "value": "find"
+      }
+     ],
+     "fallback": "hr_gone",
+     "choices": [
+      {
+       "text": "(Offer him the bucket of minnows.)",
+       "next": "hr_won",
+       "conditions": [
+        {
+         "type": "HasItem",
+         "key": "bw_minnows",
+         "amount": 1
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_minnows",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "(Offer him a pot of minnows from the market.)",
+       "next": "hr_won",
+       "conditions": [
+        {
+         "type": "HasItem",
+         "key": "bw_minnows_bait",
+         "amount": 1
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_minnows_bait",
+         "amount": 1
+        }
+       ]
+      },
+      {
+       "text": "[NATURE] (Crouch low, move slowly, and let him decide you are harmless.)",
+       "check": {
+        "skill": "Nature",
+        "dc": 13,
+        "success": "hr_won",
+        "failure": "hr_hiss"
+       },
+       "once": true,
+       "tag": "NATURE"
+      },
+      {
+       "text": "[HUNTER] (Hold perfectly still and call to him like a heron calls its mate.)",
+       "next": "hr_won",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Hunter"
+        }
+       ],
+       "tag": "HUNTER"
+      },
+      {
+       "text": "[SHAMAN] (Ask the river's spirit to tell him he is safe.)",
+       "next": "hr_won",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Shaman"
+        }
+       ],
+       "tag": "SHAMAN"
+      },
+      {
+       "text": "Ysolde, the Heronguard trained herons. Any advice?",
+       "next": "hr_ysolde",
+       "conditions": [
+        {
+         "type": "InParty",
+         "key": "ysolde"
+        }
+       ]
+      },
+      {
+       "text": "[ATHLETICS] (Lunge and grab him.)",
+       "check": {
+        "skill": "Athletics",
+        "dc": 15,
+        "success": "hr_won",
+        "failure": "hr_splash"
+       },
+       "once": true,
+       "tag": "ATHLETICS"
+      },
+      {
+       "text": "(Sit down in the reeds and wait as long as it takes.)",
+       "next": "hr_wait"
+      },
+      {
+       "text": "(Leave him be for now.)"
+      }
+     ]
+    },
+    {
+     "id": "hr_ysolde",
+     "speaker": "ysolde",
+     "text": "*Ysolde lays down her shield, tucks one foot behind her knee and stands perfectly, absurdly still.* Never chase a heron. You let him decide you are a rock. *A long minute passes. The Admiral steps out of the reeds, inspects her boot, and climbs into the basket as though it had been his idea all along.* There. He'll make a terrible knight. I like him already.",
+     "outcomes": [
+      {
+       "type": "Approval",
+       "key": "ysolde",
+       "amount": 3
+      }
+     ],
+     "next": "hr_won"
+    },
+    {
+     "id": "hr_hiss",
+     "speaker": "narrator",
+     "text": "*The Admiral hisses like a kettle and retreats deeper into the cattails, keeping his herring.*",
+     "next": "hr_start"
+    },
+    {
+     "id": "hr_splash",
+     "speaker": "narrator",
+     "text": "*You lunge. The Admiral does not. You are now in the river, and he is looking at you with something very like satisfaction.*",
+     "next": "hr_start"
+    },
+    {
+     "id": "hr_wait",
+     "speaker": "narrator",
+     "text": "*You sit in the reeds. An hour passes. Your boots fill with river. A frog sits on your knee. At last the Admiral decides you are furniture, steps out of the cattails and climbs into the basket to get out of the wind.*",
+     "next": "hr_won"
+    },
+    {
+     "id": "hr_won",
+     "speaker": "narrator",
+     "text": "*Admiral Puddles is in the basket. He eats your sandwich, glares at you, and settles down for the trip like a small, damp emperor.*",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_puddles_found"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_admiral_puddles",
+       "amount": 1
+      },
+      {
+       "type": "GiveXP",
+       "amount": 100
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Carry him home to Tamsin.)"
+      }
+     ]
+    },
+    {
+     "id": "hr_gone",
+     "speaker": "narrator",
+     "text": "*Just cattails, rustling. A frog regards you without interest. Somewhere on the far bank a heron complains about something.*",
+     "choices": [
+      {
+       "text": "(Leave the reeds.)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_herring_crates",
+   "start": "hc_start",
+   "nodes": [
+    {
+     "id": "hc_start",
+     "speaker": "narrator",
+     "text": "*Six crates stencilled SALTED HERRING — BRIGHTWATER, nailed shut. When you nudge one, it sloshes. Herring do not slosh.*",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_smugglers",
+       "value": "inspect"
+      }
+     ],
+     "fallback": "hc_done",
+     "choices": [
+      {
+       "text": "[INVESTIGATION] (Prise up a lid without splitting it and look beneath the fish.)",
+       "check": {
+        "skill": "Investigation",
+        "dc": 14,
+        "success": "hc_found",
+        "failure": "hc_fail"
+       },
+       "once": true,
+       "tag": "INVESTIGATION"
+      },
+      {
+       "text": "[PERCEPTION] (Sniff the gap under the lid.)",
+       "check": {
+        "skill": "Perception",
+        "dc": 12,
+        "success": "hc_found",
+        "failure": "hc_fail"
+       },
+       "once": true,
+       "tag": "PERCEPTION"
+      },
+      {
+       "text": "[ROGUE] (Pop the nails the way a professional would, and put them back the same way.)",
+       "next": "hc_found",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Rogue"
+        }
+       ],
+       "tag": "ROGUE"
+      },
+      {
+       "text": "(Smash a crate open.)",
+       "next": "hc_smash"
+      },
+      {
+       "text": "(Leave the crates for now.)"
+      }
+     ]
+    },
+    {
+     "id": "hc_fail",
+     "speaker": "narrator",
+     "text": "*Herring. A great deal of herring, looking up at you with salty disapproval. Whatever sloshes is further down.*",
+     "next": "hc_start"
+    },
+    {
+     "id": "hc_smash",
+     "speaker": "narrator",
+     "text": "*The lid splits with a crack that echoes off the warehouse wall. Somewhere in the square, a fishmonger looks up.*",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_smuggler_alerted"
+      }
+     ],
+     "next": "hc_found"
+    },
+    {
+     "id": "hc_found",
+     "speaker": "narrator",
+     "text": "*Under a thin layer of herring sit rows of sealed clay jars packed in straw. Lantern oil, the good kind, each jar stamped with a paw-print in red wax: the Duskmane gnolls' mark, from the raids in Amberfield. Somebody in Brightwater is buying stolen oil and shipping it upriver at night.*",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_crates_inspected"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_oil_jar",
+       "amount": 1
+      },
+      {
+       "type": "GiveXP",
+       "amount": 125
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Take a jar as evidence.)"
+      }
+     ]
+    },
+    {
+     "id": "hc_done",
+     "speaker": "narrator",
+     "text": "*Crates of salted herring. They smell exactly as you would expect.*",
+     "choices": [
+      {
+       "text": "(Leave the crates.)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_silas",
+   "start": "si_confront",
+   "nodes": [
+    {
+     "id": "si_confront",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*Silas Crane is gutting a trout with tremendous concentration.* Fresh fish! Lovely fish! *He sees the jar in your hand, and the knife stops.* ...You've got a look on you. I don't care for that look.",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_smugglers",
+       "value": "confront"
+      }
+     ],
+     "fallback": "si_greet",
+     "choices": [
+      {
+       "text": "Your boots are oily, Silas. Lantern oil, not fish oil.",
+       "next": "si_confess",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "bw_oily_footprints"
+        }
+       ]
+      },
+      {
+       "text": "[PERSUASION] Talk to me before the Watch does. Who's buying the oil?",
+       "conditions": [
+        {
+         "type": "NotFlag",
+         "key": "bw_smuggler_alerted"
+        }
+       ],
+       "check": {
+        "skill": "Persuasion",
+        "dc": 13,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "[PERSUASION] You heard the crate break. Talk to me before the Watch does.",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "bw_smuggler_alerted"
+        }
+       ],
+       "check": {
+        "skill": "Persuasion",
+        "dc": 16,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "[INTIMIDATION] (Set the jar of oil on his counter, very gently.) Start talking.",
+       "check": {
+        "skill": "Intimidation",
+        "dc": 14,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "INTIMIDATION"
+      },
+      {
+       "text": "[PALADIN] Swear on the Light you'll tell the truth, and I'll speak for you.",
+       "next": "si_confess",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Paladin"
+        }
+       ],
+       "tag": "PALADIN"
+      },
+      {
+       "text": "Jars, paw stamps, a midnight boat. I don't need you to confess, Silas.",
+       "next": "si_quiet"
+      },
+      {
+       "text": "(Walk away and think it over.)"
+      }
+     ]
+    },
+    {
+     "id": "si_deny",
+     "speaker": "bw_fishmonger_silas",
+     "text": "Lantern oil? In MY herring? *He laughs, much too loudly.* Somebody's having you on, friend. Somebody's having us BOTH on.",
+     "choices": [
+      {
+       "text": "Your boots are oily, Silas. Lantern oil, not fish oil.",
+       "next": "si_confess",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "bw_oily_footprints"
+        }
+       ]
+      },
+      {
+       "text": "[PERSUASION] Talk to me before the Watch does. Who's buying the oil?",
+       "conditions": [
+        {
+         "type": "NotFlag",
+         "key": "bw_smuggler_alerted"
+        }
+       ],
+       "check": {
+        "skill": "Persuasion",
+        "dc": 13,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "[PERSUASION] You heard the crate break. Talk to me before the Watch does.",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "bw_smuggler_alerted"
+        }
+       ],
+       "check": {
+        "skill": "Persuasion",
+        "dc": 16,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "PERSUASION"
+      },
+      {
+       "text": "[INTIMIDATION] (Set the jar of oil on his counter, very gently.) Start talking.",
+       "check": {
+        "skill": "Intimidation",
+        "dc": 14,
+        "success": "si_confess",
+        "failure": "si_deny"
+       },
+       "once": true,
+       "tag": "INTIMIDATION"
+      },
+      {
+       "text": "[PALADIN] Swear on the Light you'll tell the truth, and I'll speak for you.",
+       "next": "si_confess",
+       "conditions": [
+        {
+         "type": "Class",
+         "key": "Paladin"
+        }
+       ],
+       "tag": "PALADIN"
+      },
+      {
+       "text": "Jars, paw stamps, a midnight boat. I don't need you to confess, Silas.",
+       "next": "si_quiet"
+      },
+      {
+       "text": "(Walk away and think it over.)"
+      }
+     ]
+    },
+    {
+     "id": "si_confess",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*His shoulders drop all at once.* Fine. FINE. A man comes down the high road every new moon. Soot-grey cloak, a wyrm burned into the back of his glove. Pays in old Skyreach silver, more than the oil's worth. Says it's 'for the fire that's waking'. *He swallows.* I thought it was a figure of speech.",
+     "choices": [
+      {
+       "text": "You're coming with me to the Watch.",
+       "next": "si_arrest",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_confessed"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_resolved"
+        }
+       ]
+      },
+      {
+       "text": "You stop. Today. And I'll tell the Captain you helped.",
+       "next": "si_spare",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_confessed"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_spared"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_resolved"
+        }
+       ]
+      },
+      {
+       "text": "(He's sliding a heavy purse across the counter.) ...How heavy is that?",
+       "next": "si_bribe"
+      },
+      {
+       "text": "(Leave him to stew for now.)"
+      }
+     ]
+    },
+    {
+     "id": "si_bribe",
+     "speaker": "bw_fishmonger_silas",
+     "text": "Twenty-five silver. To forget the herring, the jars, and my face. I'll be gone down the river by dusk and Brightwater never has to know.",
+     "choices": [
+      {
+       "text": "Deal. Be gone by dusk.",
+       "next": "si_bribed",
+       "outcomes": [
+        {
+         "type": "GiveGold",
+         "amount": 2500
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_bribed"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_resolved"
+        }
+       ]
+      },
+      {
+       "text": "Keep your money. You're coming with me to the Watch.",
+       "next": "si_arrest",
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_confessed"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_silas_resolved"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "si_arrest",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*He sets the knife down and takes off his apron, folding it neatly.* Tell Poppy she can have my stall. And tell the Captain I'll talk. All of it. *He walks ahead of you toward the Watch House with his head down.*",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 150
+      }
+     ],
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "si_spare",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*He's already packing.* My sister has a stall in Amberfield. Sells cabbages. I'll... learn cabbages. *He hesitates.* Thank you. Tell the Captain the man in the grey cloak comes again at the next new moon.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 150
+      }
+     ],
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "si_bribed",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*The purse is very heavy.* Pleasure doing business. *By the time you look up again, the stall is empty and a boat with no lantern is sliding away downriver.*",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "si_quiet",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*He folds his arms.* You've got jars. You haven't got a name, and you won't get one from me. *He calmly finishes gutting the trout.* Go on, then. Fetch the Watch. I'll be here. Where would I go?",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_silas_silent"
+      },
+      {
+       "type": "SetFlag",
+       "key": "bw_silas_resolved"
+      }
+     ],
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "si_greet",
+     "speaker": "bw_fishmonger_silas",
+     "text": "*A thin man with a fish-scale apron and a smile that's slightly too wide.* Silas Crane! Fresh fish, lovely fish! Smoked eel, river trout, minnows for bait. Nothing in these crates but fish, ha ha.",
+     "choices": [
+      {
+       "text": "Show me your catch.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_fishmonger_silas"
+        }
+       ]
+      },
+      {
+       "text": "You seem nervous, Silas.",
+       "next": "si_nervous"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "si_nervous",
+     "speaker": "bw_fishmonger_silas",
+     "text": "Nervous? Me? It's the herons. They're always watching. Thieving little... *He glances, very briefly, toward the harbour.* Fish, then? Lovely fish?",
+     "choices": [
+      {
+       "text": "Show me your catch.",
+       "outcomes": [
+        {
+         "type": "OpenVendor",
+         "key": "bw_fishmonger_silas"
+        }
+       ]
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_rowan",
+   "start": "ro_greet",
+   "nodes": [
+    {
+     "id": "ro_greet",
+     "speaker": "bw_captain_rowan",
+     "text": "*A tall, sun-browned woman in river-blue livery is reading three reports at once.* Captain Hale Rowan, Brightwater Watch. If it's a lost heron, the answer is no. If it's anything else, the answer is probably also no, but I'll listen.",
+     "choices": [
+      {
+       "text": "A sealed letter from Dockmaster Hobb.",
+       "next": "ro_letter",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_letter_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_letter_done"
+        }
+       ]
+      },
+      {
+       "text": "Captain, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "ro_lantern",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_rowan"
+        }
+       ]
+      },
+      {
+       "text": "Silas Crane was smuggling stolen lantern oil. He's confessed.",
+       "next": "ro_smug_arrest",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_confessed"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_silas_spared"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_dragonsworn_lead"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Silas was smuggling oil. He named his buyer, and he's leaving town for good.",
+       "next": "ro_smug_spared",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_spared"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_dragonsworn_lead"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Silas was smuggling stolen lantern oil. He won't name his buyer.",
+       "next": "ro_smug_silent",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_silent"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "The herring business is... resolved, Captain.",
+       "next": "ro_smug_bribed",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_bribed"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_rowan_disappointed"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Is there work for the Watch?",
+       "next": "ro_fen_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_fen_road"
+        },
+        {
+         "type": "Level",
+         "amount": 18
+        }
+       ]
+      },
+      {
+       "text": "I've walked the fen road to Mirefen.",
+       "next": "ro_fen_report",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_fen_road",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_fen_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_fen_road"
+        }
+       ]
+      },
+      {
+       "text": "Anything else the Watch needs?",
+       "next": "ro_high_offer",
+       "conditions": [
+        {
+         "type": "QuestComplete",
+         "key": "bw_q_fen_road"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_high_road"
+        },
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ]
+      },
+      {
+       "text": "I've been up the high road to Skyreach.",
+       "next": "ro_high_report",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_high_road",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_high_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_high_road"
+        }
+       ]
+      },
+      {
+       "text": "What does the Watch do, exactly?",
+       "next": "ro_watch"
+      },
+      {
+       "text": "You rode with the Heronguard?",
+       "next": "ro_squire"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_hub",
+     "speaker": "bw_captain_rowan",
+     "text": "What else?",
+     "choices": [
+      {
+       "text": "A sealed letter from Dockmaster Hobb.",
+       "next": "ro_letter",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_parcels"
+        },
+        {
+         "type": "HasItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_parcel_letter_done"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "TakeItem",
+         "key": "bw_parcel_letter",
+         "amount": 1
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_parcel_letter_done"
+        }
+       ]
+      },
+      {
+       "text": "Captain, Sir Bertram is gathering the lanterns for the Ride.",
+       "next": "ro_lantern",
+       "conditions": [
+        {
+         "type": "QuestActive",
+         "key": "bw_q_forty_names"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_lantern_rowan"
+        }
+       ]
+      },
+      {
+       "text": "Silas Crane was smuggling stolen lantern oil. He's confessed.",
+       "next": "ro_smug_arrest",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_confessed"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_silas_spared"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_dragonsworn_lead"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Silas was smuggling oil. He named his buyer, and he's leaving town for good.",
+       "next": "ro_smug_spared",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_spared"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_dragonsworn_lead"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Silas was smuggling stolen lantern oil. He won't name his buyer.",
+       "next": "ro_smug_silent",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_silent"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "The herring business is... resolved, Captain.",
+       "next": "ro_smug_bribed",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_smugglers",
+         "value": "report"
+        },
+        {
+         "type": "Flag",
+         "key": "bw_silas_bribed"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_smugglers_reported"
+        },
+        {
+         "type": "SetFlag",
+         "key": "bw_rowan_disappointed"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_smugglers"
+        }
+       ]
+      },
+      {
+       "text": "Is there work for the Watch?",
+       "next": "ro_fen_offer",
+       "conditions": [
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_fen_road"
+        },
+        {
+         "type": "Level",
+         "amount": 18
+        }
+       ]
+      },
+      {
+       "text": "I've walked the fen road to Mirefen.",
+       "next": "ro_fen_report",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_fen_road",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_fen_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_fen_road"
+        }
+       ]
+      },
+      {
+       "text": "Anything else the Watch needs?",
+       "next": "ro_high_offer",
+       "conditions": [
+        {
+         "type": "QuestComplete",
+         "key": "bw_q_fen_road"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "bw_q_high_road"
+        },
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ]
+      },
+      {
+       "text": "I've been up the high road to Skyreach.",
+       "next": "ro_high_report",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "bw_q_high_road",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "bw_high_reported"
+        },
+        {
+         "type": "CompleteQuest",
+         "key": "bw_q_high_road"
+        }
+       ]
+      },
+      {
+       "text": "What does the Watch do, exactly?",
+       "next": "ro_watch"
+      },
+      {
+       "text": "You rode with the Heronguard?",
+       "next": "ro_squire"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_letter",
+     "speaker": "bw_captain_rowan",
+     "text": "*She breaks the seal and reads quickly. Her mouth thins.* Boats at night, no lanterns, tying up at the Crane warehouse. Hobb's seen it too, then. *She tucks the letter into her coat.* Thank you. Tell Hobb the Watch has it in hand. Even if the Watch hasn't, yet.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ro_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_lantern",
+     "speaker": "bw_captain_rowan",
+     "text": "*She sets down her reports.* I was sixteen. Aubric's squire. I held his horse at the bottom of the slope while he charged, and I was still holding it when Ysolde's horn sounded and the knights came back down without him. *She unhooks a small brass lantern from the wall.* I light this one every year. This year, I think I'd like someone else to carry it. Thank you.",
+     "outcomes": [
+      {
+       "type": "SetFlag",
+       "key": "bw_lantern_rowan"
+      },
+      {
+       "type": "GiveItem",
+       "key": "bw_memorial_lantern",
+       "amount": 1
+      }
+     ],
+     "choices": [
+      {
+       "text": "[INSIGHT] You've never forgiven yourself for staying at the bottom of the slope.",
+       "check": {
+        "skill": "Insight",
+        "dc": 13,
+        "success": "ro_lantern_s",
+        "failure": "ro_hub"
+       },
+       "once": true,
+       "tag": "INSIGHT"
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "ro_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_lantern_s",
+     "speaker": "bw_captain_rowan",
+     "text": "*She's quiet for a long moment.* No. I haven't. *She almost smiles.* Ysolde told me once that holding the horse was the only order anyone obeyed correctly that day. I've been trying to believe her for twelve years. Maybe this year.",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 100
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ro_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_smug_arrest",
+     "speaker": "bw_captain_rowan",
+     "text": "*She listens to the whole of it, then slowly sets down her pen.* A man in a soot-grey cloak with a wyrm on his glove. Paying in Skyreach silver for oil, 'for the fire that's waking'. *She looks north-west, toward the high road.* Those are the Dragonsworn, and Silas has been feeding their fire. He'll sit in the cells till he's told us everything. Well done. Take something from the armoury; the Watch pays its debts.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_smug_spared",
+     "speaker": "bw_captain_rowan",
+     "text": "Gone to sell cabbages in Amberfield? *She snorts.* There are worse punishments. A soot-grey cloak, a wyrm brand, Skyreach silver. The Dragonsworn are buying fire in my town. *She makes a note.* I'll double the watch on the high road at the new moon. Well done. The Watch pays its debts.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_smug_silent",
+     "speaker": "bw_captain_rowan",
+     "text": "He won't name his buyer? He will, after a week of cell porridge. Nobody holds out against cell porridge. *She stamps a report.* Stolen Amberfield oil, shipped upriver at night. That's enough to stop it, at least. Good work. The Watch pays its debts.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_smug_bribed",
+     "speaker": "bw_captain_rowan",
+     "text": "*She regards you for a long time.* Bo told me about the jars an hour ago. And now Silas's boat is gone, and you look very pleased with your purse. *She stamps a report harder than strictly necessary.* I can't prove anything. I don't need to. The smuggling's stopped, so here's your pay. Don't make me regret it.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_fen_offer",
+     "speaker": "bw_captain_rowan",
+     "text": "There is. Six weeks and not one barge up from Mirefen. The fen-folk used to pole up every tenday with eels, peat and gossip; now the river brings us nothing but drowned lanterns for Liora's shelves. Walk the fen road for me. Across the bridge, then south-west. See what's what and come back and tell me.",
+     "choices": [
+      {
+       "text": "I'll walk the fen road.",
+       "next": "ro_fen_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 18
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_fen_road"
+        }
+       ]
+      },
+      {
+       "text": "Not yet, Captain."
+      }
+     ]
+    },
+    {
+     "id": "ro_fen_accept",
+     "speaker": "bw_captain_rowan",
+     "text": "Good. Keep to the high ground, don't follow lights over the water, and if anything with too many teeth asks you to stay for dinner, decline politely and run.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_fen_report",
+     "speaker": "bw_captain_rowan",
+     "text": "*She listens, frowning, while you tell her about the fen: the drowned lanterns, the mirelings, the silence where the stilt villages used to sing.* So that's where the barges went. *She rubs her eyes.* Penhallow's been muttering about Mother Mire's coven for a month. I thought he was reading too many old books. Thank you. Here: the Watch pays its debts, and you've earned a pair of good boots at least.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_high_offer",
+     "speaker": "bw_captain_rowan",
+     "text": "*She looks north-west, toward the peaks, for a long moment.* Shepherds have been coming down the high road all month telling the same story they told twelve years ago. Fire in the clouds. Shapes on the wind. And Silas's buyer in the grey cloak came down that same road with Skyreach silver. Go up the high road to Skyreach. See it with your own eyes. And come back down it. Please.",
+     "conditions": [
+      {
+       "type": "Flag",
+       "key": "bw_dragonsworn_lead"
+      }
+     ],
+     "fallback": "ro_high_offer_b",
+     "choices": [
+      {
+       "text": "I'll climb to Skyreach.",
+       "next": "ro_high_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_high_road"
+        }
+       ]
+      },
+      {
+       "text": "Not yet, Captain."
+      }
+     ]
+    },
+    {
+     "id": "ro_high_offer_b",
+     "speaker": "bw_captain_rowan",
+     "text": "*She looks north-west, toward the peaks, for a long moment.* Shepherds have been coming down the high road all month telling the same story they told twelve years ago. Fire in the clouds. Shapes on the wind. Go up the high road to Skyreach. See it with your own eyes. And come back down it. Please.",
+     "choices": [
+      {
+       "text": "I'll climb to Skyreach.",
+       "next": "ro_high_accept",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "bw_q_high_road"
+        }
+       ]
+      },
+      {
+       "text": "Not yet, Captain."
+      }
+     ]
+    },
+    {
+     "id": "ro_high_accept",
+     "speaker": "bw_captain_rowan",
+     "text": "Take the road north-west from the bridge and keep climbing. If you find any of the old Heronguard towers up there... *She stops.* Never mind me. Just come back.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_high_report",
+     "speaker": "bw_captain_rowan",
+     "text": "*She listens to all of it: the drakes, the Dragonsworn camps, the ash on the snow, and the ruined Heronguard towers still flying their tattered herons.* Then the stories were true, both times. *She stands straighter.* I'll double the watch on the bridge, and send word to Amberfield. And you... you go and finish it. Twelve years is long enough. Take this. It's the best the Watch has.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_watch",
+     "speaker": "bw_captain_rowan",
+     "text": "We keep the bridge, the market and the peace, in roughly that order. When the Heronguard were broken, the council made a 'Watch' out of what was left: two squires, a heron-groom and a great many very serious hats. *She taps her morion.* I'm still not sure about the hats.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ro_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "ro_squire",
+     "speaker": "bw_captain_rowan",
+     "text": "I was a squire. Sixteen. I held Lord-Commander Aubric's horse at the bottom of the slope, and I'm one of the Eleven, though I never drew a sword that day. *She shrugs, too casually.* Ysolde is the one you should ask. Though I wouldn't, if I were you. Not until she's ready.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "ro_hub"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_watch",
+   "start": "wa_greet",
+   "nodes": [
+    {
+     "id": "wa_greet",
+     "speaker": "",
+     "text": "*The watch-guard straightens their morion and the blue-and-white plume bounces.* Afternoon. Keep to the bridge, mind the herons, and don't feed the Admiral, whatever he tells you.",
+     "choices": [
+      {
+       "text": "Where can I find what I need in town?",
+       "next": "wa_where"
+      },
+      {
+       "text": "Anything I should know?",
+       "next": "wa_news"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wa_where",
+     "speaker": "",
+     "text": "Market square's in the middle: Pell for goods, Ottoline for potions. Hollowell & Hollowell, weapons and armour, south of the main street. The Lantern & Heron for beds. Penhallow and Magister Vell at the town hall. Across the bridge: the chapel, the memorial, Sir Bertram's yard and Warden Tidewell's fire. Ferry from the harbour, if you've five copper and patience.",
+     "choices": [
+      {
+       "text": "Anything I should know?",
+       "next": "wa_news"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wa_news",
+     "speaker": "",
+     "text": "Captain says the Dragonsworn are buying fire in Brightwater. Can you believe it? Under the herring, of all places.",
+     "conditions": [
+      {
+       "type": "Flag",
+       "key": "bw_dragonsworn_lead"
+      }
+     ],
+     "fallback": "wa_news2",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "wa_news2",
+     "speaker": "",
+     "text": "Barges from Mirefen have stopped. Boats with no lanterns at midnight. Herons getting cheeky. And the Captain's been staring up the high road again. *Quieter.* Something's coming. Can feel it in my plume.",
+     "choices": [
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dlg_bw_memorial",
+   "start": "me_light",
+   "nodes": [
+    {
+     "id": "me_light",
+     "speaker": "narrator",
+     "text": "*Dusk settles over the river steps. Before the empty tomb of Lord-Commander Aubric, eight lanterns already burn, one for each of the Eleven still able to bring their own. You set the three you carried beside them.*",
+     "conditions": [
+      {
+       "type": "QuestState",
+       "key": "bw_q_forty_names",
+       "value": "light"
+      },
+      {
+       "type": "HasItem",
+       "key": "bw_memorial_lantern",
+       "amount": 3
+      }
+     ],
+     "fallback": "me_need",
+     "choices": [
+      {
+       "text": "[RELIGION] (Speak the Heronguard rite: 'Ride home. We will keep the ford.')",
+       "check": {
+        "skill": "Religion",
+        "dc": 12,
+        "success": "me_rite_s",
+        "failure": "me_rite_f"
+       },
+       "once": true,
+       "tag": "RELIGION"
+      },
+      {
+       "text": "Ysolde. Will you light one?",
+       "next": "me_ysolde",
+       "conditions": [
+        {
+         "type": "InParty",
+         "key": "ysolde"
+        },
+        {
+         "type": "NotFlag",
+         "key": "bw_ysolde_lit_memorial"
+        }
+       ]
+      },
+      {
+       "text": "(Light the three lanterns.)",
+       "next": "me_lit"
+      },
+      {
+       "text": "(Step back from the memorial for now.)"
+      }
+     ]
+    },
+    {
+     "id": "me_need",
+     "speaker": "narrator",
+     "text": "*The memorial waits. Sir Bertram asked for three lanterns, from Gideon, Rowan and Nettie; you do not have them all yet.*",
+     "conditions": [
+      {
+       "type": "QuestActive",
+       "key": "bw_q_forty_names"
+      },
+      {
+       "type": "NotFlag",
+       "key": "bw_memorial_lit"
+      }
+     ],
+     "fallback": "me_done",
+     "choices": [
+      {
+       "text": "(Step back from the memorial.)"
+      }
+     ]
+    },
+    {
+     "id": "me_ysolde",
+     "speaker": "ysolde",
+     "text": "*For a long moment she doesn't move. Then she kneels, strikes a light, and holds it to the first wick.* Lord-Commander Aubric. *The second.* Dame Elspeth Sparrow. *She lights the third, and then, one by one, she touches the flame to all eleven, saying a name for each of the twenty-nine and never once looking at the stone.* ...I came. I'm sorry it took me twelve years.",
+     "outcomes": [
+      {
+       "type": "Approval",
+       "key": "ysolde",
+       "amount": 6
+      },
+      {
+       "type": "SetFlag",
+       "key": "bw_ysolde_lit_memorial"
+      }
+     ],
+     "next": "me_lit"
+    },
+    {
+     "id": "me_rite_s",
+     "speaker": "narrator",
+     "text": "*The old words come out steady and plain. Down on the river steps, someone you cannot see answers the last line: 'We will keep the ford.' It sounds like Sir Bertram, and also not at all like him.*",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 150
+      }
+     ],
+     "next": "me_lit"
+    },
+    {
+     "id": "me_rite_f",
+     "speaker": "narrator",
+     "text": "*You stumble on the middle of the rite. It doesn't seem to matter. The river says the rest of it, in its own way.*",
+     "next": "me_lit"
+    },
+    {
+     "id": "me_lit",
+     "speaker": "narrator",
+     "text": "*Eleven lanterns burn before the stone, warm against the blue dusk, their light running down the river steps and out over the water. For a moment the river seems to slow, as if it were listening.*",
+     "outcomes": [
+      {
+       "type": "TakeItem",
+       "key": "bw_memorial_lantern",
+       "amount": 3
+      },
+      {
+       "type": "SetFlag",
+       "key": "bw_memorial_lit"
+      },
+      {
+       "type": "GiveXP",
+       "amount": 100
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Step back and let them burn.)"
+      }
+     ]
+    },
+    {
+     "id": "me_done",
+     "speaker": "narrator",
+     "text": "*Forty names are cut into two standing stones. Lord-Commander Aubric's is first, larger than the rest. Beneath the last name: FORTY RODE. ELEVEN RETURNED. ALL ARE REMEMBERED.*",
+     "choices": [
+      {
+       "text": "[HISTORY] (Read the dates, and what the stone does not say.)",
+       "check": {
+        "skill": "History",
+        "dc": 12,
+        "success": "me_hist_s",
+        "failure": "me_hist_f"
+       },
+       "once": true,
+       "tag": "HISTORY"
+      },
+      {
+       "text": "(Step back from the memorial.)"
+      }
+     ]
+    },
+    {
+     "id": "me_hist_s",
+     "speaker": "narrator",
+     "text": "*The dates tell it plainly: the Forty rode on the first day of the ash-wind, twelve years ago, and the Eleven came home on the fourth. No one carved what happened in between. Someone has scratched beneath Aubric's name, very small: HE ORDERED THE CHARGE. WE FORGAVE HIM. And beneath that, smaller still, in a different hand: most of us.*",
+     "outcomes": [
+      {
+       "type": "GiveXP",
+       "amount": 75
+      }
+     ],
+     "choices": [
+      {
+       "text": "(Step back from the memorial.)"
+      }
+     ]
+    },
+    {
+     "id": "me_hist_f",
+     "speaker": "narrator",
+     "text": "*The names blur into one another. Forty is a great many names to carry.*",
+     "choices": [
+      {
+       "text": "(Step back from the memorial.)"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

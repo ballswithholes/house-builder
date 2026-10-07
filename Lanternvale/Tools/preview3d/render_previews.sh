@@ -34,6 +34,12 @@ done
 "$tool" map amberfield "$out/amberfield_north.png" --at 65,46 --hour 15
 "$tool" map amberfield "$out/amberfield_barrow_entrance.png" --at 64,43 --hour 16 --flags found_barrow
 "$tool" map brightwater "$out/brightwater_north.png" --at 42,36 --hour 10
+"$tool" map brightwater "$out/brightwater_market.png" --at 55,18 --hour 11 --markers auto
+"$tool" map brightwater "$out/brightwater_bridge_dusk.png" --at 33,20 --hour 18.6 --yaw 20
+"$tool" map brightwater "$out/brightwater_harbour_night.png" --at 40,8 --hour 22.5
+"$tool" map brightwater "$out/brightwater_memorial_lit.png" --at 22,16 --hour 21 --flags bw_memorial_lit
+"$tool" map brightwater "$out/brightwater_chapel_night.png" --at 22,27 --hour 22
+"$tool" map brightwater "$out/brightwater_inn.png" --at 70,26 --hour 16.5 --yaw -25
 "$tool" map mirefen "$out/mirefen_north.png" --at 60,46 --hour 11
 "$tool" map mirefen "$out/mirefen_vault_entrance.png" --at 30,41 --hour 17 --flags found_drowned_vault
 "$tool" map mirefen "$out/mirefen_raid_portal.png" --at 12,45 --hour 21
