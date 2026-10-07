@@ -9,7 +9,7 @@
 
    公开接口
      SG.Specials.of(gen)              → 该武将的必杀技（冻结对象，已补全默认参数），按姓名缓存：
-                                        { id, gen, name, kind, stat, <数值参数…>, desc, color, fx, cry, auto, problems }
+                                        { id, gen, name, kind, stat, <数值参数…>, desc, lore, color, fx, cry, auto, problems }
                                         auto = true 表示由兜底生成器生成（没有手写条目）
      SG.Specials.all(gens?)           → 全部条目（名单内武将 + 全部手写条目）。gens 缺省为 SG.G.generals，
                                         再缺省为剧本武将表
@@ -21,6 +21,7 @@
      SG.Specials.explain(sp)          → 由数值生成的效果说明（中文一句）
      SG.Specials.rules(sp)            → 紧凑数值摘要（「单体 · 射程1 · 威力×2.4 · 士气−20 · 无视地形」）
      SG.Specials.kindName(kind)       → 机制中文名
+     SG.Specials.uiColor(sp | '#hex') → 界面文字用色（主色偏暗时提亮，深色面板上可读）
      SG.Specials.KINDS / FX / cultureOf(gen) / fallback(gen)（调试用：忽略手写条目，直接生成）
 
    控制层辅助（bc = SG.BattleController 实例；用到 bc.M、bc.V、bc.pickEnemy、bc.showCard、bc.updateHud）
@@ -116,8 +117,10 @@
     },
   };
   const FX = ['slash', 'dragon', 'havoc', 'sweep', 'dash', 'whirl', 'arrows', 'arrow', 'fire', 'wind', 'lightning', 'water',
-    'shock', 'aura', 'blossom', 'spirit', 'shield', 'heal', 'poison', 'shadow', 'drain', 'haste'];
-  const META_KEYS = ['name', 'kind', 'desc', 'color', 'fx', 'cry', 'stat', 'note'];
+    'shock', 'aura', 'blossom', 'spirit', 'shield', 'heal', 'poison', 'shadow', 'drain', 'haste', 'claw', 'rock'];
+  // 水攻：目标在河上或紧邻河流时的伤害倍率（battle-model.js 读取 SG.Specials.FLOOD_RIVER / FLOOD_DRY）
+  const FLOOD_RIVER = 1.4, FLOOD_DRY = 0.85;
+  const META_KEYS = ['name', 'kind', 'desc', 'lore', 'color', 'fx', 'cry', 'stat', 'note'];
   const STATS = ['war', 'intel', 'pol'];
 
   // 孟获一族（DESIGN-V2 §6：现有武将无 culture 时视为 han，孟获一族为 nanman）
@@ -151,6 +154,14 @@
     return SG.rgbToHex(f(p, q, h + 1 / 3), f(p, q, h), f(p, q, h - 1 / 3));
   }
 
+  // 界面文字用色：招式主色偏暗时提亮（深色面板上保持可读），特效仍用原色
+  function uiColor(spOrHex) {
+    const hex = typeof spOrHex === 'string' ? spOrHex : (spOrHex && spOrHex.color) || '#f3c969';
+    if (!/^#[0-9a-f]{6}$/i.test(hex)) return '#f3c969';
+    const [h, s0, l] = hexToHsl(hex);
+    return l >= 0.62 ? hex : hslToHex(h, Math.min(1, s0 * 1.05), 0.68);
+  }
+
   // ============================================================ 校验与补全 --
   function validate(e, who) {
     const out = [];
@@ -163,7 +174,9 @@
     }
     const K = KINDS[e.kind];
     if (!K) { out.push(tag + '未知机制 kind = ' + e.kind); return out; }
-    if (typeof e.desc !== 'string' || !e.desc.trim()) out.push(tag + '缺少中文说明 desc');
+    const hasText = v => typeof v === 'string' && v.trim().length > 0;
+    if (!hasText(e.desc) && !hasText(e.lore)) out.push(tag + '缺少中文说明 desc（或典故 lore）');
+    if (e.lore !== undefined && !/[。！？」]$/.test(String(e.lore).trim())) out.push(tag + 'lore 应为完整的一句话（以句号结尾）');
     if (e.color !== undefined && !/^#[0-9a-f]{6}$/i.test(String(e.color))) out.push(tag + '颜色应为 #rrggbb：' + e.color);
     if (e.fx !== undefined && FX.indexOf(e.fx) < 0) out.push(tag + '未知特效 fx = ' + e.fx);
     if (e.stat !== undefined && STATS.indexOf(e.stat) < 0) out.push(tag + 'stat 应为 war / intel / pol：' + e.stat);
@@ -200,7 +213,9 @@
     sp.color = /^#[0-9a-f]{6}$/i.test(String(e.color || '')) ? String(e.color).toLowerCase() : K.color;
     sp.fx = FX.indexOf(e.fx) >= 0 ? e.fx : K.fx;
     sp.cry = typeof e.cry === 'string' ? e.cry : '';
-    sp.desc = typeof e.desc === 'string' && e.desc.trim() ? e.desc : explain(sp);
+    // 说明：手写 desc 优先；否则「典故 lore + 由数值生成的效果说明」，效果说明永远与数值一致
+    sp.lore = typeof e.lore === 'string' ? e.lore.trim() : '';
+    sp.desc = typeof e.desc === 'string' && e.desc.trim() ? e.desc : sp.lore + explain(sp);
     sp.auto = !!auto;
     sp.problems = auto ? [] : validate(e, owner);
     return Object.freeze(sp);
@@ -219,23 +234,27 @@
 
   function explain(sp) {
     const pw = fmt(sp.power);
-    const near = r => (r <= 1 ? '相邻' : r + ' 格内');
+    const near = r => (r <= 1 ? '相邻' : ' ' + r + ' 格内');
     const mor = sp.morale < 0 ? '，敌军士气 ' + signed(sp.morale) : '';
     const conf = sp.confuse > 0 ? '，并可能陷入混乱' : '';
     const pierce = sp.pierce ? '（无视地形）' : '';
+    // 伤害说法随所依能力而变：武力系以普通攻击为基准，智力 / 政治系以计策为基准
+    const war = (sp.stat || 'war') === 'war';
+    const dmg = k => war ? '约 ' + fmt(k) + ' 倍普通攻击的伤害' : '计策级伤害 ×' + fmt(k);
+    const amt = k => war ? '约 ' + fmt(k) + ' 倍' : ' ×' + fmt(k) + ' 的';
     switch (sp.kind) {
-      case 'smite': return '对' + near(sp.range) + '一支敌军全力一击，造成约 ' + pw + ' 倍普通攻击的伤害' + pierce + mor + conf + '。';
-      case 'cleave': return '横扫相邻敌军：主目标受约 ' + pw + ' 倍普通攻击的伤害，其余相邻敌军受约 ' + fmt(sp.power * sp.splash) + ' 倍' + mor + conf + '。';
-      case 'charge': return '沿直线冲向 ' + sp.range + ' 格内的敌军（途中须无阻挡），造成约 ' + pw + ' 倍伤害，每冲过一格再增 ' + pct(sp.dash) +
+      case 'smite': return '对' + near(sp.range) + '一支敌军全力一击，造成' + dmg(sp.power) + pierce + mor + conf + '。';
+      case 'cleave': return '横扫相邻敌军：主目标受' + dmg(sp.power) + '，其余相邻敌军受' + amt(sp.power * sp.splash) + mor + conf + '。';
+      case 'charge': return '沿直线冲向 ' + sp.range + ' 格内的敌军（途中须无阻挡），造成' + dmg(sp.power) + '，每冲过一格再增 ' + pct(sp.dash) +
         (sp.push ? '，并将其击退一格（退路受阻时伤害 +25%）' : '') + mor + '。';
-      case 'rampage': return '在 ' + sp.range + ' 格内的敌军之间往来冲杀，连斩 ' + sp.strikes + ' 次，每斩约 ' + pw + ' 倍普通攻击的伤害' + mor + '。';
-      case 'volley': return '向 ' + sp.range + ' 格内的敌军发射，造成约 ' + pw + ' 倍普通攻击的伤害' + pierce +
-        (sp.radius > 0 ? '，周围一格的敌军受约 ' + fmt(sp.power * sp.splash) + ' 倍溅射' : '') + mor + '。';
-      case 'blaze': return '对 ' + sp.range + ' 格内的敌军纵火' + (sp.radius > 0 ? '，周围 ' + sp.radius + ' 格的敌军同受火焚' : '') +
-        '（计策级伤害 ×' + pw + '，林地 ×1.5）' + (sp.burn > 0 ? '，燃起 ' + sp.burn + ' 日大火' : '') + mor + '。';
-      case 'storm': return sp.range + ' 格内任选一处，周围 ' + sp.radius + ' 格内的所有敌军受天候重创（计策级伤害 ×' + pw + '）' +
+      case 'rampage': return '在' + (sp.range <= 1 ? '相邻' : ' ' + sp.range + ' 格内的') + '敌军之间往来冲杀，连斩 ' + sp.strikes + ' 次，每斩' + dmg(sp.power) + '（目标溃散则转斩下一支）' + mor + '。';
+      case 'volley': return '向 ' + sp.range + ' 格内的敌军发射，造成' + dmg(sp.power) + pierce +
+        (sp.radius > 0 ? '，周围一格的敌军受' + amt(sp.power * sp.splash) + '溅射' : '') + mor + '。';
+      case 'blaze': return '对 ' + sp.range + ' 格内的敌军纵火，造成' + dmg(sp.power) + (sp.radius > 0 ? '，周围 ' + sp.radius + ' 格的敌军受' + amt(sp.power * sp.splash) + '火焚' : '') +
+        '（林地 ×1.5、河上 ×0.5）' + (sp.burn > 0 ? '，燃起 ' + sp.burn + ' 日大火' : '') + mor + '。';
+      case 'storm': return sp.range + ' 格内任选一处，周围 ' + sp.radius + ' 格内的所有敌军受天候重创（' + dmg(sp.power) + '）' +
         (sp.burn > 0 ? '，脚下燃起 ' + sp.burn + ' 日大火' : '') + mor + conf + '。';
-      case 'flood': return '引水灌向 ' + sp.range + ' 格内一处，周围 ' + sp.radius + ' 格的敌军受水攻（计策级伤害 ×' + pw + '，近河 ×1.6），并扑灭火势' + mor + conf + '。';
+      case 'flood': return '引水灌向 ' + sp.range + ' 格内一处，周围 ' + sp.radius + ' 格的敌军受水攻（' + dmg(sp.power) + '，近河 ×' + FLOOD_RIVER + '、否则 ×' + FLOOD_DRY + '），并扑灭火势' + mor + conf + '。';
       case 'roar': return '一声怒吼，周围 ' + sp.radius + ' 格内的敌军' + (sp.power > 0 ? '受震伤、' : '') + '士气 ' + signed(sp.morale) + conf + '。';
       case 'rally': return '鼓舞周围 ' + sp.radius + ' 格内的友军：士气 +' + sp.morale + (sp.heal > 0 ? '，回复 ' + pct(sp.heal) + ' 最大兵力' : '') +
         (sp.cure ? '，解除混乱' : '') + (sp.atk > 1 ? '，攻击 +' + pct(sp.atk - 1) + '（' + sp.turns + ' 日）' : '') + '。';
@@ -243,14 +262,14 @@
         '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + '。';
       case 'scheme': return '对 ' + sp.range + ' 格内一处施展奇谋，' + (sp.radius > 0 ? '周围 ' + sp.radius + ' 格内的' : '') + '敌军可能陷入混乱 ' + sp.turns +
         ' 日（成功率随智力差变化）' + (sp.power > 0 ? '，并受少量伤害' : '') + mor + '。';
-      case 'drain': return '击溃' + near(sp.range) + '敌军，造成约 ' + pw + ' 倍普通攻击的伤害，并将约 ' + pct(sp.drain) + ' 的伤亡收编为己方兵力' + mor + '。';
+      case 'drain': return '击溃' + near(sp.range) + '敌军，造成' + dmg(sp.power) + '，并将约 ' + pct(sp.drain) + ' 的伤亡收编为己方兵力（随政治增减）' + mor + '。';
       case 'fortify': return (sp.radius > 0 ? '自身与周围 ' + sp.radius + ' 格内的友军' : '自身') + '防御 +' + pct(sp.def - 1) +
         (sp.counter > 1 ? '、反击 +' + pct(sp.counter - 1) : '') + '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + '。';
       case 'haste': return '令周围 ' + sp.radius + ' 格内至多 ' + sp.count + ' 支已行动的友军再次行动' + (sp.move > 0 ? '，当日机动力 +' + sp.move : '') + '。';
       case 'heal': return '为 ' + (sp.range > 0 ? sp.range + ' 格内' : '自身') + (sp.radius > 0 ? '一支友军及其周围 ' + sp.radius + ' 格的友军' : '一支友军') +
         '疗伤，回复约 ' + pct(sp.heal) + ' 最大兵力' + (sp.morale > 0 ? '、士气 +' + sp.morale : '') + (sp.cure ? '，并解除混乱' : '') + '。';
       case 'assassinate': return (sp.stat === 'intel' ? '遣死士潜入 ' : '潜入 ') + sp.range + ' 格内的敌阵刺杀敌将，得手则该部当即溃散（基础成功率 ' + pct(sp.chance) + '，随' + (sp.stat === 'intel' ? '智力' : '武力') + '差变化，主将减半）；' +
-        (sp.power > 0 ? '失手仍造成约 ' + pw + ' 倍伤害' : '失手则无功而返') + '。';
+        (sp.power > 0 ? '失手仍造成' + dmg(sp.power) : '失手则无功而返') + mor + '。';
       case 'poison': return '向 ' + sp.range + ' 格内一处施毒' + (sp.radius > 0 ? '，周围一格的敌军同时中毒' : '') + '：每日损兵约 ' + pct(sp.dot) + '，持续 ' + sp.turns + ' 日' + mor + '。';
       default: return '';
     }
@@ -491,14 +510,14 @@
     const sp = of(u.gen);
     const us = bc.M.specialUsable(u);
     if (!sp) return uiItem('必杀', '<span class="sg-muted">无</span>', false, null);
-    const nm = '<span style="color:' + sp.color + '">「' + esc(sp.name) + '」</span>';
+    const nm = '<span style="color:' + uiColor(sp) + '">「' + esc(sp.name) + '」</span>';
     return uiItem('必杀', us.ok ? nm : nm + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(sp.desc));
   }
 
   function cardLine(u) {
     const sp = u && of(u.gen);
     if (!sp) return '';
-    return '<div>必杀 <span style="color:' + sp.color + '">「' + esc(sp.name) + '」</span>' +
+    return '<div>必杀 <span style="color:' + uiColor(sp) + '">「' + esc(sp.name) + '」</span>' +
       (u.specialUsed ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　可用</span>') + '</div>';
   }
 
@@ -570,11 +589,11 @@
       const fast = !!opts.fast || !!(SG.Clash && SG.Clash.speed > 1);
       try {
         if (SG.Clash && typeof SG.Clash.cutIn === 'function' && SG.Clash.enabled !== false) {
-          await SG.Clash.cutIn({ gen: u.gen, name: sp.name, color: sp.color, side: u.side, cry: sp.cry, special: sp });
-        } else await cutIn({ gen: u.gen, name: sp.name, color: sp.color, side: u.side, cry: sp.cry, fast });
+          await SG.Clash.cutIn({ gen: u.gen, name: sp.name, color: uiColor(sp), side: u.side, cry: sp.cry, special: sp, speed: fast ? 1.6 : 1 });
+        } else await cutIn({ gen: u.gen, name: sp.name, color: uiColor(sp), side: u.side, cry: sp.cry, fast });
       } catch (e) { console.error(e); }
     }
-    toast(esc(u.gen.name) + '施展必杀「<span style="color:' + sp.color + '">' + esc(sp.name) + '</span>」！', 1.6);
+    toast(esc(u.gen.name) + '施展必杀「<span style="color:' + uiColor(sp) + '">' + esc(sp.name) + '</span>」！', 1.6);
     // 2. 结算
     const res = Mdl.useSpecial(u, target);
     if (!res.sp) return res;
@@ -731,8 +750,8 @@
   }
 
   SG.Specials = {
-    KINDS, FX,
-    of, all, check, validate, signature, needsTarget, targetSide, explain, rules, kindName, cultureOf,
+    KINDS, FX, FLOOD_RIVER, FLOOD_DRY,
+    of, all, check, validate, signature, needsTarget, targetSide, explain, rules, kindName, cultureOf, uiColor,
     fallback(gen) { return normalize(fallback(gen), gen.name, true); },
     menuItem, cardLine, pickTarget, menu, perform, cutIn,
   };

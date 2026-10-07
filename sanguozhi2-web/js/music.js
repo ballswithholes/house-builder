@@ -246,10 +246,37 @@
   }
 
   // ================================================================ 编译 ==
+  // 编译分两种驱动：compile() 同步跑完（测试 / 校验）；compileAsync() 每片 ≤ SLICE_MS，逐段编译不卡主线程
   function compile(key) {
     if (COMPILED[key]) return COMPILED[key];
+    if (!PIECES[key]) return null;
+    const g = compileGen(key);
+    let r;
+    do { r = g.next(); } while (!r.done);
+    return r.value;
+  }
+  const compiling = new Map();
+  function compileAsync(key) {
+    if (COMPILED[key] || !PIECES[key]) return Promise.resolve(compile(key));
+    if (compiling.has(key)) return compiling.get(key);
+    const g = compileGen(key);
+    const pr = new Promise(res => {
+      const step = () => {
+        const t0 = nowMs();
+        let r;
+        try {
+          do { r = g.next(); } while (!r.done && nowMs() - t0 < SLICE_MS);
+        } catch (e) { console.warn('乐曲编译失败', key, e); compiling.delete(key); res(null); return; }
+        if (r.done) { compiling.delete(key); res(r.value); } else schedule(step);
+      };
+      schedule(step);
+    });
+    compiling.set(key, pr);
+    return pr;
+  }
+
+  function* compileGen(key) {
     const P = PIECES[key];
-    if (!P) return null;
     const errors = [];
     const meter = P.meter || 4;
     const keyMidi = keyToMidi(P.key || 'C', P.oct === undefined ? 4 : P.oct);
@@ -416,6 +443,7 @@
       const bpm1 = R.bpmTo || bpm0;
       const tf = makeTime(beats, bpm0, bpm1);
       sections[name] = { name, beats, items, time: tf.time, dur: tf.dur, bars: beats / meter };
+      yield;
     }
     const form = (P.form || Object.keys(P.sections)).filter(n => { if (!sections[n]) { errors.push('曲式中未知的段 ' + n); return false; } return true; });
     let loopFrom = 0;
@@ -490,22 +518,37 @@
     return pr;
   }
 
-  const schedule = (function () {
-    if (typeof MessageChannel !== 'undefined') {
-      const ch = new MessageChannel();
-      const q = [];
-      ch.port1.onmessage = () => { const f = q.shift(); if (f) f(); };
-      if (ch.port1.unref) ch.port1.unref();   // Node 下不阻止进程退出
-      return f => { q.push(f); ch.port2.postMessage(0); };
+  // 下一个宏任务执行 f（MessageChannel 比 setTimeout(0) 少 4ms 钳制）
+  let scheduleImpl = null;
+  function schedule(f) {
+    if (!scheduleImpl) {
+      if (typeof MessageChannel !== 'undefined') {
+        const ch = new MessageChannel();
+        const q = [];
+        ch.port1.onmessage = () => { const fn = q.shift(); if (fn) fn(); };
+        if (ch.port1.unref) ch.port1.unref();   // Node 下不阻止进程退出
+        scheduleImpl = fn => { q.push(fn); ch.port2.postMessage(0); };
+      } else scheduleImpl = fn => setTimeout(fn, 0);
     }
-    return f => setTimeout(f, 0);
-  })();
+    scheduleImpl(f);
+  }
 
+  // 渲染完成即转成 AudioBuffer（无需 AudioContext；在分片任务里完成，避免播放时在调度器里集中转换）
+  function toAudioBuffer(data, sr) {
+    try {
+      if (typeof AudioBuffer !== 'function') return null;
+      const b = new AudioBuffer({ length: data.length, numberOfChannels: 1, sampleRate: sr });
+      if (b.copyToChannel) b.copyToChannel(data, 0); else b.getChannelData(0).set(data);
+      return b;
+    } catch (e) { return null; }
+  }
+  function storeSample(fk, data, sr) {
+    const buf = toAudioBuffer(data, sr);
+    SAMPLES.set(fk, { data: buf ? null : data, len: data.length, sr, buf, used: nowMs() });
+    sampleTotal += data.length;
+  }
   function finishJob(job, data) {
-    if (data) {
-      SAMPLES.set(job.fk, { data, sr: job.sr, buf: null, used: nowMs() });
-      sampleTotal += data.length;
-    }
+    if (data) storeSample(job.fk, data, job.sr);
     pending.delete(job.fk);
     job.resolve();
   }
@@ -536,8 +579,7 @@
     if (!job) return;
     let r;
     do { r = job.gen.next(); } while (!r.done);
-    SAMPLES.set(fk, { data: r.value, sr: job.sr, buf: null, used: nowMs() });
-    sampleTotal += r.value.length;
+    storeSample(fk, r.value, job.sr);
   }
 
   const pinned = new Set();     // 正在使用的曲目所需采样，不可淘汰
@@ -546,7 +588,7 @@
     const arr = Array.from(SAMPLES.entries()).filter(e => !pinned.has(e[0])).sort((a, b) => a[1].used - b[1].used);
     for (const [k, s] of arr) {
       if (sampleTotal <= SAMPLE_BUDGET * 0.8) break;
-      SAMPLES.delete(k); sampleTotal -= s.data.length;
+      SAMPLES.delete(k); sampleTotal -= s.len;
     }
   }
 
@@ -555,22 +597,22 @@
     if (!s) return null;
     s.used = nowMs();
     if (!s.buf) {
+      // 兜底：不支持 AudioBuffer 构造函数的旧浏览器
       try {
-        if (typeof AudioBuffer === 'function') {
-          try { s.buf = new AudioBuffer({ length: s.data.length, numberOfChannels: 1, sampleRate: s.sr }); }
-          catch (e) { s.buf = ctx.createBuffer(1, s.data.length, s.sr); }
-        } else s.buf = ctx.createBuffer(1, s.data.length, s.sr);
+        s.buf = ctx.createBuffer(1, s.len, s.sr);
         if (s.buf.copyToChannel) s.buf.copyToChannel(s.data, 0); else s.buf.getChannelData(0).set(s.data);
+        s.data = null;
       } catch (e) { return null; }
     }
     return s.buf;
   }
 
   function prepare(key) {
-    const C = compile(key);
-    if (!C) return Promise.resolve();
-    for (const k of C.sampleKeys) pinned.add(k);
-    return Promise.all(C.sampleKeys.map(requestSample)).then(() => undefined);
+    return compileAsync(key).then(C => {
+      if (!C) return;
+      for (const k of C.sampleKeys) pinned.add(k);
+      return Promise.all(C.sampleKeys.map(requestSample)).then(() => undefined);
+    });
   }
   function prepareSync(key) {
     const C = compile(key);
@@ -599,7 +641,9 @@
   }
 
   // 程序生成的混响脉冲：早期反射 + 指数衰减的去相关噪声，高频衰减更快
-  function makeImpulse(ctx, seconds, decay) {
+  // 生成器：每 16384 个采样让出一次（实时模式分片生成，见 impulseAsync）
+  const IR_SEC = 3.2, IR_DECAY = 2.5;
+  function* impulseGen(ctx, seconds, decay) {
     const sr = ctx.sampleRate;
     const n = Math.round(sr * seconds);
     const buf = ctx.createBuffer(2, n, sr);
@@ -615,6 +659,7 @@
         const k = 0.75 - 0.6 * Math.min(1, t / decay);
         lp += (r() * 2 - 1 - lp) * k;
         d[i] = lp * e * (t < 0.06 ? t / 0.06 * 0.6 + 0.4 : 1);
+        if ((i & 16383) === 16383) yield;
       }
       // 早期反射
       const taps = [0.017, 0.023, 0.031, 0.041, 0.053, 0.067, 0.079];
@@ -627,8 +672,28 @@
       for (let i = 0; i < n; i++) e2 += d[i] * d[i];
       const g = 1 / Math.sqrt(e2);           // 单位能量：湿声功率 ≈ 干声功率 × 发送量²
       for (let i = 0; i < n; i++) d[i] *= g;
+      yield;
     }
     return buf;
+  }
+  function makeImpulse(ctx, seconds, decay) {
+    const g = impulseGen(ctx, seconds, decay);
+    let r;
+    do { r = g.next(); } while (!r.done);
+    return r.value;
+  }
+  function impulseAsync(ctx, seconds, decay) {
+    const g = impulseGen(ctx, seconds, decay);
+    return new Promise(res => {
+      const step = () => {
+        const t0 = nowMs();
+        let r;
+        try { do { r = g.next(); } while (!r.done && nowMs() - t0 < SLICE_MS); }
+        catch (e) { console.warn('混响生成失败', e); res(null); return; }
+        if (r.done) res(r.value); else schedule(step);
+      };
+      schedule(step);
+    });
   }
 
   // 软限幅曲线：|x| ≤ 0.75 线性，其上平滑逼近 0.98（输入域 ±2）
@@ -662,7 +727,15 @@
       const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7500; lp.Q.value = 0.5;
       this.conv = c.createConvolver();
       try { this.conv.normalize = false; } catch (e) { /* 忽略 */ }
-      this.conv.buffer = makeImpulse(c, 3.2, 2.5);
+      // 脉冲响应每个 AudioContext 只生成一次；实时模式分片生成后在单独的任务里装入卷积器
+      // （装入前混响无声，曲目开头有 0.6 秒淡入，听不出差别）
+      const R = this.res;
+      if (R.ir) this.conv.buffer = R.ir;
+      else if (this.offline) { R.ir = makeImpulse(c, IR_SEC, IR_DECAY); this.conv.buffer = R.ir; }
+      else {
+        if (!R.irPromise) R.irPromise = impulseAsync(c, IR_SEC, IR_DECAY).then(b => { R.ir = b; return b; });
+        R.irPromise.then(b => { if (b && !this.disposed) schedule(() => { try { if (!this.disposed) this.conv.buffer = b; } catch (e) { /* 忽略 */ } }); });
+      }
       this.revOut = c.createGain(); this.revOut.gain.value = 0.8;
       this.revIn.connect(hp); hp.connect(lp); lp.connect(this.conv); this.conv.connect(this.revOut); this.revOut.connect(this.mix);
       this.glue = c.createDynamicsCompressor();
@@ -697,12 +770,13 @@
     // 播放曲目（交叉淡入淡出）。返回 Promise（采样就绪、开始播放时 resolve）
     play(key, opts) {
       opts = opts || {};
-      const C = compile(key);
-      if (!C) return Promise.resolve(false);
+      if (!PIECES[key]) return Promise.resolve(false);
       const fadeOut = opts.fade === undefined ? 0.8 : opts.fade;
       const token = this._token = (this._token || 0) + 1;
       const go = () => {
-        if (token !== this._token) return false;
+        if (token !== this._token || this.disposed) return false;
+        const C = compile(key);
+        if (!C) return false;
         const now = this.ctx.currentTime;
         if (opts.overlay) {
           // 叠加短曲（冲锋乐句）：压低主曲，停掉别的叠加曲
@@ -745,6 +819,10 @@
         const now = this.ctx.currentTime;
         const horizon = now + LOOKAHEAD;
         for (const t of this.tracks) t.scheduleUntil(horizon, now);
+        // 叠加短曲的音符奏完即恢复主曲音量（锣、混响的余音继续自然衰减）
+        for (const t of this.tracks) {
+          if (t.overlay && !t.stopping && !t.unducked && t.seg === null && now >= t.endTime - 0.3) { t.unducked = true; this.duck(1, 1.0); }
+        }
         // 清理已结束的曲目
         for (let i = this.tracks.length - 1; i >= 0; i--) {
           const t = this.tracks[i];
@@ -752,7 +830,7 @@
             t.dispose();
             this.tracks.splice(i, 1);
             if (t.finished && !t.stopping) {
-              if (t.overlay) this.duck(1, 0.6);
+              if (t.overlay && !t.unducked) this.duck(1, 0.6);
               if (this.onEnded) { try { this.onEnded(t.key, t.overlay); } catch (e) { console.warn(e); } }
             }
           }
@@ -764,6 +842,7 @@
     scheduleUntil(t) { for (const tr of this.tracks) tr.scheduleUntil(t, 0); }
 
     dispose() {
+      this.disposed = true;
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       for (const t of this.tracks) t.dispose();
       this.tracks = [];
@@ -909,6 +988,8 @@
     // 播放一个预渲染采样
     playBuffer(ch, fk, t, vel, o) {
       const ctx = this.ctx;
+      // 轮指的随机微偏差、倚音提前量可能让起点落在 0 之前（AudioParam 不接受负时间）
+      t = Math.max(t, this.eng.offline ? 0 : ctx.currentTime);
       let buf = getBuffer(fk, ctx);
       if (!buf) {
         if (this.eng.offline) { renderSampleSync(fk); buf = getBuffer(fk, ctx); }
@@ -1140,7 +1221,7 @@
   SG.Music = {
     version: 2,
     INST, PIECES,
-    defineInst, add, resolve, compile, prepare, prepareSync,
+    defineInst, add, resolve, compile, compileAsync, prepare, prepareSync,
     get(key) { return PIECES[key] || null; },
     keys() { return Object.keys(PIECES); },
     validate(key) { const C = compile(key); return C ? C.errors.slice() : ['未知曲目 ' + key]; },

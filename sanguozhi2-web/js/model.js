@@ -4,11 +4,12 @@
    移植自 Model/GameState.cs 与 Model/Commands.cs。
    城 / 武将 / 势力为普通对象，字段名与 C# 相同。当前游戏为 SG.G。
    第二版（调动武将）新增：
-     G.routesFrom(city, f?) → [{ city, hops, path }]   经由己方城池链可达的己方城（BFS）
+     G.routesFrom(city, f?, maxHops?) → [{ city, hops, path }]   经由己方城池链可达的己方城（BFS；maxHops 限制路程）
      G.routeBetween(from, to, f?) → 城编号数组 | null
      Commands.moveTargets(c) / transportTargets(c)       移动 / 输送的目的地（= routesFrom）
      Commands.moveBlocked(c) / transportBlocked(c)       不能使用的原因（中文）或 null
      Commands.move / transport 拒绝不可达的目的地（返回说明文字，不改变状态）
+     Commands.aiMoveTargets(c, f)                        电脑调动武将可选的目的地（路程 ≤ 2；供 strategy-ai.js 接线用）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -163,15 +164,16 @@
     // 经由 f 方城池相连可达的所有 f 方城（广度优先；不含出发城，不穿过他国或空城）。
     // → [{ city, hops, path }]：hops 为路程（相邻 = 1，途经城数 = hops − 1），
     //   path 为城编号数组（含起点与终点）。按路程、再按发现顺序（links 顺序）排列，结果确定。
-    // from 不属于 f 时返回空数组。f 缺省为 from.owner。
-    routesFrom(from, f) {
-      if (f === undefined) f = from ? from.owner : -1;
+    // from 不属于 f 时返回空数组。f 缺省为 from.owner。maxHops（可选，> 0）只取路程不超过它的城。
+    routesFrom(from, f, maxHops) {
+      if (f === undefined || f === null) f = from ? from.owner : -1;
       const out = [];
       if (!from || f < 0 || from.owner !== f) return out;
+      const lim = maxHops > 0 ? maxHops : Infinity;
       const prev = new Map();
       prev.set(from.id, -1);
       let frontier = [from.id];
-      for (let hops = 1; frontier.length > 0; hops++) {
+      for (let hops = 1; frontier.length > 0 && hops <= lim; hops++) {
         const next = [];
         for (const id of frontier) {
           for (const j of this.cities[id].links) {
@@ -296,6 +298,7 @@
   const DevKind = Object.freeze({ Land: 0, Industry: 1, Town: 2 });
 
   function G() { return SG.G; }
+  const AI_MOVE_HOPS = 2;   // 电脑调动武将的最远路程（相邻 = 1）
   function R(a, b) { return SG.Random.rangeInt(a, b + 1); }
 
   // 战略指令（玩家与电脑共用）
@@ -393,13 +396,16 @@
     // 第二版：目的地不必相邻——经由己方城池链可达的己方城都可前往（GameState.routesFrom）。
     // 每次仍只消耗 1 枚令牌（由界面扣除）。
     moveTargets(c) { return G().routesFrom(c, c.owner); },
+    // 电脑把后方武将调往前线时可选的目的地（城池数组，近者在前）：路程不超过 AI_MOVE_HOPS。
+    // 玩家可调往任意相连的己方城；电脑只看两步之内，实测（800 局 × 20 年）不改变势力存亡与对玩家的压力。
+    aiMoveTargets(c, f) { return G().routesFrom(c, f === undefined ? c.owner : f, AI_MOVE_HOPS).map(r => r.city); },
     transportTargets(c) { return G().routesFrom(c, c.owner); },
 
     // 不能从 c 调动武将的原因（规则层面；令牌、忙碌等界面状态不在此列）。null = 可以
     moveBlocked(c) {
       const g = G();
       if (c.owner < 0) return '这座城不属于任何势力。';
-      if (g.cityCount(c.owner) <= 1) return '只有一座城池——攻下第二座城后即可调动武将。';
+      if (g.cityCount(c.owner) <= 1) return '只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可调动武将。';
       if (g.routesFrom(c, c.owner).length === 0) return `${c.name}与其他己方城池之间隔着他国或空城，无法调动（须经由己方城池相连）。`;
       const offs = g.officersIn(c);
       if (offs.length === 0) return `${c.name}没有武将。`;
@@ -410,7 +416,7 @@
     transportBlocked(c) {
       const g = G();
       if (c.owner < 0) return '这座城不属于任何势力。';
-      if (g.cityCount(c.owner) <= 1) return '只有一座城池——攻下第二座城后即可输送金粮。';
+      if (g.cityCount(c.owner) <= 1) return '只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可输送金粮。';
       if (g.routesFrom(c, c.owner).length === 0) return `${c.name}与其他己方城池之间隔着他国或空城，无法输送（须经由己方城池相连）。`;
       if (c.gold <= 0 && c.food <= 0) return `${c.name}没有可输送的金粮。`;
       return null;

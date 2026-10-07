@@ -72,10 +72,10 @@
   const W = '#ece8e0', GRAY = '#b8b4ac', BLACK = '#16131a';
   SG.PortraitData.add({
     // ------------------------------------------------------------- 董卓 --
-    '董卓': { age: 52, fat: 0.95, face: { w: 1.06, jaw: 1.25 }, eyes: 'narrow', brows: 'bushy', nose: 'bulb', hair: { color: '#2a2422' },
-      beard: { style: 'full', len: 0.6 }, mustache: 'thick', hat: { type: 'jinxian', color: '#2a1a1e' }, outfit: { type: 'robe', color: '#5a1a2a', color2: '#c8a050', cape: '#3a1018' }, expr: 'sly' },
+    '董卓': { age: 52, fat: 0.95, neck: 1.45, face: { w: 1.06, jaw: 1.25 }, eyes: { shape: 'narrow', size: 0.88 }, brows: 'bushy', nose: 'bulb', hair: { color: '#2a2422' },
+      beard: { style: 'full', len: 0.75, color: '#231c1c' }, mustache: 'thick', hat: { type: 'jinxian', color: '#2a1a1e' }, outfit: { type: 'robe', color: '#5a1a2a', color2: '#c8a050', cape: '#3a1018' }, expr: 'sly' },
     '吕布': { age: 32, build: 1.15, face: { w: 0.98, jaw: 1.02, len: 1.02 }, eyes: 'sharp', brows: { shape: 'sword', thick: 1.15 }, beard: 'none', mustache: 'none',
-      hat: { type: 'pheasant' }, outfit: { type: 'plate', metal: '#b89048', color: '#b02a2a', trim: '#e8c060' }, weapon: 'halberd', expr: 'fierce' },
+      hat: { type: 'pheasant' }, outfit: { type: 'plate', metal: '#b89048', color: '#b02a2a', trim: '#e8c060' }, weapon: 'halberd', expr: 'sly' },
     '李儒': { age: 44, face: { w: 0.94, len: 1.08, hollow: 0.5 }, eyes: 'narrow', brows: 'thin', nose: 'aquiline', beard: { style: 'goatee', len: 1.1 }, mustache: 'thin',
       hat: { type: 'jinxian' }, outfit: { type: 'robe', color: '#2a2a3a', color2: '#5a1a2a' }, expr: 'sly' },
     '华雄': { age: 34, build: 1.2, neck: 1.3, face: { w: 1.06, jaw: 1.25, brow: 1.3 }, eyes: 'round', brows: 'bushy', nose: 'broad', beard: { style: 'bristle', len: 1.0 }, mustache: 'bristle',
@@ -138,7 +138,7 @@
     '李典': { age: 28, eyes: 'gentle', brows: 'straight', beard: { style: 'goatee', len: 0.6 }, mustache: 'thin', hat: { type: 'wuguan' }, outfit: { type: 'robearmor', color: '#2c3d8f', metal: '#7a808c' }, expr: 'calm' },
 
     // ------------------------------------------------------------- 刘备 --
-    '刘备': { age: 30, face: { w: 0.98, len: 1.02, jaw: 0.95 }, skin: '#f2d2b0', ears: { size: 1.3, lobe: 1.6 }, eyes: { shape: 'gentle', size: 1.04 }, brows: 'arched',
+    '刘备': { age: 30, face: { w: 0.98, len: 1.02, jaw: 0.95 }, skin: '#f2d2b0', ears: { size: 1.45, lobe: 2.0 }, eyes: { shape: 'gentle', size: 1.04 }, brows: 'arched',
       mouth: { lips: 1.1 }, beard: { style: 'goatee', len: 0.8 }, mustache: 'thin', hat: { type: 'crown', color: '#d8b050', gem: '#2f9a55' },
       outfit: { type: 'robe', color: '#2a6a3a', color2: '#d8c890', cape: 'faction' }, weapon: 'swords', expr: 'calm' },
     '关羽': { age: 30, skin: '#b8523c', build: 1.12, neck: 1.12, face: { len: 1.08, jaw: 1.05 }, eyes: 'phoenix', brows: { shape: 'silkworm', thick: 1.2 },
@@ -167,6 +167,10 @@
       hat: { type: 'crown', color: '#e0c050', gem: '#c02a30', pearls: true }, outfit: { type: 'robe', color: '#c99a2e', color2: '#7a2a2a', cape: 'faction' }, expr: 'sly' },
     '纪灵': { age: 40, build: 1.18, face: { w: 1.06, jaw: 1.2 }, eyes: 'round', brows: 'bushy', beard: { style: 'full', len: 0.9 }, mustache: 'thick', hat: { type: 'helmet', variant: 'horn', color: '#8a7048' },
       outfit: { type: 'plate', metal: '#8a7048', color: '#c99a2e' }, weapon: 'halberd', expr: 'fierce' },
+    '桥蕤': { age: 38, build: 1.08, eyes: 'normal', brows: 'straight', nose: 'broad', beard: { style: 'full', len: 0.7 }, mustache: 'droop', hat: { type: 'helmet', variant: 'plain', color: '#8a7048', plume: '#d8a020' },
+      outfit: { type: 'lamellar', metal: '#8a7048', color: '#8a6a2a' }, weapon: 'spear', expr: 'stern' },
+    '雷薄': { age: 34, build: 1.1, face: { w: 1.04, jaw: 1.15 }, eyes: 'narrow', brows: 'knit', beard: { style: 'stubble' }, mustache: 'thick', hat: { type: 'headband', color: '#a07a2e' },
+      outfit: { type: 'lamellar', metal: '#5a5e68', color: '#6a4a2a' }, marks: ['scar'], expr: 'sly' },
     '张勋': { age: 40, eyes: 'normal', brows: 'angled', beard: { style: 'short' }, mustache: 'thick', hat: { type: 'helmet', variant: 'round', color: '#7a6a48' }, outfit: { type: 'lamellar', metal: '#7a6a48', color: '#a07a2e' } },
     '阎象': { age: 50, eyes: 'narrow', brows: 'straight', beard: { style: 'long', len: 1.1 }, mustache: 'thin', hat: { type: 'jinxian' }, outfit: { type: 'robe', color: '#4a3a2a' }, expr: 'stern' },
     '杨弘': { age: 44, eyes: 'normal', brows: 'thin', beard: { style: 'goatee' }, mustache: 'thin', hat: { type: 'jinxian' }, outfit: { type: 'robe', color: '#6a5a2a' }, expr: 'calm' },
@@ -188,6 +192,8 @@
     '张允': { age: 34, eyes: 'normal', brows: 'thin', beard: { style: 'goatee' }, mustache: 'thin', hat: { type: 'ze' }, outfit: { type: 'lamellar', metal: '#6a6e78', color: '#2a6a6a' }, expr: 'sly' },
     '蒯良': { age: 46, eyes: 'narrow', brows: 'straight', beard: { style: 'long', len: 1.0 }, mustache: 'thin', hat: { type: 'jinxian' }, outfit: { type: 'robe', color: '#3a4a4a' }, expr: 'calm' },
     '蒯越': { age: 44, face: { len: 1.06 }, eyes: 'sharp', brows: 'thin', beard: { style: 'forked', len: 0.9 }, mustache: 'thin', hat: { type: 'jinxian' }, outfit: { type: 'robe', color: '#2a3a3a', color2: '#5a5a3a' }, expr: 'sly' },
+    '王威': { age: 42, face: { len: 1.06, hollow: 0.35 }, eyes: 'sharp', brows: 'straight', nose: 'aquiline', beard: { style: 'long', len: 0.9 }, mustache: 'thin',
+      hat: { type: 'wuguan', color: '#2a2a30' }, outfit: { type: 'robearmor', color: '#2a5a5a', metal: '#6a6e78' }, expr: 'calm' },
     '文聘': { age: 30, build: 1.08, eyes: 'sharp', brows: 'straight', beard: { style: 'short' }, mustache: 'thick', hat: { type: 'helmet', variant: 'plain', color: '#7a808c', plume: '#2a8a8a' },
       outfit: { type: 'plate', metal: '#7a808c', color: '#3aa5a0' }, weapon: 'spear', expr: 'stern' },
     '黄祖': { age: 52, face: { hollow: 0.5 }, eyes: 'narrow', brows: 'bushy', beard: { style: 'full', len: 0.9 }, mustache: 'droop', hat: { type: 'helmet', variant: 'round', color: '#5a5e68' },

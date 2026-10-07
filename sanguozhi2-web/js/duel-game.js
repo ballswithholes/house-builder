@@ -66,7 +66,7 @@
       hits: [0.0, 0.17, 0.34, 0.56] },
   };
   const ATTACKS = new Set(['light1', 'light2', 'light3', 'heavy', 'air', 'special']);
-  const STYLE_SPD = { pole: 1.0, one: 1.05, dual: 1.08 };
+  const STYLE_SPD = { pole: 1.0, one: 1.14, dual: 1.18 };
 
   // ============================================================ 数值 --
   function warOf(gen) { const w = Number(gen && gen.war); return M.clamp(isFinite(w) ? w : 50, 1, 120); }
@@ -80,22 +80,22 @@
   function walkSpeed(war) { return 2.3 * (0.92 + M.clamp(war, 0, 110) / 100 * 0.16); }
 
   // ============================================================ 兵器与外观 --
-  // style：pole 双手长兵 / one 单手兵 / dual 双持
+  // style：pole 双手长兵 / one 单手兵 / dual 双持；reach 判定距离（米）；pow 兵器威力系数（缺省 1，重兵器略高，用以抵消出手较慢）
   const WEAPONS = {
-    guandao: { name: '青龙偃月刀', style: 'pole', reach: 2.05 },
-    snake: { name: '丈八蛇矛', style: 'pole', reach: 2.1 },
-    ji: { name: '方天画戟', style: 'pole', reach: 2.05 },
-    spear: { name: '长枪', style: 'pole', reach: 2.1 },
-    poleblade: { name: '大刀', style: 'pole', reach: 2.0 },
-    axe: { name: '大斧', style: 'pole', reach: 1.9 },
-    bigblade: { name: '斩马刀', style: 'pole', reach: 1.9 },
-    sword: { name: '长剑', style: 'one', reach: 1.6 },
-    dao: { name: '环首刀', style: 'one', reach: 1.6 },
-    shortji: { name: '短戟', style: 'one', reach: 1.65 },
-    mace: { name: '骨朵', style: 'one', reach: 1.6 },
-    twinsword: { name: '双股剑', style: 'dual', reach: 1.55 },
-    twinji: { name: '双铁戟', style: 'dual', reach: 1.6 },
-    twindao: { name: '双刀', style: 'dual', reach: 1.5 },
+    guandao: { name: '青龙偃月刀', style: 'pole', reach: 2.0, pow: 1.05 },
+    snake: { name: '丈八蛇矛', style: 'pole', reach: 2.05 },
+    ji: { name: '方天画戟', style: 'pole', reach: 2.0, pow: 1.06 },
+    spear: { name: '长枪', style: 'pole', reach: 2.05 },
+    poleblade: { name: '大刀', style: 'pole', reach: 1.95, pow: 1.07 },
+    axe: { name: '大斧', style: 'pole', reach: 1.88, pow: 1.12 },
+    bigblade: { name: '斩马刀', style: 'pole', reach: 1.88, pow: 1.14 },
+    sword: { name: '长剑', style: 'one', reach: 1.78 },
+    dao: { name: '环首刀', style: 'one', reach: 1.75 },
+    shortji: { name: '短戟', style: 'one', reach: 1.8 },
+    mace: { name: '骨朵', style: 'one', reach: 1.72, pow: 0.97 },
+    twinsword: { name: '双股剑', style: 'dual', reach: 1.72, pow: 0.96 },
+    twinji: { name: '双铁戟', style: 'dual', reach: 1.75, pow: 0.97 },
+    twindao: { name: '双刀', style: 'dual', reach: 1.68 },
   };
 
   // 知名武将的外观（未列出的按能力值与姓名哈希确定性生成）
@@ -269,6 +269,7 @@
       this.buf = { light: -9, jump: -9, special: -9, heavy: -9, dash: -9 };
       this.lastTap = { dir: 0, t: -9 };
       this.stats = { swings: 0, hits: 0, guarded: 0, taken: 0 };
+      this.bow = !!look.bow;  // 弓将（黄忠、夏侯渊）：绝技为连珠箭（远程），不突进
     }
     get grounded() { return this.y <= 0 && this.vy <= 0; }
     // 出招阶段：'startup' | 'active' | 'recovery' | null
@@ -298,6 +299,8 @@
       this.hist = [[], []];       // 供 AI 延迟感知的历史快照
       this.histN = 90;
       this.steps = 0;
+      this.shots = [];            // 飞行中的箭（弓将绝技）：{ id, owner, x, y, vx, fin, n }
+      this.shotId = 0;
     }
     other(f) { return this.f[1 - f.idx]; }
     actionable(f) { return f.state === 'idle' || f.state === 'walk'; }
@@ -326,6 +329,7 @@
       const hb = !fz1 ? this.hitCheck(b, a) : null;
       if (ha) this.hit(a, b, ha);
       if (hb) this.hit(b, a, hb);
+      if (this.shots.length) this.updateShots(dt);
       if (this.running && !this.result) {
         this.time += dt;
         for (const f of this.f) f.rage = Math.min(100, f.rage + dt * 0.7);
@@ -443,9 +447,9 @@
           break;
         }
         case 'special': {
-          // 起手定格之后突进到对手面前
+          // 起手定格之后突进到对手面前（弓将原地连射）
           const dx = (o.x - f.x) * f.face;
-          if (f.t >= SPECIAL_FREEZE && f.t < mv.startup + mv.active) f.vx = dx > f.reach * 0.7 ? f.face * 10 : 0;
+          if (!f.bow && f.t >= SPECIAL_FREEZE && f.t < mv.startup + mv.active) f.vx = dx > f.reach * 0.7 ? f.face * 10 : 0;
           else f.vx = 0;
           if (f.t >= mv.startup + mv.active + mv.recovery) this.setState(f, 'idle');
           break;
@@ -500,7 +504,8 @@
       this.setState(f, 'special');
       f.rage = 0; f.vx = 0;
       f.stats.swings++;
-      this.freeze[o.idx] = SPECIAL_FREEZE;
+      // 对手定格；弓将的定格延续到第一支箭射到为止（近战绝技靠突进追上对手）
+      this.freeze[o.idx] = SPECIAL_FREEZE + (f.bow ? 0.12 + Math.max(0, Math.abs(o.x - f.x) - 0.6) / 24 : 0);
       this.emit({ type: 'special', who: f.idx });
     }
 
@@ -544,9 +549,17 @@
         const idx = f.hitIdx;
         if (idx >= mv.hits.length || f.t < mv.startup + mv.hits[idx]) return null;
         f.hitIdx++;
+        const fin = idx === mv.hits.length - 1;
+        if (f.bow) {
+          // 放箭：箭矢独立飞行，命中在 updateShots 里结算
+          const sh = { id: ++this.shotId, owner: f.idx, x: f.x + f.face * 0.55, y: fin ? 1.3 : 1.42, vx: f.face * (fin ? 30 : 24), fin, n: idx };
+          this.shots.push(sh);
+          this.emit({ type: 'arrow', who: f.idx, id: sh.id, fin, n: idx });
+          return null;
+        }
         this.emit({ type: 'swing', who: f.idx, move: 'special', n: idx });
         const dx = (o.x - f.x) * f.face;
-        if (dx > -0.2 && dx <= f.reach + BODY + 0.4 && !this.immune(o)) return { mv, name: 'special', fin: idx === mv.hits.length - 1, charge: 0 };
+        if (dx > -0.2 && dx <= f.reach + BODY + 0.4 && !this.immune(o)) return { mv, name: 'special', fin, charge: 0 };
         return null;
       }
       if (f.phase !== 'active' || f.hitIdx > 0) return null;
@@ -559,11 +572,34 @@
     }
     immune(o) { return o.invuln > 0 || o.state === 'knockdown' || o.state === 'down' || o.state === 'getup' || o.ko; }
 
+    // 箭矢飞行与命中（穿过倒地 / 无敌的对手，飞出场外后消失）
+    updateShots(dt) {
+      const S = this.shots;
+      let n = 0;
+      for (let i = 0; i < S.length; i++) {
+        const sh = S[i], f = this.f[sh.owner], o = this.f[1 - sh.owner];
+        const x0 = sh.x;
+        sh.x += sh.vx * dt;
+        const dir = Math.sign(sh.vx);
+        const crossed = (o.x - dir * BODY * 0.5 - x0) * dir >= -0.05 && (o.x - dir * BODY * 0.5 - sh.x) * dir <= 0;
+        if (crossed && !this.immune(o) && o.y < 1.9 && !sh.hit) {
+          sh.hit = true;
+          this.hit(f, o, { mv: MOVES.special, name: 'special', fin: sh.fin, charge: 0, px: o.x - dir * 0.25, py: sh.y + o.y * 0.6, arrow: true });
+          this.emit({ type: 'arrowEnd', id: sh.id, hit: true });
+          continue;
+        }
+        if (Math.abs(sh.x) > ARENA + 6) { this.emit({ type: 'arrowEnd', id: sh.id, hit: false }); continue; }
+        S[n++] = sh;
+      }
+      S.length = n;
+    }
+
     hit(f, o, h) {
       const mv = h.mv, name = h.name, finisher = h.fin, chg = h.charge;
-      let base = mv.dmg;
+      let base = mv.dmg * (f.wpn.pow || 1);
       if (name === 'heavy') base += mv.dmgCharge * chg;
       if (name === 'special' && finisher) base = mv.finisher;
+      if (h.arrow) base *= 0.8;                     // 箭矢可远距离命中，威力略低
       const counter = o.state === 'charge' || (MOVES[o.state] && o.phase === 'startup' && o.state !== 'special');
       if (counter) base *= 1.2;
       let dmg = damage(base, f.war, o.war) * SG.Random.rangeFloat(0.92, 1.08);
@@ -609,12 +645,14 @@
         this.emit({ type: 'knockdown', who: o.idx });
       }
       // 角落：对手退无可退时，反推攻击方
-      if (Math.abs(o.x) >= ARENA - 0.05 && Math.sign(o.x) === dir) f.vx = -dir * mv.push * 0.7;
+      if (!h.arrow && Math.abs(o.x) >= ARENA - 0.05 && Math.sign(o.x) === dir) f.vx = -dir * mv.push * 0.7;
       this.hitstop = Math.max(this.hitstop, hs);
       const entry = { who: f.idx, dmg, hpA: this.f[0].hp, hpB: this.f[1].hp, move: name, guarded, t: Math.round(this.time * 100) / 100 };
       this.log.push(entry);
-      this.emit({ type: 'hit', att: f.idx, def: o.idx, dmg, guarded, move: name, big, counter, breaks, charge: chg,
-        finisher, combo: guarded ? 0 : f.combo, x: f.x + dir * Math.min(Math.abs(o.x - f.x) * 0.75, f.reach * 0.8), y: o.y + (mv.kind === 'air' ? 1.1 : 1.25) });
+      this.emit({ type: 'hit', att: f.idx, def: o.idx, dmg, guarded, move: name, big, counter, breaks, charge: chg, arrow: !!h.arrow,
+        finisher, combo: guarded ? 0 : f.combo,
+        x: h.px !== undefined ? h.px : f.x + dir * Math.min(Math.abs(o.x - f.x) * 0.75, f.reach * 0.8),
+        y: h.py !== undefined ? h.py : o.y + (mv.kind === 'air' ? 1.1 : 1.25) });
       if (o.ko && !this.result) {
         this.result = { winner: f.idx, kind: 'ko' };
         this.endT = 0;
@@ -701,6 +739,11 @@
         if (r < s * 0.55 && dist <= reach * 1.05 && sim.actionable(me)) { this.press('light'); return; }
         if (r < s * 0.85) { this.backUntil = now + 0.35; this.guardUntil = 0; }
       }
+      // 看见对手冲刺切入：兵器较长者迎头一击（抢先出手）
+      if (seen && seen.state === 'dash' && seen.seq !== this.dashSeq && sim.actionable(me)) {
+        this.dashSeq = seen.seq;
+        if (dist <= reach + 0.5 && me.reach >= foe.reach && rnd() < 0.15 + 0.45 * s) { this.press('light'); return; }
+      }
       const canGuard = sim.actionable(me) || me.state === 'guard' || me.state === 'guardstun';
       if (now < this.guardUntil && canGuard) { H.guard = true; H.x = 0; return; }
       H.guard = false;
@@ -733,8 +776,15 @@
         return;
       }
       // 绝技
-      if (me.rage >= 100 && dist <= reach + 1.8 && rnd() < 0.3 + 0.55 * s) { this.press('special'); return; }
+      if (me.rage >= 100 && (me.bow ? dist > reach * 0.6 : dist <= reach + 1.8) && rnd() < 0.3 + 0.55 * s) { this.press('special'); return; }
       if (dist > reach * 1.02) {
+        // 兵器较短：抓对手收招的破绽，或冲刺切入（冲刺中轻击 = 突进斩）
+        const gap = foe.reach - me.reach;
+        if (gap > 0.03 && dist < reach + 0.85) {
+          const k = Math.min(1, 0.35 + gap / 0.3);
+          const opening = seen && (seen.phase === 'recovery' || seen.state === 'hitstun' || seen.state === 'guardstun');
+          if ((opening && rnd() < (0.35 + 0.5 * s) * k) || rnd() < (0.08 + 0.18 * s) * k) { H.dash = me.face; this.press('light'); return; }
+        }
         if (dist < reach * 1.45 && rnd() < this.whiffP) { this.press('light'); return; }   // 冒失出手
         if (dist > 3.4 && rnd() < 0.22 + 0.2 * s) { H.dash = me.face; return; }
         if (dist > 1.9 && dist < 3.3 && rnd() < 0.05 + 0.05 * (1 - s)) { this.press('up'); H.x = me.face; this.planX = me.face; return; }
@@ -1033,6 +1083,33 @@
     return { pb, tip, len };
   }
 
+  // 手持的弓（握把在原点，弓臂沿 ±y，弓背朝 +x；弦另画）。返回弓梢位置供挂弦
+  const BOW = { tipX: -0.075, tipY: 0.66 };
+  function buildBow() {
+    const pb = new PB();
+    const lim = y => -0.12 * Math.pow(Math.min(1, Math.abs(y) / 0.55), 1.6);
+    for (const sg of [1, -1]) {
+      let prev = [0, 0, 0];
+      for (let i = 1; i <= 6; i++) {
+        const y = sg * 0.55 * i / 6, q = [lim(y), y, 0];
+        pb.rod(prev, q, 0.02 - i * 0.0015, 0.02 - (i + 1) * 0.0015, 5, i % 3 === 0 ? GOLD : '#3a1e14');
+        prev = q;
+      }
+      pb.rod(prev, [BOW.tipX, sg * BOW.tipY, 0], 0.01, 0.007, 4, '#e8dcc0');      // 反曲弓梢（角质）
+    }
+    pb.prism(0, 0, -0.07, 0.07, 0.024, 0.024, 6, '#c8a050');                       // 握把缠绳
+    return pb;
+  }
+  // 箭（沿 +x，箭尾在原点）
+  function buildArrow(fin) {
+    const pb = new PB();
+    pb.rod([0, 0, 0], [0.8, 0, 0], 0.008, 0.008, 4, '#d8c8a0');
+    pb.slab([[0.78, -0.022], [0.92, 0], [0.78, 0.022], [0.8, 0]], -0.004, 0.004, fin ? '#ffe08a' : STEEL, EDGE);
+    for (const k of [-1, 1]) pb.slab([[0.02, 0], [0.16, 0], [0.12, k * 0.035], [0.0, k * 0.035]], -0.003, 0.003, k > 0 ? RED : '#f4efe4');
+    pb.slab([[0.02, -0.003], [0.16, -0.003], [0.12, 0.003], [0.0, 0.003]], -0.035, 0.035, '#f4efe4');
+    return pb;
+  }
+
   // ============================================================ 视图：武将模型 --
   // 局部坐标：+x 为正面，+y 向上，+z 为右侧（面向右时朝向镜头）。所有肢体都直接挂在 body 下，由 IK 摆放。
   const LEN = { thigh: 0.46, shin: 0.44, upper: 0.3, fore: 0.28 };
@@ -1101,12 +1178,14 @@
     }
     pb.prism(0, 0, 0.48, 0.58, 0.058, 0.052, 6, skin);
     if (!look.bare && !nan) pb.taper(0, 0, 0.46, 0.53, 0.17 * bk, 0.21 * bk, 0.14, 0.17, look.robe ? robe : C('#8a2a20'));
-    if (look.bow) {   // 背弓与箭囊
+    if (look.bow) {   // 箭囊（背弓单独成件，放箭时取到手上）
+      pb.at(-0.17 * bk, 0.28, 0.1, 0.4, 0, 0); pb.box(0, 0, 0, 0.08, 0.36, 0.08, '#6a4a2a'); for (let i = 0; i < 3; i++) pb.rod([0, 0.18, -0.02 + i * 0.02], [0, 0.3, -0.02 + i * 0.02], 0.006, 0.006, 3, '#e8dcc0'); pb.at();
+      const bb = new PB();
       for (let i = 0; i < 6; i++) {
         const a0 = -1.1 + i * 0.37, a1 = a0 + 0.37;
-        pb.rod([-0.17 * bk + Math.cos(a0) * 0.04, 0.24 + Math.sin(a0) * 0.42, -0.04 + Math.cos(a0) * 0.18], [-0.17 * bk + Math.cos(a1) * 0.04, 0.24 + Math.sin(a1) * 0.42, -0.04 + Math.cos(a1) * 0.18], 0.012, 0.012, 4, '#5a3a20');
+        bb.rod([-0.17 * bk + Math.cos(a0) * 0.04, 0.24 + Math.sin(a0) * 0.42, -0.04 + Math.cos(a0) * 0.18], [-0.17 * bk + Math.cos(a1) * 0.04, 0.24 + Math.sin(a1) * 0.42, -0.04 + Math.cos(a1) * 0.18], 0.012, 0.012, 4, '#5a3a20');
       }
-      pb.at(-0.17 * bk, 0.28, 0.1, 0.4, 0, 0); pb.box(0, 0, 0, 0.08, 0.36, 0.08, '#6a4a2a'); for (let i = 0; i < 3; i++) pb.rod([0, 0.18, -0.02 + i * 0.02], [0, 0.3, -0.02 + i * 0.02], 0.006, 0.006, 3, '#e8dcc0'); pb.at();
+      P.backbow = bb;
     }
     P.torso = pb;
 
@@ -1377,6 +1456,22 @@
       [t0 + h[1] - 0.06, c.light2[1][1]], [t0 + h[1], L2], [t0 + h[2] - 0.06, c.light3[1][1]], [t0 + h[2], L3], [t0 + h[3] - 0.1, c.charge], [t0 + h[3], H],
       [t0 + h[3] + 0.2, c.heavy[2][1]], [t0 + MOVES.special.active + MOVES.special.recovery, I]];
     c.intro = [[0, I], [0.25, pose(I, { wa: I[PI_.wa] + 180, gy: I[PI_.gy] + 0.3, twist: I[PI_.twist] + 0.3 })], [0.5, pose(I, { wa: I[PI_.wa] + 360, gy: I[PI_.gy] + 0.1 })], [0.85, c.guard], [1.3, I]];
+    // 弓将绝技「连珠箭」：插刀于地 → 侧身开弓 → 三连射 → 满弓重箭 → 收弓拔刀（g* = 拉弦的右手，o* = 持弓的左手）
+    const B0 = { twist: -1.05, lean: 0.03, hy: 0.86, head: 0.02, fLx: 0.44, fLy: 0.08, fRx: -0.42, fRy: 0.08, oz: -0.1, gz: 0.12, cape: 0.3 };
+    const DRAW = pose(I, Object.assign({}, B0, { gx: -0.02, gy: 1.47, ox: 0.6, oy: 1.46 }));
+    const FULL = pose(I, Object.assign({}, B0, { gx: -0.1, gy: 1.5, ox: 0.62, oy: 1.5, lean: -0.06, hy: 0.84, head: -0.06, cape: 0.6 }));
+    const REL = pose(I, Object.assign({}, B0, { gx: -0.16, gy: 1.52, gz: 0.2, ox: 0.62, oy: 1.47 }));
+    const NOCK = pose(I, Object.assign({}, B0, { gx: 0.28, gy: 1.36, ox: 0.58, oy: 1.44 }));
+    const RAISE = pose(I, Object.assign({}, B0, { gx: 0.2, gy: 1.62, ox: 0.44, oy: 1.72, twist: -0.8, lean: -0.08, head: -0.14, cape: 0.6 }));
+    const bk = [[0, I], [0.22, RAISE], [0.45, NOCK], [SPECIAL_FREEZE, DRAW]];
+    for (let i = 0; i < h.length; i++) {
+      const th = t0 + h[i], last = i === h.length - 1;
+      if (i > 0) { bk.push([t0 + h[i - 1] + 0.05, NOCK]); bk.push([th - (last ? 0.04 : 0.02), last ? FULL : DRAW]); }
+      else bk.push([th - 0.02, DRAW]);
+      bk.push([th + 0.02, REL]);
+    }
+    bk.push([t0 + h[h.length - 1] + 0.3, REL], [t0 + MOVES.special.active + MOVES.special.recovery, I]);
+    c.bowSpecial = bk;
     return c;
   }
   const CLIPS = {};
@@ -1501,6 +1596,25 @@
       this.wpn = mkW();
       if (this.style === 'dual') this.wpn2 = mkW();
       this.tipLen = w.tip; this.bladeLen = w.len;
+      // 弓将：背弓 + 手持弓（弦为折线，满弓时随右手拉开）+ 搭在弦上的箭
+      this.mats = [];
+      this.bowK = 0;
+      if (parts.backbow) mk('backbow', this.torso);
+      if (this.look.bow) {
+        const g = buildBow().geo(); this.geos.push(g);
+        this.handBow = new THREE.Mesh(g, this.mat); this.handBow.castShadow = true; this.handBow.visible = false;
+        this.body.add(this.handBow);
+        const sg = new THREE.BufferGeometry();
+        sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+        this.geos.push(sg);
+        const sm = new THREE.LineBasicMaterial({ color: 0xf0e8d0 }); this.mats.push(sm);
+        this.bowString = new THREE.Line(sg, sm); this.bowString.frustumCulled = false; this.bowString.visible = false;
+        this.body.add(this.bowString);
+        const ag = buildArrow(false).geo(); this.geos.push(ag);
+        this.nocked = new THREE.Mesh(ag, this.mat); this.nocked.visible = false; this.nocked.rotation.order = 'YZX';
+        this.body.add(this.nocked);
+        this.handL = new THREE.Vector3(); this.handR = new THREE.Vector3();
+      }
       this.cur = pose(this.idlePose); this.from = pose(this.idlePose); this.tgt = pose(this.idlePose);
       this.key = ''; this.blend = 1; this.blendDur = 0.1;
       this.walkPhase = 0; this.time = f.idx * 1.7; this.capeA = -0.1; this.capeV = 0; this.cape2A = 0;
@@ -1521,7 +1635,7 @@
       if (this.intro >= 0) { key = 'intro'; sampleKeys(c.intro, this.intro, out); dur = 0.1; }
       else if (mv && f.state !== 'special') { sampleKeys(c[f.state], phaseOf(mv, f.t), out); }
       else switch (f.state) {
-        case 'special': sampleKeys(c.special, f.t, out); break;
+        case 'special': sampleKeys(f.bow ? c.bowSpecial : c.special, f.t, out); break;
         case 'charge': out.set(c.charge); break;
         case 'guard': out.set(c.guard); break;
         case 'guardstun': out.set(c.guardstun); break;
@@ -1582,7 +1696,11 @@
       }
       if (st === 'hitstun' && f.t < 0.12) P[PI_.hx] += Math.sin(f.t * 120) * 0.025 * (1 - f.t / 0.12);
       if (st === 'dash') P[PI_.cape] += 0.4;
+      // 弓将绝技期间：刀插在地上，弓在手中
+      const sp = MOVES.special;
+      this.bowK = f.bow && st === 'special' && f.t > 0.14 && f.t < sp.startup + sp.active + sp.recovery - 0.22 ? 1 : 0;
       this.apply(P);
+      if (this.handBow) this.updateBow();
       // 位置与朝向
       this.root.position.set(f.x, f.y + P[PI_.fall] * 0.12, 0);
       this.root.scale.x = f.face;
@@ -1592,6 +1710,8 @@
       const tgtA = -0.1 - Math.abs(f.vx) * 0.06 - P[PI_.cape] * 0.55 - (f.y > 0 ? Math.min(0.5, Math.abs(f.vy) * 0.05) : 0);
       this.capeV += ((tgtA - this.capeA) * 60 - this.capeV * 9) * dt;
       this.capeA += this.capeV * dt;
+      if (this.capeA < -1.15) { this.capeA = -1.15; if (this.capeV < 0) this.capeV = 0; }   // 披风最多扬到身后近水平
+      else if (this.capeA > 0.35) { this.capeA = 0.35; if (this.capeV > 0) this.capeV = 0; }
       if (this.cape1) {
         this.cape1.rotation.z = P[PI_.lean] + this.capeA + Math.sin(this.time * 5.3) * 0.03;
         this.cape2.rotation.z = this.capeA * 0.6 + Math.sin(this.time * 6.1 + 1) * 0.06 * (1 + Math.abs(f.vx) * 0.3);
@@ -1617,6 +1737,30 @@
 
     flashHit(col, k) { this.flash = k || 0.85; this.flashColor.set(col || '#ffffff'); this.mat.flashColor = this.flashColor; }
 
+    // 手持弓、弓弦与搭箭（身体局部坐标）
+    updateBow() {
+      const on = this.bowK > 0;
+      this.handBow.visible = this.bowString.visible = on;
+      if (this.m.backbow) this.m.backbow.visible = !on;
+      if (!on) { this.nocked.visible = false; return; }
+      const L = this.handL, R = this.handR;
+      this.handBow.position.copy(L);
+      this.handBow.rotation.set(0, 0, 0);
+      const tx = L.x + BOW.tipX, ty0 = L.y + BOW.tipY, ty1 = L.y - BOW.tipY;
+      // 右手在弓后方、与握把同高附近时视为拉弦
+      const drawn = R.x < L.x - 0.12 && Math.abs(R.y - L.y) < 0.28;
+      const nx = drawn ? R.x : tx, ny = drawn ? R.y : L.y, nz = drawn ? R.z : L.z;
+      const a = this.bowString.geometry.attributes.position;
+      a.setXYZ(0, tx, ty0, L.z); a.setXYZ(1, nx, ny, nz); a.setXYZ(2, tx, ty1, L.z);
+      a.needsUpdate = true;
+      this.nocked.visible = drawn;
+      if (drawn) {
+        this.nocked.position.set(nx, ny, nz);
+        const dx = L.x + 0.1 - nx, dy = L.y - ny, dz = L.z - nz;
+        this.nocked.rotation.set(0, Math.atan2(-dz, dx), Math.atan2(dy, Math.hypot(dx, dz)));
+      }
+    }
+
     // 把姿势向量应用到各部件（身体局部坐标 + IK）
     apply(P) {
       const V = this.V, bk = this.bk, m = this.m;
@@ -1629,11 +1773,18 @@
       // 兵器
       const wa = P[PI_.wa] * M.deg2rad, wy = P[PI_.wy] * M.deg2rad;
       const G = V.T.set(P[PI_.gx], P[PI_.gy], P[PI_.gz]);
-      this.wpn.position.copy(G);
-      this.wpn.rotation.set(0, wy, wa - Math.PI / 2);
+      if (this.bowK) {
+        // 插刀于地：长兵器刃朝上、短兵器刃朝下
+        const pole = this.style === 'pole';
+        this.wpn.position.set(0.34, pole ? 0.63 : 0.9, 0.36);
+        this.wpn.rotation.set(0, 0.2, (pole ? 94 : -86) * M.deg2rad - Math.PI / 2);
+      } else {
+        this.wpn.position.copy(G);
+        this.wpn.rotation.set(0, wy, wa - Math.PI / 2);
+      }
       // 左手目标
       const O = V.O;
-      if (this.style === 'pole') {
+      if (this.style === 'pole' && !this.bowK) {
         const dir = V.d.set(Math.cos(wa) * Math.cos(wy), Math.sin(wa), -Math.cos(wa) * Math.sin(wy));
         const SL = V.S.set(0, 0.47, -0.22 * bk).applyMatrix4(this.torso.matrix);
         const reach = (LEN.upper + LEN.fore) * 0.97;
@@ -1657,6 +1808,7 @@
         const up = m[sd > 0 ? 'upperR' : 'upperL'], fo = m[sd > 0 ? 'foreR' : 'foreL'];
         if (up) orient(up, S, V.E);
         if (fo) orient(fo, V.E, V.H);
+        if (this.handL) (sd > 0 ? this.handR : this.handL).copy(V.H);
       }
       // 腿 IK
       for (const sd of [1, -1]) {
@@ -1673,7 +1825,8 @@
 
     dispose() {
       for (const g of this.geos) g.dispose();
-      this.geos.length = 0;
+      for (const m of this.mats) m.dispose();
+      this.geos.length = 0; this.mats.length = 0;
       if (this.root.parent) this.root.parent.remove(this.root);
       this.mat.flash = 0; this.mat.emission = 0;
     }
@@ -2151,7 +2304,7 @@
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;z-index:5;}
 .sgd.sgd-fixed{position:fixed;z-index:60;--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sat:env(safe-area-inset-top,0px);}
 .sgd *{box-sizing:border-box;}
-.sgd-vig{position:absolute;inset:-2px;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 52%,rgba(0,0,0,0) 55%,rgba(10,4,0,.42) 100%);}
+.sgd-vig{position:fixed;inset:-2px;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 52%,rgba(0,0,0,0) 55%,rgba(10,4,0,.42) 100%);}
 .sgd-top{position:absolute;top:calc(var(--sat) + .7*var(--u));left:calc(var(--sal) + 1.1*var(--u));right:calc(var(--sar) + 1.1*var(--u));
   display:grid;grid-template-columns:1fr auto 1fr;column-gap:calc(1.1*var(--u));align-items:start;transition:opacity .35s ease, transform .35s ease;}
 .sgd.sgd-nohud .sgd-top{opacity:0;transform:translateY(-1.2em);}
@@ -2279,11 +2432,12 @@
 .sgd-dmg.g{color:#9cc8ff;font-size:calc(1.2*var(--u));}
 .sgd-dmg.big{color:#ffd040;font-size:calc(2.1*var(--u));}
 .sgd-dmg.lbl{font:700 calc(1.4*var(--u))/1 ${KAI};font-style:normal;color:#ff9a6a;letter-spacing:.1em;}
-.sgd-flash{position:absolute;inset:-20px;background:#fff;opacity:0;pointer-events:none;}
+.sgd-flash{position:fixed;inset:-20px;background:#fff;opacity:0;pointer-events:none;}
 .sgd-fade{position:fixed;inset:0;background:#07060a;opacity:0;pointer-events:auto;z-index:70;transition:opacity .3s ease;}
 .sgd-fade.off{pointer-events:none;}
+html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
 .sgd.sgd-compact .sgd-name b{font-size:calc(1.55*var(--u));}
-.sgd.sgd-compact .sgd-legend{display:none;}
+.sgd.sgd-compact .sgd-legend{font-size:calc(.85*var(--u));padding:.3em .7em;gap:calc(.25*var(--u)) calc(.6*var(--u));bottom:calc(var(--sab) + .4*var(--u));}
 .sgd.sgd-compact .sgd-skip{top:calc(var(--sat) + 6.8*var(--u));}
 @media (max-height:540px){
   .sgd-card{padding:calc(.9*var(--u)) calc(1.3*var(--u));width:min(94vw,calc(64*var(--u)));}
@@ -2374,7 +2528,17 @@
       const f = ctx.createBiquadFilter();
       const g = ctx.createGain();
       src.connect(f); f.connect(g); g.connect(ctx.destination);
-      if (kind === 'whoosh') {
+      if (kind === 'twang') {
+        // 弓弦：短促的拨弦声
+        const o = ctx.createOscillator(), og = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.25);
+        og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.35 * vol, t + 0.005); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        o.connect(og); og.connect(ctx.destination); o.start(t); o.stop(t + 0.32);
+        o.onended = () => { try { o.disconnect(); og.disconnect(); } catch (e) { /* 忽略 */ } };
+        f.type = 'highpass'; f.frequency.value = 2500;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.15 * vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+        src.start(t, 0.1, 0.08);
+      } else if (kind === 'whoosh') {
         f.type = 'bandpass'; f.Q.value = 1.4;
         f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(2600, t + 0.12); f.frequency.exponentialRampToValueAtTime(700, t + 0.22);
         g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * vol, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
@@ -2511,6 +2675,15 @@
       this.genB = B.gen || { name: '乙', war: 70 };
       this.colA = SG.UI && SG.UI.cssColor ? SG.UI.cssColor(A.color || '#3a78c8') : (A.color || '#3a78c8');
       this.colB = SG.UI && SG.UI.cssColor ? SG.UI.cssColor(B.color || '#c8382c') : (B.color || '#c8382c');
+      // 双方势力色过于接近时，应战者改用对比色，免得分不清敌我
+      try {
+        const ca = new THREE.Color(this.colA), cb = new THREE.Color(this.colB);
+        const dist = (x, y) => Math.hypot(x.r - y.r, x.g - y.g, x.b - y.b);
+        if (dist(ca, cb) < 0.22) {
+          const red = new THREE.Color('#c8382c'), blue = new THREE.Color('#3a78c8');
+          this.colB = dist(ca, red) > dist(ca, blue) ? '#c8382c' : '#3a78c8';
+        }
+      } catch (e) { /* 保持原色 */ }
       this.lookA = lookOf(this.genA, A.culture);
       this.lookB = lookOf(this.genB, B.culture);
       const sp = opts.special || {};
@@ -2582,6 +2755,13 @@
         const o = new THREE.Mesh(rg, m); o.visible = false; o.renderOrder = 9; scene.add(o);
         this.rings.push({ o, t: 1, life: 0.5, size: 4 });
       }
+      // 飞箭（弓将绝技）：小对象池，位置每帧取自 sim.shots
+      this.arrowGeo = [buildArrow(false).geo(), buildArrow(true).geo()];
+      this.arrows = [];
+      for (let i = 0; i < 6; i++) {
+        const o = new THREE.Mesh(this.arrowGeo[0], envMat()); o.visible = false; o.castShadow = true; scene.add(o);
+        this.arrows.push({ o, id: 0 });
+      }
       this.moteR = SG.SeededRandom(5);
       for (let i = 0; i < 70; i++) this.spawnMote(true);
       this.fxR = SG.SeededRandom(17);
@@ -2597,6 +2777,8 @@
       root.className = 'sgd sgd-nohud' + (layer ? '' : ' sgd-fixed') + (SG.isTouch ? ' sgd-touch' : '');
       (layer || document.body).appendChild(root);
       this.root = root;
+      // 单挑期间隐藏同层的其他画面 HUD（战场顶栏、部队卡、按钮等）
+      document.documentElement.classList.add('sgd-on');
       const h = (cls, html, parent) => { const e = document.createElement('div'); if (cls) e.className = cls; if (html != null) e.innerHTML = html; (parent || root).appendChild(e); return e; };
       h('sgd-vig');
       const top = h('sgd-top');
@@ -2770,6 +2952,13 @@
             if (e.move === 'heavy' && e.charge > 0.6) this.puff(f.x, 4, 0.6, f.face);
             break;
           }
+          case 'arrow': {
+            const f = sim.f[e.who];
+            synth('twang', e.fin ? 1 : 0.7);
+            synth('whoosh', e.fin ? 0.9 : 0.5);
+            if (e.fin) { this.shake = Math.max(this.shake, 0.06); this.burst(f.x + f.face * 0.7, 1.4, 0.1, '#fff0c0', 12, 3, { dir: f.face, grav: 0, life: 0.25 }); }
+            break;
+          }
           case 'jump': this.puff(sim.f[e.who].x, 4, 0.5); break;
           case 'land': this.puff(e.x, 5, 0.6); break;
           case 'dash': this.puff(sim.f[e.who].x, 5, 0.6, -sim.f[e.who].face); synth('whoosh', 0.4); break;
@@ -2837,7 +3026,7 @@
         w.update(frozen || sim.freeze[i] > 0 ? 0 : adt, frozen);
         // 刀光
         const f = sim.f[i];
-        const on = this.realT < this.trailOn[i] || (f.state === 'special' && f.t > SPECIAL_FREEZE);
+        const on = this.realT < this.trailOn[i] || (f.state === 'special' && f.t > SPECIAL_FREEZE && !f.bow);
         const trs = [this.trails[i * 2], this.trails[i * 2 + 1]];
         const spc = (i === 0 ? this.spA : this.spB).color;
         const tc = f.state === 'special' ? (spc || '#ffd060') : f.state === 'heavy' ? (f.charge > 0.8 ? '#ffb040' : '#ffe0a0') : '#dfe8ff';
@@ -2856,6 +3045,7 @@
             r: c.r, g: c.g, b: c.b, a: 0.9, size: 0.06 + this.fxR.nextDouble() * 0.05, life: 0.5 + this.fxR.nextDouble() * 0.4, ac: 1.5 });
         }
       }
+      this.updateArrows(adt);
       // 环境（城头火把）
       this.arena.update(this.realT);
       for (const p of this.arena.torches) {
@@ -2882,6 +3072,36 @@
       this.updateCamera(dt);
       this.updateHud(dt);
       this.cost = performance.now() - t0;
+    }
+
+    updateArrows(dt) {
+      const S = this.sim.shots;
+      for (const a of this.arrows) {
+        const sh = a.id ? S.find(x => x.id === a.id) : null;
+        if (!sh) { a.id = 0; a.o.visible = false; }
+      }
+      for (const sh of S) {
+        let a = this.arrows.find(x => x.id === sh.id);
+        if (!a) {
+          a = this.arrows.find(x => !x.id);
+          if (!a) continue;
+          a.id = sh.id; a.o.geometry = this.arrowGeo[sh.fin ? 1 : 0];
+          a.o.scale.setScalar(sh.fin ? 1.9 : 1.45);
+        }
+        a.o.visible = true;
+        const d = Math.sign(sh.vx) || 1;
+        a.o.position.set(sh.x - d * 0.95 * a.o.scale.x, sh.y, 0.08);
+        a.o.rotation.set(0, d > 0 ? 0 : Math.PI, 0);
+        // 箭尾流光
+        if (dt > 0) {
+          const spx = this.sim.f[sh.owner].idx === 0 ? this.spA : this.spB;
+          const c = C(sh.fin ? (spx.color || '#ffd040') : '#fff4d8');
+          for (let j = 0; j < (sh.fin ? 3 : 2); j++) {
+            this.sparks.add({ x: sh.x - d * (0.2 + this.fxR.nextDouble() * 0.6), y: sh.y + (this.fxR.nextDouble() - 0.5) * 0.05, z: 0.08, vx: -d * 0.6, vy: 0, vz: 0,
+              r: c.r, g: c.g, b: c.b, a: 0.8, size: (sh.fin ? 0.13 : 0.07) * (0.6 + this.fxR.nextDouble() * 0.6), life: 0.22, ac: 1.2 });
+          }
+        }
+      }
     }
 
     updateCamera(dt) {
@@ -3079,7 +3299,8 @@
       const lose = this.player !== null && !DuelGame.auto && this.player !== win;
       const el = document.createElement('div');
       el.className = 'sgd-win' + (lose ? ' lose' : '');
-      const sub = this.skipped ? '（观战跳过）' : r.kind === 'ko' ? '击破' + loser.name : '时间到 · 体力占优';
+      const perfect = r.kind === 'ko' && sim.f[win].hp >= 100;
+      const sub = this.skipped ? '（观战跳过）' : r.kind === 'ko' ? (perfect ? '完胜 · 毫发无伤击破' : '击破') + loser.name : '时间到 · 体力占优';
       el.innerHTML = '<div class="w"><div class="ink">' + inkSplash(lose ? 'rgba(20,20,28,.85)' : 'rgba(10,8,8,.82)', hashStr(gen.name)) + '</div>' +
         '<div class="g">' + (lose ? '败' : '胜') + '</div><div class="n">' + SG.esc(gen.name) + (lose ? ' 获胜' : '') + '</div><div class="s">' + SG.esc(sub) + '</div><div class="h">' + (SG.isTouch ? '轻触继续' : '按任意键继续') + '</div></div>';
       this.root.appendChild(el);
@@ -3113,14 +3334,18 @@
       for (const s of this.stars || []) s.s.material.dispose();
       for (const g of this.rings || []) g.o.material.dispose();
       if (this.ringGeo) this.ringGeo.dispose();
+      for (const g of this.arrowGeo || []) g.dispose();
       if (this.lights) { this.lights.key.dispose(); this.lights.rim.dispose(); this.lights.hemi.dispose(); }
       if (this.scene) { this.scene.clear(); this.scene.fog = null; this.scene.background = null; }
       if (this.root && this.root.parentNode) this.root.parentNode.removeChild(this.root);
+      document.documentElement.classList.remove('sgd-on');
       this.dmgs.length = 0;
     }
 
     async run() {
       injectStyle();
+      // 让出焦点：避免空格 / 回车误触战场上仍带焦点的按钮
+      try { const ae = document.activeElement; if (ae && ae !== document.body && typeof ae.blur === 'function') ae.blur(); } catch (e) { /* 忽略 */ }
       const fade = document.createElement('div');
       fade.className = 'sgd-fade';
       (document.getElementById('ui') || document.body).appendChild(fade);
@@ -3204,10 +3429,70 @@
     }
   }
 
+  // ============================================================ 战斗接线 --
+  // 供 battle-controller.js 的 doDuel 使用（集成阶段接线，见文件头“接线”一节）
+  function sideColorOf(s) {
+    const BC = SG.BattleController;
+    try { if (BC && typeof BC.sideColor === 'function') return BC.sideColor(s); } catch (e) { /* 回退 */ }
+    return s === 0 ? '#73bfff' : '#ff806b';
+  }
+  function factionColorOf(u) {
+    try {
+      const f = SG.G && SG.G.factions && u.gen.faction >= 0 ? SG.G.factions[u.gen.faction] : null;
+      if (f && f.color) return f.color;
+    } catch (e) { /* 回退 */ }
+    return sideColorOf(u.side);
+  }
+  // 是否进入格斗画面：玩家参与、未委任、未关闭（DuelGame.enabled）。电脑对电脑 / 委任时照旧 Mdl.duel()
+  function shouldPlay(bc, a, b) {
+    if (!DuelGame.enabled || !bc || !bc.M || !a || !b) return false;
+    const ps = bc.playerSide;
+    if (ps !== 0 && ps !== 1) return false;
+    if (bc.autoPlayer) return false;
+    return a.side === ps || b.side === ps;
+  }
+  // 完整的单挑流程（替代 doDuel 中的 Mdl.duel + 旧单挑对话框）：
+  // 应战判定（Mdl.duelAccepts）→ 挑战台词 → 格斗画面 → Mdl.duelFinish → 刷新部队 → 败者溃散
+  async function perform(bc, a, b, extra) {
+    const Mdl = bc.M, V = bc.V, UI = SG.UI;
+    const refresh = () => { if (V && typeof V.refresh === 'function') for (const x of Mdl.units) { try { V.refresh(x); } catch (e) { console.error(e); } } };
+    if (!Mdl.duelAccepts(a, b)) {
+      if (UI && UI.say) await UI.say(b.gen.name + '：哼，匹夫之勇，不足与战！\n（' + b.gen.name + '拒绝单挑，其部士气下降）', b.gen.name, sideColorOf(b.side));
+      refresh();
+      if (typeof bc.updateHud === 'function') bc.updateHud();
+      return { accepted: false, rounds: [], winner: 0 };
+    }
+    if (UI && UI.say) await UI.say(a.gen.name + '：' + b.gen.name + '，可敢与我一战？', a.gen.name, sideColorOf(a.side));
+    let terrain = 0;
+    try { terrain = Mdl.map[b.x][b.y]; } catch (e) { terrain = 0; }
+    const spOf = g => { try { return SG.Specials && typeof SG.Specials.of === 'function' ? SG.Specials.of(g) : null; } catch (e) { return null; } };
+    const res = await play(Object.assign({
+      a: { gen: a.gen, side: a.side, color: factionColorOf(a), culture: a.gen.culture },
+      b: { gen: b.gen, side: b.side, color: factionColorOf(b), culture: b.gen.culture },
+      playerSide: a.side === bc.playerSide ? 0 : 1,
+      terrain,
+      special: { a: spOf(a.gen), b: spOf(b.gen) },
+    }, extra || {}));
+    const r = Mdl.duelFinish(a, b, res.winner === 0, res.log);
+    const loser = res.winner === 0 ? b : a;
+    // 败者的名牌留到溃散动画时再消失（与旧流程一致）
+    const lv = V && typeof V.vis === 'function' ? V.vis(loser) : null;
+    if (lv) lv.holdLabel = true;
+    refresh();
+    if (lv) lv.holdLabel = false;
+    if (typeof bc.updateHud === 'function') bc.updateHud();
+    if (UI && UI.toast) UI.toast((res.winner === 0 ? a : b).gen.name + '于单挑中击败了' + loser.gen.name + '！', 2);
+    if (V && typeof V.rout === 'function') await V.rout(loser);
+    return Object.assign(r, { kind: res.kind, hpA: res.hpA, hpB: res.hpB });
+  }
+
   const DuelGame = {
     auto: false,
     speed: 1,
+    enabled: true,
     active: null,
+    shouldPlay,
+    perform,
     simulate,
     lookOf,
     damage,

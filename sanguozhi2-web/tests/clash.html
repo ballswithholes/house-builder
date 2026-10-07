@@ -107,12 +107,15 @@
     big: { n: '以众击寡', a: [8400, 8190], d: [2600, 1180], fa: '锋矢', fd: '方圆' },
     small: { n: '以寡击众', a: [1800, 1160], d: [7600, 7390], fa: '长蛇', fd: '衡轭' },
     rout: { n: '击溃', a: [5200, 5050], d: [1300, 0], fa: '偃月', fd: '雁行' },
+    fail: { n: '反被击溃', a: [1500, 0], d: [6400, 6150], fa: '锋矢', fd: '方圆' },
+    typ: { n: '常见兵力', a: [3200, 2950], d: [2400, 1980], fa: '鹤翼', fd: '锋矢' },
+    tiny: { n: '残兵', a: [700, 520], d: [450, 210], fa: '方圆', fd: '长蛇' },
   };
   const SPECIAL = {
-    smite: { gen: '关羽', name: '青龙偃月斩', color: '#38d39a', kind: 'smite', fac: 'liubei' },
-    storm: { gen: '诸葛亮', name: '借东风', color: '#8fd3ff', kind: 'storm', fac: 'liubei' },
-    volley: { gen: '黄忠', name: '百步穿杨', color: '#ffd24d', kind: 'volley', fac: 'liubei' },
-    blaze: { gen: '陆逊', name: '火烧连营', color: '#ff7a2a', kind: 'blaze', fac: 'sun' },
+    smite: { gen: '关羽', name: '青龙偃月斩', color: '#38d39a', kind: 'smite', fac: 'liubei', cry: '关云长在此！' },
+    storm: { gen: '诸葛亮', name: '借东风', color: '#8fd3ff', kind: 'storm', fac: 'liubei', cry: '东风已起，天命在我！' },
+    volley: { gen: '黄忠', name: '百步穿杨', color: '#ffd24d', kind: 'volley', fac: 'liubei', cry: '老夫宝刀未老！' },
+    blaze: { gen: '陆逊', name: '火烧连营', color: '#ff7a2a', kind: 'blaze', fac: 'sun', cry: '连营七百里，一炬尽焚之！' },
   };
 
   function makeOpts(key, extra) {
@@ -126,9 +129,10 @@
       attacker: { gen: GEN[an], side: extra.swap ? 1 : 0, color: FAC[af], troopsBefore: r.a[0], troopsAfter: r.a[1], formation: r.fa, culture: GEN[an].culture },
       defender: { gen: GEN[m[2]], side: extra.swap ? 0 : 1, color: FAC[m[3]], troopsBefore: r.d[0], troopsAfter: r.d[1], formation: r.fd, culture: GEN[m[2]].culture },
       terrain: SG.Terrain ? SG.Terrain[{ plain: 'Plain', forest: 'Forest', hill: 'Hill', mountain: 'Mountain', river: 'River', wall: 'Wall', gate: 'Gate', castle: 'Castle' }[tk]] : TERR[tk],
-      special: sp ? { name: sp.name, color: sp.color, kind: sp.kind } : null,
+      special: sp ? { name: sp.name, color: sp.color, kind: sp.kind, cry: sp.cry } : null,
       playerSide: extra.playerSide === undefined ? 0 : extra.playerSide,
     };
+    if (extra.speed) o.speed = extra.speed;
     if (extra.culture) {
       o.attacker.gen = GEN.塞维鲁; o.attacker.culture = 'roman'; o.attacker.color = FAC.roman;
       o.defender.gen = GEN.沃洛吉斯; o.defender.culture = 'persia'; o.defender.color = FAC.persia;
@@ -170,6 +174,17 @@
     SG.Gfx.camera.position.set(c.x - 2, 26, c.z + 24);
     SG.Gfx.camera.lookAt(c.x, 0, c.z);
     SG.Gfx.setShadowFocus(c, 30);
+    fakeHud();
+  }
+  // 模拟战场 HUD（与 battle-controller 相同的类名），用来确认攻击画面期间它们被隐藏
+  function fakeHud() {
+    const hud = SG.UI.screen('sg-battle-hud');
+    hud.appendChild(SG.UI.el('div', 'sg-panel sg-battle-top', '<span>第 <b>3</b>/30 日　<span class="sg-side0">攻方</span>行动　行动力 <span class="sg-tokens">●●○</span></span>'));
+    hud.appendChild(SG.UI.el('div', 'sg-panel sg-battle-card', '<div><span class="sg-card-name">关羽</span><span class="sg-card-sub">攻方·主将</span></div><div>兵力 <b>6200</b>　士气 82</div>'));
+    const act = SG.UI.el('div', 'sg-battle-actions');
+    SG.UI.button(act, '委任作战', () => {});
+    SG.UI.button(act, '结束回合', () => {}, { primary: true });
+    hud.appendChild(act);
   }
   if (Q.get('freeze')) SG.Clash.debug.freezeAt = parseFloat(Q.get('freeze'));
   if (Q.get('speed')) SG.Clash.speed = parseFloat(Q.get('speed'));
@@ -198,6 +213,7 @@
     async play(key, extra) {
       if (busy) return 'busy';
       busy = true;
+      if (extra && extra.toast) SG.UI.toast('关羽部发起攻击！', 3);
       const t0 = performance.now();
       try {
         const res = await SG.Clash.play(makeOpts(key, extra));
@@ -206,9 +222,10 @@
         return res;
       } finally { busy = false; }
     },
-    async cut(side) {
+    async cut(side, long) {
       const sp = side ? SPECIAL.blaze : SPECIAL.smite;
-      await SG.Clash.cutIn({ gen: GEN[sp.gen], name: sp.name, color: sp.color, side: side ? 1 : 0 });
+      if (long) await SG.Clash.cutIn({ gen: GEN.吕布, name: '天下无双·方天画戟', color: '#ff3355', side: side ? 1 : 0, cry: '人中吕布，马中赤兔！' });
+      else await SG.Clash.cutIn({ gen: GEN[sp.gen], name: sp.name, color: sp.color, side: side ? 1 : 0, cry: sp.cry });
       return 'ok';
     },
     info() {
@@ -263,8 +280,10 @@
   for (const k of Object.keys(SPECIAL)) btn('specials', SPECIAL[k].gen + '「' + SPECIAL[k].name + '」', () => T.play(k === 'blaze' ? 'forest-even' : k === 'storm' ? 'river-big' : 'plain-even', { special: k }));
   btn('specials', '异域文化（罗马 vs 安息）', () => T.play('plain-even', { culture: true }));
   btn('specials', '守方反击（攻方为第二方）', () => T.play('gate-small', { swap: true, playerSide: 1 }));
+  btn('specials', '电脑回合（speed 1.6 + 提示）', () => T.play('castle-even', { speed: 1.6, toast: true, playerSide: 1 }));
   btn('cuts', '特写·左', () => T.cut(0));
   btn('cuts', '特写·右', () => T.cut(1));
+  btn('cuts', '特写·长招式名', () => T.cut(0, true));
   const spd = btn('opts', '速度 ×1', () => { SG.Clash.speed = SG.Clash.speed > 1 ? 1 : 2; spd.textContent = '速度 ×' + SG.Clash.speed; });
   const en = btn('opts', '已启用', () => { SG.Clash.enabled = !SG.Clash.enabled; en.textContent = SG.Clash.enabled ? '已启用' : '已关闭（play 立即返回）'; });
   btn('opts', '显存测试 ×10', () => T.memTest(10));

@@ -1313,12 +1313,12 @@ void main() {
   //   风格：slash 斩击弧光 · dragon 青龙 · havoc 无双 · sweep 横扫 · dash 突击残影 · whirl 往来连斩 ·
   //         arrows 箭雨 · arrow 一箭穿杨 · fire 火海 · wind 风助火势 · lightning 雷击 · water 水淹 ·
   //         shock 怒吼冲击波 · aura 金光 · blossom 桃花 · spirit 符阵 · shield 护盾 · heal 治愈之光 ·
-  //         poison 毒雾 · shadow 暗影刺杀 · drain 吸魂 · haste 疾风（未知风格按 slash）
+  //         poison 毒雾 · shadow 暗影刺杀 · drain 吸魂 · haste 疾风 · claw 猛虎爪痕 · rock 落石（未知风格按 slash）
   //   UnitVisual 另显示限时加成：脚下彩色光环 + 名牌上的小字（守 / 攻 / 毒 / 疾）。
   const SP_GLYPH = {
     slash: '斩', dragon: '龙', havoc: '霸', sweep: '扫', dash: '突', whirl: '闪', arrows: '箭', arrow: '穿', fire: '火', wind: '风',
     lightning: '雷', water: '水', shock: '喝', aura: '令', blossom: '义', spirit: '谋', shield: '守', heal: '愈', poison: '毒',
-    shadow: '杀', drain: '收', haste: '疾',
+    shadow: '杀', drain: '收', haste: '疾', claw: '虎', rock: '石',
   };
   const SP_FONT = '"STKaiti","KaiTi","Kaiti SC","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"';
   const spTexCache = {};
@@ -1453,7 +1453,7 @@ void main() {
   float crest = smoothstep(0.62, 0.9, y) * (1.0 - smoothstep(0.93, 1.0, y));
   float body = smoothstep(0.0, 0.2, y) * (1.0 - smoothstep(0.85, 1.0, y)) * (0.55 + 0.25 * sin(vUv.x * 70.0 - uTime * 6.0));
   float edge = sin(clamp(vUv.x, 0.0, 1.0) * 3.14159);
-  float a = (body * 0.6 + crest) * edge * uOpacity;
+  float a = (body * 0.85 + crest) * edge * uOpacity;
   gl_FragColor = vec4(mix(uColor, vec3(1.0), crest * 0.85), a);
 }`;
   // 护盾：菲涅耳边缘 + 上升扫描环 + 六角网格
@@ -1521,7 +1521,7 @@ void main() {
     return g;
   }
   // 沿折线的带子，朝向镜头（uv.x 沿线，uv.y 横向）
-  function spRibbonGeometry(points, width) {
+  function spRibbonGeometry(points, width, taper) {
     const cam = SG.Gfx && SG.Gfx.camera ? SG.Gfx.camera.position : new THREE.Vector3(0, 40, 40);
     const pos = [], uv = [], idx = [];
     let len = 0;
@@ -1532,7 +1532,7 @@ void main() {
       const p = points[i];
       tan.subVectors(points[Math.min(points.length - 1, i + 1)], points[Math.max(0, i - 1)]).normalize();
       view.subVectors(cam, p).normalize();
-      side.crossVectors(tan, view).normalize().multiplyScalar(width * 0.5);
+      side.crossVectors(tan, view).normalize().multiplyScalar(width * 0.5 * (taper ? taper(points.length > 1 ? i / (points.length - 1) : 1) : 1));
       pos.push(p.x - side.x, p.y - side.y, p.z - side.z, p.x + side.x, p.y + side.y, p.z + side.z);
       const t = len > 0 ? L[i] / len : 0;
       uv.push(t, 0, t, 1);
@@ -1703,9 +1703,9 @@ void main() {
   BV._spGlyph = function (pos, ch, cssColor, size) {
     if (typeof document === 'undefined' || !ch) return;
     const col = this._spColor(cssColor);
-    const s = (size || 3.4) * 0.72;
+    const s = (size || 3.4) * 0.56;
     pos = pos.clone();
-    pos.y += 0.6;
+    pos.y += 0.9;
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: spGlyphGlowTex(ch), color: col, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, fog: false }));
     const ink = new THREE.Sprite(new THREE.SpriteMaterial({ map: spGlyphTex(ch), color: SG.Gfx.shade(col, 0.35), transparent: true, depthTest: false, depthWrite: false, fog: false }));
     glow.position.copy(pos); ink.position.copy(pos);
@@ -1723,7 +1723,8 @@ void main() {
     const o = opts || {};
     const col = this._spColor(cssColor);
     const ring = SG.Gfx.mesh(flatDisc(1), o.additive ? SG.Gfx.additive(col) : SG.Gfx.unlit(col, o.tex || SG.Gfx.ringTexture, 1), { castShadow: false, receiveShadow: false });
-    ring.material.blending = THREE.AdditiveBlending;
+    // normal：普通混合（深色 / 冷色的符阵在明亮草地上保持本色），否则叠加发光
+    ring.material.blending = o.normal ? THREE.NormalBlending : THREE.AdditiveBlending;
     ring.position.copy(pos);
     ring.position.y += o.y === undefined ? 0.12 : o.y;
     if (o.vertical) { ring.rotation.x = Math.PI / 2 - 0.85; }
@@ -1744,7 +1745,9 @@ void main() {
     // 实色刀光（普通混合）+ 外层叠加辉光
     const mat = spShader(SP_ARC_FS, col, { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 0 } }, null, !o.glowOnly);
     const m = new THREE.Mesh(spArcGeometry(r, w, st, sw, 48), mat);
-    const gmat = spShader(SP_ARC_FS, SG.Gfx.shade(col, 0.25), { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 1 } });
+    // 外层：深色墨晕（普通混合）——明亮的草地上也能衬出刀光；glowOnly 时改为叠加辉光
+    const gmat = o.glowOnly ? spShader(SP_ARC_FS, SG.Gfx.shade(col, 0.25), { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 1 } })
+      : spShader(SP_ARC_FS, SG.Gfx.shade(col, -0.62), { uHead: { value: 0 }, uLen: { value: o.len || 0.75 }, uSoft: { value: 1 } }, null, true);
     const gm = new THREE.Mesh(spArcGeometry(r + w * 0.3, w * 1.9, st, sw, 48), gmat);
     const cam = SG.Gfx.camera;
     for (const x of [m, gm]) {
@@ -1756,18 +1759,26 @@ void main() {
         if (o.lean) x.rotateX(o.lean);
       }
     }
+    // mid：把弧心挪开，使半径为 mid 的弧的中点正好落在 pos 上（同一 mid 的几道弧同心 → 平行的爪痕）
+    if (o.mid) {
+      const ma = st + sw / 2;
+      const off = new THREE.Vector3(Math.cos(ma) * o.mid, Math.sin(ma) * o.mid, 0).applyQuaternion(m.quaternion);
+      m.position.sub(off); gm.position.sub(off);
+    }
     // 刀光压在部队之上（不做深度测试），像画面上的一笔
     mat.depthTest = gmat.depthTest = false;
     this._spAdd(gm, 32);
     this._spAdd(m, 33);
     const dur = o.dur || 0.42;
+    // stay：笔画画完后整道留在原处再淡出（爪痕）；否则刀光如彗星般扫过
+    const draw = o.stay ? 0.3 : 0.55;
     return this._spAnim(dur, t => {
-      const head = Math.min(1, t / 0.55) * (1 + mat.uniforms.uLen.value);
+      const head = o.stay ? Math.min(1, t / draw) * Math.max(1, mat.uniforms.uLen.value) : Math.min(1, t / draw) * (1 + mat.uniforms.uLen.value);
       mat.uniforms.uHead.value = head;
       gmat.uniforms.uHead.value = head;
-      const a = t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45;
+      const a = t < draw ? 1 : 1 - Math.pow((t - draw) / (1 - draw), o.stay ? 2 : 1);
       mat.uniforms.uOpacity.value = a;
-      gmat.uniforms.uOpacity.value = a * 0.55;
+      gmat.uniforms.uOpacity.value = a * (o.glowOnly ? 0.55 : 0.42);
       if (o.grow) { const s = 1 + t * o.grow; m.scale.set(s, s, s); gm.scale.set(s, s, s); }
     }).then(() => { this._spFree(m); this._spFree(gm); });
   };
@@ -1961,23 +1972,31 @@ void main() {
     this._spAnim(0.22, t => { v.pos.lerpVectors(from, to, (1 - t) * (k || 0.45)); }).then(() => v.pos.copy(from));
   };
 
-  // ---- slash 斩击弧光（单体重击）----
+  // ---- slash 斩击弧光（单体重击）：两道交叉的巨大刀痕（十字斩）留在敌阵上，随后崩散 ----
   BV._sp_slash = async function (ctx) {
     const t = ctx.target;
     await this._spCharge(ctx, 0.22);
     await this._spLunge(ctx, 0.5, 0.14);
     const p = this._spPos(t, 0.9);
+    const R = 2.3, sw = 1.25, st = Math.PI / 2 - sw / 2;
     sfx('hit', 0.9);
-    this._spArc(p, ctx.color, { radius: 1.5, width: 0.55, tilt: -0.75, sweep: 2.5, start: -0.2, dur: 0.42 });
-    await this._sleep(0.08);
-    this._spArc(p, ctx.color, { radius: 1.3, width: 0.45, tilt: 0.9, sweep: 2.3, start: 0.4, dur: 0.4 });
+    this._spArc(p, ctx.color, { radius: R, width: 0.6, start: st, sweep: sw, tilt: -0.85, mid: R, dur: 0.62, len: 1, stay: true });
+    this._spArc(p, '#ffffff', { radius: R + 0.1, width: 0.16, start: st, sweep: sw, tilt: -0.85, mid: R, dur: 0.45, len: 1, stay: true });
+    this._spImpact(t, ctx.color, false);
+    await this._sleep(0.12);
+    sfx('hit', 1);
+    this._spArc(p, ctx.color, { radius: R, width: 0.6, start: st, sweep: sw, tilt: 0.85, mid: R, dur: 0.6, len: 1, stay: true });
+    this._spArc(p, '#ffffff', { radius: R + 0.1, width: 0.16, start: st, sweep: sw, tilt: 0.85, mid: R, dur: 0.43, len: 1, stay: true });
     await this._sleep(0.06);
     this._spImpact(t, ctx.color, true);
-    this._spRing(this._spPos(t), ctx.color, 0.4, 2.6, 0.5);
-    this._spLight(p, ctx.color, 6, 0.25);
-    this._spShake(0.22, 0.3);
-    this._spFlash('rgba(255,255,255,1)', 0.18, 0.18);
+    this._spRing(this._spPos(t), ctx.color, 0.4, 2.8, 0.5);
+    this._spRing(this._spPos(t), '#ffffff', 0.3, 1.6, 0.3);
+    this._spLight(p, ctx.color, 7, 0.3);
+    this._spShake(0.26, 0.32);
+    this._spFlash('rgba(255,255,255,1)', 0.2, 0.18);
     ctx.hitAll();
+    // 刀痕崩散成碎光
+    this._emit(this.glow, p, 26, { color: this._spColor(ctx.color), color2: C(1, 1, 1), mix: 0.5, alpha: 1, life: 0.5, speed: 4.5, size: 0.18, sizeEnd: 0.05, gravity: 0.4, radius: 0.6, speedVar: 0.5 });
     this._spGlyph(this._spPos(t, 3.0), ctx.glyph, ctx.color);
     await this._sleep(0.55);
   };
@@ -1986,38 +2005,40 @@ void main() {
   BV._sp_dragon = async function (ctx) {
     const t = ctx.target;
     const col = this._spColor(ctx.color);
-    const a = this._spPos(ctx.u, 0.6), b = this._spPos(t, 1.0);
+    const a = this._spPos(ctx.u, 0.4), b = this._spPos(t, 1.0);
     if (ctx.v) ctx.v.tint(ctx.color, 1);
     this._spRing(this._spPos(ctx.u), ctx.color, 0.5, 2.4, 0.5);
+    this._spPillar(this._spPos(ctx.u), ctx.color, 0.7, 4.5, 0.9, 0.55);
     sfx('magic', 0.5);
-    const side = new THREE.Vector3(-(b.z - a.z), 0, b.x - a.x).normalize();
-    // 螺旋盘升再俯冲：两圈半的盘绕，越近目标盘得越紧
+    // 龙气：先绕施展者盘旋升空（一圈半），再自高空俯冲扑向敌军
+    const top = a.clone().add(new THREE.Vector3(-0.9, 3.4, 0));
+    const ctrl = top.clone().lerp(b, 0.5); ctrl.y += 2.4;
     const path = k => {
-      const base = a.clone().lerp(b, k);
-      base.y += Math.sin(k * Math.PI) * 2.4;
-      const ang = k * Math.PI * 5, rr = 1.3 * (1 - k * 0.75);
-      base.addScaledVector(side, Math.sin(ang) * rr);
-      base.y += Math.cos(ang) * rr * 0.6;
-      return base;
+      if (k < 0.5) {
+        const q = k / 0.5, ang = q * Math.PI * 3, r = 0.95 * (1 - q * 0.15);
+        return a.clone().add(new THREE.Vector3(Math.cos(ang) * r, 0.2 + q * 3.2, Math.sin(ang) * r));
+      }
+      return spBezier(top, ctrl, b, spEase((k - 0.5) / 0.5) * 0.85 + ((k - 0.5) / 0.5) * 0.15);
     };
-    // 龙身：沿螺旋路径生长的发光长带（头粗尾细），身后洒落龙鳞光点
+    // 龙身：沿路径生长的发光长带（头粗尾细），身后洒落龙鳞光点
+    const taper = q => 0.2 + 0.8 * Math.pow(q, 0.7);
     const body = new THREE.Mesh(new THREE.BufferGeometry(), spShader(SP_BOLT_FS, col, null, null, true));
     this._spAdd(body, 24);
     const glowBody = new THREE.Mesh(new THREE.BufferGeometry(), spShader(SP_BOLT_FS, C(0.85, 1, 0.92)));
     this._spAdd(glowBody, 25);
-    await this._spAnim(0.55, k => {
-      const head = spEase(k), tail = Math.max(0, head - 0.55);
+    await this._spAnim(0.7, k => {
+      const head = k, tail = Math.max(0, head - 0.42);
       const pts = [];
-      for (let i = 0; i <= 28; i++) pts.push(path(tail + (head - tail) * i / 28));
+      for (let i = 0; i <= 36; i++) pts.push(path(tail + (head - tail) * i / 36));
       const og = body.geometry, og2 = glowBody.geometry;
-      body.geometry = spRibbonGeometry(pts, 1.25); glowBody.geometry = spRibbonGeometry(pts, 0.42);
+      body.geometry = spRibbonGeometry(pts, 1.1, taper); glowBody.geometry = spRibbonGeometry(pts, 0.4, taper);
       og.dispose(); og2.dispose();
-      body.material.uniforms.uOpacity.value = 1.1; glowBody.material.uniforms.uOpacity.value = 0.9;
+      body.material.uniforms.uOpacity.value = 1.1; glowBody.material.uniforms.uOpacity.value = 0.95;
       const hp = path(head);
-      this._emit(this.glow, hp, 6, { color: col, color2: C(0.85, 1, 0.9), mix: 0.3, colorEnd: SG.Gfx.shade(col, -0.3), alpha: 1, life: 0.5, speed: 1.2, size: 0.45, sizeEnd: 0.15, gravity: 0.2, radius: 0.3, lifeVar: 0.3 });
-      this._emit(this.glow, hp, 1, { color: C(0.9, 1, 0.95), alpha: 1, life: 0.12, speed: 0, size: 2.2, sizeEnd: 0.6, gravity: 0, radius: 0.02 });
+      this._emit(this.glow, hp, 5, { color: col, color2: C(0.85, 1, 0.9), mix: 0.3, colorEnd: SG.Gfx.shade(col, -0.3), alpha: 1, life: 0.55, speed: 1.0, size: 0.4, sizeEnd: 0.12, gravity: 0.25, radius: 0.3, lifeVar: 0.3 });
+      this._emit(this.glow, hp, 1, { color: C(0.9, 1, 0.95), alpha: 1, life: 0.12, speed: 0, size: 2.4, sizeEnd: 0.6, gravity: 0, radius: 0.02 });
     });
-    this._spAnim(0.3, k => { body.material.uniforms.uOpacity.value = 1.1 * (1 - k); glowBody.material.uniforms.uOpacity.value = 0.9 * (1 - k); })
+    this._spAnim(0.3, k => { body.material.uniforms.uOpacity.value = 1.1 * (1 - k); glowBody.material.uniforms.uOpacity.value = 0.95 * (1 - k); })
       .then(() => { this._spFree(body); this._spFree(glowBody); });
     sfx('hit', 1);
     this._spArc(b, ctx.color, { radius: 2.1, width: 0.95, tilt: -0.6, sweep: 2.9, start: -0.5, dur: 0.5, len: 0.9 });
@@ -2160,7 +2181,9 @@ void main() {
       });
       cur = dest;
       sfx('hit', 0.7);
-      this._spArc(this._spPos(x, 0.9), ctx.color, { radius: 1.1, width: 0.38, tilt: (i % 2 ? 0.8 : -0.8) + (Math.random() - 0.5) * 0.4, sweep: 2.2, start: -0.2, dur: 0.3, len: 0.6 });
+      const tl = (i % 2 ? 0.8 : -0.8) + (Math.random() - 0.5) * 0.4;
+      this._spArc(this._spPos(x, 0.9), ctx.color, { radius: 1.9, width: 0.42, start: Math.PI / 2 - 0.55, sweep: 1.1, tilt: tl, mid: 1.9, dur: 0.42, len: 1, stay: true });
+      this._spArc(this._spPos(x, 0.9), '#ffffff', { radius: 1.97, width: 0.12, start: Math.PI / 2 - 0.55, sweep: 1.1, tilt: tl, mid: 1.9, dur: 0.3, len: 1, stay: true });
       this._spImpact(x, ctx.color, false);
       this._spShake(0.12, 0.15);
       ctx.hit(i);
@@ -2187,17 +2210,23 @@ void main() {
     await this._spCharge(ctx, 0.18);
     sfx('march', 0.5);
     const N = 42;
-    const geo = new THREE.BoxGeometry(0.06, 0.06, 0.95);
-    const mat = new THREE.MeshBasicMaterial({ color: SG.Gfx.shade(col, 0.4), transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    // 箭杆：深色实体（普通混合），箭头：发光的招式色（叠加）——两组实例共用同一套矩阵
+    const geo = new THREE.BoxGeometry(0.05, 0.05, 0.9);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.95, depthWrite: false, fog: false });
     const inst = new THREE.InstancedMesh(geo, mat, N);
     inst.frustumCulled = false;
     this._spAdd(inst, 24);
+    const hgeo = new THREE.BoxGeometry(0.12, 0.12, 0.3); hgeo.translate(0, 0, 0.5);
+    const hmat = new THREE.MeshBasicMaterial({ color: SG.Gfx.shade(col, 0.35), transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const heads = new THREE.InstancedMesh(hgeo, hmat, N);
+    heads.frustumCulled = false;
+    this._spAdd(heads, 25);
     const arrows = [];
     for (let i = 0; i < N; i++) {
       const tl = area[i % area.length];
       const dst = this.tile(tl.x, tl.y).add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0.15, (Math.random() - 0.5) * 1.5));
       const s = src.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, Math.random() * 0.4, (Math.random() - 0.5) * 1.2));
-      arrows.push({ s, d: dst, t0: Math.random() * 0.3, dur: 0.5 + Math.random() * 0.15, h: 4 + Math.random() * 1.5, landed: false });
+      arrows.push({ s, d: dst, t0: Math.random() * 0.3, dur: 0.5 + Math.random() * 0.15, h: 2.6 + Math.random() * 1.1, landed: false });
     }
     const dummy = new THREE.Object3D();
     const firstHit = new Set();
@@ -2215,6 +2244,7 @@ void main() {
         dummy.scale.setScalar(q <= 0 ? 0.0001 : q >= 1 ? 0.0001 : 1);
         dummy.updateMatrix();
         inst.setMatrixAt(i, dummy.matrix);
+        heads.setMatrixAt(i, dummy.matrix);
         if (q > 0 && q < 1 && Math.random() < 0.3) this._emit(this.glow, p, 1, { color: col, alpha: 0.6, life: 0.2, speed: 0, size: 0.18, sizeEnd: 0.2, gravity: 0, radius: 0.02 });
         if (q >= 1 && !a.landed) {
           a.landed = true;
@@ -2229,8 +2259,9 @@ void main() {
         }
       }
       inst.instanceMatrix.needsUpdate = true;
+      heads.instanceMatrix.needsUpdate = true;
     });
-    this._spFree(inst);
+    this._spFree(inst); this._spFree(heads);
     ctx.hitAll();
     this._spShake(0.12, 0.2);
     this._spGlyph(this._spPos(ctx.target, 3.0), ctx.glyph, ctx.color);
@@ -2379,7 +2410,7 @@ void main() {
     this._spTiles(area, ctx.color, 1.4, 0.4);
     if (ctx.v) ctx.v.tint(ctx.color, 1);
     for (let i = 0; i < 26; i++) {
-      this._emit(this.dust, c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 9, 8 + Math.random() * 1.5, (Math.random() - 0.5) * 7)), 1, {
+      this._emit(this.dust, c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 9, 5.2 + Math.random() * 1.2, (Math.random() - 0.5) * 7)), 1, {
         color: C(0.16, 0.17, 0.24), colorEnd: C(0.3, 0.32, 0.4), alpha: 0.75, life: 1.6, speed: 0.4, size: 3.2, sizeEnd: 4.5, gravity: 0, radius: 0.5, fadeIn: 0.25, drag: 1,
       });
     }
@@ -2389,7 +2420,7 @@ void main() {
     if (!strike.length) strike.push(ctx.target);
     for (const x of strike) {
       const g = this._spPos(x, 0.3);
-      const top = g.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 10, (Math.random() - 0.5) * 2));
+      const top = g.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 6.5, (Math.random() - 0.5) * 2));
       sfx('rock', 0.7);
       this._spBolt(top, g, ctx.color, 0.36, 0.7);
       this._spBolt(top.clone().add(new THREE.Vector3(0.5, 0, 0.3)), g, '#ffffff', 0.22, 0.32);
@@ -2407,46 +2438,62 @@ void main() {
     await this._sleep(0.55);
   };
 
-  // ---- water 水淹：浪墙席卷范围，水花四溅 ----
+  // ---- water 水淹：洪水漫过范围（水面 + 涟漪），浪墙席卷，目标处水柱冲天 ----
   BV._sp_water = async function (ctx) {
     const area = this._spAreaTiles(ctx, 1);
     const c = this._spPos(ctx.target);
     const col = this._spColor(ctx.color);
-    this._spTiles(area, ctx.color, 1.5, 0.5);
+    const deep = SG.Gfx.shade(col, -0.35);
+    this._spTiles(area, ctx.color, 1.7, 0.5);
     await this._spCharge(ctx, 0.25);
     sfx('fire', 0.4);
-    const geo = spWallGeometry(1, 1, 0, Math.PI * 2, 64);
+    const geo = spWallGeometry(1, 1, 0, Math.PI * 2, 72);
     const mat = spShader(SP_WAVE_FS, col);
     mat.blending = THREE.NormalBlending;
     const wall = new THREE.Mesh(geo, mat);
     wall.position.copy(c);
     this._spAdd(wall, 20);
-    const pool = new THREE.Mesh(flatDisc(1), SG.Gfx.unlit(col, SG.Gfx.softDotTexture, 0));
-    pool.position.copy(c); pool.position.y += 0.15;
+    // 水面：深色半透明圆盘，随浪扩张、随后退去
+    const pmat = new THREE.MeshBasicMaterial({ color: deep, transparent: true, opacity: 0, depthWrite: false, fog: false, map: SG.Gfx.softDotTexture });
+    const pool = new THREE.Mesh(flatDisc(1), pmat);
+    pool.position.copy(c); pool.position.y += 0.14;
     this._spAdd(pool, 19);
     const R = (ctx.res && ctx.res.sp ? ctx.res.sp.radius : 1) * T + 1.4;
     const done = new Set();
-    await this._spAnim(0.85, k => {
+    let lastRipple = 0;
+    await this._spAnim(0.95, k => {
       const r = 0.3 + spEase(k) * R;
-      const h = 1.6 * Math.sin(Math.min(1, k * 1.4) * Math.PI) + 0.2;
+      const h = 2.1 * Math.sin(Math.min(1, k * 1.3) * Math.PI) + 0.25;
       wall.scale.set(r, h, r);
-      mat.uniforms.uTime.value = k * 2;
+      mat.uniforms.uTime.value = k * 2.4;
       mat.uniforms.uOpacity.value = k < 0.7 ? 1 : (1 - k) / 0.3;
-      pool.scale.set(r * 1.1, 1, r * 1.1);
-      pool.material.opacity = 0.55 * Math.sin(k * Math.PI);
-      if (Math.random() < 0.9) {
+      pool.scale.set(r * 1.25, 1, r * 1.25);
+      pmat.opacity = 0.75 * Math.min(1, k * 3) * (k < 0.75 ? 1 : (1 - k) / 0.25);
+      for (let i = 0; i < 2; i++) {
         const ang = Math.random() * Math.PI * 2;
-        const p = c.clone().add(new THREE.Vector3(Math.cos(ang) * r, h * 0.8, Math.sin(ang) * r));
-        this._emit(this.glow, p, 3, { color: C(0.85, 0.95, 1), alpha: 0.9, life: 0.5, speed: 2.4, size: 0.22, gravity: 1.2, radius: 0.2 });
+        const p = c.clone().add(new THREE.Vector3(Math.cos(ang) * r, h * 0.85, Math.sin(ang) * r));
+        this._emit(this.glow, p, 3, { color: C(0.85, 0.95, 1), alpha: 0.9, life: 0.55, speed: 2.6, size: 0.24, gravity: 1.3, radius: 0.2 });
+      }
+      if (k - lastRipple > 0.12) {
+        lastRipple = k;
+        const ang = Math.random() * Math.PI * 2, rr = Math.random() * r * 0.8;
+        this._spRing(c.clone().add(new THREE.Vector3(Math.cos(ang) * rr, 0.06, Math.sin(ang) * rr)), '#e8f6ff', 0.2, 1.3, 0.5, { alpha: 0.7 });
       }
       for (const x of ctx.targets) {
         if (done.has(x) || x.side === ctx.u.side) continue;
-        if (this._spPos(x).distanceTo(c) <= r) { done.add(x); this._emit(this.glow, this._spPos(x, 0.6), 18, { color: C(0.8, 0.92, 1), alpha: 1, life: 0.6, speed: 3.5, size: 0.24, gravity: 1.4, radius: 0.3 }); const vv = this.vis(x); if (vv) vv.flashHit(); ctx.hitUnit(x); sfx('hit', 0.5); }
+        if (this._spPos(x).distanceTo(c) <= r) {
+          done.add(x);
+          const xp = this._spPos(x);
+          this._emit(this.glow, xp.clone().add(new THREE.Vector3(0, 0.4, 0)), 30, { color: C(0.82, 0.93, 1), color2: col, mix: 0.3, alpha: 1, life: 0.75, speed: 4.6, size: 0.3, gravity: 1.6, radius: 0.35, speedVar: 0.4 });
+          this._spPillar(xp, ctx.color, 0.55, 2.6, 0.55, 0.8);
+          const vv = this.vis(x); if (vv) { vv.flashHit(); vv.tint(ctx.color, 0.8); }
+          ctx.hitUnit(x); sfx('hit', 0.5);
+        }
       }
     });
     this._spFree(wall); this._spFree(pool);
     ctx.hitAll();
-    this._spShake(0.18, 0.3);
+    this._spShake(0.2, 0.3);
     this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.0, 0)), ctx.glyph, ctx.color);
     await this._sleep(0.4);
   };
@@ -2552,8 +2599,10 @@ void main() {
     const r = ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 1) + 0.5) * T;
     if (ctx.v) ctx.v.tint(ctx.color, 1);
     sfx('magic', 0.7);
-    this._spRing(c, ctx.color, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.95 });
-    this._spRing(c, ctx.color, r * 0.9, r * 0.6, 1.2, { tex: spCircleTex(), spin: 4, hold: true, alpha: 0.5, y: 0.16 });
+    const deep = '#' + SG.Gfx.shade(col, -0.15).getHexString();
+    this._spRing(c, deep, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.85, normal: true });
+    this._spRing(c, ctx.color, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.45, y: 0.14 });
+    this._spRing(c, deep, r * 0.9, r * 0.6, 1.2, { tex: spCircleTex(), spin: 4, hold: true, alpha: 0.55, y: 0.16, normal: true });
     await this._spAnim(0.6, k => {
       for (let i = 0; i < 4; i++) {
         const a = k * 12 + i * Math.PI / 2, rr = r * (1 - k * 0.7);
@@ -2745,6 +2794,134 @@ void main() {
     ctx.hitAll();
     this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.1, 0)), ctx.glyph, ctx.color);
     await this._sleep(0.5);
+  };
+
+  // ---- claw 猛虎爪痕：三道平行爪痕撕裂敌阵；以自身为中心的招式（威吓）则兽影扑向周围每支敌军 ----
+  BV._spClawMarks = function (pos, cssColor, s) {
+    s = s || 1;
+    const R = 2.6 * s, sweep = 0.9, tilt = -0.65 + (Math.random() - 0.5) * 0.35;
+    const start = Math.PI / 2 - sweep / 2;
+    for (let i = 0; i < 3; i++) {
+      const r = R + (i - 1) * 0.4 * s;
+      setTimeout(() => {
+        if (this.disposed) return;
+        this._spArc(pos, cssColor, { radius: r, width: 0.42 * s, start, sweep, tilt, mid: R, dur: 0.6, len: 1.0, stay: true });
+        this._spArc(pos, '#ffffff', { radius: r + 0.07 * s, width: 0.14 * s, start, sweep, tilt, mid: R, dur: 0.45, len: 1.0, stay: true });
+      }, i * 45);
+    }
+  };
+  BV._sp_claw = async function (ctx) {
+    const col = this._spColor(ctx.color);
+    const selfCentered = !ctx.target || ctx.target === ctx.u;
+    if (selfCentered) {
+      const c = this._spPos(ctx.u);
+      const R = (ctx.res && ctx.res.sp ? ctx.res.sp.radius || 1 : 1) * T + 1;
+      await this._spCharge(ctx, 0.3);
+      sfx('horn', 0.8); sfx('rock', 0.5);
+      this._spRing(c, ctx.color, 0.6, R, 0.55);
+      this._spRing(c, '#ffffff', 0.4, R * 0.7, 0.4);
+      this._spShake(0.35, 0.5);
+      this._spDust(this._spPos(ctx.u, 0.2), 18, 3.5);
+      const foes = ctx.targets.filter(x => x.side !== ctx.u.side);
+      for (const x of foes) {
+        const a = this._spPos(ctx.u, 0.7), b = this._spPos(x, 0.8);
+        const mid = a.clone().lerp(b, 0.5); mid.y += 1.2;
+        await this._spTrail(k => spBezier(a, mid, b, k), 0.15, 5, { color: col, color2: C(1, 1, 1), mix: 0.3, alpha: 1, life: 0.35, speed: 0.4, size: 0.42, sizeEnd: 0.1, gravity: 0, radius: 0.12, head: 1.6 });
+        sfx('hit', 0.7);
+        this._spClawMarks(this._spPos(x, 0.9), ctx.color, 0.8);
+        this._spImpact(x, ctx.color, false);
+        ctx.hitUnit(x);
+      }
+      ctx.hitAll();
+      this._spGlyph(this._spPos(ctx.u, 3.1), ctx.glyph, ctx.color, 4);
+      await this._sleep(0.6);
+      return;
+    }
+    const t = ctx.target;
+    await this._spCharge(ctx, 0.26);
+    sfx('horn', 0.5);
+    await this._spLunge(ctx, 0.55, 0.13);
+    const p = this._spPos(t, 0.9);
+    sfx('hit', 1); sfx('rock', 0.4);
+    this._spClawMarks(p, ctx.color, 1.15);
+    await this._sleep(0.1);
+    this._spImpact(t, ctx.color, true);
+    this._spRing(this._spPos(t), ctx.color, 0.4, 3.0, 0.55);
+    this._spLight(p, ctx.color, 7, 0.3);
+    this._spShake(0.3, 0.4);
+    this._spFlash('rgba(255,190,120,1)', 0.2, 0.22);
+    ctx.hitAll();
+    this._spGlyph(this._spPos(t, 3.2), ctx.glyph, ctx.color, 4);
+    await this._sleep(0.6);
+  };
+
+  // ---- rock 落石：巨石自山头滚落，砸进范围内各格，尘土飞扬 ----
+  BV._sp_rock = async function (ctx) {
+    const area = this._spAreaTiles(ctx, 1);
+    const col = this._spColor(ctx.color);
+    this._spTiles(area, ctx.color, 1.6, 0.45);
+    await this._spCharge(ctx, 0.22);
+    sfx('rock', 0.5);
+    const mat = SG.Gfx.lowPoly();
+    const rocks = [];
+    const main = ctx.target || area[0];
+    const tiles = [main].concat(area.filter(q => q.x !== main.x || q.y !== main.y));
+    const n = M.clamp(tiles.length * 2 + 2, 6, 16);
+    for (let i = 0; i < n; i++) {
+      const tl = tiles[i < 3 ? 0 : (i - 2) % tiles.length];
+      const g = this.tile(tl.x, tl.y);
+      const r = (i < 3 ? 0.42 : 0.28) + Math.random() * 0.22;
+      const mb = new SG.MeshBuilder();
+      const sh = 0.45 + Math.random() * 0.15;
+      mb.blob(V(0, 0, 0), V(r, r * 0.85, r), C(sh * 1.05, sh, sh * 0.9), i * 7 + 3);
+      const go = SG.Gfx.mesh(mb.toGeometry(), mat, { castShadow: true, receiveShadow: false });
+      go.userData.keepMat = true;
+      const land = g.clone().add(V((Math.random() - 0.5) * 1.3, r * 0.6, (Math.random() - 0.5) * 1.3));
+      // 自镜头一侧的高处斜落
+      const from = land.clone().add(V(-1.5 + Math.random() * 3, 8 + Math.random() * 2, -2 - Math.random() * 1.5));
+      go.position.copy(from);
+      go.visible = false;
+      this._spAdd(go);
+      rocks.push({ go, from, land, tile: tl, delay: i * 0.045 + (i < 3 ? 0 : 0.12), dur: 0.42 + Math.random() * 0.08, landed: false, spin: V(Math.random() * 9, Math.random() * 6, Math.random() * 9) });
+    }
+    const hitTiles = new Set();
+    await this._spAnim(1.15, k => {
+      const el = k * 1.15;
+      for (const rk of rocks) {
+        const q = (el - rk.delay) / rk.dur;
+        if (q <= 0) continue;
+        rk.go.visible = true;
+        if (q < 1) {
+          const e = q * q;   // 自由落体：加速
+          rk.go.position.lerpVectors(rk.from, rk.land, e);
+          rk.go.rotation.set(rk.spin.x * q, rk.spin.y * q, rk.spin.z * q);
+          if (Math.random() < 0.6) this._emit(this.dust, rk.go.position, 1, { color: C(0.55, 0.5, 0.44), alpha: 0.35, life: 0.4, speed: 0.1, size: 0.5, sizeEnd: 1.1, gravity: 0, radius: 0.1 });
+        } else if (!rk.landed) {
+          rk.landed = true;
+          rk.go.position.copy(rk.land);
+          this._rockImpact(rk.land);
+          this._spDust(rk.land, 6, 2.4);
+          this._emit(this.glow, rk.land, 6, { color: col, color2: C(1, 0.9, 0.7), mix: 0.5, alpha: 1, life: 0.35, speed: 3, size: 0.16, gravity: 0.8, radius: 0.15 });
+          this._spShake(0.16, 0.18);
+          const key = rk.tile.x + ',' + rk.tile.y;
+          if (!hitTiles.has(key)) {
+            hitTiles.add(key);
+            sfx('rock', 0.6);
+            this._spRing(this.tile(rk.tile.x, rk.tile.y), ctx.color, 0.3, 2.0, 0.4);
+            for (const h of ctx.hits) if (h.unit.x === rk.tile.x && h.unit.y === rk.tile.y) { const vv = this.vis(h.unit); if (vv) vv.flashHit(); ctx.hitUnit(h.unit); }
+          }
+        } else {
+          // 落地后略微下沉、渐隐
+          const s = M.clamp01(1 - (q - 1) * 1.6);
+          rk.go.scale.setScalar(Math.max(0.001, s));
+        }
+      }
+    });
+    for (const rk of rocks) this._spFree(rk.go);
+    this.smoke(this._spPos(main));
+    ctx.hitAll();
+    this._spGlyph(this._spPos(main, 3.0), ctx.glyph, ctx.color);
+    await this._sleep(0.4);
   };
 
   BattleView.Origin = ORIGIN;

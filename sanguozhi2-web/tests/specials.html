@@ -29,6 +29,8 @@
   .row { display: grid; grid-template-columns: 5.4em 1fr auto; gap: 2px 8px; padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,.06); align-items: start; }
   .row:hover { background: rgba(243,201,105,.06); }
   .row .gen { font-weight: 700; color: #f5eddb; } .row .gen small { display: block; color: #a8a194; font-weight: 400; font-size: 11px; }
+  .row .gen small span { white-space: nowrap; }
+  .row .sp .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 6px; vertical-align: 1px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
   .row .sp { font: 700 15px/1.3 "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; }
   .row .sp .tag { font: 600 10.5px/1 system-ui,sans-serif; color: #14121a; background: #f3c969; border-radius: 4px; padding: 2px 4px; margin-left: 6px; vertical-align: 2px; }
   .row .sp .tag.auto { background: #6b6576; color: #f5eddb; }
@@ -80,7 +82,10 @@
          ?nogl=1        只显示列表（不建三维场景）
          ?clash=1       同时载入 js/clash.js / portrait（若存在），特写改用 SG.Clash.cutIn
          ?seed=N        随机数种子（默认 7）
-         ?vt=1          虚拟时钟：每帧固定推进 1/30 秒（软件渲染下截图逐帧检查特效用） */
+         ?vt=1          虚拟时钟：每帧固定推进 1/30 秒（软件渲染下截图逐帧检查特效用）
+         ?nocut=1       不播特写（直接看特效）
+         ?fast=1        特写缩短（电脑回合的节奏）
+         ?menu=1        走玩家菜单流程：「必杀」条目 → 选目标（多个目标时弹出选择框）→ 施展 → spend */
 (function () {
   const Q = new URLSearchParams(location.search);
   // 虚拟时钟：performance.now() 只随渲染帧推进，动画在慢速渲染下也不跳帧
@@ -153,8 +158,8 @@
       if (handOnly && sp.auto) continue;
       const hay = (g.name + sp.name + sp.kind + S.kindName(sp.kind) + sp.desc).toLowerCase();
       if (q && hay.indexOf(q) < 0) continue;
-      rows.push(`<div class="row"><div class="gen">${esc(g.name)}<small>武${g.war} 智${g.intel} 政${g.pol}</small></div>` +
-        `<div class="sp" style="color:${sp.color}">「${esc(sp.name)}」<span class="tag${sp.auto ? ' auto' : ''}">${sp.auto ? '生成' : '手写'}</span></div>` +
+      rows.push(`<div class="row"><div class="gen">${esc(g.name)}<small><span>武${g.war}</span> <span>智${g.intel}</span> <span>政${g.pol}</span></small></div>` +
+        `<div class="sp" style="color:${S.uiColor(sp)}">「${esc(sp.name)}」<span class="tag${sp.auto ? ' auto' : ''}">${sp.auto ? '生成' : '手写'}</span><i class="sw" style="background:${sp.color}"></i></div>` +
         `<button class="tb" data-demo="${esc(g.name)}">演示</button>` +
         `<div class="rules">${esc(S.rules(sp))}　· 特效 ${esc(sp.fx)}</div><div class="desc">${esc(sp.desc)}</div>` +
         `<div class="sig">${esc(S.signature(sp))}</div></div>`);
@@ -269,7 +274,7 @@
     const sp = SG.Specials.of(u.gen);
     c.style.display = '';
     c.innerHTML = `<div><b>${esc(u.gen.name)}</b>　兵 ${u.troops}　士气 ${u.morale}　武${u.gen.war} 智${u.gen.intel} 政${u.gen.pol}</div>` +
-      `<div class="sp" style="color:${sp.color}">「${esc(sp.name)}」</div><div>${esc(SG.Specials.rules(sp))}</div>`;
+      `<div class="sp" style="color:${SG.Specials.uiColor(sp)}">「${esc(sp.name)}」</div><div>${esc(SG.Specials.rules(sp))}</div>`;
   }
 
   async function demo(name) {
@@ -288,11 +293,27 @@
       const cands = Mdl.specialTargets(u);
       let best = cands[0] || null, bv = -1;
       for (const t of cands) { const v = Mdl.specialValue(u, Mdl.specialPlan(u, t)); if (v > bv) { bv = v; best = t; } }
+      // 与 BattleController 相同的接口（pickEnemy 与控制器的写法一致：只有一个目标时直接返回，否则弹出选择框）
       const bc = {
-        M: Mdl, V: F.view, showCard, updateHud() {}, pickEnemy: async list => list[0],
+        M: Mdl, V: F.view, showCard, updateHud() {},
+        async pickEnemy(list, title) {
+          if (list.length === 1) return list[0];
+          const r = await SG.UI.choose(title, list.map(e => SG.UI.item(e.gen.name, '兵 ' + e.troops + '　武 ' + e.gen.war + '　智 ' + e.gen.intel)), null, 560);
+          return r >= 0 ? list[r] : null;
+        },
       };
       showCard(u);
-      window.__lastRes = await SG.Specials.perform(bc, u, best, { rig: F.rig });
+      window.__fxStart = performance.now();
+      if (Q.get('menu')) {
+        // ?menu=1：走玩家流程（菜单条目 → 选目标 → 施展 → spend），与集成后的「必杀」菜单相同
+        const item = SG.Specials.menuItem(bc, u);
+        window.__menuItem = item;
+        const r = await SG.UI.choose(u.gen.name + ' 的行动', [item, SG.UI.item('待机')], null, 520);
+        if (r === 0) window.__lastRes = await SG.Specials.menu(bc, u, false);
+        window.__acted = u.acted;
+      } else {
+        window.__lastRes = await SG.Specials.perform(bc, u, best, { rig: F.rig, cutIn: !Q.get('nocut'), fast: !!Q.get('fast') });
+      }
       window.__demoDone = (window.__demoDone || 0) + 1;
       await SG.wait(0.6);
       showCard(u);

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>世界地图测试</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dbd6c7; font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC","WenQuanYi Zen Hei",system-ui,sans-serif; }
+  #app { position: fixed; inset: 0; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .lbl { position: absolute; transform: translate(-50%, -100%); padding: 1px 6px; border-radius: 5px; white-space: nowrap;
+    background: rgba(18,18,26,.82); border: 1px solid rgba(243,201,105,.55); color: #f3e7c9;
+    font: 600 12px "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC","WenQuanYi Zen Hei",serif; }
+  .lbl i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 4px; }
+  .lbl.warn { border-color: #ff6a4a; color: #ffd0c0; }
+  #bar { position: fixed; left: 0; right: 0; top: 0; display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; padding-top: max(6px, env(safe-area-inset-top));
+    background: rgba(18,18,26,.78); z-index: 5; }
+  #bar button { min-height: 32px; padding: 0 9px; border-radius: 6px; border: 1px solid rgba(243,201,105,.5); background: rgba(40,36,48,.9); color: #f3e7c9; font-size: 13px; cursor: pointer; }
+  #bar button.on { background: #c8382c; color: #fff; }
+  #bar .sep { width: 1px; background: rgba(243,201,105,.35); margin: 0 4px; }
+  #hud { position: fixed; left: 8px; bottom: 8px; color: #222; font: 12px monospace; background: rgba(255,255,255,.7); padding: 4px 8px; border-radius: 4px; pointer-events: none; white-space: pre; z-index: 5; }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #16151d; color: #f3c969; z-index: 10; font-size: 20px; }
+  #loading .b { width: 260px; height: 6px; border-radius: 3px; background: rgba(243,201,105,.2); overflow: hidden; }
+  #loading .b i { display: block; height: 100%; width: 0; background: #f3c969; }
+  @media (max-height: 450px) { #bar button { min-height: 30px; font-size: 12px; padding: 0 7px; } .lbl { font-size: 11px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="bar"></div>
+<div id="hud"></div>
+<div id="loading"><div id="ltext">正在测绘世界……</div><div class="b"><i id="lbar"></i></div></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/world-geo.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/map-view.js"></script>
+<script src="world-cities.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG;
+  const params = new URLSearchParams(location.search);
+  SG.Random.seed(Number(params.get('seed') || 1));
+  // 世界剧本由 model.js 的 SG.mapPos 调用 SG.project（见 INTEGRATION）；本页不载入 model.js
+  SG.mapPos = c => SG.project(c.lon, c.lat);
+
+  // ------------------------------------------------ 城池：经典剧本 + research/*.json
+  const CULT_COLOR = { han: '#c8382c', nanman: '#9a6a3a', wa: '#e0457b', yi: '#4fb0a0', korea: '#40c4e0', steppe: '#c9a227', seasia: '#2fae5a',
+    tarim: '#d08a3a', kushan: '#8a5fc0', persia: '#2f6db5', arab: '#b08a3a', roman: '#b0103c', celt: '#1d7874', german: '#5cc028', sarmatian: '#ff80c0' };
+  const CLASSIC_OWN = { dong: ['luoyang', 'changan'], yuanshao: ['nanpi'], cao: ['chenliu'], liubei: ['pingyuan'], sunjian: ['changsha'],
+    yuanshu: ['wan', 'runan'], gongsun: ['beiping'], liubiao: ['xiangyang', 'jiangling'], liuyan: ['chengdu', 'jiangzhou'], mateng: ['wuwei', 'tianshui'],
+    taoqian: ['xiapi', 'xiaopei'], kongrong: ['beihai'], hanfu: ['ye'], zhanglu: ['hanzhong'], zhangyang: ['jinyang'], liuyao: ['jianye'], lukang: ['lujiang'], menghuo: ['yunnan'] };
+  const cities = [], byKey = new Map(), factions = [], facByKey = new Map();
+  const addFaction = (key, color, name) => { if (facByKey.has(key)) return facByKey.get(key); const f = { id: factions.length, key, color, name: name || key }; factions.push(f); facByKey.set(key, f); return f; };
+  for (const line of SG.ScenarioData.Factions) { const p = line.split('|'); addFaction(p[0], p[3], p[1]); }
+  for (const line of SG.ScenarioData.Cities) {
+    const p = line.split('|');
+    const c = { id: cities.length, key: p[0], name: p[1], lon: +p[2], lat: +p[3], town: +p[6], owner: -1, links: [], culture: 'han', src: 'classic' };
+    cities.push(c); byKey.set(c.key, c);
+  }
+  for (const fk in CLASSIC_OWN) for (const ck of CLASSIC_OWN[fk]) byKey.get(ck).owner = facByKey.get(fk).id;
+  const seaPairs = new Set();
+  const link = (a, b, kind) => {
+    if (!a || !b || a === b) return;
+    if (!a.links.includes(b.id)) { a.links.push(b.id); b.links.push(a.id); }
+    if (kind === 'sea') seaPairs.add(Math.min(a.id, b.id) + '-' + Math.max(a.id, b.id));
+  };
+  for (const l of SG.ScenarioData.Links) { const [a, b] = l.split('-'); link(byKey.get(a), byKey.get(b), 'land'); }
+  const W = window.WORLD_CITIES || { regions: [] };
+  for (const r of W.regions) {
+    for (const f of r.factions) addFaction(f.key, f.color, f.name);
+    for (const c of r.cities) {
+      if (byKey.has(c.key)) continue;
+      const f = facByKey.get(c.owner);
+      const o = { id: cities.length, key: c.key, name: c.name, lon: c.lon, lat: c.lat, town: c.town || 300, owner: f ? f.id : -1, links: [], culture: c.culture, src: r.region };
+      cities.push(o); byKey.set(o.key, o);
+    }
+  }
+  for (const r of W.regions) {
+    for (const l of r.links) link(byKey.get(l[0]), byKey.get(l[1]), l[2]);
+    for (const l of r.crossLinks) link(byKey.get(l[0]), byKey.get(l[1]), l[2]);
+  }
+  SG.linkIsSea = (a, b) => seaPairs.has(Math.min(a, b) + '-' + Math.max(a, b));
+  const state = { cities, factions, player: facByKey.get('liubei').id };
+
+  // ------------------------------------------------ 启动
+  SG.Gfx.init(document.getElementById('app'));
+  SG.Gfx.autoQuality = params.get('auto') === '1';
+  const rig = new SG.CameraRig();
+  rig.focusMap(60, 50, 95, true);
+  const map = new SG.MapView();
+  const region = params.get('region') || 'auto';
+  const t0 = performance.now();
+  let lastProgress = 0;
+  map.buildAsync(state, {
+    region,
+    sliceMs: Number(params.get('slice') || 12),
+    onProgress(p, label) {
+      lastProgress = p;
+      document.getElementById('lbar').style.width = (p * 100).toFixed(0) + '%';
+      document.getElementById('ltext').textContent = '正在测绘世界…… ' + label + ' ' + (p * 100).toFixed(0) + '%';
+    },
+  }).then(begin, e => { console.error(e); });
+
+  // ------------------------------------------------ 标签
+  const labels = document.getElementById('labels');
+  const lbls = [];
+  function makeLabels() {
+    for (const cv of map.cities.values()) {
+      const c = cv.city;
+      const el = document.createElement('div');
+      el.className = 'lbl';
+      const col = c.owner >= 0 ? factions[c.owner].color : '#999';
+      el.innerHTML = `<i style="background:${col}"></i>${c.name}`;
+      el.title = c.key + ' ' + c.culture;
+      labels.appendChild(el);
+      lbls.push({ el, cv });
+    }
+  }
+  function updateLabels() {
+    const far = rig.distance * 1.5 + 30;
+    for (const l of lbls) {
+      const s = SG.Gfx.worldToScreen(l.cv.labelPos);
+      if (!s.visible || s.dist > far || s.x < -40 || s.y < -20 || s.x > innerWidth + 40 || s.y > innerHeight + 40) { l.el.style.display = 'none'; continue; }
+      l.el.style.display = '';
+      l.el.style.left = s.x + 'px'; l.el.style.top = s.y + 'px';
+    }
+  }
+
+  // ------------------------------------------------ 按钮
+  const bar = document.getElementById('bar');
+  const btn = (text, fn, group) => { const b = document.createElement('button'); b.textContent = text; b.onclick = () => { if (group) for (const o of bar.querySelectorAll('button[data-g="' + group + '"]')) o.classList.remove('on'); if (group) b.classList.add('on'); fn(); }; if (group) b.dataset.g = group; bar.appendChild(b); return b; };
+  const sep = () => { const s = document.createElement('div'); s.className = 'sep'; bar.appendChild(s); };
+  function flyRegion(key, instant) {
+    const r = SG.World.regions[key];
+    if (!r) return Promise.resolve();
+    rig.desiredYaw = 0;
+    return rig.fitRect(r, instant);
+  }
+
+  // ------------------------------------------------ 主循环
+  let last = performance.now();
+  const frameTimes = [];
+  let recording = false;
+  function loop(now) {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    if (recording) frameTimes.push(now - last);
+    last = now;
+    rig.update(dt);
+    map.update(dt);
+    SG.Gfx.setShadowFocus(rig.target, rig.distance * 0.85 + 8);
+    updateLabels();
+    SG.Gfx.render();
+    requestAnimationFrame(loop);
+  }
+
+  function begin() {
+    const buildMs = performance.now() - t0;
+    document.getElementById('loading').style.display = 'none';
+    rig.useMap(map);
+    makeLabels();
+    for (const k of ['world', 'europe', 'med', 'arabia', 'iran', 'india', 'tarim', 'china', 'korea', 'seasia']) btn(SG.World.regions[k].name, () => flyRegion(k), 'r');
+    sep();
+    for (const [k, t] of [[null, '无叠加'], ['land', '陆海'], ['coast', '海岸距离'], ['river', '河流'], ['plateau', '高原/山'], ['biome', '群落']]) btn(t, () => map.debugOverlay(k), 'o');
+    flyRegion('china', true);
+    requestAnimationFrame(loop);
+    const st = map.buildStats;
+    const hud = document.getElementById('hud');
+    const info = SG.Gfx.renderer.info;
+    setInterval(() => {
+      hud.textContent = `build ${st.totalMs.toFixed(0)} ms (max slice ${st.maxSliceMs.toFixed(1)} ms, ${st.slices} slices) · cities ${cities.length} · trees ${map.treeCount}\n` +
+        `calls ${info.render.calls} · tris ${info.render.triangles} · geo ${info.memory.geometries} · dist ${rig.distance.toFixed(0)}`;
+    }, 500);
+    window.__test.buildMs = buildMs;
+    window.__ready = true;
+  }
+
+  // ------------------------------------------------ 测试接口
+  window.__test = {
+    state, map, rig, cities, factions, seaPairs,
+    get buildStats() { return map.buildStats; },
+    get progress() { return lastProgress; },
+    view(mapX, mapY, dist, yaw) {
+      rig.yaw = rig.desiredYaw = yaw || 0;
+      rig.focusMap(mapX, mapY, dist, true);
+      rig.update(0);
+    },
+    region(key, instant) { return flyRegion(key, instant !== false); },
+    overlay(kind) { map.debugOverlay(kind || null); },
+    async measure(seconds) {
+      frameTimes.length = 0; recording = true;
+      await SG.wait(seconds);
+      recording = false;
+      const a = frameTimes.slice().sort((x, y) => x - y);
+      const avg = a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
+      return { frames: a.length, avgMs: avg, medianMs: a[a.length >> 1], p95Ms: a[Math.floor(a.length * 0.95)] };
+    },
+    stats() {
+      const info = SG.Gfx.renderer.info;
+      return { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, programs: info.programs.length };
+    },
+    // 城池落在水里 / 离海岸太近 / 彼此太近的检查
+    check() {
+      const geo = map._geo, out = { inSea: [], nearCoast: [], close: [] };
+      for (const c of cities) {
+        const p = SG.project(c.lon, c.lat);
+        const sea = geo.inSea(p.x, p.y), d = geo.coastDist(p.x, p.y);
+        if (sea) out.inSea.push(c.name + ' ' + c.key + ' d=' + d.toFixed(2));
+        else if (d < 0.7) out.nearCoast.push(c.name + ' ' + c.key + ' d=' + d.toFixed(2));
+      }
+      for (let i = 0; i < cities.length; i++) for (let j = i + 1; j < cities.length; j++) {
+        const a = SG.project(cities[i].lon, cities[i].lat), b = SG.project(cities[j].lon, cities[j].lat);
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 3) out.close.push(cities[i].name + '–' + cities[j].name + ' ' + d.toFixed(2));
+      }
+      return out;
+    },
+  };
+})();
+</script>
+</body>
+</html>

@@ -480,6 +480,11 @@
     1: { f0: 92, bend: 1.2, tau: 0.02, t60: 0.25, modes: [[1.59, 0.25, 0.12]], skin: [0.5, 900, 0.7, 0.03], dur: 0.45 },
     2: WOOD(1200, 2100, 0.03),
   }, { gain: 0.62, rev: 0.24, label: '宝思兰鼓' });
+  // 小军鼓（凯尔特风笛鼓队）：短促鼓皮 + 宽带响弦噪声；0 正击 1 轻击 / 装饰
+  kit('snare', {
+    0: { f0: 190, bend: 1.15, tau: 0.01, t60: 0.16, modes: [[1.59, 0.4, 0.09], [2.14, 0.25, 0.07]], skin: [0.9, 3600, 0.55, 0.055], click: [0.35, 0.002, 5000], dur: 0.45 },
+    1: { f0: 190, bend: 1.1, tau: 0.008, t60: 0.07, skin: [0.65, 4200, 0.6, 0.03], click: [0.2, 0.0015, 5000], dur: 0.28 },
+  }, { gain: 0.3, rev: 0.2, pan: 0.12, label: '小军鼓' });
   kit('shamandrum', {
     0: { f0: 58, bend: 1.25, tau: 0.04, t60: 0.95, modes: [[1.59, 0.25, 0.3], [2.14, 0.12, 0.2]], skin: [0.3, 500, 0.7, 0.05], jingle: [0.05, 0.22], thump: 0.35, dur: 1.3 },
     1: { f0: 160, bend: 1.1, tau: 0.02, t60: 0.2, skin: [0.4, 1200, 0.8, 0.03], jingle: [0.1, 0.18], dur: 0.6 },
@@ -595,7 +600,9 @@
       aA.set(0, t0 - 0.002); vA.set(0, t0 - 0.002);
       if (nA) nA.set(0, t0 - 0.002);
       if (tA) tA.set(0, t0 - 0.002);
-      const graceF = P.autoGrace ? (tr.C.piece._keyMidi !== undefined ? mtof(tr.C.piece._keyMidi + P.autoGrace) : 0) : 0;
+      // 风笛装饰音：缺省为“1”上方 autoGrace 个半音；声部可用 grace（半音数）按本曲调高另设（如 1=D 时高音 G = 17）
+      const gSemi = ch.V && ch.V.grace !== undefined ? ch.V.grace : P.autoGrace;
+      const graceF = P.autoGrace ? (tr.C.piece._keyMidi !== undefined ? mtof(tr.C.piece._keyMidi + gSemi) : 0) : 0;
       for (let i = 0; i < notes.length; i++) {
         const n = notes[i], o = n.orn || {};
         const ti = n.t, d = Math.max(0.03, n.d);
@@ -829,20 +836,24 @@
     const t0 = n0.t, tEnd = nl.t + nl.d;
     const dp = ch.V.droneMidi !== undefined ? ch.V.droneMidi : (tr.C.piece._keyMidi - 24);
     const f0 = mtof(dp);
+    // 带通中心对准最接近的泛音（真正的呼麦只能唱出持续音的泛音列）
+    const harm = f => Math.max(2, Math.round(f / f0)) * f0;
+    const h0 = harm(n0.f);
     const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = f0;
-    const bp = biquadNode(ctx, 'bandpass', n0.f, 28);
-    const bp2 = biquadNode(ctx, 'bandpass', n0.f, 28);
+    const bp = biquadNode(ctx, 'bandpass', h0, 28);
+    const bp2 = biquadNode(ctx, 'bandpass', h0, 28);
     const g = ctx.createGain(); g.gain.value = 0;
     osc.connect(bp); bp.connect(bp2); bp2.connect(g); g.connect(ch.input);
     const fA = new Auto(bp.frequency), f2A = new Auto(bp2.frequency), gA = new Auto(g.gain);
-    gA.set(0, t0); fA.set(n0.f, t0); f2A.set(n0.f, t0);
-    let pf = n0.f;
+    gA.set(0, t0); fA.set(h0, t0); f2A.set(h0, t0);
+    let pf = h0;
     for (const n of notes) {
       const L = 2.4 * Math.pow(n.v, 1.2);
-      if (n !== n0) { fA.set(pf, n.t - 0.05); f2A.set(pf, n.t - 0.05); fA.exp(n.f, n.t + 0.07); f2A.exp(n.f, n.t + 0.07); }
+      const hf = harm(n.f);
+      if (n !== n0) { fA.set(pf, n.t - 0.05); f2A.set(pf, n.t - 0.05); fA.exp(hf, n.t + 0.07); f2A.exp(hf, n.t + 0.07); }
       gA.lin(L, n.t + (n === n0 ? 0.25 : 0.08));
       gA.lin(L * 0.85, n.t + n.d - 0.02);
-      pf = n.f;
+      pf = hf;
     }
     gA.lin(0, tEnd + 0.4);
     osc.start(t0); osc.stop(tEnd + 0.6);

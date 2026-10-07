@@ -8,22 +8,34 @@
 
    公开接口
    --------------------------------------------------------------------------
-   SG.Portrait.url(gen, opts)     → 图片 URL（同步）。已栅格化时为 blob: PNG，
-                                     否则为 SVG dataURL（矢量，同样清晰），并在后台排队栅格化。
-                                     按 (name, size, color, frame, flip, mood) 缓存。
-   SG.Portrait.el(gen, opts)      → <div class="sg-portrait"><img></div>，opts.size 为 CSS 像素
-   SG.Portrait.preload(gens, opts)→ Promise，空闲时分片栅格化（单片 ≤ ~12ms），避免卡顿
-   SG.Portrait.spec(gen)          → 解析后的外貌参数（调试用；见 portrait-data.js 文件头）
-   SG.Portrait.svg(gen, opts)     → SVG 源码字符串
+   SG.Portrait.url(gen, opts)     → 图片 URL（同步）。已栅格化时为 PNG dataURL；否则当场生成
+                                     SVG dataURL（矢量，同样清晰，约 2ms），并在后台排队栅格化。
+                                     按 (外貌, 像素尺寸, 颜色, 边框, 镜像, 表情) 缓存。
+   SG.Portrait.el(gen, opts)      → <div class="sg-portrait"><img></div>，opts.size 为 CSS 像素；
+                                     未缓存时先显示 SVG，栅格化完成后自动换成 PNG。
+                                     opts.className 追加类名（.is-dead 灰度）。
+   SG.Portrait.cached(gen, opts)  → 已有 URL 时返回，否则 null（不触发生成）
+   SG.Portrait.preload(gens, opts)→ Promise，分片生成 + 栅格化（单片预算 10ms），不阻塞主线程。
+                                     进入画面前对要显示的武将调用一次，之后 url/el 都是缓存命中。
+   SG.Portrait.spec(gen)          → 解析后的外貌参数（调试用；格式见 portrait-data.js 文件头）
+   SG.Portrait.svg(gen, opts)     → SVG 源码字符串（每次重新生成）
    SG.Portrait.canvas(gen, opts)  → Promise<HTMLCanvasElement>（给 WebGL 纹理等使用）
    SG.Portrait.clearCache(name?)  → 清除缓存（PortraitData.add 时自动调用）
-   SG.Portrait.cultures           → 已实现的文化代号列表
-   SG.Portrait.stats              → { built, rastered, maxSliceMs, totalMs } 性能统计
+   SG.Portrait.find(name)         → 按姓名找武将（SG.G 优先，其次剧本）；找不到为 null
+   SG.Portrait.html(gen, opts)    → 内嵌 HTML 片段 <span class="sg-portrait sg-portrait-inline"><img></span>
+                                     （UI.choose 的 label 等 HTML 字符串用；opts.size 缺省 32）
+   SG.Portrait.preloadState(state = SG.G, sizes = [44, 96]) → Promise，预生成全部在世武将
+   SG.Portrait.cultures           → 已实现的文化代号列表（DESIGN-V2 §6 全部 15 种）
+   SG.Portrait.stats              → { built, rastered, maxSliceMs, totalMs, genMs, encMs } 性能统计
 
-   gen 至少含 { name, war, intel, pol }；可选 { culture, born, sex, faction, color }。
+   gen 至少含 { name, war, intel, pol }；可选 { culture, born, sex, faction, color, portrait }。
    也可以直接传姓名字符串（会到 SG.G 或 ScenarioData 里查能力值）。
-   opts：{ size = 96, color = 势力色或灰, frame = true, flip = false,
-           mood = 'neutral' | 'angry' | 'hurt' | 'win' }
+   gen.portrait 可直接给一份外貌参数（PortraitData 没有该人条目时使用）。
+   opts：{ size = 96, scale = devicePixelRatio(≤2), color = 势力色或灰（'#hex' / THREE.Color / {r,g,b}），
+           frame = true, flip = false, mood = 'neutral' | 'angry' | 'hurt' | 'win', raster = true }
+
+   渲染管线：外貌参数 → SVG 字符串（同一份标记既可直接作 SVG 显示）→ 自带的 SVG 子集解释器
+   用 Path2D 画到 CPU 画布（背景与边框按颜色缓存）→ PNG。比让浏览器逐张解析 SVG 快数倍。
 
    画面约定：视窗 256×256 单位；脸朝画面左侧（四分之三侧面），主光来自左上前方，
    画面右侧为背光面，右缘有轮廓光。flip = true 时人物水平镜像（边框不变）。
@@ -67,6 +79,7 @@
   const sub = (name, tag) => Rng(hashStr(name + '\u0001' + tag));
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, t) => a + (b - a) * t;
+  const hyp = (x, y) => Math.sqrt(x * x + y * y); // 比 Math.hypot 快
   const smooth01 = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
   // ----------------------------------------------------------- 颜色 --
@@ -129,7 +142,9 @@
   const GOLD = '#e2b45a';
 
   // ----------------------------------------------------------- 路径 --
-  const N = v => Math.round(v * 10) / 10;
+  // 数字 → 一位小数的字符串（手写整数拼接，比浮点数转字符串快得多）
+  function Nn(n) { const i = (n / 10) | 0, f = n - i * 10; return f ? i + '.' + f : '' + i; }
+  const N = v => { const n = Math.round(v * 10); return n < 0 ? '-' + Nn(-n) : Nn(n); };
   const ps = p => N(p[0]) + ',' + N(p[1]);
   // Catmull-Rom → 三次贝塞尔。点可带第三个分量 k（0 = 尖角，1 = 圆滑）
   function spline(pts, closed) {
@@ -144,9 +159,9 @@
       const p3 = closed ? pts[(i + 2) % n] : pts[Math.min(n - 1, i + 2)];
       const k1 = (p1[2] === undefined ? 1 : p1[2]) / 6, k2 = (p2[2] === undefined ? 1 : p2[2]) / 6;
       // 控制柄长度不超过本段长度的一半，避免短段旁的长切线造成打圈
-      const seg = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) * 0.5;
+      const seg = hyp(p2[0] - p1[0], p2[1] - p1[1]) * 0.5;
       let ax = (p2[0] - p0[0]) * k1, ay = (p2[1] - p0[1]) * k1, bx = (p3[0] - p1[0]) * k2, by = (p3[1] - p1[1]) * k2;
-      const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+      const la = hyp(ax, ay), lb = hyp(bx, by);
       if (la > seg) { ax *= seg / la; ay *= seg / la; }
       if (lb > seg) { bx *= seg / lb; by *= seg / lb; }
       d += 'C' + ps([p1[0] + ax, p1[1] + ay]) + ' ' + ps([p2[0] - bx, p2[1] - by]) + ' ' + ps(p2);
@@ -163,13 +178,13 @@
     for (let i = 0; i < n; i++) {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
       let dx = b[0] - a[0], dy = b[1] - a[1];
-      const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
-      const w = (typeof ws === 'function' ? ws(n === 1 ? 0 : i / (n - 1)) : ws[i]) / 2;
+      const l = hyp(dx, dy) || 1; dx /= l; dy /= l;
+      const w = (typeof ws === 'function' ? ws(n === 1 ? 0 : i / (n - 1)) : typeof ws === 'number' ? ws : ws[i]) / 2;
       L.push([pts[i][0] - dy * w, pts[i][1] + dx * w]);
       Rr.push([pts[i][0] + dy * w, pts[i][1] - dx * w]);
     }
-    const w0 = typeof ws === 'function' ? ws(0) : ws[0];
-    const w1 = typeof ws === 'function' ? ws(1) : ws[n - 1];
+    const w0 = typeof ws === 'function' ? ws(0) : typeof ws === 'number' ? ws : ws[0];
+    const w1 = typeof ws === 'function' ? ws(1) : typeof ws === 'number' ? ws : ws[n - 1];
     if (w1 < 0.08) { Rr.pop(); L[n - 1][2] = 0.4; }
     Rr.reverse();
     if (w0 < 0.08) { Rr.pop(); L[0][2] = 0.4; }
@@ -177,7 +192,7 @@
   }
   // 叶形发绺 / 须绺：根 a、尖 b、根宽 w、弯曲 bend（相对长度的侧偏）
   function leaf(a, b, w, bend) {
-    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = hyp(dx, dy) || 1;
     const nx = -dy / l, ny = dx / l;
     const c = [(a[0] + b[0]) / 2 + nx * bend * l, (a[1] + b[1]) / 2 + ny * bend * l];
     const h = w / 2;
@@ -186,7 +201,7 @@
   }
   // 弯曲的发绺 / 须绺（毛笔笔触）：根宽 w，尖端收细，bend 为侧弯
   function lock(a, b, w, bend) {
-    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = hyp(dx, dy) || 1;
     const nx = -dy / l, ny = dx / l;
     const m1 = [a[0] + dx * 0.4 + nx * bend * l, a[1] + dy * 0.4 + ny * bend * l];
     const m2 = [a[0] + dx * 0.75 + nx * bend * l * 0.6, a[1] + dy * 0.75 + ny * bend * l * 0.6];
@@ -248,7 +263,7 @@
   // 角色（role）：warrior 武将 · general 智勇兼备 · strategist 谋士 · official 文官 ·
   //               ruler 君主 · commoner 小吏 / 草莽 · female 女性
   const DARK = [['#16131a', 6], ['#221a18', 3], ['#2c2019', 1]];
-  const BROWNEYE = ['#2a1810', '#35200f', '#1c120c'];
+  const BROWNEYE = ['#4a2c1a', '#56351e', '#3c2414', '#4e3420'];
   const LIGHTEYE = ['#3a5a7a', '#4a6a8a', '#5a7a5a', '#6a6a5a', '#4a3a2a', '#3a2a1a'];
   const CULT = {
     han: {
@@ -549,7 +564,7 @@
       if (age >= 44 && rh.chance(0.5)) return mix(base, '#a8a49c', 0.25);
       return base;
     })();
-    const eyeShapes = fem ? [['big', 4], ['phoenix', 2], ['gentle', 2]]
+    const eyeShapes = fem ? (war >= 70 ? [['phoenix', 3], ['sharp', 2], ['gentle', 1]] : [['gentle', 3], ['phoenix', 3], ['big', 1.5]])
       : role === 'warrior' ? [['sharp', 4], ['normal', 3], ['round', 2], ['phoenix', 1], ['narrow', 1], ['sleepy', 0.5]]
         : role === 'strategist' || role === 'official' ? [['narrow', 3], ['normal', 3], ['gentle', 2], ['phoenix', 2], ['sharp', 1], ['sleepy', 1]]
           : [['normal', 4], ['sharp', 2], ['gentle', 2], ['narrow', 1], ['round', 1], ['sleepy', 1]];
@@ -596,7 +611,9 @@
       hat.neck = rc.chance(0.5) ? null : rc.pick(['#5a3a24', '#7a2020', '#2a2a3a', '#4a4030']);
     }
     // 衣甲
-    const outfitType = pickRole(C.outfit, role, rc);
+    // 女将（武力高的女性）穿本文化的武将衣甲；女性不赤膊
+    let outfitType = pickRole(C.outfit, fem && war >= 70 ? 'warrior' : role, rc);
+    if (fem && outfitType === 'bare') outfitType = ((C.outfit.female || C.outfit._ || []).map(e => e[0]).find(t => t !== 'bare')) || 'robe';
     const clothC = rc.pick(C.cloth);
     let cloth2 = rc.pick(C.cloth);
     if (cloth2 === clothC) cloth2 = mix(clothC, '#000', 0.4);
@@ -634,6 +651,8 @@
     const out = Object.assign({}, base);
     for (const k in data) {
       const v = data[k];
+      // 换了冠帽类型时，不沿用默认冠帽的配色（否则紫金冠会染上帻的黑色）
+      if (k === 'hat' && v && v.type && base.hat && v.type !== base.hat.type) { out.hat = Object.assign({ type: v.type, color: null, color2: null }, HAT_COL[v.type] ? { color: HAT_COL[v.type][hashStr(base.name + 'hc') % HAT_COL[v.type].length] } : null, v); continue; }
       if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) out[k] = Object.assign({}, base[k], v);
       else out[k] = v;
     }
@@ -655,7 +674,8 @@
     if (typeof gen === 'string') gen = findGen(gen);
     gen = gen || { name: '无名' };
     const name = gen.name || '无名';
-    const key = name + '|' + (gen.culture || '') + '|' + (gen.war | 0) + '|' + (gen.intel | 0) + '|' + (gen.pol | 0) + '|' + (gen.born || '') + '|' + (gen.sex || '') + '|' + curYear();
+    // 只有带出生年的人才随年份变老（否则不必每年重画）
+    const key = name + '|' + (gen.culture || '') + '|' + (gen.war | 0) + '|' + (gen.intel | 0) + '|' + (gen.pol | 0) + '|' + (gen.born ? gen.born + '@' + curYear() : '') + '|' + (gen.sex || '');
     let sp = specCache.get(key);
     if (sp) return sp;
     const raw = (SG.PortraitData && SG.PortraitData.get && SG.PortraitData.get(name)) || (gen.portrait) || {};
@@ -712,12 +732,12 @@
       P(-0.955, -0.58),
       P(-1.0 - bb * 0.035 + fk, -0.30),
       P(-0.955 + fk * 0.3, -0.06, fem ? 1 : 0.7),
-      P(-0.99 - ck * 0.05 - fat * 0.1 + fk, 0.24),
-      P(-0.95 + hol * 0.06 - fat * 0.2, 0.55),
-      P(-0.87 - fat * 0.22, 0.86 * L),
-      P(-0.74 * cw - fat * 0.18, 1.12 * L + fat * 0.05),
-      P(-0.60 * cw - fat * 0.08, 1.31 * L + fat * 0.07, 0.7),
-      P(-0.38 * cw, 1.42 * L + fat * 0.1),
+      P(-0.99 - ck * 0.05 - fat * 0.03 + fk, 0.24),
+      P(-0.93 + hol * 0.07 - fat * 0.12 + fk, 0.55),
+      P(-0.82 - (jw - 1) * 0.25 - fat * 0.2 + fk, 0.86 * L),
+      P(-0.66 * cw - (jw - 1) * 0.15 - fat * 0.2, 1.12 * L + fat * 0.06),
+      P(-0.52 * cw - fat * 0.14, 1.31 * L + fat * 0.1, 0.7),
+      P(-0.34 * cw - fat * 0.05, 1.42 * L + fat * 0.13),
     ];
     G.jawC = [
       P(-0.06, 1.43 * L + fat * 0.22),
@@ -741,7 +761,7 @@
     G.noseY = 0.6 * L * (sp.nose.len || 1); G.mouthY = 0.93 * L + (sp.mouth.y || 0) + fat * 0.04; G.chinY = 1.38 * L + fat * 0.06;
     G.midX = y => G.FX(0, y);
     // 颈
-    const nw = sp.neck || 1;
+    const nw = clamp(sp.neck || 1, 0.7, 1.22); // 再粗就比头还宽了
     G.neckPts = [P(-0.36 * nw, 1.22 * L, 1), P(-0.46 * nw, 1.9), P(-0.5 * nw, 2.7, 0), P(1.0 * nw, 2.6, 0), P(0.96 * nw, 1.7), P(0.84 * nw, 0.45)];
     G.neckD = spline(G.neckPts, true);
     // 躯干（衣甲共用轮廓）
@@ -874,10 +894,12 @@
     // 1) 主阴影（背光侧脸颊，明暗交界线绕过颧骨下方）
     const fatK = G.fat;
     const hol = sp.face.hollow || 0;
+    // 明暗交界线：年轻、丰润的脸平滑；年长、清瘦的脸在颧骨下内收（骨相）
+    const bony = clamp(hol * 0.8 + (sp.age - 28) / 36, 0, 1) * (1 - fatK);
     const term = [
       P(0.46, -1.7, 0), P(0.42, -0.95), P(0.48, -0.55), P(0.53, -0.2), P(0.56, 0.06),
-      P(0.5 + fatK * 0.15, 0.3), P(0.34 - hol * 0.1 + fatK * 0.15, 0.5), P(0.24 + fatK * 0.2, 0.72 * L),
-      P(0.27 + fatK * 0.15, 0.98 * L), P(0.16, 1.2 * L), P(-0.04, 1.5 * L, 0), P(2, 1.6, 0), P(2, -1.7, 0),
+      P(lerp(0.55, 0.5, bony) + fatK * 0.12, 0.3), P(lerp(0.5, 0.34 - hol * 0.1, bony) + fatK * 0.12, 0.5), P(lerp(0.44, 0.24, bony) + fatK * 0.16, 0.72 * L),
+      P(lerp(0.36, 0.27, bony) + fatK * 0.12, 0.98 * L), P(lerp(0.22, 0.16, bony), 1.2 * L), P(-0.04, 1.5 * L, 0), P(2, 1.6, 0), P(2, -1.7, 0),
     ];
     S.add('head', `<path d="${spline(term, true)}" fill="${K.s}"/>`);
     // 远侧颊下凹陷（瘦者、老者）
@@ -900,9 +922,16 @@
       S.add('head', ellipse(G.FX(-0.12, 1.22 * L, 0.08), G.ey + 1.24 * L * R, 0.12 * R, 0.06 * R, -10) + ` fill="${K.h}" opacity="0.5"/>`);
     }
     // 5) 腮红
-    const bl = N(clamp((G.fem ? 0.32 : sp.age > 55 ? 0.12 : 0.2) * (sp.blush || 1), 0, 0.6));
+    const bl = N(clamp((G.fem ? 0.32 : sp.age > 55 ? 0.12 : 0.2) * (sp.blush || 1) * (S.o.mood === 'angry' ? 2.2 : 1), 0, 0.7));
     S.add('head', ellipse(G.FX(0.3, 0.42), G.ey + 0.42 * R, 0.26 * R, 0.13 * R, -10) + ` fill="${K.blush}" opacity="${bl}"/>`);
     S.add('head', ellipse(G.FX(-0.7, 0.42), G.ey + 0.42 * R, 0.12 * R, 0.1 * R) + ` fill="${K.blush}" opacity="${N(bl * 0.8)}"/>`);
+    if (fatK > 0.45) {
+      // 双下巴：下颌之下再垂一层肉
+      const dc = [P(-0.66 - fatK * 0.1, 1.05 * L), P(-0.52, 1.5 * L + fatK * 0.12), P(-0.12, 1.68 * L + fatK * 0.14), P(0.4, 1.52 * L + fatK * 0.1), P(0.72, 1.05 * L, 0)];
+      const dcD = spline(dc, true);
+      S.add('body2', `<path d="${dcD}" fill="${K.s}"/><g clip-path="${S.clip('dchin', dcD)}"><path d="${spline([P(-0.9, 1.0), P(-0.5, 1.45 * L), P(-0.15, 1.58 * L), P(-0.1, 1.2 * L)], true)}" fill="${K.b}" opacity="0.8"/></g>` +
+        `<path d="${spline(dc.slice(0, 4))}" fill="none" stroke="${INK}" stroke-width="${N(S.lw * 0.85)}"/>`);
+    }
     if (fatK > 0.35 && lo >= 1) {
       S.add('head', `<path d="${spline([P(-0.62 * G.cw, 1.3 * L + fatK * 0.05), P(-0.3, 1.42 * L + fatK * 0.04), P(0.2, 1.3 * L + fatK * 0.06)])}" fill="none" stroke="${K.line}" stroke-width="1.3" opacity="${N(clamp(fatK, 0, 0.8))}"/>`);
       S.add('head', `<path d="${spline([P(0.42, 0.62), P(0.5, 0.95 * L), P(0.36, 1.18 * L)])}" fill="none" stroke="${K.line}" stroke-width="1.1" opacity="${N(clamp(fatK * 0.7, 0, 0.6))}"/>`);
@@ -935,18 +964,18 @@
     normal: { w: 1, h: 0.17, tilt: 0.06, low: 0.42, iris: 0.82, crease: 1 },
     sharp: { w: 1.02, h: 0.14, tilt: 0.22, low: 0.32, iris: 0.86, crease: 0.8, angular: 1 },
     phoenix: { w: 1.14, h: 0.12, tilt: 0.42, low: 0.28, iris: 0.92, crease: 0.6, angular: 1 },
-    round: { w: 0.98, h: 0.26, tilt: 0.0, low: 0.62, iris: 0.34, crease: 1.2, round: 1 },
+    round: { w: 1.0, h: 0.24, tilt: 0.04, low: 0.6, iris: 0.5, crease: 1.2, round: 1 },
     narrow: { w: 1.04, h: 0.1, tilt: 0.12, low: 0.25, iris: 1.0, crease: 0.4, heavy: 1 },
     gentle: { w: 1.0, h: 0.15, tilt: -0.12, low: 0.18, iris: 0.92, crease: 1, smile: 1 },
-    big: { w: 1.1, h: 0.22, tilt: 0.14, low: 0.5, iris: 0.9, crease: 1.15, lash: 1 },
+    big: { w: 1.1, h: 0.2, tilt: 0.14, low: 0.5, iris: 0.78, crease: 1.15, lash: 1 },
     sleepy: { w: 1.0, h: 0.12, tilt: -0.06, low: 0.35, iris: 0.95, crease: 0.9, heavy: 1 },
   };
   function eyeMood(base, mood, isNear, fat) {
     const e = Object.assign({}, base);
     e.innerDrop = 0; e.squint = 1;
     if (fat > 0.4) { e.h *= 1 - (fat - 0.4) * 0.45; e.low *= 0.6; }
-    if (mood === 'angry') { e.innerDrop = 0.45; e.h *= 0.92; e.iris = Math.min(e.iris, 0.72); }
-    else if (mood === 'hurt') { e.h *= isNear ? 0.42 : 0.8; e.innerDrop = -0.25; }
+    if (mood === 'angry') { e.innerDrop = 0.62; e.h *= 0.95; e.iris = Math.min(e.iris, 0.68); }
+    else if (mood === 'hurt') { e.h *= isNear ? 0.22 : 0.7; e.innerDrop = -0.3; }
     else if (mood === 'win') { e.smile = 1; e.low = Math.min(e.low, 0.15); e.h *= 0.85; }
     return e;
   }
@@ -980,8 +1009,8 @@
     // 上睑投影
     S.add('face', `<path d="${spline(shift(U, 0, h * 0.4), false)}L${ps(add(outer, 0, -h * 2))}L${ps(add(inner, 0, -h * 2))}Z" fill="#b8a496"/>`);
     // 虹膜
-    const ri = h * ex.iris * (ex.round ? 1.42 : 1.16) * (far ? 0.92 : 1);
-    const ix = cx + dir * w * 0.02 + (far ? w * 0.06 : w * 0.04), iy = cy - h * (ex.round ? 0.18 : 0.02);
+    const ri = h * ex.iris * (ex.round ? 1.42 : 0.9) * (far ? 0.92 : 1);
+    const ix = cx + dir * w * 0.02 + (far ? w * 0.06 : w * 0.04), iy = cy - h * (ex.round ? 0.06 : 0.02);
     const ic = sp.eyes.color || '#2a1810';
     const iw = far ? 0.78 : 0.94;
     S.add('face', ellipse(ix, iy, ri * iw, ri) + ` fill="${mix(ic, '#7a5a40', 0.25)}"/>`);
@@ -1051,10 +1080,10 @@
     let b = Object.assign({}, BROW[sp.brows.shape] || BROW.straight);
     const th = sp.brows.thick || 1;
     let inD = 0;
-    if (mood === 'angry') inD = 0.1;
-    else if (mood === 'hurt') inD = -0.1;
+    if (mood === 'angry') inD = 0.17;
+    else if (mood === 'hurt') inD = -0.15;
     else if (sp.expr === 'fierce') inD = 0.05;
-    else if (mood === 'win') inD = -0.03;
+    else if (mood === 'win') inD = -0.07;
     const col = mix(sp.brows.color || '#1a1414', INK, 0.15);
     const old = sp.age >= 58;
     for (const side of [-1, 1]) {
@@ -1151,7 +1180,7 @@
     const lipT = (sp.mouth.lips || 1) * 0.1 * R;
     const lipCol = fem ? mix(K.b, '#c23848', 0.55) : K.lip;
     if (shape === 'shout' || shape === 'grin' || shape === 'clench') {
-      const open = shape === 'shout' ? 0.3 : shape === 'grin' ? 0.13 : 0.1;
+      const open = shape === 'shout' ? 0.4 : shape === 'grin' ? 0.19 : 0.11;
       const top = [cf, F(-0.18 * mw, my - 0.05, 0.1), F(0, my - 0.05, 0.12), F(0.2 * mw, my - 0.04, 0.06), cn];
       const bot = [cn, F(0.18 * mw, my + open * 0.8, 0.06), F(0, my + open, 0.12), F(-0.18 * mw, my + open * 0.85, 0.1)];
       const md = spline(top.concat(bot), true);
@@ -1180,7 +1209,7 @@
       S.add('face', `<path d="${spline(line.slice(1, -1).concat(ll), true)}" fill="${fem ? lipCol : mix(K.b, K.lip, 0.45)}"/>`);
       if (lo >= 1) S.add('face', ellipse(G.FX(-0.06, my + 0.09, 0.1), G.ey + (my + lipT / R * 0.8) * R, 0.09 * R, 0.025 * R, -6) + ` fill="${K.h}" opacity="${fem ? 0.75 : 0.5}"/>`);
       // 唇下阴影
-      S.add('face', `<path d="${spline([F(-0.2 * mw, my + 0.2, 0.08), F(0, my + 0.24, 0.1), F(0.18 * mw, my + 0.2, 0.04), F(0.02, my + 0.3, 0.1)], true)}" fill="${K.s}" opacity="0.8"/>`);
+      S.add('face', `<path d="${spline([F(-0.16 * mw, my + 0.19, 0.08), F(0, my + 0.22, 0.1), F(0.14 * mw, my + 0.19, 0.04), F(0.02, my + 0.27, 0.1)], true)}" fill="${K.s}" opacity="0.6"/>`);
       // 口缝
       S.add('face', `<path d="${taper(line, t => (0.5 + 1.5 * Math.sin(Math.PI * clamp(t * 1.1, 0, 1))) * lwk)}" fill="${INK}"/>`);
       // 口角
@@ -1189,7 +1218,7 @@
     // 人中
     if (lo >= 1) S.line('face', spline([F(0.04, G.noseY + 0.12, 0.2), F(0.05, my - 0.12, 0.13)]), K.line, 0.9 * lwk, ' opacity="0.45"');
     // 法令纹
-    let nl = sp.age >= 30 ? clamp((sp.age - 26) / 30, 0.2, 0.8) : (shape === 'grin' || shape === 'smile' ? 0.3 : 0);
+    let nl = sp.age >= 30 ? clamp((sp.age - 26) / 30, 0.15, 0.8) : (shape === 'grin' || shape === 'shout' ? 0.3 : shape === 'smile' && sp.age >= 24 ? 0.2 : 0);
     if (fem) nl = sp.age >= 45 ? nl * 0.5 : 0;
     if (nl > 0 && lo >= 1) {
       const ng = G.noseG;
@@ -1197,7 +1226,7 @@
       if (sp.age >= 45) S.line('face', spline([F(-0.36, G.noseY + 0.1, 0.05), F(-0.52, my, 0.03), F(-0.48, my + 0.22, 0.02)]), K.line, 1.0 * lwk, ` opacity="${N(nl * 0.7)}"`);
     }
     // 下巴沟
-    if (lo >= 1 && !fem) S.line('face', spline([F(-0.22, G.chinY - 0.12, 0.06), F(-0.06, G.chinY - 0.08, 0.1), F(0.08, G.chinY - 0.1, 0.06)]), K.line, 0.9 * lwk, ' opacity="0.4"');
+    if (lo >= 1 && !fem && sp.age >= 40) S.line('face', spline([F(-0.16, G.chinY - 0.2, 0.08), F(-0.06, G.chinY - 0.17, 0.1), F(0.04, G.chinY - 0.19, 0.08)]), K.line, 0.8 * lwk, ' opacity="0.3"');
   }
   // 皱纹（额头等）
   function drawWrinkles(S, G, sp, T) {
@@ -1228,11 +1257,13 @@
       }
     }
     if (mood === 'hurt') {
-      S.line('face', spline([F(-0.75, 0.15), F(-0.62, 0.3)]), '#b02a2a', 2.2);
-      S.line('face', spline([F(-0.74, 0.16), F(-0.63, 0.29)]), '#ff8070', 0.8);
-      // 汗珠
+      // 颊上刀痕、额角流血、冷汗
+      S.line('face', spline([F(-0.8, 0.12), F(-0.6, 0.36)]), '#9a1a1a', 2.6);
+      S.line('face', spline([F(-0.79, 0.13), F(-0.61, 0.35)]), '#ff8070', 0.9);
+      const b0 = F(-0.62, -0.62);
+      S.add('face', `<path d="${taper([b0, add(b0, -0.04 * R, 0.25 * R), add(b0, 0.0, 0.5 * R), add(b0, -0.05 * R, 0.78 * R)], t => (0.09 - 0.05 * t) * R)}" fill="#a81c1c" opacity="0.9"/>`);
       const x = G.FX(0.7, -0.55), y = G.ey - 0.6 * R;
-      S.add('top', `<path d="M${N(x)},${N(y)}q4,7 0,9q-4,-2 0,-9z" fill="#cfeaff" stroke="${INK}" stroke-width="1"/>`);
+      S.add('top', `<path d="M${N(x)},${N(y)}q5,8 0,11q-5,-3 0,-11z" fill="#cfeaff" stroke="${INK}" stroke-width="1"/>`);
     }
   }
 
@@ -1248,7 +1279,7 @@
   function resample(pts, n) {
     const segs = [];
     let tot = 0;
-    for (let i = 0; i < pts.length - 1; i++) { const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); segs.push(l); tot += l; }
+    for (let i = 0; i < pts.length - 1; i++) { const l = hyp(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); segs.push(l); tot += l; }
     const out = [];
     for (let k = 0; k < n; k++) {
       let d = tot * k / (n - 1), i = 0;
@@ -1261,7 +1292,7 @@
   function normals(pts) {
     return pts.map((p, i) => {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
-      const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = hyp(dx, dy) || 1;
       return [dy / l, -dx / l];
     });
   }
@@ -1272,8 +1303,8 @@
     const P = G.P, L = G.L, jw = G.jw, cw = G.cw, fat = G.fat;
     return [
       P(0.5, -0.06), P(0.6, 0.36), P(0.66 * jw + fat * 0.12, 0.86 * L), P(0.3 * jw, 1.23 * L + fat * 0.05),
-      P(-0.06, 1.43 * L + fat * 0.1), P(-0.38 * cw, 1.42 * L), P(-0.6 * cw, 1.31 * L), P(-0.74 * cw - fat * 0.06, 1.12 * L),
-      P(-0.87 - fat * 0.1, 0.86 * L), P(-0.93, 0.6),
+      P(-0.06, 1.43 * L + fat * 0.1), P(-0.34 * cw, 1.42 * L), P(-0.54 * cw, 1.31 * L), P(-0.68 * cw - (jw - 1) * 0.15 - fat * 0.12, 1.12 * L),
+      P(-0.84 - (jw - 1) * 0.25 - fat * 0.14, 0.86 * L), P(-0.92, 0.6),
     ];
   }
   // 颊上的须线（从远侧到近侧，绕开嘴唇）
@@ -1305,7 +1336,7 @@
           const k = i / (n - 1);
           const a = F(side * (0.04 + k * 0.2), ny + 0.12 + k * 0.08, 0.18 - k * 0.08);
           const b = F(side * (0.3 + k * 0.28) * mw, my + 0.02 + k * 0.12 + (st === 'bristle' ? -0.04 * i : 0), 0.04);
-          items.push({ d: leaf(a, b, (0.17 - k * 0.04) * R * sc, side * -0.08), fill: i === 1 && side < 0 ? H.h : fill });
+          items.push({ d: leaf(a, b, (0.17 - k * 0.04) * R * sc, side * -0.08), fill });
         }
       }
     }
@@ -1328,6 +1359,7 @@
     }
     const items = [];
     const lines = [], hls = [];
+    let jawSil = null;
     // ---- 颊须（沿下颌一圈的短绺）
     const jawLen = { short: [0.06, 0.16], full: [0.14, 0.42], bristle: [0.2, 0.5], flowing: [0.12, 0.3], long: [0.08, 0.2], forked: [0.1, 0.24], curled: [0.12, 0.3], braided: [0.12, 0.3] }[st];
     const jawOn = jawLen && (st === 'short' || st === 'full' || st === 'bristle' || sp.beard.jaw !== false && (st === 'flowing' || st === 'curled' || st === 'braided' || sp.beard.jaw));
@@ -1344,25 +1376,25 @@
         if (st === 'bristle') l *= (i % 2 ? 0.7 : 1.15);
         const down = st === 'bristle' ? 0.3 : 1.7;
         let dx = nm[i][0], dy = nm[i][1] + down;
-        const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+        const dl = hyp(dx, dy) || 1; dx /= dl; dy /= dl;
         tips.push([ring[i][0] + dx * l, ring[i][1] + dy * l]);
       }
-      // 底层（阴影色）：整体外形
+      // 整体外形（尖端成锯齿状的须簇），底色为迎光色
       const outer = [];
       for (let i = 0; i < n; i++) {
         outer.push([tips[i][0], tips[i][1], 0.2]);
-        if (i < n - 1) { const m = lp(ring[i], ring[i + 1], 0.5), mt = lp(tips[i], tips[i + 1], 0.5); outer.push(lp(m, mt, st === 'bristle' ? 0.45 : 0.65)); }
+        if (i < n - 1) { const m = lp(ring[i], ring[i + 1], 0.5), mt = lp(tips[i], tips[i + 1], 0.5); outer.push(lp(m, mt, st === 'bristle' ? 0.42 : 0.6)); }
       }
-      items.push({ d: spline(outer.concat(inner.slice().reverse()), true), fill: H.s });
-      // 迎光的绺（远侧与下巴前）
+      const silD = spline(outer.concat(inner.slice().reverse()), true);
+      jawSil = silD;
+      items.push({ d: silD, fill: H.b });
+      // 须线：沿每簇方向的细线（只画一部分，避免碎）
       for (let i = 0; i < n; i++) {
-        const lit = ring[i][0] < G.hx - 0.05 * R;
         const root = lp(ring[i], inner[i], 0.55);
-        if (!lit && i % 2) continue;
-        items.push({ d: st === 'bristle' ? leaf(root, tips[i], 0.24 * R, (i % 2 ? 0.06 : -0.06)) : lock(root, tips[i], (st === 'short' ? 0.2 : 0.3) * R, (i % 2 ? 0.14 : -0.1)), fill: lit ? H.b : mix(H.b, H.s, 0.5) });
-        if (lo >= 1) {
-          lines.push(spline([lp(root, tips[i], 0.15), add(lp(root, tips[i], 0.6), i % 2 ? 1.2 : -1.2, 0), lp(root, tips[i], 0.92)]));
-          if (lit && i % 2 === 0) hls.push(spline([lp(root, tips[i], 0.2), add(lp(root, tips[i], 0.5), -1.5, 0), lp(root, tips[i], 0.75)]));
+        const lit = ring[i][0] < G.hx - 0.05 * R;
+        if (lo >= 1 && (lit || i % 2 === 0)) {
+          lines.push(spline([lp(root, tips[i], 0.12), add(lp(root, tips[i], 0.55), i % 2 ? 1.0 : -1.0, 0), lp(root, tips[i], 0.9)]));
+          if (lit && i % 2 === 0) hls.push(spline([lp(root, tips[i], 0.22), add(lp(root, tips[i], 0.5), -1.2, 0), lp(root, tips[i], 0.72)]));
         }
       }
     }
@@ -1407,6 +1439,12 @@
       }
     }
     clumps(S, 'beard', items, 0.8 * lwk);
+    if (jawSil) {
+      // 颊须的阴影面：背光的近侧与唇下（赛璐璐两阶）
+      const sh = spline([P(0.16, -0.3), P(0.12, 0.5), P(0.02, 1.0 * L), P(-0.2, 1.55 * L), P(-0.3, 2.6, 0), P(2.2, 2.6, 0), P(2.2, -0.3, 0)], true);
+      const lip = spline([F(-0.42, my + 0.1, 0.06), F(-0.1, my + 0.3, 0.1), F(0.3, my + 0.22, 0.04), F(0.1, my + 0.5, 0.08), F(-0.3, my + 0.42, 0.06)], true);
+      S.add('beard', `<g clip-path="${S.clip('jb', jawSil)}"><path d="${sh}" fill="${H.s}"/><path d="${lip}" fill="${H.s}" opacity="0.7"/></g>`);
+    }
     if (st === 'curled' && lo >= 1) {
       // 波斯式卷须：成排的小卷
       let cd = '';
@@ -1416,8 +1454,8 @@
       }
       S.line('beard', cd, H.d, 1.1, ' opacity="0.8"');
     }
-    if (lines.length) S.line('beard', lines.join(''), H.d, 1.0, ' opacity="0.65"');
-    if (hls.length) S.line('beard', hls.join(''), H.h, 1.3, ' opacity="0.75"');
+    if (lines.length) S.line('beard', lines.join(''), H.d, 1.0, ' opacity="0.6"');
+    if (hls.length) S.line('beard', hls.join(''), H.h, 1.2, ' opacity="0.55"');
   }
 
   // ======================================================== 头发 ==
@@ -1862,9 +1900,10 @@
       const bx = G.hx + 0.22 * R, by = G.ey - 1.62 * R;
       const fc = sp.hat.color2 || '#c8903a';
       // 两根长雉翎：从冠后升起，向两侧外弯，出画面上缘
-      feather(S, 'back', [[bx - 0.15 * R, by - 0.1 * R], [bx - 0.5 * R, by - 0.9 * R], [bx - 0.62 * R, by - 1.7 * R], [bx - 0.35 * R, by - 2.6 * R], [bx + 0.2 * R, by - 3.2 * R]], 0.2 * R, fc, '#4a2a14');
-      feather(S, 'back', [[bx + 0.2 * R, by - 0.1 * R], [bx + 0.55 * R, by - 0.8 * R], [bx + 1.05 * R, by - 1.45 * R], [bx + 1.75 * R, by - 1.9 * R], [bx + 2.6 * R, by - 2.0 * R]], 0.2 * R, mix(fc, '#fff', 0.08), '#4a2a14');
-      return HATS.crown(S, G, Object.assign({}, sp, { hat: Object.assign({ color: '#d8a83a', gem: '#7a3aa8', pearls: true }, sp.hat) }), T);
+      // 两根长雉翎：从冠后升起，向两侧弯成长弧（经典的吕布形象），翎尾垂向两肩之外
+      feather(S, 'back', [[bx - 0.2 * R, by - 0.05 * R], [bx - 0.55 * R, by - 0.62 * R], [bx - 1.3 * R, by - 0.98 * R], [bx - 2.2 * R, by - 0.88 * R], [bx - 2.95 * R, by - 0.3 * R], [bx - 3.3 * R, by + 0.5 * R]], 0.26 * R, fc, '#4a2a14');
+      feather(S, 'back', [[bx + 0.15 * R, by - 0.05 * R], [bx + 0.5 * R, by - 0.68 * R], [bx + 1.25 * R, by - 1.02 * R], [bx + 2.1 * R, by - 0.92 * R], [bx + 2.75 * R, by - 0.35 * R], [bx + 3.0 * R, by + 0.45 * R]], 0.26 * R, mix(fc, '#fff', 0.1), '#4a2a14');
+      return HATS.crown(S, G, Object.assign({}, sp, { hat: Object.assign({ gem: '#7a3aa8', pearls: true }, sp.hat, { color: sp.hat.color || '#d8a83a' }) }), T);
     },
     // 道冠：莲花冠（张鲁等）
     daoist(S, G, sp, T) {
@@ -2166,12 +2205,12 @@
       S.add('back', `<path d="M${N(c[0] + 0.6 * R)},${N(c[1] - 2.6 * R)}v${N(5.2 * R)}" stroke="#e8e0d0" stroke-width="1"/>`);
     } else if (w === 'sword' || w === 'swords') {
       // 背后剑柄从远侧肩头探出
-      const hilts = w === 'swords' ? [[-1.75, 1.55, -0.32], [-1.45, 1.6, -0.12]] : [[-1.6, 1.6, -0.25]];
+      const hilts = w === 'swords' ? [[-2.05, 2.8, -0.4], [-1.7, 2.8, -0.2]] : [[-1.9, 2.8, -0.32]];
       for (const [hx0, hy0, sl] of hilts) {
-        const h0 = P(hx0, hy0), h1 = add(h0, sl * R, -1.15 * R);
+        const h0 = P(hx0, hy0), h1 = add(h0, sl * R, -1.5 * R);
         S.add('back', `<path d="M${ps(h0)}L${ps(h1)}" stroke="${INK}" stroke-width="${N(0.2 * R + 2.4)}"/><path d="M${ps(h0)}L${ps(h1)}" stroke="#3a2418" stroke-width="${N(0.2 * R)}"/>`);
         if (S.o.lod >= 2) S.add('back', `<path d="M${ps(h0)}L${ps(h1)}" stroke="#7a5a3a" stroke-width="${N(0.2 * R)}" stroke-dasharray="2 3" stroke-linecap="butt"/>`);
-        const g = lp(h0, h1, 0.12);
+        const g = lp(h0, h1, 0.3);
         S.add('back', `<path d="M${ps(add(g, -0.32 * R, -0.05 * R))}L${ps(add(g, 0.32 * R, 0.05 * R))}" stroke="${INK}" stroke-width="${N(0.14 * R + 2.4)}"/><path d="M${ps(add(g, -0.3 * R, -0.05 * R))}L${ps(add(g, 0.3 * R, 0.05 * R))}" stroke="${GOLD}" stroke-width="${N(0.14 * R)}"/>`);
         S.add('back', circle(h1[0], h1[1], 0.12 * R) + ` fill="${GOLD}" stroke="${INK}" stroke-width="1.3"/>`);
         tassel(S, 'back', G, h1, '#c0302a', 3, 0.45, -1);
@@ -2183,25 +2222,45 @@
       // 羽扇放在胸前，见 drawFan
     }
   }
-  // 羽扇（诸葛亮）：胸前
+  // 羽扇（诸葛亮）：胸前斜持的白鹤羽扇——宽羽层叠成圆润扇面，羽轴细线，扇柄金箍
   function drawFan(S, G, sp, T) {
     if (!(sp.acc || []).includes('fan')) return;
-    const R = G.R, P = G.P;
-    const base = P(-1.25, 3.85), top = P(-1.55, 2.0);
-    const items = [];
-    for (let i = 0; i < 9; i++) {
-      const a = -0.75 + i * 0.19;
-      const tip = add(base, Math.sin(a) * 1.55 * R - 0.25 * R, -Math.cos(a) * 1.8 * R);
-      items.push({ d: leaf(add(base, 0, -0.1 * R), tip, 0.5 * R, (i - 4) * 0.02), fill: i % 2 ? '#e8e6e0' : '#f6f4ee' });
+    const R = G.R, P = G.P, lo = S.o.lod;
+    const base = P(-1.35, 3.55);
+    const feather = (a, b, w) => {
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = hyp(dx, dy), nx = -dy / l, ny = dx / l;
+      const at = (t, k) => [a[0] + dx * t + nx * w * k, a[1] + dy * t + ny * w * k];
+      return spline([a, at(0.25, 0.22), at(0.6, 0.48), at(0.86, 0.36), [b[0], b[1], 0], at(0.86, -0.3), at(0.6, -0.42), at(0.25, -0.2)], true);
+    };
+    const items = [], spines = [], tipsD = [];
+    const n = 9;
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1);
+      const ang = -0.78 + u * 1.2;                       // 扇面略向左倾
+      const len = 2.05 * R * (0.84 + 0.16 * Math.sin(Math.PI * u));
+      const tip = add(base, Math.sin(ang) * len, -Math.cos(ang) * len);
+      const fd = feather(base, tip, 0.62 * R);
+      items.push({ d: fd, fill: i % 2 ? '#e8e5dc' : '#f8f6f0' });
+      tipsD.push(fd);
+      spines.push(spline([add(base, Math.sin(ang) * 0.3 * R, -Math.cos(ang) * 0.3 * R), add(base, Math.sin(ang) * len * 0.9, -Math.cos(ang) * len * 0.9)]));
     }
     clumps(S, 'front', items, S.lw * 0.7);
-    let ld = '';
-    for (let i = 0; i < 9; i++) { const a = -0.75 + i * 0.19; ld += `M${ps(add(base, 0, -0.1 * R))}L${ps(add(base, Math.sin(a) * 1.4 * R - 0.22 * R, -Math.cos(a) * 1.62 * R))}`; }
-    S.line('front', ld, '#b8b4a8', 0.9);
-    S.add('front', ellipse(top[0] + 0.05 * R, top[1] + 0.9 * R, 0.6 * R, 0.4 * R) + ' fill="#a8a49a" opacity="0.18"/>');
-    // 扇柄
-    S.add('front', `<path d="M${ps(add(base, 0, -0.15 * R))}L${ps(add(base, 0.12 * R, 0.9 * R))}" stroke="${INK}" stroke-width="${N(0.18 * R + 2)}"/><path d="M${ps(add(base, 0, -0.15 * R))}L${ps(add(base, 0.12 * R, 0.9 * R))}" stroke="#6a4a2a" stroke-width="${N(0.18 * R)}"/>`);
-    S.add('front', ellipse(base[0], base[1] - 0.12 * R, 0.16 * R, 0.1 * R) + ` fill="${GOLD}" stroke="${INK}" stroke-width="1.2"/>`);
+    // 背光一侧的阴影、灰色羽尖（鹤羽）
+    const fanD = tipsD.join('');
+    S.add('front', `<g clip-path="${S.clip('fan', fanD)}">` +
+      `<path d="${spline([add(base, 0.15 * R, 0), add(base, 0.75 * R, -1.3 * R), add(base, 1.1 * R, -2.6 * R, 0), add(base, 2.4 * R, -1.0 * R, 0)], true)}" fill="#c9c4b8" opacity="0.9"/>` +
+      `<path d="${spline(arcPts(base[0], base[1], 2.4 * R, 2.4 * R, 2.5, 0.9, 10).concat(arcPts(base[0], base[1], 1.66 * R, 1.66 * R, 0.9, 2.5, 10)), true)}" fill="#6a6660" opacity="0.55"/>` +
+      '</g>');
+    if (lo >= 1) S.line('front', spines.join(''), '#9a948a', 0.9, ' opacity="0.8"');
+    // 扇柄与金箍
+    const h0 = add(base, -0.02 * R, -0.1 * R), h1 = add(base, 0.18 * R, 1.0 * R);
+    S.add('front', `<path d="M${ps(h0)}L${ps(h1)}" stroke="${INK}" stroke-width="${N(0.2 * R + 2.2)}"/><path d="M${ps(h0)}L${ps(h1)}" stroke="#5a3a22" stroke-width="${N(0.2 * R)}"/>`);
+    S.add('front', ellipse(base[0], base[1] - 0.05 * R, 0.2 * R, 0.13 * R, -10) + ` fill="${GOLD}" stroke="${INK}" stroke-width="1.2"/>`);
+    // 握扇的手（简化：袖口 + 手指）
+    const hand = add(base, 0.12 * R, 0.55 * R);
+    const K = T.skin;
+    S.add('front', `<path d="${spline([add(hand, -0.28 * R, -0.12 * R), add(hand, 0.05 * R, -0.24 * R), add(hand, 0.32 * R, -0.08 * R), add(hand, 0.3 * R, 0.2 * R), add(hand, -0.05 * R, 0.3 * R), add(hand, -0.3 * R, 0.14 * R)], true)}" fill="${K.b}" stroke="${INK}" stroke-width="${N(S.lw * 0.8)}"/>`);
+    if (lo >= 1) S.line('front', spline([add(hand, -0.12 * R, -0.05 * R), add(hand, 0.18 * R, 0.02 * R)]) + spline([add(hand, -0.14 * R, 0.08 * R), add(hand, 0.16 * R, 0.14 * R)]), K.line, 1.0, ' opacity="0.7"');
   }
 
   // ======================================================== 各文化发型 ==
@@ -2218,7 +2277,7 @@
     if (tie) S.add(layer, ellipse(e[0], e[1], w * 0.45, w * 0.3) + ` fill="${tie}" stroke="${INK}" stroke-width="1.2"/>`);
     void R;
   }
-  function pathLen(pts) { let l = 0; for (let i = 0; i < pts.length - 1; i++) l += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); return l; }
+  function pathLen(pts) { let l = 0; for (let i = 0; i < pts.length - 1; i++) l += hyp(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); return l; }
   // 环形发髻（角髪）
   function hairLoop(S, layer, G, c, rx, ry, H) {
     const d = ellipsePath(c[0], c[1], rx, ry) + ellipsePath(c[0] + rx * 0.08, c[1], rx * 0.45, ry * 0.5);
@@ -2855,7 +2914,7 @@
       const pts = band(G, 0.26, 0.3, 1.1, 14).slice(1, -1);
       pts.forEach((p, i) => {
         const nx = pts[Math.min(pts.length - 1, i + 1)], dx = nx[0] - p[0], dy = nx[1] - p[1];
-        const l = Math.hypot(dx, dy) || 1;
+        const l = hyp(dx, dy) || 1;
         items.push({ d: leaf(p, add(p, dx / l * 0.3 * R - dy / l * 0.18 * R, dy / l * 0.3 * R - 0.2 * R), 0.13 * R, 0.1), fill: col });
         items.push({ d: leaf(p, add(p, dx / l * 0.3 * R + 0.02 * R, dy / l * 0.3 * R + 0.14 * R), 0.13 * R, -0.1), fill: mul(col, 0.75) });
       });
@@ -2996,10 +3055,17 @@
   // 裸露的躯干（肌肉线条）
   function bareTorso(S, G, sp, T) {
     const K = T.skin, P = G.P;
+    // 女性不赤膊：内穿短衣
+    if (sp.sex === 'f') { OUTFITS.tunic(S, G, Object.assign({}, sp, { outfit: Object.assign({}, sp.outfit, { color: sp.outfit.color2 || '#7a3a24' }) }), T); return; }
     torsoBase(S, G, sp, T, K.b, K.s, () => {
+      // 斜方肌的背光面、锁骨下与三角肌的阴影（赛璐璐两阶）
+      S.path('body', spline([P(0.55, 1.5), P(1.3, 1.85), P(2.3, 2.15), P(2.9, 2.7), P(3.4, 2.4, 0), P(3.4, 1.4, 0)], true), K.s);
+      S.path('body', spline([P(-0.35, 2.2), P(-1.0, 2.42), P(-1.7, 2.5), P(-1.1, 2.75), P(-0.4, 2.6)], true), K.s, 0, ' opacity="0.7"');
+      S.path('body', spline([P(0.6, 2.12), P(1.4, 2.25), P(2.0, 2.35), P(1.6, 2.65), P(0.7, 2.5)], true), K.s, 0, ' opacity="0.8"');
+      S.path('body', spline([P(-2.95, 2.75), P(-2.4, 2.5), P(-2.1, 2.9), P(-2.5, 3.6), P(-3.1, 3.6, 0)], true), K.s, 0, ' opacity="0.55"');
       if (S.o.lod >= 1) {
         // 锁骨、胸肌、三角肌
-        S.line('body', spline([P(-0.4, 2.05), P(-1.0, 2.25), P(-1.6, 2.35)]) + spline([P(0.7, 1.95), P(1.4, 2.05), P(2.1, 2.15)]), K.line, 1.3, ' opacity="0.6"');
+        S.line('body', spline([P(-0.4, 2.05), P(-1.0, 2.25), P(-1.6, 2.35)]) + spline([P(0.7, 1.95), P(1.4, 2.05), P(2.1, 2.15)]), K.line, 1.6, ' opacity="0.8"');
         S.line('body', spline([P(-2.1, 3.0), P(-1.5, 3.4), P(-0.7, 3.3), P(-0.45, 3.0)]) + spline([P(-0.3, 2.95), P(0.4, 3.3), P(1.4, 3.2), P(1.9, 2.75)]), K.line, 1.5, ' opacity="0.7"');
         S.line('body', spline([P(-0.4, 2.3), P(-0.38, 3.0), P(-0.4, 4.2)]), K.line, 1.1, ' opacity="0.45"');
         S.line('body', spline([P(-2.2, 2.6), P(-2.45, 3.3)]) + spline([P(2.2, 2.4), P(2.5, 3.1)]), K.line, 1.2, ' opacity="0.5"');
@@ -3400,7 +3466,9 @@
     drawAcc(S, G, sp, T);
     drawFaceMarks(S, G, sp, T);
   }
-  function buildSvg(sp, o) {
+  const ZOOM = 1.1;
+  // 生成各部分：fig（人物，含镜像 g）、defs（裁剪路径等）、bg / frame（背景与边框，只与颜色和细节档有关）
+  function buildParts(sp, o) {
     const S = new Svg(o);
     const G = geom(sp);
     const rimC = mix('#d6ecff', o.color, 0.3);
@@ -3410,13 +3478,142 @@
     figure(S, G, sp, T, o);
     const L = S.L;
     const head = L.head.join('').replace('%HEADSHADE%', S.headShade.join(''));
-    const fig = L.back.join('') + L.collarBack.join('') + L.neck.join('') + L.body.join('') + L.body2.join('') + head + L.hair.join('') + L.ear.join('') + L.face.join('') + L.beard.join('') + L.hat.join('') + L.front.join('') + L.top.join('');
-    const w = o.frame ? S.win : 0;
-    const winClip = `<clipPath id="${S.id('win')}"><rect x="${w}" y="${w}" width="${256 - 2 * w}" height="${256 - 2 * w}"/></clipPath>`;
+    const inner = L.back.join('') + L.collarBack.join('') + L.neck.join('') + L.body.join('') + L.body2.join('') + head + L.hair.join('') + L.ear.join('') + L.face.join('') + L.beard.join('') + L.hat.join('') + L.front.join('') + L.top.join('');
     const flip = o.flip ? ' transform="matrix(-1 0 0 1 256 0)"' : '';
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${o.px}" height="${o.px}" viewBox="0 0 256 256"><defs>${winClip}${S.defs.join('')}</defs>` +
-      `<g clip-path="url(#${S.id('win')})">${S.bg}<g${flip} stroke-linejoin="round" stroke-linecap="round">${fig}</g></g>` +
-      (o.frame ? S.frame : '') + '</svg>';
+    // 构图：人物整体以 (132, 150) 为中心放大 ZOOM 倍（原作头像的脸占画面更大）
+    const zoom = `translate(${N(132 * (1 - ZOOM))},${N(150 * (1 - ZOOM))}) scale(${ZOOM})`;
+    return { S, fig: `<g${flip} stroke-linejoin="round" stroke-linecap="round"><g transform="${zoom}">${inner}</g></g>`, w: o.frame ? S.win : 0 };
+  }
+  function winClipDef(S, w) {
+    return `<clipPath id="${S.id('win')}"><rect x="${w}" y="${w}" width="${256 - 2 * w}" height="${256 - 2 * w}"/></clipPath>`;
+  }
+  function buildSvg(sp, o) {
+    const { S, fig, w } = buildParts(sp, o);
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${o.px}" height="${o.px}" viewBox="0 0 256 256"><defs>${winClipDef(S, w)}${S.defs.join('')}</defs>` +
+      `<g clip-path="url(#${S.id('win')})">${S.bg}${fig}</g>` + (o.frame ? S.frame : '') + '</svg>';
+  }
+  // 只含背景（裁剪到画框内）或只含边框的 SVG：按 (颜色, 像素, 细节档) 缓存成画布
+  function chromeSvgs(o) {
+    const S = new Svg(o);
+    drawBackground(S, null, o);
+    drawFrame(S, o);
+    const w = o.frame ? S.win : 0;
+    const head = `<svg xmlns="http://www.w3.org/2000/svg" width="${o.px}" height="${o.px}" viewBox="0 0 256 256"><defs>${winClipDef(S, w)}${S.defs.join('')}</defs>`;
+    return { bg: head + `<g clip-path="url(#${S.id('win')})">${S.bg}</g></svg>`, frame: o.frame ? head + S.frame + '</svg>' : null, w };
+  }
+
+  // ======================================================== SVG 子集 → Canvas ==
+  // 头像只用到 SVG 的一个小子集（path / ellipse / circle / rect / g，填充、描边、不透明度、
+  // 裁剪、简单变换）。直接用 Path2D 画到画布上，省去浏览器为每张图建 SVG 文档的开销（快数倍）。
+  const TAG_RE = /<(\/?)([a-zA-Z]+)([^>]*?)(\/?)>/g;
+  const ATTR_RE = /([\w:-]+)="([^"]*)"/g;
+  function attrsOf(s) {
+    const a = {};
+    if (!s) return a;
+    ATTR_RE.lastIndex = 0;
+    let m;
+    while ((m = ATTR_RE.exec(s))) a[m[1]] = m[2];
+    return a;
+  }
+  function applyTransform(ctx, tr) {
+    const re = /(matrix|translate|scale|rotate)\(([^)]*)\)/g;
+    let m;
+    while ((m = re.exec(tr))) {
+      const v = m[2].split(/[\s,]+/).filter(Boolean).map(Number);
+      if (m[1] === 'matrix') ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
+      else if (m[1] === 'translate') ctx.translate(v[0], v[1] || 0);
+      else if (m[1] === 'scale') ctx.scale(v[0], v[1] == null ? v[0] : v[1]);
+      else if (m[1] === 'rotate') {
+        const r = v[0] * Math.PI / 180;
+        if (v.length >= 3) { ctx.translate(v[1], v[2]); ctx.rotate(r); ctx.translate(-v[1], -v[2]); } else ctx.rotate(r);
+      }
+    }
+  }
+  function shapePath(tag, a) {
+    let p = null;
+    if (tag === 'path') p = new Path2D(a.d);
+    else if (tag === 'ellipse') { p = new Path2D(); p.ellipse(+a.cx, +a.cy, Math.max(0, +a.rx), Math.max(0, +a.ry), 0, 0, Math.PI * 2); }
+    else if (tag === 'circle') { p = new Path2D(); p.arc(+a.cx, +a.cy, Math.max(0, +a.r), 0, Math.PI * 2); }
+    else if (tag === 'rect') {
+      p = new Path2D();
+      const x = +a.x || 0, y = +a.y || 0, w = +a.width, h = +a.height, r = +a.rx || 0;
+      if (r > 0 && p.roundRect) p.roundRect(x, y, w, h, r); else p.rect(x, y, w, h);
+    }
+    return p;
+  }
+  // 解析 defs 里的 <clipPath id><path|rect/></clipPath>
+  function clipMap(defs) {
+    const map = new Map();
+    const re = /<clipPath id="([^"]+)">(.*?)<\/clipPath>/g;
+    let m;
+    while ((m = re.exec(defs))) map.set(m[1], m[2]);
+    return { get(id) {
+      let v = map.get(id);
+      if (typeof v === 'string') {
+        const t = /<([a-zA-Z]+)([^>]*?)\/?>/.exec(v);
+        v = t ? shapePath(t[1], attrsOf(t[2])) : null;
+        map.set(id, v);
+      }
+      return v || null;
+    } };
+  }
+  function paintMarkup(ctx, markup, clips) {
+    const stack = [];
+    let st = { fill: '#000', stroke: 'none', sw: 1, alpha: 1, lj: 'miter', lc: 'butt' };
+    TAG_RE.lastIndex = 0;
+    let m;
+    while ((m = TAG_RE.exec(markup))) {
+      const close = m[1], tag = m[2];
+      if (tag === 'g') {
+        if (close) { ctx.restore(); st = stack.pop() || st; continue; }
+        const a = attrsOf(m[3]);
+        stack.push(st);
+        st = Object.assign({}, st);
+        ctx.save();
+        if (a.transform) applyTransform(ctx, a.transform);
+        if (a['clip-path']) {
+          const id = a['clip-path'].slice(5, -1);
+          const cp = clips.get(id);
+          if (cp) ctx.clip(cp);
+        }
+        if (a.fill) st.fill = a.fill;
+        if (a.stroke) st.stroke = a.stroke;
+        if (a['stroke-width']) st.sw = +a['stroke-width'];
+        if (a['stroke-linejoin']) st.lj = a['stroke-linejoin'];
+        if (a['stroke-linecap']) st.lc = a['stroke-linecap'];
+        if (a.opacity) st.alpha *= +a.opacity;
+        if (m[4]) { ctx.restore(); st = stack.pop(); } // <g/>
+        continue;
+      }
+      if (close || (tag !== 'path' && tag !== 'ellipse' && tag !== 'circle' && tag !== 'rect')) continue;
+      const a = attrsOf(m[3]);
+      const p = shapePath(tag, a);
+      if (!p) continue;
+      const tr = a.transform;
+      if (tr) { ctx.save(); applyTransform(ctx, tr); }
+      const alpha = st.alpha * (a.opacity ? +a.opacity : 1);
+      const fill = a.fill || st.fill;
+      if (fill !== 'none' && fill[0] !== 'u') {
+        ctx.globalAlpha = alpha * (a['fill-opacity'] ? +a['fill-opacity'] : 1);
+        ctx.fillStyle = fill;
+        ctx.fill(p, a['fill-rule'] === 'evenodd' ? 'evenodd' : 'nonzero');
+      }
+      const stroke = a.stroke || st.stroke;
+      if (stroke !== 'none' && stroke[0] !== 'u') {
+        ctx.globalAlpha = alpha * (a['stroke-opacity'] ? +a['stroke-opacity'] : 1);
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = a['stroke-width'] ? +a['stroke-width'] : st.sw;
+        ctx.lineJoin = a['stroke-linejoin'] || st.lj;
+        ctx.lineCap = a['stroke-linecap'] || st.lc;
+        const da = a['stroke-dasharray'];
+        if (da) ctx.setLineDash(da.split(/[\s,]+/).map(Number));
+        ctx.stroke(p);
+        if (da) ctx.setLineDash([]);
+      }
+      if (tr) ctx.restore();
+    }
+    while (stack.length) { ctx.restore(); stack.pop(); }
+    ctx.globalAlpha = 1;
   }
 
   // ======================================================== 缓存与栅格化 ==
@@ -3443,119 +3640,183 @@
       lw: lod === 0 ? 3.4 : lod === 1 ? 2.9 : 2.6,
     };
   }
-  const svgCache = new Map();     // key → svg 字符串
-  const urlCache = new Map();     // key → url（blob 或 data）
-  const stats = { built: 0, rastered: 0, maxSliceMs: 0, totalMs: 0 };
+  const urlCache = new Map();     // key → url（栅格化后为 blob: PNG；之前为 SVG dataURL）
+  // genMs：生成 SVG 并录制绘制指令；encMs：栅格化 + PNG 编码（画布在读出时才真正光栅化）
+  const stats = { built: 0, rastered: 0, maxSliceMs: 0, totalMs: 0, genMs: 0, encMs: 0 };
   function keyOf(sp, o) { return sp.key + '|' + o.px + '|' + o.color + '|' + (o.frame ? 1 : 0) + (o.flip ? 1 : 0) + '|' + o.mood; }
-  function getSvg(gen, opts) {
+  function prep(gen, opts) {
     const sp = resolveSpec(gen);
     const o = normOpts(typeof gen === 'string' ? findGen(gen) : gen, opts);
-    const key = keyOf(sp, o);
-    let s = svgCache.get(key);
-    if (!s) { s = buildSvg(sp, o); svgCache.set(key, s); stats.built++; }
-    return { s, key, o, sp };
+    return { sp, o, key: keyOf(sp, o) };
   }
   function svgUrl(s) { return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); }
+  const isRaster = u => u.startsWith('data:image/png') || u.startsWith('blob:');
+  const canRaster = () => typeof document !== 'undefined' && typeof Path2D !== 'undefined' && typeof Image !== 'undefined';
 
-  // 栅格化队列：SVG → Image → Canvas → blob URL；按时间片执行
-  const queue = [];
-  const pending = new Map(); // key → Promise
-  let pumping = false;
-  const SLICE = 12;
-  function enqueue(gen, opts) {
-    const r = getSvg(gen, opts);
-    if (urlCache.has(r.key) && urlCache.get(r.key).startsWith('blob:')) return Promise.resolve(urlCache.get(r.key));
-    if (pending.has(r.key)) return pending.get(r.key);
-    let res;
-    const p = new Promise(ok => { res = ok; });
-    pending.set(r.key, p);
-    queue.push({ r, res });
-    pump();
+  // 背景 / 边框画布（浏览器解码 SVG，含渐变）：key → Promise<{bg, frame}>
+  const chromeCache = new Map();
+  function chrome(o) {
+    const k = o.color + '|' + o.px + '|' + o.lod + '|' + (o.frame ? 1 : 0);
+    let p = chromeCache.get(k);
+    if (p) return p;
+    const sv = chromeSvgs(o);
+    const toCanvas = s => new Promise((ok, fail) => {
+      if (!s) { ok(null); return; }
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = o.px;
+        c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, o.px, o.px);
+        ok(c);
+      };
+      img.onerror = () => fail(new Error('portrait chrome'));
+      img.src = svgUrl(s);
+    });
+    p = Promise.all([toCanvas(sv.bg), toCanvas(sv.frame)]).then(([bg, frame]) => ({ bg, frame, w: sv.w }));
+    chromeCache.set(k, p);
+    if (chromeCache.size > 64) chromeCache.delete(chromeCache.keys().next().value);
     return p;
   }
-  const nextTick = (typeof MessageChannel !== 'undefined') ? (() => {
-    const ch = new MessageChannel(), cbs = [];
-    ch.port1.onmessage = () => { const f = cbs.shift(); if (f) f(); };
-    return f => { cbs.push(f); ch.port2.postMessage(0); };
-  })() : (f => setTimeout(f, 0));
+  // 把一张头像画到 ctx（已就绪的 chrome）
+  function paintPortrait(ctx, sp, o, ch) {
+    const { S, fig, w } = buildParts(sp, o);
+    stats.built++;
+    const k = o.px / 256;
+    if (ch.bg) ctx.drawImage(ch.bg, 0, 0);
+    ctx.save();
+    ctx.scale(k, k);
+    ctx.beginPath();
+    ctx.rect(w, w, 256 - 2 * w, 256 - 2 * w);
+    ctx.clip();
+    paintMarkup(ctx, fig, clipMap(S.defs.join('')));
+    ctx.restore();
+    if (ch.frame) ctx.drawImage(ch.frame, 0, 0);
+  }
+
+  // 复用的 CPU 画布（按像素尺寸）：避免 GPU 回读（GPU 画布上编码 PNG 要慢数十倍），也省去反复分配
+  const scratchMap = new Map();
+  function scratch(px) {
+    let e = scratchMap.get(px);
+    if (!e) {
+      const c = document.createElement('canvas');
+      c.width = c.height = px;
+      e = { c, ctx: c.getContext('2d', { willReadFrequently: true }) };
+      scratchMap.set(px, e);
+      if (scratchMap.size > 6) scratchMap.delete(scratchMap.keys().next().value);
+    }
+    return e;
+  }
+  // 任务队列：时间片内 生成 → 画到 CPU 画布 → 编码 PNG（dataURL）。
+  // 单片预算 SLICE 毫秒（超出预算前最多再完成一张），片与片之间让出主线程。
+  const queue = [];
+  const pending = new Map(); // key → Promise<url>
+  let pumping = false;
+  const SLICE = 10;
+  function enqueue(gen, opts) {
+    return new Promise(res => { queue.push({ gen, opts, res }); pump(); });
+  }
+  let chan = null;
+  const chanCbs = [];
+  function nextTick(f) {
+    if (typeof MessageChannel === 'undefined' || typeof document === 'undefined') { setTimeout(f, 0); return; }
+    if (!chan) {
+      chan = new MessageChannel();
+      chan.port1.onmessage = () => { const g = chanCbs.shift(); if (g) g(); };
+    }
+    chanCbs.push(f);
+    chan.port2.postMessage(0);
+  }
   function pump() {
-    if (pumping) return;
+    if (pumping || (!queue.length && !painted)) return;
     pumping = true;
     nextTick(slice);
   }
-  let inflight = 0;
+  const URL_CACHE_MAX = 1500;   // 约 1500 张 × 数十 KB；超出时丢掉最早的
+  function remember(key, url) {
+    urlCache.delete(key);
+    urlCache.set(key, url);
+    if (urlCache.size > URL_CACHE_MAX) {
+      let n = 100;
+      for (const k of urlCache.keys()) { if (n-- <= 0) break; urlCache.delete(k); }
+    }
+  }
+  function finish(key, url, ver) {
+    pending.delete(key);
+    if (ver === dataVersion) remember(key, url); // 期间 clearCache 过则不回填旧图
+    return url;
+  }
+  // 两步走：一步“生成并录制绘制指令”，一步“栅格化 + PNG 编码”，每步之间检查时间预算，
+  // 使不可分割的最小工作单元减半（单片最坏情况更短）。
+  let painted = null; // { c, key, ver, done(url) } —— 已画好、待编码的一张
+  function encodePainted() {
+    const pj = painted;
+    painted = null;
+    const te = performance.now();
+    let url;
+    try { url = pj.c.toDataURL('image/png'); stats.rastered++; } catch (e) { console.warn('portrait', e); url = pj.fallback(); }
+    stats.encMs += performance.now() - te;
+    pj.done(finish(pj.key, url, pj.ver));
+  }
   function slice() {
     const t0 = performance.now();
-    while (queue.length && inflight < 12 && performance.now() - t0 < SLICE) {
-      const job = queue.shift();
-      inflight++;
-      rasterize(job.r).then(url => { inflight--; job.res(url); pump(); }, () => { inflight--; job.res(svgUrl(job.r.s)); pump(); });
+    let waitChrome = null, nJobs = 0, lastPx = 0;
+    while ((painted || queue.length) && performance.now() - t0 < SLICE) {
+      if (painted) { encodePainted(); continue; }
+      const job = queue[0];
+      let r;
+      try { r = prep(job.gen, job.opts); } catch (e) { queue.shift(); console.warn('portrait', e); job.res(''); continue; }
+      const u = urlCache.get(r.key);
+      if (u && isRaster(u)) { queue.shift(); job.res(u); continue; }
+      const pp = pending.get(r.key);
+      if (pp) { queue.shift(); pp.then(job.res); continue; }
+      if (!canRaster()) { queue.shift(); const su = svgUrl(buildSvg(r.sp, r.o)); remember(r.key, su); job.res(su); continue; }
+      // 背景 / 边框尚未就绪：等它解码完再继续（不占主线程）
+      const chP = chrome(r.o);
+      if (!chP.ready) { waitChrome = chP; break; }
+      queue.shift();
+      nJobs++; lastPx = r.o.px;
+      const ver = dataVersion;
+      let done;
+      const p = new Promise(ok => { done = ok; });
+      pending.set(r.key, p);
+      p.then(job.res);
+      const fallback = () => svgUrl(buildSvg(r.sp, r.o));
+      try {
+        const { c, ctx } = scratch(r.o.px);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, r.o.px, r.o.px);
+        const tg = performance.now();
+        paintPortrait(ctx, r.sp, r.o, chP.value);
+        stats.genMs += performance.now() - tg;
+        // 同步编码放到下一步（toBlob 依赖空闲时段，主线程忙时会被集中强制执行，造成长卡顿）
+        painted = { c, key: r.key, ver, done, fallback };
+      } catch (e) {
+        console.warn('portrait', e);
+        done(finish(r.key, fallback(), ver));
+      }
     }
     const dt = performance.now() - t0;
     stats.maxSliceMs = Math.max(stats.maxSliceMs, dt);
     stats.totalMs += dt;
+    if (dt > 40) { stats.slow = stats.slow || []; if (stats.slow.length < 10) stats.slow.push([Math.round(dt), nJobs, lastPx]); }
     pumping = false;
-    if (queue.length && inflight < 12) pump();
+    if (waitChrome && !painted) waitChrome.then(v => { waitChrome.ready = true; waitChrome.value = v; pump(); }, () => { waitChrome.ready = true; waitChrome.value = { bg: null, frame: null, w: 0 }; pump(); });
+    else pump();
   }
-  // 绘制队列：解码完成的图片在独立时间片里画到画布上
-  const drawQ = [];
-  let drawing = false;
-  function drawPump() {
-    if (drawing) return;
-    drawing = true;
-    nextTick(() => {
-      const t0 = performance.now();
-      while (drawQ.length && performance.now() - t0 < SLICE) drawQ.shift()();
-      const dt = performance.now() - t0;
-      stats.maxSliceMs = Math.max(stats.maxSliceMs, dt);
-      stats.totalMs += dt;
-      drawing = false;
-      if (drawQ.length) drawPump();
-    });
-  }
-  function rasterize(r) {
-    return new Promise((ok, fail) => {
-      const t0 = performance.now();
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = svgUrl(r.s);
-      stats.totalMs += performance.now() - t0;
-      const go = () => {
-        drawQ.push(() => {
-          try {
-            const c = document.createElement('canvas');
-            c.width = c.height = r.o.px;
-            const ctx = c.getContext('2d');
-            ctx.drawImage(img, 0, 0, r.o.px, r.o.px);
-            rasterCanvas.set(r.key, c);
-            c.toBlob(b => {
-              if (!b) { fail(new Error('toBlob')); return; }
-              const u = URL.createObjectURL(b);
-              urlCache.set(r.key, u);
-              pending.delete(r.key);
-              stats.rastered++;
-              ok(u);
-            }, 'image/png');
-          } catch (e) { fail(e); }
-        });
-        drawPump();
-      };
-      if (img.decode) img.decode().then(go, () => (img.complete ? go() : img.addEventListener('load', go)));
-      else img.onload = go;
-    });
-  }
-  const rasterCanvas = new Map(); // key → canvas（canvas() 接口复用）
 
   const Portrait = {
     url(gen, opts) {
-      const r = getSvg(gen, opts);
+      const r = prep(gen, opts);
       const u = urlCache.get(r.key);
       if (u) return u;
-      const su = svgUrl(r.s);
-      urlCache.set(r.key, su);
+      const su = svgUrl(buildSvg(r.sp, r.o));
+      stats.built++;
+      remember(r.key, su);
       if (!(opts && opts.raster === false)) enqueue(gen, opts);
       return su;
     },
+    // 已栅格化（或已有 URL）时返回 URL，否则 null（不触发生成）
+    cached(gen, opts) { return urlCache.get(prep(gen, opts).key) || null; },
     el(gen, opts) {
       opts = opts || {};
       injectCss();
@@ -3568,7 +3829,14 @@
       img.draggable = false;
       img.decoding = 'async';
       img.width = img.height = size;
-      img.src = Portrait.url(gen, opts);
+      const r = prep(gen, opts);
+      const u = urlCache.get(r.key);
+      if (u) img.src = u;
+      else {
+        // 尚未生成：先放 SVG（矢量，立即可见），栅格化完成后换成 PNG
+        img.src = Portrait.url(gen, opts);
+        enqueue(gen, opts).then(url => { if (url && isRaster(url) && img.src !== url) img.src = url; });
+      }
       d.appendChild(img);
       return d;
     },
@@ -3577,25 +3845,60 @@
       return Promise.all(list).then(() => undefined);
     },
     spec(gen) { return resolveSpec(gen); },
-    svg(gen, opts) { return getSvg(gen, opts).s; },
+    svg(gen, opts) { const r = prep(gen, opts); stats.built++; return buildSvg(r.sp, r.o); },
     canvas(gen, opts) {
-      const r = getSvg(gen, opts);
-      if (rasterCanvas.has(r.key)) return Promise.resolve(rasterCanvas.get(r.key));
-      return enqueue(gen, opts).then(() => rasterCanvas.get(r.key));
+      return enqueue(gen, opts).then(url => new Promise((ok, fail) => {
+        const img = new Image();
+        img.onload = () => {
+          const px = normOpts(gen, opts).px;
+          const c = document.createElement('canvas');
+          c.width = c.height = px;
+          c.getContext('2d').drawImage(img, 0, 0, px, px);
+          ok(c);
+        };
+        img.onerror = () => fail(new Error('portrait canvas'));
+        img.src = url;
+      }));
     },
     clearCache(name) {
       specCache.clear();
       for (const [k, u] of urlCache) {
         if (name && !k.startsWith(name + '|')) continue;
         if (u.startsWith('blob:')) try { URL.revokeObjectURL(u); } catch (e) { /* 忽略 */ }
-        urlCache.delete(k); svgCache.delete(k); rasterCanvas.delete(k);
+        urlCache.delete(k);
       }
-      if (!name) { svgCache.clear(); rasterCanvas.clear(); }
       dataVersion++;
+    },
+    // ---- 集成辅助 ----
+    // 按姓名找武将（当前游戏优先，其次剧本数据）；找不到返回 null
+    find(name) {
+      if (!name) return null;
+      const g = findGen(String(name));
+      return g && g.war != null ? g : (SG.PortraitData && SG.PortraitData.get(name) ? g : null);
+    },
+    // 内嵌用的 HTML 片段（给 UI.choose 的 label 等 HTML 字符串用）
+    html(gen, opts) {
+      opts = opts || {};
+      injectCss();
+      const size = Math.round(opts.size || 32);
+      const o = Object.assign({ size }, opts);
+      const r = prep(gen, o);
+      const url = urlCache.get(r.key) || Portrait.url(gen, o);
+      const alt = SG.esc ? SG.esc((typeof gen === 'string' ? gen : gen && gen.name) || '') : '';
+      return `<span class="sg-portrait sg-portrait-inline${opts.className ? ' ' + opts.className : ''}" style="width:${size}px;height:${size}px"><img src="${url}" alt="${alt}" width="${size}" height="${size}" draggable="false"></span>`;
+    },
+    // 预生成当前游戏所有在世武将（势力色边框），sizes 为 CSS 像素列表
+    preloadState(state, sizes) {
+      state = state || SG.G;
+      if (!state || !state.generals) return Promise.resolve();
+      const gens = state.generals.filter(g => !g.dead);
+      const jobs = [];
+      for (const size of sizes || [44, 96]) for (const g of gens) jobs.push(enqueue(g, { size, color: factionColorOf(g) }));
+      return Promise.all(jobs).then(() => undefined);
     },
     cultures: Object.keys(CULT),
     stats,
-    _internal: { hashStr, Rng, resolveSpec, buildSvg, normOpts, CULT },
+    _internal: { hashStr, Rng, resolveSpec, buildSvg, buildParts, normOpts, paintMarkup, clipMap, chrome, paintPortrait, CULT },
   };
   let cssDone = false;
   function injectCss() {
@@ -3605,7 +3908,15 @@
     st.id = 'sg-portrait-css';
     st.textContent = '.sg-portrait{display:inline-block;position:relative;flex:none;line-height:0;vertical-align:middle}' +
       '.sg-portrait>img{width:100%;height:100%;display:block;-webkit-user-drag:none;user-select:none;pointer-events:none}' +
-      '.sg-portrait.is-dead>img{filter:grayscale(1) brightness(.7)}';
+      '.sg-portrait.is-dead>img{filter:grayscale(1) brightness(.7)}' +
+      '.sg-portrait-inline{margin-right:.45em;border-radius:2px;overflow:hidden}' +
+      // 集成位置的尺寸（与 style.css 的徽章尺寸、断点一致）：对话说话人、城池武将列表、战场部队卡
+      '.sg-say-speaker>.sg-portrait{width:4.8rem!important;height:4.8rem!important}' +
+      '.sg-genrow>.sg-portrait{width:2.5rem!important;height:2.5rem!important}' +
+      '.sg-battle-card>.sg-portrait{float:left;width:4.4rem!important;height:4.4rem!important;margin:.15rem .7rem .2rem 0}' +
+      '@media (max-height:540px){.sg-say-speaker>.sg-portrait{width:3.9rem!important;height:3.9rem!important}' +
+      '.sg-battle-card>.sg-portrait{width:3.4rem!important;height:3.4rem!important}}' +
+      '@media (max-width:700px) and (min-height:541px){.sg-say-speaker>.sg-portrait{width:3rem!important;height:3rem!important}}';
     if (!document.getElementById('sg-portrait-css')) document.head.appendChild(st);
   }
   SG.Portrait = Portrait;

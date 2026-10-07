@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>武将头像 测试</title>
+<style>
+  :root { --gold: #f3c969; --ink: #f5eddb; --muted: #a8a194; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: #16141c; color: var(--ink);
+    font: 13px/1.45 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei";
+    padding: 0 max(12px, env(safe-area-inset-right)) 40px max(12px, env(safe-area-inset-left)); }
+  h1, h2, h3 { font-family: "STKaiti","Kaiti SC","KaiTi","Songti SC","Noto Serif SC",serif,"WenQuanYi Zen Hei"; color: var(--gold); margin: 0; }
+  h1 { font-size: 22px; } h2 { font-size: 18px; margin: 18px 0 8px; border-bottom: 1px solid rgba(243,201,105,.25); padding-bottom: 4px; }
+  h3 { font-size: 15px; margin: 12px 0 6px; display: flex; align-items: center; gap: 6px; }
+  h3 small, h2 small { font: 12px/1 system-ui, sans-serif; color: var(--muted); }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(22,20,28,.94); backdrop-filter: blur(6px);
+    padding: 8px 0 8px; border-bottom: 1px solid rgba(243,201,105,.2); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  #check, #perfline { font-size: 12.5px; }
+  .ok { color: #73d98c; font-weight: 700; } .bad { color: #ff7361; font-weight: 700; } .muted { color: var(--muted); }
+  .ctl { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .tb { min-height: 34px; min-width: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(243,201,105,.45);
+    background: rgba(40,36,48,.9); color: var(--ink); font: inherit; cursor: pointer; }
+  .tb.on { background: #c8382c; border-color: var(--gold); }
+  .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; border-radius: 6px; padding: 2px; }
+  .card:hover { background: rgba(243,201,105,.08); }
+  .card .nm { font-weight: 700; font-size: 13px; line-height: 1.2; }
+  .card .st { font-size: 10.5px; color: var(--muted); line-height: 1.1; }
+  .card .ph { background: #0c0b10; border-radius: 3px; }
+  .dot { font-size: 14px; }
+  .crow { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0 10px; }
+  .crow .lab { width: 92px; flex: none; padding-top: 24px; }
+  .crow .lab b { display: block; font-size: 15px; color: var(--gold); font-family: ui-monospace, monospace; }
+  .crow .lab span { color: var(--muted); font-size: 12px; }
+  .sizes { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  #detail { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; padding: 12px; }
+  #detail.show { display: flex; }
+  #detail .box { background: #1e1b26; border: 1px solid rgba(243,201,105,.45); border-radius: 10px; padding: 12px; display: flex; gap: 12px;
+    max-width: min(900px, 96vw); max-height: 92vh; overflow: auto; flex-wrap: wrap; }
+  #detail pre { margin: 0; font-size: 11px; line-height: 1.35; color: #d8cfbb; white-space: pre-wrap; max-width: 420px; min-width: 220px; flex: 1; }
+  @media (max-height: 500px) { h2 { margin-top: 12px; } header { position: static; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>武将头像</h1>
+  <div id="check" class="muted">自检中…</div>
+  <div id="perfline" class="muted">性能测试待运行</div>
+  <div class="ctl" id="ctl-size"><span class="muted">尺寸</span></div>
+  <div class="ctl" id="ctl-mood"><span class="muted">表情</span></div>
+  <div class="ctl" id="ctl-misc"></div>
+</header>
+
+<h2>全部武将 <small id="gcount"></small></h2>
+<div id="gens"></div>
+
+<h2>文化样例 <small>（仅由外貌参数生成的样例，不是具体人物）</small></h2>
+<div id="cultures"></div>
+
+<h2>尺寸 <small>48 / 96 / 200 像素 · 四种表情 · 镜像</small></h2>
+<div id="sizes"></div>
+
+<h2>性能 <small>300 张 128px 头像：SVG 生成 + 栅格化，分片执行</small></h2>
+<div><button class="tb" id="perfbtn">重新运行性能测试</button> <span id="perfres" class="muted"></span></div>
+
+<div id="detail"><div class="box" id="detailbox"></div></div>
+
+<script src="../js/core.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/portrait-data.js"></script>
+<script src="../js/portrait.js"></script>
+<script>
+'use strict';
+(function () {
+  const P = SG.Portrait, SD = SG.ScenarioData;
+  const q = new URLSearchParams(location.search);
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+  // ---------------------------------------------------------------- 数据
+  const factions = SD.Factions.map(l => { const p = l.split('|'); return { key: p[0], name: p[1], ruler: p[2], color: p[3] }; });
+  const fByKey = {}; factions.forEach(f => { fByKey[f.key] = f; });
+  const gens = SD.Generals.map(l => {
+    const p = l.split('|');
+    const f = fByKey[p[4]];
+    return { name: p[0], war: +p[1], intel: +p[2], pol: +p[3], fkey: p[4], color: f ? f.color : '#8a8a92' };
+  });
+  window.TEST = { gens, factions, done: false, perf: null, errors: [] };
+
+  const state = { size: +(q.get('size') || 96), mood: q.get('mood') || 'neutral', flip: q.get('flip') === '1' };
+
+  // ---------------------------------------------------------------- 控件
+  function seg(parent, list, get, set) {
+    const btns = list.map(([v, label]) => {
+      const b = el('button', 'tb', label);
+      b.onclick = () => { set(v); btns.forEach((x, i) => x.classList.toggle('on', list[i][0] === get())); renderGens(); };
+      parent.appendChild(b);
+      return b;
+    });
+    btns.forEach((x, i) => x.classList.toggle('on', list[i][0] === get()));
+  }
+  seg($('ctl-size'), [[64, '64'], [96, '96'], [128, '128']], () => state.size, v => { state.size = v; });
+  seg($('ctl-mood'), [['neutral', '常'], ['angry', '怒'], ['hurt', '伤'], ['win', '胜']], () => state.mood, v => { state.mood = v; });
+  seg($('ctl-misc'), [[true, '镜像']], () => state.flip, () => { state.flip = !state.flip; });
+
+  // ---------------------------------------------------------------- 详情
+  function showDetail(gen, color) {
+    const box = $('detailbox');
+    box.innerHTML = '';
+    const left = el('div');
+    left.appendChild(P.el(gen, { size: 256, color }));
+    left.appendChild(el('div', '', `<b>${SG.esc(gen.name)}</b> <span class="muted">${gen.war != null ? `武${gen.war} 智${gen.intel} 政${gen.pol}` : ''}</span>`));
+    box.appendChild(left);
+    const sp = Object.assign({}, P.spec(gen));
+    delete sp.key;
+    box.appendChild(el('pre', '', SG.esc(JSON.stringify(sp, null, 1))));
+    $('detail').classList.add('show');
+  }
+  $('detail').onclick = () => $('detail').classList.remove('show');
+
+  // ---------------------------------------------------------------- 全部武将
+  function card(gen, color, label, sub, size) {
+    const c = el('div', 'card');
+    const ph = P.el(gen, { size, color, mood: state.mood, flip: state.flip });
+    c.appendChild(ph);
+    c.appendChild(el('div', 'nm', SG.esc(label)));
+    if (sub) c.appendChild(el('div', 'st', sub));
+    c.onclick = () => showDetail(gen, color);
+    return c;
+  }
+  let renderSeq = 0;
+  async function renderGens() {
+    const seq = ++renderSeq;
+    const root = $('gens');
+    root.innerHTML = '';
+    $('gcount').textContent = `（${gens.length} 人 · 边框为势力色）`;
+    const groups = factions.map(f => ({ f, list: gens.filter(g => g.fkey === f.key) }));
+    groups.push({ f: { key: '-', name: '在野', color: '#8a8a92' }, list: gens.filter(g => !fByKey[g.fkey]) });
+    const opts = g => ({ size: state.size, color: g.color, mood: state.mood, flip: state.flip });
+    // 先分片预生成（不阻塞页面），再一次性放入
+    for (const { f, list } of groups) {
+      if (!list.length) continue;
+      await Promise.all(list.map(g => P.preload([g], opts(g))));
+      if (seq !== renderSeq) return;
+      const h = el('h3', '', `<span class="dot" style="color:${f.color}">■</span>${SG.esc(f.name)}${f.key !== '-' ? '军' : ''} <small>${list.length} 人</small>`);
+      root.appendChild(h);
+      const grid = el('div', 'grid');
+      for (const g of list) grid.appendChild(card(g, g.color, g.name, `武${g.war} 智${g.intel} 政${g.pol}`, state.size));
+      root.appendChild(grid);
+    }
+  }
+
+  // ---------------------------------------------------------------- 文化样例
+  const CNAME = { han: '汉', nanman: '南蛮', wa: '倭', yi: '夷洲', korea: '朝鲜半岛', steppe: '草原', seasia: '南海', tarim: '西域',
+    kushan: '贵霜', persia: '安息', arab: '阿拉伯', roman: '罗马', celt: '凯尔特', german: '日耳曼', sarmatian: '萨尔马提亚' };
+  const Y = SD.StartYear || 190;
+  const ROLES = [
+    ['武将', { war: 94, intel: 38, pol: 30, born: Y - 34 }],
+    ['智将', { war: 76, intel: 80, pol: 55, born: Y - 40 }],
+    ['谋士', { war: 28, intel: 93, pol: 70, born: Y - 36 }],
+    ['君主', { war: 70, intel: 72, pol: 74, born: Y - 46, portrait: { role: 'ruler' } }],
+    ['老者', { war: 45, intel: 70, pol: 82, born: Y - 70 }],
+    ['少年', { war: 72, intel: 55, pol: 40, born: Y - 18 }],
+    ['女性', { war: 55, intel: 70, pol: 60, born: Y - 24, sex: 'f' }],
+    ['女将', { war: 82, intel: 40, pol: 30, born: Y - 28, sex: 'f' }],
+  ];
+  function cultureSamples() {
+    const out = [];
+    for (const c of P.cultures) for (const [role, base] of ROLES) {
+      out.push({ c, role, gen: Object.assign({ name: `〔样例〕${c}·${role}`, culture: c }, base) });
+    }
+    return out;
+  }
+  async function renderCultures() {
+    const root = $('cultures');
+    const all = cultureSamples();
+    await P.preload(all.map(s => s.gen), { size: 96, color: '#8a8a92' });
+    for (const c of P.cultures) {
+      const row = el('div', 'crow');
+      row.appendChild(el('div', 'lab', `<b>${c}</b><span>${CNAME[c] || ''}</span>`));
+      const grid = el('div', 'grid');
+      for (const s of all.filter(x => x.c === c)) grid.appendChild(card(s.gen, '#8a8a92', s.role, '', 96));
+      row.appendChild(grid);
+      root.appendChild(row);
+    }
+  }
+
+  // ---------------------------------------------------------------- 尺寸
+  function renderSizes() {
+    const root = $('sizes');
+    const pick = n => gens.find(g => g.name === n) || { name: n };
+    for (const n of ['关羽', '诸葛亮', '祝融']) {
+      const g = pick(n);
+      const row = el('div', 'sizes');
+      for (const s of [48, 96, 200]) row.appendChild(card(g, g.color, `${n} ${s}`, '', s));
+      root.appendChild(row);
+    }
+    const row = el('div', 'sizes');
+    for (const n of ['张飞', '曹操', '孙策']) {
+      const g = pick(n);
+      for (const [m, lab] of [['neutral', '常'], ['angry', '怒'], ['hurt', '伤'], ['win', '胜']]) {
+        const c = el('div', 'card');
+        c.appendChild(P.el(g, { size: 96, color: g.color, mood: m }));
+        c.appendChild(el('div', 'nm', `${n}·${lab}`));
+        row.appendChild(c);
+      }
+    }
+    root.appendChild(row);
+    const row2 = el('div', 'sizes');
+    for (const n of ['吕布', '赵云']) {
+      const g = pick(n);
+      for (const flip of [false, true]) {
+        const c = el('div', 'card');
+        c.appendChild(P.el(g, { size: 96, color: g.color, flip }));
+        c.appendChild(el('div', 'nm', `${n}${flip ? '·镜像' : ''}`));
+        row2.appendChild(c);
+      }
+      const c = el('div', 'card');
+      c.appendChild(P.el(g, { size: 96, frame: false }));
+      c.appendChild(el('div', 'nm', `${n}·无框`));
+      row2.appendChild(c);
+    }
+    root.appendChild(row2);
+  }
+
+  // ---------------------------------------------------------------- 自检
+  function selfCheck() {
+    const errs = [];
+    const keys = new Set();
+    let n = 0;
+    for (const g of gens) {
+      const sp = P.spec(g);
+      if (!sp || !sp.name) errs.push(`${g.name}: 无外貌参数`);
+      const s = P.svg(g, { size: 48, scale: 1, color: g.color });
+      if (!/^<svg[\s\S]*<\/svg>$/.test(s) || /NaN|undefined/.test(s)) errs.push(`${g.name}: SVG 异常`);
+      const sig = JSON.stringify([sp.skin, sp.hat, sp.hair, sp.beard, sp.mustache, sp.outfit, sp.eyes.shape, sp.brows.shape, sp.face]);
+      if (keys.has(sig)) errs.push(`${g.name}: 与他人外貌完全相同`);
+      keys.add(sig);
+      n++;
+    }
+    for (const c of P.cultures) {
+      const s = P.svg({ name: '〔自检〕' + c, culture: c, war: 60, intel: 60, pol: 60 }, { size: 48, scale: 1 });
+      if (/NaN|undefined/.test(s)) errs.push(`文化 ${c}: SVG 异常`);
+    }
+    const need = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian'];
+    for (const c of need) if (!P.cultures.includes(c)) errs.push(`缺少文化 ${c}`);
+    const hand = gens.filter(g => SG.PortraitData.get(g.name)).length;
+    // 同名同脸（确定性）
+    const a = P.svg({ name: '某甲', war: 70, intel: 50, pol: 40 }, { size: 64, scale: 1 }), b = P.svg({ name: '某甲', war: 70, intel: 50, pol: 40 }, { size: 64, scale: 1 });
+    const strip = s => s.replace(/q[0-9a-z]+(?=[a-z]*["#)])/g, '');
+    if (strip(a) !== strip(b)) errs.push('同名两次生成结果不同');
+    TEST.errors = errs;
+    $('check').innerHTML = errs.length
+      ? `<span class="bad">自检失败 ${errs.length} 项</span> <span class="muted">${SG.esc(errs.slice(0, 4).join('；'))}</span>`
+      : `<span class="ok">自检通过</span> <span class="muted">${n} 人全部生成、外貌互不相同；手工设定 ${hand}/${n}；文化 ${P.cultures.length} 种</span>`;
+  }
+
+  // ---------------------------------------------------------------- 性能
+  async function perf() {
+    const list = [];
+    for (const g of gens) list.push({ name: g.name, war: g.war, intel: g.intel, pol: g.pol });
+    let i = 0;
+    while (list.length < 300) {
+      const c = P.cultures[i % P.cultures.length];
+      list.push({ name: `〔性能〕${c}${i}`, culture: c, war: 30 + (i * 37) % 70, intel: 30 + (i * 53) % 70, pol: 30 + (i * 29) % 70, sex: i % 7 === 0 ? 'f' : 'm' });
+      i++;
+    }
+    const color = '#5a6a8a';
+    const s0 = Object.assign({}, P.stats);
+    P.stats.maxSliceMs = 0;
+    // 用 rAF 间隔检测主线程卡顿（最长一帧）
+    const t0 = performance.now();
+    let worstGap = 0, last = t0, running = true;
+    const gaps = [];
+    const tick = t => { const g = t - last; if (g > 50 && gaps.length < 6) gaps.push([Math.round(last - t0), Math.round(g)]); worstGap = Math.max(worstGap, g); last = t; if (running) requestAnimationFrame(tick); };
+    requestAnimationFrame(t => { last = t; requestAnimationFrame(tick); });
+    let longTasks = 0, longMax = 0;
+    let obs = null;
+    try {
+      obs = new PerformanceObserver(l => { for (const e of l.getEntries()) { longTasks++; longMax = Math.max(longMax, e.duration); } });
+      obs.observe({ entryTypes: ['longtask'] });
+    } catch (e) { obs = null; }
+    const busy0 = P.stats.totalMs, gen0 = P.stats.genMs, enc0 = P.stats.encMs;
+    await P.preload(list, { size: 128, scale: 1, color });
+    const dt = performance.now() - t0;
+    running = false;
+    await new Promise(r => setTimeout(r, 30));
+    if (obs) obs.disconnect();
+    const res = {
+      n: list.length, ms: Math.round(dt), maxSliceMs: +P.stats.maxSliceMs.toFixed(1),
+      built: P.stats.built - s0.built, rastered: P.stats.rastered - s0.rastered,
+      worstFrameGap: Math.round(worstGap), longTasks, longTaskMax: Math.round(longMax),
+      busyMs: Math.round(P.stats.totalMs - busy0), genMs: Math.round(P.stats.genMs - gen0), encMs: Math.round(P.stats.encMs - enc0), gaps,
+    };
+    TEST.perf = res;
+    const ok = res.ms < 1500 && res.maxSliceMs <= 50;
+    const txt = `${res.n} 张 128px：<b>${res.ms} ms</b>（主线程分片合计 ${res.busyMs} ms = 生成 ${res.genMs} + 栅格化与编码 ${res.encMs} + 其他；新建 ${res.built}，栅格化 ${res.rastered}）· 最长分片 ${res.maxSliceMs} ms · 最长帧间隔 ${res.worstFrameGap} ms` +
+      (obs ? ` · 长任务 ${res.longTasks} 个（最长 ${res.longTaskMax} ms）` : '');
+    $('perfres').innerHTML = (ok ? '<span class="ok">通过</span> ' : '<span class="bad">超出预算</span> ') + txt;
+    $('perfline').innerHTML = (ok ? '<span class="ok">性能通过</span> ' : '<span class="bad">性能超标</span> ') + `<span class="muted">300 张 ${res.ms} ms · 最长分片 ${res.maxSliceMs} ms</span>`;
+    return res;
+  }
+  $('perfbtn').onclick = () => { P.clearCache(); perf(); };
+
+  // ---------------------------------------------------------------- 启动
+  async function main() {
+    // 性能测试在冷缓存上先跑（?perf=0 跳过）
+    if (q.get('perf') !== '0') await perf();
+    selfCheck();
+    await renderGens();
+    await renderCultures();
+    renderSizes();
+    TEST.done = true;
+  }
+  main().catch(e => { console.error(e); $('check').innerHTML = `<span class="bad">${SG.esc(String(e && e.stack || e))}</span>`; });
+})();
+</script>
+</body>
+</html>

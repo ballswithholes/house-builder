@@ -48,6 +48,7 @@
     <button class="primary" id="btnGo">开　战</button>
     <button id="btnTally">20 场模拟</button>
     <button id="btnMem">5 连战内存</button>
+    <button id="btnWire">战场接线</button>
   </div>
   <div id="out"></div>
 </div>
@@ -57,11 +58,11 @@
 'use strict';
 /* 单挑格斗（js/duel-game.js）独立测试页。
    URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
-             &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子
-   测试钩子：window.runDuel(opts) → Promise<结果> · window.tally(n, a, b) · window.memTest(n) · window.__log */
+             &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子 · &pr=N 最大像素比（软件渲染测试用）
+   测试钩子：window.runDuel(opts) → Promise<结果> · window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) · window.__log */
 (function () {
   const Q = new URLSearchParams(location.search);
-  const optional = ['../js/data.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
+  const optional = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
     '../js/portrait-data.js', '../js/portrait.js', '../js/specials-data.js', '../js/specials.js', '../js/duel-game.js'];
   const loaded = {};
   function load(src) {
@@ -86,6 +87,7 @@
     const SG = window.SG;
     if (Q.has('seed')) SG.Random.seed(parseInt(Q.get('seed'), 10) || 1);
     if (Q.has('speed')) SG.DuelGame.speed = parseFloat(Q.get('speed')) || 1;
+    if (Q.has('pr')) SG.Gfx.maxPixelRatio = Math.max(0.25, parseFloat(Q.get('pr')) || 1);   // 软件渲染测试时降低像素比
     SG.Gfx.init(document.getElementById('app'));
     try { SG.Sfx && SG.Sfx.init(); } catch (e) { /* 无音频 */ }
     SG.UI.init();
@@ -158,6 +160,29 @@
       SG.DuelGame.speed = prevSpeed;
       return { before, rows };
     };
+    // 战场接线测试：真实的 BattleModel + 简化的控制器，走 SG.DuelGame.shouldPlay / perform（集成阶段 doDuel 的流程）
+    window.wireTest = async function (o) {
+      o = o || {};
+      if (!SG.GameState || !SG.BattleModel || !SG.Conquest) { log('接线测试需要 model.js / strategy-ai.js / battle-model.js'); return null; }
+      const g = SG.G = SG.GameState.newGame('cao');
+      const src = g.cityByKey('chenliu'), tgt = g.cityByKey('luoyang');
+      const s = SG.Conquest.prepare(src.owner, src, tgt, g.officersIn(src).filter(x => x.troops > 0).slice(0, 5), 3000, 0);
+      const Mdl = new SG.BattleModel(s);
+      const by = (side, name) => Mdl.alive(side).find(u => u.gen.name === name) || Mdl.alive(side).slice().sort((p, q) => q.gen.war - p.gen.war)[0];
+      const a = by(0, o.a || '夏侯惇'), b = by(1, o.b || '华雄');
+      const bc = { M: Mdl, V: null, playerSide: o.playerSide === undefined ? 0 : o.playerSide, autoPlayer: !!o.autoPlayer, hud: 0, updateHud() { this.hud++; } };
+      const should = SG.DuelGame.shouldPlay(bc, a, b);
+      const shouldAuto = SG.DuelGame.shouldPlay(Object.assign({}, bc, { autoPlayer: true }), a, b);
+      const shouldNone = SG.DuelGame.shouldPlay(Object.assign({}, bc, { playerSide: -1 }), a, b);
+      document.body.classList.add('fighting');
+      const r = await SG.DuelGame.perform(bc, a, b, o.extra);
+      document.body.classList.remove('fighting');
+      const out = { should, shouldAuto, shouldNone, accepted: r.accepted, winner: r.winner, kind: r.kind, a: [a.gen.name, a.alive, a.morale], b: [b.gen.name, b.alive, b.morale],
+        routed: [...s.routed], hud: bc.hud, result: Mdl.result };
+      log('接线：' + JSON.stringify(out));
+      return out;
+    };
+    document.getElementById('btnWire').onclick = () => window.wireTest();
     document.getElementById('btnGo').onclick = () => runDuel();
     document.getElementById('btnTally').onclick = () => {
       window.tally(20);

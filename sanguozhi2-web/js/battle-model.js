@@ -652,7 +652,7 @@
           break;
         case 'flood':
           pl.area = this.areaTiles(t, sp.radius);
-          for (const e of foes) if (dist(e, t) <= sp.radius) { hit(e, sp.power * base(e) * (this.nearRiver(e.x, e.y) ? 1.6 : 0.85), e === t); extras(e); }
+          for (const e of foes) if (dist(e, t) <= sp.radius) { hit(e, sp.power * base(e) * (this.nearRiver(e.x, e.y) ? (SG.Specials.FLOOD_RIVER || 1.4) : (SG.Specials.FLOOD_DRY || 0.85)), e === t); extras(e); }
           for (const p of pl.area) if (this.burning[p.x][p.y] > 0) pl.douse.push(P(p.x, p.y));
           break;
         case 'roar':

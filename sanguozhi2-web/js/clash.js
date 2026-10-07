@@ -9,14 +9,17 @@
        attacker: { gen, side, color, troopsBefore, troopsAfter, formation: '鱼鳞', culture },
        defender: { gen, side, color, troopsBefore, troopsAfter, formation: '方圆', culture },
        terrain,           // SG.Terrain 值（防守方所在格）：平原 / 森林 / 山丘 / 山岳 / 河川 / 城墙 / 城门 / 本城
-       special: null,     // 可选 { name, color, kind }：冲锋前先播 cutIn 特写，接敌时附带特效与额外伤亡
+       special: null,     // 可选 { name, color, kind, cry }：冲锋前先播 cutIn 特写，接敌时附带特效与额外伤亡
+                          //   kind：'blaze' 火海 / 'storm' 雷击 / 'volley' 箭雨，其余一律为斩击弧光 + 冲击波
        playerSide: 0 | 1 | null,
        speed: 1,          // 可选：本次额外的时间倍率（与 SG.Clash.speed 相乘），如电脑回合传 1.6
      })                   → Promise<{ skipped, disabled, seconds }>（seconds：画面实际播放时长）
        · gen 至少含 name；color 为势力色 '#rrggbb'；formation 可为阵型名或 SG.Defs.formations 下标；
          culture 缺省取 gen.culture，再缺省 'han'（见 DESIGN-V2 §6）。
        · 攻方永远在左。兵力数字从 troopsBefore 滚动到 troopsAfter；troopsAfter 为 0 视为溃散。
-     await SG.Clash.cutIn({ gen, name, color, side })   必杀技 / 单挑用的全屏特写（约 1.1 秒，可跳过）
+     await SG.Clash.cutIn({ gen, name, color, side, cry, speed })
+                          必杀技 / 单挑用的全屏特写（约 1.1 秒 ÷ 速度，轻点 / 空格 / 回车可跳过）：头像滑入 + 招式名大字；
+                          cry 为可选台词（显示在招式名下方），speed 为可选额外倍率。enabled 为 false 时立即返回。
      SG.Clash.enabled     布尔，默认 true；false 时 play / cutIn 立即返回
      SG.Clash.speed       时间倍率，1 = 正常（全长约 3.7 秒），2 = 快
      SG.Clash.mode        'on' | 'fast' | 'off'（读写；写入时同步 enabled / speed，并存入 localStorage）
@@ -29,7 +32,10 @@
                           holdCut 为 true 时特写不自动结束（截图用，配合 Web Animations API 定格）
 
    操作：轻点 / 点击 / 空格 / 回车 跳过（直接显示结果约 0.4 秒后退出）。
-   全部网格、贴图、粒子在退出时释放；士兵用 InstancedMesh 绘制。
+   画面期间 <html> 加 sg-clash-on 类：隐藏战场 HUD（.sg-screens 的其他子元素）、世界标签与提示层；其余按键不传给相机。
+   多次调用 play 会排队依次播放。
+   全部网格、贴图、粒子在退出时释放；士兵用 InstancedMesh 绘制。粒子 / 旗面 / 水面 / 特效材质跨场次常驻
+   （只为保住着色器程序缓存，避免每次播放重新编译），renderer.info.memory 的几何体与贴图数在多次播放后不增长。
    装饰性随机一律使用 SG.SeededRandom（按双方姓名与兵力取种子），不影响规则随机数。
    ========================================================================== */
 (function () {
@@ -446,6 +452,61 @@
     return (gen && gen.war >= 85 && Math.abs(hashStr(n)) % 3 === 0) ? 'spear' : 'glaive';
   }
 
+  // ======================================================= 常驻材质 --
+  // 跨场次复用：材质不释放，其着色器程序就一直留在渲染器的缓存里，下次播放不必重新编译
+  // （SwiftShader 下每个程序编译要数百毫秒，手机 GPU 也有几十毫秒）。贴图、几何体仍每次释放。
+  const MATS = { particle: {}, flag: {}, water: null, fx: {} };
+  function particleMaterial(blending, soft) {
+    const key = blending + '|' + soft;
+    let m = MATS.particle[key];
+    if (!m) {
+      m = MATS.particle[key] = new THREE.ShaderMaterial({
+        uniforms: { uMap: { value: SG.Gfx.softDotTexture }, uScale: { value: 600 }, uSoft: { value: soft } },
+        vertexShader: PARTICLE_VS, fragmentShader: PARTICLE_FS,
+        transparent: true, depthWrite: false, depthTest: true, blending, fog: false,
+      });
+    }
+    return m;
+  }
+  // 旗面材质：每方大旗 / 小旗各一个（同一贴图的旗帜共用），贴图每次替换
+  function flagMaterial(key, tex) {
+    let m = MATS.flag[key];
+    if (!m) {
+      m = MATS.flag[key] = SG.Gfx.newLowPoly();
+      m.side = THREE.DoubleSide;
+      m.alphaTest = 0.5;
+    }
+    m.map = tex;
+    return m;
+  }
+  function waterMaterial() {
+    if (!MATS.water) {
+      const src = SG.Gfx.water();
+      const mat = src.clone();
+      for (const k of Object.keys(src.uniforms)) mat.uniforms[k] = src.uniforms[k];   // 与主场景共用时间、雾等
+      mat.uniforms.uAlpha = { value: 0.66 };
+      mat.uniforms.uAmp = { value: 0.06 };
+      MATS.water = mat;
+    }
+    return MATS.water;
+  }
+  // 特效网格的发光材质：用完放回空闲表
+  function fxMaterial(kind) {
+    const free = MATS.fx[kind] || (MATS.fx[kind] = []);
+    if (free.length) return free.pop();
+    const o = { transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false };
+    if (kind === 'ring') o.side = THREE.DoubleSide;
+    else if (kind === 'shock') o.map = SG.Gfx.ringTexture;
+    else if (kind === 'bolt') o.vertexColors = true;
+    const m = new THREE.MeshBasicMaterial(o);
+    m.userData.fxKind = kind;
+    return m;
+  }
+  function releaseFx(m) {
+    const k = m && m.userData && m.userData.fxKind;
+    if (k) MATS.fx[k].push(m); else if (m) m.dispose();
+  }
+
   // ======================================================= 旗帜 --
   // 旗面贴图：势力色底、犬牙边、中央圆徽与姓氏
   function bannerTexture(glyph, colorHex, big) {
@@ -500,7 +561,7 @@
 
   // 会飘动的旗面：局部坐标里位于 y-z 平面，旗杆边在 z = 0，向 +z（身后）展开、自 y = 0 向下垂
   class Flag {
-    constructor(tex, w, h, flipU, seed, big) {
+    constructor(tex, w, h, flipU, seed, big, matKey) {
       this.w = w; this.h = h; this.seed = seed; this.big = big;
       const nx = 8, ny = big ? 6 : 4;
       this.nx = nx; this.ny = ny;
@@ -525,10 +586,8 @@
       g.setAttribute('color', new THREE.BufferAttribute(col, 3));
       g.setIndex(idx);
       this.geometry = g;
-      this.material = SG.Gfx.newLowPoly();
-      this.material.map = tex;
-      this.material.side = THREE.DoubleSide;
-      this.material.alphaTest = 0.5;
+      this.material = flagMaterial(matKey || 'x', tex);
+      this.tex = tex;
       this.mesh = new THREE.Mesh(g, this.material);
       this.mesh.matrixAutoUpdate = false;
       this.mesh.castShadow = true;
@@ -555,7 +614,10 @@
       this.geometry.attributes.position.needsUpdate = true;
       this.geometry.computeVertexNormals();
     }
-    dispose() { this.geometry.dispose(); this.material.dispose(); }
+    dispose() {
+      this.geometry.dispose();
+      if (this.material.map === this.tex) this.material.map = null;   // 材质常驻，只放开贴图引用
+    }
   }
 
   // ======================================================= 粒子 --
@@ -595,11 +657,7 @@ void main() {
       g.setAttribute('aSize', this.aSize);
       g.setDrawRange(0, 0);
       this.geometry = g;
-      this.material = new THREE.ShaderMaterial({
-        uniforms: { uMap: { value: SG.Gfx.softDotTexture }, uScale: { value: 600 }, uSoft: { value: soft } },
-        vertexShader: PARTICLE_VS, fragmentShader: PARTICLE_FS,
-        transparent: true, depthWrite: false, depthTest: true, blending, fog: false,
-      });
+      this.material = particleMaterial(blending, soft);
       this.points = new THREE.Points(g, this.material);
       this.points.frustumCulled = false;
       this.points.renderOrder = renderOrder;
@@ -632,11 +690,12 @@ void main() {
       if (n > 0) { this.aPos.needsUpdate = true; this.aCol.needsUpdate = true; this.aSize.needsUpdate = true; }
     }
     clear() { this.parts.length = 0; this.geometry.setDrawRange(0, 0); }
-    dispose() { this.geometry.dispose(); this.material.dispose(); }
+    dispose() { this.geometry.dispose(); }     // 材质常驻（见 particleMaterial）
   }
 
   // ======================================================= 地形 --
   const RIVER = { x: 1.05, w: 1.7, bank: 1.5, bed: -0.42, surf: -0.1 };
+  const WALL_Z = -7.4, GATE_X = 4.6;     // 城墙正面（three z）与城门中心 x
   function makeHeight(kind, seed) {
     const r = SG.SeededRandom(seed);
     const ox = r.nextDouble() * 200, oz = r.nextDouble() * 200;
@@ -673,6 +732,19 @@ void main() {
     if (kind === 'gate' || kind === 'castle' || kind === 'wall') {
       const grass = C(0.47, 0.6, 0.35);
       c.lerp(grass, sstep(3, 12, Math.abs(z - 2.5)) * 0.6 + n * 0.1);
+      if (kind !== 'wall') {
+        // 通往城门的夯土大道（两道车辙）与门前石板
+        const d = Math.abs(x - GATE_X), w = 1.45 + Math.max(0, z - WALL_Z) * 0.07;
+        const road = 1 - sstep(w - 0.35, w + 0.25, d);
+        if (road > 0) {
+          c.lerp(C(0.55, 0.47, 0.35), road * 0.85);
+          const rut = Math.abs(d - w * 0.42);
+          if (rut < 0.22) c.lerp(C(0.45, 0.38, 0.28), road * 0.55);
+        }
+        if (z < WALL_Z + 2.4 && d < 2.3) c.lerp(C(0.66, 0.64, 0.6), 0.75 * (1 - sstep(1.7, 2.3, d)));
+      }
+      // 墙根阴湿
+      c.lerp(C(0.42, 0.42, 0.36), (1 - sstep(WALL_Z, WALL_Z + 1.2, z)) * 0.35);
     } else {
       c.lerp(C(0.58, 0.52, 0.37), trample * 0.42);
       if (n > 0.12) c.lerp(shade(c, kind === 'forest' ? -0.12 : 0.08), 0.6);
@@ -838,23 +910,18 @@ void main() {
           wm.tri(a, b, c, ka); wm.tri(a, c, d, ka);
           void kb;
         }
-      const src = SG.Gfx.water();
-      const mat = src.clone();
-      for (const k of Object.keys(src.uniforms)) mat.uniforms[k] = src.uniforms[k];
-      mat.uniforms.uAlpha = { value: 0.66 };
-      mat.uniforms.uAmp = { value: 0.06 };
-      const water = SG.Gfx.mesh(wm.toGeometry(), mat, { castShadow: false, receiveShadow: false });
+      const water = SG.Gfx.mesh(wm.toGeometry(), waterMaterial(), { castShadow: false, receiveShadow: false });
       water.renderOrder = 1;
       sc.scene.add(water);
-      sc.own.push(water.geometry, mat);
+      sc.own.push(water.geometry);
     }
   }
 
   function buildWall(mb, kind, rnd, defColor, H) {
-    const Z = -7.4, TH = 1.4, WH = 3.3, X0 = -0.6, X1 = 44;
+    const Z = WALL_Z, TH = 1.4, WH = 3.3, X0 = -0.6, X1 = 44;
     const stone = C(0.7, 0.67, 0.6);
     const zc = Z - TH / 2;
-    const gx = kind === 'wall' ? null : 4.6;
+    const gx = kind === 'wall' ? null : GATE_X;
     // 墙基与墙身
     mb.box(P((X0 + X1) / 2, 0.15, zc), V(X1 - X0, 0.5, TH + 0.25), shade(stone, -0.12));
     mb.box(P((X0 + X1) / 2, WH / 2, zc), V(X1 - X0, WH, TH), stone);
@@ -883,6 +950,36 @@ void main() {
       const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.5 - rnd.nextDouble() * 5;
       mb.box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86, 0.8, 0.68));
       mb.chineseRoof(P(x, 3.6, z), 3.0, 2.2, 1.0 + rnd.nextDouble() * 0.4, C(0.27, 0.3, 0.37));
+    }
+    // 墙根碎石
+    for (let k = 0; k < 9; k++) {
+      const x = X0 + 1.2 + rnd.nextDouble() * 16;
+      if (gx !== null && Math.abs(x - gx) < 2.4) continue;
+      const r = 0.12 + rnd.nextDouble() * 0.16;
+      mb.blob(P(x, H(x, Z + 0.35) + r * 0.3, Z + 0.25 + rnd.nextDouble() * 0.4), V(r * 1.3, r * 0.8, r), shade(stone, -0.12 + (rnd.nextDouble() - 0.5) * 0.1), k + 11);
+    }
+    // 拒马：横木上交叉的削尖木桩（城门两侧、墙前）
+    const stake = shade(WOOD, 0.08);
+    const juma = (cx, cz, len) => {
+      const y0 = H(cx, cz);
+      beam(mb, P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.1, 0.1, shade(WOOD, -0.08));
+      const n = Math.max(2, Math.round(len / 0.55));
+      for (let i = 0; i < n; i++) {
+        const x = cx - len / 2 + 0.2 + (len - 0.4) * (i / (n - 1));
+        beam(mb, P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.06, 0.012, stake);
+        beam(mb, P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.06, 0.012, stake);
+      }
+    };
+    const jx = gx === null ? [1.4, 6.8] : [gx - 3.3, gx + 3.3, gx + 8.6];
+    for (const x of jx) juma(x, Z + 1.75 + (rnd.nextDouble() - 0.5) * 0.3, 1.9);
+    // 倚墙的云梯（攻城痕迹）
+    {
+      const lx = gx === null ? 9.5 : gx + 6.2, zb = Z + 1.25, zt = Z + 0.12, top = WH - 0.2;
+      for (const s of [-0.24, 0.24]) beam(mb, P(lx + s, H(lx, zb) + 0.02, zb), P(lx + s, top, zt), 0.07, 0.06, WOOD);
+      for (let i = 1; i < 8; i++) {
+        const u = i / 8;
+        beam(mb, P(lx - 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), P(lx + 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), 0.045, 0.045, shade(WOOD, 0.05));
+      }
     }
     // 城头旗帜
     for (let k = 0; k < 6; k++) {
@@ -996,7 +1093,7 @@ void main() {
       this.kind = terrainKind(opts.terrain);
       this.A = norm(opts.attacker);
       this.D = norm(opts.defender);
-      this.special = opts.special && opts.special.name ? { name: String(opts.special.name), color: hexOf(opts.special.color || '#ffd24d'), kind: String(opts.special.kind || 'smite') } : null;
+      this.special = opts.special && opts.special.name ? { name: String(opts.special.name), color: hexOf(opts.special.color || '#ffd24d'), kind: String(opts.special.kind || 'smite'), cry: opts.special.cry || null } : null;
       this.playerSide = opts.playerSide === 0 || opts.playerSide === 1 ? opts.playerSide : null;
       this.speed = Math.max(0.1, (+SG.Clash.speed || 1) * (+opts.speed || 1));
       const seed = hashStr(this.A.name + '|' + this.D.name + '|' + this.A.before + '|' + this.D.before + '|' + this.kind);
@@ -1205,11 +1302,11 @@ void main() {
         const big = bannerTexture(glyph, A.info.color, true);
         const small = bannerTexture(glyph, A.info.color, false);
         this.own.push(big, small);
-        g.flag = new Flag(big, 0.74, 0.98, A.dir > 0, A.si * 3.1, true);
+        g.flag = new Flag(big, 0.74, 0.98, A.dir > 0, A.si * 3.1, true, A.si + 'B');
         scene.add(g.flag.mesh);
         this.own.push(g.flag);
         for (const s of A.soldiers) if (s.role === 'flag') {
-          s.flag = new Flag(small, 0.56, 0.4, A.dir > 0, this.rnd.nextDouble() * 6, false);
+          s.flag = new Flag(small, 0.56, 0.4, A.dir > 0, this.rnd.nextDouble() * 6, false, A.si + 's');
           scene.add(s.flag.mesh);
           this.own.push(s.flag);
         }
@@ -1314,8 +1411,9 @@ void main() {
             parts.push({ t: isFinite(st) ? st : TL.contact, w: shareSpec + (special.kind === 'volley' ? 0.12 : 0), kind: 'special' });
           }
           const rest = 1 - parts.reduce((s, p) => s + p.w, 0);
-          parts.push({ t: TL.contact + 0.3, w: rest * 0.55, kind: 'melee' });
-          parts.push({ t: TL.contact + 0.68, w: rest * 0.45, kind: 'melee' });
+          const lag = A.si * 0.09;
+          parts.push({ t: TL.contact + 0.3 + lag, w: rest * 0.55, kind: 'melee' });
+          parts.push({ t: TL.contact + 0.68 + lag, w: rest * 0.45, kind: 'melee' });
           parts.sort((a, b) => a.t - b.t);
           let left = L;
           parts.forEach((p, i) => {
@@ -1698,7 +1796,11 @@ void main() {
       for (const s of A.soldiers) if (!(this.t >= s.fallT + 0.6)) { this.soldierXZ(A, s, this.t, o); x += o.x; n++; }
       x = n ? x / n : A.xFront;
       const k = this.chunks.filter(c => c.si === ch.si && c.t < ch.t).length;
-      this.hud.pop(V(x + (k % 2 ? 0.6 : -0.4) * A.dir, 2.0 + (k % 3) * 0.32, ZC), '−' + ch.amount, ch.kind === 'special');
+      x += (k % 2 ? 0.6 : -0.4) * A.dir;
+      // 两军接战后中心会挤在一起：各自的飘字保持在接敌线本方一侧，免得数字叠在一起
+      const xc = this.contactLine(o), gap = 1.35;
+      x = A.dir > 0 ? Math.min(x, xc - gap) : Math.max(x, xc + gap);
+      this.hud.pop(V(x, 2.0 + (k % 3) * 0.32 + ch.si * 0.18, ZC), '−' + ch.amount, ch.kind === 'special');
     }
     onRout(A) {
       sfx('lose', 0.3);
@@ -1746,7 +1848,8 @@ void main() {
     slash(pos, col) {
       const mk = (r0, r1, c, op) => {
         const g = new THREE.RingGeometry(r0, r1, 28, 1, -0.95, 1.9);
-        const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+        const m = fxMaterial('ring');
+        m.color.copy(c); m.opacity = op;
         const mesh = new THREE.Mesh(g, m);
         mesh.position.copy(pos);
         mesh.rotation.set(0, 0, -0.35);
@@ -1768,7 +1871,8 @@ void main() {
     }
     shockwave(pos, col) {
       const g = new THREE.PlaneGeometry(1, 1);
-      const m = new THREE.MeshBasicMaterial({ color: col.clone(), map: SG.Gfx.ringTexture, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+      const m = fxMaterial('shock');
+      m.color.copy(col); m.opacity = 0.9;
       const mesh = new THREE.Mesh(g, m);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.copy(pos);
@@ -1786,7 +1890,8 @@ void main() {
         x = nx; y = ny; z = nz;
         if (ny <= this.groundY(base.x, base.z) + 0.01) break;
       }
-      const m = new THREE.MeshBasicMaterial({ color: shade(col, 0.55), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, vertexColors: true });
+      const m = fxMaterial('bolt');
+      m.color.copy(shade(col, 0.55)); m.opacity = 0;
       const mesh = new THREE.Mesh(mb.toGeometry(), m);
       mesh.renderOrder = 15;
       this.scene.add(mesh);
@@ -1856,7 +1961,7 @@ void main() {
           this.cutDone = true;
           this.paused = true;
           const sp = this.special;
-          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, _inClash: true }).then(() => { this.paused = false; });
+          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, cry: sp.cry, speed: +this.opts.speed || 1, _inClash: true }).then(() => { this.paused = false; });
         }
         this.setTime(t, true);
         if (this.t >= TL.end) this.finish();
@@ -1876,7 +1981,7 @@ void main() {
       for (let i = this.temp.length - 1; i >= 0; i--) {
         const f = this.temp[i];
         const u = (this.t - f.t0) / f.life;
-        if (u >= 1 || this.state !== 'run') { this.scene.remove(f.mesh); f.mesh.geometry.dispose(); f.mesh.material.dispose(); this.temp.splice(i, 1); continue; }
+        if (u >= 1 || this.state !== 'run') { this.scene.remove(f.mesh); f.mesh.geometry.dispose(); releaseFx(f.mesh.material); this.temp.splice(i, 1); continue; }
         f.fn(u);
       }
       if (this.hud) this.hud.update(dt, this, this.state === 'run' ? (this.t - this._tPrev) / this.speed : dt);
@@ -1956,7 +2061,10 @@ void main() {
       this.resize(SG.Gfx.width, SG.Gfx.height);
       this.cameraPose(0);
       const r = SG.Gfx.renderer;
-      if (r && typeof r.compileAsync === 'function') {
+      // 有并行编译扩展时异步预编译着色器；没有时（如 SwiftShader）compileAsync 只会同步编译并警告，交给首帧即可
+      let par = false;
+      try { par = !!(r && r.extensions && r.extensions.has('KHR_parallel_shader_compile')); } catch (e) { /* 忽略 */ }
+      if (par && typeof r.compileAsync === 'function') {
         try { await Promise.race([r.compileAsync(this.scene, this.camera), new Promise(res => setTimeout(res, 700))]); } catch (e) { /* 首帧再编译 */ }
       }
       const wait = FADE_IN * 0.75 * 1000 - (performance.now() - tb);
@@ -1994,7 +2102,7 @@ void main() {
       this.state = 'done';
       SG.Gfx.popScreen(this);
       if (this.hud) this.hud.dispose();
-      for (const f of this.temp) { if (this.scene) this.scene.remove(f.mesh); f.mesh.geometry.dispose(); f.mesh.material.dispose(); }
+      for (const f of this.temp) { if (this.scene) this.scene.remove(f.mesh); f.mesh.geometry.dispose(); releaseFx(f.mesh.material); }
       this.temp.length = 0;
       for (const m of this.instanced) { m.dispose(); }
       for (const p of [this.dust, this.fx, this.glow]) if (p) p.dispose();
@@ -2017,6 +2125,7 @@ void main() {
   font-family:var(--sg-font-body,"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif,"WenQuanYi Zen Hei");
   --u:clamp(8.5px,min(1.3vw,2.45vh),26px);line-height:1.2;}
 .sg-clash *,.sg-clash *::before,.sg-clash *::after{box-sizing:border-box;}
+html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts,html.sg-clash-on #ui .sg-labels{visibility:hidden !important;}
 .sg-clash-vig{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse 75% 70% at 50% 58%,rgba(0,0,0,0) 55%,rgba(10,8,6,.42) 100%);}
 .sg-clash-shade{position:absolute;left:0;right:0;top:0;height:calc(var(--u)*11 + env(safe-area-inset-top,0px));pointer-events:none;
@@ -2146,6 +2255,9 @@ void main() {
   -webkit-text-stroke:max(1px,calc(var(--u)*.12)) rgba(30,12,4,.85);
   filter:drop-shadow(0 calc(var(--u)*.25) 0 rgba(20,8,2,.85)) drop-shadow(0 0 calc(var(--u)*1.1) var(--c));
   animation:sg-ci-name var(--T) linear both;}
+.sg-cutin-cry{margin:.35em 0 0 .4em;max-width:100%;font-family:${KAI};font-weight:700;font-size:max(13px,calc(var(--u)*1.55));line-height:1.3;color:#fff6e0;
+  letter-spacing:.06em;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 calc(var(--u)*.8) rgba(0,0,0,.6);animation:sg-ci-cry var(--T) linear both;}
+.sg-cutin.s1 .sg-cutin-cry{margin:.35em .4em 0 0;text-align:right;}
 .sg-cutin-flash{position:absolute;inset:0;background:#fff;opacity:0;animation-name:sg-ci-flash;pointer-events:none;}
 @keyframes sg-ci-dim{0%{opacity:0}9%{opacity:1}84%{opacity:1}100%{opacity:0}}
 @keyframes sg-ci-band{0%{transform:translateX(-60%) skewY(-7deg) scaleY(.05);opacity:0}10%{transform:translateX(0) skewY(-7deg) scaleY(1);opacity:1}
@@ -2161,6 +2273,7 @@ void main() {
   34%{transform:scale(1.04) translateX(-1%)}37%{transform:scale(1) translateX(1%)}40%{transform:none}84%{transform:scale(1.03)}100%{transform:scale(1.06)}}
 @keyframes sg-ci-swash{0%,13%{clip-path:inset(0 100% 0 0)}30%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
 @keyframes sg-ci-flash{0%,80%{opacity:0}84%{opacity:.55}100%{opacity:0}}
+@keyframes sg-ci-cry{0%,26%{opacity:0;transform:translateY(.6em)}36%{opacity:1;transform:none}100%{opacity:1;transform:none}}
 .sg-cutin.is-skip>*{animation:none !important;opacity:0 !important;transition:opacity .12s;}
 `;
     (document.head || document.documentElement).appendChild(s);
@@ -2201,7 +2314,6 @@ void main() {
       this.sc = sc;
       const root = this.root = el('div', 'sg-clash is-pre');
       hudParent().appendChild(root);
-      try { document.documentElement.classList.add('sg-clash-on'); } catch (e) { /* 忽略 */ }
       el('div', 'sg-clash-vig', null, root);
       el('div', 'sg-clash-shade', null, root);
       const hud = el('div', 'sg-clash-hud', null, root);
@@ -2251,6 +2363,9 @@ void main() {
         if (k === ' ' || k === 'Enter' || k === 'Escape' || k === 'Spacebar') {
           e.preventDefault(); e.stopPropagation();
           if (!e.repeat) sc.skip();
+        } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          // 其余按键不再传给主画面（相机 WASD / QE 等），免得返回战场时视角已被移动；keyup 照常放行
+          e.stopPropagation();
         }
       };
       root.addEventListener('pointerdown', this.onDown);
@@ -2271,6 +2386,8 @@ void main() {
       f.style.opacity = '1';
     }
     fadeIn(sec) {
+      // 已推入全屏场景（黑幕下）：隐藏战场 HUD、世界标签与提示，退出时恢复
+      try { document.documentElement.classList.add('sg-clash-on'); } catch (e) { /* 忽略 */ }
       const f = this.fadeEl;
       f.style.transition = 'none';
       f.style.opacity = '1';
@@ -2297,8 +2414,9 @@ void main() {
         requestAnimationFrame(() => {
           f.style.transition = `opacity ${sec}s ease-out`;
           f.style.opacity = '0';
-          setTimeout(() => { if (r.parentNode) r.parentNode.removeChild(r); }, sec * 1000 + 60);
         });
+        // 移除不依赖 rAF（页面隐藏或掉帧时也能按时清理）
+        setTimeout(() => { if (r.parentNode) r.parentNode.removeChild(r); }, sec * 1000 + 120);
       };
       setTimeout(fin, sec * 1000);
     }
@@ -2420,7 +2538,12 @@ void main() {
       const tx = el('div', 'sg-cutin-text', null, root);
       el('div', 'sg-cutin-who', esc((o.gen && o.gen.name) || ''), tx);
       const nm = el('div', 'sg-cutin-name', swashSvg(hashStr(o.name || ''), color), tx);
-      el('b', null, esc(o.name || '必杀'), nm);
+      const nmText = String(o.name || '必杀');
+      const nb = el('b', null, esc(nmText), nm);
+      // 招式名过长时按字数缩小（以 6 字为满宽）
+      const len = Array.from(nmText).length;
+      if (len > 6) nb.style.fontSize = `max(${Math.round(34 * 6 / len)}px,calc(var(--u)*${(6.4 * 6 / len).toFixed(2)}))`;
+      if (o.cry) el('div', 'sg-cutin-cry', '「' + esc(String(o.cry)) + '」', tx);
       el('div', 'sg-cutin-flash', null, root);
       document.body.appendChild(root);
       this.lines = [];

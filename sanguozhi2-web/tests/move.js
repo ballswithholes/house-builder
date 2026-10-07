@@ -54,8 +54,8 @@ section('start: one city', () => {
   const c = g.cityByKey('pingyuan');
   ok(c.owner === g.player, 'player owns 平原');
   eq(g.routesFrom(c).length, 0, 'no routes from the only city');
-  eq(Commands.moveBlocked(c), '只有一座城池——攻下第二座城后即可调动武将。', 'move blocked reason (one city)');
-  eq(Commands.transportBlocked(c), '只有一座城池——攻下第二座城后即可输送金粮。', 'transport blocked reason (one city)');
+  eq(Commands.moveBlocked(c), '只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可调动武将。', 'move blocked reason (one city)');
+  eq(Commands.transportBlocked(c), '只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可输送金粮。', 'transport blocked reason (one city)');
   // 董卓开局两城相邻：可以调动
   const g2 = fresh('dong');
   const ly = g2.cityByKey('luoyang');
@@ -83,6 +83,13 @@ section('constructed chain: reachability and distance', () => {
   eq(g.routeBetween(py, g.cityByKey('xiaopei')).length, 4, 'routeBetween length');
   eq(g.routeBetween(py, g.cityByKey('changsha')), null, 'routeBetween unreachable');
   eq(g.routeBetween(py, py), null, 'routeBetween same city');
+  // 限制路程（maxHops）：只取不超过它的城，顺序不变
+  eq(names(g, g.routesFrom(py, P, 1)), ['北海1'], 'maxHops 1');
+  eq(names(g, g.routesFrom(py, P, 2)), ['北海1', '下邳2'], 'maxHops 2');
+  eq(names(g, g.routesFrom(py, P, 0)), ['北海1', '下邳2', '小沛3'], 'maxHops 0 = unlimited');
+  eq(names(g, g.routesFrom(py, undefined, 2)), ['北海1', '下邳2'], 'maxHops with default faction');
+  eq(Commands.aiMoveTargets(py, P).map(x => x.key), ['beihai', 'xiapi'], 'Commands.aiMoveTargets: within 2 hops');
+  eq(Commands.aiMoveTargets(g.cityByKey('xiaopei'), P).map(x => x.key), ['xiapi', 'beihai'], 'aiMoveTargets from 小沛');
   // 从一座敌城 / 空城出发
   eq(g.routesFrom(g.cityByKey('puyang'), P).length, 0, 'start city not owned → no routes');
   eq(g.routesFrom(g.cityByKey('puyang')).length, 0, 'neutral start → no routes');
@@ -199,6 +206,29 @@ section('after first conquest the move command unlocks', () => {
   eq(names(g, g.routesFrom(target)), ['平原1'], 'route back from 濮阳');
 });
 
+// ------------------------------------------- 「拉拢」敌将献城也能解锁 --
+section('a defecting city also unlocks the move command', () => {
+  const g = fresh('liubei');
+  const py = g.cityByKey('pingyuan');
+  // 构造：与平原相邻的濮阳归曹操，只驻一名非君主武将；劝诱必然成功时他献城归降
+  const t = g.cityByKey('puyang');
+  const cao = g.factionByKey('cao').id;
+  ok(py.links.indexOf(t.id) >= 0, '濮阳 is adjacent to 平原');
+  t.owner = cao;
+  const target = g.generalsOf(cao).find(x => !g.isRuler(x));
+  target.city = t.id;
+  g.autoGovernor(t);
+  eq(g.officersIn(t).length, 1, '濮阳 has a single officer');
+  const agent = g.generals.find(x => x.name === '刘备');
+  const rv = SG.Random.value;
+  SG.Random.value = () => 0;
+  let msg;
+  try { msg = Commands.persuade(agent, target, g.player); } finally { SG.Random.value = rv; }
+  ok(/献城归降/.test(msg), 'persuade: ' + msg);
+  eq(t.owner, g.player, t.name + ' now ours');
+  eq(Commands.moveBlocked(py), null, 'move unlocked from 平原 after the defection');
+});
+
 // --------------------------------------------- 电脑：现有调动规则依旧成立 --
 // 电脑只把武将调往相邻的己方城；新规则下这些移动必然可达（相邻即一步），Commands.move 不会拒绝。
 section('AI moves stay valid under the new rule', () => {
@@ -222,6 +252,44 @@ section('AI moves stay valid under the new rule', () => {
   console.log(`  AI moves ${moves}, rejected ${rejected}`);
   ok(moves > 0, 'AI moved generals');
   eq(rejected, 0, 'no AI move rejected');
+});
+
+// ------------------------- 可选接线（INTEGRATION）：电脑调往两步之内的前线 --
+// 在独立的 vm 上下文里把 strategy-ai.js 第 6 步换成 Commands.aiMoveTargets(c, f)（若尚未接线），
+// 跑 15 年全电脑对局：电脑确实会调往不相邻的城，且没有任何移动被拒绝。
+section('optional AI wiring: 2-hop fronts', () => {
+  const OLD = 'const fronts = c.links.map(i => g.cities[i]).filter(n => n.owner === f);';
+  const NEW = 'const fronts = Commands.aiMoveTargets(c, f);';
+  let ai = fs.readFileSync(path.join(root, 'strategy-ai.js'), 'utf8');
+  if (ai.indexOf(NEW) < 0) {
+    if (ai.indexOf(OLD) < 0) { ok(false, 'strategy-ai.js step 6 not found (neither old nor wired line)'); return; }
+    ai = ai.replace(OLD, NEW);
+  }
+  const ctx = { console, Math, JSON };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  for (const f of ['core.js', 'data.js', 'model.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
+  vm.runInContext(ai, ctx, { filename: 'strategy-ai.js (wired)' });
+  const X = ctx.SG;
+  let moves = 0, far = 0, rejected = 0;
+  const orig = X.Commands.move;
+  X.Commands.move = function (gen, to) {
+    moves++;
+    const from = X.G.cities[gen.city];
+    if (from.links.indexOf(to.id) < 0) far++;
+    const r = orig.call(X.Commands, gen, to);
+    if (gen.city !== to.id) rejected++;
+    return r;
+  };
+  for (let seed = 1; seed <= 3; seed++) {
+    X.Random.seed(seed);
+    const g = X.G = X.GameState.newGame('liubei');
+    g.player = -1;
+    for (let m = 0; m < 12 * 15; m++) { X.StrategyAI.runAI([]); X.StrategyAI.endMonth(); }
+  }
+  console.log(`  AI moves ${moves} (non-adjacent ${far}), rejected ${rejected}`);
+  ok(moves > 0 && far > 0, 'wired AI moves generals to non-adjacent cities');
+  eq(rejected, 0, 'no wired AI move rejected');
 });
 
 console.log(`${checks} checks`);

@@ -7,7 +7,8 @@
      「移动」「输送」的目的地 = 经由己方城池相连可达的所有己方城（SG.Commands.moveTargets），
      列表注明路程（相邻 / 经 N 城）与途经城名，行军动画沿路线逐城前进；
      灰色指令按钮被点按时以提示说明原因（addCmd(name, why, …)、explainCmd）；
-     第一次占领新城后弹一次「移动」提示（firstConquestTip，本机只弹一次）并让「移动」按钮闪烁（hintCmd）。
+     第一次占领新城后弹一次「移动」提示并让「移动」按钮闪烁（moveTip / hintCmd，本机只弹一次）；
+     只在「移动」此刻真能用时弹出（有令牌、某座己方城有未行动的武将可调），否则留到下个月月初。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -95,6 +96,7 @@
 .sg-cmdgrid .sg-btn.sg-cmd-deny { animation: sg-cmd-deny .38s ease; }
 @keyframes sg-cmd-deny { 0%, 100% { translate: 0 0; } 20% { translate: -5px 0; } 40% { translate: 5px 0; } 60% { translate: -3px 0; } 80% { translate: 2px 0; } }
 .sg-cmdgrid .sg-btn.sg-cmd-hint { animation: sg-cmd-hint 1.1s ease-in-out 4; }
+.sg-cmdgrid .sg-btn.sg-cmd-hint.sg-cmd-deny { animation: sg-cmd-deny .38s ease; }
 @keyframes sg-cmd-hint {
   0%, 100% { box-shadow: 0 0 0 0 rgba(243, 201, 105, 0); }
   50% { border-color: #f3c969; box-shadow: 0 0 0 2px rgba(243, 201, 105, .95), 0 0 1.4rem rgba(243, 201, 105, .65); }
@@ -124,6 +126,9 @@
       this.selected = -1;
       this.busy = false;
       this.endMonth = false;
+      this._hint = null;              // 正在闪烁的指令按钮 { name, until }
+      this._tipPending = false;       // 已取得新城、「移动」提示待弹（等到「移动」可用时）
+      this._tipCities = [];           // 新取得的城（提示时优先选中）
       this._onMapTap = (x, y) => this.onMapTap(x, y);
       // 城名标签避让
       this._labelsOn = true;
@@ -164,7 +169,10 @@
         if (news.length > 0) await UI().say(news.slice(0, 6).join('\n'));
         try { G().save(); } catch (e) { console.warn(e); }
         UI().banner(G().year + '年 ' + G().month + '月', '令牌 ' + G().tokens + ' 枚', 1.8);
+        // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初横幅之后补弹提示
+        if (this._tipPending && this.moveUsableCity()) await SG.wait(1.2);
         this.busy = false;
+        if (this._tipPending) await this.moveTip(false);
       }
     }
 
@@ -468,12 +476,16 @@
         b.title = why.replace(/<[^>]*>/g, '');
         b.setAttribute('aria-disabled', 'true');
       }
-      if (this._hint && this._hint.name === name && performance.now() < this._hint.until) b.classList.add('sg-cmd-hint');
+      // 提示闪烁只给可用的按钮（灰色按钮闪金光会让人误以为能用）
+      if (!why && this._hint && this._hint.name === name && performance.now() < this._hint.until) b.classList.add('sg-cmd-hint');
       return b;
     }
 
     explainCmd(b) {
       if (!b || !b._why) return;
+      // 闪烁与抖动同用 animation 属性：先停掉闪烁，抖动才看得见
+      b.classList.remove('sg-cmd-hint');
+      if (this._hint && this._hint.name === b.dataset.cmd) this._hint = null;
       SG.UI.pulse(b, 'sg-cmd-deny');
       // 同一时间只留一条说明，连点不会堆叠
       if (this._denyToast && this._denyToast.parentNode) this._denyToast.parentNode.removeChild(this._denyToast);
@@ -483,16 +495,41 @@
     hintCmd(name) {
       this._hint = { name, until: performance.now() + 4400 };   // 面板重建时继续闪烁，直到时间到
       if (!this.cmdGrid) return;
-      for (const b of this.cmdGrid.children) if (b.dataset && b.dataset.cmd === name) SG.UI.pulse(b, 'sg-cmd-hint');
+      for (const b of this.cmdGrid.children) if (b.dataset && b.dataset.cmd === name && !b._why) SG.UI.pulse(b, 'sg-cmd-hint');
     }
 
-    // 第一次占领新城后弹一次提示：可用「移动」把武将调往其他城池
-    async firstConquestTip() {
-      if (tipShown()) return false;
+    // 此刻能用「移动」的己方城（有令牌，且城中有未行动的武将可调往相连的己方城）；没有则 null。
+    // 依次优先：当前选中的城、新取得的城、其余己方城。
+    moveUsableCity() {
+      const g = G(), C = SG.Commands;
+      if (!g || g.tokens <= 0 || !g.playerFaction.alive) return null;
+      const order = [this.selected].concat(this._tipCities, g.citiesOf(g.player).map(c => c.id));
+      for (const id of order) {
+        const c = id >= 0 ? g.cities[id] : null;
+        if (c && c.owner === g.player && !C.moveBlocked(c)) return c;
+      }
+      return null;
+    }
+    // 第一次取得新城后弹一次提示：可用「移动」把武将调往其他城池，并让「移动」按钮闪烁。
+    // 只在「移动」此刻真能用时弹出（必要时改选一座能用的城）；否则保持待弹，下个月月初再看。
+    // fresh：刚取得新城（true）还是延到之后补弹（false），只影响第一句。→ 是否弹出
+    async moveTip(fresh) {
+      if (tipShown()) { this._tipPending = false; return false; }
+      const c = this.moveUsableCity();
+      if (!c) return false;
+      this._tipPending = false;
+      this._tipCities = [];
       markTipShown();
-      await UI().say('【提示】占领了新的城池！\n' +
-        '现在可以用「移动」把武将调往其他己方城池——只要经由己方城池相连即可，不必相邻（每次消耗 1 枚令牌，可一次调动多人）。\n' +
-        '「输送」可以同样在己方城池之间调拨金粮。');
+      if (this.selected !== c.id) {
+        const p = SG.mapPos(c);
+        SG.Game.rig.focusMap(p.x, p.y);
+        this.selectCity(c.id);
+      }
+      this.refreshAll();              // 面板显示此刻的真实状态（「移动」可用）
+      await UI().say('【提示】' + (fresh ? '取得了新的城池！' : '领有两座以上相连的城池，可以调动武将了。') + '\n' +
+        '用「移动」可把武将调往其他己方城池——只要经由己方城池相连即可，不必相邻（每次消耗 1 枚令牌，可一次调动多人）。\n' +
+        '「输送」同样可以在己方城池之间调拨金粮。');
+      this.hintCmd('移动');
       return true;
     }
 
@@ -501,22 +538,26 @@
       this._wrap(routine);
     }
     async _wrap(routine) {
-      const cities0 = G().cityCount(G().player);
-      let tip = false;
+      const g0 = G();
+      const before = new Set(g0.citiesOf(g0.player).map(c => c.id));
+      this._hint = null;              // 下达新指令时停止提示闪烁
+      let gainedNow = false;
       this.busy = true; this.refreshAll();
       try {
         await routine();
-        // 出征攻下 / 敌将献城等使城池增加：第一次时提示「移动」
-        if (G().playerFaction.alive && G().cityCount(G().player) > cities0) {
-          SG.Game.map.refresh(G());
-          this.refreshAll();
-          tip = await this.firstConquestTip();
+        // 出征攻下 / 敌将献城等使城池增加：第一次时提示「移动」（见 moveTip）
+        const g = G();
+        if (g.playerFaction.alive && !tipShown()) {
+          const gained = g.citiesOf(g.player).filter(c => !before.has(c.id)).map(c => c.id);
+          if (gained.length > 0) { gainedNow = true; this._tipPending = true; this._tipCities = gained.concat(this._tipCities); }
         }
       } catch (e) { console.error(e); }
       this.busy = false;
       SG.Game.map.refresh(G());
-      if (tip) this.hintCmd('移动');
       this.refreshAll();
+      if (this._tipPending && !this.endMonth) {   // 刚点了「结束本月」时不弹，留到月初
+        try { await this.moveTip(gainedNow); } catch (e) { console.error(e); }
+      }
     }
     useToken() { G().tokens = Math.max(0, G().tokens - 1); }
 
