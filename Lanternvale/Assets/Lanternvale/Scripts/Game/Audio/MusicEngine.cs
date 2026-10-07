@@ -2,8 +2,10 @@
 //
 // A Composer walks a mood's chord progression in 8th-note steps and triggers voices: warm pads
 // (wavetable, detuned pair, low-passed), Karplus-Strong harp plucks, music-box bells, a soft
-// sine bass, an airy flute (forest) and, for combat, a gentle kick + shaker pulse. Melodies are
-// pentatonic random walks organised in 2-bar phrases (A A' B rest) so they feel composed.
+// sine bass, an airy flute (forest) and, for combat, a gentle kick + shaker pulse. The expansion moods add a held
+// root-and-fifth drone (highlands, fen, peaks, dungeon, raid), a low frame drum (dungeon heartbeat, raid war drums),
+// octave-up bell melodies and sparse high chimes. Melodies are pentatonic random walks organised in 2-bar phrases
+// (A A' B rest) so they feel composed.
 // A shared ping-pong delay and a small Schroeder reverb glue everything together.
 //
 // Threading: Composers are built on the main thread and handed over atomically; the audio thread
@@ -33,28 +35,123 @@ namespace Lanternvale.Game
         public int[] kickSteps = new int[0];
         public bool add9;
         public float reverb = 0.3f, delay = 0.15f;
+        // expansion voices (all off by default, so the original moods render exactly as before)
+        public float drone;                  // held root + fifth below the pads, re-struck every progression cycle
+        public float tom;                    // low frame drum on tomSteps
+        public int[] tomSteps = new int[0];
+        public int bellOctave;               // semitones added to bell melodies (12 = crystalline, an octave up)
+        public float chime;                  // chance per step of a soft high chord-tone bell (drips, snow glints)
     }
 
     internal static class MoodLibrary
     {
+        /// <summary>Every mood name (Music.Moods).</summary>
+        public static readonly string[] All =
+            { "village", "forest", "shrine", "combat", "menu", "highlands", "town", "fen", "peaks", "dungeon", "raid" };
+
+        static readonly char[] Separators = { ' ', '\t', ',', ';', '/' };
+
+        static bool IsMood(string s)
+        {
+            for (int i = 0; i < All.Length; i++) if (All[i] == s) return true;
+            return false;
+        }
+
         /// <summary>
-        /// Normalises a mood or map music id ("music_whisperwood", "forest", "boss_battle"…) to one of
-        /// village, forest, shrine, combat, menu.
+        /// Normalises a mood or map music id ("music_whisperwood", "forest", "boss_battle", "music_raid raid_hollow_heart"…)
+        /// to one of <see cref="All"/>. The input is read token by token (Music.MoodForMap passes "music_key map_id"): an
+        /// exact mood name or "music_&lt;mood&gt;" wins, then the token's keywords, before the next token is looked at — so
+        /// an explicit key beats keywords in the map id ("music_raid raid_hollow_heart" is raid, not the hollow's shrine).
+        /// Unknown names play village.
         /// </summary>
         public static string Normalize(string mood)
         {
-            var m = (mood ?? "").ToLowerInvariant();
-            if (m.Contains("combat") || m.Contains("battle") || m.Contains("boss") || m.Contains("fight")) return "combat";
-            if (m.Contains("menu") || m.Contains("title")) return "menu";
-            if (m.Contains("shrine") || m.Contains("dungeon") || m.Contains("crypt") || m.Contains("sad") || m.Contains("hollow")) return "shrine";
-            if (m.Contains("forest") || m.Contains("wood") || m.Contains("wild") || m.Contains("glade")) return "forest";
+            var tokens = (mood ?? "").ToLowerInvariant().Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                var t = tokens[i];
+                var bare = t.StartsWith("music_", StringComparison.Ordinal) ? t.Substring(6) : t;
+                if (IsMood(bare)) return bare;
+                var k = Keyword(t);
+                if (k != null) return k;
+            }
             return "village";
+        }
+
+        static string Keyword(string m)
+        {
+            if (m.Contains("combat") || m.Contains("battle") || m.Contains("boss") || m.Contains("fight")) return "combat";
+            if (m.Contains("raid")) return "raid";
+            if (m.Contains("menu") || m.Contains("title")) return "menu";
+            if (m.Contains("dungeon") || m.Contains("dgn_") || m.Contains("cave") || m.Contains("crypt") || m.Contains("catacomb")
+                || m.Contains("barrow") || m.Contains("vault") || m.Contains("grotto") || m.Contains("sanctum") || m.Contains("hollows")) return "dungeon";
+            if (m.Contains("shrine") || m.Contains("sad") || m.Contains("hollow")) return "shrine";
+            if (m.Contains("forest") || m.Contains("wood") || m.Contains("wild") || m.Contains("glade")) return "forest";
+            if (m.Contains("fen") || m.Contains("mire") || m.Contains("bog") || m.Contains("swamp") || m.Contains("marsh")) return "fen";
+            if (m.Contains("peak") || m.Contains("mountain") || m.Contains("snow") || m.Contains("sky") || m.Contains("summit")) return "peaks";
+            if (m.Contains("highland") || m.Contains("downs") || m.Contains("amber")) return "highlands";
+            if (m.Contains("town") || m.Contains("city") || m.Contains("harbo") || m.Contains("market") || m.Contains("brightwater")) return "town";
+            return null;
         }
 
         public static MoodSpec Get(string mood)
         {
             switch (Normalize(mood))
             {
+                case "highlands": // golden downs: D mixolydian 6/8, a piper's flute over a root-and-fifth drone
+                    return new MoodSpec
+                    {
+                        name = "highlands", bpm = 84f, stepsPerBar = 6, root = 50, mode = new[] { 0, 2, 4, 5, 7, 9, 10 },
+                        progression = new[] { 0, 6, 3, 0 }, barsPerChord = 2, melodyDegrees = new[] { 0, 1, 2, 4, 5 }, melodyBase = 14,
+                        melodyDensity = 0.42f, fluteMelody = true, pad = 0.06f, pluck = 0.17f, bell = 0.08f, bass = 0.13f, flute = 0.13f,
+                        arp = new[] { 0, -1, 2, 3, -1, 2 }, arpProb = 0.8f, bassSteps = new[] { 0, 3 }, drone = 0.055f,
+                        reverb = 0.4f, delay = 0.2f,
+                    };
+                case "town": // river trade town: bustling G major, busy harp, bright music box, a light shaker
+                    return new MoodSpec
+                    {
+                        name = "town", bpm = 104f, stepsPerBar = 8, root = 55, mode = new[] { 0, 2, 4, 5, 7, 9, 11 },
+                        progression = new[] { 0, 5, 3, 4 }, barsPerChord = 1, melodyDegrees = new[] { 0, 1, 2, 4, 5 }, melodyBase = 7,
+                        melodyDensity = 0.5f, pad = 0.05f, pluck = 0.19f, bell = 0.15f, bass = 0.17f, shaker = 0.028f,
+                        arp = new[] { 0, 2, 1, 2, 3, 2, 1, 2 }, arpProb = 0.9f, bassSteps = new[] { 0, 4 }, add9 = true,
+                        reverb = 0.24f, delay = 0.12f,
+                    };
+                case "fen": // misty fen: slow E dorian, breathy low flute, drips, a very wet room
+                    return new MoodSpec
+                    {
+                        name = "fen", bpm = 60f, stepsPerBar = 8, root = 52, mode = new[] { 0, 2, 3, 5, 7, 9, 10 },
+                        progression = new[] { 0, 3, 0, 4 }, barsPerChord = 2, melodyDegrees = new[] { 0, 2, 3, 4, 5 }, melodyBase = 7,
+                        melodyDensity = 0.2f, fluteMelody = true, pad = 0.1f, pluck = 0.12f, bell = 0.07f, bass = 0.12f, flute = 0.1f,
+                        arp = new[] { -1, -1, 0, -1, -1, 2, -1, -1 }, arpProb = 0.5f, bassSteps = new[] { 0 }, drone = 0.03f, chime = 0.07f,
+                        reverb = 0.56f, delay = 0.32f,
+                    };
+                case "peaks": // snowy peaks: airy F lydian, crystalline high bells, glints of snow
+                    return new MoodSpec
+                    {
+                        name = "peaks", bpm = 66f, stepsPerBar = 8, root = 53, mode = new[] { 0, 2, 4, 6, 7, 9, 11 },
+                        progression = new[] { 0, 1, 0, 4 }, barsPerChord = 2, melodyDegrees = new[] { 0, 1, 2, 4, 5 }, melodyBase = 14,
+                        melodyDensity = 0.3f, pad = 0.095f, pluck = 0.12f, bell = 0.13f, bass = 0.12f, bellOctave = 12, chime = 0.12f,
+                        arp = new[] { 0, -1, 4, -1, 3, -1, 4, -1 }, arpProb = 0.7f, bassSteps = new[] { 0 }, drone = 0.035f, add9 = true,
+                        reverb = 0.6f, delay = 0.3f,
+                    };
+                case "dungeon": // hidden dungeons: slow C# phrygian, low drone, a soft heartbeat drum, cavern echoes
+                    return new MoodSpec
+                    {
+                        name = "dungeon", bpm = 54f, stepsPerBar = 8, root = 49, mode = new[] { 0, 1, 3, 5, 7, 8, 10 },
+                        progression = new[] { 0, 1, 0, 5 }, barsPerChord = 2, melodyDegrees = new[] { 0, 1, 2, 4, 5 }, melodyBase = 14,
+                        melodyDensity = 0.18f, pad = 0.09f, pluck = 0.14f, bell = 0.1f, bass = 0.15f,
+                        arp = new[] { 0, -1, -1, 1, -1, -1, 2, -1 }, arpProb = 0.5f, bassSteps = new[] { 0 }, drone = 0.06f,
+                        tom = 0.12f, tomSteps = new[] { 0 }, chime = 0.04f, reverb = 0.58f, delay = 0.35f,
+                    };
+                case "raid": // raids: a heroic D harmonic-minor gallop in 6/8, war drums, a flute call
+                    return new MoodSpec
+                    {
+                        name = "raid", bpm = 120f, stepsPerBar = 6, root = 50, mode = new[] { 0, 2, 3, 5, 7, 8, 11 },
+                        progression = new[] { 0, 5, 2, 4 }, barsPerChord = 1, melodyDegrees = new[] { 0, 2, 3, 4, 6 }, melodyBase = 14,
+                        melodyDensity = 0.35f, fluteMelody = true, pad = 0.05f, pluck = 0.17f, bell = 0.09f, bass = 0.2f, flute = 0.12f,
+                        kick = 0.26f, shaker = 0.03f, arp = new[] { 0, 2, 3, 0, 2, 4 }, arpProb = 1f, bassSteps = new[] { 0, 3, 5 },
+                        kickSteps = new[] { 0, 3 }, tom = 0.2f, tomSteps = new[] { 2, 5 }, drone = 0.04f, reverb = 0.3f, delay = 0.12f,
+                    };
                 case "forest": case "whisperwood": case "wilds":
                     return new MoodSpec
                     {
@@ -63,7 +160,7 @@ namespace Lanternvale.Game
                         melodyDensity = 0.3f, fluteMelody = true, pad = 0.085f, pluck = 0.16f, bell = 0.09f, bass = 0.14f, flute = 0.13f,
                         arp = new[] { -1, -1, 2, -1, 3, -1, 4, -1 }, arpProb = 0.4f, bassSteps = new[] { 0 }, add9 = true, reverb = 0.42f, delay = 0.22f,
                     };
-                case "shrine": case "dungeon": case "sad":
+                case "shrine": case "sad":
                     return new MoodSpec
                     {
                         name = "shrine", bpm = 56f, stepsPerBar = 8, root = 45, mode = new[] { 0, 2, 3, 5, 7, 8, 10 },
@@ -111,6 +208,7 @@ namespace Lanternvale.Game
         readonly int[] phrase, previousPhrase;
         readonly int phraseLen;
         const int Rest = int.MinValue;
+        static readonly int[] ChimeTones = { 0, 2, 4, 7 };   // root, 3rd, 5th, octave (scale degrees above the chord)
         int lastMelody = Rest;
         public bool Released;   // fading out for good
 
@@ -176,6 +274,11 @@ namespace Lanternvale.Game
                     e.Pad(this, Wrap(Midi(chord + 4), lo, hi), holdSteps, -0.1f);
                     if (spec.add9) e.Pad(this, Wrap(Midi(chord + 8), lo + 7, hi + 7), holdSteps, 0.45f, 0.6f);
                 }
+                if (spec.drone > 0f)
+                {
+                    int cycleBars = Math.Max(1, spec.barsPerChord) * spec.progression.Length;
+                    if (bar % cycleBars == 0) e.Drone(this, spec.root - 12, cycleBars * spec.stepsPerBar);
+                }
                 if (barInPhrase == 0) NewPhrase();
             }
 
@@ -192,7 +295,14 @@ namespace Lanternvale.Game
                     e.Flute(this, midi, hold);
                     if (Rand() < 0.25f) e.Bell(this, midi + 12, spec.bell * 0.5f);
                 }
-                else e.Bell(this, midi, spec.bell * (0.8f + 0.3f * Rand()));
+                else e.Bell(this, midi + spec.bellOctave, spec.bell * (0.8f + 0.3f * Rand()));
+            }
+
+            // chime: a sparse, soft high chord tone (drips in the fen, glints of snow on the peaks)
+            if (spec.chime > 0f && Rand() < spec.chime)
+            {
+                int deg = chord + ChimeTones[RandInt(ChimeTones.Length)];
+                e.Bell(this, Wrap(Midi(deg), spec.root + 24, spec.root + 36), spec.bell * 0.45f);
             }
 
             // arpeggio / harp
@@ -218,6 +328,8 @@ namespace Lanternvale.Game
                 if (spec.kickSteps[i] == step) e.Kick(this, spec.kick);
             if (spec.kick > 0f && step == 6 && Rand() < 0.3f) e.Kick(this, spec.kick * 0.6f);
             if (spec.shaker > 0f && (step & 1) == 1) e.Shaker(this, spec.shaker * (0.7f + 0.3f * Rand()));
+            for (int i = 0; i < spec.tomSteps.Length; i++)
+                if (spec.tomSteps[i] == step) e.Tom(this, spec.tom * (step == 0 ? 1f : 0.8f));
 
             step++;
             if (step >= spec.stepsPerBar) { step = 0; bar++; }
@@ -304,7 +416,7 @@ namespace Lanternvale.Game
         const int MaxVoices = 40;
         static float[] sineTable, padTable;
 
-        enum Kind { Off, Pad, Pluck, Bell, Bass, Kick, Shaker, Flute }
+        enum Kind { Off, Pad, Pluck, Bell, Bass, Kick, Shaker, Flute, Drone, Tom }
 
         sealed class Voice
         {
@@ -444,7 +556,7 @@ namespace Lanternvale.Game
             {
                 var v = voices[i];
                 if (v.kind == Kind.Off) { best = v; break; }
-                float score = v.env * (v.kind == Kind.Pad ? 4f : 1f) + (v.releasing ? 0f : 0.5f);
+                float score = v.env * (v.kind == Kind.Pad || v.kind == Kind.Drone ? 4f : 1f) + (v.releasing ? 0f : 0.5f);
                 if (score < bestScore) { bestScore = score; best = v; }
             }
             best.kind = kind;
@@ -569,6 +681,46 @@ namespace Lanternvale.Game
             v.lpA = 1f - (float)Math.Exp(-2.0 * Math.PI * 1200.0 / sr);
         }
 
+        /// <summary>
+        /// Drone: root and fifth on the soft pad wavetable, held for a whole progression cycle with a slow swell and a
+        /// gently breathing low-pass (a cosy organ / piper's drone). The previous drone of this composer fades out.
+        /// </summary>
+        public void Drone(Composer o, int midi, int holdSteps)
+        {
+            float slow = (float)Math.Exp(-1.0 / (sr * 1.5));
+            for (int i = 0; i < MaxVoices; i++)
+                if (voices[i].kind == Kind.Drone && voices[i].owner == o && !voices[i].releasing) { voices[i].releasing = true; voices[i].releaseMul = slow; }
+            var v = Alloc(o, Kind.Drone);
+            float f = Freq(midi);
+            v.inc1 = f / sr;
+            v.inc2 = f * 1.4983f / sr;                       // a just fifth, slightly tempered: slow, warm beating
+            v.ph2 = Rand();
+            v.amp = o.spec.drone;
+            v.attackInc = 1f / (sr * 2.5f);
+            v.releaseMul = slow;
+            v.hold = holdSteps * o.samplesPerStep;
+            v.vibPh = Rand();
+            v.vibInc = 0.11f / sr;                           // filter breath every ~9 s
+            v.lpA = 1f - (float)Math.Exp(-2.0 * Math.PI * 700.0 / sr);
+            SetPan(v, 0f);
+        }
+
+        /// <summary>Tom: a low frame drum (pitch-dropping sine with a short skin noise), longer and lower than Kick.</summary>
+        public void Tom(Composer o, float amp)
+        {
+            var v = Alloc(o, Kind.Tom);
+            v.pitchEnv = 1f;
+            v.pitchDecay = (float)Math.Exp(-1.0 / (sr * 0.06));
+            v.d1 = (float)Math.Exp(-1.0 / (sr * 0.3));
+            v.d2 = (float)Math.Exp(-1.0 / (sr * 0.015));
+            v.env = 1f; v.e2 = 1f;
+            v.amp = amp;
+            v.hold = sr * 2;
+            v.delay = 0;
+            v.lpA = 1f - (float)Math.Exp(-2.0 * Math.PI * 1800.0 / sr);
+            SetPan(v, -0.15f);
+        }
+
         void RenderVoice(Voice v, int n)
         {
             float g = v.owner != null ? v.owner.gainPrev : 0f;
@@ -645,6 +797,32 @@ namespace Lanternvale.Game
                         float breath = ((v.noise & 0xFFFF) / 32768f - 1f) * 0.05f;
                         v.lp += (breath - v.lp) * v.lpA;
                         s = (Lookup(sineTable, v.ph1) + 0.12f * Lookup(sineTable, p2) + v.lp) * v.env;
+                        break;
+                    }
+                    case Kind.Drone:
+                    {
+                        if (!v.releasing) { v.env = Math.Min(1f, v.env + v.attackInc); if (v.age > v.hold) v.releasing = true; }
+                        else { v.env *= v.releaseMul; if (v.env < 0.002f) { v.kind = Kind.Off; return; } }
+                        v.ph1 += v.inc1; if (v.ph1 >= 1f) v.ph1 -= 1f;
+                        v.ph2 += v.inc2; if (v.ph2 >= 1f) v.ph2 -= 1f;
+                        v.vibPh += v.vibInc; if (v.vibPh >= 1f) v.vibPh -= 1f;
+                        float x = Lookup(padTable, v.ph1) + 0.7f * Lookup(padTable, v.ph2);
+                        float a = v.lpA * (0.75f + 0.25f * Lookup(sineTable, v.vibPh));
+                        v.lp += (x - v.lp) * a;
+                        s = v.lp * v.env * 0.6f;
+                        break;
+                    }
+                    case Kind.Tom:
+                    {
+                        v.pitchEnv *= v.pitchDecay;
+                        v.env *= v.d1;
+                        v.e2 *= v.d2;
+                        if (v.env < 0.002f) { v.kind = Kind.Off; return; }
+                        v.ph1 += (62f + 48f * v.pitchEnv) / sr; if (v.ph1 >= 1f) v.ph1 -= 1f;
+                        v.noise ^= v.noise << 13; v.noise ^= v.noise >> 17; v.noise ^= v.noise << 5;
+                        float skin = (v.noise & 0xFFFF) / 32768f - 1f;
+                        v.lp += (skin - v.lp) * v.lpA;
+                        s = Lookup(sineTable, v.ph1) * v.env + v.lp * v.e2 * 0.35f;
                         break;
                     }
                     default:

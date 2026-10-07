@@ -226,6 +226,61 @@ Karplus-Strong harp, music box, bass, ping-pong delay + small reverb; equal-time
 Synthesized in `OnAudioFilterRead` on the audio thread (≈0.5–1.5% of one core measured on .NET; no allocations).
 **WebGL**: `OnAudioFilterRead` is unsupported there, so music is silent (SFX work).
 
+### 6.1 Synthesized SFX ids and moods (expansion)
+
+`SfxSynth.GeneratePcm(errors)` (same signature as before) returns mono 44.1 kHz `float[]` keyed `"<id>#<n>"`
+(variants n = 1…K) **plus** the plain `"<id>"`. The plain key is the *same array instance* as `"<id>#1"`, so old
+call sites keep working and a player can skip the duplicate with `ReferenceEquals`.
+
+The generator also offers priority tiers and fans out over worker threads:
+* `SfxSynth.GeneratePcmTier(tier, errors, maxThreads)` with `TierCount = 3`:
+  * tier 0: UI, core combat, school impacts and bow;
+  * tier 1: ranged, wind-ups, creatures and footsteps;
+  * tier 2: hooks and fanfares.
+* `SfxSynth.MaxThreads` (0 = cores − 1, at most 4).
+* `SfxSynth.Recipes` / `Recipe(id)`, which give K, tier, peak and length.
+* `SfxSynth.BaseId("hit_blade#3")` → `"hit_blade"`.
+* `LastTierMs` / `LastTotalMs`.
+
+All synthesis is pure maths (`SynthDsp.cs`: RBJ biquads, modal resonator banks with textbook mode ratios,
+contact-pulse excitation, grains, Freeverb-style room, source-filter voices, brass horn, FM, Doppler fly-by,
+stick-slip friction). It is deterministic per id and variant, and it is verified offline by
+`Tools/sfxpreview` (`check`, `sheet`, `render`, `music`).
+
+| group | ids | K |
+|---|---|---|
+| weapon layers | `hit_blade hit_axe hit_blunt hit_dagger hit_fist hit_bite hit_claw hit_slam hit_arrow hit_bolt hit_bullet`, plus `hit_physical` (generic) and `hit_crit` (heavy + crit sweetener) | 4 |
+| target materials (play a few dB under the weapon layer) | `mat_plate mat_mail mat_leather mat_cloth mat_flesh mat_fur mat_chitin mat_bone mat_wood mat_stone mat_ether mat_ice mat_scale mat_wet` | 4 |
+| defence | `parry block_wood block_metal dodge miss resist immune absorb` | 2 |
+| swings (whoosh peaks ≈ 0.13 s, before `AttackHitTime`) | `swing_light swing swing_heavy` | 4 |
+| ranged (play at release) | `bow xbow_release gun_fire throw_release arrow_flight` (0.55 s pass-by: pitch = 0.55 / flight s) `wand_zap` | 2–3 |
+| spells | `cast_fire cast_frost cast_arcane cast_shadow cast_holy cast_nature cast_lightning` (`cast_start` stays as the fallback), `impact_fire impact_frost impact_arcane impact_shadow impact_holy impact_nature impact_lightning shout_horn stomp` | 2 |
+| death and vocals | `body_fall_light body_fall_heavy armor_clatter` (body falls ≈ 0.6 s after death, scaled time), `vo_beast_yelp vo_humanoid_grunt vo_spirit_fade vo_wood_creak vo_stone_crumble vo_dragon_roar vo_frog_croak vo_gnoll_yip`; `death` stays as the party-defeat cue | 2 |
+| footsteps | `footstep_grass footstep_dirt footstep_leaves footstep_stone footstep_snow footstep_mud armor_jingle` | 4 |
+| hooks | `loot_rare loot_epic loot_legendary set_complete secret_found door_stone boss_pull raid_warning quest_accept quest_turnin portal_whoosh` (and the old `door`) | 2 |
+| UI and rewards (byte-identical to before) | `ui_click ui_open ui_close heal buff debuff death level_up quest coin chest_open door cast_start` | 1 |
+
+**Music moods** (`Music.Moods` = `MoodLibrary.All`):
+* the five originals;
+* **highlands**: D mixolydian 6/8 at 84 bpm, a piper's flute over a root-and-fifth drone;
+* **town**: a bustling G major at 104 bpm, busy harp, music box and a light shaker;
+* **fen**: a slow E dorian at 60 bpm, breathy low flute, drips (sparse high chimes) and a very wet room;
+* **peaks**: an airy F lydian at 66 bpm, octave-up crystalline bells and snow glints;
+* **dungeon**: a slow C♯ phrygian at 54 bpm, a low drone and a soft heartbeat drum;
+* **raid**: a heroic D harmonic-minor gallop in 6/8 at 120 bpm, war drums and a flute call.
+
+`MoodLibrary.Normalize` reads its input token by token (`MoodForMap` passes `"<music key> <map id>"`). An exact
+mood name or `music_<mood>` wins, then that token's keywords, before the next token is read. So
+`music_raid raid_hollow_heart` resolves to raid, not to the "hollow" shrine mood. Keyword fallbacks:
+* dungeon: dungeon, dgn_, cave, crypt, catacomb, barrow, vault, grotto, sanctum, hollows;
+* raid: raid;
+* fen: fen, mire, bog, swamp, marsh;
+* peaks: peak, mountain, snow, sky, summit;
+* highlands: highland, downs, amber;
+* town: town, city, harbo, market, brightwater.
+
+`Music.BattleMoodFor(mapDef)` returns `"raid"` on raid maps (`raidSize > 0`) and `"combat"` elsewhere.
+
 ## 7. DioramaPreview (developer QA)
 
 Add `DioramaPreview` to an empty GameObject (set `mapId`, empty = `config.startMap`) or call

@@ -1,6 +1,7 @@
 // Generative music front-end: Music.Play("village") crossfades to a mood. The score is synthesized
 // continuously by MusicEngine inside OnAudioFilterRead on a dedicated AudioSource (playing a silent
-// carrier clip so the filter always runs). Moods: village, forest, shrine, combat, menu.
+// carrier clip so the filter always runs). Moods: village, forest, shrine, combat, menu, and for the expansion
+// highlands, town, fen, peaks, dungeon, raid (MoodLibrary.All).
 // Note: OnAudioFilterRead is not supported on WebGL (music is silent there; SFX still work).
 using Lanternvale.Data;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace Lanternvale.Game
         public static Music Instance { get; private set; }
 
         /// <summary>Known moods.</summary>
-        public static readonly string[] Moods = { "village", "forest", "shrine", "combat", "menu" };
+        public static readonly string[] Moods = MoodLibrary.All;
 
         /// <summary>Currently requested mood ("" when stopped).</summary>
         public static string Mood { get; private set; } = "";
@@ -43,7 +44,8 @@ namespace Lanternvale.Game
 
         /// <summary>
         /// Crossfades to a mood (no-op if it's already playing). Accepts mood names or map music ids
-        /// such as "music_whisperwood" (matched by keyword; unknown names play "village").
+        /// such as "music_whisperwood" or "music_fen" (an explicit music_&lt;mood&gt; key wins, else keywords;
+        /// unknown names play "village").
         /// </summary>
         public static void Play(string mood, float fadeSeconds = 3f)
         {
@@ -60,7 +62,8 @@ namespace Lanternvale.Game
 
         /// <summary>
         /// Plays the mood for a map's music key: music_lanternvale → village, music_whisperwood →
-        /// forest, music_shrine → shrine; unknown keys → village.
+        /// forest, music_shrine → shrine, music_&lt;mood&gt; → that mood (highlands, town, fen, peaks, dungeon,
+        /// raid…); unknown keys → village.
         /// </summary>
         public static void PlayForMap(string musicKey, float fadeSeconds = 3f) => Play(MoodLibrary.Normalize(musicKey), fadeSeconds);
 
@@ -71,12 +74,21 @@ namespace Lanternvale.Game
             if (Instance != null && Instance.engine != null) Instance.engine.Stop(fadeSeconds);
         }
 
-        /// <summary>Mood for a map from MapDef.music (e.g. "music_whisperwood" → forest), else from the map id.</summary>
+        /// <summary>
+        /// Mood for a map from MapDef.music (e.g. "music_whisperwood" → forest, "music_raid" → raid), else from the map
+        /// id. The music key is resolved first, so its explicit mood or keywords beat keywords in the map id.
+        /// </summary>
         public static string MoodForMap(MapDef map)
         {
             if (map == null) return "village";
             return MoodLibrary.Normalize(!string.IsNullOrEmpty(map.music) ? map.music + " " + map.id : map.id);
         }
+
+        /// <summary>
+        /// Mood for a battle on a map: raid maps (MapDef.raidSize &gt; 0) keep their heroic raid score through the
+        /// fights, every other map switches to "combat".
+        /// </summary>
+        public static string BattleMoodFor(MapDef map) => map != null && map.raidSize > 0 ? "raid" : "combat";
 
         /// <summary>Normalised mood name for any mood/music id.</summary>
         public static string Normalize(string moodOrMusicId) => MoodLibrary.Normalize(moodOrMusicId);

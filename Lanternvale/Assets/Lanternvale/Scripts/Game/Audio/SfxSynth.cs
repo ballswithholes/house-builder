@@ -1,13 +1,19 @@
 // Offline synthesis of the game's sound effects into AudioClips (generated once at startup).
-// Soft, rounded timbres to match the cosy art: plucked harps (Karplus-Strong), music-box bells,
-// filtered noise for whooshes and impacts. Deterministic (fixed seeds).
+// UI and reward sounds are soft, rounded timbres to match the cosy art: plucked harps (Karplus-Strong), music-box
+// bells, filtered noise. Combat, creature and world sounds are physically informed and layered (contact transient +
+// modal body + tail + a small baked room; SynthDsp.cs, SfxRecipes.*.cs). Deterministic (fixed seeds per id/variant).
+//
+// Output contract (GeneratePcm): mono 44.1 kHz float[] per key. Every id is published as "<id>#<n>" (n = 1…K) plus
+// the plain "<id>", which is the same float[] instance as "<id>#1" (old call sites keep working, and a player can
+// skip the duplicate with ReferenceEquals).
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Lanternvale.Game
 {
-    internal sealed class SynthBuffer
+    internal sealed partial class SynthBuffer
     {
         public enum Wave { Sine, Triangle, Square, Saw }
 
@@ -168,27 +174,195 @@ namespace Lanternvale.Game
         }
     }
 
-    internal static class SfxSynth
+    /// <summary>One synthesized id: how to render each of its variants.</summary>
+    internal sealed class SfxRecipe
+    {
+        public string Id;
+        /// <summary>Number of variants K (published as "id#1" … "id#K").</summary>
+        public int Variants = 1;
+        /// <summary>Priority tier: 0 = UI + core combat, 1 = ranged/spells/creatures/footsteps, 2 = world hooks.</summary>
+        public int Tier;
+        /// <summary>Normalised peak of every variant.</summary>
+        public float Peak;
+        /// <summary>Rendered length before the silent tail is trimmed (the original recipes keep it exactly).</summary>
+        public float Seconds;
+        /// <summary>Original recipe: fixed seed, Finish (byte-identical to the pre-expansion clip).</summary>
+        public bool Legacy;
+        public int Seed;
+        public Action<SynthBuffer, int> Make;
+    }
+
+    internal static partial class SfxSynth
     {
         static float Midi(int m) => 440f * Mathf.Pow(2f, (m - 69) / 12f);
 
+        /// <summary>Number of priority tiers (GeneratePcmTier 0 … TierCount-1).</summary>
+        public const int TierCount = 3;
+
+        /// <summary>Worker threads for GeneratePcm (0 = auto: cores - 1, at most 4; 1 = the calling thread only).</summary>
+        public static int MaxThreads = 0;
+
+        /// <summary>Milliseconds the last GeneratePcm / GeneratePcmTier call took (wall clock), per tier and in total.</summary>
+        public static readonly double[] LastTierMs = new double[TierCount];
+        public static double LastTotalMs;
+
+        static volatile List<SfxRecipe> recipes;
+        static Dictionary<string, SfxRecipe> byId;
+        static readonly object gate = new object();
+
+        /// <summary>Every recipe in registration order (built once, thread-safe).</summary>
+        public static IReadOnlyList<SfxRecipe> Recipes { get { Build(); return recipes; } }
+
+        /// <summary>The recipe of a base id, or null.</summary>
+        public static SfxRecipe Recipe(string id) { Build(); return id != null && byId.TryGetValue(BaseId(id), out var r) ? r : null; }
+
+        /// <summary>"hit_blade#3" → "hit_blade"; plain ids are returned unchanged.</summary>
+        public static string BaseId(string key)
+        {
+            if (key == null) return null;
+            int i = key.IndexOf('#');
+            return i < 0 ? key : key.Substring(0, i);
+        }
+
+        /// <summary>"hit_blade", 3 → "hit_blade#3".</summary>
+        public static string VariantKey(string id, int n) => id + "#" + n;
+
         /// <summary>
-        /// Synthesizes every effect as mono 44.1 kHz samples. Pure maths (no Unity API), so it can run
-        /// on a worker thread; ~0.1–0.3 s of CPU in total.
+        /// Synthesizes every effect (all tiers) as mono 44.1 kHz samples, keyed "id#n" plus the plain id (= variant 1).
+        /// Pure maths (no Unity API), so it can run on a worker thread; it fans out over MaxThreads threads.
         /// </summary>
         public static Dictionary<string, float[]> GeneratePcm(List<string> errors = null)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var d = new Dictionary<string, float[]>(StringComparer.Ordinal);
-            void Add(string id, float peak, float seconds, int seed, Action<SynthBuffer> make)
+            for (int t = 0; t < TierCount; t++)
+                foreach (var kv in GeneratePcmTier(t, errors)) d[kv.Key] = kv.Value;
+            LastTotalMs = sw.Elapsed.TotalMilliseconds;
+            return d;
+        }
+
+        /// <summary>
+        /// Synthesizes one priority tier (0 = UI + core combat: publish it first; 1 = ranged, spells, creatures,
+        /// footsteps; 2 = world hooks and loot fanfares). Keys as in GeneratePcm.
+        /// </summary>
+        public static Dictionary<string, float[]> GeneratePcmTier(int tier, List<string> errors = null, int maxThreads = 0)
+        {
+            Build();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var jobs = new List<KeyValuePair<SfxRecipe, int>>();
+            foreach (var r in recipes)
+                if (r.Tier == tier)
+                    for (int v = 1; v <= r.Variants; v++) jobs.Add(new KeyValuePair<SfxRecipe, int>(r, v));
+            var outp = new float[jobs.Count][];
+            // longest first: better balance across threads (the result does not depend on the order)
+            var order = new int[jobs.Count];
+            for (int i = 0; i < order.Length; i++) order[i] = i;
+            Array.Sort(order, (a, b) =>
             {
-                try
+                int c = jobs[b].Key.Seconds.CompareTo(jobs[a].Key.Seconds);
+                return c != 0 ? c : a.CompareTo(b);
+            });
+            int threads = maxThreads > 0 ? maxThreads : MaxThreads > 0 ? MaxThreads : Math.Max(1, Math.Min(4, Environment.ProcessorCount - 1));
+#if UNITY_WEBGL && !UNITY_EDITOR
+            threads = 1;
+#endif
+            void Run(int i)
+            {
+                var job = jobs[order[i]];
+                try { outp[order[i]] = Render(job.Key, job.Value); }
+                catch (Exception e)
                 {
-                    var b = new SynthBuffer(seconds, seed);
-                    make(b);
-                    d[id] = b.Finish(peak);
+                    if (errors != null) lock (errors) errors.Add(VariantKey(job.Key.Id, job.Value) + ": " + e.Message);
                 }
-                catch (Exception e) { errors?.Add(id + ": " + e.Message); }
             }
+            if (threads <= 1 || jobs.Count < 2) for (int i = 0; i < jobs.Count; i++) Run(i);
+            else Parallel.For(0, jobs.Count, new ParallelOptions { MaxDegreeOfParallelism = threads }, Run);
+
+            var d = new Dictionary<string, float[]>(StringComparer.Ordinal);
+            for (int i = 0; i < jobs.Count; i++)
+            {
+                if (outp[i] == null) continue;
+                var r = jobs[i].Key;
+                int v = jobs[i].Value;
+                d[VariantKey(r.Id, v)] = outp[i];
+                if (v == 1) d[r.Id] = outp[i];
+            }
+            if (tier >= 0 && tier < TierCount) LastTierMs[tier] = sw.Elapsed.TotalMilliseconds;
+            return d;
+        }
+
+        /// <summary>Renders one variant (1-based) of a recipe. Deterministic: same recipe + variant → same samples.</summary>
+        public static float[] Render(SfxRecipe r, int variant)
+        {
+            if (r.Legacy)
+            {
+                var lb = new SynthBuffer(r.Seconds, r.Seed);
+                r.Make(lb, variant);
+                return lb.Finish(r.Peak);
+            }
+            var b = new SynthBuffer(r.Seconds, SeedFor(r.Id, variant));
+            r.Make(b, variant);
+            return b.FinishTrim(r.Peak);
+        }
+
+        /// <summary>Stable seed from the id and variant (FNV-1a; string.GetHashCode is randomised per process).</summary>
+        public static int SeedFor(string id, int variant)
+        {
+            uint h = 2166136261u;
+            for (int i = 0; i < id.Length; i++) { h ^= id[i]; h *= 16777619u; }
+            h ^= (uint)variant * 0x9E3779B1u;
+            h *= 16777619u;
+            return (int)(h & 0x7FFFFFFF);
+        }
+
+        static void Build()
+        {
+            if (recipes != null) return;
+            lock (gate)
+            {
+                if (recipes != null) return;
+                var reg = new Registry();
+                AddLegacy(reg);
+                AddCombat(reg);
+                AddRanged(reg);
+                AddSpells(reg);
+                AddCreatures(reg);
+                AddWorld(reg);
+                var map = new Dictionary<string, SfxRecipe>(StringComparer.Ordinal);
+                foreach (var r in reg.List) map[r.Id] = r;
+                byId = map;
+                recipes = reg.List;
+            }
+        }
+
+        /// <summary>Collects recipes; a later registration of the same id replaces the earlier one in place.</summary>
+        internal sealed class Registry
+        {
+            public readonly List<SfxRecipe> List = new List<SfxRecipe>();
+
+            void Put(SfxRecipe r)
+            {
+                for (int i = 0; i < List.Count; i++)
+                    if (List[i].Id == r.Id) { List[i] = r; return; }
+                List.Add(r);
+            }
+
+            public void Legacy(string id, float peak, float seconds, int seed, Action<SynthBuffer> make)
+                => Put(new SfxRecipe { Id = id, Variants = 1, Tier = 0, Peak = peak, Seconds = seconds, Seed = seed, Legacy = true, Make = (b, v) => make(b) });
+
+            /// <summary>A layered recipe with K variants (make receives the 1-based variant index).</summary>
+            public void Add(string id, int tier, int variants, float peak, float seconds, Action<SynthBuffer, int> make)
+                => Put(new SfxRecipe { Id = id, Variants = Math.Max(1, variants), Tier = tier, Peak = peak, Seconds = seconds, Make = make });
+        }
+
+        /// <summary>
+        /// The original recipes that stay byte-identical (UI chimes, rewards, cast_start, death, door…): fixed seed and
+        /// Finish. The combat ids among them (hit_physical, hit_crit, swing, bow, impact_*, footstep_grass) are
+        /// re-registered by the layered recipes in SfxRecipes.*.cs, which replace them in place.
+        /// </summary>
+        static void AddLegacy(Registry r)
+        {
+            void Add(string id, float peak, float seconds, int seed, Action<SynthBuffer> make) => r.Legacy(id, peak, seconds, seed, make);
             var W = SynthBuffer.Wave.Sine;
 
             Add("ui_click", 0.32f, 0.07f, 1, b =>
@@ -342,7 +516,6 @@ namespace Lanternvale.Game
                 b.Tone(0.42f, 0.2f, 110f, 58f, 0.7f, 0.002f, 0.06f);
                 b.Noise(0.42f, 0.1f, 0.45f, 0.001f, 0.03f, 800f);
             });
-            return d;
         }
     }
 }
