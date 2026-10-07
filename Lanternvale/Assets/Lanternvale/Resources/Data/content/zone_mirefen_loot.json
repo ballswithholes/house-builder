@@ -1,0 +1,165 @@
+{
+  "lootTables": [
+    {
+      "id": "lt_mf_mireling",
+      "goldMin": 120,
+      "goldMax": 340,
+      "entries": [
+        {"item": "mf_fen_glass", "chance": 40},
+        {"item": "mf_junk_pretty_pebble", "chance": 25},
+        {"item": "mf_junk_eel_skin", "chance": 20},
+        {"item": "mf_junk_lantern_ring", "chance": 12},
+        {"item": "food_lantern_stew", "chance": 6},
+        {"item": "potion_healing", "chance": 4},
+        {"random": true, "chance": 6, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_mireling_oracle",
+      "goldMin": 160,
+      "goldMax": 380,
+      "entries": [
+        {"item": "mf_fen_glass", "chance": 45},
+        {"item": "mf_junk_pretty_pebble", "chance": 25},
+        {"item": "mf_junk_lantern_ring", "chance": 15},
+        {"item": "drink_melon_juice", "chance": 8},
+        {"random": true, "chance": 7, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_chief",
+      "goldMin": 1500,
+      "goldMax": 2600,
+      "entries": [
+        {"item": "mf_gubbagulps_pearl"},
+        {"item": "mf_gubbagulps_crown"},
+        {"item": "mf_junk_lantern_ring", "min": 2, "max": 4},
+        {"random": true, "chance": 60, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_crocolisk",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "mf_croc_tail", "chance": 45},
+        {"item": "mf_junk_croc_tooth", "chance": 40},
+        {"item": "mf_junk_soggy_boot", "chance": 8},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_old_gnasher",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "mf_gnashers_tooth"},
+        {"item": "mf_croc_tail", "min": 2, "max": 3},
+        {"item": "mf_junk_soggy_boot"},
+        {"random": true, "chance": 50, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_bog_ghoul",
+      "goldMin": 100,
+      "goldMax": 260,
+      "entries": [
+        {"item": "mf_junk_bog_cloth", "chance": 35},
+        {"item": "mf_junk_lantern_ring", "chance": 15},
+        {"item": "potion_healing", "chance": 4},
+        {"random": true, "chance": 5, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_bellringer",
+      "goldMin": 800,
+      "goldMax": 1400,
+      "entries": [
+        {"item": "mf_bellringers_mallet", "chance": 60},
+        {"item": "mf_junk_bog_cloth", "min": 1, "max": 2},
+        {"random": true, "chance": 50, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_fen_wisp",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "mf_wisp_glow", "chance": 55},
+        {"item": "mf_junk_wisp_dust", "chance": 40},
+        {"random": true, "chance": 3, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_mire_hag",
+      "goldMin": 200,
+      "goldMax": 460,
+      "entries": [
+        {"item": "mf_junk_frog_bone_charm", "chance": 20},
+        {"item": "potion_healing", "chance": 6},
+        {"item": "drink_melon_juice", "chance": 8},
+        {"random": true, "chance": 7, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_blight_hound",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "mf_junk_hound_fang", "chance": 45},
+        {"random": true, "chance": 4, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_auntie_gall",
+      "goldMin": 4000,
+      "goldMax": 6200,
+      "entries": [
+        {"pool": ["mf_galls_crook", "mf_cauldron_lantern", "mf_coven_reed_mantle"], "partyUsable": true},
+        {"random": true, "chance": 35, "quality": "Rare"},
+        {"random": true, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_mf_chest_coven",
+      "goldMin": 1500,
+      "goldMax": 3000,
+      "entries": [
+        {"random": true, "quality": "Uncommon"},
+        {"random": true, "chance": 25, "quality": "Rare"},
+        {"item": "potion_healing", "min": 1, "max": 2},
+        {"item": "mf_junk_frog_bone_charm", "min": 1, "max": 3}
+      ]
+    },
+    {
+      "id": "lt_mf_chest_barrow",
+      "goldMin": 900,
+      "goldMax": 1800,
+      "entries": [
+        {"random": true, "quality": "Uncommon"},
+        {"random": true, "chance": 15, "quality": "Rare"},
+        {"item": "mf_junk_lantern_ring", "min": 2, "max": 4}
+      ]
+    },
+    {
+      "id": "lt_mf_chest_heron",
+      "goldMin": 2500,
+      "goldMax": 4000,
+      "entries": [
+        {"random": true, "chance": 60, "quality": "Rare"},
+        {"random": true, "quality": "Uncommon"},
+        {"item": "potion_healing", "min": 2, "max": 3}
+      ]
+    },
+    {
+      "id": "lt_mf_chest_fen",
+      "goldMin": 1200,
+      "goldMax": 2400,
+      "entries": [
+        {"random": true, "quality": "Uncommon"},
+        {"random": true, "chance": 20, "quality": "Rare"},
+        {"item": "food_lantern_stew", "min": 2, "max": 4}
+      ]
+    }
+  ]
+}

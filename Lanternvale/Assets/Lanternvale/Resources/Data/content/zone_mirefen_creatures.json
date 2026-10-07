@@ -1,0 +1,1060 @@
+{
+  "_note": "Mirefen creatures (levels 18-24 via levelFloor/levelCap): mirelings, crocolisks, bog ghouls, fen wisps, Mother Mire's coven, and Auntie Gall. Instant damage and heals have cooldown >= 6; big casts are Telegraphs.",
+  "creatures": [
+    {
+      "id": "cr_mf_mireling",
+      "name": "Mireling Croaker",
+      "description": "Frog-folk of the Croaking Stones: round, wet, grinning, and swinging a club with the confidence of someone who has never lost an argument to a heron.",
+      "sprite": "cr_mireling",
+      "portrait": "cr_mossling",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 0.95,
+      "attackSpeed": 2.0,
+      "moveSpeed": 9,
+      "size": 1.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_driftwood_bonk", "priority": 5},
+        {"ability": "cr_mf_mud_spit", "priority": 4, "chance": 45}
+      ],
+      "passives": ["cr_mf_frog_skin"],
+      "lootTable": "lt_mf_mireling",
+      "faction": "Mirelings",
+      "bark": "Grrrbbit! Dry-foot! Dry-foot in the reeds!",
+      "material": "wet",
+      "voice": "frog"
+    },
+    {
+      "id": "cr_mf_mireling_hunter",
+      "name": "Mireling Spearhunter",
+      "description": "A reed headband, a creel full of fish, and a bone-tipped spear that has never once missed a fish. You are larger than a fish.",
+      "sprite": "cr_mireling_hunter",
+      "portrait": "cr_mossling",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 0.9,
+      "attackSpeed": 2.0,
+      "ranged": true,
+      "rangedRange": 25,
+      "moveSpeed": 9,
+      "size": 1.15,
+      "ai": "Ranged",
+      "abilities": [
+        {"ability": "cr_mf_hunting_net", "priority": 6, "chance": 60},
+        {"ability": "cr_mf_barbed_spear", "priority": 5}
+      ],
+      "passives": ["cr_mf_frog_skin"],
+      "lootTable": "lt_mf_mireling",
+      "faction": "Mirelings",
+      "material": "wet",
+      "voice": "frog"
+    },
+    {
+      "id": "cr_mf_mireling_oracle",
+      "name": "Mireling Bubble-Oracle",
+      "description": "A mireling elder with a conch-topped staff and a pearl that glows when it has opinions. It has many opinions.",
+      "sprite": "cr_mireling_oracle",
+      "portrait": "cr_mossling_shaman",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 0.85,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 9,
+      "size": 1.2,
+      "ai": "Healer",
+      "abilities": [
+        {"ability": "cr_mf_bubble_mend", "priority": 8, "condition": "allyHpBelow:55"},
+        {"ability": "cr_mf_bubble_ward", "priority": 6, "condition": "allyHpBelow:80", "chance": 60},
+        {"ability": "cr_mf_bog_bolt", "priority": 3}
+      ],
+      "passives": ["cr_mf_frog_skin"],
+      "lootTable": "lt_mf_mireling_oracle",
+      "faction": "Mirelings",
+      "material": "wet",
+      "voice": "frog"
+    },
+    {
+      "id": "cr_mf_mireling_chief",
+      "name": "Gubbagulp, Chief of the Croaking Stones",
+      "description": "The biggest mireling anyone has ever seen, wearing a crown of river-pearls and a belt of very old, very gold lantern rings.",
+      "sprite": "cr_mireling",
+      "portrait": "cr_mossling_shaman",
+      "type": "Humanoid",
+      "rank": "Elite",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 2.2,
+      "damageMult": 1.05,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "size": 1.65,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_war_croak", "priority": 8, "condition": "roundAtLeast:1"},
+        {"ability": "cr_mf_belly_flop", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_mf_driftwood_bonk", "priority": 5}
+      ],
+      "passives": ["cr_mf_frog_skin"],
+      "immune": ["Fear"],
+      "lootTable": "lt_mf_chief",
+      "faction": "Mirelings",
+      "bark": "GUBBAGULP SPEAKS! Gubbagulp also hits!",
+      "material": "wet",
+      "voice": "frog"
+    },
+    {
+      "id": "cr_mf_crocolisk",
+      "name": "Mirefen Crocolisk",
+      "description": "Seven feet of patient, mossy appetite with a lily pad on its head that it is extremely proud of.",
+      "sprite": "cr_crocolisk",
+      "portrait": "cr_boar",
+      "type": "Beast",
+      "family": "Crocolisk",
+      "rank": "Normal",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 1.15,
+      "armorMult": 1.3,
+      "attackSpeed": 2.2,
+      "moveSpeed": 8,
+      "size": 0.9,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_death_roll", "priority": 6, "chance": 40},
+        {"ability": "cr_mf_snap", "priority": 5}
+      ],
+      "lootTable": "lt_mf_crocolisk",
+      "material": "scale",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_mf_old_gnasher",
+      "name": "Old Gnasher",
+      "description": "The crocolisk the fishermen tell their children about, then tell each other about, then lie awake about. He has Bo's nets in his teeth. All of them.",
+      "sprite": "cr_crocolisk",
+      "portrait": "cr_boar",
+      "type": "Beast",
+      "family": "Crocolisk",
+      "rank": "Elite",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 2.8,
+      "damageMult": 1.55,
+      "armorMult": 1.4,
+      "attackSpeed": 2.4,
+      "moveSpeed": 7,
+      "size": 1.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_old_bellow", "priority": 10, "condition": "selfHpBelow:35"},
+        {"ability": "cr_mf_tail_sweep", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_mf_death_roll", "priority": 6},
+        {"ability": "cr_mf_snap", "priority": 5}
+      ],
+      "immune": ["Fear"],
+      "lootTable": "lt_mf_old_gnasher",
+      "bark": "*The log opens one yellow eye. Then the rest of the log opens, all teeth.*",
+      "material": "scale",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_mf_bog_ghoul",
+      "name": "Bog Ghoul",
+      "description": "Something the barrows gave back. It remembers being somebody, mostly at night, and is furious about it.",
+      "sprite": "cr_bog_ghoul",
+      "portrait": "cr_mossling",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 1.05,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_grasping_mire", "priority": 6, "chance": 35},
+        {"ability": "cr_mf_ghoul_claw", "priority": 5}
+      ],
+      "immune": ["Fear", "Sleep"],
+      "lootTable": "lt_mf_bog_ghoul",
+      "faction": "Drowned",
+      "material": "flesh",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_mf_bog_ghoul_elder",
+      "name": "The Bellringer",
+      "description": "The last sexton of the Low Bell, still on his rounds. He rings for the dead, and the dead come.",
+      "sprite": "cr_bog_ghoul",
+      "portrait": "cr_mossling",
+      "type": "Undead",
+      "rank": "Elite",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 2.0,
+      "damageMult": 1.05,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "size": 2.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_dirge", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_mf_grasping_mire", "priority": 6},
+        {"ability": "cr_mf_ghoul_claw", "priority": 5}
+      ],
+      "immune": ["Fear", "Sleep", "Polymorph"],
+      "lootTable": "lt_mf_bellringer",
+      "faction": "Drowned",
+      "bark": "*Bong.* *Bong.* *...BONG.*",
+      "material": "flesh",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_mf_fen_wisp",
+      "name": "Fen Wisp",
+      "description": "A will-o'-wisp: a teal bog-light with big round eyes and a lily-pad cap. Adorable. Lethal. Mostly adorable.",
+      "sprite": "cr_fen_wisp",
+      "portrait": "cr_hollow_wisp",
+      "type": "Elemental",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 0.75,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 10,
+      "size": 0.9,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_mf_will_o_lure", "priority": 6, "chance": 35},
+        {"ability": "cr_mf_wisp_flicker", "priority": 3}
+      ],
+      "immune": ["Sleep", "Polymorph"],
+      "lootTable": "lt_mf_fen_wisp",
+      "faction": "Fen",
+      "material": "ether",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_mf_mire_hag",
+      "name": "Coven Hag",
+      "description": "One of Mother Mire's daughters: crooked hat, reed cloak, a lantern of lime-green marsh-light, and a frog on the brim that does most of the talking.",
+      "sprite": "cr_mire_hag",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "healthMult": 0.95,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 9,
+      "size": 1.9,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_mf_hag_mend", "priority": 8, "condition": "allyHpBelow:50"},
+        {"ability": "cr_mf_bog_hex", "priority": 5, "condition": "targetNoAura:cr_mf_bog_hex"},
+        {"ability": "cr_mf_mire_bolt", "priority": 3}
+      ],
+      "lootTable": "lt_mf_mire_hag",
+      "faction": "Coven",
+      "bark": "Ooh, visitors! Mother does love visitors. Wet ones especially.",
+      "material": "cloth",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_mf_blight_hound",
+      "name": "Hollow-Touched Hound",
+      "description": "A gaunt hound in a bone mask, come up through the moon-gate from wherever the Hollow keeps its dogs.",
+      "sprite": "cr_blight_hound",
+      "portrait": "cr_wolf_blighted",
+      "type": "Beast",
+      "family": "Hound",
+      "rank": "Normal",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "attackSpeed": 2.0,
+      "moveSpeed": 10,
+      "size": 1.4,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_blight_bite", "priority": 5}
+      ],
+      "passives": ["cr_hollow_touched"],
+      "lootTable": "lt_mf_blight_hound",
+      "faction": "Hollow",
+      "material": "fur",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_mf_drowned_thrall",
+      "name": "Drowned Thrall",
+      "description": "Fen mud in the shape of somebody, called up out of the water by the coven's lantern.",
+      "sprite": "cr_bog_ghoul",
+      "portrait": "cr_mossling",
+      "type": "Undead",
+      "rank": "Minion",
+      "levelMin": 18,
+      "levelMax": 24,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 18,
+      "levelCap": 24,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 1.6,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_ghoul_claw", "priority": 5}
+      ],
+      "xpMult": 0,
+      "faction": "Coven",
+      "material": "wet",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_mf_auntie_gall",
+      "name": "Auntie Gall, Eldest of the Coven",
+      "description": "Mother Mire's eldest daughter and the coven's keeper of the moon-gate. She has drowned a great many lanterns, and she remembers every one of them fondly.",
+      "sprite": "cr_mire_hag",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Boss",
+      "resource": "Mana",
+      "levelMin": 20,
+      "levelMax": 25,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 20,
+      "levelCap": 25,
+      "healthMult": 1.05,
+      "damageMult": 1.05,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 7,
+      "size": 2.5,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_mf_call_the_drowned", "priority": 10, "condition": "selfHpBelow:60"},
+        {"ability": "cr_mf_cauldron_surge", "priority": 9, "condition": "roundAtLeast:2"},
+        {"ability": "cr_mf_gall_brew", "priority": 8, "condition": "selfHpBelow:40"},
+        {"ability": "cr_mf_drowning_hex", "priority": 6, "condition": "targetNoAura:cr_mf_drowning_hex"},
+        {"ability": "cr_mf_mire_bolt", "priority": 3}
+      ],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish", "Stun"],
+      "stats": [
+        {"stat": "Resistance", "value": 20, "school": "Nature"}
+      ],
+      "lootTable": "lt_mf_auntie_gall",
+      "xpMult": 1.3,
+      "faction": "Coven",
+      "bark": "Ah, the lantern-folk's little helpers. Sit down, dearies. Auntie's put the kettle on. The kettle is you.",
+      "material": "cloth",
+      "voice": "humanoid"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_mf_driftwood_bonk",
+      "name": "Driftwood Bonk",
+      "icon": "mace",
+      "description": "A barnacled club to the head: weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 115, "min": 6, "max": 9, "perLevel": 0.6}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_mud_spit",
+      "name": "Mud Spit",
+      "icon": "water_drop",
+      "description": "Spits fen mud into the target's eyes, reducing its chance to hit for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 20,
+      "target": "Enemy",
+      "range": 20,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_mud_eyes"}
+      ],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_hunting_net",
+      "name": "Reed Net",
+      "icon": "trap",
+      "description": "Throws a weighted reed net, rooting the target for 6 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 20,
+      "target": "Enemy",
+      "range": 20,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_netted"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_barbed_spear",
+      "name": "Barbed Spear",
+      "icon": "spear",
+      "description": "Hurls a bone-barbed spear that leaves the target bleeding for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_barbed"}
+      ],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_bubble_mend",
+      "name": "Bubble Mend",
+      "icon": "water_drop",
+      "description": "Wraps an ally in a healing bubble of pond water, restoring {0}.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 8,
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "Heal", "min": 30, "max": 40, "perLevel": 3.2}
+      ],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_mf_bog_bolt",
+      "name": "Bog Bolt",
+      "icon": "nature",
+      "description": "A gulp of swamp water spat with magic behind it: {0} Nature damage.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "Damage", "min": 16, "max": 22, "perLevel": 1.4}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_mf_bubble_ward",
+      "name": "Bubble Ward",
+      "icon": "wave",
+      "description": "Surrounds an ally with a wobbling bubble that absorbs damage for 20 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 24,
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_bubble_ward"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_belly_flop",
+      "name": "Belly Flop",
+      "icon": "earth",
+      "description": "Gubbagulp leaps and lands belly-first: {0} damage to enemies within 8 yards, and they are dazed.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [
+        {"type": "Damage", "min": 22, "max": 30, "perLevel": 1.8},
+        {"type": "ApplyAura", "aura": "cr_mf_dazed"}
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_mf_war_croak",
+      "name": "War Croak",
+      "icon": "shout",
+      "description": "A croak that rattles the reeds. Nearby allies deal 15% more damage for 30 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 60,
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_war_croak", "target": "AlliesInRadius", "radius": 30},
+        {"type": "ApplyAura", "aura": "cr_mf_war_croak", "target": "Self"}
+      ],
+      "tags": ["Shout"],
+      "aiHint": "Buff",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_mf_snap",
+      "name": "Snap",
+      "icon": "fang",
+      "description": "Jaws like a sprung trap: weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 120, "min": 7, "max": 10, "perLevel": 0.7}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_death_roll",
+      "name": "Death Roll",
+      "icon": "whirlwind",
+      "description": "Seizes the target and rolls, dealing weapon damage and stunning it for 3 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 24,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 80},
+        {"type": "ApplyAura", "aura": "cr_mf_rolled"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_tail_sweep",
+      "name": "Tail Sweep",
+      "icon": "whirlwind",
+      "description": "A sweep of the great tail hits up to 3 enemies in front for weapon damage and knocks them back.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "area": {"shape": "Cone", "radius": 6, "angle": 120, "maxTargets": 3, "affects": "Enemies"},
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 90},
+        {"type": "Knockback", "distance": 5}
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_mf_old_bellow",
+      "name": "Old Bellow",
+      "icon": "rage",
+      "description": "Old Gnasher bellows across the shallows. Damage dealt increased by 25%.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_old_bellow", "target": "Self"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "time": "OffGcd"
+    },
+    {
+      "id": "cr_mf_ghoul_claw",
+      "name": "Bog-Rot Claw",
+      "icon": "claw",
+      "description": "Filthy claws: weapon damage, and the wound festers with Bog Rot for 15 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 105},
+        {"type": "ApplyAura", "aura": "cr_mf_bog_rot"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_grasping_mire",
+      "name": "Grasping Mire",
+      "icon": "tentacle",
+      "description": "The mud reaches up and holds the target fast for 6 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 1.5,
+      "cooldown": 20,
+      "target": "Enemy",
+      "range": 20,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_mire_grip"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_dirge",
+      "name": "Drowned Dirge",
+      "icon": "fear",
+      "description": "A dirge from under the water. Up to 2 nearby enemies flee in terror for 6 sec.",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies", "maxTargets": 2},
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_dirge_fear"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_wisp_flicker",
+      "name": "Flicker",
+      "icon": "sparkle",
+      "description": "A jab of cold marsh-light: {0} Nature damage.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 1.5,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "Damage", "min": 14, "max": 19, "perLevel": 1.3}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_mf_will_o_lure",
+      "name": "Will-o'-Lure",
+      "icon": "eye",
+      "description": "A pretty light bobs just out of reach. The target wanders after it, confused, for 6 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 24,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_lured"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_mire_bolt",
+      "name": "Mire Bolt",
+      "icon": "nature",
+      "description": "A bolt of stinking marsh-fire: {0} Nature damage.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.5,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "Damage", "min": 22, "max": 29, "perLevel": 1.7}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_mf_bog_hex",
+      "name": "Bog Hex",
+      "icon": "curse",
+      "description": "Curses the target with the fen's damp: Nature damage over 18 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 15,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_bog_hex"}
+      ],
+      "tags": ["Curse"],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_hag_mend",
+      "name": "Hag's Poultice",
+      "icon": "leaf",
+      "description": "Slaps a stinking poultice on an ally's wounds, healing {0}.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 10,
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "Heal", "min": 34, "max": 44, "perLevel": 3.4}
+      ],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_mf_blight_bite",
+      "name": "Blight Bite",
+      "icon": "fang",
+      "description": "A bite that carries the Hollow: weapon damage, and healing taken is reduced by 30% for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 115},
+        {"type": "ApplyAura", "aura": "cr_mf_blight_wound"}
+      ],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_mf_cauldron_surge",
+      "name": "Cauldron Surge",
+      "icon": "wave",
+      "description": "Auntie Gall tips her cauldron-lantern: a wave of green brew washes over every enemy within 30 yards for {0} Nature damage and slows them.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 24,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 30, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [
+        {"type": "Damage", "min": 30, "max": 38, "perLevel": 2.2},
+        {"type": "ApplyAura", "aura": "cr_mf_brewsoaked"}
+      ],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_mf_call_the_drowned",
+      "name": "Call the Drowned",
+      "icon": "skull",
+      "description": "Auntie Gall rattles her lantern at the water, and two drowned thralls climb out.",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [
+        {"type": "Summon", "summon": "cr_mf_drowned_thrall", "count": 2, "target": "Self"}
+      ],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_mf_drowning_hex",
+      "name": "Drowning Hex",
+      "icon": "curse",
+      "description": "The target's lungs fill with phantom water: Nature damage over 15 sec, and healing taken is reduced by 25%.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 15,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_mf_drowning_hex"}
+      ],
+      "tags": ["Curse"],
+      "aiHint": "Debuff",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_mf_gall_brew",
+      "name": "A Nice Hot Cup",
+      "icon": "potion_red",
+      "description": "Auntie Gall slurps from the cauldron, healing herself for 12% of her health. It can be interrupted.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [
+        {"type": "Heal", "min": 0, "max": 0, "perLevel": 0, "pctOfMax": 12}
+      ],
+      "tags": ["Telegraph", "Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_mf_mud_eyes",
+      "name": "Mud in the Eyes",
+      "icon": "water_drop",
+      "kind": "Debuff",
+      "duration": 12,
+      "mods": [
+        {"stat": "MeleeHit", "value": -10},
+        {"stat": "RangedHit", "value": -10},
+        {"stat": "SpellHit", "value": -10}
+      ],
+      "description": "Chance to hit reduced by 10%."
+    },
+    {
+      "id": "cr_mf_netted",
+      "name": "Reed Net",
+      "icon": "trap",
+      "kind": "Debuff",
+      "duration": 6,
+      "states": ["Root"],
+      "description": "Tangled in a reed net."
+    },
+    {
+      "id": "cr_mf_barbed",
+      "name": "Barbed",
+      "icon": "blood",
+      "kind": "Debuff",
+      "duration": 12,
+      "tickInterval": 3,
+      "tags": ["Bleed"],
+      "tickEffects": [
+        {"type": "Damage", "min": 5, "perLevel": 0.6}
+      ],
+      "description": "Bleeding."
+    },
+    {
+      "id": "cr_mf_bubble_ward",
+      "name": "Bubble Ward",
+      "icon": "wave",
+      "kind": "Buff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 20,
+      "absorb": {"amount": 40, "perLevel": 4},
+      "description": "Absorbs damage."
+    },
+    {
+      "id": "cr_mf_dazed",
+      "name": "Dazed",
+      "icon": "boot",
+      "kind": "Debuff",
+      "duration": 6,
+      "states": ["Daze"],
+      "mods": [
+        {"stat": "MoveSpeed", "value": -50, "pct": true}
+      ],
+      "description": "Movement speed reduced by 50%."
+    },
+    {
+      "id": "cr_mf_war_croak",
+      "name": "War Croak",
+      "icon": "shout",
+      "kind": "Buff",
+      "duration": 30,
+      "mods": [
+        {"stat": "DamageDone", "value": 15, "pct": true}
+      ],
+      "description": "Damage dealt increased by 15%."
+    },
+    {"id": "cr_mf_rolled", "name": "Death Roll", "icon": "whirlwind", "kind": "Debuff", "duration": 3, "states": ["Stun"], "description": "Stunned."},
+    {
+      "id": "cr_mf_old_bellow",
+      "name": "Old Bellow",
+      "icon": "rage",
+      "kind": "Buff",
+      "duration": 0,
+      "mods": [
+        {"stat": "DamageDone", "value": 25, "pct": true}
+      ],
+      "description": "Damage dealt increased by 25%."
+    },
+    {
+      "id": "cr_mf_bog_rot",
+      "name": "Bog Rot",
+      "icon": "poison",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Disease",
+      "duration": 15,
+      "tickInterval": 3,
+      "tickEffects": [
+        {"type": "Damage", "min": 4, "perLevel": 0.5}
+      ],
+      "description": "Nature damage every 3 sec."
+    },
+    {
+      "id": "cr_mf_mire_grip",
+      "name": "Grasping Mire",
+      "icon": "tentacle",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 6,
+      "states": ["Root"],
+      "description": "Held fast by the mud."
+    },
+    {
+      "id": "cr_mf_dirge_fear",
+      "name": "Drowned Dirge",
+      "icon": "fear",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 6,
+      "states": ["Fear"],
+      "breakOnDamage": true,
+      "breakDamageThreshold": 60,
+      "description": "Fleeing in terror."
+    },
+    {
+      "id": "cr_mf_lured",
+      "name": "Will-o'-Lure",
+      "icon": "eye",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 6,
+      "states": ["Confuse"],
+      "breakOnDamage": true,
+      "breakDamageThreshold": 40,
+      "description": "Following a pretty light."
+    },
+    {
+      "id": "cr_mf_bog_hex",
+      "name": "Bog Hex",
+      "icon": "curse",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Curse",
+      "duration": 18,
+      "tags": ["Curse"],
+      "tickInterval": 3,
+      "tickEffects": [
+        {"type": "Damage", "min": 4, "perLevel": 0.55}
+      ],
+      "description": "Nature damage every 3 sec."
+    },
+    {
+      "id": "cr_mf_blight_wound",
+      "name": "Blight Wound",
+      "icon": "void",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Disease",
+      "duration": 12,
+      "mods": [
+        {"stat": "HealingTaken", "value": -30, "pct": true}
+      ],
+      "description": "Healing taken reduced by 30%."
+    },
+    {
+      "id": "cr_mf_brewsoaked",
+      "name": "Brew-Soaked",
+      "icon": "water_drop",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 9,
+      "mods": [
+        {"stat": "MoveSpeed", "value": -40, "pct": true}
+      ],
+      "description": "Movement speed reduced by 40%."
+    },
+    {
+      "id": "cr_mf_drowning_hex",
+      "name": "Drowning Hex",
+      "icon": "curse",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Curse",
+      "duration": 15,
+      "tags": ["Curse"],
+      "tickInterval": 3,
+      "tickEffects": [
+        {"type": "Damage", "min": 5, "perLevel": 0.6}
+      ],
+      "mods": [
+        {"stat": "HealingTaken", "value": -25, "pct": true}
+      ],
+      "description": "Nature damage every 3 sec. Healing taken reduced by 25%."
+    },
+    {
+      "id": "cr_mf_frog_skin",
+      "name": "Slick Skin",
+      "icon": "water_drop",
+      "kind": "Buff",
+      "duration": 0,
+      "hidden": true,
+      "mods": [
+        {"stat": "Resistance", "value": 15, "school": "Nature"}
+      ],
+      "description": "Resistant to Nature."
+    }
+  ]
+}

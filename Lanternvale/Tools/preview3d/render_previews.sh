@@ -53,6 +53,12 @@ done
 "$tool" map mirefen "$out/mirefen_north.png" --at 60,46 --hour 11
 "$tool" map mirefen "$out/mirefen_vault_entrance.png" --at 30,41 --hour 17 --flags found_drowned_vault
 "$tool" map mirefen "$out/mirefen_raid_portal.png" --at 12,45 --hour 21
+"$tool" map mirefen "$out/mirefen_lowlantern_dusk.png" --at 99,26 --hour 18.6
+"$tool" map mirefen "$out/mirefen_mere_lanterns.png" --at 63,30 --hour 21.5 --flags mf_lanterns_rise
+"$tool" map mirefen "$out/mirefen_croaking_stones.png" --at 20,16 --hour 10
+"$tool" map mirefen "$out/mirefen_heron_bridge.png" --at 40,20 --hour 16.5
+"$tool" map mirefen "$out/mirefen_barrows.png" --at 57,47 --hour 19
+"$tool" map dgn_drowned_vault "$out/dgn_drowned_vault_heart_well.png" --at 52,24 --flags dg5_tidewitch_defeated
 "$tool" map skyreach "$out/skyreach_north.png" --at 60,50 --hour 12.5
 "$tool" map skyreach "$out/skyreach_sanctum_entrance.png" --at 86,47 --hour 14 --flags found_frozen_sanctum
 "$tool" map skyreach "$out/skyreach_raid_portal.png" --at 20,53 --hour 19
