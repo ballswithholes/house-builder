@@ -32,6 +32,21 @@ namespace Lanternvale.Game
             }
         }
 
+        /// <summary>The entrance model for a map's biome and the exit's target, when the prop library has a matching
+        /// variant: an ember portal to the dragon's roost, a snowy cave mouth on the peaks and in ice caves, a golden-downs
+        /// crypt door in the highlands. Else the plain <see cref="EntranceArt(string)"/>.</summary>
+        public static string EntranceArt(string marker, string biome, string targetMap)
+        {
+            string art = EntranceArt(marker);
+            if (art == null) return null;
+            string t = targetMap ?? "", b = biome ?? "";
+            string variant = null;
+            if (marker == "portal" && (t.Contains("roost") || t.Contains("ashwyrm"))) variant = "prop_raid_portal_ember";
+            else if (marker == "cave" && (b == Biomes.Peaks || b == Biomes.IceCave)) variant = "prop_cave_mouth_snow";
+            else if (marker == "door" && b == Biomes.Highlands) variant = "prop_crypt_door_golden";
+            return variant != null && PropModels.Has(variant) ? variant : art;
+        }
+
         public static bool IsEntrance(string marker) => EntranceArt(marker) != null;
 
         /// <summary>Where a styled entrance's pivot stands: the transition centre, or (cave, door) its back edge.</summary>
@@ -49,9 +64,13 @@ namespace Lanternvale.Game
         /// Builds a styled entrance (marker cave | door | stairs | portal) under holder, at the holder's ground point,
         /// facing the camera. Lamps: the model's light anchors (a portal: its glow point). Starts unlit (a portal lit).
         /// </summary>
-        public static Waymarker BuildEntrance(Transform holder, string marker, int seed, Color glow)
+        public static Waymarker BuildEntrance(Transform holder, string marker, int seed, Color glow) =>
+            BuildEntrance(holder, marker, seed, glow, null, null);
+
+        /// <summary>As above, with the biome / target variant of the entrance model (see EntranceArt).</summary>
+        public static Waymarker BuildEntrance(Transform holder, string marker, int seed, Color glow, string biome, string targetMap)
         {
-            string art = EntranceArt(marker);
+            string art = EntranceArt(marker, biome, targetMap);
             var m = art != null && PropModels.Has(art) ? PropModels.Create(art, seed) : PropModels.MarkerStandIn(marker, seed, glow);
             var t = m.Root.transform;
             t.SetParent(holder, false);

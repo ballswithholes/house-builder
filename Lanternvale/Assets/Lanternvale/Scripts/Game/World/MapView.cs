@@ -759,7 +759,7 @@ namespace Lanternvale.Game
                 at = Waymarker.EntranceAt(style, pos, size);
                 holder.localPosition = new Vector3(at.x, at.y, 0f);
                 mk.glowColor = style == "portal" ? Waymarker.PortalGlow(t.targetMap) : new Color(1f, 0.82f, 0.52f);
-                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), mk.glowColor);
+                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), mk.glowColor, Biomes.IdOf(Def), t.targetMap);
                 mk.flowIn = true;
             }
             else if (style != "none")

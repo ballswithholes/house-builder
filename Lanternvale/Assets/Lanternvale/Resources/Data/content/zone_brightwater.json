@@ -70,7 +70,7 @@
       "shortName": "Penhallow",
       "title": "Keeper of the Brightwater Archive",
       "sprite": "npc_archivist",
-      "portrait": "portrait_trainer",
+      "portrait": "portrait_archivist",
       "dialogue": "dlg_bw_penhallow",
       "bark": "Mind the scrolls. Some of them are older than the river."
     }

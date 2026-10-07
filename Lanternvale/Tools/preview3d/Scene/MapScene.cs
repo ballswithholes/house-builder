@@ -427,7 +427,7 @@ namespace Lanternvale.Preview
                 var at = Waymarker.EntranceAt(style, pos, size);
                 holder.localPosition = new Vector3(at.x, at.y, 0f);
                 if (style == "portal") glow = Waymarker.PortalGlow(t.targetMap);
-                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), glow);
+                wm = Waymarker.BuildEntrance(holder, style, Seed(Def.id, pos, 91), glow, Biomes.IdOf(Def), t.targetMap);
             }
             else
             {

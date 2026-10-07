@@ -1114,6 +1114,10 @@ namespace Lanternvale.Game
             { "prop_market_awning", "Market Awning" },
             // caves and crypts
             { "prop_cave_mouth", "Cave Mouth" },
+            { "prop_cave_mouth_snow", "Cave Mouth" },
+            { "prop_crypt_door_golden", "Barrow Door" },
+            { "prop_raid_portal_ember", "Raid Portal" },
+            { "prop_bridge_stone_y", "Stone Bridge" },
             { "prop_stalagmite", "Stalagmite" },
             { "prop_crystal_cluster", "Crystal Cluster" },
             { "prop_glow_mushroom", "Glowing Mushroom" },
