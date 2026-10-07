@@ -196,6 +196,8 @@ namespace Lanternvale.Session
             roster.Clear();
             party.Clear();
             leader = null;
+            raid = null;   // GameSession.Raid.cs: no raid survives a new or loaded game
+            raidWiping = false;
             approval.Clear();
             vendors.Clear();
             ActiveVendor = null;

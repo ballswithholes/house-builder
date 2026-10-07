@@ -51,15 +51,15 @@ namespace Lanternvale.Session
         public RaidSaveData raid;
     }
 
-    /// <summary>The raid in progress and the normal party to restore when it ends (lists sorted, see Docs/Expansion.md §2.7).</summary>
+    /// <summary>The raid in progress and the normal party to restore when it ends (see Docs/Expansion.md §2.7).</summary>
     [Serializable]
     public sealed class RaidSaveData
     {
         public int size;
-        /// <summary>Member ids of the party before the raid.</summary>
+        /// <summary>Member ids of the party before the raid, in party order (Main first), so leaving restores the order.</summary>
         public List<string> normalParty = new List<string>();
         public string normalLeader = "";
-        /// <summary>Member ids that had auto-play on before the raid.</summary>
+        /// <summary>Member ids that had auto-play on before the raid (sorted).</summary>
         public List<string> normalAutoPlay = new List<string>();
     }
 

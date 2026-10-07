@@ -126,7 +126,9 @@ namespace Lanternvale.Rules
             }
         }
 
-        /// <summary>Unit radius in metres from the creature's sprite height.</summary>
-        public static float Radius(CreatureDef c) => Math.Max(0.3f, Math.Min(1.6f, c.size * 0.22f));
+        /// <summary>Unit radius in metres from the creature's sprite height. Bosses may be wider (a 7.5 m dragon's body is
+        /// about 4 m long), so melee does not stand inside them.</summary>
+        public static float Radius(CreatureDef c) =>
+            Math.Max(0.3f, Math.Min(c.rank == CreatureRank.Boss ? 2.8f : 1.6f, c.size * 0.22f));
     }
 }
