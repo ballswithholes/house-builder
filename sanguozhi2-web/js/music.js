@@ -18,8 +18,14 @@
      SG.Music.compile(key)              → 编译结果 { sections, form, errors, ... }（带缓存）
      SG.Music.validate(key)             → 记谱错误列表（小节长度不符、未知声部 / 乐器……）
      SG.Music.prepare(key)              → Promise：分片预渲染该曲需要的采样（每片 ≤ 8ms，不卡主线程）
+     SG.Music.variant(key, { transpose, bpm }) → 派生曲目 key（移调 / 改速；不列入 keys()）
+     SG.Music.tonic(key)                → 主音音级 0..11
      new SG.Music.Engine(ctx, dest, opts)
-        .play(key, { fade })            交叉淡入淡出（约 0.8 秒）切换曲目；返回 Promise
+        .play(key, { fade, fadeIn, overlay, sync, grid, duck })
+                                        旧曲目淡出（约 0.8 秒），新曲目默认直接进入（乐曲可写 fadeIn）；
+                                        overlay = 叠加短曲（压低主曲，与主曲目请求互不作废），
+                                        sync = 对齐主曲目的下一拍；返回 Promise<boolean>（false = 被后来的请求取代）
+        .mainInfo() → { key, bpm, meter, tonicPc }   .nextBeat(after, grid)
         .stop(fade)  .duck(level, sec)  .setVolume(v)  .tick()（实时模式由定时器自动调用）
         .scheduleUntil(t)               离线渲染时一次排程到 t 秒
         .onEnded = key => {}            非循环曲（胜利 / 战败 / 冲锋乐句）结束时回调
@@ -32,9 +38,11 @@
            scale:'1 2 3 5 6'（本调式音阶，供装饰音 / 刮奏取音）, cents:{ 'b3': -30 }（可选微分音）,
            voices:{ 声部:{ inst, oct, gain, pan, rev } }, kit:{ 鼓谱轨:{ inst, art, gain, pan, note } },
            pats:{ 节奏型:{ _step:0.25, 轨:'X..x' } }, sections:{ 段:{...} }, form:['intro','A',...],
-           loopFrom:'A'（循环起点；loop:false 为一次性短曲）, gain, reverb }
+           loopFrom:'A'（循环起点；loop:false 为一次性短曲）, gain, reverb,
+           fadeIn（秒，默认几乎为 0）, lowShelf（dB，约 160 Hz 以下）, air（dB，6 kHz 以上）, width（声像系数，默认 1.7）, tonic:'6,'（主音，默认音阶第一个音） }
    段    { 声部名:'谱', dr:'节奏型*3 加花', from:'A'（继承另一段的全部声部）, mute:['pad'],
-           inst:{ 声部:'乐器' }（换乐器）, oct:{ 声部:1 }（移八度）, bpm, bpmTo（渐快 / 渐慢）, dyn:0.9 }
+           inst:{ 声部:'乐器' }（换乐器）, oct:{ 声部:1 }（移八度）, bpm, bpmTo（渐快 / 渐慢）, dyn:0.9,
+           tr:2（整段移调，半音） }
    音符  [#|b] 级数 [八度] [时值] [装饰]
            级数   1 宫 2 商 3 角 4 清角 5 徵 6 羽 7 变宫；0 = 休止
            八度   ' 高八度（可叠用）  , 低八度
@@ -59,6 +67,7 @@
   const SAMPLE_BUDGET = 7e6;      // 采样缓存上限（浮点数个数，约 28MB）
   const DEG_SEMI = [0, 0, 2, 4, 5, 7, 9, 11];
   const NOTE_SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const PAN_WIDTH = 2.0;           // 谱面声像 × 此系数（上限 ±0.85）
   const DYN = { ppp: 0.25, pp: 0.34, p: 0.46, mp: 0.6, mf: 0.74, f: 0.88, ff: 1.0, fff: 1.08 };
 
   // ---------------------------------------------------------------- 工具 --
@@ -96,9 +105,27 @@
   const COMPILED = {};
   function add(key, piece) { piece.key_ = key; PIECES[key] = piece; delete COMPILED[key]; return piece; }
 
-  // 地域 → 变奏 key 的回退表（未覆盖的文化回退到汉地）
+  // 派生版本：移调 transpose（半音）/ 改速 bpm（冲锋乐句跟随当前战场曲的调性与速度）。
+  // 派生曲目 key 形如 'clash|t3|b138'，不出现在 keys() 里。
+  function variant(key, o) {
+    const P = PIECES[key];
+    if (!P) return null;
+    o = o || {};
+    const tr = Math.round(o.transpose || 0), bpm = o.bpm ? Math.round(o.bpm) : 0;
+    if (!tr && (!bpm || bpm === P.bpm)) return key;
+    const vk = key + '|t' + tr + '|b' + (bpm || P.bpm || 0);
+    if (!PIECES[vk]) {
+      const V = Object.assign({}, P, { transpose: (P.transpose || 0) + tr, _derived: true, _base: key });
+      if (bpm) V.bpm = bpm;
+      add(vk, V);
+    }
+    return vk;
+  }
+
+  // 地域 → 变奏 key 的回退表（未覆盖的文化回退到汉地；tarim / sarmatian 与邻近地域共用一首，
+  // 如同 celt / german —— 塔里木绿洲诸国与贵霜同属犍陀罗—中亚乐风，萨尔马提亚为草原游牧）
   const CULTURE_FALLBACK = {
-    han: 'han', nanman: 'han', yi: 'seasia', wa: 'wa', korea: 'korea', steppe: 'steppe', tarim: 'kushan',
+    han: 'han', nanman: 'han', yi: 'han', wa: 'wa', korea: 'korea', steppe: 'steppe', tarim: 'kushan',
     seasia: 'seasia', kushan: 'kushan', persia: 'persia', arab: 'arab', roman: 'roman', celt: 'celt',
     german: 'celt', sarmatian: 'steppe',
   };
@@ -279,7 +306,7 @@
     const P = PIECES[key];
     const errors = [];
     const meter = P.meter || 4;
-    const keyMidi = keyToMidi(P.key || 'C', P.oct === undefined ? 4 : P.oct);
+    const keyMidi = keyToMidi(P.key || 'C', P.oct === undefined ? 4 : P.oct) + (P.transpose || 0);
     P._keyMidi = keyMidi;
     const cents = P.cents || {};
     // 调式音阶（相对“1”的半音 + 音分），供装饰音 / 刮奏取音
@@ -318,15 +345,15 @@
     for (const name in (P.pats || {})) pats[name] = parsePattern(P.pats[name], m => errors.push('[节奏型 ' + name + '] ' + m), name);
 
     // 段落（处理继承）
-    const RESERVED = { from: 1, mute: 1, inst: 1, oct: 1, bpm: 1, bpmTo: 1, dyn: 1, dr: 1, bars: 1, label: 1 };
+    const RESERVED = { from: 1, mute: 1, inst: 1, oct: 1, bpm: 1, bpmTo: 1, dyn: 1, dr: 1, bars: 1, label: 1, tr: 1 };
     function resolveSection(name, depth) {
       const S = P.sections[name];
       if (!S) { errors.push('未定义的段 ' + name); return null; }
       if (depth > 8) { errors.push('段继承过深 ' + name); return null; }
-      let base = { voices: {}, inst: {}, oct: {}, dr: null, bpm: null, bpmTo: null, dyn: 1 };
+      let base = { voices: {}, inst: {}, oct: {}, dr: null, bpm: null, bpmTo: null, dyn: 1, tr: 0 };
       if (S.from) {
         const b = resolveSection(S.from, depth + 1);
-        if (b) base = { voices: Object.assign({}, b.voices), inst: Object.assign({}, b.inst), oct: Object.assign({}, b.oct), dr: b.dr, bpm: b.bpm, bpmTo: null, dyn: b.dyn };
+        if (b) base = { voices: Object.assign({}, b.voices), inst: Object.assign({}, b.inst), oct: Object.assign({}, b.oct), dr: b.dr, bpm: b.bpm, bpmTo: null, dyn: b.dyn, tr: b.tr };
       }
       for (const k in S) {
         if (RESERVED[k]) continue;
@@ -340,6 +367,7 @@
       if (S.bpm !== undefined) base.bpm = S.bpm;
       if (S.bpmTo !== undefined) base.bpmTo = S.bpmTo;
       if (S.dyn !== undefined) base.dyn = S.dyn;
+      if (S.tr !== undefined) base.tr = S.tr;       // 段内移调（半音），如终曲高潮升高大二度
       return base;
     }
 
@@ -348,6 +376,11 @@
     for (const name in P.sections) {
       const R = resolveSection(name, 0);
       if (!R) continue;
+      const TR = R.tr || 0;
+      // 移调段的装饰音 / 刮奏仍取本调式音阶的音
+      const nb = (p, d) => neighbor(p - TR, d) + TR;
+      const rb = (p, s) => runBelow(p - TR, s).map(q => q + TR);
+      const ra = (p, s) => runAbove(p - TR, s).map(q => q + TR);
       const items = [];
       let beats = 0;
       const lens = {};
@@ -368,10 +401,10 @@
           for (const e of evs) {
             if (e.rest) { ph = null; continue; }
             const n = e.notes[e.notes.length - 1];
-            const p = pitchOf(n, voiceOct);
+            const p = pitchOf(n, voiceOct) + TR;
             const note = { beat: e.beat, dur: e.dur, p, vel: e.vel * dyn, orn: e.orn };
-            if (e.orn.grace) note.gp = neighbor(p, e.orn.grace);
-            if (e.orn.trem) note.tp = neighbor(p, 1);
+            if (e.orn.grace) note.gp = nb(p, e.orn.grace);
+            if (e.orn.trem) note.tp = nb(p, 1);
             if (!ph) { ph = { type: 'p', voice: v, inst: instName, beat: e.beat, notes: [] }; items.push(ph); }
             ph.notes.push(note);
             if (e.breath) ph = null;
@@ -379,14 +412,14 @@
         } else {
           for (const e of evs) {
             if (e.rest) continue;
-            const ps = e.notes.map(n => pitchOf(n, voiceOct));
+            const ps = e.notes.map(n => pitchOf(n, voiceOct) + TR);
             const it = { type: def.type === 'sample' ? 's' : 'y', voice: v, inst: instName, beat: e.beat, dur: e.dur, ps, vel: e.vel * dyn, orn: e.orn };
             if (def.type === 'sample') {
               const top = ps[ps.length - 1];
-              if (e.orn.grace) it.gp = neighbor(top, e.orn.grace);
-              if (e.orn.gliss) it.run = runBelow(top, 12 * e.orn.gliss);
-              if (e.orn.glissDown) it.run = runAbove(top, 12);
-              if (e.orn.trem && def.trill) it.tp = neighbor(top, 1);
+              if (e.orn.grace) it.gp = nb(top, e.orn.grace);
+              if (e.orn.gliss) it.run = rb(top, 12 * e.orn.gliss);
+              if (e.orn.glissDown) it.run = ra(top, 12);
+              if (e.orn.trem && def.trill) it.tp = nb(top, 1);
               for (const q of ps) sampleKeys.add(def.name + '|' + sampleKeyPitch(def, q));
               if (it.gp !== undefined) sampleKeys.add(def.name + '|' + sampleKeyPitch(def, it.gp));
               if (it.tp !== undefined) sampleKeys.add(def.name + '|' + sampleKeyPitch(def, it.tp));
@@ -417,7 +450,7 @@
             if (!K) { errors.push('[节奏型 ' + pn + '] 未知鼓轨 ' + h.lane); continue; }
             const def = INST[K.inst];
             if (!def) { errors.push('鼓轨 ' + h.lane + ' 未知乐器 ' + K.inst); continue; }
-            const pitch = K.note ? pitchOf(parseNoteHead(K.note), 0) : null;
+            const pitch = K.note ? pitchOf(parseNoteHead(K.note), 0) + TR : null;
             items.push({ type: 'd', lane: h.lane, inst: K.inst, beat: b + h.beat, vel: h.vel * R.dyn, art: K.art || 0, p: pitch });
             const nv = def.variants || 1;
             for (let k = 0; k < nv; k++) sampleKeys.add(def.name + '|' + drumKey(def, K.art || 0, pitch, k));
@@ -442,7 +475,7 @@
       const bpm0 = R.bpm || P.bpm || 90;
       const bpm1 = R.bpmTo || bpm0;
       const tf = makeTime(beats, bpm0, bpm1);
-      sections[name] = { name, beats, items, time: tf.time, dur: tf.dur, bars: beats / meter };
+      sections[name] = { name, beats, items, time: tf.time, dur: tf.dur, bars: beats / meter, bpm: bpm0, bpmTo: bpm1 };
       yield;
     }
     const form = (P.form || Object.keys(P.sections)).filter(n => { if (!sections[n]) { errors.push('曲式中未知的段 ' + n); return false; } return true; });
@@ -451,9 +484,12 @@
       loopFrom = typeof P.loopFrom === 'number' ? P.loopFrom : form.indexOf(P.loopFrom);
       if (loopFrom < 0) { errors.push('loopFrom 不在曲式中'); loopFrom = 0; }
     }
+    // 主音（音级 0..11）：piece.tonic（如 '6,'）或调式音阶的第一个音
+    const th = parseNoteHead(String(P.tonic || String(P.scale || '1').trim().split(/\s+/)[0]));
+    const tonicPc = th ? (((Math.round(keyMidi + DEG_SEMI[th.deg] + (th.acc === '#' ? 1 : th.acc === 'b' ? -1 : 0)) % 12) + 12) % 12) : ((Math.round(keyMidi) % 12 + 12) % 12);
     let introDur = 0, loopDur = 0;
     form.forEach((n, i) => { if (i < loopFrom) introDur += sections[n].dur; else loopDur += sections[n].dur; });
-    const C = { key, piece: P, sections, form, loopFrom, loop: P.loop !== false, errors, sampleKeys: Array.from(sampleKeys), introDur, loopDur, meter };
+    const C = { key, piece: P, sections, form, loopFrom, loop: P.loop !== false, errors, sampleKeys: Array.from(sampleKeys), introDur, loopDur, meter, tonicPc };
     COMPILED[key] = C;
     return C;
   }
@@ -582,10 +618,18 @@
     storeSample(fk, r.value, job.sr);
   }
 
-  const pinned = new Set();     // 正在使用的曲目所需采样，不可淘汰
+  // 不可淘汰的采样：每个实时引擎一份（正在播放 / 准备中的曲目所需），外加预热（prewarm）的一份。
+  // 淘汰时取所有集合的并集——离线渲染或第二个引擎不会解除实时音乐的保护。
+  const pinSets = new Set();
+  const warmPins = new Set();
+  function isPinned(k) {
+    if (warmPins.has(k)) return true;
+    for (const s of pinSets) if (s.has(k)) return true;
+    return false;
+  }
   function evict() {
     if (sampleTotal <= SAMPLE_BUDGET) return;
-    const arr = Array.from(SAMPLES.entries()).filter(e => !pinned.has(e[0])).sort((a, b) => a[1].used - b[1].used);
+    const arr = Array.from(SAMPLES.entries()).filter(e => !isPinned(e[0])).sort((a, b) => a[1].used - b[1].used);
     for (const [k, s] of arr) {
       if (sampleTotal <= SAMPLE_BUDGET * 0.8) break;
       SAMPLES.delete(k); sampleTotal -= s.len;
@@ -607,10 +651,12 @@
     return s.buf;
   }
 
-  function prepare(key) {
+  // pins：保护这些采样的集合（引擎传自己的；不传 = 预热，只保护最近一次预热的曲目）
+  function prepare(key, pins) {
     return compileAsync(key).then(C => {
       if (!C) return;
-      for (const k of C.sampleKeys) pinned.add(k);
+      if (!pins) { warmPins.clear(); pins = warmPins; }
+      for (const k of C.sampleKeys) pins.add(k);
       return Promise.all(C.sampleKeys.map(requestSample)).then(() => undefined);
     });
   }
@@ -618,10 +664,6 @@
     const C = compile(key);
     if (!C) return;
     for (const k of C.sampleKeys) renderSampleSync(k);
-  }
-  function unpinAllBut(keys) {
-    pinned.clear();
-    for (const key of keys) { const C = compile(key); if (C) for (const k of C.sampleKeys) pinned.add(k); }
   }
 
   // ============================================================ 共享资源 ==
@@ -724,11 +766,11 @@
       this.mix = c.createGain();
       this.revIn = c.createGain();
       const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 180; hp.Q.value = 0.6;
-      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7500; lp.Q.value = 0.5;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 10000; lp.Q.value = 0.5;
       this.conv = c.createConvolver();
       try { this.conv.normalize = false; } catch (e) { /* 忽略 */ }
       // 脉冲响应每个 AudioContext 只生成一次；实时模式分片生成后在单独的任务里装入卷积器
-      // （装入前混响无声，曲目开头有 0.6 秒淡入，听不出差别）
+      // （装入前的约 0.2 秒内混响无声，只影响第一首曲子的开头）
       const R = this.res;
       if (R.ir) this.conv.buffer = R.ir;
       else if (this.offline) { R.ir = makeImpulse(c, IR_SEC, IR_DECAY); this.conv.buffer = R.ir; }
@@ -750,11 +792,49 @@
       try { this.shaper.oversample = '2x'; } catch (e) { /* 忽略 */ }
       this.post = c.createGain(); this.post.gain.value = 2;
       this.out = c.createGain(); this.out.gain.value = this.volume;
-      this.mix.connect(this.glue); this.glue.connect(this.lim); this.lim.connect(this.trim);
+      // 35 Hz 高通：手机 / 笔记本扬声器放不出的次低频不再推动压缩器与限幅器
+      this.hpf = c.createBiquadFilter(); this.hpf.type = 'highpass'; this.hpf.frequency.value = 35; this.hpf.Q.value = 0.7;
+      this.mix.connect(this.hpf); this.hpf.connect(this.glue); this.glue.connect(this.lim); this.lim.connect(this.trim);
       this.trim.connect(this.pre); this.pre.connect(this.shaper); this.shaper.connect(this.post); this.post.connect(this.out);
       this.out.connect(dest);
       this.timer = null;
       this.duckGain = 1;
+      this._token = 0;              // 主曲目请求序号（新的主曲目请求作废尚在准备的旧请求）
+      this._ovToken = 0;            // 叠加短曲请求序号（与主曲目互不作废）
+      this._pending = new Map();    // 准备中的曲目 key → 计数（其采样同样受保护）
+      this.pins = new Set();
+      if (!this.offline) pinSets.add(this.pins);
+    }
+
+    _repin() {
+      const pins = this.pins;
+      pins.clear();
+      const keys = this.tracks.filter(x => !x.stopping).map(x => x.key).concat(Array.from(this._pending.keys()));
+      for (const key of keys) { const C = COMPILED[key]; if (C) for (const k of C.sampleKeys) pins.add(k); }
+    }
+
+    // 当前主曲目（非叠加）的信息：{ key, bpm, meter, tonicPc }
+    mainInfo() {
+      const tr = this.tracks.find(x => !x.stopping && !x.overlay);
+      if (!tr) return null;
+      const sec = tr.seg ? tr.seg.sec : tr.C.sections[tr.C.form[tr.C.loopFrom]];
+      return { key: tr.key, bpm: sec.bpm, meter: tr.C.meter, tonicPc: tr.C.tonicPc };
+    }
+
+    // 主曲目在 after 秒之后的下一个拍点（grid 拍一格；12/8 等复拍子用 3）；没有主曲目时返回 after
+    nextBeat(after, grid) {
+      const tr = this.tracks.find(x => !x.stopping && !x.overlay && x.seg);
+      if (!tr) return after;
+      grid = grid || 1;
+      const seg = tr.seg, sec = seg.sec;
+      if (seg.t0 <= after) {
+        for (let b = 0; b <= sec.beats + 1e-6; b += grid) { const t = seg.t0 + sec.time(b); if (t >= after - 1e-4) return t; }
+        return seg.t0 + sec.dur;
+      }
+      // 排程已进入下一段：按该段起点的拍长往回推
+      const bd = sec.time(grid);
+      if (!(bd > 0)) return after;
+      return seg.t0 - Math.floor((seg.t0 - after) / bd) * bd;
     }
 
     setVolume(v) {
@@ -772,33 +852,46 @@
       opts = opts || {};
       if (!PIECES[key]) return Promise.resolve(false);
       const fadeOut = opts.fade === undefined ? 0.8 : opts.fade;
-      const token = this._token = (this._token || 0) + 1;
+      const ov = !!opts.overlay;
+      const token = ov ? ++this._ovToken : ++this._token;
+      const pend = this._pending;
+      pend.set(key, (pend.get(key) || 0) + 1);
+      const done = () => { const n = (pend.get(key) || 1) - 1; if (n > 0) pend.set(key, n); else pend.delete(key); };
       const go = () => {
-        if (token !== this._token || this.disposed) return false;
+        done();
+        if (token !== (ov ? this._ovToken : this._token) || this.disposed) { this._repin(); return false; }
         const C = compile(key);
         if (!C) return false;
         const now = this.ctx.currentTime;
         if (opts.overlay) {
           // 叠加短曲（冲锋乐句）：压低主曲，停掉别的叠加曲
           for (const t of this.tracks) if (!t.stopping && t.overlay) t.stop(now, 0.2);
-          this.duck(opts.duck === undefined ? 0.22 : opts.duck, 0.25);
+          this._duckLevel = opts.duck === undefined ? 0.22 : opts.duck;
+          this.duck(this._duckLevel, 0.25);
         } else {
-          for (const t of this.tracks) if (!t.stopping) t.stop(now, fadeOut);
+          // 只淡出旧的主曲目；正在响的冲锋乐句继续奏完（新主曲目同样被压低，乐句结束后一起恢复）
+          for (const t of this.tracks) if (!t.stopping && !t.overlay) t.stop(now, fadeOut);
         }
-        const t0 = opts.at !== undefined ? opts.at : now + 0.06;
-        const tr = new Track(this, C, t0, opts.fadeIn === undefined ? Math.min(0.6, fadeOut) : opts.fadeIn, !!opts.overlay);
+        let t0 = opts.at !== undefined ? opts.at : now + 0.06;
+        // 叠加短曲对齐主曲目的下一个拍点（最多推迟 0.7 秒）
+        if (opts.sync && opts.at === undefined) { const tb = this.nextBeat(now + 0.05, opts.grid || 1); if (tb >= now + 0.03 && tb <= now + 0.75) t0 = tb; }
+        // 新曲目默认直接以全音量进入（只把旧曲目淡出）：开头的锣、鼓、号角重音不被淡入吃掉。
+        // 需要慢慢浮现的曲目在乐曲里写 fadeIn（秒）。
+        const fadeIn = opts.fadeIn !== undefined ? opts.fadeIn : (C.piece.fadeIn !== undefined ? C.piece.fadeIn : 0.02);
+        const tr = new Track(this, C, t0, fadeIn, ov);
+        if (!ov && this.tracks.some(t => t.overlay && !t.stopping && !t.unducked)) tr.setDuck(this._duckLevel || 0.3, now, 0.05);
         this.tracks.push(tr);
-        unpinAllBut(this.tracks.filter(x => !x.stopping).map(x => x.key));
+        this._repin();
         this._ensureTimer();
         this.tick();
         return true;
       };
       if (this.offline) { prepareSync(key); return Promise.resolve(go()); }
-      return prepare(key).then(go);
+      return prepare(key, this.pins).then(go, e => { done(); console.warn(e); return false; });
     }
 
     stop(fade) {
-      this._token = (this._token || 0) + 1;
+      this._token++; this._ovToken++;
       const now = this.ctx.currentTime;
       for (const t of this.tracks) if (!t.stopping) t.stop(now, fade === undefined ? 0.8 : fade);
     }
@@ -829,12 +922,14 @@
           if (t.dead(now)) {
             t.dispose();
             this.tracks.splice(i, 1);
+            this._dirtyPins = true;
             if (t.finished && !t.stopping) {
               if (t.overlay && !t.unducked) this.duck(1, 0.6);
               if (this.onEnded) { try { this.onEnded(t.key, t.overlay); } catch (e) { console.warn(e); } }
             }
           }
         }
+        if (this._dirtyPins) { this._dirtyPins = false; this._repin(); }
         if (!this.tracks.length && this.timer) { clearInterval(this.timer); this.timer = null; }
       } catch (e) { console.warn(e); }
     }
@@ -843,6 +938,7 @@
 
     dispose() {
       this.disposed = true;
+      pinSets.delete(this.pins);
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       for (const t of this.tracks) t.dispose();
       this.tracks = [];
@@ -863,7 +959,20 @@
       this.bus = ctx.createGain();
       this.send = ctx.createGain();
       this.duckNode = ctx.createGain();
-      this.bus.connect(this.duckNode); this.send.connect(eng.revIn);
+      // 曲目均衡：lowShelf（dB，约 160 Hz 以下；战场曲的大鼓 / 低音弦乐过重时收一点）、
+      // air（dB，6 kHz 以上；竖琴 / 古琴 / 甘美兰等高频很少的地图曲提一点亮度）
+      let node = this.bus;
+      this.eq = [];
+      if (P.lowShelf) {
+        const f = ctx.createBiquadFilter(); f.type = 'lowshelf'; f.frequency.value = 160; f.gain.value = P.lowShelf;
+        node.connect(f); node = f; this.eq.push(f);
+      }
+      if (P.air) {
+        const f = ctx.createBiquadFilter(); f.type = 'highshelf'; f.frequency.value = 6000; f.gain.value = P.air;
+        node.connect(f); node = f; this.eq.push(f);
+      }
+      node.connect(this.duckNode);
+      this.send.connect(eng.revIn);
       this.duckNode.connect(eng.mix);
       const g0 = this.gainTarget, s0 = g0 * (P.reverb === undefined ? 1 : P.reverb);
       if (fadeIn > 0.01) {
@@ -895,8 +1004,9 @@
       input.gain.value = gain;
       let node = input;
       let pan = null;
-      const pv = V.pan !== undefined ? V.pan : (def.pan || 0);
-      if (ctx.createStereoPanner && pv) { pan = ctx.createStereoPanner(); pan.pan.value = Math.max(-1, Math.min(1, pv)); input.connect(pan); node = pan; }
+      // 声像按乐曲 width（默认 PAN_WIDTH）放宽：谱面写的是相对位置，拨弦与打击乐因此分得更开
+      const pv = (V.pan !== undefined ? V.pan : (def.pan || 0)) * (P.width !== undefined ? P.width : PAN_WIDTH);
+      if (ctx.createStereoPanner && pv) { pan = ctx.createStereoPanner(); pan.pan.value = Math.max(-0.85, Math.min(0.85, pv)); input.connect(pan); node = pan; }
       node.connect(this.bus);
       const sg = ctx.createGain();
       sg.gain.value = V.rev !== undefined ? V.rev : (def.rev === undefined ? 0.25 : def.rev);
@@ -1071,7 +1181,7 @@
     dispose() {
       for (const rec of this.nodes) { try { rec.src.stop(); } catch (e) { /* 忽略 */ } }
       this.nodes.clear();
-      try { this.bus.disconnect(); this.send.disconnect(); this.duckNode.disconnect(); } catch (e) { /* 忽略 */ }
+      try { this.bus.disconnect(); this.send.disconnect(); this.duckNode.disconnect(); for (const f of this.eq) f.disconnect(); } catch (e) { /* 忽略 */ }
       for (const k in this.channels) { const c = this.channels[k]; try { c.input.disconnect(); if (c.pan) c.pan.disconnect(); c.sg.disconnect(); } catch (e) { /* 忽略 */ } }
     }
   }
@@ -1202,6 +1312,7 @@
       buffer = await ctx.startRendering();
     }
     const ms = nowMs() - t0;
+    eng.dispose();
     let peak = 0, sum = 0, nan = 0;
     for (let c = 0; c < buffer.numberOfChannels; c++) {
       const d = buffer.getChannelData(c);
@@ -1221,9 +1332,11 @@
   SG.Music = {
     version: 2,
     INST, PIECES,
-    defineInst, add, resolve, compile, compileAsync, prepare, prepareSync,
+    defineInst, add, variant, resolve, compile, compileAsync, prepare, prepareSync,
     get(key) { return PIECES[key] || null; },
-    keys() { return Object.keys(PIECES); },
+    keys() { return Object.keys(PIECES).filter(k => !PIECES[k]._derived); },
+    // 曲目的主音音级（0 = C … 11 = B）
+    tonic(key) { const C = compile(key); return C ? C.tonicPc : null; },
     validate(key) { const C = compile(key); return C ? C.errors.slice() : ['未知曲目 ' + key]; },
     duration(key) { const C = compile(key); return C ? { intro: C.introDur, loop: C.loopDur, total: C.introDur + C.loopDur } : null; },
     Engine,

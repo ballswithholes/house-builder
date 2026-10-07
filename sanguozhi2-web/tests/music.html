@@ -17,6 +17,7 @@
   button:hover { border-color: var(--gold); }
   button.on { background: var(--red); border-color: #ffb199; }
   button.sm { min-height: 34px; font-size: 12px; padding: 0 8px; }
+  @media (pointer: coarse) { button.sm { min-height: 44px; } }   /* 触屏：保证 44px 触控目标 */
   .panel { background: var(--panel); border: 1px solid rgba(243,201,105,.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
   #now { font-size: 14px; color: var(--dim); margin-top: 8px; min-height: 20px; }
   #now b { color: var(--gold); font-weight: normal; }
@@ -44,9 +45,17 @@
   <div class="row" id="cultures"></div>
   <div class="row" style="margin-top:10px">
     <button id="stop">停止</button>
-    <button id="clashBtn">冲锋乐句（叠加）</button>
     <span class="lbl">音量</span><input id="vol" type="range" min="0" max="150" value="100">
     <button id="sfxBtn">音效：hit</button>
+  </div>
+  <h2>冲锋乐句（叠加在当前曲目上，跟随其调性与拍子）</h2>
+  <div class="row" id="stingers">
+    <button id="clashBtn" title="与游戏中相同：随机变奏，15 秒内只响一次">游戏方式</button>
+  </div>
+  <h2>衔接</h2>
+  <div class="row">
+    <button id="vicMap" title="胜利短曲开始 2.6 秒后请求地图曲：应等胜利曲奏完再切换">胜利 → 2.6 秒后请求地图</button>
+    <button id="battleClash" title="请求战场曲后立即叠加冲锋乐句：战场曲不应被取消">战场 + 立即冲锋</button>
   </div>
   <div id="now">轻点任一曲目开始（首次点击解锁音频）</div>
 </div>
@@ -90,6 +99,10 @@
   CULTURES.forEach(([c, n]) => { cultBtns[c] = btn($('cultures'), n + ' <small style="color:#a59d8c">' + c + '</small>', () => { Sfx.unlock(); Sfx.setCulture(c); mark(); }); });
   $('stop').onclick = () => { Sfx.setMusic(false); mark(); };
   $('clashBtn').onclick = () => { Sfx.unlock(); Sfx.music('clash'); };
+  [['clash', 'A 上行'], ['clash-b', 'B 呼应'], ['clash-c', 'C 擂鼓'], ['clash-short', '短（快速模式）']].forEach(([k, n]) =>
+    btn($('stingers'), n + ' <small style="color:#a59d8c">' + k + '</small>', () => { Sfx.unlock(); Sfx.stinger('clash', { force: true, variant: k }); }));
+  $('vicMap').onclick = () => { Sfx.unlock(); Sfx.setMusic(true); Sfx.music('victory'); mark(); setTimeout(() => { Sfx.music('map'); mark(); }, 2600); };
+  $('battleClash').onclick = () => { Sfx.unlock(); Sfx.setMusic(true); Sfx.music('battle'); Sfx.stinger('clash', { force: true }); mark(); };
   $('vol').oninput = e => Sfx.setMusicVolume(e.target.value / 100);
   $('sfxBtn').onclick = () => { Sfx.unlock(); Sfx.play('hit'); };
   function mark() {

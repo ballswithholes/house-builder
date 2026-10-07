@@ -58,7 +58,7 @@
   const MOVES = {
     light1: { kind: 'light', startup: 0.10, active: 0.07, recovery: 0.19, dmg: 2.4, stun: 0.30, push: 2.6, reachK: 0.92, next: 'light2', hitstop: 0.065, hmax: 0.85 },
     light2: { kind: 'light', startup: 0.09, active: 0.07, recovery: 0.21, dmg: 2.4, stun: 0.32, push: 2.9, reachK: 0.95, next: 'light3', hitstop: 0.07, hmax: 0.85 },
-    light3: { kind: 'light', startup: 0.15, active: 0.09, recovery: 0.34, dmg: 4, stun: 0.46, push: 5.0, reachK: 1.0, hitstop: 0.10, hmax: 1.45, big: true, lunge: 1.8 },
+    light3: { kind: 'light', startup: 0.15, active: 0.09, recovery: 0.44, dmg: 4, stun: 0.46, push: 5.0, reachK: 1.0, hitstop: 0.10, hmax: 1.45, big: true, lunge: 1.8 },
     heavy: { kind: 'heavy', startup: 0.09, active: 0.10, recovery: 0.40, dmg: 4.8, dmgCharge: 5, stun: 0.5, push: 4.6, reachK: 1.08, hitstop: 0.12, hmax: 1.5, big: true, lunge: 2.2 },
     air: { kind: 'air', startup: 0.05, active: 0.20, recovery: 0.10, dmg: 3, stun: 0.36, push: 3.0, reachK: 0.88, hitstop: 0.08, hmax: 9 },
     // 绝技：定格起手 → 突进 → 三段斩 + 终结一击（倒地）
@@ -436,6 +436,7 @@
         }
         case 'guard':
           f.vx = 0;
+          if (this.fresh(f, 'dash') && f.dashDir && !h.guard) { this.use(f, 'dash'); this.setState(f, 'dash'); this.emit({ type: 'dash', who: f.idx }); break; }
           if (this.fresh(f, 'light')) { this.use(f, 'light'); this.startAttack(f, 'light1'); break; }
           if (!h.guard) this.setState(f, 'idle');
           break;
@@ -653,7 +654,7 @@
       } else if (guarded) {
         if (breaks) { this.setState(o, 'guardbreak'); o.stun = 0.8 * o.stunK; this.emit({ type: 'guardbreak', who: o.idx }); }
         else { this.setState(o, 'guardstun'); o.stun = (0.12 + mv.stun * 0.35) * o.stunK; }
-        o.vx = dir * mv.push * 0.85;
+        o.vx = dir * mv.push * (mv.big ? 0.5 : 0.85);     // 大招被挡时推开得少：收招破绽可被反击
         o.rage = Math.min(100, o.rage + 2 + dmg);
         f.rage = Math.min(100, f.rage + 1.5);
       } else {
@@ -718,7 +719,8 @@
   class AI {
     constructor(me) {
       this.me = me;
-      const s = M.clamp((me.war - 20) / 80, 0, 1);
+      // 技巧：武力 20 → 0.4、武力 60 → 0.7、武力 100 → 1（下限较高：普通武将也会防守反击，强将近乎无隙可乘）
+      const s = 0.4 + 0.6 * M.clamp((me.war - 20) / 80, 0, 1);
       this.s = s;
       this.react = 0.44 - 0.29 * s;      // 反应时间：武力 100 → 0.15 秒，武力 20 → 0.44 秒
       this.guardP = 0.10 + 0.70 * s;     // 看见来招时举防的概率
@@ -749,7 +751,7 @@
       if (dist >= foeR + 0.6) this.zone = false;
       if (H.x === me.face && !H.guard && !H.dash && !T.light && !T.heavy && !T.up && !T.special && sim.actionable(me) && dist < foeR + 0.4) {
         const seen = sim.seen(foe.idx, this.react);
-        const pushy = seen && (seen.state === 'walk' || seen.state === 'dash' || MOVES[seen.state]);
+        const pushy = seen && seen.state !== 'guard' && seen.phase !== 'recovery';
         if (!this.zone || sim.clock >= this.cautAt) { this.zone = true; this.cautAt = sim.clock + 0.35; this.caut = rnd() < 0.1 + 0.75 * this.s; }
         if (pushy && this.caut) {
           H.x = 0; this.planX = 0; H.guard = true;
@@ -779,7 +781,7 @@
       if (me.state === 'light1' || me.state === 'light2') {
         if (this.comboSeq !== me.seq) { this.comboSeq = me.seq; this.comboRoll = rnd(); this.comboDone = false; }   // 每一段各自判定
         const mv = MOVES[me.state];
-        if (me.t >= mv.startup + mv.active * 0.3 && !this.comboDone) {
+        if (!this.comboDone && (me.hitIdx > 0 || me.t >= mv.startup + mv.active)) {   // 命中即确认；挥空则在判定结束时决定
           const landed = me.hitIdx > 0 && foe.state === 'hitstun';
           const go = landed ? this.comboRoll < this.comboP : this.comboRoll < this.comboP * (1 - s) * 0.6;
           if (go) this.press('light');
@@ -832,6 +834,9 @@
         }
       }
 
+      // 正在格挡而对手的连段还在继续（看到对手仍在出招）：不放下防御
+      if ((me.state === 'guard' || me.state === 'guardstun') && seen && seen.atk && Math.abs(seen.x - me.x) <= foe.reach + BODY + 0.6 && rnd() < 0.3 + 0.7 * s)
+        this.guardUntil = Math.max(this.guardUntil, now + 0.12);
       // 看见对手出招：按格挡率决定是否举防
       if (seen && seen.atk && seen.seq !== this.seenSeq) {
         this.seenSeq = seen.seq;
@@ -848,7 +853,7 @@
         if (left > need - 0.03 && rnd() < this.punishP) {
           this.guardUntil = 0; H.guard = false;
           if (dist <= reach) { this.press('light'); H.x = 0; return; }
-          if (me.state !== 'guard') { H.dash = me.face; this.press('light'); return; }
+          H.dash = me.face; this.press('light'); return;
         }
       }
       // 迎击：按看到的对手位置与速度预判，对手将进入自己的攻击距离时抢先出手（兵器长者占便宜）
@@ -929,6 +934,7 @@
           const opening = seen && (seen.phase === 'recovery' || seen.state === 'hitstun' || seen.state === 'guardstun');
           if ((opening && rnd() < (0.35 + 0.5 * s) * k) || rnd() < (0.08 + 0.18 * s) * k) { H.dash = me.face; this.press('light'); return; }
         }
+        if (gap > -0.06 && dist < reach + 0.75 && rnd() < 0.05 + 0.1 * s) { H.dash = me.face; this.press('light'); return; }   // 兵器相当：偶尔冲刺抢攻
         if (dist < reach * 1.45 && rnd() < this.whiffP) { this.press('light'); return; }   // 冒失出手
         if (dist > 3.4 && rnd() < 0.22 + 0.2 * s) { H.dash = me.face; return; }
         if (dist > 1.9 && dist < 3.3 && rnd() < 0.05 + 0.05 * (1 - s)) { this.press('up'); H.x = me.face; this.planX = me.face; return; }
@@ -2689,6 +2695,7 @@
 .sgd-pad{left:calc(var(--sal) + 1.3*var(--u));width:calc(var(--b)*2.25);height:calc(var(--b)*2.05);}
 .sgd-btns{right:calc(var(--sar) + 1.3*var(--u));width:calc(var(--b)*2.45);height:calc(var(--b)*2.2);pointer-events:none;}
 .sgd-btns .sgd-tb{pointer-events:auto;}
+@media (max-aspect-ratio:1/1){.sgd-touchhint,.sgd-tag{display:none;}}
 .sgd-tb{position:absolute;display:grid;place-items:center;width:var(--b);height:var(--b);border-radius:50%;
   background:radial-gradient(circle at 50% 35%,rgba(70,60,80,.55),rgba(14,12,20,.55));border:2px solid rgba(243,201,105,.6);
   box-shadow:0 .2em .6em rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.15);color:#fff4dc;font:700 calc(var(--b)*.3)/1 ${KAI};

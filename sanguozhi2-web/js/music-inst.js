@@ -295,11 +295,11 @@
   // ================================================================ 拨弦 ==
   ks('zheng', { emph: 0.6, t60: 3.4, t60k: 0.45, damp: 0.1, pick: 0.12, bright: 0.72, tri: 0.55, noise: 0.5, click: 0.18,
     body: [[180, 4, 1.1], [420, 2.5, 1.4], [1250, 2, 1.2], [3300, 3, 1.4]], dur: 3.4 },
-  { gain: 0.5, rev: 0.32, ring: 1.0, attackBend: 7, vibCents: 24, vibRate: 5.6, tremRate: 13, slideSemi: 2, velLp: [1800, 9000], label: '古筝' });
+  { gain: 0.5, rev: 0.32, ring: 1.0, attackBend: 7, vibCents: 24, vibRate: 5.6, tremRate: 13, slideSemi: 2, velLp: [3000, 9000], label: '古筝' });
 
   ks('pipa', { emph: 0.7, t60: 1.25, t60k: 0.4, damp: 0.06, pick: 0.085, bright: 0.9, tri: 0.35, noise: 0.7, click: 0.3,
     body: [[270, 4, 1.4], [900, 2, 1.2], [2500, 4, 1.8]], dur: 2.0 },
-  { gain: 0.46, rev: 0.24, ring: 0.3, attackBend: 6, tremRate: 17, strum: 0.012, vibCents: 18, slideSemi: 1.5, velLp: [2200, 9000], label: '琵琶' });
+  { gain: 0.46, rev: 0.24, ring: 0.3, attackBend: 6, tremRate: 17, strum: 0.012, vibCents: 18, slideSemi: 1.5, velLp: [3400, 9000], label: '琵琶' });
 
   ks('qin', { emph: 0.2, t60: 6, t60k: 0.35, damp: 0.36, pick: 0.17, bright: 0.35, tri: 0.85, noise: 0.2, click: 0.04,
     body: [[110, 4, 0.9], [320, 3, 1.1], [900, -2, 1]], dur: 4.5 },
@@ -315,7 +315,7 @@
 
   ks('koto', { emph: 0.7, t60: 1.9, t60k: 0.45, damp: 0.09, pick: 0.075, bright: 0.85, tri: 0.45, noise: 0.6, click: 0.28,
     body: [[250, 3, 1.2], [1500, 4, 1.4], [3500, 2, 2]], dur: 2.6 },
-  { gain: 0.5, rev: 0.32, ring: 0.6, attackBend: 10, vibCents: 26, vibRate: 5, slideSemi: 1, tremRate: 12, velLp: [2000, 9000], label: '筝（日本）' });
+  { gain: 0.5, rev: 0.32, ring: 0.6, attackBend: 10, vibCents: 26, vibRate: 5, slideSemi: 1, tremRate: 12, velLp: [3200, 9000], label: '筝（日本）' });
 
   ks('gayageum', { emph: 0.35, t60: 2.5, t60k: 0.5, damp: 0.3, pick: 0.2, bright: 0.48, tri: 0.8, noise: 0.3, click: 0.06,
     body: [[200, 4, 1], [700, 3, 1.2], [1800, 1, 1]], dur: 3.2 },
