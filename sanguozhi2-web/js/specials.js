@@ -34,7 +34,7 @@
          刷新部队与情报卡 → 溃散动画。与 doAttack / doTactic 一样不调用 spend（由调用方 spend）。
          opts：{ cutIn: true（false 跳过特写）, fast: false（电脑回合可 true：特写缩短）,
                  rig: 镜头（缺省 SG.Game.rig；特效期间推近到施展者与目标之间，结束后恢复距离）, zoom: true }
-     await SG.Specials.cutIn({ gen, name, color, side, cry, fast }) → 简易特写（DOM，约 1.1 秒）
+     await SG.Specials.cutIn({ gen, name, color, side, cry, fast }) → 简易特写（DOM，约 1.1 秒；放在 SG.UI 的 screens 层，点击或按键跳过）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -49,7 +49,7 @@
     },
     cleave: {
       label: '横扫', stat: 'war', target: 'enemy', fx: 'sweep', color: '#ffb04a',
-      params: { power: [1.5, 1, 2, 0.01], splash: [0.75, 0.3, 1, 0.01], morale: [-8, -30, 0, 1], confuse: [0, 0, 0.5, 0.01], turns: [1, 1, 2, 1] },
+      params: { power: [1.65, 1.1, 2.2, 0.01], splash: [0.75, 0.3, 1, 0.01], morale: [-8, -30, 0, 1], confuse: [0, 0, 0.5, 0.01], turns: [1, 1, 2, 1] },
     },
     charge: {
       label: '突击', stat: 'war', target: 'enemy', fx: 'dash', color: '#ff6b4a',
@@ -65,7 +65,7 @@
     },
     blaze: {
       label: '火攻', stat: 'intel', target: 'enemy', fx: 'fire', color: '#ff7a2a',
-      params: { range: [3, 2, 5, 1], radius: [1, 0, 2, 1], power: [0.9, 0.5, 1.3, 0.01], splash: [0.75, 0.3, 1, 0.01], burn: [2, 0, 3, 1], morale: [-8, -30, 0, 1] },
+      params: { range: [3, 2, 5, 1], radius: [1, 0, 2, 1], power: [1.15, 0.65, 1.7, 0.01], splash: [0.75, 0.3, 1, 0.01], burn: [2, 0, 3, 1], morale: [-8, -30, 0, 1] },
     },
     storm: {
       label: '天候', stat: 'intel', target: 'enemy', fx: 'lightning', color: '#9fd8ff',
@@ -119,7 +119,11 @@
   const FX = ['slash', 'dragon', 'havoc', 'sweep', 'dash', 'whirl', 'arrows', 'arrow', 'fire', 'wind', 'lightning', 'water',
     'shock', 'aura', 'blossom', 'spirit', 'shield', 'heal', 'poison', 'shadow', 'drain', 'haste', 'claw', 'rock'];
   // 水攻：目标在河上或紧邻河流时的伤害倍率（battle-model.js 读取 SG.Specials.FLOOD_RIVER / FLOOD_DRY）
-  const FLOOD_RIVER = 1.4, FLOOD_DRY = 0.85;
+  const FLOOD_RIVER = 1.25, FLOOD_DRY = 0.85;
+  // 突击：冲刺（每格 dash）与退路受阻（+25%）的加成合计不超过 CHARGE_CAP 倍
+  const CHARGE_CAP = 1.3;
+  // 范围招式：同时命中多支敌军时，全部伤害合计不超过 AREA_TOTAL × 基准（主目标不缩减，次要目标按比例缩减）
+  const AREA_TOTAL = 2.5;
   const META_KEYS = ['name', 'kind', 'desc', 'lore', 'color', 'fx', 'cry', 'stat', 'note'];
   const STATS = ['war', 'intel', 'pol'];
 
@@ -242,32 +246,37 @@
     const war = (sp.stat || 'war') === 'war';
     const dmg = k => war ? '约 ' + fmt(k) + ' 倍普通攻击的伤害' : '计策级伤害 ×' + fmt(k);
     const amt = k => war ? '约 ' + fmt(k) + ' 倍' : ' ×' + fmt(k) + ' 的';
+    // 范围伤害封顶（battle-model specialPlan：总伤害 ≤ AREA_TOTAL × 基准）
+    const cap = '（同时命中多支时总伤害封顶）';
+    // 辅助类数值按能力缩放：kS = 0.75 + 能力/400（能力 100 时为 1）
+    const statName = { war: '武力', intel: '智力', pol: '政治' }[sp.stat || 'war'];
+    const scaled = '（' + statName + ' 100 时的数值，每低 40 点弱一成）';
     switch (sp.kind) {
       case 'smite': return '对' + near(sp.range) + '一支敌军全力一击，造成' + dmg(sp.power) + pierce + mor + conf + '。';
-      case 'cleave': return '横扫相邻敌军：主目标受' + dmg(sp.power) + '，其余相邻敌军受' + amt(sp.power * sp.splash) + mor + conf + '。';
+      case 'cleave': return '横扫相邻敌军：主目标受' + dmg(sp.power) + '，其余相邻敌军受' + amt(sp.power * sp.splash) + cap + mor + conf + '。';
       case 'charge': return '沿直线冲向 ' + sp.range + ' 格内的敌军（途中须无阻挡），造成' + dmg(sp.power) + '，每冲过一格再增 ' + pct(sp.dash) +
-        (sp.push ? '，并将其击退一格（退路受阻时伤害 +25%）' : '') + mor + '。';
+        (sp.push ? '，并将其击退一格（退路受阻或敌军据守本城、城门时改为伤害 +25%）' : '') + '，加成合计至多 +' + pct(CHARGE_CAP - 1) + mor + '。';
       case 'rampage': return '在' + (sp.range <= 1 ? '相邻' : ' ' + sp.range + ' 格内的') + '敌军之间往来冲杀，连斩 ' + sp.strikes + ' 次，每斩' + dmg(sp.power) + '（目标溃散则转斩下一支）' + mor + '。';
       case 'volley': return '向 ' + sp.range + ' 格内的敌军发射，造成' + dmg(sp.power) + pierce +
-        (sp.radius > 0 ? '，周围一格的敌军受' + amt(sp.power * sp.splash) + '溅射' : '') + mor + '。';
-      case 'blaze': return '对 ' + sp.range + ' 格内的敌军纵火，造成' + dmg(sp.power) + (sp.radius > 0 ? '，周围 ' + sp.radius + ' 格的敌军受' + amt(sp.power * sp.splash) + '火焚' : '') +
+        (sp.radius > 0 ? '，周围一格的敌军受' + amt(sp.power * sp.splash) + '溅射' + cap : '') + mor + '。';
+      case 'blaze': return '对 ' + sp.range + ' 格内的敌军纵火，造成' + dmg(sp.power) + (sp.radius > 0 ? '，周围 ' + sp.radius + ' 格的敌军受' + amt(sp.power * sp.splash) + '火焚' + cap : '') +
         '（林地 ×1.5、河上 ×0.5）' + (sp.burn > 0 ? '，燃起 ' + sp.burn + ' 日大火' : '') + mor + '。';
-      case 'storm': return sp.range + ' 格内任选一处，周围 ' + sp.radius + ' 格内的所有敌军受天候重创（' + dmg(sp.power) + '）' +
+      case 'storm': return sp.range + ' 格内任选一处，周围 ' + sp.radius + ' 格内的所有敌军受天候重创（' + dmg(sp.power) + '）' + cap +
         (sp.burn > 0 ? '，脚下燃起 ' + sp.burn + ' 日大火' : '') + mor + conf + '。';
-      case 'flood': return '引水灌向 ' + sp.range + ' 格内一处，周围 ' + sp.radius + ' 格的敌军受水攻（' + dmg(sp.power) + '，近河 ×' + FLOOD_RIVER + '、否则 ×' + FLOOD_DRY + '），并扑灭火势' + mor + conf + '。';
-      case 'roar': return '一声怒吼，周围 ' + sp.radius + ' 格内的敌军' + (sp.power > 0 ? '受震伤、' : '') + '士气 ' + signed(sp.morale) + conf + '。';
+      case 'flood': return '引水灌向 ' + sp.range + ' 格内一处，周围 ' + sp.radius + ' 格的敌军受水攻（' + dmg(sp.power) + '，近河 ×' + FLOOD_RIVER + '、否则 ×' + FLOOD_DRY + '）' + cap + '，并扑灭火势' + mor + conf + '。';
+      case 'roar': return '一声怒吼，周围 ' + sp.radius + ' 格内的敌军' + (sp.power > 0 ? '受震伤、' : '') + '士气 ' + signed(sp.morale) + '（武力 100 时的降幅，每低 40 点弱一成）' + conf + '。';
       case 'rally': return '鼓舞周围 ' + sp.radius + ' 格内的友军：士气 +' + sp.morale + (sp.heal > 0 ? '，回复 ' + pct(sp.heal) + ' 最大兵力' : '') +
-        (sp.cure ? '，解除混乱' : '') + (sp.atk > 1 ? '，攻击 +' + pct(sp.atk - 1) + '（' + sp.turns + ' 日）' : '') + '。';
+        (sp.cure ? '，解除混乱' : '') + (sp.atk > 1 ? '，攻击 +' + pct(sp.atk - 1) + '（' + sp.turns + ' 日）' : '') + scaled + '。';
       case 'command': return '号令周围 ' + sp.radius + ' 格内的友军：攻击 +' + pct(sp.atk - 1) + (sp.def > 1 ? '、防御 +' + pct(sp.def - 1) : '') +
-        '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + '。';
+        '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + scaled + '。';
       case 'scheme': return '对 ' + sp.range + ' 格内一处施展奇谋，' + (sp.radius > 0 ? '周围 ' + sp.radius + ' 格内的' : '') + '敌军可能陷入混乱 ' + sp.turns +
         ' 日（成功率随智力差变化）' + (sp.power > 0 ? '，并受少量伤害' : '') + mor + '。';
       case 'drain': return '击溃' + near(sp.range) + '敌军，造成' + dmg(sp.power) + '，并将约 ' + pct(sp.drain) + ' 的伤亡收编为己方兵力（随政治增减）' + mor + '。';
       case 'fortify': return (sp.radius > 0 ? '自身与周围 ' + sp.radius + ' 格内的友军' : '自身') + '防御 +' + pct(sp.def - 1) +
-        (sp.counter > 1 ? '、反击 +' + pct(sp.counter - 1) : '') + '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + '。';
+        (sp.counter > 1 ? '、反击 +' + pct(sp.counter - 1) : '') + '，持续 ' + sp.turns + ' 日' + (sp.morale > 0 ? '，士气 +' + sp.morale : '') + scaled + '。';
       case 'haste': return '令周围 ' + sp.radius + ' 格内至多 ' + sp.count + ' 支已行动的友军再次行动' + (sp.move > 0 ? '，当日机动力 +' + sp.move : '') + '。';
       case 'heal': return '为 ' + (sp.range > 0 ? sp.range + ' 格内' : '自身') + (sp.radius > 0 ? '一支友军及其周围 ' + sp.radius + ' 格的友军' : '一支友军') +
-        '疗伤，回复约 ' + pct(sp.heal) + ' 最大兵力' + (sp.morale > 0 ? '、士气 +' + sp.morale : '') + (sp.cure ? '，并解除混乱' : '') + '。';
+        '疗伤，回复 ' + pct(sp.heal) + ' 最大兵力' + (sp.morale > 0 ? '、士气 +' + sp.morale : '') + scaled + (sp.cure ? '，并解除混乱' : '') + '。';
       case 'assassinate': return (sp.stat === 'intel' ? '遣死士潜入 ' : '潜入 ') + sp.range + ' 格内的敌阵刺杀敌将，得手则该部当即溃散（基础成功率 ' + pct(sp.chance) + '，随' + (sp.stat === 'intel' ? '智力' : '武力') + '差变化，主将减半）；' +
         (sp.power > 0 ? '失手仍造成' + dmg(sp.power) : '失手则无功而返') + mor + '。';
       case 'poison': return '向 ' + sp.range + ' 格内一处施毒' + (sp.radius > 0 ? '，周围一格的敌军同时中毒' : '') + '：每日损兵约 ' + pct(sp.dot) + '，持续 ' + sp.turns + ' 日' + mor + '。';
@@ -342,11 +351,11 @@
   // 每种机制的参数生成：s = 主能力强弱 0..1，r = 姓名种子的随机序列。数值落在平衡目标附近
   const GEN = {
     smite: (s, r) => { const range = r.next(5) === 0 ? 2 : 1; return { range, power: lerp(1.9, 2.35, s) - (range - 1) * 0.15, morale: -(8 + r.next(13)), pierce: r.next(3) === 0 ? 1 : 0, confuse: r.next(5) === 0 ? 0.15 + r.next(3) * 0.05 : 0, turns: 1 }; },
-    cleave: (s, r) => ({ power: lerp(1.55, 1.8, s), splash: 0.5 + r.next(6) * 0.05, morale: -(6 + r.next(10)), confuse: r.next(6) === 0 ? 0.15 : 0, turns: 1 }),
+    cleave: (s, r) => ({ power: lerp(1.7, 1.95, s), splash: 0.5 + r.next(6) * 0.05, morale: -(6 + r.next(10)), confuse: r.next(6) === 0 ? 0.15 : 0, turns: 1 }),
     charge: (s, r) => ({ range: 2 + r.next(3), power: lerp(1.6, 1.85, s), dash: 0.08 + r.next(5) * 0.01, push: r.next(4) === 0 ? 0 : 1, morale: -(8 + r.next(10)) }),
     rampage: (s, r) => { const strikes = 3 + r.next(4); return { range: 1 + r.next(2) + (strikes >= 5 ? 1 : 0), strikes, power: lerp(2.0, 2.35, s) / strikes, morale: -(4 + r.next(7)) }; },
     volley: (s, r) => { const radius = r.next(3) === 0 ? 1 : 0; return { range: 3 + r.next(3), power: radius ? lerp(1.4, 1.65, s) : lerp(1.8, 2.2, s), radius, splash: 0.5 + r.next(5) * 0.05, pierce: r.next(4) === 0 ? 1 : 0, morale: -(4 + r.next(9)) }; },
-    blaze: (s, r) => { const radius = r.next(4) === 0 ? 0 : 1; return { range: 3 + r.next(2), radius, power: radius ? lerp(0.95, 1.12, s) : lerp(1.15, 1.3, s), splash: 0.6 + r.next(5) * 0.05, burn: 1 + r.next(3), morale: -(6 + r.next(8)) }; },
+    blaze: (s, r) => { const radius = r.next(4) === 0 ? 0 : 1; return { range: 3 + r.next(2), radius, power: radius ? lerp(1.25, 1.45, s) : lerp(1.5, 1.7, s), splash: 0.6 + r.next(5) * 0.05, burn: 1 + r.next(3), morale: -(6 + r.next(8)) }; },
     storm: (s, r) => ({ range: 4 + r.next(3), radius: r.next(3) === 0 ? 1 : 2, power: lerp(0.65, 0.85, s), burn: r.next(4) === 0 ? 1 : 0, confuse: r.next(3) === 0 ? 0.15 + r.next(3) * 0.05 : 0, turns: 1, morale: -(8 + r.next(8)) }),
     flood: (s, r) => ({ range: 3 + r.next(3), radius: r.next(4) === 0 ? 2 : 1, power: lerp(0.9, 1.1, s), confuse: r.next(4) === 0 ? 0.15 : 0, turns: 1, morale: -(10 + r.next(8)) }),
     roar: (s, r) => ({ radius: r.next(4) === 0 ? 1 : 2, power: lerp(0.3, 0.55, s), morale: -Math.round(lerp(18, 28, s)) - r.next(4), confuse: lerp(0.2, 0.4, s), turns: 1 }),
@@ -681,7 +690,7 @@
     s.id = 'sg-specials-style';
     s.textContent = `
 .sg-spfx-on .sg-uinfo,.sg-spfx-on .sg-stem{opacity:.16 !important;}
-.sg-spcut{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden;--c:#f3c969;--cg:rgba(243,201,105,.5);--dur:1.1s;}
+.sg-spcut{position:fixed;inset:0;z-index:5;pointer-events:auto;cursor:pointer;overflow:hidden;-webkit-tap-highlight-color:transparent;--c:#f3c969;--cg:rgba(243,201,105,.5);--dur:1.1s;}
 .sg-spcut-dim{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.1),rgba(0,0,0,.6));opacity:0;animation:sg-spcut-dim var(--dur) ease forwards;}
 .sg-spcut-band{position:absolute;left:-12%;right:-12%;top:50%;height:clamp(92px,30vh,230px);margin-top:calc(clamp(92px,30vh,230px) / -2);
   transform:skewY(-6deg) scaleY(0);transform-origin:50% 50%;
@@ -743,14 +752,39 @@
       (o.cry ? '<div class="sg-spcut-cry">「' + esc(o.cry) + '」</div>' : '');
     row.appendChild(face); row.appendChild(txt);
     root.appendChild(row);
-    document.body.appendChild(root);
+    // 放在界面的 screens 层（在弹窗 / 提示之下，DESIGN-V2 §2）；没有 SG.UI 时退回 body（z-index 5，仍低于 #ui）
+    let layer = null;
+    try { layer = SG.UI && typeof SG.UI.layer === 'function' ? SG.UI.layer('screens') : null; } catch (e) { layer = null; }
+    if (layer) {   // screens 层避开了安全区；特写要铺满整屏，向外撑回安全区
+      root.style.position = 'absolute';
+      root.style.inset = 'calc(-1 * var(--sg-sat, 0px)) calc(-1 * var(--sg-sar, 0px)) calc(-1 * var(--sg-sab, 0px)) calc(-1 * var(--sg-sal, 0px))';
+    }
+    (layer || document.body).appendChild(root);
     sfx('horn', 0.55);
     setTimeout(() => sfx('duel', 0.7), 160);
-    return new Promise(res => setTimeout(() => { if (root.parentNode) root.parentNode.removeChild(root); res(); }, dur * 1000));
+    // 点击 / 触摸 / 任意键跳过（开头 0.15 秒内不接受，以免选目标的那一下直接跳过）
+    return new Promise(res => {
+      let done = false, armed = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        root.removeEventListener('pointerdown', onTap);
+        window.removeEventListener('keydown', onKey, true);
+        if (root.parentNode) root.parentNode.removeChild(root);
+        res();
+      };
+      const onTap = e => { e.preventDefault(); e.stopPropagation(); if (armed) finish(); };
+      const onKey = e => { if (armed && !e.repeat) finish(); };
+      root.addEventListener('pointerdown', onTap);
+      window.addEventListener('keydown', onKey, true);
+      setTimeout(() => { armed = true; }, 150);
+      const timer = setTimeout(finish, dur * 1000);
+    });
   }
 
   SG.Specials = {
-    KINDS, FX, FLOOD_RIVER, FLOOD_DRY,
+    KINDS, FX, FLOOD_RIVER, FLOOD_DRY, CHARGE_CAP, AREA_TOTAL,
     of, all, check, validate, signature, needsTarget, targetSide, explain, rules, kindName, cultureOf, uiColor,
     fallback(gen) { return normalize(fallback(gen), gen.name, true); },
     menuItem, cardLine, pickTarget, menu, perform, cutIn,

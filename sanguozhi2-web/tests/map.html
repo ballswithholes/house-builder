@@ -21,6 +21,7 @@
 <div id="hud"></div>
 <script src="../vendor/three.min.js"></script>
 <script src="../js/core.js"></script>
+<script src="../js/world-geo.js"></script>
 <script src="../js/art.js"></script>
 <script src="../js/camera.js"></script>
 <script src="../js/map-view.js"></script>
@@ -70,11 +71,17 @@
   const rig = new SG.CameraRig();
   rig.focusMap(60, 50, 95, true);
   const map = new SG.MapView();
+  // ?async=1：用 buildAsync（分片构建）
+  const useAsync = params.get('async') === '1';
   const t0 = performance.now();
-  map.build(state);
-  const buildMs = performance.now() - t0;
+  if (!useAsync) map.build(state);
+  start(useAsync ? map.buildAsync(state) : Promise.resolve());
+  function start(p) { p.then(() => { window.__test.buildMs = performance.now() - t0; begin(); }); }
   rig.onTap.push((x, y) => { const id = map.pick(x, y); map.select(id); window.__lastPick = id; });
 
+  const frameTimes = [];
+  let recording = false;
+  function begin() {
   // 测试用城名标签
   const labels = document.getElementById('labels');
   const lbls = [];
@@ -97,8 +104,6 @@
 
   // ------------------------------------------------ 主循环
   let last = performance.now();
-  const frameTimes = [];
-  let recording = false;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
     if (recording) frameTimes.push(now - last);
@@ -112,11 +117,12 @@
   }
   requestAnimationFrame(loop);
 
-  const info = SG.Gfx.renderer.info;
-  document.getElementById('hud').textContent = `build ${buildMs.toFixed(0)} ms · trees ${map.treeCount}`;
+  document.getElementById('hud').textContent = `build ${window.__test.buildMs.toFixed(0)} ms · trees ${map.treeCount}`;
+  window.__ready = true;
+  }
 
   window.__test = {
-    state, map, rig, buildMs,
+    state, map, rig, buildMs: 0,
     view(mapX, mapY, dist, yaw) {
       rig.yaw = rig.desiredYaw = yaw || 0;
       rig.focusMap(mapX, mapY, dist, true);
@@ -131,10 +137,10 @@
       return { frames: a.length, avgMs: avg, medianMs: a[a.length >> 1], p95Ms: a[Math.floor(a.length * 0.95)] };
     },
     stats() {
+      const info = SG.Gfx.renderer.info;
       return { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, programs: info.programs.length };
     },
   };
-  window.__ready = true;
 })();
 </script>
 </body>

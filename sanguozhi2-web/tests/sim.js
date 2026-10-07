@@ -121,7 +121,13 @@ function checkSpecialResult(res, where) {
 // 倍率的分母：武力系招式 = 对同一目标的一次普通攻击（期望）；智力 / 政治系 = 普通攻击与火计期望中较大者
 function refAction(Mdl, u, t, sp) {
   let ref = Mdl.atkExpect(u, t);
-  if (sp.stat !== 'war' && u.gen.intel >= 50) ref = Math.max(ref, M.clamp(0.5 + (u.gen.intel - t.gen.intel) / 110, 0.12, 0.92) * (260 + u.gen.intel * 11) * M.clamp(t.troops / 2500, 0.4, 1.4));
+  if (sp.stat !== 'war' && u.gen.intel >= 50) {
+    // 火计的实际期望：与 useTactic 相同的地形修正（林地 ×1.8、本城 / 城门 ×0.6）与防御加成
+    const tt = Mdl.map[t.x][t.y];
+    const terr = tt === SG.Terrain.Forest ? 1.8 : (tt === SG.Terrain.Castle || tt === SG.Terrain.Gate) ? 0.6 : 1;
+    const fire = M.clamp(0.5 + (u.gen.intel - t.gen.intel) / 110, 0.12, 0.92) * (260 + u.gen.intel * 11) * terr * M.clamp(t.troops / 2500, 0.4, 1.4) / Mdl.modK(t, 'def');
+    ref = Math.max(ref, fire);
+  }
   return Math.min(ref, t.troops);
 }
 function runBattle(seed, pr, stats) {
@@ -162,8 +168,10 @@ function runBattle(seed, pr, stats) {
           if (tg && tg.side !== u.side) {
             ref = refAction(Mdl, u, tg, sp);
           }
+          const holder = Mdl.unitAt(Mdl.castle.x, Mdl.castle.y);   // 本城上的守军（必杀技不得把他挪走）
           const res = Mdl.useSpecial(u, act.target);
           if (!res.sp || !u.specialUsed) throw new Error('planned special not used: ' + u.gen.name + ' ' + res.why);
+          if (holder && holder.side === 1 && holder.alive && (holder.x !== Mdl.castle.x || holder.y !== Mdl.castle.y)) throw new Error(sp.name + ' moved ' + holder.gen.name + ' off the castle');
           checkSpecialResult(res, 'battle ' + seed + ' ' + u.gen.name);
           checkBattleState(Mdl, 'battle ' + seed + ' ' + u.gen.name + ' ' + sp.name);
           if (stats) {
@@ -247,8 +255,13 @@ try {
   const dw = Math.abs(runs[true].w - runs[false].w) / runs[true].n;
   if (dw > 0.15) throw new Error('attacker win rate shifted by ' + (dw * 100).toFixed(1) + ' points with specials');
   if (on.st.specials < on.n * 0.5) throw new Error('AI almost never uses specials: ' + on.st.specials);
-  if (!(ratio >= 1.5 && ratio <= 3.2)) throw new Error('special/attack damage ratio out of range: ' + ratio.toFixed(2));
-  if (!(ratio1 >= 1.0 && ratio1 <= 2.8)) throw new Error('special/attack per-unit ratio out of range: ' + ratio1.toFixed(2));
+  if (!(ratio >= 1.6 && ratio <= 2.6)) throw new Error('special/attack damage ratio out of range: ' + ratio.toFixed(2));
+  if (!(ratio1 >= 1.0 && ratio1 <= 2.4)) throw new Error('special/attack per-unit ratio out of range: ' + ratio1.toFixed(2));
+  // 各机制的实战中位数（样本 ≥ 25 才判定；实战里常有补刀、残兵，单项波动大，故区间比设计目标宽）
+  for (const k of Object.keys(on.st.byKind)) if (on.st.byKind[k].length >= 25) {
+    const m = median(on.st.byKind[k]);
+    if (!(m >= 1.3 && m <= 3.0)) throw new Error('in-battle median for ' + k + ' out of range: ' + m.toFixed(2));
+  }
   if (runs[true].timeout > runs[false].timeout + 30) throw new Error('specials made many more battles time out');
 } catch (e) {
   BattleModel.specialsEnabled = true;
@@ -466,8 +479,9 @@ try {
         if (again.success || again.dmg !== 0) throw new Error('second useSpecial should do nothing');
         checked++;
       }
-      // 数日推进：中毒、燃烧、加成到期
-      for (let d = 0; d < 4 && Mdl.result === 0; d++) { Mdl.endDay(); checkBattleState(Mdl, 'fuzz endDay'); }
+      // 数日推进：中毒、燃烧、加成到期（endSide 两次 = 一日：守方之后 endDay，双方行动开始时加成计时）
+      for (let d = 0; d < 8 && Mdl.result === 0; d++) { Mdl.endSide(); checkBattleState(Mdl, 'fuzz endSide'); }
+      if (Mdl.result === 0) for (const u of Mdl.units) if (u.alive && u.mods.some(m => !(m.dot > 0) && m.days > 0 && m.days < 4)) throw new Error('fuzz: short buff still active after 4 days on ' + u.gen.name);
     }
   }
   console.log(`fuzz: ${used} specials resolved, state checked after each; kinds ${Object.keys(seenKinds).sort().map(k => k + ':' + seenKinds[k]).join(' ')}`);
@@ -515,10 +529,156 @@ try {
     return n + ' -';
   });
   console.log('  hand-made: ' + famous.join(', ') + (worst ? `; furthest from 2.1: ${worst.name} (${worst.k}) ${worst.r.toFixed(2)}` : ''));
-  for (const k of DAMAGE_KINDS) for (const o of byKind[k] || []) if (!(o.r > 1.2 && o.r < 3.6)) throw new Error('reference ratio out of range: ' + o.name + ' ' + k + ' ' + o.r.toFixed(2));
+  for (const k of DAMAGE_KINDS) for (const o of byKind[k] || []) if (!(o.r > 1.2 && o.r < 3.0)) throw new Error('reference ratio out of range: ' + o.name + ' ' + k + ' ' + o.r.toFixed(2));
 } catch (e) {
   fails++;
   console.log('useSpecial fuzz FAILED: ' + (e.stack || e));
+}
+
+// ======================================== (5b) 必杀技规则：攻守对称、据守本城、范围封顶 --
+console.log('== (5b) specials rules: symmetric durations, castle hold, area cap, per-kind damage ==');
+try {
+  const S = SG.Specials;
+  SG.Random.seed(91);
+  const g = SG.G = GameState.newGame('cao');
+  const byName = n => g.generals.find(x => x.name === n);
+  const dummy = (i, war, intel) => ({ id: 9100 + i, name: '靶' + i, war: war || 70, intel: intel || 60, pol: 50, faction: -1, troops: 3500, training: 60, loyalty: 80 });
+  // 平地小战场：caster 一方 + 若干敌我；casterSide = 施展者所在的一方
+  function field(casterGen, casterSide, nFoes, nFriends) {
+    casterGen.troops = SG.maxTroops(casterGen); casterGen.training = 70;
+    const mine = [casterGen].concat(Array.from({ length: nFriends || 0 }, (_, i) => dummy(20 + i)));
+    const theirs = Array.from({ length: nFoes }, (_, i) => dummy(i, 40, 30));
+    const s = { attacker: 0, defender: 1, src: g.cities[0], target: g.cities[11], atk: casterSide === 0 ? mine : theirs, def: casterSide === 0 ? theirs : mine, atkFood: 9000, atkGold: 0, routed: new Set(), captives: [] };
+    const Mdl = new BattleModel(s);
+    for (let x = 0; x < Mdl.W; x++) for (let y = 0; y < Mdl.H; y++) Mdl.map[x][y] = SG.Terrain.Plain;
+    Mdl.castle = P0(Mdl.W - 1, Mdl.H - 1);
+    const u = Mdl.units.find(x => x.gen === casterGen);
+    const foes = Mdl.units.filter(x => x.side !== casterSide), friends = Mdl.units.filter(x => x.side === casterSide && x !== u);
+    u.x = 5; u.y = 5;
+    [[6, 5], [5, 6], [4, 5], [5, 4]].slice(0, foes.length).forEach((p, k) => { foes[k].x = p[0]; foes[k].y = p[1]; });
+    friends.forEach((a, k) => { a.x = 6 + k; a.y = 4; });
+    for (const x of Mdl.units) { x.morale = 90; x.commander = false; }
+    Mdl.startSide(casterSide);
+    return { Mdl, u, foes, friends };
+  }
+  function P0(x, y) { return { x, y }; }
+  // 推进到下一次 side 一方行动开始（返回时 Mdl.side === side）
+  function nextPhase(Mdl, side) { do { Mdl.endSide(); } while (Mdl.side !== side && Mdl.result === 0); }
+  const realValue = SG.Random.value;
+  const lines = [];
+  // (a) 混乱：无论攻方或守方施展，「混乱 N 日」都让目标恰好失去 N 次本方行动
+  const confusers = [S.all().find(sp => sp.kind === 'roar' && sp.turns === 1 && sp.confuse > 0), S.all().find(sp => sp.kind === 'scheme' && sp.turns === 2)];
+  for (const sp of confusers) for (const side of [0, 1]) {
+    const { Mdl, u, foes } = field(byName(sp.gen), side, 2);
+    const t = S.needsTarget(sp) ? foes[0] : u;
+    SG.Random.value = () => 0;            // 必定成功
+    let res;
+    try { res = Mdl.useSpecial(u, t); } finally { SG.Random.value = realValue; }
+    if (res.confused.length === 0) throw new Error(sp.name + ' confused nobody');
+    const e = res.confused[0];
+    let lost = 0;
+    for (let k = 0; k < 4; k++) { nextPhase(Mdl, e.side); if (!Mdl.canAct(e)) lost++; }
+    lines.push(`${sp.gen}「${sp.name}」混乱 ${sp.turns} 日 by side ${side}: lost ${lost}`);
+    if (lost !== sp.turns) throw new Error(`${sp.name} (turns ${sp.turns}) cast by side ${side}: target lost ${lost} phases`);
+  }
+  // (b) 加成：持续 N 日 = 覆盖敌方 N 次行动（以及本方之后 N−1 次行动），攻守相同
+  for (const name of ['法正', '曹洪', '典韦', '曹操']) {
+    const sp = S.of(byName(name));
+    for (const side of [0, 1]) {
+      const { Mdl, u, friends } = field(byName(name), side, 1, 1);
+      const res = Mdl.useSpecial(u, u);
+      if (res.buffed.length === 0) throw new Error(name + ' buffed nobody');
+      const a = res.buffed[0];
+      const key = sp.def > 1 ? 'def' : 'atk';
+      let enemy = 0, own = 0;
+      for (let k = 0; k < 4; k++) {
+        nextPhase(Mdl, 1 - side); if (Mdl.modK(a, key) > 1) enemy++;
+        nextPhase(Mdl, side); if (Mdl.modK(a, key) > 1) own++;
+      }
+      lines.push(`${name}「${sp.name}」${key} ${sp.turns} 日 by side ${side}: enemy phases ${enemy}, later own phases ${own}`);
+      if (enemy !== sp.turns || own !== sp.turns - 1) throw new Error(`${name} (${key}, turns ${sp.turns}) by side ${side}: covers ${enemy} enemy / ${own} own phases`);
+    }
+  }
+  // (c) 中毒：发作次数 = 持续日数，攻守相同
+  {
+    const sp = S.of(byName('李儒'));
+    for (const side of [0, 1]) {
+      const { Mdl, u, foes } = field(byName('李儒'), side, 1);
+      foes[0].x = 7; foes[0].y = 5;
+      Mdl.useSpecial(u, foes[0]);
+      const e = foes[0];
+      let ticks = 0;
+      for (let k = 0; k < 6 && e.alive; k++) { const before = e.troops; nextPhase(Mdl, side); if (e.troops < before) ticks++; }
+      lines.push(`李儒「${sp.name}」中毒 ${sp.turns} 日 by side ${side}: ticks ${ticks}`);
+      if (ticks !== sp.turns) throw new Error(`poison by side ${side} ticked ${ticks} times (turns ${sp.turns})`);
+    }
+  }
+  console.log('  ' + lines.join('\n  '));
+  // (d) 突击不能把本城 / 城门上的部队撞走（守将被撞出本城后，攻方踏入即破城）
+  {
+    let n = 0;
+    for (const sp of S.all().filter(q => q.kind === 'charge' && q.push)) {
+      for (const tile of [SG.Terrain.Castle, SG.Terrain.Gate]) {
+        const { Mdl, u, foes } = field(byName(sp.gen), 0, 1);
+        const t = foes[0];
+        t.x = 9; t.y = 5; u.x = 9 - sp.range; u.y = 5;
+        Mdl.map[t.x][t.y] = tile; if (tile === SG.Terrain.Castle) Mdl.castle = P0(t.x, t.y);
+        t.commander = tile === SG.Terrain.Castle;
+        const pl = Mdl.specialPlan(u, t);
+        if (pl.push || pl.blocked !== t) throw new Error(sp.gen + ' charge would push a unit off ' + (tile === SG.Terrain.Castle ? '本城' : '城门'));
+        Mdl.useSpecial(u, t);
+        if (t.alive && (t.x !== 9 || t.y !== 5)) throw new Error(sp.gen + ' charge moved the defender off its tile');
+        n++;
+      }
+    }
+    console.log(`  charge vs 本城 / 城门: ${n} cases, defender never pushed off`);
+  }
+  // (e) 每位手写武将的伤害倍率：单体（只有一支敌军相邻 / 在射程内）与密集（主目标周围再有 3 支敌军）
+  const DAMAGE_KINDS = ['smite', 'cleave', 'charge', 'rampage', 'volley', 'blaze', 'storm', 'flood', 'drain'];
+  const roster = SG.ScenarioData.Generals.map(l => l.split('|')[0]);
+  const single = {}, cluster = {};
+  let worstCluster = null;
+  for (const name of roster) {
+    const gen = byName(name);
+    const sp = S.of(gen);
+    if (DAMAGE_KINDS.indexOf(sp.kind) < 0) continue;
+    for (const mode of ['single', 'cluster']) {
+      const { Mdl, u, foes } = field(gen, 0, mode === 'single' ? 1 : 4);
+      const t = foes[0];
+      const r = sp.kind === 'cleave' || sp.kind === 'rampage' || sp.kind === 'drain' || sp.kind === 'smite' ? 1 : Math.max(1, Math.min(sp.range, 3));
+      t.x = 5 + r; t.y = 5;
+      if (mode === 'cluster') {
+        const spots = sp.kind === 'cleave' || sp.kind === 'rampage' ? [[5, 6], [4, 5], [5, 4]] : [[t.x, 6], [t.x, 4], [t.x + 1, 5]];
+        foes.slice(1).forEach((e, k) => { e.x = spots[k][0]; e.y = spots[k][1]; });
+      }
+      if (Mdl.specialTargets(u).indexOf(t) < 0) continue;
+      const pl = Mdl.specialPlan(u, t);
+      const per = new Map();
+      for (const h of pl.dmg) per.set(h.unit, Math.min(h.unit.troops, (per.get(h.unit) || 0) + h.amt));
+      let tot = [...per.values()].reduce((a, b) => a + b, 0);
+      if (pl.drain > 0) for (const h of pl.dmg) if (h.primary) tot += Math.min(h.unit.troops, h.amt) * pl.drain;   // 收编：伤敌 + 己方增兵
+      const x = tot / Math.max(1, refAction(Mdl, u, t, sp));
+      ((mode === 'single' ? single : cluster)[sp.kind] = (mode === 'single' ? single : cluster)[sp.kind] || []).push({ name, x });
+      if (mode === 'cluster' && (!worstCluster || x > worstCluster.x)) worstCluster = { name, kind: sp.kind, x };
+    }
+  }
+  const med = a => { const b = a.slice().sort((p, q) => p - q); return b[b.length >> 1]; };
+  const fmtK = o => Object.keys(o).sort().map(k => { const xs = o[k].map(q => q.x); return `${k} ${med(xs).toFixed(2)} [${Math.min(...xs).toFixed(2)}-${Math.max(...xs).toFixed(2)}]`; }).join(', ');
+  console.log('  single target, median [min-max] of special / normal action (drain counts troops gained): ' + fmtK(single));
+  console.log('  4 clustered foes, total: ' + fmtK(cluster) + `; highest ${worstCluster.name} (${worstCluster.kind}) ${worstCluster.x.toFixed(2)}`);
+  // 单体：主打单体的机制中位数落在 1.6–2.6；范围类单体可低些（溅射类 ≥ 0.9，天候 / 水攻这类纯范围招式 ≥ 0.5，靠多目标取胜）
+  for (const k of Object.keys(single)) {
+    const m = med(single[k].map(q => q.x));
+    const lo = ['smite', 'charge', 'rampage', 'drain'].indexOf(k) >= 0 ? 1.6 : k === 'storm' || k === 'flood' ? 0.5 : 0.9;
+    if (!(m >= lo && m <= 2.6)) throw new Error(`single-target median for ${k} = ${m.toFixed(2)} (want ${lo}-2.6)`);
+    for (const o of single[k]) if (!(o.x <= 3.0)) throw new Error(`single-target ${o.name} (${k}) = ${o.x.toFixed(2)} > 3.0`);
+  }
+  // 密集：范围封顶后任何人都不超过 3.2 倍（智力系以火计期望为基准，略高于武力系）
+  for (const k of Object.keys(cluster)) for (const o of cluster[k]) if (!(o.x <= 3.2)) throw new Error(`clustered ${o.name} (${k}) = ${o.x.toFixed(2)} > 3.2`);
+  console.log('specials rules OK');
+} catch (e) {
+  fails++;
+  console.log('specials rules FAILED: ' + (e.stack || e));
 }
 
 // ============================================== (6) duel() 拆分的随机数顺序 --

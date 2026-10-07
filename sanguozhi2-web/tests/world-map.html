@@ -135,6 +135,18 @@
   const bar = document.getElementById('bar');
   const btn = (text, fn, group) => { const b = document.createElement('button'); b.textContent = text; b.onclick = () => { if (group) for (const o of bar.querySelectorAll('button[data-g="' + group + '"]')) o.classList.remove('on'); if (group) b.classList.add('on'); fn(); }; if (group) b.dataset.g = group; bar.appendChild(b); return b; };
   const sep = () => { const s = document.createElement('div'); s.className = 'sep'; bar.appendChild(s); };
+  const REGION_KEYS = ['world', 'europe', 'med', 'arabia', 'iran', 'india', 'tarim', 'china', 'korea', 'seasia'];
+  // 依次飞往各地区（平滑长距离飞行），每处停留 1.2 秒；用户拖动镜头即中止
+  let touring = 0;
+  async function tour() {
+    const id = ++touring;
+    for (const k of REGION_KEYS.slice(1)) {
+      await flyRegion(k);
+      if (id !== touring) return;
+      await SG.wait(1.2);
+      if (id !== touring) return;
+    }
+  }
   function flyRegion(key, instant) {
     const r = SG.World.regions[key];
     if (!r) return Promise.resolve();
@@ -163,7 +175,8 @@
     document.getElementById('loading').style.display = 'none';
     rig.useMap(map);
     makeLabels();
-    for (const k of ['world', 'europe', 'med', 'arabia', 'iran', 'india', 'tarim', 'china', 'korea', 'seasia']) btn(SG.World.regions[k].name, () => flyRegion(k), 'r');
+    for (const k of REGION_KEYS) btn(SG.World.regions[k].name, () => flyRegion(k), 'r');
+    btn('巡游', () => tour());
     sep();
     for (const [k, t] of [[null, '无叠加'], ['land', '陆海'], ['coast', '海岸距离'], ['river', '河流'], ['plateau', '高原/山'], ['biome', '群落']]) btn(t, () => map.debugOverlay(k), 'o');
     flyRegion('china', true);
@@ -190,6 +203,7 @@
       rig.update(0);
     },
     region(key, instant) { return flyRegion(key, instant !== false); },
+    tour,
     overlay(kind) { map.debugOverlay(kind || null); },
     async measure(seconds) {
       frameTimes.length = 0; recording = true;

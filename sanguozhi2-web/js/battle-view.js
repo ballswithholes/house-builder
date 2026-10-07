@@ -1312,7 +1312,7 @@ void main() {
   //     突击 / 击退的位移按 res.moved / res.pushed 播放，结束时部队已在新格。
   //   风格：slash 斩击弧光 · dragon 青龙 · havoc 无双 · sweep 横扫 · dash 突击残影 · whirl 往来连斩 ·
   //         arrows 箭雨 · arrow 一箭穿杨 · fire 火海 · wind 风助火势 · lightning 雷击 · water 水淹 ·
-  //         shock 怒吼冲击波 · aura 金光 · blossom 桃花 · spirit 符阵 · shield 护盾 · heal 治愈之光 ·
+  //         shock 怒吼冲击波 · aura 金光 · blossom 桃花 · spirit 符咒 · shield 护盾 · heal 治愈之光 ·
   //         poison 毒雾 · shadow 暗影刺杀 · drain 吸魂 · haste 疾风 · claw 猛虎爪痕 · rock 落石（未知风格按 slash）
   //   UnitVisual 另显示限时加成：脚下彩色光环 + 名牌上的小字（守 / 攻 / 毒 / 疾）。
   const SP_GLYPH = {
@@ -1354,6 +1354,42 @@ void main() {
       g.shadowColor = '#ffffff'; g.shadowBlur = 34;
       g.fillStyle = '#ffffff';
       for (let i = 0; i < 3; i++) g.fillText(ch, w / 2, h / 2 + 8);
+    });
+  }
+  // 符纸：黄纸朱框，竖写「敕令」，下接曲折符脚
+  function spTalismanTex() {
+    return spCanvasTex('talisman', 64, 160, (g, w, h) => {
+      g.fillStyle = '#f2df9a'; g.fillRect(4, 2, w - 8, h - 4);
+      g.strokeStyle = '#c3261c'; g.lineWidth = 3; g.strokeRect(9, 7, w - 18, h - 14);
+      g.fillStyle = '#c3261c'; g.font = '700 30px ' + SP_FONT; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('敕', w / 2, 32); g.fillText('令', w / 2, 68);
+      g.lineWidth = 3.5; g.lineJoin = 'round'; g.beginPath(); g.moveTo(w / 2, 90);
+      for (let i = 0; i < 6; i++) g.lineTo(w / 2 + (i % 2 ? 10 : -10), 96 + i * 9);
+      g.stroke();
+    });
+  }
+  // 漩涡：三条渐粗的螺旋臂
+  function spSwirlTex() {
+    return spCanvasTex('swirl', 256, 256, (g, w) => {
+      const c = w / 2;
+      g.strokeStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 6; g.lineCap = 'round';
+      for (let arm = 0; arm < 3; arm++) {
+        for (let i = 0; i < 48; i++) {
+          const t0 = i / 48, t1 = (i + 1) / 48;
+          const p = t => { const a = arm * 2.094 + t * 5.2, r = 10 + t * 112; return [c + Math.cos(a) * r, c + Math.sin(a) * r]; };
+          const [x0, y0] = p(t0), [x1, y1] = p(t1);
+          g.lineWidth = 2 + t0 * 9; g.globalAlpha = 0.35 + t0 * 0.65;
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        }
+      }
+    });
+  }
+  // 风痕：两端透明、中段明亮的细长光带
+  function spStreakTex() {
+    return spCanvasTex('streak', 128, 16, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, w, 0);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 3, w, h - 6);
     });
   }
   // 符阵：同心圆 + 八卦短划 + 星形
@@ -2592,32 +2628,66 @@ void main() {
     await this._sleep(0.7);
   };
 
-  // ---- spirit 符阵（奇谋 / 混乱）：敌阵脚下展开旋转的八卦符阵 ----
+  // ---- spirit 符咒（奇谋 / 混乱）：朱砂符纸从施展者袖中飞出，每支敌军三张绕身旋转，脚下暗紫漩涡，符燃中术 ----
   BV._sp_spirit = async function (ctx) {
-    const c = this._spPos(ctx.target);
     const col = this._spColor(ctx.color);
-    const r = ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 1) + 0.5) * T;
+    const deep = '#' + SG.Gfx.shade(col, -0.3).getHexString();
+    const foes = ctx.targets.filter(x => x.side !== ctx.u.side);
+    const list = foes.length ? foes : [ctx.target];
+    const src = this._spPos(ctx.u, 1.5);
     if (ctx.v) ctx.v.tint(ctx.color, 1);
     sfx('magic', 0.7);
-    const deep = '#' + SG.Gfx.shade(col, -0.15).getHexString();
-    this._spRing(c, deep, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.85, normal: true });
-    this._spRing(c, ctx.color, r * 0.3, r, 1.3, { tex: spCircleTex(), spin: -3, hold: true, alpha: 0.45, y: 0.14 });
-    this._spRing(c, deep, r * 0.9, r * 0.6, 1.2, { tex: spCircleTex(), spin: 4, hold: true, alpha: 0.55, y: 0.16, normal: true });
-    await this._spAnim(0.6, k => {
-      for (let i = 0; i < 4; i++) {
-        const a = k * 12 + i * Math.PI / 2, rr = r * (1 - k * 0.7);
-        this._emit(this.glow, c.clone().add(new THREE.Vector3(Math.cos(a) * rr, 0.3 + k * 2, Math.sin(a) * rr)), 1, { color: col, color2: C(1, 1, 1), mix: 0.3, alpha: 1, life: 0.5, speed: 0.3, size: 0.32, sizeEnd: 0.2, gravity: 0, radius: 0.05 });
+    this._spRing(this._spPos(ctx.u), ctx.color, 1.4, 0.4, 0.35, { alpha: 0.8 });
+    for (const x of list) this._spRing(this._spPos(x), deep, 0.3, 1.75, 1.35, { tex: spSwirlTex(), spin: -8, hold: true, alpha: 0.85, normal: true });
+    const tex = spTalismanTex();
+    const papers = [];
+    for (const x of list) for (let j = 0; j < 3; j++) {
+      const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
+      m.userData.keepGeo = true;
+      m.scale.set(0.34, 0.82, 1);
+      m.position.copy(src);
+      m.material.opacity = 0;
+      this._spAdd(m, 22);
+      papers.push({ m, x, j, ph: Math.random() * 6, lift: 0.8 + Math.random() * 1.2, side: Math.random() - 0.5 });
+    }
+    // 1. 飞出：二次曲线弧线，纸片翻飞（scale.x 随正弦翻面），身后拖紫色光点
+    await this._spAnim(0.5, t => {
+      for (const p of papers) {
+        const k = M.clamp01(t * 1.3 - p.j * 0.12), e = spEase(k);
+        const dst = this._spPos(p.x, 1.1);
+        const mid = src.clone().lerp(dst, 0.5);
+        mid.y += 1.4 + p.lift; mid.x += p.side * 1.6; mid.z -= p.side * 1.2;
+        const a0 = (1 - e) * (1 - e), a1 = 2 * (1 - e) * e, a2 = e * e;
+        p.m.position.set(src.x * a0 + mid.x * a1 + dst.x * a2, src.y * a0 + mid.y * a1 + dst.y * a2, src.z * a0 + mid.z * a1 + dst.z * a2);
+        p.m.scale.x = 0.34 * Math.cos(t * 16 + p.ph);
+        p.m.material.opacity = Math.min(1, k * 5);
+        if (k > 0 && k < 1) this._emit(this.glow, p.m.position, 1, { color: col, alpha: 0.75, life: 0.3, speed: 0.15, size: 0.2, sizeEnd: 0.04, gravity: 0, radius: 0.03 });
       }
     });
-    for (const x of ctx.targets) {
-      if (x.side === ctx.u.side) continue;
+    // 2. 绕身：三张符纸绕敌军旋转、缓缓收紧上升
+    sfx('magic', 0.4);
+    await this._spAnim(0.55, t => {
+      for (const p of papers) {
+        const c = this._spPos(p.x);
+        const a = p.j * 2.094 + t * 10 + p.ph * 0.2, r = 1.0 - t * 0.4;
+        p.m.position.set(c.x + Math.cos(a) * r, c.y + 1.1 + t * 0.5 + Math.sin(t * 7 + p.j * 2) * 0.12, c.z + Math.sin(a) * r);
+        p.m.scale.x = 0.34 * Math.cos(t * 12 + p.ph);
+      }
+      for (const x of list) if (Math.random() < 0.6) this._emit(this.glow, this._spPos(x, 0.3 + Math.random() * 1.2), 1, { color: col, color2: C(1, 1, 1), mix: 0.25, alpha: 0.9, life: 0.5, speed: 0.5, size: 0.24, sizeEnd: 0.08, gravity: -0.4, radius: 0.5 });
+    });
+    // 3. 符燃：纸片化作紫焰与金屑，敌军中术
+    for (const p of papers) {
+      this._emit(this.glow, p.m.position, 10, { color: col, color2: C(1, 0.85, 0.45), mix: 0.45, alpha: 1, life: 0.55, speed: 1.8, size: 0.26, sizeEnd: 0.05, gravity: -0.3, radius: 0.12, lifeVar: 0.3 });
+      this._spFree(p.m);
+    }
+    for (const x of list) {
       const vv = this.vis(x); if (vv) { vv.flashHit(); vv.tint(ctx.color, 1); }
-      this._emit(this.glow, this._spPos(x, 1.2), 20, { color: col, alpha: 1, life: 0.8, speed: 1.2, size: 0.28, gravity: -0.4, radius: 0.5 });
+      this._spRing(this._spPos(x), ctx.color, 0.4, 1.5, 0.45, { alpha: 0.9 });
     }
     this._spFlash('rgba(190,140,255,1)', 0.16, 0.3);
     ctx.hitAll();
-    this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.0, 0)), ctx.glyph, ctx.color);
-    await this._sleep(0.6);
+    this._spGlyph(this._spPos(ctx.target).add(new THREE.Vector3(0, 3.0, 0)), ctx.glyph, ctx.color);
+    await this._sleep(0.55);
   };
 
   // ---- shield 护盾：每支受益部队升起六角光罩 ----
@@ -2716,13 +2786,13 @@ void main() {
     const dark = C(0.12, 0.08, 0.16);
     this._emit(this.dust, a, 26, { color: dark, colorEnd: C(0.25, 0.2, 0.3), alpha: 0.8, life: 0.9, speed: 1.4, size: 0.9, sizeEnd: 2.0, gravity: -0.05, radius: 0.6, drag: 1.6 });
     if (v) v.group.visible = false;
+    const killed = !!(res && res.killed === t);
     try {
     await this._sleep(0.18);
     await this._spTrail(k => a.clone().lerp(b, k), 0.16, 5, { color: this._spColor(ctx.color), alpha: 1, life: 0.3, speed: 0.2, size: 0.45, sizeEnd: 0.1, gravity: 0, radius: 0.1, head: 1.0, headColor: C(1, 0.5, 0.7), linear: true });
     sfx('hit', 1);
     this._spArc(b, '#ff2a4a', { radius: 1.2, width: 0.3, tilt: -0.8, sweep: 2.2, start: -0.1, dur: 0.35, len: 0.5 });
     this._spArc(b, '#ff2a4a', { radius: 1.2, width: 0.3, tilt: 0.8, sweep: 2.2, start: 0.9, dur: 0.35, len: 0.5 });
-    const killed = res && res.killed === t;
     if (killed) {
       this._emit(this.dust, this._spPos(t, 0.6), 30, { color: C(0.15, 0.05, 0.08), colorEnd: C(0.3, 0.2, 0.25), alpha: 0.8, life: 1.2, speed: 2, size: 1, sizeEnd: 2.4, gravity: -0.05, radius: 0.5, drag: 1.4 });
       this._spFlash('rgba(255,20,40,1)', 0.35, 0.4);
@@ -2769,31 +2839,81 @@ void main() {
     await this._sleep(0.4);
   };
 
-  // ---- haste 疾风：青色旋风环绕友军 ----
+  // ---- haste 疾风：脚下青色旋风；受令友军身上风痕沿前进方向疾掠而过，身后拖出三重残影 ----
   BV._sp_haste = async function (ctx) {
     const c = this._spPos(ctx.u);
     const col = this._spColor(ctx.color);
     sfx('march', 0.6); sfx('magic', 0.4);
-    this._spRing(c, ctx.color, 0.5, ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 2) * T) + 0.6, 0.7);
+    const R = ((ctx.res && ctx.res.sp ? ctx.res.sp.radius : 2) * T) + 0.6;
+    this._spRing(c, ctx.color, 0.5, R, 0.7);
+    this._spRing(c, ctx.color, 0.4, 2.2, 1.0, { tex: spSwirlTex(), spin: 10, hold: true, alpha: 0.75 });
     if (ctx.v) ctx.v.tint(ctx.color, 1);
     const allies = ctx.targets.filter(x => x.side === ctx.u.side && x !== ctx.u);
     const list = allies.length ? allies : [ctx.u];
-    await this._spAnim(0.8, k => {
-      for (const x of list) {
-        const p = this._spPos(x);
-        for (let i = 0; i < 2; i++) {
-          const a = k * 22 + i * Math.PI, r = 1.0 + 0.2 * Math.sin(k * 9);
-          this._emit(this.glow, p.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.2 + k * 2.2, Math.sin(a) * r)), 1, { color: col, color2: C(1, 1, 1), mix: 0.3, alpha: 1, life: 0.45, speed: 0.2, size: 0.3, sizeEnd: 0.1, gravity: 0, radius: 0.03 });
+    // 前进方向：朝最近的敌军（没有则朝对方阵地）
+    const units = this.model && this.model.units ? this.model.units : [];
+    const dirOf = x => {
+      let best = null, bd = 1e9;
+      for (const e of units) if (e.alive && e.side !== x.side) { const d = Math.abs(e.x - x.x) + Math.abs(e.y - x.y); if (d < bd) { bd = d; best = e; } }
+      const p = this._spPos(x);
+      const d = best ? this._spPos(best).sub(p) : new THREE.Vector3(x.side === 0 ? 1 : -1, 0, 0);
+      d.y = 0;
+      if (d.lengthSq() < 1e-6) d.set(1, 0, 0);
+      return d.normalize();
+    };
+    // 风痕：细长的发光带（平躺、长轴沿前进方向），从身后掠到身前
+    const geo = new THREE.PlaneGeometry(1.5, 0.07);
+    const tex = spStreakTex();
+    const streaks = [], dirs = new Map();
+    for (const x of list) {
+      const d = dirOf(x), side = new THREE.Vector3(d.z, 0, -d.x), up = new THREE.Vector3(0, 1, 0);
+      const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, side, up));
+      for (let i = 0; i < 9; i++) {
+        const mat = new THREE.MeshBasicMaterial({ map: tex, color: i % 3 === 0 ? C(1, 1, 1) : col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+        const m = new THREE.Mesh(geo, mat);
+        m.userData.keepGeo = true;
+        m.quaternion.copy(q);
+        this._spAdd(m, 20);
+        streaks.push({ m, x, d, side, t0: i * 0.07 + Math.random() * 0.04, off: (Math.random() - 0.5) * 1.5, h: 0.25 + Math.random() * 1.3 });
+      }
+      dirs.set(x, d);
+    }
+    let ghosted = false;
+    await this._spAnim(0.95, k => {
+      const t = k * 0.95;
+      for (const s of streaks) {
+        const u = M.clamp01((t - s.t0) / 0.3);
+        const p = this._spPos(s.x);
+        s.m.position.copy(p).addScaledVector(s.d, -2.0 + u * 4.0).addScaledVector(s.side, s.off);
+        s.m.position.y = p.y + s.h;
+        s.m.material.opacity = u <= 0 || u >= 1 ? 0 : Math.sin(u * Math.PI) * 0.95;
+      }
+      if (!ghosted && t > 0.25) {
+        ghosted = true;
+        for (const x of list) {
+          const vv = this.vis(x);
+          if (vv) { vv.tint(ctx.color, 1); for (let j = 1; j <= 3; j++) this._spGhostAt(vv, ctx.color, 0.6, 0.5 - j * 0.12, dirs.get(x).clone().multiplyScalar(-0.45 * j)); }
+          this._spRing(this._spPos(x), ctx.color, 0.3, 1.8, 0.45);
+          this._spDust(this._spPos(x, 0.15), 6, 2.4);
         }
       }
     });
-    for (const x of list) {
-      const vv = this.vis(x); if (vv) { vv.tint(ctx.color, 1); this._spGhost(vv, ctx.color, 0.5, 0.5); }
-      this._spRing(this._spPos(x), ctx.color, 0.3, 1.8, 0.45);
-    }
+    for (const s of streaks) this._spFree(s.m);
+    geo.dispose();
     ctx.hitAll();
     this._spGlyph(c.clone().add(new THREE.Vector3(0, 3.1, 0)), ctx.glyph, ctx.color);
-    await this._sleep(0.5);
+    await this._sleep(0.45);
+  };
+  // 残影：在部队位置偏移 off 处放一具半透明的同形网格，life 秒内淡出
+  BV._spGhostAt = function (v, cssColor, life, alpha, off) {
+    if (!v) return;
+    const mat = new THREE.MeshBasicMaterial({ color: this._spColor(cssColor), transparent: true, opacity: alpha, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const m = new THREE.Mesh(v.mesh.geometry, mat);
+    m.userData.keepGeo = true;
+    m.position.copy(v.group.position).add(off);
+    m.rotation.copy(v.group.rotation);
+    this._spAdd(m, 9);
+    this._spAnim(life, t => { mat.opacity = alpha * (1 - t); }).then(() => this._spFree(m));
   };
 
   // ---- claw 猛虎爪痕：三道平行爪痕撕裂敌阵；以自身为中心的招式（威吓）则兽影扑向周围每支敌军 ----

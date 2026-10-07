@@ -85,6 +85,7 @@
     曹仁: G('曹仁', 86, 62), 夏侯惇: G('夏侯惇', 90, 58), 曹操: G('曹操', 85, 96), 吕布: G('吕布', 100, 26), 张辽: G('张辽', 92, 78),
     孙策: G('孙策', 94, 70), 周瑜: G('周瑜', 76, 97), 黄祖: G('黄祖', 70, 52), 纪灵: G('纪灵', 82, 40), 孟获: G('孟获', 87, 42, { culture: 'nanman' }),
     诸葛亮: G('诸葛亮', 38, 100), 陆逊: G('陆逊', 70, 95), 公孙瓒: G('公孙瓒', 84, 60), 颜良: G('颜良', 93, 42),
+    袁绍: G('袁绍', 70, 68),
     塞维鲁: G('塞维鲁', 80, 82, { culture: 'roman' }), 沃洛吉斯: G('沃洛吉斯', 74, 70, { culture: 'persia' }),
   };
   const FAC = { liubei: '#2f9a55', cao: '#2c3d8f', sun: '#c8382c', dong: '#7a2a3a', yuanshu: '#c99a2e', gongsun: '#e0e0e8', yuanshao: '#2f6db5', nanman: '#8a5a2a', roman: '#9c1b2a', persia: '#3c7a8a', liubiao: '#3aa5a0' };
@@ -133,6 +134,11 @@
       playerSide: extra.playerSide === undefined ? 0 : extra.playerSide,
     };
     if (extra.speed) o.speed = extra.speed;
+    if (extra.guandu) {
+      // 近色势力（袁绍 #2f6db5 对 曹操 #2c3d8f）：检验两军颜色拉开
+      o.attacker.gen = GEN.袁绍; o.attacker.color = FAC.yuanshao; o.attacker.culture = 'han';
+      o.defender.gen = GEN.曹操; o.defender.color = FAC.cao; o.defender.culture = 'han';
+    }
     if (extra.culture) {
       o.attacker.gen = GEN.塞维鲁; o.attacker.culture = 'roman'; o.attacker.color = FAC.roman;
       o.defender.gen = GEN.沃洛吉斯; o.defender.culture = 'persia'; o.defender.color = FAC.persia;
@@ -279,6 +285,7 @@
   const btn = (parent, text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; document.getElementById(parent).appendChild(b); return b; };
   for (const k of Object.keys(SPECIAL)) btn('specials', SPECIAL[k].gen + '「' + SPECIAL[k].name + '」', () => T.play(k === 'blaze' ? 'forest-even' : k === 'storm' ? 'river-big' : 'plain-even', { special: k }));
   btn('specials', '异域文化（罗马 vs 安息）', () => T.play('plain-even', { culture: true }));
+  btn('specials', '官渡（近色：袁绍 vs 曹操）', () => T.play('plain-big', { guandu: true }));
   btn('specials', '守方反击（攻方为第二方）', () => T.play('gate-small', { swap: true, playerSide: 1 }));
   btn('specials', '电脑回合（speed 1.6 + 提示）', () => T.play('castle-even', { speed: 1.6, toast: true, playerSide: 1 }));
   btn('cuts', '特写·左', () => T.cut(0));
@@ -290,9 +297,19 @@
   btn('opts', '手机尺寸预览', () => {
     const ph = document.getElementById('phone'), fr = document.getElementById('phoneFrame');
     const k = Math.min(1, (window.innerWidth - 60) / 844, (window.innerHeight - 90) / 390);
+    fr.style.width = '844px'; fr.style.height = '390px';
     fr.style.transform = `scale(${k})`;
     fr.parentElement.style.width = (844 * k) + 'px'; fr.parentElement.style.height = (390 * k) + 'px';
     fr.src = 'clash.html?embed=1&board=1&case=river-even';
+    ph.classList.add('on');
+  });
+  btn('opts', '竖屏手机预览', () => {
+    const ph = document.getElementById('phone'), fr = document.getElementById('phoneFrame');
+    const k = Math.min(1, (window.innerWidth - 60) / 390, (window.innerHeight - 90) / 844);
+    fr.style.width = '390px'; fr.style.height = '844px';
+    fr.style.transform = `scale(${k})`;
+    fr.parentElement.style.width = (390 * k) + 'px'; fr.parentElement.style.height = (844 * k) + 'px';
+    fr.src = 'clash.html?embed=1&board=1&case=plain-typ&special=smite';
     ph.classList.add('on');
   });
   document.getElementById('phoneClose').onclick = () => { const ph = document.getElementById('phone'); ph.classList.remove('on'); document.getElementById('phoneFrame').src = 'about:blank'; };

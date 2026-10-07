@@ -397,19 +397,44 @@
     mb.box(V(0, 0.95, -0.06), V(0.32, 0.06, 0.21), GOLD);                    // 腰带
     mb.box(V(-0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), GOLD);                 // 肩甲（金）
     mb.box(V(0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), GOLD);
-    beam(mb, V(0, 1.24, -0.17), V(0, 0.84, -0.38), 0.3, 0.38, mid);          // 披风
+    beam(mb, V(0, 1.24, -0.17), V(0, 0.84, -0.38), 0.3, 0.38, cu.hat === 'crest' ? RED : mid);   // 披风（罗马将领为红色 paludamentum）
     mb.box(V(-0.2, 1.08, 0.0), V(0.075, 0.2, 0.08), mid);                    // 左臂（持缰）
     mb.box(V(0.21, 1.1, 0.02), V(0.075, 0.18, 0.08), mid);                   // 右臂
     mb.box(V(0.22, 1.0, 0.12), V(0.07, 0.07, 0.14), mid);
     mb.box(V(0, 1.29, -0.05), V(0.09, 0.04, 0.09), skin);
     mb.box(V(0, 1.38, -0.045), V(0.165, 0.155, 0.16), skin);                 // 头
     mb.box(V(0, 1.375, 0.04), V(0.11, 0.025, 0.01), shade(skin, -0.45));
-    if (cu.hat === 'cone' || cu.hat === 'plume' || cu.hat === 'spike' || cu.hat === 'crest') {
-      // 将盔：金盔 + 雉尾
-      mb.cylinder(V(0, 1.42, -0.045), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
-      mb.cone(V(0, 1.45, -0.045), 0.12, 0.14, 6, GOLD);
+    // 将盔：按文化区分（DESIGN-V2 §6）
+    const HZ = -0.045;
+    if (cu.hat === 'cone') {
+      // 汉：金盔 + 雉尾
+      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
+      mb.cone(V(0, 1.45, HZ), 0.12, 0.14, 6, GOLD);
       beam(mb, V(0, 1.58, -0.06), V(0, 1.82, -0.26), 0.035, 0.012, RED);
       beam(mb, V(0.03, 1.58, -0.06), V(0.06, 1.78, -0.28), 0.03, 0.01, shade(RED, 0.2));
+    } else if (cu.hat === 'crest') {
+      // 罗马：铁盔 + 横向红冠（百夫长式）+ 护颊
+      mb.cone(V(0, 1.425, HZ), 0.122, 0.12, 6, IRON);
+      mb.box(V(0, 1.555, HZ), V(0.3, 0.075, 0.035), RED);
+      mb.box(V(0, 1.515, HZ), V(0.04, 0.03, 0.04), GOLD);
+      mb.box(V(-0.09, 1.35, 0.0), V(0.02, 0.09, 0.07), IRON_D);
+      mb.box(V(0.09, 1.35, 0.0), V(0.02, 0.09, 0.07), IRON_D);
+      mb.box(V(0, 1.36, -0.12), V(0.17, 0.06, 0.03), IRON_D);
+    } else if (cu.hat === 'spike') {
+      // 帕提亚 / 萨尔马提亚：鎏金尖顶分片盔 + 锁子护颈 + 两条飘带
+      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.03, 6, shade(GOLD, -0.25));
+      mb.cone(V(0, 1.44, HZ), 0.118, 0.24, 6, GOLD);
+      for (let i = -1; i <= 1; i += 2) mb.box(V(i * 0.055, 1.5, HZ), V(0.012, 0.11, 0.012), shade(GOLD, -0.35));
+      mb.box(V(0, 1.33, -0.13), V(0.19, 0.12, 0.03), IRON_D);
+      beam(mb, V(-0.04, 1.42, -0.15), V(-0.07, 1.22, -0.36), 0.03, 0.015, C(0.95, 0.94, 0.88));
+      beam(mb, V(0.04, 1.42, -0.15), V(0.07, 1.25, -0.34), 0.03, 0.015, RED);
+    } else if (cu.hat === 'plume') {
+      // 高句丽 / 三韩：鎏金盔 + 高耸白羽
+      mb.cylinder(V(0, 1.42, HZ), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
+      mb.cone(V(0, 1.45, HZ), 0.115, 0.13, 6, GOLD);
+      beam(mb, V(0, 1.56, HZ), V(0, 1.86, HZ - 0.03), 0.05, 0.02, C(0.96, 0.95, 0.9));
+      beam(mb, V(0.035, 1.56, HZ), V(0.07, 1.8, HZ - 0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
+      beam(mb, V(-0.035, 1.56, HZ), V(-0.07, 1.8, HZ - 0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
     } else headgear(mb, cu.hat, t, 1.46, 1.05);
     // 兵器：长柄大刀（右手）
     const wx = 0.24, wz = 0.14;
@@ -775,7 +800,8 @@ void main() {
     // 地面网格（three 坐标 x、z）
     const xs = axis(-48, 48, 0.8, 13, 0.25);
     const zs = [];
-    for (let z = 16; z > -95; ) { zs.push(z); z -= z > -9 ? 0.75 : 0.75 + (-9 - z) * 0.16; }
+    // 近处（z > 16）用越来越疏的行一直铺到镜头身后：竖屏 / 宽阵拉远机位时画面下缘不露底
+    for (let z = 64; z > -95; ) { zs.push(z); z -= z > 16 ? 0.75 + (z - 16) * 0.3 : z > -9 ? 0.75 : 0.75 + (-9 - z) * 0.16; }
     const pn = (x, z) => M.perlinNoise(x * 0.21 + 11.3, z * 0.21 + 4.7) - 0.465;
     for (let j = 0; j < zs.length - 1; j++) {
       if (j % 6 === 5) yield;
@@ -899,7 +925,7 @@ void main() {
       const x0 = RIVER.x - RIVER.w - RIVER.bank - 0.2, x1 = RIVER.x + RIVER.w + RIVER.bank + 0.2;
       const nx = 10;
       const zz = [];
-      for (let z = 16; z > -95; ) { zz.push(z); z -= z > -10 ? 1.2 : 1.2 + (-10 - z) * 0.25; }
+      for (let z = 64; z > -95; ) { zz.push(z); z -= z > 16 ? 1.2 + (z - 16) * 0.3 : z > -10 ? 1.2 : 1.2 + (-10 - z) * 0.25; }
       for (let j = 0; j < zz.length - 1; j++)
         for (let i = 0; i < nx; i++) {
           const xa = lerp(x0, x1, i / nx), xb = lerp(x0, x1, (i + 1) / nx);
@@ -1087,13 +1113,56 @@ void main() {
     };
   }
 
+  // 两军势力色过于接近时（袁绍 #2f6db5 对曹操 #2c3d8f 等）拉开：较亮的一方再提亮，另一方压暗并转开色相
+  function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function rgbHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h / 6, s, l];
+  }
+  function hslHex(h, s, l) {
+    h = ((h % 1) + 1) % 1;
+    const f = n => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return '#' + [f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+  // 必杀种类 → 画面特效：火（blaze / fx fire）、雷（storm / fx lightning）、箭雨（volley / fx arrow(s)），其余为斩光
+  function specKind(sp) {
+    const k = String(sp.kind || ''), fx = String(sp.fx || '');
+    if (k === 'blaze' || fx === 'fire') return 'blaze';
+    if (k === 'storm' || fx === 'lightning' || fx === 'shock') return 'storm';
+    if (k === 'volley' || fx === 'arrows' || fx === 'arrow') return 'volley';
+    return k || 'smite';
+  }
+  const SEP_DIST = 95;
+  function separateColors(A, D) {
+    const a = hexRgb(A.color), d = hexRgb(D.color);
+    const dist = Math.hypot(a[0] - d[0], a[1] - d[1], a[2] - d[2]);
+    if (dist >= SEP_DIST) return false;
+    const k = 0.6 + 0.4 * (1 - dist / SEP_DIST);
+    const ha = rgbHsl(a[0], a[1], a[2]), hd = rgbHsl(d[0], d[1], d[2]);
+    const up = ha[2] >= hd[2] ? ha : hd, dn = up === ha ? hd : ha;
+    let dh = dn[0] - up[0];
+    if (dh > 0.5) dh -= 1; if (dh < -0.5) dh += 1;
+    up[2] = clamp(up[2] + 0.12 * k, 0, 0.72);
+    dn[2] = clamp(dn[2] - 0.1 * k, 0.14, 1);
+    dn[0] += (dh >= 0 ? 1 : -1) * 0.09 * k;
+    dn[1] = Math.max(dn[1], 0.35 * k);
+    A.color = hslHex(ha[0], ha[1], ha[2]);
+    D.color = hslHex(hd[0], hd[1], hd[2]);
+    return true;
+  }
+
   class ClashScene {
     constructor(opts) {
       this.opts = opts;
       this.kind = terrainKind(opts.terrain);
       this.A = norm(opts.attacker);
       this.D = norm(opts.defender);
-      this.special = opts.special && opts.special.name ? { name: String(opts.special.name), color: hexOf(opts.special.color || '#ffd24d'), kind: String(opts.special.kind || 'smite'), cry: opts.special.cry || null } : null;
+      this.recolored = separateColors(this.A, this.D);
+      this.special = opts.special && opts.special.name ? { name: String(opts.special.name), color: hexOf(opts.special.color || '#ffd24d'), kind: specKind(opts.special), cry: opts.special.cry || null } : null;
       this.playerSide = opts.playerSide === 0 || opts.playerSide === 1 ? opts.playerSide : null;
       this.speed = Math.max(0.1, (+SG.Clash.speed || 1) * (+opts.speed || 1));
       const seed = hashStr(this.A.name + '|' + this.D.name + '|' + this.A.before + '|' + this.D.before + '|' + this.kind);
@@ -1103,6 +1172,8 @@ void main() {
       this.state = 'run';            // run | hold | out | done
       this.skipped = false;
       this.shake = 0;
+      // 系统「减弱动态效果」：不晃镜头、不闪屏
+      try { this.calm = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { this.calm = false; }
       this.lastHost = 0;
       this.evIdx = 0;
       this.seed = seed;
@@ -1608,11 +1679,7 @@ void main() {
 
     poseGeneral(A, t) {
       const G = A.general, dir = A.dir;
-      let x = G.x0 - dir * ENTER_DX * (1 - eo(seg(t, G.ed, TL.march1 + 0.05)));
-      const uc = seg(t, TL.charge0 + 0.1, TL.contact + 0.1);
-      x += dir * A.genDX * uc * uc;
-      if (A.routed) x -= dir * 9 * Math.pow(seg(t, TL.melee1 + 0.12, TL.regroup1 + 0.3), 1.4);
-      else x -= dir * 0.45 * eio(seg(t, TL.melee1 + 0.1, TL.regroup1));
+      const x = this.generalX(A, t);
       const z = G.z0;
       const y = this.groundY(x, z);
       // 步态：入场与冲锋时小跑，溃逃时疾驰
@@ -1690,7 +1757,7 @@ void main() {
         r.water = this.kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + 0.6;
       }
       const d = Math.abs(r.p1.x - r.p0.x);
-      r.apex = 1.6 + d * 0.32;
+      r.apex = Math.min(2.5, 1.6 + d * 0.22);     // 弧顶不进入画面上方的 HUD 带
     }
 
     // ---------------------------------------------------------- 特效 --
@@ -1882,11 +1949,13 @@ void main() {
     }
     bolt(base, col, delay) {
       const mb = new SG.MeshBuilder();
-      let x = base.x, z = base.z, y = 9;
+      // 雷从 HUD 带之下的一团云光中劈下（起点不高于约 5.4，免得像是从 HUD 里钻出来）
+      const top = 5.4;
+      let x = base.x, z = base.z, y = top;
       const rnd = this.rnd;
       while (y > this.groundY(base.x, base.z)) {
-        const nx = base.x + (rnd.nextDouble() - 0.5) * 0.9, ny = Math.max(this.groundY(base.x, base.z), y - 0.8 - rnd.nextDouble() * 0.6), nz = z + (rnd.nextDouble() - 0.5) * 0.3;
-        beam(mb, P(x, y, z), P(nx, ny, nz), 0.12, 0.1, C(1, 1, 1));
+        const nx = base.x + (rnd.nextDouble() - 0.5) * 0.9, ny = Math.max(this.groundY(base.x, base.z), y - 0.6 - rnd.nextDouble() * 0.5), nz = z + (rnd.nextDouble() - 0.5) * 0.3;
+        beam(mb, V(x, y, z), V(nx, ny, nz), 0.12, 0.1, C(1, 1, 1));
         x = nx; y = ny; z = nz;
         if (ny <= this.groundY(base.x, base.z) + 0.01) break;
       }
@@ -1898,7 +1967,11 @@ void main() {
       this.temp.push({
         mesh, t0: this.t + delay, life: 0.38, fn: (u) => {
           m.opacity = u < 0 ? 0 : (1 - u) * (0.75 + 0.25 * Math.sin(u * 60));
-          if (u > 0 && !mesh.userData.hit) { mesh.userData.hit = true; this.sparks(V(base.x, this.groundY(base.x, base.z) + 0.2, base.z), 12, shade(col, 0.4)); this.dustAt(base.x, base.z, 1, true); }
+          if (u > 0 && !mesh.userData.hit) {
+            mesh.userData.hit = true;
+            this.emit(this.glow, V(base.x, top + 0.2, base.z), 5, { color: shade(col, 0.6), alpha: 0.85, life: 0.4, speed: 0.5, size: 2.6, sizeEnd: 4.2, radius: 0.7, gravity: 0 });
+            this.sparks(V(base.x, this.groundY(base.x, base.z) + 0.2, base.z), 12, shade(col, 0.4)); this.dustAt(base.x, base.z, 1, true);
+          }
         },
       });
     }
@@ -1906,35 +1979,79 @@ void main() {
     // ---------------------------------------------------------- 镜头 --
     cameraPose(t) {
       const xc = this.xc;
+      // 注视点比两军略高一点：画面上方约 1/6 被 HUD 占去，让军阵落在 HUD 之下的画面中部
       const K = [
-        { t: 0, p: [-1.1, 4.0, 18.4], l: [0.2, 1.9, -0.8] },
-        { t: 0.7, p: [-0.4, 2.45, 15.0], l: [0, 1.95, -0.8] },
-        { t: TL.charge0, p: [-0.3, 2.38, 14.6], l: [0, 1.9, -0.8] },
-        { t: TL.contact, p: [xc * 0.45 + 0.2, 2.02, 11.9], l: [xc * 0.5, 1.6, -0.8] },
-        { t: TL.melee1, p: [xc * 0.45 + 0.5, 1.95, 11.4], l: [xc * 0.5 + 0.2, 1.55, -0.8] },
-        { t: TL.regroup1, p: [xc * 0.3 + 0.2, 2.35, 13.8], l: [xc * 0.3, 1.86, -0.8] },
+        { t: 0, p: [-1.1, 4.0, 18.4], l: [0.2, 2.05, -0.8] },
+        { t: 0.7, p: [-0.4, 2.55, 15.0], l: [0, 2.1, -0.8] },
+        { t: TL.charge0, p: [-0.3, 2.5, 14.6], l: [0, 2.05, -0.8] },
+        { t: TL.contact, p: [xc * 0.45 + 0.2, 2.18, 11.9], l: [xc * 0.5, 1.78, -0.8] },
+        { t: TL.melee1, p: [xc * 0.45 + 0.5, 2.1, 11.4], l: [xc * 0.5 + 0.2, 1.72, -0.8] },
+        { t: TL.regroup1, p: [xc * 0.3 + 0.2, 2.5, 13.8], l: [xc * 0.3, 2.02, -0.8] },
       ];
       let i = 0;
       while (i < K.length - 2 && t > K[i + 1].t) i++;
       const a = K[i], b = K[i + 1];
       const u = sm(seg(t, a.t, b.t));
-      const fit = this.fit || 1;
-      const lx = lerp(a.l[0], b.l[0], u), ly = lerp(a.l[1], b.l[1], u), lz = lerp(a.l[2], b.l[2], u);
-      const px = lerp(a.p[0], b.p[0], u), py = lerp(a.p[1], b.p[1], u), pz = lerp(a.p[2], b.p[2], u);
+      const lx0 = lerp(a.l[0], b.l[0], u), ly = lerp(a.l[1], b.l[1], u), lz = lerp(a.l[2], b.l[2], u);
+      const dx = lerp(a.p[0], b.p[0], u) - lx0, dy = lerp(a.p[1], b.p[1], u) - ly, dz = lerp(a.p[2], b.p[2], u) - lz;
       const cam = this.camera;
-      // 宽高比修正：保证横向能容纳两军
-      cam.position.set(lx + (px - lx) * fit, ly + (py - ly) * fit, lz + (pz - lz) * fit);
-      if (this.shake > 0.001) {
+      const aspect = cam.aspect || 1.78;
+      // 横向取景：注视点向两员武将（含帅旗）的中点靠一半；施展必杀时再偏向攻方武将
+      const ext = this.armyExtent(t);
+      let lx = lerp(lx0, (ext.l + ext.r) / 2, 0.5);
+      if (this.special) lx = lerp(lx, ext.gl, 0.22 * trap(t, TL.charge0 - 0.3, TL.melee1, 0.4));
+      // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
+      const tanH = Math.tan(cam.fov * M.deg2rad / 2) * aspect * 0.92;
+      const need = this.viewNeed(t, lx, lz, dz, tanH);
+      const fit = Math.max(this.fit || 1, need);
+      // 竖屏：拉远之后再抬高机位俯视，压低天空、让纵深铺开
+      const kP = clamp((1.15 - aspect) / 0.6, 0, 1);
+      const dist = Math.hypot(dx, dy, dz) * fit;
+      cam.position.set(lx + dx * fit, ly + dy * fit + kP * dist * 0.27, lz + dz * fit);
+      if (this.shake > 0.001 && !this.calm) {
         const k = this.shake * 0.11;
         cam.position.x += Math.sin(this.real * 71) * k;
         cam.position.y += Math.sin(this.real * 57 + 1.3) * k * 0.7;
       }
-      cam.lookAt(lx, ly, lz);
+      cam.lookAt(lx, ly - kP * 0.35, lz);
+      // 雾随机位远近平移，拉远时军阵不被雾吞掉
+      const fog = this.scene && this.scene.fog;
+      if (fog) { const extra = Math.max(0, dist - 19); fog.near = 34 + extra; fog.far = 135 + extra; }
+    }
+    // 武将 x（与 poseGeneral 同一公式；镜头取景用）
+    generalX(A, t) {
+      const G = A.general, dir = A.dir;
+      let x = G.x0 - dir * ENTER_DX * (1 - eo(seg(t, G.ed, TL.march1 + 0.05)));
+      const uc = seg(t, TL.charge0 + 0.1, TL.contact + 0.1);
+      x += dir * A.genDX * uc * uc;
+      if (A.routed) x -= dir * 9 * Math.pow(seg(t, TL.melee1 + 0.12, TL.regroup1 + 0.3), 1.4);
+      else x -= dir * 0.45 * eio(seg(t, TL.melee1 + 0.1, TL.regroup1));
+      return x;
+    }
+    // 取景用的时刻：入场时按列阵位置（让队伍走进画面），溃逃时停在溃散前（不追着逃兵拉远）
+    frameT(A, t) { return clamp(t, TL.march1, A.routed ? TL.melee1 + 0.12 : TL.end); }
+    armyExtent(t) {
+      const [L, R] = this.armies;
+      const gl = this.generalX(L, this.frameT(L, t)), gr = this.generalX(R, this.frameT(R, t));
+      return { l: gl - 1.75, r: gr + 1.75, gl, gr };
+    }
+    viewNeed(t, cx, lz, dz, tanH) {
+      if (!(dz > 0.1) || !(tanH > 0.01)) return 1;
+      let need = 0;
+      const o = this._fo || (this._fo = {});
+      const test = (x, z) => { const n = (Math.abs(x - cx) / tanH + (z - lz)) / dz; if (n > need) need = n; };
+      for (const A of this.armies) {
+        const tt = this.frameT(A, t), gx = this.generalX(A, tt), gz = A.general.z0;
+        test(gx - A.dir * 1.75, gz - 0.25);     // 帅旗（含旗面飘动）在武将身后
+        test(gx + A.dir * 1.0, gz);             // 马头
+        for (const s of A.soldiers) { this.soldierXZ(A, s, tt, o); test(o.x - A.dir * 0.3, o.z + 0.25); }
+      }
+      return need;
     }
     resize(w, h) {
       const aspect = w / Math.max(1, h);
       this.camera.aspect = aspect;
-      // 以 16:9 为基准：更窄的屏幕拉远，更宽的屏幕（手机横屏）适当推近
+      // 以 16:9 为基准：更窄的屏幕拉远，更宽的屏幕（手机横屏）适当推近；两军外缘的约束见 viewNeed
       this.fit = clamp(1.78 / aspect, 0.86, 1.75);
       this.camera.updateProjectionMatrix();
     }
@@ -1961,12 +2078,13 @@ void main() {
           this.cutDone = true;
           this.paused = true;
           const sp = this.special;
-          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, cry: sp.cry, speed: +this.opts.speed || 1, _inClash: true }).then(() => { this.paused = false; });
+          SG.Clash.cutIn({ gen: this.A.gen, name: sp.name, color: sp.color, side: this.A.side, cry: sp.cry, speed: this.speed, _inClash: true }).then(() => { this.paused = false; });
         }
         this.setTime(t, true);
         if (this.t >= TL.end) this.finish();
       } else if (this.state === 'hold') {
-        if (this.real >= this.holdUntil) this.finish();
+        // 帧率很低时（dt 被截断）也不让跳过后的停留超过 SKIP_HOLD 实际秒数
+        if (this.real >= this.holdUntil || performance.now() >= this.holdWall) this.finish();
       }
       this.shake = Math.max(0, this.shake - dt * 3.2);
       this.cameraPose(this.t);
@@ -2045,6 +2163,7 @@ void main() {
       for (const A of this.armies) if (A.routed) this.hud.stamp(A.info.name + '部', '溃 散', true);
       this.state = 'hold';
       this.holdUntil = this.real + SKIP_HOLD;
+      this.holdWall = performance.now() + SKIP_HOLD * 1000;
     }
     finish() {
       if (this.state === 'out' || this.state === 'done') return;
@@ -2217,12 +2336,42 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   background:rgba(10,10,16,.45);border:1px solid rgba(243,201,105,.3);opacity:0;transition:opacity .4s ease .5s;}
 .sg-clash-skip i{font-style:normal;color:#f3c969;margin-left:.3em;letter-spacing:-.15em;}
 .sg-clash.is-live .sg-clash-skip{opacity:1;}
+.sg-clash-mode{position:absolute;left:calc(var(--u)*1.2 + env(safe-area-inset-left,0px));bottom:calc(var(--u)*1.0 + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;min-height:max(30px,calc(var(--u)*2.4));pointer-events:auto;cursor:pointer;
+  font-size:max(11px,calc(var(--u)*.95));color:rgba(245,237,219,.82);letter-spacing:.12em;padding:0 .9em;border-radius:2em;
+  background:rgba(10,10,16,.45);border:1px solid rgba(243,201,105,.3);opacity:0;transition:opacity .4s ease .5s;}
+.sg-clash-mode b{color:#f3c969;font-weight:700;margin-left:.35em;}
+.sg-clash.is-live .sg-clash-mode{opacity:1;}
+.sg-clash.is-pre>.sg-clash-mode{visibility:hidden;}
+@media (hover:hover){.sg-clash-mode:hover{border-color:rgba(243,201,105,.75);color:#fff6e0;}}
 .sg-clash-flash{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;}
 .sg-clash-fade{position:absolute;inset:0;pointer-events:none;background:#0b0a0f;opacity:1;}
 @media (max-height:540px){
   .sg-clash{--u:clamp(8px,min(1.3vw,2.5vh),26px);}
   .sg-clash-side{height:calc(var(--u)*6.6);}
   .sg-clash-pic{width:calc(var(--u)*5.6);height:calc(var(--u)*5.6);margin-top:calc(var(--u)*1.0);}
+}
+/* 竖屏（手机竖握、平板竖放）：每侧改为两行网格（姓名 / 兵力），去掉阵型行，头像缩小 */
+@media (max-aspect-ratio:1/1){
+  .sg-clash{--u:clamp(8px,min(2.3vw,2.2vh),18px);}
+  .sg-clash-hud{gap:calc(var(--u)*.45);padding-left:calc(var(--u)*.5 + env(safe-area-inset-left,0px));padding-right:calc(var(--u)*.5 + env(safe-area-inset-right,0px));}
+  .sg-clash-side,.sg-clash-side.s1{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:calc(var(--u)*.6);row-gap:calc(var(--u)*.2);
+    align-items:center;height:auto;padding:calc(var(--u)*.6) calc(var(--u)*1.1) calc(var(--u)*.5) calc(var(--u)*.6);}
+  .sg-clash-side.s1{grid-template-columns:minmax(0,1fr) auto;padding:calc(var(--u)*.6) calc(var(--u)*.6) calc(var(--u)*.5) calc(var(--u)*1.1);}
+  .sg-clash-side::before{transform:skewX(-7deg);}
+  .sg-clash-side.s1::before{transform:skewX(7deg);}
+  .sg-clash-pic{grid-column:1;grid-row:1 / span 2;width:calc(var(--u)*4.4);height:calc(var(--u)*4.4);margin-top:0;}
+  .sg-clash-side.s1 .sg-clash-pic{grid-column:2;}
+  .sg-clash-meta{grid-column:2;grid-row:1;}
+  .sg-clash-side.s1 .sg-clash-meta{grid-column:1;}
+  .sg-clash-form,.sg-clash-num small{display:none;}
+  .sg-clash-tr{grid-column:2;grid-row:2;min-width:0;align-items:flex-start;}
+  .sg-clash-side.s1 .sg-clash-tr{grid-column:1;align-items:flex-end;}
+  .sg-clash-bar{width:100%;}
+  .sg-clash-name b{font-size:max(14px,calc(var(--u)*1.6));}
+  .sg-clash-num b{font-size:max(17px,calc(var(--u)*2.1));}
+  .sg-clash-seal{width:calc(var(--u)*3);height:calc(var(--u)*3);font-size:calc(var(--u)*2);}
+  .sg-clash-shade{height:calc(var(--u)*13 + env(safe-area-inset-top,0px));}
 }
 /* ---------------- 必杀特写 ---------------- */
 .sg-cutin{position:fixed;inset:0;z-index:40;pointer-events:auto;overflow:hidden;cursor:pointer;touch-action:none;
@@ -2250,10 +2399,10 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 10px rgba(0,0,0,.5);}
 .sg-cutin-name{position:relative;padding:.08em .5em .16em .3em;white-space:nowrap;}
 .sg-cutin-name svg{position:absolute;left:-6%;top:-14%;width:112%;height:128%;overflow:visible;animation:sg-ci-swash var(--T) linear both;}
-.sg-cutin-name b{position:relative;display:block;font-family:${KAI};font-weight:900;font-size:max(34px,calc(var(--u)*6.4));line-height:1.08;letter-spacing:.08em;
+.sg-cutin-name b{position:relative;display:block;font-family:${KAI};font-weight:700;line-height:1.08;letter-spacing:.08em;
+  font-size:max(calc(34px*var(--nk,1)),calc(var(--u)*6.4*var(--nk,1)));
   background:linear-gradient(180deg,#ffffff 0%,#fff4cf 42%,#ffd76a 62%,#f3a93b 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-  -webkit-text-stroke:max(1px,calc(var(--u)*.12)) rgba(30,12,4,.85);
-  filter:drop-shadow(0 calc(var(--u)*.25) 0 rgba(20,8,2,.85)) drop-shadow(0 0 calc(var(--u)*1.1) var(--c));
+  filter:drop-shadow(0 0 1px rgba(30,12,4,.95)) drop-shadow(0 0 1px rgba(30,12,4,.9)) drop-shadow(0 calc(var(--u)*.25) 0 rgba(20,8,2,.85)) drop-shadow(0 0 calc(var(--u)*1.1) var(--c));
   animation:sg-ci-name var(--T) linear both;}
 .sg-cutin-cry{margin:.35em 0 0 .4em;max-width:100%;font-family:${KAI};font-weight:700;font-size:max(13px,calc(var(--u)*1.55));line-height:1.3;color:#fff6e0;
   letter-spacing:.06em;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 calc(var(--u)*.8) rgba(0,0,0,.6);animation:sg-ci-cry var(--T) linear both;}
@@ -2275,6 +2424,24 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 @keyframes sg-ci-flash{0%,80%{opacity:0}84%{opacity:.55}100%{opacity:0}}
 @keyframes sg-ci-cry{0%,26%{opacity:0;transform:translateY(.6em)}36%{opacity:1;transform:none}100%{opacity:1;transform:none}}
 .sg-cutin.is-skip>*{animation:none !important;opacity:0 !important;transition:opacity .12s;}
+/* 系统「减弱动态效果」：飘字静态显示（全局规则会把它缩成 .01ms 并停在透明），不闪屏，特写只淡入淡出 */
+@media (prefers-reduced-motion:reduce){
+  .sg-clash-pop span,#ui .sg-clash-pop span{animation:none !important;opacity:1;}
+  .sg-clash-flash,.sg-cutin-flash{display:none !important;}
+  .sg-cutin>*{animation-name:sg-ci-dim !important;}
+  .sg-cutin-name svg,.sg-cutin-name b,.sg-cutin-cry{animation:none !important;}
+}
+/* 竖屏：头像在上、招式名与台词在色带内全宽排开 */
+@media (max-aspect-ratio:1/1){
+  .sg-cutin{--u:clamp(8px,min(2.3vw,2.2vh),18px);}
+  .sg-cutin-band{top:34%;height:34%;}
+  .sg-cutin-pic,.sg-cutin.s1 .sg-cutin-pic{top:10%;height:auto;width:min(60vw,36vh);}
+  .sg-cutin-pic{left:6%;}
+  .sg-cutin.s1 .sg-cutin-pic{left:auto;right:6%;}
+  .sg-cutin-pic .sg-clash-medal span{font-size:min(30vw,18vh);}
+  .sg-cutin-text,.sg-cutin.s1 .sg-cutin-text{top:41%;left:5%;right:5%;transform:none;}
+  .sg-cutin-name b{font-size:calc(min(var(--u)*6.4,12vw)*var(--nk,1));}
+}
 `;
     (document.head || document.documentElement).appendChild(s);
   }
@@ -2352,6 +2519,19 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       this.popList = [];
       this.stampEl = el('div', 'sg-clash-stamp', null, root);
       el('div', 'sg-clash-skip', (SG.isTouch ? '轻触跳过' : '点击 / 空格 跳过') + '<i>▶▶</i>', root);
+      // 动画开 / 快 / 关：战斗中也能切换（选「关」时本场立即跳到结果，之后的攻击不再播放）
+      const modeBtn = this.modeEl = el('div', 'sg-clash-mode', '', root);
+      modeBtn.setAttribute('role', 'button');
+      modeBtn.title = '攻击画面：开 / 快 / 关';
+      const modeLabel = () => { modeBtn.innerHTML = '动画<b>' + Clash.modeLabel() + '</b>'; };
+      modeLabel();
+      modeBtn.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        const m = Clash.cycleMode();
+        modeLabel();
+        if (m === 'off') sc.skip();
+        else sc.speed = Math.max(0.1, (+Clash.speed || 1) * (+sc.opts.speed || 1));
+      });
       this.flashEl = el('div', 'sg-clash-flash', null, root);
       this.fadeEl = el('div', 'sg-clash-fade', null, root);
       this.flashA = 0;
@@ -2421,6 +2601,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       setTimeout(fin, sec * 1000);
     }
     flash(color, a) {
+      if (this.sc.calm) return;
       this.flashEl.style.background = color;
       this.flashA = a || 0.35;
     }
@@ -2521,7 +2702,9 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
     constructor(o) {
       injectStyle();
       this.o = o;
-      const dur = 1.1 / Math.max(0.1, (+SG.Clash.speed || 1) * (+o.speed || 1));
+      // 调用方给了 speed 时（specials.js 在「快」档自带 1.6）不再叠乘 SG.Clash.speed；最短 0.7 秒，保证招式名读得清
+      const spd = o.speed !== undefined && o.speed !== null ? (+o.speed || 1) : (+SG.Clash.speed || 1);
+      const dur = Math.max(0.7, 1.1 / Math.max(0.1, spd));
       this.dur = dur;
       const color = hexOf(o.color || '#ffd24d');
       const side = o.side === 1 ? 1 : 0;
@@ -2542,7 +2725,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       const nb = el('b', null, esc(nmText), nm);
       // 招式名过长时按字数缩小（以 6 字为满宽）
       const len = Array.from(nmText).length;
-      if (len > 6) nb.style.fontSize = `max(${Math.round(34 * 6 / len)}px,calc(var(--u)*${(6.4 * 6 / len).toFixed(2)}))`;
+      if (len > 6) nb.style.setProperty('--nk', (6 / len).toFixed(3));
       if (o.cry) el('div', 'sg-cutin-cry', '「' + esc(String(o.cry)) + '」', tx);
       el('div', 'sg-cutin-flash', null, root);
       document.body.appendChild(root);

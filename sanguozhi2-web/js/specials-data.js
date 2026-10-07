@@ -21,7 +21,7 @@
               slash 斩击弧光 · dragon 青龙（斩击 + 盘旋龙气）· havoc 无双（血色巨刃 + 冲击波）· sweep 横扫 ·
               dash 突击残影 · whirl 往来连斩 · arrows 箭雨 · arrow 一箭穿杨 · fire 火海 · wind 风助火势 ·
               lightning 雷击 · water 水淹 · shock 怒吼冲击波 · aura 金光号令 · blossom 桃花（鼓舞）·
-              spirit 符阵（混乱）· shield 护盾 · heal 治愈之光 · poison 毒雾 · shadow 暗影刺杀 ·
+              spirit 符咒（符纸绕敌、漩涡，混乱）· shield 护盾 · heal 治愈之光 · poison 毒雾 · shadow 暗影刺杀 ·
               drain 吸魂 · haste 疾风 · claw 猛虎爪痕（单体：三道爪痕；自身为中心：兽影扑向四周）· rock 落石
      lore   可代替 desc：一句典故（以句号结尾）。说明文字 = lore + 由数值自动生成的效果说明（与数值永远一致）。
      cry    可选：发动台词（特写画面上显示）。
@@ -35,16 +35,20 @@
    伤害基准：武力系 = 一次普通攻击的期望伤害 × (0.8 + 武力/500)（随己方兵力等变化）；
              智力 / 政治系 = (200 + 能力×9) × 敌兵力系数（与计策同量级）。
    power = 相对上述基准的倍率。平衡目标：强力招式 ≈ 1.8–2.5 次普通攻击（多目标招式按命中 2 支计）。
+   范围封顶：同时命中多支敌军时，全部伤害合计 ≤ 2.5 × 基准（SG.Specials.AREA_TOTAL；主目标不缩减，次要目标按比例缩减）。
+   辅助类（rally / command / fortify / heal 的士气、回复、攻防加成，roar 的士气降幅）按能力缩放：× (0.75 + 能力/400)，
+   表中与说明文字里的数值为能力 100 时的值。
+   持续日数对攻守双方对称：混乱 N 日 = 目标失去 N 次本方行动；加成 N 日 = 覆盖敌方 N 次行动；中毒 N 日 = 发作 N 次。
 
    kind（机制）      默认能力  参数：默认 [最小, 最大]
    smite   单体重击    war    range 1 [1,2] · power 2.0 [1.4,2.6] · morale −10 [−40,0] · pierce 0 [0,1] · confuse 0 [0,0.6] · turns 1 [1,2]
-   cleave  横扫相邻    war    power 1.5 [1,2] · splash 0.75 [0.3,1]（相邻其他敌军的倍率）· morale −8 [−30,0] · confuse 0 [0,0.5] · turns 1 [1,2]
-   charge  直线突击    war    range 3 [2,4] · power 1.7 [1.2,2.2] · dash 0.12 [0,0.2]（每冲过一格 +）· push 1 [0,1]（击退；受阻时伤害 ×1.25）· morale −10 [−30,0]
+   cleave  横扫相邻    war    power 1.65 [1.1,2.2] · splash 0.75 [0.3,1]（相邻其他敌军的倍率）· morale −8 [−30,0] · confuse 0 [0,0.5] · turns 1 [1,2]
+   charge  直线突击    war    range 3 [2,4] · power 1.7 [1.2,2.2] · dash 0.12 [0,0.2]（每冲过一格 +）· push 1 [0,1]（击退；受阻或敌军在本城 / 城门上时改为伤害 +25%；冲刺与撞击加成合计 ≤ +30%）· morale −10 [−30,0]
    rampage 往来连斩    war    range 2 [1,3] · strikes 4 [2,7] · power 0.55 [0.25,1]（每斩）· morale −6 [−20,0]
    volley  远程齐射    war    range 3 [2,5] · power 1.8 [1,2.4] · radius 0 [0,1] · splash 0.6 [0.3,1] · pierce 0 [0,1] · morale −6 [−30,0]
-   blaze   范围火攻    intel  range 3 [2,5] · radius 1 [0,2] · power 0.9 [0.5,1.3] · splash 0.75 [0.3,1] · burn 2 [0,3] · morale −8 [−30,0]
+   blaze   范围火攻    intel  range 3 [2,5] · radius 1 [0,2] · power 1.15 [0.65,1.7] · splash 0.75 [0.3,1] · burn 2 [0,3] · morale −8 [−30,0]
    storm   天候        intel  range 5 [3,7] · radius 2 [1,3] · power 0.7 [0.4,1] · burn 0 [0,3] · confuse 0 [0,0.5] · turns 1 [1,2] · morale −10 [−30,0]
-   flood   水攻        intel  range 4 [2,6] · radius 1 [1,2] · power 0.85 [0.5,1.2]（近河 ×1.4、否则 ×0.85；并灭火）· confuse 0 [0,0.4] · turns 1 [1,2] · morale −12 [−30,0]
+   flood   水攻        intel  range 4 [2,6] · radius 1 [1,2] · power 0.85 [0.5,1.2]（近河 ×1.25、否则 ×0.85；并灭火）· confuse 0 [0,0.4] · turns 1 [1,2] · morale −12 [−30,0]
    roar    威吓        war    radius 2 [1,3]（以自身为中心）· power 0.45 [0,0.9] · morale −25 [−40,−5] · confuse 0.35 [0,0.8] · turns 1 [1,2]
    rally   鼓舞        pol    radius 2 [1,3] · morale 25 [10,40] · heal 0.08 [0,0.2]（最大兵力比例）· cure 1 [0,1] · atk 1 [1,1.3] · turns 2 [1,3]
    command 号令        pol    radius 2 [1,3] · atk 1.25 [1,1.4] · def 1.1 [1,1.3] · turns 2 [1,3] · morale 10 [0,30]
@@ -146,7 +150,7 @@
       desc: '江东小霸王纵马突阵。沿直线冲向四格内的敌军，冲得越远威力越大，并将其击退；退路被阻时撞击伤害更高。',
     },
     '周瑜': {
-      name: '赤壁业火', kind: 'blaze', range: 4, radius: 1, power: 1.0, splash: 0.85, burn: 3, morale: -12,
+      name: '赤壁业火', kind: 'blaze', range: 4, radius: 1, power: 1.3, splash: 0.85, burn: 3, morale: -12,
       fx: 'fire', color: '#ff6a1a', cry: '樯橹灰飞烟灭！',
       desc: '赤壁一炬，樯橹灰飞烟灭。对四格内一支敌军纵火，周围一格的敌军同受火焚（林地威力倍增），并燃起持续三日的大火。',
     },
@@ -180,7 +184,7 @@
       lore: '高顺所将七百余兵号为「陷阵营」，所攻无不破者。' },
     '贾诩': { name: '乱武', kind: 'scheme', range: 5, radius: 2, chance: 0.6, turns: 2, morale: -18, power: 0, fx: 'spirit', color: '#8e44ad', cry: '文和一计，可乱天下。',
       lore: '贾诩劝李傕、郭汜收兵反攻长安，天下由此大乱。' },
-    '胡轸': { name: '凉州骄骑', kind: 'cleave', power: 1.55, splash: 0.55, morale: -8, fx: 'sweep', color: '#cf7f4f',
+    '胡轸': { name: '凉州骄骑', kind: 'cleave', power: 1.71, splash: 0.55, morale: -8, fx: 'sweep', color: '#cf7f4f',
       lore: '胡轸率凉州兵迎击孙坚，自恃勇猛，轻敌冒进。' },
     '牛辅': { name: '据守陕县', kind: 'fortify', radius: 1, def: 1.25, counter: 1.1, turns: 2, morale: 6, fx: 'shield', color: '#8f7a5a',
       lore: '牛辅为董卓女婿，屯兵陕县以拒关东。' },
@@ -192,7 +196,7 @@
       lore: '袁绍四世三公，被推为关东联军盟主。' },
     '颜良': { name: '勇冠三军', kind: 'smite', range: 1, power: 2.25, morale: -18, fx: 'havoc', color: '#e8803a', cry: '河北颜良在此！',
       lore: '颜良为河北名将，白马之战连斩宋宪、魏续。' },
-    '文丑': { name: '延津铁骑', kind: 'cleave', power: 1.75, splash: 0.7, morale: -12, confuse: 0.1, turns: 1, fx: 'sweep', color: '#e0a040',
+    '文丑': { name: '延津铁骑', kind: 'cleave', power: 1.93, splash: 0.7, morale: -12, confuse: 0.1, turns: 1, fx: 'sweep', color: '#e0a040',
       lore: '文丑与颜良齐名，延津之战率铁骑追击曹军。' },
     '田丰': { name: '奇兵袭许', kind: 'haste', stat: 'intel', radius: 2, count: 2, move: 1, morale: 8, fx: 'haste', color: '#62d2c0',
       lore: '田丰屡劝袁绍分遣精锐，以奇兵乘虚袭许。' },
@@ -202,13 +206,13 @@
       lore: '曹操决漳水灌邺城，审配坚守数月，至死不降。' },
     '张郃': { name: '巧变连击', kind: 'rampage', range: 2, strikes: 3, power: 0.7, morale: -10, fx: 'whirl', color: '#7fb2ff',
       lore: '张郃识变数，善处营阵，料战势地形，无不如计。' },
-    '高览': { name: '劫营横扫', kind: 'cleave', power: 1.6, splash: 0.6, morale: -10, fx: 'sweep', color: '#d4a96a',
+    '高览': { name: '劫营横扫', kind: 'cleave', power: 1.76, splash: 0.6, morale: -10, fx: 'sweep', color: '#d4a96a',
       lore: '官渡之战，高览与张郃率军猛攻曹营。' },
     '逢纪': { name: '谋夺冀州', kind: 'scheme', range: 4, radius: 0, chance: 0.7, turns: 2, morale: -12, power: 0, fx: 'spirit', color: '#a07de0',
       lore: '逢纪献计诱公孙瓒南下，逼韩馥让出冀州。' },
     '郭图': { name: '谗言离间', kind: 'scheme', range: 4, radius: 1, chance: 0.45, turns: 1, morale: -20, power: 0, fx: 'spirit', color: '#9068c8',
       lore: '郭图屡进谗言，逼得张郃、高览阵前倒戈。' },
-    '许攸': { name: '献计乌巢', kind: 'blaze', range: 4, radius: 1, power: 1.15, splash: 0.7, burn: 3, morale: -14, fx: 'fire', color: '#ff8a3a', cry: '乌巢屯粮，一把火便可烧尽！',
+    '许攸': { name: '献计乌巢', kind: 'blaze', range: 4, radius: 1, power: 1.45, splash: 0.7, burn: 3, morale: -14, fx: 'fire', color: '#ff8a3a', cry: '乌巢屯粮，一把火便可烧尽！',
       lore: '许攸投曹，献计夜袭乌巢，火焚袁军粮草。' },
     '麴义': { name: '界桥强弩', kind: 'volley', range: 4, power: 1.55, radius: 1, splash: 0.75, pierce: 1, morale: -12, fx: 'arrows', color: '#e0c070',
       lore: '界桥之战，麴义以八百先登、千张强弩大破白马义从。' },
@@ -242,7 +246,7 @@
       lore: '孙坚勇冠诸侯，手持古锭刀，首破董卓、先入洛阳。' },
     '程普': { name: '三世老臣', kind: 'command', radius: 2, atk: 1.2, def: 1.12, turns: 2, morale: 14, fx: 'aura', color: '#e0b050',
       lore: '程普历事孙坚、孙策、孙权三世，军中皆呼「程公」。' },
-    '黄盖': { name: '苦肉火船', kind: 'blaze', stat: 'war', range: 3, radius: 1, power: 1.0, splash: 0.7, burn: 2, morale: -12, fx: 'fire', color: '#ff5722', cry: '火船已发，烧尽曹贼！',
+    '黄盖': { name: '苦肉火船', kind: 'blaze', stat: 'war', range: 3, radius: 1, power: 1.4, splash: 0.7, burn: 2, morale: -12, fx: 'fire', color: '#ff5722', cry: '火船已发，烧尽曹贼！',
       lore: '赤壁之战，黄盖行苦肉计诈降，以火船冲入曹军水寨。' },
     '韩当': { name: '弓马娴熟', kind: 'volley', range: 4, power: 1.95, radius: 0, pierce: 0, morale: -8, fx: 'arrow', color: '#ffd27a',
       lore: '韩当便弓马、有膂力，随孙坚征伐四方。' },
@@ -258,7 +262,7 @@
       lore: '袁术得传国玉玺，于寿春僭号称帝。' },
     '纪灵': { name: '三尖两刃', kind: 'smite', range: 1, power: 2.05, morale: -10, confuse: 0.15, turns: 1, fx: 'slash', color: '#c8a0ff',
       lore: '纪灵使三尖两刃刀，与张飞大战三十合不分胜负。' },
-    '张勋': { name: '七路横扫', kind: 'cleave', power: 1.6, splash: 0.65, morale: -10, fx: 'sweep', color: '#d9b040',
+    '张勋': { name: '七路横扫', kind: 'cleave', power: 1.76, splash: 0.65, morale: -10, fx: 'sweep', color: '#d9b040',
       lore: '张勋为袁术大将军，统七路大军进攻吕布。' },
     '桥蕤': { name: '寿春弩阵', kind: 'volley', range: 3, power: 1.85, radius: 0, pierce: 0, morale: -7, fx: 'arrow', color: '#e8c878',
       lore: '桥蕤守蕲阳以拒曹操，力战而死。' },
@@ -334,7 +338,7 @@
       lore: '庞德抬榇出战关羽，誓以死报国。' },
     '马岱': { name: '吾敢杀汝', kind: 'assassinate', range: 2, chance: 0.32, power: 0.55, morale: -15, fx: 'shadow', color: '#8a5cd0', cry: '吾敢杀汝！',
       lore: '魏延三呼「谁敢杀我」，马岱应声斩之于马下。' },
-    '成宜': { name: '关中骑阵', kind: 'cleave', power: 1.5, splash: 0.6, morale: -8, fx: 'sweep', color: '#d0a070',
+    '成宜': { name: '关中骑阵', kind: 'cleave', power: 1.65, splash: 0.6, morale: -8, fx: 'sweep', color: '#d0a070',
       lore: '成宜为关中诸将之一，随马超、韩遂起兵。' },
   });
 
@@ -346,7 +350,7 @@
       lore: '糜竺进奴客二千、金银货币以助刘备军资。' },
     '糜芳': { name: '江陵城守', kind: 'fortify', radius: 1, def: 1.25, counter: 1.0, turns: 3, morale: 5, fx: 'shield', color: '#90a8c0',
       lore: '糜芳守江陵，城池坚固，粮草充足。' },
-    '曹豹': { name: '丹阳精兵', kind: 'cleave', power: 1.55, splash: 0.65, morale: -6, fx: 'sweep', color: '#d0b070',
+    '曹豹': { name: '丹阳精兵', kind: 'cleave', power: 1.71, splash: 0.65, morale: -6, fx: 'sweep', color: '#d0b070',
       lore: '曹豹统领丹阳兵，号为徐州精锐。' },
     '陈登': { name: '匡琦疑兵', kind: 'scheme', range: 4, radius: 1, chance: 0.55, turns: 2, morale: -14, power: 0.15, fx: 'spirit', color: '#a890ff',
       lore: '孙策围匡琦，陈登夜燃火把为疑兵，大破吴军。' },
@@ -408,7 +412,7 @@
       lore: '张英屯当利口、横江，拒袁术、孙策经年。' },
     '笮融': { name: '浴佛宴杀', kind: 'assassinate', range: 2, chance: 0.3, power: 0.45, morale: -12, fx: 'shadow', color: '#b05090',
       lore: '笮融广造佛寺，却屡于宴席间杀害收留自己的主人。' },
-    '樊能': { name: '牛渚死战', kind: 'cleave', power: 1.45, splash: 0.75, morale: -10, fx: 'sweep', color: '#c88a5a',
+    '樊能': { name: '牛渚死战', kind: 'cleave', power: 1.59, splash: 0.75, morale: -10, fx: 'sweep', color: '#c88a5a',
       lore: '樊能与于麋屯牛渚，与孙策死战。' },
     '薛礼': { name: '秣陵弓手', kind: 'volley', range: 3, power: 1.7, radius: 0, pierce: 0, morale: -10, fx: 'arrow', color: '#d8c890',
       lore: '薛礼为彭城相，避乱据守秣陵城。' },
@@ -462,7 +466,7 @@
       lore: '司马懿深谋远虑，鹰视狼顾，屡挫诸葛亮北伐。' },
     '钟繇': { name: '送马关中', kind: 'haste', radius: 2, count: 1, move: 2, morale: 6, fx: 'haste', color: '#80f0c8',
       lore: '钟繇镇关中，送马二千余匹以给曹军。' },
-    '姜维': { name: '九伐中原', kind: 'cleave', power: 1.7, splash: 0.8, morale: -12, confuse: 0.2, turns: 1, fx: 'sweep', color: '#40c0ff', cry: '丞相之志，维必继之！',
+    '姜维': { name: '九伐中原', kind: 'cleave', power: 1.87, splash: 0.8, morale: -12, confuse: 0.2, turns: 1, fx: 'sweep', color: '#40c0ff', cry: '丞相之志，维必继之！',
       lore: '姜维继诸葛亮遗志，九伐中原。' },
     '鲁肃': { name: '联刘抗曹', kind: 'rally', radius: 3, morale: 25, heal: 0.06, cure: 1, atk: 1.12, turns: 2, fx: 'aura', color: '#ffd060',
       lore: '鲁肃力主孙刘联合，共抗曹操。' },
@@ -478,9 +482,9 @@
       lore: '甘宁率百骑夜劫曹营，往来冲杀，未折一人一骑。' },
     '太史慈': { name: '神箭破围', kind: 'volley', range: 4, power: 2.1, radius: 0, pierce: 0, morale: -12, fx: 'arrow', color: '#7fd1ff',
       lore: '太史慈善射，孔融被围，太史慈射杀追兵、突围求救。' },
-    '陆逊': { name: '火烧连营', kind: 'blaze', range: 5, radius: 2, power: 0.85, splash: 0.8, burn: 2, morale: -15, fx: 'fire', color: '#ff4500', cry: '连营七百里，一火可破！',
+    '陆逊': { name: '火烧连营', kind: 'blaze', range: 5, radius: 2, power: 1.1, splash: 0.8, burn: 2, morale: -15, fx: 'fire', color: '#ff4500', cry: '连营七百里，一火可破！',
       lore: '夷陵之战，陆逊火烧刘备连营七百里。' },
-    '凌统': { name: '断桥死战', kind: 'cleave', power: 1.7, splash: 0.6, morale: -10, fx: 'sweep', color: '#e09060',
+    '凌统': { name: '断桥死战', kind: 'cleave', power: 1.87, splash: 0.6, morale: -10, fx: 'sweep', color: '#e09060',
       lore: '逍遥津之战，凌统率亲兵断后死战，护孙权脱险。' },
     '魏延': { name: '子午谷奇袭', kind: 'charge', range: 4, power: 1.75, dash: 0.16, push: 0, morale: -12, fx: 'dash', color: '#e05050', cry: '谁敢杀我！',
       lore: '魏延请以精兵五千出子午谷，直取长安。' },
@@ -498,7 +502,7 @@
       lore: '邓艾偷渡阴平七百余里，以毡裹身滚下山崖，直取成都。' },
     '孙乾': { name: '奔走联络', kind: 'haste', radius: 2, count: 1, move: 1, morale: 12, fx: 'haste', color: '#70e0c0',
       lore: '孙乾常为刘备使者，奔走于诸侯之间。' },
-    '关平': { name: '关家刀法', kind: 'cleave', power: 1.65, splash: 0.7, morale: -10, fx: 'sweep', color: '#40c070',
+    '关平': { name: '关家刀法', kind: 'cleave', power: 1.81, splash: 0.7, morale: -10, fx: 'sweep', color: '#40c070',
       lore: '关平随父征战，深得关家刀法。' },
     '周仓': { name: '水擒庞德', kind: 'flood', stat: 'war', range: 2, radius: 1, power: 1.05, turns: 1, morale: -12, fx: 'water', color: '#3a8ad0',
       lore: '水淹七军之时，周仓于水中生擒庞德。' },

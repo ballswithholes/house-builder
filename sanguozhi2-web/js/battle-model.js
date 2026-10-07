@@ -14,7 +14,8 @@
      specialPlan(u, target) / specialValue(u, plan) / aiSpecial(u)   纯计算：效果清单、期望价值、电脑决策
      planAction(u) 可返回 kind 'special'（plan.target 为目标）
      限时加成 u.mods = [{ src, atk, def, counter, move, dot, days }]：atkPower / defFactor / 反击 / 机动力 /
-       计策伤害都会乘上；每日结束时 days − 1（dot = 每日按兵力比例损兵，即中毒）
+       计策伤害都会乘上；dot（每日按兵力比例损兵，即中毒）在每日结束时发作并 days − 1，其余加成在该部队
+       本方行动开始时 days − 1（攻守双方施展的持续时间对称）。混乱同理按 confuseCount 补正，见 confusedPhases
      duelAccepts(a, b) → bool、duelFinish(a, b, winnerIsA, rounds) → 结果：duel() 拆成的两步（随机数顺序不变）
      BattleModel.specialsEnabled（默认 true）：false 时规则与电脑完全回到第一版（tests/sim.js 对比平衡用）
    ========================================================================== */
@@ -266,6 +267,7 @@
     startSide(s) {
       this.side = s; this.ap = this.actionPoints(s);
       for (const u of this.units) if (u.side === s) u.acted = u.confused > 0;
+      for (const u of this.units) if (u.side === s && u.mods && u.mods.length) this.expireMods(u);   // 必杀技加成按本方行动计时
     }
     canAct(u) { return u.alive && u.side === this.side && !u.acted && this.ap > 0 && u.confused <= 0 && this.result === 0; }
     spend(u) { if (!u.acted) { u.acted = true; this.ap--; } }
@@ -438,10 +440,15 @@
       const i = u.mods.findIndex(m => m.src === mod.src);
       if (i >= 0) u.mods[i] = mod; else u.mods.push(mod);
     }
-    // 每日结束时调用：中毒损兵、剩余天数 −1、到期移除
+    // 计时规则（攻守双方对称）：
+    //   中毒（dot > 0）：每日结束时（endDay）损兵一次、days −1——无论谁施毒，都恰好发作 days 次。
+    //   其余加成（攻 / 防 / 反击 / 机动）：在该部队本方下一次行动开始时（startSide）days −1、到 0 移除。
+    //     于是「持续 N 日」= 本方剩余的这次行动 + 敌方 N 次行动 + 本方之后 N−1 次行动，攻方施展与守方施展一样长。
+    //     （若也按 endDay 计时，守方最后行动、施展后立刻过日，1 日的加成在敌方行动前就会失效。）
     tickMods(u) {
       for (const m of u.mods) {
-        if (m.dot > 0 && u.alive) {
+        if (!(m.dot > 0)) continue;
+        if (u.alive) {
           const d = Math.max(20, M.roundToInt(u.troops * m.dot));
           u.troops -= d;
           this.dayLog.push(u.gen.name + '中毒，损兵 ' + d);
@@ -450,6 +457,19 @@
         m.days--;
       }
       u.mods = u.mods.filter(m => m.days > 0);
+    }
+    expireMods(u) {
+      for (const m of u.mods) if (!(m.dot > 0)) m.days--;
+      u.mods = u.mods.filter(m => m.days > 0);
+    }
+    // 混乱的计数在每日结束时（守方行动之后）统一 −1。必杀技造成的「混乱 N 日」要让目标恰好失去 N 次本方行动：
+    //   攻方行动中混乱守军 → 守军当日即失去行动，计数 N；守方行动中混乱攻军 → 过日先 −1，计数须为 N + 1。
+    confuseCount(e, turns) { return turns + (e.side === 1 && this.side === 0 ? 0 : 1); }
+    // 部队 x 今后还会因混乱失去的本方行动次数（不含正在进行的本方行动）
+    confusedPhases(x) {
+      const c = x.confused | 0;
+      if (c <= 0) return 0;
+      return x.side === 1 && this.side === 0 ? c : c - 1;
     }
 
     // ---- 计算基准 ----
@@ -493,7 +513,7 @@
       return out;
     }
     maxTroopsOf(u) { return SG.maxTroops ? SG.maxTroops(u.gen) : Balance.GeneralTroopBase + u.gen.war * Balance.GeneralTroopPerWar; }
-    needsHeal(b) { return b.alive && (b.troops < this.maxTroopsOf(b) * 0.95 || b.confused > 0); }
+    needsHeal(b) { return b.alive && (b.troops < this.maxTroopsOf(b) * 0.95 || this.confusedPhases(b) > 0); }
     // 直线突击：t 须与 u 同行 / 同列、距离 1..range，中间各格可通行且无部队。返回落点（敌军前一格；相邻时为原地）
     chargeLanding(u, t, range) {
       if (u.x !== t.x && u.y !== t.y) return null;
@@ -614,13 +634,16 @@
           const L = this.chargeLanding(u, t, sp.range);
           if (!L) break;
           if (L.x !== u.x || L.y !== u.y) pl.move = { from: P(u.x, u.y), to: P(L.x, L.y) };
-          let amt = sp.power * base(t) * (1 + sp.dash * L.dash);
+          let k = 1 + sp.dash * L.dash;
           if (sp.push) {
+            // 本城、城门上的部队据守不退（否则一记突击就能把守将撞出本城，随后踏入即破城）
+            const tt = this.map[t.x][t.y], held = tt === Terrain.Castle || tt === Terrain.Gate;
             const bx = t.x + L.dx, by = t.y + L.dy;
-            if (this.passable(bx, by) && this.unitAt(bx, by) == null && this.map[bx][by] !== Terrain.Castle) pl.push = { unit: t, from: P(t.x, t.y), to: P(bx, by) };
-            else { amt *= 1.25; pl.blocked = t; }               // 退无可退：撞击伤害 +25%
+            if (!held && this.passable(bx, by) && this.unitAt(bx, by) == null && this.map[bx][by] !== Terrain.Castle) pl.push = { unit: t, from: P(t.x, t.y), to: P(bx, by) };
+            else { k += 0.25; pl.blocked = t; }                  // 退无可退：撞击伤害 +25%
           }
-          hit(t, amt, true); extras(t);
+          // 冲刺与撞击加成合计封顶（SG.Specials.CHARGE_CAP），单体伤害不超出平衡目标太多
+          hit(t, sp.power * base(t) * Math.min(k, SG.Specials.CHARGE_CAP || 1.3), true); extras(t);
           pl.area = L.path.concat([P(t.x, t.y)]);
           break;
         }
@@ -720,6 +743,16 @@
         default:
           break;
       }
+      // 范围伤害封顶：命中多支敌军时，次要目标的伤害按比例缩减，使总伤害 ≤ AREA_TOTAL × 基准（主目标的一次 1 倍伤害）；
+      // 主目标的伤害不缩减。连斩以斩数计量（strikes × power 已有上限），不在此列。
+      if (sp.kind !== 'rampage' && pl.dmg.length > 1) {
+        const b = t.side !== u.side ? base(t) : Math.max(...pl.dmg.map(h => base(h.unit)));
+        const eff = h => Math.min(h.amt, h.unit.troops);
+        let P0 = 0, S0 = 0;
+        for (const h of pl.dmg) if (h.primary) P0 += eff(h); else S0 += eff(h);
+        const cap = Math.max((SG.Specials.AREA_TOTAL || 2.8) * b - P0, 0.4 * b);
+        if (S0 > cap) { const k = cap / S0; for (const h of pl.dmg) if (!h.primary) h.amt *= k; pl.areaK = k; }
+      }
       return pl;
     }
 
@@ -750,7 +783,7 @@
           v += -f.morale * rem / 300;
           if (e.morale + f.morale <= 0) v += rem + this.routBonus(e);
         }
-        if (f.p > 0) v += f.p * f.turns * 0.8 * this.threat(e, u);
+        if (f.p > 0) v += f.p * Math.max(0, f.turns - this.confusedPhases(e)) * 0.8 * this.threat(e, u);
         if (f.mod && f.mod.dot > 0) v += f.mod.days * Math.max(20, rem * f.mod.dot) * 0.9;
       }
       for (const a of pl.ally) {
@@ -758,7 +791,7 @@
         v += a.heal * 0.9;
         const engaged = foes.some(e => dist(e, x) <= 5);
         if (a.morale > 0) v += Math.min(a.morale, 100 - x.morale) * x.troops / 300 * (x.morale < 40 ? 2 : 1) * (engaged ? 1 : 0.3);
-        if (a.cure && x.confused > 0) v += x.confused * 0.5 * this.atkExpect(x, nearestFoe(x) || x);
+        if (a.cure && x.confused > 0) v += this.confusedPhases(x) * 0.5 * this.atkExpect(x, nearestFoe(x) || x);
         const m = a.mod;
         if (m) {
           const near = foes.filter(e => dist(e, x) <= 4);
@@ -886,7 +919,7 @@
         touch(e);
         if (f.morale) e.morale = M.clamp(e.morale + f.morale, 0, 100);
         if (f.p > 0) {
-          if (SG.Random.value() < f.p) { e.confused = Math.max(e.confused, f.turns); e.acted = true; res.confused.push(e); }
+          if (SG.Random.value() < f.p) { e.confused = Math.max(e.confused, this.confuseCount(e, f.turns)); e.acted = true; res.confused.push(e); }
           else res.resisted.push(e);
         }
         if (f.mod) { this.addMod(e, Object.assign({}, f.mod)); res.cursed.push(e); }
