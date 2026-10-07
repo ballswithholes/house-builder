@@ -281,3 +281,63 @@ no offset); light offsets are `[x, height]` in metres and pick the nearest light
 `prop_cave_mouth_snow`, `prop_crypt_door_golden` and `prop_raid_portal_ember` share their base recipe. Light-less
 `SetLit` props (brazier, torch sconce, altar, door and stair lamps) follow the night glow; with a non-`nightOnly`
 light they always burn.
+
+### props-wild: highland, fen, peak and town props (Expansion §10; `World/Props/PropWild*.cs`)
+
+Every model stands centred on its pivot, faces −Z and is finished on all sides (the deep maps are seen from every yaw),
+so its recommended collider is a **centred** ellipse (`offset` 0) over the solid footprint; building corners may clip the
+ellipse by up to ≈ 0.3 m, which the units' own clearance absorbs. "none" = walk-through dressing or a walkable deck:
+leave `collider` out. The light column gives the map JSON `light.offset` `[x, height]`, which snaps the light to the
+model's nearest light anchor (`MapView.AddLight`), and a suggested light. Lit models switch their glass and flames with
+`SetLit`: `nightOnly: true` for windows and lamps, `false` for fires and spirit glows that always burn. Sizes at scale 1.
+
+| key | model | size w × d, h (m) | collider w × h | light offset → suggested light |
+|---|---|---|---|---|
+| `prop_standing_stone` | lichen-flecked menhir with a carved ring-and-stave rune (faintly glowing on odd seeds), chips, golden grass | 1.3 × 1.1, 2.7 | 1.0 × 0.7 | – |
+| `prop_scarecrow` | patched coat on a cross post, sack head with a stitched grin, floppy straw hat, a crow on the arm (sways) | 1.8 × 0.8, 2.3 | 0.6 × 0.4 | – |
+| `prop_beehive` | three straw skeps on a bench, a honey pot, lavender | 2.1 × 0.8, 1.2 | 2.0 × 0.9 | – |
+| `prop_wheat` | a patch of ripe wheat in sheaf-shaped bunches with bristling ears, poppies and cornflowers (sways); tiles edge to edge every 3.6 × 2.2 | 3.6 × 2.1, 1.1 | 3.4 × 1.8 (or none: a walk-through crop) | – |
+| `prop_watchtower_ruin` | round sandstone tower broken open on one side, floor beams, a red pennant, fallen blocks | Ø 3.8, 8.0 | 3.8 × 3.8 | – |
+| `prop_gnoll_tent` | Duskmane hide tent: a horned skull over the door, painted marks, guy ropes, a fire glow inside | 3.5 × 3.2, 3.6 | 2.8 × 2.6 | `[0, 0.75]` → `#ff9a4a`, r 3, i 0.9, flicker, not nightOnly |
+| `prop_gnoll_totem` | stacked carved gnoll heads under an antlered skull, a crossbar with bones and red rags (sways) | 1.5 × 1.0, 3.9 | 0.8 × 0.6 | – |
+| `prop_bonepile` | a mound of skulls, ribs and horns on churned earth, a broken red shield | 1.6 × 1.2, 0.9 | 1.6 × 1.2 | – |
+| `prop_tree_golden` | golden autumn tree: amber-to-orange canopy over a forked trunk; fallen leaves as a ground part (sways) | Ø 6.4, 9.2 | 1.2 × 0.8 (trunk) | – |
+| `prop_cairn` | stacked lichen stones, a finger stone with a hazel wand and ribbon, a pebble ring | 1.4 × 1.1, 1.5 | 1.1 × 0.8 | – |
+| `prop_farmhouse` | whitewashed stone farmhouse under turf-ridged thatch, door lantern, shutters and flower box, red plank barn wing with hayloft, hay rolls, churn | 7.5 × 4.9, 6.1 | 8.4 × 5.2 | `[-0.35, 2.45]` (door lantern) → `#ffb062`, r 3.5, i 0.7, nightOnly |
+| `prop_quarry_cart` | the Mudpaw tunnelers' cart of cut stone on a stub of rails, a pick leaning on it | 2.1 × 1.0, 1.25 | 2.2 × 1.1 | – |
+| `prop_reeds` | tall reed clump with brown plumes (no ink; sways) | 1.5 × 1.1, 1.7 | none | – |
+| `prop_cattails` | cattail clump: long leaves, brown heads (sways) | 1.7 × 1.5, 1.7 | none | – |
+| `prop_mangrove` | mangrove on arching stilt roots, aerial roots and seed pods, a moss mat | 6.9 × 4.5, 6.5 | 2.2 × 1.8 | – |
+| `prop_willow` | weeping willow: soft crown, hanging fronds (sways) | 5.6 × 4.8, 7.8 | 1.2 × 0.8 (trunk) | – |
+| `prop_lilypads` | lily pads with pink water lilies at the water line (fen pools, ponds) | 2.0 × 1.8, 0.35 | none | – |
+| `prop_stilt_hut` | thatched fen hut on stilts over the water: porch, ladder, bunting, round window, lit windows on every side | 4.1 × 4.4, 5.1 | 4.8 × 4.6 | `[-0.75, 2.35]` → `#ffb062`, r 3.5, i 0.7, nightOnly |
+| `prop_boardwalk` | 3 m plank segment on piles, deck top 0.08; chains every 3.0 m along X. **`prop_boardwalk_y`**: the same along the map's depth | 3.0 × 1.7, 0.4 | none (walkable) | – |
+| `prop_fen_lantern` | crooked pole with a hanging glass jar lantern (pale gold-green), charms, glow mushrooms | 1.0 × 0.5, 2.3 | 0.4 × 0.4 | `[0.55, 1.78]` → `#e8f0b0`, r 4, i 0.9, flicker, not nightOnly |
+| `prop_mire_totem` | Mother Mire's coven totem: driftwood post under an antlered skull with green-glowing eyes, charms, a moss mound (sways) | 1.1 × 0.9, 3.2 | 0.8 × 0.6 | optional `[0, 2.45]` → `#7cf0a0`, r 2.5, i 0.6 |
+| `prop_sunken_statue` | serene stone head and shoulder sinking into the mire, a raised stone hand with a lantern, moss, reeds | 3.0 × 1.7, 1.9 | 2.8 × 1.7 | – |
+| `prop_mushroom_giant` | giant spotted mushroom (red, blue, orange or violet by seed) with glowing gills, a half-size one leaning out beside it, little ones at its foot | 3.8 × 3.7, 4.2 | 1.9 × 1.1 | optional `[0.2, 2.45]` → `#86f2d8`, r 3, i 0.6, nightOnly |
+| `prop_fishing_rack` | drying rack hung with fish, a net, a stool and a basket (sways) | 2.6 × 1.0, 2.0 | 2.4 × 0.7 | – |
+| `prop_pine_snow` | snowy pine: six tiers under white caps with drooping tongues, a drift at the foot (sways) | Ø 4.5, 9.5–11 | 1.0 × 0.6 (trunk) | – |
+| `prop_rock_snow` | cool-grey boulders with snow on every upward face, banked drifts, frost-bitten grass | 2.5 × 1.7, 1.2 | 2.0 × 1.2 | – |
+| `prop_ice_spire` | cluster of pale, faintly luminous ice crystals (to 3.1 m) on a snowy rock, frost sparkles | 1.7 × 1.3, 3.1 | 1.4 × 1.0 | optional `[0, 1.5]` → `#bfe8ff`, r 3, i 0.7, not nightOnly |
+| `prop_snowdrift` | wind-carved drift with a cornice; a buried fence post (even seeds) or a frosted shrub with berries (odd) | 3.2 × 1.2, 0.6 (post 1.0) | 2.4 × 0.9 (or none) | – |
+| `prop_mountain_hut` | herders' log hut: crossed log corners, fieldstone plinth, a broad snow-quilted gable with icicles and red bargeboards, front balcony with an airing blanket, wreath, door lantern; woodpile (left), skis, sled and shovel (right), back door and chimney | 6.5 × 5.8, 5.6 | 7.0 × 5.2 | `[0.2, 2.1]` (door lantern) → `#ffb062`, r 3.5, i 0.8, nightOnly |
+| `prop_prayer_flags` | two poles on little cairns with strings of blue-white-red-green-yellow flags and a third string down to a stake, white scarves, a mani stone (sways) | 5.8 × 1.2, 3.7 | none (walk under) | – |
+| `prop_ruined_tower` | broken ten-sided Heronguard tower in grey stone, scorched near the top, a snowy string course with icicles, burnt joists, a half-open door, a tattered blue heron banner, fallen blocks under the breach (sways) | Ø 3.5 (4.6 with rubble), 8.2 | 4.0 × 4.0 | – |
+| `prop_dragon_bones` | an old dragon's skeleton half sunk in snow: a long horned skull resting on its jaw (left), the spine to a curled tail, ribs rising in curved arches, a folded wing, a broken spear with a blue pennant | 7.8 × 4.0, 3.4 | 8.0 × 4.2 | – |
+| `prop_dock` | timber jetty: 2.2 × 5.2 m deck along local Z, its far end (+Z) with the ladder down and a lamp post; piles, bollards, crates, barrel, fish basket, net. **`prop_dock_x`**: the same along X, far end +X (`flip`: −X) | 3.0 × 5.6, 2.5 | none (walkable; over blocking water add a `water.crossings` rect, which draws as a ford there) | `[-0.95, 2.0]` (`_x`: `[2.25, 2.0]`) → `#ffd9a0`, r 3.5, i 0.8, nightOnly |
+| `prop_boat` | rowing boat along X: painted hull per seed with a stripe and a tarred bottom, thwarts, oars, rope coil, creel, a heron figurehead, a paper lantern on the stern pole; the keel sits 0.3 m below the ground, so it floats at the water line | 3.7 × 1.3, 1.55 | none afloat; 3.4 × 1.3 beached | `[-1.62, 1.25]` → `#ffd9a0`, r 3, i 0.7, nightOnly |
+| `prop_river_house` | tall river-town house: dressed stone ground floor with quoins, arched door, shop window under a striped awning, fish sign, door lantern; jettied pastel half-timbered upper floor with shutters and a flower balcony; steep slate (even seeds) or terracotta roof with dormers, gable round windows, chimney; back door to the water, mooring ring, hanging basket, rain barrel, ivy | 5.4 × 5.4, 8.3 | 5.2 × 5.0 | `[-0.2, 2.15]` (door lantern) → `#ffb062`, r 3.5, i 0.8, nightOnly |
+| `prop_town_hall` | Brightwater's town hall: a stone arcade with two open arches and hanging lanterns, the great blue door, broad steps; half-timbered upper floor with tall windows, a balustraded balcony under the heron emblem and two banners; slate roof with dormers and chimneys; a clock tower with clocks on all four faces, an open belfry with its bell, a slate spire with a gold heron vane and pennants | 9.8 × 6.2, 15.1 | 10.8 × 6.8 | `[0, 2.2]` (arcade lanterns), `[0, 4.2]` (balcony door) or `[0, 9.1]` (clock) → `#ffb062`, r 4, i 0.8, nightOnly |
+| `prop_fountain` | twelve-sided basin with carved panels in a ring of paving, two bowls on a pedestal, a bronze heron spouting water, curtains of water, lily pads, coins on the coping | Ø 3.8, 2.7 | 3.0 × 3.0 | optional `[0, 1.3]` → `#cfeaff`, r 3, i 0.5, nightOnly |
+| `prop_bridge_stone` | stone road bridge: a 7.6 m deck along X with a low hump (0.07–0.19 m, so units walk on it), parapets with coping and moss flaring to wing walls, cutwater piers, the heron roundel on both faces, ivy, four newel pillars with lanterns. **`prop_bridge_stone_y`**: the same along the map's depth | 8.5 × 4.2, 2.0 | none (walkable: see below) | `[-3.95, 1.75]` or `[3.95, 1.75]` (one light per prop: the nearest pillar) → `#ffd9a0`, r 4, i 0.9, nightOnly |
+| `prop_market_awning` | market stall under a scalloped striped awning on four posts (colour per seed): a slanted tray of river fish, crayfish, apples, pears, honey jars, a brass scale, strings of onions and garlic, two paper lanterns, crates, barrel and sack behind, a chalk sign | 3.2 × 2.2, 2.8 | 3.4 × 1.8 | `[-1.45, 2.05]` or `[1.45, 2.05]` → `#ffc070`, r 3, i 0.8, nightOnly |
+
+**Bridges and water.** To the terrain, any prop whose art contains `bridge` is a bridge:
+* On a map with `MapDef.water`, a `water.crossings` rect with a bridge prop's pivot inside it (± 1.5 m) keeps the river's
+  deep bed under it, because the bridge spans it; every other crossing becomes a ford, a gravel bar under shallow water
+  (`MapTerrain.Water.cs`, AnalyseWater). The crossing rect is also what makes the deck walkable in the nav, since water
+  blocks movement. Give it the deck's size (`prop_bridge_stone`: about 7.6 × 2.2 along X; 2.2 × 7.6 for `_y`) and leave
+  the bridge's collider out. Bridges never lift units: the decks stay within 0.2 m of the ground.
+* On a map without `MapDef.water`, the first bridge prop lays the legacy brook through the whole map depth at its x
+  (`MapTerrain.Analyse`). That fallback is off as soon as the map has data water, so a bridge never adds a second stream.
