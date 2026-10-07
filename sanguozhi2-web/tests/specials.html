@@ -233,15 +233,18 @@
     line: { C: [2, 5], A: [[1, 3], [1, 7]], E: [[5, 5], [5, 7], [6, 6], [5, 3]] },
     support: { C: [3, 5], A: [[3, 4], [2, 6]], E: [[5, 5], [5, 4], [6, 5], [5, 6]] },
   };
-  function layoutFor(kind) {
+  function layoutFor(kind, sp) {
     if (kind === 'charge') return LAYOUT.line;
-    if (['volley', 'blaze', 'storm', 'flood', 'scheme', 'poison', 'assassinate'].indexOf(kind) >= 0) return LAYOUT.ranged;
+    if (['volley', 'blaze', 'storm', 'flood', 'scheme', 'poison', 'assassinate'].indexOf(kind) >= 0) {
+      const r = sp && sp.range || 3;                       // 射程不足 3 格：施展者前移（1 格时贴身）
+      return r >= 3 ? LAYOUT.ranged : r === 2 ? Object.assign({}, LAYOUT.ranged, { C: [3, 5] }) : LAYOUT.melee;
+    }
     if (['rally', 'command', 'fortify', 'haste', 'heal'].indexOf(kind) >= 0) return LAYOUT.support;
     return LAYOUT.melee;
   }
   function arrange(kind, casterGen) {
     const { Mdl, view, units, base } = F;
-    const L = layoutFor(kind);
+    const L = layoutFor(kind, casterGen && SG.Specials.of(casterGen));
     const atk = units.filter(u => u.side === 0), def = units.filter(u => u.side === 1);
     units.forEach((u, i) => {
       u.gen = base[i].gen;
