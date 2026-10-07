@@ -10,8 +10,8 @@
 //   drowned     cr_drowned_sentinel (barnacles, seaweed, dripping)
 //   elementals  cr_ice_elemental, cr_ash_elemental, cr_fen_wisp
 //
-// Hunched models (bog ghoul, Mother Mire) are authored upright and tipped forward about the hip line (BeginHunch /
-// EndHunch): the upper body's geometry and its bone pivots turn together, so the rig animates the hunched pose.
+// Hunched models (bog ghoul, Mother Mire) are authored upright and tipped forward about the hip line (BeginHipTilt /
+// EndHipTilt): the upper body's geometry and its bone pivots turn together, so the rig animates the hunched pose.
 // Natural heights are what the data `size` scales; the recommended sizes per key are in Docs/ArtKeys.md.
 using System;
 using System.Collections.Generic;
@@ -45,35 +45,35 @@ namespace Lanternvale.Game
 
         // ================================================================== shared pieces
 
-        /// <summary>Upper-body hunch: geometry drawn between BeginHunch and EndHunch, and the upper bones, turn forward.</summary>
-        struct Hunch
+        /// <summary>Upper-body hunch: geometry drawn between BeginHipTilt and EndHipTilt, and the upper bones, turn forward.</summary>
+        struct HipTilt
         {
             public Vector3 Pivot;
             public Quaternion Q;
             public Vector3 Apply(Vector3 p) => Pivot + Q * (p - Pivot);
         }
 
-        static Hunch BeginHunch(BipedKit k, float deg, float pivotY, float pivotZ = 0f)
+        static HipTilt BeginHipTilt(BipedKit k, float deg, float pivotY, float pivotZ = 0f)
         {
-            var h = new Hunch { Pivot = new Vector3(0f, pivotY, pivotZ), Q = Quaternion.Euler(deg, 0f, 0f) };
+            var h = new HipTilt { Pivot = new Vector3(0f, pivotY, pivotZ), Q = Quaternion.Euler(deg, 0f, 0f) };
             k.M.Push().Translate(h.Pivot).Rotate(h.Q).Translate(-h.Pivot);
             return h;
         }
 
-        static readonly int[] HunchBones =
+        static readonly int[] HipTiltBones =
         {
             BB.Spine, BB.Chest, BB.Neck, BB.Head, BB.ArmUL, BB.ArmLL, BB.HandL, BB.ArmUR, BB.ArmLR, BB.HandR,
             BB.Cape, BB.HairB, BB.WingL, BB.WingR, BB.DrawnR, BB.StringA, BB.StringB, BB.ArrowR,
         };
 
-        static void EndHunch(BipedKit k, Hunch h)
+        static void EndHipTilt(BipedKit k, HipTilt h)
         {
             k.M.Pop();
-            foreach (int b in HunchBones) k.Bind[b] = h.Apply(k.Bind[b]);
+            foreach (int b in HipTiltBones) k.Bind[b] = h.Apply(k.Bind[b]);
         }
 
         /// <summary>After Finish: the true height and the nameplate anchor of a hunched model.</summary>
-        static void FinishHunch(BipedKit k, Hunch h, float top)
+        static void FinishHipTilt(BipedKit k, HipTilt h, float top)
         {
             var m = k.Model;
             m.HeadTop = h.Q * new Vector3(0f, k.H - k.HeadY, 0f);
@@ -467,7 +467,7 @@ namespace Lanternvale.Game
                 for (int t = -1; t <= 1; t++)
                     M.Spike(new Vector3(s * k.HipX + t * 0.03f * U, 0.02f * U, 0.13f * U), new Vector3(t * 0.2f, -0.3f, 1f), 0.012f * U, 0.05f * U, 4);
             }
-            var h = BeginHunch(k, 32f, k.HipY);
+            var h = BeginHipTilt(k, 32f, k.HipY);
             k.Torso(skin, sackD, skinL, 0.12f);
             // the hump: moss and a tuft of reeds
             M.Bone = BB.Chest; M.Color = skinD;
@@ -528,7 +528,7 @@ namespace Lanternvale.Game
                 M.Bone = BB.ArmU(s); M.Color = moss;
                 M.Blob(new Vector3(s * (k.ShoulderX + 0.01f * U), k.ShoulderY + 0.02f * U, -0.01f * U), new Vector3(0.08f, 0.05f, 0.08f) * U, 0, 0.3f, 20 + s);
             }
-            EndHunch(k, h);
+            EndHipTilt(k, h);
             // rotten sackcloth loincloth (hips, not hunched)
             k.Belt(sackD, mudD, k.HipY + 0.04f * U, 1.0f, 0.05f);
             k.FrontFlap(sack, k.KneeY + 0.06f * U, 0.15f, null, k.HipY + 0.04f * U);
@@ -538,7 +538,7 @@ namespace Lanternvale.Game
             m.DustColor = new Color(0.4f, 0.34f, 0.24f, 0.35f);
             m.StrideK = 0.9f;
             var mm = Done(k, key);
-            FinishHunch(k, h, h.Apply(new Vector3(0f, k.H, 0f)).y);
+            FinishHipTilt(k, h, h.Apply(new Vector3(0f, k.H, 0f)).y);
             return mm;
         }
 
@@ -1669,7 +1669,7 @@ namespace Lanternvale.Game
                 M.Blade(a, a + new Vector3(Mathf.Sin(th) * 0.03f, -0.1f - (i % 3) * 0.03f, Mathf.Cos(th) * 0.03f) * U, 0.1f * U);
             }
             k.Skirt(shawlD, ragD, k.KneeY - 0.04f * U, 1.45f, 40f, null, -1f, 1f);
-            var h = BeginHunch(k, 26f, k.HipY);
+            var h = BeginHipTilt(k, 26f, k.HipY);
             k.Torso(shawl, rag, skinL, 0.35f);
             // moss shawl and a plum cloak with tatters
             k.Mantle(moss, 1.2f, 0.05f, 70);
@@ -1786,7 +1786,7 @@ namespace Lanternvale.Game
             M.Emission = 0f;
             k.End();
             var castLocal = k.Grip(1) - k.Bind[BB.HandR] + new Vector3(pot.x, -pot.z, pot.y + 0.08f * U);
-            EndHunch(k, h);
+            EndHipTilt(k, h);
             var m = k.Model;
             m.HoldR = UnitHold.Staff; m.Strike = UnitStrike.Staff; m.Ranged = UnitRanged.Point;
             m.CastBone = BB.HandR; m.CastOffset = h.Q * castLocal;
@@ -1794,7 +1794,7 @@ namespace Lanternvale.Game
             m.DustColor = new Color(0.4f, 0.36f, 0.26f, 0.35f);
             m.SkirtClosed = 1f;
             var mm = Done(k, key);
-            FinishHunch(k, h, h.Apply(new Vector3(0f, k.H + 0.2f * r, 0f)).y);
+            FinishHipTilt(k, h, h.Apply(new Vector3(0f, k.H + 0.2f * r, 0f)).y);
             return mm;
         }
 

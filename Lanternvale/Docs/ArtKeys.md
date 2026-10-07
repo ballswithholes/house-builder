@@ -310,7 +310,7 @@ the head or headwear (banner poles and hat brims stand above it); "r" is the Cor
 these models carries a light of its own.
 
 *models-b* keys live in `Units/UnitRecipes.CreaturesB.cs` (all biped rig). Hunched models (bog ghoul, Mother Mire) are
-authored upright and tipped forward about the hip line with their bone pivots (`BeginHunch`/`EndHunch`), so the rig
+authored upright and tipped forward about the hip line with their bone pivots (`BeginHipTilt`/`EndHipTilt`), so the rig
 animates the hunch; their natural height is the hunched height. Floating models (lich, Tidewitch, elementals, twins,
 fen wisp) have no legs (`FloatHeight` > 0). Creature-id aliases registered to the same recipes: `cr_dg3_lantern_lich`,
 `cr_dg5_tidewitch`, `cr_dg6_rimeheart`, `cr_king_aldwin`, `cr_r1_twin_sorrow`, `cr_frost_wight` (`cr_barrow_wight_frost`).
