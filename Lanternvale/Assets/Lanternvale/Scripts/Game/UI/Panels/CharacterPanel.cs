@@ -1,7 +1,8 @@
 // Character sheet (C): party member tabs, paper doll with the 17 equipment slots around the hero art (click a slot to
 // unequip; click an item in the bags to equip it on this member), primary attributes, derived stats (attack power,
 // spell power, crit, hit, dodge/parry/block, armour mitigation, resistances, mana regeneration), health/resource,
-// experience, and approval for companions (with their likes / dislikes; hover the name line for their bio).
+// experience, and approval for companions (with their likes / dislikes; hover the name line for their bio). Worn item
+// sets get a "Set bonuses" block (pieces worn, bonuses active; the tooltip lists every piece and bonus).
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -309,6 +310,19 @@ namespace Lanternvale.Game.Panels
                     float spirit5 = st.SpiritRegenPerTick * 2.5f;
                     float casting = st.ManaRegen + spirit5 * Mathf.Clamp01(st.SpiritRegenWhileCasting / 100f);
                     Line("Mana regen", $"{Mathf.RoundToInt(spirit5 + st.ManaRegen)} / 5 s", $"While casting (five-second rule): {Mathf.RoundToInt(casting)} per 5 s.\nMP5 from items: {Mathf.RoundToInt(st.ManaRegen)}.");
+                }
+            }
+
+            // item sets worn (pieces, active bonuses; hover for the pieces and every bonus)
+            var worn = ItemSets.Worn(u);
+            if (worn.Count > 0)
+            {
+                Header("Set bonuses");
+                foreach (var sp in worn)
+                {
+                    string count = $"{sp.Equipped}/{sp.Total}";
+                    string value = sp.ActiveCount > 0 ? Ui.Rich($"{count}  ·  {sp.ActiveCount} active", PanelKit.GoodDark) : count;
+                    Line(sp.Set.name, value, UiText.SetBlock(sp.Set, u));
                 }
             }
 

@@ -114,6 +114,11 @@ namespace Lanternvale.Rules
                 foreach (var p in kv.Value.Def.equipEffects)
                     if (p.type == "AbilityMod" && Matches(p, a))
                         set.Add(p.property, StatCalculator.RankValue(p.value, p.values, 1));
+            var setBonuses = ItemSets.Active(u);
+            for (int i = 0; i < setBonuses.Count; i++)
+                foreach (var p in setBonuses[i].Bonus.equipEffects)
+                    if (p.type == "AbilityMod" && Matches(p, a))
+                        set.Add(p.property, StatCalculator.RankValue(p.value, p.values, 1));
             Specials.ContributeAbilityMods(u, a, set);
             return set;
         }

@@ -387,7 +387,43 @@ Rules: armour by class `armorTypes` (+ `armorUpgrade` at its level; lower types 
 * Weapon proficiency also comes from talents (`EquipmentRules.CanUseWeapon` asks `Specials`: Two-Handed Axes and
   Maces). Class reagents live in the party inventory: `soul_shard` (max 32), `shaman_ankh`, `rogue_flash_powder`,
   `rogue_blinding_powder` (checked only for the player's party).
-* `LootGenerator.Roll(db, lootTableId, level, rng)` → `LootDrop { Items, Gold }`.
+* `Equipment.Version` is bumped by every slot change (equip, unequip, displacement, load) and by `Clear()`; caches
+  (item tooltips, `ItemSets.Active`) compare it.
+* `LootGenerator.Roll(db, lootTableId, level, rng, ctx = null)` → `LootDrop { Items, Gold }`. Each entry rolls once
+  (`ceil(ctx.Members / perMembers)` times with `perMembers`) by its `chance`, then gives `min..max` of its `item`, of a
+  random item, or of one id from its `pool` (`LootGenerator.PickFromPool(db, entry, rng, ctx)`: the pool's items,
+  kept to those some party member can use with `partyUsable`, and with `skipOwned` to those the party neither owns
+  nor has seen drop with this context; without `skipOwned` ids that have not dropped yet are preferred; uniform or
+  by `weights`, 0-weight ids never drop; nothing drops when no id is left). **Tables without the new keys consume the
+  RNG exactly as before**, with or without a context.
+* `LootContext { Members = 1, Party (characters), Owned (Func<string,bool>), Dropped (ids this context gave) }`:
+  `IsOwned(id)`, `UsableBySomeone(def)`, `static CanUse(unit, def)` (class, armour type and weapon type; the required
+  level is ignored), `static For(party, bags, roster = null)` (owned = in the bags or equipped by a party or roster
+  member), `static ForBattle(battle)`. One context spans one battle (every defeated creature's table: two bosses
+  never drop the same pool item twice) or one chest. `Battle.LootContext` is set by the session at battle creation
+  (`GameSession.BuildLootContext()`: the active party's characters, owned = bags, the open loot window or worn by
+  anyone in the roster) and used by `BattleResult.Compute`; null builds one from the battle's player characters.
+
+**Item sets** (`ItemSets`, `Docs/DataSchema.md` "Items, sets and loot"):
+
+```csharp
+ItemSetDef set = db.SetOf("raid_emberwatch_robe");          // the set an item belongs to (its items list), or null
+ItemSetDef same = db.ItemSet("set_emberwatch");             // by id
+IReadOnlyList<ActiveSetBonus> on = ItemSets.Active(unit);   // {Set, Bonus, Index}; cached per Equipment.Version; empty for non-characters
+SetProgress p = ItemSets.Progress(unit, set);               // Equipped (distinct), Total, PieceEquipped[], BonusActive[], ActiveCount, ActiveTier
+List<SetProgress> worn = ItemSets.Worn(unit);               // every set the unit wears a piece of (by set id)
+List<ActiveSetBonus> whatIf = ItemSets.ActiveFor(db, ids);  // bonuses for a hypothetical list of equipped ids (comparisons)
+int n = ItemSets.EquippedPieces(unit, set);                 // distinct pieces: two copies of a set ring count once
+```
+
+A bonus is active while at least `pieces` **distinct** set items are equipped. Its `stats` and `Stat` effects join
+`StatCalculator.Compute` (after the items), `AbilityMod` effects join `AbilityMods.For`, `Special` effects join
+`Specials.PassivesOf` / the talent-and-item passives with `Source = "set:<set id>"` (`ItemSets.SourceId`), and `Proc`
+effects fire from `Battle.FireProcs` after the item procs like a trinket (any hand; ppm by the swinging weapon's speed)
+with the saved cooldown key `"s:<set id>:<bonus index>:<effect index>"` (`ItemSets.ProcKey`). Like item procs, set
+procs run at rank 1 and do not scale with level. `db.IndexItemSets()` rebuilds the item → set index (`Load` does it;
+call it after adding sets by hand; it bumps `db.SetIndexVersion`, which invalidates the `Active` caches). Equipment
+cannot change in combat, so bonuses never flip mid-fight; saves need nothing (items are re-equipped on load).
 * `new VendorShop(db, npcDef, stockDict, buybackList)`: `Offers()`, `Buy(inv, itemId, n)`, `Sell(inv, item, n)`,
   `BuyBack(inv, item)` (return null on success, else a reason).
 

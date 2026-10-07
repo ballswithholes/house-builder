@@ -1,5 +1,6 @@
 // Loot window (Session.PendingLoot, Order 150): items with quality colours and comparison tooltips, click to take one,
 // Take All (Space / E / Esc), coins already added to the purse. Closing with items left asks first (they are lost).
+// Gear rows say who in the party can use it ("Usable by: …").
 // Quest reward choice (Order 205, modal): QuestRewardChoice → pick one of QuestRewardChoices → ClaimQuestReward;
 // "Decide later" hides it until the next reward event or the Journal's "Choose reward" button.
 using System;
@@ -127,7 +128,8 @@ namespace Lanternvale.Game.Panels
                         PanelKit.QualityRowMarks(row, it.Def.quality, row.y + 9f);
                         PanelKit.ItemIcon(new Rect(row.x + 10f, row.y + 5f, 50f, 50f), it, false, hover);
                         PanelKit.Label(new Rect(row.x + 72f, row.y + 6f, row.width - 80f - (it.Def.quality > Quality.Common ? 96f : 0f), 26f), it.Name, PanelKit.RowText, PanelKit.QualityInk(it.Def.quality));
-                        PanelKit.Label(new Rect(row.x + 72f, row.y + 32f, row.width - 80f, 22f), ItemKindText(it.Def), PanelKit.RowTextSmall);
+                        string usable = UsableByText(s, it.Def);
+                        PanelKit.Label(new Rect(row.x + 72f, row.y + 32f, row.width - 80f, 22f), usable.Length > 0 ? ItemKindText(it.Def) + "  ·  " + usable : ItemKindText(it.Def), PanelKit.RowTextSmall);
                         if (hover) Ui.TooltipFor(row, PanelKit.ItemTip(it, member, true, Ui.Rich("Click to take", Ui.Good)));
                         if (PanelKit.LeftClick(row) && Time.frameCount > lockFrame)
                         {
@@ -156,6 +158,45 @@ namespace Lanternvale.Game.Panels
             ConfirmScreen.Ask("Leave the loot?", left == 1 ? "One item is left behind. It will be lost." : $"{left} items are left behind. They will be lost.",
                 "Leave them", () => PanelKit.Sess?.CloseLoot(false), "Take all", () => PanelKit.Sess?.TakeAllLoot());
         }
+
+        static readonly Dictionary<ItemDef, string> usableTexts = new Dictionary<ItemDef, string>();
+        static int usableFrame = -1000;
+
+        /// <summary>
+        /// "Usable by: Kael, Seren" for gear (the party members who can equip it now; "+N" past three names; members who
+        /// only lack the level follow as "later: …"), "Usable by: everyone", or a red "Nobody in the party can use this".
+        /// "" for items that are not equipment. Rebuilt every half second (levels and the party change).
+        /// </summary>
+        public static string UsableByText(GameSession s, ItemDef d)
+        {
+            if (s == null || d == null || d.equip == EquipType.None) return "";
+            if (Time.frameCount - usableFrame > 30 || usableTexts.Count > 256) { usableTexts.Clear(); usableFrame = Time.frameCount; }
+            if (usableTexts.TryGetValue(d, out var t)) return t;
+            var now = new List<string>();
+            var later = new List<string>();
+            int members = 0;
+            foreach (var m in s.Party)
+            {
+                if (m == null || !m.IsCharacter) continue;
+                members++;
+                string why = null;
+                try { why = EquipmentRules.CannotUseReason(m, d); } catch (Exception) { why = "?"; }
+                if (why == null) now.Add(PanelKit.NameOf(m));
+                else if (LootContext.CanUse(m, d)) later.Add(PanelKit.NameOf(m));
+            }
+            if (now.Count == 0 && later.Count == 0) t = Ui.Rich("Nobody in the party can use this", PanelKit.BadDark);
+            else if (members > 1 && now.Count == members) t = "Usable by: everyone";
+            else
+            {
+                t = "Usable by: " + (now.Count > 0 ? Names(now) : "nobody yet");
+                if (later.Count > 0) t += " (later: " + Names(later) + ")";
+            }
+            usableTexts[d] = t;
+            return t;
+        }
+
+        static string Names(List<string> names) =>
+            names.Count <= 3 ? string.Join(", ", names) : string.Join(", ", names.GetRange(0, 3)) + " +" + (names.Count - 3);
 
         static readonly Dictionary<ItemDef, string> kindTexts = new Dictionary<ItemDef, string>();
 

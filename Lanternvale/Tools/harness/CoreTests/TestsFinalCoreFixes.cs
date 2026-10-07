@@ -33,6 +33,7 @@ namespace Lanternvale.Tests
                 ItemDef dagger = null;
                 foreach (var d in Db.Items.Values)
                     if (d.kind == ItemKind.Weapon && d.weaponType == WeaponType.Dagger && d.requiredLevel <= 30 &&
+                        d.equipEffects.Count == 0 && d.quality < Quality.Epic &&   // a plain dagger (no expansion procs)
                         (d.equip == EquipType.OneHand || d.equip == EquipType.MainHand) &&
                         (dagger == null || string.CompareOrdinal(d.id, dagger.id) < 0)) dagger = d;
                 Assert(dagger != null, "some dagger exists");

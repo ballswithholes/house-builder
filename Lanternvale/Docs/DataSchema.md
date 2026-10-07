@@ -295,3 +295,52 @@ must be Stat, AbilityMod, Proc, GrantAbility or Special.
 | `config.maxRaidSize` | 10 | Upper bound of `MapDef.raidSize`. |
 | `config.xpRateByLevel` | [] (`[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`) | `XpRatePoint {level, rate}` list, linearly interpolated by the receiving character's level (clamped to the end points) and applied to kill and quest XP (`Progression.XpRate`). Empty = `xpRate` for every level. |
 
+## Items, sets and loot (behaviour)
+
+The fields are in the tables above (`### Creatures and loot`, `### Items, sets and legendaries`); this is how the engine
+uses them (`Docs/CoreAPI.md` §6).
+
+**Equip effects** (`ItemDef.equipEffects`, `SetBonusDef.equipEffects`, both `PassiveDef`):
+
+| `type` | Applied by | Tooltip (when `description` is empty) |
+|---|---|---|
+| `Stat` | the stat sheet (target `Self`) | `Equip: +5 Strength` |
+| `AbilityMod` | `AbilityMods.For` (filters `abilities` / `tags` / `schools`, any match; none = every ability) | `Equip: Reduces the cost of Heroic Strike by 50%.` |
+| `Proc` | `Battle.FireProcs` at rank 1 (no level scaling). Weapon procs fire only from that weapon's swings; trinket, armour and set procs on every matching trigger. Chance = `values[0]`, else `proc.chance`, or `ppm` × weapon speed / 60 | `Chance on hit:` (melee, auto-attack and ranged hits), `When struck:` (OnStruck), else `Equip: Chance on <trigger>:`, then the first effect (an aura's description, damage with chain jumps, healing, an extra attack, a triggered ability), then `(5% chance, 30 sec cooldown)` / `(2 procs per minute)` |
+| `Special` | the named `Specials` handler, rank 1 | the handler name |
+| `GrantAbility` | **not applied for items** (talents only); an error in set bonuses | the ability's description |
+
+`PassiveDef.description` replaces the generated text; when it starts with its own prefix (`Equip:`, `Chance on`,
+`When struck:`, `Use:`) it is the whole line, otherwise the prefix is added. The proc odds are always appended.
+Tooltips also show `Item Level N` for gear.
+
+**Sets.** List the set's items in `itemSets[].items` (the only membership source; sets may list items of other files).
+A bonus is active while at least `pieces` distinct set items are worn: two copies of a set ring count once. The
+tooltip shows the set name with the worn count, every piece (lit when worn by the hovered member) and every bonus as
+`(n) Set: …` (green while active; `SetBonusDef.description`, else the generated stats and effects). The character
+sheet lists worn sets; equipping a piece that switches a new bonus on raises a `Toast` session event with Id
+`set_complete` (Id2 = set id, Amount = that bonus's pieces). Set and pool items are never handed out as veteran
+starting gear.
+
+**Loot entries.**
+* `item`: that item; `random`: a generated item of `quality` at the creature's (or the party's, for chests) level +
+  `itemLevelOffset` (never Epic or Legendary); `pool`: one id of the pool.
+* `chance` is rolled per roll; `min..max` is the stack size.
+* `perMembers` > 0 rolls the entry `ceil(members / perMembers)` times (members = the party characters in the fight;
+  5 in a raid of 10 gives 2 rolls). It works for `item`, `random` and `pool` entries.
+* Pools prefer ids that have not dropped yet in the same battle or chest, so one fight's bosses and a raid's rolls
+  give different pieces while the pool allows.
+* `skipOwned` removes ids the party owns (bags, the open loot window, anything a roster member wears, camp included)
+  or that already dropped in this battle: nothing drops when every id is excluded (one-per-party legendaries: a pool
+  of one with `skipOwned`, plus `unique: true`).
+* `partyUsable` keeps ids some party member could equip by class, armour and weapon type (the required level is
+  ignored, so gear a few levels ahead still drops).
+* `weights`: one per pool id (empty = equal); 0 never drops.
+* Tables that use none of `pool`, `perMembers` roll exactly as before (same RNG use), so seeded tests stay stable.
+
+**Budget guardrail.** `TestsItemSetsAndLoot.AuthoredStatBudget_WithinBounds` requires every Uncommon+ equipable item
+of item level 12+ to have authored stats (and `Stat` effects) costing between 0.8× and 3.2× `ItemGenerator.StatBudget`
+for its level, quality and slot (cost per point: primary stats, resistances 1; AttackPower 0.5; SpellDamage 0.86;
+HealingPower 0.45; crit, hit, dodge, parry 14; Armor 0.1; mana/health regen 2.5). Recommended authored budgets:
+`0.55 × ilvl × {Uncommon 1.1, Rare 1.6, Epic 2.1, Legendary 2.8} × slot` (slot: chest/legs/head/two-hand 1, shoulder,
+hands, feet, waist 0.75, wrist, neck, back, finger, trinket, off hand 0.56, one-hand 0.45, ranged 0.35).

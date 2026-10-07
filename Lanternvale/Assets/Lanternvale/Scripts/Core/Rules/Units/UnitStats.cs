@@ -117,6 +117,16 @@ namespace Lanternvale.Rules
                     if (p.type == "Stat" && (p.target == null || p.target == "Self"))
                         b.Add(p.stat, RankValue(p.value, p.values, 1), p.pct, p.school);
             }
+            // set bonuses (ItemSets: active while enough distinct pieces are worn)
+            var setBonuses = ItemSets.Active(u);
+            for (int i = 0; i < setBonuses.Count; i++)
+            {
+                var sb = setBonuses[i].Bonus;
+                foreach (var m in sb.stats) b.Add(m.stat, RankValue(m.value, m.values, 1), m.pct, m.school);
+                foreach (var p in sb.equipEffects)
+                    if (p.type == "Stat" && (p.target == null || p.target == "Self"))
+                        b.Add(p.stat, RankValue(p.value, p.values, 1), p.pct, p.school);
+            }
 
             // ---- talents (own, and the owner's pet talents for pets)
             if (u.Db != null)

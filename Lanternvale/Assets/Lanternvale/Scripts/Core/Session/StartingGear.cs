@@ -19,7 +19,7 @@ namespace Lanternvale.Session
         /// <summary>
         /// Equips the best level-appropriate piece per slot (replacing only worse items) and returns every displaced
         /// item (put them in the bags). Only common/uncommon database items that are not quest rewards, companion
-        /// signature items, guaranteed (named) loot drops, unique or quest items are considered.
+        /// signature items, guaranteed (named) or pooled loot drops, set pieces, unique or quest items are considered.
         /// </summary>
         public static List<ItemInstance> EquipLevelGear(GameDatabase db, Unit u, Rng rng)
         {
@@ -91,7 +91,8 @@ namespace Lanternvale.Session
         static bool IsHandItem(ItemDef d) =>
             d.equip == EquipType.OneHand || d.equip == EquipType.MainHand || d.equip == EquipType.TwoHand || d.equip == EquipType.OffHand;
 
-        /// <summary>Items that must not be handed out as starting gear: quest rewards, companion signature items, named drops.</summary>
+        /// <summary>Items that must not be handed out as starting gear: quest rewards, companion signature items, named and
+        /// pooled drops, set pieces.</summary>
         static HashSet<string> ReservedItems(GameDatabase db)
         {
             var set = new HashSet<string>(StringComparer.Ordinal);
@@ -104,9 +105,15 @@ namespace Lanternvale.Session
             foreach (var c in db.Companions.Values)
                 if (c.startingItems != null) foreach (var i in c.startingItems) set.Add(i);
             // named drops: guaranteed loot-table entries (boss and story loot)
+            // and every pool id (boss and raid pools: one of them always drops), and every set piece
             foreach (var t in db.LootTables.Values)
                 foreach (var e in t.entries)
+                {
                     if (!e.random && !string.IsNullOrEmpty(e.item) && e.chance >= 100f) set.Add(e.item);
+                    if (e.pool != null) foreach (var i in e.pool) if (!string.IsNullOrEmpty(i)) set.Add(i);
+                }
+            foreach (var s in db.ItemSets.Values)
+                if (s.items != null) foreach (var i in s.items) if (!string.IsNullOrEmpty(i)) set.Add(i);
             return set;
         }
 

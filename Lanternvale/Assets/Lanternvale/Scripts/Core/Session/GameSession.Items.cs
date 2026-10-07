@@ -130,11 +130,48 @@ namespace Lanternvale.Session
                 inst = item;
                 Inventory.Take(item);
             }
+            var setsBefore = ItemSets.Active(u);
             var displaced = EquipmentRules.Equip(u, inst, s);
             foreach (var d in displaced) if (d != null) Inventory.Add(d);
             u.ClampResources();
             if (Field != null) Field.RefreshAreaAuras();
+            AnnounceSetBonuses(u, setsBefore);
             return null;
+        }
+
+        /// <summary>Toast id of a set-bonus announcement (SessionEventKind.Toast; Id2 = set id, Amount = pieces of its tier).</summary>
+        public const string SetCompleteToastId = "set_complete";
+
+        /// <summary>
+        /// After an equip: one Toast per set whose bonus tier rose (a bonus became active that was not before), with
+        /// Id "set_complete", Id2 = the set id, Amount = the pieces of the highest newly active bonus, Unit = the wearer.
+        /// Losing a tier is silent. Loading a save or a veteran start never announces (they equip through the rules).
+        /// </summary>
+        void AnnounceSetBonuses(Unit u, IReadOnlyList<ActiveSetBonus> before)
+        {
+            var after = ItemSets.Active(u);
+            if (after.Count == 0) return;
+            ItemSetDef lastSet = null;
+            int best = 0;
+            for (int i = 0; i <= after.Count; i++)
+            {
+                var set = i < after.Count ? after[i].Set : null;
+                if (set != lastSet && lastSet != null && best > 0)
+                {
+                    int worn = ItemSets.EquippedPieces(u, lastSet);
+                    Raise(new SessionEvent
+                    {
+                        Kind = SessionEventKind.Toast, Id = SetCompleteToastId, Id2 = lastSet.id, Amount = best, Unit = u,
+                        Text = $"{u.Name}: {lastSet.name} ({worn}/{lastSet.items.Length}) set bonus active",
+                    });
+                    best = 0;
+                }
+                if (i == after.Count) break;
+                lastSet = set;
+                bool had = false;
+                for (int j = 0; j < before.Count && !had; j++) had = before[j].Set == set && before[j].Index == after[i].Index;
+                if (!had) best = Math.Max(best, after[i].Bonus.pieces);
+            }
         }
 
         public string Unequip(Unit u, EquipSlot slot)
@@ -144,6 +181,7 @@ namespace Lanternvale.Session
             var it = EquipmentRules.Unequip(u, slot);
             if (it == null) return "Nothing equipped there.";
             Inventory.Add(it);
+            if (Field != null) Field.RefreshAreaAuras();   // like Equip: set bonuses and equip effects can change
             return null;
         }
 
@@ -214,6 +252,24 @@ namespace Lanternvale.Session
         }
 
         // ================================================================= loot
+
+        /// <summary>
+        /// The loot context of a fight or a chest (Docs/Expansion.md §5): the active party's characters are the members
+        /// (perMembers, partyUsable); owned = in the bags, in the open loot window, or equipped by anyone in the roster
+        /// (skipOwned). One context spans one battle, so its bosses do not drop the same pool item twice.
+        /// </summary>
+        public LootContext BuildLootContext()
+        {
+            var ctx = LootContext.For(party, Inventory, roster);
+            var bagsOrWorn = ctx.Owned;
+            ctx.Owned = id =>
+            {
+                if (bagsOrWorn(id)) return true;
+                if (PendingLoot != null) foreach (var it in PendingLoot.Items) if (it != null && it.Def.id == id) return true;
+                return false;
+            };
+            return ctx;
+        }
 
         void OpenLoot(LootWindow w)
         {

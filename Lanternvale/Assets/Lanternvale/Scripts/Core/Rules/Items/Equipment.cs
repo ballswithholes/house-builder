@@ -13,8 +13,22 @@ namespace Lanternvale.Rules
         public ItemInstance this[EquipSlot s]
         {
             get => slots[(int)s];
-            internal set => slots[(int)s] = value;
+            internal set
+            {
+                slots[(int)s] = value;
+                Version++;
+            }
         }
+
+        /// <summary>
+        /// Bumped by every change of a slot (equip, unequip, displacement, load) and by <see cref="Clear"/>. UI caches
+        /// (item tooltips, set-bonus toasts) and <see cref="ItemSets.Active"/> compare it to see that the paper doll changed.
+        /// </summary>
+        public int Version { get; private set; }
+
+        /// <summary>Active set bonuses cached by <see cref="ItemSets.Active"/> for one <see cref="Version"/>.</summary>
+        internal object SetCache;
+        internal int SetCacheVersion = -1, SetCacheIndex = -1;
 
         public ItemInstance MainHand => this[EquipSlot.MainHand];
         public ItemInstance OffHand => this[EquipSlot.OffHand];
@@ -44,7 +58,11 @@ namespace Lanternvale.Rules
             return false;
         }
 
-        public void Clear() { Array.Clear(slots, 0, slots.Length); }
+        public void Clear()
+        {
+            Array.Clear(slots, 0, slots.Length);
+            Version++;
+        }
     }
 
     public static class EquipmentRules

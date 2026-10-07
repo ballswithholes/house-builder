@@ -1799,6 +1799,8 @@ namespace Lanternvale.Tests
             foreach (var d in Db.Items.Values.OrderBy(x => x.id, StringComparer.Ordinal))
             {
                 if (d.weaponType == WeaponType.None || !pred(d)) continue;
+                // plain weapons only: a proc, epic or legendary weapon (expansion content) would add hits these tests do not expect
+                if (d.equipEffects.Count > 0 || d.quality >= Quality.Epic) continue;
                 if (EquipmentRules.CannotEquipReason(u, d, slot) != null) continue;
                 EquipmentRules.Equip(u, new ItemInstance(d), slot);
                 if (slot == EquipSlot.OffHand && !u.Equipment.HasMeleeWeapon)

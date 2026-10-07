@@ -960,7 +960,8 @@ namespace Lanternvale.Game.Panels
         public static string ItemTip(ItemInstance it, Unit u, bool compare = true, string extra = null)
         {
             if (it == null || it.Def == null) return null;
-            int stamp = (u != null ? u.Level * 131 + u.Equipment.Count : 0) + (extra != null ? extra.Length * 7 : 0) + it.Count * 17;
+            // Equipment.Version: swapping a piece in the same slot keeps the count but changes the comparison and set block
+            int stamp = (u != null ? u.Level * 131 + u.Equipment.Count + u.Equipment.Version * 7919 : 0) + (extra != null ? extra.Length * 7 : 0) + it.Count * 17;
             if (it == tipItem && u == tipUnit && stamp == tipStamp && Time.frameCount - tipFrame < 30 && tipText != null)
             {
                 tipFrame = Time.frameCount;
@@ -981,7 +982,7 @@ namespace Lanternvale.Game.Panels
                 if (why != null) sb.Append('\n').Append(Ui.Rich(why, Ui.Bad));
                 else if (eq != null)
                 {
-                    var diff = CompareText(it, eq);
+                    var diff = CompareText(it, eq, u);
                     if (diff.Length > 0) sb.Append("\n\n").Append(Ui.Rich("If you replace " + eq.Name + ":", Ui.TextMuted)).Append('\n').Append(diff);
                     sb.Append("\n\n").Append(Ui.Rich("Currently equipped", Ui.TextMuted)).Append('\n').Append(UiText.Item(eq, u, null));
                 }
@@ -994,12 +995,28 @@ namespace Lanternvale.Game.Panels
         static readonly Dictionary<string, float> diffA = new Dictionary<string, float>(), diffB = new Dictionary<string, float>();
         static readonly List<string> diffKeys = new List<string>();
 
+        static readonly List<string> diffGains = new List<string>(), diffLosses = new List<string>();
+
         /// <summary>"+3 Stamina, −2 Agility, +12 Armor, +1.4 DPS" (green/red lines).</summary>
-        public static string CompareText(ItemInstance next, ItemInstance cur)
+        public static string CompareText(ItemInstance next, ItemInstance cur) => CompareText(next, cur, null);
+
+        /// <summary>
+        /// What replacing <paramref name="cur"/> with <paramref name="next"/> changes, as green/red lines: stats (with
+        /// "Stat" equip effects), then the other equip effects gained and lost. With the wearer <paramref name="u"/> it
+        /// also counts the set bonuses that would switch on or off (their stats join the stat lines, their other effects
+        /// are listed as "Set bonus gained / lost").
+        /// </summary>
+        public static string CompareText(ItemInstance next, ItemInstance cur, Unit u)
         {
-            diffA.Clear(); diffB.Clear(); diffKeys.Clear();
+            diffA.Clear(); diffB.Clear(); diffKeys.Clear(); diffGains.Clear(); diffLosses.Clear();
             Accumulate(next, diffA);
             Accumulate(cur, diffB);
+            if (next != null && cur != null && next.Def != null && cur.Def != null && next.Def.id != cur.Def.id)
+            {
+                foreach (var p in next.Def.equipEffects) if (p != null && p.type != "Stat") diffGains.Add(UiText.EffectLine(p));
+                foreach (var p in cur.Def.equipEffects) if (p != null && p.type != "Stat") diffLosses.Add(UiText.EffectLine(p));
+                CompareSets(next, cur, u);
+            }
             foreach (var k in diffA.Keys) if (!diffKeys.Contains(k)) diffKeys.Add(k);
             foreach (var k in diffB.Keys) if (!diffKeys.Contains(k)) diffKeys.Add(k);
             var sb = new StringBuilder();
@@ -1015,8 +1032,55 @@ namespace Lanternvale.Game.Panels
                 if (sb.Length > 0) sb.Append('\n');
                 sb.Append(Ui.Rich(num + (pct ? "% " : " ") + name, d > 0 ? Ui.Good : Ui.Bad));
             }
+            foreach (var g in diffGains) { if (sb.Length > 0) sb.Append('\n'); sb.Append(Ui.Rich("Gain: " + g, Ui.Good)); }
+            foreach (var l in diffLosses) { if (sb.Length > 0) sb.Append('\n'); sb.Append(Ui.Rich("Lose: " + l, Ui.Bad)); }
             return sb.ToString();
         }
+
+        /// <summary>The set bonuses the swap switches on (into diffA / diffGains) and off (into diffB / diffLosses).</summary>
+        static void CompareSets(ItemInstance next, ItemInstance cur, Unit u)
+        {
+            var db = Db;
+            if (u == null || db == null || db.ItemSets.Count == 0) return;
+            if (db.SetOf(next.Def.id) == null && db.SetOf(cur.Def.id) == null) return;
+            try
+            {
+                var ids = ItemSets.EquippedIds(u);
+                ids.Remove(cur.Def.id);
+                // a two-hander also takes the off hand off
+                if (next.Def.equip == EquipType.TwoHand && u.Equipment.OffHand != null && u.Equipment.OffHand != cur) ids.Remove(u.Equipment.OffHand.Def.id);
+                ids.Add(next.Def.id);
+                var before = ItemSets.Active(u);
+                var after = ItemSets.ActiveFor(db, ids);
+                foreach (var b in after)
+                    if (!HasBonus(before, b)) AccumulateBonus(b, diffA, diffGains);
+                foreach (var b in before)
+                    if (!HasBonus(after, b)) AccumulateBonus(b, diffB, diffLosses);
+            }
+            catch (Exception) { }
+        }
+
+        static bool HasBonus(IReadOnlyList<ActiveSetBonus> list, ActiveSetBonus b)
+        {
+            for (int i = 0; i < list.Count; i++) if (list[i].Set == b.Set && list[i].Index == b.Index) return true;
+            return false;
+        }
+
+        static void AccumulateBonus(ActiveSetBonus b, Dictionary<string, float> into, List<string> lines)
+        {
+            var bonus = b.Bonus;
+            foreach (var m in bonus.stats) if (m != null) Add(into, m.pct ? UiText.StatName(m.stat, m.school) + "%" : UiText.StatName(m.stat, m.school), m.value);
+            bool other = false;
+            foreach (var p in bonus.equipEffects)
+            {
+                if (p == null) continue;
+                if (IsSelfStat(p)) Add(into, p.pct ? UiText.StatName(p.stat, p.school) + "%" : UiText.StatName(p.stat, p.school), p.value);
+                else other = true;
+            }
+            if (other) lines.Add($"({bonus.pieces}) {b.Set.name}: " + UiText.SetBonusText(bonus));
+        }
+
+        static bool IsSelfStat(PassiveDef p) => p.type == "Stat" && (p.target == null || p.target == "Self");
 
         static void Accumulate(ItemInstance it, Dictionary<string, float> into)
         {
@@ -1031,6 +1095,13 @@ namespace Lanternvale.Game.Panels
                 var name = UiText.StatName(s.stat, s.school);
                 Add(into, s.pct ? name + "%" : name, s.value);
             }
+            // "Equip: +5 Strength" effects count like stats
+            foreach (var p in d.equipEffects)
+                if (p != null && IsSelfStat(p))
+                {
+                    var name = UiText.StatName(p.stat, p.school);
+                    Add(into, p.pct ? name + "%" : name, p.value);
+                }
         }
 
         static void Add(Dictionary<string, float> d, string k, float v)

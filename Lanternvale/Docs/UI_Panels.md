@@ -58,8 +58,16 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   while a dialogue runs): the d20 tumbles and bounces with ticking sounds, lands on the natural roll, shows
   "d20 14 + 1 Spirit + 2 proficiency = 17 vs DC 12", then SUCCESS / FAILURE / CRITICAL with sparkles and sound;
   click/Space skips; the next line waits for the die and the overlay lingers if the conversation ends on the roll.
-* **Loot** — coins already in the purse, items (quality colour, comparison tooltip, click = take), Take All
-  (Space / E / Esc), Close asks before leaving items behind. **Quest reward** — pick one card, Claim (Enter) or Decide
+* **Loot** — coins already in the purse, items (quality colour, comparison tooltip, click = take, "Usable by: …" the
+  party members who can equip a piece, "later: …" those who only lack the level, red when nobody can), Take All
+  (Space / E / Esc), Close asks before leaving items behind.
+* **Item tooltips** (`UiText.Item`, `PanelKit.ItemTip`) — name, `Item Level N`, slot and type, damage/armour, stats,
+  equip effects worded by kind (`UiText.EffectLine`: "Chance on hit:", "When struck:", "Equip: Chance on spell cast:"
+  with chance / procs per minute / cooldown; ability mods in words; `PassiveDef.description` first), the set block
+  (set name with pieces worn, each piece lit when the member wears it, bonuses green while active), requirements,
+  flavour. Comparisons (`PanelKit.CompareText(next, cur, unit)`) count Stat equip effects and the set bonuses the
+  swap switches on or off, and list other effects gained and lost. The tooltip cache is keyed on
+  `Equipment.Version`. **Quest reward** — pick one card, Claim (Enter) or Decide
   later (the Journal's "Choose your reward" brings it back).
 * **Vendor** — Buy (price plates, unaffordable/sold out/unusable flags, Shift = a stack), Sell (sell prices, Sell junk,
   Shift = one of a stack, rare+ items confirm), Buy back. Right-click in the bags sells too. **Trainer** — member tabs for
@@ -68,8 +76,9 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   confirm, then the Talents window opens for that member.
 * **Character sheet** — member tabs (party + camp), health/resource bars, paper doll (17 slots around the hero art;
   click = unequip), attributes (gear bonus in green), defence (armour + mitigation % vs a same-level attacker, dodge,
-  parry, block, resistances), melee/ranged/spell stats, mana regen in and out of the five-second rule, XP (main
-  character) or approval (companions), pet line.
+  parry, block, resistances), melee/ranged/spell stats, mana regen in and out of the five-second rule, set bonuses
+  (pieces worn and bonuses active per set; hover for the whole set), XP (main character) or approval (companions),
+  pet line.
 * **Bags** — "Equip on" member tabs, filters (All / Gear / Consumables / Quest / Junk), sort (bag order / type / quality /
   name), quality frames, stack counts, unusable gear dimmed with a red corner, comparison tooltips with stat deltas.
   Left click: equip on the selected member or use (`UseItemOutOfCombat`, in combat `Combat.BeginItem`). Right click:

@@ -27,6 +27,10 @@ namespace Lanternvale.Data
         public readonly Dictionary<string, SpecialDoc> Specials = new Dictionary<string, SpecialDoc>();
         /// <summary>Item sets by id (DataBundle.itemSets).</summary>
         public readonly Dictionary<string, ItemSetDef> ItemSets = new Dictionary<string, ItemSetDef>();
+        /// <summary>Reverse index item id → its set (built in Finish, after every file: a set may list items of other files).</summary>
+        readonly Dictionary<string, ItemSetDef> setOfItem = new Dictionary<string, ItemSetDef>(StringComparer.Ordinal);
+        /// <summary>Bumped by <see cref="IndexItemSets"/> (set-bonus caches compare it).</summary>
+        public int SetIndexVersion { get; private set; }
         public GameConfigDef Config = new GameConfigDef();
 
         /// <summary>Problems found while parsing/mapping (unknown keys, bad enums, duplicate ids).</summary>
@@ -106,6 +110,28 @@ namespace Lanternvale.Data
                 foreach (var p in a.procs) foreach (var e in p.effects) if (e.max < e.min) e.max = e.min;
             }
             if (Config.xpToLevel == null || Config.xpToLevel.Length == 0) Config.xpToLevel = DefaultXpTable;
+            IndexItemSets();
+        }
+
+        /// <summary>
+        /// Rebuilds the item → set index from <see cref="ItemSets"/> (Load does it; call it again after adding sets by
+        /// hand). A set's items list is the only source of membership; when an item is listed by two sets (a data
+        /// error the validator reports) the set with the smaller id keeps it, so the lookup does not depend on file order.
+        /// </summary>
+        public void IndexItemSets()
+        {
+            SetIndexVersion++;
+            setOfItem.Clear();
+            var setIds = new List<string>(ItemSets.Keys);
+            setIds.Sort(StringComparer.Ordinal);
+            foreach (var id in setIds)
+            {
+                var set = ItemSets[id];
+                if (set.items == null) set.items = new string[0];
+                if (set.bonuses == null) set.bonuses = new List<SetBonusDef>();
+                foreach (var item in set.items)
+                    if (!string.IsNullOrEmpty(item) && !setOfItem.ContainsKey(item)) setOfItem[item] = set;
+            }
         }
 
         public AbilityDef Ability(string id) => id != null && Abilities.TryGetValue(id, out var a) ? a : null;
@@ -114,6 +140,10 @@ namespace Lanternvale.Data
         public CreatureDef Creature(string id) => id != null && Creatures.TryGetValue(id, out var a) ? a : null;
         public ClassDef Class(ClassId id) => Classes.TryGetValue(id, out var c) ? c : null;
         public TalentDef Talent(string id) => id != null && Talents.TryGetValue(id, out var t) ? t : null;
+        /// <summary>Item set by id, or null.</summary>
+        public ItemSetDef ItemSet(string id) => id != null && ItemSets.TryGetValue(id, out var s) ? s : null;
+        /// <summary>The set an item belongs to (by its set's items list), or null.</summary>
+        public ItemSetDef SetOf(string itemId) => itemId != null && setOfItem.TryGetValue(itemId, out var s) ? s : null;
 
         /// <summary>WoW Classic experience needed to go from level (i+1) to (i+2).</summary>
         public static readonly int[] DefaultXpTable =

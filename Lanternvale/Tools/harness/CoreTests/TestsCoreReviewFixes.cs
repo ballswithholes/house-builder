@@ -124,6 +124,7 @@ namespace Lanternvale.Tests
             foreach (var id in ids)
             {
                 var d = Harness.Db.Items[id];
+                if (d.equipEffects.Count > 0 || d.quality >= Quality.Epic) continue;   // plain items only (no expansion procs or epics)
                 if (d.requiredLevel <= u.Level && (d.classes == null || d.classes.Length == 0) && pred(d)) return new ItemInstance(d);
             }
             throw new Exception("no matching item");

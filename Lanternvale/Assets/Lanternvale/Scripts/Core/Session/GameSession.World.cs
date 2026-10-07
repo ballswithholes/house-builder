@@ -641,7 +641,7 @@ namespace Lanternvale.Session
                 };
             Map.MarkChestOpened(c.id);
             var w = new LootWindow { Source = c.id, Title = "Chest" };
-            var drop = LootGenerator.Roll(Db, c.lootTable, PartyLevel, Rng);
+            var drop = LootGenerator.Roll(Db, c.lootTable, PartyLevel, Rng, BuildLootContext());
             w.Items.AddRange(drop.Items);
             w.Gold = drop.Gold + Math.Max(0, c.gold);
             if (c.items != null)

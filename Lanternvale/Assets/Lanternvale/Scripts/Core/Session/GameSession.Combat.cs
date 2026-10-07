@@ -147,6 +147,7 @@ namespace Lanternvale.Session
             }
 
             var b = new Battle(Db, Rng, pathfinder, Inventory, true);
+            b.LootContext = BuildLootContext();   // pools, skipOwned, perMembers, partyUsable (one context per fight)
             b.AddUnits(all);
             b.EventRaised += ForwardCombatEvent;
             DetachField();

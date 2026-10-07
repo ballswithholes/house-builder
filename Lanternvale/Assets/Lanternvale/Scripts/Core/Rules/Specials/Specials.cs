@@ -268,6 +268,7 @@ namespace Lanternvale.Rules
                         var h = Get(p.special);
                         if (h != null) list.Add(new PassiveRef { Handler = h, Rank = 1, Def = p, Source = kv.Value.Def.id });
                     }
+            AddSetPassives(u, list);
             foreach (var a in u.Auras)
             {
                 if (string.IsNullOrEmpty(a.Def.special)) continue;
@@ -301,7 +302,21 @@ namespace Lanternvale.Rules
                         var h = Get(p.special);
                         if (h != null) list.Add(new PassiveRef { Handler = h, Rank = 1, Def = p, Source = kv.Value.Def.id });
                     }
+            AddSetPassives(u, list);
             return list;
+        }
+
+        /// <summary>Special effects of the unit's active set bonuses (Rank 1, Source "set:&lt;set id&gt;").</summary>
+        static void AddSetPassives(Unit u, List<PassiveRef> list)
+        {
+            var setBonuses = ItemSets.Active(u);
+            for (int i = 0; i < setBonuses.Count; i++)
+                foreach (var p in setBonuses[i].Bonus.equipEffects)
+                    if (p.type == "Special")
+                    {
+                        var h = Get(p.special);
+                        if (h != null) list.Add(new PassiveRef { Handler = h, Rank = 1, Def = p, Source = ItemSets.SourceId(setBonuses[i].Set) });
+                    }
         }
 
         // ================================================================ dispatch

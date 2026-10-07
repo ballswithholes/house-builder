@@ -1,4 +1,4 @@
-// Proc triggers from auras, talents (Proc passives, incl. owner pet talents) and item equip effects.
+// Proc triggers from auras, talents (Proc passives, incl. owner pet talents), item equip effects and set bonuses.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -83,9 +83,39 @@ namespace Lanternvale.Rules
                         RunProc(owner, other, pd.proc, info, null, 1, 1);
                     }
                 }
+                // set bonuses: like trinkets (every matching trigger, no weapon-slot filter), cooldown key "s:<set>:<bonus>:<effect>"
+                FireSetProcs(trigger, owner, other, info);
                 Specials.OnProcTrigger(this, trigger, owner, other, info);
             }
             finally { procDepth--; }
+        }
+
+        void FireSetProcs(ProcTrigger trigger, Unit owner, Unit other, ProcInfo info)
+        {
+            var bonuses = ItemSets.Active(owner);
+            for (int b = 0; b < bonuses.Count; b++)
+            {
+                var sb = bonuses[b];
+                var effs = sb.Bonus.equipEffects;
+                for (int i = 0; i < effs.Count; i++)
+                {
+                    var pd = effs[i];
+                    if (pd.type != "Proc" || pd.proc == null || pd.proc.trigger != trigger || !Matches(pd.proc, info) || runningProcs.Contains(pd.proc)) continue;
+                    string key = ItemSets.ProcKey(sb, i);
+                    if (owner.ProcCooldowns.TryGetValue(key, out var cd) && cd > 0) continue;
+                    float baseChance = pd.values.Length > 0 ? pd.values[0] : pd.proc.chance;
+                    var speedInfo = info;
+                    if (pd.proc.ppm > 0)
+                    {
+                        // procs per minute: by the speed of the weapon that swung (main hand unless off hand / ranged)
+                        var w = StatCalculator.GetWeapon(owner, info.Ranged ? WeaponSlot.Ranged : info.OffHand ? WeaponSlot.OffHand : WeaponSlot.MainHand);
+                        speedInfo = new ProcInfo { WeaponSpeed = w.Valid ? w.Speed : info.WeaponSpeed };
+                    }
+                    if (!Rng.Chance(ProcChance(pd.proc, baseChance, speedInfo))) continue;
+                    if (pd.proc.internalCooldown > 0) owner.ProcCooldowns[key] = pd.proc.internalCooldown;
+                    RunProc(owner, other, pd.proc, info, null, 1, 1);
+                }
+            }
         }
 
         void FireTalentProcs(ProcTrigger trigger, Unit talentOwner, Unit owner, Unit other, ProcInfo info, bool petOnly)
