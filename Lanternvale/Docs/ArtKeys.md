@@ -157,6 +157,11 @@ NPCs: `npc_elder`, `npc_innkeeper`, `npc_merchant`, `npc_smith`, `npc_villager_a
 The four class trainers have their own 3D models (see "3D-only model keys" at the end); their 2D portrait stays
 `portrait_trainer`.
 
+Expansion portraits (*models-people*, portrait only: their sprites are 3D-only keys, see the end): `portrait_bruna`,
+`portrait_ysolde`, `portrait_liora`, `portrait_nanami` and `portrait_archivist` (`Tools/artgen/characters.py` `PORTRAITS`:
+an existing outfit painter in their colours plus personal touches — Bruna's braids, barley sprig and freckles, Ysolde's
+heron, Nanami's water-lilies, Penhallow's spectacles and quill).
+
 ## Creatures (category Creature)
 
 The heights below are the `size` values (whole-image height in metres; see `height` above) of the
@@ -293,6 +298,17 @@ heading; the content checks (`Tools/datagen/world_content/wn_check.py`) accept t
 | `cr_r1_twin` | *models-b.* The Weeping Twins (raid 1, boss 2), spectral maidens floating in long gowns with wide sleeves that fray into glowing tatters and spectral ribbons streaming from the shoulders. **`cr_r1_twin_sorrow`** (= `cr_r1_twin`): moon-blue, closed grieving eyes with glowing tears, silver circlet, a long veil, white hair to the hips. **`cr_r1_twin_solace`**: dawn-rose, serene closed eyes, a wreath of pale flowers, a small glowing lantern in her left hand (cast anchor). Natural 2.2 m. **size 3.2**; portrait `cr_hollow_spirit` | cr_r1_twin_sorrow, cr_r1_twin_solace |
 | `cr_r1_mother_mire` | *models-b.* Mother Mire (raid 1, boss 3): huge hunched bog hag (tipped 26° forward) — mossy olive skin, a great hooked nose with warts, a snaggle-toothed grin, glowing yellow-green eyes, hair of tangled roots hung with charms, glowing bottles and little mushrooms, a moss shawl over a plum cloak, layered rag skirts, long knobbly arms, and her cauldron-lantern: an iron pot of glowing green brew under a lantern-cage lid, swinging from a crooked staff (Staff; cast anchor at the brew). Natural 3.0 m (hunched). **size 5.5**; portrait `cr_hollow_treant` | cr_r1_mother_mire |
 | `cr_r2_varkas` | *models-b.* Varkas (raid 2, boss 3): giant ruddy ogre lord — underbite with tusks, red war paint, a black topknot bound in gold, dragon-scale armour (overlapping red-black scales with ember edges), a whole drake skull on his left shoulder, a layered scale pauldron with spines on the right, a fur mantle, a gold buckle hung with fangs, a two-handed maul with a spiked dragon-bone head (Mace, two-handed; Heavy). Natural 3.4 m. **size 5.2**; portrait `demon_infernal` | cr_r2_varkas |
+| `comp_bruna` | *models-people.* Bruna Haybright (Warrior): broad freckled farm girl, 1.96 m, straw-gold hair in two thick braids tied in green with a barley sprig behind the ear, harvest-orange smock over mail with rolled sleeves and a cream neckline, a quilted leather pad on the axe shoulder, a huge round barn-door shield (red planks, iron rim and battens, painted sunflower) and a billhook-axe (Mace strike). ≈ 4.2k tris | bruna |
+| `comp_ysolde` | *models-people.* Ysolde of the Heronguard (Paladin): tall and straight-backed, 1.84 m, short silver-blonde crop, river-blue surcoat over polished mail with a white heron on the breast, the faded rose order sash (shoulder strap with a heron badge, knotted tails at the hip), one big layered pauldron, a tall river-blue kite shield with a white heron and a grey heron feather tied at the rim, a plain arming sword | ysolde |
+| `comp_liora` | *models-people.* Liora, the River Lantern (Priest): 1.67 m, layered white and plum robes (plum inner robe and stole, white outer robe open at the front, a short brass-trimmed plum shoulder mantle), long white sleeves lined in plum, silver-grey hair with a low braid over the shoulder, a gentle half-smile, a little glowing brass lantern-censer hanging on a chain from her right hand (cast anchor; Carry hold, Mace strike swings it), the riverstep mace at her hip | liora |
+| `comp_nanami` | *models-people.* Nanami, Voice of the Fen (Shaman): 1.58 m barefoot tide-singer, sea-green wrap skirt with knotted tails and a coral belt, short cream top edged with shell beads (bare midriff), fen-grey shawl, dark hair in a high knot pinned with two water-lilies, blue tide tattoos banding her arms, shell anklets, a forked driftwood staff hung with a conch and three bells (sea-glass bead is the cast anchor) | nanami |
+| `npc_archivist` | *models-people.* Archivist Penhallow (Brightwater): old scholar, 1.68 m, bald with white puffs over the ears and a wisp on the crown, round gold spectacles, a quill behind the right ear, faded indigo long coat over a mustard waistcoat, ink-stained cuffs and fingers, a satchel stuffed with scrolls on the right hip, a ledger in hand | bw_archivist_penhallow |
+| `npc_ferryman` | *models-people.* Brightwater ferryman: weathered old river hand, grey beard and clay pipe, floppy felt hat with a red band, green oilskin shoulder cape and coat, rolled trousers, a rope coil at the hip, a 2.5 m punt pole with an iron shoe and a lit lantern on a hook (Spear hold) | ferryman NPCs |
+| `npc_fen_villager` | *models-people.* Mirefen stilt-folk: lanky and long-legged, 1.82 m, wide conical reed hat tipped back, layered straw rain cape, moss tunic, bound wading wraps on the shins, bare feet, a three-pronged fishing spear | Mirefen villagers |
+| `npc_mountain_guide` | *models-people.* Skyreach guide: bundled in furs, leather cap with a thick fur brim, ear flaps and a blue bobble, fur mantle, red scarf, frosted beard, knee-length quilted coat with fur hem and cuffs, a rope coil across the chest, an ice axe at the hip, a tall iron-shod alpenstock with a red ribbon | Skyreach guides |
+| `npc_quartermaster` | *models-people.* Raid-door quartermaster: stout and brisk, 1.68 m, curly red hair under a teal bandana, a pencil behind the ear, leather jerkin over a cream shirt, a bandolier of coloured potion vials (faint glow), a pocketed work apron, a heavy pack with a red bedroll, a ledger in hand | raid entrance suppliers |
+| `npc_town_guard` | *models-people.* Brightwater town guard: river-blue and white livery (white tabard with blue panels and a gold wave), steel morion with a comb and a blue-and-white plume, steel pauldrons, a halberd (Spear hold) | Brightwater guards |
+| `npc_dockhand` | *models-people.* Brightwater dockhand: broad and cheerful, 1.76 m, red knit cap with a pompom, short ponytail, navy-striped shirt with rolled sleeves and suspenders, an anchor tattoo on the forearm, a sack over the left shoulder, a cargo hook in hand | Brightwater docks |
 
 All four trainers share the trainers' gold sash with a lantern medallion.
 
@@ -317,6 +333,10 @@ fen wisp) have no legs (`FloatHeight` > 0). Creature-id aliases registered to th
 Units have no colliders or lights of their own (the Core radius is `clamp(size × 0.22, 0.3, 1.6)`); the bosses' glowing
 lanterns, hearts and brews are emissive and read in dark indoor maps, but boss arenas still want a point light in the
 map data near the boss.
+
+*models-people* keys live in `Units/UnitRecipes.PeopleX.cs` (BipedKit bipeds, drawn at their natural height: NPCs and
+companions carry no data `size`). The companions' data `portrait` keys can switch to `portrait_bruna`, `portrait_ysolde`,
+`portrait_liora`, `portrait_nanami` (and Penhallow's to `portrait_archivist`) once `generate.py --only portrait_` has run.
 
 3D-only props (`PropModels`, `World/Props/PropGarden.cs`; the village garden by the cottages): `prop_stone_wall`
 (dry-stone wall), `prop_veg_patch` (vegetable bed with a watering can), `prop_washing_line` (laundry on a line, sways).

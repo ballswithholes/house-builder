@@ -2785,9 +2785,121 @@ ROSTER = {
 }
 
 
+# ----------------------------------------------------------------------------------------
+# expansion portraits (models-people): busts only — the expansion companions and NPCs are 3D-only models
+# (Docs/ArtKeys.md "3D-only model keys"), so only their portrait is painted, on a figure drawn with an existing
+# outfit painter in their colours plus a few personal touches.
+# ----------------------------------------------------------------------------------------
+def _eye_xy(f):
+    """Centres of the two eyes as Fig.features places them."""
+    hx, hy = f.head_c
+    hw, hh, t = f.hw, f.hh, f.L.turn
+    sep = hw * 0.47
+    ey = hy + hh * 0.18
+    return (hx + t * hw * 0.45 - sep, ey), (hx + t * hw * 0.45 + sep * (1 - t * 0.35), ey)
+
+
+def _x_bruna(f):
+    """Two thick straw-gold braids over the shoulders, tied in green, and a barley sprig behind the ear."""
+    hx, hy = f.head_c
+    hw, hh, hu = f.hw, f.hh, f.hu
+    for s in (-1, 1):
+        braid(f, [(hx + s * hw * 0.95, hy + hh * 0.25), (hx + s * hw * 1.2, f.chin + hu * 0.3), (hx + s * hw * 1.15, f.chest_y + hu * 0.1)],
+              hw * 0.3, f.L.hair, beads=[(1.0, P.hx("5f9a48"))], key="xbr%d" % s)
+    bx, by = hx + hw * 0.95, hy - hh * 0.35
+    f.band([(bx, by + hh * 0.3), (bx + hw * 0.25, by - hh * 0.55)], hw * 0.05, P.hx("d8b048"), cap=False)
+    for k in range(4):
+        y = by - hh * (0.1 + k * 0.13)
+        f.ell(bx + hw * (0.12 + k * 0.03), y, hw * 0.07, hw * 0.12, P.hx("f2d06a"), rot=0.4, hi=0.5)
+    for k, (dx, dy) in enumerate(((-0.55, 0.42), (-0.4, 0.5), (-0.25, 0.44), (0.3, 0.44), (0.45, 0.5), (0.6, 0.42))):
+        f.ell(hx + f.L.turn * hw * 0.45 + hw * dx, hy + hh * dy, hw * 0.035, hw * 0.035, P.hx("c8784e"), shadow=0, line=0.0)
+
+
+def _x_ysolde(f):
+    """A white heron on the breast of the river-blue surcoat and a heron feather tucked by the ear."""
+    hx, hy = f.head_c
+    hw, hh, hu, cx = f.hw, f.hh, f.hu, f.cx
+    x, y = cx + hu * 0.05, f.chest_y + hu * 0.12
+    white = P.hx("f6f4ee")
+    f.ell(x + hu * 0.06, y + hu * 0.06, hu * 0.16, hu * 0.08, white, rot=-0.4, shadow=0.1)
+    f.band([(x - hu * 0.05, y + hu * 0.03), (x - hu * 0.14, y - hu * 0.12), (x - hu * 0.05, y - hu * 0.24)], hu * 0.045, white, shadow=0.1)
+    f.ell(x - hu * 0.05, y - hu * 0.26, hu * 0.045, hu * 0.04, white)
+    f.band([(x - hu * 0.08, y - hu * 0.26), (x - hu * 0.2, y - hu * 0.23)], hu * 0.025, P.hx("e8a43a"), w1=hu * 0.005, cap=False)
+    f.band([(hx - hw * 0.95, hy - hh * 0.1), (hx - hw * 1.25, hy - hh * 0.85)], hw * 0.14, P.hx("d8dce4"), w1=hw * 0.04)
+
+
+def _x_nanami(f):
+    """Water-lilies pinned in the high knot and blue tide tattoos at the shoulders."""
+    hx, hy = f.head_c
+    hw, hh, hu = f.hw, f.hh, f.hu
+    for k, (dx, dy, c) in enumerate(((-0.5, -1.05, P.hx("fbeef4")), (-1.05, -0.75, P.hx("f2a6c4")))):
+        x, y = hx + hw * dx, hy + hh * dy
+        for j in range(6):
+            a = j * math.pi / 3
+            f.ell(x + math.cos(a) * hw * 0.13, y + math.sin(a) * hw * 0.13, hw * 0.12, hw * 0.07, c, rot=a, hi=0.5)
+        f.ell(x, y, hw * 0.06, hw * 0.06, P.hx("f2d04a"), hi=0.6)
+    for s in (-1, 1):
+        sx = f.cx + s * f.w_sh * 0.85
+        f.band([(sx - hu * 0.12, f.sh_y + hu * 0.55), (sx, f.sh_y + hu * 0.45), (sx + hu * 0.1, f.sh_y + hu * 0.6)], hu * 0.035,
+               P.hx("3a76c8"), shadow=0, cap=False)
+
+
+def _x_archivist(f):
+    """Round gold spectacles and a quill behind the ear."""
+    hx, hy = f.head_c
+    hw, hh = f.hw, f.hh
+    gold = P.hx("d9b25a")
+    eyes = _eye_xy(f)
+    for (ex, ey) in eyes:
+        f.tube(ellipse(ex, ey, hw * 0.3, hw * 0.27, 0.0, 28), [hw * 0.05] * 28, gold, shadow=0.0, cap=False, hi=0.6)
+    (x1, y1), (x2, y2) = eyes
+    f.band([(x1 + hw * 0.3, y1 - hw * 0.04), ((x1 + x2) * 0.5, y1 - hw * 0.1), (x2 - hw * 0.3, y2 - hw * 0.04)], hw * 0.045, gold, shadow=0, cap=False)
+    f.band([(hx + hw * 0.85, hy + hh * 0.05), (hx + hw * 1.25, hy - hh * 0.9)], hw * 0.12, P.hx("5f9a8a"), w1=hw * 0.03)
+    f.band([(hx + hw * 0.85, hy + hh * 0.05), (hx + hw * 0.78, hy + hh * 0.25)], hw * 0.03, P.hx("1e2a52"), cap=False)
+
+
+PORTRAITS = {
+    # key: (outfit painter, look, palette, backdrop, extra touches)
+    "portrait_bruna": (draw_paladin, dict(build="f", height=1.9, heads=6.4, hair=P.hx("ecc25a"), eyes=P.hx("5a8a4a"), skin=P.SKIN_LIGHT,
+                                          hair_style="short", expr="grin", turn=0.16),
+                       variant(PALADIN, tabard=P.hx("e2782e"), accent=P.hx("f4e6c4"), cape=P.hx("a8521e"), mail=P.hx("9aa3ad"),
+                               plate=P.hx("aab2bc"), shield=P.hx("b84a3a"), trim=P.hx("f6c832"), belt=P.hx("55381f"), bare_right=True,
+                               faulds=1, pauldron_layers=2), CLASS_BG["warrior"], _x_bruna),
+    "portrait_ysolde": (draw_paladin, dict(build="f", height=1.84, hair=P.hx("ece0c0"), eyes=P.hx("5a7aa0"), skin=P.SKIN_FAIR,
+                                           hair_style="bob", accent=P.hx("c48a84"), expr="calm", turn=0.14),
+                        variant(PALADIN, tabard=P.hx("3f78b4"), accent=P.hx("f6f4ee"), cape=P.hx("28507e"), mail=P.hx("a9b2bc"),
+                                plate=P.hx("d0d6de"), shield=P.hx("3f78b4"), trim=P.hx("d8b464")), CLASS_BG["paladin"], _x_ysolde),
+    "portrait_liora": (draw_priest, dict(build="f", height=1.67, hair=P.hx("cfcad2"), eyes=P.hx("8a6a48"), skin=P.SKIN_FAIR,
+                                         hair_style="ponytail", accent=P.hx("7a4670"), expr="smile", turn=0.12),
+                       variant(PRIEST, top=P.hx("f6f2ea"), skirt=P.hx("7a4670"), obi=P.hx("e6dccb"), trim=P.hx("7a4670"), gold=P.hx("d6a24a"),
+                               flower1=P.hx("f6f2ea"), flower2=P.hx("c8a0c0"), cord=P.hx("d6a24a")), CLASS_BG["priest"], None),
+    "portrait_nanami": (draw_hunter, dict(build="f", height=1.6, hair=P.hx("2a2430"), eyes=P.hx("3a8a8a"), skin=P.SKIN_TAN,
+                                          hair_style="bun", accent=P.hx("f2a6c4"), expr="grin", turn=0.2),
+                        variant(HUNTER, vest=P.hx("f2e4cc"), shorts=P.hx("3aa58a"), trim=P.hx("f0806e"), fur=P.hx("a9b8b4"),
+                                sash=P.hx("8ad8c0"), wrap=P.hx("f0806e"), leather=P.hx("8a7a64"), bow=P.hx("b9a88e")),
+                        (P.hx("dff0ea"), P.hx("3aa58a")), _x_nanami),
+    "portrait_archivist": (draw_trainer, dict(build="old", height=1.68, heads=6.2, hair=P.hx("f2f0ea"), eyes=P.hx("5a6a8a"), skin=P.SKIN_LIGHT,
+                                              hair_style="bald_beard", expr="smile", turn=0.14),
+                           dict(robe=P.hx("4c5a80"), sash=P.hx("c99a46"), trim=P.hx("c99a46"), stole=P.hx("323c5a"), book=P.hx("6a3a2e")),
+                           NPC_BG, _x_archivist),
+}
+
+
+def portrait_job(key, draw, look, pal, bg, extra):
+    cv = new_canvas(key)
+    f = draw(cv, look, pal)
+    if extra is not None:
+        extra(f)
+    _, portrait = finish_char(cv, portrait_box(f), bg)
+    return {key: portrait}
+
+
 def register(reg):
     for key, (draw, lk, pal, bg) in ROSTER.items():
         reg.spec(key, "Character", size=(512, 1024), height=CANVAS_M, pivot=(0.5, 0.05), shadow=True)
         pkey = "portrait_" + key.split("_", 1)[1]
         reg.spec(pkey, "Portrait", size=(256, 256), height=1.0, pivot=(0.5, 0.5))
         reg.job([key, pkey], char_job, key, draw, Look(**lk), pal, bg)
+    for pkey, (draw, lk, pal, bg, extra) in PORTRAITS.items():
+        reg.spec(pkey, "Portrait", size=(256, 256), height=1.0, pivot=(0.5, 0.5))
+        reg.job([pkey], portrait_job, pkey, draw, Look(**lk), pal, bg, extra)
