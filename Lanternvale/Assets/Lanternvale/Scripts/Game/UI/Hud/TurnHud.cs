@@ -2,10 +2,15 @@
 // (overflow → time debt for instants, "pending" for casts), the time debt carried into the next turn, movement
 // left in metres, End Turn (Space), Leave Fight (practice fights), fast-forward, and a status pill: targeting
 // hints, "Grey Wolf is acting…" during AI turns (with "Take control" for auto-played companions), pending casts.
+// Raids and big battles add two toggles above End Turn: "Auto: all companions" and "Auto-battle" (the whole party, the main
+// character too); turning one off puts back every per-unit auto-play flag it changed. Fast animations default on in raids
+// (a separate remembered choice from ordinary fights).
 // The combat controller's HoverPreview follows the cursor. SelfResPromptHud offers Soulstone/Reincarnation.
 using System;
+using System.Collections.Generic;
 using Lanternvale.Data;
 using Lanternvale.Rules;
+using Lanternvale.Session;
 using UnityEngine;
 
 namespace Lanternvale.Game
@@ -34,34 +39,55 @@ namespace Lanternvale.Game
         string statusText = "";
         int statusKind = -1;
 
-        // the fast-animation toggle is remembered across fights (each battle gets a new CombatController)
-        const string FastForwardKey = "lv.hud.fastForward";
-        static int fastForwardPref = -1;   // -1 = not loaded
+        // the fast-animation toggle is remembered across fights (each battle gets a new CombatController); raids keep their
+        // own choice, on until the player turns it off there (a raid round is ten or more turns per side)
+        const string FastForwardKey = "lv.hud.fastForward", FastForwardRaidKey = "lv.hud.fastForwardRaid";
+        static int fastForwardPref = -1, fastForwardRaidPref = -1;   // -1 = not loaded
         CombatController ffApplied;
 
         static bool FastForwardPref
         {
-            get
-            {
-                if (fastForwardPref < 0)
-                {
-                    try { fastForwardPref = PlayerPrefs.GetInt(FastForwardKey, 0) == 1 ? 1 : 0; } catch (Exception) { fastForwardPref = 0; }
-                }
-                return fastForwardPref == 1;
-            }
-            set
-            {
-                fastForwardPref = value ? 1 : 0;
-                try { PlayerPrefs.SetInt(FastForwardKey, fastForwardPref); } catch (Exception) { }
-            }
+            get => LoadPref(FastForwardKey, ref fastForwardPref, 0);
+            set => SavePref(FastForwardKey, ref fastForwardPref, value);
         }
+
+        static bool FastForwardRaidPref
+        {
+            get => LoadPref(FastForwardRaidKey, ref fastForwardRaidPref, 1);
+            set => SavePref(FastForwardRaidKey, ref fastForwardRaidPref, value);
+        }
+
+        static bool LoadPref(string key, ref int cache, int fallback)
+        {
+            if (cache < 0)
+            {
+                try { cache = PlayerPrefs.GetInt(key, fallback) == 1 ? 1 : 0; } catch (Exception) { cache = fallback; }
+            }
+            return cache == 1;
+        }
+
+        static void SavePref(string key, ref int cache, bool value)
+        {
+            cache = value ? 1 : 0;
+            try { PlayerPrefs.SetInt(key, cache); } catch (Exception) { }
+        }
+
+        static bool InRaid { get { var s = Hud.Session; return s != null && s.InRaid; } }
 
         public void Tick(float dt)
         {
+            var s = Hud.Session;
+            if (s != snapSession || (s != null && s.InRaid) != snapInRaid)
+            {
+                // another game, or the raid began or ended (EndRaidParty restored the party's own flags): stale snapshots
+                snapSession = s;
+                snapInRaid = s != null && s.InRaid;
+                companionsSnap = battleSnap = null;
+            }
             var c = Hud.Combat;
             if (c == ffApplied) return;
             ffApplied = c;
-            if (c != null && FastForwardPref) c.FastForward = true;
+            if (c != null && (InRaid ? FastForwardRaidPref : FastForwardPref)) c.FastForward = true;
         }
 
         public void Draw()
@@ -84,6 +110,7 @@ namespace Lanternvale.Game
             DrawStatus(c, b, turnUnit, ai);
             if (turnUnit != null && !b.IsOver) DrawTurnRow(c, turnUnit);
             DrawButtons(c, b, turnUnit);
+            DrawAutoToggles(b);
             DrawCursorPreview(c);
         }
 
@@ -305,7 +332,14 @@ namespace Lanternvale.Game
             if (fr.xMax < Ui.Width - 4f)
             {
                 if (Ui.Btn(fr, ff ? "<color=#ffd27a>»</color>" : "»", HudStyles.Button, true, ff ? "Fast animations: on (click to turn off)" : "Fast animations (or hold Shift)"))
-                    Hud.Post(() => { var cc = Hud.Combat; if (cc != null) FastForwardPref = cc.FastForward = !cc.FastForward; });
+                    Hud.Post(() =>
+                    {
+                        var cc = Hud.Combat;
+                        if (cc == null) return;
+                        cc.FastForward = !cc.FastForward;
+                        if (InRaid) FastForwardRaidPref = cc.FastForward;
+                        else FastForwardPref = cc.FastForward;
+                    });
             }
 
             // leave a practice fight
@@ -317,6 +351,122 @@ namespace Lanternvale.Game
                 if (Ui.Btn(lr, "Leave Fight", HudStyles.Button, true, "Stop this practice fight (no experience or loot)."))
                     Hud.Post(() => Hud.Combat?.Disengage());
             }
+        }
+
+        // ================================================================ raid auto-play toggles
+
+        // the flags each toggle changed, put back when it is turned off (per game; dropped when a raid begins or ends)
+        AutoPlaySnapshot companionsSnap, battleSnap;
+        GameSession snapSession;
+        bool snapInRaid;
+        readonly List<Unit> companionsTmp = new List<Unit>(12), everyoneTmp = new List<Unit>(12);
+
+        const string CompanionsTipOn = "<b>Auto: all companions</b> (on)\nEvery companion's AI plays its turns (and its pet's). Click to give back the control you had before.";
+        const string CompanionsTipOff = "<b>Auto: all companions</b>\nLet every companion's AI play its turns (and its pet's); you keep your own character. Click again to put each one back as it was.";
+        const string BattleTipOn = "<b>Auto-battle</b> (on)\nThe AI fights for the whole party, your character too. Click to give back the control you had before.";
+        const string BattleTipOff = "<b>Auto-battle</b>\nLet the AI fight for the whole party, your character too. Click again to put everyone back as they were.";
+
+        /// <summary>The toggles show in raids and big battles (more than RaidPlanning.BigBattleUnits units).</summary>
+        static bool ShowAutoToggles(Battle b) => b != null && !b.IsOver && (InRaid || RaidPlanning.IsBigBattle(b));
+
+        void CollectParty(GameSession s)
+        {
+            companionsTmp.Clear();
+            everyoneTmp.Clear();
+            var party = s.Party;
+            for (int i = 0; i < party.Count; i++)
+            {
+                var u = party[i];
+                if (u == null) continue;
+                everyoneTmp.Add(u);
+                if (u != s.Main) companionsTmp.Add(u);
+            }
+        }
+
+        static bool AllAuto(List<Unit> units)
+        {
+            if (units.Count == 0) return false;
+            for (int i = 0; i < units.Count; i++) if (!units[i].AutoPlay) return false;
+            return true;
+        }
+
+        void DrawAutoToggles(Battle b)
+        {
+            if (!ShowAutoToggles(b)) return;
+            var s = Hud.Session;
+            if (s == null || s.Main == null) return;
+            CollectParty(s);
+            bool companions = AllAuto(companionsTmp);
+            bool everyone = AllAuto(everyoneTmp);
+            // stacked above End Turn (and above Leave Fight in a practice fight)
+            var er = HudLayout.EndTurn;
+            bool leave = false;
+            try { leave = b.CanDisengage; } catch (Exception) { }
+            float top = er.y - (leave ? 42f : 0f) - 8f;
+            // right-aligned with End Turn, 220 px wide (the label needs it); left of them only the turn row's end, lower down
+            const float w = 220f;
+            var battleR = new Rect(er.xMax - w, top - 30f, w, 30f);
+            var compR = new Rect(er.xMax - w, battleR.y - 36f, w, 30f);
+            if (companionsTmp.Count > 0 && AutoPill(compR, "Auto: all companions", companions, companions ? CompanionsTipOn : CompanionsTipOff))
+                Hud.Post(() => ToggleCompanions(!companions));
+            if (AutoPill(battleR, "Auto-battle", everyone, everyone ? BattleTipOn : BattleTipOff))
+                Hud.Post(() => ToggleAutoBattle(!everyone));
+        }
+
+        /// <summary>A toggle pill (check box + label). True when clicked.</summary>
+        static bool AutoPill(Rect r, string label, bool on, string tip)
+        {
+            bool hover = HudDraw.Hover(r);
+            HudDraw.Frame(r, 0.85f, on ? new Color(0.5f, 0.83f, 0.48f, 0.95f) : hover ? new Color(1f, 0.85f, 0.45f, 0.8f) : (Color?)null);
+            var box = new Rect(r.x + 8f, r.y + 7f, 16f, 16f);
+            HudDraw.Fill(box, on ? new Color(0.2f, 0.45f, 0.22f, 0.95f) : new Color(0.04f, 0.03f, 0.08f, 0.85f), 3);
+            HudDraw.Ring(box, on ? new Color(0.5f, 0.83f, 0.48f, 1f) : new Color(1f, 1f, 1f, 0.45f), 5);
+            if (on) HudDraw.Fill(new Rect(box.x + 4f, box.y + 4f, box.width - 8f, box.height - 8f), new Color(0.75f, 1f, 0.7f, 1f), 3);
+            HudDraw.Text(new Rect(box.xMax + 7f, r.y, r.width - (box.xMax + 7f - r.x) - 4f, r.height), label, HudStyles.NameSmall, on ? Color.white : Ui.TextLight);
+            if (hover) Ui.TooltipFor(r, tip);
+            Ui.Block(r);
+            if (!HudDraw.Click(r)) return false;
+            Ui.Sfx?.Invoke("ui_click");
+            return true;
+        }
+
+        static void SetAuto(Unit u, bool on)
+        {
+            var c = Hud.Combat;
+            if (c != null) c.SetAutoPlay(u, on);
+            else Hud.Session?.SetAutoPlay(u, on);
+        }
+
+        void ToggleCompanions(bool on)
+        {
+            var s = Hud.Session;
+            if (s == null) return;
+            CollectParty(s);
+            if (on)
+            {
+                companionsSnap = AutoPlaySnapshot.Capture(companionsTmp);
+                for (int i = 0; i < companionsTmp.Count; i++) SetAuto(companionsTmp[i], true);
+                return;
+            }
+            if (companionsSnap != null) companionsSnap.Restore(SetAuto, companionsTmp, false);
+            else for (int i = 0; i < companionsTmp.Count; i++) SetAuto(companionsTmp[i], false);
+            companionsSnap = null;
+        }
+
+        void ToggleAutoBattle(bool on)
+        {
+            var s = Hud.Session;
+            if (s == null) return;
+            CollectParty(s);
+            if (on)
+            {
+                battleSnap = AutoPlaySnapshot.Capture(everyoneTmp);
+                for (int i = 0; i < everyoneTmp.Count; i++) SetAuto(everyoneTmp[i], true);
+                return;
+            }
+            if (battleSnap != null) battleSnap.Restore(SetAuto, everyoneTmp, false);
+            else if (s.Main != null) SetAuto(s.Main, false);   // no record of before: hand the main character back
+            battleSnap = null;
         }
 
         // ================================================================ cursor hint

@@ -3,19 +3,27 @@
 // rules AI for ONE step, previews movement paths briefly, executes the step, lets the queue present the produced
 // events and pauses a little before the next step. Guards: a step that changes nothing twice in a row, or too many
 // steps in one turn, ends the turn; when even ending the turn keeps failing the AI stops and StuckReason tells the
-// player (a practice fight is left instead).
+// player (a practice fight is left instead). Big battles (raids: more than RaidPlanning.BigBattleUnits units) think, pause
+// and preview paths for half as long, so a round of twenty turns keeps moving.
 using System;
 using Lanternvale.Data;
 using Lanternvale.Rules;
+using Lanternvale.Session;
 using UnityEngine;
 
 namespace Lanternvale.Game
 {
     public sealed partial class CombatController
     {
-        const float AiFirstThink = 0.2f;      // before the first step of a turn (after the TurnStart beat)
-        const float AiStepPause = 0.12f;      // between steps (after the previous step finished animating)
-        const float AiPathPreview = 0.3f;     // a Move step's path is shown this long before walking
+        const float AiFirstThinkBase = 0.2f;   // before the first step of a turn (after the TurnStart beat)
+        const float AiStepPauseBase = 0.12f;   // between steps (after the previous step finished animating)
+        const float AiPathPreviewBase = 0.3f;  // a Move step's path is shown this long before walking
+        const float AiBigBattlePacing = 0.5f;  // the three above scale by this in big battles
+
+        float AiPacing => RaidPlanning.IsBigBattle(Battle) ? AiBigBattlePacing : 1f;
+        float AiFirstThink => AiFirstThinkBase * AiPacing;
+        float AiStepPause => AiStepPauseBase * AiPacing;
+        float AiPathPreview => AiPathPreviewBase * AiPacing;
         const int AiStepGuardExtra = 8;       // AI.MaxStepsPerTurn + this → end turn
 
         static readonly Color AiEnemyPathColor = new Color(1f, 0.55f, 0.45f, 0.85f);

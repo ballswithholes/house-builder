@@ -2,10 +2,13 @@
 // gold ring), team-coloured frames, small health bars, a divider where the next round begins, the round
 // number, and a hover tooltip (name, level, rank, health). Clicking a party portrait selects it.
 // The strip follows the PRESENTED turn and deaths (HudPresented): it moves on when the next turn is shown on screen.
+// Big battles (raids: more than RaidPlanning.BigBattleUnits units) get a compact strip — smaller portraits, room for up to
+// 24 entries — and a "+k" chip for the entries that still do not fit; Bottom follows the strip's height.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
 using Lanternvale.Rules;
+using Lanternvale.Session;
 using UnityEngine;
 
 namespace Lanternvale.Game
@@ -17,14 +20,25 @@ namespace Lanternvale.Game
         public bool Visible => Hud.CombatHud;
         public bool Modal => false;
 
-        public const float Top = 10f, Big = 70f, Small = 50f, Gap = 6f, DividerW = 16f;
-        /// <summary>Bottom of the strip (incl. the active unit's name) — the target frame sits below it.</summary>
-        public const float Bottom = Top + Big + 24f;
+        public const float Top = 10f, Gap = 6f, DividerW = 16f;
+        public const float BigNormal = 70f, SmallNormal = 50f, BigCompact = 56f, SmallCompact = 40f;
+        const float MoreW = 40f;
+
+        /// <summary>True while the battle shown is big (RaidPlanning.IsBigBattle): the compact strip.</summary>
+        public static bool Compact => RaidPlanning.IsBigBattle(Hud.Battle);
+        /// <summary>Size of the acting unit's portrait.</summary>
+        public static float Big => Compact ? BigCompact : BigNormal;
+        /// <summary>Size of the other portraits.</summary>
+        public static float Small => Compact ? SmallCompact : SmallNormal;
+        /// <summary>Bottom of the strip (incl. the active unit's name) — the target frame and the combat toast lane sit
+        /// below it (TargetFrameHud, ToastsHud.LaneTop).</summary>
+        public static float Bottom => Top + Big + 24f;
 
         readonly List<Unit> display = new List<Unit>(20);
         readonly List<bool> nextRound = new List<bool>(20);
         readonly HudText.One roundText = new HudText.One("Round ");
         readonly HudText.One nextRoundText = new HudText.One("R");
+        readonly HudText.One moreText = new HudText.One("+");
         Unit tipUnit;
         int tipStamp = -1;
         string tip = "";
@@ -51,8 +65,18 @@ namespace Lanternvale.Game
             var shownActive = HudPresented.ActiveUnit(b);
             int start = shownActive != null ? order.IndexOf(shownActive) : -1;
             if (start < 0) start = Mathf.Clamp(b.TurnIndex, 0, n - 1);
-            // leave room for the clock/gold pill (top right) and the party frames (top left)
-            int maxShown = Mathf.Clamp((int)((Ui.Width - 2f * (QuestTrackerHud.W + HudLayout.Margin + 12f) - 140f) / (Small + Gap)), 4, 18);
+            // leave room for the clock/gold pill (top right) and the party/raid frames (top left)
+            bool compact = Compact;
+            float big = compact ? BigCompact : BigNormal, small = compact ? SmallCompact : SmallNormal;
+            int maxShown = Mathf.Clamp((int)((Ui.Width - 2f * (QuestTrackerHud.W + HudLayout.Margin + 12f) - 140f) / (small + Gap)), 4, compact ? 24 : 18);
+            // the living units of the round: when they do not all fit, the last portrait's room goes to the "+k" chip
+            int living = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var u = order[i];
+                if (u != null && !u.IsTotem && !HudPresented.Dead(u)) living++;
+            }
+            if (living > maxShown) maxShown--;
 
             display.Clear();
             nextRound.Clear();
@@ -68,22 +92,25 @@ namespace Lanternvale.Game
                 if (wrapped) wrappedMarked = true;
             }
             if (display.Count == 0) return;
+            // the living units of this round the strip has no room for: a "+k" chip at its end
+            int more = Mathf.Max(0, living - display.Count);
 
             // total width
             float total = 0f;
             for (int i = 0; i < display.Count; i++)
             {
-                total += i == 0 ? Big : Small;
+                total += i == 0 ? big : small;
                 if (i > 0) total += Gap;
                 if (nextRound[i]) total += DividerW;
             }
+            if (more > 0) total += Gap + MoreW;
             float x = Mathf.Round(Ui.Width * 0.5f - total * 0.5f);
-            var back = new Rect(x - 104f, Top - 6f, total + 116f, Big + 12f);
+            var back = new Rect(x - 104f, Top - 6f, total + 116f, big + 12f);
             HudDraw.Frame(back, 0.55f);
             Ui.Block(back);
 
             // round label
-            var rl = new Rect(back.x + 8f, Top + Big * 0.5f - 20f, 88f, 22f);
+            var rl = new Rect(back.x + 8f, Top + big * 0.5f - 20f, 88f, 22f);
             HudDraw.Text(rl, roundText.Get(Mathf.Max(1, b.Round)), HudStyles.Header, Ui.Gold);
             HudDraw.Text(new Rect(rl.x, rl.yMax - 1f, 88f, 18f), "initiative", HudStyles.Tiny, Hud.Muted, false);
 
@@ -94,15 +121,15 @@ namespace Lanternvale.Game
             {
                 if (nextRound[i])
                 {
-                    var dr = new Rect(x + 2f, Top + 6f, DividerW - 4f, Big - 12f);
+                    var dr = new Rect(x + 2f, Top + 6f, DividerW - 4f, big - 12f);
                     HudDraw.Solid(new Rect(dr.center.x - 1f, dr.y, 2f, dr.height - 14f), new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.6f));
                     HudDraw.Text(new Rect(dr.x - 8f, dr.yMax - 16f, dr.width + 16f, 18f), nextRoundText.Get(b.Round + 1), HudStyles.TinyCenter, Ui.Gold, false);
                     x += DividerW;
                 }
                 var u = display[i];
                 bool isActive = u == active;
-                float size = i == 0 ? Big : Small;
-                var r = new Rect(x, Top + (Big - size) * 0.5f, size, size);
+                float size = i == 0 ? big : small;
+                var r = new Rect(x, Top + (big - size) * 0.5f, size, size);
                 DrawEntry(r, u, isActive, b);
                 if (HudDraw.Hover(r)) { hovered = i; hoveredRect = r; }
                 if (HudDraw.Click(r))
@@ -114,11 +141,19 @@ namespace Lanternvale.Game
                 }
                 x += size + Gap;
             }
+            if (more > 0)
+            {
+                var mr = new Rect(x, Top + (big - small) * 0.5f + small * 0.5f - 14f, MoreW, 28f);
+                HudDraw.Fill(mr, new Color(0.08f, 0.06f, 0.13f, 0.9f), 8);
+                HudDraw.Ring(mr, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.6f), 8);
+                HudDraw.Text(mr, moreText.Get(more), HudStyles.TinyCenter, Ui.Gold, false);
+                if (HudDraw.Hover(mr)) Ui.TooltipFor(mr, more == 1 ? "1 more unit acts after these (no room to show it)." : more + " more units act after these (no room to show them).");
+            }
 
             // active unit name under the strip
             if (active != null)
             {
-                var first = new Rect(Mathf.Round(Ui.Width * 0.5f - total * 0.5f), Top, Big, Big);
+                var first = new Rect(Mathf.Round(Ui.Width * 0.5f - total * 0.5f), Top, big, big);
                 var nr = new Rect(first.center.x - 120f, back.yMax + 1f, 240f, 20f);
                 HudDraw.Text(nr, Hud.NameOf(active), HudStyles.NameSmall, active.Team == b.PlayerTeam ? Hud.UnitColor(active) : Hud.EnemyTeam);
             }

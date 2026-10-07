@@ -2,6 +2,8 @@
 // class and level, status (leader / in the party / at camp / away), approval; make leader, send to camp / join the
 // party (out of combat), companion auto-play (the AI plays their turns), dismiss with confirmation; hovering a
 // companion shows their bio, personality, likes and dislikes (CharacterPanel.CompanionAbout).
+// In a raid (GameSession.InRaid) it is the raid party: "Raid party: 7 / 10", companions left behind "wait outside the raid",
+// and Dismiss is hidden — the party you came with comes back when the raid ends, so nobody should walk off in the middle.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -56,12 +58,15 @@ namespace Lanternvale.Game.Panels
             roster.AddRange(s.Roster);
             float h = Mathf.Min(Ui.Height - 140f, 170f + roster.Count * 104f + 40f);
             var r = PanelKit.Centered(Mathf.Min(980f, Ui.Width - 40f), Mathf.Max(420f, h), -20f);
-            var c = Chrome(r, "Party & camp");
-            int stamp = s.Party.Count * 100 + s.PartySize;
+            bool raid = s.InRaid;
+            var c = Chrome(r, raid ? "Raid party" : "Party & camp");
+            int stamp = s.Party.Count * 100 + s.PartySize + (raid ? 100000 : 0);
             if (stamp != headStamp)
             {
                 headStamp = stamp;
-                headText = $"Travelling together: <b>{s.Party.Count} / {s.PartySize}</b>. Companions at camp wait for you and keep their gear and levels. Hover a companion to learn who they are and what they approve of.";
+                headText = raid
+                    ? $"Raid party: <b>{s.Party.Count} / {s.PartySize}</b>. Companions you left behind wait outside the raid. When you leave the raid, the party you came with travels on together again."
+                    : $"Travelling together: <b>{s.Party.Count} / {s.PartySize}</b>. Companions at camp wait for you and keep their gear and levels. Hover a companion to learn who they are and what they approve of.";
             }
             PanelKit.Label(new Rect(c.x, c.y, c.width, 50f), headText, PanelKit.TextSmall);
             bool explore = s.Mode == SessionMode.Exploration;
@@ -100,7 +105,10 @@ namespace Lanternvale.Game.Panels
             PanelKit.Label(new Rect(x, row.y + 8f, 300f, 30f), PanelKit.NameOf(u), PanelKit.RowText, u.Class != null ? PanelKit.InkColorOf(u.Class.id) : Ui.Ink);
             var tx = TextOf(u, s);
             PanelKit.Label(new Rect(x, row.y + 36f, 300f, 24f), tx.Level, PanelKit.RowTextSmall);
-            string st = leader ? "Leading the party" : inParty ? "In the party" : status == CompanionStatus.Camp ? "Resting at camp" : away ? "Went their own way — talk to them to ask again" : "";
+            bool raid = s.InRaid;
+            string st = leader ? (raid ? "Leading the raid" : "Leading the party") : inParty ? (raid ? "In the raid" : "In the party")
+                      : status == CompanionStatus.Camp ? (raid ? "Waiting outside the raid" : "Resting at camp")
+                      : away ? "Went their own way — talk to them to ask again" : "";
             PanelKit.Label(new Rect(x, row.y + 60f, away ? 600f : 220f, 24f), st, PanelKit.RowTextSmall, leader ? PanelKit.GoldInk : Ui.InkSoft);
             if (u.Companion != null && !away)
             {
@@ -126,7 +134,8 @@ namespace Lanternvale.Game.Panels
             {
                 if (inParty)
                 {
-                    if (PanelKit.Btn(new Rect(bx + 136f, by, 128f, 38f), "To camp", PanelKit.SmallButton, explore, explore ? "They wait at camp until you call them back." : "Only while exploring."))
+                    if (PanelKit.Btn(new Rect(bx + 136f, by, 128f, 38f), "To camp", PanelKit.SmallButton, explore,
+                            !explore ? "Only while exploring." : raid ? "They wait outside the raid until you call them back." : "They wait at camp until you call them back."))
                     {
                         string cid = id;
                         PanelKit.Do(() => { var ss = PanelKit.Sess; if (ss != null) PanelKit.Try(() => ss.SetPartyMemberActive(cid, false)); });
@@ -135,13 +144,15 @@ namespace Lanternvale.Game.Panels
                 else
                 {
                     bool room = s.Party.Count < s.PartySize;
-                    if (PanelKit.Btn(new Rect(bx + 136f, by, 128f, 38f), "Join party", PanelKit.SmallButtonGold, explore && room, !room ? "The party is full. Send someone to camp first." : explore ? null : "Only while exploring."))
+                    string full = room ? null : raid ? "The raid is full. Send someone to camp first." : "The party is full. Send someone to camp first.";
+                    if (PanelKit.Btn(new Rect(bx + 136f, by, 128f, 38f), raid ? "Join raid" : "Join party", PanelKit.SmallButtonGold, explore && room, !room ? full : explore ? null : "Only while exploring."))
                     {
                         string cid = id;
                         PanelKit.Do(() => { var ss = PanelKit.Sess; if (ss != null) PanelKit.Try(() => ss.SetPartyMemberActive(cid, true)); });
                     }
                 }
-                if (PanelKit.Btn(new Rect(bx + 272f, by, 128f, 38f), "Dismiss", PanelKit.SmallButtonDark, explore, explore ? "They leave the party and go back to where you met them." : "Only while exploring."))
+                // no dismissing in a raid: the party you came with is restored when it ends
+                if (!raid && PanelKit.Btn(new Rect(bx + 272f, by, 128f, 38f), "Dismiss", PanelKit.SmallButtonDark, explore, explore ? "They leave the party and go back to where you met them." : "Only while exploring."))
                 {
                     string cid = id;
                     string name = PanelKit.NameOf(u);

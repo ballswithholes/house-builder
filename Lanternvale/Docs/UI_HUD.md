@@ -10,7 +10,8 @@ toolkit (Ink surfaces over the painted dioramas). Every layer is an `IUiScreen` 
 | `RankPins.cs` | `RankPins` — per-character pinned ability ranks (downranking; PlayerPrefs) | — |
 | `HudPresented.cs` | `HudPresented` — the battle as the player has *seen* it: health, dead/downed state and the acting unit with the not-yet-presented events (`GameFlow.CombatEventPresented`) undone, so bars, plates, frames and the turn strip never run ahead of the animation; live state while the controller waits for input | — |
 | `NameplatesHud.cs` | `NameplatesHud` — enemy health plates + telegraphed cast bars in combat; hover labels + interaction prompts in exploration | 2 |
-| `PartyFramesHud.cs` | `PartyFramesHud` — party frames (left) | 10 |
+| `PartyFramesHud.cs` | `PartyFramesHud` — party frames (left; hidden in a raid) | 10 |
+| `RaidFramesHud.cs` | `RaidFramesHud` — compact raid frames, two groups of five (left; only in a raid) | 11 |
 | `TurnOrderHud.cs` | `TurnOrderHud` — initiative strip (top centre) | 14 |
 | `TargetFrameHud.cs` | `TargetFrameHud` — target frame (top centre, combat) | 16 |
 | `QuestTrackerHud.cs` | `QuestTrackerHud` — clock/day/phase + gold, quest tracker (top right) | 18 |
@@ -46,6 +47,20 @@ pulse green, out-of-range/sight ones pulse softer (the click walks into range fi
 "Click to use Flash Heal on Kael." Outside targeting the click selects (exploration "choose a party member" picks
 work as before).
 
+**Raid frames** (left, only while `Session.InRaid`; `PartyFramesHud.Visible` steps aside then): two groups of five,
+column-major (members 1–5 left, 6–10 right, 145 × 64 px each, right edge at 310 px so the turn strip keeps its room):
+a class-colour bar, the name in class colour (leader crown), health with absorb (as presented) and "Dead"/"Downed" on it,
+a thin resource bar (the pending cast replaces it), up to four debuffs (dispel-type frames; stacks; tooltip with time
+left and caster), the **AUTO** pill (companions, and the main character while the AI plays it — Auto-battle), the gold
+pulse ring of the acting unit, the white ring of the selection, a red ring with an attacker count for aggro, and pets /
+controlled summons as thin 15 px rows under their owner (at most two; when a column would reach the bottom block, the
+pet rows give way). **The click contract is the party frames'**: `Hud.FieldPick` / `Hud.IsValidPickTarget` /
+`Hud.ResolveFieldPick` for the out-of-combat pick, `Hud.TargetStateOf` for the combat targeting look (valid pulse,
+reachable soft pulse, invalid dim; the tooltip says what the click does), `Hud.ClickUnit` otherwise — healers target
+the raid from the frames. Frame tooltips: level, class, role, health, resource, cast; built only while hovered.
+Layout (Ui.Width × Ui.Height): 1920 × 1080 at interface size 1.0 and 1280 × 720 at 1.5 (the tightest): five frames
+are 340 px tall against 482 px of room above the compact log at 1.5.
+
 **Action bar** (bottom centre) for `GameFlow.Selected` — in combat the active player unit (otherwise the selected member is
 shown dimmed, "inspect"). Statuses come from `Session.GetAbilityBar(unit, includeTooltips: false)` (battle in combat,
 field outside; pets/controlled units: `ctx.GetAbilityBar(unit, true, false)`), refreshed on unit/turn/targeting/opener/
@@ -78,14 +93,25 @@ Food/drink are hidden in combat. Combat → `Combat.BeginItem`; field → `GameF
 at `Combat.TargetingRank`, so a faster low rank shows its own cast time) highlights the
 Time it would spend and warns when it overflows ("+0.8 s debt" for instants, "becomes pending" for casts); time debt
 carried into the next turn; movement left / budget in metres (Rooted); **End Turn** (Space is handled by the combat
-controller), **»** fast animations (`Combat.FastForward`, remembered across fights: `PlayerPrefs "lv.hud.fastForward"`), **Leave Fight** when `Battle.CanDisengage`. Status pill:
+controller), **»** fast animations (`Combat.FastForward`, remembered across fights: `PlayerPrefs "lv.hud.fastForward"`;
+raids keep their own choice, `"lv.hud.fastForwardRaid"`, **on by default**), **Leave Fight** when `Battle.CanDisengage`.
+In raids and big battles (`RaidPlanning.IsBigBattle`: more than 14 units) two toggles sit above End Turn (above Leave
+Fight when it shows): **Auto: all companions** (every companion's `SetAutoPlay`, pets follow) and **Auto-battle** (the
+whole party, the main character too). Turning one on captures the flags it changes (`AutoPlaySnapshot`); turning it off
+puts each unit's own flag back (members captured in no snapshot get auto-play off). The snapshots are dropped when the
+raid begins or ends (the session restores the party's flags itself) and with a new game. The toggles read on when every
+unit they cover auto-plays, so a single AUTO pill switched off shows them off. Status pill:
 targeting hint, "Grey Wolf is acting…" for AI turns (with **Take control** for auto-played companions), "X is casting Y —
 it resolves at the start of their next turn", else "Aria's turn". `Combat.HoverPreview` follows the cursor.
 
 **Turn order** (top centre): `Battle.TurnOrder` from the acting unit (enlarged, gold), team-coloured frames, health
 strips, pending-cast hourglass, elite/boss marks, a divider where the next round starts, "Round N"; hover → name, level,
 rank, health, cast, surprised. Clicking a party portrait selects it; while an ability/item is being targeted, clicking
-any portrait confirms it on that unit (`Hud.ClickUnit` → `Combat.TargetUnit`).
+any portrait confirms it on that unit (`Hud.ClickUnit` → `Combat.TargetUnit`). **Big battles** (more than 14 units,
+`RaidPlanning.IsBigBattle`; raids) use the compact strip: 56/40 px portraits instead of 70/50 and room for up to 24; when
+the living units of the round still do not fit, the last place goes to a gold "+k" chip ("3 more units act after
+these"). `TurnOrderHud.Bottom` (and `Big`, `Small`) are properties now: the target frame and the combat toast lane
+(`ToastsHud.LaneTop`) follow the strip's height.
 
 **Target frame** (below the turn order): hovered unit (`Combat.HoveredTarget`, `GameFlow.HoveredUnit`) → acting enemy →
 the active unit's attack/combo target (sticky). Level (WoW difficulty colours, skull for bosses/+10), rank with a gold
@@ -122,7 +148,13 @@ stack so they never overlap it): map title card (Title font, `MapDef.subtitle`),
 **short level-up banner** ("Level 12" + the names, merged for the whole party, 3 s — the details are the panels'
 level-up card, bottom right; the world only gets sparkles and the chime), Combat!, Victory!/Defeat/Disengaged (when
 `Combat.Battle.IsOver`, or `CombatEnded` — the only place these words appear: the combat presenter adds sparkles/sound,
-no world text), story moments (`SpecialOutcome` with Amount 1).
+no world text), story moments (`SpecialOutcome` with Amount 1), hidden passages (`SecretFound`: a gold story banner with
+`e.Text`, "You discovered a hidden passage: The Root Hollows" — the flow no longer toasts it, so it is said once).
+**Raids:** `RaidStarted` and `RaidEnded` (Amount 0) are gold flow toasts (`GameFlow.Events`). A **raid wipe** reads as ONE
+notice: when the presented `BattleEnd` (or `CombatEnded`) is a defeat on a map where `RaidPlanning.WipeSendsHome` holds,
+the banner is "The raid has wiped" instead of "Defeat"; the session's follow-ups (`MapEntered` of the return map — its
+title card is skipped, `RaidEnded` Amount 1, `PartyHealed` "The raid has wiped. You come to in Mirefen, …") only fill in
+its second line (`RaidPlanning.WipeDetail`), and nothing else is toasted.
 
 **Quest tracker** (top right, exploration): active quests from `Session.Journal(false)` (main quests starred), objectives
 with progress (`ObjectiveView.Display`), stage text when there are no objectives, "» Return to <NPC>" in gold when someone

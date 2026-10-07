@@ -12,7 +12,7 @@ namespace Lanternvale.Game
     public sealed partial class GameFlow
     {
         static readonly Color LevelGold = new Color(1f, 0.85f, 0.42f);
-        static readonly Color SecretGold = new Color(1f, 0.82f, 0.36f);
+        static readonly Color RaidGold = new Color(1f, 0.84f, 0.48f);
         readonly Dictionary<Unit, int> levelFxFrame = new Dictionary<Unit, int>();
 
         // dialogue camera
@@ -30,7 +30,7 @@ namespace Lanternvale.Game
 
         void React(SessionEvent e)
         {
-            CombatSfx.SessionCue(e);   // sounds of events without a case here (RaidStarted, the set-bonus toast)
+            CombatSfx.SessionCue(e);   // sounds without a Sfx call here (RaidStarted, the set-bonus toast)
             switch (e.Kind)
             {
                 case SessionEventKind.GameStarted:
@@ -106,9 +106,22 @@ namespace Lanternvale.Game
                     RefreshWorldIfFlagsChanged();
                     break;
                 case SessionEventKind.SecretFound:
-                    // "You discovered a hidden passage: …" in gold (MapView sparkles the revealed marker, Sfx plays the cue)
-                    if (!string.IsNullOrEmpty(e.Text)) Toast(e.Text, SecretGold);
+                    // "You discovered a hidden passage: …" is ToastsHud's gold banner (MapView sparkles the revealed marker,
+                    // Sfx plays the cue)
                     CombatSfx.SecretFound();
+                    break;
+                case SessionEventKind.RaidPartyRequested:
+                    // a raid map without a raid party: the session did not travel; the picker answers with EnterRaid
+                    StopPartyMove(false);
+                    Panels.RaidPickerScreen.Open(e.Id, e.Id2, e.Amount);
+                    break;
+                case SessionEventKind.RaidStarted:
+                    if (!string.IsNullOrEmpty(e.Text)) Toast(e.Text, RaidGold);
+                    break;
+                case SessionEventKind.RaidEnded:
+                    // a wipe (Amount 1) reads as ONE notice: ToastsHud's "The raid has wiped" banner, which takes the
+                    // Defeat banner's place and PartyHealed's "You come to in …" line (no map title, no toasts)
+                    if (e.Amount == 0 && !string.IsNullOrEmpty(e.Text)) Toast(e.Text, RaidGold);
                     break;
             }
         }

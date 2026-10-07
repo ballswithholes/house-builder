@@ -789,12 +789,20 @@ namespace Lanternvale.Game.Panels
         public static Unit MemberTabs(Rect r, Unit selected, IReadOnlyList<Unit> members = null, float size = 56f)
         {
             members = members ?? Characters;
+            // a raid's ten tabs shrink to the rect's width instead of running past it (centred on the row they had)
+            float y = r.y;
+            if (members.Count > 0 && members.Count * (size + 10f) - 10f > r.width)
+            {
+                float fit = Mathf.Max(24f, (r.width + 10f) / members.Count - 10f);
+                y += (size - fit) * 0.5f;
+                size = fit;
+            }
             float x = r.x;
             for (int i = 0; i < members.Count; i++)
             {
                 var u = members[i];
                 if (u == null) continue;
-                var pr = new Rect(x, r.y, size, size);
+                var pr = new Rect(x, y, size, size);
                 bool sel = u == selected;
                 if (sel) Tex(new Rect(pr.x - 8f, pr.y - 8f, pr.width + 16f, pr.height + 16f), ProceduralArt.Glow, new Color(1f, 0.82f, 0.45f, 0.9f));
                 Ui.Portrait(pr, PortraitOf(u), sel ? Ui.Gold : ColorOf(u), !sel && !Hover(pr));

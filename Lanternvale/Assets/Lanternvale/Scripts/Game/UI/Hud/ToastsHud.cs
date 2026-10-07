@@ -8,7 +8,10 @@
 //  * Error lane (red, above the bottom HUD): Combat.LastError ("Not enough rage (15).") and HUD failures.
 //  * Banners (one at a time, kept below the toast stack): map title cards (Title font), region names, a short level-up
 //    banner (the details are the panels' level-up card, bottom right), Victory!/Defeat/Disengaged (hooked to
-//    Combat.Battle.IsOver — the world only gets sparkles and sound), combat start, story moments (SpecialOutcome).
+//    Combat.Battle.IsOver — the world only gets sparkles and sound), combat start, story moments (SpecialOutcome), hidden
+//    passages found (SecretFound, a gold story banner). A raid wipe is ONE notice: "The raid has wiped" takes the Defeat
+//    banner's place, and the session's follow-ups (the return map's title card, RaidEnded, PartyHealed) only fill in its
+//    second line ("You come to in Mirefen, your wounds tended.").
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -91,6 +94,10 @@ namespace Lanternvale.Game
         CombatController errCombat;
         float errSeen;
         Battle bannerBattle;
+        // the raid wipe being announced (its banner is the one notice; see ShowRaidWipe), and when it began
+        Banner wipeBanner;
+        float wipeAt = -100f;
+        const float WipeWindow = 8f;
 
         static readonly Color QuestGold = Ui.Hex("#ffd27a");
         static readonly Color InfoCol = Ui.Hex("#e8e0f4");
@@ -98,6 +105,7 @@ namespace Lanternvale.Game
         static readonly Color MoneyCol = Ui.Hex("#ffd75e");
         static readonly Color CheckGood = Ui.Hex("#7fd47a");
         static readonly Color CheckBad = Ui.Hex("#ff7a6b");
+        static readonly Color SecretGold = new Color(1f, 0.82f, 0.36f);
 
         // ================================================================ tick
 
@@ -160,12 +168,35 @@ namespace Lanternvale.Game
                     break;
                 }
                 case BattleOutcome.Defeat:
+                    if (RaidWipeAhead()) { ShowRaidWipe(); break; }
                     AddBanner(new Banner { Kind = BannerKind.Defeat, Title = "Defeat", Sub = "The party has fallen…", Color = Hud.C("#e8a0b0"), Life = 3.2f });
                     break;
                 case BattleOutcome.Fled:
                     AddBanner(new Banner { Kind = BannerKind.Left, Title = "Disengaged", Sub = "", Color = Hud.Muted, Life = 1.8f });
                     break;
             }
+        }
+
+        // ================================================================ raid wipe (one notice)
+
+        /// <summary>A defeat on the current map is a raid wipe that sends the party home (no game over).</summary>
+        static bool RaidWipeAhead()
+        {
+            var s = Hud.Session;
+            return s != null && RaidPlanning.WipeSendsHome(s.Db, s.MapDef);
+        }
+
+        /// <summary>True while the wipe's banner is up and the session's follow-up events are still arriving.</summary>
+        bool Wiping => wipeBanner != null && banners.Contains(wipeBanner) && Time.unscaledTime - wipeAt < WipeWindow;
+
+        void ShowRaidWipe()
+        {
+            if (Wiping) return;
+            banners.RemoveAll(b => b.Kind == BannerKind.Combat || b.Kind == BannerKind.Region || b.Kind == BannerKind.MapTitle || b.Kind == BannerKind.Defeat);
+            wipeBanner = new Banner { Kind = BannerKind.Defeat, Title = "The raid has wiped", Sub = "The party falls back to regroup…", Color = Hud.C("#e8a0b0"), Life = 6f };
+            wipeAt = Time.unscaledTime;
+            if (banners.Count >= 6) banners.RemoveAt(banners.Count - 1);
+            banners.Insert(0, wipeBanner);
         }
 
         void Age(float dt)
@@ -231,6 +262,7 @@ namespace Lanternvale.Game
                 case SessionEventKind.MapEntered:
                 {
                     Hud.ClearUnitCaches();
+                    if (Wiping) break;   // the wipe's banner says where the party comes to (PartyHealed)
                     var s = Hud.Session;
                     string sub = s != null && s.MapDef != null ? s.MapDef.subtitle ?? "" : "";
                     if (!string.IsNullOrEmpty(e.Text))
@@ -322,7 +354,24 @@ namespace Lanternvale.Game
                     break;
                 case SessionEventKind.Rested:
                 case SessionEventKind.PartyHealed:
+                    if (e.Kind == SessionEventKind.PartyHealed && Wiping)
+                    {
+                        // the raid wipe's second line, not a toast of its own
+                        string detail = RaidPlanning.WipeDetail(e.Text);
+                        if (!string.IsNullOrEmpty(detail)) { wipeBanner.Sub = detail; wipeBanner.Age = Mathf.Min(wipeBanner.Age, 1f); }
+                        wipeBanner = null;
+                        break;
+                    }
                     if (!string.IsNullOrEmpty(e.Text)) Add(Kind.Info, e.Text, "glyph_moon", InfoCol, "rest:" + e.Text);
+                    break;
+                case SessionEventKind.RaidEnded:
+                    // a wipe whose BattleEnd was never presented (a fight resolved without the presenter): the banner still comes
+                    if (e.Amount == 1) ShowRaidWipe();
+                    break;
+                case SessionEventKind.SecretFound:
+                    // "You discovered a hidden passage: The Root Hollows" (GameFlow no longer toasts it: this is the one notice)
+                    if (!string.IsNullOrEmpty(e.Text))
+                        AddBanner(new Banner { Kind = BannerKind.Story, Title = e.Text, Color = SecretGold, Life = 5f });
                     break;
                 case SessionEventKind.CombatStarted:
                 {
@@ -339,6 +388,9 @@ namespace Lanternvale.Game
                         else if (e.Outcome == CombatEndKind.Defeat) ShowOutcome(BattleOutcome.Defeat, e.Battle);
                         else if (e.Outcome == CombatEndKind.Left) ShowOutcome(BattleOutcome.Fled, e.Battle);
                     }
+                    break;
+                case SessionEventKind.RaidStarted:
+                    wipeBanner = null;
                     break;
                 case SessionEventKind.SpecialOutcome:
                     if (e.Amount == 1 && !string.IsNullOrEmpty(e.Text))
@@ -569,6 +621,7 @@ namespace Lanternvale.Game
 
         void ClearAll()
         {
+            wipeBanner = null;
             active.Clear();
             waiting.Clear();
             banners.Clear();

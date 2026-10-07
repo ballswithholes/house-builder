@@ -24,6 +24,7 @@ presentation helpers: `ArtLibrary`, `Sfx`, `GameAudio`, `Ui`, `UiText`).
 | `LevelUpPopup` | 160 | `LevelUp` events (bottom right, waits for dialogue to end; the detailed half of a level-up) | – |
 | `RespecScreen` | 200 | `Session.ActiveRespecNpc != ""` | – |
 | `QuestRewardScreen` | 205 | `Session.PendingQuestRewards` not deferred (exploration) | ✓ |
+| `RaidPickerScreen` (RaidPickerScreen.cs) | 212 | opened by `GameFlow` on `RaidPartyRequested`, shown while exploring | ✓ |
 | `DialogueScreen` | 220 | `Session.Mode == Dialogue` (+ a lingering d20 roll) | ✓ |
 | `PauseMenuPanel` **Esc** | 250 | `UiPanels.Pause` (GameFlow pauses time) | ✓ |
 | `SaveLoadPanel` | 255 | `UiPanels.SaveLoad` (`SaveLoadPanel.OpenFor(save)`) | ✓ |
@@ -99,7 +100,27 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   and its level band (`QuestDef.zone`), summary, current stage, objectives with ticks, "» Return to <NPC>" when the
   step can be handed in now (`Session.QuestTurnInOf`, shared with the tracker), history, rewards (XP as granted:
   `Progression.QuestXp(db, xp, PartyLevel)`, coins, items, pick-one choices). "Party & camp" opens the roster: lead, to
-  camp / join, auto-play toggle, dismiss (confirm).
+  camp / join, auto-play toggle, dismiss (confirm). **In a raid** (`Session.InRaid`) the roster is the "Raid party":
+  "Raid party: 7 / 10" (`PartySize` is the raid's size there), "Leading the raid" / "In the raid" / "Waiting outside the
+  raid", "Join raid", and **no Dismiss** — the party you came with is restored when the raid ends, so nobody should walk off
+  in the middle of it.
+* **Raid party picker** — walking, clicking or teleporting into a raid map without a raid party makes the session raise
+  `RaidPartyRequested` (Id = map, Id2 = spawn, Amount = raidSize) instead of travelling; `GameFlow.Events` opens
+  `RaidPickerScreen.Open(map, spawn, size)` (modal, Order 212). Two columns of `Session.RaidCandidates()` — Main (locked
+  in: "Leads the raid"), the party you travel with, then the companions at camp — each with a check box, portrait, a
+  role badge (shield / plus / sword / bow), "Level 22 Warrior · Tank", "Travelling with you" / "Waiting at camp", and a
+  red "Level 18 · the raid asks for 21" (outlined cell) below the map's `levelMin`; the intro names the band
+  ("levels 21–23") and warns when the party is below it. Check boxes stop at `raidSize` (a full raid dims the rest; a
+  click says so). Footer: "7 / 10 chosen", the **role summary** "2 tanks · 2 healers · 6 dps" with advice when the
+  raid has no tank or no healer, **Companions auto-play in this raid** (on by default every time the picker opens; leaving
+  the raid puts everyone's auto-play back), **Suggest**, **Cancel** (or Esc / ×: nobody travels), **Enter the raid**
+  (or Enter; disabled with `CannotEnterRaidReason` as its tooltip) → `Session.EnterRaid(map, spawn, ids, autoPlay)`
+  (deferred; a refusal becomes a notice and the picker stays). The opening suggestion (`RaidPlanning.DefaultSelection`)
+  keeps the party you travel with in its order, then fills the raid from camp — first the tanks and healers the raid
+  still lacks (one tank per five, one healer per four), then the rest in roster order. Roles are cached when the list
+  is built (refreshed on `PartyChanged`, recruits, dismissals and level-ups). Walking out and back in keeps the choice
+  being made; `RaidStarted`, a new game or a load closes it. Layout: 960 px wide; at 1280 × 720 (interface size 1.5)
+  the list scrolls between the intro and the footer.
 * **Map** — ground painted once per map from the nav grid; live party (leader ringed), NPC dots with **quest glyphs**
   above them ("!" / "?", yellow or grey, main quests in a gold ring; `Session.QuestMarkerOf`), enemies, chests, lanterns
   (lit glow), signs, exits (hidden transitions only once `MapRuntime.IsTransitionVisible`) and **objective hints**
@@ -156,5 +177,7 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   `ContextMenuScreen.Open(pos, title, items)` are available to any screen.
 * **Shared selection.** `PanelKit.Member` is the party member shown by the sheet, bags, spellbook and talents; it follows
   `GameFlow.Selected` when that changes and can be switched with the member tabs (without changing the leader).
+  `PanelKit.MemberTabs` shrinks its portraits (down to 24 px, centred on the row) when the members do not fit the rect's
+  width — a raid's ten tabs in the bags.
 * **Allocation-conscious.** Styles, money strings, counts, tooltips, row texts and labels are cached and rebuilt on
   change (stat sheet 4×/s); tooltips are built only while hovered.

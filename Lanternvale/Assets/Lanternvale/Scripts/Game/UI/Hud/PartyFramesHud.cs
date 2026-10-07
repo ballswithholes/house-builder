@@ -19,7 +19,7 @@ namespace Lanternvale.Game
     {
         public string Id => "";
         public int Order => Hud.OrderPartyFrames;
-        public bool Visible => Hud.WorldHud;
+        public bool Visible => Hud.WorldHud && !(Hud.Session?.InRaid ?? false);   // a raid: RaidFramesHud
         public bool Modal => false;
 
         const float X = 14f, Y = 14f, W = 300f, H = 90f, Portrait = 70f;
