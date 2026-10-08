@@ -28,8 +28,10 @@
    ---------------------
    体力 100；每击伤害 = 基础 × (0.55 + 武力/100) × (1 + (己武力 − 敌武力)/150)（后一项限制在 0.6–1.5，
    单击 1–40）；高武力出招略快、硬直略短；格挡减伤 80%；怒气随命中 / 受击积累，满时可放绝技；
+   格开：被连段第二段打中后，在第三段打到前约 0.1 秒内按下格挡即可格开（只认那段硬直里的第一次按下）；
    限时 60 秒，KO 或时间到时体力高者胜（相同则挑战者胜，与 BattleModel.duel 一致）。
-   电脑的反应时间、格挡率、连段与绝技使用随其武力提升。
+   电脑的反应时间、格挡率、连段与绝技使用随其武力提升；武力 40 以上的电脑会看破一味连按的对手
+   （预判举防、后撤诱空、格开第三段、抓连段挥空后的破绽），武力越高越准。
 
    操作：←/→ 或 A/D 移动（双击冲刺）、↑/W/空格 跳、J 轻击（连按三连击）、K 重击（按住蓄力，满蓄破防）、
    L 格挡（↓/S 亦可）、I 绝技（怒气满）。触摸：左下 ◀ ▶ ▲，右下 轻击 / 重击 / 格挡 / 绝技，支持多点触控。
@@ -53,6 +55,7 @@
   const TIME_LIMIT = 60;
   const CHARGE_MAX = 0.85;         // 满蓄所需时间
   const SPECIAL_FREEZE = 0.62;     // 绝技起手时对手定格的时间
+  const PARRY_WIN = 0.1;           // 格开窗口：被第二段打中后的硬直中，在第三段打到前这么久之内按下格挡
 
   // 招式时序（基准秒；出招时钟按 spd 缩放）。reachK × 兵器长度 = 判定距离
   const MOVES = {
@@ -282,7 +285,9 @@
       this.ko = false;
       this.counterHit = false;
       this.ctrl = null;       // { held, taps }
-      this.prev = { x: 0, up: false, light: false, heavy: false, special: false };
+      this.prev = { x: 0, up: false, light: false, heavy: false, special: false, guard: false };
+      this.parryAt = -9;      // 受击硬直中按下格挡的时刻（格开判定；每段硬直只算第一次按下）
+      this.parrySeq = -1;
       this.buf = { light: -9, jump: -9, special: -9, heavy: -9, dash: -9 };
       this.lastTap = { dir: 0, t: -9 };
       this.stats = { swings: 0, hits: 0, guarded: 0, taken: 0 };
@@ -398,7 +403,8 @@
       if (h.dash) { f.buf.dash = now; f.dashDir = h.dash; }
       if (taps) { taps.light = 0; taps.up = 0; taps.special = 0; taps.heavy = 0; taps.dir = 0; }
       f.holdGuard = !!h.guard;
-      p.x = h.x; p.up = h.up; p.light = h.light; p.heavy = h.heavy; p.special = h.special;
+      if (h.guard && !p.guard && f.state === 'hitstun' && f.parrySeq !== f.seq) { f.parrySeq = f.seq; f.parryAt = now; }
+      p.x = h.x; p.up = h.up; p.light = h.light; p.heavy = h.heavy; p.special = h.special; p.guard = !!h.guard;
       return h;
     }
     fresh(f, k) { return this.clock - f.buf[k] <= BUFFER; }
@@ -631,6 +637,8 @@
       let guarded = (o.state === 'guard' || o.state === 'guardstun') && o.grounded;
       // 格开：连段中的后续一击，受击方按住格挡且武力远高于攻方时，有机会格开（武力差 30 → 18%，70 → 50%）
       let parry = false;
+      // 格开（看破连段）：被第二段打中后，在第三段打到前 PARRY_WIN 秒内按下格挡（只认这段硬直里的第一次按下，挨打就乱按无效）
+      if (!guarded && name === 'light3' && o.state === 'hitstun' && o.grounded && o.hp > 0 && o.parrySeq === o.seq && this.clock - o.parryAt <= PARRY_WIN) { guarded = true; parry = true; }
       if (!guarded && o.state === 'hitstun' && o.holdGuard && o.grounded && o.hp > 0 && name !== 'special') {
         const p = M.clamp((o.war - f.war - 12) / 100, 0, 0.5);
         if (p > 0 && rnd() < p) { guarded = true; parry = true; }
@@ -653,8 +661,8 @@
         knock = true; o.ko = true;
       } else if (guarded) {
         if (breaks) { this.setState(o, 'guardbreak'); o.stun = 0.8 * o.stunK; this.emit({ type: 'guardbreak', who: o.idx }); }
-        else { this.setState(o, 'guardstun'); o.stun = (0.12 + mv.stun * 0.35) * o.stunK; }
-        o.vx = dir * mv.push * (mv.big ? 0.5 : 0.85);     // 大招被挡时推开得少：收招破绽可被反击
+        else { this.setState(o, 'guardstun'); o.stun = parry ? 0.1 : (0.12 + mv.stun * 0.35) * o.stunK; }
+        o.vx = dir * mv.push * (parry ? 0.15 : mv.big ? 0.5 : 0.85);     // 大招被挡时推开得少：收招破绽可被反击；格开几乎不退、立刻能还手
         o.rage = Math.min(100, o.rage + 2 + dmg);
         f.rage = Math.min(100, f.rage + 1.5);
       } else {
@@ -738,12 +746,44 @@
       this.chargeTo = 0; this.backUntil = 0;
       this.stunSeq = -1; this.stunGuard = false; this.stunHold = 0;
       this.aa = null; this.punSeq = -1; this.pokeAt = 0; this.lastGuarded = 0; this.zone = false; this.caut = false; this.cautAt = 0; this.patSeq = -1; this.patient = false;
+      // 读招：识破连按 / 不看命中的固定连段。武力 40 以下不会，越高越准
+      this.rk = M.clamp((me.war - 40) / 40, 0, 0.85);   // 武力 40 → 0、60 → 0.5、74 以上 → 0.85
+      this.mash = 0.3;                   // 对手「没打中也照样连下去」的倾向（指数平均，0..1）
+      this.oSeq = -1; this.oState = ''; this.oHit = false;
+      this.parryT = -1; this.ctrSeq = -1; this.mzAt = 0;
+    }
+    // 识破程度 0..1：武力 × 对手连按的证据
+    read(foe) { return this.rkVs(foe) * this.mashN(); }
+    mashN() { return M.clamp((this.mash - 0.5) / 0.3, 0, 1); }   // 连按证据：0.5 以下视为正常打法
+    // 对手武力高出越多（出招越快越难看清），读招越不灵；武力 85 以上的名将连按起来也快而难读
+    rkVs(foe) { return this.rk * M.clamp(1 + (this.me.war - foe.war) / 30, 0, 1) * (1 - 0.35 * M.clamp((foe.war - 85) / 15, 0, 1)); }
+    // 识破连按时不在对手的攻击距离里抢攻（对手一进距离就会挥刀，抢攻只会被打断）→ 改为举防，等他打完再还手
+    holdOff(sim, seen, rd) {
+      const me = this.me, foe = sim.other(me);
+      if (rd <= 0 || !seen || seen.phase === 'recovery' || !(seen.state === 'walk' || seen.state === 'idle' || seen.state === 'dash' || ATTACKS.has(seen.state))) return false;
+      if (Math.abs(foe.x - me.x) > foe.reach * MOVES.light1.reachK + BODY * 0.5 + 0.25 || rnd() >= rd * 0.6) return false;
+      this.guardUntil = Math.max(this.guardUntil, sim.clock + 0.25 + rnd() * 0.25); this.held.guard = true; this.held.x = 0; this.planX = 0;
+      return true;
+    }
+    // 观察对手的出招习惯（记忆而非反应：只统计已发生的动作）
+    observe(sim) {
+      const me = this.me, foe = sim.other(me);
+      if (MOVES[foe.state] && foe.hitIdx > 0 && (me.state === 'hitstun' || me.state === 'knockdown')) this.oHit = true;
+      if (foe.seq === this.oSeq) return;
+      const prev = this.oState;
+      if ((prev === 'light1' || prev === 'light2') && !this.oHit) {
+        // 上一段挥空 / 被挡：接着出下一段 = 不看命中的连按；停手 = 有判断
+        if (foe.state === MOVES[prev].next) this.mash += (1 - this.mash) * 0.3; else this.mash -= this.mash * 0.12;
+      }
+      if (foe.state === 'light1' && me.state !== 'hitstun' && Math.abs(foe.x - me.x) > foe.reach * MOVES.light1.reachK + BODY * 0.5 + 0.08) this.mash += (1 - this.mash) * 0.12;   // 够不着也出手
+      this.oSeq = foe.seq; this.oState = foe.state; this.oHit = false;
     }
     press(k) { this.taps[k] = (this.taps[k] || 0) + 1; }
     // 重击：同时按住，蓄力到 to 秒后松开（只点按会被当作轻点重击）
     heavy(to) { this.press('heavy'); this.held.heavy = true; this.chargeTo = to; }
 
     update(dt, sim) {
+      this.observe(sim);
       this.think(dt, sim);
       // 逼近过滤：向前走将进入对手的攻击距离、而对手正在逼近或出招时，高武力改为举防停步（不硬闯）
       const me = this.me, foe = sim.other(me), H = this.held, T = this.taps;
@@ -772,7 +812,27 @@
       H.heavy = false;
       // 受击 / 被挡 / 倒地：高武力会按住格挡，一恢复就举防（并有机会格开弱者的连段）
       if (me.state === 'hitstun' || me.state === 'guardstun' || me.state === 'guardbreak' || me.state === 'knockdown' || me.state === 'down' || me.state === 'getup') {
-        if (this.stunSeq !== me.seq) { this.stunSeq = me.seq; this.stunGuard = rnd() < this.stunGuardP; this.stunHold = 0.1 + rnd() * 0.22; }
+        if (this.stunSeq !== me.seq) {
+          this.stunSeq = me.seq; this.stunGuard = rnd() < this.stunGuardP; this.stunHold = 0.1 + rnd() * 0.22;
+          // 格开：看破对手会接下一段（第三段最常见），算准下一击打到的时刻按下格挡；武力越高拿捏越准
+          this.parryT = -1;
+          const cur = MOVES[foe.state];
+          const rk = this.rkVs(foe);
+          if (me.state === 'hitstun' && me.grounded && foe.state === 'light2' && rk > 0) {
+            const outK = 1 + 2 * M.clamp((foe.reach - me.reach) / 0.25, 0, 1);   // 兵器较短、近不了身：更要靠格开
+            if (rnd() < rk * (0.015 + 0.285 * this.mashN()) * outK) {
+              const T = now + (Math.max(0, cur.startup + cur.active * 0.6 - foe.t) + MOVES[cur.next].startup) / foe.spd;
+              this.parryT = T - PARRY_WIN * 0.55 + (rnd() * 2 - 1) * (0.02 + 0.09 * (1 - s));
+            }
+          }
+        }
+        // 挡下 / 格开对手的连段末段或重击：记下，硬直一结束就反击其收招破绽
+        if (me.state === 'guardstun' && this.ctrSeq !== foe.seq && (foe.state === 'light3' || foe.state === 'heavy') && rnd() < this.punishP * this.rkVs(foe) * (0.125 + 0.375 * this.read(foe))) this.ctrSeq = foe.seq;
+        if (this.parryT > 0 && me.state === 'hitstun') {
+          H.guard = now >= this.parryT; H.x = 0;
+          if (H.guard) this.guardUntil = Math.max(this.guardUntil, now + this.stunHold);
+          return;
+        }
         H.guard = this.stunGuard; H.x = 0;
         if (this.stunGuard) this.guardUntil = Math.max(this.guardUntil, now + this.stunHold);
         return;
@@ -783,7 +843,10 @@
         const mv = MOVES[me.state];
         if (!this.comboDone && (me.hitIdx > 0 || me.t >= mv.startup + mv.active)) {   // 命中即确认；挥空则在判定结束时决定
           const landed = me.hitIdx > 0 && foe.state === 'hitstun';
-          const go = landed ? this.comboRoll < this.comboP : this.comboRoll < this.comboP * (1 - s) * 0.6;
+          // 对手被打退后还够不够得着下一段（够不着就别接，免得挥空露破绽；武力越高越会算）
+          const away = foe.vx * me.face > 0 ? foe.vx * foe.vx / (2 * FRICTION) : 0;
+          const reachOk = dist + away <= me.reach * MOVES[mv.next].reachK + BODY * 0.5 + 0.03 + (MOVES[mv.next].lunge || 0) * 0.12;
+          const go = landed ? this.comboRoll < this.comboP && (reachOk || rnd() > s) : this.comboRoll < this.comboP * (1 - s) * 0.6;
           if (go) this.press('light');
           this.comboDone = true;
         }
@@ -798,6 +861,20 @@
         const mv = MOVES[me.state];
         const left = mv ? (mv.startup + mv.active + mv.recovery - me.t) / (me.state === 'special' ? 1 : me.spd) : 0;
         if (rnd() < 0.1 + 0.7 * s) this.guardUntil = Math.max(this.guardUntil, now + left + 0.18 + rnd() * 0.25);
+      }
+      // 反击：刚挡下 / 格开的大招还在收招（按招式节奏算好来得及）
+      if (this.ctrSeq >= 0 && free) {
+        const fm = MOVES[foe.state];
+        if (this.ctrSeq === foe.seq && fm && foe.phase === 'recovery') {
+          const left = (fm.startup + fm.active + fm.recovery - foe.t) / foe.spd;
+          const need = MOVES.light1.startup / me.spd + (dist <= reach ? 0 : 0.07 + (dist - reach) / 7.4);
+          if (left > need - 0.02 && dist <= reach + 1.1) {
+            this.ctrSeq = -1; this.guardUntil = 0; H.guard = false;
+            if (dist <= reach) { this.press('light'); H.x = 0; return; }
+            H.dash = me.face; this.press('light'); return;
+          }
+        }
+        if (this.ctrSeq !== foe.seq || !fm) this.ctrSeq = -1;
       }
       // 对手被破防：立即追击
       if (foe.state === 'guardbreak' && free && foe.t < foe.stun - MOVES.light1.startup / me.spd) {
@@ -843,8 +920,11 @@
         const threat = Math.abs(seen.x - me.x) <= foe.reach + BODY + 0.5;
         if (threat && rnd() < this.guardP) this.guardUntil = now + 0.2 + rnd() * 0.25;
       }
-      // 看见对手收招破绽（挥空 / 被挡）：抢攻，距离稍远则冲刺斩
-      if (seen && seen.phase === 'recovery' && seen.state !== 'air' && seen.seq !== this.punSeq && free && dist <= reach + 1.1) {
+      // 看见对手收招破绽（挥空 / 被挡）：抢攻，距离稍远则冲刺斩。识破连按时早有准备，反应更快
+      const rd = this.read(foe);
+      const seenR = rd > 0 ? sim.seen(foe.idx, this.react * (1 - 0.25 * rd)) : seen;
+      if (seenR && seenR.phase === 'recovery' && seenR.state !== 'air' && seenR.seq !== this.punSeq && free && dist <= reach + 1.1) {
+        const seen = seenR;
         this.punSeq = seen.seq;
         // 对手收招还剩多少时间（熟知招式节奏）：来不及冲过去就不冒险
         const fm = MOVES[foe.state];
@@ -856,6 +936,21 @@
           H.dash = me.face; this.press('light'); return;
         }
       }
+      // 识破连按：对手一进入其攻击距离就会乱挥 → 预判举防等他打完，或后撤（冲刺）让他挥空，再抓收招
+      if (rd > 0 && seen && free && now >= this.mzAt) {
+        const foeR = foe.reach * MOVES.light1.reachK + BODY * 0.5;
+        const busy = seen.phase === 'recovery' || seen.state === 'hitstun' || seen.state === 'guardstun' || seen.state === 'guardbreak' ||
+          seen.state === 'knockdown' || seen.state === 'down' || seen.state === 'getup' || seen.state === 'land';
+        if (!busy && dist < foeR + 0.5) {
+          this.mzAt = now + 0.3 + rnd() * 0.2;
+          const r = rnd(), room = Math.abs(me.x - me.face * 1.6) < ARENA - 0.3;
+          if (r < rd * 0.6 && room && me.state !== 'guard') {     // 后撤半步：他够不着照样挥，挥空就抓
+            this.guardUntil = 0; H.guard = false;
+            this.backUntil = now + 0.14 + rnd() * 0.14; H.x = -me.face; return;
+          }
+          if (r < rd * 0.735) { this.guardUntil = Math.max(this.guardUntil, now + 0.3 + rnd() * 0.35); }
+        }
+      }
       // 迎击：按看到的对手位置与速度预判，对手将进入自己的攻击距离时抢先出手（兵器长者占便宜）
       if (seen && sim.actionable(me) && now >= this.pokeAt && (seen.state === 'walk' || seen.state === 'dash' || seen.state === 'idle')) {
         const prev = sim.seen(foe.idx, this.react + 0.05);
@@ -864,7 +959,7 @@
         const pd = Math.abs(seen.x + vx * (this.react + lead) - (me.x + me.vx * lead * 0.3));
         if (pd <= reach) {
           this.pokeAt = now + 0.3;
-          if (rnd() < this.pokeP) { this.press('light'); H.x = 0; this.planX = 0; return; }
+          if (rnd() < this.pokeP) { if (this.holdOff(sim, seen, rd)) return; this.press('light'); H.x = 0; this.planX = 0; return; }
         }
       }
       // 看见对手蓄力：高武力抢攻（反击判定）或后撤，低武力傻站
@@ -950,6 +1045,7 @@
       if (foeTurtles && rnd() < 0.25 + 0.4 * s) { this.heavy(CHARGE_MAX + 0.05); return; }
       const r = rnd();
       if (r < this.aggr) {
+        if (this.holdOff(sim, seen, rd)) return;
         if (rnd() < 0.74) this.press('light');
         else this.heavy(0.12 + rnd() * (0.25 + 0.45 * s));
       } else if (r < this.aggr + 0.3) {

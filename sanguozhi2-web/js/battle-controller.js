@@ -132,6 +132,7 @@
       rig.bounds = { xMin: O.x, yMin: O.z, xMax: O.x + Mdl.W * T, yMax: O.z + Mdl.H * T };
       rig.minDist = 12; rig.maxDist = 62;
       rig.focusWorld(V.boardCenter.clone().sub(SG.U(0, 0, 2)), 40, true);
+      this.portraitOpening(rig, V, Mdl);
       rig.onTap.push(this._onTap);
       // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
       const oldCulture = SG.Sfx ? SG.Sfx.culture : null;
@@ -187,6 +188,45 @@
         try { if (SG.Sfx && oldCulture) SG.Sfx.culture = oldCulture; } catch (e) { /* 无音频 */ }
         music('map');   // 胜负短曲未奏完时由 audio.js 暂缓（HOLD_AFTER_ONE_SHOT），曲终再接地图曲
       }
+    }
+
+    // 竖屏（视口高大于宽）开场镜头：横向视野窄，全局视角只看得到战场中段（往往只有敌军）。
+    // 两军能一起框进来（距离不太远）就框两军，否则先框住玩家自己的部队（观战时为攻方），余下视野朝向敌军
+    portraitOpening(rig, V, Mdl) {
+      const cam = SG.Gfx && SG.Gfx.camera;
+      const aspect = cam && cam.aspect > 0 ? cam.aspect : window.innerWidth / Math.max(1, window.innerHeight);
+      if (aspect >= 1 || typeof rig.fitRect !== 'function' || typeof rig.fitDistance !== 'function') return false;
+      const T = SG.BattleView.T;
+      const rectOf = units => {
+        const r = { xMin: Infinity, yMin: Infinity, xMax: -Infinity, yMax: -Infinity };
+        for (const u of units) {
+          const p = V.tile(u.x, u.y);                       // three 坐标 → 地图坐标（x, −z）
+          r.xMin = Math.min(r.xMin, p.x); r.xMax = Math.max(r.xMax, p.x);
+          r.yMin = Math.min(r.yMin, -p.z); r.yMax = Math.max(r.yMax, -p.z);
+        }
+        // 留出一格边距；竖屏上下有顶栏与按钮，纵向再多留一些
+        r.xMin -= T * 1.3; r.xMax += T * 1.3; r.yMin -= T * 1.4; r.yMax += T * 1.1;
+        return r;
+      };
+      const all = Mdl.alive(0).concat(Mdl.alive(1));
+      if (!all.length) return false;
+      const both = rectOf(all);
+      if (rig.fitDistance(both) <= rig.maxDist * 0.85) { rig.fitRect(both, true); return true; }
+      const mine = Mdl.alive(this.playerSide === 1 ? 1 : 0), foes = Mdl.alive(this.playerSide === 1 ? 0 : 1);
+      if (!mine.length) return false;
+      // 框住我军，距离不近于横屏开场（40），我军靠在画面一侧、其余视野朝向敌军
+      const own = rectOf(mine);
+      const d = M.clamp(Math.max(40, rig.fitDistance(own)), rig.minDist, rig.maxDist);
+      const fov = (cam && cam.fov ? cam.fov : 34) * M.deg2rad;
+      const wVis = d * 2 * Math.tan(fov / 2) * aspect / 1.05;
+      const ox = (own.xMin + own.xMax) / 2, bx = (both.xMin + both.xMax) / 2;
+      let ex = ox;
+      if (foes.length) { ex = 0; for (const u of foes) ex += V.tile(u.x, u.y).x; ex /= foes.length; }
+      const dir = ex >= ox ? 1 : -1;
+      let cx = (dir > 0 ? own.xMin : own.xMax) + dir * wVis / 2;
+      cx = dir > 0 ? M.clamp(cx, ox, Math.max(ox, bx)) : M.clamp(cx, Math.min(ox, bx), ox);
+      rig.focusMap(cx, (own.yMin + own.yMax) / 2, d, true);
+      return true;
     }
 
     // ---------------------------------------------------------- 界面 --

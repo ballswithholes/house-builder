@@ -128,8 +128,8 @@
       });
     }
     get flying() { return !!this._fly; }
-    // 对准矩形中心，并选择能看到整个矩形的距离（按当前视口宽高比与俯角估算）
-    fitRect(r, instant) {
+    // 能看到整个矩形（地图坐标）所需的镜头距离（按当前视口宽高比与俯角估算，未按 minDist / maxDist 限制）
+    fitDistance(r) {
       const cam = this.camera;
       const aspect = cam && cam.aspect > 0 ? cam.aspect : 16 / 9;
       const fov = (cam && cam.fov ? cam.fov : 34) * M.deg2rad;
@@ -137,7 +137,11 @@
       const pitch = (this.pitch + 4) * M.deg2rad;
       const dH = h * Math.sin(pitch) / (2 * Math.tan(fov / 2)) * 1.05;
       const dW = w / (2 * Math.tan(fov / 2) * aspect) * 1.05;
-      const d = M.clamp(Math.max(dH, dW), this.minDist, this.maxDist);
+      return Math.max(dH, dW);
+    }
+    // 对准矩形中心，并选择能看到整个矩形的距离（按当前视口宽高比与俯角估算）
+    fitRect(r, instant) {
+      const d = M.clamp(this.fitDistance(r), this.minDist, this.maxDist);
       const cx = (r.xMin + r.xMax) / 2, cy = (r.yMin + r.yMax) / 2;
       if (instant) this.focusMap(cx, cy, d, true);
       else return this.flyTo(cx, cy, d);

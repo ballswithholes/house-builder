@@ -16,3 +16,7 @@
 .vs/
 .idea/
 .DS_Store
+
+# Tests~：NuGet 引用程序集（Tests~/build.sh 自动下载）与编译输出
+/Tests~/refs/
+/Tests~/out/

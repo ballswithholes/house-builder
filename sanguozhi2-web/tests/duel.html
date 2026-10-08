@@ -186,6 +186,8 @@
     };
     // 人机强度回归：模拟玩家的脚本（固定节奏、无反应延迟）对战真实电脑，检查「武力决定胜负、强将难以取巧」
     //   jumper：反复跳入空中斩（旧版漏洞：武力 30 能赢武力 100）；masher：走近连按轻击
+    //   连按对同武力 72–76 的电脑平均 ≤ 45%（电脑会看破：预判举防、后撤诱空、格开第三段、抓收招），武力 ≤ 40 仍好欺负
+    //   （Node 版更完整的矩阵：node tests/duel-bots.js）
     const botCtl = kind => {
       const c = { held: { x: 0, up: false, light: false, heavy: false, guard: false, special: false, dash: 0 }, taps: { light: 0, up: 0, special: 0, heavy: 0, dir: 0 } };
       let nt = 0;
@@ -206,11 +208,12 @@
       return c;
     };
     window.botTally = function (n) {
-      n = n || 24;
+      n = n || 40;
       const D = SG.DuelGame, rows = [];
       const cases = [
         ['jumper', '孙乾', '吕布', 0, 10], ['jumper', '刘备', '吕布', 0, 40], ['jumper', '关羽', '关羽', 0, 75],
         ['masher', '孙乾', '吕布', 0, 10], ['masher', '刘备', '吕布', 0, 40], ['masher', '关羽', '关羽', 5, 75], ['masher', '张飞', '刘备', 60, 100],
+        ['masher', '孙乾', '孙乾', 75, 100], ['masher', '刘备', '刘备', 0, 55], ['masher', '曹操', '曹操', 0, 55], ['masher', '郭汜', '潘凤', 0, 60],
       ];
       let ok = true;
       for (const [kind, p, a, lo, hi] of cases) {
@@ -227,6 +230,11 @@
         rows.push({ kind, p, a, pct, lo, hi, pass });
         log(`${pass ? '✓' : '✗'} ${kind} 玩家 ${p}(${P.war}) 对 电脑 ${a}(${A.war})：玩家胜 ${pct}%（期望 ${lo}–${hi}%）`);
       }
+      const midW = r => { const wp = byName(r.p).war, wa = byName(r.a).war; return wp === wa && wa >= 72 && wa <= 76; };
+      const mid = rows.filter(r => r.kind === 'masher' && midW(r)), midAvg = mid.reduce((t, r) => t + r.pct, 0) / mid.length;
+      const midOk = midAvg <= 45;
+      if (!midOk) ok = false;
+      log(`${midOk ? '✓' : '✗'} 连按对同武力 72–76 电脑平均 ${Math.round(midAvg)}%（期望 ≤ 45%）`);
       log(ok ? '人机强度：全部通过' : '人机强度：有未通过项');
       return { ok, rows };
     };
