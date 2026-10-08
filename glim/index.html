@@ -72,8 +72,9 @@ svg.i{width:22px;height:22px;fill:currentColor;flex:none}
 .abchip .rg circle{stroke:rgba(30,20,40,.14)}.abchip .rg .p{stroke:currentColor;stroke-dasharray:97.4;stroke-dashoffset:0;stroke-linecap:round}
 .abchip b{position:absolute;right:-7px;bottom:-5px;min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;border-radius:9px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:800;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
 .abchip b:empty{display:none}.abchip.lit{background:var(--amber-hot)}
-/* the flyer's chip row (up to 3, bound at run start): spent Rekindle shows an ash glyph; Pull shimmers while it pulls */
-#abRow{display:flex;gap:6px}
+/* the flyer's chips (up to 3, bound at run start), stacked under the power-up pills in the 36 px left gutter, clear of the flyer's
+   column: spent Rekindle shows an ash glyph; Pull shimmers while it pulls */
+#abRow{display:flex;flex-direction:column;gap:6px}
 .abchip.spent .g{opacity:.45}.abchip.spent .rg .p{stroke:transparent}
 .abchip::after{content:'';position:absolute;inset:-3px;border-radius:21px;border:2px solid #9BE7FF;opacity:0;pointer-events:none}
 .abchip.pull::after{animation:pullsh .8s ease-in-out infinite alternate}
@@ -86,6 +87,7 @@ svg.i{width:22px;height:22px;fill:currentColor;flex:none}
 #meterFull{position:absolute;inset:0;background:#FFF4E0;opacity:0;border-radius:6px}
 #meterWrap.full #meterFull{animation:mfull .45s ease-in-out infinite alternate}
 @keyframes mfull{from{opacity:0}to{opacity:.6}}
+@media (max-width:399px){#motePill{transform:scale(.8);transform-origin:0 50%}}@media (max-width:359px){#score{font-size:44px}}
 #rotChip{left:50%;top:calc(var(--st) + 112px);transform:translateX(-50%);padding:8px 14px;border-radius:16px;background:var(--paper);font-size:13px;font-weight:700;opacity:0;transition:opacity .6s;white-space:nowrap}
 .hid{display:none!important}
 /* panels */
@@ -111,13 +113,18 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 #titleUI{position:absolute;inset:0;transition:opacity .2s}
 #titleUI.off{opacity:0;visibility:hidden}
 #dailyChip{position:absolute;right:var(--sr);top:var(--st);height:48px;border-radius:24px!important;padding:0 14px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:20px}
+@media (max-width:359px){#dailyChip{max-width:120px;padding:0 10px;letter-spacing:0;line-height:15px}} /* 'DAILY · LOW / GRAVITY', clear of the logo's flame */
 #titleBottom{position:absolute;left:var(--sl);right:var(--sr);bottom:var(--sb);display:flex;flex-direction:column;align-items:center;gap:14px}
+/* the next flyer and how close it is (portrait only: in landscape it would cover 'tap to fly') */
+#tNext{align-self:center;max-width:100%;box-sizing:border-box;min-height:48px;margin-bottom:-6px;padding:4px 16px;border-radius:24px;font-size:14px;font-weight:800;line-height:18px;text-align:center}
+@media (max-height:520px){#tNext{display:none!important}}
 #missionStrip{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;font-size:15px;max-width:100%;box-sizing:border-box}
 #missionStrip .badge{background:var(--thorn);color:#fff;border-radius:10px;padding:1px 7px;font-size:13px}
 #chipRow{display:flex;align-items:center;gap:14px}
 #shopBtn{position:relative}#shopBtn.dot::after{content:'';position:absolute;right:5px;top:5px;width:12px;height:12px;border-radius:6px;background:var(--ember);box-shadow:0 0 0 2px var(--paper)}
 #bestPill{height:56px;border-radius:28px;padding:0 18px;display:flex;align-items:center;gap:8px;font-weight:800;font-variant-numeric:tabular-nums}
 #bestPill canvas{width:30px;height:30px}
+@media (max-width:359px){#chipRow{gap:8px}#bestPill{padding:0 12px;gap:6px}}
 /* results */
 #results{left:0;right:0;bottom:0;top:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
 #results .sheet{position:relative;width:100%;max-width:420px;max-height:calc(100% - var(--st) - 8px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--paper);border-radius:24px 24px 0 0;box-shadow:0 -4px 0 rgba(30,20,40,.2);padding:16px var(--sr) var(--sb) var(--sl);transform:translateY(100%);transition:transform .32s cubic-bezier(.3,1.35,.5,1)}
@@ -133,6 +140,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .small{font-size:14px;opacity:.75}
 .bar{height:8px;border-radius:4px;background:rgba(30,20,40,.12);overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--amber);border-radius:4px;transform-origin:0 50%}
 .mdone{display:flex;align-items:center;gap:8px;font-size:15px;margin-top:4px}
+.mdone.unseal{font-size:14px;font-weight:800;padding:1px 8px;margin:6px 0 2px;border-radius:10px}.mdone.unseal svg{width:20px;height:20px;flex:none}
 .chk{width:18px;height:18px;border-radius:9px;background:var(--mint);position:relative;flex:none}
 .chk::after{content:'';position:absolute;left:6px;top:3px;width:4px;height:8px;border:solid var(--ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 #rCont{position:relative;overflow:hidden}
@@ -155,6 +163,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 @media (max-height:520px){.scard{padding:10px 14px;gap:6px}.scard canvas{width:100px;height:100px}.seg{margin-top:6px}}
 @media (max-height:600px) and (orientation:portrait){.scard{padding:12px 14px;gap:6px}.scard canvas{width:96px;height:96px}}
 @media (max-height:360px){.seg{margin-top:2px;padding:2px}.shead h2{font-size:24px}} /* Safari landscape with the tab bar (852x342) */
+@media (max-height:520px) and (orientation:landscape){.seg{position:absolute;top:var(--st);left:calc(var(--sl) + 120px);right:calc(var(--sr) + 200px);margin:0;padding:0;background:#2C2236}} /* landscape: the tabs share the header row */
 /* flyers: a vertical grid of tier sections (4 tiles a row; landscape: two tiers a band, 8 columns) */
 #flyGrid{position:relative;flex:1;min-height:0;box-sizing:border-box;width:100%;max-width:calc(min(100vw,480px));margin:0 auto;padding:6px var(--sr) 12px var(--sl)}
 .fcount{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.7;margin:4px 0 2px}
@@ -164,11 +173,12 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .th svg{width:20px;height:20px;flex:none}
 .th .tn{font-size:13px;font-weight:800;letter-spacing:.12em;white-space:nowrap}
 .th .to{margin-left:auto;font-size:13px;font-weight:700;opacity:.75;font-variant-numeric:tabular-nums}
-.th .op{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tc);border:1.5px solid var(--tc);border-radius:6px;padding:0 6px;line-height:18px;transform:rotate(-3deg)}
+.th .op{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tc);border:1.5px solid var(--tc);border-radius:6px;padding:0 6px;line-height:18px;transform:rotate(-3deg);margin-right:3px}
 .tier.shine .th::after{content:'';position:absolute;left:-40%;bottom:-2px;width:40%;height:4px;background:linear-gradient(90deg,transparent,#FFF4E0,transparent);animation:shine .6s ease-out 1 forwards}
 @keyframes shine{to{left:110%}}
 .sealBtn{display:flex;align-items:center;gap:6px;width:100%;min-height:48px;margin-top:4px;padding:0 10px;border-radius:12px;background:rgba(255,244,224,.08);color:var(--paper);font-size:13px;font-weight:700;text-align:left}
 .sealBtn svg{width:16px;height:16px;flex:none;color:var(--tc)}.sealBtn span{flex:1;min-width:0}
+.sealBtn svg:last-child{transition:transform .18s var(--ease)}.sealBtn[aria-expanded=true] svg:last-child{transform:rotate(90deg)}
 .sealCard{margin-top:6px;padding:10px 12px;border-radius:12px;background:var(--paper);color:var(--ink)}
 .ur{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;margin-top:6px}.ur:first-child{margin-top:0}.ur b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .ur+.bar,.sealCard .bar{height:5px;margin-top:3px}
@@ -182,12 +192,14 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .tile.eq::before{content:'';position:absolute;right:0;top:0;width:22px;height:22px;background:#FFE08A;border-radius:0 16px 0 10px}
 .tile.eq::after{content:'';position:absolute;right:6px;top:4px;width:5px;height:9px;border:solid var(--ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 .tile.buy,.tile.save,.tile.seal{background:radial-gradient(circle at 50% 40%,#FFF4E0,#E2CFAE);color:var(--ink)}
+.tile.buy canvas,.tile.save canvas{background:radial-gradient(circle at 50% 45%,#3A2A4A,#1E1428 72%);border-radius:14px} /* a dark window: the halo and light art read as in play */
 .tile.buy .st{color:#A8501A}.tile.save canvas{opacity:.8}.tile.save .st{opacity:.6}
 .tile.buy::before{content:'';position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 2px #FFB347,inset 0 0 14px rgba(255,179,71,.7);opacity:0;animation:tpulse 1.6s ease-in-out infinite alternate;pointer-events:none}
 @keyframes tpulse{to{opacity:1}}
 .tile .new{position:absolute;left:5px;top:5px;padding:0 4px;border-radius:6px;background:var(--ember);color:#fff;font-size:13px;font-weight:800;line-height:16px}
 .tile .pb{position:absolute;left:10px;right:10px;bottom:4px;height:3px;border-radius:2px;background:rgba(30,20,40,.15);overflow:hidden}
 .tile .pb i{display:block;height:100%;background:var(--tc);transform-origin:0 50%}
+@media (max-width:359px){#flyGrid{padding-left:12px;padding-right:12px}.tiles{gap:6px}.tile .nm{white-space:normal;line-height:15px;text-align:center}}
 .tile.seal .st{opacity:.75}.tile .st svg{width:12px;height:12px;margin-right:3px;vertical-align:-1px}
 .tile.bought canvas{animation:stamp .4s var(--ease)}
 .tile.bought::after{content:'';position:absolute;left:50%;top:38px;width:20px;height:20px;margin:-10px;border-radius:50%;background:var(--gc,#FFE08A);opacity:0;animation:burst .5s ease-out 1}
@@ -210,12 +222,14 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .fdSky{display:flex;gap:6px;justify-content:center}
 .fdSky button{width:48px;height:48px;border-radius:24px;padding:0;box-shadow:inset 0 0 0 2px rgba(30,20,40,.25)}
 .fdSky button[aria-pressed=true]{box-shadow:inset 0 0 0 3px var(--ink),0 0 0 2px #FFE08A}
+@media (max-width:359px){.fdT .tw{display:none}}
 #fdName{font-size:22px;font-weight:800;margin-top:6px;text-align:center}
 #fdConcept{font-size:15px;line-height:1.3;text-align:center;opacity:.85}
 .lad{display:flex;justify-content:center;align-items:center;gap:6px;margin:10px 0 2px}
 .lad span{display:flex;align-items:center;gap:2px}
 .lad i{width:7px;height:12px;border-radius:2px;background:rgba(30,20,40,.14)}
 .lad i.on{background:var(--tc);box-shadow:inset 0 0 0 1px rgba(30,20,40,.3)}.lad i.me{width:10px;height:18px;box-shadow:0 0 0 1.5px var(--ink)}
+.lad span:first-child i.on{background:#CDB892}
 .lad i.p6.on{background:linear-gradient(180deg,#9BE7FF,#FF9BC8,#FFE08A,#7FE0B5)}
 .trs{margin-top:6px}
 .trow{display:flex;gap:10px;align-items:flex-start;margin-top:8px}
@@ -226,8 +240,10 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .fbars div{flex:1;font-size:13px;font-weight:700;opacity:.8}.fbars b{display:block;height:6px;border-radius:3px;background:rgba(30,20,40,.12);margin-top:3px;overflow:hidden}
 .fbars b i{display:block;height:100%;border-radius:3px;background:var(--ink);transform-origin:0 50%}
 #fdUnlock{margin-top:10px}
+#fdUnlock .uh{font-size:14px;font-weight:800;margin-bottom:4px}
 #fdUnlock .pr{font-size:14px;font-weight:700;opacity:.5;text-align:center;margin-top:6px}
-#fdAct{width:100%;margin-top:10px}
+.fdFoot{position:sticky;bottom:calc(-1 * var(--sb));z-index:1;background:var(--paper);margin:10px calc(-1 * var(--sr)) calc(-1 * var(--sb)) calc(-1 * var(--sl));padding:8px var(--sr) var(--sb) var(--sl);box-shadow:0 -10px 12px -6px rgba(30,20,40,.12)}
+#fdAct{width:100%}
 #fdAct.poor,#fdAct:disabled{opacity:.6}
 #fdAct.eq{background:var(--mint)}
 @media (max-height:520px){
@@ -235,7 +251,9 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
  .tiers{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px}
  .tile{min-height:96px}
  #fd{left:auto;top:0;width:320px;max-width:none;max-height:none;border-radius:24px 0 0 24px;padding:8px var(--sr) 12px 16px;transform:translateX(100%)}
- #fdCv{width:140px;height:140px}.fdT .tw{display:none}}
+ #fdCv{width:140px;height:140px}.fdT .tw{display:none}
+ .fdFoot{bottom:-12px;margin-bottom:-12px;padding-bottom:12px;margin-left:-16px;padding-left:16px}}
+@media (max-height:600px) and (orientation:portrait){#fdCv{width:150px;height:150px}}
 .scard .chip.primary{background:var(--amber)}
 .scard.cen canvas{animation:bob 1.6s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translateY(-6px)}to{transform:translateY(6px)}}
@@ -253,7 +271,7 @@ h2{margin:0 0 12px;font-size:28px;font-weight:700;text-align:center}
 .mrow .t{display:flex;justify-content:space-between;gap:8px}
 .mrow .rw{display:inline-flex;align-items:center;gap:3px;font-weight:800}
 #toast{position:fixed;left:0;right:0;top:calc(var(--st) + 146px);z-index:4;display:flex;justify-content:center;pointer-events:none}
-#toast .pill{height:auto;min-height:36px;padding:6px 14px;transform:translateY(-12px);opacity:0;transition:transform .24s var(--ease),opacity .24s}
+#toast{padding:0 var(--sr) 0 var(--sl)}#toast .pill{max-width:100%;box-sizing:border-box;text-align:center;font-size:15px;line-height:20px;height:auto;min-height:36px;padding:6px 14px;transform:translateY(-12px);opacity:0;transition:transform .24s var(--ease),opacity .24s}
 #toast.on .pill{transform:none;opacity:1}
 #toast.inshop{top:calc(var(--st) + 60px)}@media (max-height:360px){#toast.inshop{top:calc(var(--st) + 52px)}} /* in the shop: over the Flyers / Trails switch, clear of the tiles */
 #crash{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:var(--scrim);padding:24px}
@@ -311,6 +329,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
  <div id="titleUI">
   <button id="dailyChip" class="chip pe" aria-label="Daily challenge">DAILY</button>
   <div id="titleBottom">
+   <button id="tNext" class="chip pe"></button>
    <button id="missionStrip" class="chip pe" aria-label="Missions"><svg class="i"><use href="#i-list"/></svg><span id="msText">Next mission</span></button>
    <div id="chipRow">
     <button id="shopBtn" class="chip rbtn pe" aria-label="Shop"><svg class="i"><use href="#i-bag"/></svg></button>
@@ -330,7 +349,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
   <div class="rhead"><canvas id="rMedal" width="144" height="144"></canvas><div style="flex:1;min-width:0"><div id="rHeading">Nice flying!</div><div class="cap small" id="rRun">Run #1</div></div></div>
   <div style="display:flex;align-items:baseline;gap:10px"><div id="rScore">0</div><div class="cap small">score</div><span id="rNew" class="hid">NEW BEST</span></div>
   <div class="stats" id="rStats"></div>
-  <div class="small" id="rBiome"></div>
+  <div id="rUnseal"></div><div class="small" id="rBiome"></div>
   <div class="small mt" id="rNext"></div><div class="bar"><i id="rNextBar"></i></div>
   <div class="small mt" id="rUnlock"></div>
   <div id="rMissions"></div>
@@ -356,7 +375,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
     <div class="trs" id="fdTraits"></div>
     <div class="fbars" id="fdBars"></div>
     <div id="fdUnlock"></div>
-    <button id="fdAct" class="chip btn primary">Flying</button>
+    <div class="fdFoot"><button id="fdAct" class="chip btn primary">Flying</button></div>
    </div></div>
  </div>
  <div id="settings" class="panel center"><div class="scrim"></div><div class="card vscroll">
@@ -369,7 +388,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
   <div class="cap small mt">Sound follows your silent switch</div>
   <div class="cap small mt" style="opacity:.6">Stats</div><div class="slist" id="statList"></div>
   <button id="resetBtn" class="chip btn danger mt" style="width:100%">Reset progress</button>
-  <div class="small mt" style="text-align:center" id="verTxt">Glim v2.0.0</div>
+  <div class="small mt" style="text-align:center" id="verTxt">Glim v2.1.0</div>
  </div></div>
  <div id="missions" class="panel center"><div class="scrim"></div><div class="card vscroll">
   <div style="display:flex;align-items:center"><h2 style="flex:1;margin:0;text-align:left">Missions</h2><button class="chip xbtn closeP" aria-label="Close missions"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -382,7 +401,7 @@ body.rm .panel,body.rm .panel.open{transform:none!important}
 <script>
 'use strict';
 /* ===================== Const / Util ===================== */
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 const CONST = Object.freeze({
   STEP: 1 / 120, GRAVITY: 2600, APEX_VY: 150, APEX_MUL: 0.6, FLAP_VY: -760, MAX_FALL: 1050,
   H: 1000, CEIL: 30, FLOOR: 920, START_Y: 440, R: 17, R_VIS: 22, SHRINK: 0.6, GATE_W: 100, COL_HALF: 46, INSET: 4,
@@ -468,7 +487,8 @@ const Save = (() => {
   }
   function validate(s) {
     const strs = (a, must) => { const r = a.filter(x => typeof x === 'string'); if (r.indexOf(must) < 0) r.unshift(must); return r.filter((x, i) => r.indexOf(x) === i); };
-    const fly = x => typeof x === 'string' ? (LEGACY[x] || x) : x, known = x => typeof x === 'string' && !!CHARS[x];
+    const own = (o, x) => typeof x === 'string' && Object.prototype.hasOwnProperty.call(o, x); // ids only, never an Object.prototype name
+    const fly = x => own(LEGACY, x) ? LEGACY[x] : x, known = x => own(CHARS, x);
     s.owned.skins = strs(s.owned.skins.map(fly).filter(known), 'glim'); s.owned.trails = strs(s.owned.trails, 'ember');
     s.equipped.skin = fly(s.equipped.skin); if (s.owned.skins.indexOf(s.equipped.skin) < 0) s.equipped.skin = 'glim';
     s.best.anyGates = Math.max(0, s.best.anyGates); s.daily.bestStreak = Math.max(0, s.daily.bestStreak); s.stats.rekindles = Math.max(0, s.stats.rekindles);
@@ -504,13 +524,13 @@ const Save = (() => {
 const Unlocks = (() => {
   const U = {};
   U.metrics = s => ({ best: isObj(s.best) ? finiteOr0(s.best.anyGates) : 0, gates: isObj(s.stats) ? finiteOr0(s.stats.gates) : 0,
-    missions: Math.max(0, (isObj(s.missions) ? finiteOr0(s.missions.nextIdx) : 3) - 3), streak: isObj(s.daily) ? finiteOr0(s.daily.bestStreak) : 0 });
+    missions: Math.max(0, (isObj(s.missions) ? finiteOr0(s.missions.nextIdx) : 3) - 3), streak: isObj(s.daily) ? finiteOr0(s.daily.bestStreak) : 0, cur: isObj(s.daily) && (s.daily.lastDone === String(Calendar.today()) || s.daily.lastDone === String(Calendar.yesterday())) ? Math.max(0, Math.min(Math.floor(finiteOr0(s.daily.streak)), finiteOr0(s.daily.bestStreak))) : 0 });
   const openIn = (k, m) => { const sl = TIERS[k].seal; return !sl || m.best >= sl.best || m.gates >= sl.gates || (!!sl.streak && m.streak >= sl.streak) || (!!sl.missions && m.missions >= sl.missions); };
   // a higher seal also opens every tier below it, so tiers always open in ladder order (a streak path can't skip a tier)
   U.tiers = s => { const m = U.metrics(s || Save.d), t = TIERS.map((x, k) => openIn(k, m)); for (let k = t.length - 2; k >= 1; k--) t[k] = t[k] || t[k + 1]; return t; };
   U.open = k => U.tiers(Save.d)[k]; // k: 0-based tier index (CHARS[id].tier - 1)
   U.progress = k => { const sl = TIERS[k].seal; if (!sl) return null; const m = U.metrics(Save.d);
-    return { best: m.best, needBest: sl.best, gates: m.gates, needGates: sl.gates, streak: m.streak, needStreak: sl.streak || null, missions: m.missions, needMissions: sl.missions || null }; };
+    return { best: m.best, needBest: sl.best, gates: m.gates, needGates: sl.gates, streak: m.streak, needStreak: sl.streak || null, cur: m.cur, missions: m.missions, needMissions: sl.missions || null }; };
   U.owned = id => Save.d.owned.skins.indexOf(id) >= 0;
   const isFly = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(CHARS, id); // never an Object.prototype name
   // a flyer's shop state: 'eq' flying, 'own', 'buy' (open tier, affordable), 'save' (open tier, unaffordable), 'seal'
@@ -853,7 +873,7 @@ const BIOMES = [
 // the gate's pace-scaled time window at k = 10..150 in normal, Breeze, Low Gravity and Turbo; DRIFT is the tightest at
 // 1.062). Nothing goes beyond DRIFT: a fall cap below 500 fails DOWN coverage, so all power above it comes from traits.
 // Traits (all deterministic, wall clock free, held input timestamped like presses):
-//   drift   Drift      while held and falling, vy is capped at DRIFT_VY (never adds lift)
+//   drift   Drift      while held and falling, vy is capped at the flyer's driftVy, else DRIFT_VY (never adds lift)
 //   splash  Rebound    floor contact with the charge ready kicks off at SPLASH_VY; recharges after n more gates
 //   ward    Ward       implies Aegis; a broken shield regrows after n more gates (an orb restores it at once)
 //   phase   Phase      passes through one spire or blade (PHASE_TICKS invulnerable); recharges after n more gates
@@ -894,7 +914,7 @@ const CHARS = (() => { const C = {}, ids = [];
   // def(id, name, tier 1-6, price, body, kit, traits, glow, chip colour, toast tip, concept); kit overrides the body (r) and sets traits
   const def = (id, name, tier, price, body, kit, traits, glow, col, tip, concept) => { const b = BODIES[body];
     const o = { id, name, tier, rank: ids.length + 1, price, body, grav: b[0], flap: b[1], fall: b[2], apex: b[3], r: b[4], pace: b[5],
-      drift: false, splash: 0, ward: 0, phase: 0, pull: 0, aegis: false, rek: 0, head: 0, sgain: 1, surgeK: 1, perfect: 0, mag: 0 };
+      drift: false, driftVy: 0, splash: 0, ward: 0, phase: 0, pull: 0, aegis: false, rek: 0, head: 0, sgain: 1, surgeK: 1, perfect: 0, mag: 0 };
     Object.assign(o, kit); o.traits = Object.freeze(traits.slice()); o.chips = Object.freeze(traits.filter(t => CHIP_TRAITS.indexOf(t) >= 0));
     o.ab = traits.length ? (traits.find(t => PRIMARY.indexOf(t) >= 0) || traits[0]) : null;
     o.surgeLen = Math.round(CONST.SURGE_TICKS * o.surgeK); o.glow = glow; o.col = col; o.tip = tip; o.concept = concept;
@@ -902,11 +922,11 @@ const CHARS = (() => { const C = {}, ids = [];
   def('glim', 'Glim', 1, 0, 'BAL', {}, [], COL.amber, '#E8A23B', 'no tricks, all skill', 'The first light: a washi-paper lantern with a live flame.');
   def('dart', 'Dart', 1, 750, 'BAL', { head: 40 }, ['head'], '#FFD9A8', '#3D4C86', 'SURGE starts 40% charged', 'A drafting-paper dart, thrown hard.');
   def('kite', 'Kite', 1, 900, 'LIGHT', { splash: 5 }, ['splash'], '#FFB347', '#2E3A6E', 'kicks off the ground, ready again after 5 gates', 'A fighting kite cut loose, still trailing its line.');
-  def('crane', 'Crane', 1, 1100, 'GLIDE', { drift: true }, ['drift'], '#FFE58A', '#3E3A52', 'hold to glide', 'The thousand-crane fold in white washi with gilt edges.');
+  def('crane', 'Crane', 1, 1100, 'GLIDE', { drift: true, driftVy: 660 }, ['drift'], '#FFE58A', '#3E3A52', 'hold to glide', 'The thousand-crane fold in white washi with gilt edges.');
   def('swift', 'Swift', 2, 1400, 'BAL', { aegis: true }, ['aegis'], '#FFD9A8', '#3E4054', 'starts every run with a shield', 'An alpine swift that almost never lands: all scythe and speed.');
-  def('kestrel', 'Kestrel', 2, 1600, 'SWIFT', { r: 11.5, head: 45, sgain: 1.4, surgeK: 1.4, perfect: 8 }, ['storm'], '#FFB347', '#8A3F22', 'SURGE starts charged, fills faster and lasts longer', 'The hovering falcon: rufous back, slate head, and a tail it fans to hang in the wind.');
+  def('kestrel', 'Kestrel', 2, 1600, 'SWIFT', { r: 11.5, head: 70, sgain: 1.4, surgeK: 1.4, perfect: 8 }, ['storm'], '#FFB347', '#8A3F22', 'SURGE starts charged, fills faster and lasts longer', 'The hovering falcon: rufous back, slate head, and a tail it fans to hang in the wind.');
   def('peregrine', 'Peregrine', 2, 1850, 'BAL', { rek: 1 }, ['rekindle'], '#E8F7FF', '#2E3445', 'once per run, relights instead of crashing', 'The fastest animal alive, folding into a teardrop when it stoops and pulling out at the last moment.');
-  def('eagle', 'Eagle', 2, 2050, 'HEAVY', { splash: 4 }, ['splash'], '#FFE08A', '#5A3A22', 'kicks off the ground, ready again after 4 gates', 'The golden eagle: broad plank wings with fingered tips, a gold nape and a hooked beak.');
+  def('eagle', 'Eagle', 2, 2050, 'HEAVY', { r: 11.5, splash: 4 }, ['splash'], '#FFE08A', '#5A3A22', 'kicks off the ground, ready again after 4 gates', 'The golden eagle: broad plank wings with fingered tips, a gold nape and a hooked beak.');
   def('raven', 'Raven', 3, 2200, 'BAL', { phase: 9 }, ['phase'], '#C9D4FF', '#3B3560', 'passes through one spire, ready again after 9 gates', 'An ink raven with a moonlit edge: ragged primaries, a wedge tail, a bill that could crack bone.');
   def('vesper', 'Vesper', 3, 2400, 'GLIDE', { drift: true, rek: 1 }, ['drift', 'rekindle'], '#FFD9A8', '#4A2E5E', 'hold to glide, and it relights once per run', 'An evening bat cut from black card, with dusk light glowing through its wings.');
   def('manta', 'Manta', 3, 2600, 'HEAVY', { aegis: true, splash: 4 }, ['aegis', 'splash'], '#9BE7FF', '#241A3A', 'starts shielded and kicks off the ground', 'A night-sky manta seen from above: plum-black on top, moon-pale below, breaching off the floor.');
@@ -919,17 +939,18 @@ const CHARS = (() => { const C = {}, ids = [];
   def('eclipse', 'Eclipse', 5, 4700, 'DRIFT', { ward: 8, rek: 1 }, ['ward', 'rekindle'], '#FFE08A', '#0B0812', 'a shield that grows back in 8, and it relights once per run', 'A black sun wearing a burning ring, with crescent wings of corona.');
   def('comet', 'Comet', 5, 5100, 'SWIFT', { phase: 5, rek: 1, sgain: 1.5 }, ['phase', 'rekindle', 'gain'], '#9BE7FF', '#17406E', 'passes through a spire every 5 gates, and relights once per run', 'A shard of ancient ice set alight: a faceted nucleus and a long ion tail.');
   def('nebula', 'Nebula', 5, 5600, 'DRIFT', { pull: 1, splash: 4, aegis: true }, ['tidal', 'splash', 'aegis'], '#E3C9FF', '#3A2466', 'drawn toward each gap, starts shielded and kicks off the ground', 'A medusa of star-gas: a violet bell full of pinpoint stars, trailing threads of light.');
-  def('halcyon', 'Halcyon', 6, 6800, 'MOTH', { drift: true, pull: 1, ward: 5 }, ['drift', 'tidal', 'ward'], '#FFFFFF', '#2A4A7A', 'hold to glide; drawn toward each gap; a shield that grows back in 5', 'The mythic kingfisher of calm seas, regrown in glass.');
+  def('halcyon', 'Halcyon', 6, 6800, 'MOTH', { drift: true, driftVy: 575, pull: 1, ward: 5 }, ['drift', 'tidal', 'ward'], '#FFFFFF', '#2A4A7A', 'hold to glide; drawn toward each gap; a shield that grows back in 5', 'The mythic kingfisher of calm seas, regrown in glass.');
   def('seraph', 'Seraph', 6, 8000, 'DRIFT', { pull: 0.85, splash: 4, rek: 1 }, ['tidal', 'splash', 'rekindle'], '#FFFFFF', '#4A3418', 'drawn toward each gap, kicks off the ground, relights once', 'Six blades of light around a burning heart: no longer a bird at all.');
-  def('starwyrm', 'Starwyrm', 6, 8600, 'DRIFT', { phase: 4, splash: 4, rek: 1 }, ['phase', 'splash', 'rekindle'], '#FFE58A', '#141B3E', 'passes through a spire every 4 gates, kicks off the ground, relights once', 'A sky-serpent of night and gold, the oldest thing that flies, carrying its pearl.');
-  def('daystar', 'Daystar', 6, 9400, 'DRIFT', { pull: 1, rek: 1, mag: 80 }, ['tidal', 'rekindle', 'lodestone'], '#FFE08A', '#5A3212', 'drawn toward each gap, relights once, and draws in motes', 'The light at full strength: a sunbird whose body is a small sun.');
+  def('starwyrm', 'Starwyrm', 6, 8600, 'DRIFT', { r: 10.5, phase: 4, splash: 4, rek: 1 }, ['phase', 'splash', 'rekindle'], '#FFE58A', '#141B3E', 'passes through a spire every 4 gates, kicks off the ground, relights once', 'A sky-serpent of night and gold, the oldest thing that flies, carrying its pearl.');
+  def('daystar', 'Daystar', 6, 9400, 'DRIFT', { r: 9.5, pull: 1, rek: 1, mag: 80 }, ['tidal', 'rekindle', 'lodestone'], '#FFE08A', '#5A3212', 'drawn toward each gap, relights once, and draws in motes', 'The light at full strength: a sunbird whose body is a small sun.');
   C.ids = ids; return C; })();
 const ROSTER = Object.freeze(CHARS.ids.slice()); delete CHARS.ids; Object.freeze(CHARS);
 // v1.0 skins were cosmetic, so a legacy id maps by look and name (D4)
 const LEGACY = Object.freeze({ mintleaf: 'crane', koi: 'dragonkoi', moth: 'luna', comet: 'comet', jelly: 'nebula' });
 // PULL_UP/PULL_DN: the pull's limits as fractions of the flyer's gravity, scaled by its strength s. Upward it stays below even
 // the apex-hang gravity (x0.6), so the pull can never hold a flyer up. DRIFT_VY 540: a stronger glide cap made a holding
-// Crane as easy as flyers two tiers up. REK_INV = 2 x INVULN_TICKS + 1; REK_STOP_MS is the cosmetic hit-stop only.
+// Crane as easy as flyers two tiers up; Crane (660) and Halcyon (575) glide steeper so that holding never lifts them past the
+// next tier (Swift) or the top flyer (Daystar). REK_INV = 2 x INVULN_TICKS + 1; REK_STOP_MS is the cosmetic hit-stop only.
 const ABIL = Object.freeze({ DRIFT_VY: 540, SPLASH_VY: -900, PHASE_TICKS: 36, PULL_D: 240, PULL_K: 20, PULL_UP: 0.43, PULL_DN: 0.9, REK_INV: 241, REK_STOP_MS: 250 });
 const TRAILS = [{ id: 'ember', name: 'Ember', price: 0, d: 'Warm amber glow' }, { id: 'petals', name: 'Petals', price: 120, d: 'Tumbling paper petals' }, { id: 'bubbles', name: 'Bubbles', price: 250, d: 'Wobbly sky bubbles' },
   { id: 'starlight', name: 'Starlight', price: 400, d: 'Twinkling four-point stars' }, { id: 'rainbow', name: 'Rainbow', price: 800, d: 'Seven glowing hues' }, { id: 'aurora', name: 'Aurora', price: -1, secret: '7-day daily streak', d: 'Secret: a 7-day daily streak' }];
@@ -1531,12 +1552,12 @@ const FLYER_ART = (() => { const F = {};
     Renderer.place(gx, y, rot, sx, sy); ctx.globalAlpha = LV.al * (1 - LV.t / 0.2); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(26.5, -0.8); ctx.lineTo(-22.5, -19.4); ctx.stroke(); ctx.globalAlpha = LV.al; };
 
-  // #3 Kite: a fighting kite cut loose, still trailing its line. Heart: the ensō.
+  // #3 Kite: a fighting kite cut loose, still trailing its line. Heart: the brush mark.
   function bakeKiteB(x) { x.save(); x.rotate(0.436); const H = [0, -21, 15, -12, 15, 12, 0, 21, -15, 12, -15, -12];
     bakePoly(x, '#45559A', H); bakePoly(x, '#2E3A6E', [0, -21, 0, 21, -15, 12, -15, -12]); bakePoly(x, '#5868AE', [0, -21, 15, -12, 0, -6], 0.55);
     bakeLine(x, '#1A1426', 1.2, 'M0 -21L0 21M-15 -12L15 12M15 -12L-15 12', 0.55, 'butt'); x.restore();
-    x.strokeStyle = '#F3E3C7'; x.lineCap = 'round'; const arc = (w, a0, a1) => { x.lineWidth = w; x.beginPath(); x.arc(0, 0, 8, a0, a1); x.stroke(); };
-    const o = -1.25; arc(3.2, 0.95 + o, 5.25 + o); arc(2.2, 0.6 + o, 1.0 + o); arc(2.2, 5.2 + o, 5.6 + o); arc(1.2, 0.3 + o, 0.65 + o); arc(1.2, 5.55 + o, 5.9 + o); }
+    // the fighter's mark: two tapered brush slashes across the sail's centre (no closed ring, nothing that reads as an iris)
+    bakeRibbon(x, '#F3E3C7', -8, 8, -0.5, -0.5, 9, -9, 6, 1.2); bakeRibbon(x, '#F3E3C7', -2.2, 10.2, 4, 4, 10.2, -1.6, 3.2, 0.8); }
   function liveKiteTail(x, w, lag) { x.strokeStyle = '#E8743B'; x.lineWidth = 2.5; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); let b3x = 0, b3y = 0, b6x = 0, b6y = 0;
     for (let j = 0; j < 8; j++) { const px = -9 - 5.5 * j, py = 19 + 1.6 * j + Math.sin(7 * w - 0.9 * j) * (0.8 + 0.6 * j) + lag * j; if (j === 0) x.moveTo(px, py); else x.lineTo(px, py); if (j === 3) { b3x = px; b3y = py; } else if (j === 6) { b6x = px; b6y = py; } }
     x.stroke(); x.fillStyle = COL.ink; x.beginPath(); liveBow(x, b3x, b3y); liveBow(x, b6x, b6y); x.fill(); }
@@ -1555,14 +1576,15 @@ const FLYER_ART = (() => { const F = {};
     bakeLine(x, '#D9A74A', 1, 'M22 -15L7 1M-25 -13L-7 1', 0.9); bakeLine(x, '#6E634F', 1, 'M-12 4L12 4M0 -3L0 10', 0.5, 'butt'); }
   function bakeCraneWN(x) { bakePoly(x, '#CDC3B0', [0, 0, 5.5, -0.5, -7, -30]); bakePoly(x, '#F6F0E4', [5.5, -0.5, 11, -1, -7, -30]); bakeLine(x, '#D9A74A', 1.5, 'M11 -1L-7 -30'); }
   function bakeCraneWF(x) { bakePoly(x, '#3E3A52', [0, 0, 9, 0, 3, -27]); bakePoly(x, '#2E2B3E', [0, 0, 4.5, 0, 3, -27]); }
-  def('crane', { layers: [['WF', 1, -0.5, bakeCraneWF, 's'], ['B', 0, 0, bakeCraneB], ['WN', -1, 0, bakeCraneWN, 's']], np: 2, flake: '#F6F0E4', dark: '#3E3A52' });
+  def('crane', { sc: 1.05, layers: [['WF', 1, -0.5, bakeCraneWF, 's'], ['B', 0, 0, bakeCraneB], ['WN', -1, 0, bakeCraneWN, 's']], np: 2, flake: '#F6F0E4', dark: '#3E3A52' });
   F.crane.back = function (ctx, gx, y, rot, s, sx, sy, running) { Renderer.wing(Renderer.LV.F, 'WF', gx, y, rot, sx, sy, liveAng(-2.0, 0.1, 0.3, 0.03), 1, 1); };
   F.crane.front = function (ctx, gx, y, rot, s, sx, sy, running) { Renderer.wing(Renderer.LV.F, 'WN', gx, y, rot, sx, sy, liveAng(-2.0, 0.1, 0.3, 0), 1, 1); };
 
   // ======================= Tier II: TALON (dyed paper, stacked feathers, copper leading edge) =======================
   // #5 Swift: an alpine swift that almost never lands, seen from below: all scythe and speed. Heart: the pale belly.
-  function bakeSwiftB(x) { bakePoly(x, '#2B2A35', [-8, -1.2, -22, -7, -13, 0, -22, 7, -8, 1.2]); bakePath(x, '#2B2A35', 'M18.6 0Q17.8 -4.6 12 -4.7Q2 -5 -10 -1.8L-10 1.8Q2 5 12 4.7Q17.8 4.6 18.6 0Z');
-    bakeAtop(x, () => { x.fillStyle = bakeLin(x, -8, 0, 20, 0, [0, '#BDB7A9', 0.3, '#F2EEE4', 0.55, '#F2EEE4', 1, '#C9C3B5']); x.fill(new Path2D('M19.4 -1.2Q14 1.4 8 1.6Q1 1.8 -8 0.8L-8 8L20 8Z')); bakePath(x, '#C9C3B6', 'M-8 3.2Q2 4.6 14 3.6L14 8L-8 8Z'); bakeLine(x, '#3E4054', 1.2, 'M17 -3.4Q10 -4.2 0 -3.6', 0.8); }); }
+  // the fuselage is a blunt-nosed torpedo deep enough to fill the front half of the r 17 hitbox (the sickles cover the back)
+  function bakeSwiftB(x) { bakePoly(x, '#2B2A35', [-8, -1.2, -22, -7, -13, 0, -22, 7, -8, 1.2]); bakePath(x, '#2B2A35', 'M19 0Q18 -7 11 -7.5Q1 -8 -10 -2.5L-10 2.5Q1 8 11 7.5Q18 7 19 0Z');
+    bakeAtop(x, () => { x.fillStyle = bakeLin(x, -8, 0, 20, 0, [0, '#BDB7A9', 0.3, '#F2EEE4', 0.55, '#F2EEE4', 1, '#C9C3B5']); x.fill(new Path2D('M19.4 -1Q14 2 8 2.4Q1 2.6 -8 1.4L-8 9L20 9Z')); bakePath(x, '#C9C3B6', 'M-8 4.4Q2 6.6 15 5.4L15 9L-8 9Z'); bakeLine(x, '#3E4054', 1.2, 'M17 -4.6Q10 -6 0 -5.2', 0.8); }); }
   function bakeSwiftW(x) { const up = 'M0 -1Q-6 -17 -30 -23Q-13 -11 -8 -2Z', lo = 'M0 1Q-6 17 -30 23Q-13 11 -8 2Z';
     bakePath(x, '#23222C', lo); bakePath(x, '#3E4054', up);
     bakeAtop(x, () => { bakeLine(x, '#5A5C70', 4, 'M-30 -23Q-13 -11 -8 -2'); bakeLine(x, '#34343F', 4, 'M-30 23Q-13 11 -8 2'); });
@@ -1572,17 +1594,19 @@ const FLYER_ART = (() => { const F = {};
     Renderer.wing(LV.F, 'W', gx, y, rot, sx, sy, 0, 1 - 0.15 * e, 1 + 0.3 * e + fl); };
 
   // #6 Kestrel: the hovering falcon: rufous back, slate head, a tail it fans to hang in the wind. Heart: the spotted belly.
-  function bakeKestrelB(x) {
-    bakeLayer(x, t => { bakeEll(t, '#C0643A', 1, 1, 13, 7.5, -0.1); bakeAtop(t, () => { bakePoly(t, '#F1E2C6', [-16, 3.4, 16, 0.2, 16, 12, -16, 12]); bakePoly(t, '#A9532E', [-16, -8, 16, -8, 16, -4.6, -16, -2.2], 0.6);
-      for (const p of [[-7, 5], [-3.6, 7.2], [-0.6, 5.2], [2.6, 7.4], [5.6, 5], [8.4, 6.6]]) bakeEll(t, '#7A4A2E', p[0], p[1], 0.55, 1.15, 0.35, 0.85);
-      for (const p of [[-6, -2.8], [-1, -4.4], [4, -4.8]]) bakeEll(t, '#6E3420', p[0], p[1], 1.3, 0.8); }); });
-    bakeEll(x, '#6F7C95', 12, -4, 6, 6); bakeEllLo(x, '#5A6680', 12, -4, 6, 6, -0.3);
-    bakePath(x, '#2B2230', 'M11.6 -3.2Q14.2 -1 14.2 2.4L12.4 2.6Q12.2 0 11.6 -3.2Z'); bakePoly(x, '#2B2230', [17, -5, 21, -3, 17, -1]); bakeLine(x, '#E0B04A', 1, 'M17 -5L17 -1', 1, 'butt'); }
+  function bakeKestrelB(x) { // a tail-pointed teardrop under a flat-crowned slate wedge: back bars and belly streaks are short dashes
+    bakeLayer(x, t => { bakePath(t, '#C0643A', 'M14 -5.5Q9 -8.5 0 -7Q-9 -5.5 -15.5 1Q-8 7.5 1 8.5Q10 8.5 14 3Z'); bakeAtop(t, () => { bakePoly(t, '#F1E2C6', [-16, 3.4, 16, 0.2, 16, 12, -16, 12]); bakePoly(t, '#A9532E', [-16, -8, 16, -8, 16, -4.6, -16, -2.2], 0.6);
+      bakeLine(t, '#7A4A2E', 0.8, 'M-7 4.4l-0.5 1.6M-3.6 6.6l-0.5 1.6M-0.6 4.6l-0.5 1.6M2.6 6.8l-0.5 1.6M5.6 4.4l-0.5 1.6M8.4 6l-0.5 1.6', 0.85);
+      bakeLine(t, '#6E3420', 1, 'M-7.2 -2.2l2.4 -0.9M-2.2 -3.8l2.4 -0.9M2.8 -4.2l2.4 -0.9', 1, 'butt'); }); });
+    bakeLayer(x, t => { bakePoly(t, '#6F7C95', [6, -9, 14, -9.5, 18.5, -5.5, 18, -0.5, 12, 3, 7, 1]); bakeAtop(t, () => { bakePoly(t, '#5A6680', [4, -4.2, 20, -5.4, 20, 4, 4, 4]); bakeLine(t, '#4E586E', 1, 'M10 -8.4L18 -6.4');
+      bakePath(t, '#2B2230', 'M11.6 -3.2Q14.2 -1 14.2 2.4L12.4 2.6Q12.2 0 11.6 -3.2Z'); }); });
+    bakePoly(x, '#2B2230', [17, -5, 21, -3, 17, -1]); bakePoly(x, '#E0B04A', [16.6, -5.2, 19.5, -3.8, 16.6, -3.4]); }
   function bakeKestrelT(x) { const P = [0, -2, -19, -5, -21, 3, -19, 9, 0, 3]; bakePoly(x, '#6F7C95', P); bakeAtop(x, () => { bakePoly(x, '#2B2230', [-14, -8, -30, -8, -30, 14, -15, 14]); bakePoly(x, '#E8D9BE', [-18.4, -8, -30, -8, -30, 14, -18.4, 14]); bakePoly(x, '#58647C', [0, 0.4, -22, 1, -22, 14, 0, 14], 0.7); }); }
-  function bakeKestrelWN(x) { bakePath(x, '#A9532E', 'M0 0Q-8 -14 -21 -25Q-16 -10 -9 1Z'); bakePath(x, '#C9703F', 'M0 0Q-8 -14 -21 -25Q-14 -12 -7.5 -1Z');
-    bakeAtop(x, () => { bakeEll(x, '#2B2230', -21, -25, 10, 10); for (const p of [[-6, -6], [-10, -11], [-13, -15], [-8, -2.6], [-12, -7.4]]) bakeEll(x, '#6E3420', p[0], p[1], 1, 0.75); });
-    bakeFoil(x, 0, 0, -8, -14, -21, -25, 0.3); }
-  function bakeKestrelWF(x) { x.scale(0.85, 0.85); bakePath(x, '#8A3F22', 'M0 0Q-8 -14 -21 -25Q-16 -10 -9 1Z'); bakeAtop(x, () => bakeEll(x, '#1E1820', -21, -25, 10, 10)); }
+  // the hover wing: held high and nearly upright (Raven's stands at 45 degrees, Peregrine's is swept low); bars are short dashes
+  function bakeKestrelWN(x) { bakePath(x, '#A9532E', 'M0 0Q-5 -15 -14 -28Q-12 -12 -9 1Z'); bakePath(x, '#C9703F', 'M0 0Q-5 -15 -14 -28Q-10 -13 -7.5 -1Z');
+    bakeAtop(x, () => { bakeEll(x, '#2B2230', -14, -28, 11, 11); bakeLine(x, '#6E3420', 1, 'M-4 -4.6l-0.9 -2M-6.4 -10.6l-0.9 -2M-8.4 -15.6l-0.9 -2M-7.4 -2.6l-0.9 -2M-9.6 -8.2l-0.9 -2', 1, 'butt'); });
+    bakeFoil(x, 0, 0, -5, -15, -14, -28, 0.3); }
+  function bakeKestrelWF(x) { x.scale(0.85, 0.85); bakePath(x, '#8A3F22', 'M0 0Q-5 -15 -14 -28Q-12 -12 -9 1Z'); bakeAtop(x, () => bakeEll(x, '#1E1820', -14, -28, 11, 11)); }
   def('kestrel', { sc: 0.95, layers: [['WF', 3, -3.5, bakeKestrelWF, 's'], ['T', -9, 1, bakeKestrelT], ['B', 0, 0, bakeKestrelB], ['WN', 1, -3, bakeKestrelWN, 's']], np: 3, dark: '#2B2230' });
   let kesT = 1; // the hover: the tail fans to 1.7 while |vy| < apex, easing over 80 ms
   F.kestrel.back = function (ctx, gx, y, rot, s, sx, sy, running) { const LV = Renderer.LV, F2 = LV.F, tg = Math.abs(LV.vy) < 160 ? 1.7 : 1, st = LV.dt / 0.08 * 0.7;
@@ -1591,26 +1615,29 @@ const FLYER_ART = (() => { const F = {};
   F.kestrel.front = function (ctx, gx, y, rot, s, sx, sy, running) { Renderer.wing(Renderer.LV.F, 'WN', gx, y, rot, sx, sy, liveAng(-1.5, 0.1, 0.3, 0), 1, 1); };
 
   // #7 Peregrine: the fastest animal alive, folding into a teardrop when it stoops. Heart: the barred chest.
-  function bakePeregrineB(x) {
+  function bakePeregrineB(x) { // a tail-pointed teardrop under a flat-crowned hood wedge with a straight brow; the cere is a facet of the beak
     bakePoly(x, '#4E6A8A', [-11, 0, -24, -2, -24, 4, -11, 4]); bakeAtop(x, () => bakePoly(x, '#2E3445', [-20.5, -4, -26, -4, -26, 6, -20.5, 6]));
-    bakeLayer(x, t => { bakeEll(t, '#4E6A8A', 0, 1, 14, 8); bakeAtop(t, () => { t.fillStyle = bakeLin(t, -9, 0, 16, 0, [0, '#D6CDBB', 0.4, '#F4ECDC', 0.7, '#F4ECDC', 1, '#D6CDBB']); t.fill(new Path2D('M-9 2L16 -1L16 12L-9 12Z')); bakePoly(t, '#3E5674', [-16, -8, 16, -8, 16, -4, -16, -2.4], 0.7);
+    bakeLayer(x, t => { bakePath(t, '#4E6A8A', 'M15 -4Q10 -8 0 -7.5Q-10 -6 -18 0Q-10 6 0 8.5Q10 9 15 4Z'); bakeAtop(t, () => { t.fillStyle = bakeLin(t, -9, 0, 16, 0, [0, '#D6CDBB', 0.4, '#F4ECDC', 0.7, '#F4ECDC', 1, '#D6CDBB']); t.fill(new Path2D('M-9 2L16 -1L16 12L-9 12Z')); bakePoly(t, '#3E5674', [-18, -8, 16, -8, 16, -4, -18, -1.6], 0.7);
       bakeLine(t, '#4A4F63', 0.8, 'M-5 5.8h2.4M0 5.5h2.4M5 5h2.4M-2.6 7.6h2.4M2.4 7.4h2.4M7.4 6.8h2', 0.65); }); });
-    bakeLayer(x, t => { bakeEll(t, '#2E3445', 12, -2, 6.5, 6.5); bakeAtop(t, () => { bakePath(t, '#D9D0BE', 'M13 -1Q16.5 -2.2 18.6 0.4L18 5Q14 6 13.4 3Z'); bakePath(t, '#D9D0BE', 'M10 3.4L19 2.4L19 6L9 6Z'); bakePath(t, '#2E3445', 'M11 -2Q13.4 1 12.8 5.4L10.6 5.4Q10.8 1.6 10 -1Z'); }); });
-    bakeLine(x, '#E0B04A', 1.5, 'M17.8 -3.2L17.8 0', 1, 'butt'); bakePoly(x, '#2E3445', [18, -3, 22, -1, 18, 0]); }
-  function bakePeregrineWN(x) { bakePath(x, '#3E5674', 'M0 0L-23 -24Q-16 -8 -9 1Z'); bakePath(x, '#5A7698', 'M0 0L-23 -24Q-14 -10 -7.4 -1Z');
-    bakeAtop(x, () => { bakeEll(x, '#2E3445', -23, -24, 11, 11); for (let i = 0; i < 3; i++) bakeLine(x, '#46607E', 1, 'M' + (-5 - i * 4) + ' ' + (-3 - i * 4) + 'l-1 3', 0.8); });
-    bakeFoil(x, 0, 0, -11.5, -12, -23, -24, 0.3); }
-  function bakePeregrineWF(x) { x.scale(0.85, 0.85); bakePath(x, '#33465E', 'M0 0L-23 -24Q-16 -8 -9 1Z'); bakeAtop(x, () => bakeEll(x, '#1E2230', -23, -24, 11, 11)); }
+    bakeLayer(x, t => { bakePoly(t, '#2E3445', [6, -7, 14, -7.5, 18.5, -3.5, 18, 1.5, 12, 5, 7, 3]); bakeAtop(t, () => { bakeLine(t, '#1E2230', 1, 'M10 -6.4L18 -4.4');
+      bakePath(t, '#D9D0BE', 'M13 -1Q16.5 -2.2 18.6 0.4L18 5Q14 6 13.4 3Z'); bakePath(t, '#D9D0BE', 'M6 3.8L19 2.4L19 7L6 7Z'); }); });
+    bakePath(x, '#2E3445', 'M10 -1.6Q13.8 0.2 13.2 3.6L11.8 7Q11 3 9.4 0Z'); // the malar stripe: one tapered drop from the hood
+    bakePoly(x, '#2E3445', [18, -3, 22, -1, 18, 0]); bakePoly(x, '#E0B04A', [17.6, -3.2, 20.5, -1.8, 17.6, -1.4]); }
+  // the stoop-ready wing: long, narrow and swept low along the back (Raven's ragged hand stands up, Kestrel's curves up to hover)
+  function bakePeregrineWN(x) { bakePath(x, '#3E5674', 'M0 0L-30 -15Q-18 -4 -9 1Z'); bakePath(x, '#5A7698', 'M0 0L-30 -15Q-16 -5.4 -7.4 -1Z');
+    bakeAtop(x, () => { bakeEll(x, '#2E3445', -30, -15, 11, 9, 0.46); for (let i = 0; i < 3; i++) bakeLine(x, '#46607E', 1, 'M' + (-6 - i * 5) + ' ' + (-2.2 - i * 2.5) + 'l-0.4 2.6', 0.8); });
+    bakeFoil(x, 0, 0, -15, -7.5, -30, -15, 0.3); }
+  function bakePeregrineWF(x) { x.scale(0.85, 0.85); bakePath(x, '#33465E', 'M0 0L-30 -15Q-18 -4 -9 1Z'); bakeAtop(x, () => bakeEll(x, '#1E2230', -30, -15, 11, 9, 0.46)); }
   def('peregrine', { sc: 1.15, layers: [['WF', 4, -3.5, bakePeregrineWF, 's'], ['B', 0, 0, bakePeregrineB], ['WN', 2, -3, bakePeregrineWN, 's']], np: 2, dark: '#2E3445' });
   F.peregrine.back = function (ctx, gx, y, rot, s, sx, sy, running) { const LV = Renderer.LV, k = clamp((LV.vy - 577.5) / 367.5, 0, 1); Renderer.wing(LV.F, 'WF', gx, y, rot, sx, sy, liveAng(-1.6, 0.1, 0.3, 0.03) + 0.6 * k, 1, 1 - 0.55 * k); };
   F.peregrine.front = function (ctx, gx, y, rot, s, sx, sy, running) { const LV = Renderer.LV, k = clamp((LV.vy - 577.5) / 367.5, 0, 1); Renderer.wing(LV.F, 'WN', gx, y, rot, sx, sy, liveAng(-1.6, 0.1, 0.3, 0) + 0.6 * k, 1, 1 - 0.55 * k); };
 
   // #8 Eagle: the golden eagle: broad plank wings with fingered tips, a gold nape and a hooked beak. Heart: the pale breast.
-  function bakeEagleB(x) {
+  function bakeEagleB(x) { // a heavy tail-pointed teardrop, a flat-crowned wedge head under the gold nape, a hooked beak with a horn cere facet
     bakePoly(x, '#4A2F1B', [-14, 0, -25, -2, -26, 6, -14, 5]); bakeAtop(x, () => bakePoly(x, '#C9A97A', [-15.5, -4, -18.5, -4, -18.5, 8, -15.5, 8]));
-    bakeLayer(x, t => { bakeEll(t, '#5A3A22', -1, 2, 16, 9); bakeAtop(t, () => { bakePoly(t, '#45291A', [-18, 4.6, 16, 3, 16, 12, -18, 12]); bakeEll(t, '#6E4A2C', -4, -3.5, 10, 3, -0.08, 0.7); bakeEll(t, '#F1E2C6', 8.6, 7.2, 8.4, 5.2, -0.45); }); });
-    bakeLayer(x, t => { bakeEll(t, '#5A3A22', 13, -3, 6.5, 6.5); bakeAtop(t, () => { bakePath(t, '#E0A84A', 'M5 -4Q8 -11 15 -9.6Q11 -7 9.6 -1.6Q7 -0.4 5 -1Z'); bakePath(t, '#C99236', 'M6 -2Q9 -6 13 -8Q10.4 -5 9.4 -1.4Z'); }); });
-    bakePath(x, '#2A2026', 'M18 -5Q24 -4 23 1L18 0Z'); bakeLine(x, '#B8A988', 1.5, 'M18 -5L18 0', 1, 'butt'); }
+    bakeLayer(x, t => { bakePath(t, '#5A3A22', 'M15 -5Q10 -8.5 -1 -7.5Q-12 -6 -19 1Q-11 9 0 11Q11 11 15 5Z'); bakeAtop(t, () => { bakePoly(t, '#45291A', [-18, 4.6, 16, 3, 16, 12, -18, 12]); bakeEll(t, '#6E4A2C', -4, -3.5, 10, 3, -0.08, 0.7); bakeEll(t, '#DCCAA8', 8.6, 7.2, 8.4, 5.2, -0.45); bakeEll(t, '#F1E2C6', 5.6, 7.8, 6.2, 3.8, -0.4); }); });
+    bakeLayer(x, t => { bakePoly(t, '#5A3A22', [7, -8, 15, -8.5, 19.5, -4.5, 19, 0.5, 13, 4, 8, 2]); bakeAtop(t, () => { bakePath(t, '#E0A84A', 'M5 -4Q8 -11 15 -9.6Q11 -7 9.6 -1.6Q7 -0.4 5 -1Z'); bakePath(t, '#C99236', 'M6 -2Q9 -6 13 -8Q10.4 -5 9.4 -1.4Z'); bakeLine(t, '#3A2416', 1, 'M12 -7.2L19.5 -5.2'); }); });
+    bakePath(x, '#2A2026', 'M18 -5Q24 -4 23 1L18 0Z'); bakePoly(x, '#B8955A', [17.6, -5.2, 20.8, -4.6, 17.6, -2.6]); }
   function bakeEagleWing(x, base, lit, fing, bar) {
     for (let i = 0; i < 5; i++) { const t = i / 4, bx = -8.6 - 10.4 * t, by = -21.6 + 4.2 * t, a = -1.92 - 0.56 * t, L = 7 + (i === 4 ? 1.6 : 0), ca = Math.cos(a), sa = Math.sin(a), nx = -sa * 1.25, ny = ca * 1.25;
       bakePoly(x, fing, [bx + nx, by + ny, bx - nx, by - ny, bx + ca * L - nx * 0.3, by + sa * L - ny * 0.3, bx + ca * L + nx * 0.3, by + sa * L + ny * 0.3]); }
@@ -1841,11 +1868,14 @@ const FLYER_ART = (() => { const F = {};
 
   // #20 Nebula: a medusa of star-gas: a violet bell full of pinpoint stars, trailing threads of light. Heart: the inner bell.
   function bakeNebulaB(x) { let d = 'M-13 -18C-1 -23 14 -14 14 0C14 14 -1 23 -13 18'; for (let i = 0; i < 5; i++) { const y0 = 18 - i * 7.2, y1 = y0 - 7.2; d += 'Q-21 ' + ((y0 + y1) / 2) + ' -13 ' + y1; }
-    x.fillStyle = (function bakeNebulaFill() { const g = x.createRadialGradient(5, -6, 0, 3, -3, 26); g.addColorStop(0, '#C79BFF'); g.addColorStop(0.45, '#7A5ACF'); g.addColorStop(1, '#3A2466'); return g; })();
-    x.fill(new Path2D(d + 'Z')); bakeAtop(x, () => { bakeLine(x, '#2A1A4E', 3, d.slice(d.indexOf('Q')) , 0.8); bakeLine(x, '#E3C9FF', 1.2, 'M-12 -18.4C-1 -22.6 13.6 -14 13.6 0', 0.5); }); }
+    // the outer bell is star-gas: a translucent membrane a spire visibly passes through; only the inner bell (inside r + 2) is solid
+    bakeLayer(x, t => { t.fillStyle = (function bakeNebulaFill() { const g = t.createRadialGradient(5, -6, 0, 3, -3, 26); g.addColorStop(0, '#D9BFFF'); g.addColorStop(0.5, '#A989F0'); g.addColorStop(1, '#7A5ACF'); return g; })();
+      t.fill(new Path2D(d + 'Z')); bakeAtop(t, () => { bakeLine(t, '#E9D6FF', 2.4, d.slice(d.indexOf('Q')), 0.9); bakeLine(t, '#F2E6FF', 1.6, 'M-12 -18.4C-1 -22.6 13.6 -14 13.6 0', 0.9); }); }, 0.42);
+    x.fillStyle = (function bakeNebulaCore() { const g = x.createRadialGradient(4, -4, 0, 2, -2, 15); g.addColorStop(0, '#9C72E8'); g.addColorStop(0.4, '#5A3DAE'); g.addColorStop(0.7, '#2E1B57'); g.addColorStop(1, '#1E1240'); return g; })();
+    x.fill(new Path2D('M-10 -11.5C-1 -15 11.6 -9.5 11.6 0C11.6 9.5 -1 15 -10 11.5Q-6.4 0 -10 -11.5Z')); bakeLine(x, '#E3C9FF', 1, 'M-9.4 -11.8C-1 -14.6 11 -9.4 11.2 -1', 0.55); }
   function bakeNebulaL(x) { bakePath(x, '#E9D6FF', 'M-11 -11Q6 -14 6 0Q6 14 -11 11Q-7 0 -11 -11Z', 0.7); bakeRad(x, 1, -1, 8, [0, 'rgba(255,255,255,.75)', 1, 'rgba(233,214,255,0)']);
     bakeLine(x, '#E9D6FF', 1.1, 'M-4 -6Q-9 -8 -10 -4M-4 -2Q-10 -2 -9 1M-4 2Q-9 4 -11 2M-4 6Q-8 9 -10 6', 0.8);
-    for (const p of [[1, -4, 1.4], [-3, 3, 1], [3, 4, 0.8], [-1, -8, 0.9], [5, -1, 1.2], [-5, -1, 0.8], [2, 8, 1]]) bakeEll(x, '#FFFFFF', p[0], p[1], p[2], p[2]); }
+    for (const p of [[1, -4, 2.4], [-4, 4, 1.8], [4, 4.6, 1.5], [-2, -9, 1.6]]) bakeStar(x, '#FFFFFF', p[0], p[1], p[2], 0.3); } // four pinpoint stars, not polka dots
   const NEB = new Float32Array([-14, -7, 0, 7, 14]);
   function liveNebula(x, w, lag, pull) { x.lineWidth = 1.4; x.lineCap = 'round'; x.lineJoin = 'round';
     for (let g = 0; g < 2; g++) { x.strokeStyle = g ? '#9BE7FF' : '#C79BFF'; x.beginPath(); // one stroke for the outer pair, one for the inner three
@@ -1864,20 +1894,23 @@ const FLYER_ART = (() => { const F = {};
   // #21 Halcyon: the mythic kingfisher of calm seas, regrown in glass. Heart: the white top edges of the inner facets.
   const HAL = [-16, 3, -10, -5, -3, -8, 2, -11, 8, -11, 13, -5, 12, 2, 6, 6, -2, 11, -10, 9, -3, 1, 5, -3];
   const HALT = [0, 1, 10, 1, 2, 10, 2, 3, 11, 3, 4, 11, 4, 5, 11, 5, 6, 11, 6, 7, 11, 7, 10, 11, 2, 11, 10, 7, 8, 10, 8, 9, 10, 9, 0, 10];
+  const HALG = ['#1F4E7A', '#2A6FA0', '#3E86B8', '#174066']; // deep glass: the facets are sapphire; the prism hues live only in the lit edges
   function bakeHalcyonGlass(x, sh) {
     bakePoly(x, '#3E86B8', [-13, 1, -24, 2, -24, 6, -13, 5]); bakePoly(x, '#233F6B', [-13, 3.4, -24, 4, -24, 6, -13, 5]);
-    bakeLayer(x, t => { bakeEll(t, '#9BE7FF', -3, 2, 12, 9); bakeEll(t, '#9BE7FF', 6, -3, 8, 8);
-      bakeAtop(t, () => { for (let i = 0; i < 12; i++) { const a = HALT[i * 3], b = HALT[i * 3 + 1], q = HALT[i * 3 + 2]; bakePoly(t, mixHex(PRISM[(i + sh) % 4], '#FFFFFF', 0.12), [HAL[a * 2], HAL[a * 2 + 1], HAL[b * 2], HAL[b * 2 + 1], HAL[q * 2], HAL[q * 2 + 1]]);
-          const mx = (HAL[a * 2] + HAL[b * 2] + HAL[q * 2]) / 3, my = (HAL[a * 2 + 1] + HAL[b * 2 + 1] + HAL[q * 2 + 1]) / 3; if (Math.hypot(mx, my) < 9 && my < 2) bakeLine(t, '#FFFFFF', 1, 'M' + HAL[a * 2] + ' ' + HAL[a * 2 + 1] + 'L' + HAL[b * 2] + ' ' + HAL[b * 2 + 1], 0.7); }
-        bakeLine(t, '#FFFFFF', 0.6, 'M-10 -5L-3 1L5 -3L13 -5M-3 1L-2 11M5 -3L6 6', 0.35); bakePath(t, '#FFE6C8', 'M-14 6Q-3 13 9 6L9 14L-14 14Z');
+    bakeLayer(x, t => { bakeEll(t, '#9BE7FF', -3, 2, 13, 7.5); bakeEll(t, '#9BE7FF', 7, -2.5, 6.5, 5.5);
+      bakeAtop(t, () => { for (let i = 0; i < 12; i++) { const a = HALT[i * 3], b = HALT[i * 3 + 1], q = HALT[i * 3 + 2]; bakePoly(t, HALG[(i + sh) % 4], [HAL[a * 2], HAL[a * 2 + 1], HAL[b * 2], HAL[b * 2 + 1], HAL[q * 2], HAL[q * 2 + 1]]);
+          const mx = (HAL[a * 2] + HAL[b * 2] + HAL[q * 2]) / 3, my = (HAL[a * 2 + 1] + HAL[b * 2 + 1] + HAL[q * 2 + 1]) / 3; if (Math.hypot(mx, my) < 9 && my < 2) bakeLine(t, PRISM[(i + sh) % 4], 1, 'M' + HAL[a * 2] + ' ' + HAL[a * 2 + 1] + 'L' + HAL[b * 2] + ' ' + HAL[b * 2 + 1], 0.8); }
+        bakeLine(t, '#FFFFFF', 0.6, 'M-10 -5L-3 1L5 -3L13 -5M-3 1L-2 11M5 -3L6 6', 0.35); bakePath(t, '#E9B676', 'M-14 6Q-3 13 9 6L9 14L-14 14Z');
         bakeRad(t, 1, -1, 17, [0, 'rgba(255,255,255,.45)', 0.4, 'rgba(255,255,255,.08)', 0.65, 'rgba(30,50,90,0)', 1, 'rgba(30,50,90,.32)']); }); });
     bakeLine(x, '#233F6B', 4, 'M12 -2.4L2 -6', 1, 'butt'); bakePoly(x, '#233F6B', [12, -5, 28, -2, 12, 0]); bakePoly(x, '#6FB4D8', [12, -5, 28, -2, 12, -2.8]); }
   function bakeHalcyonB(x) { bakeHalcyonGlass(x, 0); }
   function bakeHalcyonB2(x) { bakeHalcyonGlass(x, 1); }
-  function bakeHalcyonWing(x, s, cols) { x.scale(s, s); const d = 'M0 0Q-4 -14 -15 -18Q-14 -8 -6 2Z'; bakePath(x, cols[0], d);
-    bakeAtop(x, () => { bakePoly(x, cols[1], [0, 0, -15, -18, -9, -8]); bakePoly(x, cols[2], [-6, 2, -15, -18, -9, -8]); }); bakeLine(x, '#FFFFFF', 0.8, 'M0 0Q-4 -14 -15 -18', 0.7); }
-  function bakeHalcyonWN(x) { bakeHalcyonWing(x, 1, ['#9BE7FF', '#FFE08A', '#FF9BC8']); }
-  function bakeHalcyonWF(x) { bakeHalcyonWing(x, 0.85, ['#4E83A8', '#8C7E4A', '#9A5A78']); }
+  // glass wings to match: sapphire facets, the prism only as light caught on the leading edge and the facet seam
+  function bakeHalcyonWing(x, s, cols, lit) { x.scale(s, s); const d = 'M0 0Q-4 -14 -15 -18Q-14 -8 -6 2Z'; bakePath(x, cols[0], d);
+    bakeAtop(x, () => { bakePoly(x, cols[1], [0, 0, -15, -18, -9, -8]); bakePoly(x, cols[2], [-6, 2, -15, -18, -9, -8]); if (lit) { bakeLine(x, '#FF9BC8', 0.9, 'M-15 -18L-9 -8L-3 1', 0.8); bakeLine(x, '#FFE08A', 0.9, 'M-14.6 -17Q-13.4 -8 -6 1.6', 0.7); } });
+    bakeLine(x, lit ? '#9BE7FF' : '#FFFFFF', lit ? 1.1 : 0.8, 'M0 0Q-4 -14 -15 -18', lit ? 0.95 : 0.5); }
+  function bakeHalcyonWN(x) { bakeHalcyonWing(x, 1, ['#2A6FA0', '#3E86B8', '#1F4E7A'], true); }
+  function bakeHalcyonWF(x) { bakeHalcyonWing(x, 0.85, ['#1A3F63', '#245A84', '#14324F'], false); }
   def('halcyon', { layers: [['WF', 2, -3.5, bakeHalcyonWF, 's'], ['B', 0, 0, bakeHalcyonB], ['B2', 0, 0, bakeHalcyonB2, 'n'], ['WN', 0, -3, bakeHalcyonWN, 's'], ['H', 6, -17, bakeHaloRing, 'L']], np: 4, flake: 'prism', dark: '#233F6B' });
   function liveHalAng(lag) { const LV = Renderer.LV, t = LV.t < lag ? 9 : LV.t - lag, e = LV.glide ? 0.35 : Renderer.wingS(t, 0.05, 0.15); return -1.4 * e + (e > 0 && !LV.glide ? 0.15 * Math.sin(LV.wall * 157) : 0) + 0.04 * Math.sin(2.1 * LV.wall); }
   F.halcyon.back = function (ctx, gx, y, rot, s, sx, sy, running) { Renderer.wing(Renderer.LV.F, 'WF', gx, y, rot, sx, sy, liveHalAng(0.03), 1, 1); };
@@ -2194,7 +2227,7 @@ const Game = (() => {
   const R = { seed: 1, mode: 'normal', mods: makeMods('normal'), start: 0, runTick: 0, dist: 0, v: 300, vb: 300, sf: 1, gates: 0, score: 0, chain: 0, mult: 1, maxChain: 0, maxMult: 1, meter: 0,
     surgeT: 0, graceT: 0, invulnT: 0, shield: false, magT: 0, slowT: 0, shrT: 0, shrHold: false, perfects: 0, grazes: 0, smashes: 0, motes: 0, moteN: 0, gems: 0, pups: 0, pure: true,
     alive: true, lockout: 0, dyingT: 0, cdT: 0, biomeN: 0, biome: 0, prevBiome: 0, best: { score: 0, gates: 0 }, newBest: false, bestShown: false, active: false, reviveUsed: false,
-    cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [],
+    cm: null, skin: 'glim', trail: 'ember', vDeath: 0, killer: 0, daily: -1, surges: 0, wasPaused: false, missionsDone: [], unsealed: [],
     ch: CHARS.glim, grav: CONST.GRAVITY, flapV: CONST.FLAP_VY, knockV: CONST.FLAP_VY, pickK: 1, held: false, glide: false, pull: false,
     cS: 0, kS: -1, cP: 0, kP: -1, cW: 0, kW: -1, rek: 0, rekindles: 0, surgeLen: CONST.SURGE_TICKS }; // per-trait counters + the gate each fired on (excluded from its recharge)
   G.run = R;
@@ -2240,7 +2273,7 @@ const Game = (() => {
     R.runTick = 0; R.dist = 0; R.pdist = 0; R.vb = R.v = speedAt(R.start, R.mods) * c.pace; R.sf = 1; R.gates = 0; R.score = 0; R.chain = 0; R.mult = 1; R.maxChain = 0; R.maxMult = 1; R.meter = c.head;
     R.surgeT = 0; R.graceT = 0; R.invulnT = 0; R.shield = R.mods.breeze || c.aegis || c.ward > 0; R.magT = 0; R.slowT = 0; R.shrT = R.mods.tiny ? 1200 : 0; R.shrHold = false;
     R.perfects = R.grazes = R.smashes = R.motes = R.moteN = R.gems = R.pups = R.surges = 0; R.pure = true; R.alive = true; R.lockout = 0; R.dyingT = 0; R.cdT = 0;
-    R.biomeN = biomeCount(R.start); R.biome = R.prevBiome = R.biomeN % 5; R.newBest = false; R.bestShown = false; R.active = true; R.reviveUsed = false; R.missionsDone = [];
+    R.biomeN = biomeCount(R.start); R.biome = R.prevBiome = R.biomeN % 5; R.newBest = false; R.bestShown = false; R.active = true; R.reviveUsed = false; R.missionsDone = []; R.unsealed = [];
     R.cm = { gates: 0, motes: 0, score: 0, ticks: 0, runs: false, died: 0 };
     const bk = mode === 'breeze' ? 'breeze' : 'normal'; R.best = { score: mode === 'daily' ? sv.daily.best : sv.best[bk].score, gates: mode === 'daily' ? 0 : sv.best[bk].gates };
     sv.missions.slots.forEach(s => { const m = mission(s.i); if (m.sc === 'run' || m.sc === 'max') s.p = 0; s.done = s.p >= m.target; });
@@ -2288,7 +2321,7 @@ const Game = (() => {
     // 2-5. gravity (apex hang, + Pull), fall cap, Drift cap, integrate, ceiling
     if (!flapped) { let gr = R.grav; if (Math.abs(P.vy) < c.apex) gr *= CONST.APEX_MUL; P.vy += gr * S; if (pa !== 0) P.vy += pa * S; }
     if (P.vy > c.fall) P.vy = c.fall;
-    if (c.drift) { R.glide = R.held && P.vy > 0; if (R.glide && P.vy > ABIL.DRIFT_VY) P.vy = ABIL.DRIFT_VY; } // Drift: holding caps the fall, never adds lift
+    if (c.drift) { R.glide = R.held && P.vy > 0; const dv = c.driftVy || ABIL.DRIFT_VY; if (R.glide && P.vy > dv) P.vy = dv; } // Drift: holding caps the fall, never adds lift
     P.y += P.vy * S;
     if (P.y - P.r < CONST.CEIL) { P.y = CONST.CEIL + P.r; if (P.vy < 0) P.vy = 0; P.sx = 1.15; P.sy = 0.87; }
     P.cosmetic(false, R.glide);
@@ -2441,7 +2474,7 @@ const Game = (() => {
     for (let j = 0; j < 3; j++) { const s = ms.slots[j], m = mission(s.i); if (s.p >= m.target) { sv.motes += m.reward; R.missionsDone.push({ text: m.text, reward: m.reward });
       const ni = ms.nextIdx++; ms.slots[j] = { id: MDEF[ni % 12].id, p: 0, i: ni }; ms.cycle = Math.floor(ni / 12); } }
     ms.pending = 0;
-    const opened = Unlocks.sync(); for (let k = 0; k < opened.length; k++) Bus.emit('unseal', opened[k], 0); // seals re-evaluated: one toast per newly opened tier
+    const opened = Unlocks.sync(); for (let k = 0; k < opened.length; k++) { R.unsealed.push(opened[k]); Bus.emit('unseal', opened[k], 0); } // seals re-evaluated: a results row and one title toast per newly opened tier
     Save.write();
   }
   G.finalize = finalize;
@@ -2828,11 +2861,11 @@ const Renderer = (() => {
 /* ===================== UI (DOM) ===================== */
 const TIPS = ['Tap gently, in rhythm', 'Skim a thorn rim for a GRAZE', 'Fly through the very centre for PERFECT', 'Fill SURGE to smash straight through spires', 'Style keeps your chain going: ×5 is the max', 'Shield saves you once, even from the bramble'];
 const UI = (() => {
-  const U = { panel: null, colN: 0 }, E = {}; // colN: pills + the flyer's chip row showing in the left HUD column (word pops keep clear of it)
+  const U = { panel: null, colN: 0 }, E = {}; // colN: pills + the flyer's chips showing in the left HUD column (word pops keep clear of it)
   ['score', 'mult', 'pips', 'hudToast', 'motePill', 'moteN', 'pups', 'pauseBtn', 'meterWrap', 'meterFill', 'meterLbl', 'rotChip', 'titleUI', 'dailyChip', 'missionStrip', 'msText', 'bestPill', 'bestTxt', 'bestMedal',
     'pause', 'pResume', 'pRestart', 'pHome', 'pMissions', 'results', 'rSheet', 'rMedal', 'rHeading', 'rRun', 'rNew', 'rScore', 'rStats', 'rBiome', 'rNext', 'rNextBar', 'rMissions', 'rTip', 'rCont', 'rContRing', 'rRetry', 'rHome', 'rShop', 'rHint',
     'shop', 'shopMotes', 'shopClose', 'segSkins', 'segTrails', 'carousel', 'flyGrid', 'fdWrap', 'fd', 'fdScrim', 'fdPrev', 'fdNext', 'fdClose', 'fdTier', 'fdNum', 'fdCv', 'fdSky', 'fdName', 'fdConcept',
-    'fdLadder', 'fdTraits', 'fdBars', 'fdUnlock', 'fdAct', 'rUnlock', 'shopBtn', 'settings', 'statList', 'resetBtn', 'verTxt', 'missions', 'mCycle', 'mList', 'toast', 'toastPill', 'hapRow', 'score'].forEach(id => { E[id] = $(id); });
+    'fdLadder', 'fdTraits', 'fdBars', 'fdUnlock', 'fdAct', 'rUnlock', 'rUnseal', 'tNext', 'shopBtn', 'settings', 'statList', 'resetBtn', 'verTxt', 'missions', 'mCycle', 'mList', 'toast', 'toastPill', 'hapRow', 'score'].forEach(id => { E[id] = $(id); });
   U.E = E;
   const POP_KF = [{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(1)' }], POP_OPT = { duration: 220, easing: 'cubic-bezier(.34,1.56,.64,1)' };
   const REM = { shield: 0, magnet: 0, slowmo: 0, shrink: 0 }, LEFT = { shield: 99, magnet: 0, slowmo: 0, shrink: 0 };
@@ -2882,10 +2915,10 @@ const UI = (() => {
       // the flyer's chips (none for Glim): only touch the DOM when a value changes
       const ch = R.ch, on = inRun && R.alive && ch.chips.length > 0; if (on !== abOn) { abOn = on; show(ABROW, on); }
       if (on) { if (ch.id !== abId) { abId = ch.id; bindChips(ch); } for (let i = 0; i < ch.chips.length; i++) chipTick(AB[i], ch, R); }
-      let n = abOn ? 1 : 0; for (const p of PUPS) if (PILLS[p].on) n++; U.colN = n;
+      let n = abOn ? ch.chips.length : 0; for (const p of PUPS) if (PILLS[p].on) n++; U.colN = n; // one 42 px slot per pill and per chip
     }
     const mv2 = Save.d.motes + (R.active && st !== 'results' && st !== 'title' ? R.motes - (R.cm ? R.cm.motes : 0) : 0);
-    if (mv2 !== C.motes) { C.motes = mv2; E.moteN.textContent = fmt(mv2); E.shopMotes.textContent = fmt(Save.d.motes); }
+    if (mv2 !== C.motes) { C.motes = mv2; E.moteN.textContent = fmtN(Math.floor(mv2)); E.shopMotes.textContent = fmtN(Math.floor(Save.d.motes)); }
     if (U.count) countTick(dt);
     if (U.contT !== undefined && U.contT > 0) { U.contT -= dt; E.rContRing.style.transform = 'scaleX(' + Math.max(0, U.contT / 4).toFixed(3) + ')'; if (U.contT <= 0) show(E.rCont, false); }
   };
@@ -2912,7 +2945,7 @@ const UI = (() => {
   // mid-run toasts would cover Glim and the gates; the results card lists the run's completed missions instead. A kept toast
   // (U.toast(html, true): a tier unsealed at the end of a run) survives the results card and shows on the title screen.
   const toastBlocked = () => Game.state === 'playing' || Game.state === 'countdown' || Game.state === 'dying' || Game.state === 'paused' || Game.state === 'results' || U.panel !== null;
-  function toastShow(html, held) { E.toast.classList.toggle('inshop', U.panel === 'shop'); toastCur = held ? html : null; E.toastPill.innerHTML = html; E.toast.classList.add('on'); clearTimeout(toastTo);
+  function toastShow(html, held) { E.toast.classList.toggle('inshop', U.panel === 'shop'); toastCur = held ? html : null; E.toastPill.innerHTML = typeof html === 'function' ? html() : html; E.toast.classList.add('on'); clearTimeout(toastTo);
     toastTo = setTimeout(() => { E.toast.classList.remove('on'); toastCur = null; if (toastQ.length || toastK.length) toastTo = setTimeout(U.flushToasts, 300); }, 2440); }
   U.toast = function (html, keep) { if (toastBlocked() || E.toast.classList.contains('on') || (keep && Game.state !== 'title')) { const q = keep ? toastK : toastQ; if (q.length < 6) q.push(html); return; } toastShow(html, true); };
   U.holdToasts = function (keep) { if (E.toast.classList.contains('on')) { clearTimeout(toastTo); E.toast.classList.remove('on'); if (keep && toastCur !== null) toastQ.unshift(toastCur); toastCur = null; } if (!keep) toastQ.length = 0; };
@@ -2928,6 +2961,7 @@ const UI = (() => {
     E.msText.innerHTML = 'Next: ' + m.text + ' · ' + Math.min(nx.p, m.target) + '/' + m.target + (ready ? ' <span class="badge">' + ready + '</span>' : '');
     const di = Game.dailyInfo(); E.dailyChip.textContent = 'DAILY · ' + MODS[di.mod].name;
     E.missionStrip.setAttribute('aria-label', 'Missions. Next: ' + m.text);
+    const tl = unlockLine(); E.tNext.textContent = tl; show(E.tNext, !!tl);
     const dot = Unlocks.newBuyable(); E.shopBtn.classList.toggle('dot', dot); E.shopBtn.setAttribute('aria-label', dot ? 'Shop, a new flyer can be bought' : 'Shop');
   }
   U.refreshTitle = refreshTitle;
@@ -2959,11 +2993,11 @@ const UI = (() => {
   U.setSetting = function (k, v) { const st = Save.d.settings; if (!(k in st)) return; st[k] = k === 'reduceMotion' && v === null ? null : !!v; U.applySettings(); Save.write(); if (k === 'breeze') refreshTitle(); };
   // ---------- shop: Flyers (tier grid + detail sheet) | Trails (carousel) ----------
   let shopTab = 'flyers', armed = null, armTo = 0;
-  const fmtN = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const SEP3 = /\B(?=(\d{3})+(?!\d))/g, fmtN = n => String(n).replace(SEP3, ','); // 9,400
   function buildShop() {
     armed = null; clearTimeout(armTo); // a rebuilt card / sheet shows the plain price, so it must not stay armed
     const fl = shopTab === 'flyers'; E.segSkins.setAttribute('aria-pressed', fl); E.segTrails.setAttribute('aria-pressed', !fl);
-    show(E.flyGrid, fl); show(E.carousel, !fl); E.shopMotes.textContent = fmt(Save.d.motes);
+    show(E.flyGrid, fl); show(E.carousel, !fl); E.shopMotes.textContent = fmtN(Math.floor(Save.d.motes));
     if (fl) buildFlyers(); else { closeDetail(true); buildTrails(); }
   }
   function buildTrails() {
@@ -2990,6 +3024,9 @@ const UI = (() => {
     });
     const ci = Math.max(0, TRAILS.findIndex(it => it.id === eq)); requestAnimationFrame(() => { const c = E.carousel.children[ci]; if (c) E.carousel.scrollLeft = c.offsetLeft - (E.carousel.clientWidth - c.clientWidth) / 2; centerCard(); });
   }
+  const tierName = k => TIERS[k].name[0] + TIERS[k].name.slice(1).toLowerCase(); // 'Talon'
+  // '8 new flyers': the flyers not owned yet in tiers ks (a migrated v1 save can already own one in a tier that just opened)
+  const newFlyers = ks => { let n = 0; for (const id of ROSTER) if (ks.indexOf(CHARS[id].tier - 1) >= 0 && !Unlocks.owned(id)) n++; return n ? n + ' new flyer' + (n === 1 ? '' : 's') : ''; };
   // tier badges (20 px): I paper tag, II copper rhombus, III moon-silver hexagon on ink, IV gold heater-shield on lacquer, V star disc, VI prism star
   function badgeSVG(k) { const c = tierCol(k), o = '<svg viewBox="0 0 20 20" aria-hidden="true">';
     if (k === 0) return o + '<rect x="3" y="3" width="14" height="14" rx="2" fill="' + c + '"/><path d="M8.6 6h2.8v8H8.6z" fill="#1E1428"/></svg>';
@@ -2999,17 +3036,29 @@ const UI = (() => {
     if (k === 4) return o + '<circle cx="10" cy="10" r="8.5" fill="' + c + '"/><path d="M10 4.5l1.4 4.1 4.1 1.4-4.1 1.4L10 15.5l-1.4-4.1L4.5 10l4.1-1.4z" fill="#1E1428"/></svg>';
     let p = ''; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, a2 = a + Math.PI / 8; p += '<path d="M10 10L' + (10 + 9 * Math.cos(a)).toFixed(1) + ' ' + (10 + 9 * Math.sin(a)).toFixed(1) + 'L' + (10 + 4 * Math.cos(a2)).toFixed(1) + ' ' + (10 + 4 * Math.sin(a2)).toFixed(1) + 'z" fill="' + PRISM[i % 4] + '"/>'; }
     return o + p + '<circle cx="10" cy="10" r="2.6" fill="#FFD27A" stroke="#1E1428" stroke-width=".8"/></svg>'; }
-  // one progress row per seal path (sealed tier headers and the detail sheet)
+  // one progress row per seal path, each 'have / need' (sealed tier headers and the detail sheet)
   function sealRows(pr) { const row = (t, v, f) => '<div class="ur"><span>' + t + '</span><b>' + v + '</b></div><div class="bar"><i style="transform:scaleX(' + Math.min(1, f).toFixed(3) + ')"></i></div>';
-    let h = row('Reach gate ' + pr.needBest + ' in one run', 'best ' + pr.best, pr.best / pr.needBest) + row('or fly ' + fmtN(pr.needGates) + ' gates', fmtN(pr.gates), pr.gates / pr.needGates);
-    if (pr.needMissions) h += row('or finish ' + pr.needMissions + ' missions', String(pr.missions), pr.missions / pr.needMissions);
-    if (pr.needStreak) h += row('or a ' + pr.needStreak + '-day daily streak', 'best ' + pr.streak, pr.streak / pr.needStreak);
+    let h = row('Reach gate ' + pr.needBest + ' in one run', 'best ' + pr.best + ' / ' + pr.needBest, pr.best / pr.needBest) + row('or pass ' + fmtN(pr.needGates) + ' gates in total', fmtN(pr.gates) + ' / ' + fmtN(pr.needGates), pr.gates / pr.needGates);
+    if (pr.needMissions) h += row('or finish ' + pr.needMissions + ' missions', pr.missions + ' / ' + pr.needMissions, pr.missions / pr.needMissions);
+    if (pr.needStreak) h += row('or play the Daily ' + pr.needStreak + ' days in a row', 'streak ' + pr.cur + ' / ' + pr.needStreak, pr.cur / pr.needStreak);
     return h; }
+  // the path the player is closest to (largest fraction done; ties keep the one-run path) as [fraction, short text, path]
+  const pl = (n, one, many) => fmtN(n) + ' ' + (n === 1 ? one : many);
+  function nearPath(pr) { const p = [[pr.best / pr.needBest, 'gate ' + pr.needBest + ' · best ' + pr.best, 'best'], [pr.gates / pr.needGates, pl(pr.needGates - pr.gates, 'more gate', 'more gates'), 'gates']];
+    if (pr.needStreak) p.push([pr.cur / pr.needStreak, pl(pr.needStreak - pr.cur, 'more Daily', 'more Dailies') + ' in a row', 'streak']);
+    if (pr.needMissions) p.push([pr.missions / pr.needMissions, pl(pr.needMissions - pr.missions, 'more mission', 'more missions'), 'missions']);
+    return p.sort((a, b) => b[0] - a[0])[0]; }
+  // the next flyer in ladder order: motes to go, or the nearest way to open the tier that stands in the way (title and results).
+  // bestG: the results card's per-mode best; the seals use the best of any mode, so say so when they differ
+  function unlockLine(bestG) { const nx = Unlocks.next(); if (!nx) return ''; const c = CHARS[nx.id];
+    if (!nx.sealed) { const need = c.price - Save.d.motes; return 'Next: ' + c.name + ' · ' + (need > 0 ? fmtN(need) + ' motes to go' : 'ready in the shop'); }
+    const pr = Unlocks.progress(nx.tier - 1), np = nearPath(pr);
+    return 'Tier ' + ROMAN[nx.tier - 1] + (np[2] === 'best' ? ' opens at gate ' + pr.needBest + ' (best ' + pr.best + (bestG !== undefined && pr.best > bestG ? ', any mode' : '') + ')' : ' opens after ' + np[1]); }
   // tiles: built once per shop opening, previews baked lazily (the equipped tier and its neighbours first, one per frame),
   // and every tile canvas is released (width 0) when the shop closes. Nothing here runs during a run.
   const TILE = {}, reveal = []; let tileQ = [], tileRaf = 0;
   function buildFlyers() {
-    const sv = Save.d, eqT = CHARS[sv.equipped.skin].tier - 1; let h = '<div class="fcount" id="fCount"></div><div class="tiers">';
+    const sv = Save.d, nx0 = Unlocks.next(), eqT = nx0 && !nx0.sealed ? nx0.tier - 1 : CHARS[sv.equipped.skin].tier - 1; let h = '<div class="fcount" id="fCount"></div><div class="tiers">';
     for (let k = 0; k < 6; k++) { h += '<section class="tier' + (reveal.indexOf(k) >= 0 ? ' shine' : '') + '" data-tier="' + (k + 1) + '" style="--tc:' + tierCol(k) + '"><div class="th">' + badgeSVG(k) + '<span class="tn">' + ROMAN[k] + ' · ' + TIERS[k].name + '</span><span class="to"></span><span class="op">Open</span></div>' +
       '<button class="sealBtn hid" aria-expanded="false"><svg class="i"><use href="#i-seal"/></svg><span></span><svg class="i"><use href="#i-right"/></svg></button><div class="sealCard hid"></div><div class="tiles">';
       for (const id of ROSTER) if (CHARS[id].tier === k + 1) h += '<button class="tile" data-id="' + id + '"><canvas width="0" height="0"></canvas><span class="nm">' + CHARS[id].name + '</span><span class="st"></span></button>';
@@ -3020,7 +3069,7 @@ const UI = (() => {
     E.flyGrid.querySelectorAll('.sealBtn').forEach(b => b.addEventListener('click', () => { Haptics.tick(); Audio.unlock(); Audio.play('ui'); const card = b.nextElementSibling, on = card.classList.contains('hid'); show(card, on); b.setAttribute('aria-expanded', on ? 'true' : 'false'); }));
     refreshFlyers();
     tileQ = ROSTER.slice().sort((a, b) => Math.abs(CHARS[a].tier - 1 - eqT) - Math.abs(CHARS[b].tier - 1 - eqT) || CHARS[a].rank - CHARS[b].rank); pumpTiles();
-    requestAnimationFrame(() => { const sec = E.flyGrid.querySelectorAll('.tier')[eqT]; if (sec && U.panel === 'shop') E.flyGrid.scrollTop = Math.max(0, sec.offsetTop - 4); }); // opens scrolled to the equipped flyer's tier
+    requestAnimationFrame(() => { const sec = E.flyGrid.querySelectorAll('.tier')[eqT]; if (sec && U.panel === 'shop') E.flyGrid.scrollTop = Math.max(0, sec.offsetTop - 4); }); // opens scrolled to the next flyer's tier when it can be bought, else the equipped flyer's
   }
   function pumpTiles() { if (tileRaf) return; tileRaf = requestAnimationFrame(function tileStep() { tileRaf = 0; if (U.panel !== 'shop') return;
     while (tileQ.length) { const id = tileQ.shift(), T = TILE[id]; if (T && !T.baked) { drawTile(T, id); break; } } if (tileQ.length) pumpTiles(); }); }
@@ -3045,18 +3094,18 @@ const UI = (() => {
     for (let k = 0; k < 6; k++) { const sec = secs[k], open = Unlocks.open(k); let o = 0; for (const id of ROSTER) if (CHARS[id].tier === k + 1 && Unlocks.owned(id)) o++;
       sec.querySelector('.to').textContent = o + '/4'; show(sec.querySelector('.op'), open); const sb = sec.querySelector('.sealBtn'), card = sec.querySelector('.sealCard'); show(sb, !open);
       if (open) { show(card, false); sb.setAttribute('aria-label', 'Tier ' + ROMAN[k] + ' is open'); }
-      else { const pr = Unlocks.progress(k), t = 'Sealed · gate ' + pr.needBest + ' · best ' + pr.best; sb.querySelector('span').textContent = t; sb.setAttribute('aria-label', 'Tier ' + ROMAN[k] + ' ' + t + ', show every way to open it'); card.innerHTML = sealRows(pr); } }
+      else { const pr = Unlocks.progress(k), t = 'Locked · ' + nearPath(pr)[1]; sb.querySelector('span').textContent = t; sb.setAttribute('aria-label', 'Tier ' + ROMAN[k] + ' ' + t + ', show every way to open it'); card.innerHTML = sealRows(pr); } }
     for (const id of ROSTER) tileState(id); }
   function tileState(id) { const T = TILE[id], c = CHARS[id], st = Unlocks.state(id), el = T.el, sv = Save.d, isNew = st === 'buy' && sv.seen.buyable.indexOf(id) < 0;
     el.className = 'tile ' + st + (T.el.classList.contains('reveal') ? ' reveal' : ''); el.style.setProperty('--gc', c.glow);
     let txt = '', lab = c.name + ', tier ' + c.tier + ', ';
     if (st === 'eq') { txt = 'Flying'; lab += 'flying'; } else if (st === 'own') lab += 'owned';
     else if (st === 'buy' || st === 'save') { txt = fmtN(c.price); lab += fmtN(c.price) + ' motes' + (st === 'save' ? ', need ' + fmtN(c.price - sv.motes) + ' more' : ', buyable'); }
-    else { const pr = Unlocks.progress(c.tier - 1); txt = pr.best + ' / ' + pr.needBest; lab += fmtN(c.price) + ' motes, sealed: reach gate ' + pr.needBest + ', best ' + pr.best; }
-    // sealed: the seal glyph and best / skill-path gate ('Best 43 / 100' does not fit an 80 px tile at 13 px)
+    else { const pr = Unlocks.progress(c.tier - 1); txt = fmtN(c.price); lab += fmtN(c.price) + ' motes, locked until Tier ' + ROMAN[c.tier - 1] + ' opens: ' + nearPath(pr)[1]; }
+    // sealed: the padlock and the price (the bar under it shows the nearest way to open the tier)
     if (st === 'seal') T.st.innerHTML = '<svg class="i" aria-hidden="true"><use href="#i-seal"/></svg>' + txt; else T.st.textContent = txt; el.setAttribute('aria-label', lab);
     let pip = el.querySelector('.new'); if (isNew && !pip) { pip = document.createElement('span'); pip.className = 'new'; pip.textContent = 'NEW'; el.appendChild(pip); } else if (!isNew && pip) pip.remove();
-    let pb = el.querySelector('.pb'); if (st === 'seal') { const pr = Unlocks.progress(c.tier - 1); if (!pb) { pb = document.createElement('b'); pb.className = 'pb'; pb.innerHTML = '<i></i>'; el.appendChild(pb); } pb.firstChild.style.transform = 'scaleX(' + Math.min(1, pr.best / pr.needBest).toFixed(3) + ')'; } else if (pb) pb.remove();
+    let pb = el.querySelector('.pb'); if (st === 'seal') { const pr = Unlocks.progress(c.tier - 1); if (!pb) { pb = document.createElement('b'); pb.className = 'pb'; pb.innerHTML = '<i></i>'; el.appendChild(pb); } pb.firstChild.style.transform = 'scaleX(' + Math.min(1, nearPath(pr)[0]).toFixed(3) + ')'; } else if (pb) pb.remove();
     const mode = st === 'seal' ? 'silhouette' : 'colour'; if (T.baked && T.mode !== mode) { T.baked = false; tileQ.push(id); pumpTiles(); } }
   function shopClosed() { closeDetail(true); if (tileRaf) { cancelAnimationFrame(tileRaf); tileRaf = 0; } tileQ.length = 0;
     for (const id in TILE) { const T = TILE[id]; T.cv.width = 0; T.cv.height = 0; T.baked = false; } reveal.length = 0; if (Unlocks.markSeen()) Save.write(); }
@@ -3093,17 +3142,17 @@ const UI = (() => {
     if (st === 'eq') { b.textContent = 'Flying'; b.disabled = true; b.classList.add('eq'); }
     else if (st === 'own') b.textContent = 'Fly as ' + c.name;
     else if (st === 'buy') b.textContent = armed === id ? 'Tap again to buy · ' + fmtN(c.price) : 'Buy · ' + fmtN(c.price);
-    else if (st === 'save') { b.textContent = fmtN(c.price) + ' · need ' + fmtN(c.price - sv.motes) + ' more'; b.disabled = true; b.classList.add('poor'); }
-    else { u = sealRows(Unlocks.progress(c.tier - 1)) + '<div class="pr">' + fmtN(c.price) + ' motes</div>'; b.textContent = 'Sealed'; b.disabled = true; }
+    else if (st === 'save') { b.textContent = 'Need ' + fmtN(c.price - sv.motes) + ' more motes'; b.disabled = true; b.classList.add('poor'); }
+    else { const k = c.tier - 1; u = '<div class="uh">Open Tier ' + ROMAN[k] + ' first, any one of:</div>' + sealRows(Unlocks.progress(k)) + '<div class="pr">' + fmtN(c.price) + ' motes' + (sv.motes >= c.price ? ' · you already have enough' : '') + '</div>'; b.textContent = 'Open Tier ' + ROMAN[k] + ' to buy'; b.disabled = true; b.classList.add('poor'); }
     E.fdUnlock.innerHTML = u; }
   function onAct() { const id = FD.id; if (id === null) return; const c = CHARS[id], st = Unlocks.state(id);
-    if (st === 'own') { Unlocks.equip(id); Art.keepFly(id); Audio.play('ui'); closeDetail(); refreshFlyers(); toastShow('<b>' + c.name + ':</b> ' + c.tip); return; }
+    if (st === 'own') { Unlocks.equip(id); Art.keepFly(id); Audio.play('ui'); closeDetail(); refreshFlyers(); toastShow('<span><b>' + c.name + ':</b> ' + c.tip + '</span>'); return; }
     if (st !== 'buy') return;
     if (armed !== id) { armed = id; Audio.play('ui'); actState(); clearTimeout(armTo); armTo = setTimeout(() => { armed = null; if (FD.id !== null) actState(); }, 3000); return; }
     armed = null; clearTimeout(armTo); if (!Unlocks.buy(id)) return;
-    Art.keepFly(id); Audio.play('purchase'); E.shopMotes.textContent = fmt(Save.d.motes); renderDetail(); refreshFlyers();
+    Art.keepFly(id); Audio.play('purchase'); E.shopMotes.textContent = fmtN(Math.floor(Save.d.motes)); renderDetail(); refreshFlyers();
     const T = TILE[id]; if (T) { T.el.classList.remove('bought'); void T.el.offsetWidth; T.el.classList.add('bought'); } // the unlock moment: a burst in its glow colour
-    toastShow('<b>' + c.name + ':</b> ' + c.tip); }
+    toastShow('<span><b>' + c.name + ' is yours!</b> ' + c.tip[0].toUpperCase() + c.tip.slice(1) + '</span>'); if (!Unlocks.next()) U.toast('<b>All 24 flyers are yours!</b>'); }
   // the stage: a 200 px preview (idle bob, a hop every 0.9 s) on the chosen biome's sky, <= 30 fps, only while the sheet is open
   function bakeStageSky(b, px) { const S = document.createElement('canvas'); S.width = S.height = px; const x = S.getContext('2d'), B = BIOMES[b], g = x.createLinearGradient(0, 0, 0, px);
     g.addColorStop(0, B.sky[0]); g.addColorStop(1, B.sky[1]); x.fillStyle = g; x.fillRect(0, 0, px, px);
@@ -3154,7 +3203,8 @@ const UI = (() => {
   // ---------- results ----------
   function openResults() {
     const R = Game.run, sv = Save.d, bk = R.mode === 'breeze' ? 'breeze' : 'normal', bestG = R.mode === 'daily' ? R.gates : sv.best[bk].gates;
-    const head = R.newBest ? 'Glim is glowing!' : R.gates < 3 ? 'Thorny one!' : (bestG - R.gates <= 3 ? 'So close!' : 'Nice flying!');
+    const us = R.unsealed, nu = us.length, z = us[nu - 1]; // tiers this run opened, in ladder order
+    const head = nu ? 'Tier ' + ROMAN[z] + ' is open!' : R.newBest ? CHARS[R.skin].name + ' is glowing!' : R.gates < 3 ? 'Thorny one!' : (R.gates < bestG && bestG - R.gates <= 3 ? 'So close!' : 'Nice flying!');
     E.rHeading.textContent = head; E.rRun.textContent = 'Run #' + sv.runCount + (R.mode === 'daily' ? ' · Daily' : '');
     show(E.rNew, R.newBest);
     bakeMedalIcon(E.rMedal, R.medal || 'none'); E.rMedal.classList.remove('stamp'); void E.rMedal.offsetWidth; if (R.medal) { E.rMedal.classList.add('stamp'); setTimeout(() => Audio.play('medal'), 120); }
@@ -3166,12 +3216,11 @@ const UI = (() => {
     const nm = MEDALS.find(d => R.gates < d.g);
     if (nm) { E.rNext.textContent = nm.id[0].toUpperCase() + nm.id.slice(1) + ' at ' + nm.g + ' gates — ' + (nm.g - R.gates) + ' to go'; E.rNextBar.style.transform = 'scaleX(' + (R.gates / nm.g).toFixed(3) + ')'; }
     else { E.rNext.textContent = 'Prism earned! You flew ' + R.gates + ' gates.'; E.rNextBar.style.transform = 'scaleX(1)'; }
-    // the next flyer in ladder order: motes to go, or the seal that stands in the way
-    const nx = Unlocks.next(); let ul = '';
-    if (nx) { const c = CHARS[nx.id]; if (nx.sealed) { const pr = Unlocks.progress(nx.tier - 1); ul = 'Tier ' + ROMAN[nx.tier - 1] + ' opens at gate ' + pr.needBest + ' (best ' + pr.best + ')'; }
-      else { const need = c.price - sv.motes; ul = 'Next: ' + c.name + ' · ' + (need > 0 ? fmtN(need) + ' motes to go' : 'ready in the shop'); } }
-    E.rUnlock.textContent = ul; show(E.rUnlock, !!ul);
-    let mh = ''; R.missionsDone.forEach(m => { mh += '<div class="mdone"><span class="chk"></span><span style="flex:1">' + m.text + '</span><b class="mfly">+' + m.reward + '</b></div>'; });
+    const ul = Unlocks.next() ? unlockLine(bestG) : 'All 24 flyers are yours'; E.rUnlock.textContent = ul; show(E.rUnlock, !!ul);
+    // one compact row (in the tier colour, above the biome line) for every tier this run opened
+    E.rUnseal.innerHTML = nu ? '<div class="mdone unseal" style="background:' + rgba(tierCol(z), 0.25) + '">' + badgeSVG(z) + '<span style="flex:1">' + (nu > 1 ? 'Tiers ' + ROMAN[us[0]] + '–' + ROMAN[z] : 'Tier ' + ROMAN[z] + ' · ' + tierName(z)) + (newFlyers(us) ? ' · ' + newFlyers(us) : ' is open') + '</span></div>' : ''; R.unsealed = [];
+    let mh = '';
+    R.missionsDone.forEach(m => { mh += '<div class="mdone"><span class="chk"></span><span style="flex:1">' + m.text + '</span><b class="mfly">+' + m.reward + '</b></div>'; });
     if (R.medalBonus) mh += '<div class="mdone"><span class="chk"></span><span style="flex:1">First ' + R.medal + ' medal</span><b class="mfly">+' + R.medalBonus + '</b></div>';
     if (R.dailyReward) { mh += '<div class="mdone"><span class="chk"></span><span style="flex:1">Daily flight · streak ' + sv.daily.streak + '</span><b class="mfly">+30</b></div>'; R.dailyReward = 0; }
     E.rMissions.innerHTML = mh; R.missionsDone = [];
@@ -3200,7 +3249,7 @@ const UI = (() => {
     E.results.addEventListener('pointerdown', anyTap); E.rSheet.addEventListener('click', anyTap);
     // a reflexive flap right after death lands where the sheet's buttons slide in: ignore them for the first 0.6 s of results
     E.rSheet.addEventListener('click', e => { if (Game.state === 'results' && Game.run.resT < CONST.LOCKOUT && e.target.closest && e.target.closest('button')) { e.stopPropagation(); e.preventDefault(); } }, true);
-    btn(E.shopBtn = $('shopBtn'), () => U.openPanel('shop')); btn($('setBtn'), () => U.openPanel('settings')); btn(E.missionStrip, () => U.openPanel('missions')); btn(E.bestPill, () => U.openPanel('missions'));
+    btn(E.shopBtn = $('shopBtn'), () => U.openPanel('shop')); btn(E.tNext, () => U.openPanel('shop')); btn($('setBtn'), () => U.openPanel('settings')); btn(E.missionStrip, () => U.openPanel('missions')); btn(E.bestPill, () => U.openPanel('missions'));
     btn(E.dailyChip, () => { Renderer.iris(); Game.toReady({ mode: 'daily' }); });
     btn(E.shopClose, () => U.closePanel(), true); document.querySelectorAll('.closeP').forEach(b => btn(b, () => U.closePanel(), true));
     ['settings', 'missions'].forEach(n => E[n].querySelector('.scrim').addEventListener('click', () => { Audio.play('back'); U.closePanel(); }));
@@ -3216,15 +3265,19 @@ const UI = (() => {
     E.fd.addEventListener('pointercancel', () => { sw = null; });
     E.fd.addEventListener('pointerup', e => { if (!sw || e.pointerId !== sw.id) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y, top = sw.top; sw = null;
       if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) stepDetail(dx < 0 ? 1 : -1); else if (dy > 80 && dy > 1.5 * Math.abs(dx) && top <= 0 && E.fd.scrollTop <= 0) closeDetail(); });
-    Bus.on('unseal', k => { U.toast('Tier ' + ROMAN[k] + ' · ' + TIERS[k].name + ' unsealed', true); if (reveal.indexOf(k) < 0) reveal.push(k); });
+    // tiers that open together (one run, or one boot) share one kept toast: the Bus still carries one 'unseal' per tier
+    const unq = [];
+    Bus.on('unseal', k => { if (reveal.indexOf(k) < 0) reveal.push(k); if (unq.push(k) > 1) return; Promise.resolve().then(() => { const a = unq.splice(0), n = a.length, z = a[n - 1];
+      U.toast(() => { const nf = newFlyers(a); return (n > 1 ? 'Tiers ' + ROMAN[a[0]] + '–' + ROMAN[z] + ' are open!' : 'Tier ' + ROMAN[z] + ' · ' + tierName(z) + ' is open!') + (nf ? ' ' + nf + ' in the shop' : ''); }, true); }); });
     let sr = 0; E.carousel.addEventListener('scroll', () => { if (!sr) sr = requestAnimationFrame(() => { sr = 0; centerCard(); }); }, { passive: true });
     document.querySelectorAll('.tgl[data-set]').forEach(b => btn(b, () => { const k = b.dataset.set, cur = b.getAttribute('aria-pressed') === 'true'; U.setSetting(k, !cur); }));
     let rTo = 0; btn(E.resetBtn, () => { if (!E.resetBtn.classList.contains('armed')) { E.resetBtn.classList.add('armed'); E.resetBtn.textContent = 'Tap again to erase everything'; clearTimeout(rTo); rTo = setTimeout(() => { E.resetBtn.classList.remove('armed'); E.resetBtn.textContent = 'Reset progress'; }, 3000); return; }
-      clearTimeout(rTo); Save.reset(); U.applySettings(); renderSettings(); refreshTitle(); toastShow('Progress erased'); });
+      clearTimeout(rTo); Save.reset(); toastQ.length = 0; toastK.length = 0; reveal.length = 0; U.applySettings(); renderSettings(); refreshTitle(); toastShow('Progress erased'); });
     U.applySettings(); refreshTitle();
   };
   // once at boot (after the save loaded): a migrated v1 save gets one intro toast; tiers opened since the last session get theirs
-  U.bootToasts = function () { const sv = Save.d, intro = !sv.seen.v2intro; if (intro) { sv.seen.v2intro = true; U.toast('24 flyers now. Glim is still yours.'); }
+  U.bootToasts = function () { const sv = Save.d, intro = !sv.seen.v2intro; if (intro) { sv.seen.v2intro = true; const OLD = { crane: 'Mintleaf', dragonkoi: 'Koi', luna: 'Moth', nebula: 'Jelly' }, eq = sv.equipped.skin; // v1 names of the renamed flyers
+      U.toast(OLD[eq] ? '24 flyers now. Your ' + OLD[eq] + ' is now ' + CHARS[eq].name + '.' : '24 flyers now. Glim is still yours.'); }
     const opened = Unlocks.sync(); for (let i = 0; i < opened.length; i++) Bus.emit('unseal', opened[i], 0); if (intro || opened.length) Save.write(); };
   return U;
 })();

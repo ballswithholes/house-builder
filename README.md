@@ -45,7 +45,7 @@ light alone.
 | 3 | Kite | I · Fold | 900 | Rebound 5 |
 | 4 | Crane | I · Fold | 1,100 | Drift (hold to glide) |
 | 5 | Swift | II · Talon | 1,400 | Aegis |
-| 6 | Kestrel | II · Talon | 1,600 | Stormheart (SURGE starts 45 % charged, fills 1.4× faster, lasts 1.4× longer; wider PERFECT) |
+| 6 | Kestrel | II · Talon | 1,600 | Stormheart (SURGE starts 70 % charged, fills 1.4× faster, lasts 1.4× longer; wider PERFECT) |
 | 7 | Peregrine | II · Talon | 1,850 | Rekindle |
 | 8 | Eagle | II · Talon | 2,050 | Rebound 4 |
 | 9 | Raven | III · Shade | 2,200 | Phase 9 |
