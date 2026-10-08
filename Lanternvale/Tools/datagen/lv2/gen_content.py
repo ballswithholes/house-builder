@@ -53,17 +53,27 @@ def has(i, n=1): return {"type": "HasItem", "key": i, "amount": n}
 def setf(k): return {"type": "SetFlag", "key": k}
 def start(q): return {"type": "StartQuest", "key": q}
 def done(q): return {"type": "CompleteQuest", "key": q}
-def xp(n): return {"type": "GiveXP", "amount": n}
+# Dialogue XP (discoveries, checks, peaceful outcomes) is halved with the quest XP (see NORTH_KILL_XP below).
+def xp(n): return {"type": "GiveXP", "amount": int(round(n * 0.5))}
 def give(i, n=1): return {"type": "GiveItem", "key": i, "amount": n}
 def take(i, n=1): return {"type": "TakeItem", "key": i, "amount": n}
 def gold(n): return {"type": "GiveGold", "amount": n}
 def fight(e): return {"type": "StartCombat", "key": e}
 
 
+# Kill XP scale (review: the north bands + the three early dungeons paid ~81k XP, the whole Amberfield band). The north
+# band is part of a 1-12 map the slice already finishes, so it pays little; the Root Hollows' fights stay worth most of
+# a level (Docs/Expansion.md §8 "its dungeon adds about one level"). With halved quest XP the slice's party leaves the
+# three north bands and their dungeons around 15. xpMult 0 (summoned sprouts) stays 0.
+NORTH_KILL_XP = 0.25
+DUNGEON_KILL_XP = 0.7
+
+
 # ====================================================================== creatures
 def creature(id, name, desc, sprite, type, rank, lmin, lmax, offset, floor, cap, size, ai, abilities, loot="", portrait="",
              family="", hm=None, dm=None, am=None, attack=2.0, move=8, material="", voice="", passives=None, immune=None,
-             stats=None, ranged=False, rng=0, school="", resource="", xpMult=None, faction="", bark="", tameable=False):
+             stats=None, ranged=False, rng=0, school="", resource="", xpMult=None, faction="", bark="", tameable=False,
+             projectile="fx_bolt"):
     c = {"id": id, "name": name, "description": desc, "sprite": sprite}
     if portrait:
         c["portrait"] = portrait
@@ -86,7 +96,7 @@ def creature(id, name, desc, sprite, type, rank, lmin, lmax, offset, floor, cap,
     if ranged:
         c["ranged"] = True
         c["rangedRange"] = rng
-        c["projectile"] = "fx_bolt"
+        c["projectile"] = projectile
     c.update({"moveSpeed": move, "size": size, "ai": ai, "abilities": abilities})
     if passives:
         c["passives"] = passives
@@ -96,8 +106,9 @@ def creature(id, name, desc, sprite, type, rank, lmin, lmax, offset, floor, cap,
         c["stats"] = stats
     if loot:
         c["lootTable"] = loot
-    if xpMult is not None:
-        c["xpMult"] = xpMult
+    x = 1.0 if xpMult is None else xpMult
+    scale = DUNGEON_KILL_XP if id.startswith("cr_dg1_") else NORTH_KILL_XP
+    c["xpMult"] = round(x * scale, 2) if x > 0 else 0
     if tameable:
         c["tameable"] = True
     if material:
@@ -234,10 +245,10 @@ CREATURES_DG1 = [
              passives=["cr_dg1_ash_touched"], immune=["Fear", "Polymorph", "Sleep"], faction="Kusu's Roots",
              bark="*The two great roots creak upright and turn their mossy faces towards you.*"),
     creature("cr_dg1_rootwarden", "The Rootwarden", "Old Kusu's guardian: a hunched giant of root and moss with a lantern for a heart. A grey seed is lodged inside the lantern, and every heartbeat spreads it a little further.",
-             "cr_dg1_rootwarden", "Spirit", "Boss", 13, 14, 2, 12, 14, 3.4, "Boss",
+             "cr_dg1_rootwarden", "Spirit", "Boss", 13, 13, 2, 12, 13, 3.4, "Boss",
              [ab("cr_dg1_lantern_blaze", 10, "selfHpBelow:30"), ab("cr_dg1_call_sprouts", 10, "selfHpBelow:60"), ab("cr_dg1_ash_bloom", 9),
               ab("cr_dg1_sweeping_claws", 7, "enemiesInRange:2"), ab("cr_dg1_strangling_roots", 6, "targetNoAura:cr_dg1_strangled"), ab("cr_dg1_root_slam", 5)],
-             loot="lt_dg1_rootwarden", portrait="cr_hollow_treant", hm=1.7, dm=1.45, am=1.1, attack=2.8, move=7, material="wood", voice="wood",
+             loot="lt_dg1_rootwarden", portrait="cr_hollow_treant", hm=1.7, dm=1.2, am=1.1, attack=2.8, move=7, material="wood", voice="wood",
              passives=["cr_dg1_ash_touched"], immune=["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
              stats=[{"stat": "Resistance", "value": 15, "school": "Nature"}], xpMult=1.3, faction="Kusu's Roots",
              bark="*The Rootwarden lifts its masked head. Inside its cage of ribs the lantern heart flickers honey-gold, then grey, then gold again, as if it is trying to remember you.*"),
@@ -280,7 +291,7 @@ CREATURES_LV2 = [
              bark="*The gnoll's ears go flat and it shows a great many teeth.*"),
     creature("cr_lv2_duskmane_lookout", "Duskmane Lookout", "A gnoll archer with a green bandana and a bow it is very proud of.",
              "cr_gnoll_archer", "Humanoid", "Normal", 10, 12, 0, 10, 12, 1.95, "Ranged", [ab("cr_lv2_barbed_arrow", 4)], loot="lt_lv2_gnoll",
-             portrait="cr_bandit_archer", hm=0.9, ranged=True, rng=30, material="leather", voice="gnoll", faction="Duskmane"),
+             portrait="cr_bandit_archer", hm=0.9, ranged=True, rng=30, projectile="fx_arrow", material="leather", voice="gnoll", faction="Duskmane"),
     creature("cr_lv2_wheat_tusker", "Wheatfield Tusker", "A boar that has discovered Ama Hollyhock's wheat and is not prepared to un-discover it.",
              "cr_boar", "Beast", "Normal", 9, 12, -1, 9, 12, 1.15, "Melee", [ab("cr_boar_charge", 6)], loot="lt_boar", family="Boar",
              hm=1.05, material="fur", voice="beast", tameable=True, faction="Beasts"),
@@ -436,7 +447,7 @@ QUESTS_LV2 = [
          {"id": "report", "description": "Tell Hana Pipp who has been eating her apples.",
           "objectives": [{"type": "Flag", "target": "lv2_orchard_reported", "text": "Report to Hana Pipp"}], "turnIn": "lv2_hana_pipp"},
      ],
-     "rewards": {"xp": 400, "gold": 450, "choiceItems": ["lv2_pippin_gloves", "lv2_orchard_shawl", "lv2_appleknot_cudgel"]}},
+     "rewards": {"xp": 200, "gold": 450, "choiceItems": ["lv2_pippin_gloves", "lv2_orchard_shawl", "lv2_appleknot_cudgel"]}},
     {"id": "lv2_singing_roots", "name": "The Singing Roots", "giver": "child_nell", "level": 10, "minLevel": 10, "zone": "lanternvale",
      "summary": "Moppet says the roots behind Old Kusu are singing. Not happy singing — the kind you do when something hurts and you don't want anyone to know. Grown-ups can't hear it. Nell thinks you might.",
      "stages": [
@@ -445,7 +456,7 @@ QUESTS_LV2 = [
          {"id": "tell", "description": "Tell Nell what the roots are singing about.",
           "objectives": [{"type": "Flag", "target": "lv2_roots_told", "text": "Tell Nell"}], "turnIn": "child_nell"},
      ],
-     "rewards": {"xp": 300, "gold": 200, "items": ["lv2_moppets_spare_bell"]}},
+     "rewards": {"xp": 150, "gold": 200, "items": ["lv2_moppets_spare_bell"]}},
     {"id": "lv2_lantern_oil", "name": "Oil for Walk Night", "giver": "lamplighter_tobben", "level": 11, "minLevel": 10, "zone": "lanternvale",
      "summary": "Three casks of lamp oil have vanished from Tobben's store on the west road, the week before Walk Night. Every lantern in the valley wants filling, and Tobben refuses to light them with good intentions.",
      "stages": [
@@ -456,7 +467,7 @@ QUESTS_LV2 = [
          {"id": "return", "description": "Tell Tobben what became of his oil.",
           "objectives": [{"type": "Flag", "target": "lv2_oil_returned", "text": "Return to Tobben"}], "turnIn": "lamplighter_tobben"},
      ],
-     "rewards": {"xp": 450, "gold": 500, "choiceItems": ["lv2_lamplighters_crook", "lv2_oilskin_jerkin", "lv2_wickbraid_ring"]}},
+     "rewards": {"xp": 225, "gold": 500, "choiceItems": ["lv2_lamplighters_crook", "lv2_oilskin_jerkin", "lv2_wickbraid_ring"]}},
 ]
 QUESTS_DG1 = [
     {"id": "dg1_heart_of_kusu", "name": "The Heart Under the Roots", "giver": "dg1_hotaru", "level": 12, "minLevel": 11, "zone": "dgn_root_hollows",
@@ -469,7 +480,7 @@ QUESTS_DG1 = [
          {"id": "elder", "description": "Show the Ash-Seed to Elder Maru under Old Kusu in Lanternvale.",
           "objectives": [{"type": "Flag", "target": "dg1_seed_shown", "text": "Show the seed to Elder Maru"}], "turnIn": "elder_maru"},
      ],
-     "rewards": {"xp": 450, "gold": 1500, "choiceItems": ["dg1_hotarus_lantern_charm", "dg1_heartwood_legguards", "dg1_rootsong_wand"]}},
+     "rewards": {"xp": 225, "gold": 1500, "choiceItems": ["dg1_hotarus_lantern_charm", "dg1_heartwood_legguards", "dg1_rootsong_wand"]}},
 ]
 
 

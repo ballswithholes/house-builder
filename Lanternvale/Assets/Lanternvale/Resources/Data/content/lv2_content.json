@@ -22,6 +22,7 @@
       "ai": "Melee",
       "abilities": [{"ability": "cr_dg1_root_headbutt", "priority": 4}],
       "lootTable": "lt_lv2_rootling",
+      "xpMult": 0.25,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots",
@@ -53,6 +54,7 @@
       "ai": "Healer",
       "abilities": [{"ability": "cr_dg1_sap_mend", "priority": 8, "condition": "allyHpBelow:55"}, {"ability": "cr_dg1_amber_spit", "priority": 3}],
       "lootTable": "lt_lv2_rootling",
+      "xpMult": 0.25,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots"
@@ -77,6 +79,7 @@
       "ai": "Melee",
       "abilities": [{"ability": "cr_lv2_yip", "priority": 5, "chance": 50}, {"ability": "cr_lv2_cleaver_chop", "priority": 4}],
       "lootTable": "lt_lv2_gnoll",
+      "xpMult": 0.25,
       "material": "leather",
       "voice": "gnoll",
       "faction": "Duskmane",
@@ -100,12 +103,13 @@
       "attackSpeed": 2.0,
       "ranged": true,
       "rangedRange": 30,
-      "projectile": "fx_bolt",
+      "projectile": "fx_arrow",
       "moveSpeed": 8,
       "size": 1.95,
       "ai": "Ranged",
       "abilities": [{"ability": "cr_lv2_barbed_arrow", "priority": 4}],
       "lootTable": "lt_lv2_gnoll",
+      "xpMult": 0.25,
       "material": "leather",
       "voice": "gnoll",
       "faction": "Duskmane"
@@ -131,6 +135,7 @@
       "ai": "Melee",
       "abilities": [{"ability": "cr_boar_charge", "priority": 6}],
       "lootTable": "lt_boar",
+      "xpMult": 0.25,
       "tameable": true,
       "material": "fur",
       "voice": "beast",
@@ -158,6 +163,7 @@
       "ai": "Melee",
       "abilities": [{"ability": "cr_boar_charge", "priority": 6}],
       "lootTable": "lt_boar",
+      "xpMult": 0.25,
       "tameable": true,
       "material": "fur",
       "voice": "beast",
@@ -608,7 +614,7 @@
           "id": "c_surv_s",
           "speaker": "narrator",
           "text": "The prints wander from tree to tree, one bite per apple, and they are fresh: a few minutes old. Whoever it is, they're still in the north rows.",
-          "outcomes": [{"type": "GiveXP", "amount": 60}],
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
           "next": "c_found"
         },
         {
@@ -621,7 +627,7 @@
           "id": "c_nat_s",
           "speaker": "narrator",
           "text": "Those aren't feet — they're root-tips, the kind a sapling puts down. Something rooty has walked up here from under Old Kusu. It has also, clearly, been enjoying itself.",
-          "outcomes": [{"type": "GiveXP", "amount": 60}, {"type": "SetFlag", "key": "lv2_knows_rootlings"}],
+          "outcomes": [{"type": "GiveXP", "amount": 30}, {"type": "SetFlag", "key": "lv2_knows_rootlings"}],
           "next": "c_found"
         },
         {"id": "c_nat_f", "speaker": "narrator", "text": "Squirrels, you decide firmly. Very heavy squirrels. With roots.", "next": "c_found"},
@@ -695,7 +701,7 @@
           "id": "r_perc_s",
           "speaker": "narrator",
           "text": "The note isn't in the root at all. It's coming up through it, from below — from the mound of moss and fern between the two biggest roots, where a cool draught is breathing out of the ground. There is a hollow under Old Kusu. And something in it is singing.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Stand up.)"}]
         },
         {
@@ -709,7 +715,7 @@
           "id": "r_nat_s",
           "speaker": "narrator",
           "text": "The sap is running the wrong way: down, not up, drawn towards the mound of moss between the two biggest roots as if something under it is drinking. When you push the ferns aside, cold air breathes out of a dark mouth in the earth.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Stand up.)"}]
         },
         {
@@ -723,7 +729,7 @@
           "id": "r_rel_s",
           "speaker": "narrator",
           "text": "In the quiet of the prayer the note becomes a word, or nearly: 'below'. When you open your eyes, the ferns on the mossy mound between the roots are stirring in a breeze that is coming out of the ground.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Stand up.)"}]
         },
         {
@@ -737,14 +743,14 @@
           "id": "r_shaman",
           "speaker": "narrator",
           "text": "The earth answers slowly, the way old earth does: the roots are hurting, because the one who guards them is hurting. He is below. The way down is under the moss between the two biggest roots.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Stand up.)"}]
         },
         {
           "id": "r_hunter",
           "speaker": "narrator",
           "text": "There — on your cheek, from the left. Cool air, steady as breath, coming out of the mound of moss and fern between the two biggest roots. Something below has a way in, and a way out.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_roots_listened"}, {"type": "SetFlag", "key": "found_root_hollows"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Stand up.)"}]
         },
         {
@@ -808,21 +814,21 @@
           "id": "g_scared",
           "speaker": "lv2_snaggle",
           "text": "*All three gnolls look at you, then at each other, then at the horizon.* ...Rug. No. Not rug. Keep oil. Bad oil. Smelly. *They are gone in a scrabble of claws and a cloud of dust.*",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 120}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 60}],
           "choices": [{"text": "(Let them go.)"}]
         },
         {
           "id": "g_hunter",
           "speaker": "lv2_snaggle",
           "text": "*The haunch sails over their heads. Three noses follow it. Three gnolls follow their noses. Somewhere over the hill, a fight breaks out over who gets the bone.*",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 120}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 60}],
           "choices": [{"text": "(Roll the casks back to the road.)"}]
         },
         {
           "id": "g_rogue",
           "speaker": "lv2_snaggle",
           "text": "*Three heads whip round. By the time they turn back, you are sitting on the oil casks, filing your nails. The gnolls decide, as one, that this is witchcraft, and leave.*",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 120}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_scared"}, {"type": "GiveXP", "amount": 60}],
           "choices": [{"text": "(Roll the casks back to the road.)"}]
         },
         {
@@ -850,7 +856,7 @@
           "id": "g_share",
           "speaker": "lv2_snaggle",
           "text": "*Long pause. Much ear-twitching.* ...One. Fair. One for Duskmane, two for lantern-people. *The smallest gnoll hugs its cask like a puppy.* You tell Big Chief, Snaggle was fair. Snaggle was VERY fair.",
-          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_shared"}, {"type": "GiveXP", "amount": 150}],
+          "outcomes": [{"type": "SetFlag", "key": "lv2_scouts_dealt"}, {"type": "SetFlag", "key": "lv2_gnolls_shared"}, {"type": "GiveXP", "amount": 75}],
           "choices": [{"text": "(Let them go.)"}]
         },
         {
@@ -901,7 +907,7 @@
           "id": "t_carp_s",
           "speaker": "lv2_teo",
           "text": "*You take the line just as it goes taut. For one glorious moment a golden back the size of a door breaks the water — then the line goes slack, and a single huge scale floats to the surface.* ...He let us see him. Forty years. Ha! HA! Here — take this, for luck.",
-          "outcomes": [{"type": "GiveXP", "amount": 80}, {"type": "GiveGold", "amount": 150}],
+          "outcomes": [{"type": "GiveXP", "amount": 40}, {"type": "GiveGold", "amount": 150}],
           "next": "t_more"
         },
         {
@@ -965,7 +971,7 @@
           "id": "a_bees_s",
           "speaker": "lv2_ama_hollyhock",
           "text": "You've a good eye. They don't like the north wind this year. It smells of smoke, they say, though there's no fire anywhere. Bees know things. I just sell the honey.",
-          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
           "next": "a_more"
         },
         {
@@ -1043,7 +1049,7 @@
           "turnIn": "lv2_hana_pipp"
         }
       ],
-      "rewards": {"xp": 400, "gold": 450, "choiceItems": ["lv2_pippin_gloves", "lv2_orchard_shawl", "lv2_appleknot_cudgel"]}
+      "rewards": {"xp": 200, "gold": 450, "choiceItems": ["lv2_pippin_gloves", "lv2_orchard_shawl", "lv2_appleknot_cudgel"]}
     },
     {
       "id": "lv2_singing_roots",
@@ -1067,7 +1073,7 @@
           "turnIn": "child_nell"
         }
       ],
-      "rewards": {"xp": 300, "gold": 200, "items": ["lv2_moppets_spare_bell"]}
+      "rewards": {"xp": 150, "gold": 200, "items": ["lv2_moppets_spare_bell"]}
     },
     {
       "id": "lv2_lantern_oil",
@@ -1097,7 +1103,7 @@
           "turnIn": "lamplighter_tobben"
         }
       ],
-      "rewards": {"xp": 450, "gold": 500, "choiceItems": ["lv2_lamplighters_crook", "lv2_oilskin_jerkin", "lv2_wickbraid_ring"]}
+      "rewards": {"xp": 225, "gold": 500, "choiceItems": ["lv2_lamplighters_crook", "lv2_oilskin_jerkin", "lv2_wickbraid_ring"]}
     }
   ]
 }

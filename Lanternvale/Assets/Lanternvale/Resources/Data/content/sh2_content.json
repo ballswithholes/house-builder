@@ -15,6 +15,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "attackSpeed": 2.2,
       "moveSpeed": 7,
       "size": 1.8,
@@ -26,6 +27,95 @@
       "material": "bone",
       "voice": "none",
       "bark": "*Clack. Clack-clack.* ...my... lantern...?"
+    },
+    {
+      "_note": "The terraces' own Hollow Wisp: the slice's cr_hollow_wisp held to the terraces' band (10-13) and its XP, so the north band does not outpace Amberfield.",
+      "id": "cr_sh2_hollow_wisp",
+      "name": "Hollow Wisp",
+      "description": "A lantern flame with the warmth scooped out. It drifts toward light like a moth toward a memory.",
+      "sprite": "cr_hollow_wisp",
+      "type": "Undead",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.25,
+      "healthMult": 0.8,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Shadow",
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_bolt",
+      "moveSpeed": 9,
+      "size": 1.0,
+      "ai": "Caster",
+      "abilities": [{"ability": "cr_siphon_light", "priority": 5, "chance": 50}, {"ability": "cr_grey_bolt", "priority": 3}],
+      "passives": ["cr_hollow_touched"],
+      "lootTable": "lt_hollow_wisp",
+      "faction": "Hollow",
+      "material": "ether",
+      "voice": "spirit",
+      "bark": "*The wisp flickers. For a moment it almost looks like a lantern flame again.*"
+    },
+    {
+      "_note": "The terraces' own Hollowed Pilgrim (cr_hollow_spirit held to the terraces' band and XP).",
+      "id": "cr_sh2_hollow_spirit",
+      "name": "Hollowed Pilgrim",
+      "description": "A pilgrim's spirit with the light scooped out. It still walks the stair, though it has forgotten why.",
+      "sprite": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.25,
+      "attackSpeed": 2.2,
+      "meleeSchool": "Shadow",
+      "moveSpeed": 8,
+      "size": 1.9,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_hollow_wail", "priority": 6, "condition": "enemiesInRange:2"}, {"ability": "cr_empty_touch", "priority": 4, "chance": 60}],
+      "passives": ["cr_hollow_touched"],
+      "lootTable": "lt_hollow_spirit",
+      "faction": "Hollow",
+      "material": "ether",
+      "voice": "spirit",
+      "bark": "...was I... going somewhere...?"
+    },
+    {
+      "_note": "The north pines' Duskfeather Owl (cr_owl held to the terraces' band and XP).",
+      "id": "cr_sh2_owl",
+      "name": "Duskfeather Owl",
+      "description": "A great round owl that hunts the pilgrim road at dusk. It does not like being stared at.",
+      "sprite": "pet_owl",
+      "type": "Beast",
+      "family": "Owl",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.25,
+      "attackSpeed": 2.0,
+      "moveSpeed": 10,
+      "size": 0.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_owl_screech", "priority": 4, "chance": 50, "condition": "targetNoAura:cr_screeched"}],
+      "lootTable": "lt_owl",
+      "faction": "Wildlife",
+      "tameable": true,
+      "material": "fur",
+      "voice": "beast",
+      "bark": "*Two enormous amber eyes blink at you from a low branch. Hoo.*"
     }
   ],
   "items": [
@@ -226,7 +316,7 @@
           "description": "Aiko says Ishiro wrote everything down. Find his ledger in the Keeper's Lodge, at the east end of the middle terrace.",
           "objectives": [{"type": "Collect", "target": "sh2_ishiros_ledger", "text": "Keeper Ishiro's ledger"}],
           "next": "give",
-          "onComplete": [{"type": "GiveXP", "amount": 100}]
+          "onComplete": [{"type": "GiveXP", "amount": 50}]
         },
         {
           "id": "give",
@@ -240,7 +330,7 @@
           "description": "Ishiro's ledger says the old stair lies beneath the cracked plinth on the High Terrace. Go down into the Lantern Catacombs.",
           "objectives": [{"type": "Reach", "target": "dgn_lantern_catacombs", "text": "Enter the Lantern Catacombs"}],
           "next": "keepers",
-          "onComplete": [{"type": "GiveXP", "amount": 100}]
+          "onComplete": [{"type": "GiveXP", "amount": 50}]
         },
         {
           "id": "keepers",
@@ -271,7 +361,7 @@
         }
       ],
       "rewards": {
-        "xp": 450,
+        "xp": 225,
         "gold": 2500,
         "choiceItems": ["sh2_keepers_broom", "sh2_novices_grey_robe", "sh2_stair_counters_sandals", "sh2_lantern_wardens_gauntlets"]
       }
@@ -361,7 +451,7 @@
                 {"type": "TakeItem", "key": "sh2_ishiros_ledger", "amount": 1},
                 {"type": "SetFlag", "key": "sh2_ledger_given"},
                 {"type": "SetFlag", "key": "found_lantern_catacombs"},
-                {"type": "GiveXP", "amount": 150}
+                {"type": "GiveXP", "amount": 75}
               ]
             },
             {"text": "Goodbye."}
@@ -487,14 +577,14 @@
               "text": "(Lay a hand on her shoulder.) The dead shouldn't have to sing to be heard. I'll help.",
               "next": "a_accept",
               "conditions": [{"type": "Level", "amount": 12}, {"type": "Class", "key": "Priest"}],
-              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 50}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 25}],
               "tag": "PRIEST"
             },
             {
               "text": "A knight keeps the vigil for those who can't. I'll go.",
               "next": "a_accept",
               "conditions": [{"type": "Level", "amount": 12}, {"type": "Class", "key": "Paladin"}],
-              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 50}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 25}],
               "tag": "PALADIN"
             },
             {
@@ -511,7 +601,7 @@
           "id": "a_ins_s",
           "speaker": "sh2_novice_aiko",
           "text": "*Her broom stops.* ...He's not in there. That's the thing. Everything's in there: his teacups, his slippers, his awful tea. Everything but him. *She wipes her eyes quickly.* Sorry. Will you go? I'll feel better knowing someone did.",
-          "outcomes": [{"type": "GiveXP", "amount": 60}],
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
           "choices": [
             {
               "text": "I'll go. You don't have to.",
@@ -594,7 +684,7 @@
           "id": "b_view",
           "speaker": "sh2_pilgrim_bento",
           "text": "*He points with a honey cake.* There: Whisperwood, like a green sea with a silver thread through it. And there, small as a thumbprint: Lanternvale. Watch. *Far below, the village lanterns come on one by one, like someone lighting birthday candles.* Fifty-one years, and that still gets me right here.",
-          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
           "choices": [{"text": "It's beautiful.", "next": "b1"}]
         },
         {
@@ -646,7 +736,7 @@
           "id": "m_stone",
           "speaker": "sh2_pilgrim_mei",
           "text": "*You set your pebble on top. It wobbles, then holds.* There! Now you're part of the shrine. *Along the terrace, one of the lanterns gives a small, definite flicker.* ...Did that lantern just wave at you? Grandmother was RIGHT.",
-          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "outcomes": [{"type": "GiveXP", "amount": 12}],
           "choices": [{"text": "Goodbye."}]
         },
         {
@@ -762,7 +852,7 @@
           "id": "p_found",
           "speaker": "narrator",
           "text": "*Something clicks deep in the stone. The plinth grinds aside on hinges older than the shrine, and a narrow stair spirals down into violet dark. Very faintly, from far below, someone is singing the keepers' evening prayer.*",
-          "outcomes": [{"type": "SetFlag", "key": "found_lantern_catacombs"}, {"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "SetFlag", "key": "found_lantern_catacombs"}, {"type": "GiveXP", "amount": 50}],
           "choices": [{"text": "(Step back.)"}]
         },
         {

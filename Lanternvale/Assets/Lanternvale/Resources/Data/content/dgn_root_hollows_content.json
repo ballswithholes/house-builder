@@ -23,6 +23,7 @@
       "abilities": [{"ability": "cr_dg1_root_headbutt", "priority": 4}],
       "passives": ["cr_dg1_ash_touched"],
       "lootTable": "lt_dg1_rootling",
+      "xpMult": 0.7,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots",
@@ -59,6 +60,7 @@
       ],
       "passives": ["cr_dg1_ash_touched"],
       "lootTable": "lt_dg1_rootling",
+      "xpMult": 0.7,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots"
@@ -92,6 +94,7 @@
       ],
       "passives": ["cr_dg1_ash_touched"],
       "lootTable": "lt_dg1_wisp",
+      "xpMult": 0.7,
       "material": "ether",
       "voice": "spirit",
       "faction": "Kusu's Roots"
@@ -127,6 +130,7 @@
       ],
       "passives": ["cr_dg1_ash_touched"],
       "lootTable": "lt_dg1_wisp",
+      "xpMult": 0.7,
       "material": "wood",
       "voice": "spirit",
       "faction": "Kusu's Roots"
@@ -160,6 +164,7 @@
       "passives": ["cr_dg1_ash_touched"],
       "immune": ["Fear"],
       "lootTable": "lt_dg1_elite",
+      "xpMult": 0.7,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots",
@@ -194,6 +199,7 @@
       "passives": ["cr_dg1_ash_touched"],
       "immune": ["Fear", "Polymorph", "Sleep"],
       "lootTable": "lt_dg1_elite",
+      "xpMult": 0.7,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots",
@@ -208,13 +214,13 @@
       "type": "Spirit",
       "rank": "Boss",
       "levelMin": 13,
-      "levelMax": 14,
+      "levelMax": 13,
       "scaleToParty": true,
       "levelOffset": 2,
       "levelFloor": 12,
-      "levelCap": 14,
+      "levelCap": 13,
       "healthMult": 1.7,
-      "damageMult": 1.45,
+      "damageMult": 1.2,
       "armorMult": 1.1,
       "attackSpeed": 2.8,
       "moveSpeed": 7,
@@ -232,7 +238,7 @@
       "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
       "stats": [{"stat": "Resistance", "value": 15, "school": "Nature"}],
       "lootTable": "lt_dg1_rootwarden",
-      "xpMult": 1.3,
+      "xpMult": 0.91,
       "material": "wood",
       "voice": "wood",
       "faction": "Kusu's Roots",
@@ -1010,7 +1016,7 @@
           "id": "o_bless_s",
           "speaker": "dg1_hotaru",
           "text": "*Somewhere deep in the dark a great slow breath goes out, and every spirit-lantern in the grove burns a little warmer.* He heard you.",
-          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
           "next": "o_return3"
         },
         {
@@ -1052,7 +1058,7 @@
           "id": "o_arc_s",
           "speaker": "dg1_hotaru",
           "text": "*Her light flickers in surprise.* You can see it? Yes — it's being drunk, a little every night, by something that isn't from here. Clever person. Listen, then.",
-          "outcomes": [{"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "GiveXP", "amount": 40}],
           "next": "o_story"
         },
         {
@@ -1141,7 +1147,7 @@
           "turnIn": "elder_maru"
         }
       ],
-      "rewards": {"xp": 450, "gold": 1500, "choiceItems": ["dg1_hotarus_lantern_charm", "dg1_heartwood_legguards", "dg1_rootsong_wand"]}
+      "rewards": {"xp": 225, "gold": 1500, "choiceItems": ["dg1_hotarus_lantern_charm", "dg1_heartwood_legguards", "dg1_rootsong_wand"]}
     }
   ]
 }

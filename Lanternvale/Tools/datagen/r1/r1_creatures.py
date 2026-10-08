@@ -11,16 +11,16 @@ IMMUNE_BOSS = ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"
 TRASH_HP = {"rootling": 1.6, "hound": 1.7, "knight": 2.1}
 BOSS = {
     "thornmaw": dict(hp=5.0, dmg=2.4, berserk=23),
-    "sorrow": dict(hp=2.7, dmg=2.1, berserk=24),
-    "solace": dict(hp=2.3, dmg=1.6, berserk=24),
+    "sorrow": dict(hp=2.5, dmg=2.1, berserk=26),
+    "solace": dict(hp=2.1, dmg=1.6, berserk=26),
     "mother_mire": dict(hp=4.3, dmg=2.3, berserk=23),
     "daughter": dict(hp=1.5, dmg=1.3),
-    "heart": dict(hp=7.4, dmg=1.8, berserk=40),
+    "heart": dict(hp=6.6, dmg=1.65, berserk=40),
 }
 TRASH_DMG = 1.35
 # the uninterruptible raid-wide casts (tag Uninterruptible): damage scale of the hit and its damage over time, so that
 # one landing costs each hero about a third of their health and three healers can top the raid up before the next
-AOE = {"thorn_bleed": 0.5, "bramble_burst": 0.3, "veil_of_tears": 0.36, "bog_eruption": 0.35, "drink_the_light": 0.8}
+AOE = {"thorn_bleed": 0.5, "bramble_burst": 0.3, "veil_of_tears": 0.29, "bog_eruption": 0.35, "drink_the_light": 0.8}
 TRASH_XP, BOSS_XP = 0.35, 0.9
 
 

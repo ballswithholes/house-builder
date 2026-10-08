@@ -15,6 +15,7 @@
       "levelOffset": 1,
       "levelFloor": 13,
       "levelCap": 16,
+      "xpMult": 0.7,
       "attackSpeed": 2.2,
       "moveSpeed": 7,
       "size": 1.8,
@@ -44,6 +45,7 @@
       "levelOffset": 1,
       "levelFloor": 13,
       "levelCap": 16,
+      "xpMult": 0.7,
       "healthMult": 0.85,
       "attackSpeed": 2.4,
       "ranged": true,
@@ -73,6 +75,7 @@
       "levelOffset": 1,
       "levelFloor": 13,
       "levelCap": 16,
+      "xpMult": 0.7,
       "healthMult": 0.9,
       "attackSpeed": 2.4,
       "moveSpeed": 6,
@@ -103,6 +106,7 @@
       "levelOffset": 1,
       "levelFloor": 13,
       "levelCap": 16,
+      "xpMult": 0.7,
       "healthMult": 1.0,
       "damageMult": 0.85,
       "attackSpeed": 2.6,
@@ -136,6 +140,7 @@
       "levelOffset": 1,
       "levelFloor": 13,
       "levelCap": 16,
+      "xpMult": 0.7,
       "healthMult": 0.85,
       "resource": "Mana",
       "attackSpeed": 2.2,
@@ -226,7 +231,7 @@
       "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
       "stats": [{"stat": "Resistance", "value": 15, "school": "Shadow"}],
       "lootTable": "lt_dg3_lantern_lich",
-      "xpMult": 1.3,
+      "xpMult": 0.91,
       "faction": "Hollow",
       "material": "cloth",
       "voice": "spirit",
@@ -783,7 +788,7 @@
           "id": "free",
           "speaker": "narrator",
           "text": "*The violet flame shivers, and turns gold. A warm draught that smells of honey and warm wax brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
-          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_hana_freed"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_hana_freed"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Step back.)"}]
         }
       ]
@@ -835,7 +840,7 @@
           "id": "free",
           "speaker": "narrator",
           "text": "*The violet flame shivers, and turns gold. A warm draught that smells of cut stone and rain brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
-          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_tomo_freed"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_tomo_freed"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Step back.)"}]
         }
       ]
@@ -882,7 +887,7 @@
           "id": "free",
           "speaker": "narrator",
           "text": "*The violet flame shivers, and turns gold. A warm draught that smells of chalk and orange peel brushes past you, up toward the stair, and is gone. Somewhere above, very faintly, a bell rings once.*",
-          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_rin_freed"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "dg3_keeper_rin_freed"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Step back.)"}]
         }
       ]
@@ -930,7 +935,7 @@
           "id": "g_peace",
           "speaker": "narrator",
           "text": "*The knights look at one another. Very slowly they lower their lanterns, and the violet flames inside turn gold. They kneel, and keep kneeling, until there is only empty armour on the flagstones and two warm motes drifting up toward the stair. On the far bank, the acolyte drops its candle and simply... stops, mid-prayer, with a look of enormous relief.*",
-          "outcomes": [{"type": "SetFlag", "key": "dg3_chapel_guard_done"}, {"type": "GiveXP", "amount": 450}],
+          "outcomes": [{"type": "SetFlag", "key": "dg3_chapel_guard_done"}, {"type": "GiveXP", "amount": 225}],
           "choices": [{"text": "(Cross the ford.)"}]
         },
         {
@@ -984,14 +989,14 @@
           "id": "l_soft",
           "speaker": "dg3_hazama",
           "text": "...Home. *The candles in his halo flicker, and for a heartbeat they burn gold.* No. No, home is dark, and the dark is where you lose people, and I will NOT— *The gold gutters out.*",
-          "outcomes": [{"type": "SetFlag", "key": "dg3_hazama_remembers"}, {"type": "GiveXP", "amount": 150}],
+          "outcomes": [{"type": "SetFlag", "key": "dg3_hazama_remembers"}, {"type": "GiveXP", "amount": 75}],
           "next": "l_fight"
         },
         {
           "id": "l_ishiro",
           "speaker": "dg3_hazama",
           "text": "...Ishiro. The little one who made such terrible tea. *A long silence.* He never came down. He never needed to. *His crook trembles.* He was braver than me.",
-          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
           "next": "l_fight"
         },
         {
@@ -1045,7 +1050,7 @@
                 {"type": "SetFlag", "key": "sh2_keepers_freed"},
                 {"type": "SetFlag", "key": "sh2_first_lantern_choice"},
                 {"type": "GiveItem", "key": "sh2_keepers_last_light", "amount": 1},
-                {"type": "GiveXP", "amount": 200},
+                {"type": "GiveXP", "amount": 100},
                 {"type": "Approval", "key": "seren", "amount": 10},
                 {"type": "Approval", "key": "torvan", "amount": 5}
               ]
@@ -1057,7 +1062,7 @@
                 {"type": "SetFlag", "key": "sh2_lantern_kept"},
                 {"type": "SetFlag", "key": "sh2_first_lantern_choice"},
                 {"type": "GiveItem", "key": "sh2_everburning_lantern", "amount": 1},
-                {"type": "GiveXP", "amount": 200},
+                {"type": "GiveXP", "amount": 100},
                 {"type": "Approval", "key": "seren", "amount": -10},
                 {"type": "Approval", "key": "morwen", "amount": 10}
               ]
@@ -1069,7 +1074,7 @@
           "id": "f_read",
           "speaker": "narrator",
           "text": "*Tiny letters, cut with great care: 'LET NO LIGHT OF THIS SHRINE EVER GO OUT.' Below, in a different, shakier hand, much later: 'I am sorry. I did not know how to stop.'*",
-          "outcomes": [{"type": "GiveXP", "amount": 60}],
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
           "next": "f_menu"
         },
         {

@@ -16,6 +16,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "healthMult": 1.1,
       "attackSpeed": 2.0,
       "moveSpeed": 9,
@@ -45,6 +46,7 @@
       "levelOffset": -1,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "healthMult": 0.9,
       "attackSpeed": 1.8,
       "moveSpeed": 9,
@@ -70,6 +72,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "healthMult": 0.9,
       "attackSpeed": 1.8,
       "moveSpeed": 8,
@@ -97,6 +100,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "healthMult": 0.85,
       "attackSpeed": 2.0,
       "moveSpeed": 8,
@@ -126,6 +130,7 @@
       "levelOffset": 1,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "healthMult": 2.6,
       "damageMult": 1.1,
       "attackSpeed": 2.2,
@@ -159,6 +164,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "attackSpeed": 2.0,
       "moveSpeed": 11,
       "size": 1.3,
@@ -185,6 +191,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
+      "xpMult": 0.25,
       "attackSpeed": 2.0,
       "moveSpeed": 10,
       "size": 1.0,
@@ -581,7 +588,7 @@
           "description": "Meet Pell at the Heron Ford, the first post of his evening patrol.",
           "objectives": [{"type": "Flag", "target": "ww2_patrol_ford", "text": "Walk the ford with Pell"}],
           "next": "stone",
-          "onComplete": [{"type": "GiveXP", "amount": 80}]
+          "onComplete": [{"type": "GiveXP", "amount": 40}]
         },
         {
           "id": "stone",
@@ -594,7 +601,7 @@
           "description": "Search the dispatch cairn at the Kestrel Stone, where riders left word for the Heron Watch.",
           "objectives": [{"type": "Collect", "target": "ww2_aubrics_dispatch", "text": "Aubric's Dispatch"}],
           "next": "home",
-          "onComplete": [{"type": "GiveXP", "amount": 80}]
+          "onComplete": [{"type": "GiveXP", "amount": 40}]
         },
         {
           "id": "home",
@@ -602,7 +609,7 @@
           "objectives": [{"type": "Flag", "target": "ww2_pell_answered", "text": "Answer Pell"}]
         }
       ],
-      "rewards": {"xp": 450, "gold": 700, "choiceItems": ["ww2_heronguard_gauntlets", "ww2_watchfire_cloak", "ww2_fordwalker_boots"]}
+      "rewards": {"xp": 225, "gold": 700, "choiceItems": ["ww2_heronguard_gauntlets", "ww2_watchfire_cloak", "ww2_fordwalker_boots"]}
     },
     {
       "id": "ww2_kings_glow",
@@ -618,7 +625,7 @@
           "description": "Clear the giant weavers out of the Lanterncap Glade.",
           "objectives": [{"type": "Defeat", "target": "enc_ww2_glade_webs", "text": "Clear the Lanterncap Glade"}],
           "next": "way",
-          "onComplete": [{"type": "GiveXP", "amount": 100}]
+          "onComplete": [{"type": "GiveXP", "amount": 50}]
         },
         {
           "id": "way",
@@ -630,9 +637,9 @@
         {
           "id": "king",
           "description": "Find the Mossling King in the depths of Mossdeep Grotto.",
-          "objectives": [{"type": "Kill", "target": "cr_dg2_mossking", "text": "King Umbercap"}],
+          "objectives": [{"type": "Flag", "target": "dg2_king_defeated", "text": "King Umbercap"}],
           "next": "return",
-          "onComplete": [{"type": "GiveXP", "amount": 100}]
+          "onComplete": [{"type": "GiveXP", "amount": 50}]
         },
         {
           "id": "return",
@@ -640,7 +647,7 @@
           "objectives": [{"type": "Talk", "target": "ww2_sprig", "text": "Talk to Sprig"}]
         }
       ],
-      "rewards": {"xp": 500, "gold": 900, "choiceItems": ["ww2_sprigs_lucky_thimble", "ww2_lanterncap_hood", "ww2_mosswalker_jerkin", "ww2_thimble_guard_coif"]}
+      "rewards": {"xp": 250, "gold": 900, "choiceItems": ["ww2_sprigs_lucky_thimble", "ww2_lanterncap_hood", "ww2_mosswalker_jerkin", "ww2_thimble_guard_coif"]}
     }
   ],
   "dialogues": [
@@ -679,7 +686,7 @@
             {"type": "SetFlag", "key": "ww2_pell_rest"},
             {"type": "SetFlag", "key": "ww2_pell_away"},
             {"type": "ClearFlag", "key": "ww2_pell_lied"},
-            {"type": "GiveXP", "amount": 200},
+            {"type": "GiveXP", "amount": 100},
             {"type": "Approval", "key": "kael", "amount": 3},
             {"type": "Approval", "key": "ysolde", "amount": 3}
           ],
@@ -789,7 +796,7 @@
             {"type": "Approval", "key": "kael", "amount": 3},
             {"type": "Approval", "key": "seren", "amount": 3},
             {"type": "Approval", "key": "aldric", "amount": 3},
-            {"type": "GiveXP", "amount": 150}
+            {"type": "GiveXP", "amount": 75}
           ],
           "choices": [{"text": "A proper one.", "next": "pe_light"}]
         },
@@ -801,7 +808,7 @@
             {"type": "Approval", "key": "aldric", "amount": 5},
             {"type": "Approval", "key": "ysolde", "amount": 5},
             {"type": "Approval", "key": "torvan", "amount": 3},
-            {"type": "GiveXP", "amount": 150}
+            {"type": "GiveXP", "amount": 75}
           ],
           "choices": [{"text": "(Light the beacon with him.)", "next": "pe_light"}]
         },
@@ -809,14 +816,14 @@
           "id": "pe_rite_priest",
           "speaker": "narrator",
           "text": "*You speak a blessing for those who wait: for lamps left in windows, for kettles kept warm, for doors left unlatched. Pell bows his head through all of it. When you finish, the frost on his boots has melted.*",
-          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}, {"type": "Approval", "key": "liora", "amount": 5}, {"type": "GiveXP", "amount": 150}],
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}, {"type": "Approval", "key": "liora", "amount": 5}, {"type": "GiveXP", "amount": 75}],
           "choices": [{"text": "(Light the beacon with him.)", "next": "pe_light"}]
         },
         {
           "id": "pe_ysolde",
           "speaker": "ysolde",
           "text": "*Ysolde takes the letter gently and goes down on one knee.* Squire Pell. I am Ysolde, of the Heronguard. Sir Corwin Vell's name is carved in the Heron Hall at Brightwater, among the twenty-nine who did not come home. Yours will be carved beside it, if I have to cut the letters myself. The watch is ended. You kept it well.",
-          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 8}, {"type": "GiveXP", "amount": 150}],
+          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 8}, {"type": "GiveXP", "amount": 75}],
           "next": "pe_ysolde2"
         },
         {
@@ -829,7 +836,7 @@
           "id": "pe_liora",
           "speaker": "liora",
           "text": "*Liora sets a small brass lantern on the beacon's edge.* At the Chapel of Small Lights, Mother Wren taught us a blessing for the ones who wait. It goes: 'You may set it down now. Someone else will carry it.' *She smiles at Pell.* Someone else will carry it, Pell.",
-          "outcomes": [{"type": "Approval", "key": "liora", "amount": 8}, {"type": "GiveXP", "amount": 150}],
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 8}, {"type": "GiveXP", "amount": 75}],
           "choices": [{"text": "(Light the beacon together.)", "next": "pe_light"}]
         },
         {
@@ -945,7 +952,7 @@
           "id": "pe_f_ath_s",
           "speaker": "narrator",
           "text": "*You hop out to the third stone, find the loose wedge under it and stamp it home. The stone stops wobbling for the first time in twelve years. Pell applauds like a man watching a royal joust.*",
-          "outcomes": [{"type": "GiveXP", "amount": 100}, {"type": "Approval", "key": "rook", "amount": 2}, {"type": "Approval", "key": "bruna", "amount": 2}],
+          "outcomes": [{"type": "GiveXP", "amount": 50}, {"type": "Approval", "key": "rook", "amount": 2}, {"type": "Approval", "key": "bruna", "amount": 2}],
           "next": "pe_ford_b"
         },
         {
@@ -958,7 +965,7 @@
           "id": "pe_f_sur_s",
           "speaker": "narrator",
           "text": "*You read the current — the dark slick over the deep hole, the ripple over the gravel bar — and point out the line. Pell nods slowly.* That's the line he used to take. I'd forgotten. Thank you.",
-          "outcomes": [{"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
           "next": "pe_ford_b"
         },
         {
@@ -1114,7 +1121,7 @@
           "id": "kc_inv_s",
           "speaker": "narrator",
           "text": "*Under the dispatch: a whetstone worn hollow in the middle, and a child's charcoal drawing of a heron, folded small. Someone left these here for Pell, a long time ago.*",
-          "outcomes": [{"type": "GiveItem", "key": "ww2_charcoal_heron", "amount": 1}, {"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "GiveItem", "key": "ww2_charcoal_heron", "amount": 1}, {"type": "GiveXP", "amount": 50}],
           "next": "kc_quest"
         },
         {"id": "kc_inv_f", "speaker": "narrator", "text": "*Just stones, and a beetle who resents you.*", "next": "kc_quest"},
@@ -1219,7 +1226,7 @@
           "id": "sp_show",
           "speaker": "narrator",
           "text": "*Sprig leads you north past the Grandmother Tree to a mossy hollow, and with great ceremony pulls aside a curtain of moss as thick as a quilt. Cold air breathes out, smelling of mushrooms and old stone. Far below, something glows.*",
-          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 50}],
           "next": "sp_show2"
         },
         {
@@ -1360,7 +1367,7 @@
             {
               "text": "Old Mossback won't be eating any more of your hats.",
               "next": "ta_mossback",
-              "conditions": [{"type": "Flag", "key": "enc_ww2_old_mossback"}],
+              "conditions": [{"type": "Flag", "key": "enc_enc_ww2_old_mossback"}],
               "once": true
             },
             {"text": "Goodbye."}
@@ -1394,7 +1401,7 @@
             {
               "text": "Old Mossback won't be eating any more of your hats.",
               "next": "ta_mossback",
-              "conditions": [{"type": "Flag", "key": "enc_ww2_old_mossback"}],
+              "conditions": [{"type": "Flag", "key": "enc_enc_ww2_old_mossback"}],
               "once": true
             },
             {"text": "Goodbye."}
@@ -1476,7 +1483,7 @@
           "id": "ks_s",
           "speaker": "narrator",
           "text": "*You follow the line to the foot of the hollow's rock wall. Behind a curtain of moss as thick as a quilt, cold air breathes out, smelling of mushrooms and old stone. A cave! Far below, something glows.*",
-          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 100}],
+          "outcomes": [{"type": "SetFlag", "key": "found_mossdeep"}, {"type": "GiveXP", "amount": 50}],
           "choices": [{"text": "(Continue.)"}]
         },
         {
@@ -1524,14 +1531,14 @@
           "id": "ot_s",
           "speaker": "narrator",
           "text": "*Between the roots, behind a screen of fish-bones arranged with real care, something glints. Somebody's been hoarding shiny things here for years.*",
-          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 80}],
+          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 40}],
           "choices": [{"text": "(Continue.)"}]
         },
         {
           "id": "ot_reach",
           "speaker": "narrator",
           "text": "*You slide a hand into the gap with professional delicacy and feel cold metal: buttons, buckles, a spoon. A hoard! A small, wet, extremely organised hoard.*",
-          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 80}, {"type": "Approval", "key": "pip", "amount": 3}],
+          "outcomes": [{"type": "SetFlag", "key": "ww2_otter_stash"}, {"type": "GiveXP", "amount": 40}, {"type": "Approval", "key": "pip", "amount": 3}],
           "choices": [{"text": "(Continue.)"}]
         },
         {

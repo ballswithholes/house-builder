@@ -640,9 +640,9 @@
           "pos": [20.6, 18.4],
           "radius": 2.8,
           "enemies": [
-            {"creature": "cr_hollow_wisp", "pos": [19.4, 19.8]},
-            {"creature": "cr_hollow_wisp", "pos": [22.2, 19.6]},
-            {"creature": "cr_hollow_spirit", "pos": [20.8, 17.0]}
+            {"creature": "cr_sh2_hollow_wisp", "pos": [19.4, 19.8]},
+            {"creature": "cr_sh2_hollow_wisp", "pos": [22.2, 19.6]},
+            {"creature": "cr_sh2_hollow_spirit", "pos": [20.8, 17.0]}
           ]
         },
         {
@@ -650,9 +650,9 @@
           "pos": [47.4, 25.2],
           "radius": 2.8,
           "enemies": [
-            {"creature": "cr_hollow_spirit", "pos": [46.4, 26.6]},
-            {"creature": "cr_hollow_spirit", "pos": [48.6, 26.2]},
-            {"creature": "cr_hollow_wisp", "pos": [47.6, 23.6]}
+            {"creature": "cr_sh2_hollow_spirit", "pos": [46.4, 26.6]},
+            {"creature": "cr_sh2_hollow_spirit", "pos": [48.6, 26.2]},
+            {"creature": "cr_sh2_hollow_wisp", "pos": [47.6, 23.6]}
           ]
         },
         {
@@ -669,7 +669,7 @@
           "id": "enc_sh2_owl_pines",
           "pos": [63.4, 36.6],
           "radius": 2.6,
-          "enemies": [{"creature": "cr_owl", "pos": [62.4, 37.4]}, {"creature": "cr_owl", "pos": [64.6, 37.0]}]
+          "enemies": [{"creature": "cr_sh2_owl", "pos": [62.4, 37.4]}, {"creature": "cr_sh2_owl", "pos": [64.6, 37.0]}]
         }
       ],
       "chests": [

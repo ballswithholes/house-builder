@@ -112,7 +112,9 @@ namespace Lanternvale.Tests
                 {
                     var c = Db.Creatures[x.creature];
                     int off = c.rank == CreatureRank.Elite || c.rank == CreatureRank.Boss ? 2 : 1;
-                    Assert(c.scaleToParty && c.levelOffset == off && c.levelCap == 12 + off && c.levelFloor == 10 + off, $"{c.id}: +{off} levels, floor/cap of the band");
+                    // the Rootwarden is capped at the band's top (13): at 14 he wiped the slice's party in ~40 % of pulls
+                    int cap = c.rank == CreatureRank.Boss ? 13 : 12 + off;
+                    Assert(c.scaleToParty && c.levelOffset == off && c.levelCap == cap && c.levelFloor == 10 + off, $"{c.id}: +{off} levels, floor/cap of the band");
                 }
 
             // the playthrough's southern band is untouched: no new encounter, region check or hidden/locked exit below y 15
@@ -368,6 +370,114 @@ namespace Lanternvale.Tests
             var solo = BossFight(ClassId.Warrior, 12, 950, party: false);
             Console.WriteLine($"    Rootwarden vs a lone Warrior at L12: {solo.outcome} after {solo.rounds} rounds");
             Assert(solo.outcome != BattleOutcome.Victory, "a lone hero cannot solo it");
+        }
+
+        /// <summary>The Duskmane Lookout shoots the bow it is so proud of: a bowstring twang, an arrow in flight and an arrow's
+        /// thud (review: its fx_bolt projectile played the crossbow latch and a bolt thump).</summary>
+        [Test]
+        public static void DuskmaneLookout_SoundsLikeABow()
+        {
+            var lookout = RulesTestUtil.Mob("cr_lv2_duskmane_lookout", 12);
+            Assert(CombatSounds.ReleaseOf(lookout, School.Physical) == "bow", "the bow's release: " + CombatSounds.ReleaseOf(lookout, School.Physical));
+            Assert(CombatSounds.AttackLayerOf(lookout, false, true) == "hit_arrow", "an arrow lands: " + CombatSounds.AttackLayerOf(lookout, false, true));
+            Assert(CombatSounds.FlightWhooshOf(lookout, School.Physical), "the arrow whooshes through the air");
+        }
+
+        /// <summary>XP pacing of the deepened first slice (Docs/Expansion.md §1/§8): the slice ends at 12; each north band
+        /// with its hidden dungeon (bands 11-13, 12-14, 13-15) adds about one level, so a party that fights every north
+        /// encounter and dungeon and hands in their quests reaches Amberfield (12-18) around 15. Review: they paid ~81k XP
+        /// (L12 -> L18, nearly the whole Amberfield band) before the kill and quest XP were scaled down.</summary>
+        [Test]
+        public static void NorthBandsAndEarlyDungeons_AboutALevelEach()
+        {
+            int level = 12; long xp = 0;
+            void Give(float amount)
+            {
+                xp += (long)Math.Round(amount);
+                while (xp >= Progression.XpToNextLevel(Db, level)) { xp -= Progression.XpToNextLevel(Db, level); level++; }
+            }
+            var plan = new[] { ("lanternvale", "dgn_root_hollows", new[] { "lv2_", "dg1_" }), ("whisperwood", "dgn_mossdeep", new[] { "ww2_" }), ("shrine", "dgn_lantern_catacombs", new[] { "sh2_" }) };
+            var log = new List<string>();
+            foreach (var (map, dungeon, prefixes) in plan)
+            {
+                int l0 = level;
+                var fights = Db.Maps[map].encounters.Where(e => e.pos.y > 15f).Concat(Db.Maps[dungeon].encounters).ToList();
+                Assert(fights.Count >= 7, $"{map}: the north band's and {dungeon}'s fights");
+                foreach (var e in fights)
+                {
+                    float sum = 0f;
+                    foreach (var x in e.enemies)
+                    {
+                        var c = Db.Creatures[x.creature];
+                        int ml = UnitFactory.CreatureLevel(c, x.level, level, null);
+                        sum += Formulas.MobXp(level, ml) * Progression.XpRankMult(c.rank) * c.xpMult * Progression.XpRate(Db, level);
+                        if (map == "shrine" || map == "whisperwood" || map == "lanternvale")
+                            Assert(!c.scaleToParty || c.levelCap > 0, $"{e.id}: {c.id} is held to its band (levelCap)");
+                    }
+                    Give(sum);
+                }
+                foreach (var q in Db.Quests.Values.Where(q => prefixes.Any(p => q.id.StartsWith(p, StringComparison.Ordinal))))
+                {
+                    foreach (var st in q.stages)
+                        if (st.onComplete != null)
+                            foreach (var o in st.onComplete.Where(o => o.type == OutcomeType.GiveXP)) Give(Progression.QuestXp(Db, o.amount, level));
+                    if (q.rewards != null) Give(Progression.QuestXp(Db, q.rewards.xp, level));
+                }
+                log.Add($"{map}+{dungeon}: L{l0} -> L{level}");
+                Assert(level - l0 <= 2, $"{map} north band + {dungeon} add about a level (L{l0} -> L{level})");
+            }
+            Console.WriteLine($"    {string.Join("; ", log)} (+{xp} XP into L{level})");
+            Assert(level >= 14 && level <= 15, $"the north bands and their dungeons take the slice's L12 to about 15, not past Amberfield's band (L{level})");
+        }
+
+        /// <summary>The party the slice really gives (TestsSessionFullPlaythrough's run: quest rewards and drops, about 20
+        /// of 45 armour/weapon slots empty, item level ~8), raised to the top of the dungeon's band (13) and walked
+        /// straight to the Rootwarden: veteran gear hides how hard he hits such a party, and a wipe here is a game over.
+        /// Review: at levelCap 14 / damageMult 1.45 this party won 5 of these 16 pulls.</summary>
+        [Test]
+        public static void Rootwarden_TheSlicePartyWinsAtTheBand()
+        {
+            var t = typeof(TestsSessionFullPlaythrough).GetNestedType("Playthrough", System.Reflection.BindingFlags.NonPublic);
+            Assert(t != null, "TestsSessionFullPlaythrough.Playthrough");
+            int wins = 0, pulls = 0, rounds = 0;
+            var parts = new List<string>();
+            foreach (ClassId c in new[] { ClassId.Warrior, ClassId.Paladin, ClassId.Hunter, ClassId.Rogue, ClassId.Priest, ClassId.Shaman, ClassId.Mage, ClassId.Warlock })
+            {
+                var p = Activator.CreateInstance(t, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                                                 null, new object[] { c, 4100 + (ulong)c }, null);
+                try
+                {
+                    t.GetMethod("Play").Invoke(p, new object[] { TestsSessionFullPlaythrough.BridgeRoute.Fight, TestsSessionFullPlaythrough.WicksRoute.Fight, TestsSessionFullPlaythrough.KeeperRoute.Letter });
+                }
+                catch (System.Reflection.TargetInvocationException e) { throw e.InnerException ?? e; }
+                var save = ((GameSession)t.GetField("S").GetValue(p)).SaveGame();
+                var res = new List<string>();
+                for (ulong k = 0; k < 2; k++)
+                {
+                    var s = new GameSession(Db, 77 + k);
+                    Assert(s.LoadGame(save, out var err), err);
+                    while (s.Main.Level < 13) s.GivePartyXp(Progression.XpToNextLevel(Db, s.Main.Level) - s.Main.Xp);
+                    Progression.LearnAllAvailable(s.Main);
+                    s.Rng.s0 = 0x9E3779B97F4A7C15UL * (k + 1); s.Rng.s1 = 0xBF58476D1CE4E5B9UL ^ k;
+                    s.Settings.CompanionAutoPlay = true;
+                    foreach (var u in s.Roster) s.SetAutoPlay(u, true);
+                    s.EnterMap(Hollows, "default");
+                    foreach (var e in s.MapDef.encounters.Where(e => e.id != "enc_dg1_rootwarden")) s.Map.MarkEncounterDone(e.id);
+                    foreach (var u in s.PartyUnits()) u.RestoreFull();
+                    var be = s.Map.FindEncounter("enc_dg1_rootwarden");
+                    s.SetPartyPositions(be.pos + new Vec2(-be.radius - 3f, -1.5f));
+                    var b = s.StartEncounter("enc_dg1_rootwarden");
+                    Assert(b != null, "the Rootwarden fight starts: " + s.LastError);
+                    var o = s.AutoResolve(100);
+                    pulls++; rounds += b.Round;
+                    if (o == BattleOutcome.Victory) wins++;
+                    res.Add($"{(o == BattleOutcome.Victory ? "won" : "lost")} in {b.Round}");
+                }
+                parts.Add($"{c} {string.Join(", ", res)}");
+            }
+            Console.WriteLine($"    Rootwarden vs the slice's party at L13: {wins}/{pulls} won ({string.Join("; ", parts)})");
+            Assert(wins >= 11, $"the slice's party usually wins at the band ({wins}/{pulls})");
+            Assert(rounds >= pulls * 8, $"still a long fight: {rounds / (float)pulls:0.#} rounds on average");
         }
     }
 }

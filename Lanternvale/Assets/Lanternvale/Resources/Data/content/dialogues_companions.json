@@ -687,6 +687,12 @@
               "conditions": [{"type": "Companion", "key": "seren", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
             },
             {
+              "text": "We met a squire's spirit in Whisperwood. We lit his beacon, and he went home.",
+              "next": "se_r_pell",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "seren_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "seren_heard_pell"}, {"type": "Approval", "key": "seren", "amount": 3}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
@@ -724,12 +730,24 @@
               "conditions": [{"type": "Companion", "key": "seren", "amount": 20}, {"type": "NotFlag", "key": "lanterns_rekindled"}]
             },
             {
+              "text": "We met a squire's spirit in Whisperwood. We lit his beacon, and he went home.",
+              "next": "se_r_pell",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "seren_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "seren_heard_pell"}, {"type": "Approval", "key": "seren", "amount": 3}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "se_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "seren"}, {"type": "ClearFlag", "key": "recruited_seren"}]
             },
             {"text": "Let's keep moving."}
           ]
+        },
+        {
+          "id": "se_r_pell",
+          "speaker": "seren",
+          "text": "*She rings her staff once, softly, the way the summoners do at a shrine.* That's the oldest kind of lantern there is: a light lit so somebody can stop waiting. *She smiles.* My mother would have liked him. She always said the road is only frightening until someone tells you where it ends.",
+          "next": "se_party_hub"
         },
         {"id": "se_dismissed", "speaker": "seren", "text": "Of course. I'll wait at the Wayside Shrine. Komorebi likes the company."},
         {
@@ -1368,6 +1386,12 @@
               "conditions": [{"type": "Companion", "key": "bruna", "amount": 20}, {"type": "NotFlag", "key": "bruna_story_told"}]
             },
             {
+              "text": "Ser Corlan gave me his heron pennant to carry north.",
+              "next": "bru_r_pennant",
+              "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "NotFlag", "key": "bruna_saw_pennant"}],
+              "outcomes": [{"type": "SetFlag", "key": "bruna_saw_pennant"}, {"type": "Approval", "key": "bruna", "amount": 3}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "bru_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "bruna"}, {"type": "ClearFlag", "key": "recruited_bruna"}]
@@ -1412,12 +1436,24 @@
               "conditions": [{"type": "Companion", "key": "bruna", "amount": 20}, {"type": "NotFlag", "key": "bruna_story_told"}]
             },
             {
+              "text": "Ser Corlan gave me his heron pennant to carry north.",
+              "next": "bru_r_pennant",
+              "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "NotFlag", "key": "bruna_saw_pennant"}],
+              "outcomes": [{"type": "SetFlag", "key": "bruna_saw_pennant"}, {"type": "Approval", "key": "bruna", "amount": 3}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "bru_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "bruna"}, {"type": "ClearFlag", "key": "recruited_bruna"}]
             },
             {"text": "Let's keep moving."}
           ]
+        },
+        {
+          "id": "bru_r_pennant",
+          "speaker": "bruna",
+          "text": "Old Ser Corlan? Him on the hill with the lame grey mare? *She whistles.* He never lets anybody touch that flag. Mum says he salutes it every morning before he does the hens. *She straightens up, very serious for once.* Right. Then we carry it properly. No dropping it in a ditch. I'm looking at you.",
+          "next": "bru_party_hub"
         },
         {
           "id": "bru_dismissed",
@@ -1613,6 +1649,36 @@
               "conditions": [{"type": "Companion", "key": "ysolde", "amount": 20}, {"type": "NotFlag", "key": "ysolde_story_told"}]
             },
             {
+              "text": "I met a squire of the Heronguard in Whisperwood. Pell. We lit his beacon, and he went home at last.",
+              "next": "yso_r_pell_rest",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "ysolde_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_pell"}, {"type": "Approval", "key": "ysolde", "amount": 4}]
+            },
+            {
+              "text": "I met a squire of the Heronguard in Whisperwood. Pell. He's still waiting for the knights to come home.",
+              "next": "yso_r_pell_waits",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_lied"}, {"type": "NotFlag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "ysolde_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_pell"}]
+            },
+            {
+              "text": "Ser Corlan gave me the Heronguard's pennant to carry north, to where the forty rode.",
+              "next": "yso_r_pennant",
+              "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "NotFlag", "key": "ysolde_saw_pennant"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_saw_pennant"}, {"type": "Approval", "key": "ysolde", "amount": 3}]
+            },
+            {
+              "text": "We found Lord-Commander Aubric's last orders in the ruins.",
+              "next": "yso_r_aubric",
+              "conditions": [{"type": "Flag", "key": "r2_aubric_letter_read"}, {"type": "NotFlag", "key": "ysolde_heard_aubric"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_aubric"}, {"type": "Approval", "key": "ysolde", "amount": 6}]
+            },
+            {
+              "text": "It's over. Vyrmathra is gone.",
+              "next": "yso_r_vyrmathra",
+              "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}, {"type": "NotFlag", "key": "ysolde_after_vyrmathra"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_after_vyrmathra"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "yso_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "ysolde"}, {"type": "ClearFlag", "key": "recruited_ysolde"}]
@@ -1657,12 +1723,72 @@
               "conditions": [{"type": "Companion", "key": "ysolde", "amount": 20}, {"type": "NotFlag", "key": "ysolde_story_told"}]
             },
             {
+              "text": "I met a squire of the Heronguard in Whisperwood. Pell. We lit his beacon, and he went home at last.",
+              "next": "yso_r_pell_rest",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "ysolde_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_pell"}, {"type": "Approval", "key": "ysolde", "amount": 4}]
+            },
+            {
+              "text": "I met a squire of the Heronguard in Whisperwood. Pell. He's still waiting for the knights to come home.",
+              "next": "yso_r_pell_waits",
+              "conditions": [{"type": "Flag", "key": "ww2_pell_lied"}, {"type": "NotFlag", "key": "ww2_pell_rest"}, {"type": "NotFlag", "key": "ysolde_heard_pell"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_pell"}]
+            },
+            {
+              "text": "Ser Corlan gave me the Heronguard's pennant to carry north, to where the forty rode.",
+              "next": "yso_r_pennant",
+              "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "NotFlag", "key": "ysolde_saw_pennant"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_saw_pennant"}, {"type": "Approval", "key": "ysolde", "amount": 3}]
+            },
+            {
+              "text": "We found Lord-Commander Aubric's last orders in the ruins.",
+              "next": "yso_r_aubric",
+              "conditions": [{"type": "Flag", "key": "r2_aubric_letter_read"}, {"type": "NotFlag", "key": "ysolde_heard_aubric"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_heard_aubric"}, {"type": "Approval", "key": "ysolde", "amount": 6}]
+            },
+            {
+              "text": "It's over. Vyrmathra is gone.",
+              "next": "yso_r_vyrmathra",
+              "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}, {"type": "NotFlag", "key": "ysolde_after_vyrmathra"}],
+              "outcomes": [{"type": "SetFlag", "key": "ysolde_after_vyrmathra"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "yso_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "ysolde"}, {"type": "ClearFlag", "key": "recruited_ysolde"}]
             },
             {"text": "Let's keep moving."}
           ]
+        },
+        {
+          "id": "yso_r_vyrmathra",
+          "speaker": "ysolde",
+          "text": "*She sits down on the nearest rock, all at once, as if her strings have been cut.* Twenty-nine knights rode up that mountain to do what we just did. *She takes off a gauntlet and holds your hand for a moment, hard.* I think they can rest now. I think I can too. ...After breakfast.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_r_aubric",
+          "speaker": "ysolde",
+          "text": "*She reads it twice. The second time her lips move.* 'Ysolde sounds the retreat. She'll argue. Make her.' *She laughs, and it breaks in the middle.* He knew. All this time I thought I'd disobeyed him, and he had already written it down. *She folds the page against her heart.* Twelve years. Thank you for bringing me his voice.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_r_pennant",
+          "speaker": "ysolde",
+          "text": "*She reaches out and touches the faded blue heron, very lightly, the way you would touch a sleeping bird.* Corlan kept this? He was sent home with a broken leg before the slopes. He always said he'd missed the only thing that mattered. *A crooked smile.* He didn't. He kept the colours. That matters.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_r_pell_waits",
+          "speaker": "ysolde",
+          "text": "*She stops walking.* Pell. Little Pell, who polished every buckle twice. *She swallows.* You told him we're coming, didn't you. *A long breath.* It was kindly meant. But he has kept that cold beacon for twelve years. One day I'll go and sit by it with him and tell him the truth myself. He's owed that much from a knight.",
+          "next": "yso_party_hub"
+        },
+        {
+          "id": "yso_r_pell_rest",
+          "speaker": "ysolde",
+          "text": "*She stops walking.* Pell. Little Pell, who polished every buckle twice and saluted the herons. *Her voice goes very careful.* He was meant to keep the beacon until we rode home. We never told him not to. *She looks north for a long moment, then back at you.* Thank you for lighting it. Somebody from the Heronguard should have. I'm glad it was a friend of one.",
+          "next": "yso_party_hub"
         },
         {
           "id": "yso_dismissed",
@@ -1858,6 +1984,12 @@
               "conditions": [{"type": "Companion", "key": "liora", "amount": 20}, {"type": "NotFlag", "key": "liora_story_told"}]
             },
             {
+              "text": "It's done. Vyrmathra is gone, and the ash will stop falling.",
+              "next": "lio_r_vyrmathra",
+              "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}, {"type": "NotFlag", "key": "liora_after_vyrmathra"}],
+              "outcomes": [{"type": "SetFlag", "key": "liora_after_vyrmathra"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "lio_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "liora"}, {"type": "ClearFlag", "key": "recruited_liora"}]
@@ -1902,12 +2034,24 @@
               "conditions": [{"type": "Companion", "key": "liora", "amount": 20}, {"type": "NotFlag", "key": "liora_story_told"}]
             },
             {
+              "text": "It's done. Vyrmathra is gone, and the ash will stop falling.",
+              "next": "lio_r_vyrmathra",
+              "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}, {"type": "NotFlag", "key": "liora_after_vyrmathra"}],
+              "outcomes": [{"type": "SetFlag", "key": "liora_after_vyrmathra"}]
+            },
+            {
               "text": "Wait here for now. I'll come back for you.",
               "next": "lio_dismissed",
               "outcomes": [{"type": "Dismiss", "key": "liora"}, {"type": "ClearFlag", "key": "recruited_liora"}]
             },
             {"text": "Let's keep moving."}
           ]
+        },
+        {
+          "id": "lio_r_vyrmathra",
+          "speaker": "liora",
+          "text": "*She lifts her censer and turns slowly in a circle, as if she is showing the whole sky its own light.* Then every lantern I ever relit stays lit. *Her eyes shine.* I'll need more shelves, dear. Brightwater will need more of everything — more lanterns, more bread, more dancing. Come and help me carry them?",
+          "next": "lio_party_hub"
         },
         {
           "id": "lio_dismissed",

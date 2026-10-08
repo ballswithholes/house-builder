@@ -431,7 +431,9 @@ namespace Lanternvale.Tests
             {
                 var d = Db.Dialogues["dlg_recruit_" + c.Id];
                 var byId = d.nodes.ToDictionary(n => n.id);
-                Assert(d.nodes.Count >= 18 && d.nodes.Count <= 22, $"{d.id}: 18-22 nodes ({d.nodes.Count})");
+                // cross-zone reaction lines (<prefix>_r_*, one short node each) come on top of the recruit dialogue's shape
+                int shape = d.nodes.Count(n => !n.id.StartsWith(c.Prefix + "_r_", StringComparison.Ordinal));
+                Assert(shape >= 18 && shape <= 22, $"{d.id}: 18-22 nodes ({shape}, besides reactions)");
                 Assert(d.start == c.Prefix + "_party", $"{d.id}: starts at the in-party check");
                 foreach (var stub in new[] { "_party", "_dismissed", "_hello", "_join" })
                     Assert(byId.ContainsKey(c.Prefix + stub), $"{d.id}: keeps the contract node {c.Prefix}{stub}");

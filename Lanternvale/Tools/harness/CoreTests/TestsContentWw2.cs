@@ -328,6 +328,85 @@ namespace Lanternvale.Tests
             Assert(gained >= Progression.XpToNextLevel(Db, 14) * 6 / 10, $"the chain and the dungeon are worth most of a level at 14 ({gained} XP)");
         }
 
+        /// <summary>Mossdeep can be found without Sprig (Perception, the Kingstone, Komorebi) and the King fought before the
+        /// quest reaches 'king': the stage counts the encounter's done flag, so it still completes (review: a Kill of the
+        /// unique cr_dg2_mossking never caught up and left the quest Active forever).</summary>
+        [Test]
+        public static void KingsGlow_KingFreedBeforeTheQuest_StillCompletes()
+        {
+            var s = Party(14, 37);
+            s.Flags.Set("found_mossdeep");   // the Perception check, the Kingstone or Komorebi's hint
+            s.EnterMap(DG, "default");
+            PacifyExcept(s, "enc_dg2_mossking");
+            Clear(s, "enc_dg2_mossking", "(Attack.)");
+            Assert(s.Flags.IsSet("dg2_king_defeated") && !s.Quests.IsActive(Glow), "the King is freed before Sprig's quest starts");
+
+            s.EnterMap(WW, "default");
+            PacifyExcept(s, "enc_ww2_glade_webs");
+            Talk(s, "ww2_sprig");
+            SessionTest.Pick(s, "What spiders?");
+            SessionTest.Pick(s, "I'll clear the glade");
+            SessionTest.Finish(s);
+            Clear(s, "enc_ww2_glade_webs");
+            Assert(s.World.Quests.GetStage(Glow) == "return", $"the King already freed counts: straight back to Sprig (stage {s.World.Quests.GetStage(Glow)})");
+            Talk(s, "ww2_sprig");
+            SessionTest.Pick(s, "Your King is free");
+            SessionTest.Finish(s);
+            Assert(s.Quests.IsCompleted(Glow), "The Glow Under the Moss complete");
+        }
+
+        /// <summary>Tamsin thanks you for Old Mossback once he is beaten (review: the choice read "enc_ww2_old_mossback",
+        /// a flag nothing sets; the encounter's done flag is "enc_" + its id).</summary>
+        [Test]
+        public static void Tamsin_ThanksYouForOldMossback()
+        {
+            var s = Party(13, 41);
+            s.EnterMap(WW, "default");
+            PacifyExcept(s, "enc_ww2_old_mossback");
+            Assert(s.StartDialogue("dlg_ww2_tamsin", "ww2_tamsin"), "Tamsin");
+            SessionTest.SkipText(s);
+            Assert(SessionTest.ChoiceIndex(s.Dialogue.Current, "Old Mossback won't be eating") < 0, "no thanks before he is beaten");
+            s.Dialogue.End();
+            Clear(s, "enc_ww2_old_mossback");
+            int stew = s.CountItem("food_lantern_stew");
+            Assert(s.StartDialogue("dlg_ww2_tamsin", "ww2_tamsin"), "Tamsin again");
+            SessionTest.Pick(s, "Old Mossback won't be eating any more of your hats.");
+            SessionTest.Finish(s);
+            Assert(s.CountItem("food_lantern_stew") == stew + 2, "two lantern stews for the road");
+        }
+
+        /// <summary>Cross-zone reactions: Ysolde, once of the Heronguard, and Seren hear about Pell after his beacon is lit,
+        /// once each; Elder Maru takes the Ashen Seed from Mossdeep into Kusu's shrine box.</summary>
+        [Test]
+        public static void Reactions_PellAndTheAshenSeed()
+        {
+            var s = SessionTest.NewGame(ClassId.Paladin, 24, 43);
+            s.Recruit("ysolde");
+            s.Recruit("seren");
+            const string Pell = "I met a squire of the Heronguard in Whisperwood. Pell.";
+            Assert(s.StartDialogue("dlg_recruit_ysolde", "ysolde"), "Ysolde");
+            SessionTest.SkipText(s);
+            Assert(SessionTest.ChoiceIndex(s.Dialogue.Current, Pell) < 0, "nothing to tell her yet");
+            s.Dialogue.End();
+            s.Flags.Set("ww2_pell_rest");
+            s.Flags.Set("ww2_beacon_lit");
+            Assert(s.StartDialogue("dlg_recruit_ysolde", "ysolde"), "Ysolde again");
+            SessionTest.Pick(s, Pell);
+            Assert(s.Dialogue.IsActive && s.Dialogue.Current.NodeId == "yso_r_pell_rest", "she remembers him: " + s.Dialogue.Current?.NodeId);
+            SessionTest.SkipText(s);
+            Assert(s.Dialogue.Current.NodeId == "yso_party_hub" && SessionTest.ChoiceIndex(s.Dialogue.Current, Pell) < 0, "said once, back to her questions");
+            s.Dialogue.End();
+            Assert(s.StartDialogue("dlg_recruit_seren", "seren"), "Seren");
+            SessionTest.Pick(s, "We met a squire's spirit in Whisperwood.");
+            SessionTest.Finish(s, "Let's keep moving.");
+
+            s.GiveItem("dg2_ashen_seed", 1);
+            Assert(s.StartDialogue("dlg_elder_maru", "elder_maru"), "Elder Maru");
+            SessionTest.Pick(s, "(Show her the cracked grey ember King Umbercap gave you.)");
+            SessionTest.Finish(s);
+            Assert(s.CountItem("dg2_ashen_seed") == 0, "the Elder keeps the ember in Kusu's shrine box");
+        }
+
         /// <summary>Walks up to the throne and answers the King's challenge with "(Attack.)": the fight starts (not resolved).</summary>
         static void PullTheKing(GameSession s, EncounterDef enc)
         {

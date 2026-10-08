@@ -185,6 +185,7 @@
               "next": "e_dg1_seed",
               "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
             },
+            {"text": "(Show her the cracked grey ember King Umbercap gave you.)", "next": "e_dg2_seed", "conditions": [{"type": "HasItem", "key": "dg2_ashen_seed", "amount": 1}]},
             {"text": "Goodbye."}
           ]
         },
@@ -239,6 +240,27 @@
           "speaker": "elder_maru",
           "text": "And the roots are singing properly again. I heard them this morning and thought I was dreaming. Thank you. Kusu thanks you — he's just slow about it.",
           "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "e_dg2_seed",
+          "speaker": "elder_maru",
+          "text": "*She turns the cold ember over in her palm, and her pipe goes out.* Another one. From the mosslings' grotto, you say — and their King kept it warm in his own moss so it wouldn't spread? *A small, fond huff.* Kings. Roots. Everyone under this valley is braver than they look.",
+          "conditions": [{"type": "Flag", "key": "dg1_seed_shown"}],
+          "fallback": "e_dg2_seed_first",
+          "next": "e_dg2_seed2"
+        },
+        {
+          "id": "e_dg2_seed_first",
+          "speaker": "elder_maru",
+          "text": "*She turns the cold ember over in her palm, and her pipe goes out.* Ash from the north, dear. It smells of a fire a very long way off. From the mosslings' grotto, you say — and their King held it in his own moss so it couldn't spread? *A small, fond huff.* Everyone under this valley is braver than they look.",
+          "next": "e_dg2_seed2"
+        },
+        {
+          "id": "e_dg2_seed2",
+          "speaker": "elder_maru",
+          "text": "*She folds it into a paper charm, ties it with shimenawa straw and tucks it into her sleeve, next to her heart.* It can keep Kusu's company in the shrine box. Thank you for carrying it home instead of leaving it in the dark. Things like this are less frightening when somebody is watching them.",
+          "outcomes": [{"type": "TakeItem", "key": "dg2_ashen_seed", "amount": 1}],
+          "next": "e_hub"
         },
         {
           "id": "e_ishiro",
@@ -454,6 +476,7 @@
               "next": "e_dg1_seed",
               "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
             },
+            {"text": "(Show her the cracked grey ember King Umbercap gave you.)", "next": "e_dg2_seed", "conditions": [{"type": "HasItem", "key": "dg2_ashen_seed", "amount": 1}]},
             {"text": "Goodbye."}
           ]
         },
@@ -508,6 +531,7 @@
               "next": "e_dg1_seed",
               "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
             },
+            {"text": "(Show her the cracked grey ember King Umbercap gave you.)", "next": "e_dg2_seed", "conditions": [{"type": "HasItem", "key": "dg2_ashen_seed", "amount": 1}]},
             {"text": "Goodbye."}
           ]
         },
@@ -529,6 +553,7 @@
               "next": "e_dg1_seed",
               "conditions": [{"type": "QuestState", "key": "dg1_heart_of_kusu", "value": "elder"}, {"type": "HasItem", "key": "dg1_ash_seed", "amount": 1}]
             },
+            {"text": "(Show her the cracked grey ember King Umbercap gave you.)", "next": "e_dg2_seed", "conditions": [{"type": "HasItem", "key": "dg2_ashen_seed", "amount": 1}]},
             {"text": "Goodbye."}
           ]
         },

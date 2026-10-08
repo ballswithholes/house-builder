@@ -501,11 +501,11 @@ namespace Lanternvale.Tests
         }
 
         /// <summary>One pull of a boss by the main (a Warrior) and these companions, every member on auto-play.</summary>
-        static PullResult Pull(string encId, string[] companions, int level, ulong seed)
+        static PullResult Pull(string encId, string[] companions, int level, ulong seed, ClassId main = ClassId.Warrior)
         {
             var ids = new List<string> { GameSession.MainId };
             ids.AddRange(companions);
-            var r = new Raider(ClassId.Warrior, level, seed, ids);
+            var r = new Raider(main, level, seed, ids);
             var s = r.S;
             RaidTest.Pacify(s);
             s.Map.ResetEncounter(encId);
@@ -575,6 +575,31 @@ namespace Lanternvale.Tests
                     if (!landed.Contains(a)) bad.Add($"{id}: {a} lands in a won fight");
                 foreach (var a in Mechanics[id].attempt)
                     if (!landed.Contains(a) && !started.Contains(a)) bad.Add($"{id}: {a} is cast");
+            }
+            Assert(bad.Count == 0, string.Join("\n    ", bad));
+        }
+
+        /// <summary>The fitting ten led by a healer or a caster main at the band's bottom (21): the Weeping Twins and the
+        /// Hollow Heart still fall in most pulls (review: a Priest- or Mage-led ten won only about half of them, with wipes
+        /// at the Twins' enrage and through the Heart's attrition).</summary>
+        [Test]
+        public static void Bosses_OtherLeadsWinTooAtTheBandBottom()
+        {
+            var bad = new List<string>();
+            foreach (var id in new[] { "enc_r1_twins", "enc_r1_hollow_heart" })
+            {
+                int wins = 0, pulls = 0;
+                var log = new List<string>();
+                foreach (var main in new[] { ClassId.Priest, ClassId.Mage })
+                    for (ulong k = 0; k < 3; k++)
+                    {
+                        var r = Pull(id, Ten, 21, 9000 + k * 13 + (ulong)main * 7, main);
+                        pulls++;
+                        if (r.Outcome == BattleOutcome.Victory) wins++;
+                        log.Add($"{main} {r.Outcome} r{r.Rounds}");
+                    }
+                Console.WriteLine($"    r1 {id} at 21, other leads: {wins}/{pulls} ({string.Join(", ", log)})");
+                if (wins < pulls - 1) bad.Add($"{id}: a Priest- or Mage-led ten at 21 wins ({wins}/{pulls})");
             }
             Assert(bad.Count == 0, string.Join("\n    ", bad));
         }
