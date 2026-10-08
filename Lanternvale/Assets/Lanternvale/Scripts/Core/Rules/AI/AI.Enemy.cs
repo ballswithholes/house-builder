@@ -176,7 +176,7 @@ namespace Lanternvale.Rules
                 default:
                     if (ca.condition != null && ca.condition.Contains("targetCasting"))
                     {
-                        foreach (var e in VisibleEnemies(b, u)) if (e.Pending != null) return e;
+                        foreach (var e in VisibleEnemies(b, u)) if (Battle.HasInterruptibleCast(e)) return e;
                         return null;
                     }
                     if (a.aiHint == "CC" && target != null)
@@ -246,7 +246,7 @@ namespace Lanternvale.Rules
                 string hint = HintOf(a);
                 if (hint == "Taunt" && (u.Role != UnitRole.Tank || t.AggroTarget == u)) continue;
                 if (hint == "Defensive" && u.HealthPct > 40f) continue;
-                if (hint == "Interrupt" && t.Pending == null) continue;
+                if (hint == "Interrupt" && !Battle.HasInterruptibleCast(t)) continue;
                 if (hint == "Heal" && (t == null || t.HealthPct > 60f)) continue;
                 if ((hint == "Buff" || hint == "Debuff") && AlreadyHasAny(a, t, u)) continue;
                 if ((hint == "CC" || hint == "Utility") && ca == null) continue;

@@ -903,7 +903,7 @@
       "id": "cr_dg5_tidal_wave",
       "name": "Tidal Wave",
       "icon": "wave",
-      "description": "The Tidewitch raises the vault's water and drops it: {0} Frost damage to every enemy within 30 yards, and they are knocked back.",
+      "description": "The Tidewitch raises the vault's water and drops it: {0} Frost damage to every enemy within 30 yards, and they are knocked back. It cannot be interrupted.",
       "school": "Frost",
       "hidden": true,
       "castTime": 4.0,
@@ -914,7 +914,7 @@
         {"type": "Damage", "min": 34, "max": 44, "perLevel": 2.6},
         {"type": "Knockback", "distance": 4}
       ],
-      "tags": ["Telegraph"],
+      "tags": ["Telegraph", "Uninterruptible"],
       "aiHint": "AoE",
       "aiPriority": 9
     },

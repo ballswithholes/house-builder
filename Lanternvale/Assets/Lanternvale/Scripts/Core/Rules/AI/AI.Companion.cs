@@ -460,7 +460,7 @@ namespace Lanternvale.Rules
                     break;
                 case "Interrupt":
                     foreach (var t in enemies)
-                        if (t.Pending != null && !t.IsTotem) yield return new Candidate { Ability = a, Target = t, Score = 25f, Why = "interrupt " + t.Pending.Ability.name };
+                        if (Battle.HasInterruptibleCast(t) && !t.IsTotem) yield return new Candidate { Ability = a, Target = t, Score = 25f, Why = "interrupt " + t.Pending.Ability.name };
                     break;
                 case "Taunt":
                     if (role != UnitRole.Tank && !(u.Kind == UnitKind.Pet && u.Role == UnitRole.Tank)) break;
@@ -617,7 +617,7 @@ namespace Lanternvale.Rules
         /// cancels casts (stun, fear, polymorph, incapacitate, sleep, banish, confuse; silence for spells) the target is not immune to.</summary>
         internal static bool CancelsCast(Battle b, AbilityDef a, Unit t)
         {
-            if (t == null || t.Pending == null || t.IsInvulnerable) return false;
+            if (!Battle.HasInterruptibleCast(t) || t.IsInvulnerable) return false;   // uninterruptible: nothing stops it
             foreach (var e in a.effects)
             {
                 if (e.chance < 100f) continue;

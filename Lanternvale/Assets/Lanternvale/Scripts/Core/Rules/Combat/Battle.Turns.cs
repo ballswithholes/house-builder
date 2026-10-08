@@ -198,7 +198,8 @@ namespace Lanternvale.Rules
             {
                 if (lost >= RulesConstants.TurnSeconds - 1e-3f)
                 {
-                    CancelPending(u, "controlled", null, 0f);
+                    // an uninterruptible cast waits out the control: the turn is skipped below and it resolves next turn
+                    if (!IsUninterruptible(u.Pending.Ability)) CancelPending(u, "controlled", null, 0f);
                 }
                 else if (u.Pending.RemainingTime > RulesConstants.TurnSeconds + 1e-3f && !u.Pending.Channel)
                 {

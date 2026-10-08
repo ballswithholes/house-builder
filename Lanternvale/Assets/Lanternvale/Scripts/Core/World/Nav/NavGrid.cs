@@ -237,7 +237,8 @@ namespace Lanternvale.World
         public bool IsWater(Vec2 p) => WorldToCell(p, out int cx, out int cy) && IsCellWater(cx, cy);
 
         // Marks the cells under every blocking water: centres within halfWidth of an open polyline, or inside a closed
-        // polygon. Centres inside one of that water's crossing rects (fords, bridges) stay dry.
+        // polygon's shore as the terrain draws it (Spline.PondShore, a Catmull-Rom loop that bulges past the data corners).
+        // Centres inside one of that water's crossing rects (fords, bridges) stay dry.
         void RasterWater()
         {
             water = null;
@@ -248,8 +249,9 @@ namespace Lanternvale.World
                 bool closed = w.closed && w.points.Count >= 3;
                 if (!closed && (w.closed || w.points.Count < 2 || w.halfWidth <= 0f)) continue;
                 float hw = closed ? 0f : w.halfWidth;
+                var shape = closed ? Spline.PondShore(w.points) : w.points;
                 float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
-                foreach (var q in w.points)
+                foreach (var q in shape)
                 {
                     minX = Math.Min(minX, q.x); maxX = Math.Max(maxX, q.x);
                     minY = Math.Min(minY, q.y); maxY = Math.Max(maxY, q.y);
@@ -267,7 +269,7 @@ namespace Lanternvale.World
                     for (int cx = x0; cx <= x1; cx++)
                     {
                         float x = (cx + 0.5f) * CellSize;
-                        bool wet = closed ? PointInPolygon(w.points, x, y) : SqrDistanceToPolyline(w.points, x, y) <= hw2;
+                        bool wet = closed ? PointInPolygon(shape, x, y) : SqrDistanceToPolyline(w.points, x, y) <= hw2;
                         if (wet && !InCrossing(w, x, y)) water[cy * Width + cx] = true;
                     }
                 }

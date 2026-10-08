@@ -126,6 +126,11 @@ namespace Lanternvale.Data
                 if (a.rankLevels.Length > 0 && a.rankLevels[0] != a.learnLevel) Err(w, "rankLevels[0] must equal learnLevel");
                 if (a.passive && !string.IsNullOrEmpty(a.passiveAura) && !HasAura(a.passiveAura)) Err(w, $"unknown passiveAura '{a.passiveAura}'");
                 if (a.channeled && a.channelTicks <= 0) Err(w, "channeled ability needs channelTicks");
+                if (a.tags != null && Array.IndexOf(a.tags, "Uninterruptible") >= 0)
+                {
+                    if (a.castTime <= 0f && !a.channeled) Err(w, "tag Uninterruptible needs a cast time or a channel");
+                    if (a.passive) Err(w, "tag Uninterruptible on a passive ability");
+                }
                 if (a.rankCastTimes != null && a.rankCastTimes.Length > 0)
                 {
                     if (a.rankCastTimes.Length != Math.Max(1, a.rankLevels.Length)) Err(w, "rankCastTimes needs one value per rank");

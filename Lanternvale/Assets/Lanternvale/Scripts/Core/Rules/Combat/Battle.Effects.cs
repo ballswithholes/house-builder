@@ -662,7 +662,9 @@ namespace Lanternvale.Rules
                 }
                 case EffectType.Dispel: EffectDispel(cast, e, t); break;
                 case EffectType.Interrupt:
-                    if (t.Pending != null)
+                    if (t.Pending != null && IsUninterruptible(t.Pending.Ability))
+                        Emit(new CombatEvent { Type = CombatEventType.Immune, Source = c, Target = t, AbilityId = cast.AbilityId, Name = cast.Name, School = cast.School, Reason = "uninterruptible" });
+                    else if (t.Pending != null)
                     {
                         float ir = Specials.InterruptResistChance(t);
                         if (ir > 0 && Rng.Chance(ir)) { EmitAvoid(CombatEventType.Resist, cast, t); break; }

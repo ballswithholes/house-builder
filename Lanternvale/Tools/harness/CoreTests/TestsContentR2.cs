@@ -416,7 +416,7 @@ namespace Lanternvale.Tests
 
         // ===================================================================================================== the bosses
 
-        static (BattleOutcome outcome, int rounds, float minHp, int deaths, float minOne) Pull(string[] companions, string encId, ulong seed, int level = 32)
+        static (BattleOutcome outcome, int rounds, float minHp, int deaths, float minOne, HashSet<string> landed) Pull(string[] companions, string encId, ulong seed, int level = 32)
         {
             var p = new Player(ClassId.Warrior, level, seed, companions);
             var s = p.S;
@@ -437,25 +437,36 @@ namespace Lanternvale.Tests
                 min = Math.Min(min, party.Sum(x => Math.Max(0f, x.Health)) / max);
                 foreach (var x in party) one = Math.Min(one, Math.Max(0f, x.Health) / x.MaxHealth);
             }
-            return (b.Outcome, b.Round, min, party.Count(u => !u.IsAlive), one);
+            // the boss side's abilities that landed (CastComplete, AbilityUsed): a cast that was started and interrupted does not count
+            var landed = new HashSet<string>(b.Events.Where(e => (e.Type == CombatEventType.CastComplete || e.Type == CombatEventType.AbilityUsed) && e.Source != null && e.Source.Team != b.PlayerTeam).Select(e => e.AbilityId));
+            return (b.Outcome, b.Round, min, party.Count(u => !u.IsAlive), one, landed);
         }
 
         [Test]
         public static void Bosses_ARaidOfTenWins_FiveOfTheSameLevelLose()
         {
             // three pulls each (different seeds: gear rolls and the fight's dice): the raid of 10 wins at least two and is
-            // pushed in at least one (someone drops below 40 % or goes down); five of the same level win none
+            // pushed in at least one (someone drops below 40 % or goes down), and the raid-wide casts land (they cannot be
+            // interrupted: the healer checks); five of the same level win none
+            var mechanics = new Dictionary<string, string[]>
+            {
+                ["enc_r2_frostclaw"] = new[] { "cr_r2_bitter_cold", "cr_r2_avalanche" },
+                ["enc_r2_cinder_drakes"] = new[] { "cr_r2_ash_breath", "cr_r2_choking_cinders" },
+                ["enc_r2_varkas"] = new[] { "cr_r2_brand_of_the_wyrm", "cr_r2_wyrmfire_slam" },
+                ["enc_r2_vyrmathra"] = new[] { "cr_r2_fire_breath", "cr_r2_rain_of_cinders", "cr_r2_hollowfire" },
+            };
             ulong seed = 7100;
             var bad = new List<string>();
             foreach (var enc in Bosses)
             {
                 int tenWins = 0, fiveWins = 0, minRounds = 999;
                 bool pushed = false;
+                var landed = new HashSet<string>();
                 for (int k = 0; k < 3; k++)
                 {
                     var ten = Pull(Ten, enc, seed++);
                     Console.WriteLine($"    roost: {enc} vs 10 at 32: {ten.outcome} in {ten.rounds} rounds, lowest raid health {ten.minHp:P0}, lowest member {ten.minOne:P0}, {ten.deaths} down");
-                    if (ten.outcome == BattleOutcome.Victory) { tenWins++; minRounds = Math.Min(minRounds, ten.rounds); }
+                    if (ten.outcome == BattleOutcome.Victory) { tenWins++; minRounds = Math.Min(minRounds, ten.rounds); landed.UnionWith(ten.landed); }
                     if (ten.minOne < 0.4f || ten.deaths > 0) pushed = true;
                     var five = Pull(Five, enc, seed++);
                     Console.WriteLine($"    roost: {enc} vs 5 at 32: {five.outcome} in {five.rounds} rounds, {five.deaths} down");
@@ -465,6 +476,7 @@ namespace Lanternvale.Tests
                 if (!pushed || minRounds < 6) bad.Add($"{enc}: not trivial (pushed {pushed}, shortest win {minRounds} rounds)");
                 if (enc == "enc_r2_vyrmathra" && minRounds < 15) bad.Add("the finale lasts many rounds: " + minRounds);
                 if (fiveWins > 0) bad.Add($"{enc}: five at 32 do not win ({fiveWins}/3)");
+                foreach (var a in mechanics[enc]) if (!landed.Contains(a)) bad.Add($"{enc}: {a} lands in a won fight");
             }
             Assert(bad.Count == 0, string.Join("\n    ", bad));
         }

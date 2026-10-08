@@ -125,8 +125,8 @@ namespace Lanternvale.Rules
             target.ClampResources();
             Emit(new CombatEvent { Type = CombatEventType.AuraApplied, Source = caster, Target = target, AuraId = def.id, Name = def.name, Count = inst.Stacks, Seconds = duration, School = def.school, AreaAuraChild = inst.IsAreaChild });
 
-            // state side effects
-            if (target.Pending != null)
+            // state side effects (an uninterruptible cast ignores them)
+            if (HasInterruptibleCast(target))
             {
                 foreach (var s in CancelCastStates)
                     if (inst.HasState(s)) { CancelPending(target, s.ToString().ToLowerInvariant(), caster, 0f); break; }

@@ -1,8 +1,9 @@
 // MapTerrain: MapDef.water — rivers (polylines with a half width) and ponds (closed polygons) with fords and bridges.
 //
-// The nav grid blocks every point within halfWidth of a river's polyline and the inside of a pond's polygon (crossing
+// The nav grid blocks every point within halfWidth of a river's polyline and the inside of a pond's shore (crossing
 // rects stay walkable). MapTerrain draws them through the same points, smoothed (Catmull-Rom), so the banks curve
-// softly and never stray more than a hand's breadth from the blocked cells on gentle bends. MapTerrain
+// softly and never stray more than a hand's breadth from the blocked cells on gentle bends; a pond's shore is the very
+// loop the nav grid blocks (Lanternvale.Util.Spline.PondShore). MapTerrain
 // carves a bed there (0.45 m; 0.12 m for water that doesn't block), lays a translucent, flowing surface just under the
 // ground (WaterLevel), darkens the damp banks and keeps ground cover and trees off them. A river that meets the map's
 // edge flows on out of it, through a valley in the hills, to the horizon. A crossing with a bridge prop over it keeps
@@ -65,7 +66,7 @@ namespace Lanternvale.Game
                     b.along = new float[b.pts.Count];
                     for (int i = 1; i < b.pts.Count; i++) b.along[i] = b.along[i - 1] + Vector2.Distance(b.pts[i - 1], b.pts[i]);
                 }
-                else b.pts = ClosedSpline(b.pts, 0.5f);
+                else b.pts = PondShore(wd.points);
                 float pad = b.closed ? 0f : b.hw;
                 b.xMin = b.yMin = float.MaxValue;
                 b.xMax = b.yMax = float.MinValue;
@@ -149,21 +150,12 @@ namespace Lanternvale.Game
             return best;
         }
 
-        /// <summary>A closed Catmull-Rom loop through a polygon's corners (a pond's soft shore), about every step metres.</summary>
-        static List<Vector2> ClosedSpline(List<Vector2> p, float step)
+        /// <summary>A pond's soft shore: the closed Catmull-Rom loop through its corners that the nav grid blocks too.</summary>
+        static List<Vector2> PondShore(List<Lanternvale.Util.Vec2> corners)
         {
-            var o = new List<Vector2>();
-            int n = p.Count;
-            for (int i = 0; i < n; i++)
-            {
-                Vector2 p0 = p[(i + n - 1) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n];
-                int k = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(p1, p2) / step));
-                for (int j = 0; j < k; j++)
-                {
-                    float t = (float)j / k, t2 = t * t, t3 = t2 * t;
-                    o.Add(0.5f * (2f * p1 + (p2 - p0) * t + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 + (3f * p1 - p0 - 3f * p2 + p3) * t3));
-                }
-            }
+            var ring = Lanternvale.Util.Spline.PondShore(corners);
+            var o = new List<Vector2>(ring.Count);
+            foreach (var q in ring) o.Add(new Vector2(q.x, q.y));
             return o;
         }
 

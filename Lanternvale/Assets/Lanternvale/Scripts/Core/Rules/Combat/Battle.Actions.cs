@@ -667,6 +667,17 @@ namespace Lanternvale.Rules
         /// <summary>The ability is a telegraphed cast (tag <see cref="TelegraphTag"/> and a cast time).</summary>
         public static bool IsTelegraphed(AbilityDef a) => a != null && a.castTime > 0f && !a.channeled && AbilityMods.HasTag(a, TelegraphTag);
 
+        /// <summary>Ability tag: a cast or channel nothing can cancel. Interrupts, silences and crowd control are shrugged off
+        /// (an Immune event, no school lockout); control that takes the caster's whole turn only delays it. Death (or the
+        /// caster's own feign death or change of sides) still ends it. Big boss casts the party has to heal or brace through.</summary>
+        public const string UninterruptibleTag = "Uninterruptible";
+
+        /// <summary>The ability is a cast or channel that cannot be interrupted (tag <see cref="UninterruptibleTag"/>).</summary>
+        public static bool IsUninterruptible(AbilityDef a) => a != null && (a.castTime > 0f || a.channeled) && AbilityMods.HasTag(a, UninterruptibleTag);
+
+        /// <summary>The unit has a pending cast an interrupt, silence or control effect can cancel.</summary>
+        public static bool HasInterruptibleCast(Unit u) => u != null && u.Pending != null && !IsUninterruptible(u.Pending.Ability);
+
         static readonly UnitState[] BreakableControlStates =
         {
             UnitState.Stun, UnitState.Incapacitate, UnitState.Sleep, UnitState.Polymorph, UnitState.Confuse, UnitState.Fear,

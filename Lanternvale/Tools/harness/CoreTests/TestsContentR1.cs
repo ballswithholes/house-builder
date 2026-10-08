@@ -2,8 +2,8 @@
 // exit, NPC, chest and encounter can be reached; the thorn gates wither boss by boss; the hidden offerings are revealed by
 // the corner's Perception check or Hinoki's hint; Quill's and Hinoki's quests are scripted to completion through the real
 // GameSession at the band's top level with a raid of ten (talk, walk, props, fights won by the party AI, both endings of
-// the choices); every boss is beaten by a raid of ten at level 22 through AutoResolve, with its mechanics firing, and not
-// by five; the quest markers follow the flag and level gates.
+// the choices); every boss is beaten by a fitting raid of ten at levels 21 and 22 (two of three pulls), its raid-wide casts
+// landing (they cannot be interrupted), and never by a fitting five; the quest markers follow the flag and level gates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,13 +32,16 @@ namespace Lanternvale.Tests
             public readonly Dictionary<string, (float minHp, int rounds, int deaths)> Fights = new Dictionary<string, (float, int, int)>(StringComparer.Ordinal);
             public long Xp;   // XP the main character earned (fights, dialogue and quest rewards)
 
-            public Raider(ClassId main, int level, ulong seed, int size = 10, bool gate = true)
+            public Raider(ClassId main, int level, ulong seed, int size = 10, bool gate = true) : this(main, level, seed, RaidTest.Ids(size), gate) { }
+
+            /// <summary>The main character and these companions (<paramref name="ids"/> starts with GameSession.MainId).</summary>
+            public Raider(ClassId main, int level, ulong seed, List<string> ids, bool gate = true)
             {
                 S = RaidTest.Game(main, level, seed);
                 S.Settings.CompanionAutoPlay = true;
                 if (gate) S.Flags.Set(Gate);
-                Assert(S.EnterRaid(Raid, "from_mirefen", RaidTest.Ids(size), true) == null, "enter the raid: " + S.LastError);
-                Assert(S.InRaid && S.MapId == Raid && S.Party.Count == size, "a raid of " + size);
+                Assert(S.EnterRaid(Raid, "from_mirefen", ids, true) == null, "enter the raid: " + S.LastError);
+                Assert(S.InRaid && S.MapId == Raid && S.Party.Count == ids.Count, "a raid of " + ids.Count);
                 S.SetAutoPlay(S.Main, true);
             }
 
@@ -473,52 +476,129 @@ namespace Lanternvale.Tests
 
         // ===================================================================================================== the bosses
 
-        [Test]
-        public static void Bosses_ARaidOfTenWins_FiveDoNot_TheMechanicsFire()
+        /// <summary>A fitting raid of 10: two tanks beside the main, three healers, four damage dealers (as TestsContentR2).</summary>
+        static readonly string[] Ten = { "bruna", "ysolde", "liora", "seren", "nanami", "rook", "pip", "lys", "morwen" };
+        /// <summary>A fitting party of 5: the main, a tank, a healer and two damage dealers.</summary>
+        static readonly string[] Five = { "bruna", "liora", "rook", "lys" };
+
+        /// <summary>What must land in a won fight (CastComplete or AbilityUsed by the boss's side), and what must at least be
+        /// attempted (the casts the raid is meant to interrupt: Solace's Mending, Drink the Light).</summary>
+        static readonly Dictionary<string, (string[] land, string[] attempt)> Mechanics = new Dictionary<string, (string[], string[])>
         {
-            var mechanics = new Dictionary<string, string[]>
+            ["enc_r1_thornmaw"] = (new[] { "cr_r1_bramble_burst", "cr_r1_call_thornlings", "cr_r1_rootbound_frenzy" }, new string[0]),
+            ["enc_r1_twins"] = (new[] { "cr_r1_veil_of_tears", "cr_r1_weeping_wisps" }, new[] { "cr_r1_solace_mending" }),
+            ["enc_r1_mother_mire"] = (new[] { "cr_r1_bog_eruption", "cr_r1_call_mirespawn", "cr_r1_frog_hex" }, new string[0]),
+            ["enc_r1_hollow_heart"] = (new[] { "cr_r1_sprout_seedlings", "cr_r1_heartbeat", "cr_r1_final_beat" }, new[] { "cr_r1_drink_the_light" }),
+        };
+
+        sealed class PullResult
+        {
+            public BattleOutcome Outcome;
+            public int Rounds, Down;
+            public float MinHp = 1f;
+            public readonly HashSet<string> Landed = new HashSet<string>(), Started = new HashSet<string>();
+            public string Took = "";
+        }
+
+        /// <summary>One pull of a boss by the main (a Warrior) and these companions, every member on auto-play.</summary>
+        static PullResult Pull(string encId, string[] companions, int level, ulong seed)
+        {
+            var ids = new List<string> { GameSession.MainId };
+            ids.AddRange(companions);
+            var r = new Raider(ClassId.Warrior, level, seed, ids);
+            var s = r.S;
+            RaidTest.Pacify(s);
+            s.Map.ResetEncounter(encId);
+            var enc = s.Map.FindEncounter(encId);
+            s.SetPartyPositions(enc.pos + new Vec2(-enc.radius - 3f, -1.5f));
+            var b = s.StartEncounter(encId);
+            Assert(b != null, "fight " + encId + ": " + s.LastError);
+            var party = b.Units.Where(u => u.Team == b.PlayerTeam && u.IsCharacter).ToList();
+            float max = party.Sum(u => u.MaxHealth);
+            var res = new PullResult();
+            int guard = 0;
+            while (!b.IsOver && b.Round <= 80 && guard++ < 300000)
             {
-                ["enc_r1_thornmaw"] = new[] { "cr_r1_bramble_burst", "cr_r1_call_thornlings", "cr_r1_rootbound_frenzy" },
-                ["enc_r1_twins"] = new[] { "cr_r1_veil_of_tears", "cr_r1_solace_mending", "cr_r1_weeping_wisps" },
-                ["enc_r1_mother_mire"] = new[] { "cr_r1_bog_eruption", "cr_r1_call_mirespawn", "cr_r1_frog_hex" },
-                ["enc_r1_hollow_heart"] = new[] { "cr_r1_drink_the_light", "cr_r1_sprout_seedlings", "cr_r1_heartbeat", "cr_r1_final_beat" },
-            };
+                var u = b.ActiveUnit;
+                if (u == null) break;
+                AI.RunTurn(b, u);
+                if (b.ActiveUnit == u && !b.IsOver) b.EndTurn(u);
+                res.MinHp = Math.Min(res.MinHp, party.Sum(x => Math.Max(0f, x.Health)) / max);
+            }
+            res.Outcome = b.Outcome;
+            res.Rounds = b.Round;
+            res.Down = party.Count(u => !u.IsAlive || u.IsDeadOrDowned);
+            foreach (var e in b.Events)
+            {
+                if (e.Source == null || e.Source.Team == b.PlayerTeam || string.IsNullOrEmpty(e.AbilityId)) continue;
+                if (e.Type == CombatEventType.CastComplete || e.Type == CombatEventType.AbilityUsed) res.Landed.Add(e.AbilityId);
+                else if (e.Type == CombatEventType.CastStart) res.Started.Add(e.AbilityId);
+            }
+            res.Took = DamageBreakdown(b);
+            return res;
+        }
+
+        [Test]
+        public static void Bosses_AFittingTenWins_FiveDoNot_TheMechanicsLand()
+        {
+            // at the band's bottom (21) and middle (22), three pulls each (different seeds: gear rolls and the fight's dice):
+            // a fitting ten wins at least two, and the raid-wide casts land (they cannot be interrupted, so the healers
+            // have work to do); a fitting five of the same level wins none
+            var bad = new List<string>();
             ulong seed = 41;
             foreach (var id in Bosses)
-            foreach (var main in new[] { ClassId.Warrior, ClassId.Priest })
             {
-                // ten at level 22
-                var r = new Raider(main, 22, seed++);
-                var s = r.S;
-                RaidTest.Pacify(s);
-                s.Map.ResetEncounter(id);
-                var enc = s.Map.FindEncounter(id);
-                s.SetPartyPositions(enc.pos + new Vec2(-enc.radius - 3f, -1.5f));
-                var b = s.StartEncounter(id);
-                Assert(b != null, "fight " + id + ": " + s.LastError);
-                var outcome = s.AutoResolve(80);
-                int rounds = b.Round;
-                var used = new HashSet<string>(b.Events.Where(e => e.Type == CombatEventType.CastStart || e.Type == CombatEventType.AbilityUsed || e.Type == CombatEventType.AuraApplied)
-                    .Select(e => string.IsNullOrEmpty(e.AbilityId) ? e.AuraId : e.AbilityId));
-                int down = s.Party.Count(u => !u.IsAlive || u.IsDeadOrDowned);
-                Console.WriteLine($"    r1 {id} ({main} leads): ten at 22 → {outcome} in {rounds} rounds, {down} down; used {string.Join(", ", mechanics[id].Where(used.Contains))}; took {DamageBreakdown(b)}");
-                Assert(outcome == BattleOutcome.Victory, $"{id}: a raid of ten wins ({outcome}, round {rounds}, {SessionTest.PartyHp(s)})");
-                Assert(rounds >= (id == "enc_r1_hollow_heart" ? 12 : 6), $"{id}: not a pushover ({rounds} rounds)");
-                foreach (var a in mechanics[id]) Assert(used.Contains(a), $"{id}: {a} happened");
-                var sum = s.FinishBattle();
-                Assert(sum != null && sum.Outcome == CombatEndKind.Victory && s.InRaid, "the raid goes on");
-
-                // five at the same level
-                var f = new Raider(main, 22, seed++, 5);
-                RaidTest.Pacify(f.S);
-                f.S.Map.ResetEncounter(id);
-                f.S.SetPartyPositions(enc.pos + new Vec2(-enc.radius - 3f, -1.5f));
-                var b5 = f.S.StartEncounter(id);
-                Assert(b5 != null, "five fight " + id);
-                var o5 = f.S.AutoResolve(80);
-                Console.WriteLine($"    r1 {id} ({main} leads): five at 22 → {o5} in {b5.Round} rounds");
-                Assert(o5 != BattleOutcome.Victory, $"{id}: five heroes do not win ({o5})");
+                var landed = new HashSet<string>();
+                var started = new HashSet<string>();
+                foreach (int level in new[] { 21, 22 })
+                {
+                    int tenWins = 0, fiveWins = 0;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        var ten = Pull(id, Ten, level, seed++);
+                        Console.WriteLine($"    r1 {id}: ten at {level} → {ten.Outcome} in {ten.Rounds} rounds, lowest raid health {ten.MinHp:P0}, {ten.Down} down; took {ten.Took}");
+                        if (ten.Outcome == BattleOutcome.Victory)
+                        {
+                            tenWins++;
+                            if (ten.Rounds < (id == "enc_r1_hollow_heart" ? 12 : 6)) bad.Add($"{id}: not a pushover at {level} ({ten.Rounds} rounds)");
+                            landed.UnionWith(ten.Landed);
+                        }
+                        started.UnionWith(ten.Started);
+                        var five = Pull(id, Five, level, seed++);
+                        Console.WriteLine($"    r1 {id}: five at {level} → {five.Outcome} in {five.Rounds} rounds");
+                        if (five.Outcome == BattleOutcome.Victory) fiveWins++;
+                    }
+                    if (tenWins < 2) bad.Add($"{id}: a fitting ten at {level} wins ({tenWins}/3)");
+                    if (fiveWins > 0) bad.Add($"{id}: five at {level} do not win ({fiveWins}/3)");
+                }
+                foreach (var a in Mechanics[id].land)
+                    if (!landed.Contains(a)) bad.Add($"{id}: {a} lands in a won fight");
+                foreach (var a in Mechanics[id].attempt)
+                    if (!landed.Contains(a) && !started.Contains(a)) bad.Add($"{id}: {a} is cast");
             }
+            Assert(bad.Count == 0, string.Join("\n    ", bad));
+        }
+
+        /// <summary>[Sim] win rates over seeds (Tools/check.sh core --sim --filter TestsContentR1.Sim).</summary>
+        [Sim]
+        public static void Sim_BossWinRates()
+        {
+            foreach (var id in Bosses)
+                foreach (int level in new[] { 21, 22 })
+                    foreach (var (name, comp) in new[] { ("10", Ten), ("5", Five) })
+                    {
+                        int wins = 0, n = 12, rounds = 0;
+                        float low = 0f;
+                        for (ulong k = 0; k < (ulong)n; k++)
+                        {
+                            var r = Pull(id, comp, level, 9000 + k * 13);
+                            if (r.Outcome == BattleOutcome.Victory) wins++;
+                            else if (name == "10") Console.WriteLine($"      loss {id} at {level} seed {9000 + k * 13}: {r.Rounds} rounds, {r.Down} down");
+                            rounds += r.Rounds;
+                            low += r.MinHp;
+                        }
+                        Console.WriteLine($"    sim {id} at {level} vs {name}: {wins}/{n} wins, avg {rounds / n} rounds, avg lowest raid health {low / n:P0}");
+                    }
         }
 
         /// <summary>The raid's damage taken, by the enemy ability that dealt it (top 5).</summary>

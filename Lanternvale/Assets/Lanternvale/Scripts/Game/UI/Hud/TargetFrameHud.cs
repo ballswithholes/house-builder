@@ -146,10 +146,12 @@ namespace Lanternvale.Game
                 HudDraw.Ring(cr, new Color(col.r, col.g, col.b, HudDraw.Pulse(6f, 0.5f, 1f)), 5);
                 HudDraw.Text(new Rect(cr.x + 6f, cr.y - 1f, cr.width - 12f, cr.height + 2f), p.Ability.name, HudStyles.NameSmall, Ui.TextLight);
                 HudDraw.Text(new Rect(cr.x + 6f, cr.y - 1f, cr.width - 12f, cr.height + 2f), castLeft.Get(p.RemainingTime), HudStyles.TinyRight, Ui.TextLight);
+                bool locked = Battle.IsUninterruptible(p.Ability);
                 if (HudDraw.Hover(cr))
                     Ui.TooltipFor(cr, "<b>" + Hud.NameOf(t) + " is casting " + p.Ability.name + "</b>\nIt resolves at the start of its next turn (" + HudText.Secs(p.RemainingTime) + " s left).\n" +
-                                      Ui.Rich("Interrupt it (Kick, Pummel, Counterspell, Earth Shock…) or stun/silence/fear it before then.", Hud.Muted));
-                string intr = hostile ? InterruptHint() : "";
+                                      Ui.Rich(locked ? "It cannot be interrupted: top everyone up, shield and spread out before it lands."
+                                                     : "Interrupt it (Kick, Pummel, Counterspell, Earth Shock…) or stun/silence/fear it before then.", Hud.Muted));
+                string intr = !hostile ? "" : locked ? "Can't be interrupted: brace for it!" : InterruptHint();
                 if (intr.Length > 0)
                 {
                     var ir = new Rect(cx, y + 22f, cw, 18f);

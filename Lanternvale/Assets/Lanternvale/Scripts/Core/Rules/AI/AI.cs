@@ -190,7 +190,7 @@ namespace Lanternvale.Rules
                         foreach (var a in b.AlliesOf(u)) if (a.HealthPct < num) { ok = true; break; }
                         break;
                     case "targetHpBelow": ok = target != null && target.HealthPct < num; break;
-                    case "targetCasting": ok = target != null && target.Pending != null; break;
+                    case "targetCasting": ok = Battle.HasInterruptibleCast(target); break;   // users are interrupts and stuns
                     case "targetNoAura": ok = target == null || !target.HasAura(arg); break;
                     case "selfNoAura": ok = !u.HasAura(arg); break;
                     case "selfAura": ok = u.HasAura(arg); break;

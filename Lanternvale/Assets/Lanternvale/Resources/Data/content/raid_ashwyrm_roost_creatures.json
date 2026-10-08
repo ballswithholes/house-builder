@@ -600,7 +600,7 @@
       "levelOffset": 2,
       "levelFloor": 31,
       "levelCap": 34,
-      "healthMult": 6.2,
+      "healthMult": 5.6,
       "damageMult": 2.9,
       "attackSpeed": 3.6,
       "moveSpeed": 7,
@@ -676,7 +676,7 @@
       "levelOffset": 2,
       "levelFloor": 31,
       "levelCap": 34,
-      "healthMult": 9.0,
+      "healthMult": 7.2,
       "damageMult": 2.0,
       "attackSpeed": 3.0,
       "moveSpeed": 6,
@@ -1113,7 +1113,7 @@
       "id": "cr_r2_bitter_cold",
       "name": "Bitter Cold",
       "icon": "frost",
-      "description": "The matriarch's breath freezes the whole Shelf: every enemy within 40 yards takes Frost damage every 3 sec for 12 sec.",
+      "description": "The matriarch's breath freezes the whole Shelf: every enemy within 40 yards takes Frost damage every 3 sec for 12 sec. It cannot be interrupted.",
       "school": "Frost",
       "hidden": true,
       "castTime": 2.0,
@@ -1126,7 +1126,8 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 8,
@@ -1141,7 +1142,7 @@
       "id": "cr_r2_avalanche",
       "name": "Avalanche",
       "icon": "earth",
-      "description": "Frostclaw rears and slams the Shelf, bringing the snow down: {0} Frost damage to every enemy within 40 yards, and they are slowed. Spread out, and heal through it.",
+      "description": "Frostclaw rears and slams the Shelf, bringing the snow down: {0} Frost damage to every enemy within 40 yards, and they are slowed. Spread out, and heal through it. It cannot be interrupted.",
       "school": "Frost",
       "hidden": true,
       "castTime": 4.0,
@@ -1154,16 +1155,17 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 9,
       "effects": [
         {
           "type": "Damage",
-          "min": 34,
-          "max": 42,
-          "perLevel": 2.4
+          "min": 17,
+          "max": 21,
+          "perLevel": 1.2
         },
         {
           "type": "ApplyAura",
@@ -1374,7 +1376,7 @@
       "id": "cr_r2_ash_breath",
       "name": "Ash Breath",
       "icon": "fire",
-      "description": "Ashtongue rears and breathes a long cone of violet fire: {0} Fire damage to every enemy in front of her, and they choke on ash.",
+      "description": "Ashtongue rears and breathes a long cone of violet fire: {0} Fire damage to every enemy in front of her, and they choke on ash. It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 3.0,
@@ -1388,16 +1390,17 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 8,
       "effects": [
         {
           "type": "Damage",
-          "min": 32,
-          "max": 40,
-          "perLevel": 2.2
+          "min": 7.0,
+          "max": 8.8,
+          "perLevel": 0.484
         },
         {
           "type": "ApplyAura",
@@ -1409,7 +1412,7 @@
       "id": "cr_r2_choking_cinders",
       "name": "Choking Cinders",
       "icon": "fire",
-      "description": "Cinders rain over the pit: every enemy within 40 yards burns every 3 sec for 12 sec.",
+      "description": "Cinders rain over the pit: every enemy within 40 yards burns every 3 sec for 12 sec. It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 2.0,
@@ -1422,7 +1425,8 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 7,
@@ -1504,7 +1508,7 @@
       "id": "cr_r2_wyrmfire_slam",
       "name": "Wyrmfire Slam",
       "icon": "earth",
-      "description": "Varkas raises the maul over his head and brings it down in a ring of fire: {0} Fire damage to every enemy within 14 yards, and they are dazed.",
+      "description": "Varkas raises the maul over his head and brings it down in a ring of fire: {0} Fire damage to every enemy within 14 yards, and they are dazed. It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 3.5,
@@ -1517,16 +1521,17 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 9,
       "effects": [
         {
           "type": "Damage",
-          "min": 34,
-          "max": 42,
-          "perLevel": 2.4
+          "min": 10,
+          "max": 13,
+          "perLevel": 0.72
         },
         {
           "type": "ApplyAura",
@@ -1538,7 +1543,7 @@
       "id": "cr_r2_brand_of_the_wyrm",
       "name": "Brand of the Wyrm",
       "icon": "curse",
-      "description": "Varkas raises the drake skull and the Ashwyrm's brand burns into every enemy within 40 yards: Fire damage every 3 sec for 15 sec, and healing taken is reduced by 25%. Remove the curse, and heal through it.",
+      "description": "Varkas raises the drake skull and the Ashwyrm's brand burns into every enemy within 40 yards: Fire damage every 3 sec for 15 sec, and healing taken is reduced by 25%. Remove the curse, and heal through it. It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 2.0,
@@ -1552,7 +1557,8 @@
       },
       "tags": [
         "Curse",
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 8,
@@ -1719,7 +1725,7 @@
       "id": "cr_r2_fire_breath",
       "name": "Fire Breath",
       "icon": "fire",
-      "description": "Vyrmathra draws a breath that empties the sky, and breathes: {0} Fire damage to every enemy in a long cone in front of her, and they burn. Get out of the cone!",
+      "description": "Vyrmathra draws a breath that empties the sky, and breathes: {0} Fire damage to every enemy in a long cone in front of her, and they burn. Get out of the cone! It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 3.5,
@@ -1733,16 +1739,17 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 8,
       "effects": [
         {
           "type": "Damage",
-          "min": 40,
-          "max": 50,
-          "perLevel": 2.8
+          "min": 4.0,
+          "max": 5.0,
+          "perLevel": 0.28
         },
         {
           "type": "ApplyAura",
@@ -1754,7 +1761,7 @@
       "id": "cr_r2_rain_of_cinders",
       "name": "Rain of Cinders",
       "icon": "fire",
-      "description": "The Ashwyrm shakes her wings, and burning ash falls over the whole summit: every enemy within 50 yards burns every 3 sec for 12 sec.",
+      "description": "The Ashwyrm shakes her wings, and burning ash falls over the whole summit: every enemy within 50 yards burns every 3 sec for 12 sec. It cannot be interrupted.",
       "school": "Fire",
       "hidden": true,
       "castTime": 2.0,
@@ -1767,7 +1774,8 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 8,
@@ -1822,7 +1830,7 @@
       "id": "cr_r2_hollowfire",
       "name": "Hollowfire",
       "icon": "shadow",
-      "description": "The fire inside the Ashwyrm turns grey: the same grey as the Hollow. {0} Shadowflame to every enemy within 50 yards. Heal through it, or nobody walks down the mountain.",
+      "description": "The fire inside the Ashwyrm turns grey: the same grey as the Hollow. {0} Shadowflame to every enemy within 50 yards. Heal through it, or nobody walks down the mountain. It cannot be interrupted.",
       "school": "Shadow",
       "hidden": true,
       "castTime": 4.0,
@@ -1835,16 +1843,17 @@
         "affects": "Enemies"
       },
       "tags": [
-        "Telegraph"
+        "Telegraph",
+        "Uninterruptible"
       ],
       "aiHint": "AoE",
       "aiPriority": 9,
       "effects": [
         {
           "type": "Damage",
-          "min": 44,
-          "max": 54,
-          "perLevel": 3.0
+          "min": 14,
+          "max": 17,
+          "perLevel": 0.96
         },
         {
           "type": "ApplyAura",
@@ -1963,8 +1972,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 7,
-          "perLevel": 0.6
+          "min": 0.7,
+          "perLevel": 0.06
         }
       ],
       "description": "Frost damage every 3 sec."
@@ -2036,8 +2045,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 6,
-          "perLevel": 0.5
+          "min": 1.3,
+          "perLevel": 0.11
         }
       ],
       "mods": [
@@ -2068,8 +2077,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 7,
-          "perLevel": 0.6
+          "min": 1.1,
+          "perLevel": 0.09
         }
       ],
       "description": "Fire damage every 3 sec."
@@ -2121,8 +2130,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 9,
-          "perLevel": 0.8
+          "min": 0.5,
+          "perLevel": 0.036
         }
       ],
       "mods": [
@@ -2175,8 +2184,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 9,
-          "perLevel": 0.8
+          "min": 0.9,
+          "perLevel": 0.08
         }
       ],
       "description": "Fire damage every 3 sec."
@@ -2193,8 +2202,8 @@
       "tickEffects": [
         {
           "type": "Damage",
-          "min": 8,
-          "perLevel": 0.7
+          "min": 0.6,
+          "perLevel": 0.049
         }
       ],
       "description": "Burning ash: Fire damage every 3 sec."

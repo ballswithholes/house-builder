@@ -38,12 +38,36 @@ namespace Lanternvale.Rules
             var items = new List<string>(comp.startingItems);
             if (items.Count == 0) items.AddRange(c.startingItems);
             InitCharacter(u, c, learnAll, items.ToArray(), leftovers);
+            if (comp.startingItems.Length > 0) FillEmptySlots(u, c.startingItems);
             Progression.AutoAllocateTalents(u);
             if (learnAll) Progression.LearnAllAvailable(u); // talent-granted abilities at their best rank
             AttachPassives(u);
             u.InvalidateStats();
             u.RestoreFull();
             return u;
+        }
+
+        /// <summary>
+        /// A companion's signature items cover only a few slots: the class's starter gear goes into the slots still empty
+        /// (legs, feet...). A starter weapon only when the companion has no weapon at all; starter pieces that do not fit
+        /// are not handed out (no pile of starter swords in the bags).
+        /// </summary>
+        static void FillEmptySlots(Unit u, string[] classStarter)
+        {
+            var eq = u.Equipment;
+            foreach (var id in classStarter)
+            {
+                var def = u.Db.Item(id);
+                if (def == null || def.equip == EquipType.None) continue;
+                foreach (var s in EquipmentRules.SlotsFor(def))
+                {
+                    if (eq[s] != null || EquipmentRules.CannotEquipReason(u, def, s) != null) continue;
+                    bool hand = s == EquipSlot.MainHand || s == EquipSlot.OffHand;
+                    if (hand && (eq.MainHand != null || s == EquipSlot.OffHand)) break;
+                    EquipmentRules.Equip(u, new ItemInstance(def), s);
+                    break;
+                }
+            }
         }
 
         static void InitCharacter(Unit u, ClassDef c, bool learnAll, string[] startingItems, List<ItemInstance> leftovers)

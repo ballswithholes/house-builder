@@ -72,6 +72,11 @@ Key fields (see Defs.cs for all):
   Blessing Stance Sting Aspect Curse Shock Armor Poison Heal Shout Trap Pet Shapeshift Form Conjure Buff Taunt`.
   `Telegraph` (engine rule): a cast-time ability that always becomes a pending cast in combat — it resolves at the start
   of the caster's next turn even if it would fit, so the party can interrupt/stun/silence it (boss big casts).
+  `Uninterruptible` (engine rule, cast-time or channelled abilities only — the validator checks): interrupts, silences
+  and crowd control do not cancel the cast (an interrupt logs "immune" and locks no school); control that takes the
+  caster's whole turn only delays it. The companion AI does not spend interrupts or stuns on it. For raid-wide boss casts
+  the healers must heal through; keep heals and the casts whose text asks for an interrupt interruptible. Say so in
+  the description ("It cannot be interrupted.").
 * `exclusiveGroup`: using the ability removes the caster's auras of that group first (stances, aspects…).
   Normally put `exclusiveGroup` on the **aura** instead; the engine enforces aura groups on application.
 * `autoAttack: true` for basic attacks (`attack`, `auto_shot`, `shoot`); `nextSwing: true` for Heroic Strike,

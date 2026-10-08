@@ -10,14 +10,17 @@ IMMUNE_BOSS = ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"
 # tuning knobs (TestsContentR1 checks the outcome)
 TRASH_HP = {"rootling": 1.6, "hound": 1.7, "knight": 2.1}
 BOSS = {
-    "thornmaw": dict(hp=5.0, dmg=2.4, berserk=18),
-    "sorrow": dict(hp=2.7, dmg=2.1, berserk=22),
-    "solace": dict(hp=2.3, dmg=1.6, berserk=22),
-    "mother_mire": dict(hp=4.8, dmg=2.3, berserk=20),
+    "thornmaw": dict(hp=5.0, dmg=2.4, berserk=23),
+    "sorrow": dict(hp=2.7, dmg=2.1, berserk=24),
+    "solace": dict(hp=2.3, dmg=1.6, berserk=24),
+    "mother_mire": dict(hp=4.3, dmg=2.3, berserk=23),
     "daughter": dict(hp=1.5, dmg=1.3),
-    "heart": dict(hp=8.5, dmg=1.8, berserk=36),
+    "heart": dict(hp=7.4, dmg=1.8, berserk=40),
 }
 TRASH_DMG = 1.35
+# the uninterruptible raid-wide casts (tag Uninterruptible): damage scale of the hit and its damage over time, so that
+# one landing costs each hero about a third of their health and three healers can top the raid up before the next
+AOE = {"thorn_bleed": 0.5, "bramble_burst": 0.3, "veil_of_tears": 0.36, "bog_eruption": 0.35, "drink_the_light": 0.8}
 TRASH_XP, BOSS_XP = 0.35, 0.9
 
 
@@ -206,6 +209,22 @@ def dmg(lo, hi, per, school=None):
     return e
 
 
+def _sc(v, f):
+    x = v * f
+    return round(x) if x >= 10 or x == int(x) else max(0.5, round(x, 1))
+
+
+def sdmg(lo, hi, per, f):
+    """dmg() scaled by a tuning factor (AOE)."""
+    return dmg(_sc(lo, f), _sc(hi, f), round(per * f, 3))
+
+
+def stick(lo, per, f):
+    """A damage-over-time tick scaled by a tuning factor (AOE). (A creature's damage multiplier reaches its ticks twice:
+    through the aura and again at the tick, Battle.EffectDamage; these numbers are tuned with that.)"""
+    return {"type": "Damage", "min": _sc(lo, f), "perLevel": round(per * f, 3)}
+
+
 def wdmg(pct, lo, hi, per):
     return {"type": "WeaponDamage", "weaponPct": pct, "min": lo, "max": hi, "perLevel": per}
 
@@ -258,9 +277,9 @@ def abilities():
         # ---- Thornmaw
         A("cr_r1_thornmaw_bite", "Rootbound Maw", "fang", "Thornmaw bites down with a maw full of thorns: heavy weapon damage plus {0}, and the target bleeds.",
           "Physical", [wdmg(140, 14, 20, 1.6), aura_on("cr_r1_thorn_bleed")], cd=6, melee=True, hint="Damage", prio=6),
-        A("cr_r1_bramble_burst", "Bramble Burst", "nature", "Thornmaw shivers and every thorn on its back flies loose: {0} Nature damage to enemies within 15 yards, who bleed.",
-          "Nature", [dmg(56, 70, 3.6), aura_on("cr_r1_thorn_bleed")], cast=3.0, cd=24, target="Self", area=circle(15),
-          tags=["Telegraph"], hint="AoE", prio=9),
+        A("cr_r1_bramble_burst", "Bramble Burst", "nature", "Thornmaw shivers and every thorn on its back flies loose: {0} Nature damage to enemies within 15 yards, who bleed. It cannot be interrupted.",
+          "Nature", [sdmg(56, 70, 3.6, AOE["bramble_burst"]), aura_on("cr_r1_thorn_bleed")], cast=3.0, cd=24, target="Self", area=circle(15),
+          tags=["Telegraph", "Uninterruptible"], hint="AoE", prio=9),
         A("cr_r1_grasping_roots", "Grasping Roots", "leaf", "Roots burst from the floor under someone at the back: rooted and crushed for Nature damage every 3 sec for 9 sec.",
           "Nature", [aura_on("cr_r1_grasping_roots")], cd=18, rng=40, hint="CC", prio=7),
         A("cr_r1_call_thornlings", "Call the Thornlings", "leaf", "Thornmaw shakes its bramble, and three thornlings tumble out of it.",
@@ -274,9 +293,9 @@ def abilities():
           [dmg(24, 30, 1.8)], cast=2.0, rng=30, hint="Damage", prio=3),
         A("cr_r1_drowning_sorrow", "Drowning Sorrow", "water_drop", "Sorrow weeps over a hero until they are wet through: {0} Frost damage, and their movement is slowed.",
           "Frost", [dmg(26, 32, 2.0), aura_on("cr_r1_drowning_sorrow")], cd=12, rng=30, hint="Damage", prio=6),
-        A("cr_r1_veil_of_tears", "Veil of Tears", "water_drop", "Sorrow lifts her veil and the whole grove weeps: {0} Shadow damage to every enemy within 40 yards, and Shadow damage every 3 sec for 12 sec. Healers, be ready.",
-          "Shadow", [dmg(16, 20, 1.0), aura_on("cr_r1_veil_of_tears")], cast=3.0, cd=24, target="Self", area=circle(40),
-          tags=["Telegraph"], hint="AoE", prio=9),
+        A("cr_r1_veil_of_tears", "Veil of Tears", "water_drop", "Sorrow lifts her veil and the whole grove weeps: {0} Shadow damage to every enemy within 40 yards, and Shadow damage every 3 sec for 12 sec. Healers, be ready. It cannot be interrupted.",
+          "Shadow", [sdmg(16, 20, 1.0, AOE["veil_of_tears"]), aura_on("cr_r1_veil_of_tears")], cast=3.0, cd=24, target="Self", area=circle(40),
+          tags=["Telegraph", "Uninterruptible"], hint="AoE", prio=9),
         A("cr_r1_weeping_wisps", "Weeping Wisps", "water_drop", "Sorrow's tears rise from the pool as two weeping wisps.",
           "Frost", [summon("cr_r1_weeping_wisp", 2)], cd=600, target="Self", hint="Summon", prio=10),
         A("cr_r1_grief_unbound", "Grief Unbound", "rage", "Below 30% health Sorrow lets go of everything at once: damage dealt increased by 50%.",
@@ -293,9 +312,9 @@ def abilities():
         # ---- Mother Mire
         A("cr_r1_cauldron_bolt", "Bubbling Brew", "vial", "A ladle of boiling brew, flung with love: {0} Nature damage.", "Nature",
           [dmg(26, 34, 2.0)], cast=2.0, rng=30, hint="Damage", prio=3),
-        A("cr_r1_bog_eruption", "Bog Eruption", "wave", "Mother Mire stirs the cauldron three times widdershins, and the whole bog boils over: {0} Nature damage to every enemy within 30 yards, and they scald for 9 sec.",
-          "Nature", [dmg(40, 52, 2.8), aura_on("cr_r1_scalded")], cast=4.0, cd=24, target="Self", area=circle(30),
-          tags=["Telegraph"], hint="AoE", prio=8),
+        A("cr_r1_bog_eruption", "Bog Eruption", "wave", "Mother Mire stirs the cauldron three times widdershins, and the whole bog boils over: {0} Nature damage to every enemy within 30 yards, and they scald for 9 sec. It cannot be interrupted.",
+          "Nature", [sdmg(40, 52, 2.8, AOE["bog_eruption"]), aura_on("cr_r1_scalded")], cast=4.0, cd=24, target="Self", area=circle(30),
+          tags=["Telegraph", "Uninterruptible"], hint="AoE", prio=8),
         A("cr_r1_frog_hex", "Frog Hex", "curse", "Mother Mire points a crooked finger: a hero becomes a small, surprised frog for 15 sec. Any damage turns them back. Remove Curse ends it.",
           "Nature", [aura_on("cr_r1_frog_hex")], cast=1.5, cd=18, rng=30, hint="CC", prio=7),
         A("cr_r1_witchs_brew", "Witch's Brew", "potion_red", "Mother Mire takes a long swig from the cauldron: heals her for 8% of her health. Interrupt it.",
@@ -313,7 +332,7 @@ def abilities():
         A("cr_r1_grasping_lash", "Grasping Lash", "tentacle", "One of the heart's slender root-arms lashes out across the chamber: {0} damage, and the target is held fast for 6 sec.",
           "Physical", [dmg(40, 52, 2.6), aura_on("cr_r1_grasping_lash")], cd=6, rng=40, hint="Damage", prio=5),
         A("cr_r1_drink_the_light", "Drink the Light", "void", "The heart draws every light in the chamber into itself: {0} Shadow damage to every enemy within 45 yards, and healing taken is reduced by 30% for 15 sec. Interrupt it, or brace.",
-          "Shadow", [dmg(64, 80, 4.2), aura_on("cr_r1_drained")], cast=6.0, cd=36, target="Self", area=circle(45),
+          "Shadow", [sdmg(64, 80, 4.2, AOE["drink_the_light"]), aura_on("cr_r1_drained")], cast=6.0, cd=36, target="Self", area=circle(45),
           tags=["Telegraph"], hint="AoE", prio=8),
         A("cr_r1_sprout_seedlings", "Sprout", "leaf", "The heart beats, and two grey seedlings push up out of the roots.",
           "Shadow", [summon("cr_r1_hollow_seedling", 2)], cd=42, target="Self", hint="Summon", prio=9),
@@ -364,14 +383,14 @@ def auras():
         aura("cr_r1_vigil_ward", "Vigil Ward", "shield", "Buff", "Absorbs damage.", dur=12,
              absorb={"amount": 220, "perLevel": 12}),
         aura("cr_r1_thorn_bleed", "Thorn Bleed", "blood", "Debuff", "Bleeding: Physical damage every 3 sec.", dur=9, stacks=3,
-             tick=3, ticks=[{"type": "Damage", "min": 7, "perLevel": 0.6}]),
+             tick=3, ticks=[stick(7, 0.6, AOE["thorn_bleed"])]),
         aura("cr_r1_grasping_roots", "Grasping Roots", "leaf", "Debuff", "Rooted. Nature damage every 3 sec.", school="Nature", dur=9,
              dispel="Magic", states=["Root"], tick=3, ticks=[{"type": "Damage", "min": 10, "perLevel": 0.8}]),
         aura("cr_r1_rootbound_frenzy", "Rootbound Frenzy", "rage", "Buff", "Damage dealt increased by 40%.", mods=[pct("DamageDone", 40)]),
         aura("cr_r1_drowning_sorrow", "Drowning Sorrow", "water_drop", "Debuff", "Soaked through: movement speed reduced by 40%.",
              school="Frost", dur=9, dispel="Magic", mods=[pct("MoveSpeed", -40)]),
         aura("cr_r1_veil_of_tears", "Veil of Tears", "water_drop", "Debuff", "Weeping: Shadow damage every 3 sec.", school="Shadow",
-             dur=12, dispel="Magic", tick=3, ticks=[{"type": "Damage", "min": 6, "perLevel": 0.45}]),
+             dur=12, dispel="Magic", tick=3, ticks=[stick(6, 0.45, AOE["veil_of_tears"])]),
         aura("cr_r1_grief_unbound", "Grief Unbound", "rage", "Buff", "Damage dealt increased by 50%.", school="Shadow",
              mods=[pct("DamageDone", 50)]),
         aura("cr_r1_lullaby", "Lullaby of Solace", "moon", "Debuff", "Asleep. Any damage will wake the target.", school="Holy",
@@ -379,7 +398,7 @@ def auras():
         aura("cr_r1_last_light", "The Last Light", "sun", "Buff", "Damage and healing done increased by 50%.", school="Holy",
              mods=[pct("DamageDone", 50), pct("HealingDone", 50)]),
         aura("cr_r1_scalded", "Scalded", "fire", "Debuff", "Nature damage every 3 sec.", school="Nature", dur=9,
-             tick=3, ticks=[{"type": "Damage", "min": 5, "perLevel": 0.35}]),
+             tick=3, ticks=[stick(5, 0.35, AOE["bog_eruption"])]),
         aura("cr_r1_frog_hex", "Frog Hex", "curse", "Debuff", "A small, surprised frog. Any damage breaks the hex.", school="Nature",
              dur=15, dispel="Curse", states=["Polymorph"], brk=True),
         aura("cr_r1_boiling_over", "Boiling Over", "rage", "Buff", "Damage dealt increased by 50%.", school="Nature",

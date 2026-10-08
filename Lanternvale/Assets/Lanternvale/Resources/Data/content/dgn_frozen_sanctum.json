@@ -971,7 +971,7 @@
       "id": "cr_dg6_glacial_pulse",
       "name": "Glacial Pulse",
       "icon": "frost_nova",
-      "description": "The frozen heart flares and the whole cavern rings: after a long wind-up, every enemy takes {0} Frost damage.",
+      "description": "The frozen heart flares and the whole cavern rings: after a long wind-up, every enemy takes {0} Frost damage. It cannot be interrupted.",
       "school": "Frost",
       "hidden": true,
       "castTime": 3.0,
@@ -979,7 +979,7 @@
       "target": "Self",
       "area": {"shape": "Circle", "radius": 40, "centeredOnCaster": true, "affects": "Enemies"},
       "effects": [{"type": "Damage", "min": 60, "max": 75}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
-      "tags": ["Telegraph"],
+      "tags": ["Telegraph", "Uninterruptible"],
       "aiHint": "AoE",
       "aiPriority": 8
     },

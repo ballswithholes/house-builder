@@ -244,7 +244,10 @@ encounter's trigger radius by 4 m while the creature has `priest_mind_soothe`).
   the next turn (`Pending.RemainingTime`, >6 s casts span several turns). **Telegraphed casts** (ability tag
   `Telegraph`, `Battle.TelegraphTag`; `Battle.IsTelegraphed(ability)`) always become pending in combat, even when they
   would fit in the remaining Time — everyone gets a turn to interrupt, stun or silence them (the Hollow Warden's Lantern
-  Requiem). Channels resolve ticks proportionally
+  Requiem). **Uninterruptible casts** (tag `Uninterruptible`, `Battle.UninterruptibleTag`; `Battle.IsUninterruptible(ability)`,
+  `Battle.HasInterruptibleCast(unit)`) shrug off Interrupt effects (an `Immune` event with Reason "uninterruptible", no
+  lockout), silences and control auras; a control that takes the whole turn only delays them; only death ends them.
+  The AI (`AI.CancelsCast`, interrupt candidates, `targetCasting`) ignores them. Channels resolve ticks proportionally
   (effects are per tick). **Casting pushback**: damage taken by a unit with a pending cast adds 0.5 s (channels
   lose 0.5 s), max twice per cast; talents/auras resist or reduce it.
 * Control: at turn start the remaining duration of control auras (stun, incapacitate, sleep, polymorph, banish,

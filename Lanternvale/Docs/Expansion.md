@@ -420,7 +420,8 @@ Follow `brief_items.md` §5–§9:
   offset of −1…+2. Dungeons use +2 levels with elite packs. Raids use rank Elite trash and Boss bosses.
   * Lone Elite/Rare: `healthMult ≥ 2`.
   * Instant-damage and heal abilities: `cooldown ≥ 6`.
-  * Big casts: tag `Telegraph`.
+  * Big casts: tag `Telegraph`. Raid-wide casts the healers must heal through also get `Uninterruptible` (keep heals
+    and the casts whose text says "interrupt" interruptible, so interrupts still matter).
 * **Quests and markers.** Follow `brief_quests.md` §13:
   * offers are gated by `Level` and by the previous quest;
   * a hand-in is a Talk objective, or a Flag set by the hand-in NPC;
