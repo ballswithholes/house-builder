@@ -1,6 +1,7 @@
 // (S) 替身自检：UnityStub 的 Random、SimLib 的 SeededRandom、Mathf.PerlinNoise 与网页版 core.js 的输出一致
 // （参考值由 node 对 SG.Random.seed / SG.SeededRandom / SG.M.perlinNoise 求得）。
 using System;
+using Sanguo;
 
 class PS
 {

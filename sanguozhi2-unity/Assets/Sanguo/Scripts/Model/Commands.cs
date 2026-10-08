@@ -6,11 +6,14 @@ namespace Sanguo
 {
     public enum DevKind { Land, Industry, Town }
 
-    // 战略指令（玩家与电脑共用）
+    // 战略指令（玩家与电脑共用；对应网页版 js/model.js 的 Commands）。
+    // 第二版：移动 / 输送可前往经由己方城池链相连的任何己方城；MoveBlocked / TransportBlocked 给出不能使用的原因。
     public static class Commands
     {
         static GameState G { get { return GameState.Current; } }
         static int R(int a, int b) { return Random.Range(a, b + 1); }
+        // 概率按 double 计算（与网页版数值一致）
+        static double Clamp(double v, double a, double b) { return v < a ? a : v > b ? b : v; }
 
         public static string DevName(DevKind k) { return k == DevKind.Land ? "土地" : k == DevKind.Industry ? "产业" : "町"; }
 
@@ -66,7 +69,7 @@ namespace Sanguo
             SearchFound = null;
             var f = G.factions[c.owner];
             var hidden = G.generals.Where(x => x.city == c.id && x.hidden && x.IsFree).ToList();
-            float p = 0.22f + g.intel / 260f + f.virtue / 420f;
+            double p = 0.22 + g.intel / 260.0 + f.virtue / 420.0;
             if (hidden.Count > 0 && Random.value < p)
             {
                 var h = hidden[Random.Range(0, hidden.Count)];
@@ -74,19 +77,19 @@ namespace Sanguo
                 SearchFound = h;
                 return string.Format("{0}四处寻访，发现了在野的人才——{1}！", g.name, h.name);
             }
-            float r = Random.value;
-            if (r < 0.25f) { int v = R(60, 220); c.gold += v; return string.Format("{0}在城中搜索，发现了 {1} 金。", g.name, v); }
-            if (r < 0.45f) { int v = R(800, 2500); c.food += v; return string.Format("{0}在城中搜索，发现了 {1} 粮。", g.name, v); }
+            double r = Random.value;
+            if (r < 0.25) { int v = R(60, 220); c.gold += v; return string.Format("{0}在城中搜索，发现了 {1} 金。", g.name, v); }
+            if (r < 0.45) { int v = R(800, 2500); c.food += v; return string.Format("{0}在城中搜索，发现了 {1} 粮。", g.name, v); }
             return g.name + "四处寻访，一无所获。";
         }
 
         // ---------------------------------------------------------- 登用 --
-        public static float HireChance(General target, General recruiter, int faction)
+        public static double HireChance(General target, General recruiter, int faction)
         {
             var f = G.factions[faction];
-            float p = 0.32f + f.virtue / 220f + recruiter.intel / 450f - (target.war + target.intel + target.pol) / 900f;
-            if (target.faction >= 0) p -= target.loyalty / 160f; // 俘虏
-            return Mathf.Clamp(p, 0.05f, 0.95f);
+            double p = 0.32 + f.virtue / 220.0 + recruiter.intel / 450.0 - (target.war + target.intel + target.pol) / 900.0;
+            if (target.faction >= 0) p -= target.loyalty / 160.0; // 俘虏
+            return Clamp(p, 0.05, 0.95);
         }
         public static bool Hire(General target, General recruiter, int faction, int city)
         {
@@ -110,15 +113,54 @@ namespace Sanguo
         }
 
         // ---------------------------------------------------------- 移动 / 输送 --
+        // 第二版：目的地不必相邻——经由己方城池链可达的己方城都可前往（GameState.RoutesFrom）。
+        // 每次仍只消耗 1 枚令牌（由界面扣除）。
+        public const int AiMoveHops = 2;   // 电脑调动武将的最远路程（相邻 = 1）
+        public static List<Route> MoveTargets(City c) { return G.RoutesFrom(c, c.owner); }
+        // 电脑把后方武将调往前线时可选的目的地（近者在前）：路程不超过 AiMoveHops
+        public static List<City> AiMoveTargets(City c, int? f = null) { return G.RoutesFrom(c, f ?? c.owner, AiMoveHops).Select(r => r.city).ToList(); }
+        public static List<Route> TransportTargets(City c) { return G.RoutesFrom(c, c.owner); }
+
+        // 不能从 c 调动武将的原因（规则层面；令牌、忙碌等界面状态不在此列）。null = 可以
+        public static string MoveBlocked(City c)
+        {
+            if (c.owner < 0) return "这座城不属于任何势力。";
+            if (G.CityCount(c.owner) <= 1) return "只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可调动武将。";
+            if (G.RoutesFrom(c, c.owner).Count == 0) return c.name + "与其他己方城池之间隔着他国或空城，无法调动（须经由己方城池相连）。";
+            var offs = G.OfficersIn(c).ToList();
+            if (offs.Count == 0) return c.name + "没有武将。";
+            if (offs.All(x => x.moved)) return "本城武将本月都已行动，没有可调动的武将。";
+            return null;
+        }
+        // 不能从 c 输送金粮的原因。null = 可以
+        public static string TransportBlocked(City c)
+        {
+            if (c.owner < 0) return "这座城不属于任何势力。";
+            if (G.CityCount(c.owner) <= 1) return "只有一座城池——取得第二座城（出征攻取或「拉拢」敌将献城）后即可输送金粮。";
+            if (G.RoutesFrom(c, c.owner).Count == 0) return c.name + "与其他己方城池之间隔着他国或空城，无法输送（须经由己方城池相连）。";
+            if (c.gold <= 0 && c.food <= 0) return c.name + "没有可输送的金粮。";
+            return null;
+        }
+
+        // 每次 Move 之后通知一次（武将、出发城、目的城、是否真的移驻）。供测试统计电脑的调动；界面不必使用
+        public static System.Action<General, City, City, bool> MoveObserver;
         public static string Move(General g, City to)
         {
             var from = G.cities[g.city];
+            // 只能经由己方城池移往己方城（不可达时不做任何改变）
+            if (G.RouteBetween(from, to, g.faction) == null)
+            {
+                if (MoveObserver != null) MoveObserver(g, from, to, false);
+                return string.Format("{0}与{1}之间没有己方城池相连，{2}无法移驻。", to.name, from.name, g.name);
+            }
             g.city = to.id; g.moved = true;
             G.AutoGovernor(from); G.AutoGovernor(to);
+            if (MoveObserver != null) MoveObserver(g, from, to, true);
             return string.Format("{0}率兵 {1} 人移驻{2}。", g.name, g.troops, to.name);
         }
         public static string Transport(City from, City to, int gold, int food)
         {
+            if (G.RouteBetween(from, to, from.owner) == null) return string.Format("{0}与{1}之间没有己方城池相连，无法输送。", to.name, from.name);
             gold = Mathf.Clamp(gold, 0, from.gold); food = Mathf.Clamp(food, 0, from.food);
             from.gold -= gold; from.food -= food; to.gold += gold; to.food += food;
             return string.Format("自{0}向{1}输送金 {2}、粮 {3}。", from.name, to.name, gold, food);
@@ -149,12 +191,12 @@ namespace Sanguo
         }
 
         // ---------------------------------------------------------- 外交策略 --
-        public static float AllyChance(int f, int target, int gift)
+        public static double AllyChance(int f, int target, int gift)
         {
             var a = G.factions[f]; var b = G.factions[target];
-            float p = 0.25f + a.virtue / 300f + gift / 1200f + (a.fame - b.fame) / 300f;
-            if (G.CityCount(f) > G.CityCount(target) * 2) p += 0.15f; // 弱者愿与强者结盟
-            return Mathf.Clamp(p, 0.05f, 0.9f);
+            double p = 0.25 + a.virtue / 300.0 + gift / 1200.0 + (a.fame - b.fame) / 300.0;
+            if (G.CityCount(f) > G.CityCount(target) * 2) p += 0.15; // 弱者愿与强者结盟
+            return Clamp(p, 0.05, 0.9);
         }
         public static string Ally(City from, int f, int target, int gift)
         {
@@ -171,7 +213,7 @@ namespace Sanguo
         public static string Discord(General agent, General target)
         {
             if (G.IsRuler(target)) return "离间君主是不可能的。";
-            float p = Mathf.Clamp(0.4f + (agent.intel - target.intel) / 100f, 0.1f, 0.9f);
+            double p = Clamp(0.4 + (agent.intel - target.intel) / 100.0, 0.1, 0.9);
             if (Random.value > p) return string.Format("{0}识破了离间之计。", target.name);
             int d = R(6, 16) * agent.intel / Mathf.Max(30, target.intel);
             d = Mathf.Clamp(d, 3, 25);
@@ -179,11 +221,11 @@ namespace Sanguo
             return string.Format("离间成功！{0}的忠诚下降了 {1}（现为 {2}）。", target.name, d, target.loyalty);
         }
 
-        public static float PersuadeChance(General agent, General target, int f)
+        public static double PersuadeChance(General agent, General target, int f)
         {
-            if (G.IsRuler(target)) return 0f;
-            float p = (100 - target.loyalty) / 110f * (0.45f + agent.intel / 180f) * (0.55f + G.factions[f].virtue / 220f);
-            return Mathf.Clamp(p, 0f, 0.9f);
+            if (G.IsRuler(target)) return 0;
+            double p = (100 - target.loyalty) / 110.0 * (0.45 + agent.intel / 180.0) * (0.55 + G.factions[f].virtue / 220.0);
+            return Clamp(p, 0, 0.9);
         }
         public static string Persuade(General agent, General target, int f)
         {
@@ -203,19 +245,6 @@ namespace Sanguo
             target.city = agent.city; target.troops /= 2; target.moved = true;
             G.AutoGovernor(oldCity); G.AutoGovernor(G.cities[agent.city]);
             return string.Format("{0}率部来投！", target.name);
-        }
-    }
-
-    public static class GameStateExt
-    {
-        // 势力灭亡检查
-        public static void CheckFactionDeath(this GameState g, int f)
-        {
-            if (f < 0 || !g.factions[f].alive) return;
-            if (g.CityCount(f) > 0) return;
-            g.factions[f].alive = false;
-            foreach (var gen in g.GeneralsOf(f).ToList()) { gen.faction = -1; gen.troops = 0; gen.loyalty = 0; }
-            g.Log(g.factions[f].name + "势力灭亡了。");
         }
     }
 }

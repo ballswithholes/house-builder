@@ -69,6 +69,29 @@ namespace Sanguo
         public TacticDef(TacticKind k, string n, int req, float pow, string desc) { Kind = k; Name = n; ReqInt = req; Power = pow; Desc = desc; }
     }
 
+    // 确定性的种子随机数（网页版 SG.SeededRandom 的 C# 版，mulberry32）。用于战场地形生成与必杀技兜底生成器，
+    // 使 Unity 版与网页版在同一种子下得到完全相同的战场与招式。
+    //   NextDouble() ∈ [0, 1)；Next(max) / Next(min, max) 不含 max；Next() ∈ [0, int.MaxValue)
+    public sealed class SeededRandom
+    {
+        uint a;
+        public SeededRandom(int seed) { a = unchecked((uint)seed ^ 0x9e3779b9u); }
+        public SeededRandom(uint seed) { a = seed ^ 0x9e3779b9u; }
+        public double NextDouble()
+        {
+            unchecked
+            {
+                a += 0x6D2B79F5;
+                uint t = (a ^ (a >> 15)) * (1u | a);
+                t = (t + (t ^ (t >> 7)) * (61u | t)) ^ t;
+                return (t ^ (t >> 14)) / 4294967296.0;
+            }
+        }
+        public int Next() { return (int)System.Math.Floor(NextDouble() * int.MaxValue); }
+        public int Next(int max) { return (int)System.Math.Floor(NextDouble() * max); }
+        public int Next(int min, int max) { return min + (int)System.Math.Floor(NextDouble() * (max - min)); }
+    }
+
     public static class Defs
     {
         // 阵型：攻击倍率、防御倍率、机动力加成、所需智力 / 武力

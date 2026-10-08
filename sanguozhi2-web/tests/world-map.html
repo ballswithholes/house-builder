@@ -98,7 +98,7 @@
   let lastProgress = 0;
   map.buildAsync(state, {
     region,
-    sliceMs: Number(params.get('slice') || 12),
+    sliceMs: Number(params.get('slice') || 8),
     onProgress(p, label) {
       lastProgress = p;
       document.getElementById('lbar').style.width = (p * 100).toFixed(0) + '%';

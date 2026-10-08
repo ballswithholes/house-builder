@@ -254,7 +254,9 @@ namespace UnityEngine
                 return (t ^ (t >> 14)) / 4294967296.0;
             }
         }
-        public static float value => (float)NextDouble();
+        public static float value => ValueOverride != null ? (float)ValueOverride() : (float)NextDouble();
+        // 仅测试用（Unity 无此成员）：替换 Random.value（如 () => 0 令概率判定必定成功），null = 正常
+        public static Func<double> ValueOverride;
         public static int Range(int min, int maxExclusive) => maxExclusive <= min ? min : min + (int)Math.Floor(NextDouble() * (maxExclusive - min));
         public static float Range(float min, float max) => (float)(min + NextDouble() * (max - min));
         public static Vector2 insideUnitCircle { get { double r = Math.Sqrt(NextDouble()), t = NextDouble() * 2 * Math.PI; return new Vector2((float)(r * Math.Cos(t)), (float)(r * Math.Sin(t))); } }

@@ -10,7 +10,7 @@
    公开接口
      build(state, opts)          同步构建（与旧版相同）。opts.region = 'auto' | 'china' | 'world'
                                  （auto：所有城池都在旧版中国地图内时用 'china'，否则 'world'）
-     buildAsync(state, opts)     → Promise<root>：同样的构建，切成约 opts.sliceMs（默认 12ms）的分片（单步 ≤ 15ms），
+     buildAsync(state, opts)     → Promise<root>：同样的构建，切成约 opts.sliceMs（默认 8ms）的分片（单步一般 ≤ 5ms，最长的分片 ≈ 预算 + 一步），
                                  opts.onProgress(fraction 0..1, label) 报告进度；opts.traceSteps 记录最长的单步
      refresh(state) select(cityId) pick(screenX, screenY) → cityId | -1
      height(mapX, mapY) surfaceY(mapX, mapY) isForest(x, z, h) update(dt)
@@ -411,7 +411,7 @@
     *build() {
       const P = geoData();
       this.legacy = !!P.legacy;
-      if (!_landIndex || _landIndex.src !== P) { _landIndex = new EdgeIndex(P.land, 2); _landIndex.src = P; }
+      if (!_landIndex || _landIndex.src !== P) { yield; _landIndex = new EdgeIndex(P.land, 2); _landIndex.src = P; }
       this.land = _landIndex;
       yield;
       // 海岸要素：所有陆地环的边（旧版后备数据只算海岸折线本身）
@@ -627,6 +627,21 @@
     g.setAttribute('position', new THREE.BufferAttribute(count * 3 === P.length ? P : P.slice(0, count * 3), 3));
     g.setAttribute('normal', new THREE.BufferAttribute(count * 3 === N.length ? N : N.slice(0, count * 3), 3));
     g.setAttribute('color', new THREE.BufferAttribute(count * 3 === C.length ? C : C.slice(0, count * 3), 3));
+    g.computeBoundingBox();
+    g.computeBoundingSphere();
+    return g;
+  }
+
+  // MeshBuilder.toGeometry() 的分步版：每个顶点属性的转换各占一步（几万个顶点的合并网格一次转完在负载下要 5–10 ms）
+  function* sliceGeometry(mb) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(mb.pos, 3));
+    yield;
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(mb.nor, 3));
+    yield;
+    g.setAttribute('color', new THREE.Float32BufferAttribute(mb.col, 3));
+    if (mb.hasUV) g.setAttribute('uv', new THREE.Float32BufferAttribute(mb.uvs, 2));
+    yield;
     g.computeBoundingBox();
     g.computeBoundingSphere();
     return g;
@@ -894,7 +909,7 @@
       this._cancelBuild();
       const token = { cancelled: false };
       this._build = token;
-      const budget = opts.sliceMs > 0 ? opts.sliceMs : 12;
+      const budget = opts.sliceMs > 0 ? opts.sliceMs : 8;
       const it = this._steps(state, opts);
       const tStart = now();
       let t0 = tStart, maxSlice = 0, maxStage = '', slices = 0, lastPaint = tStart;
@@ -931,6 +946,7 @@
     _cancelBuild() { if (this._build) { this._build.cancelled = true; this._build = null; } }
 
     *_steps(state, opts) {
+      const hadRoot = !!this.root;
       if (this.root) this._dispose();
       const spec = this._spec(state, opts);
       this.spec = spec;
@@ -945,6 +961,8 @@
       this._cityZ = state.cities.map(c => SG.mapPos ? SG.mapPos(c).y : (c.lat - 23) * 5.6);
       this._cityIdx = this._makeCityIndex(3.4);
       this._grid = null;
+      // 旧地图的释放（大量几何体 / 材质）单独成一步
+      if (hadRoot) { this._progLabel = '测绘山川'; this._prog = 0; yield; }
       // 各阶段的进度权重
       const stages = [['geo', '测绘山川', 0.24], ['terrain', '堆砌地形', 0.3], ['skirt', '远景', 0.04], ['water', '江海', 0.1],
         ['trees', '林木', 0.14], ['roads', '道路航线', 0.05], ['cities', '城池', 0.1], ['misc', '云', 0.03]];
@@ -953,6 +971,7 @@
       const run = function* (self, s, gen) {
         const t = now();
         self._progLabel = s[1];
+        self._traceTag = '';
         self._stage = { base, w: s[2] };
         self._prog = base;
         yield* gen;
@@ -970,7 +989,7 @@
       yield* run(this, stages[5], this._genRoads(state));
       yield* run(this, stages[6], this._genCities(state));
       const self = this;
-      yield* run(this, stages[7], (function* () { self._buildClouds(); self._buildSelectRing(); self.refresh(state); yield; })());
+      yield* run(this, stages[7], (function* () { self._buildClouds(); yield; self._buildSelectRing(); self.refresh(state); yield; })());
     }
     _sub(frac) { if (this._stage) this._prog = this._stage.base + this._stage.w * M.clamp01(frac); }
 
@@ -1025,7 +1044,10 @@
       const W = nz + 1;
       const hs = new Float32Array((nx + 1) * W);
       for (let i = 0; i <= nx; i++) {
-        for (let j = 0; j <= nz; j++) hs[i * W + j] = this.height(x0 + i * step, z0 + j * step);
+        for (let j = 0; j <= nz; j++) {
+          hs[i * W + j] = this.height(x0 + i * step, z0 + j * step);
+          if ((j & 127) === 127) yield;
+        }
         this._sub(0.6 * i / nx);
         yield;
       }
@@ -1047,7 +1069,9 @@
           if (quads > 0) {
             const P = new Float32Array(quads * 18), N = new Float32Array(quads * 18), C = new Float32Array(quads * 18);
             let o = 0;
-            for (let i = ci; i < iEnd; i++)
+            for (let i = ci; i < iEnd; i++) {
+              // 每 10 行让出一次（一个区块 40×40 格、3200 个三角形逐个取色，整块一步在负载下可达十几 ms）
+              if (i > ci && (i - ci) % 10 === 0) yield;
               for (let j = cj; j < jEnd; j++) {
                 const ha = hs[i * W + j], hb = hs[i * W + j + 1], hc = hs[(i + 1) * W + j + 1], hd = hs[(i + 1) * W + j];
                 if (ha <= DEEP && hb <= DEEP && hc <= DEEP && hd <= DEEP) continue;
@@ -1060,6 +1084,8 @@
                   o = this._terrainTri(P, N, C, o, geo, rnd, xa, hb, zb, xb, hc, zb, xb, hd, za, false);
                 }
               }
+            }
+            yield;
             const m = SG.Gfx.mesh(triGeometry(P, N, C, o / 3), mat, { castShadow: true, receiveShadow: true });
             m.name = 'Terrain';
             this.root.add(m);
@@ -1150,12 +1176,16 @@
       const nx = Math.ceil((Wt.x1 - x0) / step), nz = Math.ceil((Wt.z1 - z0) / step), W = nz + 1;
       const ex1 = x0 + nx * step, ez1 = z0 + nz * step;
       const hg = new Float32Array((nx + 1) * W);
+      this._traceTag = 'water.h';
       for (let i = 0; i <= nx; i++) {
         for (let j = 0; j <= nz; j++) hg[i * W + j] = this.height(x0 + i * step, z0 + j * step);
         this._sub(0.7 * i / nx);
         yield;
       }
-      const mat = SG.Gfx.water();
+      this._traceTag = 'water.mat';
+      const mat = SG.Gfx.water();   // 首次会生成波纹贴图
+      yield;
+      this._traceTag = 'water.tiles';
       // 顶点属性：r = 岸边系数（BuildWater 的顶点色）；g = 1 表示不做波浪起伏（内圈网格之外的远海，
       // 这样远海大格子与细网格拼接处不会因起伏不同而露缝）
       let pos = [], col = [];
@@ -1180,19 +1210,22 @@
       const tile = Wt.tile;
       for (let ti = 0; ti < nx; ti += tile) {
         for (let tj = 0; tj < nz; tj += tile) {
-          for (let i = ti; i < Math.min(nx, ti + tile); i++)
+          for (let i = ti; i < Math.min(nx, ti + tile); i++) {
+            if (i > ti && (i - ti) % 8 === 0) yield;
             for (let j = tj; j < Math.min(nz, tj + tile); j++) {
               const h00 = hg[i * W + j], h01 = hg[i * W + j + 1], h11 = hg[(i + 1) * W + j + 1], h10 = hg[(i + 1) * W + j];
               // 四角都远高于水面的格子略过以节省顶点
               if (h00 > 1.2 && h10 > 1.2 && h01 > 1.2 && h11 > 1.2) continue;
               quad(x0 + i * step, z0 + j * step, step, step, [shore(h00), 0], [shore(h01), 0], [shore(h11), 0], [shore(h10), 0]);
             }
+          }
           flush('Water');
           yield;
         }
         this._sub(0.7 + 0.25 * ti / nx);
         yield;
       }
+      this._traceTag = 'water.band';
       // 外海第一圈：宽 20，沿内圈边界按 2.5 细分（与内圈边界顶点完全重合）
       const band = Wt.band, far = Wt.far, nb = Math.round(band / step);
       const FAR = [0, 1];
@@ -1330,14 +1363,33 @@
     }
 
     *_genRoads(state) {
-      const mb = new SG.MeshBuilder();
+      let mb = new SG.MeshBuilder();
       const col = new THREE.Color(0.78, 0.68, 0.5);
       const done = new Set();
       const cities = state.cities;
       const seaPairs = [];
       const isSea = typeof SG.linkIsSea === 'function' ? SG.linkIsSea : null;
+      const roadMat = SG.Gfx.newLowPoly();
+      roadMat.polygonOffset = true; roadMat.polygonOffsetFactor = -1; roadMat.polygonOffsetUnits = -3;
+      // 道路按约 3 万顶点一段合并成网格，几何体分步转换（世界剧本的道路一次合并、转换在负载下要十几 ms），
+      // 每生成约 300 个路段让出一次
+      const ROAD_VERTS = 30000;
+      const self = this;
+      const flush = function* () {
+        self._traceTag = 'roads.flush';
+        if (mb.count > 0) {
+          const m = SG.Gfx.mesh(yield* sliceGeometry(mb), roadMat, { castShadow: false, receiveShadow: true });
+          m.name = 'Roads';
+          self.root.add(m);
+        }
+        mb = new SG.MeshBuilder();
+      };
+      let work = 0, ci = 0;
       for (const c of cities) {
-        if ((c.id & 7) === 7) yield;
+        ci++;
+        if (work >= 300) { work = 0; this._sub(0.2 * ci / cities.length); yield; }
+        if (mb.count >= ROAD_VERTS) { yield* flush(); yield; }
+        this._traceTag = 'roads';
         for (const li of c.links) {
           const o = cities[li];
           if (!o) continue;
@@ -1364,15 +1416,11 @@
             if (i > 0) mb.quad(prevL, l, r, prevR, col);
             prevL = l; prevR = r;
           }
+          work += n + 1;
         }
       }
-      if (mb.count > 0) {
-        const mat = SG.Gfx.newLowPoly();
-        mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -3;
-        const m = SG.Gfx.mesh(mb.toGeometry(), mat, { castShadow: false, receiveShadow: true });
-        m.name = 'Roads';
-        this.root.add(m);
-      }
+      yield* flush();
+      if (!this.root.getObjectByName('Roads')) roadMat.dispose();
       yield;
       // 海路：沿水面绕开陆地的虚线航线
       if (seaPairs.length) {
@@ -1380,7 +1428,7 @@
         const P = [];
         for (let k = 0; k < seaPairs.length; k++) {
           const [a, b] = seaPairs[k];
-          const path = this._seaPath(this._cityX[a], this._cityZ[a], this._cityX[b], this._cityZ[b]);
+          const path = yield* this._seaPathGen(this._cityX[a], this._cityZ[a], this._cityX[b], this._cityZ[b]);
           this._lanes.set(a + '-' + b, path);
           this._dashes(path, P);
           this._sub(0.2 + 0.8 * (k + 1) / seaPairs.length);
@@ -1408,30 +1456,42 @@
       const X0 = Math.floor(T.x0), Z0 = Math.floor(T.z0);
       const nx = Math.ceil(T.x1 - X0) + 1, nz = Math.ceil(T.z1 - Z0) + 1, N = nx * nz;
       const water = new Uint8Array(N), near = new Uint8Array(N), cost = new Float32Array(N);
+      this._traceTag = 'seamask';
       for (let j = 0; j < nz; j++) {
         const z = Z0 + j * res;
         for (let i = 0; i < nx; i++) { const x = X0 + i * res; water[j * nx + i] = G.inSea(x, z) && this.surfaceY(x, z) < -0.3 ? 1 : 0; }
-        if ((j & 7) === 7) yield;
+        if ((j & 1) === 1) yield;
       }
       // 陆地向外膨胀 2 格（先横后纵，可分离的最大值滤波）
+      // 按行分段（世界图约 100 万格，整张一步在负载下超过 10 ms）
       const tmp = new Uint8Array(N);
-      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-        let v = 0;
-        for (let d = -2; d <= 2 && !v; d++) { const ii = i + d; if (ii >= 0 && ii < nx && !water[j * nx + ii]) v = 1; }
-        tmp[j * nx + i] = v;
+      this._traceTag = 'seamask.dilate';
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          let v = 0;
+          for (let d = -2; d <= 2 && !v; d++) { const ii = i + d; if (ii >= 0 && ii < nx && !water[j * nx + ii]) v = 1; }
+          tmp[j * nx + i] = v;
+        }
+        if ((j & 7) === 7) yield;
       }
       yield;
-      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-        let v = 0;
-        for (let d = -2; d <= 2 && !v; d++) { const jj = j + d; if (jj >= 0 && jj < nz && tmp[jj * nx + i]) v = 1; }
-        near[j * nx + i] = v;
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          let v = 0;
+          for (let d = -2; d <= 2 && !v; d++) { const jj = j + d; if (jj >= 0 && jj < nz && tmp[jj * nx + i]) v = 1; }
+          const o = j * nx + i;
+          near[o] = v;
+          cost[o] = !water[o] ? 14 : v ? 1.5 : 1;
+        }
+        if ((j & 7) === 7) yield;
       }
-      for (let o = 0; o < N; o++) cost[o] = !water[o] ? 14 : near[o] ? 1.5 : 1;
       this._sea = { X0, Z0, nx, nz, res, water, cost };
       yield;
     }
     // 海上航线：海域栅格上的 A*（水面代价 1，近岸略高，陆地 14），再按视线拉直、Chaikin 平滑。返回 [x0, z0, x1, z1, ...]
-    _seaPath(ax, az, bx, bz) {
+    // 生成器：截取窗口与 A* 搜索中途让出（长航线的窗口可达数万格，一次搜完在负载下要 20 ms 以上）；返回值为航线
+    *_seaPathGen(ax, az, bx, bz) {
+      this._traceTag = 'seapath';
       const res = 1.0, margin = 28;
       const X0 = Math.floor(Math.min(ax, bx) - margin), Z0 = Math.floor(Math.min(az, bz) - margin);
       const nx = Math.ceil((Math.max(ax, bx) + margin - X0) / res) + 1, nz = Math.ceil((Math.max(az, bz) + margin - Z0) / res) + 1;
@@ -1448,6 +1508,7 @@
           const g = gj * S.nx + gi;
           water[j * nx + i] = S.water[g]; cost[j * nx + i] = S.cost[g];
         }
+        if ((j & 31) === 31) yield;
       }
       const cell = (x, z) => M.clamp(Math.round((z - Z0) / res), 0, nz - 1) * nx + M.clamp(Math.round((x - X0) / res), 0, nx - 1);
       const start = cell(ax, az), goal = cell(bx, bz);
@@ -1479,11 +1540,12 @@
       gs[start] = 0;
       push(start, 0);
       const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
-      let found = false;
+      let found = false, pops = 0;
       while (heap.length) {
         const o = pop();
         if (closed[o]) continue;
         closed[o] = 1;
+        if ((++pops & 255) === 0) yield;
         if (o === goal) { found = true; break; }
         const i = o % nx, j = (o / nx) | 0;
         for (const [di, dj, dl] of DIRS) {
@@ -1513,9 +1575,10 @@
         const out = [pts[0], pts[1]];
         let a = 0;
         const n2 = pts.length >> 1;
+        let checks = 0;
         while (a < n2 - 1) {
           let b = n2 - 1;
-          while (b > a + 1 && !clear(pts[2 * a], pts[2 * a + 1], pts[2 * b], pts[2 * b + 1])) b--;
+          while (b > a + 1 && !clear(pts[2 * a], pts[2 * a + 1], pts[2 * b], pts[2 * b + 1])) { b--; if ((++checks & 255) === 0) yield; }
           out.push(pts[2 * b], pts[2 * b + 1]);
           a = b;
         }
@@ -1579,6 +1642,16 @@
       const n = state.cities.length;
       const tileSize = this.spec.tile, T = this.spec.terrain;
       const bodies = new Map();   // 区块 → MeshBuilder（城体按区块合并，视锥剔除生效）
+      // 一个区块攒到约 1.5 万顶点就先合并成网格（世界剧本一个区块可有几十座城：一次转换顶点数组要十几 ms，
+      // 大数组反复扩容也会拖慢逐城的步骤）
+      const BODY_VERTS = 24000;
+      const self = this;
+      const flushBody = function* (mb) {
+        self._traceTag = 'cities.flush';
+        const body = Gfx.mesh(yield* sliceGeometry(mb), Gfx.lowPoly());
+        body.name = 'Cities';
+        self.root.add(body);
+      };
       // 旗帜：所有城共用一个实例化网格（颜色 = 势力色，摆动在 update 中）
       const flags = new THREE.InstancedMesh(MapView.flagGeometry(), Gfx.newLowPoly(), Math.max(1, n));
       flags.name = 'Flags';
@@ -1604,6 +1677,7 @@
         const culture = CA ? CA.cultureOfCity(c) : 'han';
         const capital = CA ? CA.isCapital(c, culture) : (c.key === 'luoyang' || c.key === 'changan');
         const yaw = (c.id * 37) % 20 - 10;
+        this._traceTag = 'cities';
         // 城体：烘焙到所在区块的合并网格中（Unity 坐标下的平移 × 绕 y 旋转）
         const tk = Math.floor((mx - T.x0) / tileSize) + ',' + Math.floor((mz - T.z0) / tileSize);
         let mb = bodies.get(tk);
@@ -1612,6 +1686,7 @@
         if (CA && culture !== 'han') CA.cityInto(mb, size, culture, capital, c);
         else SG.Models.cityInto(mb, size, null, capital);
         mb.M = null;
+        if (mb.count >= BODY_VERTS) { bodies.delete(tk); this._sub(0.8 * k / n); yield; yield* flushBody(mb); }
 
         const group = new THREE.Group();
         group.name = 'City_' + c.name;
@@ -1653,14 +1728,10 @@
           labelPos: SG.U(mx, y + size * 1.6 + 0.6, mz),
           mapX: mx, mapY: mz,
         });
-        if ((++k & 1) === 0) { this._sub(0.8 * k / n); yield; }
-      }
-      for (const mb of bodies.values()) {
-        const body = Gfx.mesh(mb.toGeometry(), Gfx.lowPoly());
-        body.name = 'Cities';
-        this.root.add(body);
+        this._sub(0.8 * (++k) / n);
         yield;
       }
+      for (const mb of bodies.values()) { yield* flushBody(mb); yield; }
       this.root.add(flags);
 
       const rg = new THREE.BufferGeometry();
