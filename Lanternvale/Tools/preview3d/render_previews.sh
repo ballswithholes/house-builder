@@ -62,6 +62,14 @@ done
 "$tool" map skyreach "$out/skyreach_north.png" --at 60,50 --hour 12.5
 "$tool" map skyreach "$out/skyreach_sanctum_entrance.png" --at 86,47 --hour 14 --flags found_frozen_sanctum
 "$tool" map skyreach "$out/skyreach_raid_portal.png" --at 20,53 --hour 19
+"$tool" map skyreach "$out/skyreach_cairnhollow_dusk.png" --at 90,14 --hour 18.6 --zoom 8 --markers auto --level 26
+"$tool" map skyreach "$out/skyreach_cairnhollow_night.png" --at 92,15 --hour 22.5
+"$tool" map skyreach "$out/skyreach_switchbacks.png" --at 60,30 --zoom 10.4
+"$tool" map skyreach "$out/skyreach_bone_field.png" --at 60,46 --hour 15
+"$tool" map skyreach "$out/skyreach_heronguard_tower.png" --at 40,46 --hour 17
+"$tool" map skyreach "$out/skyreach_vanguard_night.png" --at 20,50 --hour 21.5
+"$tool" map dgn_frozen_sanctum "$out/dgn_frozen_sanctum_hall.png" --at 8,22
+"$tool" map dgn_frozen_sanctum "$out/dgn_frozen_sanctum_heart.png" --at 50,22
 # ---- hidden dungeons and raids
 for m in dgn_root_hollows dgn_mossdeep dgn_lantern_catacombs dgn_barrow dgn_drowned_vault dgn_frozen_sanctum raid_hollow_heart; do
   "$tool" map "$m" "$out/${m}.png"

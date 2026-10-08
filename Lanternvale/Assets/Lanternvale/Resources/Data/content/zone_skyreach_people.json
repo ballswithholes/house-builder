@@ -1,0 +1,2416 @@
+{
+  "_note": "Skyreach Peaks (Docs/Expansion.md §8, builder skyreach, prefixes sr / dg6). NPCs and their dialogues, prop and encounter dialogues.",
+  "npcs": [
+    {
+      "id": "sr_guide_odran",
+      "name": "Odran Fellstep",
+      "shortName": "Odran",
+      "title": "Mountain Guide of Cairnhollow",
+      "sprite": "npc_mountain_guide",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_sr_odran",
+      "bark": "Up is that way. Down is quicker, but less fun."
+    },
+    {
+      "id": "sr_hilde",
+      "name": "Hilde Kettleby",
+      "shortName": "Hilde",
+      "title": "Keeper of the Kettle Hut",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_innkeeper",
+      "dialogue": "dlg_sr_hilde",
+      "vendor": [
+        {"item": "sr_food_yak_dumplings"},
+        {"item": "sr_drink_kettle_tea"},
+        {"item": "food_lantern_stew"},
+        {"item": "drink_melon_juice"},
+        {"item": "bandage_wool"},
+        {"item": "potion_healing"}
+      ],
+      "innkeeper": true,
+      "bark": "Boots off, tea's on."
+    },
+    {
+      "id": "sr_brannoc",
+      "name": "Brannoc Snowmantle",
+      "shortName": "Brannoc",
+      "title": "Trapper and Tailor",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_sr_brannoc",
+      "vendor": [{"item": "sr_trapper_leggings"}, {"item": "sr_herders_jerkin"}, {"item": "sr_quilted_robe"}, {"item": "sr_ice_axe"}, {"item": "bandage_wool"}],
+      "bark": "Pelts bought, coats sold, no refunds."
+    },
+    {
+      "id": "sr_pema",
+      "name": "Pema",
+      "title": "Goatherd (Aged Nine and Three Quarters)",
+      "sprite": "npc_child",
+      "portrait": "portrait_child",
+      "dialogue": "dlg_sr_pema",
+      "bark": "BRAMBLE! CLOVER! TURNIP! ...Have you seen my goats?"
+    },
+    {
+      "id": "sr_lumi",
+      "name": "Old Lumi",
+      "shortName": "Lumi",
+      "title": "Keeper of the Flags",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_sr_lumi",
+      "bark": "The wind unties them and I tie them again. It's a game we play."
+    },
+    {
+      "id": "sr_ottoline",
+      "name": "Magistra Ottoline Vane",
+      "shortName": "Ottoline",
+      "title": "Scholar of the Brightwater Archive",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_trainer",
+      "dialogue": "dlg_sr_ottoline",
+      "bark": "Rib seven: four point two metres. Rib eight: oh, bother, the string's frozen."
+    },
+    {
+      "id": "sr_scout_ivo",
+      "name": "Ivo Tallowmere",
+      "shortName": "Ivo",
+      "title": "Brightwater River-Scout",
+      "sprite": "npc_town_guard",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_sr_ivo",
+      "bark": "Psst. I'm a rock. Act natural."
+    },
+    {
+      "id": "sr_glimmerwing",
+      "name": "Glimmerwing",
+      "title": "The Old Frost",
+      "sprite": "cr_frost_drake",
+      "portrait": "demon_imp",
+      "dialogue": "dlg_sr_glimmerwing",
+      "bark": "*A snowdrift breathes out, very slowly.*"
+    },
+    {
+      "id": "sr_icicle",
+      "name": "Icicle",
+      "title": "A Young Frost Drake",
+      "sprite": "cr_frost_drake",
+      "portrait": "demon_imp",
+      "dialogue": "dlg_sr_icicle",
+      "bark": "*A small, sad, frosty sneeze.*"
+    },
+    {
+      "id": "sr_pell",
+      "name": "Brother Pell",
+      "shortName": "Pell",
+      "title": "Lamplighter of the Chapel of Small Lights",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_sr_pell",
+      "bark": "Up and to the left, they said. There is a great deal of left."
+    },
+    {
+      "id": "sr_gorrum",
+      "name": "Gorrum Two-Belly",
+      "shortName": "Gorrum",
+      "title": "Former Toll-Collector",
+      "sprite": "cr_ogre",
+      "portrait": "cr_bandit_chief",
+      "dialogue": "dlg_sr_gorrum_friend",
+      "bark": "Gorrum is cheese man now."
+    },
+    {
+      "id": "sr_goat_bramble",
+      "name": "Bramble",
+      "title": "A Goat Who Climbs",
+      "sprite": "sheep",
+      "portrait": "",
+      "dialogue": "dlg_sr_goat_bramble",
+      "bark": "Maa."
+    },
+    {
+      "id": "sr_goat_clover",
+      "name": "Clover",
+      "title": "A Goat Who Naps",
+      "sprite": "sheep",
+      "portrait": "",
+      "dialogue": "dlg_sr_goat_clover",
+      "bark": "Maa?"
+    },
+    {
+      "id": "sr_goat_turnip",
+      "name": "Turnip",
+      "title": "A Goat Who Eats",
+      "sprite": "sheep",
+      "portrait": "",
+      "dialogue": "dlg_sr_goat_turnip",
+      "bark": "*Chewing.*"
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_sr_odran",
+      "start": "o_first",
+      "nodes": [
+        {
+          "id": "o_first",
+          "speaker": "sr_guide_odran",
+          "text": "*A man bundled in so much fur he looks like a friendly haystack waves an ice axe at you.* Odran Fellstep, guide, at your service! Lost? Cold? Being chased? Up here it's usually all three.",
+          "conditions": [{"type": "NotFlag", "key": "sr_met_odran"}],
+          "fallback": "o_toll_done",
+          "outcomes": [{"type": "SetFlag", "key": "sr_met_odran"}],
+          "choices": [{"text": "Pleased to meet you, Odran.", "next": "o_hub"}]
+        },
+        {
+          "id": "o_toll_done",
+          "speaker": "sr_guide_odran",
+          "text": "Well? Is the road clear? Is my hat on its way?",
+          "conditions": [{"type": "QuestState", "key": "sr_ogre_toll", "value": "report"}],
+          "fallback": "o_pell_done",
+          "choices": [
+            {
+              "text": "Gorrum's made peace. He'll trade with Cairnhollow now, not rob it.",
+              "next": "o_toll_peace",
+              "conditions": [{"type": "Flag", "key": "sr_ogres_pacified"}],
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+            },
+            {
+              "text": "Gorrum and his lads ran for the hills.",
+              "next": "o_toll_scared",
+              "conditions": [{"type": "Flag", "key": "sr_ogres_scared"}],
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+            },
+            {
+              "text": "I paid his toll. The road's open.",
+              "next": "o_toll_paid",
+              "conditions": [{"type": "Flag", "key": "sr_ogres_paid"}],
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+            },
+            {
+              "text": "Gorrum won't be charging anyone anything again.",
+              "next": "o_toll_fought",
+              "conditions": [
+                {"type": "NotFlag", "key": "sr_ogres_pacified"},
+                {"type": "NotFlag", "key": "sr_ogres_scared"},
+                {"type": "NotFlag", "key": "sr_ogres_paid"}
+              ],
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+            }
+          ]
+        },
+        {
+          "id": "o_toll_peace",
+          "speaker": "sr_guide_odran",
+          "text": "Trade? With ogres? *He blinks, then roars with laughter.* Hilde will charge them double and they'll thank her for it. That's the best news this mountain's had all winter.",
+          "outcomes": [{"type": "GiveXP", "amount": 40}],
+          "next": "o_hub"
+        },
+        {
+          "id": "o_toll_scared",
+          "speaker": "sr_guide_odran",
+          "text": "Ran! Gorrum Two-Belly, running. I'd have paid a silver to see that. I'd have paid two.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_toll_paid",
+          "speaker": "sr_guide_odran",
+          "text": "Paid him? Well. It's a solution. It's an expensive solution, but the road's open, and that's the main thing. *He sighs.* My hat, though.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_toll_fought",
+          "speaker": "sr_guide_odran",
+          "text": "*He nods slowly.* He had it coming, I suppose. He had a lot of things coming. Mostly cheese. The road's clear. Thank you.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_pell_done",
+          "speaker": "sr_guide_odran",
+          "text": "Any sign of our lost lamplighter?",
+          "conditions": [{"type": "QuestState", "key": "sr_lamplighters_climb", "value": "report"}],
+          "fallback": "o_hub",
+          "choices": [
+            {
+              "text": "Brother Pell is safe at the Kettle Hut, drinking Hilde's tea.",
+              "next": "o_pell_done2",
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_lamplighters_climb"}]
+            }
+          ]
+        },
+        {
+          "id": "o_pell_done2",
+          "speaker": "sr_guide_odran",
+          "text": "He walked all that way to light one lantern for the Heronguard. *Odran rubs his eyes with a mittened hand.* Daft as a brush, these chapel folk. Bless every one of them.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_hub",
+          "speaker": "sr_guide_odran",
+          "text": "Right then. What can a guide do for you?",
+          "choices": [
+            {
+              "text": "Archivist Penhallow sent me. He's following the ash down from the Roost.",
+              "next": "o_main1",
+              "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "guide"}]
+            },
+            {"text": "Is the road west safe?", "next": "o_toll_offer", "conditions": [{"type": "QuestNotStarted", "key": "sr_ogre_toll"}]},
+            {
+              "text": "You keep looking north-east. Is someone missing?",
+              "next": "o_pell_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "sr_lamplighters_climb"}]
+            },
+            {
+              "text": "Gorrum sends your hat back. He says he has worked out the maths.",
+              "next": "o_hat",
+              "conditions": [{"type": "Flag", "key": "sr_odran_hat"}, {"type": "NotFlag", "key": "sr_odran_hat_given"}],
+              "outcomes": [{"type": "SetFlag", "key": "sr_odran_hat_given"}, {"type": "GiveXP", "amount": 30}, {"type": "GiveGold", "amount": 500}]
+            },
+            {
+              "text": "Aubric's journal says the wounded went into a temple behind the frozen falls.",
+              "next": "o_temple_journal",
+              "conditions": [{"type": "Flag", "key": "sr_knows_temple"}, {"type": "NotFlag", "key": "found_frozen_sanctum"}],
+              "outcomes": [{"type": "SetFlag", "key": "found_frozen_sanctum"}]
+            },
+            {
+              "text": "Any old stories about Glasswater Falls?",
+              "next": "o_temple_story",
+              "conditions": [{"type": "NotFlag", "key": "found_frozen_sanctum"}, {"type": "NotFlag", "key": "sr_knows_temple"}, {"type": "Level", "amount": 28}],
+              "outcomes": [{"type": "SetFlag", "key": "found_frozen_sanctum"}]
+            },
+            {"text": "Tell me about Skyreach.", "next": "o_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_main1",
+          "speaker": "sr_guide_odran",
+          "text": "Ash. *He spits into the snow; it lands grey.* It's been coming down for a month. Fine as flour, warm as bread. The herders say the Roost is smoking again, and the Dragonsworn are camped under it, singing. Badly.",
+          "choices": [{"text": "Who are the Dragonsworn?", "next": "o_main2"}, {"text": "Where should I start looking?", "next": "o_main3"}]
+        },
+        {
+          "id": "o_main2",
+          "speaker": "sr_guide_odran",
+          "text": "Fire-worshippers in red scale. They follow Highlord Varkas, and Varkas follows the dragon. They think when she wakes she'll warm the whole world. *He blows on his hands.* I'll admit it's a tempting pitch, up here.",
+          "next": "o_main3"
+        },
+        {
+          "id": "o_main3",
+          "speaker": "sr_guide_odran",
+          "text": "If you want to read the ash, go up the Switchbacks to the Bone Field. Old dragon bones, older than the mountain's name, and the ash settles thickest there. There's a scholar from Brightwater camped by them, Magistra Ottoline. Mind the elementals. They like her about as much as I do.",
+          "outcomes": [{"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "I'll head for the Bone Field."}]
+        },
+        {
+          "id": "o_toll_offer",
+          "speaker": "sr_guide_odran",
+          "text": "Safe? *He laughs.* Gorrum Two-Belly sits on the first bend of the Switchbacks with his lads and charges a toll. Cheese, mostly. Hats. He took my good hat. If you're going up anyway, could you... persuade him otherwise? However you like. I'm not fussy. I'd like my hat.",
+          "choices": [
+            {
+              "text": "I'll deal with Gorrum.",
+              "next": "o_toll_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_ogre_toll"}]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_toll_acc",
+          "speaker": "sr_guide_odran",
+          "text": "Splendid. He sits by the painted rock on the first bend. You can't miss him. Nobody can miss Gorrum; that's rather the problem.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "o_pell_offer",
+          "speaker": "sr_guide_odran",
+          "text": "Brother Pell. A lamplighter from the Chapel of Small Lights, down in Brightwater: Mother Wren's lot. He came up three days ago to light a lantern at the old Heronguard tower, and he went the wrong way. North-east, past the wolf den. I'd go myself, but my knees and the wolves have an arrangement. They don't meet.",
+          "choices": [
+            {
+              "text": "I'll find him.",
+              "next": "o_pell_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_lamplighters_climb"}, {"type": "SetFlag", "key": "sr_pell_sought"}]
+            },
+            {
+              "text": "Which way would a lost man walk in the snow?",
+              "check": {"skill": "Survival", "dc": 13, "success": "o_pell_surv", "failure": "o_pell_surv_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_pell_surv",
+          "speaker": "sr_guide_odran",
+          "text": "*He looks at you with new respect.* Downhill and towards running water, if he had any sense, which he hasn't. So uphill, towards the wolves. Follow the Tarnrun north and look for lantern-light.",
+          "outcomes": [{"type": "GiveXP", "amount": 15}],
+          "next": "o_pell_offer2"
+        },
+        {
+          "id": "o_pell_surv_f",
+          "speaker": "sr_guide_odran",
+          "text": "In circles, mostly. That's what everyone does. That's what I do, and I'm a professional.",
+          "next": "o_pell_offer2"
+        },
+        {
+          "id": "o_pell_offer2",
+          "speaker": "sr_guide_odran",
+          "text": "So: will you go?",
+          "choices": [
+            {
+              "text": "I'll find him.",
+              "next": "o_pell_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_lamplighters_climb"}, {"type": "SetFlag", "key": "sr_pell_sought"}]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_pell_acc",
+          "speaker": "sr_guide_odran",
+          "text": "Cross the Tarnrun by the ford north of the village and follow the trail up past the den. And if you meet Old Rimefang, one ear, one eye, don't stare. He hates being stared at.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "o_hat",
+          "speaker": "sr_guide_odran",
+          "text": "MY HAT! *He clutches it to his chest.* It smells of cheese. It will always smell of cheese now. I don't care. Here, take this, take all of it.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_temple_journal",
+          "speaker": "sr_guide_odran",
+          "text": "*Odran goes very still.* The old temple. My gran used to say there was a door behind the falls, and that the cold that came out of it was the kind that remembers your name. Look where the ice hangs over the rock, on the west side, by the spire. Bring a lantern. Bring two.",
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
+          "next": "o_hub"
+        },
+        {
+          "id": "o_temple_story",
+          "speaker": "sr_guide_odran",
+          "text": "Glasswater? *He lowers his voice.* My gran swore there was a temple behind the falls. Priests who sang to the cold. When the falls freeze, she said, you can see the door if you know where to look: the west side, under the overhang by the ice spire. I've never looked. I'm a guide, not a fool.",
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
+          "next": "o_hub"
+        },
+        {
+          "id": "o_lore",
+          "speaker": "sr_guide_odran",
+          "text": "Skyreach? Snow, pines, wolves, yetis, harpies, ogres (the ogres are new, and rude) and above it all the Roost, where the old dragon sleeps. The Heronguard rode up there twelve years back. Forty knights. Eleven came home. *He looks north.* We still keep their flags on the knoll. Ask Old Lumi.",
+          "next": "o_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_hilde",
+      "start": "h_ret",
+      "nodes": [
+        {
+          "id": "h_ret",
+          "speaker": "sr_hilde",
+          "text": "Is that... jingling? *She sets down the kettle.* Tell me that's jingling.",
+          "conditions": [{"type": "QuestState", "key": "sr_whiteout_bells", "value": "report"}],
+          "fallback": "h_greet",
+          "choices": [
+            {
+              "text": "Five bells, back from the harpies.",
+              "next": "h_ret2",
+              "outcomes": [{"type": "TakeItem", "key": "sr_hut_bell", "amount": 5}, {"type": "CompleteQuest", "key": "sr_whiteout_bells"}]
+            }
+          ]
+        },
+        {
+          "id": "h_ret2",
+          "speaker": "sr_hilde",
+          "text": "*She counts them twice, then hangs them one by one on the line by the door.* There. The next time the snow comes sideways, somebody lost out there will hear us and come home. *She sniffs, and blames the cold.*",
+          "next": "h_hub"
+        },
+        {
+          "id": "h_greet",
+          "speaker": "sr_hilde",
+          "text": "Come in, come in, shut the door, you're letting the weather in. Tea's on. Tea is always on. That's the rule of the Kettle Hut.",
+          "choices": [
+            {"text": "A bed by the stove, please.", "next": "h_rest"},
+            {"text": "What's on the stove?", "outcomes": [{"type": "OpenVendor", "key": "sr_hilde"}]},
+            {
+              "text": "Why does the line outside have no bells on it?",
+              "next": "h_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "sr_whiteout_bells"}]
+            },
+            {
+              "text": "Any sign of those harpies?",
+              "next": "h_prog",
+              "conditions": [{"type": "QuestState", "key": "sr_whiteout_bells", "value": "bells"}]
+            },
+            {"text": "How long have you kept the hut?", "next": "h_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_hub",
+          "speaker": "sr_hilde",
+          "text": "Anything else, love? More tea?",
+          "choices": [
+            {"text": "A bed by the stove, please.", "next": "h_rest"},
+            {"text": "What's on the stove?", "outcomes": [{"type": "OpenVendor", "key": "sr_hilde"}]},
+            {
+              "text": "Why does the line outside have no bells on it?",
+              "next": "h_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "sr_whiteout_bells"}]
+            },
+            {
+              "text": "Any sign of those harpies?",
+              "next": "h_prog",
+              "conditions": [{"type": "QuestState", "key": "sr_whiteout_bells", "value": "bells"}]
+            },
+            {"text": "How long have you kept the hut?", "next": "h_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_rest",
+          "speaker": "sr_hilde",
+          "text": "There's a cot by the stove and a quilt older than I am. The stove ticks all night. You'll sleep like a stone.",
+          "outcomes": [{"type": "Rest"}]
+        },
+        {
+          "id": "h_offer",
+          "speaker": "sr_hilde",
+          "text": "Because the harpies stole them. Every brass bell off the whiteout line. When the snow comes sideways, that line is the only way home: you follow the ringing. Without it... *She pours tea very firmly.* Five bells would do. The crag harpies have them, and that matriarch in the old tower too, I shouldn't wonder.",
+          "choices": [
+            {
+              "text": "I'll bring your bells back.",
+              "next": "h_acc",
+              "conditions": [{"type": "Level", "amount": 25}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_whiteout_bells"}]
+            },
+            {"text": "I'll think about it.", "next": "h_hub"}
+          ]
+        },
+        {
+          "id": "h_acc",
+          "speaker": "sr_hilde",
+          "text": "Bless you. Wrap up warm. Harpies go for the eyes and the spoons, in that order.",
+          "next": "h_hub"
+        },
+        {
+          "id": "h_prog",
+          "speaker": "sr_hilde",
+          "text": "The crags west of the Switchbacks, and the old tower. Listen for the jingling. Harpies can't resist jingling anything they've stolen.",
+          "next": "h_hub"
+        },
+        {
+          "id": "h_lore",
+          "speaker": "sr_hilde",
+          "text": "Forty years. My mum before me. We've fed herders, pilgrims, smugglers, two kings (one was lying) and forty knights of the Heronguard, once, the night before they rode north. *Her smile fades a little.* Eleven came back down for breakfast. I made them all the eggs I had.",
+          "next": "h_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_brannoc",
+      "start": "b_ret",
+      "nodes": [
+        {
+          "id": "b_ret",
+          "speaker": "sr_brannoc",
+          "text": "*He sniffs the air.* Frost wolf. Six of them, if my nose is any judge, and it's a very good nose.",
+          "conditions": [{"type": "QuestState", "key": "sr_warm_coats", "value": "report"}],
+          "fallback": "b_greet",
+          "choices": [
+            {
+              "text": "Six pelts, as promised.",
+              "next": "b_ret2",
+              "outcomes": [{"type": "TakeItem", "key": "sr_frost_wolf_pelt", "amount": 6}, {"type": "CompleteQuest", "key": "sr_warm_coats"}]
+            }
+          ]
+        },
+        {
+          "id": "b_ret2",
+          "speaker": "sr_brannoc",
+          "text": "*He runs his hands through the fur.* Beautiful. Pema gets the first coat, then Lumi, whether she likes it or not, then everyone else. Come back in a week and the whole of Cairnhollow will look like a family of very cosy bears.",
+          "next": "b_hub"
+        },
+        {
+          "id": "b_greet",
+          "speaker": "sr_brannoc",
+          "text": "Brannoc Snowmantle. Pelts bought, coats sold, no refunds, no exceptions, and no, not even for you.",
+          "choices": [
+            {"text": "Show me what you've made.", "outcomes": [{"type": "OpenVendor", "key": "sr_brannoc"}]},
+            {"text": "Why does the village need coats?", "next": "b_offer", "conditions": [{"type": "QuestNotStarted", "key": "sr_warm_coats"}]},
+            {"text": "About those pelts...", "next": "b_prog", "conditions": [{"type": "QuestState", "key": "sr_warm_coats", "value": "pelts"}]},
+            {"text": "What brings the frost wolves down so low?", "next": "b_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_hub",
+          "speaker": "sr_brannoc",
+          "text": "Anything else? I've got needles to thread.",
+          "choices": [
+            {"text": "Show me what you've made.", "outcomes": [{"type": "OpenVendor", "key": "sr_brannoc"}]},
+            {"text": "Why does the village need coats?", "next": "b_offer", "conditions": [{"type": "QuestNotStarted", "key": "sr_warm_coats"}]},
+            {"text": "About those pelts...", "next": "b_prog", "conditions": [{"type": "QuestState", "key": "sr_warm_coats", "value": "pelts"}]},
+            {"text": "What brings the frost wolves down so low?", "next": "b_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_offer",
+          "speaker": "sr_brannoc",
+          "text": "Because winter came early and means to stay late, and Pema's grown out of her coat, and old Lumi won't admit she's cold, and I've twelve folk to dress and no fur. The frost wolves have come down off the high meadows. Six good pelts and I'll make a coat for everyone in Cairnhollow. And one for you.",
+          "choices": [
+            {
+              "text": "Six pelts. Leave it to me.",
+              "next": "b_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_warm_coats"}]
+            },
+            {"text": "Not today.", "next": "b_hub"}
+          ]
+        },
+        {
+          "id": "b_acc",
+          "speaker": "sr_brannoc",
+          "text": "The den's up past the Tarnrun, north-east. Clean kills, if you can. I'm a tailor, not a miracle worker.",
+          "next": "b_hub"
+        },
+        {
+          "id": "b_prog",
+          "speaker": "sr_brannoc",
+          "text": "Six, I said. I can count to six. I'm very good at it. It's a tailor thing.",
+          "next": "b_hub"
+        },
+        {
+          "id": "b_lore",
+          "speaker": "sr_brannoc",
+          "text": "The ash. Comes off the Roost like flour off a baker. The deer won't graze grey grass, so they go down the valleys, and the wolves go after the deer, and here we all are, in one big hungry line.",
+          "next": "b_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_pema",
+      "start": "p_done",
+      "nodes": [
+        {
+          "id": "p_done",
+          "speaker": "sr_pema",
+          "text": "Bramble's eating the fence again. Clover's asleep. Turnip ate my hat. Everything is normal! Thank you!",
+          "conditions": [{"type": "QuestComplete", "key": "sr_woolly_business"}],
+          "fallback": "p_ret",
+          "choices": [{"text": "Glad to hear it."}]
+        },
+        {
+          "id": "p_ret",
+          "speaker": "sr_pema",
+          "text": "Is that... is that BRAMBLE? And CLOVER? And TURNIP?",
+          "conditions": [{"type": "QuestState", "key": "sr_woolly_business", "value": "return"}],
+          "fallback": "p_prog",
+          "choices": [{"text": "Every last goat, home in the pen.", "next": "p_ret2", "outcomes": [{"type": "CompleteQuest", "key": "sr_woolly_business"}]}]
+        },
+        {
+          "id": "p_ret2",
+          "speaker": "sr_pema",
+          "text": "*She flings her arms round all three goats at once. Turnip eats her scarf. She does not care.* You're the best hero. You're better than the knights in Gran's stories. They never found ANY goats.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "p_prog",
+          "speaker": "sr_pema",
+          "text": "Did you find them? Bramble likes high places. Clover likes big furry things; she thinks they're her mum. And Turnip likes food. Any food. ALL the food.",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}],
+          "fallback": "p_offer",
+          "choices": [{"text": "Still looking."}]
+        },
+        {
+          "id": "p_offer",
+          "speaker": "sr_pema",
+          "text": "Are you a hero? You look like a hero. You've got... a weapon, and a face. *She sniffs hard.* My goats ran away when the ground shook. Bramble and Clover and Turnip. Gran says they'll come home on their own, but Gran says that about everything.",
+          "choices": [
+            {
+              "text": "I'll find your goats.",
+              "next": "p_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_woolly_business"}]
+            },
+            {"text": "What are they like?", "next": "p_goats"},
+            {"text": "Sorry, not right now."}
+          ]
+        },
+        {
+          "id": "p_goats",
+          "speaker": "sr_pema",
+          "text": "Bramble's brown and climbs everything. Clover's white and sweet and a bit stupid. Turnip is grey and he ate a whole saddle once. Will you look? Please?",
+          "choices": [
+            {
+              "text": "I'll find your goats.",
+              "next": "p_acc",
+              "conditions": [{"type": "Level", "amount": 24}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_woolly_business"}]
+            },
+            {"text": "Sorry, not right now."}
+          ]
+        },
+        {
+          "id": "p_acc",
+          "speaker": "sr_pema",
+          "text": "Thank you! Goats can't say no to dried apple, so wave your hand like you've got some. Nobody can say no to dried apple.",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_goat_bramble",
+      "start": "home",
+      "nodes": [
+        {
+          "id": "home",
+          "speaker": "sr_goat_bramble",
+          "text": "*Bramble is standing on top of the hay, which is on top of the fence. She looks extremely pleased with herself.* Maa.",
+          "conditions": [{"type": "Flag", "key": "sr_goat_bramble"}],
+          "fallback": "q"
+        },
+        {
+          "id": "q",
+          "speaker": "narrator",
+          "text": "*A brown goat stands on a ledge three times your height, bleating at the harpies' spoons. She looks down at you as if you were the one in trouble.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}],
+          "fallback": "idle",
+          "choices": [
+            {
+              "text": "(Climb up and carry her down.)",
+              "check": {"skill": "Athletics", "dc": 14, "success": "got", "failure": "fall"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {"text": "(Whistle the way a goatherd would.)", "next": "got", "conditions": [{"type": "Class", "key": "Hunter"}], "tag": "HUNTER"},
+            {"text": "(Ask the mountain wind to nudge her down.)", "next": "got", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {
+              "text": "(Shake your hand as if it were full of dried apple.)",
+              "check": {"skill": "Nature", "dc": 12, "success": "got", "failure": "nope"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "(Wait for her to come down on her own.)", "next": "wait"}
+          ]
+        },
+        {
+          "id": "fall",
+          "speaker": "narrator",
+          "text": "*You get halfway up before the ledge decides you are not welcome, and you slide back down in a small, personal avalanche. Bramble looks embarrassed for you.*",
+          "next": "q"
+        },
+        {
+          "id": "nope",
+          "speaker": "narrator",
+          "text": "*Bramble considers your empty hand with deep scorn. She has been lied to before.*",
+          "next": "q"
+        },
+        {
+          "id": "wait",
+          "speaker": "narrator",
+          "text": "*You wait. Bramble waits. It is a contest of wills, and the goat has had more practice. Then a harpy feather drifts past, she leaps after it, and lands neatly at your feet, as if this was her plan all along.*",
+          "next": "got"
+        },
+        {
+          "id": "got",
+          "speaker": "narrator",
+          "text": "*Bramble lets you lead her home, chewing thoughtfully on your sleeve the whole way.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_goat_bramble"}, {"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "idle",
+          "speaker": "narrator",
+          "text": "*A brown goat stands on a ledge far too narrow for a goat, looking very pleased with itself.*",
+          "choices": [{"text": "(Leave the goat to it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_goat_clover",
+      "start": "home",
+      "nodes": [
+        {
+          "id": "home",
+          "speaker": "sr_goat_clover",
+          "text": "*Clover is asleep in the hay, snoring very gently.*",
+          "conditions": [{"type": "Flag", "key": "sr_goat_clover"}],
+          "fallback": "q"
+        },
+        {
+          "id": "q",
+          "speaker": "narrator",
+          "text": "*Clover is curled up asleep against a warm snowbank that, on closer inspection, is no longer breathing; the yeti elder has gone.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}, {"type": "Flag", "key": "sr_whitebrow_done"}],
+          "fallback": "guarded",
+          "choices": [{"text": "(Wake her gently and lead her home.)", "next": "got"}]
+        },
+        {
+          "id": "guarded",
+          "speaker": "narrator",
+          "text": "*A small white goat is being groomed by an enormous, bone-white yeti. The yeti growls when you come close. The goat purrs. Goats should not purr.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}],
+          "fallback": "idle",
+          "choices": [{"text": "(Back away slowly.)"}]
+        },
+        {
+          "id": "got",
+          "speaker": "narrator",
+          "text": "*Clover yawns, stretches, and trots after you, bleating a sleepy little song.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_goat_clover"}, {"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "idle",
+          "speaker": "narrator",
+          "text": "*A small white goat, very far from home, and not at all worried about it.*",
+          "choices": [{"text": "(Leave the goat to it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_goat_turnip",
+      "start": "home",
+      "nodes": [
+        {
+          "id": "home",
+          "speaker": "sr_goat_turnip",
+          "text": "*Turnip is eating the pen. Methodically. Plank by plank.*",
+          "conditions": [{"type": "Flag", "key": "sr_goat_turnip"}],
+          "fallback": "q"
+        },
+        {
+          "id": "q",
+          "speaker": "sr_gorrum",
+          "text": "*Turnip is wearing a hat that is clearly Odran's, and eating it. Gorrum waves you over.* Small friend! Take goat. PLEASE take goat. Goat ate Gorrum's other hat.",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}, {"type": "Flag", "key": "sr_ogres_pacified"}],
+          "fallback": "q2",
+          "choices": [{"text": "(Take Turnip home.)", "next": "got"}]
+        },
+        {
+          "id": "q2",
+          "speaker": "narrator",
+          "text": "*Turnip is happily eating an ogre's left boot beside the cold cook-pot. Nobody seems to mind any more.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}, {"type": "Flag", "key": "enc_enc_sr_ogre_camp"}],
+          "fallback": "q3",
+          "choices": [{"text": "(Take Turnip home.)", "next": "got"}]
+        },
+        {
+          "id": "q3",
+          "speaker": "narrator",
+          "text": "*A grey goat is tied to a stake beside the ogres' enormous cook-pot, next to a pile of carrots and onions. He is eating the rope. The ogres are arguing about whether goats need salt.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_woolly_business"}],
+          "fallback": "idle",
+          "choices": [
+            {
+              "text": "(Creep in and untie him.)",
+              "check": {"skill": "Stealth", "dc": 14, "success": "sneak", "failure": "caught"},
+              "once": true,
+              "tag": "STEALTH"
+            },
+            {
+              "text": "(Cut the rope from behind the pot.)",
+              "check": {"skill": "SleightOfHand", "dc": 15, "success": "sneak", "failure": "caught"},
+              "once": true,
+              "tag": "SLEIGHT OF HAND"
+            },
+            {"text": "(Charge the camp.)", "next": "charge"},
+            {"text": "(Come back later.)"}
+          ]
+        },
+        {
+          "id": "sneak",
+          "speaker": "narrator",
+          "text": "*The rope parts. Turnip takes one look at you, one look at the cook-pot, and decides he likes you much better.*",
+          "next": "got"
+        },
+        {
+          "id": "caught",
+          "speaker": "narrator",
+          "text": "*Turnip bleats, loudly and with great feeling. Every ogre in the camp turns round.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_sr_ogre_camp"}]
+        },
+        {
+          "id": "charge",
+          "speaker": "narrator",
+          "text": "*The ogres drop their spoons and pick up their clubs.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_sr_ogre_camp"}]
+        },
+        {
+          "id": "got",
+          "speaker": "narrator",
+          "text": "*Turnip follows you home, stopping to eat everything along the way, including, briefly, your map.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_goat_turnip"}, {"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "idle",
+          "speaker": "narrator",
+          "text": "*A grey goat beside the ogres' cook-pot, chewing on something that used to be a rope.*",
+          "choices": [{"text": "(Leave the goat to it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_whitebrow",
+      "start": "w1",
+      "nodes": [
+        {
+          "id": "w1",
+          "speaker": "narrator",
+          "text": "*A yeti twice the height of a door rises out of the snow. Its fur is white as old bone, and in its arms, being groomed like a baby, is a small white goat.* *The elder bares its tusks and rumbles. The goat chews its ear.*",
+          "choices": [
+            {
+              "text": "(Kneel, slow and small, and hold out an open hand.)",
+              "check": {"skill": "Nature", "dc": 15, "success": "calm", "failure": "angry"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "(Speak to it the old way, beast to beast.)",
+              "next": "calm",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Hold its gaze, calm and steady, the way you would with any big animal.)",
+              "next": "calm",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "tag": "HUNTER"
+            },
+            {
+              "text": "(Offer it a parcel of Hilde's yak-butter dumplings.)",
+              "next": "calm_food",
+              "conditions": [{"type": "HasItem", "key": "sr_food_yak_dumplings", "amount": 1}],
+              "outcomes": [{"type": "TakeItem", "key": "sr_food_yak_dumplings", "amount": 1}]
+            },
+            {"text": "Put the goat down.", "next": "fight"},
+            {"text": "(Back away slowly.)"}
+          ]
+        },
+        {
+          "id": "calm",
+          "speaker": "narrator",
+          "text": "*The elder snuffles your hand for a long moment, breathing frost. Then it sets the goat down, very gently, and pushes her toward you with one huge finger. It lumbers off into the pines and looks back, once.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_whitebrow_done"}, {"type": "SetFlag", "key": "sr_whitebrow_calmed"}, {"type": "GiveXP", "amount": 70}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "calm_food",
+          "speaker": "narrator",
+          "text": "*The elder sniffs the parcel, eats it, paper and all, and makes a noise like a very happy avalanche. It sets the goat down and wanders off, licking its fingers.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_whitebrow_done"}, {"type": "SetFlag", "key": "sr_whitebrow_calmed"}, {"type": "GiveXP", "amount": 70}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "angry",
+          "speaker": "narrator",
+          "text": "*The elder hugs the goat tighter and roars, and the snow shakes off every pine in the hollow.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_sr_whitebrow"}]
+        },
+        {
+          "id": "fight",
+          "speaker": "narrator",
+          "text": "*The elder sets the goat aside, gently, and then turns to you, not gently at all.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_sr_whitebrow"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_gorrum",
+      "start": "g1",
+      "nodes": [
+        {
+          "id": "g1",
+          "speaker": "narrator",
+          "text": "*An ogre the size of a hay barn sits on a boulder in the middle of the road, eating a whole wheel of cheese. Two more ogres loom behind him, holding clubs and, for some reason, a teapot.*",
+          "next": "g2"
+        },
+        {
+          "id": "g2",
+          "speaker": "sr_gorrum",
+          "text": "Gorrum Two-Belly. This is Gorrum's road now. Toll is... *he counts on his fingers, loses count, starts again* ...all of the cheese. And shiny things. And one hat.",
+          "choices": [
+            {
+              "text": "You're not hungry. You're scared of something.",
+              "check": {"skill": "Insight", "dc": 13, "success": "g_ins", "failure": "g_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "Who told you to block this road? Because I'd bet it wasn't your idea.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "g_story", "failure": "g_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Move, or you'll be Gorrum One-Belly.",
+              "check": {"skill": "Intimidation", "dc": 16, "success": "g_scared", "failure": "g_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "The mountain is restless, not angry. Listen to it shake, and tell me what it says.",
+              "next": "g_story",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "Arm-wrestle me for the road. Winner keeps it.",
+              "check": {"skill": "Athletics", "dc": 15, "success": "g_wrestle", "failure": "g_wrestle_f"},
+              "once": true,
+              "tag": "WARRIOR",
+              "conditions": [{"type": "Class", "key": "Warrior"}]
+            },
+            {
+              "text": "Fine. Here's your toll. Twenty-five silver.",
+              "next": "g_paid",
+              "conditions": [{"type": "Gold", "amount": 2500}],
+              "outcomes": [{"type": "TakeGold", "amount": 2500}]
+            },
+            {"text": "Then we do this the hard way.", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g2b",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum takes another bite of cheese and waits. Chewing, mostly.*",
+          "choices": [
+            {
+              "text": "You're not hungry. You're scared of something.",
+              "check": {"skill": "Insight", "dc": 13, "success": "g_ins", "failure": "g_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "Who told you to block this road? Because I'd bet it wasn't your idea.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "g_story", "failure": "g_pers_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Move, or you'll be Gorrum One-Belly.",
+              "check": {"skill": "Intimidation", "dc": 16, "success": "g_scared", "failure": "g_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "The mountain is restless, not angry. Listen to it shake, and tell me what it says.",
+              "next": "g_story",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "Arm-wrestle me for the road. Winner keeps it.",
+              "check": {"skill": "Athletics", "dc": 15, "success": "g_wrestle", "failure": "g_wrestle_f"},
+              "once": true,
+              "tag": "WARRIOR",
+              "conditions": [{"type": "Class", "key": "Warrior"}]
+            },
+            {
+              "text": "Fine. Here's your toll. Twenty-five silver.",
+              "next": "g_paid",
+              "conditions": [{"type": "Gold", "amount": 2500}],
+              "outcomes": [{"type": "TakeGold", "amount": 2500}]
+            },
+            {"text": "Then we do this the hard way.", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g_ins",
+          "speaker": "sr_gorrum",
+          "text": "*He stops chewing.* ...Mountain shakes. Every night, mountain shakes, and the fire-men say it is the Big Sleeper turning over. Ogres do not like shaking. Ogres like cheese, and lying down.",
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
+          "next": "g_story"
+        },
+        {"id": "g_ins_f", "speaker": "sr_gorrum", "text": "Gorrum is not scared. Gorrum is HUNGRY. Is different. Is very different.", "next": "g2b"},
+        {
+          "id": "g_pers_f",
+          "speaker": "sr_gorrum",
+          "text": "Gorrum's idea. All Gorrum's. Gorrum has lots of ideas. *A pause.* Two ideas.",
+          "next": "g2b"
+        },
+        {
+          "id": "g_story",
+          "speaker": "sr_gorrum",
+          "text": "Red-shiny men came. Fire-men. They say: 'Keep the small ones off the road, and ogres get cheese. Or ogres burn.' *He looks at the cheese, sadly.* Is stolen cheese. From the hut-people. Gorrum knows. Gorrum is not proud.",
+          "choices": [
+            {"text": "Let the road go free, and Cairnhollow will trade you cheese honestly. No burning.", "next": "g_peace"},
+            {"text": "The Dragonsworn will burn you anyway, once the dragon wakes. Leave the mountain.", "next": "g_scared"}
+          ]
+        },
+        {
+          "id": "g_peace",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum thinks about this so hard you can hear it.* Honest cheese. *He looks at his lads; they nod enthusiastically.* Gorrum likes honest cheese. Road is free. Gorrum will go back to the ledge and be... cheese man.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_ogres_pacified"},
+            {"type": "SetFlag", "key": "sr_ogre_road_clear"},
+            {"type": "GiveXP", "amount": 85},
+            {"type": "Approval", "key": "seren", "amount": 5},
+            {"type": "Approval", "key": "ysolde", "amount": 5},
+            {"type": "Approval", "key": "bruna", "amount": 5}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "g_scared",
+          "speaker": "narrator",
+          "text": "*Gorrum looks at you, then at the smoke over the Roost, then at you again. He tucks the cheese under one arm.* 'Gorrum... is going for a long walk,' he announces, and the ogres stomp off up the mountain, very fast for things that size.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_ogres_scared"},
+            {"type": "SetFlag", "key": "sr_ogre_road_clear"},
+            {"type": "GiveXP", "amount": 55},
+            {"type": "Approval", "key": "morwen", "amount": 3}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "g_wrestle",
+          "speaker": "narrator",
+          "text": "*Gorrum's arm is the size of a tree trunk, and for a long, straining moment it does not move at all. Then, with a crack of the boulder under your elbows, it does. Gorrum stares at his hand.* 'Small friend is STRONG,' he says, with deep respect. 'Road is yours. Gorrum will be... cheese man.'",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_ogres_pacified"},
+            {"type": "SetFlag", "key": "sr_ogre_road_clear"},
+            {"type": "GiveXP", "amount": 85},
+            {"type": "Approval", "key": "bruna", "amount": 8},
+            {"type": "Approval", "key": "kael", "amount": 5}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "g_wrestle_f",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum slams your hand onto the boulder, gently, by ogre standards.* Gorrum wins! Now... toll. Or punching.",
+          "next": "g2b"
+        },
+        {
+          "id": "g_paid",
+          "speaker": "sr_gorrum",
+          "text": "*He bites the coins, one by one, and seems satisfied.* Pleasure doing business, small friend. Road is open. For you. Today.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_ogres_paid"}, {"type": "SetFlag", "key": "sr_ogre_road_clear"}, {"type": "GiveXP", "amount": 15}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "g_fight",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum puts the cheese down, carefully, on a clean rock.* Then Gorrum takes the toll from your pockets.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_sr_ogre_toll"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_gorrum_friend",
+      "start": "f1",
+      "nodes": [
+        {
+          "id": "f1",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum Two-Belly sits by the cook-pot, wearing a hat that is very clearly Odran's.* Small friend! Gorrum is not toll man now. Gorrum is cheese man. Hut-people send cheese, Gorrum sends... not punching. Is good deal.",
+          "choices": [
+            {"text": "Is that Odran's hat?", "next": "f_hat", "conditions": [{"type": "NotFlag", "key": "sr_odran_hat"}]},
+            {"text": "What do you know about the Dragonsworn?", "next": "f_sworn"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "f_hat",
+          "speaker": "sr_gorrum",
+          "text": "Is Gorrum's hat now. Hat is warm. Odran has head, Gorrum has head, but only one hat. *He taps his skull.* Is maths.",
+          "choices": [
+            {
+              "text": "Odran would really like it back. He's very cold, and very sad.",
+              "check": {"skill": "Persuasion", "dc": 14, "success": "f_hat_s", "failure": "f_hat_f"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {"text": "Fair enough.", "next": "f1"}
+          ]
+        },
+        {
+          "id": "f_hat_s",
+          "speaker": "sr_gorrum",
+          "text": "*Gorrum's lip wobbles.* Sad? Odran is SAD? *He takes off the hat and hands it to you with both hands, like a crown.* Tell Odran: Gorrum did the maths again.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_odran_hat"}, {"type": "GiveXP", "amount": 30}],
+          "next": "f1"
+        },
+        {"id": "f_hat_f", "speaker": "sr_gorrum", "text": "Hat stays. Hat is happy here. Look at hat. Hat is smiling.", "next": "f1"},
+        {
+          "id": "f_sworn",
+          "speaker": "sr_gorrum",
+          "text": "Red-shiny men. Sing at night, very loud, very bad. Their big one has a hot sword that never goes cold. Gorrum touched it once. *He shows you a burnt finger.* Gorrum does not touch it now.",
+          "next": "f1"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_lumi",
+      "start": "l_watch_ret",
+      "nodes": [
+        {
+          "id": "l_watch_ret",
+          "speaker": "sr_lumi",
+          "text": "*Lumi is sitting very still among her flags, and for once the wind has left them alone.* You've been to the temple. I can see it on you. Like frost.",
+          "conditions": [{"type": "QuestState", "key": "dg6_the_long_watch", "value": "lumi"}],
+          "fallback": "l_29_ret",
+          "choices": [
+            {
+              "text": "They're free, Lumi. Aubric said you can take the flags down. Or leave them up; he said they're very pretty.",
+              "next": "l_watch_end",
+              "outcomes": [{"type": "CompleteQuest", "key": "dg6_the_long_watch"}]
+            }
+          ]
+        },
+        {
+          "id": "l_watch_end",
+          "speaker": "sr_lumi",
+          "text": "*She laughs, and then she cries, and then she does both at once, which she says is allowed at her age.* Pretty. The old fool. *She reaches up and ties one more flag on the line: plain white.* That one's for the cold. It kept them, all this time. Somebody ought to thank it for letting go.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_29_ret",
+          "speaker": "sr_lumi",
+          "text": "You found it. His journal. *Her old hands shake as she takes it.* Would you read me the last page? My eyes aren't what they were. Nor's my courage.",
+          "conditions": [{"type": "QuestState", "key": "sr_twenty_nine", "value": "lumi"}],
+          "fallback": "l_greet",
+          "choices": [{"text": "(Read the last page aloud.)", "next": "l_read1"}]
+        },
+        {
+          "id": "l_read1",
+          "speaker": "narrator",
+          "text": "*The last page is written in a hand that shakes:* 'Day nine. Ordered the charge for dawn. Uphill, into fire. I knew it was wrong as I said it, and I said it anyway, because I was the Lord-Commander, and pride is a heavy thing to set down on a mountain. Then: the horn. Ysolde blew the retreat. Good girl. GOOD girl. Eleven will get home because she had the courage I did not.'",
+          "next": "l_read2"
+        },
+        {
+          "id": "l_read2",
+          "speaker": "narrator",
+          "text": "'Those of us who cannot run are going into the old temple behind the falls, with the wounded. It is cold, but nothing follows us in. If anyone finds this: tell her the horn was right. Tell her we are not angry. Tell her we kept the ford.' The signature is a single letter: A.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_knows_temple"}],
+          "next": "l_29_choice"
+        },
+        {
+          "id": "l_29_choice",
+          "speaker": "sr_lumi",
+          "text": "*Lumi is quiet for a long time.* Twelve years I've kept twenty-nine flags for men who were angry at nobody. *She wipes her eyes on a flag.* That girl, Ysolde, ought to have this. If anyone knows where she is.",
+          "choices": [
+            {
+              "text": "Ysolde is right here.",
+              "next": "l_ysolde",
+              "conditions": [{"type": "InParty", "key": "ysolde"}],
+              "outcomes": [
+                {"type": "SetFlag", "key": "sr_journal_ysolde"},
+                {"type": "Approval", "key": "ysolde", "amount": 10},
+                {"type": "CompleteQuest", "key": "sr_twenty_nine"}
+              ],
+              "tag": "YSOLDE"
+            },
+            {
+              "text": "I'll carry it to her in Brightwater myself.",
+              "next": "l_carry",
+              "outcomes": [{"type": "SetFlag", "key": "sr_journal_ysolde"}, {"type": "CompleteQuest", "key": "sr_twenty_nine"}]
+            },
+            {
+              "text": "Keep it here, Lumi, with the flags. It belongs with them.",
+              "next": "l_keep",
+              "outcomes": [
+                {"type": "SetFlag", "key": "sr_journal_lumi"},
+                {"type": "TakeItem", "key": "sr_aubric_journal", "amount": 1},
+                {"type": "CompleteQuest", "key": "sr_twenty_nine"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "l_ysolde",
+          "speaker": "ysolde",
+          "text": "*Ysolde takes the journal as if it might break. She reads the last page once, and then again. When she looks up her eyes are wet and her chin is very steady.* 'We kept the ford,' she says. 'Of course you did, you stubborn old heron.' *She tucks the journal inside her surcoat, over her heart.* Thank you. Both of you.",
+          "next": "l_temple"
+        },
+        {
+          "id": "l_carry",
+          "speaker": "sr_lumi",
+          "text": "Good. Put it in her hands, not on a table. Some things should be handed over properly.",
+          "next": "l_temple"
+        },
+        {
+          "id": "l_keep",
+          "speaker": "sr_lumi",
+          "text": "*She tucks it into the cairn, between the stones with the names on, and pats it.* There. Now they're all together. Ysolde can come and read it here, when she's ready.",
+          "next": "l_temple"
+        },
+        {
+          "id": "l_temple",
+          "speaker": "sr_lumi",
+          "text": "And the temple... *she looks up the valley, towards the frozen falls* ...if the ones who couldn't run went in there, somebody ought to bring them out. Not today. You've walked far enough today. But think on it.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_greet",
+          "speaker": "sr_lumi",
+          "text": "*An old woman in a heap of shawls is re-tying a prayer flag the wind has untied. She doesn't seem to mind; she seems to think it's a game they're playing.* Hello, traveller. Mind the strings.",
+          "choices": [
+            {"text": "Who are the flags for?", "next": "l_flags"},
+            {"text": "Any news of the tower?", "next": "l_29_prog", "conditions": [{"type": "QuestActive", "key": "sr_twenty_nine"}]},
+            {
+              "text": "The knights who went into the temple...",
+              "next": "l_watch_offer",
+              "conditions": [{"type": "QuestComplete", "key": "sr_twenty_nine"}, {"type": "QuestNotStarted", "key": "dg6_the_long_watch"}]
+            },
+            {
+              "text": "About the temple behind the falls...",
+              "next": "l_watch_prog",
+              "conditions": [{"type": "QuestActive", "key": "dg6_the_long_watch"}]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_hub",
+          "speaker": "sr_lumi",
+          "text": "*She ties another knot.* Anything else, dear?",
+          "choices": [
+            {"text": "Who are the flags for?", "next": "l_flags"},
+            {"text": "Any news of the tower?", "next": "l_29_prog", "conditions": [{"type": "QuestActive", "key": "sr_twenty_nine"}]},
+            {
+              "text": "The knights who went into the temple...",
+              "next": "l_watch_offer",
+              "conditions": [{"type": "QuestComplete", "key": "sr_twenty_nine"}, {"type": "QuestNotStarted", "key": "dg6_the_long_watch"}]
+            },
+            {
+              "text": "About the temple behind the falls...",
+              "next": "l_watch_prog",
+              "conditions": [{"type": "QuestActive", "key": "dg6_the_long_watch"}]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_flags",
+          "speaker": "sr_lumi",
+          "text": "Twenty-nine flags for twenty-nine knights of the Heronguard. Forty rode up the mountain to fight the drakes, twelve years ago. Eleven came home. I was the cook's girl at the Kettle Hut then. I made the flags from their spare tabards.",
+          "choices": [
+            {
+              "text": "Is there anything I can do for them?",
+              "next": "l_29_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "sr_twenty_nine"}]
+            },
+            {"text": "They're beautiful flags.", "next": "l_hub"}
+          ]
+        },
+        {
+          "id": "l_29_offer",
+          "speaker": "sr_lumi",
+          "text": "Up at the old Heronguard tower the Lord-Commander kept a journal. Wrote in it every night, Hilde says, even the last night. If it's still there, if the harpies haven't lined a nest with it, I'd like to know what he wrote. I'd like to know if they were afraid.",
+          "choices": [
+            {
+              "text": "I'll go to the tower and look for it.",
+              "next": "l_29_acc",
+              "conditions": [{"type": "Level", "amount": 25}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_twenty_nine"}]
+            },
+            {"text": "Not yet.", "next": "l_hub"}
+          ]
+        },
+        {
+          "id": "l_29_acc",
+          "speaker": "sr_lumi",
+          "text": "West, past the Bone Field, where the blue banner still hangs. A harpy matriarch nests in it now. Shrikeclaw. Don't let her have your spoons.",
+          "next": "l_hub"
+        },
+        {
+          "id": "l_29_prog",
+          "speaker": "sr_lumi",
+          "text": "The tower's west of the Bone Field. Look for the blue banner. And mind Shrikeclaw.",
+          "next": "l_hub"
+        },
+        {
+          "id": "l_watch_offer",
+          "speaker": "sr_lumi",
+          "text": "'Those who cannot run are going into the temple.' *Lumi pulls her shawl tight.* Twelve years they've been in the cold. Nobody brought them a lantern. Nobody brought them home. Will you?",
+          "choices": [
+            {
+              "text": "I'll go into the Frozen Sanctum and bring them home.",
+              "next": "l_watch_acc",
+              "conditions": [{"type": "Level", "amount": 28}],
+              "outcomes": [{"type": "StartQuest", "key": "dg6_the_long_watch"}]
+            },
+            {"text": "I need to prepare first.", "next": "l_hub"}
+          ]
+        },
+        {
+          "id": "l_watch_acc",
+          "speaker": "sr_lumi",
+          "text": "Odran knows the falls better than anyone, if you haven't found the door. And take friends. Something in that cold has been hungry for a very long time.",
+          "next": "l_hub"
+        },
+        {
+          "id": "l_watch_prog",
+          "speaker": "sr_lumi",
+          "text": "Behind the frozen falls. Ask Odran where, if the ice won't show you. Bring them home.",
+          "next": "l_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_ottoline",
+      "start": "t_ret",
+      "nodes": [
+        {
+          "id": "t_ret",
+          "speaker": "sr_ottoline",
+          "text": "*Ottoline has her ear pressed to a rib, eyes closed.* Did you hear it? When the third stone rang?",
+          "conditions": [{"type": "QuestState", "key": "sr_singing_bones", "value": "report"}],
+          "fallback": "t_first",
+          "choices": [
+            {
+              "text": "I heard it. The bones have gone quiet.",
+              "next": "t_ret2",
+              "outcomes": [{"type": "TakeItem", "key": "sr_rime_core", "amount": 4}, {"type": "CompleteQuest", "key": "sr_singing_bones"}]
+            }
+          ]
+        },
+        {
+          "id": "t_ret2",
+          "speaker": "sr_ottoline",
+          "text": "Quiet. Listen: nothing. *She opens her eyes.* A lullaby for a dead dragon, so it would never call to a living one. Somebody up here understood dragons very well, once. I'll write to Penhallow tonight. He'll be insufferable about it.",
+          "next": "t_hub"
+        },
+        {
+          "id": "t_first",
+          "speaker": "sr_ottoline",
+          "text": "*A tall woman in a fur-lined academic gown is measuring a dragon's rib with a knotted string. She looks up, delighted.* A visitor! Not an elemental! How refreshing. Magistra Ottoline Vane, Brightwater Archive. Penhallow's colleague. His better-organised colleague.",
+          "conditions": [{"type": "NotFlag", "key": "sr_met_ottoline"}],
+          "fallback": "t_hub",
+          "outcomes": [{"type": "SetFlag", "key": "sr_met_ottoline"}],
+          "choices": [
+            {
+              "text": "Archivist Penhallow sent me to read the ash.",
+              "next": "t_main1",
+              "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "bones"}]
+            },
+            {
+              "text": "What are you measuring?",
+              "next": "t_offer",
+              "conditions": [{"type": "Flag", "key": "sr_bones_read"}, {"type": "QuestNotStarted", "key": "sr_singing_bones"}]
+            },
+            {"text": "The stones are still out of tune?", "next": "t_prog", "conditions": [{"type": "QuestActive", "key": "sr_singing_bones"}]},
+            {"text": "Whose bones are these?", "next": "t_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_hub",
+          "speaker": "sr_ottoline",
+          "text": "*She tucks the string behind her ear.* Yes? Quickly; the ink freezes if I stop.",
+          "choices": [
+            {
+              "text": "Archivist Penhallow sent me to read the ash.",
+              "next": "t_main1",
+              "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "bones"}]
+            },
+            {
+              "text": "What are you measuring?",
+              "next": "t_offer",
+              "conditions": [{"type": "Flag", "key": "sr_bones_read"}, {"type": "QuestNotStarted", "key": "sr_singing_bones"}]
+            },
+            {"text": "The stones are still out of tune?", "next": "t_prog", "conditions": [{"type": "QuestActive", "key": "sr_singing_bones"}]},
+            {"text": "Whose bones are these?", "next": "t_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_main1",
+          "speaker": "sr_ottoline",
+          "text": "Then you've come to the right ribcage. Look: the ash settles thickest here, on the bones. Not on the rocks, not on the snow. *She runs a gloved finger down a rib; it comes away grey and warm.* It's drawn to them. These bones were a dragon too, once, and the ash... remembers.",
+          "choices": [
+            {
+              "text": "It's being pulled, like iron to a lodestone. Dragon to dragon.",
+              "check": {"skill": "Arcana", "dc": 13, "success": "t_main_arc", "failure": "t_main2"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "Burn marks on the ribs. Another dragon killed this one.",
+              "check": {"skill": "History", "dc": 13, "success": "t_main_hist", "failure": "t_main2"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {"text": "What does that mean?", "next": "t_main2"}
+          ]
+        },
+        {
+          "id": "t_main_arc",
+          "speaker": "sr_ottoline",
+          "text": "Exactly! Like to like. Oh, I like you. Penhallow said you were sharp; he didn't say you were USEFUL.",
+          "outcomes": [{"type": "GiveXP", "amount": 20}],
+          "next": "t_main2"
+        },
+        {
+          "id": "t_main_hist",
+          "speaker": "sr_ottoline",
+          "text": "Yes! Centuries ago. An old frost dragon, and something with fire got to it. I think we both know what lives at the top of this mountain.",
+          "outcomes": [{"type": "GiveXP", "amount": 20}],
+          "next": "t_main2"
+        },
+        {
+          "id": "t_main2",
+          "speaker": "sr_ottoline",
+          "text": "It means the Ashwyrm, Vyrmathra, is breathing in her sleep, and every breath carries ash down the mountain. Sometimes it carries other things. Seeds. That Hollow of yours, down in Lanternvale? I'd wager my doctorate it rode down on this ash, years ago.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_bones_read"}, {"type": "GiveXP", "amount": 40}],
+          "next": "t_main3"
+        },
+        {
+          "id": "t_main3",
+          "speaker": "sr_ottoline",
+          "text": "If you want to know who is fanning the fire, ask the Dragonsworn. Or rather, ask the Brightwater scout who's been watching them: Ivo. He's in the rocks south-east of their camp, pretending to be a boulder. He's quite good at it.",
+          "choices": [{"text": "I'll find Ivo."}]
+        },
+        {
+          "id": "t_offer",
+          "speaker": "sr_ottoline",
+          "text": "Tuning! These three standing stones were set round the bones by someone who knew dragons, long ago. They're meant to sing with the bones and keep them quiet. A lullaby, I think. But they've fallen out of tune, and the bones have started... humming. I need four rime cores from the elementals for a tuning fork, and then someone brave to tune the stones.",
+          "choices": [
+            {
+              "text": "I'll get your cores and tune the stones.",
+              "next": "t_acc",
+              "conditions": [{"type": "Level", "amount": 26}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_singing_bones"}]
+            },
+            {"text": "Maybe later.", "next": "t_hub"}
+          ]
+        },
+        {
+          "id": "t_acc",
+          "speaker": "sr_ottoline",
+          "text": "Wonderful! The rime elementals drift about the bones and the falls. When you have the cores, touch each stone and listen. If it fights you, it's out of tune. If it fights you a LOT, it is very out of tune, and I apologise in advance.",
+          "next": "t_hub"
+        },
+        {
+          "id": "t_prog",
+          "speaker": "sr_ottoline",
+          "text": "Four cores, three stones: west, north and east of the bones. Listen for the flat note.",
+          "next": "t_hub"
+        },
+        {
+          "id": "t_lore",
+          "speaker": "sr_ottoline",
+          "text": "An old frost dragon, older than the Heronguard, older than Brightwater. The locals call her Old Hoarfrost. See the scorch marks on the ribs? Something with fire killed her. Something that is still up there, asleep.",
+          "next": "t_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_ivo",
+      "start": "i_ret",
+      "nodes": [
+        {
+          "id": "i_ret",
+          "speaker": "sr_scout_ivo",
+          "text": "*A boulder grins at you.* I saw the banners come down. Four of them!",
+          "conditions": [{"type": "QuestState", "key": "sr_strike_the_colours", "value": "report"}],
+          "fallback": "i_greet",
+          "choices": [
+            {
+              "text": "The mountain belongs to itself again.",
+              "next": "i_ret2",
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_strike_the_colours"}]
+            }
+          ]
+        },
+        {
+          "id": "i_ret2",
+          "speaker": "sr_scout_ivo",
+          "text": "*Ivo laughs out loud, then remembers he's a rock and stops.* The herders will be singing about you. Badly, but sincerely. I'll put it in my report: 'Banners struck. Morale excellent. Scout extremely cold.'",
+          "next": "i_hub"
+        },
+        {
+          "id": "i_greet",
+          "speaker": "sr_scout_ivo",
+          "text": "*A boulder clears its throat.* Psst. Down here. No, don't look at me, look at the camp. Ivo Tallowmere, Brightwater river-scouts. Three weeks I've been a rock.",
+          "choices": [
+            {
+              "text": "Ottoline sent me. What are the Dragonsworn up to?",
+              "next": "i_main1",
+              "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "scout"}]
+            },
+            {
+              "text": "Anything else I can do?",
+              "next": "i_offer",
+              "conditions": [{"type": "Flag", "key": "sr_ivo_met"}, {"type": "QuestNotStarted", "key": "sr_strike_the_colours"}]
+            },
+            {"text": "How goes the rock business?", "next": "i_prog", "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}]},
+            {"text": "What news from the camp?", "next": "i_news"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_hub",
+          "speaker": "sr_scout_ivo",
+          "text": "*The boulder shifts its weight.* What else?",
+          "choices": [
+            {
+              "text": "Ottoline sent me. What are the Dragonsworn up to?",
+              "next": "i_main1",
+              "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "scout"}]
+            },
+            {
+              "text": "Anything else I can do?",
+              "next": "i_offer",
+              "conditions": [{"type": "Flag", "key": "sr_ivo_met"}, {"type": "QuestNotStarted", "key": "sr_strike_the_colours"}]
+            },
+            {"text": "How goes the rock business?", "next": "i_prog", "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}]},
+            {"text": "What news from the camp?", "next": "i_news"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_main1",
+          "speaker": "sr_scout_ivo",
+          "text": "Waiting. Sharpening. Singing; that's the worst of it. Their marshal, Kaedric the Kindled, has orders from Highlord Varkas himself, and every night he reads them out by the braziers and everyone cheers. I'd give a month's pay to read those orders. *He looks at you, then at your weapons, then back.* You wouldn't happen to be the sort of person who could get them?",
+          "outcomes": [{"type": "SetFlag", "key": "sr_ivo_met"}],
+          "choices": [
+            {"text": "I'll get those orders.", "next": "i_main2"},
+            {
+              "text": "Could I slip in and read them?",
+              "check": {"skill": "Stealth", "dc": 14, "success": "i_main_sneak", "failure": "i_main2"},
+              "once": true,
+              "tag": "STEALTH"
+            }
+          ]
+        },
+        {
+          "id": "i_main_sneak",
+          "speaker": "sr_scout_ivo",
+          "text": "*He considers you seriously.* You might. But Kaedric sleeps with them under his pillow, and he sleeps with his sword. You'll have to take them. Sorry. Here's what I've learned of his habits, at least.",
+          "outcomes": [{"type": "GiveXP", "amount": 20}],
+          "next": "i_main2"
+        },
+        {
+          "id": "i_main2",
+          "speaker": "sr_scout_ivo",
+          "text": "The command tent's in the middle of the camp, by the big brazier. Kaedric's never far from it. He's tough, burning-blade tough, and he keeps an Ashguard and a pyrecaller at his elbow, and a whelp that bites ankles. Clear the pickets first if you can. I'll be here. Being a rock.",
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "i_offer",
+          "speaker": "sr_scout_ivo",
+          "text": "Those banners. The ash-banners with the wyrm's eye. They plant them round the camp like they own the mountain, and every one of them keeps the herders from bringing their goats up. Strike four of them, and break four of their zealots while you're at it, and the mountain might remember it belongs to itself.",
+          "choices": [
+            {
+              "text": "Four banners, coming down.",
+              "next": "i_acc",
+              "conditions": [{"type": "Level", "amount": 27}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_strike_the_colours"}]
+            },
+            {"text": "Not yet.", "next": "i_hub"}
+          ]
+        },
+        {
+          "id": "i_acc",
+          "speaker": "sr_scout_ivo",
+          "text": "There's one by the pickets, one west of the camp, one by the tents and one by the old skull altar. Tear them down and stamp on the embers. Very satisfying.",
+          "next": "i_hub"
+        },
+        {
+          "id": "i_prog",
+          "speaker": "sr_scout_ivo",
+          "text": "Excellent, thank you. A bit damp. Four banners, a few zealots. I'll be counting.",
+          "next": "i_hub"
+        },
+        {
+          "id": "i_news",
+          "speaker": "sr_scout_ivo",
+          "text": "More of them every week. More whelps, too, tumbling down from the Roost. They feed them coal. *He shudders.* And every night the singing gets a bit louder, and the smoke over the Roost gets a bit thicker. Something's listening.",
+          "next": "i_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_glimmerwing",
+      "start": "g_ret",
+      "nodes": [
+        {
+          "id": "g_ret",
+          "speaker": "sr_glimmerwing",
+          "text": "*The great frost drake lowers her head until one pale eye is level with yours.* Icicle is home. I can hear her singing on the shelf: a terrible little song, all wrong. It is the best thing I have heard in a century.",
+          "conditions": [{"type": "QuestState", "key": "sr_ice_and_ember", "value": "report"}],
+          "fallback": "g_first",
+          "choices": [
+            {
+              "text": "She's safe now. And the whelps won't trouble your shelf.",
+              "next": "g_ret2",
+              "outcomes": [{"type": "CompleteQuest", "key": "sr_ice_and_ember"}]
+            }
+          ]
+        },
+        {
+          "id": "g_ret2",
+          "speaker": "sr_glimmerwing",
+          "text": "*She breathes out, very gently, and a fine frost settles on your shoulders like a blessing.* Take something from my hoard. Old scales. I shed them; you may as well wear them. Small warm things look well in frost.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_first",
+          "speaker": "sr_glimmerwing",
+          "text": "*What you took for a snowdrift opens one enormous pale eye.* Oh. A small warm thing. Don't be alarmed. I am very old, and very tired, and I have eaten nobody in a hundred years. Well. Nobody important.",
+          "conditions": [{"type": "NotFlag", "key": "sr_met_glimmer"}],
+          "fallback": "g_hub",
+          "outcomes": [{"type": "SetFlag", "key": "sr_met_glimmer"}],
+          "choices": [{"text": "...Hello.", "next": "g_hub"}]
+        },
+        {
+          "id": "g_hub",
+          "speaker": "sr_glimmerwing",
+          "text": "What brings a small warm thing up to my shelf?",
+          "choices": [
+            {"text": "What troubles you, old one?", "next": "g_offer", "conditions": [{"type": "QuestNotStarted", "key": "sr_ice_and_ember"}]},
+            {"text": "How is the hunting?", "next": "g_prog", "conditions": [{"type": "QuestActive", "key": "sr_ice_and_ember"}]},
+            {"text": "Tell me about the Ashwyrm.", "next": "g_lore1"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "g_offer",
+          "speaker": "sr_glimmerwing",
+          "text": "Two things gnaw at me. First, the Ashwyrm's whelps: her brood comes tumbling down from the Roost, setting the snow alight and eating my fish. Second... *her voice drops to a rumble* ...the Dragonsworn have taken my granddaughter, Icicle. They put an ember-collar on her and keep her in a pen on the Switchbacks. They mean to make a war-drake of her. I am too old and too large to be subtle. You are small. Smallness is a gift.",
+          "choices": [
+            {
+              "text": "I'll thin the whelps and free Icicle.",
+              "next": "g_acc",
+              "conditions": [{"type": "Level", "amount": 26}],
+              "outcomes": [{"type": "StartQuest", "key": "sr_ice_and_ember"}, {"type": "SetFlag", "key": "sr_brood_hunt"}]
+            },
+            {"text": "I'm not ready for that yet.", "next": "g_hub"}
+          ]
+        },
+        {
+          "id": "g_acc",
+          "speaker": "sr_glimmerwing",
+          "text": "The pen is inside the bend of the road, below the second switchback. The whelpmaster keeps the key to her collar on his belt. And the whelps... eight should teach the rest some manners.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_prog",
+          "speaker": "sr_glimmerwing",
+          "text": "The whelps are louder than ever. And Icicle is still in her pen; I can feel it. Like a splinter.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_lore1",
+          "speaker": "sr_glimmerwing",
+          "text": "Vyrmathra. *The name comes out as a sigh of frost.* She was old when I hatched. She sleeps in the Roost with her heart banked like a forge, and the Dragonsworn sing to her every night, to wake her. Varkas sings loudest. When she wakes, the ash will become fire, and the fire will come down this mountain like water.",
+          "next": "g_lore2"
+        },
+        {
+          "id": "g_lore2",
+          "speaker": "sr_glimmerwing",
+          "text": "And yet she was beautiful, once. That is the sad thing about dragons. We are always beautiful, once. *Some of my kin still wear Dragonsworn collars. The ash gets into them. If you meet them... be quick, and be kind.*",
+          "next": "g_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_icicle",
+      "start": "home",
+      "nodes": [
+        {
+          "id": "home",
+          "speaker": "narrator",
+          "text": "*Icicle is curled against the rock, singing a terrible little song to herself. She thumps her tail when she sees you and sneezes a puff of frost.*",
+          "conditions": [{"type": "Flag", "key": "sr_drake_freed"}],
+          "fallback": "pen",
+          "choices": [{"text": "(Scratch her under the chin.)"}]
+        },
+        {
+          "id": "pen",
+          "speaker": "narrator",
+          "text": "*A young frost drake, no bigger than a hay cart, is chained to a stake by a glowing ember-collar. She flinches when you come close, then sniffs, then stares at you with enormous pale eyes.*",
+          "choices": [
+            {
+              "text": "(Unlock the collar with the Whelpmaster's key.)",
+              "next": "free",
+              "conditions": [{"type": "HasItem", "key": "sr_whelpmaster_key", "amount": 1}],
+              "outcomes": [{"type": "TakeItem", "key": "sr_whelpmaster_key", "amount": 1}]
+            },
+            {
+              "text": "(Break the chain.)",
+              "check": {"skill": "Athletics", "dc": 16, "success": "free", "failure": "fail"},
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Pick the collar's lock.)",
+              "check": {"skill": "SleightOfHand", "dc": 14, "success": "free", "failure": "fail"},
+              "once": true,
+              "tag": "SLEIGHT OF HAND"
+            },
+            {
+              "text": "(Smother the collar's ember with frost magic.)",
+              "next": "free",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {"text": "(Come back with the key.)"}
+          ]
+        },
+        {
+          "id": "fail",
+          "speaker": "narrator",
+          "text": "*The collar holds. Icicle whimpers, then licks your hand with a tongue like a frozen flannel. Try something else.*",
+          "next": "pen"
+        },
+        {
+          "id": "free",
+          "speaker": "narrator",
+          "text": "*The collar drops into the snow and hisses out. Icicle shakes herself all over like a wet dog, sneezes a little cloud of frost at you, and bounds away up the mountain towards the high shelf, looking back twice.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_drake_freed"},
+            {"type": "GiveXP", "amount": 55},
+            {"type": "Approval", "key": "lys", "amount": 3},
+            {"type": "Approval", "key": "seren", "amount": 3}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_pell",
+      "start": "home",
+      "nodes": [
+        {
+          "id": "home",
+          "speaker": "sr_pell",
+          "text": "*Brother Pell is wrapped in three of Hilde's quilts with a mug of tea, looking much happier.* You came all that way, for a lamplighter with no sense of direction. Mother Wren will hear about this, and she'll knit you something, and you will have to wear it.",
+          "conditions": [{"type": "Flag", "key": "enc_enc_sr_pell_ambush"}],
+          "fallback": "lost",
+          "choices": [{"text": "What was the lantern for?", "next": "lore"}, {"text": "Glad you're safe, Brother."}]
+        },
+        {
+          "id": "lore",
+          "speaker": "sr_pell",
+          "text": "A lantern for the twenty-nine. Mother Wren keeps a candle for each of them in the Chapel of Small Lights, but she always said someone ought to light one where they fell. *He looks at his lantern.* I was told it was 'up and to the left'. It turns out mountains have a great deal of up, and a great deal of left.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "lost",
+          "speaker": "sr_pell",
+          "text": "*A round young man in undyed wool sits in a hollow of snow, hugging a lit lantern. One ankle is bandaged with what used to be his scarf.* Oh! Oh, thank the Small Lights. I've been talking to that wolf for an hour. He is not a good listener.",
+          "conditions": [{"type": "NotFlag", "key": "sr_pell_following"}],
+          "fallback": "walk2",
+          "choices": [
+            {"text": "Liora, it's someone from your chapel.", "next": "liora", "conditions": [{"type": "InParty", "key": "liora"}], "tag": "LIORA"},
+            {"text": "Can you walk?", "next": "walk"}
+          ]
+        },
+        {
+          "id": "liora",
+          "speaker": "liora",
+          "text": "Pell! Mother Wren has lit a candle for you every night. *Liora kneels and checks his ankle, very gently.* Sprained, not broken. You'll walk. Slowly, and leaning on me. And you are never, ever going up and to the left again.",
+          "outcomes": [{"type": "Approval", "key": "liora", "amount": 5}],
+          "next": "go"
+        },
+        {
+          "id": "walk",
+          "speaker": "sr_pell",
+          "text": "On one leg. Rather badly. *He gets up, wobbles, and sits down again.* Very badly.",
+          "choices": [
+            {"text": "Let me see to that ankle.", "next": "healed", "conditions": [{"type": "Class", "key": "Priest"}], "tag": "PRIEST"},
+            {"text": "Hold still. The Light will mend it.", "next": "healed", "conditions": [{"type": "Class", "key": "Paladin"}], "tag": "PALADIN"},
+            {
+              "text": "The water in you remembers how to heal. Let it.",
+              "next": "healed",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {"text": "Lean on me. We'll go slowly.", "next": "go"},
+            {
+              "text": "I'll carry you.",
+              "check": {"skill": "Athletics", "dc": 12, "success": "carry", "failure": "carry_f"},
+              "once": true,
+              "tag": "ATHLETICS"
+            }
+          ]
+        },
+        {
+          "id": "healed",
+          "speaker": "sr_pell",
+          "text": "*Warmth spreads through the bandage. He wiggles his foot in wonder.* Oh! Oh, that's lovely. I could kiss you. I won't. I'm in holy orders and you're very armoured.",
+          "outcomes": [{"type": "GiveXP", "amount": 20}],
+          "next": "go"
+        },
+        {
+          "id": "carry",
+          "speaker": "sr_pell",
+          "text": "*You hoist him over your shoulders like a sack of flour. He is surprisingly light, and surprisingly talkative.* This is much better than walking. Is this how heroes travel?",
+          "next": "go"
+        },
+        {
+          "id": "carry_f",
+          "speaker": "sr_pell",
+          "text": "*You hoist him, stagger, and put him down again in a drift. He is surprisingly heavy.* It's the tea, I think. Shall I just lean, then?",
+          "next": "go"
+        },
+        {
+          "id": "go",
+          "speaker": "sr_pell",
+          "text": "Then let's go, before... *a howl rolls down the slope, then another, and another* ...before that. Oh dear. Oh, they've brought friends.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_pell_following"}, {"type": "StartCombat", "key": "enc_sr_pell_ambush"}],
+          "choices": [{"text": "(Draw your weapons.)"}]
+        },
+        {
+          "id": "walk2",
+          "speaker": "sr_pell",
+          "text": "*Pell holds his lantern up bravely, which is to say with both hands, shaking.* The wolves! Mind the wolves!",
+          "choices": [{"text": "(Draw your weapons.)", "outcomes": [{"type": "StartCombat", "key": "enc_sr_pell_ambush"}]}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_dragon_bones",
+      "start": "db_read",
+      "nodes": [
+        {
+          "id": "db_read",
+          "speaker": "narrator",
+          "text": "*The great ribs hum, very faintly, in the wind. The ash between them is warm.*",
+          "conditions": [{"type": "Flag", "key": "sr_bones_read"}],
+          "fallback": "db_q",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "db_q",
+          "speaker": "narrator",
+          "text": "*Ash lies thick between the ribs, grey and faintly warm, though the snow round the bones is frozen hard. It does not blow away. It clings, the way iron filings cling to a lodestone.*",
+          "conditions": [{"type": "QuestState", "key": "mq2_ash_on_the_wind", "value": "bones"}],
+          "fallback": "db_idle",
+          "choices": [
+            {
+              "text": "(Feel for whatever is drawing the ash.)",
+              "check": {"skill": "Arcana", "dc": 13, "success": "db_arc", "failure": "db_fail"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Say a word for the old dragon, and listen.)",
+              "check": {"skill": "Religion", "dc": 13, "success": "db_rel", "failure": "db_fail"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "(Study how the ash has settled.)",
+              "check": {"skill": "Nature", "dc": 12, "success": "db_nat", "failure": "db_fail"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "(Look for the Brightwater scholar.)", "next": "db_otto"}
+          ]
+        },
+        {
+          "id": "db_arc",
+          "speaker": "narrator",
+          "text": "*Under your palm the bone is warm as a hearthstone, and something pulls at the ash: dragon calling to dragon, the old dead one to the great sleeping one above. Every breath the Ashwyrm takes, these bones answer.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_bones_read"}, {"type": "GiveXP", "amount": 40}],
+          "next": "db_after"
+        },
+        {
+          "id": "db_rel",
+          "speaker": "narrator",
+          "text": "*You speak a few quiet words, and in the hush after them you hear it: a long, slow breath, very far above, and the bones sighing back. Something on top of this mountain is asleep, and dreaming of fire.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_bones_read"}, {"type": "GiveXP", "amount": 40}],
+          "next": "db_after"
+        },
+        {
+          "id": "db_nat",
+          "speaker": "narrator",
+          "text": "*The ash lies in drifts that point uphill, against the wind, towards the Roost. It is not blowing down the mountain at all. It is being breathed.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_bones_read"}, {"type": "GiveXP", "amount": 40}],
+          "next": "db_after"
+        },
+        {
+          "id": "db_fail",
+          "speaker": "narrator",
+          "text": "*You learn that ash is warm, that it gets into your boots, and that you are being watched with great interest by a scholar with a measuring string.*",
+          "next": "db_q"
+        },
+        {
+          "id": "db_after",
+          "speaker": "narrator",
+          "text": "*A Brightwater scout, Ottoline said, watches the Dragonsworn from the rocks south-east of their camp. Perhaps he knows who is fanning the fire.*",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "db_otto",
+          "speaker": "narrator",
+          "text": "*By a tent and a small campfire, a tall woman in a fur gown waves her measuring string at you. Perhaps she can help you read the bones.*",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "db_idle",
+          "speaker": "narrator",
+          "text": "*The bones of a dragon, older than the mountain's name. Scorch marks scar the great ribs.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_heron_tower",
+      "start": "ht_done",
+      "nodes": [
+        {
+          "id": "ht_done",
+          "speaker": "narrator",
+          "text": "*The Heronguard tower is quiet. The faded banner snaps in the wind, and for a moment it looks almost blue again.*",
+          "conditions": [{"type": "QuestComplete", "key": "sr_twenty_nine"}],
+          "fallback": "ht_has",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ht_has",
+          "speaker": "narrator",
+          "text": "*You have the journal. The tower has given up its secret.*",
+          "conditions": [{"type": "HasItem", "key": "sr_aubric_journal", "amount": 1}],
+          "fallback": "ht_nest",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ht_nest",
+          "speaker": "narrator",
+          "text": "*The tower door hangs open. Inside, a harpy nest of stolen blankets, spoons and one very surprised-looking teapot fills the stairwell, and something up top shrieks at you.*",
+          "conditions": [{"type": "NotFlag", "key": "enc_enc_sr_tower_harpies"}],
+          "fallback": "ht_q",
+          "choices": [{"text": "(Back off for now.)"}]
+        },
+        {
+          "id": "ht_q",
+          "speaker": "narrator",
+          "text": "*With the harpies gone the tower is very quiet. A broken stair, a cold hearth, a rack where heron-saddles hung. Twelve years of snow have drifted in through the breach.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_twenty_nine"}],
+          "fallback": "ht_idle",
+          "choices": [
+            {
+              "text": "Ysolde, where would he have kept it?",
+              "next": "ht_ysolde",
+              "conditions": [{"type": "InParty", "key": "ysolde"}],
+              "tag": "YSOLDE"
+            },
+            {
+              "text": "(Search the hearth and the walls.)",
+              "check": {"skill": "Investigation", "dc": 13, "success": "ht_found", "failure": "ht_long"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "(Search everywhere, slowly.)", "next": "ht_long"}
+          ]
+        },
+        {
+          "id": "ht_ysolde",
+          "speaker": "ysolde",
+          "text": "*Ysolde stands in the doorway for a long moment before she steps inside.* Under the hearthstone. He kept his pipe there, and his letters from his sister, and his truly terrible poetry. *She lifts the stone. The journal is there, wrapped in oilcloth.*",
+          "outcomes": [
+            {"type": "GiveItem", "key": "sr_aubric_journal", "amount": 1},
+            {"type": "GiveXP", "amount": 40},
+            {"type": "Approval", "key": "ysolde", "amount": 5}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ht_found",
+          "speaker": "narrator",
+          "text": "*A loose hearthstone, worn smooth at one corner by a thumb. Underneath, wrapped in oilcloth: a field journal with a heron stamped on the cover.*",
+          "outcomes": [{"type": "GiveItem", "key": "sr_aubric_journal", "amount": 1}, {"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ht_long",
+          "speaker": "narrator",
+          "text": "*You search the whole tower: the stair, the beams, the harpy nest (eleven spoons, one sock) and at last, under the hearthstone, an oilcloth packet. Aubric's journal.*",
+          "outcomes": [{"type": "GiveItem", "key": "sr_aubric_journal", "amount": 1}, {"type": "GiveXP", "amount": 30}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ht_idle",
+          "speaker": "narrator",
+          "text": "*The Heronguard tower. A faded blue banner hangs from the broken top. Nobody has lived here for twelve years, except harpies.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_stone_w",
+      "start": "st_done",
+      "nodes": [
+        {
+          "id": "st_done",
+          "speaker": "narrator",
+          "text": "*The western stone hums softly, in tune with the bones.*",
+          "conditions": [{"type": "Flag", "key": "sr_stone_w"}],
+          "fallback": "st_q",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "st_q",
+          "speaker": "narrator",
+          "text": "*The western standing stone is furred with frost. When you touch it, it rings: one long note, just a little flat against the slow hum of the bones. The rime cores in your pack hum back, in tune.*",
+          "conditions": [{"type": "QuestState", "key": "sr_singing_bones", "value": "stones"}],
+          "fallback": "st_idle",
+          "choices": [
+            {
+              "text": "(Tune the stone gently against the rime cores.)",
+              "check": {"skill": "Arcana", "dc": 14, "success": "st_tuned", "failure": "st_wake"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shape the note with a thread of frost magic.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {
+              "text": "(Ask the stone's spirit to sing with the others.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {"text": "(Strike the stone hard with a rime core.)", "next": "st_wake"}
+          ]
+        },
+        {
+          "id": "st_tuned",
+          "speaker": "narrator",
+          "text": "*The note slides up, wavers, and settles. For a moment the stone and the bones sing together, and the ash between the ribs lies still.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_stone_w"}, {"type": "GiveXP", "amount": 35}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "st_wake",
+          "speaker": "narrator",
+          "text": "*The stone shrieks. The note comes right, but the snow round the stone stands up, and keeps standing up, and has fists.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_stone_w_woke"},
+            {"type": "SetFlag", "key": "sr_stone_w"},
+            {"type": "StartCombat", "key": "enc_sr_stone_guard_w"}
+          ]
+        },
+        {
+          "id": "st_idle",
+          "speaker": "narrator",
+          "text": "*A standing stone, furred with frost. It rings faintly when the wind blows across it.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_stone_n",
+      "start": "st_done",
+      "nodes": [
+        {
+          "id": "st_done",
+          "speaker": "narrator",
+          "text": "*The northern stone hums softly, in tune with the bones.*",
+          "conditions": [{"type": "Flag", "key": "sr_stone_n"}],
+          "fallback": "st_q",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "st_q",
+          "speaker": "narrator",
+          "text": "*The northern standing stone is furred with frost. When you touch it, it rings: one long note, just a little flat against the slow hum of the bones. The rime cores in your pack hum back, in tune.*",
+          "conditions": [{"type": "QuestState", "key": "sr_singing_bones", "value": "stones"}],
+          "fallback": "st_idle",
+          "choices": [
+            {
+              "text": "(Tune the stone gently against the rime cores.)",
+              "check": {"skill": "Arcana", "dc": 14, "success": "st_tuned", "failure": "st_wake"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shape the note with a thread of frost magic.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {
+              "text": "(Ask the stone's spirit to sing with the others.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {"text": "(Strike the stone hard with a rime core.)", "next": "st_wake"}
+          ]
+        },
+        {
+          "id": "st_tuned",
+          "speaker": "narrator",
+          "text": "*The note slides up, wavers, and settles. For a moment the stone and the bones sing together, and the ash between the ribs lies still.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_stone_n"}, {"type": "GiveXP", "amount": 35}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "st_wake",
+          "speaker": "narrator",
+          "text": "*The stone shrieks. The note comes right, but the snow round the stone stands up, and keeps standing up, and has fists.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_stone_n_woke"},
+            {"type": "SetFlag", "key": "sr_stone_n"},
+            {"type": "StartCombat", "key": "enc_sr_stone_guard_n"}
+          ]
+        },
+        {
+          "id": "st_idle",
+          "speaker": "narrator",
+          "text": "*A standing stone, furred with frost. It rings faintly when the wind blows across it.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_stone_e",
+      "start": "st_done",
+      "nodes": [
+        {
+          "id": "st_done",
+          "speaker": "narrator",
+          "text": "*The eastern stone hums softly, in tune with the bones.*",
+          "conditions": [{"type": "Flag", "key": "sr_stone_e"}],
+          "fallback": "st_q",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "st_q",
+          "speaker": "narrator",
+          "text": "*The eastern standing stone is furred with frost. When you touch it, it rings: one long note, just a little flat against the slow hum of the bones. The rime cores in your pack hum back, in tune.*",
+          "conditions": [{"type": "QuestState", "key": "sr_singing_bones", "value": "stones"}],
+          "fallback": "st_idle",
+          "choices": [
+            {
+              "text": "(Tune the stone gently against the rime cores.)",
+              "check": {"skill": "Arcana", "dc": 14, "success": "st_tuned", "failure": "st_wake"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shape the note with a thread of frost magic.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Mage"}],
+              "tag": "MAGE"
+            },
+            {
+              "text": "(Ask the stone's spirit to sing with the others.)",
+              "next": "st_tuned",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {"text": "(Strike the stone hard with a rime core.)", "next": "st_wake"}
+          ]
+        },
+        {
+          "id": "st_tuned",
+          "speaker": "narrator",
+          "text": "*The note slides up, wavers, and settles. For a moment the stone and the bones sing together, and the ash between the ribs lies still.*",
+          "outcomes": [{"type": "SetFlag", "key": "sr_stone_e"}, {"type": "GiveXP", "amount": 35}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "st_wake",
+          "speaker": "narrator",
+          "text": "*The stone shrieks. The note comes right, but the snow round the stone stands up, and keeps standing up, and has fists.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "sr_stone_e_woke"},
+            {"type": "SetFlag", "key": "sr_stone_e"},
+            {"type": "StartCombat", "key": "enc_sr_stone_guard_e"}
+          ]
+        },
+        {
+          "id": "st_idle",
+          "speaker": "narrator",
+          "text": "*A standing stone, furred with frost. It rings faintly when the wind blows across it.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_banner_1",
+      "start": "bn_q",
+      "nodes": [
+        {
+          "id": "bn_q",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn ash-banner, its ember sigil glaring down the valley like an eye.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}],
+          "fallback": "bn_idle",
+          "choices": [
+            {
+              "text": "(Tear it down and stamp out the embers.)",
+              "next": "bn_done",
+              "outcomes": [{"type": "SetFlag", "key": "sr_banner_1_struck"}, {"type": "GiveXP", "amount": 15}]
+            },
+            {"text": "(Leave it standing for now.)"}
+          ]
+        },
+        {
+          "id": "bn_done",
+          "speaker": "narrator",
+          "text": "*The banner comes down in a shower of sparks and lands in the snow with a long, deeply satisfying hiss.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "bn_idle",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn banner. The ember eye in its sigil seems to follow you.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_banner_2",
+      "start": "bn_q",
+      "nodes": [
+        {
+          "id": "bn_q",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn ash-banner, its ember sigil glaring down the valley like an eye.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}],
+          "fallback": "bn_idle",
+          "choices": [
+            {
+              "text": "(Tear it down and stamp out the embers.)",
+              "next": "bn_done",
+              "outcomes": [{"type": "SetFlag", "key": "sr_banner_2_struck"}, {"type": "GiveXP", "amount": 15}]
+            },
+            {"text": "(Leave it standing for now.)"}
+          ]
+        },
+        {
+          "id": "bn_done",
+          "speaker": "narrator",
+          "text": "*The banner comes down in a shower of sparks and lands in the snow with a long, deeply satisfying hiss.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "bn_idle",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn banner. The ember eye in its sigil seems to follow you.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_banner_3",
+      "start": "bn_q",
+      "nodes": [
+        {
+          "id": "bn_q",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn ash-banner, its ember sigil glaring down the valley like an eye.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}],
+          "fallback": "bn_idle",
+          "choices": [
+            {
+              "text": "(Tear it down and stamp out the embers.)",
+              "next": "bn_done",
+              "outcomes": [{"type": "SetFlag", "key": "sr_banner_3_struck"}, {"type": "GiveXP", "amount": 15}]
+            },
+            {"text": "(Leave it standing for now.)"}
+          ]
+        },
+        {
+          "id": "bn_done",
+          "speaker": "narrator",
+          "text": "*The banner comes down in a shower of sparks and lands in the snow with a long, deeply satisfying hiss.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "bn_idle",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn banner. The ember eye in its sigil seems to follow you.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_banner_4",
+      "start": "bn_q",
+      "nodes": [
+        {
+          "id": "bn_q",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn ash-banner, its ember sigil glaring down the valley like an eye.*",
+          "conditions": [{"type": "QuestActive", "key": "sr_strike_the_colours"}],
+          "fallback": "bn_idle",
+          "choices": [
+            {
+              "text": "(Tear it down and stamp out the embers.)",
+              "next": "bn_done",
+              "outcomes": [{"type": "SetFlag", "key": "sr_banner_4_struck"}, {"type": "GiveXP", "amount": 15}]
+            },
+            {"text": "(Leave it standing for now.)"}
+          ]
+        },
+        {
+          "id": "bn_done",
+          "speaker": "narrator",
+          "text": "*The banner comes down in a shower of sparks and lands in the snow with a long, deeply satisfying hiss.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "bn_idle",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn banner. The ember eye in its sigil seems to follow you.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sr_frozen_falls",
+      "start": "ff_open",
+      "nodes": [
+        {
+          "id": "ff_open",
+          "speaker": "narrator",
+          "text": "*Behind the curtain of icicles, the carved doorway of the Frozen Sanctum breathes out a slow, cold draught.*",
+          "conditions": [{"type": "Flag", "key": "found_frozen_sanctum"}],
+          "fallback": "ff_q",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ff_q",
+          "speaker": "narrator",
+          "text": "*A spire of blue ice has grown up against the frozen falls, so clear you can see the rock behind it. Somewhere in there, water still mutters to itself. The overhang to the west is hung with icicles as thick as pillars.*",
+          "choices": [
+            {
+              "text": "(Study the ice where it meets the rock.)",
+              "check": {"skill": "Investigation", "dc": 14, "success": "ff_found", "failure": "ff_fail"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Feel for the draught with a wet finger.)",
+              "check": {"skill": "Survival", "dc": 15, "success": "ff_found", "failure": "ff_fail"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {"text": "(Listen to the water behind the ice.)", "next": "ff_found", "conditions": [{"type": "Class", "key": "Shaman"}], "tag": "SHAMAN"},
+            {"text": "(Step back.)"}
+          ]
+        },
+        {
+          "id": "ff_found",
+          "speaker": "narrator",
+          "text": "*The ice to the west is not lying against rock at all. It hangs over a carved lintel, and when you snap away an icicle, a cold draught breathes out of a doorway that has not been opened in twelve years.*",
+          "outcomes": [{"type": "SetFlag", "key": "found_frozen_sanctum"}, {"type": "GiveXP", "amount": 40}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ff_fail",
+          "speaker": "narrator",
+          "text": "*Ice, more ice, and a very cold nose. Whatever the falls are hiding, they are hiding it well.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "lootTables": [
+    {
+      "id": "lt_sr_wolf",
+      "goldMin": 250,
+      "goldMax": 600,
+      "entries": [{"item": "sr_frost_wolf_pelt", "chance": 75}, {"random": true, "chance": 6, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_sr_rimefang",
+      "goldMin": 1800,
+      "goldMax": 3000,
+      "entries": [
+        {"item": "sr_frost_wolf_pelt", "min": 2, "max": 2},
+        {"item": "sr_rimefang_fang", "chance": 60},
+        {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    },
+    {"id": "lt_sr_yeti", "goldMin": 400, "goldMax": 900, "entries": [{"random": true, "chance": 10, "quality": "Uncommon"}]},
+    {
+      "id": "lt_sr_whitebrow",
+      "goldMin": 1800,
+      "goldMax": 3000,
+      "entries": [{"item": "sr_whitebrow_mitts", "chance": 60}, {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}]
+    },
+    {
+      "id": "lt_sr_harpy",
+      "goldMin": 350,
+      "goldMax": 800,
+      "entries": [{"item": "sr_hut_bell", "chance": 65}, {"random": true, "chance": 8, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_sr_shrikeclaw",
+      "goldMin": 2000,
+      "goldMax": 3400,
+      "entries": [
+        {"item": "sr_hut_bell", "min": 2, "max": 2},
+        {"item": "sr_shrikeclaw_talons", "chance": 60},
+        {"random": true, "chance": 35, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    },
+    {"id": "lt_sr_ogre", "goldMin": 600, "goldMax": 1300, "entries": [{"random": true, "chance": 10, "quality": "Uncommon"}]},
+    {
+      "id": "lt_sr_gorrum",
+      "goldMin": 2600,
+      "goldMax": 4200,
+      "entries": [{"item": "sr_gorrums_second_best_club", "chance": 60}, {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}]
+    },
+    {
+      "id": "lt_sr_ice_elemental",
+      "goldMin": 300,
+      "goldMax": 700,
+      "entries": [{"item": "sr_rime_core"}, {"random": true, "chance": 6, "quality": "Uncommon"}]
+    },
+    {"id": "lt_sr_ash_elemental", "goldMin": 300, "goldMax": 700, "entries": [{"random": true, "chance": 10, "quality": "Uncommon"}]},
+    {"id": "lt_sr_whelp", "goldMin": 150, "goldMax": 400, "entries": [{"random": true, "chance": 4, "quality": "Uncommon"}]},
+    {
+      "id": "lt_sr_collared_drake",
+      "goldMin": 2400,
+      "goldMax": 3800,
+      "entries": [{"item": "sr_ember_collar_pendant", "chance": 60}, {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}]
+    },
+    {
+      "id": "lt_sr_dragonsworn",
+      "goldMin": 500,
+      "goldMax": 1100,
+      "entries": [{"random": true, "chance": 10, "quality": "Uncommon"}, {"random": true, "chance": 2, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_sr_whelpmaster",
+      "goldMin": 700,
+      "goldMax": 1300,
+      "entries": [{"item": "sr_whelpmaster_key"}, {"random": true, "chance": 12, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_sr_ashguard",
+      "goldMin": 1500,
+      "goldMax": 2600,
+      "entries": [{"random": true, "chance": 30, "quality": "Uncommon", "itemLevelOffset": 1}, {"random": true, "chance": 6, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_sr_marshal",
+      "goldMin": 6000,
+      "goldMax": 9000,
+      "entries": [
+        {"item": "sr_varkas_orders"},
+        {"pool": ["sr_kaedrics_kindled_blade", "sr_marshals_ember_mantle", "sr_pyrecallers_cowl", "sr_vanguard_scale_jerkin"]},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_sr_chest_ogre",
+      "goldMin": 2500,
+      "goldMax": 4000,
+      "entries": [{"item": "food_lantern_stew", "min": 2, "max": 4}, {"random": true, "quality": "Uncommon"}, {"random": true, "chance": 20, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_sr_chest_nest",
+      "goldMin": 1500,
+      "goldMax": 3000,
+      "entries": [{"item": "sr_hut_bell", "max": 2}, {"random": true, "quality": "Uncommon"}, {"random": true, "chance": 15, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_sr_chest_heronguard",
+      "goldMin": 2000,
+      "goldMax": 3500,
+      "entries": [
+        {"item": "potion_healing", "min": 2, "max": 3},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 35, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_sr_chest_vanguard",
+      "goldMin": 4000,
+      "goldMax": 6500,
+      "entries": [{"random": true, "quality": "Uncommon", "itemLevelOffset": 1}, {"random": true, "chance": 45, "quality": "Rare", "itemLevelOffset": 1}]
+    },
+    {
+      "id": "lt_sr_chest_cache",
+      "goldMin": 3000,
+      "goldMax": 5000,
+      "entries": [{"item": "sr_food_yak_dumplings", "min": 3, "max": 5}, {"random": true, "quality": "Rare"}]
+    }
+  ]
+}

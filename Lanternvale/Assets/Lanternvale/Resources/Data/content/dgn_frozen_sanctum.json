@@ -1,5 +1,5 @@
 {
-  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: skyreach. Expand freely; keep every id, transition and spawn of §1.",
+  "_note": "Skyreach Peaks (Docs/Expansion.md §8, builder skyreach, prefixes sr / dg6). The Frozen Sanctum (hidden dungeon, 30-32): map, creatures cr_dg6_*, gear, loot, The Long Watch.",
   "maps": [
     {
       "id": "dgn_frozen_sanctum",
@@ -9,15 +9,485 @@
       "depth": 44,
       "skyTop": "#16141c",
       "skyBottom": "#2e2a36",
-      "ground": "ground_shrine",
+      "ground": "ground_ice",
       "groundTile": 8,
-      "groundTint": "#8c8698",
+      "groundTint": "#c8d8ec",
       "biome": "ice_cave",
       "environment": "cave",
       "levelMin": 30,
       "levelMax": 32,
       "dungeon": true,
-      "npcs": [],
+      "fill": 0.5,
+      "paths": [
+        {
+          "art": "decal_path_stone",
+          "points": [[0, 22], [8, 22], [16, 22.2], [24, 21.6], [32, 21.4], [40, 21.2], [46, 21.0], [50, 21.0]],
+          "width": 2.6
+        },
+        {"art": "decal_path_stone", "points": [[20.4, 22.0], [21.2, 27.0], [23.4, 32.4], [26.4, 36.0]], "width": 1.8},
+        {"art": "decal_path_stone", "points": [[39.0, 21.4], [40.6, 27.6], [42.6, 33.0], [45.4, 35.6]], "width": 1.8},
+        {"art": "decal_path_dirt", "points": [[20.6, 21.6], [21.6, 15.4], [23.6, 10.6], [26.0, 8.0]], "width": 1.6}
+      ],
+      "water": [
+        {"points": [[29.6, 4.2], [33.4, 3.0], [37.4, 3.8], [38.6, 7.0], [36.0, 9.4], [32.0, 9.0], [29.4, 7.2]], "closed": true},
+        {"points": [[14.6, 37.6], [16.6, 36.4], [18.8, 37.2], [18.6, 39.4], [16.2, 40.2], [14.4, 39.4]], "closed": true}
+      ],
+      "props": [
+        {"art": "prop_cave_wall", "pos": [3.0, 12.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [7.4, 12.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [11.8, 12.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [16.2, 12.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [3.0, 31.4], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [7.4, 31.4], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [11.8, 31.4], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [16.0, 31.4], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [27.2, 13.8], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [31.6, 13.8], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [36.0, 13.8], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [27.6, 29.8], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [32.0, 29.8], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [36.4, 29.8], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [47.6, 31.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [52.0, 31.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [56.4, 31.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [47.0, 10.6], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [51.4, 10.6], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [55.8, 10.6], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_ice_pillar", "pos": [41.6, 12.4], "collider": {"w": 1.8, "h": 1.2}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [42.2, 16.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [42.4, 27.2],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_ice_pillar", "pos": [41.4, 30.4], "collider": {"w": 1.8, "h": 1.2}},
+        {"art": "prop_frozen_statue", "pos": [6.4, 17.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [6.4, 26.8], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [10.4, 17.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [10.4, 26.8], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [14.6, 17.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [14.6, 26.8], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.2, 17.0],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.2, 27.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [18.4, 17.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [18.2, 27.6],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_bones", "pos": [8.6, 20.2]},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [1.8, 14.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [1.8, 29.8],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {"art": "prop_crypt_pillar", "pos": [20.4, 34.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [20.6, 41.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [30.8, 34.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [31.0, 41.0], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_brazier",
+          "pos": [22.4, 39.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 0.9, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [29.4, 39.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 0.9, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_altar",
+          "pos": [25.8, 42.0],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#ffd28a", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true},
+          "interact": "dg6_hymn_altar",
+          "text": "A stone altar with a hymn carved round its edge. The letters are full of frost, so the words read white: SLEEP, AND BE STILL, AND DREAM OF SNOW."
+        },
+        {"art": "prop_frozen_statue", "pos": [13.0, 41.0], "collider": {"w": 1.4, "h": 1.0}},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [34.6, 41.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {"art": "prop_ice_spire", "pos": [34.0, 35.8], "collider": {"w": 1.4, "h": 1.0}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [21.2, 4.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_ice_pillar", "pos": [40.6, 6.6], "collider": {"w": 1.8, "h": 1.2}},
+        {"art": "prop_bones", "pos": [22.8, 9.2]},
+        {"art": "prop_bones", "pos": [28.4, 10.6]},
+        {"art": "prop_bonepile", "pos": [19.6, 7.8], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [34.2, 11.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [12.6, 4.4],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_frozen_statue",
+          "pos": [7.6, 6.8],
+          "collider": {"w": 1.4, "h": 1.0},
+          "interact": "dg6_lost_squire",
+          "text": "A young squire frozen in the ice, one hand still on a horn at his belt. Somebody has scratched a heron on the ice over his heart, from the outside."
+        },
+        {"art": "prop_campfire", "pos": [27.4, 24.8], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tent", "pos": [34.8, 17.8], "flip": true, "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_frozen_statue", "pos": [25.0, 17.8], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [37.6, 23.2], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [25.6, 27.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_banner", "pos": [37.6, 27.6], "collider": {"w": 0.4, "h": 0.3}, "sway": true, "tint": "#7fa6d6"},
+        {"art": "prop_crate", "pos": [24.4, 25.2], "collider": {"w": 0.9, "h": 0.6}},
+        {
+          "art": "prop_brazier",
+          "pos": [28.6, 17.2],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 0.9, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [38.6, 16.8],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.8, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_altar",
+          "pos": [50.8, 41.6],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#ffd28a", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true},
+          "interact": "dg6_chantry_altar",
+          "text": "The hierophant's altar. A single candle still burns on it, blue and without heat, as it has burned for five hundred years."
+        },
+        {"art": "prop_sarcophagus", "pos": [40.0, 40.6], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [56.4, 34.6], "flip": true, "collider": {"w": 2.8, "h": 1.4}},
+        {
+          "art": "prop_brazier",
+          "pos": [41.4, 34.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 0.9, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [53.6, 37.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 0.9, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_crypt_pillar", "pos": [39.6, 36.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [58.0, 40.8], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [38.2, 32.2],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [46.0, 14.4],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [55.6, 14.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_ice_pillar", "pos": [58.0, 21.0], "collider": {"w": 1.8, "h": 1.2}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [55.8, 28.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_ice_pillar", "pos": [46.4, 27.8], "collider": {"w": 1.8, "h": 1.2}},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [57.6, 17.4],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9fdcff", "radius": 6.0, "intensity": 1.2, "offset": [0, 0.9]},
+          "tint": "#9fdcff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [57.4, 24.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9fdcff", "radius": 6.0, "intensity": 1.2, "offset": [0, 0.9]},
+          "tint": "#9fdcff"
+        },
+        {"art": "prop_frozen_statue", "pos": [49.6, 15.2], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_frozen_statue", "pos": [49.4, 27.0], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {
+          "art": "prop_treasure_pile",
+          "pos": [54.8, 28.8],
+          "collider": {"w": 2.0, "h": 1.1},
+          "light": {"color": "#ffd88a", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.6]},
+          "requireFlag": "enc_enc_dg6_rimeheart"
+        },
+        {"art": "prop_bones", "pos": [53.6, 17.8]},
+        {"art": "prop_stalagmite", "pos": [13.05, 8.41], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [17.01, 6.94], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [14.32, 3.34], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [13.15, 6.27], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [6.16, 7.44], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [7.74, 41.83], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [14.57, 42.76], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [16.91, 42.76], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [6.1, 41.5], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [28.02, 1.06], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [39.21, 1.46], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [38.9, 10.29], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [20.77, 1.13], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [27.17, 3.15], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [21.15, 5.85], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [36.36, 33.79], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [22.93, 42.68], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [28.63, 40.65], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [34.01, 32.5], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [49.83, 39.54], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [43.3, 41.3], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [51.41, 35.49], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [55.62, 37.17], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [45.61, 5.4], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [51.19, 1.54], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [43.3, 7.23], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [53.58, 2.02], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [55.8, 6.29], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [34.09, 24.56], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [29.9, 26.5], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [25.74, 24.97], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [52.65, 25.42], "flip": true, "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [56.96, 22.58], "collider": {"w": 1.2, "h": 0.8}},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [6.36, 1.5],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [1.41, 8.65],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [1.75, 38.07],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [2.81, 41.38],
+          "flip": true,
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [26.15, 1.51],
+          "flip": true,
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [23.57, 3.77],
+          "flip": true,
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [29.63, 42.15],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [33.43, 39.11],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [47.97, 40.37],
+          "flip": true,
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [39.02, 37.76],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [47.26, 1.74],
+          "flip": true,
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [55.95, 4.07],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [53.55, 5.29],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [32.43, 25.7],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#bfe8ff", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.9]},
+          "tint": "#cfefff"
+        },
+        {"art": "prop_ice_spire", "pos": [9.61, 4.15], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [16.63, 2.63], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [43.49, 3.67], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [58.57, 2.18], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [32.75, 42.16], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [46.01, 42.42], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [3.39, 3.94], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [17.9, 4.97], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [40.94, 10.29], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [40.89, 3.9], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [53.27, 35.98], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [55.27, 42.85], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [32.15, 16.98], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [27.21, 17.89], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [12.64, 38.61]},
+        {"art": "prop_bones", "pos": [9.71, 19.53]},
+        {"art": "prop_bones", "pos": [12.28, 1.91], "flip": true},
+        {"art": "prop_bones", "pos": [24.25, 14.72], "flip": true},
+        {"art": "prop_bones", "pos": [10.53, 42.86], "flip": true},
+        {"art": "prop_bones", "pos": [17.27, 1.22], "flip": true},
+        {"art": "prop_bones", "pos": [52.34, 16.71], "flip": true},
+        {"art": "prop_bones", "pos": [40.27, 33.19], "flip": true}
+      ],
+      "npcs": [{"npc": "dg6_aubric", "pos": [46.6, 24.4], "requireFlag": "enc_enc_dg6_rimeheart", "hideFlag": "dg6_knights_freed"}],
+      "encounters": [
+        {
+          "id": "enc_dg6_statue_ambush",
+          "pos": [13.4, 22.0],
+          "radius": 2.0,
+          "hidden": true,
+          "enemies": [
+            {"creature": "cr_dg6_ice_sentinel", "pos": [12.0, 24.6]},
+            {"creature": "cr_dg6_ice_sentinel", "pos": [15.4, 19.6]},
+            {"creature": "cr_dg6_ice_sentinel", "pos": [16.2, 24.4]}
+          ]
+        },
+        {
+          "id": "enc_dg6_hymn_hall",
+          "pos": [25.6, 36.4],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg6_frost_wight", "pos": [24.4, 37.6]},
+            {"creature": "cr_dg6_frost_wight", "pos": [27.2, 37.2]},
+            {"creature": "cr_dg6_wight_priest", "pos": [25.8, 39.2]}
+          ]
+        },
+        {"id": "enc_dg6_hoarfang", "pos": [26.0, 7.6], "radius": 3.0, "enemies": [{"creature": "cr_dg6_hoarfang", "pos": [25.4, 5.6]}]},
+        {
+          "id": "enc_dg6_colossus",
+          "pos": [31.0, 21.6],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg6_rimebound", "pos": [32.2, 22.4]},
+            {"creature": "cr_dg6_frost_wight", "pos": [30.4, 24.0]},
+            {"creature": "cr_dg6_frost_wight", "pos": [30.6, 19.4]}
+          ]
+        },
+        {
+          "id": "enc_dg6_vael",
+          "pos": [45.6, 35.8],
+          "radius": 3.2,
+          "dialogue": "dlg_dg6_vael",
+          "enemies": [
+            {"creature": "cr_dg6_wight_lord", "pos": [46.6, 37.6]},
+            {"creature": "cr_dg6_wight_priest", "pos": [44.2, 38.0]},
+            {"creature": "cr_dg6_wight_priest", "pos": [48.8, 36.6]},
+            {"creature": "cr_dg6_ice_sentinel", "pos": [45.2, 34.2]}
+          ]
+        },
+        {"id": "enc_dg6_rimeheart", "pos": [50.0, 21.0], "radius": 3.6, "enemies": [{"creature": "cr_dg6_rimeheart", "pos": [52.4, 21.4]}]}
+      ],
+      "chests": [
+        {"id": "chest_dg6_knights", "pos": [36.4, 26.6], "art": "prop_chest", "lootTable": "lt_dg6_chest_knights"},
+        {
+          "id": "chest_dg6_reliquary",
+          "pos": [55.4, 40.0],
+          "art": "prop_chest",
+          "lootTable": "lt_dg6_chest_reliquary",
+          "requireFlag": "dg6_reliquary_found"
+        },
+        {"id": "chest_dg6_heart", "pos": [56.2, 26.6], "art": "prop_chest", "lootTable": "lt_dg6_chest_heart", "requireFlag": "enc_enc_dg6_rimeheart"}
+      ],
       "transitions": [
         {
           "id": "to_skyreach",
@@ -28,19 +498,1085 @@
           "label": "Skyreach Peaks"
         }
       ],
-      "spawns": [
-        {"id": "default", "pos": [3.4, 22.0]},
-        {"id": "from_skyreach", "pos": [3.4, 22.0]}
+      "spawns": [{"id": "default", "pos": [3.4, 22.0]}, {"id": "from_skyreach", "pos": [3.4, 22.0]}],
+      "regions": [
+        {
+          "id": "reg_dg6_hall",
+          "pos": [8.0, 22.0],
+          "size": [14, 14],
+          "enterFlag": "reg_dg6_hall",
+          "name": "Hall of the Watch",
+          "text": "The Frozen Sanctum. Knights stand along the hall in their armour, caught in the ice mid-step, as if they had only stopped to listen."
+        },
+        {
+          "id": "reg_dg6_hymn",
+          "pos": [24.0, 37.0],
+          "size": [16, 12],
+          "name": "Hymn Hall",
+          "text": "The Hymn Hall. A thin, cold singing drifts between the pillars. It has been singing for five hundred years and it is slightly flat."
+        },
+        {
+          "id": "reg_dg6_rest",
+          "pos": [31.0, 22.0],
+          "size": [14, 14],
+          "name": "The Knights' Rest",
+          "text": "The Knights' Rest. Bedrolls, a cold hearth, a stack of shields with herons on them. They made camp here, and the cold came in after them."
+        },
+        {
+          "id": "reg_dg6_chantry",
+          "pos": [47.0, 37.0],
+          "size": [16, 12],
+          "name": "Vael's Chantry",
+          "check": {"skill": "Perception", "dc": 15},
+          "checkFlag": "dg6_reliquary_found",
+          "successText": "Behind the altar the frost has a draught in it. A reliquary niche, sealed with ice and hidden for centuries.",
+          "failText": "The chantry is cold, and very quiet, and you would rather not stay."
+        },
+        {
+          "id": "reg_dg6_heart",
+          "pos": [51.0, 21.0],
+          "size": [14, 16],
+          "name": "Heart of Winter",
+          "text": "The Heart of Winter. Every breath freezes on your lips, and something vast and blue is waiting in the ice."
+        }
       ],
-      "ambient": {
-        "timeOfDay": "night",
-        "dayNightCycle": false,
-        "ambientColor": "#b0c8e8",
-        "ambientIntensity": 0.55,
-        "snow": true
-      },
+      "ambient": {"timeOfDay": "night", "dayNightCycle": false, "ambientColor": "#bcd4f0", "ambientIntensity": 0.72, "snow": true, "dust": true},
       "restArea": false,
       "music": "music_dungeon"
+    }
+  ],
+  "creatures": [
+    {
+      "id": "cr_dg6_ice_sentinel",
+      "name": "Sanctum Ice Sentinel",
+      "description": "Old ice, carved into a temple guard and then forgotten about for five hundred years.",
+      "sprite": "cr_ice_elemental",
+      "portrait": "demon_voidwalker",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 1.25,
+      "damageMult": 1.05,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "moveSpeed": 8,
+      "size": 2.3,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_sr_ice_slam", "priority": 4}, {"ability": "cr_sr_ice_shard", "priority": 3}],
+      "passives": ["cr_sr_frozen_body"],
+      "lootTable": "lt_dg6_trash",
+      "faction": "Sanctum",
+      "material": "ice",
+      "voice": "stone"
+    },
+    {
+      "id": "cr_dg6_rimebound",
+      "name": "Rimebound Colossus",
+      "description": "A sentinel the Rimeheart fed until it would not stop growing.",
+      "sprite": "cr_ice_elemental",
+      "portrait": "demon_voidwalker",
+      "type": "Elemental",
+      "rank": "Elite",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 1.8,
+      "damageMult": 1.1,
+      "armorMult": 1.2,
+      "attackSpeed": 2.6,
+      "meleeSchool": "Frost",
+      "moveSpeed": 8,
+      "size": 2.9,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg6_glacial_stomp", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg6_shatter_armor", "priority": 5, "condition": "targetNoAura:cr_dg6_shattered"},
+        {"ability": "cr_sr_ice_slam", "priority": 4}
+      ],
+      "passives": ["cr_sr_frozen_body"],
+      "immune": ["Fear", "Polymorph", "Sleep"],
+      "lootTable": "lt_dg6_elite",
+      "faction": "Sanctum",
+      "material": "ice",
+      "voice": "stone"
+    },
+    {
+      "id": "cr_dg6_frost_wight",
+      "name": "Rime-Priest Wight",
+      "description": "Once a priest of the sanctum, who prayed for the cold to keep something asleep. The cold kept him instead.",
+      "sprite": "cr_frost_wight",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 1.2,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "moveSpeed": 9,
+      "size": 2.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg6_rime_strike", "priority": 4},
+        {"ability": "cr_dg6_soul_frost", "priority": 5, "condition": "targetNoAura:cr_dg6_soul_frost"}
+      ],
+      "passives": ["cr_dg6_undying_cold"],
+      "lootTable": "lt_dg6_trash",
+      "faction": "Sanctum",
+      "material": "plate",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg6_wight_priest",
+      "name": "Wight Chanter",
+      "description": "Still chanting the old hymn. It is the only thing it remembers, and it is slightly off-key.",
+      "sprite": "cr_frost_wight",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 9,
+      "size": 2.0,
+      "ai": "Healer",
+      "abilities": [
+        {"ability": "cr_dg6_cold_mend", "priority": 8, "condition": "allyHpBelow:55"},
+        {"ability": "cr_dg6_chains_of_ice", "priority": 5, "condition": "notOnCooldown"},
+        {"ability": "cr_dg6_frost_bolt", "priority": 3}
+      ],
+      "passives": ["cr_dg6_undying_cold"],
+      "lootTable": "lt_dg6_trash",
+      "faction": "Sanctum",
+      "material": "plate",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg6_wight_lord",
+      "name": "Hierophant Vael",
+      "description": "The last high priest of the sanctum, who bound the Rimeheart here and then could not bear to leave it.",
+      "sprite": "cr_frost_wight",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Elite",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 1.8,
+      "damageMult": 1.1,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "moveSpeed": 9,
+      "size": 2.6,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg6_icebound_will", "priority": 8, "condition": "selfHpBelow:50"},
+        {"ability": "cr_dg6_death_chill", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg6_soul_frost", "priority": 5, "condition": "targetNoAura:cr_dg6_soul_frost"},
+        {"ability": "cr_dg6_rime_strike", "priority": 4}
+      ],
+      "passives": ["cr_dg6_undying_cold"],
+      "immune": ["Fear", "Polymorph", "Sleep"],
+      "lootTable": "lt_dg6_elite",
+      "faction": "Sanctum",
+      "bark": "The hymn must not stop. If the hymn stops, she wakes.",
+      "material": "plate",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg6_hoarfang",
+      "name": "Hoarfang",
+      "description": "A frost drake who crawled into the sanctum to die, a century ago, and was too cold to manage it.",
+      "sprite": "cr_frost_drake",
+      "portrait": "demon_imp",
+      "type": "Dragonkin",
+      "rank": "Elite",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 2.3,
+      "attackSpeed": 2.6,
+      "moveSpeed": 10,
+      "size": 3.4,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg6_hoar_breath", "priority": 7},
+        {"ability": "cr_sr_wing_buffet", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_sr_tail_swipe", "priority": 4, "condition": "enemiesInRange:2"}
+      ],
+      "passives": ["cr_sr_dragonscale"],
+      "immune": ["Fear", "Polymorph", "Sleep"],
+      "lootTable": "lt_dg6_hoarfang",
+      "faction": "Sanctum",
+      "material": "scale",
+      "voice": "dragon"
+    },
+    {
+      "id": "cr_dg6_rime_shard",
+      "name": "Rime Shard",
+      "description": "A splinter of the Rimeheart, walking.",
+      "sprite": "cr_ice_elemental",
+      "portrait": "demon_voidwalker",
+      "type": "Elemental",
+      "rank": "Minion",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "damageMult": 0.8,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "moveSpeed": 9,
+      "size": 1.2,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_sr_ice_slam", "priority": 4}],
+      "passives": ["cr_sr_frozen_body"],
+      "xpMult": 0.0,
+      "faction": "Sanctum",
+      "material": "ice",
+      "voice": "stone"
+    },
+    {
+      "id": "cr_dg6_rimeheart",
+      "name": "The Rimeheart",
+      "description": "An elemental lord of glacier ice with a blazing frozen heart. It has been drinking the warmth out of the sanctum for five hundred years, and it is still thirsty.",
+      "sprite": "cr_rimeheart",
+      "portrait": "demon_voidwalker",
+      "type": "Elemental",
+      "rank": "Boss",
+      "levelMin": 30,
+      "levelMax": 32,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 30,
+      "levelCap": 32,
+      "healthMult": 1.9,
+      "damageMult": 1.6,
+      "armorMult": 1.2,
+      "attackSpeed": 2.8,
+      "meleeSchool": "Frost",
+      "moveSpeed": 7,
+      "size": 4.6,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_dg6_deep_winter", "priority": 11, "condition": "roundAtLeast:22"},
+        {"ability": "cr_dg6_heart_of_winter", "priority": 10, "condition": "selfHpBelow:25"},
+        {"ability": "cr_dg6_shards_again", "priority": 10, "condition": "selfHpBelow:35"},
+        {"ability": "cr_dg6_shards_awake", "priority": 10, "condition": "selfHpBelow:70"},
+        {"ability": "cr_dg6_glacial_pulse", "priority": 8, "condition": "notOnCooldown"},
+        {"ability": "cr_dg6_frozen_tomb", "priority": 6, "condition": "notOnCooldown"},
+        {"ability": "cr_dg6_shard_fists", "priority": 5}
+      ],
+      "passives": ["cr_sr_frozen_body"],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish", "Stun"],
+      "lootTable": "lt_dg6_rimeheart",
+      "xpMult": 1.3,
+      "faction": "Sanctum",
+      "bark": "*The cavern groans. Something vast and blue unfolds from the ice, and the air is suddenly too cold to breathe.*",
+      "material": "ice",
+      "voice": "stone"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_dg6_glacial_stomp",
+      "name": "Glacial Stomp",
+      "icon": "earth",
+      "description": "Stamps the frozen floor: enemies within 8 yards take {0} Frost damage and are slowed.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 14,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 28, "max": 36}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
+      "aiHint": "AoE",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg6_shatter_armor",
+      "name": "Shatter Armour",
+      "icon": "ice_shard",
+      "description": "Cracks the target's armour with cold: armour reduced by 25% for 15 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 15,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_shattered"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg6_rime_strike",
+      "name": "Rime Strike",
+      "icon": "sword",
+      "description": "A frost-rimed blow for weapon damage plus {0}.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110, "min": 6, "max": 10}, {"type": "ApplyAura", "aura": "cr_sr_chilled", "chance": 40}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg6_soul_frost",
+      "name": "Soul Frost",
+      "icon": "skull",
+      "description": "A cold that settles in the heart: Frost damage every 3 sec. for 12 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_soul_frost"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg6_frost_bolt",
+      "name": "Rime Bolt",
+      "icon": "frost",
+      "description": "A bolt of grave-cold ice for {0} Frost damage.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.5,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 28, "max": 34}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg6_cold_mend",
+      "name": "Cold Comfort",
+      "icon": "frost",
+      "description": "Knits an ally's wounds with ice, healing {0}.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 8,
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Heal", "min": 80, "max": 100}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg6_chains_of_ice",
+      "name": "Chains of Ice",
+      "icon": "frost_nova",
+      "description": "Binds the target in chains of ice for 6 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "cr_sr_frozen_feet"}],
+      "aiHint": "CC",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg6_death_chill",
+      "name": "Death Chill",
+      "icon": "skull",
+      "description": "The Wight Lord breathes out the cold of the grave: after a short wind-up, enemies within 10 yards take {0} Frost damage.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 16,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 32, "max": 40}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_dg6_icebound_will",
+      "name": "Icebound Will",
+      "icon": "ice_block",
+      "description": "Wraps himself in ice: 40% less damage taken for 12 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_icebound", "target": "Self"}],
+      "aiHint": "Defensive",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg6_hoar_breath",
+      "name": "Hoarfrost Breath",
+      "icon": "frost",
+      "description": "A long, slow breath of hoarfrost: a cone of {0} Frost damage.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 14,
+      "target": "Enemy",
+      "range": 12,
+      "area": {"shape": "Cone", "radius": 12, "angle": 90, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 36, "max": 46}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_dg6_shard_fists",
+      "name": "Shard Fists",
+      "icon": "ice_shard",
+      "description": "Blade-like fists of ice cut up to 3 enemies in front for weapon damage plus {0}.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "area": {"shape": "Cone", "radius": 7, "angle": 120, "affects": "Enemies", "maxTargets": 3},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110, "min": 8, "max": 12}],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg6_glacial_pulse",
+      "name": "Glacial Pulse",
+      "icon": "frost_nova",
+      "description": "The frozen heart flares and the whole cavern rings: after a long wind-up, every enemy takes {0} Frost damage.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 3.0,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 40, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 60, "max": 75}, {"type": "ApplyAura", "aura": "cr_sr_chilled"}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg6_frozen_tomb",
+      "name": "Frozen Tomb",
+      "icon": "ice_block",
+      "description": "Seals one enemy in a tomb of ice: stunned for 6 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_tomb"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg6_shards_awake",
+      "name": "Shards, Awake",
+      "icon": "snowflake",
+      "description": "The Rimeheart cracks, and three shards of it pull themselves free.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg6_rime_shard", "count": 3, "target": "Self"}],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg6_shards_again",
+      "name": "The Heart Splinters",
+      "icon": "snowflake",
+      "description": "Cracked again, the Rimeheart sheds two more shards.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg6_rime_shard", "count": 2, "target": "Self"}],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg6_deep_winter",
+      "name": "Deep Winter",
+      "icon": "snowflake",
+      "description": "The Rimeheart has waited long enough: the cold deepens without end. +60% damage and attack speed.",
+      "school": "Frost",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_deep_winter", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 11
+    },
+    {
+      "id": "cr_dg6_heart_of_winter",
+      "name": "Heart of Winter",
+      "icon": "snowflake",
+      "description": "Near the end the frozen heart blazes: +25% damage and attack speed.",
+      "school": "Frost",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg6_heart_of_winter", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_dg6_shattered",
+      "name": "Shattered Armour",
+      "icon": "ice_shard",
+      "kind": "Debuff",
+      "school": "Frost",
+      "duration": 15,
+      "description": "Armour reduced by 25%.",
+      "mods": [{"stat": "Armor", "value": -25, "pct": true}]
+    },
+    {
+      "id": "cr_dg6_soul_frost",
+      "name": "Soul Frost",
+      "icon": "skull",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 12,
+      "description": "Frost damage every 3 sec.",
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "min": 9}]
+    },
+    {
+      "id": "cr_dg6_icebound",
+      "name": "Icebound Will",
+      "icon": "ice_block",
+      "kind": "Buff",
+      "school": "Frost",
+      "duration": 12,
+      "description": "Damage taken reduced by 40%.",
+      "mods": [{"stat": "DamageTaken", "value": -40, "pct": true}]
+    },
+    {
+      "id": "cr_dg6_tomb",
+      "name": "Frozen Tomb",
+      "icon": "ice_block",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 6,
+      "description": "Sealed in ice.",
+      "states": ["Stun"]
+    },
+    {
+      "id": "cr_dg6_deep_winter",
+      "name": "Deep Winter",
+      "icon": "snowflake",
+      "kind": "Buff",
+      "school": "Frost",
+      "description": "Damage dealt and attack speed increased by 60%.",
+      "mods": [{"stat": "DamageDone", "value": 60, "pct": true}, {"stat": "MeleeHaste", "value": 60, "pct": true}]
+    },
+    {
+      "id": "cr_dg6_heart_of_winter",
+      "name": "Heart of Winter",
+      "icon": "snowflake",
+      "kind": "Buff",
+      "school": "Frost",
+      "description": "Damage dealt and attack speed increased by 25%.",
+      "mods": [{"stat": "DamageDone", "value": 25, "pct": true}, {"stat": "MeleeHaste", "value": 25, "pct": true}]
+    },
+    {
+      "id": "cr_dg6_undying_cold",
+      "name": "Undying Cold",
+      "icon": "skull",
+      "kind": "Buff",
+      "description": "Grave-cold: resistant to Frost and Shadow.",
+      "mods": [{"stat": "Resistance", "value": 40, "school": "Frost"}, {"stat": "Resistance", "value": 25, "school": "Shadow"}]
+    }
+  ],
+  "items": [
+    {
+      "id": "dg6_rimeheart_shard_blade",
+      "name": "Rimeheart Shard",
+      "icon": "sword",
+      "description": "A splinter of the Rimeheart, hilted in silver. It is never warm, and never blunt.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "OneHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 40,
+      "maxDamage": 67,
+      "speed": 2.6,
+      "stats": [{"stat": "Agility", "value": 8}, {"stat": "Stamina", "value": 4}, {"stat": "Strength", "value": 2}],
+      "price": 8080
+    },
+    {
+      "id": "dg6_hymn_of_the_rime_priests",
+      "name": "Hymnal of the Rime-Priests",
+      "icon": "moon",
+      "description": "The old hymn, written in frost on vellum. It is slightly off-key.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 5}, {"stat": "HealingPower", "value": 13}],
+      "price": 10055
+    },
+    {
+      "id": "dg6_glacier_heart_girdle",
+      "name": "Glacier-Heart Girdle",
+      "icon": "armor",
+      "description": "A mail belt with a clasp of glacier ice that never melts.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "Waist",
+      "armorType": "Mail",
+      "armor": 145,
+      "stats": [{"stat": "Stamina", "value": 12}, {"stat": "Strength", "value": 8}, {"stat": "Agility", "value": 3}],
+      "price": 13470
+    },
+    {
+      "id": "dg6_frostbound_handwraps",
+      "name": "Frostbound Handwraps",
+      "icon": "armor",
+      "description": "Silk wraps rimed in frost. Spells cast through them crackle.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "Hands",
+      "armorType": "Cloth",
+      "armor": 38,
+      "stats": [{"stat": "Intellect", "value": 10}, {"stat": "Stamina", "value": 6}, {"stat": "SpellDamage", "value": 8}],
+      "price": 13470
+    },
+    {
+      "id": "dg6_sanctum_strider_boots",
+      "name": "Sanctum Strider Boots",
+      "icon": "boot",
+      "description": "Leather boots that grip ice like a cat grips a curtain.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 85,
+      "stats": [{"stat": "Agility", "value": 13}, {"stat": "Stamina", "value": 7}, {"stat": "Strength", "value": 3}],
+      "price": 13470
+    },
+    {
+      "id": "dg6_winters_long_watch",
+      "name": "The Long Watch",
+      "icon": "sword",
+      "description": "Lord-Commander Aubric's greatsword, thawed at last. A heron is etched on the blade, wings open.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 37,
+      "requiredLevel": 30,
+      "equip": "TwoHand",
+      "weaponType": "TwoHandSword",
+      "minDamage": 89,
+      "maxDamage": 149,
+      "speed": 3.5,
+      "stats": [{"stat": "Strength", "value": 21}, {"stat": "Stamina", "value": 15}, {"stat": "Agility", "value": 6}],
+      "price": 50735,
+      "unique": true
+    },
+    {
+      "id": "dg6_crown_of_seven_spires",
+      "name": "Crown of Seven Spires",
+      "icon": "crown",
+      "description": "Seven spires of white ice that never melt. It is very cold to wear, and worth it.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 37,
+      "requiredLevel": 30,
+      "equip": "Head",
+      "armorType": "Cloth",
+      "armor": 57,
+      "stats": [{"stat": "Intellect", "value": 19}, {"stat": "Stamina", "value": 11}, {"stat": "SpellDamage", "value": 15}],
+      "price": 50735,
+      "unique": true
+    },
+    {
+      "id": "dg6_rimehide_jerkin",
+      "name": "Rimehide Jerkin",
+      "icon": "armor",
+      "description": "Leather dyed the blue of deep ice, stitched with frost that crackles when you move.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 37,
+      "requiredLevel": 30,
+      "equip": "Chest",
+      "armorType": "Leather",
+      "armor": 141,
+      "stats": [{"stat": "Agility", "value": 24}, {"stat": "Stamina", "value": 13}, {"stat": "Strength", "value": 6}],
+      "price": 50735,
+      "unique": true
+    },
+    {
+      "id": "dg6_aubrics_oath",
+      "name": "Aubric's Oath",
+      "icon": "sword",
+      "description": "His arming sword, which he gave to the youngest knight to carry home. She never could.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "OneHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 39,
+      "maxDamage": 65,
+      "speed": 2.6,
+      "stats": [{"stat": "Strength", "value": 5}, {"stat": "Intellect", "value": 4}, {"stat": "Stamina", "value": 5}],
+      "price": 7580
+    },
+    {
+      "id": "dg6_lantern_of_the_long_watch",
+      "name": "Lantern of the Long Watch",
+      "icon": "sun",
+      "description": "Pell lit it from the sanctum's last candle. It burns blue, and warm.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 5}, {"stat": "HealingPower", "value": 13}],
+      "price": 9435
+    },
+    {
+      "id": "dg6_thawed_bowstring_bow",
+      "name": "Thawstring",
+      "icon": "bow",
+      "description": "A Heronguard bow, restrung with a cord that was frozen for twelve years.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "Ranged",
+      "weaponType": "Bow",
+      "minDamage": 40,
+      "maxDamage": 67,
+      "speed": 2.8,
+      "stats": [{"stat": "Agility", "value": 5}, {"stat": "Stamina", "value": 3}, {"stat": "Intellect", "value": 3}],
+      "price": 5895
+    },
+    {
+      "id": "dg6_heron_ward_cloak",
+      "name": "Heron-Ward Cloak",
+      "icon": "feather",
+      "description": "River-blue wool lined with fleece, clasped with a silver heron.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "Back",
+      "armor": 30,
+      "stats": [{"stat": "Stamina", "value": 8}, {"stat": "Strength", "value": 6}, {"stat": "Agility", "value": 3}],
+      "price": 9435
+    },
+    {
+      "id": "dg6_vaels_chanting_staff",
+      "name": "Vael's Chanting Staff",
+      "icon": "staff",
+      "description": "The hierophant's staff. The hymn is carved along it, so it never has to stop.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 59,
+      "maxDamage": 98,
+      "speed": 3.0,
+      "stats": [{"stat": "Intellect", "value": 12}, {"stat": "Spirit", "value": 12}, {"stat": "Stamina", "value": 6}],
+      "price": 16850
+    },
+    {
+      "id": "dg6_hoarfang_scale_pauldrons",
+      "name": "Hoarfang Scale Pauldrons",
+      "icon": "armor",
+      "description": "Pale blue drake-scale, heavy as a snowdrift.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 34,
+      "requiredLevel": 29,
+      "equip": "Shoulder",
+      "armorType": "Mail",
+      "armor": 190,
+      "stats": [{"stat": "Strength", "value": 11}, {"stat": "Stamina", "value": 8}, {"stat": "Agility", "value": 3}],
+      "price": 12635
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_dg6_trash",
+      "goldMin": 700,
+      "goldMax": 1400,
+      "entries": [{"random": true, "chance": 14, "quality": "Uncommon", "itemLevelOffset": 1}, {"random": true, "chance": 3, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_dg6_elite",
+      "goldMin": 2500,
+      "goldMax": 4000,
+      "entries": [
+        {"pool": ["dg6_vaels_chanting_staff", "dg6_hoarfang_scale_pauldrons"], "chance": 35},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 2},
+        {"random": true, "chance": 25, "quality": "Rare", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg6_hoarfang",
+      "goldMin": 3000,
+      "goldMax": 4500,
+      "entries": [
+        {"item": "dg6_hoarfang_scale_pauldrons", "chance": 60},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 2},
+        {"random": true, "chance": 30, "quality": "Rare", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg6_rimeheart",
+      "goldMin": 12000,
+      "goldMax": 18000,
+      "entries": [
+        {
+          "pool": [
+            "dg6_rimeheart_shard_blade",
+            "dg6_hymn_of_the_rime_priests",
+            "dg6_glacier_heart_girdle",
+            "dg6_frostbound_handwraps",
+            "dg6_sanctum_strider_boots"
+          ]
+        },
+        {"pool": ["dg6_winters_long_watch", "dg6_crown_of_seven_spires", "dg6_rimehide_jerkin"], "chance": 25},
+        {"random": true, "quality": "Rare", "itemLevelOffset": 2}
+      ]
+    },
+    {
+      "id": "lt_dg6_chest_reliquary",
+      "goldMin": 5000,
+      "goldMax": 8000,
+      "entries": [{"random": true, "quality": "Rare", "itemLevelOffset": 2}, {"item": "potion_healing", "min": 2, "max": 3}]
+    },
+    {
+      "id": "lt_dg6_chest_knights",
+      "goldMin": 4000,
+      "goldMax": 6000,
+      "entries": [{"random": true, "quality": "Uncommon", "itemLevelOffset": 2}, {"random": true, "chance": 50, "quality": "Rare", "itemLevelOffset": 2}]
+    },
+    {
+      "id": "lt_dg6_chest_heart",
+      "goldMin": 8000,
+      "goldMax": 12000,
+      "entries": [{"random": true, "quality": "Rare", "itemLevelOffset": 3}, {"random": true, "quality": "Uncommon", "itemLevelOffset": 3}]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "dg6_aubric",
+      "name": "Lord-Commander Aubric",
+      "shortName": "Aubric",
+      "title": "Heronguard, Long Watch",
+      "sprite": "char_paladin",
+      "portrait": "portrait_spirit",
+      "dialogue": "dlg_dg6_aubric",
+      "bark": "*Frost blooms on the air where he stands.*"
+    },
+    {
+      "id": "dg6_vael",
+      "name": "Hierophant Vael",
+      "title": "Last of the Rime-Priests",
+      "sprite": "cr_frost_wight",
+      "portrait": "cr_hollow_spirit",
+      "dialogue": "",
+      "bark": "The hymn must not stop."
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_dg6_aubric",
+      "start": "a1",
+      "nodes": [
+        {
+          "id": "a1",
+          "speaker": "dg6_aubric",
+          "text": "*Among the thawing statues one shape stands up out of the melting ice: a tall knight in river-blue, clear as frost on a window. He looks at his hands, then at you.* It's warm. Gods. It's been so long since anything was warm.",
+          "choices": [
+            {"text": "My lord Aubric. Ysolde is here.", "next": "a_ysolde", "conditions": [{"type": "InParty", "key": "ysolde"}], "tag": "YSOLDE"},
+            {"text": "Who are you?", "next": "a_who"},
+            {"text": "The Rimeheart is gone. Your knights are free.", "next": "a_end"}
+          ]
+        },
+        {
+          "id": "a_ysolde",
+          "speaker": "dg6_aubric",
+          "text": "*His eyes find Ysolde, and he straightens, the way a knight straightens for his standard-bearer.* Ysolde. You grew up. *She cannot speak. He smiles.* You blew the horn. Good girl. I told the others you would. They owed me a silver each.",
+          "next": "a_ysolde2"
+        },
+        {
+          "id": "a_ysolde2",
+          "speaker": "ysolde",
+          "text": "My lord, I... twenty-nine of you, and I... *Her voice breaks. She makes it go on anyway.* I have wondered every day whether you forgave me.",
+          "next": "a_ysolde3"
+        },
+        {
+          "id": "a_ysolde3",
+          "speaker": "dg6_aubric",
+          "text": "Forgave you? Twenty-nine of us chose to stay and hold the door so the wounded could get in. That was ours to choose. The horn was yours, and it was right. *He lays a hand on her shoulder; frost blooms on her pauldron and melts.* Keep the fords, Ysolde. We'll keep watch.",
+          "outcomes": [{"type": "Approval", "key": "ysolde", "amount": 15}, {"type": "SetFlag", "key": "sr_ysolde_absolved"}],
+          "next": "a_end"
+        },
+        {
+          "id": "a_who",
+          "speaker": "dg6_aubric",
+          "text": "Aubric. Lord-Commander of the Heronguard, once. We came in here with the wounded, out of the drake-fire. The cold took us in our sleep. It wasn't unkind, exactly. It was only... hungry.",
+          "next": "a_end"
+        },
+        {
+          "id": "a_end",
+          "speaker": "dg6_aubric",
+          "text": "*Around him, one by one, faint shapes stand up out of the ice: knights, a few robed priests, a heron the size of a pony. They bow to you.* Tell old Lumi she can take the flags down. Or leave them up. They're very pretty flags. *He fades like breath on glass.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg6_knights_freed"}, {"type": "GiveXP", "amount": 55}],
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg6_vael",
+      "start": "v1",
+      "nodes": [
+        {
+          "id": "v1",
+          "speaker": "narrator",
+          "text": "*At the chantry altar a tall wight in rimed vestments turns. Frost pours from his sleeves. Behind him, two chanters keep up a thin, cold hymn without drawing breath.*",
+          "next": "v2"
+        },
+        {
+          "id": "v2",
+          "speaker": "dg6_vael",
+          "text": "The hymn must not stop. Five hundred years we have sung the Heart to sleep. If the hymn stops, it wakes, and it is hungry. The knights came in out of the fire, and it drank them. It will drink you.",
+          "choices": [
+            {
+              "text": "Your watch is over, Hierophant. You can rest now.",
+              "check": {"skill": "Religion", "dc": 16, "success": "v_rest", "failure": "v_fight_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "(Lay a hand on his shoulder and pray with him for the knights.)",
+              "next": "v_rest",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {
+              "text": "By the Light: your vigil is kept. Lay down your staff.",
+              "next": "v_rest",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Then we will end the Heart, and the hymn with it.", "next": "v_fight"}
+          ]
+        },
+        {
+          "id": "v_rest",
+          "speaker": "dg6_vael",
+          "text": "*The hierophant looks at his own hands for a long time, as if he had forgotten he had them.* Rest. *The chanters fall silent. Vael sets his staff on the altar, bows to you, and is only frost on the air.* Then end it, little warm ones. End it well.",
+          "outcomes": [{"type": "SetFlag", "key": "enc_enc_dg6_vael"}, {"type": "SetFlag", "key": "dg6_vael_rested"}, {"type": "GiveXP", "amount": 110}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "v_fight_f",
+          "speaker": "dg6_vael",
+          "text": "Rest? There is no rest. There is only the hymn. *The chanters' voices rise, and the cold rises with them.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg6_vael"}]
+        },
+        {
+          "id": "v_fight",
+          "speaker": "dg6_vael",
+          "text": "Then you are the Heart's, as they were. *He lifts his staff.* Sing, brothers. SING.",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg6_vael"}]
+        }
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": "dg6_the_long_watch",
+      "name": "The Long Watch",
+      "giver": "sr_lumi",
+      "level": 28,
+      "minLevel": 28,
+      "zone": "dgn_frozen_sanctum",
+      "summary": "Twenty-nine Heronguard knights went into the old temple behind Glasswater Falls with their wounded, twelve years ago, and never came out. Bring them home.",
+      "stages": [
+        {
+          "id": "sanctum",
+          "description": "Find the Frozen Sanctum behind the frozen falls (Odran may know where the door is) and go inside.",
+          "objectives": [{"type": "Reach", "target": "dgn_frozen_sanctum", "text": "Enter the Frozen Sanctum"}],
+          "next": "rimeheart"
+        },
+        {
+          "id": "rimeheart",
+          "description": "Find what keeps the knights in the cold, and end it.",
+          "objectives": [{"type": "Defeat", "target": "enc_dg6_rimeheart", "text": "Defeat the Rimeheart"}],
+          "next": "aubric",
+          "onComplete": [{"type": "GiveXP", "amount": 420}]
+        },
+        {
+          "id": "aubric",
+          "description": "Speak with the spirit that rises from the thawing ice.",
+          "objectives": [{"type": "Talk", "target": "dg6_aubric", "text": "Speak with Lord-Commander Aubric"}],
+          "next": "lumi"
+        },
+        {
+          "id": "lumi",
+          "description": "Tell Old Lumi that the twenty-nine are free.",
+          "objectives": [{"type": "Talk", "target": "sr_lumi", "text": "Speak with Old Lumi"}]
+        }
+      ],
+      "rewards": {
+        "xp": 1460,
+        "gold": 8000,
+        "choiceItems": ["dg6_aubrics_oath", "dg6_lantern_of_the_long_watch", "dg6_thawed_bowstring_bow", "dg6_heron_ward_cloak"]
+      }
     }
   ]
 }
