@@ -109,6 +109,14 @@ done
 "$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_hall.png" --at 23,36
 "$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_ossuary.png" --at 25,8 --yaw 15
 "$tool" map dgn_lantern_catacombs "$out/dgn_lantern_catacombs_chapel.png" --at 48,18 --yaw -15
+# ---- r1: the Hollow Heart raid (the camp, the bosses, the thorn gate, the relit grove)
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_camp.png" --at 9,40 --zoom 8.5 --markers auto --flags mq2_drowned_lanterns_done --level 22
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_thornmaw.png" --at 51,14 --zoom 8.5 --yaw 15
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_thorn_gate.png" --at 47,27 --zoom 7 --yaw -25
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_pools.png" --at 49,44 --zoom 9
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_pools_relit.png" --at 47,45 --zoom 10.4 --yaw -20 --flags enc_enc_r1_thornmaw,enc_enc_r1_twins,r1_grove_relit,r1_lore_twins
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_mother_mire.png" --at 86,13 --zoom 8
+"$tool" map raid_hollow_heart "$out/raid_hollow_heart_heart.png" --at 91,49 --zoom 10.4
 # ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null
