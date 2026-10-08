@@ -1,0 +1,649 @@
+{
+  "_note": "Ashwyrm's Roost quest items, the Emberward Draught, quest reward gear (Expansion.md §8 budget: 0.55 x ilvl x Qa x slot) and the raid's chest loot tables.",
+  "items": [
+    {
+      "id": "r2_fire_gland",
+      "name": "Cinder Drake's Fire-Gland",
+      "icon": "ember",
+      "description": "A fist-sized gland from a cinder drake's throat, still faintly warm and very faintly ticking. Marta wants it for brewing. Marta is braver than she looks.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "r2_twin_fires"
+    },
+    {
+      "id": "r2_horn_of_calling",
+      "name": "Horn of Calling",
+      "icon": "shout",
+      "description": "Varkas's great horn, a drake's horn bound in gold and black iron. Blown from the summit's calling stone, it brings the Ashwyrm down out of the smoke. That is the whole point of it, and the whole problem.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "r2_last_ember"
+    },
+    {
+      "id": "r2_aubric_standard",
+      "name": "Lord-Commander Aubric's Standard",
+      "icon": "banner",
+      "description": "A heron standard of river-blue silk, scorched at the edges and wrapped round a broken spear. Twelve years in the ash, and the heron is still looking up.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "r2_twenty_nine"
+    },
+    {
+      "id": "r2_stolen_stores",
+      "name": "Stolen Expedition Stores",
+      "icon": "food",
+      "description": "Biscuits, candles, a cheese, Marta's spare pencils. Everything a whelp could carry, and several things it couldn't, slightly toasted.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 3,
+      "price": 0,
+      "unique": true,
+      "quest": "r2_small_fires"
+    },
+    {
+      "id": "r2_ember_egg",
+      "name": "The Last Warm Egg",
+      "icon": "ember",
+      "description": "A dragon's egg the size of a lantern, dark as a coal and warm as a cat. Something inside it turns over when you hum.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "r2_last_ember"
+    },
+    {
+      "id": "r2_emberward_draught",
+      "name": "Emberward Draught",
+      "icon": "potion_red",
+      "description": "Marta's brew from a cinder drake's fire-gland. Tastes of pepper and regret. Drink it before the fire, not after.",
+      "kind": "Consumable",
+      "quality": "Uncommon",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "use": "use_r2_emberward",
+      "consumable": true,
+      "stack": 10,
+      "price": 600
+    },
+    {
+      "id": "r2_q_matriarchs_mantle",
+      "name": "Matriarch's Mantle",
+      "icon": "armor",
+      "description": "A cloak of white yeti fur, shed, not taken. Kesta says Frostclaw would have liked you to have it. Kesta is being kind.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 32,
+      "stats": [
+        {
+          "stat": "Stamina",
+          "value": 10
+        },
+        {
+          "stat": "Strength",
+          "value": 8
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_shelf_snow_shawl",
+      "name": "Shelf-Snow Shawl",
+      "icon": "armor",
+      "description": "Pale wool knitted by the Skyreach herders, with a snowflake for every winter the knitter could remember.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 32,
+      "stats": [
+        {
+          "stat": "Intellect",
+          "value": 8
+        },
+        {
+          "stat": "Spirit",
+          "value": 5
+        },
+        {
+          "stat": "Stamina",
+          "value": 5
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_ring_of_the_shelf",
+      "name": "Ring of the Shelf",
+      "icon": "star",
+      "description": "A ring of blue ice-stone that never quite warms up. It makes your fingers itch to climb something.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Finger",
+      "stats": [
+        {
+          "stat": "Agility",
+          "value": 9
+        },
+        {
+          "stat": "Stamina",
+          "value": 9
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_drakescale_choker",
+      "name": "Drakescale Choker",
+      "icon": "fang",
+      "description": "Three cinder-drake scales on a steel chain. They are warm on cold mornings and hot on warm ones.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Neck",
+      "stats": [
+        {
+          "stat": "Stamina",
+          "value": 8
+        },
+        {
+          "stat": "Strength",
+          "value": 6
+        },
+        {
+          "stat": "Resistance",
+          "value": 4,
+          "school": "Fire"
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_ashtongue_pendant",
+      "name": "Ashtongue's Pendant",
+      "icon": "star",
+      "description": "A drop of violet glass from the floor of the Drake Pit, where Ashtongue's flame cooled into something pretty.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Neck",
+      "stats": [
+        {
+          "stat": "Intellect",
+          "value": 7
+        },
+        {
+          "stat": "SpellDamage",
+          "value": 9
+        },
+        {
+          "stat": "Stamina",
+          "value": 3
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_twin_cinder_band",
+      "name": "Twin-Cinder Band",
+      "icon": "star",
+      "description": "Two twisted wires, one red-gold and one violet-grey, that never quite touch.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Finger",
+      "stats": [
+        {
+          "stat": "AttackPower",
+          "value": 20
+        },
+        {
+          "stat": "Agility",
+          "value": 4
+        },
+        {
+          "stat": "Stamina",
+          "value": 4
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_highlords_signet",
+      "name": "Highlord's Signet",
+      "icon": "crown",
+      "description": "Varkas's seal ring, big enough to wear as a bracelet, cut down by Marta with a hacksaw and no sympathy.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Finger",
+      "stats": [
+        {
+          "stat": "Strength",
+          "value": 9
+        },
+        {
+          "stat": "Stamina",
+          "value": 9
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_dragonsworn_censer",
+      "name": "Pyre-Priest's Censer",
+      "icon": "fire",
+      "description": "A little brass censer from the Dragonsworn altar. It smells of cloves now. Marta scrubbed it.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Trinket",
+      "stats": [
+        {
+          "stat": "HealingPower",
+          "value": 26
+        },
+        {
+          "stat": "Spirit",
+          "value": 6
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_watch_captains_cloak",
+      "name": "Watch-Captain's Cloak",
+      "icon": "armor",
+      "description": "A Heronguard captain's cloak, river-blue, found folded in a chest in Skyreach Watch. Somebody meant to come back for it.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 32,
+      "stats": [
+        {
+          "stat": "Agility",
+          "value": 8
+        },
+        {
+          "stat": "Stamina",
+          "value": 6
+        },
+        {
+          "stat": "Strength",
+          "value": 4
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_heronguard_signet",
+      "name": "Heronguard Signet",
+      "icon": "crown",
+      "description": "A plain silver ring with a heron on it, from Sir Hamon's own hand. 'The order is broken,' he says. 'The rings aren't.'",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Finger",
+      "stats": [
+        {
+          "stat": "Stamina",
+          "value": 8
+        },
+        {
+          "stat": "Strength",
+          "value": 5
+        },
+        {
+          "stat": "Defense",
+          "value": 5
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_kestas_scarf",
+      "name": "Kesta's Spare Scarf",
+      "icon": "armor",
+      "description": "Red wool, slightly singed. 'My second-best,' Kesta says. 'My best one a whelp ate.'",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 32,
+      "stats": [
+        {
+          "stat": "Stamina",
+          "value": 8
+        },
+        {
+          "stat": "Spirit",
+          "value": 5
+        },
+        {
+          "stat": "Intellect",
+          "value": 5
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_whelp_tooth_charm",
+      "name": "Whelp-Tooth Charm",
+      "icon": "fang",
+      "description": "A baby tooth from an ember whelp, set in copper. It is still warm. It may never stop being warm.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "Trinket",
+      "stats": [
+        {
+          "stat": "AttackPower",
+          "value": 22
+        },
+        {
+          "stat": "Stamina",
+          "value": 7
+        }
+      ],
+      "price": 6765,
+      "unique": true
+    },
+    {
+      "id": "r2_q_heart_of_the_last_ember",
+      "name": "Heart of the Last Ember",
+      "icon": "ember",
+      "description": "A cinder from the Ashwyrm's furnace that went out when she did. Hold it to your ear and you can hear the mountain settling.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 38,
+      "requiredLevel": 30,
+      "equip": "Trinket",
+      "stats": [
+        {
+          "stat": "SpellDamage",
+          "value": 18
+        },
+        {
+          "stat": "Intellect",
+          "value": 9
+        }
+      ],
+      "price": 11307,
+      "unique": true
+    },
+    {
+      "id": "r2_q_wyrmslayers_medal",
+      "name": "Wyrmslayer's Medal",
+      "icon": "star",
+      "description": "Marta cast it herself in the camp forge, from a melted Dragonsworn buckle. It says WYRMSLAYER on one side and INVENTORIED on the other.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 38,
+      "requiredLevel": 30,
+      "equip": "Neck",
+      "stats": [
+        {
+          "stat": "Strength",
+          "value": 10
+        },
+        {
+          "stat": "Stamina",
+          "value": 10
+        },
+        {
+          "stat": "Agility",
+          "value": 5
+        }
+      ],
+      "price": 11307,
+      "unique": true
+    },
+    {
+      "id": "r2_q_ashfall_mantle",
+      "name": "Ashfall Mantle",
+      "icon": "armor",
+      "description": "A grey cloak woven from the last ash that fell on Skyreach. It never gets dirty: it is already the colour of dirt, and proud of it.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 38,
+      "requiredLevel": 30,
+      "equip": "Back",
+      "armorType": "Cloth",
+      "armor": 36,
+      "stats": [
+        {
+          "stat": "HealingPower",
+          "value": 22
+        },
+        {
+          "stat": "Intellect",
+          "value": 8
+        },
+        {
+          "stat": "Spirit",
+          "value": 7
+        }
+      ],
+      "price": 11307,
+      "unique": true
+    },
+    {
+      "id": "r2_q_hollows_end_band",
+      "name": "Hollow's-End Band",
+      "icon": "star",
+      "description": "A ring of dark dragon-glass. Inside it, very small, a lantern is burning.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 38,
+      "requiredLevel": 30,
+      "equip": "Finger",
+      "stats": [
+        {
+          "stat": "Agility",
+          "value": 11
+        },
+        {
+          "stat": "Stamina",
+          "value": 9
+        },
+        {
+          "stat": "AttackPower",
+          "value": 10
+        }
+      ],
+      "price": 11307,
+      "unique": true
+    }
+  ],
+  "abilities": [
+    {
+      "id": "use_r2_emberward",
+      "name": "Emberward Draught",
+      "icon": "potion_red",
+      "description": "Fire resistance increased by 60 for 10 min.",
+      "school": "Physical",
+      "time": "OffGcd",
+      "target": "Self",
+      "hidden": true,
+      "breaksStealth": true,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "r2_emberward",
+          "target": "Self"
+        }
+      ],
+      "aiHint": "Buff"
+    }
+  ],
+  "auras": [
+    {
+      "id": "r2_emberward",
+      "name": "Emberward",
+      "icon": "potion_red",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 600,
+      "mods": [
+        {
+          "stat": "Resistance",
+          "value": 60,
+          "school": "Fire"
+        }
+      ],
+      "description": "Fire resistance increased by 60."
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_r2_chest_heron_cache",
+      "goldMin": 2500,
+      "goldMax": 3500,
+      "entries": [
+        {
+          "random": true,
+          "chance": 100,
+          "quality": "Rare",
+          "itemLevelOffset": 2
+        },
+        {
+          "random": true,
+          "chance": 60,
+          "quality": "Uncommon",
+          "itemLevelOffset": 2
+        },
+        {
+          "item": "potion_healing",
+          "min": 2,
+          "max": 3
+        }
+      ]
+    },
+    {
+      "id": "lt_r2_chest_strongbox",
+      "goldMin": 3000,
+      "goldMax": 4500,
+      "entries": [
+        {
+          "random": true,
+          "chance": 100,
+          "quality": "Rare",
+          "itemLevelOffset": 3
+        },
+        {
+          "pool": [
+            "r2_ep_frostclaw_talon",
+            "r2_ep_rimefang_dirk",
+            "r2_ep_roostfeather_cloak",
+            "r2_ep_hoarfrost_knives",
+            "r2_ep_emberwake_band",
+            "r2_ep_emberjaw_maul",
+            "r2_ep_ashtongue_bellows_gun",
+            "r2_ep_cinderthorn_wand",
+            "r2_ep_signet_of_twin_cinders",
+            "r2_ep_highlords_warglaive",
+            "r2_ep_dragonsworn_arbalest",
+            "r2_ep_oathbreaker",
+            "r2_ep_wyrmscale_choker",
+            "r2_ep_roostkeepers_lantern",
+            "r2_ep_hoardgold_scepter",
+            "r2_ep_skyfire_greatstaff",
+            "r2_ep_ashen_starglobe",
+            "r2_ep_heart_of_cinders"
+          ],
+          "chance": 15,
+          "partyUsable": true
+        }
+      ]
+    },
+    {
+      "id": "lt_r2_chest_hoard",
+      "goldMin": 15000,
+      "goldMax": 20000,
+      "entries": [
+        {
+          "random": true,
+          "chance": 100,
+          "quality": "Rare",
+          "itemLevelOffset": 3
+        },
+        {
+          "random": true,
+          "chance": 100,
+          "quality": "Rare",
+          "itemLevelOffset": 3
+        },
+        {
+          "pool": [
+            "r2_ep_frostclaw_talon",
+            "r2_ep_rimefang_dirk",
+            "r2_ep_roostfeather_cloak",
+            "r2_ep_hoarfrost_knives",
+            "r2_ep_emberwake_band",
+            "r2_ep_emberjaw_maul",
+            "r2_ep_ashtongue_bellows_gun",
+            "r2_ep_cinderthorn_wand",
+            "r2_ep_signet_of_twin_cinders",
+            "r2_ep_highlords_warglaive",
+            "r2_ep_dragonsworn_arbalest",
+            "r2_ep_oathbreaker",
+            "r2_ep_wyrmscale_choker",
+            "r2_ep_roostkeepers_lantern",
+            "r2_ep_hoardgold_scepter",
+            "r2_ep_skyfire_greatstaff",
+            "r2_ep_ashen_starglobe",
+            "r2_ep_heart_of_cinders"
+          ],
+          "chance": 100,
+          "perMembers": 5,
+          "partyUsable": true
+        }
+      ]
+    }
+  ]
+}

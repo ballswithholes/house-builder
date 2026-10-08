@@ -1,5 +1,5 @@
 {
-  "_note": "CONTRACT STUB (Docs/Expansion.md §13.6): valid and minimal. Owner: r2. Expand freely; keep every id, transition and spawn of §1.",
+  "_note": "Ashwyrm's Roost (Docs/Expansion.md §1, §8; owner r2): the raid map and its six quests. Creatures in raid_ashwyrm_roost_creatures.json, people and dialogues in raid_ashwyrm_roost_people.json, quest items, reward gear and chest loot in raid_ashwyrm_roost_items.json. Boss/trash loot tables live in raid_loot*.json.",
   "maps": [
     {
       "id": "raid_ashwyrm_roost",
@@ -9,7 +9,7 @@
       "depth": 64,
       "skyTop": "#5a4a5e",
       "skyBottom": "#e8a77c",
-      "ground": "ground_shrine",
+      "ground": "ground_roost",
       "groundTile": 8,
       "biome": "roost",
       "environment": "outdoor",
@@ -18,24 +18,4845 @@
       "raidSize": 10,
       "raidReturnMap": "skyreach",
       "raidReturnSpawn": "from_raid_ashwyrm_roost",
-      "npcs": [],
+      "fill": 0.46,
+      "paths": [
+        {
+          "art": "decal_path_stone",
+          "points": [
+            [
+              -1.0,
+              32.0
+            ],
+            [
+              6.0,
+              32.4
+            ],
+            [
+              12.0,
+              33.2
+            ],
+            [
+              18.0,
+              33.8
+            ],
+            [
+              24.0,
+              34.6
+            ],
+            [
+              30.0,
+              35.6
+            ],
+            [
+              37.0,
+              36.0
+            ],
+            [
+              44.0,
+              35.2
+            ],
+            [
+              50.0,
+              33.4
+            ],
+            [
+              56.0,
+              31.8
+            ],
+            [
+              62.0,
+              31.0
+            ],
+            [
+              68.0,
+              29.6
+            ],
+            [
+              73.0,
+              27.6
+            ],
+            [
+              76.4,
+              25.6
+            ],
+            [
+              79.4,
+              22.6
+            ],
+            [
+              82.6,
+              19.0
+            ],
+            [
+              85.6,
+              16.6
+            ]
+          ],
+          "width": 2.4
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              42.0,
+              35.4
+            ],
+            [
+              41.4,
+              30.0
+            ],
+            [
+              40.2,
+              24.6
+            ],
+            [
+              40.4,
+              19.6
+            ],
+            [
+              40.6,
+              16.6
+            ]
+          ],
+          "width": 1.8
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              28.6,
+              35.4
+            ],
+            [
+              29.2,
+              40.6
+            ],
+            [
+              31.0,
+              45.6
+            ],
+            [
+              33.6,
+              50.0
+            ],
+            [
+              36.2,
+              52.8
+            ],
+            [
+              38.2,
+              54.6
+            ]
+          ],
+          "width": 1.6
+        },
+        {
+          "art": "decal_path_stone",
+          "points": [
+            [
+              61.6,
+              31.2
+            ],
+            [
+              62.6,
+              34.4
+            ],
+            [
+              63.4,
+              37.6
+            ]
+          ],
+          "width": 2.0
+        },
+        {
+          "art": "decal_path_stone",
+          "points": [
+            [
+              76.4,
+              25.6
+            ],
+            [
+              80.6,
+              29.0
+            ],
+            [
+              85.6,
+              32.0
+            ],
+            [
+              90.6,
+              34.6
+            ],
+            [
+              94.4,
+              37.2
+            ],
+            [
+              96.0,
+              40.0
+            ]
+          ],
+          "width": 2.2
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              93.0,
+              13.0
+            ],
+            [
+              97.4,
+              10.6
+            ],
+            [
+              101.0,
+              7.6
+            ],
+            [
+              103.6,
+              5.8
+            ]
+          ],
+          "width": 1.5
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              6.0,
+              32.4
+            ],
+            [
+              5.6,
+              36.0
+            ],
+            [
+              6.6,
+              40.0
+            ],
+            [
+              7.0,
+              43.0
+            ]
+          ],
+          "width": 1.4
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              13.6,
+              33.4
+            ],
+            [
+              14.6,
+              37.0
+            ],
+            [
+              15.8,
+              40.6
+            ]
+          ],
+          "width": 1.4
+        },
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [
+              9.0,
+              32.6
+            ],
+            [
+              9.4,
+              30.4
+            ]
+          ],
+          "width": 1.4
+        }
+      ],
+      "water": [
+        {
+          "points": [
+            [
+              3.8,
+              47.6
+            ],
+            [
+              5.4,
+              45.6
+            ],
+            [
+              8.6,
+              45.2
+            ],
+            [
+              11.2,
+              46.8
+            ],
+            [
+              11.0,
+              49.8
+            ],
+            [
+              8.2,
+              51.4
+            ],
+            [
+              5.0,
+              51.0
+            ]
+          ],
+          "closed": true
+        }
+      ],
+      "props": [
+        {
+          "art": "prop_campfire",
+          "pos": [
+            9.6,
+            28.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "light": {
+            "color": "#ffa050",
+            "radius": 4.5,
+            "intensity": 1.1,
+            "offset": [
+              0,
+              0.5
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_log",
+          "pos": [
+            9.6,
+            26.9
+          ],
+          "collider": {
+            "w": 2.2,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stump",
+          "pos": [
+            11.8,
+            28.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.5
+          }
+        },
+        {
+          "art": "prop_stump",
+          "pos": [
+            7.4,
+            27.8
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.5
+          }
+        },
+        {
+          "art": "prop_tent",
+          "pos": [
+            4.6,
+            25.4
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_tent",
+          "pos": [
+            14.2,
+            25.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_tent",
+          "pos": [
+            3.8,
+            37.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            12.3,
+            37.6
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            13.3,
+            38.2
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            12.9,
+            39.0
+          ],
+          "scale": 0.85,
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_barrel",
+          "pos": [
+            14.5,
+            37.3
+          ],
+          "collider": {
+            "w": 0.8,
+            "h": 0.5
+          }
+        },
+        {
+          "art": "prop_barrel",
+          "pos": [
+            15.2,
+            38.0
+          ],
+          "collider": {
+            "w": 0.8,
+            "h": 0.5
+          }
+        },
+        {
+          "art": "prop_cart",
+          "pos": [
+            17.6,
+            38.6
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_noticeboard",
+          "pos": [
+            9.2,
+            36.4
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 0.5
+          },
+          "interact": "r2_orders",
+          "dialogue": "dlg_r2_orders"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [
+            7.0,
+            35.4
+          ],
+          "collider": {
+            "w": 0.4,
+            "h": 0.3
+          },
+          "light": {
+            "color": "#ffcf8a",
+            "radius": 4.0,
+            "intensity": 0.9,
+            "offset": [
+              0,
+              2.3
+            ],
+            "flicker": true,
+            "nightOnly": true
+          }
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [
+            16.6,
+            35.8
+          ],
+          "collider": {
+            "w": 0.4,
+            "h": 0.3
+          },
+          "light": {
+            "color": "#ffcf8a",
+            "radius": 4.0,
+            "intensity": 0.9,
+            "offset": [
+              0,
+              2.3
+            ],
+            "flicker": true,
+            "nightOnly": true
+          }
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [
+            5.6,
+            30.6
+          ],
+          "collider": {
+            "w": 0.4,
+            "h": 0.3
+          },
+          "light": {
+            "color": "#ffcf8a",
+            "radius": 4.0,
+            "intensity": 0.9,
+            "offset": [
+              0,
+              2.3
+            ],
+            "flicker": true,
+            "nightOnly": true
+          }
+        },
+        {
+          "art": "prop_prayer_flags",
+          "pos": [
+            6.6,
+            22.6
+          ]
+        },
+        {
+          "art": "prop_prayer_flags",
+          "pos": [
+            17.0,
+            22.0
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [
+            20.6,
+            31.2
+          ],
+          "collider": {
+            "w": 0.4,
+            "h": 0.3
+          },
+          "text": "The old Heronguard road. One arm points east: SKYREACH WATCH. Somebody has added, in fresh charcoal: 'and a dragon'."
+        },
+        {
+          "art": "prop_mountain_hut",
+          "pos": [
+            12.0,
+            18.4
+          ],
+          "collider": {
+            "w": 7.0,
+            "h": 5.2
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 3.5,
+            "intensity": 0.8,
+            "offset": [
+              0.2,
+              2.1
+            ],
+            "nightOnly": true
+          }
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [
+            17.4,
+            43.0
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.8
+          },
+          "interact": "r2_cairn_29",
+          "text": "A cairn of twenty-nine flat stones, one laid on another. Each has a name scratched on it. The top one says AUBRIC."
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            2.8,
+            52.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            12.6,
+            53.2
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            1.8,
+            44.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            14.2,
+            47.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            8.0,
+            57.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            10.8,
+            44.0
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            3.4,
+            55.6
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            16.8,
+            54.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            6.0,
+            41.8
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            2.4,
+            18.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            5.6,
+            13.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            18.6,
+            13.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            1.6,
+            6.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            9.6,
+            7.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            22.0,
+            6.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            24.6,
+            20.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            7.0,
+            10.0
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            15.4,
+            9.0
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            21.0,
+            17.2
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            16.0,
+            4.0
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            3.0,
+            2.6
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            22.6,
+            38.4
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            32.4,
+            39.6
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            26.0,
+            30.6
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            29.6,
+            30.4
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_ruin_pillar",
+          "pos": [
+            35.2,
+            38.6
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_ruin_pillar",
+          "pos": [
+            38.8,
+            33.6
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_ruin_arch",
+          "pos": [
+            37.0,
+            36.0
+          ]
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            19.6,
+            41.2
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            30.8,
+            27.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            23.4,
+            27.8
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            21.6,
+            28.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            45.0,
+            39.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            47.6,
+            38.6
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            27.8,
+            38.4
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            26.2,
+            33.0
+          ]
+        },
+        {
+          "art": "prop_standing_stone",
+          "pos": [
+            43.2,
+            39.8
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.7
+          },
+          "text": "A Heronguard waymark, the heron chiselled off. Under it someone has scratched an eye in a flame."
+        },
+        {
+          "art": "prop_ruined_tower",
+          "pos": [
+            41.6,
+            56.6
+          ],
+          "collider": {
+            "w": 4.0,
+            "h": 4.0
+          }
+        },
+        {
+          "art": "prop_dragon_bones",
+          "pos": [
+            26.6,
+            55.4
+          ],
+          "collider": {
+            "w": 8.0,
+            "h": 4.2
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            35.4,
+            60.6
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            47.6,
+            58.8
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            38.2,
+            53.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          },
+          "interact": "r2_aubric_letter",
+          "text": "Fallen blocks at the tower door. A scorched leather satchel is pinned under them.",
+          "dialogue": "dlg_r2_aubric_letter"
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            33.6,
+            55.8
+          ],
+          "interact": "r2_aubric_standard",
+          "text": "Bones, broken spears and rags of river-blue cloth, half buried in ash.",
+          "dialogue": "dlg_r2_aubric_standard",
+          "hideFlag": "r2_standard_found"
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            30.2,
+            50.4
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            44.8,
+            51.6
+          ]
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            36.6,
+            48.2
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [
+            46.6,
+            54.6
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            22.4,
+            49.2
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            20.6,
+            58.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            51.4,
+            55.6
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            24.4,
+            45.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            50.2,
+            61.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_standing_stone",
+          "pos": [
+            31.4,
+            61.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.7
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            29.0,
+            45.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            29.0,
+            4.2
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            52.0,
+            18.8
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            30.2,
+            19.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            51.6,
+            3.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            34.4,
+            2.0
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            31.6,
+            13.2
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            33.8,
+            6.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            46.6,
+            17.6
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            50.2,
+            11.8
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            36.2,
+            18.8
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_ice_spire",
+          "pos": [
+            32.6,
+            9.6
+          ],
+          "collider": {
+            "w": 1.4,
+            "h": 1.0
+          },
+          "light": {
+            "color": "#bfe8ff",
+            "radius": 3,
+            "intensity": 0.7,
+            "offset": [
+              0,
+              1.5
+            ]
+          }
+        },
+        {
+          "art": "prop_ice_spire",
+          "pos": [
+            47.6,
+            14.2
+          ],
+          "collider": {
+            "w": 1.4,
+            "h": 1.0
+          },
+          "light": {
+            "color": "#bfe8ff",
+            "radius": 3,
+            "intensity": 0.7,
+            "offset": [
+              0,
+              1.5
+            ]
+          }
+        },
+        {
+          "art": "prop_ice_spire",
+          "pos": [
+            43.8,
+            4.0
+          ],
+          "collider": {
+            "w": 1.4,
+            "h": 1.0
+          },
+          "light": {
+            "color": "#bfe8ff",
+            "radius": 3,
+            "intensity": 0.7,
+            "offset": [
+              0,
+              1.5
+            ]
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            35.4,
+            15.6
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            44.2,
+            18.4
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            39.0,
+            3.2
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            49.6,
+            7.8
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            47.6,
+            5.6
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          },
+          "interact": "r2_cub_den",
+          "text": "A den under the drifts, its mouth staked with Dragonsworn chains. Something small and white whimpers inside.",
+          "dialogue": "dlg_r2_cub_den"
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            45.2,
+            7.2
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            37.0,
+            7.0
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            42.6,
+            15.6
+          ]
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            51.8,
+            34.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            57.8,
+            26.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            76.8,
+            38.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            48.0,
+            49.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            44.6,
+            26.0
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            51.6,
+            25.0
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            55.6,
+            36.4
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            68.4,
+            25.8
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            74.8,
+            32.8
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            58.6,
+            22.6
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            47.0,
+            45.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            54.6,
+            47.8
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            49.6,
+            41.6
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            57.6,
+            39.2
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            72.0,
+            29.6
+          ]
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            46.0,
+            53.2
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            57.0,
+            54.8
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            60.4,
+            57.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            72.6,
+            54.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            78.6,
+            49.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            79.6,
+            44.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            49.6,
+            46.8
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          },
+          "interact": "r2_stash_1",
+          "text": "A camp crate with Marta's stencil on it, dragged up here and chewed open.",
+          "dialogue": "dlg_r2_stash_1",
+          "hideFlag": "r2_stash_1_found"
+        },
+        {
+          "art": "prop_barrel",
+          "pos": [
+            56.4,
+            50.6
+          ],
+          "collider": {
+            "w": 0.8,
+            "h": 0.5
+          },
+          "interact": "r2_stash_2",
+          "text": "A barrel from the camp, rolled all the way up the mountain. The lid is scorched through.",
+          "dialogue": "dlg_r2_stash_2",
+          "hideFlag": "r2_stash_2_found"
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            74.0,
+            36.4
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          },
+          "interact": "r2_stash_3",
+          "text": "Another of Marta's crates, wedged in a crack and covered in tiny claw marks.",
+          "dialogue": "dlg_r2_stash_3",
+          "hideFlag": "r2_stash_3_found"
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            72.2,
+            44.6
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            70.28,
+            49.23
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            65.42,
+            51.69
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            62.58,
+            51.69
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            57.72,
+            49.23
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            55.8,
+            44.6
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            57.72,
+            39.97
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_crypt_pillar",
+          "pos": [
+            70.28,
+            39.97
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            61.13,
+            37.65
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            67.15,
+            37.74
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            59.0,
+            38.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            69.0,
+            38.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            61.6,
+            48.2
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            67.2,
+            49.2
+          ]
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            65.0,
+            53.4
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          },
+          "interact": "r2_drake_remains",
+          "text": "Where the cinder drakes fell, the ash is still warm.",
+          "dialogue": "dlg_r2_drake_remains",
+          "requireFlag": "r2_cinder_drakes_defeated"
+        },
+        {
+          "art": "prop_ruined_tower",
+          "pos": [
+            74.6,
+            12.4
+          ],
+          "collider": {
+            "w": 4.0,
+            "h": 4.0
+          }
+        },
+        {
+          "art": "prop_ruined_tower",
+          "pos": [
+            99.4,
+            20.8
+          ],
+          "collider": {
+            "w": 4.0,
+            "h": 4.0
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            85.4,
+            23.4
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            88.8,
+            23.4
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            94.2,
+            23.4
+          ],
+          "flip": true,
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stone_wall",
+          "pos": [
+            77.4,
+            4.2
+          ],
+          "collider": {
+            "w": 3.4,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            91.6,
+            23.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_ruin_arch",
+          "pos": [
+            80.6,
+            21.6
+          ]
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            78.4,
+            22.6
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            82.8,
+            20.6
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            85.2,
+            21.6
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            91.0,
+            21.4
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_altar",
+          "pos": [
+            88.0,
+            20.4
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          },
+          "light": {
+            "color": "#ffd28a",
+            "radius": 3.5,
+            "intensity": 0.8,
+            "offset": [
+              0,
+              1.25
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            85.6,
+            19.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            90.4,
+            19.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            82.6,
+            9.4
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            93.6,
+            9.6
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_tent",
+          "pos": [
+            95.4,
+            6.6
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          },
+          "tint": "#8a6a6a"
+        },
+        {
+          "art": "prop_tent",
+          "pos": [
+            99.6,
+            11.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          },
+          "tint": "#8a6a6a"
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            97.0,
+            4.2
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_crate",
+          "pos": [
+            98.0,
+            3.6
+          ],
+          "scale": 0.85,
+          "collider": {
+            "w": 0.9,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_barrel",
+          "pos": [
+            92.6,
+            4.6
+          ],
+          "collider": {
+            "w": 0.8,
+            "h": 0.5
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            80.0,
+            13.4
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            85.0,
+            6.0
+          ]
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            72.6,
+            20.0
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            70.4,
+            8.0
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            68.0,
+            15.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            76.6,
+            18.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            88.6,
+            12.2
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          },
+          "interact": "r2_varkas_horn",
+          "text": "Where Varkas fell: his maul, his drake-skull pauldron, and a great horn bound in gold.",
+          "dialogue": "dlg_r2_varkas_horn",
+          "requireFlag": "r2_varkas_defeated",
+          "hideFlag": "r2_horn_taken"
+        },
+        {
+          "art": "prop_bench",
+          "pos": [
+            104.0,
+            4.0
+          ],
+          "collider": {
+            "w": 1.4,
+            "h": 0.4
+          }
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [
+            100.6,
+            3.4
+          ],
+          "collider": {
+            "w": 1.1,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_prayer_flags",
+          "pos": [
+            106.0,
+            8.6
+          ]
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            108.0,
+            13.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            101.4,
+            15.8
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            83.2,
+            30.0
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            92.0,
+            37.4
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            84.0,
+            34.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            82.0,
+            37.0
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            92.2,
+            30.4
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            99.4,
+            33.6
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            102.4,
+            28.4
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            105.4,
+            34.0
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            82.6,
+            26.6
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_roost_nest",
+          "pos": [
+            97.0,
+            59.8
+          ],
+          "collider": {
+            "w": 6.2,
+            "h": 3.4
+          },
+          "light": {
+            "color": "#ff9a4a",
+            "radius": 5,
+            "intensity": 0.9,
+            "offset": [
+              0,
+              0.7
+            ]
+          },
+          "interact": "r2_nest",
+          "text": "The Ashwyrm's nest: charred branches, old bones, ash and straw, and three dark eggs.",
+          "dialogue": "dlg_r2_nest"
+        },
+        {
+          "art": "prop_dragon_skull",
+          "pos": [
+            84.0,
+            56.6
+          ],
+          "collider": {
+            "w": 6.0,
+            "h": 2.8
+          }
+        },
+        {
+          "art": "prop_treasure_pile",
+          "pos": [
+            106.4,
+            56.2
+          ],
+          "collider": {
+            "w": 2.0,
+            "h": 1.1
+          },
+          "light": {
+            "color": "#ffd88a",
+            "radius": 3.5,
+            "intensity": 0.7,
+            "offset": [
+              0,
+              0.6
+            ]
+          }
+        },
+        {
+          "art": "prop_treasure_pile",
+          "pos": [
+            104.6,
+            58.8
+          ],
+          "scale": 0.8,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.1
+          },
+          "light": {
+            "color": "#ffd88a",
+            "radius": 3.5,
+            "intensity": 0.7,
+            "offset": [
+              0,
+              0.6
+            ]
+          }
+        },
+        {
+          "art": "prop_altar",
+          "pos": [
+            96.0,
+            41.4
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 1.2
+          },
+          "light": {
+            "color": "#ffd28a",
+            "radius": 3.5,
+            "intensity": 0.8,
+            "offset": [
+              0,
+              1.25
+            ],
+            "flicker": true
+          },
+          "interact": "r2_calling_stone",
+          "text": "A Dragonsworn altar of black stone, carved with a wyrm swallowing the sun. In the middle is a horn-rest, worn smooth.",
+          "dialogue": "dlg_r2_calling_stone"
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            92.8,
+            41.0
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [
+            99.2,
+            41.0
+          ],
+          "collider": {
+            "w": 0.6,
+            "h": 0.45
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            86.4,
+            45.2
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            105.8,
+            45.4
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            86.6,
+            52.2
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [
+            105.8,
+            51.0
+          ],
+          "collider": {
+            "w": 0.9,
+            "h": 0.7
+          },
+          "light": {
+            "color": "#ffb062",
+            "radius": 5,
+            "intensity": 1.0,
+            "offset": [
+              0,
+              1.35
+            ],
+            "flicker": true
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            90.2,
+            47.6
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            101.8,
+            48.6
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            93.0,
+            56.0
+          ]
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            89.6,
+            60.6
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            107.0,
+            61.0
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            82.0,
+            47.8
+          ],
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            108.4,
+            48.0
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            80.2,
+            61.6
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            102.6,
+            62.0
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            82.6,
+            42.6
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_banner",
+          "pos": [
+            100.9,
+            46.0
+          ],
+          "collider": {
+            "w": 0.4,
+            "h": 0.3
+          },
+          "sway": true,
+          "interact": "r2_heron_standard",
+          "text": "Lord-Commander Aubric's heron standard, planted in the ash at the top of the world. It snaps in the wind like it's laughing.",
+          "requireFlag": "r2_standard_to_summit & r2_vyrmathra_defeated"
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            93.78,
+            27.07
+          ],
+          "scale": 1.07,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            75.17,
+            42.6
+          ],
+          "scale": 1.11,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            52.92,
+            58.04
+          ]
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            89.98,
+            42.45
+          ],
+          "scale": 0.96,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            25.2,
+            16.76
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            58.69,
+            7.73
+          ],
+          "scale": 0.82,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            55.53,
+            24.81
+          ],
+          "scale": 1.14,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            25.32,
+            24.5
+          ],
+          "scale": 1.17,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            93.76,
+            3.06
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            107.45,
+            16.67
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            28.54,
+            9.48
+          ]
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            5.93,
+            58.9
+          ],
+          "scale": 0.92,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            16.77,
+            57.32
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            69.81,
+            56.23
+          ],
+          "scale": 0.84,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            22.93,
+            60.43
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            49.3,
+            22.39
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            11.03,
+            40.43
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            49.58,
+            53.62
+          ],
+          "scale": 1.21,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            62.4,
+            11.39
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            10.33,
+            57.17
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            94.35,
+            29.56
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            12.64,
+            62.18
+          ],
+          "scale": 1.44,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            64.24,
+            13.05
+          ],
+          "scale": 1.32,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            63.63,
+            20.82
+          ]
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            2.57,
+            22.82
+          ],
+          "scale": 1.42,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            105.19,
+            29.44
+          ]
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            65.48,
+            7.57
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            58.86,
+            61.46
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            70.35,
+            23.94
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            76.78,
+            55.63
+          ],
+          "scale": 1.36,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            100.94,
+            26.89
+          ],
+          "scale": 1.36,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            62.97,
+            4.76
+          ]
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            29.98,
+            16.93
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            67.64,
+            7.64
+          ],
+          "scale": 0.99,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            49.04,
+            19.43
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            107.12,
+            51.84
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            85.23,
+            49.81
+          ]
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            35.02,
+            42.02
+          ],
+          "scale": 1.31,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            43.31,
+            42.21
+          ],
+          "scale": 1.23,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            86.28,
+            40.37
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            34.13,
+            31.33
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            22.1,
+            12.58
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            103.97,
+            19.39
+          ],
+          "scale": 1.38,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            24.46,
+            43.12
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            96.86,
+            16.69
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            28.56,
+            28.5
+          ]
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            4.88,
+            17.04
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            77.51,
+            7.1
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            50.45,
+            16.47
+          ],
+          "scale": 1.33,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            36.95,
+            24.31
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            67.97,
+            53.22
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            65.24,
+            9.88
+          ],
+          "scale": 1.14,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            52.32,
+            36.79
+          ],
+          "scale": 0.82,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            75.38,
+            46.51
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            59.38,
+            27.77
+          ],
+          "scale": 0.81,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            79.06,
+            46.46
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            91.96,
+            62.53
+          ],
+          "scale": 1.01,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            62.4,
+            15.09
+          ],
+          "scale": 1.09,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            73.73,
+            59.96
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            53.77,
+            11.09
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            52.52,
+            53.54
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            28.09,
+            62.9
+          ],
+          "scale": 1.04,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            98.03,
+            30.05
+          ],
+          "scale": 1.25,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            41.4,
+            61.82
+          ],
+          "scale": 1.33,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            108.16,
+            58.18
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            32.12,
+            53.49
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            55.61,
+            21.01
+          ]
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            54.92,
+            1.82
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            93.98,
+            32.99
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            74.75,
+            15.72
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            43.68,
+            62.34
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            40.17,
+            48.5
+          ],
+          "scale": 1.44,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            3.53,
+            8.9
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            57.23,
+            12.29
+          ],
+          "scale": 1.07,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            89.18,
+            62.91
+          ],
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            61.98,
+            24.78
+          ],
+          "scale": 1.41,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            28.1,
+            22.9
+          ],
+          "scale": 1.21,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            20.25,
+            2.51
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            105.1,
+            10.46
+          ]
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            11.81,
+            9.06
+          ],
+          "scale": 1.34,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            74.64,
+            55.98
+          ],
+          "scale": 0.93,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            42.09,
+            53.43
+          ],
+          "scale": 0.85,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            56.61,
+            19.05
+          ],
+          "scale": 1.49,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            73.72,
+            48.61
+          ],
+          "scale": 1.17,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            79.82,
+            48.38
+          ],
+          "scale": 0.9,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            72.03,
+            49.56
+          ],
+          "scale": 0.92,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            55.78,
+            26.98
+          ],
+          "scale": 1.36,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            69.49,
+            20.09
+          ],
+          "scale": 1.16,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            25.23,
+            61.59
+          ],
+          "scale": 0.81,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            21.34,
+            54.05
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            17.4,
+            29.42
+          ],
+          "scale": 0.87,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            78.71,
+            41.87
+          ],
+          "scale": 1.29,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_tree_dead",
+          "pos": [
+            34.42,
+            26.96
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            36.77,
+            31.73
+          ],
+          "scale": 0.82,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            107.42,
+            24.25
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            27.54,
+            12.85
+          ],
+          "scale": 1.14,
+          "flip": true,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            60.28,
+            14.61
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            81.33,
+            6.37
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            45.05,
+            46.86
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            49.91,
+            38.38
+          ],
+          "scale": 0.99,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            78.58,
+            58.07
+          ]
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            18.42,
+            49.14
+          ],
+          "flip": true,
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_snowdrift",
+          "pos": [
+            22.28,
+            22.09
+          ],
+          "collider": {
+            "w": 2.4,
+            "h": 0.9
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            52.78,
+            51.15
+          ],
+          "scale": 1.18,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            65.14,
+            23.31
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_pine_snow",
+          "pos": [
+            15.69,
+            62.84
+          ],
+          "collider": {
+            "w": 1.0,
+            "h": 0.6
+          },
+          "sway": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            34.1,
+            44.7
+          ],
+          "scale": 0.9,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rock_snow",
+          "pos": [
+            13.68,
+            55.06
+          ],
+          "scale": 0.91,
+          "collider": {
+            "w": 2.0,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            41.37,
+            59.88
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            70.67,
+            51.36
+          ],
+          "scale": 1.24,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            47.55,
+            62.27
+          ],
+          "scale": 1.21,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            105.06,
+            42.33
+          ],
+          "scale": 1.29,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            68.51,
+            62.91
+          ],
+          "scale": 0.92,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            75.77,
+            61.01
+          ],
+          "scale": 1.43,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_rubble",
+          "pos": [
+            59.47,
+            4.32
+          ],
+          "collider": {
+            "w": 1.8,
+            "h": 1.0
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            55.44,
+            4.84
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            103.85,
+            23.74
+          ],
+          "scale": 1.16,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            66.37,
+            13.54
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bonepile",
+          "pos": [
+            58.87,
+            55.65
+          ],
+          "flip": true,
+          "collider": {
+            "w": 1.6,
+            "h": 1.2
+          }
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            80.28,
+            52.04
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            96.62,
+            47.91
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            97.38,
+            55.33
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            101.8,
+            46.86
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            91.13,
+            52.96
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            101.03,
+            54.98
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            95.81,
+            54.27
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            91.62,
+            54.69
+          ]
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            87.49,
+            49.85
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_bones",
+          "pos": [
+            94.51,
+            55.31
+          ],
+          "flip": true
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            51.27,
+            62.8
+          ],
+          "scale": 1.73,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            53.59,
+            63.08
+          ],
+          "scale": 1.51,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            56.83,
+            63.48
+          ],
+          "scale": 1.8,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            62.01,
+            63.36
+          ],
+          "scale": 2.26,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            66.71,
+            63.3
+          ],
+          "scale": 1.81,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            71.42,
+            63.04
+          ],
+          "scale": 1.82,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            74.01,
+            63.14
+          ],
+          "scale": 1.97,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            76.79,
+            63.5
+          ],
+          "scale": 2.23,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            79.16,
+            63.5
+          ],
+          "scale": 1.84,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            81.62,
+            62.61
+          ],
+          "scale": 2.07,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            84.42,
+            63.15
+          ],
+          "scale": 1.63,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        },
+        {
+          "art": "prop_stalagmite",
+          "pos": [
+            104.36,
+            63.22
+          ],
+          "scale": 2.03,
+          "flip": true,
+          "collider": {
+            "w": 1.2,
+            "h": 0.8
+          }
+        }
+      ],
+      "npcs": [
+        {
+          "npc": "r2_quartermaster",
+          "pos": [
+            11.2,
+            36.2
+          ]
+        },
+        {
+          "npc": "r2_kesta",
+          "pos": [
+            7.0,
+            29.4
+          ],
+          "flip": true
+        },
+        {
+          "npc": "r2_sir_hamon",
+          "pos": [
+            15.8,
+            41.6
+          ],
+          "hideFlag": "r2_standard_to_summit & r2_vyrmathra_defeated"
+        },
+        {
+          "npc": "r2_sir_hamon_summit",
+          "pos": [
+            101.8,
+            45.2
+          ],
+          "flip": true,
+          "requireFlag": "r2_standard_to_summit & r2_vyrmathra_defeated"
+        }
+      ],
+      "encounters": [
+        {
+          "id": "enc_r2_road_patrol",
+          "pos": [
+            25.4,
+            35.4
+          ],
+          "radius": 3.4,
+          "enemies": [
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                25.6,
+                37.0
+              ]
+            },
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                27.0,
+                35.0
+              ]
+            },
+            {
+              "creature": "cr_r2_pyre_priest",
+              "pos": [
+                24.0,
+                34.0
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_vent_elementals",
+          "pos": [
+            48.0,
+            28.6
+          ],
+          "radius": 3.2,
+          "enemies": [
+            {
+              "creature": "cr_r2_ash_elemental",
+              "pos": [
+                46.8,
+                29.4
+              ]
+            },
+            {
+              "creature": "cr_r2_ash_elemental",
+              "pos": [
+                49.4,
+                28.0
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_frostclaw",
+          "pos": [
+            40.4,
+            11.4
+          ],
+          "radius": 5.0,
+          "enemies": [
+            {
+              "creature": "cr_r2_frostclaw",
+              "pos": [
+                40.6,
+                11.0
+              ]
+            }
+          ],
+          "doneFlag": "r2_frostclaw_defeated"
+        },
+        {
+          "id": "enc_r2_whelp_clutch",
+          "pos": [
+            52.0,
+            43.6
+          ],
+          "radius": 3.4,
+          "enemies": [
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                51.0,
+                44.6
+              ]
+            },
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                53.2,
+                45.0
+              ]
+            },
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                52.8,
+                42.6
+              ]
+            },
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                50.8,
+                42.6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_terrace",
+          "pos": [
+            71.6,
+            33.8
+          ],
+          "radius": 3.2,
+          "enemies": [
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                70.6,
+                34.6
+              ]
+            },
+            {
+              "creature": "cr_r2_ash_elemental",
+              "pos": [
+                72.8,
+                34.8
+              ]
+            },
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                70.8,
+                32.6
+              ]
+            },
+            {
+              "creature": "cr_r2_drake_whelp",
+              "pos": [
+                72.6,
+                32.4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_cinder_drakes",
+          "pos": [
+            64.0,
+            44.6
+          ],
+          "radius": 5.0,
+          "enemies": [
+            {
+              "creature": "cr_r2_emberjaw",
+              "pos": [
+                62.2,
+                45.6
+              ]
+            },
+            {
+              "creature": "cr_r2_ashtongue",
+              "pos": [
+                66.0,
+                46.2
+              ]
+            }
+          ],
+          "doneFlag": "r2_cinder_drakes_defeated"
+        },
+        {
+          "id": "enc_r2_court_gate",
+          "pos": [
+            79.0,
+            23.6
+          ],
+          "radius": 3.0,
+          "enemies": [
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                78.2,
+                24.4
+              ]
+            },
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                80.2,
+                24.0
+              ]
+            },
+            {
+              "creature": "cr_r2_wyrmcaller",
+              "pos": [
+                79.4,
+                25.8
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_varkas",
+          "pos": [
+            88.2,
+            13.4
+          ],
+          "radius": 5.0,
+          "enemies": [
+            {
+              "creature": "cr_r2_varkas",
+              "pos": [
+                88.4,
+                13.8
+              ]
+            },
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                85.8,
+                12.6
+              ]
+            },
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                90.8,
+                12.6
+              ]
+            }
+          ],
+          "doneFlag": "r2_varkas_defeated",
+          "dialogue": "dlg_r2_varkas"
+        },
+        {
+          "id": "enc_r2_stair_guard",
+          "pos": [
+            88.6,
+            33.6
+          ],
+          "radius": 3.2,
+          "enemies": [
+            {
+              "creature": "cr_r2_ash_elemental",
+              "pos": [
+                88.4,
+                35.2
+              ]
+            },
+            {
+              "creature": "cr_r2_pyre_priest",
+              "pos": [
+                90.0,
+                33.4
+              ]
+            },
+            {
+              "creature": "cr_r2_dragonsworn",
+              "pos": [
+                86.8,
+                33.8
+              ]
+            }
+          ]
+        },
+        {
+          "id": "enc_r2_vyrmathra",
+          "pos": [
+            96.0,
+            51.4
+          ],
+          "radius": 6.0,
+          "enemies": [
+            {
+              "creature": "cr_r2_vyrmathra",
+              "pos": [
+                96.4,
+                53.0
+              ]
+            }
+          ],
+          "doneFlag": "r2_vyrmathra_defeated",
+          "requireFlag": "r2_horn_blown"
+        }
+      ],
+      "chests": [
+        {
+          "id": "chest_r2_heron_cache",
+          "pos": [
+            46.0,
+            52.6
+          ],
+          "lootTable": "lt_r2_chest_heron_cache",
+          "requireFlag": "r2_cache_found"
+        },
+        {
+          "id": "chest_r2_varkas_strongbox",
+          "pos": [
+            97.4,
+            6.4
+          ],
+          "lootTable": "lt_r2_chest_strongbox",
+          "lockCheck": {
+            "skill": "SleightOfHand",
+            "dc": 16
+          }
+        },
+        {
+          "id": "chest_r2_hoard",
+          "pos": [
+            103.6,
+            54.6
+          ],
+          "lootTable": "lt_r2_chest_hoard",
+          "requireFlag": "r2_vyrmathra_defeated"
+        }
+      ],
       "transitions": [
         {
           "id": "to_skyreach",
-          "pos": [0.7, 32.0],
-          "size": [1.4, 6.0],
+          "pos": [
+            0.7,
+            32.0
+          ],
+          "size": [
+            1.4,
+            6.0
+          ],
           "targetMap": "skyreach",
           "targetSpawn": "from_raid_ashwyrm_roost",
           "label": "Skyreach Peaks"
         }
       ],
       "spawns": [
-        {"id": "default", "pos": [3.4, 32.0]},
-        {"id": "from_skyreach", "pos": [3.4, 32.0]}
+        {
+          "id": "default",
+          "pos": [
+            3.4,
+            32.0
+          ]
+        },
+        {
+          "id": "from_skyreach",
+          "pos": [
+            3.4,
+            32.0
+          ]
+        }
+      ],
+      "regions": [
+        {
+          "id": "reg_r2_camp",
+          "pos": [
+            10,
+            32
+          ],
+          "size": [
+            18,
+            22
+          ],
+          "name": "Ember Gate Camp",
+          "text": "Ember Gate Camp — the Brightwater expedition's tents, pitched where the pines give up. Somebody has labelled every crate."
+        },
+        {
+          "id": "reg_r2_heron_road",
+          "pos": [
+            34,
+            35
+          ],
+          "size": [
+            22,
+            10
+          ],
+          "name": "The Heron Road",
+          "text": "The Heron Road — the old knights' road to Skyreach Watch. The waymarks still stand. The herons on them do not."
+        },
+        {
+          "id": "reg_r2_last_stand",
+          "pos": [
+            36,
+            54
+          ],
+          "size": [
+            30,
+            16
+          ],
+          "enterFlag": "reg_r2_last_stand",
+          "name": "The Last Stand",
+          "text": "The Last Stand — under the broken tower, the ash lies over old bones and older spears. Twelve years, and nobody came to tidy up.",
+          "check": {
+            "skill": "Perception",
+            "dc": 15
+          },
+          "checkFlag": "r2_cache_found",
+          "successText": "One of the cairns by the tower is wrong: too neat, too square, and the top stone has a heron scratched under the soot. A soldier's cache.",
+          "failText": "Ash, bones, broken spears. You keep your eyes on the ground and your thoughts to yourself."
+        },
+        {
+          "id": "reg_r2_frost_shelf",
+          "pos": [
+            40,
+            11
+          ],
+          "size": [
+            24,
+            18
+          ],
+          "name": "Frostclaw's Shelf",
+          "text": "Frostclaw's Shelf — the last snow on the mountain. Something huge has been pacing it in circles, for days."
+        },
+        {
+          "id": "reg_r2_terraces",
+          "pos": [
+            62,
+            39
+          ],
+          "size": [
+            30,
+            26
+          ],
+          "name": "Cinder Terraces",
+          "text": "The Cinder Terraces — the stones are warm through your boots. Little scorched tracks go everywhere, like a nursery with a fire problem."
+        },
+        {
+          "id": "reg_r2_court",
+          "pos": [
+            88,
+            13
+          ],
+          "size": [
+            26,
+            20
+          ],
+          "name": "Highlord's Court",
+          "text": "Skyreach Watch — the Heronguard's keep, now the Highlord's court. The Dragonsworn have hung their banners over every heron."
+        },
+        {
+          "id": "reg_r2_overlook",
+          "pos": [
+            103,
+            6
+          ],
+          "size": [
+            12,
+            8
+          ],
+          "name": "Cloud-Sea Overlook",
+          "text": "The edge of the world: below you, the clouds lie like a white sea, and Skyreach's peaks stand up out of it like islands."
+        },
+        {
+          "id": "reg_r2_stair",
+          "pos": [
+            88,
+            33
+          ],
+          "size": [
+            18,
+            10
+          ],
+          "name": "Wyrm Stair",
+          "text": "The Wyrm Stair — steps cut by giant hands, each one taller than a dwarf. The air gets hotter as it goes up."
+        },
+        {
+          "id": "reg_r2_summit",
+          "pos": [
+            96,
+            51
+          ],
+          "size": [
+            30,
+            24
+          ],
+          "enterFlag": "reg_r2_summit",
+          "name": "The Summit",
+          "text": "The Summit — the crown of Skyreach, ringed in ash. The nest at its heart is the size of a cottage. High above, in the smoke, something enormous turns in slow circles."
+        }
       ],
       "ambient": {
         "timeOfDay": "dusk",
-        "dayNightCycle": false,
+        "dayNightCycle": true,
         "ambientColor": "#f0c8a8",
         "ambientIntensity": 0.85,
         "ash": true,
@@ -43,6 +4864,356 @@
       },
       "restArea": false,
       "music": "music_raid"
+    }
+  ],
+  "quests": [
+    {
+      "id": "r2_matriarch",
+      "name": "A Cold Welcome",
+      "giver": "r2_quartermaster",
+      "level": 31,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "summary": "The Dragonsworn chained Frostclaw's cubs in their den on the Shelf and burned ash-smoke at its mouth until the yeti matriarch went mad. She can't be saved. Her cubs can.",
+      "stages": [
+        {
+          "id": "matriarch",
+          "description": "Frostclaw paces the Shelf south of the Heron Road. Put the matriarch to rest.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_frostclaw_defeated",
+              "text": "Frostclaw put to rest"
+            }
+          ],
+          "next": "cubs"
+        },
+        {
+          "id": "cubs",
+          "description": "Free the cubs from the Dragonsworn chains at the den on the east side of the Shelf.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_cubs_freed",
+              "text": "Cubs freed"
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Marta at Ember Gate Camp.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_quartermaster",
+              "text": "Return to Marta"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 750,
+        "gold": 6000,
+        "choiceItems": [
+          "r2_q_matriarchs_mantle",
+          "r2_q_shelf_snow_shawl",
+          "r2_q_ring_of_the_shelf"
+        ]
+      }
+    },
+    {
+      "id": "r2_twin_fires",
+      "name": "Twin Fires",
+      "giver": "r2_quartermaster",
+      "level": 31,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "summary": "The Cinder Drakes, Emberjaw and Ashtongue, sleep in the Drake Pit on the terraces. Put them down, and cut Marta a fire-gland: she can brew Emberward Draughts from it for the fight at the top.",
+      "stages": [
+        {
+          "id": "drakes",
+          "description": "Defeat Emberjaw and Ashtongue in the Drake Pit on the Cinder Terraces. Stop Ashtongue mending her brother.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_cinder_drakes_defeated",
+              "text": "The Cinder Drakes defeated"
+            }
+          ],
+          "next": "gland"
+        },
+        {
+          "id": "gland",
+          "description": "Cut a fire-gland from the fallen drakes.",
+          "objectives": [
+            {
+              "type": "Collect",
+              "target": "r2_fire_gland",
+              "text": "Fire-gland"
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the fire-gland to Marta at Ember Gate Camp.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_quartermaster",
+              "text": "Return to Marta"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 750,
+        "gold": 6500,
+        "choiceItems": [
+          "r2_q_drakescale_choker",
+          "r2_q_ashtongue_pendant",
+          "r2_q_twin_cinder_band"
+        ]
+      }
+    },
+    {
+      "id": "r2_highlord",
+      "name": "The Highlord's Horn",
+      "giver": "r2_quartermaster",
+      "level": 31,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "summary": "Highlord Varkas holds Skyreach Watch with his Dragonsworn. He carries the Horn of Calling, the only thing that brings the Ashwyrm down out of her smoke.",
+      "stages": [
+        {
+          "id": "varkas",
+          "description": "Defeat Highlord Varkas in his court at Skyreach Watch, south-east of the terraces.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_varkas_defeated",
+              "text": "Highlord Varkas defeated"
+            }
+          ],
+          "next": "horn"
+        },
+        {
+          "id": "horn",
+          "description": "Take the Horn of Calling from where Varkas fell.",
+          "objectives": [
+            {
+              "type": "Collect",
+              "target": "r2_horn_of_calling",
+              "text": "Horn of Calling"
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the horn to Marta at Ember Gate Camp.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_quartermaster",
+              "text": "Return to Marta"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 900,
+        "gold": 7000,
+        "choiceItems": [
+          "r2_q_highlords_signet",
+          "r2_q_dragonsworn_censer",
+          "r2_q_watch_captains_cloak"
+        ]
+      }
+    },
+    {
+      "id": "r2_last_ember",
+      "name": "The Last Ember",
+      "giver": "r2_quartermaster",
+      "level": 33,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "main": true,
+      "summary": "Climb the Wyrm Stair, blow the Horn of Calling at the summit and bring Vyrmathra down. When the Ashwyrm dies, the Hollow dies with her.",
+      "stages": [
+        {
+          "id": "summit",
+          "description": "Climb the Wyrm Stair from the Watch's gate to the summit.",
+          "objectives": [
+            {
+              "type": "Reach",
+              "target": "reg_r2_summit",
+              "text": "Reach the summit"
+            }
+          ],
+          "next": "call"
+        },
+        {
+          "id": "call",
+          "description": "Blow the Horn of Calling at the Dragonsworn calling stone at the top of the stair.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_horn_blown",
+              "text": "The horn blown"
+            }
+          ],
+          "next": "wyrm"
+        },
+        {
+          "id": "wyrm",
+          "description": "Defeat Vyrmathra the Ashwyrm.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_vyrmathra_defeated",
+              "text": "Vyrmathra defeated"
+            }
+          ],
+          "next": "nest"
+        },
+        {
+          "id": "nest",
+          "description": "Look into the Ashwyrm's nest at the back of the summit, and decide what becomes of her eggs.",
+          "objectives": [
+            {
+              "type": "Flag",
+              "target": "r2_nest_resolved",
+              "text": "The nest"
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Marta at Ember Gate Camp that it is over.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_quartermaster",
+              "text": "Return to Marta"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 1700,
+        "gold": 20000,
+        "choiceItems": [
+          "r2_q_heart_of_the_last_ember",
+          "r2_q_wyrmslayers_medal",
+          "r2_q_ashfall_mantle",
+          "r2_q_hollows_end_band"
+        ]
+      }
+    },
+    {
+      "id": "r2_twenty_nine",
+      "name": "The Twenty-Nine",
+      "giver": "r2_sir_hamon",
+      "level": 31,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "summary": "Twelve years ago forty Heronguard knights rode up Skyreach and twenty-nine stayed. Lord-Commander Aubric's standard is still up there, somewhere under the ash at the Last Stand.",
+      "stages": [
+        {
+          "id": "stand",
+          "description": "Climb to the Last Stand under the broken tower, up the slope north of the Heron Road.",
+          "objectives": [
+            {
+              "type": "Reach",
+              "target": "reg_r2_last_stand",
+              "text": "Reach the Last Stand"
+            }
+          ],
+          "next": "standard"
+        },
+        {
+          "id": "standard",
+          "description": "Find Lord-Commander Aubric's standard among the fallen.",
+          "objectives": [
+            {
+              "type": "Collect",
+              "target": "r2_aubric_standard",
+              "text": "Aubric's standard"
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the standard to Sir Hamon at his cairn by the camp.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_sir_hamon",
+              "text": "Return to Sir Hamon"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 600,
+        "gold": 4000,
+        "items": [
+          "r2_q_heronguard_signet"
+        ]
+      }
+    },
+    {
+      "id": "r2_small_fires",
+      "name": "Small Fires",
+      "giver": "r2_kesta",
+      "level": 31,
+      "minLevel": 30,
+      "zone": "raid_ashwyrm_roost",
+      "summary": "The ember whelps from the clutch on the Cinder Terraces have been raiding the camp's stores. Kesta would like them back, and the whelps discouraged.",
+      "stages": [
+        {
+          "id": "whelps",
+          "description": "Drive off the ember whelps on the Cinder Terraces and recover the camp's three stolen stashes.",
+          "objectives": [
+            {
+              "type": "Kill",
+              "target": "cr_r2_drake_whelp",
+              "text": "Ember whelps driven off",
+              "count": 6
+            },
+            {
+              "type": "Collect",
+              "target": "r2_stolen_stores",
+              "text": "Stolen stores",
+              "count": 3
+            }
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the stores back to Kesta at the camp fire.",
+          "objectives": [
+            {
+              "type": "Talk",
+              "target": "r2_kesta",
+              "text": "Return to Kesta"
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "xp": 500,
+        "gold": 3000,
+        "choiceItems": [
+          "r2_q_kestas_scarf",
+          "r2_q_whelp_tooth_charm"
+        ]
+      }
     }
   ]
 }

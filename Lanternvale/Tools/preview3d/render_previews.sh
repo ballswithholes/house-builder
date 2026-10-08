@@ -117,6 +117,14 @@ done
 "$tool" map raid_hollow_heart "$out/raid_hollow_heart_pools_relit.png" --at 47,45 --zoom 10.4 --yaw -20 --flags enc_enc_r1_thornmaw,enc_enc_r1_twins,r1_grove_relit,r1_lore_twins
 "$tool" map raid_hollow_heart "$out/raid_hollow_heart_mother_mire.png" --at 86,13 --zoom 8
 "$tool" map raid_hollow_heart "$out/raid_hollow_heart_heart.png" --at 91,49 --zoom 10.4
+# ---- r2: Ashwyrm's Roost (the camp, the Last Stand, Frostclaw, the Drake Pit, the court, the summit before and after)
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_camp_night.png" --at 11,33 --hour 22.5
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_last_stand.png" --at 36,53 --hour 15 --flags r2_cache_found
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_frostclaw.png" --at 40,13 --hour 13
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_drake_pit.png" --at 62,40 --hour 18.5
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_court_night.png" --at 88,15 --hour 21.5
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_summit.png" --at 96,53 --zoom 9 --hour 18.5 --flags r2_horn_blown
+"$tool" map raid_ashwyrm_roost "$out/raid_ashwyrm_roost_summit_after.png" --at 96,49 --hour 19 --flags r2_vyrmathra_defeated,r2_standard_to_summit
 # ---- sheets
 "$tool" units "$out/units.png" all --tile 260
 "$tool" props "$out/props_all.png" all --views g --tile 240 > /dev/null
