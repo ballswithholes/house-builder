@@ -11,8 +11,8 @@
 //     时间对称）。混乱同理按 ConfuseCount 补正，见 ConfusedPhases
 //   DuelAccepts(a, b) → bool、DuelFinish(a, b, winnerIsA, rounds) → DuelResult：Duel() 拆成的两步（随机数顺序不变），
 //     供格斗单挑画面结束后结算
-//   BattleModel.specialsEnabled：false 时规则与电脑完全回到第一版（平衡对比测试用）。网页版默认 true；
-//     本工程暂时默认 false（见声明处的说明），无头测试（Tests~/sim）一律显式置 true 与网页版对照
+//   BattleModel.specialsEnabled：false 时规则与电脑完全回到第一版（平衡对比测试用）。默认 true（同网页版）；
+//     无头测试（Tests~/sim）一律显式置 true 与网页版对照
 // 数值按 double 计算（与网页版一致）；战场地形由 SeededRandom 生成，同一种子下与网页版完全相同。
 using System;
 using System.Collections.Generic;
@@ -99,11 +99,10 @@ namespace Sanguo
 
     public class BattleModel
     {
-        // false：不使用必杀技（平衡对比测试）。网页版默认 true。
-        // 暂时默认 false：BattleController 尚未处理 PlanAction 的 kind "special"（也没有玩家的必杀技菜单），开着时电脑选了必杀技
-        // 就白白空过一回合。BattleController 接入必杀技（AiPhase 的 "special" 分支、玩家菜单、特效）时把这里改回 true。
+        // false：不使用必杀技（平衡对比测试）。默认 true（同网页版）：BattleController 已接入必杀技
+        // （行动菜单「必杀」、AiPhase 的 "special" 分支、特写与特效）。
         // 只影响亲自指挥 / 观战的战术战斗；电脑之间的战斗走 Conquest.AutoResolve，与此无关。
-        public static bool specialsEnabled = false;
+        public static bool specialsEnabled = true;
 
         public BattleSetup setup;
         public int W = Balance.BattleW, H = Balance.BattleH;
