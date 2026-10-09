@@ -82,7 +82,9 @@ namespace Lanternvale.Rules
             bool ranged = slot == WeaponSlot.Ranged;
             var st = u.Stats;
             var tst = target.Stats;
-            bool dw = !ranged && u.Equipment.IsDualWielding;
+            // the dual-wield penalty applies whenever the off hand swings too (its weapon next to a main-hand weapon or the
+            // fists: an Off Hand weapon with an empty main hand still swings both hands)
+            bool dw = !ranged && StatCalculator.GetWeapon(u, WeaponSlot.OffHand).Valid;
             miss = Formulas.MeleeMissChance(u.Level, target.Level, dw) - (ranged ? st.RangedHit : st.MeleeHit) - tst.ChanceToBeHit + tst.Defense * 0.04f
                    + Specials.IncomingMissChance(target, ranged ? AttackKind.Ranged : AttackKind.Melee);
             miss = MathUtil.Clamp(miss, 100f - RulesConstants.MaxHitChance, 100f);

@@ -392,8 +392,12 @@ Rules: armour by class `armorTypes` (+ `armorUpgrade` at its level; lower types 
   hand is their only slot `CannotUseReason` already says why (bags grey them out for a character that cannot dual
   wield; `LootContext.CanUse` drops them for `partyUsable`). Shields and `HeldInOffhand` items need no dual wield.
   In battle an Off Hand weapon is the off-hand `WeaponInfo` (`StatCalculator.GetWeapon(u, WeaponSlot.OffHand)`):
-  `IsDualWielding`, its own swing timer, ×`StatCalculator.OffHandDamageFactor(u)` (50% × Dual Wield Specialization)
-  and the dual-wield miss penalty. `ItemGenerator` gives them one-hand `WeaponDps` and the OffHand stat budget (0.56);
+  its own swing timer, ×`StatCalculator.OffHandDamageFactor(u)` (50% × Dual Wield Specialization) and the dual-wield
+  miss penalty, which applies to both hands whenever the off hand swings (also next to an empty main hand: the fists
+  swing there). `EquipmentRules.OtherHandDisplaced(u, def, slot)` names what `Equip` also takes out of the other hand
+  (a two-hander's off hand; the two-hander an off-hand piece pushes out). Loading a save re-seats an item that no
+  longer fits its saved slot (an old save's starter off-hand dagger held in the main hand) into an empty legal slot,
+  else the bags. `ItemGenerator` gives them one-hand `WeaponDps` and the OffHand stat budget (0.56);
   veteran rogues get one, `RandomItem` makes one of three generated off-hand pieces an Off Hand weapon.
 
 * `ItemInstance`: `Def`, `Count`, `Name` (with suffix), `SuffixId/SuffixName/SuffixStats`, `Generated` (def not in

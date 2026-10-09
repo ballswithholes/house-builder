@@ -541,21 +541,61 @@ namespace Lanternvale.Session
                 foreach (var kv in s.lockouts)
                     if (Enum.TryParse<School>(kv.Key, true, out var sc)) u.Lockouts[sc] = kv.Value;
             if (s.equipment != null)
+            {
+                List<ItemInstance> misfits = null;
                 foreach (var e in s.equipment)
                 {
                     var it = LoadItem(e.item);
                     if (it == null) continue;
                     if (u.Equipment[e.slot] != null) { Inventory.Items.Add(it); continue; }
                     // an item whose definition no longer fits that slot (the rogue starter off-hand dagger became an Off
-                    // Hand weapon: an old save may hold it in the main hand) goes back to the bags
-                    if (Array.IndexOf(EquipmentRules.SlotsFor(it.Def), e.slot) < 0) { Inventory.Items.Add(it); continue; }
+                    // Hand weapon: an old save may hold it in the main hand) is re-seated below, once every slot is loaded
+                    if (Array.IndexOf(EquipmentRules.SlotsFor(it.Def), e.slot) < 0) { (misfits ??= new List<ItemInstance>()).Add(it); continue; }
                     foreach (var displaced in EquipmentRules.Equip(u, it, e.slot)) if (displaced != null) Inventory.Items.Add(displaced);
                 }
+                if (misfits != null)
+                    foreach (var it in misfits)
+                        if (!ReseatMisfit(u, it)) Inventory.Items.Add(it);
+            }
             if (s.hunterPet != null)
                 u.HunterPet = new HunterPetState { TemplateId = s.hunterPet.templateId ?? "", Name = s.hunterPet.name ?? "", HealthFraction = s.hunterPet.healthFraction, Dead = s.hunterPet.dead };
             UnitFactory.AttachPassives(u);
             u.InvalidateStats();
             return u;
+        }
+
+        /// <summary>
+        /// Equips a loaded item whose saved slot it no longer fits into an empty slot it may go into (the character keeps
+        /// wearing it, e.g. an old save's starter off-hand dagger held in the main hand goes to the off hand). An Off Hand
+        /// piece whose off hand holds a One-Hand weapon, with the main hand empty, moves that weapon to the main hand
+        /// first, so a rogue who held the two starter daggers the other way round keeps both. False: nowhere legal (the
+        /// caller bags it).
+        /// </summary>
+        static bool ReseatMisfit(Unit u, ItemInstance it)
+        {
+            var eq = u.Equipment;
+            foreach (var sl in EquipmentRules.SlotsFor(it.Def))
+                if (eq[sl] == null && EquipmentRules.CannotEquipReason(u, it.Def, sl) == null)
+                {
+                    EquipmentRules.Equip(u, it, sl);
+                    return true;
+                }
+            var off = eq.OffHand;
+            if (it.Def.equip == EquipType.OffHand && eq.MainHand == null && off != null && off.Def.equip == EquipType.OneHand
+                && EquipmentRules.CannotEquipReason(u, off.Def, EquipSlot.MainHand) == null)
+            {
+                EquipmentRules.Unequip(u, EquipSlot.OffHand);
+                EquipmentRules.Equip(u, off, EquipSlot.MainHand);
+                if (EquipmentRules.CannotEquipReason(u, it.Def, EquipSlot.OffHand) == null)
+                {
+                    EquipmentRules.Equip(u, it, EquipSlot.OffHand);
+                    return true;
+                }
+                // cannot go in the off hand after all: put the One-Hand weapon back where it was
+                EquipmentRules.Unequip(u, EquipSlot.MainHand);
+                EquipmentRules.Equip(u, off, EquipSlot.OffHand);
+            }
+            return false;
         }
 
         void LoadPet(Unit owner, PetSaveData s)

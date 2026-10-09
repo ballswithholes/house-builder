@@ -66,8 +66,10 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
   equip effects worded by kind (`UiText.EffectLine`: "Chance on hit:", "When struck:", "Equip: Chance on spell cast:"
   with chance / procs per minute / cooldown; ability mods in words; `PassiveDef.description` first), the set block
   (set name with pieces worn, each piece lit when the member wears it, bonuses green while active), requirements,
-  flavour. Comparisons (`PanelKit.CompareText(next, cur, unit)`) count Stat equip effects and the set bonuses the
-  swap switches on or off, and list other effects gained and lost. The tooltip cache is keyed on
+  flavour. Comparisons (`PanelKit.CompareText(next, cur, unit, also)`) count Stat equip effects and the set bonuses the
+  swap switches on or off, and list other effects gained and lost; `also` is the other hand the swap empties
+  (`PanelKit.Replaced`: a two-hander vs a dual wield or a shield, an Off Hand weapon or shield vs a two-hander), counted
+  as lost and named in an "Also unequips" line. The tooltip cache is keyed on
   `Equipment.Version`. **Quest reward** — pick one card, Claim (Enter) or Decide
   later (the Journal's "Choose your reward" brings it back).
 * **Vendor** — Buy (price plates, unaffordable/sold out/unusable flags, Shift = a stack), Sell (sell prices, Sell junk,

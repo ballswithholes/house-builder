@@ -149,13 +149,43 @@ namespace Lanternvale.Tests
             Assert(s2.LoadGame(json, out var err), "load: " + err);
             var r2 = s2.Main;
             Assert(r2.Knows("rogue_dual_wield"), "the starting passive is learned on load");
+            // the Off Hand dagger cannot stay in the main hand: it is re-equipped in the (empty) off hand, not bagged
             Assert(r2.Equipment.MainHand == null, "the Off Hand dagger left the main hand on load");
-            var dagger = s2.Inventory.Items.FirstOrDefault(i => i.Def.id == "rogue_starter_dagger_offhand");
-            Assert(dagger != null, "... into the bags");
+            var dagger = r2.Equipment.OffHand;
+            Assert(dagger?.Def.id == "rogue_starter_dagger_offhand", "... into the off hand: " + dagger?.Def.id);
+            Assert(!s2.Inventory.Items.Any(i => i.Def.id == "rogue_starter_dagger_offhand"), "... not into the bags");
             Assert(s2.CanEquip(r2, dagger, EquipSlot.MainHand) != null, "it cannot go back into the main hand");
-            Assert(s2.Equip(r2, dagger) == null && r2.Equipment.OffHand == dagger, "equipped: into the off hand");
             AssertDualWields(s2, r2, "loaded old-save rogue");
             Assert(s2.SaveGame().Contains("rogue_dual_wield"), "saved again with Dual Wield");
+
+            // the two starter daggers held the other way round (the old off-hand one in the main hand, the One-Hand
+            // starter in the off hand): both stay worn, each in the hand it now belongs to
+            var s3 = SessionTest.NewGame(ClassId.Rogue, 4, seed: 1104, veteranGear: false);
+            var r3 = s3.Main;
+            var main = EquipmentRules.Unequip(r3, EquipSlot.MainHand);
+            EquipmentRules.Unequip(r3, EquipSlot.OffHand);
+            Assert(main?.Def.id == "rogue_starter_dagger", "the One-Hand starter dagger: " + main?.Def.id);
+            r3.Equipment[EquipSlot.MainHand] = new ItemInstance(Db.Item("rogue_starter_dagger_offhand"));
+            r3.Equipment[EquipSlot.OffHand] = main;
+            var s4 = new GameSession(Db, 1107);
+            Assert(s4.LoadGame(s3.SaveGame(), out err), "load swapped: " + err);
+            var r4 = s4.Main;
+            Assert(r4.Equipment.MainHand?.Def.id == "rogue_starter_dagger" && r4.Equipment.OffHand?.Def.id == "rogue_starter_dagger_offhand",
+                $"swapped daggers re-seated: {r4.Equipment.MainHand?.Def.id} + {r4.Equipment.OffHand?.Def.id}");
+            Assert(r4.Equipment.IsDualWielding && !s4.Inventory.Items.Any(i => i.Def.id.StartsWith("rogue_starter_dagger")), "dual wielding, nothing bagged");
+
+            // an item with no legal empty slot still goes to the bags: an Off Hand dagger saved in the main hand next to
+            // another one in the off hand
+            var s5 = SessionTest.NewGame(ClassId.Rogue, 4, seed: 1104, veteranGear: false);
+            var r5 = s5.Main;
+            EquipmentRules.Unequip(r5, EquipSlot.MainHand);
+            EquipmentRules.Unequip(r5, EquipSlot.OffHand);
+            r5.Equipment[EquipSlot.MainHand] = new ItemInstance(Db.Item("rogue_starter_dagger_offhand"));
+            r5.Equipment[EquipSlot.OffHand] = new ItemInstance(Db.Item("rogue_starter_dagger_offhand"));
+            var s6 = new GameSession(Db, 1108);
+            Assert(s6.LoadGame(s5.SaveGame(), out err), "load two off-hand daggers: " + err);
+            Assert(s6.Main.Equipment.MainHand == null && s6.Main.Equipment.OffHand?.Def.id == "rogue_starter_dagger_offhand"
+                   && s6.Inventory.Items.Count(i => i.Def.id == "rogue_starter_dagger_offhand") == 1, "the off hand keeps one, the other is bagged");
         }
 
         // ------------------------------------------------------------------------------------------ other classes
@@ -246,9 +276,25 @@ namespace Lanternvale.Tests
 
             // an Off Hand weapon next to a two-hander takes the two-hander off (like any off-hand item)
             var w = UnitFactory.CreateCharacter(Db, ClassId.Warrior, "W", 20, learnAll: true);
-            EquipmentRules.Equip(w, new ItemInstance(TwoHandSword), EquipSlot.MainHand);
+            EquipmentRules.Unequip(w, EquipSlot.MainHand);
+            EquipmentRules.Unequip(w, EquipSlot.OffHand);
+            var twoHander = new ItemInstance(TwoHandSword);
+            EquipmentRules.Equip(w, twoHander, EquipSlot.MainHand);
+            // OtherHandDisplaced (the tooltip comparison's "Also unequips") names it before the swap
+            Assert(EquipmentRules.OtherHandDisplaced(w, OffHandSword, EquipSlot.OffHand) == twoHander, "OtherHandDisplaced: the two-hander");
+            Assert(EquipmentRules.OtherHandDisplaced(w, Shield, EquipSlot.OffHand) == twoHander, "... for a shield too");
+            Assert(EquipmentRules.OtherHandDisplaced(w, OneHandSword, EquipSlot.MainHand) == null, "nothing for a One-Hand weapon in the main hand");
             var displaced = EquipmentRules.Equip(w, new ItemInstance(OffHandSword), EquipSlot.OffHand);
-            Assert(displaced.Any(d => d != null && d.Def == TwoHandSword) && w.Equipment.MainHand == null, "the two-hander is displaced");
+            Assert(displaced.Count == 1 && displaced[0] == twoHander && w.Equipment.MainHand == null, "the two-hander is displaced");
+            // a two-hander takes an Off Hand weapon off (with the main hand empty or holding a One-Hand weapon)
+            var offSword = w.Equipment.OffHand;
+            Assert(EquipmentRules.OtherHandDisplaced(w, TwoHandSword, EquipSlot.MainHand) == offSword, "OtherHandDisplaced: the Off Hand weapon");
+            var mainSword = new ItemInstance(OneHandSword);
+            EquipmentRules.Equip(w, mainSword, EquipSlot.MainHand);
+            Assert(EquipmentRules.OtherHandDisplaced(w, TwoHandSword, EquipSlot.MainHand) == offSword, "... next to a One-Hand weapon");
+            displaced = EquipmentRules.Equip(w, twoHander, EquipSlot.MainHand);
+            Assert(displaced.Count == 2 && displaced.Contains(mainSword) && displaced.Contains(offSword) && w.Equipment.OffHand == null, "both hands displaced by the two-hander");
+            EquipmentRules.Equip(w, offSword, EquipSlot.OffHand);
             // and RemoveIllegal takes it off a character that can no longer dual wield
             w.Level = 19;
             var removed = EquipmentRules.RemoveIllegal(w);
@@ -322,6 +368,41 @@ namespace Lanternvale.Tests
             Console.WriteLine($"    dual wield L1 rogue vs wolf: {mainHits.Count} main-hand hits (avg {mainHits.Average():0.0}), {offHits.Count} off-hand hits (avg {offHits.Average():0.0}), ratio {ratio:0.000}");
             AssertNear(ratio, factor, 0.02f, "off-hand white hits deal the off-hand factor of a main-hand hit");
             Assert(b.Events.Any(e => e.Type == CombatEventType.Miss && e.Source == r && e.OffHand), "off-hand swings can miss too");
+        }
+
+        [Test]
+        public static void OffHandWeapon_WithAnEmptyMainHand_SwingsWithTheDualWieldPenalty()
+        {
+            // an Off Hand weapon alone (main hand empty): the fists swing in the main hand and the weapon in the off hand,
+            // so both hands take the dual-wield miss penalty, exactly as with a main-hand weapon
+            var b = RulesTestUtil.NewBattle(1110);
+            var r = UnitFactory.CreateCharacter(Db, ClassId.Rogue, "R", 1);
+            EquipmentRules.Unequip(r, EquipSlot.MainHand);
+            EquipmentRules.Unequip(r, EquipSlot.OffHand);
+            var foe = RulesTestUtil.Mob("cr_wolf", 1).At(10f, 10f).Tough();
+            r.At(11.2f, 10f);
+            r.FaceTowards(foe.Position);
+            foe.FaceTowards(r.Position);
+            b.AddUnits(new[] { r, foe });
+            b.Begin();
+            float bare = b.SwingHitChance(r, foe, WeaponSlot.MainHand).Miss;
+            Assert(bare < 19f && !StatCalculator.GetWeapon(r, WeaponSlot.OffHand).Valid, $"bare hands: one swing, no dual-wield penalty ({bare})");
+
+            EquipmentRules.Equip(r, new ItemInstance(OffHandDagger), EquipSlot.OffHand);
+            r.InvalidateStats();
+            Assert(r.Equipment.MainHand == null && StatCalculator.GetWeapon(r, WeaponSlot.MainHand).Unarmed && StatCalculator.GetWeapon(r, WeaponSlot.OffHand).Valid,
+                "fists in the main hand, the Off Hand dagger swings in the off hand");
+            var main = b.SwingHitChance(r, foe, WeaponSlot.MainHand);
+            var off = b.SwingHitChance(r, foe, WeaponSlot.OffHand);
+            AssertNear(main.Miss, bare + RulesConstants.DualWieldMissPenalty, 1e-3f, "the main-hand (fist) swing takes the dual-wield penalty: " + main);
+            AssertNear(off.Miss, main.Miss, 1e-3f, "and so does the off-hand swing: " + off);
+            AssertNear(b.HitChance(r, null, foe).Miss, main.Miss, 1e-3f, "the white-swing preview shows it");
+
+            // with a main-hand weapon back: the same penalty
+            EquipmentRules.Equip(r, new ItemInstance(OneHandDagger), EquipSlot.MainHand);
+            r.InvalidateStats();
+            Assert(r.Equipment.IsDualWielding, "dual wielding");
+            AssertNear(b.SwingHitChance(r, foe, WeaponSlot.OffHand).Miss, off.Miss, 1e-3f, "the same off-hand miss chance with a main-hand weapon");
         }
 
         // ------------------------------------------------------------------------------------------ generation and data

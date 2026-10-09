@@ -944,18 +944,42 @@ namespace Lanternvale.Game.Panels
         public static bool IsQuestItem(ItemDef d) => d != null && (d.kind == ItemKind.Quest || !string.IsNullOrEmpty(d.quest));
 
         /// <summary>The item currently in the slot the unit would equip `def` into (for comparisons), or null.</summary>
-        public static ItemInstance EquippedFor(Unit u, ItemDef def)
+        public static ItemInstance EquippedFor(Unit u, ItemDef def) => EquippedFor(u, def, out _);
+
+        /// <summary>
+        /// The item currently in the slot the unit would equip `def` into (for comparisons), or null, and that slot (an
+        /// occupied one if any, else where <see cref="EquipmentRules.ChooseSlot"/> puts it, else its first slot).
+        /// </summary>
+        public static ItemInstance EquippedFor(Unit u, ItemDef def, out EquipSlot slot)
         {
+            slot = EquipSlot.MainHand;
             if (u == null || def == null || def.equip == EquipType.None) return null;
             try
             {
                 var slots = EquipmentRules.SlotsFor(def);
                 if (slots == null || slots.Length == 0) return null;
+                slot = slots[0];
                 // prefer an occupied slot so there is something to compare with
-                foreach (var s in slots) { var cur = u.Equipment[s]; if (cur != null) return cur; }
+                foreach (var s in slots) { var cur = u.Equipment[s]; if (cur != null) { slot = s; return cur; } }
+                slot = EquipmentRules.ChooseSlot(u, def) ?? slots[0];
             }
             catch (Exception) { }
             return null;
+        }
+
+        /// <summary>
+        /// What equipping `def` replaces, for the tooltip comparison: <paramref name="eq"/> the item in its slot and
+        /// <paramref name="also"/> the item it takes out of the other hand (a two-hander's off hand; the two-hander an
+        /// off-hand piece pushes out). With an empty slot the other hand's item is the one compared (eq), also null.
+        /// </summary>
+        public static void Replaced(Unit u, ItemDef def, out ItemInstance eq, out ItemInstance also)
+        {
+            eq = EquippedFor(u, def, out var slot);
+            also = null;
+            if (u == null || def == null || def.equip == EquipType.None) return;
+            try { also = EquipmentRules.OtherHandDisplaced(u, def, slot); } catch (Exception) { }
+            if (also == eq) also = null;
+            if (eq == null) { eq = also; also = null; }
         }
 
         static ItemInstance tipItem;
@@ -979,8 +1003,9 @@ namespace Lanternvale.Game.Panels
             tipUnit = u;
             tipStamp = stamp;
             tipFrame = Time.frameCount;
-            var eq = compare ? EquippedFor(u, it.Def) : null;
-            if (eq == it) eq = null;
+            ItemInstance eq = null, also = null;
+            if (compare) Replaced(u, it.Def, out eq, out also);
+            if (eq == it || also == it) { eq = null; also = null; }   // the item itself is worn
             var sb = new StringBuilder();
             sb.Append(UiText.Item(it, u, null));
             if (u != null && IsEquipment(it.Def))
@@ -990,9 +1015,13 @@ namespace Lanternvale.Game.Panels
                 if (why != null) sb.Append('\n').Append(Ui.Rich(why, Ui.Bad));
                 else if (eq != null)
                 {
-                    var diff = CompareText(it, eq, u);
-                    if (diff.Length > 0) sb.Append("\n\n").Append(Ui.Rich("If you replace " + eq.Name + ":", Ui.TextMuted)).Append('\n').Append(diff);
+                    var diff = CompareText(it, eq, u, also);
+                    string head = "If you replace " + eq.Name + (also != null ? " and " + also.Name : "") + ":";
+                    if (diff.Length > 0) sb.Append("\n\n").Append(Ui.Rich(head, Ui.TextMuted)).Append('\n').Append(diff);
+                    // the other hand empties too (a two-hander takes the off hand off, an off-hand piece the two-hander)
+                    if (also != null) sb.Append(diff.Length > 0 ? "\n" : "\n\n").Append(Ui.Rich("Also unequips " + also.Name + ".", Ui.Bad));
                     sb.Append("\n\n").Append(Ui.Rich("Currently equipped", Ui.TextMuted)).Append('\n').Append(UiText.Item(eq, u, null));
+                    if (also != null) sb.Append("\n\n").Append(UiText.Item(also, u, null));
                 }
             }
             if (!string.IsNullOrEmpty(extra)) sb.Append("\n\n").Append(extra);
@@ -1012,18 +1041,25 @@ namespace Lanternvale.Game.Panels
         /// What replacing <paramref name="cur"/> with <paramref name="next"/> changes, as green/red lines: stats (with
         /// "Stat" equip effects), then the other equip effects gained and lost. With the wearer <paramref name="u"/> it
         /// also counts the set bonuses that would switch on or off (their stats join the stat lines, their other effects
-        /// are listed as "Set bonus gained / lost").
+        /// are listed as "Set bonus gained / lost"). <paramref name="also"/>: an item the swap also takes off (the other
+        /// hand, see <see cref="Replaced"/>), counted as lost.
         /// </summary>
-        public static string CompareText(ItemInstance next, ItemInstance cur, Unit u)
+        public static string CompareText(ItemInstance next, ItemInstance cur, Unit u, ItemInstance also = null)
         {
             diffA.Clear(); diffB.Clear(); diffKeys.Clear(); diffGains.Clear(); diffLosses.Clear();
+            if (also == cur || also?.Def == null) also = null;
             Accumulate(next, diffA);
             Accumulate(cur, diffB);
-            if (next != null && cur != null && next.Def != null && cur.Def != null && next.Def.id != cur.Def.id)
+            Accumulate(also, diffB);
+            if (next != null && cur != null && next.Def != null && cur.Def != null && (next.Def.id != cur.Def.id || also != null))
             {
-                foreach (var p in next.Def.equipEffects) if (p != null && p.type != "Stat") diffGains.Add(UiText.EffectLine(p));
-                foreach (var p in cur.Def.equipEffects) if (p != null && p.type != "Stat") diffLosses.Add(UiText.EffectLine(p));
-                CompareSets(next, cur, u);
+                if (next.Def.id != cur.Def.id)
+                {
+                    foreach (var p in next.Def.equipEffects) if (p != null && p.type != "Stat") diffGains.Add(UiText.EffectLine(p));
+                    foreach (var p in cur.Def.equipEffects) if (p != null && p.type != "Stat") diffLosses.Add(UiText.EffectLine(p));
+                }
+                if (also != null) foreach (var p in also.Def.equipEffects) if (p != null && p.type != "Stat") diffLosses.Add(UiText.EffectLine(p));
+                CompareSets(next, cur, u, also);
             }
             foreach (var k in diffA.Keys) if (!diffKeys.Contains(k)) diffKeys.Add(k);
             foreach (var k in diffB.Keys) if (!diffKeys.Contains(k)) diffKeys.Add(k);
@@ -1046,17 +1082,18 @@ namespace Lanternvale.Game.Panels
         }
 
         /// <summary>The set bonuses the swap switches on (into diffA / diffGains) and off (into diffB / diffLosses).</summary>
-        static void CompareSets(ItemInstance next, ItemInstance cur, Unit u)
+        static void CompareSets(ItemInstance next, ItemInstance cur, Unit u, ItemInstance also)
         {
             var db = Db;
             if (u == null || db == null || db.ItemSets.Count == 0) return;
-            if (db.SetOf(next.Def.id) == null && db.SetOf(cur.Def.id) == null) return;
+            if (db.SetOf(next.Def.id) == null && db.SetOf(cur.Def.id) == null && (also == null || db.SetOf(also.Def.id) == null)) return;
             try
             {
                 var ids = ItemSets.EquippedIds(u);
                 ids.Remove(cur.Def.id);
-                // a two-hander also takes the off hand off
-                if (next.Def.equip == EquipType.TwoHand && u.Equipment.OffHand != null && u.Equipment.OffHand != cur) ids.Remove(u.Equipment.OffHand.Def.id);
+                // the other hand the swap empties (given, or a two-hander's off hand)
+                if (also == null && next.Def.equip == EquipType.TwoHand && u.Equipment.OffHand != cur) also = u.Equipment.OffHand;
+                if (also != null) ids.Remove(also.Def.id);
                 ids.Add(next.Def.id);
                 var before = ItemSets.Active(u);
                 var after = ItemSets.ActiveFor(db, ids);

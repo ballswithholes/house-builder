@@ -299,6 +299,20 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>
+        /// The item <see cref="Equip"/> also takes out of the OTHER hand when <paramref name="def"/> goes into
+        /// <paramref name="slot"/>: the off-hand item for a two-hander, the main-hand two-hander for anything put in the off
+        /// hand (an Off Hand weapon, a shield, a held item, a One-Hand weapon); else null. For comparisons and warnings.
+        /// </summary>
+        public static ItemInstance OtherHandDisplaced(Unit u, ItemDef def, EquipSlot slot)
+        {
+            if (u == null || def == null) return null;
+            var eq = u.Equipment;
+            if (def.equip == EquipType.TwoHand) return slot == EquipSlot.OffHand ? null : eq.OffHand;
+            if (slot == EquipSlot.OffHand && eq.HasTwoHander) return eq.MainHand;
+            return null;
+        }
+
+        /// <summary>
         /// Puts the item into the slot and returns every item displaced (to be returned to the inventory).
         /// Caller must have checked <see cref="CannotEquipReason"/>.
         /// </summary>
@@ -307,15 +321,11 @@ namespace Lanternvale.Rules
             var displaced = new List<ItemInstance>();
             var eq = u.Equipment;
             if (eq[slot] != null) displaced.Add(eq[slot]);
-            if (item.Def.equip == EquipType.TwoHand && eq.OffHand != null)
+            var other = OtherHandDisplaced(u, item.Def, slot);
+            if (other != null)
             {
-                displaced.Add(eq.OffHand);
-                eq[EquipSlot.OffHand] = null;
-            }
-            if (slot == EquipSlot.OffHand && eq.HasTwoHander)
-            {
-                displaced.Add(eq.MainHand);
-                eq[EquipSlot.MainHand] = null;
+                displaced.Add(other);
+                eq[item.Def.equip == EquipType.TwoHand ? EquipSlot.OffHand : EquipSlot.MainHand] = null;
             }
             eq[slot] = item;
             u.InvalidateStats();
