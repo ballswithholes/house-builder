@@ -1413,6 +1413,23 @@
       "itemLevel": 1,
       "stack": 10,
       "price": 340
+    },
+    {
+      "id": "dg5_undertow_cutlass",
+      "name": "Undertow Cutlass",
+      "icon": "sword",
+      "description": "The Tidewitch's sentinels drowned with these at their belts. It still tugs gently towards deep water, as if it would like to go home.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "OffHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 31,
+      "maxDamage": 52,
+      "speed": 2.4,
+      "stats": [{"stat": "Agility", "value": 6}, {"stat": "Strength", "value": 4}, {"stat": "Stamina", "value": 4}],
+      "price": 4383
     }
   ],
   "lootTables": [
@@ -1458,7 +1475,7 @@
       "entries": [
         {"pool": ["dg5_staff_of_the_undertow", "dg5_coral_crown", "dg5_tidebreaker"], "chance": 25, "skipOwned": true, "partyUsable": true},
         {
-          "pool": ["dg5_kelpwoven_leggings", "dg5_sentinel_porthole_helm", "dg5_drowned_choir_robe", "dg5_tidecallers_ring", "dg5_scale_of_the_deep"],
+          "pool": ["dg5_kelpwoven_leggings", "dg5_sentinel_porthole_helm", "dg5_drowned_choir_robe", "dg5_tidecallers_ring", "dg5_scale_of_the_deep", "dg5_undertow_cutlass"],
           "partyUsable": true
         },
         {"item": "mf_tidewitch_pearl"},

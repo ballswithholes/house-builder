@@ -116,6 +116,23 @@
       "price": 15220
     },
     {
+      "id": "r1_ep_solaces_edge",
+      "name": "Solace's Edge",
+      "icon": "sword",
+      "description": "Sorrow's blade had a sister. This one is always slightly warm, as if it had just finished giving someone a hug. Carry them together and the twins are, at last, on the same side.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 27,
+      "requiredLevel": 20,
+      "equip": "OffHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 35,
+      "maxDamage": 59,
+      "speed": 2.4,
+      "stats": [{"stat": "Strength", "value": 6}, {"stat": "Agility", "value": 6}, {"stat": "Stamina", "value": 5}],
+      "price": 15220
+    },
+    {
       "id": "r1_ep_twinned_locket",
       "name": "Twinned Locket",
       "icon": "hands_pray",
@@ -316,6 +333,23 @@
       "maxDamage": 57,
       "speed": 1.8,
       "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Stamina", "value": 4}, {"stat": "SpellDamage", "value": 10}],
+      "price": 28660
+    },
+    {
+      "id": "r2_ep_frostclaw_dewclaw",
+      "name": "Frostclaw's Dewclaw",
+      "icon": "fist",
+      "description": "The small claw on the inside of the drake's foot, the one it keeps for delicate work. It is very good at delicate work.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 36,
+      "requiredLevel": 30,
+      "equip": "OffHand",
+      "weaponType": "FistWeapon",
+      "minDamage": 38,
+      "maxDamage": 64,
+      "speed": 2.0,
+      "stats": [{"stat": "Agility", "value": 12}, {"stat": "Stamina", "value": 6}, {"stat": "AttackPower", "value": 12}],
       "price": 28660
     },
     {

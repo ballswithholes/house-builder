@@ -3741,6 +3741,92 @@
    "consumable": true,
    "stack": 20,
    "price": 350
+  },
+  {
+   "id": "bw_hollowell_main_gauche_21",
+   "name": "Hollowell Main-Gauche",
+   "icon": "dagger",
+   "description": "\"Main-gauche\" is old river-talk for \"left hand\". Dunstan sells them with the eel-skinners and calls it a bargain.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "OffHand",
+   "weaponType": "Dagger",
+   "minDamage": 12,
+   "maxDamage": 20,
+   "speed": 1.5,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_floodgate_knuckles_27",
+   "name": "Floodgate Knuckles",
+   "icon": "fist",
+   "description": "Cast from the iron of the old floodgate. They hold back exactly as well as it did, which is to say: until they don't.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OffHand",
+   "weaponType": "FistWeapon",
+   "minDamage": 20,
+   "maxDamage": 34,
+   "speed": 2.0,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 2
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_left_bank_sabre_33",
+   "name": "Left-Bank Sabre",
+   "icon": "sword",
+   "description": "The left bank is whichever bank you are on while carrying this. The right bank disagrees, but it has never won the argument.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "OffHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 29,
+   "maxDamage": 48,
+   "speed": 2.4,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
   }
  ],
  "abilities": [

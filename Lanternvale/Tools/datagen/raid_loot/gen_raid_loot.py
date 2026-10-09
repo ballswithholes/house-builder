@@ -9,7 +9,8 @@ Writes, under Assets/Lanternvale/Resources/Data/content/:
 
 The numbers come from the budget formulas (brief_items §3, Expansion.md §8 "Gear budget"):
   stats  = 0.55 x ilvl x Qa x SlotBudgetMult   (Qa: Epic 2.1, Legendary 2.8), spent with ItemGenerator.StatCost
-  DPS    = ItemGenerator.WeaponDps x .86 (Epic) / .95 (Legendary)
+  DPS    = ItemGenerator.WeaponDps x .86 (Epic) / .95 (Legendary); Off Hand weapons (off_hand=True): the one-hand
+           DPS, the OffHand slot stat budget
   armour = ItemGenerator.ArmorValue; shields 30 x ilvl x 1.1 (x1.2 legendary), block 0.6 x ilvl + 3
   price  = 1.2 x ilvl^2.2 x slot x Q (Epic 15, Legendary 40), the wn_items formula
 Names, flavour text, stat profiles and set bonuses are hand-curated below. The JSON is the source of truth once
@@ -583,14 +584,19 @@ ACCESSORY_ICON = {"Neck": "hands_pray", "Finger": "halo", "Trinket": "coin", "Ba
 
 
 def gear(iid, name, desc, q, ilvl, req, kind, profile, fixed=(), speed=None, school=None, icon=None, effects=None,
-         classes=None, unique=False):
+         classes=None, unique=False, off_hand=False):
     """kind: a WeaponType, HeldInOffhand, or an accessory/armour slot (Neck, Finger, Trinket, Back).
+    off_hand: a one-hand melee weapon made an "Off Hand" weapon (equip OffHand: off-hand slot only, needs dual wield);
+    its DPS follows the one-hand rule, its stats the OffHand slot budget (0.56, a little richer than One-Hand 0.45).
     Stat equip effects are paid from the stat budget too (the guardrail test counts them)."""
-    budget = stat_budget(ilvl, q, EQUIP_OF.get(kind, kind))
+    if off_hand:
+        assert EQUIP_OF.get(kind) == "OneHand", f"{iid}: only one-hand melee weapons can be Off Hand weapons"
+    equip_of = "OffHand" if off_hand else EQUIP_OF.get(kind, kind)
+    budget = stat_budget(ilvl, q, equip_of)
     budget -= sum(e["value"] * stat_cost(e["stat"]) for e in (effects or []) if e["type"] == "Stat")
     stats = spend(budget, PROFILES[profile], fixed)
     if kind in EQUIP_OF:
-        equip = EQUIP_OF[kind]
+        equip = equip_of
         if kind == "Shield":
             return item(iid, name, icon or "shield", desc, "Weapon", q, ilvl, req, equip, weapon="Shield",
                         armor=cs_round(30 * ilvl * 1.1 * (1.2 if q == "Legendary" else 1.0)),
@@ -651,6 +657,10 @@ EPICS = [
     r1("twins", "r1_ep_mossgrip_knuckles", "Mossgrip Knuckles",
        "Moss grows on them in the shape of a smile. They punch politely, but often.",
        "FistWeapon", "agi_melee", speed=2.5),
+    r1("twins", "r1_ep_solaces_edge", "Solace's Edge",
+       "Sorrow's blade had a sister. This one is always slightly warm, as if it had just finished giving someone a hug. "
+       "Carry them together and the twins are, at last, on the same side.",
+       "OneHandSword", "hybrid_melee", speed=2.4, off_hand=True),
     r1("twins", "r1_ep_twinned_locket", "Twinned Locket",
        "Two halves that never quite close. One holds a lock of dark hair, the other a lock of light.",
        "Neck", "healer"),
@@ -697,6 +707,10 @@ EPICS = [
     r2("frostclaw", "r2_ep_rimefang_dirk", "Rimefang Dirk",
        "Carved from one of Frostclaw's fangs. Frost mages say it hums in harmony with a good frostbolt.",
        "Dagger", "caster", speed=1.8),
+    r2("frostclaw", "r2_ep_frostclaw_dewclaw", "Frostclaw's Dewclaw",
+       "The small claw on the inside of the drake's foot, the one it keeps for delicate work. It is very good at "
+       "delicate work.",
+       "FistWeapon", "agi_melee", speed=2.0, off_hand=True),
     r2("frostclaw", "r2_ep_roostfeather_cloak", "Roost-Feather Cloak",
        "Sewn from drake feathers shed in the Roost's high nests. It catches the updraft whenever you leap.",
        "Back", "agi_melee"),

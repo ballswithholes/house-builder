@@ -213,6 +213,21 @@ drop legendaries (one per party).
 | The Hollow Heart | 21–23 | Mirefen, the Moon-Gate portal | Thornmaw the Rootbound; the Weeping Twins (Sorrow and Solace); Mother Mire; The Hollow Heart | Kindlewood, Last Staff of the Heart Lantern; Solace, the Twins' Lullaby |
 | Ashwyrm's Roost | 31–33 | Skyreach, the Roost Gate (after *Ash on the Wind*) | Frostclaw the Matriarch; the Cinder Drakes (Emberjaw and Ashtongue); Highlord Varkas; Vyrmathra the Ashwyrm | Embersong, Fang of Vyrmathra; Dawnstring, the Last Light of Skyreach; Vyrmathra's Last Scale |
 
+**Off Hand weapons.** Besides One-Hand weapons (either hand), the game has *Off Hand* weapons: daggers, one-handed
+swords, fist weapons, maces and axes with `equip: "OffHand"` that go only in the off hand and need dual wield exactly
+like a One-Hand weapon there (the wielder must also use the weapon type). Their DPS follows the one-hand `WeaponDps`
+rule for their item level and quality (Common about ×0.6, Uncommon ×0.72, Rare ×0.79, Epic ×0.86); their stats use the
+OffHand slot budget (0.56), a little richer than a One-Hand weapon's (0.45) because they are less flexible. Where they
+are (20 in all; `TestsContentOffHandWeapons`):
+
+| Band | Vendor | Loot |
+|---|---|---|
+| 1–12 | Garrow (Lanternvale): Second-Best Paring Knife (dagger, level 1), Lefty's Shortsword (sword, level 2) | Cocooned Knuckle-Claw (fist, spiders), Cutpurse's Second Opinion (dagger, bandits), Rusk's Small Change (sword, Rusk) |
+| 12–18 | Dunstan (Brightwater): Hollowell Main-Gauche (dagger, 16) | Duskmane Tally-Knife (dagger, gnolls), Mudpaw Left Claw (fist, Burrowmaster Grubb); Mossdeep: Royal Toadstool Tenderiser (Rare mace, King Umbercap) |
+| 18–24 | Dunstan: Floodgate Knuckles (fist, 22) | Mireling Reed-Cutter (dagger, mirelings), Snapjaw Hatchet (axe, crocolisks); the Barrow: Huscarl's Bearded Hand-Axe (Rare, King Aldwin) |
+| 24–30 | Dunstan: Left-Bank Sabre (sword, 28) | Harpy-Quill Sabre (sword, harpies), Gorrum's Toothpick (dagger, Gorrum Two-Belly); the Drowned Vault: Undertow Cutlass (Rare, the Tidewitch); the Frozen Sanctum: Rimeheart Knuckle (Rare fist, the Rimeheart) |
+| raids | — | Solace's Edge (Epic sword, the Weeping Twins), Frostclaw's Dewclaw (Epic fist, Frostclaw) |
+
 **Companions** (12, one per class in the slice and four more in the new zones): Kael (Warrior), Aldric (Paladin), Pip
 (Rogue) in Lanternvale; Rook (Hunter), Seren (Priest), Lys (Mage) in Whisperwood; Torvan (Shaman), Morwen (Warlock) at
 the Shrine; Bruna (Warrior, Amberfield), Ysolde (Paladin, Brightwater), Liora (Priest, Brightwater), Nanami (Shaman,

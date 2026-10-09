@@ -17,7 +17,7 @@
       "goldMax": 3000,
       "entries": [
         {"pool": ["r1_set_warrior_shoulders", "r1_set_paladin_shoulders", "r1_set_hunter_shoulders", "r1_set_rogue_shoulders", "r1_set_priest_shoulders", "r1_set_shaman_shoulders", "r1_set_mage_shoulders", "r1_set_warlock_shoulders"], "perMembers": 5, "partyUsable": true},
-        {"pool": ["r1_ep_sorrows_edge", "r1_ep_solaces_tear", "r1_ep_mossgrip_knuckles", "r1_ep_twinned_locket"], "perMembers": 5, "partyUsable": true},
+        {"pool": ["r1_ep_sorrows_edge", "r1_ep_solaces_tear", "r1_ep_mossgrip_knuckles", "r1_ep_solaces_edge", "r1_ep_twinned_locket"], "perMembers": 5, "partyUsable": true},
         {"random": true, "chance": 100, "quality": "Rare", "itemLevelOffset": 3}
       ]
     },
@@ -51,7 +51,7 @@
       "entries": [
         {"random": true, "chance": 30, "quality": "Uncommon", "itemLevelOffset": 2},
         {"random": true, "chance": 12, "quality": "Rare", "itemLevelOffset": 3},
-        {"pool": ["r1_ep_thornmaws_fang", "r1_ep_briarback_cleaver", "r1_ep_sporeweave_cloak", "r1_ep_wickglass_band", "r1_ep_sorrows_edge", "r1_ep_solaces_tear", "r1_ep_mossgrip_knuckles", "r1_ep_twinned_locket", "r1_ep_mirelight_crook", "r1_ep_bogiron_bludgeon", "r1_ep_witchlight_kris", "r1_ep_hollowstring_longbow", "r1_ep_rootbound_signet", "r1_ep_thornbrand_claymore", "r1_ep_heartroot_bulwark", "r1_ep_glowcap_lantern", "r1_ep_seed_of_the_hollow", "r1_ep_bramblewick_charm"], "chance": 2, "partyUsable": true}
+        {"pool": ["r1_ep_thornmaws_fang", "r1_ep_briarback_cleaver", "r1_ep_sporeweave_cloak", "r1_ep_wickglass_band", "r1_ep_sorrows_edge", "r1_ep_solaces_tear", "r1_ep_mossgrip_knuckles", "r1_ep_solaces_edge", "r1_ep_twinned_locket", "r1_ep_mirelight_crook", "r1_ep_bogiron_bludgeon", "r1_ep_witchlight_kris", "r1_ep_hollowstring_longbow", "r1_ep_rootbound_signet", "r1_ep_thornbrand_claymore", "r1_ep_heartroot_bulwark", "r1_ep_glowcap_lantern", "r1_ep_seed_of_the_hollow", "r1_ep_bramblewick_charm"], "chance": 2, "partyUsable": true}
       ]
     },
     {
@@ -60,7 +60,7 @@
       "goldMax": 5000,
       "entries": [
         {"pool": ["r2_set_warrior_hands", "r2_set_paladin_hands", "r2_set_hunter_hands", "r2_set_rogue_hands", "r2_set_priest_hands", "r2_set_shaman_hands", "r2_set_mage_hands", "r2_set_warlock_hands"], "perMembers": 5, "partyUsable": true},
-        {"pool": ["r2_ep_frostclaw_talon", "r2_ep_rimefang_dirk", "r2_ep_roostfeather_cloak", "r2_ep_hoarfrost_knives", "r2_ep_emberwake_band"], "perMembers": 5, "partyUsable": true},
+        {"pool": ["r2_ep_frostclaw_talon", "r2_ep_rimefang_dirk", "r2_ep_frostclaw_dewclaw", "r2_ep_roostfeather_cloak", "r2_ep_hoarfrost_knives", "r2_ep_emberwake_band"], "perMembers": 5, "partyUsable": true},
         {"random": true, "chance": 100, "quality": "Rare", "itemLevelOffset": 3}
       ]
     },
@@ -105,7 +105,7 @@
       "entries": [
         {"random": true, "chance": 30, "quality": "Uncommon", "itemLevelOffset": 2},
         {"random": true, "chance": 12, "quality": "Rare", "itemLevelOffset": 3},
-        {"pool": ["r2_ep_frostclaw_talon", "r2_ep_rimefang_dirk", "r2_ep_roostfeather_cloak", "r2_ep_hoarfrost_knives", "r2_ep_emberwake_band", "r2_ep_emberjaw_maul", "r2_ep_ashtongue_bellows_gun", "r2_ep_cinderthorn_wand", "r2_ep_signet_of_twin_cinders", "r2_ep_highlords_warglaive", "r2_ep_dragonsworn_arbalest", "r2_ep_oathbreaker", "r2_ep_wyrmscale_choker", "r2_ep_roostkeepers_lantern", "r2_ep_hoardgold_scepter", "r2_ep_skyfire_greatstaff", "r2_ep_ashen_starglobe", "r2_ep_heart_of_cinders"], "chance": 2, "partyUsable": true}
+        {"pool": ["r2_ep_frostclaw_talon", "r2_ep_rimefang_dirk", "r2_ep_frostclaw_dewclaw", "r2_ep_roostfeather_cloak", "r2_ep_hoarfrost_knives", "r2_ep_emberwake_band", "r2_ep_emberjaw_maul", "r2_ep_ashtongue_bellows_gun", "r2_ep_cinderthorn_wand", "r2_ep_signet_of_twin_cinders", "r2_ep_highlords_warglaive", "r2_ep_dragonsworn_arbalest", "r2_ep_oathbreaker", "r2_ep_wyrmscale_choker", "r2_ep_roostkeepers_lantern", "r2_ep_hoardgold_scepter", "r2_ep_skyfire_greatstaff", "r2_ep_ashen_starglobe", "r2_ep_heart_of_cinders"], "chance": 2, "partyUsable": true}
       ]
     }
   ]

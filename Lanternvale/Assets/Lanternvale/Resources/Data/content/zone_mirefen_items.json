@@ -893,6 +893,40 @@
       "itemLevel": 1,
       "stack": 10,
       "price": 120
+    },
+    {
+      "id": "mf_mireling_reed_cutter",
+      "name": "Mireling Reed-Cutter",
+      "icon": "dagger",
+      "description": "A sliver of sharpened shell lashed to a reed. Mirelings cut rushes with it, and string, and the occasional boot-lace.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 21,
+      "requiredLevel": 18,
+      "equip": "OffHand",
+      "weaponType": "Dagger",
+      "minDamage": 13,
+      "maxDamage": 22,
+      "speed": 1.6,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 3}],
+      "price": 1773
+    },
+    {
+      "id": "mf_snapjaw_hatchet",
+      "name": "Snapjaw Hatchet",
+      "icon": "axe",
+      "description": "A crocolisk tooth set in an axe-head. It bites first and asks questions never.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 20,
+      "equip": "OffHand",
+      "weaponType": "OneHandAxe",
+      "minDamage": 21,
+      "maxDamage": 35,
+      "speed": 2.4,
+      "stats": [{"stat": "Strength", "value": 4}, {"stat": "Agility", "value": 2}, {"stat": "Stamina", "value": 2}],
+      "price": 2126
     }
   ]
 }

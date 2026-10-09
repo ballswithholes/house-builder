@@ -756,6 +756,40 @@
       "consumable": true,
       "stack": 20,
       "price": 700
+    },
+    {
+      "id": "sr_harpy_quill_sabre",
+      "name": "Harpy-Quill Sabre",
+      "icon": "sword",
+      "description": "A slim curved blade the harpies stole from a caravan and decorated with their own feathers. It is lighter than it looks and louder than it should be.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 27,
+      "requiredLevel": 24,
+      "equip": "OffHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 24,
+      "maxDamage": 40,
+      "speed": 2.4,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Strength", "value": 3}, {"stat": "Stamina", "value": 2}],
+      "price": 2370
+    },
+    {
+      "id": "sr_gorrums_toothpick",
+      "name": "Gorrum's Toothpick",
+      "icon": "dagger",
+      "description": "To Gorrum, a toothpick. To you, a perfectly good dagger. Do not ask what he was picking.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 29,
+      "requiredLevel": 26,
+      "equip": "OffHand",
+      "weaponType": "Dagger",
+      "minDamage": 18,
+      "maxDamage": 31,
+      "speed": 1.7,
+      "stats": [{"stat": "Agility", "value": 6}, {"stat": "Stamina", "value": 4}],
+      "price": 2735
     }
   ],
   "abilities": [

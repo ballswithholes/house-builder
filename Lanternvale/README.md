@@ -46,10 +46,12 @@ proficiencies, all following 1.12.
   and prerequisite arrows. You get 1 point per level from level 10, so 51 at level 60. "Recommended build" auto-allocates. Respec at a
   trainer for 1g, then 5g, 10g…
 * **Equipment.** 17 slots, item qualities from Poor to Legendary and random "of the Bear / Eagle /
-  Monkey…" suffix greens. Class armour and weapon proficiencies are enforced. There are 919 items in
+  Monkey…" suffix greens. Class armour and weapon proficiencies are enforced. There are 939 items in
   total, among them **16 class armour sets** (two raid tiers × eight classes; bonuses at 2, 4 and 5 pieces, shown in
   the tooltips and on the character sheet, announced with a chime when one switches on) and **5 legendaries**. Loot
-  pools favour gear your party can actually wear.
+  pools favour gear your party can actually wear. **Off Hand weapons** (20 daggers, swords, fist weapons, maces and
+  axes that go only in the off hand and need dual wield) are sold from level 1 by Garrow in Lanternvale and by Dunstan
+  in Brightwater, and drop in every band, from hidden-dungeon bosses (Rare) and in both raids (Epic).
 * **Threat.** Every enemy keeps a WoW threat table. It switches targets only when someone passes 110%
   (melee) or 130% (ranged) of its current target's threat. Stance and class threat modifiers apply, healing
   draws threat, and taunts work.

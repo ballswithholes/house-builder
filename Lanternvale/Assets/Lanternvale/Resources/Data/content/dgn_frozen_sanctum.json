@@ -1352,6 +1352,23 @@
       "armor": 190,
       "stats": [{"stat": "Strength", "value": 11}, {"stat": "Stamina", "value": 8}, {"stat": "Agility", "value": 3}],
       "price": 12635
+    },
+    {
+      "id": "dg6_rimeheart_knuckle",
+      "name": "Rimeheart Knuckle",
+      "icon": "fist",
+      "description": "Ice has grown over the knuckles in the shape of a fist and never melted. Your hand gets used to it. The things you hit do not.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 35,
+      "requiredLevel": 30,
+      "equip": "OffHand",
+      "weaponType": "FistWeapon",
+      "minDamage": 31,
+      "maxDamage": 52,
+      "speed": 2.0,
+      "stats": [{"stat": "Agility", "value": 8}, {"stat": "Stamina", "value": 5}, {"stat": "Strength", "value": 4}],
+      "price": 8080
     }
   ],
   "lootTables": [
@@ -1389,6 +1406,7 @@
         {
           "pool": [
             "dg6_rimeheart_shard_blade",
+            "dg6_rimeheart_knuckle",
             "dg6_hymn_of_the_rime_priests",
             "dg6_glacier_heart_girdle",
             "dg6_frostbound_handwraps",

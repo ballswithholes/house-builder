@@ -11,6 +11,7 @@
         {"item": "mf_junk_lantern_ring", "chance": 12},
         {"item": "food_lantern_stew", "chance": 6},
         {"item": "potion_healing", "chance": 4},
+        {"item": "mf_mireling_reed_cutter", "chance": 2},
         {"random": true, "chance": 6, "quality": "Uncommon"}
       ]
     },
@@ -45,6 +46,7 @@
         {"item": "mf_croc_tail", "whileQuestNeeds": true},
         {"item": "mf_junk_croc_tooth", "chance": 40},
         {"item": "mf_junk_soggy_boot", "chance": 8},
+        {"item": "mf_snapjaw_hatchet", "chance": 3},
         {"random": true, "chance": 4, "quality": "Uncommon"}
       ]
     },

@@ -644,6 +644,40 @@
       "equip": "Finger",
       "stats": [{"stat": "Agility", "value": 3}, {"stat": "Stamina", "value": 2}],
       "price": 1166
+    },
+    {
+      "id": "am_duskmane_tally_knife",
+      "name": "Duskmane Tally-Knife",
+      "icon": "dagger",
+      "description": "Duskmane scouts cut a notch in the handle for every lantern they steal. There is not much handle left.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 15,
+      "requiredLevel": 12,
+      "equip": "OffHand",
+      "weaponType": "Dagger",
+      "minDamage": 9,
+      "maxDamage": 15,
+      "speed": 1.5,
+      "stats": [{"stat": "Agility", "value": 3}, {"stat": "Stamina", "value": 2}],
+      "price": 909
+    },
+    {
+      "id": "am_mudpaw_left_claw",
+      "name": "Mudpaw Left Claw",
+      "icon": "claw",
+      "description": "The other half of the digging claws. A Mudpaw digs with both paws; nobody said you could not punch with both.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 18,
+      "requiredLevel": 15,
+      "equip": "OffHand",
+      "weaponType": "FistWeapon",
+      "minDamage": 14,
+      "maxDamage": 24,
+      "speed": 2.0,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 2}],
+      "price": 1306
     }
   ]
 }

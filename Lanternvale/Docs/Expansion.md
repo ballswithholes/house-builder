@@ -466,6 +466,8 @@ Follow `brief_items.md` §5–§9:
 * **Gear budget.** Stats are `0.55 × ilvl × Qa × SlotBudgetMult`, with Qa = Uncommon 1.1, Rare 1.6, Epic 2.1,
   Legendary 2.8. Weapon DPS uses `WeaponDps` × {.72, .79, .86, .95}. Armour uses `ArmorValue`.
   * Every authored green has stats.
+  * Off Hand weapons (`equip: "OffHand"` with a one-hand melee `weaponType`: off-hand slot only, need dual wield) take
+    the one-hand `WeaponDps` and the OffHand slot budget (0.56; One-Hand is 0.45). See `Docs/Design.md` §7.
   * Do not use `use` on equipables or GrantAbility.
   * Armour types must be wearable at their level: Warrior and Paladin wear Mail below 40; Hunter and Shaman wear
     Leather below 40.

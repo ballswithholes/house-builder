@@ -773,6 +773,23 @@
       "price": 0,
       "unique": true,
       "description": "A cracked grey ember, cold now, that fell into the old forest on a warm wind from the north. It still smells of a fire very far away. Elder Maru would want to see this."
+    },
+    {
+      "id": "dg2_royal_toadstool_tenderiser",
+      "name": "Royal Toadstool Tenderiser",
+      "icon": "mace",
+      "description": "King Umbercap's second sceptre, for state occasions and for tenderising disrespectful toadstools. It has been told about you.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "OffHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 22,
+      "maxDamage": 36,
+      "speed": 2.4,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Strength", "value": 3}, {"stat": "Stamina", "value": 2}],
+      "price": 1887
     }
   ],
   "lootTables": [
@@ -846,6 +863,7 @@
             "dg2_silkweave_grips",
             "dg2_moss_court_signet",
             "dg2_umbercaps_cudgel",
+            "dg2_royal_toadstool_tenderiser",
             "dg2_glowstalk_longbow",
             "dg2_mossdeep_staff"
           ],

@@ -43,6 +43,7 @@
         {"item": "junk_sticky_web", "chance": 45},
         {"item": "junk_chitin_fragment", "chance": 30},
         {"item": "spiderhide_bracers", "chance": 2},
+        {"item": "cocooned_knuckle_claw", "chance": 2},
         {"random": true, "chance": 3, "quality": "Uncommon"}
       ]
     },
@@ -108,6 +109,7 @@
         {"item": "cutthroats_hood", "chance": 2},
         {"item": "bandits_gutting_knife", "chance": 2},
         {"item": "cutpurses_signet", "chance": 2},
+        {"item": "cutpurses_second_opinion", "chance": 2},
         {"random": true, "chance": 4, "quality": "Uncommon"}
       ]
     },
@@ -132,6 +134,7 @@
       "entries": [
         {"item": "rusks_toll_taker"},
         {"item": "bridgekeepers_glaive", "chance": 25},
+        {"item": "rusks_small_change", "chance": 25},
         {"item": "potion_lesser_healing"},
         {"random": true, "chance": 50, "quality": "Uncommon"}
       ]
