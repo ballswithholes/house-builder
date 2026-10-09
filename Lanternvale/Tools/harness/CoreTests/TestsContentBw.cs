@@ -120,6 +120,53 @@ namespace Lanternvale.Tests
         }
 
         [Test]
+        public static void Water_TheHarbourDockAndEveryCrossingMeetTheShore()
+        {
+            // a crossing must reach the drawn (smoothed) shore: every standable cell of it is walkable from the default spawn,
+            // or the deck ends in an island the party cannot step onto (the harbour dock once stopped ~1.3 m short)
+            var agent = NavAgent.Default;
+            var gaps = new List<string>();
+            int checkedCrossings = 0;
+            foreach (var m in Db.Maps.Values)
+            {
+                if (m.water == null || m.water.Count == 0) continue;
+                var def = m.spawns.FirstOrDefault(sp => sp != null && sp.id == "default");
+                if (def == null) continue;
+                var nav = new NavGrid(m, null, TestsMapsReachable.AllFlagsSet);
+                var start = nav.ClampToWalkable(def.pos, agent);
+                for (int wi = 0; wi < m.water.Count; wi++)
+                {
+                    var w = m.water[wi];
+                    if (w == null || !w.blocksMovement || w.crossings == null) continue;
+                    foreach (var r in w.crossings)
+                    {
+                        if (r == null) continue;
+                        int stand = 0, reach = 0;
+                        for (float x = r.pos.x - r.size.x * 0.5f + 0.25f; x < r.pos.x + r.size.x * 0.5f; x += 0.5f)
+                            for (float y = r.pos.y - r.size.y * 0.5f + 0.25f; y < r.pos.y + r.size.y * 0.5f; y += 0.5f)
+                            {
+                                var pt = new Vec2(x, y);
+                                if (!nav.IsWalkable(pt, agent)) continue;
+                                stand++;
+                                if (nav.FindPath(start, pt, agent).Status == PathStatus.Complete) reach++;
+                            }
+                        checkedCrossings++;
+                        if (stand == 0 || reach < stand) gaps.Add($"{m.id} water[{wi}] crossing {r.pos} {r.size}: {reach} of {stand} standable cells reachable");
+                    }
+                }
+            }
+            Assert(checkedCrossings >= 20, "crossings checked: " + checkedCrossings);
+            Assert(gaps.Count == 0, "crossings cut off from the shore:\n    " + string.Join("\n    ", gaps));
+
+            var dock = Db.Maps[MapId].props.First(p => p.art == "prop_dock" && Math.Abs(p.pos.x - 37.6f) < 0.5f);
+            var town = new NavGrid(Db.Maps[MapId], null, TestsMapsReachable.AllFlagsSet);
+            var from = town.ClampToWalkable(Db.Maps[MapId].spawns.First(sp => sp.id == "default").pos, agent);
+            // the deck is 5.2 m long (PropWildTown.Dock): walkable from its landward end to within a stride of its tip
+            for (float y = dock.pos.y - 2.6f; y <= dock.pos.y + 2.05f; y += 0.25f)
+                Assert(town.FindPath(from, new Vec2(dock.pos.x, y), agent).Status == PathStatus.Complete, $"the harbour dock's deck is walkable (y {y:0.00})");
+        }
+
+        [Test]
         public static void Enter_FromEveryNeighbour_AndTheFerry()
         {
             var s = Town(16);

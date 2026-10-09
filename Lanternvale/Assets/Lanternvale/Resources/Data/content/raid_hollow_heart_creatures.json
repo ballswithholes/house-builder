@@ -268,7 +268,7 @@
       "levelOffset": 1,
       "levelFloor": 22,
       "levelCap": 24,
-      "healthMult": 5.0,
+      "healthMult": 4.3,
       "damageMult": 2.4,
       "armorMult": 1.2,
       "attackSpeed": 2.5,

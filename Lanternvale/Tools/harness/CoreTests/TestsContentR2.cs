@@ -414,6 +414,62 @@ namespace Lanternvale.Tests
             Console.WriteLine("    roost fights: " + string.Join(", ", p.Fights.Select(kv => $"{kv.Key} {kv.Value.rounds}r {kv.Value.minHp:P0}")));
         }
 
+        [Test]
+        public static void Horn_WaitsAtTheCallingStone_UntilMartaSendsYouUp()
+        {
+            // the Wyrm Stair is open from Varkas's court: the stone must not take the horn before Marta's hand-in
+            var p = new Player(ClassId.Priest, 31, 3141, new[] { "seren" });
+            var s = p.S;
+            s.Quests.Start("r2_highlord");
+            s.Flags.Set("r2_varkas_defeated");
+            s.GiveItem("r2_horn_of_calling", 1);
+            Assert(p.Stage("r2_highlord") == "return" && s.CountItem("r2_horn_of_calling") == 1, "Varkas is down, the horn in hand: " + p.Stage("r2_highlord"));
+
+            Assert(s.StartDialogue("dlg_r2_calling_stone", "r2_calling_stone"), "at the calling stone: " + s.LastError);
+            SessionTest.SkipText(s);
+            var v = s.Dialogue.Current;
+            Assert(v.NodeId == "c2_wait" && !v.Choices.Any(c => c.Text.Contains("Blow")), "the horn waits for Marta: " + SessionTest.Describe(v));
+            s.Dialogue.End();
+            Assert(s.CountItem("r2_horn_of_calling") == 1 && !s.Flags.IsSet("r2_horn_blown"), "the horn is kept");
+
+            p.TalkTo("r2_quartermaster", "Varkas is dead", "Then I'll blow the horn");
+            Assert(s.Quests.IsCompleted("r2_highlord") && s.Quests.IsActive("r2_last_ember"), "Marta takes the news and sends you up");
+
+            Assert(s.StartDialogue("dlg_r2_calling_stone", "r2_calling_stone"), "back at the calling stone: " + s.LastError);
+            SessionTest.SkipText(s);
+            v = s.Dialogue.Current;
+            Assert(v.NodeId == "c2" && v.Choices.Any(c => c.Text.Contains("(Blow the Horn")), "now the horn can be blown: " + SessionTest.Describe(v));
+            s.Dialogue.End();
+        }
+
+        [Test]
+        public static void HamonAndKesta_OfferAndTakeTheirQuests_AfterVyrmathraFalls()
+        {
+            // the summit can be won before the camp's side quests are taken or handed in
+            var p = new Player(ClassId.Priest, 31, 3142, new[] { "seren" });
+            var s = p.S;
+            s.Flags.Set("r2_vyrmathra_defeated");
+            Assert(s.QuestMarkerOf("r2_sir_hamon").Kind == QuestMarker.Available && s.QuestMarkerOf("r2_kesta").Kind == QuestMarker.Available,
+                $"Hamon and Kesta still offer: {s.QuestMarkerOf("r2_sir_hamon")} / {s.QuestMarkerOf("r2_kesta")}");
+            p.TalkTo("r2_sir_hamon", "anything I can do for them", "I'll find his standard");
+            p.TalkTo("r2_kesta", "lost something", "I'll get your stores back");
+            Assert(s.Quests.IsActive("r2_twenty_nine") && s.Quests.IsActive("r2_small_fires"), "both quests taken after the kill");
+
+            s.GiveItem("r2_aubric_standard", 1);
+            s.Quests.SetStage("r2_twenty_nine", "return");
+            s.GiveItem("r2_stolen_stores", 3);
+            s.Quests.SetStage("r2_small_fires", "return");
+            Assert(s.QuestMarkerOf("r2_sir_hamon").Kind == QuestMarker.ReadyToTurnIn && s.QuestMarkerOf("r2_kesta").Kind == QuestMarker.ReadyToTurnIn,
+                $"yellow ? on both: {s.QuestMarkerOf("r2_sir_hamon")} / {s.QuestMarkerOf("r2_kesta")}");
+
+            p.TalkTo("r2_sir_hamon", "Plant it at the summit");
+            Assert(s.Quests.IsCompleted("r2_twenty_nine") && s.CountItem("r2_aubric_standard") == 0, "The Twenty-Nine handed in after the kill");
+            Assert(s.VisibleNpcs().Any(n => n.npc == "r2_sir_hamon_summit") && !s.VisibleNpcs().Any(n => n.npc == "r2_sir_hamon"), "Sir Hamon goes up to plant it");
+            p.TalkTo("r2_kesta", "Six whelps seen off");
+            Assert(s.Quests.IsCompleted("r2_small_fires") && s.CountItem("r2_stolen_stores") == 0, "Small Fires handed in after the kill");
+            Assert(s.QuestMarkerOf("r2_kesta").Kind == QuestMarker.None, "no marker left on Kesta: " + s.QuestMarkerOf("r2_kesta"));
+        }
+
         // ===================================================================================================== the bosses
 
         static (BattleOutcome outcome, int rounds, float minHp, int deaths, float minOne, HashSet<string> landed) Pull(string[] companions, string encId, ulong seed, int level = 32)

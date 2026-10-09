@@ -499,6 +499,30 @@ namespace Lanternvale.Tests
         }
 
         [Test]
+        public static void Ivo_OffersHisBanners_EvenWhenTheScoutTalkSkipsOttolinesBranch()
+        {
+            // the 'scout' stage is a Talk objective: any conversation with Ivo ends it, so meeting him at all must open his offer
+            var p = FittingParty(30, 2425);
+            var s = p.S;
+            p.Enter("brightwater", "default");
+            s.Flags.Set("mq2_drowned_lanterns_done");
+            Assert(s.StartDialogue("dlg_bw_penhallow", "bw_archivist_penhallow"), "talk to Penhallow");
+            p.Converse("Where does the ash come from");
+            p.Enter(Peaks, "from_brightwater");
+            p.TalkTo("sr_guide_odran", "Pleased to meet you", "Archivist Penhallow sent me", "Who are the Dragonsworn", "I'll head for the Bone Field");
+            p.TalkTo("sr_ottoline", "Penhallow sent me to read the ash", "What does that mean", "I'll find Ivo");
+            Assert(p.Stage(MQ) == "scout", "find the scout: " + p.Stage(MQ));
+
+            p.TalkTo("sr_scout_ivo", "What news from the camp");
+            Assert(p.Stage(MQ) == "marshal", "the talk with Ivo ends the scout stage: " + p.Stage(MQ));
+            Assert(s.Flags.IsSet("sr_ivo_met"), "meeting Ivo at all counts as having met him");
+            var m = s.QuestMarkerOf("sr_scout_ivo");
+            Assert(m.Kind == QuestMarker.Available && m.QuestId == "sr_strike_the_colours", "Ivo's ! for Strike the Colours: " + m);
+            p.TalkTo("sr_scout_ivo", "Anything else I can do", "Four banners");
+            Assert(s.Quests.IsActive("sr_strike_the_colours"), "Strike the Colours is offered and taken");
+        }
+
+        [Test]
         public static void Gorrum_TalkedDown_ChangesTheLedge()
         {
             var p = new Player(ClassId.Shaman, 27, 5858, "seren", "rook", "kael");

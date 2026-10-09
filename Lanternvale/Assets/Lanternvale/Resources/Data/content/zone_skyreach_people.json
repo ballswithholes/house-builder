@@ -1540,6 +1540,7 @@
           "id": "i_greet",
           "speaker": "sr_scout_ivo",
           "text": "*A boulder clears its throat.* Psst. Down here. No, don't look at me, look at the camp. Ivo Tallowmere, Brightwater river-scouts. Three weeks I've been a rock.",
+          "outcomes": [{"type": "SetFlag", "key": "sr_ivo_met"}],
           "choices": [
             {
               "text": "Ottoline sent me. What are the Dragonsworn up to?",

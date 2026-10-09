@@ -10,7 +10,7 @@ IMMUNE_BOSS = ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"
 # tuning knobs (TestsContentR1 checks the outcome)
 TRASH_HP = {"rootling": 1.6, "hound": 1.7, "knight": 2.1}
 BOSS = {
-    "thornmaw": dict(hp=5.0, dmg=2.4, berserk=23),
+    "thornmaw": dict(hp=4.3, dmg=2.4, berserk=23),
     "sorrow": dict(hp=2.5, dmg=2.1, berserk=26),
     "solace": dict(hp=2.1, dmg=1.6, berserk=26),
     "mother_mire": dict(hp=4.3, dmg=2.3, berserk=23),

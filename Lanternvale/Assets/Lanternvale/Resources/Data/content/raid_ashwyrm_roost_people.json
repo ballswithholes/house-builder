@@ -997,7 +997,7 @@
     },
     {
       "id": "dlg_r2_kesta",
-      "start": "k_victory",
+      "start": "k_return",
       "nodes": [
         {
           "id": "k_victory",
@@ -1009,8 +1009,26 @@
               "key": "r2_vyrmathra_defeated"
             }
           ],
-          "fallback": "k_return",
+          "fallback": "k_active",
           "choices": [
+            {
+              "text": "You look like you've lost something.",
+              "next": "k_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_small_fires"
+                }
+              ]
+            },
             {
               "text": "Any word of the cubs?",
               "next": "k_cubs_news",
@@ -1047,7 +1065,7 @@
               "value": "return"
             }
           ],
-          "fallback": "k_active",
+          "fallback": "k_victory",
           "choices": [
             {
               "text": "Six whelps seen off, and your stores back. Slightly toasted.",
@@ -1291,7 +1309,7 @@
     },
     {
       "id": "dlg_r2_hamon",
-      "start": "h_victory",
+      "start": "h_return",
       "nodes": [
         {
           "id": "h_victory",
@@ -1303,8 +1321,26 @@
               "key": "r2_vyrmathra_defeated"
             }
           ],
-          "fallback": "h_return",
+          "fallback": "h_active",
           "choices": [
+            {
+              "text": "Is there anything I can do for them?",
+              "next": "h_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
             {
               "text": "Goodbye."
             }
@@ -1321,7 +1357,7 @@
               "value": "return"
             }
           ],
-          "fallback": "h_active",
+          "fallback": "h_victory",
           "choices": [
             {
               "text": "Plant it at the summit, where he was going. When she's dead.",
@@ -2260,9 +2296,13 @@
               "type": "HasItem",
               "key": "r2_horn_of_calling",
               "amount": 1
+            },
+            {
+              "type": "QuestActive",
+              "key": "r2_last_ember"
             }
           ],
-          "fallback": "c3",
+          "fallback": "c2_wait",
           "choices": [
             {
               "text": "(Blow the Horn of Calling.)",
@@ -2334,6 +2374,24 @@
                   "key": "enc_r2_vyrmathra"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "c2_wait",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn altar of black stone at the top of the stair, with a horn-rest worn smooth in its middle. The Horn of Calling would fit it exactly. But Marta said to bring it to her first, and Marta keeps lists.*",
+          "conditions": [
+            {
+              "type": "HasItem",
+              "key": "r2_horn_of_calling",
+              "amount": 1
+            }
+          ],
+          "fallback": "c3",
+          "choices": [
+            {
+              "text": "(Step back.)"
             }
           ]
         },

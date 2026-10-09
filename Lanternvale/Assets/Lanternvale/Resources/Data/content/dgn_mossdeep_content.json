@@ -270,7 +270,7 @@
       "levelFloor": 12,
       "levelCap": 15,
       "healthMult": 1.5,
-      "damageMult": 1.35,
+      "damageMult": 1.15,
       "armorMult": 1.1,
       "attackSpeed": 2.6,
       "moveSpeed": 6,
