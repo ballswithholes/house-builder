@@ -23,7 +23,7 @@
       "entries": [
         {"item": "am_junk_gnoll_fang", "chance": 40},
         {"item": "am_junk_stolen_spoon", "chance": 25},
-        {"item": "am_duskmane_tally_knife", "chance": 3},
+        {"pool": ["am_duskmane_tally_knife"], "chance": 3, "partyUsable": true},
         {"random": true, "chance": 4, "quality": "Uncommon"}
       ]
     },
@@ -68,7 +68,7 @@
       "id": "lt_am_burrowmaster",
       "goldMin": 200,
       "goldMax": 400,
-      "entries": [{"item": "am_mudpaw_geode_charm"}, {"item": "am_junk_candle_stub"}, {"item": "am_mudpaw_left_claw", "chance": 30}, {"random": true, "chance": 30, "quality": "Uncommon"}]
+      "entries": [{"item": "am_mudpaw_geode_charm"}, {"item": "am_junk_candle_stub"}, {"pool": ["am_mudpaw_left_claw"], "chance": 30, "partyUsable": true}, {"random": true, "chance": 30, "quality": "Uncommon"}]
     },
     {
       "id": "lt_am_highwayman",

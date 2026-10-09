@@ -1,14 +1,15 @@
 // "Off Hand" weapons (content): one-hand melee weapons with equip OffHand (off-hand slot only; they need dual wield
 // like a One-Hand weapon in the off hand). Every level band has one a rogue can get (vendor or loot), every authored
 // one follows the gear budget (one-hand DPS, the OffHand slot's stat budget), every one can be obtained, the weapon
-// types give rogues, hunters and warriors a choice, and a level-1 rogue can buy the slice's off-hand dagger from
-// Garrow and wield it in the off hand.
+// types give rogues, hunters and warriors a choice, every looted one can drop for a party at its level, and a level-3
+// rogue can buy the slice's off-hand dagger from Garrow (an upgrade over the starter) and wield it in the off hand.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lanternvale.Data;
 using Lanternvale.Rules;
 using Lanternvale.Session;
+using Lanternvale.Util;
 using static Lanternvale.Tests.Harness;
 
 namespace Lanternvale.Tests
@@ -44,6 +45,8 @@ namespace Lanternvale.Tests
 
         static bool ClassUses(ClassId c, WeaponType w) => Db.Classes[c].weaponTypes.Contains(w);
 
+        static float Dps(ItemDef d) => (d.minDamage + d.maxDamage) * 0.5f / d.speed;
+
         /// <summary>Class starting gear (e.g. the rogue's Worn Parrying Dagger): given at character creation, not sold or looted.</summary>
         static bool IsStartingItem(ItemDef d) => Db.Classes.Values.Any(c => c.startingItems.Contains(d.id));
 
@@ -76,12 +79,15 @@ namespace Lanternvale.Tests
                     .SelectMany(t => t.entries).Where(e => e.pool != null && e.partyUsable && e.perMembers > 0);
                 Assert(epics.All(d => bossPool.Any(e => e.pool.Contains(d.id))), raid + "*: the Off Hand epic is in a boss's epic pool");
             }
-            // the slice: a cheap one at Garrow's from level 1 (dagger) and by level 3 (sword)
+            // the slice: Garrow sells an off-hand dagger by level 3 and an off-hand sword by level 7, each a real step up
+            // from the rogue's starting Worn Parrying Dagger (rogues are the only slice dual wielders)
             var garrow = Db.Npcs["smith_garrow"].vendor.Select(v => Db.Item(v.item)).Where(IsOffHandWeapon).ToList();
-            Assert(garrow.Any(d => d.weaponType == WeaponType.Dagger && d.requiredLevel == 1 && d.quality <= Quality.Uncommon && d.price <= 100),
-                "Garrow sells a cheap level-1 off-hand dagger");
-            Assert(garrow.Any(d => d.weaponType == WeaponType.OneHandSword && d.requiredLevel <= 3 && d.quality <= Quality.Uncommon && d.price <= 150),
-                "Garrow sells a cheap off-hand sword by level 3");
+            float starterDps = Dps(Db.Item("rogue_starter_dagger_offhand"));
+            Assert(garrow.Any(d => d.weaponType == WeaponType.Dagger && d.requiredLevel <= 3 && d.quality <= Quality.Uncommon && d.price <= 150 && Dps(d) > starterDps),
+                $"Garrow sells an off-hand dagger by level 3 that beats the starter's {starterDps:0.00} DPS");
+            Assert(garrow.Any(d => d.weaponType == WeaponType.OneHandSword && d.requiredLevel <= 7 && d.quality <= Quality.Uncommon && d.price <= 400 && Dps(d) > starterDps),
+                $"Garrow sells an off-hand sword by level 7 that beats the starter's {starterDps:0.00} DPS");
+            foreach (var d in garrow) Assert(Dps(d) > starterDps, $"{d.id}: {Dps(d):0.00} DPS, not a downgrade from the starter's {starterDps:0.00}");
             // Brightwater's weaponsmith stocks some for the expansion bands
             var dunstan = Db.Npcs["bw_weaponsmith_dunstan"].vendor.Select(v => Db.Item(v.item)).Where(IsOffHandWeapon).ToList();
             Assert(dunstan.Count >= 2 && dunstan.Select(d => d.weaponType).Distinct().Count() >= 2, "Dunstan sells 2+ kinds of Off Hand weapon");
@@ -156,20 +162,62 @@ namespace Lanternvale.Tests
         }
 
         [Test]
-        public static void OffHandWeapons_ALevelOneRogueBuysTheSliceDaggerAndWieldsItInTheOffHand()
+        public static void OffHandWeapons_EveryLootedOneCanDropForAPartyAtItsLevel()
         {
-            var s = SessionTest.NewGame(ClassId.Rogue, 1, seed: 913);
+            // loot tables give Off Hand weapons only through partyUsable pools: no dead drops for a party with nobody
+            // who dual wields (below 20 that is every party without a rogue)
+            foreach (var t in Db.LootTables.Values)
+                foreach (var e in t.entries)
+                {
+                    if (e.random) continue;
+                    if (!string.IsNullOrEmpty(e.item))
+                        Assert(!IsOffHandWeapon(Db.Item(e.item)), $"{t.id}: {e.item} is a named drop; Off Hand weapons drop from partyUsable pools");
+                    if (e.pool != null && e.pool.Any(id => IsOffHandWeapon(Db.Item(id))))
+                        Assert(e.partyUsable, $"{t.id}: a pool with an Off Hand weapon is partyUsable");
+                }
+
+            // its required level: a class that uses its weapon type dual wields by then (trained), so the pool filter
+            // keeps it for a party at that level
+            var (_, dropped) = Sources();
+            foreach (var d in OffHandWeapons().Where(x => dropped.Contains(x.id)))
+            {
+                var users = Db.Classes.Keys.Where(c => ClassUses(c, d.weaponType) && Db.Classes[c].dualWieldLevel > 0).ToList();
+                Assert(users.Count > 0, d.id + ": some class dual wields its weapon type");
+                int lvl = Math.Max(1, d.requiredLevel);
+                Assert(users.Any(c => LootContext.CanUse(UnitFactory.CreateCharacter(Db, c, "U", lvl, learnAll: true), d)),
+                    $"{d.id} ({d.weaponType}, required level {d.requiredLevel}): a {string.Join("/", users)} of that level can use it");
+            }
+
+            // King Aldwin's guaranteed Rare: a Barrow-level party (17-18) with a rogue sees the Huscarl's Seax drop
+            const string seax = "dg4_huscarls_seax";
+            foreach (int lvl in new[] { 17, 18 })
+            {
+                var party = new[] { ClassId.Rogue, ClassId.Warrior, ClassId.Hunter, ClassId.Paladin, ClassId.Priest }
+                    .Select(c => UnitFactory.CreateCharacter(Db, c, c.ToString(), lvl, learnAll: true)).ToList();
+                int hits = 0;
+                for (int seed = 1; seed <= 300; seed++)
+                    if (LootGenerator.Roll(Db, "lt_dg4_king_aldwin", 20, new Rng((ulong)seed), LootContext.For(party, new Inventory())).Items.Any(i => i.Id == seax)) hits++;
+                Assert(hits >= 20, $"L{lvl}: the seax drops for a party with a rogue ({hits} of 300)");
+            }
+        }
+
+        [Test]
+        public static void OffHandWeapons_ALevelThreeRogueBuysTheSliceDaggerAndWieldsItInTheOffHand()
+        {
+            var s = SessionTest.NewGame(ClassId.Rogue, 3, seed: 913);
             var rogue = s.Main;
-            Assert(rogue.Level == 1 && rogue.Equipment.MainHand != null, "a level-1 rogue with a main-hand weapon");
+            Assert(rogue.Level == 3 && rogue.Equipment.MainHand != null, "a level-3 rogue with a main-hand weapon");
             // rogues start dual wielding with the Worn Parrying Dagger (or, in an older setup, an empty off hand)
             var starterOffHand = rogue.Equipment.OffHand;
             Assert(starterOffHand == null || IsOffHandWeapon(starterOffHand.Def), "and an off-hand starter dagger or an empty off hand");
 
             s.OpenVendor("smith_garrow");
             Assert(s.ActiveVendor != null, "Garrow's shop opens");
-            var offer = s.ActiveVendor.Offers().FirstOrDefault(o => IsOffHandWeapon(o.Item) && o.Item.weaponType == WeaponType.Dagger && o.Item.requiredLevel == 1);
-            Assert(offer != null, "Garrow offers a level-1 off-hand dagger");
-            Assert(offer.Price <= s.Gold, $"a new rogue can afford it ({offer.Price} of {s.Gold} copper)");
+            var offer = s.ActiveVendor.Offers().FirstOrDefault(o => IsOffHandWeapon(o.Item) && o.Item.weaponType == WeaponType.Dagger && o.Item.requiredLevel <= 3);
+            Assert(offer != null, "Garrow offers an off-hand dagger a level-3 rogue can wield");
+            if (starterOffHand != null) Assert(Dps(offer.Item) > Dps(starterOffHand.Def), "an upgrade over the starter off-hand dagger");
+            if (s.Gold < offer.Price) s.Inventory.Gold = offer.Price + 50;   // a veteran start's purse is not what is under test
+            Assert(offer.Price <= s.Gold, $"the rogue can afford it ({offer.Price} of {s.Gold} copper)");
             int gold = s.Gold;
             Assert(s.Buy(offer.Item.id) == null, "bought");
             Assert(s.Gold == gold - offer.Price, "paid");

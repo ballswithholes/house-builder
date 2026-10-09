@@ -642,7 +642,7 @@
       "goldMax": 4000,
       "entries": [
         {
-          "pool": ["dg4_aldwins_runeblade", "dg4_crown_of_the_unquiet", "dg4_barrowlight_mantle", "dg4_wightbone_wand", "dg4_huscarl_legwraps", "dg4_huscarls_hand_axe"],
+          "pool": ["dg4_aldwins_runeblade", "dg4_crown_of_the_unquiet", "dg4_barrowlight_mantle", "dg4_wightbone_wand", "dg4_huscarl_legwraps", "dg4_huscarls_seax"],
           "partyUsable": true
         },
         {"pool": ["dg4_emberheart_signet", "dg4_kingsfall"], "chance": 20, "partyUsable": true, "skipOwned": true},

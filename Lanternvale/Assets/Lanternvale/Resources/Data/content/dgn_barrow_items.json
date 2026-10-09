@@ -209,19 +209,19 @@
       "price": 260
     },
     {
-      "id": "dg4_huscarls_hand_axe",
-      "name": "Huscarl's Bearded Hand-Axe",
-      "icon": "axe",
-      "description": "King Aldwin's huscarls carried one in each hand and a grudge in each heart. The grudge has worn off; the edge has not.",
+      "id": "dg4_huscarls_seax",
+      "name": "Huscarl's Bearded Seax",
+      "icon": "dagger",
+      "description": "King Aldwin's huscarls kept a long knife for the left hand and a grudge in each heart. The grudge has worn off; the edge has not.",
       "kind": "Weapon",
       "quality": "Rare",
       "itemLevel": 25,
       "requiredLevel": 18,
       "equip": "OffHand",
-      "weaponType": "OneHandAxe",
-      "minDamage": 29,
-      "maxDamage": 48,
-      "speed": 2.5,
+      "weaponType": "Dagger",
+      "minDamage": 20,
+      "maxDamage": 32,
+      "speed": 1.7,
       "stats": [{"stat": "Strength", "value": 5}, {"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 3}],
       "price": 3260
     }

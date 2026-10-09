@@ -240,9 +240,9 @@ are (20 in all, besides the rogue's starting Worn Parrying Dagger; `TestsContent
 
 | Band | Vendor | Loot |
 |---|---|---|
-| 1–12 | Garrow (Lanternvale): Second-Best Paring Knife (dagger, level 1), Lefty's Shortsword (sword, level 2) | Cocooned Knuckle-Claw (fist, spiders), Cutpurse's Second Opinion (dagger, bandits), Rusk's Small Change (sword, Rusk) |
+| 1–12 | Garrow (Lanternvale): Second-Best Paring Knife (dagger, level 3), Lefty's Shortsword (sword, level 6) | Cocooned Knuckle-Claw (fist, spiders), Cutpurse's Second Opinion (dagger, bandits), Rusk's Small Change (sword, Rusk) |
 | 12–18 | Dunstan (Brightwater): Hollowell Main-Gauche (dagger, 16) | Duskmane Tally-Knife (dagger, gnolls), Mudpaw Left Claw (fist, Burrowmaster Grubb); Mossdeep: Royal Toadstool Tenderiser (Rare mace, King Umbercap) |
-| 18–24 | Dunstan: Floodgate Knuckles (fist, 22) | Mireling Reed-Cutter (dagger, mirelings), Snapjaw Hatchet (axe, crocolisks); the Barrow: Huscarl's Bearded Hand-Axe (Rare, King Aldwin) |
+| 18–24 | Dunstan: Floodgate Knuckles (fist, 22) | Mireling Reed-Cutter (dagger, mirelings), Snapjaw Hatchet (axe, crocolisks); the Barrow: Huscarl's Bearded Seax (Rare dagger, King Aldwin) |
 | 24–30 | Dunstan: Left-Bank Sabre (sword, 28) | Harpy-Quill Sabre (sword, harpies), Gorrum's Toothpick (dagger, Gorrum Two-Belly); the Drowned Vault: Undertow Cutlass (Rare, the Tidewitch); the Frozen Sanctum: Rimeheart Knuckle (Rare fist, the Rimeheart) |
 | raids | — | Solace's Edge (Epic sword, the Weeping Twins), Frostclaw's Dewclaw (Epic fist, Frostclaw) |
 

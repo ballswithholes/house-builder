@@ -313,6 +313,10 @@ The validator rejects an `OffHand` item with any other weapon type, an Off Hand 
 one without damage and speed. Budget (Expansion.md §8): an Off Hand weapon's DPS follows the one-hand
 `ItemGenerator.WeaponDps` for its item level and quality; its stats use the off-hand slot budget (0.56, a little richer
 than a One-Hand weapon's 0.45 since it fits only one hand). `EquipmentRules.IsOffHandWeapon(def)` tells them apart.
+Loot tables give Off Hand weapons only through `partyUsable` pools (a named drop is a pool of one, e.g.
+`{"pool": ["am_mudpaw_left_claw"], "chance": 30, "partyUsable": true}`), and a looted one's `requiredLevel` is no lower
+than the level some class that uses its weapon type dual wields (an axe: 20; a dagger: 1), so it can drop for a party
+at its level (`TestsContentOffHandWeapons`).
 
 ### Config, XP and party
 

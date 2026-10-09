@@ -27,7 +27,7 @@
       "id": "lt_sr_harpy",
       "goldMin": 350,
       "goldMax": 800,
-      "entries": [{"item": "sr_hut_bell", "whileQuestNeeds": true}, {"item": "sr_harpy_quill_sabre", "chance": 2}, {"random": true, "chance": 8, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_hut_bell", "whileQuestNeeds": true}, {"pool": ["sr_harpy_quill_sabre"], "chance": 2, "partyUsable": true}, {"random": true, "chance": 8, "quality": "Uncommon"}]
     },
     {
       "id": "lt_sr_shrikeclaw",
@@ -44,7 +44,7 @@
       "id": "lt_sr_gorrum",
       "goldMin": 2600,
       "goldMax": 4200,
-      "entries": [{"item": "sr_gorrums_second_best_club", "chance": 60}, {"item": "sr_gorrums_toothpick", "chance": 30}, {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}]
+      "entries": [{"item": "sr_gorrums_second_best_club", "chance": 60}, {"pool": ["sr_gorrums_toothpick"], "chance": 30, "partyUsable": true}, {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}]
     },
     {
       "id": "lt_sr_ice_elemental",

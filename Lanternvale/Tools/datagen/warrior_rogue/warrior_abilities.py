@@ -202,7 +202,7 @@ ABILITIES = [
     ab("warrior_parry", "Parry", "swords", "Gives a 5% chance to parry enemy melee attacks made from the front.",
        ranks=[6], passive=True),
     ab("warrior_dual_wield", "Dual Wield", "swords",
-       "Allows one-handed weapons to be equipped in the off hand. Off-hand attacks deal 50% damage.",
+       "Allows One-Hand and Off Hand weapons to be equipped in the off hand. Off-hand attacks deal 50% damage.",
        ranks=[20], passive=True),
     ab("warrior_plate_mail", "Plate Mail", "armor", "Allows the warrior to wear plate armor.", ranks=[40], passive=True),
 
