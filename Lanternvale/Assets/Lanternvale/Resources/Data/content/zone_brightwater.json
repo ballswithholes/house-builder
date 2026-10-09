@@ -197,8 +197,12 @@
        33.6
       ],
       [
-       38.4,
-       38.6
+       38.0,
+       33.3
+      ],
+      [
+       36.2,
+       37.4
       ],
       [
        32.4,
@@ -1755,8 +1759,8 @@
     {
      "art": "prop_tree_oak",
      "pos": [
-      2.4,
-      30.2
+      11.0,
+      30.4
      ],
      "collider": {
       "w": 1.2,
@@ -1779,8 +1783,8 @@
     {
      "art": "prop_tree_pine",
      "pos": [
-      1.8,
-      24.4
+      1.4,
+      20.6
      ],
      "collider": {
       "w": 1.0,
@@ -1791,8 +1795,8 @@
     {
      "art": "prop_tree_oak",
      "pos": [
-      4.4,
-      8.6
+      1.0,
+      16.4
      ],
      "collider": {
       "w": 1.2,
@@ -2124,8 +2128,8 @@
     {
      "art": "prop_tree_oak",
      "pos": [
-      45.6,
-      24.8
+      48.0,
+      24.4
      ],
      "collider": {
       "w": 1.2,
@@ -4776,6 +4780,9 @@
    "id": "dlg_bw_penhallow",
    "start": "p_hub",
    "nodes": [
+    {"id": "p_r1_seed", "speaker": "bw_archivist_penhallow", "text": "*He is writing before you finish.* A seed. Of course it was a seed. Ash doesn't rot, it carries. *He underlines something three times.* Then the Ashwyrm doesn't only burn things. She plants them. I shall need a bigger ledger.", "next": "p_hub2"},
+    {"id": "p_r2_wyrm", "speaker": "bw_archivist_penhallow", "text": "*He sets the pen down very carefully, as if it might go off.* Three hundred years of ash in these shelves. *A wobbly smile.* I have never in my life been so glad to run out of a subject. I'll write it down tonight. In ink. The good ink.", "next": "p_hub2"},
+    {"id": "p_r2_standard", "speaker": "bw_archivist_penhallow", "text": "It hangs over the river steps now, by the memorial. Sir Bertram stands under it every evening and pretends he's only checking the stitching. *He clears his throat.* I've started a new page for the Heronguard. It isn't the last page any more.", "next": "p_hub2"},
     {
      "id": "p_hub",
      "speaker": "bw_archivist_penhallow",
@@ -4912,6 +4919,9 @@
         }
        ]
       },
+      {"text": "Hinoki, in the Hollow Heart, says the Hollow was a seed carried down on the ash.", "next": "p_r1_seed", "conditions": [{"type": "Flag", "key": "r1_seed_lore_known"}], "once": true},
+      {"text": "Vyrmathra is dead. The Ashwyrm won't wake again.", "next": "p_r2_wyrm", "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}], "once": true},
+      {"text": "Aubric's standard came home from the mountain.", "next": "p_r2_standard", "conditions": [{"type": "Flag", "key": "r2_standard_home"}], "once": true},
       {
        "text": "Goodbye."
       }
@@ -5123,6 +5133,9 @@
         }
        ]
       },
+      {"text": "Hinoki, in the Hollow Heart, says the Hollow was a seed carried down on the ash.", "next": "p_r1_seed", "conditions": [{"type": "Flag", "key": "r1_seed_lore_known"}], "once": true},
+      {"text": "Vyrmathra is dead. The Ashwyrm won't wake again.", "next": "p_r2_wyrm", "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}], "once": true},
+      {"text": "Aubric's standard came home from the mountain.", "next": "p_r2_standard", "conditions": [{"type": "Flag", "key": "r2_standard_home"}], "once": true},
       {
        "text": "Goodbye."
       }

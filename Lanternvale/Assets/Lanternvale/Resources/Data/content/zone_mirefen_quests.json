@@ -12,9 +12,10 @@
       "stages": [
         {
           "id": "crocs",
-          "description": "Thin out the crocolisks of Mirefen. The Gnashing Shallows, south of the Fen Road, are thick with them.",
+          "description": "Thin out the crocolisks of the Gnashing Shallows, south of the Fen Road. Two packs bask in the shallows.",
           "objectives": [
-            {"type": "Kill", "target": "cr_mf_crocolisk", "text": "Crocolisks driven off", "count": 5}
+            {"type": "Defeat", "target": "enc_mf_shallows_crocs", "text": "Crocolisks of the Shallows driven off"},
+            {"type": "Defeat", "target": "enc_mf_shallows_crocs_east", "text": "Crocolisks of the east shallows driven off"}
           ],
           "next": "gnasher"
         },
@@ -29,8 +30,9 @@
         {
           "id": "return",
           "description": "Tell Bo the shallows are safe for nets again. He is by his pond, east of Lowlantern.",
+          "turnIn": "mf_bo_puddlefoot",
           "objectives": [
-            {"type": "Talk", "target": "mf_bo_puddlefoot", "text": "Return to Bo"}
+            {"type": "Flag", "target": "mf_bo_nets_handed_in", "text": "Return to Bo"}
           ]
         }
       ],
@@ -57,8 +59,9 @@
         {
           "id": "return",
           "description": "Bring the glass and the glow to Obi in Lowlantern.",
+          "turnIn": "mf_obi_wick",
           "objectives": [
-            {"type": "Talk", "target": "mf_obi_wick", "text": "Return to Obi"}
+            {"type": "Flag", "target": "mf_obi_glass_handed_in", "text": "Return to Obi"}
           ]
         }
       ],
@@ -87,8 +90,9 @@
         {
           "id": "return",
           "description": "Tell Obi the road is lit.",
+          "turnIn": "mf_obi_wick",
           "objectives": [
-            {"type": "Talk", "target": "mf_obi_wick", "text": "Return to Obi"}
+            {"type": "Flag", "target": "mf_obi_posts_handed_in", "text": "Return to Obi"}
           ]
         }
       ],
@@ -130,8 +134,9 @@
         {
           "id": "return",
           "description": "Tell Lily what became of His Grace.",
+          "turnIn": "mf_lily",
           "objectives": [
-            {"type": "Talk", "target": "mf_lily", "text": "Return to Lily"}
+            {"type": "Flag", "target": "mf_lily_duke_handed_in", "text": "Return to Lily"}
           ]
         }
       ],
@@ -144,13 +149,15 @@
       "level": 19,
       "minLevel": 19,
       "zone": "mirefen",
-      "summary": "The Drowned Barrows are giving back their dead. Old Corwin, once of the Heronguard, wants them laid to rest — and the Low Bell rung for them, the way it used to be.",
+      "summary": "The Drowned Barrows are giving back their dead. Old Osric, once of the Heronguard, wants them laid to rest — and the Low Bell rung for them, the way it used to be.",
       "stages": [
         {
           "id": "ghouls",
           "description": "Put the bog ghouls of the Drowned Barrows and the Mere back to rest.",
           "objectives": [
-            {"type": "Kill", "target": "cr_mf_bog_ghoul", "text": "Bog ghouls laid to rest", "count": 6}
+            {"type": "Defeat", "target": "enc_mf_mere_ghouls", "text": "Bog ghouls of the Mere laid to rest"},
+            {"type": "Defeat", "target": "enc_mf_barrow_ghouls", "text": "Bog ghouls of the Barrows laid to rest"},
+            {"type": "Defeat", "target": "enc_mf_barrow_ghouls_north", "text": "Bog ghouls of the north mounds laid to rest"}
           ],
           "next": "bell"
         },
@@ -164,9 +171,10 @@
         },
         {
           "id": "return",
-          "description": "Tell Corwin the barrows are quiet.",
+          "description": "Tell Osric the barrows are quiet.",
+          "turnIn": "mf_corwin",
           "objectives": [
-            {"type": "Talk", "target": "mf_corwin", "text": "Return to Corwin"}
+            {"type": "Flag", "target": "mf_corwin_rest_handed_in", "text": "Return to Osric"}
           ]
         }
       ],
@@ -195,8 +203,9 @@
         {
           "id": "return",
           "description": "Tell Bloop the totems are silent.",
+          "turnIn": "mf_oracle_bloop",
           "objectives": [
-            {"type": "Talk", "target": "mf_oracle_bloop", "text": "Return to Bloop"}
+            {"type": "Flag", "target": "mf_oracle_totems_handed_in", "text": "Return to Bloop"}
           ]
         }
       ],
@@ -222,8 +231,9 @@
         {
           "id": "return",
           "description": "Tell Reeve Tamsin how it went.",
+          "turnIn": "mf_reeve_tamsin",
           "objectives": [
-            {"type": "Talk", "target": "mf_reeve_tamsin", "text": "Return to Reeve Tamsin"}
+            {"type": "Flag", "target": "mf_reeve_chief_handed_in", "text": "Return to Reeve Tamsin"}
           ]
         }
       ],
@@ -250,8 +260,9 @@
         {
           "id": "return",
           "description": "Bring the makings to Hettie in Lowlantern.",
+          "turnIn": "mf_hettie_brine",
           "objectives": [
-            {"type": "Talk", "target": "mf_hettie_brine", "text": "Return to Hettie"}
+            {"type": "Flag", "target": "mf_hettie_soup_handed_in", "text": "Return to Hettie"}
           ]
         }
       ],
@@ -270,15 +281,19 @@
           "id": "hags",
           "description": "Defeat the coven hags who prowl the western fen and the road to the moon-gate.",
           "objectives": [
-            {"type": "Kill", "target": "cr_mf_mire_hag", "text": "Coven hags defeated", "count": 5}
+            {"type": "Defeat", "target": "enc_mf_coven_watch", "text": "The coven's watch-hag"},
+            {"type": "Defeat", "target": "enc_mf_statue_hags", "text": "The hags at the Sunken Statue"},
+            {"type": "Defeat", "target": "enc_mf_gate_road_hag", "text": "The hag on the gate road"},
+            {"type": "Flag", "target": "mf_gall_defeated", "text": "Auntie Gall and her daughters"}
           ],
           "next": "return"
         },
         {
           "id": "return",
           "description": "Claim the bounty from Reeve Tamsin.",
+          "turnIn": "mf_reeve_tamsin",
           "objectives": [
-            {"type": "Talk", "target": "mf_reeve_tamsin", "text": "Return to Reeve Tamsin"}
+            {"type": "Flag", "target": "mf_coven_bounty_handed_in", "text": "Return to Reeve Tamsin"}
           ]
         }
       ],
@@ -304,8 +319,9 @@
         {
           "id": "return",
           "description": "Bring the news, and the Tidewitch's pearl, to Bloop.",
+          "turnIn": "mf_oracle_bloop",
           "objectives": [
-            {"type": "Talk", "target": "mf_oracle_bloop", "text": "Return to Bloop"}
+            {"type": "Flag", "target": "dg5_undertow_handed_in", "text": "Return to Bloop"}
           ]
         }
       ],

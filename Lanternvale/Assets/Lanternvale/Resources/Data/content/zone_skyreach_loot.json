@@ -4,7 +4,7 @@
       "id": "lt_sr_wolf",
       "goldMin": 250,
       "goldMax": 600,
-      "entries": [{"item": "sr_frost_wolf_pelt", "chance": 75}, {"random": true, "chance": 6, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_frost_wolf_pelt"}, {"random": true, "chance": 6, "quality": "Uncommon"}]
     },
     {
       "id": "lt_sr_rimefang",
@@ -27,7 +27,7 @@
       "id": "lt_sr_harpy",
       "goldMin": 350,
       "goldMax": 800,
-      "entries": [{"item": "sr_hut_bell", "chance": 65}, {"random": true, "chance": 8, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_hut_bell"}, {"random": true, "chance": 8, "quality": "Uncommon"}]
     },
     {
       "id": "lt_sr_shrikeclaw",

@@ -380,8 +380,8 @@ namespace Lanternvale.Tests
             p.TalkTo("mf_bo_puddlefoot", "Old Gnasher's done");
             Assert(s.Quests.IsCompleted("mf_bo_nets"), "Teeth in the Nets complete");
 
-            // Soup of the Mire: tails (topped up: drops are luck) and three truffles
-            if (s.CountItem("mf_croc_tail") < 4) s.GiveItem("mf_croc_tail", 4 - s.CountItem("mf_croc_tail"));
+            // Soup of the Mire: every crocolisk drops a tail (six crocolisks and Old Gnasher so far), and three truffles
+            Assert(s.CountItem("mf_croc_tail") >= 4, "the crocolisks' tails: " + s.CountItem("mf_croc_tail"));
             for (int i = 1; i <= 3; i++) p.Use("mf_truffle_" + i, "(Dig gently");
             p.TalkTo("mf_hettie_brine", "Four crocolisk tails");
             Assert(s.Quests.IsCompleted("mf_hettie_soup"), "Soup of the Mire complete");
@@ -409,8 +409,10 @@ namespace Lanternvale.Tests
             Assert(s.Quests.IsCompleted("mf_corwin_rest") && s.Flags.IsSet("mf_heard_heart_hungry"), "Rest for the Drowned complete");
 
             // Fen-Glass and Wisp-Light, then Light the Way (the last post wakes an ambush)
-            if (s.CountItem("mf_fen_glass") < 5) s.GiveItem("mf_fen_glass", 5 - s.CountItem("mf_fen_glass"));
-            if (s.CountItem("mf_wisp_glow") < 4) s.GiveItem("mf_wisp_glow", 4 - s.CountItem("mf_wisp_glow"));
+            // (no top-ups: every mireling carries fen-glass and every wisp a glow, so the stewpot camp, the scouts and two
+            // wisp flocks are enough, even on the peaceful route where the Croaker camp and the Stones are never fought)
+            foreach (var e in new[] { "enc_mf_mireling_scouts", "enc_mf_mere_wisps", "enc_mf_willow_wisps" }) { p.Refresh(); p.WalkInto(e); }
+            Assert(s.CountItem("mf_fen_glass") >= 5 && s.CountItem("mf_wisp_glow") >= 4, $"glass {s.CountItem("mf_fen_glass")}, glow {s.CountItem("mf_wisp_glow")}");
             p.TalkTo("mf_obi_wick", "Five lumps of fen-glass");
             Assert(s.Quests.IsCompleted("mf_obi_glass"), "Fen-Glass and Wisp-Light complete");
             p.TalkTo("mf_obi_wick", "What will you make", "I'll hang them");
@@ -445,9 +447,15 @@ namespace Lanternvale.Tests
             p.TalkTo("mf_reeve_tamsin", "Gubbagulp won't be cutting");
             Assert(s.Quests.IsCompleted("mf_reeve_chief"), "The Croaking Stones complete");
 
-            // Bounty: five hags
-            foreach (var e in new[] { "enc_mf_coven_watch", "enc_mf_statue_hags", "enc_mf_gate_road_hag" }) { p.Refresh(); p.WalkInto(e); }
-            Assert(p.Stage("mf_coven_bounty") == "return", "five hags: " + p.Stage("mf_coven_bounty"));
+            // Bounty: the coven's hags, Auntie Gall and her daughters among them
+            // (round the vault's stair, which the totems revealed: the gate road, the watch, Gall's ring, then the statue)
+            foreach (var e in new[] { "enc_mf_gate_road_hag", "enc_mf_coven_watch" }) { p.Refresh(); p.WalkInto(e); }
+            p.Refresh();
+            p.WalkInto("enc_mf_auntie_gall", "It ends now");
+            Assert(p.Stage("mf_coven_bounty") == "hags", "the statue's hags still stand: " + p.Stage("mf_coven_bounty"));
+            p.Refresh();
+            p.WalkInto("enc_mf_statue_hags");
+            Assert(p.Stage("mf_coven_bounty") == "return", "the hags and Gall: " + p.Stage("mf_coven_bounty"));
             p.TalkTo("mf_reeve_tamsin", "The coven is five hags fewer");
             Assert(s.Quests.IsCompleted("mf_coven_bounty"), "the bounty paid");
         }

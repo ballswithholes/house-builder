@@ -62,8 +62,8 @@
     },
     {
       "id": "mf_corwin",
-      "name": "Old Corwin",
-      "shortName": "Corwin",
+      "name": "Old Osric",
+      "shortName": "Osric",
       "title": "Once of the Heronguard",
       "sprite": "npc_villager_b",
       "portrait": "portrait_guard",
@@ -152,6 +152,8 @@
           "text": "Tamsin Lowe, Reeve of Lowlantern. That means I count the planks, settle the arguments and get blamed for the weather. Mind the third plank. And the seventh. Actually, mind all of them.",
           "next": "r_hub"
         },
+        {"id": "r_r1_home", "speaker": "mf_reeve_tamsin", "text": "*She looks out over the Mere for a long moment.* So that's what the children saw last night. Little lights coming up out of the water and bobbing off along the old posts, as if they knew the way. Nobody in Lowlantern is crying this morning. Well. Everybody is. The good kind.", "next": "r_hub"},
+        {"id": "r_r1_grove", "speaker": "mf_reeve_tamsin", "text": "*She is quiet a while, then nods.* Granny Sen would have liked that. A light should go where it's needed. I'll tell the families their lanterns are still burning. That's the truth, isn't it? Just somewhere else.", "next": "r_hub"},
         {
           "id": "r_hub",
           "speaker": "mf_reeve_tamsin",
@@ -205,7 +207,6 @@
               "text": "You look like a woman with a frog problem.",
               "next": "r_chief_offer",
               "conditions": [
-                {"type": "Flag", "key": "mf_met_reeve"},
                 {"type": "Level", "amount": 20},
                 {"type": "QuestNotStarted", "key": "mf_reeve_chief"},
                 {"type": "NotFlag", "key": "mf_chief_resolved"}
@@ -244,7 +245,9 @@
               ]
             },
             {"text": "Tell me about Lowlantern.", "next": "r_lore"},
-            {"text": "Who was Granny Sen?", "next": "r_sen", "conditions": [{"type": "Flag", "key": "mf_met_reeve"}]},
+            {"text": "Who was Granny Sen?", "next": "r_sen"},
+            {"text": "The drowned lights went home. They followed the sending-posts up out of the deep.", "next": "r_r1_home", "conditions": [{"type": "Flag", "key": "r1_lights_sent_home"}], "once": true},
+            {"text": "The drowned lights stayed below. They chose to light the grove that kept them.", "next": "r_r1_grove", "conditions": [{"type": "Flag", "key": "r1_grove_relit"}], "once": true},
             {"text": "Goodbye."}
           ]
         },
@@ -447,6 +450,7 @@
           "text": "*You tell her. She listens with her head on one side, and when you hand her Gubbagulp's pearl she holds it up to the light for a long time.* A pearl. From Gubbagulp. Forty years I've lived on this pool and the mirelings have never given us so much as a wet look. If they want to trade, we'll trade. If they want to come to the lantern-night, they can come.",
           "outcomes": [
             {"type": "TakeItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "mf_reeve_chief_handed_in"},
             {"type": "CompleteQuest", "key": "mf_reeve_chief"},
             {"type": "Approval", "key": "nanami", "amount": 4},
             {"type": "Approval", "key": "seren", "amount": 3},
@@ -460,6 +464,7 @@
           "text": "*She looks at the pearl from the chief's crown, and then at you, and nods slowly.* So it came to that. Well. The lines will stay whole. I'll put the pearl in the Reeve's box, and tell the children there was a big frog and he lost.",
           "outcomes": [
             {"type": "TakeItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "mf_reeve_chief_handed_in"},
             {"type": "CompleteQuest", "key": "mf_reeve_chief"}
           ],
           "next": "r_chief_end"
@@ -503,6 +508,7 @@
           "speaker": "mf_reeve_tamsin",
           "text": "*She counts out the coins twice, then a third time out of habit.* Five fewer hats. The fishers will sing your name. Badly, but loudly.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_coven_bounty_handed_in"},
             {"type": "CompleteQuest", "key": "mf_coven_bounty"}
           ],
           "choices": [
@@ -528,7 +534,7 @@
         {
           "id": "r_lore3",
           "speaker": "mf_reeve_tamsin",
-          "text": "Mirelings at the Croaking Stones — frog-folk, mostly harmless, lately less so. Crocolisks in the Shallows. Something unpleasant in the Drowned Barrows. An old knight called Corwin who lives out there and talks to nobody. And Mother Mire's coven, who we don't talk about, except all the time.",
+          "text": "Mirelings at the Croaking Stones — frog-folk, mostly harmless, lately less so. Crocolisks in the Shallows. Something unpleasant in the Drowned Barrows. An old knight called Osric who lives out there and talks to nobody. And Mother Mire's coven, who we don't talk about, except all the time.",
           "next": "r_hub"
         },
         {
@@ -688,6 +694,7 @@
           "outcomes": [
             {"type": "TakeItem", "key": "mf_fen_glass", "amount": 5},
             {"type": "TakeItem", "key": "mf_wisp_glow", "amount": 4},
+            {"type": "SetFlag", "key": "mf_obi_glass_handed_in"},
             {"type": "CompleteQuest", "key": "mf_obi_glass"}
           ],
           "choices": [
@@ -737,6 +744,7 @@
           "speaker": "mf_obi_wick",
           "text": "I saw them! From the porch! Four little green stars, all down the road. *He has to take his spectacles off to wipe them.* Old Tobben in Lanternvale used to say a lantern isn't for seeing by. It's for being seen. I never knew what he meant till tonight.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_obi_posts_handed_in"},
             {"type": "CompleteQuest", "key": "mf_obi_posts"},
             {"type": "Approval", "key": "seren", "amount": 3},
             {"type": "Approval", "key": "liora", "amount": 3}
@@ -874,6 +882,7 @@
           "outcomes": [
             {"type": "TakeItem", "key": "mf_croc_tail", "amount": 4},
             {"type": "TakeItem", "key": "mf_fen_truffle", "amount": 3},
+            {"type": "SetFlag", "key": "mf_hettie_soup_handed_in"},
             {"type": "CompleteQuest", "key": "mf_hettie_soup"},
             {"type": "GiveItem", "key": "food_lantern_stew", "amount": 4},
             {"type": "Approval", "key": "pip", "amount": 3},
@@ -886,7 +895,7 @@
         {
           "id": "h_corwin",
           "speaker": "mf_hettie_brine",
-          "text": "Corwin. Came down out of the north twelve years ago with a heron on his coat and a look in his eye like a door that won't shut. Lives out past the Mere with the ghosts. Buys fish-hooks and nothing else. Never says a word about Skyreach, which is how you know it's the only thing he thinks about.",
+          "text": "Osric. Came down out of the north twelve years ago with a heron on his coat and a look in his eye like a door that won't shut. Lives out past the Mere with the ghosts. Buys fish-hooks and nothing else. Never says a word about Skyreach, which is how you know it's the only thing he thinks about.",
           "next": "h_hub"
         },
         {
@@ -956,6 +965,7 @@
           "speaker": "mf_lily",
           "text": "*You open your hands. The Duke of Puddles regards Lily with enormous dignity, then leaps onto her head.* YOUR GRACE! *She is crying and laughing and he is croaking and it is, frankly, a lot.* Thank you thank you thank you. You can have anything. Not him. Anything else.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_lily_duke_handed_in"},
             {"type": "CompleteQuest", "key": "mf_lily_duke"},
             {"type": "Approval", "key": "pip", "amount": 4},
             {"type": "Approval", "key": "bruna", "amount": 3}
@@ -969,6 +979,7 @@
           "speaker": "mf_lily",
           "text": "*You explain about the stewpot, and the rescue, and Lady Bubbles, and how the Duke looked at her. Lily listens very seriously.* ...So he's in love. *A long pause.* A duke has to follow his heart. That's in all the books. *She sniffles, very bravely.* Can I visit?",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_lily_duke_handed_in"},
             {"type": "CompleteQuest", "key": "mf_lily_duke"},
             {"type": "Approval", "key": "nanami", "amount": 5},
             {"type": "Approval", "key": "liora", "amount": 3},
@@ -1090,6 +1101,7 @@
           "speaker": "mf_bo_puddlefoot",
           "text": "*He sits down on his own dock, hard.* Gnasher. Done. Twenty years that log's been watching me. *He laughs, then can't stop laughing.* Here. Take your pick. I'd give you a boat, but you'd only get eaten in it.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_bo_nets_handed_in"},
             {"type": "CompleteQuest", "key": "mf_bo_nets"},
             {"type": "Approval", "key": "rook", "amount": 3},
             {"type": "Approval", "key": "kael", "amount": 2}
@@ -1187,7 +1199,7 @@
         {
           "id": "c_hub",
           "speaker": "mf_corwin",
-          "text": "*Corwin pokes the fire.* Well. Say what you came to say. The fire doesn't mind company. I'm still deciding.",
+          "text": "*Osric pokes the fire.* Well. Say what you came to say. The fire doesn't mind company. I'm still deciding.",
           "choices": [
             {"text": "That's a Heronguard heron on your coat.", "next": "c_heron"},
             {
@@ -1257,7 +1269,7 @@
         {
           "id": "c_ysolde",
           "speaker": "mf_corwin",
-          "text": "*He stands up so fast the boot goes in the fire.* Ysolde? Little Ysolde, with the heron? Sir Wadsworth? *He fishes the boot out, swearing gently.* She was a squire when we rode north. Left her at the gate because she was too young. She cried for a week. *He looks at her, and at you.* Look at her now.",
+          "text": "*He stands up so fast the boot goes in the fire.* Ysolde? Little Ysolde, with the horn? And Sir Wadsworth, still alive and still rude? *He fishes the boot out, swearing gently.* She blew the retreat on the mountain when Aubric wouldn't. Eleven of us heard it and turned our birds round. I'm one of the eleven. *He looks at her, and at you.* I never thanked you, girl. Look at you now.",
           "outcomes": [
             {"type": "Approval", "key": "ysolde", "amount": 8},
             {"type": "GiveXP", "amount": 40}
@@ -1330,6 +1342,7 @@
           "speaker": "mf_corwin",
           "text": "*He listens with his eyes shut. The fen is very quiet.* ...Aye. I can hear it. Nothing walking. *He opens a battered chest and takes out a pair of river-blue greaves.* Carried these out of Skyreach and never had the heart to wear them. They'd rather walk than sit in a box. Take what you need.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_corwin_rest_handed_in"},
             {"type": "CompleteQuest", "key": "mf_corwin_rest"},
             {"type": "Approval", "key": "ysolde", "amount": 5},
             {"type": "Approval", "key": "aldric", "amount": 4},
@@ -1640,6 +1653,7 @@
           "speaker": "mf_oracle_bloop",
           "text": "*Bloop presses the conch to its ear for a long time. Then its throat-sac puffs out, enormously, and it lets out one long, happy croak.* Quiet. The fen is quiet. Bloop can hear things again. Bloop can hear... *the eyes go very wide* ...the undertow.",
           "outcomes": [
+            {"type": "SetFlag", "key": "mf_oracle_totems_handed_in"},
             {"type": "CompleteQuest", "key": "mf_oracle_totems"},
             {"type": "SetFlag", "key": "mf_totems_done"}
           ],
@@ -1701,6 +1715,7 @@
           "text": "*Bloop holds the pearl to its conch and listens. Very slowly, its eyes fill up.* Lanterns. Hundreds. Singing. *It sets the pearl in the water, and lets go. The pearl sinks, glowing — and then, far out on the fen, a hundred small lights come up out of the reeds and drift away toward the deep marsh.* Thank you, friend.",
           "outcomes": [
             {"type": "TakeItem", "key": "mf_tidewitch_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "dg5_undertow_handed_in"},
             {"type": "CompleteQuest", "key": "dg5_undertow"},
             {"type": "Approval", "key": "nanami", "amount": 6},
             {"type": "Approval", "key": "liora", "amount": 4},
@@ -1715,6 +1730,7 @@
           "speaker": "mf_oracle_bloop",
           "text": "*Bloop listens to the conch for a long while.* No more undertow. The water is only water again. *It nods, slowly.* That is enough. That is more than enough.",
           "outcomes": [
+            {"type": "SetFlag", "key": "dg5_undertow_handed_in"},
             {"type": "CompleteQuest", "key": "dg5_undertow"}
           ],
           "choices": [

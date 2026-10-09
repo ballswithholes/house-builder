@@ -4903,10 +4903,11 @@
         {
           "id": "return",
           "description": "Tell Marta at Ember Gate Camp.",
+          "turnIn": "r2_quartermaster",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_quartermaster",
+              "type": "Flag",
+              "target": "r2_matriarch_handed_in",
               "text": "Return to Marta"
             }
           ]
@@ -4958,10 +4959,11 @@
         {
           "id": "return",
           "description": "Bring the fire-gland to Marta at Ember Gate Camp.",
+          "turnIn": "r2_quartermaster",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_quartermaster",
+              "type": "Flag",
+              "target": "r2_twin_fires_handed_in",
               "text": "Return to Marta"
             }
           ]
@@ -5013,10 +5015,11 @@
         {
           "id": "return",
           "description": "Bring the horn to Marta at Ember Gate Camp.",
+          "turnIn": "r2_quartermaster",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_quartermaster",
+              "type": "Flag",
+              "target": "r2_highlord_handed_in",
               "text": "Return to Marta"
             }
           ]
@@ -5093,10 +5096,11 @@
         {
           "id": "return",
           "description": "Tell Marta at Ember Gate Camp that it is over.",
+          "turnIn": "r2_quartermaster",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_quartermaster",
+              "type": "Flag",
+              "target": "r2_last_ember_handed_in",
               "text": "Return to Marta"
             }
           ]
@@ -5149,10 +5153,11 @@
         {
           "id": "return",
           "description": "Bring the standard to Sir Hamon at his cairn by the camp.",
+          "turnIn": "r2_sir_hamon",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_sir_hamon",
+              "type": "Flag",
+              "target": "r2_twenty_nine_handed_in",
               "text": "Return to Sir Hamon"
             }
           ]
@@ -5180,10 +5185,14 @@
           "description": "Drive off the ember whelps on the Cinder Terraces and recover the camp's three stolen stashes.",
           "objectives": [
             {
-              "type": "Kill",
-              "target": "cr_r2_drake_whelp",
-              "text": "Ember whelps driven off",
-              "count": 6
+              "type": "Defeat",
+              "target": "enc_r2_whelp_clutch",
+              "text": "Ember whelps at the clutch driven off"
+            },
+            {
+              "type": "Defeat",
+              "target": "enc_r2_terrace",
+              "text": "Ember whelps on the terrace driven off"
             },
             {
               "type": "Collect",
@@ -5197,10 +5206,11 @@
         {
           "id": "return",
           "description": "Bring the stores back to Kesta at the camp fire.",
+          "turnIn": "r2_kesta",
           "objectives": [
             {
-              "type": "Talk",
-              "target": "r2_kesta",
+              "type": "Flag",
+              "target": "r2_small_fires_handed_in",
               "text": "Return to Kesta"
             }
           ]

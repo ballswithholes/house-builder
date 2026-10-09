@@ -103,7 +103,7 @@
        "next": "be_dummy"
       },
       {
-       "text": "[INSIGHT] You favour that knee like it owes you money.",
+       "text": "You favour that knee like it owes you money.",
        "check": {
         "skill": "Insight",
         "dc": 12,
@@ -216,7 +216,7 @@
        "next": "be_dummy"
       },
       {
-       "text": "[INSIGHT] You favour that knee like it owes you money.",
+       "text": "You favour that knee like it owes you money.",
        "check": {
         "skill": "Insight",
         "dc": 12,
@@ -491,7 +491,7 @@
        "next": "ti_news"
       },
       {
-       "text": "[NATURE] The river's running low for the season.",
+       "text": "The river's running low for the season.",
        "check": {
         "skill": "Nature",
         "dc": 13,
@@ -555,7 +555,7 @@
        "next": "ti_news"
       },
       {
-       "text": "[NATURE] The river's running low for the season.",
+       "text": "The river's running low for the season.",
        "check": {
         "skill": "Nature",
         "dc": 13,
@@ -759,7 +759,7 @@
        "next": "ve_clock"
       },
       {
-       "text": "[ARCANA] There's a ward woven into that clock tower.",
+       "text": "There's a ward woven into that clock tower.",
        "check": {
         "skill": "Arcana",
         "dc": 13,
@@ -849,7 +849,7 @@
        "next": "ve_clock"
       },
       {
-       "text": "[ARCANA] There's a ward woven into that clock tower.",
+       "text": "There's a ward woven into that clock tower.",
        "check": {
         "skill": "Arcana",
         "dc": 13,
@@ -1025,7 +1025,7 @@
        "next": "co_story"
       },
       {
-       "text": "[INSIGHT] You watch the door like a man who used to come in through the window.",
+       "text": "You watch the door like a man who used to come in through the window.",
        "check": {
         "skill": "Insight",
         "dc": 13,
@@ -1085,7 +1085,7 @@
        "next": "co_story"
       },
       {
-       "text": "[INSIGHT] You watch the door like a man who used to come in through the window.",
+       "text": "You watch the door like a man who used to come in through the window.",
        "check": {
         "skill": "Insight",
         "dc": 13,
@@ -1223,7 +1223,7 @@
        "next": "mg_name"
       },
       {
-       "text": "[PERSUASION] Surely a weary traveller deserves a slice of pie on the house.",
+       "text": "Surely a weary traveller deserves a slice of pie on the house.",
        "check": {
         "skill": "Persuasion",
         "dc": 13,
@@ -1265,7 +1265,7 @@
        "next": "mg_name"
       },
       {
-       "text": "[PERSUASION] Surely a weary traveller deserves a slice of pie on the house.",
+       "text": "Surely a weary traveller deserves a slice of pie on the house.",
        "check": {
         "skill": "Persuasion",
         "dc": 13,
@@ -1466,7 +1466,7 @@
        "next": "ot_green"
       },
       {
-       "text": "[NATURE] Is that marsh-mint in your Fen-Ward Tonic?",
+       "text": "Is that marsh-mint in your Fen-Ward Tonic?",
        "check": {
         "skill": "Nature",
         "dc": 13,
@@ -1500,7 +1500,7 @@
        "next": "ot_green"
       },
       {
-       "text": "[NATURE] Is that marsh-mint in your Fen-Ward Tonic?",
+       "text": "Is that marsh-mint in your Fen-Ward Tonic?",
        "check": {
         "skill": "Nature",
         "dc": 13,
@@ -1593,7 +1593,7 @@
        "next": "du_four"
       },
       {
-       "text": "[INSIGHT] You two argue like people who'd hate to stop.",
+       "text": "You two argue like people who'd hate to stop.",
        "check": {
         "skill": "Insight",
         "dc": 12,
@@ -1786,6 +1786,8 @@
    "id": "dlg_bw_wren",
    "start": "wr_greet",
    "nodes": [
+    {"id": "wr_r2_egg", "speaker": "bw_mother_wren", "text": "*She pours you tea you didn't ask for.* Good. Something that young hasn't decided what it is yet. Perhaps it will grow up warm instead of hungry. Small lights, small chances, dear. That's all any of us get.", "next": "wr_hub"},
+    {"id": "wr_r2_eggs", "speaker": "bw_mother_wren", "text": "*She is quiet for a while, turning her cup.* Then nobody will have to do this again in three hundred years. That was a hard thing to choose. I'll light a candle tonight for the ones who had to choose it. That's you, dear.", "next": "wr_hub"},
     {
      "id": "wr_greet",
      "speaker": "bw_mother_wren",
@@ -1834,6 +1836,8 @@
        "next": "wr_tea",
        "once": true
       },
+      {"text": "One of the Ashwyrm's eggs was still warm. We carried it down the mountain.", "next": "wr_r2_egg", "conditions": [{"type": "Flag", "key": "r2_egg_spared"}], "once": true},
+      {"text": "We broke the Ashwyrm's eggs. There won't be another.", "next": "wr_r2_eggs", "conditions": [{"type": "Flag", "key": "r2_eggs_broken"}], "once": true},
       {
        "text": "Goodbye."
       }
@@ -1887,6 +1891,8 @@
        "next": "wr_tea",
        "once": true
       },
+      {"text": "One of the Ashwyrm's eggs was still warm. We carried it down the mountain.", "next": "wr_r2_egg", "conditions": [{"type": "Flag", "key": "r2_egg_spared"}], "once": true},
+      {"text": "We broke the Ashwyrm's eggs. There won't be another.", "next": "wr_r2_eggs", "conditions": [{"type": "Flag", "key": "r2_eggs_broken"}], "once": true},
       {
        "text": "Goodbye."
       }
@@ -2770,7 +2776,7 @@
      "text": "*Her hands go still on the rope.* My mother's name is on that stone. Elspeth Sparrow. Every year I carry her lantern to the memorial and every year Dame Ysolde watches from the river steps and doesn't come down. *Her jaw sets.* Why should I carry it for the Eleven, when one of the Eleven is the reason my mother's on that stone?",
      "choices": [
       {
-       "text": "[PERSUASION] Your mother rode so others could come home. Ysolde made sure some did.",
+       "text": "Your mother rode so others could come home. Ysolde made sure some did.",
        "check": {
         "skill": "Persuasion",
         "dc": 12,
@@ -3176,7 +3182,7 @@
        ]
       },
       {
-       "text": "[NATURE] (Crouch low, move slowly, and let him decide you are harmless.)",
+       "text": "(Crouch low, move slowly, and let him decide you are harmless.)",
        "check": {
         "skill": "Nature",
         "dc": 13,
@@ -3187,7 +3193,7 @@
        "tag": "NATURE"
       },
       {
-       "text": "[HUNTER] (Hold perfectly still and call to him like a heron calls its mate.)",
+       "text": "(Hold perfectly still and call to him like a heron calls its mate.)",
        "next": "hr_won",
        "conditions": [
         {
@@ -3198,7 +3204,7 @@
        "tag": "HUNTER"
       },
       {
-       "text": "[SHAMAN] (Ask the river's spirit to tell him he is safe.)",
+       "text": "(Ask the river's spirit to tell him he is safe.)",
        "next": "hr_won",
        "conditions": [
         {
@@ -3219,7 +3225,7 @@
        ]
       },
       {
-       "text": "[ATHLETICS] (Lunge and grab him.)",
+       "text": "(Lunge and grab him.)",
        "check": {
         "skill": "Athletics",
         "dc": 15,
@@ -3324,7 +3330,7 @@
      "fallback": "hc_done",
      "choices": [
       {
-       "text": "[INVESTIGATION] (Prise up a lid without splitting it and look beneath the fish.)",
+       "text": "(Prise up a lid without splitting it and look beneath the fish.)",
        "check": {
         "skill": "Investigation",
         "dc": 14,
@@ -3335,7 +3341,7 @@
        "tag": "INVESTIGATION"
       },
       {
-       "text": "[PERCEPTION] (Sniff the gap under the lid.)",
+       "text": "(Sniff the gap under the lid.)",
        "check": {
         "skill": "Perception",
         "dc": 12,
@@ -3346,7 +3352,7 @@
        "tag": "PERCEPTION"
       },
       {
-       "text": "[ROGUE] (Pop the nails the way a professional would, and put them back the same way.)",
+       "text": "(Pop the nails the way a professional would, and put them back the same way.)",
        "next": "hc_found",
        "conditions": [
         {
@@ -3448,7 +3454,7 @@
        ]
       },
       {
-       "text": "[PERSUASION] Talk to me before the Watch does. Who's buying the oil?",
+       "text": "Talk to me before the Watch does. Who's buying the oil?",
        "conditions": [
         {
          "type": "NotFlag",
@@ -3465,7 +3471,7 @@
        "tag": "PERSUASION"
       },
       {
-       "text": "[PERSUASION] You heard the crate break. Talk to me before the Watch does.",
+       "text": "You heard the crate break. Talk to me before the Watch does.",
        "conditions": [
         {
          "type": "Flag",
@@ -3482,7 +3488,7 @@
        "tag": "PERSUASION"
       },
       {
-       "text": "[INTIMIDATION] (Set the jar of oil on his counter, very gently.) Start talking.",
+       "text": "(Set the jar of oil on his counter, very gently.) Start talking.",
        "check": {
         "skill": "Intimidation",
         "dc": 14,
@@ -3493,7 +3499,7 @@
        "tag": "INTIMIDATION"
       },
       {
-       "text": "[PALADIN] Swear on the Light you'll tell the truth, and I'll speak for you.",
+       "text": "Swear on the Light you'll tell the truth, and I'll speak for you.",
        "next": "si_confess",
        "conditions": [
         {
@@ -3528,7 +3534,7 @@
        ]
       },
       {
-       "text": "[PERSUASION] Talk to me before the Watch does. Who's buying the oil?",
+       "text": "Talk to me before the Watch does. Who's buying the oil?",
        "conditions": [
         {
          "type": "NotFlag",
@@ -3545,7 +3551,7 @@
        "tag": "PERSUASION"
       },
       {
-       "text": "[PERSUASION] You heard the crate break. Talk to me before the Watch does.",
+       "text": "You heard the crate break. Talk to me before the Watch does.",
        "conditions": [
         {
          "type": "Flag",
@@ -3562,7 +3568,7 @@
        "tag": "PERSUASION"
       },
       {
-       "text": "[INTIMIDATION] (Set the jar of oil on his counter, very gently.) Start talking.",
+       "text": "(Set the jar of oil on his counter, very gently.) Start talking.",
        "check": {
         "skill": "Intimidation",
         "dc": 14,
@@ -3573,7 +3579,7 @@
        "tag": "INTIMIDATION"
       },
       {
-       "text": "[PALADIN] Swear on the Light you'll tell the truth, and I'll speak for you.",
+       "text": "Swear on the Light you'll tell the truth, and I'll speak for you.",
        "next": "si_confess",
        "conditions": [
         {
@@ -4322,7 +4328,7 @@
      ],
      "choices": [
       {
-       "text": "[INSIGHT] You've never forgiven yourself for staying at the bottom of the slope.",
+       "text": "You've never forgiven yourself for staying at the bottom of the slope.",
        "check": {
         "skill": "Insight",
         "dc": 13,
@@ -4644,7 +4650,7 @@
      "fallback": "me_need",
      "choices": [
       {
-       "text": "[RELIGION] (Speak the Heronguard rite: 'Ride home. We will keep the ford.')",
+       "text": "(Speak the Heronguard rite: 'Ride home. We will keep the ford.')",
        "check": {
         "skill": "Religion",
         "dc": 12,
@@ -4693,6 +4699,26 @@
      ],
      "fallback": "me_done",
      "choices": [
+      {
+       "text": "Ysolde, this is Aubric's field journal. Lumi of Cairnhollow wanted it in your hands.",
+       "next": "me_journal",
+       "conditions": [
+        {
+         "type": "InParty",
+         "key": "ysolde"
+        },
+        {
+         "type": "Flag",
+         "key": "sr_journal_ysolde"
+        },
+        {
+         "type": "HasItem",
+         "key": "sr_aubric_journal",
+         "amount": 1
+        }
+       ],
+       "tag": "YSOLDE"
+      },
       {
        "text": "(Step back from the memorial.)"
       }
@@ -4764,7 +4790,7 @@
      "text": "*Forty names are cut into two standing stones. Lord-Commander Aubric's is first, larger than the rest. Beneath the last name: FORTY RODE. ELEVEN RETURNED. ALL ARE REMEMBERED.*",
      "choices": [
       {
-       "text": "[HISTORY] (Read the dates, and what the stone does not say.)",
+       "text": "(Read the dates, and what the stone does not say.)",
        "check": {
         "skill": "History",
         "dc": 12,
@@ -4774,6 +4800,48 @@
        "once": true,
        "tag": "HISTORY"
       },
+      {
+       "text": "Ysolde, this is Aubric's field journal. Lumi of Cairnhollow wanted it in your hands.",
+       "next": "me_journal",
+       "conditions": [
+        {
+         "type": "InParty",
+         "key": "ysolde"
+        },
+        {
+         "type": "Flag",
+         "key": "sr_journal_ysolde"
+        },
+        {
+         "type": "HasItem",
+         "key": "sr_aubric_journal",
+         "amount": 1
+        }
+       ],
+       "tag": "YSOLDE"
+      },
+      {
+       "text": "(Step back from the memorial.)"
+      }
+     ]
+    },
+    {
+     "id": "me_journal",
+     "speaker": "ysolde",
+     "text": "*Ysolde takes the journal in both hands, here, in front of his empty tomb. She reads the last page, and then reads it again.* 'We kept the ford.' *Her voice holds.* Of course you did, you stubborn old heron. *She tucks it inside her surcoat, over her heart.* Thank you for carrying it home.",
+     "outcomes": [
+      {
+       "type": "TakeItem",
+       "key": "sr_aubric_journal",
+       "amount": 1
+      },
+      {
+       "type": "Approval",
+       "key": "ysolde",
+       "amount": 10
+      }
+     ],
+     "choices": [
       {
        "text": "(Step back from the memorial.)"
       }

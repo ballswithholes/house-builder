@@ -725,6 +725,7 @@
       "icon": "lightning",
       "description": "A whip of storm-light for {0} Nature damage.",
       "school": "Nature",
+      "tags": ["Lightning"],
       "hidden": true,
       "castTime": 2.0,
       "target": "Enemy",

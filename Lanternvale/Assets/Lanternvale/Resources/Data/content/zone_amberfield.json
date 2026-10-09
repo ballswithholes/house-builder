@@ -362,7 +362,7 @@
         },
         {"art": "prop_cairn", "pos": [56.8, 44.6], "collider": {"w": 1.1, "h": 0.8}},
         {"art": "prop_cairn", "pos": [71.4, 44.0], "flip": true, "collider": {"w": 1.1, "h": 0.8}},
-        {"art": "prop_tree_golden", "pos": [57.0, 53.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [60.4, 53.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
         {"art": "prop_tree_golden", "pos": [71.4, 53.8], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
         {"art": "prop_rock_large", "pos": [59.6, 48.4], "collider": {"w": 2.0, "h": 1.0}},
         {"art": "prop_rock_small", "pos": [68.4, 49.2]},
@@ -573,7 +573,7 @@
           "collider": {"w": 0.4, "h": 0.3},
           "text": "MUDPAW WORKINGS. Please do not fall in. (The sign is upside down. The Mudpaw read it from below.)"
         },
-        {"art": "prop_tree_golden", "pos": [2.6, 17.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [1.2, 9.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
         {"art": "prop_tree_golden", "pos": [27.0, 3.0], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
         {
           "art": "prop_signpost",
@@ -1227,8 +1227,12 @@
       "stages": [
         {
           "id": "hawks",
-          "description": "Kill plains hawks on the Downs.",
-          "objectives": [{"type": "Kill", "target": "cr_am_hawk", "text": "Plains hawks killed", "count": 6}],
+          "description": "Thin out the plains hawks on the Downs: the flock on the southern downs, the one over the north wheat and the Lookout's.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_am_hawks_south", "text": "Hawks on the southern downs"},
+            {"type": "Defeat", "target": "enc_am_hawks_ring", "text": "Hawks over the north wheat"},
+            {"type": "Defeat", "target": "enc_am_hawks_lookout", "text": "Hawks at Shepherd's Lookout"}
+          ],
           "next": "return"
         },
         {

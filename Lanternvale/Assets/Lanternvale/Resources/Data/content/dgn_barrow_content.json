@@ -13,6 +13,7 @@
       "levelFloor": 18,
       "levelCap": 20,
       "levelOffset": 2,
+      "damageMult": 1.5,
       "size": 2.0,
       "ai": "Melee",
       "abilities": [{"ability": "cr_am_gnoll_cackle", "priority": 8, "condition": "selfHpBelow:50"}, {"ability": "cr_am_cleaver_chop", "priority": 4}],
@@ -50,6 +51,7 @@
       "description": "A Duskmane mystic who talks to the dead. The dead have started answering, which she did not expect.",
       "resource": "Mana",
       "healthMult": 0.9,
+      "damageMult": 1.5,
       "faction": "Duskmane"
     },
     {
@@ -73,6 +75,7 @@
       "xpMult": 0.5,
       "description": "A carved stone face in the pillar, with a mouthful of old, poisoned darts.",
       "healthMult": 0.5,
+      "damageMult": 1.5,
       "moveSpeed": 0,
       "ranged": true,
       "rangedRange": 25,
@@ -91,6 +94,7 @@
       "levelFloor": 18,
       "levelCap": 20,
       "levelOffset": 2,
+      "damageMult": 1.5,
       "size": 1.8,
       "ai": "Melee",
       "abilities": [{"ability": "cr_dg4_shield_bash", "priority": 7, "condition": "targetCasting"}, {"ability": "cr_dg4_rusted_cleave", "priority": 4}],
@@ -114,6 +118,7 @@
       "levelFloor": 18,
       "levelCap": 20,
       "levelOffset": 2,
+      "damageMult": 1.5,
       "size": 1.8,
       "ai": "Ranged",
       "abilities": [{"ability": "cr_dg4_grave_arrow", "priority": 5}],
@@ -152,6 +157,7 @@
       "xpMult": 0.65,
       "description": "A dead lord of the old court in rusted plate, ghost-light leaking from the cracks. It remembers being loyal. It remembers little else.",
       "healthMult": 1.3,
+      "damageMult": 1.6,
       "immune": ["Fear", "Sleep"],
       "stats": [{"stat": "Resistance", "value": 20, "school": "Frost"}]
     },
@@ -181,6 +187,7 @@
       "xpMult": 0.65,
       "description": "The Duskmane mystic who tends the Hungry Fire. Her paws are black with oil to the elbow, and she has not blinked in some time.",
       "healthMult": 1.5,
+      "damageMult": 1.6,
       "resource": "Mana",
       "faction": "Duskmane",
       "bark": "It is so nearly awake! One more cask! ONE MORE!"
@@ -211,6 +218,7 @@
       "xpMult": 0.65,
       "description": "The king's own guard, taller than the rest, with a crowned shield. It stands in the tomb door and does not move. It has had a lot of practice.",
       "healthMult": 1.4,
+      "damageMult": 1.6,
       "immune": ["Fear", "Sleep"]
     },
     {

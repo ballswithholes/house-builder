@@ -561,7 +561,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 1.25,
-      "damageMult": 1.05,
+      "damageMult": 1.7,
       "attackSpeed": 2.0,
       "meleeSchool": "Frost",
       "moveSpeed": 8,
@@ -589,7 +589,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 1.8,
-      "damageMult": 1.1,
+      "damageMult": 1.9,
       "armorMult": 1.2,
       "attackSpeed": 2.6,
       "meleeSchool": "Frost",
@@ -623,6 +623,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 1.2,
+      "damageMult": 1.7,
       "attackSpeed": 2.0,
       "meleeSchool": "Frost",
       "moveSpeed": 9,
@@ -651,6 +652,7 @@
       "levelMax": 32,
       "scaleToParty": true,
       "levelOffset": 2,
+      "damageMult": 1.7,
       "levelFloor": 30,
       "levelCap": 32,
       "attackSpeed": 2.0,
@@ -686,7 +688,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 1.8,
-      "damageMult": 1.1,
+      "damageMult": 1.9,
       "attackSpeed": 2.0,
       "meleeSchool": "Frost",
       "moveSpeed": 9,
@@ -721,6 +723,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 2.3,
+      "damageMult": 1.9,
       "attackSpeed": 2.6,
       "moveSpeed": 10,
       "size": 3.4,
@@ -779,7 +782,7 @@
       "levelFloor": 30,
       "levelCap": 32,
       "healthMult": 1.9,
-      "damageMult": 1.6,
+      "damageMult": 1.5,
       "armorMult": 1.2,
       "attackSpeed": 2.8,
       "meleeSchool": "Frost",
@@ -1384,9 +1387,11 @@
             "dg6_glacier_heart_girdle",
             "dg6_frostbound_handwraps",
             "dg6_sanctum_strider_boots"
-          ]
+          ],
+          "skipOwned": true,
+          "partyUsable": true
         },
-        {"pool": ["dg6_winters_long_watch", "dg6_crown_of_seven_spires", "dg6_rimehide_jerkin"], "chance": 25},
+        {"pool": ["dg6_winters_long_watch", "dg6_crown_of_seven_spires", "dg6_rimehide_jerkin"], "chance": 25, "skipOwned": true, "partyUsable": true},
         {"random": true, "quality": "Rare", "itemLevelOffset": 2}
       ]
     },
@@ -1563,13 +1568,15 @@
         {
           "id": "aubric",
           "description": "Speak with the spirit that rises from the thawing ice.",
-          "objectives": [{"type": "Talk", "target": "dg6_aubric", "text": "Speak with Lord-Commander Aubric"}],
-          "next": "lumi"
+          "objectives": [{"type": "Flag", "target": "dg6_knights_freed", "text": "Speak with Lord-Commander Aubric"}],
+          "next": "lumi",
+          "turnIn": "dg6_aubric"
         },
         {
           "id": "lumi",
           "description": "Tell Old Lumi that the twenty-nine are free.",
-          "objectives": [{"type": "Talk", "target": "sr_lumi", "text": "Speak with Old Lumi"}]
+          "turnIn": "sr_lumi",
+          "objectives": [{"type": "Flag", "target": "dg6_the_long_watch_handed_in", "text": "Speak with Old Lumi"}]
         }
       ],
       "rewards": {

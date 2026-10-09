@@ -171,19 +171,19 @@
               "text": "Gorrum's made peace. He'll trade with Cairnhollow now, not rob it.",
               "next": "o_toll_peace",
               "conditions": [{"type": "Flag", "key": "sr_ogres_pacified"}],
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_ogre_toll_handed_in"}, {"type": "CompleteQuest", "key": "sr_ogre_toll"}]
             },
             {
               "text": "Gorrum and his lads ran for the hills.",
               "next": "o_toll_scared",
               "conditions": [{"type": "Flag", "key": "sr_ogres_scared"}],
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_ogre_toll_handed_in"}, {"type": "CompleteQuest", "key": "sr_ogre_toll"}]
             },
             {
               "text": "I paid his toll. The road's open.",
               "next": "o_toll_paid",
               "conditions": [{"type": "Flag", "key": "sr_ogres_paid"}],
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_ogre_toll_handed_in"}, {"type": "CompleteQuest", "key": "sr_ogre_toll"}]
             },
             {
               "text": "Gorrum won't be charging anyone anything again.",
@@ -193,7 +193,7 @@
                 {"type": "NotFlag", "key": "sr_ogres_scared"},
                 {"type": "NotFlag", "key": "sr_ogres_paid"}
               ],
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_ogre_toll"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_ogre_toll_handed_in"}, {"type": "CompleteQuest", "key": "sr_ogre_toll"}]
             }
           ]
         },
@@ -232,7 +232,7 @@
             {
               "text": "Brother Pell is safe at the Kettle Hut, drinking Hilde's tea.",
               "next": "o_pell_done2",
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_lamplighters_climb"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_lamplighters_climb_handed_in"}, {"type": "CompleteQuest", "key": "sr_lamplighters_climb"}]
             }
           ]
         },
@@ -242,6 +242,8 @@
           "text": "He walked all that way to light one lantern for the Heronguard. *Odran rubs his eyes with a mittened hand.* Daft as a brush, these chapel folk. Bless every one of them.",
           "next": "o_hub"
         },
+        {"id": "o_aldwin_coal", "speaker": "sr_guide_odran", "text": "*He stops filling his pipe.* Aldwin of the Downs, who put her to sleep? The old shepherds say the mountain coughed once, three hundred years back, and then went quiet. If half that coal has come up here in a Dragonsworn pocket, every camp of theirs is a hearth waiting for it. Keep that to yourself in the village. People sleep badly enough.", "next": "o_hub"},
+        {"id": "o_osric_warm", "speaker": "sr_guide_odran", "text": "Osric. *He says the name like he's heard it before.* Then he was on the high road with the forty. Warm stone below the Roost, aye. My father felt it, the summer before they came. It's warm again now. That's why I keep looking north.", "next": "o_hub"},
         {
           "id": "o_hub",
           "speaker": "sr_guide_odran",
@@ -277,6 +279,8 @@
               "outcomes": [{"type": "SetFlag", "key": "found_frozen_sanctum"}]
             },
             {"text": "Tell me about Skyreach.", "next": "o_lore"},
+            {"text": "King Aldwin's shade told me he took a coal from the Ashwyrm's heart, and a man in red scales carried half of it north.", "next": "o_aldwin_coal", "conditions": [{"type": "Flag", "key": "dg4_shade_spoke"}], "once": true},
+            {"text": "An old Heronguard in Mirefen, Osric, said the stone went warm under their boots up here.", "next": "o_osric_warm", "conditions": [{"type": "Flag", "key": "mf_heard_skyreach"}], "once": true},
             {"text": "Goodbye."}
           ]
         },
@@ -414,7 +418,7 @@
             {
               "text": "Five bells, back from the harpies.",
               "next": "h_ret2",
-              "outcomes": [{"type": "TakeItem", "key": "sr_hut_bell", "amount": 5}, {"type": "CompleteQuest", "key": "sr_whiteout_bells"}]
+              "outcomes": [{"type": "TakeItem", "key": "sr_hut_bell", "amount": 5}, {"type": "SetFlag", "key": "sr_whiteout_bells_handed_in"}, {"type": "CompleteQuest", "key": "sr_whiteout_bells"}]
             }
           ]
         },
@@ -520,7 +524,7 @@
             {
               "text": "Six pelts, as promised.",
               "next": "b_ret2",
-              "outcomes": [{"type": "TakeItem", "key": "sr_frost_wolf_pelt", "amount": 6}, {"type": "CompleteQuest", "key": "sr_warm_coats"}]
+              "outcomes": [{"type": "TakeItem", "key": "sr_frost_wolf_pelt", "amount": 6}, {"type": "SetFlag", "key": "sr_warm_coats_handed_in"}, {"type": "CompleteQuest", "key": "sr_warm_coats"}]
             }
           ]
         },
@@ -606,7 +610,7 @@
           "text": "Is that... is that BRAMBLE? And CLOVER? And TURNIP?",
           "conditions": [{"type": "QuestState", "key": "sr_woolly_business", "value": "return"}],
           "fallback": "p_prog",
-          "choices": [{"text": "Every last goat, home in the pen.", "next": "p_ret2", "outcomes": [{"type": "CompleteQuest", "key": "sr_woolly_business"}]}]
+          "choices": [{"text": "Every last goat, home in the pen.", "next": "p_ret2", "outcomes": [{"type": "SetFlag", "key": "sr_woolly_business_handed_in"}, {"type": "CompleteQuest", "key": "sr_woolly_business"}]}]
         },
         {
           "id": "p_ret2",
@@ -1158,7 +1162,7 @@
             {
               "text": "They're free, Lumi. Aubric said you can take the flags down. Or leave them up; he said they're very pretty.",
               "next": "l_watch_end",
-              "outcomes": [{"type": "CompleteQuest", "key": "dg6_the_long_watch"}]
+              "outcomes": [{"type": "SetFlag", "key": "dg6_the_long_watch_handed_in"}, {"type": "CompleteQuest", "key": "dg6_the_long_watch"}]
             }
           ]
         },
@@ -1200,7 +1204,9 @@
               "conditions": [{"type": "InParty", "key": "ysolde"}],
               "outcomes": [
                 {"type": "SetFlag", "key": "sr_journal_ysolde"},
+                {"type": "TakeItem", "key": "sr_aubric_journal", "amount": 1},
                 {"type": "Approval", "key": "ysolde", "amount": 10},
+                {"type": "SetFlag", "key": "sr_twenty_nine_handed_in"},
                 {"type": "CompleteQuest", "key": "sr_twenty_nine"}
               ],
               "tag": "YSOLDE"
@@ -1208,7 +1214,7 @@
             {
               "text": "I'll carry it to her in Brightwater myself.",
               "next": "l_carry",
-              "outcomes": [{"type": "SetFlag", "key": "sr_journal_ysolde"}, {"type": "CompleteQuest", "key": "sr_twenty_nine"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_journal_ysolde"}, {"type": "SetFlag", "key": "sr_twenty_nine_handed_in"}, {"type": "CompleteQuest", "key": "sr_twenty_nine"}]
             },
             {
               "text": "Keep it here, Lumi, with the flags. It belongs with them.",
@@ -1216,6 +1222,7 @@
               "outcomes": [
                 {"type": "SetFlag", "key": "sr_journal_lumi"},
                 {"type": "TakeItem", "key": "sr_aubric_journal", "amount": 1},
+                {"type": "SetFlag", "key": "sr_twenty_nine_handed_in"},
                 {"type": "CompleteQuest", "key": "sr_twenty_nine"}
               ]
             }
@@ -1245,6 +1252,7 @@
           "text": "And the temple... *she looks up the valley, towards the frozen falls* ...if the ones who couldn't run went in there, somebody ought to bring them out. Not today. You've walked far enough today. But think on it.",
           "choices": [{"text": "(Continue.)"}]
         },
+        {"id": "l_pennant", "speaker": "sr_lumi", "text": "*She takes the little heron pennant in both hands, smooths it, and ties a strip of blue prayer-cloth round the ferrule before she gives it back.* There. Now it's been up the mountain properly. Wear it where they can see it, dear. The twenty-nine like company.", "next": "l_hub"},
         {
           "id": "l_greet",
           "speaker": "sr_lumi",
@@ -1262,6 +1270,7 @@
               "next": "l_watch_prog",
               "conditions": [{"type": "QuestActive", "key": "dg6_the_long_watch"}]
             },
+            {"text": "Ser Corlan of Amberfield gave me this pennant. He wanted it carried where the forty rode.", "next": "l_pennant", "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "HasItem", "key": "am_heronguard_pennant_token"}], "once": true},
             {"text": "Goodbye."}
           ]
         },
@@ -1282,6 +1291,7 @@
               "next": "l_watch_prog",
               "conditions": [{"type": "QuestActive", "key": "dg6_the_long_watch"}]
             },
+            {"text": "Ser Corlan of Amberfield gave me this pennant. He wanted it carried where the forty rode.", "next": "l_pennant", "conditions": [{"type": "Flag", "key": "am_corlan_pennant_carried"}, {"type": "HasItem", "key": "am_heronguard_pennant_token"}], "once": true},
             {"text": "Goodbye."}
           ]
         },
@@ -1366,7 +1376,7 @@
             {
               "text": "I heard it. The bones have gone quiet.",
               "next": "t_ret2",
-              "outcomes": [{"type": "TakeItem", "key": "sr_rime_core", "amount": 4}, {"type": "CompleteQuest", "key": "sr_singing_bones"}]
+              "outcomes": [{"type": "TakeItem", "key": "sr_rime_core", "amount": 4}, {"type": "SetFlag", "key": "sr_singing_bones_handed_in"}, {"type": "CompleteQuest", "key": "sr_singing_bones"}]
             }
           ]
         },
@@ -1514,7 +1524,7 @@
             {
               "text": "The mountain belongs to itself again.",
               "next": "i_ret2",
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_strike_the_colours"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_strike_the_colours_handed_in"}, {"type": "CompleteQuest", "key": "sr_strike_the_colours"}]
             }
           ]
         },
@@ -1641,7 +1651,7 @@
             {
               "text": "She's safe now. And the whelps won't trouble your shelf.",
               "next": "g_ret2",
-              "outcomes": [{"type": "CompleteQuest", "key": "sr_ice_and_ember"}]
+              "outcomes": [{"type": "SetFlag", "key": "sr_ice_and_ember_handed_in"}, {"type": "CompleteQuest", "key": "sr_ice_and_ember"}]
             }
           ]
         },

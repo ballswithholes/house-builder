@@ -171,6 +171,10 @@
           "text": "*For a moment she doesn't write anything at all. Then she sits down on a crate of bandages, very carefully, the way you sit when your knees have already decided.* Four hundred years. Penhallow says the Hollow came on her ash: a seed on the north wind, every few lifetimes, and wherever it landed, things went grey and quiet and stopped. *She looks up at the summit. It is only a mountain.* No more ash. No more seeds. Whatever's left of the Hollow down south is the last of it, and it has nothing left to grow from. It ends. It actually ends.",
           "outcomes": [
             {
+              "type": "SetFlag",
+              "key": "r2_last_ember_handed_in"
+            },
+            {
               "type": "CompleteQuest",
               "key": "r2_last_ember"
             },
@@ -408,6 +412,10 @@
           "text": "'Highlord Varkas.' *She writes it down, then crosses out 'Highlord'.* Varkas. *She holds the horn a moment, then gives it back, both hands, the way somebody hands over a sword in a story.* You know what this means. Nobody is blowing it but you.",
           "outcomes": [
             {
+              "type": "SetFlag",
+              "key": "r2_highlord_handed_in"
+            },
+            {
               "type": "CompleteQuest",
               "key": "r2_highlord"
             }
@@ -527,6 +535,10 @@
               "type": "GiveItem",
               "key": "r2_emberward_draught",
               "amount": 5
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_twin_fires_handed_in"
             },
             {
               "type": "CompleteQuest",
@@ -649,6 +661,10 @@
           "speaker": "r2_quartermaster",
           "text": "*She writes for a while.* Kesta will want to know. She's been sitting by the fire all morning pretending not to listen for the roar. *She closes the ledger on her pencil.* Thank you. That was the kind job and the hard job at once, and those are the worst ones.",
           "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_matriarch_handed_in"
+            },
             {
               "type": "CompleteQuest",
               "key": "r2_matriarch"
@@ -1060,6 +1076,10 @@
               "amount": 3
             },
             {
+              "type": "SetFlag",
+              "key": "r2_small_fires_handed_in"
+            },
+            {
               "type": "CompleteQuest",
               "key": "r2_small_fires"
             }
@@ -1324,6 +1344,10 @@
                   "key": "r2_standard_to_summit"
                 },
                 {
+                  "type": "SetFlag",
+                  "key": "r2_twenty_nine_handed_in"
+                },
+                {
                   "type": "CompleteQuest",
                   "key": "r2_twenty_nine"
                 }
@@ -1348,6 +1372,10 @@
                 {
                   "type": "SetFlag",
                   "key": "r2_standard_home"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_twenty_nine_handed_in"
                 },
                 {
                   "type": "CompleteQuest",

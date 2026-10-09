@@ -490,6 +490,16 @@
       "ai": "Boss",
       "abilities": [
         {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:38"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
+        {
           "ability": "cr_r2_grief_fire",
           "priority": 10,
           "condition": "selfHpBelow:30&selfNoAura:cr_r2_grief_fire"
@@ -558,6 +568,16 @@
       "size": 4.2,
       "ai": "Boss",
       "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:38"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
         {
           "ability": "cr_r2_grief_fire",
           "priority": 10,
@@ -629,6 +649,16 @@
       "size": 5.2,
       "ai": "Boss",
       "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:45"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
         {
           "ability": "cr_r2_highlords_wrath",
           "priority": 10,
@@ -712,6 +742,16 @@
       "size": 7.5,
       "ai": "Boss",
       "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:56"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
         {
           "ability": "cr_r2_the_last_ember",
           "priority": 10,
@@ -1879,6 +1919,52 @@
           "target": "Self"
         }
       ]
+    },
+    {
+      "id": "cr_r2_ashwyrm_fury",
+      "name": "The Ashwyrm's Fury",
+      "icon": "rage",
+      "description": "The fight has gone on too long: the Ashwyrm's fire fills the champion, damage dealt increased by 200%.",
+      "school": "Fire",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 11,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_ashwyrm_fury",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_firestorm",
+      "name": "Firestorm",
+      "icon": "fire",
+      "description": "In the Ashwyrm's fury the whole mountain-top burns: {0} Fire damage to every enemy within 60 yards, every turn. Win before the fury comes.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 60,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 11,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 40,
+          "max": 50,
+          "perLevel": 3.0
+        }
+      ]
     }
   ],
   "auras": [
@@ -2243,6 +2329,20 @@
         }
       ],
       "description": "Damage dealt increased by 30%. Attack speed increased by 20%."
+    },
+    {
+      "id": "cr_r2_ashwyrm_fury",
+      "name": "The Ashwyrm's Fury",
+      "icon": "rage",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 200,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 200%."
     }
   ]
 }

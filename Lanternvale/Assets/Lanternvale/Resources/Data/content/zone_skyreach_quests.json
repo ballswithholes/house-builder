@@ -54,7 +54,7 @@
           "description": "The orders speak of a gate. Find it, above the camp.",
           "objectives": [{"type": "Reach", "target": "reg_sr_roost_gate", "text": "Find the Roost Gate"}],
           "next": "report",
-          "onComplete": [{"type": "GiveXP", "amount": 250}]
+          "onComplete": [{"type": "GiveXP", "amount": 250}, {"type": "SetFlag", "key": "sr_roost_revealed"}]
         },
         {
           "id": "report",
@@ -87,7 +87,8 @@
         {
           "id": "return",
           "description": "Tell Pema her goats are home.",
-          "objectives": [{"type": "Talk", "target": "sr_pema", "text": "Speak with Pema"}]
+          "turnIn": "sr_pema",
+          "objectives": [{"type": "Flag", "target": "sr_woolly_business_handed_in", "text": "Speak with Pema"}]
         }
       ],
       "rewards": {"xp": 670, "gold": 2500, "choiceItems": ["sr_goatherds_mittens", "sr_cloudwool_shawl", "sr_bell_on_a_string"]}
@@ -110,7 +111,8 @@
         {
           "id": "report",
           "description": "Tell Odran the road is clear.",
-          "objectives": [{"type": "Talk", "target": "sr_guide_odran", "text": "Speak with Odran"}]
+          "turnIn": "sr_guide_odran",
+          "objectives": [{"type": "Flag", "target": "sr_ogre_toll_handed_in", "text": "Speak with Odran"}]
         }
       ],
       "rewards": {"xp": 620, "gold": 2500, "choiceItems": ["sr_two_belly_belt", "sr_toll_takers_gloves", "sr_cheese_wheel_buckler"]}
@@ -133,7 +135,8 @@
         {
           "id": "report",
           "description": "Bring the pelts to Brannoc in Cairnhollow.",
-          "objectives": [{"type": "Talk", "target": "sr_brannoc", "text": "Speak with Brannoc"}]
+          "turnIn": "sr_brannoc",
+          "objectives": [{"type": "Flag", "target": "sr_warm_coats_handed_in", "text": "Speak with Brannoc"}]
         }
       ],
       "rewards": {"xp": 560, "gold": 2200, "choiceItems": ["sr_trapper_coat", "sr_rimefur_mantle", "sr_snowfox_hood"]}
@@ -162,7 +165,8 @@
         {
           "id": "report",
           "description": "Tell Odran that Pell is safe.",
-          "objectives": [{"type": "Talk", "target": "sr_guide_odran", "text": "Speak with Odran"}]
+          "turnIn": "sr_guide_odran",
+          "objectives": [{"type": "Flag", "target": "sr_lamplighters_climb_handed_in", "text": "Speak with Odran"}]
         }
       ],
       "rewards": {"xp": 670, "gold": 2500, "choiceItems": ["sr_pells_spare_lantern", "sr_snowshoe_treads", "sr_chapel_candle_rod"]}
@@ -185,7 +189,8 @@
         {
           "id": "report",
           "description": "Bring the bells back to Hilde at the Kettle Hut.",
-          "objectives": [{"type": "Talk", "target": "sr_hilde", "text": "Speak with Hilde"}]
+          "turnIn": "sr_hilde",
+          "objectives": [{"type": "Flag", "target": "sr_whiteout_bells_handed_in", "text": "Speak with Hilde"}]
         }
       ],
       "rewards": {"xp": 670, "gold": 2800, "choiceItems": ["sr_bellwether_boots", "sr_whiteout_wraps", "sr_harpy_feather_cloak"]}
@@ -221,7 +226,8 @@
         {
           "id": "lumi",
           "description": "Bring the journal to Old Lumi on Flag Knoll.",
-          "objectives": [{"type": "Talk", "target": "sr_lumi", "text": "Speak with Old Lumi"}]
+          "turnIn": "sr_lumi",
+          "objectives": [{"type": "Flag", "target": "sr_twenty_nine_handed_in", "text": "Speak with Old Lumi"}]
         }
       ],
       "rewards": {"xp": 900, "gold": 3500, "choiceItems": ["sr_heronguard_vambraces", "sr_ribbon_of_the_twenty_nine", "sr_fordkeepers_spaulders"]}
@@ -258,7 +264,8 @@
         {
           "id": "report",
           "description": "Return to Glimmerwing on her shelf.",
-          "objectives": [{"type": "Talk", "target": "sr_glimmerwing", "text": "Speak with Glimmerwing"}]
+          "turnIn": "sr_glimmerwing",
+          "objectives": [{"type": "Flag", "target": "sr_ice_and_ember_handed_in", "text": "Speak with Glimmerwing"}]
         }
       ],
       "rewards": {"xp": 900, "gold": 3500, "choiceItems": ["sr_glimmerscale_leggings", "sr_frosthide_breeches", "sr_rimesilk_trousers"]}
@@ -291,7 +298,8 @@
         {
           "id": "report",
           "description": "Return to Magistra Ottoline at the Bone Field.",
-          "objectives": [{"type": "Talk", "target": "sr_ottoline", "text": "Speak with Ottoline"}]
+          "turnIn": "sr_ottoline",
+          "objectives": [{"type": "Flag", "target": "sr_singing_bones_handed_in", "text": "Speak with Ottoline"}]
         }
       ],
       "rewards": {"xp": 840, "gold": 3200, "choiceItems": ["sr_resonance_rod", "sr_bone_song_ring", "sr_dragonbone_cudgel"]}
@@ -307,17 +315,19 @@
       "stages": [
         {
           "id": "banners",
-          "description": "Tear down 4 Dragonsworn ash-banners around the camp and defeat 4 Dragonsworn Zealots.",
+          "description": "Tear down 4 Dragonsworn ash-banners around the camp and break the zealots of the vanguard's three pickets.",
           "objectives": [
             {"type": "Flag", "target": "sr_banner_1_struck", "text": "Banner by the pickets"},
             {"type": "Flag", "target": "sr_banner_2_struck", "text": "Banner west of the camp"},
             {"type": "Flag", "target": "sr_banner_3_struck", "text": "Banner by the tents"},
             {"type": "Flag", "target": "sr_banner_4_struck", "text": "Banner by the skull altar"},
-            {"type": "Kill", "target": "cr_sr_dragonsworn", "text": "Dragonsworn Zealots", "count": 4}
+            {"type": "Defeat", "target": "enc_sr_vanguard_pickets", "text": "Zealots at the pickets"},
+            {"type": "Defeat", "target": "enc_sr_vanguard_west", "text": "Zealots west of the camp"},
+            {"type": "Defeat", "target": "enc_sr_vanguard_altar", "text": "Zealots by the skull altar"}
           ],
           "next": "report"
         },
-        {"id": "report", "description": "Report back to Ivo.", "objectives": [{"type": "Talk", "target": "sr_scout_ivo", "text": "Speak with Ivo"}]}
+        {"id": "report", "description": "Report back to Ivo.", "turnIn": "sr_scout_ivo", "objectives": [{"type": "Flag", "target": "sr_strike_the_colours_handed_in", "text": "Speak with Ivo"}]}
       ],
       "rewards": {"xp": 950, "gold": 3800, "choiceItems": ["sr_scouts_longbow", "sr_colour_breaker", "sr_ashcloth_gloves"]}
     }

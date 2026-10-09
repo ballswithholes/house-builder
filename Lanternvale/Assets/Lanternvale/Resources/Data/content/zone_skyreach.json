@@ -985,7 +985,9 @@
           "targetMap": "raid_ashwyrm_roost",
           "targetSpawn": "from_skyreach",
           "label": "Ashwyrm's Roost",
-          "marker": "portal"
+          "marker": "portal",
+          "hidden": true,
+          "revealFlag": "sr_roost_revealed"
         }
       ],
       "spawns": [

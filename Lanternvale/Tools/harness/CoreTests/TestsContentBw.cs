@@ -235,7 +235,7 @@ namespace Lanternvale.Tests
 
             // Something Fishy (passive Perception at the warehouse, Investigation at the crates, evidence at the stall)
             Talk(s, "bw_dockhand_bo", "Something wrong with those crates", "take a look");
-            UseProp(s, "bw_herring_crates", "[INVESTIGATION]");
+            UseProp(s, "bw_herring_crates", "Prise up a lid");
             Assert(s.Flags.IsSet("bw_oily_footprints"), "the warehouse yard's passive check found the oily footprints");
             Stage(s, "bw_q_smugglers", "confront");
             Assert(s.CountItem("bw_oil_jar") == 1, "a jar of stolen oil as evidence");
@@ -252,7 +252,7 @@ namespace Lanternvale.Tests
             Talk(s, "bw_ferryman_gideon", "gathering the lanterns");
             Assert(s.QuestMarkerOf("bw_captain_rowan").Kind == QuestMarker.ReadyToTurnIn, "then Rowan (yellow ?)");
             Talk(s, "bw_captain_rowan", "gathering the lanterns");
-            Talk(s, "bw_dockhand_nettie", "gathering the lanterns", "[PERSUASION]");
+            Talk(s, "bw_dockhand_nettie", "gathering the lanterns", "Your mother rode");
             Stage(s, "bw_q_forty_names", "light");
             Assert(s.CountItem("bw_memorial_lantern") == 3, "three lanterns");
             var lit = s.Map.Def.props.First(p => p.art == "prop_spirit_lantern" && p.requireFlag == "bw_memorial_lit");
@@ -291,24 +291,24 @@ namespace Lanternvale.Tests
             Talk(s, "bw_dockhand_nettie");
             s.TakeItem("bw_minnows", 1);
             Assert(s.CountItem("bw_minnows") == 0, "drop the minnows");
-            UseProp(s, "bw_heron_reeds", "[NATURE]", "[ATHLETICS]", "wait as long as it takes");
+            UseProp(s, "bw_heron_reeds", "Crouch low", "Lunge and grab", "wait as long as it takes");
             Assert(s.Flags.IsSet("bw_puddles_found"), "patience finds the Admiral");
             Talk(s, "bw_child_tamsin", "Here he is", "crate with a roof");
             Assert(s.Quests.IsCompleted("bw_q_lost_heron") && s.CountItem("bw_tamsins_lucky_button") == 1, "kept at home, with Tamsin's lucky button");
 
             // the smugglers: nothing spotted, checks fail, smash the crate; Silas will not talk; the bribe
             Talk(s, "bw_dockhand_bo", "Something wrong with those crates", "take a look");
-            UseProp(s, "bw_herring_crates", "[INVESTIGATION]", "[PERCEPTION]", "Smash a crate");
+            UseProp(s, "bw_herring_crates", "Prise up a lid", "Sniff the gap", "Smash a crate");
             Assert(s.Flags.IsSet("bw_crates_inspected") && s.Flags.IsSet("bw_smuggler_alerted") && !s.Flags.IsSet("bw_oily_footprints"), "smashed open, Silas alerted, no footprints");
             int gold = s.Gold;
-            Talk(s, "bw_fishmonger_silas", "[INTIMIDATION]", "midnight boat");
+            Talk(s, "bw_fishmonger_silas", "Set the jar of oil", "midnight boat");
             Assert(s.Flags.IsSet("bw_silas_silent"), "no name, but caught");
             Talk(s, "bw_captain_rowan", "won't name his buyer");
             Assert(s.Quests.IsCompleted("bw_q_smugglers") && !s.Flags.IsSet("bw_dragonsworn_lead"), "done, without the lead");
 
             // Nettie: the persuasion fails, the honest answer still works
             Talk(s, "bw_trainer_bertram", "Is something troubling you", "gather the lanterns");
-            Talk(s, "bw_dockhand_nettie", "gathering the lanterns", "[PERSUASION]", "carry it for your mother");
+            Talk(s, "bw_dockhand_nettie", "gathering the lanterns", "Your mother rode", "carry it for your mother");
             Assert(s.Flags.IsSet("bw_lantern_nettie"), "Nettie's lantern");
         }
 
@@ -317,10 +317,10 @@ namespace Lanternvale.Tests
         {
             var s = Town(20, ClassId.Rogue, checkBonus: 100, seed: 4403);
             Talk(s, "bw_dockhand_bo", "Something wrong with those crates", "take a look");
-            UseProp(s, "bw_herring_crates", "[ROGUE]");
+            UseProp(s, "bw_herring_crates", "Pop the nails");
             Assert(s.Flags.IsSet("bw_crates_inspected") && !s.Flags.IsSet("bw_smuggler_alerted"), "a rogue opens the crates without a sound");
             int gold = s.Gold;
-            Talk(s, "bw_fishmonger_silas", "[PERSUASION] Talk to me", "How heavy", "Deal");
+            Talk(s, "bw_fishmonger_silas", "Who's buying the oil", "How heavy", "Deal");
             Assert(s.Gold == gold + 2500 && s.Flags.IsSet("bw_silas_bribed") && !s.Flags.IsSet("bw_silas_confessed"), "twenty-five silver, and no name");
             Assert(!s.VisibleNpcs().Any(n => n.npc == "bw_fishmonger_silas"), "Silas is gone downriver");
             Talk(s, "bw_captain_rowan", "resolved, Captain");
