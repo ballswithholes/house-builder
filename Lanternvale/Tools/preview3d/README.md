@@ -136,7 +136,11 @@ anchors (magenta) and a 1.75 m person.
 | `Render/` | rasterizer, G-buffer, LV_Shade, ink, PNG I/O |
 | `Stubs/` | UnityEngine and game stand-ins |
 
-The committed previews in `Docs/previews3d/` are re-rendered by `Tools/preview3d/render_previews.sh`, which takes
-an optional output directory. It covers every map: a default view, spots in the deep maps' northern bands, the hidden
-entrances revealed, the zones of levels 12-30 at noon, dusk and night, the dungeons and raids (near and far), and the
-units and props sheets.
+The committed previews in `Docs/previews3d/` are re-rendered by `Tools/preview3d/render_previews.sh [out-dir]`: a
+**curated** set of 44 images (about 14 MB as JPEG) that shows the expansion — every zone, hidden dungeon and raid once
+or twice, a few night shots, quest markers over NPCs (`--markers auto`), the hidden entrances revealed (`--flags`),
+the expansion's unit sheets (`exp_people`, `exp_a`, `exp_b`, `exp_c`) and the `wild` and `dungeon` prop sheets.
+`render_previews.sh --all [out-dir]` adds every other spot (about 150 images: dusk and night for every zone, near and
+far views of every dungeon and raid, the builders' review spots, every unit group and the whole prop library) for
+reviews; render those into a scratch directory, not into `Docs/previews3d/`. The curated run takes a few minutes (about
+7 s per map image).

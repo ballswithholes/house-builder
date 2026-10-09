@@ -204,8 +204,14 @@ auto-played companions and their pets, controlled party members): wait 0.2 s at 
 as `GameSession.RunAIStep` does) → the produced events are presented → 0.12 s pause → next step. Guards: two steps in
 a row that change nothing end the turn; more than `AI.MaxStepsPerTurn + 8` steps end the turn.
 
+**Big battles** (raids; more than 14 units counting every side, pets and totems — `RaidPlanning.IsBigBattle(Battle)`)
+halve all three waits (`AiBigBattlePacing` 0.5: 0.1 s first think, 0.15 s path preview, 0.06 s between steps), so a
+round of twenty turns keeps moving. Raids also start with fast-forward on (`"lv.hud.fastForwardRaid"`, UI_HUD.md).
+
 ## 7. Timing at speed 1 (estimate)
 
 Estimated from the beat durations above, not measured in the Unity editor: a 4-vs-3 fight should present in roughly
 15–35 s per round depending on how many spells are cast (each instant ability ≈ 1.0–1.3 s, melee swing ≈ 0.5 s,
 move ≈ distance / 4.6 m/s, AI think pauses ≈ 0.3 s per step). Shift / fast-forward divides that by 2.5.
+A raid round (10 party members plus pets against a boss and its adds) runs several times longer; the halved AI
+pauses, raid fast-forward and the companions' auto-play keep it watchable.

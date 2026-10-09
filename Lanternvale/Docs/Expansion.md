@@ -79,43 +79,44 @@ Paths: `S/` = `Lanternvale/Assets/Lanternvale/Scripts/`, `D/` = `Lanternvale/Ass
 | `raid_ashwyrm_roost` | Ashwyrm's Roost (raid) | 110×64 | roost | outdoor | 31–33 | music_raid | no | 10 |
 
 **Links.** Positions of edge exits are fixed. Spawns may be moved by the owner of their map, but their ids are fixed.
+The table is **as built** (from the data; the contract's original hidden-entrance spots moved north with the deepened
+maps where noted).
 
-| from map | transition id | pos | size | marker | to map / spawn |
-|---|---|---|---|---|---|
-| lanternvale | `to_amberfield` | (0.7, 32) | (1.4, 6) | auto (side) | amberfield / `from_lanternvale` |
-| lanternvale | `to_dgn_root_hollows` (hidden, reveal `found_root_hollows`) | (20, 19) | (2, 2) | cave | dgn_root_hollows / `from_lanternvale` |
-| whisperwood | `to_dgn_mossdeep` (hidden, `found_mossdeep`) | (46, 38) | (2, 2) | cave | dgn_mossdeep / `from_whisperwood` |
-| shrine | `to_dgn_lantern_catacombs` (hidden, `found_lantern_catacombs`) | (36, 32) | (2, 2) | stairs | dgn_lantern_catacombs / `from_shrine` |
-| amberfield | `to_lanternvale` | (129.3, 30) | (1.4, 6) | auto | lanternvale / `from_amberfield` |
-| amberfield | `to_brightwater` | (0.7, 22) | (1.4, 6) | auto | brightwater / `from_amberfield` |
-| amberfield | `to_dgn_barrow` (hidden, `found_barrow`) | (64, 46) | (2, 2) | door | dgn_barrow / `from_amberfield` |
-| brightwater | `to_amberfield` | (83.3, 22) | (1.4, 6) | auto | amberfield / `from_brightwater` |
-| brightwater | `to_mirefen` | (0.7, 12) | (1.4, 6) | auto | mirefen / `from_brightwater` |
-| brightwater | `to_skyreach` | (0.7, 34) | (1.4, 6) | auto | skyreach / `from_brightwater` |
-| mirefen | `to_brightwater` | (119.3, 16) | (1.4, 6) | auto | brightwater / `from_mirefen` |
-| mirefen | `to_dgn_drowned_vault` (hidden, `found_drowned_vault`) | (30, 44) | (2, 2) | stairs | dgn_drowned_vault / `from_mirefen` |
-| mirefen | `to_raid_hollow_heart` | (12, 48) | (3, 3) | portal | raid_hollow_heart / `from_mirefen` |
-| skyreach | `to_brightwater` | (119.3, 10) | (1.4, 6) | auto | brightwater / `from_skyreach` |
-| skyreach | `to_dgn_frozen_sanctum` (hidden, `found_frozen_sanctum`) | (86, 50) | (2, 2) | cave | dgn_frozen_sanctum / `from_skyreach` |
-| skyreach | `to_raid_ashwyrm_roost` | (20, 56) | (3, 3) | portal | raid_ashwyrm_roost / `from_skyreach` |
-| every dungeon / raid | `to_<parent>` | (0.7, D/2) | (1.4, 6) | auto | parent / `from_<dungeon or raid id>` |
+| from map | transition id | pos | size | marker | to map / spawn | arrival spawn beside the entrance |
+|---|---|---|---|---|---|---|
+| lanternvale | `to_amberfield` | (0.7, 32) | (1.4, 6) | auto (side) | amberfield / `from_lanternvale` | `from_amberfield` (3.4, 32) |
+| lanternvale | `to_dgn_root_hollows` (hidden, reveal `found_root_hollows`) | **(23.6, 35)** (contract: 20, 19; moved north of Kusu's canopy) | (2, 2) | cave | dgn_root_hollows / `from_lanternvale` | `from_dgn_root_hollows` (23.6, 32.4) |
+| whisperwood | `to_dgn_mossdeep` (hidden, `found_mossdeep`) | (46, 38) | (2, 2) | cave | dgn_mossdeep / `from_whisperwood` | `from_dgn_mossdeep` (46, 35.5) |
+| shrine | `to_dgn_lantern_catacombs` (hidden, `found_lantern_catacombs`) | **(36, 35)** (contract: 36, 32) | (2, 2) | stairs | dgn_lantern_catacombs / `from_shrine` | `from_dgn_lantern_catacombs` (36, 32.4) |
+| amberfield | `to_lanternvale` | (129.3, 30) | (1.4, 6) | auto | lanternvale / `from_amberfield` | `from_lanternvale` (126, 30) = `default` |
+| amberfield | `to_brightwater` | (0.7, 22) | (1.4, 6) | auto | brightwater / `from_amberfield` | `from_brightwater` (3.4, 22) |
+| amberfield | `to_dgn_barrow` (hidden, `found_barrow`) | **(64, 50.5)** (contract: 64, 46; the barrow door north of the King's Ring) | (2, 2) | door | dgn_barrow / `from_amberfield` | `from_dgn_barrow` (64, 48) |
+| brightwater | `to_amberfield` | (83.3, 22) | (1.4, 6) | auto | amberfield / `from_brightwater` | `from_amberfield` (80, 22) = `default` |
+| brightwater | `to_mirefen` | (0.7, 12) | (1.4, 6) | auto | mirefen / `from_brightwater` | `from_mirefen` (3.4, 12) |
+| brightwater | `to_skyreach` | (0.7, 34) | (1.4, 6) | auto | skyreach / `from_brightwater` | `from_skyreach` (3.4, 34) |
+| mirefen | `to_brightwater` | (119.3, 16) | (1.4, 6) | auto | brightwater / `from_mirefen` | `from_brightwater` (116, 16) = `default` |
+| mirefen | `to_dgn_drowned_vault` (hidden, `found_drowned_vault`) | **(30, 46.4)** (contract: 30, 44) | (2, 2) | stairs | dgn_drowned_vault / `from_mirefen` | `from_dgn_drowned_vault` (30, 43.9) |
+| mirefen | `to_raid_hollow_heart` | (12, 48) | (3, 3) | portal | raid_hollow_heart / `from_mirefen` | `from_raid_hollow_heart` (12, 45.5) |
+| skyreach | `to_brightwater` | (119.3, 10) | (1.4, 6) | auto | brightwater / `from_skyreach` | `from_brightwater` (116, 10) = `default` |
+| skyreach | `to_dgn_frozen_sanctum` (hidden, `found_frozen_sanctum`) | (86, 50) | (2, 2) | cave | dgn_frozen_sanctum / `from_skyreach` | `from_dgn_frozen_sanctum` (86, 47.5) |
+| skyreach | `to_raid_ashwyrm_roost` (**hidden** as built, reveal `sr_roost_revealed`, set when `mq2_ash_on_the_wind` ends) | (20, 56) | (3, 3) | portal | raid_ashwyrm_roost / `from_skyreach` | `from_raid_ashwyrm_roost` (20, 53.5) |
+| every dungeon / raid | `to_<parent>` | (0.7, D/2) — 20 in the 40 m caves, 22 in the 44 m maps, **30 / 32** in the raids (60 / 64 m) | (1.4, 6) | auto | parent / `from_<dungeon or raid id>` | `default` = `from_<parent>` at (3.4, same y) |
 
-Spawns that must exist:
-* `default` on every map.
-* `from_<x>` for every incoming link.
-* The parent maps get `from_<dungeon/raid id>` beside each entrance, about 2.5 m in front of it.
-* Raids set `raidReturnMap` and `raidReturnSpawn`: `mirefen`/`from_raid_hollow_heart` and `skyreach`/`from_raid_ashwyrm_roost`.
+The original slice's links are unchanged: lanternvale `to_whisperwood` (89.3, 5) → `from_village`; whisperwood
+`to_lanternvale` (0.7, 6) and `to_shrine` (99.3, 7, `requireFlag rotheart_defeated`); shrine `to_whisperwood` (0.7, 6).
+Extra spawns as built: lanternvale `camphor` (23.2, 5.4), shrine `sanctum` (54, 6), brightwater `bw_ferry_west`
+(24.6, 9) / `bw_ferry_east` (39.6, 1.8) (the ferryman's crossing), skyreach `cairnhollow` (92, 13.2).
 
 **Deepening rule** (existing maps). Keep every existing coordinate in y ∈ [0, 15] exactly. Add the new northern band
 at y 15 → D. Never place locked or hidden transitions or new encounters on the routes `TestsSessionFullPlaythrough`
 walks (they stay in the southern band).
 
 **Companions placed by the contract stubs.** Each NPC entry uses `hideFlag recruited_<id>`. Zone builders keep the
-entry and may move it within their map.
-* `bruna` — amberfield (100, 20)
-* `ysolde` — brightwater (40, 26)
-* `liora` — brightwater (52, 18)
-* `nanami` — mirefen (96, 30)
+entry and may move it within their map. As built:
+* `bruna` — amberfield (100, 20), at Haybright Farm (contract spot kept)
+* `ysolde` — brightwater (26.2, 18.4), by the Heronguard Memorial (contract: 40, 26)
+* `liora` — brightwater (24, 24.8), by the Chapel of Small Lights (contract: 52, 18)
+* `nanami` — mirefen (99.6, 35.2), in Lowlantern (contract: 96, 30)
 
 ---------------------------------------------------------------------------------------------------------------------
 
@@ -489,6 +490,54 @@ the north, where the Ashwyrm **Vyrmathra** drowses beneath Skyreach.
 | **raidloot** | `D/content/raid_loot*.json` | set items (8 classes × 5 slots × 2 tiers), set bonuses at 2, 4 and 5 pieces, about 12 raid epics per raid, 5 legendaries with auras and procs; boss tables `lt_r1_thornmaw lt_r1_twins lt_r1_mother_mire lt_r1_hollow_heart lt_r1_trash lt_r2_frostclaw lt_r2_cinder_drakes lt_r2_varkas lt_r2_vyrmathra lt_r2_trash` |
 | **companions** | `companions.json` (append), `dialogues_companions.json` (append), `items_companions2.json`, `T/TestsSessionParty.cs`, `T/TestsCompanionBuilds.cs` | 4 companions: `bruna` (Warrior, Tank), `ysolde` (Paladin, Tank — use Warrior if the role inference cannot make a Paladin a Tank), `liora` (Priest, Healer), `nanami` (Shaman, Healer). Each gets preferredTalents that give the right role at L10–60, 2–3 signature items, and a full recruit/in-party dialogue |
 
+
+**As built** (one line per row above; maps and links in §1, discovery per dungeon in `Docs/WorldAPI.md` §6, content
+per zone in `Docs/Design.md` §7):
+* **lv** — Lanternvale is 90×44 with the west road to Amberfield, the millpond, the Lantern Meadow, Pipp Orchard,
+  Hollyhock Farm and Lantern Hill; 3 side quests (`lv2_orchard_thieves`, `lv2_singing_roots`, `lv2_lantern_oil`) and
+  Elder Maru's `mq2_ember_road` offer. The Root Hollows' mouth sits under Kusu's roots at (23.6, 35), revealed by
+  `reg_lv2_kusu_roots` (Perception 13), Nell or the Listening Root; 6 encounters, boss **The Rootwarden**, 3 chests,
+  quest `dg1_heart_of_kusu` (Hotaru). Generated by `Tools/datagen/lv2/gen_lv2.py`.
+* **ww** — Whisperwood is 100×46: the old forest, the brook as `water` with Heron Ford, Mossy Ford and the Old Bridge;
+  quests `ww2_last_watch` (Pell) and `ww2_kings_glow` (Sprig). Mossdeep Grotto: 6 encounters, boss **King Umbercap, the
+  Moss King** (with his court), 3 chests.
+* **sh** — the shrine is 70×40 with the terraced Lantern Steps, Pilgrims' Rest, the Garden of Small Stones, the
+  Keeper's Lodge and the High Terrace; quest `sh2_keepers_rest` (Aiko, after the Heart Lantern is lit). The Lantern
+  Catacombs: 7 encounters, boss **Hazama, the Lantern Lich**, 3 chests, three keepers' lanterns to free.
+* **amberfield** — 130×56 golden downs: Haybright Farm, Amberfield Cross, the King's Ring, Duskmane Warcamp (Warchief
+  Skarra), Mudpaw Quarry (fight or make peace), Aldwin's Watch (the Ditchwater Gang), Turnbull's Turnips; 12 quests incl.
+  `mq2_ember_road`; Bruna at Haybright. The Barrow of King Aldwin: 7 encounters (a dart-trap ambush a Perception check
+  disarms), boss **King Aldwin the Unquiet**, 3 chests.
+* **brightwater** — 84×44 river town: the market square, the Lantern & Heron inn, Smiths' Row (weapons, armour), a
+  general store, an apothecary, a fishmonger and a greengrocer, the harbour and Old Gideon's ferry, the Chapel of Small
+  Lights, the Heronguard Memorial; four trainers (Sir Bertram Oakes: Warrior, Paladin; Warden Mags Tidewell: Hunter,
+  Shaman; Magister Orrin Vell: Mage, Warlock; Corwin Ashby: Priest, Rogue); Archivist Penhallow; 6 town quests; Ysolde
+  and Liora.
+* **mirefen** — 120×56 fen: Lowlantern stilt village, the Sinking Mere and its drowned lanterns, the Drowned Barrows,
+  the Croaking Stones (Chief Gubbagulp: fight or make peace), Heron Bridge, Willow Hollow, the Gnashing Shallows and the
+  Moon-Gate with the Hollow Heart portal; 11 quests incl. `mq2_drowned_lanterns` and the coven boss **Auntie Gall**;
+  Nanami in Lowlantern. The Drowned Vault: 7 encounters, boss **The Tidewitch**, 3 chests, quest `dg5_undertow`.
+* **skyreach** — 120×60 peaks: Cairnhollow hut village (an inn), Two-Belly Ledge (the ogres: fight or pacify),
+  Whitebrow Hollow, the Harpy Crags, the Bone Field's standing stones, Heronguard Tower, the Frozen Falls and the
+  Dragonsworn Vanguard Camp (boss **Vanguard-Marshal Kaedric**) before the Roost Gate; 10 quests incl.
+  `mq2_ash_on_the_wind`, whose end reveals the Roost portal (`sr_roost_revealed`). The Frozen Sanctum: 6 encounters, boss
+  **The Rimeheart**, 3 chests, quest `dg6_the_long_watch` (Old Lumi).
+* **r1** — the Hollow Heart (110×60, levels 21–23): the Lantern Stair camp (quartermaster Bettany Quill, Hinoki), the
+  Root Gallery, Thornmaw's Den, the Weeping Pools, Mire Hollow and the Heart Chamber; thorn walls open as each boss
+  falls; 6 trash packs (Elite) and 4 boss fights: **Thornmaw the Rootbound**, **the Weeping Twins** (Sorrow and
+  Solace), **Mother Mire**, **The Hollow Heart**; 3 quests; 2 chests (one behind a Perception check). Generated by
+  `Tools/datagen/r1/gen_r1.py`.
+* **r2** — Ashwyrm's Roost (110×64, levels 31–33): Ember Gate Camp (Marta Hobb, Kesta Highfold, Sir Hamon Reede), the
+  Heron Road, the Last Stand, Frostclaw's Shelf, the Cinder Terraces, the Highlord's Court, the Wyrm Stair and the
+  Summit; 6 trash packs and 4 boss fights: **Frostclaw the Matriarch**, **the Cinder Drakes** (Emberjaw and
+  Ashtongue), **Highlord Varkas**, **Vyrmathra the Ashwyrm** (summoned with Varkas's horn); 6 quests, the finale
+  `r2_last_ember`; 3 chests.
+* **raidloot** — 80 set pieces (16 sets: 8 classes × 2 tiers, bonuses at 2/4/5), 36 raid epics, 5 legendaries
+  (Kindlewood, Solace; Embersong, Dawnstring, Vyrmathra's Last Scale) and the 10 tables, all generated by
+  `Tools/datagen/raid_loot/gen_raid_loot.py`.
+* **companions** — Bruna (Warrior, Tank), Ysolde (Paladin, Tank), Liora (Priest, Healer), Nanami (Shaman, Healer),
+  each with 3 signature items (`items_companions2.json`) and a full recruit and in-party dialogue.
+
 **Raid loot design:**
 * Tier 1 (Hollow Heart) has required level 20 and ilvl 26–28. Tier 2 (Ashwyrm's Roost) has required level 30 and
   ilvl 36–38.
@@ -577,7 +626,8 @@ yaw (maps are deep now). Lights belong in data. Check props with the props sheet
 ## 11. Acceptance (lead review)
 
 * `check.sh all` passes on the merged branch.
-* `render_previews.sh` covers every map, with several spots on deep maps, plus the units and props sheets.
+* `render_previews.sh --all` covers every map, with several spots on deep maps, plus the units and props sheets; the
+  default run renders the curated set committed in `Docs/previews3d`.
 * Reviewers judge the renders.
 * The quest marker scenarios pass.
 * The sfx `check` passes, and the spectrogram sheets show distinct materials.

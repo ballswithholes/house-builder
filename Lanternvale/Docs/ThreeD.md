@@ -272,6 +272,61 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
 * Performance: static props without scripts; meshes cached per (art, seed bucket); one `LateUpdate` for fades,
   flicker, markers and particles; keep ≤ ~600 draw calls on the biggest map.
 
+### The expansion's world (biomes, indoor maps, data paths and water, entrances)
+
+* **Biomes** (`World/Biomes.cs`, `BiomeStyle`): one style table per `MapDef.biome` — `meadow | village | forest |
+  shrine | highlands | fen | peaks | cave | ice_cave | crypt | hollow_heart | roost` — holding the ground and
+  surroundings textures and tints, the relief around the map and indoor walls, the terrain's detail layer, ground-cover
+  and hill-tree palettes, the backdrop's leaves and the Map panel's base colour. `MapTerrain`, `MapView`,
+  `MapBackdrop` and preview3d read it instead of sniffing keywords. Maps without a biome fall back to their ground key
+  (`ground_forest` → forest, `ground_shrine` → shrine, `ground_village` → village, else meadow), which reproduces the
+  three original maps exactly. A biome with its own ground (`ground_highlands`, `ground_fen`, `ground_snow`,
+  `ground_roost`, `ground_cave`, `ground_ice`, `ground_crypt`, `ground_hollow`) uses it while `MapDef.ground` is still one of the four original
+  placeholders.
+* **Terrain partials** of `MapTerrain`: `MapTerrain.Cover.cs` (each biome's ground cover and hill trees outside the
+  map — golden grass and poppies, reeds and bog cotton, snowy stones and drifts, ash heaps and charred sticks, rubble,
+  stalagmites, ice, bones or glowing fungus along indoor walls — and the `MapDef.fill` pass that scatters the same
+  cover on open interior ground, clear of trails, water, props, exits, spawns, NPCs and chests); `MapTerrain.Paths.cs`
+  (`MapDef.paths`: Catmull-Rom smoothed polylines in any direction, drawn by the same ribbon as the chained path decals,
+  running on past exits; on the paved shrine they become processional walkways); `MapTerrain.Water.cs`
+  (`MapDef.water`: river polylines and closed ponds with a carved bed, a translucent flowing surface, damp banks, rivers
+  flowing out through a valley in the hills; crossings under a bridge, dock or boardwalk prop keep the deep bed, other
+  crossings are fords with a gravel bar and stepping stones; a pond's shore is `Spline.PondShore`, the very loop the
+  nav grid blocks; the fen's surroundings also get a still water table); `MapTerrain.Indoor.cs` (indoor maps as a
+  cutaway diorama: a flat floor, a steep back wall rising 9–13 m into the dark, gentler (≈ 50°) side walls the camera
+  looks over at yaw ±45°, a rubble lip and a dark pit in front, exits as passages sloping into darkness; crypts stand
+  dressed masonry before the rock, caves boulders and stalagmites, the ice cave crystals and snow, the Hollow Heart great
+  roots and glowing fungus). `World/WorldTextures.cs` makes the small procedural textures (glows, stars, particles,
+  water, markers, gravel and leaf-litter detail).
+* **Indoor light and camera** (`MapDef.environment` cave / crypt, `DayNight.IsIndoor`): no sun, moon, sky or hills; a
+  fixed low cool fill from above with the warm point lights at full night strength (the hour changes nothing); near,
+  dark fog from 4 m past the look-at point to 40 m further (`DayNight.IndoorFog`); `CameraRig.SetIndoor` raises the
+  zoom-in limit to 3.4 (`IndoorMinSize`) and keeps the look-at 2 m inside the side walls (`IndoorBounds`), so the camera
+  never sinks into rock or looks past the walls.
+* **Backdrops** (`MapBackdrop.Biomes.cs`): maps without authored layers get clouds and far mountains in their biome's
+  mood, and the outdoor biomes their own scenery — highlands: golden downs, windmills on the crests, standing-stone
+  rings, cairns and haystacks; fen: crooked dead trees hung with moss, reed banks, grey-green woods in the mist; peaks:
+  a near ridge of snowy peaks over the pass and snow-laden pines; roost: a crown of dark spires with ember-lit cracks
+  around the plateau above a sea of cloud.
+* **Ambient particles**: `snow`, `ash` (with a few still-glowing flecks), `dust` (motes hanging in the air) and
+  `drips` (falling from a cave's roof, with ripples where they land) join fireflies, pollen, leaves, mist, rain and
+  embers; the fen adds will-o'-wisp motes low over the ground.
+* **Entrance markers** (`Waymarker.Entrances.cs`, `TransitionDef.marker`): `cave`, `door`, `stairs` and `portal`
+  stand a model at the transition instead of the arch or posts — `prop_cave_mouth`, `prop_crypt_door`,
+  `prop_stairs_down`, `prop_raid_portal` from the prop library, else a stand-in (`PropMarkers.cs`, `PropModels.
+  MarkerStandIn`: a rocky mound with an arched mouth, iron-banded doors in a grassy barrow, stairs between rubble walls,
+  a rune-lit trilithon). They face the camera; cave and door stand with their threshold on the back edge of the
+  transition rect so the walk-in area lies in front, stairs and portal on its centre. The portal's glow burns day and
+  night; the others light their lamps at night. A hidden transition builds no marker until its `revealFlag` holds
+  (`MapView.RefreshFlags` reveals it with a sparkle; the session announces `SecretFound`).
+* **NPC scale** (`NpcDef.scale`, 0.3–3): `GameFlow.Views` passes it to `UnitView.Create(sprite, 0, ring, scale)`, which
+  multiplies the model's height — a pup on the adult's model (Biscuit 0.7, Nib 0.6), a young drake (Icicle 0.8), an
+  old one bigger (Glimmerwing 1.6).
+* **Prop and model libraries** of the expansion are partial files registered through the §2.8 hooks of
+  `Docs/Expansion.md`: `PropWild*.cs` (highlands, fen, peaks, town), `PropDungeon*.cs` (cave, crypt, raid) and
+  `UnitRecipes.CreaturesA/B/C.cs`, `UnitRecipes.PeopleX.cs`; keys, sizes and colliders are in `Docs/ArtKeys.md`
+  ("3D-only model keys").
+
 ## 7. Prop library (Props)
 
 `partial class PropModels` in `World/Props/`: implement `static partial void TryBuild(string artKey, int seed, ref

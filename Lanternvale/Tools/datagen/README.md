@@ -28,5 +28,11 @@ the design agents used to produce it from WoW Classic reference numbers (rank-1 
 | `paladin_priest/` | `classes/paladin.json`, `classes/priest.json` |
 | `warrior_rogue/` | `classes/warrior.json`, `classes/rogue.json` (`warrior_main.py`, `rogue_main.py <out>`) |
 | `world_content/` | `content/*.json` (`wn_build.py`; `wn_check.py` runs extra content checks) |
+| `lv2/` | the expansion's Lanternvale northern band and the Root Hollows: `content/map_lanternvale.json`, `lv2_content.json`, `dgn_root_hollows.json`, `dgn_root_hollows_content.json` (`gen_lv2.py`; `xp_tally.py` totals the XP) |
+| `r1/` | the Hollow Heart raid: `content/raid_hollow_heart.json`, `raid_hollow_heart_creatures.json`, `raid_hollow_heart_people.json` (`gen_r1.py`) |
+| `raid_loot/` | the raid sets, epics, legendaries and boss tables: `content/raid_loot.json`, `raid_loot_t1.json`, `raid_loot_t2.json`, `raid_loot_epics.json` (`gen_raid_loot.py`) |
+
+The three expansion generators (`lv2/`, `r1/`, `raid_loot/`) write straight into `Assets/Lanternvale/Resources/Data/content/` (found relative to the script)
+and, at the expansion's docs pass, reproduced the committed JSON byte for byte. Edit those files through their script.
 
 Paths inside the scripts may point at the original build machine; adjust before running.

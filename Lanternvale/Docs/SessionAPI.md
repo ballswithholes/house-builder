@@ -105,7 +105,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 
 | Kind | Meaning / payload |
 |---|---|
-| `Toast` | info line in `Text` (NPC bark, sign text, "The chest is empty.", an opener that failed …) |
+| `Toast` | info line in `Text` (NPC bark, sign text, "The chest is empty.", an opener that failed …). A **set bonus** that switches on after an equip is a Toast with `Id` `set_complete` (`GameSession.SetCompleteToastId`), `Id2` the set id, `Amount` the pieces of the highest newly active bonus, `Unit` the wearer, `Text` "Bruna: Rootwall Battlegear (4/5) set bonus active" (§4) |
 | `GameStarted` / `GameLoaded` | after `NewGame` / `LoadGame` (a `MapEntered` follows) |
 | `FlagsChanged` | story flags changed — `Amount` = `FlagsVersion`; raised **at most once per `Tick` / dialogue step** (also after a battle, `NewGame`, `LoadGame`), however many flags changed. Rebuild flag-dependent views (visible NPCs, chests, props, journal) |
 | `GameOver` | the party was defeated (`Mode == GameOver`) |
@@ -216,6 +216,27 @@ string EnterRaid(string mapId, string spawnId, IReadOnlyList<string> ids, bool c
 * **Saves** keep the raid (`SessionSaveData.raid`: size, the normal party in order, its leader, the sorted ids
   with auto-play on; null when not in a raid). A raid saved on a map that is no longer a raid map ends on load.
 
+**`RaidPlanning`** (`Session/RaidPlanning.cs`, static, pure — it changes no session state) holds the rules the raid UI
+shares with the tests:
+
+```csharp
+const int BigBattleUnits = 14; bool IsBigBattle(int units) / IsBigBattle(Battle b)   // > 14 units, every side, pets and totems:
+                                                  // compact turn strip, Auto toggles, AI pacing halved (CombatFlow.md)
+RoleCounts CountRoles(IEnumerable<Unit> | IEnumerable<UnitRole>)   // Tanks, Healers, Melee, Ranged, Dps, Total (characters only)
+string RoleSummary(RoleCounts c)                  // "2 tanks · 2 healers · 6 dps"
+int WantedTanks(int size) / WantedHealers(int size)   // one tank per five, one healer per four (at least one from 2 up)
+string RoleAdvice(RoleCounts c)                   // advice when 3+ chosen have no tank or no healer, else null
+List<string> DefaultSelection(GameSession s, IReadOnlyList<Unit> candidates, int size, Func<Unit,UnitRole> roleOf = null)
+                                                  // the picker's suggestion: Main, the travelling party in order, then camp
+                                                  // companions — missing tanks and healers first, then roster order
+string LevelWarning(int level, int levelMin)      // "Level 18 · the raid asks for 21", or null
+string BandText(MapDef m)                         // "levels 21–23" / "level 21+" / ""
+const string WipeNotice = "The raid has wiped."; bool WipeSendsHome(GameDatabase db, MapDef map); string WipeDetail(string text)
+                                                  // the wipe rule FinishBattle applies, and the toast's second line
+AutoPlaySnapshot.Capture(units) → Restore(set[, current, fallback]) / Matches() / FlagOf(u)
+                                                  // what the "Auto: all companions" / "Auto-battle" toggles put back
+```
+
 **Pets.** Hunter pets (Call Pet) and warlock demons are summoned with abilities (in the field or in battle) and stay
 as the owner's `Unit.Pet`: listed in `PartyUnits()`, following in formation, joining every battle right after their
 owner, kept across maps and saves. A pet that dies is removed after the battle (`PetChanged`); a hunter's dead pet
@@ -239,6 +260,7 @@ string CanEquip(Unit u, ItemInstance item, EquipSlot? slot = null)    // reason 
 string Equip(Unit u, ItemInstance item, EquipSlot? slot = null)       // from the bags (one of a stack); displaced → bags
 string Unequip(Unit u, EquipSlot slot)
 string DestroyItem(ItemInstance item, int count = 1)                  // quest items refuse
+const string SetCompleteToastId = "set_complete"
 
 // abilities & items — combat: the active unit through the Battle; exploration: the Field context
 List<AbilityStatus> GetAbilityBar(Unit u, bool includeTooltips = true)   // false: Tooltip = "" (frequent HUD refreshes)
@@ -250,6 +272,12 @@ ActionResult UseItem(Unit user, ItemInstance item, Unit target = null, Vec2? poi
 Battle Field                                   // exploration context (InCombat = false) of PartyUnits()
 ```
 
+**Set bonuses** (`ItemSets`, CoreAPI.md §6). After a successful `Equip`, every set whose bonus tier rose for that
+unit (a bonus became active that was not before) raises one `Toast` with `Id` = `set_complete`, `Id2` = the set id,
+`Amount` = the `pieces` of the highest newly active bonus, `Unit` = the wearer and `Text` = "<name>: <set name>
+(<worn>/<total>) set bonus active". Losing a tier (unequip, swap) is silent, and loading a save or a veteran start never
+announces. The Game layer plays `set_complete` for it (GameFlow.md).
+
 Food/drink (`requires.notInCombat`) only work out of combat and are cancelled when their eater moves ("must remain
 seated"); potions share `cooldownGroup` `potion`; cooldowns keep running in real time out of combat.
 
@@ -257,7 +285,17 @@ seated"); potions share `cooldownGroup` `potion`; cooldowns keep running in real
 LootWindow PendingLoot                         // { Source ("battle" | chest id), Title, Items, Gold } or null
 string TakeLoot(ItemInstance item); void TakeAllLoot(); void CloseLoot(bool takeAll = false)
 // gold is added when the window opens; items left in a closed window are lost (travel/combat take them all)
+LootContext BuildLootContext()                 // the loot context of one fight or one chest (CoreAPI.md §6)
+```
 
+`BuildLootContext()` makes the `LootContext` the expansion's loot keys read (`pool`, `perMembers`, `partyUsable`,
+`skipOwned`; DataSchema.md): the members are the **active party's characters** (a raid of ten rolls a `perMembers: 5`
+entry twice), and an item counts as owned when it is in the bags, in the open loot window (`PendingLoot`) or worn by
+anyone in the roster (camp included). The session builds one per battle (`Battle.LootContext`, set at battle creation,
+so two bosses of one fight never drop the same pool item twice) and one per chest. Tables without the new keys roll
+exactly as before.
+
+```csharp
 VendorShop ActiveVendor; VendorShop GetVendor(string npcId)   // Rules VendorShop: Offers(), Buyback, Npc, Stock
 void OpenVendor(string npcId); void CloseVendor()
 string Buy(string itemId, int count = 1); string Sell(ItemInstance item, int count = 1); string BuyBack(ItemInstance item)

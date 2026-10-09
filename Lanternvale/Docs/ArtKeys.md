@@ -407,3 +407,33 @@ model's nearest light anchor (`MapView.AddLight`), and a suggested light. Lit mo
   the bridge's collider out. Bridges never lift units: the decks stay within 0.2 m of the ground.
 * On a map without `MapDef.water`, the first bridge prop lays the legacy brook through the whole map depth at its x
   (`MapTerrain.Analyse`). That fallback is off as soon as the map has data water, so a bridge never adds a second stream.
+
+### Fallbacks and stand-ins in the expansion's data
+
+Every sprite key in the shipped data has a 3D recipe except one, which falls back by prefix (`UnitRecipes.Build`:
+`fx_*` → the hunter-trap rune plate, `cr_*` → a grey wolf, `prop_*` → the Lightwell, `demon_*` → the imp):
+
+| key | used by | what shows | a real model would be |
+|---|---|---|---|
+| `fx_barrow_dart_trap` | `cr_dg4_dart_trap` (the Barrow's dart-trap ambush, `enc_dg4_dart_trap`) | the `fx_*` fallback: the hunter trap's static glowing rune plate with iron teeth | a dart-slit stone plinth or wall plate, static, in the crypt palette |
+
+Stand-ins: NPCs and creatures that reuse an existing model on purpose (some with `NpcDef.scale`), and portraits that
+borrow another key's 2D art. They are fine to ship; a dedicated key can replace each later.
+
+| key | stands in for |
+|---|---|
+| `npc_spirit` | Granny Sen (`mf_granny_sen`), Hotaru (`dg1_hotaru`), Hinoki (`r1_hinoki`), the Shade of King Aldwin (`dg4_aldwin_shade`); the creature Greyed Kodama (Root Hollows) |
+| `char_paladin` | Lord-Commander Aubric (`dg6_aubric`, portrait `portrait_spirit`) |
+| `pet_wolf` | Biscuit the farm dog (`am_biscuit`, scale 0.7) |
+| `sheep` | the Skyreach goats Bramble, Clover and Turnip (`sr_goat_*`) and Amberfield's Duchess and Wobble |
+| `cr_gnoll` | Nib the gnoll pup (`am_nib`, `am_nib_farm`, scale 0.6) and Snaggle (`lv2_snaggle`); portrait `cr_bandit` |
+| `cr_frost_drake` | the young drakes Icicle (`sr_icicle`, scale 0.8) and Glimmerwing (`sr_glimmerwing`, scale 1.6); portrait `demon_imp` |
+| `cr_rootling`, `cr_mossling`, `cr_mireling`, `cr_tunneler` | friendly little folk: Sprout (`lv2_sprout`), Sprig (`ww2_sprig`), Plip (`mf_plip`), Pebble (`am_mudpaw_pebble`) |
+| `cr_mossling_shaman` | King Umbercap after his defeat (`dg2_umbercap`); the boss himself is `cr_mossling_king` |
+| `cr_dragonsworn` | every Dragonsworn rank, Vanguard-Marshal Kaedric (`cr_sr_marshal_kaedric`) and the Roost's Honour Guard |
+| `cr_skeleton`, `cr_gnoll_mystic`, `cr_bog_ghoul`, `cr_fen_wisp`, `cr_frost_wight`, `cr_ice_elemental` | named elites and adds that share their kind's model (Aldwin's Huscarl, Grave-Speaker Ruuk, the Bellringer, Tide Spark, Hierophant Vael, the Rimebound Colossus …) |
+| villager, guard, child, smith and trainer keys | most zone NPCs (`npc_villager_a/b`, `npc_child`, `npc_guard`, `npc_smith`, `npc_trainer_*`), next to the new people keys (`npc_archivist`, `npc_ferryman`, `npc_fen_villager`, `npc_mountain_guide`, `npc_quartermaster`, `npc_town_guard`, `npc_dockhand`) |
+
+Portrait stand-ins of the new creature models are listed per key above (e.g. `cr_harpy` → `demon_succubus`, the
+dragons → `demon_imp` / `demon_infernal`, `cr_r1_hollow_heart` → `cr_hollow_wisp`). The NPCs that speak for a boss
+(`r1_heart_voice`, `r1_mother_mire_voice`, `r2_varkas`, `r2_vyrmathra`) use the boss's own model and that portrait.

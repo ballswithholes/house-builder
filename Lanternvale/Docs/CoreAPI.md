@@ -481,3 +481,29 @@ Soulstone, Master Demonologist) with `Rank`, `EffLevel`, `LearnLevel`, `ComboPoi
 `RefreshModValues`. Party `Inventory` (incl. reagents and `Generated` item defs). Not saved (combat-transient):
 `Unit.Vars`, aura `Vars`/`ExtraMods`/proc cooldowns, `Unit.ProcCooldowns` (the only data ICD is the Lanternbough's
 30 s spell proc; losing it on load at most lets it proc once early), threat, combo points, pending casts.
+
+---
+
+## 11. Files added by the expansion ("The Ember Road", `Docs/Expansion.md`)
+
+One line per new pure-C# file under `Scripts/Core` (all Unity-free, all covered by `Tools/harness/CoreTests`):
+
+| File | What it is |
+|---|---|
+| `Rules/Combat/CombatSounds.cs` | `CombatSounds` + `CreatureSoundProfile`: which sound id a combat moment makes — weapon layer (`WeaponLayerOf`, `AttackLayerOf`), material layer (`MaterialOf`, `MaterialLayer` → `mat_<material>`), voice (`VoiceOf`, `VocalOf`, pitch and volume by size and sex), swing (`SwingOf`: light / normal / heavy), ranged release and flight whoosh (`ReleaseOf`, `FlightWhooshOf`), school wind-up, impact, area burst and tick, avoid and block outcomes (`AvoidOf`, `BlockOf`), body fall and armour clatter, footsteps by map biome (`FootstepOf`), loot fanfare by quality (`LootOf`), hit loudness (`HitVolume`), `DeathFallDelay` 0.62 s / `DownedFallDelay` 0.46 s. Creature profiles come from `CreatureDef.material` / `voice`, else are inferred from the art key → id → words → family → type (`ProfileOf`, `Infer`, cached). The id manifest: `LegacyIds`, `ExpansionIds`, `AllIds`, `IsKnownId`. Played by `Game/Audio/CombatSfx.cs` (PresentationAPI.md §6) |
+| `Rules/Items/ItemSets.cs` | `ItemSets` (`Active`, `Progress`, `Worn`, `ActiveFor`, `EquippedPieces`, `SourceId`, `ProcKey`), `ActiveSetBonus`, `SetProgress`: set bonuses by distinct pieces worn, cached per `Equipment.Version` (§6 "Item sets") |
+| `Session/GameSession.Discovery.cs` | region skill checks (once per save, rolled by the best party member), `SecretFound` when a hidden transition becomes visible, `InteractProp` and prop dialogues, the nav grid rebuilt in place when flag-gated props or chests appear (SessionAPI.md §5 "Discovery") |
+| `Session/GameSession.Markers.cs` | `QuestMarkersVersion`, `QuestMarkerOf` / `QuestMarkersOf` / `QuestMarkersOnMap`, `QuestTurnInOf`, `QuestHintsOnMap`, cached per version (SessionAPI.md "Quest markers") |
+| `Session/GameSession.Raid.cs` | `InRaid`, `RaidSize`, `MaxPartySizeOn`, `RaidCandidates`, `CannotEnterRaidReason`, `EnterRaid`, the raid gate, leaving, the wipe and the raid save state; also the battle formation by role and `EncounterHealthScale` (SessionAPI.md §3 "Raids", §7) |
+| `Session/RaidPlanning.cs` | static helpers of the raid UI: `IsBigBattle` (more than 14 units), role counts, summary and advice, `WantedTanks` / `WantedHealers`, the picker's `DefaultSelection`, `LevelWarning`, `BandText`, the wipe rule and notice (`WipeSendsHome`, `WipeNotice`, `WipeDetail`) and `AutoPlaySnapshot` for the combat HUD's Auto toggles (SessionAPI.md §3) |
+| `World/Quests/QuestMarkers.cs` | `QuestMarker` (None < AvailableLater < InProgress < Available < ReadyToTurnIn), `QuestMarkerInfo` (glyph, colour, main, `Describe()`), `DialogueReach` (a read-only dry run of a dialogue graph), `QuestMarkerIndex` (static index of dialogue owners, starters, stage setters, completers, flag setters and each stage's hand-in NPC), `QuestMarkers.Evaluate`, `QuestMapHint` (WorldAPI.md §5) |
+| `World/Map/MapLabels.cs` | `MapViewport` (the Map panel's rect, wheel zoom 1–3× around the cursor, drag pan, world ↔ screen), `MapLabels` (short names, priorities and `Plan`: quest NPCs, exits, service crowds folded into one region label, then everyone else), `MapLabel`, `MapLabelPlan`, `MapLabelKind` |
+| `Util/LabelLayout.cs` | `LabelLayout` + `LabelRect`: greedy non-overlapping label placement on rings round each anchor, with obstacles, padding and leader lines; labels that find no place are left for hover |
+| `Util/SfxBank.cs` | the sound player's Unity-free bookkeeping: `SfxIds` (`"<id>#<n>"` variants: `BaseOf`, `VariantOf`, `Group`), `SfxVariantPicker` (shuffle-bag round robin, no immediate repeat), `SfxJitter` (±3 % pitch, ±1.5 dB; `Stable` ids exempt), the voice rules (30 ms per-id limit, 4 voices per id, a per-frame budget, the pooled slot choice), the delayed-play queue on scaled time, and the merge of recorded overrides (`Resources/Audio/Sfx/<id>/*.wav`) |
+| `Util/Spline.cs` | `Spline.ClosedCatmullRom` and `PondShore` (a point every 0.5 m): the one curve a pond's shore is drawn along (`MapTerrain.Water`) and blocked along (`NavGrid`) |
+
+Changed for the expansion and documented in their sections or in the other API docs: `Loot.cs` (`LootContext`, pools,
+§6), `Equipment.Version`, `Battle.Procs` (set procs), `Battle` (`Uninterruptible` casts, §3), `UnitFactory.CreatureLevel`
+(`levelFloor` / `levelCap`), `Progression` (`xpRateByLevel`, §7), `SkillChecks` (Perception: Spirit; Hunter and Rogue
+proficient), `NavGrid` (water and its crossings, flag-gated props), `MapRuntime` (`IsTransitionVisible`,
+`IsPropVisible`, `checkedRegions`; WorldAPI.md) and `DataValidator` (the expansion's rules, DataSchema.md).

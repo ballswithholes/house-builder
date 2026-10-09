@@ -154,19 +154,74 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   auto-play back; a wipe sends everyone home healed. In big fights DPS companions assist the tank nearest to them,
   and two companion healers never heal the same target in one round.
 
-## 7. Content of the vertical slice
+## 7. Content
 
-* **Lanternvale Village** (hub): Elder Maru, the inn, merchants, a weaponsmith and an armourer, four trainers
-  (each teaches two classes), recruitable companions (Kael, Aldric, Pip).
-* **Whisperwood** (forest): wolves, boars, mischievous Mosslings, bandits, spiders, owls, blighted spirits;
-  side quests; companions Rook, Seren, Lys.
-* **The Old Lantern Shrine** (dungeon): hollowed spirits, Keeper Ishiro, the boss *The Hollow Warden*;
-  companions Torvan, Morwen.
-* Quests: the main quest *The Lanterns Go Dark* and five side quests. Enemies scale to the party's level
-  (`scaleToParty` + `levelOffset`), tuned around levels 1–12.
+The first slice (levels 1–12) and the expansion *The Ember Road* (levels 12–33; contract and as-built notes in
+`Docs/Expansion.md`, links and coordinates in its §1). Enemies scale to the party's level (`scaleToParty` +
+`levelOffset`), clamped to their map's band (`levelFloor` / `levelCap`); XP per kill and quest follows
+`config.xpRateByLevel` (×4 to level 12, rising to ×9 at 30). Every map lists its band on the Map panel and in the
+journal; NPCs show WoW-style quest markers (§6 "Quests", `Docs/WorldAPI.md` §5).
+
+**The valley (levels 1–12, deepened by the expansion).**
+* **Lanternvale Village** (hub, 90×44): Elder Maru, the inn, merchants, a weaponsmith and an armourer, four trainers
+  (each teaches two classes), companions Kael, Aldric and Pip. The northern band adds the west road to Amberfield, the
+  millpond, the Lantern Meadow, Pipp Orchard, Hollyhock Farm and Lantern Hill, with 3 side quests (rootlings in the
+  orchard, singing roots, lamp oil and Duskmane scouts).
+* **Whisperwood** (forest, 100×46): wolves, boars, mischievous Mosslings, bandits, spiders, owls, blighted spirits;
+  the old forest to the north with its brook, fords and the Heron Watch; companions Rook, Seren, Lys; 2 more side quests.
+* **The Old Lantern Shrine** (70×40): hollowed spirits, Keeper Ishiro, the boss *The Hollow Warden*; the terraced climb
+  north (Lantern Steps, Pilgrims' Rest, the Keeper's Lodge, the High Terrace) and 1 side quest; companions Torvan, Morwen.
+* Quests: the main quest *The Lanterns Go Dark*, five original side quests and six new ones.
+
+**Hidden dungeons** (one under every map; harder: +2 levels, elite packs, a named boss with an Epic chance and a
+guaranteed Rare, 2–3 chests, no resting). Each is revealed by a Perception check near its entrance (rolled once, by the
+best party member) or by an NPC's hint or an inspected prop; the entrance then appears with a "hidden passage" banner.
+
+| Dungeon | Levels | Under | Boss | Quest |
+|---|---|---|---|---|
+| The Root Hollows | 11–13 | Lanternvale (Kusu's roots) | The Rootwarden | *The Heart Under the Roots* |
+| Mossdeep Grotto | 12–14 | Whisperwood (Mossy Hollow) | King Umbercap, the Moss King | *The Glow Under the Moss* |
+| The Lantern Catacombs | 13–15 | the Shrine (High Terrace) | Hazama, the Lantern Lich | *The Keepers' Rest* |
+| The Barrow of King Aldwin | 18–20 | Amberfield (the King's Ring) | King Aldwin the Unquiet | *The King Under the Hill* |
+| The Drowned Vault | 24–26 | Mirefen (the Sunken Statue) | The Tidewitch | *The Undertow* |
+| The Frozen Sanctum | 30–32 | Skyreach (the Frozen Falls) | The Rimeheart | *The Long Watch* |
+
+**New zones (levels 12–30).** The road runs west from Lanternvale: Amberfield → Brightwater, which branches to Mirefen
+and Skyreach.
+* **Amberfield Downs** (12–18, 130×56): golden downs, farmsteads, windmills and standing stones; Duskmane gnolls
+  stealing lantern oil (their warcamp and Warchief Skarra), Mudpaw tunnelers (fight or make peace), hawks, the
+  Ditchwater Gang; 12 quests including *The Ember Road*; companion **Bruna** (Warrior, tank) at Haybright Farm.
+* **Brightwater** (hub 12–30, 84×44): a river trade town with an inn, general goods, a weaponsmith, an armourer,
+  reagents and potions, four trainers, Archivist Penhallow (the main-story hub), a ferry and 6 town quests; companions
+  **Ysolde** (Paladin, tank) and **Liora** (Priest, healer).
+* **Mirefen** (18–24, 120×56): misty fen of boardwalks and stilt villages; mirelings, crocolisks, bog ghouls, fen wisps
+  and Mother Mire's coven (Auntie Gall); 11 quests including *The Drowned Lanterns*; companion **Nanami** (Shaman,
+  healer) in Lowlantern; the portal to the Hollow Heart.
+* **Skyreach Peaks** (24–30, 120×60): snow, pines and the mountain hut village of Cairnhollow; yetis, frost wolves,
+  harpies, ogres, ice and ash elementals, drakes and the Dragonsworn vanguard (Vanguard-Marshal Kaedric); 10 quests
+  including *Ash on the Wind*, which reveals the Roost.
+
+**Raids** (raid party of up to 10, picked at the door from everyone recruited; Elite trash and Boss bosses with
+telegraphed and uninterruptible raid-wide casts, adds and enrages; a wipe sends everyone home healed, no lockouts).
+Each boss drops class set pieces (tier 1 / tier 2: 8 classes × head, shoulders, chest, hands, legs; bonuses at 2, 4 and
+5 pieces) and raid epics for the party's classes — two of each in a raid of ten — gold and a Rare; the final bosses can
+drop legendaries (one per party).
+
+| Raid | Levels | Entrance | Bosses (in order) | Legendaries |
+|---|---|---|---|---|
+| The Hollow Heart | 21–23 | Mirefen, the Moon-Gate portal | Thornmaw the Rootbound; the Weeping Twins (Sorrow and Solace); Mother Mire; The Hollow Heart | Kindlewood, Last Staff of the Heart Lantern; Solace, the Twins' Lullaby |
+| Ashwyrm's Roost | 31–33 | Skyreach, the Roost Gate (after *Ash on the Wind*) | Frostclaw the Matriarch; the Cinder Drakes (Emberjaw and Ashtongue); Highlord Varkas; Vyrmathra the Ashwyrm | Embersong, Fang of Vyrmathra; Dawnstring, the Last Light of Skyreach; Vyrmathra's Last Scale |
+
+**Companions** (12, one per class in the slice and four more in the new zones): Kael (Warrior), Aldric (Paladin), Pip
+(Rogue) in Lanternvale; Rook (Hunter), Seren (Priest), Lys (Mage) in Whisperwood; Torvan (Shaman), Morwen (Warlock) at
+the Shrine; Bruna (Warrior, Amberfield), Ysolde (Paladin, Brightwater), Liora (Priest, Brightwater), Nanami (Shaman,
+Mirefen). The active party holds 5; the rest wait at camp.
 
 Story: the spirit-lanterns that protect the valley are going dark one by one. A creeping *Hollow* — a
-grey blight that empties spirits — spreads from the old shrine. The party must rekindle the lanterns.
+grey blight that empties spirits — spreads from the old shrine. The party must rekindle the lanterns. Then the Heart
+Lantern shows a vision: the Hollow was a seed carried on ash from the north, where the Ashwyrm **Vyrmathra** drowses
+beneath Skyreach. *The Ember Road* leads through Amberfield to Brightwater's archivist, *The Drowned Lanterns* through
+Mirefen to the Hollow Heart, and *Ash on the Wind* through Skyreach to the Roost and Vyrmathra.
 
 ## 8. Architecture
 

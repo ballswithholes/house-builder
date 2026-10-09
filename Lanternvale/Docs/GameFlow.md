@@ -99,8 +99,13 @@ HUD's `ToastsHud`/`ToastLaneHud`, see UI_HUD.md) — UI toasts need no other sou
 | `LeaderChanged` | camera follows the new leader, `Selected` = leader |
 | `LevelUp` | `level_up` + golden sparkles/ring/heal glow (once per unit per frame) — no floating text: the words are the HUD's short "Level N" banner and the panels' level-up card |
 | `FlagsChanged` | (at most once per Tick / dialogue step) rebuild the flag-driven world — chests/transitions (`MapView.RefreshFlags`), NPCs, encounters (`SyncWorldViews`) — when `FlagsVersion` differs from the one the world was built for; in dialogue/combat the rebuild waits for `DialogueEnded`/`CombatEnded` (or the next exploration frame) |
-| `ItemReceived` / `GoldChanged` | `ui_open` / `coin` |
-| `QuestStarted` / `QuestCompleted` | `quest` |
+| `ItemReceived` / `GoldChanged` | `CombatSfx.Loot(item)`: `loot_rare` / `loot_epic` / `loot_legendary` by quality, else the plain `ui_open` pickup / `coin` |
+| `QuestStarted` / `QuestCompleted` | `quest_accept` / `quest_turnin` (`CombatSfx.QuestCue`) |
+| `SecretFound` | `secret_found`; the words are ToastsHud's gold banner ("You discovered a hidden passage: …") and `MapView.RefreshFlags` sparkles the revealed entrance |
+| `RaidPartyRequested` | the session did not travel: stop the party and open `RaidPickerScreen.Open(e.Id, e.Id2, e.Amount)`; the picker answers with `Session.EnterRaid` (UI_Panels.md "Raid party picker") |
+| `RaidStarted` | gold toast with `e.Text`, `portal_whoosh` then `raid_warning` 0.7 s later (`CombatSfx.SessionCue`) |
+| `RaidEnded` | Amount 0 (walked out): gold toast; Amount 1 (a wipe): nothing here — ToastsHud's "The raid has wiped" banner says it once (UI_HUD.md) |
+| `Toast` with Id `set_complete` | the toast lane shows it; `CombatSfx.SessionCue` plays `set_complete` |
 | `SkillCheck` (outside dialogue: locks) | floating "17 vs 15 · Success" over the roller + `buff`/`debuff` |
 | `TransitionLocked` | marker dimmed (`SetLocked`), violet pulse, `debuff` |
 | `CombatStarted` | see §5 |
@@ -143,7 +148,7 @@ Hovering an NPC with a `bark` shows it as a speech bubble above it (once per 16 
 | Left click NPC / companion | walk until within `InteractionRange − 0.35` m → both face each other → `TalkTo(id)` (a bark-only NPC answers with a bubble) |
 | Left click chest | walk next to it → `OpenChest`; when `Locked`: a party rogue knowing `rogue_pick_lock` tries `PickLock`, otherwise `TryUnlockChest` (results arrive as `SkillCheck`/`ChestOpened`/`LootOpened`; a failed roll says "The lock holds. You can try again.") |
 | Left click transition marker | walk to it (entering the rectangle travels by itself), else `UseTransition` |
-| Left click prop with an interact id | walk close → `InspectProp` (its text arrives as a `Toast`) |
+| Left click prop with an interact id | walk close → `Session.InteractProp`: a prop with `PropDef.dialogue` starts that conversation, others show their text (a `Toast`; "Nothing of note." when empty). Flag-hidden props and unrevealed hidden transitions are neither hovered nor clickable (`Exploration.IsPresent`) |
 | Left click enemy (exploration encounter) | walk until within 9 m → `EngageEncounter(id)` — starts the fight at once and skips the encounter dialogue. This is **not** a free first strike: initiative is rolled normally (d20 + Agility), so the enemies may act first and close the distance; only when the leader is stealthed are the enemies surprised (they lose their first turn). Arm an opener (next row) to act before the battle begins |
 | Left click enemy with an **armed opener** | walk until the caster is in the opener's range of that enemy's spot (the encounter is kept from triggering by itself during the final approach) → `EngageEncounter(id, caster, ability, enemyIndex)` |
 | Right click | disarm an opener, else stop the party and cancel the pending interaction |
@@ -231,6 +236,11 @@ whenever saving is allowed (they wait for a running conversation to end; failure
 * `NameOf(u)`: companion names via `Session.NpcName`, else `Unit.Name`, creature or class name.
 * `PartyUnits`: `Session.PartyUnits()` cached per frame and after every session event — read it freely, but do not
   keep the list across frames.
+* **Quest markers** (`GameFlow.QuestMarkers.cs`, ThreeD.md §5): one `QuestMarker3D` per map-NPC view that has a marker,
+  its kind re-read from `Session.QuestMarkerOf` whenever `Session.QuestMarkersVersion` moves, scaled up to ×1.35 as the
+  camera zooms out, hidden in combat, while a battle is presented, at game over and over the current dialogue speaker
+  (`UpdateQuestMarkers`, called from `UpdateWorldTimers`). `HoveredNpcId` feeds the nameplate's quest line.
+* **NPC size**: `NpcDef.scale` is passed to `UnitView.Create` (a pup on the adult's model).
 
 ## 9. Overlay, camera, audio
 
@@ -238,7 +248,9 @@ whenever saving is allowed (they wait for a running conversation to end; failure
   rest fades, the lantern flash and NPC bark bubbles (`Ui.InkPanelSoft`). Plain `GUI` on Repaint only.
 * Camera: follows the leader's view; dialogue focuses between speakers (zoom ≤ 5.3, restored after); the combat
   controller takes over focus in battle; the title uses a slow eased pan (140 s period) with manual pan disabled.
-* Music: `menu` on the title, `Music.MoodForMap(map)` on maps, `combat` in battle, fade out on game over.
+* Music: `menu` on the title, `Music.MoodForMap(map)` on maps (from `MapDef.music`: the expansion adds `highlands`,
+  `town`, `fen`, `peaks`, `dungeon` and `raid`; PresentationAPI.md), `Music.BattleMoodFor(map)` in battle (`raid` stays
+  on raid maps, `combat` elsewhere), fade out on game over.
 * Sound cues (`CombatSfx`, PresentationAPI.md §6): the leader's footsteps every 0.34 s on the map's ground
   (`footstep_dirt/leaves/stone/snow/mud/grass` by `MapDef.biome`, keyword fallback; mail and plate add `armor_jingle`);
   `ItemReceived` plays `loot_rare` / `loot_epic` / `loot_legendary` by quality, the plain `ui_open` pickup otherwise;

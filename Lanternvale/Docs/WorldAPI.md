@@ -97,7 +97,9 @@ always blocked (tiny colliders still block). `foreground` props are ignored. NPC
 register them as units if they should block.
 
 **Water** (`MapDef.water`, only entries with `blocksMovement`): cells whose centre lies within `halfWidth` of an open
-polyline, or inside a `closed` polygon, are blocked — except inside that water's `crossings` rects (fords, bridges).
+polyline, or inside a `closed` polygon's **shore as the terrain draws it** (`Spline.PondShore`: a closed Catmull-Rom loop
+through the corners, sampled every 0.5 m, which bulges a little past convex corners), are blocked — except inside that
+water's `crossings` rects (fords, stepping stones, bridges). Water with `blocksMovement: false` is only drawn.
 
 **Flag-gated props and chests.** The plain `NavGrid(mapDef)` blocks every prop and chest, whatever its flags. The
 session builds `new NavGrid(mapDef, null, flags.Test)`: a prop whose `requireFlag` fails or whose `hideFlag` holds, and a
@@ -582,6 +584,25 @@ CheckResult RollRegionCheck(RegionDef r, IDialogueContext ctx, Rng rng)
 Ways to set the reveal flag: a region `check` (`checkFlag`), a region `enterFlag`, a dialogue `SetFlag` (an NPC hint
 or a prop dialogue with an Investigation check, `PropDef.dialogue`), any other flag source. The session announces each
 passage once (`SessionEventKind.SecretFound`).
+
+**Discovery in the shipped content** (Docs/Expansion.md §8): every hidden dungeon has a Perception region next to its
+entrance plus at least one other way in. Once the flag holds, the transition's entrance marker (cave mouth, barrow
+door, stairs or portal; ThreeD.md) appears; in Lanternvale and Whisperwood the bushes hiding the mouth (`hideFlag`)
+vanish too, and the nav grid follows them (`RefreshFlags`).
+
+| map → dungeon | reveal flag | Perception region (DC) | other ways |
+|---|---|---|---|
+| lanternvale → `dgn_root_hollows` | `found_root_hollows` | `reg_lv2_kusu_roots` (13) | Nell's hint (`dlg_child_nell`), the Listening Root log (`dlg_lv2_listening_root`) |
+| whisperwood → `dgn_mossdeep` | `found_mossdeep` | `reg_ww2_mossy_hollow` (14) | Komorebi, Sprig, Tamsin, the King-stone (`dlg_ww2_kingstone`); the quest `ww2_kings_glow` |
+| shrine → `dgn_lantern_catacombs` | `found_lantern_catacombs` | `reg_sh2_high_terrace` (14, once `heart_lantern_lit`) | Aiko, the cracked plinth (`dlg_sh2_cracked_plinth`) |
+| amberfield → `dgn_barrow` | `found_barrow` | `reg_am_kings_ring` (14) | Nib, Mother Delve, Old Ida (`am_q_barrow`), the King's Stone, Archivist Penhallow |
+| mirefen → `dgn_drowned_vault` | `found_drowned_vault` | `reg_mf_sunken_statue` (14) | Old Bloop, the sunken statue (`dlg_mf_sunken_statue`), Penhallow |
+| skyreach → `dgn_frozen_sanctum` | `found_frozen_sanctum` | `reg_sr_frozen_falls` (14) | Odran, the frozen falls (`dlg_sr_frozen_falls`), Penhallow |
+| skyreach → `raid_ashwyrm_roost` | `sr_roost_revealed` | — | the end of `mq2_ash_on_the_wind` |
+
+Smaller secrets use the same machinery with chests: e.g. `reg_am_lookout` → `am_lookout_cache`, `reg_bw_river_steps` →
+`bw_river_cache_found`, `reg_sr_vista` → `sr_found_cache`, and inside dungeons and raids `reg_dg4_tripwire` (spotting
+it sets the dart-trap ambush's `doneFlag`), `reg_dg6_chantry`, `reg_r1_offerings`, `reg_r2_last_stand`.
 
 Loot generation, combat setup and actually moving between maps are the session's job.
 

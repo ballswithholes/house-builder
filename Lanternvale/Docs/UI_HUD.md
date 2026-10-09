@@ -161,7 +161,7 @@ with progress (`ObjectiveView.Display`), stage text when there are no objectives
 can take the current step now (`QuestTrackerHud.ReturnLine` ← `Session.QuestTurnInOf`; left out when an objective already
 names them; rebuilt when `QuestMarkersVersion` moves), "+N more"; click a quest → Journal;
 the header collapses the list (saved). Above it: day, time (5-minute steps), phase (sun/moon) and the party's gold; on
-rest-area maps (`MapDef.restArea`: Whisperwood, the Shrine) a moon button left of the clock makes camp
+rest-area maps (`MapDef.restArea`: Whisperwood, the Shrine and the four new zones; never in dungeons or raids) a moon button left of the clock makes camp
 (`GameFlow.TryRest`, disabled with `Session.CannotRestReason()` in its tooltip).
 
 **Menu bar** (top right, exploration and combat, between the clock/gold pill and the quest tracker): a button per
