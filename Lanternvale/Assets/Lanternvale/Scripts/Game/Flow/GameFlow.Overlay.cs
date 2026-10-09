@@ -216,7 +216,7 @@ namespace Lanternvale.Game
                 return;
             }
             ClearLanternSequence();
-            foreach (var o in map.Objects) if (o.IsLantern && !o.LanternLit) lanternQueue.Add(o);
+            foreach (var o in map.Objects) if (o.IsLantern && !o.LanternLit && !o.LanternFlagDriven) lanternQueue.Add(o);
             var from = LeaderFeet();
             lanternQueue.Sort((a, b) => (a.Position - from).sqrMagnitude.CompareTo((b.Position - from).sqrMagnitude));
             lanternSequence = true;

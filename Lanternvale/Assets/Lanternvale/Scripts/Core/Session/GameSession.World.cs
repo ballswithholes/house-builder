@@ -59,7 +59,7 @@ namespace Lanternvale.Session
             RebuildField();
             Raise(new SessionEvent { Kind = SessionEventKind.MapEntered, Id = rt.Id, Id2 = spawnId, Text = rt.Def.name });
             if (raidLeft != null) RaiseRaidEnded(raidLeft);
-            if (LanternsRekindled)
+            if (LanternsLitHere)
                 Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
             CheckTimeOfDay();
             foreach (var r in Map.UpdatePartyPosition(Leader.Position)) RaiseRegion(r);
@@ -158,6 +158,19 @@ namespace Lanternvale.Session
 
         /// <summary>Spirit lanterns are lit (flag lanterns_rekindled).</summary>
         public bool LanternsRekindled => World.Flags.IsSet(LanternsFlag);
+
+        /// <summary>The valley the Heart Lantern relights (the first slice's outdoor maps).</summary>
+        public static readonly string[] RekindleMapIds = { "lanternvale", "whisperwood", "shrine" };
+
+        /// <summary>
+        /// True when the valley-wide relight (flag lanterns_rekindled) applies to this map. Maps beyond the valley
+        /// keep their own dark lanterns and flag-driven dark/lit pairs (Brightwater's memorial, Mirefen's rising
+        /// lanterns, the Drowned Vault, the Hollow Heart's grove).
+        /// </summary>
+        public static bool IsRekindleMap(MapDef def) => def != null && Array.IndexOf(RekindleMapIds, def.id) >= 0;
+
+        /// <summary>Flag lanterns_rekindled is set and the relight applies to the current map.</summary>
+        public bool LanternsLitHere => LanternsRekindled && IsRekindleMap(MapDef);
 
         public List<MapNpcDef> VisibleNpcs()
         {

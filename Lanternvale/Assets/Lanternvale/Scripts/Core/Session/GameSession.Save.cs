@@ -318,7 +318,7 @@ namespace Lanternvale.Session
             lastPhase = TimeOfDay;
             Raise(new SessionEvent { Kind = SessionEventKind.GameLoaded, Unit = Main, Text = $"Loaded: {Main.Name}, level {Main.Level}." });
             Raise(new SessionEvent { Kind = SessionEventKind.MapEntered, Id = MapId, Id2 = "", Text = MapDef?.name ?? "" });
-            if (LanternsRekindled) Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
+            if (LanternsLitHere) Raise(new SessionEvent { Kind = SessionEventKind.SpecialOutcome, Id = RekindleLanternsSpecial, Amount = 0 });
             MarkFlagsChanged();   // FlagStore.Load replaces the flags without Changed events
             FlushFlagsChanged();
             return true;

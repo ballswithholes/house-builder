@@ -31,6 +31,8 @@ namespace Lanternvale.Game
             public bool Wanders;
             public float NextIdle;
             public float BarkReady;
+            /// <summary>QuestMarkersVersion this entry's quest marker was last read for (UpdateQuestMarkers).</summary>
+            public int MarkerChecked = int.MinValue;
         }
 
         sealed class EnemyEntry

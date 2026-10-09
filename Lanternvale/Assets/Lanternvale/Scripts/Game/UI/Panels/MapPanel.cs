@@ -61,11 +61,13 @@ namespace Lanternvale.Game.Panels
             ground = null;
             if (nav == null || nav.Width <= 0 || nav.Height <= 0) return;
             int w = nav.Width, h = nav.Height;
-            var baseCol = Ui.Hex("#b8d48f");
-            if (!string.IsNullOrEmpty(def.groundTint)) baseCol = Color.Lerp(baseCol, Ui.Hex(def.groundTint), 0.35f);
-            if (def.ground != null && def.ground.Contains("shrine")) baseCol = Ui.Hex("#c9c1b0");
-            else if (def.ground != null && def.ground.Contains("forest")) baseCol = Ui.Hex("#9fbf80");
-            else if (def.ground != null && def.ground.Contains("village")) baseCol = Ui.Hex("#d9c79c");
+            // the parchment takes the biome's colour (fen, peaks, roost, caves… no longer all meadow green); the three
+            // original biomes keep their painted colours untinted, as before
+            string biome = Biomes.IdOf(def);
+            var baseCol = Biomes.For(def).MapColor;
+            string tint = Biomes.GroundTint(def);
+            bool original = biome == Biomes.Village || biome == Biomes.Forest || biome == Biomes.Shrine;
+            if (!original && !string.IsNullOrEmpty(tint)) baseCol = Color.Lerp(baseCol, Ui.Hex(tint), 0.35f);
             var dark = Color.Lerp(baseCol, Ui.Hex("#3d4a2e"), 0.55f);
             var edge = Ui.Hex("#4a3b2c");
             var px = new Color32[w * h];

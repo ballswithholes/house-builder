@@ -134,7 +134,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 | `CombatStarted` | `Battle`, `Id` encounter id, `Text` first creature bark — create the combat presenter |
 | `CombatEnded` | `Outcome` (`Victory` / `Defeat` / `Left`), `Id` encounter id, `Battle` |
 | `Rested` / `PartyHealed` | `Text` |
-| `SpecialOutcome` | `Id` special id (`Id2` argument). **`RekindleLanterns`**: `Amount` 1 = the story moment (`MapView.SetLanternLit(id, true, animate: true)` for every lantern + banner `Text`); `Amount` 0 = raised after every `MapEntered` while flag `lanterns_rekindled` is set (relight silently) |
+| `SpecialOutcome` | `Id` special id (`Id2` argument). **`RekindleLanterns`**: `Amount` 1 = the story moment (`MapView.SetLanternLit(id, true, animate: true)` for every lantern + banner `Text`); `Amount` 0 = raised after every `MapEntered` while flag `lanterns_rekindled` is set and the map is in the valley (`IsRekindleMap`: lanternvale, whisperwood, shrine; relight silently) |
 | `TimeOfDayChanged` | `Id`/`Text` new phase (`dawn` `day` `dusk` `night`) |
 | `SecretFound` | a hidden transition (any map) became visible: `Id` its `revealFlag`, `Id2` the transition id, `Text` "You discovered a hidden passage: <label, else the target map's name>". Once per passage per game, whatever set the flag (region check, dialogue, NPC hint); never on `LoadGame` for passages the save already knew (§5 Discovery) |
 | `RaidPartyRequested` | the party tried to travel into a raid map without a raid party (walking, clicking the exit, `EnterMap`, a dialogue `Teleport` once the conversation ends): `Id` raid map, `Id2` spawn, `Amount` its `raidSize` — open the raid picker, answer with `EnterRaid(Id, Id2, …)`. Nobody travelled (§3 "Raids") |
@@ -298,6 +298,8 @@ List<Unit> OwnedSummons()                                   // living totems/tem
                                                             // them when it ends, so this is empty after CombatEnded); cleared on map change
 string NpcName(string id); string DialogueOf(string id)     // npcs and companions
 bool LanternsRekindled                                      // flag lanterns_rekindled (also see SpecialOutcome)
+bool LanternsLitHere                                        // LanternsRekindled and IsRekindleMap(MapDef)
+static bool IsRekindleMap(MapDef def)                       // the valley the relight covers (RekindleMapIds)
 ```
 
 The session is authoritative for positions (`Unit.Position`/`Facing`); the Unity layer animates.

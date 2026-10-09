@@ -45,7 +45,9 @@ namespace Lanternvale.Game
                 var e = npcEntries[i];
                 if (e.View == null || string.IsNullOrEmpty(e.Id)) continue;
                 bool fresh = !questMarkers.TryGetValue(e, out var marker);
-                if (!refresh && !fresh) continue;
+                // an NPC without a marker is read once per QuestMarkersVersion, not every frame
+                if (!refresh && (!fresh || e.MarkerChecked == questMarkersVersion)) continue;
+                e.MarkerChecked = questMarkersVersion;
                 var info = s.QuestMarkerOf(e.Id);
                 if (fresh)
                 {

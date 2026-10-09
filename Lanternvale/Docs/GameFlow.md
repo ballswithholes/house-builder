@@ -91,10 +91,10 @@ HUD's `ToastsHud`/`ToastLaneHud`, see UI_HUD.md) — UI toasts need no other sou
 | Event | Reaction |
 |---|---|
 | `GameStarted` | autosave requested (written once the opening conversation ends) |
-| `MapEntered` | dispose views/combat/old map, `MapView.Build(def, Session.Flags.Test)`, opened chests shown open (silent), lanterns lit silently if `LanternsRekindled`, views for `PartyUnits()`, `VisibleNpcs()`, `VisibleEncounters()`, camera follows the leader (`SnapToTarget`), `Music` for the map, fade-in from dark; travel (`Id2` = a transition spawn) requests an autosave |
+| `MapEntered` | dispose views/combat/old map, `MapView.Build(def, Session.Flags.Test)`, opened chests shown open (silent), lanterns lit silently if `LanternsLitHere` (flag set and a valley map, `GameSession.IsRekindleMap`), views for `PartyUnits()`, `VisibleNpcs()`, `VisibleEncounters()`, camera follows the leader (`SnapToTarget`), `Music` for the map, fade-in from dark; travel (`Id2` = a transition spawn) requests an autosave |
 | `DialogueStarted` / `DialogueEnded` | stop the party, zoom in and keep the camera between the leader and the current speaker (NPC, companion, encounter, or the owner when the hero speaks); both face each other. On end: restore zoom/follow, re-evaluate flags (chests, transitions, NPCs, encounters) |
 | `ChestOpened` | `Map.SetChestOpen(id)` (pop + sparkles) + `chest_open` |
-| `SpecialOutcome` `RekindleLanterns` | `Amount 0`: `SetAllLanternsLit(true)` silently. `Amount 1`: warm flash, chime, party sparkles, then every dark lantern relights one by one (nearest first, 0.38 s apart, holy impacts) and a final `level_up` chime |
+| `SpecialOutcome` `RekindleLanterns` | `Amount 0`: `SetAllLanternsLit(true)` silently (flag-driven lanterns, `MapObject.LanternFlagDriven`, keep their authored state). `Amount 1`: warm flash, chime, party sparkles, then every dark lantern relights one by one (nearest first, 0.38 s apart, holy impacts) and a final `level_up` chime |
 | `PartyChanged` `PetChanged` `CompanionRecruited` `CompanionDismissed` | view sync (out of combat): a recruit steps out of its NPC spot and walks to its party position; a dismissed companion walks back to its NPC spot; pets/demons appear with sparkles / vanish in a puff |
 | `LeaderChanged` | camera follows the new leader, `Selected` = leader |
 | `LevelUp` | `level_up` + golden sparkles/ring/heal glow (once per unit per frame) — no floating text: the words are the HUD's short "Level N" banner and the panels' level-up card |
@@ -164,7 +164,7 @@ at most 0.2 m). Footsteps play every 0.34 s while the leader walks.
 2. the exploration views of `Session.BattleEncounter` are re-bound to the new enemy units (same creature id, nearest);
    remaining units get `EnsureView` (hidden ambushes appear in a puff);
 3. every view walks (4.5 m/s) to its unit's battle position; out-of-combat summons that did not join are removed;
-4. `Music.Play("combat")`, then `Combat = new CombatController(this, battle)`. If the constructor throws, the flow logs it
+4. `Music.Play(Music.BattleMoodFor(mapDef))` (raid maps keep `"raid"`, others `"combat"`), then `Combat = new CombatController(this, battle)`. If the constructor throws, the flow logs it
    and auto-resolves the fight next frame so the game cannot soft-lock.
 
 **During combat** the controller animates events, owns clicks/targeting and calls `EnsureView`/`ViewOf`/`RemoveView`/

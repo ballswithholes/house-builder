@@ -141,7 +141,7 @@ namespace Lanternvale.Game
             if (def.chests != null && s.Map != null)
                 foreach (var c in def.chests)
                     if (c != null && s.Map.IsChestOpened(c.id)) map.SetChestOpen(c.id, true, false);
-            if (s.LanternsRekindled) map.SetAllLanternsLit(true, false);
+            if (s.LanternsLitHere) map.SetAllLanternsLit(true, false);   // the valley only (GameSession.IsRekindleMap)
 
             SpawnWorldViews();
 
@@ -468,7 +468,7 @@ namespace Lanternvale.Game
             }
             foreach (var u in tmpUnits) RemoveView(u);
 
-            Music.Play("combat", 1.5f);
+            Music.Play(Music.BattleMoodFor(s.MapDef), 1.5f);   // raid maps keep their raid score
             CombatSfx.BattleStart(b);   // boss_pull when a Boss-rank enemy is in the fight
             combatFallbackLogged = false;
             try { Combat = new CombatController(this, b); }

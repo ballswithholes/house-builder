@@ -47,6 +47,11 @@ namespace Lanternvale.Game
         public bool Highlighted;
         public bool IsLantern;
         public bool LanternLit;
+        /// <summary>
+        /// A lantern prop shown/hidden by a flag (requireFlag/hideFlag): half of an authored dark/lit pair whose
+        /// story moment swaps them, so map-wide relights leave it as authored.
+        /// </summary>
+        public bool LanternFlagDriven => IsLantern && Prop != null && (!string.IsNullOrEmpty(Prop.requireFlag) || !string.IsNullOrEmpty(Prop.hideFlag));
 
         // ---- presentation internals
         internal Transform root;            // holder at the ground point (identity rotation, scale 1)
@@ -1738,14 +1743,15 @@ namespace Lanternvale.Game
 
         /// <summary>
         /// Lights (or darkens) every spirit lantern on the map. animate=false (default) switches
-        /// silently — use it on map load; pass true for the story moment.
+        /// silently — use it on map load; pass true for the story moment. Flag-driven lanterns
+        /// (<see cref="MapObject.LanternFlagDriven"/>) keep their authored state.
         /// </summary>
         public void SetAllLanternsLit(bool lit, bool animate = false)
         {
             for (int i = 0; i < Objects.Count; i++)
             {
                 var o = Objects[i];
-                if (!o.IsLantern || o.LanternLit == lit) continue;
+                if (!o.IsLantern || o.LanternLit == lit || o.LanternFlagDriven) continue;
                 SetLanternLitInternal(o, lit, animate);
             }
             UpdateCliffLanterns(animate);

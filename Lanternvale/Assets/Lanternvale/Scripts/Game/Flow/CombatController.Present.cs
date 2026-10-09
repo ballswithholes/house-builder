@@ -545,8 +545,11 @@ namespace Lanternvale.Game
                     break;
                 }
                 case CombatEventType.BattleStart:
-                    if (Music.Mood != "combat") { Music.Play("combat", 1.5f); startedCombatMusic = true; }
+                {
+                    var battleMood = Music.BattleMoodFor(flow != null && flow.Session != null ? flow.Session.MapDef : null);
+                    if (Music.Mood != battleMood) { Music.Play(battleMood, 1.5f); startedCombatMusic = true; }
                     break;
+                }
                 case CombatEventType.Damage: VisDamage(e); break;
                 case CombatEventType.Heal: VisHeal(e); break;
                 case CombatEventType.Miss: VisAvoid(e, "Miss", true); break;
