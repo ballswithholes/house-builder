@@ -299,20 +299,20 @@ namespace Lanternvale.Rules
 
         // ============================================================ combo points
 
-        /// <summary>Combo points the unit has on the target (0 when they are on another target).</summary>
-        public int ComboPointsOn(Unit u, Unit target)
-        {
-            if (u.ComboPoints <= 0) return 0;
-            if (target != null && u.ComboTarget != null && target != u.ComboTarget) return 0;
-            if (u.ComboTarget != null && !u.ComboTarget.IsAlive) return 0;
-            return u.ComboPoints;
-        }
+        /// <summary>
+        /// Combo points a finisher of the unit would spend on <paramref name="target"/>. Lanternvale rule (modern WoW, not
+        /// 1.12): combo points belong to the rogue for the whole battle, so they carry over when the target dies (a
+        /// companion took the kill) or the rogue switches target; they are cleared when spent, by Vanish and at battle end.
+        /// The target is accepted for API stability (every finisher asks "points on this target").
+        /// </summary>
+        public int ComboPointsOn(Unit u, Unit target) => u == null ? 0 : Math.Max(0, u.ComboPoints);
 
-        /// <summary>Adds combo points on a target (switching target loses the old points). Max 5.</summary>
+        /// <summary>Adds combo points (max 5); building on a new target moves the points to it and keeps the count
+        /// (<see cref="ComboPointsOn"/>). ComboTarget is the unit the points were last built on (frames, combat log).</summary>
         public void AddComboPoints(Unit u, Unit target, int n)
         {
             if (n == 0 || target == null) return;
-            if (u.ComboTarget != target) { u.ComboPoints = 0; u.ComboTarget = target; }
+            if (u.ComboTarget != target) u.ComboTarget = target;
             int before = u.ComboPoints;
             u.ComboPoints = MathUtil.Clamp(u.ComboPoints + n, 0, (int)RulesConstants.MaxComboPoints);
             if (u.ComboPoints != before)
@@ -784,6 +784,8 @@ namespace Lanternvale.Rules
                 bool rangedAp = cast.Ability != null && AbilityRules.IsRangedWeaponAbility(cast.Ability);
                 v += e.apCoef * (rangedAp ? c.Stats.RangedAttackPower : c.Stats.AttackPower);
             }
+            // finishers: attack power per combo point spent (Eviscerate; Lanternvale change, see rogue.json _note)
+            if (e.apCoefPerCombo > 0 && cast.ComboPoints > 0) v += e.apCoefPerCombo * c.Stats.AttackPower * cast.ComboPoints;
             v *= cast.MagnitudeScale * chainScale;
             if (cast.Periodic && cast.SourceAura != null)
                 v *= cast.SourceAura.DamageMult * cast.SourceAura.EffectMult * Math.Max(1, cast.SourceAura.Stacks);

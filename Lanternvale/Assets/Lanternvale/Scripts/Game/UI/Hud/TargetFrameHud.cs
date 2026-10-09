@@ -178,11 +178,14 @@ namespace Lanternvale.Game
                 }
             }
 
-            // combo points on this target
-            if (me != null && me.ComboPoints > 0 && me.ComboTarget == t)
+            // combo points a finisher would spend on this enemy: they belong to the rogue for the whole battle
+            // (Battle.ComboPointsOn), so any hostile target shows them, not only the one they were built on
+            if (me != null && me.ComboPoints > 0 && t != me && t.IsHostileTo(me))
             {
+                int cp = me.ComboPoints;
+                try { if (b != null) cp = b.ComboPointsOn(me, t); } catch (Exception) { }
                 for (int i = 0; i < 5; i++)
-                    HudDraw.Pip(new Rect(pr.x + 6f + i * 14f, pr.y - 7f, 11f, 11f), Hud.C("#ffcf4d"), i < me.ComboPoints);
+                    HudDraw.Pip(new Rect(pr.x + 6f + i * 14f, pr.y - 7f, 11f, 11f), Hud.C("#ffcf4d"), i < cp);
             }
 
             // auras below the frame

@@ -85,7 +85,8 @@ SPECIALS = [
        "direct damage, Rupture's tickEffects) add amount x (effLevel - learnLevel) x comboPoints to the base "
        "magnitude, where 'amount' is that effect's amount field (per-combo-point growth per level: Eviscerate 2.582 "
        "-> 5 per point at rank 1, ~147 at rank 8; Rupture 0.3 per tick -> 2 per point per tick at rank 1, 14 at "
-       "rank 6). Applied before Damage/Effect AbilityMods, crits and armor."),
+       "rank 6). Applied before Damage/Effect AbilityMods, crits and armor. Eviscerate's attack-power part (7% AP per "
+       "point) is the generic EffectDef.apCoefPerCombo, added by Battle.EffectDamage, not by this special."),
     sp("RogueExposeArmor", "rogue_expose_armor (aura)",
        "Aura special (OnAuraApplied): after the aura resolves its mod values (Armor -80/-145/-210/-275/-340 by rank, "
        "x Improved Expose Armor EffectMult), multiply ModValues[0] by the aura's ComboPoints (the points spent by the "
@@ -167,7 +168,13 @@ used, unused = write_bundle(OUT, "Rogue class data (WoW Classic 1.12). Generated
                             "warrior.json. Lanternvale change: rogues dual wield from level 1 (dualWieldLevel 1; Dual "
                             "Wield is a starting passive, not sold by the trainer, so it never gates: "
                             "EquipmentRules.ProficiencyPassive skips starting passives and old saves learn it on load); "
-                            "the starter off-hand dagger is a real Off Hand weapon (equip OffHand).", [CLASS], abilities, AURAS, TREES, ITEMS, SPECIALS,
+                            "the starter off-hand dagger is a real Off Hand weapon (equip OffHand). Lanternvale change "
+                            "(finishers, turn-based pacing): combo points belong to the rogue for the whole battle (they "
+                            "carry over when the target dies or the rogue switches target; cleared when spent, by Vanish "
+                            "and at battle end), and Eviscerate adds 7% attack power per combo point (apCoefPerCombo "
+                            "0.07, the WotLK value; 1.12 had none) with rank 2 at level 6 instead of 8, because only "
+                            "about one finisher lands per fight while builders and white hits scale with weapon and AP. "
+                            "Ranks 1 and 8 keep WoW's base numbers.", [CLASS], abilities, AURAS, TREES, ITEMS, SPECIALS,
                             extra_specials=GENERIC_FROM_WARRIOR)
 print("rogue: abilities", len(abilities), "auras", len(AURAS), "items", len(ITEMS),
       "talents", [len(t["talents"]) for t in TREES], "specials", sorted(used))

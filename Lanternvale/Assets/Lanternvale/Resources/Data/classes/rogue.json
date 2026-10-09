@@ -1,5 +1,5 @@
 {
-  "_note": "Rogue class data (WoW Classic 1.12). Generated; generic specials RankDurations, SweepingHits, WeaponTypeTalent, OffHandDamage and PhysicalRangedShot are documented in warrior.json. Lanternvale change: rogues dual wield from level 1 (dualWieldLevel 1; Dual Wield is a starting passive, not sold by the trainer, so it never gates: EquipmentRules.ProficiencyPassive skips starting passives and old saves learn it on load); the starter off-hand dagger is a real Off Hand weapon (equip OffHand).",
+  "_note": "Rogue class data (WoW Classic 1.12). Generated; generic specials RankDurations, SweepingHits, WeaponTypeTalent, OffHandDamage and PhysicalRangedShot are documented in warrior.json. Lanternvale change: rogues dual wield from level 1 (dualWieldLevel 1; Dual Wield is a starting passive, not sold by the trainer, so it never gates: EquipmentRules.ProficiencyPassive skips starting passives and old saves learn it on load); the starter off-hand dagger is a real Off Hand weapon (equip OffHand). Lanternvale change (finishers, turn-based pacing): combo points belong to the rogue for the whole battle (they carry over when the target dies or the rogue switches target; cleared when spent, by Vanish and at battle end), and Eviscerate adds 7% attack power per combo point (apCoefPerCombo 0.07, the WotLK value; 1.12 had none) with rank 2 at level 6 instead of 8, because only about one finisher lands per fight while builders and white hits scale with weapon and AP. Ranks 1 and 8 keep WoW's base numbers.",
   "classes": [
     {
       "id": "Rogue",
@@ -133,16 +133,26 @@
       "name": "Eviscerate",
       "icon": "daggers",
       "classId": "Rogue",
-      "description": "Finishing move that causes damage per combo point: 1 point 6-10, 2 points 11-15, 3 points 16-20, 4 points 21-25, 5 points 26-30 (rank 8: 199-295 ... 787-883).",
+      "description": "Finishing move that causes damage per combo point, plus 7% of your attack power per point: 1 point {0@1}, 2 points {0@2}, 3 points {0@3}, 4 points {0@4}, 5 points {0@5}. Spend 3 or more points for a big hit; your combo points stay with you for the whole fight, even when the target falls.",
       "learnLevel": 1,
-      "rankLevels": [1, 8, 16, 24, 32, 40, 48, 56],
+      "rankLevels": [1, 6, 16, 24, 32, 40, 48, 56],
       "trainCost": 10,
       "cost": {"type": "Energy", "amount": 35, "consumesComboPoints": true},
       "melee": true,
       "requires": {"minComboPoints": 1},
       "tags": ["Finisher"],
       "special": "RoguePerComboByRank",
-      "effects": [{"type": "Damage", "min": 1, "max": 5, "perLevel": 1.76, "perCombo": 5, "amount": 2.582}],
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 1,
+          "max": 5,
+          "perLevel": 1.76,
+          "perCombo": 5,
+          "amount": 2.582,
+          "apCoefPerCombo": 0.07
+        }
+      ],
       "aiHint": "Finisher",
       "aiPriority": 8
     },
@@ -2180,7 +2190,7 @@
     {
       "id": "RoguePerComboByRank",
       "usedBy": "rogue_eviscerate, rogue_rupture (abilities)",
-      "behaviour": "Ability special (ModifyDamage), also applied to the periodic ticks of auras the ability applied (tick casts carry the aura's Rank/EffLevel/LearnLevel/ComboPoints). WoW finishers gain more damage PER COMBO POINT at higher ranks, which perCombo alone cannot express. For every Damage effect of the ability (Eviscerate's direct damage, Rupture's tickEffects) add amount x (effLevel - learnLevel) x comboPoints to the base magnitude, where 'amount' is that effect's amount field (per-combo-point growth per level: Eviscerate 2.582 -> 5 per point at rank 1, ~147 at rank 8; Rupture 0.3 per tick -> 2 per point per tick at rank 1, 14 at rank 6). Applied before Damage/Effect AbilityMods, crits and armor."
+      "behaviour": "Ability special (ModifyDamage), also applied to the periodic ticks of auras the ability applied (tick casts carry the aura's Rank/EffLevel/LearnLevel/ComboPoints). WoW finishers gain more damage PER COMBO POINT at higher ranks, which perCombo alone cannot express. For every Damage effect of the ability (Eviscerate's direct damage, Rupture's tickEffects) add amount x (effLevel - learnLevel) x comboPoints to the base magnitude, where 'amount' is that effect's amount field (per-combo-point growth per level: Eviscerate 2.582 -> 5 per point at rank 1, ~147 at rank 8; Rupture 0.3 per tick -> 2 per point per tick at rank 1, 14 at rank 6). Applied before Damage/Effect AbilityMods, crits and armor. Eviscerate's attack-power part (7% AP per point) is the generic EffectDef.apCoefPerCombo, added by Battle.EffectDamage, not by this special."
     },
     {
       "id": "RogueExposeArmor",

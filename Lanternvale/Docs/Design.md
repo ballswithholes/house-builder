@@ -79,7 +79,8 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
 * **Armor** mitigation = `armor / (armor + 400 + 85 × attackerLevel)`, capped at 75%. Physical only.
 * **Resistance** average mitigation = `resist / (5 × attackerLevel) × 0.75` capped at 75%.
 * Spell damage = base + `coef × SpellDamage(school)`. Heal = base + `coef × HealingPower`.
-  Ability effect magnitudes: `rand(min,max) + perLevel × (effLevel − learnLevel) + perCombo × CP` where
+  Ability effect magnitudes: `rand(min,max) + perLevel × (effLevel − learnLevel) + perCombo × CP` (+ `apCoefPerCombo ×
+  AP × CP` on a finisher's Damage effect) where
   effLevel = level of the highest rank known (rankLevels), or caster level if `scaleWithLevel` / creature.
 * **Rage**: conversion `c = 0.0091107836 L² + 3.225598133 L + 4.2652911`. Dealing white damage `d`:
   `+7.5 × d / c × 1.75` (turn compression factor), taking damage `+2.5 × d / c`. Max 100. Out of combat
@@ -89,9 +90,14 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   Righteous Fury Holy ×1.6. AI targets the highest threat it can reach; it switches only when another unit
   exceeds 110% (melee) / 130% (ranged) of the current target's threat. Taunt: forces the taunted enemy to
   target the taunter on its next turn and sets taunter threat = highest threat.
-* **Combo points** (Rogue): stored on the rogue for one target; switching target loses them. Max 5.
+* **Combo points** (Rogue): stored on the rogue, max 5. **Lanternvale change** (turn-based pacing, modern WoW): they
+  belong to the rogue for the whole battle, so they carry over when the target dies or the rogue builds on or finishes
+  another enemy (1.12 lost them on a target switch); cleared when spent, by Vanish and at battle end.
   Builders with `generatesComboPoint` add 1 on hit (+`ComboPoints` mods). Finishers (`cost.consumesComboPoints`)
-  scale with `perCombo` / `durationPerCombo` and spend all points.
+  scale with `perCombo` / `durationPerCombo` (+ `apCoefPerCombo` × AP per point) and spend all points on a hit (an
+  avoided finisher keeps them). **Eviscerate** adds 7% AP per point (`apCoefPerCombo` 0.07, the WotLK value) and gets
+  rank 2 at level 6: only about one finisher lands per fight while builders and white hits scale with weapon and AP,
+  so 3 points now hit for ~2-3x a Sinister Strike and 5 points ~3-5x (rank-1 base numbers stay WoW's 6-10 ... 26-30).
 * **Soul shards** (Warlock): an inventory item `soul_shard` (max 32 in bags). A Drain Soul killing blow creates one
   (`special: "WarlockDrainSoulShard"`), and so does a target dying under Shadowburn's hidden 5 s debuff (aura
   `special: "WarlockShadowburnShard"`). Summon Voidwalker/Succubus/Felhunter, Soul Fire, Shadowburn and every

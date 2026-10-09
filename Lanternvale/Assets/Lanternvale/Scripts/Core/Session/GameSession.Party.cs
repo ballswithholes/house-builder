@@ -276,9 +276,29 @@ namespace Lanternvale.Session
         {
             string text = $"{u.Name} reached level {info.NewLevel}!";
             if (info.TalentPointsGained > 0) text += $" +{info.TalentPointsGained} talent point{(info.TalentPointsGained == 1 ? "" : "s")}.";
-            if (u == Main && info.NewTrainable.Count > 0) text += " New abilities can be trained.";
+            if (u == Main && info.NewTrainable.Count > 0) text += " " + TrainableText(info.NewTrainable);
             Raise(new SessionEvent { Kind = SessionEventKind.LevelUp, Unit = u, Amount = info.NewLevel, LevelUp = info, Text = text });
         }
+
+        /// <summary>"Your class trainer can teach Eviscerate (Rank 2) and Sinister Strike (Rank 2)." — names what became
+        /// trainable (a new rank is easy to miss: the main character keeps the old one until trained).</summary>
+        static string TrainableText(List<TrainerOffer> offers)
+        {
+            var names = new List<string>();
+            foreach (var o in offers)
+            {
+                if (o?.Ability == null || o.Ability.hidden) continue;
+                string n = o.Rank > 1 ? $"{o.Ability.name} (Rank {o.Rank})" : o.Ability.name;
+                if (!names.Contains(n)) names.Add(n);
+            }
+            if (names.Count == 0) return "New abilities can be trained.";
+            const int Shown = 4;
+            string list = names.Count <= Shown ? JoinAnd(names) : string.Join(", ", names.GetRange(0, Shown)) + $" and {names.Count - Shown} more";
+            return $"Your class trainer can teach {list}.";
+        }
+
+        static string JoinAnd(List<string> xs) =>
+            xs.Count == 1 ? xs[0] : string.Join(", ", xs.GetRange(0, xs.Count - 1)) + " and " + xs[xs.Count - 1];
 
         /// <summary>Raises a companion to the main character's level (auto-training and talents per settings).</summary>
         void SyncCompanionLevel(Unit c, List<LevelUpInfo> into)

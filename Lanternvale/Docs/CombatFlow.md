@@ -126,6 +126,24 @@ Overlays owned by the controller (FxSystem preview ids): `combat_move_range` (Re
 re-baked only when the unit's position/budget changes), `combat_path`, `combat_aoe`, `combat_range` (faint ring of
 the ability's range), `combat_ai_path`. Do not reuse these ids.
 
+### Combo points and finishers (rogue)
+
+Energy is +60 per turn and a builder (Sinister Strike, 45) adds one point on a hit, so a rogue builds about 1.3 points
+per turn. Because fights are short, **combo points belong to the rogue for the whole battle**: `Battle.ComboPointsOn(u,
+target)` is simply `u.ComboPoints`. They carry over when the target dies (a companion took the kill) or when the rogue
+builds on or finishes another enemy (`ComboTarget` names the unit they were last built on). A landed finisher spends
+them all, an avoided one keeps them, and Vanish and the end of the battle clear them. Finisher numbers: `Tooltip.Magnitude(..,
+rank, comboPoints)` gives the total at a given count (`Tooltip.PerComboPoint` = `perCombo` + the rank growth of
+`RoguePerComboByRank` + `apCoefPerCombo` × AP, 0.07 for Eviscerate). Description tokens `{0@3}` print effect 0 at 3
+points, so the bar tooltip shows the rogue's own rank and attack power.
+
+* Hover line: "Eviscerate (3 combo points) → Bandit · 77–92 damage · 90% hit …"; at 1–2 points it adds "· weak at 1
+  point, 3–5 hit much harder" (plain text: the preview is drawn with a shadow pass).
+* Action bar: a finisher slot shows gold pips (the points it would spend) in the padding above the icon; its tooltip
+  says "Spends your 3 combo points." With none, the slot is dimmed and the reason names a builder the unit knows:
+  "Requires combo points (you have none): build them with Sinister Strike first."
+* Target frame: pips on any hostile target while the rogue holds points; party frame pips read the same count.
+
 ## 5. Presentation
 
 Events are grouped into **beats** and played strictly one after another; every event is announced exactly once and

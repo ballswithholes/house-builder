@@ -303,7 +303,7 @@ namespace Lanternvale.Rules
                 if (u.AttackTarget == tgt) { u.AttackTarget = null; }
                 if (u.AggroTarget == tgt) u.AggroTarget = null;
                 u.Threat.Remove(tgt);
-                if (u.ComboTarget == tgt && u.Team != tgt.Team) { /* combo points fade with the target */ }
+                // combo points stay with the rogue when their target dies (Battle.ComboPointsOn): ComboTarget keeps naming it
             }
             if (killer != null && killer != tgt)
             {

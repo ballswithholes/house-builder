@@ -1157,6 +1157,13 @@ namespace Lanternvale.Game
             sb.Length = 0;
             if (plan.Approach) sb.Append("Move ").Append(plan.ApproachLength.ToString("0.0")).Append(plan.Behind ? " m behind, then " : " m, then ");
             sb.Append(label ?? a.name);
+            // finishers: the points this cast would spend (Battle.ComboPointsOn — they stay with the rogue across targets)
+            int cp = -1;
+            if (a.cost != null && a.cost.consumesComboPoints)
+            {
+                try { cp = Battle != null ? Battle.ComboPointsOn(u, target) : u.ComboPoints; } catch (Exception) { cp = u.ComboPoints; }
+                if (cp > 0) sb.Append(" (").Append(cp).Append(cp == 1 ? " combo point)" : " combo points)");
+            }
             if (target != null && target != u)
             {
                 sb.Append(" → ").Append(target.Name);
@@ -1169,8 +1176,12 @@ namespace Lanternvale.Game
                     if (locked && a.effects != null && a.effects.Exists(e => e != null && e.type == EffectType.Interrupt)) sb.Append(" · the interrupt has no effect");
                 }
             }
-            var mag = MagnitudeText(u, a, mods, used);
+            var mag = MagnitudeText(u, a, mods, used, cp);
             if (!string.IsNullOrEmpty(mag)) sb.Append(" · ").Append(mag);
+            // a finisher spent early is weak (WoW: build to 3-5); say so before the click without blocking it (plain text:
+            // TurnHud draws the preview with a shadow pass, which colour tags would tint)
+            if ((cp == 1 || cp == 2) && Tooltip.IsComboDamageFinisher(a))
+                sb.Append(" · weak at ").Append(cp).Append(cp == 1 ? " point" : " points").Append(", 3–5 hit much harder");
             if (enemies >= 0)
             {
                 sb.Append(" · ").Append(enemies).Append(enemies == 1 ? " enemy" : " enemies");
@@ -1202,7 +1213,9 @@ namespace Lanternvale.Game
             return rank < known ? a.name + " (Rank " + rank + ")" : a.name;
         }
 
-        string MagnitudeText(Unit u, AbilityDef a, AbilityModSet mods, int rank)
+        /// <summary>"77–92 damage": the first damage/heal effect at the rank; a finisher's at <paramref name="comboPoints"/>
+        /// (the points it would spend; &lt; 1 shows the 1-point value and the per-point step).</summary>
+        string MagnitudeText(Unit u, AbilityDef a, AbilityModSet mods, int rank, int comboPoints = -1)
         {
             try
             {
@@ -1211,7 +1224,7 @@ namespace Lanternvale.Game
                 {
                     if (e == null) continue;
                     if (e.type != EffectType.Damage && e.type != EffectType.WeaponDamage && e.type != EffectType.Heal) continue;
-                    var m = Tooltip.Magnitude(u, a, e, eff, mods, rank);
+                    var m = Tooltip.Magnitude(u, a, e, eff, mods, rank, comboPoints);
                     if (string.IsNullOrEmpty(m)) continue;
                     m = m.Replace(" to ", "–");
                     if (e.type == EffectType.Heal) return m + " healing";

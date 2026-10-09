@@ -71,7 +71,9 @@ enough resource), **red tint when an enemy ability is out of range of the unit's
 (`AbilityStatus.InRangeOfAttackTarget == false`: range, dead zone or line of sight — WoW's red icon; "Out of range of …"
 in the tooltip), cost (bottom right, resource colour), cast time (top right), hotkey (top left), gold
 "Active" glow for stances/aspects/auto attack/queued swings, the ability being targeted and an armed opener
-(`GameFlow.PendingOpener`). **Downranking:** a rank pinned in the Spellbook (`RankPins`) is fetched with
+(`GameFlow.PendingOpener`). **Finishers** (`cost.consumesComboPoints`) show gold pips in the bar padding above the icon
+(the points they would spend, `Battle.ComboPointsOn`) and "Spends your 3 combo points." in the tooltip (muted "weak" note at
+1-2); with none the reason names a builder ("Requires combo points (you have none): build them with Sinister Strike first."). **Downranking:** a rank pinned in the Spellbook (`RankPins`) is fetched with
 `Battle.GetStatus(unit, ability, false, rank, false)` (cost, cast time, usability of that rank), shows a gold "R3" plate
 (bottom left; top centre on Soul Shard spells), its tooltip describes that rank ("Pinned to Rank 3 of 7…"), and the slot,
 its hotkey and right-click cast it (`Combat.BeginAbility(id, rank)` / `GameFlow.UseAbilityOutOfCombat(.., rank)`).
@@ -117,7 +119,8 @@ these"). `TurnOrderHud.Bottom` (and `Big`, `Small`) are properties now: the targ
 the active unit's attack/combo target (sticky). Level (WoW difficulty colours, skull for bosses/+10), rank with a gold
 winged "dragon" frame (silver for rares), creature type, health with absorbs and %, resource, the telegraphed **cast
 bar** (pending casts resolve on the caster's next turn) with "Interrupt now: Kick [3]" when the active player unit has a
-usable `Interrupt`-tagged ability, debuffs/buffs (yours glow), combo points, "Attacking Kael" / "Taunted by …" and
+usable `Interrupt`-tagged ability, debuffs/buffs (yours glow), combo points (on any hostile target while the rogue holds
+them: they stay with the rogue for the whole battle), "Attacking Kael" / "Taunted by …" and
 "Your threat 64%" (`Battle.ThreatOf` vs the current target's threat).
 
 **Nameplates** (under everything): enemy health plates with level (`5+` elite, `??` boss), name when hovered/targeted/

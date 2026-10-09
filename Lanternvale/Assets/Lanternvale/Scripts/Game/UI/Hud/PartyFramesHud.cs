@@ -460,14 +460,18 @@ namespace Lanternvale.Game
 
         static void DrawCombo(Rect row, Unit u)
         {
-            int cp = Mathf.Clamp(u.ComboPoints, 0, 5);
+            // the count the rules use (Battle.ComboPointsOn: points stay with the rogue across targets until spent)
+            var b = Hud.Combat != null ? Hud.Combat.Battle : null;
+            int cp = u.ComboPoints;
+            try { if (b != null) cp = b.ComboPointsOn(u, null); } catch (Exception) { }
+            cp = Mathf.Clamp(cp, 0, 5);
             const float d = 12f, gap = 4f;
             for (int i = 0; i < 5; i++)
                 HudDraw.Pip(new Rect(row.x + i * (d + gap), row.y, d, d), Hud.C("#ffcf4d"), i < cp);
             var hr = new Rect(row.x, row.y, 5 * (d + gap), d);
             if (HudDraw.Hover(hr))
-                Ui.TooltipFor(hr, "Combo points: " + cp + (u.ComboTarget != null && cp > 0 ? " on " + Hud.NameOf(u.ComboTarget) : "") +
-                                  "\n" + Ui.Rich("Builders add points to the target; finishers spend them all.", Hud.Muted));
+                Ui.TooltipFor(hr, "Combo points: " + cp + (u.ComboTarget != null && cp > 0 ? " (last built on " + Hud.NameOf(u.ComboTarget) + ")" : "") +
+                                  "\n" + Ui.Rich("Builders add a point; finishers spend them all, hitting much harder at 3–5. Points stay with you for the whole fight, even when the target falls.", Hud.Muted));
         }
 
         void DrawShards(Rect row)

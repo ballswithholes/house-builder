@@ -9,7 +9,8 @@
 // GameFlow.UseAbilityOutOfCombat/UseItemOutOfCombat in the field (ally spells first ask for a party member).
 // Statuses are fetched without tooltips (GetAbilityBar(.., includeTooltips: false)); a slot's tooltip is built on hover.
 // Ranks pinned in the Spellbook (RankPins, WoW downranking) are cast at that rank and show an "R3" badge; enemy abilities
-// out of range of the unit's attack target get a red tint (AbilityStatus.InRangeOfAttackTarget).
+// out of range of the unit's attack target get a red tint (AbilityStatus.InRangeOfAttackTarget). Finishers show the
+// combo points they would spend (gold pips above the slot, Battle.ComboPointsOn) and say so in the tooltip.
 using System;
 using System.Collections.Generic;
 using Lanternvale.Data;
@@ -680,6 +681,20 @@ namespace Lanternvale.Game
             }
             else if (sl.Cost.Length > 0)
                 HudDraw.Text(new Rect(r.x + 2f, r.yMax - 18f, r.width - 5f, 17f), sl.Cost, HudStyles.TinyRight, new Color(sl.CostColor.r, sl.CostColor.g, sl.CostColor.b, alpha));
+            // finishers: the combo points they would spend (gold pips in the bar's padding above the slot, clear of the
+            // corner texts; Battle.ComboPointsOn)
+            if (inCombat && a.cost != null && a.cost.consumesComboPoints)
+            {
+                int cp = ComboPoints(unit);
+                if (cp > 0)
+                {
+                    float pw = 7f, gap = 2f, total = 5f * pw + 4f * gap;
+                    float px = r.center.x - total * 0.5f, py = r.y - pw - 1.5f;
+                    var on = new Color(1f, 0.81f, 0.3f, alpha);
+                    var off = new Color(0f, 0f, 0f, 0.45f * alpha);
+                    for (int i = 0; i < 5; i++) HudDraw.Fill(new Rect(px + i * (pw + gap), py, pw, pw), i < cp ? on : off, 2);
+                }
+            }
             // pinned lower rank: a small "R3" plate (bottom left; top centre on Soul Shard spells, whose corner shows shards)
             if (sl.RankLabel.Length > 0)
             {
@@ -688,6 +703,15 @@ namespace Lanternvale.Game
                 HudDraw.Ring(br, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, 0.7f * alpha), 4);
                 HudDraw.Text(br, sl.RankLabel, HudStyles.TinyCenter, new Color(Ui.Gold.r, Ui.Gold.g, Ui.Gold.b, alpha), false);
             }
+        }
+
+        /// <summary>Combo points a finisher of <paramref name="u"/> would spend now (the rules' count, 0 out of combat).</summary>
+        static int ComboPoints(Unit u)
+        {
+            if (u == null) return 0;
+            var b = Hud.Combat != null ? Hud.Combat.Battle : null;
+            try { return Mathf.Clamp(b != null ? b.ComboPointsOn(u, null) : u.ComboPoints, 0, 5); }
+            catch (Exception) { return 0; }
         }
 
         static readonly string[] rankBadges = new string[32];
@@ -796,6 +820,15 @@ namespace Lanternvale.Game
             var st = sl.St;
             if (sl.Rank > 0)
                 tip += "\n" + Ui.Rich("Pinned to Rank " + sl.Rank + " of " + st.KnownRanks + " (downranked: cheaper, weaker). Change it in the Spellbook (P).", Ui.Gold);
+            if (inCombat && sl.A.cost != null && sl.A.cost.consumesComboPoints)
+            {
+                int cp = ComboPoints(unit);
+                if (cp > 0)
+                {
+                    bool weak = cp <= 2 && Tooltip.IsComboDamageFinisher(sl.A);
+                    tip += "\n" + Ui.Rich("Spends your " + (cp == 1 ? "1 combo point" : cp + " combo points") + (weak ? " (weak: 3–5 points hit much harder)." : "."), weak ? Hud.Muted : Ui.Gold);
+                }
+            }
             if (!st.Usable && !string.IsNullOrEmpty(st.Reason)) tip += "\n" + Ui.Rich(st.Reason, Ui.Bad);
             else if (st.InRangeOfAttackTarget == false && unit != null && unit.AttackTarget != null)
                 tip += "\n" + Ui.Rich("Out of range of " + Hud.NameOf(unit.AttackTarget) + ".", Ui.Bad);

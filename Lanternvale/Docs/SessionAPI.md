@@ -119,7 +119,7 @@ event Action<CombatEvent> CombatEventRaised;  // every CombatEvent of the field 
 | `ItemReceived` / `ItemLost` | `Id` item id, `Amount` count, `Item` (when known), `Text` ("Received: Kindling Taper") |
 | `GoldChanged` | `Amount` delta, `Text` ("+1s 20c") |
 | `XpGained` | `Amount`, `Unit` = main character |
-| `LevelUp` | `Unit`, `Amount` new level, `LevelUp` (health/mana gained, `TalentPointsGained`, `NewTrainable` offers), `Text` — one per level and character (companions too) |
+| `LevelUp` | `Unit`, `Amount` new level, `LevelUp` (health/mana gained, `TalentPointsGained`, `NewTrainable` offers), `Text` — one per level and character (companions too); the main character's text names what became trainable ("Your class trainer can teach Eviscerate (Rank 2) and Sinister Strike (Rank 2).", up to 4 names) |
 | `AbilityLearned` | `Unit`, `Id` ability, `Amount` rank (training, talent abilities, auto-trained companions) |
 | `TalentPointsAvailable` | `Unit`, `Amount` unspent points |
 | `CompanionRecruited` | `Id`, `Unit`, `Text` ("Kael joins the party." / "… waits at camp (the party is full).") |

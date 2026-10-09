@@ -31,7 +31,11 @@ namespace Lanternvale.Game
         public static string Ability(Unit u, AbilityDef a, int rank)
         {
             if (a == null) return "";
-            if (u == null) return $"<b>{a.name}</b>\n{a.description}";
+            if (u == null)   // no unit: rank-1 numbers ({0}, {0@3} tokens resolved without stats), never raw tokens
+            {
+                try { return $"<b>{a.name}</b>\n{Tooltip.Ability(null, a, rank > 0 ? rank : 0)}"; }
+                catch (System.Exception) { return $"<b>{a.name}</b>\n{a.description}"; }
+            }
             try { return Tooltip.AbilityFull(u, a, rank > 0 ? rank : 0); }
             catch (System.Exception) { return $"<b>{a.name}</b>\n{a.description}"; }
         }

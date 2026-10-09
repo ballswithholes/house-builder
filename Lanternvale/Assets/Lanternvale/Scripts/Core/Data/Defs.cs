@@ -155,6 +155,7 @@ namespace Lanternvale.Data
         public float perCombo;                           // added per combo point spent
         public float coef;                               // spell power coefficient (SpellDamage or HealingPower)
         public float apCoef;                             // attack power coefficient (ranged abilities use RAP)
+        public float apCoefPerCombo;                     // Damage of a finisher: + this × attack power per combo point spent (Eviscerate)
         public float weaponPct = 100f;                   // WeaponDamage: percent of weapon damage
         public bool offHand, ranged;                     // WeaponDamage: which weapon
         public float pctOfMax;                           // Heal/GainResource/Resurrect: percent of max

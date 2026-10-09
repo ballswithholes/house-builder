@@ -32,7 +32,8 @@ namespace Lanternvale.Rules
         }
     }
 
-    /// <summary>Finishers gain amount × (effLevel − learnLevel) per combo point on every Damage effect (incl. Rupture ticks).</summary>
+    /// <summary>Finishers gain amount × (effLevel − learnLevel) per combo point on every Damage effect (incl. Rupture ticks).
+    /// Eviscerate's attack-power part per point is the generic EffectDef.apCoefPerCombo (Battle.EffectDamage).</summary>
     sealed class RoguePerComboByRank : SpecialHandler
     {
         public RoguePerComboByRank() : base("RoguePerComboByRank") { }

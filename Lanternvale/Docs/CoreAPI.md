@@ -43,7 +43,8 @@ Key `Unit` members:
   `CooldownLeft(abilityDef)` (own or shared-group cooldown, whichever is longer; the `grp:` key is built once per
   `AbilityDef` and cached — no string building per call), `static string Unit.CooldownGroupKey(AbilityDef)` (that key,
   or null without a `cooldownGroup`), `Lockouts` (school → s).
-* Combat state: `AttackTarget`, `AutoAttacking`, `AutoAttackAbility`, `QueuedSwing`, `ComboPoints`, `ComboTarget`,
+* Combat state: `AttackTarget`, `AutoAttacking`, `AutoAttackAbility`, `QueuedSwing`, `ComboPoints` (the rogue's for the
+  whole battle: `Battle.ComboPointsOn(u, anyTarget)` = `ComboPoints`), `ComboTarget` (the unit they were last built on),
   `Threat` (AI units: unit → threat), `AggroTarget`, `Pending` (`PendingCast`: `Ability`, `Rank`, `Target`, `RemainingTime`,
   `Channel`, `TicksLeft/TicksTotal`, `Pushbacks`, **`TotalTime`** — full hasted cast/channel time for cast bars, +0.5 s per
   pushback on casts, −the cut time on channels — and `Progress` = (TotalTime − RemainingTime) / TotalTime), `QueuedSwing`
@@ -483,7 +484,10 @@ Progression.LearnAllAvailable(unit);         // veteran start
 "14 to 22") and `{d0}` (aura duration, incl. per-rank duration growth such as Hammer of Justice); `rankOverride` > 0
 describes that rank (downranking picker: magnitudes, aura values). `Tooltip.AbilityFull(unit, ability, rankOverride = 0)`
 adds name/rank/cost/range/cast/cooldown lines for that rank. `Tooltip.Magnitude(unit, ability, effect, effLevel, mods,
-rank)` (the 5-argument overload uses the highest known rank).
+rank)` (the 5-argument overload uses the highest known rank); `Tooltip.Magnitude(.., rank, comboPoints)` gives a
+finisher's total at that many points ("77 to 92"; < 1 → "13 to 17 at 1 combo point, +23 per extra point") and
+`Tooltip.PerComboPoint(unit, ability, effect, effLevel)` the damage one point adds (`perCombo` + `RoguePerComboByRank`
+rank growth + `apCoefPerCombo` × AP). Description token `{N@P}` = effect N at P combo points (Eviscerate lists 1-5).
 `Tooltip.Talent(talentDef, rank, onlyCurrent:false)` renders `{a/b/c}` groups with the current rank wrapped in
 `Tooltip.HighlightOpen/HighlightClose` (IMGUI rich text by default).
 

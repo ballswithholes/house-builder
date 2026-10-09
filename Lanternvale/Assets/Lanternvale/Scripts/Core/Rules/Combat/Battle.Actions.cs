@@ -218,9 +218,8 @@ namespace Lanternvale.Rules
             int needCp = Math.Max(r.minComboPoints, a.cost != null && a.cost.consumesComboPoints ? 1 : 0);
             if (needCp > 0)
             {
-                int cp = target != null && u.ComboTarget != null && target != u.ComboTarget ? 0 : u.ComboPoints;
-                if (u.ComboTarget != null && !u.ComboTarget.IsAlive) cp = 0;
-                if (cp < needCp) return UseCheck.Fail(UseFailure.ComboPoints, needCp == 1 ? "Requires combo points." : $"Requires {needCp} combo points.");
+                int cp = ComboPointsOn(u, target);
+                if (cp < needCp) return UseCheck.Fail(UseFailure.ComboPoints, ComboPointsReason(u, needCp, cp));
             }
             if (!checkTarget || target == null) return UseCheck.Pass;
 
@@ -248,6 +247,24 @@ namespace Lanternvale.Rules
             if (r.outOfMeleeRange && u.DistanceTo(target) < MathUtil.Yd(8f) + target.Radius)
                 return UseCheck.Fail(UseFailure.TooClose, "Target is too close.");
             return UseCheck.Pass;
+        }
+
+        /// <summary>Why a finisher cannot be used yet: the points held and a builder the unit knows, so the bar tooltip and
+        /// the error line tell the player what to press ("Requires combo points (you have none): build them with Sinister
+        /// Strike first.").</summary>
+        string ComboPointsReason(Unit u, int need, int have)
+        {
+            string builder = null;
+            int best = int.MaxValue;
+            foreach (var kv in u.Abilities)
+            {
+                var b = Db.Ability(kv.Key);
+                if (b == null || !b.generatesComboPoint || b.passive || b.hidden) continue;
+                if (b.learnLevel < best) { best = b.learnLevel; builder = b.name; }
+            }
+            string held = have <= 0 ? "you have none" : have == 1 ? "you have 1" : $"you have {have}";
+            string what = need == 1 ? "Requires combo points" : $"Requires {need} combo points";
+            return builder != null ? $"{what} ({held}): build them with {builder} first." : $"{what} ({held}).";
         }
 
         bool IsStealthIncapacitate(AbilityDef a)

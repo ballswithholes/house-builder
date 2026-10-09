@@ -92,7 +92,8 @@ Key fields (see Defs.cs for all):
 ### Description tokens
 
 `{0}`, `{1}`… are replaced by the computed magnitude of `effects[0]`, `effects[1]`… at the caster's current
-rank and stats (min–max range for damage/heal). `{d0}` = duration of the aura applied by effects[0].
+rank and stats (min–max range for damage/heal). `{d0}` = duration of the aura applied by effects[0]. `{0@3}` =
+effects[0] when 3 combo points are spent (finishers: rank growth, `apCoefPerCombo` × AP and talents included).
 
 ## Effects (`EffectDef`)
 
@@ -100,7 +101,7 @@ rank and stats (min–max range for damage/heal). `{d0}` = duration of the aura 
 
 | type | fields |
 |---|---|
-| `Damage` | `min max perLevel perCombo coef apCoef school pctOfDamage cannotCrit cannotMiss` |
+| `Damage` | `min max perLevel perCombo coef apCoef apCoefPerCombo school pctOfDamage cannotCrit cannotMiss` (`apCoefPerCombo`: a finisher's + this × AP per combo point spent; validator: finishers' Damage effects only) |
 | `WeaponDamage` | `weaponPct` (% of weapon roll incl. AP), `min max perLevel` (flat bonus), `offHand ranged` |
 | `Heal` | `min max perLevel coef pctOfMax` |
 | `ApplyAura` | `aura stacks duration durationPerCombo chance` |

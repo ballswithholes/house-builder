@@ -59,12 +59,15 @@ ABILITIES = [
        "combo point.",
        ranks=[1, 6, 14, 22, 30, 38, 46, 54], cost=energy(45), melee=True, generatesComboPoint=True, tags=["Builder"],
        effects=[E("WeaponDamage", weaponPct=100, min=3, perLevel=1.226)], aiHint="Damage", aiPriority=6),
+    # Lanternvale change: +7% AP per combo point (apCoefPerCombo, the WotLK value) and rank 2 at level 6 (with Sinister
+    # Strike rank 2); WoW 1.12 had neither, but here only about one finisher lands per fight (see rogue.json _note)
     ab("rogue_eviscerate", "Eviscerate", "daggers",
-       "Finishing move that causes damage per combo point: 1 point 6-10, 2 points 11-15, 3 points 16-20, 4 points "
-       "21-25, 5 points 26-30 (rank 8: 199-295 ... 787-883).",
-       ranks=[1, 8, 16, 24, 32, 40, 48, 56], cost=energy(35, combo=True), melee=True, requires=finisher_req(),
+       "Finishing move that causes damage per combo point, plus 7% of your attack power per point: 1 point {0@1}, "
+       "2 points {0@2}, 3 points {0@3}, 4 points {0@4}, 5 points {0@5}. Spend 3 or more points for a big hit; your "
+       "combo points stay with you for the whole fight, even when the target falls.",
+       ranks=[1, 6, 16, 24, 32, 40, 48, 56], cost=energy(35, combo=True), melee=True, requires=finisher_req(),
        tags=["Finisher"], special="RoguePerComboByRank",
-       effects=[E("Damage", min=1, max=5, perLevel=1.76, perCombo=5, amount=2.582)], aiHint="Finisher", aiPriority=8),
+       effects=[E("Damage", min=1, max=5, perLevel=1.76, perCombo=5, amount=2.582, apCoefPerCombo=0.07)], aiHint="Finisher", aiPriority=8),
     ab("rogue_stealth", "Stealth", "stealth",
        "Allows the rogue to sneak around, but reduces your speed by 50% (40%, 35% and 30% at ranks 2-4). Lasts until "
        "cancelled. Attacking from Stealth with an opener starts the battle with a surprise round.",

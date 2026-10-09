@@ -57,6 +57,15 @@ namespace Lanternvale.Rules
 
         static string Token(Unit u, AbilityDef a, string tok, int eff, AbilityModSet mods, int rank)
         {
+            // {N@P}: effect N's magnitude when P combo points are spent (finisher descriptions: rank, attack power, talents)
+            int at = tok.IndexOf('@');
+            if (at > 0)
+            {
+                if (!int.TryParse(tok.Substring(0, at), NumberStyles.Integer, CultureInfo.InvariantCulture, out int ei)) return null;
+                if (!int.TryParse(tok.Substring(at + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out int cp)) return null;
+                if (ei < 0 || ei >= a.effects.Count) return "?";
+                return Magnitude(u, a, a.effects[ei], eff, mods, rank, Math.Max(1, cp));
+            }
             bool dur = tok.StartsWith("d", StringComparison.Ordinal);
             if (!int.TryParse(dur ? tok.Substring(1) : tok, NumberStyles.Integer, CultureInfo.InvariantCulture, out int idx)) return null;
             if (idx < 0 || idx >= a.effects.Count) return "?";
@@ -80,7 +89,39 @@ namespace Lanternvale.Rules
         public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods) => Magnitude(u, a, e, eff, mods, 0);
 
         /// <summary>Displayed magnitude of an ability effect at an effective level and rank (0 = the unit's highest known rank).</summary>
-        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods, int rank)
+        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods, int rank) =>
+            Magnitude(u, a, e, eff, mods, rank, -1);
+
+        /// <summary>
+        /// Damage a finisher's Damage effect adds per combo point, before talents/multipliers: perCombo, the rank growth of
+        /// RoguePerComboByRank (amount × (effLevel − learnLevel)) and apCoefPerCombo × attack power (null unit: no AP) —
+        /// exactly what Battle adds per point spent. 0 for effects that do not scale with combo points.
+        /// </summary>
+        public static float PerComboPoint(Unit u, AbilityDef a, EffectDef e, int eff)
+        {
+            if (a == null || e == null) return 0f;
+            float delta = Math.Max(0, eff - a.learnLevel);
+            float v = e.perCombo;
+            if (a.special == "RoguePerComboByRank" && e.type == EffectType.Damage && e.amount != 0f) v += e.amount * delta;
+            if (u != null && e.apCoefPerCombo > 0f) v += e.apCoefPerCombo * u.Stats.AttackPower;
+            return v;
+        }
+
+        /// <summary>A finisher whose direct damage grows per combo point (Eviscerate): spending 1-2 points is weak.</summary>
+        public static bool IsComboDamageFinisher(AbilityDef a)
+        {
+            if (a == null || a.cost == null || !a.cost.consumesComboPoints) return false;
+            foreach (var e in a.effects)
+                if (e != null && e.type == EffectType.Damage && (e.perCombo > 0f || e.apCoefPerCombo > 0f)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Displayed magnitude at an effective level and rank. <paramref name="comboPoints"/>: for an effect that scales with
+        /// combo points, ≥ 1 gives the total when that many points are spent ("77 to 92"); &lt; 1 gives the 1-point value and
+        /// the step ("13 to 17 at 1 combo point, +23 per extra point"). Other effects ignore it.
+        /// </summary>
+        public static string Magnitude(Unit u, AbilityDef a, EffectDef e, int eff, AbilityModSet mods, int rank, int comboPoints)
         {
             float delta = Math.Max(0, eff - a.learnLevel);
             // damage and heal magnitudes (direct and per tick) as Battle reads them: an unowned creature's above level 20
@@ -97,7 +138,14 @@ namespace Lanternvale.Rules
                     if (u != null && e.coef > 0) bonus += e.coef * u.Stats.SpellDamage(school);
                     if (u != null && e.apCoef > 0) bonus += e.apCoef * (AbilityRules.IsRangedWeaponAbility(a) ? u.Stats.RangedAttackPower : u.Stats.AttackPower);
                     float m = mods.DamageMult * (u != null && u.Class == null && u.Creature != null ? CreatureScaling.DamageMult(u.Creature) : 1f);
-                    return Range(((e.min + e.perLevel * sdelta) * sm + bonus) * m, ((Math.Max(e.min, e.max) + e.perLevel * sdelta) * sm + bonus) * m) + combo;
+                    float step = PerComboPoint(u, a, e, eff);
+                    if (step > 0f)
+                    {
+                        int cp = Math.Max(1, comboPoints);
+                        string at = Range(((e.min + e.perLevel * sdelta) * sm + bonus + step * cp) * m, ((Math.Max(e.min, e.max) + e.perLevel * sdelta) * sm + bonus + step * cp) * m);
+                        return comboPoints >= 1 ? at : $"{at} at 1 combo point, +{N(step * m)} per extra point";
+                    }
+                    return Range(((e.min + e.perLevel * sdelta) * sm + bonus) * m, ((Math.Max(e.min, e.max) + e.perLevel * sdelta) * sm + bonus) * m);
                 }
                 case EffectType.Heal:
                 {

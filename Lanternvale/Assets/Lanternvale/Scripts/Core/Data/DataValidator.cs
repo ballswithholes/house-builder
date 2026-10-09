@@ -145,6 +145,13 @@ namespace Lanternvale.Data
                 foreach (var x in a.requires.targetAuras) if (!HasAura(x)) Err(w, $"requires unknown target aura '{x}'");
                 if (a.cost.type == ResourceType.None && (a.cost.amount > 0 || a.cost.pctBaseMana > 0)) Err(w, "cost amount without cost type");
                 CheckEffects(a.effects, w);
+                for (int i = 0; i < a.effects.Count; i++)
+                {
+                    var e = a.effects[i];
+                    if (e.apCoefPerCombo < 0f) Err(w, $"effects[{i}] apCoefPerCombo must be >= 0");
+                    if (e.apCoefPerCombo > 0f && (e.type != EffectType.Damage || a.cost == null || !a.cost.consumesComboPoints))
+                        Err(w, $"effects[{i}] apCoefPerCombo only applies to a Damage effect of a finisher (cost.consumesComboPoints)");
+                }
                 UseSpecial(a.special, w);
             }
 
