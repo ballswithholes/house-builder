@@ -308,6 +308,7 @@ namespace Lanternvale.Rules
         {
             var p = (c.projectile ?? "").ToLowerInvariant();
             if (p.Contains("arrow")) return "hit_arrow";
+            if (p.Contains("dart") || HasWord(c.sprite, "dart") || HasWord(c.id, "dart")) return "hit_bolt";   // spring-shot darts click and thump
             if (p.Contains("bullet") || p.Contains("shot")) return "hit_bullet";
             if (p.Contains("bolt")) return c.meleeSchool == School.Physical ? "hit_bolt" : "hit_blunt";
             if (p.Contains("spear") || p.Contains("knife") || p.Contains("dagger") || p.Contains("axe")) return "hit_dagger";
@@ -591,8 +592,91 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>
-        /// The thud of the body landing (null for things that do not fall: ether spirits fade, totems and traps vanish).
-        /// Heavy for big creatures (size ≥ 2.2 m), giants, dragons and stone; light otherwise.
+        /// The death vocal of a unit: its voice's vocal (<see cref="VocalOf(string)"/>), refined by body. Spiders and
+        /// other chitin beasts die without a cry, and so do small reptiles (scale); big beasts (≥ 2.4 m: yetis,
+        /// Frostclaw) roar instead of yelping.
+        /// </summary>
+        public static string VocalOf(Unit u)
+        {
+            if (u == null) return null;
+            var voice = VoiceOf(u);
+            var c = u.Class == null ? u.Creature : null;
+            if (c != null && voice == "beast")
+            {
+                var m = ProfileOf(c).Material;
+                if (m == "chitin") return null;
+                if (c.size >= BigBeastSize) return "vo_dragon_roar";
+                if (m == "scale") return null;
+            }
+            return VocalOf(voice);
+        }
+
+        const float BigBeastSize = 2.4f;
+
+        /// <summary>
+        /// The pitch of a unit's death vocal. Roars follow the body: dragons sqrt(4.2/size) in [0.85, 1.8] (whelp 1.1 m →
+        /// 1.8, drake 4.2 m → 1, Vyrmathra 7.5 m → 0.85), big beasts sqrt(9/size) in [1, 1.6] (yeti 2.8 m → 1.6,
+        /// Frostclaw 5 m → 1.34). A grunt from a female body (<see cref="IsFemaleArt"/>) sits about a fourth higher (×1.35,
+        /// at most 1.4: the shift moves the formants too). Everything else uses <see cref="SizePitchOf"/>.
+        /// </summary>
+        public static float VocalPitchOf(Unit u)
+        {
+            var vocal = VocalOf(u);
+            var c = u != null && u.Class == null ? u.Creature : null;
+            if (vocal == "vo_dragon_roar" && c != null)
+            {
+                float size = Math.Max(0.3f, c.size);
+                if (VoiceOf(u) == "dragon") return Clamp((float)Math.Sqrt(4.2 / size), 0.85f, 1.8f);
+                return Clamp((float)Math.Sqrt(9.0 / size), 1f, 1.6f);
+            }
+            float p = SizePitchOf(u);
+            if (vocal == "vo_humanoid_grunt" && IsFemaleArt(u)) p = Math.Min(1.4f, p * 1.35f);
+            return p;
+        }
+
+        /// <summary>The volume of a death vocal: 0.8, 0.6 for a party member going down; small roarers (whelps) are softer.</summary>
+        public static float VocalVolumeOf(Unit u, bool downed)
+        {
+            float v = downed ? 0.6f : 0.8f;
+            var c = u != null && u.Class == null ? u.Creature : null;
+            if (c != null && c.size < 2f && VocalOf(u) == "vo_dragon_roar") v *= 0.7f;
+            return v;
+        }
+
+        static float Clamp(float x, float lo, float hi) => x < lo ? lo : x > hi ? hi : x;
+
+        /// <summary>
+        /// Art keys built on a female body (Game/Units, BipedKit female = true) whose units can grunt: the Hunter, Mage
+        /// and Priest heroes, eight companions, the succubus and the witches. Tinted variants "&lt;key&gt;_&lt;suffix&gt;" match.
+        /// </summary>
+        static readonly HashSet<string> FemaleArt = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "char_hunter", "char_mage", "char_priest",
+            "comp_lys", "comp_seren", "comp_morwen", "comp_pip", "comp_bruna", "comp_ysolde", "comp_liora", "comp_nanami",
+            "demon_succubus", "cr_mire_hag", "cr_tidewitch", "cr_dg5_tidewitch", "cr_r1_mother_mire", "cr_r1_twin",
+        };
+
+        /// <summary>True when the unit's art (Unit.Sprite, else its creature's sprite) is one of the female bodies.</summary>
+        public static bool IsFemaleArt(Unit u)
+        {
+            if (u == null) return false;
+            if (MatchesKey(FemaleArt, u.Sprite)) return true;
+            return u.Creature != null && MatchesKey(FemaleArt, u.Creature.sprite);
+        }
+
+        static bool MatchesKey(HashSet<string> keys, string key)
+        {
+            if (string.IsNullOrEmpty(key)) return false;
+            if (keys.Contains(key)) return true;
+            for (int i = key.Length - 1; i > 0; i--)
+                if (key[i] == '_' && keys.Contains(key.Substring(0, i))) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// The thud of the body landing (null for things that do not fall: ether spirits fade, totems and mechanical traps
+        /// vanish). Heavy for big creatures (size ≥ 2.2 m), giants and stone bodies of 1.2 m and more; light otherwise (a
+        /// dragon whelp lands light).
         /// </summary>
         public static string BodyFallOf(Unit u)
         {
@@ -601,10 +685,28 @@ namespace Lanternvale.Rules
             var c = u.Class == null ? u.Creature : null;
             if (c == null) return "body_fall_light";
             if (c.type == CreatureType.Totem || c.rank == CreatureRank.Totem) return null;
+            if (IsTrap(c)) return null;
             var m = ProfileOf(c).Material;
             if (m == "ether") return null;
-            if (c.size >= 2.2f || c.type == CreatureType.Giant || c.type == CreatureType.Dragonkin || m == "stone") return "body_fall_heavy";
+            if (c.size >= 2.2f || c.type == CreatureType.Giant || (m == "stone" && c.size >= 1.2f)) return "body_fall_heavy";
             return "body_fall_light";
+        }
+
+        /// <summary>A mechanical trap (the barrow's dart trap, drawn as an fx_ plate on the ground): no body to drop.</summary>
+        static bool IsTrap(CreatureDef c) =>
+            c.type == CreatureType.Mechanical &&
+            (HasWord(c.id, "trap") || HasWord(c.sprite, "trap") || (c.sprite ?? "").StartsWith("fx_", StringComparison.Ordinal));
+
+        /// <summary>
+        /// Bones rattle after the fall: skeletons (bone, or a skeleton body such as the drowned dead) have no voice, so the
+        /// clatter of bone is their death cry (CombatSfx plays two quick mat_bone hits).
+        /// </summary>
+        public static bool RattlesOf(Unit u)
+        {
+            if (u == null || BodyFallOf(u) == null) return false;
+            if (MaterialOf(u) == "bone") return true;
+            var c = u.Class == null ? u.Creature : null;
+            return c != null && (HasWord(c.sprite, "skeleton") || HasWord(c.id, "skeleton"));
         }
 
         /// <summary>Armour clatters on the ground after the fall (plate and mail).</summary>

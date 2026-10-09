@@ -6,7 +6,9 @@
 #   Tools/check.sh unity          compile-check every Unity script against Unity reference assemblies (editor + player)
 #                                 and every shader pass (HLSL via glslangValidator, see Tools/shadercheck)
 #   Tools/check.sh shaders        shaders only
-#   Tools/check.sh all   [args]   core + unity
+#   Tools/check.sh audio          the procedural audio suite (Tools/sfxpreview check: determinism, clipping, spectral guard,
+#                                 material distinctness, variant variety, call-site ids, music)
+#   Tools/check.sh all   [args]   core + unity + audio
 #
 # Harness args: --grep <text> (only print data problems containing text), --filter <test name>, --sim,
 #               --no-tests, --allow-problems, --quiet
@@ -99,12 +101,18 @@ run_unity() {
   done
 }
 
+# the synthesis-time budgets are doubled here (8 s / 4 s, typical ~1 s / 0.4 s) so builds running in parallel do not
+# make the gate flaky; `sfxpreview.sh check` alone keeps the tight 4 s / 2 s budgets
+run_audio() { "$ROOT/Tools/sfxpreview/sfxpreview.sh" check --budget-ms "${LV_SFX_BUDGET_MS:-8000}" --tier0-budget-ms "${LV_SFX_TIER0_BUDGET_MS:-4000}"; }
+
 case "$MODE" in
   data)  echo "== Data validation"; run_core DataCheck false ${1+"$@"} ;;
   core)  echo "== Core (rules engine, data validation, tests)"; run_core CoreTests true ${1+"$@"} ;;
   unity) status=0; run_unity || status=1; echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" || status=1; exit $status ;;
   shaders) echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" ;;
+  audio) echo "== Audio"; run_audio ;;
   all)   status=0; echo "== Core"; run_core CoreTests true ${1+"$@"} || status=1; run_unity || status=1
-         echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" || status=1; exit $status ;;
-  *)     echo "usage: $0 data|core|unity|shaders|all [args]"; exit 2 ;;
+         echo "== Shaders"; python3 "$ROOT/Tools/shadercheck/check.py" || status=1
+         echo "== Audio"; run_audio || status=1; exit $status ;;
+  *)     echo "usage: $0 data|core|unity|shaders|audio|all [args]"; exit 2 ;;
 esac

@@ -368,7 +368,8 @@ Tools/datagen/      the scripts that first generated the class/content JSON (rea
 | `Tools/check.sh core` | compiles the whole pure-C# core, validates the data (must print `Data validation: OK`) and runs every `[Test]` |
 | `Tools/check.sh core --sim` | the same, plus the `[Sim]` balance reports and long simulations (win rates over many seeds, boss replay) |
 | `Tools/check.sh unity` | compile-checks every Unity script against Unity reference assemblies, in an **editor** configuration (with `UnityEditor`, legacy-input define) and a **player** configuration (no editor scripts, IMGUI-input path) |
-| `Tools/check.sh all` | `core` + `unity` (the default) |
+| `Tools/check.sh audio` | the procedural audio suite (`Tools/sfxpreview/sfxpreview.sh check`: determinism, clipping, spectral guard, material distinctness, variant variety, call-site ids, music) |
+| `Tools/check.sh all` | `core` + `unity` + `audio` (the default) |
 
 Harness arguments (after `data`/`core`/`all`):
 

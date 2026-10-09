@@ -55,6 +55,7 @@ namespace Lanternvale.Game
                     b.Band(t, 0.04f, 300f, 200f, 1f, 0.3f * w, 0.002f, 0.012f);
                     b.Grains(t, 0.03f, 5, GrainKind.Noise, 2000f, 5000f, 0.001f, 0.003f, 0.12f * w, 0f); // grit under the sole
                 });
+                b.Saturate(3f);
                 SmallRoom(b, 0.06f, 0.25f);
                 b.CutLows(90f);
             });

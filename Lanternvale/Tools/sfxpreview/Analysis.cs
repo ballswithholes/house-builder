@@ -159,6 +159,34 @@ namespace Lanternvale.SfxPreview
             return m;
         }
 
+        /// <summary>
+        /// Maximum normalised cross-correlation of two clips over all lags (1 = the same sound, merely shifted or scaled),
+        /// on their common first samples (at most 2^15 ≈ 0.74 s, where the character of a one-shot lives).
+        /// </summary>
+        public static float MaxXcorr(float[] a, float[] b)
+        {
+            int n = Math.Min(Math.Min(a.Length, b.Length), 1 << 15);
+            if (n <= 0) return 0f;
+            int size = 1;
+            while (size < 2 * n) size <<= 1;
+            double[] ar = new double[size], ai = new double[size], br = new double[size], bi = new double[size];
+            double ea = 0, eb = 0;
+            for (int i = 0; i < n; i++) { ar[i] = a[i]; br[i] = b[i]; ea += a[i] * (double)a[i]; eb += b[i] * (double)b[i]; }
+            if (ea <= 1e-12 || eb <= 1e-12) return 0f;
+            Fft(ar, ai);
+            Fft(br, bi);
+            // A · conj(B), then the inverse transform as conj(FFT(conj(X))) / size
+            for (int i = 0; i < size; i++)
+            {
+                double re = ar[i] * br[i] + ai[i] * bi[i], im = ai[i] * br[i] - ar[i] * bi[i];
+                ar[i] = re; ai[i] = -im;
+            }
+            Fft(ar, ai);
+            double best = 0;
+            for (int i = 0; i < size; i++) best = Math.Max(best, Math.Abs(ar[i]) / size);
+            return (float)(best / Math.Sqrt(ea * eb));
+        }
+
         public static ulong Hash(float[] x)
         {
             ulong h = 14695981039346656037UL;

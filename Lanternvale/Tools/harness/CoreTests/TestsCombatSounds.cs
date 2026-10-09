@@ -330,6 +330,87 @@ namespace Lanternvale.Tests
             Assert(CombatSounds.BodyFallOf(null) == null && CombatSounds.MaterialOf(null) == "flesh" && CombatSounds.VoiceOf(null) == "none", "null units are safe");
         }
 
+        [Test]
+        public static void DeathVocalsAndFallsFollowTheBody()
+        {
+            Unit M(string id) => RulesTestUtil.Mob(id, 20);
+            // dragons: whelps squeal high and soft, drakes and Vyrmathra boom; only the big ones land heavy
+            var whelp = M("cr_r2_ashborn_whelp");
+            var drake = M("cr_r2_emberjaw");
+            var vyr = M("cr_r2_vyrmathra");
+            foreach (var d in new[] { whelp, drake, vyr }) Assert(CombatSounds.VocalOf(d) == "vo_dragon_roar", d.Creature.id + " roars");
+            AssertNear(CombatSounds.VocalPitchOf(whelp), 1.8f, 0.01f, "a 1.1 m whelp roars at 1.8 (a squeal, not Vyrmathra's boom)");
+            AssertNear(CombatSounds.VocalPitchOf(drake), 1f, 0.01f, "a 4.2 m drake roars at 1");
+            AssertNear(CombatSounds.VocalPitchOf(vyr), 0.85f, 0.01f, "Vyrmathra is the deepest");
+            Assert(CombatSounds.VocalVolumeOf(whelp, false) < CombatSounds.VocalVolumeOf(vyr, false), "whelps are softer");
+            foreach (var id in new[] { "cr_r2_ashborn_whelp", "cr_r2_drake_whelp", "cr_sr_drake_whelp", "cr_sr_drake_whelp_minion" })
+                Assert(CombatSounds.BodyFallOf(M(id)) == "body_fall_light", id + ": a whelp lands light");
+            Assert(CombatSounds.BodyFallOf(drake) == "body_fall_heavy" && CombatSounds.BodyFallOf(vyr) == "body_fall_heavy", "drakes land heavy");
+
+            // big beasts roar (not a 650 Hz yelp); small ones still yelp
+            var yeti = M("cr_sr_yeti");
+            var frostclaw = M("cr_r2_frostclaw");
+            Assert(CombatSounds.VocalOf(yeti) == "vo_dragon_roar" && CombatSounds.VocalOf(frostclaw) == "vo_dragon_roar", "yetis and Frostclaw roar");
+            AssertNear(CombatSounds.VocalPitchOf(yeti), 1.6f, 0.01f, "a 2.8 m yeti roars high");
+            AssertNear(CombatSounds.VocalPitchOf(frostclaw), 1.34f, 0.01f, "5 m Frostclaw roars lower");
+            var wolf = M("cr_wolf");
+            Assert(CombatSounds.VocalOf(wolf) == "vo_beast_yelp" && CombatSounds.VocalPitchOf(wolf) == CombatSounds.SizePitchOf(wolf), "a wolf still yelps");
+
+            // spiders and crocolisks do not yelp
+            foreach (var id in new[] { "cr_spider", "cr_dg2_silkwidow", "cr_dg2_spiderling", "cr_mf_crocolisk", "cr_dg5_vault_snapjaw" })
+            {
+                var u = M(id);
+                Assert(CombatSounds.VocalOf(u) == null, id + ": no yelp");
+                Assert(CombatSounds.BodyFallOf(u) == "body_fall_light", id + ": still lands");
+            }
+
+            // the barrow's dart trap: no body to drop, a spring click-thump instead of a thrown rock
+            var trap = M("cr_dg4_dart_trap");
+            Assert(CombatSounds.BodyFallOf(trap) == null && CombatSounds.VocalOf(trap) == null, "a dart trap vanishes silently");
+            Assert(CombatSounds.ReleaseOf(trap, School.Physical, Db.Ability("cr_dg4_poison_dart")) == "xbow_release", "the trap shoots with a click-thump");
+            Assert(CombatSounds.AttackLayerOf(trap, false, true) == "hit_bolt", "and the dart lands like a bolt");
+            var dummy = M("cr_training_dummy");
+            Assert(CombatSounds.BodyFallOf(dummy) == "body_fall_light", "the training dummy still topples");
+            Assert(CombatSounds.BodyFallOf(M("cr_r2_ash_elemental")) == "body_fall_heavy", "a big stone elemental lands heavy");
+
+            // skeletons rattle as they fall (they have no voice); a beast does not
+            foreach (var id in new[] { "cr_dg3_skeleton", "cr_dg4_huscarl", "cr_sh2_restless_bones", "cr_dg3_drowned_dead" })
+            {
+                var u = M(id);
+                Assert(CombatSounds.VocalOf(u) == null && CombatSounds.RattlesOf(u), id + ": bones rattle");
+            }
+            Assert(!CombatSounds.RattlesOf(wolf) && !CombatSounds.RattlesOf(null), "flesh does not rattle");
+
+            // female bodies grunt higher (heroes, companions, witches); male ones keep the pitch
+            var hunter = Bare(ClassId.Hunter);
+            var warrior = Bare(ClassId.Warrior);
+            Assert(CombatSounds.IsFemaleArt(hunter) && !CombatSounds.IsFemaleArt(warrior), "the Hunter hero has a female body, the Warrior a male one");
+            AssertNear(CombatSounds.VocalPitchOf(hunter), 1.35f, 1e-4f, "a female hero grunts a fourth higher");
+            AssertNear(CombatSounds.VocalPitchOf(warrior), 1f, 1e-4f, "a male hero keeps pitch 1");
+            var lys = Bare(ClassId.Mage);
+            lys.Sprite = "comp_lys";
+            Assert(CombatSounds.VocalOf(lys) == "vo_humanoid_grunt" && CombatSounds.VocalPitchOf(lys) > 1.3f, "companion Lys grunts higher");
+            var torvan = Bare(ClassId.Warrior);
+            torvan.Sprite = "comp_torvan";
+            AssertNear(CombatSounds.VocalPitchOf(torvan), 1f, 1e-4f, "Torvan does not");
+            foreach (var id in new[] { "cr_mf_mire_hag", "cr_mf_auntie_gall", "cr_r1_mother_mire" })
+            {
+                var hag = M(id);
+                Assert(CombatSounds.VocalPitchOf(hag) > CombatSounds.SizePitchOf(hag) * 1.3f && CombatSounds.VocalPitchOf(hag) <= 1.4f, id + " grunts higher (≤ 1.4)");
+            }
+            Assert(CombatSounds.VocalOf((Unit)null) == null && CombatSounds.VocalPitchOf(null) == 1f, "null units are safe");
+
+            // every creature in data: a known (or no) vocal at a playable pitch
+            foreach (var c in Db.Creatures.Values)
+            {
+                var u = UnitFactory.CreateCreature(Db, c, Math.Max(1, c.levelMin));
+                var vocal = CombatSounds.VocalOf(u);
+                Assert(vocal == null || CombatSounds.IsKnownId(vocal), c.id + " vocal " + vocal);
+                float p = CombatSounds.VocalPitchOf(u);
+                Assert(p >= 0.8f && p <= 1.8f, c.id + " vocal pitch " + p);
+            }
+        }
+
         // ------------------------------------------------------------------ outcomes, spells
 
         [Test]

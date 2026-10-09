@@ -43,6 +43,7 @@ show distinct modal lines, bands and decay shapes.
 | no synthesis errors; cold `GeneratePcm` ≤ `--budget-ms` (4000) and tier 0 ≤ `--tier0-budget-ms` (2000) | boot-time regressions (the game synthesizes on a worker thread at boot) |
 | bit-identical output: parallel vs single thread vs repeated run | non-determinism, shared state between threads |
 | every recipe publishes `id`, `id#1` … `id#K` (nothing more); the plain id is the same array as `#1`; K ≥ the §4 minimum (4 for hit_/mat_/swing/footstep ids, 2 otherwise); variants differ | the WP-A/WP-B key contract (`Sfx` groups variants by base id) |
+| variant variety: outside the jingles (`hooks`) and the byte-pinned originals, no two variants of an id have a maximum normalised cross-correlation of 0.95 or more (first 0.74 s, every lag) | a round robin of one waveform with different noise (impact_arcane once measured 1.000, shout_horn 0.999) |
 | every id of `Docs/Expansion.md` §4 and all 24 original ids exist | missing ids |
 | the original UI/reward clips (`ui_*`, `heal`, `buff`, `debuff`, `death`, `level_up`, `quest`, `coin`, `chest_open`, `door`, `cast_start`) are byte-identical to the pre-expansion recipes (FNV hashes in `Spec.cs`) | accidental changes to the cosy UI sounds |
 | every layered clip: finite, peak ≤ 0.9 and within 5 % of the declared peak, \|DC\| < 0.01, last 10 ms below −40 dBFS, length within the declared bounds | clipping, NaN, clicks, cut tails |

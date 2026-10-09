@@ -30,7 +30,7 @@ Paths: `S/` = `Lanternvale/Assets/Lanternvale/Scripts/`, `D/` = `Lanternvale/Ass
 * **Verify before committing:**
   `cd Lanternvale && LV_BUILD_DIR=/tmp/claude-lv-<yourkey> Tools/check.sh all`.
   The result must show `Data validation: OK`, every test passing (the count grows; nothing may fail), `compile OK`
-  twice, and every shader stage OK. Delete your `LV_BUILD_DIR` when you are done, because disk space is limited.
+  twice, every shader stage OK and `sfxpreview check: N passed, 0 failed`. Delete your `LV_BUILD_DIR` when you are done, because disk space is limited.
   Visual work also runs `Lanternvale/Tools/preview3d/preview3d.sh` and is judged by looking at the renders with the
   Read tool. Audio work uses `Lanternvale/Tools/sfxpreview` (created by the audio-synth builder).
 * **Integrate continuously (rebase + fast-forward).** When your work is committed and green in your worktree:

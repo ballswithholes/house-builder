@@ -1,6 +1,7 @@
 // Spell recipes: per-school wind-ups (cast_<school>; cast_start stays as the fallback), upgraded school impacts,
 // lightning, the warrior's horn-call shout and the Thunder Clap stomp. Wind-ups swell towards the release
-// (UnitView.CastReleaseTime ≈ 0.45 s); impacts carry a transient so they read on small speakers.
+// (UnitView.CastReleaseTime ≈ 0.45 s) and peak just before it (≈ 0.38–0.42 s; CombatSfx speeds them up with the
+// presentation); impacts carry a transient so they read on small speakers.
 namespace Lanternvale.Game
 {
     internal static partial class SfxSynth
@@ -19,8 +20,8 @@ namespace Lanternvale.Game
 
             r.Add("cast_fire", 1, 2, 0.45f, 0.8f, (b, v) =>
             {
-                b.Band(0f, 0.65f, 400f, b.Jit(2600f, 0.1f), 0.8f, 0.45f, 0.75f, 0f);              // inhale: rising, swelling
-                b.Band(0.05f, 0.6f, 160f, 320f, 0.9f, 0.3f, 0.8f, 0f);                             // low roar
+                b.Band(0f, 0.65f, 400f, b.Jit(2600f, 0.1f), 0.8f, 0.45f, 0.6f, 0f);               // inhale: rising, swelling
+                b.Band(0.05f, 0.6f, 160f, 320f, 0.9f, 0.3f, 0.6f, 0f);                             // low roar
                 b.Crackle(0.15f, 0.55f, 45f, 0.25f);
                 b.Grains(0.2f, 0.45f, 12, GrainKind.Click, 1500f, 4000f, 0.002f, 0.006f, 0.12f, 0f); // embers pop
                 b.CutLows(90f);
@@ -28,26 +29,26 @@ namespace Lanternvale.Game
             r.Add("cast_frost", 1, 2, 0.42f, 0.85f, (b, v) =>
             {
                 float f = b.U(2400f, 2800f);
-                b.Swell(0f, 0.7f, new[] { f, f * 1.34f, f * 1.68f, f * 2.41f }, 0.35f, 0.7f, 7f);  // glassy shimmer
+                b.Swell(0f, 0.7f, new[] { f, f * 1.34f, f * 1.68f, f * 2.41f }, 0.35f, 0.55f, 7f); // glassy shimmer
                 b.Grains(0.1f, 0.55f, 24, GrainKind.Metal, 4000f, 9000f, 0.003f, 0.01f, 0.12f, 0f); // crystals forming
-                b.Band(0f, 0.7f, 6000f, 8000f, 0.7f, 0.12f, 0.7f, 0f);                             // cold air
+                b.Band(0f, 0.7f, 6000f, 8000f, 0.7f, 0.12f, 0.55f, 0f);                            // cold air
                 SmallRoom(b, 0.15f, 0.5f);
                 b.CutLows(400f);
             });
             r.Add("cast_arcane", 1, 2, 0.42f, 1.1f, (b, v) =>
             {
                 float f = b.U(560f, 640f);
-                b.Fm(0f, 0.65f, f, 1.41f, 0.2f, 3.2f, 0.32f, 0.5f, 0.4f, f * 1.12f);              // FM shimmer, index rising
-                b.Swell(0f, 0.65f, new[] { f * 2f, f * 3f, f * 4.24f }, 0.18f, 0.85f, 11f);         // reverse swell
+                b.Fm(0f, 0.65f, f, 1.41f, 0.2f, 3.2f, 0.32f, 0.38f, 0.4f, f * 1.12f);             // FM shimmer, index rising
+                b.Swell(0f, 0.65f, new[] { f * 2f, f * 3f, f * 4.24f }, 0.18f, 0.6f, 11f);          // reverse swell
                 b.Grains(0.25f, 0.4f, 10, GrainKind.Metal, 3000f, 7000f, 0.005f, 0.015f, 0.1f, 0f);
                 SmallRoom(b, 0.18f, 0.6f);
                 b.CutLows(150f);
             });
             r.Add("cast_shadow", 1, 2, 0.45f, 1.2f, (b, v) =>
             {
-                b.Voice(0f, 0.7f, b.U(75f, 95f), b.U(100f, 115f), VowelU, FormantGains, 0.3f, 0.45f, 0.12f, 0.35f, 0.02f, 0.5f); // low growl
-                b.Whoosh(0f, 0.7f, 1800f, 3500f, 1.1f, 0.22f, 0.8f, 2f, 7f, 0.6f);                // whisper
-                b.Band(0f, 0.7f, 300f, 600f, 1.2f, 0.25f, 0.85f, 0f);                              // reversed swell
+                b.Voice(0f, 0.7f, b.U(75f, 95f), b.U(100f, 115f), VowelU, FormantGains, 0.3f, 0.36f, 0.12f, 0.35f, 0.02f, 0.5f); // low growl
+                b.Whoosh(0f, 0.7f, 1800f, 3500f, 1.1f, 0.22f, 0.58f, 2f, 7f, 0.6f);               // whisper
+                b.Band(0f, 0.7f, 300f, 600f, 1.2f, 0.25f, 0.6f, 0f);                               // reversed swell
                 b.Reverb(0.8f, 0.2f, 0.6f, 0.5f, 12f);
                 b.CutLows(70f);
             });
@@ -78,12 +79,12 @@ namespace Lanternvale.Game
             r.Add("cast_lightning", 1, 2, 0.45f, 0.8f, (b, v) =>
             {
                 // electric hum: a square at ~120 Hz through a band-pass, getting louder, plus a rising crackle
-                b.Tone(0f, 0.7f, b.U(115f, 125f), 122f, 0.25f, 0.5f, 0.6f, SynthBuffer.Wave.Square, 0f, 0f, 1400f);
-                b.Whoosh(0f, 0.7f, 2500f, 6000f, 0.8f, 0.2f, 0.85f, 2f, 50f, 0.7f);
+                b.Tone(0f, 0.7f, b.U(115f, 125f), 122f, 0.25f, 0.38f, 0.6f, SynthBuffer.Wave.Square, 0f, 0f, 1400f);
+                b.Whoosh(0f, 0.7f, 2500f, 6000f, 0.8f, 0.2f, 0.6f, 2f, 50f, 0.7f);
                 for (int i = 0; i < 18; i++)
                 {
-                    float t = 0.7f * (float)System.Math.Sqrt(b.U(0f, 1f));                     // denser towards the release
-                    b.Click(t, b.U(0.3f, 1.2f), 3000f, b.U(0.15f, 0.4f) * (0.3f + t));
+                    float t = 0.45f * (float)System.Math.Sqrt(b.U(0f, 1f));                    // denser towards the release
+                    b.Click(t, b.U(0.3f, 1.2f), 3000f, b.U(0.15f, 0.4f) * (0.3f + t * 1.55f));
                 }
                 b.CutLows(90f);
             });
@@ -112,12 +113,13 @@ namespace Lanternvale.Game
             });
             r.Add("impact_arcane", 0, 2, 0.6f, 0.8f, (b, v) =>
             {
-                b.Tone(0f, 0.65f, 880f, 330f, 0.4f, 0.005f, 0.22f, SynthBuffer.Wave.Sine, 9f, 0.03f);
-                b.Tone(0f, 0.65f, 1320f, 495f, 0.18f, 0.005f, 0.2f, SynthBuffer.Wave.Sine, 9f, 0.03f);
+                float f0 = v == 1 ? 880f : 784f, vib = b.U(7f, 11f);                             // A5 / G5: two distinct strikes
+                b.Tone(0f, 0.65f, f0, f0 * 0.375f, 0.4f, 0.005f, 0.22f, SynthBuffer.Wave.Sine, vib, 0.03f);
+                b.Tone(0f, 0.65f, f0 * 1.5f, f0 * 0.5625f, 0.18f, 0.005f, 0.2f, SynthBuffer.Wave.Sine, vib, 0.03f);
                 b.Thump(0f, 200f, 120f, 0.06f, 0.3f);                                            // soft thoom
                 b.Click(0.001f, 1f, 2000f, 0.3f);
-                b.Bell(0.05f, Midi(96), 0.12f, 0.06f);
-                b.Bell(0.12f, Midi(100), 0.1f, 0.06f);
+                b.Bell(0.05f, Midi(v == 1 ? 96 : 95), 0.12f, 0.06f);
+                b.Bell(0.12f, Midi(v == 1 ? 100 : 98), 0.1f, 0.06f);
                 SmallRoom(b, 0.14f, 0.5f);
                 b.CutLows(90f);
             });
@@ -140,7 +142,7 @@ namespace Lanternvale.Game
                 b.Reverb(0.9f, 0.15f, 0.6f, 0.3f, 12f);
                 b.CutLows(100f);
             });
-            r.Add("impact_nature", 0, 2, 0.62f, 0.7f, (b, v) =>
+            r.Add("impact_nature", 0, 2, 0.85f, 0.7f, (b, v) =>
             {
                 b.Strike(0.002f, b.U(200f, 300f), Modes.Wood, 0.05f, 1.1f, 0.5f, 0.7f, b.U(0.2f, 0.4f)); // wood thud
                 b.Grains(0.005f, 0.25f, 30, GrainKind.Noise, 2000f, 6000f, 0.001f, 0.004f, 0.2f, 0.08f); // rustle
@@ -161,8 +163,9 @@ namespace Lanternvale.Game
                     b.Tone(t, 0.03f, b.U(90f, 140f), 80f, a * 0.4f, 0.0005f, 0.01f, SynthBuffer.Wave.Saw, 0f, 0f, 3000f); // zzt
                     t += b.U(0.02f, 0.05f);
                 }
-                b.Thump(0.005f, 90f, 50f, 0.3f, 0.12f);                                           // rumble (quiet: the crack carries it)
-                b.Band(0.01f, 0.8f, 120f, 60f, 0.7f, 0.1f, 0.05f, 0.25f);
+                b.Thump(0.005f, 90f, 50f, 0.3f, 0.16f);                                           // rumble
+                b.Band(0.01f, 0.8f, 120f, 60f, 0.7f, 0.14f, 0.05f, 0.25f);
+                b.Saturate(3f);
                 b.Reverb(0.9f, 0.2f, 0.7f, 0.4f, 15f);
                 b.CutLows(45f);
             });
@@ -171,7 +174,7 @@ namespace Lanternvale.Game
 
             r.Add("shout_horn", 1, 2, 0.6f, 1.3f, (b, v) =>
             {
-                float f = Midi(b.UInt(0, 1) == 0 ? 55 : 57);                                      // G3 or A3
+                float f = Midi(v == 1 ? 55 : 57);                                                  // G3 or A3: one each
                 b.Horn(0f, 0.7f, f, 0.5f, 0.06f, 0.2f, 3f);
                 b.Horn(0.04f, 0.66f, f * 1.5f, 0.22f, 0.08f, 0.2f, 3f, 5.6f);                     // a fifth above
                 b.Reverb(0.9f, 0.25f, 0.7f, 0.35f, 18f);

@@ -164,12 +164,13 @@ namespace Lanternvale.Game
 
             // ---------------------------------------------------------------- target materials (K = 4)
 
-            r.Add("mat_plate", 0, 4, 0.7f, 1.1f, (b, v) =>
+            r.Add("mat_plate", 0, 4, 0.56f, 0.5f, (b, v) =>
             {
                 b.Click(T0, 0.8f, 3000f, 0.6f);
-                b.Strike(T0, b.U(420f, 540f), Modes.Plate, b.Jit(0.28f, 0.1f), 0.6f, 0.5f, 0.2f, b.U(0.2f, 0.35f), 0.015f, null, 0.92f);
-                b.Strike(T0, b.U(2000f, 3500f), Modes.FreeBar, 0.18f, 0.5f, 0.3f, 0.12f, b.U(0.1f, 0.4f)); // bright edge ring
-                b.Reverb(0.35f, 0.12f, 0.35f, 0.4f, 5f);
+                b.Strike(T0, b.U(420f, 540f), Modes.Plate, b.Jit(0.16f, 0.1f), 0.6f, 0.5f, 0.2f, b.U(0.2f, 0.35f), 0.015f, null, 0.92f);
+                b.Band(T0, 0.06f, 380f, 220f, 1f, 0.35f, 0.002f, 0.02f);                         // the body behind the plate
+                b.Strike(T0, b.U(2000f, 3500f), Modes.FreeBar, 0.1f, 0.5f, 0.3f, 0.12f, b.U(0.1f, 0.4f)); // bright edge ring
+                SmallRoom(b, 0.1f);
                 b.CutLows(150f);
             });
             r.Add("mat_mail", 0, 4, 0.7f, 0.45f, (b, v) =>
@@ -188,14 +189,16 @@ namespace Lanternvale.Game
                 b.Band(T0 + 0.005f, 0.03f, 2800f, 2100f, 1.2f, 0.55f, 0.001f, 0.006f);           // snap
                 b.Strike(T0, b.U(220f, 320f), Modes.Membrane, 0.02f, 0.8f, 0.22f, 1.2f, b.U(0.2f, 0.45f)); // padded body
                 b.Band(T0 + 0.012f, 0.08f, b.Jit(420f, 0.1f), 470f, 8f, 0.12f, 0.01f, 0.03f);    // creak of the straps
+                b.Saturate(3f);                                                                  // denser body, crest ~16 dB like its peers
                 SmallRoom(b, 0.08f);
                 b.CutLows(100f);
             });
             r.Add("mat_cloth", 0, 4, 0.65f, 0.3f, (b, v) =>
             {
-                b.Band(T0, 0.07f, 300f, 140f, 0.9f, 0.42f, 0.003f, 0.025f);                      // soft thud
-                b.Whoosh(T0, b.Jit(0.08f, 0.15f), 2200f, 3800f, 0.8f, 0.45f, 0.25f, 1.5f, b.U(35f, 50f), 0.75f); // fabric flap
+                b.Band(T0, 0.07f, 300f, 140f, 0.9f, 0.55f, 0.003f, 0.025f);                      // soft thud
+                b.Whoosh(T0, b.Jit(0.08f, 0.15f), 1200f, 2600f, 0.8f, 0.45f, 0.25f, 1.5f, b.U(35f, 50f), 0.75f); // fabric flap
                 b.Grains(T0, 0.05f, 14, GrainKind.Noise, 2000f, 5000f, 0.001f, 0.003f, 0.1f, 0f); // fibres
+                b.Filter(Biquad.Kind.LowPass, 6000f, 0.7f);
                 SmallRoom(b, 0.07f, 0.22f);
                 b.CutLows(80f);
             });
@@ -205,19 +208,22 @@ namespace Lanternvale.Game
                 b.Thump(T0, 120f, 80f, 0.03f, 0.1f);
                 b.Band(T0, 0.025f, b.Jit(2200f, 0.12f), 1300f, 1.1f, 0.7f, 0.0006f, 0.006f);     // slap
                 b.Band(T0 + 0.01f, 0.07f, 900f, 450f, 3f, 0.13f, 0.01f, 0.025f);                 // squish
+                b.Saturate(3f);                                                                  // denser body, crest ~16 dB like its peers
                 SmallRoom(b, 0.08f);
                 b.CutLows(80f);
             });
-            r.Add("mat_fur", 0, 4, 0.66f, 0.42f, (b, v) =>
+            r.Add("mat_fur", 0, 4, 0.8f, 0.42f, (b, v) =>
             {
-                b.Band(T0, 0.1f, 280f, 150f, 1f, 0.4f, 0.004f, 0.04f);                           // a furry body gives
-                b.Grains(T0, b.Jit(0.16f, 0.15f), 70, GrainKind.Noise, 4000f, 9000f, 0.0008f, 0.003f, 0.14f, 0.07f); // hairs brushing
-                b.Band(T0 + 0.01f, 0.18f, 6000f, 4500f, 0.7f, 0.18f, 0.2f, 0f);                   // long soft hiss
-                b.Band(T0, 0.02f, 1600f, 1200f, 1.1f, 0.25f, 0.001f, 0.006f);
+                b.Band(T0, 0.1f, 320f, 160f, 1f, 0.7f, 0.003f, b.Jit(0.035f, 0.15f));          // the body under the pelt gives
+                b.Thump(T0, 150f, 95f, 0.03f, 0.18f);
+                b.Band(T0, 0.04f, b.Jit(1500f, 0.12f), 900f, 0.9f, 0.8f, 0.002f, 0.012f);       // muffled slap through the fur
+                b.Grains(T0, b.Jit(0.06f, 0.15f), 30, GrainKind.Noise, 1500f, 4500f, 0.0008f, 0.003f, 0.1f, 0.03f); // hairs, short
+                b.Saturate(2.5f);
                 SmallRoom(b, 0.07f);
+                b.Filter(Biquad.Kind.LowPass, 5000f, 0.7f);
                 b.CutLows(80f);
             });
-            r.Add("mat_chitin", 0, 4, 0.7f, 0.3f, (b, v) =>
+            r.Add("mat_chitin", 0, 4, 0.85f, 0.3f, (b, v) =>
             {
                 int clicks = b.UInt(2, 3);
                 for (int k = 0; k < clicks; k++)
@@ -257,7 +263,7 @@ namespace Lanternvale.Game
                 SmallRoom(b, 0.1f);
                 b.CutLows(70f);
             });
-            r.Add("mat_ether", 0, 4, 0.62f, 0.7f, (b, v) =>
+            r.Add("mat_ether", 0, 4, 0.48f, 0.7f, (b, v) =>
             {
                 b.Thump(T0, 230f, 110f, 0.06f, 0.28f);                                           // soft whoomp
                 b.Band(T0, 0.25f, 1500f, 600f, 1.2f, 0.3f, 0.02f, 0.08f);                        // breath
@@ -266,7 +272,7 @@ namespace Lanternvale.Game
                 b.Reverb(0.6f, 0.2f, 0.6f, 0.3f, 10f);
                 b.CutLows(90f);
             });
-            r.Add("mat_ice", 0, 4, 0.7f, 0.6f, (b, v) =>
+            r.Add("mat_ice", 0, 4, 0.5f, 0.6f, (b, v) =>
             {
                 b.Click(T0, 0.4f, 4000f, 0.6f);
                 b.Click(T0 + b.U(0.006f, 0.014f), 0.4f, 4000f, 0.35f);

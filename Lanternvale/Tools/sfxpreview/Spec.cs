@@ -17,6 +17,11 @@ namespace Lanternvale.SfxPreview
             public bool Distinct;
             /// <summary>Default sheet window in seconds.</summary>
             public float SheetSeconds = 0.6f;
+            /// <summary>
+            /// Variants must be different sounds, not one waveform with noise on top (max normalised cross-correlation
+            /// below <see cref="MaxVariantXcorr"/>). Off for the jingles, whose variants repeat a motif by design.
+            /// </summary>
+            public bool Varied = true;
         }
 
         public static readonly Group[] Groups =
@@ -43,7 +48,7 @@ namespace Lanternvale.SfxPreview
                 "vo_wood_creak", "vo_stone_crumble", "vo_dragon_roar", "vo_frog_croak", "vo_gnoll_yip" } },
             new Group { Name = "footsteps", MinVariants = 4, Distinct = true, SheetSeconds = 0.25f, Ids = new[] {
                 "footstep_grass", "footstep_dirt", "footstep_leaves", "footstep_stone", "footstep_snow", "footstep_mud", "armor_jingle" } },
-            new Group { Name = "hooks", MinVariants = 2, Distinct = true, SheetSeconds = 2.4f, Ids = new[] {
+            new Group { Name = "hooks", MinVariants = 2, Distinct = true, Varied = false, SheetSeconds = 2.4f, Ids = new[] {
                 "loot_rare", "loot_epic", "loot_legendary", "set_complete", "secret_found", "door_stone", "boss_pull",
                 "raid_warning", "quest_accept", "quest_turnin", "portal_whoosh" } },
         };
@@ -93,6 +98,17 @@ namespace Lanternvale.SfxPreview
             int k = 1;
             foreach (var g in Groups) foreach (var x in g.Ids) if (x == id && g.MinVariants > k) k = g.MinVariants;
             return k;
+        }
+
+        /// <summary>Round-robin variants that sound alike defeat the round robin (impact_arcane once correlated at 1.000).</summary>
+        public const float MaxVariantXcorr = 0.95f;
+
+        /// <summary>True when the id's variants must be audibly different sounds (a Varied group; not a byte-pinned original).</summary>
+        public static bool MustVary(string id)
+        {
+            if (LegacyHashes.ContainsKey(id)) return false;
+            foreach (var g in Groups) if (g.Varied) foreach (var x in g.Ids) if (x == id) return true;
+            return false;
         }
 
         public static bool Guarded(string id)

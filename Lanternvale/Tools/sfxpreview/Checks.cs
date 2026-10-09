@@ -95,6 +95,15 @@ namespace Lanternvale.SfxPreview
                     var hashes = new HashSet<ulong>();
                     for (int v = 1; v <= r.Variants; v++) hashes.Add(Analysis.Hash(pcm[SfxSynth.VariantKey(r.Id, v)]));
                     Expect(hashes.Count == r.Variants, $"{r.Id}: all {r.Variants} variants differ");
+                    if (Spec.MustVary(r.Id))
+                    {
+                        float worst = 0f;
+                        for (int v = 1; v <= r.Variants; v++)
+                            for (int w = v + 1; w <= r.Variants; w++)
+                                worst = Math.Max(worst, Analysis.MaxXcorr(pcm[SfxSynth.VariantKey(r.Id, v)], pcm[SfxSynth.VariantKey(r.Id, w)]));
+                        Expect(worst < Spec.MaxVariantXcorr,
+                               $"{r.Id}: variants sound different (max cross-correlation {worst:0.000} < {Spec.MaxVariantXcorr})");
+                    }
                 }
             }
             foreach (var key in pcm.Keys)

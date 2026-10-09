@@ -38,10 +38,21 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------------ attacks
 
-        /// <summary>The whoosh of a melee swing, weighted by the weapon (daggers light, two-handers heavy) or the creature.</summary>
+        /// <summary>
+        /// The pitch factor that keeps a timed clip in step with a faster presentation. AudioSource playback ignores
+        /// Time.timeScale, but the blow lands at UnitView.AttackHitTime and a cast releases at UnitView.CastReleaseTime in
+        /// scaled time: at 2× a clip whose peak should precede the blow must play twice as fast. Capped at 3× (beyond that
+        /// the shift would turn a whoosh into a squeak); slow-motion and pause keep pitch 1.
+        /// </summary>
+        static float SpeedPitch => Mathf.Clamp(Time.timeScale, 1f, 3f);
+
+        /// <summary>
+        /// The whoosh of a melee swing, weighted by the weapon (daggers light, two-handers heavy) or the creature. It sits
+        /// about 5 dB under the blow (×0.45): the contact, not the air, carries the hit.
+        /// </summary>
         public static void Swing(Unit actor, bool offHand, Vector2 pos, float volume = 1f)
         {
-            Sfx.Play(CombatSounds.SwingOf(actor, offHand), pos, volume * 0.8f, CombatSounds.SizePitchOf(actor));
+            Sfx.Play(CombatSounds.SwingOf(actor, offHand), pos, volume * 0.45f, CombatSounds.SizePitchOf(actor) * SpeedPitch);
         }
 
         /// <summary>
@@ -123,10 +134,13 @@ namespace Lanternvale.Game
 
         // ------------------------------------------------------------------ spells
 
-        /// <summary>The wind-up of a cast: cast_fire, cast_frost… (cast_lightning for Lightning-tagged spells, cast_start for physical).</summary>
+        /// <summary>
+        /// The wind-up of a cast: cast_fire, cast_frost… (cast_lightning for Lightning-tagged spells, cast_start for
+        /// physical). The swell peaks just before the release (≈ 0.4 s at 1×) and is sped up with the presentation.
+        /// </summary>
         public static void CastWindup(AbilityDef a, School school, Vector2 pos, float volume = 1f)
         {
-            Sfx.Play(CombatSounds.CastWindupOf(a, school), pos, volume * 0.85f, 1f);
+            Sfx.Play(CombatSounds.CastWindupOf(a, school), pos, volume * 0.85f, SpeedPitch);
         }
 
         /// <summary>
@@ -152,20 +166,27 @@ namespace Lanternvale.Game
         // ------------------------------------------------------------------ deaths
 
         /// <summary>
-        /// A death (or a party member going down): the creature's vocal now, the body landing when the death animation
-        /// lays it down (scaled time, so it keeps in step at any presentation speed), plus armour clatter for mail and
-        /// plate. Spirits fade instead of falling.
+        /// A death (or a party member going down): the vocal now (sized to the body: whelps squeal where Vyrmathra
+        /// booms, big beasts roar, female bodies grunt higher), the body landing when the death animation lays it down
+        /// (scaled time, so it keeps in step at any presentation speed), plus armour clatter for mail and plate and a
+        /// rattle of bones for skeletons. Spirits fade instead of falling.
         /// </summary>
         public static void Death(Unit u, Vector2 pos, bool downed)
         {
             if (u == null) return;
             float pitch = CombatSounds.SizePitchOf(u);
-            var vocal = CombatSounds.VocalOf(CombatSounds.VoiceOf(u));
-            if (vocal != null) Sfx.Play(vocal, pos, downed ? 0.6f : 0.8f, pitch);
+            var vocal = CombatSounds.VocalOf(u);
+            if (vocal != null) Sfx.Play(vocal, pos, CombatSounds.VocalVolumeOf(u, downed), CombatSounds.VocalPitchOf(u));
             float delay = downed ? CombatSounds.DownedFallDelay : CombatSounds.DeathFallDelay;
             var fall = CombatSounds.BodyFallOf(u);
             if (fall != null) Sfx.PlayAfter(fall, delay, pos, 0.85f, pitch);
             if (fall != null && CombatSounds.ClattersOf(u)) Sfx.PlayAfter("armor_clatter", delay + 0.04f, pos, 0.65f, 1f);
+            if (CombatSounds.RattlesOf(u))
+            {
+                // two quick bone knocks (90 ms apart: clear of the 30 ms per-id rate limit)
+                Sfx.PlayAfter("mat_bone", delay, pos, 0.8f, 0.95f);
+                Sfx.PlayAfter("mat_bone", delay + 0.09f, pos, 0.55f, 1.12f);
+            }
         }
 
         // ------------------------------------------------------------------ world
@@ -217,8 +238,8 @@ namespace Lanternvale.Game
         }
 
         /// <summary>
-        /// Session cues that have no case of their own in GameFlow.React: RaidStarted (portal and warning) and the items
-        /// builder's set-bonus Toast (Id "set_complete").
+        /// The sounds of session events whose GameFlow.React case plays none itself: RaidStarted (portal and warning; React
+        /// only shows its toast) and the items builder's set-bonus Toast (Id "set_complete").
         /// </summary>
         public static void SessionCue(SessionEvent e)
         {
