@@ -77,6 +77,27 @@ namespace Lanternvale.Tests
             Assert(rageNow >= 4, $"the opening swing's rage arrives in the same turn ({rageNow}/6 hit)");
         }
 
+        /// <summary>A turn mostly lost to a stun (Death Roll) makes no swing, so it has no opening swing either: HasOpeningSwing
+        /// (the hover text "your first swing lands at once", the rage fallback) agrees with OpeningSwing.</summary>
+        [Test]
+        public static void OpeningSwing_NotPromised_InAStunShortenedTurn()
+        {
+            var (b, w, foe) = Duel(20);
+            var speed = StatCalculator.GetWeapon(w, WeaponSlot.MainHand).Speed;
+            Assert(b.HasOpeningSwing(w), "a full turn: the opening swing is to come");
+            w.SwingMain = 0f;
+            w.SwingTimeThisTurn = speed * 0.5f / w.Stats.MeleeHaste;   // the stun took most of the turn
+            Assert(!b.HasOpeningSwing(w), "too little swing time left this turn: no opening swing promised");
+            int c0 = b.Events.Count;
+            Assert(b.UseAbility(w, "attack", foe).Ok, "attack");
+            Assert(MainHandSwings(b, w, c0) == 0 && !w.OpeningSwingUsed, "and none lands");
+            Assert(!b.HasOpeningSwing(w), "still none this turn");
+            b.EndTurn(w);
+            SkipTo(b, w);
+            if (!w.OpeningSwingUsed)
+                Assert(b.HasOpeningSwing(w), "a full turn later the opening swing is to come again");
+        }
+
         /// <summary>A melee strike (Rend) starts the auto attack; the opening swing follows it, after the strike has resolved.
         /// Enemies get the same rule (symmetric): their first swing lands when they engage.</summary>
         [Test]

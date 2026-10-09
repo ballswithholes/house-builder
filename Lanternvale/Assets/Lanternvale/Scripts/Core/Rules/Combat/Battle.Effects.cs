@@ -311,7 +311,8 @@ namespace Lanternvale.Rules
         /// (<see cref="ComboPointsOn"/>). ComboTarget is the unit the points were last built on (frames, combat log).</summary>
         public void AddComboPoints(Unit u, Unit target, int n)
         {
-            if (n == 0 || target == null) return;
+            // a builder that lands the killing blow resolves after the battle ended (and cleared the points): nothing to add
+            if (n == 0 || target == null || u == null || IsOver) return;
             if (u.ComboTarget != target) u.ComboTarget = target;
             int before = u.ComboPoints;
             u.ComboPoints = MathUtil.Clamp(u.ComboPoints + n, 0, (int)RulesConstants.MaxComboPoints);

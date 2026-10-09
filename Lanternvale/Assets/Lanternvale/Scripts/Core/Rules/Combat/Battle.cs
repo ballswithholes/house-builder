@@ -81,6 +81,8 @@ namespace Lanternvale.Rules
         {
             if (u == null || Units.Contains(u)) return;
             Units.Add(u);
+            // nobody brings combo points into a fight (here, not in Begin: an opener such as Ambush builds them before Begin)
+            u.ComboPoints = 0; u.ComboTarget = null;
             if (InCombat && !Started) u.Engaged = false;   // a new fight: nobody has fought in it yet (Charge, Sap-like openers)
             if (!Meters.ContainsKey(u)) Meters[u] = new UnitMeters();
             if (u.IsAlive) Pathfinder?.SetUnit(u.Id, u.Position, u.Radius);

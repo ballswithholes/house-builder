@@ -82,7 +82,8 @@ All return `null` on success or a reason (also stored in `LastError` and raised 
     swing** lands at once (`Battle.OpeningSwing`, CoreAPI.md); then the strike is checked again and used when it is
     affordable now, else the reason is shown ("…Your swings build more rage at the end of the turn."). Hover text:
     "Rend: Not enough rage (10) — click to move 2.1 m and attack Grey Wolf: your first swing lands at once and builds
-    rage, then Rend follows if it can". Already swinging in reach with the opening swing spent → the plain refusal.
+    rage, then Rend follows if it can". Already swinging in reach with the opening swing spent, or in a turn a stun shortened below one swing
+    (`HasOpeningSwing` is false then too) → the plain refusal.
   * **Minimum range** (Charge 8–25 yd, hunter shots): a target that is too close is still a valid target (dimmed); the
     click **steps back** out of the minimum range first (a reachable spot in range and in sight, nearest first), then
     uses the ability ("Move 5.4 m, then Charge → Grey Wolf"). The battle formation puts a tank about 2 m from the enemies,
@@ -146,7 +147,9 @@ Energy is +60 per turn and a builder (Sinister Strike, 45) adds one point on a h
 per turn. Because fights are short, **combo points belong to the rogue for the whole battle**: `Battle.ComboPointsOn(u,
 target)` is simply `u.ComboPoints`. They carry over when the target dies (a companion took the kill) or when the rogue
 builds on or finishes another enemy (`ComboTarget` names the unit they were last built on). A landed finisher spends
-them all, an avoided one keeps them, and Vanish and the end of the battle clear them. Finisher numbers: `Tooltip.Magnitude(..,
+them all, an avoided one keeps them, and Vanish and the end of the battle clear them (a builder landing the killing blow
+adds nothing after the battle ended, and `Battle.AddUnit` clears them, so no fight starts with points; an opener such as
+Cheap Shot builds its own before `Begin`). Finisher numbers: `Tooltip.Magnitude(..,
 rank, comboPoints)` gives the total at a given count (`Tooltip.PerComboPoint` = `perCombo` + the rank growth of
 `RoguePerComboByRank` + `apCoefPerCombo` × AP, 0.07 for Eviscerate). Description tokens `{0@3}` print effect 0 at 3
 points, so the bar tooltip shows the rogue's own rank and attack power.

@@ -159,7 +159,7 @@ AreaShapeInfo shape = Targeting.AreaOf(unit, ability, target, point, AbilityMods
 List<Unit> hit = Targeting.AreaUnits(battle, unit, ability, target, point, mods);
 bool seen = battle.CanSee(observer, target);       // stealth
 float reach = battle.MeleeReachOf(a, b); bool inMelee = battle.InMeleeRange(a, b);
-bool opening = battle.HasOpeningSwing(unit);       // its first melee swing of the battle is still to come (lands at once)
+bool opening = battle.HasOpeningSwing(unit);       // its first melee swing of the battle is still to come (lands at once; not in a turn a stun shortened below one swing)
 float held = battle.HeldForQueuedSwing(unit, ResourceType.Rage, out AbilityDef queued); // rage a queued Heroic Strike holds
 ```
 

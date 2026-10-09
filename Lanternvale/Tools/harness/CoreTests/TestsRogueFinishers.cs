@@ -272,6 +272,47 @@ namespace Lanternvale.Tests
             Assert(r.ComboPoints == 0 && r.ComboTarget == null, "combo points do not leave the battle");
         }
 
+        /// <summary>A builder that lands the killing blow resolves after the battle ended: the point it would add does not leak
+        /// out of the fight, and no unit brings combo points into a new one (an opener still builds its own).</summary>
+        [Test]
+        public static void ComboPoints_KillingBlowBuilder_DoesNotLeakIntoTheNextFight()
+        {
+            int kills = 0;
+            for (int seed = 1; seed <= 4; seed++)
+            {
+                var b = NewBattle(seed, new Inventory());
+                var r = Hero(ClassId.Rogue, 8).At(20f, 20f);
+                r.AutoPlay = false;
+                var foe = Mob(Foe, 8).At(22f, 20f);
+                b.AddUnit(r);
+                b.AddUnit(foe);
+                b.Begin();
+                SkipTo(b, r);
+                foe.Health = 1f;
+                for (int k = 0; k < 20 && !b.IsOver; k++)
+                {
+                    r.Energy = r.MaxResource(ResourceType.Energy);
+                    r.TimeLeft = 6f;
+                    b.UseAbility(r, SS, foe, null, 0);
+                }
+                Assert(b.IsOver, "Sinister Strike killed the last enemy");
+                kills++;
+                Assert(r.ComboPoints == 0 && r.ComboTarget == null, $"seed {seed}: no combo point after the battle ({r.ComboPoints})");
+                // a unit still holding points (an older save, a leak) starts the next fight with none
+                r.ComboPoints = 3;
+                r.ComboTarget = foe;
+                var b2 = NewBattle(seed + 10, new Inventory());
+                var foe2 = Mob(Foe, 8).At(22f, 20f).Tough(1000f);
+                b2.AddUnit(r);
+                b2.AddUnit(foe2);
+                Assert(r.ComboPoints == 0 && r.ComboTarget == null, "joining a battle clears combo points");
+                b2.Begin();
+                SkipTo(b2, r);
+                Assert(b2.ComboPointsOn(r, foe2) == 0 && !b2.CanUse(r, Db.Ability(Evis), foe2).Ok, "Eviscerate needs a builder first");
+            }
+            Assert(kills == 4, "every seed ended the fight");
+        }
+
         [Test]
         public static void Eviscerate_TooltipShowsTheRogue_sOwnRank()
         {

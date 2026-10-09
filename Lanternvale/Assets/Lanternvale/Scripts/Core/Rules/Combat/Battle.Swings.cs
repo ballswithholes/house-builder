@@ -100,8 +100,18 @@ namespace Lanternvale.Rules
         /// attacking) instead of at the end of the turn. Rage users get their first rage from it, so a warrior can use a
         /// rage ability in the turn he engages. For UI previews ("your first swing lands at once").
         /// </summary>
-        public bool HasOpeningSwing(Unit u) =>
-            u != null && InCombat && Started && !u.OpeningSwingUsed && StatCalculator.GetWeapon(u, WeaponSlot.MainHand).Valid;
+        public bool HasOpeningSwing(Unit u)
+        {
+            if (u == null || !InCombat || !Started || u.OpeningSwingUsed) return false;
+            var main = StatCalculator.GetWeapon(u, WeaponSlot.MainHand);
+            if (!main.Valid) return false;
+            // in its own turn, only when this turn makes a swing at all (OpeningSwing's check: a turn mostly lost to a
+            // stun keeps its timing, so the first swing waits)
+            return ActiveUnit != u || !u.InOwnTurn || OpeningSwingTimeLeft(u, main.Speed);
+        }
+
+        bool OpeningSwingTimeLeft(Unit u, float speed) =>
+            u.SwingMain + u.SwingTimeThisTurn * u.Stats.MeleeHaste >= speed - 1e-4f;
 
         /// <summary>
         /// The opening swing (see <see cref="HasOpeningSwing"/>): during the unit's own turn, when its melee auto attack runs
@@ -121,7 +131,7 @@ namespace Lanternvale.Rules
             if (!main.Valid) return;
             var st = u.Stats;
             // only a swing this turn would make anyway (a turn mostly lost to a stun keeps its timing)
-            if (u.SwingMain + u.SwingTimeThisTurn * st.MeleeHaste < main.Speed - 1e-4f) return;
+            if (!OpeningSwingTimeLeft(u, main.Speed)) return;
             u.SwingMain -= main.Speed;
             u.FaceTowards(t.Position);
             MainHandSwing(u, t);
