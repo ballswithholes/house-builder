@@ -222,12 +222,19 @@ namespace Lanternvale.Game
             }
             if (npcByView.TryGetValue(v, out var npc))
             {
-                BeginInteraction(PendingKind.Talk, npc.Id, v.FeetPosition, v, null, GameSession.InteractionRange - 0.35f);
+                BeginInteraction(PendingKind.Talk, npc.Id, v.FeetPosition, v, null, TalkRange(v));
                 return;
             }
             if (enemyByView.TryGetValue(v, out var enemy) && enemy.Encounter != null)
                 ClickEnemy(enemy);
         }
+
+        /// <summary>
+        /// Where the talker stops in front of someone: 2.15 m for people, further out for a big body (NpcDef.scale: the
+        /// 1.6× frost drake Glimmerwing reaches ~2.3 m from her feet), so the speaker turning to face the talker does
+        /// not swing her chest and wings through him. GameSession.TalkTo has no range check.
+        /// </summary>
+        static float TalkRange(UnitView v) => Mathf.Max(GameSession.InteractionRange - 0.35f, v != null ? v.BodyReach + 0.7f : 0f);
 
         // a click that selects a companion is not followed by a talk on the next click within this time (double click)
         const float TalkClickGuard = 0.35f;
@@ -280,7 +287,7 @@ namespace Lanternvale.Game
                     return "Not now.";   // that report started a fight, a dialogue or a journey
                 if (s.Leader != talker) return "Not now.";   // SetLeader refused (Select toasted why)
             }
-            BeginInteraction(PendingKind.Talk, id, cv.FeetPosition, cv, null, GameSession.InteractionRange - 0.35f);
+            BeginInteraction(PendingKind.Talk, id, cv.FeetPosition, cv, null, TalkRange(cv));
             return null;
         }
 

@@ -262,7 +262,9 @@ exempt), 24 pooled sources. The pure bookkeeping is `Core/Util/SfxBank.cs` (test
 
 **Delayed play.** `Sfx.PlayAfter` queues on `Time.time` (scaled) in `SfxPlayer.Update`, so a delay shrinks at combat
 speed 2–8× and waits while the game is paused (`timeScale` 0). Used for the body fall (`CombatSounds.DeathFallDelay`
-0.62 s, `DownedFallDelay` 0.46 s — inside the lie window of `UnitAnimator` Death/Fall) and the raid warning.
+0.62 s, `DownedFallDelay` 0.46 s — inside the lie window of `UnitAnimator` Death/Fall) and the raid warning. A
+skeleton's two-knock bone rattle is spaced `CombatSounds.BoneRattleScaledGap(Time.timeScale)` apart: 90 ms of real
+time at any speed, so the real-time rate limit never swallows the second knock.
 
 **Mapping (`CombatSounds`, tested by `TestsCombatSounds`).**
 * Weapon layer by `WeaponType` (swords and polearms → blade, axes → axe, maces/staves/shields → blunt, daggers and

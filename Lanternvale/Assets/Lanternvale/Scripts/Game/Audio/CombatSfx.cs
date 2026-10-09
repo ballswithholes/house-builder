@@ -183,9 +183,10 @@ namespace Lanternvale.Game
             if (fall != null && CombatSounds.ClattersOf(u)) Sfx.PlayAfter("armor_clatter", delay + 0.04f, pos, 0.65f, 1f);
             if (CombatSounds.RattlesOf(u))
             {
-                // two quick bone knocks (90 ms apart: clear of the 30 ms per-id rate limit)
+                // two quick bone knocks, 90 ms apart in real time at any presentation speed: the 30 ms per-id rate
+                // limit counts real time while PlayAfter waits in scaled time
                 Sfx.PlayAfter("mat_bone", delay, pos, 0.8f, 0.95f);
-                Sfx.PlayAfter("mat_bone", delay + 0.09f, pos, 0.55f, 1.12f);
+                Sfx.PlayAfter("mat_bone", delay + CombatSounds.BoneRattleScaledGap(Time.timeScale), pos, 0.55f, 1.12f);
             }
         }
 

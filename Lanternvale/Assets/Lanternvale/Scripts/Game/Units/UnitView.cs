@@ -124,6 +124,9 @@ namespace Lanternvale.Game
         public bool Floating;
 
         public Vector2 FeetPosition => pos;
+        /// <summary>How far the body reaches from <see cref="FeetPosition"/> in any facing (footprint radius plus the
+        /// half-length of a long body, times the size scale): a big drake's chest and wings are ~2.3 m out.</summary>
+        public float BodyReach => body != null ? (body.Model.Radius + body.Model.HalfLength) * CurrentScale : 0.35f;
         public Vector2 Position => pos;
         /// <summary>±1: the sign of the facing direction's x (+1 = facing right).</summary>
         public int Facing => facingSign;

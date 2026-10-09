@@ -145,7 +145,7 @@ Hovering an NPC with a `bark` shows it as a speech bubble above it (once per 16 
 |---|---|
 | Left click ground | `Session.PlanPartyMove` → leader and followers walk their paths (3.4 m/s, jogging up to 4.8 m/s on long trips; followers scale their speed to arrive together); a small ground ring marks the destination (red when unreachable). Holding the button keeps re-planning towards the cursor. |
 | Left click party member | `Select(u)` → becomes the leader (`SetLeader`), camera follows |
-| Left click NPC / companion | walk until within `InteractionRange − 0.35` m → both face each other → `TalkTo(id)` (a bark-only NPC answers with a bubble) |
+| Left click NPC / companion | walk until within `InteractionRange − 0.35` m (a big body further out: its `UnitView.BodyReach` + 0.7 m, so the 1.6× drake Glimmerwing turning to face the talker does not swing through him) → both face each other → `TalkTo(id)` (a bark-only NPC answers with a bubble) |
 | Left click chest | walk next to it → `OpenChest`; when `Locked`: a party rogue knowing `rogue_pick_lock` tries `PickLock`, otherwise `TryUnlockChest` (results arrive as `SkillCheck`/`ChestOpened`/`LootOpened`; a failed roll says "The lock holds. You can try again.") |
 | Left click transition marker | walk to it (entering the rectangle travels by itself), else `UseTransition` |
 | Left click prop with an interact id | walk close → `Session.InteractProp`: a prop with `PropDef.dialogue` starts that conversation, others show their text (a `Toast`; "Nothing of note." when empty). Flag-hidden props and unrevealed hidden transitions are neither hovered nor clickable (`Exploration.IsPresent`) |

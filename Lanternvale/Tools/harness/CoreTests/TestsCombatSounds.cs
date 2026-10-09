@@ -528,6 +528,42 @@ namespace Lanternvale.Tests
                 "the body lands inside the death animation's lie window (0.36–0.72 s)");
         }
 
+        [Test]
+        public static void SkeletonRattleKeepsBothKnocksAtEveryPresentationSpeed()
+        {
+            // CombatSfx.Death queues two mat_bone knocks on SCALED time (Sfx.PlayAfter → SfxDelayQueue on Time.time); the
+            // player pops due items once per frame and SfxVoiceRules rate-limits per base id on UNSCALED time. Speeds
+            // are AnimationSpeed (≤ 3) × fast forward (2.5), capped at 8.
+            foreach (float fps in new[] { 30f, 60f, 144f })
+                foreach (float speed in new[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.75f, 5f, 6f, 7.5f, 8f })
+                {
+                    var rnd = new Random(7);
+                    for (int t = 0; t < 40; t++)
+                    {
+                        var q = new Lanternvale.Util.SfxDelayQueue<int>();
+                        var rules = new Lanternvale.Util.SfxVoiceRules();
+                        float dt = 1f / fps, phase = (float)rnd.NextDouble() * dt;
+                        float scaled = phase * speed, unscaled = phase;
+                        q.Add(scaled, CombatSounds.DeathFallDelay, 1);
+                        q.Add(scaled, CombatSounds.DeathFallDelay + CombatSounds.BoneRattleScaledGap(speed), 2);
+                        int started = 0;
+                        var due = new List<int>();
+                        for (int f = 1; f < 2000 && q.Count > 0; f++)
+                        {
+                            unscaled += dt; scaled += dt * speed;
+                            due.Clear();
+                            q.PopDue(scaled, due);
+                            foreach (var d in due) if (rules.TryStart("mat_bone", unscaled, f)) started++;
+                        }
+                        Assert(started == 2, $"both rattle knocks heard at {speed}x, {fps} fps (trial {t}): {started}");
+                    }
+                }
+            AssertNear(CombatSounds.BoneRattleScaledGap(1f), CombatSounds.BoneRattleGap, 1e-6f, "1x: the plain gap");
+            AssertNear(CombatSounds.BoneRattleScaledGap(0f), CombatSounds.BoneRattleGap, 1e-6f, "paused: the plain gap");
+            AssertNear(CombatSounds.BoneRattleScaledGap(float.NaN), CombatSounds.BoneRattleGap, 1e-6f, "garbage: the plain gap");
+            AssertNear(CombatSounds.BoneRattleScaledGap(8f), CombatSounds.BoneRattleGap * 8f, 1e-5f, "8x: the same real gap");
+        }
+
         // ------------------------------------------------------------------ the Game code asks only for known ids
 
         static readonly HashSet<string> LegacyAliases = new HashSet<string> { "click", "open", "close", "hit", "impact_physical", "crit", "footstep", "gold", "loot", "levelup", "chest", "cast" };

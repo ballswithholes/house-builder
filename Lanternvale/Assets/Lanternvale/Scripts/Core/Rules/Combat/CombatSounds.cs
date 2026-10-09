@@ -106,6 +106,17 @@ namespace Lanternvale.Rules
         public const float DeathFallDelay = 0.62f;
         /// <summary>Seconds from PlayDowned until the party member lies down (lie 0.18 → 0.56 s).</summary>
         public const float DownedFallDelay = 0.46f;
+        /// <summary>Real seconds between the two bone knocks of a skeleton's death rattle: well clear of the 30 ms per-id
+        /// rate limit (SfxVoiceRules.MinGap), which counts real (unscaled) time.</summary>
+        public const float BoneRattleGap = 0.09f;
+
+        /// <summary>
+        /// The second rattle knock's extra delay in scaled seconds (Sfx.PlayAfter queues on scaled time) at this
+        /// Time.timeScale: <see cref="BoneRattleGap"/> of real time at any presentation speed (up to 8× with fast
+        /// forward), so the knock is not rate-limited away; the plain gap at 1× or slower.
+        /// </summary>
+        public static float BoneRattleScaledGap(float timeScale) =>
+            BoneRattleGap * (timeScale > 1f && !float.IsInfinity(timeScale) ? timeScale : 1f);
 
         // ------------------------------------------------------------------ weapons
 
