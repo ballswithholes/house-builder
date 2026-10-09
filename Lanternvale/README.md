@@ -15,7 +15,7 @@ dungeons and two ten-player raids to the Ashwyrm Vyrmathra.
 > **Status — please read [Known limitations](#known-limitations).** The game runs from level 1 to about 33, but
 > nobody has run it inside the Unity editor yet. The Unity scripts are compile-checked against Unity reference
 > assemblies, the shaders are compile-checked offline, and the rules, world and save code is tested headlessly
-> (455 tests, including full 1–12 playthroughs for every class, every new zone's quest chain, every hidden
+> (469 tests, including full 1–12 playthroughs for every class, every new zone's quest chain, every hidden
 > dungeon and both raids won with a party of ten). All 3D models are built in code.
 
 ---
@@ -180,7 +180,10 @@ Scale in the Roost), never one the party already has.
   wheel zooms up to 3× around the cursor, dragging pans, and **Whole map** zooms back out. The title shows the zone's
   level band and a "Hidden dungeon" or "Raid (10)" badge.
 * Most encounters are visible on the map (a few are ambushes). Walk into one, or click an enemy to start
-  the fight. Enemies scale to the party's level. Stealthed units are only noticed within 3 m. An ability
+  the fight. Enemies scale to the party's level, within their map's band. XP (kills and quests, every party member
+  gets it in full) is paid at the rate of the content's level — the creature's, the quest's — never above yours
+  (`config.xpRateByLevel`, `Docs/DataSchema.md`), so a zone pays the same whenever you arrive. Quest items such as
+  pelts or embers only drop while a quest still needs them. Stealthed units are only noticed within 3 m. An ability
   used on an enemy outside combat becomes an **opener**, and opening from stealth gives a surprise round.
 * Out of combat you get chests (some locked), signs, things to inspect (some start a conversation or a skill
   check), map transitions, vendors with buyback, inns, and camp on the wild maps (long rest; not in dungeons or
@@ -483,7 +486,7 @@ Harness arguments (after `data`/`core`/`all`):
 * `--no-tests`, `--quiet`.
 * `--allow-problems` doesn't fail on data problems. Don't use it for a real check.
 
-The current state is `Data validation: OK` and **`Tests: 455/455 passed`**, both Unity configurations report
+The current state is `Data validation: OK` and **`Tests: 469/469 passed`**, both Unity configurations report
 `compile OK`, all 32 shader stages compile and `sfxpreview check: 2978 passed, 0 failed`. The tests cover formulas
 and the hit table, every class ability used through the real engine (smoke tests), AI battles, items, sets and loot
 pools, progression, navigation (water, flag-gated props), dialogue, quests and quest markers, map labels, combat

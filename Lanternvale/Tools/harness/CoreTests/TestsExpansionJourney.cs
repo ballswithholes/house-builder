@@ -965,6 +965,10 @@ namespace Lanternvale.Tests
             });
             j.Block("mf_coven_bounty", () =>
             {
+                // offered at 21: on the lean route the offer block is still deferred here, and a hand-in talk before
+                // the quest starts would pass silently and leave the bounty at 'return' (Defeat objectives are pulled
+                // from the encounters' done state when it starts)
+                if (!j.S.Quests.IsActive("mf_coven_bounty") && !j.S.Quests.IsCompleted("mf_coven_bounty")) throw new Deferred("mf_coven_bounty not offered yet");
                 foreach (var e in new[] { "enc_mf_coven_watch", "enc_mf_statue_hags", "enc_mf_gate_road_hag" }) j.WalkInto(e);
                 j.TalkTo("mf_reeve_tamsin", "The coven is five hags fewer");
             });

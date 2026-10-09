@@ -2380,7 +2380,7 @@
         {
           "id": "c2_wait",
           "speaker": "narrator",
-          "text": "*A Dragonsworn altar of black stone at the top of the stair, with a horn-rest worn smooth in its middle. The Horn of Calling would fit it exactly. But Marta said to bring it to her first, and Marta keeps lists.*",
+          "text": "*A Dragonsworn altar of black stone at the top of the stair, with a horn-rest worn smooth in its middle. The Horn of Calling would fit it exactly. But Marta wants to send you up herself, when you're ready, and Marta keeps lists.*",
           "conditions": [
             {
               "type": "HasItem",

@@ -442,7 +442,10 @@ Follow `brief_items.md` §5–§9:
   * Mirefen 18→24 about 150 k.
   * Skyreach 24→30 about 220 k.
   * The north bands and their three dungeons (§1) are optional catch-up content worth about 3 levels at 12–15, so
-    their bosses are met at their bands (the Mossking at 14, the Lantern Lich at 15).
+    their bosses are met at their bands (the Mossking at 14, the Lantern Lich at 15). Both were retuned for the
+    slice's party at those levels: the Mossking's `damageMult` 1.15; Hazama `healthMult` 1.1 / `damageMult` 1.45 and his
+    lanterns' Tithe 30–36 + 2.4/level (a two-healer party no longer stalls against the lanterns: replay of 24 L15
+    journey saves × 4 seeds 96/96, was 78/96; `Journey_NorthBosses` 24/24, was 20/24).
   * **As tuned (xp-pacing review).** Totals from the data, each encounter once: north + dg1–3 32 k; Amberfield +
     Barrow 84 k; Brightwater's errands 32 k; Mirefen + Vault 140 k; Skyreach + Sanctum 199 k. Played
     (`TestsExpansionJourney`, the slice's party, every side quest, no grinding), zone exit levels:
