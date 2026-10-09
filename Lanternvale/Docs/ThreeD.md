@@ -292,7 +292,8 @@ What a map is in 3D (all from `MapDef`, see `Docs/WorldAPI.md` / `DataSchema.md`
   (`MapDef.water`: river polylines and closed ponds with a carved bed, a translucent flowing surface, damp banks, rivers
   flowing out through a valley in the hills; crossings under a bridge, dock or boardwalk prop keep the deep bed, other
   crossings are fords with a gravel bar and stepping stones; a pond's shore is `Spline.PondShore`, the very loop the
-  nav grid blocks; the fen's surroundings also get a still water table); `MapTerrain.Indoor.cs` (indoor maps as a
+  nav grid blocks; where a river runs into a pond the two surfaces cross-fade over the pond's first metre instead of
+  stacking; the fen's surroundings also get a still water table); `MapTerrain.Indoor.cs` (indoor maps as a
   cutaway diorama: a flat floor, a steep back wall rising 9–13 m into the dark, gentler (≈ 50°) side walls the camera
   looks over at yaw ±45°, a rubble lip and a dark pit in front, exits as passages sloping into darkness; crypts stand
   dressed masonry before the rock, caves boulders and stalagmites, the ice cave crystals and snow, the Hollow Heart great

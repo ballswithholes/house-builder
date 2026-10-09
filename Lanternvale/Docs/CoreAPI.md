@@ -245,8 +245,9 @@ encounter's trigger radius by 4 m while the creature has `priest_mind_soothe`).
   `Telegraph`, `Battle.TelegraphTag`; `Battle.IsTelegraphed(ability)`) always become pending in combat, even when they
   would fit in the remaining Time — everyone gets a turn to interrupt, stun or silence them (the Hollow Warden's Lantern
   Requiem). **Uninterruptible casts** (tag `Uninterruptible`, `Battle.UninterruptibleTag`; `Battle.IsUninterruptible(ability)`,
-  `Battle.HasInterruptibleCast(unit)`) shrug off Interrupt effects (an `Immune` event with Reason "uninterruptible", no
-  lockout), silences and control auras; a control that takes the whole turn only delays them; only death ends them.
+  `Battle.HasInterruptibleCast(unit)`) shrug off Interrupt effects (an `Immune` event with Reason "uninterruptible",
+  `CombatLog.UninterruptibleReason`; log line "Varkas's Wyrmfire Slam is uninterruptible: Kael's Kick has no effect.",
+  floating word "Uninterruptible" from `CombatLog.AvoidWord(e)`; no lockout, only the interrupt's own cooldown), silences and control auras; a control that takes the whole turn only delays them; only death ends them.
   The AI (`AI.CancelsCast`, interrupt candidates, `targetCasting`) ignores them. Channels resolve ticks proportionally
   (effects are per tick). **Casting pushback**: damage taken by a unit with a pending cast adds 0.5 s (channels
   lose 0.5 s), max twice per cast; talents/auras resist or reduce it.
@@ -397,8 +398,11 @@ Rules: armour by class `armorTypes` (+ `armorUpgrade` at its level; lower types 
   random item, or of one id from its `pool` (`LootGenerator.PickFromPool(db, entry, rng, ctx)`: the pool's items,
   kept to those some party member can use with `partyUsable`, and with `skipOwned` to those the party neither owns
   nor has seen drop with this context; without `skipOwned` ids that have not dropped yet are preferred; uniform or
-  by `weights`, 0-weight ids never drop; nothing drops when no id is left). **Tables without the new keys consume the
-  RNG exactly as before**, with or without a context.
+  by `weights`, 0-weight ids never drop; nothing drops when no id is left). A `whileQuestNeeds` entry is then capped
+  to `ctx.QuestCap(id, n)` (the quests' remaining need, `ctx.QuestNeed` minus `ctx.DroppedCount`; uncapped when
+  `QuestNeed` is null). **Tables without the new keys consume the RNG exactly as before**, with or without a context.
+* `QuestLog.CollectNeed(itemId)`: the largest `Collect` count of the item among the stages still ahead of unfinished
+  quests (current and later stages of active quests, every stage of quests not started yet); 0 when none.
 * `LootContext { Members = 1, Party (characters), Owned (Func<string,bool>), Dropped (ids this context gave) }`:
   `IsOwned(id)`, `UsableBySomeone(def)`, `static CanUse(unit, def)` (class, armour type and weapon type; the required
   level is ignored), `static For(party, bags, roster = null)` (owned = in the bags or equipped by a party or roster

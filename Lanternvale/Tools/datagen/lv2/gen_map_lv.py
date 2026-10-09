@@ -97,7 +97,7 @@ def lanternvale(base):
     m["water"] = [
         # the millpond (spring-fed; Teo's jetty reaches into it)
         {"closed": True, "halfWidth": 1.0, "points": [[35.2, 32.6], [36.2, 30.0], [39.2, 29.0], [42.6, 29.6], [44.2, 32.0], [43.4, 34.8], [40.4, 36.2], [37.0, 35.4]],
-         "crossings": [{"pos": [39.4, 31.0], "size": [3.0, 4.6]}]},
+         "crossings": [{"pos": [39.4, 30.85], "size": [2.4, 4.3]}]},
         # the brook that fills it, down from the northern woods, forded below the alders
         {"halfWidth": 0.8, "points": [[38.4, 44.0], [38.0, 41.0], [39.0, 38.4], [39.6, 36.0]],
          "crossings": [{"pos": [38.1, 41.0], "size": [3.8, 2.2]}]},

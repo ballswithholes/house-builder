@@ -465,6 +465,7 @@ namespace Lanternvale.Data
         public bool skipOwned;                           // pool: skip ids the party already owns (bags or equipped)
         public int perMembers;                           // > 0: roll once more per this many party members (ceil(n / perMembers) rolls)
         public bool partyUsable;                         // pool: only ids some party member can equip
+        public bool whileQuestNeeds;                     // item: drop only while an unfinished quest still collects it (capped to the shortfall)
     }
 
     [Serializable]

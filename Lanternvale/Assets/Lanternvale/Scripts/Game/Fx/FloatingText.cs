@@ -67,7 +67,7 @@ namespace Lanternvale.Game
             Spawn(worldPos, "+" + amount, crit ? new Color(0.7f, 1f, 0.55f) : Ui.Good, crit ? 1.2f : 1f, crit);
         }
 
-        /// <summary>"Miss", "Dodge", "Parry", "Block", "Resist", "Immune", "Absorb", "Evade"…</summary>
+        /// <summary>"Miss", "Dodge", "Parry", "Block", "Resist", "Immune", "Uninterruptible", "Absorb", "Evade"… (CombatLog.AvoidWord)</summary>
         public static void Miss(Vector3 worldPos, string word)
         {
             Spawn(worldPos, word, new Color(0.88f, 0.86f, 0.95f), 0.85f);

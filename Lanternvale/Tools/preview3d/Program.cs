@@ -4,7 +4,7 @@
 //   units <out.png> [keys|group|all] [--tile px] [--ss N] [--hour H] [--speed m/s]
 //                          [--view sheet|game|spin] [--pose idle|walk|wind|strike|shoot|cast] [--facing 1|-1] [--pitch deg]
 //   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--pitch deg] [--at x,y] [--size WxH] [--ss N] [--spawn id]
-//                          [--player key] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
+//                          [--player key] [--flags f1,f2|*] [--no-units] [--no-halos] [--nav] [--nav-lift m] [--no-ink] [--gamma]
 //                          [--markers auto|npc:kind,...] [--quests q,q=stage,q=done] [--level N]
 using System;
 using System.Collections.Generic;
@@ -57,7 +57,7 @@ namespace Lanternvale.Preview
       --view spin: one --pose at nine facings; a key may name a look variant (npc_child#2, npc_child@child_nell);
       groups: chars comps npcs trainers foes beasts pets demons static (all = one page per group, <out>_<group>.png)
   map <mapId> <out.png> [--hour H] [--yaw D] [--zoom Z] [--pitch deg] [--at x,y] [--size 1600x900] [--ss 2] [--spawn id]
-                        [--player char_warrior] [--flags f1,f2|*] [--no-units] [--no-halos] [--no-ink] [--gamma]
+                        [--player char_warrior] [--flags f1,f2|*] [--no-units] [--no-halos] [--nav] [--nav-lift m] [--no-ink] [--gamma]
                         [--markers auto|npc:ready|available|progress|later[+main],...] [--quests q,q=stage,q=done] [--level 5]
       the player's view of a map: look-at = the spawn (or --at), Zoom = CameraRig zoom (2.6 … 10.4, default 6.2),
       yaw ±45, hour 0..24 (default: the map's own time / the world clock 12.5); --pitch: a vista of the backdrop
@@ -129,6 +129,8 @@ namespace Lanternvale.Preview
                     case "--level": opt.Level = int.Parse(Next(), CultureInfo.InvariantCulture); break;
                     case "--no-units": opt.Units = false; break;
                     case "--no-halos": opt.Halos = false; break;
+                    case "--nav": opt.Nav = true; break;
+                    case "--nav-lift": opt.Nav = true; opt.NavLift = float.Parse(Next(), CultureInfo.InvariantCulture); break;
                     case "--no-ink": ink = false; break;
                     case "--gamma": Lighting.Linear = false; QualitySettings.activeColorSpace = ColorSpace.Gamma; break;
                     case "--root": i++; break;

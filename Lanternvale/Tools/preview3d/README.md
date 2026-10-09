@@ -37,6 +37,7 @@ finds `Assets/Lanternvale/Resources` by searching upwards, or you can pass `--ro
 | `--flags a,b` / `--flags '*'` | story flags to treat as set, which shows encounters and chests gated by `requireFlag`, NPCs and props by `requireFlag` / `hideFlag`, and hidden transitions whose `revealFlag` holds (flag expressions `a&!b` as FlagStore.Test reads them; `*` sets every flag, so `!x` gates fail). `lanterns_rekindled` relights the valley's spirit lanterns (lanternvale, whisperwood, shrine) as the game does, except flag-driven ones. |
 | `--markers auto` / `--markers npc:kind[+main],…` | quest markers (`QuestMarker3D`) over the NPCs: `auto` runs the game's marker rules against `--flags`, `--quests q,q=stage,q=done` and `--level N` (default 5); a list names `ready`, `available`, `progress` or `later` per NPC. |
 | `--no-units`, `--no-halos`, `--no-ink` | leave those out. |
+| `--nav` | review aid (not a game view): the map's real `NavGrid` (flags from `--flags`) as dots on the ground: red = blocked by water; inside a water crossing (ford, bridge, dock, boardwalk) green = where a unit's centre can stand (clearance ≥ the 0.4 m default unit radius), blue = walkable but too tight for a unit; orange = blocked by anything else within 3 m of water. `--nav-lift m` raises the dots (e.g. 3 with `--pitch 89` to see them over bridges and docks). |
 | `--gamma` | use the gamma colour pipeline instead of linear. |
 
 The camera is CameraRig's maths (`Scene/CameraMath.cs`): FOV 38°, distance = Zoom / tan 19°, pitch eased from

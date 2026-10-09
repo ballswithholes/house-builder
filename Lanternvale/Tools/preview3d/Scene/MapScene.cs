@@ -25,6 +25,10 @@ namespace Lanternvale.Preview
             public Vector2? At;
             public bool Units = true;
             public bool Halos = true;
+            /// <summary>--nav: the nav grid's water cells as dots (Scene/NavOverlay; a review aid, not a game view).</summary>
+            public bool Nav;
+            /// <summary>Height (m) of the --nav dots over the ground or water (--nav-lift: above bridges and docks, for top views).</summary>
+            public float NavLift = 0.04f;
             public string Spawn = "default";
             /// <summary>Model of the party leader at the spawn (a new game starts with the class picked at creation).</summary>
             public string Player = "char_warrior";
@@ -164,6 +168,7 @@ namespace Lanternvale.Preview
             foreach (var t in def.transitions) if (t != null) Guard("transition " + t.id, () => BuildTransition(t));
             UpdateCliffLanterns();
             if (opt.Units) Guard("units", BuildUnits);
+            if (opt.Nav) Guard("nav overlay", () => NavOverlay.Build(Root, def, terrain, opt));
             RebuildShadows();
 
             // camera (CameraRig), then the frame's mood: sky, fog, lights (MapView.UpdateView at t = 0)

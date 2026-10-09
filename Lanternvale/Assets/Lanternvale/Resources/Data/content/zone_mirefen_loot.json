@@ -5,7 +5,7 @@
       "goldMin": 120,
       "goldMax": 340,
       "entries": [
-        {"item": "mf_fen_glass"},
+        {"item": "mf_fen_glass", "whileQuestNeeds": true},
         {"item": "mf_junk_pretty_pebble", "chance": 25},
         {"item": "mf_junk_eel_skin", "chance": 20},
         {"item": "mf_junk_lantern_ring", "chance": 12},
@@ -19,7 +19,7 @@
       "goldMin": 160,
       "goldMax": 380,
       "entries": [
-        {"item": "mf_fen_glass"},
+        {"item": "mf_fen_glass", "whileQuestNeeds": true},
         {"item": "mf_junk_pretty_pebble", "chance": 25},
         {"item": "mf_junk_lantern_ring", "chance": 15},
         {"item": "drink_melon_juice", "chance": 8},
@@ -42,7 +42,7 @@
       "goldMin": 0,
       "goldMax": 0,
       "entries": [
-        {"item": "mf_croc_tail"},
+        {"item": "mf_croc_tail", "whileQuestNeeds": true},
         {"item": "mf_junk_croc_tooth", "chance": 40},
         {"item": "mf_junk_soggy_boot", "chance": 8},
         {"random": true, "chance": 4, "quality": "Uncommon"}
@@ -54,7 +54,7 @@
       "goldMax": 0,
       "entries": [
         {"item": "mf_gnashers_tooth"},
-        {"item": "mf_croc_tail", "min": 2, "max": 3},
+        {"item": "mf_croc_tail", "whileQuestNeeds": true, "min": 2, "max": 3},
         {"item": "mf_junk_soggy_boot"},
         {"random": true, "chance": 50, "quality": "Uncommon"}
       ]
@@ -85,7 +85,7 @@
       "goldMin": 0,
       "goldMax": 0,
       "entries": [
-        {"item": "mf_wisp_glow"},
+        {"item": "mf_wisp_glow", "whileQuestNeeds": true},
         {"item": "mf_junk_wisp_dust", "chance": 40},
         {"random": true, "chance": 3, "quality": "Uncommon"}
       ]

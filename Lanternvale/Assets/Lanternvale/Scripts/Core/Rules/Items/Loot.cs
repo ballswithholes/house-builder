@@ -16,7 +16,8 @@ namespace Lanternvale.Rules
 
     /// <summary>
     /// What a loot roll knows about the party (Docs/Expansion.md §2.4, §5). Only the new loot-entry keys read it:
-    /// <c>perMembers</c> (Members), <c>partyUsable</c> (Party), <c>skipOwned</c> (Owned, Dropped) and pools (Dropped).
+    /// <c>perMembers</c> (Members), <c>partyUsable</c> (Party), <c>skipOwned</c> (Owned, Dropped), pools (Dropped) and
+    /// <c>whileQuestNeeds</c> (QuestNeed, DroppedCount).
     /// One context spans one battle (every defeated creature's table) or one chest, so two bosses of one fight do not
     /// drop the same pool item twice. The session builds it (GameSession.BuildLootContext); without one, a roll sees a
     /// party of one that owns nothing.
@@ -31,6 +32,25 @@ namespace Lanternvale.Rules
         public Func<string, bool> Owned;
         /// <summary>Database item ids dropped so far by rolls with this context.</summary>
         public readonly HashSet<string> Dropped = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>
+        /// How many more of an item the party's quests want (<c>whileQuestNeeds</c> entries): the quests' need minus
+        /// what the party holds (bags, open loot window). Drops of this context are subtracted on top
+        /// (<see cref="DroppedCount"/>). Null = no quest knowledge: such entries drop as plain item entries.
+        /// </summary>
+        public Func<string, int> QuestNeed;
+        /// <summary>Stack counts dropped so far by <c>whileQuestNeeds</c> entries with this context, per item id.</summary>
+        public readonly Dictionary<string, int> DroppedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Items a <c>whileQuestNeeds</c> entry may still give: <paramref name="wanted"/> capped to the quests'
+        /// remaining need (0 when none); <paramref name="wanted"/> when the context knows no quests.
+        /// </summary>
+        public int QuestCap(string itemId, int wanted)
+        {
+            if (QuestNeed == null || string.IsNullOrEmpty(itemId)) return wanted;
+            DroppedCount.TryGetValue(itemId, out int got);
+            return Math.Max(0, Math.Min(wanted, QuestNeed(itemId) - got));
+        }
 
         public bool IsOwned(string itemId) => Owned != null && !string.IsNullOrEmpty(itemId) && Owned(itemId);
 
@@ -100,8 +120,9 @@ namespace Lanternvale.Rules
         /// <summary>
         /// Rolls a loot table: gold in [goldMin, goldMax], then `rolls` passes over the entries. Each entry rolls once
         /// (ceil(members / perMembers) times with perMembers) by its chance, then gives `min..max` of its item, of a
-        /// random item, or of one id picked from its pool (see <see cref="PickFromPool"/>). Tables without the new keys
-        /// consume the RNG exactly as before, with or without a context.
+        /// random item, or of one id picked from its pool (see <see cref="PickFromPool"/>). A <c>whileQuestNeeds</c>
+        /// entry is capped to the quests' remaining need (<see cref="LootContext.QuestCap"/>) after its usual rolls.
+        /// Tables without the new keys consume the RNG exactly as before, with or without a context.
         /// </summary>
         public static LootDrop Roll(GameDatabase db, string tableId, int level, Rng rng, LootContext ctx = null)
         {
@@ -127,6 +148,14 @@ namespace Lanternvale.Rules
                         }
                         var def = e.pool != null && e.pool.Length > 0 ? PickFromPool(db, e, rng, ctx) : db.Item(e.item);
                         if (def == null) continue;
+                        if (e.whileQuestNeeds)
+                        {
+                            // rolled as usual (same RNG use), then capped to what the quests still want
+                            n = ctx.QuestCap(def.id, n);
+                            if (n <= 0) continue;
+                            ctx.DroppedCount.TryGetValue(def.id, out int had);
+                            ctx.DroppedCount[def.id] = had + n;
+                        }
                         drop.Items.Add(new ItemInstance(def, n));
                         ctx.Dropped.Add(def.id);
                     }

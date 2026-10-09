@@ -292,8 +292,9 @@ LootContext BuildLootContext()                 // the loot context of one fight 
 `skipOwned`; DataSchema.md): the members are the **active party's characters** (a raid of ten rolls a `perMembers: 5`
 entry twice), and an item counts as owned when it is in the bags, in the open loot window (`PendingLoot`) or worn by
 anyone in the roster (camp included). The session builds one per battle (`Battle.LootContext`, set at battle creation,
-so two bosses of one fight never drop the same pool item twice) and one per chest. Tables without the new keys roll
-exactly as before.
+so two bosses of one fight never drop the same pool item twice) and one per chest. Its `QuestNeed` (for
+`whileQuestNeeds` quest-item entries) is `Quests.CollectNeed(id)` minus the bags and the open loot window. Tables
+without the new keys roll exactly as before.
 
 ```csharp
 VendorShop ActiveVendor; VendorShop GetVendor(string npcId)   // Rules VendorShop: Offers(), Buyback, Npc, Stock

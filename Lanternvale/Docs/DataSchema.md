@@ -279,6 +279,7 @@ across all maps** (the done flag `enc_<id>` is global).
 | `LootEntryDef.skipOwned` | bool, false | Pool: skip ids the party already owns. |
 | `LootEntryDef.perMembers` | int ≥ 0, 0 | > 0: one roll per `perMembers` party members (a raid of 10 with 5 rolls twice). |
 | `LootEntryDef.partyUsable` | bool, false | Pool: only ids some party member can equip. |
+| `LootEntryDef.whileQuestNeeds` | bool, false | Plain `item` entries only, and some quest must collect the item: drop only while an unfinished quest still wants more of it (capped to the shortfall). Use it on every creature or chest entry of a quest item. |
 
 `random: true` with `quality` Epic or Legendary is an error: author epics and legendaries and drop them from a pool.
 
@@ -342,6 +343,13 @@ starting gear.
 * `partyUsable` keeps ids some party member could equip by class, armour and weapon type (the required level is
   ignored, so gear a few levels ahead still drops).
 * `weights`: one per pool id (empty = equal); 0 never drops.
+* `whileQuestNeeds` (quest items such as pelts, bells, fen-glass, wisp-glows, wicks, embers): the entry rolls as usual
+  (same RNG use), then gives at most what the quests still want: the largest `Collect` count of the item among the
+  stages still ahead of unfinished quests (the current stage and later ones of an active quest, any stage of a quest
+  not started yet, since encounters never respawn), minus the party's count in the bags and the open loot window and
+  what already dropped in this battle or chest (`QuestLog.CollectNeed`, `LootContext.QuestNeed`). Once the quest has
+  passed its collecting stage, completed or failed, nothing drops, so quest items no longer pile up in the bags.
+  Without a session context (a bare `Battle`) the entry drops as a plain `item` entry.
 * Tables that use none of `pool`, `perMembers` roll exactly as before (same RNG use), so seeded tests stay stable.
 
 **Budget guardrail.** `TestsItemSetsAndLoot.AuthoredStatBudget_WithinBounds` requires every Uncommon+ equipable item

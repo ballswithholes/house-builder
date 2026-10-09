@@ -560,7 +560,7 @@ namespace Lanternvale.Game
                     VisAvoid(e, "Block", false);   // the shield thunk is VisAvoid's CombatSfx.Avoid
                     break;
                 case CombatEventType.Resist: VisAvoid(e, "Resist", false); break;
-                case CombatEventType.Immune: VisAvoid(e, "Immune", false); break;
+                case CombatEventType.Immune: VisAvoid(e, CombatLog.AvoidWord(e), false); break;   // "Uninterruptible" for an interrupt on a boss cast nothing stops
                 case CombatEventType.Absorb:
                 {
                     var tv = V(e.Target);

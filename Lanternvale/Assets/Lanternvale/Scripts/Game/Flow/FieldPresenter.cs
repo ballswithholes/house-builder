@@ -216,7 +216,7 @@ namespace Lanternvale.Game
                 case CombatEventType.Absorb:
                 {
                     var tv = ViewOf(e.Target);
-                    if (tv != null) FloatingText.Miss(tv.HeadPosition, e.Type.ToString());
+                    if (tv != null) FloatingText.Miss(tv.HeadPosition, CombatLog.AvoidWord(e));
                     if (tv != null) CombatSfx.Avoid(e, tv.FeetPosition);
                     break;
                 }

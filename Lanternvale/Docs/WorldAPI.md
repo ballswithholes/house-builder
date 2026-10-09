@@ -99,7 +99,10 @@ register them as units if they should block.
 **Water** (`MapDef.water`, only entries with `blocksMovement`): cells whose centre lies within `halfWidth` of an open
 polyline, or inside a `closed` polygon's **shore as the terrain draws it** (`Spline.PondShore`: a closed Catmull-Rom loop
 through the corners, sampled every 0.5 m, which bulges a little past convex corners), are blocked — except inside that
-water's `crossings` rects (fords, stepping stones, bridges). Water with `blocksMovement: false` is only drawn.
+water's `crossings` rects (fords, stepping stones, bridges). Water with `blocksMovement: false` is only drawn. A
+crossing under a bridge, dock or boardwalk should be no wider than its deck: a unit (radius 0.4 m) stands only where the
+clearance allows, so a rect a little wider than the deck lets bodies hang over the water at its edge
+(`Tools/preview3d/preview3d.sh map <id> out.png --nav` shows the blocked water and the cells a unit can stand on).
 
 **Flag-gated props and chests.** The plain `NavGrid(mapDef)` blocks every prop and chest, whatever its flags. The
 session builds `new NavGrid(mapDef, null, flags.Test)`: a prop whose `requireFlag` fails or whose `hideFlag` holds, and a

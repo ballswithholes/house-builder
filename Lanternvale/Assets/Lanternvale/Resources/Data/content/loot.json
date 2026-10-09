@@ -57,7 +57,7 @@
       "goldMin": 6,
       "goldMax": 24,
       "entries": [
-        {"item": "lantern_wick"},
+        {"item": "lantern_wick", "whileQuestNeeds": true},
         {"item": "junk_tiny_leaf_hat", "chance": 25},
         {"item": "junk_damp_pebbles", "chance": 25},
         {"item": "junk_nibbled_mushroom", "chance": 20},
@@ -71,7 +71,7 @@
       "goldMin": 8,
       "goldMax": 30,
       "entries": [
-        {"item": "lantern_wick"},
+        {"item": "lantern_wick", "whileQuestNeeds": true},
         {"item": "junk_tiny_leaf_hat", "chance": 20},
         {"item": "junk_damp_pebbles", "chance": 20},
         {"item": "potion_minor_mana", "chance": 6},
@@ -84,7 +84,7 @@
       "goldMin": 60,
       "goldMax": 140,
       "entries": [
-        {"item": "lantern_wick", "min": 4, "max": 4},
+        {"item": "lantern_wick", "whileQuestNeeds": true, "min": 4, "max": 4},
         {"item": "mossweave_sandals"},
         {"item": "junk_shiny_button"},
         {"random": true, "chance": 30, "quality": "Uncommon"}
@@ -141,7 +141,7 @@
       "goldMin": 0,
       "goldMax": 0,
       "entries": [
-        {"item": "spirit_ember"},
+        {"item": "spirit_ember", "whileQuestNeeds": true},
         {"item": "junk_grey_ash", "chance": 40},
         {"item": "junk_dull_lantern_glass", "chance": 25},
         {"random": true, "chance": 3, "quality": "Uncommon"}

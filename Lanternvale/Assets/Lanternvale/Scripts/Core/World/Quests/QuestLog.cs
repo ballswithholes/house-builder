@@ -134,6 +134,39 @@ namespace Lanternvale.World
             return r != null && objectiveIndex >= 0 && objectiveIndex < r.progress.Length ? r.progress[objectiveIndex] : 0;
         }
 
+        /// <summary>
+        /// How many of an item the quests still want in total (loot entries with <c>whileQuestNeeds</c>): the largest
+        /// Collect count for the item among the stages of unfinished quests that are still ahead, i.e. the current stage
+        /// and later ones of an active quest, or any stage of a quest not started yet (encounters never respawn, so
+        /// creatures killed before the quest is picked up must still supply it). 0 once every such quest has passed
+        /// its collecting stage, completed or failed. The party's own count is not subtracted.
+        /// </summary>
+        public int CollectNeed(string itemId)
+        {
+            if (Db == null || string.IsNullOrEmpty(itemId)) return 0;
+            int need = 0;
+            foreach (var q in Db.Quests.Values)
+            {
+                if (q?.stages == null) continue;
+                var r = Rec(q.id);
+                int from = 0;
+                if (r != null)
+                {
+                    if (r.status == QuestStatus.Completed || r.status == QuestStatus.Failed) continue;
+                    if (r.status == QuestStatus.Active) from = r.stageIndex;
+                }
+                for (int s = Math.Max(0, from); s < q.stages.Count; s++)
+                {
+                    var objectives = q.stages[s]?.objectives;
+                    if (objectives == null) continue;
+                    foreach (var o in objectives)
+                        if (o != null && o.type == ObjectiveType.Collect && string.Equals(o.target, itemId, StringComparison.Ordinal))
+                            need = Math.Max(need, Math.Max(1, o.count));
+                }
+            }
+            return need;
+        }
+
         /// <summary>Ids of all started quests (any status), in start order.</summary>
         public IEnumerable<string> KnownQuests()
         {

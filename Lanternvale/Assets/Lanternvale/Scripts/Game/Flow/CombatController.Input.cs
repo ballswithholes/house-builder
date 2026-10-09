@@ -1162,7 +1162,12 @@ namespace Lanternvale.Game
                 sb.Append(" → ").Append(target.Name);
                 var p = target.Pending;
                 if (p != null && p.Ability != null && target.IsHostileTo(u))
-                    sb.Append(" (casting ").Append(p.Ability.name).Append(", ").Append(p.RemainingTime.ToString("0.#")).Append(" s left)");
+                {
+                    bool locked = Battle.IsUninterruptible(p.Ability);
+                    sb.Append(" (casting ").Append(p.Ability.name).Append(locked ? ", uninterruptible, " : ", ").Append(p.RemainingTime.ToString("0.#")).Append(" s left)");
+                    // the interrupt would only spend its cooldown: say so before the click (CombatLog: "… is uninterruptible")
+                    if (locked && a.effects != null && a.effects.Exists(e => e != null && e.type == EffectType.Interrupt)) sb.Append(" · the interrupt has no effect");
+                }
             }
             var mag = MagnitudeText(u, a, mods, used);
             if (!string.IsNullOrEmpty(mag)) sb.Append(" · ").Append(mag);

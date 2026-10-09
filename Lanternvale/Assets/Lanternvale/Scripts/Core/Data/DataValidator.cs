@@ -279,6 +279,13 @@ namespace Lanternvale.Data
             }
 
             // loot tables
+            var collected = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var q in db.Quests.Values)
+                if (q?.stages != null)
+                    foreach (var st in q.stages)
+                        if (st?.objectives != null)
+                            foreach (var o in st.objectives)
+                                if (o != null && o.type == ObjectiveType.Collect && !string.IsNullOrEmpty(o.target)) collected.Add(o.target);
             foreach (var l in db.LootTables.Values)
             {
                 var lw = $"loot {l.id}";
@@ -299,6 +306,11 @@ namespace Lanternvale.Data
                         if (weights.Length > 0) Err(lw, "weights without a pool");
                     }
                     if (e.perMembers < 0) Err(lw, "perMembers must be >= 0");
+                    if (e.whileQuestNeeds)
+                    {
+                        if (e.random || pool.Length > 0) Err(lw, "whileQuestNeeds needs a plain item entry (not random or pooled)");
+                        else if (!collected.Contains(e.item ?? "")) Err(lw, $"whileQuestNeeds: no quest collects '{e.item}' (it would never drop)");
+                    }
                     if (e.random && e.quality >= Quality.Epic) Err(lw, $"random {e.quality} drops are not allowed (author Epic and Legendary items, use a pool)");
                 }
             }

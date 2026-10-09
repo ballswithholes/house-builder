@@ -190,7 +190,7 @@ Previews draw at `FxSystem.PreviewOrder` (on the ground, under units).
 FloatingText.Spawn(Vector2 worldPos, string text, Color color, float scale = 1f, bool crit = false);
 FloatingText.Damage(unit.HeadPosition, 123, crit, school);   // white / school-tinted; crit = yellow, bigger, pops, "123!"
 FloatingText.Heal(pos, 80, crit);                            // "+80" green
-FloatingText.Miss(pos, "Dodge");                             // Dodge, Parry, Block, Resist, Immune, Absorb, Evade, Miss
+FloatingText.Miss(pos, "Dodge");                             // Dodge, Parry, Block, Resist, Immune, Absorb, Evade, Miss; word = CombatLog.AvoidWord(e) ("Uninterruptible" for an interrupt on an uninterruptible cast)
 FloatingText.Resource(pos, 20, ResourceType.Rage);           // "+20 Rage"
 FloatingText.Status(pos, "Stunned", color);  FloatingText.Clear();
 ```

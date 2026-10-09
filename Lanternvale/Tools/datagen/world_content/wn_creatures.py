@@ -358,8 +358,9 @@ creature(id="cr_hollow_warden", name="The Hollow Warden",
 
 
 # ====================================================================== loot tables
-def E(item, chance=100, mn=1, mx=1):
+def E(item, chance=100, mn=1, mx=1, quest=False):
     d = {"item": item}
+    if quest: d["whileQuestNeeds"] = True   # quest item: drops only while a quest still collects it
     if chance != 100: d["chance"] = chance
     if mn != 1 or mx != 1: d["min"], d["max"] = mn, mx
     return d
@@ -382,12 +383,12 @@ lt("lt_wolf_blighted", 0, 0, [E("junk_grey_ash", 30), E("junk_broken_fang", 30),
 lt("lt_greymane", 0, 0, [E("greymanes_mantle"), E("junk_grey_ash"), E("wolf_tooth_necklace", 25), RND(35)])
 lt("lt_boar", 0, 0, [E("junk_cracked_tusk", 40), E("junk_bristly_hide", 35), RND(2)])
 lt("lt_spider", 0, 0, [E("junk_sticky_web", 45), E("junk_chitin_fragment", 30), E("spiderhide_bracers", 2), RND(3)])
-lt("lt_mossling", 6, 24, [E("lantern_wick"), E("junk_tiny_leaf_hat", 25), E("junk_damp_pebbles", 25),
+lt("lt_mossling", 6, 24, [E("lantern_wick", quest=True), E("junk_tiny_leaf_hat", 25), E("junk_damp_pebbles", 25),
                           E("junk_nibbled_mushroom", 20), E("food_mushroom_skewer", 8), E("junk_shiny_button", 5),
                           RND(3)])
-lt("lt_mossling_shaman", 8, 30, [E("lantern_wick"), E("junk_tiny_leaf_hat", 20), E("junk_damp_pebbles", 20),
+lt("lt_mossling_shaman", 8, 30, [E("lantern_wick", quest=True), E("junk_tiny_leaf_hat", 20), E("junk_damp_pebbles", 20),
                                  E("potion_minor_mana", 6), E("mossweave_sandals", 2), RND(4)])
-lt("lt_puddlecap", 60, 140, [E("lantern_wick", 100, 4, 4), E("mossweave_sandals"), E("junk_shiny_button"), RND(30)])
+lt("lt_puddlecap", 60, 140, [E("lantern_wick", 100, 4, 4, quest=True), E("mossweave_sandals"), E("junk_shiny_button"), RND(30)])
 lt("lt_bandit", 30, 90, [E("junk_torn_scarf_mask", 25), E("junk_chipped_dice", 12), E("junk_dented_cup", 15),
                          E("junk_bad_poetry", 6), E("food_rice_ball", 10), E("drink_spring_water", 10),
                          E("potion_minor_healing", 6), E("bandage_linen", 8), E("scroll_strength", 3),
@@ -398,7 +399,7 @@ lt("lt_bandit_hexer", 40, 100, [E("junk_chipped_dice", 15), E("junk_bad_poetry",
                                 RND(4)])
 lt("lt_bandit_chief", 300, 600, [E("rusks_toll_taker"), E("bridgekeepers_glaive", 25), E("potion_lesser_healing"),
                                  RND(50)])
-lt("lt_hollow_wisp", 0, 0, [E("spirit_ember"), E("junk_grey_ash", 40), E("junk_dull_lantern_glass", 25), RND(3)])
+lt("lt_hollow_wisp", 0, 0, [E("spirit_ember", quest=True), E("junk_grey_ash", 40), E("junk_dull_lantern_glass", 25), RND(3)])
 lt("lt_hollow_spirit", 40, 110, [E("junk_faded_prayer_strip", 35), E("junk_grey_ash", 30), E("junk_hollow_shard", 15),
                                  E("potion_lesser_healing", 6), E("scroll_spirit", 3), E("scroll_stamina", 3),
                                  E("bindings_of_quiet_dusk", 2), RND(5)])

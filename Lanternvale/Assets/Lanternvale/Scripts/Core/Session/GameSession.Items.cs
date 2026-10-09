@@ -256,7 +256,8 @@ namespace Lanternvale.Session
         /// <summary>
         /// The loot context of a fight or a chest (Docs/Expansion.md §5): the active party's characters are the members
         /// (perMembers, partyUsable); owned = in the bags, in the open loot window, or equipped by anyone in the roster
-        /// (skipOwned). One context spans one battle, so its bosses do not drop the same pool item twice.
+        /// (skipOwned). One context spans one battle, so its bosses do not drop the same pool item twice. Quest need
+        /// (whileQuestNeeds) = <see cref="QuestLog.CollectNeed"/> minus the bags and the open loot window.
         /// </summary>
         public LootContext BuildLootContext()
         {
@@ -267,6 +268,14 @@ namespace Lanternvale.Session
                 if (bagsOrWorn(id)) return true;
                 if (PendingLoot != null) foreach (var it in PendingLoot.Items) if (it != null && it.Def.id == id) return true;
                 return false;
+            };
+            ctx.QuestNeed = id =>
+            {
+                int need = Quests?.CollectNeed(id) ?? 0;
+                if (need <= 0) return 0;
+                int have = Inventory.Count(id);
+                if (PendingLoot != null) foreach (var it in PendingLoot.Items) if (it != null && it.Def.id == id) have += it.Count;
+                return Math.Max(0, need - have);
             };
             return ctx;
         }

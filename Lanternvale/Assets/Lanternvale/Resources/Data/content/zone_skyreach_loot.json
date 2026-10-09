@@ -4,14 +4,14 @@
       "id": "lt_sr_wolf",
       "goldMin": 250,
       "goldMax": 600,
-      "entries": [{"item": "sr_frost_wolf_pelt"}, {"random": true, "chance": 6, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_frost_wolf_pelt", "whileQuestNeeds": true}, {"random": true, "chance": 6, "quality": "Uncommon"}]
     },
     {
       "id": "lt_sr_rimefang",
       "goldMin": 1800,
       "goldMax": 3000,
       "entries": [
-        {"item": "sr_frost_wolf_pelt", "min": 2, "max": 2},
+        {"item": "sr_frost_wolf_pelt", "whileQuestNeeds": true, "min": 2, "max": 2},
         {"item": "sr_rimefang_fang", "chance": 60},
         {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1}
       ]
@@ -27,14 +27,14 @@
       "id": "lt_sr_harpy",
       "goldMin": 350,
       "goldMax": 800,
-      "entries": [{"item": "sr_hut_bell"}, {"random": true, "chance": 8, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_hut_bell", "whileQuestNeeds": true}, {"random": true, "chance": 8, "quality": "Uncommon"}]
     },
     {
       "id": "lt_sr_shrikeclaw",
       "goldMin": 2000,
       "goldMax": 3400,
       "entries": [
-        {"item": "sr_hut_bell", "min": 2, "max": 2},
+        {"item": "sr_hut_bell", "whileQuestNeeds": true, "min": 2, "max": 2},
         {"item": "sr_shrikeclaw_talons", "chance": 60},
         {"random": true, "chance": 35, "quality": "Uncommon", "itemLevelOffset": 1}
       ]
@@ -50,7 +50,7 @@
       "id": "lt_sr_ice_elemental",
       "goldMin": 300,
       "goldMax": 700,
-      "entries": [{"item": "sr_rime_core"}, {"random": true, "chance": 6, "quality": "Uncommon"}]
+      "entries": [{"item": "sr_rime_core", "whileQuestNeeds": true}, {"random": true, "chance": 6, "quality": "Uncommon"}]
     },
     {"id": "lt_sr_ash_elemental", "goldMin": 300, "goldMax": 700, "entries": [{"random": true, "chance": 10, "quality": "Uncommon"}]},
     {"id": "lt_sr_whelp", "goldMin": 150, "goldMax": 400, "entries": [{"random": true, "chance": 4, "quality": "Uncommon"}]},
@@ -83,7 +83,7 @@
       "goldMin": 6000,
       "goldMax": 9000,
       "entries": [
-        {"item": "sr_varkas_orders"},
+        {"item": "sr_varkas_orders", "whileQuestNeeds": true},
         {"pool": ["sr_kaedrics_kindled_blade", "sr_marshals_ember_mantle", "sr_pyrecallers_cowl", "sr_vanguard_scale_jerkin"]},
         {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}
       ]
@@ -98,7 +98,7 @@
       "id": "lt_sr_chest_nest",
       "goldMin": 1500,
       "goldMax": 3000,
-      "entries": [{"item": "sr_hut_bell", "max": 2}, {"random": true, "quality": "Uncommon"}, {"random": true, "chance": 15, "quality": "Rare"}]
+      "entries": [{"item": "sr_hut_bell", "whileQuestNeeds": true, "max": 2}, {"random": true, "quality": "Uncommon"}, {"random": true, "chance": 15, "quality": "Rare"}]
     },
     {
       "id": "lt_sr_chest_heronguard",

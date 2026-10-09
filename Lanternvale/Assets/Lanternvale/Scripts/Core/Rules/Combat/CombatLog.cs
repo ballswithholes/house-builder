@@ -17,6 +17,23 @@ namespace Lanternvale.Rules
             return u.Name.EndsWith("s") ? $"{u.Name}' {thing}" : $"{u.Name}'s {thing}";
         }
 
+        /// <summary>An interrupt (or other cast-cancelling effect) that hit a cast nothing can cancel: an Immune event
+        /// with this reason (<see cref="Battle.UninterruptibleTag"/>).</summary>
+        public const string UninterruptibleReason = "uninterruptible";
+
+        public static bool IsUninterruptible(CombatEvent e) =>
+            e != null && e.Type == CombatEventType.Immune && e.Reason == UninterruptibleReason;
+
+        /// <summary>
+        /// The floating word of an avoided hit: "Miss", "Dodge", "Parry", "Block", "Resist", "Evade", "Absorb", "Immune",
+        /// and "Uninterruptible" for an interrupt that met an uninterruptible cast.
+        /// </summary>
+        public static string AvoidWord(CombatEvent e)
+        {
+            if (e == null) return "";
+            return IsUninterruptible(e) ? "Uninterruptible" : e.Type.ToString();
+        }
+
         public static string Format(CombatEvent e)
         {
             var s = e.Source; var t = e.Target;
@@ -52,7 +69,13 @@ namespace Lanternvale.Rules
                 case CombatEventType.Block: return $"{Who(t)} blocks {Possessive(s, what)}.";
                 case CombatEventType.Resist: return $"{Who(t)} resists {Possessive(s, what)}.";
                 case CombatEventType.Absorb: return $"{what} absorbs {N(e.Amount)} damage on {Who(t)}.";
-                case CombatEventType.Immune: return $"{Who(t)} is immune to {Possessive(s, string.IsNullOrEmpty(what) ? "attack" : what)}.";
+                case CombatEventType.Immune:
+                    if (IsUninterruptible(e))
+                    {
+                        string cast = t?.Pending?.Ability?.name;
+                        return $"{Possessive(t, string.IsNullOrEmpty(cast) ? "cast" : cast)} is uninterruptible: {Possessive(s, string.IsNullOrEmpty(what) ? "interrupt" : what)} has no effect.";
+                    }
+                    return $"{Who(t)} is immune to {Possessive(s, string.IsNullOrEmpty(what) ? "attack" : what)}.";
                 case CombatEventType.Evade: return $"{Who(t)} evades.";
                 case CombatEventType.AuraApplied:
                 {

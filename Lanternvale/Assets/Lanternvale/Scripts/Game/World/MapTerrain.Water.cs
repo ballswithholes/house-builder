@@ -8,7 +8,9 @@
 // ground (WaterLevel), darkens the damp banks and keeps ground cover and trees off them. A river that meets the map's
 // edge flows on out of it, through a valley in the hills, to the horizon. A crossing with a bridge, dock or boardwalk
 // prop over it keeps the deep bed (the prop spans it); any other crossing is a ford: the bed rises to a gravel bar just under the
-// surface, stepping stones break it and a data path fades out into the shallows on either bank.
+// surface, stepping stones break it and a data path fades out into the shallows on either bank. Where a river runs
+// into a pond (Brightwater's harbour, the millpond's brook, Skyreach's tarn) the two translucent surfaces cross-fade
+// over the first metre inside the pond's shore, so the water never shows a doubled, hard-edged band.
 //
 // The fen's surroundings (BiomeStyle.WaterTable) also get a still water table just under the ground: pools wherever its
 // hummocky land dips below it.
@@ -213,6 +215,32 @@ namespace Lanternvale.Game
             return best - b.hw;
         }
 
+        /// <summary>How far (m) a point lies inside the nearest pond's shore (negative outside; -99 far from every pond).</summary>
+        float PondInside(float x, float y)
+        {
+            float best = -99f;
+            for (int i = 0; i < waters.Count; i++)
+            {
+                var b = waters[i];
+                if (!b.closed || x < b.xMin - 2f || x > b.xMax + 2f || y < b.yMin - 2f || y > b.yMax + 2f) continue;
+                best = Mathf.Max(best, -BodyEdge(b, x, y));
+            }
+            return best;
+        }
+
+        /// <summary>Signed distance (m) from the nearest river's bank: negative in the river (99 far from every river).</summary>
+        float RiverEdge(float x, float y)
+        {
+            float best = 99f;
+            for (int i = 0; i < waters.Count; i++)
+            {
+                var b = waters[i];
+                if (b.closed || x < b.xMin - 2f || x > b.xMax + 2f || y < b.yMin - 2f || y > b.yMax + 2f) continue;
+                best = Mathf.Min(best, BodyEdge(b, x, y));
+            }
+            return best;
+        }
+
         /// <summary>0..1: inside one of the body's fords (soft over 0.6 m).</summary>
         static float FordFactor(WaterBody b, float x, float y)
         {
@@ -407,7 +435,9 @@ namespace Lanternvale.Game
                     var c = Color.Lerp(shallow, deep, 1f - Mathf.Abs(us[k]) / 1.3f);
                     // a lighter lip at the shore
                     if (Mathf.Abs(us[k]) >= 1f) c = Color.Lerp(c, Color.white, 0.12f);
-                    c.a = alphas[k] * fade;
+                    // where the river runs into a pond the pond's surface takes over (cross-fading over the first metre
+                    // inside its shore), so the two translucent sheets never stack into a lighter, hard-edged band
+                    c.a = alphas[k] * fade * (1f - Smooth(0f, 1f, PondInside(q.x, q.y)));
                     cols.Add(c);
                     uvs.Add(new Vector2(us[k] * hw / 3f + 0.5f, s / 3f));
                 }
@@ -460,6 +490,10 @@ namespace Lanternvale.Game
                 var col = Color.Lerp(shallow, deep, Smooth(0f, 2.2f, inner));
                 if (inner < 0.15f) col = Color.Lerp(col, Color.white, 0.12f);
                 col.a = Mathf.Lerp(0.45f, 0.62f, Smooth(0f, 1.5f, inner));
+                // over a river's water (where a river meets the pond) the pond fades in from its shore as the river
+                // fades out (AddRiver): one sheet of water, no stepped grid edge showing in the river
+                float inRiver = 1f - Smooth(-0.2f, 0.2f, RiverEdge(x, y));
+                if (inRiver > 0f) col.a *= Mathf.Lerp(1f, Smooth(0f, 1f, inner), inRiver);
                 cols.Add(col);
                 uvs.Add(new Vector2(x / 4.5f, y / 4.5f));
                 idx[k] = verts.Count - 1;
