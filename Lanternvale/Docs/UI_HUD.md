@@ -139,7 +139,7 @@ them), talent points (likewise), companions, approval, skill checks
 ("Aria · Sleight of Hand check: 14 + 2 = 16 vs DC 12 — Success"; world checks only — conversation checks are rolled
 by the dialogue window, a toast would spoil the die), locked transitions, rest, time of day, flow toasts, and
 telegraphs from `GameFlow.CombatEventPresented` (`CastStart` that left a pending cast: "Hollow Warden begins casting …!
-Interrupt it before its next turn."), and the **panels' notices**: `PanelKit.Notice` → `GameFlow.Toast(text, colour)`
+Interrupt it before its next turn."; an `Uninterruptible` cast says "It can't be interrupted: brace for it."), and the **panels' notices**: `PanelKit.Notice` → `GameFlow.Toast(text, colour)`
 (red refusals "Not enough money.", gold confirmations "Saved to Slot 2."; `GameFlow.ToastColorOf(e)` gives the colour
 during the relay) — there is no separate notice screen any more. At most five on screen and never lower than the room
 above the error lane (three lines kept free; in dialogue the upper half), the rest queue. **Error lane** (red, above the

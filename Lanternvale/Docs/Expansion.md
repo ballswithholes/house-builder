@@ -99,7 +99,7 @@ maps where noted).
 | mirefen | `to_raid_hollow_heart` | (12, 48) | (3, 3) | portal | raid_hollow_heart / `from_mirefen` | `from_raid_hollow_heart` (12, 45.5) |
 | skyreach | `to_brightwater` | (119.3, 10) | (1.4, 6) | auto | brightwater / `from_skyreach` | `from_brightwater` (116, 10) = `default` |
 | skyreach | `to_dgn_frozen_sanctum` (hidden, `found_frozen_sanctum`) | (86, 50) | (2, 2) | cave | dgn_frozen_sanctum / `from_skyreach` | `from_dgn_frozen_sanctum` (86, 47.5) |
-| skyreach | `to_raid_ashwyrm_roost` (**hidden** as built, reveal `sr_roost_revealed`, set when `mq2_ash_on_the_wind` ends) | (20, 56) | (3, 3) | portal | raid_ashwyrm_roost / `from_skyreach` | `from_raid_ashwyrm_roost` (20, 53.5) |
+| skyreach | `to_raid_ashwyrm_roost` (**hidden** as built, reveal `sr_roost_revealed`, set when `mq2_ash_on_the_wind`'s `gate` stage completes at `reg_sr_roost_gate`) | (20, 56) | (3, 3) | portal | raid_ashwyrm_roost / `from_skyreach` | `from_raid_ashwyrm_roost` (20, 53.5) |
 | every dungeon / raid | `to_<parent>` | (0.7, D/2) — 20 in the 40 m caves, 22 in the 44 m maps, **30 / 32** in the raids (60 / 64 m) | (1.4, 6) | auto | parent / `from_<dungeon or raid id>` | `default` = `from_<parent>` at (3.4, same y) |
 
 The original slice's links are unchanged: lanternvale `to_whisperwood` (89.3, 5) → `from_village`; whisperwood
@@ -520,7 +520,7 @@ per zone in `Docs/Design.md` §7):
 * **skyreach** — 120×60 peaks: Cairnhollow hut village (an inn), Two-Belly Ledge (the ogres: fight or pacify),
   Whitebrow Hollow, the Harpy Crags, the Bone Field's standing stones, Heronguard Tower, the Frozen Falls and the
   Dragonsworn Vanguard Camp (boss **Vanguard-Marshal Kaedric**) before the Roost Gate; 10 quests incl.
-  `mq2_ash_on_the_wind`, whose end reveals the Roost portal (`sr_roost_revealed`). The Frozen Sanctum: 6 encounters, boss
+  `mq2_ash_on_the_wind`, whose `gate` stage (finding the Roost Gate) reveals the Roost portal (`sr_roost_revealed`). The Frozen Sanctum: 6 encounters, boss
   **The Rimeheart**, 3 chests, quest `dg6_the_long_watch` (Old Lumi).
 * **r1** — the Hollow Heart (110×60, levels 21–23): the Lantern Stair camp (quartermaster Bettany Quill, Hinoki), the
   Root Gallery, Thornmaw's Den, the Weeping Pools, Mire Hollow and the Heart Chamber; thorn walls open as each boss

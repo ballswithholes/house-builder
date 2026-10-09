@@ -598,7 +598,7 @@ vanish too, and the nav grid follows them (`RefreshFlags`).
 | amberfield → `dgn_barrow` | `found_barrow` | `reg_am_kings_ring` (14) | Nib, Mother Delve, Old Ida (`am_q_barrow`), the King's Stone, Archivist Penhallow |
 | mirefen → `dgn_drowned_vault` | `found_drowned_vault` | `reg_mf_sunken_statue` (14) | Old Bloop, the sunken statue (`dlg_mf_sunken_statue`), Penhallow |
 | skyreach → `dgn_frozen_sanctum` | `found_frozen_sanctum` | `reg_sr_frozen_falls` (14) | Odran, the frozen falls (`dlg_sr_frozen_falls`), Penhallow |
-| skyreach → `raid_ashwyrm_roost` | `sr_roost_revealed` | — | the end of `mq2_ash_on_the_wind` |
+| skyreach → `raid_ashwyrm_roost` | `sr_roost_revealed` | — | `mq2_ash_on_the_wind`'s `gate` stage (reaching `reg_sr_roost_gate` after Kaedric falls) |
 
 Smaller secrets use the same machinery with chests: e.g. `reg_am_lookout` → `am_lookout_cache`, `reg_bw_river_steps` →
 `bw_river_cache_found`, `reg_sr_vista` → `sr_found_cache`, and inside dungeons and raids `reg_dg4_tripwire` (spotting

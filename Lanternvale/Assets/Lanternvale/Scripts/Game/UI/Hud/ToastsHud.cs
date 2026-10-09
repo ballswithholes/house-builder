@@ -431,7 +431,9 @@ namespace Lanternvale.Game
                 if (party)
                     Add(Kind.Info, name + " begins casting " + p.Ability.name + " — it resolves at the start of their next turn.", "glyph_hourglass", Hud.SchoolCol(p.Ability.school), "cast:" + u.Id + ":" + p.Ability.id);
                 else
-                    Add(Kind.Warn, name + " begins casting " + p.Ability.name + "! Interrupt it before its next turn.", "glyph_hourglass", WarnCol, "ecast:" + u.Id + ":" + p.Ability.id);
+                    Add(Kind.Warn, name + " begins casting " + p.Ability.name +
+                        (Battle.IsUninterruptible(p.Ability) ? "! It can't be interrupted: brace for it." : "! Interrupt it before its next turn."),
+                        "glyph_hourglass", WarnCol, "ecast:" + u.Id + ":" + p.Ability.id);
             }
             catch (Exception ex) { Hud.LogOnce("toast-cast", "Cast toast: " + ex.Message); }
         }
