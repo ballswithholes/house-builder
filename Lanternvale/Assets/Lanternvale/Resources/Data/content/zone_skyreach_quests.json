@@ -22,14 +22,14 @@
           "description": "Find a guide in Cairnhollow, the mountain hut village, and ask about the ash.",
           "objectives": [{"type": "Talk", "target": "sr_guide_odran", "text": "Speak with Odran Fellstep"}],
           "next": "bones",
-          "onComplete": [{"type": "GiveXP", "amount": 250}]
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
         },
         {
           "id": "bones",
           "description": "Go up the Switchbacks to the Bone Field and read the ash on the old dragon's bones. Magistra Ottoline may help.",
           "objectives": [{"type": "Flag", "target": "sr_bones_read", "text": "Read the ash on the dragon bones"}],
           "next": "scout",
-          "onComplete": [{"type": "GiveXP", "amount": 420}],
+          "onComplete": [{"type": "GiveXP", "amount": 335}],
           "turnIn": "sr_ottoline"
         },
         {
@@ -37,7 +37,7 @@
           "description": "Find Ivo Tallowmere, the Brightwater scout hiding south-east of the Dragonsworn camp.",
           "objectives": [{"type": "Talk", "target": "sr_scout_ivo", "text": "Speak with Ivo the scout"}],
           "next": "marshal",
-          "onComplete": [{"type": "GiveXP", "amount": 250}]
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
         },
         {
           "id": "marshal",
@@ -47,14 +47,14 @@
             {"type": "Collect", "target": "sr_varkas_orders", "text": "Highlord Varkas's orders"}
           ],
           "next": "gate",
-          "onComplete": [{"type": "GiveXP", "amount": 730}]
+          "onComplete": [{"type": "GiveXP", "amount": 585}]
         },
         {
           "id": "gate",
           "description": "The orders speak of a gate. Find it, above the camp.",
           "objectives": [{"type": "Reach", "target": "reg_sr_roost_gate", "text": "Find the Roost Gate"}],
           "next": "report",
-          "onComplete": [{"type": "GiveXP", "amount": 250}, {"type": "SetFlag", "key": "sr_roost_revealed"}]
+          "onComplete": [{"type": "GiveXP", "amount": 200}, {"type": "SetFlag", "key": "sr_roost_revealed"}]
         },
         {
           "id": "report",
@@ -63,7 +63,7 @@
           "onComplete": [{"type": "SetFlag", "key": "mq2_ash_on_the_wind_done"}]
         }
       ],
-      "rewards": {"xp": 1180, "gold": 9000, "choiceItems": ["sr_vanguard_breakers_helm", "sr_windrider_hood", "sr_archivists_ember_lens"]}
+      "rewards": {"xp": 945, "gold": 9000, "choiceItems": ["sr_vanguard_breakers_helm", "sr_windrider_hood", "sr_archivists_ember_lens"]}
     },
     {
       "id": "sr_woolly_business",
@@ -91,7 +91,7 @@
           "objectives": [{"type": "Flag", "target": "sr_woolly_business_handed_in", "text": "Speak with Pema"}]
         }
       ],
-      "rewards": {"xp": 670, "gold": 2500, "choiceItems": ["sr_goatherds_mittens", "sr_cloudwool_shawl", "sr_bell_on_a_string"]}
+      "rewards": {"xp": 535, "gold": 2500, "choiceItems": ["sr_goatherds_mittens", "sr_cloudwool_shawl", "sr_bell_on_a_string"]}
     },
     {
       "id": "sr_ogre_toll",
@@ -115,7 +115,7 @@
           "objectives": [{"type": "Flag", "target": "sr_ogre_toll_handed_in", "text": "Speak with Odran"}]
         }
       ],
-      "rewards": {"xp": 620, "gold": 2500, "choiceItems": ["sr_two_belly_belt", "sr_toll_takers_gloves", "sr_cheese_wheel_buckler"]}
+      "rewards": {"xp": 495, "gold": 2500, "choiceItems": ["sr_two_belly_belt", "sr_toll_takers_gloves", "sr_cheese_wheel_buckler"]}
     },
     {
       "id": "sr_warm_coats",
@@ -139,7 +139,7 @@
           "objectives": [{"type": "Flag", "target": "sr_warm_coats_handed_in", "text": "Speak with Brannoc"}]
         }
       ],
-      "rewards": {"xp": 560, "gold": 2200, "choiceItems": ["sr_trapper_coat", "sr_rimefur_mantle", "sr_snowfox_hood"]}
+      "rewards": {"xp": 450, "gold": 2200, "choiceItems": ["sr_trapper_coat", "sr_rimefur_mantle", "sr_snowfox_hood"]}
     },
     {
       "id": "sr_lamplighters_climb",
@@ -169,7 +169,7 @@
           "objectives": [{"type": "Flag", "target": "sr_lamplighters_climb_handed_in", "text": "Speak with Odran"}]
         }
       ],
-      "rewards": {"xp": 670, "gold": 2500, "choiceItems": ["sr_pells_spare_lantern", "sr_snowshoe_treads", "sr_chapel_candle_rod"]}
+      "rewards": {"xp": 535, "gold": 2500, "choiceItems": ["sr_pells_spare_lantern", "sr_snowshoe_treads", "sr_chapel_candle_rod"]}
     },
     {
       "id": "sr_whiteout_bells",
@@ -193,7 +193,7 @@
           "objectives": [{"type": "Flag", "target": "sr_whiteout_bells_handed_in", "text": "Speak with Hilde"}]
         }
       ],
-      "rewards": {"xp": 670, "gold": 2800, "choiceItems": ["sr_bellwether_boots", "sr_whiteout_wraps", "sr_harpy_feather_cloak"]}
+      "rewards": {"xp": 535, "gold": 2800, "choiceItems": ["sr_bellwether_boots", "sr_whiteout_wraps", "sr_harpy_feather_cloak"]}
     },
     {
       "id": "sr_twenty_nine",
@@ -215,7 +215,7 @@
           "description": "Drive Shrikeclaw and her harpies out of the tower.",
           "objectives": [{"type": "Defeat", "target": "enc_sr_tower_harpies", "text": "Defeat Shrikeclaw"}],
           "next": "journal",
-          "onComplete": [{"type": "GiveXP", "amount": 225}]
+          "onComplete": [{"type": "GiveXP", "amount": 180}]
         },
         {
           "id": "journal",
@@ -230,7 +230,7 @@
           "objectives": [{"type": "Flag", "target": "sr_twenty_nine_handed_in", "text": "Speak with Old Lumi"}]
         }
       ],
-      "rewards": {"xp": 900, "gold": 3500, "choiceItems": ["sr_heronguard_vambraces", "sr_ribbon_of_the_twenty_nine", "sr_fordkeepers_spaulders"]}
+      "rewards": {"xp": 720, "gold": 3500, "choiceItems": ["sr_heronguard_vambraces", "sr_ribbon_of_the_twenty_nine", "sr_fordkeepers_spaulders"]}
     },
     {
       "id": "sr_ice_and_ember",
@@ -252,7 +252,7 @@
           "description": "Break the Dragonsworn drake pen below the second switchback.",
           "objectives": [{"type": "Defeat", "target": "enc_sr_drake_pen", "text": "Break the drake pen"}],
           "next": "free",
-          "onComplete": [{"type": "GiveXP", "amount": 225}]
+          "onComplete": [{"type": "GiveXP", "amount": 180}]
         },
         {
           "id": "free",
@@ -268,7 +268,7 @@
           "objectives": [{"type": "Flag", "target": "sr_ice_and_ember_handed_in", "text": "Speak with Glimmerwing"}]
         }
       ],
-      "rewards": {"xp": 900, "gold": 3500, "choiceItems": ["sr_glimmerscale_leggings", "sr_frosthide_breeches", "sr_rimesilk_trousers"]}
+      "rewards": {"xp": 720, "gold": 3500, "choiceItems": ["sr_glimmerscale_leggings", "sr_frosthide_breeches", "sr_rimesilk_trousers"]}
     },
     {
       "id": "sr_singing_bones",
@@ -302,7 +302,7 @@
           "objectives": [{"type": "Flag", "target": "sr_singing_bones_handed_in", "text": "Speak with Ottoline"}]
         }
       ],
-      "rewards": {"xp": 840, "gold": 3200, "choiceItems": ["sr_resonance_rod", "sr_bone_song_ring", "sr_dragonbone_cudgel"]}
+      "rewards": {"xp": 670, "gold": 3200, "choiceItems": ["sr_resonance_rod", "sr_bone_song_ring", "sr_dragonbone_cudgel"]}
     },
     {
       "id": "sr_strike_the_colours",
@@ -329,7 +329,7 @@
         },
         {"id": "report", "description": "Report back to Ivo.", "turnIn": "sr_scout_ivo", "objectives": [{"type": "Flag", "target": "sr_strike_the_colours_handed_in", "text": "Speak with Ivo"}]}
       ],
-      "rewards": {"xp": 950, "gold": 3800, "choiceItems": ["sr_scouts_longbow", "sr_colour_breaker", "sr_ashcloth_gloves"]}
+      "rewards": {"xp": 760, "gold": 3800, "choiceItems": ["sr_scouts_longbow", "sr_colour_breaker", "sr_ashcloth_gloves"]}
     }
   ]
 }

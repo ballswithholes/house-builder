@@ -216,18 +216,19 @@ namespace Lanternvale.Tests
             db.Config.xpRateByLevel.Reverse();
             AssertNear(Progression.XpRate(db, 15), 5f, 1e-4f, "unsorted list");
 
-            // the real data: the 1-12 slice is unchanged, kill XP scales with the receiving character's level
+            // the real data: the 1-12 slice is unchanged; a level-18 kill pays rate 6
             Assert(Progression.XpRate(Db, 1) == Db.Config.xpRate && Progression.XpRate(Db, 12) == Db.Config.xpRate, "1-12 slice unchanged");
             var mob = UnitFactory.CreateCreature(Db, Db.Creature("cr_wolf"), 18);
             int k18 = Progression.KillXp(Db, 18, mob);
             int expected = (int)Math.Round(Formulas.MobXp(18, 18) * Progression.XpRankMult(mob.Creature.rank) * mob.Creature.xpMult * 6f);
             Assert(k18 == expected, $"kill XP at level 18 uses rate 6 ({k18} vs {expected})");
 
-            // the session's dialogue/quest XP uses the main character's level
+            // the session's dialogue XP is paid at the content's level (Progression.RateLevel; TestsExpansionJourney has
+            // the rest of the rule): outside a quest, the map's band bottom - Lanternvale's 1, rate 4 - even at level 18
             var s = SessionTest.NewGame(ClassId.Mage, 18, seed: 41);
             int before = s.Main.Xp;
             s.GiveXP(50);
-            Assert(s.Main.Xp == before + 300, $"GiveXP(50) at level 18 = 300 ({s.Main.Xp - before})");
+            Assert(s.MapId == "lanternvale" && s.Main.Xp == before + 200, $"GiveXP(50) in Lanternvale at level 18 = 200 ({s.Main.Xp - before})");
         }
 
         // ------------------------------------------------------------------ creature level floor and cap

@@ -300,7 +300,7 @@ must be Stat, AbilityMod, Proc, GrantAbility or Special.
 |---|---|---|
 | `config.partySize` | 4 (5) | Active party size outside raids. |
 | `config.maxRaidSize` | 10 | Upper bound of `MapDef.raidSize`. |
-| `config.xpRateByLevel` | [] (`[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`) | `XpRatePoint {level, rate}` list, linearly interpolated by the receiving character's level (clamped to the end points) and applied to kill and quest XP (`Progression.XpRate`). Empty = `xpRate` for every level. |
+| `config.xpRateByLevel` | [] (`[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`) | `XpRatePoint {level, rate}` list, linearly interpolated by level (clamped to the end points) and applied to kill and quest XP (`Progression.XpRate`). Empty = `xpRate` for every level. The level is the **content's**, never above the receiving character's (`Progression.RateLevel`): a kill pays at the creature's level (after `levelFloor`/`levelCap`), a quest's `rewards.xp` and its stages' `GiveXP` at the quest's level (`minLevel`, else its `zone` map's `levelMin`, else `level`), any other `GiveXP` at the current map's `levelMin`. So the same content pays the same whatever level the party arrives at; tune a zone with `TestsExpansionJourney` (Expansion.md §8 "XP"). |
 
 ## Items, sets and loot (behaviour)
 

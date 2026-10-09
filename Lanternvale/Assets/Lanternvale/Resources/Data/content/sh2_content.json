@@ -15,7 +15,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
-      "xpMult": 0.25,
+      "xpMult": 0.12,
       "attackSpeed": 2.2,
       "moveSpeed": 7,
       "size": 1.8,
@@ -43,7 +43,7 @@
       "levelOffset": 1,
       "levelFloor": 10,
       "levelCap": 13,
-      "xpMult": 0.25,
+      "xpMult": 0.12,
       "healthMult": 0.8,
       "attackSpeed": 2.0,
       "meleeSchool": "Shadow",
@@ -75,7 +75,7 @@
       "levelOffset": 1,
       "levelFloor": 10,
       "levelCap": 13,
-      "xpMult": 0.25,
+      "xpMult": 0.12,
       "attackSpeed": 2.2,
       "meleeSchool": "Shadow",
       "moveSpeed": 8,
@@ -104,7 +104,7 @@
       "levelOffset": 0,
       "levelFloor": 10,
       "levelCap": 13,
-      "xpMult": 0.25,
+      "xpMult": 0.12,
       "attackSpeed": 2.0,
       "moveSpeed": 10,
       "size": 0.8,
@@ -316,7 +316,7 @@
           "description": "Aiko says Ishiro wrote everything down. Find his ledger in the Keeper's Lodge, at the east end of the middle terrace.",
           "objectives": [{"type": "Collect", "target": "sh2_ishiros_ledger", "text": "Keeper Ishiro's ledger"}],
           "next": "give",
-          "onComplete": [{"type": "GiveXP", "amount": 50}]
+          "onComplete": [{"type": "GiveXP", "amount": 25}]
         },
         {
           "id": "give",
@@ -330,7 +330,7 @@
           "description": "Ishiro's ledger says the old stair lies beneath the cracked plinth on the High Terrace. Go down into the Lantern Catacombs.",
           "objectives": [{"type": "Reach", "target": "dgn_lantern_catacombs", "text": "Enter the Lantern Catacombs"}],
           "next": "keepers",
-          "onComplete": [{"type": "GiveXP", "amount": 50}]
+          "onComplete": [{"type": "GiveXP", "amount": 25}]
         },
         {
           "id": "keepers",
@@ -361,7 +361,7 @@
         }
       ],
       "rewards": {
-        "xp": 225,
+        "xp": 110,
         "gold": 2500,
         "choiceItems": ["sh2_keepers_broom", "sh2_novices_grey_robe", "sh2_stair_counters_sandals", "sh2_lantern_wardens_gauntlets"]
       }

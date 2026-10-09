@@ -439,9 +439,16 @@ cannot change in combat, so bonuses never flip mid-fight; saves need nothing (it
 ## 7. Progression
 
 ```csharp
-int xp = Progression.KillXp(db, charLevel, mobUnit);       // WoW formula × elite/boss × xpMult × config.xpRate
+int xp = Progression.KillXp(db, charLevel, mobUnit);       // WoW formula (Formulas.MobXp: grey = 0, lower mobs less)
+                                                            //   × elite/boss × xpMult × XpRate(RateLevel(mob level, charLevel))
 List<LevelUpInfo> ups = Progression.GiveXp(unit, amount);   // every party member gets full kill XP
-Progression.QuestXp(db, amount); Progression.XpToNextLevel(db, level); Progression.SetLevel(unit, level);
+// the XP rate follows the CONTENT's level, never above the receiver's (config.xpRateByLevel, DataSchema.md):
+int rl = Progression.RateLevel(contentLevel, receiverLevel); // min(content, receiver); content <= 0 = the receiver's
+int ql = Progression.QuestLevel(db, questDef);               // minLevel, else its zone map's levelMin, else its level
+int ml = Progression.MapLevel(mapDef);                       // the map's levelMin (0 = none)
+int qxp = Progression.ContentXp(db, amount, ql, receiverLevel); // amount × XpRate(RateLevel(ql, receiverLevel))
+Progression.XpRate(db, level); Progression.QuestXp(db, amount, rateLevel);
+Progression.XpToNextLevel(db, level); Progression.SetLevel(unit, level);
 // talents: 1 point per level from 10; tier gate 5×(tier−1) in the tree; arrows must be maxed
 string why = Progression.CannotLearnTalent(unit, talentId); Progression.LearnTalent(unit, talentId);
 Progression.TalentPointsAvailable(unit); Progression.PointsInTree(unit, treeId);
@@ -508,6 +515,6 @@ One line per new pure-C# file under `Scripts/Core` (all Unity-free, all covered 
 
 Changed for the expansion and documented in their sections or in the other API docs: `Loot.cs` (`LootContext`, pools,
 §6), `Equipment.Version`, `Battle.Procs` (set procs), `Battle` (`Uninterruptible` casts, §3), `UnitFactory.CreatureLevel`
-(`levelFloor` / `levelCap`), `Progression` (`xpRateByLevel`, §7), `SkillChecks` (Perception: Spirit; Hunter and Rogue
+(`levelFloor` / `levelCap`), `Progression` (`xpRateByLevel` at the content's level: `RateLevel`, `QuestLevel`, `MapLevel`, `ContentXp`, §7), `SkillChecks` (Perception: Spirit; Hunter and Rogue
 proficient), `NavGrid` (water and its crossings, flag-gated props), `MapRuntime` (`IsTransitionVisible`,
 `IsPropVisible`, `checkedRegions`; WorldAPI.md) and `DataValidator` (the expansion's rules, DataSchema.md).

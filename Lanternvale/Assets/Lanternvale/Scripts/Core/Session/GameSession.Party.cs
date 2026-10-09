@@ -233,12 +233,16 @@ namespace Lanternvale.Session
 
         // ================================================================= xp & levels
 
-        /// <summary>Raw XP from data (dialogue outcome / quest reward): the main character's XP rate is applied
-        /// (config.xpRateByLevel, else config.xpRate).</summary>
+        /// <summary>Raw XP from data (dialogue outcome / quest reward), paid at the XP rate of the CONTENT's level
+        /// (config.xpRateByLevel, else config.xpRate): a quest's stage outcomes and rewards at Progression.QuestLevel,
+        /// other outcomes at the current map's band bottom (Progression.MapLevel); never above the main character's
+        /// level (Progression.RateLevel).</summary>
         public void GiveXP(int amount)
         {
             if (resetting || amount <= 0) return;
-            GivePartyXp(Progression.QuestXp(Db, amount, PartyLevel));
+            var paying = World?.Quests?.Paying;
+            int content = paying != null ? Progression.QuestLevel(Db, paying) : Progression.MapLevel(MapDef);
+            GivePartyXp(Progression.ContentXp(Db, amount, content, PartyLevel));
         }
 
         /// <summary>Gives already-scaled XP to the party (main character; companions are level-synced). Returns the level-ups.</summary>

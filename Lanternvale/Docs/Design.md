@@ -159,7 +159,8 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
 The first slice (levels 1–12) and the expansion *The Ember Road* (levels 12–33; contract and as-built notes in
 `Docs/Expansion.md`, links and coordinates in its §1). Enemies scale to the party's level (`scaleToParty` +
 `levelOffset`), clamped to their map's band (`levelFloor` / `levelCap`); XP per kill and quest follows
-`config.xpRateByLevel` (×4 to level 12, rising to ×9 at 30). Every map lists its band on the Map panel and in the
+`config.xpRateByLevel` (×4 to level 12, rising to ×9 at 30) at the content's level (the creature's, the quest's),
+never above the character's, so arriving early or late does not change what a zone pays. Every map lists its band on the Map panel and in the
 journal; NPCs show WoW-style quest markers (§6 "Quests", `Docs/WorldAPI.md` §5).
 
 **The valley (levels 1–12, deepened by the expansion).**

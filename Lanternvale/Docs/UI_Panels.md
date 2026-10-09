@@ -99,7 +99,7 @@ game-over screen. `PanelArt` makes the procedural textures (d20, arrow heads, di
 * **Journal** — active (main first), completed and failed (collapsible) quests; detail: giver, level, the quest's zone
   and its level band (`QuestDef.zone`), summary, current stage, objectives with ticks, "» Return to <NPC>" when the
   step can be handed in now (`Session.QuestTurnInOf`, shared with the tracker), history, rewards (XP as granted:
-  `Progression.QuestXp(db, xp, PartyLevel)`, coins, items, pick-one choices). "Party & camp" opens the roster: lead, to
+  `Progression.ContentXp(db, xp, Progression.QuestLevel(db, quest), PartyLevel)`, coins, items, pick-one choices). "Party & camp" opens the roster: lead, to
   camp / join, auto-play toggle, dismiss (confirm). **In a raid** (`Session.InRaid`) the roster is the "Raid party":
   "Raid party: 7 / 10" (`PartySize` is the raid's size there), "Leading the raid" / "In the raid" / "Waiting outside the
   raid", "Join raid", and **no Dismiss** — the party you came with is restored when the raid ends, so nobody should walk off

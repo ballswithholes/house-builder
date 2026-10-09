@@ -102,6 +102,10 @@ namespace Lanternvale.World
         /// <summary>Raised for every quest change (toasts, journal refresh).</summary>
         public event Action<QuestEvent> Changed;
 
+        /// <summary>The quest whose stage outcomes or rewards are being applied right now (null otherwise): the session
+        /// pays their GiveXP at the quest's level (Progression.QuestLevel), not the receiver's.</summary>
+        public QuestDef Paying { get; private set; }
+
         readonly Dictionary<string, Record> records = new Dictionary<string, Record>(StringComparer.Ordinal);
         readonly List<Record> ordered = new List<Record>();
         readonly List<string> pendingChoices = new List<string>();
@@ -302,9 +306,12 @@ namespace Lanternvale.World
             if (depth >= MaxDepth) { Log.Warn($"QuestLog: recursion limit reached in '{r.id}'"); return; }
             depth++;
             r.leaving = true;
+            var paying = Paying;
+            Paying = r.def;
             try { WorldRules.ExecuteAll(st.onComplete, Context); }
             finally
             {
+                Paying = paying;
                 r.leaving = false;
                 depth--;
             }
@@ -346,7 +353,13 @@ namespace Lanternvale.World
             Emit(QuestEventKind.Completed, r, -1, r.def.name);
             var rw = r.def.rewards;
             if (rw == null || Context == null) return;
-            if (rw.xp > 0) Context.GiveXP(rw.xp);
+            if (rw.xp > 0)
+            {
+                var paying = Paying;
+                Paying = r.def;
+                try { Context.GiveXP(rw.xp); }
+                finally { Paying = paying; }
+            }
             if (rw.gold > 0) Context.GiveGold(rw.gold);
             if (rw.items != null) foreach (var it in rw.items) if (!string.IsNullOrEmpty(it)) Context.GiveItem(it, 1);
             if (rw.choiceItems != null && rw.choiceItems.Length > 0 && !pendingChoices.Contains(r.id))

@@ -182,9 +182,15 @@ put it in `requestsForLead`.
 ### 2.6 Config, XP and party
 * `config.partySize = 5`.
 * `GameConfigDef.maxRaidSize = 10`.
-* `GameConfigDef.xpRateByLevel`: list of `XpRatePoint {int level; float rate}`, linearly interpolated by the
-  receiving character's level, applied to kill **and** quest XP. When the list is empty, `xpRate` is used (old
-  behaviour). The data is `[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`, so levels 1–12 are unchanged.
+* `GameConfigDef.xpRateByLevel`: list of `XpRatePoint {int level; float rate}`, linearly interpolated by level and
+  applied to kill **and** quest XP. When the list is empty, `xpRate` is used (old behaviour). The data is
+  `[{1,4},{12,4},{18,6},{24,8},{30,9},{60,9}]`, so levels 1–12 are unchanged. **The level is the content's**, never
+  above the receiver's (`Progression.RateLevel`, as built after the review): a kill uses the creature's level (after
+  its `levelFloor`/`levelCap` clamp), quest XP (rewards and stage `GiveXP`) the quest's level (`minLevel`, else its
+  zone map's `levelMin`), other `GiveXP` outcomes the current map's `levelMin`. The same content pays the same
+  whatever level the party arrives at, so a party that is ahead stays about as far ahead and does not run further
+  away (the contract's first rule, the receiver's level, made the same Amberfield content pay 100 k from 12 and 131 k
+  from 18).
 
 ### 2.7 Session API additions (stubs in the contract commit; real bodies come from the owners)
 * `SessionEventKind`, appended at the end: `RaidPartyRequested` (Id = map, Id2 = spawn, Amount = raidSize),
@@ -429,11 +435,31 @@ Follow `brief_items.md` §5–§9:
   * completion is `CompleteQuest` at the turn-in NPC;
   * keep `giver` accurate;
   * cross-zone gating uses **flags**, not quest ids from other files.
-* **XP.** Rates come from `xpRateByLevel`. A zone's quests plus its normal fights must take a character through the
-  zone band, and its dungeon adds about one level. Tune quest `xp` with a script that totals the zone.
+* **XP.** Rates come from `xpRateByLevel` at the content's level (§2.6). A zone's quests plus its normal fights must
+  take a character through the zone band, and its dungeon adds about one level. Tune quest `xp` and creature
+  `xpMult` with a script that totals the zone (`TestsExpansionJourney.Xp_ZoneBudgets`, `--sim`).
   * Amberfield 12→18 needs about 85 k XP after rate.
   * Mirefen 18→24 about 150 k.
   * Skyreach 24→30 about 220 k.
+  * The north bands and their three dungeons (§1) are optional catch-up content worth about 3 levels at 12–15, so
+    their bosses are met at their bands (the Mossking at 14, the Lantern Lich at 15).
+  * **As tuned (xp-pacing review).** Totals from the data, each encounter once: north + dg1–3 32 k; Amberfield +
+    Barrow 84 k; Brightwater's errands 32 k; Mirefen + Vault 140 k; Skyreach + Sanctum 199 k. Played
+    (`TestsExpansionJourney`, the slice's party, every side quest, no grinding), zone exit levels:
+
+    | route | north + dg1–3 | Amberfield + Barrow | Mirefen + Vault | Skyreach + Sanctum |
+    |---|---|---|---|---|
+    | lean (north skipped): measured / window | — | 18 / 17–19 | 24 / 23–25 | 30 / 29–31 |
+    | full: measured / window | 15 / 14–15 | 20 / 18–20 | 26 / 24–26 | 31 / 30–31 |
+    | review, before | 18 (lean —) | 23 (lean 19) | 28 (lean 25) | 34 (lean 32) |
+
+    The lean route reaches every level gate by itself (the Barrow at 17, The Drowned Lanterns at 18, the Vault at
+    23, Ash on the Wind at 24, the Sanctum at 28) and leaves each zone at its band top; the full route is about one
+    level ahead (its zone exits sit at the dungeon bands' tops) and the raids (31–33) are not reached by the zones
+    alone. Creature `xpMult` as tuned: north band trash 0.12–0.2, Amberfield 0.85 (the caravan boss and the warchief 1.27), Barrow 0.17–0.45,
+    Mirefen 0.92 (Auntie Gall 1.2), Drowned Vault 0.38–0.7, Skyreach 0.8, Frozen Sanctum 0.45–0.59. Amberfield's
+    level gates (16 and 17) need its early quests and fights to pay about 61 k before the Barrow: keep the
+    pre-Barrow content front-loaded when retuning.
 * **Gear budget.** Stats are `0.55 × ilvl × Qa × SlotBudgetMult`, with Qa = Uncommon 1.1, Rare 1.6, Epic 2.1,
   Legendary 2.8. Weapon DPS uses `WeaponDps` × {.72, .79, .86, .95}. Armour uses `ArmorValue`.
   * Every authored green has stats.

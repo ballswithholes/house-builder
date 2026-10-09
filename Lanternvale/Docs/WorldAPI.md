@@ -297,7 +297,7 @@ public interface IDialogueContext
     void TakeItem(string itemId, int count);
     void GiveGold(int copper);
     void TakeGold(int copper);
-    void GiveXP(int amount);                        // raw amount from data (apply config.xpRate here if desired)
+    void GiveXP(int amount);                        // raw amount from data (the session applies the rate; QuestLog.Paying = the quest paying it)
     void Recruit(string companionId);
     void Dismiss(string companionId);
     void ChangeApproval(string companionId, int delta);
@@ -446,6 +446,8 @@ void OnDefeat(string encounterId)             // MapRuntime.MarkEncounterDone ca
 void Refresh()                                // re-pull Collect/Flag/Defeat objectives from ctx
 // rewards
 IReadOnlyList<string> PendingRewardChoices    // quest ids whose choiceItems await a pick
+QuestDef Paying                               // the quest whose stage outcomes / rewards are being applied (else null):
+                                              // the session pays their GiveXP at Progression.QuestLevel
 bool ClaimRewardChoice(string questId, string itemId)
 // journal
 List<QuestJournalEntry> GetJournal(bool includeFinished = true)

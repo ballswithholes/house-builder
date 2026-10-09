@@ -243,7 +243,9 @@ owner, kept across maps and saves. A pet that dies is removed after the battle (
 stays dead (`Unit.HunterPet.Dead`) until Revive Pet or a long rest. Totems and temporary guardians placed out of
 combat join the next battle and are cleared on map change.
 
-**XP.** `GiveXP(raw)` (dialogue outcome / quest reward amount) applies `config.xpRate`; battles give the main
+**XP.** `GiveXP(raw)` (dialogue outcome / quest reward amount) applies the XP rate of the content's level, never
+above the main character's (`Progression.RateLevel`): a quest's stage outcomes and reward at `Progression.QuestLevel`
+(`QuestLog.Paying` names the quest being paid), anything else at the current map's band bottom; battles give the main
 character's `BattleResult` XP (rate already applied); `GivePartyXp(scaled)` grants an exact amount. The main
 character gains it and every roster companion is raised to the same level → `XpGained`, `LevelUp`×n,
 `AbilityLearned`, `TalentPointsAvailable`.

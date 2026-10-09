@@ -56,18 +56,53 @@ namespace Lanternvale.Rules
         }
 
         /// <summary>XP a character of <paramref name="charLevel"/> earns for killing <paramref name="mob"/> (rate applied).
-        /// Every party member earns the full amount (BG3 style, no splitting).</summary>
+        /// Every party member earns the full amount (BG3 style, no splitting). The WoW formula (Formulas.MobXp: grey
+        /// mobs pay nothing, lower ones less) is multiplied by the rank, xpMult and the XP rate of the CONTENT: the
+        /// creature's level (after its levelFloor/levelCap clamp), never above the receiver's own (RateLevel).</summary>
         public static int KillXp(GameDatabase db, int charLevel, Unit mob)
         {
             if (mob == null || mob.Creature == null || mob.Kind != UnitKind.Creature) return 0;
             if (charLevel >= db.Config.maxLevel) return 0;
-            float xp = Formulas.MobXp(charLevel, mob.Level) * XpRankMult(mob.Creature.rank) * mob.Creature.xpMult * XpRate(db, charLevel);
+            float xp = Formulas.MobXp(charLevel, mob.Level) * XpRankMult(mob.Creature.rank) * mob.Creature.xpMult
+                       * XpRate(db, RateLevel(mob.Level, charLevel));
             return Math.Max(0, (int)Math.Round(xp));
         }
 
         /// <summary>
-        /// XP multiplier for a character of <paramref name="level"/>: config.xpRateByLevel linearly interpolated by level
-        /// (clamped to the first/last point), or config.xpRate when that list is empty.
+        /// The level whose XP rate pays for content of <paramref name="contentLevel"/> earned by a character of
+        /// <paramref name="receiverLevel"/>: the content's level, capped at the receiver's (≤ 0 = unknown: the
+        /// receiver's). So the same content pays the same whatever level the party arrives at (out-levelling a zone
+        /// no longer raises its pay), and playing above your level never pays a higher band's rate (the WoW formula
+        /// already adds 5 % per level for kills). Levels 1-12 share one rate, so the 1-12 slice is unaffected.
+        /// </summary>
+        public static int RateLevel(int contentLevel, int receiverLevel)
+        {
+            int r = Math.Max(1, receiverLevel);
+            return contentLevel > 0 ? Math.Min(contentLevel, r) : r;
+        }
+
+        /// <summary>The level a quest's XP (its rewards.xp and the GiveXP outcomes of its stages) is paid at: its
+        /// minLevel; else the bottom of its zone map's band (levelMin); else its display level.</summary>
+        public static int QuestLevel(GameDatabase db, QuestDef q)
+        {
+            if (q == null) return 0;
+            if (q.minLevel > 0) return q.minLevel;
+            if (!string.IsNullOrEmpty(q.zone) && db != null && db.Maps.TryGetValue(q.zone, out var m) && m != null && m.levelMin > 0) return m.levelMin;
+            return Math.Max(1, q.level);
+        }
+
+        /// <summary>The level a map's dialogue/prop XP (GiveXP outcomes outside a quest) is paid at: the bottom of its
+        /// band (levelMin; 0 = none = the receiver's level).</summary>
+        public static int MapLevel(MapDef map) => map != null && map.levelMin > 0 ? map.levelMin : 0;
+
+        /// <summary>Raw data XP (a GiveXP outcome or a quest reward) for content of <paramref name="contentLevel"/> earned
+        /// by a character of <paramref name="receiverLevel"/>: amount × XpRate(RateLevel(content, receiver)).</summary>
+        public static int ContentXp(GameDatabase db, int amount, int contentLevel, int receiverLevel) =>
+            QuestXp(db, amount, RateLevel(contentLevel, receiverLevel));
+
+        /// <summary>
+        /// XP multiplier at <paramref name="level"/>: config.xpRateByLevel linearly interpolated by level (clamped to
+        /// the first/last point), or config.xpRate when that list is empty. The level is the content's (RateLevel).
         /// </summary>
         public static float XpRate(GameDatabase db, int level)
         {
@@ -88,7 +123,8 @@ namespace Lanternvale.Rules
             return lo.rate + (hi.rate - lo.rate) * t;
         }
 
-        /// <summary>Quest XP (data amount × the XP rate of a character of <paramref name="level"/>; level ≤ 0 = level 1).</summary>
+        /// <summary>Data XP × the XP rate at <paramref name="level"/> (≤ 0 = level 1). Callers pass the rate level
+        /// (RateLevel / ContentXp); the session pays quest XP with QuestLevel and other data XP with MapLevel.</summary>
         public static int QuestXp(GameDatabase db, int amount, int level = 1) =>
             Math.Max(0, (int)Math.Round(amount * XpRate(db, Math.Max(1, level))));
 

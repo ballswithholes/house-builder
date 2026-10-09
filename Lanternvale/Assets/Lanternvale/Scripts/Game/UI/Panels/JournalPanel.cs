@@ -306,9 +306,9 @@ namespace Lanternvale.Game.Panels
                     {
                         int xp = rw.xp;
                         var db = PanelKit.Db;
-                        // as the session grants it: config.xpRateByLevel at the party's level
+                        // as the session grants it: config.xpRateByLevel at the quest's level (never above the party's)
                         var sess = PanelKit.Sess;
-                        if (db != null) try { xp = Progression.QuestXp(db, rw.xp, sess != null ? sess.PartyLevel : 1); } catch (Exception) { }
+                        if (db != null) try { xp = Progression.ContentXp(db, rw.xp, Progression.QuestLevel(db, db.Quests.TryGetValue(q.Id ?? "", out var qd) ? qd : null), sess != null ? sess.PartyLevel : 1); } catch (Exception) { }
                         var plate = new Rect(x, y + 4f, 150f, 34f);
                         PanelKit.Rounded(plate, new Color(0.69f, 0.48f, 0.88f, 0.3f));
                         if (xp != xpShown) { xpShown = xp; xpText = "<b>" + xp + "</b> XP"; }

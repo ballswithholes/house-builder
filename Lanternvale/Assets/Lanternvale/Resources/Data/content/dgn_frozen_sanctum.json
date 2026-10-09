@@ -554,6 +554,7 @@
       "portrait": "demon_voidwalker",
       "type": "Elemental",
       "rank": "Normal",
+      "xpMult": 0.45,
       "levelMin": 30,
       "levelMax": 32,
       "scaleToParty": true,
@@ -582,6 +583,7 @@
       "portrait": "demon_voidwalker",
       "type": "Elemental",
       "rank": "Elite",
+      "xpMult": 0.45,
       "levelMin": 30,
       "levelMax": 32,
       "scaleToParty": true,
@@ -616,6 +618,7 @@
       "portrait": "cr_hollow_spirit",
       "type": "Undead",
       "rank": "Normal",
+      "xpMult": 0.45,
       "levelMin": 30,
       "levelMax": 32,
       "scaleToParty": true,
@@ -647,6 +650,7 @@
       "portrait": "cr_hollow_spirit",
       "type": "Undead",
       "rank": "Normal",
+      "xpMult": 0.45,
       "resource": "Mana",
       "levelMin": 30,
       "levelMax": 32,
@@ -681,6 +685,7 @@
       "portrait": "cr_hollow_spirit",
       "type": "Undead",
       "rank": "Elite",
+      "xpMult": 0.45,
       "levelMin": 30,
       "levelMax": 32,
       "scaleToParty": true,
@@ -716,6 +721,7 @@
       "portrait": "demon_imp",
       "type": "Dragonkin",
       "rank": "Elite",
+      "xpMult": 0.45,
       "levelMin": 30,
       "levelMax": 32,
       "scaleToParty": true,
@@ -801,7 +807,7 @@
       "passives": ["cr_sr_frozen_body"],
       "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish", "Stun"],
       "lootTable": "lt_dg6_rimeheart",
-      "xpMult": 1.3,
+      "xpMult": 0.59,
       "faction": "Sanctum",
       "bark": "*The cavern groans. Something vast and blue unfolds from the ice, and the air is suddenly too cold to breathe.*",
       "material": "ice",
@@ -1563,7 +1569,7 @@
           "description": "Find what keeps the knights in the cold, and end it.",
           "objectives": [{"type": "Defeat", "target": "enc_dg6_rimeheart", "text": "Defeat the Rimeheart"}],
           "next": "aubric",
-          "onComplete": [{"type": "GiveXP", "amount": 420}]
+          "onComplete": [{"type": "GiveXP", "amount": 295}]
         },
         {
           "id": "aubric",
@@ -1580,7 +1586,7 @@
         }
       ],
       "rewards": {
-        "xp": 1460,
+        "xp": 1020,
         "gold": 8000,
         "choiceItems": ["dg6_aubrics_oath", "dg6_lantern_of_the_long_watch", "dg6_thawed_bowstring_bow", "dg6_heron_ward_cloak"]
       }
