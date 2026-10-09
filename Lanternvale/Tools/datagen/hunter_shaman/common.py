@@ -98,7 +98,7 @@ class Builder:
         talent = kw.get("fromTalent", False)
         if "trainCost" not in kw and not hidden and not talent:
             d["trainCost"] = train_cost(learn)
-        order = ["trainCost", "fromTalent", "passive", "passiveAura", "scaleWithLevel", "hidden", "time", "castTime",
+        order = ["trainCost", "fromTalent", "passive", "passiveAura", "scaleWithLevel", "hidden", "time", "castTime", "rankCastTimes",
                  "channeled", "channelTicks", "gcdOverride", "cooldown", "cooldownGroup", "cost", "target", "range",
                  "minRange", "melee", "area", "requires", "effects", "tags", "exclusiveGroup", "breaksStealth",
                  "autoAttack", "nextSwing", "usableWhileCasting", "special", "aiHint", "aiPriority"]

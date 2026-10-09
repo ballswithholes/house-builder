@@ -1139,21 +1139,24 @@ namespace Lanternvale.Tests
             public override string ToString() => $"{Raid}/{Boss} at L{Level} ({Recruited} recruited, quests offered {QuestsOffered}; the ten: avg ilvl {TenIlvl:0.0}, {TenEmptySlots} empty armour/weapon slots) [{Composition}]: ten {Ten} in {TenRounds}r, five {Five} in {FiveRounds}r; the same ten in level gear (veteran rules): {TenLevelGear}";
         }
 
-        /// <summary>The raid the player would pick: Main, then at most 2 tanks and 3 healers, the rest damage dealers, the
-        /// best-geared first (RaidPickerScreen shows the roles).</summary>
+        /// <summary>The raid the player would pick (RaidPickerScreen shows the roles): Main, then the best-geared 2 tanks and
+        /// 3 healers (1 and 1 below ten), then the best-geared damage dealers, then anyone left. Role first, so a poorly
+        /// geared healer still makes the ten and the raid lines measure the gear gap, not a one-healer composition.</summary>
         public static List<string> PickRaid(GameSession s, int n)
         {
             var c = s.RaidCandidates();
             var pick = new List<Unit> { s.Main };
+            var rest = c.Skip(1).OrderByDescending(x => Journey.AvgIlvl(new[] { x })).ToList();
             int Count(UnitRole r) => pick.Count(u => u.Role == r);
-            foreach (var u in c.Skip(1).OrderByDescending(x => Journey.AvgIlvl(new[] { x })))
+            void Fill(UnitRole role, int cap)
             {
-                if (pick.Count >= n) break;
-                var r = u.Role;
-                if (r == UnitRole.Tank && Count(UnitRole.Tank) >= (n >= 10 ? 2 : 1)) continue;
-                if (r == UnitRole.Healer && Count(UnitRole.Healer) >= (n >= 10 ? 3 : 1)) continue;
-                pick.Add(u);
+                foreach (var u in rest)
+                    if (pick.Count < n && Count(role) < cap && u.Role == role && !pick.Contains(u)) pick.Add(u);
             }
+            Fill(UnitRole.Tank, n >= 10 ? 2 : 1);
+            Fill(UnitRole.Healer, n >= 10 ? 3 : 1);
+            foreach (var u in rest)
+                if (pick.Count < n && u.Role != UnitRole.Tank && u.Role != UnitRole.Healer && !pick.Contains(u)) pick.Add(u);
             foreach (var u in c) if (pick.Count < n && !pick.Contains(u)) pick.Add(u);
             return pick.Select(s.MemberId).ToList();
         }

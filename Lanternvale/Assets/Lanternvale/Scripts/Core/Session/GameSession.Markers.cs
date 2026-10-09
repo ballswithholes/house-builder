@@ -166,7 +166,8 @@ namespace Lanternvale.Session
         }
 
         /// <summary>
-        /// Active objectives on the current map: visible encounters holding an incomplete Kill target (or a Defeat target),
+        /// Active objectives on the current map: visible encounters holding an incomplete Kill target (or a Defeat target,
+        /// or whose done flag is a Flag target),
         /// regions and exits to maps that Reach objectives target, and unopened chests holding a needed Collect item.
         /// Cached per QuestMarkersVersion and map; do not modify the list.
         /// </summary>
@@ -207,6 +208,11 @@ namespace Lanternvale.Session
                                 bool hit = o.type == ObjectiveType.Defeat ? e.id == o.target : HasEnemy(e, o.target);
                                 if (hit) Hint(QuestMapHintKind.Encounter, e.id, e.pos, default);
                             }
+                            break;
+                        case ObjectiveType.Flag:
+                            // a boss objective written as Flag(<encounter's done flag>) rings that encounter too
+                            foreach (var e in def.encounters)
+                                if (e != null && Map.IsEncounterVisible(e) && MapRuntime.DoneFlag(e) == o.target) Hint(QuestMapHintKind.Encounter, e.id, e.pos, default);
                             break;
                         case ObjectiveType.Reach:
                             foreach (var r in def.regions)

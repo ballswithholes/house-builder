@@ -408,6 +408,15 @@ namespace Lanternvale.Tests
             s.World.Quests.Start("sq_satchel");
             s.EnterMap("whisperwood");
             Assert(s.QuestHintsOnMap().Any(h => h.Kind == QuestMapHintKind.Chest && h.Id == "chest_satchel"), "the satchel chest is hinted");
+
+            // a boss objective written as Flag(<the encounter's doneFlag>) rings that encounter too
+            Assert(s.Quests.SetStage("ww2_kings_glow", "king"), "The Kings' Glow at the king");
+            s.EnterMap("dgn_mossdeep");
+            hints = s.QuestHintsOnMap();
+            Assert(hints.Any(h => h.Kind == QuestMapHintKind.Encounter && h.Id == "enc_dg2_mossking" && h.QuestId == "ww2_kings_glow"),
+                "the Moss King (Flag dg2_king_defeated) is an encounter hint: " + string.Join("; ", hints));
+            s.Flags.Set("dg2_king_defeated", 1);
+            Assert(!s.QuestHintsOnMap().Any(h => h.Id == "enc_dg2_mossking"), "no ring once the king is done");
         }
 
         // ------------------------------------------------------------------ labels

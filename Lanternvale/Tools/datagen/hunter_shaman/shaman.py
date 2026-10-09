@@ -11,13 +11,15 @@ CC_IMMUNE = ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph",
 DMG_SPELLS = ["shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
               "shaman_frost_shock"]
 LIGHTNING = ["shaman_lightning_bolt", "shaman_chain_lightning"]
+# Rank 1 of Lightning Bolt and Healing Wave is a 1.5 s cast in WoW 1.12; later ranks take 3 s.
+RANK1_FAST = [1.5, 3, 3, 3, 3, 3, 3, 3, 3, 3]
 
 # =====================================================================================================================
 # Elemental spells
 # =====================================================================================================================
 A("shaman_lightning_bolt", "Lightning Bolt", "lightning", "Nature",
   "Casts a bolt of lightning at the target for {0} Nature damage.",
-  learn=1, ranks=[1, 8, 14, 20, 26, 32, 38, 44, 50, 56], trainCost=10, castTime=3,
+  learn=1, ranks=[1, 8, 14, 20, 26, 32, 38, 44, 50, 56], trainCost=10, castTime=3, rankCastTimes=RANK1_FAST,
   cost=mana(15, pl(15, 265, 1, 56)), target="Enemy", range=30,
   effects=[eff("Damage", min=15, max=17, perLevel=pl(16, 452.5, 1, 56), coef=0.857)],
   tags=["Lightning"], aiHint="Damage", aiPriority=5)
@@ -80,14 +82,16 @@ A("shaman_purge", "Purge", "hand", "Nature",
 # =====================================================================================================================
 A("shaman_healing_wave", "Healing Wave", "wave", "Nature",
   "Heals a friendly target for {0}.",
-  learn=1, ranks=[1, 6, 12, 18, 24, 32, 40, 48, 56, 60], trainCost=10, castTime=3, cost=mana(25, pl(25, 620, 1, 60)),
+  learn=1, ranks=[1, 6, 12, 18, 24, 32, 40, 48, 56, 60], trainCost=10, castTime=3, rankCastTimes=RANK1_FAST,
+  cost=mana(25, 4.5),  # WoW: mana(25, pl(25, 620, 1, 60)); see CLASS["_costNote"]
   target="Ally", range=40,
   effects=[eff("Heal", min=34, max=44, perLevel=pl(39, 1735, 1, 60), coef=0.857)],
   tags=["Heal"], aiHint="Heal", aiPriority=6)
 
 A("shaman_lesser_healing_wave", "Lesser Healing Wave", "water_drop", "Nature",
   "Heals a friendly target for {0}.",
-  learn=20, ranks=[20, 28, 36, 44, 52, 60], castTime=1.5, cost=mana(105, pl(105, 380, 20, 60)), target="Ally",
+  learn=20, ranks=[20, 28, 36, 44, 52, 60], castTime=1.5, target="Ally",
+  cost=mana(55, 3.0),  # WoW: mana(105, pl(105, 380, 20, 60)); see CLASS["_costNote"]
   range=40, effects=[eff("Heal", min=162, max=186, perLevel=pl(174, 880, 20, 60), coef=0.429)],
   tags=["Heal"], aiHint="Heal", aiPriority=7)
 
@@ -689,8 +693,8 @@ BUILD = ([EN + "ancestral_knowledge"] * 5 + [EN + "thundering_strikes"] * 5 + [E
 ITEMS = [
     {"id": "shaman_starter_worn_mace", "name": "Worn Mace", "icon": "mace",
      "description": "A knobbly club of seasoned wood, banded with copper.", "kind": "Weapon", "quality": "Common",
-     "itemLevel": 2, "requiredLevel": 1, "equip": "OneHand", "weaponType": "OneHandMace", "minDamage": 2,
-     "maxDamage": 5, "speed": 2.2, "price": 9},
+     "itemLevel": 2, "requiredLevel": 1, "equip": "OneHand", "weaponType": "OneHandMace", "minDamage": 7,
+     "maxDamage": 13, "speed": 2.2, "price": 9},
     {"id": "shaman_starter_battered_buckler", "name": "Battered Buckler", "icon": "shield",
      "description": "A small hide-covered shield painted with a faded spiral.", "kind": "Armor", "quality": "Common",
      "itemLevel": 2, "requiredLevel": 1, "equip": "OffHand", "weaponType": "Shield", "armor": 15, "block": 2,
@@ -716,6 +720,10 @@ CLASS = {
     "armorTypes": ["Cloth", "Leather"], "armorUpgrade": {"level": 40, "type": "Mail"},
     "weaponTypes": ["OneHandMace", "OneHandAxe", "Staff", "Dagger", "FistWeapon", "Shield"],
     "dualWieldLevel": 0, "canParry": False, "canBlock": True,
+    "_costNote": "Lanternvale deviation, as for the priest's heals: Healing Wave keeps 25 mana at rank 1 but grows "
+                 "4.5 mana per level instead of 10.085, and Lesser Healing Wave costs 55 + 3.0 per level instead of "
+                 "105 + 6.875 (about 0.45x WoW Classic at the top ranks). A healer casts every 6-second turn, so the "
+                 "five-second rule never lapses in combat and WoW costs left her dry by round 5-7 of a dungeon boss.",
     "baseStatsLevel1": {"strength": 21, "agility": 20, "stamina": 21, "intellect": 21, "spirit": 23},
     "baseStatsLevel60": {"strength": 98, "agility": 51, "stamina": 105, "intellect": 90, "spirit": 98},
     "baseHealthLevel1": 37, "baseHealthLevel60": 1423, "baseManaLevel1": 55, "baseManaLevel60": 1520,

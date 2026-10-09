@@ -413,8 +413,9 @@ IReadOnlyList<QuestMarkerInfo> QuestMarkersOnMap()          // non-None markers 
 QuestMarkerInfo QuestTurnInOf(string questId)               // where an active quest goes next: ReadyToTurnIn (hand it
                                                             // in now: "» Return to …"), InProgress (its hand-in NPC
                                                             // waits for later steps) or None
-IReadOnlyList<QuestMapHint> QuestHintsOnMap()               // visible encounters with a Kill/Defeat target, Reach
-                                                            // regions and exits, unopened chests with a Collect item
+IReadOnlyList<QuestMapHint> QuestHintsOnMap()               // visible encounters with a Kill/Defeat target or whose
+                                                            // done flag is a Flag target, Reach regions and exits,
+                                                            // unopened chests with a Collect item
 ```
 
 ---
