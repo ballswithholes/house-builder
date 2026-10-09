@@ -82,6 +82,7 @@ namespace Lanternvale.Rules
             u.TauntUntilTurn = -1;
             u.SelfRes = null;
             u.SwingMain = u.SwingOff = u.SwingRanged = 0f;
+            u.OpeningSwingUsed = false;
             u.QueuedSwing = "";
             u.QueuedSwingRank = 0;
             u.Pending = null;

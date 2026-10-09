@@ -128,6 +128,7 @@ namespace Lanternvale.Tests
             // queued swing keeps its rank
             var (b3, w, foe3) = Setup(ClassId.Warrior, 60, talents: false);
             Fresh(w);
+            w.OpeningSwingUsed = true;   // already swung this battle: the strike waits for the end-of-turn swing
             Assert(b3.UseAbility(w, "warrior_heroic_strike", foe3, null, 1).Ok, "rank 1 heroic strike queued");
             Assert(w.QueuedSwing == "warrior_heroic_strike" && w.QueuedSwingRank == 1, "queued rank 1");
             int c3 = b3.Events.Count;

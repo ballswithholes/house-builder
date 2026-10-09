@@ -263,6 +263,10 @@ namespace Lanternvale.Game
                         // everything the command caused belongs to it (procs, reactions, deaths) until a separator;
                         // only a second, different cast start (e.g. a proc'd cast) opens a new beat
                         if (t == CombatEventType.CastStart && e.Source == b.Actor && b.HasCastStart) return false;
+                        // the opening swing after a strike (Rend, Sinister Strike: Battle.OpeningSwing) is a swing of its own:
+                        // the strike lands first, then the white hit (with its rage) gets its own lunge
+                        if (IsOutcome(t) && e.AutoAttack && e.Source == b.Actor && b.Ability != null && !b.Ability.autoAttack && !b.Ability.nextSwing)
+                            return false;
                         // ...and units acting on their own: a cast that does not fit ends the turn inside the command, so
                         // the caster's totems act (Searing bolt, Healing Stream) — they get their own beat and delivery
                         if (ActsOnItsOwn(b, e)) return false;

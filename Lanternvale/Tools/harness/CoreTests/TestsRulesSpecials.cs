@@ -88,6 +88,7 @@ namespace Lanternvale.Tests
             AssertNear(v, 100f + 30f * 3f * 3f, 0.01f, "3 × rank damage per extra rage");
             Fresh(w);
             w.Rage = 80f;
+            w.OpeningSwingUsed = true;   // measure the drain alone (the opening swing after a strike would add rage)
             var r = b.UseAbility(w, "warrior_execute", foe);
             Assert(r.Ok, "execute: " + r.Reason);
             Assert(w.Rage < 1f, $"all rage consumed (left {w.Rage})");

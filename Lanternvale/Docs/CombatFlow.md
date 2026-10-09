@@ -46,7 +46,7 @@ UI screens reach it only through `GameFlow.Instance.Combat` (null outside combat
 | `HoverPreview` | one line describing what a left click does now; "" when nothing. Draw it near the cursor during `IsPlayerTurn`. |
 | `HoveredTarget` | battle unit under the cursor during the player's turn (target-frame preview), or null. |
 | `PendingSelfResurrection` | `SelfResOffer` (Soulstone, Reincarnation) for the active player unit → show "Rise now?" with Accept/Decline → `AnswerSelfResurrection(bool)`. |
-| `LastError`, `LastErrorTime`, `ErrorRaised` | the last command failure ("Not enough rage (15).", "Out of range (needs 2.4 m more movement).") for a toast. `LastErrorTime` is `Time.unscaledTime`. |
+| `LastError`, `LastErrorTime`, `ErrorRaised` | the last command failure ("Not enough rage (15). Attack an enemy to build rage.", "Out of range (needs 2.4 m more movement).") for a toast. `LastErrorTime` is `Time.unscaledTime`. |
 | `LogLines` | presented combat-log lines, newest last, IMGUI rich text (`<color=#…>`), capped at ~300. Resource costs and small resource gains are omitted. |
 | `ShowMoveRange` | settings toggle for the movement overlay (default on). |
 | `FastForward`, `PresentationSpeed` | fast-forward toggle (×2.5, same as holding Shift); effective speed = `GameFlow.AnimationSpeed` × fast-forward. |
@@ -74,6 +74,20 @@ All return `null` on success or a reason (also stored in `LastError` and raised 
     Attack while attacking stops); **next-swing** abilities (Heroic Strike, Raptor Strike) on the current target.
   * **Targeting mode** otherwise: unit abilities (Enemy/Ally/AllyOther/Any/DeadAlly), ground abilities (`Point`),
     and **aimed** cones/lines from the caster (Cone of Cold) which follow the mouse direction.
+  * **Rage strikes without the rage** (an Enemy ability paid with rage — Rend, Heroic Strike, Hamstring — refused with
+    `UseFailure.Resource`, which every warrior fight starts with: rage 0) do not dead-end while attacking would build
+    rage now (the unit is not yet swinging at an enemy in reach, or its opening swing is still to come): targeting mode
+    starts anyway ("Rend: Not enough rage (10) — click an enemy to attack it first: your swings build rage"). The
+    click on an enemy (or `TargetUnit`) attacks it — walking into reach first, like the smart click — and the **opening
+    swing** lands at once (`Battle.OpeningSwing`, CoreAPI.md); then the strike is checked again and used when it is
+    affordable now, else the reason is shown ("…Your swings build more rage at the end of the turn."). Hover text:
+    "Rend: Not enough rage (10) — click to move 2.1 m and attack Grey Wolf: your first swing lands at once and builds
+    rage, then Rend follows if it can". Already swinging in reach with the opening swing spent → the plain refusal.
+  * **Minimum range** (Charge 8–25 yd, hunter shots): a target that is too close is still a valid target (dimmed); the
+    click **steps back** out of the minimum range first (a reachable spot in range and in sight, nearest first), then
+    uses the ability ("Move 5.4 m, then Charge → Grey Wolf"). The battle formation puts a tank about 2 m from the enemies,
+    so this is how a warrior Charges on turn 1 (only before he has struck or been struck: "You are already in combat:
+    Charge only opens a fight…"). The smart click never steps back (hunters melee when too close).
 * `CancelTargeting()` — also right click (not over UI) and Esc.
 * `TargetUnit(unit)` — confirms the ability/item being targeted (at `TargetingRank`) on a unit picked in the UI,
   exactly like a left click on it in the world (walks into range first when needed). `null` when nothing is targeted,
@@ -102,7 +116,7 @@ ignored (`GameInput.WorldClick`). World input is blocked entirely while `UiRoot.
 | hover downed ally | green highlight, "Help → Kael" (walks into reach first) | — |
 | hover own unit | "Hero · 4.5 s and 6.0 m left this turn · Space ends the turn" | self-cast preview |
 | left click ground | walk (exact path shown; partial/truncated paths walk as far as the budget allows) | ground abilities cast at the point (snaps to a hovered unit); cones/lines cast in the aimed direction |
-| left click enemy | **smart attack**: hunters Auto Shot (melee Attack when too close); casters with a wand Shoot when out of melee reach; otherwise melee Attack — walking into reach first when the movement budget allows. Already attacking that enemy in reach → nothing (auto attacks swing at the end of the turn). | cast on it; when out of range but reachable this turn the unit walks into range first, then casts |
+| left click enemy | **smart attack**: hunters Auto Shot (melee Attack when too close); casters with a wand Shoot when out of melee reach; otherwise melee Attack — walking into reach first when the movement budget allows. The first melee swing of the battle lands at once (opening swing); the others at the end of the turn. Already attacking that enemy in reach → nothing (auto attacks swing at the end of the turn). | cast on it; when out of range but reachable this turn the unit walks into range first, then casts |
 | left click downed ally | Help (walks into reach first) | — |
 | right click / Esc | (Esc opens the pause menu as usual) | cancel targeting; Esc is consumed (`UiRoot.HotkeysSuppressed`) |
 | Space / Enter | end turn | end turn (cancels targeting) |
@@ -163,7 +177,7 @@ it (no name-matching or per-aura time throttles).
 | | `CastStart` "continuing" | glow progress + "Casting X... (2.5 s)", 0.5 s |
 | | `BattleStart`, `RoundStart`, `TurnEnd`, `Initiative`, `BattleEnd` | log only (BattleStart switches to the combat music mood) |
 | action | one ability/item use with all consequences (costs, hits, heals, auras, deaths, procs, reactions) | see below |
-| swing | one auto-attack swing (+ procs, rage, deaths) | melee lunge, blow at `AttackHitTime` (0.22 s); ranged: shoot, release at 0.2 s, arrow/bolt flight; follow-up swings of one volley are quicker |
+| swing | one auto-attack swing (+ procs, rage, deaths) | melee lunge, blow at `AttackHitTime` (0.22 s); ranged: shoot, release at 0.2 s, arrow/bolt flight; follow-up swings of one volley are quicker. The opening swing after a strike (Rend, Sinister Strike) leaves the strike's command beat and gets its own swing beat; after Attack or a queued Heroic Strike it is that command's blow |
 | tick | periodic damage/heals/regen at a turn start (all units together) | small numbers, puffs/sparkles, 0.4 s (0 when nothing is visible) |
 | move | one `Move` (`Path`) | `UnitView.MoveAlong` at 4.6 m/s (fear 5.4 m/s + "Feared"), camera follows, waits for arrival |
 
@@ -176,7 +190,9 @@ target or bursts on the area per `ChannelTick`, 0.32 s apart). Abilities with a 
 ability name above their head. All hits of an AoE land together.
 
 Pending casts (do not fit the remaining Time): cast pose + "Casting X..." + a persistent glow (and, for channels, the
-beam) until `CastComplete`, `CastInterrupted` ("Interrupted"), `CastFailed` ("Failed"), death or downing.
+beam) until `CastComplete`, `CastInterrupted` ("Interrupted"), `CastFailed` ("Failed"), death or downing. A queued
+Heroic Strike / Cleave whose swing cannot pay it any more emits `CastFailed` too: "Heroic Strike failed" over the unit
+and the log line "…Heroic Strike fails: Not enough rage." (the white swing follows).
 
 Event visuals: `Damage` → `PlayHit`, number (crits bigger with a small camera shake, periodic smaller), impact or slash,
 impact sound · `Heal` → sparkles + green number · `Miss/Dodge/Parry/Evade` → word + dodge hop · `Block/Resist/Immune`

@@ -115,6 +115,9 @@ namespace Lanternvale.Rules
         /// <summary>Basic attack ability in use ("attack", "auto_shot" ...).</summary>
         public string AutoAttackAbility = "attack";
         public float SwingMain, SwingOff, SwingRanged;
+        /// <summary>The unit has made its first main-hand melee swing of the battle (Battle.OpeningSwing: the first swing
+        /// lands when the unit engages, not at the end of its turn). Reset at battle start.</summary>
+        public bool OpeningSwingUsed;
         /// <summary>nextSwing ability (Heroic Strike/Cleave/Raptor Strike) replacing the next main-hand swing.</summary>
         public string QueuedSwing = "";
         /// <summary>Rank requested for the queued swing (0 = highest known; downranked Heroic Strike).</summary>

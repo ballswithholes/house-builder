@@ -159,10 +159,32 @@ AreaShapeInfo shape = Targeting.AreaOf(unit, ability, target, point, AbilityMods
 List<Unit> hit = Targeting.AreaUnits(battle, unit, ability, target, point, mods);
 bool seen = battle.CanSee(observer, target);       // stealth
 float reach = battle.MeleeReachOf(a, b); bool inMelee = battle.InMeleeRange(a, b);
+bool opening = battle.HasOpeningSwing(unit);       // its first melee swing of the battle is still to come (lands at once)
+float held = battle.HeldForQueuedSwing(unit, ResourceType.Rage, out AbilityDef queued); // rage a queued Heroic Strike holds
 ```
 
-Reasons are complete sentences ("Not enough rage (15).", "You must be behind your target.", "Requires Battle
-Stance.", "Target is too close.", "It is not your turn." …).
+Reasons are complete sentences ("Not enough rage (15). Attack an enemy to build rage.", "You must be behind your
+target.", "Requires Battle Stance.", "Target is too close.", "It is not your turn." …). Rage refusals of characters
+say what to do: "… Attack an enemy to build rage." (not swinging at an enemy in reach) or "… Your swings build more
+rage at the end of the turn." (already swinging); a queued next-swing ability's cost is held: "Not enough rage (10): 15
+is held for Heroic Strike (press it again to release)."
+
+**Opening swing.** Units start a battle with their swing timers at 0 and `Unit.OpeningSwingUsed = false`. The first
+main-hand melee swing of the battle (plus a due off-hand swing) happens *during* the unit's own turn the moment it
+engages: `UseAbility` calls it after starting a melee auto attack (Attack), after queuing a next-swing ability (the
+queued Heroic Strike / Cleave / Raptor Strike replaces it at once) and after a melee strike that starts the auto attack
+has fully resolved (Rend, Sinister Strike…; never before, so the strike cannot lose its target). Conditions: own turn,
+auto attack on, target hostile/alive/visible/in melee reach, not pacified or controlled, and the swing is due this turn
+(`SwingMain + SwingTimeThisTurn × haste ≥ speed`). The swing is taken from the turn's swing time (`SwingMain -= speed`,
+going below zero), so the end-of-turn swings are one fewer: the number of swings per fight is unchanged, only the first
+lands earlier — with its rage, so a warrior can use a rage ability in the turn he engages. Any main-hand swing sets
+`OpeningSwingUsed`. It applies to enemies too.
+
+**Queued next-swing abilities hold their cost** (`CheckUse`): any other ability paying with the same resource must fit
+in `resource − cost of the queued ability (at its queued rank)`; another next-swing ability replaces the queue and is not
+blocked. At the swing the cost is paid (WoW); when it still cannot be (Execute's drain, a stance swap, a lost requirement
+or cooldown) the swing emits `CastFailed` (Reason "Not enough rage." or the requirement) and swings white instead of
+silently dropping the strike.
 
 **Hit chance previews.** `HitChanceInfo` { `Kind` (AttackKind), `SingleRoll` (white swing), `Rolls` (the ability rolls
 at all), `Immune`, `CanCrit`, `Hit`, `Miss`, `Dodge`, `Parry`, `Block`, `Resist`, `Crit`, `CritOnHit` } — percentages of

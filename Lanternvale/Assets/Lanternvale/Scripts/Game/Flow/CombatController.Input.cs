@@ -669,11 +669,23 @@ namespace Lanternvale.Game
             {
                 FxSystem.Hide(PathId);
                 sb.Length = 0;
+                // targeting entered for a rage strike without the rage (Begin): say what a click on an enemy does
+                if (!fromItem && RageStrike(u, a))
+                {
+                    var chk = Battle.CanUseIgnoringTarget(u, a, false, rank);
+                    if (!chk.Ok && chk.Code == UseFailure.Resource)
+                    {
+                        sb.Append(label).Append(": ").Append(chk.Reason.TrimEnd('.').Split('.')[0])
+                          .Append(" — click an enemy to attack it first: your swings build rage (right click to cancel)");
+                        return sb.ToString();
+                    }
+                }
                 sb.Append(label).Append(": ").Append(a.target == TargetType.Enemy ? "choose an enemy" : "choose a target")
                   .Append(" · ").Append(TimeText(u, a, mods, rank)).Append(" (right click to cancel)");
                 return sb.ToString();
             }
-            var plan = PlanUse(u, a, tgt, point, fromItem, rank);
+            var plan = PlanUse(u, a, tgt, point, fromItem, rank, true);
+            if (plan.Error != null && RageFallback(u, a, TargetingItem, tgt)) return RageFallbackPreview(u, a, tgt, label, plan.Error);
             if (tgt != null) Want(tgt, plan.Error != null ? InvalidColor : tgt.IsHostileTo(u) ? HostileColor : FriendlyColor);
             ShowApproach(plan);
             if (plan.Error != null) return tgt != null ? label + " → " + tgt.Name + ": " + plan.Error : label + ": " + plan.Error;
@@ -733,6 +745,10 @@ namespace Lanternvale.Game
                     catch (Exception) { continue; }
                     if (c.Ok) validTargets[o] = true;
                     else if (c.Code == UseFailure.Range || c.Code == UseFailure.LineOfSight) validTargets[o] = false;
+                    // too close for a minimum range (Charge, hunter shots): a click steps back first
+                    else if (c.Code == UseFailure.TooClose && o != u && o.IsHostileTo(u)) validTargets[o] = false;
+                    // a rage strike without the rage: a click attacks that enemy first (RageFallback)
+                    else if (c.Code == UseFailure.Resource && !fromItem && o.IsAlive && o.IsHostileTo(u) && RageStrike(u, a) && AttackingBuildsRageNow(u)) validTargets[o] = false;
                     // Backstab & co. on an enemy the unit is not behind yet (a click walks behind it)
                     else if (c.Code == UseFailure.Requirement && a.requires != null && a.requires.behindTarget && o != u && !u.IsBehind(o)) validTargets[o] = false;
                 }
@@ -747,7 +763,12 @@ namespace Lanternvale.Game
 
         // ================================================================ plans
 
-        SmartPlan PlanUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, int rank = 0)
+        /// <summary>
+        /// What a click with the ability on the target/point does: use it, walk into range (or behind) first, or why not.
+        /// <paramref name="stepBack"/> (explicit targeting only, never the smart click): a target inside the ability's minimum
+        /// range (Charge, hunter shots) makes the unit step back out of it first when movement allows.
+        /// </summary>
+        SmartPlan PlanUse(Unit u, AbilityDef a, Unit target, Vec2? point, bool fromItem, int rank = 0, bool stepBack = false)
         {
             var plan = new SmartPlan { Ability = a };
             approachPoints.Clear();
@@ -784,9 +805,88 @@ namespace Lanternvale.Game
                 plan.Error = sight ? chk.Reason : why ?? chk.Reason;
                 return plan;
             }
+            if (stepBack && chk.Code == UseFailure.TooClose && target != null && target != u)
+            {
+                if (TryStepBack(u, a, target, fromItem, rank, out float slen, out string swhy))
+                {
+                    plan.Approach = true;
+                    plan.ApproachLength = slen;
+                    return plan;
+                }
+                plan.Error = swhy ?? chk.Reason;
+                return plan;
+            }
             plan.Error = chk.Reason;
             return plan;
         }
+
+        /// <summary>
+        /// Path to a spot outside the ability's minimum range of the target (and inside its maximum range, in sight)
+        /// reachable this turn: a warrior standing next to the enemies at the start of a fight steps back to Charge, a hunter
+        /// in the dead zone steps out to shoot (fills approachPoints). The ability is checked as if the unit stood there.
+        /// </summary>
+        bool TryStepBack(Unit u, AbilityDef a, Unit target, bool fromItem, int rank, out float length, out string why)
+        {
+            approachPoints.Clear();
+            length = 0f;
+            why = null;
+            var grid = Grid;
+            if (grid == null) return false;
+            var cannot = Battle.CannotMoveReason(u);
+            if (cannot != null) { why = "Target is too close (" + cannot.TrimEnd('.').ToLowerInvariant() + ")."; return false; }
+            float min = AbilityRules.MinRangeMetres(a);
+            if (a.requires != null && a.requires.outOfMeleeRange) min = Mathf.Max(min, MathUtil.Yd(8f) + target.Radius);
+            if (min <= 0f) return false;
+            var away = u.Position - target.Position;
+            if (away.SqrLength < 1e-6f) away = u.Facing * -1f;
+            if (away.SqrLength < 1e-6f) away = Vec2.Right;
+            away = away.Normalized;
+            var r = EnsureReach(u);
+            if (r == null) return false;
+            var agent = NavAgent.ForUnit(u.Radius, u.Id);
+            Vec2 best = default;
+            float bestLen = float.PositiveInfinity;
+            string blocked = null;
+            bool any = false;
+            foreach (float extra in StepBackExtra)
+            {
+                float dist = min + extra;
+                for (int i = 0; i < StepBackAngles.Length; i++)
+                {
+                    float ang = StepBackAngles[i] * Mathf.Deg2Rad;
+                    float cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
+                    var dir = new Vec2(away.x * cs - away.y * sn, away.x * sn + away.y * cs);
+                    var goal = target.Position + dir * dist;
+                    if (!grid.IsWalkable(goal, agent)) continue;
+                    any = true;
+                    if (!r.CanReach(goal)) continue;
+                    float walk = r.DistanceTo(goal);
+                    if (walk >= bestLen || walk > u.MoveLeft + 1e-3f) continue;
+                    var sim = CheckFrom(u, a, target, goal, fromItem, rank);
+                    if (!sim.Ok) { blocked ??= sim.Reason; continue; }
+                    bestLen = walk;
+                    best = goal;
+                }
+                if (!float.IsInfinity(bestLen)) break;   // the nearest ring that works
+            }
+            if (!float.IsInfinity(bestLen))
+            {
+                var p = r.PathTo(best, approachTmp);
+                if (p != null && p.Status != PathStatus.NoPath && !p.IsEmpty && p.Points.Count >= 2)
+                {
+                    approachPoints.AddRange(p.Points);
+                    length = p.Length;
+                    return true;
+                }
+            }
+            why = blocked ?? (any
+                ? "Target is too close (needs " + (min / MathUtil.Yd(1f)).ToString("0") + " yd; no room to step back that far this turn)."
+                : "Target is too close, and there is no room to step back.");
+            return false;
+        }
+
+        static readonly float[] StepBackExtra = { 0.3f, 0.8f, 1.5f };
+        static readonly float[] StepBackAngles = { 0f, 25f, -25f, 50f, -50f, 80f, -80f, 115f, -115f };
 
         /// <summary>
         /// Path to a spot behind the target (outside its frontal arc, within melee reach) reachable this turn, for abilities
@@ -964,7 +1064,7 @@ namespace Lanternvale.Game
                 tgt = hover;
             }
             int rank = item != null ? 0 : TargetingRank;
-            ExecutePlan(u, PlanUse(u, a, tgt, point, item != null, rank), tgt, point, item, rank);
+            Confirm(u, a, item, tgt, point, rank);
         }
 
         string ExecutePlan(Unit u, SmartPlan plan, Unit target, Vec2? point, ItemInstance item, int rank = 0)
@@ -1060,6 +1160,13 @@ namespace Lanternvale.Game
             var chk = Battle.CanUseIgnoringTarget(u, a, item != null, rank);
             if (!chk.Ok)
             {
+                // a rage strike without the rage (every warrior's first turn): instead of a dead end, targeting mode offers
+                // to attack the enemy first — the opening swing builds the rage, then the strike follows when it can
+                if (item == null && chk.Code == UseFailure.Resource && RageStrike(u, a) && AttackingBuildsRageNow(u))
+                {
+                    StartTargeting(a, null, rank);
+                    return null;
+                }
                 bool waitable = chk.Code == UseFailure.Silenced || chk.Code == UseFailure.Pacified || chk.Code == UseFailure.Locked;
                 return Fail(waitable ? chk.Reason + WaitHint(u) : chk.Reason);
             }
@@ -1080,6 +1187,12 @@ namespace Lanternvale.Game
                 return Execute(u, a, null, cur, null);
             if (item == null && a.nextSwing && curOk && Battle.CanUse(u, a, cur, null, false, rank).Ok) return Execute(u, a, null, cur, null, rank);
 
+            StartTargeting(a, item, rank);
+            return null;
+        }
+
+        void StartTargeting(AbilityDef a, ItemInstance item, int rank)
+        {
             TargetingAbility = a;
             TargetingItem = item;
             TargetingRank = rank;
@@ -1088,7 +1201,71 @@ namespace Lanternvale.Game
             rangeRingFor = null;
             hoverDirty = true;
             if (moveRangeShown) { FxSystem.Hide(MoveRangeId); moveRangeShown = false; }
-            return null;
+        }
+
+        // ================================================================ rage: attack first
+
+        /// <summary>An enemy-targeted ability paid with rage (Rend, Heroic Strike, Hamstring, Sunder Armor...).</summary>
+        static bool RageStrike(Unit u, AbilityDef a) =>
+            u != null && a != null && a.target == TargetType.Enemy && a.cost != null && a.cost.type == ResourceType.Rage;
+
+        /// <summary>
+        /// Attacking an enemy now would build rage this turn: the unit is not yet swinging at a living enemy in reach (the
+        /// click starts the auto attack, walking in first), or its opening swing — the first swing of the battle, which
+        /// lands at once (Battle.OpeningSwing) — is still to come.
+        /// </summary>
+        bool AttackingBuildsRageNow(Unit u)
+        {
+            if (u == null || u.PowerType != ResourceType.Rage) return false;
+            var t = u.AttackTarget;
+            bool swinging = u.AutoAttacking && t != null && t.IsAlive && t.IsHostileTo(u) && Battle.Units.Contains(t) && Battle.InMeleeRange(u, t);
+            return !swinging || Battle.HasOpeningSwing(u);
+        }
+
+        /// <summary>The rage fallback applies to this click: a rage strike refused for rage on a living enemy.</summary>
+        bool RageFallback(Unit u, AbilityDef a, ItemInstance item, Unit target) =>
+            item == null && target != null && target != u && target.IsAlive && target.IsHostileTo(u) && RageStrike(u, a) &&
+            lastCheckCode == UseFailure.Resource && AttackingBuildsRageNow(u);
+
+        /// <summary>
+        /// Confirms the targeted ability on a unit (left click in the world, TargetUnit from a frame). A rage strike the unit
+        /// cannot pay yet attacks the enemy instead (walking in first): the opening swing builds rage, and the strike is
+        /// used right after when it is affordable then; otherwise the reason says the swings build more at the end of the turn.
+        /// </summary>
+        string Confirm(Unit u, AbilityDef a, ItemInstance item, Unit tgt, Vec2? point, int rank)
+        {
+            var plan = PlanUse(u, a, tgt, point, item != null, rank, true);
+            if (plan.Error == null || !RageFallback(u, a, item, tgt)) return ExecutePlan(u, plan, tgt, point, item, rank);
+
+            var attack = PlanSmartAttack(u, tgt);
+            if (attack.Error != null) return Fail(a.name + ": " + plan.Error + " " + tgt.Name + ": " + attack.Error);
+            if (!attack.AlreadyAttacking)
+            {
+                var why = ExecutePlan(u, attack, tgt, null, null);
+                if (why != null) return why;
+            }
+            CancelTargeting();
+            if (Battle.IsOver || Battle.ActiveUnit != u || !tgt.IsAlive) return null;
+            var again = PlanUse(u, a, tgt, null, false, rank, true);
+            if (again.Error == null) return ExecutePlan(u, again, tgt, null, null, rank);
+            return Fail(a.name + ": " + again.Error);
+        }
+
+        /// <summary>Hover text for a rage strike refused for rage: what the click does instead (attack, walking in first).</summary>
+        string RageFallbackPreview(Unit u, AbilityDef a, Unit tgt, string label, string reason)
+        {
+            var attack = PlanSmartAttack(u, tgt);
+            Want(tgt, attack.Error == null ? HostileColor : InvalidColor);
+            ShowApproach(attack);
+            if (attack.Error != null) return label + " → " + tgt.Name + ": " + reason;
+            sb.Length = 0;
+            sb.Append(label).Append(": ").Append(reason.TrimEnd('.').Split('.')[0]).Append(" — click to ");
+            if (attack.Approach) sb.Append("move ").Append(attack.ApproachLength.ToString("0.0")).Append(" m and ");
+            sb.Append("attack ").Append(tgt.Name);
+            if (!Battle.HasOpeningSwing(u)) sb.Append(": your swings build rage at the end of the turn");
+            else if (!string.IsNullOrEmpty(u.QueuedSwing)) sb.Append(": your queued ").Append(Db?.Ability(u.QueuedSwing)?.name ?? "strike").Append(" lands at once");
+            else sb.Append(": your first swing lands at once and builds rage, then ").Append(a.name).Append(" follows if it can");
+            return sb.ToString();
         }
 
         /// <summary>Cones and lines from the caster (Cone of Cold, breath attacks) are aimed with the mouse.</summary>
@@ -1254,8 +1431,10 @@ namespace Lanternvale.Game
 
         string TimeText(Unit u, AbilityDef a, AbilityModSet mods, int rank = 0)
         {
-            if (a.autoAttack) return "auto attack at the end of your turn";
-            if (a.nextSwing) return "replaces your next swing";
+            // the opening swing (Battle.OpeningSwing): the first melee swing of the battle lands as the unit engages
+            bool opening = Battle.HasOpeningSwing(u) && !AbilityRules.IsRangedWeaponAbility(a);
+            if (a.autoAttack) return opening ? "first swing at once, then auto attacks at the end of your turn" : "auto attack at the end of your turn";
+            if (a.nextSwing) return opening ? "replaces your first swing (lands at once in reach)" : "replaces your next swing";
             float tc, ct;
             int used = UsedRank(u, a, rank);
             try

@@ -843,7 +843,10 @@ namespace Lanternvale.Game
                 int shards = Hud.SoulShards;
                 tip += "\n" + Ui.Rich("Consumes a Soul Shard — " + (shards == 1 ? "1 shard" : HudText.Int(shards) + " shards") + " in your bags.", shards > 0 ? ShardColor : Ui.Bad);
             }
-            if (st.Active) tip += "\n" + Ui.Rich("Active", Ui.Gold);
+            if (st.Active && sl.A.nextSwing && st.Cost > 0f)
+                tip += "\n" + Ui.Rich("Queued: replaces your next swing. Its " + HudText.Int(Mathf.RoundToInt(st.Cost)) + " " +
+                                      st.CostType.ToString().ToLowerInvariant() + " is held until then; press it again to cancel.", Ui.Gold);
+            else if (st.Active) tip += "\n" + Ui.Rich("Active", Ui.Gold);
             string self = SelfCastable(sl.A.target) ? " · right-click casts on yourself" : "";
             tip += "\n" + Ui.Rich("Hotkey " + HudText.Hotkey(index) + self + " · drag to rearrange · Shift+right-click resets the order", Hud.Muted);
             return tip;

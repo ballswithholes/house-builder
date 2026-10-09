@@ -609,7 +609,9 @@ namespace Lanternvale.Game
                 case CombatEventType.CastFailed:
                 {
                     StopCastVis(e.Source);
-                    FloatingText.Spawn(Head(e.Source, V(e.Source)), "Failed", MutedText, 0.75f);
+                    // a queued Heroic Strike / Cleave the swing could not pay (the log says why): name it, it was promised
+                    var fa = Db?.Ability(e.AbilityId);
+                    FloatingText.Spawn(Head(e.Source, V(e.Source)), fa != null && fa.nextSwing ? fa.name + " failed" : "Failed", MutedText, 0.75f);
                     break;
                 }
                 case CombatEventType.SwingQueued:

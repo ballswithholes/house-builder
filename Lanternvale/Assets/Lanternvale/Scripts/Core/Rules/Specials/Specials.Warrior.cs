@@ -78,7 +78,8 @@ namespace Lanternvale.Rules
         const string BloodrageAura = "warrior_bloodrage";
         public WarriorCharge() : base("WarriorCharge") { }
         public override string CheckUse(Battle b, Unit u, AbilityDef a, Unit target) =>
-            (b.InCombat && b.Started && u.Engaged) || u.HasAura(BloodrageAura) ? "You are already in combat." : null;
+            (b.InCombat && b.Started && u.Engaged) || u.HasAura(BloodrageAura)
+                ? "You are already in combat: Charge only opens a fight, before you strike or are struck (8–25 yd away)." : null;
     }
 
     /// <summary>Retaliation: the OnStruck counterattack does not fire (nor use a charge) against attackers behind the warrior.</summary>

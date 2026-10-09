@@ -147,7 +147,13 @@ SPECIALS = [
 classes = [CLASS]
 abilities = finish_abilities(ABILITIES, "Warrior")
 check_build(TREES, BUILD)
-used, unused = write_bundle(OUT, "Warrior class data (WoW Classic 1.12). Generated; see Docs/DataSchema.md.",
+NOTE = ("Warrior class data (WoW Classic 1.12). Generated; see Docs/DataSchema.md. Lanternvale rage rules (engine, not data): "
+        "fights start at 0 rage and every attack costs rage, so the first melee swing of a battle lands as the warrior engages "
+        "(Battle.OpeningSwing, taken from that turn's swing time) and its rage pays for a strike in the same turn; a queued "
+        "Heroic Strike / Cleave holds its rage until its swing and fails visibly when the swing cannot pay it; rage refusals say "
+        "'Attack an enemy to build rage.' and the player's strike attacks the enemy first. Charge (8-25 yd) only opens a fight; "
+        "from the battle formation the click steps back out of its minimum range first.")
+used, unused = write_bundle(OUT, NOTE,
                             classes, abilities, AURAS, TREES, ITEMS, SPECIALS,
                             extra_specials=())
 print("warrior: abilities", len(abilities), "auras", len(AURAS), "items", len(ITEMS),

@@ -44,6 +44,15 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   `speed` in the timer one swing happens (main hand, and off hand separately when dual wielding). If not in
   reach the timer is capped at one ready swing. Heroic Strike / Cleave / Raptor Strike (`nextSwing: true`)
   replace the next main-hand swing.
+  **Opening swing:** the first main-hand melee swing of a battle (and a ready off-hand one) lands the moment the
+  unit engages in its own turn — when it starts its melee auto attack on a hostile in reach, queues a next-swing
+  ability, or after a melee strike (Rend, Sinister Strike) has resolved — instead of at the end of the turn. It is
+  taken from that turn's swing time (the timers go below zero), so the number of swings does not change, only when the
+  first one lands; a queued Heroic Strike replaces it. This is how a warrior, who starts every fight at 0 rage, gets
+  the rage for a strike in the turn he engages. It applies to every melee unit, enemies included.
+  A queued next-swing ability **holds its cost**: other abilities paying with the same resource may only spend the
+  rest ("Not enough rage (10): 15 is held for Heroic Strike"). If its swing still cannot pay (a stance swap, Execute's
+  drain) it fails visibly (`CastFailed`, "Heroic Strike failed") and a white swing lands instead.
   Casters "Shoot" a wand by using the Shoot ability (costs wand speed seconds of Time).
 * **Durations and cooldowns are in seconds.** At the start of a unit's turn, 6 s elapse for that unit's
   auras (and auras it suffers) and its cooldowns. Periodic auras tick `6 / tickInterval` times per round
@@ -84,7 +93,10 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds**. Every unit
   effLevel = level of the highest rank known (rankLevels), or caster level if `scaleWithLevel` / creature.
 * **Rage**: conversion `c = 0.0091107836 L² + 3.225598133 L + 4.2652911`. Dealing white damage `d`:
   `+7.5 × d / c × 1.75` (turn compression factor), taking damage `+2.5 × d / c`. Max 100. Out of combat
-  rage decays. Stance swap keeps up to 0 rage (Tactical Mastery: up to 5 per rank).
+  rage decays. Stance swap keeps up to 0 rage (Tactical Mastery: up to 5 per rank). Every warrior attack costs rage,
+  so a refusal for rage always says what to do ("Not enough rage (15). Attack an enemy to build rage."), and in combat
+  the player's strike on an enemy attacks it first when the rage is missing (CombatFlow.md §3). Charge (8–25 yd) only
+  opens a fight: from the battle formation the click steps back out of its minimum range first.
 * **Threat**: 1 per damage, healing 0.5 per point split among engaged enemies, mana/rage gains 0.5/5.
   Modifiers: Defensive Stance ×1.3, Battle/Berserker ×0.8, Rogue ×0.71 (class passive aura),
   Righteous Fury Holy ×1.6. AI targets the highest threat it can reach; it switches only when another unit

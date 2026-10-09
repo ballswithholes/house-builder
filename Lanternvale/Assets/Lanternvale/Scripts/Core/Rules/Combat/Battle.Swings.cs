@@ -94,6 +94,46 @@ namespace Lanternvale.Rules
             }
         }
 
+        /// <summary>
+        /// True when the unit's opening swing is still to come this battle: the first main-hand melee swing of the fight
+        /// lands the moment the unit engages its target in its own turn (WoW: the weapon is ready when you start
+        /// attacking) instead of at the end of the turn. Rage users get their first rage from it, so a warrior can use a
+        /// rage ability in the turn he engages. For UI previews ("your first swing lands at once").
+        /// </summary>
+        public bool HasOpeningSwing(Unit u) =>
+            u != null && InCombat && Started && !u.OpeningSwingUsed && StatCalculator.GetWeapon(u, WeaponSlot.MainHand).Valid;
+
+        /// <summary>
+        /// The opening swing (see <see cref="HasOpeningSwing"/>): during the unit's own turn, when its melee auto attack runs
+        /// against a hostile in reach and in sight, the first main-hand swing of the battle (a queued Heroic Strike or
+        /// Cleave replaces it) and a ready off-hand swing happen now. The swing is taken from this turn's swing time (the
+        /// timers go below zero), so the end-of-turn swings that follow are one fewer: the total number of swings does not
+        /// change, only when the first one lands. Called by UseAbility after starting the auto attack, after queuing a
+        /// next-swing ability and after a melee ability has resolved.
+        /// </summary>
+        internal void OpeningSwing(Unit u)
+        {
+            if (!InCombat || !Started || IsOver || u == null || ActiveUnit != u || !u.InOwnTurn || actingOutOfTurn == u) return;
+            if (u.OpeningSwingUsed || !u.AutoAttacking || !u.IsAlive || u.Pending != null || u.IsControlled || u.HasState(UnitState.Pacify)) return;
+            var t = u.AttackTarget;
+            if (t == null || !t.IsAlive || !t.IsHostileTo(u) || !Units.Contains(t) || IsRangedAutoMode(u, t) || !InMeleeReach(u, t) || !CanSee(u, t)) return;
+            var main = StatCalculator.GetWeapon(u, WeaponSlot.MainHand);
+            if (!main.Valid) return;
+            var st = u.Stats;
+            // only a swing this turn would make anyway (a turn mostly lost to a stun keeps its timing)
+            if (u.SwingMain + u.SwingTimeThisTurn * st.MeleeHaste < main.Speed - 1e-4f) return;
+            u.SwingMain -= main.Speed;
+            u.FaceTowards(t.Position);
+            MainHandSwing(u, t);
+            var off = StatCalculator.GetWeapon(u, WeaponSlot.OffHand);
+            if (off.Valid && t.IsAlive && u.IsAlive && !IsOver && u.SwingOff + u.SwingTimeThisTurn * st.MeleeHaste >= off.Speed - 1e-4f)
+            {
+                u.SwingOff -= off.Speed;
+                WhiteSwing(u, t, WeaponSlot.OffHand);
+            }
+            CheckBattleEnd();
+        }
+
         bool InRangedReach(Unit u, Unit target)
         {
             float d = u.DistanceTo(target);
@@ -107,6 +147,7 @@ namespace Lanternvale.Rules
 
         void MainHandSwing(Unit u, Unit target)
         {
+            u.OpeningSwingUsed = true;
             if (!string.IsNullOrEmpty(u.QueuedSwing))
             {
                 var a = Db.Ability(u.QueuedSwing);
@@ -120,7 +161,8 @@ namespace Lanternvale.Rules
                     float cost = AbilityRules.ResourceCost(u, a, rank, mods);
                     bool afford = cost <= 0 || u.GetResource(a.cost.type) + 1e-3f >= cost;
                     var req = CheckRequirements(u, a, target, true);
-                    if (afford && req.Ok && u.CooldownLeft(a) <= 1e-3f)
+                    float cd = u.CooldownLeft(a);
+                    if (afford && req.Ok && cd <= 1e-3f)
                     {
                         var cast = NewCast(u, a, rank, target, null, mods);
                         BreakOnAction(u);
@@ -128,6 +170,12 @@ namespace Lanternvale.Rules
                         ResolveCast(cast);
                         return;
                     }
+                    // the queue holds its cost (CheckUse), but a stance swap, Execute's drain or a lost requirement can still
+                    // leave it unpaid: say so instead of letting it vanish, then swing white (WoW)
+                    string why = !afford ? $"Not enough {a.cost.type.ToString().ToLowerInvariant()}."
+                               : !req.Ok ? req.Reason
+                               : $"{a.name} is not ready.";
+                    Emit(new CombatEvent { Type = CombatEventType.CastFailed, Source = u, Target = target, AbilityId = a.id, Name = a.name, Reason = why });
                 }
             }
             WhiteSwing(u, target, WeaponSlot.MainHand);

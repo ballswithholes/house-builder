@@ -1097,6 +1097,9 @@ namespace Lanternvale.Tests
             } while (c.Pending != null && guard++ < 6);
             if (c.Pending != null) return Fail(Status.Unresolved, $"still casting after {guard} turns ({c.Pending})");
             var later = b.Events.Skip(mark).ToList();
+            // the opening swing of the battle lands at once when the caster engages in reach (Battle.OpeningSwing), and a
+            // queued swing replaces it: those events follow the use itself, so they are looked for there too
+            if (a.nextSwing || a.autoAttack) later = immediate.Concat(later).ToList();
             // the pending cast resolves at the caster's turn start; the queued swing announces itself (AbilityUsed)
             var inWindow = Window(later, e => e.Source == c && (e.Type == CombatEventType.TurnStart || e.AbilityId == a.id));
             Func<CombatEvent, bool> mine = a.autoAttack

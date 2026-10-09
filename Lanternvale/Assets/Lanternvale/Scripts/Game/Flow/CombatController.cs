@@ -281,7 +281,7 @@ namespace Lanternvale.Game
                 Vec2? point = null;
                 if (a.target == TargetType.Point || IsAimed(a)) point = AimPoint(u, a, target, ToV(target.Position));
                 else tgt = target;
-                var why = ExecutePlan(u, PlanUse(u, a, tgt, point, item != null, rank), tgt, point, item, rank);
+                var why = Confirm(u, a, item, tgt, point, rank);
                 hoverDirty = true;
                 return why;
             }

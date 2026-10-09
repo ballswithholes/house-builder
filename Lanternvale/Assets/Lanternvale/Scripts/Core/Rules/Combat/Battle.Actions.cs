@@ -137,7 +137,17 @@ namespace Lanternvale.Rules
             if (cost > 0f)
             {
                 var r = a.cost.type;
-                if (u.GetResource(r) + 1e-3f < cost) return UseCheck.Fail(UseFailure.Resource, $"Not enough {r.ToString().ToLowerInvariant()} ({cost:0}).");
+                // a queued Heroic Strike / Cleave / Raptor Strike holds its cost until its swing: other abilities paying with
+                // the same resource may only spend the rest (queuing another next-swing ability replaces it, so it is free)
+                AbilityDef queued = null;
+                float held = a.nextSwing ? 0f : HeldForQueuedSwing(u, r, out queued);
+                if (u.GetResource(r) - held + 1e-3f < cost)
+                {
+                    string what = r.ToString().ToLowerInvariant();
+                    if (held > 0f)
+                        return UseCheck.Fail(UseFailure.Resource, $"Not enough {what} ({cost:0}): {held:0} is held for {queued.name} (press it again to release).");
+                    return UseCheck.Fail(UseFailure.Resource, $"Not enough {what} ({cost:0})." + RageHint(u, r));
+                }
             }
             if (a.cost != null && a.cost.health > 0 && u.Health <= a.cost.health) return UseCheck.Fail(UseFailure.Resource, "Not enough health.");
 
@@ -151,6 +161,33 @@ namespace Lanternvale.Rules
 
             if (!checkTarget) return UseCheck.Pass;
             return CheckTarget(u, a, target, point, mods);
+        }
+
+        /// <summary>
+        /// The resource the unit's queued next-swing ability (Heroic Strike, Cleave, Raptor Strike) will spend at its swing,
+        /// when it pays with <paramref name="r"/> (0 otherwise). CheckUse keeps it out of reach of other abilities so the
+        /// queued strike is not starved before it fires.
+        /// </summary>
+        public float HeldForQueuedSwing(Unit u, ResourceType r, out AbilityDef queued)
+        {
+            queued = null;
+            if (u == null || string.IsNullOrEmpty(u.QueuedSwing)) return 0f;
+            var q = Db.Ability(u.QueuedSwing);
+            if (q == null || q.cost == null || q.cost.type != r) return 0f;
+            queued = q;
+            return AbilityRules.ResourceCost(u, q, AbilityRules.UsedRank(u, q, u.QueuedSwingRank), AbilityMods.For(u, q));
+        }
+
+        /// <summary>
+        /// What to do about missing rage, appended to "Not enough rage (15)." for characters: rage only comes from hitting
+        /// and being hit, so the answer is always "attack something". "" for other resources.
+        /// </summary>
+        string RageHint(Unit u, ResourceType r)
+        {
+            if (r != ResourceType.Rage || u == null || u.Class == null) return "";
+            var t = u.AttackTarget;
+            bool swinging = u.AutoAttacking && t != null && t.IsAlive && t.IsHostileTo(u) && Units.Contains(t) && InMeleeReach(u, t);
+            return InCombat && Started && swinging ? " Your swings build more rage at the end of the turn." : " Attack an enemy to build rage.";
         }
 
         bool KnowsForUse(Unit u, AbilityDef a)
@@ -569,6 +606,7 @@ namespace Lanternvale.Rules
             if (a.autoAttack)
             {
                 StartAutoAttack(u, target, a, true);
+                OpeningSwing(u);   // engaging with a ready weapon: the first swing lands now
                 return ActionResult.Success;
             }
             if (a.nextSwing)
@@ -577,6 +615,7 @@ namespace Lanternvale.Rules
                 u.QueuedSwingRank = fromItem ? 0 : requestedRank;
                 if (target != null && target.IsHostileTo(u)) StartAutoAttack(u, target, Db.Ability("attack"), false);
                 Emit(new CombatEvent { Type = CombatEventType.SwingQueued, Source = u, Target = target, AbilityId = a.id, Name = a.name });
+                OpeningSwing(u);   // the queued strike replaces the opening swing when it is still to come
                 return ActionResult.Success;
             }
 
@@ -672,6 +711,9 @@ namespace Lanternvale.Rules
 
             ResolveCast(cast);
             if (castTime > 0f) Emit(new CombatEvent { Type = CombatEventType.CastComplete, Source = u, Target = target, AbilityId = a.id, Name = a.name });
+            // a melee strike (Rend, Sinister Strike...) started the auto attack: the opening swing follows it, after it has
+            // fully resolved (never before, so the strike cannot lose its target to the swing)
+            if (target != null && target.IsHostileTo(u) && AbilityRules.StartsMeleeAutoAttack(a)) OpeningSwing(u);
             return ActionResult.Success;
         }
 
