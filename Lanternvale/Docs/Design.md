@@ -218,7 +218,7 @@ swords, fist weapons, maces and axes with `equip: "OffHand"` that go only in the
 like a One-Hand weapon there (the wielder must also use the weapon type). Their DPS follows the one-hand `WeaponDps`
 rule for their item level and quality (Common about ×0.6, Uncommon ×0.72, Rare ×0.79, Epic ×0.86); their stats use the
 OffHand slot budget (0.56), a little richer than a One-Hand weapon's (0.45) because they are less flexible. Where they
-are (20 in all; `TestsContentOffHandWeapons`):
+are (20 in all, besides the rogue's starting Worn Parrying Dagger; `TestsContentOffHandWeapons`):
 
 | Band | Vendor | Loot |
 |---|---|---|

@@ -18,9 +18,9 @@ namespace Lanternvale.Tests
         static readonly WeaponType[] OneHandMelee =
             { WeaponType.Dagger, WeaponType.FistWeapon, WeaponType.OneHandSword, WeaponType.OneHandMace, WeaponType.OneHandAxe };
 
-        /// <summary>An "Off Hand" weapon: a one-hand melee weapon type that goes only in the off hand.</summary>
-        public static bool IsOffHandWeapon(ItemDef d) =>
-            d != null && d.kind == ItemKind.Weapon && d.equip == EquipType.OffHand && Array.IndexOf(OneHandMelee, d.weaponType) >= 0;
+        /// <summary>An "Off Hand" weapon: a one-hand melee weapon type that goes only in the off hand (the rule's own
+        /// <see cref="EquipmentRules.IsOffHandWeapon"/>, authored as a weapon).</summary>
+        public static bool IsOffHandWeapon(ItemDef d) => d != null && d.kind == ItemKind.Weapon && EquipmentRules.IsOffHandWeapon(d);
 
         static List<ItemDef> OffHandWeapons() =>
             Db.Items.Values.Where(IsOffHandWeapon).OrderBy(d => d.id, StringComparer.Ordinal).ToList();
@@ -44,13 +44,16 @@ namespace Lanternvale.Tests
 
         static bool ClassUses(ClassId c, WeaponType w) => Db.Classes[c].weaponTypes.Contains(w);
 
+        /// <summary>Class starting gear (e.g. the rogue's Worn Parrying Dagger): given at character creation, not sold or looted.</summary>
+        static bool IsStartingItem(ItemDef d) => Db.Classes.Values.Any(c => c.startingItems.Contains(d.id));
+
         [Test]
         public static void OffHandWeapons_EveryBandHasOneForARogue_AndChoicesForEveryDualWielder()
         {
             var all = OffHandWeapons();
             var (sold, dropped) = Sources();
             Assert(all.Count >= 20, "the game has 20+ Off Hand weapons: " + all.Count);
-            foreach (var d in all) Assert(sold.Contains(d.id) || dropped.Contains(d.id), d.id + ": sold by a vendor or dropped by a loot table");
+            foreach (var d in all) Assert(sold.Contains(d.id) || dropped.Contains(d.id) || IsStartingItem(d), d.id + ": sold by a vendor, dropped by a loot table or class starting gear");
 
             // [lo, hi): required levels of the slice, the three expansion zones, and the two raids (required 20 / 30)
             var bands = new (string name, int lo, int hi)[]
@@ -120,11 +123,13 @@ namespace Lanternvale.Tests
             foreach (var d in OffHandWeapons())
             {
                 Assert(!string.IsNullOrEmpty(d.name) && !string.IsNullOrEmpty(d.description) && !string.IsNullOrEmpty(d.icon), d.id + ": name, flavour and icon");
-                Assert(d.price > 0 && d.requiredLevel >= 1 && d.requiredLevel <= d.itemLevel, d.id + ": price and levels");
+                bool starter = IsStartingItem(d);
+                Assert(d.price > 0 && d.requiredLevel >= (starter ? 0 : 1) && d.requiredLevel <= d.itemLevel, d.id + ": price and levels");
                 Assert(string.IsNullOrEmpty(d.use) && d.equipEffects.All(e => e.type != "GrantAbility"), d.id + ": no use on equipables");
                 Assert(d.minDamage > 0 && d.maxDamage > d.minDamage && d.speed >= 1.2f && d.speed <= 2.8f, d.id + ": weapon damage and a one-hander's speed");
                 Assert(d.armorType == ArmorType.None && d.armor == 0 && d.block == 0, d.id + ": a weapon, not a shield");
                 Assert(EquipmentRules.SlotsFor(d).SequenceEqual(new[] { EquipSlot.OffHand }), d.id + ": goes only in the off hand");
+                if (starter) continue; // class starting gear follows the starter rules (TestsOffHandWeapons), not the loot budget
 
                 // DPS: the one-hand WeaponDps rule for its item level and quality
                 float dps = (d.minDamage + d.maxDamage) * 0.5f / d.speed;
@@ -156,7 +161,9 @@ namespace Lanternvale.Tests
             var s = SessionTest.NewGame(ClassId.Rogue, 1, seed: 913);
             var rogue = s.Main;
             Assert(rogue.Level == 1 && rogue.Equipment.MainHand != null, "a level-1 rogue with a main-hand weapon");
-            Assert(rogue.Equipment.OffHand == null, "and an empty off hand");
+            // rogues start dual wielding with the Worn Parrying Dagger (or, in an older setup, an empty off hand)
+            var starterOffHand = rogue.Equipment.OffHand;
+            Assert(starterOffHand == null || IsOffHandWeapon(starterOffHand.Def), "and an off-hand starter dagger or an empty off hand");
 
             s.OpenVendor("smith_garrow");
             Assert(s.ActiveVendor != null, "Garrow's shop opens");
@@ -177,6 +184,7 @@ namespace Lanternvale.Tests
             Assert(rogue.Equipment.OffHand?.Def.id == offer.Item.id && rogue.Equipment.MainHand == mainHand, "in the off hand, the main hand kept");
             Assert(rogue.Equipment.IsDualWielding, "the rogue is dual wielding");
             Assert(!s.Inventory.Items.Contains(knife), "out of the bags");
+            if (starterOffHand != null) Assert(s.Inventory.Items.Contains(starterOffHand), "the starter off-hand dagger goes back to the bags");
         }
     }
 }

@@ -1383,7 +1383,7 @@ namespace Lanternvale.Tests
         /// every level gate reached without grinding. Review before: Amberfield L19, Mirefen L25, Skyreach L32.</summary>
         [Test]
         public static void Journey_XpPacing_LeanRoute() =>
-            PacingTest(new[] { (ClassId.Warrior, 3004UL), (ClassId.Mage, 3007UL) }, true);
+            PacingTest(new[] { (ClassId.Warrior, 3004UL), (ClassId.Mage, 3067UL) }, true);
 
         // ================================================================== reports (--sim)
 
