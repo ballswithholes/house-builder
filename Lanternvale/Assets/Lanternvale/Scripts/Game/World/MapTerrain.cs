@@ -803,22 +803,63 @@ namespace Lanternvale.Game
             }
             if (style.Id == Biomes.Roost)
             {
-                // scorched patches: soot-black rings, still warm at the heart
-                // smaller, crisper scorches with ragged rims (a dragon's breath, not a cloud's shadow)
+                // scorched patches of grey ash with a ragged soot rim, still warm at the heart (a dragon's breath, not
+                // a hole in the ground). The camp, the spawns, the people and the trails stay unburnt.
                 float sc = Mathf.PerlinNoise(x * 0.11f + s5, y * 0.11f + s1);
-                float burn = Smooth(0.68f, 0.72f, sc + (Mathf.PerlinNoise(x * 0.6f + s2, y * 0.6f + s3) - 0.5f) * 0.1f) * 0.85f;
+                float edge = sc + (Mathf.PerlinNoise(x * 0.6f + s2, y * 0.6f + s3) - 0.5f) * 0.1f
+                                + (Mathf.PerlinNoise(x * 1.5f + s4, y * 1.5f + s6) - 0.5f) * 0.08f;
+                float burn = Smooth(0.665f, 0.68f, edge);
+                if (burn > 0f) burn *= ScorchClear(x, y);
                 if (burn > 0f)
                 {
-                    c = new Color(c.r * Mathf.Lerp(1f, 0.3f, burn), c.g * Mathf.Lerp(1f, 0.27f, burn), c.b * Mathf.Lerp(1f, 0.26f, burn));
-                    float heart = Smooth(0.79f, 0.84f, sc);
+                    // ash: the brown ground turned grey (a little cooler, hardly darker), the painted ground showing through
+                    c = new Color(c.r * Mathf.Lerp(1f, 0.84f, burn), c.g * Mathf.Lerp(1f, 0.87f, burn), c.b * Mathf.Lerp(1f, 0.97f, burn));
+                    // soot along the rim: a thin, ragged dark ring
+                    float rim = burn * (1f - Smooth(0.675f, 0.7f, edge));
+                    c = new Color(c.r * (1f - 0.26f * rim), c.g * (1f - 0.28f * rim), c.b * (1f - 0.28f * rim));
+                    strength *= 1f - 0.25f * burn;
+                    float heart = Smooth(0.79f, 0.84f, sc) * burn;
                     if (heart > 0f)
                     {
-                        c = Color.Lerp(c, new Color(0.62f, 0.26f, 0.12f), heart * 0.6f);
-                        emission = heart * 0.35f;
+                        c = Color.Lerp(c, new Color(0.62f, 0.3f, 0.16f), heart * 0.45f);
+                        emission = heart * 0.3f;
                     }
                 }
             }
             return c;
+        }
+
+        List<Vector3> scorchClear;
+
+        /// <summary>
+        /// Where the summit's scorches may lie (0 = keep clear … 1): away from the spawns (4–10 m), the people, the
+        /// camp's fires and tents, and off the painted trails.
+        /// </summary>
+        float ScorchClear(float x, float y)
+        {
+            if (scorchClear == null)
+            {
+                // (x, y, clear radius): fully burnt beyond 2.5× the radius
+                scorchClear = new List<Vector3>();
+                foreach (var sp in def.spawns) if (sp != null) scorchClear.Add(new Vector3(sp.pos.x, sp.pos.y, 4f));
+                foreach (var n in def.npcs) if (n != null) scorchClear.Add(new Vector3(n.pos.x, n.pos.y, 2.5f));
+                foreach (var p in def.props)
+                    if (p != null && p.art != null && (p.art.Contains("campfire") || p.art.Contains("tent")))
+                        scorchClear.Add(new Vector3(p.pos.x, p.pos.y, 3f));
+            }
+            float k = 1f;
+            for (int i = 0; i < scorchClear.Count; i++)
+            {
+                var q = scorchClear[i];
+                float d = Mathf.Sqrt((x - q.x) * (x - q.x) + (y - q.y) * (y - q.y));
+                if (d < q.z * 2.5f) k = Mathf.Min(k, Smooth(q.z, q.z * 2.5f, d));
+            }
+            if (k > 0f && chains.Count > 0)
+            {
+                float d = PathDistance(x, y, out float half);
+                k *= Smooth(half + 0.5f, half + 2.5f, d);
+            }
+            return k;
         }
 
         // ================================================================== painted paths (decal_path_*)

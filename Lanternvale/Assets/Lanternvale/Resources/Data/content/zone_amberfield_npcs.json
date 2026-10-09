@@ -5,6 +5,7 @@
       "name": "Biscuit",
       "title": "Haybright's Sheepdog (Retired)",
       "sprite": "pet_wolf",
+      "scale": 0.7,
       "portrait": "cr_wolf",
       "dialogue": "dlg_am_biscuit",
       "bark": "*thump, thump* (That is his tail. He is not getting up.)"
@@ -33,6 +34,7 @@
       "name": "Nib",
       "title": "A Very Small Gnoll",
       "sprite": "cr_gnoll",
+      "scale": 0.6,
       "portrait": "cr_bandit",
       "dialogue": "dlg_am_nib",
       "bark": "Nib is not here. Nib is a scarecrow."
@@ -42,6 +44,7 @@
       "name": "Nib",
       "title": "Haybright's Newest Farmhand",
       "sprite": "cr_gnoll",
+      "scale": 0.6,
       "portrait": "cr_bandit",
       "dialogue": "dlg_am_nib_farm",
       "bark": "Nib has a HAT. And a JOB. And a SPOON he did not steal."

@@ -16,6 +16,8 @@ namespace Lanternvale.Data
 
         // Value sets of string-typed fields (Docs/Expansion.md §2).
         public static readonly string[] TransitionMarkers = { "", "none", "cave", "door", "stairs", "portal" };
+        /// <summary>NpcDef.scale range (model size multiplier).</summary>
+        public const float NpcScaleMin = 0.3f, NpcScaleMax = 3f;
         public static readonly string[] Biomes = { "", "meadow", "village", "forest", "shrine", "highlands", "fen", "peaks", "cave", "ice_cave", "crypt", "hollow_heart", "roost" };
         public static readonly string[] Environments = { "", "outdoor", "cave", "crypt" };
         public static readonly string[] CreatureMaterials = { "", "plate", "mail", "leather", "cloth", "flesh", "fur", "chitin", "bone", "wood", "stone", "ether", "ice", "scale", "wet" };
@@ -320,6 +322,7 @@ namespace Lanternvale.Data
             {
                 var w = $"npc {n.id}";
                 if (!string.IsNullOrEmpty(n.dialogue) && !db.Dialogues.ContainsKey(n.dialogue)) Err(w, $"unknown dialogue '{n.dialogue}'");
+                if (!(n.scale >= NpcScaleMin && n.scale <= NpcScaleMax)) Err(w, $"scale {n.scale} outside [{NpcScaleMin}, {NpcScaleMax}]");
                 foreach (var v in n.vendor) if (!HasItem(v.item)) Err(w, $"vendor sells unknown item '{v.item}'");
             }
             foreach (var c in db.Companions.Values)

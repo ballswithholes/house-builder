@@ -294,9 +294,29 @@ namespace Lanternvale.Preview
         /// <summary>As MapView.PropShown: the prop's requireFlag holds and its hideFlag does not (--flags).</summary>
         bool PropShown(PropDef p) => opt.Test(p.requireFlag) && !(!string.IsNullOrEmpty(p.hideFlag) && opt.Test(p.hideFlag));
 
+        /// <summary>
+        /// As GameFlow.RebuildWorld with flag lanterns_rekindled (GameSession.LanternsLitHere): the valley's spirit
+        /// lanterns are relit (GameSession.IsRekindleMap); flag-driven lanterns (requireFlag / hideFlag, the dark/lit
+        /// pairs of a story beat) keep their authored state, as MapView.SetAllLanternsLit (MapObject.LanternFlagDriven).
+        /// </summary>
+        bool Rekindled(PropDef p) =>
+            opt.Test(Lanternvale.Session.GameSession.LanternsFlag) && Lanternvale.Session.GameSession.IsRekindleMap(Def)
+            && string.IsNullOrEmpty(p.requireFlag) && string.IsNullOrEmpty(p.hideFlag);
+
+        /// <summary>Flag-hidden spirit lanterns: MapView builds them hidden and still counts them for the cliff lanterns.</summary>
+        int hiddenLanterns, hiddenLanternsLit;
+
+        static bool IsLanternArt(string art) => art.Contains("spirit_lantern");
+        static bool LitArt(string art) => !art.EndsWith("_dark", StringComparison.Ordinal);
+
         void BuildProp(PropDef p, int index)
         {
-            if (!PropShown(p)) return;   // as MapView: built hidden (no model, light or shadow shows)
+            if (!PropShown(p))
+            {
+                // as MapView: built hidden (no model, light or shadow shows)
+                if (IsLanternArt(p.art)) { hiddenLanterns++; if (LitArt(p.art)) hiddenLanternsLit++; }
+                return;
+            }
             var holder = new GameObject(p.art).transform;
             holder.SetParent(propsRoot, false);
             holder.localPosition = new Vector3(p.pos.x, p.pos.y, 0f);
@@ -306,8 +326,8 @@ namespace Lanternvale.Preview
                 scale = p.scale > 0f ? p.scale : 1f, flip = p.flip,
                 tint = string.IsNullOrEmpty(p.tint) ? Color.white : Ui.Hex(p.tint),
             };
-            bool lantern = p.art.Contains("spirit_lantern");
-            if (lantern) { o.isLantern = true; o.lanternLit = !p.art.EndsWith("_dark", StringComparison.Ordinal); }
+            bool lantern = IsLanternArt(p.art);
+            if (lantern) { o.isLantern = true; o.lanternLit = LitArt(p.art) || Rekindled(p); }
             PlaceModel(o, Seed(Def.id, new Vector2(p.pos.x, p.pos.y), index));
             o.groundShadow = true;
             o.occluder = TopOf(o) >= 2.5f;
@@ -396,8 +416,8 @@ namespace Lanternvale.Preview
 
         void BuildChest(ChestDef c)
         {
-            // chests behind an unset flag stay hidden (MapView with FlagStore.Test)
-            if (!opt.Has(c.requireFlag)) return;
+            // chests behind an unset flag stay hidden (MapRuntime.IsChestAvailable: FlagStore.Test)
+            if (!opt.Test(c.requireFlag)) return;
             var holder = new GameObject("Chest " + c.id).transform;
             holder.SetParent(propsRoot, false);
             holder.localPosition = new Vector3(c.pos.x, c.pos.y, 0f);
@@ -491,7 +511,7 @@ namespace Lanternvale.Preview
         void UpdateCliffLanterns()
         {
             if (backdrop == null || !backdrop.HasCliffLanterns) return;
-            int total = 0, lit = 0;
+            int total = hiddenLanterns, lit = hiddenLanternsLit;
             foreach (var o in props) if (o.isLantern) { total++; if (o.lanternLit) lit++; }
             backdrop.SetLanternFraction(total > 0 ? (float)lit / total : 0f, false);
         }
@@ -512,14 +532,16 @@ namespace Lanternvale.Preview
             AddUnit(opt.Player, 0f, spawn, 1, true, n++);
             foreach (var npc in Def.npcs)
             {
-                if (npc == null || !opt.Has(npc.requireFlag)) continue;
+                if (!NpcShown(npc)) continue;
                 // as CreateNpcView: generic villagers / children get a stable look per NPC id (SetVariant)
-                AddUnit(NpcSprite(npc.npc), 0f, new Vector2(npc.pos.x, npc.pos.y), npc.flip ? -1 : 1, false, n++, UnitModels.StableVariant(npc.npc ?? ""));
+                AddUnit(NpcSprite(npc.npc), 0f, new Vector2(npc.pos.x, npc.pos.y), npc.flip ? -1 : 1, false, n++, UnitModels.StableVariant(npc.npc ?? ""),
+                        NpcScale(npc.npc));
                 if (!string.IsNullOrEmpty(npc.npc)) NpcPosers[npc.npc] = Units[Units.Count - 1];
             }
             foreach (var e in Def.encounters)
             {
-                if (e == null || e.hidden || !opt.Has(e.requireFlag) || e.enemies == null) continue;
+                // MapRuntime.IsEncounterVisible (nothing is done or triggered in a preview)
+                if (e == null || e.hidden || !opt.Test(e.requireFlag) || e.enemies == null) continue;
                 foreach (var en in e.enemies)
                 {
                     var cd = Db?.Creature(en?.creature);
@@ -531,6 +553,13 @@ namespace Lanternvale.Preview
                 }
             }
         }
+
+        /// <summary>As MapRuntime.IsNpcVisible: the NPC's requireFlag holds and its hideFlag does not (--flags).</summary>
+        bool NpcShown(MapNpcDef npc) =>
+            npc != null && opt.Test(npc.requireFlag) && !(!string.IsNullOrEmpty(npc.hideFlag) && opt.Test(npc.hideFlag));
+
+        /// <summary>NpcDef.scale (1 for companions and unknown ids), as GameFlow.CreateNpcView.</summary>
+        float NpcScale(string id) => Db != null && Db.Npcs.TryGetValue(id ?? "", out var npc) ? npc.scale : 1f;
 
         string NpcSprite(string id)
         {
@@ -548,12 +577,12 @@ namespace Lanternvale.Preview
             return string.IsNullOrEmpty(sprite) ? "npc_villager_a" : sprite;
         }
 
-        void AddUnit(string key, float height, Vector2 pos, int facing, bool fadesOccluders, int index, int variant = 0)
+        void AddUnit(string key, float height, Vector2 pos, int facing, bool fadesOccluders, int index, int variant = 0, float sizeScale = 1f)
         {
             // SetFacing(±1) is screen-right/left for the current camera yaw (UnitFacing.SideYaw); no SetFacing keeps
             // UnitView's initial world yaw
             float yaw = facing == 0 ? 90f + UnitPoser.FacingBias : UnitPoser.FacingYaw(facing, opt.Yaw);
-            var u = new UnitPoser(key, height, unitsRoot, pos, yaw, variant);
+            var u = new UnitPoser(key, height, unitsRoot, pos, yaw, variant, false, sizeScale);
             // a little idle life, desynchronised per unit (breathing, weight shift, glances)
             u.Idle(1.2f + (index * 0.37f) % 1.6f);
             Units.Add(u);

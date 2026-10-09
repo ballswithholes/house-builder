@@ -234,21 +234,23 @@ namespace Lanternvale.Game
 
         /// <summary>
         /// Creates a unit visual. height ≤ 0 uses the model's natural height; pass CreatureDef.size for creatures.
+        /// sizeScale multiplies the result (NpcDef.scale: a pup on the adult gnoll's model, an old drake bigger).
         /// </summary>
-        public static UnitView Create(string spriteKey, float height, Color ringColor)
+        public static UnitView Create(string spriteKey, float height, Color ringColor, float sizeScale = 1f)
         {
             ArtLibrary.Init();
             var go = new GameObject("Unit " + spriteKey);
             var u = go.AddComponent<UnitView>();
-            u.Init(spriteKey, height, ringColor);
+            u.Init(spriteKey, height, ringColor, sizeScale);
             return u;
         }
 
-        void Init(string key, float height, Color ringColor)
+        void Init(string key, float height, Color ringColor, float sizeScale)
         {
             SpriteKey = key ?? "";
             RingColor = ringColor;
             requestedHeight = height;
+            requestedScale = sizeScale > 0f ? sizeScale : 1f;
             SceneLighting.Ensure();
             BuildBase();
             shadow = MeshCache.AddShadow(transform, 0.4f, 0.4f);
@@ -263,14 +265,14 @@ namespace Lanternvale.Game
             Animate(0f);
         }
 
-        float requestedHeight;
+        float requestedHeight, requestedScale = 1f;
 
         void BuildBase()
         {
             Variant = UnitModels.NormalizeVariant(SpriteKey, requestedVariant);
             model = UnitModels.Get(SpriteKey, requestedVariant);
             if (model == null) return;
-            scale = requestedHeight > 0f ? requestedHeight / Mathf.Max(0.05f, model.Height) : 1f;
+            scale = (requestedHeight > 0f ? requestedHeight / Mathf.Max(0.05f, model.Height) : 1f) * requestedScale;
             Height = model.Height * scale;
             Floating = model.FloatHeight > 0f;
             baseBody = UnitBody.Create(model, transform);

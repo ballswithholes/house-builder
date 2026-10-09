@@ -85,6 +85,7 @@
       "name": "Glimmerwing",
       "title": "The Old Frost",
       "sprite": "cr_frost_drake",
+      "scale": 1.6,
       "portrait": "demon_imp",
       "dialogue": "dlg_sr_glimmerwing",
       "bark": "*A snowdrift breathes out, very slowly.*"
@@ -94,6 +95,7 @@
       "name": "Icicle",
       "title": "A Young Frost Drake",
       "sprite": "cr_frost_drake",
+      "scale": 0.8,
       "portrait": "demon_imp",
       "dialogue": "dlg_sr_icicle",
       "bark": "*A small, sad, frosty sneeze.*"

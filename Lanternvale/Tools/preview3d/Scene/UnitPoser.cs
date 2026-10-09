@@ -41,11 +41,12 @@ namespace Lanternvale.Preview
         /// and is set down showing its front to the camera (UnitFacing.StaticYaw, to the side `yaw` points to), unless
         /// `exactYaw` (a sheet's fixed 3/4 view).
         /// </summary>
-        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw, int variant = 0, bool exactYaw = false)
+        public UnitPoser(string key, float height, Transform parent, Vector2 pos, float yaw, int variant = 0, bool exactYaw = false, float sizeScale = 1f)
         {
             Key = key;
             Model = UnitModels.Get(key, variant) ?? throw new InvalidOperationException("no unit model for " + key);
-            Scale = height > 0f ? height / Mathf.Max(0.05f, Model.Height) : 1f;
+            // as UnitView.BuildBase (sizeScale: NpcDef.scale)
+            Scale = (height > 0f ? height / Mathf.Max(0.05f, Model.Height) : 1f) * (sizeScale > 0f ? sizeScale : 1f);
             Holder = new GameObject("Unit " + key).transform;
             Holder.SetParent(parent, false);
             Pos = pos;

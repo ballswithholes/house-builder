@@ -550,6 +550,7 @@ namespace Lanternvale.Data
         public string bark = "";                         // hover/ambient line
         public bool wanders;
         public string shortName = "";                    // Map panel label ("" = name)
+        public float scale = 1f;                         // model size × this (a pup on the adult's model); 0.3–3
     }
 
     [Serializable]

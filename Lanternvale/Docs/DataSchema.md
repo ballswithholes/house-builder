@@ -226,6 +226,7 @@ shows one mistake per rule.
 | `QuestDef.zone` | map id, "" | Groups the quest in the journal. Must be a known map. |
 | `QuestStageDef.turnIn` | npc/companion id, "" | The NPC the quest marker points at for this stage ("" = inferred). Also excuses a `Flag` stage whose flag no data sets (set by code). |
 | `NpcDef.shortName` | string, "" | Map panel label ("" = `name`). |
+| `NpcDef.scale` | float, 1 | Size of the NPC's model as a multiplier of its natural height (a gnoll pup on the adult's model: 0.6). Must be in [0.3, 3]. The game's unit view and preview3d apply it. |
 | `RegionDef.name` | string, "" | Map panel cluster label. |
 
 Quest rules: `giver` is a known npc or companion; something starts every quest (a `StartQuest`/`SetQuestStage`

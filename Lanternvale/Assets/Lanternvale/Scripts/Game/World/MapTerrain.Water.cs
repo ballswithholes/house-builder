@@ -6,8 +6,8 @@
 // loop the nav grid blocks (Lanternvale.Util.Spline.PondShore). MapTerrain
 // carves a bed there (0.45 m; 0.12 m for water that doesn't block), lays a translucent, flowing surface just under the
 // ground (WaterLevel), darkens the damp banks and keeps ground cover and trees off them. A river that meets the map's
-// edge flows on out of it, through a valley in the hills, to the horizon. A crossing with a bridge prop over it keeps
-// the deep bed (the bridge spans it); any other crossing is a ford: the bed rises to a gravel bar just under the
+// edge flows on out of it, through a valley in the hills, to the horizon. A crossing with a bridge, dock or boardwalk
+// prop over it keeps the deep bed (the prop spans it); any other crossing is a ford: the bed rises to a gravel bar just under the
 // surface, stepping stones break it and a data path fades out into the shallows on either bank.
 //
 // The fen's surroundings (BiomeStyle.WaterTable) also get a still water table just under the ground: pools wherever its
@@ -93,7 +93,7 @@ namespace Lanternvale.Game
                         var r = new Rect(c.pos.x - c.size.x * 0.5f, c.pos.y - c.size.y * 0.5f, c.size.x, c.size.y);
                         bool bridged = false;
                         foreach (var p in def.props)
-                            if (p != null && p.art != null && p.art.Contains("bridge") &&
+                            if (p != null && IsSpan(p.art) &&
                                 p.pos.x > r.xMin - 1.5f && p.pos.x < r.xMax + 1.5f && p.pos.y > r.yMin - 1.5f && p.pos.y < r.yMax + 1.5f)
                                 bridged = true;
                         (bridged ? b.bridges : b.fords).Add(r);
@@ -101,6 +101,13 @@ namespace Lanternvale.Game
                 waters.Add(b);
             }
         }
+
+        /// <summary>
+        /// A prop that carries the way over the water (bridges, docks, boardwalks): its crossing keeps the deep bed and
+        /// gets no stepping stones (only a bare crossing is a ford).
+        /// </summary>
+        internal static bool IsSpan(string art) =>
+            art != null && (art.Contains("bridge") || art.Contains("boardwalk") || art.Contains("dock"));
 
         /// <summary>A river end within 3 m of the edge runs on outwards (and keeps going far beyond the map).</summary>
         void ExtendRiver(List<Vector2> pts, bool start)

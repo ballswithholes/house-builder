@@ -16,7 +16,7 @@ mkdir -p "$out"
 "$tool" map lanternvale "$out/lanternvale_kusu.png" --spawn camphor --hour 17.5 --flags moppet_found
 "$tool" map lanternvale "$out/lanternvale_pasture.png" --at 84,9 --hour 9 --flags shepherd_quest,bandits_peaceful
 "$tool" map lanternvale "$out/lanternvale_north.png" --at 45,30 --hour 11
-"$tool" map lanternvale "$out/lanternvale_hollows_entrance.png" --at 20,16 --hour 15 --flags found_root_hollows
+"$tool" map lanternvale "$out/lanternvale_hollows_entrance.png" --at 23.6,33 --hour 15 --flags found_root_hollows
 "$tool" map whisperwood "$out/whisperwood_noon.png" --hour 12.5
 "$tool" map whisperwood "$out/whisperwood_greymane.png" --at 25,9 --hour 12.5 --flags shepherd_hunt
 "$tool" map whisperwood "$out/whisperwood_north.png" --at 50,32 --hour 12.5
