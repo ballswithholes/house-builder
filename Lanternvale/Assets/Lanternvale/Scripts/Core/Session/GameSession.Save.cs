@@ -526,6 +526,14 @@ namespace Lanternvale.Session
                 SecondsSinceManaSpent = s.secondsSinceManaSpent, SecondsSinceCombat = s.secondsSinceCombat,
             };
             if (s.abilities != null) foreach (var kv in s.abilities) if (Db.Ability(kv.Key) != null) u.Abilities[kv.Key] = kv.Value;
+            // starting passives are always known: one added after the save was made (Rogue Dual Wield, a starting passive
+            // since rogues dual wield from level 1) is learned on load, so it shows in the spellbook (it gates nothing)
+            if (cls != null)
+                foreach (var id in cls.startingAbilities)
+                {
+                    var sa = string.IsNullOrEmpty(id) || u.Abilities.ContainsKey(id) ? null : Db.Ability(id);
+                    if (sa != null && sa.passive && sa.classId == cls.id) u.Abilities[id] = 1;
+                }
             if (s.talents != null) foreach (var kv in s.talents) if (Db.Talent(kv.Key) != null) u.Talents[kv.Key] = kv.Value;
             if (s.cooldowns != null) foreach (var kv in s.cooldowns) u.Cooldowns[kv.Key] = kv.Value;
             if (s.procCooldowns != null) foreach (var kv in s.procCooldowns) u.ProcCooldowns[kv.Key] = kv.Value;
@@ -538,6 +546,9 @@ namespace Lanternvale.Session
                     var it = LoadItem(e.item);
                     if (it == null) continue;
                     if (u.Equipment[e.slot] != null) { Inventory.Items.Add(it); continue; }
+                    // an item whose definition no longer fits that slot (the rogue starter off-hand dagger became an Off
+                    // Hand weapon: an old save may hold it in the main hand) goes back to the bags
+                    if (Array.IndexOf(EquipmentRules.SlotsFor(it.Def), e.slot) < 0) { Inventory.Items.Add(it); continue; }
                     foreach (var displaced in EquipmentRules.Equip(u, it, e.slot)) if (displaced != null) Inventory.Items.Add(displaced);
                 }
             if (s.hunterPet != null)

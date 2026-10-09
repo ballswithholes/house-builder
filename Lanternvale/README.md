@@ -31,7 +31,7 @@ proficiencies, all following 1.12.
 | Class | Roles | What makes it play like WoW Classic |
 |---|---|---|
 | **Warrior** | Tank, melee DPS | **Rage** from dealing and taking white damage (the 1.12 rage formula), no passive regen, decays out of combat. Battle / Defensive / Berserker **stances** gate abilities and change threat; Tactical Mastery keeps rage on a stance swap. Charge, Taunt, Heroic Strike / Cleave **replace the next swing**. Mail, then Plate at 40; dual wield at 20. |
-| **Rogue** | Melee DPS | **Energy** (+20 per 2 s) and **combo points** stored on one target; finishers scale with points. 1.0 s GCD. **Stealth** with openers (Cheap Shot, Ambush…) — opening a fight from stealth gives a surprise round. Pick Lock opens locked chests. Leather; dual wield at 10. |
+| **Rogue** | Melee DPS | **Energy** (+20 per 2 s) and **combo points** stored on one target; finishers scale with points. 1.0 s GCD. **Stealth** with openers (Cheap Shot, Ambush…) — opening a fight from stealth gives a surprise round. Pick Lock opens locked chests. Leather; **dual wields from level 1** (a dagger in each hand from the start, no trainer step). |
 | **Hunter** | Ranged DPS | **Auto Shot** with the 8-yard **dead zone**, aspects, stings and **traps**. **Pets**: tame a beast (wolf, cat, boar, bear, owl, spider). Pets use Focus, take their own turn right after the hunter and are remembered between fights. Feign Death. Leather, then Mail at 40; dual wield at 20. |
 | **Mage** | Ranged DPS, support | Mana with the **five-second rule**. Fire / Frost / Arcane, Polymorph, Blink, Counterspell, Ice Block, Evocation, conjured food and water. Cloth; staves, swords, daggers and wands. |
 | **Priest** | Healer, ranged DPS, support | Downrankable heals, Power Word: Shield, Shadowform, Mind Control (a channelled spell: a humanoid enemy fights for you until the priest acts), Lightwell. Cloth; maces, staves, daggers and wands. |
@@ -67,7 +67,9 @@ WoW is real-time; Lanternvale slices it into **rounds of 6 seconds** (`Docs/Desi
   * a **cast** becomes **pending**. It resolves at the start of the caster's next turn, so the cast is
     **telegraphed** and can be **interrupted** (Kick, Pummel, Counterspell, Earth Shock…).
 * **Auto attacks run on WoW swing timers** in parallel and swing at the end of the turn. Dual wield, the
-  Auto Shot dead zone, wand Shoot and next-swing abilities all work as in WoW.
+  Auto Shot dead zone, wand Shoot and next-swing abilities all work as in WoW. Dual wielders hold a One-Hand weapon
+  or a real **Off Hand** weapon (daggers, swords, fist weapons… that go only in the off hand) in the off hand; the
+  off hand swings at 50% damage.
 * Resources regenerate per turn: energy +60, mana from Spirit with the five-second rule (MP5 always),
   pet Focus +36.
 * Durations and cooldowns are in seconds: 6 s pass per round. Out of combat the clock runs in real time.

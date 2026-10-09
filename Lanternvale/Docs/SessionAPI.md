@@ -259,6 +259,8 @@ Inventory Inventory; int Gold                 // shared bags (Items, Count(id), 
 int CountItem(string itemId)
 void GiveItem(string id, int n); void TakeItem(string id, int n); void GiveGold(int c); void TakeGold(int c)
 string CanEquip(Unit u, ItemInstance item, EquipSlot? slot = null)    // reason or null
+   // EquipmentRules (CoreAPI.md §6): a One-Hand or Off Hand weapon in the off hand needs dual wield (Rogue from level 1,
+   // Warrior/Hunter 20 + trainer); an Off Hand weapon never goes in the main hand (slot null → the off hand)
 string Equip(Unit u, ItemInstance item, EquipSlot? slot = null)       // from the bags (one of a stack); displaced → bags
 string Unequip(Unit u, EquipSlot slot)
 string DestroyItem(ItemInstance item, int count = 1)                  // quest items refuse

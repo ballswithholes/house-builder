@@ -122,7 +122,8 @@ namespace Lanternvale.Rules
         /// <summary>
         /// The class passive a trainer sells for a proficiency, by data convention: &lt;class&gt;_plate_mail / &lt;class&gt;_mail
         /// for the armorUpgrade type, &lt;class&gt;_dual_wield, &lt;class&gt;_parry (Shaman: granted by the Enhancement talent).
-        /// Null when the class data has no such passive: the level/class rule alone applies then.
+        /// Null when the class data has no such passive, or when the passive is one of the class's startingAbilities (Rogue
+        /// Dual Wield, known from level 1): the level/class rule alone applies then.
         /// </summary>
         public static AbilityDef ProficiencyPassive(Unit u, Proficiency p)
         {
@@ -144,6 +145,9 @@ namespace Lanternvale.Rules
                             id = type == ArmorType.Plate ? prefix + "_plate_mail" : type == ArmorType.Mail ? prefix + "_mail" : "";
                             break;
                     }
+                    // a starting passive (Rogue Dual Wield) is known from level 1 and never sold: it gates nothing, so
+                    // characters that do not list it (saves from before it became one) are not locked out
+                    if (c.startingAbilities != null && Array.IndexOf(c.startingAbilities, id) >= 0) id = "";
                     ids[c] = id;
                 }
             }
@@ -180,9 +184,41 @@ namespace Lanternvale.Rules
             return Specials.GrantsWeapon(u, t); // talents granting proficiency (Two-Handed Axes and Maces)
         }
 
-        /// <summary>Off-hand one-handers: the class dual wields from dualWieldLevel once its Dual Wield passive is trained.</summary>
+        /// <summary>
+        /// Weapons in the off hand (One-Hand and Off Hand weapons): the class dual wields from dualWieldLevel once its Dual
+        /// Wield passive is known. Rogue: level 1, Dual Wield is a starting passive (never gated, see <see cref="ProficiencyPassive"/>);
+        /// Warrior and Hunter: level 20 and the trainer.
+        /// </summary>
         public static bool CanDualWield(Unit u) =>
             u.Class != null && u.Class.dualWieldLevel > 0 && u.Level >= u.Class.dualWieldLevel && HasProficiency(u, Proficiency.DualWield);
+
+        /// <summary>Why the unit cannot dual wield (level, the trainer's Dual Wield, or its class), or null when it can.</summary>
+        public static string CannotDualWieldReason(Unit u)
+        {
+            if (CanDualWield(u)) return null;
+            if (u.Class != null && u.Class.dualWieldLevel > 0)
+            {
+                if (u.Level < u.Class.dualWieldLevel) return $"Dual Wield requires level {u.Class.dualWieldLevel}.";
+                var pa = ProficiencyPassive(u, Proficiency.DualWield);
+                if (pa != null && !u.Knows(pa.id)) return $"Requires {pa.name} (class trainer).";
+            }
+            return $"{u.Class?.name ?? "This class"} cannot dual wield.";
+        }
+
+        /// <summary>The one-hand melee weapon types: those of One-Hand weapons and of Off Hand weapons.</summary>
+        public static bool IsOneHandMeleeType(WeaponType t) =>
+            t == WeaponType.Dagger || t == WeaponType.OneHandSword || t == WeaponType.FistWeapon || t == WeaponType.OneHandMace || t == WeaponType.OneHandAxe;
+
+        /// <summary>
+        /// An Off Hand weapon (WoW "Off Hand" daggers, swords, fist weapons...): equip OffHand with a one-hand melee weapon
+        /// type. It goes only in the off hand and needs dual wield there, exactly like a One-Hand weapon in the off hand.
+        /// Shields and held-in-off-hand items (also equip OffHand) are not: they need no dual wield.
+        /// </summary>
+        public static bool IsOffHandWeapon(ItemDef d) => d != null && d.equip == EquipType.OffHand && IsOneHandMeleeType(d.weaponType);
+
+        /// <summary>Putting the item into the slot is dual wielding: a One-Hand or an Off Hand weapon in the off hand.</summary>
+        public static bool NeedsDualWield(ItemDef d, EquipSlot slot) =>
+            d != null && slot == EquipSlot.OffHand && (d.equip == EquipType.OneHand || IsOffHandWeapon(d));
 
         /// <summary>Why the unit cannot use the item at all (ignoring slot), or null.</summary>
         public static string CannotUseReason(Unit u, ItemDef def)
@@ -204,6 +240,7 @@ namespace Lanternvale.Rules
             }
             if (def.weaponType != WeaponType.None && !CanUseWeapon(u, def.weaponType))
                 return $"{u.Class?.name ?? "This class"} cannot use {Pretty(def.weaponType)}.";
+            if (IsOffHandWeapon(def)) return CannotDualWieldReason(u);   // its only slot is the off hand: it needs dual wield
             return null;
         }
 
@@ -229,16 +266,12 @@ namespace Lanternvale.Rules
         {
             var why = CannotUseReason(u, def);
             if (why != null) return why;
-            if (Array.IndexOf(SlotsFor(def), slot) < 0) return $"{def.name} does not go in the {slot} slot.";
-            if (slot == EquipSlot.OffHand && def.equip == EquipType.OneHand && !CanDualWield(u))
+            if (Array.IndexOf(SlotsFor(def), slot) < 0)
+                return IsOffHandWeapon(def) ? $"{def.name} is an off-hand weapon: it goes only in the off hand." : $"{def.name} does not go in the {slot} slot.";
+            if (NeedsDualWield(def, slot))
             {
-                if (u.Class != null && u.Class.dualWieldLevel > 0)
-                {
-                    if (u.Level < u.Class.dualWieldLevel) return $"Dual Wield requires level {u.Class.dualWieldLevel}.";
-                    var pa = ProficiencyPassive(u, Proficiency.DualWield);
-                    if (pa != null && !u.Knows(pa.id)) return $"Requires {pa.name} (class trainer).";
-                }
-                return $"{u.Class?.name ?? "This class"} cannot dual wield.";
+                var dw = CannotDualWieldReason(u);
+                if (dw != null) return dw;
             }
             if (def.unique)
             {

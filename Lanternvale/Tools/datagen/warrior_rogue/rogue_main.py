@@ -14,7 +14,7 @@ CLASS = {
     "resource": "Energy", "gcd": 1.0,
     "armorTypes": ["Cloth", "Leather"], "armorUpgrade": {"level": 40, "type": "None"},
     "weaponTypes": ["Dagger", "FistWeapon", "OneHandMace", "OneHandSword", "Bow", "Crossbow", "Gun", "Thrown"],
-    "dualWieldLevel": 10, "canParry": True, "canBlock": False,
+    "dualWieldLevel": 1, "canParry": True, "canBlock": False,
     "baseStatsLevel1": {"strength": 21, "agility": 23, "stamina": 21, "intellect": 20, "spirit": 21},
     "baseStatsLevel60": {"strength": 80, "agility": 130, "stamina": 75, "intellect": 35, "spirit": 52},
     "baseHealthLevel1": 25, "baseHealthLevel60": 1523, "baseManaLevel1": 0, "baseManaLevel60": 0,
@@ -23,7 +23,7 @@ CLASS = {
     "baseMeleeCrit": 5, "baseSpellCrit": 0, "baseDodge": 5, "manaRegenBase": 0, "manaRegenPerSpirit": 0,
     "basicAttack": "attack",
     "startingAbilities": ["attack", "rogue_sinister_strike", "rogue_eviscerate", "rogue_stealth", "rogue_throw",
-                          "rogue_shoot", "rogue_shadowed_presence"],
+                          "rogue_shoot", "rogue_shadowed_presence", "rogue_dual_wield"],
     "startingItems": ["rogue_starter_dagger", "rogue_starter_dagger_offhand", "rogue_starter_vest", "rogue_starter_pants", "rogue_starter_shoes",
                       "rogue_starter_throwing_knives"],
     "startingStance": "",
@@ -47,9 +47,9 @@ ITEMS = [
      "description": "A plain, well-balanced blade. Every footpad's first friend.", "kind": "Weapon",
      "quality": "Common", "itemLevel": 2, "equip": "OneHand", "weaponType": "Dagger",
      "minDamage": 1, "maxDamage": 3, "speed": 1.6, "price": 35},
-    {"id": "rogue_starter_dagger_offhand", "name": "Worn Dagger", "icon": "dagger",
-     "description": "A twin to your first dagger, for when you learn to fight with a blade in each hand.",
-     "kind": "Weapon", "quality": "Common", "itemLevel": 2, "equip": "OneHand", "weaponType": "Dagger",
+    {"id": "rogue_starter_dagger_offhand", "name": "Worn Parrying Dagger", "icon": "dagger",
+     "description": "A twin to your first dagger, weighted for the off hand. Every rogue fights with a blade in each hand.",
+     "kind": "Weapon", "quality": "Common", "itemLevel": 2, "equip": "OffHand", "weaponType": "Dagger",
      "minDamage": 1, "maxDamage": 3, "speed": 1.6, "price": 35},
     armor("rogue_starter_vest", "Footpad's Vest", "armor", "Chest", 3,
           "Dark, close-fitting leather that doesn't creak.", 6),
@@ -164,7 +164,10 @@ abilities = finish_abilities(ABILITIES, "Rogue")
 check_build(TREES, BUILD)
 used, unused = write_bundle(OUT, "Rogue class data (WoW Classic 1.12). Generated; generic specials RankDurations, "
                             "SweepingHits, WeaponTypeTalent, OffHandDamage and PhysicalRangedShot are documented in "
-                            "warrior.json.", [CLASS], abilities, AURAS, TREES, ITEMS, SPECIALS,
+                            "warrior.json. Lanternvale change: rogues dual wield from level 1 (dualWieldLevel 1; Dual "
+                            "Wield is a starting passive, not sold by the trainer, so it never gates: "
+                            "EquipmentRules.ProficiencyPassive skips starting passives and old saves learn it on load); "
+                            "the starter off-hand dagger is a real Off Hand weapon (equip OffHand).", [CLASS], abilities, AURAS, TREES, ITEMS, SPECIALS,
                             extra_specials=GENERIC_FROM_WARRIOR)
 print("rogue: abilities", len(abilities), "auras", len(AURAS), "items", len(ITEMS),
       "talents", [len(t["talents"]) for t in TREES], "specials", sorted(used))

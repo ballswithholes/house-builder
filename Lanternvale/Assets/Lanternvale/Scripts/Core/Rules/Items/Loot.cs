@@ -64,8 +64,9 @@ namespace Lanternvale.Rules
 
         /// <summary>
         /// The character could equip the item apart from its required level: an equipable item of its class (or of no
-        /// class), an armour type it wears now (Back always) and a weapon type it can use. Gear a few levels ahead
-        /// counts as usable; armour the class only wears from a later level (Warrior plate at 40) does not.
+        /// class), an armour type it wears now (Back always) and a weapon type it can use (an Off Hand weapon also needs
+        /// dual wield now). Gear a few levels ahead counts as usable; armour the class only wears from a later level
+        /// (Warrior plate at 40) and Off Hand weapons before the class dual wields (Warrior at 20) do not.
         /// </summary>
         public static bool CanUse(Unit u, ItemDef d)
         {
@@ -73,6 +74,7 @@ namespace Lanternvale.Rules
             if (d.classes != null && d.classes.Length > 0 && Array.IndexOf(d.classes, u.ClassId) < 0) return false;
             if (d.equip != EquipType.Back && !EquipmentRules.CanWearArmor(u, d.armorType)) return false;
             if (d.weaponType != WeaponType.None && !EquipmentRules.CanUseWeapon(u, d.weaponType)) return false;
+            if (EquipmentRules.IsOffHandWeapon(d) && !EquipmentRules.CanDualWield(u)) return false;   // its only slot needs dual wield
             return true;
         }
 

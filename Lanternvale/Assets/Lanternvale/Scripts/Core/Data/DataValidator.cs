@@ -224,6 +224,16 @@ namespace Lanternvale.Data
                 if (!string.IsNullOrEmpty(i.use) && !HasAbility(i.use)) Err(w, $"unknown use ability '{i.use}'");
                 if (i.kind == ItemKind.Weapon && (i.maxDamage <= 0 || i.speed <= 0) && i.weaponType != WeaponType.Shield && i.weaponType != WeaponType.HeldInOffhand)
                     Err(w, "weapon needs damage and speed");
+                // Off Hand weapons (equip OffHand, a weapon type other than Shield / HeldInOffhand): one-hand melee types
+                // with damage and speed; they go only in the off hand and need dual wield (EquipmentRules.IsOffHandWeapon)
+                if (i.equip == EquipType.OffHand && i.weaponType != WeaponType.None && i.weaponType != WeaponType.Shield && i.weaponType != WeaponType.HeldInOffhand)
+                {
+                    var owt = i.weaponType;   // = EquipmentRules.IsOneHandMeleeType (Data compiles without Rules: Tools/check.sh data)
+                    if (owt != WeaponType.Dagger && owt != WeaponType.OneHandSword && owt != WeaponType.FistWeapon && owt != WeaponType.OneHandMace && owt != WeaponType.OneHandAxe)
+                        Err(w, $"an Off Hand weapon must be a one-hand melee type (Dagger, OneHandSword, FistWeapon, OneHandMace, OneHandAxe), not {i.weaponType}");
+                    if (i.kind != ItemKind.Weapon) Err(w, "an Off Hand weapon needs kind Weapon");
+                    if (i.maxDamage <= 0 || i.speed <= 0 || i.minDamage > i.maxDamage) Err(w, "an Off Hand weapon needs damage (minDamage ≤ maxDamage) and speed");
+                }
                 if ((i.kind == ItemKind.Weapon || i.kind == ItemKind.Armor || i.kind == ItemKind.Accessory) && i.equip == EquipType.None)
                     Err(w, "equipable item needs equip slot");
                 foreach (var e in i.equipEffects)

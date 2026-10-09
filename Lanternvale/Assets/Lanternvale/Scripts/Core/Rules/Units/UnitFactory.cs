@@ -49,8 +49,9 @@ namespace Lanternvale.Rules
 
         /// <summary>
         /// A companion's signature items cover only a few slots: the class's starter gear goes into the slots still empty
-        /// (legs, feet...). A starter weapon only when the companion has no weapon at all; starter pieces that do not fit
-        /// are not handed out (no pile of starter swords in the bags).
+        /// (legs, feet...). A starter weapon only when the companion has no weapon at all, or the class's starter Off Hand
+        /// weapon for a dual wielder (Rogue) whose main hand holds a one-hander and whose off hand is empty; starter pieces
+        /// that do not fit are not handed out (no pile of starter swords in the bags).
         /// </summary>
         static void FillEmptySlots(Unit u, string[] classStarter)
         {
@@ -63,7 +64,9 @@ namespace Lanternvale.Rules
                 {
                     if (eq[s] != null || EquipmentRules.CannotEquipReason(u, def, s) != null) continue;
                     bool hand = s == EquipSlot.MainHand || s == EquipSlot.OffHand;
-                    if (hand && (eq.MainHand != null || s == EquipSlot.OffHand)) break;
+                    // a dual wielder holding a one-hander gets the class's starter Off Hand weapon (Rogue) in its empty off hand
+                    bool offHandWeapon = s == EquipSlot.OffHand && eq.MainHand != null && !eq.HasTwoHander && EquipmentRules.IsOffHandWeapon(def);
+                    if (hand && !offHandWeapon && (eq.MainHand != null || s == EquipSlot.OffHand)) break;
                     EquipmentRules.Equip(u, new ItemInstance(def), s);
                     break;
                 }

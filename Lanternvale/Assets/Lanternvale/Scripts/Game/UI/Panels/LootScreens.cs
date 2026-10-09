@@ -216,7 +216,7 @@ namespace Lanternvale.Game.Panels
             if (d.equip != EquipType.None)
             {
                 string slot = UiText.SlotName(d.equip);
-                string type = d.weaponType != WeaponType.None ? UiText.Spaced(d.weaponType.ToString()) : d.armorType != ArmorType.None ? d.armorType.ToString() : "";
+                string type = d.weaponType != WeaponType.None ? UiText.WeaponTypeName(d.weaponType) : d.armorType != ArmorType.None ? d.armorType.ToString() : "";
                 return type.Length > 0 ? slot + " · " + type : slot;
             }
             if (PanelKit.IsQuestItem(d)) return "Quest item";

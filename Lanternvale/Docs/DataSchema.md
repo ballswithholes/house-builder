@@ -191,6 +191,12 @@ See Defs.cs. Must include `resource`, `gcd`, `armorTypes`, `armorUpgrade`, `weap
 regen values, `basicAttack`, `startingAbilities`, `startingItems`, `startingStance`, `talentTrees` (3),
 `designNotes` (2–4 sentences on how the class plays, shown at character creation).
 
+Proficiency passives (`<class>_plate_mail` / `<class>_mail`, `<class>_dual_wield`, `<class>_parry`) gate their
+proficiency until trained, unless the passive is one of the class's `startingAbilities`: a starting passive is known
+from level 1, never sold, and gates nothing (Rogue Dual Wield: `dualWieldLevel: 1`, so every rogue dual wields from
+level 1; characters from older saves learn missing starting passives on load). Warrior and Hunter dual wield from 20
+after the trainer's Dual Wield.
+
 Shared basic attacks (`attack`, `auto_shot`, `shoot`), `help_up` and generic items live in
 `Data/classes/shared.json`.
 
@@ -294,6 +300,19 @@ across all maps** (the done flag `enc_<id>` is global).
 A set needs a name and at least 2 equipable items. `quality: Legendary` ⇒ `unique: true`. Item `equipEffects[].type`
 must be Stat, AbilityMod, Proc, GrantAbility or Special.
 
+**Off-hand items.** `equip: "OffHand"` holds three kinds of item:
+
+| Kind | `kind`, `weaponType` | Rules |
+|---|---|---|
+| Shield | `Armor` or `Weapon`, `Shield` (+ `armor`, `block`) | Classes with Shield in `weaponTypes` or `canBlock`. No dual wield. |
+| Held in off hand | `Armor` or `Weapon`, `HeldInOffhand` | Anyone (orbs, tomes, lanterns). No dual wield, no swings. |
+| **Off Hand weapon** | `Weapon`, one of `Dagger`, `OneHandSword`, `FistWeapon`, `OneHandMace`, `OneHandAxe`, with `minDamage` ≤ `maxDamage` and `speed` | Goes **only** in the off hand (never the main hand) and needs dual wield there, exactly like a `OneHand` weapon in the off hand: the class's `dualWieldLevel` and its `<class>_dual_wield` passive (Rogue: level 1, a starting passive; Warrior, Hunter: level 20 + trainer), and the weapon type in `weaponTypes`. Swings with the off hand (50% damage, dual-wield miss rules). |
+
+The validator rejects an `OffHand` item with any other weapon type, an Off Hand weapon that is not `kind: Weapon`, and
+one without damage and speed. Budget (Expansion.md §8): an Off Hand weapon's DPS follows the one-hand
+`ItemGenerator.WeaponDps` for its item level and quality; its stats use the off-hand slot budget (0.56, a little richer
+than a One-Hand weapon's 0.45 since it fits only one hand). `EquipmentRules.IsOffHandWeapon(def)` tells them apart.
+
 ### Config, XP and party
 
 | Field | Default (shipped) | Meaning |
@@ -340,8 +359,8 @@ starting gear.
 * `skipOwned` removes ids the party owns (bags, the open loot window, anything a roster member wears, camp included)
   or that already dropped in this battle: nothing drops when every id is excluded (one-per-party legendaries: a pool
   of one with `skipOwned`, plus `unique: true`).
-* `partyUsable` keeps ids some party member could equip by class, armour and weapon type (the required level is
-  ignored, so gear a few levels ahead still drops).
+* `partyUsable` keeps ids some party member could equip by class, armour and weapon type, Off Hand weapons only for a
+  member who dual wields now (the required level is ignored, so gear a few levels ahead still drops).
 * `weights`: one per pool id (empty = equal); 0 never drops.
 * `whileQuestNeeds` (quest items such as pelts, bells, fen-glass, wisp-glows, wicks, embers): the entry rolls as usual
   (same RNG use), then gives at most what the quests still want: the largest `Collect` count of the item among the

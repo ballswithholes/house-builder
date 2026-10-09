@@ -80,7 +80,7 @@ namespace Lanternvale.Game
             if (d.equip != EquipType.None)
             {
                 string slot = SlotName(d.equip);
-                string type = d.weaponType != WeaponType.None ? Spaced(d.weaponType.ToString())
+                string type = d.weaponType != WeaponType.None ? WeaponTypeName(d.weaponType)
                             : d.armorType != ArmorType.None ? d.armorType.ToString() : "";
                 sb.Append(slot);
                 if (type.Length > 0) sb.Append("   ").Append(type);
@@ -394,6 +394,22 @@ namespace Lanternvale.Game
                 case EquipType.MainHand: return "Main Hand";
                 case EquipType.OffHand: return "Off Hand";
                 default: return e.ToString();
+            }
+        }
+
+        /// <summary>
+        /// The weapon type shown next to the slot, WoW style: the slot already says the hands ("One-Hand   Sword",
+        /// "Off Hand   Dagger", "Two-Hand   Mace"), so one/two-handed types drop that prefix; others are spaced
+        /// ("Fist Weapon", "Held In Offhand").
+        /// </summary>
+        public static string WeaponTypeName(WeaponType w)
+        {
+            switch (w)
+            {
+                case WeaponType.OneHandSword: case WeaponType.TwoHandSword: return "Sword";
+                case WeaponType.OneHandAxe: case WeaponType.TwoHandAxe: return "Axe";
+                case WeaponType.OneHandMace: case WeaponType.TwoHandMace: return "Mace";
+                default: return Spaced(w.ToString());
             }
         }
 

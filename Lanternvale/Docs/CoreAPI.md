@@ -381,6 +381,20 @@ Rules: armour by class `armorTypes` (+ `armorUpgrade` at its level; lower types 
 `weaponTypes` (shields need Shield or `canBlock`), dual wield from `dualWieldLevel`, two-handers clear the off hand,
 `requiredLevel`, `classes`, `unique`.
 
+* **Dual wield**: `EquipmentRules.CanDualWield(u)` = level ≥ `dualWieldLevel` and the class's `<class>_dual_wield`
+  passive known (`ProficiencyPassive` ignores a passive that is a class starting ability: Rogue Dual Wield, known from
+  level 1, gates nothing; Warrior and Hunter train theirs at 20). `CannotDualWieldReason(u)` gives the level / trainer
+  / class message.
+* **Off Hand weapons** (`EquipmentRules.IsOffHandWeapon(def)`: `equip OffHand` + a one-hand melee type,
+  `IsOneHandMeleeType`): `SlotsFor` = the off hand only, so `ChooseSlot` picks the off hand and the main hand is
+  refused. They need dual wield like a One-Hand weapon in the off hand (`NeedsDualWield(def, slot)`), and since the off
+  hand is their only slot `CannotUseReason` already says why (bags grey them out for a character that cannot dual
+  wield; `LootContext.CanUse` drops them for `partyUsable`). Shields and `HeldInOffhand` items need no dual wield.
+  In battle an Off Hand weapon is the off-hand `WeaponInfo` (`StatCalculator.GetWeapon(u, WeaponSlot.OffHand)`):
+  `IsDualWielding`, its own swing timer, ×`StatCalculator.OffHandDamageFactor(u)` (50% × Dual Wield Specialization)
+  and the dual-wield miss penalty. `ItemGenerator` gives them one-hand `WeaponDps` and the OffHand stat budget (0.56);
+  veteran rogues get one, `RandomItem` makes one of three generated off-hand pieces an Off Hand weapon.
+
 * `ItemInstance`: `Def`, `Count`, `Name` (with suffix), `SuffixId/SuffixName/SuffixStats`, `Generated` (def not in
   the database — save the whole `Def`), `SellPrice` (¼ price), `Uid`.
 * `ItemGenerator.RandomItem(db, rng, itemLevel, quality)`, `MakeDef`, `ApplyRandomSuffix`, `StatBudget`,

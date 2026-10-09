@@ -276,8 +276,13 @@ namespace Lanternvale.Rules
             inst.SuffixStats.AddRange(SplitBudget(budget, suf.stats, suf.weights));
         }
 
-        /// <summary>A random equipable item of the given level/quality: a matching database item when one exists, otherwise generated.
-        /// Uncommon+ items roll a random suffix.</summary>
+        static readonly WeaponType[] OffHandKinds =
+        {
+            WeaponType.Shield, WeaponType.HeldInOffhand, WeaponType.Dagger, WeaponType.Shield, WeaponType.HeldInOffhand, WeaponType.OneHandSword,
+        };
+
+        /// <summary>A random equipable item of the given level/quality: a matching database item when one exists, otherwise generated
+        /// (an off-hand piece is a shield, a held item or an Off Hand weapon). Uncommon+ items roll a random suffix.</summary>
         public static ItemInstance RandomItem(GameDatabase db, Rng rng, int itemLevel, Quality q)
         {
             itemLevel = Math.Max(1, itemLevel);
@@ -303,7 +308,8 @@ namespace Lanternvale.Rules
                 if (slot == EquipType.OneHand) weapon = new[] { WeaponType.Dagger, WeaponType.OneHandSword, WeaponType.OneHandMace, WeaponType.OneHandAxe }[rng.Range(0, 3)];
                 else if (slot == EquipType.TwoHand) weapon = new[] { WeaponType.Staff, WeaponType.TwoHandSword, WeaponType.TwoHandMace, WeaponType.TwoHandAxe, WeaponType.Polearm }[rng.Range(0, 4)];
                 else if (slot == EquipType.Ranged) weapon = new[] { WeaponType.Bow, WeaponType.Gun, WeaponType.Wand, WeaponType.Crossbow }[rng.Range(0, 3)];
-                else if (slot == EquipType.OffHand) weapon = rng.Chance(50) ? WeaponType.Shield : WeaponType.HeldInOffhand;
+                // off hand: a shield, a held item or (one in three) an Off Hand weapon for dual wielders; one roll either way
+                else if (slot == EquipType.OffHand) weapon = OffHandKinds[rng.Range(0, OffHandKinds.Length - 1)];
                 else if (slot != EquipType.Finger && slot != EquipType.Neck && slot != EquipType.Back)
                 {
                     int maxType = itemLevel >= 40 ? 4 : 3;
@@ -359,7 +365,9 @@ namespace Lanternvale.Rules
             {
                 bool weaponSlot = e == EquipType.OneHand || e == EquipType.TwoHand || e == EquipType.MainHand || e == EquipType.OffHand || e == EquipType.Ranged;
                 if (weaponSlot && wt == WeaponType.None) return;
-                if (wt != WeaponType.None && wt != WeaponType.Shield && wt != WeaponType.HeldInOffhand && !IsRangedType(wt))
+                // melee weapons: a two-hander or a One-Hand weapon, except an Off Hand weapon asked for the off hand
+                if (wt != WeaponType.None && wt != WeaponType.Shield && wt != WeaponType.HeldInOffhand && !IsRangedType(wt)
+                    && !(e == EquipType.OffHand && EquipmentRules.IsOneHandMeleeType(wt)))
                     e = IsTwoHand(wt) ? EquipType.TwoHand : EquipType.OneHand;
                 var def = MakeDef(prefix, e, at, wt, ilvl, q);
                 def.requiredLevel = Math.Min(def.requiredLevel, u.Level);
@@ -389,7 +397,8 @@ namespace Lanternvale.Rules
                     break;
                 case ClassId.Rogue:
                     Add(EquipType.OneHand, ArmorType.None, FirstAllowed(u, WeaponType.Dagger, WeaponType.OneHandSword));
-                    if (EquipmentRules.CanDualWield(u)) Add(EquipType.OneHand, ArmorType.None, FirstAllowed(u, WeaponType.OneHandSword, WeaponType.Dagger, WeaponType.FistWeapon, WeaponType.OneHandMace));
+                    // rogues dual wield from level 1: an Off Hand weapon (one-hand DPS, the richer OffHand stat budget)
+                    if (EquipmentRules.CanDualWield(u)) Add(EquipType.OffHand, ArmorType.None, FirstAllowed(u, WeaponType.OneHandSword, WeaponType.Dagger, WeaponType.FistWeapon, WeaponType.OneHandMace));
                     AddRanged(u, Add, WeaponType.Thrown, WeaponType.Bow, WeaponType.Gun, WeaponType.Crossbow);
                     break;
                 case ClassId.Shaman:

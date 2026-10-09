@@ -186,8 +186,9 @@ ABILITIES = [
        "Rogues work unseen: all threat you generate is reduced by 29% (WoW Classic rogue threat modifier x0.71).",
        ranks=[1], trainCost=0, passive=True, passiveAura="rogue_threat_aura"),
     ab("rogue_dual_wield", "Dual Wield", "daggers",
-       "Allows one-handed weapons to be equipped in the off hand. Off-hand attacks deal 50% damage.",
-       ranks=[10], passive=True),
+       "Allows One-Hand and Off Hand weapons to be equipped in the off hand. Off-hand attacks deal 50% damage. "
+       "Rogues know it from the start.",
+       ranks=[1], trainCost=0, passive=True),
     ab("rogue_parry", "Parry", "swords", "Gives a 5% chance to parry enemy melee attacks made from the front.",
        ranks=[12], passive=True),
 

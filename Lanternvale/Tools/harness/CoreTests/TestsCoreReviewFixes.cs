@@ -169,6 +169,14 @@ namespace Lanternvale.Tests
             // classes without such passives keep their level rule (mage: cloth only, no dual wield, no parry)
             var m = UnitFactory.CreateCharacter(db, ClassId.Mage, "M", 60, learnAll: true);
             Harness.Assert(EquipmentRules.MaxArmor(m) == ArmorType.Cloth && !EquipmentRules.CanDualWield(m) && !m.Stats.CanParry, "mage unchanged");
+            // rogues dual wield from level 1: Dual Wield is a starting passive, not a trainer step (Parry still is)
+            var r = UnitFactory.CreateCharacter(db, ClassId.Rogue, "R", 1);   // knows only its starting abilities
+            var offDagger = FindItem(r, d => d.weaponType == WeaponType.Dagger && d.equip == EquipType.OneHand);
+            Harness.Assert(r.Knows("rogue_dual_wield") && EquipmentRules.CanDualWield(r), "level 1 rogue: Dual Wield known, dual wields");
+            Harness.Assert(EquipmentRules.ProficiencyPassive(r, EquipmentRules.Proficiency.DualWield) == null, "no trainer passive gates the rogue's dual wield");
+            Harness.Assert(EquipmentRules.CannotEquipReason(r, offDagger.Def, EquipSlot.OffHand) == null, "level 1 rogue: a One-Hand dagger in the off hand");
+            Harness.Assert(Progression.Train(r, db.Ability("rogue_dual_wield"), 1, inv) != null, "nothing to train");
+            Harness.Assert(!r.Knows("rogue_parry") && !r.Stats.CanParry, "rogue Parry is still trained (level 12)");
         }
 
         [Test]

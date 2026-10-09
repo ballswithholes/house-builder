@@ -311,6 +311,12 @@ namespace Lanternvale.Rules
 
         // ------------------------------------------------------------------ weapons
 
+        /// <summary>
+        /// Damage factor of the unit's off-hand hits (white swings and off-hand weapon strikes): RulesConstants.OffHandDamageFactor
+        /// (50%) × its talents (Dual Wield Specialization). For displays; the battle applies the same product.
+        /// </summary>
+        public static float OffHandDamageFactor(Unit u) => RulesConstants.OffHandDamageFactor * Specials.OffHandMultiplier(u);
+
         /// <summary>Weapon used for an attack in the slot (virtual for creatures, fists when unarmed or disarmed).</summary>
         public static WeaponInfo GetWeapon(Unit u, WeaponSlot slot)
         {

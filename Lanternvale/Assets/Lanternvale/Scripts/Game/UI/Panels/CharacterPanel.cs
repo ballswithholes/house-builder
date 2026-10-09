@@ -280,6 +280,15 @@ namespace Lanternvale.Game.Panels
                 float bonus = st.AttackPower / 14f * mh.Speed;
                 Line("Damage", $"{Mathf.RoundToInt(mh.Min + bonus)}–{Mathf.RoundToInt(mh.Max + bonus)}", $"Main hand, {mh.Speed:0.0} s per swing (one swing every {mh.Speed / Mathf.Max(0.1f, st.MeleeHaste):0.0} s).");
             }
+            // dual wielding (a One-Hand or Off Hand weapon in the off hand): the off hand swings on its own timer at reduced damage
+            var oh = StatCalculator.GetWeapon(u, WeaponSlot.OffHand);
+            if (oh.Valid && mh.Valid)
+            {
+                float f = StatCalculator.OffHandDamageFactor(u);
+                float bonus = st.AttackPower / 14f * oh.Speed;
+                Line("Off hand", $"{Mathf.RoundToInt((oh.Min + bonus) * f)}–{Mathf.RoundToInt((oh.Max + bonus) * f)}",
+                    $"Off hand at {Mathf.RoundToInt(f * 100f)}% damage, {oh.Speed:0.0} s per swing. White swings miss more often while dual wielding.");
+            }
             Line("Attack power", Mathf.RoundToInt(st.AttackPower).ToString(), "Adds AP / 14 × weapon speed to each swing.");
             Line("Crit", PanelKit.Pct(st.MeleeCrit));
             Line("Hit", "+" + PanelKit.Pct(st.MeleeHit), "Reduces your chance to miss (5% base, more against higher levels).");

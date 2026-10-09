@@ -480,7 +480,9 @@ namespace Lanternvale.Tests
 
             static bool IsUpgrade(ItemDef cur, ItemDef d)
             {
-                if (cur.equip != d.equip) return false;
+                // a One-Hand weapon held in the off hand and an Off Hand weapon compete for the same slot
+                bool offHand = (EquipmentRules.IsOffHandWeapon(d) && cur.equip == EquipType.OneHand) || (EquipmentRules.IsOffHandWeapon(cur) && d.equip == EquipType.OneHand);
+                if (cur.equip != d.equip && !offHand) return false;
                 if (d.weaponType != cur.weaponType) return false;
                 if (d.armorType < cur.armorType) return false;
                 return StartingGear.Score(d) > StartingGear.Score(cur) + 0.5f;
