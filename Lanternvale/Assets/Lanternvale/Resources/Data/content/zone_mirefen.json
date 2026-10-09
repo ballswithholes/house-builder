@@ -1,0 +1,1502 @@
+{
+  "_note": "Mirefen (Docs/Expansion.md §1, §8; owner: mirefen). The map and the main-story quest The Drowned Lanterns. Creatures, people, side quests, gear and loot live in zone_mirefen_*.json.",
+  "maps": [
+    {
+      "id": "mirefen",
+      "name": "Mirefen",
+      "subtitle": "Misty fen of boardwalks and stilt villages",
+      "width": 120,
+      "depth": 56,
+      "skyTop": "#9fb8a8",
+      "skyBottom": "#e6e3c8",
+      "ground": "ground_fen",
+      "groundTile": 8,
+      "biome": "fen",
+      "environment": "outdoor",
+      "levelMin": 18,
+      "levelMax": 24,
+      "fill": 0.42,
+      "paths": [
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [121.0, 16.0],
+            [112.0, 16.4],
+            [104.0, 17.4],
+            [97.0, 17.0],
+            [90.0, 15.6],
+            [82.0, 15.6],
+            [74.0, 16.8],
+            [66.0, 17.6],
+            [58.0, 18.6],
+            [50.0, 19.4],
+            [46.0, 20.0],
+            [37.4, 20.0],
+            [31.0, 22.4],
+            [25.0, 26.4],
+            [20.6, 31.0],
+            [16.6, 36.4],
+            [13.6, 41.4],
+            [12.4, 44.6]
+          ],
+          "width": 2.4
+        },
+        {"art": "decal_path_dirt", "points": [[99.0, 17.2], [98.6, 20.2], [99.2, 23.4], [99.6, 26.4]], "width": 2.0},
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [105.0, 26.6],
+            [110.6, 29.6],
+            [112.2, 35.0],
+            [110.4, 41.6],
+            [104.6, 45.6],
+            [96.0, 46.4],
+            [89.0, 48.4]
+          ],
+          "width": 1.6
+        },
+        {"art": "decal_path_dirt", "points": [[63.0, 17.8], [63.0, 20.4]], "width": 1.8},
+        {"art": "decal_path_dirt", "points": [[63.0, 41.6], [61.6, 44.2], [57.6, 46.6], [56.0, 48.4]], "width": 1.6},
+        {"art": "decal_path_dirt", "points": [[61.8, 43.8], [67.0, 44.6], [72.0, 44.6]], "width": 1.5},
+        {"art": "decal_path_dirt", "points": [[57.6, 46.6], [51.6, 45.4], [49.4, 44.2]], "width": 1.6},
+        {"art": "decal_path_dirt", "points": [[41.6, 44.0], [36.0, 42.8], [30.0, 42.0], [24.0, 41.6], [19.6, 41.2], [14.6, 40.2]], "width": 1.6},
+        {"art": "decal_path_dirt", "points": [[30.0, 42.0], [30.0, 45.2]], "width": 1.4},
+        {"art": "decal_path_dirt", "points": [[37.4, 20.0], [36.6, 15.0], [38.2, 11.6]], "width": 1.6},
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [39.4, 6.6],
+            [33.0, 7.2],
+            [27.0, 8.6],
+            [21.6, 12.0],
+            [19.2, 14.8],
+            [14.2, 19.2],
+            [11.4, 22.6]
+          ],
+          "width": 1.6
+        },
+        {"art": "decal_path_dirt", "points": [[31.0, 22.4], [32.4, 26.8]], "width": 1.5},
+        {"art": "decal_path_dirt", "points": [[104.0, 17.4], [103.8, 12.4], [103.0, 8.6]], "width": 1.6},
+        {"art": "decal_path_dirt", "points": [[82.0, 15.6], [80.0, 12.6], [75.6, 10.6], [71.0, 8.6]], "width": 1.5}
+      ],
+      "water": [
+        {
+          "points": [
+            [46.5, 57.5],
+            [47, 52],
+            [45, 47.5],
+            [45.5, 42],
+            [43.5, 36],
+            [43.6, 30],
+            [42.2, 25],
+            [41.5, 20],
+            [40.2, 14.5],
+            [38.6, 9],
+            [37.2, 4],
+            [36.2, -1.5]
+          ],
+          "halfWidth": 1.6,
+          "crossings": [
+            {"pos": [41.6, 20.0], "size": [7.6, 2.4]},
+            {"pos": [45.4, 44.0], "size": [7.0, 2.0]},
+            {"pos": [38.7, 9.0], "size": [6.4, 3.0]}
+          ]
+        },
+        {
+          "points": [
+            [92.6, 32.2],
+            [95, 29.4],
+            [100, 28.6],
+            [105, 29.4],
+            [108.4, 32.4],
+            [108, 37],
+            [104.2, 40],
+            [98, 40.4],
+            [93.8, 38]
+          ],
+          "closed": true,
+          "crossings": [
+            {"pos": [99.6, 31.5], "size": [1.8, 9.0]}
+          ]
+        },
+        {
+          "points": [
+            [103.4, 4.6],
+            [107, 2.6],
+            [112, 3],
+            [115.2, 5.4],
+            [114.4, 9],
+            [110.2, 10.4],
+            [105.4, 9.4]
+          ],
+          "closed": true,
+          "crossings": [
+            {"pos": [106.0, 6.4], "size": [5.4, 2.2]}
+          ]
+        },
+        {"points": [[74, 5.6], [78, 3], [85, 2.6], [91, 4], [92.6, 7.8], [88, 10.4], [81.2, 10.2], [76.2, 9]], "closed": true},
+        {
+          "points": [
+            [53.6, 28],
+            [56, 23.6],
+            [62, 22.2],
+            [69, 22.6],
+            [74, 26],
+            [75, 31],
+            [72, 36],
+            [65, 38.2],
+            [58, 37.2],
+            [54, 33.6]
+          ],
+          "closed": true,
+          "crossings": [
+            {"pos": [63.0, 31.0], "size": [1.9, 21.0]},
+            {"pos": [63.0, 30.0], "size": [9.4, 1.9]}
+          ]
+        },
+        {"points": [[4.4, 27.2], [8.6, 25.8], [13, 27.4], [13.2, 30.8], [9, 32.0], [4.8, 31.2]], "closed": true},
+        {"points": [[27.8, 49.9], [31.6, 49.2], [35.6, 49.6], [37.4, 52.2], [34.2, 54.6], [29.2, 54.4]], "closed": true},
+        {"points": [[63.4, 51.4], [66.6, 50.2], [69.8, 51.4], [69.4, 54.2], [65.4, 54.8]], "closed": true},
+        {"points": [[97, 50], [101, 48.6], [105.6, 49.4], [106.4, 52.6], [101.6, 54], [97.4, 53]], "closed": true}
+      ],
+      "props": [
+        {
+          "art": "prop_stilt_hut",
+          "pos": [93.4, 29.4],
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [106.6, 29.8],
+          "flip": true,
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [108.8, 38.2],
+          "flip": true,
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [93.6, 39.2],
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [101.4, 41.8],
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [117.4, 6.4],
+          "flip": true,
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {
+          "art": "prop_stilt_hut",
+          "pos": [88.4, 22.4],
+          "collider": {"w": 4.8, "h": 4.6},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.75, 2.35], "nightOnly": true}
+        },
+        {"art": "prop_boardwalk", "pos": [95.78, 27.2]},
+        {"art": "prop_boardwalk", "pos": [98.53, 27.2]},
+        {"art": "prop_boardwalk", "pos": [101.28, 27.2]},
+        {"art": "prop_boardwalk", "pos": [104.03, 27.2]},
+        {"art": "prop_boardwalk_y", "pos": [99.6, 29.7]},
+        {"art": "prop_boardwalk_y", "pos": [99.6, 32.3]},
+        {"art": "prop_boardwalk_y", "pos": [99.6, 34.9]},
+        {"art": "prop_boardwalk_y", "pos": [104.8, 25.2]},
+        {
+          "art": "prop_noticeboard",
+          "pos": [96.0, 21.2],
+          "collider": {"w": 1.6, "h": 0.5},
+          "interact": "mf_lowlantern_notices",
+          "dialogue": "dlg_mf_notices"
+        },
+        {
+          "art": "prop_market_awning",
+          "pos": [102.8, 21.6],
+          "collider": {"w": 3.4, "h": 1.8},
+          "light": {"color": "#ffc070", "radius": 3, "intensity": 0.8, "offset": [-1.45, 2.05], "nightOnly": true}
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [99.2, 22.4],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [99.2, 20.8], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [104.8, 22.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [105.4, 21.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_crate", "pos": [104.9, 20.3], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_fishing_rack", "pos": [91.0, 25.6], "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_fishing_rack", "pos": [108.6, 24.4], "flip": true, "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_washing_line", "pos": [110.6, 27.4], "collider": {"w": 3.4, "h": 0.3}},
+        {"art": "prop_barrel", "pos": [92.6, 27.0], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_signpost",
+          "pos": [113.6, 18.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "West: Lowlantern, then the Sinking Mere and the Heron Bridge. North-west, past the Croaking Stones: the old moon-gate. (Scratched underneath, in a careful hand: PLEASE DO NOT FEED THE CROCOLISKS. THEY ARE FED.)"
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [97.4, 19.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [101.2, 25.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [96.2, 26.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [98.0, 28.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [101.2, 34.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [106.6, 26.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [110.0, 18.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [102.0, 15.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [91.6, 17.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [84.0, 17.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [68.0, 15.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [61.4, 20.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [64.6, 20.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [46.6, 22.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [61.6, 41.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [64.6, 41.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [106.2, 8.8],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [78.6, 18.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "interact": "mf_post_1",
+          "dialogue": "dlg_mf_post_1",
+          "hideFlag": "mf_post_1_lit",
+          "text": "A dead lamp-post. Its hook is empty and its jar is smashed."
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [78.6, 18.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true},
+          "requireFlag": "mf_post_1_lit"
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [54.8, 20.8],
+          "collider": {"w": 0.4, "h": 0.4},
+          "interact": "mf_post_2",
+          "dialogue": "dlg_mf_post_2",
+          "hideFlag": "mf_post_2_lit",
+          "text": "A dead lamp-post. Its hook is empty and its jar is smashed."
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [54.8, 20.8],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true},
+          "requireFlag": "mf_post_2_lit"
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [36.2, 18.2],
+          "collider": {"w": 0.4, "h": 0.4},
+          "interact": "mf_post_3",
+          "dialogue": "dlg_mf_post_3",
+          "hideFlag": "mf_post_3_lit",
+          "text": "A dead lamp-post. Its hook is empty and its jar is smashed."
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [36.2, 18.2],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true},
+          "requireFlag": "mf_post_3_lit"
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [29.6, 24.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "interact": "mf_post_4",
+          "dialogue": "dlg_mf_post_4",
+          "hideFlag": "mf_post_4_lit",
+          "text": "A dead lamp-post. Its hook is empty and its jar is smashed."
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [29.6, 24.6],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true},
+          "requireFlag": "mf_post_4_lit"
+        },
+        {"art": "prop_lilypads", "pos": [97.8, 34.6]},
+        {"art": "prop_lilypads", "pos": [101.6, 36.6]},
+        {"art": "prop_lilypads", "pos": [98.4, 37.4]},
+        {"art": "prop_lilypads", "pos": [103.4, 33.0]},
+        {"art": "prop_lilypads", "pos": [96.0, 31.4]},
+        {"art": "prop_lilypads", "pos": [106.23, 33.51]},
+        {"art": "prop_lilypads", "pos": [97.67, 30.78]},
+        {"art": "prop_lilypads", "pos": [100.4, 38.2]},
+        {"art": "prop_lilypads", "pos": [95.09, 35.37]},
+        {"art": "prop_cattails", "pos": [108.72, 35.41], "sway": true},
+        {"art": "prop_cattails", "pos": [104.56, 41.21], "sway": true},
+        {"art": "prop_cattails", "pos": [98.89, 41.33], "sway": true},
+        {"art": "prop_reeds", "pos": [96.1, 40.08], "sway": true},
+        {"art": "prop_cattails", "pos": [92.62, 34.19], "sway": true},
+        {
+          "art": "prop_dock_x",
+          "pos": [106.0, 6.4],
+          "light": {"color": "#ffd9a0", "radius": 3.5, "intensity": 0.8, "offset": [2.25, 2.0], "nightOnly": true}
+        },
+        {
+          "art": "prop_boat",
+          "pos": [111.2, 5.6],
+          "light": {"color": "#ffd9a0", "radius": 3, "intensity": 0.7, "offset": [-1.62, 1.25], "nightOnly": true}
+        },
+        {"art": "prop_fishing_rack", "pos": [104.4, 12.4], "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_barrel", "pos": [108.4, 12.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_lilypads", "pos": [108.97, 6.46]},
+        {"art": "prop_lilypads", "pos": [105.95, 5.59]},
+        {"art": "prop_reeds", "pos": [105.43, 1.96], "sway": true},
+        {"art": "prop_reeds", "pos": [109.64, 2.39], "sway": true},
+        {"art": "prop_cattails", "pos": [115.34, 4.26], "sway": true},
+        {"art": "prop_cattails", "pos": [111.56, 10.58], "sway": true},
+        {"art": "prop_cattails", "pos": [107.6, 10.41], "sway": true},
+        {"art": "prop_willow", "pos": [86.0, 31.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [113.0, 33.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [116.6, 41.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [117.4, 25.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [95.6, 10.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [117.2, 3.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [100.2, 6.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [111.6, 46.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [88.0, 36.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [115.0, 50.8], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 22.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 25.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 28.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 31.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 34.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 37.0]},
+        {"art": "prop_boardwalk_y", "pos": [63.0, 40.0]},
+        {"art": "prop_boardwalk", "pos": [60.7, 30.0]},
+        {"art": "prop_boardwalk", "pos": [65.3, 30.0]},
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [61.4, 25.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "mf_drowned_lantern_1",
+          "dialogue": "dlg_mf_drowned_lantern_1",
+          "text": "A stone lantern, sunk to its shoulders in black water.",
+          "hideFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [61.4, 25.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [64.6, 35.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "mf_drowned_lantern_2",
+          "dialogue": "dlg_mf_drowned_lantern_2",
+          "text": "A stone lantern leaning in the mere, its fire-box full of weed.",
+          "hideFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [64.6, 35.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [67.4, 31.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "mf_drowned_lantern_3",
+          "dialogue": "dlg_mf_drowned_lantern_3",
+          "text": "A drowned lantern, a skein of something knotted round its foot.",
+          "hideFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [67.4, 31.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern_dark",
+          "pos": [57.8, 30.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "interact": "mf_sens_lantern",
+          "text": "Granny Sen's lantern. Somebody has wound a fresh ribbon round its neck.",
+          "hideFlag": "mf_lanterns_rise"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [57.8, 30.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [56.6, 26.4], "hideFlag": "mf_lanterns_rise"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [56.6, 26.4],
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [71.0, 27.6], "hideFlag": "mf_lanterns_rise"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [71.0, 27.6],
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [58.8, 35.0], "hideFlag": "mf_lanterns_rise"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [58.8, 35.0],
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [69.0, 36.4], "hideFlag": "mf_lanterns_rise"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [69.0, 36.4],
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "mf_lanterns_rise"
+        },
+        {"art": "prop_lilypads", "pos": [66.7, 29.66]},
+        {"art": "prop_lilypads", "pos": [67.69, 23.96]},
+        {"art": "prop_lilypads", "pos": [65.29, 24.63]},
+        {"art": "prop_lilypads", "pos": [58.38, 28.12]},
+        {"art": "prop_lilypads", "pos": [59.74, 26.56]},
+        {"art": "prop_lilypads", "pos": [68.46, 27.83]},
+        {"art": "prop_lilypads", "pos": [65.88, 35.38]},
+        {"art": "prop_reeds", "pos": [52.94, 27.57], "sway": true},
+        {"art": "prop_reeds", "pos": [54.71, 24.84], "sway": true},
+        {"art": "prop_reeds", "pos": [58.02, 22.64], "sway": true},
+        {"art": "prop_reeds", "pos": [60.33, 21.75], "sway": true},
+        {"art": "prop_cattails", "pos": [66.34, 21.88], "sway": true},
+        {"art": "prop_reeds", "pos": [71.06, 22.64], "sway": true},
+        {"art": "prop_reeds", "pos": [74.56, 24.96], "sway": true},
+        {"art": "prop_cattails", "pos": [75.23, 28.01], "sway": true},
+        {"art": "prop_reeds", "pos": [75.18, 30.28], "sway": true},
+        {"art": "prop_cattails", "pos": [74.93, 32.4], "sway": true},
+        {"art": "prop_reeds", "pos": [73.11, 35.11], "sway": true},
+        {"art": "prop_cattails", "pos": [70.46, 37.14], "sway": true},
+        {"art": "prop_reeds", "pos": [67.84, 37.89], "sway": true},
+        {"art": "prop_reeds", "pos": [66.57, 38.15], "sway": true},
+        {"art": "prop_reeds", "pos": [58.48, 37.8], "sway": true},
+        {"art": "prop_reeds", "pos": [55.76, 36.68], "sway": true},
+        {"art": "prop_reeds", "pos": [53.87, 34.51], "sway": true},
+        {"art": "prop_reeds", "pos": [52.78, 32.57], "sway": true},
+        {"art": "prop_reeds", "pos": [52.31, 29.8], "sway": true},
+        {"art": "prop_willow", "pos": [51.0, 24.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [77.4, 28.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [72.2, 53.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [80.2, 33.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_sunken_statue", "pos": [74.0, 21.0], "flip": true, "collider": {"w": 2.8, "h": 1.7}},
+        {
+          "art": "prop_mushrooms",
+          "pos": [52.4, 26.2],
+          "interact": "mf_duke_willow",
+          "dialogue": "dlg_mf_duke_willow",
+          "text": "Under the willow: crushed clover and a scatter of beetle-wings."
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [50.6, 33.6],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {"art": "prop_lilypads", "pos": [86.15, 4.51]},
+        {"art": "prop_lilypads", "pos": [80.05, 6.99]},
+        {"art": "prop_lilypads", "pos": [90.59, 6.76]},
+        {"art": "prop_cattails", "pos": [76.32, 3.13], "sway": true},
+        {"art": "prop_reeds", "pos": [79.7, 2.21], "sway": true},
+        {"art": "prop_reeds", "pos": [81.81, 2.32], "sway": true},
+        {"art": "prop_reeds", "pos": [87.53, 2.67], "sway": true},
+        {"art": "prop_reeds", "pos": [92.85, 6.43], "sway": true},
+        {"art": "prop_reeds", "pos": [92.06, 8.75], "sway": true},
+        {"art": "prop_cattails", "pos": [86.75, 11.23], "sway": true},
+        {"art": "prop_cattails", "pos": [84.28, 10.59], "sway": true},
+        {"art": "prop_cattails", "pos": [74.52, 7.51], "sway": true},
+        {"art": "prop_bones", "pos": [70.6, 6.0]},
+        {"art": "prop_bones", "pos": [72.8, 8.6]},
+        {"art": "prop_log", "pos": [69.0, 4.2], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_stump", "pos": [67.6, 8.8], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_tree_dead", "pos": [66.0, 5.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [94.0, 11.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_mangrove", "pos": [59.0, 9.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [93.6, 2.2], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [72.4, 12.2], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [55.6, 5.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {
+          "art": "prop_ruin_arch",
+          "pos": [56.0, 50.6],
+          "interact": "mf_low_bell",
+          "dialogue": "dlg_mf_low_bell",
+          "text": "The Low Bell still hangs in the broken arch: green bronze, cracked lip, a rope of rotten reeds."
+        },
+        {"art": "prop_ruin_pillar", "pos": [52.4, 50.0], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [59.8, 50.4], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [53.2, 53.8], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [58.6, 54.0], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_cairn", "pos": [50.2, 46.8], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [54.0, 47.2], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [60.6, 46.8], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [49.6, 51.4], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [62.6, 48.4], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [51.6, 54.6], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [61.6, 53.6], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [47.8, 49.4], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_bones", "pos": [55.0, 45.6]},
+        {"art": "prop_bones", "pos": [59.2, 52.6]},
+        {"art": "prop_bones", "pos": [64.6, 47.0]},
+        {"art": "prop_bones", "pos": [48.6, 53.0]},
+        {"art": "prop_tree_dead", "pos": [48.6, 42.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [67.8, 46.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [70.8, 50.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [53.4, 43.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [50.0, 55.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [68.6, 41.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_spirit_lantern_dark", "pos": [57.6, 48.2], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_reeds", "pos": [63.97, 49.95], "sway": true},
+        {"art": "prop_cattails", "pos": [69.56, 50.98], "sway": true},
+        {"art": "prop_reeds", "pos": [70.23, 53.08], "sway": true},
+        {"art": "prop_reeds", "pos": [66.2, 54.98], "sway": true},
+        {"art": "prop_reeds", "pos": [62.42, 52.17], "sway": true},
+        {"art": "prop_lilypads", "pos": [66.77, 52.43]},
+        {"art": "prop_tent", "pos": [76.4, 48.2], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [74.0, 45.6],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [75.2, 44.0], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_banner", "pos": [78.6, 46.4], "collider": {"w": 0.4, "h": 0.3}, "tint": "#a8c4e0"},
+        {"art": "prop_fishing_rack", "pos": [79.8, 49.6], "flip": true, "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_crate", "pos": [73.4, 48.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_willow", "pos": [84.0, 46.2], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [93.4, 53.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [112.0, 53.2], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [118.0, 46.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [86.6, 54.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [108.6, 46.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [80.6, 47.6],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [116.4, 44.0],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [95.2, 50.2],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true}
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [87.6, 51.6],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true},
+          "interact": "mf_truffle_1",
+          "dialogue": "dlg_mf_truffle_1",
+          "text": "A giant toadstool. The soil round its foot smells of rain on a cellar door."
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [103.6, 44.8],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true},
+          "interact": "mf_truffle_2",
+          "dialogue": "dlg_mf_truffle_2",
+          "text": "A giant toadstool. The soil round its foot smells of rain on a cellar door."
+        },
+        {
+          "art": "prop_mushroom_giant",
+          "pos": [110.0, 50.4],
+          "collider": {"w": 1.9, "h": 1.1},
+          "light": {"color": "#86f2d8", "radius": 3, "intensity": 0.6, "offset": [0.2, 2.45], "nightOnly": true},
+          "interact": "mf_truffle_3",
+          "dialogue": "dlg_mf_truffle_3",
+          "text": "A giant toadstool. The soil round its foot smells of rain on a cellar door."
+        },
+        {"art": "prop_mushrooms", "pos": [91.6, 48.6]},
+        {"art": "prop_mushrooms", "pos": [91.0, 49.54]},
+        {"art": "prop_mushrooms", "pos": [89.64, 49.77]},
+        {"art": "prop_mushrooms", "pos": [88.56, 49.12]},
+        {"art": "prop_mushrooms", "pos": [88.56, 48.08]},
+        {"art": "prop_mushrooms", "pos": [89.64, 47.43]},
+        {"art": "prop_mushrooms", "pos": [91.0, 47.66]},
+        {
+          "art": "prop_rock_small",
+          "pos": [90.0, 48.6],
+          "interact": "mf_duke_ring",
+          "dialogue": "dlg_mf_duke_ring",
+          "text": "A fairy ring of fat speckled toadstools. In the middle, a flat stone, still warm from something small sitting on it."
+        },
+        {"art": "prop_lilypads", "pos": [101.51, 53.08]},
+        {"art": "prop_lilypads", "pos": [99.64, 50.22]},
+        {"art": "prop_reeds", "pos": [97.1, 49.6], "sway": true},
+        {"art": "prop_reeds", "pos": [105.32, 48.96], "sway": true},
+        {"art": "prop_cattails", "pos": [106.48, 49.92], "sway": true},
+        {"art": "prop_cattails", "pos": [104.88, 53.28], "sway": true},
+        {"art": "prop_reeds", "pos": [100.25, 54.53], "sway": true},
+        {"art": "prop_cattails", "pos": [96.27, 52.06], "sway": true},
+        {"art": "prop_standing_stone", "pos": [23.97, 16.58], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [20.9, 19.12], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [16.4, 18.86], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [13.86, 15.99], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [15.19, 12.68], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [19.39, 11.41], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [23.3, 13.15], "collider": {"w": 1.0, "h": 0.7}},
+        {
+          "art": "prop_campfire",
+          "pos": [19.0, 15.6],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {
+          "art": "prop_mire_totem",
+          "pos": [25.4, 19.8],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true,
+          "interact": "mf_totem_1",
+          "dialogue": "dlg_mf_totem_1",
+          "hideFlag": "mf_totem_1_broken",
+          "text": "A coven totem: driftwood, an antlered skull, green fire in the sockets. The mirelings bow to it when they pass."
+        },
+        {
+          "art": "prop_mire_totem",
+          "pos": [8.6, 25.2],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true,
+          "interact": "mf_totem_2",
+          "dialogue": "dlg_mf_totem_2",
+          "hideFlag": "mf_totem_2_broken",
+          "text": "A coven totem hung with frog-bone charms. It hums, very faintly, in a voice that is not a frog's."
+        },
+        {
+          "art": "prop_mire_totem",
+          "pos": [34.8, 30.6],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true,
+          "interact": "mf_totem_3",
+          "dialogue": "dlg_mf_totem_3",
+          "hideFlag": "mf_totem_3_broken",
+          "text": "A coven totem at the edge of the reeds. Someone has left it a dead eel, very respectfully."
+        },
+        {
+          "art": "prop_mire_totem",
+          "pos": [23.4, 31.2],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true,
+          "interact": "mf_totem_4",
+          "dialogue": "dlg_mf_totem_4",
+          "hideFlag": "mf_totem_4_broken",
+          "text": "A coven totem on the old road to the moon-gate. The reeds lean away from it."
+        },
+        {"art": "prop_bones", "pos": [25.7, 18.9], "requireFlag": "mf_totem_1_broken"},
+        {"art": "prop_bones", "pos": [8.9, 24.3], "requireFlag": "mf_totem_2_broken"},
+        {"art": "prop_bones", "pos": [35.1, 29.7], "requireFlag": "mf_totem_3_broken"},
+        {"art": "prop_bones", "pos": [23.7, 30.3], "requireFlag": "mf_totem_4_broken"},
+        {"art": "prop_fishing_rack", "pos": [24.0, 5.0], "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_fishing_rack", "pos": [30.2, 11.4], "flip": true, "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {
+          "art": "prop_campfire",
+          "pos": [27.6, 7.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true},
+          "interact": "mf_duke_pot",
+          "dialogue": "dlg_mf_duke_pot",
+          "text": "A mireling stewpot on a reed fire. Something in it is singing, indignantly."
+        },
+        {"art": "prop_bonepile", "pos": [23.0, 10.6], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_mushrooms", "pos": [31.6, 7.6]},
+        {"art": "prop_mushrooms", "pos": [21.2, 7.0]},
+        {"art": "prop_fishing_rack", "pos": [15.6, 25.0], "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {
+          "art": "prop_campfire",
+          "pos": [13.6, 22.6],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_bonepile", "pos": [9.0, 20.0], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_lilypads", "pos": [9.72, 28.42]},
+        {"art": "prop_lilypads", "pos": [9.24, 30.83]},
+        {"art": "prop_cattails", "pos": [5.87, 26.03], "sway": true},
+        {"art": "prop_cattails", "pos": [13.06, 26.26], "sway": true},
+        {"art": "prop_reeds", "pos": [13.98, 30.04], "sway": true},
+        {"art": "prop_cattails", "pos": [3.32, 29.29], "sway": true},
+        {"art": "prop_mangrove", "pos": [3.2, 11.4], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_log", "pos": [8.6, 5.4], "collider": {"w": 2.2, "h": 0.6}},
+        {
+          "art": "prop_fen_lantern",
+          "pos": [4.0, 7.0],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {"art": "prop_mushrooms", "pos": [7.6, 9.4]},
+        {"art": "prop_mangrove", "pos": [13.6, 4.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [31.6, 2.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [2.6, 18.4], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [26.6, 30.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [38.6, 27.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_willow", "pos": [10.0, 12.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [16.4, 28.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [33.6, 16.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_sunken_statue",
+          "pos": [26.2, 47.6],
+          "flip": true,
+          "collider": {"w": 2.8, "h": 1.7},
+          "interact": "mf_sunken_statue",
+          "dialogue": "dlg_mf_sunken_statue",
+          "text": "A serene stone face sinking into the mire, one hand still raised above the water with a lantern in it."
+        },
+        {"art": "prop_rock_large", "pos": [33.0, 46.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_standing_stone", "pos": [28.0, 45.0], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [32.0, 45.0], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_lilypads", "pos": [32.16, 53.25]},
+        {"art": "prop_lilypads", "pos": [34.34, 51.41]},
+        {"art": "prop_reeds", "pos": [36.25, 48.61], "sway": true},
+        {"art": "prop_reeds", "pos": [36.71, 50.48], "sway": true},
+        {"art": "prop_reeds", "pos": [36.97, 53.5], "sway": true},
+        {"art": "prop_cattails", "pos": [32.34, 55.35], "sway": true},
+        {"art": "prop_reeds", "pos": [29.84, 55.25], "sway": true},
+        {"art": "prop_cattails", "pos": [27.71, 51.56], "sway": true},
+        {"art": "prop_tree_dead", "pos": [23.0, 49.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [36.4, 46.2], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [37.0, 40.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_ruin_pillar", "pos": [5.4, 48.2], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [18.6, 48.2], "collider": {"w": 1.1, "h": 0.6}},
+        {
+          "art": "prop_mire_totem",
+          "pos": [8.0, 51.4],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true
+        },
+        {
+          "art": "prop_mire_totem",
+          "pos": [16.2, 51.6],
+          "collider": {"w": 0.8, "h": 0.6},
+          "light": {"color": "#7cf0a0", "radius": 2.5, "intensity": 0.6, "offset": [0, 2.45]},
+          "sway": true
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [21.6, 51.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#9cf07a", "radius": 5, "intensity": 1.2, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_mire_totem", "pos": [18.6, 49.0], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_mire_totem", "pos": [24.8, 49.2], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_mire_totem", "pos": [18.4, 53.8], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_mire_totem", "pos": [25.0, 53.8], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_mangrove", "pos": [2.2, 50.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [22.4, 56.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [4.0, 55.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [10.6, 54.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [1.6, 31.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [13.4, 55.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [39.0, 37.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_mushrooms", "pos": [3.6, 36.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [22.6, 35.2], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [6.4, 44.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [20.8, 44.0], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_mushrooms", "pos": [12.8, 34.6], "light": {"color": "#8ff0d2", "radius": 2.0, "intensity": 0.6, "offset": [0, 0.3]}},
+        {"art": "prop_reeds", "pos": [1.6, 41.0], "sway": true},
+        {"art": "prop_reeds", "pos": [25.6, 39.6], "sway": true},
+        {"art": "prop_reeds", "pos": [9.0, 35.6], "sway": true},
+        {"art": "prop_reeds", "pos": [17.0, 45.4], "sway": true},
+        {"art": "prop_rock_small", "pos": [15.4, 38.6]},
+        {"art": "prop_rock_small", "pos": [8.6, 41.6]},
+        {"art": "prop_rock_small", "pos": [21.4, 40.8]},
+        {"art": "prop_bones", "pos": [18.6, 37.0]},
+        {"art": "prop_bones", "pos": [5.0, 39.6]},
+        {"art": "decal_blight", "pos": [12.0, 44.0]},
+        {
+          "art": "prop_fen_lantern",
+          "pos": [7.8, 47.8],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#a8f0c0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_fen_lantern",
+          "pos": [16.0, 47.8],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#a8f0c0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {
+          "art": "prop_bridge_stone",
+          "pos": [41.6, 20.0],
+          "light": {"color": "#ffd9a0", "radius": 4, "intensity": 0.9, "offset": [-3.95, 1.75], "nightOnly": true}
+        },
+        {"art": "prop_boardwalk", "pos": [43.9, 44.0]},
+        {"art": "prop_boardwalk", "pos": [46.9, 44.0]},
+        {
+          "art": "prop_fen_lantern",
+          "pos": [49.0, 45.4],
+          "collider": {"w": 0.4, "h": 0.4},
+          "light": {"color": "#e8f0b0", "radius": 4, "intensity": 0.9, "offset": [0.55, 1.78], "flicker": true}
+        },
+        {"art": "prop_willow", "pos": [47.6, 27.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [40.2, 31.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [45.6, 12.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [34.4, 12.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [48.8, 37.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_willow", "pos": [41.0, 51.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [18.0, 1.6], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [47.6, 2.4], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [63.2, 2.0], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_mangrove", "pos": [98.0, 1.4], "collider": {"w": 2.2, "h": 1.8}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [52.6, 12.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [78.0, 22.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [86.0, 26.4], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [80.4, 38.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [40.0, 39.6], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [6.0, 15.0], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [56.0, 15.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [84.6, 31.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [30.6, 35.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [13.2, 9.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [45.4, 54.0], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [80.0, 54.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [118.2, 34.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_reeds", "pos": [64.33, 54.59], "sway": true},
+        {"art": "prop_reeds", "pos": [63.24, 38.73], "sway": true},
+        {"art": "prop_reeds", "pos": [40.36, 1.26], "sway": true},
+        {"art": "prop_reeds", "pos": [74.24, 4.12], "sway": true},
+        {"art": "prop_reeds", "pos": [49.3, 49.54], "sway": true},
+        {"art": "prop_reeds", "pos": [41.17, 33.05], "sway": true},
+        {"art": "prop_reeds", "pos": [92.21, 3.82], "sway": true},
+        {"art": "prop_reeds", "pos": [59.74, 38.62], "sway": true},
+        {"art": "prop_reeds", "pos": [73.75, 35.28], "sway": true},
+        {"art": "prop_reeds", "pos": [44.41, 22.87], "sway": true},
+        {"art": "prop_reeds", "pos": [103.47, 55.53], "sway": true},
+        {"art": "prop_reeds", "pos": [112.68, 10.81], "sway": true},
+        {"art": "prop_reeds", "pos": [85.7, 12.01], "sway": true},
+        {"art": "prop_reeds", "pos": [64.33, 39.34], "sway": true},
+        {"art": "prop_reeds", "pos": [72.58, 4.33], "sway": true},
+        {"art": "prop_reeds", "pos": [80.46, 1.16], "sway": true},
+        {"art": "prop_reeds", "pos": [13.63, 26.75], "sway": true},
+        {"art": "prop_reeds", "pos": [46.89, 35.78], "sway": true},
+        {"art": "prop_reeds", "pos": [102.09, 3.25], "sway": true},
+        {"art": "prop_reeds", "pos": [101.45, 55.57], "sway": true},
+        {"art": "prop_reeds", "pos": [14.4, 29.33], "sway": true},
+        {"art": "prop_reeds", "pos": [106.31, 47.72], "sway": true},
+        {"art": "prop_reeds", "pos": [55.7, 22.24], "sway": true},
+        {"art": "prop_reeds", "pos": [93.54, 6.4], "sway": true},
+        {"art": "prop_reeds", "pos": [43.74, 51.77], "sway": true},
+        {"art": "prop_reeds", "pos": [90.14, 10.19], "sway": true},
+        {"art": "prop_reeds", "pos": [67.82, 21.19], "sway": true},
+        {"art": "prop_reeds", "pos": [6.09, 24.83], "sway": true},
+        {"art": "prop_reeds", "pos": [84.08, 11.09], "sway": true},
+        {"art": "prop_reeds", "pos": [48.84, 41.3], "sway": true},
+        {"art": "prop_reeds", "pos": [108.96, 11.14], "sway": true},
+        {"art": "prop_reeds", "pos": [102.15, 5.22], "sway": true},
+        {"art": "prop_reeds", "pos": [92.38, 9.59], "sway": true},
+        {"art": "prop_reeds", "pos": [42.34, 41.5], "sway": true},
+        {"art": "prop_cattails", "pos": [73.88, 24.23], "sway": true},
+        {"art": "prop_cattails", "pos": [88.65, 2.63], "sway": true},
+        {"art": "prop_cattails", "pos": [46.61, 30.46], "sway": true},
+        {"art": "prop_cattails", "pos": [46.14, 32.67], "sway": true},
+        {"art": "prop_cattails", "pos": [58.38, 39.38], "sway": true},
+        {"art": "prop_cattails", "pos": [56.69, 38.91], "sway": true},
+        {"art": "prop_cattails", "pos": [34.72, 4.2], "sway": true},
+        {"art": "prop_cattails", "pos": [64.34, 49.31], "sway": true},
+        {"art": "prop_cattails", "pos": [75.45, 26.48], "sway": true},
+        {"art": "prop_cattails", "pos": [41.68, 9.76], "sway": true},
+        {"art": "prop_cattails", "pos": [63.21, 52.55], "sway": true},
+        {"art": "prop_cattails", "pos": [84.19, 0.76], "sway": true},
+        {"art": "prop_cattails", "pos": [78.16, 0.85], "sway": true},
+        {"art": "prop_cattails", "pos": [93.41, 7.9], "sway": true},
+        {"art": "prop_cattails", "pos": [115.91, 10.55], "sway": true},
+        {"art": "prop_cattails", "pos": [52.16, 27.52], "sway": true},
+        {"art": "prop_cattails", "pos": [97.98, 55.17], "sway": true},
+        {"art": "prop_cattails", "pos": [107.59, 48.47], "sway": true},
+        {"art": "prop_cattails", "pos": [58.04, 20.93], "sway": true},
+        {"art": "prop_cattails", "pos": [47.1, 37.16], "sway": true},
+        {"art": "prop_cattails", "pos": [36.7, 49.58], "sway": true},
+        {"art": "prop_cattails", "pos": [75.68, 33.98], "sway": true},
+        {"art": "prop_cattails", "pos": [35.94, 48.11], "sway": true},
+        {"art": "prop_cattails", "pos": [106.61, 49.27], "sway": true},
+        {"art": "prop_mushrooms", "pos": [91.18, 53.62]},
+        {"art": "prop_mushrooms", "pos": [91.22, 50.88]},
+        {"art": "prop_mushrooms", "pos": [95.99, 54.62]},
+        {"art": "prop_mushrooms", "pos": [85.19, 50.49]},
+        {"art": "prop_mushrooms", "pos": [28.86, 30.92]},
+        {"art": "prop_mushrooms", "pos": [117.42, 53.86]},
+        {"art": "prop_mushrooms", "pos": [88.87, 41.91]},
+        {"art": "prop_mushrooms", "pos": [54.84, 40.42]},
+        {"art": "prop_mushrooms", "pos": [54.69, 36.65]},
+        {"art": "prop_mushrooms", "pos": [83.1, 39.89]},
+        {"art": "prop_bush_b", "pos": [15.21, 22.61], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [113.14, 20.85], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [46.19, 17.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [52.85, 8.26], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [106.2, 54.08], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [63.87, 13.66], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [66.74, 40.75], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [105.16, 1.75], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [9.4, 8.95], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [15.57, 53.52], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [54.25, 1.2]},
+        {"art": "prop_rock_small", "pos": [88.83, 28.37]},
+        {"art": "prop_rock_small", "pos": [82.12, 19.09]},
+        {"art": "prop_rock_small", "pos": [38.96, 32.65]},
+        {"art": "prop_rock_small", "pos": [107.54, 55.44]},
+        {"art": "prop_rock_small", "pos": [89.43, 44.0]},
+        {"art": "prop_rock_small", "pos": [31.33, 31.37]},
+        {"art": "prop_rock_small", "pos": [82.91, 12.13]},
+        {"art": "prop_rock_small", "pos": [29.19, 27.06]},
+        {"art": "prop_rock_small", "pos": [50.68, 22.98]},
+        {"art": "prop_rock_small", "pos": [91.26, 34.44]},
+        {"art": "prop_rock_small", "pos": [76.54, 32.2]},
+        {"art": "prop_rock_small", "pos": [66.48, 3.65]},
+        {"art": "prop_rock_small", "pos": [34.6, 29.25]},
+        {"art": "prop_stump", "pos": [98.5, 9.07], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [65.95, 13.48], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [71.29, 5.43], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [2.25, 14.35], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [60.3, 13.45], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [55.65, 8.67], "collider": {"w": 0.9, "h": 0.5}}
+      ],
+      "npcs": [
+        {"npc": "nanami", "pos": [99.6, 35.2], "hideFlag": "recruited_nanami"},
+        {"npc": "mf_reeve_tamsin", "pos": [97.6, 22.6]},
+        {"npc": "mf_obi_wick", "pos": [104.6, 26.4], "flip": true},
+        {"npc": "mf_hettie_brine", "pos": [102.6, 20.2]},
+        {"npc": "mf_lily", "pos": [94.4, 24.2]},
+        {"npc": "mf_bo_puddlefoot", "pos": [106.6, 11.4], "flip": true},
+        {"npc": "mf_corwin", "pos": [72.6, 44.2]},
+        {"npc": "mf_granny_sen", "pos": [59.4, 30.0], "hideFlag": "mf_sen_sent"},
+        {"npc": "mf_oracle_bloop", "pos": [6.0, 7.6]},
+        {"npc": "mf_reedcutter_ansel", "pos": [90.6, 19.4]},
+        {"npc": "mf_netmender_orla", "pos": [110.4, 24.4], "flip": true},
+        {"npc": "mf_plip", "pos": [95.8, 20.6], "requireFlag": "mf_chief_peace"}
+      ],
+      "encounters": [
+        {
+          "id": "enc_mf_shallows_crocs",
+          "pos": [84, 12.2],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_mf_crocolisk", "pos": [83, 11.6]},
+            {"creature": "cr_mf_crocolisk", "pos": [85.6, 12.4]}
+          ]
+        },
+        {
+          "id": "enc_mf_shallows_crocs_east",
+          "pos": [93.2, 8.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_mf_crocolisk", "pos": [93.6, 9.6]},
+            {"creature": "cr_mf_crocolisk", "pos": [94.6, 7.2]}
+          ]
+        },
+        {"id": "enc_mf_old_gnasher", "pos": [70.6, 7.4], "radius": 3.4, "enemies": [{"creature": "cr_mf_old_gnasher", "pos": [70.2, 6.8]}]},
+        {
+          "id": "enc_mf_channel_crocs",
+          "pos": [44.6, 9.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_crocolisk", "pos": [44.2, 8.6]},
+            {"creature": "cr_mf_crocolisk", "pos": [45.8, 10.2]}
+          ]
+        },
+        {
+          "id": "enc_mf_mere_wisps",
+          "pos": [76.6, 32.6],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_mf_fen_wisp", "pos": [76.2, 33.6]},
+            {"creature": "cr_mf_fen_wisp", "pos": [77.8, 31.8]},
+            {"creature": "cr_mf_fen_wisp", "pos": [75.6, 31.4]}
+          ]
+        },
+        {
+          "id": "enc_mf_mere_ghouls",
+          "pos": [52.2, 40.2],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_mf_bog_ghoul", "pos": [51.6, 40.8]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [53.4, 39.4]}
+          ]
+        },
+        {
+          "id": "enc_mf_barrow_ghouls",
+          "pos": [51.4, 48.4],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_mf_bog_ghoul", "pos": [50.8, 48.8]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [53.2, 48.4]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [51.6, 47.0]}
+          ]
+        },
+        {
+          "id": "enc_mf_barrow_ghouls_north",
+          "pos": [63.0, 45.8],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_bog_ghoul", "pos": [63.6, 46.4]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [62.0, 46.0]}
+          ]
+        },
+        {
+          "id": "enc_mf_low_bell",
+          "pos": [56.0, 48.4],
+          "radius": 3.0,
+          "requireFlag": "mf_bell_rung",
+          "hidden": true,
+          "doneFlag": "mf_bellringer_laid",
+          "enemies": [
+            {"creature": "cr_mf_bog_ghoul_elder", "pos": [56.2, 51.8]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [54.0, 50.4]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [58.4, 50.6]}
+          ]
+        },
+        {
+          "id": "enc_mf_willow_wisps",
+          "pos": [97.4, 47.0],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_mf_fen_wisp", "pos": [97.0, 47.8]},
+            {"creature": "cr_mf_fen_wisp", "pos": [98.4, 46.4]},
+            {"creature": "cr_mf_fen_wisp", "pos": [96.2, 46.2]}
+          ]
+        },
+        {
+          "id": "enc_mf_willow_wisps_east",
+          "pos": [113.6, 47.6],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_fen_wisp", "pos": [113.0, 48.4]},
+            {"creature": "cr_mf_fen_wisp", "pos": [114.6, 47.0]}
+          ]
+        },
+        {
+          "id": "enc_mf_hollow_crocs",
+          "pos": [84.0, 42.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_crocolisk", "pos": [83.4, 41.4]},
+            {"creature": "cr_mf_crocolisk", "pos": [85.0, 42.8]}
+          ]
+        },
+        {
+          "id": "enc_mf_mireling_scouts",
+          "pos": [31.8, 28.6],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_mf_mireling_hunter", "pos": [31.4, 29.6]},
+            {"creature": "cr_mf_mireling", "pos": [32.8, 28.0]},
+            {"creature": "cr_mf_mireling_hunter", "pos": [30.4, 28.2]}
+          ]
+        },
+        {
+          "id": "enc_mf_stewpot_camp",
+          "pos": [26.6, 9.0],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_mf_mireling", "pos": [26.0, 9.6]},
+            {"creature": "cr_mf_mireling", "pos": [27.6, 9.8]},
+            {"creature": "cr_mf_mireling_oracle", "pos": [26.8, 8.2]}
+          ]
+        },
+        {
+          "id": "enc_mf_croaker_camp",
+          "pos": [12.2, 22.4],
+          "radius": 3.4,
+          "requireFlag": "!mf_chief_peace",
+          "enemies": [
+            {"creature": "cr_mf_mireling", "pos": [11.6, 23.0]},
+            {"creature": "cr_mf_mireling_hunter", "pos": [12.8, 24.2]},
+            {"creature": "cr_mf_mireling_oracle", "pos": [12.4, 21.4]}
+          ]
+        },
+        {
+          "id": "enc_mf_croaking_stones",
+          "pos": [19.0, 15.6],
+          "radius": 3.2,
+          "doneFlag": "mf_chief_resolved",
+          "dialogue": "dlg_mf_chief",
+          "enemies": [
+            {"creature": "cr_mf_mireling_chief", "pos": [19.0, 17.4]},
+            {"creature": "cr_mf_mireling_hunter", "pos": [16.8, 15.0]},
+            {"creature": "cr_mf_mireling_oracle", "pos": [21.2, 15.0]}
+          ]
+        },
+        {
+          "id": "enc_mf_coven_watch",
+          "pos": [17.4, 34.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_mf_mire_hag", "pos": [17.0, 35.6]},
+            {"creature": "cr_mf_blight_hound", "pos": [18.6, 34.2]}
+          ]
+        },
+        {
+          "id": "enc_mf_statue_hags",
+          "pos": [37.0, 48.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_mire_hag", "pos": [37.6, 49.6]},
+            {"creature": "cr_mf_mire_hag", "pos": [38.4, 47.6]}
+          ]
+        },
+        {
+          "id": "enc_mf_gate_road_hag",
+          "pos": [23.6, 38.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_mf_mire_hag", "pos": [24.4, 39.4]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [22.8, 39.6]}
+          ]
+        },
+        {
+          "id": "enc_mf_gate_hounds",
+          "pos": [4.8, 41.6],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_mf_blight_hound", "pos": [4.2, 42.4]},
+            {"creature": "cr_mf_blight_hound", "pos": [5.6, 40.8]}
+          ]
+        },
+        {
+          "id": "enc_mf_auntie_gall",
+          "pos": [21.6, 49.6],
+          "radius": 3.6,
+          "requireFlag": "mf_coven_known",
+          "doneFlag": "mf_gall_defeated",
+          "dialogue": "dlg_mf_gall",
+          "enemies": [
+            {"creature": "cr_mf_auntie_gall", "pos": [21.6, 52.4]},
+            {"creature": "cr_mf_mire_hag", "pos": [19.4, 51.6]},
+            {"creature": "cr_mf_mire_hag", "pos": [23.8, 51.6]}
+          ]
+        },
+        {
+          "id": "enc_mf_post_ambush",
+          "pos": [29.0, 23.8],
+          "radius": 3.2,
+          "requireFlag": "mf_post_4_lit",
+          "hidden": true,
+          "enemies": [
+            {"creature": "cr_mf_mire_hag", "pos": [27.4, 26.0]},
+            {"creature": "cr_mf_bog_ghoul", "pos": [30.6, 26.2]}
+          ]
+        }
+      ],
+      "chests": [
+        {"id": "chest_mf_coven_stash", "pos": [26.8, 54.6], "lootTable": "lt_mf_chest_coven", "lockCheck": {"skill": "SleightOfHand", "dc": 15}},
+        {"id": "chest_mf_barrow_offering", "pos": [57.4, 55.0], "lootTable": "lt_mf_chest_barrow"},
+        {"id": "chest_mf_heron_cache", "pos": [36.8, 17.2], "lootTable": "lt_mf_chest_heron", "requireFlag": "mf_heron_cache_seen"},
+        {"id": "chest_mf_willow_hoard", "pos": [117.4, 53.6], "lootTable": "lt_mf_chest_fen"}
+      ],
+      "transitions": [
+        {
+          "id": "to_brightwater",
+          "pos": [119.3, 16.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_mirefen",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_drowned_vault",
+          "pos": [30.0, 46.4],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_drowned_vault",
+          "targetSpawn": "from_mirefen",
+          "label": "The Drowned Vault",
+          "hidden": true,
+          "revealFlag": "found_drowned_vault",
+          "marker": "stairs"
+        },
+        {
+          "id": "to_raid_hollow_heart",
+          "pos": [12.0, 48.0],
+          "size": [3.0, 3.0],
+          "targetMap": "raid_hollow_heart",
+          "targetSpawn": "from_mirefen",
+          "label": "The Hollow Heart",
+          "marker": "portal"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [116.0, 16.0]},
+        {"id": "from_brightwater", "pos": [116.0, 16.0]},
+        {"id": "from_dgn_drowned_vault", "pos": [30.0, 43.9]},
+        {"id": "from_raid_hollow_heart", "pos": [12.0, 45.5]}
+      ],
+      "regions": [
+        {
+          "id": "reg_mf_lowlantern",
+          "pos": [100, 27],
+          "size": [26, 22],
+          "name": "Lowlantern",
+          "text": "Lowlantern — a stilt village on a pool of lilies. Every porch has a lantern hook. Most of the hooks are empty."
+        },
+        {
+          "id": "reg_mf_sinking_mere",
+          "pos": [63, 30],
+          "size": [24, 18],
+          "enterFlag": "reg_mf_sinking_mere",
+          "name": "Sinking Mere",
+          "text": "The Sinking Mere — where Lowlantern sends its lights. The water is very still, and full of stone lanterns."
+        },
+        {
+          "id": "reg_mf_barrows",
+          "pos": [58, 49],
+          "size": [24, 12],
+          "name": "Drowned Barrows",
+          "text": "The Drowned Barrows — the fen's old burial mounds, going under one cairn at a time. Something squelches, then stops."
+        },
+        {
+          "id": "reg_mf_croaking_stones",
+          "pos": [19, 15],
+          "size": [26, 20],
+          "name": "Croaking Stones",
+          "text": "The Croaking Stones — mireling country. A hundred golden eyes blink at you from the reeds, then a hundred more."
+        },
+        {
+          "id": "reg_mf_moon_gate",
+          "pos": [14, 48],
+          "size": [24, 14],
+          "enterFlag": "reg_mf_moon_gate",
+          "name": "Moon-Gate",
+          "text": "The old moon-gate stands in the reeds, turning slowly inside like a held breath. The coven's totems face it, not you."
+        },
+        {
+          "id": "reg_mf_sunken_statue",
+          "pos": [30, 45],
+          "size": [12, 8],
+          "name": "Sunken Statue",
+          "check": {"skill": "Perception", "dc": 14},
+          "checkFlag": "found_drowned_vault",
+          "successText": "Water is running somewhere it shouldn't — down. Under the statue's raised hand, moss hides a stair cut into the mire.",
+          "failText": "The statue gazes over the water. Frogs. Reeds. Nothing else you can see."
+        },
+        {
+          "id": "reg_mf_willow_hollow",
+          "pos": [100, 49],
+          "size": [38, 12],
+          "name": "Willow Hollow",
+          "text": "Willow Hollow — giant toadstools and weeping willows. The air smells of rain and something sweet."
+        },
+        {
+          "id": "reg_mf_gnashing_shallows",
+          "pos": [80, 7],
+          "size": [26, 12],
+          "name": "Gnashing Shallows",
+          "text": "The Gnashing Shallows. The logs here have eyes."
+        },
+        {
+          "id": "reg_mf_heron_bridge",
+          "pos": [40, 19],
+          "size": [12, 8],
+          "name": "Heron Bridge",
+          "check": {"skill": "Perception", "dc": 13},
+          "checkFlag": "mf_heron_cache_seen",
+          "successText": "A heron is carved on the bridge's keystone — and under the downstream arch, someone has wedged an oilskin bundle out of sight.",
+          "failText": "An old heron is carved on the keystone, worn almost smooth."
+        }
+      ],
+      "ambient": {"timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#e0ecd8", "ambientIntensity": 0.9, "mist": true, "fireflies": true},
+      "restArea": true,
+      "music": "music_fen"
+    }
+  ],
+  "quests": [
+    {
+      "id": "mq2_drowned_lanterns",
+      "name": "The Drowned Lanterns",
+      "giver": "bw_archivist_penhallow",
+      "level": 18,
+      "minLevel": 18,
+      "zone": "mirefen",
+      "main": true,
+      "summary": "Penhallow's records speak of lanterns sunk in the fens of Mirefen. Find out what drowned them.",
+      "stages": [
+        {
+          "id": "fen",
+          "description": "Go west from Brightwater into the fens of Mirefen.",
+          "objectives": [
+            {"type": "Reach", "target": "mirefen", "text": "Travel to Mirefen"}
+          ],
+          "next": "reeve"
+        },
+        {
+          "id": "reeve",
+          "description": "Find the Reeve of Lowlantern, the stilt village on the lily pool, and ask about the drowned lanterns.",
+          "objectives": [
+            {"type": "Talk", "target": "mf_reeve_tamsin", "text": "Speak with Reeve Tamsin"}
+          ],
+          "next": "cords",
+          "onComplete": [
+            {"type": "GiveXP", "amount": 150}
+          ]
+        },
+        {
+          "id": "cords",
+          "description": "Search the drowned lanterns of the Sinking Mere, west along the Fen Road. Whatever is holding them down, cut it loose and bring it back.",
+          "objectives": [
+            {"type": "Collect", "target": "mf_drowning_cord", "text": "Drowning cords cut from the Sinking Mere", "count": 3}
+          ],
+          "next": "coven",
+          "onComplete": [
+            {"type": "GiveXP", "amount": 300}
+          ]
+        },
+        {
+          "id": "coven",
+          "description": "Show the drowning cords to Reeve Tamsin in Lowlantern.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_coven_known", "text": "Show the cords to Reeve Tamsin"}
+          ],
+          "next": "gall",
+          "onComplete": [
+            {"type": "GiveXP", "amount": 150}
+          ]
+        },
+        {
+          "id": "gall",
+          "description": "Mother Mire's coven gathers at the old moon-gate in the north-west of the fen. Find Auntie Gall, Eldest of the Coven, and stop the drowning at its root.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_gall_defeated", "text": "Auntie Gall defeated"}
+          ],
+          "next": "sen",
+          "onComplete": [
+            {"type": "GiveXP", "amount": 600}
+          ]
+        },
+        {
+          "id": "sen",
+          "description": "The hooks are out of the water. Go back to the Sinking Mere: there is someone on the boardwalk who has been waiting a long time for the end of a song.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_lanterns_rise", "text": "Sing Granny Sen's sending"}
+          ],
+          "next": "report",
+          "onComplete": [
+            {"type": "GiveXP", "amount": 450}
+          ]
+        },
+        {
+          "id": "report",
+          "description": "Bring word back to Archivist Penhallow in Brightwater.",
+          "objectives": [
+            {"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}
+          ],
+          "onComplete": [
+            {"type": "SetFlag", "key": "mq2_drowned_lanterns_done"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 1900, "gold": 6000, "choiceItems": ["mf_mantle_of_the_last_verse", "mf_reedrunner_spaulders", "mf_lowlantern_pauldrons"]}
+    }
+  ]
+}

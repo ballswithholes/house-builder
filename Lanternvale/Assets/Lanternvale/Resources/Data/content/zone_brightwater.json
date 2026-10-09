@@ -1,0 +1,5472 @@
+{
+ "_note": "Brightwater, the river trade town (Docs/Expansion.md §1, §8 builder 'brightwater'). The map, its people, the Archivist's hub dialogue (kept from the contract stub, enriched) and the town's shops, trainers and inn. Generated layout; hand-edit freely.",
+ "maps": [
+  {
+   "id": "brightwater",
+   "name": "Brightwater",
+   "subtitle": "A river trade town",
+   "width": 84,
+   "depth": 44,
+   "skyTop": "#9fd3f0",
+   "skyBottom": "#fdf1d6",
+   "layers": [
+    {
+     "art": "bg_clouds",
+     "parallax": 0.05,
+     "y": 15.5,
+     "height": 6,
+     "loop": true,
+     "scrollSpeed": 0.15
+    },
+    {
+     "art": "bg_mountains_far",
+     "parallax": 0.1,
+     "y": 12.0,
+     "height": 9,
+     "loop": true
+    },
+    {
+     "art": "bg_hills_far",
+     "parallax": 0.25,
+     "y": 12.5,
+     "height": 7,
+     "loop": true
+    }
+   ],
+   "ground": "ground_village",
+   "groundTile": 8,
+   "biome": "village",
+   "environment": "outdoor",
+   "levelMin": 12,
+   "levelMax": 30,
+   "fill": 0.42,
+   "paths": [
+    {
+     "art": "decal_path_stone",
+     "points": [
+      [
+       84,
+       22
+      ],
+      [
+       70,
+       22.2
+      ],
+      [
+       62,
+       22
+      ],
+      [
+       54.6,
+       21.6
+      ],
+      [
+       46,
+       22
+      ],
+      [
+       36,
+       22
+      ]
+     ],
+     "width": 2.6
+    },
+    {
+     "art": "decal_path_stone",
+     "points": [
+      [
+       27,
+       22
+      ],
+      [
+       19,
+       22.2
+      ]
+     ],
+     "width": 2.4
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       19,
+       22.2
+      ],
+      [
+       13.6,
+       20.2
+      ],
+      [
+       7.6,
+       15.0
+      ],
+      [
+       0,
+       12
+      ]
+     ],
+     "width": 2.2
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       19,
+       22.2
+      ],
+      [
+       14.2,
+       27.6
+      ],
+      [
+       7.2,
+       32.4
+      ],
+      [
+       0,
+       34
+      ]
+     ],
+     "width": 2.2
+    },
+    {
+     "art": "decal_path_stone",
+     "points": [
+      [
+       49.0,
+       17.2
+      ],
+      [
+       54.6,
+       13.8
+      ],
+      [
+       60.2,
+       17.2
+      ],
+      [
+       54.6,
+       20.2
+      ],
+      [
+       49.0,
+       17.2
+      ]
+     ],
+     "width": 2.0
+    },
+    {
+     "art": "decal_path_stone",
+     "points": [
+      [
+       45.2,
+       22
+      ],
+      [
+       43.0,
+       16.6
+      ],
+      [
+       41.8,
+       12.0
+      ],
+      [
+       42.2,
+       5.4
+      ],
+      [
+       38.2,
+       2.8
+      ]
+     ],
+     "width": 2.0
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       45.6,
+       22
+      ],
+      [
+       45.4,
+       28.4
+      ],
+      [
+       43.8,
+       33.6
+      ],
+      [
+       38.0,
+       33.3
+      ],
+      [
+       36.2,
+       37.4
+      ],
+      [
+       32.4,
+       38.6
+      ],
+      [
+       24.8,
+       39.4
+      ],
+      [
+       16.6,
+       39.6
+      ],
+      [
+       12.6,
+       37.4
+      ],
+      [
+       7.4,
+       32.6
+      ]
+     ],
+     "width": 1.8
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       45.4,
+       33.6
+      ],
+      [
+       56,
+       35.2
+      ],
+      [
+       68,
+       35.6
+      ],
+      [
+       84,
+       34.6
+      ]
+     ],
+     "width": 1.7
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       62.8,
+       21.6
+      ],
+      [
+       64.8,
+       15.4
+      ],
+      [
+       64.2,
+       9.6
+      ],
+      [
+       72.0,
+       9.8
+      ],
+      [
+       84,
+       9.6
+      ]
+     ],
+     "width": 1.8
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       49.6,
+       9.8
+      ],
+      [
+       56.6,
+       10.6
+      ],
+      [
+       64.2,
+       9.6
+      ]
+     ],
+     "width": 1.6
+    },
+    {
+     "art": "decal_path_stone",
+     "points": [
+      [
+       27.6,
+       9.0
+      ],
+      [
+       26.4,
+       14.0
+      ],
+      [
+       26.2,
+       19.6
+      ],
+      [
+       25.8,
+       26.0
+      ],
+      [
+       23.6,
+       26.4
+      ]
+     ],
+     "width": 1.6
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       13.6,
+       20.2
+      ],
+      [
+       15.4,
+       14.8
+      ],
+      [
+       15.0,
+       8.4
+      ],
+      [
+       12.4,
+       6.6
+      ]
+     ],
+     "width": 1.6
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       19.6,
+       22.2
+      ],
+      [
+       21.2,
+       19.4
+      ]
+     ],
+     "width": 1.5
+    },
+    {
+     "art": "decal_path_dirt",
+     "points": [
+      [
+       66.6,
+       22.1
+      ],
+      [
+       68.0,
+       25.4
+      ]
+     ],
+     "width": 1.5
+    }
+   ],
+   "water": [
+    {
+     "points": [
+      [
+       31.0,
+       47
+      ],
+      [
+       32.6,
+       39
+      ],
+      [
+       31.2,
+       31
+      ],
+      [
+       31.5,
+       22
+      ],
+      [
+       30.4,
+       14
+      ],
+      [
+       31.6,
+       6
+      ],
+      [
+       30.8,
+       -3
+      ]
+     ],
+     "halfWidth": 3.0,
+     "crossings": [
+      {
+       "pos": [
+        31.5,
+        22.0
+       ],
+       "size": [
+        7.6,
+        2.4
+       ]
+      },
+      {
+       "pos": [
+        32.4,
+        38.6
+       ],
+       "size": [
+        8.2,
+        3.0
+       ]
+      },
+      {
+       "pos": [
+        33.0,
+        15.4
+       ],
+       "size": [
+        3.4,
+        2.2
+       ]
+      },
+      {
+       "pos": [
+        28.9,
+        9.0
+       ],
+       "size": [
+        2.6,
+        2.2
+       ]
+      }
+     ]
+    },
+    {
+     "points": [
+      [
+       33.8,
+       5.0
+      ],
+      [
+       38.2,
+       4.6
+      ],
+      [
+       41.0,
+       6.4
+      ],
+      [
+       41.6,
+       9.6
+      ],
+      [
+       39.6,
+       12.4
+      ],
+      [
+       34.0,
+       13.0
+      ]
+     ],
+     "closed": true,
+     "crossings": [
+      {
+       "pos": [
+        37.6,
+        7.0
+       ],
+       "size": [
+        2.2,
+        6.0
+       ]
+      }
+     ]
+    }
+   ],
+   "props": [
+    {
+     "art": "decal_flowers",
+     "pos": [
+      52.0,
+      11.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      58.8,
+      23.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      66.2,
+      31.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      75.0,
+      36.4
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      19.0,
+      13.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      24.4,
+      13.4
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      20.6,
+      31.4
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      16.0,
+      25.2
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      44.6,
+      30.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      62.4,
+      11.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      8.0,
+      21.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      5.6,
+      27.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      47.4,
+      40.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      60.6,
+      41.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      13.2,
+      33.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      80.0,
+      12.6
+     ]
+    },
+    {
+     "art": "prop_bridge_stone",
+     "pos": [
+      31.5,
+      22.0
+     ],
+     "light": {
+      "color": "#ffd9a0",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       3.95,
+       1.75
+      ],
+      "nightOnly": true
+     },
+     "text": "The Heron Bridge. Three hundred years of carts have worn the cobbles into gentle waves; a stone heron roundel watches the water on either side."
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      26.6,
+      24.3
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      36.4,
+      19.7
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_dock",
+     "pos": [
+      37.6,
+      7.0
+     ],
+     "light": {
+      "color": "#ffd9a0",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.95,
+       2.0
+      ],
+      "nightOnly": true
+     },
+     "text": "The ferry stage. A chalkboard on the post reads: FERRY — WHEN GIDEON FEELS LIKE IT."
+    },
+    {
+     "art": "prop_dock_x",
+     "pos": [
+      34.6,
+      15.4
+     ],
+     "flip": true,
+     "light": {
+      "color": "#ffd9a0",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       2.25,
+       2.0
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_boat",
+     "pos": [
+      35.0,
+      11.2
+     ],
+     "light": {
+      "color": "#ffd9a0",
+      "radius": 3.0,
+      "intensity": 0.7,
+      "offset": [
+       -1.62,
+       1.25
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_boat",
+     "pos": [
+      40.0,
+      10.6
+     ],
+     "flip": true
+    },
+    {
+     "art": "prop_boat",
+     "pos": [
+      31.4,
+      13.0
+     ]
+    },
+    {
+     "art": "prop_lilypads",
+     "pos": [
+      39.6,
+      6.6
+     ]
+    },
+    {
+     "art": "prop_lilypads",
+     "pos": [
+      28.8,
+      33.4
+     ]
+    },
+    {
+     "art": "prop_lilypads",
+     "pos": [
+      30.0,
+      44.0
+     ]
+    },
+    {
+     "art": "prop_lilypads",
+     "pos": [
+      31.8,
+      2.4
+     ]
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      42.6,
+      4.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      43.4,
+      3.9
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      41.6,
+      3.4
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      44.8,
+      13.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_fishing_rack",
+     "pos": [
+      46.6,
+      15.6
+     ],
+     "collider": {
+      "w": 2.4,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      38.6,
+      15.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      39.4,
+      16.2
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      37.5,
+      16.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      41.6,
+      14.2
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      35.2,
+      3.6
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      47.4,
+      7.4
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     },
+     "text": "Crane & Daughters, Fish and Salt. There are no daughters. There never were."
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      44.0,
+      9.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     },
+     "interact": "bw_herring_crates",
+     "dialogue": "dlg_bw_herring_crates",
+     "text": "Crates stencilled SALTED HERRING — BRIGHTWATER. One of them sloshes."
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      44.9,
+      10.3
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      43.4,
+      10.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_cart",
+     "pos": [
+      50.6,
+      2.2
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 1.0
+     }
+    },
+    {
+     "art": "prop_cottage_b",
+     "pos": [
+      21.8,
+      29.0
+     ],
+     "collider": {
+      "w": 4.4,
+      "h": 2.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       -1.0,
+       3.0
+      ],
+      "nightOnly": true
+     },
+     "text": "The Chapel of Small Lights. Every ledge, sill and rafter holds a lantern, and every lantern has a name."
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      18.6,
+      27.0
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      25.0,
+      27.0
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      27.0,
+      25.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      27.2,
+      28.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      26.8,
+      31.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      24.6,
+      32.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      18.0,
+      31.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern_dark",
+     "pos": [
+      25.6,
+      30.0
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "text": "A drowned lantern, its glass clouded with fen-water. A paper tag reads: FOUND BELOW THE WEIR. NOT YET LIT."
+    },
+    {
+     "art": "prop_spirit_lantern_dark",
+     "pos": [
+      19.8,
+      31.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "text": "Another drowned lantern, waiting its turn on the chapel step."
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      20.0,
+      26.2
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_altar",
+     "pos": [
+      22.0,
+      34.6
+     ],
+     "collider": {
+      "w": 2.4,
+      "h": 1.2
+     },
+     "light": {
+      "color": "#ffd28a",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       0,
+       1.25
+      ],
+      "flicker": true
+     },
+     "text": "A little river altar behind the chapel: candles, a bowl of river stones, and a chalk list of names that the rain keeps rubbing out and somebody keeps writing back."
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      17.6,
+      29.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      16.4,
+      31.8
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      26.2,
+      34.6
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_sarcophagus",
+     "pos": [
+      21.4,
+      16.6
+     ],
+     "collider": {
+      "w": 2.8,
+      "h": 1.4
+     },
+     "interact": "bw_heronguard_memorial",
+     "dialogue": "dlg_bw_memorial",
+     "text": "The Heronguard Memorial: an empty tomb for Lord-Commander Aubric, whose body never came home."
+    },
+    {
+     "art": "prop_standing_stone",
+     "pos": [
+      18.2,
+      17.2
+     ],
+     "collider": {
+      "w": 1.0,
+      "h": 0.7
+     },
+     "text": "Names are cut into the stone in two neat columns. Beside some of them, someone has carved a very small heron."
+    },
+    {
+     "art": "prop_standing_stone",
+     "pos": [
+      24.6,
+      17.2
+     ],
+     "collider": {
+      "w": 1.0,
+      "h": 0.7
+     },
+     "text": "More names. The last line reads: FORTY RODE. ELEVEN RETURNED. ALL ARE REMEMBERED."
+    },
+    {
+     "art": "prop_banner",
+     "pos": [
+      19.6,
+      18.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_banner",
+     "pos": [
+      23.2,
+      18.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      17.0,
+      15.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      25.8,
+      15.8
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      16.2,
+      18.8
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      10.4,
+      15.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      13.4,
+      15.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      10.4,
+      8.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      13.4,
+      8.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_banner",
+     "pos": [
+      9.0,
+      14.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      16.6,
+      9.4
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      9.0,
+      9.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_tent",
+     "pos": [
+      7.4,
+      12.0
+     ],
+     "collider": {
+      "w": 2.4,
+      "h": 1.2
+     },
+     "text": "The yard's kit tent: blunted swords, dented shields and one helmet with 'NOT YOURS, PELL' scratched inside."
+    },
+    {
+     "art": "prop_log",
+     "pos": [
+      12.0,
+      9.8
+     ],
+     "collider": {
+      "w": 2.2,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_tent",
+     "pos": [
+      6.0,
+      4.2
+     ],
+     "collider": {
+      "w": 2.4,
+      "h": 1.2
+     }
+    },
+    {
+     "art": "prop_campfire",
+     "pos": [
+      9.2,
+      3.6
+     ],
+     "collider": {
+      "w": 1.0,
+      "h": 0.6
+     },
+     "light": {
+      "color": "#ffa050",
+      "radius": 4.0,
+      "intensity": 1.1,
+      "offset": [
+       0,
+       0.5
+      ],
+      "flicker": true
+     }
+    },
+    {
+     "art": "prop_log",
+     "pos": [
+      9.4,
+      2.2
+     ],
+     "collider": {
+      "w": 2.2,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_fishing_rack",
+     "pos": [
+      13.4,
+      4.4
+     ],
+     "collider": {
+      "w": 2.4,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_noticeboard",
+     "pos": [
+      15.6,
+      7.2
+     ],
+     "collider": {
+      "w": 1.6,
+      "h": 0.5
+     },
+     "text": "RIVER WARDEN'S NOTICES — Eels running. Crocolisks NOT running (yet). Barges from Mirefen: none for six weeks. Anyone heading down the fen road, report to the Watch."
+    },
+    {
+     "art": "prop_dock_x",
+     "pos": [
+      27.0,
+      9.0
+     ],
+     "light": {
+      "color": "#ffd9a0",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       2.25,
+       2.0
+      ],
+      "nightOnly": true
+     },
+     "interact": "bw_ferry_bell",
+     "dialogue": "dlg_bw_ferry_bell",
+     "text": "The west ferry landing. A brass bell hangs from the lamp post, polished by a great many impatient hands."
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      25.8,
+      4.2
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      22.6,
+      1.8
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      26.6,
+      12.8
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      27.8,
+      36.8
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      25.0,
+      43.0
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      28.4,
+      2.0
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_cattails",
+     "pos": [
+      27.2,
+      15.4
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_cattails",
+     "pos": [
+      24.0,
+      6.6
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_cattails",
+     "pos": [
+      26.4,
+      39.4
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_cattails",
+     "pos": [
+      27.3,
+      41.6
+     ],
+     "sway": true,
+     "interact": "bw_heron_reeds",
+     "dialogue": "dlg_bw_heron_reeds",
+     "text": "A thick stand of cattails at the water's edge. Something in there is muttering."
+    },
+    {
+     "art": "prop_willow",
+     "pos": [
+      24.0,
+      1.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_willow",
+     "pos": [
+      3.4,
+      17.8
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_willow",
+     "pos": [
+      24.2,
+      38.2
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_windmill",
+     "pos": [
+      10.6,
+      40.0
+     ],
+     "collider": {
+      "w": 2.6,
+      "h": 1.0
+     },
+     "text": "The Brightwater mill. Its sails turn whichever way the wind is going and complain about it."
+    },
+    {
+     "art": "prop_farmhouse",
+     "pos": [
+      4.8,
+      40.4
+     ],
+     "collider": {
+      "w": 8.4,
+      "h": 5.2
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.7,
+      "offset": [
+       -0.35,
+       2.45
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_wheat",
+     "pos": [
+      15.4,
+      36.2
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_wheat",
+     "pos": [
+      19.0,
+      36.2
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_wheat",
+     "pos": [
+      15.4,
+      38.4
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_wheat",
+     "pos": [
+      19.0,
+      38.4
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_scarecrow",
+     "pos": [
+      17.2,
+      40.8
+     ],
+     "collider": {
+      "w": 0.6,
+      "h": 0.4
+     },
+     "text": "A scarecrow in a cast-off Heronguard surcoat. The crows seem unimpressed by its pedigree."
+    },
+    {
+     "art": "prop_hay",
+     "pos": [
+      13.6,
+      42.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     }
+    },
+    {
+     "art": "prop_hay",
+     "pos": [
+      7.4,
+      36.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     }
+    },
+    {
+     "art": "prop_cart",
+     "pos": [
+      21.8,
+      41.0
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 1.0
+     }
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      11.0,
+      30.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      16.2,
+      32.6
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_pine",
+     "pos": [
+      1.4,
+      20.6
+     ],
+     "collider": {
+      "w": 1.0,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      1.0,
+      16.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      18.6,
+      2.6
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      1.6,
+      2.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_rock_large",
+     "pos": [
+      3.0,
+      21.4
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 1.0
+     }
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      8.8,
+      27.2
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      23.6,
+      42.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      14.0,
+      34.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      20.2,
+      34.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_beehive",
+     "pos": [
+      2.6,
+      35.6
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 0.9
+     }
+    },
+    {
+     "art": "prop_town_hall",
+     "pos": [
+      54.6,
+      31.0
+     ],
+     "collider": {
+      "w": 10.8,
+      "h": 6.8
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 4.0,
+      "intensity": 0.8,
+      "offset": [
+       0,
+       2.2
+      ],
+      "nightOnly": true
+     },
+     "text": "Brightwater Town Hall. The clock has been precisely four minutes slow since the day it was built, and the town has quietly adjusted."
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      48.4,
+      26.6
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      60.8,
+      26.6
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_fountain",
+     "pos": [
+      54.6,
+      16.4
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 3.0
+     },
+     "light": {
+      "color": "#cfeaff",
+      "radius": 3.0,
+      "intensity": 0.5,
+      "offset": [
+       0,
+       1.3
+      ],
+      "nightOnly": true
+     },
+     "text": "The Heron Fountain. A bronze heron spouts water with an expression of deep disapproval. Coins glint in the basin."
+    },
+    {
+     "art": "prop_market_awning",
+     "pos": [
+      48.4,
+      19.4
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 1.8
+     },
+     "light": {
+      "color": "#ffc070",
+      "radius": 3.0,
+      "intensity": 0.8,
+      "offset": [
+       -1.45,
+       2.05
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_market_awning",
+     "pos": [
+      60.8,
+      19.4
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 1.8
+     },
+     "light": {
+      "color": "#ffc070",
+      "radius": 3.0,
+      "intensity": 0.8,
+      "offset": [
+       1.45,
+       2.05
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_market_awning",
+     "pos": [
+      49.0,
+      12.6
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 1.8
+     }
+    },
+    {
+     "art": "prop_market_awning",
+     "pos": [
+      60.2,
+      12.6
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 1.8
+     },
+     "light": {
+      "color": "#ffc070",
+      "radius": 3.0,
+      "intensity": 0.8,
+      "offset": [
+       1.45,
+       2.05
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      51.4,
+      14.6
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      57.8,
+      14.6
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_noticeboard",
+     "pos": [
+      63.8,
+      24.2
+     ],
+     "collider": {
+      "w": 1.6,
+      "h": 0.5
+     },
+     "text": "BRIGHTWATER NOTICES — LOST: one heron, small, rude, answers to 'Admiral'. See Tamsin. — DOCK WORK: parcels to carry, see Hobb. — THE WATCH IS HIRING (brave, sensible, or ideally both). — Anniversary of the Ride: lanterns at the memorial, tomorrow at dusk."
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      46.2,
+      20.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      62.8,
+      20.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      46.6,
+      11.6
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      48.0,
+      24.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      62.6,
+      31.2
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      47.2,
+      28.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      62.0,
+      33.0
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      39.8,
+      29.4
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      41.4,
+      37.2
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     },
+     "text": "The Reed house. A crate by the door is labelled ADMIRAL in large, determined letters."
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      44.6,
+      35.0
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     },
+     "text": "A crate with straw, a water bowl and a sign: ADMIRAL PUDDLES. KNOCK FIRST."
+    },
+    {
+     "art": "prop_washing_line",
+     "pos": [
+      45.4,
+      39.2
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_inn",
+     "pos": [
+      70.0,
+      29.2
+     ],
+     "collider": {
+      "w": 7.0,
+      "h": 2.6
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.7,
+      "offset": [
+       -1.6,
+       3.2
+      ],
+      "nightOnly": true
+     },
+     "text": "The Lantern & Heron. The sign shows a heron wearing a lantern like a very small hat."
+    },
+    {
+     "art": "prop_signpost",
+     "pos": [
+      74.4,
+      25.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "text": "THE LANTERN & HERON — beds, pies, and the best view of the clock in town. (The clock is slow.)"
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      66.0,
+      25.4
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      73.8,
+      27.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      74.6,
+      28.2
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_cottage_c",
+     "pos": [
+      79.6,
+      31.0
+     ],
+     "collider": {
+      "w": 5.0,
+      "h": 2.2
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.7,
+      "offset": [
+       1.5,
+       2.6
+      ],
+      "nightOnly": true
+     },
+     "text": "The Watch House of Brightwater. A slate by the door counts DAYS WITHOUT A HERON-RELATED INCIDENT: 0."
+    },
+    {
+     "art": "prop_banner",
+     "pos": [
+      77.0,
+      29.0
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_banner",
+     "pos": [
+      82.2,
+      29.0
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      83.0,
+      31.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      80.6,
+      25.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      80.6,
+      18.2
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_stone_wall",
+     "pos": [
+      82.6,
+      26.4
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_stone_wall",
+     "pos": [
+      82.6,
+      17.6
+     ],
+     "flip": true,
+     "collider": {
+      "w": 3.4,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      83.2,
+      27.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      83.2,
+      16.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      83.0,
+      38.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      82.0,
+      30.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      76.0,
+      23.6
+     ]
+    },
+    {
+     "art": "prop_signpost",
+     "pos": [
+      77.6,
+      18.4
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "text": "BRIGHTWATER. Mind the herons. West across the bridge: the fen road (Mirefen) and the high road (Skyreach). East: Amberfield Downs."
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      44.0,
+      24.0
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      52.0,
+      23.8
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      66.8,
+      24.0
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_lamp_post",
+     "pos": [
+      70.6,
+      19.6
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "light": {
+      "color": "#ffb46c",
+      "radius": 4.0,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       2.3
+      ],
+      "flicker": true,
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_smithy",
+     "pos": [
+      70.4,
+      14.8
+     ],
+     "collider": {
+      "w": 5.0,
+      "h": 2.2
+     },
+     "light": {
+      "color": "#ff9a4a",
+      "radius": 3.8,
+      "intensity": 1.0,
+      "offset": [
+       0.8,
+       1.0
+      ],
+      "flicker": true
+     },
+     "text": "Hollowell & Hollowell, Weapons and Armour. Two signs, nailed up by two different hands, each insisting on going first."
+    },
+    {
+     "art": "prop_shop_stall",
+     "pos": [
+      76.2,
+      15.4
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 1.1
+     },
+     "text": "Dagny's armour rack: mail coats on poles, leather jerkins, and one helmet with a heron crest that nobody can afford."
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      67.0,
+      13.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_crate",
+     "pos": [
+      73.6,
+      13.2
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.6
+     }
+    },
+    {
+     "art": "prop_cart",
+     "pos": [
+      79.8,
+      14.4
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 1.0
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      57.0,
+      5.6
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      64.6,
+      6.0
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_cottage_a",
+     "pos": [
+      72.4,
+      6.4
+     ],
+     "collider": {
+      "w": 5.0,
+      "h": 2.2
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.7,
+      "offset": [
+       1.3,
+       2.4
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      80.0,
+      6.2
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_veg_patch",
+     "pos": [
+      76.4,
+      2.0
+     ],
+     "collider": {
+      "w": 3.6,
+      "h": 1.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_washing_line",
+     "pos": [
+      68.6,
+      2.0
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_well",
+     "pos": [
+      61.0,
+      10.4
+     ],
+     "collider": {
+      "w": 1.8,
+      "h": 0.9
+     }
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      83.0,
+      2.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      53.0,
+      2.0
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      68.2,
+      10.2
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      83.0,
+      10.8
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      66.4,
+      39.2
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_river_house",
+     "pos": [
+      74.4,
+      39.6
+     ],
+     "collider": {
+      "w": 5.2,
+      "h": 5.0
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.8,
+      "offset": [
+       -0.2,
+       2.15
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_cottage_a",
+     "pos": [
+      81.6,
+      38.8
+     ],
+     "collider": {
+      "w": 5.0,
+      "h": 2.2
+     },
+     "light": {
+      "color": "#ffb062",
+      "radius": 3.5,
+      "intensity": 0.7,
+      "offset": [
+       1.3,
+       2.4
+      ],
+      "nightOnly": true
+     }
+    },
+    {
+     "art": "prop_tree_golden",
+     "pos": [
+      58.6,
+      39.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      51.6,
+      40.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      47.2,
+      33.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_beehive",
+     "pos": [
+      60.6,
+      36.0
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 0.9
+     }
+    },
+    {
+     "art": "prop_well",
+     "pos": [
+      70.4,
+      34.6
+     ],
+     "collider": {
+      "w": 1.8,
+      "h": 0.9
+     }
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      55.4,
+      36.2
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      83.0,
+      34.4
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      78.0,
+      34.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      37.0,
+      42.2
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_reeds",
+     "pos": [
+      36.0,
+      33.6
+     ],
+     "sway": true
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      63.0,
+      42.8
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_pine",
+     "pos": [
+      70.6,
+      43.0
+     ],
+     "collider": {
+      "w": 1.0,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_oak",
+     "pos": [
+      79.0,
+      43.0
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_signpost",
+     "pos": [
+      18.6,
+      20.0
+     ],
+     "collider": {
+      "w": 0.4,
+      "h": 0.3
+     },
+     "text": "WEST FORK. Left: the fen road to Mirefen (mind the lights over the water). Right: the high road to Skyreach (mind everything)."
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      6.0,
+      19.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_cairn",
+     "pos": [
+      9.6,
+      22.0
+     ],
+     "collider": {
+      "w": 1.1,
+      "h": 0.8
+     }
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      22.4,
+      21.0
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_cart",
+     "pos": [
+      4.4,
+      25.6
+     ],
+     "collider": {
+      "w": 2.0,
+      "h": 1.0
+     }
+    },
+    {
+     "art": "prop_hay",
+     "pos": [
+      6.4,
+      26.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.7
+     }
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      38.6,
+      24.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      42.8,
+      19.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_barrel",
+     "pos": [
+      37.2,
+      19.6
+     ],
+     "collider": {
+      "w": 0.8,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_veg_patch",
+     "pos": [
+      70.2,
+      41.6
+     ],
+     "collider": {
+      "w": 3.6,
+      "h": 1.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      63.2,
+      41.0
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_fence",
+     "pos": [
+      77.8,
+      41.6
+     ],
+     "collider": {
+      "w": 3.0,
+      "h": 0.35
+     }
+    },
+    {
+     "art": "prop_washing_line",
+     "pos": [
+      60.4,
+      43.0
+     ],
+     "collider": {
+      "w": 3.4,
+      "h": 0.3
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_golden",
+     "pos": [
+      49.6,
+      36.4
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.8
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_bush_a",
+     "pos": [
+      54.0,
+      42.8
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_stump",
+     "pos": [
+      52.4,
+      35.0
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     }
+    },
+    {
+     "art": "prop_bench",
+     "pos": [
+      69.0,
+      9.0
+     ],
+     "collider": {
+      "w": 1.4,
+      "h": 0.4
+     }
+    },
+    {
+     "art": "prop_bush_b",
+     "pos": [
+      57.6,
+      9.6
+     ],
+     "collider": {
+      "w": 1.2,
+      "h": 0.6
+     },
+     "sway": true
+    },
+    {
+     "art": "prop_tree_birch",
+     "pos": [
+      46.0,
+      2.0
+     ],
+     "collider": {
+      "w": 0.7,
+      "h": 0.4
+     },
+     "sway": true
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      29.0,
+      26.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      37.0,
+      27.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      66.0,
+      18.6
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      83.0,
+      22.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      49.6,
+      24.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      58.4,
+      24.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      7.0,
+      30.0
+     ]
+    },
+    {
+     "art": "decal_flowers",
+     "pos": [
+      12.0,
+      18.0
+     ]
+    },
+    {
+     "art": "prop_spirit_lantern_dark",
+     "pos": [
+      19.3,
+      15.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "hideFlag": "bw_memorial_lit"
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      19.3,
+      15.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     },
+     "requireFlag": "bw_memorial_lit"
+    },
+    {
+     "art": "prop_spirit_lantern_dark",
+     "pos": [
+      23.5,
+      15.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "hideFlag": "bw_memorial_lit"
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      23.5,
+      15.4
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     },
+     "requireFlag": "bw_memorial_lit"
+    },
+    {
+     "art": "prop_spirit_lantern_dark",
+     "pos": [
+      21.4,
+      18.8
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "hideFlag": "bw_memorial_lit"
+    },
+    {
+     "art": "prop_spirit_lantern",
+     "pos": [
+      21.4,
+      18.8
+     ],
+     "collider": {
+      "w": 0.9,
+      "h": 0.5
+     },
+     "light": {
+      "color": "#ffd27a",
+      "radius": 3.5,
+      "intensity": 0.9,
+      "offset": [
+       0,
+       1.6
+      ],
+      "flicker": true
+     },
+     "requireFlag": "bw_memorial_lit"
+    }
+   ],
+   "npcs": [
+    {
+     "npc": "bw_archivist_penhallow",
+     "pos": [
+      51.2,
+      26.0
+     ]
+    },
+    {
+     "npc": "bw_trainer_vell",
+     "pos": [
+      58.2,
+      26.0
+     ]
+    },
+    {
+     "npc": "ysolde",
+     "pos": [
+      26.2,
+      18.4
+     ],
+     "hideFlag": "recruited_ysolde"
+    },
+    {
+     "npc": "liora",
+     "pos": [
+      24.0,
+      24.8
+     ],
+     "hideFlag": "recruited_liora"
+    },
+    {
+     "npc": "bw_mother_wren",
+     "pos": [
+      19.4,
+      24.8
+     ]
+    },
+    {
+     "npc": "bw_trainer_corwin",
+     "pos": [
+      16.4,
+      28.4
+     ]
+    },
+    {
+     "npc": "bw_watchman_pike",
+     "pos": [
+      17.0,
+      23.8
+     ]
+    },
+    {
+     "npc": "bw_trainer_bertram",
+     "pos": [
+      16.6,
+      12.2
+     ]
+    },
+    {
+     "npc": "bw_trainer_tidewell",
+     "pos": [
+      11.4,
+      5.6
+     ]
+    },
+    {
+     "npc": "bw_ferryman_gideon",
+     "pos": [
+      39.8,
+      3.2
+     ]
+    },
+    {
+     "npc": "bw_dockmaster_hobb",
+     "pos": [
+      44.6,
+      17.2
+     ]
+    },
+    {
+     "npc": "bw_dockhand_bo",
+     "pos": [
+      42.4,
+      7.8
+     ]
+    },
+    {
+     "npc": "bw_dockhand_nettie",
+     "pos": [
+      39.6,
+      14.2
+     ]
+    },
+    {
+     "npc": "bw_fishmonger_silas",
+     "pos": [
+      49.0,
+      14.4
+     ],
+     "hideFlag": "bw_silas_resolved"
+    },
+    {
+     "npc": "bw_greengrocer_poppy",
+     "pos": [
+      60.2,
+      14.4
+     ]
+    },
+    {
+     "npc": "bw_merchant_pell",
+     "pos": [
+      48.4,
+      21.2
+     ]
+    },
+    {
+     "npc": "bw_apothecary_ottoline",
+     "pos": [
+      60.8,
+      21.2
+     ]
+    },
+    {
+     "npc": "bw_innkeeper_marigold",
+     "pos": [
+      68.0,
+      26.4
+     ]
+    },
+    {
+     "npc": "bw_weaponsmith_dunstan",
+     "pos": [
+      67.8,
+      17.0
+     ]
+    },
+    {
+     "npc": "bw_armourer_dagny",
+     "pos": [
+      76.2,
+      17.2
+     ]
+    },
+    {
+     "npc": "bw_captain_rowan",
+     "pos": [
+      79.4,
+      27.6
+     ]
+    },
+    {
+     "npc": "bw_watchman_ferris",
+     "pos": [
+      79.0,
+      24.6
+     ]
+    },
+    {
+     "npc": "bw_watchwoman_della",
+     "pos": [
+      79.0,
+      19.4
+     ]
+    },
+    {
+     "npc": "bw_watchwoman_holloway",
+     "pos": [
+      56.6,
+      22.8
+     ]
+    },
+    {
+     "npc": "bw_child_tamsin",
+     "pos": [
+      44.2,
+      33.2
+     ]
+    }
+   ],
+   "encounters": [
+    {
+     "id": "enc_bw_training_dummy",
+     "pos": [
+      11.0,
+      12.2
+     ],
+     "radius": 0.9,
+     "enemies": [
+      {
+       "creature": "cr_training_dummy",
+       "pos": [
+        11.0,
+        12.0
+       ]
+      }
+     ],
+     "doneFlag": "bw_training_dummy_done"
+    }
+   ],
+   "chests": [
+    {
+     "id": "chest_bw_river_cache",
+     "pos": [
+      26.2,
+      19.4
+     ],
+     "lootTable": "lt_bw_river_cache",
+     "requireFlag": "bw_river_cache_found"
+    },
+    {
+     "id": "chest_bw_strongbox",
+     "pos": [
+      45.8,
+      11.6
+     ],
+     "lootTable": "lt_bw_strongbox",
+     "lockCheck": {
+      "skill": "SleightOfHand",
+      "dc": 15
+     }
+    },
+    {
+     "id": "chest_bw_picnic_basket",
+     "pos": [
+      13.4,
+      41.2
+     ],
+     "lootTable": "lt_bw_picnic"
+    }
+   ],
+   "transitions": [
+    {
+     "id": "to_amberfield",
+     "pos": [
+      83.3,
+      22.0
+     ],
+     "size": [
+      1.4,
+      6.0
+     ],
+     "targetMap": "amberfield",
+     "targetSpawn": "from_brightwater",
+     "label": "Amberfield Downs"
+    },
+    {
+     "id": "to_mirefen",
+     "pos": [
+      0.7,
+      12.0
+     ],
+     "size": [
+      1.4,
+      6.0
+     ],
+     "targetMap": "mirefen",
+     "targetSpawn": "from_brightwater",
+     "label": "Mirefen"
+    },
+    {
+     "id": "to_skyreach",
+     "pos": [
+      0.7,
+      34.0
+     ],
+     "size": [
+      1.4,
+      6.0
+     ],
+     "targetMap": "skyreach",
+     "targetSpawn": "from_brightwater",
+     "label": "Skyreach Peaks"
+    }
+   ],
+   "spawns": [
+    {
+     "id": "default",
+     "pos": [
+      80.0,
+      22.0
+     ]
+    },
+    {
+     "id": "from_amberfield",
+     "pos": [
+      80.0,
+      22.0
+     ]
+    },
+    {
+     "id": "from_mirefen",
+     "pos": [
+      3.4,
+      12.0
+     ]
+    },
+    {
+     "id": "from_skyreach",
+     "pos": [
+      3.4,
+      34.0
+     ]
+    },
+    {
+     "id": "bw_ferry_west",
+     "pos": [
+      24.6,
+      9.0
+     ]
+    },
+    {
+     "id": "bw_ferry_east",
+     "pos": [
+      39.6,
+      1.8
+     ]
+    }
+   ],
+   "regions": [
+    {
+     "id": "reg_bw_market",
+     "pos": [
+      54.6,
+      17.2
+     ],
+     "size": [
+      16,
+      10
+     ],
+     "name": "Market Square",
+     "text": "The Market Square of Brightwater. A bronze heron spouts water with an expression of deep disapproval."
+    },
+    {
+     "id": "reg_bw_town_hall",
+     "pos": [
+      54.6,
+      26.6
+     ],
+     "size": [
+      14,
+      3.6
+     ],
+     "name": "Town Hall",
+     "text": "The steps of Brightwater Town Hall: the archive, and the clock that has been four minutes slow for a hundred and twelve years."
+    },
+    {
+     "id": "reg_bw_inn",
+     "pos": [
+      69.6,
+      26.4
+     ],
+     "size": [
+      10,
+      5
+     ],
+     "name": "The Lantern & Heron",
+     "text": "The Lantern & Heron. Somebody inside is singing, slightly flat, about a heron who loved a lantern."
+    },
+    {
+     "id": "reg_bw_smiths",
+     "pos": [
+      72.0,
+      16.8
+     ],
+     "size": [
+      12,
+      5
+     ],
+     "name": "Smiths' Row",
+     "text": "Smiths' Row. Two hammers ring out of time with each other, very deliberately."
+    },
+    {
+     "id": "reg_bw_harbour",
+     "pos": [
+      40.4,
+      8.6
+     ],
+     "size": [
+      12,
+      14
+     ],
+     "name": "The Harbour",
+     "text": "Brightwater harbour: boats, nets, gulls, and a ferry stage with very low expectations."
+    },
+    {
+     "id": "reg_bw_warehouse",
+     "pos": [
+      44.0,
+      8.8
+     ],
+     "size": [
+      5,
+      6
+     ],
+     "requireFlag": "bw_smugglers_on",
+     "check": {
+      "skill": "Perception",
+      "dc": 13
+     },
+     "checkFlag": "bw_oily_footprints",
+     "successText": "Oily footprints lead from the herring crates across the cobbles toward the market. Not fish oil: it smells of lamps.",
+     "failText": "The warehouse yard smells of fish, tar and nothing in particular."
+    },
+    {
+     "id": "reg_bw_chapel",
+     "pos": [
+      22.0,
+      27.4
+     ],
+     "size": [
+      10,
+      7
+     ],
+     "name": "Chapel of Small Lights",
+     "text": "The Chapel of Small Lights. Every ledge, sill and rafter holds a lantern, and every lantern has a name."
+    },
+    {
+     "id": "reg_bw_memorial",
+     "pos": [
+      21.4,
+      15.8
+     ],
+     "size": [
+      9,
+      5
+     ],
+     "name": "Heronguard Memorial",
+     "text": "The Heronguard Memorial. Forty names, two stones, and the empty tomb of Lord-Commander Aubric."
+    },
+    {
+     "id": "reg_bw_river_steps",
+     "pos": [
+      26.6,
+      17.4
+     ],
+     "size": [
+      2.4,
+      4.0
+     ],
+     "check": {
+      "skill": "Perception",
+      "dc": 14
+     },
+     "checkFlag": "bw_river_cache_found",
+     "successText": "Under the bridge's west abutment, a loose stone in the river steps hides a smugglers' cache.",
+     "failText": "The river steps are worn smooth by three hundred years of boots and herons."
+    },
+    {
+     "id": "reg_bw_yard",
+     "pos": [
+      12.4,
+      12.2
+     ],
+     "size": [
+      9,
+      7
+     ],
+     "name": "Training Yard",
+     "text": "Sir Bertram's training yard. A straw knight in a dented helm waits patiently to be hit."
+    },
+    {
+     "id": "reg_bw_warden_post",
+     "pos": [
+      10.4,
+      4.8
+     ],
+     "size": [
+      9,
+      6
+     ],
+     "name": "Warden's Post",
+     "text": "The river warden's post: a tent, a fire, a fishing rack, and a noticeboard nobody reads."
+    },
+    {
+     "id": "reg_bw_watch_house",
+     "pos": [
+      79.4,
+      28.0
+     ],
+     "size": [
+      7,
+      3
+     ],
+     "name": "Watch House",
+     "text": "The Watch House of Brightwater, flying the old blue heron banners of the order it replaced."
+    },
+    {
+     "id": "reg_bw_mill_hill",
+     "pos": [
+      10.4,
+      36.6
+     ],
+     "size": [
+      10,
+      6
+     ],
+     "text": "From the mill hill you can see the whole of Brightwater: the clock tower, the bridge, the lantern-lit chapel, and far to the north-west the white teeth of Skyreach, with a thread of grey smoke above them."
+    },
+    {
+     "id": "reg_bw_ford",
+     "pos": [
+      32.4,
+      38.6
+     ],
+     "size": [
+      8,
+      4
+     ],
+     "text": "The Heron Ford: the old crossing the Heronguard kept. The stepping stones are worn into the shape of a great many feet, and some claws."
+    }
+   ],
+   "ambient": {
+    "timeOfDay": "day",
+    "dayNightCycle": true,
+    "ambientColor": "#fff6e8",
+    "ambientIntensity": 1.0,
+    "fireflies": true,
+    "pollen": true
+   },
+   "restArea": true,
+   "music": "music_town"
+  }
+ ],
+ "npcs": [
+  {
+   "id": "bw_archivist_penhallow",
+   "name": "Archivist Penhallow",
+   "shortName": "Penhallow",
+   "title": "Keeper of the Brightwater Archive",
+   "sprite": "npc_archivist",
+   "portrait": "portrait_archivist",
+   "dialogue": "dlg_bw_penhallow",
+   "bark": "Mind the scrolls. Some of them are older than the river."
+  },
+  {
+   "id": "bw_innkeeper_marigold",
+   "name": "Marigold Tansy",
+   "title": "Innkeeper of the Lantern & Heron",
+   "sprite": "npc_innkeeper",
+   "portrait": "portrait_innkeeper",
+   "dialogue": "dlg_bw_marigold",
+   "shortName": "Marigold",
+   "vendor": [
+    {
+     "item": "bw_food_fishcakes"
+    },
+    {
+     "item": "bw_food_heron_pie"
+    },
+    {
+     "item": "bw_food_lantern_dumplings"
+    },
+    {
+     "item": "bw_drink_elderflower"
+    },
+    {
+     "item": "bw_drink_mountain_spring"
+    },
+    {
+     "item": "bw_drink_moonberry"
+    },
+    {
+     "item": "food_lantern_stew"
+    },
+    {
+     "item": "drink_melon_juice"
+    }
+   ],
+   "innkeeper": true,
+   "bark": "Pies at noon, songs at dusk, and nobody mentions the heron in the pie."
+  },
+  {
+   "id": "bw_merchant_pell",
+   "name": "Pell Underbough",
+   "title": "General Goods",
+   "sprite": "npc_merchant",
+   "portrait": "portrait_merchant",
+   "dialogue": "dlg_bw_pell",
+   "shortName": "Pell",
+   "vendor": [
+    {
+     "item": "rogue_flash_powder"
+    },
+    {
+     "item": "rogue_blinding_powder"
+    },
+    {
+     "item": "shaman_ankh"
+    },
+    {
+     "item": "bandage_wool"
+    },
+    {
+     "item": "bw_bandage_silk"
+    },
+    {
+     "item": "bw_bandage_heavy_silk"
+    },
+    {
+     "item": "elixir_lantern_oil"
+    },
+    {
+     "item": "food_honey_cake"
+    },
+    {
+     "item": "drink_barley_tea"
+    },
+    {
+     "item": "bw_food_fishcakes"
+    },
+    {
+     "item": "bw_drink_elderflower"
+    },
+    {
+     "item": "bw_reedwood_wand"
+    },
+    {
+     "item": "bw_kingfisher_wand"
+    },
+    {
+     "item": "bw_lamplit_wand_21"
+    },
+    {
+     "item": "bw_lamplit_wand_27"
+    },
+    {
+     "item": "bw_lamplit_wand_33"
+    },
+    {
+     "item": "rogue_instant_poison_vial"
+    },
+    {
+     "item": "rogue_crippling_poison_vial"
+    },
+    {
+     "item": "rogue_mind_numbing_poison_vial"
+    },
+    {
+     "item": "rogue_deadly_poison_vial"
+    }
+   ],
+   "bark": "If it fits in a sack, I sell it. If it doesn't, I sell a bigger sack."
+  },
+  {
+   "id": "bw_apothecary_ottoline",
+   "name": "Ottoline Sedge",
+   "title": "Apothecary",
+   "sprite": "npc_quartermaster",
+   "portrait": "portrait_merchant",
+   "dialogue": "dlg_bw_ottoline",
+   "shortName": "Ottoline",
+   "vendor": [
+    {
+     "item": "potion_healing"
+    },
+    {
+     "item": "bw_potion_greater_healing"
+    },
+    {
+     "item": "bw_potion_riverlight_healing"
+    },
+    {
+     "item": "potion_lesser_mana"
+    },
+    {
+     "item": "bw_potion_mana"
+    },
+    {
+     "item": "bw_potion_greater_mana"
+    },
+    {
+     "item": "bw_potion_rejuvenation"
+    },
+    {
+     "item": "bw_elixir_fortitude"
+    },
+    {
+     "item": "bw_elixir_defense"
+    },
+    {
+     "item": "bw_elixir_ogres_strength"
+    },
+    {
+     "item": "bw_elixir_agility"
+    },
+    {
+     "item": "bw_elixir_greater_intellect"
+    },
+    {
+     "item": "bw_elixir_ember_ward"
+    },
+    {
+     "item": "bw_elixir_fen_ward"
+    },
+    {
+     "item": "bw_elixir_frost_ward"
+    },
+    {
+     "item": "elixir_wisdom"
+    },
+    {
+     "item": "bw_bandage_silk"
+    },
+    {
+     "item": "bw_bandage_heavy_silk"
+    },
+    {
+     "item": "bw_bandage_mageweave"
+    }
+   ],
+   "bark": "Potions! Elixirs! Things in jars that are definitely meant to be in jars!"
+  },
+  {
+   "id": "bw_weaponsmith_dunstan",
+   "name": "Dunstan Hollowell",
+   "title": "Weaponsmith",
+   "sprite": "npc_smith",
+   "portrait": "portrait_smith",
+   "dialogue": "dlg_bw_dunstan",
+   "shortName": "Dunstan",
+   "vendor": [
+    {
+     "item": "bw_riverforged_dirk"
+    },
+    {
+     "item": "bw_riverforged_knuckles"
+    },
+    {
+     "item": "bw_riverforged_hatchet"
+    },
+    {
+     "item": "bw_riverforged_mace"
+    },
+    {
+     "item": "bw_riverforged_sabre"
+    },
+    {
+     "item": "bw_riverforged_halberd"
+    },
+    {
+     "item": "bw_riverforged_quarterstaff"
+    },
+    {
+     "item": "bw_riverforged_greataxe"
+    },
+    {
+     "item": "bw_riverforged_maul"
+    },
+    {
+     "item": "bw_riverforged_greatsword"
+    },
+    {
+     "item": "bw_riverforged_longbow"
+    },
+    {
+     "item": "bw_riverforged_crossbow"
+    },
+    {
+     "item": "bw_riverforged_blunderbuss"
+    },
+    {
+     "item": "bw_riverforged_throwing_knives"
+    },
+    {
+     "item": "bw_riverforged_heater_shield"
+    },
+    {
+     "item": "bw_brightsteel_stiletto"
+    },
+    {
+     "item": "bw_brightsteel_cestus"
+    },
+    {
+     "item": "bw_brightsteel_bearded_axe"
+    },
+    {
+     "item": "bw_brightsteel_morning_star"
+    },
+    {
+     "item": "bw_brightsteel_arming_sword"
+    },
+    {
+     "item": "bw_brightsteel_glaive"
+    },
+    {
+     "item": "bw_brightsteel_ferrule_staff"
+    },
+    {
+     "item": "bw_brightsteel_broadaxe"
+    },
+    {
+     "item": "bw_brightsteel_war_hammer"
+    },
+    {
+     "item": "bw_brightsteel_zweihander"
+    },
+    {
+     "item": "bw_brightsteel_recurve"
+    },
+    {
+     "item": "bw_brightsteel_arbalest"
+    },
+    {
+     "item": "bw_brightsteel_long_rifle"
+    },
+    {
+     "item": "bw_brightsteel_throwing_axes"
+    },
+    {
+     "item": "bw_brightsteel_kite_shield"
+    },
+    {
+     "item": "bw_hollowell_sabre_21"
+    },
+    {
+     "item": "bw_chapel_censer_mace_21"
+    },
+    {
+     "item": "bw_eel_skinner_21"
+    },
+    {
+     "item": "bw_hollowell_main_gauche_21"
+    },
+    {
+     "item": "bw_lamplighters_pole_21"
+    },
+    {
+     "item": "bw_bargebreaker_21"
+    },
+    {
+     "item": "bw_ford_wardens_spear_21"
+    },
+    {
+     "item": "bw_kingfisher_longbow_21"
+    },
+    {
+     "item": "bw_floodgate_shield_21"
+    },
+    {
+     "item": "bw_hollowell_sabre_27"
+    },
+    {
+     "item": "bw_chapel_censer_mace_27"
+    },
+    {
+     "item": "bw_eel_skinner_27"
+    },
+    {
+     "item": "bw_floodgate_knuckles_27"
+    },
+    {
+     "item": "bw_lamplighters_pole_27"
+    },
+    {
+     "item": "bw_bargebreaker_27"
+    },
+    {
+     "item": "bw_ford_wardens_spear_27"
+    },
+    {
+     "item": "bw_kingfisher_longbow_27"
+    },
+    {
+     "item": "bw_floodgate_shield_27"
+    },
+    {
+     "item": "bw_hollowell_sabre_33"
+    },
+    {
+     "item": "bw_chapel_censer_mace_33"
+    },
+    {
+     "item": "bw_eel_skinner_33"
+    },
+    {
+     "item": "bw_left_bank_sabre_33"
+    },
+    {
+     "item": "bw_lamplighters_pole_33"
+    },
+    {
+     "item": "bw_bargebreaker_33"
+    },
+    {
+     "item": "bw_ford_wardens_spear_33"
+    },
+    {
+     "item": "bw_kingfisher_longbow_33"
+    },
+    {
+     "item": "bw_floodgate_shield_33"
+    }
+   ],
+   "bark": "Hollowell & Hollowell. The first Hollowell is me."
+  },
+  {
+   "id": "bw_armourer_dagny",
+   "name": "Dagny Hollowell",
+   "title": "Armourer",
+   "sprite": "npc_smith",
+   "portrait": "portrait_smith",
+   "dialogue": "dlg_bw_dagny",
+   "shortName": "Dagny",
+   "vendor": [
+    {
+     "item": "bw_river_linen_robe"
+    },
+    {
+     "item": "bw_river_linen_trousers"
+    },
+    {
+     "item": "bw_river_linen_hood"
+    },
+    {
+     "item": "bw_river_linen_mantle"
+    },
+    {
+     "item": "bw_river_linen_gloves"
+    },
+    {
+     "item": "bw_river_linen_shoes"
+    },
+    {
+     "item": "bw_river_linen_sash"
+    },
+    {
+     "item": "bw_river_linen_cuffs"
+    },
+    {
+     "item": "bw_otterhide_jerkin"
+    },
+    {
+     "item": "bw_otterhide_breeches"
+    },
+    {
+     "item": "bw_otterhide_cap"
+    },
+    {
+     "item": "bw_otterhide_shoulderpads"
+    },
+    {
+     "item": "bw_otterhide_gloves"
+    },
+    {
+     "item": "bw_otterhide_boots"
+    },
+    {
+     "item": "bw_otterhide_belt"
+    },
+    {
+     "item": "bw_otterhide_bracers"
+    },
+    {
+     "item": "bw_ringlink_hauberk"
+    },
+    {
+     "item": "bw_ringlink_leggings"
+    },
+    {
+     "item": "bw_ringlink_coif"
+    },
+    {
+     "item": "bw_ringlink_pauldrons"
+    },
+    {
+     "item": "bw_ringlink_gauntlets"
+    },
+    {
+     "item": "bw_ringlink_sabatons"
+    },
+    {
+     "item": "bw_ringlink_girdle"
+    },
+    {
+     "item": "bw_ringlink_bracers"
+    },
+    {
+     "item": "bw_river_linen_cloak"
+    },
+    {
+     "item": "bw_brightweave_robe"
+    },
+    {
+     "item": "bw_brightweave_trousers"
+    },
+    {
+     "item": "bw_brightweave_hood"
+    },
+    {
+     "item": "bw_brightweave_mantle"
+    },
+    {
+     "item": "bw_brightweave_gloves"
+    },
+    {
+     "item": "bw_brightweave_shoes"
+    },
+    {
+     "item": "bw_brightweave_sash"
+    },
+    {
+     "item": "bw_brightweave_cuffs"
+    },
+    {
+     "item": "bw_eelskin_jerkin"
+    },
+    {
+     "item": "bw_eelskin_breeches"
+    },
+    {
+     "item": "bw_eelskin_cap"
+    },
+    {
+     "item": "bw_eelskin_shoulderpads"
+    },
+    {
+     "item": "bw_eelskin_gloves"
+    },
+    {
+     "item": "bw_eelskin_boots"
+    },
+    {
+     "item": "bw_eelskin_belt"
+    },
+    {
+     "item": "bw_eelskin_bracers"
+    },
+    {
+     "item": "bw_brightwater_chain_hauberk"
+    },
+    {
+     "item": "bw_brightwater_chain_leggings"
+    },
+    {
+     "item": "bw_brightwater_chain_coif"
+    },
+    {
+     "item": "bw_brightwater_chain_pauldrons"
+    },
+    {
+     "item": "bw_brightwater_chain_gauntlets"
+    },
+    {
+     "item": "bw_brightwater_chain_sabatons"
+    },
+    {
+     "item": "bw_brightwater_chain_girdle"
+    },
+    {
+     "item": "bw_brightwater_chain_bracers"
+    },
+    {
+     "item": "bw_brightweave_cloak"
+    },
+    {
+     "item": "bw_archivist_robe_21"
+    },
+    {
+     "item": "bw_archivist_gloves_21"
+    },
+    {
+     "item": "bw_archivist_shoes_21"
+    },
+    {
+     "item": "bw_riverwarden_jerkin_21"
+    },
+    {
+     "item": "bw_riverwarden_gloves_21"
+    },
+    {
+     "item": "bw_riverwarden_boots_21"
+    },
+    {
+     "item": "bw_tidecaller_jerkin_21"
+    },
+    {
+     "item": "bw_watchman_hauberk_21"
+    },
+    {
+     "item": "bw_watchman_gauntlets_21"
+    },
+    {
+     "item": "bw_watchman_sabatons_21"
+    },
+    {
+     "item": "bw_chapel_knight_hauberk_21"
+    },
+    {
+     "item": "bw_heron_grey_cloak_21"
+    },
+    {
+     "item": "bw_archivist_trousers_27"
+    },
+    {
+     "item": "bw_archivist_hood_27"
+    },
+    {
+     "item": "bw_archivist_mantle_27"
+    },
+    {
+     "item": "bw_riverwarden_breeches_27"
+    },
+    {
+     "item": "bw_riverwarden_cap_27"
+    },
+    {
+     "item": "bw_riverwarden_shoulderpads_27"
+    },
+    {
+     "item": "bw_tidecaller_breeches_27"
+    },
+    {
+     "item": "bw_watchman_leggings_27"
+    },
+    {
+     "item": "bw_watchman_coif_27"
+    },
+    {
+     "item": "bw_watchman_pauldrons_27"
+    },
+    {
+     "item": "bw_chapel_knight_leggings_27"
+    },
+    {
+     "item": "bw_heron_grey_cloak_27"
+    },
+    {
+     "item": "bw_archivist_robe_33"
+    },
+    {
+     "item": "bw_archivist_trousers_33"
+    },
+    {
+     "item": "bw_archivist_hood_33"
+    },
+    {
+     "item": "bw_riverwarden_jerkin_33"
+    },
+    {
+     "item": "bw_riverwarden_breeches_33"
+    },
+    {
+     "item": "bw_riverwarden_cap_33"
+    },
+    {
+     "item": "bw_tidecaller_jerkin_33"
+    },
+    {
+     "item": "bw_watchman_hauberk_33"
+    },
+    {
+     "item": "bw_watchman_leggings_33"
+    },
+    {
+     "item": "bw_watchman_coif_33"
+    },
+    {
+     "item": "bw_chapel_knight_hauberk_33"
+    },
+    {
+     "item": "bw_heron_grey_cloak_33"
+    }
+   ],
+   "bark": "Hollowell & Hollowell. The first Hollowell is ME. He's lying."
+  },
+  {
+   "id": "bw_trainer_bertram",
+   "name": "Sir Bertram Oakes",
+   "title": "Warrior & Paladin Trainer",
+   "sprite": "npc_trainer_warrior",
+   "portrait": "portrait_trainer",
+   "dialogue": "dlg_bw_bertram",
+   "shortName": "Bertram",
+   "trains": [
+    "Warrior",
+    "Paladin"
+   ],
+   "bark": "Shield up. No, up. Higher. That's a tray, not a shield."
+  },
+  {
+   "id": "bw_trainer_tidewell",
+   "name": "Warden Mags Tidewell",
+   "title": "Hunter & Shaman Trainer",
+   "sprite": "npc_trainer_hunter",
+   "portrait": "portrait_trainer",
+   "dialogue": "dlg_bw_tidewell",
+   "shortName": "Tidewell",
+   "trains": [
+    "Hunter",
+    "Shaman"
+   ],
+   "bark": "The river talks. Most folk just don't listen past the splashing."
+  },
+  {
+   "id": "bw_trainer_vell",
+   "name": "Magister Orrin Vell",
+   "title": "Mage & Warlock Trainer",
+   "sprite": "npc_trainer_mage",
+   "portrait": "portrait_trainer",
+   "dialogue": "dlg_bw_vell",
+   "shortName": "Vell",
+   "trains": [
+    "Mage",
+    "Warlock"
+   ],
+   "bark": "You are four minutes late. So is the clock. We forgive each other."
+  },
+  {
+   "id": "bw_trainer_corwin",
+   "name": "Corwin Ashby",
+   "title": "Priest & Rogue Trainer",
+   "sprite": "npc_trainer_priest",
+   "portrait": "portrait_trainer",
+   "dialogue": "dlg_bw_corwin",
+   "shortName": "Corwin",
+   "trains": [
+    "Priest",
+    "Rogue"
+   ],
+   "bark": "Bless you. Also, your purse strings are loose. Tie them; this is a market town."
+  },
+  {
+   "id": "bw_mother_wren",
+   "name": "Mother Wren",
+   "title": "Keeper of the Chapel of Small Lights",
+   "sprite": "npc_villager_a",
+   "portrait": "portrait_villager_a",
+   "dialogue": "dlg_bw_wren",
+   "shortName": "Wren",
+   "bark": "Sit, dear. The kettle's on. The kettle is always on."
+  },
+  {
+   "id": "bw_ferryman_gideon",
+   "name": "Old Gideon",
+   "title": "Ferryman",
+   "sprite": "npc_ferryman",
+   "portrait": "portrait_villager_b",
+   "dialogue": "dlg_bw_gideon",
+   "shortName": "Gideon",
+   "bark": "Ferry leaves when it leaves. Mind the gap. Mind the heron. Mind me."
+  },
+  {
+   "id": "bw_captain_rowan",
+   "name": "Captain Hale Rowan",
+   "title": "Captain of the Brightwater Watch",
+   "sprite": "npc_town_guard",
+   "portrait": "portrait_guard",
+   "dialogue": "dlg_bw_rowan",
+   "shortName": "Rowan",
+   "bark": "Brightwater Watch. Keep your blades sheathed and your herons on a lead."
+  },
+  {
+   "id": "bw_dockmaster_hobb",
+   "name": "Dockmaster Hobb",
+   "title": "Harbour Master",
+   "sprite": "npc_villager_b",
+   "portrait": "portrait_villager_b",
+   "dialogue": "dlg_bw_hobb",
+   "shortName": "Hobb",
+   "bark": "If it floats, I've taxed it. If it sinks, I've taxed it twice."
+  },
+  {
+   "id": "bw_dockhand_bo",
+   "name": "Bo Tiller",
+   "title": "Dockhand",
+   "sprite": "npc_dockhand",
+   "portrait": "portrait_villager_b",
+   "dialogue": "dlg_bw_bo",
+   "shortName": "Bo",
+   "bark": "Herring don't slosh. I'm just saying."
+  },
+  {
+   "id": "bw_dockhand_nettie",
+   "name": "Nettie Sparrow",
+   "title": "Dockhand",
+   "sprite": "npc_dockhand",
+   "portrait": "portrait_villager_a",
+   "dialogue": "dlg_bw_nettie",
+   "shortName": "Nettie",
+   "bark": "Ropes coiled, gulls insulted, all's well on the river."
+  },
+  {
+   "id": "bw_fishmonger_silas",
+   "name": "Silas Crane",
+   "title": "Fishmonger",
+   "sprite": "npc_villager_b",
+   "portrait": "portrait_villager_b",
+   "dialogue": "dlg_bw_silas",
+   "shortName": "Silas",
+   "vendor": [
+    {
+     "item": "bw_minnows_bait"
+    },
+    {
+     "item": "bw_smoked_eel"
+    },
+    {
+     "item": "food_rice_ball"
+    }
+   ],
+   "bark": "Fresh fish! Lovely fish! Nothing else in these crates but fish!"
+  },
+  {
+   "id": "bw_greengrocer_poppy",
+   "name": "Poppy Marsh",
+   "title": "Greengrocer",
+   "sprite": "npc_villager_a",
+   "portrait": "portrait_villager_a",
+   "dialogue": "dlg_bw_poppy",
+   "shortName": "Poppy",
+   "vendor": [
+    {
+     "item": "food_honey_cake"
+    },
+    {
+     "item": "drink_spring_water"
+    },
+    {
+     "item": "drink_barley_tea"
+    },
+    {
+     "item": "bw_food_fishcakes"
+    }
+   ],
+   "bark": "Apples! Pears! Turnips shaped like the Captain!"
+  },
+  {
+   "id": "bw_child_tamsin",
+   "name": "Tamsin Reed",
+   "title": "",
+   "sprite": "npc_child",
+   "portrait": "portrait_child",
+   "dialogue": "dlg_bw_tamsin",
+   "shortName": "Tamsin",
+   "bark": "ADMIRAL! Admiral Puddles! ...Have you seen a heron?"
+  },
+  {
+   "id": "bw_watchman_ferris",
+   "name": "Watchman Ferris",
+   "title": "Brightwater Watch",
+   "sprite": "npc_town_guard",
+   "portrait": "portrait_guard",
+   "dialogue": "dlg_bw_watch",
+   "shortName": "Ferris",
+   "bark": "Welcome to Brightwater. Mind the herons."
+  },
+  {
+   "id": "bw_watchwoman_della",
+   "name": "Watchwoman Della",
+   "title": "Brightwater Watch",
+   "sprite": "npc_town_guard",
+   "portrait": "portrait_guard",
+   "dialogue": "dlg_bw_watch",
+   "shortName": "Della",
+   "bark": "East gate's open, west road's long, and the pies are at the inn."
+  },
+  {
+   "id": "bw_watchman_pike",
+   "name": "Watchman Pike",
+   "title": "Brightwater Watch",
+   "sprite": "npc_town_guard",
+   "portrait": "portrait_guard",
+   "dialogue": "dlg_bw_watch",
+   "shortName": "Pike",
+   "bark": "Fen road left, high road right. Both of them uphill, somehow."
+  },
+  {
+   "id": "bw_watchwoman_holloway",
+   "name": "Watchwoman Holloway",
+   "title": "Brightwater Watch",
+   "sprite": "npc_town_guard",
+   "portrait": "portrait_guard",
+   "dialogue": "dlg_bw_watch",
+   "shortName": "Holloway",
+   "bark": "No running near the fountain. Yes, that includes herons."
+  }
+ ],
+ "dialogues": [
+  {
+   "id": "dlg_bw_penhallow",
+   "start": "p_hub",
+   "nodes": [
+    {"id": "p_r1_seed", "speaker": "bw_archivist_penhallow", "text": "*He is writing before you finish.* A seed. Of course it was a seed. Ash doesn't rot, it carries. *He underlines something three times.* Then the Ashwyrm doesn't only burn things. She plants them. I shall need a bigger ledger.", "next": "p_hub2"},
+    {"id": "p_r2_wyrm", "speaker": "bw_archivist_penhallow", "text": "*He sets the pen down very carefully, as if it might go off.* Three hundred years of ash in these shelves. *A wobbly smile.* I have never in my life been so glad to run out of a subject. I'll write it down tonight. In ink. The good ink.", "next": "p_hub2"},
+    {"id": "p_r2_standard", "speaker": "bw_archivist_penhallow", "text": "It hangs over the river steps now, by the memorial. Sir Bertram stands under it every evening and pretends he's only checking the stitching. *He clears his throat.* I've started a new page for the Heronguard. It isn't the last page any more.", "next": "p_hub2"},
+    {
+     "id": "p_hub",
+     "speaker": "bw_archivist_penhallow",
+     "text": "*A stooped man peers at you over a tower of scrolls.* Visitors! Real ones, with mud on their boots. What brings you to the archive?",
+     "choices": [
+      {
+       "text": "Elder Maru sent me. The Heart Lantern showed ash, drifting down from the north.",
+       "next": "p_ember",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_ember_road",
+         "value": "archivist"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_ember_road"
+        }
+       ]
+      },
+      {
+       "text": "I've been to Mirefen. The drowned lanterns are dark no longer.",
+       "next": "p_fen_done",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_drowned_lanterns",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_drowned_lanterns"
+        }
+       ]
+      },
+      {
+       "text": "I've been to Skyreach. Someone up there serves the Ashwyrm.",
+       "next": "p_peaks_done",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_ash_on_the_wind",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_ash_on_the_wind"
+        }
+       ]
+      },
+      {
+       "text": "What do your records say about the fens?",
+       "next": "p_fen",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_ember_road_done"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "mq2_drowned_lanterns"
+        },
+        {
+         "type": "Level",
+         "amount": 18
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "mq2_drowned_lanterns"
+        }
+       ]
+      },
+      {
+       "text": "Where does the ash come from?",
+       "next": "p_peaks",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_drowned_lanterns_done"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "mq2_ash_on_the_wind"
+        },
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "mq2_ash_on_the_wind"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about the archive.",
+       "next": "p_archive"
+      },
+      {
+       "text": "Any news in town?",
+       "next": "p_news"
+      },
+      {
+       "text": "What do your records say about the Heronguard?",
+       "next": "p_heronguard"
+      },
+      {
+       "text": "What do you know about the Ashwyrm?",
+       "next": "p_wyrm",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_ember_road_done"
+        }
+       ]
+      },
+      {
+       "text": "Do your records mention any hidden places?",
+       "next": "p_secrets",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 17
+        }
+       ]
+      },
+      {"text": "Hinoki, in the Hollow Heart, says the Hollow was a seed carried down on the ash.", "next": "p_r1_seed", "conditions": [{"type": "Flag", "key": "r1_seed_lore_known"}], "once": true},
+      {"text": "Vyrmathra is dead. The Ashwyrm won't wake again.", "next": "p_r2_wyrm", "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}], "once": true},
+      {"text": "Aubric's standard came home from the mountain.", "next": "p_r2_standard", "conditions": [{"type": "Flag", "key": "r2_standard_home"}], "once": true},
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_ember",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Ash from the north... *He pulls down a cracked map.* Then the old songs were right. Something drowses beneath Skyreach, and it breathes in its sleep. Rest here a while. When you are ready, I will have more for you.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_fen",
+     "speaker": "bw_archivist_penhallow",
+     "text": "The fens of Mirefen were lantern country once. Then the water rose, and the lanterns went under, one by one. Go and see what keeps them down.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_fen_done",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Then the fens can breathe again. And the coven's trail leads underground, to a heart that should not beat. Be careful.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_peaks",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Every flake of that ash fell from Skyreach. Climb, and find out who tends the fire.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_peaks_done",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Highlord Varkas and his Dragonsworn... and above them, the Roost. So she wakes. *He rolls up the map with shaking hands.* Go carefully.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_hub2",
+     "speaker": "bw_archivist_penhallow",
+     "text": "*He licks a finger and turns a page that does not need turning.* Something else? Ask away. Questions are the only thing in this archive that never gather dust.",
+     "choices": [
+      {
+       "text": "Elder Maru sent me. The Heart Lantern showed ash, drifting down from the north.",
+       "next": "p_ember",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_ember_road",
+         "value": "archivist"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_ember_road"
+        }
+       ]
+      },
+      {
+       "text": "I've been to Mirefen. The drowned lanterns are dark no longer.",
+       "next": "p_fen_done",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_drowned_lanterns",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_drowned_lanterns"
+        }
+       ]
+      },
+      {
+       "text": "I've been to Skyreach. Someone up there serves the Ashwyrm.",
+       "next": "p_peaks_done",
+       "conditions": [
+        {
+         "type": "QuestState",
+         "key": "mq2_ash_on_the_wind",
+         "value": "report"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "CompleteQuest",
+         "key": "mq2_ash_on_the_wind"
+        }
+       ]
+      },
+      {
+       "text": "What do your records say about the fens?",
+       "next": "p_fen",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_ember_road_done"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "mq2_drowned_lanterns"
+        },
+        {
+         "type": "Level",
+         "amount": 18
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "mq2_drowned_lanterns"
+        }
+       ]
+      },
+      {
+       "text": "Where does the ash come from?",
+       "next": "p_peaks",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_drowned_lanterns_done"
+        },
+        {
+         "type": "QuestNotStarted",
+         "key": "mq2_ash_on_the_wind"
+        },
+        {
+         "type": "Level",
+         "amount": 24
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "StartQuest",
+         "key": "mq2_ash_on_the_wind"
+        }
+       ]
+      },
+      {
+       "text": "Tell me about the archive.",
+       "next": "p_archive"
+      },
+      {
+       "text": "Any news in town?",
+       "next": "p_news"
+      },
+      {
+       "text": "What do your records say about the Heronguard?",
+       "next": "p_heronguard"
+      },
+      {
+       "text": "What do you know about the Ashwyrm?",
+       "next": "p_wyrm",
+       "conditions": [
+        {
+         "type": "Flag",
+         "key": "mq2_ember_road_done"
+        }
+       ]
+      },
+      {
+       "text": "Do your records mention any hidden places?",
+       "next": "p_secrets",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 17
+        }
+       ]
+      },
+      {"text": "Hinoki, in the Hollow Heart, says the Hollow was a seed carried down on the ash.", "next": "p_r1_seed", "conditions": [{"type": "Flag", "key": "r1_seed_lore_known"}], "once": true},
+      {"text": "Vyrmathra is dead. The Ashwyrm won't wake again.", "next": "p_r2_wyrm", "conditions": [{"type": "Flag", "key": "r2_vyrmathra_defeated"}], "once": true},
+      {"text": "Aubric's standard came home from the mountain.", "next": "p_r2_standard", "conditions": [{"type": "Flag", "key": "r2_standard_home"}], "once": true},
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_archive",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Four hundred years of Brightwater, dear visitor: every tax roll, flood mark, wedding list, love letter and laundry list the river ever carried to this door. *He pats a teetering stack fondly.* And the Heronguard chronicles, all of them. Including Hallam's forty pages on the correct folding of a heron's saddle-blanket, which I consider the finest prose in the language.",
+     "choices": [
+      {
+       "text": "Why keep laundry lists?",
+       "next": "p_laundry"
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_laundry",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Because a laundry list tells you who was alive, and what they wore, and that somebody cared enough to wash it. *He peers over his spectacles.* Kings are in the chronicles. People are in the laundry.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_news",
+     "speaker": "bw_archivist_penhallow",
+     "text": "News? *He brightens.* Three items, in order of importance. First: young Bo on the docks distrusts the herring, and when a dockhand distrusts fish, something is badly wrong. Second: not one barge up from Mirefen in six weeks. Third, and least: Tamsin Reed's heron has absconded again, and taken a herring with him.",
+     "conditions": [
+      {
+       "type": "NotFlag",
+       "key": "bw_silas_resolved"
+      }
+     ],
+     "fallback": "p_news2",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_news2",
+     "speaker": "bw_archivist_penhallow",
+     "text": "News? The Watch has given me Silas Crane's ledgers to catalogue. Dreadful. Fascinating, but dreadful: stolen Amberfield oil, shipped up the high road to men who pay in Skyreach silver. *He shudders.* And his handwriting. A smuggler should at least have the decency to be legible.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_heronguard",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Founded three hundred years ago by Dame Ardith Reed, who tamed the first river-heron with a bucket of minnows and, according to Hallam, sheer stubbornness. *He turns pages.* They kept the fords and the post. Twelve years ago Lord-Commander Aubric rode forty knights up the high road after shepherds reported fire in the clouds. Eleven came home. The council called the retreat cowardice and disbanded the order. *He closes the book.* I took the minutes. I have never forgiven myself for the spelling.",
+     "choices": [
+      {
+       "text": "Who was Lord-Commander Aubric?",
+       "next": "p_aubric"
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_aubric",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Brave, handsome, beloved and, I am sorry to say, a poor listener. The chronicle records that he ordered a charge uphill, into the fire of drakes, and that his standard-bearer, Ysolde, sounded the retreat instead. *Softly.* The chronicle does not record that I have read that page a great many times, and that each time I am glad of the horn.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_wyrm",
+     "speaker": "bw_archivist_penhallow",
+     "text": "*He goes to a locked case and takes out a book bound in something grey.* Vyrmathra. The Ash Queen. The old songs say she sleeps beneath Skyreach and that when she turns in her sleep, ash falls on the river. The Hollow that dimmed your valley's lanterns was a seed carried on that ash. *He closes the book with care.* She is waking. The Dragonsworn are her hands, and Highlord Varkas is the hand that holds the knife. Everything I read says the same thing: put out the lanterns first, and the wyrm wakes in the dark.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_secrets",
+     "speaker": "bw_archivist_penhallow",
+     "text": "Hidden places? *He looks delighted, then guilty, then delighted again.* The archive is full of them. Old surveys, smugglers' charts, a priest's diary with a very indiscreet map. Which interests you?",
+     "choices": [
+      {
+       "text": "The barrow of King Aldwin in Amberfield.",
+       "next": "p_barrow",
+       "conditions": [
+        {
+         "type": "NotFlag",
+         "key": "found_barrow"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "found_barrow"
+        }
+       ]
+      },
+      {
+       "text": "Drowned places in Mirefen.",
+       "next": "p_vault",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 23
+        },
+        {
+         "type": "NotFlag",
+         "key": "found_drowned_vault"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "found_drowned_vault"
+        }
+       ]
+      },
+      {
+       "text": "Cold places under Skyreach.",
+       "next": "p_sanctum",
+       "conditions": [
+        {
+         "type": "Level",
+         "amount": 29
+        },
+        {
+         "type": "NotFlag",
+         "key": "found_frozen_sanctum"
+        }
+       ],
+       "outcomes": [
+        {
+         "type": "SetFlag",
+         "key": "found_frozen_sanctum"
+        }
+       ]
+      },
+      {
+       "text": "Anything else hidden that I should be ready for?",
+       "next": "p_later",
+       "conditions": [
+        {
+         "type": "NotFlag",
+         "key": "found_frozen_sanctum"
+        }
+       ]
+      },
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_barrow",
+     "speaker": "bw_archivist_penhallow",
+     "text": "King Aldwin, who held the downs before there were downs to hold. A surveyor of the year 212 notes a door of dressed stone in a grassy mound on the northern rim of Amberfield, facing the dawn, about halfway along. *He taps the page.* He also notes that the door was 'warm to the touch and disinclined to be knocked upon'. Take a lantern. And a friend.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_vault",
+     "speaker": "bw_archivist_penhallow",
+     "text": "A drowned vault. The fen-folk sing of steps that go down beneath the water in the far west of Mirefen, into a hall the sea once kept. The diary says 'follow the stair the water forgot'. *He shivers.* Something keeps that place now. Something with a tide in its voice.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_sanctum",
+     "speaker": "bw_archivist_penhallow",
+     "text": "The Frozen Sanctum. The Heronguard's last report from the mountain mentions a cave under the glacier's lip, high in the north-east of the peaks, where the snow 'burns blue at night'. Nobody who went in wrote anything after. *He closes the book very gently.* Please be the first.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    },
+    {
+     "id": "p_later",
+     "speaker": "bw_archivist_penhallow",
+     "text": "There are places in these books I will not send you yet. A drowned vault under Mirefen; a cold sanctum in the ice of Skyreach. Come back when the road has made you stronger, and I will open the right drawers.",
+     "choices": [
+      {
+       "text": "(Ask about something else.)",
+       "next": "p_hub2"
+      },
+      {
+       "text": "Goodbye."
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "lootTables": [
+  {
+   "id": "lt_bw_river_cache",
+   "goldMin": 800,
+   "goldMax": 1600,
+   "entries": [
+    {
+     "random": true,
+     "quality": "Uncommon",
+     "itemLevelOffset": 2
+    },
+    {
+     "item": "bw_potion_greater_healing",
+     "chance": 60,
+     "min": 1,
+     "max": 2
+    },
+    {
+     "random": true,
+     "quality": "Rare",
+     "chance": 15
+    }
+   ]
+  },
+  {
+   "id": "lt_bw_strongbox",
+   "goldMin": 1500,
+   "goldMax": 2800,
+   "entries": [
+    {
+     "random": true,
+     "quality": "Uncommon",
+     "itemLevelOffset": 1
+    },
+    {
+     "item": "bw_elixir_ember_ward",
+     "chance": 50
+    },
+    {
+     "random": true,
+     "quality": "Rare",
+     "chance": 20
+    }
+   ]
+  },
+  {
+   "id": "lt_bw_picnic",
+   "goldMin": 40,
+   "goldMax": 120,
+   "entries": [
+    {
+     "item": "bw_food_fishcakes",
+     "min": 2,
+     "max": 3
+    },
+    {
+     "item": "bw_drink_elderflower",
+     "min": 1,
+     "max": 2
+    },
+    {
+     "item": "food_honey_cake",
+     "chance": 50
+    }
+   ]
+  }
+ ]
+}

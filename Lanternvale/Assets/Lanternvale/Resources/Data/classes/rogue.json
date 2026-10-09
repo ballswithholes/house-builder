@@ -1,0 +1,2276 @@
+{
+  "_note": "Rogue class data (WoW Classic 1.12). Generated; generic specials RankDurations, SweepingHits, WeaponTypeTalent, OffHandDamage and PhysicalRangedShot are documented in warrior.json. Lanternvale change: rogues dual wield from level 1 (dualWieldLevel 1; Dual Wield is a starting passive, not sold by the trainer, so it never gates: EquipmentRules.ProficiencyPassive skips starting passives and old saves learn it on load); the starter off-hand dagger is a real Off Hand weapon (equip OffHand). Lanternvale change (finishers, turn-based pacing): combo points belong to the rogue for the whole battle (they carry over when the target dies or the rogue switches target; cleared when spent, by Vanish and at battle end), and Eviscerate adds 7% attack power per combo point (apCoefPerCombo 0.07, the WotLK value; 1.12 had none) with rank 2 at level 6 instead of 8, because only about one finisher lands per fight while builders and white hits scale with weapon and AP. Ranks 1 and 8 keep WoW's base numbers.",
+  "classes": [
+    {
+      "id": "Rogue",
+      "name": "Rogue",
+      "description": "Cunning and agile, rogues strike from the shadows with daggers and poison, building combo points with quick strikes and spending them on devastating finishing moves.",
+      "roles": ["Melee DPS"],
+      "color": "#FFF569",
+      "icon": "crest_rogue",
+      "resource": "Energy",
+      "gcd": 1.0,
+      "armorTypes": ["Cloth", "Leather"],
+      "armorUpgrade": {"level": 40, "type": "None"},
+      "weaponTypes": ["Dagger", "FistWeapon", "OneHandMace", "OneHandSword", "Bow", "Crossbow", "Gun", "Thrown"],
+      "dualWieldLevel": 1,
+      "canParry": true,
+      "canBlock": false,
+      "baseStatsLevel1": {"strength": 21, "agility": 23, "stamina": 21, "intellect": 20, "spirit": 21},
+      "baseStatsLevel60": {"strength": 80, "agility": 130, "stamina": 75, "intellect": 35, "spirit": 52},
+      "baseHealthLevel1": 25,
+      "baseHealthLevel60": 1523,
+      "baseManaLevel1": 0,
+      "baseManaLevel60": 0,
+      "meleeAp": "StrengthPlusAgility",
+      "agilityPerMeleeCritAt60": 29,
+      "agilityPerDodgeAt60": 14.5,
+      "intellectPerSpellCritAt60": 60,
+      "baseMeleeCrit": 5,
+      "baseSpellCrit": 0,
+      "baseDodge": 5,
+      "manaRegenBase": 0,
+      "manaRegenPerSpirit": 0,
+      "basicAttack": "attack",
+      "startingAbilities": [
+        "attack",
+        "rogue_sinister_strike",
+        "rogue_eviscerate",
+        "rogue_stealth",
+        "rogue_throw",
+        "rogue_shoot",
+        "rogue_shadowed_presence",
+        "rogue_dual_wield"
+      ],
+      "startingItems": [
+        "rogue_starter_dagger",
+        "rogue_starter_dagger_offhand",
+        "rogue_starter_vest",
+        "rogue_starter_pants",
+        "rogue_starter_shoes",
+        "rogue_starter_throwing_knives"
+      ],
+      "startingStance": "",
+      "talentTrees": ["tree_rogue_assassination", "tree_rogue_combat", "tree_rogue_subtlety"],
+      "defaultBuild": [
+        "rogue_combat_improved_sinister_strike",
+        "rogue_combat_improved_sinister_strike",
+        "rogue_combat_lightning_reflexes",
+        "rogue_combat_lightning_reflexes",
+        "rogue_combat_lightning_reflexes",
+        "rogue_combat_lightning_reflexes",
+        "rogue_combat_lightning_reflexes",
+        "rogue_combat_precision",
+        "rogue_combat_precision",
+        "rogue_combat_precision",
+        "rogue_combat_precision",
+        "rogue_combat_precision",
+        "rogue_combat_endurance",
+        "rogue_combat_endurance",
+        "rogue_combat_improved_gouge",
+        "rogue_combat_dual_wield_specialization",
+        "rogue_combat_dual_wield_specialization",
+        "rogue_combat_dual_wield_specialization",
+        "rogue_combat_dual_wield_specialization",
+        "rogue_combat_dual_wield_specialization",
+        "rogue_combat_blade_flurry",
+        "rogue_combat_sword_specialization",
+        "rogue_combat_sword_specialization",
+        "rogue_combat_sword_specialization",
+        "rogue_combat_sword_specialization",
+        "rogue_combat_sword_specialization",
+        "rogue_combat_weapon_expertise",
+        "rogue_combat_weapon_expertise",
+        "rogue_combat_aggression",
+        "rogue_combat_aggression",
+        "rogue_combat_adrenaline_rush",
+        "rogue_assassination_improved_eviscerate",
+        "rogue_assassination_improved_eviscerate",
+        "rogue_assassination_improved_eviscerate",
+        "rogue_assassination_malice",
+        "rogue_assassination_malice",
+        "rogue_assassination_malice",
+        "rogue_assassination_malice",
+        "rogue_assassination_malice",
+        "rogue_assassination_ruthlessness",
+        "rogue_assassination_ruthlessness",
+        "rogue_assassination_ruthlessness",
+        "rogue_assassination_relentless_strikes",
+        "rogue_assassination_lethality",
+        "rogue_assassination_lethality",
+        "rogue_assassination_lethality",
+        "rogue_assassination_lethality",
+        "rogue_assassination_lethality",
+        "rogue_assassination_improved_slice_and_dice",
+        "rogue_assassination_improved_slice_and_dice",
+        "rogue_assassination_improved_slice_and_dice"
+      ],
+      "sprite": "char_rogue",
+      "portrait": "portrait_rogue",
+      "designNotes": "Rogues run on Energy (+60 each turn, max 100) and a 1-second global cooldown, so a turn is two or three quick strikes: builders such as Sinister Strike and Backstab add combo points to one target, and finishers like Eviscerate, Slice and Dice, Rupture and Kidney Shot spend them all. Open from Stealth with Cheap Shot, Garrote or Ambush to win a surprise round, coat your blades with poisons, and lean on Gouge, Sap, Blind, Evasion and Vanish to control or escape a fight; rogues generate 29% less threat but wear only leather."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "rogue_sinister_strike",
+      "name": "Sinister Strike",
+      "icon": "dagger",
+      "classId": "Rogue",
+      "description": "An instant strike that causes 3 damage (68 at rank 8) in addition to your normal weapon damage: {0}. Awards 1 combo point.",
+      "learnLevel": 1,
+      "rankLevels": [1, 6, 14, 22, 30, 38, 46, 54],
+      "trainCost": 10,
+      "cost": {"type": "Energy", "amount": 45},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Builder"],
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 3, "perLevel": 1.226}],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "rogue_eviscerate",
+      "name": "Eviscerate",
+      "icon": "daggers",
+      "classId": "Rogue",
+      "description": "Finishing move that causes damage per combo point, plus 7% of your attack power per point: 1 point {0@1}, 2 points {0@2}, 3 points {0@3}, 4 points {0@4}, 5 points {0@5}. Spend 3 or more points for a big hit; your combo points stay with you for the whole fight, even when the target falls.",
+      "learnLevel": 1,
+      "rankLevels": [1, 6, 16, 24, 32, 40, 48, 56],
+      "trainCost": 10,
+      "cost": {"type": "Energy", "amount": 35, "consumesComboPoints": true},
+      "melee": true,
+      "requires": {"minComboPoints": 1},
+      "tags": ["Finisher"],
+      "special": "RoguePerComboByRank",
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 1,
+          "max": 5,
+          "perLevel": 1.76,
+          "perCombo": 5,
+          "amount": 2.582,
+          "apCoefPerCombo": 0.07
+        }
+      ],
+      "aiHint": "Finisher",
+      "aiPriority": 8
+    },
+    {
+      "id": "rogue_stealth",
+      "name": "Stealth",
+      "icon": "stealth",
+      "classId": "Rogue",
+      "description": "Allows the rogue to sneak around, but reduces your speed by 50% (40%, 35% and 30% at ranks 2-4). Lasts until cancelled. Attacking from Stealth with an opener starts the battle with a surprise round.",
+      "learnLevel": 1,
+      "rankLevels": [1, 20, 40, 60],
+      "trainCost": 10,
+      "time": "OffGcd",
+      "cooldown": 10,
+      "target": "Self",
+      "breaksStealth": false,
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_stealth_aura"}],
+      "aiHint": "Utility",
+      "aiPriority": 2
+    },
+    {
+      "id": "rogue_backstab",
+      "name": "Backstab",
+      "icon": "dagger",
+      "classId": "Rogue",
+      "description": "Backstab the target, causing 150% weapon damage plus 15 (210 at rank 8): {0}. Must be behind the target. Requires a dagger in the main hand. Awards 1 combo point.",
+      "learnLevel": 4,
+      "rankLevels": [4, 12, 20, 28, 36, 44, 52, 60],
+      "trainCost": 100,
+      "cost": {"type": "Energy", "amount": 60},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Builder"],
+      "requires": {"behindTarget": true, "mainHand": ["Dagger"]},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 150, "min": 15, "perLevel": 3.48}],
+      "aiHint": "Damage",
+      "aiPriority": 7
+    },
+    {
+      "id": "rogue_gouge",
+      "name": "Gouge",
+      "icon": "fist",
+      "classId": "Rogue",
+      "description": "Causes {0} damage, incapacitating the opponent for 4 sec, and turns off your attack. Target must be facing you. Any damage caused will revive the target. Awards 1 combo point.",
+      "learnLevel": 6,
+      "rankLevels": [6, 18, 32, 46, 60],
+      "trainCost": 200,
+      "cost": {"type": "Energy", "amount": 45},
+      "cooldown": 10,
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Builder"],
+      "effects": [{"type": "Damage", "min": 10, "perLevel": 1.2}, {"type": "ApplyAura", "aura": "rogue_gouge"}],
+      "aiHint": "CC",
+      "aiPriority": 5
+    },
+    {
+      "id": "rogue_evasion",
+      "name": "Evasion",
+      "icon": "feather",
+      "classId": "Rogue",
+      "description": "The rogue's dodge chance will increase by 50% for 15 sec.",
+      "learnLevel": 8,
+      "trainCost": 400,
+      "cooldown": 300,
+      "target": "Self",
+      "breaksStealth": false,
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_evasion"}],
+      "aiHint": "Defensive",
+      "aiPriority": 5
+    },
+    {
+      "id": "rogue_sap",
+      "name": "Sap",
+      "icon": "mace",
+      "classId": "Rogue",
+      "description": "Incapacitates the target for 25 sec (35/45 sec at ranks 2-3). Must be stealthed. Only works on Humanoids that are not in combat. Any damage caused will revive the target. Only 1 target may be sapped at a time.",
+      "learnLevel": 10,
+      "rankLevels": [10, 28, 48],
+      "trainCost": 600,
+      "cost": {"type": "Energy", "amount": 65},
+      "melee": true,
+      "tags": ["Opener"],
+      "requires": {"casterStates": ["Stealth"], "targetCreatureTypes": ["Humanoid"]},
+      "effects": [{"type": "ApplyAura", "aura": "rogue_sap"}],
+      "aiHint": "CC",
+      "aiPriority": 4
+    },
+    {
+      "id": "rogue_slice_and_dice",
+      "name": "Slice and Dice",
+      "icon": "swords",
+      "classId": "Rogue",
+      "description": "Finishing move that increases melee attack speed by {0}% (30% at rank 2). Lasts longer per combo point: 1 point 9 sec, 2 points 12 sec, 3 points 15 sec, 4 points 18 sec, 5 points 21 sec.",
+      "learnLevel": 10,
+      "rankLevels": [10, 42],
+      "trainCost": 600,
+      "cost": {"type": "Energy", "amount": 25, "consumesComboPoints": true},
+      "range": 30,
+      "requires": {"minComboPoints": 1},
+      "tags": ["Finisher"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_slice_and_dice", "durationPerCombo": 3}],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "rogue_sprint",
+      "name": "Sprint",
+      "icon": "boot",
+      "classId": "Rogue",
+      "description": "Increases the rogue's movement speed by {0}% for 15 sec (70%/100% at ranks 2-3). Does not break stealth.",
+      "learnLevel": 10,
+      "rankLevels": [10, 34, 58],
+      "trainCost": 600,
+      "cooldown": 300,
+      "target": "Self",
+      "breaksStealth": false,
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_sprint"}],
+      "aiHint": "Utility",
+      "aiPriority": 3
+    },
+    {
+      "id": "rogue_kick",
+      "name": "Kick",
+      "icon": "kick",
+      "classId": "Rogue",
+      "description": "A quick kick that injures a single foe for {0} damage. It also interrupts spellcasting and prevents any spell in that school from being cast for 5 sec.",
+      "learnLevel": 12,
+      "rankLevels": [12, 26, 42, 58],
+      "trainCost": 800,
+      "cost": {"type": "Energy", "amount": 25},
+      "cooldown": 10,
+      "melee": true,
+      "tags": ["Interrupt"],
+      "effects": [{"type": "Damage", "min": 15, "perLevel": 1.41}, {"type": "Interrupt", "lockout": 5}],
+      "aiHint": "Interrupt",
+      "aiPriority": 9
+    },
+    {
+      "id": "rogue_garrote",
+      "name": "Garrote",
+      "icon": "blood",
+      "classId": "Rogue",
+      "description": "Garrote the enemy, causing {0} damage over 18 sec (rank 6: 552). Must be stealthed and behind the target. Awards 1 combo point.",
+      "learnLevel": 14,
+      "rankLevels": [14, 22, 30, 38, 46, 54],
+      "trainCost": 1100,
+      "cost": {"type": "Energy", "amount": 50},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Opener", "Builder", "Bleed"],
+      "requires": {"casterStates": ["Stealth"], "behindTarget": true},
+      "effects": [{"type": "ApplyAura", "aura": "rogue_garrote"}],
+      "aiHint": "Opener",
+      "aiPriority": 7
+    },
+    {
+      "id": "rogue_expose_armor",
+      "name": "Expose Armor",
+      "icon": "armor",
+      "classId": "Rogue",
+      "description": "Finishing move that exposes the target, reducing armor per combo point: 80 per point at rank 1 (340 per point, 1700 at 5 points, at rank 5). Lasts 30 sec.",
+      "learnLevel": 14,
+      "rankLevels": [14, 26, 36, 46, 56],
+      "trainCost": 1100,
+      "cost": {"type": "Energy", "amount": 25, "consumesComboPoints": true},
+      "melee": true,
+      "requires": {"minComboPoints": 1},
+      "tags": ["Finisher"],
+      "effects": [{"type": "ApplyAura", "aura": "rogue_expose_armor"}],
+      "aiHint": "Debuff",
+      "aiPriority": 4
+    },
+    {
+      "id": "rogue_feint",
+      "name": "Feint",
+      "icon": "mask",
+      "classId": "Rogue",
+      "description": "Performs a feint, causing no damage but lowering your threat by 150 at rank 1 (600 at rank 4), making the enemy less likely to attack you.",
+      "learnLevel": 16,
+      "rankLevels": [16, 28, 40, 52],
+      "trainCost": 1400,
+      "cost": {"type": "Energy", "amount": 20},
+      "cooldown": 10,
+      "melee": true,
+      "effects": [{"type": "Threat", "threat": -150, "perLevel": -12.5}],
+      "aiHint": "Utility",
+      "aiPriority": 4
+    },
+    {
+      "id": "rogue_pick_lock",
+      "name": "Pick Lock",
+      "icon": "key",
+      "classId": "Rogue",
+      "description": "Allows opening of locked chests and doors that require a Sleight of Hand check. 5 sec cast, out of combat.",
+      "learnLevel": 16,
+      "trainCost": 1400,
+      "castTime": 5,
+      "target": "Self",
+      "breaksStealth": false,
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "Special", "target": "Self", "special": "RoguePickLock"}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_ambush",
+      "name": "Ambush",
+      "icon": "daggers",
+      "classId": "Rogue",
+      "description": "Ambush the target, causing 250% weapon damage plus 70 (290 at rank 6): {0}. Must be stealthed and behind the target. Requires a dagger in the main hand. Awards 1 combo point.",
+      "learnLevel": 18,
+      "rankLevels": [18, 26, 34, 42, 50, 58],
+      "trainCost": 1800,
+      "cost": {"type": "Energy", "amount": 60},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Opener", "Builder"],
+      "requires": {"casterStates": ["Stealth"], "behindTarget": true, "mainHand": ["Dagger"]},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 250, "min": 70, "perLevel": 5.5}],
+      "aiHint": "Opener",
+      "aiPriority": 9
+    },
+    {
+      "id": "rogue_rupture",
+      "name": "Rupture",
+      "icon": "blood",
+      "classId": "Rogue",
+      "description": "Finishing move that causes damage over time, increased by combo points and by your attack power: 1 point 40 over 8 sec, 2 points 60 over 10 sec, 3 points 84 over 12 sec, 4 points 112 over 14 sec, 5 points 144 over 16 sec (much more at higher ranks).",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 36, 44, 52, 60],
+      "trainCost": 2200,
+      "cost": {"type": "Energy", "amount": 25, "consumesComboPoints": true},
+      "melee": true,
+      "requires": {"minComboPoints": 1},
+      "tags": ["Finisher", "Bleed"],
+      "special": "RoguePerComboByRank",
+      "effects": [{"type": "ApplyAura", "aura": "rogue_rupture", "durationPerCombo": 2}],
+      "aiHint": "Finisher",
+      "aiPriority": 6
+    },
+    {
+      "id": "rogue_distract",
+      "name": "Distract",
+      "icon": "coin",
+      "classId": "Rogue",
+      "description": "Throws a distraction, attracting the attention of all nearby monsters within 10 yards for 10 sec. Does not break stealth.",
+      "learnLevel": 22,
+      "trainCost": 2700,
+      "cost": {"type": "Energy", "amount": 30},
+      "cooldown": 30,
+      "target": "Point",
+      "range": 30,
+      "breaksStealth": false,
+      "area": {"shape": "Circle", "radius": 10},
+      "effects": [{"type": "ApplyAura", "aura": "rogue_distract"}],
+      "aiHint": "Utility",
+      "aiPriority": 2
+    },
+    {
+      "id": "rogue_vanish",
+      "name": "Vanish",
+      "icon": "stealth",
+      "classId": "Rogue",
+      "description": "Allows the rogue to vanish from sight, entering an improved stealth mode for 10 sec. Also breaks movement impairing effects and drops you from enemy threat. Requires Flash Powder.",
+      "learnLevel": 22,
+      "rankLevels": [22, 42],
+      "trainCost": 2700,
+      "cooldown": 300,
+      "target": "Self",
+      "breaksStealth": false,
+      "special": "RogueVanish",
+      "effects": [
+        {"type": "ApplyAura", "target": "Self", "aura": "rogue_restealth_aura"},
+        {"type": "ApplyAura", "target": "Self", "aura": "rogue_vanish_aura"}
+      ],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "rogue_cheap_shot",
+      "name": "Cheap Shot",
+      "icon": "fist",
+      "classId": "Rogue",
+      "description": "Stuns the target for 4 sec. Must be stealthed. Awards 2 combo points.",
+      "learnLevel": 26,
+      "trainCost": 3700,
+      "cost": {"type": "Energy", "amount": 60},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Opener", "Builder"],
+      "requires": {"casterStates": ["Stealth"]},
+      "effects": [
+        {"type": "ApplyAura", "aura": "rogue_cheap_shot"},
+        {"type": "GainResource", "resource": "ComboPoints", "amount": 1}
+      ],
+      "aiHint": "Opener",
+      "aiPriority": 8
+    },
+    {
+      "id": "rogue_kidney_shot",
+      "name": "Kidney Shot",
+      "icon": "fist",
+      "classId": "Rogue",
+      "description": "Finishing move that stuns the target. Lasts longer per combo point: 1 point 1 sec ... 5 points 5 sec (rank 2: 2 to 6 sec).",
+      "learnLevel": 30,
+      "rankLevels": [30, 50],
+      "trainCost": 5000,
+      "cost": {"type": "Energy", "amount": 25, "consumesComboPoints": true},
+      "cooldown": 20,
+      "melee": true,
+      "requires": {"minComboPoints": 1},
+      "tags": ["Finisher"],
+      "effects": [{"type": "ApplyAura", "aura": "rogue_kidney_shot", "durationPerCombo": 1}],
+      "aiHint": "CC",
+      "aiPriority": 7
+    },
+    {
+      "id": "rogue_blind",
+      "name": "Blind",
+      "icon": "eye",
+      "classId": "Rogue",
+      "description": "Blinds the target, causing it to wander disoriented for up to 10 sec. Any damage caused will remove the effect. Requires Blinding Powder.",
+      "learnLevel": 34,
+      "trainCost": 6400,
+      "cost": {"type": "Energy", "amount": 30},
+      "cooldown": 300,
+      "range": 10,
+      "special": "RogueBlind",
+      "effects": [{"type": "ApplyAura", "aura": "rogue_blind"}],
+      "aiHint": "CC",
+      "aiPriority": 4
+    },
+    {
+      "id": "rogue_shoot",
+      "name": "Shoot",
+      "icon": "bow",
+      "classId": "Rogue",
+      "description": "Shoot your equipped bow, gun or crossbow at the target for ranged weapon damage. Takes as long as the weapon's speed.",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "range": 30,
+      "minRange": 8,
+      "special": "PhysicalRangedShot",
+      "tags": ["Ranged", "Shoot"],
+      "requires": {"rangedWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "ranged": true}],
+      "aiHint": "Damage",
+      "aiPriority": 1
+    },
+    {
+      "id": "rogue_throw",
+      "name": "Throw",
+      "icon": "dagger",
+      "classId": "Rogue",
+      "description": "Throw your equipped thrown weapon at the target for ranged weapon damage. Takes as long as the weapon's speed.",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "range": 30,
+      "minRange": 8,
+      "special": "PhysicalRangedShot",
+      "tags": ["Ranged", "Thrown"],
+      "requires": {"rangedWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "ranged": true}],
+      "aiHint": "Damage",
+      "aiPriority": 1
+    },
+    {
+      "id": "rogue_instant_poison",
+      "name": "Instant Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Prepares 5 vials of Instant Poison from the rogue's kit (out of combat). Using a vial coats your weapons for 30 min (40 charges). Each strike has a 20% chance of poisoning the enemy for 19 to 25 Nature damage (112 to 148 at level 60). Potency grows with your level (WoW ranks I-VI).",
+      "learnLevel": 20,
+      "trainCost": 2200,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "CreateItem", "target": "Self", "item": "rogue_instant_poison_vial", "count": 5}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_apply_instant_poison",
+      "name": "Apply Instant Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Coats your weapons with Instant Poison for 30 min (40 charges). Each strike has a 20% chance of poisoning the enemy for 19 to 25 Nature damage (112 to 148 at level 60). Only one damaging (Instant/Deadly/Wound) and one utility (Crippling/Mind-numbing) poison can be active.",
+      "learnLevel": 20,
+      "hidden": true,
+      "scaleWithLevel": true,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_instant_poison_coating"}],
+      "aiHint": "Buff",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_crippling_poison",
+      "name": "Crippling Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Prepares 5 vials of Crippling Poison from the rogue's kit (out of combat). Using a vial coats your weapons for 30 min (20 charges). Each strike has a 30% chance of poisoning the enemy, slowing its movement speed by 50% (70% at level 60) for 12 sec. Potency grows with your level (WoW ranks I-VI).",
+      "learnLevel": 20,
+      "trainCost": 2200,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "CreateItem", "target": "Self", "item": "rogue_crippling_poison_vial", "count": 5}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_apply_crippling_poison",
+      "name": "Apply Crippling Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Coats your weapons with Crippling Poison for 30 min (20 charges). Each strike has a 30% chance of poisoning the enemy, slowing its movement speed by 50% (70% at level 60) for 12 sec. Only one damaging (Instant/Deadly/Wound) and one utility (Crippling/Mind-numbing) poison can be active.",
+      "learnLevel": 20,
+      "hidden": true,
+      "scaleWithLevel": true,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_crippling_poison_coating"}],
+      "aiHint": "Buff",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_mind_numbing_poison",
+      "name": "Mind-numbing Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Prepares 5 vials of Mind-numbing Poison from the rogue's kit (out of combat). Using a vial coats your weapons for 30 min (50 charges). Each strike has a 20% chance of poisoning the enemy, increasing its casting time by 40% (up to 60%) for 10 sec. Potency grows with your level (WoW ranks I-VI).",
+      "learnLevel": 24,
+      "trainCost": 3200,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "CreateItem", "target": "Self", "item": "rogue_mind_numbing_poison_vial", "count": 5}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_apply_mind_numbing_poison",
+      "name": "Apply Mind-numbing Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Coats your weapons with Mind-numbing Poison for 30 min (50 charges). Each strike has a 20% chance of poisoning the enemy, increasing its casting time by 40% (up to 60%) for 10 sec. Only one damaging (Instant/Deadly/Wound) and one utility (Crippling/Mind-numbing) poison can be active.",
+      "learnLevel": 24,
+      "hidden": true,
+      "scaleWithLevel": true,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_mind_numbing_poison_coating"}],
+      "aiHint": "Buff",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_deadly_poison",
+      "name": "Deadly Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Prepares 5 vials of Deadly Poison from the rogue's kit (out of combat). Using a vial coats your weapons for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy for 36 Nature damage over 12 sec (136 at level 60). Stacks up to 5 times. Potency grows with your level (WoW ranks I-VI).",
+      "learnLevel": 30,
+      "trainCost": 5000,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "CreateItem", "target": "Self", "item": "rogue_deadly_poison_vial", "count": 5}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_apply_deadly_poison",
+      "name": "Apply Deadly Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Coats your weapons with Deadly Poison for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy for 36 Nature damage over 12 sec (136 at level 60). Stacks up to 5 times. Only one damaging (Instant/Deadly/Wound) and one utility (Crippling/Mind-numbing) poison can be active.",
+      "learnLevel": 30,
+      "hidden": true,
+      "scaleWithLevel": true,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_deadly_poison_coating"}],
+      "aiHint": "Buff",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_wound_poison",
+      "name": "Wound Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Prepares 5 vials of Wound Poison from the rogue's kit (out of combat). Using a vial coats your weapons for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy, reducing all healing it receives (2% per application, about 5% at level 56). Stacks up to 5 times. Lasts 15 sec. Potency grows with your level (WoW ranks I-VI).",
+      "learnLevel": 32,
+      "trainCost": 5600,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "requires": {"notInCombat": true},
+      "effects": [{"type": "CreateItem", "target": "Self", "item": "rogue_wound_poison_vial", "count": 5}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_apply_wound_poison",
+      "name": "Apply Wound Poison",
+      "icon": "vial",
+      "classId": "Rogue",
+      "description": "Coats your weapons with Wound Poison for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy, reducing all healing it receives (2% per application, about 5% at level 56). Stacks up to 5 times. Lasts 15 sec. Only one damaging (Instant/Deadly/Wound) and one utility (Crippling/Mind-numbing) poison can be active.",
+      "learnLevel": 32,
+      "hidden": true,
+      "scaleWithLevel": true,
+      "castTime": 3,
+      "target": "Self",
+      "breaksStealth": false,
+      "tags": ["Poison"],
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_wound_poison_coating"}],
+      "aiHint": "Buff",
+      "aiPriority": 0
+    },
+    {
+      "id": "rogue_shadowed_presence",
+      "name": "Shadowed Presence",
+      "icon": "mask",
+      "classId": "Rogue",
+      "description": "Rogues work unseen: all threat you generate is reduced by 29% (WoW Classic rogue threat modifier x0.71).",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "passive": true,
+      "passiveAura": "rogue_threat_aura"
+    },
+    {
+      "id": "rogue_dual_wield",
+      "name": "Dual Wield",
+      "icon": "daggers",
+      "classId": "Rogue",
+      "description": "Allows One-Hand and Off Hand weapons to be equipped in the off hand. Off-hand attacks deal 50% damage. Rogues know it from the start.",
+      "learnLevel": 1,
+      "trainCost": 0,
+      "passive": true
+    },
+    {
+      "id": "rogue_parry",
+      "name": "Parry",
+      "icon": "swords",
+      "classId": "Rogue",
+      "description": "Gives a 5% chance to parry enemy melee attacks made from the front.",
+      "learnLevel": 12,
+      "trainCost": 800,
+      "passive": true
+    },
+    {
+      "id": "rogue_riposte",
+      "name": "Riposte",
+      "icon": "swords",
+      "classId": "Rogue",
+      "description": "A strike that becomes active after parrying an opponent's attack (until the end of your next turn). This attack deals 150% weapon damage ({0}) and disarms the target for 6 sec.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "cost": {"type": "Energy", "amount": 10},
+      "cooldown": 6,
+      "melee": true,
+      "tags": [],
+      "requires": {"reactive": "SelfParried", "meleeWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 150}, {"type": "ApplyAura", "aura": "rogue_riposte_disarm"}],
+      "aiHint": "Damage",
+      "aiPriority": 8
+    },
+    {
+      "id": "rogue_ghostly_strike",
+      "name": "Ghostly Strike",
+      "icon": "dagger",
+      "classId": "Rogue",
+      "description": "A strike that deals 125% weapon damage ({0}) and increases your chance to dodge by 15% for 7 sec. Awards 1 combo point.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "cost": {"type": "Energy", "amount": 40},
+      "cooldown": 20,
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Builder"],
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 125},
+        {"type": "ApplyAura", "target": "Self", "aura": "rogue_ghostly_strike"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "rogue_cold_blood",
+      "name": "Cold Blood",
+      "icon": "skull",
+      "classId": "Rogue",
+      "description": "When activated, increases the critical strike chance of your next offensive ability by 100%.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 180,
+      "target": "Self",
+      "breaksStealth": false,
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_cold_blood"}],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "rogue_blade_flurry",
+      "name": "Blade Flurry",
+      "icon": "whirlwind",
+      "classId": "Rogue",
+      "description": "Increases your attack speed by 20%. In addition, attacks strike an additional nearby opponent. Lasts 15 sec.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cost": {"type": "Energy", "amount": 25},
+      "cooldown": 120,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_blade_flurry"}],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "rogue_hemorrhage",
+      "name": "Hemorrhage",
+      "icon": "blood",
+      "classId": "Rogue",
+      "description": "An instant strike that deals 110% weapon damage ({0}) and causes the target to hemorrhage, increasing Physical damage dealt to it (WoW: +3 per hit, +5/+7 at ranks 2-3; here +3% Physical damage taken). Lasts 30 charges or 15 sec. Awards 1 combo point.",
+      "learnLevel": 30,
+      "rankLevels": [30, 46, 58],
+      "fromTalent": true,
+      "cost": {"type": "Energy", "amount": 35},
+      "melee": true,
+      "generatesComboPoint": true,
+      "tags": ["Builder"],
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110}, {"type": "ApplyAura", "aura": "rogue_hemorrhage"}],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "rogue_preparation",
+      "name": "Preparation",
+      "icon": "hourglass",
+      "classId": "Rogue",
+      "description": "When activated, this ability immediately finishes the cooldown on your other Rogue abilities.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cooldown": 600,
+      "target": "Self",
+      "breaksStealth": false,
+      "effects": [
+        {
+          "type": "ResetCooldowns",
+          "target": "Self",
+          "abilities": [
+            "rogue_evasion",
+            "rogue_sprint",
+            "rogue_vanish",
+            "rogue_blind",
+            "rogue_gouge",
+            "rogue_kick",
+            "rogue_feint",
+            "rogue_kidney_shot",
+            "rogue_distract",
+            "rogue_stealth",
+            "rogue_riposte",
+            "rogue_ghostly_strike",
+            "rogue_cold_blood",
+            "rogue_blade_flurry",
+            "rogue_adrenaline_rush",
+            "rogue_premeditation"
+          ]
+        }
+      ],
+      "aiHint": "Utility",
+      "aiPriority": 2
+    },
+    {
+      "id": "rogue_adrenaline_rush",
+      "name": "Adrenaline Rush",
+      "icon": "rage",
+      "classId": "Rogue",
+      "description": "Increases your Energy regeneration rate by 100% for 15 sec.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "cooldown": 300,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_adrenaline_rush"}],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "rogue_premeditation",
+      "name": "Premeditation",
+      "icon": "eye",
+      "classId": "Rogue",
+      "description": "When used, adds 2 combo points to your target. You must add to or use those combo points within 10 sec or the combo points are lost. Must be stealthed; does not break stealth.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 120,
+      "range": 30,
+      "breaksStealth": false,
+      "requires": {"casterStates": ["Stealth"]},
+      "effects": [{"type": "GainResource", "resource": "ComboPoints", "amount": 2}],
+      "aiHint": "Opener",
+      "aiPriority": 6
+    }
+  ],
+  "auras": [
+    {
+      "id": "rogue_stealth_aura",
+      "name": "Stealth",
+      "icon": "stealth",
+      "description": "Stealthed. Movement speed reduced.",
+      "kind": "Buff",
+      "duration": 0,
+      "states": ["Stealth"],
+      "breakOnAction": true,
+      "tags": ["Stealth"],
+      "mods": [{"stat": "MoveSpeed", "value": -50, "values": [-50, -40, -35, -30], "pct": true}]
+    },
+    {
+      "id": "rogue_restealth_aura",
+      "name": "Stealth",
+      "icon": "stealth",
+      "description": "Stealthed. Movement speed reduced by 30%.",
+      "kind": "Buff",
+      "duration": 0,
+      "states": ["Stealth"],
+      "breakOnAction": true,
+      "tags": ["Stealth"],
+      "mods": [{"stat": "MoveSpeed", "value": -30, "pct": true}]
+    },
+    {
+      "id": "rogue_vanish_aura",
+      "name": "Vanish",
+      "icon": "stealth",
+      "description": "Vanished: improved stealth for 10 sec.",
+      "kind": "Buff",
+      "duration": 10,
+      "states": ["Stealth"],
+      "breakOnAction": true,
+      "tags": ["Stealth"]
+    },
+    {
+      "id": "rogue_threat_aura",
+      "name": "Shadowed Presence",
+      "icon": "mask",
+      "description": "Threat generated reduced by 29%.",
+      "kind": "Buff",
+      "duration": 0,
+      "hidden": true,
+      "persistThroughDeath": true,
+      "mods": [{"stat": "ThreatGenerated", "value": -29, "pct": true}]
+    },
+    {
+      "id": "rogue_gouge",
+      "name": "Gouge",
+      "icon": "fist",
+      "description": "Incapacitated. Any damage will revive the target.",
+      "kind": "Debuff",
+      "duration": 4,
+      "states": ["Incapacitate"],
+      "breakOnDamage": true
+    },
+    {
+      "id": "rogue_evasion",
+      "name": "Evasion",
+      "icon": "feather",
+      "description": "Dodge chance increased by 50%.",
+      "kind": "Buff",
+      "duration": 15,
+      "mods": [{"stat": "Dodge", "value": 50}]
+    },
+    {
+      "id": "rogue_sap",
+      "name": "Sap",
+      "icon": "mace",
+      "description": "Incapacitated. Any damage will revive the target.",
+      "kind": "Debuff",
+      "duration": 25,
+      "states": ["Incapacitate"],
+      "breakOnDamage": true,
+      "special": "RankDurations",
+      "tags": ["Durations:25/35/45"]
+    },
+    {
+      "id": "rogue_slice_and_dice",
+      "name": "Slice and Dice",
+      "icon": "swords",
+      "description": "Melee attack speed increased.",
+      "kind": "Buff",
+      "duration": 6,
+      "mods": [{"stat": "MeleeHaste", "value": 20, "values": [20, 30], "pct": true}]
+    },
+    {
+      "id": "rogue_sprint",
+      "name": "Sprint",
+      "icon": "boot",
+      "description": "Movement speed increased.",
+      "kind": "Buff",
+      "duration": 15,
+      "mods": [{"stat": "MoveSpeed", "value": 50, "values": [50, 70, 100], "pct": true}]
+    },
+    {
+      "id": "rogue_garrote",
+      "name": "Garrote",
+      "icon": "blood",
+      "description": "Bleeding for Physical damage every 3 sec.",
+      "kind": "Debuff",
+      "duration": 18,
+      "tags": ["Bleed"],
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "min": 24, "perLevel": 1.7, "apCoef": 0.03}]
+    },
+    {
+      "id": "rogue_expose_armor",
+      "name": "Expose Armor",
+      "icon": "armor",
+      "description": "Armor reduced.",
+      "kind": "Debuff",
+      "duration": 30,
+      "special": "RogueExposeArmor",
+      "mods": [{"stat": "Armor", "value": -80, "values": [-80, -145, -210, -275, -340]}]
+    },
+    {
+      "id": "rogue_rupture",
+      "name": "Rupture",
+      "icon": "blood",
+      "description": "Bleeding for Physical damage every 2 sec.",
+      "kind": "Debuff",
+      "duration": 6,
+      "tags": ["Bleed"],
+      "tickInterval": 2,
+      "tickEffects": [{"type": "Damage", "min": 8, "perLevel": 1.2, "perCombo": 2, "amount": 0.3, "apCoef": 0.03}]
+    },
+    {
+      "id": "rogue_distract",
+      "name": "Distracted",
+      "icon": "coin",
+      "description": "Distracted: looking away from the rogue.",
+      "kind": "Debuff",
+      "duration": 10,
+      "breakOnDamage": true,
+      "special": "RogueDistracted"
+    },
+    {
+      "id": "rogue_cheap_shot",
+      "name": "Cheap Shot",
+      "icon": "fist",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 4,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "rogue_kidney_shot",
+      "name": "Kidney Shot",
+      "icon": "fist",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 1,
+      "states": ["Stun"],
+      "tags": ["Stun"],
+      "special": "RogueKidneyShot",
+      "mods": [{"stat": "DamageTaken", "value": 0, "pct": true}]
+    },
+    {
+      "id": "rogue_blind",
+      "name": "Blind",
+      "icon": "eye",
+      "description": "Disoriented. Any damage will remove the effect.",
+      "kind": "Debuff",
+      "duration": 10,
+      "states": ["Confuse"],
+      "breakOnDamage": true
+    },
+    {
+      "id": "rogue_kick_silence",
+      "name": "Kick - Silenced",
+      "icon": "kick",
+      "description": "Silenced.",
+      "kind": "Debuff",
+      "duration": 2,
+      "states": ["Silence"]
+    },
+    {
+      "id": "rogue_mace_stun",
+      "name": "Mace Stun Effect",
+      "icon": "mace",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "duration": 3,
+      "states": ["Stun"],
+      "tags": ["Stun"]
+    },
+    {
+      "id": "rogue_riposte_disarm",
+      "name": "Riposte",
+      "icon": "swords",
+      "description": "Disarmed.",
+      "kind": "Debuff",
+      "duration": 6,
+      "states": ["Disarm"]
+    },
+    {
+      "id": "rogue_blade_flurry",
+      "name": "Blade Flurry",
+      "icon": "whirlwind",
+      "description": "Attack speed increased by 20%. Attacks strike an additional nearby opponent.",
+      "kind": "Buff",
+      "duration": 15,
+      "special": "SweepingHits",
+      "mods": [{"stat": "MeleeHaste", "value": 20, "pct": true}]
+    },
+    {
+      "id": "rogue_adrenaline_rush",
+      "name": "Adrenaline Rush",
+      "icon": "rage",
+      "description": "Energy regeneration increased by 100%.",
+      "kind": "Buff",
+      "duration": 15,
+      "mods": [{"stat": "EnergyRegen", "value": 100, "pct": true}]
+    },
+    {
+      "id": "rogue_ghostly_strike",
+      "name": "Ghostly Strike",
+      "icon": "dagger",
+      "description": "Dodge chance increased by 15%.",
+      "kind": "Buff",
+      "duration": 7,
+      "mods": [{"stat": "Dodge", "value": 15}]
+    },
+    {
+      "id": "rogue_hemorrhage",
+      "name": "Hemorrhage",
+      "icon": "blood",
+      "description": "Physical damage taken increased (30 hits).",
+      "kind": "Debuff",
+      "duration": 15,
+      "charges": 30,
+      "mods": [{"stat": "DamageTaken", "value": 3, "pct": true, "school": "Physical"}],
+      "procs": [{"trigger": "OnStruck", "schools": ["Physical"], "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "rogue_cold_blood",
+      "name": "Cold Blood",
+      "icon": "skull",
+      "description": "Your next offensive ability will be a critical strike.",
+      "kind": "Buff",
+      "duration": 0,
+      "charges": 1,
+      "mods": [{"stat": "MeleeCrit", "value": 100}],
+      "procs": [{"trigger": "OnAbilityUsed", "abilities": ["rogue_riposte"], "tags": ["Builder", "Finisher", "Opener"], "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "rogue_remorseless_attacks",
+      "name": "Remorseless",
+      "icon": "skull",
+      "description": "Critical strike chance of your next Sinister Strike, Hemorrhage, Backstab, Ambush or Ghostly Strike increased.",
+      "kind": "Buff",
+      "duration": 20,
+      "charges": 1,
+      "mods": [{"stat": "MeleeCrit", "value": 20, "values": [20, 40]}],
+      "procs": [
+        {
+          "trigger": "OnAbilityUsed",
+          "abilities": ["rogue_sinister_strike", "rogue_hemorrhage", "rogue_backstab", "rogue_ambush", "rogue_ghostly_strike"],
+          "consumeCharge": true,
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "rogue_instant_poison_coating",
+      "name": "Instant Poison",
+      "icon": "vial",
+      "description": "Weapons coated with Instant Poison: each melee hit has a 20% chance to poison the target.",
+      "kind": "Buff",
+      "duration": 1800,
+      "school": "Nature",
+      "charges": 40,
+      "exclusiveGroup": "rogue_poison_lethal",
+      "tags": ["Poison", "WeaponCoating"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 20,
+          "consumeCharge": true,
+          "effects": [{"type": "Damage", "school": "Nature", "min": 19, "max": 25, "perLevel": 2.7}]
+        }
+      ]
+    },
+    {
+      "id": "rogue_deadly_poison_coating",
+      "name": "Deadly Poison",
+      "icon": "vial",
+      "description": "Weapons coated with Deadly Poison: each melee hit has a 30% chance to poison the target.",
+      "kind": "Buff",
+      "duration": 1800,
+      "school": "Nature",
+      "charges": 60,
+      "exclusiveGroup": "rogue_poison_lethal",
+      "tags": ["Poison", "WeaponCoating"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 30,
+          "consumeCharge": true,
+          "effects": [{"type": "ApplyAura", "aura": "rogue_deadly_poison"}]
+        }
+      ]
+    },
+    {
+      "id": "rogue_wound_poison_coating",
+      "name": "Wound Poison",
+      "icon": "vial",
+      "description": "Weapons coated with Wound Poison: each melee hit has a 30% chance to poison the target.",
+      "kind": "Buff",
+      "duration": 1800,
+      "school": "Nature",
+      "charges": 60,
+      "exclusiveGroup": "rogue_poison_lethal",
+      "tags": ["Poison", "WeaponCoating"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 30,
+          "consumeCharge": true,
+          "effects": [{"type": "ApplyAura", "aura": "rogue_wound_poison"}]
+        }
+      ]
+    },
+    {
+      "id": "rogue_crippling_poison_coating",
+      "name": "Crippling Poison",
+      "icon": "vial",
+      "description": "Weapons coated with Crippling Poison: each melee hit has a 30% chance to poison the target.",
+      "kind": "Buff",
+      "duration": 1800,
+      "school": "Nature",
+      "charges": 20,
+      "exclusiveGroup": "rogue_poison_utility",
+      "tags": ["Poison", "WeaponCoating"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 30,
+          "consumeCharge": true,
+          "effects": [{"type": "ApplyAura", "aura": "rogue_crippling_poison"}]
+        }
+      ]
+    },
+    {
+      "id": "rogue_mind_numbing_poison_coating",
+      "name": "Mind-numbing Poison",
+      "icon": "vial",
+      "description": "Weapons coated with Mind-numbing Poison: each melee hit has a 20% chance to poison the target.",
+      "kind": "Buff",
+      "duration": 1800,
+      "school": "Nature",
+      "charges": 50,
+      "exclusiveGroup": "rogue_poison_utility",
+      "tags": ["Poison", "WeaponCoating"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 20,
+          "consumeCharge": true,
+          "effects": [{"type": "ApplyAura", "aura": "rogue_mind_numbing_poison"}]
+        }
+      ]
+    },
+    {
+      "id": "rogue_deadly_poison",
+      "name": "Deadly Poison",
+      "icon": "poison",
+      "description": "Suffering Nature damage every 3 sec.",
+      "kind": "Debuff",
+      "duration": 12,
+      "school": "Nature",
+      "dispel": "Poison",
+      "maxStacks": 5,
+      "tags": ["Poison"],
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "school": "Nature", "min": 9, "perLevel": 0.75}]
+    },
+    {
+      "id": "rogue_wound_poison",
+      "name": "Wound Poison",
+      "icon": "poison",
+      "description": "Healing received reduced.",
+      "kind": "Debuff",
+      "duration": 15,
+      "school": "Nature",
+      "dispel": "Poison",
+      "maxStacks": 5,
+      "tags": ["Poison"],
+      "mods": [{"stat": "HealingTaken", "value": -2, "perLevel": -0.125, "pct": true}]
+    },
+    {
+      "id": "rogue_crippling_poison",
+      "name": "Crippling Poison",
+      "icon": "poison",
+      "description": "Movement speed reduced.",
+      "kind": "Debuff",
+      "duration": 12,
+      "school": "Nature",
+      "dispel": "Poison",
+      "tags": ["Poison", "Snare"],
+      "mods": [{"stat": "MoveSpeed", "value": -50, "perLevel": -0.5, "pct": true}]
+    },
+    {
+      "id": "rogue_mind_numbing_poison",
+      "name": "Mind-numbing Poison",
+      "icon": "poison",
+      "description": "Casting time increased.",
+      "kind": "Debuff",
+      "duration": 10,
+      "school": "Nature",
+      "dispel": "Poison",
+      "tags": ["Poison"],
+      "mods": [{"stat": "CastSpeed", "value": -40, "perLevel": -0.625, "pct": true}]
+    }
+  ],
+  "talentTrees": [
+    {
+      "id": "tree_rogue_assassination",
+      "classId": "Rogue",
+      "name": "Assassination",
+      "icon": "poison",
+      "description": "A deadly master of poisons who dispatches victims with vicious dagger strikes and lethal finishers.",
+      "talents": [
+        {
+          "id": "rogue_assassination_improved_eviscerate",
+          "name": "Improved Eviscerate",
+          "icon": "daggers",
+          "tier": 1,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the damage done by your Eviscerate ability by {5/10/15}%.",
+          "effects": [{"type": "AbilityMod", "property": "Damage", "value": 5, "abilities": ["rogue_eviscerate"]}]
+        },
+        {
+          "id": "rogue_assassination_remorseless_attacks",
+          "name": "Remorseless Attacks",
+          "icon": "skull",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 2,
+          "description": "After killing an opponent that yields experience or honor, gives you a {20/40}% increased critical strike chance on your next Sinister Strike, Hemorrhage, Backstab, Ambush, or Ghostly Strike. Lasts 20 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnKill",
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_remorseless_attacks"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "rogue_assassination_malice",
+          "name": "Malice",
+          "icon": "dagger",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your critical strike chance by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "rogue_assassination_ruthlessness",
+          "name": "Ruthlessness",
+          "icon": "fist",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Gives your finishing moves a {20/40/60}% chance to add a combo point to your target.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {"trigger": "OnFinisher", "effects": [{"type": "GainResource", "resource": "ComboPoints", "amount": 1}]},
+              "values": [20, 40, 60]
+            }
+          ]
+        },
+        {
+          "id": "rogue_assassination_murder",
+          "name": "Murder",
+          "icon": "skull",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Increases all damage caused against Humanoid, Giant, Beast and Dragonkin targets by {1/2}%.",
+          "effects": [{"type": "Special", "special": "RogueMurder", "value": 1}]
+        },
+        {
+          "id": "rogue_assassination_improved_slice_and_dice",
+          "name": "Improved Slice and Dice",
+          "icon": "swords",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Increases the duration of your Slice and Dice ability by {15/30/45}%.",
+          "effects": [{"type": "AbilityMod", "property": "DurationPct", "value": 15, "abilities": ["rogue_slice_and_dice"]}]
+        },
+        {
+          "id": "rogue_assassination_relentless_strikes",
+          "name": "Relentless Strikes",
+          "icon": "star",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Your finishing moves have a 20% chance per combo point to restore 25 energy.",
+          "effects": [{"type": "Special", "special": "RogueRelentlessStrikes"}]
+        },
+        {
+          "id": "rogue_assassination_improved_expose_armor",
+          "name": "Improved Expose Armor",
+          "icon": "armor",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Increases the armor reduced by your Expose Armor ability by {25/50}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "values": [25, 50], "abilities": ["rogue_expose_armor"]}]
+        },
+        {
+          "id": "rogue_assassination_lethality",
+          "name": "Lethality",
+          "icon": "dagger",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the critical strike damage bonus of your Sinister Strike, Gouge, Backstab, Ghostly Strike, and Hemorrhage abilities by {6/12/18/24/30}%.",
+          "requires": "rogue_assassination_malice",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CritBonus",
+              "value": 6,
+              "abilities": ["rogue_sinister_strike", "rogue_gouge", "rogue_backstab", "rogue_ghostly_strike", "rogue_hemorrhage"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_assassination_vile_poisons",
+          "name": "Vile Poisons",
+          "icon": "poison",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the damage dealt by your poisons by {4/8/12/16/20}% and gives your poisons an additional {8/16/24/32/40}% chance to resist dispel effects.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 4,
+              "abilities": ["rogue_apply_instant_poison", "rogue_apply_deadly_poison"],
+              "schools": ["Nature"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_assassination_improved_poisons",
+          "name": "Improved Poisons",
+          "icon": "vial",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the chance to apply poisons to your target by {2/4/6/8/10}%.",
+          "effects": [{"type": "Special", "special": "RogueImprovedPoisons", "value": 2}]
+        },
+        {
+          "id": "rogue_assassination_cold_blood",
+          "name": "Cold Blood",
+          "icon": "skull",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Cold Blood ability.",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_cold_blood"}]
+        },
+        {
+          "id": "rogue_assassination_improved_kidney_shot",
+          "name": "Improved Kidney Shot",
+          "icon": "fist",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 3,
+          "description": "While affected by your Kidney Shot ability, the target receives an additional {3/6/9}% damage from all sources.",
+          "effects": [{"type": "Special", "special": "RogueKidneyShot", "value": 3}]
+        },
+        {
+          "id": "rogue_assassination_seal_fate",
+          "name": "Seal Fate",
+          "icon": "star",
+          "tier": 6,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Your critical strikes from abilities that add combo points have a {20/40/60/80/100}% chance to add an additional combo point.",
+          "requires": "rogue_assassination_cold_blood",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnMeleeCrit",
+                "tags": ["Builder"],
+                "effects": [{"type": "GainResource", "resource": "ComboPoints", "amount": 1}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "rogue_assassination_vigor",
+          "name": "Vigor",
+          "icon": "heart",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Increases your maximum Energy by 10.",
+          "effects": [{"type": "Special", "special": "RogueVigor", "value": 10}]
+        }
+      ]
+    },
+    {
+      "id": "tree_rogue_combat",
+      "classId": "Rogue",
+      "name": "Combat",
+      "icon": "swords",
+      "description": "A swashbuckler who uses agility and guile to stand toe-to-toe with enemies.",
+      "talents": [
+        {
+          "id": "rogue_combat_improved_gouge",
+          "name": "Improved Gouge",
+          "icon": "fist",
+          "tier": 1,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the effect duration of your Gouge ability by {0.5/1/1.5} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Duration", "value": 0.5, "abilities": ["rogue_gouge"]}]
+        },
+        {
+          "id": "rogue_combat_improved_sinister_strike",
+          "name": "Improved Sinister Strike",
+          "icon": "dagger",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Reduces the Energy cost of your Sinister Strike ability by {3/5}.",
+          "effects": [{"type": "AbilityMod", "property": "CostFlat", "values": [-3, -5], "abilities": ["rogue_sinister_strike"]}]
+        },
+        {
+          "id": "rogue_combat_lightning_reflexes",
+          "name": "Lightning Reflexes",
+          "icon": "feather",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your Dodge chance by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Dodge", "value": 1}]
+        },
+        {
+          "id": "rogue_combat_improved_backstab",
+          "name": "Improved Backstab",
+          "icon": "dagger",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the critical strike chance of your Backstab ability by {10/20/30}%.",
+          "effects": [{"type": "AbilityMod", "property": "CritChance", "value": 10, "abilities": ["rogue_backstab"]}]
+        },
+        {
+          "id": "rogue_combat_deflection",
+          "name": "Deflection",
+          "icon": "swords",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your Parry chance by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Parry", "value": 1}]
+        },
+        {
+          "id": "rogue_combat_precision",
+          "name": "Precision",
+          "icon": "eye",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your chance to hit with melee weapons by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeHit", "value": 1}]
+        },
+        {
+          "id": "rogue_combat_endurance",
+          "name": "Endurance",
+          "icon": "boot",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Sprint and Evasion abilities by {45/90} sec.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Cooldown",
+              "value": -45,
+              "abilities": ["rogue_sprint", "rogue_evasion"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_riposte",
+          "name": "Riposte",
+          "icon": "swords",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Riposte ability.",
+          "requires": "rogue_combat_deflection",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_riposte"}]
+        },
+        {
+          "id": "rogue_combat_improved_sprint",
+          "name": "Improved Sprint",
+          "icon": "boot",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Gives a {50/100}% chance to remove all movement impairing effects when you activate your Sprint ability.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["rogue_sprint"],
+                "effects": [{"type": "Special", "target": "Self", "special": "RogueRemoveSnares"}]
+              },
+              "values": [50, 100]
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_improved_kick",
+          "name": "Improved Kick",
+          "icon": "kick",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Gives your Kick ability a {50/100}% chance to silence the target for 2 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["rogue_kick"],
+                "effects": [{"type": "ApplyAura", "aura": "rogue_kick_silence"}]
+              },
+              "values": [50, 100]
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_dagger_specialization",
+          "name": "Dagger Specialization",
+          "icon": "dagger",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with Daggers by {1/2/3/4/5}%.",
+          "effects": [{"type": "Special", "special": "WeaponTypeTalent", "tags": ["Dagger"], "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "rogue_combat_dual_wield_specialization",
+          "name": "Dual Wield Specialization",
+          "icon": "daggers",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage done by your offhand weapon by {10/20/30/40/50}%.",
+          "requires": "rogue_combat_precision",
+          "effects": [{"type": "Special", "special": "OffHandDamage", "value": 10}]
+        },
+        {
+          "id": "rogue_combat_mace_specialization",
+          "name": "Mace Specialization",
+          "icon": "mace",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Increases your skill with Maces by {1/2/3/4/5}, and gives you a {1/2/3/4/6}% chance to stun your target for 3 sec with a Mace.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandMace"],
+              "values": [1, 2, 3, 4, 6],
+              "proc": {"trigger": "OnMeleeHit", "effects": [{"type": "ApplyAura", "aura": "rogue_mace_stun"}]}
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_blade_flurry",
+          "name": "Blade Flurry",
+          "icon": "whirlwind",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Blade Flurry ability.",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_blade_flurry"}]
+        },
+        {
+          "id": "rogue_combat_sword_specialization",
+          "name": "Sword Specialization",
+          "icon": "sword",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives you a {1/2/3/4/5}% chance to get an extra attack on the same target after hitting your target with your Sword.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandSword"],
+              "values": [1, 2, 3, 4, 5],
+              "proc": {"trigger": "OnMeleeHit", "effects": [{"type": "WeaponDamage", "weaponPct": 100}]}
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_fist_weapon_specialization",
+          "name": "Fist Weapon Specialization",
+          "icon": "fist",
+          "tier": 5,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with Fist Weapons by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["FistWeapon"],
+              "stat": "MeleeCrit",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_weapon_expertise",
+          "name": "Weapon Expertise",
+          "icon": "swords",
+          "tier": 6,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Increases your skill with Sword, Fist and Dagger weapons by {3/5} (here: +{0.6/1}% chance to hit with them).",
+          "requires": "rogue_combat_blade_flurry",
+          "effects": [
+            {
+              "type": "Special",
+              "special": "WeaponTypeTalent",
+              "tags": ["OneHandSword", "FistWeapon", "Dagger"],
+              "stat": "MeleeHit",
+              "values": [0.6, 1.0]
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_aggression",
+          "name": "Aggression",
+          "icon": "rage",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the damage of your Sinister Strike and Eviscerate abilities by {2/4/6}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 2,
+              "abilities": ["rogue_sinister_strike", "rogue_eviscerate"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_combat_adrenaline_rush",
+          "name": "Adrenaline Rush",
+          "icon": "rage",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Adrenaline Rush ability.",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_adrenaline_rush"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_rogue_subtlety",
+      "classId": "Rogue",
+      "name": "Subtlety",
+      "icon": "stealth",
+      "description": "A shadowy operative who strikes from stealth and bends every fight to their own timing.",
+      "talents": [
+        {
+          "id": "rogue_subtlety_master_of_deception",
+          "name": "Master of Deception",
+          "icon": "mask",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the chance enemies have to detect you while in Stealth mode.",
+          "effects": [{"type": "Special", "special": "RogueMasterOfDeception", "value": 1}]
+        },
+        {
+          "id": "rogue_subtlety_opportunity",
+          "name": "Opportunity",
+          "icon": "dagger",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage dealt when striking from behind with your Backstab, Garrote, or Ambush abilities by {4/8/12/16/20}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 4,
+              "abilities": ["rogue_backstab", "rogue_garrote", "rogue_ambush"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_subtlety_sleight_of_hand",
+          "name": "Sleight of Hand",
+          "icon": "hand",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the chance you are critically hit by melee and ranged attacks by {1/2}% and increases the threat reduction of your Feint ability by {10/20}%.",
+          "effects": [
+            {"type": "Special", "special": "RogueSleightOfHand", "value": 1},
+            {"type": "AbilityMod", "property": "Threat", "value": 10, "abilities": ["rogue_feint"]}
+          ]
+        },
+        {
+          "id": "rogue_subtlety_elusiveness",
+          "name": "Elusiveness",
+          "icon": "stealth",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Vanish and Blind abilities by {45/90} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -45, "abilities": ["rogue_vanish", "rogue_blind"]}]
+        },
+        {
+          "id": "rogue_subtlety_camouflage",
+          "name": "Camouflage",
+          "icon": "leaf",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your speed while stealthed by {3/6/9/12/15}% and reduces the cooldown of your Stealth ability by {1/2/3/4/5} sec.",
+          "effects": [
+            {"type": "Special", "special": "RogueCamouflage", "value": 3},
+            {"type": "AbilityMod", "property": "Cooldown", "value": -1, "abilities": ["rogue_stealth"]}
+          ]
+        },
+        {
+          "id": "rogue_subtlety_initiative",
+          "name": "Initiative",
+          "icon": "star",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Gives you a {25/50/75}% chance to add an additional combo point to your target when using your Ambush, Garrote, or Cheap Shot ability.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["rogue_ambush", "rogue_garrote", "rogue_cheap_shot"],
+                "effects": [{"type": "GainResource", "resource": "ComboPoints", "amount": 1}]
+              },
+              "values": [25, 50, 75]
+            }
+          ]
+        },
+        {
+          "id": "rogue_subtlety_ghostly_strike",
+          "name": "Ghostly Strike",
+          "icon": "dagger",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Ghostly Strike ability.",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_ghostly_strike"}]
+        },
+        {
+          "id": "rogue_subtlety_improved_ambush",
+          "name": "Improved Ambush",
+          "icon": "daggers",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the critical strike chance of your Ambush ability by {15/30/45}%.",
+          "effects": [{"type": "AbilityMod", "property": "CritChance", "value": 15, "abilities": ["rogue_ambush"]}]
+        },
+        {
+          "id": "rogue_subtlety_setup",
+          "name": "Setup",
+          "icon": "feather",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Gives you a {15/30/45}% chance to add a combo point to your target after dodging their attack.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnDodge",
+                "effects": [{"type": "GainResource", "resource": "ComboPoints", "amount": 1, "target": "Attacker"}]
+              },
+              "values": [15, 30, 45]
+            }
+          ]
+        },
+        {
+          "id": "rogue_subtlety_improved_sap",
+          "name": "Improved Sap",
+          "icon": "mace",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Gives you a {30/60/90}% chance to return to stealth mode after using your Sap ability.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["rogue_sap"],
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "rogue_restealth_aura"}]
+              },
+              "values": [30, 60, 90]
+            }
+          ]
+        },
+        {
+          "id": "rogue_subtlety_serrated_blades",
+          "name": "Serrated Blades",
+          "icon": "dagger",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Causes your attacks to ignore armor (about {2.7/5.4/8} per level) and increases the damage dealt by your Rupture ability by {10/20/30}%. The amount of Armor reduced increases with your level.",
+          "effects": [
+            {"type": "Special", "special": "RogueSerratedBlades", "values": [2.67, 5.43, 8.0]},
+            {"type": "AbilityMod", "property": "Damage", "value": 10, "abilities": ["rogue_rupture"]}
+          ]
+        },
+        {
+          "id": "rogue_subtlety_heightened_senses",
+          "name": "Heightened Senses",
+          "icon": "eye",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases your Stealth detection and reduces the chance you are hit by spells and ranged attacks by {2/4}%.",
+          "effects": [
+            {"type": "Stat", "stat": "StealthDetection", "value": 5},
+            {"type": "Special", "special": "RogueHeightenedSenses", "value": 2}
+          ]
+        },
+        {
+          "id": "rogue_subtlety_preparation",
+          "name": "Preparation",
+          "icon": "hourglass",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Preparation ability.",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_preparation"}]
+        },
+        {
+          "id": "rogue_subtlety_hemorrhage",
+          "name": "Hemorrhage",
+          "icon": "blood",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Grants the Hemorrhage ability.",
+          "requires": "rogue_subtlety_serrated_blades",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_hemorrhage"}]
+        },
+        {
+          "id": "rogue_subtlety_dirty_deeds",
+          "name": "Dirty Deeds",
+          "icon": "coin",
+          "tier": 5,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Reduces the Energy cost of your Cheap Shot and Garrote abilities by {10/20}.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CostFlat",
+              "value": -10,
+              "abilities": ["rogue_cheap_shot", "rogue_garrote"]
+            }
+          ]
+        },
+        {
+          "id": "rogue_subtlety_deadliness",
+          "name": "Deadliness",
+          "icon": "skull",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your attack power by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "AttackPower", "value": 2, "pct": true}]
+        },
+        {
+          "id": "rogue_subtlety_premeditation",
+          "name": "Premeditation",
+          "icon": "eye",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Grants the Premeditation ability.",
+          "requires": "rogue_subtlety_preparation",
+          "effects": [{"type": "GrantAbility", "ability": "rogue_premeditation"}]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "rogue_starter_dagger",
+      "name": "Worn Dagger",
+      "icon": "dagger",
+      "description": "A plain, well-balanced blade. Every footpad's first friend.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "equip": "OneHand",
+      "weaponType": "Dagger",
+      "minDamage": 5,
+      "maxDamage": 8,
+      "speed": 1.6,
+      "price": 35
+    },
+    {
+      "id": "rogue_starter_dagger_offhand",
+      "name": "Worn Parrying Dagger",
+      "icon": "dagger",
+      "description": "A twin to your first dagger, weighted for the off hand. Every rogue fights with a blade in each hand.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "equip": "OffHand",
+      "weaponType": "Dagger",
+      "minDamage": 5,
+      "maxDamage": 8,
+      "speed": 1.6,
+      "price": 35
+    },
+    {
+      "id": "rogue_starter_vest",
+      "name": "Footpad's Vest",
+      "icon": "armor",
+      "description": "Dark, close-fitting leather that doesn't creak.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Chest",
+      "armorType": "Leather",
+      "armor": 3,
+      "price": 6
+    },
+    {
+      "id": "rogue_starter_pants",
+      "name": "Footpad's Pants",
+      "icon": "armor",
+      "description": "Soft leather trousers with more pockets than seams.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Legs",
+      "armorType": "Leather",
+      "armor": 2,
+      "price": 5
+    },
+    {
+      "id": "rogue_starter_shoes",
+      "name": "Footpad's Shoes",
+      "icon": "boot",
+      "description": "Felt-soled shoes for quiet feet.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 1,
+      "price": 4
+    },
+    {
+      "id": "rogue_starter_throwing_knives",
+      "name": "Small Throwing Knives",
+      "icon": "dagger",
+      "description": "A bandolier of small, balanced knives. They always seem to find their way back.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 3,
+      "equip": "Ranged",
+      "weaponType": "Thrown",
+      "minDamage": 2,
+      "maxDamage": 4,
+      "speed": 2.0,
+      "price": 20
+    },
+    {
+      "id": "rogue_flash_powder",
+      "name": "Flash Powder",
+      "icon": "sparkle",
+      "description": "A pinch of blinding powder. Reagent for Vanish.",
+      "kind": "Reagent",
+      "quality": "Common",
+      "itemLevel": 22,
+      "stack": 20,
+      "price": 25,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_blinding_powder",
+      "name": "Blinding Powder",
+      "icon": "sparkle",
+      "description": "Ground fadeleaf that stings the eyes. Reagent for Blind.",
+      "kind": "Reagent",
+      "quality": "Common",
+      "itemLevel": 34,
+      "stack": 20,
+      "price": 50,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_instant_poison_vial",
+      "name": "Instant Poison",
+      "icon": "vial",
+      "description": "Use: coats your weapons for 30 min (40 charges). Each strike has a 20% chance of poisoning the enemy for 19 to 25 Nature damage (112 to 148 at level 60).",
+      "kind": "Consumable",
+      "quality": "Common",
+      "itemLevel": 20,
+      "requiredLevel": 20,
+      "use": "rogue_apply_instant_poison",
+      "consumable": true,
+      "stack": 20,
+      "price": 60,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_crippling_poison_vial",
+      "name": "Crippling Poison",
+      "icon": "vial",
+      "description": "Use: coats your weapons for 30 min (20 charges). Each strike has a 30% chance of poisoning the enemy, slowing its movement speed by 50% (70% at level 60) for 12 sec.",
+      "kind": "Consumable",
+      "quality": "Common",
+      "itemLevel": 20,
+      "requiredLevel": 20,
+      "use": "rogue_apply_crippling_poison",
+      "consumable": true,
+      "stack": 20,
+      "price": 60,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_mind_numbing_poison_vial",
+      "name": "Mind-numbing Poison",
+      "icon": "vial",
+      "description": "Use: coats your weapons for 30 min (50 charges). Each strike has a 20% chance of poisoning the enemy, increasing its casting time by 40% (up to 60%) for 10 sec.",
+      "kind": "Consumable",
+      "quality": "Common",
+      "itemLevel": 24,
+      "requiredLevel": 24,
+      "use": "rogue_apply_mind_numbing_poison",
+      "consumable": true,
+      "stack": 20,
+      "price": 80,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_deadly_poison_vial",
+      "name": "Deadly Poison",
+      "icon": "vial",
+      "description": "Use: coats your weapons for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy for 36 Nature damage over 12 sec (136 at level 60). Stacks up to 5 times.",
+      "kind": "Consumable",
+      "quality": "Common",
+      "itemLevel": 30,
+      "requiredLevel": 30,
+      "use": "rogue_apply_deadly_poison",
+      "consumable": true,
+      "stack": 20,
+      "price": 120,
+      "classes": ["Rogue"]
+    },
+    {
+      "id": "rogue_wound_poison_vial",
+      "name": "Wound Poison",
+      "icon": "vial",
+      "description": "Use: coats your weapons for 30 min (60 charges). Each strike has a 30% chance of poisoning the enemy, reducing all healing it receives (2% per application, about 5% at level 56). Stacks up to 5 times. Lasts 15 sec.",
+      "kind": "Consumable",
+      "quality": "Common",
+      "itemLevel": 32,
+      "requiredLevel": 32,
+      "use": "rogue_apply_wound_poison",
+      "consumable": true,
+      "stack": 20,
+      "price": 140,
+      "classes": ["Rogue"]
+    }
+  ],
+  "specials": [
+    {
+      "id": "RoguePerComboByRank",
+      "usedBy": "rogue_eviscerate, rogue_rupture (abilities)",
+      "behaviour": "Ability special (ModifyDamage), also applied to the periodic ticks of auras the ability applied (tick casts carry the aura's Rank/EffLevel/LearnLevel/ComboPoints). WoW finishers gain more damage PER COMBO POINT at higher ranks, which perCombo alone cannot express. For every Damage effect of the ability (Eviscerate's direct damage, Rupture's tickEffects) add amount x (effLevel - learnLevel) x comboPoints to the base magnitude, where 'amount' is that effect's amount field (per-combo-point growth per level: Eviscerate 2.582 -> 5 per point at rank 1, ~147 at rank 8; Rupture 0.3 per tick -> 2 per point per tick at rank 1, 14 at rank 6). Applied before Damage/Effect AbilityMods, crits and armor. Eviscerate's attack-power part (7% AP per point) is the generic EffectDef.apCoefPerCombo, added by Battle.EffectDamage, not by this special."
+    },
+    {
+      "id": "RogueExposeArmor",
+      "usedBy": "rogue_expose_armor (aura)",
+      "behaviour": "Aura special (OnAuraApplied): after the aura resolves its mod values (Armor -80/-145/-210/-275/-340 by rank, x Improved Expose Armor EffectMult), multiply ModValues[0] by the aura's ComboPoints (the points spent by the finisher): 5 points at rank 5 = -1700 armor (-2550 with 2/2 Improved Expose Armor). Does not stack with Sunder Armor in WoW: when the target has warrior_sunder_armor, keep only the larger total armor reduction (remove the weaker one)."
+    },
+    {
+      "id": "RogueKidneyShot",
+      "usedBy": "rogue_kidney_shot (aura), rogue_assassination_improved_kidney_shot (talent passive)",
+      "behaviour": "Aura special (OnAuraApplied). Duration: the data gives 1 s base + 1 s per combo point (rank 2 values, 2-6 s); at rank 1 subtract 1 s (1-5 s). Improved Kidney Shot: if the caster has the talent at rank r, set the aura's ModValues[0] (DamageTaken, pct) to 3 x r so the stunned target takes +3/6/9% damage from all sources while the stun lasts. The talent's own Special passive does nothing else."
+    },
+    {
+      "id": "RogueVanish",
+      "usedBy": "rogue_vanish (ability)",
+      "behaviour": "Ability special. CheckUse: requires one rogue_flash_powder in the party inventory. Resolve (before the ability's effects): consume one Flash Powder; remove every aura on the rogue imposing Root or a negative MoveSpeed mod (snares, Daze; same rule as RogueRemoveSnares); set the rogue's threat to 0 on every enemy table and make enemies that were targeting it pick a new target; cancel its auto attack and combo-point target. Then the effects apply rogue_restealth_aura (the Stealth state with a flat -30% MoveSpeed, i.e. the max-rank Stealth penalty as a documented approximation; allowed in combat, unlike the Stealth ability) and rogue_vanish_aura (10 s; while it lasts the rogue cannot be detected even within 3 m and cannot be targeted by enemies). Rank 2 only differs in WoW stealth level (no extra rule). Openers used from Vanish stealth in an ongoing battle do NOT grant a surprise round."
+    },
+    {
+      "id": "RogueBlind",
+      "usedBy": "rogue_blind (ability)",
+      "behaviour": "Ability special. CheckUse: requires one rogue_blinding_powder in the party inventory (reason 'Requires Blinding Powder'). On cast (even if the target resists) consume one Blinding Powder."
+    },
+    {
+      "id": "RogueDistracted",
+      "usedBy": "rogue_distract (aura)",
+      "behaviour": "Aura special on enemies hit by Distract (10 s, broken by damage). While active the unit faces the distraction point, cannot detect stealthed units (no 3 m detection) and counts as facing away from every enemy that is not between it and the point (Backstab/Ambush/Garrote behindTarget checks pass, it cannot parry or block those attacks). Out of combat it stops patrolling for the duration. It does not skip turns."
+    },
+    {
+      "id": "RoguePickLock",
+      "usedBy": "rogue_pick_lock (effect)",
+      "behaviour": "Effect special used from the exploration UI on a locked chest/door (ChestDef.lockCheck, skill SleightOfHand). After the 5 s cast the rogue rolls d20 + the normal SleightOfHand modifier + floor(level/5) (lockpicking skill) against the lock DC; natural 20 always succeeds. Success opens the lock (same outcome as passing the check); failure can be retried after another cast. Not usable in combat. A chest that does not need a check simply opens."
+    },
+    {
+      "id": "RogueRelentlessStrikes",
+      "usedBy": "rogue_assassination_relentless_strikes (talent passive)",
+      "behaviour": "Talent passive: after any finisher (cost.consumesComboPoints) resolves, roll 20% x combo points spent (20..100%); on success the rogue gains 25 Energy (capped at max energy)."
+    },
+    {
+      "id": "RogueMurder",
+      "usedBy": "rogue_assassination_murder (talent passive)",
+      "behaviour": "Talent passive (ModifyOutgoingDamage): all damage the rogue deals to targets of creature type Humanoid, Giant, Beast or Dragonkin is increased by 1% x rank (1/2%)."
+    },
+    {
+      "id": "RogueImprovedPoisons",
+      "usedBy": "rogue_assassination_improved_poisons (talent passive)",
+      "behaviour": "Talent passive: adds 2 x rank percentage points (2..10) to the proc chance of the rogue's poison coatings (auras tagged WeaponCoating: Instant 20% -> 30%, Deadly/Crippling/Wound 30% -> 40%, Mind-numbing 20% -> 30%)."
+    },
+    {
+      "id": "RogueVigor",
+      "usedBy": "rogue_assassination_vigor (talent passive)",
+      "behaviour": "Talent passive: maximum Energy +10 (100 -> 110). Turn regeneration is unchanged (+60)."
+    },
+    {
+      "id": "RogueCamouflage",
+      "usedBy": "rogue_subtlety_camouflage (talent passive)",
+      "behaviour": "Talent passive: while the rogue has an aura with the Stealth state, MoveSpeed +3% x rank (pct, offsets the stealth movement penalty: -50/-40/-35/-30% by Stealth rank, -30% when Vanish or Improved Sap restealths via rogue_restealth_aura). The Stealth cooldown reduction is a separate AbilityMod."
+    },
+    {
+      "id": "RogueMasterOfDeception",
+      "usedBy": "rogue_subtlety_master_of_deception (talent passive)",
+      "behaviour": "Talent passive: enemies' stealth detection radius against this rogue (base 3 m out of combat, see Design.md Stealth) is reduced by 10% x rank (to 1.5 m at 5/5); in-combat detection checks against the rogue take the same reduction."
+    },
+    {
+      "id": "RogueRemoveSnares",
+      "usedBy": "rogue_combat_improved_sprint (proc effect)",
+      "behaviour": "Effect special (target Self): removes every aura on the target that imposes the Root state or has a negative MoveSpeed stat mod (snares, Daze, Hamstring, Frost Nova...). Stun and other control effects are not removed."
+    },
+    {
+      "id": "RogueSleightOfHand",
+      "usedBy": "rogue_subtlety_sleight_of_hand (talent passive)",
+      "behaviour": "Talent passive: melee and ranged attacks against the rogue have their critical strike chance reduced by 1% x rank (applied in the attacker's crit roll, not below 0). The Feint part is an AbilityMod Threat."
+    },
+    {
+      "id": "RogueHeightenedSenses",
+      "usedBy": "rogue_subtlety_heightened_senses (talent passive)",
+      "behaviour": "Talent passive (IncomingMissChance hook): spells (incl. wand shots) and ranged attacks (Auto Shot, ranged weapon abilities, thrown) aimed at the rogue get +value x rank percentage points (2/4) of miss chance, added to the attacker's miss chance before the 99% hit cap (spells: the resist roll; physical ranged: the miss part of the ranged table). Melee attacks are not affected. The Stealth detection part is a separate Stat passive."
+    },
+    {
+      "id": "RogueSerratedBlades",
+      "usedBy": "rogue_subtlety_serrated_blades (talent passive)",
+      "behaviour": "Talent passive: the rogue's physical attacks ignore armor equal to values[rank-1] x rogue level (2.67/5.43/8 per level: 160/326/480 at level 60), i.e. a level-scaled ArmorPenetration stat. The Rupture damage bonus is a separate AbilityMod."
+    }
+  ]
+}

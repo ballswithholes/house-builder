@@ -1,0 +1,551 @@
+{
+  "_note": "The Lantern Catacombs (Docs/Expansion.md §8 row sh, prefix dg3): the map. Creatures, loot, items and dialogues are in dgn_lantern_catacombs_content.json.",
+  "maps": [
+    {
+      "id": "dgn_lantern_catacombs",
+      "name": "The Lantern Catacombs",
+      "subtitle": "Where the shrine's keepers sleep",
+      "width": 56,
+      "depth": 44,
+      "skyTop": "#16141c",
+      "skyBottom": "#2e2a36",
+      "ground": "ground_shrine",
+      "groundTile": 8,
+      "groundTint": "#8c8698",
+      "biome": "crypt",
+      "environment": "crypt",
+      "levelMin": 13,
+      "levelMax": 15,
+      "dungeon": true,
+      "npcs": [],
+      "transitions": [
+        {
+          "id": "to_shrine",
+          "pos": [0.7, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "shrine",
+          "targetSpawn": "from_dgn_lantern_catacombs",
+          "label": "The Old Lantern Shrine"
+        }
+      ],
+      "spawns": [{"id": "default", "pos": [3.4, 22.0]}, {"id": "from_shrine", "pos": [3.4, 22.0]}],
+      "ambient": {"dust": true, "drips": true, "timeOfDay": "night", "dayNightCycle": false, "ambientColor": "#b0a0c8", "ambientIntensity": 0.55},
+      "restArea": false,
+      "music": "music_dungeon",
+      "_note": "Hidden dungeon under the Old Lantern Shrine (Docs/Expansion.md §8 row sh, prefix dg3). Revealed by the High Terrace Perception check, the cracked plinth (Investigation/Religion) or Aiko's reading of Ishiro's ledger.",
+      "props": [
+        {
+          "art": "prop_torch_sconce",
+          "pos": [2.6, 17.4],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [2.6, 26.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_coffin", "pos": [6.4, 28.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [9.6, 28.8], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [6.2, 15.4], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [9.4, 15.2], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_bones", "pos": [5.2, 19.0]},
+        {"art": "prop_bones", "pos": [8.8, 25.0]},
+        {"art": "prop_crypt_pillar", "pos": [11.8, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [11.8, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [17.2, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [17.2, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [22.6, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [22.6, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [28.0, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [28.0, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [33.4, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [33.4, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [38.8, 17.2], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [38.8, 26.8], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [19.9, 17.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [30.7, 17.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [25.3, 26.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [36.1, 26.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_bones", "pos": [21.0, 23.4]},
+        {"art": "prop_bones", "pos": [34.6, 20.4]},
+        {"art": "prop_rubble", "pos": [14.6, 25.4], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_sarcophagus",
+          "pos": [10.6, 33.4],
+          "collider": {"w": 2.8, "h": 1.4},
+          "text": "KEEPER ODA. HE PLANTED THE PINES. Someone has left a pine cone on the lid."
+        },
+        {
+          "art": "prop_sarcophagus",
+          "pos": [10.6, 38.4],
+          "collider": {"w": 2.8, "h": 1.4},
+          "text": "KEEPER MIWA. SHE COUNTED THE STARS AND KEPT THE LEDGER BEFORE ISHIRO."
+        },
+        {
+          "art": "prop_sarcophagus",
+          "pos": [17.0, 37.6],
+          "collider": {"w": 2.8, "h": 1.4},
+          "text": "KEEPER JUN. HE WAS AFRAID OF HEIGHTS AND CLIMBED THE STAIR EVERY DAY FOR SIXTY YEARS."
+        },
+        {
+          "art": "prop_sarcophagus",
+          "pos": [29.2, 37.6],
+          "collider": {"w": 2.8, "h": 1.4},
+          "text": "KEEPER AYA. SHE TAUGHT THE FOXES TO WAIT FOR THEIR SUPPER."
+        },
+        {"art": "prop_sarcophagus", "pos": [35.4, 38.4], "collider": {"w": 2.8, "h": 1.4}, "text": "KEEPER GEN. HE MADE THE LANTERNS. ALL OF THEM."},
+        {
+          "art": "prop_sarcophagus",
+          "pos": [35.4, 33.4],
+          "collider": {"w": 2.8, "h": 1.4},
+          "text": "KEEPER SUMI. SHE SANG WHILE SHE SWEPT. THE NOVICES SANG BACK."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [19.6, 30.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [26.4, 30.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [6.4, 30.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [38.8, 41.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_coffin", "pos": [6.4, 36.2], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_bones", "pos": [14.2, 35.4]},
+        {"art": "prop_bones", "pos": [31.4, 34.4]},
+        {"art": "prop_rubble", "pos": [38.4, 31.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [20.0, 40.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [26.0, 40.6], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [14.4, 42.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "dg3_lantern_hana",
+          "text": "A stone lantern burning with cold violet fire.",
+          "hideFlag": "dg3_keeper_hana_freed",
+          "dialogue": "dlg_dg3_lantern_hana"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [14.4, 42.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd28a", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6]},
+          "interact": "dg3_lantern_hana_freed",
+          "text": "The lantern burns a calm gold now, and it is empty, the way a house is empty when everyone has gone out to watch the stars.",
+          "requireFlag": "dg3_keeper_hana_freed"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [23.0, 42.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "dg3_lantern_tomo",
+          "text": "A stone lantern burning with cold violet fire.",
+          "hideFlag": "dg3_keeper_tomo_freed",
+          "dialogue": "dlg_dg3_lantern_tomo"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [23.0, 42.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd28a", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6]},
+          "interact": "dg3_lantern_tomo_freed",
+          "text": "The lantern burns a calm gold now, and it is empty, the way a house is empty when everyone has gone out to watch the stars.",
+          "requireFlag": "dg3_keeper_tomo_freed"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [31.6, 42.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "dg3_lantern_rin",
+          "text": "A stone lantern burning with cold violet fire.",
+          "hideFlag": "dg3_keeper_rin_freed",
+          "dialogue": "dlg_dg3_lantern_rin"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [31.6, 42.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd28a", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6]},
+          "interact": "dg3_lantern_rin_freed",
+          "text": "The lantern burns a calm gold now, and it is empty, the way a house is empty when everyone has gone out to watch the stars.",
+          "requireFlag": "dg3_keeper_rin_freed"
+        },
+        {
+          "art": "prop_drowned_arch",
+          "pos": [24.0, 7.4],
+          "text": "An arch of the old ossuary, half drowned. Barnacles in a crypt: nobody can explain them."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [17.0, 6.8],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [31.4, 6.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [34.6, 8.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
+        },
+        {"art": "prop_bonepile", "pos": [12.8, 10.8], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_bonepile", "pos": [36.8, 13.6], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_bones", "pos": [19.6, 10.4]},
+        {"art": "prop_bones", "pos": [27.8, 13.2]},
+        {"art": "prop_coffin", "pos": [15.6, 13.4], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [21.2, 14.4], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [8.4, 12.6], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_brazier",
+          "pos": [26.6, 15.0],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [10.2, 7.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_coffin", "pos": [20.2, 1.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_bones", "pos": [31.0, 2.2]},
+        {"art": "prop_rubble", "pos": [36.6, 1.6], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.0, 11.0],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [41.6, 31.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [40.8, 13.2],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#9fd8ff", "radius": 3.2, "intensity": 0.7, "offset": [0, 1.6], "flicker": true}
+        },
+        {"art": "prop_bones", "pos": [37.4, 24.6]},
+        {"art": "prop_rubble", "pos": [38.4, 15.6], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [49.4, 22.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [54.6, 19.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [54.6, 13.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [49.4, 10.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [44.6, 13.0],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [44.2, 19.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "text": "One of the First Keeper's lanterns. The light inside is made of many small lights, pressed close together."
+        },
+        {
+          "art": "prop_altar",
+          "pos": [51.4, 21.2],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#c9a8ff", "radius": 6.0, "intensity": 1.1, "offset": [0, 1.25], "flicker": true},
+          "text": "The First Keeper's altar: a bell, a bowl of cold incense and four candles that never burn down."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [47.4, 24.2],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [53.8, 24.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_treasure_pile", "pos": [53.4, 7.2], "collider": {"w": 2.0, "h": 1.1}},
+        {"art": "prop_rubble", "pos": [45.0, 4.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [48.0, 6.4]},
+        {
+          "art": "prop_brazier",
+          "pos": [50.4, 3.4],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_crypt_pillar", "pos": [43.4, 8.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [55.0, 9.6], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [52.4, 18.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#b49cff", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "dg3_first_lantern",
+          "text": "Hazama's great caged lantern, lying where he fell. Hundreds of little lights crowd inside it.",
+          "requireFlag": "dg3_lich_defeated",
+          "hideFlag": "sh2_first_lantern_choice",
+          "dialogue": "dlg_dg3_first_lantern"
+        },
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [52.4, 18.6],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd28a", "radius": 3.6, "intensity": 0.9, "offset": [0, 1.6]},
+          "interact": "dg3_first_lantern_empty",
+          "text": "The First Keeper's lantern stands open and empty, and warm.",
+          "requireFlag": "sh2_keepers_freed"
+        },
+        {
+          "art": "prop_altar",
+          "pos": [49.0, 42.2],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#ffd28a", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true},
+          "text": "A vestry altar crowded with candle stubs: three hundred years of vigils, none of them finished."
+        },
+        {"art": "prop_coffin", "pos": [44.8, 39.4], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [53.4, 39.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [44.4, 31.0],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [54.6, 31.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_rubble", "pos": [54.4, 35.2], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [46.6, 34.0]},
+        {"art": "prop_crypt_pillar", "pos": [44.4, 27.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [54.8, 27.8], "collider": {"w": 1.1, "h": 0.9}}
+      ],
+      "fill": 0.5,
+      "paths": [
+        {"art": "decal_path_stone", "points": [[0.5, 22.0], [12.0, 22.0], [26.0, 22.0], [37.0, 22.0], [43.6, 22.0], [46.8, 20.2]], "width": 2.4},
+        {"art": "decal_path_stone", "points": [[25.0, 22.0], [23.0, 30.0], [23.0, 38.6]], "width": 2.0},
+        {"art": "decal_path_stone", "points": [[25.0, 22.0], [24.2, 13.0], [24.0, 11.0], [24.0, 1.4]], "width": 2.0},
+        {"art": "decal_path_stone", "points": [[43.6, 22.0], [46.4, 26.4], [48.6, 31.6], [49.0, 36.0]], "width": 1.8}
+      ],
+      "water": [
+        {
+          "points": [[42.6, 46.0], [41.8, 36.0], [41.2, 26.0], [40.8, 18.0], [40.6, 10.0], [41.4, 2.0], [41.8, -2.0]],
+          "halfWidth": 1.4,
+          "crossings": [{"pos": [41.0, 22.0], "size": [5.6, 3.6]}]
+        },
+        {
+          "points": [[13.0, 7.2], [16.0, 4.8], [22.0, 4.4], [30.0, 4.6], [35.6, 6.0], [36.4, 8.4], [33.0, 10.2], [25.0, 10.4], [17.0, 10.0], [13.6, 9.0]],
+          "closed": true,
+          "crossings": [{"pos": [24.0, 7.4], "size": [3.2, 8.4]}]
+        }
+      ],
+      "encounters": [
+        {
+          "id": "enc_dg3_gallery_bones",
+          "pos": [17.0, 22.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg3_skeleton", "pos": [18.4, 23.2]},
+            {"creature": "cr_dg3_skeleton", "pos": [18.8, 20.8]},
+            {"creature": "cr_dg3_skeleton_archer", "pos": [20.6, 22.0]}
+          ]
+        },
+        {
+          "id": "enc_dg3_ossuary",
+          "pos": [30.6, 13.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg3_skeleton", "pos": [29.6, 14.0]},
+            {"creature": "cr_dg3_skeleton", "pos": [31.8, 13.8]},
+            {"creature": "cr_dg3_skeleton_archer", "pos": [30.2, 11.6]},
+            {"creature": "cr_dg3_skeleton_archer", "pos": [32.4, 11.8]}
+          ]
+        },
+        {
+          "id": "enc_dg3_drowned_ambush",
+          "pos": [28.6, 2.0],
+          "radius": 2.6,
+          "hidden": true,
+          "enemies": [
+            {"creature": "cr_dg3_drowned_dead", "pos": [26.8, 2.8]},
+            {"creature": "cr_dg3_drowned_dead", "pos": [30.4, 3.0]},
+            {"creature": "cr_dg3_drowned_dead", "pos": [28.6, 3.6]}
+          ]
+        },
+        {
+          "id": "enc_dg3_keepers_hall",
+          "pos": [23.0, 34.8],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg3_hollow_knight", "pos": [21.8, 36.2]},
+            {"creature": "cr_dg3_hollow_knight", "pos": [24.4, 36.0]},
+            {"creature": "cr_dg3_skeleton_archer", "pos": [23.2, 38.4]}
+          ]
+        },
+        {
+          "id": "enc_dg3_chapel_guard",
+          "pos": [37.2, 22.0],
+          "radius": 2.8,
+          "doneFlag": "dg3_chapel_guard_done",
+          "dialogue": "dlg_dg3_chapel_guard",
+          "enemies": [
+            {"creature": "cr_dg3_hollow_knight", "pos": [39.0, 23.2]},
+            {"creature": "cr_dg3_hollow_knight", "pos": [39.0, 20.8]},
+            {"creature": "cr_dg3_lantern_acolyte", "pos": [43.6, 22.0]}
+          ]
+        },
+        {
+          "id": "enc_dg3_vestry",
+          "pos": [49.0, 36.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg3_lantern_acolyte", "pos": [47.8, 37.8]},
+            {"creature": "cr_dg3_lantern_acolyte", "pos": [50.4, 37.6]},
+            {"creature": "cr_dg3_skeleton", "pos": [49.2, 35.0]}
+          ]
+        },
+        {
+          "id": "enc_dg3_lantern_lich",
+          "pos": [49.4, 16.6],
+          "radius": 4.0,
+          "doneFlag": "dg3_lich_defeated",
+          "dialogue": "dlg_dg3_lich",
+          "enemies": [{"creature": "cr_dg3_lantern_lich", "pos": [51.2, 17.4]}]
+        }
+      ],
+      "chests": [
+        {
+          "id": "chest_dg3_reliquary",
+          "pos": [7.6, 41.8],
+          "art": "prop_chest",
+          "lootTable": "lt_dg3_chest_reliquary",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 15}
+        },
+        {"id": "chest_dg3_ossuary", "pos": [28.6, 1.2], "art": "prop_chest", "lootTable": "lt_dg3_chest_ossuary"},
+        {
+          "id": "chest_dg3_first_keepers_hoard",
+          "pos": [51.0, 7.4],
+          "art": "prop_chest",
+          "lootTable": "lt_dg3_chest_hoard",
+          "requireFlag": "dg3_lich_defeated"
+        }
+      ],
+      "regions": [
+        {
+          "id": "reg_dg3_stair",
+          "pos": [6.0, 22.0],
+          "size": [10, 12],
+          "name": "Keepers' Stair",
+          "text": "The Lantern Catacombs. The air is cold and smells of wax. Somewhere ahead, very tired voices are singing the keepers' evening prayer."
+        },
+        {
+          "id": "reg_dg3_gallery",
+          "pos": [25.5, 22.0],
+          "size": [26, 9],
+          "name": "Long Gallery",
+          "text": "The Long Gallery. Every pillar has a niche, and every niche had a candle, once."
+        },
+        {
+          "id": "reg_dg3_hall",
+          "pos": [23.0, 36.6],
+          "size": [34, 13],
+          "name": "Hall of Keepers",
+          "text": "The Hall of Keepers. Stone keepers lie on their tombs with folded hands. Their lanterns burn violet, and they do not look like they are resting."
+        },
+        {
+          "id": "reg_dg3_ossuary",
+          "pos": [23.0, 7.6],
+          "size": [32, 13],
+          "name": "Flooded Ossuary",
+          "text": "The Flooded Ossuary. A black channel has broken through the wall and taken the lower crypt for itself. The bones don't seem to mind. Mostly."
+        },
+        {
+          "id": "reg_dg3_chapel",
+          "pos": [49.0, 15.6],
+          "size": [13, 20],
+          "name": "Lantern Chapel",
+          "text": "The Lantern Chapel. A ring of lanterns, an altar, and a great deal of very patient dark."
+        },
+        {
+          "id": "reg_dg3_vestry",
+          "pos": [49.0, 37.0],
+          "size": [12, 13],
+          "name": "Candle Vestry",
+          "text": "The Candle Vestry. Three hundred years of candle stubs, every one of them blown out halfway through a prayer."
+        }
+      ]
+    }
+  ]
+}

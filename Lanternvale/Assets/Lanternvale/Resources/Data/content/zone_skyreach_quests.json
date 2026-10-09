@@ -1,0 +1,335 @@
+{
+  "_note": "Skyreach Peaks (Docs/Expansion.md §8, builder skyreach, prefixes sr / dg6). The main story Ash on the Wind and the zone's side quests.",
+  "quests": [
+    {
+      "id": "mq2_ash_on_the_wind",
+      "name": "Ash on the Wind",
+      "giver": "bw_archivist_penhallow",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "main": true,
+      "summary": "The ash comes from the peaks. Climb into Skyreach, read the ash at the Bone Field, and learn who serves the sleeping Ashwyrm.",
+      "stages": [
+        {
+          "id": "peaks",
+          "description": "Climb north-west from Brightwater into Skyreach Peaks.",
+          "objectives": [{"type": "Reach", "target": "skyreach", "text": "Travel to Skyreach Peaks"}],
+          "next": "guide"
+        },
+        {
+          "id": "guide",
+          "description": "Find a guide in Cairnhollow, the mountain hut village, and ask about the ash.",
+          "objectives": [{"type": "Talk", "target": "sr_guide_odran", "text": "Speak with Odran Fellstep"}],
+          "next": "bones",
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
+        },
+        {
+          "id": "bones",
+          "description": "Go up the Switchbacks to the Bone Field and read the ash on the old dragon's bones. Magistra Ottoline may help.",
+          "objectives": [{"type": "Flag", "target": "sr_bones_read", "text": "Read the ash on the dragon bones"}],
+          "next": "scout",
+          "onComplete": [{"type": "GiveXP", "amount": 335}],
+          "turnIn": "sr_ottoline"
+        },
+        {
+          "id": "scout",
+          "description": "Find Ivo Tallowmere, the Brightwater scout hiding south-east of the Dragonsworn camp.",
+          "objectives": [{"type": "Talk", "target": "sr_scout_ivo", "text": "Speak with Ivo the scout"}],
+          "next": "marshal",
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
+        },
+        {
+          "id": "marshal",
+          "description": "Defeat Vanguard-Marshal Kaedric in the Dragonsworn camp and take Highlord Varkas's orders.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_sr_marshal", "text": "Defeat Vanguard-Marshal Kaedric"},
+            {"type": "Collect", "target": "sr_varkas_orders", "text": "Highlord Varkas's orders"}
+          ],
+          "next": "gate",
+          "onComplete": [{"type": "GiveXP", "amount": 585}]
+        },
+        {
+          "id": "gate",
+          "description": "The orders speak of a gate. Find it, above the camp.",
+          "objectives": [{"type": "Reach", "target": "reg_sr_roost_gate", "text": "Find the Roost Gate"}],
+          "next": "report",
+          "onComplete": [{"type": "GiveXP", "amount": 200}, {"type": "SetFlag", "key": "sr_roost_revealed"}]
+        },
+        {
+          "id": "report",
+          "description": "Bring word back to Archivist Penhallow in Brightwater.",
+          "objectives": [{"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}],
+          "onComplete": [{"type": "SetFlag", "key": "mq2_ash_on_the_wind_done"}]
+        }
+      ],
+      "rewards": {"xp": 945, "gold": 9000, "choiceItems": ["sr_vanguard_breakers_helm", "sr_windrider_hood", "sr_archivists_ember_lens"]}
+    },
+    {
+      "id": "sr_woolly_business",
+      "name": "Woolly Business",
+      "giver": "sr_pema",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "summary": "Pema's three goats ran off when the mountain shook: Bramble, who climbs; Clover, who naps; and Turnip, who eats. Bring them home to Cairnhollow.",
+      "stages": [
+        {
+          "id": "goats",
+          "description": "Find Bramble (high places), Clover (big furry things) and Turnip (food) and send them home.",
+          "objectives": [
+            {"type": "Flag", "target": "sr_goat_bramble", "text": "Bramble found"},
+            {"type": "Flag", "target": "sr_goat_clover", "text": "Clover found"},
+            {"type": "Flag", "target": "sr_goat_turnip", "text": "Turnip found"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Pema her goats are home.",
+          "turnIn": "sr_pema",
+          "objectives": [{"type": "Flag", "target": "sr_woolly_business_handed_in", "text": "Speak with Pema"}]
+        }
+      ],
+      "rewards": {"xp": 535, "gold": 2500, "choiceItems": ["sr_goatherds_mittens", "sr_cloudwool_shawl", "sr_bell_on_a_string"]}
+    },
+    {
+      "id": "sr_ogre_toll",
+      "name": "The Ogre Toll",
+      "giver": "sr_guide_odran",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "summary": "Gorrum Two-Belly and his ogres charge a toll on the Switchbacks road. Odran would like the road clear, and his hat back. However you manage it.",
+      "stages": [
+        {
+          "id": "toll",
+          "description": "Deal with Gorrum Two-Belly's toll on the first bend of the Switchbacks: talk, pay, scare or fight.",
+          "objectives": [{"type": "Flag", "target": "sr_ogre_road_clear", "text": "Clear the Switchbacks road"}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Tell Odran the road is clear.",
+          "turnIn": "sr_guide_odran",
+          "objectives": [{"type": "Flag", "target": "sr_ogre_toll_handed_in", "text": "Speak with Odran"}]
+        }
+      ],
+      "rewards": {"xp": 495, "gold": 2500, "choiceItems": ["sr_two_belly_belt", "sr_toll_takers_gloves", "sr_cheese_wheel_buckler"]}
+    },
+    {
+      "id": "sr_warm_coats",
+      "name": "Warm Coats for Cold Folk",
+      "giver": "sr_brannoc",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "summary": "Winter came early to Cairnhollow. Brannoc the trapper needs six frost wolf pelts to make coats for everyone in the village.",
+      "stages": [
+        {
+          "id": "pelts",
+          "description": "Collect 6 Frost Wolf Pelts from the frost wolves north-east of the Tarnrun.",
+          "objectives": [{"type": "Collect", "target": "sr_frost_wolf_pelt", "text": "Frost Wolf Pelts", "count": 6}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Bring the pelts to Brannoc in Cairnhollow.",
+          "turnIn": "sr_brannoc",
+          "objectives": [{"type": "Flag", "target": "sr_warm_coats_handed_in", "text": "Speak with Brannoc"}]
+        }
+      ],
+      "rewards": {"xp": 450, "gold": 2200, "choiceItems": ["sr_trapper_coat", "sr_rimefur_mantle", "sr_snowfox_hood"]}
+    },
+    {
+      "id": "sr_lamplighters_climb",
+      "name": "The Lamplighter's Climb",
+      "giver": "sr_guide_odran",
+      "level": 24,
+      "minLevel": 24,
+      "zone": "skyreach",
+      "summary": "Brother Pell of the Chapel of Small Lights climbed up to light a lantern for the lost Heronguard and went the wrong way, towards the wolf den.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Find Brother Pell north-east of the Tarnrun, past the wolf den.",
+          "objectives": [{"type": "Talk", "target": "sr_pell", "text": "Find Brother Pell"}],
+          "next": "home"
+        },
+        {
+          "id": "home",
+          "description": "Get Pell safely away from the wolves.",
+          "objectives": [{"type": "Defeat", "target": "enc_sr_pell_ambush", "text": "Drive off the frost wolves"}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Tell Odran that Pell is safe.",
+          "turnIn": "sr_guide_odran",
+          "objectives": [{"type": "Flag", "target": "sr_lamplighters_climb_handed_in", "text": "Speak with Odran"}]
+        }
+      ],
+      "rewards": {"xp": 535, "gold": 2500, "choiceItems": ["sr_pells_spare_lantern", "sr_snowshoe_treads", "sr_chapel_candle_rod"]}
+    },
+    {
+      "id": "sr_whiteout_bells",
+      "name": "Bells in the Whiteout",
+      "giver": "sr_hilde",
+      "level": 25,
+      "minLevel": 25,
+      "zone": "skyreach",
+      "summary": "The harpies stole every bell from the Kettle Hut's whiteout line, the ringing that guides lost travellers home through the snow.",
+      "stages": [
+        {
+          "id": "bells",
+          "description": "Take back 5 Kettle Hut Bells from the harpies of the crags and the Heronguard tower.",
+          "objectives": [{"type": "Collect", "target": "sr_hut_bell", "text": "Kettle Hut Bells", "count": 5}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Bring the bells back to Hilde at the Kettle Hut.",
+          "turnIn": "sr_hilde",
+          "objectives": [{"type": "Flag", "target": "sr_whiteout_bells_handed_in", "text": "Speak with Hilde"}]
+        }
+      ],
+      "rewards": {"xp": 535, "gold": 2800, "choiceItems": ["sr_bellwether_boots", "sr_whiteout_wraps", "sr_harpy_feather_cloak"]}
+    },
+    {
+      "id": "sr_twenty_nine",
+      "name": "The Twenty-Nine",
+      "giver": "sr_lumi",
+      "level": 25,
+      "minLevel": 25,
+      "zone": "skyreach",
+      "summary": "Old Lumi keeps twenty-nine prayer flags for the Heronguard knights who never came home. She would like to know what their Lord-Commander wrote on his last night.",
+      "stages": [
+        {
+          "id": "tower",
+          "description": "Go to the ruined Heronguard tower west of the Bone Field.",
+          "objectives": [{"type": "Reach", "target": "reg_sr_heron_tower", "text": "Reach the Heronguard tower"}],
+          "next": "nest"
+        },
+        {
+          "id": "nest",
+          "description": "Drive Shrikeclaw and her harpies out of the tower.",
+          "objectives": [{"type": "Defeat", "target": "enc_sr_tower_harpies", "text": "Defeat Shrikeclaw"}],
+          "next": "journal",
+          "onComplete": [{"type": "GiveXP", "amount": 180}]
+        },
+        {
+          "id": "journal",
+          "description": "Search the tower for Lord-Commander Aubric's journal.",
+          "objectives": [{"type": "Collect", "target": "sr_aubric_journal", "text": "Aubric's field journal"}],
+          "next": "lumi"
+        },
+        {
+          "id": "lumi",
+          "description": "Bring the journal to Old Lumi on Flag Knoll.",
+          "turnIn": "sr_lumi",
+          "objectives": [{"type": "Flag", "target": "sr_twenty_nine_handed_in", "text": "Speak with Old Lumi"}]
+        }
+      ],
+      "rewards": {"xp": 720, "gold": 3500, "choiceItems": ["sr_heronguard_vambraces", "sr_ribbon_of_the_twenty_nine", "sr_fordkeepers_spaulders"]}
+    },
+    {
+      "id": "sr_ice_and_ember",
+      "name": "Ice and Ember",
+      "giver": "sr_glimmerwing",
+      "level": 26,
+      "minLevel": 26,
+      "zone": "skyreach",
+      "summary": "Glimmerwing, the old frost drake, is plagued by the Ashwyrm's ember whelps, and the Dragonsworn have chained her granddaughter Icicle in a pen.",
+      "stages": [
+        {
+          "id": "whelps",
+          "description": "Drive off the ember whelps tumbling down to the shelf and the village: defeat 6 of them.",
+          "objectives": [{"type": "Kill", "target": "cr_sr_drake_whelp", "text": "Ember Whelps", "count": 6}],
+          "next": "pen"
+        },
+        {
+          "id": "pen",
+          "description": "Break the Dragonsworn drake pen below the second switchback.",
+          "objectives": [{"type": "Defeat", "target": "enc_sr_drake_pen", "text": "Break the drake pen"}],
+          "next": "free",
+          "onComplete": [{"type": "GiveXP", "amount": 180}]
+        },
+        {
+          "id": "free",
+          "description": "Free Icicle from her ember-collar.",
+          "objectives": [{"type": "Flag", "target": "sr_drake_freed", "text": "Free Icicle"}],
+          "next": "report",
+          "turnIn": "sr_icicle"
+        },
+        {
+          "id": "report",
+          "description": "Return to Glimmerwing on her shelf.",
+          "turnIn": "sr_glimmerwing",
+          "objectives": [{"type": "Flag", "target": "sr_ice_and_ember_handed_in", "text": "Speak with Glimmerwing"}]
+        }
+      ],
+      "rewards": {"xp": 720, "gold": 3500, "choiceItems": ["sr_glimmerscale_leggings", "sr_frosthide_breeches", "sr_rimesilk_trousers"]}
+    },
+    {
+      "id": "sr_singing_bones",
+      "name": "The Singing Bones",
+      "giver": "sr_ottoline",
+      "level": 26,
+      "minLevel": 26,
+      "zone": "skyreach",
+      "summary": "Three standing stones once sang a lullaby to the old dragon's bones. Now they are out of tune and the bones have begun to hum back to the Roost.",
+      "stages": [
+        {
+          "id": "cores",
+          "description": "Collect 4 Rime Cores from the rime elementals around the Bone Field and the falls.",
+          "objectives": [{"type": "Collect", "target": "sr_rime_core", "text": "Rime Cores", "count": 4}],
+          "next": "stones"
+        },
+        {
+          "id": "stones",
+          "description": "Tune the western, northern and eastern standing stones around the dragon bones.",
+          "objectives": [
+            {"type": "Flag", "target": "sr_stone_w", "text": "Western stone tuned"},
+            {"type": "Flag", "target": "sr_stone_n", "text": "Northern stone tuned"},
+            {"type": "Flag", "target": "sr_stone_e", "text": "Eastern stone tuned"}
+          ],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Return to Magistra Ottoline at the Bone Field.",
+          "turnIn": "sr_ottoline",
+          "objectives": [{"type": "Flag", "target": "sr_singing_bones_handed_in", "text": "Speak with Ottoline"}]
+        }
+      ],
+      "rewards": {"xp": 670, "gold": 3200, "choiceItems": ["sr_resonance_rod", "sr_bone_song_ring", "sr_dragonbone_cudgel"]}
+    },
+    {
+      "id": "sr_strike_the_colours",
+      "name": "Strike the Colours",
+      "giver": "sr_scout_ivo",
+      "level": 27,
+      "minLevel": 27,
+      "zone": "skyreach",
+      "summary": "The Dragonsworn have planted ash-banners all round their camp. Scout Ivo wants them torn down, and the vanguard thinned.",
+      "stages": [
+        {
+          "id": "banners",
+          "description": "Tear down 4 Dragonsworn ash-banners around the camp and break the zealots of the vanguard's three pickets.",
+          "objectives": [
+            {"type": "Flag", "target": "sr_banner_1_struck", "text": "Banner by the pickets"},
+            {"type": "Flag", "target": "sr_banner_2_struck", "text": "Banner west of the camp"},
+            {"type": "Flag", "target": "sr_banner_3_struck", "text": "Banner by the tents"},
+            {"type": "Flag", "target": "sr_banner_4_struck", "text": "Banner by the skull altar"},
+            {"type": "Defeat", "target": "enc_sr_vanguard_pickets", "text": "Zealots at the pickets"},
+            {"type": "Defeat", "target": "enc_sr_vanguard_west", "text": "Zealots west of the camp"},
+            {"type": "Defeat", "target": "enc_sr_vanguard_altar", "text": "Zealots by the skull altar"}
+          ],
+          "next": "report"
+        },
+        {"id": "report", "description": "Report back to Ivo.", "turnIn": "sr_scout_ivo", "objectives": [{"type": "Flag", "target": "sr_strike_the_colours_handed_in", "text": "Speak with Ivo"}]}
+      ],
+      "rewards": {"xp": 760, "gold": 3800, "choiceItems": ["sr_scouts_longbow", "sr_colour_breaker", "sr_ashcloth_gloves"]}
+    }
+  ]
+}

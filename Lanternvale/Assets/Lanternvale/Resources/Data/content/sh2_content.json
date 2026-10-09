@@ -1,0 +1,867 @@
+{
+  "_note": "Old Lantern Shrine additions (Docs/Expansion.md §8 row sh, prefix sh2): Aiko the novice, Old Bento the pilgrim, Keeper Ishiro at rest; the side quest sh2_keepers_rest (the Keepers' Rest), which leads into the Lantern Catacombs; the cracked plinth's inspect dialogue; Restless Bones on the High Terrace.",
+  "creatures": [
+    {
+      "id": "cr_sh2_restless_bones",
+      "name": "Restless Bones",
+      "description": "A keeper's skeleton that heard the singing under the High Terrace and climbed out to look for its lantern. It has forgotten it was ever a keeper. It has not forgotten the sword.",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.12,
+      "attackSpeed": 2.2,
+      "moveSpeed": 7,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_dg3_rusted_cleave", "priority": 5, "chance": 60}],
+      "immune": ["Fear"],
+      "lootTable": "lt_sh2_restless_bones",
+      "faction": "Hollow",
+      "material": "bone",
+      "voice": "none",
+      "bark": "*Clack. Clack-clack.* ...my... lantern...?"
+    },
+    {
+      "_note": "The terraces' own Hollow Wisp: the slice's cr_hollow_wisp held to the terraces' band (10-13) and its XP, so the north band does not outpace Amberfield.",
+      "id": "cr_sh2_hollow_wisp",
+      "name": "Hollow Wisp",
+      "description": "A lantern flame with the warmth scooped out. It drifts toward light like a moth toward a memory.",
+      "sprite": "cr_hollow_wisp",
+      "type": "Undead",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.12,
+      "healthMult": 0.8,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Shadow",
+      "ranged": true,
+      "rangedRange": 30,
+      "projectile": "fx_bolt",
+      "moveSpeed": 9,
+      "size": 1.0,
+      "ai": "Caster",
+      "abilities": [{"ability": "cr_siphon_light", "priority": 5, "chance": 50}, {"ability": "cr_grey_bolt", "priority": 3}],
+      "passives": ["cr_hollow_touched"],
+      "lootTable": "lt_hollow_wisp",
+      "faction": "Hollow",
+      "material": "ether",
+      "voice": "spirit",
+      "bark": "*The wisp flickers. For a moment it almost looks like a lantern flame again.*"
+    },
+    {
+      "_note": "The terraces' own Hollowed Pilgrim (cr_hollow_spirit held to the terraces' band and XP).",
+      "id": "cr_sh2_hollow_spirit",
+      "name": "Hollowed Pilgrim",
+      "description": "A pilgrim's spirit with the light scooped out. It still walks the stair, though it has forgotten why.",
+      "sprite": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.12,
+      "attackSpeed": 2.2,
+      "meleeSchool": "Shadow",
+      "moveSpeed": 8,
+      "size": 1.9,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_hollow_wail", "priority": 6, "condition": "enemiesInRange:2"}, {"ability": "cr_empty_touch", "priority": 4, "chance": 60}],
+      "passives": ["cr_hollow_touched"],
+      "lootTable": "lt_hollow_spirit",
+      "faction": "Hollow",
+      "material": "ether",
+      "voice": "spirit",
+      "bark": "...was I... going somewhere...?"
+    },
+    {
+      "_note": "The north pines' Duskfeather Owl (cr_owl held to the terraces' band and XP).",
+      "id": "cr_sh2_owl",
+      "name": "Duskfeather Owl",
+      "description": "A great round owl that hunts the pilgrim road at dusk. It does not like being stared at.",
+      "sprite": "pet_owl",
+      "type": "Beast",
+      "family": "Owl",
+      "rank": "Normal",
+      "levelMin": 10,
+      "levelMax": 12,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 10,
+      "levelCap": 13,
+      "xpMult": 0.12,
+      "attackSpeed": 2.0,
+      "moveSpeed": 10,
+      "size": 0.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_owl_screech", "priority": 4, "chance": 50, "condition": "targetNoAura:cr_screeched"}],
+      "lootTable": "lt_owl",
+      "faction": "Wildlife",
+      "tameable": true,
+      "material": "fur",
+      "voice": "beast",
+      "bark": "*Two enormous amber eyes blink at you from a low branch. Hoo.*"
+    }
+  ],
+  "items": [
+    {
+      "id": "sh2_ishiros_ledger",
+      "name": "Keeper Ishiro's Ledger",
+      "icon": "key",
+      "description": "Forty years of tiny, tidy handwriting: lanterns lit, stairs swept, cups of tea, and cats doodled in every margin.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "sh2_keepers_rest"
+    },
+    {
+      "id": "sh2_keepers_broom",
+      "name": "Keeper's Broom",
+      "icon": "staff",
+      "description": "Sweeps stairs, cobwebs and, in a pinch, the restless dead. The bristles are three hundred years old and have opinions.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 34,
+      "maxDamage": 51,
+      "speed": 3.0,
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 6}, {"stat": "Stamina", "value": 4}],
+      "price": 3180
+    },
+    {
+      "id": "sh2_stair_counters_sandals",
+      "name": "Stair-Counter's Sandals",
+      "icon": "boot",
+      "description": "Four hundred and twelve steps. These sandals have counted every one of them, and would like you to know.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 47,
+      "stats": [{"stat": "Agility", "value": 7}, {"stat": "Stamina", "value": 4}],
+      "price": 3180
+    },
+    {
+      "id": "sh2_lantern_wardens_gauntlets",
+      "name": "Lantern-Warden's Gauntlets",
+      "icon": "hand",
+      "description": "Ashen mail gauntlets with a lantern hook at the wrist, warm on the inside, as if someone has only just taken them off.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Hands",
+      "armorType": "Mail",
+      "armor": 89,
+      "stats": [{"stat": "Strength", "value": 7}, {"stat": "Stamina", "value": 4}],
+      "price": 3180
+    },
+    {
+      "id": "sh2_novices_grey_robe",
+      "name": "Novice's Grey Robe",
+      "icon": "armor",
+      "description": "Patched at both elbows and smelling faintly of incense and broom. Every novice of the Old Shrine has worn it at least once.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Chest",
+      "armorType": "Cloth",
+      "armor": 34,
+      "stats": [{"stat": "Intellect", "value": 6}, {"stat": "Spirit", "value": 6}, {"stat": "Stamina", "value": 4}],
+      "price": 3180
+    },
+    {
+      "id": "sh2_keepers_last_light",
+      "name": "Keeper's Last Light",
+      "icon": "ember",
+      "description": "A single warm ember on a cord, left behind in an empty lantern. It never burns you. It never goes out. It feels like being thanked.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 18,
+      "requiredLevel": 13,
+      "equip": "Neck",
+      "stats": [{"stat": "Spirit", "value": 3}, {"stat": "Intellect", "value": 3}, {"stat": "Stamina", "value": 1}, {"stat": "HealingPower", "value": 6}],
+      "price": 3565,
+      "unique": true
+    },
+    {
+      "id": "sh2_everburning_lantern",
+      "name": "The Everburning Lantern",
+      "icon": "fire",
+      "description": "Hundreds of tiny lights press against the glass, warm and patient. They don't seem to mind. You try not to wonder whether they do.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 18,
+      "requiredLevel": 13,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [{"stat": "Intellect", "value": 4}, {"stat": "Stamina", "value": 2}, {"stat": "SpellDamage", "value": 4}],
+      "price": 3565,
+      "unique": true
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_sh2_restless_bones",
+      "goldMin": 60,
+      "goldMax": 140,
+      "entries": [
+        {"item": "junk_faded_prayer_strip", "chance": 40},
+        {"item": "dg3_junk_knucklebone", "chance": 25},
+        {"random": true, "chance": 8, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_sh2_keepers_lodge",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [
+        {"item": "drink_barley_tea", "min": 2, "max": 3},
+        {"item": "potion_healing", "chance": 60},
+        {"random": true, "chance": 100, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_sh2_pilgrims_cache",
+      "goldMin": 500,
+      "goldMax": 900,
+      "entries": [
+        {"item": "food_honey_cake", "min": 2, "max": 3},
+        {"item": "elixir_lantern_oil"},
+        {"item": "potion_healing"},
+        {"random": true, "chance": 100, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 20, "quality": "Rare"}
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "sh2_novice_aiko",
+      "name": "Aiko",
+      "title": "<Novice of the Old Shrine>",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_sh2_aiko",
+      "bark": "Four hundred and twelve steps. I counted. Twice.",
+      "shortName": "Aiko"
+    },
+    {
+      "id": "sh2_pilgrim_bento",
+      "name": "Old Bento",
+      "title": "<Pilgrim>",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_sh2_bento",
+      "bark": "Fifty-one years up this stair. My knees have filed a complaint.",
+      "shortName": "Bento"
+    },
+    {
+      "id": "sh2_pilgrim_mei",
+      "name": "Mei",
+      "title": "<Pilgrim>",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_sh2_mei",
+      "bark": "One stone for Grandmother, one for the cat, one for luck...",
+      "wanders": true,
+      "shortName": "Mei"
+    },
+    {
+      "id": "sh2_ishiro_spirit",
+      "name": "Keeper Ishiro",
+      "title": "<At Rest, Mostly>",
+      "sprite": "cr_hollow_keeper",
+      "portrait": "cr_hollow_spirit",
+      "dialogue": "dlg_sh2_ishiro",
+      "bark": "*A faint smell of very bad tea.*",
+      "shortName": "Ishiro"
+    }
+  ],
+  "quests": [
+    {
+      "id": "sh2_keepers_rest",
+      "name": "The Keepers' Rest",
+      "giver": "sh2_novice_aiko",
+      "level": 13,
+      "minLevel": 12,
+      "zone": "shrine",
+      "summary": "Aiko, Keeper Ishiro's novice, has come home to the Old Shrine now that its lanterns burn again. Every night she hears tired voices singing beneath the High Terrace, and she is sure Ishiro's ledger knows why.",
+      "stages": [
+        {
+          "id": "ledger",
+          "description": "Aiko says Ishiro wrote everything down. Find his ledger in the Keeper's Lodge, at the east end of the middle terrace.",
+          "objectives": [{"type": "Collect", "target": "sh2_ishiros_ledger", "text": "Keeper Ishiro's ledger"}],
+          "next": "give",
+          "onComplete": [{"type": "GiveXP", "amount": 25}]
+        },
+        {
+          "id": "give",
+          "description": "Bring Keeper Ishiro's ledger to Aiko at the Pilgrims' Rest.",
+          "objectives": [{"type": "Flag", "target": "sh2_ledger_given", "text": "Give Aiko the ledger"}],
+          "next": "descend",
+          "turnIn": "sh2_novice_aiko"
+        },
+        {
+          "id": "descend",
+          "description": "Ishiro's ledger says the old stair lies beneath the cracked plinth on the High Terrace. Go down into the Lantern Catacombs.",
+          "objectives": [{"type": "Reach", "target": "dgn_lantern_catacombs", "text": "Enter the Lantern Catacombs"}],
+          "next": "keepers",
+          "onComplete": [{"type": "GiveXP", "amount": 25}]
+        },
+        {
+          "id": "keepers",
+          "description": "Unbind the lanterns of the last three keepers Ishiro buried, Hana, Tomo and Rin, in the Hall of Keepers.",
+          "objectives": [
+            {"type": "Flag", "target": "dg3_keeper_hana_freed", "text": "Keeper Hana's lantern unbound"},
+            {"type": "Flag", "target": "dg3_keeper_tomo_freed", "text": "Keeper Tomo's lantern unbound"},
+            {"type": "Flag", "target": "dg3_keeper_rin_freed", "text": "Keeper Rin's lantern unbound"}
+          ],
+          "next": "lich"
+        },
+        {
+          "id": "lich",
+          "description": "Cross the black channel to the Lantern Chapel and lay Hazama, the First Keeper, to rest.",
+          "objectives": [{"type": "Flag", "target": "dg3_lich_defeated", "text": "Hazama laid to rest"}],
+          "next": "lantern"
+        },
+        {
+          "id": "lantern",
+          "description": "Hazama's great lantern lies where he fell, crowded with the light of every keeper the shrine ever had. Decide what becomes of it.",
+          "objectives": [{"type": "Flag", "target": "sh2_first_lantern_choice", "text": "Decide the lantern's fate"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Return to Aiko at the Pilgrims' Rest and tell her what you found.",
+          "objectives": [{"type": "Talk", "target": "sh2_novice_aiko", "text": "Speak with Aiko"}]
+        }
+      ],
+      "rewards": {
+        "xp": 110,
+        "gold": 2500,
+        "choiceItems": ["sh2_keepers_broom", "sh2_novices_grey_robe", "sh2_stair_counters_sandals", "sh2_lantern_wardens_gauntlets"]
+      }
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_sh2_aiko",
+      "start": "a_done_freed",
+      "nodes": [
+        {
+          "id": "a_done_freed",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko is sweeping the stair and humming something that is almost the evening prayer.* The lanterns on the High Terrace light themselves now, every dusk. I don't even need the matches. *She leans on her broom.* Keeper Ishiro's on his old bench, by the way. He says hello. He also says the tea's still terrible.",
+          "conditions": [{"type": "QuestComplete", "key": "sh2_keepers_rest"}, {"type": "Flag", "key": "sh2_keepers_freed"}],
+          "fallback": "a_done_kept",
+          "choices": [{"text": "How are you doing, Aiko?", "next": "a_post_how"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "a_post_how",
+          "speaker": "sh2_novice_aiko",
+          "text": "Busy! Four hundred and twelve steps don't sweep themselves. *She smiles, a little shyly.* I think I'm going to stay. Somebody has to keep the lanterns, and I've always been the one who notices when one goes out.",
+          "choices": [{"text": "The shrine's in good hands.", "outcomes": [{"type": "Approval", "key": "seren", "amount": 2}]}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "a_done_kept",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko is sweeping, a little more briskly than the step needs.* The High Terrace is quiet now. Quieter than I'd like. *She glances at the lantern at your belt, and her face softens.* Look after them. Please.",
+          "conditions": [{"type": "QuestComplete", "key": "sh2_keepers_rest"}],
+          "fallback": "a_ret",
+          "choices": [{"text": "I will."}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "a_ret",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko drops her broom with a clatter.* You're back! You're... you're all in one piece! Mostly! Tell me everything. No, wait, tell me the important thing first.",
+          "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "return"}],
+          "fallback": "a_give",
+          "choices": [
+            {
+              "text": "We opened the First Keeper's lantern. Every keeper went home.",
+              "next": "a_ret_freed",
+              "conditions": [{"type": "Flag", "key": "sh2_keepers_freed"}]
+            },
+            {
+              "text": "Hazama is at peace. I kept his lantern; the keepers are safe and warm in it.",
+              "next": "a_ret_kept",
+              "conditions": [{"type": "Flag", "key": "sh2_lantern_kept"}]
+            }
+          ]
+        },
+        {
+          "id": "a_ret_freed",
+          "speaker": "sh2_novice_aiko",
+          "text": "*She covers her mouth with both hands. Then she laughs, and cries, and manages both at once.* Three hundred years of keepers. All of them. *She bows very low, the way novices bow to keepers.* Ishiro would say 'about time', and then he'd make tea. Terrible tea. *She sniffs.* Thank you. Please, take something from the shrine's stores. Keepers always pay their debts.",
+          "outcomes": [
+            {"type": "CompleteQuest", "key": "sh2_keepers_rest"},
+            {"type": "Approval", "key": "seren", "amount": 10},
+            {"type": "Approval", "key": "torvan", "amount": 5},
+            {"type": "Approval", "key": "kael", "amount": 5}
+          ],
+          "choices": [{"text": "It was an honour, Aiko."}]
+        },
+        {
+          "id": "a_ret_kept",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko looks at the lantern for a long moment. Violet light moves inside it like fish under ice.* ...They'll be warm in there, I suppose. Warmer than in the dark. *She straightens her robe.* You did what you thought was kind. That's the first thing a keeper learns. The second is that kind and right aren't always the same lantern. *She bows.* The shrine keeps its word. Take your reward.",
+          "outcomes": [
+            {"type": "CompleteQuest", "key": "sh2_keepers_rest"},
+            {"type": "Approval", "key": "seren", "amount": -5},
+            {"type": "Approval", "key": "morwen", "amount": 5}
+          ],
+          "choices": [{"text": "Thank you, Aiko."}]
+        },
+        {
+          "id": "a_give",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko sees the ledger under your arm and goes very still.* You found it. He always kept it on the windowsill, by the cat.",
+          "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "give"}],
+          "fallback": "a_active",
+          "choices": [
+            {
+              "text": "Here. Keeper Ishiro's ledger.",
+              "next": "a_led1",
+              "conditions": [{"type": "HasItem", "key": "sh2_ishiros_ledger", "amount": 1}],
+              "outcomes": [
+                {"type": "TakeItem", "key": "sh2_ishiros_ledger", "amount": 1},
+                {"type": "SetFlag", "key": "sh2_ledger_given"},
+                {"type": "SetFlag", "key": "found_lantern_catacombs"},
+                {"type": "GiveXP", "amount": 75}
+              ]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "a_led1",
+          "speaker": "narrator",
+          "text": "*She opens it carefully. Ishiro's handwriting is tiny and very neat, with cats doodled in every margin.* 'Day 14,602. Swept the stair. Lit the lanterns. The singing under the High Terrace again. The First Keeper still will not let them go.' *She turns the pages faster.*",
+          "next": "a_led2"
+        },
+        {
+          "id": "a_led2",
+          "speaker": "sh2_novice_aiko",
+          "text": "'Keeper Hazama founded this shrine three hundred years ago. He was so afraid of the dark that when he died he would not let his lantern go out. He gathered the keepers' lights below, one by one, to keep them burning forever. They do not rest. They only burn.' *Her voice wobbles.* And here: 'The old stair lies under the cracked plinth on the High Terrace. Press the third keeper's mark and say the evening prayer. Do not go down alone, little broom.'",
+          "next": "a_led3"
+        },
+        {
+          "id": "a_led3",
+          "speaker": "sh2_novice_aiko",
+          "text": "Little broom. That's me. *She holds the ledger to her chest.* He knew, all those years. He kept every lantern up here burning so they'd have something warm to look up at. *She looks at you.* Please go down. Unbind the keepers' lanterns. Hana, Tomo and Rin were the last ones Ishiro buried; he'd want them home first. And then... the First Keeper. Let them all go home.",
+          "choices": [
+            {"text": "What do I do about the First Keeper?", "next": "a_led_lich"},
+            {"text": "(Let Seren speak.)", "next": "a_led_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {"text": "We'll bring them home, Aiko."}
+          ]
+        },
+        {
+          "id": "a_led_lich",
+          "speaker": "sh2_novice_aiko",
+          "text": "Ishiro wrote that you can't argue a frightened man out of the dark. You have to take the lantern out of his hands. Gently, if you can. Firmly, if you can't. *She swallows.* I think he means you'll have to fight him.",
+          "choices": [
+            {"text": "(Let Seren speak.)", "next": "a_led_seren", "conditions": [{"type": "InParty", "key": "seren"}]},
+            {"text": "We'll bring them home, Aiko."}
+          ]
+        },
+        {
+          "id": "a_led_seren",
+          "speaker": "seren",
+          "text": "*Seren kneels so she's level with the girl.* My mother walked this stair, years ago. She was frightened too, and she did the brave thing anyway. *She touches the ledger.* We'll be gentle, Aiko. Every light deserves to go home.",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}],
+          "choices": [{"text": "We'll bring them home, Aiko."}]
+        },
+        {
+          "id": "a_active",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko is sweeping the same step for the fourth time.* How's it going? Down there, I mean. Or up here. Wherever you are with it.",
+          "conditions": [{"type": "QuestActive", "key": "sh2_keepers_rest"}],
+          "fallback": "a_offer",
+          "choices": [
+            {
+              "text": "Where would Ishiro keep his ledger?",
+              "next": "a_hint_ledger",
+              "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "ledger"}]
+            },
+            {
+              "text": "Where is the old stair again?",
+              "next": "a_hint_stair",
+              "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "descend"}]
+            },
+            {
+              "text": "Tell me about the bound lanterns.",
+              "next": "a_hint_keepers",
+              "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "keepers"}]
+            },
+            {
+              "text": "What else do you know about the First Keeper?",
+              "next": "a_led_lich",
+              "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "lich"}]
+            },
+            {
+              "text": "What should I do with Hazama's lantern?",
+              "next": "a_hint_lantern",
+              "conditions": [{"type": "QuestState", "key": "sh2_keepers_rest", "value": "lantern"}]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "a_hint_ledger",
+          "speaker": "sh2_novice_aiko",
+          "text": "In the Keeper's Lodge, at the east end of this terrace: the house with the blue door and the very judgemental stone cat. He kept it in the chest by the door, with his good teacups. *She hesitates.* I haven't been able to go in.",
+          "choices": [{"text": "I'll find it."}]
+        },
+        {
+          "id": "a_hint_stair",
+          "speaker": "sh2_novice_aiko",
+          "text": "Up on the High Terrace, the cracked plinth, the only lantern up there that won't light. Ishiro said press the third keeper's mark and say the evening prayer. I've opened it for you; you'll see the stair.",
+          "choices": [{"text": "I'll find it."}]
+        },
+        {
+          "id": "a_hint_keepers",
+          "speaker": "sh2_novice_aiko",
+          "text": "Hana kept the bees. Tomo mended the stair. Rin taught the novices to count, which is why I can count to four hundred and twelve. *She smiles.* Their lanterns will be in the Hall of Keepers. Be kind to them. They've been waiting a long time.",
+          "choices": [{"text": "I'll be kind."}]
+        },
+        {
+          "id": "a_hint_lantern",
+          "speaker": "sh2_novice_aiko",
+          "text": "*She chews her lip.* Ishiro's ledger says a keeper's light should go home when its keeper does. But... it's your hand on the lantern, not mine. Whatever you choose, come and tell me.",
+          "choices": [{"text": "I'll come and tell you."}]
+        },
+        {
+          "id": "a_offer",
+          "speaker": "sh2_novice_aiko",
+          "text": "*A girl in a novice's grey robe is sweeping the steps with a broom taller than she is. She stops when she sees you.* Oh! You're the ones who lit the Heart! I saw it from the valley; the whole stair went gold, step by step, like someone running up it with a candle. *She bows, then bows again to be safe.* I'm Aiko. I was Keeper Ishiro's novice. Until he sent me home.",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}, {"type": "Level", "amount": 12}, {"type": "QuestNotStarted", "key": "sh2_keepers_rest"}],
+          "fallback": "a_low",
+          "next": "a_offer2"
+        },
+        {
+          "id": "a_offer2",
+          "speaker": "sh2_novice_aiko",
+          "text": "He told me the old keepers sleep under the High Terrace, and that the stair down was sealed before he was born. But since the Heart was lit, every lantern up here burns except one cracked plinth. And at night I hear... singing. Very tired singing. *She grips the broom.* Ishiro wrote everything in his ledger: every lantern, every keeper, every cup of tea. It's in his lodge. I haven't been able to go in.",
+          "choices": [
+            {
+              "text": "I'll fetch the ledger for you.",
+              "next": "a_accept",
+              "conditions": [{"type": "Level", "amount": 12}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}]
+            },
+            {
+              "text": "(Lay a hand on her shoulder.) The dead shouldn't have to sing to be heard. I'll help.",
+              "next": "a_accept",
+              "conditions": [{"type": "Level", "amount": 12}, {"type": "Class", "key": "Priest"}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 25}],
+              "tag": "PRIEST"
+            },
+            {
+              "text": "A knight keeps the vigil for those who can't. I'll go.",
+              "next": "a_accept",
+              "conditions": [{"type": "Level", "amount": 12}, {"type": "Class", "key": "Paladin"}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "GiveXP", "amount": 25}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "You're not afraid of the lodge. You're afraid of what isn't in it.",
+              "conditions": [{"type": "Level", "amount": 12}],
+              "check": {"skill": "Insight", "dc": 12, "success": "a_ins_s", "failure": "a_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Not today, Aiko."}
+          ]
+        },
+        {
+          "id": "a_ins_s",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Her broom stops.* ...He's not in there. That's the thing. Everything's in there: his teacups, his slippers, his awful tea. Everything but him. *She wipes her eyes quickly.* Sorry. Will you go? I'll feel better knowing someone did.",
+          "outcomes": [{"type": "GiveXP", "amount": 30}],
+          "choices": [
+            {
+              "text": "I'll go. You don't have to.",
+              "next": "a_accept",
+              "conditions": [{"type": "Level", "amount": 12}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}, {"type": "Approval", "key": "seren", "amount": 5}]
+            },
+            {"text": "Not today, Aiko."}
+          ]
+        },
+        {
+          "id": "a_ins_f",
+          "speaker": "sh2_novice_aiko",
+          "text": "*She blinks at you.* It's a lodge. It has a cat statue. The cat statue is very judgemental. *She sweeps a step that is already clean.* Will you go or not?",
+          "choices": [
+            {
+              "text": "I'll fetch the ledger for you.",
+              "next": "a_accept",
+              "conditions": [{"type": "Level", "amount": 12}],
+              "outcomes": [{"type": "StartQuest", "key": "sh2_keepers_rest"}]
+            },
+            {"text": "Not today, Aiko."}
+          ]
+        },
+        {
+          "id": "a_accept",
+          "speaker": "sh2_novice_aiko",
+          "text": "Thank you! The lodge is at the east end of this terrace: the blue door, the crooked chimney, the stone cat. *She hesitates.* If you find his tea tin, leave it. It's... it's his.",
+          "choices": [{"text": "I'll be back soon."}]
+        },
+        {
+          "id": "a_low",
+          "speaker": "sh2_novice_aiko",
+          "text": "*Aiko looks you up and down.* You lit the Heart, but you look like you need a long nap and a hot meal. Come back when you've rested, and a bit more. I've a favour to ask, and it isn't a small one.",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}],
+          "fallback": "a_greet",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "a_greet",
+          "speaker": "sh2_novice_aiko",
+          "text": "*A girl in a novice's robe sweeps the stair, counting under her breath.* ...two hundred and nine, two hundred and ten...",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sh2_bento",
+      "start": "b1",
+      "nodes": [
+        {
+          "id": "b1",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "*An old man in a straw pilgrim's hat sits on the bench with a basket on his knees, looking out over the valley.* Ah, the lantern-lighters! Sit, sit. Mind the basket, it's honey cakes. They're for the Warden. He asked, you know. Very politely.",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}],
+          "fallback": "b_dark",
+          "choices": [
+            {"text": "What's the view like from up here?", "next": "b_view", "once": true},
+            {"text": "You climbed all this way with honey cakes?", "next": "b_cakes", "once": true},
+            {"text": "Tell me about the shrine.", "next": "b_lore"},
+            {
+              "text": "Have you heard singing on the High Terrace?",
+              "next": "b_singing",
+              "conditions": [{"type": "QuestActive", "key": "sh2_keepers_rest"}]
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_dark",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "*An old man in a straw pilgrim's hat sits on the bench, looking down at the valley in the dusk.* Fifty-one years I've climbed this stair, and fifty-one years the lanterns were lit when I got here. This year... *He pats the bench beside him.* I'll wait. Lanterns come back. They always come back.",
+          "choices": [
+            {"text": "What's the view like from up here?", "next": "b_view_dark"},
+            {"text": "Tell me about the shrine.", "next": "b_lore"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_view",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "*He points with a honey cake.* There: Whisperwood, like a green sea with a silver thread through it. And there, small as a thumbprint: Lanternvale. Watch. *Far below, the village lanterns come on one by one, like someone lighting birthday candles.* Fifty-one years, and that still gets me right here.",
+          "outcomes": [{"type": "GiveXP", "amount": 25}],
+          "choices": [{"text": "It's beautiful.", "next": "b1"}]
+        },
+        {
+          "id": "b_view_dark",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "Whisperwood, the river, the village. All grey this year, like a drawing nobody coloured in. *He sighs.* Still. A view is a view. It'll keep.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_cakes",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "Every autumn the Warden walked the valley, and every autumn my mother left a honey cake on the windowsill for him. He never ate it. Well. He's a spirit. But it was gone in the morning, and so was the frost. *He offers you one.* Go on. He won't miss one.",
+          "outcomes": [{"type": "GiveItem", "key": "food_honey_cake", "amount": 1}],
+          "choices": [{"text": "Thank you, Bento.", "next": "b1"}]
+        },
+        {
+          "id": "b_lore",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "Keeper Hazama built the stair with his own hands, three hundred years back. They say he couldn't sleep without a light on. Couldn't sleep at all, at the end. *He lowers his voice.* My grandmother said the old keepers are buried under the High Terrace, and the way down is the one lantern that never takes a flame.",
+          "choices": [{"text": "The one lantern that never takes a flame?", "next": "b_lore2"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "b_lore2",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "That's what she said. She also said owls were the souls of tax collectors, so. *He shrugs.* But I've counted the lanterns on that terrace every year for fifty-one years, and there's always one dark plinth. Every year. Funny, that.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "b_singing",
+          "speaker": "sh2_pilgrim_bento",
+          "text": "*He nods slowly.* Every night since the Heart was lit. Tired voices. Like a choir that's been asked for one more verse too many. *He offers you a honey cake, then thinks better of it and eats it himself.* Whatever you're about to do, be gentle with them.",
+          "choices": [{"text": "I will.", "next": "b1"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sh2_mei",
+      "start": "m1",
+      "nodes": [
+        {
+          "id": "m1",
+          "speaker": "sh2_pilgrim_mei",
+          "text": "*A young woman with a pilgrim's staff is building a cairn, one careful pebble at a time.* Oh, hello! Every pilgrim carries a stone up from the valley in their pocket and leaves it here. This one's for my grandmother. She climbed the stair every spring until she was ninety. *She pats the cairn.* She said the lanterns waved at her.",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}],
+          "fallback": "m_dark",
+          "choices": [{"text": "(Add a pebble of your own to the cairn.)", "next": "m_stone", "once": true}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "m_stone",
+          "speaker": "sh2_pilgrim_mei",
+          "text": "*You set your pebble on top. It wobbles, then holds.* There! Now you're part of the shrine. *Along the terrace, one of the lanterns gives a small, definite flicker.* ...Did that lantern just wave at you? Grandmother was RIGHT.",
+          "outcomes": [{"type": "GiveXP", "amount": 12}],
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "m_dark",
+          "speaker": "sh2_pilgrim_mei",
+          "text": "*A young woman with a pilgrim's staff sits beside a half-built cairn, the stone still in her hand.* I'll put it down when the lanterns come back. Grandmother would want them to see it.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sh2_ishiro",
+      "start": "i1",
+      "nodes": [
+        {
+          "id": "i1",
+          "speaker": "sh2_ishiro_spirit",
+          "text": "*A keeper in a faded robe sits on the old bench, translucent as morning mist, holding a cup of tea that steams faintly.* Ah. The ones who swept out my cellar. *He raises the cup.* Sit. The tea is terrible. It always was. Aiko says I brew it like a man who has never met a leaf.",
+          "choices": [
+            {"text": "You're... at peace?", "next": "i_peace"},
+            {"text": "The keepers below. Are they home?", "next": "i_keepers"},
+            {"text": "(Let Seren speak.)", "next": "i_seren", "conditions": [{"type": "InParty", "key": "seren"}], "once": true},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_peace",
+          "speaker": "sh2_ishiro_spirit",
+          "text": "More or less. I'm a keeper; I'll keep the bench for a while. Somebody has to make sure the girl sweeps under the lanterns and not just around them. *He sips, and winces.* Truly awful.",
+          "choices": [{"text": "The keepers below. Are they home?", "next": "i_keepers"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "i_keepers",
+          "speaker": "sh2_ishiro_spirit",
+          "text": "Every one. Hazama too. He went last, you know. Stood at the foot of the stair with his hat in his hands, like a man who'd forgotten he was allowed to leave. *He looks into his cup.* You reminded him. A light only needs reminding, sometimes.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {"id": "i_seren", "speaker": "seren", "text": "Keeper Ishiro. You told me lanterns were only stars that decided to stay.", "next": "i_seren2"},
+        {
+          "id": "i_seren2",
+          "speaker": "sh2_ishiro_spirit",
+          "text": "*He smiles, and for a moment he is not mist at all.* And you went and became one, little Seren. Your mother would be insufferable about it. *He raises his cup to her.*",
+          "outcomes": [{"type": "Approval", "key": "seren", "amount": 5}],
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_sh2_cracked_plinth",
+      "start": "p_open",
+      "nodes": [
+        {
+          "id": "p_open",
+          "speaker": "narrator",
+          "text": "*The plinth has swung aside on old stone hinges. Beneath it a narrow stair breathes cold air and a faint violet light. Very far below, someone is singing.*",
+          "conditions": [{"type": "Flag", "key": "found_lantern_catacombs"}],
+          "fallback": "p_lit",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "p_lit",
+          "speaker": "narrator",
+          "text": "*Of all the lanterns on the High Terrace, only this one is dark. Its lantern is long gone; the plinth is cracked clean through, and a cold draught breathes from the crack. Someone has scratched a row of little marks along its base: keepers' marks, one for each who served.*",
+          "conditions": [{"type": "Flag", "key": "heart_lantern_lit"}],
+          "fallback": "p_dark",
+          "next": "p_menu"
+        },
+        {
+          "id": "p_dark",
+          "speaker": "narrator",
+          "text": "*A cracked lantern plinth in a row of dark lanterns. Cold air breathes from the crack, colder than the dusk, and there's a row of little marks scratched along its base.*",
+          "next": "p_menu"
+        },
+        {
+          "id": "p_menu",
+          "speaker": "narrator",
+          "text": "*The draught whistles softly through the crack.*",
+          "choices": [
+            {
+              "text": "(Search the plinth for a hidden catch.)",
+              "check": {"skill": "Investigation", "dc": 13, "success": "p_found", "failure": "p_fail"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Press the third keeper's mark and recite the evening prayer.)",
+              "check": {"skill": "Religion", "dc": 13, "success": "p_found", "failure": "p_fail"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "(Count the marks on Ishiro's prayer beads, one bead per lantern, and press the one that's missing.)",
+              "next": "p_found",
+              "conditions": [{"type": "HasItem", "key": "ishiros_prayer_beads", "amount": 1}],
+              "tag": "ISHIRO'S BEADS"
+            },
+            {
+              "text": "(Run your fingers along the crack for a latch.)",
+              "next": "p_found",
+              "conditions": [{"type": "Class", "key": "Rogue"}],
+              "tag": "ROGUE"
+            },
+            {
+              "text": "(Lay a hand on the keepers' marks and bless them.)",
+              "next": "p_found",
+              "conditions": [{"type": "Class", "key": "Priest"}],
+              "tag": "PRIEST"
+            },
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "p_found",
+          "speaker": "narrator",
+          "text": "*Something clicks deep in the stone. The plinth grinds aside on hinges older than the shrine, and a narrow stair spirals down into violet dark. Very faintly, from far below, someone is singing the keepers' evening prayer.*",
+          "outcomes": [{"type": "SetFlag", "key": "found_lantern_catacombs"}, {"type": "GiveXP", "amount": 50}],
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "p_fail",
+          "speaker": "narrator",
+          "text": "*The stone stays stone. The draught sighs, as if a little disappointed in you.*",
+          "choices": [{"text": "(Leave it for now.)"}]
+        }
+      ]
+    }
+  ]
+}

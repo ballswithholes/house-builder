@@ -1,0 +1,331 @@
+{
+  "_note": "Mirefen side quests (and the Drowned Vault's, given in the fen).",
+  "quests": [
+    {
+      "id": "mf_bo_nets",
+      "name": "Teeth in the Nets",
+      "giver": "mf_bo_puddlefoot",
+      "level": 18,
+      "minLevel": 18,
+      "zone": "mirefen",
+      "summary": "Bo Puddlefoot's nets keep coming back in ribbons. The Gnashing Shallows are thick with crocolisks, and the biggest of them is wearing his nets as a scarf.",
+      "stages": [
+        {
+          "id": "crocs",
+          "description": "Thin out the crocolisks of the Gnashing Shallows, south of the Fen Road. Two packs bask in the shallows.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_mf_shallows_crocs", "text": "Crocolisks of the Shallows driven off"},
+            {"type": "Defeat", "target": "enc_mf_shallows_crocs_east", "text": "Crocolisks of the east shallows driven off"}
+          ],
+          "next": "gnasher"
+        },
+        {
+          "id": "gnasher",
+          "description": "Old Gnasher lies on the mud bank at the west end of the Gnashing Shallows. Deal with him.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_mf_old_gnasher", "text": "Old Gnasher defeated"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Bo the shallows are safe for nets again. He is by his pond, east of Lowlantern.",
+          "turnIn": "mf_bo_puddlefoot",
+          "objectives": [
+            {"type": "Flag", "target": "mf_bo_nets_handed_in", "text": "Return to Bo"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 850, "gold": 2200, "choiceItems": ["mf_croc_hide_jerkin", "mf_waders_mail_boots", "mf_net_floats_cord"]}
+    },
+    {
+      "id": "mf_obi_glass",
+      "name": "Fen-Glass and Wisp-Light",
+      "giver": "mf_obi_wick",
+      "level": 18,
+      "minLevel": 18,
+      "zone": "mirefen",
+      "summary": "Obi Wick, Lowlantern's lanternwright, can make new lanterns for the fen — if somebody brings him fen-glass from the mirelings, who hoard it, and wisp-glow from the wisps, who are it.",
+      "stages": [
+        {
+          "id": "gather",
+          "description": "Collect fen-glass from the mirelings of the Croaking Stones and wisp-glow from the fen wisps of the Mere and Willow Hollow.",
+          "objectives": [
+            {"type": "Collect", "target": "mf_fen_glass", "text": "Lumps of fen-glass", "count": 5},
+            {"type": "Collect", "target": "mf_wisp_glow", "text": "Wisp-glows", "count": 4}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the glass and the glow to Obi in Lowlantern.",
+          "turnIn": "mf_obi_wick",
+          "objectives": [
+            {"type": "Flag", "target": "mf_obi_glass_handed_in", "text": "Return to Obi"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 800, "gold": 2000, "choiceItems": ["mf_glassblowers_gloves", "mf_lantern_hook", "mf_wisp_glass_ring"]}
+    },
+    {
+      "id": "mf_obi_posts",
+      "name": "Light the Way",
+      "giver": "mf_obi_wick",
+      "level": 19,
+      "minLevel": 19,
+      "zone": "mirefen",
+      "summary": "Obi has made four post-lamps for the dark stretches of the Fen Road. Hang them, and the fen folk can walk to the Mere at night again.",
+      "stages": [
+        {
+          "id": "posts",
+          "description": "Hang Obi's lamps on the four dark lamp-posts along the Fen Road, from the Shallows' turning to the Croaking Stones.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_post_1_lit", "text": "Lamp by the Shallows' turning"},
+            {"type": "Flag", "target": "mf_post_2_lit", "text": "Lamp at the Mere road"},
+            {"type": "Flag", "target": "mf_post_3_lit", "text": "Lamp at the Heron Bridge"},
+            {"type": "Flag", "target": "mf_post_4_lit", "text": "Lamp at the Croaking Stones"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Obi the road is lit.",
+          "turnIn": "mf_obi_wick",
+          "objectives": [
+            {"type": "Flag", "target": "mf_obi_posts_handed_in", "text": "Return to Obi"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 900, "gold": 2400, "choiceItems": ["mf_lamplighters_staff", "mf_post_keepers_belt", "mf_wickmans_wraps"]}
+    },
+    {
+      "id": "mf_lily_duke",
+      "name": "The Duke of Puddles",
+      "giver": "mf_lily",
+      "level": 18,
+      "minLevel": 18,
+      "zone": "mirefen",
+      "summary": "Lily's frog, His Grace the Duke of Puddles, has gone missing. He likes mushroom rings, willows, and anywhere with flies. He answers to 'Your Grace'.",
+      "stages": [
+        {
+          "id": "ring",
+          "description": "Search the fairy ring of toadstools in Willow Hollow, north-east of Lowlantern.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_duke_seen_ring", "text": "Search the fairy ring"}
+          ],
+          "next": "willow"
+        },
+        {
+          "id": "willow",
+          "description": "Follow the trail of tiny wet footprints to the willow on the west shore of the Sinking Mere.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_duke_seen_willow", "text": "Search under the willow"}
+          ],
+          "next": "pot"
+        },
+        {
+          "id": "pot",
+          "description": "The footprints lead south-west, to the mireling camp below the Croaking Stones. There is a stewpot there. Hurry.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_duke_found", "text": "Find the Duke"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Lily what became of His Grace.",
+          "turnIn": "mf_lily",
+          "objectives": [
+            {"type": "Flag", "target": "mf_lily_duke_handed_in", "text": "Return to Lily"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 750, "gold": 1500, "choiceItems": ["mf_lily_pad_cap", "mf_puddle_jumpers", "mf_dukes_hop_ring"]}
+    },
+    {
+      "id": "mf_corwin_rest",
+      "name": "Rest for the Drowned",
+      "giver": "mf_corwin",
+      "level": 19,
+      "minLevel": 19,
+      "zone": "mirefen",
+      "summary": "The Drowned Barrows are giving back their dead. Old Osric, once of the Heronguard, wants them laid to rest — and the Low Bell rung for them, the way it used to be.",
+      "stages": [
+        {
+          "id": "ghouls",
+          "description": "Put the bog ghouls of the Drowned Barrows and the Mere back to rest.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_mf_mere_ghouls", "text": "Bog ghouls of the Mere laid to rest"},
+            {"type": "Defeat", "target": "enc_mf_barrow_ghouls", "text": "Bog ghouls of the Barrows laid to rest"},
+            {"type": "Defeat", "target": "enc_mf_barrow_ghouls_north", "text": "Bog ghouls of the north mounds laid to rest"}
+          ],
+          "next": "bell"
+        },
+        {
+          "id": "bell",
+          "description": "Ring the Low Bell in the ruined arch at the heart of the Barrows, and face whatever answers.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_bellringer_laid", "text": "The Bellringer laid to rest"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Osric the barrows are quiet.",
+          "turnIn": "mf_corwin",
+          "objectives": [
+            {"type": "Flag", "target": "mf_corwin_rest_handed_in", "text": "Return to Osric"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 950, "gold": 2400, "choiceItems": ["mf_heronguard_greaves", "mf_barrow_warden_cloak", "mf_sextons_handbell"]}
+    },
+    {
+      "id": "mf_oracle_totems",
+      "name": "Unbinding the Totems",
+      "giver": "mf_oracle_bloop",
+      "level": 20,
+      "minLevel": 20,
+      "zone": "mirefen",
+      "summary": "Old Bloop, an exiled mireling oracle, says the coven's totems whisper to his tribe: bring us the lights. Four of them stand in the western fen. Bloop would like them to stop.",
+      "stages": [
+        {
+          "id": "totems",
+          "description": "Break the four coven totems: on the road into the Croaking Stones, by the Croaker Pool, at the edge of the reeds north of the scouts' camp, and on the old road to the moon-gate.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_totem_1_broken", "text": "Totem at the Croaking Stones"},
+            {"type": "Flag", "target": "mf_totem_2_broken", "text": "Totem by the Croaker Pool"},
+            {"type": "Flag", "target": "mf_totem_3_broken", "text": "Totem at the reeds"},
+            {"type": "Flag", "target": "mf_totem_4_broken", "text": "Totem on the gate road"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Bloop the totems are silent.",
+          "turnIn": "mf_oracle_bloop",
+          "objectives": [
+            {"type": "Flag", "target": "mf_oracle_totems_handed_in", "text": "Return to Bloop"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 1000, "gold": 2600, "choiceItems": ["mf_oracles_pearl", "mf_conch_buckler", "mf_reedwoven_leggings"]}
+    },
+    {
+      "id": "mf_reeve_chief",
+      "name": "The Croaking Stones",
+      "giver": "mf_reeve_tamsin",
+      "level": 20,
+      "minLevel": 20,
+      "zone": "mirefen",
+      "summary": "Mireling raiders have been cutting Lowlantern's lines and stealing its lanterns' glass. Their chief, Gubbagulp, holds court in the Croaking Stones. Reeve Tamsin wants it stopped — one way or the other.",
+      "stages": [
+        {
+          "id": "chief",
+          "description": "Go to the Croaking Stones in the south-west and settle things with Chief Gubbagulp. Talking is allowed. So is the other thing.",
+          "objectives": [
+            {"type": "Flag", "target": "mf_chief_resolved", "text": "Settle things with Gubbagulp"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Reeve Tamsin how it went.",
+          "turnIn": "mf_reeve_tamsin",
+          "objectives": [
+            {"type": "Flag", "target": "mf_reeve_chief_handed_in", "text": "Return to Reeve Tamsin"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 1000, "gold": 2800, "choiceItems": ["mf_reeves_seal", "mf_croaking_stone_hauberk", "mf_frogskin_robe"]}
+    },
+    {
+      "id": "mf_hettie_soup",
+      "name": "Soup of the Mire",
+      "giver": "mf_hettie_brine",
+      "level": 21,
+      "minLevel": 21,
+      "zone": "mirefen",
+      "summary": "Hettie Brine is making her famous Mire Chowder for the first lantern-night in a year. She needs crocolisk tail and fen truffles, and she is not taking no for an answer.",
+      "stages": [
+        {
+          "id": "gather",
+          "description": "Bring Hettie crocolisk tails, and dig fen truffles from under the giant toadstools of Willow Hollow.",
+          "objectives": [
+            {"type": "Collect", "target": "mf_croc_tail", "text": "Crocolisk tails", "count": 4},
+            {"type": "Collect", "target": "mf_fen_truffle", "text": "Fen truffles", "count": 3}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the makings to Hettie in Lowlantern.",
+          "turnIn": "mf_hettie_brine",
+          "objectives": [
+            {"type": "Flag", "target": "mf_hettie_soup_handed_in", "text": "Return to Hettie"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 850, "gold": 2500, "choiceItems": ["mf_hetties_ladle", "mf_stew_stained_breeches", "mf_chowder_belt"]}
+    },
+    {
+      "id": "mf_coven_bounty",
+      "name": "Bounty: Mother Mire's Daughters",
+      "giver": "mf_reeve_tamsin",
+      "level": 21,
+      "minLevel": 21,
+      "zone": "mirefen",
+      "summary": "Lowlantern is paying, in coin and in gratitude, for every coven hag who stops tying cords to its lanterns.",
+      "stages": [
+        {
+          "id": "hags",
+          "description": "Defeat the coven hags who prowl the western fen and the road to the moon-gate.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_mf_coven_watch", "text": "The coven's watch-hag"},
+            {"type": "Defeat", "target": "enc_mf_statue_hags", "text": "The hags at the Sunken Statue"},
+            {"type": "Defeat", "target": "enc_mf_gate_road_hag", "text": "The hag on the gate road"},
+            {"type": "Flag", "target": "mf_gall_defeated", "text": "Auntie Gall and her daughters"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Claim the bounty from Reeve Tamsin.",
+          "turnIn": "mf_reeve_tamsin",
+          "objectives": [
+            {"type": "Flag", "target": "mf_coven_bounty_handed_in", "text": "Return to Reeve Tamsin"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 850, "gold": 3000, "choiceItems": ["mf_hagthorn_dagger", "mf_coven_cord_sash", "mf_reedcloak_spaulders"]}
+    },
+    {
+      "id": "dg5_undertow",
+      "name": "The Undertow",
+      "giver": "mf_oracle_bloop",
+      "level": 23,
+      "minLevel": 23,
+      "zone": "mirefen",
+      "summary": "Beneath the sunken statue a stair goes down into the old fen temple, where the water drains away toward something that beats. Bloop says a witch lives there who drinks the drowned lights. Go and stop her.",
+      "stages": [
+        {
+          "id": "tidewitch",
+          "description": "Descend into the Drowned Vault beneath the sunken statue, find the Tidewitch at the Heart-Well, and put an end to the undertow.",
+          "objectives": [
+            {"type": "Flag", "target": "dg5_tidewitch_defeated", "text": "The Tidewitch defeated"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the news, and the Tidewitch's pearl, to Bloop.",
+          "turnIn": "mf_oracle_bloop",
+          "objectives": [
+            {"type": "Flag", "target": "dg5_undertow_handed_in", "text": "Return to Bloop"}
+          ]
+        }
+      ],
+      "rewards": {"xp": 1000, "gold": 6000, "choiceItems": ["dg5_tide_singers_bracers", "dg5_listening_conch", "dg5_sentinel_gauntlets"]}
+    }
+  ]
+}

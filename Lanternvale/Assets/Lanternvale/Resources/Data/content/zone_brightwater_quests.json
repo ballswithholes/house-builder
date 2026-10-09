@@ -1,0 +1,360 @@
+{
+ "_note": "Brightwater town quests (levels 14-25). Offers gated by Level (and the previous quest); hand-ins are Flags set by the hand-in NPC with CompleteQuest there.",
+ "quests": [
+  {
+   "id": "bw_q_parcels",
+   "name": "Parcels on the Tide",
+   "giver": "bw_dockmaster_hobb",
+   "level": 14,
+   "zone": "brightwater",
+   "summary": "Dockmaster Hobb has three parcels that came in on the morning barge and nobody to carry them: lamp wicks for Mother Wren at the Chapel of Small Lights, clock springs for Magister Vell at the town hall, and a sealed letter for Captain Rowan at the Watch House.",
+   "stages": [
+    {
+     "id": "wicks",
+     "description": "Carry the lamp wicks across the Heron Bridge to Mother Wren at the Chapel of Small Lights. (The springs and the letter can go in any order.)",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_parcel_wicks_done",
+       "text": "Lamp wicks delivered to Mother Wren"
+      }
+     ],
+     "next": "springs",
+     "turnIn": "bw_mother_wren"
+    },
+    {
+     "id": "springs",
+     "description": "Take the crate of clock springs to Magister Vell on the town hall steps.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_parcel_springs_done",
+       "text": "Clock springs delivered to Magister Vell"
+      }
+     ],
+     "next": "letter",
+     "turnIn": "bw_trainer_vell"
+    },
+    {
+     "id": "letter",
+     "description": "Hand the sealed letter to Captain Rowan at the Watch House by the east gate.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_parcel_letter_done",
+       "text": "Letter delivered to Captain Rowan"
+      }
+     ],
+     "next": "return",
+     "turnIn": "bw_captain_rowan"
+    },
+    {
+     "id": "return",
+     "description": "Tell Dockmaster Hobb on the harbour lane that every parcel arrived dry.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_parcels_paid",
+       "text": "Return to Dockmaster Hobb"
+      }
+     ],
+     "turnIn": "bw_dockmaster_hobb"
+    }
+   ],
+   "rewards": {
+    "xp": 600,
+    "gold": 1500,
+    "choiceItems": [
+     "bw_dockmasters_oilskin",
+     "bw_hobbs_rope_belt",
+     "bw_tide_clerks_gloves"
+    ]
+   },
+   "minLevel": 12
+  },
+  {
+   "id": "bw_q_lost_heron",
+   "name": "Admiral Puddles Is Missing",
+   "giver": "bw_child_tamsin",
+   "level": 14,
+   "zone": "brightwater",
+   "summary": "Tamsin Reed's heron, Admiral Puddles (small, grey, one wing on sideways, extremely rude), has run away. Nettie on the docks sees everything that flies; start with her.",
+   "stages": [
+    {
+     "id": "ask",
+     "description": "Ask Nettie Sparrow on the docks whether she has seen the Admiral.",
+     "objectives": [
+      {
+       "type": "Talk",
+       "target": "bw_dockhand_nettie",
+       "text": "Ask Nettie on the docks"
+      }
+     ],
+     "next": "find"
+    },
+    {
+     "id": "find",
+     "description": "Nettie saw the Admiral flap upriver toward the reeds above the Heron Ford, on the west bank. Find him and coax him into a basket.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_puddles_found",
+       "text": "Find Admiral Puddles in the reeds"
+      }
+     ],
+     "next": "return"
+    },
+    {
+     "id": "return",
+     "description": "Bring Admiral Puddles home to Tamsin by the Reed house.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_puddles_returned",
+       "text": "Return the Admiral to Tamsin"
+      }
+     ],
+     "turnIn": "bw_child_tamsin"
+    }
+   ],
+   "rewards": {
+    "xp": 700,
+    "gold": 1200,
+    "choiceItems": [
+     "bw_admirals_feather",
+     "bw_puddle_jumpers",
+     "bw_reedwoven_bracers"
+    ]
+   },
+   "minLevel": 12
+  },
+  {
+   "id": "bw_q_smugglers",
+   "name": "Something Fishy",
+   "giver": "bw_dockhand_bo",
+   "level": 16,
+   "zone": "brightwater",
+   "summary": "Bo Tiller swears the 'salted herring' crates behind the Crane warehouse slosh, and that they come in at midnight on a boat with no lantern. Find out what is really in them, and who is behind it.",
+   "stages": [
+    {
+     "id": "inspect",
+     "description": "Inspect the herring crates behind the Crane & Daughters warehouse by the harbour.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_crates_inspected",
+       "text": "Find out what is in the herring crates"
+      }
+     ],
+     "next": "confront"
+    },
+    {
+     "id": "confront",
+     "description": "The crates hide stolen lantern oil from Amberfield. Confront Silas Crane, the fishmonger, at his stall in the market square.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_silas_resolved",
+       "text": "Confront Silas Crane"
+      }
+     ],
+     "next": "report",
+     "turnIn": "bw_fishmonger_silas"
+    },
+    {
+     "id": "report",
+     "description": "Report to Captain Rowan at the Watch House by the east gate.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_smugglers_reported",
+       "text": "Report to Captain Rowan"
+      }
+     ],
+     "turnIn": "bw_captain_rowan"
+    }
+   ],
+   "rewards": {
+    "xp": 1000,
+    "gold": 3000,
+    "choiceItems": [
+     "bw_watch_halberd",
+     "bw_lantern_oil_ward",
+     "bw_riverwatch_hauberk"
+    ]
+   },
+   "minLevel": 15
+  },
+  {
+   "id": "bw_q_forty_names",
+   "name": "Forty Names",
+   "giver": "bw_trainer_bertram",
+   "level": 17,
+   "zone": "brightwater",
+   "summary": "Twelve years ago forty knights of the Heronguard rode to Skyreach and eleven came home. Every year the Eleven light a lantern at Lord-Commander Aubric's stone for the twenty-nine. Sir Bertram's knee will not take the ferry steps: gather the lanterns of Old Gideon, Captain Rowan and Nettie Sparrow, and light them at the memorial.",
+   "stages": [
+    {
+     "id": "gideon",
+     "description": "Ask Old Gideon on the harbour's ferry stage for his memorial lantern. (Rowan's and Nettie's can be gathered in any order.)",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_lantern_gideon",
+       "text": "Old Gideon's lantern"
+      }
+     ],
+     "next": "rowan",
+     "turnIn": "bw_ferryman_gideon"
+    },
+    {
+     "id": "rowan",
+     "description": "Ask Captain Rowan at the Watch House for her memorial lantern.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_lantern_rowan",
+       "text": "Captain Rowan's lantern"
+      }
+     ],
+     "next": "nettie",
+     "turnIn": "bw_captain_rowan"
+    },
+    {
+     "id": "nettie",
+     "description": "Ask Nettie Sparrow on the docks for her mother's lantern.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_lantern_nettie",
+       "text": "Nettie Sparrow's lantern"
+      }
+     ],
+     "next": "light",
+     "turnIn": "bw_dockhand_nettie"
+    },
+    {
+     "id": "light",
+     "description": "Set the three lanterns before Aubric's empty tomb at the Heronguard memorial on the west bank, and light them.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_memorial_lit",
+       "text": "Light the lanterns at the memorial"
+      }
+     ],
+     "next": "return"
+    },
+    {
+     "id": "return",
+     "description": "Tell Sir Bertram at the training yard that the lanterns are lit.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_forty_turned_in",
+       "text": "Return to Sir Bertram"
+      }
+     ],
+     "turnIn": "bw_trainer_bertram"
+    }
+   ],
+   "rewards": {
+    "xp": 1000,
+    "gold": 2500,
+    "choiceItems": [
+     "bw_shield_of_the_eleven",
+     "bw_aubrics_practice_blade",
+     "bw_mantle_of_the_twenty_nine"
+    ]
+   },
+   "minLevel": 16
+  },
+  {
+   "id": "bw_q_fen_road",
+   "name": "The Fen Road",
+   "giver": "bw_captain_rowan",
+   "level": 19,
+   "zone": "brightwater",
+   "summary": "No barge has come up from Mirefen in six weeks: no eels, no peat, no gossip. Captain Rowan wants someone to walk the fen road south-west and see what is wrong.",
+   "stages": [
+    {
+     "id": "scout",
+     "description": "Follow the fen road west across the bridge and south-west to Mirefen.",
+     "objectives": [
+      {
+       "type": "Reach",
+       "target": "mirefen",
+       "text": "Reach Mirefen"
+      }
+     ],
+     "next": "report"
+    },
+    {
+     "id": "report",
+     "description": "Report what you saw to Captain Rowan at the Watch House.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_fen_reported",
+       "text": "Report to Captain Rowan"
+      }
+     ],
+     "turnIn": "bw_captain_rowan"
+    }
+   ],
+   "rewards": {
+    "xp": 1000,
+    "gold": 4000,
+    "choiceItems": [
+     "bw_fen_scouts_waders",
+     "bw_rowans_spyglass",
+     "bw_marsh_walker_breeches"
+    ]
+   },
+   "minLevel": 18
+  },
+  {
+   "id": "bw_q_high_road",
+   "name": "The High Road",
+   "giver": "bw_captain_rowan",
+   "level": 25,
+   "zone": "brightwater",
+   "summary": "Shepherds coming down from the peaks talk of fire in the clouds again, the same story they told twelve years ago. Captain Rowan asks you to climb the high road to Skyreach and see for yourself.",
+   "stages": [
+    {
+     "id": "scout",
+     "description": "Take the high road north-west from the bridge and climb to Skyreach Peaks.",
+     "objectives": [
+      {
+       "type": "Reach",
+       "target": "skyreach",
+       "text": "Reach Skyreach Peaks"
+      }
+     ],
+     "next": "report"
+    },
+    {
+     "id": "report",
+     "description": "Tell Captain Rowan what waits up the high road.",
+     "objectives": [
+      {
+       "type": "Flag",
+       "target": "bw_high_reported",
+       "text": "Report to Captain Rowan"
+      }
+     ],
+     "turnIn": "bw_captain_rowan"
+    }
+   ],
+   "rewards": {
+    "xp": 1300,
+    "gold": 6000,
+    "choiceItems": [
+     "bw_watch_captains_greatcoat",
+     "bw_high_road_gauntlets",
+     "bw_lookouts_hood"
+    ]
+   },
+   "minLevel": 24
+  }
+ ]
+}

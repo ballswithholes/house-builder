@@ -1,0 +1,4650 @@
+{
+ "_note": "Brightwater items: weaponsmith and armourer stock (Common/Uncommon, required levels 14-28), wands, potions, elixirs, bandages, food and drink for levels 12-30 with their use abilities, quest items and quest rewards. Stats follow Docs/Expansion.md §8 (0.55 x ilvl x Qa x slot; WeaponDps x .64 Common / .72 Uncommon; ArmorValue).",
+ "items": [
+  {
+   "id": "bw_riverforged_dirk",
+   "name": "Riverforged Dirk",
+   "icon": "dagger",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OneHand",
+   "weaponType": "Dagger",
+   "minDamage": 10,
+   "maxDamage": 17,
+   "speed": 1.7,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_knuckles",
+   "name": "Riverforged Knuckles",
+   "icon": "fist",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OneHand",
+   "weaponType": "FistWeapon",
+   "minDamage": 15,
+   "maxDamage": 25,
+   "speed": 2.5,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_hatchet",
+   "name": "Riverforged Hatchet",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OneHand",
+   "weaponType": "OneHandAxe",
+   "minDamage": 15,
+   "maxDamage": 26,
+   "speed": 2.6,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_mace",
+   "name": "Riverforged Mace",
+   "icon": "mace",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OneHand",
+   "weaponType": "OneHandMace",
+   "minDamage": 15,
+   "maxDamage": 26,
+   "speed": 2.6,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_sabre",
+   "name": "Riverforged Sabre",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 15,
+   "maxDamage": 26,
+   "speed": 2.6,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_halberd",
+   "name": "Riverforged Halberd",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 3.5,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_quarterstaff",
+   "name": "Riverforged Quarterstaff",
+   "icon": "staff",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "TwoHand",
+   "weaponType": "Staff",
+   "minDamage": 23,
+   "maxDamage": 39,
+   "speed": 3.0,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_greataxe",
+   "name": "Riverforged Greataxe",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandAxe",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 3.5,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_maul",
+   "name": "Riverforged Maul",
+   "icon": "hammer",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandMace",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 3.5,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_greatsword",
+   "name": "Riverforged Greatsword",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandSword",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 3.5,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_longbow",
+   "name": "Willow Longbow",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Ranged",
+   "weaponType": "Bow",
+   "minDamage": 16,
+   "maxDamage": 26,
+   "speed": 2.8,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_crossbow",
+   "name": "Riverforged Crossbow",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Ranged",
+   "weaponType": "Crossbow",
+   "minDamage": 17,
+   "maxDamage": 28,
+   "speed": 3.0,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_blunderbuss",
+   "name": "Bargeman's Blunderbuss",
+   "icon": "gun",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Ranged",
+   "weaponType": "Gun",
+   "minDamage": 16,
+   "maxDamage": 26,
+   "speed": 2.8,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_throwing_knives",
+   "name": "Riverforged Throwing Knives",
+   "icon": "daggers",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Ranged",
+   "weaponType": "Thrown",
+   "minDamage": 11,
+   "maxDamage": 19,
+   "speed": 2.0,
+   "price": 732
+  },
+  {
+   "id": "bw_riverforged_heater_shield",
+   "name": "Riverforged Heater Shield",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 513,
+   "block": 14,
+   "price": 732
+  },
+  {
+   "id": "bw_brightsteel_stiletto",
+   "name": "Brightsteel Stiletto",
+   "icon": "dagger",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OneHand",
+   "weaponType": "Dagger",
+   "minDamage": 14,
+   "maxDamage": 23,
+   "speed": 1.7,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_cestus",
+   "name": "Brightsteel Cestus",
+   "icon": "fist",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OneHand",
+   "weaponType": "FistWeapon",
+   "minDamage": 20,
+   "maxDamage": 34,
+   "speed": 2.5,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_bearded_axe",
+   "name": "Brightsteel Bearded Axe",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OneHand",
+   "weaponType": "OneHandAxe",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_morning_star",
+   "name": "Brightsteel Morning Star",
+   "icon": "mace",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OneHand",
+   "weaponType": "OneHandMace",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_arming_sword",
+   "name": "Brightsteel Arming Sword",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_glaive",
+   "name": "Brightsteel Glaive",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 37,
+   "maxDamage": 61,
+   "speed": 3.5,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_ferrule_staff",
+   "name": "Brightsteel Ferrule Staff",
+   "icon": "staff",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "TwoHand",
+   "weaponType": "Staff",
+   "minDamage": 32,
+   "maxDamage": 53,
+   "speed": 3.0,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_broadaxe",
+   "name": "Brightsteel Broadaxe",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandAxe",
+   "minDamage": 37,
+   "maxDamage": 61,
+   "speed": 3.5,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_war_hammer",
+   "name": "Brightsteel War Hammer",
+   "icon": "hammer",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandMace",
+   "minDamage": 37,
+   "maxDamage": 61,
+   "speed": 3.5,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_zweihander",
+   "name": "Brightsteel Zweihander",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "TwoHand",
+   "weaponType": "TwoHandSword",
+   "minDamage": 37,
+   "maxDamage": 61,
+   "speed": 3.5,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_recurve",
+   "name": "Brightsteel Recurve",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Ranged",
+   "weaponType": "Bow",
+   "minDamage": 22,
+   "maxDamage": 36,
+   "speed": 2.8,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_arbalest",
+   "name": "Brightsteel Arbalest",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Ranged",
+   "weaponType": "Crossbow",
+   "minDamage": 23,
+   "maxDamage": 38,
+   "speed": 3.0,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_long_rifle",
+   "name": "Brightsteel Long Rifle",
+   "icon": "gun",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Ranged",
+   "weaponType": "Gun",
+   "minDamage": 22,
+   "maxDamage": 36,
+   "speed": 2.8,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_throwing_axes",
+   "name": "Brightsteel Throwing Axes",
+   "icon": "daggers",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Ranged",
+   "weaponType": "Thrown",
+   "minDamage": 15,
+   "maxDamage": 26,
+   "speed": 2.0,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightsteel_kite_shield",
+   "name": "Brightsteel Kite Shield",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 729,
+   "block": 19,
+   "price": 1468
+  },
+  {
+   "id": "bw_hollowell_sabre_21",
+   "name": "Hollowell Sabre",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Dunstan's work: a sabre that sings when you draw it, mostly off-key.",
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_chapel_censer_mace_21",
+   "name": "Chapel Censer-Mace",
+   "icon": "mace",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Weighted like a censer, blessed like a lamp, swung like a mace.",
+   "equip": "OneHand",
+   "weaponType": "OneHandMace",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    },
+    {
+     "stat": "Spirit",
+     "value": 1
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_eel_skinner_21",
+   "name": "Eel-Skinner",
+   "icon": "dagger",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Narrow, wicked and very good at its original job.",
+   "equip": "OneHand",
+   "weaponType": "Dagger",
+   "minDamage": 14,
+   "maxDamage": 23,
+   "speed": 1.7,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_lamplighters_pole_21",
+   "name": "Lamplighter's Pole",
+   "icon": "staff",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Long enough to reach the highest wick, sturdy enough for anything else.",
+   "equip": "TwoHand",
+   "weaponType": "Staff",
+   "minDamage": 32,
+   "maxDamage": 53,
+   "speed": 3.0,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 6
+    },
+    {
+     "stat": "Spirit",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_bargebreaker_21",
+   "name": "Bargebreaker",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Named after the incident. Dunstan does not talk about the incident.",
+   "equip": "TwoHand",
+   "weaponType": "TwoHandAxe",
+   "minDamage": 37,
+   "maxDamage": 62,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_ford_wardens_spear_21",
+   "name": "Ford-Warden's Spear",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "The Heronguard carried spears like this to fish ducklings out of the shallows.",
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 37,
+   "maxDamage": 62,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Strength",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_kingfisher_longbow_21",
+   "name": "Kingfisher Longbow",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Strung with heron-gut by somebody who apologised to the heron first.",
+   "equip": "Ranged",
+   "weaponType": "Bow",
+   "minDamage": 22,
+   "maxDamage": 36,
+   "speed": 2.8,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_floodgate_shield_21",
+   "name": "Floodgate Shield",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Riveted oak faced with river-steel. Things bounce off it, including advice.",
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 630,
+   "block": 16,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_hollowell_sabre_27",
+   "name": "Hollowell Sabre of the Ford",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Dunstan's work: a sabre that sings when you draw it, mostly off-key.",
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 26,
+   "maxDamage": 44,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_chapel_censer_mace_27",
+   "name": "Chapel Censer-Mace of the Ford",
+   "icon": "mace",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Weighted like a censer, blessed like a lamp, swung like a mace.",
+   "equip": "OneHand",
+   "weaponType": "OneHandMace",
+   "minDamage": 26,
+   "maxDamage": 44,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    },
+    {
+     "stat": "Spirit",
+     "value": 1
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_eel_skinner_27",
+   "name": "Eel-Skinner of the Ford",
+   "icon": "dagger",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Narrow, wicked and very good at its original job.",
+   "equip": "OneHand",
+   "weaponType": "Dagger",
+   "minDamage": 17,
+   "maxDamage": 29,
+   "speed": 1.7,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_lamplighters_pole_27",
+   "name": "Lamplighter's Pole of the Ford",
+   "icon": "staff",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Long enough to reach the highest wick, sturdy enough for anything else.",
+   "equip": "TwoHand",
+   "weaponType": "Staff",
+   "minDamage": 39,
+   "maxDamage": 66,
+   "speed": 3.0,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 8
+    },
+    {
+     "stat": "Spirit",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_bargebreaker_27",
+   "name": "Bargebreaker of the Ford",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Named after the incident. Dunstan does not talk about the incident.",
+   "equip": "TwoHand",
+   "weaponType": "TwoHandAxe",
+   "minDamage": 46,
+   "maxDamage": 77,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_ford_wardens_spear_27",
+   "name": "Ford-Warden's Spear of the Ford",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "The Heronguard carried spears like this to fish ducklings out of the shallows.",
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 46,
+   "maxDamage": 77,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_kingfisher_longbow_27",
+   "name": "Kingfisher Longbow of the Ford",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Strung with heron-gut by somebody who apologised to the heron first.",
+   "equip": "Ranged",
+   "weaponType": "Bow",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 2.8,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_floodgate_shield_27",
+   "name": "Floodgate Shield of the Ford",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Riveted oak faced with river-steel. Things bounce off it, including advice.",
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 810,
+   "block": 19,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 4
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_hollowell_sabre_33",
+   "name": "Hollowell Sabre of the High Water",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Dunstan's work: a sabre that sings when you draw it, mostly off-key.",
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 32,
+   "maxDamage": 53,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_chapel_censer_mace_33",
+   "name": "Chapel Censer-Mace of the High Water",
+   "icon": "mace",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Weighted like a censer, blessed like a lamp, swung like a mace.",
+   "equip": "OneHand",
+   "weaponType": "OneHandMace",
+   "minDamage": 32,
+   "maxDamage": 53,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    },
+    {
+     "stat": "Spirit",
+     "value": 1
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_eel_skinner_33",
+   "name": "Eel-Skinner of the High Water",
+   "icon": "dagger",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Narrow, wicked and very good at its original job.",
+   "equip": "OneHand",
+   "weaponType": "Dagger",
+   "minDamage": 21,
+   "maxDamage": 34,
+   "speed": 1.7,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_lamplighters_pole_33",
+   "name": "Lamplighter's Pole of the High Water",
+   "icon": "staff",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Long enough to reach the highest wick, sturdy enough for anything else.",
+   "equip": "TwoHand",
+   "weaponType": "Staff",
+   "minDamage": 47,
+   "maxDamage": 79,
+   "speed": 3.0,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 10
+    },
+    {
+     "stat": "Spirit",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_bargebreaker_33",
+   "name": "Bargebreaker of the High Water",
+   "icon": "axe",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Named after the incident. Dunstan does not talk about the incident.",
+   "equip": "TwoHand",
+   "weaponType": "TwoHandAxe",
+   "minDamage": 55,
+   "maxDamage": 92,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_ford_wardens_spear_33",
+   "name": "Ford-Warden's Spear of the High Water",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "The Heronguard carried spears like this to fish ducklings out of the shallows.",
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 55,
+   "maxDamage": 92,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_kingfisher_longbow_33",
+   "name": "Kingfisher Longbow of the High Water",
+   "icon": "bow",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Strung with heron-gut by somebody who apologised to the heron first.",
+   "equip": "Ranged",
+   "weaponType": "Bow",
+   "minDamage": 32,
+   "maxDamage": 54,
+   "speed": 2.8,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_floodgate_shield_33",
+   "name": "Floodgate Shield of the High Water",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "Riveted oak faced with river-steel. Things bounce off it, including advice.",
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 990,
+   "block": 23,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Strength",
+     "value": 4
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_river_linen_robe",
+   "name": "River-linen Robe",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Chest",
+   "armorType": "Cloth",
+   "armor": 30,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_trousers",
+   "name": "River-linen Trousers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Legs",
+   "armorType": "Cloth",
+   "armor": 30,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_hood",
+   "name": "River-linen Hood",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Head",
+   "armorType": "Cloth",
+   "armor": 24,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_mantle",
+   "name": "River-linen Mantle",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Shoulder",
+   "armorType": "Cloth",
+   "armor": 23,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_gloves",
+   "name": "River-linen Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Hands",
+   "armorType": "Cloth",
+   "armor": 19,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_shoes",
+   "name": "River-linen Shoes",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Feet",
+   "armorType": "Cloth",
+   "armor": 21,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_sash",
+   "name": "River-linen Sash",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Waist",
+   "armorType": "Cloth",
+   "armor": 17,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_cuffs",
+   "name": "River-linen Cuffs",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Wrist",
+   "armorType": "Cloth",
+   "armor": 13,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_jerkin",
+   "name": "Otterhide Jerkin",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 60,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_breeches",
+   "name": "Otterhide Breeches",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 60,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_cap",
+   "name": "Otterhide Cap",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Head",
+   "armorType": "Leather",
+   "armor": 49,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_shoulderpads",
+   "name": "Otterhide Shoulderpads",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Shoulder",
+   "armorType": "Leather",
+   "armor": 45,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_gloves",
+   "name": "Otterhide Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Hands",
+   "armorType": "Leather",
+   "armor": 37,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_boots",
+   "name": "Otterhide Boots",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Feet",
+   "armorType": "Leather",
+   "armor": 42,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_belt",
+   "name": "Otterhide Belt",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Waist",
+   "armorType": "Leather",
+   "armor": 34,
+   "price": 732
+  },
+  {
+   "id": "bw_otterhide_bracers",
+   "name": "Otterhide Bracers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Wrist",
+   "armorType": "Leather",
+   "armor": 27,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_hauberk",
+   "name": "Ringlink Hauberk",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 127,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_leggings",
+   "name": "Ringlink Leggings",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Legs",
+   "armorType": "Mail",
+   "armor": 127,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_coif",
+   "name": "Ringlink Coif",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Head",
+   "armorType": "Mail",
+   "armor": 103,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_pauldrons",
+   "name": "Ringlink Pauldrons",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Shoulder",
+   "armorType": "Mail",
+   "armor": 96,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_gauntlets",
+   "name": "Ringlink Gauntlets",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Hands",
+   "armorType": "Mail",
+   "armor": 79,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_sabatons",
+   "name": "Ringlink Sabatons",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Feet",
+   "armorType": "Mail",
+   "armor": 88,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_girdle",
+   "name": "Ringlink Girdle",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Waist",
+   "armorType": "Mail",
+   "armor": 71,
+   "price": 732
+  },
+  {
+   "id": "bw_ringlink_bracers",
+   "name": "Ringlink Bracers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Wrist",
+   "armorType": "Mail",
+   "armor": 56,
+   "price": 732
+  },
+  {
+   "id": "bw_river_linen_cloak",
+   "name": "River-linen Cloak",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 15,
+   "price": 732
+  },
+  {
+   "id": "bw_brightweave_robe",
+   "name": "Brightweave Robe",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Chest",
+   "armorType": "Cloth",
+   "armor": 40,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_trousers",
+   "name": "Brightweave Trousers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Cloth",
+   "armor": 40,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_hood",
+   "name": "Brightweave Hood",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Cloth",
+   "armor": 33,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_mantle",
+   "name": "Brightweave Mantle",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Cloth",
+   "armor": 30,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_gloves",
+   "name": "Brightweave Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Hands",
+   "armorType": "Cloth",
+   "armor": 25,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_shoes",
+   "name": "Brightweave Shoes",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Feet",
+   "armorType": "Cloth",
+   "armor": 28,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_sash",
+   "name": "Brightweave Sash",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Waist",
+   "armorType": "Cloth",
+   "armor": 23,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_cuffs",
+   "name": "Brightweave Cuffs",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Wrist",
+   "armorType": "Cloth",
+   "armor": 18,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_jerkin",
+   "name": "Eelskin Jerkin",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 81,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_breeches",
+   "name": "Eelskin Breeches",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 81,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_cap",
+   "name": "Eelskin Cap",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Leather",
+   "armor": 65,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_shoulderpads",
+   "name": "Eelskin Shoulderpads",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Leather",
+   "armor": 60,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_gloves",
+   "name": "Eelskin Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Hands",
+   "armorType": "Leather",
+   "armor": 50,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_boots",
+   "name": "Eelskin Boots",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Feet",
+   "armorType": "Leather",
+   "armor": 56,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_belt",
+   "name": "Eelskin Belt",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Waist",
+   "armorType": "Leather",
+   "armor": 45,
+   "price": 1468
+  },
+  {
+   "id": "bw_eelskin_bracers",
+   "name": "Eelskin Bracers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Wrist",
+   "armorType": "Leather",
+   "armor": 35,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_hauberk",
+   "name": "Brightwater Chain Hauberk",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 170,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_leggings",
+   "name": "Brightwater Chain Leggings",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Mail",
+   "armor": 170,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_coif",
+   "name": "Brightwater Chain Coif",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Mail",
+   "armor": 138,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_pauldrons",
+   "name": "Brightwater Chain Pauldrons",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Mail",
+   "armor": 127,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_gauntlets",
+   "name": "Brightwater Chain Gauntlets",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Hands",
+   "armorType": "Mail",
+   "armor": 105,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_sabatons",
+   "name": "Brightwater Chain Sabatons",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Feet",
+   "armorType": "Mail",
+   "armor": 117,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_girdle",
+   "name": "Brightwater Chain Girdle",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Waist",
+   "armorType": "Mail",
+   "armor": 95,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightwater_chain_bracers",
+   "name": "Brightwater Chain Bracers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Wrist",
+   "armorType": "Mail",
+   "armor": 75,
+   "price": 1468
+  },
+  {
+   "id": "bw_brightweave_cloak",
+   "name": "Brightweave Cloak",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 20,
+   "price": 1468
+  },
+  {
+   "id": "bw_archivist_robe_21",
+   "name": "Archivist's Robe",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Chest",
+   "armorType": "Cloth",
+   "armor": 36,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 6
+    },
+    {
+     "stat": "Spirit",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_archivist_gloves_21",
+   "name": "Archivist's Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Hands",
+   "armorType": "Cloth",
+   "armor": 23,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 5
+    },
+    {
+     "stat": "Spirit",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_archivist_shoes_21",
+   "name": "Archivist's Shoes",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Feet",
+   "armorType": "Cloth",
+   "armor": 25,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 5
+    },
+    {
+     "stat": "Spirit",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_riverwarden_jerkin_21",
+   "name": "Riverwarden's Jerkin",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 73,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_riverwarden_gloves_21",
+   "name": "Riverwarden's Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Hands",
+   "armorType": "Leather",
+   "armor": 45,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_riverwarden_boots_21",
+   "name": "Riverwarden's Boots",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Feet",
+   "armorType": "Leather",
+   "armor": 50,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_tidecaller_jerkin_21",
+   "name": "Tidecaller's Jerkin",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 73,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_watchman_hauberk_21",
+   "name": "Watchman's Hauberk",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 153,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_watchman_gauntlets_21",
+   "name": "Watchman's Gauntlets",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Hands",
+   "armorType": "Mail",
+   "armor": 95,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_watchman_sabatons_21",
+   "name": "Watchman's Sabatons",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Feet",
+   "armorType": "Mail",
+   "armor": 106,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_chapel_knight_hauberk_21",
+   "name": "Chapel-Knight's Hauberk",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 153,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 5
+    },
+    {
+     "stat": "Intellect",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_heron_grey_cloak_21",
+   "name": "Heron-Grey Cloak",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 18,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    },
+    {
+     "stat": "Intellect",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_archivist_trousers_27",
+   "name": "Archivist's Trousers of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Cloth",
+   "armor": 45,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 8
+    },
+    {
+     "stat": "Spirit",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_archivist_hood_27",
+   "name": "Archivist's Hood of the Ford",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Cloth",
+   "armor": 36,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 8
+    },
+    {
+     "stat": "Spirit",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_archivist_mantle_27",
+   "name": "Archivist's Mantle of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Cloth",
+   "armor": 34,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 6
+    },
+    {
+     "stat": "Spirit",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_riverwarden_breeches_27",
+   "name": "Riverwarden's Breeches of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 90,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_riverwarden_cap_27",
+   "name": "Riverwarden's Cap of the Ford",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Leather",
+   "armor": 73,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_riverwarden_shoulderpads_27",
+   "name": "Riverwarden's Shoulderpads of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Leather",
+   "armor": 67,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_tidecaller_breeches_27",
+   "name": "Tidecaller's Breeches of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 90,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Spirit",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_watchman_leggings_27",
+   "name": "Watchman's Leggings of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Mail",
+   "armor": 189,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_watchman_coif_27",
+   "name": "Watchman's Coif of the Ford",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Head",
+   "armorType": "Mail",
+   "armor": 153,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_watchman_pauldrons_27",
+   "name": "Watchman's Pauldrons of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Shoulder",
+   "armorType": "Mail",
+   "armor": 142,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_chapel_knight_leggings_27",
+   "name": "Chapel-Knight's Leggings of the Ford",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Legs",
+   "armorType": "Mail",
+   "armor": 189,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 7
+    },
+    {
+     "stat": "Intellect",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_heron_grey_cloak_27",
+   "name": "Heron-Grey Cloak of the Ford",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 22,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 5
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    },
+    {
+     "stat": "Intellect",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_archivist_robe_33",
+   "name": "Archivist's Robe of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Chest",
+   "armorType": "Cloth",
+   "armor": 53,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 10
+    },
+    {
+     "stat": "Spirit",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_archivist_trousers_33",
+   "name": "Archivist's Trousers of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Legs",
+   "armorType": "Cloth",
+   "armor": 53,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 10
+    },
+    {
+     "stat": "Spirit",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_archivist_hood_33",
+   "name": "Archivist's Hood of the High Water",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Head",
+   "armorType": "Cloth",
+   "armor": 43,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 10
+    },
+    {
+     "stat": "Spirit",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_riverwarden_jerkin_33",
+   "name": "Riverwarden's Jerkin of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 106,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 12
+    },
+    {
+     "stat": "Stamina",
+     "value": 8
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_riverwarden_breeches_33",
+   "name": "Riverwarden's Breeches of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 106,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 12
+    },
+    {
+     "stat": "Stamina",
+     "value": 8
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_riverwarden_cap_33",
+   "name": "Riverwarden's Cap of the High Water",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Head",
+   "armorType": "Leather",
+   "armor": 86,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 12
+    },
+    {
+     "stat": "Stamina",
+     "value": 8
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_tidecaller_jerkin_33",
+   "name": "Tidecaller's Jerkin of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 106,
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Spirit",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_watchman_hauberk_33",
+   "name": "Watchman's Hauberk of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 224,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_watchman_leggings_33",
+   "name": "Watchman's Leggings of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Legs",
+   "armorType": "Mail",
+   "armor": 224,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_watchman_coif_33",
+   "name": "Watchman's Coif of the High Water",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Head",
+   "armorType": "Mail",
+   "armor": 182,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 10
+    },
+    {
+     "stat": "Stamina",
+     "value": 7
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_chapel_knight_hauberk_33",
+   "name": "Chapel-Knight's Hauberk of the High Water",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 224,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 8
+    },
+    {
+     "stat": "Intellect",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_heron_grey_cloak_33",
+   "name": "Heron-Grey Cloak of the High Water",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 27,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 6
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    },
+    {
+     "stat": "Intellect",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_reedwood_wand",
+   "name": "Reedwood Wand",
+   "icon": "sparkle",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 19,
+   "requiredLevel": 14,
+   "description": "Cut from the river reeds. Hums faintly near water.",
+   "equip": "Ranged",
+   "weaponType": "Wand",
+   "minDamage": 13,
+   "maxDamage": 22,
+   "speed": 1.8,
+   "damageSchool": "Frost",
+   "price": 732
+  },
+  {
+   "id": "bw_kingfisher_wand",
+   "name": "Kingfisher Wand",
+   "icon": "sparkle",
+   "kind": "Weapon",
+   "quality": "Common",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "Tipped with a blue feather that is definitely not from a real kingfisher. Pell swears.",
+   "equip": "Ranged",
+   "weaponType": "Wand",
+   "minDamage": 18,
+   "maxDamage": 30,
+   "speed": 1.8,
+   "damageSchool": "Arcane",
+   "price": 1468
+  },
+  {
+   "id": "bw_lamplit_wand_21",
+   "name": "Lamplit Wand",
+   "icon": "sparkle",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "A lantern-glass bead at the tip glows when you aim.",
+   "equip": "Ranged",
+   "weaponType": "Wand",
+   "minDamage": 18,
+   "maxDamage": 30,
+   "speed": 1.8,
+   "damageSchool": "Fire",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 3
+    },
+    {
+     "stat": "Spirit",
+     "value": 1
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_lamplit_wand_27",
+   "name": "Lamplit Wand of the Ford",
+   "icon": "sparkle",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "description": "A lantern-glass bead at the tip glows when you aim.",
+   "equip": "Ranged",
+   "weaponType": "Wand",
+   "minDamage": 23,
+   "maxDamage": 38,
+   "speed": 1.8,
+   "damageSchool": "Fire",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_lamplit_wand_33",
+   "name": "Lamplit Wand of the High Water",
+   "icon": "sparkle",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "description": "A lantern-glass bead at the tip glows when you aim.",
+   "equip": "Ranged",
+   "weaponType": "Wand",
+   "minDamage": 27,
+   "maxDamage": 45,
+   "speed": 1.8,
+   "damageSchool": "Fire",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 5
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    }
+   ],
+   "price": 4366
+  },
+  {
+   "id": "bw_potion_greater_healing",
+   "name": "Greater Healing Potion",
+   "icon": "potion_red",
+   "description": "Ottoline's own. Tastes of cherries, copper and the fear of failure.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 31,
+   "requiredLevel": 21,
+   "use": "bw_use_potion_greater_healing",
+   "consumable": true,
+   "stack": 5,
+   "price": 1000
+  },
+  {
+   "id": "bw_potion_riverlight_healing",
+   "name": "Riverlight Healing Potion",
+   "icon": "potion_red",
+   "description": "Brewed by moonlight on the river steps. It glows, faintly, like a promise.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 40,
+   "requiredLevel": 28,
+   "use": "bw_use_potion_riverlight_healing",
+   "consumable": true,
+   "stack": 5,
+   "price": 1600
+  },
+  {
+   "id": "bw_potion_mana",
+   "name": "Mana Potion",
+   "icon": "potion_blue",
+   "description": "Bright blue, and it fizzes in a way that suggests opinions.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 32,
+   "requiredLevel": 22,
+   "use": "bw_use_potion_mana",
+   "consumable": true,
+   "stack": 5,
+   "price": 900
+  },
+  {
+   "id": "bw_potion_greater_mana",
+   "name": "Greater Mana Potion",
+   "icon": "potion_blue",
+   "description": "Ottoline labels these DO NOT SHAKE. She shakes them constantly.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 41,
+   "requiredLevel": 29,
+   "use": "bw_use_potion_greater_mana",
+   "consumable": true,
+   "stack": 5,
+   "price": 1500
+  },
+  {
+   "id": "bw_potion_rejuvenation",
+   "name": "Rejuvenation Potion",
+   "icon": "potion_red",
+   "description": "Half red, half blue, and mixed this time, thanks to a very patient spoon.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 28,
+   "requiredLevel": 18,
+   "use": "bw_use_potion_rejuvenation",
+   "consumable": true,
+   "stack": 5,
+   "price": 1100
+  },
+  {
+   "id": "bw_elixir_fortitude",
+   "name": "Elixir of Fortitude",
+   "icon": "vial",
+   "description": "Thick as porridge. Twice as good for you, half as pleasant.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 26,
+   "requiredLevel": 16,
+   "use": "bw_use_elixir_fortitude",
+   "consumable": true,
+   "stack": 5,
+   "price": 450
+  },
+  {
+   "id": "bw_elixir_defense",
+   "name": "Elixir of Defense",
+   "icon": "vial",
+   "description": "Leaves a gravelly feeling in the throat that is, Ottoline insists, the point.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 24,
+   "requiredLevel": 14,
+   "use": "bw_use_elixir_defense",
+   "consumable": true,
+   "stack": 5,
+   "price": 400
+  },
+  {
+   "id": "bw_elixir_ogres_strength",
+   "name": "Elixir of Ogre's Strength",
+   "icon": "vial",
+   "description": "Not made from ogres. Ottoline would like that on the record.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 30,
+   "requiredLevel": 20,
+   "use": "bw_use_elixir_ogres_strength",
+   "consumable": true,
+   "stack": 5,
+   "price": 600
+  },
+  {
+   "id": "bw_elixir_agility",
+   "name": "Elixir of Agility",
+   "icon": "vial",
+   "description": "Your feet start tapping before the cork is out.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 34,
+   "requiredLevel": 24,
+   "use": "bw_use_elixir_agility",
+   "consumable": true,
+   "stack": 5,
+   "price": 700
+  },
+  {
+   "id": "bw_elixir_greater_intellect",
+   "name": "Elixir of Greater Intellect",
+   "icon": "vial",
+   "description": "Distilled from strong tea and stronger opinions.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 35,
+   "requiredLevel": 25,
+   "use": "bw_use_elixir_greater_intellect",
+   "consumable": true,
+   "stack": 5,
+   "price": 700
+  },
+  {
+   "id": "bw_elixir_ember_ward",
+   "name": "Ember-Ward Draught",
+   "icon": "fire",
+   "description": "Smells of wet slate. Recommended by Ottoline for anyone walking north.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 32,
+   "requiredLevel": 22,
+   "use": "bw_use_elixir_ember_ward",
+   "consumable": true,
+   "stack": 5,
+   "price": 650
+  },
+  {
+   "id": "bw_elixir_fen_ward",
+   "name": "Fen-Ward Tonic",
+   "icon": "leaf",
+   "description": "Bitter as marsh-mint. Keeps the fen's little bites from biting quite so hard.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 28,
+   "requiredLevel": 18,
+   "use": "bw_use_elixir_fen_ward",
+   "consumable": true,
+   "stack": 5,
+   "price": 550
+  },
+  {
+   "id": "bw_elixir_frost_ward",
+   "name": "Frostward Tonic",
+   "icon": "frost",
+   "description": "Warm all the way down, and then some.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 34,
+   "requiredLevel": 24,
+   "use": "bw_use_elixir_frost_ward",
+   "consumable": true,
+   "stack": 5,
+   "price": 650
+  },
+  {
+   "id": "bw_bandage_silk",
+   "name": "Silk Bandage",
+   "icon": "bandage",
+   "description": "River silk, cut in strips by the chapel's knitting circle.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 24,
+   "requiredLevel": 14,
+   "use": "bw_use_bandage_silk",
+   "consumable": true,
+   "stack": 20,
+   "price": 250
+  },
+  {
+   "id": "bw_bandage_heavy_silk",
+   "name": "Heavy Silk Bandage",
+   "icon": "bandage",
+   "description": "Doubled and stitched. It will hold a knight together, briefly.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 32,
+   "requiredLevel": 22,
+   "use": "bw_use_bandage_heavy_silk",
+   "consumable": true,
+   "stack": 20,
+   "price": 450
+  },
+  {
+   "id": "bw_bandage_mageweave",
+   "name": "Mageweave Bandage",
+   "icon": "bandage",
+   "description": "Faintly warm, and it smells of somebody else's spell.",
+   "kind": "Consumable",
+   "quality": "Common",
+   "itemLevel": 40,
+   "requiredLevel": 28,
+   "use": "bw_use_bandage_mageweave",
+   "consumable": true,
+   "stack": 20,
+   "price": 700
+  },
+  {
+   "id": "bw_food_fishcakes",
+   "name": "Riverside Fishcakes",
+   "icon": "food",
+   "description": "Marigold's fishcakes: crisp outside, soft inside, and they never taste of yesterday.",
+   "kind": "Food",
+   "quality": "Common",
+   "itemLevel": 26,
+   "requiredLevel": 18,
+   "use": "bw_use_food_fishcakes",
+   "consumable": true,
+   "stack": 20,
+   "price": 500
+  },
+  {
+   "id": "bw_food_heron_pie",
+   "name": "Lantern & Heron Pie",
+   "icon": "food",
+   "description": "Contains no heron. Marigold is tired of being asked.",
+   "kind": "Food",
+   "quality": "Common",
+   "itemLevel": 33,
+   "requiredLevel": 25,
+   "use": "bw_use_food_heron_pie",
+   "consumable": true,
+   "stack": 20,
+   "price": 900
+  },
+  {
+   "id": "bw_food_lantern_dumplings",
+   "name": "Lantern Dumplings",
+   "icon": "food",
+   "description": "Steamed in little paper lanterns. You eat the dumpling, not the lantern.",
+   "kind": "Food",
+   "quality": "Common",
+   "itemLevel": 38,
+   "requiredLevel": 30,
+   "use": "bw_use_food_lantern_dumplings",
+   "consumable": true,
+   "stack": 20,
+   "price": 1300
+  },
+  {
+   "id": "bw_drink_elderflower",
+   "name": "Elderflower Cordial",
+   "icon": "drink",
+   "description": "Sweet, cold and faintly fizzy, like a summer afternoon in a bottle.",
+   "kind": "Drink",
+   "quality": "Common",
+   "itemLevel": 26,
+   "requiredLevel": 18,
+   "use": "bw_use_drink_elderflower",
+   "consumable": true,
+   "stack": 20,
+   "price": 500
+  },
+  {
+   "id": "bw_drink_mountain_spring",
+   "name": "Skyreach Spring Water",
+   "icon": "drink",
+   "description": "Carried down from the peaks in barrels. Marigold charges for the carrying.",
+   "kind": "Drink",
+   "quality": "Common",
+   "itemLevel": 33,
+   "requiredLevel": 25,
+   "use": "bw_use_drink_mountain_spring",
+   "consumable": true,
+   "stack": 20,
+   "price": 900
+  },
+  {
+   "id": "bw_drink_moonberry",
+   "name": "Moonberry Juice",
+   "icon": "drink",
+   "description": "Silver-blue and tart enough to wake the dead. Please do not test that.",
+   "kind": "Drink",
+   "quality": "Common",
+   "itemLevel": 38,
+   "requiredLevel": 30,
+   "use": "bw_use_drink_moonberry",
+   "consumable": true,
+   "stack": 20,
+   "price": 1300
+  },
+  {
+   "id": "bw_parcel_wicks",
+   "name": "Parcel of Lamp Wicks",
+   "icon": "bandage",
+   "description": "Addressed in careful capitals: MOTHER WREN, CHAPEL OF SMALL LIGHTS. PLEASE DO NOT DROP IN RIVER (AGAIN).",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_parcels"
+  },
+  {
+   "id": "bw_parcel_springs",
+   "name": "Crate of Clock Springs",
+   "icon": "clock",
+   "description": "It ticks when you shake it. It should not tick. Deliver to Magister Vell, the clock tower.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_parcels"
+  },
+  {
+   "id": "bw_parcel_letter",
+   "name": "Sealed Letter for the Watch",
+   "icon": "key",
+   "description": "Sealed with the dockmaster's wax: a fish wearing a crown. For Captain Rowan's eyes only.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_parcels"
+  },
+  {
+   "id": "bw_minnows",
+   "name": "Bucket of Minnows",
+   "icon": "food",
+   "description": "Silver, wriggling and irresistible to any heron with a pulse.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_lost_heron"
+  },
+  {
+   "id": "bw_admiral_puddles",
+   "name": "Admiral Puddles (in a basket)",
+   "icon": "feather",
+   "description": "A small, damp, deeply offended heron. He has eaten your sandwich.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_lost_heron"
+  },
+  {
+   "id": "bw_oil_jar",
+   "name": "Sealed Jar of Lantern Oil",
+   "icon": "vial",
+   "description": "Stamped with a Duskmane paw-print. Lantern oil from Amberfield, hidden under a layer of herring.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 1,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_smugglers"
+  },
+  {
+   "id": "bw_memorial_lantern",
+   "name": "Memorial Lantern",
+   "icon": "star",
+   "description": "A small brass lantern with a heron etched on the glass. One for each of the Eleven who could not carry their own.",
+   "kind": "Quest",
+   "quality": "Common",
+   "itemLevel": 1,
+   "stack": 3,
+   "price": 0,
+   "unique": true,
+   "quest": "bw_q_forty_names"
+  },
+  {
+   "id": "bw_dockmasters_oilskin",
+   "name": "Dockmaster's Oilskin",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 16,
+   "description": "Smells of tar and good decisions. Mostly tar.",
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 3
+    },
+    {
+     "stat": "Agility",
+     "value": 3
+    }
+   ],
+   "price": 1306
+  },
+  {
+   "id": "bw_hobbs_rope_belt",
+   "name": "Hobb's Lucky Rope Belt",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Waist",
+   "armorType": "Mail",
+   "armor": 76,
+   "description": "Tied with a bargeman's knot that nobody has ever untied, including Hobb.",
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1306
+  },
+  {
+   "id": "bw_tide_clerks_gloves",
+   "name": "Tide-Clerk's Gloves",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Hands",
+   "armorType": "Cloth",
+   "armor": 20,
+   "description": "Ink-stained at the fingertips, as all good gloves are.",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 4
+    },
+    {
+     "stat": "Spirit",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 1
+    }
+   ],
+   "price": 1306
+  },
+  {
+   "id": "bw_admirals_feather",
+   "name": "The Admiral's Feather",
+   "icon": "heart",
+   "kind": "Accessory",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Neck",
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    }
+   ],
+   "price": 1306,
+   "description": "Given with enormous reluctance by the Admiral himself."
+  },
+  {
+   "id": "bw_puddle_jumpers",
+   "name": "Puddle-Jumper Boots",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Feet",
+   "armorType": "Leather",
+   "armor": 44,
+   "description": "Waterproof, mostly. Tamsin tested them in the fountain.",
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1306
+  },
+  {
+   "id": "bw_reedwoven_bracers",
+   "name": "Reedwoven Bracers",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 18,
+   "requiredLevel": 13,
+   "equip": "Wrist",
+   "armorType": "Cloth",
+   "armor": 14,
+   "description": "Plaited from river reeds by small, determined hands.",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 3
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    },
+    {
+     "stat": "Stamina",
+     "value": 1
+    }
+   ],
+   "price": 1306
+  },
+  {
+   "id": "bw_watch_halberd",
+   "name": "Watch-Issue Halberd",
+   "icon": "spear",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 20,
+   "requiredLevel": 15,
+   "description": "Polished for parades, sharpened for everything else.",
+   "equip": "TwoHand",
+   "weaponType": "Polearm",
+   "minDamage": 35,
+   "maxDamage": 59,
+   "speed": 3.5,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1610
+  },
+  {
+   "id": "bw_lantern_oil_ward",
+   "name": "Lantern-Oil Ward",
+   "icon": "star",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 20,
+   "requiredLevel": 15,
+   "description": "A recovered jar of lantern oil, re-blessed by Corwin and set in a brass cage. It glows.",
+   "equip": "OffHand",
+   "weaponType": "HeldInOffhand",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 3
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    },
+    {
+     "stat": "Stamina",
+     "value": 1
+    }
+   ],
+   "price": 1610
+  },
+  {
+   "id": "bw_riverwatch_hauberk",
+   "name": "Riverwatch Hauberk",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 20,
+   "requiredLevel": 15,
+   "equip": "Chest",
+   "armorType": "Mail",
+   "armor": 148,
+   "description": "River-blue surcoat over good mail. The Watch has spare ones now.",
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 1610
+  },
+  {
+   "id": "bw_shield_of_the_eleven",
+   "name": "Shield of the Eleven",
+   "icon": "shield",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Eleven heron feathers are painted round its rim. Nobody painted the other twenty-nine; they are carved.",
+   "equip": "OffHand",
+   "weaponType": "Shield",
+   "armor": 630,
+   "block": 16,
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_aubrics_practice_blade",
+   "name": "Aubric's Practice Blade",
+   "icon": "sword",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "description": "Lord-Commander Aubric's old practice sword. Sir Bertram says he was never very good with it.",
+   "equip": "OneHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 21,
+   "maxDamage": 35,
+   "speed": 2.6,
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_mantle_of_the_twenty_nine",
+   "name": "Mantle of the Twenty-Nine",
+   "icon": "wings",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "Back",
+   "armorType": "Cloth",
+   "armor": 18,
+   "description": "River-blue wool with twenty-nine tiny herons embroidered at the hem.",
+   "stats": [
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Intellect",
+     "value": 2
+    },
+    {
+     "stat": "Spirit",
+     "value": 2
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_fen_scouts_waders",
+   "name": "Fen-Scout's Waders",
+   "icon": "boot",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 23,
+   "requiredLevel": 18,
+   "equip": "Feet",
+   "armorType": "Mail",
+   "armor": 114,
+   "description": "Tall, oiled and smelling faintly of eel.",
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    }
+   ],
+   "price": 2126
+  },
+  {
+   "id": "bw_rowans_spyglass",
+   "name": "Rowan's Spare Spyglass",
+   "icon": "star",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 23,
+   "requiredLevel": 18,
+   "description": "Brass, dented, and pointed at the horizon more often than at anything near.",
+   "equip": "OffHand",
+   "weaponType": "HeldInOffhand",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    },
+    {
+     "stat": "Spirit",
+     "value": 1
+    }
+   ],
+   "price": 2126
+  },
+  {
+   "id": "bw_marsh_walker_breeches",
+   "name": "Marsh-Walker Breeches",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 23,
+   "requiredLevel": 18,
+   "equip": "Legs",
+   "armorType": "Leather",
+   "armor": 78,
+   "description": "Waxed leather, stitched for wading. The knees are reinforced for kneeling in mud.",
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 8
+    },
+    {
+     "stat": "Stamina",
+     "value": 6
+    }
+   ],
+   "price": 2126
+  },
+  {
+   "id": "bw_watch_captains_greatcoat",
+   "name": "Watch-Captain's Greatcoat",
+   "icon": "armor",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 29,
+   "requiredLevel": 24,
+   "equip": "Chest",
+   "armorType": "Leather",
+   "armor": 95,
+   "description": "Heavy river-blue wool over leather, with brass heron buttons.",
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 9
+    },
+    {
+     "stat": "Stamina",
+     "value": 6
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    }
+   ],
+   "price": 3374
+  },
+  {
+   "id": "bw_high_road_gauntlets",
+   "name": "High Road Gauntlets",
+   "icon": "hand",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 29,
+   "requiredLevel": 24,
+   "equip": "Hands",
+   "armorType": "Mail",
+   "armor": 124,
+   "description": "Fur-lined for the passes. Rowan wore a pair like them, twelve years ago.",
+   "stats": [
+    {
+     "stat": "Strength",
+     "value": 7
+    },
+    {
+     "stat": "Stamina",
+     "value": 4
+    },
+    {
+     "stat": "Agility",
+     "value": 2
+    }
+   ],
+   "price": 3374
+  },
+  {
+   "id": "bw_lookouts_hood",
+   "name": "Skyreach Lookout's Hood",
+   "icon": "mask",
+   "kind": "Armor",
+   "quality": "Uncommon",
+   "itemLevel": 29,
+   "requiredLevel": 24,
+   "equip": "Head",
+   "armorType": "Cloth",
+   "armor": 39,
+   "description": "Grey wool with a long scarf-tail to wrap against the wind off the peaks.",
+   "stats": [
+    {
+     "stat": "Intellect",
+     "value": 9
+    },
+    {
+     "stat": "Spirit",
+     "value": 6
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 3374
+  },
+  {
+   "id": "bw_tamsins_lucky_button",
+   "name": "Tamsin's Lucky Button",
+   "icon": "sparkle",
+   "kind": "Accessory",
+   "quality": "Uncommon",
+   "itemLevel": 16,
+   "requiredLevel": 11,
+   "equip": "Finger",
+   "stats": [
+    {
+     "stat": "Spirit",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1034,
+   "description": "A brass button on a loop of string. Tamsin says it is lucky because she found it, which is lucky."
+  },
+  {
+   "id": "bw_minnows_bait",
+   "name": "Pot of Minnows",
+   "icon": "food",
+   "description": "Bait, mostly. Herons consider it a delicacy, and Silas considers herons a menace.",
+   "kind": "Junk",
+   "quality": "Common",
+   "itemLevel": 5,
+   "stack": 20,
+   "price": 10
+  },
+  {
+   "id": "bw_smoked_eel",
+   "name": "Smoked River Eel",
+   "icon": "food",
+   "description": "Glossy, smoky and alarmingly long.",
+   "kind": "Food",
+   "quality": "Common",
+   "itemLevel": 22,
+   "requiredLevel": 14,
+   "use": "bw_use_smoked_eel",
+   "consumable": true,
+   "stack": 20,
+   "price": 350
+  },
+  {
+   "id": "bw_hollowell_main_gauche_21",
+   "name": "Hollowell Main-Gauche",
+   "icon": "dagger",
+   "description": "\"Main-gauche\" is old river-talk for \"left hand\". Dunstan sells them with the eel-skinners and calls it a bargain.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 21,
+   "requiredLevel": 16,
+   "equip": "OffHand",
+   "weaponType": "Dagger",
+   "minDamage": 12,
+   "maxDamage": 20,
+   "speed": 1.5,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 4
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 1774
+  },
+  {
+   "id": "bw_floodgate_knuckles_27",
+   "name": "Floodgate Knuckles",
+   "icon": "fist",
+   "description": "Cast from the iron of the old floodgate. They hold back exactly as well as it did, which is to say: until they don't.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 27,
+   "requiredLevel": 22,
+   "equip": "OffHand",
+   "weaponType": "FistWeapon",
+   "minDamage": 20,
+   "maxDamage": 34,
+   "speed": 2.0,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 2
+    },
+    {
+     "stat": "Stamina",
+     "value": 2
+    }
+   ],
+   "price": 2926
+  },
+  {
+   "id": "bw_left_bank_sabre_33",
+   "name": "Left-Bank Sabre",
+   "icon": "sword",
+   "description": "The left bank is whichever bank you are on while carrying this. The right bank disagrees, but it has never won the argument.",
+   "kind": "Weapon",
+   "quality": "Uncommon",
+   "itemLevel": 33,
+   "requiredLevel": 28,
+   "equip": "OffHand",
+   "weaponType": "OneHandSword",
+   "minDamage": 29,
+   "maxDamage": 48,
+   "speed": 2.4,
+   "stats": [
+    {
+     "stat": "Agility",
+     "value": 5
+    },
+    {
+     "stat": "Strength",
+     "value": 3
+    },
+    {
+     "stat": "Stamina",
+     "value": 3
+    }
+   ],
+   "price": 4366
+  }
+ ],
+ "abilities": [
+  {
+   "id": "bw_use_potion_greater_healing",
+   "name": "Greater Healing Potion",
+   "icon": "potion_red",
+   "description": "Restores {0} health.",
+   "school": "Physical",
+   "time": "OffGcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 120,
+   "cooldownGroup": "potion",
+   "effects": [
+    {
+     "type": "Heal",
+     "min": 455,
+     "max": 585,
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Heal"
+  },
+  {
+   "id": "bw_use_potion_riverlight_healing",
+   "name": "Riverlight Healing Potion",
+   "icon": "potion_red",
+   "description": "Restores {0} health.",
+   "school": "Physical",
+   "time": "OffGcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 120,
+   "cooldownGroup": "potion",
+   "effects": [
+    {
+     "type": "Heal",
+     "min": 640,
+     "max": 820,
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Heal"
+  },
+  {
+   "id": "bw_use_potion_mana",
+   "name": "Mana Potion",
+   "icon": "potion_blue",
+   "description": "Restores {0} mana.",
+   "school": "Physical",
+   "time": "OffGcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 120,
+   "cooldownGroup": "potion",
+   "effects": [
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 560,
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_potion_greater_mana",
+   "name": "Greater Mana Potion",
+   "icon": "potion_blue",
+   "description": "Restores {0} mana.",
+   "school": "Physical",
+   "time": "OffGcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 120,
+   "cooldownGroup": "potion",
+   "effects": [
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 800,
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_potion_rejuvenation",
+   "name": "Rejuvenation Potion",
+   "icon": "potion_red",
+   "description": "Restores {0} health and {1} mana.",
+   "school": "Physical",
+   "time": "OffGcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 120,
+   "cooldownGroup": "potion",
+   "effects": [
+    {
+     "type": "Heal",
+     "min": 280,
+     "max": 360,
+     "target": "Self"
+    },
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 320,
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Heal"
+  },
+  {
+   "id": "bw_use_elixir_fortitude",
+   "name": "Elixir of Fortitude",
+   "icon": "vial",
+   "description": "Stamina increased by 10 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_fortitude"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_defense",
+   "name": "Elixir of Defense",
+   "icon": "vial",
+   "description": "Armor increased by 150 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_defense"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_ogres_strength",
+   "name": "Elixir of Ogre's Strength",
+   "icon": "vial",
+   "description": "Strength increased by 10 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_ogres_strength"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_agility",
+   "name": "Elixir of Agility",
+   "icon": "vial",
+   "description": "Agility increased by 12 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_agility"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_greater_intellect",
+   "name": "Elixir of Greater Intellect",
+   "icon": "vial",
+   "description": "Intellect increased by 12 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_greater_intellect"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_ember_ward",
+   "name": "Ember-Ward Draught",
+   "icon": "fire",
+   "description": "Fire resistance increased by 25 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_ember_ward"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_fen_ward",
+   "name": "Fen-Ward Tonic",
+   "icon": "leaf",
+   "description": "Nature resistance increased by 25 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_fen_ward"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_elixir_frost_ward",
+   "name": "Frostward Tonic",
+   "icon": "frost",
+   "description": "Frost resistance increased by 25 for 1 hour.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_elixir_frost_ward"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_bandage_silk",
+   "name": "Silk Bandage",
+   "icon": "bandage",
+   "description": "Heals 280 damage over 7 sec.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Ally",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 60,
+   "cooldownGroup": "bandage",
+   "range": 5,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_bandage_silk"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_bandage_heavy_silk",
+   "name": "Heavy Silk Bandage",
+   "icon": "bandage",
+   "description": "Heals 406 damage over 7 sec.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Ally",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 60,
+   "cooldownGroup": "bandage",
+   "range": 5,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_bandage_heavy_silk"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_bandage_mageweave",
+   "name": "Mageweave Bandage",
+   "icon": "bandage",
+   "description": "Heals 600 damage over 8 sec.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Ally",
+   "hidden": true,
+   "breaksStealth": true,
+   "cooldown": 60,
+   "cooldownGroup": "bandage",
+   "range": 5,
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_bandage_mageweave"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_food_fishcakes",
+   "name": "Riverside Fishcakes",
+   "icon": "food",
+   "description": "Restores 872 health over 24 sec. Must remain seated while eating. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_food_fishcakes",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_food_heron_pie",
+   "name": "Lantern & Heron Pie",
+   "icon": "food",
+   "description": "Restores 1392 health over 24 sec. Must remain seated while eating. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_food_heron_pie",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_food_lantern_dumplings",
+   "name": "Lantern Dumplings",
+   "icon": "food",
+   "description": "Restores 1952 health over 24 sec. Must remain seated while eating. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_food_lantern_dumplings",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_drink_elderflower",
+   "name": "Elderflower Cordial",
+   "icon": "drink",
+   "description": "Restores 1344 mana over 24 sec. Must remain seated while drinking.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_drink_elderflower",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_drink_mountain_spring",
+   "name": "Skyreach Spring Water",
+   "icon": "drink",
+   "description": "Restores 1944 mana over 24 sec. Must remain seated while drinking.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_drink_mountain_spring",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_drink_moonberry",
+   "name": "Moonberry Juice",
+   "icon": "drink",
+   "description": "Restores 2936 mana over 24 sec. Must remain seated while drinking.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_drink_moonberry",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  },
+  {
+   "id": "bw_use_smoked_eel",
+   "name": "Smoked River Eel",
+   "icon": "food",
+   "description": "Restores 720 health over 24 sec. Must remain seated while eating.",
+   "school": "Physical",
+   "time": "Gcd",
+   "target": "Self",
+   "hidden": true,
+   "breaksStealth": true,
+   "requires": {
+    "notInCombat": true
+   },
+   "effects": [
+    {
+     "type": "ApplyAura",
+     "aura": "bw_cn_smoked_eel",
+     "target": "Self"
+    }
+   ],
+   "aiHint": "Buff"
+  }
+ ],
+ "auras": [
+  {
+   "id": "bw_cn_elixir_fortitude",
+   "name": "Elixir of Fortitude",
+   "icon": "vial",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Stamina increased by 10 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Stamina",
+     "value": 10
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_defense",
+   "name": "Elixir of Defense",
+   "icon": "vial",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Armor increased by 150 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Armor",
+     "value": 150
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_ogres_strength",
+   "name": "Elixir of Ogre's Strength",
+   "icon": "vial",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Strength increased by 10 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Strength",
+     "value": 10
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_agility",
+   "name": "Elixir of Agility",
+   "icon": "vial",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Agility increased by 12 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Agility",
+     "value": 12
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_greater_intellect",
+   "name": "Elixir of Greater Intellect",
+   "icon": "vial",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Intellect increased by 12 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Intellect",
+     "value": 12
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_ember_ward",
+   "name": "Ember-Ward Draught",
+   "icon": "fire",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Fire resistance increased by 25 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Resistance",
+     "value": 25,
+     "school": "Fire"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_fen_ward",
+   "name": "Fen-Ward Tonic",
+   "icon": "leaf",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Nature resistance increased by 25 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Resistance",
+     "value": 25,
+     "school": "Nature"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_elixir_frost_ward",
+   "name": "Frostward Tonic",
+   "icon": "frost",
+   "kind": "Buff",
+   "duration": 3600,
+   "description": "Frost resistance increased by 25 for 1 hour.",
+   "mods": [
+    {
+     "stat": "Resistance",
+     "value": 25,
+     "school": "Frost"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_bandage_silk",
+   "name": "First Aid",
+   "icon": "bandage",
+   "kind": "Buff",
+   "duration": 7,
+   "tickInterval": 1,
+   "description": "Heals 280 damage over 7 sec. Interrupted by damage.",
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 40,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_bandage_heavy_silk",
+   "name": "First Aid",
+   "icon": "bandage",
+   "kind": "Buff",
+   "duration": 7,
+   "tickInterval": 1,
+   "description": "Heals 406 damage over 7 sec. Interrupted by damage.",
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 58,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_bandage_mageweave",
+   "name": "First Aid",
+   "icon": "bandage",
+   "kind": "Buff",
+   "duration": 8,
+   "tickInterval": 1,
+   "description": "Heals 600 damage over 8 sec. Interrupted by damage.",
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 75,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_food_fishcakes",
+   "name": "Food",
+   "icon": "food",
+   "description": "Restoring 872 health over 24 sec. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "food",
+   "tags": [
+    "Food"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 109,
+     "target": "Target"
+    }
+   ],
+   "onExpire": [
+    {
+     "type": "ApplyAura",
+     "aura": "cn_well_fed",
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_food_heron_pie",
+   "name": "Food",
+   "icon": "food",
+   "description": "Restoring 1392 health over 24 sec. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "food",
+   "tags": [
+    "Food"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 174,
+     "target": "Target"
+    }
+   ],
+   "onExpire": [
+    {
+     "type": "ApplyAura",
+     "aura": "cn_well_fed",
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_food_lantern_dumplings",
+   "name": "Food",
+   "icon": "food",
+   "description": "Restoring 1952 health over 24 sec. If you spend the full time eating, you become Well Fed (+4 Stamina and Spirit for 15 min).",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "food",
+   "tags": [
+    "Food"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 244,
+     "target": "Target"
+    }
+   ],
+   "onExpire": [
+    {
+     "type": "ApplyAura",
+     "aura": "cn_well_fed",
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_drink_elderflower",
+   "name": "Drink",
+   "icon": "drink",
+   "description": "Restoring 1344 mana over 24 sec.",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "drink",
+   "tags": [
+    "Drink"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 168,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_drink_mountain_spring",
+   "name": "Drink",
+   "icon": "drink",
+   "description": "Restoring 1944 mana over 24 sec.",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "drink",
+   "tags": [
+    "Drink"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 243,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_drink_moonberry",
+   "name": "Drink",
+   "icon": "drink",
+   "description": "Restoring 2936 mana over 24 sec.",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "drink",
+   "tags": [
+    "Drink"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "GainResource",
+     "resource": "Mana",
+     "amount": 367,
+     "target": "Target"
+    }
+   ]
+  },
+  {
+   "id": "bw_cn_smoked_eel",
+   "name": "Food",
+   "icon": "food",
+   "description": "Restoring 720 health over 24 sec.",
+   "kind": "Buff",
+   "duration": 24,
+   "tickInterval": 3,
+   "exclusiveGroup": "food",
+   "tags": [
+    "Food"
+   ],
+   "breakOnDamage": true,
+   "tickEffects": [
+    {
+     "type": "Heal",
+     "min": 90,
+     "target": "Target"
+    }
+   ]
+  }
+ ]
+}

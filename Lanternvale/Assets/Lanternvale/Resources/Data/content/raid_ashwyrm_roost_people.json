@@ -1,0 +1,2981 @@
+{
+  "_note": "Ashwyrm's Roost people: the expedition camp (Marta Hobb, Kesta Highfold, Sir Hamon Reede), the encounter speakers, and every dialogue of the raid (NPCs, props, Varkas and Vyrmathra).",
+  "npcs": [
+    {
+      "id": "r2_quartermaster",
+      "name": "Marta Hobb",
+      "shortName": "Marta",
+      "title": "Quartermaster of the Expedition",
+      "sprite": "npc_quartermaster",
+      "portrait": "portrait_merchant",
+      "dialogue": "dlg_r2_marta",
+      "vendor": [
+        {
+          "item": "potion_healing"
+        },
+        {
+          "item": "potion_lesser_mana"
+        },
+        {
+          "item": "bandage_wool"
+        },
+        {
+          "item": "food_lantern_stew"
+        },
+        {
+          "item": "drink_spring_water"
+        }
+      ],
+      "bark": "Blankets, forty-two. Bandages, plenty. Pencils... one. Who has my pencils?"
+    },
+    {
+      "id": "r2_kesta",
+      "name": "Kesta Highfold",
+      "shortName": "Kesta",
+      "title": "Skyreach Guide",
+      "sprite": "npc_mountain_guide",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_r2_kesta",
+      "bark": "Three points of contact on the stair. Four if you've got a tail."
+    },
+    {
+      "id": "r2_sir_hamon",
+      "name": "Sir Hamon Reede",
+      "shortName": "Sir Hamon",
+      "title": "Heronguard, one of the Eleven",
+      "sprite": "npc_town_guard",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_r2_hamon",
+      "bark": "Twenty-nine stones. I bring one up every year."
+    },
+    {
+      "id": "r2_sir_hamon_summit",
+      "name": "Sir Hamon Reede",
+      "shortName": "Sir Hamon",
+      "title": "Heronguard, one of the Eleven",
+      "sprite": "npc_town_guard",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_r2_hamon_summit",
+      "bark": "Uphill, into fire. He'd have liked this."
+    },
+    {
+      "id": "r2_varkas",
+      "name": "Highlord Varkas",
+      "title": "Highlord of the Dragonsworn",
+      "sprite": "cr_r2_varkas",
+      "portrait": "demon_infernal"
+    },
+    {
+      "id": "r2_vyrmathra",
+      "name": "Vyrmathra",
+      "title": "the Ashwyrm",
+      "sprite": "cr_r2_vyrmathra",
+      "portrait": "demon_infernal"
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_r2_marta",
+      "start": "m_epi_done",
+      "nodes": [
+        {
+          "id": "m_epi_done",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta has her ledger open on a crate and is writing very slowly, like someone who wants the page to last.* 'Ashwyrm, one. Deceased.' *She underlines it twice.* I have been waiting my whole life to write a line like that.",
+          "conditions": [
+            {
+              "type": "QuestComplete",
+              "key": "r2_last_ember"
+            }
+          ],
+          "fallback": "m_last_return",
+          "choices": [
+            {
+              "text": "What happens now?",
+              "next": "m_after"
+            },
+            {
+              "text": "Will the egg be all right?",
+              "next": "m_after_egg",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_egg_spared"
+                }
+              ]
+            },
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_after",
+          "speaker": "r2_quartermaster",
+          "text": "Now? Now I count everything twice, pack it, and carry it down a mountain, and at the bottom I write Penhallow the longest letter of his life. *She looks up at a sky with no ash in it.* And then I think I'll sleep for a week. In a bed. With a pillow I have not personally inventoried.",
+          "choices": [
+            {
+              "text": "You've earned it.",
+              "next": "m_epi_done"
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_after_egg",
+          "speaker": "r2_quartermaster",
+          "text": "It's on its way to Brightwater in my second-best blanket, with Kesta's cousin and very strict instructions. Mother Wren will take it in. She raises the things nobody else will. *She almost smiles.* It'll hatch into whatever it's taught to be. We'll teach it lanterns.",
+          "choices": [
+            {
+              "text": "Good.",
+              "next": "m_epi_done"
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_last_return",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta is on her feet before you reach the fire. The pencil has fallen out from behind her ear and she hasn't noticed.* The sky stopped. The ash. It just... stopped. Tell me properly. In words. I need to write it down.",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_last_ember",
+              "value": "return"
+            }
+          ],
+          "fallback": "m_last_active",
+          "choices": [
+            {
+              "text": "Vyrmathra is dead. The Ashwyrm won't wake again.",
+              "next": "m_ep1"
+            }
+          ]
+        },
+        {
+          "id": "m_ep1",
+          "speaker": "r2_quartermaster",
+          "text": "*For a moment she doesn't write anything at all. Then she sits down on a crate of bandages, very carefully, the way you sit when your knees have already decided.* Four hundred years. Penhallow says the Hollow came on her ash: a seed on the north wind, every few lifetimes, and wherever it landed, things went grey and quiet and stopped. *She looks up at the summit. It is only a mountain.* No more ash. No more seeds. Whatever's left of the Hollow down south is the last of it, and it has nothing left to grow from. It ends. It actually ends.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_last_ember_handed_in"
+            },
+            {
+              "type": "CompleteQuest",
+              "key": "r2_last_ember"
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_roost_epilogue"
+            }
+          ],
+          "next": "m_ep2"
+        },
+        {
+          "id": "m_ep2",
+          "speaker": "narrator",
+          "text": "*Around the camp, people are coming out of the tents. Somebody is laughing. Somebody else is crying and pretending to be laughing. Kesta has climbed up on the cart to look at the summit, and Sir Hamon has taken off his helmet.*",
+          "choices": [
+            {
+              "text": "There's one more thing. One egg was still warm.",
+              "next": "m_ep_egg",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_egg_spared"
+                }
+              ]
+            },
+            {
+              "text": "We broke the eggs. There won't be another Ashwyrm.",
+              "next": "m_ep_broken",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_eggs_broken"
+                }
+              ]
+            },
+            {
+              "text": "The nest has gone cold. Nothing up there will hatch.",
+              "next": "m_ep_left",
+              "conditions": [
+                {
+                  "type": "NotFlag",
+                  "key": "r2_egg_spared"
+                },
+                {
+                  "type": "NotFlag",
+                  "key": "r2_eggs_broken"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m_ep_egg",
+          "speaker": "r2_quartermaster",
+          "text": "*She looks at the egg for a long time.* Mother Wren, at the Chapel of Small Lights, raises the things nobody else will. She raised a baby out of a basket in the reeds; a dragon is hardly a step up. *She wraps it in her second-best blanket.* It will hatch into whatever it's taught to be. We'll teach it lanterns.",
+          "outcomes": [
+            {
+              "type": "TakeItem",
+              "key": "r2_ember_egg",
+              "amount": 1
+            }
+          ],
+          "next": "m_ep_y"
+        },
+        {
+          "id": "m_ep_broken",
+          "speaker": "r2_quartermaster",
+          "text": "*She nods slowly.* Hard thing to do. Right thing, maybe. I'll write it down as both.",
+          "next": "m_ep_y"
+        },
+        {
+          "id": "m_ep_left",
+          "speaker": "r2_quartermaster",
+          "text": "*She nods.* Then let the mountain have them. It's had enough of everything else.",
+          "next": "m_ep_y"
+        },
+        {
+          "id": "m_ep_y",
+          "speaker": "ysolde",
+          "text": "*Ysolde stands at the edge of the firelight with her helmet under her arm. Her voice is quite steady.* Twelve years ago I blew the retreat on this mountain. Today I didn't have to. *She looks up at the summit.* I think that's the end of the song, Marta. You can write it down.",
+          "conditions": [
+            {
+              "type": "InParty",
+              "key": "ysolde"
+            }
+          ],
+          "fallback": "m_ep_l",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "ysolde",
+              "amount": 10
+            }
+          ],
+          "next": "m_ep_l"
+        },
+        {
+          "id": "m_ep_l",
+          "speaker": "liora",
+          "text": "*Liora has her little lantern out, and lit.* Mother Wren keeps a lantern in the chapel for everyone who goes up into the dark and doesn't come down. Tonight I'll tell her she can put some of them out. *She smiles.* Not all of them. Some you keep lit because you remember.",
+          "conditions": [
+            {
+              "type": "InParty",
+              "key": "liora"
+            }
+          ],
+          "fallback": "m_ep_n",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "liora",
+              "amount": 5
+            }
+          ],
+          "next": "m_ep_n"
+        },
+        {
+          "id": "m_ep_n",
+          "speaker": "nanami",
+          "text": "*Nanami has taken her shoes off, for some reason, and is standing in the ash with her toes curled.* Granny Sen said every big thing that ends needs a little song, so it knows it's allowed to stop. *She hums something low and short and warm, with no words in it. Halfway through, Kesta joins in.*",
+          "conditions": [
+            {
+              "type": "InParty",
+              "key": "nanami"
+            }
+          ],
+          "fallback": "m_ep_end",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "nanami",
+              "amount": 5
+            }
+          ],
+          "next": "m_ep_end"
+        },
+        {
+          "id": "m_ep_end",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta closes the ledger.* Right. Breakfast for forty, tents down by noon, and somebody is carrying Sir Hamon's cairn stones down the mountain if he wants them, because I'm not. *She holds out her hand. Her grip is a quartermaster's grip: firm, brief, accounted for.* Thank you. Penhallow will want it all in writing. I'll tell him you were magnificent. I'll even spell it properly.",
+          "choices": [
+            {
+              "text": "It took all of us.",
+              "next": "m_ep_bye"
+            },
+            {
+              "text": "Look after yourself, Marta.",
+              "next": "m_ep_bye"
+            }
+          ]
+        },
+        {
+          "id": "m_ep_bye",
+          "speaker": "r2_quartermaster",
+          "text": "*She tucks the pencil back behind her ear, where it belongs.* Always do.",
+          "choices": [
+            {
+              "text": "(Leave the fire.)"
+            }
+          ]
+        },
+        {
+          "id": "m_last_active",
+          "speaker": "r2_quartermaster",
+          "text": "Up the Wyrm Stair to the summit. The calling stone's at the top. Blow the horn there and she comes down. *She taps the ledger.* The Emberward Draughts are in your kit. Drink before she breathes, not after. After doesn't work.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_last_ember"
+            }
+          ],
+          "fallback": "m_horn_return",
+          "choices": [
+            {
+              "text": "What should we expect from her?",
+              "next": "m_wyrm_tactics"
+            },
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_wyrm_tactics",
+          "speaker": "r2_quartermaster",
+          "text": "From Hamon, who got it from the worst day of his life: she breathes fire down a long cone, so don't stand in front of her face. When she's hurt she takes to the smoke and calls her brood down on you. And near the end, he says, the fire turns grey, like the Hollow, and it reaches everyone at once. *She closes the ledger on her pencil.* Healers earn their pay at the end. Tell them I said so.",
+          "choices": [
+            {
+              "text": "Understood.",
+              "next": "m_last_active"
+            }
+          ]
+        },
+        {
+          "id": "m_horn_return",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta sees the horn under your arm and puts her pencil down.* That's it. That's the Horn of Calling. Sir Hamon says the Dragonsworn blew it every new moon, and she came down out of the smoke to be worshipped.",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_highlord",
+              "value": "return"
+            }
+          ],
+          "fallback": "m_horn_active",
+          "choices": [
+            {
+              "text": "Varkas is dead. Here's his horn.",
+              "next": "m_horn_done",
+              "conditions": [
+                {
+                  "type": "HasItem",
+                  "key": "r2_horn_of_calling",
+                  "amount": 1
+                }
+              ]
+            },
+            {
+              "text": "Not quite. We still need the horn."
+            }
+          ]
+        },
+        {
+          "id": "m_horn_done",
+          "speaker": "r2_quartermaster",
+          "text": "'Highlord Varkas.' *She writes it down, then crosses out 'Highlord'.* Varkas. *She holds the horn a moment, then gives it back, both hands, the way somebody hands over a sword in a story.* You know what this means. Nobody is blowing it but you.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_highlord_handed_in"
+            },
+            {
+              "type": "CompleteQuest",
+              "key": "r2_highlord"
+            }
+          ],
+          "next": "m_last_offer"
+        },
+        {
+          "id": "m_last_offer",
+          "speaker": "r2_quartermaster",
+          "text": "The summit, then. The calling stone, the horn, and her. *She looks up the mountain.* I'd come, but I'd only count her teeth and get upset.",
+          "choices": [
+            {
+              "text": "Then I'll blow the horn and bring her down.",
+              "next": "m_last_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_highlord"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_last_ember"
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_last_ember"
+                }
+              ]
+            },
+            {
+              "text": "Not yet. We need to get ready."
+            }
+          ]
+        },
+        {
+          "id": "m_last_accept",
+          "speaker": "r2_quartermaster",
+          "text": "Then go and end it. And come back. That second part isn't optional: I've already written your names in the 'returning' column, and I don't own an eraser.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_horn_active",
+          "speaker": "r2_quartermaster",
+          "text": "Varkas holds court in the old Watch, south-east past the gate. Ogre lord, dragon-scale, very loud. He calls his Honour Guard when he's hurting, and when he's really hurting he gets... *she searches for the word* ...personal. Bring me his horn.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_highlord"
+            }
+          ],
+          "fallback": "m_gland_return",
+          "choices": [
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_gland_return",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta has a cauldron on the fire and a pair of oven gloves on.* Is that it? Is it ticking? Put it — no, not there. There.",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_twin_fires",
+              "value": "return"
+            }
+          ],
+          "fallback": "m_gland_active",
+          "choices": [
+            {
+              "text": "One fire-gland, as ordered.",
+              "next": "m_gland_done",
+              "conditions": [
+                {
+                  "type": "HasItem",
+                  "key": "r2_fire_gland",
+                  "amount": 1
+                }
+              ]
+            },
+            {
+              "text": "I'll be back with the gland."
+            }
+          ]
+        },
+        {
+          "id": "m_gland_done",
+          "speaker": "r2_quartermaster",
+          "text": "*The gland goes in the cauldron, the lid goes on, and something inside says FWUMP.* Emberward Draughts. Five for you, and I'll brew more for the others. Drink one before the big fires — hers, mostly — and you'll come out medium-rare instead of well done.",
+          "outcomes": [
+            {
+              "type": "TakeItem",
+              "key": "r2_fire_gland",
+              "amount": 1
+            },
+            {
+              "type": "GiveItem",
+              "key": "r2_emberward_draught",
+              "amount": 5
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_twin_fires_handed_in"
+            },
+            {
+              "type": "CompleteQuest",
+              "key": "r2_twin_fires"
+            }
+          ],
+          "next": "m_horn_offer"
+        },
+        {
+          "id": "m_horn_offer",
+          "speaker": "r2_quartermaster",
+          "text": "Now. The bad news.",
+          "choices": [
+            {
+              "text": "There's always bad news. Go on.",
+              "next": "m_horn_pitch",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_twin_fires"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_highlord"
+                }
+              ]
+            },
+            {
+              "text": "Later, Marta."
+            }
+          ]
+        },
+        {
+          "id": "m_horn_pitch",
+          "speaker": "r2_quartermaster",
+          "text": "Highlord Varkas holds the old Heronguard keep, Skyreach Watch, south-east of the terraces. He has the Horn of Calling, the only thing that brings the Ashwyrm down out of her smoke where we can reach her. Kill him, take the horn, bring it here.",
+          "choices": [
+            {
+              "text": "Varkas, then the horn. Consider it done.",
+              "next": "m_horn_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_highlord"
+                }
+              ]
+            },
+            {
+              "text": "Not right now."
+            }
+          ]
+        },
+        {
+          "id": "m_horn_accept",
+          "speaker": "r2_quartermaster",
+          "text": "Mind the gate. And the braziers. And Varkas. Mostly Varkas.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_gland_active",
+          "speaker": "r2_quartermaster",
+          "text": "Emberjaw and Ashtongue sleep in the old drill-ring on the terraces: the Drake Pit. He bites like a forge; she breathes, and she mends him if you let her, so don't let her. When they're down, cut me a fire-gland. Gloves. Please, gloves.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_twin_fires"
+            }
+          ],
+          "fallback": "m_cubs_return",
+          "choices": [
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_cubs_return",
+          "speaker": "r2_quartermaster",
+          "text": "*Marta is counting blankets. She loses count when she sees your face.* Well?",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_matriarch",
+              "value": "return"
+            }
+          ],
+          "fallback": "m_matriarch_active",
+          "choices": [
+            {
+              "text": "Frostclaw is at rest, and the cubs are free.",
+              "next": "m_cubs_done"
+            }
+          ]
+        },
+        {
+          "id": "m_cubs_done",
+          "speaker": "r2_quartermaster",
+          "text": "*She writes for a while.* Kesta will want to know. She's been sitting by the fire all morning pretending not to listen for the roar. *She closes the ledger on her pencil.* Thank you. That was the kind job and the hard job at once, and those are the worst ones.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_matriarch_handed_in"
+            },
+            {
+              "type": "CompleteQuest",
+              "key": "r2_matriarch"
+            }
+          ],
+          "next": "m_fires_offer"
+        },
+        {
+          "id": "m_fires_offer",
+          "speaker": "r2_quartermaster",
+          "text": "Next on the list, if you've the stomach for it.",
+          "choices": [
+            {
+              "text": "What's next on the list?",
+              "next": "m_fires_pitch",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_matriarch"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_twin_fires"
+                }
+              ]
+            },
+            {
+              "text": "Later, Marta."
+            }
+          ]
+        },
+        {
+          "id": "m_fires_pitch",
+          "speaker": "r2_quartermaster",
+          "text": "Two cinder drakes in the Drake Pit on the terraces: Emberjaw and Ashtongue, brother and sister. He bites, she breathes, and she mends him when he's hurt — so stop her mending. When they're down I want one of their fire-glands. I can brew an Emberward Draught from it, and you'll want those for what's at the top.",
+          "choices": [
+            {
+              "text": "Two drakes and a gland. Fine.",
+              "next": "m_fires_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_twin_fires"
+                }
+              ]
+            },
+            {
+              "text": "Not right now."
+            }
+          ]
+        },
+        {
+          "id": "m_fires_accept",
+          "speaker": "r2_quartermaster",
+          "text": "Gloves. I'm serious about the gloves.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_matriarch_active",
+          "speaker": "r2_quartermaster",
+          "text": "Frostclaw's on the Shelf, south off the Heron Road. When she's hurt she calls her grown ones down off the ledges, and when she really gets going she brings the snow down on everyone. Spread out, heal through it. The cubs are in the den on the east side of the Shelf. Chains. The Dragonsworn like chains.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_matriarch"
+            }
+          ],
+          "fallback": "m_first",
+          "choices": [
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_first",
+          "speaker": "r2_quartermaster",
+          "text": "*A stout woman in a teal bandana looks up from a ledger, pencil behind her ear, and weighs you from boots to hat the way a grocer weighs a sack of flour.* You'll be the raid. Good. Marta Hobb, quartermaster of the Brightwater expedition: which is a grand name for eleven tents, forty-two blankets and one strong opinion. Nobody dies on my inventory.",
+          "conditions": [
+            {
+              "type": "NotFlag",
+              "key": "r2_met_marta"
+            }
+          ],
+          "fallback": "m_hub",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_met_marta"
+            }
+          ],
+          "next": "m_hub"
+        },
+        {
+          "id": "m_hub",
+          "speaker": "r2_quartermaster",
+          "text": "Right. What do you need?",
+          "choices": [
+            {
+              "text": "Where do we start?",
+              "next": "m_matriarch_pitch",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_matriarch"
+                }
+              ]
+            },
+            {
+              "text": "What's next on the list?",
+              "next": "m_fires_pitch",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_matriarch"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_twin_fires"
+                }
+              ]
+            },
+            {
+              "text": "Any more bad news?",
+              "next": "m_horn_pitch",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_twin_fires"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_highlord"
+                }
+              ]
+            },
+            {
+              "text": "The summit. It's time.",
+              "next": "m_last_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "QuestComplete",
+                  "key": "r2_highlord"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_last_ember"
+                }
+              ]
+            },
+            {
+              "text": "Can we go up yet?",
+              "next": "m_not_yet",
+              "conditions": [
+                {
+                  "type": "NotFlag",
+                  "key": "mq2_ash_on_the_wind_done"
+                }
+              ]
+            },
+            {
+              "text": "Who sent you up here?",
+              "next": "m_who"
+            },
+            {
+              "text": "What do you know about the Ashwyrm?",
+              "next": "m_wyrm_lore"
+            },
+            {
+              "text": "Show me your supplies.",
+              "outcomes": [
+                {
+                  "type": "OpenVendor",
+                  "key": "r2_quartermaster"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_not_yet",
+          "speaker": "r2_quartermaster",
+          "text": "Penhallow's orders, I'm afraid. Nobody climbs until the Skyreach business is settled: Varkas's vanguard, the passes, all of it. *She looks apologetic.* When the Archivist says it's time, I'll have the kit ready.",
+          "choices": [
+            {
+              "text": "Fair enough.",
+              "next": "m_hub"
+            }
+          ]
+        },
+        {
+          "id": "m_matriarch_pitch",
+          "speaker": "r2_quartermaster",
+          "text": "Frostclaw. The yeti matriarch on the Shelf, below the Heron Road. Kesta says she's been queen of that snow since before the knights built their road, and never troubled anyone who didn't trouble her. *She taps the ledger.* Then the Dragonsworn chained her cubs in their den and burned ash-smoke at the mouth until she went mad with it. She's killed two of our porters. Kesta says she can't be brought back. The cubs can.",
+          "choices": [
+            {
+              "text": "I'll put her to rest, and free the cubs.",
+              "next": "m_matriarch_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_matriarch"
+                }
+              ]
+            },
+            {
+              "text": "Not right now."
+            }
+          ]
+        },
+        {
+          "id": "m_matriarch_accept",
+          "speaker": "r2_quartermaster",
+          "text": "Thank you. Kesta won't say it, so I will. *She writes something down: 'Frostclaw. Gently, if possible.'*",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "m_who",
+          "speaker": "r2_quartermaster",
+          "text": "Archivist Penhallow, down in Brightwater, who has never once been up a mountain and writes very confident letters about them. He read the ash, found the Roost in the old chronicles, and asked for volunteers. *She shrugs.* I volunteered to count things. Sir Hamon volunteered because he's been waiting twelve years to be asked. Kesta volunteered because nobody else knows the way.",
+          "choices": [
+            {
+              "text": "And the tents?",
+              "next": "m_tents"
+            },
+            {
+              "text": "I see.",
+              "next": "m_hub"
+            }
+          ]
+        },
+        {
+          "id": "m_tents",
+          "speaker": "r2_quartermaster",
+          "text": "Eleven. One per surviving Heronguard knight, Hamon's idea, and then he only uses the one. The other ten are full of bandages. *She sniffs.* Sentiment is very good for storage.",
+          "choices": [
+            {
+              "text": "I see.",
+              "next": "m_hub"
+            }
+          ]
+        },
+        {
+          "id": "m_wyrm_lore",
+          "speaker": "r2_quartermaster",
+          "text": "Vyrmathra. Four hundred years asleep on the summit, breathing ash in her sleep. The ash goes south on the wind, and where it lands, things go hollow. That's what Penhallow found in the chronicles: the Hollow was never a curse. It was a seed. *She shivers.* She's waking now. The Dragonsworn are making sure of it.",
+          "choices": [
+            {
+              "text": "How do we fight her?",
+              "next": "m_wyrm_tactics2"
+            },
+            {
+              "text": "I see.",
+              "next": "m_hub"
+            }
+          ]
+        },
+        {
+          "id": "m_wyrm_tactics2",
+          "speaker": "r2_quartermaster",
+          "text": "From Hamon, who got it from the worst day of his life: she breathes fire down a long cone. When she's hurt she takes to the smoke and calls her brood. And at the very end the fire turns grey, like the Hollow, and it reaches everyone. Healers earn their pay at the end.",
+          "choices": [
+            {
+              "text": "I'll remember.",
+              "next": "m_hub"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_kesta",
+      "start": "k_return",
+      "nodes": [
+        {
+          "id": "k_victory",
+          "speaker": "r2_kesta",
+          "text": "*Kesta sits on the cart with her boots dangling, looking up at the summit. The smoke is thinning; you can see stars through it.* My gran said there used to be stars over Skyreach every night. I always thought she'd made it up.",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_vyrmathra_defeated"
+            }
+          ],
+          "fallback": "k_active",
+          "choices": [
+            {
+              "text": "You look like you've lost something.",
+              "next": "k_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_small_fires"
+                }
+              ]
+            },
+            {
+              "text": "Any word of the cubs?",
+              "next": "k_cubs_news",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_cubs_freed"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_cubs_news",
+          "speaker": "r2_kesta",
+          "text": "Herders down on the lower ledges sent word by mirror-flash this morning. Two white shapes on the salt rock at dawn, sitting very straight, watching the sun come up. *She doesn't look at you. Her voice is rough.* That's all. Thought you'd want to know.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_return",
+          "speaker": "r2_kesta",
+          "text": "Well? Did you find my biscuits?",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_small_fires",
+              "value": "return"
+            }
+          ],
+          "fallback": "k_victory",
+          "choices": [
+            {
+              "text": "Six whelps seen off, and your stores back. Slightly toasted.",
+              "next": "k_done",
+              "conditions": [
+                {
+                  "type": "HasItem",
+                  "key": "r2_stolen_stores",
+                  "amount": 3
+                }
+              ]
+            },
+            {
+              "text": "Not all of them yet."
+            }
+          ]
+        },
+        {
+          "id": "k_done",
+          "speaker": "r2_kesta",
+          "text": "*She sniffs a biscuit, shrugs, and eats it.* Toasted is a flavour. Here, pick something. And thank you. The whelps aren't wicked, you know. They're babies that were born on fire, and nobody ever taught them anything but 'take'.",
+          "outcomes": [
+            {
+              "type": "TakeItem",
+              "key": "r2_stolen_stores",
+              "amount": 3
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_small_fires_handed_in"
+            },
+            {
+              "type": "CompleteQuest",
+              "key": "r2_small_fires"
+            }
+          ],
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_active",
+          "speaker": "r2_kesta",
+          "text": "The whelps' clutch is on the terraces west of the Drake Pit, and they've dragged our stores all over: one crate in the clutch, a barrel at the pit's edge, another crate up on the terrace past the pit. Watch your eyebrows.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_small_fires"
+            }
+          ],
+          "fallback": "k_first",
+          "choices": [
+            {
+              "text": "Tell me about Frostclaw.",
+              "next": "k_frost"
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_first",
+          "speaker": "r2_kesta",
+          "text": "*A lean woman in a red scarf, with a coil of rope over one shoulder and snow-goggles pushed up on her forehead, is feeding sticks to the fire one at a time as if they owe her money.* Kesta Highfold. I guide people up Skyreach. Mostly I guide them back down again, faster.",
+          "conditions": [
+            {
+              "type": "NotFlag",
+              "key": "r2_met_kesta"
+            }
+          ],
+          "fallback": "k_hub",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_met_kesta"
+            }
+          ],
+          "next": "k_hub"
+        },
+        {
+          "id": "k_hub",
+          "speaker": "r2_kesta",
+          "text": "What can I do for you?",
+          "choices": [
+            {
+              "text": "You look like you've lost something.",
+              "next": "k_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_small_fires"
+                }
+              ]
+            },
+            {
+              "text": "Tell me about Frostclaw.",
+              "next": "k_frost"
+            },
+            {
+              "text": "The cubs are free.",
+              "next": "k_cubs",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_cubs_freed"
+                },
+                {
+                  "type": "NotFlag",
+                  "key": "r2_kesta_heard_cubs"
+                }
+              ]
+            },
+            {
+              "text": "What's the way up like?",
+              "next": "k_way"
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_offer",
+          "speaker": "r2_kesta",
+          "text": "Lost something? The whelps have lost us everything. Little ember whelps, from the clutch on the terraces. They come down at night and drag off whatever's warm: biscuits, candles, a cheese, Marta's pencils. She's down to her last pencil. You do not want to see Marta down to her last pencil.",
+          "choices": [
+            {
+              "text": "I'll get your stores back.",
+              "next": "k_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_small_fires"
+                }
+              ]
+            },
+            {
+              "text": "Not right now."
+            }
+          ]
+        },
+        {
+          "id": "k_accept",
+          "speaker": "r2_kesta",
+          "text": "Six of the little horrors chased off or put down, and our three stashes back. They hoard like magpies: look for chewed crates. And some advice for free: don't let them hiccup on you.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "k_frost",
+          "speaker": "r2_kesta",
+          "text": "She's been queen of the Shelf since my gran was a girl. Never bothered the herders, never bothered the road. You'd see her sometimes at dawn, sitting on a ledge with the cubs, watching the sun come up. *She pokes the fire too hard.* The Dragonsworn did this. Chains on her babies and ash-smoke in the den until she forgot everything she ever was. There's no bringing her back; I've looked at her eyes. But it should be done kindly. Quick, and kind.",
+          "choices": [
+            {
+              "text": "Bruna?",
+              "next": "k_bruna",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "bruna"
+                }
+              ]
+            },
+            {
+              "text": "It will be.",
+              "next": "k_hub"
+            }
+          ]
+        },
+        {
+          "id": "k_bruna",
+          "speaker": "bruna",
+          "text": "*Bruna has been very quiet.* She was standing in the gate for them. That's all she was doing. Same as anyone would. *Kesta looks at her for a long moment, and nods once.*",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "bruna",
+              "amount": 3
+            }
+          ],
+          "choices": [
+            {
+              "text": "We'll be kind.",
+              "next": "k_hub"
+            }
+          ]
+        },
+        {
+          "id": "k_cubs",
+          "speaker": "r2_kesta",
+          "text": "*She stops feeding the fire.* Free. *She says it again, as if trying out the word.* They'll go down to the lower ledges, where the herders leave salt licks. Somebody will see them at dawn one day, sitting on a ledge, watching the sun. *She turns away to do something very important with a stick.* Thank you.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_kesta_heard_cubs"
+            }
+          ],
+          "choices": [
+            {
+              "text": "You're welcome.",
+              "next": "k_hub"
+            }
+          ]
+        },
+        {
+          "id": "k_way",
+          "speaker": "r2_kesta",
+          "text": "The Heron Road east, past the Last Stand up the slope, the Shelf down to the south. Then the Cinder Terraces: warm underfoot, whelps everywhere. The old Watch where Varkas squats is south-east, and the Wyrm Stair goes up from its gate to the summit. Every step of it is taller than a dwarf. I went up it once, at night, when I was sixteen and stupid. *She grins.* Still stupid.",
+          "choices": [
+            {
+              "text": "Thanks, Kesta.",
+              "next": "k_hub"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_hamon",
+      "start": "h_return",
+      "nodes": [
+        {
+          "id": "h_victory",
+          "speaker": "r2_sir_hamon",
+          "text": "*Sir Hamon sits by the cairn of twenty-nine stones with his helmet beside him, looking up at a sky with no ash in it.* I've counted to twenty-nine every night for twelve years, the way you count stairs in the dark. *He smiles, a little crookedly.* Tonight I think I'll count to eleven instead, and then I'll go to sleep.",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_vyrmathra_defeated"
+            }
+          ],
+          "fallback": "h_active",
+          "choices": [
+            {
+              "text": "Is there anything I can do for them?",
+              "next": "h_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "h_return",
+          "speaker": "r2_sir_hamon",
+          "text": "*Sir Hamon sees the river-blue silk in your hands and stands up so fast his knee cracks.* That's... give it here. Gently. *He unrolls it. The heron is scorched, but it is still looking up.* Aubric's. He carried it himself at the end, after his bearer...",
+          "conditions": [
+            {
+              "type": "QuestState",
+              "key": "r2_twenty_nine",
+              "value": "return"
+            }
+          ],
+          "fallback": "h_victory",
+          "choices": [
+            {
+              "text": "Plant it at the summit, where he was going. When she's dead.",
+              "next": "h_plant",
+              "conditions": [
+                {
+                  "type": "HasItem",
+                  "key": "r2_aubric_standard",
+                  "amount": 1
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "TakeItem",
+                  "key": "r2_aubric_standard",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_standard_to_summit"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_twenty_nine_handed_in"
+                },
+                {
+                  "type": "CompleteQuest",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
+            {
+              "text": "It should go home to Brightwater, to the river.",
+              "next": "h_home",
+              "conditions": [
+                {
+                  "type": "HasItem",
+                  "key": "r2_aubric_standard",
+                  "amount": 1
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "TakeItem",
+                  "key": "r2_aubric_standard",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_standard_home"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_twenty_nine_handed_in"
+                },
+                {
+                  "type": "CompleteQuest",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
+            {
+              "text": "I'll bring it to you."
+            }
+          ]
+        },
+        {
+          "id": "h_plant",
+          "speaker": "r2_sir_hamon",
+          "text": "*He looks up at the summit for a long time.* Yes. Uphill, into fire. *A short, surprised laugh.* He'd have liked that. When she's dead I'll carry it up there myself and plant it so deep in her ash it never comes out. *He presses something into your hand: a plain silver ring with a heron on it.*",
+          "next": "h_after"
+        },
+        {
+          "id": "h_home",
+          "speaker": "r2_sir_hamon",
+          "text": "*He folds it corner to corner, the way the Heronguard folded everything.* Home. To the river. The Chapel of Small Lights will hang it, and Sir Wadsworth will sit on the rail under it and glare at people, and that will be its honour guard. *He presses something into your hand: a plain silver ring with a heron on it.*",
+          "next": "h_after"
+        },
+        {
+          "id": "h_after",
+          "speaker": "r2_sir_hamon",
+          "text": "The order is broken. The rings aren't. *He turns back to the cairn.* Thank you.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "h_active",
+          "speaker": "r2_sir_hamon",
+          "text": "The Last Stand is up the slope north of the road, under the broken tower. The standard will be where he fell; he took it from his bearer at the end. Look among the bones. *He looks away.* Mind them. They were good men and women, most of them, and the rest were at least very loud.",
+          "conditions": [
+            {
+              "type": "QuestActive",
+              "key": "r2_twenty_nine"
+            }
+          ],
+          "fallback": "h_first",
+          "choices": [
+            {
+              "text": "Sir Hamon, you know Ysolde.",
+              "next": "h_ysolde_meet",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "ysolde"
+                },
+                {
+                  "type": "NotFlag",
+                  "key": "r2_hamon_ysolde"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "h_first",
+          "speaker": "r2_sir_hamon",
+          "text": "*A grey-haired knight in river-blue livery sits beside a cairn of flat stones, adding one more. He stands when you come, out of very old habit.* Sir Hamon Reede, late of the Heronguard. One of the eleven, if you've heard the story. If you haven't: forty of us rode up this mountain twelve years ago, and eleven came down.",
+          "conditions": [
+            {
+              "type": "NotFlag",
+              "key": "r2_met_hamon"
+            }
+          ],
+          "fallback": "h_hub",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_met_hamon"
+            }
+          ],
+          "next": "h_hub"
+        },
+        {
+          "id": "h_hub",
+          "speaker": "r2_sir_hamon",
+          "text": "What can I do for you?",
+          "choices": [
+            {
+              "text": "Is there anything I can do for them?",
+              "next": "h_offer",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                },
+                {
+                  "type": "QuestNotStarted",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
+            {
+              "text": "Tell me what happened twelve years ago.",
+              "next": "h_story"
+            },
+            {
+              "text": "Tell me about Lord-Commander Aubric.",
+              "next": "h_aubric"
+            },
+            {
+              "text": "Sir Hamon, you know Ysolde.",
+              "next": "h_ysolde_meet",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "ysolde"
+                },
+                {
+                  "type": "NotFlag",
+                  "key": "r2_hamon_ysolde"
+                }
+              ]
+            },
+            {
+              "text": "Did the Heronguard leave anything up there?",
+              "next": "h_cache",
+              "conditions": [
+                {
+                  "type": "NotFlag",
+                  "key": "r2_cache_found"
+                }
+              ]
+            },
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "h_story",
+          "speaker": "r2_sir_hamon",
+          "text": "The drakes came down out of the cloud, the way the herders said they would. Aubric ordered the charge. Uphill. Into fire. *He turns a flat stone over in his hands.* Twelve years I've told myself he was brave. He was. He was also wrong, and he knew it by the third step.",
+          "next": "h_story2"
+        },
+        {
+          "id": "h_story2",
+          "speaker": "r2_sir_hamon",
+          "text": "The standard-bearer blew the retreat. Eleven of us heard it and turned. Twenty-nine didn't, or couldn't, and he was one of them. The council in Brightwater called it cowardice and broke the order. *He sets the stone on the cairn.* Twenty-nine stones. I bring one up every year. This year I didn't have to come alone.",
+          "choices": [
+            {
+              "text": "I'm sorry.",
+              "next": "h_hub"
+            }
+          ]
+        },
+        {
+          "id": "h_aubric",
+          "speaker": "r2_sir_hamon",
+          "text": "Big man. Loud laugh. Wrote terrible poetry and read it out at supper, and we all said it was wonderful, because he was Aubric. *He smiles.* He used to say a knight's job was to stand between the dark and the people who were busy with other things. Bread, mostly. Babies. Lanterns.",
+          "choices": [
+            {
+              "text": "He sounds like a good man.",
+              "next": "h_hub"
+            }
+          ]
+        },
+        {
+          "id": "h_offer",
+          "speaker": "r2_sir_hamon",
+          "text": "*He's quiet for a while.* The Last Stand, up the slope under the broken tower. Aubric's standard is there somewhere, under twelve years of ash. I've tried to go up. Every year I get as far as the road and my legs stop. *He looks at his hands.* Find it for me. Bring it down. I'll know what to do with it when I'm holding it.",
+          "choices": [
+            {
+              "text": "I'll find his standard.",
+              "next": "h_accept",
+              "conditions": [
+                {
+                  "type": "Level",
+                  "amount": 30
+                },
+                {
+                  "type": "Flag",
+                  "key": "mq2_ash_on_the_wind_done"
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "StartQuest",
+                  "key": "r2_twenty_nine"
+                }
+              ]
+            },
+            {
+              "text": "Not right now."
+            }
+          ]
+        },
+        {
+          "id": "h_accept",
+          "speaker": "r2_sir_hamon",
+          "text": "Thank you. Look where the bones lie thickest. He'd have been in the middle. He always was.",
+          "choices": [
+            {
+              "text": "Goodbye."
+            }
+          ]
+        },
+        {
+          "id": "h_cache",
+          "speaker": "r2_sir_hamon",
+          "text": "*He actually laughs.* Aubric buried a cache on every march: biscuits, bandages, a bottle of something, and his spare socks. Look for a cairn by the tower that's too neat, square, with a heron scratched under the top stone. It'll still be there. Nobody else would have had the nerve.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_cache_found"
+            }
+          ],
+          "choices": [
+            {
+              "text": "Spare socks. Noted.",
+              "next": "h_hub"
+            }
+          ]
+        },
+        {
+          "id": "h_ysolde_meet",
+          "speaker": "r2_sir_hamon",
+          "text": "*Sir Hamon goes very still. Then he stands, and salutes, which you suspect he has not done in twelve years.* Ysolde. Standard-bearer. *Ysolde lifts her chin, the way people do when they're waiting to be hit.*",
+          "next": "h_ysolde2"
+        },
+        {
+          "id": "h_ysolde2",
+          "speaker": "r2_sir_hamon",
+          "text": "You blew the retreat. I've wanted to say this to you for twelve years, and never had the nerve to go down to the river steps and do it: I'm alive because of it. Ten others are. We'd have charged with him and burned with him, and you knew it, and you blew it anyway.",
+          "next": "h_ysolde3"
+        },
+        {
+          "id": "h_ysolde3",
+          "speaker": "ysolde",
+          "text": "*Her voice is very quiet.* The council called it cowardice.",
+          "next": "h_ysolde4"
+        },
+        {
+          "id": "h_ysolde4",
+          "speaker": "r2_sir_hamon",
+          "text": "The council wasn't on the mountain. *He holds out his hand. After a moment, she takes it.* Welcome back, Heronguard.",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_hamon_ysolde"
+            },
+            {
+              "type": "Approval",
+              "key": "ysolde",
+              "amount": 8
+            }
+          ],
+          "choices": [
+            {
+              "text": "Ysolde, show him the letter.",
+              "next": "h_ysolde_letter",
+              "conditions": [
+                {
+                  "type": "Flag",
+                  "key": "r2_aubric_letter_read"
+                }
+              ]
+            },
+            {
+              "text": "(Leave them to it.)"
+            }
+          ]
+        },
+        {
+          "id": "h_ysolde_letter",
+          "speaker": "r2_sir_hamon",
+          "text": "*He reads the scorched page twice, lips moving. Then he hands it back to her very carefully, as if it might break.* 'She'll argue. Make her.' *He laughs, and it cracks in the middle.* That's him. That's exactly him.",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "ysolde",
+              "amount": 5
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Leave them to it.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_hamon_summit",
+      "start": "h_summit",
+      "nodes": [
+        {
+          "id": "h_summit",
+          "speaker": "r2_sir_hamon_summit",
+          "text": "*Sir Hamon stands beside the standard with his helmet in his hands. The heron snaps in the wind above him.* Forty rode up this mountain and twenty-nine stayed. I always thought they stayed because we lost. *He looks at the empty nest, the cold ash, the clear sky.* They stayed because we hadn't finished. We've finished now.",
+          "choices": [
+            {
+              "text": "Ysolde should see this.",
+              "next": "h_summit_y",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "ysolde"
+                }
+              ]
+            },
+            {
+              "text": "Rest easy, Sir Hamon."
+            }
+          ]
+        },
+        {
+          "id": "h_summit_y",
+          "speaker": "ysolde",
+          "text": "*Ysolde stands under the standard for a long moment. Then she reaches up and straightens the cloth, very gently, so the heron faces the sun.* There, my lord. Uphill. *Her voice does not shake at all.*",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "ysolde",
+              "amount": 5
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Leave them to the wind.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_varkas",
+      "start": "v1",
+      "nodes": [
+        {
+          "id": "v1",
+          "speaker": "r2_varkas",
+          "text": "*An ogre the size of a cottage rises from a throne of stacked shields. His armour is dragon-scale, red and black, and a whole drake skull sits on his shoulder like a parrot.* VISITORS. To the court of HIGHLORD Varkas. *He waits.* This is where you kneel.",
+          "choices": [
+            {
+              "text": "We're not here to kneel.",
+              "next": "v2"
+            },
+            {
+              "text": "That skull on your shoulder: did the drake know you'd be wearing it?",
+              "check": {
+                "skill": "Intimidation",
+                "dc": 16,
+                "success": "v_int_s",
+                "failure": "v_int_f"
+              },
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Those are Heronguard shields.",
+              "next": "v_ysolde",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "ysolde"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v2",
+          "speaker": "r2_varkas",
+          "text": "Then you are here to DIE, which is also acceptable. HONOUR GUARD! *Two Dragonsworn step out of the tents.* ...Not all of you. The rest stay in the tents. I want to do this bit myself.",
+          "choices": [
+            {
+              "text": "(Fight.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_varkas"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v_int_s",
+          "speaker": "r2_varkas",
+          "text": "*Varkas opens his mouth, closes it, looks at the skull, and for a moment is visibly, deeply uncertain.* ...It was a GIFT. *A pause.* It was a gift from HER. *He reaches for the maul with the air of someone who would very much like to stop talking.*",
+          "outcomes": [
+            {
+              "type": "GiveXP",
+              "amount": 150
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Fight.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_varkas"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v_int_f",
+          "speaker": "r2_varkas",
+          "text": "*Varkas laughs, a sound like a cart going downhill with nobody steering.* Little thing. Little LOUD thing. I will wear YOU on my other shoulder.",
+          "choices": [
+            {
+              "text": "(Fight.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_varkas"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v_ysolde",
+          "speaker": "ysolde",
+          "text": "*Ysolde's voice is very quiet.* That one, third from the top, with the notch in the rim. That was Sir Tibbet's. He taught me to ride.",
+          "next": "v_ysolde2"
+        },
+        {
+          "id": "v_ysolde2",
+          "speaker": "r2_varkas",
+          "text": "And now it is MY chair. *He stands, and keeps standing for some time.*",
+          "choices": [
+            {
+              "text": "(Fight.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_varkas"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_orders",
+      "start": "o1",
+      "nodes": [
+        {
+          "id": "o1",
+          "speaker": "narrator",
+          "text": "*EXPEDITION ORDERS, in Marta's square capitals:* 1. Nobody climbs alone. 2. Nobody climbs without signing out. 3. Nobody climbs without a blanket, a bandage and a biscuit. 4. Do NOT feed the whelps. 5. Do NOT let the whelps feed on you. 6. Sir Hamon is excused from rule 2 because he never signs anything. *Underneath, in a different hand:* 7. Kesta is not a pack mule. — K.",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_cub_den",
+      "start": "d0",
+      "nodes": [
+        {
+          "id": "d0",
+          "speaker": "narrator",
+          "text": "*The den is empty. Two lines of small round footprints lead away down the slope, side by side, toward the lower ledges.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_cubs_freed"
+            }
+          ],
+          "fallback": "d1",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "d1",
+          "speaker": "narrator",
+          "text": "*Under the drift is a den, and in the den two yeti cubs the size of hay bales, huddled together. Iron stakes ring the mouth, and black chains run from them to collars round the cubs' necks. They stare at you with big frightened eyes and do not make a sound.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_frostclaw_defeated"
+            }
+          ],
+          "fallback": "d_mad",
+          "choices": [
+            {
+              "text": "(Wrench the stakes out of the frozen ground.)",
+              "check": {
+                "skill": "Athletics",
+                "dc": 15,
+                "success": "d_free_strong",
+                "failure": "d_fail"
+              },
+              "once": true,
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Pick the padlocks on the collars.)",
+              "check": {
+                "skill": "SleightOfHand",
+                "dc": 14,
+                "success": "d_free_lock",
+                "failure": "d_fail"
+              },
+              "once": true,
+              "tag": "SLEIGHT OF HAND"
+            },
+            {
+              "text": "(Settle them first, the way you'd settle any frightened animal, then slip the collars.)",
+              "next": "d_free_calm",
+              "conditions": [
+                {
+                  "type": "Class",
+                  "key": "Hunter"
+                }
+              ],
+              "tag": "HUNTER"
+            },
+            {
+              "text": "(Ask the frozen earth to let go of the stakes.)",
+              "next": "d_free_earth",
+              "conditions": [
+                {
+                  "type": "Class",
+                  "key": "Shaman"
+                }
+              ],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Freeze the old iron brittle and snap it.)",
+              "next": "d_free_frost",
+              "conditions": [
+                {
+                  "type": "Class",
+                  "key": "Mage"
+                }
+              ],
+              "tag": "MAGE"
+            },
+            {
+              "text": "(Hack through the chains with a camp axe. It takes a long, cold while.)",
+              "next": "d_free_slow"
+            },
+            {
+              "text": "(Leave them for now.)"
+            }
+          ]
+        },
+        {
+          "id": "d_mad",
+          "speaker": "narrator",
+          "text": "*Two cubs huddle in a chained den under the drift. Across the Shelf, Frostclaw paces and roars at nothing, and the smoke from a Dragonsworn censer still curls at the den mouth. Nobody is freeing anything with her raging. Not yet.*",
+          "choices": [
+            {
+              "text": "(Back away quietly.)"
+            }
+          ]
+        },
+        {
+          "id": "d_fail",
+          "speaker": "narrator",
+          "text": "*The stake won't budge, or the lock snaps your pick: either way, there is a loud noise, and the cubs flinch from it.*",
+          "choices": [
+            {
+              "text": "(Do it the slow way: hack through the chains.)",
+              "next": "d_free_slow"
+            },
+            {
+              "text": "(Leave them for now.)"
+            }
+          ]
+        },
+        {
+          "id": "d_free_strong",
+          "speaker": "narrator",
+          "text": "*You set your feet, take hold and heave. The first stake comes out of the ice with a crack like a gunshot, then the next, then the next. The chains go slack.*",
+          "next": "d_free"
+        },
+        {
+          "id": "d_free_lock",
+          "speaker": "narrator",
+          "text": "*Dragonsworn locks: big, ugly and cheap. Click. Click. The collars drop into the snow.*",
+          "next": "d_free"
+        },
+        {
+          "id": "d_free_calm",
+          "speaker": "narrator",
+          "text": "*You crouch, very slowly, and hum, and wait. After a long while the bigger cub puts its nose into your palm. After that, the collars are easy.*",
+          "outcomes": [
+            {
+              "type": "GiveXP",
+              "amount": 150
+            },
+            {
+              "type": "Approval",
+              "key": "rook",
+              "amount": 3
+            }
+          ],
+          "next": "d_free"
+        },
+        {
+          "id": "d_free_earth",
+          "speaker": "narrator",
+          "text": "*You lay a hand on the frozen ground and ask. The mountain thinks about it for a long, cold moment, and then the stakes slide up out of the ice as if the earth were shrugging them off.*",
+          "outcomes": [
+            {
+              "type": "GiveXP",
+              "amount": 150
+            },
+            {
+              "type": "Approval",
+              "key": "torvan",
+              "amount": 3
+            },
+            {
+              "type": "Approval",
+              "key": "nanami",
+              "amount": 3
+            }
+          ],
+          "next": "d_free"
+        },
+        {
+          "id": "d_free_frost",
+          "speaker": "narrator",
+          "text": "*A touch of frost, and the old iron goes white and brittle. One tap, and the chains fall to pieces like icicles.*",
+          "outcomes": [
+            {
+              "type": "GiveXP",
+              "amount": 150
+            }
+          ],
+          "next": "d_free"
+        },
+        {
+          "id": "d_free_slow",
+          "speaker": "narrator",
+          "text": "*It takes a long, cold while, and the cubs whimper at every blow, but the links give, one by one.*",
+          "next": "d_free"
+        },
+        {
+          "id": "d_free",
+          "speaker": "narrator",
+          "text": "*The cubs sit in the snow, blinking. Then the bigger one bumps its head once against your knee, a heavy, deliberate bump, and the two of them go off down the slope side by side, toward the lower ledges, not looking back.*",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_cubs_freed"
+            },
+            {
+              "type": "GiveXP",
+              "amount": 200
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Watch them go.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_drake_remains",
+      "start": "g0",
+      "nodes": [
+        {
+          "id": "g0",
+          "speaker": "narrator",
+          "text": "*Emberjaw's body is cooling into something like basalt. There is nothing more here you want.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_gland_taken"
+            }
+          ],
+          "fallback": "g1",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "g1",
+          "speaker": "narrator",
+          "text": "*The Cinder Drakes lie where they fell, side by side, the violet light gone out of her and the forge-glow out of him. Behind Emberjaw's jaw, under the scales, something the size of a fist is still glowing: the fire-gland Marta wants.*",
+          "choices": [
+            {
+              "text": "(Cut along the scale-line, the way you'd dress a deer.)",
+              "check": {
+                "skill": "Survival",
+                "dc": 14,
+                "success": "g_clean",
+                "failure": "g_burn"
+              },
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {
+              "text": "(Feel for where the heat pulses, and cut round it.)",
+              "check": {
+                "skill": "Nature",
+                "dc": 14,
+                "success": "g_clean",
+                "failure": "g_burn"
+              },
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "(Cut it out the hard way. Gloves.)",
+              "next": "g_burn"
+            },
+            {
+              "text": "(Leave it for now.)"
+            }
+          ]
+        },
+        {
+          "id": "g_clean",
+          "speaker": "narrator",
+          "text": "*It comes out whole and neat, warm through your gloves and ticking faintly. Marta will be delighted. Marta will also tell you not to drop it.*",
+          "outcomes": [
+            {
+              "type": "GiveItem",
+              "key": "r2_fire_gland",
+              "amount": 1
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_gland_taken"
+            },
+            {
+              "type": "GiveXP",
+              "amount": 150
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Wrap it up carefully.)"
+            }
+          ]
+        },
+        {
+          "id": "g_burn",
+          "speaker": "narrator",
+          "text": "*It comes out, eventually, along with a spurt of something like liquid fire that eats through one glove and takes your eyebrows with it. Still: one fire-gland, as ordered.*",
+          "outcomes": [
+            {
+              "type": "GiveItem",
+              "key": "r2_fire_gland",
+              "amount": 1
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_gland_taken"
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Wrap it up, wincing.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_varkas_horn",
+      "start": "v1",
+      "nodes": [
+        {
+          "id": "v1",
+          "speaker": "narrator",
+          "text": "*Varkas lies where he fell, the maul beside him. The great horn is still slung across his back: a drake's horn bound in gold and black iron, carved with a wyrm swallowing the sun.*",
+          "choices": [
+            {
+              "text": "(Take the Horn of Calling.)",
+              "next": "v2",
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_horn_of_calling",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_horn_taken"
+                }
+              ]
+            },
+            {
+              "text": "(Leave it for now.)"
+            }
+          ]
+        },
+        {
+          "id": "v2",
+          "speaker": "narrator",
+          "text": "*It is heavier than it looks, and warm, as if someone has only just stopped blowing it.*",
+          "choices": [
+            {
+              "text": "(Sling it over your shoulder.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_calling_stone",
+      "start": "c0",
+      "nodes": [
+        {
+          "id": "c0",
+          "speaker": "narrator",
+          "text": "*The calling stone is cold. Somebody, Marta probably, has left a biscuit in the horn-rest out of spite.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_vyrmathra_defeated"
+            }
+          ],
+          "fallback": "c1",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "c1",
+          "speaker": "narrator",
+          "text": "*The stone hums under your hand. Above, in the smoke, she is still coming.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_horn_blown"
+            }
+          ],
+          "fallback": "c2",
+          "choices": [
+            {
+              "text": "(Face her.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_vyrmathra"
+                }
+              ]
+            },
+            {
+              "text": "(Not yet.)"
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn altar of black stone at the top of the stair. In its middle is a horn-rest, worn smooth by four hundred years of new moons. The Horn of Calling fits it exactly.*",
+          "conditions": [
+            {
+              "type": "HasItem",
+              "key": "r2_horn_of_calling",
+              "amount": 1
+            },
+            {
+              "type": "QuestActive",
+              "key": "r2_last_ember"
+            }
+          ],
+          "fallback": "c2_wait",
+          "choices": [
+            {
+              "text": "(Blow the Horn of Calling.)",
+              "next": "c_blow"
+            },
+            {
+              "text": "(Not yet.)"
+            }
+          ]
+        },
+        {
+          "id": "c_blow",
+          "speaker": "narrator",
+          "text": "*You set the horn to your lips and blow. The note goes out over the summit, low and long and enormous, and the smoke above the nest stops turning. Then it starts to come down.*",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_horn_blown"
+            },
+            {
+              "type": "TakeItem",
+              "key": "r2_horn_of_calling",
+              "amount": 1
+            }
+          ],
+          "next": "c_wyrm1"
+        },
+        {
+          "id": "c_wyrm1",
+          "speaker": "r2_vyrmathra",
+          "text": "*She lands on the nest, and the whole summit tilts. Ash rolls out from under her wings in a grey wave. Her eyes are molten gold, and very, very old.* LITTLE LIGHTS. I have slept on this mountain since your kings were goatherds, and in my sleep I breathed, and where my breath fell, your lanterns went out. Have you climbed all this way to be the last of them?",
+          "choices": [
+            {
+              "text": "We came to end the Hollow. It ends with you.",
+              "next": "c_wyrm2"
+            },
+            {
+              "text": "We came to light a lantern on your grave.",
+              "next": "c_wyrm2"
+            },
+            {
+              "text": "Forty knights climbed this mountain twelve years ago. Remember them?",
+              "next": "c_wyrm_y",
+              "conditions": [
+                {
+                  "type": "InParty",
+                  "key": "ysolde"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_wyrm_y",
+          "speaker": "r2_vyrmathra",
+          "text": "THE HERONS. *Something like amusement moves in the molten eyes.* I remember. They were brave, and they were crunchy. *Beside you, Ysolde draws her sword. Her hand is perfectly steady.*",
+          "next": "c_wyrm2"
+        },
+        {
+          "id": "c_wyrm2",
+          "speaker": "r2_vyrmathra",
+          "text": "Then come. The ash will settle on you, as it settles on everything. It always does.",
+          "choices": [
+            {
+              "text": "(Fight.)",
+              "outcomes": [
+                {
+                  "type": "StartCombat",
+                  "key": "enc_r2_vyrmathra"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c2_wait",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn altar of black stone at the top of the stair, with a horn-rest worn smooth in its middle. The Horn of Calling would fit it exactly. But Marta wants to send you up herself, when you're ready, and Marta keeps lists.*",
+          "conditions": [
+            {
+              "type": "HasItem",
+              "key": "r2_horn_of_calling",
+              "amount": 1
+            }
+          ],
+          "fallback": "c3",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "speaker": "narrator",
+          "text": "*A Dragonsworn altar of black stone, carved with a wyrm swallowing the sun. In the middle is a horn-rest, worn smooth. Without a horn it is only a rock with ambitions.*",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_nest",
+      "start": "n0",
+      "nodes": [
+        {
+          "id": "n0",
+          "speaker": "narrator",
+          "text": "*The nest has gone cold. One egg-shaped hollow in the lining is empty: the warm one, on its way down the mountain in Marta's second-best blanket.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_egg_spared"
+            }
+          ],
+          "fallback": "n0b",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "n0b",
+          "speaker": "narrator",
+          "text": "*Broken shell and cold ash. There will be no more Ashwyrms.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_eggs_broken"
+            }
+          ],
+          "fallback": "n0c",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "n0c",
+          "speaker": "narrator",
+          "text": "*Three dark eggs lie cold in the ash. The mountain can keep them.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_nest_resolved"
+            }
+          ],
+          "fallback": "n1",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "n1",
+          "speaker": "narrator",
+          "text": "*The nest is the size of a cottage, woven of charred branches and old bones and lined with ash and straw. Three dark eggs lie in the hollow. Two are already cold and cracked, the ember-light gone out of them. The third is warm. Something inside it turns over when you lay your hand on it.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_vyrmathra_defeated"
+            }
+          ],
+          "fallback": "n_hot",
+          "choices": [
+            {
+              "text": "(Break the eggs. There must never be another Ashwyrm.)",
+              "next": "n_break",
+              "outcomes": [
+                {
+                  "type": "SetFlag",
+                  "key": "r2_eggs_broken"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_nest_resolved"
+                },
+                {
+                  "type": "Approval",
+                  "key": "kael",
+                  "amount": 3
+                },
+                {
+                  "type": "Approval",
+                  "key": "morwen",
+                  "amount": 2
+                }
+              ]
+            },
+            {
+              "text": "(Take the warm egg down the mountain. It can be raised better than she was.)",
+              "next": "n_take",
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_ember_egg",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_egg_spared"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_nest_resolved"
+                },
+                {
+                  "type": "Approval",
+                  "key": "liora",
+                  "amount": 5
+                },
+                {
+                  "type": "Approval",
+                  "key": "nanami",
+                  "amount": 5
+                },
+                {
+                  "type": "Approval",
+                  "key": "aldric",
+                  "amount": 3
+                }
+              ]
+            },
+            {
+              "text": "(Bless the warm egg first, so whatever hatches remembers kindness before it learns fire.)",
+              "next": "n_bless",
+              "conditions": [
+                {
+                  "type": "Class",
+                  "key": "Priest"
+                }
+              ],
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_ember_egg",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_egg_spared"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_egg_blessed"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_nest_resolved"
+                },
+                {
+                  "type": "Approval",
+                  "key": "liora",
+                  "amount": 8
+                },
+                {
+                  "type": "Approval",
+                  "key": "seren",
+                  "amount": 5
+                }
+              ],
+              "tag": "PRIEST"
+            },
+            {
+              "text": "(Leave them. Without her fire, none of them will hatch.)",
+              "next": "n_leave",
+              "outcomes": [
+                {
+                  "type": "SetFlag",
+                  "key": "r2_eggs_left"
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_nest_resolved"
+                },
+                {
+                  "type": "Approval",
+                  "key": "seren",
+                  "amount": 2
+                }
+              ]
+            },
+            {
+              "text": "(Decide later.)"
+            }
+          ]
+        },
+        {
+          "id": "n_break",
+          "speaker": "narrator",
+          "text": "*It is quick. It is not easy. When it is done you stand for a while in the cold ash, and nobody says anything, which is the right thing to say.*",
+          "choices": [
+            {
+              "text": "(Walk away from the nest.)"
+            }
+          ]
+        },
+        {
+          "id": "n_take",
+          "speaker": "narrator",
+          "text": "*It is heavier than a lantern and warm as a sleeping cat. When you hum, without meaning to, the thing inside turns over and goes still, as if listening.*",
+          "choices": [
+            {
+              "text": "(Wrap it in your cloak.)"
+            }
+          ]
+        },
+        {
+          "id": "n_bless",
+          "speaker": "narrator",
+          "text": "*You lay both hands on the shell and pray: not for victory, not for anything grand, just that whatever is in there learns kindness before it learns fire. The egg is warm under your palms. For a moment, it is warm the way a hearth is warm, not a forge.*",
+          "choices": [
+            {
+              "text": "(Wrap it in your cloak.)"
+            }
+          ]
+        },
+        {
+          "id": "n_leave",
+          "speaker": "narrator",
+          "text": "*You leave them in the ash. Without her fire they will go cold, and the mountain will keep them, as it keeps everything up here.*",
+          "choices": [
+            {
+              "text": "(Walk away from the nest.)"
+            }
+          ]
+        },
+        {
+          "id": "n_hot",
+          "speaker": "narrator",
+          "text": "*The nest is the size of a cottage and as hot as an oven. Three dark eggs lie in the hollow, glowing faintly. High above, in the smoke, something enormous turns in slow circles, and does not take its eyes off you.*",
+          "choices": [
+            {
+              "text": "(Back away.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_aubric_standard",
+      "start": "a1",
+      "nodes": [
+        {
+          "id": "a1",
+          "speaker": "narrator",
+          "text": "*Bones, broken spears, rags of river-blue cloth. Twelve years of ash lies over everything like grey snow. Somewhere in here is Aubric's standard.*",
+          "choices": [
+            {
+              "text": "(Look for where the bones lie thickest.)",
+              "check": {
+                "skill": "Perception",
+                "dc": 13,
+                "success": "a_found",
+                "failure": "a_slow"
+              },
+              "once": true,
+              "tag": "PERCEPTION"
+            },
+            {
+              "text": "(Think like Aubric. Where would he have stood?)",
+              "check": {
+                "skill": "Insight",
+                "dc": 13,
+                "success": "a_found_insight",
+                "failure": "a_slow"
+              },
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "(Search every heap, one by one.)",
+              "next": "a_slow"
+            },
+            {
+              "text": "(Leave them in peace for now.)"
+            }
+          ]
+        },
+        {
+          "id": "a_found",
+          "speaker": "narrator",
+          "text": "*Where the bones lie thickest, at the very middle, a broken spear stands upright in the ash with something wrapped round it. You unwind it: river-blue silk, scorched at the edges, and a heron, still looking up.*",
+          "outcomes": [
+            {
+              "type": "GiveItem",
+              "key": "r2_aubric_standard",
+              "amount": 1
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_standard_found"
+            },
+            {
+              "type": "GiveXP",
+              "amount": 150
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Roll it up carefully.)"
+            }
+          ]
+        },
+        {
+          "id": "a_found_insight",
+          "speaker": "narrator",
+          "text": "*Uphill. Into fire. In front of everyone.* You walk to the highest point of the field, where the ash lies deepest, and dig with your hands. A broken spear, river-blue silk wrapped round it, and a heron, still looking up.",
+          "outcomes": [
+            {
+              "type": "GiveItem",
+              "key": "r2_aubric_standard",
+              "amount": 1
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_standard_found"
+            },
+            {
+              "type": "GiveXP",
+              "amount": 150
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Roll it up carefully.)"
+            }
+          ]
+        },
+        {
+          "id": "a_slow",
+          "speaker": "narrator",
+          "text": "*It takes a long time, and you are careful with every one of them. At the end, in the middle of the field, you find a broken spear with river-blue silk wrapped round it.*",
+          "outcomes": [
+            {
+              "type": "GiveItem",
+              "key": "r2_aubric_standard",
+              "amount": 1
+            },
+            {
+              "type": "SetFlag",
+              "key": "r2_standard_found"
+            }
+          ],
+          "choices": [
+            {
+              "text": "(Roll it up carefully.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_aubric_letter",
+      "start": "l0",
+      "nodes": [
+        {
+          "id": "l0",
+          "speaker": "narrator",
+          "text": "*The satchel lies empty under the fallen blocks. Its page has gone where it was needed.*",
+          "conditions": [
+            {
+              "type": "Flag",
+              "key": "r2_aubric_letter_read"
+            }
+          ],
+          "fallback": "l1",
+          "choices": [
+            {
+              "text": "(Step back.)"
+            }
+          ]
+        },
+        {
+          "id": "l1",
+          "speaker": "narrator",
+          "text": "*Under the fallen blocks at the tower door is a scorched leather satchel with a heron on the flap. Inside: a stub of pencil, a heel of bread gone to stone, and one folded page, written fast in a big, loud hand.*",
+          "choices": [
+            {
+              "text": "(Read the page.)",
+              "next": "l2"
+            },
+            {
+              "text": "(Leave it.)"
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "speaker": "narrator",
+          "text": "*'Orders for the morning, in case I'm not there to give them. If it goes wrong on the slope, Ysolde sounds the retreat. She'll argue. Make her. Better eleven knights who can come back and finish this than forty heroes in a heap. — A.' Underneath, smaller, as if added later by firelight: 'Also, somebody please tell Hamon that his snoring is a crime against the order.'*",
+          "outcomes": [
+            {
+              "type": "SetFlag",
+              "key": "r2_aubric_letter_read"
+            },
+            {
+              "type": "GiveXP",
+              "amount": 100
+            }
+          ],
+          "next": "l_y"
+        },
+        {
+          "id": "l_y",
+          "speaker": "ysolde",
+          "text": "*Ysolde reads it over your shoulder. Then she reads it again. Then she sits down in the ash, quite suddenly, with the page in both hands.* He told them to make me. *She laughs, and it comes out wrong, and she presses the back of her wrist to her mouth.* Twelve years. He told them to make me.",
+          "conditions": [
+            {
+              "type": "InParty",
+              "key": "ysolde"
+            }
+          ],
+          "fallback": "l_end",
+          "outcomes": [
+            {
+              "type": "Approval",
+              "key": "ysolde",
+              "amount": 15
+            }
+          ],
+          "next": "l_y2"
+        },
+        {
+          "id": "l_y2",
+          "speaker": "ysolde",
+          "text": "*After a while she folds the page very small and tucks it into her sash, behind the faded heron.* Thank you. I think I'll keep this, if nobody minds. *She stands, and checks her shield strap. Twice.*",
+          "choices": [
+            {
+              "text": "(Give her a moment.)"
+            }
+          ]
+        },
+        {
+          "id": "l_end",
+          "speaker": "narrator",
+          "text": "*You fold the page and keep it. Somebody, somewhere, needs to read it. Sir Hamon, perhaps. Or the standard-bearer.*",
+          "choices": [
+            {
+              "text": "(Fold it away.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_stash_1",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*Marta's crate, chewed open: half full of slightly toasted biscuits, two candles and a cheese with tiny tooth marks in it.*",
+          "choices": [
+            {
+              "text": "(Gather up what's left of the stores.)",
+              "next": "s2",
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_stolen_stores",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_stash_1_found"
+                }
+              ]
+            },
+            {
+              "text": "(Leave it.)"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "speaker": "narrator",
+          "text": "*You bundle it up. Kesta will be thrilled. Marta will count it.*",
+          "choices": [
+            {
+              "text": "(Carry on.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_stash_2",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*Marta's barrel of lamp oil and dried apples, with a hole scorched through the lid. Most of the apples are still there. Most.*",
+          "choices": [
+            {
+              "text": "(Gather up what's left of the stores.)",
+              "next": "s2",
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_stolen_stores",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_stash_2_found"
+                }
+              ]
+            },
+            {
+              "text": "(Leave it.)"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "speaker": "narrator",
+          "text": "*You bundle it up. Kesta will be thrilled. Marta will count it.*",
+          "choices": [
+            {
+              "text": "(Carry on.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_r2_stash_3",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*Another crate, wedged in a crack: blankets, a coil of rope, and Marta's spare pencils, every one of them chewed to a stub.*",
+          "choices": [
+            {
+              "text": "(Gather up what's left of the stores.)",
+              "next": "s2",
+              "outcomes": [
+                {
+                  "type": "GiveItem",
+                  "key": "r2_stolen_stores",
+                  "amount": 1
+                },
+                {
+                  "type": "SetFlag",
+                  "key": "r2_stash_3_found"
+                }
+              ]
+            },
+            {
+              "text": "(Leave it.)"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "speaker": "narrator",
+          "text": "*You bundle it up. Kesta will be thrilled. Marta will count it.*",
+          "choices": [
+            {
+              "text": "(Carry on.)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

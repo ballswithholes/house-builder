@@ -1,0 +1,1105 @@
+{
+  "_note": "Mossdeep Grotto (Docs/Expansion.md §8, builder ww, prefix dg2): mosslings, giant weavers and King Umbercap; gear, loot, the shrunk King and the encounter dialogue. The map is dgn_mossdeep.json.",
+  "creatures": [
+    {
+      "id": "cr_dg2_glowling",
+      "name": "Glowling Scamp",
+      "description": "A mossling grown giddy and bright on the grotto's glow. It throws glowing pebbles and laughs at its own jokes.",
+      "sprite": "cr_mossling",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "healthMult": 0.95,
+      "attackSpeed": 1.8,
+      "moveSpeed": 8,
+      "size": 0.95,
+      "ai": "Skirmisher",
+      "abilities": [
+        {"ability": "cr_mud_in_eye", "priority": 5, "chance": 50, "condition": "targetNoAura:cr_mud_blind"},
+        {"ability": "cr_dg2_glow_pebble", "priority": 4, "chance": 60}
+      ],
+      "lootTable": "lt_dg2_glowling",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "The King says KEEP IT! Keep it, keep it, keep it!",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_glowling_minion",
+      "name": "Royal Glowling",
+      "description": "Summoned to the King's side. Extremely loyal, extremely small.",
+      "sprite": "cr_mossling",
+      "type": "Elemental",
+      "rank": "Minion",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "attackSpeed": 1.8,
+      "moveSpeed": 8,
+      "size": 0.85,
+      "ai": "Skirmisher",
+      "abilities": [{"ability": "cr_dg2_glow_pebble", "priority": 4, "chance": 60}],
+      "xpMult": 0,
+      "material": "wood",
+      "voice": "wood",
+      "bark": "For the King!"
+    },
+    {
+      "id": "cr_dg2_glowcaller",
+      "name": "Mossling Glowcaller",
+      "description": "A mudcaller who has learned to sing the glow into wounds. Unfortunately the wounds are on its friends.",
+      "sprite": "cr_mossling_shaman",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "healthMult": 0.85,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 1.05,
+      "ai": "Healer",
+      "abilities": [
+        {"ability": "cr_dg2_glowmend", "priority": 8, "condition": "allyHpBelow:60"},
+        {"ability": "cr_sleepy_spores", "priority": 6, "chance": 40},
+        {"ability": "cr_dg2_spore_bolt", "priority": 3}
+      ],
+      "resource": "Mana",
+      "meleeSchool": "Nature",
+      "ranged": true,
+      "rangedRange": 25,
+      "lootTable": "lt_dg2_glowcaller",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "Glow, glow, keep it close — sleep, big-folk, sleep!",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_moss_sprout",
+      "name": "Moss Sprout",
+      "description": "A root tuber the glow has woken up. It doesn't know what it is for yet, so it headbutts things to find out.",
+      "sprite": "cr_rootling",
+      "portrait": "cr_mossling",
+      "type": "Elemental",
+      "rank": "Normal",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 0.9,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_dg2_root_headbutt", "priority": 4, "chance": 60}],
+      "lootTable": "lt_dg2_sprout",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "*A small, determined creak.*",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_weaver",
+      "name": "Mossdeep Weaver",
+      "description": "A giant spider of the deep grotto, spotted with sea-green light. It spins webs strong enough to hold a cow, and it would like to try.",
+      "sprite": "cr_spider_giant",
+      "portrait": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Normal",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "healthMult": 1.1,
+      "attackSpeed": 2.0,
+      "moveSpeed": 9,
+      "size": 1.5,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_web_spray", "priority": 5, "chance": 50, "condition": "targetNoAura:cr_webbed"},
+        {"ability": "cr_dg2_glowvenom_bite", "priority": 4, "chance": 60}
+      ],
+      "tameable": false,
+      "lootTable": "lt_dg2_weaver",
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*The webs tremble. Something big is coming down them, fast.*",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_gallery_stalker",
+      "name": "Gallery Stalker",
+      "description": "One of the great weavers of the Webbed Gallery, as broad as a table and twice as patient.",
+      "sprite": "cr_spider_giant",
+      "portrait": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Elite",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "attackSpeed": 2.2,
+      "moveSpeed": 9,
+      "size": 1.6,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg2_leg_sweep", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_web_spray", "priority": 5, "chance": 50, "condition": "targetNoAura:cr_webbed"},
+        {"ability": "cr_dg2_glowvenom_bite", "priority": 4, "chance": 60}
+      ],
+      "tameable": false,
+      "lootTable": "lt_dg2_elite",
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*Two great shapes unfold from the ceiling, legs first.*",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_silkwidow",
+      "name": "Old Silkwidow",
+      "description": "The broodmother of Mossdeep: huge, grey-furred with age, and wrapped in a shawl of her own silk. She has eaten three adventurers and a sofa. Nobody knows where she got the sofa.",
+      "sprite": "cr_spider_giant",
+      "portrait": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Elite",
+      "levelMin": 13,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "healthMult": 1.4,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "size": 2.0,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg2_brood_call", "priority": 10, "condition": "selfHpBelow:60"},
+        {"ability": "cr_dg2_cocoon", "priority": 6, "chance": 60, "condition": "targetNoAura:cr_dg2_cocooned"},
+        {"ability": "cr_dg2_leg_sweep", "priority": 5, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg2_glowvenom_bite", "priority": 4, "chance": 60}
+      ],
+      "tameable": false,
+      "immune": ["Fear"],
+      "lootTable": "lt_dg2_silkwidow",
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*A vast grey spider lowers herself from the dark on a single thread, as unhurried as a duchess.*",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_spiderling",
+      "name": "Silkwidow Spiderling",
+      "description": "Small, fast and very hungry.",
+      "sprite": "cr_spider",
+      "type": "Beast",
+      "family": "Spider",
+      "rank": "Minion",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 0,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "attackSpeed": 1.6,
+      "moveSpeed": 10,
+      "size": 0.7,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_venom_bite", "priority": 4, "chance": 50}],
+      "tameable": false,
+      "xpMult": 0,
+      "material": "chitin",
+      "voice": "beast",
+      "bark": "*Skitter.*"
+    },
+    {
+      "id": "cr_dg2_thimble_knight",
+      "name": "Thimble Knight",
+      "description": "A mossling of the King's guard in a thimble helm and acorn-cup armour. It takes its duties very, very seriously.",
+      "sprite": "cr_mossling",
+      "type": "Elemental",
+      "rank": "Elite",
+      "levelMin": 12,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "attackSpeed": 2.2,
+      "moveSpeed": 8,
+      "size": 1.45,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_barkskin_blessing", "priority": 6, "chance": 40}, {"ability": "cr_dg2_thimble_bash", "priority": 5, "chance": 60}],
+      "lootTable": "lt_dg2_elite",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "NONE SHALL PASS! ...Unless the King says. The King says NONE.",
+      "xpMult": 0.52
+    },
+    {
+      "id": "cr_dg2_mossking",
+      "name": "King Umbercap, the Moss King",
+      "description": "The Mossling King went down into Mossdeep a long age ago to keep the glow safe. A grey ember sits in his crown now, and the glow keeps him: he has grown huge, slow and hungry on it.",
+      "sprite": "cr_mossling_king",
+      "portrait": "cr_mossling_shaman",
+      "type": "Elemental",
+      "rank": "Boss",
+      "levelMin": 14,
+      "levelMax": 15,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 12,
+      "levelCap": 15,
+      "healthMult": 1.5,
+      "damageMult": 1.2,
+      "armorMult": 1.1,
+      "attackSpeed": 2.6,
+      "moveSpeed": 6,
+      "size": 2.8,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_dg2_last_glow", "priority": 10, "condition": "selfHpBelow:25"},
+        {"ability": "cr_dg2_royal_summons", "priority": 10, "condition": "selfHpBelow:60"},
+        {"ability": "cr_dg2_glow_nova", "priority": 9},
+        {"ability": "cr_dg2_spore_cloud", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg2_drowsy_decree", "priority": 6, "chance": 50, "condition": "targetNoAura:cr_spore_sleep"},
+        {"ability": "cr_dg2_sceptre_smash", "priority": 5}
+      ],
+      "passives": ["cr_dg2_ash_touched"],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
+      "stats": [{"stat": "Resistance", "value": 15, "school": "Nature"}],
+      "xpMult": 0.91,
+      "resource": "Mana",
+      "lootTable": "lt_dg2_mossking",
+      "material": "wood",
+      "voice": "wood",
+      "bark": "*The Moss King rises from his throne. The grey ember in his crown beats like a sick heart, and every glowing thing in the hall dims to feed it.*"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_dg2_glow_pebble",
+      "name": "Glowing Pebble",
+      "icon": "rock",
+      "description": "Flings a pebble soaked in glow for {0} Nature damage.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "Damage", "min": 6, "max": 9, "perLevel": 0.7}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg2_glowmend",
+      "name": "Glowmend",
+      "icon": "leaf",
+      "description": "Sings glowing moss into an ally's wounds, healing {0}.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 8,
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Heal", "min": 22, "max": 30, "perLevel": 3}],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg2_spore_bolt",
+      "name": "Spore Bolt",
+      "icon": "nature",
+      "description": "Hurls a puff of glowing spores for {0} Nature damage.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 8, "max": 11, "perLevel": 0.9}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg2_root_headbutt",
+      "name": "Root Headbutt",
+      "icon": "rock",
+      "description": "Headbutts the target with a knot of hard root: weapon damage, and the target is dazed.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 110}, {"type": "ApplyAura", "aura": "cr_dazed"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg2_glowvenom_bite",
+      "name": "Deep Glowvenom",
+      "icon": "spider",
+      "description": "A bite of the deep weavers: weapon damage, then Nature damage over 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}, {"type": "ApplyAura", "aura": "cr_dg2_glowvenom"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg2_leg_sweep",
+      "name": "Leg Sweep",
+      "icon": "spider",
+      "description": "Sweeps its great legs through everyone nearby for {0} damage.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 15,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 5, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 10, "max": 14, "perLevel": 1.0}],
+      "aiHint": "AoE",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg2_cocoon",
+      "name": "Silk Cocoon",
+      "icon": "spider",
+      "description": "Wraps the target in silk: it cannot act for 4 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "castTime": 1.5,
+      "cooldown": 20,
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg2_cocooned"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg2_brood_call",
+      "name": "Brood Call",
+      "icon": "spider",
+      "description": "The Silkwidow clicks, and two spiderlings drop from the ceiling.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg2_spiderling", "count": 2, "target": "Self"}],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg2_thimble_bash",
+      "name": "Thimble Bash",
+      "icon": "shield_bash",
+      "description": "A ringing blow with a thimble shield: weapon damage, and the target is dazed.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 120}, {"type": "ApplyAura", "aura": "cr_dazed"}],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg2_royal_summons",
+      "name": "Royal Summons",
+      "icon": "crown",
+      "description": "The King thumps his sceptre, and three royal glowlings tumble out of the moss to defend him.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg2_glowling_minion", "count": 3, "target": "Self"}],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg2_glow_nova",
+      "name": "Glow Nova",
+      "icon": "sparkle",
+      "description": "The King draws every glow in the hall into his crown and lets it burst: after a long cast, {0} Nature damage to every enemy nearby. Interrupt it, stun it or silence it!",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 24,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 14, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 24, "max": 32, "perLevel": 3.0}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg2_spore_cloud",
+      "name": "Spore Cloud",
+      "icon": "nature",
+      "description": "Exhales a cloud of glowing spores: nearby enemies take Nature damage over 12 sec.",
+      "school": "Nature",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 9, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg2_spore_dot"}],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_dg2_sceptre_smash",
+      "name": "Sceptre Smash",
+      "icon": "mace",
+      "description": "Brings the twig sceptre down like a falling tree: heavy weapon damage and a knockback.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 160}, {"type": "Knockback", "distance": 6}],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg2_drowsy_decree",
+      "name": "Drowsy Decree",
+      "icon": "moon",
+      "description": "By royal decree, the target falls asleep for 12 sec. Any damage wakes it.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 1.5,
+      "cooldown": 25,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [{"type": "ApplyAura", "aura": "cr_spore_sleep"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg2_last_glow",
+      "name": "The Last Glow",
+      "icon": "sun",
+      "description": "Below 25% health the King burns the last of the glow.",
+      "school": "Nature",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg2_last_glow", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_dg2_glowvenom",
+      "name": "Deep Glowvenom",
+      "icon": "poison",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Poison",
+      "duration": 12,
+      "tickInterval": 3,
+      "description": "Nature damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 4, "perLevel": 0.45}]
+    },
+    {
+      "id": "cr_dg2_cocooned",
+      "name": "Silk Cocoon",
+      "icon": "spider",
+      "kind": "Debuff",
+      "duration": 4,
+      "states": ["Stun"],
+      "description": "Wrapped in sticky silk. Cannot act."
+    },
+    {
+      "id": "cr_dg2_spore_dot",
+      "name": "Glowing Spores",
+      "icon": "nature",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Disease",
+      "duration": 12,
+      "tickInterval": 3,
+      "description": "Nature damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 5, "perLevel": 0.75}]
+    },
+    {
+      "id": "cr_dg2_last_glow",
+      "name": "The Last Glow",
+      "icon": "sun",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 0,
+      "description": "The King burns the last of the glow. Damage dealt and attack speed increased by 25%.",
+      "mods": [{"stat": "DamageDone", "value": 25, "pct": true}, {"stat": "MeleeHaste", "value": 25, "pct": true}]
+    },
+    {
+      "id": "cr_dg2_ash_touched",
+      "name": "Ash-Touched",
+      "icon": "ember",
+      "kind": "Buff",
+      "school": "Fire",
+      "hidden": true,
+      "description": "A grey ember of ash burns in his crown. Resistant to Fire.",
+      "mods": [{"stat": "Resistance", "value": 10, "school": "Fire"}]
+    }
+  ],
+  "items": [
+    {
+      "id": "dg2_glowmoss_mantle",
+      "name": "Glowmoss Mantle",
+      "icon": "armor",
+      "description": "Shoulder pads of living glowmoss on a silk backing. They hum when spells are cast nearby, like a cat being stroked.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Shoulder",
+      "armorType": "Cloth",
+      "armor": 28,
+      "stats": [{"stat": "Intellect", "value": 4}, {"stat": "Spirit", "value": 3}, {"stat": "Stamina", "value": 3}, {"stat": "SpellDamage", "value": 3}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_thimble_knight_girdle",
+      "name": "Girdle of the Thimble Knights",
+      "icon": "armor",
+      "description": "A belt of linked thimbles, re-forged for a big-folk waist. Every one is engraved 'FOR THE KING'.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Waist",
+      "armorType": "Mail",
+      "armor": 87,
+      "stats": [{"stat": "Strength", "value": 7}, {"stat": "Stamina", "value": 6}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_silkweave_grips",
+      "name": "Silkweave Grips",
+      "icon": "fist",
+      "description": "Gloves woven from the Silkwidow's own thread. Nothing you hold in them ever slips — not swords, not lockpicks, not cake.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Hands",
+      "armorType": "Leather",
+      "armor": 46,
+      "stats": [{"stat": "Agility", "value": 7}, {"stat": "Stamina", "value": 6}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_moss_court_signet",
+      "name": "Signet of the Moss Court",
+      "icon": "crown",
+      "description": "A ring of green-gold with a tiny mushroom crown. Mosslings bow when they see it. Then they ask for it back.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Finger",
+      "stats": [{"stat": "Stamina", "value": 4}, {"stat": "Intellect", "value": 3}, {"stat": "Spirit", "value": 2}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_umbercaps_cudgel",
+      "name": "Umbercap's Cudgel",
+      "icon": "mace",
+      "description": "The King's old walking stick, hard as iron after a hundred years in the glow. Still has a mushroom growing on it.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "MainHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 23,
+      "maxDamage": 39,
+      "speed": 2.6,
+      "stats": [{"stat": "Strength", "value": 4}, {"stat": "Stamina", "value": 4}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_glowstalk_longbow",
+      "name": "Glowstalk Longbow",
+      "icon": "bow",
+      "description": "A bow of grotto root strung with weaver silk. Arrows loosed from it leave a faint green trail, like a comet with no ambition.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "Ranged",
+      "weaponType": "Bow",
+      "minDamage": 24,
+      "maxDamage": 40,
+      "speed": 2.8,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 2}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_mossdeep_staff",
+      "name": "Mossdeep Staff",
+      "icon": "staff",
+      "description": "A crooked staff with a glowing mushroom for a head. Healing through it smells, pleasantly, of rain.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 35,
+      "maxDamage": 58,
+      "speed": 3.0,
+      "stats": [{"stat": "Intellect", "value": 5}, {"stat": "Spirit", "value": 5}, {"stat": "Stamina", "value": 4}, {"stat": "HealingPower", "value": 8}],
+      "price": 1887,
+      "unique": true
+    },
+    {
+      "id": "dg2_sceptre_of_the_moss_court",
+      "name": "Sceptre of the Moss Court",
+      "icon": "mace",
+      "description": "The Moss King's twig sceptre, the seed bud at its tip glowing gold again now the grey is gone. It is much heavier than a twig has any right to be.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 21,
+      "requiredLevel": 14,
+      "equip": "MainHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 31,
+      "maxDamage": 51,
+      "speed": 2.6,
+      "stats": [{"stat": "Intellect", "value": 4}, {"stat": "Stamina", "value": 3}, {"stat": "SpellDamage", "value": 5}],
+      "price": 2832,
+      "unique": true
+    },
+    {
+      "id": "dg2_crown_of_lanterncaps",
+      "name": "Crown of Lanterncaps",
+      "icon": "crown",
+      "description": "A circlet of tiny glowing mushrooms that grow back whenever one is picked. It makes everybody you meet slightly hungry.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 21,
+      "requiredLevel": 14,
+      "equip": "Head",
+      "armorType": "Leather",
+      "armor": 71,
+      "stats": [{"stat": "Agility", "value": 13}, {"stat": "Stamina", "value": 11}],
+      "price": 2832,
+      "unique": true
+    },
+    {
+      "id": "dg2_heartmoss_hauberk",
+      "name": "Heartmoss Hauberk",
+      "icon": "armor",
+      "description": "Mail padded with heartmoss from beneath the King's throne. It is always cool, always damp, and somehow never uncomfortable.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 21,
+      "requiredLevel": 14,
+      "equip": "Chest",
+      "armorType": "Mail",
+      "armor": 184,
+      "stats": [{"stat": "Strength", "value": 12}, {"stat": "Stamina", "value": 12}],
+      "price": 2832,
+      "unique": true
+    },
+    {
+      "id": "dg2_widows_silk_sash",
+      "name": "Widow's Silk Sash",
+      "icon": "armor",
+      "description": "A sash of grey spider silk, light as a cobweb and stronger than rope.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 17,
+      "requiredLevel": 12,
+      "equip": "Waist",
+      "armorType": "Cloth",
+      "armor": 17,
+      "stats": [{"stat": "Intellect", "value": 4}, {"stat": "Spirit", "value": 4}],
+      "price": 1166,
+      "unique": true
+    },
+    {
+      "id": "dg2_glowcap_lantern",
+      "name": "Umbercap's Glowcap Lantern",
+      "icon": "sun",
+      "description": "A thimble lantern with a glowing mushroom where the wick should be. The King gave it to you himself, and made a short speech, mostly about soup.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 18,
+      "requiredLevel": 13,
+      "equip": "Trinket",
+      "stats": [{"stat": "Spirit", "value": 3}, {"stat": "Stamina", "value": 3}, {"stat": "HealingPower", "value": 7}],
+      "price": 1695,
+      "unique": true
+    },
+    {
+      "id": "dg2_ashen_seed",
+      "name": "Ashen Seed",
+      "icon": "ember",
+      "kind": "Junk",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "description": "A cracked grey ember, cold now, that fell into the old forest on a warm wind from the north. It still smells of a fire very far away. Elder Maru would want to see this."
+    },
+    {
+      "id": "dg2_royal_toadstool_tenderiser",
+      "name": "Royal Toadstool Tenderiser",
+      "icon": "mace",
+      "description": "King Umbercap's second sceptre, for state occasions and for tenderising disrespectful toadstools. It has been told about you.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 19,
+      "requiredLevel": 14,
+      "equip": "OffHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 22,
+      "maxDamage": 36,
+      "speed": 2.4,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Strength", "value": 3}, {"stat": "Stamina", "value": 2}],
+      "price": 1887
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_dg2_glowling",
+      "goldMin": 15,
+      "goldMax": 40,
+      "entries": [
+        {"item": "junk_tiny_leaf_hat", "chance": 25},
+        {"item": "junk_nibbled_mushroom", "chance": 30},
+        {"item": "junk_shiny_button", "chance": 8},
+        {"random": true, "quality": "Uncommon", "chance": 5}
+      ]
+    },
+    {
+      "id": "lt_dg2_glowcaller",
+      "goldMin": 20,
+      "goldMax": 50,
+      "entries": [
+        {"item": "junk_nibbled_mushroom", "chance": 30},
+        {"item": "potion_lesser_mana", "chance": 8},
+        {"random": true, "quality": "Uncommon", "chance": 6}
+      ]
+    },
+    {
+      "id": "lt_dg2_sprout",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [{"item": "junk_damp_pebbles", "chance": 40}, {"random": true, "quality": "Uncommon", "chance": 4}]
+    },
+    {
+      "id": "lt_dg2_weaver",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "junk_sticky_web", "chance": 50},
+        {"item": "junk_chitin_fragment", "chance": 35},
+        {"random": true, "quality": "Uncommon", "chance": 6}
+      ]
+    },
+    {
+      "id": "lt_dg2_elite",
+      "goldMin": 60,
+      "goldMax": 160,
+      "entries": [
+        {"item": "potion_healing", "chance": 15},
+        {"random": true, "quality": "Uncommon", "chance": 35},
+        {"random": true, "quality": "Rare", "chance": 5}
+      ]
+    },
+    {
+      "id": "lt_dg2_silkwidow",
+      "goldMin": 120,
+      "goldMax": 260,
+      "entries": [
+        {"item": "dg2_widows_silk_sash", "chance": 40},
+        {"item": "junk_sticky_web", "min": 2, "max": 3},
+        {"random": true, "quality": "Uncommon", "chance": 60},
+        {"random": true, "quality": "Rare", "chance": 12}
+      ]
+    },
+    {
+      "id": "lt_dg2_mossking",
+      "goldMin": 2500,
+      "goldMax": 4000,
+      "entries": [
+        {
+          "pool": [
+            "dg2_glowmoss_mantle",
+            "dg2_thimble_knight_girdle",
+            "dg2_silkweave_grips",
+            "dg2_moss_court_signet",
+            "dg2_umbercaps_cudgel",
+            "dg2_royal_toadstool_tenderiser",
+            "dg2_glowstalk_longbow",
+            "dg2_mossdeep_staff"
+          ],
+          "partyUsable": true
+        },
+        {"pool": ["dg2_sceptre_of_the_moss_court", "dg2_crown_of_lanterncaps", "dg2_heartmoss_hauberk"], "partyUsable": true, "chance": 22},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "quality": "Rare", "chance": 30}
+      ]
+    },
+    {
+      "id": "lt_dg2_chest_cocoon",
+      "goldMin": 200,
+      "goldMax": 450,
+      "entries": [{"item": "potion_healing", "chance": 40}, {"item": "junk_sticky_web", "max": 2}, {"random": true, "quality": "Uncommon"}]
+    },
+    {
+      "id": "lt_dg2_chest_pool",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [
+        {"item": "potion_lesser_mana", "chance": 40},
+        {"item": "elixir_wisdom", "chance": 30},
+        {"random": true, "quality": "Uncommon"},
+        {"random": true, "quality": "Rare", "chance": 40}
+      ]
+    },
+    {
+      "id": "lt_dg2_chest_hoard",
+      "goldMin": 900,
+      "goldMax": 1600,
+      "entries": [
+        {"item": "junk_shiny_button", "min": 2, "max": 4},
+        {"item": "potion_healing", "chance": 60, "max": 2},
+        {"random": true, "quality": "Rare"},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "dg2_umbercap",
+      "name": "King Umbercap",
+      "title": "of the Moss Court",
+      "shortName": "Umbercap",
+      "sprite": "cr_mossling_shaman",
+      "portrait": "cr_mossling_shaman",
+      "dialogue": "dlg_dg2_umbercap",
+      "bark": "Small again! Small and DAMP. Marvellous."
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_dg2_mossking",
+      "start": "mk_1",
+      "nodes": [
+        {
+          "id": "mk_1",
+          "speaker": "narrator",
+          "text": "*The cavern opens into a hall of glowing moss. On a throne of tangled roots sits a mossling the size of a haystack, crowned with mushrooms. In the middle of his crown, where a jewel should be, a grey ember pulses like a slow, sick heartbeat. His eyes open — bright, and not entirely his own.*",
+          "next": "mk_2"
+        },
+        {
+          "id": "mk_2",
+          "speaker": "dg2_umbercap",
+          "text": "WHO COMES TO THE MOSS COURT? *The voice is huge and damp and very tired.* The glow is MINE to keep. Keep it. Keep it. Keep it all. *The grey ember throbs, and every light in the hall dims.*",
+          "choices": [
+            {
+              "text": "Your Majesty, the glow is choking the old wood above.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "mk_pers_s", "failure": "mk_pers_f"},
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "(Speak in the slow, damp language of moss and stone.)",
+              "next": "mk_shaman",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "That ember in your crown isn't moss. It's ash.",
+              "check": {"skill": "Nature", "dc": 13, "success": "mk_nat_s", "failure": "mk_nat_f"},
+              "tag": "NATURE"
+            },
+            {"text": "Sprig sent us. He sang us your song.", "next": "mk_sprig", "conditions": [{"type": "QuestActive", "key": "ww2_kings_glow"}]},
+            {"text": "(Attack.)", "next": "mk_fight"}
+          ]
+        },
+        {
+          "id": "mk_pers_s",
+          "speaker": "dg2_umbercap",
+          "text": "*For a moment the huge eyes clear.* Choking...? I only meant to keep it SAFE. The grey star fell into the glade and I carried it down here so it could hurt no one, and then it... it... *The ember flares, and his voice drowns under it.* KEEP IT. KEEP IT ALL.",
+          "outcomes": [{"type": "SetFlag", "key": "dg2_king_soothed"}],
+          "next": "mk_fight2"
+        },
+        {
+          "id": "mk_pers_f",
+          "speaker": "dg2_umbercap",
+          "text": "CHOKING? NOTHING IS CHOKING. EVERYTHING IS KEPT. *He rises, and the hall shakes.*",
+          "next": "mk_fight"
+        },
+        {
+          "id": "mk_shaman",
+          "speaker": "narrator",
+          "text": "*You speak the slow tongue of moss. Deep inside the giant, something small and green answers — one word, 'help' — before the grey ember drowns it out.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "dg2_king_soothed"},
+            {"type": "Approval", "key": "nanami", "amount": 3},
+            {"type": "Approval", "key": "torvan", "amount": 3}
+          ],
+          "next": "mk_fight2"
+        },
+        {
+          "id": "mk_nat_s",
+          "speaker": "narrator",
+          "text": "*You see it now: the ember is a seed of grey ash, sunk into his crown like a splinter, feeding on the glow and on him. Break the crown's glow, and the seed will break with it.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "dg2_seed_spotted"},
+            {"type": "Approval", "key": "lys", "amount": 3},
+            {"type": "Approval", "key": "morwen", "amount": 2}
+          ],
+          "next": "mk_fight2"
+        },
+        {
+          "id": "mk_nat_f",
+          "speaker": "dg2_umbercap",
+          "text": "MOSS. IT IS ALL MOSS. EVERYTHING IS MOSS. *That does not seem entirely right, but he is very large.*",
+          "next": "mk_fight"
+        },
+        {
+          "id": "mk_sprig",
+          "speaker": "dg2_umbercap",
+          "text": "*The giant blinks, slow as a sunrise.* Sprig...? Small Sprig? He used to bring me soup... *The ember flares.* NO. NO VISITORS. THE GLOW IS KEPT.",
+          "outcomes": [{"type": "SetFlag", "key": "dg2_king_soothed"}],
+          "next": "mk_fight2"
+        },
+        {
+          "id": "mk_fight2",
+          "speaker": "narrator",
+          "text": "*The grey ember blazes, and the giant lurches up from his throne. Whatever is left of the King inside, the seed is not letting go without a fight.*",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg2_mossking"}]
+        },
+        {"id": "mk_fight", "speaker": "dg2_umbercap", "text": "THE GLOW IS KEPT!", "outcomes": [{"type": "StartCombat", "key": "enc_dg2_mossking"}]}
+      ]
+    },
+    {
+      "id": "dlg_dg2_umbercap",
+      "start": "uc_done",
+      "nodes": [
+        {
+          "id": "uc_done",
+          "speaker": "dg2_umbercap",
+          "text": "Off you go, big-folk. Umbercap has a hundred years of naps to catch up on, and he intends to start immediately.",
+          "conditions": [{"type": "Flag", "key": "dg2_umbercap_thanked"}],
+          "fallback": "uc_1",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "uc_1",
+          "speaker": "narrator",
+          "text": "*Where the giant fell sits a mossling no bigger than a cabbage, wearing a crown of tiny mushrooms that is now much too large for him. Beside him lies a cracked grey ember, cold at last.*",
+          "next": "uc_2s"
+        },
+        {
+          "id": "uc_2s",
+          "speaker": "dg2_umbercap",
+          "text": "You talked to me. Down there, under all that grey, I heard you. Thank you for that... and for the hitting, I suppose. It needed doing.",
+          "conditions": [{"type": "Flag", "key": "dg2_king_soothed"}],
+          "fallback": "uc_2",
+          "choices": [
+            {"text": "What was that grey ember?", "next": "uc_seed", "once": true},
+            {"text": "Sprig is waiting for you up top.", "next": "uc_sprig", "once": true},
+            {"text": "Go home safe, Your Majesty.", "next": "uc_gift", "conditions": [{"type": "NotFlag", "key": "dg2_umbercap_thanked"}]},
+            {"text": "Goodbye.", "conditions": [{"type": "Flag", "key": "dg2_umbercap_thanked"}]}
+          ]
+        },
+        {
+          "id": "uc_2",
+          "speaker": "dg2_umbercap",
+          "text": "Ow. Ow. Everything is ow. ...But it is MY ow again. Thank you, big-folk.",
+          "choices": [
+            {"text": "What was that grey ember?", "next": "uc_seed", "once": true},
+            {"text": "Sprig is waiting for you up top.", "next": "uc_sprig", "once": true},
+            {"text": "Go home safe, Your Majesty.", "next": "uc_gift", "conditions": [{"type": "NotFlag", "key": "dg2_umbercap_thanked"}]},
+            {"text": "Goodbye.", "conditions": [{"type": "Flag", "key": "dg2_umbercap_thanked"}]}
+          ]
+        },
+        {
+          "id": "uc_more",
+          "speaker": "dg2_umbercap",
+          "text": "*He adjusts his enormous crown. It slides over one eye.*",
+          "choices": [
+            {"text": "What was that grey ember?", "next": "uc_seed", "once": true},
+            {"text": "Sprig is waiting for you up top.", "next": "uc_sprig", "once": true},
+            {"text": "Go home safe, Your Majesty.", "next": "uc_gift", "conditions": [{"type": "NotFlag", "key": "dg2_umbercap_thanked"}]},
+            {"text": "Goodbye.", "conditions": [{"type": "Flag", "key": "dg2_umbercap_thanked"}]}
+          ]
+        },
+        {
+          "id": "uc_seed",
+          "speaker": "dg2_umbercap",
+          "text": "It fell out of the sky, long ago — or not so long; I lose count down here. A grey star on a warm wind from the north, smelling of a fire very far away. Where it landed, the glow went sick. I carried it down here so it couldn't hurt the forest. Then it started carrying me. *He shivers.* Somewhere up north, something is still burning. Something big.",
+          "outcomes": [{"type": "SetFlag", "key": "dg2_heard_of_ash"}],
+          "next": "uc_more"
+        },
+        {
+          "id": "uc_sprig",
+          "speaker": "dg2_umbercap",
+          "text": "Sprig? Small Sprig! Puddlecap's sister's boy! He used to bring me soup, down to the first step, every week, and shout 'SOUP, YOUR MAJESTY' into the dark. *His eyes shine.* I'll go up. I'll go up and tell him it was very good soup.",
+          "next": "uc_more"
+        },
+        {
+          "id": "uc_gift",
+          "speaker": "dg2_umbercap",
+          "text": "Wait, wait! Royalty does not let its rescuers leave empty-handed. Take the ember, so it is far from my moss — and show it to somebody wise. And... *he rummages in his cape of leaves*... this.",
+          "conditions": [{"type": "Flag", "key": "dg2_king_soothed"}],
+          "fallback": "uc_gift_plain",
+          "outcomes": [
+            {"type": "GiveItem", "key": "dg2_ashen_seed", "amount": 1},
+            {"type": "GiveItem", "key": "dg2_glowcap_lantern", "amount": 1},
+            {"type": "SetFlag", "key": "dg2_umbercap_thanked"},
+            {"type": "GiveXP", "amount": 75}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "uc_gift_plain",
+          "speaker": "dg2_umbercap",
+          "text": "Wait! Take the ember, so it is far from my moss — and show it to somebody wise. Somebody who knows about fires in the north.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "dg2_ashen_seed", "amount": 1},
+            {"type": "SetFlag", "key": "dg2_umbercap_thanked"},
+            {"type": "GiveXP", "amount": 75}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    }
+  ]
+}

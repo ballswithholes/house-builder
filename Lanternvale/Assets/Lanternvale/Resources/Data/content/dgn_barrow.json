@@ -1,0 +1,429 @@
+{
+  "_note": "The Barrow of King Aldwin (hidden dungeon under the King's Ring, levels 18-20).",
+  "maps": [
+    {
+      "id": "dgn_barrow",
+      "name": "The Barrow of King Aldwin",
+      "subtitle": "An old king's mound",
+      "width": 60,
+      "depth": 44,
+      "skyTop": "#16141c",
+      "skyBottom": "#2e2a36",
+      "ground": "ground_shrine",
+      "groundTile": 5,
+      "groundTint": "#8c8698",
+      "biome": "crypt",
+      "environment": "crypt",
+      "levelMin": 18,
+      "levelMax": 20,
+      "dungeon": true,
+      "fill": 0.5,
+      "props": [
+        {"art": "prop_crypt_pillar", "pos": [1.4, 15.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [4.15, 15.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [6.9, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [9.65, 15.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [12.4, 15.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [15.15, 15.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [17.9, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [20.65, 15.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [23.4, 15.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [26.15, 15.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [28.9, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [37.15, 15.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [39.9, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [42.65, 15.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [45.4, 15.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [48.15, 15.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [50.9, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [53.65, 15.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [56.4, 15.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [1.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [4.15, 29.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [6.9, 29.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [9.65, 29.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [12.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [15.15, 29.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [17.9, 29.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [20.65, 29.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [23.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [31.65, 29.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [34.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [37.15, 29.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [39.9, 29.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [42.65, 29.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [45.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [48.15, 29.0], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [50.9, 29.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_cave_wall", "pos": [53.65, 29.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_crypt_pillar", "pos": [56.4, 29.0], "flip": true, "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [13.0, 16.3], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [13.0, 17.3], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [13.0, 18.3], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [13.0, 25.7], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [13.0, 26.7], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [13.0, 27.7], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [14.4, 19.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [15.9, 19.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [17.4, 19.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [18.9, 19.4], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [20.4, 19.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [21.9, 19.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [14.4, 24.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [15.9, 24.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [17.4, 24.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [18.9, 24.6], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [20.4, 24.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [21.9, 24.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [42.0, 16.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [42.0, 17.4], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [42.0, 18.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [42.0, 25.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [42.0, 26.6], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [42.0, 27.6], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [2.4, 16.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [2.4, 27.4],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_barrel", "pos": [6.4, 27.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [7.4, 27.9], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [8.6, 27.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_crate", "pos": [10.8, 16.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bones", "pos": [5.6, 18.0]},
+        {"art": "prop_bonepile", "pos": [11.2, 26.9], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_rubble", "pos": [4.6, 16.6], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_coffin", "pos": [17.6, 17.0], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [17.8, 27.0], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_bones", "pos": [20.6, 16.6]},
+        {"art": "prop_bones", "pos": [15.2, 27.8]},
+        {"art": "prop_sarcophagus", "pos": [25.6, 17.8], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [25.6, 26.2], "flip": true, "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [30.8, 17.8], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [30.8, 26.2], "flip": true, "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [36.2, 17.8], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_sarcophagus", "pos": [36.2, 26.2], "flip": true, "collider": {"w": 2.8, "h": 1.4}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [23.4, 16.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [39.6, 27.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [39.6, 16.2],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_bones", "pos": [33.8, 19.6]},
+        {
+          "art": "prop_altar",
+          "pos": [40.2, 22.0],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#ffd28a", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true},
+          "interact": "dg4_hall_altar",
+          "text": "An altar to the old kings: a vermilion runner gone brown, an incense bowl full of dust, and seven candle stubs. Someone has lit them recently. Something, perhaps."
+        },
+        {"art": "prop_coffin", "pos": [6.0, 11.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [12.0, 11.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [18.0, 11.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [44.0, 11.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [50.0, 11.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [9.0, 5.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [15.0, 5.6], "flip": true, "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [47.0, 5.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_coffin", "pos": [53.0, 5.6], "collider": {"w": 2.3, "h": 0.9}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [26.0, 13.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [39.0, 13.8],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.0, 13.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [57.0, 13.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_bones", "pos": [28.0, 6.4]},
+        {"art": "prop_bones", "pos": [36.0, 4.0]},
+        {"art": "prop_bones", "pos": [22.0, 3.0]},
+        {"art": "prop_rubble", "pos": [24.4, 9.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [40.0, 9.0], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crypt_pillar", "pos": [30.0, 3.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [35.0, 3.0], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_altar",
+          "pos": [55.6, 8.4],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#ffd28a", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true}
+        },
+        {
+          "art": "prop_coffin",
+          "pos": [3.6, 2.2],
+          "collider": {"w": 2.3, "h": 0.9},
+          "interact": "dg4_shepherd_coffin",
+          "text": "A small, plain coffin among the kings' huscarls. A shepherd's crook is carved on the lid, and the name CROOK. Old Ida's family has watched over this hill for a very long time."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [40.0, 38.6],
+          "scale": 1.5,
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ff6a3a", "radius": 6.5, "intensity": 1.3, "offset": [0, 1.35], "flicker": true},
+          "interact": "dg4_ember",
+          "dialogue": "dlg_dg4_ember",
+          "hideFlag": "dg4_ember_smothered",
+          "text": "The Hungry Fire: a single coal the size of a fist, red as an eye, in a great iron brazier slick with lamp oil."
+        },
+        {"art": "prop_brazier", "pos": [40.0, 38.6], "scale": 1.5, "collider": {"w": 0.9, "h": 0.7}, "requireFlag": "dg4_ember_smothered"},
+        {
+          "art": "prop_brazier",
+          "pos": [35.6, 36.4],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ff6a3a", "radius": 6.5, "intensity": 1.3, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [44.4, 36.4],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ff6a3a", "radius": 6.5, "intensity": 1.3, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_barrel", "pos": [34.0, 40.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [35.2, 41.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [45.6, 41.2], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [46.6, 40.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [33.0, 41.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bonepile", "pos": [48.4, 33.0], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_bones", "pos": [38.0, 33.2]},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [25.0, 30.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [56.6, 30.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [9.0, 36.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_crate", "pos": [6.0, 39.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [4.8, 38.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_bonepile", "pos": [13.4, 40.6], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_rubble", "pos": [17.6, 37.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_coffin", "pos": [20.6, 41.8], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [52.0, 37.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [28.0, 37.0], "collider": {"w": 1.1, "h": 0.9}},
+        {
+          "art": "prop_sarcophagus",
+          "pos": [57.0, 22.0],
+          "collider": {"w": 2.8, "h": 1.4},
+          "interact": "dg4_aldwin_tomb",
+          "text": "King Aldwin's sarcophagus, its lid pushed aside from within. The effigy on it holds a sword point-down over a little carved flame."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [51.0, 17.2],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#9fd8ff", "radius": 5.0, "intensity": 0.8, "offset": [0, 1.25]}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [51.0, 26.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#9fd8ff", "radius": 5.0, "intensity": 0.8, "offset": [0, 1.25]}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [57.2, 17.4],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#9fd8ff", "radius": 5.0, "intensity": 0.8, "offset": [0, 1.25]}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [57.2, 26.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#9fd8ff", "radius": 5.0, "intensity": 0.8, "offset": [0, 1.25]}
+        },
+        {
+          "art": "prop_treasure_pile",
+          "pos": [55.0, 27.6],
+          "collider": {"w": 2.0, "h": 1.1},
+          "light": {"color": "#ffd88a", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.6]}
+        },
+        {"art": "prop_crypt_pillar", "pos": [46.0, 16.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [46.0, 27.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_bones", "pos": [49.0, 24.6]},
+        {"art": "prop_rubble", "pos": [44.6, 27.8], "flip": true, "collider": {"w": 1.8, "h": 1.0}}
+      ],
+      "npcs": [{"npc": "dg4_aldwin_shade", "pos": [54.6, 22.0], "requireFlag": "dg4_aldwin_rests"}],
+      "encounters": [
+        {
+          "id": "enc_dg4_robbers",
+          "pos": [9.6, 22.0],
+          "radius": 2.8,
+          "enemies": [
+            {"creature": "cr_dg4_robber", "pos": [10.4, 23.4]},
+            {"creature": "cr_dg4_robber", "pos": [10.6, 20.6]},
+            {"creature": "cr_dg4_robber_caller", "pos": [11.8, 22.2]}
+          ]
+        },
+        {
+          "id": "enc_dg4_dart_trap",
+          "pos": [18.6, 22.0],
+          "radius": 2.2,
+          "hidden": true,
+          "doneFlag": "dg4_trap_spotted",
+          "enemies": [
+            {"creature": "cr_dg4_dart_trap", "pos": [18.9, 21.0]},
+            {"creature": "cr_dg4_dart_trap", "pos": [20.0, 23.1]},
+            {"creature": "cr_dg4_skeleton", "pos": [21.0, 21.2]},
+            {"creature": "cr_dg4_skeleton", "pos": [17.0, 23.2]}
+          ]
+        },
+        {
+          "id": "enc_dg4_wight_guard",
+          "pos": [33.4, 22.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg4_wight", "pos": [34.6, 23.4]},
+            {"creature": "cr_dg4_wight", "pos": [35.2, 20.6]},
+            {"creature": "cr_dg4_skeleton_archer", "pos": [37.8, 22.2]}
+          ]
+        },
+        {
+          "id": "enc_dg4_ossuary",
+          "pos": [32.0, 9.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg4_skeleton", "pos": [31.0, 8.0]},
+            {"creature": "cr_dg4_skeleton", "pos": [33.4, 8.4]},
+            {"creature": "cr_dg4_skeleton_archer", "pos": [30.4, 5.6]},
+            {"creature": "cr_dg4_skeleton_archer", "pos": [34.4, 5.4]}
+          ]
+        },
+        {
+          "id": "enc_dg4_ember_hearth",
+          "pos": [40.0, 34.8],
+          "radius": 3.0,
+          "doneFlag": "dg4_ruuk_defeated",
+          "enemies": [
+            {"creature": "cr_dg4_grave_speaker", "pos": [40.0, 36.2]},
+            {"creature": "cr_dg4_robber", "pos": [38.0, 35.6]},
+            {"creature": "cr_dg4_robber", "pos": [42.2, 35.4]},
+            {"creature": "cr_dg4_robber_caller", "pos": [41.0, 33.4]}
+          ]
+        },
+        {
+          "id": "enc_dg4_huscarls",
+          "pos": [46.0, 22.0],
+          "radius": 2.6,
+          "enemies": [
+            {"creature": "cr_dg4_huscarl", "pos": [47.4, 23.4]},
+            {"creature": "cr_dg4_huscarl", "pos": [47.6, 20.6]},
+            {"creature": "cr_dg4_skeleton_archer", "pos": [49.6, 22.2]}
+          ]
+        },
+        {
+          "id": "enc_dg4_king_aldwin",
+          "pos": [52.8, 22.0],
+          "radius": 3.0,
+          "doneFlag": "dg4_aldwin_rests",
+          "dialogue": "dlg_dg4_aldwin",
+          "enemies": [{"creature": "cr_dg4_king_aldwin", "pos": [54.2, 22.0]}]
+        }
+      ],
+      "chests": [
+        {"id": "chest_dg4_ossuary", "pos": [6.4, 3.4], "lootTable": "lt_dg4_chest_ossuary"},
+        {"id": "chest_dg4_hearth", "pos": [52.6, 41.4], "lootTable": "lt_dg4_chest_hearth", "lockCheck": {"skill": "SleightOfHand", "dc": 15}},
+        {"id": "chest_dg4_hoard", "pos": [57.6, 18.8], "lootTable": "lt_dg4_chest_hoard", "requireFlag": "dg4_aldwin_rests"}
+      ],
+      "transitions": [
+        {
+          "id": "to_amberfield",
+          "pos": [0.7, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "amberfield",
+          "targetSpawn": "from_dgn_barrow",
+          "label": "Amberfield Downs"
+        }
+      ],
+      "spawns": [{"id": "default", "pos": [3.4, 22.0]}, {"id": "from_amberfield", "pos": [3.4, 22.0]}],
+      "regions": [
+        {
+          "id": "reg_dg4_vestibule",
+          "pos": [6.0, 22.0],
+          "size": [10, 12],
+          "name": "The Barrow Door",
+          "text": "Cold air, old dust, and the smell of lamp oil where no lamp has burned for a thousand years."
+        },
+        {
+          "id": "reg_dg4_tripwire",
+          "pos": [14.8, 22.0],
+          "size": [2.6, 4.6],
+          "check": {"skill": "Perception", "dc": 15},
+          "checkFlag": "dg4_trap_spotted",
+          "successText": "A wire at ankle height, grey as the dust, strung between two pillars. You step over it, and cut it.",
+          "failText": ""
+        },
+        {
+          "id": "reg_dg4_hall",
+          "pos": [32.0, 22.0],
+          "size": [18, 13],
+          "name": "Hall of Kings",
+          "text": "The Hall of Kings. Stone kings lie in rows with their swords on their chests. Not all of the swords are stone."
+        },
+        {
+          "id": "reg_dg4_hearth",
+          "pos": [40.0, 37.0],
+          "size": [20, 12],
+          "name": "The Ember Hearth",
+          "text": "A red light pulses at the far end of the hall, slow as breathing. The floor is sticky with oil."
+        },
+        {"id": "reg_dg4_ossuary", "pos": [30.0, 7.5], "size": [56, 13], "name": "The Ossuary"},
+        {
+          "id": "reg_dg4_tomb",
+          "pos": [52.0, 22.0],
+          "size": [14, 12],
+          "name": "Aldwin's Tomb",
+          "text": "The king's tomb. Ghost-blue fire in the braziers, and an open sarcophagus."
+        }
+      ],
+      "ambient": {"timeOfDay": "night", "dayNightCycle": false, "ambientColor": "#b8a890", "ambientIntensity": 0.55, "dust": true},
+      "restArea": false,
+      "music": "music_dungeon"
+    }
+  ]
+}

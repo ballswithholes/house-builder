@@ -1,0 +1,1552 @@
+{
+  "_note": "The Drowned Vault (hidden dungeon under Mirefen, levels 24-26; owner: mirefen).",
+  "maps": [
+    {
+      "id": "dgn_drowned_vault",
+      "name": "The Drowned Vault",
+      "subtitle": "Flooded halls under the fen",
+      "width": 60,
+      "depth": 44,
+      "skyTop": "#16141c",
+      "skyBottom": "#2e2a36",
+      "ground": "ground_cave",
+      "groundTile": 8,
+      "groundTint": "#8ca0a4",
+      "biome": "cave",
+      "environment": "cave",
+      "levelMin": 24,
+      "levelMax": 26,
+      "dungeon": true,
+      "fill": 0.5,
+      "paths": [
+        {"art": "decal_path_stone", "points": [[0, 22], [12, 22], [20, 21.6], [30, 21.4], [40, 21.6], [48, 22]], "width": 2.6},
+        {"art": "decal_path_stone", "points": [[36, 21.6], [38.4, 26], [39, 29]], "width": 1.8},
+        {"art": "decal_path_stone", "points": [[36, 21.6], [38.6, 15], [39.4, 11]], "width": 1.8}
+      ],
+      "water": [
+        {"points": [[14.4, 29.4], [20, 27.8], [27, 28.2], [32.4, 29.8], [33.2, 35], [29.4, 39.6], [21, 40.2], [15.2, 37]], "closed": true},
+        {"points": [[15, 13.2], [19, 8.2], [25, 5.6], [31, 6.6], [32.2, 11], [28.4, 14.2], [20.2, 14.8]], "closed": true},
+        {"points": [[45.4, 30.6], [50, 28.8], [55.8, 29.2], [58.4, 33], [57.6, 40.2], [50.4, 41.4], [45.6, 37.8]], "closed": true},
+        {"points": [[36.4, 15.2], [39.4, 14], [42.4, 15.4], [41.6, 17.6], [37.6, 17.8]], "closed": true}
+      ],
+      "props": [
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.0, 16.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [3.0, 27.4],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {"art": "prop_crypt_pillar", "pos": [6.6, 15.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [6.6, 29.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [10.6, 15.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [10.6, 28.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_drowned_arch", "pos": [13.0, 22.0]},
+        {"art": "prop_stalagmite", "pos": [2.2, 9.0], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [5.0, 5.6], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [2.0, 35.0], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [9.4, 9.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [12.0, 4.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_rubble", "pos": [9.0, 11.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [7.4, 19.0]},
+        {"art": "prop_bones", "pos": [8.6, 25.6]},
+        {"art": "prop_sarcophagus", "pos": [6.0, 40.8], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_coffin", "pos": [10.6, 41.4], "collider": {"w": 2.3, "h": 0.9}},
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [2.4, 41.2],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {"art": "prop_rubble", "pos": [13.0, 37.6], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [11.6, 33.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {"art": "prop_drowned_arch", "pos": [21.0, 21.6]},
+        {"art": "prop_drowned_arch", "pos": [30.0, 21.4]},
+        {"art": "prop_crypt_pillar", "pos": [16.8, 18.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [16.8, 25.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [25.6, 17.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [25.6, 25.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [34.0, 17.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [34.0, 25.8], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_spirit_lantern_dark", "pos": [18.0, 31.4]},
+        {"art": "prop_spirit_lantern_dark", "pos": [28.6, 33.6]},
+        {"art": "prop_spirit_lantern_dark", "pos": [22.6, 36.4]},
+        {"art": "prop_spirit_lantern_dark", "pos": [19.6, 11.4]},
+        {"art": "prop_spirit_lantern_dark", "pos": [27.2, 9.4]},
+        {"art": "prop_spirit_lantern_dark", "pos": [23.0, 7.6]},
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [14.0, 41.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [33.6, 41.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [36.6, 37.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [14.4, 3.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [33.6, 3.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [36.0, 33.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [31.0, 1.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [18.6, 1.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {"art": "prop_stalagmite", "pos": [13.4, 31.2], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [34.6, 40.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [36.6, 7.0], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [12.6, 7.6], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_crypt_pillar", "pos": [36.6, 26.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [41.6, 26.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [36.6, 31.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [41.6, 33.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [36.6, 12.4], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [42.0, 11.6], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_crypt_pillar", "pos": [39.0, 7.0], "collider": {"w": 1.1, "h": 0.9}},
+        {"art": "prop_rubble", "pos": [43.4, 35.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [37.4, 3.0], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [39.6, 29.2]},
+        {"art": "prop_bones", "pos": [40.4, 9.0]},
+        {"art": "prop_coffin", "pos": [39.4, 38.6], "collider": {"w": 2.3, "h": 0.9}},
+        {
+          "art": "prop_torch_sconce",
+          "pos": [43.6, 17.0],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_torch_sconce",
+          "pos": [43.6, 26.6],
+          "collider": {"w": 0.6, "h": 0.5},
+          "light": {"color": "#ffb46c", "radius": 4, "intensity": 0.9, "offset": [0, 2.3], "flicker": true}
+        },
+        {
+          "art": "prop_altar",
+          "pos": [51.6, 27.4],
+          "collider": {"w": 2.4, "h": 1.2},
+          "light": {"color": "#9ff3e4", "radius": 3.5, "intensity": 0.8, "offset": [0, 1.25], "flicker": true}
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [47.4, 27.6], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [47.4, 27.6],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [55.8, 27.6], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [55.8, 27.6],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [46.6, 32.8], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [46.6, 32.8],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [57.6, 31.6], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [57.6, 31.6],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [48.6, 38.6], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [48.6, 38.6],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [55.0, 39.4], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [55.0, 39.4],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [52.0, 34.4], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [52.0, 34.4],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [50.0, 31.6], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [50.0, 31.6],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {"art": "prop_spirit_lantern_dark", "pos": [54.6, 35.4], "hideFlag": "dg5_tidewitch_defeated"},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [54.6, 35.4],
+          "light": {"color": "#ffe0a0", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "requireFlag": "dg5_tidewitch_defeated"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [45.4, 9.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [58.4, 18.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [58.2, 26.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [45.2, 41.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4.5, "intensity": 0.9, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {"art": "prop_stalagmite", "pos": [47.0, 4.0], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [58.4, 7.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [46.0, 15.6], "collider": {"w": 1.2, "h": 0.8}},
+        {
+          "art": "prop_treasure_pile",
+          "pos": [56.4, 11.6],
+          "collider": {"w": 2.0, "h": 1.1},
+          "light": {"color": "#ffd88a", "radius": 3.5, "intensity": 0.7, "offset": [0, 0.6]}
+        },
+        {"art": "prop_rubble", "pos": [49.6, 8.0], "collider": {"w": 1.8, "h": 1.0}},
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [58.0, 22.2],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 4, "intensity": 0.8, "offset": [0, 0.95]}
+        },
+        {"art": "prop_lilypads", "pos": [51.0, 36.0]},
+        {
+          "art": "prop_brazier",
+          "pos": [18.8, 18.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [27.8, 24.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [36.2, 23.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [45.0, 25.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [57.0, 24.6],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [14.2, 26.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [32.8, 27.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [15.6, 15.8],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [31.8, 15.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [44.6, 32.2],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [58.4, 37.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_crystal_cluster",
+          "pos": [21.6, 41.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.6, "intensity": 0.75, "offset": [0, 0.9]},
+          "tint": "#a8f0e0"
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [24.6, 26.8],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.4, "intensity": 0.7, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [26.0, 16.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.4, "intensity": 0.7, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [35.4, 36.0],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.4, "intensity": 0.7, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [48.4, 6.2],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.4, "intensity": 0.7, "offset": [0, 0.95]}
+        },
+        {
+          "art": "prop_glow_mushroom",
+          "pos": [2.2, 30.6],
+          "collider": {"w": 1.4, "h": 0.9},
+          "light": {"color": "#9ff3e4", "radius": 3.4, "intensity": 0.7, "offset": [0, 0.95]}
+        },
+        {"art": "prop_cave_wall", "pos": [16.0, 42.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [27.0, 42.4], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [39.6, 42.4], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [52.0, 2.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [20.4, 1.8], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [6.6, 1.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_rubble", "pos": [44.2, 39.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [8.4, 32.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [34.6, 9.2], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [47.4, 12.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [3.2, 4.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [57.6, 3.4], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bones", "pos": [13.4, 18.8]},
+        {"art": "prop_bones", "pos": [29.0, 19.0]},
+        {"art": "prop_bones", "pos": [33.6, 23.8]},
+        {"art": "prop_bones", "pos": [43.0, 13.6]},
+        {"art": "prop_bones", "pos": [49.8, 18.6]},
+        {"art": "prop_bones", "pos": [55.6, 21.8]},
+        {"art": "prop_bones", "pos": [5.4, 31.4]},
+        {"art": "prop_bones", "pos": [11.6, 12.8]},
+        {"art": "prop_sarcophagus", "pos": [40.4, 35.4], "collider": {"w": 2.8, "h": 1.4}},
+        {"art": "prop_coffin", "pos": [36.4, 4.6], "collider": {"w": 2.3, "h": 0.9}},
+        {"art": "prop_stalagmite", "pos": [43.4, 4.6], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [55.2, 4.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [2.4, 13.6], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [2.6, 24.8], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [57.8, 13.4], "collider": {"w": 1.2, "h": 0.8}},
+        {"art": "prop_stalagmite", "pos": [24.6, 3.0], "collider": {"w": 1.2, "h": 0.8}}
+      ],
+      "npcs": [],
+      "encounters": [
+        {
+          "id": "enc_dg5_entry_thralls",
+          "pos": [10.6, 22.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg5_drowned_thrall", "pos": [11.0, 23.0]},
+            {"creature": "cr_dg5_drowned_thrall", "pos": [11.6, 21.0]},
+            {"creature": "cr_dg5_drowned_thrall", "pos": [12.4, 22.4]}
+          ]
+        },
+        {
+          "id": "enc_dg5_alcove_thralls",
+          "pos": [8.0, 36.6],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_dg5_drowned_thrall", "pos": [7.4, 37.6]},
+            {"creature": "cr_dg5_tide_wisp", "pos": [9.2, 38.0]}
+          ]
+        },
+        {
+          "id": "enc_dg5_causeway",
+          "pos": [25.4, 21.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg5_tide_wisp", "pos": [26.4, 22.8]},
+            {"creature": "cr_dg5_tide_wisp", "pos": [26.8, 20.2]},
+            {"creature": "cr_dg5_drowned_thrall", "pos": [25.4, 21.4]}
+          ]
+        },
+        {
+          "id": "enc_dg5_sentinels",
+          "pos": [39.0, 29.0],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg5_drowned_sentinel", "pos": [38.4, 30.2]},
+            {"creature": "cr_dg5_drowned_sentinel", "pos": [40.2, 29.6]}
+          ]
+        },
+        {
+          "id": "enc_dg5_snapjaws",
+          "pos": [39.4, 10.2],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg5_vault_snapjaw", "pos": [38.6, 9.6]},
+            {"creature": "cr_dg5_vault_snapjaw", "pos": [40.4, 10.8]}
+          ]
+        },
+        {
+          "id": "enc_dg5_captain",
+          "pos": [45.4, 21.8],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_dg5_sentinel_captain", "pos": [46.8, 21.8]},
+            {"creature": "cr_dg5_drowned_thrall", "pos": [45.8, 23.6]},
+            {"creature": "cr_dg5_drowned_thrall", "pos": [45.8, 19.8]}
+          ]
+        },
+        {
+          "id": "enc_dg5_tidewitch",
+          "pos": [51.6, 21.6],
+          "radius": 3.6,
+          "doneFlag": "dg5_tidewitch_defeated",
+          "dialogue": "dlg_dg5_tidewitch",
+          "enemies": [
+            {"creature": "cr_dg5_tidewitch", "pos": [52.4, 23.4]}
+          ]
+        }
+      ],
+      "chests": [
+        {"id": "chest_dg5_alcove", "pos": [4.2, 39.4], "lootTable": "lt_dg5_chest"},
+        {"id": "chest_dg5_sunken", "pos": [40.6, 3.6], "lootTable": "lt_dg5_chest", "lockCheck": {"skill": "SleightOfHand", "dc": 16}},
+        {"id": "chest_dg5_hoard", "pos": [54.0, 10.4], "lootTable": "lt_dg5_chest_hoard", "requireFlag": "dg5_tidewitch_defeated"}
+      ],
+      "transitions": [
+        {
+          "id": "to_mirefen",
+          "pos": [0.7, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "mirefen",
+          "targetSpawn": "from_dgn_drowned_vault",
+          "label": "Mirefen"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [3.4, 22.0]},
+        {"id": "from_mirefen", "pos": [3.4, 22.0]}
+      ],
+      "regions": [
+        {
+          "id": "reg_dg5_vault",
+          "pos": [6, 22],
+          "size": [10, 14],
+          "enterFlag": "reg_dg5_vault",
+          "name": "Drowned Stair",
+          "text": "The Drowned Vault — a fen temple that sank with all its lanterns lit. Water whispers down the walls, always downward."
+        },
+        {
+          "id": "reg_dg5_heart_well",
+          "pos": [51, 26],
+          "size": [16, 14],
+          "name": "Heart-Well",
+          "text": "The Heart-Well. Drowned lanterns lie heaped round a black pool that drains away into the deep — towards something that beats."
+        }
+      ],
+      "ambient": {"timeOfDay": "night", "dayNightCycle": false, "ambientColor": "#a6c8cc", "ambientIntensity": 0.75, "drips": true, "mist": true},
+      "restArea": false,
+      "music": "music_dungeon"
+    }
+  ],
+  "creatures": [
+    {
+      "id": "cr_dg5_drowned_thrall",
+      "name": "Drowned Thrall",
+      "description": "A fen-folk sexton, a pilgrim, a lamplighter — whoever the undertow caught. The water keeps them walking.",
+      "sprite": "cr_bog_ghoul",
+      "portrait": "cr_mossling",
+      "type": "Undead",
+      "rank": "Normal",
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.5,
+      "damageMult": 1.7,
+      "attackSpeed": 2.0,
+      "moveSpeed": 8,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg5_drowned_grasp", "priority": 5}
+      ],
+      "passives": ["cr_dg5_drowned"],
+      "immune": ["Fear", "Sleep"],
+      "lootTable": "lt_dg5_trash",
+      "xpMult": 0.38,
+      "faction": "Drowned",
+      "material": "wet",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_dg5_tide_wisp",
+      "name": "Tide Wisp",
+      "description": "A drowned lantern's light, gone cold and green and spiteful in the dark water.",
+      "sprite": "cr_fen_wisp",
+      "portrait": "cr_hollow_wisp",
+      "type": "Elemental",
+      "rank": "Normal",
+      "resource": "Mana",
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.2,
+      "damageMult": 1.7,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 10,
+      "size": 0.9,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_dg5_rip_current", "priority": 6, "chance": 35},
+        {"ability": "cr_dg5_tide_bolt", "priority": 3}
+      ],
+      "passives": ["cr_dg5_drowned"],
+      "immune": ["Sleep", "Polymorph"],
+      "lootTable": "lt_dg5_trash",
+      "xpMult": 0.38,
+      "faction": "Drowned",
+      "material": "ether",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg5_tide_wisp_minion",
+      "name": "Tide Spark",
+      "description": "A spark of the Tidewitch's pool.",
+      "sprite": "cr_fen_wisp",
+      "portrait": "cr_hollow_wisp",
+      "type": "Elemental",
+      "rank": "Minion",
+      "resource": "Mana",
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 10,
+      "size": 0.8,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_dg5_tide_bolt", "priority": 3}
+      ],
+      "xpMult": 0,
+      "faction": "Drowned",
+      "material": "ether",
+      "voice": "spirit"
+    },
+    {
+      "id": "cr_dg5_drowned_sentinel",
+      "name": "Drowned Sentinel",
+      "description": "A temple guard in verdigris bronze, still keeping the vault's doors a hundred years after the water came in. Barnacles to the eyebrows.",
+      "sprite": "cr_drowned_sentinel",
+      "portrait": "cr_bandit_chief",
+      "type": "Undead",
+      "rank": "Elite",
+      "xpMult": 0.5,
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.6,
+      "damageMult": 1.8,
+      "armorMult": 1.3,
+      "attackSpeed": 2.6,
+      "moveSpeed": 7,
+      "size": 2.3,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg5_barnacle_guard", "priority": 7, "condition": "selfHpBelow:50"},
+        {"ability": "cr_dg5_trident_sweep", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg5_undertow", "priority": 5, "chance": 40}
+      ],
+      "passives": ["cr_dg5_drowned"],
+      "immune": ["Fear", "Sleep", "Polymorph"],
+      "lootTable": "lt_dg5_elite",
+      "faction": "Drowned",
+      "material": "mail",
+      "voice": "none"
+    },
+    {
+      "id": "cr_dg5_sentinel_captain",
+      "name": "Sentinel-Captain Ossuary",
+      "description": "The vault guard's captain, wearing the drowned temple's last banner as a cloak. His orders were to let no one in. He has expanded them.",
+      "sprite": "cr_drowned_sentinel",
+      "portrait": "cr_bandit_chief",
+      "type": "Undead",
+      "rank": "Elite",
+      "xpMult": 0.5,
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.8,
+      "damageMult": 1.8,
+      "armorMult": 1.35,
+      "attackSpeed": 2.6,
+      "moveSpeed": 7,
+      "size": 2.7,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg5_captains_order", "priority": 8, "condition": "roundAtLeast:1"},
+        {"ability": "cr_dg5_trident_sweep", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg5_undertow", "priority": 5}
+      ],
+      "passives": ["cr_dg5_drowned"],
+      "immune": ["Fear", "Sleep", "Polymorph", "Stun"],
+      "lootTable": "lt_dg5_captain",
+      "faction": "Drowned",
+      "bark": "*The captain's porthole visor brightens. Bubbles rise from inside it, slowly.*",
+      "material": "mail",
+      "voice": "none"
+    },
+    {
+      "id": "cr_dg5_vault_snapjaw",
+      "name": "Vault Snapjaw",
+      "description": "A crocolisk that swam down the undertow as an egg and grew up in the dark. Pale, huge and blind, and it does not need to see you.",
+      "sprite": "cr_crocolisk",
+      "portrait": "cr_boar",
+      "type": "Beast",
+      "family": "Crocolisk",
+      "rank": "Elite",
+      "xpMult": 0.5,
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.6,
+      "damageMult": 1.8,
+      "armorMult": 1.3,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "size": 1.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_mf_death_roll", "priority": 6, "chance": 35},
+        {"ability": "cr_dg5_snapjaw_bite", "priority": 5}
+      ],
+      "lootTable": "lt_dg5_elite",
+      "faction": "Drowned",
+      "material": "scale",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_dg5_tidewitch",
+      "name": "The Tidewitch",
+      "description": "Mother Mire's sister from under the sea-road, who drinks the drowned lanterns' light and sends it down the undertow to the Hollow Heart. She hums while she works. It is a lullaby, and it is not for you.",
+      "sprite": "cr_tidewitch",
+      "portrait": "demon_succubus",
+      "type": "Spirit",
+      "rank": "Boss",
+      "resource": "Mana",
+      "levelMin": 24,
+      "levelMax": 26,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 24,
+      "levelCap": 26,
+      "healthMult": 1.8,
+      "damageMult": 1.5,
+      "attackSpeed": 2.0,
+      "meleeSchool": "Frost",
+      "ranged": true,
+      "rangedRange": 30,
+      "moveSpeed": 7,
+      "size": 3.6,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_dg5_high_tide", "priority": 10, "condition": "selfHpBelow:25"},
+        {"ability": "cr_dg5_call_the_tide", "priority": 10, "condition": "selfHpBelow:65"},
+        {"ability": "cr_dg5_tidal_wave", "priority": 9, "condition": "roundAtLeast:2"},
+        {"ability": "cr_dg5_pearl_mend", "priority": 8, "condition": "selfHpBelow:45"},
+        {"ability": "cr_dg5_drowning_embrace", "priority": 6, "condition": "targetNoAura:cr_dg5_embrace"},
+        {"ability": "cr_dg5_tide_bolt", "priority": 3}
+      ],
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish", "Stun"],
+      "stats": [
+        {"stat": "Resistance", "value": 25, "school": "Frost"}
+      ],
+      "lootTable": "lt_dg5_tidewitch",
+      "xpMult": 0.7,
+      "faction": "Drowned",
+      "bark": "Shh, shh. Little lights go down, down, down. And so will you, my dears. So will you.",
+      "material": "wet",
+      "voice": "spirit"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_dg5_trident_sweep",
+      "name": "Trident Sweep",
+      "icon": "spear",
+      "description": "A wide sweep of the barnacled trident hits up to 3 enemies in front for weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "area": {"shape": "Cone", "radius": 6, "angle": 120, "maxTargets": 3, "affects": "Enemies"},
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 100, "min": 10, "max": 14, "perLevel": 0.9}
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_dg5_undertow",
+      "name": "Undertow",
+      "icon": "wave",
+      "description": "A drag of cold water pulls the sentinel to the target and roots it for 4 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [
+        {"type": "Charge"},
+        {"type": "ApplyAura", "aura": "cr_dg5_undertow"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg5_barnacle_guard",
+      "name": "Barnacle Guard",
+      "icon": "shield",
+      "description": "Hunches into its barnacled plate: armor increased by 60% for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_dg5_barnacle_guard", "target": "Self"}
+      ],
+      "aiHint": "Defensive",
+      "aiPriority": 7,
+      "time": "OffGcd"
+    },
+    {
+      "id": "cr_dg5_drowned_grasp",
+      "name": "Drowned Grasp",
+      "icon": "claw",
+      "description": "Cold, wet hands: weapon damage, and the target is chilled for 9 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 110},
+        {"type": "ApplyAura", "aura": "cr_dg5_chilled"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg5_tide_bolt",
+      "name": "Tide Bolt",
+      "icon": "water_drop",
+      "description": "A bolt of black seawater: {0} Frost damage.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "Damage", "min": 18, "max": 24, "perLevel": 1.5}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg5_rip_current",
+      "name": "Rip Current",
+      "icon": "wave",
+      "description": "The water around the target spins: knocked back and slowed for 6 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [
+        {"type": "Knockback", "distance": 6},
+        {"type": "ApplyAura", "aura": "cr_dg5_chilled"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg5_captains_order",
+      "name": "Hold the Line",
+      "icon": "banner",
+      "description": "The captain bangs his trident on the stone. Nearby allies take 15% less damage for 30 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 60,
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_dg5_held_line", "target": "AlliesInRadius", "radius": 30},
+        {"type": "ApplyAura", "aura": "cr_dg5_held_line", "target": "Self"}
+      ],
+      "tags": ["Shout"],
+      "aiHint": "Buff",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg5_snapjaw_bite",
+      "name": "Vault Bite",
+      "icon": "fang",
+      "description": "A bite from a jaw that has grown up in the dark: weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [
+        {"type": "WeaponDamage", "weaponPct": 125, "min": 10, "max": 14, "perLevel": 0.9}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg5_tidal_wave",
+      "name": "Tidal Wave",
+      "icon": "wave",
+      "description": "The Tidewitch raises the vault's water and drops it: {0} Frost damage to every enemy within 30 yards, and they are knocked back. It cannot be interrupted.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 24,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 30, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [
+        {"type": "Damage", "min": 34, "max": 44, "perLevel": 2.6},
+        {"type": "Knockback", "distance": 4}
+      ],
+      "tags": ["Telegraph", "Uninterruptible"],
+      "aiHint": "AoE",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg5_call_the_tide",
+      "name": "Call the Tide",
+      "icon": "water_drop",
+      "description": "The pool boils, and two tide wisps rise to defend their mistress.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [
+        {"type": "Summon", "summon": "cr_dg5_tide_wisp_minion", "count": 2, "target": "Self"}
+      ],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg5_drowning_embrace",
+      "name": "Drowning Embrace",
+      "icon": "tentacle",
+      "description": "Plum tentacles coil round the target: rooted, and Frost damage every 3 sec for 12 sec.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_dg5_embrace"}
+      ],
+      "aiHint": "CC",
+      "aiPriority": 7
+    },
+    {
+      "id": "cr_dg5_pearl_mend",
+      "name": "Pearl Mend",
+      "icon": "heal_plus",
+      "description": "The pearl in her staff glows: the Tidewitch heals herself for 10% of her health. It can be interrupted.",
+      "school": "Nature",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [
+        {"type": "Heal", "min": 0, "max": 0, "perLevel": 0, "pctOfMax": 10}
+      ],
+      "tags": ["Telegraph", "Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg5_high_tide",
+      "name": "High Tide",
+      "icon": "storm",
+      "description": "Below a quarter of her health the Tidewitch becomes the tide: damage dealt increased by 30%.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "aura": "cr_dg5_high_tide", "target": "Self"}
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "time": "OffGcd"
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_dg5_undertow",
+      "name": "Undertow",
+      "icon": "wave",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 4,
+      "states": ["Root"],
+      "description": "Rooted by the undertow."
+    },
+    {
+      "id": "cr_dg5_barnacle_guard",
+      "name": "Barnacle Guard",
+      "icon": "shield",
+      "kind": "Buff",
+      "duration": 12,
+      "mods": [
+        {"stat": "Armor", "value": 60, "pct": true}
+      ],
+      "description": "Armor increased by 60%."
+    },
+    {
+      "id": "cr_dg5_chilled",
+      "name": "Chilled",
+      "icon": "frost",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 9,
+      "mods": [
+        {"stat": "MoveSpeed", "value": -40, "pct": true}
+      ],
+      "description": "Movement speed reduced by 40%."
+    },
+    {
+      "id": "cr_dg5_held_line",
+      "name": "Hold the Line",
+      "icon": "banner",
+      "kind": "Buff",
+      "duration": 30,
+      "mods": [
+        {"stat": "DamageTaken", "value": -15, "pct": true}
+      ],
+      "description": "Damage taken reduced by 15%."
+    },
+    {
+      "id": "cr_dg5_embrace",
+      "name": "Drowning Embrace",
+      "icon": "tentacle",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 12,
+      "states": ["Root"],
+      "tickInterval": 3,
+      "tickEffects": [
+        {"type": "Damage", "min": 7, "perLevel": 0.7}
+      ],
+      "description": "Rooted. Frost damage every 3 sec."
+    },
+    {
+      "id": "cr_dg5_high_tide",
+      "name": "High Tide",
+      "icon": "storm",
+      "kind": "Buff",
+      "duration": 0,
+      "mods": [
+        {"stat": "DamageDone", "value": 30, "pct": true}
+      ],
+      "description": "Damage dealt increased by 30%."
+    },
+    {
+      "id": "cr_dg5_drowned",
+      "name": "Drowned",
+      "icon": "water_drop",
+      "kind": "Buff",
+      "duration": 0,
+      "hidden": true,
+      "mods": [
+        {"stat": "Resistance", "value": 20, "school": "Frost"},
+        {"stat": "Resistance", "value": 10, "school": "Nature"}
+      ],
+      "description": "Resistant to Frost and Nature."
+    }
+  ],
+  "items": [
+    {
+      "id": "dg5_staff_of_the_undertow",
+      "name": "Staff of the Undertow",
+      "icon": "staff",
+      "description": "Driftwood and coral, with a cold pearl caught in the claw. It pulls, faintly, toward deep water.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 30,
+      "requiredLevel": 25,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 67,
+      "maxDamage": 101,
+      "speed": 3.0,
+      "stats": [
+        {"stat": "Intellect", "value": 16},
+        {"stat": "Stamina", "value": 9},
+        {"stat": "SpellDamage", "value": 12}
+      ],
+      "price": 5770,
+      "unique": true
+    },
+    {
+      "id": "dg5_coral_crown",
+      "name": "Coral Crown of the Tidewitch",
+      "icon": "crown",
+      "description": "A branching crown of living coral, still growing, very slowly. Healers swear it hums the sending song.",
+      "kind": "Armor",
+      "quality": "Epic",
+      "itemLevel": 30,
+      "requiredLevel": 25,
+      "equip": "Head",
+      "armorType": "Cloth",
+      "armor": 48,
+      "stats": [
+        {"stat": "Intellect", "value": 14},
+        {"stat": "Spirit", "value": 10},
+        {"stat": "HealingPower", "value": 23}
+      ],
+      "price": 5770,
+      "unique": true
+    },
+    {
+      "id": "dg5_tidebreaker",
+      "name": "Tidebreaker",
+      "icon": "spear",
+      "description": "A sentinel's trident, scoured of barnacles and reforged with the Tidewitch's pearl-bronze. It hits like the sea.",
+      "kind": "Weapon",
+      "quality": "Epic",
+      "itemLevel": 30,
+      "requiredLevel": 25,
+      "equip": "TwoHand",
+      "weaponType": "Polearm",
+      "minDamage": 79,
+      "maxDamage": 118,
+      "speed": 3.5,
+      "stats": [
+        {"stat": "Strength", "value": 21},
+        {"stat": "Stamina", "value": 14}
+      ],
+      "price": 5770,
+      "unique": true
+    },
+    {
+      "id": "dg5_kelpwoven_leggings",
+      "name": "Kelpwoven Leggings",
+      "icon": "armor",
+      "description": "Leather braided with dried kelp. They creak like a ship's rigging and fit like a second skin.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "Legs",
+      "armorType": "Leather",
+      "armor": 105,
+      "stats": [
+        {"stat": "Agility", "value": 15},
+        {"stat": "Stamina", "value": 10}
+      ],
+      "price": 4383,
+      "unique": true
+    },
+    {
+      "id": "dg5_sentinel_porthole_helm",
+      "name": "Sentinel's Porthole Helm",
+      "icon": "armor",
+      "description": "A round bronze helm with a glass porthole visor. The inside has been thoroughly dried. Mostly.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "Head",
+      "armorType": "Mail",
+      "armor": 179,
+      "stats": [
+        {"stat": "Stamina", "value": 14},
+        {"stat": "Strength", "value": 11}
+      ],
+      "price": 4383,
+      "unique": true
+    },
+    {
+      "id": "dg5_drowned_choir_robe",
+      "name": "Robe of the Drowned Choir",
+      "icon": "armor",
+      "description": "A temple chorister's robe, sea-green and silver. When the wind blows through it, it sings one note, very softly.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "Chest",
+      "armorType": "Cloth",
+      "armor": 52,
+      "stats": [
+        {"stat": "Intellect", "value": 11},
+        {"stat": "Stamina", "value": 6},
+        {"stat": "SpellDamage", "value": 9}
+      ],
+      "price": 4383,
+      "unique": true
+    },
+    {
+      "id": "dg5_tidecallers_ring",
+      "name": "Tidecaller's Ring",
+      "icon": "sparkle",
+      "description": "A ring of black pearl that is always cool to the touch, and always, faintly, damp.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "Finger",
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Spirit", "value": 4},
+        {"stat": "HealingPower", "value": 10}
+      ],
+      "price": 4383,
+      "unique": true
+    },
+    {
+      "id": "dg5_scale_of_the_deep",
+      "name": "Scale of the Deep",
+      "icon": "shield",
+      "description": "A Vault Snapjaw's back-plate set in bronze. It has stopped bigger teeth than yours.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "OffHand",
+      "weaponType": "Shield",
+      "armor": 924,
+      "block": 20,
+      "stats": [
+        {"stat": "Stamina", "value": 8},
+        {"stat": "Strength", "value": 6}
+      ],
+      "price": 4087,
+      "unique": true
+    },
+    {
+      "id": "dg5_ossuary_cloak",
+      "name": "Ossuary's Banner-Cloak",
+      "icon": "armor",
+      "description": "The drowned temple's last banner, worn by its last captain. The heron on it is faded almost to nothing.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "Back",
+      "armor": 25,
+      "stats": [
+        {"stat": "Stamina", "value": 8},
+        {"stat": "Strength", "value": 6}
+      ],
+      "price": 4087,
+      "unique": true
+    },
+    {
+      "id": "dg5_barnacled_bracers",
+      "name": "Barnacled Bracers",
+      "icon": "armor",
+      "description": "Verdigris bronze, crusted with barnacles that are, somehow, still alive.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "Wrist",
+      "armorType": "Mail",
+      "armor": 86,
+      "stats": [
+        {"stat": "Stamina", "value": 5},
+        {"stat": "Strength", "value": 4}
+      ],
+      "price": 3146
+    },
+    {
+      "id": "dg5_snapjaw_hide_gloves",
+      "name": "Snapjaw-Hide Gloves",
+      "icon": "hand",
+      "description": "Pale, supple and blind-white, from a crocolisk that never saw the sun.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "Hands",
+      "armorType": "Leather",
+      "armor": 57,
+      "stats": [
+        {"stat": "Agility", "value": 7},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "Intellect", "value": 3}
+      ],
+      "price": 3146
+    },
+    {
+      "id": "dg5_undertow_signet",
+      "name": "Undertow Signet",
+      "icon": "sparkle",
+      "description": "The vault's priests wore these. The sigil is a lantern going down into the waves.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "Finger",
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "SpellDamage", "value": 5}
+      ],
+      "price": 4087
+    },
+    {
+      "id": "dg5_tide_singers_bracers",
+      "name": "Tide-Singer's Bracers",
+      "icon": "armor",
+      "description": "Leather bracers stitched with the old tide-songs, from the vault's chorister vestry. Bloop insists they are rightfully yours.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 23,
+      "equip": "Wrist",
+      "armorType": "Leather",
+      "armor": 45,
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Stamina", "value": 4},
+        {"stat": "Agility", "value": 3}
+      ],
+      "price": 4087
+    },
+    {
+      "id": "dg5_listening_conch",
+      "name": "Listening Conch",
+      "icon": "star",
+      "description": "Bloop's second-best conch. Hold it to your ear in a fight and you can hear, very faintly, which way the tide is turning.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 23,
+      "equip": "Trinket",
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Spirit", "value": 4},
+        {"stat": "HealingPower", "value": 9}
+      ],
+      "price": 4087
+    },
+    {
+      "id": "dg5_sentinel_gauntlets",
+      "name": "Sentinel's Verdigris Gauntlets",
+      "icon": "hand",
+      "description": "Green bronze gauntlets from the vault's gate-guard, scoured clean by mireling sand and a great deal of patience.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 23,
+      "equip": "Hands",
+      "armorType": "Mail",
+      "armor": 133,
+      "stats": [
+        {"stat": "Stamina", "value": 10},
+        {"stat": "Strength", "value": 8}
+      ],
+      "price": 4087
+    },
+    {
+      "id": "dg5_pearl_diver_boots",
+      "name": "Pearl-Diver's Boots",
+      "icon": "boot",
+      "description": "Cloth boots with weighted soles, for walking on the bottom of the sea. They work just as well on stairs.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 28,
+      "requiredLevel": 24,
+      "equip": "Feet",
+      "armorType": "Cloth",
+      "armor": 35,
+      "stats": [
+        {"stat": "Intellect", "value": 9},
+        {"stat": "Spirit", "value": 9}
+      ],
+      "price": 4087
+    },
+    {
+      "id": "dg5_junk_barnacle",
+      "name": "Clump of Vault Barnacles",
+      "icon": "rock",
+      "description": "They close up when you touch them. They have been closing up for a hundred years.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 300
+    },
+    {
+      "id": "dg5_junk_temple_coin",
+      "name": "Drowned Temple Coin",
+      "icon": "coin",
+      "description": "A green bronze coin stamped with a lantern going down into the waves.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 420
+    },
+    {
+      "id": "dg5_junk_sea_glass",
+      "name": "Cold Sea-Glass",
+      "icon": "sparkle",
+      "description": "Glass from a lantern that went down the undertow. It is never quite dry.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 340
+    },
+    {
+      "id": "dg5_undertow_cutlass",
+      "name": "Undertow Cutlass",
+      "icon": "sword",
+      "description": "The Tidewitch's sentinels drowned with these at their belts. It still tugs gently towards deep water, as if it would like to go home.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 29,
+      "requiredLevel": 24,
+      "equip": "OffHand",
+      "weaponType": "OneHandSword",
+      "minDamage": 31,
+      "maxDamage": 52,
+      "speed": 2.4,
+      "stats": [{"stat": "Agility", "value": 6}, {"stat": "Strength", "value": 4}, {"stat": "Stamina", "value": 4}],
+      "price": 4383
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_dg5_trash",
+      "goldMin": 260,
+      "goldMax": 600,
+      "entries": [
+        {"item": "dg5_junk_barnacle", "chance": 35},
+        {"item": "dg5_junk_sea_glass", "chance": 25},
+        {"item": "dg5_junk_temple_coin", "chance": 15},
+        {"item": "potion_healing", "chance": 5},
+        {"random": true, "chance": 8, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 1, "quality": "Rare", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg5_elite",
+      "goldMin": 700,
+      "goldMax": 1300,
+      "entries": [
+        {"item": "dg5_junk_temple_coin", "chance": 60},
+        {"item": "dg5_barnacled_bracers", "chance": 7},
+        {"item": "dg5_snapjaw_hide_gloves", "chance": 7},
+        {"random": true, "chance": 30, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 6, "quality": "Rare", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg5_captain",
+      "goldMin": 2200,
+      "goldMax": 3400,
+      "entries": [
+        {"pool": ["dg5_ossuary_cloak", "dg5_undertow_signet", "dg5_pearl_diver_boots"], "chance": 60, "partyUsable": true},
+        {"random": true, "chance": 25, "quality": "Rare", "itemLevelOffset": 1},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg5_tidewitch",
+      "goldMin": 6000,
+      "goldMax": 9000,
+      "entries": [
+        {"pool": ["dg5_staff_of_the_undertow", "dg5_coral_crown", "dg5_tidebreaker"], "chance": 25, "skipOwned": true, "partyUsable": true},
+        {
+          "pool": ["dg5_kelpwoven_leggings", "dg5_sentinel_porthole_helm", "dg5_drowned_choir_robe", "dg5_tidecallers_ring", "dg5_scale_of_the_deep", "dg5_undertow_cutlass"],
+          "partyUsable": true
+        },
+        {"item": "mf_tidewitch_pearl"},
+        {"random": true, "chance": 35, "quality": "Rare", "itemLevelOffset": 1},
+        {"item": "dg5_junk_temple_coin", "min": 3, "max": 6}
+      ]
+    },
+    {
+      "id": "lt_dg5_chest",
+      "goldMin": 1600,
+      "goldMax": 2800,
+      "entries": [
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 25, "quality": "Rare", "itemLevelOffset": 1},
+        {"item": "dg5_junk_temple_coin", "min": 2, "max": 4}
+      ]
+    },
+    {
+      "id": "lt_dg5_chest_hoard",
+      "goldMin": 5000,
+      "goldMax": 8000,
+      "entries": [
+        {"random": true, "quality": "Rare", "itemLevelOffset": 1},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"item": "dg5_junk_temple_coin", "min": 4, "max": 8}
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_dg5_tidewitch",
+      "start": "t1",
+      "nodes": [
+        {
+          "id": "t1",
+          "speaker": "narrator",
+          "text": "*At the edge of the black well the water rises into a slow spiral, and in the spiral floats a woman with a coral crown and kelp for hair, humming. Around her, heaped like driftwood, lie the drowned lanterns of a hundred years. Every one of them is dark.*",
+          "next": "t2"
+        },
+        {
+          "id": "t2",
+          "speaker": "narrator",
+          "text": "*She opens her eyes. They are the colour of very deep water.* 'Shh, shh. Little lights go down, down, down. And so will you, my dears. So will you.'",
+          "choices": [
+            {"text": "Give the lights back.", "next": "t_fight"},
+            {
+              "text": "Who taught you that lullaby?",
+              "check": {"skill": "Insight", "dc": 15, "success": "t_ins", "failure": "t_fight"},
+              "once": true,
+              "tag": "INSIGHT"
+            }
+          ]
+        },
+        {
+          "id": "t_ins",
+          "speaker": "narrator",
+          "text": "*'My sister sings it to the Heart,' she says dreamily, 'and I sing it to the lights, and the lights sing it all the way down.' She smiles with far too many teeth. 'You'll learn it soon. Everybody does, at the bottom.'*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 80}
+          ],
+          "next": "t_fight"
+        },
+        {
+          "id": "t_fight",
+          "speaker": "narrator",
+          "text": "*The spiral of water rears up behind her like a wave about to break.*",
+          "outcomes": [
+            {"type": "StartCombat", "key": "enc_dg5_tidewitch"}
+          ]
+        }
+      ]
+    }
+  ]
+}

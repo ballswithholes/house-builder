@@ -1,0 +1,2029 @@
+{
+  "_note": "Priest - WoW Classic 1.12 kit translated to Lanternvale. Generated; see specials for custom handlers. Aura StatMod.values[i] = value when applied by rank i+1 of the source ability/talent; ApplyAura duration + perLevel = seconds of duration per level above learnLevel.",
+  "classes": [
+    {
+      "id": "Priest",
+      "name": "Priest",
+      "description": "A devoted healer in layered robes and rings of light, equally able to mend the party and to unmake foes with shadow. Priests command the strongest healing and the deepest mana pool.",
+      "roles": ["Healer", "Ranged DPS", "Support"],
+      "color": "#FFFFFF",
+      "icon": "crest_priest",
+      "resource": "Mana",
+      "gcd": 1.5,
+      "armorTypes": ["Cloth"],
+      "armorUpgrade": {"level": 40, "type": "None"},
+      "weaponTypes": ["OneHandMace", "Staff", "Dagger", "Wand"],
+      "dualWieldLevel": 0,
+      "canParry": false,
+      "canBlock": false,
+      "_statsNote": "Human priest, naked. Level 1: 20/20/20/22/23 -> 52 health, 160 mana (WoW Classic).",
+      "_costNote": "Lanternvale deviation: Lesser Heal, Heal, Greater Heal, Flash Heal and Renew cost 0.4x their WoW Classic mana (amount and perLevel). A healer casts every 6-second turn, so the five-second rule never lapses in combat and WoW costs left her dry by round 4-5 of a 12-14 round boss fight.",
+      "baseStatsLevel1": {"strength": 20, "agility": 20, "stamina": 20, "intellect": 22, "spirit": 23},
+      "baseStatsLevel60": {"strength": 37, "agility": 40, "stamina": 52, "intellect": 120, "spirit": 131},
+      "baseHealthLevel1": 32,
+      "baseHealthLevel60": 1397,
+      "baseManaLevel1": 110,
+      "baseManaLevel60": 1436,
+      "meleeAp": "Strength",
+      "rangedAp": "Strength",
+      "agilityPerMeleeCritAt60": 20,
+      "intellectPerSpellCritAt60": 59.5,
+      "agilityPerDodgeAt60": 20,
+      "baseMeleeCrit": 3,
+      "baseSpellCrit": 0.8,
+      "baseDodge": 3.2,
+      "manaRegenBase": 12.5,
+      "manaRegenPerSpirit": 0.25,
+      "basicAttack": "attack",
+      "startingAbilities": ["attack", "shoot", "priest_smite", "priest_lesser_heal"],
+      "startingItems": ["priest_starter_mace", "priest_starter_robe", "priest_starter_pants", "priest_starter_boots"],
+      "talentTrees": ["tree_priest_discipline", "tree_priest_holy", "tree_priest_shadow"],
+      "defaultBuild": [
+        "priest_discipline_wand_specialization", "priest_discipline_wand_specialization",
+        "priest_discipline_wand_specialization", "priest_discipline_wand_specialization",
+        "priest_discipline_wand_specialization", "priest_shadow_spirit_tap", "priest_shadow_spirit_tap",
+        "priest_shadow_spirit_tap", "priest_shadow_spirit_tap", "priest_shadow_spirit_tap",
+        "priest_shadow_improved_shadow_word_pain", "priest_shadow_improved_shadow_word_pain",
+        "priest_shadow_shadow_focus", "priest_shadow_shadow_focus", "priest_shadow_shadow_focus",
+        "priest_shadow_mind_flay", "priest_shadow_improved_mind_blast", "priest_shadow_improved_mind_blast",
+        "priest_shadow_improved_mind_blast", "priest_shadow_improved_mind_blast", "priest_shadow_improved_mind_blast",
+        "priest_shadow_shadow_weaving", "priest_shadow_shadow_weaving", "priest_shadow_shadow_weaving",
+        "priest_shadow_shadow_weaving", "priest_shadow_vampiric_embrace", "priest_shadow_improved_psychic_scream",
+        "priest_shadow_improved_psychic_scream", "priest_shadow_silence", "priest_shadow_shadow_weaving",
+        "priest_shadow_darkness", "priest_shadow_darkness", "priest_shadow_darkness", "priest_shadow_darkness",
+        "priest_shadow_darkness", "priest_shadow_shadowform", "priest_discipline_improved_power_word_shield",
+        "priest_discipline_improved_power_word_shield", "priest_discipline_improved_power_word_shield",
+        "priest_discipline_improved_power_word_fortitude", "priest_discipline_improved_power_word_fortitude",
+        "priest_discipline_meditation", "priest_discipline_meditation", "priest_discipline_meditation",
+        "priest_discipline_inner_focus", "priest_discipline_unbreakable_will", "priest_discipline_mental_agility",
+        "priest_discipline_mental_agility", "priest_discipline_mental_agility", "priest_discipline_mental_agility",
+        "priest_discipline_mental_agility"
+      ],
+      "sprite": "char_priest",
+      "portrait": "portrait_priest",
+      "designNotes": "The party's best healer: fast Flash Heal, efficient Heal/Greater Heal (3 sec casts that can run into your next turn), Renew and Power Word: Shield (then Weakened Soul for 15 sec). Spirit drives strong mana regeneration, so pace your casting around the five-second rule. Shadow priests trade healing for Shadow Word: Pain, Mind Blast, Mind Flay and Shadowform, and everyone wields a wand with Shoot when mana runs low."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "priest_lesser_heal",
+      "name": "Lesser Heal",
+      "icon": "heal_plus",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Heal your target for {0}.",
+      "learnLevel": 1,
+      "rankLevels": [1, 4, 10],
+      "trainCost": 10,
+      "castTime": 2.5,
+      "rankCastTimes": [1.5, 2.5, 2.5],
+      "cost": {"type": "Mana", "amount": 12, "perLevel": 2},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 46, "max": 56, "perLevel": 10.556, "coef": 0.714}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_heal",
+      "name": "Heal",
+      "icon": "heal_plus",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Heal your target for {0}.",
+      "learnLevel": 16,
+      "rankLevels": [16, 22, 28, 34],
+      "trainCost": 820,
+      "castTime": 3.0,
+      "cost": {"type": "Mana", "amount": 62, "perLevel": 3.333},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 295, "max": 341, "perLevel": 24.444, "coef": 0.857}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_greater_heal",
+      "name": "Greater Heal",
+      "icon": "heal_plus",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "A slow casting spell that heals a single target for {0}.",
+      "learnLevel": 40,
+      "rankLevels": [40, 46, 52, 58, 60],
+      "trainCost": 12800,
+      "castTime": 3.0,
+      "cost": {"type": "Mana", "amount": 148, "perLevel": 6.8},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 899, "max": 1013, "perLevel": 56.2, "coef": 0.857}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 7
+    },
+    {
+      "id": "priest_flash_heal",
+      "name": "Flash Heal",
+      "icon": "sparkle",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Heals a friendly target for {0}.",
+      "learnLevel": 20,
+      "rankLevels": [20, 26, 32, 38, 44, 50, 56],
+      "trainCost": 1600,
+      "castTime": 1.5,
+      "cost": {"type": "Mana", "amount": 50, "perLevel": 2.833},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 193, "max": 237, "perLevel": 18.61, "coef": 0.429}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 7
+    },
+    {
+      "id": "priest_renew",
+      "name": "Renew",
+      "icon": "renew",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Heals the target for 45 (rank 10: 970) over 15 sec.",
+      "learnLevel": 8,
+      "rankLevels": [8, 14, 20, 26, 32, 38, 44, 50, 56, 60],
+      "trainCost": 200,
+      "cost": {"type": "Mana", "amount": 12, "perLevel": 2.923},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "priest_renew"}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_prayer_of_healing",
+      "name": "Prayer of Healing",
+      "icon": "hands_pray",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "A powerful prayer that heals party members within 30 yards for {0}.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "trainCost": 5400,
+      "castTime": 3.0,
+      "cost": {"type": "Mana", "amount": 410, "perLevel": 20.667},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "Heal",
+          "target": "AlliesInRadius",
+          "min": 312,
+          "max": 333,
+          "perLevel": 21.417,
+          "coef": 0.286,
+          "radius": 30
+        }
+      ],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_desperate_prayer",
+      "name": "Desperate Prayer",
+      "icon": "hands_pray",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Instantly heals the caster for {0}. (Human and Dwarf priest racial spell.)",
+      "learnLevel": 10,
+      "rankLevels": [10, 18, 26, 34, 42, 50, 58],
+      "trainCost": 200,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Heal", "target": "Self", "min": 134, "max": 170, "perLevel": 26.9, "coef": 0.429}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 8
+    },
+    {
+      "id": "priest_power_word_shield",
+      "name": "Power Word: Shield",
+      "icon": "shield",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Draws on the soul of the party member to shield them, absorbing 44 (rank 10: 942) damage. Lasts 30 sec. While the shield holds, spellcasting will not be interrupted by damage. Once shielded, the target cannot be shielded again for 15 sec (Weakened Soul).",
+      "learnLevel": 6,
+      "rankLevels": [6, 12, 18, 24, 30, 36, 42, 48, 54, 60],
+      "trainCost": 150,
+      "cooldown": 4,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 8.426},
+      "target": "Ally",
+      "range": 40,
+      "effects": [
+        {"type": "ApplyAura", "aura": "priest_power_word_shield"},
+        {"type": "ApplyAura", "aura": "priest_weakened_soul"}
+      ],
+      "tags": ["Shield"],
+      "special": "PriestWeakenedSoulCheck",
+      "aiHint": "Defensive",
+      "aiPriority": 7
+    },
+    {
+      "id": "priest_power_word_fortitude",
+      "name": "Power Word: Fortitude",
+      "icon": "heart",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Power infuses the target, increasing their Stamina by 3 (rank 6: 54) for 30 min.",
+      "learnLevel": 1,
+      "rankLevels": [1, 12, 24, 36, 48, 60],
+      "trainCost": 10,
+      "cost": {"type": "Mana", "amount": 60, "perLevel": 24.831},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_power_word_fortitude"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_prayer_of_fortitude",
+      "name": "Prayer of Fortitude",
+      "icon": "heart",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Power infuses all party members, increasing their Stamina by 43 (rank 2: 54) for 1 hour.",
+      "learnLevel": 48,
+      "rankLevels": [48, 60],
+      "trainCost": 22120,
+      "cost": {"type": "Mana", "amount": 1700, "perLevel": 41.667},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Party", "aura": "priest_prayer_of_fortitude"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "priest_shadow_protection",
+      "name": "Shadow Protection",
+      "icon": "shadow",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Increases the target's resistance to Shadow spells by 30 (rank 3: 60) for 10 min.",
+      "learnLevel": 30,
+      "rankLevels": [30, 42, 56],
+      "trainCost": 5400,
+      "cost": {"type": "Mana", "amount": 160, "perLevel": 11.154},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_shadow_protection"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "priest_divine_spirit",
+      "name": "Divine Spirit",
+      "icon": "halo",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Holy power infuses the target, increasing their Spirit by 17 (rank 4: 40) for 30 min.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "trainCost": 5400,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 285, "perLevel": 22.833},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_divine_spirit"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_inner_fire",
+      "name": "Inner Fire",
+      "icon": "sun",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "A burst of Holy energy fills the caster, increasing armor by 315 (rank 6: 1395). Each melee or ranged hit against the priest removes one charge. Lasts 10 min or 20 charges.",
+      "learnLevel": 12,
+      "rankLevels": [12, 20, 30, 40, 50, 60],
+      "trainCost": 350,
+      "cost": {"type": "Mana", "amount": 20, "perLevel": 4.688},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_inner_fire"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_fear_ward",
+      "name": "Fear Ward",
+      "icon": "cross",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Wards the friendly target against Fear. The next Fear effect used against the target will fail, using up the ward. Lasts 10 min. (Dwarf priest racial spell.)",
+      "learnLevel": 20,
+      "trainCost": 1600,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 78},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_fear_ward"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "priest_smite",
+      "name": "Smite",
+      "icon": "holy",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Smite an enemy for {0} Holy damage.",
+      "learnLevel": 1,
+      "rankLevels": [1, 6, 14, 22, 30, 38, 46, 54],
+      "trainCost": 10,
+      "castTime": 2.5,
+      "rankCastTimes": [1.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5],
+      "cost": {"type": "Mana", "amount": 20, "perLevel": 4.906},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 13, "max": 17, "perLevel": 7.132, "coef": 0.714}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_holy_fire",
+      "name": "Holy Fire",
+      "icon": "fire",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Consumes the enemy in Holy flames that cause {0} Holy damage and an additional 30 (rank 8: 145) Holy damage over 10 sec.",
+      "learnLevel": 20,
+      "rankLevels": [20, 24, 30, 36, 42, 48, 54, 60],
+      "trainCost": 1600,
+      "castTime": 3.5,
+      "cost": {"type": "Mana", "amount": 85, "perLevel": 4.25},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {"type": "Damage", "min": 84, "max": 104, "perLevel": 7.7, "coef": 0.75},
+        {"type": "ApplyAura", "aura": "priest_holy_fire"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_shadow_word_pain",
+      "name": "Shadow Word: Pain",
+      "icon": "skull",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "A word of darkness that causes 30 (rank 8: 852) Shadow damage over 18 sec.",
+      "learnLevel": 4,
+      "rankLevels": [4, 10, 18, 26, 34, 42, 50, 58],
+      "trainCost": 100,
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 8.241},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_shadow_word_pain"}],
+      "aiHint": "Debuff",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_mind_blast",
+      "name": "Mind Blast",
+      "icon": "brain",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Blasts the target for {0} Shadow damage.",
+      "learnLevel": 10,
+      "rankLevels": [10, 16, 22, 28, 34, 40, 46, 52, 58],
+      "trainCost": 200,
+      "castTime": 1.5,
+      "cooldown": 8,
+      "cost": {"type": "Mana", "amount": 50, "perLevel": 6.25},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 39, "max": 43, "perLevel": 9.917, "coef": 0.429}],
+      "aiHint": "Damage",
+      "aiPriority": 7
+    },
+    {
+      "id": "priest_mind_flay",
+      "name": "Mind Flay",
+      "icon": "tentacle",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Assault the target's mind with Shadow energy, causing {0} Shadow damage per second for 3 sec (75 total at rank 1, 426 at rank 6) and slowing their movement speed by 50%. Channeled; effects resolve once per tick.",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 36, 44, 52, 60],
+      "trainCost": 1600,
+      "fromTalent": true,
+      "castTime": 3,
+      "channeled": true,
+      "channelTicks": 3,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 4},
+      "target": "Enemy",
+      "range": 20,
+      "effects": [
+        {"type": "Damage", "min": 25, "perLevel": 2.925, "coef": 0.15},
+        {"type": "ApplyAura", "aura": "priest_mind_flay"}
+      ],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_psychic_scream",
+      "name": "Psychic Scream",
+      "icon": "fear",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "The caster lets out a psychic scream, causing up to 5 enemies within 8 yards to flee for 8 sec (rank 1 affects 2 enemies, +1 per rank). Damage caused may interrupt the effect.",
+      "learnLevel": 14,
+      "rankLevels": [14, 28, 42, 56],
+      "trainCost": 550,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 100, "perLevel": 2.619},
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "maxTargets": 5, "affects": "Enemies"},
+      "effects": [{"type": "ApplyAura", "aura": "priest_psychic_scream"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_mana_burn",
+      "name": "Mana Burn",
+      "icon": "drain",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Destroy 99-111 (rank 5: 408-452) mana from a target. For each mana destroyed in this way, the target takes 0.5 Shadow damage.",
+      "learnLevel": 24,
+      "rankLevels": [24, 32, 40, 48, 56],
+      "trainCost": 2760,
+      "castTime": 3.0,
+      "cost": {"type": "Mana", "amount": 70, "perLevel": 5},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Special", "min": 99, "max": 111, "perLevel": 10.156, "amount": 50, "special": "PriestManaBurn"}],
+      "aiHint": "Debuff",
+      "aiPriority": 3
+    },
+    {
+      "id": "priest_holy_nova",
+      "name": "Holy Nova",
+      "icon": "sun",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Causes an explosion of holy light around the caster, causing {0} Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for {1}. These effects cause no threat.",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 36, 44, 52, 60],
+      "trainCost": 1600,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 185, "perLevel": 14.125},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "Damage",
+          "target": "EnemiesInRadius",
+          "min": 29,
+          "max": 34,
+          "perLevel": 4.1,
+          "coef": 0.107,
+          "radius": 10
+        },
+        {
+          "type": "Heal",
+          "target": "AlliesInRadius",
+          "min": 52,
+          "max": 60,
+          "perLevel": 6.75,
+          "coef": 0.143,
+          "radius": 10
+        }
+      ],
+      "tags": ["Heal", "NoThreat"],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_silence",
+      "name": "Silence",
+      "icon": "mask",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Silences the target, preventing them from casting spells for 5 sec. Interrupts a spell being cast.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cooldown": 45,
+      "cost": {"type": "Mana", "amount": 225},
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "Interrupt", "lockout": 0}, {"type": "ApplyAura", "aura": "priest_silence"}],
+      "tags": ["Interrupt"],
+      "aiHint": "Interrupt",
+      "aiPriority": 8
+    },
+    {
+      "id": "priest_vampiric_embrace",
+      "name": "Vampiric Embrace",
+      "icon": "blood",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Afflicts your target with Shadow energy that causes all party members to be healed for 20% of any Shadow spell damage you deal to the target. Lasts 1 min.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "cooldown": 10,
+      "cost": {"type": "Mana", "amount": 40},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_vampiric_embrace"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_shadowform",
+      "name": "Shadowform",
+      "icon": "void",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Assume a Shadowform, increasing your Shadow damage by 15% and reducing Physical damage done to you by 15%. However, you may not cast Holy spells while in this form.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "pctBaseMana": 13},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_shadowform"}],
+      "tags": ["Form"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "priest_feedback",
+      "name": "Feedback",
+      "icon": "eye",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "The priest becomes surrounded with anti-magic energy. Any successful spell cast against the priest will burn 105 (rank 5: 805) of the attacker's mana, causing 1 Shadow damage for each point of mana burned. Lasts 15 sec. (Human priest racial spell.)",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "trainCost": 1600,
+      "cooldown": 180,
+      "cost": {"type": "Mana", "amount": 80, "perLevel": 5.5},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_feedback"}],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "priest_fade",
+      "name": "Fade",
+      "icon": "stealth",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Fade out, temporarily reducing all your threat by 55 (rank 6: 820) for 10 sec.",
+      "learnLevel": 8,
+      "rankLevels": [8, 20, 30, 40, 50, 60],
+      "trainCost": 200,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 4.423},
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "target": "Self", "aura": "priest_fade"},
+        {"type": "Special", "target": "Self", "min": 55, "perLevel": 14.712, "special": "PriestFade"}
+      ],
+      "aiHint": "Defensive",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_dispel_magic",
+      "name": "Dispel Magic",
+      "icon": "sparkle",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Dispels magic on the target, removing 1 harmful spell from a friend or 1 beneficial spell from an enemy (rank 2: 2 spells).",
+      "learnLevel": 18,
+      "rankLevels": [18, 36],
+      "trainCost": 1170,
+      "cost": {"type": "Mana", "amount": 125, "perLevel": 4.167},
+      "target": "Any",
+      "range": 30,
+      "effects": [{"type": "Dispel", "dispelType": "Magic", "dispelCount": 1, "special": "PriestDispelRank"}],
+      "aiHint": "Utility",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_cure_disease",
+      "name": "Cure Disease",
+      "icon": "water_drop",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Removes 1 disease from the friendly target.",
+      "learnLevel": 14,
+      "trainCost": 550,
+      "cost": {"type": "Mana", "amount": 75},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}],
+      "aiHint": "Utility",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_abolish_disease",
+      "name": "Abolish Disease",
+      "icon": "water_drop",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Attempts to cure 1 disease effect on the target, and 1 more disease effect every 5 seconds for 20 sec.",
+      "learnLevel": 32,
+      "trainCost": 6550,
+      "cost": {"type": "Mana", "amount": 105},
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "Dispel", "dispelType": "Disease", "dispelCount": 1},
+        {"type": "ApplyAura", "aura": "priest_abolish_disease"}
+      ],
+      "aiHint": "Utility",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_mind_soothe",
+      "name": "Mind Soothe",
+      "icon": "brain",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Soothes the target, reducing the range at which it will attack you by 10 yards. Only affects Humanoid targets. Lasts 15 sec.",
+      "learnLevel": 20,
+      "rankLevels": [20, 34, 48],
+      "trainCost": 1600,
+      "cost": {"type": "Mana", "amount": 70, "perLevel": 1.786},
+      "target": "Enemy",
+      "range": 40,
+      "requires": {"targetCreatureTypes": ["Humanoid"]},
+      "effects": [{"type": "ApplyAura", "aura": "priest_mind_soothe"}, {"type": "Special", "special": "PriestMindSoothe"}],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "priest_shackle_undead",
+      "name": "Shackle Undead",
+      "icon": "lock",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Shackles the target undead enemy for up to 30 sec (rank 2: 40, rank 3: 50). The shackled unit is unable to move, attack or cast spells. Any damage caused will release the target. Only one target can be shackled at a time.",
+      "learnLevel": 20,
+      "rankLevels": [20, 40, 60],
+      "trainCost": 1600,
+      "castTime": 1.5,
+      "cost": {"type": "Mana", "amount": 80, "perLevel": 1.75},
+      "target": "Enemy",
+      "range": 30,
+      "requires": {"targetCreatureTypes": ["Undead"]},
+      "effects": [{"type": "ApplyAura", "perLevel": 0.5, "aura": "priest_shackle_undead", "duration": 30}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_mind_control",
+      "name": "Mind Control",
+      "icon": "eye",
+      "classId": "Priest",
+      "school": "Shadow",
+      "description": "Controls a humanoid mind up to level 33 (rank 2: 45, rank 3: 57), but increases the time between its attacks by 25%. Lasts while the Priest channels, up to 60 sec.",
+      "learnLevel": 30,
+      "rankLevels": [30, 44, 58],
+      "trainCost": 5400,
+      "castTime": 3.0,
+      "cost": {"type": "Mana", "amount": 350, "perLevel": 14.286},
+      "target": "Enemy",
+      "range": 20,
+      "requires": {"targetCreatureTypes": ["Humanoid"]},
+      "effects": [{"type": "ApplyAura", "aura": "priest_mind_control"}, {"type": "Special", "special": "PriestMindControl"}],
+      "aiHint": "CC",
+      "aiPriority": 3
+    },
+    {
+      "id": "priest_resurrection",
+      "name": "Resurrection",
+      "icon": "halo",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Brings a dead player back to life with 35% health and mana.",
+      "learnLevel": 10,
+      "rankLevels": [10, 22, 34, 46, 58],
+      "trainCost": 200,
+      "castTime": 10,
+      "cost": {"type": "Mana", "amount": 125, "perLevel": 18.229},
+      "target": "DeadAlly",
+      "range": 30,
+      "effects": [{"type": "Resurrect", "pctOfMax": 35}],
+      "aiHint": "Utility",
+      "aiPriority": 8
+    },
+    {
+      "id": "priest_inner_focus",
+      "name": "Inner Focus",
+      "icon": "eye",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "When activated, reduces the mana cost of your next spell by 100% and increases its critical effect chance by 25% if it is capable of a critical effect. Does not trigger the global cooldown.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 180,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_inner_focus"}],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "priest_power_infusion",
+      "name": "Power Infusion",
+      "icon": "star",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Infuses the target with power, increasing their spell damage and healing by 20%. Lasts 15 sec.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "cooldown": 180,
+      "cost": {"type": "Mana", "pctBaseMana": 16},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "priest_power_infusion"}],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_lightwell",
+      "name": "Lightwell",
+      "icon": "halo",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Creates a holy Lightwell. Members of your party within 5 yards can use the Lightwell to be healed for 800 (rank 3: 1400) over 10 sec. Lightwell lasts 3 min or 5 charges.",
+      "learnLevel": 40,
+      "rankLevels": [40, 50, 60],
+      "trainCost": 12800,
+      "fromTalent": true,
+      "castTime": 1.5,
+      "cooldown": 600,
+      "cost": {"type": "Mana", "amount": 225, "perLevel": 6},
+      "target": "Self",
+      "effects": [
+        {"type": "Summon", "target": "Self", "summon": "priest_lightwell", "lifetime": 180, "count": 1},
+        {"type": "Special", "target": "Self", "special": "PriestLightwell"}
+      ],
+      "aiHint": "Summon",
+      "aiPriority": 4
+    },
+    {
+      "id": "priest_lightwell_renew",
+      "name": "Lightwell Renew",
+      "icon": "renew",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Touch the Lightwell to be healed for 800 (rank 3: 1400) over 10 sec. Uses one of the Lightwell's charges.",
+      "learnLevel": 40,
+      "rankLevels": [40, 50, 60],
+      "fromTalent": true,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_lightwell_renew"}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "priest_spirit_of_redemption",
+      "name": "Spirit of Redemption",
+      "icon": "wings",
+      "classId": "Priest",
+      "school": "Holy",
+      "description": "Upon death, the priest becomes the Spirit of Redemption for 10 sec. The Spirit of Redemption cannot move, attack, be attacked or targeted by any spells or effects. While in this form the priest can cast any healing spell free of cost. When the effect ends, the priest dies.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "passive": true,
+      "passiveAura": "priest_spirit_of_redemption_passive"
+    }
+  ],
+  "auras": [
+    {
+      "id": "priest_renew",
+      "name": "Renew",
+      "icon": "renew",
+      "description": "Healing every 3 sec.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 15,
+      "exclusiveGroup": "priest_renew",
+      "exclusivePerCaster": true,
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Heal", "min": 9, "perLevel": 3.558, "coef": 0.2}]
+    },
+    {
+      "id": "priest_power_word_shield",
+      "name": "Power Word: Shield",
+      "icon": "shield",
+      "description": "Absorbs damage. Spellcasting is not delayed by damage while the shield holds.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 30,
+      "tags": ["Shield"],
+      "absorb": {"amount": 44, "perLevel": 16.63, "coef": 0.1}
+    },
+    {
+      "id": "priest_weakened_soul",
+      "name": "Weakened Soul",
+      "icon": "soul_shard",
+      "description": "Cannot be affected by Power Word: Shield.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 15,
+      "tags": ["WeakenedSoul"]
+    },
+    {
+      "id": "priest_power_word_fortitude",
+      "name": "Power Word: Fortitude",
+      "icon": "heart",
+      "description": "Stamina increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 1800,
+      "exclusiveGroup": "priest_fortitude",
+      "mods": [{"stat": "Stamina", "value": 3, "values": [3, 8, 20, 32, 43, 54]}]
+    },
+    {
+      "id": "priest_prayer_of_fortitude",
+      "name": "Prayer of Fortitude",
+      "icon": "heart",
+      "description": "Stamina increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 3600,
+      "exclusiveGroup": "priest_fortitude",
+      "mods": [{"stat": "Stamina", "value": 43, "values": [43, 54]}]
+    },
+    {
+      "id": "priest_shadow_protection",
+      "name": "Shadow Protection",
+      "icon": "shadow",
+      "description": "Shadow resistance increased.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 600,
+      "mods": [{"stat": "Resistance", "value": 30, "values": [30, 45, 60], "school": "Shadow"}]
+    },
+    {
+      "id": "priest_divine_spirit",
+      "name": "Divine Spirit",
+      "icon": "halo",
+      "description": "Spirit increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 1800,
+      "mods": [{"stat": "Spirit", "value": 17, "values": [17, 23, 33, 40]}]
+    },
+    {
+      "id": "priest_inner_fire",
+      "name": "Inner Fire",
+      "icon": "sun",
+      "description": "Armor increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 600,
+      "charges": 20,
+      "mods": [{"stat": "Armor", "value": 315, "values": [315, 495, 720, 945, 1170, 1395]}],
+      "procs": [{"trigger": "OnDamaged", "schools": ["Physical"], "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "priest_fear_ward",
+      "name": "Fear Ward",
+      "icon": "cross",
+      "description": "The next Fear effect against you fails.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 600,
+      "charges": 1,
+      "special": "PriestFearWard"
+    },
+    {
+      "id": "priest_holy_fire",
+      "name": "Holy Fire",
+      "icon": "fire",
+      "description": "Taking Holy damage every 2 sec.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "exclusiveGroup": "priest_holy_fire",
+      "exclusivePerCaster": true,
+      "tickInterval": 2,
+      "tickEffects": [{"type": "Damage", "min": 6, "perLevel": 0.575, "coef": 0.034}]
+    },
+    {
+      "id": "priest_shadow_word_pain",
+      "name": "Shadow Word: Pain",
+      "icon": "skull",
+      "description": "Taking Shadow damage every 3 sec.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 18,
+      "exclusiveGroup": "priest_shadow_word_pain",
+      "exclusivePerCaster": true,
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "min": 5, "perLevel": 2.537, "coef": 0.183}]
+    },
+    {
+      "id": "priest_mind_flay",
+      "name": "Mind Flay",
+      "icon": "tentacle",
+      "description": "Movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 3,
+      "tags": ["Snare"],
+      "mods": [{"stat": "MoveSpeed", "value": -50, "pct": true}]
+    },
+    {
+      "id": "priest_psychic_scream",
+      "name": "Psychic Scream",
+      "icon": "fear",
+      "description": "Fleeing in terror.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 8,
+      "tags": ["Fear"],
+      "states": ["Fear"]
+    },
+    {
+      "id": "priest_silence",
+      "name": "Silence",
+      "icon": "mask",
+      "description": "Silenced.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 5,
+      "states": ["Silence"]
+    },
+    {
+      "id": "priest_vampiric_embrace",
+      "name": "Vampiric Embrace",
+      "icon": "blood",
+      "description": "Shadow damage from the priest heals their party.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 60,
+      "exclusiveGroup": "priest_vampiric_embrace",
+      "exclusivePerCaster": true,
+      "special": "PriestVampiricEmbrace"
+    },
+    {
+      "id": "priest_shadowform",
+      "name": "Shadowform",
+      "icon": "void",
+      "description": "Shadow damage increased by 15%, Physical damage taken reduced by 15%. Cannot cast Holy spells.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 0,
+      "exclusiveGroup": "priest_shadowform",
+      "tags": ["Form"],
+      "mods": [
+        {"stat": "DamageDone", "value": 15, "pct": true, "school": "Shadow"},
+        {"stat": "DamageTaken", "value": -15, "pct": true, "school": "Physical"}
+      ],
+      "forbidSchools": ["Holy"]
+    },
+    {
+      "id": "priest_feedback",
+      "name": "Feedback",
+      "icon": "eye",
+      "description": "Spells cast against you burn the caster's mana.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 15,
+      "procs": [
+        {
+          "trigger": "OnDamaged",
+          "schools": ["Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane"],
+          "effects": [
+            {
+              "type": "Special",
+              "target": "Attacker",
+              "min": 105,
+              "perLevel": 17.5,
+              "amount": 100,
+              "special": "PriestManaBurn"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "priest_fade",
+      "name": "Fade",
+      "icon": "stealth",
+      "description": "Threat temporarily reduced.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 10
+    },
+    {
+      "id": "priest_abolish_disease",
+      "name": "Abolish Disease",
+      "icon": "water_drop",
+      "description": "Removes a disease every 5 sec.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 20,
+      "tickInterval": 5,
+      "tickEffects": [{"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}]
+    },
+    {
+      "id": "priest_mind_soothe",
+      "name": "Mind Soothe",
+      "icon": "brain",
+      "description": "Aggro range reduced by 10 yards.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 15
+    },
+    {
+      "id": "priest_shackle_undead",
+      "name": "Shackle Undead",
+      "icon": "lock",
+      "description": "Shackled.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 30,
+      "exclusiveGroup": "priest_shackle",
+      "exclusivePerCaster": true,
+      "states": ["Incapacitate"],
+      "breakOnDamage": true
+    },
+    {
+      "id": "priest_mind_control",
+      "name": "Mind Control",
+      "icon": "eye",
+      "description": "Controlled by a priest. Attack speed reduced by 25%.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 60,
+      "tags": ["MindControl", "Charm"],
+      "mods": [{"stat": "MeleeHaste", "value": -25, "pct": true}]
+    },
+    {
+      "id": "priest_inner_focus",
+      "name": "Inner Focus",
+      "icon": "eye",
+      "description": "Next spell costs no mana and has +25% critical effect chance.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "charges": 1,
+      "mods": [{"stat": "ManaCost", "value": -100, "pct": true}, {"stat": "SpellCrit", "value": 25}],
+      "procs": [{"trigger": "OnSpellCast", "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "priest_power_infusion",
+      "name": "Power Infusion",
+      "icon": "star",
+      "description": "Spell damage and healing increased by 20%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 15,
+      "mods": [
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Holy"},
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Fire"},
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Nature"},
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Frost"},
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Shadow"},
+        {"stat": "DamageDone", "value": 20, "pct": true, "school": "Arcane"},
+        {"stat": "HealingDone", "value": 20, "pct": true}
+      ]
+    },
+    {
+      "id": "priest_lightwell_renew",
+      "name": "Lightwell Renew",
+      "icon": "renew",
+      "description": "Healing every 2 sec.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "tickInterval": 2,
+      "tickEffects": [{"type": "Heal", "min": 160, "perLevel": 6, "coef": 0.067}]
+    },
+    {
+      "id": "priest_spirit_of_redemption_passive",
+      "name": "Spirit of Redemption",
+      "icon": "wings",
+      "description": "Upon death, become the Spirit of Redemption.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "hidden": true,
+      "persistThroughDeath": true,
+      "special": "PriestSpiritOfRedemption"
+    },
+    {
+      "id": "priest_spirit_of_redemption",
+      "name": "Spirit of Redemption",
+      "icon": "wings",
+      "description": "Spirit form: healing spells cost no mana; cannot move, attack or be targeted.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 10,
+      "persistThroughDeath": true,
+      "mods": [{"stat": "ManaCost", "value": -100, "pct": true}],
+      "states": ["Untargetable", "Invulnerable", "Root", "Pacify"]
+    },
+    {
+      "id": "priest_focused_casting",
+      "name": "Focused Casting",
+      "icon": "hands_pray",
+      "description": "Casting is not delayed by damage; increased resistance to Interrupt effects.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 6,
+      "special": "PriestFocusedCasting"
+    },
+    {
+      "id": "priest_inspiration",
+      "name": "Inspiration",
+      "icon": "armor",
+      "description": "Armor increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 15,
+      "mods": [{"stat": "Armor", "value": 8, "values": [8, 16, 25], "pct": true}]
+    },
+    {
+      "id": "priest_blessed_recovery",
+      "name": "Blessed Recovery",
+      "icon": "heal_plus",
+      "description": "Healing a portion of a critical hit taken over 6 sec.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 6,
+      "tickInterval": 2,
+      "tickEffects": [{"type": "Heal", "target": "Target", "special": "PriestBlessedRecovery"}]
+    },
+    {
+      "id": "priest_spirit_tap",
+      "name": "Spirit Tap",
+      "icon": "soul_shard",
+      "description": "Spirit increased by 100%; 50% of mana regeneration continues while casting.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 15,
+      "mods": [{"stat": "Spirit", "value": 100, "pct": true}, {"stat": "SpiritRegenWhileCasting", "value": 50}]
+    },
+    {
+      "id": "priest_blackout",
+      "name": "Blackout",
+      "icon": "shadow",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 3,
+      "tags": ["Stun"],
+      "states": ["Stun"]
+    },
+    {
+      "id": "priest_shadow_vulnerability",
+      "name": "Shadow Vulnerability",
+      "icon": "void",
+      "description": "Shadow damage taken increased by 3% per stack.",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "duration": 15,
+      "maxStacks": 5,
+      "mods": [{"stat": "DamageTaken", "value": 3, "pct": true, "school": "Shadow"}]
+    }
+  ],
+  "talentTrees": [
+    {
+      "id": "tree_priest_discipline",
+      "classId": "Priest",
+      "name": "Discipline",
+      "icon": "halo",
+      "description": "Willpower, shields, mana efficiency and empowering allies.",
+      "talents": [
+        {
+          "id": "priest_discipline_unbreakable_will",
+          "name": "Unbreakable Will",
+          "icon": "cross",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your chance to resist Stun, Fear, and Silence effects by an additional {3/6/9/12/15}%.",
+          "effects": [{"type": "Special", "special": "PriestUnbreakableWill", "values": [3, 6, 9, 12, 15]}]
+        },
+        {
+          "id": "priest_discipline_wand_specialization",
+          "name": "Wand Specialization",
+          "icon": "staff",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your damage with Wands by {5/10/15/20/25}%.",
+          "effects": [{"type": "AbilityMod", "property": "Damage", "value": 5, "abilities": ["shoot"]}]
+        },
+        {
+          "id": "priest_discipline_silent_resolve",
+          "name": "Silent Resolve",
+          "icon": "hands_pray",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 5,
+          "description": "Reduces the threat generated by your Holy and Discipline spells by {4/8/12/16/20}% and reduces the chance your helpful spells and damage over time effects will be dispelled by {4/8/12/16/20}%.",
+          "effects": [{"type": "AbilityMod", "property": "Threat", "value": -4, "schools": ["Holy"]}]
+        },
+        {
+          "id": "priest_discipline_improved_power_word_fortitude",
+          "name": "Improved Power Word: Fortitude",
+          "icon": "heart",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Increases the effect of your Power Word: Fortitude and Prayer of Fortitude spells by {15/30}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 15,
+              "abilities": ["priest_power_word_fortitude", "priest_prayer_of_fortitude"]
+            }
+          ]
+        },
+        {
+          "id": "priest_discipline_improved_power_word_shield",
+          "name": "Improved Power Word: Shield",
+          "icon": "shield",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases damage absorbed by your Power Word: Shield by {5/10/15}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 5, "abilities": ["priest_power_word_shield"]}]
+        },
+        {
+          "id": "priest_discipline_martyrdom",
+          "name": "Martyrdom",
+          "icon": "heart",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Gives you a {50/100}% chance to gain the Focused Casting effect that lasts for 6 sec after being the victim of a melee or ranged critical strike. The Focused Casting effect prevents you from losing casting time when taking damage and increases resistance to Interrupt effects by {10/20}%.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "chance": 50,
+                "schools": ["Physical"],
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_focused_casting"}]
+              },
+              "values": [50, 100]
+            }
+          ]
+        },
+        {
+          "id": "priest_discipline_inner_focus",
+          "name": "Inner Focus",
+          "icon": "eye",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "When activated, reduces the mana cost of your next spell by 100% and increases its critical effect chance by 25% if it is capable of a critical effect.",
+          "effects": [{"type": "GrantAbility", "ability": "priest_inner_focus"}]
+        },
+        {
+          "id": "priest_discipline_meditation",
+          "name": "Meditation",
+          "icon": "hands_pray",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Allows {5/10/15}% of your Mana regeneration to continue while casting.",
+          "effects": [{"type": "Stat", "stat": "SpiritRegenWhileCasting", "value": 5}]
+        },
+        {
+          "id": "priest_discipline_improved_inner_fire",
+          "name": "Improved Inner Fire",
+          "icon": "sun",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the effect of your Inner Fire spell by {10/20/30}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 10, "abilities": ["priest_inner_fire"]}]
+        },
+        {
+          "id": "priest_discipline_mental_agility",
+          "name": "Mental Agility",
+          "icon": "brain",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the mana cost of your instant cast spells by {2/4/6/8/10}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Cost",
+              "value": -2,
+              "abilities": [
+                "priest_power_word_shield", "priest_power_word_fortitude", "priest_prayer_of_fortitude",
+                "priest_renew", "priest_shadow_word_pain", "priest_psychic_scream", "priest_fade",
+                "priest_dispel_magic", "priest_cure_disease", "priest_abolish_disease", "priest_holy_nova",
+                "priest_inner_fire", "priest_shadow_protection", "priest_divine_spirit", "priest_power_infusion",
+                "priest_silence", "priest_vampiric_embrace", "priest_shadowform", "priest_fear_ward",
+                "priest_feedback", "priest_mind_soothe"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "priest_discipline_improved_mana_burn",
+          "name": "Improved Mana Burn",
+          "icon": "drain",
+          "tier": 4,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Reduces the casting time of your Mana Burn spell by {0.25/0.5} secs.",
+          "effects": [{"type": "AbilityMod", "property": "CastTime", "value": -0.25, "abilities": ["priest_mana_burn"]}]
+        },
+        {
+          "id": "priest_discipline_mental_strength",
+          "name": "Mental Strength",
+          "icon": "brain",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your maximum Mana by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Mana", "value": 2, "pct": true}]
+        },
+        {
+          "id": "priest_discipline_divine_spirit",
+          "name": "Divine Spirit",
+          "icon": "halo",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Holy power infuses the target, increasing their Spirit by 17 for 30 min.",
+          "requires": "priest_discipline_meditation",
+          "effects": [{"type": "GrantAbility", "ability": "priest_divine_spirit"}]
+        },
+        {
+          "id": "priest_discipline_force_of_will",
+          "name": "Force of Will",
+          "icon": "star",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your spell damage by {1/2/3/4/5}% and the critical strike chance of your offensive spells by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 1,
+              "abilities": [
+                "priest_smite", "priest_holy_fire", "priest_mind_blast", "priest_shadow_word_pain",
+                "priest_mind_flay", "priest_holy_nova", "priest_mana_burn"
+              ]
+            },
+            {
+              "type": "AbilityMod",
+              "property": "CritChance",
+              "value": 1,
+              "abilities": [
+                "priest_smite", "priest_holy_fire", "priest_mind_blast", "priest_shadow_word_pain",
+                "priest_mind_flay", "priest_holy_nova", "priest_mana_burn"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "priest_discipline_power_infusion",
+          "name": "Power Infusion",
+          "icon": "star",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Infuses the target with power, increasing their spell damage and healing by 20%. Lasts 15 sec.",
+          "requires": "priest_discipline_mental_strength",
+          "effects": [{"type": "GrantAbility", "ability": "priest_power_infusion"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_priest_holy",
+      "classId": "Priest",
+      "name": "Holy",
+      "icon": "holy",
+      "description": "Healing, holy damage and the light that outlasts death.",
+      "talents": [
+        {
+          "id": "priest_holy_healing_focus",
+          "name": "Healing Focus",
+          "icon": "hands_pray",
+          "tier": 1,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Gives you a {35/70}% chance to avoid interruption caused by damage while casting any healing spell.",
+          "effects": [{"type": "Special", "special": "PriestPushbackResist", "values": [35, 70]}]
+        },
+        {
+          "id": "priest_holy_improved_renew",
+          "name": "Improved Renew",
+          "icon": "renew",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases the amount healed by your Renew spell by {5/10/15}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 5, "abilities": ["priest_renew"]}]
+        },
+        {
+          "id": "priest_holy_holy_specialization",
+          "name": "Holy Specialization",
+          "icon": "holy",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the critical effect chance of your Holy spells by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "SpellCrit", "value": 1, "school": "Holy"}]
+        },
+        {
+          "id": "priest_holy_spell_warding",
+          "name": "Spell Warding",
+          "icon": "shield",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces all spell damage taken by {2/4/6/8/10}%.",
+          "effects": [
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Holy"},
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Fire"},
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Nature"},
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Frost"},
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Shadow"},
+            {"type": "Stat", "stat": "DamageTaken", "value": -2, "pct": true, "school": "Arcane"}
+          ]
+        },
+        {
+          "id": "priest_holy_divine_fury",
+          "name": "Divine Fury",
+          "icon": "sun",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Reduces the casting time of your Smite, Holy Fire, Heal and Greater Heal spells by {0.1/0.2/0.3/0.4/0.5} sec.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CastTime",
+              "value": -0.1,
+              "abilities": ["priest_smite", "priest_holy_fire", "priest_heal", "priest_greater_heal"]
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_holy_nova",
+          "name": "Holy Nova",
+          "icon": "sun",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Causes an explosion of holy light around the caster, causing 29 to 34 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 52 to 60. These effects cause no threat.",
+          "effects": [{"type": "GrantAbility", "ability": "priest_holy_nova"}]
+        },
+        {
+          "id": "priest_holy_blessed_recovery",
+          "name": "Blessed Recovery",
+          "icon": "heal_plus",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 3,
+          "description": "After being struck by a melee or ranged critical hit, heal {8/16/25}% of the damage taken over 6 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "schools": ["Physical"],
+                "effects": [{"type": "Special", "target": "Self", "special": "PriestBlessedRecovery"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_inspiration",
+          "name": "Inspiration",
+          "icon": "armor",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Increases your target's armor by {8/16/25}% for 15 sec after getting a critical effect from your Flash Heal, Heal, Greater Heal, or Prayer of Healing spell.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellCrit",
+                "abilities": ["priest_flash_heal", "priest_heal", "priest_greater_heal", "priest_prayer_of_healing"],
+                "effects": [{"type": "ApplyAura", "aura": "priest_inspiration"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_holy_reach",
+          "name": "Holy Reach",
+          "icon": "holy",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the range of your Smite and Holy Fire spells by {10/20}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Range",
+              "value": 10,
+              "abilities": ["priest_smite", "priest_holy_fire"]
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_improved_healing",
+          "name": "Improved Healing",
+          "icon": "heal_plus",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Reduces the Mana cost of your Lesser Heal, Heal, and Greater Heal spells by {5/10/15}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Cost",
+              "value": -5,
+              "abilities": ["priest_lesser_heal", "priest_heal", "priest_greater_heal"]
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_searing_light",
+          "name": "Searing Light",
+          "icon": "fire",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Increases the damage of your Smite and Holy Fire spells by {5/10}%.",
+          "requires": "priest_holy_divine_fury",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 5,
+              "abilities": ["priest_smite", "priest_holy_fire"]
+            }
+          ]
+        },
+        {
+          "id": "priest_holy_improved_prayer_of_healing",
+          "name": "Improved Prayer of Healing",
+          "icon": "hands_pray",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the Mana cost of your Prayer of Healing spell by {10/20}%.",
+          "effects": [{"type": "AbilityMod", "property": "Cost", "value": -10, "abilities": ["priest_prayer_of_healing"]}]
+        },
+        {
+          "id": "priest_holy_spirit_of_redemption",
+          "name": "Spirit of Redemption",
+          "icon": "wings",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Upon death, the priest becomes the Spirit of Redemption for 10 sec. The Spirit of Redemption cannot move, attack, be attacked or targeted by any spells or effects. While in this form the priest can cast any healing spell free of cost. When the effect ends, the priest dies.",
+          "effects": [{"type": "GrantAbility", "ability": "priest_spirit_of_redemption"}]
+        },
+        {
+          "id": "priest_holy_spiritual_guidance",
+          "name": "Spiritual Guidance",
+          "icon": "halo",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases spell damage and healing by up to {5/10/15/20/25}% of your total Spirit.",
+          "effects": [{"type": "Special", "special": "PriestSpiritualGuidance", "values": [5, 10, 15, 20, 25]}]
+        },
+        {
+          "id": "priest_holy_spiritual_healing",
+          "name": "Spiritual Healing",
+          "icon": "heal_plus",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the amount healed by your healing spells by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "HealingDone", "value": 2, "pct": true}]
+        },
+        {
+          "id": "priest_holy_lightwell",
+          "name": "Lightwell",
+          "icon": "halo",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Creates a holy Lightwell. Members of your party can use the Lightwell to be healed for 800 over 10 sec. Lightwell lasts 3 min or 5 charges.",
+          "requires": "priest_holy_spirit_of_redemption",
+          "effects": [{"type": "GrantAbility", "ability": "priest_lightwell"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_priest_shadow",
+      "classId": "Priest",
+      "name": "Shadow",
+      "icon": "shadow",
+      "description": "Shadow magic, damage over time and mind control.",
+      "talents": [
+        {
+          "id": "priest_shadow_spirit_tap",
+          "name": "Spirit Tap",
+          "icon": "soul_shard",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Gives you a {20/40/60/80/100}% chance to gain a 100% bonus to your Spirit after killing a target that yields experience. For the duration, your Mana will regenerate at a 50% rate while casting. Lasts 15 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnKill",
+                "chance": 20,
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "priest_spirit_tap"}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "priest_shadow_blackout",
+          "name": "Blackout",
+          "icon": "shadow",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives your Shadow damage spells a {2/4/6/8/10}% chance to stun the target for 3 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellHit",
+                "chance": 2,
+                "schools": ["Shadow"],
+                "effects": [{"type": "ApplyAura", "aura": "priest_blackout"}]
+              },
+              "values": [2, 4, 6, 8, 10]
+            }
+          ]
+        },
+        {
+          "id": "priest_shadow_shadow_affinity",
+          "name": "Shadow Affinity",
+          "icon": "shadow",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Reduces the threat generated by your Shadow spells by {8/16/25}%.",
+          "effects": [{"type": "AbilityMod", "property": "Threat", "values": [-8, -16, -25], "schools": ["Shadow"]}]
+        },
+        {
+          "id": "priest_shadow_improved_shadow_word_pain",
+          "name": "Improved Shadow Word: Pain",
+          "icon": "skull",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Increases the duration of your Shadow Word: Pain spell by {3/6} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Duration", "value": 3, "abilities": ["priest_shadow_word_pain"]}]
+        },
+        {
+          "id": "priest_shadow_shadow_focus",
+          "name": "Shadow Focus",
+          "icon": "eye",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Reduces your target's chance to resist your Shadow spells by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "SpellHit", "value": 2, "school": "Shadow"}]
+        },
+        {
+          "id": "priest_shadow_improved_psychic_scream",
+          "name": "Improved Psychic Scream",
+          "icon": "fear",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Psychic Scream spell by {2/4} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -2, "abilities": ["priest_psychic_scream"]}]
+        },
+        {
+          "id": "priest_shadow_improved_mind_blast",
+          "name": "Improved Mind Blast",
+          "icon": "brain",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the cooldown of your Mind Blast spell by {0.5/1/1.5/2/2.5} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -0.5, "abilities": ["priest_mind_blast"]}]
+        },
+        {
+          "id": "priest_shadow_mind_flay",
+          "name": "Mind Flay",
+          "icon": "tentacle",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Assault the target's mind with Shadow energy, causing 75 Shadow damage over 3 sec and slowing their movement speed by 50%.",
+          "effects": [{"type": "GrantAbility", "ability": "priest_mind_flay"}]
+        },
+        {
+          "id": "priest_shadow_improved_fade",
+          "name": "Improved Fade",
+          "icon": "stealth",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Decreases the cooldown of your Fade ability by {3/6} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -3, "abilities": ["priest_fade"]}]
+        },
+        {
+          "id": "priest_shadow_shadow_reach",
+          "name": "Shadow Reach",
+          "icon": "shadow",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the range of your Shadow damage spells by {6/13/20}%.",
+          "effects": [{"type": "AbilityMod", "property": "Range", "values": [6, 13, 20], "schools": ["Shadow"]}]
+        },
+        {
+          "id": "priest_shadow_shadow_weaving",
+          "name": "Shadow Weaving",
+          "icon": "void",
+          "tier": 4,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Your Shadow damage spells have a {20/40/60/80/100}% chance to cause your target to be vulnerable to Shadow damage. This vulnerability increases the Shadow damage dealt to your target by 3% and lasts 15 sec. Stacks up to 5 times.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellHit",
+                "chance": 20,
+                "schools": ["Shadow"],
+                "effects": [{"type": "ApplyAura", "aura": "priest_shadow_vulnerability"}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "priest_shadow_silence",
+          "name": "Silence",
+          "icon": "mask",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Silences the target, preventing them from casting spells for 5 sec.",
+          "requires": "priest_shadow_improved_psychic_scream",
+          "effects": [{"type": "GrantAbility", "ability": "priest_silence"}]
+        },
+        {
+          "id": "priest_shadow_vampiric_embrace",
+          "name": "Vampiric Embrace",
+          "icon": "blood",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Afflicts your target with Shadow energy that causes all party members to be healed for 20% of any Shadow spell damage you deal. Lasts 1 min.",
+          "effects": [{"type": "GrantAbility", "ability": "priest_vampiric_embrace"}]
+        },
+        {
+          "id": "priest_shadow_improved_vampiric_embrace",
+          "name": "Improved Vampiric Embrace",
+          "icon": "blood",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Increases the percentage healed by Vampiric Embrace by an additional {5/10}%.",
+          "requires": "priest_shadow_vampiric_embrace",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 25, "abilities": ["priest_vampiric_embrace"]}]
+        },
+        {
+          "id": "priest_shadow_darkness",
+          "name": "Darkness",
+          "icon": "shadow",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your Shadow spell damage by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "DamageDone", "value": 2, "pct": true, "school": "Shadow"}]
+        },
+        {
+          "id": "priest_shadow_shadowform",
+          "name": "Shadowform",
+          "icon": "void",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Assume a Shadowform, increasing your Shadow damage by 15% and reducing Physical damage done to you by 15%. However, you may not cast Holy spells while in this form.",
+          "requires": "priest_shadow_vampiric_embrace",
+          "effects": [{"type": "GrantAbility", "ability": "priest_shadowform"}]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "priest_starter_mace",
+      "name": "Worn Mace",
+      "icon": "mace",
+      "description": "A plain acolyte's mace with a lantern-shaped head.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "OneHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 7,
+      "maxDamage": 11,
+      "speed": 2.0,
+      "price": 30,
+      "classes": ["Priest"]
+    },
+    {
+      "id": "priest_starter_robe",
+      "name": "Neophyte's Robe",
+      "icon": "armor",
+      "description": "Layered white robes with a sky-blue sash.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "Chest",
+      "armorType": "Cloth",
+      "armor": 4,
+      "price": 20,
+      "classes": ["Priest"]
+    },
+    {
+      "id": "priest_starter_pants",
+      "name": "Neophyte's Hakama",
+      "icon": "armor",
+      "description": "Pleated trousers, easy to kneel in.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "Legs",
+      "armorType": "Cloth",
+      "armor": 3,
+      "price": 15,
+      "classes": ["Priest"]
+    },
+    {
+      "id": "priest_starter_boots",
+      "name": "Neophyte's Sandals",
+      "icon": "boot",
+      "description": "Woven sandals for temple steps.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "requiredLevel": 1,
+      "equip": "Feet",
+      "armorType": "Cloth",
+      "armor": 1,
+      "price": 8,
+      "classes": ["Priest"]
+    }
+  ],
+  "creatures": [
+    {
+      "id": "priest_lightwell",
+      "name": "Lightwell",
+      "description": "A pillar of holy light summoned by a priest. Party members within 5 yards can touch it to be renewed (5 charges).",
+      "sprite": "prop_spirit_lantern",
+      "type": "Spirit",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "scaleToParty": true,
+      "healthMult": 0.5,
+      "damageMult": 0,
+      "ai": "Totem",
+      "moveSpeed": 0,
+      "size": 2.4,
+      "xpMult": 0,
+      "immune": ["Fear", "Stun", "Polymorph", "Sleep", "Confuse", "Incapacitate"]
+    }
+  ],
+  "specials": [
+    {
+      "id": "PriestWeakenedSoulCheck",
+      "usedBy": "priest_power_word_shield",
+      "behaviour": "Cast-validation hook only (the listed effects then resolve normally): Power Word: Shield cannot be cast on a target that has the aura priest_weakened_soul (from ANY priest). The UI greys out such targets and the AI never selects them. The shield then applies priest_weakened_soul (15 sec) itself. While priest_power_word_shield holds, the bearer's pending casts ignore pushback (see PriestPushbackResist)."
+    },
+    {
+      "id": "PriestFade",
+      "usedBy": "priest_fade",
+      "behaviour": "Effect magnitude F = min + perLevel x (effLevel - learnLevel) (55 at rank 1 ... 820 at rank 6). For every enemy that has the caster on its threat table, reduce the caster's threat by F (not below 0) and remember the amount actually removed on the caster's priest_fade aura. When priest_fade is removed (expiry after 10 sec, death, or combat end), add the remembered amounts back to those enemies that are still alive. Taunt-like target forcing is not affected."
+    },
+    {
+      "id": "PriestManaBurn",
+      "usedBy": "priest_mana_burn, priest_feedback",
+      "behaviour": "Burn B = rand(min, max) + perLevel x (effLevel - learnLevel) mana from the effect target (capped at its current mana; 0 if it has no mana). Then deal Shadow damage = B x amount / 100 to it (Mana Burn: amount 50; Feedback: amount 100). Damage cannot crit and has no spell power coefficient; Mana Burn's spell can miss (Shadow spell hit roll), the Feedback proc cannot. Threat = damage."
+    },
+    {
+      "id": "PriestDispelRank",
+      "usedBy": "priest_dispel_magic",
+      "behaviour": "Modifier on the Dispel effect: dispelCount = number of the highest rank the caster knows (rank 1 at level 18 removes 1 magic effect, rank 2 at level 36 removes 2)."
+    },
+    {
+      "id": "PriestMindSoothe",
+      "usedBy": "priest_mind_soothe",
+      "behaviour": "Only meaningful out of combat: if the target belongs to an encounter that has not started, that encounter's trigger radius is reduced by 4 m (10 yards, minimum 1 m) while priest_mind_soothe is on any of its enemies (15 sec, real time). In combat the spell has no effect beyond the debuff."
+    },
+    {
+      "id": "PriestMindControl",
+      "usedBy": "priest_mind_control",
+      "behaviour": "Target must be a Humanoid creature of level <= 33 / 45 / 57 (rank 1/2/3); otherwise the cast fails before cost. On success the target joins the caster's team for the duration of priest_mind_control (up to 60 sec): it takes its turns right after the priest, controlled by the player (AI fallback), with 25% slower attacks; its threat tables are cleared. The priest is channelling the whole time: on each of the priest's turns the priest may do nothing but end the turn (moving or acting breaks the control), and the control ends immediately if the priest is stunned, silenced, feared, incapacitated, interrupted or killed, or when the aura is dispelled or expires. When it ends the creature returns to its team with full threat on the priest."
+    },
+    {
+      "id": "PriestLightwell",
+      "usedBy": "priest_lightwell, priest_lightwell_renew",
+      "behaviour": "After the Summon effect creates priest_lightwell next to the caster (lifetime 180 sec), give it 5 charges and remember the caster's Lightwell rank. While it exists, every living party member within 5 yards of it may, on its own turn, use the contextual action priest_lightwell_renew (OffGcd, no cost, self-target) if it is not already affected by priest_lightwell_renew; this consumes one charge and applies the HoT using the CASTER'S Lightwell rank and HealingPower (800/1100/1400 over 10 sec). Companion AI uses it below 70% health. At 0 charges or when the lifetime ends the Lightwell despawns. Only one Lightwell per priest."
+    },
+    {
+      "id": "PriestSpiritOfRedemption",
+      "usedBy": "priest_spirit_of_redemption_passive",
+      "behaviour": "When the priest's health would reach 0 (instead of being Downed): set health to 1, remove all debuffs and apply priest_spirit_of_redemption (10 sec: Untargetable, Invulnerable, Root, Pacify, healing spells cost no mana). In that form the priest keeps taking turns but may only use abilities tagged Heal (and end turn). When the aura ends, the priest dies (Downed, can be helped up/resurrected normally). Does not trigger if the priest is already in that form."
+    },
+    {
+      "id": "PriestVampiricEmbrace",
+      "usedBy": "priest_vampiric_embrace",
+      "behaviour": "Whenever the CASTER of this debuff deals Shadow damage (direct or periodic, after mitigation) to the bearer, every living ally of the caster within 30 yards (including the caster) is healed for 20% of that damage (x (1 + AbilityMod Effect % on priest_vampiric_embrace): Improved Vampiric Embrace makes it 25%/30%). These heals do not crit and generate no threat."
+    },
+    {
+      "id": "PriestFearWard",
+      "usedBy": "priest_fear_ward",
+      "behaviour": "When an aura with the Fear state would be applied to the bearer, it is not applied (shown as 'Immune') and priest_fear_ward is removed (1 charge)."
+    },
+    {
+      "id": "PriestFocusedCasting",
+      "usedBy": "priest_focused_casting",
+      "behaviour": "While active (6 sec) the bearer's pending casts and channels ignore casting pushback (see PriestPushbackResist) and the bearer has +10% (Martyrdom rank 1) / +20% (rank 2) chance to resist Interrupt effects (the interrupt does nothing)."
+    },
+    {
+      "id": "PriestPushbackResist",
+      "usedBy": "priest_holy_healing_focus",
+      "behaviour": "Casting pushback rule (shared with PaladinConcentrationAura): when a unit with a pending cast takes damage, 0.5 sec is added to the remaining cast time (channels lose 0.5 sec instead), at most twice per cast. Healing Focus: values[rank-1] = % chance that a pending cast of an ability tagged Heal ignores a pushback. If the engine does not implement pushback this talent has no effect."
+    },
+    {
+      "id": "PriestUnbreakableWill",
+      "usedBy": "priest_discipline_unbreakable_will",
+      "behaviour": "Talent passive: values[rank-1] = additional % chance to resist auras with the Stun, Fear or Silence state when they would be applied to the priest."
+    },
+    {
+      "id": "PriestSpiritualGuidance",
+      "usedBy": "priest_holy_spiritual_guidance",
+      "behaviour": "Talent passive: the priest gains SpellDamage (all schools) and HealingPower equal to values[rank-1] % of current total Spirit (5/10/15/20/25%), recomputed whenever Spirit changes."
+    },
+    {
+      "id": "PriestBlessedRecovery",
+      "usedBy": "priest_holy_blessed_recovery, priest_blessed_recovery",
+      "behaviour": "Proc effect when the priest takes a melee/ranged critical hit of D damage: apply (refresh) priest_blessed_recovery storing a pool P = D x (8/16/25% for talent rank 1/2/3), added to any remaining pool. The aura's 3 ticks (every 2 sec over 6 sec) each heal the priest for P/3 (the tick Heal effect carries this special and reads the pool; no coefficient, cannot crit)."
+    }
+  ]
+}

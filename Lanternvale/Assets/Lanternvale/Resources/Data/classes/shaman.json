@@ -1,0 +1,3165 @@
+{
+  "_note": "Shaman (WoW Classic 1.12). Totems are SummonTotem units (one per element) that act at the end of the owner's turn by using their hidden abilities ('pulses'). Buff/debuff totems pulse a 10 s aura on units in range each owner turn (it lingers about one turn after leaving range, like WoW totem buffs), so they scale with the totem's level (= owner level) through perLevel and receive the owner's talents through AbilityMods with target 'Pet' (Enhancing Totems, Guardian Totems, Improved Weapon Totems, Totemic Mastery, Call of Flame, Restorative Totems...). Periodic totems are folded to one pulse per round (Healing Stream/Mana Spring/Magma x3, Searing x2.4, Mana Tide x2). Non-scalable per-rank values (cast times, durations, dispel counts) use the max-rank value, like the other class files.",
+  "classes": [
+    {
+      "id": "Shaman",
+      "name": "Shaman",
+      "description": "A spiritual guide who commands the elements: lightning and shocks, imbued weapons, healing waves and totems of earth, fire, water and air.",
+      "roles": ["Healer", "Melee DPS", "Ranged DPS", "Support"],
+      "color": "#0070DE",
+      "icon": "totem",
+      "resource": "Mana",
+      "gcd": 1.5,
+      "armorTypes": ["Cloth", "Leather"],
+      "armorUpgrade": {"level": 40, "type": "Mail"},
+      "weaponTypes": ["OneHandMace", "OneHandAxe", "Staff", "Dagger", "FistWeapon", "Shield"],
+      "dualWieldLevel": 0,
+      "canParry": false,
+      "canBlock": true,
+      "_costNote": "Lanternvale deviation, as for the priest's heals: Healing Wave keeps 25 mana at rank 1 but grows 4.5 mana per level instead of 10.085, and Lesser Healing Wave costs 55 + 3.0 per level instead of 105 + 6.875 (about 0.45x WoW Classic at the top ranks). A healer casts every 6-second turn, so the five-second rule never lapses in combat and WoW costs left her dry by round 5-7 of a dungeon boss.",
+      "baseStatsLevel1": {"strength": 21, "agility": 20, "stamina": 21, "intellect": 21, "spirit": 23},
+      "baseStatsLevel60": {"strength": 98, "agility": 51, "stamina": 105, "intellect": 90, "spirit": 98},
+      "baseHealthLevel1": 37,
+      "baseHealthLevel60": 1423,
+      "baseManaLevel1": 55,
+      "baseManaLevel60": 1520,
+      "meleeAp": "StrengthTimesTwo",
+      "agilityPerMeleeCritAt60": 20,
+      "intellectPerSpellCritAt60": 59.5,
+      "agilityPerDodgeAt60": 20,
+      "baseMeleeCrit": 5,
+      "baseSpellCrit": 2.2,
+      "baseDodge": 5,
+      "manaRegenBase": 17,
+      "manaRegenPerSpirit": 0.2,
+      "basicAttack": "attack",
+      "startingAbilities": ["attack", "shaman_lightning_bolt", "shaman_healing_wave", "shaman_rockbiter_weapon"],
+      "startingItems": [
+        "shaman_starter_worn_mace", "shaman_starter_battered_buckler", "shaman_starter_primitive_mantle",
+        "shaman_starter_primitive_kilt"
+      ],
+      "startingStance": "",
+      "talentTrees": ["tree_shaman_elemental", "tree_shaman_enhancement", "tree_shaman_restoration"],
+      "defaultBuild": [
+        "shaman_enh_ancestral_knowledge", "shaman_enh_ancestral_knowledge", "shaman_enh_ancestral_knowledge",
+        "shaman_enh_ancestral_knowledge", "shaman_enh_ancestral_knowledge", "shaman_enh_thundering_strikes",
+        "shaman_enh_thundering_strikes", "shaman_enh_thundering_strikes", "shaman_enh_thundering_strikes",
+        "shaman_enh_thundering_strikes", "shaman_enh_two_handed_axes_and_maces", "shaman_enh_improved_ghost_wolf",
+        "shaman_enh_improved_ghost_wolf", "shaman_enh_enhancing_totems", "shaman_enh_enhancing_totems",
+        "shaman_enh_flurry", "shaman_enh_flurry", "shaman_enh_flurry", "shaman_enh_flurry", "shaman_enh_flurry",
+        "shaman_enh_elemental_weapons", "shaman_enh_elemental_weapons", "shaman_enh_elemental_weapons",
+        "shaman_enh_improved_weapon_totems", "shaman_enh_improved_weapon_totems", "shaman_enh_weapon_mastery",
+        "shaman_enh_weapon_mastery", "shaman_enh_weapon_mastery", "shaman_enh_weapon_mastery", "shaman_enh_weapon_mastery",
+        "shaman_enh_stormstrike", "shaman_enh_anticipation", "shaman_enh_anticipation", "shaman_enh_anticipation",
+        "shaman_enh_anticipation", "shaman_enh_anticipation", "shaman_enh_toughness", "shaman_enh_toughness",
+        "shaman_enh_toughness", "shaman_enh_toughness", "shaman_enh_toughness", "shaman_enh_parry",
+        "shaman_enh_guardian_totems", "shaman_enh_guardian_totems", "shaman_enh_improved_lightning_shield",
+        "shaman_enh_improved_lightning_shield", "shaman_enh_improved_lightning_shield", "shaman_ele_concussion",
+        "shaman_ele_concussion", "shaman_ele_concussion", "shaman_ele_concussion"
+      ],
+      "sprite": "char_shaman",
+      "portrait": "portrait_shaman",
+      "designNotes": "The Shaman is a hybrid who channels the elements: Lightning Bolt and Shocks at range, imbued weapons and Stormstrike in melee, Healing Wave and Chain Heal for the party. Drop one totem of each element - Earth, Fire, Water and Air - to empower allies or hinder foes; totems act at the end of your turn. Shocks share a cooldown, so choose between Earth Shock's interrupt, Flame Shock's burn and Frost Shock's snare."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "shaman_lightning_bolt",
+      "name": "Lightning Bolt",
+      "icon": "lightning",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Casts a bolt of lightning at the target for {0} Nature damage.",
+      "learnLevel": 1,
+      "rankLevels": [1, 8, 14, 20, 26, 32, 38, 44, 50, 56],
+      "trainCost": 10,
+      "castTime": 3,
+      "rankCastTimes": [1.5, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      "cost": {"type": "Mana", "amount": 15, "perLevel": 4.545},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 15, "max": 17, "perLevel": 7.936, "coef": 0.857}],
+      "tags": ["Lightning"],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_chain_lightning",
+      "name": "Chain Lightning",
+      "icon": "chain_lightning",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Hurls a lightning bolt at the enemy, dealing {0} Nature damage and then jumping to additional nearby enemies. Each jump reduces the damage by 30%. Affects 3 total targets.",
+      "learnLevel": 32,
+      "rankLevels": [32, 40, 48, 56],
+      "trainCost": 11980,
+      "castTime": 2.5,
+      "cooldown": 6,
+      "cost": {"type": "Mana", "amount": 280, "perLevel": 13.542},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 200,
+          "max": 227,
+          "perLevel": 13.375,
+          "coef": 0.714,
+          "chainTargets": 2,
+          "chainFalloffPct": 30,
+          "chainRange": 12
+        }
+      ],
+      "tags": ["Lightning"],
+      "aiHint": "AoE",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_earth_shock",
+      "name": "Earth Shock",
+      "icon": "earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Instantly shocks the target with concussive force, causing {0} Nature damage. It also interrupts spellcasting and prevents any spell in that school from being cast for 2 sec. Shocks share a 6 sec cooldown.",
+      "learnLevel": 4,
+      "rankLevels": [4, 8, 14, 24, 36, 48, 60],
+      "trainCost": 190,
+      "cooldown": 6,
+      "cooldownGroup": "shaman_shock",
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 7.5},
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "Damage", "min": 19, "max": 22, "perLevel": 9.116, "coef": 0.386}, {"type": "Interrupt", "lockout": 2}],
+      "tags": ["Shock", "Interrupt"],
+      "aiHint": "Interrupt",
+      "aiPriority": 8
+    },
+    {
+      "id": "shaman_flame_shock",
+      "name": "Flame Shock",
+      "icon": "flame_wave",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Instantly sears the target with fire, causing {0} Fire damage immediately and 28 (rank 1) to 320 (rank 6) Fire damage over 12 sec. Shocks share a 6 sec cooldown.",
+      "learnLevel": 10,
+      "rankLevels": [10, 18, 28, 40, 52, 60],
+      "trainCost": 1170,
+      "cooldown": 6,
+      "cooldownGroup": "shaman_shock",
+      "cost": {"type": "Mana", "amount": 55, "perLevel": 7.1},
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "Damage", "min": 25, "perLevel": 5.34, "coef": 0.15}, {"type": "ApplyAura", "aura": "shaman_flame_shock"}],
+      "tags": ["Shock"],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_frost_shock",
+      "name": "Frost Shock",
+      "icon": "frost",
+      "classId": "Shaman",
+      "school": "Frost",
+      "description": "Instantly shocks the target with frost, causing {0} Frost damage and slowing movement speed by 50% for 8 sec. Shocks share a 6 sec cooldown.",
+      "learnLevel": 20,
+      "rankLevels": [20, 34, 46, 58],
+      "trainCost": 4680,
+      "cooldown": 6,
+      "cooldownGroup": "shaman_shock",
+      "cost": {"type": "Mana", "amount": 115, "perLevel": 8.289},
+      "target": "Enemy",
+      "range": 20,
+      "effects": [
+        {"type": "Damage", "min": 95, "max": 101, "perLevel": 10.737, "coef": 0.386},
+        {"type": "ApplyAura", "aura": "shaman_frost_shock"}
+      ],
+      "tags": ["Shock"],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_lightning_shield",
+      "name": "Lightning Shield",
+      "icon": "storm",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "The caster is surrounded by 3 balls of lightning. When a melee or ranged attack hits the caster, the attacker will be struck by lightning for 13 (rank 1) to 198 (rank 7) Nature damage. This expends one lightning ball. Lasts 10 min.",
+      "learnLevel": 8,
+      "rankLevels": [8, 16, 24, 32, 40, 48, 56],
+      "trainCost": 750,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 6.771},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "shaman_lightning_shield"}],
+      "tags": ["Lightning"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_purge",
+      "name": "Purge",
+      "icon": "hand",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Purges the enemy target, removing 2 beneficial magic effects (rank 1 removes 1 in WoW; Lanternvale uses the max-rank count).",
+      "learnLevel": 12,
+      "rankLevels": [12, 32],
+      "trainCost": 1680,
+      "cost": {"type": "Mana", "amount": 90, "perLevel": 4.5},
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Dispel", "dispelType": "Magic", "dispelCount": 2}],
+      "aiHint": "Debuff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_healing_wave",
+      "name": "Healing Wave",
+      "icon": "wave",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Heals a friendly target for {0}.",
+      "learnLevel": 1,
+      "rankLevels": [1, 6, 12, 18, 24, 32, 40, 48, 56, 60],
+      "trainCost": 10,
+      "castTime": 3,
+      "rankCastTimes": [1.5, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 4.5},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 34, "max": 44, "perLevel": 28.746, "coef": 0.857}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_lesser_healing_wave",
+      "name": "Lesser Healing Wave",
+      "icon": "water_drop",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Heals a friendly target for {0}.",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 36, 44, 52, 60],
+      "trainCost": 4680,
+      "castTime": 1.5,
+      "cost": {"type": "Mana", "amount": 55, "perLevel": 3},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 162, "max": 186, "perLevel": 17.65, "coef": 0.429}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 7
+    },
+    {
+      "id": "shaman_chain_heal",
+      "name": "Chain Heal",
+      "icon": "heal_plus",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Heals the friendly target for {0}, then jumps to heal additional nearby injured allies. Each jump reduces the effectiveness of the heal by 50%. Heals 3 total targets.",
+      "learnLevel": 40,
+      "rankLevels": [40, 46, 54],
+      "trainCost": 18720,
+      "castTime": 2.5,
+      "cost": {"type": "Mana", "amount": 260, "perLevel": 10.357},
+      "target": "Ally",
+      "range": 40,
+      "effects": [
+        {
+          "type": "Heal",
+          "min": 332,
+          "max": 381,
+          "perLevel": 17.857,
+          "coef": 0.714,
+          "chainTargets": 2,
+          "chainFalloffPct": 50,
+          "chainRange": 12
+        }
+      ],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_cure_poison",
+      "name": "Cure Poison",
+      "icon": "vial",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Cures 1 poison effect on the target.",
+      "learnLevel": 16,
+      "trainCost": 3000,
+      "cost": {"type": "Mana", "amount": 50},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Dispel", "dispelType": "Poison", "dispelCount": 1}],
+      "tags": ["Cure"],
+      "aiHint": "Utility",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_cure_disease",
+      "name": "Cure Disease",
+      "icon": "cross",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Cures 1 disease effect on the target.",
+      "learnLevel": 22,
+      "trainCost": 5660,
+      "cost": {"type": "Mana", "amount": 70},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}],
+      "tags": ["Cure"],
+      "aiHint": "Utility",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_ghost_wolf",
+      "name": "Ghost Wolf",
+      "icon": "wolf_spirit",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Turns the Shaman into a Ghost Wolf, increasing speed by 40%. While in this form the Shaman can only move and shapeshift. Use again (or cancel the aura) to return to normal form.",
+      "learnLevel": 20,
+      "trainCost": 4680,
+      "castTime": 3,
+      "cost": {"type": "Mana", "amount": 55},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "shaman_ghost_wolf"}],
+      "tags": ["Shapeshift"],
+      "aiHint": "Utility",
+      "aiPriority": 0
+    },
+    {
+      "id": "shaman_ancestral_spirit",
+      "name": "Ancestral Spirit",
+      "icon": "wings",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Returns the spirit to the body, restoring a dead or downed target to life with 25% health and mana.",
+      "learnLevel": 12,
+      "rankLevels": [12, 24, 36, 48, 60],
+      "trainCost": 1680,
+      "castTime": 10,
+      "cost": {"type": "Mana", "amount": 85, "perLevel": 9.583},
+      "target": "DeadAlly",
+      "range": 30,
+      "effects": [{"type": "Resurrect", "pctOfMax": 25}],
+      "aiHint": "Heal",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_reincarnation",
+      "name": "Reincarnation",
+      "icon": "halo",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Allows you to resurrect yourself upon death with 20% health and mana. Consumes an Ankh. 60 min cooldown.",
+      "learnLevel": 30,
+      "trainCost": 10530,
+      "passive": true,
+      "passiveAura": "shaman_reincarnation",
+      "cooldown": 3600
+    },
+    {
+      "id": "shaman_mail",
+      "name": "Mail",
+      "icon": "armor",
+      "classId": "Shaman",
+      "school": "Physical",
+      "description": "Allows the wearing of mail armor.",
+      "learnLevel": 40,
+      "trainCost": 18720,
+      "passive": true
+    },
+    {
+      "id": "shaman_rockbiter_weapon",
+      "name": "Rockbiter Weapon",
+      "icon": "rock",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Imbue the Shaman's weapon with stone, increasing melee attack power by 29 (rank 1) to 104 (rank 7). Lasts 5 min. Only one weapon imbue can be active.",
+      "learnLevel": 1,
+      "rankLevels": [1, 8, 16, 24, 34, 44, 54],
+      "trainCost": 10,
+      "cost": {"type": "Mana", "amount": 15, "perLevel": 1.415},
+      "target": "Self",
+      "requires": {"meleeWeapon": true},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_rockbiter_weapon"}],
+      "tags": ["Imbue"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_flametongue_weapon",
+      "name": "Flametongue Weapon",
+      "icon": "ember",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Imbue the Shaman's weapon with fire. Each hit causes 9-13 (rank 1) to about 55-60 (rank 6) additional Fire damage. Lasts 5 min. Only one weapon imbue can be active.",
+      "learnLevel": 10,
+      "rankLevels": [10, 18, 26, 36, 46, 56],
+      "trainCost": 1170,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 2.065},
+      "target": "Self",
+      "requires": {"meleeWeapon": true},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_flametongue_weapon"}],
+      "tags": ["Imbue"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_frostbrand_weapon",
+      "name": "Frostbrand Weapon",
+      "icon": "ice_shard",
+      "classId": "Shaman",
+      "school": "Frost",
+      "description": "Imbue the Shaman's weapon with frost. Each hit has a chance (9 per minute) of causing 46 (rank 1) to 156 (rank 5) additional Frost damage and slowing the target's movement speed by 50% for 8 sec. Lasts 5 min. Only one weapon imbue can be active.",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 38, 48, 58],
+      "trainCost": 4680,
+      "cost": {"type": "Mana", "amount": 70, "perLevel": 1.974},
+      "target": "Self",
+      "requires": {"meleeWeapon": true},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_frostbrand_weapon"}],
+      "tags": ["Imbue"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_windfury_weapon",
+      "name": "Windfury Weapon",
+      "icon": "wind",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of dealing additional damage equal to two extra attacks with 46 (rank 1) to 333 (rank 4) extra attack power. Lasts 5 min. Only one weapon imbue can be active.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "trainCost": 10530,
+      "cost": {"type": "Mana", "amount": 95, "perLevel": 2.667},
+      "target": "Self",
+      "requires": {"meleeWeapon": true},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_windfury_weapon"}],
+      "tags": ["Imbue"],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_stoneskin_totem",
+      "name": "Stoneskin Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Stoneskin Totem at the feet of the caster. The totem protects party members within 20 yards, reducing melee damage taken by 3 (rank 1) to 20 (rank 6) per hit. Lasts 2 min.",
+      "learnLevel": 4,
+      "rankLevels": [4, 14, 24, 34, 44, 54],
+      "trainCost": 190,
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 1.5},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_stoneskin",
+          "totemElement": "Earth",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_stoneskin_totem_pulse",
+      "name": "Stoneskin Totem",
+      "icon": "rock",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Melee damage taken reduced by a flat amount per hit (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 4,
+      "rankLevels": [4, 14, 24, 34, 44, 54],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_stoneskin"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_earthbind_totem",
+      "name": "Earthbind Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons an Earthbind Totem at the feet of the caster for 45 sec that slows the movement speed of enemies within 10 yards by 50%.",
+      "learnLevel": 6,
+      "trainCost": 420,
+      "cooldown": 15,
+      "cost": {"type": "Mana", "amount": 50},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_earthbind",
+          "totemElement": "Earth",
+          "lifetime": 45
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "CC",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_earthbind_totem_pulse",
+      "name": "Earthbind Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Movement speed reduced by 50% (within 10 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 6,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_earthbind"}],
+      "tags": ["Totem"],
+      "aiHint": "Debuff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_strength_of_earth_totem",
+      "name": "Strength of Earth Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Strength of Earth Totem at the feet of the caster. The totem increases the Strength of party members within 20 yards by 10 (rank 1) to 77 (rank 5). Lasts 2 min.",
+      "learnLevel": 10,
+      "rankLevels": [10, 24, 38, 52, 60],
+      "trainCost": 1170,
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 5},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_strength_of_earth",
+          "totemElement": "Earth",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_strength_of_earth_totem_pulse",
+      "name": "Strength of Earth Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Strength increased (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 10,
+      "rankLevels": [10, 24, 38, 52, 60],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_strength_of_earth"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_stoneclaw_totem",
+      "name": "Stoneclaw Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a sturdy Stoneclaw Totem at the feet of the caster for 15 sec that taunts creatures within 8 yards to attack it.",
+      "learnLevel": 8,
+      "rankLevels": [8, 18, 28, 38, 48, 58],
+      "trainCost": 750,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 2.3},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_stoneclaw",
+          "totemElement": "Earth",
+          "lifetime": 15
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Defensive",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_stoneclaw_totem_taunt",
+      "name": "Stoneclaw Taunt",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Taunts enemies within 8 yards to attack the totem.",
+      "learnLevel": 8,
+      "rankLevels": [8, 18, 28, 38, 48, 58],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Taunt"}],
+      "tags": ["Totem"],
+      "aiHint": "Taunt",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_tremor_totem",
+      "name": "Tremor Totem",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Tremor Totem at the feet of the caster that shakes the ground around it, removing Fear, Charm and Sleep effects from party members within 30 yards. Lasts 2 min.",
+      "learnLevel": 18,
+      "trainCost": 3790,
+      "cost": {"type": "Mana", "amount": 60},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_tremor", "totemElement": "Earth", "lifetime": 120}],
+      "tags": ["Totem"],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_tremor_totem_pulse",
+      "name": "Tremor",
+      "icon": "totem_earth",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Removes Fear, Charm and Sleep effects from party members within 30 yards.",
+      "learnLevel": 18,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 30, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [
+        {"type": "RemoveAura", "auraTag": "Fear"},
+        {"type": "RemoveAura", "auraTag": "Charm"},
+        {"type": "RemoveAura", "auraTag": "Sleep"}
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Utility",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_searing_totem",
+      "name": "Searing Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Summons a Searing Totem at the feet of the caster for 55 sec that repeatedly attacks an enemy within 20 yards for 9-11 (rank 1) to 40-54 (rank 6) Fire damage (about 2.4 attacks per round, resolved as one bolt at the end of your turn).",
+      "learnLevel": 10,
+      "rankLevels": [10, 20, 30, 40, 50, 60],
+      "trainCost": 1170,
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 2.9},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_searing", "totemElement": "Fire", "lifetime": 55}],
+      "tags": ["Totem"],
+      "aiHint": "Damage",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_searing_totem_attack",
+      "name": "Searing Bolt",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "The Searing Totem attacks an enemy within 20 yards for {0} Fire damage this round.",
+      "learnLevel": 10,
+      "rankLevels": [10, 20, 30, 40, 50, 60],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Enemy",
+      "range": 20,
+      "effects": [{"type": "Damage", "min": 22, "max": 26, "perLevel": 1.78, "coef": 0.4}],
+      "tags": ["Totem"],
+      "aiHint": "Damage",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_fire_nova_totem",
+      "name": "Fire Nova Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Summons a Fire Nova Totem at the feet of the caster. At the end of your turn (unless destroyed first) the totem explodes, inflicting 53-62 (rank 1) to 413-459 (rank 5) Fire damage to enemies within 10 yards, and is destroyed.",
+      "learnLevel": 12,
+      "rankLevels": [12, 22, 32, 42, 52],
+      "trainCost": 1680,
+      "cooldown": 15,
+      "cost": {"type": "Mana", "amount": 95, "perLevel": 10.625},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_fire_nova",
+          "totemElement": "Fire",
+          "lifetime": 10
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "shaman_fire_nova_totem_blast",
+      "name": "Fire Nova",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "The totem explodes for {0} Fire damage to enemies within 10 yards.",
+      "learnLevel": 12,
+      "rankLevels": [12, 22, 32, 42, 52],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 53, "max": 62, "perLevel": 9.463, "coef": 0.214}, {"type": "Kill", "target": "Self"}],
+      "tags": ["Totem"],
+      "aiHint": "AoE",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_magma_totem",
+      "name": "Magma Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Summons a Magma Totem at the feet of the caster for 20 sec that causes 22 (rank 1) to 75 (rank 4) Fire damage to enemies within 8 yards every 2 sec (3 pulses per round, resolved at the end of your turn).",
+      "learnLevel": 26,
+      "rankLevels": [26, 36, 46, 56],
+      "trainCost": 7910,
+      "cost": {"type": "Mana", "amount": 230, "perLevel": 14},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_magma", "totemElement": "Fire", "lifetime": 20}],
+      "tags": ["Totem"],
+      "aiHint": "AoE",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_magma_totem_pulse",
+      "name": "Magma Pulse",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Deals {0} Fire damage to enemies within 8 yards (three pulses).",
+      "learnLevel": 26,
+      "rankLevels": [26, 36, 46, 56],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 66, "perLevel": 5.3, "coef": 0.1}],
+      "tags": ["Totem"],
+      "aiHint": "AoE",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_flametongue_totem",
+      "name": "Flametongue Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Summons a Flametongue Totem at the feet of the caster. Party members within 20 yards gain the Flametongue effect: each melee hit causes 7-11 (rank 1) to about 28-32 (rank 4) additional Fire damage. Lasts 2 min.",
+      "learnLevel": 28,
+      "rankLevels": [28, 38, 48, 58],
+      "trainCost": 9170,
+      "cost": {"type": "Mana", "amount": 115, "perLevel": 5.333},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_flametongue",
+          "totemElement": "Fire",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_flametongue_totem_pulse",
+      "name": "Flametongue Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Melee hits deal additional Fire damage (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 28,
+      "rankLevels": [28, 38, 48, 58],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_flametongue_totem_buff"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_frost_resistance_totem",
+      "name": "Frost Resistance Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Summons a Frost Resistance Totem at the feet of the caster. The totem increases party members' Frost resistance by 30 (rank 1) to 60 (rank 3) within 20 yards. Lasts 2 min.",
+      "learnLevel": 24,
+      "rankLevels": [24, 38, 54],
+      "trainCost": 6740,
+      "cost": {"type": "Mana", "amount": 135, "perLevel": 4.5},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_frost_resistance",
+          "totemElement": "Fire",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 1
+    },
+    {
+      "id": "shaman_frost_resistance_totem_pulse",
+      "name": "Frost Resistance Totem",
+      "icon": "totem_fire",
+      "classId": "Shaman",
+      "school": "Fire",
+      "description": "Frost resistance increased (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 24,
+      "rankLevels": [24, 38, 54],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_frost_resistance"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_healing_stream_totem",
+      "name": "Healing Stream Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Healing Stream Totem at the feet of the caster for 1 min that heals party members within 20 yards for 6 (rank 1) to 14 (rank 5) every 2 sec (3 pulses per round, resolved at the end of your turn).",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "trainCost": 4680,
+      "cost": {"type": "Mana", "amount": 40, "perLevel": 1},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_healing_stream",
+          "totemElement": "Water",
+          "lifetime": 60
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Heal",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_healing_stream_totem_pulse",
+      "name": "Healing Stream",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Heals party members within 20 yards for {0} (three pulses).",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "Heal", "min": 18, "perLevel": 0.6, "coef": 0.066}],
+      "tags": ["Totem", "Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_mana_spring_totem",
+      "name": "Mana Spring Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Mana Spring Totem at the feet of the caster for 1 min that restores 4 (rank 1) to 10 (rank 4) mana every 2 sec to party members within 20 yards (3 pulses per round, resolved at the end of your turn).",
+      "learnLevel": 26,
+      "rankLevels": [26, 36, 46, 56],
+      "trainCost": 7910,
+      "cost": {"type": "Mana", "amount": 40, "perLevel": 2},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_mana_spring",
+          "totemElement": "Water",
+          "lifetime": 60
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_mana_spring_totem_pulse",
+      "name": "Mana Spring",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Restores {0} mana to party members within 20 yards (three pulses).",
+      "learnLevel": 26,
+      "rankLevels": [26, 36, 46, 56],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "GainResource", "resource": "Mana", "amount": 12, "perLevel": 0.6}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_poison_cleansing_totem",
+      "name": "Poison Cleansing Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Poison Cleansing Totem at the feet of the caster that attempts to remove 1 poison effect from party members within 20 yards every 5 sec (once per round). Lasts 2 min.",
+      "learnLevel": 22,
+      "trainCost": 5660,
+      "cost": {"type": "Mana", "amount": 50},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_poison_cleansing",
+          "totemElement": "Water",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Utility",
+      "aiPriority": 2
+    },
+    {
+      "id": "shaman_poison_cleansing_totem_pulse",
+      "name": "Poison Cleansing",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Removes 1 poison effect from each party member within 20 yards.",
+      "learnLevel": 22,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "Dispel", "dispelType": "Poison", "dispelCount": 1}],
+      "tags": ["Totem"],
+      "aiHint": "Utility",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_disease_cleansing_totem",
+      "name": "Disease Cleansing Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Disease Cleansing Totem at the feet of the caster that attempts to remove 1 disease effect from party members within 20 yards every 5 sec (once per round). Lasts 2 min.",
+      "learnLevel": 38,
+      "trainCost": 16890,
+      "cost": {"type": "Mana", "amount": 50},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_disease_cleansing",
+          "totemElement": "Water",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Utility",
+      "aiPriority": 2
+    },
+    {
+      "id": "shaman_disease_cleansing_totem_pulse",
+      "name": "Disease Cleansing",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Removes 1 disease effect from each party member within 20 yards.",
+      "learnLevel": 38,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}],
+      "tags": ["Totem"],
+      "aiHint": "Utility",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_fire_resistance_totem",
+      "name": "Fire Resistance Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Fire Resistance Totem at the feet of the caster. The totem increases party members' Fire resistance by 30 (rank 1) to 60 (rank 3) within 20 yards. Lasts 2 min.",
+      "learnLevel": 28,
+      "rankLevels": [28, 42, 58],
+      "trainCost": 9170,
+      "cost": {"type": "Mana", "amount": 145, "perLevel": 4.667},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_fire_resistance",
+          "totemElement": "Water",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 1
+    },
+    {
+      "id": "shaman_fire_resistance_totem_pulse",
+      "name": "Fire Resistance Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Fire resistance increased (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 28,
+      "rankLevels": [28, 42, 58],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_fire_resistance"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_mana_tide_totem",
+      "name": "Mana Tide Totem",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Mana Tide Totem at the feet of the caster for 12 sec that restores 170 (rank 1) to 290 (rank 3) mana every 3 sec to party members within 20 yards (2 pulses per round, resolved at the end of your turn).",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 58],
+      "fromTalent": true,
+      "cooldown": 300,
+      "cost": {"type": "Mana", "amount": 40, "perLevel": 1.111},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_mana_tide",
+          "totemElement": "Water",
+          "lifetime": 13
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_mana_tide_totem_pulse",
+      "name": "Mana Tide",
+      "icon": "totem_water",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Restores {0} mana to party members within 20 yards (two pulses).",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 58],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "GainResource", "resource": "Mana", "amount": 340, "perLevel": 13.333}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_windfury_totem",
+      "name": "Windfury Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Windfury Totem at the feet of the caster. Party members within 20 yards gain Windfury on their melee weapons: each hit has a 20% chance of granting 1 extra attack with 122 (rank 1) to 315 (rank 3) extra attack power. Lasts 2 min.",
+      "learnLevel": 32,
+      "rankLevels": [32, 42, 52],
+      "trainCost": 11980,
+      "cost": {"type": "Mana", "amount": 95, "perLevel": 4},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_windfury", "totemElement": "Air", "lifetime": 120}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "shaman_windfury_totem_pulse",
+      "name": "Windfury Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Melee hits have a 20% chance to grant an extra attack (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 32,
+      "rankLevels": [32, 42, 52],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_windfury_totem_buff"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_grace_of_air_totem",
+      "name": "Grace of Air Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Grace of Air Totem at the feet of the caster. Party members within 20 yards gain 43 (rank 1) to 77 (rank 3) Agility. Lasts 2 min.",
+      "learnLevel": 42,
+      "rankLevels": [42, 56, 60],
+      "trainCost": 20640,
+      "cost": {"type": "Mana", "amount": 155, "perLevel": 8.611},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_grace_of_air",
+          "totemElement": "Air",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_grace_of_air_totem_pulse",
+      "name": "Grace of Air Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Agility increased (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 42,
+      "rankLevels": [42, 56, 60],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_grace_of_air"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_grounding_totem",
+      "name": "Grounding Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Grounding Totem at the feet of the caster that will redirect one harmful single-target spell cast on a nearby party member to itself every 10 seconds. Will not redirect area of effect spells. Lasts 45 sec.",
+      "learnLevel": 30,
+      "trainCost": 10530,
+      "cooldown": 15,
+      "cost": {"type": "Mana", "amount": 90},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_grounding", "totemElement": "Air", "lifetime": 45}],
+      "tags": ["Totem"],
+      "aiHint": "Defensive",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_nature_resistance_totem",
+      "name": "Nature Resistance Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Nature Resistance Totem at the feet of the caster. The totem increases party members' Nature resistance by 30 (rank 1) to 60 (rank 3) within 20 yards. Lasts 2 min.",
+      "learnLevel": 30,
+      "rankLevels": [30, 44, 60],
+      "trainCost": 10530,
+      "cost": {"type": "Mana", "amount": 160, "perLevel": 4.667},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_nature_resistance",
+          "totemElement": "Air",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 1
+    },
+    {
+      "id": "shaman_nature_resistance_totem_pulse",
+      "name": "Nature Resistance Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Nature resistance increased (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 30,
+      "rankLevels": [30, 44, 60],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_nature_resistance"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_windwall_totem",
+      "name": "Windwall Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Windwall Totem at the feet of the caster that reduces the damage of each ranged attack against party members within 20 yards by 10 (rank 1) to 25 (rank 3). Lasts 2 min.",
+      "learnLevel": 36,
+      "rankLevels": [36, 46, 56],
+      "trainCost": 15160,
+      "cost": {"type": "Mana", "amount": 115, "perLevel": 5.5},
+      "target": "Self",
+      "effects": [{"type": "SummonTotem", "target": "Self", "summon": "shaman_totem_windwall", "totemElement": "Air", "lifetime": 120}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "shaman_windwall_totem_pulse",
+      "name": "Windwall Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Ranged damage taken reduced by a flat amount per hit (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 36,
+      "rankLevels": [36, 46, 56],
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_windwall"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_tranquil_air_totem",
+      "name": "Tranquil Air Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Summons a Tranquil Air Totem at the feet of the caster. Party members within 20 yards generate 20% less threat. Lasts 2 min.",
+      "learnLevel": 50,
+      "trainCost": 29250,
+      "cost": {"type": "Mana", "amount": 50},
+      "target": "Self",
+      "effects": [
+        {
+          "type": "SummonTotem",
+          "target": "Self",
+          "summon": "shaman_totem_tranquil_air",
+          "totemElement": "Air",
+          "lifetime": 120
+        }
+      ],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "shaman_tranquil_air_totem_pulse",
+      "name": "Tranquil Air Totem",
+      "icon": "totem_air",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Threat generated reduced by 20% (within 20 yards; refreshed at the end of the shaman's turn).",
+      "learnLevel": 50,
+      "hidden": true,
+      "time": "OffGcd",
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Allies"},
+      "effects": [{"type": "ApplyAura", "aura": "shaman_tranquil_air"}],
+      "tags": ["Totem"],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "shaman_elemental_mastery",
+      "name": "Elemental Mastery",
+      "icon": "sparkle",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "When activated, your next Fire, Frost, or Nature damage spell has a 100% critical strike chance and costs no mana.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 180,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "shaman_elemental_mastery"}],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "shaman_stormstrike",
+      "name": "Stormstrike",
+      "icon": "fist",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "Gives you an extra attack ({0}). In addition, the next 2 sources of Nature damage dealt to the target are increased by 20%. Lasts 12 sec.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "cooldown": 20,
+      "cost": {"type": "Mana", "pctBaseMana": 21},
+      "target": "Enemy",
+      "melee": true,
+      "requires": {"meleeWeapon": true},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}, {"type": "ApplyAura", "aura": "shaman_stormstrike"}],
+      "aiHint": "Damage",
+      "aiPriority": 8
+    },
+    {
+      "id": "shaman_natures_swiftness",
+      "name": "Nature's Swiftness",
+      "icon": "leaf",
+      "classId": "Shaman",
+      "school": "Nature",
+      "description": "When activated, your next Nature spell with a casting time less than 10 sec. becomes an instant cast spell.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 180,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "shaman_natures_swiftness"}],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "shaman_parry",
+      "name": "Parry",
+      "icon": "swords",
+      "classId": "Shaman",
+      "school": "Physical",
+      "description": "Gives a chance to parry enemy melee attacks.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "passive": true,
+      "passiveAura": "shaman_parry"
+    }
+  ],
+  "auras": [
+    {
+      "id": "shaman_flame_shock",
+      "name": "Flame Shock",
+      "icon": "flame_wave",
+      "description": "Burning for Fire damage every 3 sec.",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 12,
+      "tickInterval": 3,
+      "tickEffects": [{"type": "Damage", "min": 7, "perLevel": 1.46, "coef": 0.1}]
+    },
+    {
+      "id": "shaman_frost_shock",
+      "name": "Frost Shock",
+      "icon": "frost",
+      "description": "Movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 8,
+      "mods": [{"stat": "MoveSpeed", "value": -50}]
+    },
+    {
+      "id": "shaman_lightning_shield",
+      "name": "Lightning Shield",
+      "icon": "storm",
+      "description": "Attackers are struck by lightning.",
+      "kind": "Buff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 600,
+      "charges": 3,
+      "tags": ["Shield"],
+      "procs": [
+        {
+          "trigger": "OnStruck",
+          "chance": 100,
+          "consumeCharge": true,
+          "effects": [{"type": "Damage", "target": "Attacker", "min": 13, "perLevel": 3.854, "coef": 0.267}]
+        }
+      ]
+    },
+    {
+      "id": "shaman_ghost_wolf",
+      "name": "Ghost Wolf",
+      "icon": "wolf_spirit",
+      "description": "Movement speed increased by 40%. Shapeshifted.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 0,
+      "exclusiveGroup": "shaman_form",
+      "tags": ["Shapeshift", "Form"],
+      "mods": [{"stat": "MoveSpeed", "value": 40}],
+      "states": ["Shapeshift"]
+    },
+    {
+      "id": "shaman_reincarnation",
+      "name": "Reincarnation",
+      "icon": "halo",
+      "description": "You may reincarnate when slain (requires an Ankh).",
+      "kind": "Buff",
+      "school": "Nature",
+      "hidden": true,
+      "persistThroughDeath": true,
+      "special": "ShamanReincarnation"
+    },
+    {
+      "id": "shaman_rockbiter_weapon",
+      "name": "Rockbiter Weapon",
+      "icon": "rock",
+      "description": "Melee attack power increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 300,
+      "exclusiveGroup": "shaman_imbue",
+      "tags": ["Imbue"],
+      "mods": [{"stat": "AttackPower", "value": 29, "values": [29, 39, 50, 62, 76, 90, 104]}]
+    },
+    {
+      "id": "shaman_flametongue_weapon",
+      "name": "Flametongue Weapon",
+      "icon": "ember",
+      "description": "Melee hits deal additional Fire damage.",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 300,
+      "exclusiveGroup": "shaman_imbue",
+      "tags": ["Imbue"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 100,
+          "effects": [{"type": "Damage", "target": "Target", "school": "Fire", "min": 9, "max": 13, "perLevel": 1.022, "coef": 0.1}]
+        }
+      ]
+    },
+    {
+      "id": "shaman_frostbrand_weapon",
+      "name": "Frostbrand Weapon",
+      "icon": "ice_shard",
+      "description": "Melee hits may deal Frost damage and slow.",
+      "kind": "Buff",
+      "school": "Frost",
+      "duration": 300,
+      "exclusiveGroup": "shaman_imbue",
+      "tags": ["Imbue"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "ppm": 9,
+          "effects": [
+            {"type": "Damage", "target": "Target", "school": "Frost", "min": 46, "perLevel": 2.895, "coef": 0.1},
+            {"type": "ApplyAura", "target": "Target", "aura": "shaman_frostbrand_attack"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shaman_frostbrand_attack",
+      "name": "Frostbrand Attack",
+      "icon": "ice_shard",
+      "description": "Movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 8,
+      "mods": [{"stat": "MoveSpeed", "value": -50}]
+    },
+    {
+      "id": "shaman_windfury_weapon",
+      "name": "Windfury Weapon",
+      "icon": "wind",
+      "description": "Melee hits have a 20% chance to grant two extra attacks.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 300,
+      "exclusiveGroup": "shaman_imbue",
+      "tags": ["Imbue"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 20,
+          "effects": [
+            {
+              "type": "Special",
+              "target": "Self",
+              "special": "ShamanWindfuryAttack",
+              "count": 2,
+              "min": 46,
+              "perLevel": 9.567
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shaman_stoneskin",
+      "name": "Stoneskin",
+      "icon": "rock",
+      "description": "Melee damage taken reduced by a flat amount per hit.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "absorb": {"amount": 3, "perLevel": 0.34, "schools": ["Physical"]},
+      "special": "ShamanStoneskin"
+    },
+    {
+      "id": "shaman_earthbind",
+      "name": "Earthbind",
+      "icon": "totem_earth",
+      "description": "Movement speed reduced by 50%.",
+      "kind": "Debuff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "MoveSpeed", "value": -50}]
+    },
+    {
+      "id": "shaman_strength_of_earth",
+      "name": "Strength of Earth",
+      "icon": "totem_earth",
+      "description": "Strength increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "Strength", "value": 10, "perLevel": 1.34}]
+    },
+    {
+      "id": "shaman_flametongue_totem_buff",
+      "name": "Flametongue Totem",
+      "icon": "totem_fire",
+      "description": "Melee hits deal additional Fire damage.",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 10,
+      "tags": ["Totem"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 100,
+          "effects": [{"type": "Damage", "target": "Target", "school": "Fire", "min": 7, "max": 11, "perLevel": 0.7}]
+        }
+      ]
+    },
+    {
+      "id": "shaman_frost_resistance",
+      "name": "Frost Resistance",
+      "icon": "totem_fire",
+      "description": "Frost resistance increased.",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "Resistance", "value": 30, "perLevel": 1, "school": "Frost"}]
+    },
+    {
+      "id": "shaman_fire_resistance",
+      "name": "Fire Resistance",
+      "icon": "totem_water",
+      "description": "Fire resistance increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "Resistance", "value": 30, "perLevel": 1, "school": "Fire"}]
+    },
+    {
+      "id": "shaman_windfury_totem_buff",
+      "name": "Windfury Totem",
+      "icon": "totem_air",
+      "description": "Melee hits have a 20% chance to grant an extra attack.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "chance": 20,
+          "effects": [
+            {
+              "type": "Special",
+              "target": "Self",
+              "special": "ShamanWindfuryAttack",
+              "count": 1,
+              "min": 122,
+              "perLevel": 9.65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shaman_grace_of_air",
+      "name": "Grace of Air",
+      "icon": "totem_air",
+      "description": "Agility increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "Agility", "value": 43, "perLevel": 1.889}]
+    },
+    {
+      "id": "shaman_grounding_totem_effect",
+      "name": "Grounding Totem Effect",
+      "icon": "totem_air",
+      "description": "Redirects one harmful spell cast on a party member within 20 yards to the totem every 10 sec.",
+      "kind": "Buff",
+      "school": "Nature",
+      "hidden": true,
+      "special": "ShamanGroundingTotem"
+    },
+    {
+      "id": "shaman_nature_resistance",
+      "name": "Nature Resistance",
+      "icon": "totem_air",
+      "description": "Nature resistance increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "Resistance", "value": 30, "perLevel": 1, "school": "Nature"}]
+    },
+    {
+      "id": "shaman_windwall",
+      "name": "Windwall",
+      "icon": "totem_air",
+      "description": "Ranged damage taken reduced by a flat amount per hit.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "absorb": {"amount": 10, "perLevel": 0.75, "schools": ["Physical"]},
+      "special": "ShamanWindwall"
+    },
+    {
+      "id": "shaman_tranquil_air",
+      "name": "Tranquil Air",
+      "icon": "totem_air",
+      "description": "Threat generated reduced by 20%.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "tags": ["Totem"],
+      "mods": [{"stat": "ThreatGenerated", "value": -20}]
+    },
+    {
+      "id": "shaman_elemental_mastery",
+      "name": "Elemental Mastery",
+      "icon": "sparkle",
+      "description": "Your next Fire, Frost, or Nature damage spell is a critical strike and costs no mana.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 0,
+      "charges": 1,
+      "procs": [
+        {
+          "trigger": "OnSpellCast",
+          "chance": 100,
+          "abilities": [
+            "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+            "shaman_frost_shock"
+          ],
+          "consumeCharge": true,
+          "effects": []
+        }
+      ],
+      "special": "ShamanNextDamageSpell"
+    },
+    {
+      "id": "shaman_stormstrike",
+      "name": "Stormstrike",
+      "icon": "fist",
+      "description": "Nature damage taken increased by 20% (2 charges).",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Magic",
+      "duration": 12,
+      "charges": 2,
+      "mods": [{"stat": "DamageTaken", "value": 20, "school": "Nature"}],
+      "procs": [{"trigger": "OnDamaged", "chance": 100, "schools": ["Nature"], "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "shaman_natures_swiftness",
+      "name": "Nature's Swiftness",
+      "icon": "leaf",
+      "description": "Your next Nature spell with a casting time less than 10 sec is instant.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 0,
+      "charges": 1,
+      "special": "ShamanNaturesSwiftness"
+    },
+    {
+      "id": "shaman_parry",
+      "name": "Parry",
+      "icon": "swords",
+      "description": "Able to parry melee attacks.",
+      "kind": "Buff",
+      "school": "Physical",
+      "hidden": true,
+      "mods": [{"stat": "Parry", "value": 5}]
+    },
+    {
+      "id": "shaman_clearcasting",
+      "name": "Clearcasting",
+      "icon": "sparkle",
+      "description": "Your next damage spell costs no mana.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 15,
+      "charges": 1,
+      "procs": [
+        {
+          "trigger": "OnSpellCast",
+          "chance": 100,
+          "abilities": [
+            "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+            "shaman_frost_shock"
+          ],
+          "consumeCharge": true,
+          "effects": []
+        }
+      ],
+      "special": "ShamanClearcasting"
+    },
+    {
+      "id": "shaman_focused_casting",
+      "name": "Focused Casting",
+      "icon": "storm",
+      "description": "Taking damage does not delay your spellcasting.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 6,
+      "special": "ShamanPushbackResist"
+    },
+    {
+      "id": "shaman_elemental_devastation",
+      "name": "Elemental Devastation",
+      "icon": "storm",
+      "description": "Melee critical strike chance increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 10,
+      "mods": [{"stat": "MeleeCrit", "value": 3, "values": [3, 6, 9]}]
+    },
+    {
+      "id": "shaman_flurry",
+      "name": "Flurry",
+      "icon": "wind",
+      "description": "Attack speed increased for the next 3 swings.",
+      "kind": "Buff",
+      "school": "Physical",
+      "duration": 15,
+      "charges": 3,
+      "mods": [{"stat": "MeleeHaste", "value": 10, "values": [10, 15, 20, 25, 30]}],
+      "procs": [{"trigger": "OnAutoAttackHit", "chance": 100, "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "shaman_ancestral_fortitude",
+      "name": "Ancestral Fortitude",
+      "icon": "armor",
+      "description": "Armor increased.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 15,
+      "mods": [{"stat": "Armor", "value": 8, "values": [8, 16, 25], "pct": true}]
+    },
+    {
+      "id": "shaman_healing_way",
+      "name": "Healing Way",
+      "icon": "wave",
+      "description": "Healing received increased by 6% per stack.",
+      "kind": "Buff",
+      "school": "Nature",
+      "duration": 15,
+      "maxStacks": 3,
+      "mods": [{"stat": "HealingTaken", "value": 6}]
+    }
+  ],
+  "talentTrees": [
+    {
+      "id": "tree_shaman_elemental",
+      "classId": "Shaman",
+      "name": "Elemental",
+      "icon": "lightning",
+      "description": "Command the storm: stronger, cheaper Lightning and Shocks, Elemental Fury and Elemental Mastery.",
+      "talents": [
+        {
+          "id": "shaman_ele_convection",
+          "name": "Convection",
+          "icon": "lightning",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the mana cost of your Shock, Lightning Bolt and Chain Lightning spells by {2/4/6/8/10}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Cost",
+              "value": -2,
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"],
+              "tags": ["Shock"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_concussion",
+          "name": "Concussion",
+          "icon": "storm",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage done by your Lightning Bolt, Chain Lightning and Shock spells by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 1,
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"],
+              "tags": ["Shock"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_earths_grasp",
+          "name": "Earth's Grasp",
+          "icon": "earth",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the health of your Stoneclaw Totem by {25/50}% and the radius of your Earthbind Totem by {10/20}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Radius",
+              "value": 10,
+              "abilities": ["shaman_earthbind_totem_pulse"],
+              "target": "Pet"
+            },
+            {"type": "Special", "special": "ShamanEarthsGrasp", "values": [25, 50]}
+          ]
+        },
+        {
+          "id": "shaman_ele_elemental_warding",
+          "name": "Elemental Warding",
+          "icon": "shield",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Reduces damage taken from Fire, Frost and Nature effects by {4/7/10}%.",
+          "effects": [
+            {"type": "Stat", "stat": "DamageTaken", "values": [-4, -7, -10], "school": "Fire"},
+            {"type": "Stat", "stat": "DamageTaken", "values": [-4, -7, -10], "school": "Frost"},
+            {"type": "Stat", "stat": "DamageTaken", "values": [-4, -7, -10], "school": "Nature"}
+          ]
+        },
+        {
+          "id": "shaman_ele_call_of_flame",
+          "name": "Call of Flame",
+          "icon": "totem_fire",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the damage done by your Fire Totems by {5/10/15}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 5,
+              "abilities": ["shaman_searing_totem_attack", "shaman_magma_totem_pulse", "shaman_fire_nova_totem_blast"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_elemental_focus",
+          "name": "Elemental Focus",
+          "icon": "sparkle",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Gives you a 10% chance to enter a Clearcasting state after casting any Fire, Frost, or Nature damage spell. The Clearcasting state reduces the mana cost of your next damage spell by 100%.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellCast",
+                "chance": 10,
+                "abilities": [
+                  "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+                  "shaman_frost_shock"
+                ],
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "shaman_clearcasting"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_reverberation",
+          "name": "Reverberation",
+          "icon": "earth",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the cooldown of your Shock spells by {0.2/0.4/0.6/0.8/1} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -0.2, "tags": ["Shock"]}]
+        },
+        {
+          "id": "shaman_ele_call_of_thunder",
+          "name": "Call of Thunder",
+          "icon": "lightning",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the critical strike chance of your Lightning Bolt and Chain Lightning spells by an additional {1/2/3/4/6}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CritChance",
+              "values": [1, 2, 3, 4, 6],
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_improved_fire_totems",
+          "name": "Improved Fire Totems",
+          "icon": "totem_fire",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the delay before your Fire Nova Totem activates by {1/2} sec. (it already explodes at the end of your turn in Lanternvale) and decreases the threat generated by your Magma Totem by {25/50}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Threat",
+              "value": -25,
+              "abilities": ["shaman_magma_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_eye_of_the_storm",
+          "name": "Eye of the Storm",
+          "icon": "storm",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Gives you a {33/66/100}% chance to gain the Focused Casting effect that lasts for 6 sec after being the victim of a melee or ranged critical strike. The Focused Casting effect prevents you from losing casting time when taking damage.",
+          "effects": [
+            {
+              "type": "Proc",
+              "values": [33, 66, 100],
+              "proc": {
+                "trigger": "OnCritTaken",
+                "schools": ["Physical"],
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "shaman_focused_casting"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_elemental_devastation",
+          "name": "Elemental Devastation",
+          "icon": "storm",
+          "tier": 4,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Your offensive spell crits will increase your chance to get a critical strike with melee attacks by {3/6/9}% for 10 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellCrit",
+                "chance": 100,
+                "abilities": [
+                  "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+                  "shaman_frost_shock"
+                ],
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "shaman_elemental_devastation"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_storm_reach",
+          "name": "Storm Reach",
+          "icon": "chain_lightning",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the range of your Lightning Bolt and Chain Lightning spells by {3/6} yards.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Range",
+              "value": 10,
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_elemental_fury",
+          "name": "Elemental Fury",
+          "icon": "fire",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Increases the critical strike damage bonus of your Searing, Magma, and Fire Nova Totems and your Fire, Frost, and Nature spells by 100%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CritBonus",
+              "value": 100,
+              "abilities": [
+                "shaman_lightning_bolt", "shaman_chain_lightning", "shaman_earth_shock", "shaman_flame_shock",
+                "shaman_frost_shock"
+              ]
+            },
+            {
+              "type": "AbilityMod",
+              "property": "CritBonus",
+              "value": 100,
+              "abilities": ["shaman_searing_totem_attack", "shaman_magma_totem_pulse", "shaman_fire_nova_totem_blast"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_lightning_mastery",
+          "name": "Lightning Mastery",
+          "icon": "lightning",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Reduces the cast time of your Lightning Bolt and Chain Lightning spells by {0.2/0.4/0.6/0.8/1} sec.",
+          "requires": "shaman_ele_call_of_thunder",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CastTime",
+              "value": -0.2,
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_ele_elemental_mastery",
+          "name": "Elemental Mastery",
+          "icon": "sparkle",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "When activated, this spell gives your next Fire, Frost, or Nature damage spell a 100% critical strike chance and reduces the mana cost by 100%. 3 min cooldown.",
+          "requires": "shaman_ele_elemental_fury",
+          "effects": [{"type": "GrantAbility", "ability": "shaman_elemental_mastery"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_shaman_enhancement",
+      "classId": "Shaman",
+      "name": "Enhancement",
+      "icon": "fist",
+      "description": "The spirit-touched warrior: weapon imbues, Flurry, two-handed weapons and Stormstrike.",
+      "talents": [
+        {
+          "id": "shaman_enh_ancestral_knowledge",
+          "name": "Ancestral Knowledge",
+          "icon": "brain",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your maximum Mana by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Mana", "value": 1, "pct": true}]
+        },
+        {
+          "id": "shaman_enh_shield_specialization",
+          "name": "Shield Specialization",
+          "icon": "shield",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your chance to block attacks with a shield by {1/2/3/4/5}% and increases the amount blocked by {5/10/15/20/25}%.",
+          "effects": [{"type": "Stat", "stat": "Block", "value": 1}, {"type": "Stat", "stat": "BlockValue", "value": 5, "pct": true}]
+        },
+        {
+          "id": "shaman_enh_guardian_totems",
+          "name": "Guardian Totems",
+          "icon": "totem_earth",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the amount of damage reduced by your Stoneskin Totem and Windwall Totem by {10/20}% and reduces the cooldown of your Grounding Totem by {1/2} sec.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 10,
+              "abilities": ["shaman_stoneskin_totem_pulse", "shaman_windwall_totem_pulse"],
+              "target": "Pet"
+            },
+            {"type": "AbilityMod", "property": "Cooldown", "value": -1, "abilities": ["shaman_grounding_totem"]}
+          ]
+        },
+        {
+          "id": "shaman_enh_thundering_strikes",
+          "name": "Thundering Strikes",
+          "icon": "lightning",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Improves your chance to get a critical strike with your weapon attacks by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "shaman_enh_improved_ghost_wolf",
+          "name": "Improved Ghost Wolf",
+          "icon": "wolf_spirit",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Reduces the cast time of your Ghost Wolf spell by {1/2} sec.",
+          "effects": [{"type": "AbilityMod", "property": "CastTime", "value": -1, "abilities": ["shaman_ghost_wolf"]}]
+        },
+        {
+          "id": "shaman_enh_improved_lightning_shield",
+          "name": "Improved Lightning Shield",
+          "icon": "storm",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Increases the damage done by your Lightning Shield orbs by {5/10/15}%.",
+          "effects": [{"type": "AbilityMod", "property": "Damage", "value": 5, "abilities": ["shaman_lightning_shield"]}]
+        },
+        {
+          "id": "shaman_enh_enhancing_totems",
+          "name": "Enhancing Totems",
+          "icon": "totem_earth",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the effect of your Strength of Earth and Grace of Air Totems by {8/15}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "values": [8, 15],
+              "abilities": ["shaman_strength_of_earth_totem_pulse", "shaman_grace_of_air_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_enh_two_handed_axes_and_maces",
+          "name": "Two-Handed Axes and Maces",
+          "icon": "axe",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Allows you to use Two-Handed Axes and Two-Handed Maces.",
+          "effects": [{"type": "Special", "special": "ShamanTwoHandedWeapons"}]
+        },
+        {
+          "id": "shaman_enh_anticipation",
+          "name": "Anticipation",
+          "icon": "eye",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases your chance to dodge by an additional {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Dodge", "value": 1}]
+        },
+        {
+          "id": "shaman_enh_flurry",
+          "name": "Flurry",
+          "icon": "wind",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your attack speed by {10/15/20/25/30}% for your next 3 swings after dealing a critical strike.",
+          "requires": "shaman_enh_thundering_strikes",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnMeleeCrit",
+                "chance": 100,
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "shaman_flurry"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_enh_toughness",
+          "name": "Toughness",
+          "icon": "armor",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your armor value from items by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Armor", "value": 2, "pct": true}]
+        },
+        {
+          "id": "shaman_enh_improved_weapon_totems",
+          "name": "Improved Weapon Totems",
+          "icon": "totem_air",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Increases the melee attack power bonus of your Windfury Totem by {15/30}% and increases the damage caused by your Flametongue Totem by {6/12}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "values": [15, 30],
+              "abilities": ["shaman_windfury_totem_pulse"],
+              "target": "Pet"
+            },
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "values": [6, 12],
+              "abilities": ["shaman_flametongue_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_enh_elemental_weapons",
+          "name": "Elemental Weapons",
+          "icon": "ember",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases the melee attack power bonus of your Rockbiter Weapon by {7/14/20}%, your Frostbrand Weapon damage by {7/14/20}% and your Flametongue Weapon damage by {5/10/15}%.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Effect", "values": [7, 14, 20], "abilities": ["shaman_rockbiter_weapon"]},
+            {"type": "AbilityMod", "property": "Damage", "values": [7, 14, 20], "abilities": ["shaman_frostbrand_weapon"]},
+            {"type": "AbilityMod", "property": "Damage", "values": [5, 10, 15], "abilities": ["shaman_flametongue_weapon"]}
+          ]
+        },
+        {
+          "id": "shaman_enh_parry",
+          "name": "Parry",
+          "icon": "swords",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Gives a chance to parry enemy melee attacks.",
+          "effects": [{"type": "GrantAbility", "ability": "shaman_parry"}]
+        },
+        {
+          "id": "shaman_enh_weapon_mastery",
+          "name": "Weapon Mastery",
+          "icon": "mace",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage you deal with all weapons by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "DamageDone", "value": 2, "school": "Physical"}]
+        },
+        {
+          "id": "shaman_enh_stormstrike",
+          "name": "Stormstrike",
+          "icon": "fist",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Gives you an extra attack. In addition, the next 2 sources of Nature damage dealt to the target are increased by 20%. Lasts 12 sec.",
+          "requires": "shaman_enh_elemental_weapons",
+          "effects": [{"type": "GrantAbility", "ability": "shaman_stormstrike"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_shaman_restoration",
+      "classId": "Shaman",
+      "name": "Restoration",
+      "icon": "water_drop",
+      "description": "Healer of the tribe: cheaper, stronger heals, Nature's Swiftness and Mana Tide Totem.",
+      "talents": [
+        {
+          "id": "shaman_resto_improved_healing_wave",
+          "name": "Improved Healing Wave",
+          "icon": "wave",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Reduces the casting time of your Healing Wave spell by {0.1/0.2/0.3/0.4/0.5} sec.",
+          "effects": [{"type": "AbilityMod", "property": "CastTime", "value": -0.1, "abilities": ["shaman_healing_wave"]}]
+        },
+        {
+          "id": "shaman_resto_tidal_focus",
+          "name": "Tidal Focus",
+          "icon": "water_drop",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Reduces the mana cost of your healing spells by {1/2/3/4/5}%.",
+          "effects": [{"type": "AbilityMod", "property": "Cost", "value": -1, "tags": ["Heal"]}]
+        },
+        {
+          "id": "shaman_resto_improved_reincarnation",
+          "name": "Improved Reincarnation",
+          "icon": "halo",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Reincarnation spell by {10/20} min and increases the amount of health and mana you reincarnate with by an additional {10/20}%.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Cooldown", "value": -600, "abilities": ["shaman_reincarnation"]},
+            {"type": "AbilityMod", "property": "Effect", "value": 50, "abilities": ["shaman_reincarnation"]}
+          ]
+        },
+        {
+          "id": "shaman_resto_ancestral_healing",
+          "name": "Ancestral Healing",
+          "icon": "heal_plus",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases your target's armor value by {8/16/25}% for 15 sec after getting a critical effect from one of your healing spells.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellCrit",
+                "chance": 100,
+                "tags": ["Heal"],
+                "effects": [{"type": "ApplyAura", "target": "Target", "aura": "shaman_ancestral_fortitude"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_totemic_focus",
+          "name": "Totemic Focus",
+          "icon": "totem",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Reduces the mana cost of your totems by {5/10/15/20/25}%.",
+          "effects": [{"type": "AbilityMod", "property": "Cost", "value": -5, "tags": ["Totem"]}]
+        },
+        {
+          "id": "shaman_resto_natures_guidance",
+          "name": "Nature's Guidance",
+          "icon": "leaf",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases your chance to hit with melee attacks and spells by {1/2/3}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeHit", "value": 1}, {"type": "Stat", "stat": "SpellHit", "value": 1}]
+        },
+        {
+          "id": "shaman_resto_healing_focus",
+          "name": "Healing Focus",
+          "icon": "hands_pray",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Gives you a {14/28/42/56/70}% chance to avoid interruption caused by damage while casting any healing spell.",
+          "effects": [{"type": "Special", "special": "ShamanPushbackResist", "values": [14, 28, 42, 56, 70]}]
+        },
+        {
+          "id": "shaman_resto_totemic_mastery",
+          "name": "Totemic Mastery",
+          "icon": "totem",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 1,
+          "description": "The radius of your totems that affect friendly targets is increased to 30 yards.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Radius",
+              "value": 50,
+              "abilities": [
+                "shaman_stoneskin_totem_pulse", "shaman_strength_of_earth_totem_pulse", "shaman_flametongue_totem_pulse",
+                "shaman_frost_resistance_totem_pulse", "shaman_healing_stream_totem_pulse",
+                "shaman_mana_spring_totem_pulse", "shaman_poison_cleansing_totem_pulse",
+                "shaman_disease_cleansing_totem_pulse", "shaman_fire_resistance_totem_pulse",
+                "shaman_mana_tide_totem_pulse", "shaman_windfury_totem_pulse", "shaman_grace_of_air_totem_pulse",
+                "shaman_nature_resistance_totem_pulse", "shaman_windwall_totem_pulse", "shaman_tranquil_air_totem_pulse"
+              ],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_healing_grace",
+          "name": "Healing Grace",
+          "icon": "hands_pray",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 3,
+          "description": "Reduces the threat generated by your healing spells by {5/10/15}%.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Threat", "value": -5, "tags": ["Heal"]},
+            {
+              "type": "AbilityMod",
+              "property": "Threat",
+              "value": -5,
+              "abilities": ["shaman_healing_stream_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_restorative_totems",
+          "name": "Restorative Totems",
+          "icon": "totem_water",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the effect of your Mana Spring and Healing Stream Totems by {5/10/15/20/25}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Healing",
+              "value": 5,
+              "abilities": ["shaman_healing_stream_totem_pulse"],
+              "target": "Pet"
+            },
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 5,
+              "abilities": ["shaman_mana_spring_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_tidal_mastery",
+          "name": "Tidal Mastery",
+          "icon": "wave",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the critical effect chance of your healing and lightning spells by {1/2/3/4/5}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "CritChance",
+              "value": 1,
+              "abilities": ["shaman_lightning_bolt", "shaman_chain_lightning"],
+              "tags": ["Heal"]
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_healing_way",
+          "name": "Healing Way",
+          "icon": "wave",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Your Healing Wave spells have a {33/66/100}% chance to increase the effect of subsequent Healing Wave spells on that target by 6% for 15 sec. This effect will stack up to 3 times.",
+          "effects": [
+            {
+              "type": "Proc",
+              "values": [33, 66, 100],
+              "proc": {
+                "trigger": "OnHealCast",
+                "abilities": ["shaman_healing_wave"],
+                "effects": [{"type": "ApplyAura", "target": "Target", "aura": "shaman_healing_way"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_natures_swiftness",
+          "name": "Nature's Swiftness",
+          "icon": "leaf",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 1,
+          "description": "When activated, your next Nature spell with a casting time less than 10 sec. becomes an instant cast spell.",
+          "effects": [{"type": "GrantAbility", "ability": "shaman_natures_swiftness"}]
+        },
+        {
+          "id": "shaman_resto_purification",
+          "name": "Purification",
+          "icon": "heal_plus",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the effectiveness of your healing spells by {2/4/6/8/10}%.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Healing", "value": 2, "tags": ["Heal"]},
+            {
+              "type": "AbilityMod",
+              "property": "Healing",
+              "value": 2,
+              "abilities": ["shaman_healing_stream_totem_pulse"],
+              "target": "Pet"
+            }
+          ]
+        },
+        {
+          "id": "shaman_resto_mana_tide_totem",
+          "name": "Mana Tide Totem",
+          "icon": "totem_water",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Summons a Mana Tide Totem with 5 health at the feet of the caster for 12 sec that restores 170 mana every 3 seconds to group members within 20 yards.",
+          "requires": "shaman_resto_restorative_totems",
+          "effects": [{"type": "GrantAbility", "ability": "shaman_mana_tide_totem"}]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "shaman_starter_worn_mace",
+      "name": "Worn Mace",
+      "icon": "mace",
+      "description": "A knobbly club of seasoned wood, banded with copper.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "OneHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 7,
+      "maxDamage": 13,
+      "speed": 2.2,
+      "price": 9
+    },
+    {
+      "id": "shaman_starter_battered_buckler",
+      "name": "Battered Buckler",
+      "icon": "shield",
+      "description": "A small hide-covered shield painted with a faded spiral.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "OffHand",
+      "weaponType": "Shield",
+      "armor": 15,
+      "block": 2,
+      "price": 8
+    },
+    {
+      "id": "shaman_starter_primitive_mantle",
+      "name": "Primitive Mantle",
+      "icon": "armor",
+      "description": "A fur-trimmed leather mantle hung with bone charms.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "requiredLevel": 1,
+      "equip": "Chest",
+      "armorType": "Leather",
+      "armor": 12,
+      "price": 5
+    },
+    {
+      "id": "shaman_starter_primitive_kilt",
+      "name": "Primitive Kilt",
+      "icon": "armor",
+      "description": "A wrap of tough hide, comfortable for long walks between spirit stones.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "requiredLevel": 1,
+      "equip": "Legs",
+      "armorType": "Leather",
+      "armor": 10,
+      "price": 5
+    },
+    {
+      "id": "shaman_ankh",
+      "name": "Ankh",
+      "icon": "halo",
+      "description": "A small carved ankh. Consumed by a Shaman's Reincarnation.",
+      "kind": "Reagent",
+      "quality": "Common",
+      "itemLevel": 30,
+      "stack": 10,
+      "price": 2000,
+      "classes": ["Shaman"]
+    }
+  ],
+  "creatures": [
+    {
+      "id": "shaman_totem_stoneskin",
+      "name": "Stoneskin Totem",
+      "description": "An earth totem that hardens the skin of nearby allies.",
+      "sprite": "totem_earth",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Earth",
+      "abilities": [{"ability": "shaman_stoneskin_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_earthbind",
+      "name": "Earthbind Totem",
+      "description": "An earth totem that grips the feet of nearby enemies.",
+      "sprite": "totem_earth",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Earth",
+      "abilities": [{"ability": "shaman_earthbind_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_strength_of_earth",
+      "name": "Strength of Earth Totem",
+      "description": "An earth totem that lends strength to nearby allies.",
+      "sprite": "totem_earth",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Earth",
+      "abilities": [{"ability": "shaman_strength_of_earth_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_stoneclaw",
+      "name": "Stoneclaw Totem",
+      "description": "A sturdy earth totem that draws enemies' attacks.",
+      "sprite": "totem_earth",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 2.2,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Earth",
+      "abilities": [{"ability": "shaman_stoneclaw_totem_taunt", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_tremor",
+      "name": "Tremor Totem",
+      "description": "An earth totem whose tremors shake allies free of fear, charm and sleep.",
+      "sprite": "totem_earth",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Earth",
+      "abilities": [{"ability": "shaman_tremor_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_searing",
+      "name": "Searing Totem",
+      "description": "A fire totem that hurls bolts of flame at nearby enemies.",
+      "sprite": "totem_fire",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Fire",
+      "abilities": [{"ability": "shaman_searing_totem_attack", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_fire_nova",
+      "name": "Fire Nova Totem",
+      "description": "A fire totem that erupts in a nova of flame.",
+      "sprite": "totem_fire",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Fire",
+      "abilities": [{"ability": "shaman_fire_nova_totem_blast", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_magma",
+      "name": "Magma Totem",
+      "description": "A fire totem that pulses molten heat.",
+      "sprite": "totem_fire",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Fire",
+      "abilities": [{"ability": "shaman_magma_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_flametongue",
+      "name": "Flametongue Totem",
+      "description": "A fire totem that wreathes allied weapons in flame.",
+      "sprite": "totem_fire",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Fire",
+      "abilities": [{"ability": "shaman_flametongue_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_frost_resistance",
+      "name": "Frost Resistance Totem",
+      "description": "A fire totem that wards allies against frost.",
+      "sprite": "totem_fire",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Fire",
+      "abilities": [{"ability": "shaman_frost_resistance_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_healing_stream",
+      "name": "Healing Stream Totem",
+      "description": "A water totem that sends forth gentle healing waters.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_healing_stream_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_mana_spring",
+      "name": "Mana Spring Totem",
+      "description": "A water totem that restores mana to nearby allies.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_mana_spring_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_poison_cleansing",
+      "name": "Poison Cleansing Totem",
+      "description": "A water totem that purges poisons.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_poison_cleansing_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_disease_cleansing",
+      "name": "Disease Cleansing Totem",
+      "description": "A water totem that cleanses disease.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_disease_cleansing_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_fire_resistance",
+      "name": "Fire Resistance Totem",
+      "description": "A water totem that wards allies against fire.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_fire_resistance_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_mana_tide",
+      "name": "Mana Tide Totem",
+      "description": "A water totem that surges with restoring tides.",
+      "sprite": "totem_water",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Water",
+      "abilities": [{"ability": "shaman_mana_tide_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_windfury",
+      "name": "Windfury Totem",
+      "description": "An air totem that quickens allied weapons.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "abilities": [{"ability": "shaman_windfury_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_grace_of_air",
+      "name": "Grace of Air Totem",
+      "description": "An air totem that lends grace to nearby allies.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "abilities": [{"ability": "shaman_grace_of_air_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_grounding",
+      "name": "Grounding Totem",
+      "description": "An air totem that draws hostile spells into itself.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "passives": ["shaman_grounding_totem_effect"],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_nature_resistance",
+      "name": "Nature Resistance Totem",
+      "description": "An air totem that wards allies against nature.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "abilities": [{"ability": "shaman_nature_resistance_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_windwall",
+      "name": "Windwall Totem",
+      "description": "An air totem that turns aside arrows and bullets.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "abilities": [{"ability": "shaman_windwall_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    },
+    {
+      "id": "shaman_totem_tranquil_air",
+      "name": "Tranquil Air Totem",
+      "description": "An air totem that calms the minds of enemies towards your allies.",
+      "sprite": "totem_air",
+      "type": "Totem",
+      "rank": "Totem",
+      "levelMin": 1,
+      "levelMax": 60,
+      "healthMult": 1.0,
+      "damageMult": 1,
+      "armorMult": 0,
+      "attackSpeed": 2,
+      "moveSpeed": 0,
+      "size": 1.2,
+      "ai": "Totem",
+      "totemElement": "Air",
+      "abilities": [{"ability": "shaman_tranquil_air_totem_pulse", "priority": 10}],
+      "immune": ["Stun", "Root", "Silence", "Pacify", "Disarm", "Fear", "Polymorph", "Incapacitate", "Sleep", "Confuse", "Daze"],
+      "xpMult": 0
+    }
+  ],
+  "specials": [
+    {
+      "id": "ShamanWindfuryAttack",
+      "usedBy": "shaman_windfury_weapon (aura proc, count 2), shaman_windfury_totem_buff (aura proc, count 1)",
+      "behaviour": "Proc effect (target Self = the aura bearer). Immediately performs `count` extra main-hand melee swings against the unit that was hit (if still alive and in reach), outside the normal swing timer. Each extra swing uses the normal melee hit table and weapon damage with attack power temporarily increased by min + perLevel x (effLevel - learnLevel) of the source ability's rank (46..333 for the weapon, 122..315 for the totem), multiplied by the source aura's EffectMult (Improved Weapon Totems +15/30% for the totem). Extra swings can crit and trigger other on-hit procs (Flametongue, Flurry, Lightning Shield on the target...) but can never trigger ShamanWindfuryAttack themselves. They do not reset or consume the swing timer. Only one Windfury proc per triggering hit."
+    },
+    {
+      "id": "ShamanStoneskin",
+      "usedBy": "shaman_stoneskin (buff applied by shaman_stoneskin_totem_pulse)",
+      "behaviour": "The aura's `absorb` is NOT a depleting shield: skip the generic absorb pool for this aura. Instead every incoming melee hit (white swing or Physical melee ability) on the bearer is reduced by absorb.amount + absorb.perLevel x (effLevel - learnLevel) (3 at level 4 ... 20 at level 54; the pulse is cast by the totem so effLevel = totem level = owner level), multiplied by the aura's EffectMult (Guardian Totems +10/20% via owner 'Pet' AbilityMods on the pulse), applied after armor, never below 0. Ranged attacks and spells are unaffected. Several Stoneskin auras do not stack (same aura id)."
+    },
+    {
+      "id": "ShamanWindwall",
+      "usedBy": "shaman_windwall (buff applied by shaman_windwall_totem_pulse)",
+      "behaviour": "Same as ShamanStoneskin but for ranged attacks: every incoming ranged weapon attack (Auto Shot, Shoot, thrown, ranged-table abilities) on the bearer is reduced by the absorb amount scaled by level (10 at 36 ... 25 at 56) and EffectMult (Guardian Totems), never below 0. Skip the generic absorb pool."
+    },
+    {
+      "id": "ShamanEarthsGrasp",
+      "usedBy": "shaman_ele_earths_grasp",
+      "behaviour": "Stoneclaw Totems (creature shaman_totem_stoneclaw) summoned by a shaman with this talent have their maximum (and current) health multiplied by 1 + values[rank]/100 (25/50%). Implement in Specials.OnSummoned. (The Earthbind radius part is the talent's AbilityMod on the pulse.)"
+    },
+    {
+      "id": "ShamanGroundingTotem",
+      "usedBy": "shaman_grounding_totem_effect (passive of shaman_totem_grounding)",
+      "behaviour": "While the totem lives, the first harmful single-target spell (ability with a non-Physical school, target Enemy, no area) cast by a hostile unit at a member of the totem owner's party (including pets, excluding totems) within 20 yards of the totem is redirected to the totem: the totem becomes the spell's target and suffers its effects instead (damage normally destroys it; CC is ignored because totems are immune). After a redirect the effect is inactive for 10 sec of game time (rounds count 6 s). Area and chain spells, melee and ranged weapon attacks are never redirected."
+    },
+    {
+      "id": "ShamanReincarnation",
+      "usedBy": "shaman_reincarnation (passive aura)",
+      "behaviour": "When the shaman becomes Downed (or dead) in combat while the ability shaman_reincarnation is off cooldown and the party inventory holds a 'shaman_ankh', she is flagged 'can reincarnate'. When her turn slot next comes up (Downed units normally skip it), offer 'Reincarnate' instead of skipping (the player chooses; companion AI always accepts). Accepting consumes one Ankh, clears Downed/Dead and revives her in place with 20% x (1 + Effect AbilityMod%) of maximum health and mana (Improved Reincarnation +50/100% => 30/40%), starts the ability's cooldown (3600 s + Cooldown mods: -600/-1200 s; recovers in real time out of combat), and she then takes that turn normally. Declining leaves her Downed (allies can still Help her up)."
+    },
+    {
+      "id": "ShamanNaturesSwiftness",
+      "usedBy": "shaman_natures_swiftness (aura)",
+      "behaviour": "The next ability the bearer uses whose school is Nature and whose (modified) castTime is > 0 and < 10 s has castTime 0 (its Time cost becomes the GCD, it can never become a pending cast). The aura is consumed by that cast. Channeled abilities are not affected."
+    },
+    {
+      "id": "ShamanNextDamageSpell",
+      "usedBy": "shaman_elemental_mastery (aura)",
+      "behaviour": "Elemental Mastery (WoW 1.12): the next Fire, Frost or Nature DAMAGE spell is a guaranteed critical strike and costs no mana. The damage spells are exactly the abilities of the aura's consumeCharge OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock). While the aura is up, such a spell costs 0 mana (ResourceCost, so the action bar shows it free) and every non-periodic effect of that cast gets +100 crit chance (all Chain Lightning targets; not the Flame Shock DoT ticks, not procs). The bonus also covers a cast that went pending; the proc consumes the aura once that cast has resolved (whether it hit or was resisted; an interrupted cast keeps it). Heals (Healing Wave, Chain Heal...), totems, Purge and weapon imbues neither benefit from nor consume it."
+    },
+    {
+      "id": "ShamanClearcasting",
+      "usedBy": "shaman_clearcasting (aura from Elemental Focus)",
+      "behaviour": "Clearcasting from Elemental Focus (WoW 1.12: 'reduces the mana cost of your next damage spell by 100%'). The mana-cost reduction applies only to the spells that consume the aura, i.e. the abilities of its consumeCharge OnSpellCast proc (Lightning Bolt, Chain Lightning, Earth/Flame/Frost Shock): those cost 0 mana while it is up; heals, totems and other spells pay full cost and do not consume it. The proc consumes the charge after the free cast resolved (aura procs fire before talent procs, so a new Clearcasting from the same cast's Elemental Focus roll is kept)."
+    },
+    {
+      "id": "ShamanTwoHandedWeapons",
+      "usedBy": "shaman_enh_two_handed_axes_and_maces",
+      "behaviour": "While the talent is learned the shaman is proficient with TwoHandAxe and TwoHandMace (added to the class weaponTypes for equip checks). Unlearning it (respec) unequips such weapons to the bags."
+    },
+    {
+      "id": "ShamanPushbackResist",
+      "usedBy": "shaman_resto_healing_focus (values 14..70 %), shaman_focused_casting (aura, 100 %)",
+      "behaviour": "Only meaningful if the engine models WoW spell pushback (damage taken while a cast is pending delays it). Healing Focus: pending casts of abilities tagged Heal ignore pushback with values[rank]% chance per damage event. Focused Casting aura: all pending casts of the bearer ignore pushback while it lasts. If pushback is not modelled, both are no-ops."
+    }
+  ]
+}

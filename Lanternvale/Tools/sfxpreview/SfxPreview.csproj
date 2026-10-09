@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Offline sound-effect preview and checks for Lanternvale (see README.md): compiles the game's own synthesis code
+    (Game/Audio: SfxSynth, SynthDsp, SfxRecipes.*, MusicEngine) against the preview3d UnityEngine stand-in plus a tiny
+    AudioClip stub (Stubs/AudioStub.cs), renders WAVs and spectrogram sheets (ffmpeg) and runs the audio checks.
+    Game sources are referenced by relative path and never edited for the tool's sake. Synthesis files may use only
+    System, UnityEngine.Mathf and AudioClip (in SynthBuffer.ToClip); Sfx.cs, GameAudio.cs and Music.cs stay out.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>SfxPreview</AssemblyName>
+    <RootNamespace>Lanternvale.SfxPreview</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <Optimize>true</Optimize>
+    <NoWarn>CS0414;CS0169;CS0649;CS0162;CS0067;CS8981;CS0618;CS0219;CS0168</NoWarn>
+    <Game>../../Assets/Lanternvale/Scripts</Game>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- the tool -->
+    <Compile Include="*.cs" />
+    <Compile Include="Stubs/*.cs" />
+    <!-- the managed UnityEngine stand-in shared with preview3d (it has no AudioClip; Stubs/AudioStub.cs adds one) -->
+    <Compile Include="../preview3d/Stubs/UnityEngine.cs" />
+    <!-- game: the pure synthesis code -->
+    <Compile Include="$(Game)/Game/Audio/SfxSynth.cs" />
+    <Compile Include="$(Game)/Game/Audio/SynthDsp.cs" />
+    <Compile Include="$(Game)/Game/Audio/SfxRecipes.*.cs" />
+    <Compile Include="$(Game)/Game/Audio/MusicEngine.cs" />
+  </ItemGroup>
+</Project>

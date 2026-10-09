@@ -1,0 +1,1452 @@
+{
+  "_note": "Amberfield Downs (Docs/Expansion.md §8, builder amberfield): the map and its quests. Generated once, then the JSON is the source of truth.",
+  "maps": [
+    {
+      "id": "amberfield",
+      "name": "Amberfield Downs",
+      "subtitle": "Golden downs on the west road",
+      "width": 130,
+      "depth": 56,
+      "skyTop": "#a9d8f5",
+      "skyBottom": "#fbe9c4",
+      "ground": "ground_meadow",
+      "groundTile": 8,
+      "biome": "highlands",
+      "environment": "outdoor",
+      "levelMin": 12,
+      "levelMax": 18,
+      "fill": 0.42,
+      "paths": [
+        {
+          "art": "decal_path_dirt",
+          "width": 2.4,
+          "points": [
+            [130, 30],
+            [121, 30],
+            [112, 27.6],
+            [104, 25.2],
+            [96, 24.6],
+            [88, 25.2],
+            [80, 25.4],
+            [72, 24.6],
+            [62, 23.4],
+            [53, 22.2],
+            [48, 22],
+            [43, 22],
+            [36, 21.4],
+            [27, 21],
+            [17, 21.6],
+            [8, 22],
+            [0, 22]
+          ]
+        },
+        {"art": "decal_path_dirt", "width": 1.6, "points": [[100, 24.8], [100, 20], [100.6, 14.6], [103.6, 8.0], [108.6, 7.0]]},
+        {"art": "decal_path_dirt", "width": 1.8, "points": [[80, 25.4], [80.6, 29.0], [79.0, 33.6]]},
+        {"art": "decal_path_dirt", "width": 1.6, "points": [[82.6, 28.6], [86.8, 33.8], [88.6, 38.6]]},
+        {"art": "decal_path_dirt", "width": 1.6, "points": [[88, 25.2], [92.6, 29.4], [95.0, 31.6]]},
+        {
+          "art": "decal_path_dirt",
+          "width": 1.8,
+          "points": [[72, 24.8], [71.2, 31], [68.6, 36.4], [64, 36.0], [59.8, 39.2], [57.0, 42.4], [52.2, 43.2], [46, 44.4], [40, 45.0], [34.6, 44.2]]
+        },
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[68.6, 36.4], [74.6, 40.2], [81.2, 45.6]]},
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[118, 29.2], [116.6, 37], [117.8, 45.6]]},
+        {"art": "decal_path_dirt", "width": 2.0, "points": [[42, 22.4], [39.4, 27.4], [36, 33.6], [32.4, 38.2], [27.6, 41.0], [22.6, 41.6]]},
+        {"art": "decal_path_dirt", "width": 1.6, "points": [[64.6, 23.6], [62.4, 18.4], [62.8, 12.6]]},
+        {"art": "decal_path_dirt", "width": 1.4, "points": [[60.2, 7.0], [52.0, 8.2], [45.2, 8.6], [42.6, 10.6], [42.2, 17.6], [41.0, 21.6]]},
+        {"art": "decal_path_dirt", "width": 1.8, "points": [[27, 21], [24.6, 16.6], [21.4, 12.0], [16.0, 9.8]]}
+      ],
+      "water": [
+        {
+          "points": [[57.5, 58], [55.5, 51], [52.6, 44], [51.0, 37], [49.5, 30], [48.3, 24.5], [47.9, 20], [46.8, 14], [45.3, 8.5], [44.2, 3], [43.6, -2]],
+          "halfWidth": 2.0,
+          "crossings": [{"pos": [48.0, 22.0], "size": [7.6, 2.2]}, {"pos": [52.4, 43.4], "size": [7.0, 3.0]}, {"pos": [45.3, 8.6], "size": [7.0, 3.0]}]
+        },
+        {
+          "points": [
+            [92.86, 13.6],
+            [92.19, 14.69],
+            [90.71, 14.9],
+            [89.17, 15.15],
+            [88.21, 14.18],
+            [88.7, 13.15],
+            [89.17, 12.05],
+            [90.81, 11.93],
+            [91.79, 12.75]
+          ],
+          "closed": true
+        }
+      ],
+      "props": [
+        {
+          "art": "prop_signpost",
+          "pos": [122.4, 32.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "East: Lanternvale, over the hill. West: Amberfield Cross, the Amber Bridge and, a long day on, Brightwater. Someone has carved underneath: THE GATE IS HAYBRIGHT'S. BE NICE TO THE DOG."
+        },
+        {"art": "prop_tree_golden", "pos": [124.5, 40.5], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [127.5, 46.0], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_tree_golden",
+          "pos": [112.5, 44.0],
+          "collider": {"w": 1.2, "h": 0.8},
+          "sway": true,
+          "interact": "am_swarm",
+          "dialogue": "dlg_am_swarm",
+          "text": "A golden tree, humming loudly."
+        },
+        {"art": "prop_tree_golden", "pos": [125.5, 19.5], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [121.0, 14.5], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [118.5, 33.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [115.2, 32.4], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [123.8, 27.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [119.6, 26.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [128.0, 36.5], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [126.2, 37.6]},
+        {"art": "prop_rock_small", "pos": [116.8, 24.6]},
+        {"art": "prop_bush_b", "pos": [127.6, 24.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {
+          "art": "prop_cairn",
+          "pos": [118.2, 48.6],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "am_lookout_cairn",
+          "text": "A shepherd's cairn on the brow of the downs. From up here the whole of Amberfield lies gold to the west, the river a silver thread, the windmill turning. Every shepherd who passes adds a stone."
+        },
+        {"art": "prop_standing_stone", "pos": [114.6, 50.6], "flip": true, "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_bench", "pos": [121.4, 46.4], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_tree_golden", "pos": [123.8, 51.5], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_rock_large", "pos": [110.0, 51.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [112.5, 49.0]},
+        {"art": "prop_cairn", "pos": [106.5, 53.0], "flip": true, "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_bush_a", "pos": [116.0, 44.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_wheat", "pos": [109.8, 39.15], "sway": true},
+        {"art": "prop_wheat", "pos": [109.8, 41.25], "sway": true},
+        {"art": "prop_wheat", "pos": [113.4, 37.05], "sway": true},
+        {"art": "prop_wheat", "pos": [113.4, 39.15], "sway": true},
+        {"art": "prop_wheat", "pos": [113.4, 41.25], "sway": true},
+        {"art": "prop_wheat", "pos": [117.0, 37.05], "sway": true},
+        {"art": "prop_wheat", "pos": [117.0, 39.15], "sway": true},
+        {"art": "prop_wheat", "pos": [117.0, 41.25], "sway": true},
+        {"art": "prop_stone_wall", "pos": [109.5, 34.2], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [112.1, 34.2], "flip": true, "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [114.7, 34.2], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_cart", "pos": [105.4, 35.4], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [103.6, 36.0], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [106.6, 37.0], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [104.2, 37.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_tree_golden", "pos": [101.5, 41.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_fence", "pos": [90.3, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [93.3, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [96.3, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [103.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [106.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [109.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [112.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [115.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [118.7, 19.6], "collider": {"w": 3.0, "h": 0.35}},
+        {
+          "art": "prop_signpost",
+          "pos": [97.2, 21.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "HAYBRIGHT FARM. Barley, beans, forty sheep, one dog and Bruna. Gnolls: please use the other road."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [102.8, 21.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_farmhouse",
+          "pos": [109.0, 11.2],
+          "collider": {"w": 8.4, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.35, 2.45], "nightOnly": true}
+        },
+        {"art": "prop_well", "pos": [101.4, 6.0], "collider": {"w": 1.8, "h": 0.9}},
+        {"art": "prop_hay", "pos": [114.8, 7.6], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [115.2, 5.9], "flip": true, "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [113.4, 15.8], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_washing_line", "pos": [96.0, 16.6], "collider": {"w": 3.4, "h": 0.3}},
+        {"art": "prop_veg_patch", "pos": [95.6, 10.8], "collider": {"w": 3.6, "h": 1.8}},
+        {"art": "prop_cart", "pos": [115.4, 13.8], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [117.0, 14.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [117.6, 13.4], "collider": {"w": 0.9, "h": 0.6}},
+        {
+          "art": "prop_scarecrow",
+          "pos": [121.9, 8.2],
+          "collider": {"w": 0.6, "h": 0.4},
+          "sway": true,
+          "interact": "am_scarecrow",
+          "dialogue": "dlg_am_scarecrow",
+          "text": "A scarecrow in a patched coat and a hat with a sunflower in the band. There is a crow on its arm, which is not a good advert."
+        },
+        {"art": "prop_tree_golden", "pos": [123.6, 16.4], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [87.2, 18.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [88.0, 3.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [128.2, 12.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [128.4, 4.6], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bench", "pos": [105.2, 6.6], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_barrel", "pos": [104.0, 9.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [103.4, 10.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_wheat", "pos": [118.3, 4.05], "sway": true},
+        {"art": "prop_wheat", "pos": [118.3, 6.15], "sway": true},
+        {"art": "prop_wheat", "pos": [118.3, 8.25], "sway": true},
+        {"art": "prop_wheat", "pos": [118.3, 10.35], "sway": true},
+        {"art": "prop_wheat", "pos": [121.9, 4.05], "sway": true},
+        {"art": "prop_wheat", "pos": [121.9, 6.15], "sway": true},
+        {"art": "prop_wheat", "pos": [121.9, 10.35], "sway": true},
+        {"art": "prop_wheat", "pos": [125.5, 4.05], "sway": true},
+        {"art": "prop_wheat", "pos": [125.5, 6.15], "sway": true},
+        {"art": "prop_wheat", "pos": [125.5, 8.25], "sway": true},
+        {"art": "prop_wheat", "pos": [125.5, 10.35], "sway": true},
+        {"art": "prop_wheat", "pos": [90.6, 3.65], "sway": true},
+        {"art": "prop_wheat", "pos": [90.6, 5.75], "sway": true},
+        {"art": "prop_wheat", "pos": [90.6, 7.85], "sway": true},
+        {"art": "prop_wheat", "pos": [94.2, 3.65], "sway": true},
+        {"art": "prop_wheat", "pos": [94.2, 5.75], "sway": true},
+        {"art": "prop_wheat", "pos": [94.2, 7.85], "sway": true},
+        {
+          "art": "prop_farmhouse",
+          "pos": [80.0, 37.2],
+          "flip": true,
+          "collider": {"w": 8.4, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.35, 2.45], "nightOnly": true},
+          "interact": "am_reeves_hall",
+          "text": "The Reeve's Hall: the biggest farmhouse on the Downs, which isn't saying much. A slate by the door reads TODAY: oil (none). Tomorrow: oil (hopefully)."
+        },
+        {"art": "prop_well", "pos": [82.6, 30.4], "collider": {"w": 1.8, "h": 0.9}},
+        {"art": "prop_market_awning", "pos": [74.6, 29.8], "collider": {"w": 3.4, "h": 1.8}},
+        {
+          "art": "prop_noticeboard",
+          "pos": [86.6, 29.4],
+          "collider": {"w": 1.6, "h": 0.5},
+          "interact": "am_noticeboard",
+          "text": "NOTICES. Lost: one queen bee, answers to nothing — see Old Hob. Wanted: the DITCHWATER GANG (highwaymen), by order of the Reeve — see Constable Pip. Harvest-Home postponed until the lanes are lit. Found: one sock."
+        },
+        {"art": "prop_bench", "pos": [77.2, 28.6], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_crate", "pos": [72.2, 30.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [72.6, 31.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_windmill", "pos": [90.2, 41.2], "collider": {"w": 2.6, "h": 1.0}},
+        {"art": "prop_hay", "pos": [87.4, 42.8], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_crate", "pos": [92.6, 39.2], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [93.4, 40.2], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_cottage_a",
+          "pos": [96.2, 33.2],
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.3, 2.4], "nightOnly": true},
+          "interact": "am_corlan_cottage",
+          "text": "A neat cottage with a vegetable patch laid out in ranks like soldiers. A heron is carved over the door."
+        },
+        {"art": "prop_bench", "pos": [99.0, 30.4], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_log", "pos": [93.4, 35.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_banner", "pos": [98.9, 32.0], "collider": {"w": 0.4, "h": 0.3}, "requireFlag": "am_corlan_banner_home"},
+        {"art": "prop_tree_golden", "pos": [85.0, 46.5], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [101.0, 30.2], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [68.2, 30.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_b", "pos": [86.0, 33.4], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [75.2, 33.6], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_washing_line", "pos": [84.6, 41.0], "collider": {"w": 3.4, "h": 0.3}},
+        {"art": "prop_wheat", "pos": [95.2, 42.05], "sway": true},
+        {"art": "prop_wheat", "pos": [95.2, 44.15], "sway": true},
+        {"art": "prop_wheat", "pos": [95.2, 46.25], "sway": true},
+        {"art": "prop_wheat", "pos": [98.8, 42.05], "sway": true},
+        {"art": "prop_wheat", "pos": [98.8, 44.15], "sway": true},
+        {"art": "prop_wheat", "pos": [98.8, 46.25], "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [71.8, 27.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "am_lane_lamp_1",
+          "dialogue": "dlg_am_lane_lamp_1",
+          "hideFlag": "am_lamp_1",
+          "text": "A lane lantern, dry as a biscuit. The oil's been stolen."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [71.8, 27.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true},
+          "requireFlag": "am_lamp_1"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [79.4, 27.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "am_lane_lamp_2",
+          "dialogue": "dlg_am_lane_lamp_2",
+          "hideFlag": "am_lamp_2",
+          "text": "A lane lantern, dry as a biscuit. The oil's been stolen."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [79.4, 27.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true},
+          "requireFlag": "am_lamp_2"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [89.8, 27.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "am_lane_lamp_3",
+          "dialogue": "dlg_am_lane_lamp_3",
+          "hideFlag": "am_lamp_3",
+          "text": "A lane lantern, dry as a biscuit. The oil's been stolen."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [89.8, 27.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true},
+          "requireFlag": "am_lamp_3"
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [84.8, 35.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "am_lane_lamp_4",
+          "dialogue": "dlg_am_lane_lamp_4",
+          "hideFlag": "am_lamp_4",
+          "text": "A lane lantern, dry as a biscuit. The oil's been stolen."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [84.8, 35.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true},
+          "requireFlag": "am_lamp_4"
+        },
+        {"art": "prop_banner", "pos": [76.0, 31.0], "collider": {"w": 0.4, "h": 0.3}, "requireFlag": "am_harvest_home"},
+        {"art": "prop_banner", "pos": [81.0, 32.6], "collider": {"w": 0.4, "h": 0.3}, "requireFlag": "am_harvest_home"},
+        {"art": "prop_banner", "pos": [88.4, 31.6], "collider": {"w": 0.4, "h": 0.3}, "requireFlag": "am_harvest_home"},
+        {
+          "art": "prop_cottage_c",
+          "pos": [73.8, 18.6],
+          "flip": true,
+          "collider": {"w": 5.0, "h": 2.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [1.5, 2.6], "nightOnly": true}
+        },
+        {"art": "prop_beehive", "pos": [69.4, 16.2], "collider": {"w": 2.0, "h": 0.9}},
+        {"art": "prop_beehive", "pos": [70.6, 13.4], "flip": true, "collider": {"w": 2.0, "h": 0.9}},
+        {"art": "prop_beehive", "pos": [74.2, 14.4], "collider": {"w": 2.0, "h": 0.9}},
+        {"art": "prop_bush_a", "pos": [77.4, 15.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [78.6, 19.8], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_signpost", "pos": [68.2, 20.6], "collider": {"w": 0.4, "h": 0.3}, "text": "WAXLEY'S HONEY. Mind the bees. The bees mind you."},
+        {
+          "art": "prop_cottage_b",
+          "pos": [83.6, 50.4],
+          "collider": {"w": 4.4, "h": 2.0},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-1.0, 3.0], "nightOnly": true}
+        },
+        {"art": "prop_fence", "pos": [88.6, 52.2], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [91.6, 52.2], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_hay", "pos": [87.4, 53.6], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_tree_golden", "pos": [92.4, 54.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_b", "pos": [80.0, 53.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_standing_stone", "pos": [68.6, 41.0], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [67.62, 43.83], "flip": true, "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [60.38, 43.83], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [59.4, 41.0], "flip": true, "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [60.48, 38.04], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [64.0, 36.4], "flip": true, "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_standing_stone", "pos": [67.52, 38.04], "collider": {"w": 1.0, "h": 0.7}},
+        {
+          "art": "prop_standing_stone",
+          "pos": [64.0, 40.4],
+          "scale": 1.25,
+          "collider": {"w": 1.0, "h": 0.7},
+          "interact": "am_kings_stone",
+          "dialogue": "dlg_am_kings_stone",
+          "text": "The tallest stone, carved with a crowned figure holding up a little flame."
+        },
+        {"art": "prop_cairn", "pos": [56.8, 44.6], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [71.4, 44.0], "flip": true, "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_tree_golden", "pos": [60.4, 53.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [71.4, 53.8], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_rock_large", "pos": [59.6, 48.4], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [68.4, 49.2]},
+        {"art": "prop_rubble", "pos": [72.4, 48.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bonepile", "pos": [75.6, 48.8], "flip": true, "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_barrel", "pos": [77.6, 49.8], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_barrel",
+          "pos": [78.4, 48.8],
+          "collider": {"w": 0.8, "h": 0.5},
+          "interact": "am_cask_3",
+          "dialogue": "dlg_am_cask_3",
+          "text": "A cask of lamp oil, stencilled PELL'S MILL."
+        },
+        {"art": "prop_crate", "pos": [78.8, 50.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bridge_stone", "pos": [48.0, 22.0]},
+        {
+          "art": "prop_lamp_post",
+          "pos": [53.6, 26.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffb46c", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {"art": "prop_crate", "pos": [56.4, 26.8], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [57.2, 26.1], "collider": {"w": 0.8, "h": 0.5}},
+        {
+          "art": "prop_signpost",
+          "pos": [42.2, 24.6],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "North: nothing good (gnolls). South: Turnbull's turnips. West: Brightwater."
+        },
+        {"art": "prop_tree_golden", "pos": [55.2, 32.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [42.0, 31.6], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [40.6, 12.0], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [54.8, 18.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [41.8, 27.8], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [50.8, 3.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_watchtower_ruin", "pos": [66.0, 14.4], "collider": {"w": 3.8, "h": 3.8}},
+        {"art": "prop_tent", "pos": [60.2, 9.8], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [63.6, 8.2],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [62.0, 6.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_log", "pos": [65.6, 6.4], "flip": true, "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_crate", "pos": [69.8, 9.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [70.6, 10.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [70.2, 8.2], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_washing_line", "pos": [60.4, 13.8], "collider": {"w": 3.4, "h": 0.3}},
+        {"art": "prop_ruin_pillar", "pos": [60.0, 16.0], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [72.2, 16.6], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_rubble", "pos": [69.4, 17.6], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_bush_b", "pos": [56.6, 9.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [74.4, 6.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_cart", "pos": [37.0, 31.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [35.6, 30.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [38.8, 32.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_quarry_cart", "pos": [39.6, 30.2], "collider": {"w": 2.2, "h": 1.1}},
+        {"art": "prop_bonepile", "pos": [33.6, 33.2], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_gnoll_totem", "pos": [30.4, 38.0], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_gnoll_totem", "pos": [34.8, 39.6], "flip": true, "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_bonepile", "pos": [27.0, 39.0], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_gnoll_tent",
+          "pos": [27.6, 44.6],
+          "collider": {"w": 2.8, "h": 2.6},
+          "light": {"color": "#ff9a4a", "radius": 3.0, "intensity": 0.9, "offset": [0, 0.75], "flicker": true}
+        },
+        {
+          "art": "prop_gnoll_tent",
+          "pos": [15.4, 40.6],
+          "flip": true,
+          "collider": {"w": 2.8, "h": 2.6},
+          "light": {"color": "#ff9a4a", "radius": 3.0, "intensity": 0.9, "offset": [0, 0.75], "flicker": true}
+        },
+        {
+          "art": "prop_gnoll_tent",
+          "pos": [9.6, 47.8],
+          "collider": {"w": 2.8, "h": 2.6},
+          "light": {"color": "#ff9a4a", "radius": 3.0, "intensity": 0.9, "offset": [0, 0.75], "flicker": true}
+        },
+        {
+          "art": "prop_gnoll_tent",
+          "pos": [30.6, 50.4],
+          "flip": true,
+          "collider": {"w": 2.8, "h": 2.6},
+          "light": {"color": "#ff9a4a", "radius": 3.0, "intensity": 0.9, "offset": [0, 0.75], "flicker": true}
+        },
+        {
+          "art": "prop_gnoll_tent",
+          "pos": [17.6, 53.6],
+          "scale": 1.3,
+          "collider": {"w": 2.8, "h": 2.6},
+          "light": {"color": "#ff9a4a", "radius": 3.0, "intensity": 0.9, "offset": [0, 0.75], "flicker": true}
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [22.6, 44.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [12.8, 43.8],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_gnoll_totem", "pos": [21.6, 49.6], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_gnoll_totem", "pos": [13.2, 51.6], "flip": true, "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_bonepile", "pos": [8.0, 41.6], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_bonepile", "pos": [25.2, 53.4], "flip": true, "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_bonepile", "pos": [33.4, 46.0], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_barrel", "pos": [27.4, 47.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [28.4, 48.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [26.2, 48.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_cart", "pos": [24.8, 38.4], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [23.0, 37.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [12.0, 54.2], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [10.6, 53.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_gnoll_totem", "pos": [6.2, 39.4], "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_gnoll_totem", "pos": [33.8, 52.8], "flip": true, "collider": {"w": 0.8, "h": 0.6}, "sway": true},
+        {"art": "prop_bonepile", "pos": [18.4, 42.6], "flip": true, "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_hay", "pos": [32.6, 43.0], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_crate", "pos": [4.6, 44.8], "collider": {"w": 0.9, "h": 0.6}},
+        {
+          "art": "prop_barrel",
+          "pos": [29.4, 47.4],
+          "collider": {"w": 0.8, "h": 0.5},
+          "interact": "am_cask_1",
+          "dialogue": "dlg_am_cask_1",
+          "text": "A cask of lamp oil, stencilled PELL'S MILL."
+        },
+        {"art": "prop_rock_large", "pos": [6.4, 44.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [9.0, 38.0], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_dead", "pos": [4.6, 51.2], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [35.6, 53.0], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_rock_small", "pos": [19.4, 38.6]},
+        {"art": "prop_tree_golden", "pos": [37.8, 42.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_cart", "pos": [41.8, 49.4], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {
+          "art": "prop_barrel",
+          "pos": [43.6, 50.2],
+          "collider": {"w": 0.8, "h": 0.5},
+          "interact": "am_cask_2",
+          "dialogue": "dlg_am_cask_2",
+          "text": "A cask of lamp oil, stencilled PELL'S MILL."
+        },
+        {"art": "prop_barrel", "pos": [40.2, 50.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_tree_golden", "pos": [47.8, 52.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_rock_large", "pos": [49.0, 47.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_golden", "pos": [39.4, 36.4], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_farmhouse",
+          "pos": [35.6, 13.6],
+          "collider": {"w": 8.4, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.7, "offset": [-0.35, 2.45], "nightOnly": true}
+        },
+        {"art": "prop_veg_patch", "pos": [30.6, 7.4], "collider": {"w": 3.6, "h": 1.8}},
+        {"art": "prop_veg_patch", "pos": [34.6, 7.4], "collider": {"w": 3.6, "h": 1.8}},
+        {"art": "prop_veg_patch", "pos": [38.6, 7.4], "collider": {"w": 3.6, "h": 1.8}},
+        {"art": "prop_veg_patch", "pos": [34.6, 4.4], "collider": {"w": 3.6, "h": 1.8}},
+        {
+          "art": "prop_rubble",
+          "pos": [30.4, 4.2],
+          "collider": {"w": 1.8, "h": 1.0},
+          "interact": "am_sinkhole",
+          "text": "A sinkhole, neatly round, right where a row of turnips used to be. Something has been digging from below."
+        },
+        {"art": "prop_rubble", "pos": [39.6, 4.0], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_scarecrow", "pos": [41.6, 6.0], "collider": {"w": 0.6, "h": 0.4}, "sway": true},
+        {"art": "prop_hay", "pos": [29.8, 12.4], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_tree_golden", "pos": [27.6, 17.6], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_b", "pos": [41.6, 16.2], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_cave_mouth", "pos": [12.0, 13.6], "collider": {"w": 6.0, "h": 1.8}},
+        {"art": "prop_cave_wall", "pos": [5.0, 16.6], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [19.6, 16.8], "flip": true, "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_cave_wall", "pos": [1.8, 7.0], "collider": {"w": 4.4, "h": 1.3}},
+        {"art": "prop_stone_wall", "pos": [23.4, 11.4], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [9.4, 2.4], "flip": true, "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "decal_path_stone", "pos": [15.4, 7.4]},
+        {"art": "decal_path_stone", "pos": [9.0, 5.0]},
+        {"art": "decal_path_stone", "pos": [20.4, 8.6]},
+        {"art": "prop_rubble", "pos": [3.4, 13.8], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_barrel", "pos": [23.6, 6.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_rock_large", "pos": [8.2, 15.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [16.0, 15.4], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [3.0, 10.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [21.8, 14.2], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [7.4, 12.8]},
+        {"art": "prop_quarry_cart", "pos": [17.4, 9.6], "collider": {"w": 2.2, "h": 1.1}},
+        {"art": "prop_quarry_cart", "pos": [7.8, 7.2], "flip": true, "collider": {"w": 2.2, "h": 1.1}},
+        {"art": "prop_quarry_cart", "pos": [22.6, 5.6], "collider": {"w": 2.2, "h": 1.1}},
+        {"art": "prop_rubble", "pos": [20.2, 3.6], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [4.8, 4.4], "flip": true, "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_rubble", "pos": [13.6, 4.0], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_crate", "pos": [24.2, 8.0], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_crate", "pos": [25.0, 9.0], "collider": {"w": 0.9, "h": 0.6}},
+        {
+          "art": "prop_lamp_post",
+          "pos": [15.6, 11.4],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffcf7a", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [25.6, 15.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "MUDPAW WORKINGS. Please do not fall in. (The sign is upside down. The Mudpaw read it from below.)"
+        },
+        {"art": "prop_tree_golden", "pos": [1.2, 9.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [27.0, 3.0], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {
+          "art": "prop_signpost",
+          "pos": [7.2, 25.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "text": "West: Brightwater, the river town. East: Amberfield Cross and the Downs."
+        },
+        {"art": "prop_tree_golden", "pos": [4.0, 30.4], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [13.6, 27.2], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [9.6, 18.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [18.6, 24.6], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [2.6, 34.6], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_tree_golden", "pos": [22.4, 30.0], "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [30.2, 26.0], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_bush_a", "pos": [34.6, 25.0], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_cairn", "pos": [100.2, 52.6], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [51.8, 54.0], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [2.6, 46.0], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_cairn", "pos": [85.4, 23.0], "collider": {"w": 1.1, "h": 0.8}},
+        {"art": "prop_standing_stone", "pos": [30.2, 55.0], "collider": {"w": 1.0, "h": 0.7}},
+        {"art": "prop_bush_b", "pos": [120.11, 32.78], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [111.32, 30.32], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [108.78, 29.82], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [121.93, 27.14], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [116.92, 26.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [115.44, 25.51], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [112.63, 24.92], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [110.04, 24.31], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [107.93, 23.17], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [67.08, 26.93], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [64.38, 26.4], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [61.87, 25.99], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [58.62, 25.81], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [59.51, 20.45], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [57.53, 20.04], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [52.9, 19.13], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [33.92, 23.94], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [31.26, 23.94], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [29.3, 24.08], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [27.06, 23.73], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [24.69, 23.79], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [22.2, 24.37], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [20.32, 24.16], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [16.87, 24.54], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [9.11, 24.98], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [16.6, 18.54], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [15.11, 18.91], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [12.13, 18.77], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [1.56, 27.5], "scale": 0.92, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [24.62, 27.71], "scale": 0.89, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [126.93, 43.92], "scale": 0.98, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [81.59, 14.5], "scale": 0.91, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [1.34, 39.98], "scale": 0.87, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [2.47, 52.4], "scale": 0.96, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [43.3, 54.01], "scale": 0.93, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [76.77, 51.64], "scale": 1.05, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [105.45, 48.92], "scale": 0.81, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [124.62, 54.55], "scale": 0.86, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [83.78, 54.21], "scale": 0.81, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [69.03, 54.84], "scale": 0.94, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [125.09, 35.43], "scale": 0.94, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [111.77, 53.62], "scale": 1.04, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [54.3, 29.62], "scale": 0.94, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [15.47, 28.71], "scale": 0.95, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [94.94, 53.01], "scale": 0.95, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [44.47, 33.12], "scale": 1.01, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [127.91, 17.51], "scale": 0.81, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [36.96, 50.79], "scale": 1.01, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [49.69, 50.63], "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [119.19, 15.61], "scale": 0.81, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [75.63, 8.08], "scale": 0.9, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [68.16, 47.09], "scale": 0.99, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [128.99, 6.7], "scale": 1.04, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [21.77, 54.59], "scale": 0.8, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_golden", "pos": [97.83, 36.9], "scale": 0.94, "flip": true, "collider": {"w": 1.2, "h": 0.8}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [45.96, 52.46], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [84.77, 12.02], "flip": true, "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_tree_dead", "pos": [117.44, 54.16], "collider": {"w": 1.0, "h": 0.6}},
+        {"art": "prop_bush_b", "pos": [42.86, 38.72], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [13.76, 54.33], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [73.47, 51.98], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [24.76, 34.48], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [10.13, 35.93], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [74.64, 10.35], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [128.05, 41.75], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [38.3, 38.66], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [28.27, 33.71], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [63.58, 30.53], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [31.15, 33.89], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [10.91, 27.92], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [17.46, 30.54], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [48.88, 1.92], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [29.22, 29.86], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [40.36, 40.45], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [80.74, 19.08], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [64.69, 3.04], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [19.71, 27.61], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [41.18, 35.69], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [108.63, 53.86], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [30.62, 2.08], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [5.98, 32.19], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [123.31, 42.42], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [12.69, 36.74], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [14.25, 31.42], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [78.46, 11.94], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [112.16, 1.48], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [58.36, 30.29], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [115.19, 22.3], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [126.49, 49.41], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [52.36, 10.57], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [103.37, 14.9], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [55.42, 1.93], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [4.64, 47.37], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [69.59, 2.49], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [38.97, 53.88], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [75.17, 1.98], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [109.15, 3.44], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [105.35, 54.89], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [103.81, 39.55], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [120.54, 41.75], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [123.17, 37.35], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [57.33, 37.32], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [70.72, 40.92], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [56.31, 13.16], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [125.47, 25.55], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [128.7, 2.45], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [4.57, 38.53], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [22.12, 33.99], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_b", "pos": [105.88, 41.42], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [14.28, 1.77], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [123.72, 22.1], "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [29.94, 18.04], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_bush_a", "pos": [10.3, 33.35], "flip": true, "collider": {"w": 1.2, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_large", "pos": [73.34, 35.93], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [85.01, 20.36], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [6.41, 49.54], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [128.08, 51.38], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [11.59, 25.53], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [71.84, 2.15], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [73.73, 54.93], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [5.81, 1.58], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [102.59, 46.17], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [55.92, 34.3], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [22.05, 1.15], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [120.64, 44.02], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [104.63, 3.49], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [113.98, 3.89], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [2.35, 31.8], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [53.83, 14.51], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [123.11, 24.6], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [24.66, 32.09], "flip": true, "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [29.02, 15.05], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_large", "pos": [2.36, 43.64], "collider": {"w": 2.0, "h": 1.0}},
+        {"art": "prop_rock_small", "pos": [47.62, 54.43]},
+        {"art": "prop_rock_small", "pos": [12.9, 28.55], "flip": true},
+        {"art": "prop_rock_small", "pos": [99.85, 27.71], "flip": true},
+        {"art": "prop_rock_small", "pos": [128.17, 21.59], "flip": true},
+        {"art": "prop_rock_small", "pos": [7.35, 19.52]},
+        {"art": "prop_rock_small", "pos": [120.25, 1.78], "flip": true},
+        {"art": "prop_rock_small", "pos": [22.64, 35.65], "flip": true},
+        {"art": "prop_rock_small", "pos": [96.99, 4.96]},
+        {"art": "prop_rock_small", "pos": [7.7, 32.94], "flip": true},
+        {"art": "prop_rock_small", "pos": [27.95, 25.34], "flip": true},
+        {"art": "prop_rock_small", "pos": [13.84, 34.82], "flip": true},
+        {"art": "prop_rock_small", "pos": [3.55, 1.61]},
+        {"art": "prop_rock_small", "pos": [72.26, 9.09]},
+        {"art": "prop_rock_small", "pos": [26.88, 6.77], "flip": true},
+        {"art": "prop_rock_small", "pos": [52.93, 2.09]},
+        {"art": "prop_rock_small", "pos": [67.12, 2.31]},
+        {"art": "prop_rock_small", "pos": [16.97, 35.19], "flip": true},
+        {"art": "prop_rock_small", "pos": [113.74, 23.49]},
+        {"art": "prop_rock_small", "pos": [60.91, 31.93]},
+        {"art": "prop_rock_small", "pos": [56.72, 5.17]},
+        {"art": "prop_rock_small", "pos": [106.33, 1.84]},
+        {"art": "prop_rock_small", "pos": [8.39, 26.83]},
+        {"art": "prop_rock_small", "pos": [105.46, 39.47], "flip": true},
+        {"art": "prop_rock_small", "pos": [2.14, 37.98], "flip": true},
+        {"art": "prop_rock_small", "pos": [59.52, 17.96]},
+        {"art": "prop_rock_small", "pos": [66.33, 18.18]},
+        {"art": "decal_flowers", "pos": [20.19, 32.43]},
+        {"art": "decal_flowers", "pos": [14.43, 33.13]},
+        {"art": "decal_flowers", "pos": [40.61, 38.15]},
+        {"art": "decal_flowers", "pos": [76.64, 54.1]},
+        {"art": "decal_flowers", "pos": [26.87, 15.41]},
+        {"art": "decal_flowers", "pos": [102.44, 53.78]},
+        {"art": "decal_flowers", "pos": [50.06, 53.26]},
+        {"art": "decal_flowers", "pos": [121.39, 17.86]},
+        {"art": "decal_flowers", "pos": [116.66, 51.91]},
+        {"art": "decal_flowers", "pos": [118.87, 22.85]},
+        {"art": "decal_flowers", "pos": [87.08, 1.98]},
+        {"art": "decal_flowers", "pos": [126.35, 22.68]},
+        {"art": "decal_flowers", "pos": [38.65, 49.34]},
+        {"art": "decal_flowers", "pos": [104.54, 42.6]},
+        {"art": "decal_flowers", "pos": [97.19, 28.54]},
+        {"art": "decal_flowers", "pos": [42.8, 29.9]},
+        {"art": "decal_flowers", "pos": [122.84, 40.28]},
+        {"art": "decal_flowers", "pos": [37.43, 1.46]},
+        {"art": "decal_flowers", "pos": [1.42, 29.63]},
+        {"art": "decal_flowers", "pos": [75.37, 12.5]},
+        {"art": "decal_flowers", "pos": [81.1, 22.24]},
+        {"art": "decal_flowers", "pos": [61.28, 33.94]},
+        {"art": "decal_flowers", "pos": [123.62, 47.68]},
+        {"art": "decal_flowers", "pos": [80.26, 16.57]},
+        {"art": "decal_flowers", "pos": [101.23, 3.34]},
+        {"art": "decal_flowers", "pos": [112.96, 7.05]},
+        {"art": "decal_flowers", "pos": [27.43, 9.86]},
+        {"art": "decal_flowers", "pos": [128.83, 38.75]},
+        {"art": "decal_flowers", "pos": [60.29, 27.76]},
+        {"art": "decal_flowers", "pos": [31.71, 26.75]},
+        {"art": "decal_flowers", "pos": [66.28, 19.83]},
+        {"art": "decal_flowers", "pos": [87.02, 21.03]},
+        {"art": "decal_flowers", "pos": [3.34, 37.06]},
+        {"art": "decal_flowers", "pos": [92.31, 22.21]},
+        {"art": "decal_flowers", "pos": [91.69, 44.58]},
+        {"art": "decal_flowers", "pos": [92.74, 49.74]},
+        {"art": "decal_flowers", "pos": [97.72, 6.76]},
+        {"art": "decal_flowers", "pos": [96.45, 1.38]},
+        {"art": "decal_flowers", "pos": [38.93, 18.43]},
+        {"art": "decal_flowers", "pos": [84.51, 17.31]},
+        {"art": "decal_flowers", "pos": [89.46, 34.79]},
+        {"art": "decal_flowers", "pos": [21.78, 27.5]},
+        {"art": "decal_flowers", "pos": [63.51, 1.65]},
+        {"art": "decal_flowers", "pos": [54.62, 17.17]},
+        {"art": "decal_flowers", "pos": [65.73, 33.09]},
+        {"art": "decal_flowers", "pos": [80.56, 49.26]},
+        {"art": "prop_stump", "pos": [6.47, 34.76], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [56.97, 15.65], "flip": true, "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [70.12, 52.03], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [114.95, 52.78], "flip": true, "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [127.5, 15.17], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_stump", "pos": [20.32, 29.9], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_hay", "pos": [126.05, 41.37], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [28.66, 1.17], "flip": true, "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [62.32, 28.34], "flip": true, "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [54.35, 5.04], "flip": true, "collider": {"w": 1.2, "h": 0.7}}
+      ],
+      "npcs": [
+        {"npc": "bruna", "pos": [100.0, 20.0], "hideFlag": "recruited_bruna"},
+        {"npc": "am_biscuit", "pos": [101.6, 21.2]},
+        {"npc": "am_hedda_haybright", "pos": [107.0, 6.0]},
+        {"npc": "am_tam_haybright", "pos": [94.2, 13.8]},
+        {"npc": "am_nib", "pos": [123.4, 9.6], "requireFlag": "am_nib_found", "hideFlag": "am_nib_decided"},
+        {"npc": "am_nib_farm", "pos": [99.4, 11.8], "requireFlag": "am_nib_stays"},
+        {"npc": "am_reeve_hester", "pos": [78.2, 31.4]},
+        {"npc": "am_miller_pell", "pos": [88.0, 37.4]},
+        {"npc": "am_ser_corlan", "pos": [93.6, 29.8]},
+        {"npc": "am_hob_waxley", "pos": [70.6, 20.8]},
+        {"npc": "am_ida_crook", "pos": [82.6, 47.0]},
+        {"npc": "am_sheep_duchess", "pos": [86.4, 46.6]},
+        {"npc": "am_sheep_wobble", "pos": [89.0, 48.8]},
+        {"npc": "am_constable_pip", "pos": [55.4, 25.4]},
+        {"npc": "am_wat_turnbull", "pos": [35.0, 18.6]},
+        {"npc": "am_mother_delve", "pos": [14.4, 8.4], "requireFlag": "am_mudpaw_peace"},
+        {"npc": "am_mudpaw_pebble", "pos": [19.0, 6.0], "requireFlag": "am_mudpaw_peace"},
+        {"npc": "am_jory_farmhand", "pos": [71.6, 32.2], "requireFlag": "am_gang_hired"}
+      ],
+      "encounters": [
+        {
+          "id": "enc_am_raiders_east",
+          "pos": [104.4, 33.0],
+          "radius": 3.2,
+          "enemies": [{"creature": "cr_am_gnoll", "pos": [104.0, 34.4]}, {"creature": "cr_am_gnoll_archer", "pos": [102.2, 35.6]}]
+        },
+        {
+          "id": "enc_am_hawks_lookout",
+          "pos": [110.4, 46.0],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_am_hawk_redwing", "pos": [110.4, 47.4]},
+            {"creature": "cr_am_hawk", "pos": [108.6, 46.0]},
+            {"creature": "cr_am_hawk", "pos": [112.4, 45.6]}
+          ]
+        },
+        {
+          "id": "enc_am_hawks_south",
+          "pos": [82.4, 7.0],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_am_hawk", "pos": [81.4, 8.0]},
+            {"creature": "cr_am_hawk", "pos": [83.6, 6.4]},
+            {"creature": "cr_am_hawk", "pos": [82.6, 9.4]}
+          ]
+        },
+        {
+          "id": "enc_am_hawks_ring",
+          "pos": [97.2, 47.4],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_am_hawk", "pos": [96.4, 48.4]}, {"creature": "cr_am_hawk", "pos": [98.6, 47.4]}]
+        },
+        {
+          "id": "enc_am_grave_robbers",
+          "pos": [74.2, 45.2],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_am_gnoll", "pos": [74.0, 46.6]},
+            {"creature": "cr_am_gnoll_mystic", "pos": [76.2, 47.0]},
+            {"creature": "cr_am_gnoll", "pos": [72.2, 46.4]}
+          ]
+        },
+        {
+          "id": "enc_am_gnoll_scouts",
+          "pos": [44.4, 46.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_am_gnoll", "pos": [44.2, 48.0]},
+            {"creature": "cr_am_gnoll_archer", "pos": [42.4, 47.8]},
+            {"creature": "cr_am_gnoll", "pos": [46.0, 47.6]}
+          ]
+        },
+        {
+          "id": "enc_am_oil_caravan",
+          "pos": [37.6, 29.2],
+          "radius": 3.4,
+          "doneFlag": "am_caravan_broken",
+          "enemies": [
+            {"creature": "cr_am_gnoll_packmaster", "pos": [37.6, 29.6]},
+            {"creature": "cr_am_gnoll", "pos": [35.6, 29.6]},
+            {"creature": "cr_am_gnoll_archer", "pos": [39.8, 31.4]},
+            {"creature": "cr_am_gnoll_mystic", "pos": [34.6, 31.8]}
+          ]
+        },
+        {
+          "id": "enc_am_warcamp_gate",
+          "pos": [31.4, 40.2],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_am_gnoll", "pos": [31.0, 41.6]},
+            {"creature": "cr_am_gnoll", "pos": [33.2, 41.2]},
+            {"creature": "cr_am_gnoll_archer", "pos": [29.4, 42.2]}
+          ]
+        },
+        {
+          "id": "enc_am_warcamp_fire",
+          "pos": [23.2, 42.4],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_am_gnoll", "pos": [22.0, 45.4]},
+            {"creature": "cr_am_gnoll", "pos": [24.4, 45.6]},
+            {"creature": "cr_am_gnoll_mystic", "pos": [20.6, 46.4]},
+            {"creature": "cr_am_gnoll_archer", "pos": [25.8, 46.4]}
+          ]
+        },
+        {
+          "id": "enc_am_warcamp_archers",
+          "pos": [10.8, 43.6],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_am_gnoll_archer", "pos": [7.6, 45.8]},
+            {"creature": "cr_am_gnoll_archer", "pos": [10.0, 39.6]},
+            {"creature": "cr_am_gnoll", "pos": [11.6, 45.4]}
+          ]
+        },
+        {
+          "id": "enc_am_warchief",
+          "pos": [18.4, 49.6],
+          "radius": 2.6,
+          "doneFlag": "am_skarra_defeated",
+          "dialogue": "dlg_am_skarra",
+          "enemies": [
+            {"creature": "cr_am_gnoll_chief", "pos": [18.4, 50.8]},
+            {"creature": "cr_am_gnoll", "pos": [16.0, 50.4]},
+            {"creature": "cr_am_gnoll", "pos": [20.8, 50.6]},
+            {"creature": "cr_am_gnoll_mystic", "pos": [14.6, 49.0]},
+            {"creature": "cr_am_gnoll_archer", "pos": [22.4, 48.6]}
+          ]
+        },
+        {
+          "id": "enc_am_quarry_parley",
+          "pos": [20.2, 11.2],
+          "radius": 3.2,
+          "doneFlag": "am_quarry_settled",
+          "dialogue": "dlg_am_mudpaw_parley",
+          "enemies": [
+            {"creature": "cr_am_burrowmaster", "pos": [18.6, 9.2]},
+            {"creature": "cr_am_tunneler", "pos": [16.8, 10.6]},
+            {"creature": "cr_am_tunneler", "pos": [20.4, 8.4]},
+            {"creature": "cr_am_geomancer", "pos": [16.6, 8.0]}
+          ]
+        },
+        {
+          "id": "enc_am_quarry_deep",
+          "pos": [8.6, 9.4],
+          "radius": 3.0,
+          "requireFlag": "!am_mudpaw_peace",
+          "enemies": [
+            {"creature": "cr_am_tunneler", "pos": [7.4, 10.6]},
+            {"creature": "cr_am_tunneler", "pos": [10.2, 10.2]},
+            {"creature": "cr_am_geomancer", "pos": [6.0, 9.0]}
+          ]
+        },
+        {
+          "id": "enc_am_ditchwater",
+          "pos": [63.4, 10.0],
+          "radius": 3.2,
+          "doneFlag": "am_gang_dealt",
+          "dialogue": "dlg_am_jory",
+          "enemies": [
+            {"creature": "cr_am_jory", "pos": [64.6, 10.4]},
+            {"creature": "cr_am_cutpurse", "pos": [62.0, 11.2]},
+            {"creature": "cr_am_bowman", "pos": [67.6, 11.0]},
+            {"creature": "cr_am_hedgewitch", "pos": [59.6, 7.4]}
+          ]
+        }
+      ],
+      "chests": [
+        {
+          "id": "chest_am_strongbox",
+          "pos": [69.8, 12.6],
+          "lootTable": "lt_am_chest_strongbox",
+          "items": ["am_biscuit_bell"],
+          "lockCheck": {"skill": "SleightOfHand", "dc": 13},
+          "requireFlag": "am_gang_dealt&!am_gang_hired"
+        },
+        {"id": "chest_am_trophies", "pos": [11.8, 50.2], "lootTable": "lt_am_chest_trophies", "items": ["am_heron_pennant"]},
+        {"id": "chest_am_lookout", "pos": [119.8, 50.4], "lootTable": "lt_am_chest_lookout", "requireFlag": "am_lookout_cache"}
+      ],
+      "transitions": [
+        {
+          "id": "to_lanternvale",
+          "pos": [129.3, 30.0],
+          "size": [1.4, 6.0],
+          "targetMap": "lanternvale",
+          "targetSpawn": "from_amberfield",
+          "label": "Lanternvale"
+        },
+        {
+          "id": "to_brightwater",
+          "pos": [0.7, 22.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_amberfield",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_barrow",
+          "pos": [64.0, 50.5],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_barrow",
+          "targetSpawn": "from_amberfield",
+          "label": "The Barrow of King Aldwin",
+          "hidden": true,
+          "revealFlag": "found_barrow",
+          "marker": "door"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [126.0, 30.0]},
+        {"id": "from_lanternvale", "pos": [126.0, 30.0]},
+        {"id": "from_brightwater", "pos": [3.4, 22.0]},
+        {"id": "from_dgn_barrow", "pos": [64.0, 48.0]}
+      ],
+      "regions": [
+        {
+          "id": "reg_am_downs",
+          "pos": [121.0, 30.0],
+          "size": [14, 10],
+          "name": "Amberfield Downs",
+          "text": "Amberfield Downs — gold to the horizon, and not a lamp lit on any lane."
+        },
+        {
+          "id": "reg_am_haybright",
+          "pos": [107.0, 10.5],
+          "size": [38, 17],
+          "name": "Haybright Farm",
+          "text": "Haybright Farm. Somewhere a dog is snoring."
+        },
+        {
+          "id": "reg_am_cross",
+          "pos": [84.0, 34.0],
+          "size": [28, 18],
+          "name": "Amberfield Cross",
+          "text": "Amberfield Cross — a well, a mill, a reeve, and a great many opinions."
+        },
+        {
+          "id": "reg_am_kings_ring",
+          "pos": [64.0, 41.0],
+          "size": [12, 10],
+          "name": "The King's Ring",
+          "text": "The King's Ring. Seven grey stones stand in the gold, leaning together like old men sharing a secret.",
+          "check": {"skill": "Perception", "dc": 14},
+          "checkFlag": "found_barrow",
+          "successText": "The grass on the mound north of the stones grows in a seam, straight as a ruler — over a door.",
+          "failText": "The stones keep their secret. The wind hums through them, and nothing more."
+        },
+        {
+          "id": "reg_am_lookout",
+          "pos": [117.6, 47.6],
+          "size": [10, 8],
+          "name": "Shepherd's Lookout",
+          "text": "Shepherd's Lookout. The whole of the Downs lies below, gold to the river and gold beyond it.",
+          "check": {"skill": "Perception", "dc": 13},
+          "checkFlag": "am_lookout_cache",
+          "successText": "One stone of the cairn is cleaner than the rest. Someone takes it out, often.",
+          "failText": ""
+        },
+        {
+          "id": "reg_am_warcamp",
+          "pos": [20.0, 46.0],
+          "size": [30, 16],
+          "name": "Duskmane Warcamp",
+          "text": "The Duskmane warcamp: hide tents, bone totems, and the smell of somebody else's lamp oil."
+        },
+        {
+          "id": "reg_am_quarry",
+          "pos": [14.0, 9.6],
+          "size": [24, 14],
+          "name": "Mudpaw Quarry",
+          "text": "The Mudpaw workings. Little lights bob in the tunnel mouth: candles, on helmets, on moles."
+        },
+        {
+          "id": "reg_am_watch",
+          "pos": [65.0, 11.0],
+          "size": [14, 11],
+          "name": "Aldwin's Watch",
+          "text": "Aldwin's Watch, the old king's tower. Someone has hung washing from the arrow slits."
+        },
+        {
+          "id": "reg_am_bridge",
+          "pos": [48.0, 22.0],
+          "size": [12, 6],
+          "name": "Amber Bridge",
+          "text": "The Amber Bridge. The river under it is the colour of weak tea and twice as cheerful."
+        },
+        {"id": "reg_am_turnbull", "pos": [35.6, 10.0], "size": [16, 14], "name": "Turnbull's Turnips"}
+      ],
+      "ambient": {"pollen": true, "leaves": true, "timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#fff6e8", "ambientIntensity": 1.0},
+      "restArea": true,
+      "music": "music_highlands"
+    }
+  ],
+  "quests": [
+    {
+      "id": "mq2_ember_road",
+      "name": "The Ember Road",
+      "giver": "elder_maru",
+      "level": 12,
+      "zone": "amberfield",
+      "main": true,
+      "summary": "The Heart Lantern showed ash drifting down from the north. Elder Maru sends you west over Amberfield Downs, where the lamp oil is vanishing into gnoll carts, and on to the archive in Brightwater.",
+      "stages": [
+        {
+          "id": "road",
+          "description": "Take the west road out of Lanternvale to Amberfield Downs.",
+          "objectives": [{"type": "Reach", "target": "amberfield", "text": "Travel to Amberfield Downs"}],
+          "next": "reeve"
+        },
+        {
+          "id": "reeve",
+          "description": "Find the Reeve of Amberfield at Amberfield Cross.",
+          "objectives": [{"type": "Talk", "target": "am_reeve_hester", "text": "Speak with Reeve Hester"}],
+          "next": "caravan",
+          "onComplete": [{"type": "GiveXP", "amount": 150}]
+        },
+        {
+          "id": "caravan",
+          "description": "Ambush the Duskmane oil caravan on the track north of the Amber Bridge.",
+          "objectives": [{"type": "Flag", "target": "am_caravan_broken", "text": "Break the Duskmane oil caravan"}],
+          "next": "corlan",
+          "onComplete": [{"type": "GiveXP", "amount": 350}]
+        },
+        {
+          "id": "corlan",
+          "description": "Take the caravan boss's tally-stick to Ser Corlan, the cottage with the heron over the door.",
+          "objectives": [{"type": "Talk", "target": "am_ser_corlan", "text": "Show Ser Corlan the tally-stick"}],
+          "next": "warchief",
+          "onComplete": [{"type": "GiveXP", "amount": 250}]
+        },
+        {
+          "id": "warchief",
+          "description": "Cross the river to the Duskmane warcamp and break it: defeat Warchief Skarra Duskmane.",
+          "objectives": [{"type": "Flag", "target": "am_skarra_defeated", "text": "Defeat Warchief Skarra"}],
+          "next": "reeve_report",
+          "onComplete": [{"type": "GiveXP", "amount": 600}]
+        },
+        {
+          "id": "reeve_report",
+          "description": "Bring Skarra's scorched letter to Reeve Hester.",
+          "objectives": [{"type": "Talk", "target": "am_reeve_hester", "text": "Show Reeve Hester the letter"}],
+          "next": "archivist",
+          "onComplete": [{"type": "GiveXP", "amount": 300}]
+        },
+        {
+          "id": "archivist",
+          "description": "Bring word to Archivist Penhallow in Brightwater.",
+          "objectives": [{"type": "Talk", "target": "bw_archivist_penhallow", "text": "Speak with Archivist Penhallow"}],
+          "onComplete": [{"type": "SetFlag", "key": "mq2_ember_road_done"}]
+        }
+      ],
+      "rewards": {"xp": 1600, "gold": 2500, "choiceItems": ["am_cinderproof_mantle", "am_wayfarers_spaulders", "am_gatewardens_pauldrons"]}
+    },
+    {
+      "id": "am_q_lamp_oil",
+      "name": "Lamps Out on the Downs",
+      "giver": "am_miller_pell",
+      "level": 12,
+      "minLevel": 12,
+      "zone": "amberfield",
+      "summary": "Tamsin Pell's last three casks of lamp oil were stolen off the carts. Find them and chalk her mill-mark on them so her carters can bring them home.",
+      "stages": [
+        {
+          "id": "casks",
+          "description": "Find Pell's three stolen casks and chalk her mark on each.",
+          "objectives": [
+            {"type": "Flag", "target": "am_cask_1", "text": "Cask in the Duskmane warcamp"},
+            {"type": "Flag", "target": "am_cask_2", "text": "Cask at the north ford"},
+            {"type": "Flag", "target": "am_cask_3", "text": "Cask on the king's hill"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Tamsin Pell her casks are marked.",
+          "objectives": [{"type": "Flag", "target": "am_q_lamp_oil_handed_in", "text": "Return to Miller Pell"}],
+          "turnIn": "am_miller_pell"
+        }
+      ],
+      "rewards": {"xp": 850, "gold": 900, "choiceItems": ["am_flour_dusted_gloves", "am_millwrights_belt", "am_millstone_bracers"]}
+    },
+    {
+      "id": "am_q_bell",
+      "name": "Biscuit's Bell",
+      "giver": "am_hedda_haybright",
+      "level": 12,
+      "minLevel": 12,
+      "zone": "amberfield",
+      "summary": "The Ditchwater Gang took Hedda Haybright's cart, and with it the brass bell she calls old Biscuit in with.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Recover Biscuit's brass bell from the Ditchwater Gang at Aldwin's Watch.",
+          "objectives": [{"type": "Collect", "target": "am_biscuit_bell", "text": "Biscuit's bell"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the bell back to Hedda Haybright.",
+          "objectives": [{"type": "Flag", "target": "am_q_bell_handed_in", "text": "Return to Hedda"}],
+          "turnIn": "am_hedda_haybright"
+        }
+      ],
+      "rewards": {"xp": 700, "gold": 600, "items": ["am_haybright_scarf", "food_honey_cake"]}
+    },
+    {
+      "id": "am_q_hawks",
+      "name": "Feathers and Fury",
+      "giver": "am_ida_crook",
+      "level": 13,
+      "minLevel": 13,
+      "zone": "amberfield",
+      "summary": "Plains hawks have grown bold on the Downs, and old Redwing has taken a lamb a year for twenty years. Thin them out for Old Ida.",
+      "stages": [
+        {
+          "id": "hawks",
+          "description": "Thin out the plains hawks on the Downs: the flock on the southern downs, the one over the north wheat and the Lookout's.",
+          "objectives": [
+            {"type": "Defeat", "target": "enc_am_hawks_south", "text": "Hawks on the southern downs"},
+            {"type": "Defeat", "target": "enc_am_hawks_ring", "text": "Hawks over the north wheat"},
+            {"type": "Defeat", "target": "enc_am_hawks_lookout", "text": "Hawks at Shepherd's Lookout"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Old Ida her lambs are safe.",
+          "objectives": [{"type": "Flag", "target": "am_q_hawks_handed_in", "text": "Return to Old Ida"}],
+          "turnIn": "am_ida_crook"
+        }
+      ],
+      "rewards": {"xp": 850, "gold": 900, "choiceItems": ["am_shepherds_crook", "am_hawkfeather_bow", "am_fleece_jerkin"]}
+    },
+    {
+      "id": "am_q_queen",
+      "name": "The Queen Has Left the Hive",
+      "giver": "am_hob_waxley",
+      "level": 13,
+      "minLevel": 13,
+      "zone": "amberfield",
+      "summary": "Old Hob's best queen has swarmed into a golden tree by Shepherd's Lookout. Bring her home, slow and kind.",
+      "stages": [
+        {
+          "id": "coax",
+          "description": "Coax Old Hob's swarm out of the golden tree by Shepherd's Lookout.",
+          "objectives": [{"type": "Flag", "target": "am_queen_home", "text": "Bring the queen home"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Old Hob his queen is home.",
+          "objectives": [{"type": "Flag", "target": "am_q_queen_handed_in", "text": "Return to Old Hob"}],
+          "turnIn": "am_hob_waxley"
+        }
+      ],
+      "rewards": {"xp": 800, "gold": 700, "items": ["am_honeycomb_band"]}
+    },
+    {
+      "id": "am_q_ditchwater",
+      "name": "The Ditchwater Gang",
+      "giver": "am_constable_pip",
+      "level": 13,
+      "minLevel": 13,
+      "zone": "amberfield",
+      "summary": "Jory Ditchwater's highwaymen have been stopping carts on the south road and have holed up in Aldwin's Watch. Constable Pip has deputised you, with a button.",
+      "stages": [
+        {
+          "id": "gang",
+          "description": "Deal with the Ditchwater Gang at Aldwin's Watch, however you see fit.",
+          "objectives": [{"type": "Flag", "target": "am_gang_dealt", "text": "Deal with the Ditchwater Gang"}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Report to Constable Pip at the Amber Bridge.",
+          "objectives": [{"type": "Flag", "target": "am_q_ditchwater_handed_in", "text": "Report to Constable Pip"}],
+          "turnIn": "am_constable_pip"
+        }
+      ],
+      "rewards": {"xp": 950, "gold": 1000, "choiceItems": ["am_constables_cudgel", "am_highwaymans_hood", "am_pips_buckler"]}
+    },
+    {
+      "id": "am_q_sinkholes",
+      "name": "Holes in the Barley",
+      "giver": "am_wat_turnbull",
+      "level": 14,
+      "minLevel": 14,
+      "zone": "amberfield",
+      "summary": "The Mudpaw tunnelers of the old quarry have started digging under Wat Turnbull's fields. Sort them out — however you like.",
+      "stages": [
+        {
+          "id": "quarry",
+          "description": "Go to the Mudpaw quarry and settle the matter of the tunnels.",
+          "objectives": [{"type": "Flag", "target": "am_quarry_settled", "text": "Settle things with the Mudpaw"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Wat Turnbull how it went.",
+          "objectives": [{"type": "Flag", "target": "am_q_sinkholes_handed_in", "text": "Return to Wat Turnbull"}],
+          "turnIn": "am_wat_turnbull"
+        }
+      ],
+      "rewards": {"xp": 1050, "gold": 800, "choiceItems": ["am_turnip_farmers_legguards", "am_muddy_breeches", "am_burlap_trousers"]}
+    },
+    {
+      "id": "am_q_peace_offering",
+      "name": "A Peace Offering",
+      "giver": "am_mother_delve",
+      "level": 15,
+      "minLevel": 15,
+      "zone": "amberfield",
+      "summary": "Mother Delve of the Mudpaw wants to make peace with Wat Turnbull the Mudpaw way: with a stone.",
+      "stages": [
+        {
+          "id": "deliver",
+          "description": "Take Mother Delve's peace geode to Wat Turnbull.",
+          "objectives": [{"type": "Flag", "target": "am_q_peace_offering_handed_in", "text": "Give Wat the peace geode"}],
+          "turnIn": "am_wat_turnbull"
+        }
+      ],
+      "rewards": {"xp": 700, "gold": 600, "choiceItems": ["am_candle_helm", "am_geomancers_spectacles", "am_digging_claws"]}
+    },
+    {
+      "id": "am_q_scarecrow",
+      "name": "The Scarecrow Who Walked",
+      "giver": "am_tam_haybright",
+      "level": 14,
+      "minLevel": 14,
+      "zone": "amberfield",
+      "summary": "Tam Haybright swears the scarecrow in the east field walks at night and eats honey cake. Tam is right about one of those things.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Investigate the scarecrow in Haybright's east field.",
+          "objectives": [{"type": "Flag", "target": "am_nib_found", "text": "Find out what's in the scarecrow"}],
+          "next": "decide"
+        },
+        {
+          "id": "decide",
+          "description": "Decide what happens to the scarecrow's secret.",
+          "objectives": [{"type": "Flag", "target": "am_nib_decided", "text": "Decide Nib's fate"}],
+          "next": "return",
+          "turnIn": "am_nib"
+        },
+        {
+          "id": "return",
+          "description": "Tell Tam what you found.",
+          "objectives": [{"type": "Flag", "target": "am_q_scarecrow_handed_in", "text": "Return to Tam"}],
+          "turnIn": "am_tam_haybright"
+        }
+      ],
+      "rewards": {"xp": 900, "gold": 700, "items": ["am_sunflower_straw_hat"]}
+    },
+    {
+      "id": "am_q_corlan",
+      "name": "The Twelfth Banner",
+      "giver": "am_ser_corlan",
+      "level": 16,
+      "minLevel": 16,
+      "zone": "amberfield",
+      "summary": "Ser Corlan Hale rode north with the Heronguard twelve years ago, one of eleven who came home. The Duskmane stole the pennant he carried. Bring it back.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Recover Ser Corlan's heron pennant from Skarra's trophy chest in the Duskmane warcamp.",
+          "objectives": [{"type": "Collect", "target": "am_heron_pennant", "text": "Ser Corlan's pennant"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Return the pennant to Ser Corlan.",
+          "objectives": [{"type": "Flag", "target": "am_q_corlan_handed_in", "text": "Return to Ser Corlan"}],
+          "turnIn": "am_ser_corlan"
+        }
+      ],
+      "rewards": {"xp": 1100, "gold": 1200}
+    },
+    {
+      "id": "am_q_harvest",
+      "name": "Light the Lanes",
+      "giver": "am_reeve_hester",
+      "level": 16,
+      "minLevel": 16,
+      "zone": "amberfield",
+      "summary": "With the oil coming home, Reeve Hester wants the four lane lanterns of Amberfield Cross lit, so Harvest-Home can begin.",
+      "stages": [
+        {
+          "id": "lamps",
+          "description": "Fill and light the four lane lanterns of Amberfield Cross.",
+          "objectives": [
+            {"type": "Flag", "target": "am_lamp_1", "text": "Market corner lantern"},
+            {"type": "Flag", "target": "am_lamp_2", "text": "Well lantern"},
+            {"type": "Flag", "target": "am_lamp_3", "text": "Mill lane lantern"},
+            {"type": "Flag", "target": "am_lamp_4", "text": "Reeve's Hall lantern"}
+          ],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Reeve Hester the lanes are lit.",
+          "objectives": [{"type": "Flag", "target": "am_q_harvest_handed_in", "text": "Return to Reeve Hester"}],
+          "turnIn": "am_reeve_hester"
+        }
+      ],
+      "rewards": {"xp": 1250, "gold": 1500, "choiceItems": ["am_harvest_moon_pendant", "am_sheaf_knot_choker"]}
+    },
+    {
+      "id": "am_q_barrow",
+      "name": "The King Under the Hill",
+      "giver": "am_ida_crook",
+      "level": 18,
+      "minLevel": 17,
+      "zone": "amberfield",
+      "summary": "Something under the King's Ring has woken the old king who lies there. Old Ida asks you to go down into the barrow and put it back to sleep.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Find the hidden door into the barrow beneath the King's Ring.",
+          "objectives": [{"type": "Flag", "target": "found_barrow", "text": "Find the barrow door"}],
+          "next": "king"
+        },
+        {
+          "id": "king",
+          "description": "Descend into the Barrow of King Aldwin and lay the king to rest.",
+          "objectives": [{"type": "Flag", "target": "dg4_aldwin_rests", "text": "Lay King Aldwin to rest"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Return to Old Ida.",
+          "objectives": [{"type": "Flag", "target": "am_q_barrow_handed_in", "text": "Return to Old Ida"}],
+          "turnIn": "am_ida_crook"
+        }
+      ],
+      "rewards": {"xp": 800, "gold": 3000, "choiceItems": ["dg4_aldwins_signet_band", "dg4_barrow_lantern", "dg4_kingsguard_greaves"]}
+    }
+  ]
+}

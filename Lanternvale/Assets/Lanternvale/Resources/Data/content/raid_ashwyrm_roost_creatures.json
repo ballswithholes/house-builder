@@ -1,0 +1,2348 @@
+{
+  "_note": "Ashwyrm's Roost creatures (levels 31-34 via levelFloor/levelCap; Elite trash, Boss bosses): Dragonsworn, ash elementals, ember whelps, Frostclaw, the Cinder Drakes, Highlord Varkas and Vyrmathra. Instant damage and heals have cooldown >= 6; big casts are Telegraphs; phases and enrages via AI conditions.",
+  "creatures": [
+    {
+      "id": "cr_r2_dragonsworn",
+      "name": "Dragonsworn Ashblade",
+      "description": "A cultist of the Ashwyrm in crimson-and-bronze scale, greatsword glowing like a poker left in the fire. They swore their names to Vyrmathra. Most of them can't remember what the names were.",
+      "sprite": "cr_dragonsworn",
+      "portrait": "cr_bandit",
+      "type": "Humanoid",
+      "rank": "Elite",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.25,
+      "damageMult": 0.95,
+      "attackSpeed": 3.2,
+      "moveSpeed": 8,
+      "lootTable": "lt_r2_trash",
+      "xpMult": 0.5,
+      "faction": "Dragonsworn",
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 20,
+          "school": "Fire"
+        }
+      ],
+      "bark": "Ash to ash. You first.",
+      "size": 2.2,
+      "ai": "Melee",
+      "abilities": [
+        {
+          "ability": "cr_r2_sworn_fervour",
+          "priority": 9,
+          "condition": "selfHpBelow:35"
+        },
+        {
+          "ability": "cr_r2_ember_cleave",
+          "priority": 6,
+          "condition": "enemiesInRange:2"
+        },
+        {
+          "ability": "cr_r2_searing_slash",
+          "priority": 5
+        }
+      ],
+      "material": "mail",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_r2_pyre_priest",
+      "name": "Dragonsworn Pyre-Priest",
+      "description": "A Dragonsworn in a soot-black cope, who tends the wounded with fire and the unwounded with more fire. Interrupt the mending, or the fight goes on all night.",
+      "sprite": "cr_dragonsworn",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Elite",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.0,
+      "damageMult": 0.9,
+      "resource": "Mana",
+      "ranged": true,
+      "rangedRange": 30,
+      "attackSpeed": 2.4,
+      "moveSpeed": 7,
+      "meleeSchool": "Fire",
+      "lootTable": "lt_r2_trash",
+      "xpMult": 0.5,
+      "faction": "Dragonsworn",
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 20,
+          "school": "Fire"
+        }
+      ],
+      "bark": "Burn, and be mended. Burn, and be mended.",
+      "size": 2.1,
+      "ai": "Healer",
+      "abilities": [
+        {
+          "ability": "cr_r2_cinder_mend",
+          "priority": 10,
+          "condition": "allyHpBelow:60"
+        },
+        {
+          "ability": "cr_r2_ash_ward",
+          "priority": 7,
+          "condition": "allyHpBelow:85"
+        },
+        {
+          "ability": "cr_r2_flame_lash",
+          "priority": 4
+        }
+      ],
+      "material": "mail",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_r2_wyrmcaller",
+      "name": "Dragonsworn Wyrmcaller",
+      "description": "A Dragonsworn with a bone whistle on a chain. When it blows, small hot things come flapping out of the smoke.",
+      "sprite": "cr_dragonsworn",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Elite",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.0,
+      "damageMult": 0.9,
+      "resource": "Mana",
+      "ranged": true,
+      "rangedRange": 30,
+      "attackSpeed": 2.4,
+      "moveSpeed": 7,
+      "meleeSchool": "Fire",
+      "lootTable": "lt_r2_trash",
+      "xpMult": 0.5,
+      "faction": "Dragonsworn",
+      "bark": "Come, little embers. Supper.",
+      "size": 2.1,
+      "ai": "Caster",
+      "abilities": [
+        {
+          "ability": "cr_r2_whistle_whelps",
+          "priority": 10,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_flame_lash",
+          "priority": 4
+        }
+      ],
+      "material": "mail",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_r2_ash_elemental",
+      "name": "Ash Elemental",
+      "description": "Packed ash and cinders, held together by an ember heart and a bad temper. It leaves a trail of warm footprints and a smell like a blacksmith's apron.",
+      "sprite": "cr_ash_elemental",
+      "portrait": "demon_infernal",
+      "type": "Elemental",
+      "rank": "Elite",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.45,
+      "damageMult": 0.9,
+      "attackSpeed": 2.6,
+      "moveSpeed": 7,
+      "meleeSchool": "Fire",
+      "lootTable": "lt_r2_trash",
+      "xpMult": 0.5,
+      "faction": "Ashwyrm",
+      "immune": [
+        "Fear",
+        "Sleep",
+        "Polymorph"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 60,
+          "school": "Fire"
+        }
+      ],
+      "bark": "*The ash elemental grinds like a cart of hot gravel.*",
+      "size": 2.6,
+      "ai": "Melee",
+      "abilities": [
+        {
+          "ability": "cr_r2_cinder_slam",
+          "priority": 7,
+          "condition": "enemiesInRange:2"
+        },
+        {
+          "ability": "cr_r2_smothering_ash",
+          "priority": 6,
+          "condition": "targetNoAura:cr_r2_smothered"
+        },
+        {
+          "ability": "cr_r2_ember_fist",
+          "priority": 4
+        }
+      ],
+      "material": "stone",
+      "voice": "stone"
+    },
+    {
+      "id": "cr_r2_drake_whelp",
+      "name": "Ember Whelp",
+      "description": "A chubby red-orange whelp with big eyes, nub horns and no sense of personal space. It is adorable. It is also on fire.",
+      "sprite": "cr_drake_whelp",
+      "portrait": "demon_imp",
+      "type": "Dragonkin",
+      "rank": "Elite",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 0.55,
+      "damageMult": 0.6,
+      "attackSpeed": 1.6,
+      "moveSpeed": 10,
+      "meleeSchool": "Fire",
+      "lootTable": "lt_r2_trash",
+      "xpMult": 0.3,
+      "faction": "Ashwyrm",
+      "family": "Dragonkin",
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 40,
+          "school": "Fire"
+        }
+      ],
+      "bark": "*Hic.* *A small puff of flame.*",
+      "size": 1.4,
+      "ai": "Skirmisher",
+      "abilities": [
+        {
+          "ability": "cr_r2_whelp_breath",
+          "priority": 6
+        },
+        {
+          "ability": "cr_r2_nip",
+          "priority": 4
+        }
+      ],
+      "material": "scale",
+      "voice": "dragon"
+    },
+    {
+      "id": "cr_r2_ashborn_whelp",
+      "name": "Ashborn Whelp",
+      "description": "A whelp called down out of the smoke. It does not know what it is fighting for. It knows it is hungry.",
+      "sprite": "cr_drake_whelp",
+      "portrait": "demon_imp",
+      "type": "Dragonkin",
+      "rank": "Minion",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.6,
+      "damageMult": 0.8,
+      "attackSpeed": 1.6,
+      "moveSpeed": 10,
+      "meleeSchool": "Fire",
+      "xpMult": 0,
+      "faction": "Ashwyrm",
+      "family": "Dragonkin",
+      "size": 1.1,
+      "ai": "Melee",
+      "abilities": [
+        {
+          "ability": "cr_r2_nip",
+          "priority": 4
+        }
+      ],
+      "material": "scale",
+      "voice": "dragon"
+    },
+    {
+      "id": "cr_r2_ash_yeti",
+      "name": "Ash-Maddened Yeti",
+      "description": "One of Frostclaw's grown children, its white fur grey with ash-smoke and its eyes gone red. It isn't angry at you. It's angry at everything.",
+      "sprite": "cr_yeti",
+      "portrait": "pet_bear",
+      "type": "Beast",
+      "rank": "Normal",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 1.6,
+      "damageMult": 1.1,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "xpMult": 0,
+      "faction": "Frostclaw",
+      "family": "Yeti",
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 30,
+          "school": "Frost"
+        }
+      ],
+      "size": 2.7,
+      "ai": "Melee",
+      "abilities": [
+        {
+          "ability": "cr_r2_yeti_maul",
+          "priority": 5
+        }
+      ],
+      "material": "fur",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_r2_honour_guard",
+      "name": "Highlord's Honour Guard",
+      "description": "A Dragonsworn in gilded scale, sworn to die for Varkas. Varkas is very much in favour of the arrangement.",
+      "sprite": "cr_dragonsworn",
+      "portrait": "cr_bandit",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 1,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 2.2,
+      "damageMult": 1.1,
+      "attackSpeed": 3.2,
+      "moveSpeed": 8,
+      "xpMult": 0,
+      "faction": "Dragonsworn",
+      "size": 2.3,
+      "ai": "Melee",
+      "abilities": [
+        {
+          "ability": "cr_r2_searing_slash",
+          "priority": 5
+        }
+      ],
+      "material": "mail",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_r2_frostclaw",
+      "name": "Frostclaw the Matriarch",
+      "description": "The yeti matriarch of Skyreach, queen of the Shelf since before the Heronguard built their road. The Dragonsworn chained her cubs and burned ash-smoke at her den until she forgot what she was guarding.",
+      "sprite": "cr_r2_frostclaw",
+      "portrait": "pet_bear",
+      "type": "Beast",
+      "rank": "Boss",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 3.8,
+      "damageMult": 2.4,
+      "attackSpeed": 2.6,
+      "moveSpeed": 8,
+      "meleeSchool": "Physical",
+      "immune": [
+        "Fear",
+        "Polymorph",
+        "Sleep",
+        "Incapacitate",
+        "Confuse",
+        "Banish",
+        "Stun",
+        "Root"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 60,
+          "school": "Frost"
+        }
+      ],
+      "lootTable": "lt_r2_frostclaw",
+      "xpMult": 1.0,
+      "faction": "Frostclaw",
+      "family": "Yeti",
+      "bark": "*A roar that brings snow down off every ledge on the Shelf.*",
+      "size": 5.0,
+      "ai": "Boss",
+      "abilities": [
+        {
+          "ability": "cr_r2_white_out",
+          "priority": 10,
+          "condition": "roundAtLeast:28&selfNoAura:cr_r2_white_out"
+        },
+        {
+          "ability": "cr_r2_blizzard",
+          "priority": 10,
+          "condition": "selfAura:cr_r2_white_out"
+        },
+        {
+          "ability": "cr_r2_matriarchs_fury",
+          "priority": 10,
+          "condition": "selfHpBelow:25&selfNoAura:cr_r2_matriarchs_fury"
+        },
+        {
+          "ability": "cr_r2_call_the_brood",
+          "priority": 10,
+          "condition": "selfHpBelow:75"
+        },
+        {
+          "ability": "cr_r2_call_the_brood_2",
+          "priority": 10,
+          "condition": "selfHpBelow:40"
+        },
+        {
+          "ability": "cr_r2_avalanche",
+          "priority": 9,
+          "condition": "roundAtLeast:3"
+        },
+        {
+          "ability": "cr_r2_bitter_cold",
+          "priority": 8,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_rending_claws",
+          "priority": 6,
+          "condition": "targetNoAura:cr_r2_rent"
+        },
+        {
+          "ability": "cr_r2_glacial_swipe",
+          "priority": 5,
+          "condition": "enemiesInRange:3"
+        }
+      ],
+      "material": "fur",
+      "voice": "beast"
+    },
+    {
+      "id": "cr_r2_emberjaw",
+      "name": "Emberjaw",
+      "description": "The elder of the Cinder Drakes: red-orange, molten-jawed, built like a furnace that learned to bite. He guards the pit. His sister guards him.",
+      "sprite": "cr_r2_cinder_drake_emberjaw",
+      "portrait": "demon_imp",
+      "type": "Dragonkin",
+      "rank": "Boss",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 3.0,
+      "damageMult": 2.0,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "meleeSchool": "Fire",
+      "immune": [
+        "Fear",
+        "Polymorph",
+        "Sleep",
+        "Incapacitate",
+        "Confuse",
+        "Banish",
+        "Stun",
+        "Root"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 75,
+          "school": "Fire"
+        }
+      ],
+      "lootTable": "lt_r2_cinder_drakes",
+      "xpMult": 1.0,
+      "faction": "Ashwyrm",
+      "family": "Dragonkin",
+      "bark": "*Emberjaw's jaws open, and the light inside is the colour of a forge.*",
+      "size": 4.2,
+      "ai": "Boss",
+      "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:38"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
+        {
+          "ability": "cr_r2_grief_fire",
+          "priority": 10,
+          "condition": "selfHpBelow:30&selfNoAura:cr_r2_grief_fire"
+        },
+        {
+          "ability": "cr_r2_molten_bite",
+          "priority": 7
+        },
+        {
+          "ability": "cr_r2_tail_lash",
+          "priority": 6,
+          "condition": "enemiesInRange:3"
+        },
+        {
+          "ability": "cr_r2_magma_spit",
+          "priority": 5,
+          "condition": "roundAtLeast:2"
+        }
+      ],
+      "material": "scale",
+      "voice": "dragon"
+    },
+    {
+      "id": "cr_r2_ashtongue",
+      "name": "Ashtongue",
+      "description": "The younger Cinder Drake: ash-violet, slim, with a pale violet flame that hangs in the air like smoke. She breathes and he bites. She mends him, too, if you let her.",
+      "sprite": "cr_r2_cinder_drake_ashtongue",
+      "portrait": "demon_imp",
+      "type": "Dragonkin",
+      "rank": "Boss",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 2.7,
+      "damageMult": 1.9,
+      "ranged": true,
+      "rangedRange": 25,
+      "attackSpeed": 2.4,
+      "moveSpeed": 8,
+      "meleeSchool": "Fire",
+      "resource": "Mana",
+      "immune": [
+        "Fear",
+        "Polymorph",
+        "Sleep",
+        "Incapacitate",
+        "Confuse",
+        "Banish",
+        "Stun",
+        "Root"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 75,
+          "school": "Fire"
+        }
+      ],
+      "xpMult": 1.0,
+      "faction": "Ashwyrm",
+      "family": "Dragonkin",
+      "bark": "*Ashtongue hisses, and violet smoke curls out between her teeth.*",
+      "size": 4.2,
+      "ai": "Boss",
+      "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:38"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
+        {
+          "ability": "cr_r2_grief_fire",
+          "priority": 10,
+          "condition": "selfHpBelow:30&selfNoAura:cr_r2_grief_fire"
+        },
+        {
+          "ability": "cr_r2_rekindle",
+          "priority": 9,
+          "condition": "allyHpBelow:50"
+        },
+        {
+          "ability": "cr_r2_ash_breath",
+          "priority": 8,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_choking_cinders",
+          "priority": 7,
+          "condition": "roundAtLeast:3"
+        },
+        {
+          "ability": "cr_r2_violet_flame",
+          "priority": 4
+        }
+      ],
+      "material": "scale",
+      "voice": "dragon"
+    },
+    {
+      "id": "cr_r2_varkas",
+      "name": "Highlord Varkas",
+      "description": "An ogre lord in dragon-scale armour with a whole drake skull for a pauldron. He came to the Ashwyrm for power and stayed for the title. He is very proud of the title.",
+      "sprite": "cr_r2_varkas",
+      "portrait": "demon_infernal",
+      "type": "Giant",
+      "rank": "Boss",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 5.6,
+      "damageMult": 2.9,
+      "attackSpeed": 3.6,
+      "moveSpeed": 7,
+      "meleeSchool": "Physical",
+      "immune": [
+        "Fear",
+        "Polymorph",
+        "Sleep",
+        "Incapacitate",
+        "Confuse",
+        "Banish",
+        "Stun",
+        "Root"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 40,
+          "school": "Fire"
+        }
+      ],
+      "lootTable": "lt_r2_varkas",
+      "xpMult": 1.0,
+      "faction": "Dragonsworn",
+      "bark": "I am HIGHLORD Varkas. Say it. All of it. The Highlord part especially.",
+      "size": 5.2,
+      "ai": "Boss",
+      "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:45"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
+        {
+          "ability": "cr_r2_highlords_wrath",
+          "priority": 10,
+          "condition": "selfHpBelow:25&selfNoAura:cr_r2_highlords_wrath"
+        },
+        {
+          "ability": "cr_r2_call_honour_guard",
+          "priority": 10,
+          "condition": "selfHpBelow:65"
+        },
+        {
+          "ability": "cr_r2_wyrmfire_slam",
+          "priority": 9,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_brand_of_the_wyrm",
+          "priority": 8,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_war_bellow",
+          "priority": 7,
+          "condition": "selfHpBelow:50"
+        },
+        {
+          "ability": "cr_r2_skullsplitter",
+          "priority": 6
+        }
+      ],
+      "material": "scale",
+      "voice": "humanoid"
+    },
+    {
+      "id": "cr_r2_vyrmathra",
+      "name": "Vyrmathra the Ashwyrm",
+      "description": "The Ashwyrm: a great ash-black dragon, molten at the seams, with a furnace glowing between her belly plates. For four hundred years she has slept on Skyreach and breathed ash on the wind, and everything the ash touched went hollow.",
+      "sprite": "cr_r2_vyrmathra",
+      "portrait": "demon_infernal",
+      "type": "Dragonkin",
+      "rank": "Boss",
+      "levelMin": 31,
+      "levelMax": 34,
+      "scaleToParty": true,
+      "levelOffset": 2,
+      "levelFloor": 31,
+      "levelCap": 34,
+      "healthMult": 7.2,
+      "damageMult": 2.0,
+      "attackSpeed": 3.0,
+      "moveSpeed": 6,
+      "meleeSchool": "Physical",
+      "immune": [
+        "Fear",
+        "Polymorph",
+        "Sleep",
+        "Incapacitate",
+        "Confuse",
+        "Banish",
+        "Stun",
+        "Root",
+        "Silence",
+        "Disarm"
+      ],
+      "stats": [
+        {
+          "stat": "Resistance",
+          "value": 90,
+          "school": "Fire"
+        },
+        {
+          "stat": "Resistance",
+          "value": 30
+        }
+      ],
+      "lootTable": "lt_r2_vyrmathra",
+      "xpMult": 1.5,
+      "faction": "Ashwyrm",
+      "family": "Dragon",
+      "bark": "Little lights. I have eaten kingdoms of little lights.",
+      "size": 7.5,
+      "ai": "Boss",
+      "abilities": [
+        {
+          "ability": "cr_r2_ashwyrm_fury",
+          "priority": 11,
+          "condition": "roundAtLeast:56"
+        },
+        {
+          "ability": "cr_r2_firestorm",
+          "priority": 11,
+          "condition": "selfAura:cr_r2_ashwyrm_fury"
+        },
+        {
+          "ability": "cr_r2_the_last_ember",
+          "priority": 10,
+          "condition": "selfHpBelow:25&selfNoAura:cr_r2_the_last_ember"
+        },
+        {
+          "ability": "cr_r2_take_wing",
+          "priority": 10,
+          "condition": "selfHpBelow:70"
+        },
+        {
+          "ability": "cr_r2_brood_of_ash",
+          "priority": 10,
+          "condition": "selfHpBelow:35"
+        },
+        {
+          "ability": "cr_r2_hollowfire",
+          "priority": 9,
+          "condition": "selfHpBelow:35&roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_fire_breath",
+          "priority": 8,
+          "condition": "roundAtLeast:2"
+        },
+        {
+          "ability": "cr_r2_rain_of_cinders",
+          "priority": 8,
+          "condition": "selfHpBelow:70"
+        },
+        {
+          "ability": "cr_r2_wing_buffet",
+          "priority": 7,
+          "condition": "selfHpAbove:70&enemiesInRange:3"
+        },
+        {
+          "ability": "cr_r2_tail_sweep",
+          "priority": 6,
+          "condition": "enemiesInRange:3"
+        },
+        {
+          "ability": "cr_r2_wyrm_cleave",
+          "priority": 5
+        }
+      ],
+      "material": "scale",
+      "voice": "dragon"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_r2_searing_slash",
+      "name": "Searing Slash",
+      "icon": "sword",
+      "description": "A swing of the glowing greatsword: weapon damage plus {0} Fire.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 5,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 110,
+          "min": 8,
+          "max": 12,
+          "perLevel": 0.8
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_ember_cleave",
+      "name": "Ember Cleave",
+      "icon": "axe",
+      "description": "A wide, burning sweep: weapon damage to enemies in front.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "area": {
+        "shape": "Cone",
+        "radius": 6,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 85
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_sworn_fervour",
+      "name": "Sworn Fervour",
+      "icon": "fire",
+      "description": "The Ashblade's oath burns hot: damage dealt increased by 30% for 20 sec.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 60,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 9,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_sworn_fervour",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_flame_lash",
+      "name": "Flame Lash",
+      "icon": "fire",
+      "description": "A lash of fire from the Dragonsworn's hand: {0} Fire damage.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "aiHint": "Damage",
+      "aiPriority": 4,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 24,
+          "max": 30,
+          "perLevel": 1.6
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_cinder_mend",
+      "name": "Cinder Mend",
+      "icon": "heal_plus",
+      "description": "The Pyre-Priest seals an ally's wounds with fire, healing 14% of its health. It can be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.5,
+      "cooldown": 12,
+      "target": "Ally",
+      "range": 30,
+      "tags": [
+        "Heal",
+        "Telegraph"
+      ],
+      "aiHint": "Heal",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Heal",
+          "min": 0,
+          "max": 0,
+          "pctOfMax": 14
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_ash_ward",
+      "name": "Ash Ward",
+      "icon": "shield",
+      "description": "Wraps an ally in a skin of hot ash that absorbs damage for 15 sec.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 20,
+      "target": "Ally",
+      "range": 30,
+      "aiHint": "Buff",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_ash_ward"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_whistle_whelps",
+      "name": "Whistle for Whelps",
+      "icon": "wings",
+      "description": "The Wyrmcaller blows a bone whistle. Two whelps come flapping out of the smoke.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_ashborn_whelp",
+          "count": 2,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_ember_fist",
+      "name": "Ember Fist",
+      "icon": "fist",
+      "description": "A cinder fist with glowing knuckles: weapon damage plus {0} Fire.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 4,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 105,
+          "min": 6,
+          "max": 9,
+          "perLevel": 0.6
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_cinder_slam",
+      "name": "Cinder Slam",
+      "icon": "earth",
+      "description": "The elemental slams both fists down: {0} Fire damage to enemies within 8 yards.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 14,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 8,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 20,
+          "max": 26,
+          "perLevel": 1.4
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_smothering_ash",
+      "name": "Smothering Ash",
+      "icon": "curse",
+      "description": "A cloud of hot ash in the face: the target deals 20% less damage for 12 sec.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 10,
+      "aiHint": "Debuff",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_smothered"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_nip",
+      "name": "Nip",
+      "icon": "claw",
+      "description": "Small teeth, very hot: weapon damage plus {0}.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 4,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 100,
+          "min": 3,
+          "max": 5,
+          "perLevel": 0.3
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_whelp_breath",
+      "name": "Hiccup of Flame",
+      "icon": "fire",
+      "description": "The whelp hiccups a gout of flame: {0} Fire damage to enemies in front.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "range": 8,
+      "area": {
+        "shape": "Cone",
+        "radius": 8,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 12,
+          "max": 16,
+          "perLevel": 0.8
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_yeti_maul",
+      "name": "Maul",
+      "icon": "claw",
+      "description": "Two huge fists: weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 5,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 110,
+          "min": 6,
+          "max": 9,
+          "perLevel": 0.6
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_rending_claws",
+      "name": "Rending Claws",
+      "icon": "claw",
+      "description": "Icicle claws rake the target: weapon damage plus {0}, and it bleeds for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 120,
+          "min": 10,
+          "max": 14,
+          "perLevel": 0.9
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_rent"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_glacial_swipe",
+      "name": "Glacial Swipe",
+      "icon": "frost",
+      "description": "A swipe that sprays ice: {0} Frost damage to enemies in front, and they are slowed.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "area": {
+        "shape": "Cone",
+        "radius": 9,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 5,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 22,
+          "max": 28,
+          "perLevel": 1.6
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_chilled"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_bitter_cold",
+      "name": "Bitter Cold",
+      "icon": "frost",
+      "description": "The matriarch's breath freezes the whole Shelf: every enemy within 40 yards takes Frost damage every 3 sec for 12 sec. It cannot be interrupted.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 18,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 8,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_bitter_cold"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_avalanche",
+      "name": "Avalanche",
+      "icon": "earth",
+      "description": "Frostclaw rears and slams the Shelf, bringing the snow down: {0} Frost damage to every enemy within 40 yards, and they are slowed. Spread out, and heal through it. It cannot be interrupted.",
+      "school": "Frost",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 24,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 9,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 17,
+          "max": 21,
+          "perLevel": 1.2
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_chilled"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_call_the_brood",
+      "name": "Call the Brood",
+      "icon": "paw",
+      "description": "Frostclaw roars for her grown children. Two ash-maddened yetis come down off the ledges.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_ash_yeti",
+          "count": 2,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_call_the_brood_2",
+      "name": "Call the Brood",
+      "icon": "paw",
+      "description": "Frostclaw roars again. Two more yetis answer.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_ash_yeti",
+          "count": 2,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_matriarchs_fury",
+      "name": "Matriarch's Fury",
+      "icon": "rage",
+      "description": "Wounded and smoke-blind, Frostclaw goes berserk: damage dealt increased by 40% and attack speed by 25%.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_matriarchs_fury",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_white_out",
+      "name": "White-Out",
+      "icon": "snowflake",
+      "description": "The fight has gone on too long: the Shelf vanishes in a howling white-out and Frostclaw fights inside it, damage dealt increased by 300% and attack speed by 50%. Kill her before the snow comes.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_white_out",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_blizzard",
+      "name": "Blizzard",
+      "icon": "snowflake",
+      "description": "Inside the white-out the wind itself cuts: {0} Frost damage to every enemy within 40 yards, every turn.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 40,
+          "max": 50,
+          "perLevel": 3.0
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_molten_bite",
+      "name": "Molten Bite",
+      "icon": "claw",
+      "description": "A bite with a jaw full of magma: weapon damage plus {0} Fire, and the target's armour softens (stacks to 5). Trade the tank.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 120,
+          "min": 10,
+          "max": 14,
+          "perLevel": 0.9
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_molten"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_tail_lash",
+      "name": "Tail Lash",
+      "icon": "earth",
+      "description": "A sweep of the spiked tail: {0} damage to enemies within 10 yards.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 10,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 22,
+          "max": 28,
+          "perLevel": 1.5
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_magma_spit",
+      "name": "Magma Spit",
+      "icon": "fire",
+      "description": "Emberjaw spits a gob of magma at a distant enemy: {0} Fire damage.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 1.5,
+      "cooldown": 10,
+      "target": "Enemy",
+      "range": 30,
+      "aiHint": "Damage",
+      "aiPriority": 5,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 26,
+          "max": 32,
+          "perLevel": 1.8
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_violet_flame",
+      "name": "Violet Flame",
+      "icon": "fire",
+      "description": "A bolt of pale violet fire: {0} Fire damage.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "aiHint": "Damage",
+      "aiPriority": 4,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 24,
+          "max": 30,
+          "perLevel": 1.7
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_ash_breath",
+      "name": "Ash Breath",
+      "icon": "fire",
+      "description": "Ashtongue rears and breathes a long cone of violet fire: {0} Fire damage to every enemy in front of her, and they choke on ash. It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 3.0,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 30,
+      "area": {
+        "shape": "Cone",
+        "radius": 30,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 8,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 7.0,
+          "max": 8.8,
+          "perLevel": 0.484
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_choking"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_choking_cinders",
+      "name": "Choking Cinders",
+      "icon": "fire",
+      "description": "Cinders rain over the pit: every enemy within 40 yards burns every 3 sec for 12 sec. It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_choking_cinders"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_rekindle",
+      "name": "Rekindle",
+      "icon": "heal_plus",
+      "description": "Ashtongue breathes her flame into her wounded brother, healing 12% of his health. Interrupt it!",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 3.0,
+      "cooldown": 24,
+      "target": "Ally",
+      "range": 30,
+      "tags": [
+        "Heal",
+        "Telegraph"
+      ],
+      "aiHint": "Heal",
+      "aiPriority": 9,
+      "effects": [
+        {
+          "type": "Heal",
+          "min": 0,
+          "max": 0,
+          "pctOfMax": 12
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_grief_fire",
+      "name": "Grief-Fire",
+      "icon": "rage",
+      "description": "Badly hurt, the drake burns hotter: damage dealt increased by 50%.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_grief_fire",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_skullsplitter",
+      "name": "Skullsplitter",
+      "icon": "mace",
+      "description": "The dragon-bone maul comes straight down: weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "aiHint": "Damage",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 150,
+          "min": 14,
+          "max": 18,
+          "perLevel": 1.1
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_wyrmfire_slam",
+      "name": "Wyrmfire Slam",
+      "icon": "earth",
+      "description": "Varkas raises the maul over his head and brings it down in a ring of fire: {0} Fire damage to every enemy within 14 yards, and they are dazed. It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 3.5,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 14,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 9,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 10,
+          "max": 13,
+          "perLevel": 0.72
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_dazed"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_brand_of_the_wyrm",
+      "name": "Brand of the Wyrm",
+      "icon": "curse",
+      "description": "Varkas raises the drake skull and the Ashwyrm's brand burns into every enemy within 40 yards: Fire damage every 3 sec for 15 sec, and healing taken is reduced by 25%. Remove the curse, and heal through it. It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 18,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Curse",
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 8,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_branded"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_call_honour_guard",
+      "name": "To Me, Honour Guard!",
+      "icon": "banner",
+      "description": "Varkas bellows, and two of his Honour Guard come running from the tents.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_honour_guard",
+          "count": 2,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_war_bellow",
+      "name": "Highlord's Bellow",
+      "icon": "shout",
+      "description": "A bellow that shakes the banners: Varkas and his allies deal 20% more damage for 30 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 45,
+      "target": "Self",
+      "tags": [
+        "Shout"
+      ],
+      "aiHint": "Buff",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_war_bellow",
+          "target": "AlliesInRadius",
+          "radius": 30
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_war_bellow",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_highlords_wrath",
+      "name": "Highlord's Wrath",
+      "icon": "rage",
+      "description": "Nobody has ever made Varkas bleed this much. He takes it personally: damage dealt increased by 50%.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_highlords_wrath",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_wyrm_cleave",
+      "name": "Wyrm Cleave",
+      "icon": "claw",
+      "description": "Claws as long as swords sweep the front ranks: weapon damage to every enemy in front of her.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "melee": true,
+      "area": {
+        "shape": "Cone",
+        "radius": 10,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 5,
+      "effects": [
+        {
+          "type": "WeaponDamage",
+          "weaponPct": 100
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_tail_sweep",
+      "name": "Tail Sweep",
+      "icon": "earth",
+      "description": "The spade-bladed tail sweeps the ash: {0} damage to every enemy within 12 yards, and they are knocked back.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 12,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 6,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 26,
+          "max": 32,
+          "perLevel": 1.8
+        },
+        {
+          "type": "Knockback",
+          "distance": 4
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_wing_buffet",
+      "name": "Wing Buffet",
+      "icon": "wind",
+      "description": "Vyrmathra opens her wings and beats them once: {0} damage to every enemy within 14 yards, and they are dazed.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 16,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 14,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 7,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 18,
+          "max": 24,
+          "perLevel": 1.2
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_dazed"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_fire_breath",
+      "name": "Fire Breath",
+      "icon": "fire",
+      "description": "Vyrmathra draws a breath that empties the sky, and breathes: {0} Fire damage to every enemy in a long cone in front of her, and they burn. Get out of the cone! It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 3.5,
+      "cooldown": 18,
+      "target": "Enemy",
+      "range": 40,
+      "area": {
+        "shape": "Cone",
+        "radius": 40,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 8,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 4.0,
+          "max": 5.0,
+          "perLevel": 0.28
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_wyrmburn"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_rain_of_cinders",
+      "name": "Rain of Cinders",
+      "icon": "fire",
+      "description": "The Ashwyrm shakes her wings, and burning ash falls over the whole summit: every enemy within 50 yards burns every 3 sec for 12 sec. It cannot be interrupted.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 50,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 8,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_searing_ash"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_take_wing",
+      "name": "Take Wing",
+      "icon": "wings",
+      "description": "Vyrmathra leaps into the smoke and screams. Four whelps of her brood come down to fight for her.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_ashborn_whelp",
+          "count": 4,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_brood_of_ash",
+      "name": "Brood of Ash",
+      "icon": "ember",
+      "description": "Her eggs crack in the nest. Four more whelps tumble out, already burning.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Summon",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "Summon",
+          "summon": "cr_r2_ashborn_whelp",
+          "count": 4,
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_hollowfire",
+      "name": "Hollowfire",
+      "icon": "shadow",
+      "description": "The fire inside the Ashwyrm turns grey: the same grey as the Hollow. {0} Shadowflame to every enemy within 50 yards. Heal through it, or nobody walks down the mountain. It cannot be interrupted.",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 50,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "tags": [
+        "Telegraph",
+        "Uninterruptible"
+      ],
+      "aiHint": "AoE",
+      "aiPriority": 9,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 14,
+          "max": 17,
+          "perLevel": 0.96
+        },
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_hollowed_flame"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_the_last_ember",
+      "name": "The Last Ember",
+      "icon": "fire",
+      "description": "Vyrmathra burns everything she has left: damage dealt increased by 30% and attack speed by 20%.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 10,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_the_last_ember",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_ashwyrm_fury",
+      "name": "The Ashwyrm's Fury",
+      "icon": "rage",
+      "description": "The fight has gone on too long: the Ashwyrm's fire fills the champion, damage dealt increased by 200%.",
+      "school": "Fire",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "aiHint": "Buff",
+      "aiPriority": 11,
+      "effects": [
+        {
+          "type": "ApplyAura",
+          "aura": "cr_r2_ashwyrm_fury",
+          "target": "Self"
+        }
+      ]
+    },
+    {
+      "id": "cr_r2_firestorm",
+      "name": "Firestorm",
+      "icon": "fire",
+      "description": "In the Ashwyrm's fury the whole mountain-top burns: {0} Fire damage to every enemy within 60 yards, every turn. Win before the fury comes.",
+      "school": "Fire",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Self",
+      "area": {
+        "shape": "Circle",
+        "radius": 60,
+        "centeredOnCaster": true,
+        "affects": "Enemies"
+      },
+      "aiHint": "AoE",
+      "aiPriority": 11,
+      "effects": [
+        {
+          "type": "Damage",
+          "min": 40,
+          "max": 50,
+          "perLevel": 3.0
+        }
+      ]
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_r2_sworn_fervour",
+      "name": "Sworn Fervour",
+      "icon": "fire",
+      "kind": "Buff",
+      "duration": 20,
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 30,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 30%."
+    },
+    {
+      "id": "cr_r2_ash_ward",
+      "name": "Ash Ward",
+      "icon": "shield",
+      "kind": "Buff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 15,
+      "absorb": {
+        "amount": 180
+      },
+      "description": "A skin of hot ash absorbs damage."
+    },
+    {
+      "id": "cr_r2_smothered",
+      "name": "Smothered",
+      "icon": "curse",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 12,
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": -20,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt reduced by 20%."
+    },
+    {
+      "id": "cr_r2_rent",
+      "name": "Rent",
+      "icon": "blood",
+      "kind": "Debuff",
+      "duration": 12,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 6,
+          "perLevel": 0.6
+        }
+      ],
+      "description": "Bleeding: Physical damage every 3 sec."
+    },
+    {
+      "id": "cr_r2_chilled",
+      "name": "Chilled",
+      "icon": "frost",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 8,
+      "mods": [
+        {
+          "stat": "MoveSpeed",
+          "value": -40,
+          "pct": true
+        }
+      ],
+      "description": "Movement speed reduced by 40%."
+    },
+    {
+      "id": "cr_r2_bitter_cold",
+      "name": "Bitter Cold",
+      "icon": "frost",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 12,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 0.7,
+          "perLevel": 0.06
+        }
+      ],
+      "description": "Frost damage every 3 sec."
+    },
+    {
+      "id": "cr_r2_matriarchs_fury",
+      "name": "Matriarch's Fury",
+      "icon": "rage",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 40,
+          "pct": true
+        },
+        {
+          "stat": "MeleeHaste",
+          "value": 25,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 40%. Attack speed increased by 25%."
+    },
+    {
+      "id": "cr_r2_white_out",
+      "name": "White-Out",
+      "icon": "snowflake",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 300,
+          "pct": true
+        },
+        {
+          "stat": "MeleeHaste",
+          "value": 50,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 300%. Attack speed increased by 50%."
+    },
+    {
+      "id": "cr_r2_molten",
+      "name": "Molten Armour",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "duration": 20,
+      "maxStacks": 5,
+      "mods": [
+        {
+          "stat": "Armor",
+          "value": -10,
+          "pct": true
+        }
+      ],
+      "description": "Armour reduced by 10% per application."
+    },
+    {
+      "id": "cr_r2_choking",
+      "name": "Choking Ash",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 9,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 1.3,
+          "perLevel": 0.11
+        }
+      ],
+      "mods": [
+        {
+          "stat": "MeleeHit",
+          "value": -10
+        },
+        {
+          "stat": "SpellHit",
+          "value": -10
+        },
+        {
+          "stat": "RangedHit",
+          "value": -10
+        }
+      ],
+      "description": "Fire damage every 3 sec. Chance to hit reduced by 10%."
+    },
+    {
+      "id": "cr_r2_choking_cinders",
+      "name": "Choking Cinders",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 12,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 1.1,
+          "perLevel": 0.09
+        }
+      ],
+      "description": "Fire damage every 3 sec."
+    },
+    {
+      "id": "cr_r2_grief_fire",
+      "name": "Grief-Fire",
+      "icon": "rage",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 50,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 50%."
+    },
+    {
+      "id": "cr_r2_dazed",
+      "name": "Dazed",
+      "icon": "boot",
+      "kind": "Debuff",
+      "duration": 6,
+      "states": [
+        "Daze"
+      ],
+      "mods": [
+        {
+          "stat": "MoveSpeed",
+          "value": -50,
+          "pct": true
+        }
+      ],
+      "description": "Movement speed reduced by 50%."
+    },
+    {
+      "id": "cr_r2_branded",
+      "name": "Brand of the Wyrm",
+      "icon": "curse",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Curse",
+      "duration": 15,
+      "tags": [
+        "Curse"
+      ],
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 0.5,
+          "perLevel": 0.036
+        }
+      ],
+      "mods": [
+        {
+          "stat": "HealingTaken",
+          "value": -25,
+          "pct": true
+        }
+      ],
+      "description": "Fire damage every 3 sec. Healing taken reduced by 25%."
+    },
+    {
+      "id": "cr_r2_war_bellow",
+      "name": "Highlord's Bellow",
+      "icon": "shout",
+      "kind": "Buff",
+      "duration": 30,
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 20,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 20%."
+    },
+    {
+      "id": "cr_r2_highlords_wrath",
+      "name": "Highlord's Wrath",
+      "icon": "rage",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 50,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 50%."
+    },
+    {
+      "id": "cr_r2_wyrmburn",
+      "name": "Wyrmburn",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 9,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 0.9,
+          "perLevel": 0.08
+        }
+      ],
+      "description": "Fire damage every 3 sec."
+    },
+    {
+      "id": "cr_r2_searing_ash",
+      "name": "Searing Ash",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "dispel": "Magic",
+      "duration": 12,
+      "tickInterval": 3,
+      "tickEffects": [
+        {
+          "type": "Damage",
+          "min": 0.6,
+          "perLevel": 0.049
+        }
+      ],
+      "description": "Burning ash: Fire damage every 3 sec."
+    },
+    {
+      "id": "cr_r2_hollowed_flame",
+      "name": "Hollowed Flame",
+      "icon": "shadow",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 9,
+      "mods": [
+        {
+          "stat": "HealingTaken",
+          "value": -20,
+          "pct": true
+        }
+      ],
+      "description": "Grey fire: healing taken reduced by 20%."
+    },
+    {
+      "id": "cr_r2_the_last_ember",
+      "name": "The Last Ember",
+      "icon": "fire",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 30,
+          "pct": true
+        },
+        {
+          "stat": "MeleeHaste",
+          "value": 20,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 30%. Attack speed increased by 20%."
+    },
+    {
+      "id": "cr_r2_ashwyrm_fury",
+      "name": "The Ashwyrm's Fury",
+      "icon": "rage",
+      "kind": "Buff",
+      "mods": [
+        {
+          "stat": "DamageDone",
+          "value": 200,
+          "pct": true
+        }
+      ],
+      "description": "Damage dealt increased by 200%."
+    }
+  ]
+}

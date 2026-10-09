@@ -1,0 +1,214 @@
+{
+  "_note": "Main quest (mq_) and side quests (sq_). Reach objectives target region ids; each such region also sets an enterFlag with the same name. XP/gold are WoW-like base values.",
+  "quests": [
+    {
+      "id": "mq_lanterns",
+      "name": "The Lanterns Go Dark",
+      "giver": "elder_maru",
+      "level": 8,
+      "main": true,
+      "summary": "The spirit-lanterns that keep Lanternvale warm are going dark one by one, and a grey blight called the Hollow creeps in behind them. Elder Maru believes the trouble starts at the Old Lantern Shrine, high above Whisperwood, where the great stag spirit called the Warden keeps the Heart Lantern.",
+      "stages": [
+        {
+          "id": "elder",
+          "description": "Speak with Elder Maru beneath Old Kusu, the great camphor tree in the village square.",
+          "objectives": [{"type": "Flag", "target": "met_elder", "text": "Speak with Elder Maru"}],
+          "next": "wayshrine"
+        },
+        {
+          "id": "wayshrine",
+          "description": "Follow the old pilgrim road east into Whisperwood and find the Wayside Shrine.",
+          "objectives": [{"type": "Reach", "target": "reg_wayshrine", "text": "Find the Wayside Shrine"}],
+          "next": "komorebi",
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
+        },
+        {
+          "id": "komorebi",
+          "description": "Learn what has happened to the Wayside Shrine's lantern from the spirit who keeps it.",
+          "objectives": [{"type": "Flag", "target": "met_komorebi", "text": "Speak with the Wayside spirit"}],
+          "next": "embers"
+        },
+        {
+          "id": "embers",
+          "description": "Free 3 Spirit Embers from the Hollow wisps drifting through the Grey Grove, east of the Old Bridge.",
+          "objectives": [{"type": "Collect", "target": "spirit_ember", "text": "Spirit Embers freed", "count": 3}],
+          "next": "embers_return",
+          "onComplete": [{"type": "GiveXP", "amount": 400}]
+        },
+        {
+          "id": "embers_return",
+          "description": "Bring the Spirit Embers to Komorebi at the Wayside Shrine.",
+          "objectives": [{"type": "Flag", "target": "embers_gathered", "text": "Return to Komorebi"}],
+          "next": "rotheart"
+        },
+        {
+          "id": "rotheart",
+          "description": "Burn a way through the blight: defeat Rotheart, the Blighted Treant, whose grey roots seal the pilgrim stair at the eastern end of Whisperwood.",
+          "objectives": [{"type": "Kill", "target": "cr_hollow_treant", "text": "Rotheart defeated"}],
+          "next": "shrine",
+          "onComplete": [{"type": "GiveXP", "amount": 600}]
+        },
+        {
+          "id": "shrine",
+          "description": "Climb the pilgrim stair to the Old Lantern Shrine.",
+          "objectives": [{"type": "Reach", "target": "reg_shrine_approach", "text": "Reach the Old Lantern Shrine"}],
+          "next": "warden",
+          "onComplete": [{"type": "GiveXP", "amount": 200}]
+        },
+        {
+          "id": "warden",
+          "description": "Find the source of the Hollow in the shrine's sanctum and face what waits there.",
+          "objectives": [{"type": "Kill", "target": "cr_hollow_warden", "text": "The Hollow Warden defeated"}],
+          "next": "rekindle"
+        },
+        {
+          "id": "rekindle",
+          "description": "Rekindle the Heart Lantern.",
+          "objectives": [{"type": "Flag", "target": "heart_lantern_lit", "text": "Rekindle the Heart Lantern"}],
+          "next": "home"
+        },
+        {
+          "id": "home",
+          "description": "Return to Elder Maru in Lanternvale.",
+          "objectives": [{"type": "Talk", "target": "elder_maru", "text": "Return to Elder Maru"}]
+        }
+      ],
+      "rewards": {
+        "xp": 1650,
+        "gold": 2500,
+        "choiceItems": [
+          "pilgrim_guardians_blade",
+          "staff_of_the_kindled_hearth",
+          "ember_stitched_jerkin",
+          "hauberk_of_the_long_night",
+          "kindlewarm_robe",
+          "bow_of_the_lantern_road"
+        ]
+      }
+    },
+    {
+      "id": "sq_shepherd",
+      "name": "Wolves at the Fold",
+      "giver": "shepherd_bram",
+      "level": 3,
+      "summary": "Wolves have been at Bram's flock every night since the lanterns began to fail. Something in Whisperwood is driving them out of the trees.",
+      "stages": [
+        {
+          "id": "wolves",
+          "description": "Drive off the wolves troubling Bram's flock in the east pasture of Lanternvale.",
+          "objectives": [{"type": "Kill", "target": "cr_wolf", "text": "Grey Wolves driven off", "count": 3}],
+          "next": "report",
+          "onComplete": [{"type": "GiveXP", "amount": 150}]
+        },
+        {
+          "id": "report",
+          "description": "Tell Bram the pasture is clear.",
+          "objectives": [{"type": "Flag", "target": "shepherd_hunt", "text": "Speak with Bram"}],
+          "next": "greymane"
+        },
+        {
+          "id": "greymane",
+          "description": "Track Greymane, the old alpha, to his den beneath the big rocks at the edge of Whisperwood, and put him to rest.",
+          "objectives": [{"type": "Kill", "target": "cr_greymane", "text": "Greymane put to rest"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Return to Bram in the east pasture.",
+          "objectives": [{"type": "Talk", "target": "shepherd_bram", "text": "Return to Bram"}]
+        }
+      ],
+      "rewards": {"xp": 700, "gold": 150, "choiceItems": ["wolfrunner_boots", "shepherds_fleece_vest", "shepherds_crook", "wolf_tooth_necklace"]}
+    },
+    {
+      "id": "sq_spirit_friend",
+      "name": "Little Lost Light",
+      "giver": "child_nell",
+      "level": 4,
+      "summary": "Nell's spirit friend Moppet ran away into Whisperwood when the great lantern went out. Nell is not scared about it. Not even a bit. (A bit.)",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Find Moppet somewhere quiet in Whisperwood. He likes glowing mushrooms and places where grown-ups don't look. Nell's bell might help.",
+          "objectives": [{"type": "Flag", "target": "moppet_found", "text": "Find Moppet"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Tell Nell that Moppet is safe.",
+          "objectives": [{"type": "Talk", "target": "child_nell", "text": "Return to Nell"}]
+        }
+      ],
+      "rewards": {"xp": 550, "gold": 0, "choiceItems": ["nells_lucky_acorn", "moppets_moss_charm"]}
+    },
+    {
+      "id": "sq_wicks",
+      "name": "Wicks Gone Walkabout",
+      "giver": "lamplighter_tobben",
+      "level": 6,
+      "summary": "Old Tobben's spirit-wicks keep disappearing from his stores, leaving behind little muddy leaf-shaped footprints. Mosslings!",
+      "stages": [
+        {
+          "id": "gather",
+          "description": "Recover 6 Lantern Wicks from the Mosslings of Whisperwood. Their camp, Puddlecap Hollow, lies just east of the Wayside Shrine.",
+          "objectives": [{"type": "Collect", "target": "lantern_wick", "text": "Lantern Wicks recovered", "count": 6}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Bring the wicks back to Tobben in Lanternvale.",
+          "objectives": [{"type": "Flag", "target": "wicks_returned", "text": "Return to Tobben"}]
+        }
+      ],
+      "rewards": {"xp": 800, "gold": 250, "choiceItems": ["lamplighters_gloves", "wayfarers_chain_boots", "mossy_cloak"]}
+    },
+    {
+      "id": "sq_satchel",
+      "name": "Return to Sender",
+      "giver": "postman_fennick",
+      "level": 6,
+      "summary": "Fennick the letter-carrier dropped his satchel when a boar charged him on the Whisperwood road, and spiders dragged it off into their hollow. Every letter in the valley is in a spider's larder.",
+      "stages": [
+        {
+          "id": "find",
+          "description": "Recover Fennick's satchel from the Spiders' Hollow, east of the Old Bridge in Whisperwood.",
+          "objectives": [{"type": "Collect", "target": "fennicks_satchel", "text": "Recover Fennick's satchel"}],
+          "next": "return"
+        },
+        {
+          "id": "return",
+          "description": "Return the satchel to Fennick in Lanternvale.",
+          "objectives": [{"type": "Talk", "target": "postman_fennick", "text": "Return to Fennick"}],
+          "next": "deliver"
+        },
+        {
+          "id": "deliver",
+          "description": "Deliver Keeper Ishiro's letter to Elder Maru.",
+          "objectives": [{"type": "Flag", "target": "ishiro_letter_read", "text": "Deliver the letter to Elder Maru"}]
+        }
+      ],
+      "rewards": {"xp": 750, "gold": 300, "choiceItems": ["couriers_swift_cloak", "willow_ring", "cutpurses_signet"]}
+    },
+    {
+      "id": "sq_bridge",
+      "name": "Toll at the Old Bridge",
+      "giver": "guard_holt",
+      "level": 9,
+      "summary": "Bandits have taken the Old Bridge in Whisperwood and are charging pilgrims a 'toll'. Sergeant Holt can't leave the village. He'd like them gone — however you manage it.",
+      "stages": [
+        {
+          "id": "bandits",
+          "description": "Deal with Rusk and the bandits holding the Old Bridge in Whisperwood — by blade, by word or by coin.",
+          "objectives": [{"type": "Flag", "target": "bandits_dealt_with", "text": "Deal with the bandits at the Old Bridge"}],
+          "next": "report"
+        },
+        {
+          "id": "report",
+          "description": "Report back to Sergeant Holt in Lanternvale.",
+          "objectives": [{"type": "Talk", "target": "guard_holt", "text": "Report to Sergeant Holt"}]
+        }
+      ],
+      "rewards": {"xp": 1000, "gold": 400, "choiceItems": ["bridgewardens_hauberk", "guardsmans_coif", "brightsteel_shortsword", "mosswood_longbow"]}
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "_note": "Game configuration and the specials requested by world content.",
+  "config": {
+    "startMap": "lanternvale",
+    "startSpawn": "default",
+    "startDialogue": "dlg_opening",
+    "xpRate": 4,
+    "maxLevel": 60,
+    "partySize": 5,
+    "maxRaidSize": 10,
+    "xpRateByLevel": [
+      {"level": 1, "rate": 4},
+      {"level": 12, "rate": 4},
+      {"level": 18, "rate": 6},
+      {"level": 24, "rate": 8},
+      {"level": 30, "rate": 9},
+      {"level": 60, "rate": 9}
+    ],
+    "baseMoveMetres": 9,
+    "meleeReachMetres": 2.2,
+    "startingGold": 1000,
+    "startingItems": [
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_healing",
+      "potion_minor_mana",
+      "potion_minor_mana",
+      "food_rice_ball",
+      "food_rice_ball",
+      "food_rice_ball",
+      "food_rice_ball",
+      "drink_spring_water",
+      "drink_spring_water",
+      "drink_spring_water",
+      "drink_spring_water",
+      "bandage_linen",
+      "bandage_linen"
+    ]
+  },
+  "specials": [
+    {
+      "id": "RekindleLanterns",
+      "usedBy": "dlg_warden_spirit (dialogue outcome Special)",
+      "behaviour": "Dialogue outcome (no parameters), run when the Heart Lantern is rekindled; the same node also sets flags heart_lantern_lit and lanterns_rekindled. Valley-wide relight: on the current map call MapView.SetLanternLit(id, true, animate: true) for every lantern object (all spirit-lantern props carry a unique interact id: great_lantern, great_lantern_twin, wayside_lantern, heart_lantern, lantern_<map>_<n>). Whenever a map is built while flag lanterns_rekindled is set, call SetLanternLit(id, true, animate: false) for all of them so the change persists across map changes and save/load. Optional polish: a camera flash/bloom pulse and a 'The lanterns of Lanternvale are lit!' banner."
+    }
+  ]
+}

@@ -1,0 +1,1098 @@
+{
+  "_note": "Skyreach Peaks (Docs/Expansion.md §8, builder skyreach, prefixes sr / dg6). The map: Cairnhollow, the Switchbacks, the Bone Field, the Heronguard tower, the Dragonsworn vanguard and the Roost Gate.",
+  "maps": [
+    {
+      "id": "skyreach",
+      "name": "Skyreach Peaks",
+      "subtitle": "Snow, pines and the old dragon roads",
+      "width": 120,
+      "depth": 60,
+      "skyTop": "#b8d4ee",
+      "skyBottom": "#f2f4f8",
+      "ground": "ground_snow",
+      "groundTile": 8,
+      "groundTint": "#f4f6fa",
+      "biome": "peaks",
+      "environment": "outdoor",
+      "levelMin": 24,
+      "levelMax": 30,
+      "fill": 0.42,
+      "paths": [
+        {
+          "art": "decal_path_dirt",
+          "points": [
+            [120, 10],
+            [112, 10],
+            [104, 10],
+            [98, 12.6],
+            [92, 14.4],
+            [84, 14.6],
+            [77, 13.6],
+            [70, 15.2],
+            [64.5, 18.6],
+            [66.5, 23.2],
+            [73.5, 26.4],
+            [77.5, 30.2],
+            [72.5, 33.8],
+            [63, 35.8],
+            [54, 37.2],
+            [45, 38.0],
+            [37, 39.2],
+            [31, 42.0],
+            [27, 46.4],
+            [23.4, 50.6],
+            [20.4, 54.2]
+          ],
+          "width": 2.5
+        },
+        {"art": "decal_path_dirt", "points": [[91.2, 15.0], [91.0, 22.0], [90.2, 28.6], [88.6, 35.0], [87.4, 41.0], [86.6, 46.4]], "width": 1.6},
+        {"art": "decal_path_dirt", "points": [[112.4, 10.6], [113.6, 18.0], [112.2, 26.0], [113.0, 34.0], [114.2, 41.0]], "width": 1.5},
+        {"art": "decal_path_dirt", "points": [[90.6, 27.8], [98.0, 28.8], [105.2, 29.0], [111.6, 29.6]], "width": 1.5},
+        {
+          "art": "decal_path_dirt",
+          "points": [[64.6, 18.4], [56.0, 16.6], [47.0, 17.6], [38.0, 15.6], [28.0, 16.8], [19.0, 19.6], [10.0, 21.0], [5.0, 20.4]],
+          "width": 1.6
+        },
+        {"art": "decal_path_dirt", "points": [[56.0, 36.8], [57.4, 41.6], [60.2, 44.6], [65.4, 45.0]], "width": 1.5},
+        {"art": "decal_path_dirt", "points": [[43.0, 38.4], [41.0, 41.6], [40.4, 45.2]], "width": 1.5},
+        {"art": "decal_path_dirt", "points": [[27.0, 46.4], [18.0, 45.2], [10.0, 45.6]], "width": 1.8},
+        {"art": "decal_path_dirt", "points": [[77.0, 30.6], [80.0, 37.0], [78.0, 45.0], [75.0, 51.4]], "width": 1.4},
+        {"art": "decal_path_stone", "points": [[88.4, 14.2], [96.6, 14.6]], "width": 3.2},
+        {"art": "decal_path_stone", "points": [[96.6, 14.8], [97.2, 18.6]], "width": 1.6},
+        {"art": "decal_path_stone", "points": [[84.0, 14.6], [84.4, 17.2]], "width": 1.6}
+      ],
+      "water": [
+        {
+          "points": [[93.5, 44.5], [96.0, 41.4], [101.2, 40.4], [105.6, 42.6], [105.0, 47.6], [100.4, 50.0], [95.4, 49.4]],
+          "closed": true,
+          "halfWidth": 1.5
+        },
+        {
+          "points": [[103.4, 42.0], [104.6, 36.0], [105.4, 30.0], [107.0, 23.0], [108.0, 16.0], [108.0, 10.0], [108.0, 4.0], [107.6, -2.0]],
+          "halfWidth": 1.3,
+          "crossings": [{"pos": [108.0, 10.0], "size": [7.6, 2.4]}, {"pos": [105.3, 29.0], "size": [5.4, 3.2]}]
+        }
+      ],
+      "props": [
+        {
+          "art": "prop_bridge_stone",
+          "pos": [108.0, 10.0],
+          "light": {"color": "#ffd9a0", "radius": 4.0, "intensity": 0.9, "offset": [3.95, 1.75], "nightOnly": true}
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [113.4, 12.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "sr_sign_bridge",
+          "text": "West: Cairnhollow (hot tea, warm beds, opinions). North: the Wolf Den (do not). Far north-west: the Roost (absolutely do not)."
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [103.0, 11.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffcf8a", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_mountain_hut",
+          "pos": [85.0, 22.2],
+          "collider": {"w": 7.0, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.8, "offset": [0.2, 2.1], "nightOnly": true},
+          "interact": "sr_hut_odran",
+          "text": "Odran's hut. A pair of snowshoes hangs on the door, and a note: OUT GUIDING. OR IN. KNOCK."
+        },
+        {
+          "art": "prop_mountain_hut",
+          "pos": [97.4, 22.4],
+          "collider": {"w": 7.0, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.8, "offset": [0.2, 2.1], "nightOnly": true},
+          "interact": "sr_hut_kettle",
+          "text": "The Kettle Hut. Smoke, tea and the sound of someone humming badly."
+        },
+        {
+          "art": "prop_mountain_hut",
+          "pos": [78.2, 21.6],
+          "collider": {"w": 7.0, "h": 5.2},
+          "light": {"color": "#ffb062", "radius": 3.5, "intensity": 0.8, "offset": [0.2, 2.1], "nightOnly": true},
+          "interact": "sr_hut_brannoc",
+          "text": "Brannoc's hut. The door is decorated with antlers, snowshoes and a sign that says PELTS BOUGHT, COATS SOLD, NO REFUNDS."
+        },
+        {
+          "art": "prop_campfire",
+          "pos": [91.4, 18.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 5.0, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_log", "pos": [89.4, 18.6], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_log", "pos": [93.4, 18.8], "flip": true, "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_prayer_flags", "pos": [91.0, 21.6], "sway": true},
+        {"art": "prop_prayer_flags", "pos": [101.6, 12.4], "flip": true, "sway": true},
+        {
+          "art": "prop_lamp_post",
+          "pos": [82.2, 12.8],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffcf8a", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_lamp_post",
+          "pos": [95.0, 12.0],
+          "collider": {"w": 0.4, "h": 0.3},
+          "light": {"color": "#ffcf8a", "radius": 4.0, "intensity": 0.9, "offset": [0, 2.3], "flicker": true, "nightOnly": true}
+        },
+        {
+          "art": "prop_signpost",
+          "pos": [80.6, 16.2],
+          "collider": {"w": 0.4, "h": 0.3},
+          "interact": "sr_sign_village",
+          "text": "East: Cairnhollow and the Brightwater road. West and up: the Switchbacks, Two-Belly Ledge (pay the ogre or run fast). North: Flag Knoll and Glasswater Falls."
+        },
+        {
+          "art": "prop_noticeboard",
+          "pos": [99.6, 17.0],
+          "collider": {"w": 1.6, "h": 0.5},
+          "interact": "sr_board",
+          "text": "CAIRNHOLLOW NOTICES. Lost: three goats (answer to nothing). Wanted: wolf pelts, harpy-proof bells, and patience. Seen: a lot more smoke than usual over the Roost. Hilde says: wipe your boots."
+        },
+        {"art": "prop_barrel", "pos": [101.6, 20.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_barrel", "pos": [102.2, 21.8], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [101.4, 23.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_washing_line", "pos": [84.4, 9.2], "collider": {"w": 3.4, "h": 0.3}, "sway": true},
+        {"art": "prop_fishing_rack", "pos": [93.6, 7.2], "collider": {"w": 2.4, "h": 0.7}, "sway": true},
+        {"art": "prop_crate", "pos": [92.8, 3.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_stump", "pos": [82.6, 7.4], "collider": {"w": 0.9, "h": 0.5}},
+        {"art": "prop_fence", "pos": [98.6, 6.4], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [102.2, 6.4], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_hay", "pos": [103.6, 2.6], "collider": {"w": 1.2, "h": 0.7}},
+        {"art": "prop_hay", "pos": [97.0, 2.0], "collider": {"w": 1.2, "h": 0.7}},
+        {
+          "art": "prop_cairn",
+          "pos": [93.6, 33.8],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_cairn_knoll",
+          "text": "A cairn of river stones. Each one has a name scratched on it, very small. You count twenty-nine."
+        },
+        {"art": "prop_prayer_flags", "pos": [90.0, 34.6], "sway": true},
+        {"art": "prop_prayer_flags", "pos": [95.6, 35.6], "flip": true, "sway": true},
+        {"art": "prop_prayer_flags", "pos": [94.8, 29.0], "sway": true},
+        {
+          "art": "prop_standing_stone",
+          "pos": [96.6, 32.2],
+          "collider": {"w": 1.0, "h": 0.7},
+          "interact": "sr_mani_stone",
+          "text": "A flat stone carved with a heron and a single line: THEY HELD THE FORDS. NOW WE HOLD THEM."
+        },
+        {"art": "prop_bench", "pos": [89.2, 31.2], "collider": {"w": 1.4, "h": 0.4}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [95.0, 54.8],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [99.0, 56.6],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [103.0, 55.0],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_ice_spire", "pos": [92.6, 52.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [97.0, 52.0], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [101.2, 52.6], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [105.4, 51.8], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [90.6, 56.6], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [107.4, 56.0], "collider": {"w": 1.4, "h": 1.0}},
+        {
+          "art": "prop_ice_spire",
+          "pos": [81.6, 49.6],
+          "collider": {"w": 1.4, "h": 1.0},
+          "light": {"color": "#bfe8ff", "radius": 3.0, "intensity": 0.7, "offset": [0, 1.5]}
+        },
+        {
+          "art": "prop_ice_spire",
+          "pos": [91.4, 49.0],
+          "collider": {"w": 1.4, "h": 1.0},
+          "interact": "sr_frozen_falls_ice",
+          "dialogue": "dlg_sr_frozen_falls"
+        },
+        {"art": "prop_rock_snow", "pos": [82.0, 54.0], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [109.6, 52.0], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [107.0, 46.4], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_snowdrift", "pos": [89.0, 58.4], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_rock_snow", "pos": [116.8, 34.8], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [110.6, 35.6], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [118.0, 29.2], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_bonepile", "pos": [116.6, 31.0], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_snowdrift", "pos": [111.2, 28.4], "collider": {"w": 2.4, "h": 0.9}},
+        {
+          "art": "prop_spirit_lantern",
+          "pos": [117.6, 48.4],
+          "collider": {"w": 0.9, "h": 0.5},
+          "light": {"color": "#ffd27a", "radius": 3.5, "intensity": 0.9, "offset": [0, 1.6], "flicker": true},
+          "interact": "sr_pell_lantern",
+          "text": "A little brass lantern, still lit. Its owner has wrapped it in his own scarf.",
+          "requireFlag": "sr_pell_sought",
+          "hideFlag": "sr_pell_following"
+        },
+        {"art": "prop_rock_snow", "pos": [118.4, 51.2], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_tent", "pos": [58.0, 9.6], "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_tent", "pos": [66.6, 7.4], "flip": true, "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [63.4, 5.0],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 5.0, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_barrel", "pos": [64.6, 6.4], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_bonepile", "pos": [55.0, 6.4], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_cart",
+          "pos": [69.0, 3.4],
+          "collider": {"w": 2.0, "h": 1.0},
+          "interact": "sr_ogre_cart",
+          "text": "A cart full of 'toll': three left boots, a teapot, a saddle, and an enormous wheel of cheese with one bite out of it."
+        },
+        {"art": "prop_rock_snow", "pos": [72.4, 5.4], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [53.2, 12.6], "collider": {"w": 2.0, "h": 1.2}},
+        {
+          "art": "prop_rock_large",
+          "pos": [74.6, 9.0],
+          "collider": {"w": 2.0, "h": 1.0},
+          "interact": "sr_toll_rock",
+          "text": "TOLL, painted in red. Underneath, smaller: 'Gorrum is not a good speller but Gorrum is a good puncher.'"
+        },
+        {"art": "prop_crate", "pos": [57.4, 4.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_snowdrift", "pos": [40.8, 27.4], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [46.8, 22.0], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_rock_snow", "pos": [46.4, 28.6], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [38.0, 25.6], "collider": {"w": 2.0, "h": 1.2}},
+        {
+          "art": "prop_cairn",
+          "pos": [3.4, 18.6],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_cairn_overlook",
+          "text": "A herders' cairn, built stone by stone over many years. Each stone means 'I got up here, and I got home again.'"
+        },
+        {"art": "prop_prayer_flags", "pos": [6.0, 22.6], "sway": true},
+        {"art": "prop_bench", "pos": [6.4, 15.6], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_rock_snow", "pos": [15.0, 30.8], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [8.6, 36.6], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [4.4, 30.2], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [20.6, 25.4], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [23.0, 18.0], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [12.6, 18.6], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [2.6, 37.4], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_ice_spire", "pos": [17.6, 36.0], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [5.6, 26.4], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [22.4, 31.8], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [10.2, 34.2], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_bonepile", "pos": [12.6, 31.6], "collider": {"w": 1.6, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [70.0, 57.4], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [78.6, 57.2], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_snowdrift", "pos": [76.6, 55.0], "collider": {"w": 2.4, "h": 0.9}},
+        {
+          "art": "prop_ice_spire",
+          "pos": [68.6, 53.4],
+          "collider": {"w": 1.4, "h": 1.0},
+          "light": {"color": "#bfe8ff", "radius": 3.0, "intensity": 0.6, "offset": [0, 1.5]}
+        },
+        {"art": "prop_bonepile", "pos": [76.2, 37.8], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_ash_banner",
+          "pos": [61.4, 31.4],
+          "collider": {"w": 0.6, "h": 0.45},
+          "sway": true,
+          "interact": "sr_pen_banner",
+          "text": "A Dragonsworn banner over the drake pen. Someone has chalked underneath: 'Drakes are not dogs. —G.'"
+        },
+        {"art": "prop_crate", "pos": [67.2, 31.6], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_fence", "pos": [62.2, 33.4], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [65.2, 33.6], "collider": {"w": 3.0, "h": 0.35}},
+        {"art": "prop_fence", "pos": [68.2, 33.4], "flip": true, "collider": {"w": 3.0, "h": 0.35}},
+        {
+          "art": "prop_dragon_bones",
+          "pos": [60.6, 49.6],
+          "scale": 1.5,
+          "collider": {"w": 8.0, "h": 4.2},
+          "interact": "sr_dragon_bones",
+          "dialogue": "dlg_sr_dragon_bones"
+        },
+        {"art": "prop_tent", "pos": [66.6, 41.8], "flip": true, "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_campfire",
+          "pos": [65.0, 44.2],
+          "collider": {"w": 1.0, "h": 0.6},
+          "light": {"color": "#ffa050", "radius": 4.5, "intensity": 1.1, "offset": [0, 0.5], "flicker": true}
+        },
+        {"art": "prop_crate", "pos": [68.4, 43.8], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bench", "pos": [62.4, 41.2], "collider": {"w": 1.4, "h": 0.4}},
+        {"art": "prop_standing_stone", "pos": [51.4, 45.8], "collider": {"w": 1.0, "h": 0.7}, "interact": "sr_stone_w", "dialogue": "dlg_sr_stone_w"},
+        {"art": "prop_standing_stone", "pos": [58.0, 54.4], "collider": {"w": 1.0, "h": 0.7}, "interact": "sr_stone_n", "dialogue": "dlg_sr_stone_n"},
+        {"art": "prop_standing_stone", "pos": [70.6, 51.6], "collider": {"w": 1.0, "h": 0.7}, "interact": "sr_stone_e", "dialogue": "dlg_sr_stone_e"},
+        {"art": "prop_bonepile", "pos": [54.8, 52.4], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_ruined_tower",
+          "pos": [40.2, 48.6],
+          "scale": 1.2,
+          "collider": {"w": 4.0, "h": 4.0},
+          "sway": true,
+          "interact": "sr_heron_tower",
+          "dialogue": "dlg_sr_heron_tower"
+        },
+        {"art": "prop_stone_wall", "pos": [35.0, 46.0], "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_stone_wall", "pos": [45.8, 46.8], "flip": true, "collider": {"w": 3.4, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [34.2, 51.6], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_ruin_pillar", "pos": [46.4, 51.0], "collider": {"w": 1.1, "h": 0.6}},
+        {"art": "prop_banner", "pos": [37.4, 44.6], "collider": {"w": 0.4, "h": 0.3}, "sway": true, "tint": "#7fa6d6"},
+        {
+          "art": "prop_cairn",
+          "pos": [33.6, 55.0],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_knight_cairn_1",
+          "text": "A cairn with a rusted spur on top."
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [37.0, 56.4],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_knight_cairn_2",
+          "text": "A cairn with a heron feather tucked between the stones. It looks fresh."
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [40.6, 57.0],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_knight_cairn_3",
+          "text": "A cairn. Someone has scratched AUBRIC into the top stone, then, smaller, SORRY WE WERE LATE."
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [44.2, 56.4],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_knight_cairn_4",
+          "text": "A cairn with a cracked helmet on it, upside down, full of snow."
+        },
+        {
+          "art": "prop_cairn",
+          "pos": [47.6, 55.0],
+          "collider": {"w": 1.1, "h": 0.8},
+          "interact": "sr_knight_cairn_5",
+          "text": "A cairn with a carved wooden heron, worn smooth by the wind."
+        },
+        {"art": "prop_rubble", "pos": [43.8, 51.0], "collider": {"w": 1.8, "h": 1.0}},
+        {"art": "prop_tent", "pos": [14.6, 47.4], "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_tent", "pos": [30.0, 48.8], "flip": true, "collider": {"w": 2.4, "h": 1.2}},
+        {"art": "prop_tent", "pos": [6.8, 45.0], "collider": {"w": 2.4, "h": 1.2}},
+        {
+          "art": "prop_dragon_skull",
+          "pos": [7.8, 56.2],
+          "collider": {"w": 6.0, "h": 2.8},
+          "interact": "sr_vanguard_skull",
+          "text": "A dragon's skull, painted with ember sigils. Candles burn in the eye sockets. Someone has been very busy being very ominous."
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [16.4, 55.2],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [23.6, 55.4],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [21.2, 46.8],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [5.6, 50.0],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {
+          "art": "prop_brazier",
+          "pos": [31.4, 44.2],
+          "collider": {"w": 0.9, "h": 0.7},
+          "light": {"color": "#ffb062", "radius": 5.0, "intensity": 1.0, "offset": [0, 1.35], "flicker": true}
+        },
+        {"art": "prop_ash_banner", "pos": [18.6, 50.6], "collider": {"w": 0.6, "h": 0.45}, "sway": true},
+        {"art": "prop_ash_banner", "pos": [26.6, 51.6], "collider": {"w": 0.6, "h": 0.45}, "sway": true},
+        {"art": "prop_crate", "pos": [28.0, 42.0], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_barrel", "pos": [29.2, 42.6], "collider": {"w": 0.8, "h": 0.5}},
+        {"art": "prop_crate", "pos": [13.0, 44.4], "collider": {"w": 0.9, "h": 0.6}},
+        {"art": "prop_bonepile", "pos": [33.6, 51.6], "collider": {"w": 1.6, "h": 1.2}},
+        {
+          "art": "prop_ash_banner",
+          "pos": [30.8, 39.0],
+          "collider": {"w": 0.6, "h": 0.45},
+          "sway": true,
+          "interact": "sr_banner_1",
+          "hideFlag": "sr_banner_1_struck",
+          "dialogue": "dlg_sr_banner_1"
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [15.6, 39.4],
+          "collider": {"w": 0.6, "h": 0.45},
+          "sway": true,
+          "interact": "sr_banner_2",
+          "hideFlag": "sr_banner_2_struck",
+          "dialogue": "dlg_sr_banner_2"
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [4.0, 47.6],
+          "collider": {"w": 0.6, "h": 0.45},
+          "sway": true,
+          "interact": "sr_banner_3",
+          "hideFlag": "sr_banner_3_struck",
+          "dialogue": "dlg_sr_banner_3"
+        },
+        {
+          "art": "prop_ash_banner",
+          "pos": [13.6, 56.0],
+          "collider": {"w": 0.6, "h": 0.45},
+          "sway": true,
+          "interact": "sr_banner_4",
+          "hideFlag": "sr_banner_4_struck",
+          "dialogue": "dlg_sr_banner_4"
+        },
+        {"art": "prop_rock_snow", "pos": [43.4, 34.8], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [39.8, 35.6], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_log", "pos": [42.0, 31.4], "collider": {"w": 2.2, "h": 0.6}},
+        {"art": "prop_rock_snow", "pos": [2.8, 33.6], "scale": 1.6, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [6.6, 38.6], "scale": 1.5, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [17.8, 38.4], "scale": 1.6, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [21.8, 27.6], "scale": 1.5, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [3.2, 26.0], "scale": 1.5, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [23.6, 35.6], "scale": 1.4, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [60.6, 20.6], "scale": 1.6, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [59.4, 15.0], "scale": 1.4, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [81.4, 31.6], "scale": 1.6, "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [82.6, 27.0], "scale": 1.4, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [69.8, 36.4], "scale": 1.4, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [50.8, 34.6], "scale": 1.5, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_ice_pillar", "pos": [88.2, 54.4], "collider": {"w": 1.8, "h": 1.2}},
+        {
+          "art": "prop_ice_pillar",
+          "pos": [91.6, 55.6],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {
+          "art": "prop_ice_pillar",
+          "pos": [94.0, 52.6],
+          "collider": {"w": 1.8, "h": 1.2},
+          "light": {"color": "#bfe8ff", "radius": 4.0, "intensity": 0.7, "offset": [0, 1.6]}
+        },
+        {"art": "prop_snowdrift", "pos": [84.0, 56.0], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_pine_snow", "pos": [117.56, 15.84], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [118.78, 25.04], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [79.24, 7.1], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [75.86, 6.5], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [55.88, 20.42], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [51.8, 22.02], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [48.89, 24.17], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [31.89, 26.67], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [29.28, 23.14], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [28.43, 29.39], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [36.07, 28.05], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [31.74, 29.9], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [26.5, 7.22], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [33.07, 7.28], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [41.91, 7.05], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [44.43, 9.88], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [36.58, 7.94], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [29.74, 6.94], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [24.36, 10.53], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [5.81, 7.61], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [9.47, 9.9], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [19.84, 7.86], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [16.08, 6.68], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [1.05, 6.95], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [12.87, 6.56], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [9.02, 6.58], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [14.2, 9.62], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [26.41, 33.73], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [26.65, 25.58], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [50.49, 57.98], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [48.81, 51.68], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [53.41, 55.1], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [46.38, 57.84], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [84.35, 35.55], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [111.52, 58.21], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [117.06, 55.84], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [108.97, 38.03], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [118.03, 38.08], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [110.51, 54.8], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [114.64, 53.17], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [115.04, 58.59], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [118.7, 58.79], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [2.58, 40.85], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [1.2, 43.85], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [30.64, 56.44], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [33.5, 58.12], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_snow", "pos": [52.04, 3.38], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [37.48, 3.92], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [25.08, 2.88], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [40.76, 12.28], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [45.17, 12.97], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [72.22, 20.29], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [60.48, 12.3], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [63.88, 14.35], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [100.77, 32.16], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [93.83, 37.51], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [20.99, 36.55], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [23.85, 38.6], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [27.94, 37.72], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [47.51, 30.84], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [57.74, 30.47], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [37.67, 32.13], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [38.55, 29.68], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_snowdrift", "pos": [46.83, 33.57], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [54.77, 32.22], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [64.76, 39.52], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [30.93, 2.01], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [5.4, 2.48], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [28.34, 2.68], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [14.34, 1.63], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [101.93, 25.41], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [116.25, 26.55], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [69.58, 20.04], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [61.72, 23.73], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_ice_spire", "pos": [50.49, 53.95], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [52.25, 52.49], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [68.44, 39.3], "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [67.32, 47.33], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [84.15, 32.24], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [17.29, 24.16], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [15.25, 23.94], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_ice_spire", "pos": [20.18, 29.64], "flip": true, "collider": {"w": 1.4, "h": 1.0}},
+        {"art": "prop_tree_dead", "pos": [2.38, 53.52], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_tree_dead", "pos": [26.84, 55.85], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [44.7, 31.1], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [107.43, 53.67], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [13.44, 36.62], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [57.54, 24.85], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [1.33, 15.81], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [7.36, 13.49], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [1.07, 10.16], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [22.81, 22.73], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [26.23, 21.22], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_snowdrift", "pos": [19.5, 3.41], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [90.37, 4.95], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [76.42, 1.76], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [11.17, 2.75], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [82.41, 2.32], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [117.85, 2.14], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [85.38, 2.38], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [53.66, 1.22], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [95.47, 4.52], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [50.16, 1.37], "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [40.73, 3.26], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_snowdrift", "pos": [1.51, 1.91], "flip": true, "collider": {"w": 2.4, "h": 0.9}},
+        {"art": "prop_rock_snow", "pos": [22.45, 2.05], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [113.69, 5.34], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [87.35, 5.02], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [35.12, 1.43], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [16.62, 3.27], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [72.95, 1.06], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [93.97, 1.4], "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [112.96, 1.8], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [47.73, 3.39], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [87.61, 1.19], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [44.63, 3.24], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_rock_snow", "pos": [8.44, 3.63], "flip": true, "collider": {"w": 2.0, "h": 1.2}},
+        {"art": "prop_pine_snow", "pos": [1.81, 58.18], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [13.67, 58.42], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [38.46, 58.2], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [43.14, 59.18], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [53.7, 58.9], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [72.79, 58.74], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [83.29, 58.87], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [76.17, 58.56], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [93.62, 58.53], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [102.68, 58.01], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [106.32, 58.69], "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_pine_snow", "pos": [96.85, 58.26], "flip": true, "collider": {"w": 1.0, "h": 0.6}, "sway": true},
+        {"art": "prop_rock_small", "pos": [38.75, 10.4]},
+        {"art": "prop_rock_small", "pos": [35.36, 55.72]},
+        {"art": "prop_rock_small", "pos": [34.17, 11.05], "flip": true},
+        {"art": "prop_rock_small", "pos": [15.31, 52.91], "flip": true},
+        {"art": "prop_rock_small", "pos": [18.34, 21.88], "flip": true},
+        {"art": "prop_rock_small", "pos": [76.73, 8.49]},
+        {"art": "prop_rock_small", "pos": [4.38, 22.95]},
+        {"art": "prop_rock_small", "pos": [43.43, 53.7], "flip": true},
+        {"art": "prop_rock_small", "pos": [6.22, 52.54]},
+        {"art": "prop_rock_small", "pos": [43.72, 54.71]},
+        {"art": "prop_rock_small", "pos": [42.71, 52.08], "flip": true},
+        {"art": "prop_rock_small", "pos": [83.81, 4.78]},
+        {"art": "prop_rock_small", "pos": [100.3, 26.49]},
+        {"art": "prop_rock_small", "pos": [32.11, 12.94], "flip": true},
+        {"art": "prop_rock_small", "pos": [69.24, 54.78]},
+        {"art": "prop_rock_small", "pos": [115.56, 1.39], "flip": true},
+        {"art": "prop_rock_small", "pos": [68.74, 46.11]},
+        {"art": "prop_rock_small", "pos": [7.29, 10.72], "flip": true},
+        {"art": "prop_rock_small", "pos": [7.66, 8.66], "flip": true},
+        {"art": "prop_rock_small", "pos": [26.91, 1.44]},
+        {"art": "prop_rock_small", "pos": [90.11, 41.03], "flip": true},
+        {"art": "prop_rock_small", "pos": [6.04, 11.07]},
+        {"art": "prop_rock_small", "pos": [108.84, 31.73], "flip": true},
+        {"art": "prop_rock_small", "pos": [72.89, 23.14], "flip": true},
+        {"art": "prop_rock_small", "pos": [42.52, 36.19], "flip": true},
+        {"art": "prop_rock_small", "pos": [45.1, 1.2]},
+        {"art": "prop_rock_small", "pos": [74.43, 3.24], "flip": true},
+        {"art": "prop_rock_small", "pos": [3.44, 8.3], "flip": true},
+        {"art": "prop_rock_small", "pos": [72.33, 29.43], "flip": true},
+        {"art": "prop_rock_small", "pos": [3.5, 45.8], "flip": true}
+      ],
+      "npcs": [
+        {"npc": "sr_guide_odran", "pos": [86.2, 16.8]},
+        {"npc": "sr_hilde", "pos": [95.4, 17.4]},
+        {"npc": "sr_brannoc", "pos": [77.2, 17.8]},
+        {"npc": "sr_pema", "pos": [98.6, 8.4]},
+        {"npc": "sr_lumi", "pos": [91.8, 31.0]},
+        {"npc": "sr_ottoline", "pos": [63.6, 43.0]},
+        {"npc": "sr_scout_ivo", "pos": [41.6, 33.4]},
+        {"npc": "sr_glimmerwing", "pos": [73.6, 54.0]},
+        {"npc": "sr_pell", "pos": [116.0, 47.2], "requireFlag": "sr_pell_sought", "hideFlag": "sr_pell_following"},
+        {"npc": "sr_pell", "pos": [101.6, 16.4], "requireFlag": "enc_enc_sr_pell_ambush"},
+        {"npc": "sr_gorrum", "pos": [63.4, 9.2], "requireFlag": "sr_ogres_pacified"},
+        {"npc": "sr_goat_bramble", "pos": [7.2, 33.6], "hideFlag": "sr_goat_bramble"},
+        {"npc": "sr_goat_clover", "pos": [45.2, 26.6], "hideFlag": "sr_goat_clover"},
+        {"npc": "sr_goat_turnip", "pos": [66.0, 4.2], "hideFlag": "sr_goat_turnip"},
+        {"npc": "sr_goat_bramble", "pos": [99.4, 3.4], "requireFlag": "sr_goat_bramble"},
+        {"npc": "sr_goat_clover", "pos": [101.8, 4.6], "requireFlag": "sr_goat_clover"},
+        {"npc": "sr_goat_turnip", "pos": [100.4, 2.0], "requireFlag": "sr_goat_turnip"},
+        {"npc": "sr_icicle", "pos": [65.6, 31.6], "requireFlag": "enc_enc_sr_drake_pen", "hideFlag": "sr_drake_freed"},
+        {"npc": "sr_icicle", "pos": [78.0, 53.2], "requireFlag": "sr_drake_freed"}
+      ],
+      "encounters": [
+        {
+          "id": "enc_sr_wolves_road",
+          "pos": [114.4, 22.0],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_sr_frost_wolf", "pos": [113.6, 22.8]}, {"creature": "cr_sr_frost_wolf", "pos": [115.4, 21.2]}]
+        },
+        {
+          "id": "enc_sr_wolf_den",
+          "pos": [113.6, 31.2],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_sr_frost_wolf", "pos": [112.4, 32.2]},
+            {"creature": "cr_sr_frost_wolf", "pos": [114.8, 32.4]},
+            {"creature": "cr_sr_frost_wolf", "pos": [113.8, 30.0]}
+          ]
+        },
+        {
+          "id": "enc_sr_rimefang",
+          "pos": [113.4, 42.8],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_sr_rimefang", "pos": [114.0, 44.0]},
+            {"creature": "cr_sr_frost_wolf", "pos": [112.0, 43.4]},
+            {"creature": "cr_sr_frost_wolf", "pos": [115.4, 42.2]}
+          ]
+        },
+        {
+          "id": "enc_sr_pell_ambush",
+          "pos": [112.6, 46.4],
+          "radius": 1.5,
+          "requireFlag": "sr_pell_following",
+          "hidden": true,
+          "enemies": [
+            {"creature": "cr_sr_frost_wolf", "pos": [110.8, 46.8]},
+            {"creature": "cr_sr_frost_wolf", "pos": [112.4, 48.6]},
+            {"creature": "cr_sr_frost_wolf", "pos": [117.6, 45.0]}
+          ]
+        },
+        {
+          "id": "enc_sr_ogre_toll",
+          "pos": [70.4, 11.6],
+          "radius": 3.4,
+          "dialogue": "dlg_sr_gorrum",
+          "doneFlag": "sr_ogre_road_clear",
+          "enemies": [
+            {"creature": "cr_sr_gorrum", "pos": [70.4, 10.2]},
+            {"creature": "cr_sr_ogre", "pos": [67.6, 10.8]},
+            {"creature": "cr_sr_ogre", "pos": [73.2, 10.4]}
+          ]
+        },
+        {
+          "id": "enc_sr_ogre_camp",
+          "pos": [60.6, 5.4],
+          "radius": 3.2,
+          "requireFlag": "!sr_ogres_pacified",
+          "enemies": [
+            {"creature": "cr_sr_ogre_mage", "pos": [60.2, 4.2]},
+            {"creature": "cr_sr_ogre", "pos": [58.4, 6.2]},
+            {"creature": "cr_sr_ogre", "pos": [62.6, 6.4]}
+          ]
+        },
+        {
+          "id": "enc_sr_ogre_patrol",
+          "pos": [50.4, 8.6],
+          "radius": 3.0,
+          "requireFlag": "!sr_ogres_pacified",
+          "enemies": [{"creature": "cr_sr_ogre", "pos": [49.4, 9.2]}, {"creature": "cr_sr_ogre_mage", "pos": [51.6, 8.0]}]
+        },
+        {
+          "id": "enc_sr_yetis_a",
+          "pos": [35.2, 21.6],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_sr_yeti", "pos": [34.2, 22.6]}, {"creature": "cr_sr_yeti", "pos": [36.6, 21.2]}]
+        },
+        {
+          "id": "enc_sr_whitebrow",
+          "pos": [43.0, 24.4],
+          "radius": 3.2,
+          "dialogue": "dlg_sr_whitebrow",
+          "doneFlag": "sr_whitebrow_done",
+          "enemies": [{"creature": "cr_sr_whitebrow", "pos": [43.2, 25.4]}, {"creature": "cr_sr_yeti", "pos": [41.0, 24.0]}]
+        },
+        {
+          "id": "enc_sr_yetis_b",
+          "pos": [52.8, 27.6],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_sr_yeti", "pos": [52.0, 28.6]}, {"creature": "cr_sr_yeti", "pos": [54.0, 27.0]}]
+        },
+        {
+          "id": "enc_sr_harpies_a",
+          "pos": [18.6, 13.6],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_sr_harpy", "pos": [17.4, 14.2]},
+            {"creature": "cr_sr_harpy", "pos": [19.8, 14.8]},
+            {"creature": "cr_sr_harpy", "pos": [18.8, 12.4]}
+          ]
+        },
+        {
+          "id": "enc_sr_harpies_b",
+          "pos": [11.0, 27.4],
+          "radius": 3.2,
+          "enemies": [
+            {"creature": "cr_sr_harpy_windcaller", "pos": [10.6, 28.8]},
+            {"creature": "cr_sr_harpy", "pos": [9.2, 26.8]},
+            {"creature": "cr_sr_harpy", "pos": [12.8, 27.0]}
+          ]
+        },
+        {
+          "id": "enc_sr_whelps_a",
+          "pos": [72.8, 41.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_sr_drake_whelp", "pos": [71.6, 42.4]},
+            {"creature": "cr_sr_drake_whelp", "pos": [74.0, 42.6]},
+            {"creature": "cr_sr_drake_whelp", "pos": [72.6, 40.0]},
+            {"creature": "cr_sr_drake_whelp", "pos": [74.6, 40.4]}
+          ]
+        },
+        {
+          "id": "enc_sr_whelps_b",
+          "pos": [81.6, 42.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_sr_drake_whelp", "pos": [80.6, 43.2]},
+            {"creature": "cr_sr_drake_whelp", "pos": [82.6, 43.4]},
+            {"creature": "cr_sr_drake_whelp", "pos": [81.8, 41.2]}
+          ]
+        },
+        {
+          "id": "enc_sr_drake_pen",
+          "pos": [64.6, 28.4],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_sr_whelpmaster", "pos": [64.4, 29.6]},
+            {"creature": "cr_sr_dragonsworn", "pos": [62.4, 28.2]},
+            {"creature": "cr_sr_dragonsworn", "pos": [66.8, 28.6]},
+            {"creature": "cr_sr_drake_whelp", "pos": [63.4, 26.8]},
+            {"creature": "cr_sr_drake_whelp", "pos": [65.8, 26.8]}
+          ]
+        },
+        {
+          "id": "enc_sr_bone_ice",
+          "pos": [54.6, 42.6],
+          "radius": 2.8,
+          "enemies": [{"creature": "cr_sr_ice_elemental", "pos": [53.8, 43.4]}, {"creature": "cr_sr_ice_elemental", "pos": [55.6, 42.0]}]
+        },
+        {
+          "id": "enc_sr_bone_ash",
+          "pos": [65.0, 55.2],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_sr_ash_elemental", "pos": [64.2, 56.0]}, {"creature": "cr_sr_ash_elemental", "pos": [66.2, 55.8]}]
+        },
+        {
+          "id": "enc_sr_stone_guard_w",
+          "pos": [51.4, 47.2],
+          "radius": 1.2,
+          "requireFlag": "sr_stone_w_woke",
+          "hidden": true,
+          "enemies": [{"creature": "cr_sr_ice_elemental", "pos": [50.2, 48.4]}, {"creature": "cr_sr_ice_elemental", "pos": [52.8, 48.6]}]
+        },
+        {
+          "id": "enc_sr_stone_guard_n",
+          "pos": [58.0, 55.8],
+          "radius": 1.2,
+          "requireFlag": "sr_stone_n_woke",
+          "hidden": true,
+          "enemies": [{"creature": "cr_sr_ice_elemental", "pos": [56.6, 56.6]}, {"creature": "cr_sr_ash_elemental", "pos": [59.6, 56.8]}]
+        },
+        {
+          "id": "enc_sr_stone_guard_e",
+          "pos": [70.6, 50.0],
+          "radius": 1.2,
+          "requireFlag": "sr_stone_e_woke",
+          "hidden": true,
+          "enemies": [{"creature": "cr_sr_ash_elemental", "pos": [71.4, 51.2]}, {"creature": "cr_sr_ice_elemental", "pos": [70.2, 48.4]}]
+        },
+        {
+          "id": "enc_sr_rime_drift",
+          "pos": [47.0, 41.2],
+          "radius": 2.8,
+          "enemies": [{"creature": "cr_sr_ice_elemental", "pos": [46.0, 42.2]}, {"creature": "cr_sr_ice_elemental", "pos": [48.2, 42.0]}]
+        },
+        {
+          "id": "enc_sr_brood_shelf",
+          "pos": [77.6, 47.6],
+          "radius": 3.0,
+          "requireFlag": "sr_brood_hunt",
+          "enemies": [
+            {"creature": "cr_sr_drake_whelp", "pos": [76.4, 48.6]},
+            {"creature": "cr_sr_drake_whelp", "pos": [78.8, 48.8]},
+            {"creature": "cr_sr_drake_whelp", "pos": [77.2, 46.4]},
+            {"creature": "cr_sr_drake_whelp", "pos": [79.0, 46.6]}
+          ]
+        },
+        {
+          "id": "enc_sr_brood_huts",
+          "pos": [86.0, 28.2],
+          "radius": 2.8,
+          "requireFlag": "sr_brood_hunt",
+          "enemies": [
+            {"creature": "cr_sr_drake_whelp", "pos": [85.0, 29.2]},
+            {"creature": "cr_sr_drake_whelp", "pos": [87.2, 29.0]},
+            {"creature": "cr_sr_drake_whelp", "pos": [86.2, 27.2]}
+          ]
+        },
+        {
+          "id": "enc_sr_falls_ice",
+          "pos": [98.8, 37.4],
+          "radius": 3.0,
+          "enemies": [{"creature": "cr_sr_ice_elemental", "pos": [98.0, 38.4]}, {"creature": "cr_sr_ice_elemental", "pos": [100.0, 37.8]}]
+        },
+        {
+          "id": "enc_sr_tower_harpies",
+          "pos": [41.2, 43.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_sr_shrikeclaw", "pos": [41.0, 44.4]},
+            {"creature": "cr_sr_harpy", "pos": [39.0, 43.2]},
+            {"creature": "cr_sr_harpy", "pos": [43.2, 42.8]}
+          ]
+        },
+        {
+          "id": "enc_sr_vanguard_pickets",
+          "pos": [33.6, 35.0],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_sr_dragonsworn", "pos": [32.6, 35.8]},
+            {"creature": "cr_sr_dragonsworn", "pos": [34.8, 35.6]},
+            {"creature": "cr_sr_pyrecaller", "pos": [33.6, 33.6]}
+          ]
+        },
+        {
+          "id": "enc_sr_vanguard_west",
+          "pos": [11.0, 41.6],
+          "radius": 3.4,
+          "enemies": [
+            {"creature": "cr_sr_collared_drake", "pos": [11.0, 43.2]},
+            {"creature": "cr_sr_dragonsworn", "pos": [8.8, 41.2]},
+            {"creature": "cr_sr_dragonsworn", "pos": [13.2, 41.0]}
+          ]
+        },
+        {
+          "id": "enc_sr_vanguard_altar",
+          "pos": [10.6, 51.4],
+          "radius": 3.0,
+          "enemies": [
+            {"creature": "cr_sr_pyrecaller", "pos": [10.6, 52.8]},
+            {"creature": "cr_sr_dragonsworn", "pos": [8.6, 51.6]},
+            {"creature": "cr_sr_dragonsworn", "pos": [12.6, 51.8]},
+            {"creature": "cr_sr_ashguard", "pos": [10.6, 50.2]}
+          ]
+        },
+        {
+          "id": "enc_sr_marshal",
+          "pos": [25.6, 44.6],
+          "radius": 3.6,
+          "enemies": [
+            {"creature": "cr_sr_marshal_kaedric", "pos": [25.6, 46.2]},
+            {"creature": "cr_sr_ashguard", "pos": [23.4, 45.2]},
+            {"creature": "cr_sr_pyrecaller", "pos": [27.8, 45.6]},
+            {"creature": "cr_sr_drake_whelp", "pos": [26.4, 43.2]}
+          ]
+        }
+      ],
+      "chests": [
+        {"id": "chest_sr_ogre_hoard", "pos": [56.4, 3.2], "lootTable": "lt_sr_chest_ogre"},
+        {"id": "chest_sr_harpy_nest", "pos": [14.6, 33.2], "lootTable": "lt_sr_chest_nest"},
+        {
+          "id": "chest_sr_aubric_footlocker",
+          "pos": [44.0, 47.2],
+          "lootTable": "lt_sr_chest_heronguard",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 15}
+        },
+        {
+          "id": "chest_sr_vanguard_strongbox",
+          "pos": [30.6, 52.6],
+          "lootTable": "lt_sr_chest_vanguard",
+          "lockCheck": {"skill": "SleightOfHand", "dc": 16}
+        },
+        {"id": "chest_sr_hidden_cache", "pos": [3.6, 13.0], "lootTable": "lt_sr_chest_cache", "requireFlag": "sr_found_cache"}
+      ],
+      "transitions": [
+        {
+          "id": "to_brightwater",
+          "pos": [119.3, 10.0],
+          "size": [1.4, 6.0],
+          "targetMap": "brightwater",
+          "targetSpawn": "from_skyreach",
+          "label": "Brightwater"
+        },
+        {
+          "id": "to_dgn_frozen_sanctum",
+          "pos": [86.0, 50.0],
+          "size": [2.0, 2.0],
+          "targetMap": "dgn_frozen_sanctum",
+          "targetSpawn": "from_skyreach",
+          "label": "The Frozen Sanctum",
+          "hidden": true,
+          "revealFlag": "found_frozen_sanctum",
+          "marker": "cave"
+        },
+        {
+          "id": "to_raid_ashwyrm_roost",
+          "pos": [20.0, 56.0],
+          "size": [3.0, 3.0],
+          "targetMap": "raid_ashwyrm_roost",
+          "targetSpawn": "from_skyreach",
+          "label": "Ashwyrm's Roost",
+          "marker": "portal",
+          "hidden": true,
+          "revealFlag": "sr_roost_revealed"
+        }
+      ],
+      "spawns": [
+        {"id": "default", "pos": [116.0, 10.0]},
+        {"id": "from_brightwater", "pos": [116.0, 10.0]},
+        {"id": "from_dgn_frozen_sanctum", "pos": [86.0, 47.5]},
+        {"id": "from_raid_ashwyrm_roost", "pos": [20.0, 53.5]},
+        {"id": "cairnhollow", "pos": [92.0, 13.2]}
+      ],
+      "regions": [
+        {
+          "id": "reg_sr_cairnhollow",
+          "pos": [92.0, 15.0],
+          "size": [22, 20],
+          "enterFlag": "reg_sr_cairnhollow",
+          "name": "Cairnhollow",
+          "text": "Cairnhollow: three huts, one fire, and a great many prayer flags arguing with the wind."
+        },
+        {
+          "id": "reg_sr_ledge",
+          "pos": [64.0, 8.0],
+          "size": [22, 14],
+          "name": "Two-Belly Ledge",
+          "text": "Two-Belly Ledge. Somebody has painted TOLL on a boulder, then crossed it out and painted TOLL bigger."
+        },
+        {
+          "id": "reg_sr_hollow",
+          "pos": [43.0, 23.0],
+          "size": [24, 16],
+          "name": "Whitebrow Hollow",
+          "text": "Whitebrow Hollow. The pines here grow close, and something large has been stacking snowballs in neat pyramids."
+        },
+        {
+          "id": "reg_sr_crags",
+          "pos": [13.0, 24.0],
+          "size": [22, 26],
+          "name": "Harpy Crags",
+          "text": "The Harpy Crags. Every ledge is decorated with stolen spoons."
+        },
+        {
+          "id": "reg_sr_vista",
+          "pos": [4.6, 17.0],
+          "size": [7, 9],
+          "name": "Windgap Overlook",
+          "text": "Windgap Overlook. The whole world falls away below you: the river, the fens, the downs, and far off a glint that might be Brightwater's weathervane.",
+          "check": {"skill": "Perception", "dc": 13},
+          "checkFlag": "sr_found_cache",
+          "successText": "Someone has wedged a waxed bundle under the cairn, out of the wind. A herder's cache, long forgotten.",
+          "failText": "The wind makes your eyes water. Lovely view, though."
+        },
+        {
+          "id": "reg_sr_bone_field",
+          "pos": [60.0, 47.0],
+          "size": [22, 16],
+          "enterFlag": "reg_sr_bone_field",
+          "name": "The Bone Field",
+          "text": "The Bone Field. Ribs taller than houses rise out of the snow, and the snow between them is grey with ash."
+        },
+        {
+          "id": "reg_sr_heron_tower",
+          "pos": [40.0, 47.0],
+          "size": [16, 14],
+          "enterFlag": "reg_sr_heron_tower",
+          "name": "Heronguard Tower",
+          "text": "The Heronguard tower. A blue banner still hangs from the broken top, faded to the colour of a winter sky."
+        },
+        {
+          "id": "reg_sr_vanguard",
+          "pos": [19.0, 48.0],
+          "size": [30, 22],
+          "enterFlag": "reg_sr_vanguard",
+          "name": "Vanguard Camp",
+          "text": "The Dragonsworn vanguard camp. Everything here smells of smoke, including the snow."
+        },
+        {
+          "id": "reg_sr_roost_gate",
+          "pos": [20.0, 54.6],
+          "size": [9, 6],
+          "enterFlag": "reg_sr_roost_gate",
+          "name": "The Roost Gate",
+          "text": "The Roost Gate. Ember-light turns inside the old stones, and far above the clouds a vast shape breathes in its sleep."
+        },
+        {
+          "id": "reg_sr_frozen_falls",
+          "pos": [88.4, 46.4],
+          "size": [9, 6.4],
+          "name": "The Frozen Falls",
+          "text": "Glasswater Falls, frozen in mid-tumble. Somewhere behind the ice, water still mutters to itself.",
+          "check": {"skill": "Perception", "dc": 14},
+          "checkFlag": "found_frozen_sanctum",
+          "successText": "Behind a curtain of icicles the rock is not rock at all, but carved stone, and a cold draught breathes out of a doorway.",
+          "failText": "Ice, more ice, and a very cold nose."
+        },
+        {
+          "id": "reg_sr_glimmer_shelf",
+          "pos": [74.0, 52.6],
+          "size": [12, 9],
+          "name": "Glimmerwing's Shelf",
+          "text": "A wide shelf of old snow, scraped smooth by something with a very long tail."
+        },
+        {"id": "reg_sr_lumi_knoll", "pos": [92.6, 32.0], "size": [10, 8], "name": "Flag Knoll"}
+      ],
+      "ambient": {"timeOfDay": "day", "dayNightCycle": true, "ambientColor": "#eef4ff", "ambientIntensity": 1.0, "snow": true},
+      "restArea": true,
+      "music": "music_peaks"
+    }
+  ]
+}

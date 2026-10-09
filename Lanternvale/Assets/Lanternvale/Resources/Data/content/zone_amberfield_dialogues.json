@@ -1,0 +1,1941 @@
+{
+  "dialogues": [
+    {
+      "id": "dlg_am_hester",
+      "start": "h_report",
+      "nodes": [
+        {
+          "id": "h_report",
+          "speaker": "am_reeve_hester",
+          "text": "*The Reeve looks up from a ledger, sees the warchief's scorched letter in your hand, and goes very still.* Skarra? Truly? *She stands, knocking over the inkpot, and doesn't notice.* Show me that.",
+          "conditions": [{"type": "QuestState", "key": "mq2_ember_road", "value": "reeve_report"}],
+          "fallback": "h_reeve",
+          "choices": [{"text": "Skarra Duskmane is dead. She carried this letter.", "next": "h_report2"}]
+        },
+        {
+          "id": "h_report2",
+          "speaker": "am_reeve_hester",
+          "text": "'Feed the Ember under the king's hill. Oil, every night. When it wakes, so will She. — V.' *She turns the seal to the light: a scale, pressed into red wax.* Every drop of lamp oil on the Downs, poured down a hole to wake something up. And 'She'. I don't like a capital letter in a threat.",
+          "outcomes": [{"type": "TakeItem", "key": "am_ember_letter"}],
+          "choices": [{"text": "Who would know what it means?", "next": "h_report3"}]
+        },
+        {
+          "id": "h_report3",
+          "speaker": "am_reeve_hester",
+          "text": "Archivist Penhallow, in Brightwater, west down the road. He knows every old song there is, and footnotes for the ones that don't exist. I'll send the letter ahead with the post-rider — you go and tell him what you saw. *She squeezes your hand.* And thank you. The Downs will have light tonight for the first time in a month.",
+          "choices": [{"text": "I'll take the road to Brightwater."}]
+        },
+        {
+          "id": "h_reeve",
+          "speaker": "am_reeve_hester",
+          "text": "*A brisk woman with a pencil behind each ear and a third in her hair, forgotten.* Elder Maru's lot, from over the hill? Thank the stars. I'm Hester Applegarth, Reeve of Amberfield, which means everyone brings me their problems and I write them down. Here's this month's: someone is stealing the lamp oil. All of it.",
+          "conditions": [{"type": "QuestState", "key": "mq2_ember_road", "value": "reeve"}],
+          "fallback": "h_harvest_ret",
+          "choices": [{"text": "Who's stealing it?", "next": "h_reeve2"}]
+        },
+        {
+          "id": "h_reeve2",
+          "speaker": "am_reeve_hester",
+          "text": "The Duskmane gnolls, from their warcamp across the river. They used to steal sheep, which was awful but at least made sense. Now they won't touch a sheep. They take the oil from Pell's mill, from the farms, from the lanes — and they carry it north in carts. Ser Corlan reckons they're hauling it somewhere particular.",
+          "choices": [{"text": "Then I'll follow the carts.", "next": "h_reeve3"}]
+        },
+        {
+          "id": "h_reeve3",
+          "speaker": "am_reeve_hester",
+          "text": "A caravan goes up the track north of the Amber Bridge most days. Break it, see what they're carrying and where it's going, and take whatever you find to Ser Corlan — the cottage with the heron over the door. He was Heronguard; he reads gnoll better than I read my own handwriting.",
+          "choices": [{"text": "North of the Amber Bridge. I'm on it."}]
+        },
+        {
+          "id": "h_harvest_ret",
+          "speaker": "am_reeve_hester",
+          "text": "*The Reeve is standing in the lane with her eyes shut, smiling.* Listen. Hear that? That's moths. Moths, around a lantern, in Amberfield Cross. Is that all four?",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "return"}],
+          "fallback": "h_harvest_wip",
+          "choices": [
+            {
+              "text": "All four lane lanterns are lit, Reeve.",
+              "next": "h_harvest_done",
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_q_harvest_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_harvest"},
+                {"type": "SetFlag", "key": "am_harvest_home"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "h_harvest_done",
+          "speaker": "am_reeve_hester",
+          "text": "Then Harvest-Home is ON. Bunting! Pies! Pell's terrible fiddle! *She presses something into your hands.* Wear that tonight, and every Harvest-Home after. You'll always have a seat at the long table in Amberfield.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "h_harvest_wip",
+          "speaker": "am_reeve_hester",
+          "text": "Four lanterns: the market corner, the well, the mill lane and the hall. Pell will have filled you a can. Go on — I've been waiting a month to read in bed.",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}],
+          "fallback": "h_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_hub",
+          "speaker": "am_reeve_hester",
+          "text": "*The Reeve finds the pencil in her hair, looks surprised, and uses it.* What can Amberfield do for you?",
+          "choices": [
+            {
+              "text": "The warchief is dead and the oil is coming home. What now?",
+              "next": "h_harvest_offer",
+              "conditions": [{"type": "Flag", "key": "am_skarra_defeated"}, {"type": "QuestNotStarted", "key": "am_q_harvest"}, {"type": "Level", "amount": 16}]
+            },
+            {"text": "Tell me about Amberfield.", "next": "h_lore"},
+            {"text": "How goes the hunt for the oil?", "next": "h_progress", "conditions": [{"type": "QuestActive", "key": "mq2_ember_road"}]},
+            {"text": "Any news from Jory's lot?", "next": "h_jory", "conditions": [{"type": "Flag", "key": "am_gang_hired"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_harvest_offer",
+          "speaker": "am_reeve_hester",
+          "text": "Now? Now we light the lanes. Pell's pressing what you brought back. Four lane lanterns in the Cross, dry as a sermon since the spring. Fill them, light them, and I'll call Harvest-Home — the first in Amberfield since the gnolls came.",
+          "choices": [
+            {
+              "text": "I'll light the lanes.",
+              "next": "h_harvest_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_harvest"}],
+              "conditions": [{"type": "Level", "amount": 16}]
+            },
+            {"text": "Not just yet."}
+          ]
+        },
+        {
+          "id": "h_harvest_yes",
+          "speaker": "am_reeve_hester",
+          "text": "Pell has the cans. Mind the wicks; they bite.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "h_lore",
+          "speaker": "am_reeve_hester",
+          "text": "Amberfield grows two things: barley, and lampseed. The barley feeds the valley; the lampseed lights it. Pell presses the seed for oil, and half the lanterns between here and Brightwater burn Amberfield gold. *She sighs.* Burned.",
+          "choices": [{"text": "And the old king? People keep mentioning him.", "next": "h_lore2"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "h_lore2",
+          "speaker": "am_reeve_hester",
+          "text": "King Aldwin. Long before there were reeves, there were kings, and he was the last one on the Downs. Old Ida up by the Ring tells it best — something about putting a fire to sleep. We name things after him. The tower. The bridge, nearly. It's mostly an excuse for a festival.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_progress",
+          "speaker": "am_reeve_hester",
+          "text": "Every night another cask goes missing, and every night the lanes stay dark. Ser Corlan says gnolls don't plan this far ahead unless somebody's planning for them. That worries me more than the gnolls.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "h_jory",
+          "speaker": "am_reeve_hester",
+          "text": "Jory Ditchwater bound three hundred sheaves yesterday and cried at lunch because nobody had ever thanked him for a sheaf before. I've given him the north field. He's given me a very sincere speech.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_pell",
+      "start": "p_ret",
+      "nodes": [
+        {
+          "id": "p_ret",
+          "speaker": "am_miller_pell",
+          "text": "*The miller is a lean woman, floured to the eyebrows.* Well? Did you find my casks?",
+          "conditions": [{"type": "QuestState", "key": "am_q_lamp_oil", "value": "return"}],
+          "fallback": "p_wip",
+          "choices": [
+            {
+              "text": "All three casks are found and chalked with your mill-mark.",
+              "next": "p_ret2",
+              "outcomes": [{"type": "SetFlag", "key": "am_q_lamp_oil_handed_in"}, {"type": "CompleteQuest", "key": "am_q_lamp_oil"}]
+            }
+          ]
+        },
+        {
+          "id": "p_ret2",
+          "speaker": "am_miller_pell",
+          "text": "Chalked! You lovely creature. The Reeve's carters will have them home by morning — one from the warcamp, if they go in force, one from the north ford, one from the king's hill, of all places. *She frowns.* The king's hill. What do gnolls want with the king's hill?",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "p_wip",
+          "speaker": "am_miller_pell",
+          "text": "Three casks, stencilled PELL'S MILL. Find them, chalk my mark on them, and the carters will fetch them home. Gnolls can't read, but they're scared of chalk. Don't ask me why. Nobody knows why.",
+          "conditions": [{"type": "QuestState", "key": "am_q_lamp_oil", "value": "casks"}],
+          "fallback": "p_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "p_hub",
+          "speaker": "am_miller_pell",
+          "text": "*The sails of the mill creak round above her. She does not look up from the sack she is tying.* Flour or oil? I'm out of oil.",
+          "choices": [
+            {
+              "text": "You're out of oil?",
+              "next": "p_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_lamp_oil"}, {"type": "Level", "amount": 12}]
+            },
+            {
+              "text": "The Reeve says you have oil for the lanes.",
+              "next": "p_harvest",
+              "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}]
+            },
+            {"text": "Bruna Haybright says you write her mum's letters.", "next": "p_letters"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_offer",
+          "speaker": "am_miller_pell",
+          "text": "Out of oil, out of patience, out of casks. I press lampseed by night — or I did. The Duskmane took my last three casks off the carts. I could press more, but I've nothing to put it in, and nobody to guard it. If you see casks with PELL'S MILL on them, chalk my mark on the side. My carters will do the rest.",
+          "choices": [
+            {
+              "text": "I'll find your casks and mark them.",
+              "next": "p_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_lamp_oil"}],
+              "conditions": [{"type": "Level", "amount": 12}]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "p_offer_yes",
+          "speaker": "am_miller_pell",
+          "text": "Here's a stick of chalk. Big cross, little circle. That's my mark. That's also, I'm told, the gnoll sign for 'here be a very angry miller'. Good.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "p_harvest",
+          "speaker": "am_miller_pell",
+          "text": "*She hands you a long-spouted can, already full and warm.* First pressing from the casks you brought home. Four lanterns, mind. Don't let Hester talk you into five; she'll have you lighting the privy.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "p_letters",
+          "speaker": "am_miller_pell",
+          "text": "Ha! Hedda can't spell to save her life — she spells like a hen walks. So she tells me and I write. 'Dear Bruna, eat something green. Biscuit misses you. Your brothers broke the gate again.' Every week. *She smiles.* Same letter, different broken thing.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_cask_1",
+      "start": "c_mark",
+      "nodes": [
+        {
+          "id": "c_mark",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil in the middle of the Duskmane warcamp, stencilled PELL'S MILL. Somebody has drawn a fire with teeth on the lid in soot.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_lamp_oil", "value": "casks"}, {"type": "NotFlag", "key": "am_cask_1"}],
+          "fallback": "c_done",
+          "choices": [
+            {
+              "text": "(Chalk Pell's mark on the cask: a big cross, a little circle.)",
+              "next": "c_marked",
+              "outcomes": [{"type": "SetFlag", "key": "am_cask_1"}]
+            },
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "c_marked",
+          "speaker": "narrator",
+          "text": "*Big cross, little circle. Pell's carters will find it now.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_done",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil with Pell's chalk mark on the side, waiting for the carters.*",
+          "conditions": [{"type": "Flag", "key": "am_cask_1"}],
+          "fallback": "c_plain",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "c_plain",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil in the middle of the Duskmane warcamp, stencilled PELL'S MILL. Somebody at the mill will want this back.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_cask_2",
+      "start": "c_mark",
+      "nodes": [
+        {
+          "id": "c_mark",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil beside a broken gnoll cart at the north ford, stencilled PELL'S MILL. Somebody has drawn a fire with teeth on the lid in soot.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_lamp_oil", "value": "casks"}, {"type": "NotFlag", "key": "am_cask_2"}],
+          "fallback": "c_done",
+          "choices": [
+            {
+              "text": "(Chalk Pell's mark on the cask: a big cross, a little circle.)",
+              "next": "c_marked",
+              "outcomes": [{"type": "SetFlag", "key": "am_cask_2"}]
+            },
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "c_marked",
+          "speaker": "narrator",
+          "text": "*Big cross, little circle. Pell's carters will find it now.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_done",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil with Pell's chalk mark on the side, waiting for the carters.*",
+          "conditions": [{"type": "Flag", "key": "am_cask_2"}],
+          "fallback": "c_plain",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "c_plain",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil beside a broken gnoll cart at the north ford, stencilled PELL'S MILL. Somebody at the mill will want this back.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_cask_3",
+      "start": "c_mark",
+      "nodes": [
+        {
+          "id": "c_mark",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil at the edge of a fresh dig on the king's hill, stencilled PELL'S MILL. Somebody has drawn a fire with teeth on the lid in soot.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_lamp_oil", "value": "casks"}, {"type": "NotFlag", "key": "am_cask_3"}],
+          "fallback": "c_done",
+          "choices": [
+            {
+              "text": "(Chalk Pell's mark on the cask: a big cross, a little circle.)",
+              "next": "c_marked",
+              "outcomes": [{"type": "SetFlag", "key": "am_cask_3"}]
+            },
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "c_marked",
+          "speaker": "narrator",
+          "text": "*Big cross, little circle. Pell's carters will find it now.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_done",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil with Pell's chalk mark on the side, waiting for the carters.*",
+          "conditions": [{"type": "Flag", "key": "am_cask_3"}],
+          "fallback": "c_plain",
+          "choices": [{"text": "(Leave it.)"}]
+        },
+        {
+          "id": "c_plain",
+          "speaker": "narrator",
+          "text": "*A cask of lamp oil at the edge of a fresh dig on the king's hill, stencilled PELL'S MILL. Somebody at the mill will want this back.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_hedda",
+      "start": "hd_ret",
+      "nodes": [
+        {
+          "id": "hd_ret",
+          "speaker": "am_hedda_haybright",
+          "text": "*Hedda Haybright sees the brass bell in your hand and drops a whole basket of eggs. None of them break. Haybright eggs are like that.* That's — that's his bell!",
+          "conditions": [{"type": "QuestState", "key": "am_q_bell", "value": "return"}],
+          "fallback": "hd_wip",
+          "choices": [
+            {
+              "text": "Biscuit's bell, back where it belongs.",
+              "next": "hd_ret2",
+              "outcomes": [
+                {"type": "TakeItem", "key": "am_biscuit_bell"},
+                {"type": "SetFlag", "key": "am_q_bell_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_bell"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hd_ret2",
+          "speaker": "am_hedda_haybright",
+          "text": "*She ties the red ribbon round the old dog's neck. Biscuit, who has not lifted his head for a cart, a gnoll or a thunderstorm in a year, lifts it now. The bell tinks. His tail goes like a threshing flail.* There. There, you old fool. Now I can find you at supper. *She sniffs, hard.* Hay dust. Here — take a scarf. I knit when I worry, so there are a great many scarves.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "hd_wip",
+          "speaker": "am_hedda_haybright",
+          "text": "Still no bell? Those Ditchwater layabouts took it off my cart on the south road, along with a ham and my good temper. They're squatting in the old king's tower.",
+          "conditions": [{"type": "QuestState", "key": "am_q_bell", "value": "find"}],
+          "fallback": "hd_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "hd_hub",
+          "speaker": "am_hedda_haybright",
+          "text": "*A broad, freckled woman with flour to the elbows and five small boys' worth of patience left, which isn't much.* If you've come for Bruna, she's at the gate; she's always at the gate. If you've come for cake, it's not ready.",
+          "choices": [
+            {
+              "text": "You look like you've lost something.",
+              "next": "hd_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_bell"}, {"type": "Level", "amount": 12}]
+            },
+            {"text": "Tell me about Bruna.", "next": "hd_bruna"},
+            {"text": "How is Nib settling in?", "next": "hd_nib", "conditions": [{"type": "Flag", "key": "am_nib_stays"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "hd_offer",
+          "speaker": "am_hedda_haybright",
+          "text": "A bell. Biscuit's bell. He's half deaf, the old dear, but he could always hear that bell — it's how I call him in. The Ditchwater Gang had it off my cart with everything else. Now he lies out at the gate all night with Bruna and I can't call him in for supper. Get it back and I'll knit you something. I'll knit you something anyway, but I'll knit it faster.",
+          "choices": [
+            {
+              "text": "I'll get Biscuit's bell back.",
+              "next": "hd_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_bell"}],
+              "conditions": [{"type": "Level", "amount": 12}]
+            },
+            {"text": "Not right now, Hedda."}
+          ]
+        },
+        {
+          "id": "hd_offer_yes",
+          "speaker": "am_hedda_haybright",
+          "text": "Brass, red ribbon, BISCUIT on the side. You'll know it.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "hd_bruna",
+          "speaker": "am_hedda_haybright",
+          "text": "My eldest. Tall as a barn door and twice as stubborn. Since the gnolls came over the hill she won't leave that gate. Stands there all night with her da's old barn door on her arm. *She looks out of the window.* I'd like her to have something to stand in front of that's worth it. A gate's a small thing to give your life to.",
+          "choices": [{"text": "She's braver than she thinks.", "next": "hd_bruna2"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "hd_bruna2",
+          "speaker": "am_hedda_haybright",
+          "text": "*Hedda smiles, and for a moment looks exactly like her daughter.* She's braver than *I* think, and I think a lot. If you're going where the trouble is, take her. She'll pretend she's not glad. She'll be glad.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "hd_nib",
+          "speaker": "am_hedda_haybright",
+          "text": "That gnoll? He eats like a harvest crew, sleeps in the hay, and has polished every spoon in the house, including three I didn't know we had. Tam has taught him to say please. He says it to the chickens.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_biscuit",
+      "start": "b_start",
+      "nodes": [
+        {
+          "id": "b_start",
+          "speaker": "narrator",
+          "text": "*An elderly sheepdog lies across the path like a rug somebody dropped. One ear goes up. The other has retired.*",
+          "choices": [
+            {"text": "(Scratch his ears.)", "next": "b_scratch"},
+            {"text": "(Jingle the brass bell.)", "next": "b_bell", "conditions": [{"type": "HasItem", "key": "am_biscuit_bell"}]},
+            {"text": "(Leave him to his nap.)"}
+          ]
+        },
+        {
+          "id": "b_scratch",
+          "speaker": "narrator",
+          "text": "*Biscuit groans with deep, professional satisfaction. His tail thumps the ground twice. Some kind of contract has been signed.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "b_bell",
+          "speaker": "narrator",
+          "text": "*Biscuit's head comes up. Both ears — both! — stand straight. For the first time in a long while, he hears something, and the something is his.*",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_tam",
+      "start": "t_ret",
+      "nodes": [
+        {
+          "id": "t_ret",
+          "speaker": "am_tam_haybright",
+          "text": "*Tam is hopping from foot to foot.* Well? WELL? Was it a ghost? Was it a SCARECROW GHOST?",
+          "conditions": [{"type": "QuestState", "key": "am_q_scarecrow", "value": "return"}],
+          "fallback": "t_decide",
+          "choices": [
+            {
+              "text": "It was a gnoll pup called Nib. He's going to help on the farm.",
+              "next": "t_ret_stays",
+              "conditions": [{"type": "Flag", "key": "am_nib_stays"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_scarecrow_handed_in"}, {"type": "CompleteQuest", "key": "am_q_scarecrow"}]
+            },
+            {
+              "text": "It was a gnoll pup. I sent him home to his clan with a message.",
+              "next": "t_ret_home",
+              "conditions": [{"type": "Flag", "key": "am_nib_home"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_scarecrow_handed_in"}, {"type": "CompleteQuest", "key": "am_q_scarecrow"}]
+            },
+            {
+              "text": "It was a gnoll pup. Constable Pip has him now.",
+              "next": "t_ret_jail",
+              "conditions": [{"type": "Flag", "key": "am_nib_jailed"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_scarecrow_handed_in"}, {"type": "CompleteQuest", "key": "am_q_scarecrow"}]
+            }
+          ]
+        },
+        {
+          "id": "t_ret_stays",
+          "speaker": "am_tam_haybright",
+          "text": "A GNOLL? On OUR farm? Doing CHORES? *He runs three circles round you.* I'm going to teach him conkers. And spitting. Mum says not spitting. I'm going to teach him anyway. Here — you can have the scarecrow's hat. He doesn't need it, he's not a scarecrow, he's NIB.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "t_ret_home",
+          "speaker": "am_tam_haybright",
+          "text": "Home? Oh. *He thinks about it very hard.* Did he have a mum? *You nod.* Then that's all right. Everyone should have a mum to go home to. Even gnolls. Here — the scarecrow's hat. He was borrowing it, so it's a sort of reward.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "t_ret_jail",
+          "speaker": "am_tam_haybright",
+          "text": "In JAIL? *His lip wobbles.* Does he get supper in jail? Does Pip know he likes cake? *He shoves the scarecrow's hat at you, not looking.* You can have this. I'm going to go and take Pip some cake. For the gnoll. Not for Pip.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "t_decide",
+          "speaker": "am_tam_haybright",
+          "text": "You FOUND it? What is it? Is it scary? Ask it what it is! Ask it if it likes conkers!",
+          "conditions": [{"type": "QuestState", "key": "am_q_scarecrow", "value": "decide"}],
+          "fallback": "t_wip",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_wip",
+          "speaker": "am_tam_haybright",
+          "text": "It's the scarecrow in the east field! It WALKS at night. It ate Mum's honey cake off the windowsill. Scarecrows don't eat cake. Go and LOOK at it.",
+          "conditions": [{"type": "QuestState", "key": "am_q_scarecrow", "value": "find"}],
+          "fallback": "t_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "t_hub",
+          "speaker": "am_tam_haybright",
+          "text": "*A very small boy with a very large conker on a string.* I'm Tam. I'm the smallest Haybright. Bruna's the biggest. Biscuit's the oldest. The scarecrow's the most suspicious.",
+          "choices": [
+            {
+              "text": "Suspicious? The scarecrow?",
+              "next": "t_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_scarecrow"}, {"type": "Level", "amount": 14}]
+            },
+            {"text": "What's your conker called?", "next": "t_conker"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "t_offer",
+          "speaker": "am_tam_haybright",
+          "text": "It WALKS. At NIGHT. I saw it from the window: it went to the cake sill and back. In the morning it was in a different bit of the field. Mum says I dreamed it. Mum doesn't know everything. She doesn't know about the frog in the butter churn, for a start.",
+          "choices": [
+            {
+              "text": "I'll take a look at your scarecrow.",
+              "next": "t_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_scarecrow"}],
+              "conditions": [{"type": "Level", "amount": 14}]
+            },
+            {"text": "Maybe later, Tam."}
+          ]
+        },
+        {
+          "id": "t_offer_yes",
+          "speaker": "am_tam_haybright",
+          "text": "Be careful. Take a stick. Take TWO sticks.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "t_conker",
+          "speaker": "am_tam_haybright",
+          "text": "Doombringer the Third. Doombringer the Second is in the pond. We don't talk about it.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_scarecrow",
+      "start": "s_quest",
+      "nodes": [
+        {
+          "id": "s_quest",
+          "speaker": "narrator",
+          "text": "*The scarecrow stands in the wheat in a patched green coat. The coat is breathing. Slightly. There are honey-cake crumbs on its boots, and the crow on its arm looks embarrassed to be involved.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_scarecrow", "value": "find"}],
+          "fallback": "s_after",
+          "choices": [
+            {
+              "text": "Look closer at the coat, the stitching, the straw.",
+              "check": {"skill": "Investigation", "dc": 12, "success": "s_found", "failure": "s_fail"},
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "Hold still and listen.",
+              "check": {"skill": "Perception", "dc": 12, "success": "s_found", "failure": "s_fail"},
+              "tag": "PERCEPTION"
+            },
+            {
+              "text": "(Set a honey cake down in the wheat, step back, and wait.)",
+              "next": "s_found_cake",
+              "conditions": [{"type": "HasItem", "key": "food_honey_cake"}],
+              "outcomes": [{"type": "TakeItem", "key": "food_honey_cake"}]
+            },
+            {"text": "(Give the scarecrow a good firm shake.)", "next": "s_found_shake"},
+            {"text": "(Leave it be for now.)"}
+          ]
+        },
+        {
+          "id": "s_fail",
+          "speaker": "narrator",
+          "text": "*Straw, sacking, a stitched grin. The crow caws at you. Nothing else. And yet — the coat moved. Didn't it?*",
+          "choices": [{"text": "(Give the scarecrow a good firm shake.)", "next": "s_found_shake"}, {"text": "(Leave it be for now.)"}]
+        },
+        {
+          "id": "s_found",
+          "speaker": "narrator",
+          "text": "*Inside the coat, behind the straw, two large dark eyes are looking back at you. A very small voice says: 'Nib is not here. Nib is a scarecrow.'*",
+          "outcomes": [{"type": "SetFlag", "key": "am_nib_found"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "s_found_cake",
+          "speaker": "narrator",
+          "text": "*Nothing happens for a long minute. Then a long, furry arm creeps out of the scarecrow's sleeve, gropes about, finds the honey cake, and pulls it inside. Munching. The scarecrow says, with its mouth full: 'Thank you.'*",
+          "outcomes": [{"type": "SetFlag", "key": "am_nib_found"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "s_found_shake",
+          "speaker": "narrator",
+          "text": "*You shake. The scarecrow yelps, falls over, and becomes, in a flurry of straw, a very young gnoll in a very large coat, holding half a honey cake and both hands up.*",
+          "outcomes": [{"type": "SetFlag", "key": "am_nib_found"}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "s_after",
+          "speaker": "narrator",
+          "text": "*A scarecrow in the wheat, a little lopsided, a little lonely. The crow has gone.*",
+          "conditions": [{"type": "Flag", "key": "am_nib_found"}],
+          "fallback": "s_plain",
+          "choices": [{"text": "(Leave it be.)"}]
+        },
+        {
+          "id": "s_plain",
+          "speaker": "narrator",
+          "text": "*A scarecrow in a patched coat, with a sunflower in its hat-band and a crow on its arm. You could swear it is watching you. So is the crow.*",
+          "choices": [{"text": "(Leave it be.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_nib",
+      "start": "n_start",
+      "nodes": [
+        {
+          "id": "n_start",
+          "speaker": "am_nib",
+          "text": "*A gnoll — but a young one, gangly and all ears, wrapped in the scarecrow's coat like a blanket.* Please don't tell Skarra. Nib is not a good gnoll. Nib does not like carrying oil into the dark, and Nib does not like the Hungry Fire. Nib likes CAKE.",
+          "conditions": [{"type": "NotFlag", "key": "am_nib_decided"}],
+          "fallback": "n_after",
+          "choices": [{"text": "Why did you run away from the warcamp?", "next": "n_why"}, {"text": "What's the Hungry Fire?", "next": "n_fire"}]
+        },
+        {
+          "id": "n_why",
+          "speaker": "am_nib",
+          "text": "Skarra makes the pups carry the oil. Up the king's hill, through the door in the grass, down the steps, into the cold. Down there is the Hungry Fire. You pour, and it drinks, and it gets bigger. *He shivers.* And the bones in the hill walk now. They didn't before. Nib dropped a cask and ran and ran.",
+          "choices": [{"text": "A door in the grass? Where?", "next": "n_door"}, {"text": "What happens to you now, Nib?", "next": "n_choice"}]
+        },
+        {
+          "id": "n_fire",
+          "speaker": "am_nib",
+          "text": "It is a little red light in a big dark room, under the old king's hill. It talks to Skarra in dreams. It says: more oil. The red-scale man says it too. He brings meat and says: when it wakes, the Duskmane eat first. *Nib's ears go flat.* Nib does not think the Duskmane eat first.",
+          "choices": [{"text": "A door in the grass? Where?", "next": "n_door"}, {"text": "What happens to you now, Nib?", "next": "n_choice"}]
+        },
+        {
+          "id": "n_door",
+          "speaker": "am_nib",
+          "text": "North of the seven stones. The grass looks like grass. It is not grass. Push and it opens. *He looks at you.* Don't go down there. Or — go down there with a lot of friends.",
+          "outcomes": [{"type": "SetFlag", "key": "found_barrow"}, {"type": "SetFlag", "key": "am_nib_told"}],
+          "choices": [{"text": "What happens to you now, Nib?", "next": "n_choice"}]
+        },
+        {
+          "id": "n_choice",
+          "speaker": "am_nib",
+          "text": "*Nib looks at the farmhouse, at the warcamp smoke across the river, at his feet.* Nib doesn't know. What happens to Nib?",
+          "choices": [
+            {
+              "text": "Hedda Haybright could use a farmhand who likes cake. I'll put in a word.",
+              "next": "n_stays",
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_nib_stays"},
+                {"type": "SetFlag", "key": "am_nib_decided"},
+                {"type": "Approval", "key": "bruna", "amount": 8}
+              ]
+            },
+            {
+              "text": "Go home to your mum, Nib. Tell the Duskmane the Downs have a gate now.",
+              "next": "n_home",
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_nib_home"},
+                {"type": "SetFlag", "key": "am_nib_decided"},
+                {"type": "Approval", "key": "bruna", "amount": 5}
+              ]
+            },
+            {
+              "text": "You stole from these people. Constable Pip can decide what to do with you.",
+              "next": "n_jail",
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_nib_jailed"},
+                {"type": "SetFlag", "key": "am_nib_decided"},
+                {"type": "Approval", "key": "bruna", "amount": -5}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n_stays",
+          "speaker": "am_nib",
+          "text": "*Nib's ears go straight up.* A FARMHAND? With a HAT? *He bundles the scarecrow's coat up neatly, puts it back on the post, and trots off towards the farmhouse, practising.* Please. Please. Please...",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "n_home",
+          "speaker": "am_nib",
+          "text": "*He nods slowly.* Nib will tell them. Nib will tell them about the gate, and the cake, and you. *He hands you the half honey cake back, which is a great sacrifice, and lopes off west.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "n_jail",
+          "speaker": "am_nib",
+          "text": "*Nib's ears fold flat. He doesn't run. He just follows you, very slowly, to the bridge, where Constable Pip looks at him, looks at you, and sighs.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {"id": "n_after", "speaker": "am_nib", "text": "Nib is going now. Thank you for not being Skarra.", "choices": [{"text": "(Continue.)"}]}
+      ]
+    },
+    {
+      "id": "dlg_am_nib_farm",
+      "start": "nf_start",
+      "nodes": [
+        {
+          "id": "nf_start",
+          "speaker": "am_nib_farm",
+          "text": "*Nib is wearing a straw hat with a sunflower in it and carrying a bucket with great ceremony.* Nib feeds the chickens now. Nib says please to the chickens. The chickens do not say please back. Rude.",
+          "choices": [{"text": "You look happy, Nib.", "next": "nf_happy"}, {"text": "(Leave him to his chores.)"}]
+        },
+        {
+          "id": "nf_happy",
+          "speaker": "am_nib_farm",
+          "text": "Nib is happy. Biscuit lets Nib sleep in the hay. Tam is teaching Nib conkers. Nib is very bad at conkers. *He grins with too many teeth.* It is the best.",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_hob",
+      "start": "hb_ret",
+      "nodes": [
+        {
+          "id": "hb_ret",
+          "speaker": "am_hob_waxley",
+          "text": "*Old Hob is standing among his hives with his ear to one of them, like a man listening at a door.* Is she home? Tell me she's home.",
+          "conditions": [{"type": "QuestState", "key": "am_q_queen", "value": "return"}],
+          "fallback": "hb_wip",
+          "choices": [
+            {
+              "text": "Your queen is back in her skep, Hob.",
+              "next": "hb_ret2",
+              "outcomes": [
+                {"type": "TakeItem", "key": "am_hobs_smoker"},
+                {"type": "SetFlag", "key": "am_q_queen_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_queen"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hb_ret2",
+          "speaker": "am_hob_waxley",
+          "text": "*He listens again, and his whole face crinkles.* There she is. Hear that? That's a hive that's got its mother back. That's the best sound in the world. *He presses a ring into your palm.* My father made that out of the first gold I ever earned from honey. Don't sell it to a gnoll.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "hb_wip",
+          "speaker": "am_hob_waxley",
+          "text": "She's up in the golden tree by Shepherd's Lookout, the whole swarm hanging off her like a beard. The hawks have been worrying them. Puff the smoker, slow and kind, and bring her home.",
+          "conditions": [{"type": "QuestState", "key": "am_q_queen", "value": "coax"}],
+          "fallback": "hb_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "hb_hub",
+          "speaker": "am_hob_waxley",
+          "text": "*A small, bent old man in a veiled hat. Several bees are walking about on his face. He does not seem to mind.* Honey's a copper a pot. Wax is two. Advice is free, and worth it.",
+          "choices": [
+            {
+              "text": "You look worried, Hob.",
+              "next": "hb_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_queen"}, {"type": "Level", "amount": 13}]
+            },
+            {"text": "Why is every lane on the Downs dark?", "next": "hb_dark"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "hb_offer",
+          "speaker": "am_hob_waxley",
+          "text": "My best queen's gone. Swarmed, the whole lot, and hung themselves in a golden tree up by the Lookout. Too far for these knees, and the hawks up there are vicious. Take my smoker. A puff, slow and kind, and they'll go in the sack like lambs.",
+          "choices": [
+            {
+              "text": "I'll bring your queen home.",
+              "next": "hb_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_queen"}, {"type": "GiveItem", "key": "am_hobs_smoker"}],
+              "conditions": [{"type": "Level", "amount": 13}]
+            },
+            {"text": "Not just now, Hob."}
+          ]
+        },
+        {"id": "hb_offer_yes", "speaker": "am_hob_waxley", "text": "Slow and kind. Like talking to your gran.", "choices": [{"text": "(Continue.)"}]},
+        {
+          "id": "hb_dark",
+          "speaker": "am_hob_waxley",
+          "text": "Because the oil's gone and the candles are mine, and I can't make candles fast enough for a whole county. *He taps his nose.* And between you and me — wax candles are for church and for courting, not for lanes. The lanes want Pell's oil.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_swarm",
+      "start": "sw_quest",
+      "nodes": [
+        {
+          "id": "sw_quest",
+          "speaker": "narrator",
+          "text": "*A great humming beard of bees hangs from a low branch of the golden tree. Somewhere in the middle of it is a queen with opinions.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_queen", "value": "coax"}],
+          "fallback": "sw_done",
+          "choices": [
+            {
+              "text": "(Puff Old Hob's smoker, slow and kind, the way he showed you.)",
+              "next": "sw_smoke",
+              "conditions": [{"type": "HasItem", "key": "am_hobs_smoker"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_queen_home"}]
+            },
+            {
+              "text": "Hum to them, low and steady, the way a hive hums.",
+              "check": {"skill": "Nature", "dc": 13, "success": "sw_hum", "failure": "sw_sting"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "Ask the swarm, spirit to spirit, to go home.",
+              "next": "sw_spirit",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_queen_home"}, {"type": "GiveXP", "amount": 100}],
+              "tag": "SHAMAN"
+            },
+            {"text": "(Leave them be for now.)"}
+          ]
+        },
+        {
+          "id": "sw_smoke",
+          "speaker": "narrator",
+          "text": "*The bees grow drowsy and amiable. The whole humming mass slides into Hob's skep-sack like warm honey. You are stung only once, on the thumb, out of principle.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sw_hum",
+          "speaker": "narrator",
+          "text": "*You hum. The swarm hums back, curious, then settles. The queen walks onto your sleeve as if she had always meant to, and the rest follow her into the sack.*",
+          "outcomes": [{"type": "SetFlag", "key": "am_queen_home"}, {"type": "GiveXP", "amount": 100}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sw_sting",
+          "speaker": "narrator",
+          "text": "*The swarm takes your humming as an insult to its musicianship. You retreat, at speed, slightly lumpy. Perhaps the smoker.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sw_spirit",
+          "speaker": "narrator",
+          "text": "*The bees go quiet. Then, all at once, they lift and pour into Hob's sack in a gold river, as if they had only been waiting to be asked nicely.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "sw_done",
+          "speaker": "narrator",
+          "text": "*A few stray bees bumble about the branch, looking for the party.*",
+          "conditions": [{"type": "Flag", "key": "am_queen_home"}],
+          "fallback": "sw_plain",
+          "choices": [{"text": "(Leave them be.)"}]
+        },
+        {
+          "id": "sw_plain",
+          "speaker": "narrator",
+          "text": "*A golden tree, buzzing loudly. Best left to a beekeeper.*",
+          "choices": [{"text": "(Leave them be.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_pip",
+      "start": "pp_ret",
+      "nodes": [
+        {
+          "id": "pp_ret",
+          "speaker": "am_constable_pip",
+          "text": "*Constable Pip straightens his helmet, which promptly slides over his eyes again.* Well? Is the road safe? Do I need to write a report? I've never written a report. I've got a pencil and everything.",
+          "conditions": [{"type": "QuestState", "key": "am_q_ditchwater", "value": "report"}],
+          "fallback": "pp_wip",
+          "choices": [
+            {
+              "text": "Jory's gang are harvest hands now. The Reeve hired them.",
+              "next": "pp_hired",
+              "conditions": [{"type": "Flag", "key": "am_gang_hired"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_ditchwater_handed_in"}, {"type": "CompleteQuest", "key": "am_q_ditchwater"}]
+            },
+            {
+              "text": "They've run, and they won't be back.",
+              "next": "pp_scared",
+              "conditions": [{"type": "Flag", "key": "am_gang_scared"}, {"type": "NotFlag", "key": "am_gang_hired"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_ditchwater_handed_in"}, {"type": "CompleteQuest", "key": "am_q_ditchwater"}]
+            },
+            {
+              "text": "The Ditchwater Gang won't trouble the road again.",
+              "next": "pp_fought",
+              "conditions": [{"type": "NotFlag", "key": "am_gang_hired"}, {"type": "NotFlag", "key": "am_gang_scared"}],
+              "outcomes": [{"type": "SetFlag", "key": "am_q_ditchwater_handed_in"}, {"type": "CompleteQuest", "key": "am_q_ditchwater"}]
+            }
+          ]
+        },
+        {
+          "id": "pp_hired",
+          "speaker": "am_constable_pip",
+          "text": "Hired? JORY? Working? *He writes it down, very slowly, tongue out.* 'Gang... reformed... by... pie.' That's going in the report. That's going in the report TWICE. Here — the Reeve said to give you something from the lock-up. Take your pick.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pp_scared",
+          "speaker": "am_constable_pip",
+          "text": "Run off! Ha! *He makes a note.* 'Gang... ran off... very fast... from constable's associate.' The Reeve said to give you something from the lock-up. Take your pick.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pp_fought",
+          "speaker": "am_constable_pip",
+          "text": "*Pip takes his helmet off, holds it to his chest for a moment, and puts it back on.* Right. Right. The road's safe. That's what matters. The Reeve said to give you something from the lock-up. Take your pick.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pp_wip",
+          "speaker": "am_constable_pip",
+          "text": "They're holed up in Aldwin's Watch, the old tower south of the road. Jory Ditchwater and three others. I'd go myself, only I'm guarding the bridge. From the bridge. Somebody has to.",
+          "conditions": [{"type": "QuestState", "key": "am_q_ditchwater", "value": "gang"}],
+          "fallback": "pp_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "pp_hub",
+          "speaker": "am_constable_pip",
+          "text": "*A gangly young man in a helmet two sizes too big, standing very straight beside the only lit lamp on the Downs.* Halt! Er. Hello. Constable Pip Harrow, the Reeve's constable. The only one, so be nice.",
+          "choices": [
+            {
+              "text": "The noticeboard says you're after highwaymen.",
+              "next": "pp_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_ditchwater"}, {"type": "Level", "amount": 13}]
+            },
+            {"text": "Why is your lamp the only one lit?", "next": "pp_lamp"},
+            {"text": "How's your prisoner?", "next": "pp_nib", "conditions": [{"type": "Flag", "key": "am_nib_jailed"}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "pp_offer",
+          "speaker": "am_constable_pip",
+          "text": "The Ditchwater Gang! Jory Ditchwater and his lads. They've been stopping carts on the south road — took Hedda Haybright's cart, ham and bell and all. Now they've moved into Aldwin's Watch. The Reeve says I'm to 'deal with them'. I've never dealt with anything. Would you... deal with them? Officially. I'll deputise you. I've got a badge. Well, a button.",
+          "choices": [
+            {
+              "text": "Consider them dealt with, Constable.",
+              "next": "pp_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_ditchwater"}],
+              "conditions": [{"type": "Level", "amount": 13}]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "pp_offer_yes",
+          "speaker": "am_constable_pip",
+          "text": "*He pins a button to your collar with great solemnity.* By the authority of the Reeve. Try not to hit anyone who says sorry.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "pp_lamp",
+          "speaker": "am_constable_pip",
+          "text": "Cooking grease. Mum's. A constable should have a lamp, she says. *He sniffs.* It smells like bacon all night. The moths love it. I'm very popular with moths.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "pp_nib",
+          "speaker": "am_constable_pip",
+          "text": "Nib? He's eaten all my biscuits. Not Biscuit. Biscuits. Tam Haybright brings him cake every afternoon and the lock-up door isn't actually locked, it's never been locked, so mostly he just sits on the step. *He sighs.* I think I've got a gnoll now.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_jory",
+      "start": "j1",
+      "nodes": [
+        {
+          "id": "j1",
+          "speaker": "narrator",
+          "text": "*Four figures in tea-towel masks spring out from behind the tower — well, three spring; one trips. Their leader is a big sunburnt man in a feathered hat, holding a hay-knife like it might go off.*",
+          "next": "j2"
+        },
+        {
+          "id": "j2",
+          "speaker": "am_jory_highwayman",
+          "text": "Stand and deliver! Purse, pack, and boots. Specially boots. Wil needs boots. *Wil waves, shyly.*",
+          "choices": [
+            {
+              "text": "You hold that hay-knife like a harvest hand. You're not highwaymen at all.",
+              "check": {"skill": "Insight", "dc": 13, "success": "j_insight", "failure": "j_wobble"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {
+              "text": "Reeve Hester needs hands for the harvest. She pays in pie.",
+              "check": {"skill": "Persuasion", "dc": 14, "success": "j_hired", "failure": "j_fight"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Run. Now. While you still have boots.",
+              "check": {"skill": "Intimidation", "dc": 15, "success": "j_scared", "failure": "j_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Lay down your knives. The Downs need workers more than they need thieves.",
+              "next": "j_hired",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "Nice hat. I took a better one off a better highwayman.",
+              "next": "j_scared",
+              "conditions": [{"type": "Class", "key": "Rogue"}],
+              "tag": "ROGUE"
+            },
+            {
+              "text": "Where's the bell you took off Hedda Haybright's cart?",
+              "next": "j_bell",
+              "conditions": [{"type": "QuestActive", "key": "am_q_bell"}]
+            },
+            {"text": "(Attack.)", "next": "j_fight"}
+          ]
+        },
+        {
+          "id": "j_wobble",
+          "speaker": "am_jory_highwayman",
+          "text": "Oi! I'm a very frightening highwayman! I've got a hat! *The hat's feather droops.* ...Right. Well?",
+          "choices": [
+            {
+              "text": "Reeve Hester needs hands for the harvest. She pays in pie.",
+              "check": {"skill": "Persuasion", "dc": 14, "success": "j_hired", "failure": "j_fight"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Run. Now. While you still have boots.",
+              "check": {"skill": "Intimidation", "dc": 15, "success": "j_scared", "failure": "j_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {"text": "(Attack.)", "next": "j_fight"}
+          ]
+        },
+        {
+          "id": "j_insight",
+          "speaker": "am_jory_highwayman",
+          "text": "*Jory's shoulders drop. Behind him, Wil sits down on a log.* ...We did the night-harvest. Every year. Lampseed's cut by lantern-light, see, after the dew. No oil, no lanterns, no night-harvest, no wages. Robbing seemed easier than starving. It isn't. It's really not.",
+          "choices": [
+            {"text": "The Reeve would pay you to bring in the barley. I'll vouch for you.", "next": "j_hired"},
+            {"text": "Then go home before this gets worse.", "next": "j_scared"},
+            {"text": "You chose the road. Now you answer for it. (Attack.)", "next": "j_fight"}
+          ]
+        },
+        {
+          "id": "j_bell",
+          "speaker": "am_jory_highwayman",
+          "text": "The bell? It's in the strongbox behind the tower. *Guiltily.* We were going to give it back. Wil cried about the dog. Well?",
+          "choices": [
+            {
+              "text": "Reeve Hester needs hands for the harvest. She pays in pie.",
+              "check": {"skill": "Persuasion", "dc": 12, "success": "j_hired", "failure": "j_fight"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Run. Now. While you still have boots.",
+              "check": {"skill": "Intimidation", "dc": 15, "success": "j_scared", "failure": "j_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {"text": "(Attack.)", "next": "j_fight"}
+          ]
+        },
+        {
+          "id": "j_hired",
+          "speaker": "am_jory_highwayman",
+          "text": "Pie? *Four tea-towel masks come off. Underneath are four very sunburnt farmhands.* We'll do it. We'll do it for the pie and the wage and — and for not being this any more. *Jory digs in the strongbox and presses a brass bell into your hands.* Hedda Haybright's. Tell her we're sorry. Tell the dog too.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "am_gang_hired"},
+            {"type": "SetFlag", "key": "am_gang_dealt"},
+            {"type": "GiveItem", "key": "am_biscuit_bell"},
+            {"type": "GiveXP", "amount": 250},
+            {"type": "Approval", "key": "bruna", "amount": 5}
+          ],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "j_scared",
+          "speaker": "narrator",
+          "text": "*Something in your face makes the Ditchwater Gang reconsider their career. They leave at a run, Jory clutching his hat, Wil's bare feet slapping the road. The strongbox stays behind.*",
+          "outcomes": [{"type": "SetFlag", "key": "am_gang_scared"}, {"type": "SetFlag", "key": "am_gang_dealt"}, {"type": "GiveXP", "amount": 200}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "j_fight",
+          "speaker": "am_jory_highwayman",
+          "text": "Right, lads! Masks on! Er — they are on. CHARGE!",
+          "outcomes": [{"type": "SetFlag", "key": "am_gang_fought"}, {"type": "StartCombat", "key": "enc_am_ditchwater"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_jory_farmhand",
+      "start": "jf_start",
+      "nodes": [
+        {
+          "id": "jf_start",
+          "speaker": "am_jory_farmhand",
+          "text": "*Jory Ditchwater is binding sheaves with enormous concentration, tongue out.* Stand and deliv— sorry. Habit. Lovely day for a harvest, isn't it? Lovely. I bound three hundred sheaves yesterday. The Reeve said 'well done'. Nobody's ever said 'well done' to me.",
+          "choices": [{"text": "Well done, Jory.", "next": "jf_done"}, {"text": "(Leave him to the sheaves.)"}]
+        },
+        {
+          "id": "jf_done",
+          "speaker": "am_jory_farmhand",
+          "text": "*He goes bright red and binds a sheaf so tight it squeaks.*",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_wat",
+      "start": "w_geode",
+      "nodes": [
+        {
+          "id": "w_geode",
+          "speaker": "am_wat_turnbull",
+          "text": "*Wat eyes the grey stone in your hand with deep suspicion.* What's that, then? Looks like a rock. I've got rocks. I've got more rocks than turnips, thanks to those moles.",
+          "conditions": [{"type": "QuestState", "key": "am_q_peace_offering", "value": "deliver"}],
+          "fallback": "w_ret",
+          "choices": [
+            {
+              "text": "A gift from Mother Delve. Open it.",
+              "next": "w_geode2",
+              "outcomes": [
+                {"type": "TakeItem", "key": "am_mudpaw_geode"},
+                {"type": "SetFlag", "key": "am_q_peace_offering_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_peace_offering"},
+                {"type": "SetFlag", "key": "am_wat_and_delve"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w_geode2",
+          "speaker": "am_wat_turnbull",
+          "text": "*He prises it open. Amber light spills out over his big red hands. He says nothing for a long moment.* ...They give these to family? *Gruffly.* Well. Well. You tell her — you tell her she can have the bottom field for her roads. And a sack of turnips. Two sacks. And if she's ever cold she's to come up and sit by the stove. *He wipes his nose.* Dust. From the holes.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "w_ret",
+          "speaker": "am_wat_turnbull",
+          "text": "*Wat leans on his hoe.* Well? Did you sort out those moles?",
+          "conditions": [{"type": "QuestState", "key": "am_q_sinkholes", "value": "return"}],
+          "fallback": "w_wip",
+          "choices": [
+            {
+              "text": "The Mudpaw aren't raiding — they're fleeing something under the king's hill. They'll dig under the hedgerows, not your fields.",
+              "next": "w_peace",
+              "conditions": [{"type": "Flag", "key": "am_mudpaw_peace"}],
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_q_sinkholes_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_sinkholes"},
+                {"type": "GiveItem", "key": "am_lucky_turnip"}
+              ]
+            },
+            {
+              "text": "The Mudpaw diggers won't undermine your fields again.",
+              "next": "w_war",
+              "conditions": [{"type": "NotFlag", "key": "am_mudpaw_peace"}],
+              "outcomes": [
+                {"type": "SetFlag", "key": "am_q_sinkholes_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_sinkholes"},
+                {"type": "GiveGold", "amount": 1500}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w_peace",
+          "speaker": "am_wat_turnbull",
+          "text": "Fleeing? From under the king's hill? *He scratches his head with the hoe.* Huh. Well. Hedgerows, you say. And — what's this, they've offered to dig my new well for free? *A long pause.* Fine. FINE. Here. My lucky turnip. It's shaped like my uncle. He'd have liked you. He didn't like anyone.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "w_war",
+          "speaker": "am_wat_turnbull",
+          "text": "*Wat looks at the quarry for a long while.* Right. Good. That's... good. *He counts coins into your hand, slower than he needs to.* Bounty. The Reeve chipped in. I'll fill in the holes myself.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "w_wip",
+          "speaker": "am_wat_turnbull",
+          "text": "The moles are in the old quarry, west of here. Mudpaw, they call themselves. Every night a new hole, and every morning a row of turnips gone into it.",
+          "conditions": [{"type": "QuestState", "key": "am_q_sinkholes", "value": "quarry"}],
+          "fallback": "w_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "w_hub",
+          "speaker": "am_wat_turnbull",
+          "text": "*A red-faced farmer glares at a perfectly round hole in the ground, as if it owes him money.* That was a turnip. Now it's a hole.",
+          "choices": [
+            {
+              "text": "That's a very round hole.",
+              "next": "w_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_sinkholes"}, {"type": "Level", "amount": 14}]
+            },
+            {"text": "How are the turnips?", "next": "w_turnips"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "w_offer",
+          "speaker": "am_wat_turnbull",
+          "text": "It's a MOLE hole. Mudpaw tunnelers, from the old quarry. Thirty years they've kept to themselves, and this spring they start digging under my fields like there's a fire behind them. I've lost a cow into one. Got her out. She's not been the same. Go and sort them out. However you like. I'm past caring how.",
+          "choices": [
+            {
+              "text": "I'll go to the quarry and sort it out.",
+              "next": "w_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_sinkholes"}],
+              "conditions": [{"type": "Level", "amount": 14}]
+            },
+            {"text": "Not right now, Wat."}
+          ]
+        },
+        {
+          "id": "w_offer_yes",
+          "speaker": "am_wat_turnbull",
+          "text": "West, past the hay. Mind the holes. Mind ALL the holes.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "w_turnips",
+          "speaker": "am_wat_turnbull",
+          "text": "Biggest on the Downs, when they're not falling into the earth. *He brightens.* Got one last year the size of a baby. Named it. Ate it. Bit sad, in hindsight.",
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_mudpaw_parley",
+      "start": "g1",
+      "nodes": [
+        {
+          "id": "g1",
+          "speaker": "narrator",
+          "text": "*Candle-lit brass helmets pop up out of the quarry floor like mushrooms after rain. The biggest belongs to a stout mole in denim overalls, brandishing a pick.*",
+          "next": "g2"
+        },
+        {
+          "id": "g2",
+          "speaker": "am_grubb",
+          "text": "Surface-folk! Stop stamping on our ROOF! Every time a plough goes over, a tunnel comes down! And now they send YOU. With WEAPONS.",
+          "choices": [
+            {
+              "text": "Your new tunnels all run away from the king's hill. You're not raiding — you're fleeing something.",
+              "check": {"skill": "Nature", "dc": 14, "success": "g_peace", "failure": "g_fail"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "Nobody needs a war over turnips. Tell me what you need.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "g_peace", "failure": "g_fail"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "The stones here are frightened. What did you dig into?",
+              "next": "g_peace",
+              "conditions": [{"type": "Class", "key": "Shaman"}],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "Every track out of this quarry points away from the barrow mound. What chased you?",
+              "next": "g_peace",
+              "conditions": [{"type": "Class", "key": "Hunter"}],
+              "tag": "HUNTER"
+            },
+            {"text": "(Attack.)", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g_fail",
+          "speaker": "am_grubb",
+          "text": "Words! Surface words! Diggers — at them!",
+          "outcomes": [{"type": "SetFlag", "key": "am_mudpaw_war"}, {"type": "StartCombat", "key": "enc_am_quarry_parley"}]
+        },
+        {
+          "id": "g_peace",
+          "speaker": "am_grubb",
+          "text": "*Grubb's pick wobbles, then lowers.* ...MUM! MUM, come and see! There's one that listens!",
+          "next": "g_peace2"
+        },
+        {
+          "id": "g_peace2",
+          "speaker": "narrator",
+          "text": "*An old mole in a moss shawl and round brass spectacles climbs out of the tunnel, leaning on a staff of amber crystals. Every candle in the quarry turns towards her.* 'Mother Delve,' she says, 'eldest of the Mudpaw. We dug too deep under the king's hill, dear. We broke into a cold place. The bones in there got up. So we dug away, as fast as we could, and the fastest way was under the farms.'",
+          "next": "g_peace3"
+        },
+        {
+          "id": "g_peace3",
+          "speaker": "am_grubb",
+          "text": "*Grubb, sulkily.* We'll dig under the hedgerows. Not the turnips. If the turnip-man stops shouting down our holes.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "am_mudpaw_peace"},
+            {"type": "SetFlag", "key": "am_quarry_settled"},
+            {"type": "GiveXP", "amount": 300},
+            {"type": "Approval", "key": "bruna", "amount": 4}
+          ],
+          "choices": [{"text": "Deal. I'll tell Wat."}]
+        },
+        {
+          "id": "g_fight",
+          "speaker": "am_grubb",
+          "text": "Picks UP, Mudpaw! Defend the burrows!",
+          "outcomes": [{"type": "SetFlag", "key": "am_mudpaw_war"}, {"type": "StartCombat", "key": "enc_am_quarry_parley"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_delve",
+      "start": "d_done",
+      "nodes": [
+        {
+          "id": "d_done",
+          "speaker": "am_mother_delve",
+          "text": "*Mother Delve is sitting on a sack of turnips like a queen on a throne.* He sent turnips! Hundreds! We shall be eating turnips until midwinter. It is WONDERFUL. And he says I may sit by his stove. *She polishes her spectacles.* I may, too.",
+          "conditions": [{"type": "QuestComplete", "key": "am_q_peace_offering"}],
+          "fallback": "d_wip",
+          "choices": [{"text": "What did you dig into, under the hill?", "next": "d_cold"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "d_wip",
+          "speaker": "am_mother_delve",
+          "text": "Has the turnip-man opened my stone yet? He'll like it. Everyone likes the inside of a geode.",
+          "conditions": [{"type": "QuestState", "key": "am_q_peace_offering", "value": "deliver"}],
+          "fallback": "d_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "d_hub",
+          "speaker": "am_mother_delve",
+          "text": "*An old mole in a moss shawl peers up at you through round brass spectacles.* Ah. The surface-folk who listens. Sit, dear. Mind the roof. It's our floor.",
+          "choices": [
+            {
+              "text": "Is there anything I can do for the Mudpaw?",
+              "next": "d_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_peace_offering"}, {"type": "Level", "amount": 15}]
+            },
+            {"text": "What did you dig into, under the hill?", "next": "d_cold"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "d_offer",
+          "speaker": "am_mother_delve",
+          "text": "Peace with the turnip-man would be a fine thing. Mudpaw don't say sorry with words, dear; we say it with stones. *She presses a plain grey stone into your hands. It is heavier than it looks.* Take him this. A peace geode. We only give them to family. Tell him to open it in the sun.",
+          "choices": [
+            {
+              "text": "I'll take it to Wat.",
+              "next": "d_offer_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_peace_offering"}, {"type": "GiveItem", "key": "am_mudpaw_geode"}],
+              "conditions": [{"type": "Level", "amount": 15}]
+            },
+            {"text": "Not just now, Mother Delve."}
+          ]
+        },
+        {
+          "id": "d_offer_yes",
+          "speaker": "am_mother_delve",
+          "text": "In the sun, mind. Inside is no good. Inside it just looks like a rock.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "d_cold",
+          "speaker": "am_mother_delve",
+          "text": "A cold room full of old kings' things, under the hill with the seven stones. A door on the north side of the mound, dressed in turf so it looks like grass. It is not grass. *She shivers.* There's a light down there, red as a coal, that the gnolls pour oil into. And the dead walk round it like moths round a lamp.",
+          "outcomes": [{"type": "SetFlag", "key": "found_barrow"}],
+          "choices": [{"text": "Thank you, Mother Delve."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_pebble",
+      "start": "pb_start",
+      "nodes": [
+        {
+          "id": "pb_start",
+          "speaker": "am_mudpaw_pebble",
+          "text": "*A small mole with a very large wheelbarrow of stones beams at you.* Rocks! Do you want a rock? This one is a good rock. This one is a better rock. This one is my FAVOURITE rock.",
+          "choices": [{"text": "I'd love your favourite rock.", "next": "pb_no"}, {"text": "(Leave him to his rocks.)"}]
+        },
+        {"id": "pb_no", "speaker": "am_mudpaw_pebble", "text": "*Long pause.* ...You can have the good one.", "choices": [{"text": "(Continue.)"}]}
+      ]
+    },
+    {
+      "id": "dlg_am_corlan",
+      "start": "c_ember",
+      "nodes": [
+        {
+          "id": "c_ember",
+          "speaker": "am_ser_corlan",
+          "text": "*Ser Corlan takes the greasy tally-stick from you between finger and thumb, and turns it to the light.* So. The Reeve sent you. Good. Let's see what the Duskmane have been counting.",
+          "conditions": [{"type": "QuestState", "key": "mq2_ember_road", "value": "corlan"}],
+          "fallback": "c_ret",
+          "choices": [
+            {
+              "text": "It came off the caravan boss. There's a drawing on it.",
+              "next": "c_ember2",
+              "outcomes": [{"type": "TakeItem", "key": "am_duskmane_tally"}]
+            }
+          ]
+        },
+        {
+          "id": "c_ember2",
+          "speaker": "am_ser_corlan",
+          "text": "Casks. Forty, fifty — every cask on the Downs. And this: seven little strokes in a ring, and a fire with teeth. *His mouth goes thin.* The King's Ring. They're carrying the oil to the king's hill. And this mark, here, burnt in — a scale. I've seen that mark before. Painted on shields, at Skyreach, twelve years ago.",
+          "choices": [{"text": "Skyreach?", "next": "c_ember3"}]
+        },
+        {
+          "id": "c_ember3",
+          "speaker": "am_ser_corlan",
+          "text": "Another time. *He snaps the stick in two.* What matters now is that gnolls don't plan like this. Somebody's planning for them, and paying Skarra Duskmane to do it. Her warcamp is across the river, north-west. Cut off the head and the clan scatters. Bring me back her ears — no. Don't. Bring me back whatever she's carrying.",
+          "choices": [{"text": "Skarra's warcamp. I'm going."}]
+        },
+        {
+          "id": "c_ret",
+          "speaker": "am_ser_corlan",
+          "text": "*Ser Corlan sees the faded blue pennant in your hands and stands up very slowly, like a man much older than he is.* You found it.",
+          "conditions": [{"type": "QuestState", "key": "am_q_corlan", "value": "return"}],
+          "fallback": "c_wip",
+          "choices": [
+            {
+              "text": "Hang it over your door again, Ser Corlan. Let the Downs see it.",
+              "next": "c_hang",
+              "outcomes": [
+                {"type": "TakeItem", "key": "am_heron_pennant"},
+                {"type": "SetFlag", "key": "am_q_corlan_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_corlan"},
+                {"type": "SetFlag", "key": "am_corlan_banner_home"},
+                {"type": "GiveItem", "key": "am_corlans_riding_cloak"}
+              ]
+            },
+            {
+              "text": "Let me carry it north, to where the forty rode.",
+              "next": "c_carry",
+              "outcomes": [
+                {"type": "TakeItem", "key": "am_heron_pennant"},
+                {"type": "SetFlag", "key": "am_q_corlan_handed_in"},
+                {"type": "CompleteQuest", "key": "am_q_corlan"},
+                {"type": "SetFlag", "key": "am_corlan_pennant_carried"},
+                {"type": "GiveItem", "key": "am_heronguard_pennant_token"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_hang",
+          "speaker": "am_ser_corlan",
+          "text": "*He hangs it on the old nail over the door, steps back, and salutes it, and his hand is steady.* Twelve years I've kept my head down and my beans straight. Long enough. *He fetches a rolled blue cloak from a chest and puts it in your arms.* My riding cloak. I won't be riding again. You will.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_carry",
+          "speaker": "am_ser_corlan",
+          "text": "*He is quiet for a long time. Then he knots the pennant round an old lance-ferrule and closes your hand on it.* Skyreach. Where the forty rode, and twenty-nine stayed. If you ever stand up there, under the ash, plant it in the snow for them. Tell them Corlan sends his — tell them he kept the beans straight.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_wip",
+          "speaker": "am_ser_corlan",
+          "text": "The Duskmane took it in the spring raids — a blue pennant with a white heron. Skarra keeps her trophies in a chest by her tent. Gnolls like shiny things and things that matter to people. That one's both.",
+          "conditions": [{"type": "QuestState", "key": "am_q_corlan", "value": "find"}],
+          "fallback": "c_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "c_hub",
+          "speaker": "am_ser_corlan",
+          "text": "*An old man in a faded blue coat is weeding a vegetable patch laid out in perfect ranks. He straightens up the way soldiers do, all at once.* Corlan Hale. Ser, if you're being formal. Nobody is.",
+          "outcomes": [{"type": "SetFlag", "key": "am_corlan_met"}],
+          "choices": [
+            {
+              "text": "There's a heron carved over your door. You were Heronguard?",
+              "next": "c_story",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_corlan"}, {"type": "Level", "amount": 16}]
+            },
+            {"text": "What do you know about the Duskmane?", "next": "c_gnolls"},
+            {
+              "text": "You stand like a man who's held a shield-wall.",
+              "next": "c_class",
+              "conditions": [{"type": "Class", "key": "Warrior"}],
+              "tag": "WARRIOR"
+            },
+            {
+              "text": "The Light keeps the Heronguard's oath, even when the knights are gone.",
+              "next": "c_class",
+              "conditions": [{"type": "Class", "key": "Paladin"}],
+              "tag": "PALADIN"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "c_story",
+          "speaker": "am_ser_corlan",
+          "text": "*He looks at the carving for a long moment.* Forty of us rode to Skyreach, twelve years ago, under Lord-Commander Aubric. Eleven came home. I was one of the eleven. I brought my pennant home and hung it over that door so I'd never forget. *His jaw works.* The Duskmane took it in the spring raids. I'm too old to go and get it. I've been telling myself that all summer.",
+          "choices": [
+            {
+              "text": "Then I'll get it back for you.",
+              "next": "c_story_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_corlan"}],
+              "conditions": [{"type": "Level", "amount": 16}]
+            },
+            {"text": "Not now, Ser Corlan."}
+          ]
+        },
+        {
+          "id": "c_story_yes",
+          "speaker": "am_ser_corlan",
+          "text": "*He nods once, and goes back to his weeding, and his hands are not quite steady.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "c_gnolls",
+          "speaker": "am_ser_corlan",
+          "text": "Hyena-folk. Matriarchs rule — the biggest, meanest female is warchief, and Skarra is very big and very mean. They raid, they cackle, they eat anything. But they don't hoard lamp oil. Gnolls don't care about the dark. *Darkly.* Somebody else does.",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "c_class",
+          "speaker": "am_ser_corlan",
+          "text": "*He gives you a long look, and something in his face unclenches.* Huh. It's been a while since anyone on the Downs saw that. Keep your shield up and your shoulders down. And never, ever trust a road that's quiet.",
+          "outcomes": [{"type": "GiveXP", "amount": 50}],
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_ida",
+      "start": "i_barrow_ret",
+      "nodes": [
+        {
+          "id": "i_barrow_ret",
+          "speaker": "am_ida_crook",
+          "text": "*Old Ida is sitting on the step of her hut, crook across her knees, looking at the Ring. She knows before you speak.* He's sleeping again. Isn't he.",
+          "conditions": [{"type": "QuestState", "key": "am_q_barrow", "value": "return"}],
+          "fallback": "i_hawks_ret",
+          "choices": [
+            {
+              "text": "King Aldwin sleeps again, and the ember under his hill is cold.",
+              "next": "i_barrow_done",
+              "outcomes": [{"type": "SetFlag", "key": "am_q_barrow_handed_in"}, {"type": "CompleteQuest", "key": "am_q_barrow"}]
+            }
+          ]
+        },
+        {
+          "id": "i_barrow_done",
+          "speaker": "am_ida_crook",
+          "text": "*She nods, and two tears go down her face into the wrinkles and get lost there.* My gran used to say he wasn't a wicked king, only a tired one. Put a fire to sleep and lay down on top of it so it wouldn't wake. And somebody went and poured oil on him. *She sniffs.* Go on. Pick something from the old box. They were grave-goods once. I put them back out of respect. You've earned out of respect.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "i_hawks_ret",
+          "speaker": "am_ida_crook",
+          "text": "Well? Will my lambs sleep tonight?",
+          "conditions": [{"type": "QuestState", "key": "am_q_hawks", "value": "return"}],
+          "fallback": "i_barrow_wip",
+          "choices": [
+            {
+              "text": "Six hawks won't take any more of your lambs.",
+              "next": "i_hawks_done",
+              "outcomes": [{"type": "SetFlag", "key": "am_q_hawks_handed_in"}, {"type": "CompleteQuest", "key": "am_q_hawks"}]
+            }
+          ]
+        },
+        {
+          "id": "i_hawks_done",
+          "speaker": "am_ida_crook",
+          "text": "*She claps her hands, once, like a gunshot.* Ha! Six! And if you got old Redwing too, you've done what fifty years of shepherds couldn't. Here — take your pick. My spare crook, a bow my late husband never used, or a jerkin Duchess grew for you. Not on purpose.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "i_barrow_wip",
+          "speaker": "am_ida_crook",
+          "text": "The door's north of the stones, in the side of the mound. Go down with friends, and come back up with them.",
+          "conditions": [{"type": "QuestActive", "key": "am_q_barrow"}],
+          "fallback": "i_hawks_wip",
+          "choices": [{"text": "Tell me about the King's Ring.", "next": "i_ring"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "i_hawks_wip",
+          "speaker": "am_ida_crook",
+          "text": "Hawks. Up on the Lookout, out on the south pasture, over the Ring. Six of them'll do. Mind Redwing; she takes hats.",
+          "conditions": [{"type": "QuestState", "key": "am_q_hawks", "value": "hawks"}],
+          "fallback": "i_hub",
+          "choices": [{"text": "Goodbye."}]
+        },
+        {
+          "id": "i_hub",
+          "speaker": "am_ida_crook",
+          "text": "*A tiny old woman leaning on a crook taller than she is. Her eyes are very blue and very sharp.* Count the stones, count the sheep. One of them's always missing. Usually Wobble.",
+          "choices": [
+            {
+              "text": "Are you missing lambs as well as sheep?",
+              "next": "i_hawks_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_hawks"}, {"type": "Level", "amount": 13}]
+            },
+            {
+              "text": "Something's wrong under the king's hill, isn't it?",
+              "next": "i_barrow_offer",
+              "conditions": [{"type": "QuestNotStarted", "key": "am_q_barrow"}, {"type": "Level", "amount": 17}]
+            },
+            {"text": "Tell me about the King's Ring.", "next": "i_ring"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "i_hawks_offer",
+          "speaker": "am_ida_crook",
+          "text": "Lambs, hats, a chicken, and once a very surprised cat. The plains hawks have got bold since the gnolls drove off the foxes. And old Redwing, up on the Lookout, has taken a lamb a year for twenty years. Thin them out for me. Six hawks. If you get Redwing, I'll dance.",
+          "choices": [
+            {
+              "text": "Six hawks. I'll see to it.",
+              "next": "i_hawks_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_hawks"}],
+              "conditions": [{"type": "Level", "amount": 13}]
+            },
+            {"text": "Not right now, Ida."}
+          ]
+        },
+        {
+          "id": "i_hawks_yes",
+          "speaker": "am_ida_crook",
+          "text": "Good. I'll put the kettle on. It'll be cold by the time you're back. I'll drink it anyway.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "i_barrow_offer",
+          "speaker": "am_ida_crook",
+          "text": "*She looks at you a long while.* The stones hum at night now. The sheep won't graze inside the Ring. And the gnolls have been carrying oil into the hill, down to where the old king sleeps. My gran's gran watched over that hill. Now it's me. Go down, if you're strong enough. Whatever's woken him — put it back to sleep.",
+          "choices": [
+            {
+              "text": "I'll go down into the barrow.",
+              "next": "i_barrow_yes",
+              "outcomes": [{"type": "StartQuest", "key": "am_q_barrow"}],
+              "conditions": [{"type": "Level", "amount": 17}]
+            },
+            {"text": "Not yet. I need to be stronger first."}
+          ]
+        },
+        {
+          "id": "i_barrow_yes",
+          "speaker": "am_ida_crook",
+          "text": "Take a light. Take two. And be kind to him, if you can. He was kind once.",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "i_ring",
+          "speaker": "am_ida_crook",
+          "text": "Seven stones for the seven nights King Aldwin fought the fire that came down from the north on the wind. On the seventh night he put it to sleep, and lay down over it in his hill so it would never wake. That's the song. *She taps her crook on the ground.* Songs are true more often than people think.",
+          "choices": [{"text": "Is there a way into the hill?", "next": "i_door"}, {"text": "Goodbye."}]
+        },
+        {
+          "id": "i_door",
+          "speaker": "am_ida_crook",
+          "text": "*She lowers her voice, though there's nobody but sheep to hear.* Count the stones from the tallest, sunwise, and walk north from the seventh. Where the grass grows in a seam, straight as a ruler — that's a door. My gran showed me when I was six. I've never told a soul. *She sniffs.* You've a trustworthy face. Mostly.",
+          "outcomes": [{"type": "SetFlag", "key": "found_barrow"}],
+          "choices": [{"text": "Goodbye."}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_kings_stone",
+      "start": "ks_found",
+      "nodes": [
+        {
+          "id": "ks_found",
+          "speaker": "narrator",
+          "text": "*The tallest stone. A crowned figure holds up a little flame, and below it the runes read: HERE SLEEPS ALDWIN, WHO PUT THE FIRE TO SLEEP. LET HIM KEEP IT. North of the Ring, the door in the mound stands open to the dark.*",
+          "conditions": [{"type": "Flag", "key": "found_barrow"}],
+          "fallback": "ks_1",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ks_1",
+          "speaker": "narrator",
+          "text": "*The tallest stone of the Ring, carved with a crowned figure holding up a little flame. Below are runes, worn nearly smooth, and the grass at the stone's foot is trampled flat by many large feet — and dark with spilt oil.*",
+          "choices": [
+            {
+              "text": "Read the worn runes.",
+              "check": {"skill": "History", "dc": 12, "success": "ks_hist", "failure": "ks_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {
+              "text": "Follow the oil stains and the trampled grass.",
+              "check": {"skill": "Investigation", "dc": 13, "success": "ks_inv", "failure": "ks_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {"text": "(Step back.)"}
+          ]
+        },
+        {
+          "id": "ks_hist",
+          "speaker": "narrator",
+          "text": "*HERE SLEEPS ALDWIN, WHO PUT THE FIRE TO SLEEP. LET HIM KEEP IT. And beneath, smaller, a later hand: 'and let no one wake either.'*",
+          "outcomes": [{"type": "GiveXP", "amount": 60}],
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ks_hist_f",
+          "speaker": "narrator",
+          "text": "*The runes are too worn. Something about a fire, and a king, and sleeping.*",
+          "choices": [{"text": "(Step back.)"}]
+        },
+        {
+          "id": "ks_inv",
+          "speaker": "narrator",
+          "text": "*The oil-stains lead north past the stones to the flank of the mound, where the turf grows in a seam, straight as a ruler. You push. The grass swings inward on old hinges: a door, dressed in turf.*",
+          "outcomes": [{"type": "SetFlag", "key": "found_barrow"}, {"type": "GiveXP", "amount": 100}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "ks_inv_f",
+          "speaker": "narrator",
+          "text": "*The trail is a muddle of paws and spilt oil. It goes everywhere, and so nowhere.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_lane_lamp_1",
+      "start": "l_fill",
+      "nodes": [
+        {
+          "id": "l_fill",
+          "speaker": "narrator",
+          "text": "*The lane lantern at the market corner is dry as a biscuit, its wick curled. Pell's long-spouted can is warm in your hand.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}, {"type": "NotFlag", "key": "am_lamp_1"}],
+          "fallback": "l_dark",
+          "choices": [
+            {"text": "(Fill the lantern and light the wick.)", "next": "l_lit", "outcomes": [{"type": "SetFlag", "key": "am_lamp_1"}]},
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "l_lit",
+          "speaker": "narrator",
+          "text": "*The wick catches. A small gold light opens in the lane, and within a minute a moth has found it, and then another.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_dark",
+          "speaker": "narrator",
+          "text": "*The lane lantern at the market corner, dry as a biscuit. The oil was stolen months ago.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_lane_lamp_2",
+      "start": "l_fill",
+      "nodes": [
+        {
+          "id": "l_fill",
+          "speaker": "narrator",
+          "text": "*The lane lantern by the well is dry as a biscuit, its wick curled. Pell's long-spouted can is warm in your hand.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}, {"type": "NotFlag", "key": "am_lamp_2"}],
+          "fallback": "l_dark",
+          "choices": [
+            {"text": "(Fill the lantern and light the wick.)", "next": "l_lit", "outcomes": [{"type": "SetFlag", "key": "am_lamp_2"}]},
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "l_lit",
+          "speaker": "narrator",
+          "text": "*The wick catches. A small gold light opens in the lane, and within a minute a moth has found it, and then another.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_dark",
+          "speaker": "narrator",
+          "text": "*The lane lantern by the well, dry as a biscuit. The oil was stolen months ago.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_lane_lamp_3",
+      "start": "l_fill",
+      "nodes": [
+        {
+          "id": "l_fill",
+          "speaker": "narrator",
+          "text": "*The lane lantern on the mill lane is dry as a biscuit, its wick curled. Pell's long-spouted can is warm in your hand.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}, {"type": "NotFlag", "key": "am_lamp_3"}],
+          "fallback": "l_dark",
+          "choices": [
+            {"text": "(Fill the lantern and light the wick.)", "next": "l_lit", "outcomes": [{"type": "SetFlag", "key": "am_lamp_3"}]},
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "l_lit",
+          "speaker": "narrator",
+          "text": "*The wick catches. A small gold light opens in the lane, and within a minute a moth has found it, and then another.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_dark",
+          "speaker": "narrator",
+          "text": "*The lane lantern on the mill lane, dry as a biscuit. The oil was stolen months ago.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_lane_lamp_4",
+      "start": "l_fill",
+      "nodes": [
+        {
+          "id": "l_fill",
+          "speaker": "narrator",
+          "text": "*The lane lantern outside the Reeve's Hall is dry as a biscuit, its wick curled. Pell's long-spouted can is warm in your hand.*",
+          "conditions": [{"type": "QuestState", "key": "am_q_harvest", "value": "lamps"}, {"type": "NotFlag", "key": "am_lamp_4"}],
+          "fallback": "l_dark",
+          "choices": [
+            {"text": "(Fill the lantern and light the wick.)", "next": "l_lit", "outcomes": [{"type": "SetFlag", "key": "am_lamp_4"}]},
+            {"text": "(Leave it for now.)"}
+          ]
+        },
+        {
+          "id": "l_lit",
+          "speaker": "narrator",
+          "text": "*The wick catches. A small gold light opens in the lane, and within a minute a moth has found it, and then another.*",
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "l_dark",
+          "speaker": "narrator",
+          "text": "*The lane lantern outside the Reeve's Hall, dry as a biscuit. The oil was stolen months ago.*",
+          "choices": [{"text": "(Leave it.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_am_skarra",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*Skarra Duskmane rises from a throne of stolen oil casks. She is enormous: a crown of fangs, a red stone that glows on her brow, a great cleaver across her shoulders. Her clan stops cackling all at once.*",
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "speaker": "am_skarra",
+          "text": "Hee. The oil-takers. You broke my caravan, chalked my casks, killed my hawks — no, those were not my hawks. *She grins.* The Hungry Fire under the king's hill is nearly awake. The red-scale man promised: when it wakes, the Duskmane eat FIRST.",
+          "choices": [
+            {
+              "text": "The red-scale man is using you. When that fire wakes, it eats gnolls too.",
+              "check": {"skill": "Insight", "dc": 14, "success": "s_ins", "failure": "s_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "Who is the red-scale man?", "next": "s_who"},
+            {"text": "Bruna, anything to add?", "next": "s_bruna", "conditions": [{"type": "InParty", "key": "bruna"}]},
+            {"text": "(Attack.)", "next": "s_fight"}
+          ]
+        },
+        {
+          "id": "s_who",
+          "speaker": "am_skarra",
+          "text": "He smells of ash. He wears scales the way you wear skin. He signs with a V and pays in meat and promises. *She licks her teeth.* The meat was good. The promises were better. Enough talk.",
+          "next": "s_fight"
+        },
+        {
+          "id": "s_ins",
+          "speaker": "am_skarra",
+          "text": "*For a heartbeat the red stone on her brow flickers, and Skarra looks — not afraid. Tired. Then she snarls.* Then Skarra eats IT first. And you before. SUPPER!",
+          "outcomes": [{"type": "GiveXP", "amount": 150}, {"type": "SetFlag", "key": "am_skarra_doubt"}],
+          "next": "s_fight"
+        },
+        {"id": "s_ins_f", "speaker": "am_skarra", "text": "Hee-hee-HEE! Clever meat. Clever meat still tastes like meat.", "next": "s_fight"},
+        {
+          "id": "s_bruna",
+          "speaker": "bruna",
+          "text": "*Bruna steps forward and sets the barn-door shield in the dirt.* You came over my hill with torches. You don't get a speech.",
+          "outcomes": [{"type": "Approval", "key": "bruna", "amount": 3}],
+          "next": "s_fight"
+        },
+        {
+          "id": "s_fight",
+          "speaker": "am_skarra",
+          "text": "DUSKMANE! SUPPER IS SERVED!",
+          "outcomes": [{"type": "StartCombat", "key": "enc_am_warchief"}]
+        }
+      ]
+    }
+  ]
+}

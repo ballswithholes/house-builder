@@ -1,0 +1,2626 @@
+{
+  "_note": "Paladin - WoW Classic 1.12 kit translated to Lanternvale. Generated; see specials for custom handlers. Aura StatMod.values[i] = value when applied by rank i+1 of the source ability/talent; ApplyAura duration + perLevel = seconds of duration per level above learnLevel.",
+  "classes": [
+    {
+      "id": "Paladin",
+      "name": "Paladin",
+      "description": "A holy warrior in plate and tabard who wields hammer, seal and blessing. Paladins shield their allies, heal in a pinch, and judge their foes with radiant light.",
+      "roles": ["Tank", "Healer", "Melee DPS", "Support"],
+      "color": "#F58CBA",
+      "icon": "crest_paladin",
+      "resource": "Mana",
+      "gcd": 1.5,
+      "armorTypes": ["Cloth", "Leather", "Mail"],
+      "armorUpgrade": {"level": 40, "type": "Plate"},
+      "weaponTypes": ["OneHandMace", "TwoHandMace", "OneHandSword", "TwoHandSword", "OneHandAxe", "TwoHandAxe", "Polearm", "Shield"],
+      "dualWieldLevel": 0,
+      "canParry": true,
+      "canBlock": true,
+      "_statsNote": "Human paladin, naked. Level 1: 22/20/22/20/22 -> 58 health, 80 mana (WoW Classic).",
+      "baseStatsLevel1": {"strength": 22, "agility": 20, "stamina": 22, "intellect": 20, "spirit": 22},
+      "baseStatsLevel60": {"strength": 105, "agility": 69, "stamina": 102, "intellect": 75, "spirit": 82},
+      "baseHealthLevel1": 18,
+      "baseHealthLevel60": 1381,
+      "baseManaLevel1": 60,
+      "baseManaLevel60": 1512,
+      "meleeAp": "StrengthTimesTwo",
+      "rangedAp": "Strength",
+      "agilityPerMeleeCritAt60": 20,
+      "intellectPerSpellCritAt60": 54,
+      "agilityPerDodgeAt60": 20,
+      "baseMeleeCrit": 5,
+      "baseSpellCrit": 3.3,
+      "baseDodge": 0.7,
+      "manaRegenBase": 15,
+      "manaRegenPerSpirit": 0.2,
+      "basicAttack": "attack",
+      "startingAbilities": ["attack", "paladin_holy_light", "paladin_seal_of_righteousness", "paladin_devotion_aura"],
+      "startingItems": ["paladin_starter_hammer", "paladin_starter_vest", "paladin_starter_leggings", "paladin_starter_boots"],
+      "talentTrees": ["tree_paladin_holy", "tree_paladin_protection", "tree_paladin_retribution"],
+      "defaultBuild": [
+        "paladin_retribution_benediction", "paladin_retribution_benediction", "paladin_retribution_benediction",
+        "paladin_retribution_benediction", "paladin_retribution_benediction",
+        "paladin_retribution_improved_judgement", "paladin_retribution_improved_judgement",
+        "paladin_retribution_deflection", "paladin_retribution_deflection", "paladin_retribution_deflection",
+        "paladin_retribution_seal_of_command", "paladin_retribution_conviction", "paladin_retribution_conviction",
+        "paladin_retribution_conviction", "paladin_retribution_conviction", "paladin_retribution_conviction",
+        "paladin_retribution_pursuit_of_justice", "paladin_retribution_pursuit_of_justice",
+        "paladin_retribution_deflection", "paladin_retribution_deflection",
+        "paladin_retribution_two_handed_weapon_specialization",
+        "paladin_retribution_two_handed_weapon_specialization",
+        "paladin_retribution_two_handed_weapon_specialization", "paladin_retribution_vindication",
+        "paladin_retribution_vindication", "paladin_retribution_vindication", "paladin_retribution_vengeance",
+        "paladin_retribution_vengeance", "paladin_retribution_vengeance", "paladin_retribution_vengeance",
+        "paladin_retribution_vengeance", "paladin_retribution_repentance", "paladin_holy_divine_strength",
+        "paladin_holy_divine_strength", "paladin_holy_divine_strength", "paladin_holy_divine_strength",
+        "paladin_holy_divine_strength", "paladin_holy_improved_seal_of_righteousness",
+        "paladin_holy_improved_seal_of_righteousness", "paladin_holy_improved_seal_of_righteousness",
+        "paladin_holy_improved_seal_of_righteousness", "paladin_holy_improved_seal_of_righteousness",
+        "paladin_holy_consecration", "paladin_holy_divine_intellect", "paladin_holy_divine_intellect",
+        "paladin_holy_divine_intellect", "paladin_holy_divine_intellect", "paladin_holy_divine_intellect",
+        "paladin_retribution_improved_blessing_of_might", "paladin_retribution_improved_blessing_of_might",
+        "paladin_retribution_improved_blessing_of_might"
+      ],
+      "sprite": "char_paladin",
+      "portrait": "portrait_paladin",
+      "designNotes": "Keep a Seal up, swing your weapon and spend it with an off-GCD Judgement (10 sec cooldown), then reseal. One Blessing per Paladin per ally and one Aura per Paladin keep the whole party stronger. Mana is precious: Holy Light and Flash of Light heal well, Lay on Hands and Divine Shield save the day, and Righteous Fury plus Holy Shield turn the Paladin into a tank."
+    }
+  ],
+  "abilities": [
+    {
+      "id": "paladin_holy_light",
+      "name": "Holy Light",
+      "icon": "holy",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Heals a friendly target for {0}.",
+      "learnLevel": 1,
+      "rankLevels": [1, 6, 14, 22, 30, 38, 46, 54, 60],
+      "trainCost": 10,
+      "castTime": 2.5,
+      "cost": {"type": "Mana", "amount": 35, "perLevel": 10.593},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 39, "max": 47, "perLevel": 27.746, "coef": 0.714}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_flash_of_light",
+      "name": "Flash of Light",
+      "icon": "sparkle",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Heals a friendly target for {0}.",
+      "learnLevel": 20,
+      "rankLevels": [20, 26, 34, 42, 50, 58],
+      "trainCost": 1600,
+      "castTime": 1.5,
+      "cost": {"type": "Mana", "amount": 35, "perLevel": 2.763},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Heal", "min": 67, "max": 77, "perLevel": 7.803, "coef": 0.429}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_seal_of_righteousness",
+      "name": "Seal of Righteousness",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Fills the Paladin with holy spirit for 30 sec. Each melee hit deals additional Holy damage (3 at rank 1, about 60 at rank 8 with a 3.0 speed weapon). Judgement unleashes the seal for 15-17 (rank 8: 205-226) Holy damage.",
+      "learnLevel": 1,
+      "rankLevels": [1, 10, 18, 26, 34, 42, 50, 58],
+      "trainCost": 10,
+      "cost": {"type": "Mana", "amount": 20, "perLevel": 1.93},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_righteousness"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_righteousness",
+      "name": "Judgement of Righteousness",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Unleashes the Seal of Righteousness, dealing {0} Holy damage to the target.",
+      "learnLevel": 1,
+      "rankLevels": [1, 10, 18, 26, 34, 42, 50, 58],
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "Damage", "min": 15, "max": 17, "perLevel": 3.5, "coef": 0.5}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_seal_of_the_crusader",
+      "name": "Seal of the Crusader",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Fills the Paladin with the spirit of a crusader for 30 sec, granting 36 melee attack power (rank 6: 306) and 40% increased melee attack speed; each melee hit deals proportionally less damage. Judgement increases the Holy damage the target takes by up to 23 (rank 6: 140) for 10 sec.",
+      "learnLevel": 6,
+      "rankLevels": [6, 12, 22, 32, 42, 52],
+      "trainCost": 150,
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 2.935},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_the_crusader"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_the_crusader",
+      "name": "Judgement of the Crusader",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Increases the Holy damage the target takes from all sources by up to 23 (rank 6: 140) for 10 sec.",
+      "learnLevel": 6,
+      "rankLevels": [6, 12, 22, 32, 42, 52],
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_judgement_of_the_crusader_debuff"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_seal_of_justice",
+      "name": "Seal of Justice",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Fills the Paladin with the spirit of justice for 30 sec, giving each melee attack a chance to stun the target for 2 sec. Judgement prevents the target from fleeing and restricts its movement speed to normal for 10 sec.",
+      "learnLevel": 22,
+      "trainCost": 2130,
+      "cost": {"type": "Mana", "amount": 35},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_justice"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_justice",
+      "name": "Judgement of Justice",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Prevents the target from fleeing and restricts its movement speed to normal for 10 sec.",
+      "learnLevel": 22,
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_judgement_of_justice_debuff"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_seal_of_light",
+      "name": "Seal of Light",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Fills the Paladin with divine light for 30 sec, giving each melee attack a chance to heal the Paladin for 39 (rank 4: 85). Judgement makes melee and ranged attacks against the target heal the attacker for 25 (rank 4: 61) 50% of the time, for 10 sec.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "trainCost": 5400,
+      "cost": {"type": "Mana", "amount": 45, "perLevel": 2.167},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_light"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_light",
+      "name": "Judgement of Light",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "For 10 sec, attacks against the target have a 50% chance to heal the attacker for 25 (rank 4: 61).",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_judgement_of_light_debuff"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_seal_of_wisdom",
+      "name": "Seal of Wisdom",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Fills the Paladin with divine wisdom for 30 sec, giving each melee attack a chance to restore 27 (rank 3: 50) of the Paladin's mana. Judgement makes melee and ranged attacks against the target restore 33 (rank 3: 59) mana to the attacker 50% of the time, for 10 sec.",
+      "learnLevel": 38,
+      "rankLevels": [38, 48, 58],
+      "trainCost": 10970,
+      "cost": {"type": "Mana", "amount": 70, "perLevel": 1.85},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_wisdom"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_wisdom",
+      "name": "Judgement of Wisdom",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "For 10 sec, attacks against the target have a 50% chance to restore 33 (rank 3: 59) mana to the attacker.",
+      "learnLevel": 38,
+      "rankLevels": [38, 48, 58],
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_judgement_of_wisdom_debuff"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_seal_of_command",
+      "name": "Seal of Command",
+      "icon": "seal",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the Paladin a chance to deal additional Holy damage equal to 70% of normal weapon damage (7 procs per minute) for 30 sec. Judgement deals 46-50 (rank 5: 228-252) Holy damage, doubled against stunned targets.",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "trainCost": 1600,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 65, "perLevel": 2},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_seal_of_command"}],
+      "tags": ["Seal"],
+      "aiHint": "Buff",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_judgement_of_command",
+      "name": "Judgement of Command",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Unleashes the Seal of Command, dealing {0} Holy damage to the target; doubled if the target is stunned.",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "fromTalent": true,
+      "hidden": true,
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "Damage", "min": 46, "max": 50, "perLevel": 4.8, "coef": 0.43, "special": "PaladinDoubleVsStunned"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 0
+    },
+    {
+      "id": "paladin_judgement",
+      "name": "Judgement",
+      "icon": "judgement",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Unleashes the energy of your active Seal upon an enemy, consuming the Seal and producing its Judgement: Righteousness and Command deal Holy damage, the Crusader increases Holy damage taken, Justice prevents fleeing, Light and Wisdom return health or mana to attackers. Judgement debuffs last 10 sec and only one of your Judgements can be on a target. Does not trigger the global cooldown.",
+      "learnLevel": 4,
+      "trainCost": 100,
+      "time": "OffGcd",
+      "cooldown": 10,
+      "cost": {"type": "Mana", "pctBaseMana": 5},
+      "target": "Enemy",
+      "range": 10,
+      "requires": {"casterAuraTags": ["Seal"]},
+      "effects": [{"type": "Special", "special": "PaladinJudgement"}],
+      "tags": ["Judgement"],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_blessing_of_might",
+      "name": "Blessing of Might",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, increasing melee attack power by 20 (rank 7: 185) for 5 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 4,
+      "rankLevels": [4, 12, 22, 32, 42, 52, 60],
+      "trainCost": 100,
+      "cost": {"type": "Mana", "amount": 20, "perLevel": 1.964},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_might"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_blessing_of_wisdom",
+      "name": "Blessing of Wisdom",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, restoring 10 (rank 6: 33) mana every 5 seconds for 5 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 14,
+      "rankLevels": [14, 24, 34, 44, 54, 60],
+      "trainCost": 550,
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 1.522},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_wisdom"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_blessing_of_kings",
+      "name": "Blessing of Kings",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, increasing total stats by 10% for 5 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 20,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 75},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_kings"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_blessing_of_salvation",
+      "name": "Blessing of Salvation",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, reducing the threat it generates by 30% for 5 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 26,
+      "trainCost": 3520,
+      "cost": {"type": "Mana", "amount": 70},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_salvation"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_blessing_of_light",
+      "name": "Blessing of Light",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, increasing the effects of Holy Light spells used on the target by up to 210 and the effect of Flash of Light spells by up to 60 (rank 3: 400 and 115) for 5 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 40,
+      "rankLevels": [40, 50, 60],
+      "trainCost": 12800,
+      "cost": {"type": "Mana", "amount": 85, "perLevel": 1.5},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_light"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_blessing_of_sanctuary",
+      "name": "Blessing of Sanctuary",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, reducing damage dealt from all sources by up to 10 (rank 4: 24) for 5 min. In addition, when the target blocks a melee attack the attacker takes 14 (rank 4: 35) Holy damage. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 30,
+      "rankLevels": [30, 40, 50, 60],
+      "trainCost": 5400,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 85, "perLevel": 1.167},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_sanctuary"}],
+      "tags": ["Blessing"],
+      "aiHint": "Buff",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_blessing_of_protection",
+      "name": "Blessing of Protection",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "A targeted party member is protected from all physical attacks for 6 sec (rank 2: 8, rank 3: 10), but during that time they cannot attack or use physical abilities. Once protected, the target cannot be made invulnerable by Divine Shield, Divine Protection or Blessing of Protection again for 1 min.",
+      "learnLevel": 10,
+      "rankLevels": [10, 24, 38],
+      "trainCost": 200,
+      "cooldown": 300,
+      "cost": {"type": "Mana", "amount": 25, "perLevel": 1.071},
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "perLevel": 0.143, "aura": "paladin_blessing_of_protection", "duration": 6},
+        {"type": "ApplyAura", "aura": "paladin_forbearance"}
+      ],
+      "tags": ["Blessing"],
+      "special": "PaladinForbearanceCheck",
+      "aiHint": "Defensive",
+      "aiPriority": 8
+    },
+    {
+      "id": "paladin_blessing_of_freedom",
+      "name": "Blessing of Freedom",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the friendly target, granting immunity to movement impairing effects for 10 sec.",
+      "learnLevel": 18,
+      "trainCost": 1170,
+      "cooldown": 20,
+      "cost": {"type": "Mana", "amount": 60},
+      "target": "Ally",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_freedom"}],
+      "tags": ["Blessing"],
+      "aiHint": "Defensive",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_blessing_of_sacrifice",
+      "name": "Blessing of Sacrifice",
+      "icon": "blessing",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Places a Blessing on the party member, transferring 30 (rank 2: 40) damage taken per hit to the Paladin for 30 sec.",
+      "learnLevel": 46,
+      "rankLevels": [46, 54],
+      "trainCost": 19470,
+      "cost": {"type": "Mana", "amount": 75, "perLevel": 2.5},
+      "target": "AllyOther",
+      "range": 30,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_blessing_of_sacrifice"}],
+      "tags": ["Blessing"],
+      "aiHint": "Defensive",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_greater_blessing_of_might",
+      "name": "Greater Blessing of Might",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Might, increasing melee attack power by 155 (rank 2: 185) for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 52,
+      "rankLevels": [52, 60],
+      "trainCost": 28120,
+      "cost": {"type": "Mana", "amount": 175, "perLevel": 3.75},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_might"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_greater_blessing_of_wisdom",
+      "name": "Greater Blessing of Wisdom",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Wisdom, restoring 30 (rank 2: 33) mana every 5 seconds for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 54,
+      "rankLevels": [54, 60],
+      "trainCost": 31490,
+      "cost": {"type": "Mana", "amount": 150, "perLevel": 2.5},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_wisdom"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_greater_blessing_of_kings",
+      "name": "Greater Blessing of Kings",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Kings, increasing total stats by 10% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 60,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 150},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_kings"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_greater_blessing_of_salvation",
+      "name": "Greater Blessing of Salvation",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Salvation, reducing the threat it generates by 30% for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 60,
+      "trainCost": 43200,
+      "cost": {"type": "Mana", "amount": 140},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_salvation"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_greater_blessing_of_light",
+      "name": "Greater Blessing of Light",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Light, increasing the effects of Holy Light by up to 400 and Flash of Light by up to 115 for 15 min. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 60,
+      "trainCost": 43200,
+      "cost": {"type": "Mana", "amount": 170},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_light"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_greater_blessing_of_sanctuary",
+      "name": "Greater Blessing of Sanctuary",
+      "icon": "crown",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives the friendly target and every party member who shares its class a Greater Blessing of Sanctuary, reducing damage from all sources by up to 24 for 15 min; blocking a melee attack deals 35 Holy damage to the attacker. Players may only have one Blessing on them per Paladin at any one time.",
+      "learnLevel": 60,
+      "fromTalent": true,
+      "cost": {"type": "Mana", "amount": 170},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "ApplyAura", "aura": "paladin_greater_blessing_of_sanctuary"}],
+      "tags": ["Blessing"],
+      "special": "PaladinGreaterBlessing",
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_devotion_aura",
+      "name": "Devotion Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Gives 55 (rank 7: 735) additional armor to party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 1,
+      "rankLevels": [1, 10, 20, 30, 40, 50, 60],
+      "trainCost": 10,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_devotion_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_retribution_aura",
+      "name": "Retribution Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Causes 5 (rank 5: 20) Holy damage to any enemy that strikes a party member within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 16,
+      "rankLevels": [16, 26, 36, 46, 56],
+      "trainCost": 820,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_retribution_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_concentration_aura",
+      "name": "Concentration Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "All party members within 30 yards lose 35% less casting or channeling time when damaged. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 22,
+      "trainCost": 2130,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_concentration_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 3
+    },
+    {
+      "id": "paladin_shadow_resistance_aura",
+      "name": "Shadow Resistance Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Shadow",
+      "description": "Gives 30 (rank 3: 60) additional Shadow resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 28,
+      "rankLevels": [28, 40, 52],
+      "trainCost": 4390,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_shadow_resistance_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "paladin_frost_resistance_aura",
+      "name": "Frost Resistance Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Frost",
+      "description": "Gives 30 (rank 3: 60) additional Frost resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 32,
+      "rankLevels": [32, 44, 56],
+      "trainCost": 6550,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_frost_resistance_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "paladin_fire_resistance_aura",
+      "name": "Fire Resistance Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Fire",
+      "description": "Gives 30 (rank 3: 60) additional Fire resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 36,
+      "rankLevels": [36, 48, 60],
+      "trainCost": 9330,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_fire_resistance_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "paladin_sanctity_aura",
+      "name": "Sanctity Aura",
+      "icon": "aura",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Increases Holy damage done by party members within 30 yards by 10%. Players can only have one Aura on them per Paladin at any one time.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_sanctity_aura"}],
+      "tags": ["Aura"],
+      "aiHint": "Buff",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_lay_on_hands",
+      "name": "Lay on Hands",
+      "icon": "hands_pray",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Heals a friendly target for an amount equal to the Paladin's maximum health and drains all of the Paladin's remaining mana. Rank 2 also restores 250 mana to the target, rank 3 restores 550.",
+      "learnLevel": 10,
+      "rankLevels": [10, 30, 50],
+      "trainCost": 200,
+      "cooldown": 3600,
+      "cost": {"type": "Mana", "consumeAll": true},
+      "target": "Ally",
+      "range": 40,
+      "effects": [{"type": "Special", "special": "PaladinLayOnHands"}],
+      "tags": ["Heal"],
+      "aiHint": "Heal",
+      "aiPriority": 9
+    },
+    {
+      "id": "paladin_divine_protection",
+      "name": "Divine Protection",
+      "icon": "shield",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "You are protected from all physical attacks and spells for 6 sec (rank 2: 8 sec), but during that time you cannot attack or use physical abilities. Causes Forbearance for 1 min.",
+      "learnLevel": 6,
+      "rankLevels": [6, 18],
+      "trainCost": 150,
+      "cooldown": 300,
+      "cost": {"type": "Mana", "amount": 35, "perLevel": 1.25},
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "target": "Self", "perLevel": 0.167, "aura": "paladin_divine_protection", "duration": 6},
+        {"type": "ApplyAura", "target": "Self", "aura": "paladin_forbearance"}
+      ],
+      "special": "PaladinForbearanceCheck",
+      "aiHint": "Defensive",
+      "aiPriority": 8
+    },
+    {
+      "id": "paladin_divine_shield",
+      "name": "Divine Shield",
+      "icon": "shield",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Protects the Paladin from all damage and spells for 10 sec (rank 2: 12 sec), but reduces attack speed by 50%. Causes Forbearance for 1 min.",
+      "learnLevel": 34,
+      "rankLevels": [34, 50],
+      "trainCost": 7860,
+      "cooldown": 300,
+      "cost": {"type": "Mana", "amount": 75, "perLevel": 2.188},
+      "target": "Self",
+      "effects": [
+        {"type": "ApplyAura", "target": "Self", "perLevel": 0.125, "aura": "paladin_divine_shield", "duration": 10},
+        {"type": "ApplyAura", "target": "Self", "aura": "paladin_forbearance"}
+      ],
+      "special": "PaladinForbearanceCheck",
+      "aiHint": "Defensive",
+      "aiPriority": 9
+    },
+    {
+      "id": "paladin_righteous_fury",
+      "name": "Righteous Fury",
+      "icon": "sun",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Increases the threat generated by your Holy spells by 60% for 30 min.",
+      "learnLevel": 16,
+      "trainCost": 820,
+      "cost": {"type": "Mana", "amount": 80},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_righteous_fury"}],
+      "tags": ["Buff"],
+      "aiHint": "Buff",
+      "aiPriority": 2
+    },
+    {
+      "id": "paladin_divine_intervention",
+      "name": "Divine Intervention",
+      "icon": "wings",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "The Paladin sacrifices himself to remove the targeted party member from harm's way. Enemies will stop attacking the protected party member, who will be immune to all harmful attacks but cannot take any action for 3 min. Drains all of the Paladin's mana.",
+      "learnLevel": 30,
+      "trainCost": 5400,
+      "cooldown": 3600,
+      "cost": {"type": "Mana", "consumeAll": true},
+      "target": "AllyOther",
+      "range": 30,
+      "effects": [
+        {"type": "ApplyAura", "aura": "paladin_divine_intervention"},
+        {"type": "Special", "special": "PaladinDivineIntervention"}
+      ],
+      "aiHint": "Utility",
+      "aiPriority": 1
+    },
+    {
+      "id": "paladin_hammer_of_justice",
+      "name": "Hammer of Justice",
+      "icon": "hammer",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Stuns the target for 3 sec (rank 2: 4, rank 3: 5, rank 4: 6 sec).",
+      "learnLevel": 8,
+      "rankLevels": [8, 24, 40, 54],
+      "trainCost": 200,
+      "cooldown": 60,
+      "cost": {"type": "Mana", "amount": 30, "perLevel": 1.304},
+      "target": "Enemy",
+      "range": 10,
+      "effects": [{"type": "ApplyAura", "perLevel": 0.065, "aura": "paladin_hammer_of_justice", "duration": 3}],
+      "tags": ["Stun"],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_purify",
+      "name": "Purify",
+      "icon": "hand",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Cleanses a friendly target, removing 1 poison effect and 1 disease effect.",
+      "learnLevel": 8,
+      "trainCost": 200,
+      "cost": {"type": "Mana", "amount": 32},
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "Dispel", "dispelType": "Poison", "dispelCount": 1},
+        {"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}
+      ],
+      "aiHint": "Utility",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_cleanse",
+      "name": "Cleanse",
+      "icon": "hand",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Cleanses a friendly target, removing 1 poison effect, 1 disease effect and 1 magic effect.",
+      "learnLevel": 42,
+      "trainCost": 14820,
+      "cost": {"type": "Mana", "amount": 60},
+      "target": "Ally",
+      "range": 30,
+      "effects": [
+        {"type": "Dispel", "dispelType": "Magic", "dispelCount": 1},
+        {"type": "Dispel", "dispelType": "Poison", "dispelCount": 1},
+        {"type": "Dispel", "dispelType": "Disease", "dispelCount": 1}
+      ],
+      "aiHint": "Utility",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_redemption",
+      "name": "Redemption",
+      "icon": "hands_pray",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Brings a dead player back to life with 35% health and mana.",
+      "learnLevel": 12,
+      "rankLevels": [12, 24, 36, 48, 60],
+      "trainCost": 350,
+      "castTime": 10,
+      "cost": {"type": "Mana", "amount": 125, "perLevel": 20.521},
+      "target": "DeadAlly",
+      "range": 30,
+      "effects": [{"type": "Resurrect", "pctOfMax": 35}],
+      "aiHint": "Utility",
+      "aiPriority": 8
+    },
+    {
+      "id": "paladin_turn_undead",
+      "name": "Turn Undead",
+      "icon": "sun",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "The targeted undead enemy will be compelled to flee for up to 10 sec (rank 2: 15, rank 3: 20 sec). Damage caused may interrupt the effect. Only one target can be turned at a time.",
+      "learnLevel": 24,
+      "rankLevels": [24, 38, 50],
+      "trainCost": 2760,
+      "castTime": 1.5,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 50, "perLevel": 3.462},
+      "target": "Enemy",
+      "range": 20,
+      "requires": {"targetCreatureTypes": ["Undead"]},
+      "effects": [{"type": "ApplyAura", "perLevel": 0.385, "aura": "paladin_turn_undead", "duration": 10}],
+      "aiHint": "CC",
+      "aiPriority": 4
+    },
+    {
+      "id": "paladin_exorcism",
+      "name": "Exorcism",
+      "icon": "holy",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Causes {0} Holy damage to an Undead or Demon target.",
+      "learnLevel": 20,
+      "rankLevels": [20, 28, 36, 44, 52, 60],
+      "trainCost": 1600,
+      "cooldown": 15,
+      "cost": {"type": "Mana", "amount": 85, "perLevel": 6.5},
+      "target": "Enemy",
+      "range": 30,
+      "requires": {"targetCreatureTypes": ["Undead", "Demon"]},
+      "effects": [{"type": "Damage", "min": 90, "max": 102, "perLevel": 10.95, "coef": 0.429}],
+      "aiHint": "Damage",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_hammer_of_wrath",
+      "name": "Hammer of Wrath",
+      "icon": "hammer",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Hurls a hammer that strikes an enemy for {0} Holy damage. Only usable on enemies that have 20% or less health.",
+      "learnLevel": 44,
+      "rankLevels": [44, 52, 60],
+      "trainCost": 17040,
+      "castTime": 1.0,
+      "cooldown": 6,
+      "cost": {"type": "Mana", "amount": 295, "perLevel": 8.75},
+      "target": "Enemy",
+      "range": 30,
+      "requires": {"targetHealthBelowPct": 20},
+      "effects": [{"type": "Damage", "min": 304, "max": 336, "perLevel": 13.125, "coef": 0.429}],
+      "aiHint": "Damage",
+      "aiPriority": 8
+    },
+    {
+      "id": "paladin_holy_wrath",
+      "name": "Holy Wrath",
+      "icon": "sun",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Sends bolts of holy power in all directions, causing {0} Holy damage to all Undead and Demon targets within 20 yards.",
+      "learnLevel": 50,
+      "rankLevels": [50, 60],
+      "trainCost": 25000,
+      "castTime": 2.0,
+      "cooldown": 60,
+      "cost": {"type": "Mana", "amount": 645, "perLevel": 16},
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 20, "centeredOnCaster": true, "affects": "Enemies"},
+      "requires": {"targetCreatureTypes": ["Undead", "Demon"]},
+      "effects": [{"type": "Damage", "min": 362, "max": 428, "perLevel": 13.8, "coef": 0.19}],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_consecration",
+      "name": "Consecration",
+      "icon": "sun",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Consecrates the land beneath the Paladin, doing 64 (rank 5: 384) Holy damage over 8 sec to enemies who enter the area.",
+      "learnLevel": 20,
+      "rankLevels": [20, 30, 40, 50, 60],
+      "trainCost": 1600,
+      "fromTalent": true,
+      "cooldown": 8,
+      "cost": {"type": "Mana", "amount": 135, "perLevel": 10.75},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_consecration"}],
+      "aiHint": "AoE",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_holy_shock",
+      "name": "Holy Shock",
+      "icon": "holy",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Blasts the target with Holy energy, causing {0} Holy damage to an enemy, or {1} healing to an ally.",
+      "learnLevel": 40,
+      "rankLevels": [40, 48, 56],
+      "trainCost": 12800,
+      "fromTalent": true,
+      "cooldown": 30,
+      "cost": {"type": "Mana", "amount": 225, "perLevel": 6.25},
+      "target": "Any",
+      "range": 20,
+      "effects": [
+        {"type": "Damage", "min": 204, "max": 220, "perLevel": 10.5, "coef": 0.429},
+        {"type": "Heal", "min": 204, "max": 220, "perLevel": 10.5, "coef": 0.429}
+      ],
+      "tags": ["Heal"],
+      "special": "PaladinHolyShock",
+      "aiHint": "Heal",
+      "aiPriority": 7
+    },
+    {
+      "id": "paladin_holy_shield",
+      "name": "Holy Shield",
+      "icon": "shield",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Increases chance to block by 30% for 10 sec, and deals 65 (rank 3: 130) Holy damage for each attack blocked while active. Each block expends a charge. 4 charges.",
+      "learnLevel": 40,
+      "rankLevels": [40, 50, 60],
+      "trainCost": 12800,
+      "fromTalent": true,
+      "cooldown": 10,
+      "cost": {"type": "Mana", "amount": 135, "perLevel": 4},
+      "target": "Self",
+      "requires": {"shield": true},
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_holy_shield"}],
+      "aiHint": "Defensive",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_repentance",
+      "name": "Repentance",
+      "icon": "hands_pray",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "Puts the enemy target in a state of meditation, incapacitating it for up to 6 sec. Any damage caused will awaken the target. Only works against Humanoids.",
+      "learnLevel": 40,
+      "fromTalent": true,
+      "cooldown": 60,
+      "cost": {"type": "Mana", "amount": 60},
+      "target": "Enemy",
+      "range": 20,
+      "requires": {"targetCreatureTypes": ["Humanoid"]},
+      "effects": [{"type": "ApplyAura", "aura": "paladin_repentance"}],
+      "aiHint": "CC",
+      "aiPriority": 5
+    },
+    {
+      "id": "paladin_divine_favor",
+      "name": "Divine Favor",
+      "icon": "star",
+      "classId": "Paladin",
+      "school": "Holy",
+      "description": "When activated, gives your next Flash of Light, Holy Light, or Holy Shock spell a 100% critical effect chance. Does not trigger the global cooldown.",
+      "learnLevel": 30,
+      "fromTalent": true,
+      "time": "OffGcd",
+      "cooldown": 120,
+      "cost": {"type": "Mana", "pctBaseMana": 3},
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_divine_favor"}],
+      "aiHint": "Buff",
+      "aiPriority": 6
+    },
+    {
+      "id": "paladin_parry",
+      "name": "Parry",
+      "icon": "swords",
+      "classId": "Paladin",
+      "school": "Physical",
+      "description": "Gives a chance to parry enemy melee attacks made from the front.",
+      "learnLevel": 8,
+      "trainCost": 200,
+      "passive": true
+    },
+    {
+      "id": "paladin_plate_mail",
+      "name": "Plate Mail",
+      "icon": "armor",
+      "classId": "Paladin",
+      "school": "Physical",
+      "description": "Allows the wearing of plate armor (trained at level 40).",
+      "learnLevel": 40,
+      "trainCost": 12800,
+      "passive": true
+    }
+  ],
+  "auras": [
+    {
+      "id": "paladin_seal_of_righteousness",
+      "name": "Seal of Righteousness",
+      "icon": "seal",
+      "description": "Melee hits deal additional Holy damage.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "effects": [{"type": "Damage", "school": "Holy", "min": 3, "perLevel": 1, "coef": 0.1}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_seal_of_the_crusader",
+      "name": "Seal of the Crusader",
+      "icon": "seal",
+      "description": "Melee attack power increased; attack speed increased by 40% but each hit deals less damage.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "mods": [
+        {"stat": "AttackPower", "value": 36, "values": [36, 70, 100, 140, 200, 306]},
+        {"stat": "MeleeHaste", "value": 40, "pct": true},
+        {"stat": "DamageDone", "value": -28.6, "pct": true, "school": "Physical"}
+      ]
+    },
+    {
+      "id": "paladin_judgement_of_the_crusader_debuff",
+      "name": "Judgement of the Crusader",
+      "icon": "judgement",
+      "description": "Holy damage taken increased (23/35/58/92/127/140 by rank).",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 10,
+      "exclusiveGroup": "paladin_judgement",
+      "exclusivePerCaster": true,
+      "tags": ["Judgement"],
+      "special": "PaladinJudgementOfTheCrusader"
+    },
+    {
+      "id": "paladin_seal_of_justice",
+      "name": "Seal of Justice",
+      "icon": "seal",
+      "description": "Melee attacks have a chance to stun the target for 2 sec.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "ppm": 1.0,
+          "effects": [{"type": "ApplyAura", "aura": "paladin_seal_of_justice_stun"}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_seal_of_justice_stun",
+      "name": "Seal of Justice",
+      "icon": "seal",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 2,
+      "tags": ["Stun"],
+      "states": ["Stun"]
+    },
+    {
+      "id": "paladin_judgement_of_justice_debuff",
+      "name": "Judgement of Justice",
+      "icon": "judgement",
+      "description": "Cannot flee; movement speed cannot exceed normal.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 10,
+      "exclusiveGroup": "paladin_judgement",
+      "exclusivePerCaster": true,
+      "tags": ["Judgement"],
+      "special": "PaladinJudgementOfJustice"
+    },
+    {
+      "id": "paladin_seal_of_light",
+      "name": "Seal of Light",
+      "icon": "seal",
+      "description": "Melee attacks have a chance to heal you.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "ppm": 15,
+          "effects": [{"type": "Heal", "target": "Self", "min": 39, "perLevel": 1.533}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_judgement_of_light_debuff",
+      "name": "Judgement of Light",
+      "icon": "judgement",
+      "description": "Attacks against this target may heal the attacker.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 10,
+      "exclusiveGroup": "paladin_judgement",
+      "exclusivePerCaster": true,
+      "tags": ["Judgement"],
+      "procs": [
+        {
+          "trigger": "OnStruck",
+          "chance": 50,
+          "effects": [{"type": "Heal", "target": "Attacker", "min": 25, "perLevel": 1.2}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_seal_of_wisdom",
+      "name": "Seal of Wisdom",
+      "icon": "seal",
+      "description": "Melee attacks have a chance to restore mana.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "procs": [
+        {
+          "trigger": "OnMeleeHit",
+          "ppm": 15,
+          "effects": [{"type": "GainResource", "target": "Self", "perLevel": 1.15, "resource": "Mana", "amount": 27}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_judgement_of_wisdom_debuff",
+      "name": "Judgement of Wisdom",
+      "icon": "judgement",
+      "description": "Attacks against this target may restore mana to the attacker.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 10,
+      "exclusiveGroup": "paladin_judgement",
+      "exclusivePerCaster": true,
+      "tags": ["Judgement"],
+      "procs": [
+        {
+          "trigger": "OnStruck",
+          "chance": 50,
+          "effects": [{"type": "GainResource", "target": "Attacker", "perLevel": 1.3, "resource": "Mana", "amount": 33}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_seal_of_command",
+      "name": "Seal of Command",
+      "icon": "seal",
+      "description": "Melee hits may deal 70% weapon damage as additional Holy damage.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 30,
+      "exclusiveGroup": "paladin_seal",
+      "tags": ["Seal"],
+      "procs": [{"trigger": "OnMeleeHit", "ppm": 7, "effects": [{"type": "WeaponDamage", "school": "Holy", "weaponPct": 70}]}]
+    },
+    {
+      "id": "paladin_forbearance",
+      "name": "Forbearance",
+      "icon": "hand",
+      "description": "Cannot be affected by Divine Shield, Divine Protection or Blessing of Protection.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 60,
+      "tags": ["Forbearance"]
+    },
+    {
+      "id": "paladin_blessing_of_might",
+      "name": "Blessing of Might",
+      "icon": "blessing",
+      "description": "Melee attack power increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "AttackPower", "value": 20, "values": [20, 35, 55, 85, 115, 155, 185]}]
+    },
+    {
+      "id": "paladin_blessing_of_wisdom",
+      "name": "Blessing of Wisdom",
+      "icon": "blessing",
+      "description": "Restores mana every 5 seconds.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "ManaRegen", "value": 10, "values": [10, 15, 20, 25, 30, 33]}]
+    },
+    {
+      "id": "paladin_blessing_of_kings",
+      "name": "Blessing of Kings",
+      "icon": "blessing",
+      "description": "All stats increased by 10%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "AllStats", "value": 10, "pct": true}]
+    },
+    {
+      "id": "paladin_blessing_of_salvation",
+      "name": "Blessing of Salvation",
+      "icon": "blessing",
+      "description": "Threat generated reduced by 30%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "ThreatGenerated", "value": -30, "pct": true}]
+    },
+    {
+      "id": "paladin_blessing_of_light",
+      "name": "Blessing of Light",
+      "icon": "blessing",
+      "description": "Holy Light and Flash of Light heal you for more.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "special": "PaladinBlessingOfLight"
+    },
+    {
+      "id": "paladin_blessing_of_sanctuary",
+      "name": "Blessing of Sanctuary",
+      "icon": "blessing",
+      "description": "Damage taken reduced; blocking deals Holy damage to the attacker.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 300,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "procs": [
+        {
+          "trigger": "OnBlock",
+          "effects": [{"type": "Damage", "target": "Attacker", "school": "Holy", "min": 14, "perLevel": 0.7}]
+        }
+      ],
+      "special": "PaladinBlessingOfSanctuary"
+    },
+    {
+      "id": "paladin_blessing_of_protection",
+      "name": "Blessing of Protection",
+      "icon": "blessing",
+      "description": "Immune to physical attacks; cannot attack or use physical abilities.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 6,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "states": ["ImmunePhysical", "Pacify"]
+    },
+    {
+      "id": "paladin_blessing_of_freedom",
+      "name": "Blessing of Freedom",
+      "icon": "blessing",
+      "description": "Immune to movement impairing effects.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "special": "PaladinBlessingOfFreedom"
+    },
+    {
+      "id": "paladin_blessing_of_sacrifice",
+      "name": "Blessing of Sacrifice",
+      "icon": "blessing",
+      "description": "Part of each hit taken is transferred to the Paladin.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 30,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "special": "PaladinBlessingOfSacrifice"
+    },
+    {
+      "id": "paladin_greater_blessing_of_might",
+      "name": "Greater Blessing of Might",
+      "icon": "blessing",
+      "description": "Melee attack power increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "AttackPower", "value": 155, "values": [155, 185]}]
+    },
+    {
+      "id": "paladin_greater_blessing_of_wisdom",
+      "name": "Greater Blessing of Wisdom",
+      "icon": "blessing",
+      "description": "Restores mana every 5 seconds.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "ManaRegen", "value": 30, "values": [30, 33]}]
+    },
+    {
+      "id": "paladin_greater_blessing_of_kings",
+      "name": "Greater Blessing of Kings",
+      "icon": "blessing",
+      "description": "All stats increased by 10%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "AllStats", "value": 10, "pct": true}]
+    },
+    {
+      "id": "paladin_greater_blessing_of_salvation",
+      "name": "Greater Blessing of Salvation",
+      "icon": "blessing",
+      "description": "Threat generated reduced by 30%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "mods": [{"stat": "ThreatGenerated", "value": -30, "pct": true}]
+    },
+    {
+      "id": "paladin_greater_blessing_of_light",
+      "name": "Greater Blessing of Light",
+      "icon": "blessing",
+      "description": "Holy Light and Flash of Light heal you for more.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "special": "PaladinBlessingOfLight"
+    },
+    {
+      "id": "paladin_greater_blessing_of_sanctuary",
+      "name": "Greater Blessing of Sanctuary",
+      "icon": "blessing",
+      "description": "Damage taken reduced; blocking deals Holy damage to the attacker.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 900,
+      "exclusiveGroup": "paladin_blessing",
+      "exclusivePerCaster": true,
+      "tags": ["Blessing"],
+      "procs": [{"trigger": "OnBlock", "effects": [{"type": "Damage", "target": "Attacker", "school": "Holy", "min": 35}]}],
+      "special": "PaladinBlessingOfSanctuary"
+    },
+    {
+      "id": "paladin_devotion_aura",
+      "name": "Devotion Aura",
+      "icon": "aura",
+      "description": "Gives 55 (rank 7: 735) additional armor to party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_devotion_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_devotion_aura_effect",
+      "name": "Devotion Aura",
+      "icon": "aura",
+      "description": "Armor increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "tags": ["Aura"],
+      "mods": [{"stat": "Armor", "value": 55, "values": [55, 159, 274, 389, 504, 620, 735]}]
+    },
+    {
+      "id": "paladin_retribution_aura",
+      "name": "Retribution Aura",
+      "icon": "aura",
+      "description": "Causes 5 (rank 5: 20) Holy damage to any enemy that strikes a party member within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_retribution_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_retribution_aura_effect",
+      "name": "Retribution Aura",
+      "icon": "aura",
+      "description": "Melee attackers take Holy damage.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "tags": ["Aura"],
+      "procs": [
+        {
+          "trigger": "OnStruck",
+          "effects": [{"type": "Damage", "target": "Attacker", "school": "Holy", "min": 5, "perLevel": 0.375}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_concentration_aura",
+      "name": "Concentration Aura",
+      "icon": "aura",
+      "description": "All party members within 30 yards lose 35% less casting or channeling time when damaged. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_concentration_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_concentration_aura_effect",
+      "name": "Concentration Aura",
+      "icon": "aura",
+      "description": "Casting pushback reduced by 35%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "tags": ["Aura"],
+      "special": "PaladinConcentrationAura"
+    },
+    {
+      "id": "paladin_shadow_resistance_aura",
+      "name": "Shadow Resistance Aura",
+      "icon": "aura",
+      "description": "Gives 30 (rank 3: 60) additional Shadow resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_shadow_resistance_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_shadow_resistance_aura_effect",
+      "name": "Shadow Resistance Aura",
+      "icon": "aura",
+      "description": "Shadow resistance increased.",
+      "kind": "Buff",
+      "school": "Shadow",
+      "duration": 0,
+      "tags": ["Aura"],
+      "mods": [{"stat": "Resistance", "value": 30, "values": [30, 45, 60], "school": "Shadow"}]
+    },
+    {
+      "id": "paladin_frost_resistance_aura",
+      "name": "Frost Resistance Aura",
+      "icon": "aura",
+      "description": "Gives 30 (rank 3: 60) additional Frost resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Frost",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_frost_resistance_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_frost_resistance_aura_effect",
+      "name": "Frost Resistance Aura",
+      "icon": "aura",
+      "description": "Frost resistance increased.",
+      "kind": "Buff",
+      "school": "Frost",
+      "duration": 0,
+      "tags": ["Aura"],
+      "mods": [{"stat": "Resistance", "value": 30, "values": [30, 45, 60], "school": "Frost"}]
+    },
+    {
+      "id": "paladin_fire_resistance_aura",
+      "name": "Fire Resistance Aura",
+      "icon": "aura",
+      "description": "Gives 30 (rank 3: 60) additional Fire resistance to all party members within 30 yards. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_fire_resistance_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_fire_resistance_aura_effect",
+      "name": "Fire Resistance Aura",
+      "icon": "aura",
+      "description": "Fire resistance increased.",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 0,
+      "tags": ["Aura"],
+      "mods": [{"stat": "Resistance", "value": 30, "values": [30, 45, 60], "school": "Fire"}]
+    },
+    {
+      "id": "paladin_sanctity_aura",
+      "name": "Sanctity Aura",
+      "icon": "aura",
+      "description": "Increases Holy damage done by party members within 30 yards by 10%. Players can only have one Aura on them per Paladin at any one time.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "exclusiveGroup": "paladin_aura",
+      "tags": ["Aura"],
+      "radius": 30,
+      "radiusAura": "paladin_sanctity_aura_effect",
+      "radiusAffects": "Allies"
+    },
+    {
+      "id": "paladin_sanctity_aura_effect",
+      "name": "Sanctity Aura",
+      "icon": "aura",
+      "description": "Holy damage done increased by 10%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "tags": ["Aura"],
+      "mods": [{"stat": "DamageDone", "value": 10, "pct": true, "school": "Holy"}]
+    },
+    {
+      "id": "paladin_divine_protection",
+      "name": "Divine Protection",
+      "icon": "shield",
+      "description": "Immune to all damage and harmful effects; cannot attack or use physical abilities.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 6,
+      "states": ["Invulnerable", "Pacify"]
+    },
+    {
+      "id": "paladin_divine_shield",
+      "name": "Divine Shield",
+      "icon": "shield",
+      "description": "Immune to all damage and harmful effects. Attack speed reduced by 50%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 10,
+      "mods": [{"stat": "MeleeHaste", "value": -50, "pct": true}],
+      "states": ["Invulnerable"]
+    },
+    {
+      "id": "paladin_righteous_fury",
+      "name": "Righteous Fury",
+      "icon": "sun",
+      "description": "Threat generated by Holy spells increased by 60%.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 1800,
+      "mods": [{"stat": "ThreatGenerated", "value": 60, "pct": true, "school": "Holy"}]
+    },
+    {
+      "id": "paladin_divine_intervention",
+      "name": "Divine Intervention",
+      "icon": "wings",
+      "description": "Protected by Divine Intervention: immune to all harm, cannot act, ignored by enemies.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 180,
+      "persistThroughDeath": false,
+      "states": ["Banish", "Invulnerable"]
+    },
+    {
+      "id": "paladin_hammer_of_justice",
+      "name": "Hammer of Justice",
+      "icon": "hammer",
+      "description": "Stunned.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 3,
+      "tags": ["Stun"],
+      "states": ["Stun"]
+    },
+    {
+      "id": "paladin_turn_undead",
+      "name": "Turn Undead",
+      "icon": "fear",
+      "description": "Fleeing in terror.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "exclusiveGroup": "paladin_turn_undead",
+      "exclusivePerCaster": true,
+      "tags": ["Fear"],
+      "states": ["Fear"]
+    },
+    {
+      "id": "paladin_consecration",
+      "name": "Consecration",
+      "icon": "sun",
+      "description": "Consecrated ground: enemies within 8 yards take Holy damage every second.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 8,
+      "tags": ["Consecration"],
+      "radius": 8,
+      "radiusAura": "paladin_consecration_effect",
+      "radiusAffects": "Enemies"
+    },
+    {
+      "id": "paladin_consecration_effect",
+      "name": "Consecration",
+      "icon": "sun",
+      "description": "Taking Holy damage every second.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "duration": 0,
+      "tags": ["Consecration"],
+      "tickInterval": 1,
+      "tickEffects": [{"type": "Damage", "school": "Holy", "min": 8, "perLevel": 1, "coef": 0.042}]
+    },
+    {
+      "id": "paladin_holy_shield",
+      "name": "Holy Shield",
+      "icon": "shield",
+      "description": "Block chance increased by 30%. Blocked attackers take Holy damage.",
+      "kind": "Buff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "charges": 4,
+      "mods": [{"stat": "Block", "value": 30}],
+      "procs": [
+        {
+          "trigger": "OnBlock",
+          "consumeCharge": true,
+          "effects": [{"type": "Damage", "target": "Attacker", "school": "Holy", "min": 65, "perLevel": 3.25, "coef": 0.05}]
+        }
+      ]
+    },
+    {
+      "id": "paladin_repentance",
+      "name": "Repentance",
+      "icon": "hands_pray",
+      "description": "Incapacitated.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 6,
+      "states": ["Incapacitate"],
+      "breakOnDamage": true
+    },
+    {
+      "id": "paladin_divine_favor",
+      "name": "Divine Favor",
+      "icon": "star",
+      "description": "Your next Flash of Light, Holy Light or Holy Shock is a critical effect.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 0,
+      "charges": 1,
+      "procs": [
+        {
+          "trigger": "OnSpellCast",
+          "abilities": ["paladin_holy_light", "paladin_flash_of_light", "paladin_holy_shock"],
+          "consumeCharge": true,
+          "effects": []
+        }
+      ],
+      "special": "PaladinDivineFavor"
+    },
+    {
+      "id": "paladin_improved_lay_on_hands",
+      "name": "Improved Lay on Hands",
+      "icon": "hands_pray",
+      "description": "Armor increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 120,
+      "mods": [{"stat": "Armor", "value": 15, "values": [15, 30], "pct": true}]
+    },
+    {
+      "id": "paladin_redoubt",
+      "name": "Redoubt",
+      "icon": "shield",
+      "description": "Block chance increased.",
+      "kind": "Buff",
+      "school": "Physical",
+      "duration": 10,
+      "charges": 5,
+      "mods": [{"stat": "Block", "value": 6, "values": [6, 12, 18, 24, 30]}],
+      "procs": [{"trigger": "OnBlock", "consumeCharge": true, "effects": []}]
+    },
+    {
+      "id": "paladin_vindication",
+      "name": "Vindication",
+      "icon": "fist",
+      "description": "Strength and Agility reduced.",
+      "kind": "Debuff",
+      "school": "Holy",
+      "dispel": "Magic",
+      "duration": 10,
+      "mods": [
+        {"stat": "Strength", "value": -5, "values": [-5, -10, -15], "pct": true},
+        {"stat": "Agility", "value": -5, "values": [-5, -10, -15], "pct": true}
+      ]
+    },
+    {
+      "id": "paladin_vengeance",
+      "name": "Vengeance",
+      "icon": "rage",
+      "description": "Physical and Holy damage increased.",
+      "kind": "Buff",
+      "school": "Holy",
+      "duration": 8,
+      "mods": [
+        {"stat": "DamageDone", "value": 3, "values": [3, 6, 9, 12, 15], "pct": true, "school": "Physical"},
+        {"stat": "DamageDone", "value": 3, "values": [3, 6, 9, 12, 15], "pct": true, "school": "Holy"}
+      ]
+    }
+  ],
+  "talentTrees": [
+    {
+      "id": "tree_paladin_holy",
+      "classId": "Paladin",
+      "name": "Holy",
+      "icon": "holy",
+      "description": "Healing light, holy spells and Seal of Righteousness.",
+      "talents": [
+        {
+          "id": "paladin_holy_divine_strength",
+          "name": "Divine Strength",
+          "icon": "fist",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your Strength by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Strength", "value": 2, "pct": true}]
+        },
+        {
+          "id": "paladin_holy_divine_intellect",
+          "name": "Divine Intellect",
+          "icon": "brain",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your total Intellect by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Intellect", "value": 2, "pct": true}]
+        },
+        {
+          "id": "paladin_holy_spiritual_focus",
+          "name": "Spiritual Focus",
+          "icon": "hands_pray",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Gives your Flash of Light and Holy Light spells a {14/28/42/56/70}% chance to not lose casting time when you take damage.",
+          "effects": [{"type": "Special", "special": "PaladinPushbackResist", "values": [14, 28, 42, 56, 70]}]
+        },
+        {
+          "id": "paladin_holy_improved_seal_of_righteousness",
+          "name": "Improved Seal of Righteousness",
+          "icon": "seal",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage done by your Seal of Righteousness and its Judgement by {3/6/9/12/15}%.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Effect", "value": 3, "abilities": ["paladin_seal_of_righteousness"]},
+            {
+              "type": "AbilityMod",
+              "property": "Damage",
+              "value": 3,
+              "abilities": ["paladin_judgement_of_righteousness"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_holy_healing_light",
+          "name": "Healing Light",
+          "icon": "heal_plus",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the amount healed by your Holy Light and Flash of Light spells by {4/8/12}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Healing",
+              "value": 4,
+              "abilities": ["paladin_holy_light", "paladin_flash_of_light"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_holy_consecration",
+          "name": "Consecration",
+          "icon": "sun",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Consecrates the land beneath the Paladin, doing 64 Holy damage over 8 sec to enemies who enter the area.",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_consecration"}]
+        },
+        {
+          "id": "paladin_holy_improved_lay_on_hands",
+          "name": "Improved Lay on Hands",
+          "icon": "hands_pray",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Gives the target of your Lay on Hands spell a {15/30}% bonus to their armor value from items for 2 min. In addition, the cooldown for your Lay on Hands spell is reduced by {10/20} min.",
+          "effects": [
+            {"type": "AbilityMod", "property": "Cooldown", "value": -600, "abilities": ["paladin_lay_on_hands"]},
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnAbilityUsed",
+                "abilities": ["paladin_lay_on_hands"],
+                "effects": [{"type": "ApplyAura", "aura": "paladin_improved_lay_on_hands"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "paladin_holy_unyielding_faith",
+          "name": "Unyielding Faith",
+          "icon": "cross",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Increases your chance to resist Fear and Disorient effects by an additional {5/10}%.",
+          "effects": [{"type": "Special", "special": "PaladinUnyieldingFaith", "values": [5, 10]}]
+        },
+        {
+          "id": "paladin_holy_illumination",
+          "name": "Illumination",
+          "icon": "sun",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 5,
+          "description": "After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell, gives you a {20/40/60/80/100}% chance to gain mana equal to the base cost of the spell.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnSpellCrit",
+                "chance": 20,
+                "abilities": ["paladin_holy_light", "paladin_flash_of_light", "paladin_holy_shock"],
+                "effects": [{"type": "Special", "target": "Self", "special": "PaladinIllumination"}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "paladin_holy_improved_blessing_of_wisdom",
+          "name": "Improved Blessing of Wisdom",
+          "icon": "blessing",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Increases the effect of your Blessing of Wisdom spell by {10/20}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 10,
+              "abilities": ["paladin_blessing_of_wisdom", "paladin_greater_blessing_of_wisdom"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_holy_divine_favor",
+          "name": "Divine Favor",
+          "icon": "star",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "When activated, gives your next Flash of Light, Holy Light, or Holy Shock spell a 100% critical effect chance.",
+          "requires": "paladin_holy_illumination",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_divine_favor"}]
+        },
+        {
+          "id": "paladin_holy_lasting_judgement",
+          "name": "Lasting Judgement",
+          "icon": "judgement",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the duration of your Judgement of Light by {10/20/30} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Duration", "value": 10, "abilities": ["paladin_judgement_of_light"]}]
+        },
+        {
+          "id": "paladin_holy_holy_power",
+          "name": "Holy Power",
+          "icon": "holy",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the critical effect chance of your Holy spells by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "SpellCrit", "value": 1, "school": "Holy"}]
+        },
+        {
+          "id": "paladin_holy_holy_shock",
+          "name": "Holy Shock",
+          "icon": "holy",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Blasts the target with Holy energy, causing 204 to 220 Holy damage to an enemy, or 204 to 220 healing to an ally.",
+          "requires": "paladin_holy_divine_favor",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_holy_shock"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_paladin_protection",
+      "classId": "Paladin",
+      "name": "Protection",
+      "icon": "shield",
+      "description": "Shields, blessings of protection, defense and holy threat.",
+      "talents": [
+        {
+          "id": "paladin_protection_improved_devotion_aura",
+          "name": "Improved Devotion Aura",
+          "icon": "aura",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the armor bonus of your Devotion Aura by {5/10/15/20/25}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 5, "abilities": ["paladin_devotion_aura"]}]
+        },
+        {
+          "id": "paladin_protection_redoubt",
+          "name": "Redoubt",
+          "icon": "shield",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your chance to block attacks with your shield by {6/12/18/24/30}% after being the victim of a critical strike. Lasts 10 sec or 5 blocks.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_redoubt"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "paladin_protection_precision",
+          "name": "Precision",
+          "icon": "sword",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases your chance to hit with melee weapons by {1/2/3}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeHit", "value": 1}]
+        },
+        {
+          "id": "paladin_protection_guardians_favor",
+          "name": "Guardian's Favor",
+          "icon": "blessing",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 2,
+          "description": "Reduces the cooldown of your Blessing of Protection by {60/120} sec and increases the duration of your Blessing of Freedom by {3/6} sec.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Cooldown",
+              "value": -60,
+              "abilities": ["paladin_blessing_of_protection"]
+            },
+            {"type": "AbilityMod", "property": "Duration", "value": 3, "abilities": ["paladin_blessing_of_freedom"]}
+          ]
+        },
+        {
+          "id": "paladin_protection_toughness",
+          "name": "Toughness",
+          "icon": "armor",
+          "tier": 2,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases your armor value from items by {2/4/6/8/10}%.",
+          "effects": [{"type": "Stat", "stat": "Armor", "value": 2, "pct": true}]
+        },
+        {
+          "id": "paladin_protection_blessing_of_kings",
+          "name": "Blessing of Kings",
+          "icon": "crown",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 1,
+          "description": "Places a Blessing on the friendly target, increasing total stats by 10% for 5 min.",
+          "effects": [
+            {"type": "GrantAbility", "ability": "paladin_blessing_of_kings"},
+            {"type": "GrantAbility", "ability": "paladin_greater_blessing_of_kings"}
+          ]
+        },
+        {
+          "id": "paladin_protection_improved_righteous_fury",
+          "name": "Improved Righteous Fury",
+          "icon": "sun",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases the threat generated by your Righteous Fury spell by {16/33/50}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "values": [16, 33, 50],
+              "abilities": ["paladin_righteous_fury"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_protection_shield_specialization",
+          "name": "Shield Specialization",
+          "icon": "shield",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the amount of damage absorbed by your shield by {10/20/30}%.",
+          "requires": "paladin_protection_redoubt",
+          "effects": [{"type": "Stat", "stat": "BlockValue", "value": 10, "pct": true}]
+        },
+        {
+          "id": "paladin_protection_anticipation",
+          "name": "Anticipation",
+          "icon": "eye",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 5,
+          "description": "Increases your Defense skill by {2/4/6/8/10}.",
+          "effects": [{"type": "Stat", "stat": "Defense", "value": 2}]
+        },
+        {
+          "id": "paladin_protection_improved_hammer_of_justice",
+          "name": "Improved Hammer of Justice",
+          "icon": "hammer",
+          "tier": 4,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Decreases the cooldown of your Hammer of Justice spell by {5/10/15} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -5, "abilities": ["paladin_hammer_of_justice"]}]
+        },
+        {
+          "id": "paladin_protection_improved_concentration_aura",
+          "name": "Improved Concentration Aura",
+          "icon": "aura",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 3,
+          "description": "Increases the effect of your Concentration Aura by an additional {5/10/15}% and gives all group members affected by the aura an additional {5/10/15}% chance to resist Silence and Interrupt effects.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 5, "abilities": ["paladin_concentration_aura"]}]
+        },
+        {
+          "id": "paladin_protection_blessing_of_sanctuary",
+          "name": "Blessing of Sanctuary",
+          "icon": "blessing",
+          "tier": 5,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Places a Blessing on the friendly target, reducing damage dealt from all sources by up to 10 for 5 min. In addition, when the target blocks a melee attack the attacker takes 14 Holy damage.",
+          "effects": [
+            {"type": "GrantAbility", "ability": "paladin_blessing_of_sanctuary"},
+            {"type": "GrantAbility", "ability": "paladin_greater_blessing_of_sanctuary"}
+          ]
+        },
+        {
+          "id": "paladin_protection_reckoning",
+          "name": "Reckoning",
+          "icon": "fist",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Gives you a {20/40/60/80/100}% chance to gain an extra attack after being the victim of a critical strike. Extra attacks stack up to 4.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "chance": 20,
+                "effects": [{"type": "Special", "target": "Self", "special": "PaladinReckoning"}]
+              },
+              "values": [20, 40, 60, 80, 100]
+            }
+          ]
+        },
+        {
+          "id": "paladin_protection_one_handed_weapon_specialization",
+          "name": "One-Handed Weapon Specialization",
+          "icon": "mace",
+          "tier": 6,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases the damage you deal with one-handed melee weapons by {2/4/6/8/10}%.",
+          "effects": [{"type": "Special", "special": "PaladinWeaponSpecialization", "values": [2, 4, 6, 8, 10]}]
+        },
+        {
+          "id": "paladin_protection_holy_shield",
+          "name": "Holy Shield",
+          "icon": "shield",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Increases chance to block by 30% for 10 sec, and deals 65 Holy damage for each attack blocked while active. Each block expends a charge. 4 charges.",
+          "requires": "paladin_protection_blessing_of_sanctuary",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_holy_shield"}]
+        }
+      ]
+    },
+    {
+      "id": "tree_paladin_retribution",
+      "classId": "Paladin",
+      "name": "Retribution",
+      "icon": "hammer",
+      "description": "Righteous melee combat, seals and judgements.",
+      "talents": [
+        {
+          "id": "paladin_retribution_improved_blessing_of_might",
+          "name": "Improved Blessing of Might",
+          "icon": "blessing",
+          "tier": 1,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases the melee attack power bonus of your Blessing of Might by {4/8/12/16/20}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 4,
+              "abilities": ["paladin_blessing_of_might", "paladin_greater_blessing_of_might"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_retribution_benediction",
+          "name": "Benediction",
+          "icon": "hands_pray",
+          "tier": 1,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Decreases the mana cost of your Judgement and Seal spells by {3/6/9/12/15}%.",
+          "effects": [{"type": "AbilityMod", "property": "Cost", "value": -3, "tags": ["Seal", "Judgement"]}]
+        },
+        {
+          "id": "paladin_retribution_improved_judgement",
+          "name": "Improved Judgement",
+          "icon": "judgement",
+          "tier": 2,
+          "column": 0,
+          "maxRank": 2,
+          "description": "Decreases the cooldown of your Judgement spell by {1/2} sec.",
+          "effects": [{"type": "AbilityMod", "property": "Cooldown", "value": -1, "abilities": ["paladin_judgement"]}]
+        },
+        {
+          "id": "paladin_retribution_improved_seal_of_the_crusader",
+          "name": "Improved Seal of the Crusader",
+          "icon": "seal",
+          "tier": 2,
+          "column": 1,
+          "maxRank": 3,
+          "description": "Increases the melee attack power bonus of your Seal of the Crusader and the Holy damage increase of your Judgement of the Crusader by {5/10/15}%.",
+          "effects": [
+            {
+              "type": "AbilityMod",
+              "property": "Effect",
+              "value": 5,
+              "abilities": ["paladin_seal_of_the_crusader", "paladin_judgement_of_the_crusader"]
+            }
+          ]
+        },
+        {
+          "id": "paladin_retribution_deflection",
+          "name": "Deflection",
+          "icon": "shield",
+          "tier": 2,
+          "column": 2,
+          "maxRank": 5,
+          "description": "Increases your Parry chance by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "Parry", "value": 1}]
+        },
+        {
+          "id": "paladin_retribution_vindication",
+          "name": "Vindication",
+          "icon": "fist",
+          "tier": 3,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Gives the Paladin's damaging melee attacks a chance to reduce the target's Strength and Agility by {5/10/15}% for 10 sec.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {"trigger": "OnMeleeHit", "ppm": 2, "effects": [{"type": "ApplyAura", "aura": "paladin_vindication"}]}
+            }
+          ]
+        },
+        {
+          "id": "paladin_retribution_conviction",
+          "name": "Conviction",
+          "icon": "sword",
+          "tier": 3,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Increases your chance to get a critical strike with melee weapons by {1/2/3/4/5}%.",
+          "effects": [{"type": "Stat", "stat": "MeleeCrit", "value": 1}]
+        },
+        {
+          "id": "paladin_retribution_seal_of_command",
+          "name": "Seal of Command",
+          "icon": "seal",
+          "tier": 3,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Gives the Paladin a chance to deal additional Holy damage equal to 70% of normal weapon damage. Lasts 30 sec. Unleashing this Seal's energy will judge an enemy for 46.5 to 50.5 Holy damage.",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_seal_of_command"}]
+        },
+        {
+          "id": "paladin_retribution_pursuit_of_justice",
+          "name": "Pursuit of Justice",
+          "icon": "boot",
+          "tier": 3,
+          "column": 3,
+          "maxRank": 2,
+          "description": "Increases movement and mounted movement speed by {4/8}%. This does not stack with other movement speed increasing effects.",
+          "effects": [{"type": "Stat", "stat": "MoveSpeed", "value": 4, "pct": true}]
+        },
+        {
+          "id": "paladin_retribution_eye_for_an_eye",
+          "name": "Eye for an Eye",
+          "icon": "eye",
+          "tier": 4,
+          "column": 0,
+          "maxRank": 2,
+          "description": "All spell criticals against you cause {15/30}% of the damage taken to the caster as well. The damage caused by Eye for an Eye will not exceed 50% of the Paladin's total health.",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {
+                "trigger": "OnCritTaken",
+                "schools": ["Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane"],
+                "effects": [{"type": "Special", "target": "Attacker", "special": "PaladinEyeForAnEye"}]
+              }
+            }
+          ]
+        },
+        {
+          "id": "paladin_retribution_improved_retribution_aura",
+          "name": "Improved Retribution Aura",
+          "icon": "aura",
+          "tier": 4,
+          "column": 2,
+          "maxRank": 2,
+          "description": "Increases the damage done by your Retribution Aura by {25/50}%.",
+          "effects": [{"type": "AbilityMod", "property": "Effect", "value": 25, "abilities": ["paladin_retribution_aura"]}]
+        },
+        {
+          "id": "paladin_retribution_two_handed_weapon_specialization",
+          "name": "Two-Handed Weapon Specialization",
+          "icon": "hammer",
+          "tier": 5,
+          "column": 0,
+          "maxRank": 3,
+          "description": "Increases the damage you deal with two-handed melee weapons by {2/4/6}%.",
+          "effects": [{"type": "Special", "special": "PaladinWeaponSpecialization", "values": [2, 4, 6]}]
+        },
+        {
+          "id": "paladin_retribution_sanctity_aura",
+          "name": "Sanctity Aura",
+          "icon": "aura",
+          "tier": 5,
+          "column": 2,
+          "maxRank": 1,
+          "description": "Increases Holy damage done by party members within 30 yards by 10%. Players can only have one Aura on them per Paladin at any one time.",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_sanctity_aura"}]
+        },
+        {
+          "id": "paladin_retribution_vengeance",
+          "name": "Vengeance",
+          "icon": "rage",
+          "tier": 6,
+          "column": 1,
+          "maxRank": 5,
+          "description": "Gives you a {3/6/9/12/15}% bonus to Physical and Holy damage you deal for 8 sec after dealing a critical strike from a weapon swing, spell, or ability.",
+          "requires": "paladin_retribution_conviction",
+          "effects": [
+            {
+              "type": "Proc",
+              "proc": {"trigger": "OnCrit", "effects": [{"type": "ApplyAura", "target": "Self", "aura": "paladin_vengeance"}]}
+            }
+          ]
+        },
+        {
+          "id": "paladin_retribution_repentance",
+          "name": "Repentance",
+          "icon": "hands_pray",
+          "tier": 7,
+          "column": 1,
+          "maxRank": 1,
+          "description": "Puts the enemy target in a state of meditation, incapacitating them for up to 6 sec. Any damage caused will awaken the target. Only works against Humanoids.",
+          "requires": "paladin_retribution_vengeance",
+          "effects": [{"type": "GrantAbility", "ability": "paladin_repentance"}]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "paladin_starter_hammer",
+      "name": "Battleworn Hammer",
+      "icon": "hammer",
+      "description": "A squire's two-handed hammer, nicked from years of practice in the chapel yard.",
+      "kind": "Weapon",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "TwoHand",
+      "weaponType": "TwoHandMace",
+      "minDamage": 13,
+      "maxDamage": 22,
+      "speed": 2.9,
+      "price": 45,
+      "classes": ["Paladin"]
+    },
+    {
+      "id": "paladin_starter_vest",
+      "name": "Squire's Chain Vest",
+      "icon": "armor",
+      "description": "Riveted rings over a sun-stitched tabard.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "Chest",
+      "armorType": "Mail",
+      "armor": 21,
+      "price": 30,
+      "classes": ["Paladin"]
+    },
+    {
+      "id": "paladin_starter_leggings",
+      "name": "Squire's Leggings",
+      "icon": "armor",
+      "description": "Sturdy leather leggings, freshly oiled.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 2,
+      "requiredLevel": 1,
+      "equip": "Legs",
+      "armorType": "Leather",
+      "armor": 9,
+      "price": 20,
+      "classes": ["Paladin"]
+    },
+    {
+      "id": "paladin_starter_boots",
+      "name": "Squire's Boots",
+      "icon": "boot",
+      "description": "Good boots for long marches.",
+      "kind": "Armor",
+      "quality": "Common",
+      "itemLevel": 1,
+      "requiredLevel": 1,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 5,
+      "price": 10,
+      "classes": ["Paladin"]
+    }
+  ],
+  "specials": [
+    {
+      "id": "PaladinJudgement",
+      "usedBy": "paladin_judgement",
+      "behaviour": "Effect of Judgement (target: enemy within 10 yd; off-GCD; requires a caster aura tagged Seal). Find the caster's active aura in exclusiveGroup 'paladin_seal'. Map it to its judgement ability by id: paladin_seal_of_righteousness -> paladin_judgement_of_righteousness, paladin_seal_of_the_crusader -> paladin_judgement_of_the_crusader, paladin_seal_of_justice -> paladin_judgement_of_justice, paladin_seal_of_light -> paladin_judgement_of_light, paladin_seal_of_wisdom -> paladin_judgement_of_wisdom, paladin_seal_of_command -> paladin_judgement_of_command (i.e. replace 'seal_of_' by 'judgement_of_'). Remove the seal aura, then execute the hidden judgement ability on the Judgement target for free, as if cast by the paladin: it uses the RANK of the seal (effLevel = highest rankLevels entry of the seal ability the paladin knows; the judgement abilities share the seal's learnLevel/rankLevels), rolls a Holy spell hit (a miss still consumes the seal) and can crit as a spell. AbilityMods that target the judgement ability id apply. Judgement debuffs are in exclusiveGroup 'paladin_judgement' (exclusivePerCaster) so a new Judgement replaces the paladin's previous one on that target. Threat: the damage/effect threat of the triggered ability."
+    },
+    {
+      "id": "PaladinDoubleVsStunned",
+      "usedBy": "paladin_judgement_of_command",
+      "behaviour": "Modifier on a Damage effect: compute the damage normally, then multiply by 2 if the target currently has an aura with the Stun state (from any source)."
+    },
+    {
+      "id": "PaladinJudgementOfTheCrusader",
+      "usedBy": "paladin_judgement_of_the_crusader_debuff",
+      "behaviour": "While the bearer has this debuff, every Holy-school Damage effect dealt to it by ANY attacker (spell, proc, seal, tick) is computed as if the attacker had extra Holy spell damage of X, i.e. +X x (that effect's coef; use 1.0 for effects whose coef is 0 and that are not weapon-based; WeaponDamage effects converted to Holy, like Seal of Command, use 0.2). X by rank of the paladin's Seal of the Crusader: 23/35/58/92/127/140 (ranks 1-6, learned at 6/12/22/32/42/52), multiplied by (1 + AbilityMod Effect % on paladin_judgement_of_the_crusader, e.g. Improved Seal of the Crusader +15%)."
+    },
+    {
+      "id": "PaladinJudgementOfJustice",
+      "usedBy": "paladin_judgement_of_justice_debuff",
+      "behaviour": "While active the bearer cannot flee: AI 'Coward' fleeing and voluntary retreat are disabled and positive MoveSpeed modifiers are ignored (movement cannot exceed its normal speed). Fear effects still work."
+    },
+    {
+      "id": "PaladinBlessingOfLight",
+      "usedBy": "paladin_blessing_of_light, paladin_greater_blessing_of_light",
+      "behaviour": "Heals from paladin_holy_light received by the bearer gain +H and heals from paladin_flash_of_light gain +F (added to the base before crit, by any caster). Blessing of Light ranks 1-3 (levels 40/50/60): H = 210/300/400, F = 60/85/115. Greater Blessing of Light: H = 400, F = 115. Scale by AbilityMod Effect % on the blessing ability."
+    },
+    {
+      "id": "PaladinBlessingOfSanctuary",
+      "usedBy": "paladin_blessing_of_sanctuary, paladin_greater_blessing_of_sanctuary",
+      "behaviour": "Each incoming damage instance against the bearer (any school, after armor/resistance, before absorbs) is reduced by a flat R (not below 0). Blessing of Sanctuary ranks 1-4 (levels 30/40/50/60): R = 10/14/19/24. Greater Blessing of Sanctuary: R = 24. The OnBlock Holy damage to the attacker is an ordinary proc on the aura."
+    },
+    {
+      "id": "PaladinBlessingOfFreedom",
+      "usedBy": "paladin_blessing_of_freedom",
+      "behaviour": "On apply, remove the bearer's Root auras and auras with negative MoveSpeed mods. While active, ignore new Root states and negative MoveSpeed mods on the bearer (auras still land; they simply have no movement effect). Duration 10 sec + AbilityMod Duration (Guardian's Favor +3/6 sec)."
+    },
+    {
+      "id": "PaladinBlessingOfSacrifice",
+      "usedBy": "paladin_blessing_of_sacrifice",
+      "behaviour": "Each damage instance the bearer takes is reduced by up to T and the caster paladin takes that amount instead (unmitigated, cannot be redirected again; if the paladin is dead/out of the encounter the blessing is removed). T by rank (levels 46/54): 30/40. Cannot target self."
+    },
+    {
+      "id": "PaladinForbearanceCheck",
+      "usedBy": "paladin_blessing_of_protection, paladin_divine_protection, paladin_divine_shield",
+      "behaviour": "Cast-validation hook only (all listed effects then resolve normally): the ability cannot be used on a target (for Divine Protection/Shield: the caster) that has the aura paladin_forbearance. The UI greys the target out and the AI never selects it. The ability's own effects apply paladin_forbearance (60 sec)."
+    },
+    {
+      "id": "PaladinLayOnHands",
+      "usedBy": "paladin_lay_on_hands",
+      "behaviour": "Read the caster's CURRENT mana M before the cost (cost.consumeAll then sets the caster's mana to 0). Heal the target for the caster's maximum health (not affected by healing power, can't crit, threat as a normal heal). Rank 2 (level 30) additionally gives the target 250 mana, rank 3 (level 50) 550 mana. Requires M > 0 to cast (WoW: LoH needs some mana)."
+    },
+    {
+      "id": "PaladinDivineIntervention",
+      "usedBy": "paladin_divine_intervention",
+      "behaviour": "Target: another living party member within 30 yd. Apply paladin_divine_intervention (3 min: Banish + Invulnerable, no actions, enemies drop all threat on them and cannot target them). Then the paladin dies immediately (Downed state skipped: becomes dead and must be resurrected; no Help-up). If the encounter ends while the protected unit is the last one standing the party loses as normal. The aura is removed early when combat ends."
+    },
+    {
+      "id": "PaladinHolyShock",
+      "usedBy": "paladin_holy_shock",
+      "behaviour": "Friend-or-foe: if the target is hostile, resolve only the Damage effect (effects[0]); if friendly (including self), resolve only the Heal effect (effects[1]). Holy school, can crit; Divine Favor and Illumination apply to the heal."
+    },
+    {
+      "id": "PaladinConcentrationAura",
+      "usedBy": "paladin_concentration_aura_effect",
+      "behaviour": "Casting pushback: when a unit with a pending cast or channel takes damage, the engine adds 0.5 sec (WoW 1.0 s pushback, halved for 6-second rounds) to the remaining cast time (channels lose that much channel time instead), at most twice per cast. While this aura is on the unit, pushback is reduced by 35% (+5/10/15% with Improved Concentration Aura, read from AbilityMod Effect on paladin_concentration_aura), and Improved Concentration Aura also gives the same 5/10/15% chance to resist Silence and Interrupt effects. If the engine does not implement pushback, only the resist part applies."
+    },
+    {
+      "id": "PaladinPushbackResist",
+      "usedBy": "paladin_holy_spiritual_focus",
+      "behaviour": "Talent passive: values[rank-1] = % chance that a pending paladin_holy_light or paladin_flash_of_light cast ignores casting pushback (see PaladinConcentrationAura for the pushback rule)."
+    },
+    {
+      "id": "PaladinUnyieldingFaith",
+      "usedBy": "paladin_holy_unyielding_faith",
+      "behaviour": "Talent passive: values[rank-1] = additional % chance to resist auras with the Fear or Confuse state (disorient) when they would be applied to the paladin."
+    },
+    {
+      "id": "PaladinIllumination",
+      "usedBy": "paladin_holy_illumination",
+      "behaviour": "Proc effect after a healing critical effect of Holy Light, Flash of Light or Holy Shock (heal branch only): the paladin gains mana equal to the BASE mana cost of the rank used (cost.amount + cost.perLevel x (rankLevel - learnLevel), before talent reductions)."
+    },
+    {
+      "id": "PaladinReckoning",
+      "usedBy": "paladin_protection_reckoning",
+      "behaviour": "Grant the paladin one stored extra attack (max 4 stored). At the end of the paladin's next turn, if auto attack is on and the target is in reach, perform one additional main-hand swing per stored extra attack (consuming them), in addition to the normal swing timer swings. Stored extra attacks are lost when combat ends."
+    },
+    {
+      "id": "PaladinWeaponSpecialization",
+      "usedBy": "paladin_protection_one_handed_weapon_specialization, paladin_retribution_two_handed_weapon_specialization",
+      "behaviour": "Talent passive: values[rank-1] = % increase to all damage the paladin deals while wielding a one-handed (One-Handed Weapon Specialization) or two-handed (Two-Handed Weapon Specialization) melee weapon in the main hand. Applies to auto attacks, weapon-based abilities and Holy damage from seals/judgements (WoW 1.12 behaviour)."
+    },
+    {
+      "id": "PaladinEyeForAnEye",
+      "usedBy": "paladin_retribution_eye_for_an_eye",
+      "behaviour": "On a spell (non-Physical) critical hit taken by the paladin, deal Holy damage to the attacker equal to 15% x talent rank of the damage taken, capped at 50% of the paladin's maximum health. Cannot crit, no coefficient, cannot be resisted."
+    },
+    {
+      "id": "PaladinGreaterBlessing",
+      "usedBy": "paladin_greater_blessing_of_might, _wisdom, _kings, _salvation, _light, _sanctuary (abilities)",
+      "behaviour": "Ability special (After hook). WoW 1.12: a Greater Blessing reaches every party member who shares the target's class. After the blessing's ApplyAura effect has blessed the target, the same ApplyAura effect (same rank, duration and AbilityMods of the cast, e.g. Improved Blessing of Might) is applied to every other living unit of the battle/field on the target's team whose class is the target's class (characters and companions; pets, totems, summons and mind-controlled creatures have no class and are skipped), regardless of distance. The normal blessing rules apply to each of them (one Blessing per Paladin: exclusiveGroup paladin_blessing per caster). Mana is paid once."
+    },
+    {
+      "id": "PaladinDivineFavor",
+      "usedBy": "paladin_divine_favor (aura)",
+      "behaviour": "Divine Favor (WoW 1.12): the next Holy Light, Flash of Light or Holy Shock is a guaranteed critical effect. The spells are exactly the abilities of the aura's consumeCharge OnSpellCast proc; while the aura is up every non-periodic heal/damage effect of such a cast gets +100 crit chance (Holy Shock's heal or damage alike). The bonus also covers a cast that went pending; the proc consumes the aura once that cast has resolved. Other Holy spells (Exorcism, Judgements, Holy Wrath, Seals, Blessings...) neither benefit from nor consume it."
+    }
+  ]
+}

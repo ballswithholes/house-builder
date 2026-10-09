@@ -1,0 +1,932 @@
+{
+  "_note": "Mirefen gear (Expansion.md §8 budget: stats 0.55 x ilvl x Qa x slot, DPS x0.72/0.79, ArmorValue), quest items and fen junk.",
+  "items": [
+    {
+      "id": "mf_drowning_cord",
+      "name": "Drowning Cord",
+      "icon": "curse",
+      "description": "Knotted reed-rope tied to a river stone, hung with frog-bone charms. Somebody wanted that lantern to stay down.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 3,
+      "price": 0,
+      "unique": true,
+      "quest": "mq2_drowned_lanterns"
+    },
+    {
+      "id": "mf_fen_glass",
+      "name": "Lump of Fen-Glass",
+      "icon": "sparkle",
+      "description": "Green glass from a broken lantern, polished smooth by mireling thumbs. They collect it the way magpies collect spoons.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_obi_glass"
+    },
+    {
+      "id": "mf_wisp_glow",
+      "name": "Wisp-Glow",
+      "icon": "star",
+      "description": "A drop of light that kept glowing after the wisp stopped. It is warm, and it wriggles if you look at it.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_obi_glass"
+    },
+    {
+      "id": "mf_new_lantern",
+      "name": "Lowlantern Post-Lamp",
+      "icon": "fire",
+      "description": "One of Obi's new lamps: fen-glass, wisp-glow and a stubborn little wick. Hang it on a post and it will stay lit.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 4,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_obi_posts"
+    },
+    {
+      "id": "mf_croc_tail",
+      "name": "Crocolisk Tail",
+      "icon": "food",
+      "description": "Heavy, scaly, and, according to Hettie, the best soup meat in the fen. Hettie is the only one who says this.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_hettie_soup"
+    },
+    {
+      "id": "mf_fen_truffle",
+      "name": "Fen Truffle",
+      "icon": "leaf",
+      "description": "A knobbly blue truffle from under a giant toadstool. It smells like rain on a cellar door.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_hettie_soup"
+    },
+    {
+      "id": "mf_gubbagulps_pearl",
+      "name": "Gubbagulp's Pearl",
+      "icon": "star",
+      "description": "A river-pearl the size of a plum, given in friendship, or taken in a fight. Either way it is warm from the chief's crown.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "mf_reeve_chief"
+    },
+    {
+      "id": "mf_tidewitch_pearl",
+      "name": "The Undertow Pearl",
+      "icon": "water_drop",
+      "description": "The pearl from the Tidewitch's staff. Inside it, very small and very far away, lanterns are still going down.",
+      "kind": "Quest",
+      "quality": "Common",
+      "itemLevel": 1,
+      "stack": 1,
+      "price": 0,
+      "unique": true,
+      "quest": "dg5_undertow"
+    },
+    {
+      "id": "mf_croc_hide_jerkin",
+      "name": "Croc-Hide Jerkin",
+      "icon": "armor",
+      "description": "Bo's own spare, cut from a crocolisk that bit the wrong fisherman. It still smells a little of pond.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Chest",
+      "armorType": "Leather",
+      "armor": 76,
+      "stats": [
+        {"stat": "Agility", "value": 8},
+        {"stat": "Stamina", "value": 5}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_waders_mail_boots",
+      "name": "Wader's Mail Boots",
+      "icon": "boot",
+      "description": "Mail to the knee and tar on the seams. Your feet will be dry. Your feet will be the only dry thing in Mirefen.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Feet",
+      "armorType": "Mail",
+      "armor": 110,
+      "stats": [
+        {"stat": "Stamina", "value": 5},
+        {"stat": "Strength", "value": 4}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_net_floats_cord",
+      "name": "Cord of Net-Floats",
+      "icon": "star",
+      "description": "Cork floats on a braided cord, worn by Lowlantern fishers for luck. Bo swears it works. Bo has nine fingers.",
+      "kind": "Accessory",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Neck",
+      "stats": [
+        {"stat": "Intellect", "value": 3},
+        {"stat": "Stamina", "value": 2},
+        {"stat": "Agility", "value": 2}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_glassblowers_gloves",
+      "name": "Glassblower's Gloves",
+      "icon": "hand",
+      "description": "Scorched at the fingertips. Obi says a good lanternwright never feels the heat. Obi has a lot of scars.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Hands",
+      "armorType": "Cloth",
+      "armor": 23,
+      "stats": [
+        {"stat": "Intellect", "value": 4},
+        {"stat": "Stamina", "value": 2},
+        {"stat": "SpellDamage", "value": 3}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_lantern_hook",
+      "name": "Lantern-Hook Mace",
+      "icon": "mace",
+      "description": "An iron lantern-hook on a heavy haft. It hangs lamps and, in a pinch, knocks things down from where they hang.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "OneHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 23,
+      "maxDamage": 35,
+      "speed": 2.6,
+      "stats": [
+        {"stat": "Strength", "value": 4},
+        {"stat": "Stamina", "value": 2}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_wisp_glass_ring",
+      "name": "Ring of Wisp-Glass",
+      "icon": "sparkle",
+      "description": "A band of green fen-glass with a fleck of wisp-glow sealed inside. It blinks when you're about to do something unwise.",
+      "kind": "Accessory",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Finger",
+      "stats": [
+        {"stat": "Intellect", "value": 4},
+        {"stat": "Spirit", "value": 4}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_lamplighters_staff",
+      "name": "Lamplighter's Long-Staff",
+      "icon": "staff",
+      "description": "A long ash staff with a hook for hanging lamps on high posts. The hook glows, faintly, out of habit.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 37,
+      "maxDamage": 55,
+      "speed": 3.0,
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Spirit", "value": 4},
+        {"stat": "HealingPower", "value": 9}
+      ],
+      "price": 2126
+    },
+    {
+      "id": "mf_post_keepers_belt",
+      "name": "Post-Keeper's Belt",
+      "icon": "armor",
+      "description": "A mail belt with loops for a wick-knife, a tinderbox and a spare lamp. Obi made it for himself; it was always too big.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "Waist",
+      "armorType": "Mail",
+      "armor": 93,
+      "stats": [
+        {"stat": "Strength", "value": 5},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "Intellect", "value": 3}
+      ],
+      "price": 2126
+    },
+    {
+      "id": "mf_wickmans_wraps",
+      "name": "Wickman's Wraps",
+      "icon": "armor",
+      "description": "Leather bracers stained with lamp oil, the old wickmen's badge of trade.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "Wrist",
+      "armorType": "Leather",
+      "armor": 34,
+      "stats": [
+        {"stat": "Agility", "value": 4},
+        {"stat": "Stamina", "value": 2},
+        {"stat": "Intellect", "value": 2}
+      ],
+      "price": 2126
+    },
+    {
+      "id": "mf_lily_pad_cap",
+      "name": "Lily-Pad Cap",
+      "icon": "armor",
+      "description": "A wide hat of woven reeds with a lily pad sewn to the crown. It is very fashionable. The Duke has one too.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Head",
+      "armorType": "Cloth",
+      "armor": 31,
+      "stats": [
+        {"stat": "Intellect", "value": 7},
+        {"stat": "Spirit", "value": 7}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_puddle_jumpers",
+      "name": "Puddle-Jumpers",
+      "icon": "boot",
+      "description": "Supple leather boots that make a very satisfying sound in puddles. Lily tested them thoroughly.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Feet",
+      "armorType": "Leather",
+      "armor": 52,
+      "stats": [
+        {"stat": "Agility", "value": 6},
+        {"stat": "Stamina", "value": 4}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_dukes_hop_ring",
+      "name": "The Duke's Hop",
+      "icon": "sparkle",
+      "description": "A green glass ring Lily found in a frog's pond. She says it makes you jump higher. She is about eight.",
+      "kind": "Accessory",
+      "quality": "Uncommon",
+      "itemLevel": 22,
+      "requiredLevel": 18,
+      "equip": "Finger",
+      "stats": [
+        {"stat": "Agility", "value": 4},
+        {"stat": "Stamina", "value": 3}
+      ],
+      "price": 1946
+    },
+    {
+      "id": "mf_heronguard_greaves",
+      "name": "Heronguard Greaves",
+      "icon": "armor",
+      "description": "River-blue mail greaves with a heron worked on each knee. Osric's spare pair, carried out of Skyreach twelve years ago and never worn since.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "Legs",
+      "armorType": "Mail",
+      "armor": 182,
+      "stats": [
+        {"stat": "Stamina", "value": 11},
+        {"stat": "Strength", "value": 9}
+      ],
+      "price": 2761
+    },
+    {
+      "id": "mf_barrow_warden_cloak",
+      "name": "Barrow-Warden's Cloak",
+      "icon": "armor",
+      "description": "A grey cloak the sextons of the Low Bell wore on their rounds. It keeps off rain, mist and, they said, the worst of the dark.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "Back",
+      "armor": 20,
+      "stats": [
+        {"stat": "Stamina", "value": 5},
+        {"stat": "Spirit", "value": 3}
+      ],
+      "price": 2126
+    },
+    {
+      "id": "mf_sextons_handbell",
+      "name": "Sexton's Handbell",
+      "icon": "star",
+      "description": "A little bronze handbell from the Low Bell's chapel. Ring it and the fen goes quiet for a heartbeat, listening.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [
+        {"stat": "Intellect", "value": 3},
+        {"stat": "Spirit", "value": 2},
+        {"stat": "HealingPower", "value": 5}
+      ],
+      "price": 2126
+    },
+    {
+      "id": "mf_oracles_pearl",
+      "name": "Pearl of Listening",
+      "icon": "star",
+      "description": "A mireling oracle's pearl on a kelp cord. Hold it to your ear and you can hear the fen thinking.",
+      "kind": "Accessory",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Neck",
+      "stats": [
+        {"stat": "Intellect", "value": 3},
+        {"stat": "Spirit", "value": 2},
+        {"stat": "HealingPower", "value": 5}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_conch_buckler",
+      "name": "Conch-Shell Buckler",
+      "icon": "shield",
+      "description": "A great spiral conch backed with driftwood. Mireling-made, so it is a little small, and very, very sturdy.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "OffHand",
+      "weaponType": "Shield",
+      "armor": 720,
+      "block": 17,
+      "stats": [
+        {"stat": "Stamina", "value": 4},
+        {"stat": "Strength", "value": 4}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_reedwoven_leggings",
+      "name": "Reedwoven Leggings",
+      "icon": "armor",
+      "description": "Leather trousers reinforced with tightly braided reed. Mirelings make them for visitors who keep falling in.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Legs",
+      "armorType": "Leather",
+      "armor": 81,
+      "stats": [
+        {"stat": "Agility", "value": 9},
+        {"stat": "Stamina", "value": 6}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_reeves_seal",
+      "name": "Reeve's Seal",
+      "icon": "sparkle",
+      "description": "Lowlantern's old seal ring: a lantern over three wavy lines. Tamsin has a spare. Tamsin has a spare of everything.",
+      "kind": "Accessory",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Finger",
+      "stats": [
+        {"stat": "Stamina", "value": 4},
+        {"stat": "Strength", "value": 4}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_croaking_stone_hauberk",
+      "name": "Croaking-Stone Hauberk",
+      "icon": "armor",
+      "description": "Mail rings dyed pond-green, with a little carved stone frog on the collar for luck.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Chest",
+      "armorType": "Mail",
+      "armor": 171,
+      "stats": [
+        {"stat": "Strength", "value": 7},
+        {"stat": "Stamina", "value": 4},
+        {"stat": "Intellect", "value": 4}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_frogskin_robe",
+      "name": "Frog-Silk Robe",
+      "icon": "armor",
+      "description": "Not actually frog. Mireling silk, spun from something in the reeds nobody wants to describe. Beautiful, though.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Chest",
+      "armorType": "Cloth",
+      "armor": 41,
+      "stats": [
+        {"stat": "Intellect", "value": 7},
+        {"stat": "Stamina", "value": 4},
+        {"stat": "SpellDamage", "value": 5}
+      ],
+      "price": 2314
+    },
+    {
+      "id": "mf_hetties_ladle",
+      "name": "Hettie's Ladle",
+      "icon": "mace",
+      "description": "A long copper ladle, bent in two places from 'disagreements'. Somehow it improves magic. Hettie says it's the stock.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "MainHand",
+      "weaponType": "OneHandMace",
+      "minDamage": 26,
+      "maxDamage": 39,
+      "speed": 2.6,
+      "stats": [
+        {"stat": "Intellect", "value": 3},
+        {"stat": "Stamina", "value": 2},
+        {"stat": "SpellDamage", "value": 2}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_stew_stained_breeches",
+      "name": "Stew-Stained Breeches",
+      "icon": "armor",
+      "description": "Comfortable cloth trousers with a long and honourable history of soup.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "Legs",
+      "armorType": "Cloth",
+      "armor": 42,
+      "stats": [
+        {"stat": "Intellect", "value": 6},
+        {"stat": "Spirit", "value": 5},
+        {"stat": "HealingPower", "value": 10}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_chowder_belt",
+      "name": "Chowder-Keeper's Belt",
+      "icon": "armor",
+      "description": "A wide leather belt with a hook for a pot and a loop for a spoon. Every adventurer should be so prepared.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "Waist",
+      "armorType": "Leather",
+      "armor": 47,
+      "stats": [
+        {"stat": "Intellect", "value": 5},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "Agility", "value": 3}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_hagthorn_dagger",
+      "name": "Hagthorn Dagger",
+      "icon": "dagger",
+      "description": "A black thorn as long as your hand, bound to a bone grip. The coven used them to cut lantern cords.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "OneHand",
+      "weaponType": "Dagger",
+      "minDamage": 17,
+      "maxDamage": 26,
+      "speed": 1.7,
+      "stats": [
+        {"stat": "Agility", "value": 4},
+        {"stat": "Stamina", "value": 3}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_coven_cord_sash",
+      "name": "Coven-Cord Sash",
+      "icon": "armor",
+      "description": "Woven from the cords the hags used to drown lanterns. Turned to a better use, it holds a robe up very well.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "Waist",
+      "armorType": "Cloth",
+      "armor": 24,
+      "stats": [
+        {"stat": "Intellect", "value": 5},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "SpellDamage", "value": 4}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_reedcloak_spaulders",
+      "name": "Reedcloak Spaulders",
+      "icon": "armor",
+      "description": "Leather spaulders thatched with dry reed, the way the coven wears them, but without the frogs.",
+      "kind": "Armor",
+      "quality": "Uncommon",
+      "itemLevel": 25,
+      "requiredLevel": 21,
+      "equip": "Shoulder",
+      "armorType": "Leather",
+      "armor": 63,
+      "stats": [
+        {"stat": "Agility", "value": 6},
+        {"stat": "Stamina", "value": 3},
+        {"stat": "Intellect", "value": 2}
+      ],
+      "price": 2510
+    },
+    {
+      "id": "mf_mantle_of_the_last_verse",
+      "name": "Mantle of the Last Verse",
+      "icon": "armor",
+      "description": "A tide-singer's shawl of fen-grey wool, embroidered with every verse of the sending song. The last one is stitched in gold.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "Shoulder",
+      "armorType": "Cloth",
+      "armor": 36,
+      "stats": [
+        {"stat": "Intellect", "value": 7},
+        {"stat": "Spirit", "value": 5},
+        {"stat": "HealingPower", "value": 11}
+      ],
+      "price": 3525
+    },
+    {
+      "id": "mf_reedrunner_spaulders",
+      "name": "Reedrunner Spaulders",
+      "icon": "armor",
+      "description": "Light leather pauldrons in Lowlantern green, worn by the fen's runners who carry news between the stilt villages.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "Shoulder",
+      "armorType": "Leather",
+      "armor": 72,
+      "stats": [
+        {"stat": "Agility", "value": 10},
+        {"stat": "Stamina", "value": 7}
+      ],
+      "price": 3525
+    },
+    {
+      "id": "mf_lowlantern_pauldrons",
+      "name": "Lowlantern Pauldrons",
+      "icon": "armor",
+      "description": "Mail shoulders with a small brass lantern riveted to each. They glint at night, which the fen folk find very reassuring.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "Shoulder",
+      "armorType": "Mail",
+      "armor": 151,
+      "stats": [
+        {"stat": "Stamina", "value": 9},
+        {"stat": "Strength", "value": 8}
+      ],
+      "price": 3525
+    },
+    {
+      "id": "mf_gnashers_tooth",
+      "name": "Gnasher's Tooth",
+      "icon": "dagger",
+      "description": "One of Old Gnasher's front teeth, as long as a knife and twice as mean, bound to a whalebone grip.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "OneHand",
+      "weaponType": "Dagger",
+      "minDamage": 19,
+      "maxDamage": 29,
+      "speed": 1.7,
+      "stats": [
+        {"stat": "Agility", "value": 5},
+        {"stat": "Stamina", "value": 4}
+      ],
+      "price": 2761,
+      "unique": true
+    },
+    {
+      "id": "mf_gubbagulps_crown",
+      "name": "Gubbagulp's River-Crown",
+      "icon": "crown",
+      "description": "A crown of river-pearls strung on gold lantern wire. It was sized for a frog, but it stretches.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Head",
+      "armorType": "Cloth",
+      "armor": 36,
+      "stats": [
+        {"stat": "Intellect", "value": 10},
+        {"stat": "Stamina", "value": 5},
+        {"stat": "SpellDamage", "value": 7}
+      ],
+      "price": 3005,
+      "unique": true
+    },
+    {
+      "id": "mf_bellringers_mallet",
+      "name": "The Bellringer's Mallet",
+      "icon": "hammer",
+      "description": "The sexton's bell-mallet, green bronze on a black oak haft. Every swing sounds like a funeral.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 23,
+      "requiredLevel": 19,
+      "equip": "TwoHand",
+      "weaponType": "TwoHandMace",
+      "minDamage": 51,
+      "maxDamage": 77,
+      "speed": 3.5,
+      "stats": [
+        {"stat": "Strength", "value": 12},
+        {"stat": "Stamina", "value": 8}
+      ],
+      "price": 2761,
+      "unique": true
+    },
+    {
+      "id": "mf_galls_crook",
+      "name": "Auntie Gall's Crook",
+      "icon": "staff",
+      "description": "A gnarled crook with a cage of lime marsh-light swinging from the hook. It hums a little tune when lanterns are near.",
+      "kind": "Weapon",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "TwoHand",
+      "weaponType": "Staff",
+      "minDamage": 49,
+      "maxDamage": 74,
+      "speed": 3.0,
+      "stats": [
+        {"stat": "Intellect", "value": 10},
+        {"stat": "Stamina", "value": 6},
+        {"stat": "SpellDamage", "value": 8}
+      ],
+      "price": 3525,
+      "unique": true
+    },
+    {
+      "id": "mf_cauldron_lantern",
+      "name": "The Cauldron-Lantern",
+      "icon": "fire",
+      "description": "Auntie Gall's lantern, with her brew drained and a good honest flame put in instead. It still smells of soup.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "OffHand",
+      "weaponType": "HeldInOffhand",
+      "stats": [
+        {"stat": "Intellect", "value": 5},
+        {"stat": "Spirit", "value": 4},
+        {"stat": "HealingPower", "value": 9}
+      ],
+      "price": 3525,
+      "unique": true
+    },
+    {
+      "id": "mf_coven_reed_mantle",
+      "name": "Reed Mantle of the Coven",
+      "icon": "armor",
+      "description": "A long cloak of dry, rustling reed. Wearing it, you can stand still in the fen and simply not be there.",
+      "kind": "Armor",
+      "quality": "Rare",
+      "itemLevel": 26,
+      "requiredLevel": 22,
+      "equip": "Back",
+      "armor": 24,
+      "stats": [
+        {"stat": "Agility", "value": 8},
+        {"stat": "Stamina", "value": 5}
+      ],
+      "price": 3525,
+      "unique": true
+    },
+    {
+      "id": "mf_mireling_pearl_charm",
+      "name": "Mireling Pearl-Charm",
+      "icon": "star",
+      "description": "A gift of the Croaking Stones: a river-pearl in a cage of carved bone. Mirelings give them only to friends of the tribe.",
+      "kind": "Accessory",
+      "quality": "Rare",
+      "itemLevel": 24,
+      "requiredLevel": 20,
+      "equip": "Trinket",
+      "stats": [
+        {"stat": "Stamina", "value": 7},
+        {"stat": "Spirit", "value": 5}
+      ],
+      "price": 3005,
+      "unique": true
+    },
+    {
+      "id": "mf_junk_soggy_boot",
+      "name": "Soggy Boot",
+      "icon": "boot",
+      "description": "One boot, left foot, full of fen. There is a small fish living in it. It seems happy.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 5,
+      "price": 180
+    },
+    {
+      "id": "mf_junk_pretty_pebble",
+      "name": "Very Pretty Pebble",
+      "icon": "rock",
+      "description": "Polished by a mireling for what must have been weeks. It is, genuinely, a very pretty pebble.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 140
+    },
+    {
+      "id": "mf_junk_lantern_ring",
+      "name": "Rusted Lantern Ring",
+      "icon": "coin",
+      "description": "The iron ring from a drowned lantern's hook. The fen folk will buy these back, a little sadly.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 220
+    },
+    {
+      "id": "mf_junk_croc_tooth",
+      "name": "Crocolisk Tooth",
+      "icon": "fang",
+      "description": "Crocolisks grow new teeth all their lives. This means there is always another one coming.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 160
+    },
+    {
+      "id": "mf_junk_wisp_dust",
+      "name": "Pinch of Wisp-Dust",
+      "icon": "sparkle",
+      "description": "Glittering dust that drifts upward if you let go of it. Keep the bag closed.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 200
+    },
+    {
+      "id": "mf_junk_bog_cloth",
+      "name": "Scrap of Bog-Linen",
+      "icon": "mask",
+      "description": "Grave-cloth, peat-brown and very old. It smells like the inside of a barrow, because it is.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 150
+    },
+    {
+      "id": "mf_junk_frog_bone_charm",
+      "name": "Frog-Bone Charm",
+      "icon": "curse",
+      "description": "A coven charm with the whisper worn out of it. It looks less frightening than it used to, and a little lonely.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 240
+    },
+    {
+      "id": "mf_junk_hound_fang",
+      "name": "Hollow-Touched Fang",
+      "icon": "fang",
+      "description": "Violet at the root, like a bruise. It is cold, and stays cold in your hand.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 260
+    },
+    {
+      "id": "mf_junk_eel_skin",
+      "name": "Dried Eel Skin",
+      "icon": "food",
+      "description": "A mireling delicacy, or a mireling shoelace. Possibly both, at different times.",
+      "kind": "Junk",
+      "quality": "Poor",
+      "itemLevel": 1,
+      "stack": 10,
+      "price": 120
+    },
+    {
+      "id": "mf_mireling_reed_cutter",
+      "name": "Mireling Reed-Cutter",
+      "icon": "dagger",
+      "description": "A sliver of sharpened shell lashed to a reed. Mirelings cut rushes with it, and string, and the occasional boot-lace.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 21,
+      "requiredLevel": 18,
+      "equip": "OffHand",
+      "weaponType": "Dagger",
+      "minDamage": 13,
+      "maxDamage": 22,
+      "speed": 1.6,
+      "stats": [{"stat": "Agility", "value": 4}, {"stat": "Stamina", "value": 3}],
+      "price": 1773
+    },
+    {
+      "id": "mf_snapjaw_hatchet",
+      "name": "Snapjaw Hatchet",
+      "icon": "axe",
+      "description": "A crocolisk tooth set in an axe-head. It bites first and asks questions never.",
+      "kind": "Weapon",
+      "quality": "Uncommon",
+      "itemLevel": 23,
+      "requiredLevel": 20,
+      "equip": "OffHand",
+      "weaponType": "OneHandAxe",
+      "minDamage": 21,
+      "maxDamage": 35,
+      "speed": 2.4,
+      "stats": [{"stat": "Strength", "value": 4}, {"stat": "Agility", "value": 2}, {"stat": "Stamina", "value": 2}],
+      "price": 2126
+    }
+  ]
+}

@@ -1,0 +1,3316 @@
+{
+  "_note": "The people of Mirefen and their conversations (prop dialogues included).",
+  "npcs": [
+    {
+      "id": "mf_reeve_tamsin",
+      "name": "Reeve Tamsin Lowe",
+      "shortName": "Reeve Tamsin",
+      "title": "Reeve of Lowlantern",
+      "sprite": "npc_fen_villager",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_mf_reeve",
+      "bark": "Mind the third plank. And the seventh. Actually, mind all the planks."
+    },
+    {
+      "id": "mf_obi_wick",
+      "name": "Obadiah Wick",
+      "shortName": "Obi",
+      "title": "Lanternwright",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_mf_obi",
+      "bark": "Glass, wick, glow. Glass, wick, glow. That's all a lantern is. That's all anything is, really."
+    },
+    {
+      "id": "mf_hettie_brine",
+      "name": "Hettie Brine",
+      "shortName": "Hettie",
+      "title": "Fen Goods and Chowder",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_mf_hettie",
+      "vendor": [
+        {"item": "potion_healing"},
+        {"item": "potion_lesser_mana"},
+        {"item": "food_lantern_stew"},
+        {"item": "drink_melon_juice"},
+        {"item": "bandage_linen"},
+        {"item": "mf_waders_mail_boots", "stock": 1},
+        {"item": "mf_wickmans_wraps", "stock": 1},
+        {"item": "mf_glassblowers_gloves", "stock": 1}
+      ],
+      "bark": "Chowder! Fresh chowder! Only slightly crocolisk!"
+    },
+    {
+      "id": "mf_lily",
+      "name": "Lily",
+      "title": "Duchess of the Puddles",
+      "sprite": "npc_child",
+      "portrait": "portrait_child",
+      "dialogue": "dlg_mf_lily",
+      "bark": "Have you seen a frog? Very handsome. Answers to 'Your Grace'."
+    },
+    {
+      "id": "mf_bo_puddlefoot",
+      "name": "Bo Puddlefoot",
+      "shortName": "Bo",
+      "title": "Fisherman",
+      "sprite": "npc_fen_villager",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_mf_bo",
+      "bark": "Nine fingers, three boats, no nets. Ask me how. Actually, don't."
+    },
+    {
+      "id": "mf_corwin",
+      "name": "Old Osric",
+      "shortName": "Osric",
+      "title": "Once of the Heronguard",
+      "sprite": "npc_villager_b",
+      "portrait": "portrait_guard",
+      "dialogue": "dlg_mf_corwin",
+      "bark": "The fen's quiet. I like it quiet. Quiet doesn't ask you where the other twenty-nine are."
+    },
+    {
+      "id": "mf_granny_sen",
+      "name": "Granny Sen",
+      "title": "A Lantern That Didn't Go Out",
+      "sprite": "npc_spirit",
+      "portrait": "portrait_spirit",
+      "dialogue": "dlg_mf_granny_sen",
+      "bark": "Hm. You've got wet feet and a good face. That'll do."
+    },
+    {
+      "id": "mf_oracle_bloop",
+      "name": "Old Bloop-Who-Listens",
+      "shortName": "Bloop",
+      "title": "Mireling Oracle (Exiled)",
+      "sprite": "cr_mireling_oracle",
+      "portrait": "cr_mossling_shaman",
+      "dialogue": "dlg_mf_bloop",
+      "bark": "Bloop listens. Bloop always listens. Nobody listens to Bloop."
+    },
+    {
+      "id": "mf_reedcutter_ansel",
+      "name": "Ansel Reedcutter",
+      "shortName": "Ansel",
+      "title": "Reedcutter",
+      "sprite": "npc_fen_villager",
+      "portrait": "portrait_villager_b",
+      "dialogue": "dlg_mf_ansel",
+      "bark": "Reeds for thatch, reeds for baskets, reeds for the lanterns' wicks. Reeds for everything, except boats. Learned that one the hard way."
+    },
+    {
+      "id": "mf_netmender_orla",
+      "name": "Orla Netmender",
+      "shortName": "Orla",
+      "title": "Netmender",
+      "sprite": "npc_villager_a",
+      "portrait": "portrait_villager_a",
+      "dialogue": "dlg_mf_orla",
+      "bark": "Over, under, knot. Over, under, knot. Bo, if that crocolisk eats one more of these I'm mending you."
+    },
+    {
+      "id": "mf_plip",
+      "name": "Plip",
+      "title": "Mireling Trader (Very Official)",
+      "sprite": "cr_mireling",
+      "portrait": "cr_mossling",
+      "dialogue": "dlg_mf_plip",
+      "vendor": [
+        {"item": "mf_mireling_pearl_charm", "stock": 1},
+        {"item": "food_lantern_stew"},
+        {"item": "drink_melon_juice"},
+        {"item": "mf_conch_buckler", "stock": 1},
+        {"item": "mf_reedwoven_leggings", "stock": 1}
+      ],
+      "bark": "Plip sells! Plip buys! Plip is Gubbagulp's nephew, so Plip has the best prices. Plip decided this."
+    },
+    {"id": "mf_gubbagulp", "name": "Gubbagulp", "title": "Chief of the Croaking Stones", "sprite": "cr_mireling", "portrait": "cr_mossling_shaman"},
+    {"id": "mf_auntie_gall", "name": "Auntie Gall", "title": "Eldest of the Coven", "sprite": "cr_mire_hag", "portrait": "cr_bandit_hexer"}
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_mf_reeve",
+      "start": "r_first",
+      "nodes": [
+        {
+          "id": "r_first",
+          "speaker": "narrator",
+          "text": "*A tall woman in a reed hat is nailing a ledger to a post with the air of someone who has nailed many ledgers to many posts. She looks you over, boots first.* Dry feet. Clean cloak. You're not from the fen, and you're not lost, which makes you rare.",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_reeve"}
+          ],
+          "fallback": "r_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_reeve"}
+          ],
+          "next": "r_intro"
+        },
+        {
+          "id": "r_intro",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Tamsin Lowe, Reeve of Lowlantern. That means I count the planks, settle the arguments and get blamed for the weather. Mind the third plank. And the seventh. Actually, mind all of them.",
+          "next": "r_hub"
+        },
+        {"id": "r_r1_home", "speaker": "mf_reeve_tamsin", "text": "*She looks out over the Mere for a long moment.* So that's what the children saw last night. Little lights coming up out of the water and bobbing off along the old posts, as if they knew the way. Nobody in Lowlantern is crying this morning. Well. Everybody is. The good kind.", "next": "r_hub"},
+        {"id": "r_r1_grove", "speaker": "mf_reeve_tamsin", "text": "*She is quiet a while, then nods.* Granny Sen would have liked that. A light should go where it's needed. I'll tell the families their lanterns are still burning. That's the truth, isn't it? Just somewhere else.", "next": "r_hub"},
+        {
+          "id": "r_hub",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Well? What can Lowlantern do for you — or, more likely, what can you do for Lowlantern?",
+          "choices": [
+            {
+              "text": "Archivist Penhallow of Brightwater sent me. Something is drowning your lanterns.",
+              "next": "r_mq1",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "reeve"}
+              ]
+            },
+            {
+              "text": "I cut these from the drowned lanterns. They were knotted round their feet.",
+              "next": "r_cords1",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "coven"},
+                {"type": "HasItem", "key": "mf_drowning_cord", "amount": 3}
+              ]
+            },
+            {
+              "text": "Tell me about the drowned lanterns again.",
+              "next": "r_mq_hint_cords",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "cords"}
+              ]
+            },
+            {
+              "text": "Where do I find Auntie Gall?",
+              "next": "r_mq_hint_gall",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "gall"}
+              ]
+            },
+            {
+              "text": "Auntie Gall is gone. The coven's ring is broken.",
+              "next": "r_mq_gall_done",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "sen"}
+              ]
+            },
+            {
+              "text": "The lanterns are floating again.",
+              "next": "r_mq_done",
+              "conditions": [
+                {"type": "Flag", "key": "mf_lanterns_rise"}
+              ],
+              "once": true
+            },
+            {
+              "text": "You look like a woman with a frog problem.",
+              "next": "r_chief_offer",
+              "conditions": [
+                {"type": "Level", "amount": 20},
+                {"type": "QuestNotStarted", "key": "mf_reeve_chief"},
+                {"type": "NotFlag", "key": "mf_chief_resolved"}
+              ]
+            },
+            {
+              "text": "I've already been to the Croaking Stones. Gubbagulp and I have... come to an understanding.",
+              "next": "r_chief_early",
+              "conditions": [
+                {"type": "Level", "amount": 20},
+                {"type": "QuestNotStarted", "key": "mf_reeve_chief"},
+                {"type": "Flag", "key": "mf_chief_resolved"}
+              ]
+            },
+            {
+              "text": "Gubbagulp won't be cutting your lines again.",
+              "next": "r_chief_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_reeve_chief", "value": "return"}
+              ]
+            },
+            {
+              "text": "Is anyone paying for coven hags?",
+              "next": "r_bounty_offer",
+              "conditions": [
+                {"type": "Flag", "key": "mf_coven_known"},
+                {"type": "Level", "amount": 21},
+                {"type": "QuestNotStarted", "key": "mf_coven_bounty"}
+              ]
+            },
+            {
+              "text": "The coven is five hags fewer. About that bounty.",
+              "next": "r_bounty_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_coven_bounty", "value": "return"}
+              ]
+            },
+            {"text": "Tell me about Lowlantern.", "next": "r_lore"},
+            {"text": "Who was Granny Sen?", "next": "r_sen"},
+            {"text": "The drowned lights went home. They followed the sending-posts up out of the deep.", "next": "r_r1_home", "conditions": [{"type": "Flag", "key": "r1_lights_sent_home"}], "once": true},
+            {"text": "The drowned lights stayed below. They chose to light the grove that kept them.", "next": "r_r1_grove", "conditions": [{"type": "Flag", "key": "r1_grove_relit"}], "once": true},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_mq1",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She stops hammering.* Penhallow. That old owl still remembers us? Good. Then you'll want the whole of it. When someone in the fen dies, we float a lantern out on the Sinking Mere, and the tide-singer sings it away to the deep marsh. That's a sending. For a year now, every lantern has sunk before the song is done.",
+          "next": "r_mq2"
+        },
+        {
+          "id": "r_mq2",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Our tide-singer is a girl called Nanami. She thinks it's her fault, because it started with her grandmother's sending — Granny Sen's. It isn't her fault. I'd bet the village on it. But I can't prove it, and I can't walk out to the Mere every night and stare at the water.",
+          "choices": [
+            {"text": "Then I'll go and stare at it for you.", "next": "r_mq3"},
+            {
+              "text": "You said 'sinks'. Not 'goes out'. Lanterns don't sink on their own.",
+              "check": {"skill": "Insight", "dc": 13, "success": "r_mq_ins_s", "failure": "r_mq_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            }
+          ]
+        },
+        {
+          "id": "r_mq_ins_s",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*Her mouth goes thin.* No. They don't. Somebody's pulling them. I've thought it a hundred nights and said it to nobody, because the only somebodies out in that water are frogs, crocolisks and Mother Mire's daughters. And I don't fancy any of those answers.",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "next": "r_mq3"
+        },
+        {
+          "id": "r_mq_ins_f",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She shrugs.* Water's water. Things go into it. That's most of what water's for.",
+          "next": "r_mq3"
+        },
+        {
+          "id": "r_mq3",
+          "speaker": "mf_reeve_tamsin",
+          "text": "The Sinking Mere is west along the Fen Road — follow the lamp-posts, the ones that still work. There's a boardwalk straight across it. Look at the lanterns properly. Whatever you find, bring it back to me.",
+          "choices": [
+            {"text": "I'll go now."}
+          ]
+        },
+        {
+          "id": "r_mq_hint_cords",
+          "speaker": "mf_reeve_tamsin",
+          "text": "West along the Fen Road to the Sinking Mere, and out along the boardwalk. Three of the old sending-lanterns stand right beside the planks. Look at their feet. Look at everything. Then come back.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_cords1",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She takes the cords and turns one over. The frog-bone charms click together. Every bit of colour leaves her face.* Coven knots. Mother Mire's daughters tie these. A drowning cord: tie it to a stone, loop it on the lantern's foot, and anything you float there gets pulled down.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_drowning_cord", "amount": 3}
+          ],
+          "next": "r_cords2"
+        },
+        {
+          "id": "r_cords2",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Somebody has been sinking our dead on purpose. For a year. *She sits down on an upturned crate, quite suddenly.* The coven gathers at the old moon-gate in the north-west, past the Croaking Stones. Their eldest is Auntie Gall. If anybody holds the other end of these cords, it's her.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_coven_known"}
+          ],
+          "choices": [
+            {"text": "Why would a coven want drowned lanterns?", "next": "r_cords_why"},
+            {"text": "Then I'll go and have a word with Auntie Gall.", "next": "r_cords_go"}
+          ]
+        },
+        {
+          "id": "r_cords_why",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Why does a coven want anything? Old stories say the moon-gate opens on the deep places, where the Hollow Heart beats. Lights go down, something down there gets fed. *She spits in the water, very precisely.* That's a story for children. I hope.",
+          "next": "r_cords_go"
+        },
+        {
+          "id": "r_cords_go",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Go at dusk, if you can stand it — that's when the ring is busiest. Take friends. Take more friends than you think. And whatever Auntie Gall offers you, don't drink it.",
+          "choices": [
+            {"text": "I'll be careful."}
+          ]
+        },
+        {
+          "id": "r_mq_hint_gall",
+          "speaker": "mf_reeve_tamsin",
+          "text": "North-west, past the Croaking Stones, along the old road to the moon-gate. Look for green fire and a lot of hats. She'll be the one in the middle who is enjoying herself.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_mq_gall_done",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She closes her eyes for a long moment.* Then the Mere can let go. Go out there tonight. I think — *she laughs, a little shakily* — I think someone on the boardwalk has been waiting for you. Nanami doesn't know. Don't you dare tell her before it's done.",
+          "choices": [
+            {"text": "Who is waiting?", "next": "r_mq_gall_who"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_mq_gall_who",
+          "speaker": "mf_reeve_tamsin",
+          "text": "You'll see. The fen keeps what it loves, a little longer than it should. *She waves you off.* Go on. The Mere, the boardwalk, the middle.",
+          "choices": [
+            {"text": "I'm going."}
+          ]
+        },
+        {
+          "id": "r_mq_done",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She is standing on the porch with her hat off, watching the west, where a hundred little lights are drifting on the Mere like a tide of stars.* I counted them. I always count them. Every one is floating. *She wipes her face with the back of her hand.* Lowlantern won't forget this. I'll see to it.",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 120},
+            {"type": "Approval", "key": "nanami", "amount": 5},
+            {"type": "Approval", "key": "liora", "amount": 5},
+            {"type": "Approval", "key": "seren", "amount": 3}
+          ],
+          "choices": [
+            {"text": "Neither will I."}
+          ]
+        },
+        {
+          "id": "r_chief_offer",
+          "speaker": "mf_reeve_tamsin",
+          "text": "I've a mireling problem, which is a frog problem with ambitions. Somebody's been cutting our fishing lines and stealing the glass out of our lamps. It's Gubbagulp's lot, from the Croaking Stones. Their chief. Big. Shiny crown. Opinions.",
+          "choices": [
+            {
+              "text": "I'll go and talk to him.",
+              "next": "r_chief_accept",
+              "conditions": [
+                {"type": "Level", "amount": 20}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_reeve_chief"}
+              ]
+            },
+            {"text": "And if talking doesn't work?", "next": "r_chief_how"},
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "r_chief_how",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Then do the other thing. I'm not squeamish. But mirelings were our neighbours long before the coven started whispering at them, and I'd rather have neighbours than a hole where they used to be.",
+          "choices": [
+            {
+              "text": "I'll see what I can do.",
+              "next": "r_chief_accept",
+              "conditions": [
+                {"type": "Level", "amount": 20}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_reeve_chief"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "r_chief_accept",
+          "speaker": "mf_reeve_tamsin",
+          "text": "South-west, past the Heron Bridge. Follow the croaking. You can't miss it; nobody ever has.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_chief_early",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*Her eyebrows climb right up under her hat.* Already? Gubbagulp? Well, I'll write that in the ledger. In ink.",
+          "conditions": [
+            {"type": "Level", "amount": 20}
+          ],
+          "fallback": "r_hub",
+          "outcomes": [
+            {"type": "StartQuest", "key": "mf_reeve_chief"}
+          ],
+          "next": "r_chief_ret"
+        },
+        {
+          "id": "r_chief_ret",
+          "speaker": "mf_reeve_tamsin",
+          "text": "So? How did it go?",
+          "conditions": [
+            {"type": "Flag", "key": "mf_chief_peace"}
+          ],
+          "fallback": "r_chief_fought",
+          "next": "r_chief_peace"
+        },
+        {
+          "id": "r_chief_peace",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*You tell her. She listens with her head on one side, and when you hand her Gubbagulp's pearl she holds it up to the light for a long time.* A pearl. From Gubbagulp. Forty years I've lived on this pool and the mirelings have never given us so much as a wet look. If they want to trade, we'll trade. If they want to come to the lantern-night, they can come.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "mf_reeve_chief_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_reeve_chief"},
+            {"type": "Approval", "key": "nanami", "amount": 4},
+            {"type": "Approval", "key": "seren", "amount": 3},
+            {"type": "Approval", "key": "aldric", "amount": 3}
+          ],
+          "next": "r_chief_end"
+        },
+        {
+          "id": "r_chief_fought",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She looks at the pearl from the chief's crown, and then at you, and nods slowly.* So it came to that. Well. The lines will stay whole. I'll put the pearl in the Reeve's box, and tell the children there was a big frog and he lost.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "mf_reeve_chief_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_reeve_chief"}
+          ],
+          "next": "r_chief_end"
+        },
+        {
+          "id": "r_chief_end",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Here. The village's thanks, such as they are — and they are, I promise, considerable.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_bounty_offer",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Paying? I'll pay in coin, in chowder and in the undying gratitude of every fisher on this pool. The coven's daughters are still out there in their hats, tying cords. Five of them fewer would let a lot of people sleep.",
+          "choices": [
+            {
+              "text": "Consider it done.",
+              "next": "r_bounty_accept",
+              "conditions": [
+                {"type": "Level", "amount": 21}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_coven_bounty"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "r_bounty_accept",
+          "speaker": "mf_reeve_tamsin",
+          "text": "They prowl the road to the moon-gate, the reeds by the sunken statue, and anywhere a lantern used to be. Mind the frogs on their hats. The frogs are the clever ones.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_bounty_ret",
+          "speaker": "mf_reeve_tamsin",
+          "text": "*She counts out the coins twice, then a third time out of habit.* Five fewer hats. The fishers will sing your name. Badly, but loudly.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_coven_bounty_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_coven_bounty"}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "r_lore",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Lowlantern's been on this pool since before Brightwater had a bridge. Stilts, because the fen moves. Boardwalks, because the fen bites. And lanterns — every porch has a hook. One for the living, so the boats find home. One for the dead, on the Mere. Lately most of the hooks are empty.",
+          "choices": [
+            {"text": "Why are they empty?", "next": "r_lore2"},
+            {"text": "Who lives out in the fen besides you?", "next": "r_lore3"},
+            {"text": "Let me ask about something else.", "next": "r_hub"}
+          ]
+        },
+        {
+          "id": "r_lore2",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Because nobody wants to light a lantern and watch it sink. Grief's heavy enough without the water pulling at it. Mother Wren at the Chapel of Small Lights in Brightwater still sends us a box of candles every winter. We've stopped opening them.",
+          "next": "r_hub"
+        },
+        {
+          "id": "r_lore3",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Mirelings at the Croaking Stones — frog-folk, mostly harmless, lately less so. Crocolisks in the Shallows. Something unpleasant in the Drowned Barrows. An old knight called Osric who lives out there and talks to nobody. And Mother Mire's coven, who we don't talk about, except all the time.",
+          "next": "r_hub"
+        },
+        {
+          "id": "r_sen",
+          "speaker": "mf_reeve_tamsin",
+          "text": "Our tide-singer, before Nanami. Sharp as a heron and twice as bossy. She taught half this village to swim and the other half to mind its manners. She died last winter. Her lantern was the first to sink. *She looks away across the pool.* Nanami was singing it. She hasn't forgiven herself.",
+          "next": "r_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_obi",
+      "start": "o_first",
+      "nodes": [
+        {
+          "id": "o_first",
+          "speaker": "narrator",
+          "text": "*A round man in a leather apron is squinting at a lantern through three pairs of spectacles worn at once. The workshop behind him clinks with glass. Everything smells of lamp oil and toast.*",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_obi"}
+          ],
+          "fallback": "o_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_obi"}
+          ],
+          "next": "o_intro"
+        },
+        {
+          "id": "o_intro",
+          "speaker": "mf_obi_wick",
+          "text": "Obadiah Wick, lanternwright. Obi, if you're in a hurry, and everybody is. Glass, wick, glow — that's all a lantern is. Mind you, that's all anything is, if you squint.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_hub",
+          "speaker": "mf_obi_wick",
+          "text": "*Obi takes off one pair of spectacles, then the other two.* What can I light for you?",
+          "choices": [
+            {
+              "text": "Lowlantern looks short of lanterns.",
+              "next": "o_glass_offer",
+              "conditions": [
+                {"type": "Level", "amount": 18},
+                {"type": "QuestNotStarted", "key": "mf_obi_glass"}
+              ]
+            },
+            {
+              "text": "Five lumps of fen-glass and four wisp-glows, as ordered.",
+              "next": "o_glass_ret",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_obi_glass"},
+                {"type": "HasItem", "key": "mf_fen_glass", "amount": 5},
+                {"type": "HasItem", "key": "mf_wisp_glow", "amount": 4}
+              ]
+            },
+            {
+              "text": "Where do I find fen-glass and wisp-glow again?",
+              "next": "o_glass_hint",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_obi_glass"}
+              ]
+            },
+            {
+              "text": "What will you make with all that glass?",
+              "next": "o_posts_offer",
+              "conditions": [
+                {"type": "QuestComplete", "key": "mf_obi_glass"},
+                {"type": "Level", "amount": 19},
+                {"type": "QuestNotStarted", "key": "mf_obi_posts"}
+              ]
+            },
+            {
+              "text": "I'm one lamp short. Do you have another?",
+              "next": "o_posts_more",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_obi_posts", "value": "posts"},
+                {"type": "NotHasItem", "key": "mf_new_lantern", "amount": 1}
+              ]
+            },
+            {
+              "text": "The Fen Road is lit, all the way to the Croaking Stones.",
+              "next": "o_posts_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_obi_posts", "value": "return"}
+              ]
+            },
+            {"text": "Why do the lanterns matter so much to you?", "next": "o_lore"},
+            {
+              "text": "Wisp-glow isn't fire, is it? It's something else.",
+              "conditions": [
+                {"type": "Flag", "key": "mf_met_obi"}
+              ],
+              "check": {"skill": "Arcana", "dc": 14, "success": "o_arc_s", "failure": "o_arc_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_glass_offer",
+          "speaker": "mf_obi_wick",
+          "text": "Short? We're starving! Half the village won't light a lamp, and the other half can't — the mirelings have been pinching the glass out of them. They collect it, you see. Like magpies, but wetter. Bring me fen-glass, and a little wisp-glow for the wicks, and I'll make lanterns that stay lit.",
+          "choices": [
+            {"text": "How much do you need?", "next": "o_glass_how"},
+            {
+              "text": "I'll find you some.",
+              "next": "o_glass_accept",
+              "conditions": [
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_obi_glass"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_glass_how",
+          "speaker": "mf_obi_wick",
+          "text": "Five good lumps of glass — the mirelings of the Croaking Stones carry it in their pouches — and four drops of wisp-glow. The fen wisps leave it behind when they... stop. Round the Mere, and in Willow Hollow.",
+          "choices": [
+            {
+              "text": "I'll find you some.",
+              "next": "o_glass_accept",
+              "conditions": [
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_obi_glass"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_glass_accept",
+          "speaker": "mf_obi_wick",
+          "text": "Splendid! Bring it back in one piece. Or several pieces. Glass is glass; I melt it anyway.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_glass_hint",
+          "speaker": "mf_obi_wick",
+          "text": "Glass from the mirelings, down at the Croaking Stones, south-west past the Heron Bridge. Glow from the wisps — round the Sinking Mere, and up in Willow Hollow among the big toadstools. Wisps are pretty. Wisps also bite. Keep that in mind.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_glass_ret",
+          "speaker": "mf_obi_wick",
+          "text": "*He tips the glass onto the bench and holds a wisp-glow up to his spectacles. It wriggles.* Oh, that's lovely. That's very, very lovely. Give me a night and a full kettle and you'll see something.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_fen_glass", "amount": 5},
+            {"type": "TakeItem", "key": "mf_wisp_glow", "amount": 4},
+            {"type": "SetFlag", "key": "mf_obi_glass_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_obi_glass"}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_posts_offer",
+          "speaker": "mf_obi_wick",
+          "text": "*He sets four lamps on the bench: green glass, fat wicks, a drop of glow trembling in each.* Post-lamps! The Fen Road's been dark since the coven's lot started smashing them. Hang these on the four dead posts between here and the Croaking Stones, and the fen folk can walk to the Mere at night again.",
+          "choices": [
+            {
+              "text": "I'll hang them.",
+              "next": "o_posts_accept",
+              "conditions": [
+                {"type": "Level", "amount": 19}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_obi_posts"},
+                {"type": "GiveItem", "key": "mf_new_lantern", "amount": 4}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "o_posts_accept",
+          "speaker": "mf_obi_wick",
+          "text": "The first dead post is by the turning to the Shallows. Then the Mere road, then the Heron Bridge, then the last one by the Croaking Stones. That last one's in coven country. Something always notices when a light comes on.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_posts_more",
+          "speaker": "mf_obi_wick",
+          "text": "*He looks at you over all three pairs of spectacles.* You dropped one in the fen, didn't you. Everybody does. Here.",
+          "outcomes": [
+            {"type": "GiveItem", "key": "mf_new_lantern", "amount": 1}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_posts_ret",
+          "speaker": "mf_obi_wick",
+          "text": "I saw them! From the porch! Four little green stars, all down the road. *He has to take his spectacles off to wipe them.* Old Tobben in Lanternvale used to say a lantern isn't for seeing by. It's for being seen. I never knew what he meant till tonight.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_obi_posts_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_obi_posts"},
+            {"type": "Approval", "key": "seren", "amount": 3},
+            {"type": "Approval", "key": "liora", "amount": 3}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o_lore",
+          "speaker": "mf_obi_wick",
+          "text": "Because out here the dark goes on for miles, and a lantern on a porch says: somebody lives here, somebody's waiting, come home. And on the Mere it says: we haven't forgotten you. That's a lot of work for a bit of glass and a wick. I like to make sure it's good glass.",
+          "next": "o_hub"
+        },
+        {
+          "id": "o_arc_s",
+          "speaker": "mf_obi_wick",
+          "text": "*His eyebrows shoot up.* Exactly! It's the memory of light. A wisp is what's left when a lantern goes out somewhere it shouldn't have. That's why their glow takes so kindly to a new wick. It wants to be a lantern again.",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "next": "o_hub"
+        },
+        {
+          "id": "o_arc_f",
+          "speaker": "mf_obi_wick",
+          "text": "*You say something learned about phosphorescence. Obi nods politely, the way people nod at a cat bringing them a leaf.*",
+          "next": "o_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_hettie",
+      "start": "h_first",
+      "nodes": [
+        {
+          "id": "h_first",
+          "speaker": "mf_hettie_brine",
+          "text": "*A broad woman behind a stall of jars, nets and a bubbling pot waves a ladle at you.* Customer! A real one, with coin and everything. Hettie Brine. Fen goods, potions that mostly work, and the best chowder in Mirefen. It's also the only chowder in Mirefen. Don't tell anyone.",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_hettie"}
+          ],
+          "fallback": "h_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_hettie"}
+          ],
+          "next": "h_hub"
+        },
+        {
+          "id": "h_hub",
+          "speaker": "mf_hettie_brine",
+          "text": "What'll it be, love?",
+          "choices": [
+            {"text": "Let me see your wares.", "outcomes": [{"type": "OpenVendor", "key": "mf_hettie_brine"}]},
+            {
+              "text": "That chowder smells... ambitious.",
+              "next": "h_soup_offer",
+              "conditions": [
+                {"type": "Level", "amount": 21},
+                {"type": "QuestNotStarted", "key": "mf_hettie_soup"}
+              ]
+            },
+            {
+              "text": "Four crocolisk tails and three fen truffles, chef.",
+              "next": "h_soup_ret",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_hettie_soup"},
+                {"type": "HasItem", "key": "mf_croc_tail", "amount": 4},
+                {"type": "HasItem", "key": "mf_fen_truffle", "amount": 3}
+              ]
+            },
+            {"text": "Where were the truffles again?", "next": "h_soup_hint", "conditions": [{"type": "QuestActive", "key": "mf_hettie_soup"}]},
+            {"text": "Who's the old knight out by the barrows?", "next": "h_corwin"},
+            {"text": "What's actually in the chowder?", "next": "h_what"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_soup_offer",
+          "speaker": "mf_hettie_brine",
+          "text": "Ambitious is right. It's lantern-night chowder — or it will be, once there's a lantern-night again. Proper Mire Chowder wants crocolisk tail, four of them, and fen truffles, three. Bring me those and I'll feed the whole pool.",
+          "choices": [
+            {"text": "Crocolisk tail? Really?", "next": "h_soup_croc"},
+            {
+              "text": "I'll fetch them.",
+              "next": "h_soup_accept",
+              "conditions": [
+                {"type": "Level", "amount": 21}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_hettie_soup"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "h_soup_croc",
+          "speaker": "mf_hettie_brine",
+          "text": "Really! It's like chicken, if the chicken had tried to eat you first. That's what gives it the flavour. Spite.",
+          "choices": [
+            {
+              "text": "I'll fetch them.",
+              "next": "h_soup_accept",
+              "conditions": [
+                {"type": "Level", "amount": 21}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_hettie_soup"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "h_soup_accept",
+          "speaker": "mf_hettie_brine",
+          "text": "Crocs in the Gnashing Shallows and anywhere there's a sunny log. Truffles grow under the giant toadstools in Willow Hollow — dig at the roots, gently. If it smells like rain on a cellar door, it's a truffle. If it smells like feet, it's a foot.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_soup_hint",
+          "speaker": "mf_hettie_brine",
+          "text": "Truffles under the big toadstools in Willow Hollow, north-east of the pool. Croc tails from crocs. That bit's simple. The crocs will disagree.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_soup_ret",
+          "speaker": "mf_hettie_brine",
+          "text": "*She sniffs a truffle and closes her eyes in something close to prayer.* Oh, you beauty. *Into the pot it all goes. The steam turns gold.* Here — take a few bowls for the road, and this, and don't argue. Nobody argues with a woman holding a ladle.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_croc_tail", "amount": 4},
+            {"type": "TakeItem", "key": "mf_fen_truffle", "amount": 3},
+            {"type": "SetFlag", "key": "mf_hettie_soup_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_hettie_soup"},
+            {"type": "GiveItem", "key": "food_lantern_stew", "amount": 4},
+            {"type": "Approval", "key": "pip", "amount": 3},
+            {"type": "Approval", "key": "bruna", "amount": 4}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "h_corwin",
+          "speaker": "mf_hettie_brine",
+          "text": "Osric. Came down out of the north twelve years ago with a heron on his coat and a look in his eye like a door that won't shut. Lives out past the Mere with the ghosts. Buys fish-hooks and nothing else. Never says a word about Skyreach, which is how you know it's the only thing he thinks about.",
+          "next": "h_hub"
+        },
+        {
+          "id": "h_what",
+          "speaker": "mf_hettie_brine",
+          "text": "*She leans in.* Love, a good cook never tells. A great cook tells you, and then you never eat it again. I am a very good cook.",
+          "next": "h_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_lily",
+      "start": "l_done_home",
+      "nodes": [
+        {
+          "id": "l_done_home",
+          "speaker": "mf_lily",
+          "text": "*Lily is wearing a lily-pad hat. Under it, something croaks.* The Duke sends his regards. He's in here. He likes it in here. It's warm.",
+          "conditions": [
+            {"type": "QuestComplete", "key": "mf_lily_duke"},
+            {"type": "Flag", "key": "mf_duke_home"}
+          ],
+          "fallback": "l_done_free",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_done_free",
+          "speaker": "mf_lily",
+          "text": "I visit the Duke on Sundays. Lady Bubbles makes him very happy. *She sighs a great sigh.* It is so romantic I could be sick.",
+          "conditions": [
+            {"type": "QuestComplete", "key": "mf_lily_duke"}
+          ],
+          "fallback": "l_return",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_return",
+          "speaker": "mf_lily",
+          "text": "*Lily grabs your sleeve with both hands.* Did you find him? Is he alright? Is he SOUP?",
+          "conditions": [
+            {"type": "QuestState", "key": "mf_lily_duke", "value": "return"}
+          ],
+          "fallback": "l_active",
+          "choices": [
+            {
+              "text": "Not soup. Here he is — His Grace, safe and sound.",
+              "next": "l_ret_home",
+              "conditions": [
+                {"type": "Flag", "key": "mf_duke_home"}
+              ]
+            },
+            {
+              "text": "He's safe. But he's not coming home, Lily. Let me explain.",
+              "next": "l_ret_free",
+              "conditions": [
+                {"type": "Flag", "key": "mf_duke_free"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "l_ret_home",
+          "speaker": "mf_lily",
+          "text": "*You open your hands. The Duke of Puddles regards Lily with enormous dignity, then leaps onto her head.* YOUR GRACE! *She is crying and laughing and he is croaking and it is, frankly, a lot.* Thank you thank you thank you. You can have anything. Not him. Anything else.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_lily_duke_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_lily_duke"},
+            {"type": "Approval", "key": "pip", "amount": 4},
+            {"type": "Approval", "key": "bruna", "amount": 3}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_ret_free",
+          "speaker": "mf_lily",
+          "text": "*You explain about the stewpot, and the rescue, and Lady Bubbles, and how the Duke looked at her. Lily listens very seriously.* ...So he's in love. *A long pause.* A duke has to follow his heart. That's in all the books. *She sniffles, very bravely.* Can I visit?",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_lily_duke_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_lily_duke"},
+            {"type": "Approval", "key": "nanami", "amount": 5},
+            {"type": "Approval", "key": "liora", "amount": 3},
+            {"type": "Approval", "key": "pip", "amount": 2}
+          ],
+          "choices": [
+            {"text": "Every Sunday."}
+          ]
+        },
+        {
+          "id": "l_active",
+          "speaker": "mf_lily",
+          "text": "Any clues? He likes mushroom rings, and willows, and anywhere with flies. He is very handsome. He has a little crown. Well, a spot that looks like a crown.",
+          "conditions": [
+            {"type": "QuestActive", "key": "mf_lily_duke"}
+          ],
+          "fallback": "l_first",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_first",
+          "speaker": "mf_lily",
+          "text": "*A girl in an enormous raincoat is peering under the boardwalk.* Your Grace? Your GRACE? *She notices you.* Oh! Are you a knight? You've got the shoulders of a knight.",
+          "choices": [
+            {"text": "Who are you looking for?", "next": "l_offer", "conditions": [{"type": "Level", "amount": 18}]},
+            {"text": "I'm just a traveller.", "next": "l_trav"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_trav",
+          "speaker": "mf_lily",
+          "text": "That's what knights say when they're being modest. I've read about it.",
+          "choices": [
+            {"text": "Who are you looking for?", "next": "l_offer", "conditions": [{"type": "Level", "amount": 18}]},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "l_offer",
+          "speaker": "mf_lily",
+          "text": "His Grace the Duke of Puddles! My frog. He's been gone two days, which is a hundred years in frog. I'm not allowed past the Fen Road on my own because of the crocolisks and the hags and the ghosts and the everything. Will you look for him?",
+          "choices": [
+            {
+              "text": "I'll find your Duke.",
+              "next": "l_accept",
+              "conditions": [
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_lily_duke"}
+              ]
+            },
+            {"text": "What does he look like?", "next": "l_look"},
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "l_look",
+          "speaker": "mf_lily",
+          "text": "Green. Shiny. Very handsome. He answers to 'Your Grace', but only if he's in the mood.",
+          "choices": [
+            {
+              "text": "I'll find your Duke.",
+              "next": "l_accept",
+              "conditions": [
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_lily_duke"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "l_accept",
+          "speaker": "mf_lily",
+          "text": "THANK you. He loves the fairy ring up in Willow Hollow. Start there. If he's not there, he's somewhere else. That's how frogs work.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_bo",
+      "start": "b_done",
+      "nodes": [
+        {
+          "id": "b_done",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "*Bo is mending a net with Orla's spare needle and humming.* Shallows are quiet. First fish in a month this morning. Ate it standing up. Best fish of my life.",
+          "conditions": [
+            {"type": "QuestComplete", "key": "mf_bo_nets"}
+          ],
+          "fallback": "b_return",
+          "choices": [
+            {"text": "Tell me about Old Gnasher.", "next": "b_gnasher"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_return",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "You're back! And you've still got all your fingers. Count them for me. Go on.",
+          "conditions": [
+            {"type": "QuestState", "key": "mf_bo_nets", "value": "return"}
+          ],
+          "fallback": "b_active",
+          "choices": [
+            {"text": "Old Gnasher's done. The Shallows are yours again.", "next": "b_ret"}
+          ]
+        },
+        {
+          "id": "b_ret",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "*He sits down on his own dock, hard.* Gnasher. Done. Twenty years that log's been watching me. *He laughs, then can't stop laughing.* Here. Take your pick. I'd give you a boat, but you'd only get eaten in it.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_bo_nets_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_bo_nets"},
+            {"type": "Approval", "key": "rook", "amount": 3},
+            {"type": "Approval", "key": "kael", "amount": 2}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_active",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "The crocs are in the Gnashing Shallows, south of the road. The big one, Gnasher, lies on the mud bank at the west end and pretends to be a log. He's not a log. I checked. That's how I lost the finger.",
+          "conditions": [
+            {"type": "QuestActive", "key": "mf_bo_nets"}
+          ],
+          "fallback": "b_first",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_first",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "*A wiry man in a reed hat is staring at a net that has been reduced to an idea of a net.* Nine fingers, three boats, no nets. Ask me how. Actually, don't.",
+          "choices": [
+            {"text": "How?", "next": "b_offer", "conditions": [{"type": "Level", "amount": 18}]},
+            {"text": "Rough day?", "next": "b_offer", "conditions": [{"type": "Level", "amount": 18}]},
+            {"text": "You should learn to read croc sign.", "next": "b_hunter", "conditions": [{"type": "Class", "key": "Hunter"}], "tag": "HUNTER"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_hunter",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "*He squints at you.* You've the look of somebody who has. Go on, then. *You show him the slide-marks in the mud, the bubble-trails, the way the reeds lean.* ...Huh. They've been coming up the channel at dawn. All this time I've been fishing at dawn.",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 60},
+            {"type": "Approval", "key": "rook", "amount": 3}
+          ],
+          "next": "b_offer"
+        },
+        {
+          "id": "b_offer",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "Crocolisks. The Shallows are thick with them, and the biggest — Old Gnasher — has every net I own wrapped round his teeth like a scarf. Thin them out and see off Gnasher, and you can have the pick of my spare gear. I've a lot of spare gear. I've had a lot of bad days.",
+          "choices": [
+            {
+              "text": "I'll deal with your crocolisks.",
+              "next": "b_accept",
+              "conditions": [
+                {"type": "Level", "amount": 18}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_bo_nets"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "b_accept",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "Five of the small ones, then Gnasher. Mind the logs. Especially the logs that blink.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "b_gnasher",
+          "speaker": "mf_bo_puddlefoot",
+          "text": "Oldest croc in the fen. My grandad tried to catch him with a rope and a goose. He kept the rope. The goose kept Grandad's hat. Gnasher kept the goose.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_corwin",
+      "start": "c_first",
+      "nodes": [
+        {
+          "id": "c_first",
+          "speaker": "narrator",
+          "text": "*An old man in a faded river-blue surcoat sits by a small fire, mending a boot. There is a heron on his breast, worked in white thread gone grey. He doesn't look up.* You're not from the fen. Nobody from the fen walks that straight.",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_corwin"}
+          ],
+          "fallback": "c_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_corwin"}
+          ],
+          "next": "c_hub"
+        },
+        {
+          "id": "c_hub",
+          "speaker": "mf_corwin",
+          "text": "*Osric pokes the fire.* Well. Say what you came to say. The fire doesn't mind company. I'm still deciding.",
+          "choices": [
+            {"text": "That's a Heronguard heron on your coat.", "next": "c_heron"},
+            {
+              "text": "What keeps you out here, with the ghosts?",
+              "next": "c_offer",
+              "conditions": [
+                {"type": "Level", "amount": 19},
+                {"type": "QuestNotStarted", "key": "mf_corwin_rest"}
+              ]
+            },
+            {
+              "text": "Where do I find the bog ghouls?",
+              "next": "c_hint_ghouls",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_corwin_rest", "value": "ghouls"}
+              ]
+            },
+            {
+              "text": "Tell me about the Low Bell.",
+              "next": "c_hint_bell",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_corwin_rest", "value": "bell"}
+              ]
+            },
+            {
+              "text": "The barrows are quiet. The Bellringer sleeps.",
+              "next": "c_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_corwin_rest", "value": "return"}
+              ]
+            },
+            {"text": "Ysolde of the Heronguard says hello.", "next": "c_ysolde", "conditions": [{"type": "InParty", "key": "ysolde"}], "once": true},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "c_heron",
+          "speaker": "mf_corwin",
+          "text": "*He looks down at it as if he'd forgotten.* It was. The Heronguard: forty knights under Lord-Commander Aubric, sworn to bring folk home from wherever they'd wandered. Twelve years ago we rode to Skyreach. Eleven of us came back. *He goes back to the boot.* I came back the furthest. All the way to the bottom of a swamp.",
+          "choices": [
+            {"text": "What happened at Skyreach?", "next": "c_sky"},
+            {"text": "I'm sorry.", "next": "c_sorry"},
+            {"text": "Let me ask about something else.", "next": "c_hub"}
+          ]
+        },
+        {
+          "id": "c_sky",
+          "speaker": "mf_corwin",
+          "text": "Fire. Fire that walked about in armour and called itself sworn. And under the mountain, something that breathed it out in its sleep. We never saw it. We only felt the stone get warm under our boots. *Long pause.* Aubric went forward to see. He didn't come back to tell us.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_heard_skyreach"}
+          ],
+          "choices": [
+            {"text": "Something under the mountain. A dragon?", "next": "c_sky2"},
+            {"text": "Let me ask about something else.", "next": "c_hub"}
+          ]
+        },
+        {
+          "id": "c_sky2",
+          "speaker": "mf_corwin",
+          "text": "Don't say that word round here. The fen's superstitious. *But he nods, once.* If you ever go north, you'll find twenty-nine heron banners under the snow. Straighten one for me.",
+          "choices": [
+            {"text": "I will.", "next": "c_hub"}
+          ]
+        },
+        {"id": "c_sorry", "speaker": "mf_corwin", "text": "*A grunt.* Don't be. Be careful. It's more use.", "next": "c_hub"},
+        {
+          "id": "c_ysolde",
+          "speaker": "mf_corwin",
+          "text": "*He stands up so fast the boot goes in the fire.* Ysolde? Little Ysolde, with the horn? And Sir Wadsworth, still alive and still rude? *He fishes the boot out, swearing gently.* She blew the retreat on the mountain when Aubric wouldn't. Eleven of us heard it and turned our birds round. I'm one of the eleven. *He looks at her, and at you.* I never thanked you, girl. Look at you now.",
+          "outcomes": [
+            {"type": "Approval", "key": "ysolde", "amount": 8},
+            {"type": "GiveXP", "amount": 40}
+          ],
+          "next": "c_hub"
+        },
+        {
+          "id": "c_offer",
+          "speaker": "mf_corwin",
+          "text": "Somebody has to keep the barrows. The fen folk bury their dead out there, on the mounds, and lately the fen's been giving them back. Bog ghouls — just mud and grief and somebody's old coat. They didn't ask to get up. Somebody has to put them down kindly.",
+          "choices": [
+            {
+              "text": "I'll help you lay them down.",
+              "next": "c_accept",
+              "conditions": [
+                {"type": "Level", "amount": 19}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_corwin_rest"}
+              ]
+            },
+            {"text": "Why are they rising?", "next": "c_why"},
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "c_why",
+          "speaker": "mf_corwin",
+          "text": "Same reason the lanterns sink, I'd wager. Something's pulling at the fen from underneath. The dead feel it first. They always do.",
+          "choices": [
+            {
+              "text": "I'll help you lay them down.",
+              "next": "c_accept",
+              "conditions": [
+                {"type": "Level", "amount": 19}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_corwin_rest"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "c_accept",
+          "speaker": "mf_corwin",
+          "text": "Six of them, to start. They wander the mounds and the north shore of the Mere. Then ring the Low Bell — the old bronze in the broken arch. It used to call the dead home. Whatever's left out there will come when it hears it. Be ready.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "c_hint_ghouls",
+          "speaker": "mf_corwin",
+          "text": "On the mounds, north of the Mere, and on the Mere's own shore. Follow the smell. You won't need to follow it far.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "c_hint_bell",
+          "speaker": "mf_corwin",
+          "text": "The broken arch at the heart of the barrows. Ring it three times. The sexton used to ring it for every burial. He's still out there, I think. Still doing his rounds. When you ring it, he'll come.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "c_ret",
+          "speaker": "mf_corwin",
+          "text": "*He listens with his eyes shut. The fen is very quiet.* ...Aye. I can hear it. Nothing walking. *He opens a battered chest and takes out a pair of river-blue greaves.* Carried these out of Skyreach and never had the heart to wear them. They'd rather walk than sit in a box. Take what you need.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_corwin_rest_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_corwin_rest"},
+            {"type": "Approval", "key": "ysolde", "amount": 5},
+            {"type": "Approval", "key": "aldric", "amount": 4},
+            {"type": "Approval", "key": "kael", "amount": 3}
+          ],
+          "next": "c_ret2"
+        },
+        {
+          "id": "c_ret2",
+          "speaker": "mf_corwin",
+          "text": "One more thing. When the Bellringer went down, he said something. Not to me — to the bell. 'The Heart is hungry.' *He stares into the fire.* I've heard that before. On the mountain. I don't like hearing it twice.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_heard_heart_hungry"}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_granny_sen",
+      "start": "g_sending",
+      "nodes": [
+        {
+          "id": "g_first",
+          "speaker": "narrator",
+          "text": "*On the middle of the boardwalk sits a small, round, pale spirit with its feet in the water. It is wearing — unmistakably — a pair of tiny spectacles. It looks up at you over them.*",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_sen"}
+          ],
+          "fallback": "g_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_sen"}
+          ],
+          "next": "g_intro"
+        },
+        {
+          "id": "g_intro",
+          "speaker": "mf_granny_sen",
+          "text": "Don't stare, dearie, it's rude. I'm a lantern that didn't go out. It happens, now and then, when a song isn't finished. You've got wet feet and a good face. That'll do. Sit, if you like. The water's cold, but it's honest.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_hub",
+          "speaker": "mf_granny_sen",
+          "text": "*Granny Sen swings her feet in the water.* Well? Ask, then. I've had a year of nobody to talk to but frogs, and frogs only ever want to talk about flies.",
+          "choices": [
+            {"text": "Who are you?", "next": "g_who"},
+            {"text": "Why are you still here?", "next": "g_why"},
+            {"text": "Nanami blames herself for the lanterns.", "next": "g_nanami_blame", "conditions": [{"type": "Flag", "key": "mf_met_reeve"}]},
+            {"text": "What's pulling the lanterns down?", "next": "g_pull"},
+            {"text": "Goodbye, Granny Sen."}
+          ]
+        },
+        {
+          "id": "g_who",
+          "speaker": "mf_granny_sen",
+          "text": "Sen. Granny Sen, to the whole fen, whether they were mine or not. Tide-singer of Lowlantern for sixty years. I sang every lantern on this Mere out to the deep marsh, and I never lost one. Not one. *She sniffs.* Until mine.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_why",
+          "speaker": "mf_granny_sen",
+          "text": "Because my granddaughter — not by blood, by singing, which is better — never finished my song. She got to the last verse and she couldn't. Loved me too much to let go. So here I sit, half-sent. *She lowers her voice.* Don't tell her. She'd only cry, and the fen's wet enough.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_nanami_blame",
+          "speaker": "mf_granny_sen",
+          "text": "Course she does. She's a good girl, so she thinks everything's her fault, including the weather. *The spectacles flash.* It's not her song that drowned my light, dearie. It was a hook. I felt it tug, right as she faltered. Find who tied it.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_pull",
+          "speaker": "mf_granny_sen",
+          "text": "Cords. Knotted round the old lantern-stones, down in the mud. Coven work — I'd know Mother Mire's daughters' knots anywhere; I've been untying them for sixty years. Something below the fen wants the lights. The coven sends them down. That's all I know, and more than I'd like.",
+          "next": "g_hub"
+        },
+        {
+          "id": "g_sending",
+          "speaker": "mf_granny_sen",
+          "text": "*Granny Sen is standing on the very end of the planks, looking out over the water.* I felt the hooks go. All of them, one after another, like knots coming out of a shawl. *She turns.* So. There's a song I never got to the end of. Somebody had better finish it, before I get used to being a ghost.",
+          "conditions": [
+            {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "sen"}
+          ],
+          "fallback": "g_first",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_sen"}
+          ],
+          "choices": [
+            {"text": "Nanami. It's time. Sing her the last verse.", "next": "g_by_nanami", "conditions": [{"type": "InParty", "key": "nanami"}]},
+            {"text": "I'll sing it. Teach me the words.", "next": "g_by_player"},
+            {
+              "text": "(Kneel and pray her across.)",
+              "conditions": [
+                {"type": "Class", "key": "Priest"}
+              ],
+              "check": {"skill": "Religion", "dc": 13, "success": "g_pray_s", "failure": "g_by_player"},
+              "once": true,
+              "tag": "PRIEST"
+            },
+            {
+              "text": "(Call the tide to carry her.)",
+              "conditions": [
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "check": {"skill": "Nature", "dc": 13, "success": "g_tide_s", "failure": "g_by_player"},
+              "once": true,
+              "tag": "SHAMAN"
+            },
+            {"text": "Not yet. I'll come back."}
+          ]
+        },
+        {
+          "id": "g_by_nanami",
+          "speaker": "narrator",
+          "text": "*Nanami walks out past you onto the water — not the boardwalk, the water — and stops in front of the little spirit. Neither of them says anything for a while.* 'Hello, Granny.' 'Hello, little light. You're late.' *Nanami laughs, and it turns into a sob, and the sob turns into the last verse.*",
+          "outcomes": [
+            {"type": "Approval", "key": "nanami", "amount": 15},
+            {"type": "GiveXP", "amount": 150}
+          ],
+          "next": "g_sung"
+        },
+        {
+          "id": "g_by_player",
+          "speaker": "narrator",
+          "text": "*Granny Sen teaches you the last verse. It is short and old and the tune goes somewhere you don't expect. You sing it badly. She laughs so hard her spectacles fall off — and then, as you reach the end, she isn't laughing. She is listening.* 'It never was about the voice, dearie. Only the finishing.'",
+          "next": "g_sung"
+        },
+        {
+          "id": "g_pray_s",
+          "speaker": "narrator",
+          "text": "*You kneel on the wet planks and say the oldest prayer you know: the one for travellers. Granny Sen bows her head beside you. When you look up, the water around her is full of light, as if every star had come down to walk her home.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 100}
+          ],
+          "next": "g_sung"
+        },
+        {
+          "id": "g_tide_s",
+          "speaker": "narrator",
+          "text": "*You put your hand in the Mere and ask it, politely, to carry one more light. The water thinks about it — then the whole Mere turns, slow and gentle, like a sleeper rolling over, and the tide comes in under Granny Sen's feet.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 100},
+            {"type": "Approval", "key": "nanami", "amount": 5}
+          ],
+          "next": "g_sung"
+        },
+        {
+          "id": "g_sung",
+          "speaker": "narrator",
+          "text": "*The little spirit rises off the planks, pale and then golden, and drifts out over the Mere. As she passes, the old lantern-stones in the water light one by one — every dark lantern on the Mere, then the floating lights the village never stopped sending, rising up out of the black water all at once.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_lanterns_rise"},
+            {"type": "SetFlag", "key": "mf_sen_sent"}
+          ],
+          "next": "g_last"
+        },
+        {
+          "id": "g_last",
+          "speaker": "mf_granny_sen",
+          "text": "*Her voice comes from very far off, and very close.* Mind me now. The lights that already went down are still down there, in the deep under the moon-gate — in the Hollow Heart. Mother Mire tends it, and it is hungry. Don't you go after it alone. Take every friend you've got. Then take a few more.",
+          "choices": [
+            {"text": "Farewell, Granny Sen.", "next": "g_end"}
+          ]
+        },
+        {
+          "id": "g_end",
+          "speaker": "narrator",
+          "text": "*The golden light reaches the far side of the Mere, and goes on, out over the reeds, toward the deep marsh where the lost lights gather. Somewhere behind you, in Lowlantern, someone starts to cheer.*",
+          "choices": [
+            {"text": "(Let her go.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_bloop",
+      "start": "p_first",
+      "nodes": [
+        {
+          "id": "p_first",
+          "speaker": "narrator",
+          "text": "*A very old mireling sits on a log in the reeds with a great conch pressed to the side of its head. Its pearl-topped staff leans beside it. It holds up one webbed finger.* Shh. Bloop is listening.",
+          "conditions": [
+            {"type": "NotFlag", "key": "mf_met_bloop"}
+          ],
+          "fallback": "p_hub",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_met_bloop"}
+          ],
+          "next": "p_intro"
+        },
+        {
+          "id": "p_intro",
+          "speaker": "mf_oracle_bloop",
+          "text": "...The fen says you are wet, confused, and carrying too many pockets. *It lowers the conch.* The fen is usually right. Bloop is Old Bloop-Who-Listens. Oracle of the Croaking Stones. Formerly.",
+          "next": "p_hub"
+        },
+        {
+          "id": "p_hub",
+          "speaker": "mf_oracle_bloop",
+          "text": "*Bloop's golden eyes blink, one, then the other.* Ask. Bloop listens to everything. Even dry-foots.",
+          "choices": [
+            {"text": "Why do you live out here alone?", "next": "p_exile"},
+            {
+              "text": "What do the coven totems do?",
+              "next": "p_totems_offer",
+              "conditions": [
+                {"type": "Level", "amount": 20},
+                {"type": "QuestNotStarted", "key": "mf_oracle_totems"}
+              ]
+            },
+            {
+              "text": "Where are the totems again?",
+              "next": "p_totems_hint",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_oracle_totems", "value": "totems"}
+              ]
+            },
+            {
+              "text": "The four totems are broken. They're silent.",
+              "next": "p_totems_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_oracle_totems", "value": "return"}
+              ]
+            },
+            {
+              "text": "Where does the undertow go?",
+              "next": "p_undertow_offer",
+              "conditions": [
+                {"type": "QuestComplete", "key": "mf_oracle_totems"},
+                {"type": "Level", "amount": 23},
+                {"type": "QuestNotStarted", "key": "dg5_undertow"}
+              ]
+            },
+            {
+              "text": "The Tidewitch is gone. Here is her pearl.",
+              "next": "p_undertow_ret",
+              "conditions": [
+                {"type": "QuestState", "key": "dg5_undertow", "value": "return"},
+                {"type": "HasItem", "key": "mf_tidewitch_pearl", "amount": 1}
+              ]
+            },
+            {
+              "text": "The Tidewitch is gone. The pearl went down with the water.",
+              "next": "p_undertow_ret_nopearl",
+              "conditions": [
+                {"type": "QuestState", "key": "dg5_undertow", "value": "return"},
+                {"type": "NotHasItem", "key": "mf_tidewitch_pearl", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Hold the conch to your ear and listen with Bloop.)",
+              "conditions": [
+                {"type": "NotFlag", "key": "found_drowned_vault"}
+              ],
+              "check": {"skill": "Nature", "dc": 12, "success": "p_listen_s", "failure": "p_listen_f"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_exile",
+          "speaker": "mf_oracle_bloop",
+          "text": "Bloop said the coven's totems were bad. Bloop said: the totems whisper 'bring us the lights', and lights are not food, lights are people's grandmothers. Gubbagulp said Bloop was bad for saying it. So now Bloop lives with the log. *It pats the log.* The log is a very good listener.",
+          "next": "p_hub"
+        },
+        {
+          "id": "p_totems_offer",
+          "speaker": "mf_oracle_bloop",
+          "text": "They whisper. Day and night. 'Bring us the lights, little frogs. Feed the Deep Mother, and the crocolisks will leave your tadpoles alone.' So the young ones steal lantern-glass and cut lantern-lines and feel very brave. *The pearl dims.* Break the totems, dry-foot. Four of them. Then the tribe can hear Bloop again.",
+          "choices": [
+            {
+              "text": "I'll break them.",
+              "next": "p_totems_accept",
+              "conditions": [
+                {"type": "Level", "amount": 20}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "mf_oracle_totems"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "p_totems_accept",
+          "speaker": "mf_oracle_bloop",
+          "text": "One watches the road into the Croaking Stones, where Gubbagulp sits. One by the Croaker Pool, west. One at the reeds, north of the scouts' camp. One on the old road to the moon-gate. They have skulls with green eyes. You will know them. They will know you.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_totems_hint",
+          "speaker": "mf_oracle_bloop",
+          "text": "Croaking Stones. Croaker Pool. The reeds past the scouts. The gate road. Skulls, antlers, green eyes. *It shudders.* Very rude totems.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_totems_ret",
+          "speaker": "mf_oracle_bloop",
+          "text": "*Bloop presses the conch to its ear for a long time. Then its throat-sac puffs out, enormously, and it lets out one long, happy croak.* Quiet. The fen is quiet. Bloop can hear things again. Bloop can hear... *the eyes go very wide* ...the undertow.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_oracle_totems_handed_in"},
+            {"type": "CompleteQuest", "key": "mf_oracle_totems"},
+            {"type": "SetFlag", "key": "mf_totems_done"}
+          ],
+          "next": "p_vault_hint"
+        },
+        {
+          "id": "p_vault_hint",
+          "speaker": "mf_oracle_bloop",
+          "text": "Under the stone lady — the sunken statue, with her hand in the air — water goes down. Not into the mud. Down stairs. There is an old temple under the fen, and the lights the coven drowns are going down it, down, down, to something that beats. Bloop can hear it beating.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "found_drowned_vault"},
+            {"type": "SetFlag", "key": "mf_vault_hint"}
+          ],
+          "choices": [
+            {"text": "A stair under the statue. I'll find it.", "next": "p_vault_hint2"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_vault_hint2",
+          "speaker": "mf_oracle_bloop",
+          "text": "Be careful, dry-foot. Things live in the old temple that were people once, and one that never was. Bloop does not like her song.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_undertow_offer",
+          "speaker": "mf_oracle_bloop",
+          "text": "Down. Under the stone lady, into the old temple, to a black well where the water drains away. A witch lives there. Mother Mire's sister, from the sea-road. She drinks the drowned lights and hums, and the undertow carries what's left to the Hollow Heart. *The pearl flickers.* Stop her, and the undertow stops.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "found_drowned_vault"}
+          ],
+          "choices": [
+            {
+              "text": "I'll go down and stop her.",
+              "next": "p_undertow_accept",
+              "conditions": [
+                {"type": "Level", "amount": 23}
+              ],
+              "outcomes": [
+                {"type": "StartQuest", "key": "dg5_undertow"}
+              ]
+            },
+            {"text": "Not right now."}
+          ]
+        },
+        {
+          "id": "p_undertow_accept",
+          "speaker": "mf_oracle_bloop",
+          "text": "Bring Bloop her pearl, after. Bloop wants to listen to it. Bloop wants to know what a hundred years of stolen light sounds like. *A pause.* And then Bloop wants to give it back.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_undertow_ret",
+          "speaker": "mf_oracle_bloop",
+          "text": "*Bloop holds the pearl to its conch and listens. Very slowly, its eyes fill up.* Lanterns. Hundreds. Singing. *It sets the pearl in the water, and lets go. The pearl sinks, glowing — and then, far out on the fen, a hundred small lights come up out of the reeds and drift away toward the deep marsh.* Thank you, friend.",
+          "outcomes": [
+            {"type": "TakeItem", "key": "mf_tidewitch_pearl", "amount": 1},
+            {"type": "SetFlag", "key": "dg5_undertow_handed_in"},
+            {"type": "CompleteQuest", "key": "dg5_undertow"},
+            {"type": "Approval", "key": "nanami", "amount": 6},
+            {"type": "Approval", "key": "liora", "amount": 4},
+            {"type": "Approval", "key": "seren", "amount": 4}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_undertow_ret_nopearl",
+          "speaker": "mf_oracle_bloop",
+          "text": "*Bloop listens to the conch for a long while.* No more undertow. The water is only water again. *It nods, slowly.* That is enough. That is more than enough.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "dg5_undertow_handed_in"},
+            {"type": "CompleteQuest", "key": "dg5_undertow"}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "p_listen_s",
+          "speaker": "narrator",
+          "text": "*You hold the conch to your ear. The sea, as you'd expect — and then, under it, something else: water running down stone steps, a long way off, under the place where the sunken statue raises her hand.* Bloop nods slowly. 'You hear it too. A stair. Under the stone lady.'",
+          "outcomes": [
+            {"type": "SetFlag", "key": "found_drowned_vault"},
+            {"type": "GiveXP", "amount": 80}
+          ],
+          "next": "p_hub"
+        },
+        {
+          "id": "p_listen_f",
+          "speaker": "narrator",
+          "text": "*You hold the conch to your ear. The sea. Definitely the sea. Possibly also your own pulse.* Bloop watches you with great patience. 'Bloop has been listening for sixty years. Bloop is still learning.'",
+          "next": "p_hub"
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_ansel",
+      "start": "a1",
+      "nodes": [
+        {
+          "id": "a1",
+          "speaker": "mf_reedcutter_ansel",
+          "text": "*A lanky man with a sickle and an armful of reeds nods to you.* Reeds for thatch, reeds for baskets, reeds for the lanterns' wicks. Reeds for everything, except boats. Learned that one the hard way.",
+          "choices": [
+            {"text": "What's the fen like, past the village?", "next": "a2"},
+            {
+              "text": "Seen anything strange out in the reeds?",
+              "check": {"skill": "Survival", "dc": 12, "success": "a_sur_s", "failure": "a_sur_f"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "a2",
+          "speaker": "mf_reedcutter_ansel",
+          "text": "Road runs west to the Mere, then on over the Heron Bridge into mireling country. Don't leave the road at night. Don't leave the road in the day, either, if you can help it. And if a pretty little light asks you to follow it into the water — it's lying.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "a_sur_s",
+          "speaker": "mf_reedcutter_ansel",
+          "text": "*You point out a line of cut reed-stems, too neat for crocolisk teeth.* ...Aye. Somebody's been cutting their own paths through my reed-beds, toward the old statue up north. Small feet. Hat-shaped shadows. I don't go up there any more.",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 50}
+          ],
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "a_sur_f",
+          "speaker": "mf_reedcutter_ansel",
+          "text": "Strange? It's a fen. Everything's strange. That heron's been looking at me funny all week.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_orla",
+      "start": "o1",
+      "nodes": [
+        {
+          "id": "o1",
+          "speaker": "mf_netmender_orla",
+          "text": "*A woman with a mouthful of twine and a lap full of net glares past you, toward Bo's pond.* Over, under, knot. Over, under, knot. Bo, if that crocolisk eats one more of these, I am mending YOU.",
+          "choices": [
+            {"text": "How long has Bo been losing nets?", "next": "o2"},
+            {"text": "Is it true about the lanterns sinking?", "next": "o3"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o2",
+          "speaker": "mf_netmender_orla",
+          "text": "Since the spring. Old Gnasher took a liking to them. I think he likes the floats. They're very pretty floats. I painted them.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "o3",
+          "speaker": "mf_netmender_orla",
+          "text": "*She stops mending.* Every one. My dad's went down in the autumn, right in front of me, before the song was halfway. Nanami cried harder than I did. *She goes back to the net, a bit too fast.* Over, under, knot.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_plip",
+      "start": "pl1",
+      "nodes": [
+        {
+          "id": "pl1",
+          "speaker": "mf_plip",
+          "text": "*A small, extremely confident mireling stands on an upturned crate, beside a tray of shells, pearls and smoked eels.* Plip sells! Plip buys! Plip is Gubbagulp's nephew, so Plip has the best prices. Plip decided this.",
+          "choices": [
+            {"text": "Let me see your wares.", "outcomes": [{"type": "OpenVendor", "key": "mf_plip"}]},
+            {"text": "How do you like Lowlantern?", "next": "pl2"},
+            {"text": "Goodbye."}
+          ]
+        },
+        {
+          "id": "pl2",
+          "speaker": "mf_plip",
+          "text": "Very dry. Very tall houses. Everybody waves. *Plip waves back at someone across the pool, enormously.* Lily the small dry-foot says Plip can come to lantern-night. Plip is going to bring an eel.",
+          "choices": [
+            {"text": "Goodbye."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_notices",
+      "start": "n1",
+      "nodes": [
+        {
+          "id": "n1",
+          "speaker": "narrator",
+          "text": "*The notice board is a slab of driftwood nailed to two posts. Notes are pinned to it with fish-hooks.*\nLOST: one frog. Very handsome. Answers to 'Your Grace'. — Lily.\nWANTED: crocolisk tail, fen truffles. Good chowder paid. — H. Brine.\nNO LANTERN-NIGHT THIS MONTH EITHER. — the Reeve.\nAnd, in the corner, in very small letters: I am sorry. — N.",
+          "choices": [
+            {"text": "(Read the small note again.)", "next": "n2"},
+            {"text": "(Leave the board.)"}
+          ]
+        },
+        {
+          "id": "n2",
+          "speaker": "narrator",
+          "text": "*'I am sorry. — N.' The paper is soft from being handled. Someone has pinned a pressed water-lily beside it, and someone else has written underneath, in a sharp old hand that looks freshly inked though nobody could have: 'Hush, child. Not your fault.'*",
+          "choices": [
+            {"text": "(Leave the board.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_low_bell",
+      "start": "b1",
+      "nodes": [
+        {
+          "id": "b1",
+          "speaker": "narrator",
+          "text": "*The Low Bell hangs in the broken arch: green bronze, cracked at the lip, with a rope of rotten reed. Names are scratched all round its waist — hundreds of them, in a hundred different hands.*",
+          "choices": [
+            {
+              "text": "(Ring the Low Bell three times.)",
+              "next": "ring",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_corwin_rest", "value": "bell"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_bell_rung"}
+              ]
+            },
+            {"text": "(Read the names.)", "next": "names"},
+            {
+              "text": "(Recall what the bell was for.)",
+              "check": {"skill": "History", "dc": 13, "success": "hist_s", "failure": "hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {"text": "(Leave the bell alone.)"}
+          ]
+        },
+        {
+          "id": "names",
+          "speaker": "narrator",
+          "text": "*Fishers, reedcutters, a lamplighter, a 'Tam, aged 6, who could whistle', a 'Sen's Hal, who loved her'. The newest names are not scratched, only written in charcoal, and the rain is taking them.*",
+          "next": "b1"
+        },
+        {
+          "id": "hist_s",
+          "speaker": "narrator",
+          "text": "*The sextons of the Low Bell rang it at every burial on the mounds, so the dead would know where home was if they ever got lost. Three strokes to call them, one to send them back to sleep. Nobody has rung the fourth stroke in years.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 50}
+          ],
+          "next": "b1"
+        },
+        {"id": "hist_f", "speaker": "narrator", "text": "*It is a bell. It is old. It is, you are fairly confident, for ringing.*", "next": "b1"},
+        {
+          "id": "ring",
+          "speaker": "narrator",
+          "text": "*BONG. The sound goes out across the fen and doesn't come back. BONG. Every frog stops. BONG. Out on the mounds, the mud begins to move — and from the arch's shadow a tall, stooped shape in a sexton's rags steps out, with a bell-rope still round its wrist.*",
+          "choices": [
+            {"text": "(Stand your ground.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_sunken_statue",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*A great stone face, serene and moss-bearded, sinking into the mire up to its chin. One stone hand is still raised clear of the water, holding a lantern that hasn't been lit in a hundred years.*",
+          "choices": [
+            {
+              "text": "(Search around the statue's raised hand.)",
+              "conditions": [
+                {"type": "NotFlag", "key": "found_drowned_vault"}
+              ],
+              "check": {"skill": "Investigation", "dc": 13, "success": "s_inv_s", "failure": "s_inv_f"},
+              "once": true,
+              "tag": "INVESTIGATION"
+            },
+            {
+              "text": "(Recall what this statue was.)",
+              "check": {"skill": "History", "dc": 14, "success": "s_hist_s", "failure": "s_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {"text": "(Leave her to her sinking.)"}
+          ]
+        },
+        {
+          "id": "s_inv_s",
+          "speaker": "narrator",
+          "text": "*The moss under the raised hand is wrong — too smooth, laid like a carpet. You pull it back. Underneath, cut into the stone of the mire itself, a stair goes down, slick and green, into the dark. Somewhere far below, water is running.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "found_drowned_vault"},
+            {"type": "GiveXP", "amount": 80}
+          ],
+          "choices": [
+            {"text": "(Step back.)"}
+          ]
+        },
+        {
+          "id": "s_inv_f",
+          "speaker": "narrator",
+          "text": "*Moss, mud, a startled newt. If the statue is keeping a secret, she is keeping it well.*",
+          "next": "s1"
+        },
+        {
+          "id": "s_hist_s",
+          "speaker": "narrator",
+          "text": "*The Lady of the Low Lantern. The fen folk built a temple to her before the water rose — a whole temple, with a choir and a bell and a well that was said to reach the sea. When the fen drowned it, they left her hand above the water so the dead could find their way.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 50}
+          ],
+          "next": "s1"
+        },
+        {"id": "s_hist_f", "speaker": "narrator", "text": "*An old statue of an old somebody. She has a kind face. That's something.*", "next": "s1"}
+      ]
+    },
+    {
+      "id": "dlg_mf_duke_ring",
+      "start": "d1",
+      "nodes": [
+        {
+          "id": "d1",
+          "speaker": "narrator",
+          "text": "*A fairy ring of fat speckled toadstools. In the middle, a flat stone, still warm from something small sitting on it — and a very small, very wet footprint.*",
+          "choices": [
+            {
+              "text": "(Look for a trail.)",
+              "next": "d_found",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_lily_duke", "value": "ring"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_duke_seen_ring"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {
+              "text": "(Track the footprints properly.)",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_lily_duke", "value": "ring"}
+              ],
+              "check": {"skill": "Survival", "dc": 12, "success": "d_found_s", "failure": "d_found"},
+              "once": true,
+              "tag": "SURVIVAL"
+            },
+            {"text": "(Leave the ring.)"}
+          ]
+        },
+        {
+          "id": "d_found",
+          "speaker": "narrator",
+          "text": "*Tiny wet prints, very evenly spaced, as if made by somebody walking with great dignity. They head south-west, toward the willows of the Sinking Mere.*",
+          "choices": [
+            {"text": "(Follow them.)"}
+          ]
+        },
+        {
+          "id": "d_found_s",
+          "speaker": "narrator",
+          "text": "*The prints are fresh. Their owner stopped here to eat four flies and a beetle, sat in the exact middle of the ring for a while (dukes like to be seen), then set off south-west toward the willow on the Mere's west shore.*",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_duke_seen_ring"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Follow them.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_duke_willow",
+      "start": "w1",
+      "nodes": [
+        {
+          "id": "w1",
+          "speaker": "narrator",
+          "text": "*Under the willow's hanging fronds, a ring of crushed clover and a scatter of beetle-wings. Somebody has dined here. Somebody with excellent manners.*",
+          "choices": [
+            {
+              "text": "(Look for the trail again.)",
+              "next": "w_found",
+              "conditions": [
+                {"type": "QuestState", "key": "mf_lily_duke", "value": "willow"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_duke_seen_willow"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {"text": "(Leave it.)"}
+          ]
+        },
+        {
+          "id": "w_found",
+          "speaker": "narrator",
+          "text": "*The tiny footprints go on — and then, beside them, much larger, flatter, webbed ones. Mireling prints. They head south-west, toward the camps below the Croaking Stones. There is a smell of woodsmoke and, ominously, onions.*",
+          "choices": [
+            {"text": "(Hurry.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_duke_pot",
+      "start": "s1",
+      "nodes": [
+        {
+          "id": "s1",
+          "speaker": "narrator",
+          "text": "*A mireling stewpot bubbles on a reed fire. Sitting on its rim, quite unbothered, is a handsome green frog with a spot on his head like a crown — and beside him, gazing at him adoringly, a plump golden frog wearing a tiny shell necklace.*",
+          "conditions": [
+            {"type": "QuestState", "key": "mf_lily_duke", "value": "pot"}
+          ],
+          "fallback": "s_empty",
+          "choices": [
+            {
+              "text": "(Scoop up His Grace and take him home to Lily.)",
+              "next": "s_home",
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_duke_home"},
+                {"type": "SetFlag", "key": "mf_duke_found"}
+              ]
+            },
+            {"text": "(Watch the two frogs for a moment.)", "next": "s_watch"},
+            {
+              "text": "(Read the frogs' mood.)",
+              "check": {"skill": "Insight", "dc": 11, "success": "s_ins_s", "failure": "s_ins_f"},
+              "once": true,
+              "tag": "INSIGHT"
+            }
+          ]
+        },
+        {
+          "id": "s_empty",
+          "speaker": "narrator",
+          "text": "*A mireling stewpot, bubbling quietly. It smells of onions and, faintly, of victory.*",
+          "choices": [
+            {"text": "(Leave the pot.)"}
+          ]
+        },
+        {
+          "id": "s_watch",
+          "speaker": "narrator",
+          "text": "*The golden frog croaks, softly. The Duke croaks back. She hops one hop closer. He does not hop away. It is, in its way, the most romantic thing you have ever seen beside a stewpot.*",
+          "choices": [
+            {
+              "text": "(Take him home to Lily anyway.)",
+              "next": "s_home",
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_duke_home"},
+                {"type": "SetFlag", "key": "mf_duke_found"}
+              ]
+            },
+            {
+              "text": "(Lift them both out of the camp and let them go together, free, by the pool.)",
+              "next": "s_free",
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_duke_free"},
+                {"type": "SetFlag", "key": "mf_duke_found"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "s_ins_s",
+          "speaker": "narrator",
+          "text": "*The Duke is not in danger. The Duke is in love. The golden frog — the mirelings call her Lady Bubbles — was the one who led him here, and nobody has put anyone in the pot. The mirelings were simply warming their feet.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 40}
+          ],
+          "next": "s_watch"
+        },
+        {"id": "s_ins_f", "speaker": "narrator", "text": "*Two frogs. On a pot. You are reasonably certain of that much.*", "next": "s_watch"},
+        {
+          "id": "s_home",
+          "speaker": "narrator",
+          "text": "*His Grace permits himself to be lifted. As you go, he looks back once, over your thumb, at the golden frog on the rim of the pot. She croaks. He doesn't answer.*",
+          "choices": [
+            {"text": "(Head back to Lowlantern.)"}
+          ]
+        },
+        {
+          "id": "s_free",
+          "speaker": "narrator",
+          "text": "*You carry them both to the edge of the Croaker Pool and set them on a lily pad. They sit side by side, very close, and do not look at you at all. That seems right.*",
+          "outcomes": [
+            {"type": "Approval", "key": "nanami", "amount": 4},
+            {"type": "Approval", "key": "liora", "amount": 3}
+          ],
+          "choices": [
+            {"text": "(Go and tell Lily.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_chief",
+      "start": "ch1",
+      "nodes": [
+        {
+          "id": "ch1",
+          "speaker": "narrator",
+          "text": "*Twenty mirelings go quiet at once. In the ring of croaking stones, on a throne of driftwood, sits the biggest frog-person you have ever seen, wearing a crown of river-pearls and a belt of very old, very gold lantern rings.*",
+          "next": "ch2"
+        },
+        {
+          "id": "ch2",
+          "speaker": "mf_gubbagulp",
+          "text": "DRY-FOOT! Gubbagulp knows why you come. Lantern-folk send you. They say 'Gubbagulp steal our lines, our glass, our lights!' *He puffs up enormously.* Gubbagulp SAYS: the Coven Mothers tell us lights are FOOD for the Deep Mother. Feed the Deep Mother, and the crocolisks leave our tadpoles alone. Is fair trade!",
+          "choices": [
+            {
+              "text": "The coven's totems are broken. Bloop was right — they lied to you.",
+              "next": "ch_totems",
+              "conditions": [
+                {"type": "Flag", "key": "mf_totems_done"}
+              ]
+            },
+            {
+              "text": "The lights don't feed anyone. They're dragged down to something that will eat your tadpoles too, in the end.",
+              "check": {"skill": "Persuasion", "dc": 15, "success": "ch_peace", "failure": "ch_angry"},
+              "once": true,
+              "tag": "PERSUASION"
+            },
+            {
+              "text": "Crocolisks hunt open water. Move your spawning pools in under the willows and they'll never find them.",
+              "check": {"skill": "Nature", "dc": 13, "success": "ch_nature", "failure": "ch_angry"},
+              "once": true,
+              "tag": "NATURE"
+            },
+            {
+              "text": "Leave the lantern-folk alone, or I'll leave you without a throne.",
+              "check": {"skill": "Intimidation", "dc": 16, "success": "ch_scared", "failure": "ch_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {
+              "text": "Listen. The water itself is crying. You can hear it as well as I can.",
+              "next": "ch_shaman",
+              "conditions": [
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "tag": "SHAMAN"
+            },
+            {"text": "Nanami — you speak frog. Tell him.", "next": "ch_nanami", "conditions": [{"type": "InParty", "key": "nanami"}]},
+            {"text": "(Attack.)", "next": "ch_fight"}
+          ]
+        },
+        {
+          "id": "ch_angry",
+          "speaker": "mf_gubbagulp",
+          "text": "*Gubbagulp's throat-sac swells to the size of a pumpkin.* LIES! Dry-foot lies! The Coven Mothers PROMISED. *Every spear in the ring comes up.* One more word, and Gubbagulp sits on you.",
+          "choices": [
+            {
+              "text": "The coven's totems are broken. Bloop was right — they lied to you.",
+              "next": "ch_totems",
+              "conditions": [
+                {"type": "Flag", "key": "mf_totems_done"}
+              ]
+            },
+            {
+              "text": "Leave the lantern-folk alone, or I'll leave you without a throne.",
+              "check": {"skill": "Intimidation", "dc": 16, "success": "ch_scared", "failure": "ch_fight"},
+              "once": true,
+              "tag": "INTIMIDATION"
+            },
+            {"text": "Nanami — you speak frog. Tell him.", "next": "ch_nanami", "conditions": [{"type": "InParty", "key": "nanami"}]},
+            {"text": "(Attack.)", "next": "ch_fight"}
+          ]
+        },
+        {
+          "id": "ch_totems",
+          "speaker": "mf_gubbagulp",
+          "text": "*He goes very still.* ...Broken? The whispering ones? *Around the ring, mirelings look at each other. One of them, very small, says: 'It IS quieter.'* *Gubbagulp sags on his throne.* Bloop said. Bloop said and Gubbagulp sent Bloop to live with a log.",
+          "next": "ch_peace"
+        },
+        {
+          "id": "ch_nature",
+          "speaker": "mf_gubbagulp",
+          "text": "*Gubbagulp opens his mouth to shout, then closes it. Then opens it again.* ...Under the willows. In the shade. *A long, thoughtful croak.* Crocolisks DO hate the willows. They get the fronds up their noses.",
+          "next": "ch_peace"
+        },
+        {
+          "id": "ch_shaman",
+          "speaker": "narrator",
+          "text": "*You crouch and lay your palm on the water. The tribe goes silent, listening — and then they hear it too: the fen, very faintly, weeping for every light that went down.* Gubbagulp takes off his crown.",
+          "next": "ch_peace"
+        },
+        {
+          "id": "ch_nanami",
+          "speaker": "narrator",
+          "text": "*Nanami steps forward and croaks. It is a long, complicated, surprisingly rude croak. Gubbagulp croaks back, outraged. Nanami croaks again, softer. The whole ring falls silent. Gubbagulp's eyes are very wet.*",
+          "outcomes": [
+            {"type": "Approval", "key": "nanami", "amount": 6}
+          ],
+          "next": "ch_peace"
+        },
+        {
+          "id": "ch_peace",
+          "speaker": "mf_gubbagulp",
+          "text": "*Gubbagulp climbs down off his throne.* The Coven Mothers lied to the tribe. The lights were people's grandmothers. *He pulls the biggest pearl off his crown and holds it out.* Give this to the lantern-folk Reeve. Tell her: no more lines cut. No more glass taken. Gubbagulp is... *he struggles with the word* ...sorry.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_chief_peace"},
+            {"type": "SetFlag", "key": "mf_chief_resolved"},
+            {"type": "GiveItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "GiveXP", "amount": 250},
+            {"type": "Approval", "key": "seren", "amount": 3},
+            {"type": "Approval", "key": "aldric", "amount": 3},
+            {"type": "Approval", "key": "liora", "amount": 3}
+          ],
+          "choices": [
+            {"text": "I'll tell her.", "next": "ch_peace2"}
+          ]
+        },
+        {
+          "id": "ch_peace2",
+          "speaker": "mf_gubbagulp",
+          "text": "And tell her Gubbagulp's nephew Plip wants to sell eels at the lantern-night. Plip is VERY good at eels. *The ring croaks in agreement, deafeningly.*",
+          "choices": [
+            {"text": "(Leave the Croaking Stones in peace.)"}
+          ]
+        },
+        {
+          "id": "ch_scared",
+          "speaker": "mf_gubbagulp",
+          "text": "*Gubbagulp looks at you. Looks at your weapon. Looks at his own very small spear.* ...Gubbagulp thinks the lantern-folk can keep their lines. *He tugs a pearl off his crown and tosses it at your feet, sulkily.* For the Reeve. Go away now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_chief_peace"},
+            {"type": "SetFlag", "key": "mf_chief_resolved"},
+            {"type": "GiveItem", "key": "mf_gubbagulps_pearl", "amount": 1},
+            {"type": "GiveXP", "amount": 250},
+            {"type": "Approval", "key": "kael", "amount": 2},
+            {"type": "Approval", "key": "morwen", "amount": 2}
+          ],
+          "choices": [
+            {"text": "(Leave the Croaking Stones.)"}
+          ]
+        },
+        {
+          "id": "ch_fight",
+          "speaker": "mf_gubbagulp",
+          "text": "GUBBAGULP SPEAKS! *He leaps off the throne.* Gubbagulp also HITS!",
+          "outcomes": [
+            {"type": "StartCombat", "key": "enc_mf_croaking_stones"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_gall",
+      "start": "g1",
+      "nodes": [
+        {
+          "id": "g1",
+          "speaker": "narrator",
+          "text": "*Green fire in a ring of totems, and a cauldron-lantern swinging from a crooked staff. Coven hags in reed cloaks stand round it, humming. In the middle, stirring, is a very old woman with a very long nose and a frog asleep on her hat-brim. She looks up and beams.*",
+          "next": "g2"
+        },
+        {
+          "id": "g2",
+          "speaker": "mf_auntie_gall",
+          "text": "Ah! The lantern-folk's little helpers. Come in, come in, dearies, out of the damp. Auntie's put the kettle on. *She taps the cauldron. It smells of bog-myrtle and old pennies.* You've been cutting my cords. Naughty.",
+          "choices": [
+            {"text": "Why drown the lanterns? They're people's dead.", "next": "g_why"},
+            {
+              "text": "Who are you sending the lights to?",
+              "check": {"skill": "Insight", "dc": 14, "success": "g_who_s", "failure": "g_who"},
+              "once": true,
+              "tag": "INSIGHT"
+            },
+            {"text": "It ends now, Auntie.", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g_why",
+          "speaker": "mf_auntie_gall",
+          "text": "*She laughs, warmly, as if you'd said something sweet.* Dead don't need lights, dearie. Dead need nothing at all — that's rather the point of them. But something down below needs them very much, and Mother does love to feed things.",
+          "next": "g_who"
+        },
+        {
+          "id": "g_who",
+          "speaker": "mf_auntie_gall",
+          "text": "Down through the gate, under the fen, there's a heart that beats where no heart should. Mother tends it. Mother loves it. Every little light we send down makes it beat a bit stronger, and one day it'll beat so strong the whole fen will hear it. Won't that be nice?",
+          "choices": [
+            {"text": "Not if I can help it.", "next": "g_fight"}
+          ]
+        },
+        {
+          "id": "g_who_s",
+          "speaker": "narrator",
+          "text": "*She is not lying, and she is not mad. She is perfectly cheerful, the way a cat is cheerful about a bird. And behind the cheer, under it, you catch something else: she is afraid of whoever she calls Mother.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "next": "g_who"
+        },
+        {
+          "id": "g_fight",
+          "speaker": "mf_auntie_gall",
+          "text": "*She sighs and sets down her spoon.* Always the same with the helpful ones. Very well. Sit DOWN, dearies. *The cauldron-lantern flares green.* Auntie insists.",
+          "outcomes": [
+            {"type": "StartCombat", "key": "enc_mf_auntie_gall"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_drowned_lantern_1",
+      "start": "l",
+      "nodes": [
+        {
+          "id": "l",
+          "speaker": "narrator",
+          "text": "*A stone sending-lantern stands sunk to its shoulders in the black water beside the boardwalk. Its fire-box is full of weed. Something pale is wound round its foot, just below the surface.*",
+          "choices": [
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "reeve"},
+                {"type": "NotFlag", "key": "mf_cord_1"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_1"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "cords"},
+                {"type": "NotFlag", "key": "mf_cord_1"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_1"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Feel along the lantern's foot under the water.)",
+              "conditions": [
+                {"type": "NotFlag", "key": "mf_cord_1"},
+                {"type": "NotHasItem", "key": "mf_drowning_cord", "amount": 3}
+              ],
+              "check": {"skill": "Perception", "dc": 11, "success": "feel_s", "failure": "feel_f"},
+              "once": true,
+              "tag": "PERCEPTION"
+            },
+            {"text": "(Leave it be.)"}
+          ]
+        },
+        {
+          "id": "feel_s",
+          "speaker": "narrator",
+          "text": "*Under the water your fingers find rope — reed-rope, wet and knotted, wound tight round the lantern's foot and tied off to a river stone. Little frog-bone charms are threaded on it. When you tug, the whole Mere seems to tug back.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 40}
+          ],
+          "next": "l"
+        },
+        {"id": "feel_f", "speaker": "narrator", "text": "*Cold water, soft mud, and something slimy that is probably a weed. Probably.*", "next": "l"},
+        {
+          "id": "cut",
+          "speaker": "narrator",
+          "text": "*You saw through the knotted reed-rope. It comes away with a little shudder, like a held breath let go, and the dark lantern seems to stand a fraction straighter. Frog-bone charms click on the cord in your hand.*",
+          "choices": [
+            {"text": "(Step back onto the boardwalk.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_drowned_lantern_2",
+      "start": "l",
+      "nodes": [
+        {
+          "id": "l",
+          "speaker": "narrator",
+          "text": "*An old lantern-stone, leaning a little, as if something has been pulling at it from below. Its paper window is long gone. Lilies have grown right up to it and then, oddly, stopped.*",
+          "choices": [
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "reeve"},
+                {"type": "NotFlag", "key": "mf_cord_2"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_2"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "cords"},
+                {"type": "NotFlag", "key": "mf_cord_2"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_2"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Feel along the lantern's foot under the water.)",
+              "conditions": [
+                {"type": "NotFlag", "key": "mf_cord_2"},
+                {"type": "NotHasItem", "key": "mf_drowning_cord", "amount": 3}
+              ],
+              "check": {"skill": "Perception", "dc": 11, "success": "feel_s", "failure": "feel_f"},
+              "once": true,
+              "tag": "PERCEPTION"
+            },
+            {"text": "(Leave it be.)"}
+          ]
+        },
+        {
+          "id": "feel_s",
+          "speaker": "narrator",
+          "text": "*Under the water your fingers find rope — reed-rope, wet and knotted, wound tight round the lantern's foot and tied off to a river stone. Little frog-bone charms are threaded on it. When you tug, the whole Mere seems to tug back.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 40}
+          ],
+          "next": "l"
+        },
+        {"id": "feel_f", "speaker": "narrator", "text": "*Cold water, soft mud, and something slimy that is probably a weed. Probably.*", "next": "l"},
+        {
+          "id": "cut",
+          "speaker": "narrator",
+          "text": "*You saw through the knotted reed-rope. It comes away with a little shudder, like a held breath let go, and the dark lantern seems to stand a fraction straighter. Frog-bone charms click on the cord in your hand.*",
+          "choices": [
+            {"text": "(Step back onto the boardwalk.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_drowned_lantern_3",
+      "start": "l",
+      "nodes": [
+        {
+          "id": "l",
+          "speaker": "narrator",
+          "text": "*A drowned lantern at the end of the cross-walk. Someone has tied a faded ribbon to its roof. Below the water, a skein of something knotted is wrapped round its foot, hung with tiny charms that tick against the stone.*",
+          "choices": [
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "reeve"},
+                {"type": "NotFlag", "key": "mf_cord_3"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_3"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Cut the cord loose and take it.)",
+              "next": "cut",
+              "conditions": [
+                {"type": "QuestState", "key": "mq2_drowned_lanterns", "value": "cords"},
+                {"type": "NotFlag", "key": "mf_cord_3"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_cord_3"},
+                {"type": "GiveItem", "key": "mf_drowning_cord", "amount": 1}
+              ]
+            },
+            {
+              "text": "(Feel along the lantern's foot under the water.)",
+              "conditions": [
+                {"type": "NotFlag", "key": "mf_cord_3"},
+                {"type": "NotHasItem", "key": "mf_drowning_cord", "amount": 3}
+              ],
+              "check": {"skill": "Perception", "dc": 11, "success": "feel_s", "failure": "feel_f"},
+              "once": true,
+              "tag": "PERCEPTION"
+            },
+            {"text": "(Leave it be.)"}
+          ]
+        },
+        {
+          "id": "feel_s",
+          "speaker": "narrator",
+          "text": "*Under the water your fingers find rope — reed-rope, wet and knotted, wound tight round the lantern's foot and tied off to a river stone. Little frog-bone charms are threaded on it. When you tug, the whole Mere seems to tug back.*",
+          "outcomes": [
+            {"type": "GiveXP", "amount": 40}
+          ],
+          "next": "l"
+        },
+        {"id": "feel_f", "speaker": "narrator", "text": "*Cold water, soft mud, and something slimy that is probably a weed. Probably.*", "next": "l"},
+        {
+          "id": "cut",
+          "speaker": "narrator",
+          "text": "*You saw through the knotted reed-rope. It comes away with a little shudder, like a held breath let go, and the dark lantern seems to stand a fraction straighter. Frog-bone charms click on the cord in your hand.*",
+          "choices": [
+            {"text": "(Step back onto the boardwalk.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_totem_1",
+      "start": "t0",
+      "nodes": [
+        {
+          "id": "t0",
+          "speaker": "narrator",
+          "text": "*A coven totem: a driftwood post under an antlered skull, green fire burning in the eye-holes. Up close you can hear it — a whisper, wet and patient: bring us the lights, little ones, bring us the lights.*",
+          "choices": [
+            {
+              "text": "(Smash the skull from the post.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Athletics", "dc": 12, "success": "t_smash", "failure": "t_smash_f"},
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Unpick the binding charms.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Arcana", "dc": 13, "success": "t_unbind", "failure": "t_unbind_f"},
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shatter it with the Light.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Paladin"}
+              ],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Drain the whisper into the earth.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Cut the cords holding the charms.)",
+              "next": "t_unbind",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Rogue"}
+              ],
+              "tag": "ROGUE"
+            },
+            {"text": "(Back away from it.)"}
+          ]
+        },
+        {
+          "id": "t_smash_f",
+          "speaker": "narrator",
+          "text": "*You heave at it. The totem groans and leans and does not come down, and the whisper laughs at you. Try again — or try something cleverer.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_unbind_f",
+          "speaker": "narrator",
+          "text": "*The charms are knotted in a pattern that keeps changing as you look at it. Your fingers slip. The green eyes flare.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_smash",
+          "speaker": "narrator",
+          "text": "*You put your shoulder to the post and heave. The skull comes off with a crack like a frozen pond, and the green fire goes out with a hiss.*",
+          "next": "t_smash_which"
+        },
+        {
+          "id": "t_unbind",
+          "speaker": "narrator",
+          "text": "*One by one you unpick the frog-bone charms. The whisper gets thinner and thinner, and with the last knot it simply stops, mid-word.*",
+          "next": "t_unbind_which"
+        },
+        {
+          "id": "t_light",
+          "speaker": "narrator",
+          "text": "*You lay a hand on the post. Something old and patient pushes back — and then gives, all at once, the green fire guttering out like a candle in the rain.*",
+          "next": "t_light_which"
+        },
+        {
+          "id": "t_smash_which",
+          "speaker": "narrator",
+          "text": "The totem that watches the road into the Croaking Stones. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_1_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_unbind_which",
+          "speaker": "narrator",
+          "text": "The totem that watches the road into the Croaking Stones. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_1_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_light_which",
+          "speaker": "narrator",
+          "text": "The totem that watches the road into the Croaking Stones. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_1_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_totem_2",
+      "start": "t0",
+      "nodes": [
+        {
+          "id": "t0",
+          "speaker": "narrator",
+          "text": "*A coven totem: a driftwood post under an antlered skull, green fire burning in the eye-holes. Up close you can hear it — a whisper, wet and patient: bring us the lights, little ones, bring us the lights.*",
+          "choices": [
+            {
+              "text": "(Smash the skull from the post.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Athletics", "dc": 12, "success": "t_smash", "failure": "t_smash_f"},
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Unpick the binding charms.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Arcana", "dc": 13, "success": "t_unbind", "failure": "t_unbind_f"},
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shatter it with the Light.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Paladin"}
+              ],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Drain the whisper into the earth.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Cut the cords holding the charms.)",
+              "next": "t_unbind",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Rogue"}
+              ],
+              "tag": "ROGUE"
+            },
+            {"text": "(Back away from it.)"}
+          ]
+        },
+        {
+          "id": "t_smash_f",
+          "speaker": "narrator",
+          "text": "*You heave at it. The totem groans and leans and does not come down, and the whisper laughs at you. Try again — or try something cleverer.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_unbind_f",
+          "speaker": "narrator",
+          "text": "*The charms are knotted in a pattern that keeps changing as you look at it. Your fingers slip. The green eyes flare.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_smash",
+          "speaker": "narrator",
+          "text": "*You put your shoulder to the post and heave. The skull comes off with a crack like a frozen pond, and the green fire goes out with a hiss.*",
+          "next": "t_smash_which"
+        },
+        {
+          "id": "t_unbind",
+          "speaker": "narrator",
+          "text": "*One by one you unpick the frog-bone charms. The whisper gets thinner and thinner, and with the last knot it simply stops, mid-word.*",
+          "next": "t_unbind_which"
+        },
+        {
+          "id": "t_light",
+          "speaker": "narrator",
+          "text": "*You lay a hand on the post. Something old and patient pushes back — and then gives, all at once, the green fire guttering out like a candle in the rain.*",
+          "next": "t_light_which"
+        },
+        {
+          "id": "t_smash_which",
+          "speaker": "narrator",
+          "text": "The totem by the Croaker Pool, hung with tiny frog-bone charms. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_2_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_unbind_which",
+          "speaker": "narrator",
+          "text": "The totem by the Croaker Pool, hung with tiny frog-bone charms. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_2_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_light_which",
+          "speaker": "narrator",
+          "text": "The totem by the Croaker Pool, hung with tiny frog-bone charms. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_2_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_totem_3",
+      "start": "t0",
+      "nodes": [
+        {
+          "id": "t0",
+          "speaker": "narrator",
+          "text": "*A coven totem: a driftwood post under an antlered skull, green fire burning in the eye-holes. Up close you can hear it — a whisper, wet and patient: bring us the lights, little ones, bring us the lights.*",
+          "choices": [
+            {
+              "text": "(Smash the skull from the post.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Athletics", "dc": 12, "success": "t_smash", "failure": "t_smash_f"},
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Unpick the binding charms.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Arcana", "dc": 13, "success": "t_unbind", "failure": "t_unbind_f"},
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shatter it with the Light.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Paladin"}
+              ],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Drain the whisper into the earth.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Cut the cords holding the charms.)",
+              "next": "t_unbind",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Rogue"}
+              ],
+              "tag": "ROGUE"
+            },
+            {"text": "(Back away from it.)"}
+          ]
+        },
+        {
+          "id": "t_smash_f",
+          "speaker": "narrator",
+          "text": "*You heave at it. The totem groans and leans and does not come down, and the whisper laughs at you. Try again — or try something cleverer.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_unbind_f",
+          "speaker": "narrator",
+          "text": "*The charms are knotted in a pattern that keeps changing as you look at it. Your fingers slip. The green eyes flare.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_smash",
+          "speaker": "narrator",
+          "text": "*You put your shoulder to the post and heave. The skull comes off with a crack like a frozen pond, and the green fire goes out with a hiss.*",
+          "next": "t_smash_which"
+        },
+        {
+          "id": "t_unbind",
+          "speaker": "narrator",
+          "text": "*One by one you unpick the frog-bone charms. The whisper gets thinner and thinner, and with the last knot it simply stops, mid-word.*",
+          "next": "t_unbind_which"
+        },
+        {
+          "id": "t_light",
+          "speaker": "narrator",
+          "text": "*You lay a hand on the post. Something old and patient pushes back — and then gives, all at once, the green fire guttering out like a candle in the rain.*",
+          "next": "t_light_which"
+        },
+        {
+          "id": "t_smash_which",
+          "speaker": "narrator",
+          "text": "The totem at the reeds, with a dead eel at its foot, offered very respectfully. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_3_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_unbind_which",
+          "speaker": "narrator",
+          "text": "The totem at the reeds, with a dead eel at its foot, offered very respectfully. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_3_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_light_which",
+          "speaker": "narrator",
+          "text": "The totem at the reeds, with a dead eel at its foot, offered very respectfully. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_3_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_totem_4",
+      "start": "t0",
+      "nodes": [
+        {
+          "id": "t0",
+          "speaker": "narrator",
+          "text": "*A coven totem: a driftwood post under an antlered skull, green fire burning in the eye-holes. Up close you can hear it — a whisper, wet and patient: bring us the lights, little ones, bring us the lights.*",
+          "choices": [
+            {
+              "text": "(Smash the skull from the post.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Athletics", "dc": 12, "success": "t_smash", "failure": "t_smash_f"},
+              "tag": "ATHLETICS"
+            },
+            {
+              "text": "(Unpick the binding charms.)",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"}
+              ],
+              "check": {"skill": "Arcana", "dc": 13, "success": "t_unbind", "failure": "t_unbind_f"},
+              "tag": "ARCANA"
+            },
+            {
+              "text": "(Shatter it with the Light.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Paladin"}
+              ],
+              "tag": "PALADIN"
+            },
+            {
+              "text": "(Drain the whisper into the earth.)",
+              "next": "t_light",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Shaman"}
+              ],
+              "tag": "SHAMAN"
+            },
+            {
+              "text": "(Cut the cords holding the charms.)",
+              "next": "t_unbind",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_oracle_totems"},
+                {"type": "Class", "key": "Rogue"}
+              ],
+              "tag": "ROGUE"
+            },
+            {"text": "(Back away from it.)"}
+          ]
+        },
+        {
+          "id": "t_smash_f",
+          "speaker": "narrator",
+          "text": "*You heave at it. The totem groans and leans and does not come down, and the whisper laughs at you. Try again — or try something cleverer.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_unbind_f",
+          "speaker": "narrator",
+          "text": "*The charms are knotted in a pattern that keeps changing as you look at it. Your fingers slip. The green eyes flare.*",
+          "next": "t0"
+        },
+        {
+          "id": "t_smash",
+          "speaker": "narrator",
+          "text": "*You put your shoulder to the post and heave. The skull comes off with a crack like a frozen pond, and the green fire goes out with a hiss.*",
+          "next": "t_smash_which"
+        },
+        {
+          "id": "t_unbind",
+          "speaker": "narrator",
+          "text": "*One by one you unpick the frog-bone charms. The whisper gets thinner and thinner, and with the last knot it simply stops, mid-word.*",
+          "next": "t_unbind_which"
+        },
+        {
+          "id": "t_light",
+          "speaker": "narrator",
+          "text": "*You lay a hand on the post. Something old and patient pushes back — and then gives, all at once, the green fire guttering out like a candle in the rain.*",
+          "next": "t_light_which"
+        },
+        {
+          "id": "t_smash_which",
+          "speaker": "narrator",
+          "text": "The totem on the gate road. The reeds lean away from it. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_4_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_unbind_which",
+          "speaker": "narrator",
+          "text": "The totem on the gate road. The reeds lean away from it. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_4_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        },
+        {
+          "id": "t_light_which",
+          "speaker": "narrator",
+          "text": "The totem on the gate road. The reeds lean away from it. Silent now.",
+          "outcomes": [
+            {"type": "SetFlag", "key": "mf_totem_4_broken"},
+            {"type": "GiveXP", "amount": 60}
+          ],
+          "choices": [
+            {"text": "(Leave the broken totem.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_post_1",
+      "start": "p1",
+      "nodes": [
+        {
+          "id": "p1",
+          "speaker": "narrator",
+          "text": "*A crooked lamp-post by the turning to the Shallows, its hook empty and its old jar smashed. Somebody has scratched a little frog-bone sign into the wood.*",
+          "choices": [
+            {
+              "text": "(Hang one of Obi's lamps on the hook.)",
+              "next": "lit",
+              "conditions": [
+                {"type": "HasItem", "key": "mf_new_lantern", "amount": 1}
+              ],
+              "outcomes": [
+                {"type": "TakeItem", "key": "mf_new_lantern", "amount": 1},
+                {"type": "SetFlag", "key": "mf_post_1_lit"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {"text": "(Leave the dark post.)"}
+          ]
+        },
+        {
+          "id": "lit",
+          "speaker": "narrator",
+          "text": "*The lamp settles on the hook with a click. For a moment nothing — then the wisp-glow wakes in the wick, and a small green light comes up over the road, steady as a heartbeat.*",
+          "choices": [
+            {"text": "(Step back and admire it.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_post_2",
+      "start": "p1",
+      "nodes": [
+        {
+          "id": "p1",
+          "speaker": "narrator",
+          "text": "*A crooked lamp-post where the Mere road leaves the Fen Road, its hook empty and its old jar smashed. Somebody has scratched a little frog-bone sign into the wood.*",
+          "choices": [
+            {
+              "text": "(Hang one of Obi's lamps on the hook.)",
+              "next": "lit",
+              "conditions": [
+                {"type": "HasItem", "key": "mf_new_lantern", "amount": 1}
+              ],
+              "outcomes": [
+                {"type": "TakeItem", "key": "mf_new_lantern", "amount": 1},
+                {"type": "SetFlag", "key": "mf_post_2_lit"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {"text": "(Leave the dark post.)"}
+          ]
+        },
+        {
+          "id": "lit",
+          "speaker": "narrator",
+          "text": "*The lamp settles on the hook with a click. For a moment nothing — then the wisp-glow wakes in the wick, and a small green light comes up over the road, steady as a heartbeat.*",
+          "choices": [
+            {"text": "(Step back and admire it.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_post_3",
+      "start": "p1",
+      "nodes": [
+        {
+          "id": "p1",
+          "speaker": "narrator",
+          "text": "*A crooked lamp-post at the west end of the Heron Bridge, its hook empty and its old jar smashed. Somebody has scratched a little frog-bone sign into the wood.*",
+          "choices": [
+            {
+              "text": "(Hang one of Obi's lamps on the hook.)",
+              "next": "lit",
+              "conditions": [
+                {"type": "HasItem", "key": "mf_new_lantern", "amount": 1}
+              ],
+              "outcomes": [
+                {"type": "TakeItem", "key": "mf_new_lantern", "amount": 1},
+                {"type": "SetFlag", "key": "mf_post_3_lit"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {"text": "(Leave the dark post.)"}
+          ]
+        },
+        {
+          "id": "lit",
+          "speaker": "narrator",
+          "text": "*The lamp settles on the hook with a click. For a moment nothing — then the wisp-glow wakes in the wick, and a small green light comes up over the road, steady as a heartbeat.*",
+          "choices": [
+            {"text": "(Step back and admire it.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_post_4",
+      "start": "p1",
+      "nodes": [
+        {
+          "id": "p1",
+          "speaker": "narrator",
+          "text": "*A crooked lamp-post at the edge of the Croaking Stones, its hook empty and its old jar smashed. Somebody has scratched a little frog-bone sign into the wood.*",
+          "choices": [
+            {
+              "text": "(Hang one of Obi's lamps on the hook.)",
+              "next": "lit",
+              "conditions": [
+                {"type": "HasItem", "key": "mf_new_lantern", "amount": 1}
+              ],
+              "outcomes": [
+                {"type": "TakeItem", "key": "mf_new_lantern", "amount": 1},
+                {"type": "SetFlag", "key": "mf_post_4_lit"},
+                {"type": "GiveXP", "amount": 40}
+              ]
+            },
+            {"text": "(Leave the dark post.)"}
+          ]
+        },
+        {
+          "id": "lit",
+          "speaker": "narrator",
+          "text": "*The lamp settles on the hook with a click. For a moment nothing — then the wisp-glow wakes in the wick, and a small green light comes up over the road, steady as a heartbeat.* *Out in the reeds, something notices.*",
+          "choices": [
+            {"text": "(Step back and admire it.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_truffle_1",
+      "start": "t1",
+      "nodes": [
+        {
+          "id": "t1",
+          "speaker": "narrator",
+          "text": "*A giant toadstool taller than a cottage. Its gills glow faintly. Around its foot the soil is dark and soft, and smells of rain on a cellar door.*",
+          "choices": [
+            {
+              "text": "(Dig gently at the roots.)",
+              "next": "dig",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_hettie_soup"},
+                {"type": "NotFlag", "key": "mf_truffle_1"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_truffle_1"},
+                {"type": "GiveItem", "key": "mf_fen_truffle", "amount": 1}
+              ]
+            },
+            {"text": "(Admire the toadstool and leave it.)"}
+          ]
+        },
+        {
+          "id": "dig",
+          "speaker": "narrator",
+          "text": "*Under the roots, nestled like an egg: a knobbly blue truffle. It smells exactly the way Hettie said it would.*",
+          "choices": [
+            {"text": "(Pocket the truffle.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_truffle_2",
+      "start": "t1",
+      "nodes": [
+        {
+          "id": "t1",
+          "speaker": "narrator",
+          "text": "*A giant toadstool leaning over the path like a nosy neighbour. Its gills glow faintly. Around its foot the soil is dark and soft, and smells of rain on a cellar door.*",
+          "choices": [
+            {
+              "text": "(Dig gently at the roots.)",
+              "next": "dig",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_hettie_soup"},
+                {"type": "NotFlag", "key": "mf_truffle_2"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_truffle_2"},
+                {"type": "GiveItem", "key": "mf_fen_truffle", "amount": 1}
+              ]
+            },
+            {"text": "(Admire the toadstool and leave it.)"}
+          ]
+        },
+        {
+          "id": "dig",
+          "speaker": "narrator",
+          "text": "*Under the roots, nestled like an egg: a knobbly blue truffle. It smells exactly the way Hettie said it would.*",
+          "choices": [
+            {"text": "(Pocket the truffle.)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dlg_mf_truffle_3",
+      "start": "t1",
+      "nodes": [
+        {
+          "id": "t1",
+          "speaker": "narrator",
+          "text": "*A giant toadstool with a smaller one huddled under it. Its gills glow faintly. Around its foot the soil is dark and soft, and smells of rain on a cellar door.*",
+          "choices": [
+            {
+              "text": "(Dig gently at the roots.)",
+              "next": "dig",
+              "conditions": [
+                {"type": "QuestActive", "key": "mf_hettie_soup"},
+                {"type": "NotFlag", "key": "mf_truffle_3"}
+              ],
+              "outcomes": [
+                {"type": "SetFlag", "key": "mf_truffle_3"},
+                {"type": "GiveItem", "key": "mf_fen_truffle", "amount": 1}
+              ]
+            },
+            {"text": "(Admire the toadstool and leave it.)"}
+          ]
+        },
+        {
+          "id": "dig",
+          "speaker": "narrator",
+          "text": "*Under the roots, nestled like an egg: a knobbly blue truffle. It smells exactly the way Hettie said it would.*",
+          "choices": [
+            {"text": "(Pocket the truffle.)"}
+          ]
+        }
+      ]
+    }
+  ]
+}

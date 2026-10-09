@@ -1,0 +1,844 @@
+{
+  "creatures": [
+    {
+      "id": "cr_dg4_robber",
+      "name": "Duskmane Grave-Robber",
+      "sprite": "cr_gnoll",
+      "portrait": "cr_bandit",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "damageMult": 1.5,
+      "size": 2.0,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_am_gnoll_cackle", "priority": 8, "condition": "selfHpBelow:50"}, {"ability": "cr_am_cleaver_chop", "priority": 4}],
+      "lootTable": "lt_dg4_robber",
+      "material": "fur",
+      "voice": "gnoll",
+      "xpMult": 0.23,
+      "description": "A Duskmane gnoll with a sack of grave-goods and an oil can. He looks as if he'd like to leave.",
+      "faction": "Duskmane"
+    },
+    {
+      "id": "cr_dg4_robber_caller",
+      "name": "Duskmane Grave-Caller",
+      "sprite": "cr_gnoll_mystic",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Normal",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 1.9,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_am_bone_mend", "priority": 9, "condition": "allyHpBelow:55"},
+        {"ability": "cr_am_hyena_hex", "priority": 6, "condition": "targetNoAura:cr_am_hyena_hex_dot"},
+        {"ability": "cr_am_bone_bolt", "priority": 3}
+      ],
+      "lootTable": "lt_dg4_robber",
+      "material": "cloth",
+      "voice": "gnoll",
+      "xpMult": 0.23,
+      "description": "A Duskmane mystic who talks to the dead. The dead have started answering, which she did not expect.",
+      "resource": "Mana",
+      "healthMult": 0.9,
+      "damageMult": 1.5,
+      "faction": "Duskmane"
+    },
+    {
+      "id": "cr_dg4_dart_trap",
+      "name": "Barrow Dart Trap",
+      "sprite": "fx_barrow_dart_trap",
+      "portrait": "",
+      "type": "Mechanical",
+      "rank": "Normal",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 0.8,
+      "ai": "Caster",
+      "abilities": [{"ability": "cr_dg4_poison_dart", "priority": 5}],
+      "material": "stone",
+      "voice": "none",
+      "xpMult": 0.17,
+      "description": "A carved stone face in the pillar, with a mouthful of old, poisoned darts.",
+      "healthMult": 0.5,
+      "damageMult": 1.5,
+      "moveSpeed": 0,
+      "ranged": true,
+      "rangedRange": 25,
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Stun", "Root", "Daze"]
+    },
+    {
+      "id": "cr_dg4_skeleton",
+      "name": "Barrow Guard",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit",
+      "type": "Undead",
+      "rank": "Normal",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "damageMult": 1.5,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_dg4_shield_bash", "priority": 7, "condition": "targetCasting"}, {"ability": "cr_dg4_rusted_cleave", "priority": 4}],
+      "lootTable": "lt_dg4_skeleton",
+      "material": "bone",
+      "voice": "none",
+      "xpMult": 0.23,
+      "description": "One of King Aldwin's guard, still guarding. The shield is teal; the paint is a thousand years old.",
+      "immune": ["Fear", "Sleep"]
+    },
+    {
+      "id": "cr_dg4_skeleton_archer",
+      "name": "Barrow Bowman",
+      "sprite": "cr_skeleton_archer",
+      "portrait": "cr_bandit_archer",
+      "type": "Undead",
+      "rank": "Normal",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "damageMult": 1.5,
+      "size": 1.8,
+      "ai": "Ranged",
+      "abilities": [{"ability": "cr_dg4_grave_arrow", "priority": 5}],
+      "lootTable": "lt_dg4_skeleton",
+      "material": "bone",
+      "voice": "none",
+      "xpMult": 0.23,
+      "description": "A skeleton bowman under a mossy hood. Its aim has not improved in a thousand years. It has not needed to.",
+      "ranged": true,
+      "rangedRange": 30,
+      "immune": ["Fear", "Sleep"]
+    },
+    {
+      "id": "cr_dg4_wight",
+      "name": "Barrow Wight",
+      "sprite": "cr_barrow_wight",
+      "portrait": "cr_hollow_spirit",
+      "type": "Undead",
+      "rank": "Elite",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 2.1,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg4_dread_wail", "priority": 7, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg4_life_drain", "priority": 6, "condition": "selfHpBelow:70"},
+        {"ability": "cr_dg4_grave_chill", "priority": 5, "condition": "targetNoAura:cr_dg4_chilled"}
+      ],
+      "lootTable": "lt_dg4_wight",
+      "material": "plate",
+      "voice": "spirit",
+      "xpMult": 0.23,
+      "description": "A dead lord of the old court in rusted plate, ghost-light leaking from the cracks. It remembers being loyal. It remembers little else.",
+      "healthMult": 1.3,
+      "damageMult": 1.6,
+      "immune": ["Fear", "Sleep"],
+      "stats": [{"stat": "Resistance", "value": 20, "school": "Frost"}]
+    },
+    {
+      "id": "cr_dg4_grave_speaker",
+      "name": "Grave-Speaker Ruuk",
+      "sprite": "cr_gnoll_mystic",
+      "portrait": "cr_bandit_hexer",
+      "type": "Humanoid",
+      "rank": "Elite",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 2.15,
+      "ai": "Caster",
+      "abilities": [
+        {"ability": "cr_am_bone_mend", "priority": 9, "condition": "allyHpBelow:50"},
+        {"ability": "cr_dg4_oil_flask", "priority": 8, "condition": "roundAtLeast:2"},
+        {"ability": "cr_dg4_ember_bolt", "priority": 3}
+      ],
+      "lootTable": "lt_dg4_grave_speaker",
+      "material": "cloth",
+      "voice": "gnoll",
+      "xpMult": 0.23,
+      "description": "The Duskmane mystic who tends the Hungry Fire. Her paws are black with oil to the elbow, and she has not blinked in some time.",
+      "healthMult": 1.5,
+      "damageMult": 1.6,
+      "resource": "Mana",
+      "faction": "Duskmane",
+      "bark": "It is so nearly awake! One more cask! ONE MORE!"
+    },
+    {
+      "id": "cr_dg4_huscarl",
+      "name": "Aldwin's Huscarl",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit_chief",
+      "type": "Undead",
+      "rank": "Elite",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 2.35,
+      "ai": "Melee",
+      "abilities": [
+        {"ability": "cr_dg4_shield_wall", "priority": 9, "condition": "selfHpBelow:50"},
+        {"ability": "cr_dg4_sundering_blow", "priority": 6, "condition": "targetNoAura:cr_dg4_sundered"},
+        {"ability": "cr_dg4_rusted_cleave", "priority": 4}
+      ],
+      "lootTable": "lt_dg4_huscarl",
+      "material": "bone",
+      "voice": "none",
+      "xpMult": 0.23,
+      "description": "The king's own guard, taller than the rest, with a crowned shield. It stands in the tomb door and does not move. It has had a lot of practice.",
+      "healthMult": 1.4,
+      "damageMult": 1.6,
+      "immune": ["Fear", "Sleep"]
+    },
+    {
+      "id": "cr_dg4_risen",
+      "name": "Risen Huscarl",
+      "sprite": "cr_skeleton",
+      "portrait": "cr_bandit",
+      "type": "Undead",
+      "rank": "Minion",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 0,
+      "size": 1.8,
+      "ai": "Melee",
+      "abilities": [{"ability": "cr_dg4_rusted_cleave", "priority": 4}],
+      "material": "bone",
+      "voice": "none",
+      "xpMult": 0,
+      "description": "Called up from the floor of the tomb.",
+      "immune": ["Fear", "Sleep"]
+    },
+    {
+      "id": "cr_dg4_king_aldwin",
+      "name": "King Aldwin the Unquiet",
+      "sprite": "cr_dg4_king_aldwin",
+      "portrait": "cr_bandit_chief",
+      "type": "Undead",
+      "rank": "Boss",
+      "scaleToParty": true,
+      "levelMin": 18,
+      "levelMax": 20,
+      "levelFloor": 18,
+      "levelCap": 20,
+      "levelOffset": 2,
+      "size": 3.4,
+      "ai": "Boss",
+      "abilities": [
+        {"ability": "cr_dg4_call_huscarls", "priority": 10, "condition": "selfHpBelow:70"},
+        {"ability": "cr_dg4_ember_wrath", "priority": 10, "condition": "selfHpBelow:35"},
+        {"ability": "cr_dg4_kingsfall", "priority": 9, "condition": "roundAtLeast:2"},
+        {"ability": "cr_dg4_royal_rebuke", "priority": 8, "condition": "targetCasting"},
+        {"ability": "cr_dg4_cleave_of_ages", "priority": 6, "condition": "enemiesInRange:2"},
+        {"ability": "cr_dg4_grave_chill", "priority": 5, "condition": "targetNoAura:cr_dg4_chilled"}
+      ],
+      "lootTable": "lt_dg4_king_aldwin",
+      "material": "plate",
+      "voice": "spirit",
+      "xpMult": 0.45,
+      "description": "The last king of the Downs, who put the Ashwyrm's fire to sleep and lay down over it. Somebody poured oil on his dreams, and he woke angry.",
+      "healthMult": 1.8,
+      "damageMult": 1.45,
+      "moveSpeed": 8,
+      "immune": ["Fear", "Polymorph", "Sleep", "Incapacitate", "Confuse", "Banish"],
+      "stats": [{"stat": "Resistance", "value": 25, "school": "Frost"}, {"stat": "Resistance", "value": 15, "school": "Shadow"}],
+      "bark": "WHO WAKES THE KING?"
+    }
+  ],
+  "abilities": [
+    {
+      "id": "cr_dg4_poison_dart",
+      "name": "Poisoned Dart",
+      "icon": "poison",
+      "description": "Spits an old poisoned dart for {0} damage; the poison deals Nature damage over 9 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "range": 25,
+      "effects": [{"type": "Damage", "min": 5, "max": 8, "perLevel": 0.7}, {"type": "ApplyAura", "aura": "cr_dg4_dart_poison"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg4_rusted_cleave",
+      "name": "Rusted Blade",
+      "icon": "sword",
+      "description": "A blow with a notched, rusted sword for weapon damage plus {0}.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 6,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 4, "max": 7, "perLevel": 0.7}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg4_shield_bash",
+      "name": "Shield Bash",
+      "icon": "shield_bash",
+      "description": "Bashes with a teal-painted shield: interrupts spellcasting and deals half weapon damage.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "Interrupt", "lockout": 4}, {"type": "WeaponDamage", "weaponPct": 50}],
+      "tags": ["Interrupt"],
+      "aiHint": "Interrupt",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg4_grave_arrow",
+      "name": "Grave Arrow",
+      "icon": "arrow",
+      "description": "An arrow that has lain in the grave-dust a long time: ranged weapon damage, and the target is chilled.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "ranged": true}, {"type": "ApplyAura", "aura": "cr_dg4_chilled"}],
+      "aiHint": "Damage",
+      "aiPriority": 4
+    },
+    {
+      "id": "cr_dg4_grave_chill",
+      "name": "Grave Chill",
+      "icon": "frost",
+      "description": "The cold of the grave: {0} Frost damage, and the target is chilled.",
+      "school": "Frost",
+      "hidden": true,
+      "cooldown": 8,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 10, "max": 14, "perLevel": 1.0}, {"type": "ApplyAura", "aura": "cr_dg4_chilled"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg4_life_drain",
+      "name": "Drink the Warmth",
+      "icon": "drain",
+      "description": "Drinks the warmth out of the living: {0} Shadow damage, healing the wight for as much.",
+      "school": "Shadow",
+      "hidden": true,
+      "castTime": 2.0,
+      "cooldown": 12,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 12, "max": 16, "perLevel": 1.1, "pctOfDamage": 100}],
+      "aiHint": "Damage",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg4_dread_wail",
+      "name": "Dread Wail",
+      "icon": "fear",
+      "description": "A wail from a thousand years down. Up to 2 nearby enemies flee in terror for 6 sec.",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 8, "centeredOnCaster": true, "affects": "Enemies", "maxTargets": 2},
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg4_dread"}],
+      "aiHint": "CC",
+      "aiPriority": 6
+    },
+    {
+      "id": "cr_dg4_oil_flask",
+      "name": "Flask of Burning Oil",
+      "icon": "fire",
+      "description": "Ruuk lights a flask of stolen lamp oil and hurls it. After the cast, it bursts for {0} Fire damage on every enemy within 6 yards of the target, who keep burning. Interrupt her, or spread out!",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 3.0,
+      "cooldown": 16,
+      "target": "Enemy",
+      "range": 30,
+      "area": {"shape": "Circle", "radius": 6, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 14, "max": 18, "perLevel": 1.2}, {"type": "ApplyAura", "aura": "cr_dg4_burning"}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg4_ember_bolt",
+      "name": "Ember Bolt",
+      "icon": "fireball",
+      "description": "A spat coal from the Hungry Fire: {0} Fire damage.",
+      "school": "Fire",
+      "hidden": true,
+      "castTime": 2.0,
+      "target": "Enemy",
+      "range": 30,
+      "effects": [{"type": "Damage", "min": 10, "max": 13, "perLevel": 1.0}],
+      "aiHint": "Damage",
+      "aiPriority": 3
+    },
+    {
+      "id": "cr_dg4_shield_wall",
+      "name": "Crowned Shield Wall",
+      "icon": "stance_defensive",
+      "description": "Sets the crowned shield: damage taken reduced by 30% for 12 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 30,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg4_shield_wall_buff", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg4_sundering_blow",
+      "name": "Sundering Blow",
+      "icon": "axe",
+      "description": "A blow aimed at the joints of armour: weapon damage, and the target's armor is reduced by 25% for 15 sec.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100}, {"type": "ApplyAura", "aura": "cr_dg4_sundered"}],
+      "aiHint": "Debuff",
+      "aiPriority": 5
+    },
+    {
+      "id": "cr_dg4_call_huscarls",
+      "name": "To Me, My Huscarls",
+      "icon": "skull",
+      "description": "The king strikes the floor with his sword, and two of his huscarls rise from it.",
+      "school": "Shadow",
+      "hidden": true,
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "Summon", "summon": "cr_dg4_risen", "count": 2, "target": "Self"}],
+      "aiHint": "Summon",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg4_ember_wrath",
+      "name": "The Ember Remembers",
+      "icon": "fire",
+      "description": "Below 35% health the ember in the king's crown wakes: damage dealt increased by 25% and attack speed by 20%.",
+      "school": "Fire",
+      "hidden": true,
+      "time": "OffGcd",
+      "cooldown": 600,
+      "target": "Self",
+      "effects": [{"type": "ApplyAura", "aura": "cr_dg4_ember_wrath_buff", "target": "Self"}],
+      "aiHint": "Buff",
+      "aiPriority": 10
+    },
+    {
+      "id": "cr_dg4_kingsfall",
+      "name": "Kingsfall",
+      "icon": "sword",
+      "description": "King Aldwin lifts his greatsword high over his head. After the cast, the blow shakes the barrow: {0} damage to every enemy within 10 yards. Interrupt him, stun him — or get away from him!",
+      "school": "Physical",
+      "hidden": true,
+      "castTime": 4.0,
+      "cooldown": 20,
+      "target": "Self",
+      "area": {"shape": "Circle", "radius": 10, "centeredOnCaster": true, "affects": "Enemies"},
+      "effects": [{"type": "Damage", "min": 26, "max": 34, "perLevel": 2.2}],
+      "tags": ["Telegraph"],
+      "aiHint": "AoE",
+      "aiPriority": 9
+    },
+    {
+      "id": "cr_dg4_royal_rebuke",
+      "name": "Royal Rebuke",
+      "icon": "shield_bash",
+      "description": "'You will NOT speak in my hall.' Interrupts spellcasting and deals weapon damage.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 12,
+      "target": "Enemy",
+      "melee": true,
+      "effects": [{"type": "Interrupt", "lockout": 4}, {"type": "WeaponDamage", "weaponPct": 80}],
+      "tags": ["Interrupt"],
+      "aiHint": "Interrupt",
+      "aiPriority": 8
+    },
+    {
+      "id": "cr_dg4_cleave_of_ages",
+      "name": "Cleave of Ages",
+      "icon": "sword",
+      "description": "A slow, enormous sweep: weapon damage plus {0} to up to 3 enemies in front.",
+      "school": "Physical",
+      "hidden": true,
+      "cooldown": 10,
+      "target": "Enemy",
+      "melee": true,
+      "area": {"shape": "Cone", "radius": 7, "angle": 120, "maxTargets": 3, "affects": "Enemies"},
+      "effects": [{"type": "WeaponDamage", "weaponPct": 100, "min": 6, "max": 9, "perLevel": 0.8}],
+      "aiHint": "AoE",
+      "aiPriority": 6
+    }
+  ],
+  "auras": [
+    {
+      "id": "cr_dg4_dart_poison",
+      "name": "Barrow Poison",
+      "icon": "poison",
+      "kind": "Debuff",
+      "school": "Nature",
+      "dispel": "Poison",
+      "duration": 9,
+      "tickInterval": 3,
+      "description": "Nature damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 3, "perLevel": 0.45}]
+    },
+    {
+      "id": "cr_dg4_chilled",
+      "name": "Grave Chill",
+      "icon": "frost",
+      "kind": "Debuff",
+      "school": "Frost",
+      "dispel": "Magic",
+      "duration": 9,
+      "description": "Movement speed reduced by 40% and attack speed by 15%.",
+      "mods": [{"stat": "MoveSpeed", "value": -40, "pct": true}, {"stat": "MeleeHaste", "value": -15, "pct": true}]
+    },
+    {
+      "id": "cr_dg4_dread",
+      "name": "Dread Wail",
+      "icon": "fear",
+      "kind": "Debuff",
+      "school": "Shadow",
+      "dispel": "Magic",
+      "duration": 6,
+      "states": ["Fear"],
+      "breakOnDamage": true,
+      "breakDamageThreshold": 60,
+      "description": "Fleeing in terror."
+    },
+    {
+      "id": "cr_dg4_burning",
+      "name": "Burning Oil",
+      "icon": "fire",
+      "kind": "Debuff",
+      "school": "Fire",
+      "duration": 9,
+      "tickInterval": 3,
+      "description": "Fire damage every 3 sec.",
+      "tickEffects": [{"type": "Damage", "min": 4, "perLevel": 0.5}]
+    },
+    {
+      "id": "cr_dg4_shield_wall_buff",
+      "name": "Crowned Shield Wall",
+      "icon": "stance_defensive",
+      "kind": "Buff",
+      "duration": 12,
+      "description": "Damage taken reduced by 30%.",
+      "mods": [{"stat": "DamageTaken", "value": -30, "pct": true}]
+    },
+    {
+      "id": "cr_dg4_sundered",
+      "name": "Sundered",
+      "icon": "armor",
+      "kind": "Debuff",
+      "duration": 15,
+      "description": "Armor reduced by 25%.",
+      "mods": [{"stat": "Armor", "value": -25, "pct": true}]
+    },
+    {
+      "id": "cr_dg4_ember_wrath_buff",
+      "name": "The Ember Remembers",
+      "icon": "fire",
+      "kind": "Buff",
+      "school": "Fire",
+      "duration": 0,
+      "description": "The ember in the crown burns. Damage dealt increased by 25% and attack speed by 20%.",
+      "mods": [{"stat": "DamageDone", "value": 25, "pct": true}, {"stat": "MeleeHaste", "value": 20, "pct": true}]
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "lt_dg4_robber",
+      "goldMin": 80,
+      "goldMax": 260,
+      "entries": [
+        {"item": "am_junk_stolen_spoon", "chance": 30},
+        {"item": "dg4_junk_grave_goods", "chance": 45},
+        {"random": true, "chance": 6, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_dg4_skeleton",
+      "goldMin": 0,
+      "goldMax": 0,
+      "entries": [
+        {"item": "dg4_junk_grave_dust", "chance": 50},
+        {"item": "dg4_junk_tarnished_coin", "chance": 35},
+        {"random": true, "chance": 5, "quality": "Uncommon"}
+      ]
+    },
+    {
+      "id": "lt_dg4_wight",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [
+        {"item": "dg4_junk_tarnished_coin", "min": 2, "max": 4},
+        {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 8, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg4_huscarl",
+      "goldMin": 300,
+      "goldMax": 600,
+      "entries": [
+        {"item": "dg4_junk_grave_goods"},
+        {"random": true, "chance": 40, "quality": "Uncommon", "itemLevelOffset": 1},
+        {"random": true, "chance": 8, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg4_grave_speaker",
+      "goldMin": 500,
+      "goldMax": 900,
+      "entries": [{"item": "dg4_oilsoaked_handwraps"}, {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}]
+    },
+    {
+      "id": "lt_dg4_king_aldwin",
+      "goldMin": 2500,
+      "goldMax": 4000,
+      "entries": [
+        {
+          "pool": ["dg4_aldwins_runeblade", "dg4_crown_of_the_unquiet", "dg4_barrowlight_mantle", "dg4_wightbone_wand", "dg4_huscarl_legwraps", "dg4_huscarls_seax"],
+          "partyUsable": true
+        },
+        {"pool": ["dg4_emberheart_signet", "dg4_kingsfall"], "chance": 20, "partyUsable": true, "skipOwned": true},
+        {"random": true, "chance": 40, "quality": "Rare", "itemLevelOffset": 1},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 1}
+      ]
+    },
+    {
+      "id": "lt_dg4_chest_ossuary",
+      "goldMin": 800,
+      "goldMax": 1400,
+      "entries": [{"random": true, "quality": "Uncommon", "itemLevelOffset": 2}, {"random": true, "chance": 25, "quality": "Rare"}]
+    },
+    {
+      "id": "lt_dg4_chest_hearth",
+      "goldMin": 1000,
+      "goldMax": 1800,
+      "entries": [
+        {"item": "potion_healing", "min": 2, "max": 3},
+        {"random": true, "quality": "Uncommon", "itemLevelOffset": 2},
+        {"random": true, "chance": 35, "quality": "Rare"}
+      ]
+    },
+    {
+      "id": "lt_dg4_chest_hoard",
+      "goldMin": 3000,
+      "goldMax": 5000,
+      "entries": [{"random": true, "quality": "Rare", "itemLevelOffset": 1}, {"random": true, "quality": "Uncommon", "itemLevelOffset": 2}]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "dg4_king_aldwin",
+      "name": "King Aldwin the Unquiet",
+      "title": "The Last King of the Downs",
+      "sprite": "cr_dg4_king_aldwin",
+      "portrait": "cr_bandit_chief",
+      "bark": "WHO WAKES THE KING?"
+    },
+    {
+      "id": "dg4_aldwin_shade",
+      "name": "The Shade of King Aldwin",
+      "shortName": "Aldwin's Shade",
+      "title": "At Rest, Nearly",
+      "sprite": "npc_spirit",
+      "portrait": "portrait_spirit",
+      "dialogue": "dlg_dg4_aldwin_shade",
+      "bark": "Thank you. It is very quiet now."
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg_dg4_aldwin",
+      "start": "a1",
+      "nodes": [
+        {
+          "id": "a1",
+          "speaker": "narrator",
+          "text": "*The thing on the open sarcophagus sits up. Then it stands, and keeps standing, until its crown of spikes nearly scrapes the vault. Ghost-light leaks from the seams of its armour. Its eyes are two blue flames.*",
+          "next": "a2"
+        },
+        {
+          "id": "a2",
+          "speaker": "dg4_king_aldwin",
+          "text": "WHO WAKES THE KING? *The voice comes from everywhere at once.* Is it the seventh night? Has she come back down on the wind? *The skull turns toward the red light beyond the wall.* ...No. Someone FED it. Someone poured oil on my fire. Was it YOU?",
+          "choices": [
+            {
+              "text": "Your war is over, King Aldwin. The fire was fed by thieves. Let us put it out, and you can sleep again.",
+              "check": {"skill": "Religion", "dc": 15, "success": "a_rel", "failure": "a_rel_f"},
+              "once": true,
+              "tag": "RELIGION"
+            },
+            {
+              "text": "You put the Ashwyrm's fire to sleep and lay down over it. The songs remember you.",
+              "check": {"skill": "History", "dc": 13, "success": "a_hist", "failure": "a_hist_f"},
+              "once": true,
+              "tag": "HISTORY"
+            },
+            {"text": "(Draw your weapon.)", "next": "a_fight"}
+          ]
+        },
+        {
+          "id": "a_rel",
+          "speaker": "dg4_king_aldwin",
+          "text": "*The blue flames flicker. For a moment the king's voice is only an old man's.* Rest... I would like that. But the oath is in the bones, and the bones do not listen. Then end it, as my huscarls ended things: at the edge of the sword. Do not hold back. I will not be able to.",
+          "outcomes": [{"type": "GiveXP", "amount": 200}, {"type": "SetFlag", "key": "dg4_aldwin_heard"}],
+          "next": "a_fight"
+        },
+        {"id": "a_rel_f", "speaker": "dg4_king_aldwin", "text": "Rest? REST? There is no rest while the fire is awake! To arms!", "next": "a_fight"},
+        {
+          "id": "a_hist",
+          "speaker": "dg4_king_aldwin",
+          "text": "*The great head tilts.* They sing of it still? Seven nights... *The crown dips.* Then you know what I must do. Whoever stands in my hall while the fire wakes is its servant. Prove you are not, at the edge of the sword.",
+          "outcomes": [{"type": "GiveXP", "amount": 150}],
+          "next": "a_fight"
+        },
+        {"id": "a_hist_f", "speaker": "dg4_king_aldwin", "text": "SONGS. Songs do not hold a door. To arms!", "next": "a_fight"},
+        {
+          "id": "a_fight",
+          "speaker": "dg4_king_aldwin",
+          "text": "TO ME, MY HUSCARLS! FOR THE DOWNS!",
+          "outcomes": [{"type": "StartCombat", "key": "enc_dg4_king_aldwin"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg4_aldwin_shade",
+      "start": "sh_told",
+      "nodes": [
+        {
+          "id": "sh_told",
+          "speaker": "dg4_aldwin_shade",
+          "text": "*The king's shade sits on the edge of his sarcophagus like a tired grandfather on a garden wall.* Go north, friend. Ash comes down on the wind before she does. You will see it first on the snow.",
+          "conditions": [{"type": "Flag", "key": "dg4_shade_spoke"}],
+          "fallback": "sh1",
+          "choices": [{"text": "Rest well, King Aldwin."}]
+        },
+        {
+          "id": "sh1",
+          "speaker": "dg4_aldwin_shade",
+          "text": "*A faint, kindly old man in a ghost of a crown, sitting on the edge of his own tomb. He looks very relieved.* Thank you. It is so quiet now. I had forgotten quiet.",
+          "choices": [{"text": "What was the fire under your hill?", "next": "sh2"}, {"text": "Rest well, King Aldwin."}]
+        },
+        {
+          "id": "sh2",
+          "speaker": "dg4_aldwin_shade",
+          "text": "A coal from her fire. Hers — the Ashwyrm, Vyrmathra, who came down from the north on the wind and burned the Downs for seven nights. On the seventh I put her to sleep, and I took one coal from her heart so she could never wake whole. I carried it here and lay down over it.",
+          "next": "sh3"
+        },
+        {
+          "id": "sh3",
+          "speaker": "dg4_aldwin_shade",
+          "text": "*His blue eyes dim.* A man in red scales came, with the gnolls. He fed my coal with oil until it was bright enough to carry, and then he broke it in two and took the brighter half away. North. Toward the peaks. He means to give it back to her. *He looks at you.* She is only sleeping, friend. She was always only sleeping.",
+          "outcomes": [{"type": "SetFlag", "key": "dg4_shade_spoke"}, {"type": "GiveXP", "amount": 150}],
+          "choices": [{"text": "Then I'll follow him north.", "next": "sh4"}, {"text": "Rest well, King Aldwin."}]
+        },
+        {
+          "id": "sh4",
+          "speaker": "dg4_aldwin_shade",
+          "text": "Brightwater first. They keep old books there; one of them will remember my name, and hers. And take whatever you like from my hoard. A king should pay his debts.",
+          "choices": [{"text": "(Continue.)"}]
+        }
+      ]
+    },
+    {
+      "id": "dlg_dg4_ember",
+      "start": "e_live",
+      "nodes": [
+        {
+          "id": "e_live",
+          "speaker": "narrator",
+          "text": "*The Hungry Fire: a single coal the size of a fist, red as an eye, in a great iron brazier slick with lamp oil. It is half of something; the broken face of it glitters. It pulses, slow as breathing, and the dark pulses with it.*",
+          "conditions": [{"type": "NotFlag", "key": "dg4_ember_smothered"}],
+          "fallback": "e_dead",
+          "choices": [
+            {
+              "text": "(Smother the coal with grave-dust and an old shield.)",
+              "next": "e_smother",
+              "conditions": [{"type": "Flag", "key": "dg4_ruuk_defeated"}]
+            },
+            {
+              "text": "Study the broken face of the coal.",
+              "check": {"skill": "Arcana", "dc": 14, "success": "e_arcana", "failure": "e_arcana_f"},
+              "once": true,
+              "tag": "ARCANA"
+            },
+            {"text": "(Step back from the heat.)"}
+          ]
+        },
+        {
+          "id": "e_smother",
+          "speaker": "narrator",
+          "text": "*You heap grave-dust on the coal and press an old crowned shield down over the brazier. The red light fights, and hisses, and goes out. For the first time in a long while, the barrow is only dark, and only cold.*",
+          "outcomes": [{"type": "SetFlag", "key": "dg4_ember_smothered"}, {"type": "GiveXP", "amount": 150}],
+          "choices": [{"text": "(Continue.)"}]
+        },
+        {
+          "id": "e_arcana",
+          "speaker": "narrator",
+          "text": "*The coal's broken face is fresh — split within the year. This is half an ember. The other, brighter half has been carried away, and somewhere it is still burning.*",
+          "outcomes": [{"type": "GiveXP", "amount": 80}],
+          "choices": [{"text": "(Step back from the heat.)"}]
+        },
+        {
+          "id": "e_arcana_f",
+          "speaker": "narrator",
+          "text": "*It is very hot, and very red, and it looks back at you.*",
+          "choices": [{"text": "(Step back from the heat.)"}]
+        },
+        {
+          "id": "e_dead",
+          "speaker": "narrator",
+          "text": "*A cold iron brazier full of grave-dust. Nothing pulses.*",
+          "choices": [{"text": "(Step back.)"}]
+        }
+      ]
+    }
+  ]
+}

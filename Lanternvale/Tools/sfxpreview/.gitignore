@@ -1,0 +1,5 @@
+# build output
+bin/
+obj/
+# Lanternvale/.gitignore ignores *.csproj (Unity's generated projects); this one is hand-written
+!SfxPreview.csproj

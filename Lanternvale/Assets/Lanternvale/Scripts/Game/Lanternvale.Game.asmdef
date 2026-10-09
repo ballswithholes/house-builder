@@ -1,0 +1,16 @@
+{
+    "name": "Lanternvale.Game",
+    "rootNamespace": "Lanternvale",
+    "references": [ "Lanternvale.Core" ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        { "name": "com.unity.render-pipelines.universal", "expression": "", "define": "LANTERNVALE_URP" }
+    ],
+    "noEngineReferences": false
+}
