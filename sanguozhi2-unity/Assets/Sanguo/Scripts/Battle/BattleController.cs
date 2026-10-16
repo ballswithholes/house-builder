@@ -749,6 +749,7 @@ namespace Sanguo
             DuelGame.MusicAfter = battleMusic;          // 单挑结束后回到战斗音乐
             yield return Co.Guard(DuelGame.Play(a.gen, a.side, FactionColorOf(a), b.gen, b.side, FactionColorOf(b), a.side == playerSide ? 0 : 1, terrain, r => res = r),
                 e => Debug.LogException(e));
+            DuelGame.MusicAfter = null;
             if (res == null)
             {   // 格斗画面出错：改用无画面模拟（同一套规则）分出胜负，保证士气与溃散照常结算
                 try { res = DuelGame.Simulate(a.gen, b.gen); }

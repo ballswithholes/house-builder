@@ -638,7 +638,7 @@ namespace Sanguo
             }
             mesh.Clear();
             mesh.vertices = vs; mesh.uv = uv; mesh.triangles = tri;
-            mesh.RecalculateBounds();
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
         }
         SpObj SpRibbonObj(Material mat, int queue)
         {
@@ -719,12 +719,12 @@ namespace Sanguo
         void SpGhostAt(UnitVisual v, Color col, float life, float alpha, Vector3 off)
         {
             if (v == null || v.SharedMesh == null) return;
-            var mat = AddMat(col, null);
-            SetAlpha(mat, col, alpha);
+            var mat = FxMat(5, col, true);
+            mat.SetFloat("_Opacity", alpha);
             var ob = SpMake("FxGhost", v.SharedMesh, false, mat, true, 3009);
             ob.go.transform.position = v.transform.position + off;
             ob.go.transform.rotation = v.transform.rotation;
-            SpRun(SpAnim(life, t => SetAlpha(mat, col, alpha * (1 - t)), () => SpFree(ob)));
+            SpRun(SpAnim(life, t => mat.SetFloat("_Opacity", alpha * (1 - t)), () => SpFree(ob)));
         }
 
         // ---- 沿路径移动的发射头：path(t) → 位置；每帧在头部喷粒子
@@ -1204,6 +1204,9 @@ namespace Sanguo
                 mesh = new Mesh { name = "fxBatch" };
                 mesh.MarkDynamic();
                 mesh.vertices = verts; mesh.uv = uvs; mesh.colors = cols; mesh.triangles = tris;
+                var nrm = new Vector3[verts.Length];
+                for (int i = 0; i < nrm.Length; i++) nrm[i] = Vector3.up;
+                mesh.normals = nrm;
             }
             public void Set(int i, Matrix4x4 m) { for (int j = 0; j < per; j++) verts[i * per + j] = m.MultiplyPoint3x4(tv[j]); }
             public void Apply() { mesh.vertices = verts; mesh.RecalculateBounds(); }
@@ -1222,8 +1225,9 @@ namespace Sanguo
             var shaftTpl = new MeshBuilder(); shaftTpl.Box(Vector3.zero, new Vector3(0.05f, 0.05f, 0.9f), Color.white);
             var headTpl = new MeshBuilder(); headTpl.Box(new Vector3(0, 0, 0.5f), new Vector3(0.12f, 0.12f, 0.3f), Color.white);
             var shafts = new SpBatch(shaftTpl, N); var heads = new SpBatch(headTpl, N);
-            var shaftMat = AlphaMat(new Color(0x2a / 255f, 0x20 / 255f, 0x18 / 255f, 0.95f), null);
-            var headMat = AddMat(Art.Shade(col, 0.35f), null);
+            var shaftMat = FxMat(5, new Color(0x2a / 255f, 0x20 / 255f, 0x18 / 255f), false);
+            shaftMat.SetFloat("_Opacity", 0.95f);
+            var headMat = FxMat(5, Art.Shade(col, 0.35f), true);
             var so = SpMake("FxArrows", shafts.mesh, true, shaftMat, true, 3024);
             var ho = SpMake("FxArrowHeads", heads.mesh, true, headMat, true, 3025);
             var arrows = new List<Arrow>();
@@ -1292,7 +1296,7 @@ namespace Sanguo
             var m = SpRibbonObj(mat, 3024);
             SetRibbon(m.mesh, pts, 0.42f, null);
             var hb = new MeshBuilder(); hb.Box(Vector3.zero, new Vector3(0.08f, 0.08f, 1.3f), Color.white);
-            var head = SpMake("FxArrowHead", hb.ToMesh("fxArrowHead"), true, AddMat(Art.Shade(col, 0.6f), null), true, 3025);
+            var head = SpMake("FxArrowHead", hb.ToMesh("fxArrowHead"), true, FxMat(5, Art.Shade(col, 0.6f), true), true, 3025);
             yield return SpAnim(0.22f, k =>
             {
                 if (head.go == null) return;
@@ -1670,15 +1674,13 @@ namespace Sanguo
             Sfx.Play("magic", 0.7f);
             SpRing(SpPos(c.u), col, 1.4f, 0.4f, 0.35f, new RO { alpha = 0.8f });
             foreach (var x in list) SpRing(SpPos(x), deep, 0.3f, 1.75f, 1.35f, new RO { tex = SwirlTex, spin = -8, hold = true, alpha = 0.85f, normal = true });
-            var paperMat = AlphaMat(Color.white, TalismanTex);
-            paperMat.renderQueue = 3022;
-            ownMats.Add(paperMat);
-            SetAlpha(paperMat, Color.white, 0);
             var papers = new List<Paper>();
             foreach (var x in list)
                 for (int j = 0; j < 3; j++)
                 {
-                    var o = SpMake("FxPaper", QuadMesh, false, paperMat, false);
+                    var pm = AlphaMat(Color.white, TalismanTex);
+                    SetAlpha(pm, Color.white, 0);
+                    var o = SpMake("FxPaper", QuadMesh, false, pm, true, 3022);
                     o.go.transform.position = src;
                     o.go.transform.localScale = new Vector3(0.34f, 0.82f, 1);
                     papers.Add(new Paper { o = o, x = x, j = j, ph = Rnd() * 6, lift = 0.8f + Rnd() * 1.2f, side = Rnd() - 0.5f });
@@ -1687,7 +1689,6 @@ namespace Sanguo
             yield return SpAnim(0.5f, t =>
             {
                 var cam = FxCam();
-                float op = 0;
                 foreach (var p in papers)
                 {
                     if (p.o.go == null) continue;
@@ -1700,10 +1701,9 @@ namespace Sanguo
                     tr.position = src * a0 + mid * a1 + dst * a2;
                     tr.localScale = new Vector3(0.34f * Mathf.Cos(t * 16 + p.ph), 0.82f, 1);
                     if (cam != null) tr.rotation = cam.transform.rotation;
-                    op = Mathf.Max(op, Mathf.Min(1, k * 5));
+                    SetAlpha(p.o.mat, Color.white, Mathf.Min(1, k * 5));
                     if (k > 0 && k < 1) Emit(glow, tr.position, 1, new EO { color = col, alpha = 0.75f, life = 0.3f, speed = 0.15f, size = 0.2f, sizeEnd = 0.04f, gravity = 0, radius = 0.03f });
                 }
-                SetAlpha(paperMat, Color.white, op);
             });
             // 2. 绕身：三张符纸绕敌军旋转、缓缓收紧上升
             Sfx.Play("magic", 0.4f);
@@ -1728,7 +1728,6 @@ namespace Sanguo
                 if (p.o.go != null) Emit(glow, p.o.go.transform.position, 10, new EO { color = col, color2 = C(1, 0.85f, 0.45f), mix = 0.45f, alpha = 1, life = 0.55f, speed = 1.8f, size = 0.26f, sizeEnd = 0.05f, gravity = -0.3f, radius = 0.12f, lifeVar = 0.3f });
                 SpFree(p.o);
             }
-            Destroy(paperMat);
             foreach (var x in list)
             {
                 var vv = VisOf(x); if (vv != null) { vv.FlashHit(); vv.Tint(col, 1); }

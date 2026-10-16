@@ -2,6 +2,7 @@
 //   _Mode 0 弧光（月牙形刀光，_Head / _Len 控制彗星头尾，_Soft > 0 为外层柔光）
 //         1 闪电 / 拖尾（横向高斯，芯白）  2 光柱（自下而上渐隐，螺旋条纹流动）
 //         3 水墙（浪身半透明、浪尖泛白）    4 护盾（菲涅耳边缘 + 上升扫描环 + 六角网格）
+//         5 纯色（_Color × _Opacity；残影、箭杆、箭头）
 //   混合方式（_SrcBlend / _DstBlend）、深度测试（_ZTest）、剔除（_Cull）由脚本设定：叠加 = SrcAlpha One，普通 = SrcAlpha OneMinusSrcAlpha
 Shader "Sanguo/SpecialFx"
 {
@@ -54,7 +55,7 @@ Shader "Sanguo/SpecialFx"
                 o.pos = UnityObjectToClipPos(i.vertex);
                 o.uv = i.uv;
                 float3 vp = UnityObjectToViewPos(i.vertex.xyz);
-                o.n = normalize(mul((float3x3)UNITY_MATRIX_IT_MV, i.normal));
+                o.n = mul((float3x3)UNITY_MATRIX_IT_MV, i.normal);   // 护盾模式才用（在片元里归一化）
                 o.v = normalize(-vp);
                 o.p = i.vertex.xyz;
                 return o;
@@ -108,6 +109,11 @@ Shader "Sanguo/SpecialFx"
                     float edge = sin(saturate(uv.x) * 3.14159);
                     float a = (body * 0.85 + crest) * edge * _Opacity;
                     return float4(lerp(col, float3(1.0, 1.0, 1.0), crest * 0.85), a);
+                }
+                if (_Mode > 4.5)
+                {
+                    // 纯色（残影、箭杆 / 箭头）：网页版 MeshBasicMaterial（不用顶点色与贴图）
+                    return float4(col, _Opacity);
                 }
                 // 护盾：菲涅耳边缘 + 上升扫描环 + 六角网格
                 float f = pow(1.0 - abs(dot(normalize(i.n), normalize(i.v))), 2.0);
