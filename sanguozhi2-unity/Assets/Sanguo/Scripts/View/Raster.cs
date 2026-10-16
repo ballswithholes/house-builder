@@ -929,13 +929,14 @@ namespace Sanguo
             }
             return o;
         }
-        public Texture2D ToTexture(bool mipmaps = false)
+        // readable = false 时上传后丢掉 CPU 端像素副本（之后不能再 GetPixels / SetPixels）
+        public Texture2D ToTexture(bool mipmaps = false, bool readable = true)
         {
             var t = new Texture2D(W, H, TextureFormat.RGBA32, mipmaps);
             t.wrapMode = TextureWrapMode.Clamp;
             t.filterMode = FilterMode.Bilinear;
             t.SetPixels32(ToColor32());
-            t.Apply(mipmaps, false);
+            t.Apply(mipmaps, !readable);
             return t;
         }
 #endif

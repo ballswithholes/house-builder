@@ -218,6 +218,13 @@ namespace Sanguo
                 var ss = si.gameObject.AddComponent<Shadow>(); ss.effectColor = new Color(0, 0, 0, 0.85f); ss.effectDistance = new Vector2(0, -1);
             }
 
+            // 操作提示（网页版 .sg-title-foot：触屏 / 桌面两种文字）
+            bool touch = Input.touchSupported && Application.isMobilePlatform;
+            var foot = UIKit.Label(title, touch ? "拖动平移 · 双指缩放 · 轻触选取" : "拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转", 16,
+                new Color(0.96f, 0.93f, 0.86f, 0.62f), TextAnchor.MiddleCenter);
+            UIKit.Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(1200, 28));
+            var fs = foot.gameObject.AddComponent<Shadow>(); fs.effectColor = new Color(0, 0, 0, 0.8f); fs.effectDistance = new Vector2(0, -1);
+
             float ang = 0;
             while (true)
             {

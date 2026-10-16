@@ -63,6 +63,47 @@ The scenario is **190 年 · 董卓专横**: 38 cities, 18 warlords and about 15
 generals, including hidden talents such as 诸葛亮, 郭嘉 and 周瑜 that you must
 find with 搜索.
 
+## Version 2 features (ported from the browser version)
+
+Everything in the browser version (`../sanguozhi2-web`) is ported here:
+
+- **Two scenarios**: 董卓专横 · 中原 (the original campaign) and 天下大势 · 世界
+  (Eurasia in 190 AD: 55 factions, about 140 cities, sea routes, culture-styled
+  cities). World rulers are chosen by region.
+- **Portraits** for every general, drawn by a small C# vector rasterizer
+  (`View/Raster.cs`, `View/Portrait.cs`).
+- **攻击** plays a side-view clash cinematic (`Battle/Clash.cs`); the 动画 button
+  (or V) switches it on / fast / off.
+- **必杀**: a unique special attack per general, once per battle, with its own
+  effect (`Battle/BattleViewFx.cs`).
+- **单挑** is a fighting game (`Battle/Duel*.cs`): ←→ move, ↑ jump, J light,
+  K heavy, L guard, I special; on-screen buttons on touch screens.
+- **Music**: a C# synthesizer (`Core/MusicEngine.cs`, `Core/MusicInstruments.cs`)
+  plays the same newly composed scores as the browser, with regional variants.
+- **移动 / 输送** reach any own city connected through own territory; tapping a
+  grey command explains why it is unavailable.
+
+The data shared with the browser version (special attacks, world scenario,
+geography, portraits, music scores) is generated into
+`Assets/Sanguo/Scripts/Data/Generated/` by `../sanguozhi2-web/tools/export-unity-*.js`;
+do not edit those files by hand. `UNITY-V2.md` describes the port.
+
+### Testing without Unity
+
+`Tests~/` (ignored by Unity) holds a compile check and headless tests that
+compare the C# with the browser version: rules (whole games replay identically),
+portraits (rendered to PNG), music (rendered to WAV), map maths and duel AI. See
+`Tests~/README.md`.
+
+### Not yet seen running in Unity
+
+The port was compiled and tested headlessly, but nobody has opened it in the
+Unity editor yet. On the first run, check: shaders compile (including the new
+`LowPolyFade` and `SpecialFx`), fog on the map and in cinematics, the clash and
+duel screens, touch controls on an iPhone/iPad, music playback and audio after
+switching output devices, and frame rate on a phone during the world map and
+the clash cinematic.
+
 ## Code layout
 
 | Folder | Contents |

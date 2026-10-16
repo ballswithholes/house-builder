@@ -590,10 +590,15 @@ namespace Sanguo
         readonly Dictionary<int, string> zones = new Dictionary<int, string>();
         readonly Dictionary<int, string> owner = new Dictionary<int, string>();
         readonly HashSet<string> btnOn = new HashSet<string>();
+        // 每帧复用的临时容器（PollTouch 每帧都跑：不产生垃圾，免得 iPhone 上 GC 停顿卡住音乐线程）
+        static readonly string[] ActBtns = { "light", "heavy", "guard", "special" };
+        readonly HashSet<int> seen = new HashSet<int>();
+        readonly List<int> idScratch = new List<int>();
+        readonly Vector3[] corners = new Vector3[4];
         public void PollTouch(DuelInput input, float time, bool specialReady)
         {
             if (!hasTouch || input == null) return;
-            var seen = new HashSet<int>();
+            seen.Clear();
             for (int i = 0; i < Input.touchCount; i++)
             {
                 var t = Input.GetTouch(i);
@@ -607,15 +612,17 @@ namespace Sanguo
                 if (held) seen.Add(-1);
             }
             // 消失的触点
-            foreach (var id in new List<int>(zones.Keys)) if (!seen.Contains(id)) zones.Remove(id);
-            foreach (var id in new List<int>(owner.Keys)) if (!seen.Contains(id)) owner.Remove(id);
+            idScratch.Clear(); foreach (var id in zones.Keys) if (!seen.Contains(id)) idScratch.Add(id);
+            foreach (var id in idScratch) zones.Remove(id);
+            idScratch.Clear(); foreach (var id in owner.Keys) if (!seen.Contains(id)) idScratch.Add(id);
+            foreach (var id in idScratch) owner.Remove(id);
             bool L = false, Rr = false, U = false;
             foreach (var z in zones.Values) { if (z == "left") L = true; else if (z == "right") Rr = true; else if (z == "up") U = true; }
             input.SetTouch("left", L); input.SetTouch("right", Rr); input.SetTouch("up", U);
             btnOn.Clear(); foreach (var v in owner.Values) btnOn.Add(v);
-            foreach (var kk in new[] { "light", "heavy", "guard", "special" }) input.SetTouch(kk, btnOn.Contains(kk));
+            foreach (var kk in ActBtns) input.SetTouch(kk, btnOn.Contains(kk));
             StyleBtn("left", L, false, time); StyleBtn("right", Rr, false, time); StyleBtn("up", U, false, time);
-            foreach (var kk in new[] { "light", "heavy", "guard", "special" }) StyleBtn(kk, btnOn.Contains(kk), kk == "special" && specialReady, time);
+            foreach (var kk in ActBtns) StyleBtn(kk, btnOn.Contains(kk), kk == "special" && specialReady, time);
         }
         void Pointer(int id, Vector2 pos, bool began, bool ended)
         {
@@ -623,7 +630,7 @@ namespace Sanguo
             if (began)
             {
                 if (controlsA < 0.5f) return;
-                foreach (var kk in new[] { "light", "heavy", "guard", "special" })
+                foreach (var kk in ActBtns)
                 {
                     RectTransform rt; if (!btn.TryGetValue(kk, out rt) || rt == null) continue;
                     var c = RectTransformUtility.WorldToScreenPoint(null, rt.TransformPoint(rt.rect.center));
@@ -639,7 +646,7 @@ namespace Sanguo
         string ZoneAt(Vector2 p)
         {
             if (padRt == null) return null;
-            Vector3[] cs = new Vector3[4]; padRt.GetWorldCorners(cs);   // 屏幕覆盖画布：世界坐标即屏幕像素
+            var cs = corners; padRt.GetWorldCorners(cs);   // 屏幕覆盖画布：世界坐标即屏幕像素
             float left = cs[0].x, bottom = cs[0].y, right = cs[2].x, top = cs[2].y;
             float px = Screen.height / Mathf.Max(1, H) * k;     // 1 CSS 像素对应的屏幕像素
             if (p.x < left - 40 * px || p.x > right + 40 * px || p.y > top + 50 * px || p.y < bottom - 40 * px) return null;

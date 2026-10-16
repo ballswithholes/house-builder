@@ -47,6 +47,8 @@ namespace Sanguo
         sealed class CityLabel
         {
             public RectTransform rt; public Text text; public CanvasGroup cg; public MapView.CityVisual cv;
+            public Image bg, border, ring;     // 底色、金边、选中时的外圈（网页版 .is-mine / .is-selected）
+            public int style = -1;
             public float fade = -1; public bool on, seen;
         }
         readonly Dictionary<int, CityLabel> labels = new Dictionary<int, CityLabel>();
@@ -72,6 +74,9 @@ namespace Sanguo
 
         // ---------------------------------------------------------- 小工具 --
         static string Hex(Color c) { return "#" + ColorUtility.ToHtmlStringRGB(c); }
+        // 与区域设置无关的百分比 / 千分位（网页版 pct = Math.round(p*100)+'%'，n0 = toLocaleString('en-US')）
+        static string Pct(double p) { return ((long)System.Math.Floor(p * 100 + 0.5)).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%"; }
+        static string N0(long v) { return v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture); }
         // 深色势力色作为文字时提亮，保证在漆黑面板上可读（标记 ■● 仍用原色）
         static string Readable(Color c)
         {
@@ -257,9 +262,13 @@ namespace Sanguo
                 bg.rectTransform.sizeDelta = new Vector2(120, 38);
                 var t = UIKit.Label(bg.transform, cv.city.name, 22, UIKit.Text, TextAnchor.MiddleCenter, true);
                 UIKit.Stretch(t.rectTransform, 4, 0, 4, 0);
+                var border = UIKit.Img(bg.transform, UIKit.RROutline, new Color(0.95f, 0.79f, 0.41f, 0.26f), "Border");
+                UIKit.Stretch(border.rectTransform, 1, 1, 1, 1); border.raycastTarget = false;
+                var ring = UIKit.Img(bg.transform, UIKit.RROutline, new Color(0.95f, 0.79f, 0.41f, 0.45f), "Ring");
+                UIKit.Stretch(ring.rectTransform, -3, -3, -3, -3); ring.raycastTarget = false; ring.enabled = false;
                 var cg = bg.gameObject.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; cg.interactable = false;
                 cg.alpha = 0;                // 首次避让计算后才显示，避免第一帧城名叠在一起
-                labels[cv.city.id] = new CityLabel { rt = bg.rectTransform, text = t, cg = cg, cv = cv };
+                labels[cv.city.id] = new CityLabel { rt = bg.rectTransform, text = t, cg = cg, cv = cv, bg = bg, border = border, ring = ring };
             }
         }
 
@@ -393,11 +402,24 @@ namespace Sanguo
             l.text.GetComponent<FontBase>().Set(compact ? 20 : 22);
             l.text.text = "<color=" + Hex(col) + ">●</color>" + c.name + (c.owner == G.player && !compact ? " " + UIKit.Sz(16) + G.TroopsIn(c) + "</size>" : "");
             l.rt.sizeDelta = new Vector2(l.text.preferredWidth + (compact ? 16 : 22), compact ? 32 : 38);
+            StyleLabel(id, l);
+        }
+
+        // 城名牌样式：选中城金边 + 金褐底 + 外圈光晕，己方城金边加重，其余淡金边（网页版 .is-selected / .is-mine）
+        void StyleLabel(int id, CityLabel l)
+        {
+            int st = id == selected ? 2 : G.cities[id].owner == G.player ? 1 : 0;
+            if (st == l.style || l.bg == null) return;
+            l.style = st;
+            l.bg.color = st == 2 ? new Color(0.2f, 0.15f, 0.07f, 0.88f) : new Color(0.05f, 0.05f, 0.08f, 0.72f);
+            l.border.color = new Color(0.95f, 0.79f, 0.41f, st == 2 ? 1f : st == 1 ? 0.5f : 0.26f);
+            l.ring.enabled = st == 2;
         }
 
         void SelectCity(int id)
         {
             selected = id;
+            foreach (var kv in labels) StyleLabel(kv.Key, kv.Value);
             Game.I.Map.Select(id);
             if (id >= 0) Sfx.Click();
             RefreshCityPanel();
@@ -413,8 +435,8 @@ namespace Sanguo
             cityTitle.text = c.name + "  " + UIKit.Sz(24) + (owner != null ? "<color=" + Readable(owner.Col) + ">" + owner.name + "</color>" : "<color=#a8a194>空城</color>") + "</size>";
             var gov = c.governor >= 0 ? G.generals[c.governor].name : "—";
             var free = G.FreeFoundIn(c.id).ToList();
-            cityStats.text = string.Format("太守 <b>{0}</b>　　人口 {1:N0}\n土地 <b>{2}</b>　产业 <b>{3}</b>　町 <b>{4}</b>\n金 <b>{5}</b>　粮 <b>{6}</b>　防御 {7}\n兵力 <b>{8}</b>　武将 {9} 人{10}",
-                gov, c.population, c.land, c.industry, c.town, c.gold, c.food, c.Defense, G.TroopsIn(c), G.OfficersIn(c).Count(),
+            cityStats.text = string.Format("太守 <b>{0}</b>　　人口 {1}\n土地 <b>{2}</b>　产业 <b>{3}</b>　町 <b>{4}</b>\n金 <b>{5}</b>　粮 <b>{6}</b>　防御 {7}\n兵力 <b>{8}</b>　武将 {9} 人{10}",
+                gov, N0(c.population), c.land, c.industry, c.town, c.gold, c.food, c.Defense, G.TroopsIn(c), G.OfficersIn(c).Count(),
                 free.Count > 0 && mine ? "　<color=#73d98c>在野 " + free.Count + " 人</color>" : "");
             foreach (Transform t in genList) Destroy(t.gameObject);
             // 武将列表（君主优先，其次兵力）；点按武将行 → 武将详情
@@ -637,7 +659,7 @@ namespace Sanguo
             if (found != null)
             {
                 var ok = new Ref<bool>();
-                yield return UIKit.Confirm(string.Format("登用{0}？（武{1} 智{2} 政{3}，成功率约 {4:P0}）", found.name, found.war, found.intel, found.pol, Commands.HireChance(found, who.v, G.player)), ok, "登用", "暂且作罢");
+                yield return UIKit.Confirm(string.Format("登用{0}？（武{1} 智{2} 政{3}，成功率约 {4}）", found.name, found.war, found.intel, found.pol, Pct(Commands.HireChance(found, who.v, G.player))), ok, "登用", "暂且作罢");
                 if (ok.v) yield return HireResult(found, who.v, c);
             }
         }
@@ -654,7 +676,7 @@ namespace Sanguo
             yield return PickGeneral("登用哪位在野人才？", G.FreeFoundIn(c.id), g => string.Format("武{0} 智{1} 政{2}", g.war, g.intel, g.pol), target);
             if (target.v == null) yield break;
             var who = new Ref<General>();
-            yield return PickGeneral("派谁前去？", G.OfficersIn(c), g => string.Format("智力 {0}　成功率约 {1:P0}", g.intel, Commands.HireChance(target.v, g, G.player)), who);
+            yield return PickGeneral("派谁前去？", G.OfficersIn(c), g => string.Format("智力 {0}　成功率约 {1}", g.intel, Pct(Commands.HireChance(target.v, g, G.player))), who);
             if (who.v == null) yield break;
             UseToken();
             yield return HireResult(target.v, who.v, c);
@@ -826,14 +848,14 @@ namespace Sanguo
                 var fs = G.factions.Where(f => f.alive && f.id != G.player).ToList();
                 bool world = RegionsOf() != null;
                 var grp = GroupedFactions(fs, f => new UIKit.Item(G.Ruler(f.id).name + (world && f.name != G.Ruler(f.id).name ? "  " + Small(f.name, 19) : ""),
-                    G.Allied(f.id, G.player) ? "已同盟" : "城 " + G.CityCount(f.id) + "　成功率约 " + Commands.AllyChance(G.player, f.id, Balance.AllianceGift).ToString("P0"),
+                    G.Allied(f.id, G.player) ? "已同盟" : "城 " + G.CityCount(f.id) + "　成功率约 " + Pct(Commands.AllyChance(G.player, f.id, Balance.AllianceGift)),
                     !G.Allied(f.id, G.player)));
                 var fi = new Ref<int>();
                 yield return UIKit.Choose("与谁结盟？", grp.items, fi);
                 var ff = fi.v >= 0 ? grp.pick[fi.v] : null;
                 if (ff == null) yield break;
                 var gift = new Ref<int>();
-                yield return UIKit.PickNumber("赠送礼金", 0, c.gold, 50, Mathf.Min(c.gold, Balance.AllianceGift), v => "成功率约 " + Commands.AllyChance(G.player, ff.id, v).ToString("P0"), gift);
+                yield return UIKit.PickNumber("赠送礼金", 0, c.gold, 50, Mathf.Min(c.gold, Balance.AllianceGift), v => "成功率约 " + Pct(Commands.AllyChance(G.player, ff.id, v)), gift);
                 if (gift.v < 0) yield break;
                 UseToken();
                 yield return UIKit.Say(Commands.Ally(c, G.player, ff.id, gift.v));
@@ -846,7 +868,7 @@ namespace Sanguo
             if (targets.Count == 0) { yield return UIKit.Say("邻近城池中没有可以下手的敌将。"); yield break; }
             var target = new Ref<General>();
             if (r.v == 1) yield return PickGeneral("离间哪位敌将？", targets, g => G.factions[g.faction].name + "·" + G.cities[g.city].name + "　智" + g.intel + "　忠诚 " + g.loyalty, target);
-            else yield return PickGeneral("拉拢哪位敌将？", targets, g => G.factions[g.faction].name + "·" + G.cities[g.city].name + "　忠诚 " + g.loyalty + "　成功率约 " + Commands.PersuadeChance(agent.v, g, G.player).ToString("P0"), target);
+            else yield return PickGeneral("拉拢哪位敌将？", targets, g => G.factions[g.faction].name + "·" + G.cities[g.city].name + "　忠诚 " + g.loyalty + "　成功率约 " + Pct(Commands.PersuadeChance(agent.v, g, G.player)), target);
             if (target.v == null) yield break;
             UseToken();
             agent.v.moved = true;
@@ -967,7 +989,7 @@ namespace Sanguo
                 var r = new Ref<int>();
                 yield return UIKit.Choose("俘虏：" + cap.name + (isRuler ? "（君主）" : ""), new List<UIKit.Item>
                 {
-                    new UIKit.Item("登用", isRuler ? "君主不会投降" : "成功率约 " + Commands.HireChance(cap, recruiter, G.player).ToString("P0"), !isRuler),
+                    new UIKit.Item("登用", isRuler ? "君主不会投降" : "成功率约 " + Pct(Commands.HireChance(cap, recruiter, G.player)), !isRuler),
                     new UIKit.Item("释放", "放其归去"),
                     new UIKit.Item("处斩", "以绝后患"),
                 }, r, string.Format("武{0} 智{1} 政{2}", cap.war, cap.intel, cap.pol));

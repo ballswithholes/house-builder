@@ -63,6 +63,8 @@ namespace Sanguo
             inst.music.playOnAwake = false;
             inst.music.loop = true; inst.music.volume = 1;
             inst.music.spatialBlend = 0;
+            // 音频系统重置（换输出设备、系统采样率变化、AudioSettings.Reset）会停掉所有 AudioSource：重新开播流式音乐
+            AudioSettings.OnAudioConfigurationChanged += inst.OnAudioConfigChanged;
             // 预先在后台渲染标题曲需要的乐器采样
             try { var k = MusicLib.Resolve(MusicKind ?? "title", Culture); if (k != null) MusicLib.PrepareAsync(k, null, null, OutRate()); }
             catch (Exception e) { Debug.LogWarning("音乐预热失败：" + e.Message); }
@@ -303,6 +305,18 @@ namespace Sanguo
             }
             if (heldKind != null && holdUntil >= 0 && Time.unscaledTime >= holdUntil) ReleaseHold();
             if (oneShotDone != null && (Time.unscaledTime >= oneShotDeadline || !MusicOn || MusicKind != oneShotKind)) FireOneShot();
+            // 兜底：流式音乐源被停掉（音频重置的回调没来或来早了）时每秒重试一次
+            if (stream != null && Time.unscaledTime >= nextRevive) { nextRevive = Time.unscaledTime + 1f; ReviveMusic(); }
+        }
+        float nextRevive;
+        void OnAudioConfigChanged(bool deviceWasChanged) { ReviveMusic(); }
+        // 引擎与流式 AudioClip 不用重建（采样率变了 Unity 会重采样）；丢掉环形缓冲里过期的提前量后重新开播
+        void ReviveMusic()
+        {
+            if (stream == null || music == null || !running || music.isPlaying) return;
+            Interlocked.Exchange(ref rpos, Interlocked.Read(ref wpos));
+            music.clip = stream;
+            music.Play();
         }
 
         // ---------------------------------------------------------- 渲染与播放 --
@@ -382,6 +396,7 @@ namespace Sanguo
 
         void OnDestroy()
         {
+            AudioSettings.OnAudioConfigurationChanged -= OnAudioConfigChanged;
             running = false;
             if (renderThread != null) { try { renderThread.Join(200); } catch (Exception) { } renderThread = null; }
             if (music != null) music.Stop();

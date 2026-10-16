@@ -224,18 +224,8 @@ namespace Sanguo
         public static string Hex(Color c) { return "#" + ColorUtility.ToHtmlStringRGB(c).ToLowerInvariant(); }
         public static Color Lerp(Color a, Color b, float t) { return Color.Lerp(a, b, t); }
         public static void Sfx(string name, float vol = 0.8f) { try { Sanguo.Sfx.Play(name, vol); } catch (Exception) { /* 无音频 */ } }
-        // 交锋乐句（Sfx.Stinger 由音乐模块提供；尚未提供时静默）
-        static System.Reflection.MethodInfo stinger;
-        static bool stingerLooked;
-        public static void Stinger(string kind, float speed)
-        {
-            try
-            {
-                if (!stingerLooked) { stingerLooked = true; stinger = typeof(Sanguo.Sfx).GetMethod("Stinger", new[] { typeof(string), typeof(float) }); }
-                if (stinger != null) stinger.Invoke(null, new object[] { kind, speed });
-            }
-            catch (Exception) { /* 无音频 */ }
-        }
+        // 交锋乐句（= clash.js 的 SG.Sfx.stinger('clash', { speed })）。直接调用：签名变了编译就报错，不会静默失效
+        public static void Stinger(string kind, float speed) { try { Sanguo.Sfx.Stinger(kind, speed); } catch (Exception) { /* 无音频 */ } }
         // three 空间的矩阵 → Unity 空间（S · M · S）
         public static Matrix4x4 ToU(Matrix4x4 m)
         {
@@ -1926,7 +1916,8 @@ namespace Sanguo
             foreach (var c in Camera.allCameras) if (c != cam) depth = Mathf.Max(depth, c.depth);
             cam.depth = depth + 10;
             cam.cullingMask = 1 << Clash.Layer;
-            cam.clearFlags = RenderSettings.skybox != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+            // 网页版 scene.background = FOG：纯雾色背景，远处地面雾化后与天际无缝（不用地图的天空盒）
+            cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = FOG;
             cam.fieldOfView = 34;
             cam.nearClipPlane = 0.3f; cam.farClipPlane = 300;

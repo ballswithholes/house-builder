@@ -1010,13 +1010,16 @@ namespace Sanguo
                 bool hide = cam.transform.position.y > (treesHidden ? 165 : 180);
                 if (hide != treesHidden) { treesHidden = hide; foreach (var t in treeObjs) if (t != null) t.SetActive(!hide); }
             }
-            // 世界地图：镜头拉远时雾随之推远（地图隐藏时——如战斗——恢复原值）
-            if (Region == "world" && cam != null && RenderSettings.fog)
+            // 世界地图：镜头拉远时雾随之推远。RenderSettings 的雾是全局的：地图隐藏时（战斗及其中的交锋 / 单挑）
+            // 只恢复一次原值，之后不再写，免得盖掉交锋、单挑自己设的雾距（JS 里地图缩放只改主场景的 fog）
+            bool vis = Root.gameObject.activeInHierarchy;
+            if (Region == "world" && cam != null && RenderSettings.fog && vis)
             {
                 if (!fogSaved) { fogSaved = true; fogStart0 = RenderSettings.fogStartDistance; fogEnd0 = RenderSettings.fogEndDistance; }
-                float k = Root.gameObject.activeInHierarchy ? Mathf.Max(1, cam.transform.position.y / 105f) : 1;
+                float k = Mathf.Max(1, cam.transform.position.y / 105f);
                 RenderSettings.fogStartDistance = fogStart0 * k; RenderSettings.fogEndDistance = fogEnd0 * k;
             }
+            else if (fogSaved && !vis) RestoreFog();
         }
         void RestoreFog()
         {

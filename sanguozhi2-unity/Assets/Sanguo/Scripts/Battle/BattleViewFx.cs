@@ -419,6 +419,7 @@ namespace Sanguo
                     var l = new GameObject("FxLight").AddComponent<Light>();
                     l.transform.SetParent(root, false);
                     l.type = LightType.Point; l.range = 6; l.intensity = 0; l.shadows = LightShadows.None; l.enabled = false;
+                    l.renderMode = LightRenderMode.ForcePixel;   // 低画质（像素光 1 盏）下也逐像素，不退化为顶点光；只有两盏且短暂点亮
                     spLights.Add(new SpLightSlot { l = l, seed = i * 17.3f });
                 }
             var s = spLights.FirstOrDefault(x => !x.busy);

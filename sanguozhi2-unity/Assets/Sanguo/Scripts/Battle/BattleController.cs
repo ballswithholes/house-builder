@@ -20,6 +20,7 @@ namespace Sanguo
     public class BattleController
     {
         BattleModel M; BattleView V; int playerSide; bool autoPlayer, endTurn;
+        UIKit.Btn endBtn;
         Vector2? tap;
         RectTransform hud; Text topText, cardText, cardHead, cardSub; RectTransform card, cardBarFill; Image cardPic, cardBarImg;
         UIKit.Btn animBtn; string animShown;
@@ -43,27 +44,29 @@ namespace Sanguo
             V = BattleView.Create(M);
             var rig = Game.I.Rig;
             var oldBounds = rig.Bounds; var oldTarget = rig.Desired; var oldDist = rig.DesiredDistance; float oldMin = rig.MinDist, oldMax = rig.MaxDist;
-            Game.I.Map.Root.gameObject.SetActive(false);
-            rig.Bounds = new Rect(BattleView.Origin.x, BattleView.Origin.z, M.W * BattleView.T, M.H * BattleView.T);
-            rig.MinDist = 12; rig.MaxDist = 62;
-            rig.Focus(V.BoardCenter - new Vector3(0, 0, 2), 40, true);
-            try { PortraitOpening(rig); } catch (Exception e) { Debug.LogException(e); }
-            rig.OnTap += OnTap;
-            // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
             string oldCulture = Sfx.Culture;
+            // 布置战场也放进 try：其中任何一步抛出异常时，finally 照样恢复地图、镜头与音乐
             try
             {
-                var cul = CultureOfFoe(s, playerSide);
-                if (!string.IsNullOrEmpty(cul) && cul != Sfx.Culture) Sfx.Culture = cul;
-            }
-            catch (Exception) { /* 无地域资料 */ }
-            battleMusic = playerSide == 1 ? "battle-defend" : "battle";
-            Sfx.Music(battleMusic);
-            V.StartCoroutine(KeyLoop());
-            BuildHud();
-            UpdateHud();                       // 开场横幅期间顶栏即显示日数 / 兵力 / 粮草
-            try
-            {
+                Game.I.Map.Root.gameObject.SetActive(false);
+                rig.Bounds = new Rect(BattleView.Origin.x, BattleView.Origin.z, M.W * BattleView.T, M.H * BattleView.T);
+                rig.MinDist = 12; rig.MaxDist = 62;
+                rig.Focus(V.BoardCenter - new Vector3(0, 0, 2), 40, true);
+                try { PortraitOpening(rig); } catch (Exception e) { Debug.LogException(e); }
+                rig.OnTap += OnTap;
+                // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
+                try
+                {
+                    var cul = CultureOfFoe(s, playerSide);
+                    if (!string.IsNullOrEmpty(cul) && cul != Sfx.Culture) Sfx.Culture = cul;
+                }
+                catch (Exception) { /* 无地域资料 */ }
+                battleMusic = playerSide == 1 ? "battle-defend" : "battle";
+                Sfx.Music(battleMusic);
+                V.StartCoroutine(KeyLoop());
+                BuildHud();
+                UpdateHud();                       // 开场横幅期间顶栏即显示日数 / 兵力 / 粮草
+
                 string an = G.factions[s.attacker].name, dn = s.defender >= 0 ? G.factions[s.defender].name : "守军";
                 UIKit.Banner(s.target.name + "之战", an + "军 进攻 " + dn + "军", 2.2f);
                 Sfx.Play("horn");
@@ -104,6 +107,7 @@ namespace Sanguo
                 rig.Bounds = oldBounds; rig.MinDist = oldMin; rig.MaxDist = oldMax; rig.Focus(oldTarget, oldDist, true);
                 if (!string.IsNullOrEmpty(oldCulture)) Sfx.Culture = oldCulture;
                 Sfx.Music("map");   // 胜负短曲未奏完时由 Sfx 暂缓（HOLD_AFTER_ONE_SHOT），曲终再接地图曲
+                try { Portrait.ReleaseRetired(); } catch (Exception e) { Debug.LogException(e); }   // 战斗结束时释放被淘汰的大头像
             }
         }
 
@@ -180,10 +184,10 @@ namespace Sanguo
             UIKit.Place(top, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(980, 64));
             topText = UIKit.Label(top, "", 24, UIKit.Text, TextAnchor.MiddleCenter);
             UIKit.Stretch(topText.rectTransform, 16, 0, 16, 0);
-            var end = UIKit.Button(hud, "结束回合", () => endTurn = true, 28, true);
+            var end = endBtn = UIKit.Button(hud, "结束回合", () => endTurn = true, 28, true);
             UIKit.Place(end.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 24), new Vector2(220, 70));
             UIKit.Btn auto = null;
-            auto = UIKit.Button(hud, "委任作战", () => { autoPlayer = !autoPlayer; endTurn = true; auto.label.text = autoPlayer ? "亲自指挥" : "委任作战"; }, 26);
+            auto = UIKit.Button(hud, "委任作战", () => { autoPlayer = !autoPlayer; endTurn = true; auto.label.text = autoPlayer ? "亲自指挥" : "委任作战"; SyncEndBtn(); }, 26);
             UIKit.Place(auto.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-260, 24), new Vector2(200, 70));
             // 攻击画面 开 / 快 / 关（Clash.Mode；快捷键 V）
             animBtn = UIKit.Button(hud, "", CycleAnim, 24, false, "AnimMode");
@@ -219,8 +223,11 @@ namespace Sanguo
             int t0 = M.Alive(0).Sum(u => u.Troops), t1 = M.Alive(1).Sum(u => u.Troops);
             topText.text = string.Format("第 <b>{0}</b>/{1} 日　{2}行动　行动力 <color=#f3c969>{3}</color>　｜　攻 {4}  粮{5}　守 {6}  粮{7}",
                 Mathf.Min(M.day, Balance.BattleDays), Balance.BattleDays, side, dots, t0, M.food[0], t1, M.food[1]);
+            SyncEndBtn();
             SyncAnimBtn();
         }
+        // 「结束回合」只在玩家亲自指挥的本方行动时可按（= 网页版 updateHud 的 endBtn.disabled）
+        void SyncEndBtn() { if (endBtn != null && endBtn.button != null) endBtn.button.interactable = M.side == playerSide && !autoPlayer; }
 
         void ShowCard(BUnit u)
         {
@@ -318,7 +325,10 @@ namespace Sanguo
                 while (tap == null && !endTurn) yield return null;
                 if (endTurn) break;
                 Vector2Int t;
-                if (!V.TileFromScreen(Game.I.Rig.Cam, tap.Value, out t)) continue;
+                // 先看是否点在部队头顶的名牌上（窄屏上名牌比部队本身更显眼，常被当作点选目标），否则按地面取格
+                var lu = V.UnitFromLabel(tap.Value);
+                if (lu != null) t = new Vector2Int(lu.x, lu.y);
+                else if (!V.TileFromScreen(Game.I.Rig.Cam, tap.Value, out t)) continue;
                 var at = M.UnitAt(t.x, t.y);
                 if (sel == null)
                 {

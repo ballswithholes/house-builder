@@ -57,6 +57,7 @@ namespace Sanguo
             var v = go.AddComponent<BattleView>();
             v.M = m;
             v.Build();
+            go.AddComponent<UnitLabelLayout>().view = v;    // 名牌避让（在 WorldFollow 定位之后运行）
             return v;
         }
 
@@ -267,8 +268,180 @@ namespace Sanguo
                 highlights.Add(go);
             }
         }
+        // ------------------------------------------------------ 名牌避让 --
+        // 移植网页版 BattleView._layoutLabels：部队头顶名牌互相遮挡时（窄屏上格距只有约 30px）按优先级排布：
+        // 选中部队 > 主将 > 靠近镜头（屏幕上更低）的部队。先放的留在原位；后放的若与已放的重叠，就在小范围内
+        // 上移 / 下移 / 左右平移到最近的空位（上移时显示一根引线连回部队），实在放不下则淡化到 0.3 并压到下层。
+        // 坐标为 LabelLayer 的本地坐标（画布单位，y 向上）。由 UnitLabelLayout 在 WorldFollow 定位之后每帧调用。
+        struct LRect { public float l, r, b, t; public LRect(float l, float b, float r, float t) { this.l = l; this.b = b; this.r = r; this.t = t; } }
+        readonly List<UnitVisual> lblItems = new List<UnitVisual>();
+        readonly List<UnitVisual> lblZOrder = new List<UnitVisual>(), lblZLast = new List<UnitVisual>();
+        readonly List<int> lblSlots = new List<int>();
+        readonly List<LRect> lblPlaced = new List<LRect>(), lblNear = new List<LRect>();
+        readonly List<float> lblDys = new List<float>(), lblDxs = new List<float>();
+        const float LblGap = 6f, LblM = 2f;   // 名牌底与部队锚点的间距（网页版 bottom:.35em）；名牌之间至少留 2
+        static readonly System.Comparison<UnitVisual> LblPriority = (a, b) =>
+            a.lblPr != b.lblPr ? b.lblPr.CompareTo(a.lblPr) : a.lblBase.y != b.lblBase.y ? a.lblBase.y.CompareTo(b.lblBase.y) : a.lblOrder.CompareTo(b.lblOrder);
+        static readonly System.Comparison<UnitVisual> LblByZ = (a, b) => a.lblZ != b.lblZ ? a.lblZ.CompareTo(b.lblZ) : a.lblOrder.CompareTo(b.lblOrder);
+        static bool LblHits(List<LRect> list, float l, float b, float r, float t)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = list[i];
+                if (l < p.r + LblM && r > p.l - LblM && b < p.t + LblM && t > p.b - LblM) return true;
+            }
+            return false;
+        }
+        internal void LayoutLabels(float dt)
+        {
+            var cam = Camera.main;
+            var layer = UIKit.LabelLayer;
+            if (cam == null || layer == null) return;
+            lblItems.Clear();
+            int order = 0;
+            foreach (var v in vis.Values)
+            {
+                order++;
+                if (v == null || v.Info == null || v.follow == null) continue;
+                if (!(v.labelAlpha > 0.001f) || !v.Info.gameObject.activeInHierarchy) { v.lblShown = false; continue; }
+                var p = v.transform.position;
+                var sp = cam.WorldToScreenPoint(p);
+                Vector2 local;
+                if (sp.z <= 0 || !(Vector3.Distance(cam.transform.position, p) < v.follow.hideBeyond)
+                    || !RectTransformUtility.ScreenPointToLocalPointInRectangle(layer, sp, null, out local)) { v.lblShown = false; continue; }
+                v.lblBase = local + v.follow.offset;
+                v.lblPr = (v.u == CursorUnit ? 2 : 0) + (v.u.commander ? 1 : 0);
+                v.lblOrder = order;
+                lblItems.Add(v);
+            }
+            // 优先级高的先放；同级时靠近镜头（屏幕上更低）的先放，后面的部队名牌自然向上让开
+            lblItems.Sort(LblPriority);
+            lblPlaced.Clear();
+            int n = lblItems.Count;
+            for (int rank = 0; rank < n; rank++)
+            {
+                var v = lblItems[rank];
+                var sz = v.Info.rect.size;
+                float w = sz.x, h = sz.y;
+                float l0 = v.lblBase.x - w / 2, r0 = v.lblBase.x + w / 2, b0 = v.lblBase.y - h / 2, t0 = v.lblBase.y + h / 2;
+                bool found = false; float bdx = 0, bdy = 0;
+                if (!LblHits(lblPlaced, l0, b0, r0, t0)) found = true;
+                else
+                {
+                    float maxUp = h * 1.6f + 4, maxDown = h * 0.45f, maxSide = w * 0.42f;
+                    // 只看附近的名牌：候选偏移取“贴着它们的边”的位置
+                    lblNear.Clear(); lblDys.Clear(); lblDxs.Clear(); lblDys.Add(0); lblDxs.Add(0);
+                    foreach (var p in lblPlaced)
+                        if (p.l < r0 + maxSide + LblM && p.r > l0 - maxSide - LblM && p.b < t0 + maxUp + LblM && p.t > b0 - maxDown - LblM) lblNear.Add(p);
+                    foreach (var p in lblNear)
+                    {
+                        float up = p.t + LblM - b0, down = t0 - p.b + LblM, left = p.l - LblM - r0, right = p.r + LblM - l0;
+                        if (up > 0 && up <= maxUp) lblDys.Add(up);
+                        if (down > 0 && down <= maxDown) lblDys.Add(-down);
+                        if (left < 0 && -left <= maxSide) lblDxs.Add(left);
+                        if (right > 0 && right <= maxSide) lblDxs.Add(right);
+                    }
+                    float bestCost = float.PositiveInfinity;
+                    foreach (var dy in lblDys)
+                        foreach (var dx in lblDxs)
+                        {
+                            if (LblHits(lblNear, l0 + dx, b0 + dy, r0 + dx, t0 + dy)) continue;
+                            // 上移最自然，下移会挡住自己的部队，平移次之；与上一帧的目标接近者优先（防抖）
+                            float cost = (dy >= 0 ? dy : -dy * 1.8f) + Mathf.Abs(dx) * 1.25f
+                                + (Mathf.Abs(dx - v.lblTdx) + Mathf.Abs(dy - v.lblTdy)) * 0.3f;
+                            if (cost < bestCost) { bestCost = cost; bdx = dx; bdy = dy; found = true; }
+                        }
+                }
+                if (found)
+                {
+                    v.lblRect = lblPlaced.Count;
+                    lblPlaced.Add(new LRect(l0 + bdx, b0 + bdy, r0 + bdx, t0 + bdy));
+                    v.lblTdx = bdx; v.lblTdy = bdy; v.lblTfade = 1; v.lblZ = -(1 + rank);
+                }
+                else
+                {
+                    v.lblRect = -1;
+                    v.lblTdx = 0; v.lblTdy = 0; v.lblTfade = 0.3f; v.lblZ = -(1 + n + rank);
+                }
+            }
+            float k = Mathf.Min(1, dt * 14), kf = Mathf.Min(1, dt * 8);
+            foreach (var v in lblItems)
+            {
+                if (!v.lblShown) { v.lblDx = v.lblTdx; v.lblDy = v.lblTdy; v.lblFade = v.lblTfade; v.lblShown = true; }
+                else { v.lblDx += (v.lblTdx - v.lblDx) * k; v.lblDy += (v.lblTdy - v.lblDy) * k; v.lblFade += (v.lblTfade - v.lblFade) * kf; }
+                v.Info.anchoredPosition = v.lblBase + new Vector2(v.lblDx, v.lblDy);
+                // 引线：从名牌底部连回部队锚点；落点若被别的名牌盖住就不画，免得看起来连到了别人的名牌
+                float h = v.Info.rect.height;
+                float ax = v.lblBase.x, ay = v.lblBase.y - h / 2 - LblGap;
+                bool stemOk = v.lblDy > 2;
+                if (stemOk)
+                    for (int i = 0; i < lblPlaced.Count; i++)
+                    {
+                        if (i == v.lblRect) continue;
+                        var p = lblPlaced[i];
+                        if (ax > p.l && ax < p.r && ay < p.t && ay + LblGap > p.b) { stemOk = false; break; }
+                    }
+                float stemH = stemOk ? Mathf.Round(v.lblDy + LblGap) : 0;
+                if (v.lblStem != null)
+                {
+                    if (stemH != v.lblStemH)
+                    {
+                        v.lblStemH = stemH;
+                        v.lblStem.gameObject.SetActive(stemH > 0);
+                        v.lblStem.sizeDelta = new Vector2(2, stemH);
+                    }
+                    if (stemH > 0)
+                    {
+                        v.lblStem.anchoredPosition = new Vector2(-v.lblDx, 0);   // 引线留在部队正上方，不随名牌平移
+                        float sa = Mathf.Clamp01((v.lblDy - 2) / 6);
+                        var lc = v.lblStemImg.color; lc.a = 0.6f * sa; v.lblStemImg.color = lc;
+                        var dc = v.lblDotImg.color; dc.a = sa; v.lblDotImg.color = dc;
+                    }
+                }
+                // 边框：选中（网页版 .sg-uinfo.sel）> 主将（.cmd）> 普通
+                int style = v.u == CursorUnit ? 2 : v.u.commander ? 1 : 0;
+                if (style != v.lblStyle && v.lblOutline != null)
+                {
+                    v.lblStyle = style;
+                    v.lblOutline.color = style == 2 ? new Color(1f, 0.886f, 0.549f, 0.95f) : new Color(0.953f, 0.788f, 0.412f, style == 1 ? 0.85f : 0.42f);
+                }
+            }
+            // 层级：已放好的按优先级在上，放不下的压到最下（只在顺序变化时调整，且只在名牌原有的层级槽位间互换）
+            lblZOrder.Clear(); lblZOrder.AddRange(lblItems); lblZOrder.Sort(LblByZ);
+            bool same = lblZOrder.Count == lblZLast.Count;
+            for (int i = 0; same && i < lblZOrder.Count; i++) same = lblZOrder[i] == lblZLast[i];
+            if (!same)
+            {
+                lblSlots.Clear();
+                foreach (var v in lblZOrder) lblSlots.Add(v.Info.GetSiblingIndex());
+                lblSlots.Sort();
+                for (int i = 0; i < lblZOrder.Count; i++) lblZOrder[i].Info.SetSiblingIndex(lblSlots[i]);
+                lblZLast.Clear(); lblZLast.AddRange(lblZOrder);
+            }
+        }
+
+        // 屏幕点落在哪支部队的名牌上（= 网页版 BattleController.unitFromLabel）：按名牌当前层级从上往下找，
+        // 只认清晰显示的名牌（不透明度 ≥ 0.45）——避让失败而淡化压到下层的名牌不拦截点击。没有命中返回 null
+        public BUnit UnitFromLabel(Vector2 screen)
+        {
+            BUnit best = null; int bestIdx = int.MinValue;
+            foreach (var v in vis.Values)
+            {
+                if (v == null || v.Info == null || !v.lblShown || v.hidden) continue;
+                var u = v.u;
+                if (u == null || !u.alive || M.UnitAt(u.x, u.y) != u) continue;
+                if (!(v.labelAlpha * v.lblFade >= 0.45f) || !v.Info.gameObject.activeInHierarchy) continue;
+                if (!RectTransformUtility.RectangleContainsScreenPoint(v.Info, screen, null)) continue;
+                int si = v.Info.GetSiblingIndex();
+                if (si > bestIdx) { bestIdx = si; best = u; }
+            }
+            return best;
+        }
+
+        public BUnit CursorUnit { get; private set; }               // 光标所在（选中）的部队：名牌优先级最高、高亮边框
         public void SetCursor(BUnit u)
         {
+            CursorUnit = u;
             cursor.SetActive(u != null);
             if (u != null) cursor.transform.position = Tile(u.x, u.y) + Vector3.up * 0.08f;
         }
@@ -392,6 +565,7 @@ namespace Sanguo
             var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Box; shape.scale = new Vector3(1.6f, 0.2f, 1.6f);
             var light = new GameObject("FireLight").AddComponent<Light>();
             light.transform.SetParent(ps.transform, false); light.transform.localPosition = Vector3.up; light.type = LightType.Point; light.color = new Color(1, 0.5f, 0.2f); light.range = 6; light.intensity = 3;
+            light.renderMode = LightRenderMode.ForcePixel;   // 同 FxLight：低画质下不退化为顶点光（火光只持续数秒）
             yield return new WaitForSeconds(1.0f);
             var em = ps.emission; em.rateOverTime = 25;
             Destroy(ps.gameObject, 2.5f);
@@ -470,6 +644,14 @@ namespace Sanguo
         }
     }
 
+    // 每帧在 WorldFollow.LateUpdate（缺省执行顺序 0）之后运行名牌避让，在它算好的位置上叠加偏移
+    [DefaultExecutionOrder(1000)]
+    public class UnitLabelLayout : MonoBehaviour
+    {
+        public BattleView view;
+        void LateUpdate() { if (view != null) view.LayoutLabels(Time.deltaTime); }
+    }
+
     // 一支部队：武将 + 若干士兵 + 头顶信息
     public class UnitVisual : MonoBehaviour
     {
@@ -487,6 +669,14 @@ namespace Sanguo
         GameObject buffRing; Material buffMat;
         RectTransform chips;
         static readonly Color HeatTint = new Color(1, 0.42f, 0.1f);
+        // 名牌避让（BattleView.LayoutLabels 写入；= 网页版 v.lbl 与 v.labelAlpha）
+        internal WorldFollow follow;
+        internal float labelAlpha;                                  // 已行动 / 必杀淡出后的不透明度（未乘避让淡化）
+        internal bool lblShown; internal float lblDx, lblDy, lblTdx, lblTdy, lblFade = 1, lblTfade = 1;
+        internal int lblPr, lblOrder, lblZ, lblRect; internal Vector2 lblBase;
+        internal Image lblOutline; internal RectTransform lblStem; internal Image lblStemImg, lblDotImg;
+        internal float lblStemH = -1; internal int lblStyle = -1;
+        internal RectTransform Info { get { return info; } }
 
         public Mesh SharedMesh { get { return mf != null ? mf.sharedMesh : null; } }
 
@@ -511,6 +701,19 @@ namespace Sanguo
             bar.anchorMin = new Vector2(0, 0); bar.anchorMax = new Vector2(1, 0); bar.offsetMin = new Vector2(14, 5); bar.offsetMax = new Vector2(-6, 11);
             barFill = (RectTransform)bar.Find("Fill");
             var wf = info.gameObject.AddComponent<WorldFollow>(); wf.target = transform; wf.offset = new Vector2(0, 74); wf.hideBeyond = 90;
+            follow = wf;
+            // 边框（网页版 .sg-uinfo 的金边；主将 .cmd 加深，选中 .sel 更亮）与上移时连回部队的引线
+            lblOutline = UIKit.Img(info, UIKit.RROutline, new Color(0.953f, 0.788f, 0.412f, 0.42f), "Outline");
+            UIKit.Stretch(lblOutline.rectTransform); lblOutline.raycastTarget = false;
+            lblStem = UIKit.NewRect("Stem", info);
+            lblStem.anchorMin = lblStem.anchorMax = new Vector2(0.5f, 0); lblStem.pivot = new Vector2(0.5f, 1);
+            lblStem.sizeDelta = new Vector2(2, 0);
+            lblStemImg = UIKit.Img(lblStem, null, new Color(0.953f, 0.788f, 0.412f, 0.6f), "Line");
+            UIKit.Stretch(lblStemImg.rectTransform); lblStemImg.raycastTarget = false;
+            lblDotImg = UIKit.Img(lblStem, UIKit.RR, new Color(0.953f, 0.788f, 0.412f, 1f), "Dot");
+            var dr = lblDotImg.rectTransform; dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 0); dr.pivot = new Vector2(0.5f, 0.5f);
+            dr.sizeDelta = new Vector2(6, 6); dr.anchoredPosition = Vector2.zero; lblDotImg.raycastTarget = false;
+            lblStem.gameObject.SetActive(false);
             Refresh();
         }
 
@@ -654,7 +857,8 @@ namespace Sanguo
             {
                 float a = (u.alive || holdLabel) && !hidden ? (u.acted && u.side == view.M.side ? 0.55f : 1f) : 0f;
                 if (view.SpLabelsDim) a *= 0.16f;
-                info.GetComponent<WorldFollow>().alphaMul = a;
+                labelAlpha = a;
+                if (follow != null) follow.alphaMul = a * (lblShown ? lblFade : 1f);   // 避让失败的名牌淡到 0.3（LayoutLabels）
             }
         }
         void OnDestroy()

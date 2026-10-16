@@ -32,7 +32,7 @@ namespace Sanguo
         // ---------------------------------------------------------- 初始化 --
         public static void Init()
         {
-            Body = Font.CreateDynamicFontFromOSFont(new[] { "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "Microsoft YaHei UI", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "SimHei", "Arial Unicode MS", "Arial" }, 32);
+            Body = Font.CreateDynamicFontFromOSFont(new[] { "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "Microsoft YaHei UI", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "SimHei", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", "Noto Sans KR", "Hiragino Sans", "Yu Gothic", "Arial Unicode MS", "Arial" }, 32);
             Title = Font.CreateDynamicFontFromOSFont(new[] { "STKaiti", "Kaiti SC", "KaiTi", "BiauKai", "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", "PingFang SC", "Microsoft YaHei", "Arial Unicode MS" }, 48);
 
             var go = new GameObject("UI");
@@ -54,6 +54,9 @@ namespace Sanguo
                 es.AddComponent<StandaloneInputModule>();
             }
             LabelLayer = Layer("Labels");
+            LabelLayer.gameObject.AddComponent<CanvasGroup>();
+            LabelLayer.gameObject.AddComponent<LabelDim>();
+            liveBanners = 0;
             var screens = Layer("Screens");
             ModalLayer = Layer("Modals");
             ToastLayer = Layer("Toasts");
@@ -361,6 +364,7 @@ namespace Sanguo
         // side：对话框靠左（距左缘 2% 屏宽），遮罩改为自左向右渐淡，地图留在右侧可见（网页版 .sg-side-modal）
         public static Modal OpenModal(float w, float h, bool dim = true, bool side = false)
         {
+            ClearUISelection();
             Image bl;
             if (side) { bl = Img(ModalLayer, SideShade, Color.white, "Modal"); bl.type = Image.Type.Simple; }
             else bl = Img(ModalLayer, null, new Color(0, 0, 0, dim ? 0.45f : 0.001f), "Modal");
@@ -423,6 +427,7 @@ namespace Sanguo
         public static IEnumerator Say(string text, string speaker = null, Color? speakerColor = null)
         {
             bool done = false;
+            ClearUISelection();
             var blocker = Img(ModalLayer, null, new Color(0, 0, 0, 0.25f), "Say").rectTransform;
             Stretch(blocker);
             var panel = Panel(blocker);
@@ -461,7 +466,7 @@ namespace Sanguo
                 }
                 else t.text = text;
                 hint.enabled = full && Mathf.Repeat(Time.unscaledTime, 1f) < 0.65f;
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)) { if (full) done = true; else full = true; }
+                if ((KeyEnter() || Input.GetKeyDown(KeyCode.Escape)) && IsTopModal(blocker)) { if (full) done = true; else full = true; }
                 yield return null;
             }
             Sfx.Click();
@@ -569,6 +574,7 @@ namespace Sanguo
             int pending = -1, last = -1; float pendingAt = 0;
             Action<int> onHover = i => { if (i == last) return; last = i; pending = i; pendingAt = Time.unscaledTime; };
             var rows = new List<RectTransform>();
+            var rings = new List<Image>();
             for (int i = 0; i < items.Count; i++)
             {
                 int idx = i;
@@ -576,6 +582,7 @@ namespace Sanguo
                 float rh = RowHeight(it, itemH);
                 if (it.header)
                 {
+                    rings.Add(null);
                     var row = Img(content, null, new Color(0, 0, 0, 0), "Group");
                     var hl = Label(row.transform, it.label, 22, Gold, TextAnchor.LowerLeft, true);
                     Stretch(hl.rectTransform, 12, 6, 12, 0);
@@ -656,6 +663,7 @@ namespace Sanguo
                 Size(b.bg, -1, rh);
                 if (opts.hover != null) { var hv = b.bg.gameObject.AddComponent<HoverRelay>(); hv.index = idx; hv.onHover = onHover; }
                 rows.Add(b.rt);
+                rings.Add(FocusRing(b.rt));
             }
             float h2 = Mathf.Min(760, 140 + (info != null ? 60 : 0) + listH);
             if (h2 > h) m.panel.sizeDelta = new Vector2(width, Mathf.Min(h2, MaxModalHeight));
@@ -664,9 +672,33 @@ namespace Sanguo
                 ScrollTo(sr, content, rows[opts.initial]);
                 if (opts.hover != null) onHover(opts.initial);
             }
+            // 键盘（网页版 choose 的 onKey）：先聚焦预选或第一项可选行；↑↓ Home End PgUp PgDn 移动，回车 / 空格选定，1–9 直选
+            Func<int, bool> enabledAt = i => i >= 0 && i < items.Count && items[i].enabled && !items[i].header;
+            int active = items.FindIndex(it => it.selected && it.enabled && !it.header);
+            if (active < 0) active = items.FindIndex(it => it.enabled && !it.header);
+            if (active > 0 && opts.initial < 0) ScrollTo(sr, content, rows[active]);
+            int frame0 = Time.frameCount;
             while (result.v == -2)
             {
-                if (Input.GetKeyDown(KeyCode.Escape)) result.v = -1;
+                if (Time.frameCount != frame0 && IsTopModal(m.blocker))
+                {
+                    int dg = DigitDown();
+                    if (Input.GetKeyDown(KeyCode.Escape)) result.v = -1;
+                    else if (KeyEnter()) { if (enabledAt(active)) { Sfx.Click(); result.v = active; } }
+                    else if (dg > 0) { if (enabledAt(dg - 1)) { Sfx.Click(); result.v = dg - 1; } }
+                    else
+                    {
+                        int next = ListNav(items.Count, enabledAt, active);
+                        if (next >= 0)
+                        {
+                            if (active >= 0 && rings[active] != null) rings[active].enabled = false;
+                            active = next;
+                            if (rings[active] != null) rings[active].enabled = true;
+                            ScrollTo(sr, content, rows[active]);
+                            if (opts.hover != null) onHover(active);
+                        }
+                    }
+                }
                 if (pending >= 0 && opts.hover != null && Time.unscaledTime - pendingAt >= 0.14f)
                 {
                     int i = pending; pending = -1;
@@ -706,6 +738,8 @@ namespace Sanguo
             var content = Scroll(m.panel, out sr);
             Stretch((RectTransform)sr.transform, 22, 96, 22, 112);
             var buttons = new List<Btn>();
+            var rings = new List<Image>();
+            var groups = new List<CanvasGroup>();
             Action refresh = null;
             for (int i = 0; i < items.Count; i++)
             {
@@ -722,6 +756,8 @@ namespace Sanguo
                 b.button.interactable = items[i].enabled;
                 Size(b.bg, -1, Mathf.Max(62, MinTouch));
                 buttons.Add(b);
+                rings.Add(FocusRing(b.rt));
+                groups.Add(b.bg.gameObject.AddComponent<CanvasGroup>());
             }
             var ok = Button(m.panel, "确定", () => done = true, 28, true);
             Place(ok.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 22), new Vector2(200, 60));
@@ -736,12 +772,44 @@ namespace Sanguo
                     bool on = sel.Contains(i);
                     buttons[i].label.text = (on ? "<color=#f3c969>◆</color> " : "◇ ") + items[i].label;
                     buttons[i].bg.color = on ? new Color(0.45f, 0.32f, 0.16f, 0.95f) : new Color(0.2f, 0.19f, 0.24f, 0.95f);
+                    groups[i].alpha = !on && sel.Count >= max ? 0.62f : 1f;   // 已达上限：未选行变淡（网页版 .is-capped）
                 }
                 count.text = "已选 " + sel.Count + " / " + max;
                 ok.button.interactable = sel.Count > 0;
             };
             refresh();
-            while (!done && !cancel) { if (Input.GetKeyDown(KeyCode.Escape)) cancel = true; yield return null; }
+            // 键盘（网页版 chooseMany 的 onKey）：空格切换当前行，回车确定（至少选一项），↑↓ 等移动
+            Func<int, bool> enabledAt = i => i >= 0 && i < items.Count && items[i].enabled;
+            int active = items.FindIndex(it => it.enabled);
+            int frame0 = Time.frameCount;
+            while (!done && !cancel)
+            {
+                if (Time.frameCount != frame0 && IsTopModal(m.blocker))
+                {
+                    if (Input.GetKeyDown(KeyCode.Escape)) cancel = true;
+                    else if (Input.GetKeyDown(KeyCode.Space))
+                    {
+                        if (enabledAt(active))
+                        {
+                            Sfx.Click();
+                            if (sel.Contains(active)) sel.Remove(active); else if (sel.Count < max) sel.Add(active);
+                            refresh();
+                        }
+                    }
+                    else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) { if (sel.Count > 0) { Sfx.Click(); done = true; } }
+                    else
+                    {
+                        int next = ListNav(items.Count, enabledAt, active);
+                        if (next >= 0)
+                        {
+                            if (active >= 0) rings[active].enabled = false;
+                            active = next; rings[active].enabled = true;
+                            ScrollTo(sr, content, buttons[active].rt);
+                        }
+                    }
+                }
+                yield return null;
+            }
             m.Close();
             if (done) { result.v = new List<int>(sel); result.v.Sort(); }
         }
@@ -753,7 +821,7 @@ namespace Sanguo
             if (max < min) { yield return Say("数量不足，无法执行。"); yield break; }
             bool done = false, cancel = false;
             int val = Mathf.Clamp(start, min, max);
-            var m = OpenModal(620, 340);
+            var m = OpenModal(620, 366);
             var head = Label(m.panel, title, 32, Gold, TextAnchor.MiddleLeft, true);
             Place(head.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -18), new Vector2(560, 48));
             var big = Label(m.panel, "", 54, Text, TextAnchor.MiddleCenter, true);
@@ -762,18 +830,43 @@ namespace Sanguo
             Place(desc.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(560, 34));
             var slider = NewSlider(m.panel, min, max, val);
             Place((RectTransform)slider.transform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -196), new Vector2(520, 36));
+            // 滑块两端的最小 / 最大值（网页版 .sg-range-ends）
+            var endMin = Label(m.panel, min.ToString(), 18, Muted, TextAnchor.UpperLeft);
+            Place(endMin.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-130, -234), new Vector2(260, 26));
+            var endMax = Label(m.panel, max.ToString(), 18, Muted, TextAnchor.UpperRight);
+            Place(endMax.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(130, -234), new Vector2(260, 26));
             Action upd = () => { big.text = val.ToString(); desc.text = describe != null ? describe(val) : ""; slider.value = val; };
             slider.onValueChanged.AddListener(f => { val = Mathf.Clamp(Mathf.RoundToInt(f / step) * step, min, max); big.text = val.ToString(); desc.text = describe != null ? describe(val) : ""; });
-            var minus = Button(m.panel, "－", () => { val = Mathf.Max(min, val - step); upd(); }, 34);
+            Action dec = () => { val = Mathf.Max(min, val - step); upd(); };
+            Action inc = () => { val = Mathf.Min(max, val + step); upd(); };
+            // －／＋ 按住连续增减（网页版 holdable：按下即执行一次，0.38 秒后每 0.07 秒一次）
+            var minus = Button(m.panel, "－", null, 34);
             Place(minus.rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-230, -80), new Vector2(70, 64));
-            var plus = Button(m.panel, "＋", () => { val = Mathf.Min(max, val + step); upd(); }, 34);
+            minus.bg.gameObject.AddComponent<HoldRepeat>().fn = dec;
+            var plus = Button(m.panel, "＋", null, 34);
             Place(plus.rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(230, -80), new Vector2(70, 64));
+            plus.bg.gameObject.AddComponent<HoldRepeat>().fn = inc;
             var ok = Button(m.panel, "确定", () => done = true, 28, true);
             Place(ok.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 22), new Vector2(180, 60));
             var cc = Button(m.panel, "取消", () => cancel = true, 28);
             Place(cc.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-220, 22), new Vector2(150, 60));
             upd();
-            while (!done && !cancel) { if (Input.GetKeyDown(KeyCode.Escape)) cancel = true; if (Input.GetKeyDown(KeyCode.Return)) done = true; yield return null; }
+            int frame0 = Time.frameCount;
+            while (!done && !cancel)
+            {
+                if (Time.frameCount != frame0 && IsTopModal(m.blocker))
+                {
+                    if (Input.GetKeyDown(KeyCode.Escape)) cancel = true;
+                    else if (KeyEnter()) { Sfx.Click(); done = true; }
+                    else if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.DownArrow)) dec();
+                    else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.UpArrow)) inc();
+                    else if (Input.GetKeyDown(KeyCode.PageDown)) { val = Mathf.Max(min, val - step * 10); upd(); }
+                    else if (Input.GetKeyDown(KeyCode.PageUp)) { val = Mathf.Min(max, val + step * 10); upd(); }
+                    else if (Input.GetKeyDown(KeyCode.Home)) slider.value = min;
+                    else if (Input.GetKeyDown(KeyCode.End)) slider.value = max;
+                }
+                yield return null;
+            }
             m.Close();
             if (done) result.v = val;
         }
@@ -792,16 +885,105 @@ namespace Sanguo
             return s;
         }
 
+        // 确认：标题 + [否][是（主按钮）] 一排（网页版 confirm）。回车 / 空格取当前按钮（起初为「是」），方向键切换，Esc = 否
         public static IEnumerator Confirm(string text, Ref<bool> result, string yes = "是", string no = "否")
         {
-            var r = new Ref<int>();
-            yield return Choose(text, new List<Item> { new Item(yes), new Item(no) }, r, null, 520);
-            result.v = r.v == 0;
+            const float width = 520;
+            int res = -2;
+            var m = OpenModal(width, 220);
+            var head = Label(m.panel, text, 30, Gold, TextAnchor.UpperLeft, true);
+            Place(head.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -24), new Vector2(width - 110, 48));
+            float th = Mathf.Max(40, head.preferredHeight);
+            head.rectTransform.sizeDelta = new Vector2(width - 110, th);
+            var close = Button(m.panel, "×", () => res = 0, 24);
+            Place(close.rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-18, -18), new Vector2(52, 48));
+            var bYes = Button(m.panel, yes, () => res = 1, 28, true);
+            Place(bYes.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 22), new Vector2(180, 60));
+            var bNo = Button(m.panel, no, () => res = 0, 28);
+            Place(bNo.rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-220, 22), new Vector2(160, 60));
+            m.panel.sizeDelta = new Vector2(width, Mathf.Min(MaxModalHeight, 24 + th + 28 + 60 + 22));
+            var ringYes = FocusRing(bYes.rt); var ringNo = FocusRing(bNo.rt);
+            bool onYes = true;
+            int frame0 = Time.frameCount;
+            while (res == -2)
+            {
+                if (Time.frameCount != frame0 && IsTopModal(m.blocker))
+                {
+                    if (Input.GetKeyDown(KeyCode.Escape)) res = 0;
+                    else if (KeyEnter()) { Sfx.Click(); res = onYes ? 1 : 0; }
+                    else if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow))
+                    {
+                        onYes = !onYes; ringYes.enabled = onYes; ringNo.enabled = !onYes;
+                    }
+                }
+                yield return null;
+            }
+            m.Close();
+            result.v = res == 1;
+        }
+
+        // ---------------------------------------------------------- 键盘 --
+        static bool KeyEnter() { return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space); }
+        static int DigitDown()
+        {
+            for (int i = 1; i <= 9; i++) if (Input.GetKeyDown(KeyCode.Alpha0 + i) || Input.GetKeyDown(KeyCode.Keypad0 + i)) return i;
+            return 0;
+        }
+        // 只有最上层的对话框响应按键（叠开的对话框不会一起被回车选中）
+        static bool IsTopModal(RectTransform blocker)
+        {
+            return blocker != null && ModalLayer != null && blocker.parent == ModalLayer && blocker.GetSiblingIndex() == ModalLayer.childCount - 1;
+        }
+        // 打开对话框时清除 UGUI 的当前选中按钮：否则回车 / 空格会经 StandaloneInputModule 再次「提交」背后的指令按钮
+        static void ClearUISelection()
+        {
+            var es = EventSystem.current;
+            if (es != null && !es.alreadySelecting) es.SetSelectedGameObject(null);
+        }
+        // 键盘焦点框（金色外圈，起初隐藏）
+        static Image FocusRing(RectTransform rt)
+        {
+            var r = Img(rt, RROutline, Gold, "Focus");
+            Stretch(r.rectTransform, -2, -2, -2, -2);
+            r.raycastTarget = false; r.enabled = false;
+            return r;
+        }
+        // 网页版 listNav：↑↓ 循环跳过不可选项，Home / End 到首末，PgUp / PgDn 移 5 项（不循环）。无相关按键返回 -2
+        static int ListNav(int n, Func<int, bool> enabledAt, int a)
+        {
+            if (n <= 0) return -2;
+            Func<int, int, int> step = (from, d) =>
+            {
+                for (int j = 1; j <= n; j++) { int idx = ((from + d * j) % n + n) % n; if (enabledAt(idx)) return idx; }
+                return -1;
+            };
+            if (Input.GetKeyDown(KeyCode.DownArrow)) return step(a < 0 ? -1 : a, 1);
+            if (Input.GetKeyDown(KeyCode.UpArrow)) return step(a < 0 ? 0 : a, -1);
+            if (Input.GetKeyDown(KeyCode.Home)) return step(-1, 1);
+            if (Input.GetKeyDown(KeyCode.End)) return step(n, -1);
+            if (Input.GetKeyDown(KeyCode.PageDown))
+            {
+                int next = a;
+                for (int j = 0; j < 5; j++) { int s2 = step(next < 0 ? -1 : next, 1); if (s2 <= next) break; next = s2; }
+                return next;
+            }
+            if (Input.GetKeyDown(KeyCode.PageUp))
+            {
+                int next = a;
+                for (int j = 0; j < 5; j++) { int s2 = step(next < 0 ? 0 : next, -1); if (s2 >= next || s2 < 0) break; next = s2; }
+                return next;
+            }
+            return -2;
         }
 
         // ---------------------------------------------------------- 提示 --
+        const int MaxToasts = 6;
         public static RectTransform Toast(string text, float seconds = 2.2f)
         {
+            // 最多同时 6 条，超出时去掉最早的（网页版 MAX_TOASTS）
+            var live = new List<GameObject>();
+            foreach (Transform ch in ToastLayer) if (ch.name == "Toast" && ch.gameObject.activeSelf) live.Add(ch.gameObject);
+            for (int i = 0; i <= live.Count - MaxToasts; i++) { live[i].SetActive(false); UnityEngine.Object.Destroy(live[i]); }
             var p = Img(ToastLayer, RR, new Color(0.05f, 0.05f, 0.08f, 0.88f), "Toast").rectTransform;
             var t = Label(p, text, 24, Text, TextAnchor.MiddleCenter);
             Stretch(t.rectTransform, 24, 6, 24, 6);
@@ -811,6 +993,7 @@ namespace Sanguo
             for (int i = 0; i < ToastLayer.childCount - 1; i++)
             {
                 var c = (RectTransform)ToastLayer.GetChild(i);
+                if (!c.gameObject.activeSelf) continue;
                 y += c.name == "Toast" ? c.sizeDelta.y + 8 : 58;
             }
             Place(p, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -y), new Vector2(w, 50));
@@ -834,7 +1017,10 @@ namespace Sanguo
             if (sub != null) { var s = Label(rt, sub, 28, Text, TextAnchor.MiddleCenter); Stretch(s.rectTransform, 0, 0, 0, 150); }
             rt.gameObject.AddComponent<AutoFade>().life = seconds;
             rt.gameObject.AddComponent<PopIn>();
+            // 横幅期间压暗世界标签层（部队信息卡、城名牌），横幅开始淡出时恢复（网页版 bannerDim）
+            rt.gameObject.AddComponent<BannerDim>().undimAt = Mathf.Max(0, seconds - Mathf.Min(1f / 3, seconds / 3));
         }
+        internal static int liveBanners;
 
         // ---------------------------------------------------------- 动效 --
         // 抖动（灰色指令被点按：0.38 秒左右摇晃，网页版 sg-cmd-deny）
@@ -871,6 +1057,14 @@ namespace Sanguo
                 }
                 catch (Exception e)
                 {
+                    // 先由内向外 Dispose 仍挂起的各层，让它们的 finally 照常执行（网页版 async 的 try / finally 总会运行）
+                    foreach (var it in stack)
+                    {
+                        var d = it as IDisposable;
+                        if (d == null) continue;
+                        try { d.Dispose(); } catch (Exception de) { Debug.LogException(de); }
+                    }
+                    stack.Clear();
                     if (onError != null) onError(e); else Debug.LogException(e);
                     yield break;
                 }
@@ -1013,6 +1207,53 @@ namespace Sanguo
         }
     }
     // 自动淡出后销毁
+    // 横幅存续期间计入 UIKit.liveBanners（到 undimAt 秒或被销毁时释放）
+    public class BannerDim : MonoBehaviour
+    {
+        public float undimAt;
+        float t; bool held;
+        void Awake() { held = true; UIKit.liveBanners++; }
+        void Update() { t += Time.unscaledDeltaTime; if (t >= undimAt) Release(); }
+        void OnDestroy() { Release(); }
+        void Release() { if (!held) return; held = false; UIKit.liveBanners = Mathf.Max(0, UIKit.liveBanners - 1); }
+    }
+    // 标签层的压暗（0.2 秒过渡到 0.15 / 1）。别处（交锋）改了这层的透明度时暂停，直到它恢复为本组件最后写入的值
+    public class LabelDim : MonoBehaviour
+    {
+        CanvasGroup g; float written = 1;
+        void Awake() { g = GetComponent<CanvasGroup>(); if (g != null) written = g.alpha; }
+        void Update()
+        {
+            if (g == null || Mathf.Abs(g.alpha - written) > 0.0005f) return;
+            float target = UIKit.liveBanners > 0 ? 0.15f : 1f;
+            if (written == target) return;
+            written = Mathf.MoveTowards(written, target, Time.unscaledDeltaTime / 0.2f);
+            g.alpha = written;
+        }
+    }
+    // 按住连续触发（按下执行一次，0.38 秒后每 0.07 秒一次；抬起或移出即停）
+    public class HoldRepeat : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+    {
+        public Action fn;
+        bool held; float t, next;
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (e.button != PointerEventData.InputButton.Left) return;
+            var b = GetComponent<Button>(); if (b != null && !b.IsInteractable()) return;
+            Sfx.Click();
+            if (fn != null) fn();
+            held = true; t = 0; next = 0.38f;
+        }
+        public void OnPointerUp(PointerEventData e) { held = false; }
+        public void OnPointerExit(PointerEventData e) { held = false; }
+        void OnDisable() { held = false; }
+        void Update()
+        {
+            if (!held) return;
+            t += Time.unscaledDeltaTime;
+            while (held && t >= next) { next += 0.07f; if (fn != null) fn(); }
+        }
+    }
     public class AutoFade : MonoBehaviour
     {
         public float life = 2;

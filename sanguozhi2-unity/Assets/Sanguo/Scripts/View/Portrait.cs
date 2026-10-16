@@ -4876,7 +4876,21 @@ namespace Sanguo
         // 无 Unity 线程（WebGL）时在主线程按时间片栅格化
         public static bool? UseThreadsOverride;
         static bool UseThreads { get { return UseThreadsOverride ?? Application.platform != RuntimePlatform.WebGLPlayer; } }
-        public const int TextureCacheMax = 600;
+        // 纹理缓存上限（LRU）：小图（≤ 128px）按张数，不低于 JS 的 1500，并保证装得下整局预生成（在世武将 × 2 种尺寸
+        // + 君主图）；大图（交锋 / 单挑立绘，可到 512px ≈ 1MB）另有张数与字节预算
+        public const int TextureCacheMin = 1500;
+        public const int LargeCacheMax = 48;
+        public const long LargeCacheBytes = 48L << 20;
+        const int LargePx = 128 * 128;
+        public static int TextureCacheMax
+        {
+            get
+            {
+                var gs = GameState.Current;
+                int n = gs != null && gs.generals != null ? gs.generals.Count : 0, f = gs != null && gs.factions != null ? gs.factions.Count : 0;
+                return Math.Max(TextureCacheMin, 2 * n + 3 * f + 200);
+            }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void InitHooks()
@@ -4899,40 +4913,74 @@ namespace Sanguo
             return new Color32(0x8a, 0x8a, 0x92, 255);
         }
 
-        static readonly Dictionary<string, Texture2D> texCache = new Dictionary<string, Texture2D>();
-        static readonly LinkedList<string> texOrder = new LinkedList<string>();
+        // 缓存项：每个 key 一个链表结点（命中时 O(1) 挪到队尾）
+        sealed class TexEntry { public string key; public Texture2D tex; public long bytes; public bool large; public LinkedListNode<TexEntry> node; }
+        static readonly Dictionary<string, TexEntry> texCache = new Dictionary<string, TexEntry>();
+        static readonly Dictionary<Texture2D, TexEntry> texEntry = new Dictionary<Texture2D, TexEntry>();
+        static readonly LinkedList<TexEntry> smallOrder = new LinkedList<TexEntry>(), largeOrder = new LinkedList<TexEntry>();
+        static long largeBytes;
         static readonly Dictionary<Texture2D, UnityEngine.Sprite> spriteCache = new Dictionary<Texture2D, UnityEngine.Sprite>();
+        // 逐出的纹理不 Destroy：可能还有 Image / RawImage 在显示它（JS 里逐出 data URL 也不影响已显示的 <img>）。
+        // 只丢掉引用，由 Resources.UnloadUnusedAssets 回收确实没人用的（纹理与 Sprite 都不带 DontUnloadUnusedAsset）
+        static long retiredBytes; static int retiredCount; static float lastRelease = -1000;
+        public const long RetiredFlushBytes = 32L << 20;
+        static void Touch(TexEntry e)
+        {
+            var list = e.large ? largeOrder : smallOrder;
+            if (e.node.List == list && list.Last != e.node) { list.Remove(e.node); list.AddLast(e.node); }
+        }
         static void Remember(string key, Texture2D t)
         {
-            Texture2D old;
-            if (texCache.TryGetValue(key, out old) && old != t) { texOrder.Remove(key); DestroyTex(old); }
-            texCache[key] = t; texOrder.AddLast(key);
-            while (texCache.Count > TextureCacheMax)
+            TexEntry old;
+            if (texCache.TryGetValue(key, out old))
             {
-                string k = texOrder.First.Value; texOrder.RemoveFirst();
-                Texture2D d; if (texCache.TryGetValue(k, out d)) { texCache.Remove(k); DestroyTex(d); }
+                if (old.tex == t) { Touch(old); return; }
+                Drop(old);
             }
+            var e = new TexEntry { key = key, tex = t, bytes = (long)t.width * t.height * 4, large = t.width * t.height > LargePx };
+            e.node = (e.large ? largeOrder : smallOrder).AddLast(e);
+            texCache[key] = e; texEntry[t] = e;
+            if (e.large) largeBytes += e.bytes;
+            int cap = TextureCacheMax;
+            while (smallOrder.Count > cap) Drop(smallOrder.First.Value);
+            while (largeOrder.Count > 1 && (largeOrder.Count > LargeCacheMax || largeBytes > LargeCacheBytes)) Drop(largeOrder.First.Value);
+            MaybeRelease();
         }
-        static void DestroyTex(Texture2D t)
+        // 从缓存移除（不销毁，见上）
+        static void Drop(TexEntry e)
         {
-            UnityEngine.Sprite s;
-            if (spriteCache.TryGetValue(t, out s)) { spriteCache.Remove(t); if (s != null) UnityEngine.Object.Destroy(s); }
-            if (t != null) UnityEngine.Object.Destroy(t);
+            if (e.node.List != null) e.node.List.Remove(e.node);
+            if (e.large) largeBytes -= e.bytes;
+            texCache.Remove(e.key);
+            if (e.tex != null) { texEntry.Remove(e.tex); spriteCache.Remove(e.tex); }
+            retiredBytes += e.bytes; retiredCount++;
+        }
+        // 逐出的纹理累积够多时让 Unity 回收没人引用的（最多 20 秒一次）
+        static void MaybeRelease()
+        {
+            if (retiredBytes < RetiredFlushBytes || Time.realtimeSinceStartup - lastRelease < 20f) return;
+            ReleaseRetired();
+        }
+        // 回收已逐出且不再显示的头像纹理（Resources.UnloadUnusedAssets）；换画面时可调用，没有逐出时什么也不做
+        public static void ReleaseRetired()
+        {
+            if (retiredCount == 0) return;
+            retiredBytes = 0; retiredCount = 0; lastRelease = Time.realtimeSinceStartup;
+            Resources.UnloadUnusedAssets();
         }
         static void ClearTextures(string name)
         {
-            var keys = new List<string>(texCache.Keys);
-            foreach (var k in keys)
-            {
-                if (name != null && !k.StartsWith(name + "|", StringComparison.Ordinal)) continue;
-                DestroyTex(texCache[k]); texCache.Remove(k); texOrder.Remove(k);
-            }
+            var drop = new List<TexEntry>();
+            foreach (var e in texCache.Values)
+                if (name == null || e.key.StartsWith(name + "|", StringComparison.Ordinal)) drop.Add(e);
+            foreach (var e in drop) Drop(e);
         }
+        const HideFlags TexFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
         static Texture2D Upload(Raster r, string key)
         {
-            var t = r.ToTexture();
+            var t = r.ToTexture(false, false);   // 不保留 CPU 端副本（头像纹理不回读像素）
             t.name = "Portrait " + key;
-            t.hideFlags = HideFlags.DontSave;
+            t.hideFlags = TexFlags;
             return t;
         }
         // 头像纹理（缓存）。size 为像素边长；factionColor 为边框与背景的势力色
@@ -4945,9 +4993,9 @@ namespace Sanguo
         {
             var sp = Spec(gen);
             string key = KeyOf(sp, o);
-            Texture2D t;
-            if (texCache.TryGetValue(key, out t) && t != null) return t;
-            t = Upload(Render(gen, o), key);
+            TexEntry e;
+            if (texCache.TryGetValue(key, out e) && e.tex != null) { Touch(e); return e.tex; }
+            var t = Upload(Render(gen, o), key);
             Remember(key, t);
             return t;
         }
@@ -4955,8 +5003,10 @@ namespace Sanguo
         public static Texture2D Cached(General g, int size, Color factionColor, PortraitMood mood = PortraitMood.Neutral, bool frame = true, bool flip = false)
         {
             var o = PortraitOpts.Make(size, Hex(factionColor), MoodName(mood), frame, flip);
-            Texture2D t;
-            return texCache.TryGetValue(KeyOf(Spec(Describe(g)), o), out t) ? t : null;
+            TexEntry e;
+            if (!texCache.TryGetValue(KeyOf(Spec(Describe(g)), o), out e) || e.tex == null) return null;
+            Touch(e);
+            return e.tex;
         }
         // UGUI Image 用的 Sprite（与纹理同一缓存）
         public static UnityEngine.Sprite Sprite(General g, int size, Color factionColor, PortraitMood mood = PortraitMood.Neutral, bool frame = true, bool flip = false)
@@ -4967,9 +5017,12 @@ namespace Sanguo
         public static UnityEngine.Sprite SpriteOf(Texture2D t)
         {
             UnityEngine.Sprite s;
+            TexEntry e;
+            if (texEntry.TryGetValue(t, out e)) Touch(e);
             if (spriteCache.TryGetValue(t, out s) && s != null) return s;
             s = UnityEngine.Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
             s.name = t.name;
+            s.hideFlags = TexFlags;
             spriteCache[t] = s;
             return s;
         }
@@ -4994,6 +5047,11 @@ namespace Sanguo
                 foreach (var g in state.generals)
                     if (!g.dead) jobs.Add(new KeyValuePair<PortraitGen, PortraitOpts>(Describe(g), PortraitOpts.Make(size, Hex(FactionColorOf(g)))));
             yield return PreloadAsync(jobs, budgetMs);
+        }
+        static void StartWorker(Action work)
+        {
+            try { new Thread(() => work()) { IsBackground = true, Name = "SanguoPortrait", Priority = System.Threading.ThreadPriority.BelowNormal }.Start(); }
+            catch (Exception) { ThreadPool.QueueUserWorkItem(_ => work()); }
         }
         public static IEnumerator PreloadAsync(IList<KeyValuePair<PortraitGen, PortraitOpts>> jobs, float budgetMs = 6f)
         {
@@ -5020,10 +5078,12 @@ namespace Sanguo
             // 后台线程：固定数量的工作线程依次取任务
             var done = new Queue<KeyValuePair<string, Raster>>();
             int next = -1, finished = 0;
-            int workers = Math.Max(1, Math.Min(4, SystemInfo.processorCount - 1));
+            // 专用低优先级线程（不占线程池、不压过 BelowNormal 的乐器采样线程与音乐渲染线程）；移动端最多用一半核心
+            int cores = SystemInfo.processorCount;
+            int workers = Math.Max(1, Math.Min(Application.isMobilePlatform ? cores / 2 : 4, cores - 1));
             for (int w = 0; w < workers; w++)
             {
-                ThreadPool.QueueUserWorkItem(_ =>
+                StartWorker(() =>
                 {
                     while (true)
                     {

@@ -70,7 +70,17 @@ namespace Sanguo
             }
             var go = new GameObject("DuelScreen");
             var s = go.AddComponent<DuelScreen>();
-            s.Setup(a, colA, b, colB, playerSide == 0 || playerSide == 1 ? playerSide : -1, terrain);
+            bool setupOk = false;
+            try { s.Setup(a, colA, b, colB, playerSide == 0 || playerSide == 1 ? playerSide : -1, terrain); setupOk = true; }
+            catch (Exception e) { Debug.LogError("单挑画面初始化出错，改为直接结算：" + e); }
+            if (!setupOk)
+            {   // Setup 先设了 current：清掉，否则下一场单挑会一直等（网页版在构造成功后才设 active，并在 finally 清除）
+                if (DuelScreen.current == s) DuelScreen.current = null;
+                UnityEngine.Object.Destroy(go);
+                var r1 = Simulate(a, b);
+                if (done != null) done(r1);
+                yield break;
+            }
             while (!s.finished) yield return null;
             var res = s.result ?? Simulate(a, b);
             UnityEngine.Object.Destroy(go);
@@ -122,6 +132,7 @@ namespace Sanguo
         public bool finished;
         public DuelGame.DuelResult result;
         bool failed; int errors;
+        bool musicDuel;     // 已切到单挑曲：结束时（含出错）须切回 MusicAfter（= 网页版 play() 的 finally）
         // ---- 复原
         readonly List<Camera> camsOff = new List<Camera>();
         readonly List<KeyValuePair<Light, int>> lightMasks = new List<KeyValuePair<Light, int>>();
@@ -184,9 +195,17 @@ namespace Sanguo
                 catch (Exception e) { Debug.LogError(e); result = null; }
                 Cleanup();
                 if (hud != null) { hud.Dispose(); hud = null; }
+                RestoreMusic();
             }
             if (current == this) current = null;
             finished = true;
+        }
+
+        void RestoreMusic()
+        {
+            if (!musicDuel) return;
+            musicDuel = false;
+            try { if (!string.IsNullOrEmpty(DuelGame.MusicAfter)) Sfx.Music(DuelGame.MusicAfter); } catch (Exception) { /* 无音频 */ }
         }
 
         float Wait(float sec) { return realT + sec / Mathf.Max(0.05f, DuelGame.Speed); }
@@ -226,6 +245,7 @@ namespace Sanguo
             BuildScene();
             yield return null;
             EnterScreen();
+            musicDuel = true;
             try { Sfx.Music("duel"); } catch (Exception) { /* 无音频 */ }
             yield return null;
             hud.SetFade(0);
@@ -288,7 +308,7 @@ namespace Sanguo
             // 拆除画面，再淡出遮罩
             Cleanup();
             hud.DisposeKeepFade();
-            try { if (!string.IsNullOrEmpty(DuelGame.MusicAfter)) Sfx.Music(DuelGame.MusicAfter); } catch (Exception) { /* 无音频 */ }
+            RestoreMusic();
             hud.SetFade(0);
             until = realT + 0.35f;
             while (realT < until) yield return null;
@@ -360,6 +380,9 @@ namespace Sanguo
             var l = go.AddComponent<Light>();
             l.type = LightType.Directional; l.color = col; l.intensity = intensity;
             l.cullingMask = 1 << Layer;
+            // 逐像素：iPhone 缺省画质 Medium 只有 1 盏像素光，否则轮廓光会退化成球谐（没有 HalfLambert 包裹光）。
+            // 只照第 30 层的两名武将与场地，代价很小
+            l.renderMode = LightRenderMode.ForcePixel;
             l.shadows = shadows ? LightShadows.Soft : LightShadows.None;
             l.shadowStrength = 0.55f; l.shadowBias = 0.04f; l.shadowNormalBias = 0.3f;
             go.transform.rotation = Quaternion.LookRotation(DuelXf.P(dirThree).normalized);

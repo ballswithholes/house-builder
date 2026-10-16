@@ -296,7 +296,8 @@ namespace Sanguo
             }
             float wheel = Input.mouseScrollDelta.y;
             if (Mathf.Abs(wheel) > 0.01f && !OverUI()) { EndFly(); DesiredDistance *= Mathf.Pow(0.88f, Mathf.Clamp(wheel, -4, 4)); }
-            // 键盘
+            // 键盘（有模态对话框时不动镜头，同 camera.js 的 _keyboard）
+            if (UIKit.AnyModal) return;
             var move = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
             if (move.sqrMagnitude > 0.01f) { EndFly(); Desired += Quaternion.Euler(0, Yaw, 0) * move * Time.unscaledDeltaTime * Distance * 0.9f; }
             if (Input.GetKey(KeyCode.Q)) DesiredYaw -= 60 * Time.unscaledDeltaTime;
