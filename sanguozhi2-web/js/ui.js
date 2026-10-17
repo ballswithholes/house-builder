@@ -9,6 +9,14 @@
    - 尺寸参数（choose 的 width、medal 的 size、follow 的 offsetY）沿用 C# 中
      Unity 参考画布（1600×900）的像素值，自动按界面缩放换算（1rem = 20 参考像素）。
    - 样式见 css/style.css，类名说明见 UI-CLASSES.md。
+   第三版 §5「头像无处不在」（非战斗阶段）：
+     UI.item(label, right, enabled, desc, { avatar: 武将或姓名, avatarOpts })  choose / chooseMany 行首显示头像
+     UI.say(text, speaker, color, { mood, sub })   speaker 可为姓名或武将对象；sub 为姓名下的小字
+     UI.confirm(text, yes, no, { body })            标题与按钮之间的说明（如头像名片）
+     UI.portrait(who, opts) → 头像元素   UI.face(who, opts) → 行内小头像 HTML   UI.genCard(who, opts) → 头像名片 HTML
+     UI.faces(html, { gens, skip, factions, max })  在文字里提到的武将（势力名 → 君主）前加行内小头像
+     UI.facePx(rem) / UI.faceSizes() / UI.FACE_REM  头像像素尺寸（预生成用）
+     打字机效果把行内头像当作一个字，打到时才出现。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -180,8 +188,130 @@
     return b;
   };
 
-  UI.item = function (label, right, enabled, desc) {
-    return { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : !!enabled, desc: desc === undefined ? null : desc, selected: false };
+  // 列表条目。opts（可选）：{ avatar: 武将对象或姓名（行首显示头像）, avatarOpts: 传给 SG.Portrait.el 的选项（color / mood / className） }
+  //   也可以直接给返回的对象设 .avatar
+  UI.item = function (label, right, enabled, desc, opts) {
+    const it = { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : !!enabled, desc: desc === undefined ? null : desc, selected: false };
+    if (opts && opts.avatar) it.avatar = opts.avatar;
+    if (opts && opts.avatarOpts) it.avatarOpts = opts.avatarOpts;
+    return it;
+  };
+
+  // ------------------------------------------------------------- 头像 --
+  // 非战斗阶段所有提到武将的地方都显示头像（DESIGN-V3 §5）。尺寸以 rem 计，换算为当前像素后交给 SG.Portrait
+  // （按像素尺寸缓存；game.js 进入战略画面前按 UI.faceSizes() 预生成）。
+  const FACE_REM = { item: 2.5, say: 4.8, inline: 1.9, card: 4.4 };
+  UI.FACE_REM = FACE_REM;
+  // rem → 当前 CSS 像素（取整）
+  UI.facePx = function (r) { return Math.max(16, Math.round(r * uiScale * 20)); };
+  // 需要预生成的头像尺寸（列表行 / 城池面板、对话说话人）
+  UI.faceSizes = function () { return [UI.facePx(FACE_REM.item), UI.facePx(FACE_REM.say)]; };
+  function genOf(x) {
+    if (!x) return null;
+    if (typeof x === 'object') return x;
+    const P = SG.Portrait;
+    return (P && P.find && P.find(String(x))) || { name: String(x) };
+  }
+  // 头像元素（无头像模块时退回姓氏徽章）。opts：{ size（CSS 像素）, color, mood, className, medalColor }
+  UI.portrait = function (who, opts) {
+    opts = opts || {};
+    const gen = genOf(who);
+    const size = opts.size || UI.facePx(FACE_REM.item);
+    const P = SG.Portrait;
+    if (P && gen) {
+      try {
+        const o = { size };
+        if (opts.color) o.color = opts.color;
+        if (opts.mood) o.mood = opts.mood;
+        if (opts.className) o.className = opts.className;
+        return P.el(gen, o);
+      } catch (e) { /* 退回徽章 */ }
+    }
+    return UI.medal(gen ? gen.name : '?', opts.medalColor || UI.colors.cinnabar, size / Math.max(0.01, uiScale));
+  };
+  function avatarEl(it) {
+    const wrap = el('span', 'sg-item-face');
+    wrap.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(UI.portrait(it.avatar, Object.assign({ size: UI.facePx(FACE_REM.item) }, it.avatarOpts || {})));
+    return wrap;
+  }
+  // 行内小头像（HTML 字符串）：放在文字里的武将姓名前。opts：{ size, mood, color }
+  UI.face = function (who, opts) {
+    const P = SG.Portrait;
+    const gen = genOf(who);
+    if (!P || !gen) return '';
+    opts = opts || {};
+    try {
+      const o = { size: opts.size || UI.facePx(FACE_REM.inline), className: 'sg-face' };
+      if (opts.mood) o.mood = opts.mood;
+      if (opts.color) o.color = opts.color;
+      return P.html(gen, o);
+    } catch (e) { return ''; }
+  };
+  // 头像名片（HTML 字符串）：头像 + 姓名 + 一行副标题 + 一行数据。俘虏处置、登用确认等对话框的说明区使用。
+  // opts：{ sub: 副标题 HTML, stats: 数据 HTML（缺省 武 智 政）, mood }
+  UI.genCard = function (who, opts) {
+    const gen = genOf(who);
+    if (!gen) return '';
+    opts = opts || {};
+    const P = SG.Portrait;
+    let face = '';
+    if (P) { try { face = P.html(gen, { size: UI.facePx(FACE_REM.card), className: 'sg-gencard-face', mood: opts.mood }); } catch (e) { face = ''; } }
+    const stats = opts.stats !== undefined ? opts.stats
+      : (gen.war !== undefined ? `武 <b>${gen.war}</b>　智 <b>${gen.intel}</b>　政 <b>${gen.pol}</b>` : '');
+    return '<span class="sg-gencard">' + face + '<span class="sg-gencard-text"><span class="sg-gencard-name">' + SG.esc(gen.name || '') + '</span>' +
+      (opts.sub ? '<span class="sg-gencard-sub">' + opts.sub + '</span>' : '') +
+      (stats ? '<span class="sg-gencard-stats">' + stats + '</span>' : '') + '</span></span>';
+  };
+
+  // 文字中提到的武将（以及势力名 → 其君主）前加行内小头像；每个名字只加第一次出现。
+  // 只处理标签之外的文字；城名优先于同名的势力名（「罗马」城不配皇帝头像）。
+  // opts：{ gens: 只给这些武将（或姓名）加头像, skip: 不加头像的姓名（如对话的说话人）, factions = true, max = 8 }
+  let faceIdx = null;
+  function faceIndex() {
+    const g = SG.G;
+    if (!g || !g.generals) return null;
+    const key = g.generals.length + '|' + (g.factions ? g.factions.length : 0) + '|' + (g.cities ? g.cities.length : 0);
+    if (faceIdx && faceIdx.g === g && faceIdx.key === key) return faceIdx;
+    const map = new Map();
+    for (const x of g.generals) if (x && x.name && x.name.length >= 2 && !map.has(x.name)) map.set(x.name, { gen: x });
+    for (const c of g.cities || []) if (c && c.name && c.name.length >= 2 && !map.has(c.name)) map.set(c.name, { city: c });
+    for (const f of g.factions || []) if (f && f.name && f.name.length >= 2 && !map.has(f.name)) map.set(f.name, { fac: f });
+    const names = Array.from(map.keys()).sort((a, b) => b.length - a.length);
+    const re = names.length ? new RegExp(names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g') : null;
+    faceIdx = { g, key, map, re };
+    return faceIdx;
+  }
+  UI.faces = function (html, opts) {
+    if (html === null || html === undefined) return html;
+    html = String(html);
+    const idx = SG.Portrait ? faceIndex() : null;
+    if (!idx || !idx.re) return html;
+    opts = opts || {};
+    const g = SG.G;
+    const skip = new Set((opts.skip || []).map(x => (x && typeof x === 'object' ? x.name : String(x))));
+    const only = opts.gens ? new Set(opts.gens.map(x => (x && typeof x === 'object' ? x.name : String(x)))) : null;
+    const facs = opts.factions !== false;
+    const max = opts.max === undefined ? 8 : opts.max;
+    const used = new Set();
+    let n = 0;
+    return html.split(/(<[^>]*>|&[#\w]+;)/).map((seg, i) => {
+      if (i % 2 === 1 || !seg) return seg;
+      return seg.replace(idx.re, m => {
+        const e = idx.map.get(m);
+        if (!e || e.city || n >= max || skip.has(m) || used.has(m)) return m;
+        let gen = e.gen;
+        if (e.fac) {
+          if (!facs || only) return m;
+          try { gen = g.ruler(e.fac.id); } catch (err) { gen = null; }
+          if (!gen || used.has(gen.name) || skip.has(gen.name)) return m;
+          used.add(gen.name);
+        } else if (only && !only.has(m)) return m;
+        used.add(m);
+        n++;
+        return UI.face(gen) + m;
+      });
+    }).join('');
   };
 
   // 重新触发一次 CSS 动画类（如单挑的 .sg-duel-vs.is-hit）
@@ -317,15 +447,27 @@
   }
 
   // -------------------------------------------------------- 打字机效果 --
-  // 把元素内所有文字拆为“已显示 + 隐藏占位”，版面从一开始就是完整大小
+  // 把元素内所有文字拆为“已显示 + 隐藏占位”，版面从一开始就是完整大小。
+  // 文字中的行内头像（.sg-portrait）算作一个字：打到它时才显示，不会先于前面的文字出现。
   function typewriter(root) {
     const texts = [];
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+      acceptNode(x) {
+        if (x.nodeType === 3) return NodeFilter.FILTER_ACCEPT;
+        return x.classList && x.classList.contains('sg-portrait') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      },
+    });
     let n;
     while ((n = walker.nextNode())) texts.push(n);
     const parts = [];
     let total = 0;
     for (const t of texts) {
+      if (t.nodeType === 1) {
+        t.style.visibility = 'hidden';
+        parts.push({ face: t, start: total, shown: 0 });
+        total += 1;
+        continue;
+      }
       const chars = Array.from(t.data);
       if (!chars.length) continue;
       const vis = document.createTextNode('');
@@ -340,6 +482,11 @@
     }
     function show(k) {
       for (const p of parts) {
+        if (p.face) {
+          const on = k > p.start ? 1 : 0;
+          if (on !== p.shown) { p.shown = on; p.face.style.visibility = on ? '' : 'hidden'; }
+          continue;
+        }
         const m = M.clamp(k - p.start, 0, p.chars.length);
         if (m === p.shown) continue;
         p.shown = m;
@@ -351,21 +498,31 @@
   }
 
   // ---------------------------------------------------------- 对话 say --
-  // 说话者徽章 + 文字（打字机），点击 / Enter / Space 继续
-  UI.say = function (text, speaker, speakerColor) {
+  // 说话者头像 + 文字（打字机），点击 / Enter / Space 继续。
+  // speaker：姓名或武将对象（null = 旁白）；speakerColor：找不到该武将时姓氏徽章的颜色。
+  // opts（可选）：{ mood: 'neutral'|'angry'|'hurt'|'win'（头像表情）, sub: 姓名下的小字 HTML（身份 / 势力）, className }
+  UI.say = function (text, speaker, speakerColor, opts) {
     ensure();
-    if (speaker === undefined) speaker = null;
+    if (speaker === undefined || speaker === '') speaker = null;
     if (!speakerColor) speakerColor = UI.colors.cinnabar;
+    opts = opts || {};
+    const spObj = speaker && typeof speaker === 'object' ? speaker : null;
+    const spName = speaker === null ? null : spObj ? String(spObj.name || '') : String(speaker);
     return new Promise(resolve => {
-      const m = openModal('sg-say' + (speaker ? ' has-speaker' : ''), { blockerClass: 'sg-say-modal' });
+      const m = openModal('sg-say' + (spName ? ' has-speaker' : '') + (opts.className ? ' ' + opts.className : ''), { blockerClass: 'sg-say-modal' });
       const panel = m.panel;
-      if (speaker) {
+      if (spName) {
         const sp = el('div', 'sg-say-speaker');
-        // 有该武将时显示头像，否则退回姓氏徽章
-        const pg = SG.Portrait && SG.Portrait.find(speaker);
-        sp.appendChild(pg ? SG.Portrait.el(pg, { size: Math.round(96 * UI.scale()) })
-                          : UI.medal(String(speaker).charAt(0), speakerColor, 96));
-        sp.appendChild(el('div', 'sg-say-name', SG.esc(speaker)));
+        // 有该武将时显示头像（势力色边框），否则退回姓氏徽章
+        const pg = spObj || (SG.Portrait && SG.Portrait.find(spName));
+        let face = null;
+        if (pg && SG.Portrait) {
+          try { face = SG.Portrait.el(pg, opts.mood ? { size: UI.facePx(FACE_REM.say), mood: opts.mood } : { size: UI.facePx(FACE_REM.say) }); } catch (e) { face = null; }
+        }
+        sp.appendChild(face || UI.medal(spName.charAt(0), speakerColor, 96));
+        const nm = el('div', 'sg-say-name', SG.esc(spName));
+        sp.appendChild(nm);
+        if (opts.sub) sp.appendChild(el('div', 'sg-say-sub', opts.sub));
         panel.appendChild(sp);
       }
       const body = el('div', 'sg-say-text');
@@ -439,6 +596,7 @@
       let active = -1;
       const buttons = items.map((it, i) => {
         const b = el('button', 'sg-item', itemHtml(it, false));
+        if (it && it.avatar) { b.insertBefore(avatarEl(it), b.firstChild); b.classList.add('has-face'); list.classList.add('has-faces'); }
         b.type = 'button';
         b.setAttribute('role', 'option');
         b.disabled = !isEnabled(it);
@@ -496,6 +654,7 @@
       let active = -1;
       const buttons = items.map((it, i) => {
         const b = el('button', 'sg-item', itemHtml(it, true));
+        if (it && it.avatar) { const ck = b.querySelector('.sg-check'); b.insertBefore(avatarEl(it), ck ? ck.nextSibling : b.firstChild); b.classList.add('has-face'); list.classList.add('has-faces'); }
         b.type = 'button';
         b.setAttribute('role', 'option');
         b.disabled = !isEnabled(it);
@@ -676,18 +835,21 @@
   };
 
   // ---------------------------------------------------------- 确认 confirm --
-  UI.confirm = function (text, yes, no) {
+  // opts（可选）：{ body: 标题与按钮之间的说明 HTML（如 UI.genCard 名片）, width }
+  UI.confirm = function (text, yes, no, opts) {
     ensure();
     if (yes === undefined || yes === null) yes = '是';
     if (no === undefined || no === null) no = '否';
+    opts = opts || {};
     return new Promise(resolve => {
-      const m = openModal('sg-confirm', { width: 520 });
+      const m = openModal('sg-confirm' + (opts.body ? ' has-body' : ''), { width: opts.width || (opts.body ? 600 : 520) });
       let done = false;
       const finish = v => { if (done) return; done = true; m.close(); resolve(v); };
       const head = el('div', 'sg-dlg-head');
       head.appendChild(el('div', 'sg-dlg-title', text));
       const close = UI.button(head, '×', () => finish(false), { className: 'sg-close', ariaLabel: '关闭' });
       m.panel.appendChild(head);
+      if (opts.body) m.panel.appendChild(el('div', 'sg-dlg-info sg-confirm-body', opts.body));
       const row = el('div', 'sg-confirm-btns');
       const bNo = UI.button(row, no, () => finish(false));
       const bYes = UI.button(row, yes, () => finish(true), { primary: true });

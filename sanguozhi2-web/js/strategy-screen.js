@@ -1,6 +1,6 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 战略画面
+   三国志-霸王的世界 · 网页版 · 战略画面
    ← Strategy/StrategyScreen.cs：顶栏、城池情报、指令与月份循环
    协程 → async 函数。new SG.StrategyScreen().run() → Promise（游戏结束时重载页面）。
    第二版 §4F 调动武将：
@@ -15,6 +15,10 @@
      「势力」列表与外交的同盟对象在世界剧本中按地域分组（groupedFactions）。
      世界地图的城名在远景（拉远到 340）也显示，距离超过约 175 时改为紧凑样式，由避让逻辑按优先级取舍；
      月末消息优先显示与玩家相关的（我方、本地域与邻国），见 pickNews。
+   第三版 §5 头像无处不在（非战斗阶段）：
+     所有列出武将的列表（指令选人、出征、移动、登用、俘虏、外交、势力一览……）每行带头像（SG.UI.item 的 avatar）；
+     指令结果由执行的武将以头像汇报（report）；月末消息由军师汇报，文中提到的武将 / 势力（→ 君主）带小头像（SG.UI.faces）；
+     急报以来犯主将的头像示警；俘虏、登用确认显示头像名片（SG.UI.genCard）；「大事」查看记录（带小头像）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -102,9 +106,24 @@
     const bs = m.querySelectorAll('.sg-item');
     for (const i of heads) if (bs[i]) { bs[i].classList.add('sg-item-group'); bs[i].tabIndex = -1; }
   }
-  function item(label, right, enabled, desc) {
-    if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc);
-    return { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : enabled, desc: desc === undefined ? null : desc, selected: false };
+  function item(label, right, enabled, desc, opts) {
+    if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc, opts);
+    const it = { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : enabled, desc: desc === undefined ? null : desc, selected: false };
+    if (opts && opts.avatar) it.avatar = opts.avatar;
+    return it;
+  }
+  // 头像辅助（SG.UI 未载入时退化为纯文字）
+  function faces(html, opts) { try { return SG.UI && SG.UI.faces ? SG.UI.faces(html, opts) : html; } catch (e) { return html; } }
+  function face(gen) { try { return SG.UI && SG.UI.face ? SG.UI.face(gen) : ''; } catch (e) { return ''; } }
+  function genCard(gen, opts) { try { return SG.UI && SG.UI.genCard ? SG.UI.genCard(gen, opts) : ''; } catch (e) { return ''; } }
+  // 武将的身份小字：君 / 太守 / 势力名
+  function genSub(gen) {
+    const g = G();
+    if (!gen) return '';
+    const f = gen.faction >= 0 ? g.factions[gen.faction] : null;
+    const fn = f ? `<span style="color:${readable(f.color)}">${SG.esc(f.name)}</span>` : '<span class="sg-muted">在野</span>';
+    const role = f && g.isRuler(gen) ? '君主' : g.cities[gen.city] && g.cities[gen.city].governor === gen.id && f ? '太守' : '';
+    return fn + (role ? '·' + role : '');
   }
   function h(tag, cls, html, parent) {
     const e = document.createElement(tag);
@@ -246,7 +265,7 @@
         game.map.refresh(G()); this.refreshAll();
         if (!G().playerFaction.alive) { await this.gameOver(false); return; }
         if (G().cities.every(c => c.owner === G().player)) { await this.gameOver(true); return; }
-        if (news.length > 0) await UI().say(this.pickNews(news));
+        if (news.length > 0) await this.sayNews(news);
         try { G().save(); } catch (e) { console.warn(e); }
         UI().banner(G().year + '年 ' + G().month + '月', '令牌 ' + G().tokens + ' 枚', 1.8);
         // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初横幅之后补弹提示
@@ -272,6 +291,46 @@
       return list.join('\n') + '\n<span class="sg-muted">（各地另有 ' + (news.length - list.length) + ' 条消息）</span>';
     }
 
+    // 月末消息由我方军师（智力最高的部将；没有部将时为君主）汇报，文中武将 / 势力带小头像
+    advisor() {
+      const g = G();
+      const gs = g.generalsOf(g.player).filter(x => !x.dead);
+      const ru = g.ruler(g.player);
+      const pool = gs.filter(x => x !== ru);
+      return (pool.length ? pool.reduce((a, b) => (b.intel > a.intel ? b : a)) : ru) || null;
+    }
+    sayNews(news) {
+      const adv = this.advisor();
+      const g = G();
+      const role = adv && adv === g.ruler(g.player) ? '君主' : '军师';
+      return UI().say(faces(this.pickNews(news), { skip: adv ? [adv.name] : [], max: 10 }), adv, null, { sub: `<span class="sg-say-cmd">${role}</span>本月消息` });
+    }
+
+    // 大事记：GameState.log（新的在前），提到的武将 / 势力带小头像
+    chronicle() {
+      const g = G();
+      const log = Array.from(g.log || []).slice().reverse();
+      return new Promise(resolve => {
+        const m = UI().openModal('sg-chronicle', { width: 820 });
+        let done = false;
+        const finish = () => { if (done) return; done = true; m.close(); resolve(); };
+        m.blocker.addEventListener('click', e => { if (e.target === m.blocker) finish(); });
+        m.onKey = k => { if (k === 'Escape' || k === 'Enter' || k === 'Space') { finish(); return true; } return false; };
+        const head = h('div', 'sg-dlg-head', null, m.panel);
+        h('div', 'sg-dlg-title', '天下大事<small>' + log.length + ' 条</small>', head);
+        const close = SG.UI.button(head, '×', finish, { className: 'sg-close', ariaLabel: '关闭' });
+        const list = h('div', 'sg-list sg-chron-list', null, m.panel);
+        if (!log.length) h('div', 'sg-chron-empty sg-muted', '尚无大事发生。', list);
+        for (const line of log) {
+          const mt = /^(\d+)年(\d+)月 ([\s\S]*)$/.exec(String(line));
+          const row = h('div', 'sg-chron-row', null, list);
+          h('span', 'sg-chron-date', mt ? `${mt[1]}<i>年</i>${mt[2]}<i>月</i>` : '', row);
+          h('span', 'sg-chron-text', faces(SG.esc(mt ? mt[3] : String(line)), { max: 4 }), row);
+        }
+        try { close.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ }
+      });
+    }
+
     async gameOver(won) {
       const g = G();
       this.busy = true;
@@ -280,7 +339,7 @@
         sfx('win');
         UI().banner('天下统一', g.ruler(g.player).name + '终成霸业', 4);
         await SG.wait(2.5);
-        await UI().say(`${g.year}年${g.month}月，${g.ruler(g.player).name}平定四海，一统天下。\n麾下武将 ${g.generalsOf(g.player).length} 员，历时 ${g.year - SG.ScenarioData.StartYear} 年。`);
+        await UI().say(`${g.year}年${g.month}月，${SG.esc(g.ruler(g.player).name)}平定四海，一统天下。\n麾下武将 ${g.generalsOf(g.player).length} 员，历时 ${g.year - SG.ScenarioData.StartYear} 年。`, g.ruler(g.player), null, { mood: 'win', sub: genSub(g.ruler(g.player)) });
       } else {
         sfx('lose');
         UI().banner('势力灭亡', '霸业未成，身先陨落……', 4);
@@ -310,6 +369,7 @@
       this.topCenter = h('div', 'sg-topbar-center', '', top);
       const row = h('div', 'sg-topbar-actions', null, top);
       SG.UI.button(row, '势力', () => this.do(() => this.factionInfo()));
+      SG.UI.button(row, '大事', () => this.do(() => this.chronicle()), { title: '天下大事（记录）' });
       // 指令或月末处理进行中（令牌已用、军粮已扣、尚未交战等）不可记录，避免存下半途的局面
       this.saveBtn = SG.UI.button(row, '记录', () => {
         if (this.busy || this.endMonth) return;
@@ -518,10 +578,10 @@
       const owner = c.owner >= 0 ? g.factions[c.owner] : null;
       this.cityTitle.innerHTML = SG.esc(c.name) + '<small>' +
         (owner ? `<span style="color:${readable(owner.color)}">${SG.esc(owner.name)}</span>` : '空城') + '</small>';
-      const gov = c.governor >= 0 ? g.generals[c.governor].name : '—';
+      const govGen = c.governor >= 0 ? g.generals[c.governor] : null;
       const free = g.freeFoundIn(c.id);
       this.cityStats.innerHTML =
-        `太守 <b>${SG.esc(gov)}</b>　　人口 ${n0(c.population)}\n` +
+        `太守 ${govGen ? face(govGen) + '<b>' + SG.esc(govGen.name) + '</b>' : '<b>—</b>'}　　人口 ${n0(c.population)}\n` +
         `土地 <b>${c.land}</b>　产业 <b>${c.industry}</b>　町 <b>${c.town}</b>\n` +
         `金 <b>${c.gold}</b>　粮 <b>${c.food}</b>　防御 ${SG.cityDefense(c)}\n` +
         `兵力 <b>${g.troopsIn(c)}</b>　武将 ${g.officersIn(c).length} 人` +
@@ -540,7 +600,7 @@
         row.title = gen.name + ' · 详情';
         row.addEventListener('click', () => this.showGeneral(gen));
         row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.showGeneral(gen); } });
-        if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: 40 }));
+        if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: SG.UI.facePx ? SG.UI.facePx(SG.UI.FACE_REM.item) : 40 }));
         const tag = g.isRuler(gen) ? '<span class="sg-tag sg-tag-ruler">君</span>' : gen.id === c.governor ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
         h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
         h('div', 'sg-genrow-stats', `武${gen.war} 智${gen.intel} 政${gen.pol}\n兵${gen.troops} 训${gen.training} 忠${g.isRuler(gen) ? 100 : gen.loyalty}`, row);
@@ -677,11 +737,18 @@
     async pickGeneral(title, list, info, enabled) {
       const gens = list.slice();
       if (gens.length === 0) { await UI().say('没有可用的武将。'); return null; }
-      const items = gens.map(g => item(SG.esc(g.name), info(g), !enabled || enabled(g)));
+      const gs = G();
+      const items = gens.map(g => item(SG.esc(g.name) + (gs.isRuler(g) ? '<span class="sg-tag sg-tag-ruler">君</span>' : ''), info(g), !enabled || enabled(g), null, { avatar: g }));
       const r = await UI().choose(title, items, null, 700);
       return r >= 0 ? gens[r] : null;
     }
     available(c) { return G().officersIn(c).filter(g => !g.moved); }
+    // 武将汇报：以该武将的头像说话，文中提到的其他武将带小头像。cmd：指令名（姓名下的小字）；opts：{ mood }
+    report(who, text, cmd, opts) {
+      opts = opts || {};
+      const sub = (cmd ? `<span class="sg-say-cmd">${SG.esc(cmd)}</span>` : '') + (opts.sub || '');
+      return UI().say(faces(text, { skip: who ? [who.name] : [] }), who || null, null, { mood: opts.mood, sub: sub || null });
+    }
 
     // ---------------------------------------------------------- 内政 --
     async cmdDevelop(c) {
@@ -696,7 +763,7 @@
       if (!who) return;
       this.useToken();
       sfx('coin');
-      await UI().say(C.develop(c, who, kinds[r]));
+      await this.report(who, C.develop(c, who, kinds[r]), '开发');
     }
 
     async cmdRecruit(c) {
@@ -708,14 +775,14 @@
       if (!(n > 0)) return;
       this.useToken();
       sfx('march', 0.5);
-      await UI().say(C.recruit(c, who, n));
+      await this.report(who, C.recruit(c, who, n), '征兵');
     }
 
     async cmdTrain(c) {
       const who = await this.pickGeneral('训练哪支部队？', G().officersIn(c), g => `兵 ${g.troops}　训练 ${g.training}`, g => g.troops > 0 && g.training < 100);
       if (!who) return;
       this.useToken();
-      await UI().say(SG.Commands.train(who));
+      await this.report(who, SG.Commands.train(who), '训练');
     }
 
     // ---------------------------------------------------------- 人事 --
@@ -726,9 +793,11 @@
       this.useToken();
       const msg = C.search(c, who);
       const found = C.searchFound;
-      await UI().say(msg);
+      await this.report(who, msg, '搜索', { mood: found ? 'win' : undefined });
       if (found) {
-        const ok = await UI().confirm(`登用${found.name}？（武${found.war} 智${found.intel} 政${found.pol}，成功率约 ${pct(C.hireChance(found, who, G().player))}）`, '登用', '暂且作罢');
+        const ok = await UI().confirm(`登用${SG.esc(found.name)}？`, '登用', '暂且作罢', {
+          body: genCard(found, { sub: '在野人才　成功率约 <b>' + pct(C.hireChance(found, who, G().player)) + '</b>' }),
+        });
         if (ok) await this.hireResult(found, who, c);
       }
     }
@@ -736,9 +805,9 @@
     async hireResult(target, recruiter, c) {
       if (SG.Commands.hire(target, recruiter, G().player, c.id)) {
         sfx('win', 0.5);
-        await UI().say(target.name + '：久闻明公大名，愿效犬马之劳！\n（' + target.name + '加入了我军）', target.name, CINNABAR);
+        await UI().say(target.name + '：久闻明公大名，愿效犬马之劳！\n（' + target.name + '加入了我军）', target, CINNABAR, { mood: 'win', sub: genSub(target) });
       } else {
-        await UI().say(target.name + '：在下另有志向，请回吧。', target.name, GREY_SPEAKER);
+        await UI().say(target.name + '：在下另有志向，请回吧。\n' + faces(`（${recruiter.name}登用未成）`), target, GREY_SPEAKER, { mood: 'angry', sub: genSub(target) });
       }
     }
 
@@ -757,7 +826,7 @@
       const who = await this.pickGeneral('赏赐谁？（' + B.RewardGold + ' 金）', G().officersIn(c).filter(g => !G().isRuler(g)), g => '忠诚 ' + g.loyalty, g => g.loyalty < 100 && c.gold >= B.RewardGold);
       if (!who) return;
       sfx('coin');
-      UI().toast(SG.Commands.reward(c, who));
+      UI().toast(faces(SG.Commands.reward(c, who), { gens: [who] }));
     }
 
     async cmdAppoint(c) {
@@ -766,7 +835,7 @@
       if (!who) return;
       if (g.officersIn(c).some(x => g.isRuler(x)) && !g.isRuler(who)) { await UI().say('君主所在之城，由君主亲自坐镇。'); return; }
       c.governor = who.id;
-      UI().toast(who.name + '出任' + c.name + '太守');
+      UI().toast(face(who) + SG.esc(who.name) + '出任' + SG.esc(c.name) + '太守');
     }
 
     // 移动：目的地为经由己方城池相连可达的所有己方城（不必相邻），列表注明路程
@@ -782,13 +851,13 @@
       const rt = routes[r], dest = rt.city;
       const gens = this.available(c);
       if (gens.length === 0) { await UI().say('本月已无可调动的武将。'); return; }
-      const sel = await UI().chooseMany('调动武将至' + dest.name + '（' + routeText(rt) + '）', gens.map(x => item(SG.esc(x.name), '兵 ' + x.troops)), 10, '可一次调动多名武将（消耗 1 枚令牌）');
+      const sel = await UI().chooseMany('调动武将至' + dest.name + '（' + routeText(rt) + '）', gens.map(x => item(SG.esc(x.name), `兵 ${x.troops}　武${x.war} 智${x.intel}`, true, null, { avatar: x })), 10, '可一次调动多名武将（消耗 1 枚令牌）');
       if (!sel || sel.length === 0) return;
       this.useToken();
       await this.marchRoute(rt.path, g.playerFaction.color);
-      let n = 0;
-      for (const i of sel) { C.move(gens[i], dest); if (gens[i].city === dest.id) n++; }
-      UI().toast(n + ' 名武将移驻' + dest.name);
+      const moved = [];
+      for (const i of sel) { C.move(gens[i], dest); if (gens[i].city === dest.id) moved.push(gens[i]); }
+      UI().toast('<span class="sg-toast-faces">' + moved.slice(0, 6).map(face).join('') + '</span>' + moved.length + ' 名武将移驻' + SG.esc(dest.name), 2.8);
     }
 
     // 沿己方路线逐城行军：相邻 1.2 秒；路线越长每段越快，总长不超过约 2.6 秒
@@ -843,9 +912,9 @@
       if (r < 0) return;
       if (r === 0) {
         const fs = g.factions.filter(f => f.alive && f.id !== g.player);
-        const grp = groupedFactions(fs, f => item(SG.esc(g.ruler(f.id).name) + (regionsOf() && f.name !== g.ruler(f.id).name ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : ''),
+        const grp = groupedFactions(fs, f => item(swatch(f.color) + SG.esc(g.ruler(f.id).name) + (regionsOf() && f.name !== g.ruler(f.id).name ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : ''),
           g.allied(f.id, g.player) ? '已同盟' : '城 ' + g.cityCount(f.id) + '　成功率约 ' + pct(C.allyChance(g.player, f.id, B.AllianceGift)),
-          !g.allied(f.id, g.player)));
+          !g.allied(f.id, g.player), null, { avatar: g.ruler(f.id) }));
         const p = UI().choose('与谁结盟？', grp.items);
         markGroupHeads(grp.heads);
         const fi = await p;
@@ -854,7 +923,10 @@
         const gift = await UI().pickNumber('赠送礼金', 0, c.gold, 50, Math.min(c.gold, B.AllianceGift), v => '成功率约 ' + pct(C.allyChance(g.player, ff.id, v)));
         if (gift < 0) return;
         this.useToken();
-        await UI().say(C.ally(c, g.player, ff.id, gift));
+        const res = C.ally(c, g.player, ff.id, gift);
+        const ok = g.allied(ff.id, g.player);
+        const ru = g.ruler(ff.id);
+        await UI().say((ok ? '……愿与贵方结为同盟，共图大业。' : '……此事不必再提。') + '\n' + SG.esc(res), ru, null, { mood: ok ? 'win' : 'angry', sub: genSub(ru) });
         return;
       }
       const agent = await this.pickGeneral('派谁执行？', this.available(c), x => '智力 ' + x.intel);
@@ -871,21 +943,28 @@
       if (!target) return;
       this.useToken();
       agent.moved = true;
-      await UI().say(r === 1 ? C.discord(agent, target) : C.persuade(agent, target, g.player));
+      const res = r === 1 ? C.discord(agent, target) : C.persuade(agent, target, g.player);
+      const won = r === 1 ? res.indexOf('成功') >= 0 : target.faction === g.player;
+      await this.report(agent, res, r === 1 ? '离间' : '拉拢', { mood: won ? 'win' : undefined });
     }
 
     // ---------------------------------------------------------- 战争 --
     async cmdAttack(c) {
       const g = G(), B = SG.Balance;
       const targets = c.links.map(i => g.cities[i]).filter(x => x.owner !== g.player && !g.allied(x.owner, g.player));
+      // 每座目标城列出守将的小头像（至多 6 人）
+      const guards = t => {
+        const os = g.officersIn(t).slice().sort((a, b) => (g.isRuler(b) - g.isRuler(a)) || (b.troops - a.troops));
+        return os.length ? '<span class="sg-item-faces">' + os.slice(0, 6).map(face).join('') + (os.length > 6 ? `<span class="sg-muted">+${os.length - 6}</span>` : '') + '</span>' : null;
+      };
       const r = await UI().choose('攻打何处？', targets.map(t => item(SG.esc(t.name),
-        (t.owner >= 0 ? g.factions[t.owner].name : '空城') + '　武将 ' + g.officersIn(t).length + '　兵 ' + g.troopsIn(t) + '　防 ' + SG.cityDefense(t))));
+        (t.owner >= 0 ? g.factions[t.owner].name : '空城') + '　武将 ' + g.officersIn(t).length + '　兵 ' + g.troopsIn(t) + '　防 ' + SG.cityDefense(t), true, guards(t))));
       if (r < 0) return;
       const target = targets[r];
       const gens = this.available(c).filter(x => x.troops > 0);
       if (gens.length === 0) { await UI().say('没有可以出征的部队（需有兵力且本月未行动）。'); return; }
       const sel = await UI().chooseMany('出征武将（至多 ' + B.MaxSortieGenerals + ' 名）',
-        gens.map(x => item(SG.esc(x.name), `兵${x.troops} 武${x.war} 智${x.intel} 训${x.training}`)), B.MaxSortieGenerals,
+        gens.map(x => item(SG.esc(x.name) + (g.isRuler(x) ? '<span class="sg-tag sg-tag-ruler">君</span>' : ''), `兵${x.troops} 武${x.war} 智${x.intel} 训${x.training}`, true, null, { avatar: x })), B.MaxSortieGenerals,
         '君主出征时由君主任主将，否则为列表中最靠前的武将；主将败走则全军撤退。');
       if (!sel || sel.length === 0) return;
       const squad = sel.map(i => gens[i]);
@@ -907,9 +986,20 @@
       SG.Game.rig.focusMap(p.x, p.y, 45);
       this.selectCity(s.target.id);
       await SG.Game.map.march(s.src, s.target, g.factions[s.attacker].color, 1.4);
-      const leader = g.ruler(s.attacker).name === s.atk[0].name ? g.ruler(s.attacker).name : g.factions[s.attacker].name + '军' + s.atk[0].name;
-      await UI().say(`急报！${leader}率 ${s.atk.length} 名武将、兵 ${sum(s.atk, x => x.troops)} 来犯${s.target.name}！`);
+      await this.alarm(s);
       await this.fight(s, 1);
+    }
+
+    // 急报：来犯主将的头像（怒容、敌方势力色边框）示警，随行武将带小头像
+    alarm(s) {
+      const g = G();
+      const lead = s.atk[0];
+      const fac = g.factions[s.attacker];
+      const leader = g.ruler(s.attacker).name === lead.name ? SG.esc(lead.name) : SG.esc(fac.name) + '军' + SG.esc(lead.name);
+      const rest = s.atk.slice(1);
+      const text = `<b class="sg-alarm">急报！</b>${leader}率 ${s.atk.length} 名武将、兵 <b>${n0(sum(s.atk, x => x.troops))}</b> 来犯${SG.esc(s.target.name)}！` +
+        (rest.length ? '\n<span class="sg-muted">随行</span> ' + rest.map(x => face(x) + SG.esc(x.name)).join('　') : '');
+      return UI().say(text, lead, null, { mood: 'angry', sub: genSub(lead), className: 'is-alarm' });
     }
 
     // 战斗与战后处理。playerSide：玩家是攻方 0 还是守方 1
@@ -922,11 +1012,14 @@
         let fates = null;
         if (s.captives.length > 0) fates = await this.handleCaptives(s, playerSide === 0);
         SG.Game.map.refresh(g); this.refreshAll();
-        await UI().say(s.summary);
+        await UI().say(faces(s.summary));
         await this.reportCaptives(fates, s.attackerWon ? s.attacker : s.defender);
         return;
       }
-      const mode = await UI().choose(s.target.name + '之战', [item('亲自指挥', '在战场上调兵遣将'), item('委任', '由部将自行作战，立即得出结果')], null, 560);
+      // 说明区：双方出阵武将的小头像
+      const side = (list, cls, name) => `<span class="${cls}">${name}</span> ` + list.slice(0, 5).map(x => face(x)).join('') + (list.length > 5 ? `<span class="sg-muted">+${list.length - 5}</span>` : '');
+      const vs = '<span class="sg-vs-faces">' + side(s.atk, 'sg-side0', '攻') + '<span class="sg-sep">　</span>' + side(s.def, 'sg-side1', '守') + '</span>';
+      const mode = await UI().choose(SG.esc(s.target.name) + '之战', [item('亲自指挥', '在战场上调兵遣将'), item('委任', '由部将自行作战，立即得出结果')], vs, 560);
       if (mode === 0) {
         this.hud.style.display = 'none';
         this.setMapLabelsVisible(false);
@@ -956,9 +1049,13 @@
       const res = playerSide === 0
         ? (s.attackerWon ? '我军攻陷了' + s.target.name + '！' : '攻城失利，全军撤回' + s.src.name + '。')
         : (s.attackerWon ? s.target.name + '失守了……' : '我军成功守住了' + s.target.name + '！');
-      await UI().say(res);
+      // 由我方主将汇报战果（主将阵亡 / 被俘时由其余在籍的武将汇报）
+      const ours = (playerSide === 0 ? s.atk : s.def).filter(x => x && !x.dead && x.faction === g.player);
+      const who = ours[0] || null;
+      if (who) await this.report(who, res, s.target.name + '之战', { mood: playerWon ? 'win' : 'hurt' });
+      else await UI().say(res);
       await this.reportCaptives(fates, playerSide === 0 ? s.defender : s.attacker);
-      if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(g.factions[s.defender].name + '势力就此灭亡。');
+      if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(faces(g.factions[s.defender].name + '势力就此灭亡。'));
     }
 
     // 战败后我方被俘武将的下落（fates：Conquest.aiDecideCaptives 的结果；winner：处置俘虏的势力）
@@ -972,7 +1069,7 @@
         if (fate === 'executed') return `${gen.name}被俘，遭${wn}处斩。`;
         return gen.faction === g.player ? `${gen.name}被俘后获释，回到了${g.cities[gen.city].name}。` : `${gen.name}被俘后获释，流落在野。`;
       });
-      await UI().say(lines.join('\n'));
+      await UI().say(faces(lines.join('\n'), { gens: mine.map(x => x.gen), max: 12 }));
     }
 
     async handleCaptives(s, playerDecides) {
@@ -983,15 +1080,15 @@
       const recruiter = g.ruler(g.player);
       for (const cap of s.captives.slice()) {
         const isRuler = cap.faction >= 0 && g.factions[cap.faction].ruler === cap.id;
-        const r = await UI().choose('俘虏：' + cap.name + (isRuler ? '（君主）' : ''), [
+        const r = await UI().choose('俘虏：' + SG.esc(cap.name) + (isRuler ? '（君主）' : ''), [
           item('登用', isRuler ? '君主不会投降' : '成功率约 ' + pct(C.hireChance(cap, recruiter, g.player)), !isRuler),
           item('释放', '放其归去'),
           item('处斩', '以绝后患'),
-        ], `武${cap.war} 智${cap.intel} 政${cap.pol}`);
+        ], genCard(cap, { sub: genSub(cap) + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
         if (r === 0) {
-          if (C.hire(cap, recruiter, g.player, holderCity.id)) await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap.name, CINNABAR);
-          else { await UI().say(cap.name + '：忠臣不事二主！', cap.name, GREY_SPEAKER); Cq.release(cap); }
-        } else if (r === 2) { Cq.execute(cap); await UI().say(cap.name + '被处斩了。'); }
+          if (C.hire(cap, recruiter, g.player, holderCity.id)) await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap, CINNABAR, { mood: 'win', sub: genSub(cap) });
+          else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub: genSub(cap) }); Cq.release(cap); }
+        } else if (r === 2) { Cq.execute(cap); await UI().say(SG.esc(cap.name) + '被处斩了。', cap, GREY_SPEAKER, { mood: 'hurt' }); }
         else Cq.release(cap);
       }
     }
@@ -1071,7 +1168,7 @@
       const grp = groupedFactions(fs, f => item(
         swatch(f.color) + SG.esc(g.ruler(f.id).name) + (f.name !== g.ruler(f.id).name && regionsOf() ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : '') +
         (f.id === g.player ? '（我方）' : g.allied(f.id, g.player) ? '（同盟）' : ''),
-        `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　兵 ${sum(g.citiesOf(f.id), c => g.troopsIn(c))}`));
+        `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　兵 ${sum(g.citiesOf(f.id), c => g.troopsIn(c))}`, true, null, { avatar: g.ruler(f.id) }));
       const pr = UI().choose('天下势力', grp.items, regionsOf() ? '按地域分组（我方所在地域在前，其余由近及远）；点选势力，镜头飞往其都城。' : null, 760);
       markGroupHeads(grp.heads);
       const r = await pr;

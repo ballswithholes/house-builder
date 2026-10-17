@@ -1,6 +1,6 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 必杀技（DESIGN-V2 §4D）
+   三国志-霸王的世界 · 网页版 · 必杀技（DESIGN-V2 §4D；第三版 §4：可习得必杀、多招必杀菜单）
 
    数据：js/specials-data.js（SG.SpecialsData，条目格式与机制参数表写在该文件头注释里）。
    规则：js/battle-model.js（specialUsable / specialTargets / useSpecial / aiSpecial）。
@@ -23,16 +23,26 @@
      SG.Specials.kindName(kind)       → 机制中文名
      SG.Specials.uiColor(sp | '#hex') → 界面文字用色（主色偏暗时提亮，深色面板上可读）
      SG.Specials.KINDS / FX / cultureOf(gen) / fallback(gen)（调试用：忽略手写条目，直接生成）
+   第三版（成长）：
+     SG.Specials.pool()               → 全部「可习得必杀」（冻结，按等阶排序）：{ id: 'lp:编号', tier, pool: true, name, kind, … }
+     SG.Specials.byId(id)             → 'sp:武将名'（专属必杀，已解析过的）或 'lp:编号'（可习得必杀）| null
+     SG.Specials.known(gen)           → 该武将会的全部必杀：[专属必杀, …已习得的可习得必杀（gen.specials 顺序）]
+                                        （SG.Progress.enabled = false 时只有专属必杀）
+     SG.Specials.tierName(t)          → '一阶' … '四阶'
+     SG.Specials.check() 另检查池：池内名称、参数与全部专属必杀两两不同（rep.pool = { total, byTier }）
 
    控制层辅助（bc = SG.BattleController 实例；用到 bc.M、bc.V、bc.pickEnemy、bc.showCard、bc.updateHud）
-     SG.Specials.menuItem(bc, u)            → 战斗行动菜单的「必杀」条目（SG.UI.item）
-     SG.Specials.cardLine(u)                → 部队情报卡的一行 HTML：必杀「名」可用 / 已施展
-     await SG.Specials.pickTarget(bc, u)    → 目标 BUnit | null（自身招式直接返回 u；沿用 bc.pickEnemy，并在棋盘上标出范围）
-     await SG.Specials.menu(bc, u, moved)   → 完整流程：选目标 → perform → Mdl.spend(u)；取消时与策略菜单相同（moved 时也 spend）
+     SG.Specials.menuItem(bc, u)            → 战斗行动菜单的「必杀」条目（SG.UI.item；会多招时显示「名」等 N 招 · 可用 k）
+     SG.Specials.cardLine(u)                → 部队情报卡的 HTML：每招一行「名」可用 / 已施展
+     await SG.Specials.pickSpecial(bc, u)   → 会多招且不止一招可用时弹出选招菜单（每招：名称、等阶、摘要、可用 / 原因）；
+                                              记入 u.spPick 并返回该招 | null（取消）
+     await SG.Specials.pickTarget(bc, u, sp?) → 目标 BUnit | null（未指定 sp 时先 pickSpecial；自身招式直接返回 u；
+                                              沿用 bc.pickEnemy，并在棋盘上标出范围）。取消时清除 u.spPick
+     await SG.Specials.menu(bc, u, moved)   → 完整流程：选招 → 选目标 → perform → Mdl.spend(u)；取消时与策略菜单相同（moved 时也 spend）
      await SG.Specials.perform(bc, u, target, opts) → res（Mdl.useSpecial 的结果）
          特写（SG.Clash.cutIn，若无则本文件的简易特写）→ Mdl.useSpecial → V.specialFx → 伤害 / 回复飘字 →
          刷新部队与情报卡 → 溃散动画。与 doAttack / doTactic 一样不调用 spend（由调用方 spend）。
-         opts：{ cutIn: true（false 跳过特写）, fast: false（电脑回合可 true：特写缩短）,
+         opts：{ special: 招式或编号（缺省 = u.spPick，再缺省 = 第一招可用的）, cutIn: true（false 跳过特写）, fast: false（电脑回合可 true：特写缩短）,
                  rig: 镜头（缺省 SG.Game.rig；特效期间推近到施展者与目标之间，结束后恢复距离）, zoom: true }
      await SG.Specials.cutIn({ gen, name, color, side, cry, fast }) → 简易特写（DOM，约 1.1 秒；放在 SG.UI 的 screens 层，点击或按键跳过）
    ========================================================================== */
@@ -124,7 +134,8 @@
   const CHARGE_CAP = 1.3;
   // 范围招式：同时命中多支敌军时，全部伤害合计不超过 AREA_TOTAL × 基准（主目标不缩减，次要目标按比例缩减）
   const AREA_TOTAL = 2.5;
-  const META_KEYS = ['name', 'kind', 'desc', 'lore', 'color', 'fx', 'cry', 'stat', 'note'];
+  const META_KEYS = ['name', 'kind', 'desc', 'lore', 'color', 'fx', 'cry', 'stat', 'note', 'tier'];
+  const TIER_NAME = ['', '一阶', '二阶', '三阶', '四阶'];
   const STATS = ['war', 'intel', 'pol'];
 
   // 孟获一族（DESIGN-V2 §6：现有武将无 culture 时视为 han，孟获一族为 nanman）
@@ -201,13 +212,15 @@
   }
 
   // 补全默认参数并夹到范围内 → 冻结对象
-  function normalize(e, owner, auto) {
+  // poolKey：可习得必杀的编号（id = 'lp:编号'，gen 为空，另有 tier / pool）
+  function normalize(e, owner, auto, poolKey) {
     const K = KINDS[e.kind] || KINDS.smite;
     const kind = KINDS[e.kind] ? e.kind : 'smite';
     const sp = {
-      id: 'sp:' + owner, gen: owner, name: String(e.name || owner + '·绝技'), kind,
+      id: poolKey ? 'lp:' + poolKey : 'sp:' + owner, gen: poolKey ? '' : owner, name: String(e.name || owner + '·绝技'), kind,
       stat: STATS.indexOf(e.stat) >= 0 ? e.stat : K.stat,
     };
+    if (poolKey) { sp.pool = true; sp.tier = M.clamp(Math.round(num(e.tier) ? e.tier : 1), 1, 4); }
     for (const k of Object.keys(K.params)) {
       const p = K.params[k];
       let v = num(e[k]) ? e[k] : p[0];
@@ -221,7 +234,8 @@
     sp.lore = typeof e.lore === 'string' ? e.lore.trim() : '';
     sp.desc = typeof e.desc === 'string' && e.desc.trim() ? e.desc : sp.lore + explain(sp);
     sp.auto = !!auto;
-    sp.problems = auto ? [] : validate(e, owner);
+    sp.problems = auto ? [] : validate(e, poolKey ? '可习得「' + poolKey + '」' : owner);
+    if (poolKey && !(num(e.tier) && e.tier >= 1 && e.tier <= 4 && Math.round(e.tier) === e.tier)) sp.problems.push('可习得「' + poolKey + '」：tier 应为 1–4 的整数');
     return Object.freeze(sp);
   }
 
@@ -417,7 +431,9 @@
 
   // ============================================================ 解析与缓存 --
   const cache = new Map();       // 武将名 → 冻结条目
-  const sigOwner = new Map();    // 签名 → 武将名
+  const sigOwner = new Map();    // 签名 → 武将名（可习得必杀为 'lp:编号'）
+  const poolMap = new Map();     // 'lp:编号' → 冻结条目
+  let poolList = [];
   let dataVersion = -1;
   function data() { return SG.SpecialsData || null; }
   function syncData() {
@@ -425,7 +441,7 @@
     const v = D ? D.version : 0;
     if (v === dataVersion) return;
     dataVersion = v;
-    cache.clear(); sigOwner.clear();
+    cache.clear(); sigOwner.clear(); poolMap.clear(); poolList = [];
     if (!D) return;
     for (const n of D.names()) {
       const sp = normalize(D.get(n), n, false);
@@ -433,6 +449,35 @@
       const sig = signature(sp);
       if (!sigOwner.has(sig)) sigOwner.set(sig, n);
     }
+    // 可习得必杀：兜底生成器同样避开它们的 (机制, 参数)
+    if (typeof D.poolIds === 'function') {
+      for (const k of D.poolIds()) {
+        const sp = normalize(D.getPool(k), '', false, k);
+        poolMap.set(sp.id, sp);
+        poolList.push(sp);
+        const sig = signature(sp);
+        if (!sigOwner.has(sig)) sigOwner.set(sig, sp.id);
+      }
+      poolList.sort((a, b) => a.tier - b.tier);
+    }
+  }
+  function pool() { syncData(); return poolList.slice(); }
+  function byId(id) {
+    if (typeof id !== 'string') return null;
+    syncData();
+    if (id.indexOf('lp:') === 0) return poolMap.get(id) || null;
+    if (id.indexOf('sp:') === 0) return cache.get(id.slice(3)) || null;
+    return null;
+  }
+  // 该武将会的全部必杀：专属必杀在前，其后为已习得的可习得必杀（每招每战一次）
+  function known(gen) {
+    const sig = of(gen);
+    if (!sig) return [];
+    const out = [sig];
+    const P = SG.Progress;
+    if (P && P.enabled === false) return out;
+    if (gen && Array.isArray(gen.specials)) for (const id of gen.specials) { const sp = byId(id); if (sp && sp.pool && out.indexOf(sp) < 0) out.push(sp); }
+    return out;
   }
 
   function of(gen) {
@@ -491,15 +536,26 @@
       if (!bySig.has(s)) bySig.set(s, []);
       bySig.get(s).push(sp.gen);
     }
+    // 可习得必杀：名称与参数也不得与任何专属必杀（或池内彼此）相同
+    const pl = pool();
+    const byTier = {};
+    for (const sp of pl) {
+      byTier[sp.tier] = (byTier[sp.tier] || 0) + 1;
+      if (!byName.has(sp.name)) byName.set(sp.name, []);
+      byName.get(sp.name).push(sp.id);
+      const s = signature(sp);
+      if (!bySig.has(s)) bySig.set(s, []);
+      bySig.get(s).push(sp.id);
+    }
     const dupNames = [...byName].filter(([, v]) => v.length > 1).map(([k, v]) => ({ name: k, gens: v }));
     const dupSigs = [...bySig].filter(([, v]) => v.length > 1).map(([k, v]) => ({ sig: k, gens: v }));
     const problems = [];
-    for (const sp of list) for (const p of sp.problems) problems.push(p);
+    for (const sp of list.concat(pl)) for (const p of sp.problems) problems.push(p);
     const roster0 = roster(gens);
     const missing = roster0.filter(g => g && g.name && !of(g)).map(g => g.name);
     const hand = list.filter(sp => !sp.auto).length;
     return {
-      total: list.length, hand, auto: list.length - hand, dupNames, dupSigs, problems, missing,
+      total: list.length, hand, auto: list.length - hand, dupNames, dupSigs, problems, missing, pool: { total: pl.length, byTier },
       ok: dupNames.length === 0 && dupSigs.length === 0 && problems.length === 0 && missing.length === 0,
     };
   }
@@ -515,12 +571,26 @@
     return { label, right, enabled, desc, selected: false };
   }
 
-  function menuItem(bc, u) {
+  // 部队会的全部必杀（规则层 knownSpecials；旧版规则层退回专属必杀）
+  function knownOf(Mdl, u) {
+    if (Mdl && typeof Mdl.knownSpecials === 'function') return Mdl.knownSpecials(u);
     const sp = of(u.gen);
-    const us = bc.M.specialUsable(u);
-    if (!sp) return uiItem('必杀', '<span class="sg-muted">无</span>', false, null);
+    return sp ? [sp] : [];
+  }
+  function usable1(Mdl, u, sp) { return typeof Mdl.knownSpecials === 'function' ? Mdl.specialUsable(u, sp.id) : Mdl.specialUsable(u); }
+  function menuItem(bc, u) {
+    const list = knownOf(bc.M, u);
+    if (!list.length) return uiItem('必杀', '<span class="sg-muted">无</span>', false, null);
+    const okList = list.filter(sp => usable1(bc.M, u, sp).ok);
+    const sp = okList[0] || list[0];
     const nm = '<span style="color:' + uiColor(sp) + '">「' + esc(sp.name) + '」</span>';
-    return uiItem('必杀', us.ok ? nm : nm + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(menuDesc(sp)));
+    if (list.length === 1) {
+      const us = usable1(bc.M, u, sp);
+      return uiItem('必杀', us.ok ? nm : nm + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(menuDesc(sp)));
+    }
+    const more = '<span class="sg-muted">等 ' + list.length + ' 招 · 可用 ' + okList.length + '</span>';
+    const why = okList.length ? '' : ' <span class="sg-muted">' + esc(bc.M.specialUsable(u).why || '') + '</span>';
+    return uiItem('必杀', nm + ' ' + more + why, okList.length > 0, null);
   }
   // 行动菜单里的说明：矮屏（横屏手机）只留一行（机制名 + 说明的第一句，截断），免得把「待机」挤出菜单；
   // 完整说明在选择目标时的提示、部队卡片与武将详情里都有
@@ -534,19 +604,60 @@
     return kindName(sp.kind) + '：' + first;
   }
 
+  function usedIn(u, sp) {
+    if (!u || !sp) return false;
+    if (Array.isArray(u.spUsed) && u.spUsed.indexOf(sp.id) >= 0) return true;
+    return !sp.pool && !!u.specialUsed;
+  }
   function cardLine(u) {
-    const sp = u && of(u.gen);
-    if (!sp) return '';
-    return '<div>必杀 <span style="color:' + uiColor(sp) + '">「' + esc(sp.name) + '」</span>' +
-      (u.specialUsed ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　可用</span>') + '</div>';
+    if (!u || !u.gen) return '';
+    const list = known(u.gen);
+    if (!list.length) return '';
+    const sig = list[0];
+    const head = '<div>必杀 <span style="color:' + uiColor(sig) + '">「' + esc(sig.name) + '」</span>' +
+      (usedIn(u, sig) ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　可用</span>') + '</div>';
+    if (list.length === 1) return head;
+    // 习得的招式压成一行：可用的着色，已施展的灰显划线（情报卡在横屏手机上也不至过长）
+    const more = list.slice(1).map(sp => usedIn(u, sp)
+      ? '<s class="sg-muted">' + esc(sp.name) + '</s>'
+      : '<span style="color:' + uiColor(sp) + '">' + esc(sp.name) + '</span>').join('<span class="sg-muted"> · </span>');
+    return head + '<div>习得 ' + more + '</div>';
+  }
+
+  // 选招：会多招且不止一招可用时弹出菜单；结果记入 u.spPick（规则层 useSpecial 缺省用它）
+  async function pickSpecial(bc, u) {
+    const Mdl = bc.M;
+    const list = knownOf(Mdl, u);
+    if (!list.length) return null;
+    const okList = list.filter(sp => usable1(Mdl, u, sp).ok);
+    if (okList.length === 0) return null;
+    let sp = okList[0];
+    if (okList.length > 1 && SG.UI && typeof SG.UI.choose === 'function') {
+      const items = list.map(x => {
+        const us = usable1(Mdl, u, x);
+        // 右栏只放等阶 / 原因（短），数值摘要放在说明行，窄屏上也不挤
+        const tier = x.pool ? '<span class="sg-muted">' + TIER_NAME[x.tier] + '</span>' : '<span class="sg-goldc">专属</span>';
+        return uiItem('<span style="color:' + uiColor(x) + '">' + esc(x.name) + '</span>', us.ok ? tier : tier + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(rules(x)));
+      });
+      const r = await SG.UI.choose(u.gen.name + ' 的必杀', items, null, 680);
+      if (r < 0) { u.spPick = null; return null; }
+      sp = list[r];
+    }
+    u.spPick = sp.id;
+    return sp;
   }
 
   // 选择目标：沿用控制器的 pickEnemy（只有一个目标时直接返回），并在棋盘上标出射程与可选目标
-  async function pickTarget(bc, u) {
+  async function pickTarget(bc, u, spArg) {
     const Mdl = bc.M, V = bc.V;
-    const sp = of(u.gen);
-    const list = Mdl.specialTargets(u);
-    if (!sp || list.length === 0) return null;
+    const multi = typeof Mdl.knownSpecials === 'function';
+    let sp = spArg ? (typeof spArg === 'string' ? byId(spArg) : spArg) : null;
+    if (!sp && multi) sp = await pickSpecial(bc, u);
+    if (!sp && !multi) sp = of(u.gen);
+    if (!sp) return null;
+    if (multi) u.spPick = sp.id;
+    const list = multi ? Mdl.specialTargets(u, sp.id) : Mdl.specialTargets(u);
+    if (list.length === 0) { u.spPick = null; return null; }
     if (!needsTarget(sp)) return u;
     if (V && V.highlight) {
       try {
@@ -568,6 +679,7 @@
     } finally {
       if (V && V.clearHighlights) V.clearHighlights();
     }
+    if (!tgt) u.spPick = null;
     return tgt || null;
   }
 
@@ -577,7 +689,7 @@
     if (!us.ok) { toast(us.why); if (moved) Mdl.spend(u); return null; }
     const tgt = await pickTarget(bc, u);
     if (!tgt) { if (moved) Mdl.spend(u); return null; }
-    const res = await perform(bc, u, tgt);
+    const res = await perform(bc, u, tgt, { special: u.spPick });
     Mdl.spend(u);
     return res;
   }
@@ -597,10 +709,13 @@
     opts = opts || {};
     const Mdl = bc && bc.M, V = bc && bc.V;
     if (!Mdl || !u) return null;
-    const sp = of(u.gen);
-    const us = Mdl.specialUsable(u);
+    const multi = typeof Mdl.knownSpecials === 'function';
+    const sp = multi ? Mdl.specialOf(u, opts.special) : of(u.gen);
+    const sid = sp ? sp.id : null;
+    const us = sp ? (multi ? Mdl.specialUsable(u, sid) : Mdl.specialUsable(u)) : { ok: false, why: '无必杀技' };
     if (!sp || !us.ok) { toast(esc(us.why || '无法施展')); return null; }
-    const cands = Mdl.specialTargets(u);
+    if (multi) u.spPick = sid;
+    const cands = multi ? Mdl.specialTargets(u, sid) : Mdl.specialTargets(u);
     if (!target || cands.indexOf(target) < 0) target = cands[0];
     call(bc, 'showCard', u);
     if (V && V.setCursor) V.setCursor(u);
@@ -615,7 +730,7 @@
     }
     toast(esc(u.gen.name) + '施展必杀「<span style="color:' + uiColor(sp) + '">' + esc(sp.name) + '</span>」！', 1.6);
     // 2. 结算
-    const res = Mdl.useSpecial(u, target);
+    const res = multi ? Mdl.useSpecial(u, target, sid) : Mdl.useSpecial(u, target);
     if (!res.sp) return res;
     // 镜头推近：施展者与主目标的中点；部队名牌暂时淡出，让出画面
     const rig = opts.rig || (SG.Game && SG.Game.rig) || null;
@@ -797,7 +912,8 @@
   SG.Specials = {
     KINDS, FX, FLOOD_RIVER, FLOOD_DRY, CHARGE_CAP, AREA_TOTAL,
     of, all, check, validate, signature, needsTarget, targetSide, explain, rules, kindName, cultureOf, uiColor,
+    pool, byId, known, TIER_NAME, tierName(t) { return TIER_NAME[t] || ''; },
     fallback(gen) { return normalize(fallback(gen), gen.name, true); },
-    menuItem, cardLine, pickTarget, menu, perform, cutIn,
+    menuItem, cardLine, pickSpecial, pickTarget, menu, perform, cutIn,
   };
 })();

@@ -1,8 +1,9 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 必杀技数据（DESIGN-V2 §4D）
+   三国志-霸王的世界 · 网页版 · 必杀技数据（DESIGN-V2 §4D；第三版 §4 可习得必杀见文件末尾）
 
-   每位武将一招独有的必杀技。本文件只有数据；机制表、默认参数、兜底生成器与校验在
+   每位武将一招独有的必杀技（专属必杀）；另有所有武将共用的「可习得必杀」池（SG.SpecialsData.addPool，
+   按等阶 1–4，升级后按武力习得，见文件末尾与 js/model.js 的 SG.Progress）。本文件只有数据；机制表、默认参数、兜底生成器与校验在
    js/specials.js，结算规则在 js/battle-model.js（useSpecial），特效在 js/battle-view.js（specialFx）。
    载入顺序：battle-model.js 之后、specials.js 之前（specials.js 缺本文件也能运行，只是全部走兜底生成）。
 
@@ -989,5 +990,107 @@
       lore: '雷斯库波三世继父为博斯普鲁斯王，据潘提卡彭城，事迹多见于钱币。' },
     '皮耶波鲁斯': { name: '南掠希腊', kind: 'rampage', range: 2, strikes: 4, power: 0.45, morale: -8, fx: 'whirl', color: '#784212',
       lore: '170 年前后科斯托博契人南下劫掠，远至希腊厄琉息斯秘仪圣所。' },
+  });
+
+  // ============================================================ 可习得必杀（第三版 §4） --
+  // 武将升级后可另学的招式（专属必杀之外）。所有武将共用这一池，按等阶 1–4 分组：
+  //   可学几招、最高几阶由武力决定（SG.Progress.specialSlots：武力 60/70/80/90 各一格；
+  //   等阶上限 武力 60→1、70→2、80→3、92→4），并在 2/4/6/8 级逐格、逐阶解锁。
+  // 条目格式同上（name、kind、参数、lore、color、fx、cry），另加 tier（1–4）；键为编号（存档里保存 'lp:编号'）。
+  // 名称两两不同且不与任何专属必杀重名；(kind, stat, 全部参数) 不与任何专属必杀相同（tests/sim.js 自检）。
+  // 平衡：威力按等阶递增——一阶 ≈ 1.4–1.6 次普通攻击、二阶 ≈ 1.7–1.9、三阶 ≈ 2.0–2.2、四阶 ≈ 2.3–2.6（每招每战一次）。
+  //   辅助类一律 stat 'war'（武人的号令、鼓舞、坚守），数值依武力缩放。
+  //   SG.SpecialsData.addPool({ 编号: 条目, … }) 可追加；poolIds() / getPool(id) 读取。
+  const pool = Object.create(null);
+  store.addPool = function (map) {
+    if (!map || typeof map !== 'object') return store;
+    for (const k of Object.keys(map)) if (map[k] && typeof map[k] === 'object') pool[k] = Object.assign({}, map[k]);
+    store.version++;
+    return store;
+  };
+  store.getPool = function (id) { return Object.prototype.hasOwnProperty.call(pool, id) ? pool[id] : null; };
+  store.poolIds = function () { return Object.keys(pool); };
+
+  store.addPool({
+    // ---- 一阶（武力 60+，2 级起） ----
+    huimaqiang: { tier: 1, name: '回马枪', kind: 'smite', range: 1, power: 1.5, morale: -8, fx: 'slash', color: '#e8e0c8',
+      lore: '佯败而走，待敌追近，回身一枪——古来枪家的看家绝技。' },
+    tuodao: { tier: 1, name: '拖刀计', kind: 'smite', range: 1, power: 1.55, morale: -12, confuse: 0.1, turns: 1, fx: 'slash', color: '#c9d6a3',
+      lore: '诈败拖刀，诱敌近前回身劈斩；《三国演义》第五十三回，关羽战长沙时欲以此计取黄忠。' },
+    lianzhu: { tier: 1, name: '连珠箭', kind: 'volley', range: 3, power: 1.45, radius: 0, morale: -5, fx: 'arrows', color: '#f2d27a',
+      lore: '一弦数矢、连发不绝的射法。' },
+    hengsao: { tier: 1, name: '横扫千军', kind: 'cleave', power: 1.3, splash: 0.5, morale: -6, fx: 'sweep', color: '#f0b45c',
+      lore: '长兵抡圆横扫，逼退四周之敌（语出杜甫「笔阵独扫千人军」）。' },
+    xiaoqi: { tier: 1, name: '骁骑突击', kind: 'charge', range: 2, power: 1.4, dash: 0.1, push: 1, morale: -8, fx: 'dash', color: '#ff8a5c',
+      lore: '汉代以骁骑名营，轻骑倏忽而至，一冲即走。' },
+    sanlian: { tier: 1, name: '三连斩', kind: 'rampage', range: 1, strikes: 3, power: 0.53, morale: -5, fx: 'whirl', color: '#dfe9f5',
+      lore: '刀随身转，一合之间连出三刀。' },
+    numu: { tier: 1, name: '怒目断喝', kind: 'roar', radius: 1, power: 0, morale: -15, confuse: 0.2, turns: 1, fx: 'shock', color: '#ff9f50',
+      lore: '瞋目大喝，近前之敌为之夺气。' },
+    lidun: { tier: 1, name: '立盾坚阵', kind: 'fortify', stat: 'war', radius: 0, def: 1.22, counter: 1.1, turns: 1, morale: 6, fx: 'shield', color: '#8fbce8',
+      lore: '大橹相连、长戟在后，汉军步卒拒骑之法。' },
+    leigu: { tier: 1, name: '擂鼓助威', kind: 'rally', stat: 'war', radius: 1, morale: 15, heal: 0, cure: 1, atk: 1, turns: 1, fx: 'aura', color: '#f7d36a',
+      lore: '「一鼓作气」——《左传·庄公十年》曹刿论战。' },
+    xiujian: { tier: 1, name: '袖箭', kind: 'assassinate', range: 1, chance: 0.15, power: 0.45, morale: -10, fx: 'shadow', color: '#9b7fd6',
+      lore: '藏于袖中、以机括发射的短箭，近身暗算防不胜防。' },
+    // ---- 二阶（武力 70+，4 级起） ----
+    zhanma: { tier: 2, name: '斩马剑', kind: 'smite', range: 1, power: 1.8, pierce: 1, morale: -10, fx: 'slash', color: '#d8dee8',
+      lore: '《汉书·朱云传》：「臣愿赐尚方斩马剑，断佞臣一人头。」' },
+    xuanfeng: { tier: 2, name: '旋风斩', kind: 'cleave', power: 1.5, splash: 0.62, morale: -8, fx: 'sweep', color: '#ffc46b',
+      lore: '人随刀转如旋风，近身之敌无一幸免。' },
+    tuzhen: { tier: 2, name: '突阵', kind: 'charge', range: 3, power: 1.6, dash: 0.12, push: 1, morale: -10, fx: 'dash', color: '#ff7a4f',
+      lore: '率先突入敌阵、搅乱其行列。' },
+    shediao: { tier: 2, name: '射雕手', kind: 'volley', range: 4, power: 1.75, radius: 0, morale: -6, fx: 'arrow', color: '#ffe39a',
+      lore: '《史记·李将军列传》：「是必射雕者也。」匈奴称最善射者为射雕手。' },
+    chuanzhen: { tier: 2, name: '穿阵四击', kind: 'rampage', range: 2, strikes: 4, power: 0.48, morale: -6, fx: 'whirl', color: '#e3edf8',
+      lore: '纵马穿阵，往来四击而还。' },
+    shouxiang: { tier: 2, name: '收降纳叛', kind: 'drain', range: 1, power: 1.6, drain: 0.4, morale: -10, fx: 'drain', color: '#f06a8a',
+      lore: '击破敌军后收其降卒为己用——汉末诸侯扩军的常法。' },
+    xiansheng: { tier: 2, name: '先声夺人', kind: 'roar', radius: 2, power: 0.2, morale: -20, confuse: 0.3, turns: 1, fx: 'shock', color: '#ff9440',
+      lore: '《左传·昭公二十一年》：「先人有夺人之心。」' },
+    qinzei: { tier: 2, name: '擒贼擒王', kind: 'assassinate', range: 2, chance: 0.22, power: 0.5, morale: -15, fx: 'shadow', color: '#a66be0',
+      lore: '杜甫《前出塞》：「射人先射马，擒贼先擒王。」' },
+    tiebi: { tier: 2, name: '铁壁铜墙', kind: 'fortify', stat: 'war', radius: 1, def: 1.3, counter: 1.2, turns: 2, morale: 8, fx: 'shield', color: '#7fb0e6',
+      lore: '列阵如墙，任敌冲突而岿然不动。' },
+    jiangling: { tier: 2, name: '将令如山', kind: 'command', stat: 'war', radius: 1, atk: 1.15, def: 1.05, turns: 1, morale: 6, fx: 'aura', color: '#f5c650',
+      lore: '军令一出，进退如一。' },
+    // ---- 三阶（武力 80+，6 级起） ----
+    zhanjiang: { tier: 3, name: '斩将搴旗', kind: 'smite', range: 1, power: 2.15, morale: -22, fx: 'havoc', color: '#ff5f4a',
+      lore: '《史记》屡以「斩将搴旗」称战功：阵前斩其将、拔其旗。' },
+    huifeng: { tier: 3, name: '回风扫叶', kind: 'cleave', power: 1.82, splash: 0.7, morale: -10, confuse: 0.12, turns: 1, fx: 'sweep', color: '#ffb347',
+      lore: '刀势如秋风扫落叶，四面之敌纷纷披靡。' },
+    tieqi: { tier: 3, name: '铁骑踏阵', kind: 'charge', range: 4, power: 1.85, dash: 0.12, push: 1, morale: -12, fx: 'dash', color: '#ff6a3d',
+      lore: '重骑结队冲锋，所过之处阵脚尽乱。' },
+    chuanyun: { tier: 3, name: '穿云箭', kind: 'volley', range: 4, power: 2.05, radius: 0, pierce: 1, morale: -8, fx: 'arrow', color: '#fff0b0',
+      lore: '强弓劲矢，箭出穿云，甲盾不能挡。' },
+    wuhu: { tier: 3, name: '五虎断门', kind: 'rampage', range: 2, strikes: 5, power: 0.44, morale: -8, fx: 'claw', color: '#ffb000',
+      lore: '五虎断门刀，相传为古之刀法，招招封门、连环不断。' },
+    najiang: { tier: 3, name: '纳降扩军', kind: 'drain', range: 1, power: 1.85, drain: 0.5, morale: -12, fx: 'drain', color: '#ff4f7a',
+      lore: '阵前招降，敌卒解甲来归，军势愈盛。' },
+    shizihou: { tier: 3, name: '狮子吼', kind: 'roar', radius: 2, power: 0.4, morale: -28, confuse: 0.4, turns: 1, fx: 'shock', color: '#ff8a2a',
+      lore: '佛经以「狮子吼」喻无畏之音，一吼而百兽慑伏。' },
+    jintang: { tier: 3, name: '固若金汤', kind: 'fortify', stat: 'war', radius: 1, def: 1.45, counter: 1.4, turns: 2, morale: 10, fx: 'shield', color: '#6fa8ff',
+      lore: '《汉书·蒯通传》：「金城汤池，不可攻也。」' },
+    fenglin: { tier: 3, name: '风林火山', kind: 'command', stat: 'war', radius: 2, atk: 1.25, def: 1.1, turns: 2, morale: 10, fx: 'aura', color: '#ffcf5a',
+      lore: '《孙子·军争》：「其疾如风，其徐如林，侵掠如火，不动如山。」' },
+    xingye: { tier: 3, name: '星夜驰援', kind: 'haste', stat: 'war', radius: 2, count: 1, move: 1, morale: 5, fx: 'haste', color: '#80ffd8',
+      lore: '轻装疾进、星夜兼程，及时赶到友军身边。' },
+    yuchang: { tier: 3, name: '鱼肠剑', kind: 'assassinate', range: 2, chance: 0.3, power: 0.7, morale: -18, fx: 'shadow', color: '#8f4fe0',
+      lore: '《史记·刺客列传》：专诸置匕首鱼炙之腹中而进，刺杀吴王僚。' },
+    // ---- 四阶（武力 92+，8 级起） ----
+    wanrendi: { tier: 4, name: '万人敌', kind: 'rampage', range: 2, strikes: 6, power: 0.42, morale: -10, fx: 'havoc', color: '#ff3b3b', cry: '谁敢与我一战！',
+      lore: '《三国志·程昱传》：「刘备有英名，关羽、张飞皆万人敌也。」' },
+    bashan: { tier: 4, name: '力拔山兮', kind: 'smite', range: 1, power: 2.35, pierce: 1, morale: -25, confuse: 0.15, turns: 1, fx: 'havoc', color: '#ff5030', cry: '力拔山兮气盖世！',
+      lore: '项羽《垓下歌》：「力拔山兮气盖世。」' },
+    pofu: { tier: 4, name: '破釜沉舟', kind: 'command', stat: 'war', radius: 2, atk: 1.35, def: 1.12, turns: 2, morale: 18, fx: 'aura', color: '#ffb43c', cry: '有进无退！',
+      lore: '《史记·项羽本纪》：「皆沉船，破釜甑，烧庐舍，持三日粮，以示士卒必死。」' },
+    piyi: { tier: 4, name: '千军辟易', kind: 'roar', radius: 3, power: 0.6, morale: -35, confuse: 0.5, turns: 1, fx: 'shock', color: '#ff7020',
+      lore: '《史记·项羽本纪》：项王瞋目叱之，「人马俱惊，辟易数里」。' },
+    yiqi: { tier: 4, name: '一骑当千', kind: 'charge', range: 4, power: 1.95, dash: 0.15, push: 1, morale: -15, fx: 'dash', color: '#ff4a2a',
+      lore: '单骑突入敌阵，千人不能当。' },
+    beishui: { tier: 4, name: '背水一战', kind: 'rally', stat: 'war', radius: 2, morale: 30, heal: 0.08, cure: 1, atk: 1.2, turns: 2, fx: 'blossom', color: '#ffd24a', cry: '置之死地而后生！',
+      lore: '《史记·淮阴侯列传》：韩信背水列阵，置之死地而后生，大破赵军于井陉。' },
+    sheri: { tier: 4, name: '射日弓', kind: 'volley', range: 5, power: 2.3, radius: 1, splash: 0.5, morale: -10, fx: 'arrows', color: '#ffe066',
+      lore: '传说后羿引弓射落九日；神射之名，千古不衰。' },
   });
 })();

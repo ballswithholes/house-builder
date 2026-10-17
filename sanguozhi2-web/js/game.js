@@ -1,6 +1,6 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 启动与主循环
+   三国志-霸王的世界 · 网页版 · 启动与主循环（第三版改名，DESIGN-V3 §7）
    ← Core/Game.cs：创建世界、标题画面（地图缓慢环绕）、操作说明、选择君主、战略循环
    SG.Game.boot() 由 index.html 调用。?seed=N 可复现随机数（截图 / 测试用）。
    第二版 §4G：
@@ -10,10 +10,16 @@
      地图按剧本分片构建（map.buildAsync），载入画面（#loading）显示进度；镜头范围按剧本（useMap）。
      Game.buildMap(region, title) → Promise    Game.ensureMap(scenarioId) → Promise
      Game.lastBuildMs                          最近一次地图构建耗时（毫秒）
+   第三版：
+     Game.TITLE = '三国志-霸王的世界'；标题画面「三国志」「霸王的世界」两行排版（css .sg-title-*）。
+     战斗动画默认开启：启动时一次性清除旧存的攻击画面设定（localStorage 'sanguozhi2_clash'，见 migrateV3），
+       标记键 'sanguozhi2_v3_clash_reset'；之后玩家在战场上改的设定照常保存。
+     头像预生成尺寸按 SG.UI.faceSizes()（列表行 / 城池面板、对话说话人）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
 
+  const TITLE = '三国志-霸王的世界';
   const HelpText = '【操作】拖动平移地图，滚轮或双指缩放，点击城池查看情报。\n【令牌】每月可下达的指令数量取决于所领城池数。灰色指令点按可查看原因。\n【出征】选择相邻的敌城与至多五名武将；可亲自指挥战斗或委任电脑。\n【移动 / 输送】调动武将、调拨金粮：经由己方城池相连的城都可前往，不必相邻（列表注明经过几城），每次 1 枚令牌。己方两城相连即可使用。\n【战斗】点选部队移动，相邻时可攻击、施展策略或单挑。击败敌军主将或攻入本城即可获胜，三十日内未能攻下则撤退。';
 
   function UI() { return SG.UI; }
@@ -82,7 +88,12 @@
       el.style.opacity = '1';
     }
     const t = el.querySelector('.sg-loading-title');
-    if (t && title) t.textContent = title;
+    if (t && title) {
+      // 游戏名分两段排版（「三国志」小字 +「霸王的世界」），与 index.html 的载入画面一致
+      const m = /^(三国志)-(.+)$/.exec(title);
+      if (m) { t.innerHTML = `<span class="sg-lt-pre">${m[1]}</span><span class="sg-lt-dash">-</span>${SG.esc(m[2])}`; t.setAttribute('aria-label', title); }
+      else { t.textContent = title; t.removeAttribute('aria-label'); }
+    }
     return el;
   }
   // 进度：阶段名 + 百分比；进度条改为确定进度
@@ -100,7 +111,24 @@
   }
   // 空闲时分片预生成全部在世武将的头像（城池面板 40px、对话 96 参考像素）
   function preloadPortraits() {
-    try { if (SG.Portrait && SG.G) SG.Portrait.preloadState(SG.G, [40, Math.round(96 * SG.UI.scale())]); } catch (e) { console.warn(e); }
+    try { if (SG.Portrait && SG.G) SG.Portrait.preloadState(SG.G, SG.UI.faceSizes ? SG.UI.faceSizes() : [40, Math.round(96 * SG.UI.scale())]); } catch (e) { console.warn(e); }
+  }
+  // 第三版：战斗动画（攻击画面）默认开启。旧版本存下的「关」作废一次——清除 clash.js 的设定键，
+  // 并把已按旧设定初始化的 SG.Clash 改回默认（「快」仍是开启动画，予以保留）。只执行一次（标记键）。
+  const CLASH_KEY = 'sanguozhi2_clash', V3_MARK = 'sanguozhi2_v3_clash_reset';
+  function migrateV3() {
+    let ls = null;
+    try { ls = window.localStorage; } catch (e) { ls = null; }
+    if (!ls) return;
+    try {
+      if (ls.getItem(V3_MARK)) return;
+      const old = ls.getItem(CLASH_KEY);
+      if (old !== 'fast') {
+        ls.removeItem(CLASH_KEY);
+        if (SG.Clash) { SG.Clash.enabled = true; SG.Clash.speed = 1; }
+      }
+      ls.setItem(V3_MARK, '1');
+    } catch (e) { /* 无存储：沿用默认 */ }
   }
   function music(kind) { try { if (SG.Sfx) SG.Sfx.music(kind); } catch (e) { /* 无音频 */ } }
   function h(tag, cls, html, parent) {
@@ -110,8 +138,8 @@
     if (parent) parent.appendChild(e);
     return e;
   }
-  function item(label, right, enabled, desc) {
-    if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc);
+  function item(label, right, enabled, desc, opts) {
+    if (SG.UI && SG.UI.item) return SG.UI.item(label, right === undefined ? null : right, enabled === undefined ? true : enabled, desc === undefined ? null : desc, opts);
     return { label, right: right === undefined ? null : right, enabled: enabled === undefined ? true : enabled, desc: desc === undefined ? null : desc, selected: false };
   }
   function layer(name) {
@@ -175,6 +203,7 @@
     strategy: null,
     HelpText,
     SCENARIOS,
+    TITLE,
     lastBuildMs: 0,
     _last: 0,
     _running: false,
@@ -190,6 +219,8 @@
           const n = parseInt(q.get('seed'), 10);
           if (!isNaN(n)) SG.Random.seed(n);
         }
+        migrateV3();
+        try { document.title = TITLE; } catch (e) { /* 忽略 */ }
         const app = document.getElementById('app') || document.body;
         SG.Gfx.init(app);
         try { SG.Sfx.init(); } catch (e) { console.warn(e); }
@@ -237,7 +268,7 @@
 
     // 按 SG.G 重建地图（region 'china' | 'world'），载入画面显示进度；完成后镜头范围随地图
     async buildMap(region, title) {
-      const el = loadingOverlay(title || '霸王的大陆');
+      const el = loadingOverlay(title || TITLE);
       setLoading(el, 0, '准备');
       this.map.select(-1);
       try {
@@ -255,7 +286,7 @@
     async ensureMap(sid) {
       const want = sid === 'world' ? 'world' : 'china';
       if (this.map.root && this.map.region === want) { this.rig.useMap(this.map); return; }
-      await this.buildMap(want, sid === 'world' ? '天下大势' : '霸王的大陆');
+      await this.buildMap(want, sid === 'world' ? '天下大势' : TITLE);
     },
 
     // ------------------------------------------------------------ 渲染循环 --
@@ -296,10 +327,19 @@
       rig.inputEnabled = false;
       const title = h('div', 'sg-title', null, layer('screens'));
       const hero = h('div', 'sg-title-hero', null, title);
-      h('div', 'sg-title-seal', '霸', hero);
-      h('div', 'sg-title-sub0', '三国志 II', hero);
-      h('div', 'sg-title-main', '霸王的大陆', hero);
-      h('div', 'sg-title-sub', '群雄逐鹿 · 一统天下', hero);
+      hero.setAttribute('role', 'heading');
+      hero.setAttribute('aria-level', '1');
+      hero.setAttribute('aria-label', TITLE);
+      h('div', 'sg-title-seal', '霸', hero).setAttribute('aria-hidden', 'true');
+      // 「三国志」上行（两侧金线收于菱形，即书名里的「-」）+「霸王的世界」主标题（金色渐变 + 流光，背后一圈经纬环）
+      const top = h('div', 'sg-title-sub0', null, hero);
+      top.setAttribute('aria-hidden', 'true');
+      h('span', 'sg-title-rule', null, top);
+      h('span', 'sg-title-sgz', '三国志', top);
+      h('span', 'sg-title-rule', null, top);
+      const main = h('div', 'sg-title-main', '霸王的世界', hero);
+      main.setAttribute('aria-hidden', 'true');
+      h('div', 'sg-title-sub', '群雄逐鹿 · 四海归一', hero).setAttribute('aria-hidden', 'true');
       const menu = h('div', 'sg-title-menu', null, title);
       let choice = -1;
       SG.UI.button(menu, '新的征程', () => { choice = 0; }, { primary: true });
@@ -423,9 +463,8 @@
         .sort((a, b) => (b.n - a.n) || (a.i - b.i)).map(o => o.f);
       for (;;) {
         const items = factions.map(f => item(
-          portraitHtml(g.ruler(f.id), 32) +
-          `<span style="color:${f.color}">■</span> ${SG.esc(g.ruler(f.id).name)}`,
-          `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　德 ${f.virtue}　人望 ${f.fame}`));
+          swatch(f.color) + ' ' + SG.esc(g.ruler(f.id).name),
+          `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　德 ${f.virtue}　人望 ${f.fame}`, true, null, { avatar: g.ruler(f.id) }));
         const r = await UI().choose('选择君主　' + SG.ScenarioData.StartYear + '年 · ' + SG.ScenarioData.Title, items, '德越高越易登用人才；人望决定战场上的行动力。', 820);
         if (r < 0) return null;
         const f0 = factions[r];
@@ -497,9 +536,9 @@
           const ru = g.ruler(f.id);
           const full = FI[f.key] && FI[f.key].full;
           const fname = f.name !== ru.name && !full ? `<small class="sg-faction-name">${SG.esc(f.name)}</small>` : '';
-          return item(portraitHtml(ru, 40) + swatch(f.color) + ` <b>${SG.esc(ru.name)}</b>${fname}`,
+          return item(swatch(f.color) + ` <b>${SG.esc(ru.name)}</b>${fname}`,
             `城 ${g.cityCount(f.id)}　将 ${g.generalsOf(f.id).length}　德 ${f.virtue}　人望 ${f.fame}`, true,
-            full ? SG.esc(full) : null);
+            full ? SG.esc(full) : null, { avatar: ru });
         });
         const p = UI().choose('选择君主　' + row.r.name, items, '德越高越易登用人才；人望决定战场上的行动力。', 760);
         sideModal();

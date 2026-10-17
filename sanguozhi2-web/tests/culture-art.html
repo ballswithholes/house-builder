@@ -53,7 +53,7 @@
   list.forEach((cult, i) => {
     for (const cap of [false, true]) {
       const t0 = performance.now();
-      const geo = cult === 'han' ? SG.Models.city(size, null, cap) : SG.CultureArt.city(size, cult, cap, { key: cult === 'arab' && cap ? 'aksum' : '', town: cap ? 400 : 260 });
+      const geo = SG.CultureArt.city(size, cult, cap, { key: cult === 'arab' && cap ? 'aksum' : '', town: cap ? 400 : 260 });
       const ms = performance.now() - t0;
       const m = new THREE.Mesh(geo, mat);
       const x = (i - (cols - 1) / 2) * gap, z = cap ? gap * 0.55 : -gap * 0.55;

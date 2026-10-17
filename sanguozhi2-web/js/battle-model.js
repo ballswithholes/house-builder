@@ -1,6 +1,6 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 战术战斗规则
+   三国志-霸王的世界 · 战术战斗规则
    移植自 Battle/BattleModel.cs。网格坐标为普通对象 {x, y}（按字段比较）。
 
    第二版新增（DESIGN-V2 §4D 必杀技，招式数据见 js/specials.js / js/specials-data.js）：
@@ -18,6 +18,26 @@
        本方行动开始时 days − 1（攻守双方施展的持续时间对称）。混乱同理按 confuseCount 补正，见 confusedPhases
      duelAccepts(a, b) → bool、duelFinish(a, b, winnerIsA, rounds) → 结果：duel() 拆成的两步（随机数顺序不变）
      BattleModel.specialsEnabled（默认 true）：false 时规则与电脑完全回到第一版（tests/sim.js 对比平衡用）
+
+   第三版（DESIGN-V3 §4 成长；成长规则见 js/model.js 的 SG.Progress，计策目录见 js/tactics-data.js）：
+     必杀：一支部队可会多招（专属必杀 + 习得的可习得必杀），每招每战一次。
+       knownSpecials(u) → [sp]（专属在前）· specialOf(u, id?) · specialUsable(u, id?) · specialTargets(u, id?) ·
+       specialPlan(u, target, id?) · useSpecial(u, target, id?)
+       id 缺省时：u.spPick（选招菜单或电脑记下的那一招）→ 否则第一招可施展的。specialUsable(u) 不带 id 且未选招时
+       回答「是否还有任何一招可用」（「必杀」菜单项用）。已施展的招式记在 u.spUsed（编号数组）；专属必杀施展后
+       u.specialUsed 仍为 true（与第二版相同）。aiSpecial(u) → { target, value, special } —— 电脑在全部已会的招式中
+       挑最划算的；planAction 的 'special' 计划带 plan.special，并记入 u.spPick（旧控制器不传编号也能用对招）。
+     计策：knownTactics(u) → 该部队会的计策（原四计按智力 + 习得的新计策，见 SG.Tactics.known）。
+       原四计（kind 为数字）的 tacticUsable / tacticRange / tacticTargets / useTactic 与第一版完全相同；
+       新计策（kind 为字符串）：tacticUsable 另查是否习得、冷却（u.tacReady[id] = 可再用的日子）、军粮、地形需求；
+       tacticChance(u, t, target) 成功率；tacticPlan(u, t, target) 效果清单（与 specialPlan 同结构）；
+       useTactic(u, t, target) → 与 useSpecial 相同结构的 res（另有 res.tactic；失败时 success = false、resisted = [目标]）；
+       tacticValue(u, t, target) / aiTactic(u)：电脑按期望价值使用新计策（不耗随机数；原四计的随机判定照旧）。
+     经验：每支部队累计 u.xp = { dmg, heal, routs, cmdRouts, duelWin, duelLoss, specials, tactics, tacFail }；
+       分出胜负时（checkEnd / 期限）自动结算 SG.Progress.battleExp → SG.Progress.gain，结果在
+       Mdl.progress = setup.progress = [{ gen, side, won, exp, from, to, learned, xp }]（电脑武将已自动习得 learned；
+       玩家武将见 SG.Progress.pending(G.player)）。setup.progressDone = true，防止同一场再被自动结算计一次。
+     载入时包装 SG.Conquest.autoResolve（SG.Progress.hookConquest）：电脑之间自动结算的攻城战也给经验。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -46,8 +66,12 @@
       this.confused = 0;
       this.commander = false;
       this.alive = true;
-      this.specialUsed = false;   // 本战已施展必杀技
+      this.specialUsed = false;   // 本战已施展专属必杀
+      this.spUsed = [];           // 本战已施展的全部必杀（编号）
+      this.spPick = null;         // 选招菜单 / 电脑选定、尚未施展的必杀编号
+      this.tacReady = {};         // 新计策的冷却：编号 → 可再用的日子
       this.mods = [];             // 限时加成（见 BattleModel.addMod）
+      this.xp = { dmg: 0, heal: 0, routs: 0, cmdRouts: 0, duelWin: 0, duelLoss: 0, specials: 0, tactics: 0, tacFail: 0 };   // 本战经验来源
       if (o) Object.assign(this, o);
     }
     get troops() { return this.gen.troops; }
@@ -56,7 +80,7 @@
     get mobility() {
       let mv = 0;
       if (this.mods && this.mods.length) for (const m of this.mods) if (typeof m.move === 'number') mv += m.move;
-      return 3 + this.form.move + mv;
+      return Math.max(1, 3 + this.form.move + mv);   // 疑兵等削弱机动力时至少 1
     }
   }
 
@@ -79,6 +103,8 @@
       this.result = 0; // 0 进行中 1 攻方胜 2 守方胜
       this.resultReason = '';
       this.dayLog = [];
+      this.progress = null;        // 第三版：战后经验结算（settleProgress）
+      this.progressDone = false;
 
       const g = G();
       this.generate(s.target.id * 31 + g.year);
@@ -268,7 +294,7 @@
     }
     startSide(s) {
       this.side = s; this.ap = this.actionPoints(s);
-      for (const u of this.units) if (u.side === s) u.acted = u.confused > 0;
+      for (const u of this.units) if (u.side === s) { u.acted = u.confused > 0; u.spPick = null; }
       for (const u of this.units) if (u.side === s && u.mods && u.mods.length) this.expireMods(u);   // 必杀技加成按本方行动计时
     }
     canAct(u) { return u.alive && u.side === this.side && !u.acted && this.ap > 0 && u.confused <= 0 && this.result === 0; }
@@ -302,7 +328,7 @@
       for (let x = 0; x < this.W; x++) for (let y = 0; y < this.H; y++) if (this.burning[x][y] > 0) this.burning[x][y]--;
       this.day++;
       this.checkEnd();
-      if (this.result === 0 && this.day > Balance.BattleDays) { this.result = 2; this.resultReason = '攻城期限已过，攻方撤退。'; }
+      if (this.result === 0 && this.day > Balance.BattleDays) { this.result = 2; this.resultReason = '攻城期限已过，攻方撤退。'; this.settleProgress(); }
     }
 
     // ---------------------------------------------------------- 行动 --
@@ -328,8 +354,21 @@
         r.selfRouted = this.checkRout(a);
       }
       a.morale = Math.min(100, a.morale + (r.dmg > r.counter ? 3 : 0));
+      this.xpHit(a, t, r.dmg);
+      if (r.counter > 0) this.xpHit(t, a, r.counter);
       this.checkEnd();
       return r;
+    }
+
+    // 经验来源：u 对 victim 造成 dmg（victim 因此溃散时记一次击溃，每支部队只记一次）
+    xpHit(u, victim, dmg) {
+      if (!u || !u.xp) return;
+      u.xp.dmg += Math.max(0, dmg | 0);
+      if (victim && !victim.alive && !victim._xpRouted && victim.side !== u.side) {
+        victim._xpRouted = true;
+        u.xp.routs++;
+        if (victim.commander) u.xp.cmdRouts++;
+      }
     }
 
     checkRout(u) {
@@ -343,19 +382,31 @@
     }
 
     tacticUsable(u, t) {
+      if (typeof t.kind === 'string') return this.newTacticUsable(u, t);
       if (u.gen.intel < t.reqInt) return { ok: false, why: '智力不足（需 ' + t.reqInt + '）' };
       if (t.kind === TacticKind.Rockfall && this.map[u.x][u.y] !== Terrain.Hill) return { ok: false, why: '须立于山丘' };
       return { ok: true, why: '' };
     }
-    tacticRange(t) { return t.kind === TacticKind.Inspire ? 0 : t.kind === TacticKind.Confuse ? 3 : 2; }
+    tacticRange(t) { if (typeof t.kind === 'string') return t.range | 0; return t.kind === TacticKind.Inspire ? 0 : t.kind === TacticKind.Confuse ? 3 : 2; }
     tacticTargets(u, t) {
+      if (typeof t.kind === 'string') return this.newTacticTargets(u, t);
       if (t.kind === TacticKind.Inspire) return [u];
       const r = this.tacticRange(t);
       return this.units.filter(o => o.alive && o.side !== u.side && BattleModel.dist(o, u) <= r && (t.kind !== TacticKind.Fire || this.map[o.x][o.y] !== Terrain.River));
     }
 
-    // 返回 {success, dmg}
+    // 返回 {success, dmg}（新计策返回与 useSpecial 同结构的 res，见 useNewTactic）
     useTactic(u, t, target) {
+      if (typeof t.kind === 'string') return this.useNewTactic(u, t, target);
+      const r = this.useTactic1(u, t, target);
+      if (u.xp) {
+        if (r.success) { u.xp.tactics++; if (r.dmg > 0) this.xpHit(u, target, r.dmg); }
+        else u.xp.tacFail++;
+      }
+      return r;
+    }
+    // 原四计（第一版规则，原样保留）
+    useTactic1(u, t, target) {
       if (t.kind === TacticKind.Inspire) {
         for (const o of this.units) {
           if (o.alive && o.side === u.side && BattleModel.dist(o, u) <= 1) o.morale = Math.min(100, o.morale + 12 + M.idiv(u.gen.intel, 10));
@@ -385,6 +436,211 @@
       return { success: true, dmg };
     }
 
+    // ======================================================== 新计策（第三版） --
+    // 计策目录与规则字段见 js/tactics-data.js。原四计（kind 为数字）不经过这里。
+    knownTactics(u) {
+      const T = SG.Tactics;
+      if (T && typeof T.known === 'function') return T.known(u.gen);
+      return Defs.tactics.filter(t => u.gen.intel >= t.reqInt);
+    }
+    knowsTactic(u, t) {
+      if (typeof t.kind !== 'string') return u.gen.intel >= t.reqInt;
+      const P = SG.Progress;
+      if (P && P.enabled === false) return false;
+      return Array.isArray(u.gen.tactics) && u.gen.tactics.indexOf(t.id) >= 0;
+    }
+    // 地形需求：river 目标在河上或临河；cover 目标在林地 / 山丘上或紧邻之
+    tacNeedOk(t, e) {
+      if (t.need === 'river') return this.nearRiver(e.x, e.y);
+      if (t.need === 'cover') {
+        const cov = (x, y) => this.inBounds(x, y) && (this.map[x][y] === Terrain.Forest || this.map[x][y] === Terrain.Hill);
+        if (cov(e.x, e.y)) return true;
+        for (const d of BattleModel.Dirs) if (cov(e.x + d.x, e.y + d.y)) return true;
+        return false;
+      }
+      return true;
+    }
+    newTacticTargets(u, t) {
+      if (!u.alive) return [];
+      const dist = BattleModel.dist;
+      if (t.target === 'enemy') return this.alive(1 - u.side).filter(e => dist(e, u) <= t.range && this.tacNeedOk(t, e));
+      if (t.target === 'ally') {
+        return this.alive(u.side).filter(a => dist(a, u) <= t.range &&
+          (t.heal ? (t.cure ? this.needsHeal(a) : a.troops < this.healCapOf(a) * 0.95) : true));
+      }
+      return [u];
+    }
+    newTacticUsable(u, t) {
+      if (!this.knowsTactic(u, t)) return { ok: false, why: '尚未习得' };
+      if (u.gen.intel < (t.reqInt | 0)) return { ok: false, why: '智力不足（需 ' + t.reqInt + '）' };
+      const r = u.tacReady && u.tacReady[t.id];
+      if (r && this.day < r) return { ok: false, why: '冷却中（第 ' + r + ' 日起可用）' };
+      if (t.food && this.food[u.side] < 50) return { ok: false, why: '军粮不足' };
+      if (t.need && this.newTacticTargets(u, t).length === 0) return { ok: false, why: t.need === 'river' ? '射程内无临河的敌军' : '射程内无靠近林地 / 山丘的敌军' };
+      return { ok: true, why: '' };
+    }
+    // 成功率（原四计：火计 / 落石 / 混乱同第一版公式，激励必定成功）
+    tacticChance(u, t, target) {
+      if (typeof t.kind !== 'string') {
+        if (t.kind === TacticKind.Inspire || !target) return 1;
+        return M.clamp(0.5 + (u.gen.intel - target.gen.intel) / 110, 0.12, 0.92);
+      }
+      const r = t.roll;
+      if (!r || !target || target.side === u.side) return 1;
+      let p = r.base + (u.gen.intel - target.gen.intel) / r.div;
+      if (r.forest && this.map[target.x][target.y] === Terrain.Forest) p += r.forest;
+      if (r.lowMorale && target.morale < 50) p += r.lowMorale;
+      return M.clamp(p, r.min, r.max);
+    }
+    // 计策伤害（期望值，不含随机浮动）：(base + per × 智力) × 敌兵力系数 ÷ 敌防御加成；林地、城防修正；溅射
+    tacDmg(u, e, t, primary) {
+      const D = t.dmg;
+      let d = (D.base + D.per * u.gen.intel) * M.clamp(e.troops / 2500, 0.4, 1.4) / this.modK(e, 'def');
+      const tt = this.map[e.x][e.y];
+      if (D.forest && tt === Terrain.Forest) d *= D.forest;
+      if (!D.pierce && (tt === Terrain.Castle || tt === Terrain.Gate)) d *= 0.6;
+      if (!primary) d *= D.splash || 0;
+      return d;
+    }
+    // 效果清单（与 spPlan 同结构，由 applyPlan 结算；纯计算）
+    tacticPlan(u, t, target) {
+      const dist = BattleModel.dist;
+      const I = u.gen.intel;
+      const foes = this.alive(1 - u.side), friends = this.alive(u.side);
+      const tg = target || u;
+      const sp = { id: 'tac:' + t.id, name: t.name, kind: t.id, fx: t.fx, color: t.color, power: 0, tactic: true };
+      const pl = {
+        sp, kind: t.id, tactic: t, unit: u, target: tg, center: P(tg.x, tg.y), area: [], dmg: [], foe: [], ally: [],
+        burn: [], douse: [], refresh: [], ap: 0, move: null, push: null, blocked: null, kill: null, drain: 0, pool: null, seq: false,
+      };
+      const morale = Math.round((t.morale || 0) + (t.moraleI || 0) * I);
+      const src = 'tac:' + t.id;
+      if (t.target === 'enemy') {
+        const R = t.radius || 0;
+        const list = [tg].concat(R > 0 ? foes.filter(e => e !== tg && dist(e, tg) <= R) : []);
+        pl.area = this.areaTiles(tg, R);
+        for (const e of list) {
+          if (t.dmg) { const a = this.tacDmg(u, e, t, e === tg); if (a > 0) pl.dmg.push({ unit: e, amt: a, primary: e === tg, onFail: false }); }
+          const f = { unit: e, morale: morale < 0 ? morale : 0, p: 0, turns: 0, mod: null };
+          if (t.confuse) { const c = t.confuse; f.p = c.base >= 1 ? 1 : M.clamp(c.base + (I - e.gen.intel) / c.div, c.min, c.max); f.turns = c.turns; }
+          // 削弱持续 N 日 = 敌军之后 N 次本方行动（加成在受影响部队本方行动开始时计时，故 +1；中毒按日发作，不加）
+          if (t.mod) f.mod = Object.assign({ src }, t.mod, { days: t.mod.days + (t.mod.dot > 0 ? 0 : 1) });
+          if (f.morale || f.p > 0 || f.mod) pl.foe.push(f);
+        }
+        if (t.douse) for (const p of pl.area) if (this.burning[p.x][p.y] > 0) pl.douse.push(P(p.x, p.y));
+        // 范围封顶（同必杀技）：次要目标合计不超过 AREA_TOTAL × 主目标 − 主目标
+        if (pl.dmg.length > 1) {
+          const b = pl.dmg[0].primary ? pl.dmg[0].amt : Math.max(...pl.dmg.map(h => h.amt));
+          let S0 = 0;
+          for (const h of pl.dmg) if (!h.primary) S0 += Math.min(h.amt, h.unit.troops);
+          const P0 = pl.dmg[0].primary ? Math.min(b, tg.troops) : 0;
+          const cap = Math.max(((SG.Specials && SG.Specials.AREA_TOTAL) || 2.5) * b - P0, 0.4 * b);
+          if (S0 > cap) { const k = cap / S0; for (const h of pl.dmg) if (!h.primary) h.amt *= k; pl.areaK = k; }
+        }
+      } else {
+        const c = t.target === 'self' ? u : tg;
+        const R = t.radius || 0;
+        pl.center = P(c.x, c.y);
+        pl.area = this.areaTiles(c, R);
+        for (const a of friends) if (dist(a, c) <= R) {
+          const heal = t.heal ? Math.max(0, Math.min(this.healCapOf(a) - a.troops, M.roundToInt((t.heal + (t.healI || 0) * I) * this.maxTroopsOf(a)))) : 0;
+          const mod = t.mod ? Object.assign({ src }, t.mod) : null;
+          if (heal > 0 || morale > 0 || mod || t.cure) pl.ally.push({ unit: a, morale: morale > 0 ? morale : 0, heal, cure: !!t.cure, mod });
+        }
+        if (t.foeConfuse) {
+          const fc = t.foeConfuse;
+          for (const e of foes) if (dist(e, u) <= R) pl.foe.push({ unit: e, morale: 0, p: M.clamp(fc.base + (I - e.gen.intel) / fc.div, fc.min, fc.max), turns: fc.turns, mod: null });
+        }
+      }
+      return pl;
+    }
+    // 电脑用：期望价值 = 成功率 × (specialValue + 削弱的价值)
+    tacticValue(u, t, target) {
+      const dist = BattleModel.dist;
+      const pl = this.tacticPlan(u, t, target);
+      let v = this.specialValue(u, pl);
+      const friends = this.alive(u.side);
+      for (const f of pl.foe) {
+        const m = f.mod;
+        if (!m || m.dot > 0) continue;
+        const e = f.unit;
+        let near = null, bd = 1e9;
+        for (const a of friends) { const d = dist(a, e); if (d < bd) { bd = d; near = a; } }
+        if (!near) continue;
+        const days = m.days - 1;
+        if (m.atk && m.atk < 1) v += (1 - m.atk) * this.threat(e, near) * days * 0.8;
+        if (m.def && m.def < 1) {
+          let inc = 0;
+          for (const a of friends.filter(x => dist(x, e) <= 3).slice(0, 2)) inc += Math.min(e.troops, this.atkExpect(a, e));
+          v += (1 / m.def - 1) * inc * days * 0.6;
+        }
+        if (m.counter && m.counter < 1) v += (1 - m.counter) * this.atkExpect(e, near) * Balance.CounterRatio * days * 0.5;
+        if (m.move && m.move < 0) v += (bd > 2 ? 25 : 10) * days;
+      }
+      return v * this.tacticChance(u, t, target);
+    }
+    // 电脑：划算时使用习得的新计策 → { tactic, target, value } | null（不耗随机数）
+    aiTactic(u) {
+      const P = SG.Progress;
+      if ((P && P.enabled === false) || !u.gen || !Array.isArray(u.gen.tactics)) return null;
+      let best = null;
+      for (const t of this.knownTactics(u)) {
+        if (typeof t.kind !== 'string' || !this.tacticUsable(u, t).ok) continue;
+        for (const tg of this.newTacticTargets(u, t)) {
+          const v = this.tacticValue(u, t, tg);
+          if (!best || v > best.value) best = { tactic: t, target: tg, value: v };
+        }
+      }
+      if (!best) return null;
+      return best.value >= Math.max(this.aiNormalValue(u) * 1.15, 120) ? best : null;
+    }
+    useNewTactic(u, t, target) {
+      const res = this.newRes();
+      res.tactic = t; res.kind = t.id; res.name = t.name;
+      const us = this.newTacticUsable(u, t);
+      if (!us.ok || !u.alive || this.result !== 0) { res.why = us.why || '无法施展'; return res; }
+      const cands = this.newTacticTargets(u, t);
+      if (!cands.length) { res.why = '范围内无目标'; return res; }
+      if (!target || cands.indexOf(target) < 0) target = cands[0];
+      res.target = target; res.center = P(target.x, target.y);
+      if (t.cd > 0) { if (!u.tacReady) u.tacReady = {}; u.tacReady[t.id] = this.day + t.cd; }
+      const p = this.tacticChance(u, t, target);
+      if (p < 1 && SG.Random.value() > p) {
+        res.resisted.push(target);
+        if (u.xp) u.xp.tacFail++;
+        return res;
+      }
+      const pl = this.tacticPlan(u, t, target);
+      res.success = true; res.center = pl.center; res.area = pl.area;
+      this.applyPlan(u, pl, res);
+      if (t.food && res.heal > 0) this.food[u.side] = Math.max(0, this.food[u.side] - Math.ceil(res.heal / t.food));
+      if (u.xp) u.xp.tactics++;
+      this.checkEnd();
+      return res;
+    }
+
+    // ======================================================== 战后经验 --
+    // 分出胜负时调用一次（checkEnd / 期限）：按 u.xp 结算经验与战绩（SG.Progress），结果在 this.progress
+    settleProgress() {
+      if (this.progressDone || this.result === 0) return;
+      this.progressDone = true;
+      if (this.setup) this.setup.progressDone = true;
+      this.progress = [];
+      if (this.setup) this.setup.progress = this.progress;     // 与自动结算相同：界面战后读 setup.progress
+      const Pg = SG.Progress;
+      if (!Pg || !Pg.enabled) return;
+      const win = this.result === 1 ? 0 : 1;
+      for (const u of this.units) {
+        if (!u.gen) continue;
+        const won = u.side === win;
+        const x = u.xp || {};
+        const e = Pg.battleExp(Object.assign({}, x, { won, commander: !!u.commander }));
+        Pg.note(u.gen, won, x.routs | 0, x.duelWin | 0);
+        const r = Pg.gain(u.gen, e, 'battle');
+        this.progress.push({ gen: u.gen, side: u.side, won, exp: e, from: r ? r.from : u.gen.level, to: r ? r.to : u.gen.level, learned: r ? r.learned : [], xp: Object.assign({}, x) });
+      }
+    }
+
     // 单挑：是否应战（拒绝时双方士气变化）。随机数调用与第一版 duel() 完全相同
     duelAccepts(a, b) {
       const ok = b.gen.war >= a.gen.war - 8 || SG.Random.value() < 0.25 || (b.commander && SG.Random.value() < 0.4);
@@ -395,6 +651,8 @@
     duelFinish(a, b, winnerIsA, rounds) {
       const winner = winnerIsA ? a : b, loser = winnerIsA ? b : a;
       loser.troops = 0; loser.alive = false; this.setup.routed.add(loser.gen.id);
+      if (winner.xp) { winner.xp.duelWin++; this.xpHit(winner, loser, 0); }
+      if (loser.xp) loser.xp.duelLoss++;
       for (const o of this.alive(loser.side)) o.morale = Math.max(0, o.morale - 8);
       winner.morale = Math.min(100, winner.morale + 15);
       this.checkEnd();
@@ -423,9 +681,24 @@
     // ======================================================== 必杀技 --
     // 招式数据由 SG.Specials.of(gen) 提供（js/specials.js，已按机制补全默认参数）。
     // 未载入 specials.js 或 BattleModel.specialsEnabled = false 时，必杀技一律不可用，电脑也不会考虑。
-    specialOf(u) {
-      if (!BattleModel.specialsEnabled || !u || !u.gen || !SG.Specials || typeof SG.Specials.of !== 'function') return null;
-      return SG.Specials.of(u.gen) || null;
+    // 该部队会的全部必杀（专属在前；第三版起含习得的可习得必杀，见 SG.Specials.known）
+    knownSpecials(u) {
+      if (!BattleModel.specialsEnabled || !u || !u.gen || !SG.Specials || typeof SG.Specials.of !== 'function') return [];
+      if (typeof SG.Specials.known === 'function') return SG.Specials.known(u.gen);
+      const sp = SG.Specials.of(u.gen);
+      return sp ? [sp] : [];
+    }
+    spWasUsed(u, sp) { return (Array.isArray(u.spUsed) && u.spUsed.indexOf(sp.id) >= 0) || (!sp.pool && !!u.specialUsed); }
+    // id（编号或招式对象）缺省时：u.spPick → 第一招尚可施展且有目标的 → 第一招未施展的 → 专属必杀
+    specialOf(u, id) {
+      const list = this.knownSpecials(u);
+      if (!list.length) return null;
+      if (id && typeof id === 'object') id = id.id;
+      if (id) return list.find(s => s.id === id) || null;
+      if (u.spPick) { const p = list.find(s => s.id === u.spPick); if (p) return p; }
+      if (list.length === 1) return list[0];
+      for (const s of list) if (!this.spWasUsed(u, s) && this.targetsOf(u, s).length > 0) return s;
+      return list.find(s => !this.spWasUsed(u, s)) || list[0];
     }
 
     // ---- 限时加成 ----
@@ -541,8 +814,8 @@
     }
 
     // ---- 目标与可用性 ----
-    specialTargets(u) {
-      const sp = this.specialOf(u);
+    specialTargets(u, id) { const sp = this.specialOf(u, id); return sp ? this.targetsOf(u, sp) : []; }
+    targetsOf(u, sp) {
       if (!sp || !u.alive) return [];
       const dist = BattleModel.dist;
       const foes = this.alive(1 - u.side), friends = this.alive(u.side);
@@ -557,14 +830,29 @@
         default: return foes.filter(e => dist(e, u) <= sp.range);
       }
     }
-    specialUsable(u) {
-      const sp = this.specialOf(u);
-      if (!sp) return { ok: false, why: BattleModel.specialsEnabled && SG.Specials ? '无必杀技' : '必杀技未开放' };
+    // id 缺省且未选招时：是否还有任何一招可用（why 为第一招不可用的原因；全部施展过为「本战已施展」）
+    specialUsable(u, id) {
+      const list = this.knownSpecials(u);
+      if (!list.length) return { ok: false, why: BattleModel.specialsEnabled && SG.Specials ? '无必杀技' : '必杀技未开放' };
+      if (id == null && !(u.spPick && list.some(s => s.id === u.spPick))) {
+        let first = null;
+        for (const s of list) {
+          const r = this.spUsable1(u, s);
+          if (r.ok) return r;
+          if (!first && r.why !== '本战已施展') first = r;
+        }
+        return first || { ok: false, why: '本战已施展' };
+      }
+      const sp = this.specialOf(u, id);
+      if (!sp) return { ok: false, why: '未习得此招' };
+      return this.spUsable1(u, sp);
+    }
+    spUsable1(u, sp) {
       if (this.result !== 0) return { ok: false, why: '战斗已结束' };
       if (!u.alive) return { ok: false, why: '已溃散' };
-      if (u.specialUsed) return { ok: false, why: '本战已施展' };
+      if (this.spWasUsed(u, sp)) return { ok: false, why: '本战已施展' };
       if (u.confused > 0) return { ok: false, why: '混乱中' };
-      if (this.specialTargets(u).length === 0) {
+      if (this.targetsOf(u, sp).length === 0) {
         switch (sp.kind) {
           case 'cleave': case 'roar': return { ok: false, why: '附近无敌军' };
           case 'charge': return { ok: false, why: '直线上无可突击的敌军' };
@@ -579,9 +867,11 @@
     // ---- 效果清单（纯计算：不改状态、不耗随机数） ----
     // 返回 plan = { sp, kind, unit, target, center, area, dmg: [{unit, amt, primary, onFail}], foe: [{unit, morale, p, turns, mod}],
     //               ally: [{unit, morale, heal, cure, mod}], burn, douse, refresh, ap, move, push, blocked, kill, drain, pool, seq }
-    specialPlan(u, target) {
-      const sp = this.specialOf(u);
-      if (!sp) return null;
+    specialPlan(u, target, id) {
+      const sp = this.specialOf(u, id);
+      return sp ? this.spPlan(u, sp, target) : null;
+    }
+    spPlan(u, sp, target) {
       const dist = BattleModel.dist;
       const t = target || u;
       const foes = this.alive(1 - u.side), friends = this.alive(u.side);
@@ -840,37 +1130,57 @@
     }
 
     // 电脑：划算时施展必杀技 → { target, value } 或 null。越到战斗后期、己方越危急，门槛越低
+    // 第三版：在全部已会、尚未施展的招式中挑期望价值最高的一手（同值时专属必杀优先）
     aiSpecial(u) {
-      if (!BattleModel.specialsEnabled || !this.specialUsable(u).ok) return null;
-      let best = null, bv = 0;
-      for (const t of this.specialTargets(u)) {
-        const v = this.specialValue(u, this.specialPlan(u, t));
-        if (v > bv) { bv = v; best = t; }
+      if (!BattleModel.specialsEnabled) return null;
+      let best = null, bv = 0, bsp = null;
+      for (const sp of this.knownSpecials(u)) {
+        if (!this.spUsable1(u, sp).ok) continue;
+        for (const t of this.targetsOf(u, sp)) {
+          const v = this.specialValue(u, this.spPlan(u, sp, t));
+          if (v > bv) { bv = v; best = t; bsp = sp; }
+        }
       }
       if (!best) return null;
       const normal = this.aiNormalValue(u);
       let k = this.day >= 20 ? 1.05 : this.day >= 10 ? 1.3 : 1.5;
       if (u.troops < this.maxTroopsOf(u) * 0.3 || u.morale < 30) k = Math.min(k, 1.0);
-      return bv >= Math.max(normal * k, 260) ? { target: best, value: bv } : null;
+      return bv >= Math.max(normal * k, 260) ? { target: best, value: bv, special: bsp } : null;
     }
 
     // ---- 结算 ----
-    useSpecial(u, target) {
-      const res = {
+    newRes() {
+      return {
         success: false, name: '', kind: '', sp: null, why: '', dmg: 0, hits: [], healed: [], heal: 0, confused: [], resisted: [], cursed: [],
         buffed: [], refreshed: [], burned: [], doused: [], moved: null, pushed: [], blocked: null, killed: null, gained: 0,
         routed: [], affected: [], area: [], center: null, target: null,
       };
-      const sp = this.specialOf(u);
-      if (!sp) { res.why = '无必杀技'; return res; }
+    }
+    useSpecial(u, target, id) {
+      const res = this.newRes();
+      const sp = this.specialOf(u, id);
+      if (!sp) { res.why = this.knownSpecials(u).length ? '未习得此招' : '无必杀技'; return res; }
       res.name = sp.name; res.kind = sp.kind; res.sp = sp;
-      const us = this.specialUsable(u);
+      const us = this.spUsable1(u, sp);
       if (!us.ok) { res.why = us.why; return res; }
-      const cands = this.specialTargets(u);
+      const cands = this.targetsOf(u, sp);
       if (!target || cands.indexOf(target) < 0) target = cands[0];
-      const pl = this.specialPlan(u, target);
-      u.specialUsed = true;
+      const pl = this.spPlan(u, sp, target);
+      if (!Array.isArray(u.spUsed)) u.spUsed = [];
+      u.spUsed.push(sp.id);
+      if (!sp.pool) u.specialUsed = true;
+      u.spPick = null;
+      if (u.xp) u.xp.specials++;
       res.success = true; res.target = target; res.center = pl.center; res.area = pl.area;
+      this.applyPlan(u, pl, res);
+      if (res.dmg > 0) u.morale = Math.min(100, u.morale + 6);
+      this.checkEnd();
+      return res;
+    }
+
+    // 按效果清单结算（必杀与新计策共用；随机数调用顺序与第二版 useSpecial 相同）
+    applyPlan(u, pl, res) {
+      const sp = pl.sp;
       const touch = x => { if (res.affected.indexOf(x) < 0) res.affected.push(x); };
       const routed = x => { if (res.routed.indexOf(x) < 0) res.routed.push(x); };
       // 1. 突击位移
@@ -884,6 +1194,7 @@
           k.troops = 0; k.alive = false; this.setup.routed.add(k.gen.id);
           res.killed = k; res.dmg += d; res.hits.push({ unit: k, dmg: d, primary: true, killed: true });
           routed(k); touch(k); killed = true;
+          this.xpHit(u, k, d);
         } else res.success = false;                     // 失手（仍可能造成少量伤害）
       }
       // 3. 伤害（连斩：目标已溃散则转向下一个敌军）
@@ -905,6 +1216,7 @@
         res.hits.push({ unit: e, dmg: d, primary: h.primary });
         touch(e);
         if (this.checkRout(e)) routed(e);
+        this.xpHit(u, e, d);
       }
       // 4. 击退
       if (pl.push && pl.push.unit.alive) {
@@ -924,14 +1236,14 @@
           else res.resisted.push(e);
         }
         if (f.mod) { this.addMod(e, Object.assign({}, f.mod)); res.cursed.push(e); }
-        if (this.checkRout(e)) routed(e);
+        if (this.checkRout(e)) { routed(e); this.xpHit(u, e, 0); }
       }
       // 6. 友军：回复、士气、解除混乱、加成
       for (const a of pl.ally) {
         const x = a.unit;
         if (!x.alive) continue;
         touch(x);
-        if (a.heal > 0) { x.troops += a.heal; res.healed.push({ unit: x, amount: a.heal }); res.heal += a.heal; }
+        if (a.heal > 0) { x.troops += a.heal; res.healed.push({ unit: x, amount: a.heal }); res.heal += a.heal; if (u.xp) u.xp.heal += a.heal; }
         if (a.morale) x.morale = M.clamp(x.morale + a.morale, 0, 100);
         if (a.cure && x.confused > 0) x.confused = 0;
         if (a.mod) { this.addMod(x, Object.assign({}, a.mod)); res.buffed.push(x); }
@@ -947,8 +1259,6 @@
         const g = Math.max(0, Math.min(Math.max(0, this.maxTroopsOf(u) - u.troops), M.roundToInt(primaryDmg * pl.drain)));
         u.troops += g; res.gained = g;
       }
-      if (res.dmg > 0) u.morale = Math.min(100, u.morale + 6);
-      this.checkEnd();
       return res;
     }
 
@@ -962,6 +1272,7 @@
       else if (c1 != null && !c1.alive) { this.result = 1; this.resultReason = '守城主将败走，城池陷落！'; }
       else if (c0 != null && !c0.alive) { this.result = 2; this.resultReason = '攻方主将败走，全军撤退！'; }
       else if (this.alive(0).some(u => u.x === castle.x && u.y === castle.y)) { this.result = 1; this.resultReason = '攻入本城，城池陷落！'; }
+      if (this.result !== 0) this.settleProgress();
     }
 
     // ---------------------------------------------------------- 电脑 --
@@ -1017,8 +1328,15 @@
       // 必杀技：划算时优先（不耗随机数；specialsEnabled = false 时完全跳过，行为与第一版一致）
       if (BattleModel.specialsEnabled) {
         const sp = this.aiSpecial(u);
-        if (sp) { plan.kind = 'special'; plan.target = sp.target; plan.value = sp.value; return plan; }
+        if (sp) {
+          plan.kind = 'special'; plan.target = sp.target; plan.value = sp.value; plan.special = sp.special;
+          u.spPick = sp.special ? sp.special.id : null;     // 旧控制器不传编号：useSpecial / SG.Specials.perform 缺省用它
+          return plan;
+        }
       }
+      // 第三版：习得的新计策（按期望价值，不耗随机数；原四计的随机判定照旧在后面）
+      const lt = this.aiTactic(u);
+      if (lt) { plan.kind = 'tactic'; plan.tactic = lt.tactic; plan.target = lt.target; plan.value = lt.value; return plan; }
       const adj = this.adjacentEnemies(u);
       // 策略
       for (const t of Defs.tactics) {
@@ -1043,6 +1361,8 @@
   }
   BattleModel.Dirs = Object.freeze([P(1, 0), P(-1, 0), P(0, 1), P(0, -1)]);
   BattleModel.specialsEnabled = true;   // false：不使用必杀技（tests/sim.js 平衡对比）
+  // 第三版：电脑之间自动结算的攻城战也给经验（strategy-ai.js 先于本文件载入；不耗随机数，s.progressDone 防重复）
+  if (SG.Progress && SG.Conquest) SG.Progress.hookConquest(SG.Conquest);
 
   SG.BUnit = BUnit;
   SG.BattleModel = BattleModel;

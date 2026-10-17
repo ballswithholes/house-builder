@@ -22,6 +22,14 @@
      SAVE_KEY = 'sanguozhi2_save_v2'；GameState.loadError：最近一次读档失败的原因（中文）；
        GameState.hasLegacySave()：只有旧版存档（键 'sanguozhi2_save'）
      GameState.saveInfo() → { scenario, year, month, faction } | null（标题画面显示用）
+   第三版 §4 成长（经验、等级、可习得必杀与计策）：
+     武将新增存档字段：exp（经验）、level（1–10，由 exp 推出）、specials（已习得的「可习得必杀」编号，
+       不含专属必杀）、tactics（已会的计策编号：按智力自带的原四计 + 习得的新计策）、
+       record { battles, wins, routs, duels }（战绩）。
+     SAVE_KEY = 'sanguozhi2_save_v3'、SAVE_VERSION = 3；读到第二版存档（键 'sanguozhi2_save_v2'，version 2）时补齐：
+       等级 1、经验 0、只有专属必杀、原四计按智力（GameState.migratedFrom = 2，非枚举，界面可提示一次）。
+     SG.Progress（本文件末尾，接口说明见该处注释）：经验与等级、按武力 / 智力的格数与等阶上限、
+       升级候选（3 选 1）、习得、电脑自动习得、自动结算战斗的经验。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -31,9 +39,10 @@
   const ScenarioData = new Proxy({}, { get: (t, k) => SG.ScenarioData[k] });
   const Seq = SG.Seq;
 
-  const SAVE_KEY = 'sanguozhi2_save_v2';
+  const SAVE_KEY = 'sanguozhi2_save_v3';
+  const V2_SAVE_KEY = 'sanguozhi2_save_v2';     // 第二版存档：读取时迁移（补齐成长数据），下次存档写入新键
   const LEGACY_SAVE_KEY = 'sanguozhi2_save';
-  const SAVE_VERSION = 2;
+  const SAVE_VERSION = 3;
   // 当前剧本的键：'classic' | 'world'
   function scenarioId() {
     const S = SG.Scenarios;
@@ -62,6 +71,11 @@
       dead: false,
       formation: 0,  // 当前阵型
       moved: false,  // 本月已行动（移动/出征）
+      // 第三版：成长（SG.Progress.ensure 补齐 tactics 等；level 恒由 exp 推出）
+      exp: 0, level: 1,
+      specials: [],  // 已习得的「可习得必杀」编号（专属必杀不在此列）
+      tactics: null, // 已会的计策编号（null = 尚未补齐：ensure 按智力填入原四计）
+      record: null,  // 战绩 { battles, wins, routs, duels }
     }, o);
   }
   function newFaction(o) {
@@ -146,6 +160,7 @@
           loyalty: parseInt(p[6], 10), troops: parseInt(p[7], 10), hidden: p[8] === '1',
         });
         gen.training = gen.faction >= 0 ? 55 + SG.Random.rangeInt(0, 20) : 40;
+        Progress.ensure(gen);
         g.generals.push(gen);
       }
       // 君主
@@ -311,40 +326,50 @@
     save() {
       const st = storage();
       if (!st) return false;
-      try { st.setItem(SAVE_KEY, JSON.stringify(this)); return true; } catch (e) { console.log('save failed', e); return false; }
+      try { st.setItem(SAVE_KEY, JSON.stringify(this)); } catch (e) { console.log('save failed', e); return false; }
+      try { st.removeItem(V2_SAVE_KEY); } catch (e) { /* 第二版存档已由新存档取代 */ }
+      return true;
+    }
+    // 当前存档的文字：第三版键优先，否则第二版键（读取时迁移）
+    static saveText(st) {
+      st = st || storage();
+      if (!st) return null;
+      try { return st.getItem(SAVE_KEY) || st.getItem(V2_SAVE_KEY) || null; } catch (e) { return null; }
     }
     static hasSave() {
       const st = storage();
       if (!st) return false;
-      try { return !!st.getItem(SAVE_KEY); } catch (e) { return false; }
+      return !!GameState.saveText(st);
     }
     // 只有旧版（第一版）存档：读不了，标题画面提示“新版本，旧存档无法读取”
     static hasLegacySave() {
       const st = storage();
       if (!st) return false;
-      try { return !st.getItem(SAVE_KEY) && !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
+      try { return !GameState.saveText(st) && !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
     }
-    // 存档摘要（不完整读档）：{ scenario, year, month, faction } | null
+    // 存档摘要（不完整读档）：{ scenario, year, month, faction, version } | null
     static saveInfo() {
       const st = storage();
       if (!st) return null;
       try {
-        const d = JSON.parse(st.getItem(SAVE_KEY) || 'null');
+        const d = JSON.parse(GameState.saveText(st) || 'null');
         if (!d || !Array.isArray(d.factions)) return null;
         const f = d.factions[d.player];
-        return { scenario: d.scenario || 'classic', year: d.year | 0, month: d.month | 0, faction: f ? f.name : '' };
+        return { scenario: d.scenario || 'classic', year: d.year | 0, month: d.month | 0, faction: f ? f.name : '', version: d.version | 0 };
       } catch (e) { return null; }
     }
     static deleteSave() {
       const st = storage();
       if (!st) return;
       try { st.removeItem(SAVE_KEY); } catch (e) { /* 忽略 */ }
+      try { st.removeItem(V2_SAVE_KEY); } catch (e) { /* 忽略 */ }
     }
     // 不合格的存档抛出带中文说明的 Error（load() 把说明放进 GameState.loadError）
     static fromJSON(text) {
       const d = typeof text === 'string' ? JSON.parse(text) : text;
       if (!d || !Array.isArray(d.cities) || !Array.isArray(d.generals) || !Array.isArray(d.factions)) return null;
-      if (d.version !== SAVE_VERSION) throw new Error('新版本，旧存档无法读取。');
+      // 第二版存档可读：补齐成长数据（Progress.ensure：等级 1、经验 0、原四计按智力）
+      if (d.version !== SAVE_VERSION && d.version !== 2) throw new Error('新版本，旧存档无法读取。');
       const sid = d.scenario || 'classic';
       const scen = SG.Scenarios ? SG.Scenarios[sid] : (sid === 'classic' ? SG.ScenarioData : null);
       if (!scen) throw new Error('存档所用的剧本（' + sid + '）不存在，无法读取。');
@@ -364,6 +389,8 @@
       while (g.alliance.length < n * n) g.alliance.push(0);
       g.log = makeLog(g, Array.isArray(d.log) ? d.log.map(String) : []);
       g.init();
+      for (const x of g.generals) Progress.ensure(x);
+      derived(g, 'migratedFrom', d.version === SAVE_VERSION ? 0 : d.version | 0);
       return g;
     }
     static load() {
@@ -372,7 +399,7 @@
       if (!st) { GameState.loadError = '浏览器不允许读取存档。'; return null; }
       const prev = SG.ScenarioData;
       try {
-        const text = st.getItem(SAVE_KEY);
+        const text = GameState.saveText(st);
         if (!text) {
           GameState.loadError = st.getItem(LEGACY_SAVE_KEY) ? '新版本，旧存档无法读取。' : '没有存档。';
           return null;
@@ -389,6 +416,7 @@
     }
   }
   GameState.SAVE_KEY = SAVE_KEY;
+  GameState.V2_SAVE_KEY = V2_SAVE_KEY;
   GameState.LEGACY_SAVE_KEY = LEGACY_SAVE_KEY;
   GameState.SAVE_VERSION = SAVE_VERSION;
   GameState.loadError = null;
@@ -609,8 +637,325 @@
     },
   };
 
+  // ================================================================ Progress --
+  // 第三版 §4 成长：经验、等级、可习得必杀与计策（纯逻辑，Node 下可测）。
+  //
+  //   经验与等级（每位武将，电脑势力同样成长）
+  //     Progress.EXP[L]                 升到 L 级所需的累计经验（L = 1..10）
+  //     levelFor(exp) → L               expInfo(gen) → { level, exp, cur, next, need, pct, max }（界面进度条用）
+  //     gain(gen, amount, why?) → { gen, exp, from, to, learned: [cand] } | null
+  //                                     加经验；电脑武将（非玩家势力）有空格即自动习得（learned）
+  //     battleExp(x) → 一战所得经验：x = { dmg, heal, routs, cmdRouts, duelWin, duelLoss, specials, tactics, tacFail, won, commander }
+  //       参战 10 + 每击杀 40 兵 1 + 每回复 80 兵 1 + 击溃敌部 12（敌主将再 +12）+ 单挑胜 25 / 负 5 +
+  //       每次必杀 6 + 每次计策成功 4（失败 1）+ 胜方 25（主将再 +10），一战至多 BATTLE_CAP。
+  //       战术战斗（battle-model.js）在分出胜负时自动结算（Mdl.progress）；自动结算的攻城战见 autoBattle。
+  //   格数与等阶（升级时解锁；原四计按智力自带、不占格）
+  //     specialSlots(gen) / tacticSlots(gen) → { max, unlocked, used, open, tier, statTier, levelTier }
+  //       必杀：武力 60/70/80/90 各 1 格（至多 4）；等阶上限 武力 60→1、70→2、80→3、92→4（≈(武力−40)/15）；
+  //             第 k 格与第 k 阶在 2/4/6/8 级解锁。
+  //       计策：智力 50/60/70/80/90 各 1 格（至多 5）；等阶上限 智力 50→1、65→2、80→3、92→4（≈(智力−35)/15）；
+  //             第 k 格在 3/5/7/9/10 级、第 k 阶在 3/5/7/9 级解锁。
+  //       第 k 格最高只能学 k 阶（tier = 下一招可学的最高等阶 = min(能力上限, 等级上限, 已学 + 1)），
+  //       故招式按 1、2、3、4 阶逐级习得；推迟选择也不能一口气全学高阶。
+  //     openings(gen) → { special, tactic, total }   现在可学的空格数
+  //   升级选择（玩家从 3 个候选中选 1；电脑自动选）
+  //     candidates(gen, n = 3) → [{ type: 'special'|'tactic', id, tier, name, desc, rules, color, fx, ref }]
+  //       候选确定（按姓名、等级、已学、本局种子），不耗 SG.Random；两类都有空格时两类都会出现。
+  //     learn(gen, typeOrCand, id?) → bool        aiPick(gen, cands) → cand        autoLearn(gen) → [cand]
+  //     pending(f) → [gen]                       f 势力中有空格且有候选的武将（玩家：战后逐个弹出升级对话框）
+  //     known(gen) → { specials: [sp], tactics: [tactic] }（专属必杀在前；需 specials.js / tactics-data.js）
+  //   自动结算的攻城战（strategy-ai.js 的 Conquest.autoResolve）
+  //     snapshot(s) → 战前兵力；autoBattle(s, snap) → [{ gen, exp, from, to, learned, side, won }]
+  //       （按战损与战前战力分摊；结果同时写入 s.progress；s.progressDone 防重复）
+  //     hookConquest(Conquest)：包装 autoResolve 一次（battle-model.js 载入时调用），不耗随机数
+  //   Progress.enabled = false：不再获得经验，战斗只用专属必杀与原四计（tests/sim.js 对比平衡用）
+  const INNATE_TACTICS = Object.freeze(['fire', 'rockfall', 'confuse', 'inspire']);   // 与 Defs.tactics 同序
+  const INNATE_SET = new Set(INNATE_TACTICS);
+  function countAtLeast(list, v) { let n = 0; for (const t of list) if (v >= t) n++; return n; }
+  function phash(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return h >>> 0;
+  }
+  function genPower(x) { return Math.max(0, x.troops) * (0.55 + x.war / 220) * (0.7 + x.training / 330); }
+
+  const Progress = {
+    enabled: true,
+    MAX_LEVEL: 10,
+    EXP: Object.freeze([0, 0, 80, 200, 360, 560, 800, 1080, 1400, 1760, 2160]),
+    BATTLE_CAP: 240,
+    SPECIAL_SLOT_WAR: Object.freeze([60, 70, 80, 90]),
+    SPECIAL_TIER_WAR: Object.freeze([60, 70, 80, 92]),
+    SPECIAL_SLOT_LEVEL: Object.freeze([2, 4, 6, 8]),
+    SPECIAL_TIER_LEVEL: Object.freeze([2, 4, 6, 8]),
+    TACTIC_SLOT_INT: Object.freeze([50, 60, 70, 80, 90]),
+    TACTIC_TIER_INT: Object.freeze([50, 65, 80, 92]),
+    TACTIC_SLOT_LEVEL: Object.freeze([3, 5, 7, 9, 10]),
+    TACTIC_TIER_LEVEL: Object.freeze([3, 5, 7, 9]),
+    INNATE_TACTICS,
+
+    levelFor(exp) {
+      let L = 1;
+      for (let i = 2; i <= Progress.MAX_LEVEL; i++) if (exp >= Progress.EXP[i]) L = i;
+      return L;
+    },
+    expInfo(gen) {
+      Progress.ensure(gen);
+      const L = gen.level, max = L >= Progress.MAX_LEVEL;
+      const cur = Progress.EXP[L], next = max ? cur : Progress.EXP[L + 1];
+      return { level: L, exp: gen.exp, cur, next, need: max ? 0 : next - gen.exp, pct: max ? 1 : M.clamp01((gen.exp - cur) / Math.max(1, next - cur)), max };
+    },
+
+    // 原四计中按智力会的（与 Defs.tactics 的需求智力相同）
+    innateTactics(gen) {
+      const out = [];
+      const T = SG.Defs.tactics;
+      for (let i = 0; i < INNATE_TACTICS.length; i++) if (T[i] && (gen.intel | 0) >= T[i].reqInt) out.push(INNATE_TACTICS[i]);
+      return out;
+    },
+    isInnateTactic(id) { return INNATE_SET.has(id); },
+
+    // 补齐 / 规范成长字段（幂等：已规范的数据原样不变，存档往返一致）
+    ensure(gen) {
+      if (!gen) return gen;
+      if (!(gen.exp >= 0)) gen.exp = 0;
+      gen.exp = Math.min(Math.round(gen.exp), Progress.EXP[Progress.MAX_LEVEL]);
+      gen.level = Progress.levelFor(gen.exp);
+      const Sp = SG.Specials && typeof SG.Specials.byId === 'function' ? SG.Specials : null;
+      const Tc = SG.Tactics && typeof SG.Tactics.byId === 'function' ? SG.Tactics : null;
+      const sp0 = Array.isArray(gen.specials) ? gen.specials : [];
+      const sp = [];
+      for (const id of sp0) if (typeof id === 'string' && sp.indexOf(id) < 0 && (!Sp || Sp.byId(id))) sp.push(id);
+      if (!Array.isArray(gen.specials) || sp.length !== sp0.length) gen.specials = sp;
+      const t0 = Array.isArray(gen.tactics) ? gen.tactics : [];
+      const tac = Progress.innateTactics(gen);
+      for (const id of t0) if (typeof id === 'string' && !INNATE_SET.has(id) && tac.indexOf(id) < 0 && (!Tc || Tc.byId(id))) tac.push(id);
+      if (!Array.isArray(gen.tactics) || tac.join() !== t0.join()) gen.tactics = tac;
+      const r = gen.record;
+      if (!r || typeof r !== 'object') gen.record = { battles: 0, wins: 0, routs: 0, duels: 0 };
+      else for (const k of ['battles', 'wins', 'routs', 'duels']) if (!(r[k] >= 0)) r[k] = 0;
+      return gen;
+    },
+    learnedTactics(gen) { Progress.ensure(gen); return gen.tactics.filter(id => !INNATE_SET.has(id)); },
+
+    specialSlots(gen) {
+      Progress.ensure(gen);
+      const P = Progress, w = gen.war | 0;
+      const max = countAtLeast(P.SPECIAL_SLOT_WAR, w);
+      const unlocked = Math.min(max, countAtLeast(P.SPECIAL_SLOT_LEVEL, gen.level));
+      const statTier = countAtLeast(P.SPECIAL_TIER_WAR, w);
+      const levelTier = countAtLeast(P.SPECIAL_TIER_LEVEL, gen.level);
+      const used = gen.specials.length;
+      const tier = Math.min(statTier, levelTier, used + 1);
+      return { max, unlocked, used, open: Math.max(0, unlocked - used), tier, statTier, levelTier };
+    },
+    tacticSlots(gen) {
+      Progress.ensure(gen);
+      const P = Progress, v = gen.intel | 0;
+      const max = countAtLeast(P.TACTIC_SLOT_INT, v);
+      const unlocked = Math.min(max, countAtLeast(P.TACTIC_SLOT_LEVEL, gen.level));
+      const statTier = countAtLeast(P.TACTIC_TIER_INT, v);
+      const levelTier = countAtLeast(P.TACTIC_TIER_LEVEL, gen.level);
+      const used = Progress.learnedTactics(gen).length;
+      const tier = Math.min(statTier, levelTier, used + 1);
+      return { max, unlocked, used, open: Math.max(0, unlocked - used), tier, statTier, levelTier };
+    },
+    openings(gen) {
+      const s = Progress.specialSlots(gen).open, t = Progress.tacticSlots(gen).open;
+      return { special: s, tactic: t, total: s + t };
+    },
+
+    // 可学的条目（未学、等阶不超过上限）
+    eligible(gen, type) {
+      Progress.ensure(gen);
+      if (type === 'special') {
+        const S = SG.Specials;
+        if (!S || typeof S.pool !== 'function') return [];
+        const sl = Progress.specialSlots(gen);
+        if (sl.open <= 0) return [];
+        return S.pool().filter(sp => sp.tier <= sl.tier && gen.specials.indexOf(sp.id) < 0);
+      }
+      const T = SG.Tactics;
+      if (!T || typeof T.learnable !== 'function') return [];
+      const sl = Progress.tacticSlots(gen);
+      if (sl.open <= 0) return [];
+      return T.learnable().filter(t => t.tier <= sl.tier && gen.tactics.indexOf(t.id) < 0 && (gen.intel | 0) >= (t.reqInt | 0));
+    },
+    cand(type, x) {
+      const S = SG.Specials, T = SG.Tactics;
+      if (type === 'special') return { type, id: x.id, tier: x.tier, name: x.name, desc: x.desc, rules: S && S.rules ? S.rules(x) : '', color: x.color, fx: x.fx, ref: x };
+      return { type, id: x.id, tier: x.tier, name: x.name, desc: x.desc, rules: T && T.rules ? T.rules(x) : '', color: x.color, fx: x.fx, ref: x };
+    },
+    candidates(gen, n) {
+      n = n > 0 ? n : 3;
+      Progress.ensure(gen);
+      const seed = SG.G && SG.G.seed ? SG.G.seed : 0;
+      const r = SG.SeededRandom(phash(gen.name + '|' + gen.level + '|' + gen.specials.join(',') + '|' + gen.tactics.join(',') + '|' + seed));
+      const pools = [];
+      for (const type of ['special', 'tactic']) {
+        const list = Progress.eligible(gen, type);
+        if (!list.length) continue;
+        const cap = type === 'special' ? Progress.specialSlots(gen).tier : Progress.tacticSlots(gen).tier;
+        pools.push({ type, list: list.slice(), cap });
+      }
+      if (!pools.length) return [];
+      // 加权不放回抽取：本等阶上限的条目 ×4、低一阶 ×2、其余 ×1
+      const draw = p => {
+        let tot = 0;
+        const w = p.list.map(x => { const k = x.tier >= p.cap ? 4 : x.tier === p.cap - 1 ? 2 : 1; tot += k; return k; });
+        let roll = r.nextDouble() * tot;
+        for (let i = 0; i < p.list.length; i++) { roll -= w[i]; if (roll < 0 || i === p.list.length - 1) return Progress.cand(p.type, p.list.splice(i, 1)[0]); }
+        return null;
+      };
+      const out = [];
+      // 两类都有空格时交替抽取（武力 / 智力相对更高的一类先抽），保证两类都出现
+      if (pools.length === 2 && (gen.intel | 0) > (gen.war | 0)) pools.reverse();
+      for (let guard = 0; out.length < n && guard < 32; guard++) {
+        const live = pools.filter(p => p.list.length);
+        if (!live.length) break;
+        const c = draw(live[out.length % live.length]);
+        if (c) out.push(c);
+      }
+      return out;
+    },
+    learn(gen, a, b) {
+      const type = typeof a === 'string' ? a : a && a.type;
+      const id = typeof a === 'string' ? b : a && a.id;
+      if (!gen || !id || (type !== 'special' && type !== 'tactic')) return false;
+      if (!Progress.eligible(gen, type).some(x => x.id === id)) return false;
+      if (type === 'special') gen.specials.push(id); else gen.tactics.push(id);
+      return true;
+    },
+    // 电脑的选择：高阶优先；同阶按武将所长（武力系伤害 / 智力系 / 辅助）与姓名哈希
+    aiPick(gen, cands) {
+      if (!cands || !cands.length) return null;
+      const W = gen.war | 0, I = gen.intel | 0, Pl = gen.pol | 0;
+      const SUPPORT = { rally: 1, command: 1, fortify: 1, haste: 1, heal: 1 };
+      let best = null, bs = -1e9;
+      for (const c of cands) {
+        let s = c.tier * 10;
+        const k = c.ref && c.ref.kind;
+        if (c.type === 'special') s += SUPPORT[k] ? (Pl >= W - 5 ? 3 : 0) : (W >= Pl ? 3 : 0);
+        else s += c.ref && c.ref.dmg ? (I >= 80 ? 3 : 1) : 2;
+        s += (phash(gen.name + '|' + c.id) % 100) / 100;
+        if (s > bs) { bs = s; best = c; }
+      }
+      return best;
+    },
+    autoLearn(gen) {
+      const out = [];
+      for (let guard = 0; guard < 12 && Progress.openings(gen).total > 0; guard++) {
+        const c = Progress.aiPick(gen, Progress.candidates(gen, 3));
+        if (!c || !Progress.learn(gen, c)) break;
+        out.push(c);
+      }
+      return out;
+    },
+    isPlayerGen(gen) { const g = SG.G; return !!(g && g.player >= 0 && gen && gen.faction === g.player); },
+    pending(f) {
+      const g = SG.G;
+      if (!g) return [];
+      return g.generals.filter(x => x.faction === f && !x.dead && Progress.openings(x).total > 0 && Progress.candidates(x, 1).length > 0);
+    },
+    known(gen) {
+      const S = SG.Specials, T = SG.Tactics;
+      return {
+        specials: S && typeof S.known === 'function' ? S.known(gen) : [],
+        tactics: T && typeof T.known === 'function' ? T.known(gen) : [],
+      };
+    },
+
+    gain(gen, amount, why) {
+      if (!Progress.enabled || !gen || !(amount > 0)) return null;
+      Progress.ensure(gen);
+      const from = gen.level;
+      const add = Math.round(amount);
+      gen.exp = Math.min(gen.exp + add, Progress.EXP[Progress.MAX_LEVEL]);
+      gen.level = Progress.levelFor(gen.exp);
+      const res = { gen, exp: add, why: why || '', from, to: gen.level, learned: [] };
+      if (!Progress.isPlayerGen(gen)) res.learned = Progress.autoLearn(gen);
+      else if (gen.level > from && SG.G && typeof SG.G.addLog === 'function') SG.G.addLog(gen.name + '升至 ' + gen.level + ' 级。');
+      return res;
+    },
+    battleExp(x) {
+      let e = 10;
+      e += (x.dmg || 0) / 40 + (x.heal || 0) / 80;
+      e += (x.routs || 0) * 12 + (x.cmdRouts || 0) * 12;
+      e += (x.duelWin || 0) * 25 + (x.duelLoss || 0) * 5;
+      e += (x.specials || 0) * 6 + (x.tactics || 0) * 4 + (x.tacFail || 0);
+      if (x.won) e += 25 + (x.commander ? 10 : 0);
+      return Math.round(Math.min(Progress.BATTLE_CAP, e));
+    },
+    // 战绩（战术战斗与自动结算共用）
+    note(gen, won, routs, duels) {
+      Progress.ensure(gen);
+      const r = gen.record;
+      r.battles++;
+      if (won) r.wins++;
+      r.routs += routs | 0;
+      r.duels += duels | 0;
+    },
+
+    // ---- 自动结算的攻城战 ----
+    snapshot(s) {
+      const m = new Map();
+      for (const x of (s.atk || []).concat(s.def || [])) m.set(x.id, { troops: Math.max(0, x.troops | 0), power: genPower(x) });
+      return m;
+    },
+    autoBattle(s, snap) {
+      if (!Progress.enabled || !s || s.progressDone || !snap) return [];
+      s.progressDone = true;
+      const out = s.progress = [];          // 与战术战斗的 setup.progress 同格式（界面战后统一读取）
+      const sides = [s.atk || [], s.def || []];
+      // 无人防守，不战而下：攻方只得少量经验
+      if (sides[1].length === 0 || sides[1].every(d => !(snap.get(d.id) && snap.get(d.id).troops > 0))) {
+        for (const a of sides[0]) { const r = Progress.gain(a, 5, 'battle'); if (r) out.push(Object.assign(r, { side: 0, won: true })); }
+        return out;
+      }
+      for (let k = 0; k < 2; k++) {
+        const mine = sides[k], foes = sides[1 - k];
+        const won = k === 0 ? !!s.attackerWon : !s.attackerWon;
+        let loss = 0, routs = 0, cmd = 0;
+        foes.forEach((e, i) => {
+          const b = snap.get(e.id);
+          if (!b) return;
+          loss += Math.max(0, b.troops - Math.max(0, e.troops));
+          if (b.troops > 0 && (s.routed.has(e.id) || e.troops <= 0)) { routs++; if (i === 0) cmd++; }
+        });
+        let tot = 0;
+        for (const a of mine) tot += snap.get(a.id) ? snap.get(a.id).power : 0;
+        mine.forEach((a, i) => {
+          const b = snap.get(a.id);
+          if (!b || !(b.troops > 0)) return;
+          const share = tot > 0 ? b.power / tot : 1 / mine.length;
+          const e = Progress.battleExp({ dmg: loss * share, routs: routs * share, cmdRouts: cmd * share, won, commander: i === 0 });
+          Progress.note(a, won, Math.round(routs * share), 0);
+          const from = a.level;
+          const r = Progress.gain(a, e, 'battle');
+          if (r) out.push(Object.assign(r, { side: k, won }));
+          else out.push({ gen: a, exp: 0, from, to: from, learned: [], side: k, won });
+        });
+      }
+      return out;
+    },
+    hookConquest(C) {
+      if (!C || C._progressHook || typeof C.autoResolve !== 'function') return false;
+      const orig = C.autoResolve;
+      C.autoResolve = function (s) {
+        let snap = null;
+        try { snap = Progress.snapshot(s); } catch (e) { console.error(e); }
+        const r = orig.apply(this, arguments);
+        try { Progress.autoBattle(s, snap); } catch (e) { console.error(e); }
+        return r;
+      };
+      C._progressHook = true;
+      return true;
+    },
+  };
+
   SG.GameState = GameState;
   SG.DevKind = DevKind;
   SG.Commands = Commands;
+  SG.Progress = Progress;
   if (!('G' in SG)) SG.G = null;
 })();

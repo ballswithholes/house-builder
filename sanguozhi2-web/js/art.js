@@ -726,21 +726,54 @@ void main() {
         }
       }
     }
-    // 中式屋顶：四坡顶，檐角上翘
+    // 中式屋顶（第三版：凹曲屋面、檐口两端起翘、平滑法线，正脊两端加鸱吻）。bc 为檐口中心（Unity），w × d 为檐口外缘，h 为脊高
     chineseRoof(bc, w, d, h, col) {
       col = MeshBuilder._rgb(col);
-      const ew = w * 0.5, ed = d * 0.5, cw = w * 0.32, cd = d * 0.3, ey = h * 0.1, cy = h * 0.36;
-      const e0 = v3(bc.x - ew, bc.y + ey, bc.z - ed), e1 = v3(bc.x + ew, bc.y + ey, bc.z - ed), e2 = v3(bc.x + ew, bc.y + ey, bc.z + ed), e3 = v3(bc.x - ew, bc.y + ey, bc.z + ed);
-      const c0 = v3(bc.x - cw, bc.y + cy, bc.z - cd), c1 = v3(bc.x + cw, bc.y + cy, bc.z - cd), c2 = v3(bc.x + cw, bc.y + cy, bc.z + cd), c3 = v3(bc.x - cw, bc.y + cy, bc.z + cd);
-      const r0 = v3(bc.x - w * 0.22, bc.y + h, bc.z), r1 = v3(bc.x + w * 0.22, bc.y + h, bc.z);
-      const dark = shade(col, -0.15);
-      // 檐口（上翘的四角）
-      this.quad(e0, c0, c1, e1, dark); this.quad(e1, c1, c2, e2, dark); this.quad(e2, c2, c3, e3, dark); this.quad(e3, c3, c0, e0, dark);
-      // 屋面
-      this.quad(c0, r0, r1, c1, col); this.quad(c2, r1, r0, c3, col);
-      this.tri(c1, r1, c2, shade(col, -0.08)); this.tri(c3, r0, c0, shade(col, -0.08));
-      // 正脊
-      this.box(v3((r0.x + r1.x) * 0.5, (r0.y + r1.y) * 0.5 + 0.02, (r0.z + r1.z) * 0.5), v3(w * 0.55, h * 0.08, d * 0.06), shade(col, -0.4));
+      const rw = w * 0.22, ew = w * 0.5, ed = d * 0.5, NS = w > 0.7 ? 4 : w > 0.3 ? 3 : 2;
+      // 四圈（檐口 → 两道中圈 → 正脊）：x 半宽、z 半深、高度、翼角起翘
+      const R = [[ew, ed, h * 0.08, h * 0.16], [rw + (ew - rw) * 0.64, ed * 0.62, h * 0.27, h * 0.06], [rw + (ew - rw) * 0.3, ed * 0.3, h * 0.6, h * 0.015], [rw, 0, h, 0]];
+      const ringPt = (k, side, t) => {
+        // side 0 南（−z）1 东（+x）2 北（+z）3 西（−x）；t 沿边 0→1
+        const r = R[k], lift = r[3] * Math.pow(Math.abs(2 * t - 1), 2.4), out = 1 + 0.06 * Math.pow(Math.abs(2 * t - 1), 3) * (k === 0 ? 1 : 0);
+        let x, z;
+        if (side === 0) { x = (-r[0] + 2 * r[0] * t) * out; z = -r[1] * out; }
+        else if (side === 1) { x = r[0] * out; z = (-r[1] + 2 * r[1] * t) * out; }
+        else if (side === 2) { x = (r[0] - 2 * r[0] * t) * out; z = r[1] * out; }
+        else { x = -r[0] * out; z = (r[1] - 2 * r[1] * t) * out; }
+        return v3(bc.x + x, bc.y + r[2] + lift, bc.z + z);
+      };
+      const dark = shade(col, -0.18), mid = shade(col, -0.06);
+      for (let side = 0; side < 4; side++) {
+        // 网格点 P[k][i]，各点法线为相邻面法线之和（同一坡面内平滑，戗脊处分开）
+        const P = [], N = [];
+        for (let k = 0; k < 4; k++) { P.push([]); N.push([]); for (let i = 0; i <= NS; i++) { P[k].push(ringPt(k, side, i / NS)); N[k].push(v3(0, 0, 0)); } }
+        const outward = side === 0 ? v3(0, 0, -1) : side === 1 ? v3(1, 0, 0) : side === 2 ? v3(0, 0, 1) : v3(-1, 0, 0);
+        const fn = (a, b, c) => { const n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)); if (n.y < 0) n.negate(); return n; };
+        for (let k = 0; k < 3; k++) for (let i = 0; i < NS; i++) {
+          const n = fn(P[k][i], P[k][i + 1], P[k + 1][i]).add(outward.clone().multiplyScalar(0.02));
+          N[k][i].add(n); N[k][i + 1].add(n); N[k + 1][i].add(n); N[k + 1][i + 1].add(n);
+        }
+        for (let k = 0; k < 3; k++) for (let i = 0; i < NS; i++) {
+          const c0 = k === 0 ? dark : k === 1 ? mid : col, c1 = k === 0 ? mid : col;
+          const a = P[k][i], b = P[k][i + 1], c = P[k + 1][i + 1], dd = P[k + 1][i];
+          const na = N[k][i].clone().normalize(), nb = N[k][i + 1].clone().normalize(), nc = N[k + 1][i + 1].clone().normalize(), nd = N[k + 1][i].clone().normalize();
+          this.triN(a, b, c, na, nb, nc, c0, c0, c1);
+          if (dd.distanceToSquared(c) > 1e-12) this.triN(a, c, dd, na, nc, nd, c0, c1, c1);
+        }
+        // 檐下（深色，略厚）
+        const e0 = P[0][0], e1 = P[0][NS], down = v3(0, -1, 0), th = h * 0.05;
+        const u0 = v3(e0.x, e0.y - th, e0.z), u1 = v3(e1.x, e1.y - th, e1.z);
+        this.triN(e0, u1, e1, outward, outward, outward, shade(col, -0.45));
+        this.triN(e0, u0, u1, outward, outward, outward, shade(col, -0.45));
+        void down;
+      }
+      // 正脊 + 鸱吻（小屋顶只有正脊）
+      const ridgeC = shade(col, -0.32);
+      this.box(v3(bc.x, bc.y + h + h * 0.04, bc.z), v3(rw * 2 + h * 0.12, h * 0.1, Math.max(0.01, h * 0.09)), ridgeC);
+      if (w > 0.3) for (const sx of [-1, 1]) {
+        this.box(v3(bc.x + sx * (rw + h * 0.04), bc.y + h + h * 0.14, bc.z), v3(h * 0.08, h * 0.22, h * 0.08), ridgeC);
+        this.box(v3(bc.x + sx * (rw + h * 0.0), bc.y + h + h * 0.26, bc.z), v3(h * 0.1, h * 0.06, h * 0.06), ridgeC);
+      }
     }
     flag(pole, h, fw, fh, col) {
       col = MeshBuilder._rgb(col);
@@ -749,6 +782,137 @@ void main() {
       const a = v3(tx + 0.02, ty, tz), b = v3(tx + fw, ty - fh * 0.1, tz);
       const c = v3(tx + fw, ty - fh * 1.1, tz), d = v3(tx + 0.02, ty - fh, tz);
       this.quad(a, b, c, d, col); this.quad(a, d, c, b, col);
+    }
+
+    // ---- 第三版：平滑网格（逐顶点法线，DESIGN-V3 §1）----
+    // 法线向量（Unity 坐标）→ three 坐标（按 this.M 的旋转部分变换，z 取反）
+    _n(n) {
+      let x = n.x, y = n.y, z = n.z;
+      if (this.M) {
+        const e = this.M.elements;
+        const tx = e[0] * x + e[4] * y + e[8] * z, ty = e[1] * x + e[5] * y + e[9] * z, tz = e[2] * x + e[6] * y + e[10] * z;
+        x = tx; y = ty; z = tz;
+      }
+      const l = Math.sqrt(x * x + y * y + z * z) || 1;
+      return { x: x / l, y: y / l, z: -z / l };
+    }
+    // 三角形 + 各顶点法线与颜色（Unity 坐标）。正反面按给定法线自动确定（几何法线与三个法线之和同向）
+    triN(a, b, c, na, nb, nc, ca, cb, cc) {
+      let A = this._p(a), B = this._p(b), C = this._p(c);
+      let NA = this._n(na), NB = this._n(nb), NC = this._n(nc);
+      ca = MeshBuilder._rgb(ca); cb = cb ? MeshBuilder._rgb(cb) : ca; cc = cc ? MeshBuilder._rgb(cc) : ca;
+      const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z, vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
+      const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
+      if (gx * (NA.x + NB.x + NC.x) + gy * (NA.y + NB.y + NC.y) + gz * (NA.z + NB.z + NC.z) < 0) {
+        let t = B; B = C; C = t;
+        t = NB; NB = NC; NC = t;
+        t = cb; cb = cc; cc = t;
+      }
+      this.pos.push(A.x, A.y, A.z, B.x, B.y, B.z, C.x, C.y, C.z);
+      this.nor.push(NA.x, NA.y, NA.z, NB.x, NB.y, NB.z, NC.x, NC.y, NC.z);
+      this.col.push(ca.r, ca.g, ca.b, cb.r, cb.g, cb.b, cc.r, cc.g, cc.b);
+      this.uvs.push(0, 0, 0, 1, 1, 0);
+    }
+    // 平滑椭球（二十面体细分 detail 次：0 = 20、1 = 80、2 = 320 个三角形）。
+    // opts：seed、rough（起伏幅度，0–0.3）、top（顶面提亮，默认 0.06）、flat（y 低于该值处压平，用于石块、树冠底）、
+    //       bottomShade（底部压暗，默认 0）
+    sphere(center, radius, col, detail, opts) {
+      const o = opts || {};
+      const r = typeof radius === 'number' ? { x: radius, y: radius, z: radius } : radius;
+      const ico = icosphere(detail === undefined ? 1 : detail);
+      col = MeshBuilder._rgb(col);
+      const n = ico.v.length / 3, P = new Float64Array(n * 3);
+      const rough = o.rough || 0, s = (o.seed || 0) * 0.618;
+      const flat = o.flat === undefined ? -2 : o.flat;
+      for (let i = 0; i < n; i++) {
+        const dx = ico.v[i * 3], dy = ico.v[i * 3 + 1], dz = ico.v[i * 3 + 2];
+        let k = 1;
+        if (rough) k += rough * (Math.sin(dx * 3.1 + s * 5.3) * Math.sin(dy * 2.7 + s * 2.1 + 1) * Math.sin(dz * 3.3 + s * 3.7 + 2) * 1.6 +
+          Math.sin(dx * 6.7 + dz * 5.1 + s * 9.1) * 0.35);
+        const y = dy < flat ? flat + (dy - flat) * 0.12 : dy;
+        P[i * 3] = center.x + dx * r.x * k; P[i * 3 + 1] = center.y + y * r.y * k; P[i * 3 + 2] = center.z + dz * r.z * k;
+      }
+      const N = smoothNormals(P, ico.f, center);
+      const top = o.top === undefined ? 0.06 : o.top, bot = o.bottomShade || 0;
+      const K = [];
+      for (let i = 0; i < n; i++) {
+        const dy = ico.v[i * 3 + 1];
+        K.push(shade(col, dy * top - (dy < 0 ? -dy * bot : 0)));
+      }
+      const f = ico.f, pv = i => v3(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]), nv = i => v3(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]);
+      for (let q = 0; q < f.length; q += 3) this.triN(pv(f[q]), pv(f[q + 1]), pv(f[q + 2]), nv(f[q]), nv(f[q + 1]), nv(f[q + 2]), K[f[q]], K[f[q + 1]], K[f[q + 2]]);
+    }
+    // 旋转体（平滑）：profile = [[r, y, col?, sharp?], …]（由下而上，相对 base），seg 段。
+    // sharp 的轮廓点两侧法线不平均（折角）。opts：capTop、capBottom、y0Shade（自下而上的明暗 [下, 上]）
+    lathe(base, profile, seg, col, opts) {
+      const o = opts || {};
+      col = MeshBuilder._rgb(col);
+      const np = profile.length;
+      const ring = (k, a) => { const p = profile[k]; return v3(base.x + Math.cos(a) * p[0], base.y + p[1], base.z + Math.sin(a) * p[0]); };
+      const tan = (i, j) => { const dr = profile[j][0] - profile[i][0], dy = profile[j][1] - profile[i][1]; const l = Math.hypot(dr, dy) || 1; return [dy / l, -dr / l]; };
+      const nAt = (k, segIdx) => {
+        // segIdx：所在的段（k 与 k+1 或 k−1 与 k）；sharp 点只取本段方向
+        const own = segIdx === k ? tan(k, k + 1) : tan(k - 1, k);
+        if (profile[k][3] || k === 0 || k === np - 1) return own;
+        const a = tan(k - 1, k), b = tan(k, k + 1), x = a[0] + b[0], y = a[1] + b[1], l = Math.hypot(x, y) || 1;
+        return [x / l, y / l];
+      };
+      const colAt = k => profile[k][2] ? MeshBuilder._rgb(profile[k][2]) : col;
+      for (let k = 0; k + 1 < np; k++) {
+        const n0 = nAt(k, k), n1 = nAt(k + 1, k), c0 = colAt(k), c1 = colAt(k + 1);
+        if (profile[k][0] < 1e-5 && profile[k + 1][0] < 1e-5) continue;
+        for (let i = 0; i < seg; i++) {
+          const a0 = i * Math.PI * 2 / seg, a1 = (i + 1) * Math.PI * 2 / seg;
+          const N = (n, a) => v3(Math.cos(a) * n[0], n[1], Math.sin(a) * n[0]);
+          const p00 = ring(k, a0), p01 = ring(k, a1), p10 = ring(k + 1, a0), p11 = ring(k + 1, a1);
+          if (profile[k][0] > 1e-5) this.triN(p00, p10, p01, N(n0, a0), N(n1, a0), N(n0, a1), c0, c1, c0);
+          if (profile[k + 1][0] > 1e-5) this.triN(p01, p10, p11, N(n0, a1), N(n1, a0), N(n1, a1), c0, c1, c1);
+        }
+      }
+      const cap = (k, up) => {
+        const p = profile[k];
+        if (!(p[0] > 1e-5)) return;
+        const c = shade(colAt(k), up ? 0.06 : -0.2), ctr = v3(base.x, base.y + p[1], base.z), n = v3(0, up ? 1 : -1, 0);
+        for (let i = 0; i < seg; i++) this.triN(ctr, ring(k, i * Math.PI * 2 / seg), ring(k, (i + 1) * Math.PI * 2 / seg), n, n, n, c);
+      };
+      if (o.capTop) cap(np - 1, true);
+      if (o.capBottom) cap(0, false);
+    }
+    // 平滑圆柱 / 圆台（可带顶盖）
+    smoothCylinder(bottom, r0, r1, h, seg, col, cap) {
+      this.lathe(bottom, [[r0, 0], [r1, h]], seg, col, { capTop: cap !== false && r1 > 1e-5 });
+    }
+    // 沿折线的平滑管（树干、绳索）：pts 为 Unity 坐标点，radii 为各点半径
+    tube(pts, radii, seg, col, capEnd) {
+      col = MeshBuilder._rgb(col);
+      const n = pts.length;
+      if (n < 2) return;
+      const rings = [];
+      let ref = v3(1, 0, 0);
+      for (let i = 0; i < n; i++) {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+        const t = v3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
+        if (Math.abs(t.dot(ref)) > 0.9) ref = v3(0, 0, 1);
+        const u = new THREE.Vector3().crossVectors(t, ref).normalize(), w = new THREE.Vector3().crossVectors(t, u).normalize();
+        const R = [], Nn = [];
+        for (let j = 0; j < seg; j++) {
+          const ang = j * Math.PI * 2 / seg, ca = Math.cos(ang), sa = Math.sin(ang);
+          const nx = u.x * ca + w.x * sa, ny = u.y * ca + w.y * sa, nz = u.z * ca + w.z * sa;
+          Nn.push(v3(nx, ny, nz));
+          R.push(v3(pts[i].x + nx * radii[i], pts[i].y + ny * radii[i], pts[i].z + nz * radii[i]));
+        }
+        rings.push({ R, N: Nn });
+      }
+      for (let i = 0; i + 1 < n; i++)
+        for (let j = 0; j < seg; j++) {
+          const j1 = (j + 1) % seg, A = rings[i], B = rings[i + 1];
+          this.triN(A.R[j], B.R[j], A.R[j1], A.N[j], B.N[j], A.N[j1], col);
+          this.triN(A.R[j1], B.R[j], B.R[j1], A.N[j1], B.N[j], B.N[j1], col);
+        }
+      if (capEnd) {
+        const L = rings[n - 1], c = pts[n - 1], tn = v3(c.x - pts[n - 2].x, c.y - pts[n - 2].y, c.z - pts[n - 2].z).normalize();
+        for (let j = 0; j < seg; j++) this.triN(c, L.R[j], L.R[(j + 1) % seg], tn, tn, tn, shade(col, 0.05));
+      }
     }
 
     toGeometry() {
@@ -764,6 +928,52 @@ void main() {
   }
   const UV00 = [0, 0], UV10 = [1, 0], UV01 = [0, 1], UV11 = [1, 1];
   function v3(x, y, z) { return new THREE.Vector3(x, y, z); }
+  // 单位二十面体细分（缓存）：v = 顶点（单位向量），f = 三角形顶点下标
+  const _ico = [];
+  function icosphere(detail) {
+    detail = Math.max(0, Math.min(3, detail | 0));
+    if (_ico[detail]) return _ico[detail];
+    const t = (1 + Math.sqrt(5)) / 2;
+    let V = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]]
+      .map(p => { const l = Math.hypot(p[0], p[1], p[2]); return [p[0] / l, p[1] / l, p[2] / l]; });
+    let F = [0, 11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11, 1, 5, 9, 5, 11, 4, 11, 10, 2, 10, 7, 6, 7, 1, 8,
+      3, 9, 4, 3, 4, 2, 3, 2, 6, 3, 6, 8, 3, 8, 9, 4, 9, 5, 2, 4, 11, 6, 2, 10, 8, 6, 7, 9, 8, 1];
+    for (let d = 0; d < detail; d++) {
+      const mid = new Map(), F2 = [];
+      const m = (a, b) => {
+        const k = a < b ? a * 4096 + b : b * 4096 + a;
+        let i = mid.get(k);
+        if (i === undefined) {
+          const p = V[a], q = V[b], x = p[0] + q[0], y = p[1] + q[1], z = p[2] + q[2], l = Math.hypot(x, y, z);
+          i = V.length; V.push([x / l, y / l, z / l]); mid.set(k, i);
+        }
+        return i;
+      };
+      for (let q = 0; q < F.length; q += 3) {
+        const a = F[q], b = F[q + 1], c = F[q + 2], ab = m(a, b), bc = m(b, c), ca = m(c, a);
+        F2.push(a, ab, ca, b, bc, ab, c, ca, bc, ab, bc, ca);
+      }
+      F = F2;
+    }
+    const v = new Float32Array(V.length * 3);
+    V.forEach((p, i) => { v[i * 3] = p[0]; v[i * 3 + 1] = p[1]; v[i * 3 + 2] = p[2]; });
+    _ico[detail] = { v, f: Uint16Array.from(F) };
+    return _ico[detail];
+  }
+  // 索引网格的平滑法线（面法线按面积累加），朝离开 center 的方向
+  function smoothNormals(P, F, center) {
+    const N = new Float64Array(P.length);
+    for (let q = 0; q < F.length; q += 3) {
+      const a = F[q] * 3, b = F[q + 1] * 3, c = F[q + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const ox = (P[a] + P[b] + P[c]) / 3 - center.x, oy = (P[a + 1] + P[b + 1] + P[c + 1]) / 3 - center.y, oz = (P[a + 2] + P[b + 2] + P[c + 2]) / 3 - center.z;
+      if (nx * ox + ny * oy + nz * oz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      for (const i of [a, b, c]) { N[i] += nx; N[i + 1] += ny; N[i + 2] += nz; }
+    }
+    for (let i = 0; i < N.length; i += 3) { const l = Math.hypot(N[i], N[i + 1], N[i + 2]) || 1; N[i] /= l; N[i + 1] /= l; N[i + 2] /= l; }
+    return N;
+  }
   function nrm(x, y, z) { const l = Math.sqrt(x * x + y * y + z * z) || 1; return { x: x / l, y: y / l, z: z / l }; }
   // up, down, left, right, forward, back（Unity）
   const BLOB_PTS = [{ x: 0, y: 1, z: 0 }, { x: 0, y: -1, z: 0 }, { x: -1, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }];
@@ -773,12 +983,14 @@ void main() {
   const C = (r, g, b) => new THREE.Color(r, g, b);
   const addv = (p, x, y, z) => v3(p.x + x, p.y + y, p.z + z);
   const Models = {
+    // 第三版：平滑树干与圆润树冠（阔叶约 92、针叶约 72 个三角形）
     tree(mb, p, s, leaf, pine, seed) {
-      mb.cylinder(p, 0.06 * s, 0.05 * s, 0.35 * s, 4, C(0.38, 0.27, 0.16), false);
+      leaf = MeshBuilder._rgb(leaf);
+      mb.lathe(p, [[0.065 * s, 0], [0.045 * s, 0.4 * s]], 6, C(0.38, 0.27, 0.16));
       if (pine) {
-        mb.cone(addv(p, 0, 0.25 * s, 0), 0.42 * s, 0.7 * s, 6, leaf);
-        mb.cone(addv(p, 0, 0.6 * s, 0), 0.32 * s, 0.6 * s, 6, shade(leaf, 0.08));
-      } else mb.blob(addv(p, 0, 0.65 * s, 0), v3(0.42 * s, 0.4 * s, 0.42 * s), leaf, seed);
+        mb.lathe(addv(p, 0, 0.22 * s, 0), [[0, 0.06 * s], [0.44 * s, 0, null, true], [0.2 * s, 0.36 * s], [0, 0.66 * s]], 10, shade(leaf, -0.04));
+        mb.lathe(addv(p, 0, 0.6 * s, 0), [[0, 0.05 * s], [0.32 * s, 0, null, true], [0.13 * s, 0.32 * s], [0, 0.58 * s]], 10, shade(leaf, 0.08));
+      } else mb.sphere(addv(p, 0, 0.66 * s, 0), v3(0.43 * s, 0.41 * s, 0.43 * s), leaf, 1, { seed: seed || 0, rough: 0.07, bottomShade: 0.25 });
     },
 
     // 城池：城墙、角楼、主殿、旗帜。size 约为占地半径。返回 BufferGeometry
@@ -871,6 +1083,304 @@ void main() {
       mb.flag(at(-0.16, 0.4, -0.1), 0.9 * s, 0.36 * s, 0.28 * s, team);
     },
   };
+
+  // ======================================================== 第三版：地形材质 --
+  // 程序化细节纹理（可平铺，256²，RGBA，带 mipmap）——全部在代码中生成，不载入素材：
+  //   A.r 草地明暗（簇状噪声）  A.g 泥土 / 碎石  A.b 沙纹  A.a 柔和噪声（雪面、过渡边缘）
+  //   B.r 岩石明暗（层理 + 裂隙 + 脊状噪声）  B.g 大尺度变化  B.b 农田地块编号（0 = 田埂小路）  B.a 犁沟
+  const TEX_N = 256;
+  function periodicNoise(N, P, rnd) {
+    const lat = new Float32Array(P * P);
+    for (let i = 0; i < lat.length; i++) lat[i] = rnd.nextDouble();
+    const out = new Float32Array(N * N), cell = N / P;
+    for (let y = 0; y < N; y++) {
+      const gy = y / cell, iy = Math.floor(gy);
+      let fy = gy - iy; fy = fy * fy * (3 - 2 * fy);
+      const y0 = (iy % P) * P, y1 = ((iy + 1) % P) * P;
+      for (let x = 0; x < N; x++) {
+        const gx = x / cell, ix = Math.floor(gx);
+        let fx = gx - ix; fx = fx * fx * (3 - 2 * fx);
+        const x0 = ix % P, x1 = (ix + 1) % P;
+        const a = lat[y0 + x0], b = lat[y0 + x1], c = lat[y1 + x0], d = lat[y1 + x1];
+        out[y * N + x] = (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
+      }
+    }
+    return out;
+  }
+  function* fbmTex(N, periods, amps, seed, out) {
+    const rnd = SG.SeededRandom(seed), acc = new Float32Array(N * N);
+    for (let o = 0; o < periods.length; o++) {
+      const n = periodicNoise(N, periods[o], rnd);
+      for (let i = 0; i < acc.length; i++) acc[i] += n[i] * amps[o];
+      yield;
+    }
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < acc.length; i++) { lo = Math.min(lo, acc[i]); hi = Math.max(hi, acc[i]); }
+    for (let i = 0; i < acc.length; i++) acc[i] = (acc[i] - lo) / Math.max(1e-6, hi - lo);
+    out.v = acc;
+  }
+  // 可平铺的 Worley 噪声：f1 = 到最近特征点的距离，f2 − f1（裂隙 / 卵石边缘）
+  function* worleyTex(N, P, seed, out) {
+    const rnd = SG.SeededRandom(seed), cell = N / P;
+    const fx = new Float32Array(P * P), fy = new Float32Array(P * P);
+    for (let i = 0; i < P * P; i++) { fx[i] = rnd.nextDouble(); fy[i] = rnd.nextDouble(); }
+    const f1 = new Float32Array(N * N), f21 = new Float32Array(N * N);
+    for (let y = 0; y < N; y++) {
+      const cy = Math.floor(y / cell);
+      for (let x = 0; x < N; x++) {
+        const cx = Math.floor(x / cell);
+        let d1 = 1e9, d2 = 1e9;
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+          const gx = cx + i, gy = cy + j, k = ((gy + P) % P) * P + ((gx + P) % P);
+          const px = (gx + fx[k]) * cell, py = (gy + fy[k]) * cell;
+          const d = Math.hypot(px - x, py - y);
+          if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+        }
+        f1[y * N + x] = d1 / cell; f21[y * N + x] = (d2 - d1) / cell;
+      }
+      if ((y & 31) === 31) yield;
+    }
+    out.f1 = f1; out.f21 = f21;
+  }
+  function makeDataTex(data, N) {
+    const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.generateMipmaps = true;
+    if (Gfx.renderer) t.anisotropy = Math.min(4, Gfx.renderer.capabilities.getMaxAnisotropy());
+    t.needsUpdate = true;
+    return t;
+  }
+  let _detail = null;
+  // 生成器（可分片）；完成后 Gfx.terrainDetail() 直接返回
+  function* terrainDetailGen() {
+    if (_detail) return _detail;
+    const N = TEX_N, NN = N * N;
+    const g = {}, m = {}, s = {}, r = {}, w = {}, w2 = {}, lo = {};
+    yield* fbmTex(N, [4, 8, 16, 32, 64, 128], [0.1, 0.16, 0.2, 0.2, 0.18, 0.16], 101, g);
+    yield* fbmTex(N, [2, 4, 8, 16], [0.4, 0.3, 0.2, 0.1], 202, lo);
+    yield* fbmTex(N, [8, 16, 32], [0.5, 0.3, 0.2], 303, m);
+    yield* worleyTex(N, 22, 404, w);
+    yield* fbmTex(N, [4, 8, 16, 32, 64], [0.32, 0.26, 0.2, 0.14, 0.08], 505, r);
+    yield* worleyTex(N, 16, 606, w2);
+    yield* fbmTex(N, [4, 8], [0.6, 0.4], 707, s);
+    const A = new Uint8Array(NN * 4), B = new Uint8Array(NN * 4);
+    const b8 = v => Math.max(0, Math.min(255, Math.round(v * 255)));
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const i = y * N + x, o = i * 4;
+        // 草地：细噪声 + 簇（向两极拉开）
+        let gr = g.v[i];
+        gr = 0.5 + (gr - 0.5) * 1.6;
+        A[o] = b8(gr);
+        // 泥土：卵石（Worley）+ 噪声
+        const peb = Math.min(1, w.f1[i] * 1.3);
+        A[o + 1] = b8(0.35 + 0.4 * (1 - peb * peb) * (0.6 + 0.4 * m.v[i]) + 0.25 * g.v[i] - (w.f21[i] < 0.05 ? 0.18 : 0));
+        // 沙纹：沿对角方向、整数周期（可平铺），用噪声扭曲
+        const ph = (x + y) / N * 14 + (s.v[i] - 0.5) * 2.2;
+        const rip = 0.5 + 0.5 * Math.sin(ph * Math.PI * 2);
+        A[o + 2] = b8(0.25 + 0.45 * rip * rip + 0.3 * g.v[i]);
+        A[o + 3] = b8(lo.v[i]);
+        // 岩石：脊状噪声 + 层理 + 颗粒 + 细裂隙（裂隙网按噪声扭曲，不成规则多边形）
+        const ridge = 1 - Math.abs(r.v[i] * 2 - 1);
+        const strata = 0.5 + 0.5 * Math.sin((y / N * 9 + r.v[i] * 1.6) * Math.PI * 2);
+        let rock = 0.22 + 0.4 * ridge * ridge + 0.14 * strata + 0.2 * g.v[i] + 0.1 * m.v[i];
+        const wx = (x + Math.round((m.v[i] - 0.5) * 40) + N) % N, wy = (y + Math.round((lo.v[i] - 0.5) * 40) + N) % N;
+        const cr = w2.f21[wy * N + wx];
+        if (cr < 0.04) rock *= 0.78 + 0.22 * cr / 0.04;
+        B[o] = b8(rock);
+        B[o + 1] = b8(lo.v[(i * 7) % NN] * 0.5 + m.v[i] * 0.5);
+      }
+      if ((y & 63) === 63) yield;
+    }
+    // 农田：按行切成田块（行高、田宽随机，可平铺），田埂编号 0；犁沟方向逐块随机（周期 8 像素，整除 256）
+    const rnd = SG.SeededRandom(808);
+    const cut = (total, min, max) => { const a = []; let t = 0; while (t < total) { const v = min + rnd.nextDouble() * (max - min); a.push(v); t += v; } const k = total / t; let c = 0; return a.map(v => (c += v * k)); };
+    const rows = cut(N, 34, 84);
+    let r0 = 0;
+    for (let ri = 0; ri < rows.length; ri++) {
+      const r1 = rows[ri], shift = Math.floor(rnd.nextDouble() * N);
+      const cols = cut(N, 30, 96);
+      const ids = cols.map(() => 0.06 + rnd.nextDouble() * 0.94), dirs = cols.map(() => rnd.nextDouble() < 0.5);
+      for (let y = Math.floor(r0); y < Math.floor(r1); y++) {
+        for (let xx = 0; xx < N; xx++) {
+          const x = (xx + shift) % N;
+          let c0 = 0, k = 0;
+          while (k < cols.length - 1 && cols[k] <= xx) { c0 = cols[k]; k++; }
+          const edge = Math.min(xx - c0, cols[k] - xx, y - r0, r1 - y);
+          const o = (y * N + x) * 4;
+          const furrow = 0.5 + 0.5 * Math.sin(((dirs[k] ? x : y) / 8) * Math.PI * 2);
+          B[o + 2] = edge < 1.6 ? 0 : b8(ids[k]);
+          B[o + 3] = b8(0.55 + 0.45 * furrow * (0.7 + 0.3 * g.v[y * N + x]));
+        }
+      }
+      r0 = r1;
+      yield;
+    }
+    _detail = { a: makeDataTex(A, N), b: makeDataTex(B, N) };
+    return _detail;
+  }
+
+  // 地形着色器（在 LowPoly 光照之上）：按坡度 / 高度 / 群落混合草地、干草、泥土、农田、沙、岩石（三平面投影）、雪与海床，
+  // 再乘以凹凸遮蔽。两种取数方式：
+  //   maps 版（战略地图）：法线 / 高度、群落色、材质权重来自地图数据纹理（js/map-view.js 生成），几何体只需位置与法线；
+  //   顶点版（其他场景可用）：顶点色 = 群落底色，attribute vec4 aMat = (沙, 岩石倾向, 雪, 1 − 农田)（缺省 (0,0,0,1) = 纯草地）。
+  const TERRAIN_VS_PARS = 'varying vec3 vSgW;\nvarying vec3 vSgNW;\n#ifndef SG_TERRAIN_MAPS\nattribute vec4 aMat;\nvarying vec4 vSgMat;\n#endif\n';
+  const TERRAIN_VS_MAIN = '#include <project_vertex>\n\tvSgW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\n\tvSgNW = normalize( mat3( modelMatrix ) * objectNormal );\n#ifndef SG_TERRAIN_MAPS\n\tvSgMat = aMat;\n#endif\n';
+  const TERRAIN_FS_PARS = `
+uniform sampler2D sgDetA;
+uniform sampler2D sgDetB;
+varying vec3 vSgW;
+varying vec3 vSgNW;
+#ifdef SG_TERRAIN_MAPS
+uniform sampler2D sgMapN;
+uniform sampler2D sgMapC;
+uniform sampler2D sgMapM;
+uniform sampler2D sgOutC;
+uniform sampler2D sgOutM;
+uniform vec4 sgXfN;
+uniform vec4 sgXfC;
+uniform vec4 sgXfO;
+uniform vec4 sgInner;
+#else
+varying vec4 vSgMat;
+#endif
+vec3 sgCrop( float id ) {
+  vec3 c = vec3( 0.42, 0.57, 0.23 );
+  c = mix( c, vec3( 0.75, 0.66, 0.31 ), step( 0.24, id ) );
+  c = mix( c, vec3( 0.53, 0.41, 0.28 ), step( 0.42, id ) );
+  c = mix( c, vec3( 0.33, 0.49, 0.2 ), step( 0.56, id ) );
+  c = mix( c, vec3( 0.64, 0.62, 0.3 ), step( 0.72, id ) );
+  c = mix( c, vec3( 0.47, 0.6, 0.26 ), step( 0.87, id ) );
+  return c;
+}
+`;
+  const TERRAIN_FS_ALBEDO = `
+	vec2 sgP = vec2( vSgW.x, - vSgW.z );
+	float sgH = vSgW.y;
+	vec3 sgTint;
+	vec4 sgMat;
+	float sgForest = 0.0;
+	float sgAO = 0.5;
+	vec3 sgN = normalize( vSgNW );
+#ifdef SG_TERRAIN_MAPS
+	{
+		vec2 e = min( sgP - sgInner.xy, sgInner.zw - sgP );
+		float wI = clamp( min( e.x, e.y ) * 0.2, 0.0, 1.0 );
+		sgTint = vec3( 0.0 ); sgMat = vec4( 0.0 );
+		if ( wI < 1.0 ) {
+			vec2 uvO = sgP * sgXfO.zw + sgXfO.xy;
+			sgTint = texture2D( sgOutC, uvO ).rgb * ( 1.0 - wI );
+			sgMat = texture2D( sgOutM, uvO ) * ( 1.0 - wI );
+		}
+		if ( wI > 0.0 ) {
+			vec2 uvC = sgP * sgXfC.zw + sgXfC.xy;
+			vec4 ic = texture2D( sgMapC, uvC );
+			vec4 tn = texture2D( sgMapN, sgP * sgXfN.zw + sgXfN.xy );
+			vec3 n2 = vec3( tn.r * 2.0 - 1.0, 0.0, tn.g * 2.0 - 1.0 );
+			n2.y = sqrt( max( 0.0, 1.0 - dot( n2.xz, n2.xz ) ) );
+			sgTint += ic.rgb * wI;
+			sgMat += texture2D( sgMapM, uvC ) * wI;
+			sgForest = ic.a * wI;
+			sgAO = mix( 0.5, tn.b, wI );
+			sgN = normalize( mix( sgN, n2, wI ) );
+		}
+	}
+#else
+	sgTint = diffuseColor.rgb;
+	sgMat = vSgMat;
+#endif
+	vec4 sgDA = texture2D( sgDetA, sgP * 0.23 );
+	vec4 sgDM = texture2D( sgDetA, sgP * 0.047 + vec2( 0.31, 0.67 ) );
+	vec4 sgDF = texture2D( sgDetA, sgP * 0.93 + vec2( 0.53, 0.19 ) );
+	float sgSlope = 1.0 - sgN.y;
+	// 草地：三级细节明暗（近处可见草簇纹理）+ 大尺度的干湿斑块 + 林下压暗
+	vec3 sgCol = sgTint * ( 0.76 + 0.5 * ( sgDA.r * 0.36 + sgDF.r * 0.28 + sgDM.r * 0.36 ) );
+	sgCol = mix( sgCol, sgCol * vec3( 1.1, 1.03, 0.8 ), smoothstep( 0.5, 0.78, sgDM.g ) * 0.55 );
+	sgCol = mix( sgCol, sgCol * vec3( 0.78, 0.86, 0.74 ), smoothstep( 0.55, 0.85, sgDM.a ) * 0.6 );
+	sgCol *= 1.0 - 0.3 * sgForest;
+	// 裸土：陡坡、干旱区的斑块
+	float sgDry = clamp( ( sgTint.r - sgTint.g * 0.85 ) * 4.0 + 0.3, 0.0, 1.0 );
+	float sgDirtW = smoothstep( 0.66, 0.9, sgDM.a * 0.62 + sgSlope * 0.95 + sgDry * 0.2 + ( sgDA.g - 0.5 ) * 0.2 );
+	vec3 sgDirt = mix( vec3( 0.48, 0.39, 0.28 ), sgTint * vec3( 0.95, 0.85, 0.7 ), 0.35 ) * ( 0.78 + 0.44 * sgDA.g );
+	sgCol = mix( sgCol, sgDirt, sgDirtW * 0.85 );
+	// 农田：地块、犁沟、田埂
+	float sgFarm = 1.0 - sgMat.a;
+	float sgFw = 0.0;
+	if ( sgFarm > 0.02 ) {
+		vec4 sgDB = texture2D( sgDetB, sgP * 0.11 + vec2( 0.13, 0.71 ) );
+		vec3 sgCrop3 = sgCrop( sgDB.b ) * ( 0.8 + 0.34 * sgDB.a );
+		sgCrop3 = mix( sgCrop3, vec3( 0.58, 0.5, 0.36 ), step( sgDB.b, 0.03 ) );
+		sgCrop3 = mix( sgCrop3, sgTint, 0.15 );
+		sgFw = smoothstep( 0.3, 0.52, sgFarm + ( sgDM.r - 0.5 ) * 0.55 ) * ( 1.0 - smoothstep( 0.1, 0.26, sgSlope ) );
+		sgCol = mix( sgCol, sgCrop3, sgFw );
+	}
+	// 沙：海滩与河岸（按高度）、沙漠（按群落）
+	float sgBeach = 1.0 - smoothstep( 0.2, 0.48, sgH + ( sgDA.b - 0.5 ) * 0.14 );
+	vec3 sgSand = mix( vec3( 0.87, 0.8, 0.62 ), sgTint * 1.05, clamp( sgMat.r * 0.7, 0.0, 0.6 ) ) * ( 0.86 + 0.24 * sgDA.b );
+	sgSand *= mix( 0.8, 1.0, smoothstep( 0.0, 0.22, sgH ) );
+	sgCol = mix( sgCol, sgSand, max( sgBeach, smoothstep( 0.2, 0.7, sgMat.r + ( sgDM.a - 0.5 ) * 0.25 ) * ( 1.0 - sgFw ) ) );
+	// 岩石：陡坡与高山（三平面投影，避免峭壁上的纹理拉伸）
+	float sgRockW = smoothstep( 0.4, 0.62, sgSlope + ( sgDM.a - 0.5 ) * 0.22 - sgMat.g * 0.12 );
+	sgRockW = max( sgRockW, smoothstep( 4.4, 6.6, sgH + ( sgDM.r - 0.5 ) * 1.6 + sgMat.g * 1.0 ) );
+	if ( sgRockW > 0.004 ) {
+		vec3 sgBw = sgN * sgN; sgBw *= sgBw; sgBw /= ( sgBw.x + sgBw.y + sgBw.z );
+		float sgR = texture2D( sgDetB, vSgW.zy * 0.19 ).r * sgBw.x + texture2D( sgDetB, vSgW.xz * 0.19 ).r * sgBw.y + texture2D( sgDetB, vSgW.xy * 0.19 ).r * sgBw.z;
+		vec3 sgRockC = mix( vec3( 0.46, 0.44, 0.41 ), vec3( 0.56, 0.47, 0.37 ), clamp( sgMat.g, 0.0, 1.0 ) ) * ( 0.55 + 0.75 * sgR );
+		sgCol = mix( sgCol, sgRockC, sgRockW );
+		sgAO += ( sgR - 0.5 ) * 0.25 * sgRockW;
+	}
+	// 雪：雪线以上、坡度不太陡处，边缘带噪声
+	float sgSnowW = smoothstep( 0.3, 0.62, sgMat.b + ( sgDA.a - 0.5 ) * 0.5 + ( sgDM.a - 0.5 ) * 0.3 - sgSlope * 0.7 );
+	sgCol = mix( sgCol, vec3( 0.8, 0.83, 0.88 ) * ( 0.88 + 0.16 * sgDA.a ), sgSnowW );
+	// 水下的海床
+	sgCol = mix( sgCol, vec3( 0.6, 0.57, 0.45 ) * ( 0.85 + 0.2 * sgDA.b ), smoothstep( -0.05, -0.7, sgH ) * 0.75 );
+	sgCol *= 0.74 + 0.52 * clamp( sgAO, 0.0, 1.0 );
+	diffuseColor.rgb = sgCol;
+`;
+  const TERRAIN_FS_NORMAL = '#include <normal_fragment_maps>\n\tnormal = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );';
+  // 高光肩部：与旧版地形材质相同（向阳的亮面不截断成纯白）
+  const SHOULDER_KNEE = '0.8';
+  const SHOULDER =
+    '\tfloat sgPeak = max( max( outgoingLight.r, outgoingLight.g ), outgoingLight.b );\n' +
+    '\tif ( sgPeak > ' + SHOULDER_KNEE + ' ) outgoingLight *= ( ' + SHOULDER_KNEE + ' + ( 1.0 - ' + SHOULDER_KNEE + ' ) * ( 1.0 - exp( ( ' + SHOULDER_KNEE +
+    ' - sgPeak ) / ( 1.0 - ' + SHOULDER_KNEE + ' ) ) ) ) / sgPeak;\n' +
+    '\t#include <opaque_fragment>';
+
+  Object.assign(Gfx, {
+    // 地形细节纹理 { a, b }（同步生成，约 40ms；地图构建时用 terrainDetailGen 分片生成）
+    terrainDetail() { if (!_detail) { const it = terrainDetailGen(); while (!it.next().done) { /* 同步跑完 */ } } return _detail; },
+    terrainDetailGen,
+    // 新建地形材质。opts.maps = { n, c, m, oc, om: DataTexture；xfN, xfC, xfO: Vector4（uv = 地图坐标 × zw + xy）；inner: Vector4(x0, z0, x1, z1)}
+    terrainMaterial(opts) {
+      const o = opts || {};
+      const det = Gfx.terrainDetail();
+      const mat = new LowPolyMaterial();
+      const u = { sgDetA: { value: det.a }, sgDetB: { value: det.b } };
+      if (o.maps) {
+        const m = o.maps;
+        mat.vertexColors = false;
+        mat.defines = { SG_TERRAIN_MAPS: '' };
+        Object.assign(u, {
+          sgMapN: { value: m.n }, sgMapC: { value: m.c }, sgMapM: { value: m.m }, sgOutC: { value: m.oc }, sgOutM: { value: m.om },
+          sgXfN: { value: m.xfN }, sgXfC: { value: m.xfC }, sgXfO: { value: m.xfO }, sgInner: { value: m.inner },
+        });
+      }
+      mat.userData.terrainUniforms = u;
+      mat.onBeforeCompile = function terrainCompile(shader, renderer) {
+        lowPolyCompile.call(this, shader, renderer);
+        Object.assign(shader.uniforms, u);
+        shader.vertexShader = TERRAIN_VS_PARS + shader.vertexShader.replace('#include <project_vertex>', TERRAIN_VS_MAIN);
+        shader.fragmentShader = TERRAIN_FS_PARS + shader.fragmentShader
+          .replace('#include <color_fragment>', '#include <color_fragment>\n' + TERRAIN_FS_ALBEDO)
+          .replace('#include <normal_fragment_maps>', TERRAIN_FS_NORMAL)
+          .replace('#include <opaque_fragment>', SHOULDER);
+      };
+      mat.name = o.maps ? 'TerrainMaps' : 'TerrainVerts';
+      return mat;
+    },
+  });
 
   SG.Gfx = Gfx;
   SG.MeshBuilder = MeshBuilder;

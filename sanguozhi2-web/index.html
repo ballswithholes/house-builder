@@ -7,10 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="霸王的大陆">
+<meta name="apple-mobile-web-app-title" content="霸王的世界">
+<meta name="application-name" content="三国志-霸王的世界">
 <meta name="format-detection" content="telephone=no">
-<meta name="description" content="三国志II 霸王的大陆 · 网页版">
-<title>霸王的大陆</title>
+<meta name="description" content="三国志-霸王的世界 · 网页版：东起倭国、西至罗马，群雄逐鹿的战略游戏">
+<title>三国志-霸王的世界</title>
 <style>
   /* 关键样式（css/style.css 在其后载入，可覆盖） */
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #12121a;
@@ -28,8 +29,11 @@
     display: flex; align-items: center; justify-content: center; font-size: 56px; line-height: 1;
     box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,220,170,.25);
     animation: sg-seal 2.4s ease-in-out infinite; }
-  #loading .sg-loading-title { font-size: 40px; color: #f3c969; letter-spacing: .12em;
-    text-shadow: 0 2px 0 #4d1f05, 0 6px 14px rgba(0,0,0,.6); }
+  #loading .sg-loading-title { font-size: 40px; color: #f3c969; letter-spacing: .12em; white-space: nowrap;
+    display: flex; align-items: baseline; gap: .1em; text-shadow: 0 2px 0 #4d1f05, 0 6px 14px rgba(0,0,0,.6); }
+  #loading .sg-loading-title .sg-lt-pre { font-size: .62em; color: #f5eddb; letter-spacing: .2em; }
+  #loading .sg-loading-title .sg-lt-dash { font-size: .62em; color: rgba(243,201,105,.7); margin: 0 .1em 0 -.05em; }
+  @media (max-width: 420px) { #loading .sg-loading-title { font-size: 30px; } }
   #loading .sg-loading-text { font-size: 18px; color: #d8cfbb; letter-spacing: .3em; }
   #loading .sg-loading-bar { width: 220px; height: 3px; border-radius: 2px; background: rgba(243,201,105,.15); overflow: hidden; }
   #loading .sg-loading-bar i { display: block; width: 40%; height: 100%; border-radius: 2px;
@@ -59,7 +63,7 @@
 
 <div id="loading" role="status" aria-live="polite">
   <div class="sg-loading-seal">霸</div>
-  <div class="sg-loading-title">霸王的大陆</div>
+  <div class="sg-loading-title" aria-label="三国志-霸王的世界"><span class="sg-lt-pre">三国志</span><span class="sg-lt-dash">-</span>霸王的世界</div>
   <div class="sg-loading-text">正在绘制山河……</div>
   <div class="sg-loading-bar"><i></i></div>
 </div>
