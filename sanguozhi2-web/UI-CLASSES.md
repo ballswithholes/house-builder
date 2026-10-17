@@ -55,6 +55,11 @@ SG.UI.toast(html, seconds = 2.2)
 SG.UI.banner(text, sub = null, seconds = 2.4)
 SG.UI.anyModal()                                               → boolean
 
+// 第三版 §4 成长界面（类名表见 css/style.css 末尾「第三版 §4 成长界面」一节的注释）
+SG.UI.notice(title, bodyHtml, { ok, width, className })        → Promise<void>  只有一个按钮的说明框（.sg-confirm.sg-notice）
+SG.UI.lvTag(gen, cls)                                          → 「Lv5」小标签 HTML（.sg-lv）
+SG.UI.expBar(pct, cls)                                         → 经验条 HTML（.sg-expbar > i，--v = 0..1）
+
 // 世界坐标标签
 SG.UI.follow(el, () => worldVec3, { offsetY = 0, hideBeyond = 9999, align = 'center' })
     // → { el, alpha, remove(), update() }；align: 'center' | 'bottom' | 'top' | 'none'（左上角对准）
