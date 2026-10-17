@@ -126,6 +126,19 @@
   };
   SG.esc = function (s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); };
 
+  // ------------------------------------------------------------- 文化代号 --
+  // DESIGN-V2 §6 的 15 种基础文化 + 第三版新增的 india（天竺诸国）、africa（阿克苏姆、库施）、moor（毛里人 / 巴夸特）。
+  // 某个模块没有某文化的专门外观时，用 SG.cultureBase(code) 取它的回退文化（唯一的回退表）：
+  //   india → seasia，africa → arab，moor → arab；基础文化返回自身；未知 / 空 → han。
+  // 已有专门外观的模块应先查 code 本身，查不到再查 cultureBase(code)。
+  const CULTURE_BASE = {
+    han: 'han', nanman: 'nanman', wa: 'wa', yi: 'yi', korea: 'korea', steppe: 'steppe', seasia: 'seasia', tarim: 'tarim', kushan: 'kushan',
+    persia: 'persia', arab: 'arab', roman: 'roman', celt: 'celt', german: 'german', sarmatian: 'sarmatian',
+    india: 'seasia', africa: 'arab', moor: 'arab',
+  };
+  SG.CULTURES = Object.keys(CULTURE_BASE);
+  SG.cultureBase = function (code) { return (code && CULTURE_BASE[code]) || 'han'; };
+
   // ------------------------------------------------------------- 坐标约定 --
   // Unity 为左手系（z 向北）。three.js 为右手系。
   // 约定：世界坐标 three = (unityX, unityY, -unityZ)。地图坐标 (mapX, mapY) 对应 unity (x, *, z=mapY)。
