@@ -403,9 +403,11 @@
         if (r.success) { u.xp.tactics++; if (r.dmg > 0) this.xpHit(u, target, r.dmg); }
         else u.xp.tacFail++;
       }
+      // 胜负判定放在记经验之后：火计 / 落石击溃最后一支敌军或敌主将时，施计者的经验也计入战后结算
+      this.checkEnd();
       return r;
     }
-    // 原四计（第一版规则，原样保留）
+    // 原四计（第一版规则，原样保留；第一版末尾的 checkEnd 移到 useTactic 记经验之后，结果与随机数序列不变）
     useTactic1(u, t, target) {
       if (t.kind === TacticKind.Inspire) {
         for (const o of this.units) {
@@ -432,7 +434,6 @@
         target.morale = Math.max(0, target.morale - 10);
         this.checkRout(target);
       }
-      this.checkEnd();
       return { success: true, dmg };
     }
 
@@ -603,7 +604,7 @@
       if (!cands.length) { res.why = '范围内无目标'; return res; }
       if (!target || cands.indexOf(target) < 0) target = cands[0];
       res.target = target; res.center = P(target.x, target.y);
-      if (t.cd > 0) { if (!u.tacReady) u.tacReady = {}; u.tacReady[t.id] = this.day + t.cd; }
+      if (t.cd > 0) { if (!u.tacReady) u.tacReady = {}; u.tacReady[t.id] = this.day + t.cd + 1; }   // 「冷却 N 日」：之后 N 日不能用
       const p = this.tacticChance(u, t, target);
       if (p < 1 && SG.Random.value() > p) {
         res.resisted.push(target);
@@ -631,7 +632,7 @@
       if (!Pg || !Pg.enabled) return;
       const win = this.result === 1 ? 0 : 1;
       for (const u of this.units) {
-        if (!u.gen) continue;
+        if (!u.gen || !(u.troops0 > 0)) continue;     // 无兵上阵的武将不计（与自动结算 autoBattle 相同）
         const won = u.side === win;
         const x = u.xp || {};
         const e = Pg.battleExp(Object.assign({}, x, { won, commander: !!u.commander }));

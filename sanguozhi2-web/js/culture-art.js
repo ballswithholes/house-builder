@@ -1,6 +1,15 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 各文化的城池模型（DESIGN-V2 §4G、§6）
+   三国志-霸王的世界 · 网页版 · 各文化的城池模型（DESIGN-V2 §4G、§6；第三版 DESIGN-V3 §1：平滑、细致）
+   第三版：圆形构件（塔、穹顶、窣堵波、毡帐、立柱、圆锥顶、山丘）一律改为平滑旋转体 / 椭球；
+   汉地城池不再用 SG.Models.cityInto，改为 B.han（女墙垛口、马面、两层角楼、重檐城楼、三层台基的重檐主殿、
+   都城的阙楼与金顶，曲面屋顶来自 MeshBuilder.chineseRoof）；另有远景简化模型 cityFarInto（地图在镜头较远时替换）。
+   第三版修订：罗马（平滑圆塔 + 圆锥瓦顶、半圆拱门、带前阶与山花的列柱神庙、都城为三层拱廊的椭圆竞技场）、
+   安息 / 波斯（尖拱门楼与釉砖框、伊万宫殿的尖拱 + 筒拱大厅、拜火祠穹顶）、阿拉伯（平滑圆城墙与雉堞环）、
+   贵霜 / 印度（带栏楯与四面塔门的窣堵波、拱门僧院、都城穹顶宫殿）重新建模；新增构件 arch / archFrame（平滑拱券）、
+   ellipseRing（平滑椭圆环）、vault（筒拱）、wallBands（檐线与勒脚）、merlonRing（圆形雉堞）；椰树羽叶为弧形叶片。
+   墙面砖缝、屋面瓦垄由地图的 SG.Gfx.masonryMaterial()（js/art.js）在着色器里按世界坐标生成，这里仍只写顶点色。
+   各城三角形约 1.2k–3.5k（罗马都城约 4.4k）。
 
    战略地图上的城池按所属文化换成不同的低多边形模型；汉地城池（han）仍用 SG.Models.cityInto
    （js/art.js）的原模型。与原模型相同的约定：Unity 坐标（x 东、z 北、y 上），size ≈ 占地半径 r，
@@ -28,7 +37,8 @@
      SG.CultureArt.cultures                        已有模型的文化代号
      SG.CultureArt.cultureOfCity(city)             city.culture → SG.WorldData.cultureOfCity(city.key) → 'han'
      SG.CultureArt.isCapital(city, culture?)       汉地：洛阳、长安；其他文化：世界剧本各势力的初始都城（SG.FactionInfo）
-     SG.CultureArt.cityInto(mb, size, culture, capital, city?) → mb    写入 MeshBuilder；han / 未知文化用原模型
+     SG.CultureArt.cityInto(mb, size, culture, capital, city?) → mb    写入 MeshBuilder；未知文化按汉地
+     SG.CultureArt.cityFarInto(mb, size, culture, capital) → mb       远景简化模型（约 300–600 个三角形，轮廓与配色一致）
      SG.CultureArt.city(size, culture, capital)    → BufferGeometry（测试用）
    测试页：tests/culture-art.html（全部文化 × 普通 / 都城的模型一览，可旋转）。
    ========================================================================== */
@@ -178,15 +188,22 @@
     const h = s * (0.75 + rnd.nextDouble() * 0.3), lean = (rnd.nextDouble() - 0.5) * 0.12 * s;
     const top = v3(x + lean, y0 + h, z + lean * 0.4);
     mb.tube([v3(x, y0, z), v3(x + lean * 0.3, y0 + h * 0.45, z + lean * 0.1), top], [0.035 * s, 0.03 * s, 0.024 * s], 6, H('#8a6a44'));
-    const leaf = H('#3f7a34'), up = v3(0, 1, 0);
-    for (let i = 0; i < 7; i++) {
-      const a = i * Math.PI * 2 / 7 + rnd.nextDouble() * 0.4, ca = Math.cos(a), sa = Math.sin(a), L = 0.34 * s;
-      const mid = v3(top.x + ca * L * 0.5, top.y + 0.04 * s, top.z + sa * L * 0.5), tip = v3(top.x + ca * L, top.y - 0.12 * s, top.z + sa * L);
-      const w = 0.07 * s, n = v3(ca * 0.3, 1, sa * 0.3).normalize();
-      const l = v3(mid.x - sa * w, mid.y, mid.z + ca * w), r = v3(mid.x + sa * w, mid.y, mid.z - ca * w);
-      const c = shade(leaf, (i % 2) * 0.08);
-      mb.triN(top, l, mid, up, n, n, c); mb.triN(top, mid, r, up, n, n, c); mb.triN(l, tip, mid, n, n, n, c); mb.triN(mid, tip, r, n, n, n, c);
+    // 第三版修订：羽叶为三段下垂的弧形叶片（中脉隆起、叶宽渐变、逐顶点法线），不再是平面三角
+    const leaf = H('#3f7a34'), up = v3(0, 1, 0), nf = 8;
+    for (let i = 0; i < nf; i++) {
+      const a = i * Math.PI * 2 / nf + rnd.nextDouble() * 0.35, ca = Math.cos(a), sa = Math.sin(a), Lf = (0.34 + rnd.nextDouble() * 0.06) * s;
+      const c = shade(leaf, (i % 2) * 0.08 - 0.02), n = v3(ca * 0.25, 1, sa * 0.25).normalize();
+      let pl = null, pr = null, pc = top;
+      for (let k = 1; k <= 3; k++) {
+        const u = k / 3, L = Lf * u, droop = (0.1 * u - 0.36 * u * u) * s, w = 0.075 * s * Math.sin(Math.PI * Math.min(1, u * 1.1));
+        const cc = v3(top.x + ca * L, top.y + droop, top.z + sa * L);
+        const l = v3(cc.x - sa * w, cc.y - 0.014 * s, cc.z + ca * w), r = v3(cc.x + sa * w, cc.y - 0.014 * s, cc.z - ca * w);
+        if (!pl) { mb.triN(pc, l, cc, up, n, n, c); mb.triN(pc, cc, r, up, n, n, c); }
+        else { mb.triN(pl, l, cc, n, n, n, c); mb.triN(pl, cc, pc, n, n, n, c); mb.triN(pc, cc, r, n, n, n, c); mb.triN(pc, r, pr, n, n, n, c); }
+        pl = l; pr = r; pc = cc;
+      }
     }
+    mb.sphere(v3(top.x, top.y - 0.01 * s, top.z), v3(0.035 * s, 0.03 * s, 0.035 * s), H('#6a5a30'), 1, { bottomShade: 0.3 });
   }
   // 钻天杨
   function poplar(mb, x, z, s, y0) {
@@ -292,7 +309,7 @@
       mb.box(v3(x, wallH * 0.8, z), v3(w, wallH * 0.4, d), stone, 0.08);
     }
     // 女墙垛口（城门处留空，东北角留给旗帜）
-    const mer = 0.08 * s, n = 5;
+    const mer = 0.085 * s, n = 4;
     for (let i = -n; i <= n; i++) {
       const u = i * r / (n + 0.5);
       for (const [x, z, ax] of [[u, -r - t * 0.38, 1], [u, r + t * 0.38, 1], [-r - t * 0.38, u, 0], [r + t * 0.38, u, 0]]) {
@@ -356,8 +373,8 @@
       }
     }
     // 坊屋：白墙灰瓦
-    const houses = [[-0.58, -0.5, 0.3, 0.2], [-0.58, -0.18, 0.3, 0.2], [0.58, -0.5, 0.3, 0.2], [0.58, -0.18, 0.3, 0.2], [-0.62, 0.32, 0.24, 0.3], [0.32, 0.66, 0.22, 0.18], [-0.3, 0.66, 0.22, 0.18]];
-    if (!cap) houses.push([-0.3, -0.42, 0.18, 0.16]);
+    const houses = [[-0.58, -0.5, 0.3, 0.2], [-0.58, -0.18, 0.3, 0.2], [0.58, -0.5, 0.3, 0.2], [0.58, -0.18, 0.3, 0.2], [-0.62, 0.32, 0.24, 0.3]];
+    if (!cap) houses.push([-0.3, 0.66, 0.22, 0.18]);
     for (const [x, z, w, d] of houses) {
       mb.box(v3(x * s, 0.18 * s / 2 + 0.1, z * s), v3(w * s, 0.18 * s, d * s), plaster, 0.06);
       mb.box(v3(x * s, 0.04 * s + 0.1, (z - d / 2) * s - 0.002), v3(w * s * 0.96, 0.08 * s, 0.006), H('#8a8070'));
@@ -368,136 +385,246 @@
     void wood;
   };
 
+  // ------------------------------------------- 第三版修订：拱、椭圆环、筒拱、墙带 --
+  // 拱形门洞 / 窗洞：贴在朝向 (nx, nz)（水平单位向量）的立面上，(x, y0, z) 为立面上的底边中点，宽 w、总高 h；
+  // pointed = 尖拱（安息 / 波斯式）。半圆 / 尖拱部分为 10 段平滑弧线
+  function arch(mb, x, y0, z, w, h, nx, nz, c, pointed) {
+    const tx = -nz, tz = nx, o = 0.004, r = w / 2;
+    const P = (u, y) => v3(x + tx * u + nx * o, y0 + y, z + tz * u + nz * o);
+    const rise = pointed ? r * 1.35 : r, spring = Math.max(0, h - rise);
+    const pts = [P(-r, 0), P(r, 0), P(r, spring)];
+    const N = 10;
+    for (let i = 1; i < N; i++) {
+      const a = i / N * Math.PI, cu = Math.cos(a);
+      const y = pointed ? rise * Math.pow(Math.max(0, 1 - Math.abs(cu)), 0.55) * (Math.sin(a) > 0 ? 1 : 0) : Math.sin(a) * r;
+      pts.push(P(cu * r, spring + y));
+    }
+    pts.push(P(-r, spring));
+    face(mb, pts, c, v3(nx, 0, nz));
+  }
+  // 拱框（门洞外一圈浅色券石）：比门洞宽 2·b
+  function archFrame(mb, x, y0, z, w, h, nx, nz, c, pointed, b) {
+    arch(mb, x - nx * 0.002, y0, z - nz * 0.002, w + 2 * b, h + b, nx, nz, c, pointed);
+  }
+  // 平滑椭圆环（竞技场、圆城）：中心 (cx, cz)，外缘半轴 rx × rz，壁厚 t，底 y0，高 h；外壁、内壁、顶面，逐顶点法线
+  function ellipseRing(mb, cx, cz, rx, rz, y0, h, t, c, cIn, n, noInner) {
+    const P = (a, off, y) => v3(cx + Math.cos(a) * (rx - off), y, cz + Math.sin(a) * (rz - off));
+    const N = (a, k) => { const x = Math.cos(a) / rx, z = Math.sin(a) / rz, l = Math.hypot(x, z); return v3(k * x / l, 0, k * z / l); };
+    const up = v3(0, 1, 0), top = shade(c, 0.07);
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+      mb.triN(P(a0, 0, y0), P(a1, 0, y0), P(a1, 0, y0 + h), N(a0, 1), N(a1, 1), N(a1, 1), c);
+      mb.triN(P(a0, 0, y0), P(a1, 0, y0 + h), P(a0, 0, y0 + h), N(a0, 1), N(a1, 1), N(a0, 1), c);
+      if (!noInner) {
+        mb.triN(P(a0, t, y0), P(a1, t, y0 + h), P(a1, t, y0), N(a0, -1), N(a1, -1), N(a1, -1), cIn || c);
+        mb.triN(P(a0, t, y0), P(a0, t, y0 + h), P(a1, t, y0 + h), N(a0, -1), N(a0, -1), N(a1, -1), cIn || c);
+      }
+      mb.triN(P(a0, 0, y0 + h), P(a1, 0, y0 + h), P(a1, t, y0 + h), up, up, up, top);
+      mb.triN(P(a0, 0, y0 + h), P(a1, t, y0 + h), P(a0, t, y0 + h), up, up, up, top);
+    }
+  }
+  // 筒拱（半圆柱，轴沿 z）：跨中心 (x, y, z0→z1)，半径 r；后端半圆封口
+  function vault(mb, x, y, z0, z1, r, c, n) {
+    n = n || 12;
+    const back = v3(0, 0, z1 > z0 ? 1 : -1);
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * Math.PI, a1 = (i + 1) / n * Math.PI;
+      const p = (a, z) => v3(x + Math.cos(a) * r, y + Math.sin(a) * r, z), nn = a => v3(Math.cos(a), Math.sin(a), 0);
+      mb.triN(p(a0, z0), p(a1, z0), p(a1, z1), nn(a0), nn(a1), nn(a1), c);
+      mb.triN(p(a0, z0), p(a1, z1), p(a0, z1), nn(a0), nn(a1), nn(a0), c);
+      mb.triN(v3(x, y, z1), p(a0, z1), p(a1, z1), back, back, back, shade(c, -0.15));
+    }
+  }
+  // 墙带：方城四面的墙顶檐线与墙脚勒脚（略宽于墙身），打破整块方墙的单调
+  function wallBands(mb, r, h, t, c) {
+    const c2 = shade(c, -0.08);
+    for (const [x, z, w, d] of [[0, -r, r * 2 + t, t], [0, r, r * 2 + t, t], [-r, 0, t, r * 2 + t], [r, 0, t, r * 2 + t]]) {
+      const kx = w > d ? 1 : 1.25, kz = d > w ? 1 : 1.25;
+      mb.box(v3(x, h - 0.022 * r, z), v3(w * kx, 0.03 * r, d * kz), c, 0.1);
+      mb.box(v3(x, 0.13 * r, z), v3(w * (w > d ? 1 : 1.18), 0.08 * r, d * (d > w ? 1 : 1.18)), c2, 0.04);
+    }
+  }
+  // 圆形雉堞环（圆塔、圆城墙顶）：n 个垛
+  function merlonRing(mb, x, z, R, y, n, w, hh, t, c) {
+    for (let i = 0; i < n; i++) {
+      const a = (i + 0.5) / n * Math.PI * 2, a0 = a - w / R / 2, a1 = a + w / R / 2;
+      seg(mb, x + Math.cos(a0) * R, z + Math.sin(a0) * R, x + Math.cos(a1) * R, z + Math.sin(a1) * R, y, hh, t, c);
+    }
+  }
+
   // ---------------------------------------------------------- 罗马 --
+  // 第三版修订：带檐线与勒脚的石墙、圆角塔（平滑塔身 + 雉堞 + 圆锥瓦顶）、双圆塔夹半圆拱城门；
+  // 列柱神庙（台基前阶、六柱、山花）；都城为平滑椭圆竞技场（三层拱廊、看台斜坡、沙地）+ 小神庙
   B.roman = function (mb, s, cap, city) {
     const r = s, wallH = 0.42 * s, t = 0.16 * s;
-    const stone = H('#cdbf9f'), tile = H('#b4553a'), stucco = H('#ece2c8'), marble = H('#f2eee4');
+    const stone = H('#cdbf9f'), stone2 = H('#b9ab8a'), tile = H('#b4553a'), stucco = H('#ece2c8'), marble = H('#f2eee4'), dark = H('#33261c');
     base(mb, r, H('#a89a7a'));
-    squareWall(mb, r, wallH, t, stone, 0.08 * s, 3);
-    // 圆角塔（东北角留给旗帜：缩小）
+    mb.box(v3(0, 0.104, 0), v3(r * 1.8, 0.012, r * 1.8), H('#b8ab8c'));
+    squareWall(mb, r, wallH, t, stone, 0.07 * s, 4);
+    wallBands(mb, r, wallH, t, stone2);
     for (const cx of [-1, 1]) for (const cz of [-1, 1]) {
       const big = !(cx > 0 && cz > 0);
-      cyl(mb, v3(cx * r, 0, cz * r), t * (big ? 1.05 : 0.8), t, wallH * (big ? 1.35 : 1.1), 8, shade(stone, -0.04), true);
-      if (big) hip(mb, cx * r, wallH * 1.35, cz * r, t * 2.1, t * 2.1, t * 1.1, tile);
+      tower(mb, cx * r, cz * r, t * (big ? 1.0 : 0.78), wallH * (big ? 1.3 : 1.05), shade(stone, -0.03), big ? tile : null);
+      if (!big) merlonRing(mb, cx * r, cz * r, t * 0.84, wallH * 1.05 + t * 0.2, 6, 0.04 * s, 0.05 * s, 0.03 * s, stone);
     }
-    gateway(mb, r, 0.24 * s, wallH, stone, shade(stone, -0.05), true);
-    // 红瓦民居
-    const houses = [[-0.55, -0.45, 0.34, 0.26], [0.5, -0.5, 0.3, 0.26], [-0.6, 0.15, 0.28, 0.34], [0.62, 0.05, 0.26, 0.3], [-0.2, -0.62, 0.26, 0.2], [0.2, -0.25, 0.22, 0.2]];
-    houses.forEach((h, i) => gableHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, 0.18 * s, i % 2 ? stucco : shade(stucco, -0.06), tile, h[3] > h[2] ? 'z' : 'x'));
-    if (!cap) {
-      // 列柱神庙（北侧中央）：基台 + 六柱 + 山墙顶
-      const tz = 0.45 * s;
-      mb.box(v3(0, 0.06 * s, tz), v3(0.62 * s, 0.12 * s, 0.7 * s), marble);
-      mb.box(v3(0, 0.27 * s, tz + 0.08 * s), v3(0.44 * s, 0.3 * s, 0.44 * s), stucco);
-      for (let i = 0; i < 4; i++) column(mb, (-0.24 + i * 0.16) * s, 0.12 * s, tz - 0.27 * s, 0.32 * s, 0.03 * s, marble);
-      gable(mb, 0, 0.47 * s, tz, 0.6 * s, 0.68 * s, 0.17 * s, tile, 'z', 0.02 * s);
-      mb.box(v3(0, 0.45 * s, tz - 0.33 * s), v3(0.6 * s, 0.05 * s, 0.03 * s), marble);
-    } else {
-      // 都城：竞技场（椭圆环，两层拱）+ 神庙
-      const ax = -0.05 * s, az = 0.35 * s, R = 0.5 * s, n = 14, hh = 0.48 * s;
+    // 城门：双圆塔 + 半圆拱门洞 + 券石
+    for (const sx of [-1, 1]) tower(mb, sx * 0.19 * s, -r - 0.02 * s, 0.1 * s, wallH * 1.3, stone, tile);
+    archFrame(mb, 0, 0.1 * s, -r - t / 2, 0.16 * s, wallH * 0.7, 0, -1, marble, false, 0.02 * s);
+    arch(mb, 0, 0.1 * s, -r - t / 2, 0.16 * s, wallH * 0.7, 0, -1, dark, false);
+    // 红瓦民居（瓦顶出檐，山墙一侧开小窗）
+    const houses = cap ? [[-0.6, -0.5, 0.3, 0.24], [0.56, -0.52, 0.28, 0.24], [-0.62, -0.12, 0.26, 0.3], [0.62, -0.12, 0.24, 0.28], [-0.25, -0.64, 0.24, 0.18], [0.27, -0.66, 0.22, 0.17]]
+      : [[-0.55, -0.45, 0.34, 0.26], [0.5, -0.5, 0.3, 0.26], [-0.6, 0.15, 0.28, 0.34], [0.62, 0.05, 0.26, 0.3], [-0.2, -0.62, 0.26, 0.2], [0.2, -0.25, 0.22, 0.2]];
+    houses.forEach((h, i) => {
+      const w = h[2] * s, d = h[3] * s, hh = (0.17 + (i % 3) * 0.03) * s;
+      gableHouse(mb, h[0] * s, h[1] * s, w, d, hh, i % 2 ? stucco : shade(stucco, -0.06), tile, d > w ? 'z' : 'x', 0.1, Math.min(w, d) * 0.32);
+      arch(mb, h[0] * s, 0.1 + hh * 0.35, h[1] * s - d / 2, 0.045 * s, hh * 0.45, 0, -1, dark, false);
+    });
+    const temple = (tx, tz, k) => {
+      // 台基 + 前阶
+      mb.box(v3(tx, 0.1 + 0.06 * k, tz), v3(0.6 * k, 0.12 * k, 0.72 * k), marble, 0.06);
+      for (let i = 0; i < 3; i++) mb.box(v3(tx, 0.1 + 0.02 * k * (i + 0.5), tz - 0.36 * k - (2.5 - i) * 0.035 * k), v3(0.4 * k, 0.04 * k * (i + 1), 0.035 * k), shade(marble, -0.04 * i));
+      const y1 = 0.1 + 0.12 * k;
+      mb.box(v3(tx, y1 + 0.15 * k, tz + 0.08 * k), v3(0.42 * k, 0.3 * k, 0.44 * k), stucco);
+      arch(mb, tx, y1, tz + 0.08 * k - 0.22 * k, 0.12 * k, 0.24 * k, 0, -1, dark, false);
+      for (let i = 0; i < 6; i++) column(mb, tx + (-0.25 + i * 0.1) * k, y1, tz - 0.29 * k, 0.32 * k, 0.026 * k, marble);
+      for (const sx of [-1, 1]) for (let i = 1; i < 4; i++) column(mb, tx + sx * 0.25 * k, y1, tz + (-0.29 + i * 0.16) * k, 0.32 * k, 0.026 * k, marble);
+      const y2 = y1 + 0.32 * k + 0.035 * k;
+      mb.box(v3(tx, y2 + 0.025 * k, tz), v3(0.62 * k, 0.05 * k, 0.72 * k), marble, 0.08);   // 檐部
+      gable(mb, tx, y2 + 0.05 * k, tz, 0.64 * k, 0.74 * k, 0.15 * k, tile, 'z', 0.012 * k);
+      face(mb, [v3(tx - 0.3 * k, y2 + 0.052 * k, tz - 0.372 * k), v3(tx + 0.3 * k, y2 + 0.052 * k, tz - 0.372 * k), v3(tx, y2 + 0.19 * k, tz - 0.372 * k)], marble, v3(0, 0, -1));   // 山花
+    };
+    if (!cap) temple(0, 0.42 * s, s);
+    else {
+      // 竞技场：外壁三层拱廊（底两层开拱、顶层为实墙带小窗）、檐线、看台斜坡、沙地
+      const ax = -0.08 * s, az = 0.3 * s, rx = 0.56 * s, rz = 0.43 * s, hh = 0.5 * s, n = 30;
+      ellipseRing(mb, ax, az, rx, rz, 0.1, hh, 0.07 * s, stucco, shade(stucco, -0.1), n);
+      for (const [y, k] of [[0.33, 1.01], [0.66, 1.008], [0.98, 1.012]]) ellipseRing(mb, ax, az, rx * k, rz * k, 0.1 + hh * y - 0.012 * s, 0.024 * s, 0.03 * s, shade(stucco, 0.05), null, n, true);
       for (let i = 0; i < n; i++) {
-        const a0 = i * Math.PI * 2 / n, a1 = (i + 1) * Math.PI * 2 / n;
-        const x0 = ax + Math.cos(a0) * R * 1.15, z0 = az + Math.sin(a0) * R * 0.85, x1 = ax + Math.cos(a1) * R * 1.15, z1 = az + Math.sin(a1) * R * 0.85;
-        seg(mb, x0, z0, x1, z1, 0, hh, 0.1 * s, i % 2 ? stucco : shade(stucco, -0.04));
-        // 拱：外立面上的深色窗洞（两层）
-        const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, nx = Math.cos((a0 + a1) / 2), nz = Math.sin((a0 + a1) / 2);
-        for (const yy of [0.14, 0.32]) {
-          const px = mx + nx * 0.052 * s, pz = mz + nz * 0.052 * s;
-          const tx = (x1 - x0) * 0.22, tz2 = (z1 - z0) * 0.22;
-          face(mb, [v3(px - tx, yy * s, pz - tz2), v3(px + tx, yy * s, pz + tz2), v3(px + tx, (yy + 0.1) * s, pz + tz2), v3(px - tx, (yy + 0.1) * s, pz - tz2)], H('#4a3a2c'), v3(nx, 0, nz));
-        }
+        const a = (i + 0.5) / n * Math.PI * 2, nx0 = Math.cos(a) / rx, nz0 = Math.sin(a) / rz, l = Math.hypot(nx0, nz0);
+        const px = ax + Math.cos(a) * rx, pz = az + Math.sin(a) * rz, w = Math.PI * 2 * Math.sqrt((rx * rx + rz * rz) / 2) / n * 0.55;
+        for (const y of [0.03, 0.36]) arch(mb, px, 0.1 + hh * y, pz, w, hh * 0.25, nx0 / l, nz0 / l, H('#4a3a2c'), false);
+        if (i % 2 === 0) arch(mb, px, 0.1 + hh * 0.72, pz, w * 0.4, hh * 0.12, nx0 / l, nz0 / l, H('#5a4a38'), false);
       }
-      face(mb, [v3(ax - R, 0.11, az - R * 0.75), v3(ax + R, 0.11, az - R * 0.75), v3(ax + R, 0.11, az + R * 0.75), v3(ax - R, 0.11, az + R * 0.75)], H('#d8c08a'), v3(0, 1, 0));
-      // 小神庙（东侧）
-      mb.box(v3(0.62 * s, 0.05 * s, 0.55 * s), v3(0.3 * s, 0.1 * s, 0.36 * s), marble);
-      for (let i = 0; i < 3; i++) column(mb, (0.52 + i * 0.1) * s, 0.1 * s, 0.4 * s, 0.24 * s, 0.022 * s, marble);
-      mb.box(v3(0.62 * s, 0.22 * s, 0.6 * s), v3(0.26 * s, 0.24 * s, 0.22 * s), stucco);
-      gable(mb, 0.62 * s, 0.35 * s, 0.55 * s, 0.3 * s, 0.36 * s, 0.1 * s, tile, 'z', 0.01 * s);
+      // 看台（内壁顶 → 场地边缘的斜坡）
+      const ring = (a, k, y) => v3(ax + Math.cos(a) * (rx - 0.07 * s) * k, y, az + Math.sin(a) * (rz - 0.07 * s) * k);
+      for (let i = 0; i < n; i++) {
+        const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, nm = v3(0, 1, 0);
+        const p0 = ring(a0, 1, 0.1 + hh * 0.96), p1 = ring(a1, 1, 0.1 + hh * 0.96), q0 = ring(a0, 0.52, 0.16), q1 = ring(a1, 0.52, 0.16);
+        const slope = (a) => { const x = Math.cos(a) / rx, z = Math.sin(a) / rz, l = Math.hypot(x, z); return v3(-x / l * 0.8, 0.6, -z / l * 0.8); };
+        mb.triN(p0, q1, p1, slope(a0), slope(a1), slope(a1), H('#c9bda2'));
+        mb.triN(p0, q0, q1, slope(a0), slope(a0), slope(a1), H('#c9bda2'));
+        mb.triN(v3(ax, 0.16, az), q1, q0, nm, nm, nm, H('#dcc48e'));
+      }
+      temple(0.6 * s, 0.5 * s, 0.5 * s);
     }
-    standard(mb, -0.25 * s, -r - 0.18 * s, 0.75 * s, H('#a8261e'), 'vexillum');
-    standard(mb, 0.25 * s, -r - 0.18 * s, 0.75 * s, H('#a8261e'), 'vexillum');
+    standard(mb, -0.3 * s, -r - 0.2 * s, 0.75 * s, H('#a8261e'), 'vexillum');
+    standard(mb, 0.3 * s, -r - 0.2 * s, 0.75 * s, H('#a8261e'), 'vexillum');
   };
 
   // ---------------------------------------------------- 安息 / 波斯 --
+  // 第三版修订：土坯城墙（檐线、勒脚、阶梯垛口）、半圆扶壁塔与圆角塔、高耸的门楼（尖拱 + 釉砖框）；
+  // 三层阶梯内城上的伊万宫殿（尖拱大门 + 筒拱大厅 + 两翼拱廊）；都城另有拜火祠（四拱亭 + 穹顶）
   B.persia = function (mb, s, cap) {
     const r = s, wallH = 0.42 * s, t = 0.2 * s;
-    const mud = H('#c8a679'), mud2 = H('#b8946a'), glaze = H('#2f6e8e');
+    const mud = H('#c8a679'), mud2 = H('#b8946a'), glaze = H('#2f6e8e'), dark = H('#2e2016'), lite = H('#e0c89c');
     base(mb, r, H('#b8a07a'));
+    mb.box(v3(0, 0.104, 0), v3(r * 1.8, 0.012, r * 1.8), H('#c2aa82'));
     squareWall(mb, r, wallH, t, mud, 0.09 * s, 3);
-    // 扶壁塔（方形，沿墙等距）
+    wallBands(mb, r, wallH, t, mud2);
+    // 半圆扶壁塔（沿墙等距）与圆角塔（东北角留给旗帜）
     for (const k of [-0.5, 0.5]) for (const side of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
       const x = side[0] ? side[0] * r : k * r * 1.2, z = side[1] ? side[1] * r : k * r * 1.2;
-      if (x > 0 && z > 0.4 * r) continue;   // 东北角留给旗帜
-      mb.box(v3(x, wallH * 0.58, z), v3(t * 1.2, wallH * 1.16, t * 1.2), mud2);
+      if (x > 0 && z > 0.4 * r) continue;
+      if (side[1] === -1 && Math.abs(x) < 0.4 * r) continue;
+      tower(mb, x, z, t * 0.62, wallH * 1.08, mud2, null);
     }
-    for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) mb.box(v3(cx * r, wallH * 0.65, cz * r), v3(t * 1.6, wallH * 1.3, t * 1.6), mud2);
-    // 城门：高拱门
-    mb.box(v3(0, wallH * 0.62, -r), v3(0.5 * s, wallH * 1.24, t * 1.3), mud2);
-    mb.box(v3(0, wallH * 0.42, -r - t * 0.66), v3(0.2 * s, wallH * 0.84, 0.02), H('#2a1c12'));
-    mb.box(v3(0, wallH * 0.95, -r - t * 0.66), v3(0.3 * s, 0.05 * s, 0.02), glaze);
-    // 平顶房
-    const hs = [[-0.6, -0.5, 0.3, 0.26, 0.2], [0.55, -0.55, 0.26, 0.24, 0.18], [-0.62, -0.05, 0.26, 0.32, 0.22], [0.62, -0.1, 0.24, 0.3, 0.2], [-0.3, -0.58, 0.2, 0.2, 0.16], [0.28, -0.6, 0.2, 0.18, 0.15]];
-    hs.forEach((h, i) => flatHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, h[4] * s, i % 2 ? mud : shade(mud, 0.08)));
+    for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) {
+      tower(mb, cx * r, cz * r, t * 0.9, wallH * 1.3, mud2, null);
+      merlonRing(mb, cx * r, cz * r, t * 0.95, wallH * 1.3 + t * 0.22, 7, 0.05 * s, 0.05 * s, 0.03 * s, mud);
+    }
+    // 城门：门楼（矩形框）+ 尖拱 + 釉砖框
+    mb.box(v3(0, wallH * 0.7, -r), v3(0.46 * s, wallH * 1.4, t * 1.3), mud2, 0.06);
+    archFrame(mb, 0, 0.1, -r - t * 0.65, 0.2 * s, wallH * 1.02, 0, -1, glaze, true, 0.025 * s);
+    arch(mb, 0, 0.1, -r - t * 0.65, 0.2 * s, wallH * 1.02, 0, -1, dark, true);
+    for (const sx of [-1, 1]) tower(mb, sx * 0.23 * s, -r - t * 0.1, 0.055 * s, wallH * 1.55, lite, null);
+    // 平顶房（女儿墙、小拱门）
+    const hs = [[-0.6, -0.5, 0.3, 0.26, 0.2], [0.55, -0.55, 0.26, 0.24, 0.18], [-0.62, -0.05, 0.26, 0.32, 0.22], [0.62, -0.1, 0.24, 0.3, 0.2], [-0.3, -0.62, 0.2, 0.18, 0.16], [0.3, -0.64, 0.2, 0.16, 0.15]];
+    hs.forEach((h, i) => {
+      flatHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, h[4] * s, i % 2 ? mud : shade(mud, 0.08), 0.1);
+      arch(mb, h[0] * s, 0.1, h[1] * s - h[3] * s / 2 - 0.003, 0.05 * s, h[4] * s * 0.6, 0, -1, dark, true);
+      if (i % 3 === 0) dome(mb, h[0] * s, 0.1 + h[4] * s, h[1] * s, Math.min(h[2], h[3]) * s * 0.32, shade(mud, 0.1), 12);
+    });
     // 阶梯内城（北侧）：三层台
     const cz = 0.42 * s;
-    [[0.9, 0.16], [0.68, 0.16], [0.46, 0.14]].reduce((y, l, i) => {
-      mb.box(v3(-0.05 * s, y + l[1] * s / 2, cz), v3(l[0] * s, l[1] * s, l[0] * s * 0.7), i % 2 ? mud2 : shade(mud2, 0.06));
+    const ty = [[0.9, 0.16], [0.68, 0.16], [0.46, 0.14]].reduce((y, l, i) => {
+      mb.box(v3(-0.05 * s, y + l[1] * s / 2, cz), v3(l[0] * s, l[1] * s, l[0] * s * 0.7), i % 2 ? mud2 : shade(mud2, 0.06), 0.08);
       return y + l[1] * s;
-    }, 0);
-    // 伊万宫殿（立在台顶）：方体 + 巨大拱门（深色）+ 釉砖边框 + 筒拱顶
-    const py = 0.46 * s, iw = cap ? 0.42 : 0.3;
-    mb.box(v3(-0.05 * s, py + 0.14 * s, cz), v3(iw * s, 0.28 * s, 0.26 * s), H('#d8bc8c'));
-    mb.box(v3(-0.05 * s, py + 0.12 * s, cz - 0.131 * s), v3(iw * 0.5 * s, 0.22 * s, 0.01), H('#3a2818'));
-    mb.box(v3(-0.05 * s, py + 0.245 * s, cz - 0.132 * s), v3(iw * 0.62 * s, 0.025 * s, 0.01), glaze);
-    cyl(mb, v3(-0.05 * s, py + 0.28 * s, cz), iw * 0.36 * s, 0.02 * s, 0.1 * s, 6, H('#c8ac7c'), false);
+    }, 0.1);
+    for (let i = 0; i < 4; i++) mb.box(v3(-0.05 * s, 0.1 + (i + 0.5) * 0.08 * s, cz - 0.315 * s - (3 - i) * 0.012 * s), v3(0.14 * s, 0.08 * s * (i + 1) / 2, 0.03 * s), shade(mud2, 0.04));   // 正面台阶
+    // 伊万宫殿：门面（大尖拱 + 釉砖框）+ 后接筒拱大厅 + 两翼拱廊
+    const iw = cap ? 0.44 : 0.32, px = -0.05 * s, fz = cz - 0.12 * s;
+    mb.box(v3(px, ty + 0.17 * s, fz), v3(iw * s, 0.34 * s, 0.06 * s), H('#dcc192'), 0.06);
+    archFrame(mb, px, ty, fz - 0.031 * s, iw * 0.52 * s, 0.3 * s, 0, -1, glaze, true, 0.018 * s);
+    arch(mb, px, ty, fz - 0.031 * s, iw * 0.52 * s, 0.3 * s, 0, -1, dark, true);
+    vault(mb, px, ty + 0.14 * s, fz + 0.03 * s, fz + 0.26 * s, iw * 0.3 * s, H('#d2b688'), 12);
+    for (const sx of [-1, 1]) {
+      mb.box(v3(px + sx * iw * 0.38 * s, ty + 0.08 * s, fz + 0.13 * s), v3(iw * 0.26 * s, 0.16 * s, 0.22 * s), shade(H('#d2b688'), -0.04), 0.06);
+      for (const k of [-1, 1]) arch(mb, px + sx * iw * 0.38 * s + k * 0.04 * s, ty, fz + 0.02 * s - 0.003, 0.045 * s, 0.12 * s, 0, -1, dark, true);
+    }
     if (cap) {
-      // 都城：拜火祠（四柱亭 + 穹顶）与第二座伊万
-      const fx = 0.55 * s, fz = 0.5 * s;
-      mb.box(v3(fx, 0.04 * s, fz), v3(0.3 * s, 0.08 * s, 0.3 * s), mud2);
-      for (const ox of [-1, 1]) for (const oz of [-1, 1]) mb.box(v3(fx + ox * 0.1 * s, 0.17 * s, fz + oz * 0.1 * s), v3(0.06 * s, 0.18 * s, 0.06 * s), H('#d8c098'));
-      mb.box(v3(fx, 0.28 * s, fz), v3(0.28 * s, 0.05 * s, 0.28 * s), H('#d8c098'));
-      dome(mb, fx, 0.3 * s, fz, 0.12 * s, H('#d8c098'), 8);
-      cone(mb, v3(fx, 0.08 * s, fz), 0.03 * s, 0.07 * s, 5, H('#ff8a2a'));
+      // 拜火祠（chahar taq）：方台 + 四面拱门 + 穹顶
+      const fx = 0.56 * s, fzz = 0.5 * s, k = 0.14 * s;
+      mb.box(v3(fx, 0.1 + 0.04 * s, fzz), v3(0.32 * s, 0.08 * s, 0.32 * s), mud2);
+      mb.box(v3(fx, 0.1 + 0.08 * s + k * 0.7, fzz), v3(k * 1.7, k * 1.4, k * 1.7), lite, 0.06);
+      for (const [nx, nz] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) arch(mb, fx + nx * k * 0.85, 0.1 + 0.08 * s, fzz + nz * k * 0.85, k * 0.8, k * 1.15, nx, nz, dark, true);
+      dome(mb, fx, 0.1 + 0.08 * s + k * 1.4, fzz, k * 0.8, lite, 16);
+      cone(mb, v3(fx, 0.1 + 0.08 * s, fzz - k * 0.86), 0.025 * s, 0.05 * s, 6, H('#ff8a2a'));
     }
     standard(mb, -0.6 * s, 0.6 * s, 0.7 * s, H('#7a2a5a'), 'tail');
   };
 
   // ------------------------------------------------- 阿拉伯 / 哈特拉 --
+  // 第三版修订：平滑的圆形城墙（檐线、雉堞环）、平滑圆塔、拱门；神庙院（双伊万 + 列柱）
   B.arab = function (mb, s, cap, city) {
-    const r = s, R = 0.98 * r, wallH = 0.4 * s;
-    const stone = H('#d8c49a'), stone2 = H('#c4ae84');
+    const r = s, R = 0.98 * r, wallH = 0.4 * s, t = 0.15 * s;
+    const stone = H('#d8c49a'), stone2 = H('#c4ae84'), dark = H('#2e2016');
     base(mb, r, H('#c8b080'));
-    ringWall(mb, R, 16, wallH, 0.15 * s, stone, Math.PI / 16);
-    // 圆塔（跳过东北）
+    mb.lathe(v3(0, 0, 0), [[R + t / 2, 0.06], [R + t / 2 + 0.01 * s, 0.14 * s, null, true], [R + t / 2, 0.15 * s, null, true], [R + t / 2, wallH, null, true], [R - t / 2, wallH, null, true], [R - t / 2, 0.06]], 40, stone);
+    mb.lathe(v3(0, wallH - 0.02 * s, 0), [[R + t / 2 + 0.012 * s, 0], [R + t / 2 + 0.012 * s, 0.03 * s, null, true], [R - t / 2, 0.03 * s]], 40, shade(stone, 0.05));
+    merlonRing(mb, 0, 0, R + t * 0.3, wallH + 0.01 * s, 30, 0.05 * s, 0.05 * s, 0.035 * s, shade(stone, 0.05));
     for (let i = 0; i < 8; i++) {
       const a = i * Math.PI / 4 + Math.PI / 8;
       const x = Math.cos(a) * R, z = Math.sin(a) * R;
       if (x > 0.3 * r && z > 0.3 * r) continue;
-      cyl(mb, v3(x, 0, z), 0.11 * s, 0.1 * s, wallH * 1.3, 6, stone2, true);
+      tower(mb, x, z, 0.1 * s, wallH * 1.3, stone2, null);
+      merlonRing(mb, x, z, 0.105 * s, wallH * 1.3 + 0.025 * s, 6, 0.035 * s, 0.04 * s, 0.025 * s, stone2);
     }
     // 南门
-    mb.box(v3(0, wallH * 0.6, -R), v3(0.34 * s, wallH * 1.2, 0.22 * s), stone2);
-    mb.box(v3(0, wallH * 0.4, -R - 0.112 * s), v3(0.14 * s, wallH * 0.8, 0.01), H('#2a1c12'));
-    // 神庙院（中央）：围墙 + 双伊万神殿 + 列柱
+    mb.box(v3(0, wallH * 0.62, -R), v3(0.34 * s, wallH * 1.24, 0.22 * s), stone2, 0.06);
+    archFrame(mb, 0, 0.08, -R - 0.112 * s, 0.14 * s, wallH * 0.85, 0, -1, H('#efe3c4'), false, 0.016 * s);
+    arch(mb, 0, 0.08, -R - 0.112 * s, 0.14 * s, wallH * 0.85, 0, -1, dark, false);
+    // 神庙院（中央）：双伊万神殿 + 列柱
     const tz = 0.12 * s;
     mb.box(v3(0, 0.05 * s, tz), v3(0.84 * s, 0.1 * s, 0.6 * s), shade(stone, 0.06));
     const n = cap ? 2 : 1;
     for (let k = 0; k < n; k++) {
       const x = (n === 1 ? 0 : (k ? 0.2 : -0.2)) * s;
-      mb.box(v3(x, 0.1 * s + 0.17 * s, tz + 0.1 * s), v3(0.34 * s, 0.34 * s, 0.32 * s), stone);
-      mb.box(v3(x, 0.1 * s + 0.14 * s, tz - 0.061 * s), v3(0.15 * s, 0.26 * s, 0.01), H('#3a2818'));
-      mb.box(v3(x, 0.1 * s + 0.35 * s, tz + 0.1 * s), v3(0.36 * s, 0.03 * s, 0.34 * s), shade(stone, 0.12));
+      mb.box(v3(x, 0.1 * s + 0.17 * s, tz + 0.1 * s), v3(0.34 * s, 0.34 * s, 0.32 * s), stone, 0.06);
+      arch(mb, x, 0.1 * s, tz - 0.061 * s, 0.15 * s, 0.27 * s, 0, -1, dark, false);
+      vault(mb, x, 0.1 * s + 0.34 * s, tz - 0.06 * s, tz + 0.26 * s, 0.12 * s, shade(stone, 0.08), 10);
     }
     for (let i = 0; i < 6; i++) column(mb, (-0.36 + i * 0.144) * s, 0.1 * s, tz - 0.25 * s, 0.2 * s, 0.022 * s, H('#efe3c4'));
-    // 平顶房 + 椰枣树
     const hs = [[-0.55, -0.45], [0.55, -0.42], [-0.62, 0.35], [-0.3, -0.62], [0.3, -0.64]];
-    hs.forEach((h, i) => flatHouse(mb, h[0] * s, h[1] * s, 0.22 * s, 0.2 * s, (0.14 + (i % 3) * 0.03) * s, i % 2 ? stone : H('#e2d2ac')));
+    hs.forEach((h, i) => {
+      flatHouse(mb, h[0] * s, h[1] * s, 0.22 * s, 0.2 * s, (0.14 + (i % 3) * 0.03) * s, i % 2 ? stone : H('#e2d2ac'), 0.1);
+      arch(mb, h[0] * s, 0.1, h[1] * s - 0.103 * s, 0.05 * s, 0.09 * s, 0, -1, dark, false);
+    });
     palm(mb, 0.55 * s, 0.1 * s, s, 11); palm(mb, -0.15 * s, 0.6 * s, s * 0.9, 12); palm(mb, -0.72 * s, -0.12 * s, s * 0.85, 13);
-    // 阿克苏姆：石碑
     if (city && city.key === 'aksum') {
       for (const [x, h] of [[0.42, 0.95], [0.6, 0.7], [0.28, 0.6]]) {
         mb.box(v3(x * s, h * s / 2, 0.55 * s), v3(0.07 * s, h * s, 0.04 * s), H('#9a8f80'));
-        cone(mb, v3(x * s, h * s, 0.55 * s), 0.045 * s, 0.05 * s, 4, H('#9a8f80'));
+        mb.lathe(v3(x * s, h * s, 0.55 * s), [[0.035 * s, 0], [0.03 * s, 0.03 * s], [0, 0.05 * s]], 8, H('#9a8f80'));
+        for (let j = 1; j < 5; j++) mb.box(v3(x * s, h * s * j / 5, 0.55 * s - 0.021 * s), v3(0.05 * s, 0.03 * s, 0.004), H('#6a6056'));   // 假窗
       }
     }
     standard(mb, 0, 0.62 * s, 0.75 * s, H('#d8b050'), 'tail');
@@ -506,40 +633,64 @@
   // ------------------------------------------------------------ 贵霜 --
   function stupa(mb, x, z, k, y0) {
     y0 = y0 || 0;
-    const white = H('#ece6d6'), gold = H('#d8b050');
-    mb.box(v3(x, y0 + 0.05 * k, z), v3(0.52 * k, 0.1 * k, 0.52 * k), H('#cfc4a8'));
-    mb.box(v3(x, y0 + 0.12 * k, z), v3(0.44 * k, 0.05 * k, 0.44 * k), H('#ddd2b6'));
+    const white = H('#ece6d6'), gold = H('#d8b050'), sand = H('#cfc4a8');
+    mb.box(v3(x, y0 + 0.05 * k, z), v3(0.52 * k, 0.1 * k, 0.52 * k), sand, 0.06);
+    mb.box(v3(x, y0 + 0.12 * k, z), v3(0.44 * k, 0.05 * k, 0.44 * k), H('#ddd2b6'), 0.06);
+    // 栏楯（围栏环）与四面塔门
+    mb.lathe(v3(x, y0 + 0.1 * k, z), [[0.3 * k, 0], [0.3 * k, 0.05 * k, null, true], [0.29 * k, 0.055 * k, null, true], [0.29 * k, 0]], 24, sand);
+    for (const [nx, nz] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      const gx = x + nx * 0.3 * k, gz = z + nz * 0.3 * k, tx = -nz, tz = nx;
+      for (const sd of [-1, 1]) mb.box(v3(gx + tx * sd * 0.04 * k, y0 + 0.1 * k + 0.07 * k, gz + tz * sd * 0.04 * k), v3(0.014 * k, 0.14 * k, 0.014 * k), sand);
+      for (const yy of [0.12, 0.15]) mb.box(v3(gx, y0 + 0.1 * k + yy * k, gz), v3(Math.abs(tx) * 0.12 * k + 0.012 * k, 0.012 * k, Math.abs(tz) * 0.12 * k + 0.012 * k), sand);
+    }
     mb.lathe(v3(x, y0 + 0.145 * k, z), [[0.21 * k, 0], [0.21 * k, 0.1 * k, null, true], [0.2 * k, 0.1 * k, null, true],
-      [0.2 * k, 0.14 * k], [0.18 * k, 0.24 * k], [0.13 * k, 0.31 * k], [0.06 * k, 0.345 * k], [0, 0.35 * k]], 16, white);
+      [0.2 * k, 0.14 * k], [0.19 * k, 0.2 * k], [0.165 * k, 0.26 * k], [0.13 * k, 0.31 * k], [0.08 * k, 0.34 * k], [0, 0.352 * k]], 24, white);
     mb.box(v3(x, y0 + 0.51 * k, z), v3(0.08 * k, 0.05 * k, 0.08 * k), H('#b88a4a'));
-    mb.lathe(v3(x, y0 + 0.535 * k, z), [[0.012 * k, 0], [0.01 * k, 0.24 * k]], 6, gold);
-    for (let i = 0; i < 3; i++) mb.lathe(v3(x, y0 + (0.57 + i * 0.06) * k, z), [[(0.07 - i * 0.017) * k, 0], [(0.07 - i * 0.017) * k, 0.012 * k, null, true], [0, 0.014 * k]], 10, gold);
+    mb.lathe(v3(x, y0 + 0.535 * k, z), [[0.012 * k, 0], [0.01 * k, 0.24 * k]], 8, gold);
+    for (let i = 0; i < 3; i++) mb.lathe(v3(x, y0 + (0.57 + i * 0.06) * k, z), [[(0.07 - i * 0.017) * k, 0], [(0.07 - i * 0.017) * k, 0.012 * k, null, true], [0, 0.014 * k]], 14, gold);
   }
+  // 第三版修订：砖城（檐线、勒脚）、平滑圆角堡与半圆马面、拱门；带栏楯与塔门的窣堵波、带木檐的僧院；都城宫殿为高台列柱厅 + 穹顶
   B.kushan = function (mb, s, cap) {
     const r = s, wallH = 0.4 * s, t = 0.18 * s;
-    const brick = H('#b98f64'), brick2 = H('#a87e56'), plaster = H('#e2d4b4');
+    const brick = H('#b98f64'), brick2 = H('#a87e56'), plaster = H('#e2d4b4'), wood = H('#7a5232'), dark = H('#2e2016');
     base(mb, r, H('#a8966e'));
+    mb.box(v3(0, 0.104, 0), v3(r * 1.8, 0.012, r * 1.8), H('#b3a07a'));
     squareWall(mb, r, wallH, t, brick, 0.07 * s, 3);
-    for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) cyl(mb, v3(cx * r, 0, cz * r), t * 1.2, t * 1.1, wallH * 1.25, 8, brick2, true);
-    gateway(mb, r, 0.22 * s, wallH, brick, brick2, false);
-    // 窣堵波（北侧）
-    stupa(mb, -0.15 * s, 0.38 * s, cap ? 1.35 * s : 1.0 * s);
-    // 僧院 / 民居（平顶，木檐）
+    wallBands(mb, r, wallH, t, brick2);
+    for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) {
+      tower(mb, cx * r, cz * r, t * 1.05, wallH * 1.25, brick2, null);
+      merlonRing(mb, cx * r, cz * r, t * 1.1, wallH * 1.25 + t * 0.26, 7, 0.045 * s, 0.05 * s, 0.03 * s, brick);
+    }
+    for (const [x, z] of [[-r, -0.4 * r], [-r, 0.4 * r], [r, -0.4 * r], [-0.45 * r, r], [0.45 * r, -r], [-0.45 * r, -r]]) tower(mb, x, z, t * 0.6, wallH * 1.06, brick2, null);
+    // 城门：方门楼 + 半圆拱 + 木檐
+    for (const sx of [-1, 1]) mb.box(v3(sx * 0.2 * s, wallH * 0.65, -r), v3(0.16 * s, wallH * 1.3, t * 1.3), brick2, 0.06);
+    mb.box(v3(0, wallH * 1.05, -r), v3(0.5 * s, 0.03 * s, t * 1.5), wood);
+    archFrame(mb, 0, 0.1, -r - t / 2, 0.15 * s, wallH * 0.82, 0, -1, plaster, false, 0.018 * s);
+    arch(mb, 0, 0.1, -r - t / 2, 0.15 * s, wallH * 0.82, 0, -1, dark, false);
+    stupa(mb, -0.15 * s, 0.38 * s, cap ? 1.3 * s : 1.0 * s, 0.1);
+    // 僧院 / 民居：平顶 + 木檐 + 拱门
     const hs = [[-0.58, -0.45, 0.3, 0.24], [0.55, -0.45, 0.28, 0.24], [0.6, 0.0, 0.24, 0.3], [-0.65, 0.05, 0.22, 0.3], [0.15, -0.6, 0.24, 0.2]];
-    hs.forEach((h, i) => flatHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, 0.17 * s, i % 2 ? plaster : brick));
+    hs.forEach((h, i) => {
+      const hh = 0.17 * s;
+      flatHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, hh, i % 2 ? plaster : brick, 0.1);
+      mb.box(v3(h[0] * s, 0.1 + hh * 0.78, h[1] * s), v3(h[2] * s * 1.14, 0.014 * s, h[3] * s * 1.14), wood);
+      arch(mb, h[0] * s, 0.1, h[1] * s - h[3] * s / 2 - 0.004, 0.05 * s, hh * 0.6, 0, -1, dark, false);
+    });
     if (cap) {
-      // 宫殿：高台 + 列柱厅
-      mb.box(v3(0.5 * s, 0.08 * s, 0.45 * s), v3(0.44 * s, 0.16 * s, 0.36 * s), brick2);
-      mb.box(v3(0.5 * s, 0.3 * s, 0.5 * s), v3(0.36 * s, 0.28 * s, 0.24 * s), plaster);
-      for (let i = 0; i < 4; i++) column(mb, (0.36 + i * 0.093) * s, 0.16 * s, 0.33 * s, 0.26 * s, 0.018 * s, H('#f0e8d8'));
-      mb.box(v3(0.5 * s, 0.45 * s, 0.45 * s), v3(0.42 * s, 0.04 * s, 0.34 * s), H('#8a5a34'));
+      // 宫殿：高台（前阶）+ 列柱厅 + 穹顶
+      const px = 0.48 * s, pz = 0.45 * s;
+      mb.box(v3(px, 0.1 + 0.08 * s, pz), v3(0.44 * s, 0.16 * s, 0.36 * s), brick2, 0.06);
+      for (let i = 0; i < 3; i++) mb.box(v3(px, 0.1 + 0.027 * s * (i + 0.5), pz - 0.18 * s - (2.5 - i) * 0.025 * s), v3(0.16 * s, 0.054 * s * (i + 1) / 2, 0.025 * s), brick);
+      mb.box(v3(px, 0.1 + 0.3 * s, pz + 0.05 * s), v3(0.36 * s, 0.28 * s, 0.24 * s), plaster, 0.06);
+      for (let i = 0; i < 4; i++) column(mb, px + (-0.14 + i * 0.093) * s, 0.1 + 0.16 * s, pz - 0.12 * s, 0.26 * s, 0.018 * s, H('#f0e8d8'));
+      mb.box(v3(px, 0.1 + 0.45 * s, pz), v3(0.42 * s, 0.04 * s, 0.34 * s), wood, 0.06);
+      dome(mb, px, 0.1 + 0.47 * s, pz + 0.04 * s, 0.11 * s, plaster, 16);
     } else {
-      poplar(mb, 0.45 * s, 0.4 * s, s * 0.9); poplar(mb, 0.62 * s, 0.32 * s, s * 0.8);
+      poplar(mb, 0.45 * s, 0.4 * s, s * 0.9, 0.1); poplar(mb, 0.62 * s, 0.32 * s, s * 0.8, 0.1);
     }
     standard(mb, 0.3 * s, -0.25 * s, 0.7 * s, H('#d8b050'), 'flag');
   };
 
-  // ------------------------------------------------------------- 倭 --
   B.wa = function (mb, s, cap) {
     const r = s;
     const wood = H('#8a6a46'), thatch = H('#a88a52'), thatch2 = H('#94784a');

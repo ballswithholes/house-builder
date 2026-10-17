@@ -61,7 +61,7 @@
 /* 单挑格斗（js/duel-game.js）独立测试页。
    URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
              &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子 · &pr=N 最大像素比（软件渲染测试用）
-             &bots=1 载入后立即跑「人机强度」回归 · &pbot=parry|guard|spam|masher|jumper 玩家一方交给脚本玩家（真实画面里看格开 / 反击）
+             &bots=1 载入后立即跑「人机强度」回归 · &pbot=parry|heavy|guard|spam|masher|jumper 玩家一方交给脚本玩家（真实画面里看格开 / 反击；heavy 多用重击，看满蓄重击的举刀一顿与格开）
    测试钩子：window.runDuel(opts) → Promise<结果>（opts.bot = 脚本玩家种类）· window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) ·
              window.botTally(n) · window.parryDemo(a, b) · window.__log */
 (function () {
@@ -192,7 +192,7 @@
     };
     // 人机强度回归：模拟玩家的脚本（SG.DuelGame.scriptBot，与 tests/duel-bots.js 同一套）对战真实电脑，检查「武力决定胜负、强将难以取巧」
     //   jumper：反复跳入空中斩（旧版漏洞：武力 30 能赢武力 100）；masher：走近连按轻击；spam：冷却一好就按格开，其余连按；
-    //   parry：熟练的防守反击 + 按节奏格开（挨了第二段格开第三段、挡下一击格开下一击、看清重击起手格开）
+    //   parry：熟练的防守反击 + 人的反应（0.22 秒）与节奏误差（σ 0.045 秒）格开（挨了第二段踩准第三段、挡下一击格开下一击、看见满蓄重击松手格开）
     //   连按对同武力 72–76 的电脑平均 ≤ 45%（电脑会看破：预判举防、后撤诱空、格开连段、抓收招），武力 ≤ 40 仍好欺负；
     //   连按格开不占便宜；格开对熟练玩家有用但强将仍难（Node 版更完整的矩阵与格开规则检查：node tests/duel-bots.js）
     const botCtl = kind => SG.DuelGame.scriptBot(kind, 0);

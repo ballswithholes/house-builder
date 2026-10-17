@@ -121,9 +121,9 @@
     const g = G();
     if (!gen) return '';
     const f = gen.faction >= 0 ? g.factions[gen.faction] : null;
-    const fn = f ? `<span style="color:${readable(f.color)}">${SG.esc(f.name)}</span>` : '<span class="sg-muted">在野</span>';
+    const fn = f ? `<span style="color:${lifted(f.color)}">${SG.esc(f.name)}</span>` : '<span class="sg-muted">在野</span>';
     const role = f && g.isRuler(gen) ? '君主' : g.cities[gen.city] && g.cities[gen.city].governor === gen.id && f ? '太守' : '';
-    return fn + (role ? '·' + role : '');
+    return fn + (role ? '·<wbr>' + role : '');   // 窄屏时长势力名在「·」后折行
   }
   function h(tag, cls, html, parent) {
     const e = document.createElement(tag);
@@ -144,6 +144,14 @@
     const L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     if (L >= 0.5) return hex;
     const k = M.clamp((0.5 - L) * 1.3, 0, 0.6);
+    return SG.rgbToHex(c[0] + (1 - c[0]) * k, c[1] + (1 - c[1]) * k, c[2] + (1 - c[2]) * k);
+  }
+  // 小字用的势力色：比 readable 提得更亮（说话人身份、名片副标题）
+  function lifted(hex) {
+    const c = SG.hexToRgb(hex);
+    const L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    if (L >= 0.62) return hex;
+    const k = M.clamp((0.62 - L) * 1.5, 0, 0.75);
     return SG.rgbToHex(c[0] + (1 - c[0]) * k, c[1] + (1 - c[1]) * k, c[2] + (1 - c[2]) * k);
   }
   function dot(color, glyph) { return `<span class="sg-dot" style="color:${color}">${glyph || '●'}</span>`; }
@@ -747,6 +755,9 @@
     report(who, text, cmd, opts) {
       opts = opts || {};
       const sub = (cmd ? `<span class="sg-say-cmd">${SG.esc(cmd)}</span>` : '') + (opts.sub || '');
+      // 指令结果是第三人称（「刘备主持土地开发……」）：由本人汇报时省去句首的自己的名字
+      text = String(text);
+      if (who && who.name && text.length > who.name.length + 1 && text.startsWith(who.name) && !/^[，。！？、：]/.test(text.slice(who.name.length))) text = text.slice(who.name.length);
       return UI().say(faces(text, { skip: who ? [who.name] : [] }), who || null, null, { mood: opts.mood, sub: sub || null });
     }
 
@@ -833,7 +844,7 @@
       const g = G();
       const who = await this.pickGeneral('任命太守', g.officersIn(c), x => `政${x.pol} 智${x.intel}`);
       if (!who) return;
-      if (g.officersIn(c).some(x => g.isRuler(x)) && !g.isRuler(who)) { await UI().say('君主所在之城，由君主亲自坐镇。'); return; }
+      if (g.officersIn(c).some(x => g.isRuler(x)) && !g.isRuler(who)) { await this.report(g.ruler(g.player), '此城由我亲自坐镇，不另设太守。', '任命'); return; }
       c.governor = who.id;
       UI().toast(face(who) + SG.esc(who.name) + '出任' + SG.esc(c.name) + '太守');
     }
@@ -851,7 +862,7 @@
       const rt = routes[r], dest = rt.city;
       const gens = this.available(c);
       if (gens.length === 0) { await UI().say('本月已无可调动的武将。'); return; }
-      const sel = await UI().chooseMany('调动武将至' + dest.name + '（' + routeText(rt) + '）', gens.map(x => item(SG.esc(x.name), `兵 ${x.troops}　武${x.war} 智${x.intel}`, true, null, { avatar: x })), 10, '可一次调动多名武将（消耗 1 枚令牌）');
+      const sel = await UI().chooseMany('调动武将至' + dest.name + '（' + routeText(rt) + '）', gens.map(x => item(SG.esc(x.name) + (g.isRuler(x) ? '<span class="sg-tag sg-tag-ruler">君</span>' : ''), `兵 ${x.troops}　武${x.war} 智${x.intel}`, true, null, { avatar: x })), 10, '可一次调动多名武将（消耗 1 枚令牌）');
       if (!sel || sel.length === 0) return;
       this.useToken();
       await this.marchRoute(rt.path, g.playerFaction.color);
@@ -952,10 +963,11 @@
     async cmdAttack(c) {
       const g = G(), B = SG.Balance;
       const targets = c.links.map(i => g.cities[i]).filter(x => x.owner !== g.player && !g.allied(x.owner, g.player));
-      // 每座目标城列出守将的小头像（至多 6 人）
+      // 每座目标城列出守将的小头像（至多 5 人，再多显示 +N）
       const guards = t => {
         const os = g.officersIn(t).slice().sort((a, b) => (g.isRuler(b) - g.isRuler(a)) || (b.troops - a.troops));
-        return os.length ? '<span class="sg-item-faces">' + os.slice(0, 6).map(face).join('') + (os.length > 6 ? `<span class="sg-muted">+${os.length - 6}</span>` : '') + '</span>' : null;
+        const n = os.length > 5 ? 4 : os.length;
+        return os.length ? '<span class="sg-item-faces">' + os.slice(0, n).map(face).join('') + (os.length > n ? `<span class="sg-muted">+${os.length - n}</span>` : '') + '</span>' : null;
       };
       const r = await UI().choose('攻打何处？', targets.map(t => item(SG.esc(t.name),
         (t.owner >= 0 ? g.factions[t.owner].name : '空城') + '　武将 ' + g.officersIn(t).length + '　兵 ' + g.troopsIn(t) + '　防 ' + SG.cityDefense(t), true, guards(t))));
@@ -1012,7 +1024,11 @@
         let fates = null;
         if (s.captives.length > 0) fates = await this.handleCaptives(s, playerSide === 0);
         SG.Game.map.refresh(g); this.refreshAll();
-        await UI().say(faces(s.summary));
+        // 空城：同样由我方主将汇报（守城武将全被俘时由君主汇报）
+        const won = s.attackerWon === (playerSide === 0);
+        const who = this.ourReporter(s, playerSide);
+        if (who) await this.report(who, s.summary, s.target.name + '之战', { mood: won ? 'win' : 'hurt' });
+        else await UI().say(faces(s.summary));
         await this.reportCaptives(fates, s.attackerWon ? s.attacker : s.defender);
         return;
       }
@@ -1049,13 +1065,24 @@
       const res = playerSide === 0
         ? (s.attackerWon ? '我军攻陷了' + s.target.name + '！' : '攻城失利，全军撤回' + s.src.name + '。')
         : (s.attackerWon ? s.target.name + '失守了……' : '我军成功守住了' + s.target.name + '！');
-      // 由我方主将汇报战果（主将阵亡 / 被俘时由其余在籍的武将汇报）
-      const ours = (playerSide === 0 ? s.atk : s.def).filter(x => x && !x.dead && x.faction === g.player);
-      const who = ours[0] || null;
+      // 由我方主将汇报战果（主将阵亡 / 被俘时由其余在籍的武将汇报，都不在时由君主汇报）
+      const who = this.ourReporter(s, playerSide);
       if (who) await this.report(who, res, s.target.name + '之战', { mood: playerWon ? 'win' : 'hurt' });
       else await UI().say(res);
       await this.reportCaptives(fates, playerSide === 0 ? s.defender : s.attacker);
       if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(faces(g.factions[s.defender].name + '势力就此灭亡。'));
+    }
+
+    // 汇报战果的我方武将：出阵（守城）武将中第一位仍在籍、未被俘的；都不在时为君主；我方已灭亡 → null
+    ourReporter(s, playerSide) {
+      const g = G();
+      const caps = new Set((s.captives || []).map(x => x.id));
+      const ok = x => x && !x.dead && x.faction === g.player && !caps.has(x.id);
+      const who = (playerSide === 0 ? s.atk : s.def).find(ok);
+      if (who) return who;
+      const pf = g.factions[g.player];
+      const ru = pf && pf.alive ? g.ruler(g.player) : null;
+      return ok(ru) ? ru : null;
     }
 
     // 战败后我方被俘武将的下落（fates：Conquest.aiDecideCaptives 的结果；winner：处置俘虏的势力）

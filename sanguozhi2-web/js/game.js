@@ -331,7 +331,7 @@
       hero.setAttribute('aria-level', '1');
       hero.setAttribute('aria-label', TITLE);
       h('div', 'sg-title-seal', '霸', hero).setAttribute('aria-hidden', 'true');
-      // 「三国志」上行（两侧金线收于菱形，即书名里的「-」）+「霸王的世界」主标题（金色渐变 + 流光，背后一圈经纬环）
+      // 「三国志」上行（两侧金线收于菱形，即书名里的「-」）+「霸王的世界」主标题（金色渐变 + 流光）
       const top = h('div', 'sg-title-sub0', null, hero);
       top.setAttribute('aria-hidden', 'true');
       h('span', 'sg-title-rule', null, top);
@@ -429,7 +429,8 @@
       // 临时局面：供地图与列表显示（经典剧本沿用标题背景的那一份，随机数序列与旧版相同）
       if (!SG.G || SG.G.scenario !== sid) SG.G = SG.GameState.newGame(SG.ScenarioData.Factions[0].split('|')[0], sid);
       await this.ensureMap(sid);
-      await UI().say(SG.ScenarioData.Intro);
+      // 剧本简介：提到的武将带行内小头像（临时局面已有这些武将）
+      await UI().say(SG.UI.faces(SG.esc(SG.ScenarioData.Intro), { factions: false, max: 8 }));
       const f0 = sid === 'world' && SG.ScenarioData.Regions ? await this.pickRulerByRegion() : await this.pickRulerList();
       this.map.select(-1);
       if (!f0) return false;
@@ -469,7 +470,10 @@
         if (r < 0) return null;
         const f0 = factions[r];
         this._focusCapital(g, f0, 45);
-        const ok = await UI().confirm('以' + g.ruler(f0.id).name + '开始？', '出阵', '再想想');
+        const ru = g.ruler(f0.id);
+        const ok = await UI().confirm('以' + SG.esc(ru.name) + '开始？', '出阵', '再想想', {
+          body: SG.UI.genCard(ru, { mood: 'win', sub: swatch(f0.color) + (f0.name !== ru.name ? SG.esc(f0.name) + '　' : '') + `城 ${g.cityCount(f0.id)}　将 ${g.generalsOf(f0.id).length}　德 ${f0.virtue}　人望 ${f0.fame}` }),
+        });
         if (!ok) { this.map.select(-1); continue; }
         return f0;
       }

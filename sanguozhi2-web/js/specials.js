@@ -119,7 +119,7 @@
     },
     assassinate: {
       label: '暗杀', stat: 'war', target: 'enemy', fx: 'shadow', color: '#b04dff',
-      params: { range: [2, 1, 3, 1], chance: [0.3, 0.1, 0.5, 0.01], power: [0.6, 0, 1.2, 0.01], morale: [-15, -40, 0, 1] },
+      params: { range: [2, 1, 3, 1], chance: [0.3, 0.05, 0.5, 0.01], power: [0.6, 0, 1.2, 0.01], morale: [-15, -40, 0, 1] },
     },
     poison: {
       label: '毒计', stat: 'intel', target: 'enemy', fx: 'poison', color: '#8be05a',

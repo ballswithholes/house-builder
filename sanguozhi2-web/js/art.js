@@ -1,9 +1,23 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 渲染基础
+   三国志-霸王的世界 · 网页版 · 渲染基础
    ← View/Art.cs（材质、程序化纹理、低多边形网格工具、常用模型）
    ← Resources/Shaders/*.shader（LowPoly 半兰伯特、Water、Sky、Unlit、Additive）
    ← Core/Game.cs SetupWorld()（太阳、三色环境光、雾、天空盒、阴影）
+
+   第三版（DESIGN-V3 §1：平滑、细致）新增 / 改进：
+     MeshBuilder.triN(a, b, c, na, nb, nc, ca, cb?, cc?)   逐顶点法线与颜色的三角形（正反面按法线自动确定）
+     MeshBuilder.sphere(center, radius(数或 Vector3), col, detail = 1, { seed, rough, top, flat, bottomShade })   平滑（可起伏的）椭球
+     MeshBuilder.lathe(base, [[r, y, col?, sharp?], …], seg, col, { capTop, capBottom })   平滑旋转体（穹顶、塔、帐、树冠层）
+     MeshBuilder.smoothCylinder(bottom, r0, r1, h, seg, col, cap)   MeshBuilder.tube(points, radii, seg, col, capEnd)
+     MeshBuilder.chineseRoof(...)   参数不变；改为凹曲屋面、翼角起翘、平滑法线并加鸱吻（所有用到它的场景一起变得细致）
+     Models.tree(...)               参数不变；平滑树干与圆润树冠
+     Gfx.terrainDetail() / terrainDetailGen()   程序化地形细节纹理（草、土、沙纹、岩石、农田地块、犁沟）
+     Gfx.masonryMaterial(near?, far?)   城池砖石材质（墙面错缝砖、坡面筒瓦、平顶方砖，按世界坐标程序化，随距离淡出）
+     Gfx.terrainMaterial(opts)      地形着色器（LowPoly 光照之上按坡度 / 高度 / 群落混合草地、泥土、农田、沙、
+                                    三平面投影岩石、雪、海床，再乘凹凸遮蔽）。opts.maps → 战略地图的数据纹理版；
+                                    缺省为顶点版：顶点色 = 群落底色，attribute vec4 aMat = (沙, 岩石倾向, 雪, 1 − 农田)
+   原有接口（Gfx.lowPoly / newLowPoly / water / unlit / additive、MeshBuilder 的平面着色方法、Models.soldier / commander / city）不变。
 
    颜色约定：关闭 three.js 的颜色管理，按 Unity「Gamma 空间」工作——
    C# 里的颜色数字（new Color(r,g,b)、'#rrggbb'）原样作为顶点色 / 材质色使用，
@@ -729,7 +743,7 @@ void main() {
     // 中式屋顶（第三版：凹曲屋面、檐口两端起翘、平滑法线，正脊两端加鸱吻）。bc 为檐口中心（Unity），w × d 为檐口外缘，h 为脊高
     chineseRoof(bc, w, d, h, col) {
       col = MeshBuilder._rgb(col);
-      const rw = w * 0.22, ew = w * 0.5, ed = d * 0.5, NS = w > 0.7 ? 4 : w > 0.3 ? 3 : 2;
+      const rw = w * 0.22, ew = w * 0.5, ed = d * 0.5, NS = w > 0.7 ? 4 : w > 0.45 ? 3 : 2;
       // 四圈（檐口 → 两道中圈 → 正脊）：x 半宽、z 半深、高度、翼角起翘
       const R = [[ew, ed, h * 0.08, h * 0.16], [rw + (ew - rw) * 0.64, ed * 0.62, h * 0.27, h * 0.06], [rw + (ew - rw) * 0.3, ed * 0.3, h * 0.6, h * 0.015], [rw, 0, h, 0]];
       const ringPt = (k, side, t) => {
@@ -770,7 +784,7 @@ void main() {
       // 正脊 + 鸱吻（小屋顶只有正脊）
       const ridgeC = shade(col, -0.32);
       this.box(v3(bc.x, bc.y + h + h * 0.04, bc.z), v3(rw * 2 + h * 0.12, h * 0.1, Math.max(0.01, h * 0.09)), ridgeC);
-      if (w > 0.3) for (const sx of [-1, 1]) {
+      if (w > 0.5) for (const sx of [-1, 1]) {
         this.box(v3(bc.x + sx * (rw + h * 0.04), bc.y + h + h * 0.14, bc.z), v3(h * 0.08, h * 0.22, h * 0.08), ridgeC);
         this.box(v3(bc.x + sx * (rw + h * 0.0), bc.y + h + h * 0.26, bc.z), v3(h * 0.1, h * 0.06, h * 0.06), ridgeC);
       }
@@ -1174,12 +1188,16 @@ void main() {
         let gr = g.v[i];
         gr = 0.5 + (gr - 0.5) * 1.6;
         A[o] = b8(gr);
-        // 泥土：卵石（Worley）+ 噪声
-        const peb = Math.min(1, w.f1[i] * 1.3);
-        A[o + 1] = b8(0.35 + 0.4 * (1 - peb * peb) * (0.6 + 0.4 * m.v[i]) + 0.25 * g.v[i] - (w.f21[i] < 0.05 ? 0.18 : 0));
-        // 沙纹：沿对角方向、整数周期（可平铺），用噪声扭曲
-        const ph = (x + y) / N * 14 + (s.v[i] - 0.5) * 2.2;
-        const rip = 0.5 + 0.5 * Math.sin(ph * Math.PI * 2);
+        // 泥土（第三版修订）：以 fBm 为主，卵石只是很淡的、经噪声扭曲的斑点，不再有 Worley 的多边形轮廓线（远看像铺石路）
+        const px = (x + Math.round((s.v[i] - 0.5) * 24) + N) % N, py = (y + Math.round((lo.v[i] - 0.5) * 24) + N) % N;
+        const peb = Math.min(1, w.f1[py * N + px] * 1.3);
+        A[o + 1] = b8(0.22 + 0.34 * m.v[i] + 0.3 * g.v[i] + 0.12 * (1 - peb * peb));
+        // 沙纹（第三版修订）：三个方向的整数周期波纹（可平铺），按低频噪声混合——各处波纹方向不同，并用噪声扭曲
+        const wa = s.v[i], wb = lo.v[((y + 97) % N) * N + (x + 141) % N];
+        const k1 = Math.max(0, 1 - Math.abs(wa - 0.25) * 3), k2 = Math.max(0, 1 - Math.abs(wa - 0.6) * 3), k3 = Math.max(0, 1 - Math.abs(wb - 0.55) * 2.6);
+        const kw = k1 + k2 + k3 + 1e-3, warp = (m.v[i] - 0.5) * 2.4;
+        const r1 = Math.sin(((x + y) / N * 14 + warp) * Math.PI * 2), r2 = Math.sin(((x - 2 * y) / N * 9 + warp) * Math.PI * 2), r3 = Math.sin(((3 * x + y) / N * 6 + warp) * Math.PI * 2);
+        const rip = 0.5 + 0.5 * (r1 * k1 + r2 * k2 + r3 * k3) / kw;
         A[o + 2] = b8(0.25 + 0.45 * rip * rip + 0.3 * g.v[i]);
         A[o + 3] = b8(lo.v[i]);
         // 岩石：脊状噪声 + 层理 + 颗粒 + 细裂隙（裂隙网按噪声扭曲，不成规则多边形）
@@ -1318,7 +1336,9 @@ vec3 sgCrop( float id ) {
 	}
 	// 沙：海滩与河岸（按高度）、沙漠（按群落）
 	float sgBeach = 1.0 - smoothstep( 0.2, 0.48, sgH + ( sgDA.b - 0.5 ) * 0.14 );
-	vec3 sgSand = mix( vec3( 0.87, 0.8, 0.62 ), sgTint * 1.05, clamp( sgMat.r * 0.7, 0.0, 0.6 ) ) * ( 0.86 + 0.24 * sgDA.b );
+	// 波纹只在沙漠里明显，海滩、河岸以细噪声为主
+	float sgRip = mix( 0.08, 0.26, smoothstep( 0.3, 0.8, sgMat.r ) );
+	vec3 sgSand = mix( vec3( 0.87, 0.8, 0.62 ), sgTint * 1.05, clamp( sgMat.r * 0.7, 0.0, 0.6 ) ) * ( 1.0 - sgRip * 0.55 + sgRip * sgDA.b + ( sgDF.r - 0.5 ) * 0.08 );
 	sgSand *= mix( 0.8, 1.0, smoothstep( 0.0, 0.22, sgH ) );
 	sgCol = mix( sgCol, sgSand, max( sgBeach, smoothstep( 0.2, 0.7, sgMat.r + ( sgDM.a - 0.5 ) * 0.25 ) * ( 1.0 - sgFw ) ) );
 	// 岩石：陡坡与高山（三平面投影，避免峭壁上的纹理拉伸）
@@ -1348,7 +1368,82 @@ vec3 sgCrop( float id ) {
     ' - sgPeak ) / ( 1.0 - ' + SHOULDER_KNEE + ' ) ) ) ) / sgPeak;\n' +
     '\t#include <opaque_fragment>';
 
+  // 城池 / 关隘 / 桥的砖石材质（第三版修订）：在 LowPoly 光照之上按世界坐标程序化生成——
+  // 竖直墙面为错缝砖石层（每块明暗略异、灰缝压暗；只作用于低饱和度的墙色，旗帜、门窗等彩色部分基本不变），
+  // 坡面为筒瓦（沿檐方向的瓦垄 + 逐行的瓦缝），平顶为方砖。随镜头距离淡出（远处不出现摩尔纹）
+  const MASONRY_VS_PARS = 'varying vec3 vSgMW;\nvarying vec3 vSgMN;\nvarying float vSgMD;\n';
+  const MASONRY_VS_MAIN = '#include <project_vertex>\n\tvSgMW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\n\tvSgMN = normalize( mat3( modelMatrix ) * objectNormal );\n\tvSgMD = - mvPosition.z;\n';
+  const MASONRY_FS_PARS = `varying vec3 vSgMW;
+varying vec3 vSgMN;
+varying float vSgMD;
+uniform vec2 sgMFade;
+float sgMHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+`;
+  const MASONRY_FS = `#include <color_fragment>
+	{
+		float sgFd = 1.0 - smoothstep( sgMFade.x, sgMFade.y, vSgMD );
+		if ( sgFd > 0.0 ) {
+			vec3 n = normalize( vSgMN );
+			vec3 p = vSgMW;
+			vec3 c = diffuseColor.rgb;
+			float mx = max( max( c.r, c.g ), c.b ), mn = min( min( c.r, c.g ), c.b );
+			float sat = ( mx - mn ) / max( mx, 0.001 );
+			float ay = abs( n.y );
+			float k = 1.0;
+			// 墙面：错缝砖石
+			float wW = ( 1.0 - smoothstep( 0.25, 0.4, ay ) ) * clamp( 1.0 - ( sat - 0.25 ) * 2.2, 0.0, 1.0 );
+			if ( wW > 0.0 ) {
+				float u = abs( n.x ) > abs( n.z ) ? p.z : p.x;
+				float row = floor( p.y / 0.052 );
+				float uu = u / 0.12 + mod( row, 2.0 ) * 0.5;
+				float fy = fract( p.y / 0.052 ), fu = fract( uu );
+				float mort = 1.0 - smoothstep( 0.05, 0.16, min( fy, 1.0 - fy ) ) * smoothstep( 0.03, 0.08, min( fu, 1.0 - fu ) );
+				float h = sgMHash( vec2( floor( uu ), row ) );
+				k *= mix( 1.0, ( 0.9 + 0.16 * h ) * ( 1.0 - 0.24 * mort ), wW );
+			}
+			// 坡面：筒瓦
+			float rW = smoothstep( 0.25, 0.4, ay ) * ( 1.0 - smoothstep( 0.9, 0.97, ay ) );
+			if ( rW > 0.0 ) {
+				vec2 t = normalize( vec2( - n.z, n.x ) + vec2( 1e-4, 0.0 ) );
+				float u = dot( p.xz, t );
+				float roll = 0.5 + 0.5 * sin( u / 0.04 * 6.2832 );
+				float fy = fract( p.y / 0.03 );
+				k *= mix( 1.0, ( 0.84 + 0.22 * roll * roll ) * ( 1.0 - 0.18 * ( 1.0 - smoothstep( 0.0, 0.22, fy ) ) ), rW );
+			}
+			// 平顶：方砖
+			float fW = smoothstep( 0.9, 0.97, ay ) * clamp( 1.0 - ( sat - 0.25 ) * 2.2, 0.0, 1.0 );
+			if ( fW > 0.0 ) {
+				vec2 g = p.xz / 0.14;
+				vec2 f = abs( fract( g ) - 0.5 );
+				float j = 1.0 - smoothstep( 0.42, 0.48, max( f.x, f.y ) );
+				k *= mix( 1.0, ( 0.93 + 0.1 * sgMHash( floor( g ) ) ) * ( 0.86 + 0.14 * j ), fW * 0.8 );
+			}
+			diffuseColor.rgb *= mix( 1.0, k, sgFd );
+		}
+	}
+`;
+  const _masonry = {};
+  function masonryMaterial(near, far) {
+    near = near || 16; far = far || 30;
+    const key = near + ':' + far;
+    if (_masonry[key]) return _masonry[key];
+    const mat = new LowPolyMaterial();
+    const u = { sgMFade: { value: new THREE.Vector2(near, far) } };
+    mat.onBeforeCompile = function masonryCompile(shader, renderer) {
+      lowPolyCompile.call(this, shader, renderer);
+      Object.assign(shader.uniforms, u);
+      shader.vertexShader = MASONRY_VS_PARS + shader.vertexShader.replace('#include <project_vertex>', MASONRY_VS_MAIN);
+      shader.fragmentShader = MASONRY_FS_PARS + shader.fragmentShader.replace('#include <color_fragment>', MASONRY_FS);
+    };
+    mat.customProgramCacheKey = () => 'sgMasonry';
+    mat.name = 'Masonry';
+    _masonry[key] = mat;
+    return mat;
+  }
+
   Object.assign(Gfx, {
+    // 砖石材质（城池、关隘、桥；共享实例，勿 dispose）：near / far 为淡出的镜头距离（缺省 16 / 30）
+    masonryMaterial,
     // 地形细节纹理 { a, b }（同步生成，约 40ms；地图构建时用 terrainDetailGen 分片生成）
     terrainDetail() { if (!_detail) { const it = terrainDetailGen(); while (!it.next().done) { /* 同步跑完 */ } } return _detail; },
     terrainDetailGen,

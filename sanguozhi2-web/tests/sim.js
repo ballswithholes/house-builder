@@ -848,6 +848,7 @@ function fightAI(Mdl, st, check) {
             st.pool++;
             st.poolTier[sp.tier] = (st.poolTier[sp.tier] || 0) + 1;
             if (ref > 0 && r.dmg > 0 && DMG_KINDS.indexOf(sp.kind) >= 0) (st.poolRatio[sp.tier] = st.poolRatio[sp.tier] || []).push(r.dmg / ref);
+            if (ref > 0 && sp.kind === 'assassinate') { st.assn.push(r.dmg / ref); if (r.killed) st.assnKill++; }
           } else st.sig++;
           if (check) checkSpecialResult(r, 'special ' + sp.name);
         }
@@ -859,13 +860,14 @@ function fightAI(Mdl, st, check) {
   }
   if (Mdl.result === 0) throw new Error('battle never ended');
 }
-function newStats() { return { n: 0, w: 0, days: 0, dmg: 0, atk: [], oldTac: 0, newTac: 0, byTac: {}, sig: 0, pool: 0, poolTier: {}, poolRatio: {}, outcomes: [] }; }
+function newStats() { return { n: 0, w: 0, days: 0, dmg: 0, atk: [], oldTac: 0, newTac: 0, byTac: {}, sig: 0, pool: 0, poolTier: {}, poolRatio: {}, assn: [], assnKill: 0, outcomes: [] }; }
 function levelHist(gens) { const h = {}; for (const x of gens) h[x.level] = (h[x.level] || 0) + 1; return Object.keys(h).sort((a, b) => a - b).map(k => 'L' + k + ':' + h[k]).join(' '); }
 // 习得的招式不超出格数与等阶上限
 function checkCaps(x, where) {
   const ss = Pg.specialSlots(x), ts = Pg.tacticSlots(x);
   if (x.specials.length > ss.max) throw new Error(where + ': ' + x.name + ' knows ' + x.specials.length + ' learned specials, slots ' + ss.max);
   x.specials.forEach((id, k) => { const sp = SG.Specials.byId(id); if (!sp || sp.tier > ss.statTier || sp.tier > k + 1) throw new Error(where + ': ' + x.name + ' (war ' + x.war + ') has ' + id + ' beyond tier cap (slot ' + (k + 1) + ')'); });
+  if (x.specials.filter(id => SG.Specials.byId(id).kind === 'assassinate').length > 1) throw new Error(where + ': ' + x.name + ' knows more than one pool assassinate');
   const lt = Pg.learnedTactics(x);
   if (lt.length > ts.max) throw new Error(where + ': ' + x.name + ' knows ' + lt.length + ' learned tactics, slots ' + ts.max);
   lt.forEach((id, k) => { const t = Tc.byId(id); if (!t || t.tier > ts.statTier || t.tier > k + 1 || x.intel < t.reqInt) throw new Error(where + ': ' + x.name + ' (intel ' + x.intel + ') has tactic ' + id + ' beyond cap (slot ' + (k + 1) + ')'); });
@@ -916,6 +918,10 @@ try {
         if (!Pg.eligible(x, c.type).some(e => e.id === c.id)) throw new Error('ineligible candidate ' + c.id);
         if (!c.name || !c.desc || !c.rules || !/^#[0-9a-f]{6}$/i.test(c.color)) throw new Error('candidate lacks display fields: ' + JSON.stringify(c));
       }
+      for (const type of ['special', 'tactic']) {
+        const cap = type === 'special' ? Pg.specialSlots(x).tier : Pg.tacticSlots(x).tier;
+        if (Pg.eligible(x, type).some(e => e.tier === cap) && !c1.some(c => c.type === type && c.tier === cap)) throw new Error('offer lacks a top-tier ' + type + ' (tier ' + cap + ') for ' + x.name);
+      }
       if (op.special > 0 && op.tactic > 0 && Pg.eligible(x, 'special').length && Pg.eligible(x, 'tactic').length) {
         total++;
         if (c1.some(c => c.type === 'special') && c1.some(c => c.type === 'tactic')) mixed++;
@@ -932,15 +938,30 @@ try {
   const low = mk(65, 55, 10);
   const t4 = SG.Specials.pool().find(sp => sp.tier === 4), tt4 = Tc.learnable().find(t => t.tier === 4);
   if (Pg.learn(low, 'special', t4.id) || Pg.learn(low, 'tactic', tt4.id) || Pg.learn(low, 'tactic', 'fire') || Pg.learn(low, 'special', 'lp:nope')) throw new Error('learn() accepted an ineligible entry');
-  // 电脑自动习得；玩家武将保留待选
-  const ai = mk(95, 95, 1, 3), me = mk(95, 95, 1, g.player);
-  const ra = Pg.gain(ai, Pg.EXP[10]), rm = Pg.gain(me, Pg.EXP[10]);
+  // 电脑自动习得；玩家武将：playerAutoLearn = false（升级对话框上线后）保留待选，缺省 true 时与电脑一样自动习得
+  if (Pg.playerAutoLearn !== true) throw new Error('playerAutoLearn should default to true until the level-up dialog ships');
+  const ai = mk(95, 95, 1, 3), me = mk(95, 95, 1, g.player), me2 = mk(95, 95, 1, g.player);
+  Pg.playerAutoLearn = false;
+  let ra, rm, rm2;
+  try { ra = Pg.gain(ai, Pg.EXP[10]); rm = Pg.gain(me, Pg.EXP[10]); } finally { Pg.playerAutoLearn = true; }
+  rm2 = Pg.gain(me2, Pg.EXP[10]);
   if (ai.level !== 10 || me.level !== 10 || ai.exp !== Pg.EXP[10]) throw new Error('gain did not reach level 10');
   if (Pg.openings(ai).total !== 0 || ra.learned.length !== 9 || ai.specials.length !== 4 || Pg.learnedTactics(ai).length !== 5) throw new Error('AI auto-learn should fill 4 + 5 slots: ' + JSON.stringify(Pg.openings(ai)) + ' learned ' + ra.learned.length);
-  if (rm.learned.length !== 0 || Pg.openings(me).total !== 9) throw new Error('player general should keep openings for the level-up dialog');
-  g.generals.push(me);
-  if (Pg.pending(g.player).indexOf(me) < 0) throw new Error('pending() misses the player general');
-  g.generals.pop();
+  if (rm.learned.length !== 0 || Pg.openings(me).total !== 9) throw new Error('player general should keep openings for the level-up dialog (playerAutoLearn false)');
+  if (rm2.learned.length !== 9 || Pg.openings(me2).total !== 0) throw new Error('player general should auto-learn while playerAutoLearn is on: ' + rm2.learned.length);
+  g.generals.push(me, me2);
+  if (Pg.pending(g.player).indexOf(me) < 0 || Pg.pending(g.player).indexOf(me2) >= 0) throw new Error('pending() wrong for the player generals');
+  g.generals.pop(); g.generals.pop();
+  // openings 只在有可学计策（载入 tactics-data.js）时计计策格，否则候选为空时 total 不会停在 > 0
+  {
+    const lone = mk(40, 95, 1, g.player);
+    lone.exp = Pg.EXP[10]; Pg.ensure(lone);
+    const Tsave = SG.Tactics;
+    SG.Tactics = undefined;
+    try { if (Pg.openings(lone).total !== 0 || Pg.candidates(lone).length !== 0) throw new Error('openings without tactics-data.js: ' + JSON.stringify(Pg.openings(lone))); }
+    finally { SG.Tactics = Tsave; }
+    if (Pg.openings(lone).tactic !== 5 || Pg.candidates(lone).length === 0) throw new Error('openings with tactics-data.js: ' + JSON.stringify(Pg.openings(lone)));
+  }
   const tiers = ai.specials.map(id => SG.Specials.byId(id).tier).join('');
   if (tiers !== '1234') throw new Error('slot k should take tier k for a war-95 general: ' + tiers);
   // ensure 幂等
@@ -1041,8 +1062,11 @@ try {
   const g = SG.G = GameState.newGame('cao');
   const dummy = i => ({ id: 9000 + i, name: '靶' + i, war: 70, intel: 60, pol: 50, faction: -1, troops: 3500, training: 60, loyalty: 80 });
   const ratios = {};
+  const RANGE = { 1: [1.2, 1.9], 2: [1.45, 2.25], 3: [1.75, 2.6], 4: [2.0, 2.9] };
+  const evs = [];     // 暗杀：期望值 = 成功率 × 目标兵力 + (1 − 成功率) × 失手伤害（整支溃散的额外价值不计）
   for (const sp of pool) {
-    if (DMG_KINDS.indexOf(sp.kind) < 0) continue;
+    const assn = sp.kind === 'assassinate';
+    if (DMG_KINDS.indexOf(sp.kind) < 0 && !assn) continue;
     const gen = { id: 9700, name: '参考', war: 85, intel: 60, pol: 50, faction: -1, troops: 0, training: 70, loyalty: 90 };
     gen.troops = SG.maxTroops(gen);
     const s = { attacker: 0, defender: 1, src: g.cities[0], target: g.cities[11], atk: [gen], def: [dummy(1), dummy(2), dummy(3), dummy(4)], atkFood: 3000, atkGold: 0, routed: new Set(), captives: [] };
@@ -1052,19 +1076,43 @@ try {
     u.x = 4; u.y = 4; u.morale = 80;
     [[5, 4], [5, 5], [4, 6], [4, 2]].forEach((p, k) => { const e = [e1, e2, e3, e4][k]; e.x = p[0]; e.y = p[1]; e.morale = 70; });
     Mdl.side = 0;
+    if (assn) for (const x of Mdl.units) x.commander = false;     // 参考目标都不是主将（主将成功率减半）
     const normal = refAction(Mdl, u, e1, sp);
     let best = 0;
     for (const t of Mdl.targetsOf(u, sp)) {
       const pl = Mdl.spPlan(u, sp, t);
+      if (assn) {
+        const p = pl.kill ? pl.kill.p : 0;
+        let miss = 0;
+        for (const h of pl.dmg) miss += Math.min(h.unit.troops, h.amt);
+        best = Math.max(best, p * (pl.kill ? pl.kill.unit.troops : 0) + (1 - p) * miss);
+        continue;
+      }
       const per = new Map();
       for (const h of pl.dmg) per.set(h.unit, Math.min(h.unit.troops, (per.get(h.unit) || 0) + h.amt));
       let dmg = [...per.values()].sort((a, b) => b - a).slice(0, sp.kind === 'rampage' ? 99 : 2).reduce((a, b) => a + b, 0);
       if (pl.drain > 0) for (const h of pl.dmg) if (h.primary) dmg += Math.min(h.unit.troops, h.amt) * pl.drain * 0.5;
       best = Math.max(best, dmg);
     }
+    if (assn) { evs.push({ name: sp.name, tier: sp.tier, r: best / Math.max(1, normal) }); continue; }
     (ratios[sp.tier] = ratios[sp.tier] || []).push({ name: sp.name, r: best / Math.max(1, normal) });
   }
-  const RANGE = { 1: [1.2, 1.9], 2: [1.45, 2.25], 3: [1.75, 2.6], 4: [2.0, 2.9] };
+  // 暗杀的期望值（不计整支溃散 / 主将被刺的额外价值）须落在同阶伤害型的范围内，且逐阶递增
+  for (const o of evs) {
+    const lo = 0.7, hi = RANGE[o.tier][1];
+    if (!(o.r >= lo && o.r <= hi)) throw new Error(`pool assassinate ${o.name} (tier ${o.tier}) expected value / normal attack ${o.r.toFixed(2)} outside ${lo}-${hi}`);
+  }
+  evs.sort((a, b) => a.tier - b.tier);
+  for (let k = 1; k < evs.length; k++) if (evs[k].tier > evs[k - 1].tier && !(evs[k].r > evs[k - 1].r)) throw new Error('pool assassinate expected value should rise with tier');
+  // 每位武将至多一招可习得的暗杀
+  {
+    const killer = { id: 9701, name: '刺客', war: 95, intel: 60, pol: 50, faction: -1, troops: 3000, training: 70, loyalty: 90 };
+    Pg.ensure(killer); killer.exp = Pg.EXP[10]; Pg.ensure(killer);
+    const assnIds = pool.filter(sp => sp.kind === 'assassinate').map(sp => sp.id);
+    killer.specials = [assnIds[0]];
+    if (Pg.eligible(killer, 'special').some(sp => sp.kind === 'assassinate')) throw new Error('a general should learn at most one pool assassinate');
+    if (Pg.learn(killer, 'special', assnIds[1])) throw new Error('learn() accepted a second pool assassinate');
+  }
   const meds = [];
   const line = [];
   for (let t = 1; t <= 4; t++) {
@@ -1074,7 +1122,7 @@ try {
     for (const o of ratios[t]) if (!(o.r >= RANGE[t][0] && o.r <= RANGE[t][1])) throw new Error(`pool ${o.name} (tier ${t}) reference ratio ${o.r.toFixed(2)} outside ${RANGE[t].join('-')}`);
   }
   for (let t = 1; t < 4; t++) if (!(meds[t] > meds[t - 1])) throw new Error('pool tier medians should increase: ' + meds.map(x => x.toFixed(2)).join(' '));
-  console.log(`(7c) learnable specials OK: ${pool.length} (${[1, 2, 3, 4].map(t => 'T' + t + ':' + byTier[t].length).join(' ')}), names & (kind, params) unique vs ${rep.total} signature specials; reference damage / normal attack (war 85): ${line.join('; ')}`);
+  console.log(`(7c) learnable specials OK: ${pool.length} (${[1, 2, 3, 4].map(t => 'T' + t + ':' + byTier[t].length).join(' ')}), names & (kind, params) unique vs ${rep.total} signature specials; reference damage / normal attack (war 85): ${line.join('; ')}; assassinate expected value ${evs.map(o => o.name + ' ' + o.r.toFixed(2)).join(' ')} (at most one per general)`);
 } catch (e) {
   fails++;
   console.log('(7c) learnable specials FAILED: ' + (e.stack || e));
@@ -1128,10 +1176,61 @@ try {
     SG.Random.value = () => 0;
     let r; try { r = Mdl.useTactic(u, T('water'), foes[0]); } finally { SG.Random.value = realValue; }
     if (!r.success || r.hits.length < 2 || r.doused.length < 1) throw new Error('water: ' + JSON.stringify({ s: r.success, h: r.hits.length, d: r.doused.length }));
+    // 冷却：「冷却 N 日」= 用后的 N 个本方回合不能再用（第 d 日用，第 d+N+1 日起可用）
+    const cdW = T('water').cd;
+    if (!(cdW >= 1)) throw new Error('water should have a cooldown');
     if (Mdl.tacticUsable(u, T('water')).ok) throw new Error('water should be on cooldown the same day');
+    for (let k = 1; k <= cdW; k++) {
+      Mdl.endSide(); Mdl.endSide();
+      if (Mdl.tacticUsable(u, T('water')).ok) throw new Error('water (冷却' + cdW + '日) usable again after only ' + k + ' day(s)');
+    }
     Mdl.endSide(); Mdl.endSide();
-    if (!Mdl.tacticUsable(u, T('water')).ok) throw new Error('water cooldown (1 day) should be over the next day: ' + Mdl.tacticUsable(u, T('water')).why);
-    notes.push(`水计 hits ${r.hits.length} dmg ${r.dmg}`);
+    if (!Mdl.tacticUsable(u, T('water')).ok) throw new Error('water cooldown (' + cdW + ' day) should be over after ' + (cdW + 1) + ' days: ' + Mdl.tacticUsable(u, T('water')).why);
+    notes.push(`水计 hits ${r.hits.length} dmg ${r.dmg}, 冷却${cdW}日 = next use day +${cdW + 1}`);
+  }
+  // 每种有冷却的计策：每个本方回合都尝试施展（必定成功），可用的日子间隔 = 冷却 + 1
+  {
+    const pat = [];
+    for (const t of learn) {
+      if (!(t.cd > 0)) continue;
+      const { Mdl, u, foes } = tfield(2, 1);
+      foes[0].x = 5; foes[0].y = 5; foes[1].x = 6; foes[1].y = 5;
+      if (t.need === 'river') Mdl.map[foes[0].x][foes[0].y + 1] = SG.Terrain.River;
+      if (t.need === 'cover') Mdl.map[foes[0].x][foes[0].y + 1] = SG.Terrain.Forest;
+      let line = '';
+      for (let d = 0; d < 7; d++) {
+        if (Mdl.result !== 0) throw new Error('cooldown probe battle ended early (' + t.name + ')');
+        for (const x of Mdl.units) { x.troops = x.side === 1 ? 3500 : x === u ? 4000 : 1500; x.morale = 80; x.confused = 0; }
+        const ok = Mdl.tacticUsable(u, t).ok;
+        line += ok ? 'Y' : '-';
+        if (ok) {
+          const tg = Mdl.tacticTargets(u, t)[0];
+          SG.Random.value = () => 0;
+          try { Mdl.useTactic(u, t, tg); } finally { SG.Random.value = realValue; }
+        }
+        Mdl.endSide(); Mdl.endSide();
+      }
+      const want = Array.from({ length: 7 }, (_, d) => d % (t.cd + 1) === 0 ? 'Y' : '-').join('');
+      if (line !== want) throw new Error(`${t.name} 冷却${t.cd}日: usable pattern ${line}, want ${want}`);
+      if (Tc.rules(t).indexOf('冷却' + t.cd + '日') < 0) throw new Error(t.name + ' rules text should state 冷却' + t.cd + '日');
+      pat.push(t.name + t.cd);
+    }
+    notes.push('cooldowns ' + pat.join(' '));
+  }
+  // 火计击溃敌主将而结束战斗：施计者的计策 / 伤害 / 击溃经验都要计入战后结算（结算在记经验之后）
+  {
+    const { Mdl, u, foes } = tfield(3);
+    const e = foes[0];
+    e.troops = 300; e.commander = true;
+    foes[2].troops = 0; foes[2].troops0 = 0;     // 无兵上阵的守将（构造时 troops0 = 武将兵力 0）：战后不计经验、不计战绩
+    SG.Random.value = () => 0;
+    let r; try { r = Mdl.useTactic(u, T('fire'), e); } finally { SG.Random.value = realValue; }
+    if (!r.success || e.alive || Mdl.result !== 1) throw new Error('fire should rout the 300-troop commander and end the battle: ' + JSON.stringify({ r, alive: e.alive, result: Mdl.result }));
+    const pr = (Mdl.progress || []).find(p => p.gen === u.gen);
+    const want = Pg.battleExp({ dmg: 300, routs: 1, cmdRouts: 1, tactics: 1, won: true, commander: false });
+    if (!pr || pr.xp.tactics !== 1 || pr.xp.routs !== 1 || pr.xp.cmdRouts !== 1 || pr.xp.dmg !== 300 || pr.exp !== want) throw new Error('battle-ending fire lost the caster exp: ' + JSON.stringify(pr && { exp: pr.exp, want, xp: pr.xp }));
+    if (Mdl.progress.some(p => p.gen === foes[2].gen) || !Mdl.progress.some(p => p.gen === foes[1].gen) || (foes[2].gen.record ? foes[2].gen.record.battles : 0) !== 0) throw new Error('a 0-troop unit should get no battle exp / record');
+    notes.push(`battle-ending 火计 credits caster ${pr.exp} exp; 0-troop unit skipped`);
   }
   // 伏兵：须靠近林地 / 山丘
   {
@@ -1270,7 +1369,7 @@ try {
       if (on) (snaps[0] = snaps[0] || []).push(JSON.stringify(g));         // 开局（全员 1 级）
       for (let m = 0; m < 12 * 20; m++) {
         StrategyAI.runAI([]); StrategyAI.endMonth();
-        if (on && (m === 35 || m === 95)) (snaps[m] = snaps[m] || []).push(JSON.stringify(g));
+        if (on && (m === 5 || m === 11 || m === 35 || m === 95)) (snaps[m] = snaps[m] || []).push(JSON.stringify(g));
         if (on && (m === 59 || m === 119 || m === 239)) {
           const act = g.generals.filter(x => !x.dead && x.record.battles > 0);
           for (const x of g.generals) checkCaps(x, '7f');
@@ -1295,11 +1394,12 @@ try {
   console.log('(7f) campaign FAILED: ' + (e.stack || e));
 }
 
-// ---- (7g) 战术战斗平衡：取全电脑模拟开局 / 第 3 年 / 第 8 年的局面，成长开 / 关各打一遍 ----
+// ---- (7g) 战术战斗平衡：取全电脑模拟开局 / 第 6、12 个月 / 第 3 年 / 第 8 年的局面，成长开 / 关各打一遍 ----
+// （第 6、12 个月：玩家最先遇到已升级的电脑武将的时候，早期不能失衡）
 try {
   const rows = [];
   const results = {};
-  for (const m of [0, 35, 95]) {
+  for (const m of [0, 5, 11, 35, 95]) {
     for (const on of [false, true]) {
       const st = newStats();
       (snaps[m] || []).forEach((text, si) => {
@@ -1329,7 +1429,10 @@ try {
     }
     const off = results[m + ':false'], on = results[m + ':true'];
     const pr = o => Object.keys(o.poolRatio).sort().map(t => 'T' + t + ' ' + median(o.poolRatio[t]).toFixed(2)).join(' ');
-    rows.push(`  ${m === 0 ? 'start' : 'year ' + (m + 1) / 12}: OFF atk win ${(100 * off.w / off.n).toFixed(1)}% days ${(off.days / off.n).toFixed(1)} dmg/battle ${(off.dmg / off.n) | 0} | ON atk win ${(100 * on.w / on.n).toFixed(1)}% days ${(on.days / on.n).toFixed(1)} dmg/battle ${(on.dmg / on.n) | 0}; ` +
+    // 局面中武力 ≥ 60 的在世武将有几位已学到必杀
+    const lrn = (snaps[m] || []).map(text => { const gs = JSON.parse(text).generals.filter(x => !x.dead && x.war >= 60 && x.faction >= 0); return [gs.filter(x => (x.specials || []).length).length, gs.length]; });
+    const lrnTxt = lrn.reduce((a, b) => a + b[0], 0) + '/' + lrn.reduce((a, b) => a + b[1], 0);
+    rows.push(`  ${m === 0 ? 'start' : m < 12 ? 'month ' + (m + 1) : 'year ' + (m + 1) / 12} (war≥60 with a learned special ${lrnTxt}): OFF atk win ${(100 * off.w / off.n).toFixed(1)}% days ${(off.days / off.n).toFixed(1)} dmg/battle ${(off.dmg / off.n) | 0} | ON atk win ${(100 * on.w / on.n).toFixed(1)}% days ${(on.days / on.n).toFixed(1)} dmg/battle ${(on.dmg / on.n) | 0}; ` +
       `ON per battle: signature ${(on.sig / on.n).toFixed(2)}, learned specials ${(on.pool / on.n).toFixed(2)}, new tactics ${(on.newTac / on.n).toFixed(2)}, old tactics ${(on.oldTac / on.n).toFixed(2)} (OFF ${(off.oldTac / off.n).toFixed(2)})` +
       (on.pool ? `; learned special dmg / normal attack by tier: ${pr(on)}` : ''));
     if (m === 0 && on.outcomes.join() !== off.outcomes.join()) throw new Error('opening battles (all level 1) must be identical with progression on/off');
@@ -1342,8 +1445,12 @@ try {
   const all = {};
   for (const key of ['35:true', '95:true']) for (const t of Object.keys(results[key].poolRatio)) all[t] = (all[t] || []).concat(results[key].poolRatio[t]);
   const tierLine = Object.keys(all).sort().map(t => `T${t} ${median(all[t]).toFixed(2)} (n${all[t].length})`).join(', ');
+  let assn = [], assnKill = 0;
+  for (const key of Object.keys(results)) { assn = assn.concat(results[key].assn); assnKill += results[key].assnKill; }
+  const assnLine = assn.length ? `; learned assassinate realised dmg / normal attack mean ${(assn.reduce((a, b) => a + b, 0) / assn.length).toFixed(2)} (n${assn.length}, ${assnKill} kills)` : '';
+  if (assn.length >= 10 && !(assn.reduce((a, b) => a + b, 0) / assn.length <= 2.2)) throw new Error('learned assassinate too strong in battle: ' + assnLine);
   for (const t of Object.keys(all)) if (all[t].length >= 10 && !(median(all[t]) >= [0, 1.1, 1.3, 1.6, 1.8][t] && median(all[t]) <= [0, 2.0, 2.3, 2.7, 3.1][t])) throw new Error('in-battle learned special ratio for tier ' + t + ' = ' + median(all[t]).toFixed(2));
-  console.log('(7g) tactical balance, 160 battles per row (same seeds and armies, progression OFF vs ON):\n' + rows.join('\n') + '\n  learned special damage / normal attack in battle: ' + tierLine);
+  console.log('(7g) tactical balance, 160 battles per row (same seeds and armies, progression OFF vs ON):\n' + rows.join('\n') + '\n  learned special damage / normal attack in battle: ' + tierLine + assnLine);
 } catch (e) {
   Pg.enabled = true;
   fails++;

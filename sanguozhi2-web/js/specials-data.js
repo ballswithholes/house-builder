@@ -58,7 +58,7 @@
    fortify 坚守        pol    radius 1 [0,2] · def 1.35 [1.1,1.7] · counter 1.3 [1,2] · turns 2 [1,3] · morale 10 [0,30]
    haste   疾行        pol    radius 2 [1,3] · count 2 [1,3]（令已行动的友军再动，并补行动力）· move 1 [0,2]（当日机动力 +）· morale 5 [0,20]
    heal    医术        intel  range 2 [0,4] · radius 1 [0,2] · heal 0.2 [0.08,0.35] · morale 10 [0,30] · cure 1 [0,1]
-   assassinate 暗杀    war    range 2 [1,3] · chance 0.3 [0.1,0.5]（+ 武力差/250 + 智力差/300；stat 'intel' 时 + 智力差/200 + 武力差/500；
+   assassinate 暗杀    war    range 2 [1,3] · chance 0.3 [0.05,0.5]（+ 武力差/250 + 智力差/300；stat 'intel' 时 + 智力差/200 + 武力差/500；
                               上限 0.6，主将减半）· power 0.6 [0,1.2]（失手时）· morale −15 [−40,0]
    poison  毒计        intel  range 3 [2,5] · radius 1 [0,1] · power 0.4 [0,0.8] · dot 0.06 [0.03,0.12]（每日损兵比例）· turns 3 [2,4] · morale −8 [−30,0]
 
@@ -1000,6 +1000,9 @@
   // 名称两两不同且不与任何专属必杀重名；(kind, stat, 全部参数) 不与任何专属必杀相同（tests/sim.js 自检）。
   // 平衡：威力按等阶递增——一阶 ≈ 1.4–1.6 次普通攻击、二阶 ≈ 1.7–1.9、三阶 ≈ 2.0–2.2、四阶 ≈ 2.3–2.6（每招每战一次）。
   //   辅助类一律 stat 'war'（武人的号令、鼓舞、坚守），数值依武力缩放。
+  //   暗杀（袖箭 / 擒贼擒王 / 鱼肠剑）得手即整支溃散，基础成功率压低到 6% / 10% / 14%，且每人至多学一招
+  //   （SG.Progress.eligible）；期望值（成功率 × 目标兵力 + 失手伤害）不超过同阶伤害型的下沿。
+  //   远射（连珠箭 / 射雕手 / 穿云箭 / 射日弓）不必近身、几乎每战都用得上，威力取同阶偏低。
   //   SG.SpecialsData.addPool({ 编号: 条目, … }) 可追加；poolIds() / getPool(id) 读取。
   const pool = Object.create(null);
   store.addPool = function (map) {
@@ -1017,7 +1020,7 @@
       lore: '佯败而走，待敌追近，回身一枪——古来枪家的看家绝技。' },
     tuodao: { tier: 1, name: '拖刀计', kind: 'smite', range: 1, power: 1.55, morale: -12, confuse: 0.1, turns: 1, fx: 'slash', color: '#c9d6a3',
       lore: '诈败拖刀，诱敌近前回身劈斩；《三国演义》第五十三回，关羽战长沙时欲以此计取黄忠。' },
-    lianzhu: { tier: 1, name: '连珠箭', kind: 'volley', range: 3, power: 1.45, radius: 0, morale: -5, fx: 'arrows', color: '#f2d27a',
+    lianzhu: { tier: 1, name: '连珠箭', kind: 'volley', range: 3, power: 1.35, radius: 0, morale: -5, fx: 'arrows', color: '#f2d27a',
       lore: '一弦数矢、连发不绝的射法。' },
     hengsao: { tier: 1, name: '横扫千军', kind: 'cleave', power: 1.3, splash: 0.5, morale: -6, fx: 'sweep', color: '#f0b45c',
       lore: '长兵抡圆横扫，逼退四周之敌（语出杜甫「笔阵独扫千人军」）。' },
@@ -1031,7 +1034,7 @@
       lore: '大橹相连、长戟在后，汉军步卒拒骑之法。' },
     leigu: { tier: 1, name: '擂鼓助威', kind: 'rally', stat: 'war', radius: 1, morale: 15, heal: 0, cure: 1, atk: 1, turns: 1, fx: 'aura', color: '#f7d36a',
       lore: '「一鼓作气」——《左传·庄公十年》曹刿论战。' },
-    xiujian: { tier: 1, name: '袖箭', kind: 'assassinate', range: 1, chance: 0.15, power: 0.45, morale: -10, fx: 'shadow', color: '#9b7fd6',
+    xiujian: { tier: 1, name: '袖箭', kind: 'assassinate', range: 1, chance: 0.06, power: 0.45, morale: -10, fx: 'shadow', color: '#9b7fd6',
       lore: '藏于袖中、以机括发射的短箭，近身暗算防不胜防。' },
     // ---- 二阶（武力 70+，4 级起） ----
     zhanma: { tier: 2, name: '斩马剑', kind: 'smite', range: 1, power: 1.8, pierce: 1, morale: -10, fx: 'slash', color: '#d8dee8',
@@ -1040,7 +1043,7 @@
       lore: '人随刀转如旋风，近身之敌无一幸免。' },
     tuzhen: { tier: 2, name: '突阵', kind: 'charge', range: 3, power: 1.6, dash: 0.12, push: 1, morale: -10, fx: 'dash', color: '#ff7a4f',
       lore: '率先突入敌阵、搅乱其行列。' },
-    shediao: { tier: 2, name: '射雕手', kind: 'volley', range: 4, power: 1.75, radius: 0, morale: -6, fx: 'arrow', color: '#ffe39a',
+    shediao: { tier: 2, name: '射雕手', kind: 'volley', range: 4, power: 1.6, radius: 0, morale: -6, fx: 'arrow', color: '#ffe39a',
       lore: '《史记·李将军列传》：「是必射雕者也。」匈奴称最善射者为射雕手。' },
     chuanzhen: { tier: 2, name: '穿阵四击', kind: 'rampage', range: 2, strikes: 4, power: 0.48, morale: -6, fx: 'whirl', color: '#e3edf8',
       lore: '纵马穿阵，往来四击而还。' },
@@ -1048,7 +1051,7 @@
       lore: '击破敌军后收其降卒为己用——汉末诸侯扩军的常法。' },
     xiansheng: { tier: 2, name: '先声夺人', kind: 'roar', radius: 2, power: 0.2, morale: -20, confuse: 0.3, turns: 1, fx: 'shock', color: '#ff9440',
       lore: '《左传·昭公二十一年》：「先人有夺人之心。」' },
-    qinzei: { tier: 2, name: '擒贼擒王', kind: 'assassinate', range: 2, chance: 0.22, power: 0.5, morale: -15, fx: 'shadow', color: '#a66be0',
+    qinzei: { tier: 2, name: '擒贼擒王', kind: 'assassinate', range: 2, chance: 0.1, power: 0.5, morale: -15, fx: 'shadow', color: '#a66be0',
       lore: '杜甫《前出塞》：「射人先射马，擒贼先擒王。」' },
     tiebi: { tier: 2, name: '铁壁铜墙', kind: 'fortify', stat: 'war', radius: 1, def: 1.3, counter: 1.2, turns: 2, morale: 8, fx: 'shield', color: '#7fb0e6',
       lore: '列阵如墙，任敌冲突而岿然不动。' },
@@ -1061,7 +1064,7 @@
       lore: '刀势如秋风扫落叶，四面之敌纷纷披靡。' },
     tieqi: { tier: 3, name: '铁骑踏阵', kind: 'charge', range: 4, power: 1.85, dash: 0.12, push: 1, morale: -12, fx: 'dash', color: '#ff6a3d',
       lore: '重骑结队冲锋，所过之处阵脚尽乱。' },
-    chuanyun: { tier: 3, name: '穿云箭', kind: 'volley', range: 4, power: 2.05, radius: 0, pierce: 1, morale: -8, fx: 'arrow', color: '#fff0b0',
+    chuanyun: { tier: 3, name: '穿云箭', kind: 'volley', range: 4, power: 1.9, radius: 0, pierce: 1, morale: -8, fx: 'arrow', color: '#fff0b0',
       lore: '强弓劲矢，箭出穿云，甲盾不能挡。' },
     wuhu: { tier: 3, name: '五虎断门', kind: 'rampage', range: 2, strikes: 5, power: 0.44, morale: -8, fx: 'claw', color: '#ffb000',
       lore: '五虎断门刀，相传为古之刀法，招招封门、连环不断。' },
@@ -1075,7 +1078,7 @@
       lore: '《孙子·军争》：「其疾如风，其徐如林，侵掠如火，不动如山。」' },
     xingye: { tier: 3, name: '星夜驰援', kind: 'haste', stat: 'war', radius: 2, count: 1, move: 1, morale: 5, fx: 'haste', color: '#80ffd8',
       lore: '轻装疾进、星夜兼程，及时赶到友军身边。' },
-    yuchang: { tier: 3, name: '鱼肠剑', kind: 'assassinate', range: 2, chance: 0.3, power: 0.7, morale: -18, fx: 'shadow', color: '#8f4fe0',
+    yuchang: { tier: 3, name: '鱼肠剑', kind: 'assassinate', range: 2, chance: 0.14, power: 0.7, morale: -18, fx: 'shadow', color: '#8f4fe0',
       lore: '《史记·刺客列传》：专诸置匕首鱼炙之腹中而进，刺杀吴王僚。' },
     // ---- 四阶（武力 92+，8 级起） ----
     wanrendi: { tier: 4, name: '万人敌', kind: 'rampage', range: 2, strikes: 6, power: 0.42, morale: -10, fx: 'havoc', color: '#ff3b3b', cry: '谁敢与我一战！',
@@ -1090,7 +1093,7 @@
       lore: '单骑突入敌阵，千人不能当。' },
     beishui: { tier: 4, name: '背水一战', kind: 'rally', stat: 'war', radius: 2, morale: 30, heal: 0.08, cure: 1, atk: 1.2, turns: 2, fx: 'blossom', color: '#ffd24a', cry: '置之死地而后生！',
       lore: '《史记·淮阴侯列传》：韩信背水列阵，置之死地而后生，大破赵军于井陉。' },
-    sheri: { tier: 4, name: '射日弓', kind: 'volley', range: 5, power: 2.3, radius: 1, splash: 0.5, morale: -10, fx: 'arrows', color: '#ffe066',
+    sheri: { tier: 4, name: '射日弓', kind: 'volley', range: 5, power: 2.15, radius: 1, splash: 0.5, morale: -10, fx: 'arrows', color: '#ffe066',
       lore: '传说后羿引弓射落九日；神射之名，千古不衰。' },
   });
 })();

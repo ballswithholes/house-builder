@@ -15,7 +15,7 @@
      special: { a: SG.Specials?.of(a.gen), b: … }// 可选：绝技名称与配色 { name, color }
    })
    // → { winner: 0 | 1（0 = a 胜）, kind: 'ko' | 'time' | 'skip', hpA, hpB, log: [{ who, dmg, hpA, hpB, move, guarded, t }],
-   //     stats: [{ hits, parries, parryTries, counters, whiffs }, …]（a、b 各一项：可供成长系统计经验） }
+   //     stats: [{ hits, parries, parryTries, counters, whiffs, parryBy: { stance, guard, hitstun } }, …]（a、b 各一项：可供成长系统计经验） }
    //   log 的每一项兼容 BattleModel.duel 的 rounds（who / dmg / hpA / hpB），可直接交给 Mdl.duelFinish。
 
    SG.DuelGame.auto        // 测试用：true 时玩家一方也由电脑操作（URL 参数 ?duelauto=1 等效）
@@ -32,10 +32,11 @@
    格开（第三版，与按住格挡分开）：轻按 U，有效窗口 0.15–0.22 秒（武力越高越宽）；来招落在窗口内 → 对手被弹开
    硬直 0.6 秒（重击 0.7），己方得到 0.7 秒反击窗口：此间第一击 ×1.5、不可格挡也不可格开（慢镜头、火花、震屏、
    金铁交鸣）。窗口内没有来招 → 0.4 秒落空破绽（挨打算「破绽」×1.2）。冷却 2.5 秒（从按下算起），明显长于攻击与格挡。
-   可在站立 / 走动 / 格挡 / 挡下一击的硬直中格开；被连段打中时只能看破第三段（挨了第二段后按下，第三段落在窗口内
-   即格开；没等到第三段则硬直结束时短暂破绽）。绝技与箭矢不可格开。按住格挡的「硬挡」（武力远胜者挨连段时有机会
-   挡下后续一击）保留，但不再算格开。
-   重击松开后有清晰的起手（刃口闪光 + 「铮」声，0.13 秒）；绝技起手（定格亮相与突进）无敌。
+   可在站立 / 走动 / 格挡 / 挡下一击的硬直中格开；被连段打中时只能看破第三段：挨了第二段后须踩准节奏，按在第三段
+   打到前 0.6 × 窗口（约 0.09–0.13 秒）之内才格开，按早了白费（第三段照样打中，提示「过早」）；没等到第三段则
+   硬直结束时短暂破绽。绝技与箭矢不可格开。按住格挡的「硬挡」（武力远胜者挨连段时有机会挡下后续一击）保留，但不算格开。
+   重击松开后有清晰的起手（刃口闪光 + 「铮」声）：轻点约 0.15 秒（看不及，只能预判），满蓄约 0.27 秒（举刀一顿再劈下，
+   人的反应来得及——满蓄破防的重击可以看准格开）；电脑看重击与看其他来招的反应时间相同。绝技起手（定格亮相与突进）无敌。
    限时 60 秒，KO 或时间到时体力高者胜（相同则挑战者胜，与 BattleModel.duel 一致）。
    电脑的反应时间、格挡率、连段与绝技使用随其武力提升；武力 40 以上的电脑会看破一味连按的对手
    （预判举防、后撤诱空、格开连段、抓连段挥空后的破绽），武力越高越准。电脑也会格开：看破连段第三段、挡下一击后
@@ -77,6 +78,20 @@
   const COUNTER_WIN = 0.7;         // 反击窗口
   const COUNTER_K = 1.5;           // 反击第一击的伤害倍率
   function parryWindow(war) { return 0.15 + 0.07 * M.clamp((war - 30) / 70, 0, 1); }   // 武力 30 → 0.15 秒，100 → 0.22 秒
+  // 受击硬直中预先按下的格开（看破连段第三段）：只认第三段打到前 0.6 × 窗口内的按键（约 0.09–0.13 秒）——
+  // 须踩准第三段的节奏；按早了白费（照样挨打，冷却照算）
+  const HS_PARRY_K = 0.6;
+  // 重击松手后的起手随蓄力变长：0.13 秒（基准，按出招速度缩放）+ 举刀亮刃的一顿 0.15 × 蓄力（实际秒数，不随出招速度缩短）
+  // → 轻点 ≈ 0.12–0.15 秒（看不及，只能预判）、满蓄 ≈ 0.25–0.28 秒。看得见（刃口闪光 +「铮」一声）也来得及反应：
+  // 满蓄重击（破防）可以看准当场格开，双方同一规则
+  const HEAVY_HOLD = 0.15;
+  const HEAVY_PARRY_CAP = 0.45;    // 电脑看准格开满蓄重击的概率上限（武力 100 时）
+  // 重击起手（招式时钟，即 × 出招速度 spd 后的基准秒）
+  function heavySU(charge, spd) { return 0.13 + HEAVY_HOLD * M.clamp(charge || 0, 0, 1) * (spd || 1); }
+  // 当前招式的起手时长（重击随蓄力）
+  function suOf(f) { return f.state === 'heavy' ? heavySU(f.charge, f.spd) : MOVES[f.state].startup; }
+  // 当前招式的总时长（基准秒）
+  function totalOf(f) { const mv = MOVES[f.state]; return suOf(f) + mv.active + mv.recovery; }
   const BACKSTEP_T = 0.26;         // 后撤步（向后双击）
 
   // 招式时序（基准秒；出招时钟按 spd 缩放）。reachK × 兵器长度 = 判定距离
@@ -320,7 +335,8 @@
       this.hitBack = false;
       this.buf = { light: -9, jump: -9, special: -9, heavy: -9, dash: -9, parry: -9 };
       this.lastTap = { dir: 0, t: -9 };
-      this.stats = { swings: 0, hits: 0, guarded: 0, taken: 0, parryTries: 0, parries: 0, parried: 0, counters: 0, whiffs: 0 };
+      this.stats = { swings: 0, hits: 0, guarded: 0, taken: 0, parryTries: 0, parries: 0, parried: 0, counters: 0, whiffs: 0, parryBy: { stance: 0, guard: 0, hitstun: 0 } };
+      this.parryFrom = '';    // 进入格开架势前的状态（统计格开途径）
       this.bow = !!look.bow;  // 弓将（黄忠、夏侯渊）：绝技为连珠箭（远程），不突进
     }
     get grounded() { return this.y <= 0 && this.vy <= 0; }
@@ -328,8 +344,9 @@
     get phase() {
       const mv = MOVES[this.state];
       if (!mv) return null;
-      if (this.t < mv.startup) return 'startup';
-      if (this.t < mv.startup + mv.active) return 'active';
+      const su = this.state === 'heavy' ? heavySU(this.charge, this.spd) : mv.startup;
+      if (this.t < su) return 'startup';
+      if (this.t < su + mv.active) return 'active';
       return 'recovery';
     }
   }
@@ -531,7 +548,7 @@
             f.tapHeavy = false; f.chargeFull = false;
             this.startAttack(f, 'heavy');
             f.charge = c;
-            this.emit({ type: 'heavyGo', who: f.idx, charge: c });   // 起手预兆：刃口闪光
+            this.emit({ type: 'heavyGo', who: f.idx, charge: c, su: heavySU(c, f.spd) / f.spd });   // 起手预兆：刃口闪光（su：到打中还有几秒）
           }
           break;
         case 'light1':
@@ -539,9 +556,10 @@
         case 'light3':
         case 'heavy': {
           if (f.state !== 'light3' && f.state !== 'heavy' && this.fresh(f, 'light') && f.t > 0.03) { this.use(f, 'light'); f.chain = true; }
-          const total = mv.startup + mv.active + mv.recovery;
-          if (mv.lunge && f.t >= mv.startup * 0.6 && f.t < mv.startup + mv.active) f.vx = f.face * mv.lunge;
-          if (f.chain && mv.next && f.t >= mv.startup + mv.active * 0.6) { this.startAttack(f, mv.next); break; }
+          const su = suOf(f), total = su + mv.active + mv.recovery;
+          // 突进：起手最后 0.4 段才开始（满蓄重击举刀那一顿原地不动，突进距离不变）
+          if (mv.lunge && f.t >= su - mv.startup * 0.4 && f.t < su + mv.active) f.vx = f.face * mv.lunge;
+          if (f.chain && mv.next && f.t >= su + mv.active * 0.6) { this.startAttack(f, mv.next); break; }
           if (f.t >= total) this.setState(f, 'idle');
           break;
         }
@@ -604,6 +622,7 @@
     tryParry(f) {
       if (!this.fresh(f, 'parry') || !this.parryReady(f) || !f.grounded) return false;
       this.use(f, 'parry');
+      f.parryFrom = f.state;
       this.setState(f, 'parry');
       f.parryReadyAt = this.clock + PARRY_CD;
       f.stats.parryTries++;
@@ -646,7 +665,7 @@
           }
           else if (f.state === 'hitstun') f.vx *= 0.5;
         }
-      } else if (f.state !== 'walk' && f.state !== 'dash' && f.state !== 'backstep' && !(f.state === 'special' && f.vx !== 0) && !(MOVES[f.state] && MOVES[f.state].lunge && f.t < MOVES[f.state].startup + MOVES[f.state].active)) {
+      } else if (f.state !== 'walk' && f.state !== 'dash' && f.state !== 'backstep' && !(f.state === 'special' && f.vx !== 0) && !(MOVES[f.state] && MOVES[f.state].lunge && f.t < suOf(f) + MOVES[f.state].active)) {
         const s = Math.sign(f.vx), v = Math.abs(f.vx) - FRICTION * dt;
         f.vx = v > 0 ? s * v : 0;
       }
@@ -726,12 +745,16 @@
     parries(f, o, h) {
       if (h.name === 'special' || h.arrow || o.hp <= 0 || this.countering(f)) return false;
       if (o.state === 'parry') return o.t <= o.parryW + 1e-6;
-      // 受击硬直中预先按下的格开：只对连段第三段有效
-      return h.name === 'light3' && o.state === 'hitstun' && o.grounded && o.hsParrySeq === o.seq && this.clock - o.hsParryAt <= o.parryW + 1e-6;
+      // 受击硬直中预先按下的格开：只对连段第三段有效，且须按在第三段打到前 HS_PARRY_K × 窗口之内（踩准节奏）
+      return this.hsArmed(f, o, h) && this.clock - o.hsParryAt <= o.parryW * HS_PARRY_K + 1e-6;
     }
+    hsArmed(f, o, h) { return h.name === 'light3' && o.state === 'hitstun' && o.grounded && o.hsParrySeq === o.seq; }
     // 格开成功：攻方兵器被弹开、硬直；守方弹刀，获得反击窗口
     parrySuccess(f, o, h) {
       const dir = f.face;
+      // 格开的途径：stance 站立 / 走动中按下 · guard 举防或挡下一击后按下 · hitstun 受击硬直中看破第三段
+      const route = o.state === 'hitstun' ? 'hitstun' : o.parryFrom === 'guard' || o.parryFrom === 'guardstun' ? 'guard' : 'stance';
+      o.stats.parryBy[route]++;
       this.setState(f, 'parried');
       f.stun = PARRY_STAGGER + (h.name === 'heavy' ? 0.1 : 0);
       f.vx = -dir * 1.8; f.charge = 0; f.chargeFull = false;
@@ -744,12 +767,14 @@
       f.combo = 0; o.combo = 0;
       this.hitstop = Math.max(this.hitstop, 0.13);
       const gap = Math.abs(o.x - f.x);
-      this.emit({ type: 'parry', att: f.idx, def: o.idx, move: h.name, x: o.x - dir * Math.min(gap * 0.45, 0.75), y: o.y + (h.name === 'air' ? 1.5 : 1.3) });
+      this.emit({ type: 'parry', att: f.idx, def: o.idx, move: h.name, route, x: o.x - dir * Math.min(gap * 0.45, 0.75), y: o.y + (h.name === 'air' ? 1.5 : 1.3) });
     }
 
     hit(f, o, h) {
       const mv = h.mv, name = h.name, finisher = h.fin, chg = h.charge;
       if (this.parries(f, o, h)) { this.parrySuccess(f, o, h); return; }
+      // 受击硬直中按早了：第三段照样打中（提示「过早」，计一次落空）
+      if (this.hsArmed(f, o, h)) { o.hsParrySeq = -1; o.stats.whiffs++; this.emit({ type: 'parryEarly', who: o.idx }); }
       let base = mv.dmg * (f.wpn.pow || 1);
       if (name === 'heavy') base += mv.dmgCharge * chg;
       if (name === 'special' && finisher) base = mv.finisher;
@@ -846,7 +871,7 @@
 
     outcome(kind) {
       const r = this.result || { winner: this.f[0].hp >= this.f[1].hp ? 0 : 1, kind: 'time' };
-      const st = f => ({ hits: f.stats.hits, parries: f.stats.parries, parryTries: f.stats.parryTries, counters: f.stats.counters, whiffs: f.stats.whiffs });
+      const st = f => ({ hits: f.stats.hits, parries: f.stats.parries, parryTries: f.stats.parryTries, counters: f.stats.counters, whiffs: f.stats.whiffs, parryBy: Object.assign({}, f.stats.parryBy) });
       return { winner: r.winner, kind: kind || r.kind, hpA: this.f[0].hp, hpB: this.f[1].hp, log: this.log.slice(), stats: [st(this.f[0]), st(this.f[1])] };
     }
   }
@@ -871,8 +896,10 @@
       this.stunGuardP = 0.08 + 0.84 * s; // 受击 / 倒地后一恢复就举防
       this.held = { x: 0, up: false, light: false, heavy: false, guard: false, special: false, parry: false, dash: 0 };
       this.taps = { light: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0 };
-      // 格开：武力 35 以下几乎不用；越高越常用、拿捏越准。按下时刻的误差为三角分布 ±(0.18 + 0.25·(1−s)) 秒，
-      // 对比半个有效窗口（0.075–0.11 秒）：武力 100 ≈ 85% 成功，75 ≈ 67%，30 ≈ 40%（失手即落空破绽或被打中）
+      // 格开：武力 35 以下几乎不用；越高越常用、拿捏越准。按节奏预约的格开（连段的下一击），按下时刻的误差为三角分布
+      // ±(0.18 + 0.25·(1−s)) 秒：对比整个有效窗口（±0.075–0.11 秒）武力 100 ≈ 85% 成功、75 ≈ 67%；受击硬直中看破第三段
+      // 只认最后 0.6 × 窗口（±0.045–0.066 秒），但连段节奏固定、误差 × 0.65：武力 100 ≈ 80%、75 ≈ 65%（失手即被打中）。
+      // 重击则是反应：与看见其他来招同样的反应时间（this.react），看清即按——只有满蓄重击来得及
       this.parryP = 0.6 * M.clamp((me.war - 35) / 65, 0, 1);
       this.parryErr = 0.18 + 0.25 * (1 - s);
       this.parryAt = -1; this.hvSeq = -1; this.pwSeq = -1; this.stanceSeq = -1;
@@ -888,10 +915,11 @@
       this.p3 = 0; this.hsSeen = -1;     // 对手「挨了第二段就格开第三段」的倾向（指数平均，0..1）
       this.baitUntil = 0;                // 故意只打两段诱对手格开落空：此前料定，无需反应即可抓破绽
     }
-    // 预约一次格开：在预计来招时刻 T 前半个窗口按下（误差随武力）；冷却赶不上就不预约
-    planParry(sim, T) {
+    // 预约一次格开：瞄准有效区间的正中（站立格开 = 来招前半个窗口；受击硬直中 = 前 0.3 个窗口）按下，误差随武力；
+    // 冷却赶不上就不预约。误差算出来早于此刻 = 本该更早按 → 只能此刻按（多半仍落在窗口里，仅限站立格开）
+    planParry(sim, T, k, ek) {
       const me = this.me, now = sim.clock;
-      const at = Math.max(now, T - me.parryW * 0.5 + (rnd() + rnd() - 1) * this.parryErr);
+      const at = Math.max(now, T - me.parryW * (k === undefined ? 0.5 : k) + (rnd() + rnd() - 1) * this.parryErr * (ek || 1));
       if (sim.parryCd(me) > at - now) return false;
       this.parryAt = at;
       return true;
@@ -973,7 +1001,7 @@
           // 看破连段：被第二段打中，料定对手会接第三段 → 算准第三段打到的时刻按下格开（兵器较短、近不了身的更要靠格开）
           if (me.state === 'hitstun' && me.grounded && foe.state === 'light2' && rk > 0 && sim.parryReady(me)) {
             const outK = 1 + 2 * M.clamp((foe.reach - me.reach) / 0.25, 0, 1);
-            if (rnd() < this.parryP * (0.3 + 0.15 * this.mashN()) * (0.5 + 0.5 * rk) * outK) this.planParry(sim, this.nextChainHit(sim, foe));
+            if (rnd() < this.parryP * (0.3 + 0.15 * this.mashN()) * (0.5 + 0.5 * rk) * outK) this.planParry(sim, this.nextChainHit(sim, foe), HS_PARRY_K * 0.5, 0.65);
           }
           // 挡下连段的一击：料定对手还会接着打 → 格开下一击，然后反击（对手停手则落空，露出破绽）
           if (me.state === 'guardstun' && (foe.state === 'light1' || foe.state === 'light2') && sim.parryReady(me) &&
@@ -1025,14 +1053,16 @@
       // 已预约格开：举防不动，等那一刻
       if (this.parryAt >= 0) { if (free) { H.guard = true; H.x = 0; } return; }
       if (me.state === 'parry') { H.x = 0; H.guard = false; return; }
-      // 看清重击起手（刃口闪光，较普通出招更易察觉）：武力高者当场格开（满蓄的重击会破防，更要格开）
+      // 看清重击起手（刃口闪光）：反应时间与看见其他来招相同。看清即按（手上再慢 0–0.05 秒，武力越低越慢）；
+      // 熟知招式节奏，算得出来不来得及——轻点重击（约 0.15 秒）看到时已打到，来不及就举防；满蓄重击（约 0.27 秒，会破防）
+      // 武力高者常能当场格开，但至多不到一半（HEAVY_PARRY_CAP），其余照样被破防或挨打
       if (foe.state === 'heavy' && foe.phase === 'startup' && foe.seq !== this.hvSeq && free && sim.parryReady(me)) {
-        const sn = sim.seen(foe.idx, this.react * 0.6);
+        const sn = sim.seen(foe.idx, this.react);
         if (sn && sn.state === 'heavy' && sn.seq === foe.seq) {
           this.hvSeq = foe.seq;
-          const mvH = MOVES.heavy;
-          if (dist <= foe.reach * mvH.reachK + BODY * 0.5 + 0.6 && rnd() < this.parryP * (0.6 + 0.6 * foe.charge)) {
-            if (this.planParry(sim, now + (mvH.startup - foe.t) / foe.spd)) { H.guard = true; H.x = 0; return; }
+          const mvH = MOVES.heavy, at = now + rnd() * 0.05 * (1.6 - s), T = now + (suOf(foe) - foe.t) / foe.spd;
+          if (at < T - 0.01 && dist <= foe.reach * mvH.reachK + BODY * 0.5 + 0.6 && rnd() < Math.min(HEAVY_PARRY_CAP, this.parryP * (0.55 + 0.45 * foe.charge))) {
+            this.parryAt = at; H.guard = true; H.x = 0; return;
           }
         }
       }
@@ -1049,7 +1079,7 @@
         if (left > need - 0.02 && dist <= reach + 1.2 && rnd() < this.punishP) {
           this.guardUntil = 0; H.guard = false;
           if (dist <= reach) {
-            if (left > (0.12 + MOVES.heavy.startup) / me.spd + 0.03 && rnd() < 0.5 * s) this.heavy(0.13); else this.press('light');
+            if (left > (0.12 + heavySU(0.13 / CHARGE_MAX, me.spd)) / me.spd + 0.03 && rnd() < 0.5 * s) this.heavy(0.13); else this.press('light');
             H.x = 0; return;
           }
           H.dash = me.face; this.press('light'); return;
@@ -1059,14 +1089,14 @@
       if (me.stats.guarded !== this.lastGuarded) {
         this.lastGuarded = me.stats.guarded;
         const mv = MOVES[me.state];
-        const left = mv ? (mv.startup + mv.active + mv.recovery - me.t) / (me.state === 'special' ? 1 : me.spd) : 0;
+        const left = mv ? (totalOf(me) - me.t) / (me.state === 'special' ? 1 : me.spd) : 0;
         if (rnd() < 0.1 + 0.7 * s) this.guardUntil = Math.max(this.guardUntil, now + left + 0.18 + rnd() * 0.25);
       }
       // 反击：刚挡下 / 格开的大招还在收招（按招式节奏算好来得及）
       if (this.ctrSeq >= 0 && free) {
         const fm = MOVES[foe.state];
         if (this.ctrSeq === foe.seq && fm && foe.phase === 'recovery') {
-          const left = (fm.startup + fm.active + fm.recovery - foe.t) / foe.spd;
+          const left = (totalOf(foe) - foe.t) / foe.spd;
           const need = MOVES.light1.startup / me.spd + (dist <= reach ? 0 : 0.07 + (dist - reach) / 7.4);
           if (left > need - 0.02 && dist <= reach + 1.1) {
             this.ctrSeq = -1; this.guardUntil = 0; H.guard = false;
@@ -1128,7 +1158,7 @@
         this.punSeq = seen.seq;
         // 对手收招还剩多少时间（熟知招式节奏）：来不及冲过去就不冒险
         const fm = MOVES[foe.state];
-        const left = fm && foe.seq === seen.seq ? (fm.startup + fm.active + fm.recovery - foe.t) / (foe.state === 'special' ? 1 : foe.spd) : 0;
+        const left = fm && foe.seq === seen.seq ? (totalOf(foe) - foe.t) / (foe.state === 'special' ? 1 : foe.spd) : 0;
         const need = MOVES.light1.startup / me.spd + (dist <= reach ? 0 : 0.07 + (dist - reach) / 7.4);
         if (left > need - 0.03 && rnd() < this.punishP) {
           this.guardUntil = 0; H.guard = false;
@@ -1263,13 +1293,16 @@
   // tests/duel-bots.js（Node）与 tests/duel.html 共用的「模拟玩家」（固定套路，规则随机数走 SG.Random，可复现）：
   //   jumper 反复跳入空中斩 · masher 走近连按轻击（怒气满放绝技）· spam 冷却一好、对手在兵器距离内就按格开，其余时间连按 ·
   //   guard 谨慎的防守反击（反应 0.2 秒：看见来招就挡，抓收招与落空破绽，平时隔一阵试探一下，命中才接连段）·
-  //   parry 同 guard，另按节奏格开（按键误差 ±0.05 秒）：挨了第二段格开第三段、挡下一击后格开连段的下一击、
-  //   看清重击起手（0.17 秒）就格开；得手即反击
+  //   parry 同 guard，另按人的节奏与反应格开：挨了第二段格开第三段（瞄准有效区间正中，按键误差正态 σ 0.045 秒）、
+  //   挡下一击后格开连段的下一击（同上）、看见重击松手（反应 0.22 ± 0.04 秒）就按——只有满蓄重击来得及；得手即反击 ·
+  //   heavy 同 parry，但试探时六成改用重击（一半轻点、一半满蓄）：量电脑格开重击的频率
   function scriptBot(kind, idx) {
     idx = idx || 0;
     const c = { held: { x: 0, up: false, light: false, heavy: false, guard: false, special: false, parry: false, dash: 0 }, taps: { light: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0 } };
-    let nt = 0, pAt = -1, gsSeq = -1, hvSeq = -1;
+    let nt = 0, pAt = -1, gsSeq = -1, hvSeq = -1, relAt = 0;
     const nextHit = (sim, o, cur) => sim.clock + (Math.max(0, cur.startup + cur.active * 0.6 - o.t) + MOVES[cur.next].startup) / o.spd;
+    const gz = () => (rnd() + rnd() + rnd() + rnd() - 2) * 1.732;   // 近似标准正态
+    const HRT = 0.22, SD = 0.045;
     c.update = (dt, sim) => {
       const me = sim.f[idx], o = sim.f[1 - idx], d = Math.abs(o.x - me.x), now = sim.clock, H = c.held, T = c.taps;
       if (kind === 'jumper') {
@@ -1287,25 +1320,29 @@
         if (me.rage >= 100) T.special++;
         return;
       }
-      const useParry = kind === 'parry';
+      const useParry = kind === 'parry' || kind === 'heavy';
       const reach = me.reach * MOVES.light1.reachK + BODY * 0.5 - 0.03;
+      if (me.state === 'charge') { H.heavy = now < relAt; H.x = 0; H.guard = false; return; }
+      H.heavy = false;
       if (pAt >= 0 && now >= pAt) { T.parry++; pAt = -1; }
       H.x = 0;
       if (me.state === 'parryok' || sim.countering(me)) { H.guard = false; if (d <= reach + 0.05) { if (now > nt) { T.light++; nt = now + 0.08; } } else H.x = me.face; return; }
       if ((me.state === 'light1' || me.state === 'light2') && me.hitIdx > 0 && o.state === 'hitstun') { T.light++; return; }
       if (useParry && me.state === 'hitstun' && me.seq !== gsSeq && o.state === 'light2' && sim.parryReady(me)) {
         gsSeq = me.seq;
-        pAt = Math.max(now, nextHit(sim, o, MOVES.light2) - me.parryW * 0.5 + (rnd() - 0.5) * 0.1);
+        pAt = Math.max(now, nextHit(sim, o, MOVES.light2) - me.parryW * HS_PARRY_K * 0.5 + gz() * SD);
       }
       if (useParry && me.state === 'guardstun' && me.seq !== gsSeq) {
         gsSeq = me.seq;
-        if ((o.state === 'light1' || o.state === 'light2') && sim.parryReady(me)) pAt = Math.max(now, nextHit(sim, o, MOVES[o.state]) - me.parryW * 0.5 + (rnd() - 0.5) * 0.1);
+        if ((o.state === 'light1' || o.state === 'light2') && sim.parryReady(me)) pAt = Math.max(now, nextHit(sim, o, MOVES[o.state]) - me.parryW * 0.5 + gz() * SD);
       }
-      const sh = sim.seen(o.idx, 0.17);
-      if (useParry && sh && sh.state === 'heavy' && sh.seq !== hvSeq && o.state === 'heavy' && o.seq === sh.seq && sim.parryReady(me)) {
-        hvSeq = sh.seq;
-        const T0 = now + (MOVES.heavy.startup - o.t) / o.spd;
-        if (T0 > now) pAt = Math.max(now, T0 - me.parryW * 0.5 + (rnd() - 0.5) * 0.1);
+      // 重击：对手蓄力蓄得久（看得见）才打算格开；松手（刃口闪光）后过了反应时间 HRT ± 0.04 秒才按得下去
+      if (useParry && o.state === 'heavy' && o.seq !== hvSeq) {
+        hvSeq = o.seq;
+        if (o.charge >= 0.6 && sim.parryReady(me) && d < o.reach * MOVES.heavy.reachK + 1.2) {
+          const at = now - o.t / o.spd + Math.max(0.12, HRT + 0.04 * gz());
+          pAt = pAt >= 0 ? Math.min(pAt, at) : at;
+        }
       }
       const seen = sim.seen(o.idx, 0.2);
       if (pAt >= 0) { H.guard = me.state !== 'hitstun'; return; }
@@ -1314,7 +1351,11 @@
       H.guard = false;
       if (me.rage >= 100 && d < reach + 1) { T.special++; return; }
       if (d > reach * 0.95) H.x = me.face;
-      else if (now > nt && sim.actionable(me)) { T.light++; nt = now + 0.45 + rnd() * 0.3; }
+      else if (now > nt && sim.actionable(me)) {
+        if (kind === 'heavy' && rnd() < 0.6) { T.heavy++; H.heavy = true; relAt = now + (rnd() < 0.5 ? 0.13 : 0.78 + rnd() * 0.12); }
+        else T.light++;
+        nt = now + 0.45 + rnd() * 0.3;
+      }
     };
     return c;
   }
@@ -2180,8 +2221,9 @@
     out.set(keys[keys.length - 1][1]);
     return out;
   }
-  // 出招时间 → 相位（0..3）
-  function phaseOf(mv, t) {
+  // 出招时间 → 相位（0..3）。hold：起手前先定住的时长（满蓄重击举刀亮刃的一顿），之后按原节奏劈下
+  function phaseOf(mv, t, hold) {
+    if (hold > 0) { if (t < hold) return 0; t -= hold; }
     if (t < mv.startup) return t / mv.startup;
     if (t < mv.startup + mv.active) return 1 + (t - mv.startup) / mv.active;
     return Math.min(3, 2 + (t - mv.startup - mv.active) / mv.recovery);
@@ -2334,7 +2376,7 @@
       let key = f.state + ':' + f.seq, dur = BLEND[f.state] !== undefined ? BLEND[f.state] : 0.05;
       const mv = MOVES[f.state];
       if (this.intro >= 0) { key = 'intro'; sampleKeys(c.intro, this.intro, out); dur = 0.1; }
-      else if (mv && f.state !== 'special') { sampleKeys(c[f.state], phaseOf(mv, f.t), out); }
+      else if (mv && f.state !== 'special') { sampleKeys(c[f.state], phaseOf(mv, f.t, f.state === 'heavy' ? heavySU(f.charge, f.spd) - mv.startup : 0), out); }
       else switch (f.state) {
         case 'special': sampleKeys(f.bow ? c.bowSpecial : c.special, f.t, out); break;
         case 'charge': out.set(c.charge); break;
@@ -2400,6 +2442,9 @@
         const q = f.charge, n = this.time * 61;
         P[PI_.gx] += Math.sin(n) * 0.012 * q; P[PI_.gy] += Math.cos(n * 1.3) * 0.012 * q; P[PI_.hy] -= q * 0.04;
       }
+      // 重击举刀的一顿：兵器再往上提一点、身子后仰蓄势（看得出「要劈下来了」）
+      const hold = st === 'heavy' ? heavySU(f.charge, f.spd) - MOVES.heavy.startup : 0;
+      if (hold > 0 && f.t < hold) { const u = f.t / hold; P[PI_.gy] += 0.06 * u; P[PI_.lean] -= 0.06 * u; P[PI_.hy] -= 0.03 * u; }
       if (st === 'hitstun' && f.t < 0.12) P[PI_.hx] += Math.sin(f.t * 120) * 0.025 * (1 - f.t / 0.12);
       if (st === 'parried') {   // 被震开：手臂发麻的抖动、脚下不稳
         const k = Math.max(0, 1 - f.t / Math.max(0.1, f.stun));
@@ -2435,6 +2480,7 @@
       this.mat.flash = fl;
       let em = 0;
       if (st === 'charge') em = f.charge * 0.25 + (f.charge >= 1 ? 0.12 * (0.5 + 0.5 * Math.sin(this.time * 30)) : 0);
+      else if (hold > 0 && f.t < hold + MOVES.heavy.startup) em = 0.2 + 0.25 * f.charge;
       else if (st === 'special' && f.t < SPECIAL_FREEZE + 0.1) em = 0.3 + 0.1 * Math.sin(this.time * 25);
       else if (f.rage >= 100) em = 0.06 + 0.05 * Math.sin(this.time * 8);
       this.mat.emission = em;
@@ -3140,6 +3186,11 @@
 .sgd-pchip.ready::before{background:#bfe6ff;}
 .sgd-pchip.ctr{color:#2a1600;background:radial-gradient(circle,#fff2b0,#ffb020);box-shadow:0 0 .8em rgba(255,200,80,1);animation:sgd-blink .18s ease-in-out infinite alternate;}
 .sgd-pchip.ctr::before{background:#ffd860;}
+.sgd.sgd-compact .sgd-pchip{width:max(24px,calc(2.3*var(--u)));height:max(24px,calc(2.3*var(--u)));font-size:max(12px,calc(1.15*var(--u)));background:rgba(8,14,28,.85);}
+.sgd.sgd-compact .sgd-pchip::before{inset:-3px;background:conic-gradient(#c4e8ff calc(var(--p,1)*360deg),rgba(255,255,255,.22) 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));}
+.sgd.sgd-compact .sgd-pchip.ready::before{background:#dff3ff;}
+.sgd.sgd-compact .sgd-pchip.ctr::before{background:#ffd860;}
 .sgd-k.pk{background:linear-gradient(180deg,#d8f0ff,#8cc4f0);box-shadow:0 2px 0 #2a5a80,0 3px 3px rgba(0,0,0,.4);}
 .sgd-k.pk.cool{opacity:.4;}
 .sgd-dmg.lbl.parry{font-size:calc(2.6*var(--u));color:#dff3ff;letter-spacing:.12em;text-shadow:0 2px 0 #0a2a50,0 0 .5em rgba(120,200,255,.9),0 0 1px #000;}
@@ -3446,13 +3497,31 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     const end = e => { if (zones.delete(e.pointerId)) sync(); };
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, end);
     const btns = h('sgd-btns', null, root);
+    // 每个触点归哪个按钮（own）：按下时归所按的按钮；格挡与格开之间拇指一滑即换手（按住格挡滑到格开 = 松开格挡、轻触格开，
+    // 滑回来又按住格挡），其余按钮按下后滑出仍算按住（防误触）
+    const own = new Map(), recs = {};
+    const SLIDE = { guard: 'parry', parry: 'guard' };
+    const take = (id, r) => {
+      const was = own.get(id);
+      if (was === r) return;
+      if (was) { was.ids.delete(id); was.set(); }
+      if (r) { r.ids.add(id); own.set(id, r); r.set(); } else own.delete(id);
+    };
+    const inside = (el, e) => { const q = el.getBoundingClientRect(); return e.clientX >= q.left && e.clientX <= q.right && e.clientY >= q.top && e.clientY <= q.bottom; };
     const mk = (cls, label, key, css) => {
       const b = h('sgd-tb ' + cls, label, btns);
       b.style.cssText = css;
-      const ids = new Set();
-      const set = () => { input.setTouch(key, ids.size > 0); b.classList.toggle('on', ids.size > 0); };
-      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ } ids.add(e.pointerId); set(); }, opt);
-      const up = e => { if (ids.delete(e.pointerId)) set(); };
+      const r = { b, key, ids: new Set() };
+      r.set = () => { input.setTouch(key, r.ids.size > 0); b.classList.toggle('on', r.ids.size > 0); };
+      recs[key] = r;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ } take(e.pointerId, r); }, opt);
+      b.addEventListener('pointermove', e => {
+        const cur = own.get(e.pointerId);
+        if (!cur || !SLIDE[cur.key]) return;
+        const to = recs[SLIDE[cur.key]];
+        if (to && inside(to.b, e) && !inside(cur.b, e)) { e.preventDefault(); take(e.pointerId, to); }
+      }, opt);
+      const up = e => { if (own.has(e.pointerId)) take(e.pointerId, null); };
       for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
       return b;
     };
@@ -3825,6 +3894,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             break;
           }
           case 'parryWhiff': { const f = sim.f[e.who]; this.floatDmg(f.x, f.y + 2.2, '落空', 'lbl miss'); synth('whoosh', 0.25); break; }
+          case 'parryEarly': { const f = sim.f[e.who]; this.floatDmg(f.x, f.y + 2.5, '过早', 'lbl miss'); break; }
           case 'heavyGo': {
             // 重击起手预兆：刃口闪出一点红光并「铮」一声（满蓄更亮）
             const w = this.war[e.who];
@@ -4182,7 +4252,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="row"><span class="sgd-chip big">轻击</span>连按三连击</div>' +
           '<div class="row"><span class="sgd-chip">重击</span>按住蓄力，满蓄破防</div>' +
           '<div class="row"><span class="sgd-chip">格挡</span>按住减伤八成</div>' +
-          '<div class="row"><span class="sgd-chip pa">格开</span>来招瞬间轻触：弹开对手，反击 ×1.5 不可挡；冷却 2.5 秒</div>' +
+          '<div class="row"><span class="sgd-chip pa">格开</span>来招打到前一瞬轻触：弹开对手，反击 ×1.5 不可挡。落空有破绽，冷却 2.5 秒；挨了第二击后踩准第三击再触可格开（早了无效）；满蓄重击见闪光即触；按住格挡滑过来亦可</div>' +
           '<div class="row"><span class="sgd-chip">绝技</span>怒气满时「' + SG.esc(sp.name) + '」</div></div></div>' +
           '<div class="go">轻触开始</div>';
       } else {
@@ -4192,7 +4262,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="keys">' + k('J') + '</div><div class="desc">轻击<small>连按三连击</small></div>' +
           '<div class="keys">' + k('K') + '</div><div class="desc">重击<small>按住蓄力，满蓄破防</small></div>' +
           '<div class="keys">' + k('L') + '<span style="opacity:.6">/</span>' + k('↓') + '</div><div class="desc">格挡<small>按住减伤八成；满蓄重击与绝技终结会破防</small></div>' +
-          '<div class="keys"><b class="sgd-k pk">U</b></div><div class="desc">格开<small>来招打到前一瞬轻按（约 ' + Math.round(parryWindow(warOf(me)) * 100) / 100 + ' 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒；挨了连段第二击可格开第三击</small></div>' +
+          '<div class="keys"><b class="sgd-k pk">U</b></div><div class="desc">格开<small>来招打到前一瞬轻按（约 ' + Math.round(parryWindow(warOf(me)) * 100) / 100 + ' 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。挨了连段第二击，踩准第三击的节奏再按可格开（按早无效）；满蓄重击见刃口闪光即按</small></div>' +
           '<div class="keys"><b class="sgd-k r">I</b></div><div class="desc">绝技「' + SG.esc(sp.name) + '」<small>怒气满时</small></div>' +
           '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下 ◀ ▶ ▲ 移动，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
       }
@@ -4446,7 +4516,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     damage,
     parryWindow,
     scriptBot,
-    PARRY: { CD: PARRY_CD, WHIFF: PARRY_WHIFF, STAGGER: PARRY_STAGGER, COUNTER_WIN, COUNTER_K },
+    PARRY: { CD: PARRY_CD, WHIFF: PARRY_WHIFF, STAGGER: PARRY_STAGGER, COUNTER_WIN, COUNTER_K, HS_K: HS_PARRY_K, HEAVY_CAP: HEAVY_PARRY_CAP },
+    heavySU,
     MOVES, WEAPONS, LOOKS,
     _Sim: Sim, _AI: AI,
   };

@@ -25,7 +25,7 @@
 
    规则字段（新计策；I = 施计者智力，tI = 主目标智力）
      tier 等阶 1–4 · reqInt 需求智力 · target 'enemy' | 'ally' | 'self' · range 射程（自身为中心时 0）·
-     radius 波及半径（敌：主目标周围的其他敌军；友 / 自身：周围友军）· cd 冷却日数（用后 cd 日内不能再用；0 = 每次行动都可用）·
+     radius 波及半径（敌：主目标周围的其他敌军；友 / 自身：周围友军）· cd 冷却日数（第 d 日用后，第 d+1 … d+cd 日不能再用、第 d+cd+1 日起可用；0 = 每次行动都可用）·
      need 'river'（目标在河上或紧邻河流）| 'cover'（目标在林地 / 山丘上或紧邻之）
      roll { base, div, min, max, forest?, lowMorale? }：整体成功率 = clamp(base + (I − tI)/div + 加成, min, max)（缺省 = 必定成功）
      dmg { base, per, splash?, forest?, pierce? }：伤害 = (base + per × I) × clamp(敌兵/2500, 0.4, 1.4) ÷ 敌防御加成
@@ -66,7 +66,7 @@
       fx: 'shadow', color: '#9aa7b8', lore: '遍插旌旗、多设灶火，使敌疑惧不前。',
     },
     {
-      id: 'supply', name: '补给', tier: 1, reqInt: 50, target: 'ally', range: 1, cd: 2,
+      id: 'supply', name: '补给', tier: 1, reqInt: 50, target: 'ally', range: 1, cd: 1,
       heal: 0.04, healI: 0.0003, morale: 8, food: 5,
       fx: 'aura', color: '#e8c66a', lore: '开仓分粮，补充战损。',
     },
@@ -89,7 +89,7 @@
     },
     // ---- 高阶（智力 80+，7 级起） ----
     {
-      id: 'chain', name: '连环', tier: 3, reqInt: 80, target: 'enemy', range: 3, radius: 1, cd: 2,
+      id: 'chain', name: '连环', tier: 3, reqInt: 80, target: 'enemy', range: 3, radius: 1, cd: 1,
       morale: -8, confuse: { base: 0.45, div: 110, min: 0.1, max: 0.85, turns: 1 },
       fx: 'spirit', color: '#b48cff', lore: '计中套计，使敌军首尾相连、进退失据。',
     },
@@ -99,33 +99,33 @@
       fx: 'lightning', color: '#bcd8ff', lore: '登坛作法，引天雷击敌。',
     },
     {
-      id: 'sorcery', name: '妖术', tier: 3, reqInt: 80, target: 'enemy', range: 3, cd: 2,
+      id: 'sorcery', name: '妖术', tier: 3, reqInt: 80, target: 'enemy', range: 3, cd: 1,
       roll: { base: 0.5, div: 100, min: 0.12, max: 0.9 }, morale: -10, confuse: { base: 1, turns: 1 }, mod: { dot: 0.05, days: 3 },
       fx: 'poison', color: '#8be05a', lore: '以符水妖法迷惑敌军，瘴疠随之而起。',
     },
     {
-      id: 'rouse', name: '鼓舞', tier: 3, reqInt: 80, target: 'self', range: 0, radius: 3, cd: 2,
+      id: 'rouse', name: '鼓舞', tier: 3, reqInt: 80, target: 'self', range: 0, radius: 3, cd: 1,
       morale: 10, moraleI: 0.1, mod: { atk: 1.1, days: 1 },
       fx: 'blossom', color: '#ffd966', lore: '登高陈说利害，鼓舞全军。',
     },
     {
-      id: 'cure', name: '治疗', tier: 3, reqInt: 80, target: 'ally', range: 2, cd: 2,
+      id: 'cure', name: '治疗', tier: 3, reqInt: 80, target: 'ally', range: 2, cd: 1,
       heal: 0.1, healI: 0.001, morale: 5, cure: 1,
       fx: 'heal', color: '#7dffa8', lore: '延请医者疗治伤兵，收拢散卒。',
     },
     // ---- 绝阶（智力 92+，9 级起） ----
     {
-      id: 'weather', name: '天变', tier: 4, reqInt: 92, target: 'enemy', range: 5, radius: 2, cd: 3,
+      id: 'weather', name: '天变', tier: 4, reqInt: 92, target: 'enemy', range: 5, radius: 2, cd: 2,
       roll: { base: 0.55, div: 110, min: 0.2, max: 0.9 }, dmg: { base: 200, per: 8, splash: 0.8 }, morale: -10,
       fx: 'lightning', color: '#9fd8ff', lore: '观天象而知风雨，呼风唤雨、雷电交加。',
     },
     {
-      id: 'bazhen', name: '八阵', tier: 4, reqInt: 92, target: 'self', range: 0, radius: 2, cd: 3,
+      id: 'bazhen', name: '八阵', tier: 4, reqInt: 92, target: 'self', range: 0, radius: 2, cd: 2,
       morale: 8, mod: { def: 1.35, counter: 1.3, days: 2 },
       fx: 'shield', color: '#79b8ff', lore: '依八阵图布阵，休、生、伤、杜、景、死、惊、开，进退有序。',
     },
     {
-      id: 'qimen', name: '奇门遁甲', tier: 4, reqInt: 92, target: 'self', range: 0, radius: 2, cd: 3,
+      id: 'qimen', name: '奇门遁甲', tier: 4, reqInt: 92, target: 'self', range: 0, radius: 2, cd: 2,
       morale: 6, cure: 1, mod: { move: 2, days: 1 }, foeConfuse: { base: 0.4, div: 100, min: 0.1, max: 0.8, turns: 1 },
       fx: 'haste', color: '#7affd9', lore: '推演奇门，借地遁形：我军来去如风，敌军迷失方向。',
     },

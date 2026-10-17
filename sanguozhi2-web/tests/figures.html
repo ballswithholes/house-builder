@@ -17,7 +17,9 @@
   #hud { position: fixed; right: 8px; top: 48px; z-index: 5; background: rgba(12,12,16,.72); padding: 8px 10px; border-radius: 8px; white-space: pre; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; color: #cfe8c8; pointer-events: none; }
   #labels { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
   #labels div { position: absolute; transform: translate(-50%, 0); font-size: 12px; color: #f3e2b8; text-shadow: 0 1px 2px #000, 0 0 6px #000; white-space: nowrap; }
-  @media (max-width: 900px) { #bar button, #bar select { padding: 4px 6px; min-height: 30px; font-size: 12px; } #hud { top: auto; bottom: 46px; font-size: 11px; } }
+  #hud.min { white-space: nowrap; }
+  @media (max-width: 900px) { #bar button, #bar select { padding: 4px 6px; min-height: 30px; font-size: 12px; } #hud { top: auto; bottom: auto; top: 84px; right: 6px; font-size: 10px; padding: 5px 7px; pointer-events: auto; cursor: pointer; } }
+  @media (max-height: 460px) { #hud { top: 84px; } }
 </style>
 </head>
 <body>
@@ -54,6 +56,8 @@
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // 绘制统计包含阴影贴图那一遍（three 默认在阴影之后才重置 info，会漏掉阴影绘制）
+  renderer.info.autoReset = false;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0.2, 0.21, 0.25);
   scene.fog = new THREE.Fog(new THREE.Color(0.2, 0.21, 0.25), 18, 60);
@@ -90,12 +94,14 @@
   let items = [];   // { fig, x, z, label, horse }
   const labels = document.getElementById('labels');
   function clear() {
-    for (const it of items) { if (it.fig) it.fig.dispose(); if (it.horse) it.horse.dispose(); if (it.mesh) { scene.remove(it.mesh); it.mesh.geometry.dispose(); } }
+    for (const it of items) { if (it.fig) it.fig.dispose(); if (it.horse) it.horse.dispose(); if (it.mesh) { scene.remove(it.mesh); it.mesh.geometry.dispose(); } if (it.crowd) it.crowd.dispose(); }
+    crowd = null;
     items = []; labels.innerHTML = '';
   }
   function place(obj, x, z, yaw) { obj.position.set(x, 0, z); obj.rotation.y = yaw || 0; scene.add(obj); }
   function label(it, text) { const d = document.createElement('div'); d.textContent = text; labels.appendChild(d); it.label = d; }
   let camTarget = new THREE.Vector3(0, 1, 0), camDist = 6, camYaw = 0, camPitch = 0.12;
+  let crowd = null;     // 压力测试：实例化士兵群（?crowd=0 改用逐个 SkinnedMesh）
   function build() {
     clear();
     const t0 = performance.now();
@@ -162,6 +168,23 @@
       lay(poles, -1.2, 1.05, 0.5);
       lay(short, 0.6, 0.55, 0.36);
       camTarget.set(0, 1.0, -0.4); camDist = 6.5; camPitch = 0.05;
+    } else if (m === 'crowd') {
+      // 实例化士兵群：每种文化一排（枪、刀盾、弓、骑），片段取 pose（骑兵：idle / walk / trot / gallop / attack / charge / hit / die）
+      const cults = Q.has('cults') ? Q.get('cults').split(',') : ['han', 'roman', 'persia', 'steppe', 'wa'];
+      crowd = SG.Figure.crowd({ lod: state.lod || 'low', renderer }); scene.add(crowd.root); items.push({ crowd });
+      const cols = ['#b02a24', '#2c3d8f', '#2f7d4a', '#c89a2a', '#6a2a8a'];
+      const mclip = { idle: 'idle', walk: 'walk', run: 'gallop', light1: 'attack', light2: 'attack', heavy: 'attack', hit: 'hit', die: 'die', down: 'die' }[state.pose] || state.pose;
+      cults.forEach((c, ci) => ['spear', 'sword', 'archer', 'cavalry'].forEach((ty, ti) => {
+        const mounted = ty === 'cavalry';
+        const id = crowd.add({ type: ty, culture: c, seed: ci, color: cols[ci % cols.length], mounted });
+        const x = (ti - 1.5) * 1.3, z = -ci * 2.4;
+        crowd.setTransform(id, x, 0, z, mounted ? -0.5 : 0);
+        crowd.play(id, mounted ? mclip : (ty === 'archer' && state.pose === 'light1' ? 'bowDraw' : state.pose), { t0: 0 });
+        const it = { x, z, ly: mounted ? 2.6 : 2.0 }; if (ti === 0) label(it, c); items.push(it);
+      }));
+      camTarget.set(0, 1.0, -(cults.length - 1) * 1.2); camDist = 7 + cults.length * 2.2; camPitch = 0.22;
+    } else if (m === 'check') {
+      runChecks();
     } else if (m === 'stress') {
       const L = [], R = [];
       const g1 = SG.Figure.general(gen('关羽'), { lod: 'mid', color: '#2f7d4a' }), g2 = SG.Figure.general(gen('张辽'), { lod: 'mid', color: '#2c3d8f' });
@@ -169,8 +192,19 @@
       h1.mount(g1); h2.mount(g2);
       place(h1.root, -3.2, 0, Math.PI / 2); place(h2.root, 3.2, 0, -Math.PI / 2);
       items.push({ fig: g1, horse: h1, x: -3.2, z: 0, clip: 'idle' }, { fig: g2, horse: h2, x: 3.2, z: 0, clip: 'idle' });
+      const useCrowd = qv('crowd', '1') !== '0';
+      if (useCrowd) { crowd = SG.Figure.crowd({ lod: 'low', renderer }); scene.add(crowd.root); items.push({ crowd }); }
       for (let side = 0; side < 2; side++) for (let i = 0; i < 28; i++) {
         const ty = i < 4 ? 'cavalry' : i < 12 ? 'archer' : i < 20 ? 'spear' : 'sword';
+        if (crowd) {
+          const row = Math.floor(i / 7), colm = i % 7;
+          const x = (side ? 1 : -1) * (1.2 + row * 0.9), z = (colm - 3) * 0.85;
+          const mounted = ty === 'cavalry' && i < 2;
+          const id = crowd.add({ type: ty, culture: qv('cult', 'han'), seed: i, color: side ? '#2c3d8f' : '#2f7d4a', mounted });
+          crowd.setTransform(id, x, 0, z, side ? -Math.PI / 2 : Math.PI / 2);
+          crowd.play(id, mounted ? 'gallop' : ['idle', 'walk', 'light1', 'run', 'block', 'hit', 'heavy'][i % 7], { phase: (i * 0.37) % 1 });
+          continue;
+        }
         const f = SG.Figure.soldier({ type: ty, culture: 'han', lod: 'low', seed: i, color: side ? '#2c3d8f' : '#2f7d4a' });
         const row = Math.floor(i / 7), colm = i % 7;
         const x = (side ? 1 : -1) * (1.2 + row * 0.9), z = (colm - 3) * 0.85;
@@ -188,6 +222,77 @@
     applyWire();
     poseAll(0);
     renderPoseButtons();
+  }
+  // ------------------------------------------------------------ 自动检查（?mode=check）--
+  // 倒地 / 跪地片段不穿地、双手长兵左手在杆上、三角形预算、裸身肤色与面部一致、士兵群绘制次数（含阴影）
+  function runChecks() {
+    const R = [], ok = (name, pass, info) => R.push({ name, pass, info });
+    const v = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), g = new THREE.Vector3(), ab = new THREE.Vector3(), ag = new THREE.Vector3();
+    const names = (Q.get('names') || '关羽,吕布,赵云,张飞,许褚,孙权,刘备,诸葛亮,黄忠,典韦,卑弥呼,康茂德').split(',');
+    let rigidMin = 0, skinMin = 0, gripMax = 0, worst = '', worstG = '';
+    for (const n of names) {
+      const f = SG.Figure.general(gen(n), { lod: 'high' });
+      for (const clip of Object.keys(SG.Figure.clips)) {
+        const info = SG.Figure.clips[clip];
+        for (const fr of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+          f.setPose(clip, fr * info.dur); f.root.updateMatrixWorld(true);
+          for (const m of f.meshes) {
+            const pos = m.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i += 3) {
+              if (m.isSkinnedMesh) { m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld); if (v.y < skinMin) skinMin = v.y; continue; }
+              v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); if (v.y < rigidMin) { rigidMin = v.y; worst = n + ' ' + clip + '@' + fr + ' ' + m.name; }
+            }
+          }
+          if (f.style === 'pole' && f._P.sh >= 0.999 && f.weaponMesh) {
+            f.weaponMesh.updateWorldMatrix(true, false);
+            a.set(0, -0.8, 0).applyMatrix4(f.weaponMesh.matrixWorld); b.set(0, f.weaponInfo.base[1], 0).applyMatrix4(f.weaponMesh.matrixWorld);
+            ab.subVectors(b, a); f.sockets.gripL.getWorldPosition(g); ag.subVectors(g, a);
+            const t = Math.max(0, Math.min(1, ag.dot(ab) / ab.lengthSq())), d = g.distanceTo(v.copy(a).addScaledVector(ab, t));
+            if (d > gripMax) { gripMax = d; worstG = n + ' ' + clip + '@' + fr; }
+          }
+        }
+      }
+      f.dispose();
+    }
+    ok('倒地/跪地：头、兵器等刚体最低点 ≥ −0.03 m', rigidMin >= -0.03, rigidMin.toFixed(3) + ' ' + worst);
+    ok('蒙皮最低点（着色器压平前，布料/缨/发贴地压平）', true, skinMin.toFixed(3));
+    ok('双手长兵：左手到杆 ≤ 0.05 m', gripMax <= 0.05, gripMax.toFixed(3) + ' ' + worstG);
+    // 预算
+    const W2 = SG.Scenarios && SG.Scenarios.world;
+    const all = W2 ? W2.Generals.map(l => l.split('|')[0]) : names;
+    const step = Q.has('all') ? 1 : 6;
+    let hi = 0, mid = 0, lo = 0, hn = '', mn = '', ln = '';
+    for (let i = 0; i < all.length; i += step) for (const lod of ['high', 'mid']) { const f = SG.Figure.general(gen(all[i]), { lod }); if (lod === 'high' && f.triangles > hi) { hi = f.triangles; hn = all[i]; } if (lod === 'mid' && f.triangles > mid) { mid = f.triangles; mn = all[i]; } f.dispose(); }
+    for (const c of SG.Figure.cultures) for (const ty of SG.Figure.soldierTypes) for (const sd of [0, 1, 2]) { const f = SG.Figure.soldier({ type: ty, culture: c, seed: sd }); if (f.triangles > lo) { lo = f.triangles; ln = c + '/' + ty + sd; } f.dispose(); }
+    ok('三角形预算 high ≤ 15000', hi <= 15000, hi + ' ' + hn); ok('三角形预算 mid ≤ 4000', mid <= 4000, mid + ' ' + mn); ok('三角形预算 low 士兵 ≤ 900', lo <= 900, lo + ' ' + ln);
+    // 裸身肤色：脸颊与胸口亮度相差 ≤ 15%
+    {
+      const sc = new THREE.Scene(); sc.add(hemi.clone()); const sn = sun.clone(); sn.castShadow = false; sc.add(sn); sc.add(sn.target);
+      const f = SG.Figure.general(gen('许褚'), { lod: 'high' }); sc.add(f.root); f.setPose('idle', 0); f.root.updateMatrixWorld(true);
+      const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50); cam.position.set(0, 1.45, 1.8); cam.lookAt(0, 1.45, 0); cam.updateMatrixWorld();
+      const rt = new THREE.WebGLRenderTarget(256, 256); renderer.setRenderTarget(rt); renderer.render(sc, cam); renderer.setRenderTarget(null);
+      const px = new Uint8Array(4 * 25), lumAt = (p) => { p.project(cam); const x = Math.round((p.x * 0.5 + 0.5) * 256), y = Math.round((p.y * 0.5 + 0.5) * 256); renderer.readRenderTargetPixels(rt, x - 2, y - 2, 5, 5, px); let s = 0; for (let i = 0; i < 25; i++) s += px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11; return s / 25; };
+      const hb = new THREE.Vector3(); f.bones.head.getWorldPosition(hb);
+      const face = lumAt(new THREE.Vector3(hb.x - 0.04, hb.y + 0.09, hb.z + 0.09)), chest = lumAt(new THREE.Vector3(0.02, 1.3, 0.15));
+      ok('裸身：胸口与脸颊亮度差 ≤ 15%', Math.abs(chest - face) / Math.max(face, 1) <= 0.15, 'face ' + face.toFixed(0) + ' chest ' + chest.toFixed(0));
+      f.dispose(); rt.dispose();
+    }
+    // 士兵群：56 名（含 4 名骑兵）一次渲染的绘制次数（含阴影）
+    {
+      const sc = new THREE.Scene(); const sn = sun.clone(); sn.castShadow = true; sc.add(sn); sc.add(sn.target); sc.add(hemi.clone());
+      const cr = SG.Figure.crowd({ lod: 'low', renderer }); sc.add(cr.root);
+      for (let side = 0; side < 2; side++) for (let i = 0; i < 28; i++) { const ty = i < 4 ? 'cavalry' : i < 12 ? 'archer' : i < 20 ? 'spear' : 'sword'; const id = cr.add({ type: ty, culture: 'han', seed: i, color: side ? '#2c3d8f' : '#2f7d4a', mounted: ty === 'cavalry' }); cr.setTransform(id, (side ? 1 : -1) * (1 + (i % 4)), 0, (i >> 2) - 3, 0); }
+      const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100); cam.position.set(0, 8, 14); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
+      const rt = new THREE.WebGLRenderTarget(64, 64); renderer.setRenderTarget(rt); renderer.info.reset(); renderer.render(sc, cam); const calls = renderer.info.render.calls; renderer.setRenderTarget(null);
+      ok('士兵群 56 人绘制次数（含阴影）≤ 40', calls <= 40, calls + ' 次，' + cr.stats().groups + ' 组');
+      cr.dispose(); rt.dispose();
+    }
+    window.__fig.checks = R;
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:8px;right:8px;top:52px;bottom:48px;overflow:auto;z-index:6;background:rgba(12,12,16,.9);padding:10px 12px;border-radius:8px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap';
+    box.textContent = R.map(r => (r.pass ? '✔ ' : '✘ ') + r.name + '  —  ' + r.info).join('\n');
+    document.body.appendChild(box);
+    camTarget.set(0, 1, 0); camDist = 6;
   }
   function applyWire() { for (const m of SG.Figure.material ? [SG.Figure.material] : []) m.wireframe = state.wire; scene.traverse(o => { if (o.material && o.material.name && o.material.name.indexOf('SG.Figure') === 0) o.material.wireframe = state.wire; }); }
   let animT = 0;
@@ -211,7 +316,7 @@
   function btn(parent, text, on, fn) { const b = document.createElement('button'); b.textContent = text; if (on) b.classList.add('on'); b.onclick = fn; parent.appendChild(b); return b; }
   function renderBar() {
     bar.innerHTML = '';
-    for (const [m, t] of [['generals', '名将'], ['one', '单人特写'], ['poses', '动作一览'], ['soldiers', '各文化士兵'], ['horses', '战马'], ['weapons', '兵器'], ['stress', '压力测试']]) btn(bar, t, state.mode === m, () => { state.mode = m; renderBar(); build(); });
+    for (const [m, t] of [['generals', '名将'], ['one', '单人特写'], ['poses', '动作一览'], ['soldiers', '各文化士兵'], ['crowd', '士兵群'], ['horses', '战马'], ['weapons', '兵器'], ['stress', '压力测试'], ['check', '自动检查']]) btn(bar, t, state.mode === m, () => { state.mode = m; renderBar(); build(); });
     const sep = document.createElement('i'); sep.className = 'sep'; bar.appendChild(sep);
     if (state.mode === 'generals') { btn(bar, '◀', false, () => { state.page = Math.max(0, state.page - 1); build(); }); btn(bar, '▶', false, () => { state.page = Math.min(Math.ceil(FAMOUS.length / 6) - 1, state.page + 1); build(); }); }
     if (state.mode === 'one' || state.mode === 'poses') {
@@ -228,8 +333,8 @@
   }
   function renderPoseButtons() {
     const P = document.getElementById('poses'); P.innerHTML = '';
-    const list = state.mode === 'horses' ? Object.keys(SG.Figure.horseClips).concat(['gallop']) : Object.keys(SG.Figure.clips);
-    for (const c of new Set(list)) btn(P, c, state.pose === c, () => { state.pose = c; animT = 0; renderPoseButtons(); });
+    const list = state.mode === 'horses' ? Object.keys(SG.Figure.horseClips).concat(['gallop']) : state.mode === 'crowd' ? SG.Figure.crowdClips : Object.keys(SG.Figure.clips);
+    for (const c of new Set(list)) btn(P, c, state.pose === c, () => { state.pose = c; animT = 0; if (state.mode === 'crowd') build(); else renderPoseButtons(); });
   }
   // 拖动旋转、滚轮缩放
   let drag = null;
@@ -241,18 +346,23 @@
   function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
   const hud = document.getElementById('hud');
-  let frames = 0, acc = 0, last = performance.now(), fps = 0, jsMs = 0, jsAcc = 0, frameMs = 0;
+  // 窄屏：HUD 默认折叠成一行（点按展开），不遮挡动作按钮
+  if (innerWidth <= 900) hud.classList.add('min');
+  hud.addEventListener('click', () => { hud.classList.toggle('min'); hud.textContent = hud.classList.contains('min') ? hudFull.split('\n').slice(0, 3).join('  ').replace(/\s+/g, ' ') + '  ▾' : hudFull; });
+  let frames = 0, acc = 0, last = performance.now(), fps = 0, jsMs = 0, jsAcc = 0, frameMs = 0, hudFull = '';
   const tv = new THREE.Vector3();
   function loop() {
     const tNow = performance.now(), dt = Math.min(0.1, (tNow - last) / 1000); last = tNow;
     const j0 = performance.now();
     if (state.anim) { animT += dt; poseAll(animT); for (const it of items) if (it.fig) it.fig.update(dt); }
+    if (crowd) crowd.setTime(state.t != null ? state.t : animT);
     if (state.spin && state.mode !== 'stress') camYaw += dt * 0.35;
     if (state.mode === 'weapons') for (const it of items) if (it.spinMesh) it.mesh.rotation.y += state.spin ? dt * 0.6 : 0;
     camera.position.set(camTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist, camTarget.y + Math.sin(camPitch) * camDist, camTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist);
     camera.lookAt(camTarget);
     sun.target.position.copy(camTarget);
     jsAcc += performance.now() - j0;
+    renderer.info.reset();
     renderer.render(scene, camera);
     // 标签
     for (const it of items) if (it.label) {
@@ -264,8 +374,9 @@
     if (acc >= 0.5) {
       fps = frames / acc; frameMs = acc / frames * 1000; jsMs = jsAcc / frames; frames = 0; acc = 0; jsAcc = 0;
       const info = renderer.info, st = SG.Figure.stats();
-      let tris = 0, figs = 0; for (const it of items) { if (it.fig) { tris += it.fig.triangles; figs++; } if (it.horse) tris += it.horse.triangles; if (it.mesh) tris += it.mesh.userData.tris || 0; }
-      hud.textContent = `${state.mode}  ${state.pose}\n人物 ${figs}  模型三角形 ${tris}\n绘制 ${info.render.calls}  渲染三角形 ${info.render.triangles}\n帧 ${frameMs.toFixed(1)}ms (${fps.toFixed(0)}fps)  JS ${jsMs.toFixed(2)}ms\n构建 ${window.__fig.info.buildMs}ms  图集 ${st.atlasMs}ms\n模板 ${st.templateCount}  贴图 ${st.textures}  程序 ${info.programs ? info.programs.length : '?'}`;
+      let tris = 0, figs = 0; for (const it of items) { if (it.fig) { tris += it.fig.triangles; figs++; } if (it.horse) tris += it.horse.triangles; if (it.mesh) tris += it.mesh.userData.tris || 0; if (it.crowd) { tris += it.crowd.triangles; figs += it.crowd.count; } }
+      hudFull = `${state.mode}  ${state.pose}\n人物 ${figs}  模型三角形 ${tris}\n绘制（含阴影）${info.render.calls}  渲染三角形 ${info.render.triangles}${crowd ? '\n士兵群 ' + crowd.count + ' 人 / ' + crowd.drawCalls + ' 组' : ''}\n帧 ${frameMs.toFixed(1)}ms (${fps.toFixed(0)}fps)  JS ${jsMs.toFixed(2)}ms\n构建 ${window.__fig.info.buildMs}ms  图集 ${st.atlasMs}ms\n模板 ${st.templateCount}  贴图 ${st.textures}  程序 ${info.programs ? info.programs.length : '?'}`;
+      hud.textContent = hud.classList.contains('min') ? hudFull.split('\n').slice(0, 3).join('  ').replace(/\s+/g, ' ') + '  ▾' : hudFull;
       Object.assign(window.__fig.info, { fps, frameMs, jsMs, calls: info.render.calls, rtris: info.render.triangles, tris, programs: info.programs ? info.programs.length : 0 });
     }
     if (!SHOT) requestAnimationFrame(loop);

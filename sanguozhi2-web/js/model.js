@@ -656,13 +656,16 @@
   //       计策：智力 50/60/70/80/90 各 1 格（至多 5）；等阶上限 智力 50→1、65→2、80→3、92→4（≈(智力−35)/15）；
   //             第 k 格在 3/5/7/9/10 级、第 k 阶在 3/5/7/9 级解锁。
   //       第 k 格最高只能学 k 阶（tier = 下一招可学的最高等阶 = min(能力上限, 等级上限, 已学 + 1)），
-  //       故招式按 1、2、3、4 阶逐级习得；推迟选择也不能一口气全学高阶。
+  //       故招式按 1、2、3、4 阶逐级习得；推迟选择也不能一口气全学高阶。可习得的暗杀（kind assassinate）每人至多一招。
   //     openings(gen) → { special, tactic, total }   现在可学的空格数
   //   升级选择（玩家从 3 个候选中选 1；电脑自动选）
   //     candidates(gen, n = 3) → [{ type: 'special'|'tactic', id, tier, name, desc, rules, color, fx, ref }]
-  //       候选确定（按姓名、等级、已学、本局种子），不耗 SG.Random；两类都有空格时两类都会出现。
+  //       候选确定（按姓名、等级、已学、本局种子），不耗 SG.Random；两类都有空格时两类都会出现；
+  //       每类至少一个候选是当前可学的最高等阶。
   //     learn(gen, typeOrCand, id?) → bool        aiPick(gen, cands) → cand        autoLearn(gen) → [cand]
   //     pending(f) → [gen]                       f 势力中有空格且有候选的武将（玩家：战后逐个弹出升级对话框）
+  //       对话框循环条件请用 candidates(gen).length > 0（openings 只在载入 tactics-data.js 时计计策格）
+  //     playerAutoLearn（缺省 true）：玩家武将也由 aiPick 自动习得；升级对话框上线时设为 false
   //     known(gen) → { specials: [sp], tactics: [tactic] }（专属必杀在前；需 specials.js / tactics-data.js）
   //   自动结算的攻城战（strategy-ai.js 的 Conquest.autoResolve）
   //     snapshot(s) → 战前兵力；autoBattle(s, snap) → [{ gen, exp, from, to, learned, side, won }]
@@ -681,6 +684,9 @@
 
   const Progress = {
     enabled: true,
+    // 玩家武将也自动习得（与电脑相同的选择）。升级对话框接好后（第二阶段，strategy-screen.js）设为 false，
+    // 玩家武将改为保留空格，由 pending(G.player) / candidates / learn 逐个选择。
+    playerAutoLearn: true,
     MAX_LEVEL: 10,
     EXP: Object.freeze([0, 0, 80, 200, 360, 560, 800, 1080, 1400, 1760, 2160]),
     BATTLE_CAP: 240,
@@ -760,8 +766,10 @@
       const tier = Math.min(statTier, levelTier, used + 1);
       return { max, unlocked, used, open: Math.max(0, unlocked - used), tier, statTier, levelTier };
     },
+    // 计策格只在载入了 js/tactics-data.js（有可学的计策）时计入，否则 total 会停在 > 0 而 candidates() 为空
     openings(gen) {
-      const s = Progress.specialSlots(gen).open, t = Progress.tacticSlots(gen).open;
+      const T = SG.Tactics;
+      const s = Progress.specialSlots(gen).open, t = T && typeof T.learnable === 'function' ? Progress.tacticSlots(gen).open : 0;
       return { special: s, tactic: t, total: s + t };
     },
 
@@ -773,7 +781,9 @@
         if (!S || typeof S.pool !== 'function') return [];
         const sl = Progress.specialSlots(gen);
         if (sl.open <= 0) return [];
-        return S.pool().filter(sp => sp.tier <= sl.tier && gen.specials.indexOf(sp.id) < 0);
+        // 可习得的暗杀每人至多一招（得手即整支溃散，多招叠加时主将被刺、一战定局的机会过大）
+        const hasAssn = gen.specials.some(id => { const k = S.byId(id); return k && k.kind === 'assassinate'; });
+        return S.pool().filter(sp => sp.tier <= sl.tier && gen.specials.indexOf(sp.id) < 0 && !(hasAssn && sp.kind === 'assassinate'));
       }
       const T = SG.Tactics;
       if (!T || typeof T.learnable !== 'function') return [];
@@ -799,12 +809,15 @@
         pools.push({ type, list: list.slice(), cap });
       }
       if (!pools.length) return [];
-      // 加权不放回抽取：本等阶上限的条目 ×4、低一阶 ×2、其余 ×1
+      // 加权不放回抽取：本等阶上限的条目 ×4、低一阶 ×2、其余 ×1；每类的第一个候选必为本等阶上限的条目
+      // （新解锁的等阶一定出现在候选里，电脑 aiPick 也就总能学到当前最高阶）
       const draw = p => {
         let tot = 0;
-        const w = p.list.map(x => { const k = x.tier >= p.cap ? 4 : x.tier === p.cap - 1 ? 2 : 1; tot += k; return k; });
+        const capOnly = !p.drawn && p.list.some(x => x.tier >= p.cap);
+        p.drawn = true;
+        const w = p.list.map(x => { const k = x.tier >= p.cap ? 4 : capOnly ? 0 : x.tier === p.cap - 1 ? 2 : 1; tot += k; return k; });
         let roll = r.nextDouble() * tot;
-        for (let i = 0; i < p.list.length; i++) { roll -= w[i]; if (roll < 0 || i === p.list.length - 1) return Progress.cand(p.type, p.list.splice(i, 1)[0]); }
+        for (let i = 0; i < p.list.length; i++) { roll -= w[i]; if ((roll < 0 && w[i] > 0) || i === p.list.length - 1) return Progress.cand(p.type, p.list.splice(i, 1)[0]); }
         return null;
       };
       const out = [];
@@ -873,8 +886,11 @@
       gen.exp = Math.min(gen.exp + add, Progress.EXP[Progress.MAX_LEVEL]);
       gen.level = Progress.levelFor(gen.exp);
       const res = { gen, exp: add, why: why || '', from, to: gen.level, learned: [] };
-      if (!Progress.isPlayerGen(gen)) res.learned = Progress.autoLearn(gen);
-      else if (gen.level > from && SG.G && typeof SG.G.addLog === 'function') SG.G.addLog(gen.name + '升至 ' + gen.level + ' 级。');
+      const player = Progress.isPlayerGen(gen);
+      if (!player || Progress.playerAutoLearn) res.learned = Progress.autoLearn(gen);
+      if (player && gen.level > from && SG.G && typeof SG.G.addLog === 'function') {
+        SG.G.addLog(gen.name + '升至 ' + gen.level + ' 级' + (res.learned.length ? '，习得' + res.learned.map(c => '「' + c.name + '」').join('') : '') + '。');
+      }
       return res;
     },
     battleExp(x) {

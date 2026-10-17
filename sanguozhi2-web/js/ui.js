@@ -265,7 +265,8 @@
   };
 
   // 文字中提到的武将（以及势力名 → 其君主）前加行内小头像；每个名字只加第一次出现。
-  // 只处理标签之外的文字；城名优先于同名的势力名（「罗马」城不配皇帝头像）。
+  // 只处理标签之外的文字。与城同名的势力（罗马、夫余、鄯善……）按上下文区分：名字后接「攻陷 / 占领 / 击退 / 军 / 势力 /
+  // 继承 / 同意 / 拒绝 / 的」或前接「离开了」时视为势力（配君主头像），否则视为城名（「攻陷了罗马」「罗马无人防守」不配头像）。
   // opts：{ gens: 只给这些武将（或姓名）加头像, skip: 不加头像的姓名（如对话的说话人）, factions = true, max = 8 }
   let faceIdx = null;
   function faceIndex() {
@@ -276,12 +277,19 @@
     const map = new Map();
     for (const x of g.generals) if (x && x.name && x.name.length >= 2 && !map.has(x.name)) map.set(x.name, { gen: x });
     for (const c of g.cities || []) if (c && c.name && c.name.length >= 2 && !map.has(c.name)) map.set(c.name, { city: c });
-    for (const f of g.factions || []) if (f && f.name && f.name.length >= 2 && !map.has(f.name)) map.set(f.name, { fac: f });
+    for (const f of g.factions || []) {
+      if (!f || !f.name || f.name.length < 2) continue;
+      const e = map.get(f.name);
+      if (!e) map.set(f.name, { fac: f });
+      else if (e.city && !e.fac) e.fac = f;   // 与城同名：保留两者，替换时看上下文
+    }
     const names = Array.from(map.keys()).sort((a, b) => b.length - a.length);
     const re = names.length ? new RegExp(names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g') : null;
     faceIdx = { g, key, map, re };
     return faceIdx;
   }
+  const FAC_AFTER = /^(攻陷|占领|击退|未能|军|势力|继承|同意|拒绝|的)/;
+  const FAC_BEFORE = /离开了$/;
   UI.faces = function (html, opts) {
     if (html === null || html === undefined) return html;
     html = String(html);
@@ -297,9 +305,13 @@
     let n = 0;
     return html.split(/(<[^>]*>|&[#\w]+;)/).map((seg, i) => {
       if (i % 2 === 1 || !seg) return seg;
-      return seg.replace(idx.re, m => {
+      return seg.replace(idx.re, (m, off, str) => {
         const e = idx.map.get(m);
-        if (!e || e.city || n >= max || skip.has(m) || used.has(m)) return m;
+        if (!e || n >= max || skip.has(m) || used.has(m)) return m;
+        if (e.city) {   // 城名；与城同名的势力只在上下文像势力时配君主头像
+          const asFac = e.fac && (FAC_AFTER.test(str.slice(off + m.length, off + m.length + 2)) || FAC_BEFORE.test(str.slice(Math.max(0, off - 3), off)));
+          if (!asFac) return m;
+        }
         let gen = e.gen;
         if (e.fac) {
           if (!facs || only) return m;
@@ -520,7 +532,9 @@
           try { face = SG.Portrait.el(pg, opts.mood ? { size: UI.facePx(FACE_REM.say), mood: opts.mood } : { size: UI.facePx(FACE_REM.say) }); } catch (e) { face = null; }
         }
         sp.appendChild(face || UI.medal(spName.charAt(0), speakerColor, 96));
-        const nm = el('div', 'sg-say-name', SG.esc(spName));
+        // 长名（外国人名）收紧字距，再长则允许折行，不挤压对话文字
+        const nlen = Array.from(spName).length;
+        const nm = el('div', 'sg-say-name' + (nlen >= 7 ? ' is-long is-xlong' : nlen >= 5 ? ' is-long' : ''), SG.esc(spName));
         sp.appendChild(nm);
         if (opts.sub) sp.appendChild(el('div', 'sg-say-sub', opts.sub));
         panel.appendChild(sp);

@@ -1974,26 +1974,6 @@ body {
 }
 
 /* ================================================ 第三版：改名（§7）与头像无处不在（§5） == */
-/* 标题：「霸王的世界」背后一圈倾斜的经纬环（世界），两端淡出 */
-.sg-title-hero::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: -9%;
-  right: -9%;
-  top: 47%;
-  height: 40%;
-  border-radius: 50%;
-  border: 1.5px solid rgba(243, 201, 105, .5);
-  border-top-color: rgba(243, 201, 105, .16);
-  box-shadow: 0 0 1.2rem rgba(243, 201, 105, .12), inset 0 0 1.2rem rgba(243, 201, 105, .08);
-  transform: rotate(-5deg);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
-  pointer-events: none;
-  animation: sg-fade-in 1.4s ease-out .9s both;
-}
-
 /* 列表行头像（SG.UI.item 的 avatar） */
 .sg-item.has-face { gap: .85rem; padding-top: .3rem; padding-bottom: .3rem; }
 .sg-item-face {
@@ -2106,7 +2086,7 @@ body {
 @media (max-height: 540px) {
   .sg-item.has-face { gap: .7rem; padding-top: .2rem; padding-bottom: .2rem; }
   .sg-item-face { width: 2.35rem; height: 2.35rem; }
-  .sg-say-sub { font-size: .76rem; margin-top: -.2rem; }
+  .sg-say-sub { font-size: .76rem; margin-top: -.2rem; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; text-overflow: clip; }
   .sg-portrait-inline.sg-gencard-face { width: 3.5rem !important; height: 3.5rem !important; }
   .sg-gencard-name { font-size: 1.25rem; }
   .sg-chron-row { font-size: 1.05rem; padding: .3rem .7rem; line-height: 1.55; }
@@ -2122,4 +2102,12 @@ body {
 .sg-vs-faces .sg-portrait-inline.sg-face { margin: 0 .05em; vertical-align: 0; }
 .sg-vs-faces .sg-side0, .sg-vs-faces .sg-side1 { font-weight: 700; margin-right: .15em; }
 .sg-item-desc .sg-item-faces { margin-top: .15em; }
-.sg-item-desc .sg-item-faces .sg-portrait-inline.sg-face { width: 2.05em !important; height: 2.05em !important; }
+.sg-item-desc .sg-item-faces .sg-portrait-inline.sg-face { width: 1.9em !important; height: 1.9em !important; }
+/* 说话人长名（外国人名）：收紧字距；七字以上折行 */
+.sg-say-name.is-long { letter-spacing: .02em; }
+.sg-say-name.is-xlong { max-width: 8rem; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; text-align: center; line-height: 1.2; font-size: 1.05rem; }
+@media (max-height: 540px) {
+  .sg-say-name.is-long { font-size: .95rem; letter-spacing: 0; }
+  .sg-say-name.is-xlong { max-width: 6.4rem; font-size: .9rem; }
+}
+.sg-item-main:has(> .sg-item-desc > .sg-item-faces) { align-items: center; }
