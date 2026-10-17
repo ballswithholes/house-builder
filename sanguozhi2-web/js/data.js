@@ -38,7 +38,7 @@
 
     // ---- 战斗 ----
     BattleDays: 30,
-    BattleW: 14, BattleH: 10,
+    BattleW: 18, BattleH: 13,  // 第三版 §2：战场 +25%（原 14 × 10）
     MaxSortieGenerals: 5,
     DamageK: 0.11,
     CounterRatio: 0.5,

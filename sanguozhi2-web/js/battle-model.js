@@ -1019,6 +1019,8 @@
             ? M.clamp(sp.chance + (I - t.gen.intel) / 200 + (W - t.gen.war) / 500, 0.05, 0.6)
             : M.clamp(sp.chance + (W - t.gen.war) / 250 + (I - t.gen.intel) / 300, 0.05, 0.6);
           if (t.commander) p *= 0.5;
+          // 学来的暗杀（招式池，带 tier）成功率减半：第三版战场放大后电脑更易挑出弱将下手，实测倍率偏高
+          if (sp.tier) p *= 0.5;
           pl.kill = { unit: t, p };
           if (sp.power > 0) hit(t, sp.power * base(t), true, true);   // 失手时造成的伤害
           if (sp.morale) foeFx(t, { morale: sp.morale });
