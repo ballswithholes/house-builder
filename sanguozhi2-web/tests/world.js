@@ -3,7 +3,8 @@
    世界剧本「天下大势」检测（Node，无依赖）
    (1) 数据自检：格式、计数、经典剧本原样包含、连线（全图连通、海路是子集、度数）、势力 / 君主 / 都城、
        武将（姓名唯一、隐士忠诚与兵力为 0、无人卒于 190 年前）、资料表（WorldInfo / FactionInfo / CityInfo）、
-       城池间距（SG.project ≥ 3）、势力颜色（CIEDE2000 色差）、显示名长度。
+       城池间距（SG.project ≥ 3）、势力颜色（CIEDE2000 色差）、显示名长度、开局领土从都城连通（例外列表）、
+       玩家可见文字（无研究 / 开发说明、同条目无重复分句）。
    (2) 全电脑模拟：12 个种子 × 25 年（可用参数改）。统计每秒月数、单月最长耗时、各地域势力存活、
        首个势力超过全部城池 25% 的时间、地域在 3 年内全灭、罗马 / 安息 / 贵霜的城数走势。
    model.js / strategy-ai.js 在载入时读取 SG.ScenarioData，故先载入 world-data.js，
@@ -134,6 +135,21 @@ for (const p of F) {
   }
 }
 for (const r of W.Regions) check(r.factions.length > 0 && r.name, 'region ' + r.id);
+// 开局领土连通：各势力的城池从都城出发、只经己方城池即可全部到达（否则开局无法调兵运粮）。
+// 已知的例外（城键）：经典剧本的袁术、乌桓；贵霜的秣菟罗（第二版起隔着空城塔克西拉）；罗马的廷吉斯（隔着空城科尔杜巴 / 约尔，两地 190 年主官不可考）
+{
+  const KNOWN_SPLIT = { yuanshu: ['runan'], wuhuan: ['ningcheng'], kushan: ['mathura'], roma: ['tingis'] };
+  const own = {}; for (const p of G) if (p[4] !== '-' && p[8] !== '1') own[p[5]] = p[4];
+  const bad = [];
+  for (const p of F) {
+    const cap = genByName[p[2]] && genByName[p[2]][5]; if (!cap) continue;
+    const seen = new Set([cap]), q = [cap];
+    while (q.length) { const x = q.pop(); for (const y of adj[x]) if (own[y] === p[0] && !seen.has(y)) { seen.add(y); q.push(y); } }
+    const cut = Object.keys(own).filter(k => own[k] === p[0] && !seen.has(k)).sort();
+    if (cut.join() !== (KNOWN_SPLIT[p[0]] || []).slice().sort().join()) bad.push(`${p[1]} [${cut.join(' ')}] (expected [${(KNOWN_SPLIT[p[0]] || []).join(' ')}])`);
+  }
+  check(bad.length === 0, 'every faction\'s start cities connect to its capital through its own cities (known exceptions listed): ' + bad.join('; '));
+}
 check(Object.keys(inRegion).length === F.length, 'every faction has a region');
 // 武将
 const names = new Set();
@@ -162,16 +178,18 @@ for (const p of newGens) {
   check((wi.born == null ? '' : String(wi.born)) === p[10], 'born column matches WorldInfo ' + p[0]);
 }
 for (const p of F.slice(nF)) check(SG.FactionInfo[p[0]] && SG.FactionInfo[p[0]].name === p[1] && SG.FactionInfo[p[0]].ruler === p[2], 'FactionInfo name / ruler match ' + p[0]);
-// 性别：四位女性；sexOf 覆盖经典武将（祝融）
+// 性别：第二版四位、第三版十位女性；sexOf 覆盖经典武将（祝融）
 {
   const fem = newGens.filter(p => SG.WorldInfo[p[0]] && SG.WorldInfo[p[0]].sex === 'f').map(p => p[0]).sort();
-  check(fem.join() === ['卑弥呼', '多姆娜', '玛伊莎', '玛琪亚'].sort().join(), 'female generals ' + fem.join());
+  const FEMALE = ['卑弥呼', '多姆娜', '玛伊莎', '玛琪亚',                       // 第二版
+    '索埃米亚斯', '马梅亚', '罗达格', '阿曼哈利卡', '婆薮', '昌提室利', '于氏', '神功皇后', '田油津媛', '蔡琰'];  // 第三版
+  check(fem.join() === FEMALE.sort().join(), 'female generals ' + fem.join());
   check(SG.WorldData.sexOf('玛琪亚') === 'f' && SG.WorldData.sexOf('祝融') === 'f' && SG.WorldData.sexOf('曹操') === 'm' && SG.WorldData.sexOf('塞维鲁') === 'm', 'SG.WorldData.sexOf');
   check(SG.WorldData.bornOf('曹操') === 155 && SG.WorldData.bornOf('塞维鲁') === 145 && SG.WorldData.bornOf('张飞') === null, 'SG.WorldData.bornOf');
 }
 // 给玩家看的文字：不得残留研究 / 合并阶段的说明、内部键名或 ASCII 引号；【游戏取舍】只放在 liberty 字段
 {
-  const META = /合并时|去重|研究摘要|JSON|data\.js|DESIGN|notes?\b|本区|中国区|【游戏取舍】|"/;
+  const META = /合并时|去重|研究摘要|JSON|data\.js|DESIGN|notes?\b|本区|中国区|【游戏取舍】|建议|TODO|现有数据|"/;
   const allKeys = new Set([...cityKeys, ...F.map(p => p[0])]);
   let bad = [];
   for (const [tab, T] of [['WorldInfo', SG.WorldInfo], ['FactionInfo', SG.FactionInfo], ['CityInfo', SG.CityInfo]]) {
@@ -194,6 +212,16 @@ for (const p of F.slice(nF)) check(SG.FactionInfo[p[0]] && SG.FactionInfo[p[0]].
   let dash = [];
   for (const T of [SG.WorldInfo, SG.FactionInfo]) for (const k in T) for (const f of ['full', 'role', 'note', 'liberty']) if (/–/.test(T[k][f] || '')) dash.push(k + '.' + f);
   check(dash.length === 0, 'date ranges use 「—」, not 「–」: ' + dash.join(', '));
+  // 同一条目的 note 与 liberty 里不得有重复（含换了措辞）的分句：按「。；，」切分，去标点后 ≥ 10 字的分句两两比较字对重合度
+  const bigrams = t => { const a = [...t], m = new Map(); for (let i = 0; i + 1 < a.length; i++) { const k = a[i] + a[i + 1]; m.set(k, (m.get(k) || 0) + 1); } return m; };
+  const overlap = (x, y) => { let n = 0, nx = 0, ny = 0; for (const v of x.values()) nx += v; for (const v of y.values()) ny += v; for (const [k, v] of x) if (y.has(k)) n += Math.min(v, y.get(k)); return n / Math.max(1, Math.min(nx, ny)); };
+  const rep = [];
+  for (const [tab, T] of [['WorldInfo', SG.WorldInfo], ['FactionInfo', SG.FactionInfo], ['CityInfo', SG.CityInfo]]) for (const k in T) {
+    const cl = [];
+    for (const f of ['note', 'liberty']) for (const c of String(T[k][f] || '').split(/[。；，]/)) { const t = c.replace(/[（）“”《》·、：\s]/g, ''); if ([...t].length >= 10) cl.push([c, bigrams(t)]); }
+    for (let i = 0; i < cl.length; i++) for (let j = i + 1; j < cl.length; j++) if (overlap(cl[i][1], cl[j][1]) >= 0.7) rep.push(`${tab}.${k}「${cl[j][0]}」`);
+  }
+  check(rep.length === 0, 'no repeated clause inside one note + liberty: ' + rep.join(', '));
 }
 for (const p of C.slice(nC)) check(SG.CityInfo[p[0]], 'CityInfo ' + p[0]);
 for (const n in SG.GeneralBorn) check(genByName[n] && genByName[n][10] === String(SG.GeneralBorn[n]), 'GeneralBorn ' + n);
@@ -270,6 +298,8 @@ try {
   for (const f of g0.factions) check(g0.cityCount(f.id) >= 1, 'faction owns a city at start ' + f.name);
   for (const c of g0.cities) if (c.owner >= 0) check(g0.officersIn(c).length > 0, 'owned city has an officer ' + c.name);
   const nNeutral = g0.cities.filter(c => c.owner < 0).length;
+  // 第三版：贵霜不再是两城小国
+  check(g0.cityCount(g0.factionByKey('kushan').id) >= 3, 'Kushan starts with ≥ 3 cities');
   console.log(`start: ${g0.factions.length} factions, ${g0.cities.length - nNeutral} owned cities, ${nNeutral} neutral`);
   // 存档往返
   const g1 = GameState.fromJSON(JSON.stringify(g0));
@@ -289,11 +319,11 @@ function consistency(g) {
 const regionName = {}; for (const r of W.Regions) regionName[r.id] = r.name;
 const CHECK_Y = [1, 3, 5, 10, 15, 20, 25].filter(y => y <= YEARS);
 const surv = {}; for (const r of W.Regions) surv[r.id] = CHECK_Y.map(() => 0);
-const watch = ['roma', 'parthia', 'kushan'];
+const watch = ['roma', 'parthia', 'kushan', 'satavahana'];
 const watchN = {}; for (const k of watch) watchN[k] = CHECK_Y.map(() => []);
-// “西方”= 欧洲与西亚：罗马、蛮族、波斯、阿拉伯四个地域的开局城池，加上这些文化的无主城（不含中亚草原与贵霜式城邦），
-// 用来衡量罗马是否吞并西方
-const WEST_REG = ['roma', 'barbar', 'bosi', 'arab'];
+// “西方”= 欧洲、西亚与北非：罗马、蛮族、波斯、阿拉伯、非洲五个地域的开局城池，加上这些文化的无主城
+// （不含中亚草原与贵霜式城邦），用来衡量罗马是否吞并西方
+const WEST_REG = ['roma', 'barbar', 'bosi', 'arab', 'africa'];
 const WEST_CULT = ['roman', 'celt', 'german', 'sarmatian', 'persia', 'arab'];
 const westShare = CHECK_Y.map(() => []);
 let WEST_N = 0;
@@ -301,6 +331,7 @@ const first25 = [], wiped = [], wipedFast = [];
 let months = 0, simMs = 0, maxMs = 0, maxAt = '';
 const wall = [];
 const finals = [];
+const loadAtStart = require('os').loadavg()[0];
 for (const seed of SEED_LIST) {
   SG.Random.seed(seed);
   const g = SG.G = GameState.newGame('roma');
@@ -347,7 +378,12 @@ const pct = p => wall[Math.min(wall.length - 1, Math.floor(wall.length * p))].to
 console.log(`speed: ${months} months in ${(simMs / 1000).toFixed(1)}s = ${(months / (simMs / 1000)).toFixed(0)} months/s; wall ms per month avg ${(simMs / months).toFixed(2)}, p99 ${pct(0.99)}, p99.9 ${pct(0.999)}, max ${wall[wall.length - 1].toFixed(1)}; CPU max ${maxMs.toFixed(1)} ms (${maxAt})`);
 // 单月耗时以 CPU 时间计（墙钟在 4 核共享机器上会被其他进程抢占，偶有 >60ms 的尖峰）
 check(maxMs < 60, 'max per-month processing (CPU time) < 60 ms');
-check(+pct(0.999) < 60, 'p99.9 per-month wall time < 60 ms');
+// 墙钟 p99.9 上限 60 ms；其他进程把 1 分钟负载推到超过 CPU 核数时按负载 / 核数放宽（抢占造成的尖峰与数据无关，CPU 时间仍按 60 ms 判定）
+{
+  const cpus = require('os').cpus().length, load = Math.max(loadAtStart, require('os').loadavg()[0]);
+  const lim = Math.round(60 * Math.max(1, load / cpus));
+  check(+pct(0.999) < lim, `p99.9 per-month wall time < ${lim} ms` + (lim > 60 ? ` (60 ms × load ${load.toFixed(1)} / ${cpus} CPUs)` : ''));
+}
 console.log('region factions alive (avg over seeds) at years ' + CHECK_Y.join('/') + ':');
 for (const r of W.Regions) console.log(`  ${(regionName[r.id] + '　　　　').slice(0, 6)} ${r.factions.length} → ${surv[r.id].map(v => (v / SEEDS).toFixed(1)).join(' / ')}`);
 const avgN = a => a.length ? (a.reduce((s, v) => s + v, 0) / a.length).toFixed(1) : '-';
@@ -392,6 +428,8 @@ if (yi5 >= 0) {
   check(surv.barbar[yi5] / SEEDS >= 1.5, 'barbarian factions: ≥ 1.5 alive on average at year 5');
   check(watchN.parthia[yi5].filter(n => n > 0).length >= SEEDS * 0.5, 'Parthia alive at year 5 in ≥ 50% of seeds');
   check(watchN.kushan[yi5].filter(n => n > 0).length >= SEEDS * 0.5, 'Kushan alive at year 5 in ≥ 50% of seeds');
+  // 第三版：贵霜开局 3 城，5 年后平均不少于 3 城（不再是两城小国）
+  check(watchN.kushan[yi5].reduce((a, b) => a + b, 0) / SEEDS >= 3, 'Kushan holds ≥ 3 cities on average at year 5');
 }
 
 // =============================================================== (3) 经典剧本不受影响 --

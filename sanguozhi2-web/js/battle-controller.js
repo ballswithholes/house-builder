@@ -1,8 +1,15 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 战斗流程
+   三国志-霸王的世界 · 网页版 · 战斗流程
    ← Battle/BattleController.cs：玩家操作、电脑行动、动画与界面
    协程 → async 函数。SG.BattleController.run(setup, playerSide) → Promise。
+   第三版 §4 成长（规则见 battle-model.js / model.js 的 SG.Progress，计策目录见 tactics-data.js）：
+     行动菜单「必杀」→ 列出该部队会的全部必杀（专属在前，每招每战一次；已施展 / 无目标的灰显并注明原因）→
+       选目标 → 特写 + SG.Specials.perform（special = 所选招式）；只会一招时直接选目标。
+     「策略」→ 列出已会的计策（原四计按智力 + 习得的新计策，SG.Tactics.menuItems）；新计策经 SG.Tactics.perform
+       播放各自的 V.specialFx 风格；电脑的 'special' / 'tactic' 计划走同一条路径（plan.special / plan.tactic）。
+     子菜单（必杀 / 策略 / 目标 / 阵型）取消时回到行动菜单；行动菜单本身取消时与旧版相同（移动过则待机）。
+     情报卡：姓名旁显示等级（Lv）与经验进度条（SG.Progress.expInfo）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -80,6 +87,9 @@
     void el.offsetWidth;
     el.classList.add(cls);
   }
+  function progressOn() { return !!(SG.Progress && SG.Progress.enabled !== false && typeof SG.Progress.expInfo === 'function'); }
+  // 窄高（横屏手机）：菜单说明只留一行
+  function shortScreen() { return typeof window !== 'undefined' && window.innerHeight > 0 && window.innerHeight < 560; }
   function sumTroops(list) { let s = 0; for (const u of list) s += u.troops; return s; }
   function up(v, k) { return v.clone().add(new THREE.Vector3(0, k, 0)); }
   function samePoint(a, b) { return a.x === b.x && a.y === b.y; }
@@ -315,7 +325,7 @@
       }
       this._cardUnit = u;
       this.card.innerHTML =
-        `<div><span class="sg-card-name">${SG.esc(u.gen.name)}</span><span class="sg-card-sub">${u.side === 0 ? '攻方' : '守方'}${u.commander ? '·主将' : ''}</span></div>` +
+        `<div><span class="sg-card-name">${SG.esc(u.gen.name)}</span>${this.levelChip(u.gen)}<span class="sg-card-sub">${u.side === 0 ? '攻方' : '守方'}${u.commander ? '·主将' : ''}</span></div>` +
         `<div class="sg-bar" style="--c:${sideColor(u.side)};--v:${M.clamp01(u.troops / max).toFixed(3)}"><i class="sg-bar-fill"></i></div>` +
         `<div>兵力 <b>${u.troops}</b>　士气 ${u.morale}　训练 ${u.gen.training}</div>` +
         `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}</div>` +
@@ -323,6 +333,16 @@
         `<div>地形 ${SG.Defs.terrainName(this.M.map[u.x][u.y])}${u.confused > 0 ? '　<span style="color:#c79bff">混乱中</span>' : ''}</div>` +
         this.specialLine(u);
       if (SG.Portrait) this.card.prepend(SG.Portrait.el(u.gen, { size: 70, className: u.alive ? '' : 'is-dead' }));
+    }
+
+    // 情报卡姓名旁的等级与经验进度（第三版成长；未载入成长规则时为空）
+    levelChip(gen) {
+      if (!progressOn() || !gen) return '';
+      try {
+        const e = SG.Progress.expInfo(gen);
+        const tip = e.max ? '等级 ' + e.level + '（已满级）' : '等级 ' + e.level + ' · 经验 ' + e.exp + ' / ' + e.next;
+        return `<span class="sg-card-lv" title="${tip}">Lv<b>${e.level}</b><i class="sg-card-exp" style="--v:${e.pct.toFixed(3)}"></i></span>`;
+      } catch (e) { console.error(e); return ''; }
     }
 
     // 情报卡的必杀一行：招式名 + 可用 / 已施展
@@ -419,52 +439,71 @@
       V.highlight(Mdl.adjacentEnemies(u).map(e => ({ x: e.x, y: e.y })), '#ff4d40', 0.7);           // (1,0.3,0.25,0.7)
     }
 
+    // 部队会的计策（原四计按智力 + 习得；规则层旧版时只看原四计）
+    tacticsOf(u) {
+      const Mdl = this.M;
+      try { if (typeof Mdl.knownTactics === 'function') return Mdl.knownTactics(u); } catch (e) { console.error(e); }
+      return SG.Defs.tactics.filter(t => u.gen.intel >= t.reqInt);
+    }
+    // 部队会的必杀（专属在前）
+    specialsOf(u) {
+      const Mdl = this.M, SP = SG.Specials;
+      try {
+        if (typeof Mdl.knownSpecials === 'function') return Mdl.knownSpecials(u);
+        const sp = SP && SP.of ? SP.of(u.gen) : null;
+        return sp ? [sp] : [];
+      } catch (e) { console.error(e); return []; }
+    }
+    spUsable(u, sp) {
+      const Mdl = this.M;
+      return typeof Mdl.knownSpecials === 'function' ? Mdl.specialUsable(u, sp ? sp.id : undefined) : Mdl.specialUsable(u);
+    }
+
+    // 行动菜单。子菜单（必杀 / 策略 / 选目标 / 阵型）取消时回到本菜单；本菜单取消时：移动过的部队待机
     async actionMenu(u, moved) {
       const Mdl = this.M;
       moved = !!moved;
-      const adj = Mdl.adjacentEnemies(u);
-      const items = [
-        item('攻击', adj.length > 0 ? adj.length + ' 支敌军相邻' : '无相邻敌军', adj.length > 0),
-        item('策略', '智力 ' + u.gen.intel, u.gen.intel >= 40),
-        item('单挑', '武力 ' + u.gen.war, adj.length > 0),
-        item('阵型', u.form.name),
-        item('待机'),
-      ];
-      // 必杀：插在「策略」之后，显示招式名；已施展 / 无目标时灰显并注明原因
       const SP = this.specialsOn() ? 1 : 0;
-      if (SP) {
-        let it = null;
-        try { it = SG.Specials.menuItem(this, u); } catch (e) { console.error(e); }
-        if (it) items.splice(2, 0, it);
-        else items.splice(2, 0, item('必杀', '无', false));
-      }
-      let r = await UI().choose(u.gen.name + ' 的行动', items, null, 520);
-      if (SP && r === 2) {
-        const us = Mdl.specialUsable(u);
-        if (!us.ok) { UI().toast(SG.esc(us.why || '无法施展')); if (moved) Mdl.spend(u); }
-        else {
-          const tgt = await SG.Specials.pickTarget(this, u);
-          if (tgt) { await this.doSpecial(u, tgt, false); Mdl.spend(u); } else if (moved) Mdl.spend(u);
+      for (let guard = 0; guard < 40; guard++) {
+        if (!u.alive || Mdl.result !== 0) break;
+        const adj = Mdl.adjacentEnemies(u);
+        const tacs = this.tacticsOf(u);
+        const tacOk = tacs.filter(t => { try { return Mdl.tacticUsable(u, t).ok && Mdl.tacticTargets(u, t).length > 0; } catch (e) { return false; } }).length;
+        const items = [
+          item('攻击', adj.length > 0 ? adj.length + ' 支敌军相邻' : '无相邻敌军', adj.length > 0),
+          item('策略', tacs.length ? '智力 ' + u.gen.intel + '<span class="sg-muted"> · ' + tacs.length + ' 计' + (tacOk < tacs.length ? ' · 可用 ' + tacOk : '') + '</span>' : '<span class="sg-muted">未习计策</span>', tacs.length > 0),
+          item('单挑', '武力 ' + u.gen.war, adj.length > 0),
+          item('阵型', u.form.name),
+          item('待机'),
+        ];
+        // 必杀：插在「策略」之后，显示招式名；已施展 / 无目标时灰显并注明原因
+        if (SP) {
+          let it = null;
+          try { it = SG.Specials.menuItem(this, u); } catch (e) { console.error(e); }
+          items.splice(2, 0, it || item('必杀', '无', false));
         }
-        for (const x of Mdl.units) this.V.refresh(x);
-        return;
-      }
-      if (SP && r > 2) r--;
-      switch (r) {
-        case 0: {
-          const tgt = await this.pickEnemy(adj, '攻击目标');
-          if (tgt) { await this.doAttack(u, tgt); Mdl.spend(u); } else if (moved) Mdl.spend(u);
-          break;
+        let r = await UI().choose(u.gen.name + ' 的行动', items, null, 520);
+        if (r < 0) { if (moved) Mdl.spend(u); break; }
+        if (SP && r === 2) { if (await this.specialMenu(u)) break; continue; }
+        if (SP && r > 2) r--;
+        let done = true;
+        switch (r) {
+          case 0: {
+            const tgt = await this.pickEnemy(adj, '攻击目标');
+            if (tgt) { await this.doAttack(u, tgt); Mdl.spend(u); } else done = false;
+            break;
+          }
+          case 1: done = await this.tacticMenu(u); break;
+          case 2: {
+            const tgt = await this.pickEnemy(adj, '单挑对手');
+            if (tgt) { await this.doDuel(u, tgt); Mdl.spend(u); } else done = false;
+            break;
+          }
+          case 3: done = await this.formationMenu(u); break;
+          case 4: Mdl.spend(u); break;
+          default: if (moved) Mdl.spend(u); break;
         }
-        case 1: await this.tacticMenu(u, moved); break;
-        case 2: {
-          const tgt = await this.pickEnemy(adj, '单挑对手');
-          if (tgt) { await this.doDuel(u, tgt); Mdl.spend(u); } else if (moved) Mdl.spend(u);
-          break;
-        }
-        case 3: await this.formationMenu(u); break;
-        case 4: Mdl.spend(u); break;
-        default: if (moved) Mdl.spend(u); break;
+        if (done) break;
       }
       for (const x of Mdl.units) this.V.refresh(x);
     }
@@ -475,26 +514,91 @@
       return r >= 0 ? list[r] : null;
     }
 
-    async tacticMenu(u, moved) {
-      const Mdl = this.M;
-      const items = [];
-      for (const t of SG.Defs.tactics) {
-        const us = Mdl.tacticUsable(u, t);
-        let why = us.why || '';
-        const ok = us.ok && Mdl.tacticTargets(u, t).length > 0;
-        if (why === '' && !ok) why = '范围内无目标';
-        items.push(item(t.name, ok ? t.desc : why, ok));
+    // 「必杀」：列出全部已会的必杀（专属在前），每招一行：名称、等阶、机制 / 不可用的原因、数值摘要。
+    // 只会一招时直接选目标。施展后 spend → true；取消（回到行动菜单）→ false
+    async specialMenu(u) {
+      const Mdl = this.M, SP = SG.Specials;
+      const list = this.specialsOf(u);
+      if (!list.length) { UI().toast('无必杀技'); return false; }
+      let sp = list[0];
+      if (list.length > 1) {
+        const rows = list.map(x => this.specialItem(u, x));
+        const nUsed = list.filter(x => Mdl.spWasUsed ? Mdl.spWasUsed(u, x) : false).length;
+        const info = '<span class="sg-muted">每招每战限一次' + (nUsed ? ' · 已施展 ' + nUsed + ' / ' + list.length : '') + '</span>';
+        const r = await UI().choose(SG.esc(u.gen.name) + ' 的必杀', rows, info, 700);
+        if (r < 0) { u.spPick = null; return false; }
+        sp = list[r];
       }
-      const r = await UI().choose('策略', items, null, 640);
-      if (r < 0) { if (moved) Mdl.spend(u); return; }
-      const tac = SG.Defs.tactics[r];
-      const targets = Mdl.tacticTargets(u, tac);
-      let tgt;
-      if (tac.kind === SG.TacticKind.Inspire) tgt = u;
-      else tgt = await this.pickEnemy(targets, tac.name + '的目标');
-      if (!tgt) { if (moved) Mdl.spend(u); return; }
+      const us = this.spUsable(u, sp);
+      if (!us.ok) { UI().toast(SG.esc(us.why || '无法施展')); return false; }
+      let tgt = null;
+      try { tgt = await SP.pickTarget(this, u, sp); } catch (e) { console.error(e); tgt = null; }
+      if (!tgt) { u.spPick = null; return false; }
+      await this.doSpecial(u, tgt, false, sp.id);
+      Mdl.spend(u);
+      return true;
+    }
+    // 必杀列表的一行
+    specialItem(u, sp) {
+      const SP = SG.Specials;
+      const us = this.spUsable(u, sp);
+      let col = sp.color || GOLD;
+      try { if (SP.uiColor) col = SP.uiColor(sp); } catch (e) { /* 原色 */ }
+      const tier = sp.pool ? (SP.tierName ? SP.tierName(sp.tier) : sp.tier + '阶') : '专属';
+      const label = `<span class="sg-sp-tier${sp.pool ? '' : ' is-sig'}">${tier}</span><span style="color:${col}">${SG.esc(sp.name)}</span>`;
+      const kind = SP.kindName ? SP.kindName(sp.kind) : '';
+      const right = us.ok ? `<span class="sg-muted">${SG.esc(kind)}</span>` : `<span class="sg-muted">${SG.esc(us.why || '不可用')}</span>`;
+      let rules = '';
+      try { rules = SP.rules ? SP.rules(sp) : ''; } catch (e) { rules = ''; }
+      // 去掉开头的机制名（右栏已有）
+      if (kind && rules.indexOf(kind + ' · ') === 0) rules = rules.slice(kind.length + 3);
+      // 矮屏（横屏手机）：只留数值摘要，去掉末尾的「依武力 / 依智力」
+      const desc = shortScreen() ? SG.esc(rules.replace(/ · 依(武力|智力|政治)$/, '')) : SG.esc(rules) + (sp.lore ? '<span class="sg-sp-lore">' + SG.esc(sp.lore) + '</span>' : '');
+      return item(label, right, us.ok, desc);
+    }
+
+    // 「策略」：已会的计策（原四计按智力 + 习得的新计策）。施展后 spend → true；取消 → false
+    async tacticMenu(u) {
+      const Mdl = this.M, T = SG.Tactics;
+      let rows;
+      if (T && typeof T.menuItems === 'function') {
+        try { rows = T.menuItems(this, u); } catch (e) { console.error(e); rows = null; }
+      }
+      if (!rows) {
+        rows = this.tacticsOf(u).map(t => {
+          const us = Mdl.tacticUsable(u, t);
+          let why = us.why || '';
+          const ok = us.ok && Mdl.tacticTargets(u, t).length > 0;
+          if (why === '' && !ok) why = '范围内无目标';
+          return { tactic: t, item: item(t.name, ok ? t.desc : why, ok) };
+        });
+      }
+      if (!rows.length) { UI().toast('尚未掌握计策'); return false; }
+      const r = await UI().choose(SG.esc(u.gen.name) + ' 的策略', rows.map(x => x.item), null, 680);
+      if (r < 0) return false;
+      const tac = rows[r].tactic;
+      const tgt = await this.pickTacticTarget(u, tac);
+      if (!tgt) return false;
       await this.doTactic(u, tac, tgt);
       Mdl.spend(u);
+      return true;
+    }
+    // 计策目标：自身为中心 → 自身；否则在棋盘上标出射程与可选目标后沿用 pickEnemy
+    async pickTacticTarget(u, tac) {
+      const Mdl = this.M, V = this.V, T = SG.Tactics;
+      const targets = Mdl.tacticTargets(u, tac);
+      if (!targets.length) return null;
+      if (tac.kind === SG.TacticKind.Inspire || tac.target === 'self') return u;
+      if (targets.length === 1) return targets[0];
+      const ally = tac.target === 'ally';
+      try {
+        V.clearHighlights();
+        V.highlight(targets.map(o => ({ x: o.x, y: o.y })), ally ? '#73d98c' : '#ff4d40', 0.75);
+      } catch (e) { console.error(e); }
+      try {
+        if (T && typeof T.pickTarget === 'function') return (await T.pickTarget(this, u, tac)) || null;
+        return await this.pickEnemy(targets, tac.name + '的目标');
+      } finally { try { V.clearHighlights(); } catch (e) { /* 忽略 */ } }
     }
 
     async formationMenu(u) {
@@ -505,11 +609,12 @@
         Mdl.formationAllowed(u, i) ? `攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)} 机动${sign(f.move)}` : (f.reqInt > 0 ? '需智力 ' + f.reqInt : '需武力 ' + f.reqWar),
         Mdl.formationAllowed(u, i), f.desc));
       const r = await UI().choose('变换阵型（消耗本回合行动）', items, null, 760);
-      if (r < 0 || r === u.formation) return;
+      if (r < 0 || r === u.formation) return false;
       Mdl.changeFormation(u, r);
       V.floatText(up(V.tile(u.x, u.y), 1.8), SG.Defs.formations[r].name + '之阵', GOLD, 34);
       sfx('horn', 0.4);
       Mdl.spend(u);
+      return true;
     }
 
     // ---------------------------------------------------------- 动作 --
@@ -548,6 +653,14 @@
 
     async doTactic(u, tac, t) {
       const Mdl = this.M, V = this.V, K = SG.TacticKind;
+      // 第三版新计策：各自的 V.specialFx 风格与飘字（SG.Tactics.perform；不 spend）
+      if (SG.Tactics && typeof SG.Tactics.isNew === 'function' && SG.Tactics.isNew(tac)) {
+        let res = null;
+        try { res = await SG.Tactics.perform(this, u, tac, t); } catch (e) { console.error(e); }
+        for (const x of Mdl.units) V.refresh(x);
+        this.updateHud();
+        return res;
+      }
       UI().toast(u.gen.name + '施展「' + tac.name + '」！', 1.5);
       const res = Mdl.useTactic(u, tac, t);
       switch (tac.kind) {
@@ -566,15 +679,18 @@
     }
 
     // 必杀技：特写（由控制器按动画设定播放）→ SG.Specials.perform（结算、特效、伤害、溃散）。不消耗行动（调用方 spend）
-    async doSpecial(u, target, ai) {
+    // id：招式编号（缺省 = u.spPick → 第一招可施展的；电脑的计划带 plan.special）
+    async doSpecial(u, target, ai, id) {
       const Mdl = this.M, V = this.V, SP = SG.Specials;
-      const sp = SP.of(u.gen);
-      const us = Mdl.specialUsable(u);
+      const multi = typeof Mdl.knownSpecials === 'function' && typeof Mdl.specialOf === 'function';
+      const sp = multi ? Mdl.specialOf(u, id) : SP.of(u.gen);
+      const us = sp ? (multi ? Mdl.specialUsable(u, sp.id) : Mdl.specialUsable(u)) : { ok: false, why: '无必杀技' };
       if (!sp || !us.ok) { UI().toast(SG.esc(us.why || '无法施展')); return null; }
+      if (multi) u.spPick = sp.id;
       this.showCard(u); V.setCursor(u);
       await this.specialCutIn(u, sp, ai);
       let res = null;
-      try { res = await SP.perform(this, u, target, { cutIn: false, fast: !!ai }); } catch (e) { console.error(e); }
+      try { res = await SP.perform(this, u, target, { cutIn: false, fast: !!ai, special: sp.id }); } catch (e) { console.error(e); }
       for (const x of Mdl.units) V.refresh(x);
       this.updateHud();
       return res;
@@ -742,7 +858,7 @@
         else if (act.kind === 'tactic') await this.doTactic(u, act.tactic, act.target);
         else if (act.kind === 'duel') await this.doDuel(u, act.target);
         else if (act.kind === 'special' && this.specialsOn()) {
-          const res = await this.doSpecial(u, act.target, true);
+          const res = await this.doSpecial(u, act.target, true, act.special ? act.special.id : undefined);
           if (res && res.refreshed) for (const x of res.refreshed) order.push(x);   // 疾行：再动的友军排到队尾（canAct 防止重复行动）
         }
         Mdl.spend(u);

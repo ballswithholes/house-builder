@@ -57,8 +57,10 @@
 <script src="../js/camera.js"></script>
 <script src="../js/battle-view.js"></script>
 <script>
-  // 头像模块（B）完成后可用 ?portrait=1 一并载入（按游戏的载入顺序先于 clash.js）；缺省用姓氏徽章
-  if (/[?&]portrait=1/.test(location.search)) document.write('<script src="../js/portrait-data.js"><\/script><script src="../js/portrait.js"><\/script>');
+  // 头像模块按游戏的载入顺序先于 figure.js / clash.js（名将面部与头像一致）；?portrait=0 不载入（HUD 用姓氏徽章）
+  if (!/[?&]portrait=0/.test(location.search)) document.write('<script src="../js/portrait-data.js"><\/script><script src="../js/portrait.js"><\/script>');
+  // ?figure=0：不预先载入 figure.js（检验 clash.js 的自动载入）
+  if (!/[?&]figure=0/.test(location.search)) document.write('<script src="../js/figure.js"><\/script>');
 </script>
 <script src="../js/clash.js"></script>
 <script>
@@ -72,7 +74,8 @@
          ?freeze=1.7          动画停在该时刻（截图用，SG.Clash.debug.freezeAt）
          ?board=0             不搭建背景战场（更快）
          ?embed=1             隐藏控制面板（手机预览用）
-         ?portrait=1          载入 js/portrait.js（头像模块就绪后）
+         ?portrait=0          不载入 js/portrait.js（缺省载入：HUD 头像、名将面部）
+         ?figure=0            不预先载入 js/figure.js（检验 clash.js 首次播放时的自动载入）
          ?speed=2             速度
    window.T：play(caseKey, extra) / cut(side) / memTest(n) / info() */
 (function () {

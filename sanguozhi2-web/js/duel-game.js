@@ -2,8 +2,10 @@
 /* ==========================================================================
    三国志-霸王的世界 · 网页版 · 单挑格斗（DESIGN-V2 §4E，第三版格开与手感：DESIGN-V3 §3）
 
-   单挑 = 一场横版 2.5D 格斗：独立的三维场景（SG.Gfx.pushScreen），两名程序化建模的
-   低多边形武将，程序化关键帧动画，键盘 / 多点触控操作，攻击力与伤害取决于 武力。
+   单挑 = 一场横版 2.5D 格斗：独立的三维场景（SG.Gfx.pushScreen），两名 js/figure.js 的高精度武将（平滑蒙皮、
+   按头像外貌生成的面部、层叠衣甲、披风、名将专属兵器；未载入 figure.js 时退回旧的低多边形模型），
+   由本文件的时钟与状态机驱动 figure.js 的动作片段，键盘 / 多点触控操作，攻击力与伤害取决于 武力。
+   场地同为平滑、细致的第三版画风（地形着色器、平滑植被、实例化的两军士兵）。
 
    公开接口
    --------
@@ -47,8 +49,10 @@
    满蓄破防）、L 格挡（↓/S 亦可）、U 格开、I 绝技（怒气满）。触摸：左下 ◀ ▶ ▲，右下 轻击 / 重击 / 格挡 / 格开
   （带冷却环）/ 绝技，支持多点触控。
 
-   第二阶段接入 js/figure.js：Warrior 每帧把姿势向量解算为关节位置 Warrior.J（身体局部坐标）与兵器变换
-   （Warrior.wpn / wpn2 / shield），新模型可按此驱动骨架，替换 buildParts 的分段网格（见 Warrior 构造函数）。
+   第三版接入 js/figure.js（FigWarrior）：出招的 起手 / 判定 / 收招 映射到 figure.js 片段时间（判定开始 = 兵器尖端前伸最远的一刻；
+   对手更近时取尖端刚越过对手中线的一刻，命中定格时刃口停在对手身上），状态切换按骨骼交叉淡化；兵器按 weaponInfo 实测的
+   前伸距离缩放、出招前冲（随起手确定性地迈到位，短兵最多 0.9 米）补足，使刃口与规则判定距离一致（规则与平衡不变）。
+   旧的 Warrior（低多边形、姿势向量 + IK）保留为未载入 figure.js 时的退路。
 
    结构：Sim（纯逻辑，固定 60Hz 步长，可在 Node 中运行）+ AI + 视图（场景、武将模型与动画、特效）+ HUD（DOM）+ 输入。
    规则相关的随机数一律走 SG.Random；纯装饰（粒子等）用 SG.SeededRandom。
@@ -2603,6 +2607,474 @@
     }
   }
 
+  // ============================================================ 视图：武将（第三版 · js/figure.js 高精度模型） --
+  // 每名武将 = SG.Figure.general(…, { lod: 'high' })（平滑蒙皮网格、按头像外貌生成的面部、层叠衣甲、披风、专属兵器）。
+  // 动作取 figure.js 的程序化片段（idle / walk / light1–3 / heavy / block / parry / hit / hitB / knockdown / down / getup /
+  // guardbreak / victory / defeat / jump / dash / bowDraw / bowShoot …），由单挑自己的时钟与状态机驱动：
+  //   出招按 MOVES 的 起手 / 判定 / 收招 三段映射到片段时间，判定开始的一刻 = 片段里兵器尖端伸得最远（「打到」）的一刻；
+  //   状态切换时按骨骼四元数交叉淡化（BLEND 表的时长），任何姿势之间都不跳变。
+  // 兵器长度对齐规则判定距离（weaponInfo）：构建时逐片段测量尖端在单挑画面里的前伸距离，按 武将.reach × reachK 缩放兵器
+  //（长兵 0.9–1.15 倍，短兵 1–1.5 倍，真三国无双式的大兵器），仍够不到的部分由出招时的前冲步补足（按与对手的实际距离，
+  // 只冲到刃口刚好碰到对手为止；起手期间按包络确定性地迈步，判定开始的一帧必定到位）。对手比兵器全伸更近时，
+  // 「打到」的一刻改取挥击段里尖端第一次越过对手中线的时刻（contactT），定格时长兵不会整片穿出对手背后。受击闪光、格开架势的冷光、反击窗口的金光、蓄力 / 绝技的发光都叠加在人物自己的材质副本上
+  //（fig.setTint：自发光）。
+  const FIG_WEAPON = { guandao: 'guandao', snake: 'snake', ji: 'halberd', spear: 'spear', poleblade: 'poleblade', axe: 'axe', bigblade: 'bigblade',
+    sword: 'jian', dao: 'dao', shortji: 'dao', mace: 'mace', twinsword: 'swords', twinji: 'twinji', twindao: 'twindao',
+    gladius: 'gladius', lance: 'lance', handaxe: 'handaxe', tachi: 'tachi' };
+  // 西方 / 草原 / 南亚文化的「长剑」用 spatha 造型
+  const FIG_SPATHA = new Set(['roman', 'celt', 'german', 'persia', 'arab', 'kushan', 'sarmatian']);
+  const FIG_SHIELD = { wood: 'wa', round: 'round', scutum: 'scutum', oval: 'oval', pai: 'pai', rattan: 'rattan' };
+  // 兵器：规则的兵器种类决定流派与判定距离；名将若有同流派的专属兵器（青龙偃月刀、方天画戟、涯角枪……）则用专属造型。
+  // 规则的「短戟」是单手兵器：figure.js 没有单支短戟，一般武将用单手环首刀造型（流派一致）；
+  // 唯一的例外是 太史慈 的专属「双短戟」（figure.js 的 sig 兵器，双持造型，规则仍按单手计时与判定）
+  function figWeaponOf(look, gen) {
+    const F = SG.Figure, want = (WEAPONS[look.weapon] || WEAPONS.sword).style;
+    let w = FIG_WEAPON[look.weapon] || 'jian';
+    if (w === 'jian' && FIG_SPATHA.has(look.culture)) w = 'spatha';
+    try {
+      const fl = F.lookOf(gen, { culture: look.culture });
+      const sig = fl && fl.sig && fl.sig.weapon;
+      const def = sig && F.weapons.find(x => x.id === sig);
+      if (def && (def.style === want || (want === 'one' && def.style === 'dual' && look.weapon === 'shortji'))) w = sig;
+    } catch (e) { /* 用缺省 */ }
+    return w;
+  }
+  // 出招片段的挥击段 [挥起, 劈到]（figure.js 关键帧时刻）；判定开始的一刻在这一段里取尖端前伸最远处
+  const FIG_SWING = { light1: [0.08, 0.2], light2: [0.08, 0.21], light3: [0.12, 0.26], heavy: [0.42, 0.56] };
+  const FIG_SEC = new Set(['cape1', 'cape2', 'cape3', 'plume1', 'plume2', 'hair1']);   // 弹簧随动的骨（不参与交叉淡化）
+  // 前冲步的上限：一般兵器 ≤ 0.55 米；短兵（日耳曼战斧等）按需放宽到 0.9 米，保证判定距离处刃口真的够到
+  const FIG_LUNGE_MAX = 0.55, FIG_LUNGE_CAP = 0.9;
+  const FIG_BITE = 0.04;           // 近身时「打到」的姿势：尖端刚越过对手身体中线这么多（米）
+  let FIG_HEAD_DEPTH = null;
+  function figHeadDepth() {
+    if (FIG_HEAD_DEPTH) return FIG_HEAD_DEPTH;
+    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    // 阴影渲染每帧把物体材质的 map 抄到深度材质上；这里锁成 null（深度不需要贴图，也就不会引用面部贴图）
+    Object.defineProperty(m, 'map', { get: () => null, set: () => {}, configurable: true });
+    m.name = 'SG.Duel.headDepth';
+    return (FIG_HEAD_DEPTH = m);
+  }
+  const lerpU = (a, b, t) => a + (b - a) * t;
+  const ease2 = t => t * t * (3 - 2 * t);
+
+  class FigWarrior {
+    constructor(f, team) {
+      const F = SG.Figure;
+      this.f = f;
+      this.look = f.look;
+      this.style = f.wpn.style;
+      this.figWeapon = figWeaponOf(f.look, f.gen);
+      const wdef = F.weapons.find(x => x.id === this.figWeapon);
+      const shield = this.style === 'one' && f.look.shield && (!wdef || wdef.style === 'one') ? (FIG_SHIELD[f.look.shield] || 'round') : false;
+      const fig = this.fig = F.general(f.gen, { culture: f.look.culture, color: team, lod: 'high', weapon: this.figWeapon, shield });
+      this.fstyle = fig.style;
+      fig.setTint('#000000', 0);                       // 先建立人物自己的材质副本（闪光不影响同色的另一人）
+      // 头部的阴影用不带贴图的深度材质：three.js 的共用深度材质会记住面部贴图，单挑结束释放贴图后，
+      // 下一场的阴影渲染可能把这张已释放的贴图重新上传（每场泄漏一张 512² 贴图）
+      if (fig.head) fig.head.customDepthMaterial = figHeadDepth();
+      this.root = new THREE.Group();
+      this.root.name = 'Duelist_' + (f.gen && f.gen.name);
+      this.root.add(fig.root);
+      fig.root.rotation.y = Math.PI / 2 - TURN;        // 面朝 +Z 的模型 → 面向对手并向镜头侧转 3/4
+      this.bones = fig.skeleton.bones;
+      this.snapQ = this.bones.map(b => b.quaternion.clone());
+      this.snapP = this.bones.map(b => b.position.clone());
+      this.blendMask = this.bones.map(b => !FIG_SEC.has(b.name));
+      this._q = new THREE.Quaternion();
+      this._v = new THREE.Vector3(); this._v2 = new THREE.Vector3();
+      this.key = ''; this.blend = 1; this.blendDur = 0.1;
+      this.walkPhase = 0; this.time = f.idx * 1.7; this.lungeX = 0; this.turn = TURN;
+      this.flash = 0; this.flashColor = new THREE.Color(1, 1, 1);
+      this.parryCol = new THREE.Color('#bfe6ff'); this.ctrCol = new THREE.Color('#ffc850'); this.emCol = new THREE.Color('#ffcf8a');
+      this.tint = new THREE.Color(); this._tc = new THREE.Color();
+      this.ctr = 0; this.intro = -1;
+      this.tipW = [new THREE.Vector3(), new THREE.Vector3()];
+      this.baseW = [new THREE.Vector3(), new THREE.Vector3()];
+      this.chestW = new THREE.Vector3();
+      this.wpn2 = fig.weaponMesh2 || null;
+      this.extra = [];                                 // 自建的网格（插地的兵器、弓弦、搭箭），dispose 时释放
+      this.calibrate();
+      // 弓将（黄忠、夏侯渊）：绝技时换弓连射，主兵器插在身旁地上
+      this.bowOn = false;
+      if (f.bow) this.buildBowKit(team);
+      this.opp = null;
+      this.update(0, false);
+    }
+
+    // 兵器长度与判定距离对齐（见本节说明）
+    calibrate() {
+      const fig = this.fig, f = this.f, v = this._v;
+      fig.root.updateMatrixWorld(true);
+      const tipX = (mesh, tip) => { if (!mesh) return -9; v.fromArray(tip).applyMatrix4(mesh.matrixWorld); return v.x; };
+      const cal = {};
+      const wi = fig.weaponInfo || { tip: [0, 1, 0] };
+      const ms = [fig.weaponMesh, fig.weaponMesh2], g = this._v2;
+      for (const clip in FIG_SWING) {
+        const sw = FIG_SWING[clip], info = fig.clipInfo(clip) || { dur: 0.6 };
+        let best = -9, bt = sw[1], gx = 0;
+        const samp = [];                               // 挥击段逐帧：[t, 尖端 x, y, 握点 x, y]×两件兵器（未缩放）
+        for (let t = sw[0]; t <= sw[1] + 1e-6; t += 0.005) {
+          fig.setPose(clip, t);
+          fig.root.updateMatrixWorld(true);
+          const a = tipX(fig.weaponMesh, wi.tip), b = tipX(fig.weaponMesh2, wi.tip);
+          const m = a >= b ? fig.weaponMesh : fig.weaponMesh2, x = Math.max(a, b);
+          if (x > best + 1e-4) { best = x; bt = t; gx = m ? v.setFromMatrixPosition(m.matrixWorld).x : 0; }
+          const row = [t];
+          for (const mm of ms) {
+            if (!mm) { row.push(-9, 9, 0, 0); continue; }
+            v.fromArray(wi.tip).applyMatrix4(mm.matrixWorld); g.setFromMatrixPosition(mm.matrixWorld);
+            row.push(v.x, v.y, g.x, g.y);
+          }
+          samp.push(row);
+        }
+        cal[clip] = { tc: bt, te: Math.max(sw[1], bt + 0.02), dur: info.dur, tip: best, grip: gx, target: f.reach * MOVES[clip].reachK, samp };
+      }
+      // 兵器缩放：使各招的尖端前伸接近判定距离（取平均，限制在合理范围）
+      let sum = 0, n = 0;
+      for (const k in cal) { const c = cal[k], arm = c.tip - c.grip; if (arm > 0.15) { sum += (c.target - c.grip) / arm; n++; } }
+      // 长兵 0.9–1.15 倍；短兵 1 倍起，上限按兵器本身长短（短剑可放大到 1.5 倍，长剑 1.3 倍：真三国无双式的大兵器）
+      const pole = this.fstyle === 'pole', len = (fig.weaponInfo && fig.weaponInfo.len) || 0.9;
+      const s = M.clamp(n ? sum / n : 1, pole ? 0.9 : 1, pole ? 1.15 : M.clamp(1.12 / len, 1.3, 1.5));
+      this.wScale = s;
+      for (const m of [fig.weaponMesh, fig.weaponMesh2]) if (m) m.scale.setScalar(s);
+      // 前冲上限：短兵放大到上限仍不够长时，按需放宽（最多 FIG_LUNGE_CAP）
+      let need = 0;
+      for (const k in cal) { const c = cal[k]; need = Math.max(need, c.target - (c.grip + (c.tip - c.grip) * s)); }
+      const lmax = this.lungeMax = M.clamp(need, FIG_LUNGE_MAX, FIG_LUNGE_CAP);
+      for (const k in cal) {
+        const c = cal[k];
+        c.tip = c.grip + (c.tip - c.grip) * s;
+        c.lunge = M.clamp(c.target - c.tip, 0, lmax);   // 判定距离处仍够不到的部分：出招时前冲补足
+        // 逐帧尖端前伸（缩放后，只留到最远处为止），供近身时找「刚好打到」的一刻
+        const n = c.samp.findIndex(r => r[0] >= c.tc - 1e-6) + 1 || c.samp.length;
+        const T = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          const r = c.samp[i];
+          T[i] = r[0];
+          let bx = -9, by = 9;
+          for (let k2 = 0; k2 < 2; k2++) {
+            const o = 1 + k2 * 4, x = r[o + 2] + (r[o] - r[o + 2]) * s, y = r[o + 3] + (r[o + 1] - r[o + 3]) * s;
+            if (r[o] > -8 && x > bx) { bx = x; by = y; }
+          }
+          X[i] = bx; Y[i] = by;
+        }
+        c.samp = { n, T, X, Y };
+      }
+      cal.air = Object.assign({}, cal.heavy, { target: f.reach * MOVES.air.reachK });
+      cal.air.lunge = M.clamp(cal.air.target - cal.heavy.tip, 0, lmax);
+      this.cal = cal;
+      fig.setPose('idle', 0);
+    }
+
+    // 弓与弦（绝技「连珠箭」）
+    buildBowKit(team) {
+      const F = SG.Figure, fig = this.fig;
+      this.bowName = this.f.gen && this.f.gen.name === '黄忠' ? 'huangbow' : 'bow';
+      // 插在地上的主兵器（独立网格）
+      const pw = F.weapon(this.figWeapon, { color: team });
+      pw.visible = false; pw.scale.setScalar(this.wScale);
+      this.root.add(pw); this.planted = pw; this.extra.push(pw);
+      // 拉开的弓弦（折线，世界坐标随弓与右手）与搭在弦上的箭
+      const sg = new THREE.BufferGeometry();
+      sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+      const sm = new THREE.LineBasicMaterial({ color: 0xf0e8d0, fog: true });
+      this.bowString = new THREE.Line(sg, sm); this.bowString.frustumCulled = false; this.bowString.visible = false;
+      this.extra.push(this.bowString);
+      const ag = arrowGeometry(false);
+      this.nocked = new THREE.Mesh(ag, envMat()); this.nocked.visible = false; this.nocked.castShadow = true;
+      this.extra.push({ geometry: ag, parent: null, isGeo: true });
+    }
+    setBow(on) {
+      if (on === this.bowOn || !this.planted) return;
+      this.bowOn = on;
+      const fig = this.fig;
+      fig.setWeapon(on ? this.bowName : this.figWeapon);
+      if (!on) for (const m of [fig.weaponMesh, fig.weaponMesh2]) if (m) m.scale.setScalar(this.wScale);
+      this.planted.visible = on;
+      if (on) {
+        // 长兵刃朝上斜插、短兵插地（在身后偏镜头一侧，不挡住开弓）
+        const pole = this.fstyle === 'pole', p = this.planted;
+        p.position.set(-0.42, pole ? -0.25 : -0.18, 0.22);
+        p.rotation.set(pole ? 0.12 : Math.PI - 0.12, 0, pole ? -0.16 : 0.16);
+      }
+      // 弓弦与箭放在场景根下（世界坐标）
+      const scene = this.root.parent;
+      if (scene && this.bowString.parent !== scene) { scene.add(this.bowString); scene.add(this.nocked); }
+      this.bowString.visible = this.nocked.visible = false;
+    }
+    updateBowString() {
+      if (!this.bowOn) return;
+      const fig = this.fig, wi = fig.weaponInfo, m = fig.weaponMesh;
+      if (!m || !wi.nockTop) return;
+      m.updateWorldMatrix(true, false);
+      const top = this._v.fromArray(wi.nockTop).applyMatrix4(m.matrixWorld), bot = this._v2.fromArray(wi.nockBot).applyMatrix4(m.matrixWorld);
+      const a = this.bowString.geometry.attributes.position;
+      const hand = fig.sockets.gripR; hand.updateWorldMatrix(true, false);
+      const H = TMP.hb || (TMP.hb = new THREE.Vector3()); H.setFromMatrixPosition(hand.matrixWorld);
+      const mid = TMP.hm || (TMP.hm = new THREE.Vector3()); mid.addVectors(top, bot).multiplyScalar(0.5);
+      // 右手离弓把足够远且与弓同高附近 → 视为拉弦
+      const drawn = H.distanceTo(mid) > 0.2 && H.distanceTo(mid) < 0.95;
+      const N = drawn ? H : mid;
+      a.setXYZ(0, top.x, top.y, top.z); a.setXYZ(1, N.x, N.y, N.z); a.setXYZ(2, bot.x, bot.y, bot.z);
+      a.needsUpdate = true;
+      this.bowString.visible = true;
+      this.nocked.visible = drawn;
+      if (drawn) {
+        this.nocked.position.copy(H);
+        const d = TMP.hd || (TMP.hd = new THREE.Vector3()); d.subVectors(mid, H).normalize();
+        this.nocked.quaternion.setFromUnitVectors(TMP.hx || (TMP.hx = new THREE.Vector3(1, 0, 0)), d);
+      }
+    }
+
+    // 弓将绝技：插刀 → 开弓 → 四连射 → 收弓
+    bowSpecialPose(t) {
+      const sp = MOVES.special, t0 = sp.startup, h = sp.hits, end = sp.startup + sp.active + sp.recovery;
+      this.setBow(t > 0.14 && t < end - 0.22);
+      if (t <= 0.14) return ['idle', this.time, 'bs0'];
+      if (!this.bowOn) return ['idle', this.time, 'bs9'];
+      if (t < t0 + h[0]) return ['bowDraw', Math.min(0.8, (t - 0.14) / (t0 + h[0] - 0.2) * 0.8), 'bs1'];
+      for (let i = 0; i < h.length; i++) {
+        const T = t0 + h[i], next = i + 1 < h.length ? t0 + h[i + 1] : end;
+        if (t < T + 0.06) return ['bowShoot', (t - T) / 0.06 * 0.08, 'bsS' + i];
+        if (t < next && i + 1 < h.length) return ['bowDraw', 0.35 + 0.45 * M.clamp01((t - T - 0.06) / Math.max(0.04, next - T - 0.08)), 'bsD' + i];
+      }
+      return ['bowShoot', 0.08 + Math.min(0.42, (t - t0 - h[h.length - 1] - 0.06) * 1.2), 'bsE'];
+    }
+
+    // 近身时的「打到」时刻：对手比兵器全伸的距离近时，取挥击段里尖端（在头顶以下、正向前挥）第一次越过对手中线的一刻，
+    // 定格（打击停顿）时刃口停在对手身上，而不是整片穿出对手背后；够不到中线时仍取全伸的一刻（远处由前冲补足）
+    contactT(c) {
+      const o = this.opp, S = c.samp;
+      if (!o || !S || S.n < 2) return c.tc;
+      const want = (o.x - this.f.x) * this.f.face + FIG_BITE;
+      if (want >= c.tip - 0.06) return c.tc;
+      for (let i = 1; i < S.n; i++) if (S.X[i] >= want && S.Y[i] <= 2.0 && S.X[i] > S.X[i - 1] + 1e-3) return S.T[i];
+      return c.tc;
+    }
+
+    // 近战绝技：蓄势亮相（高举兵器）→ 突进 → 轻一 / 轻二 / 轻三 / 重击 四连斩（每段的「打到」与规则的命中时刻对齐）
+    specialPose(t) {
+      const sp = MOVES.special, t0 = sp.startup, h = sp.hits, C = this.cal;
+      if (t < SPECIAL_FREEZE) return ['heavy', Math.min(0.42, t / 0.3 * 0.42), 'sp0', null, 0];
+      const seq = [['light1', 0], ['light2', 0], ['light3', 0], ['heavy', 0.2]];
+      let prev = SPECIAL_FREEZE;
+      for (let i = 0; i < h.length; i++) {
+        const T = t0 + h[i], [clip, s0] = seq[i], c = C[clip];
+        if (t < T) {
+          const u = M.clamp01((t - prev) / Math.max(0.03, T - prev));
+          return [clip, lerpU(s0, this.contactT(c), u), 'sp' + (i + 1), i === 0 ? { lower: 'dash', lowerT: t } : null, i === 0 ? ease2(M.clamp01((u - 0.2) / 0.8)) : 1, c];
+        }
+        prev = T;
+      }
+      const c = C.heavy, end = t0 + sp.active + sp.recovery;
+      const u = M.clamp01((t - prev) / Math.max(0.05, end - prev));
+      return ['heavy', lerpU(c.tc, c.dur, u), 'sp5', null, 1 - u, c];
+    }
+
+    // 状态 → [片段, 片段时间, 键, setPose 选项, 前冲包络 0..1, 出招的测量值 cal]
+    pick() {
+      const f = this.f, C = this.cal, mv = MOVES[f.state];
+      let clip = 'idle', t = this.time, key = f.state + ':' + f.seq;
+      if (this.intro >= 0) {
+        const it = this.intro;
+        if (it < 0.55) { clip = 'victory'; t = it / 0.55 * 0.7; key = 'in0'; }
+        else if (it < 0.95) { clip = 'block'; t = it; key = 'in1'; }
+        else { clip = 'idle'; key = 'idle'; }
+        return [clip, t, key, null, 0];
+      }
+      if (f.state === 'special') return f.bow ? this.bowSpecialPose(f.t).concat([null, 0]) : this.specialPose(f.t);
+      if (mv && f.state !== 'air') {
+        const c = C[f.state];
+        const hold = f.state === 'heavy' ? heavySU(f.charge, f.spd) - mv.startup : 0;
+        const ph = phaseOf(mv, f.t, hold);
+        const s0 = f.state === 'heavy' ? FIG_SWING.heavy[0] : 0;
+        clip = f.state;
+        // 「打到」的片段时刻：起手期间按与对手的距离逐帧取（连续变化），进入判定后锁定（打击停顿时姿势不跳）
+        if (ph < 1 || this.tcKey !== key) { this.tcKey = key; this.tcHit = this.contactT(c); }
+        const tc = this.tcHit;
+        t = ph < 1 ? lerpU(s0, tc, f.state === 'heavy' ? ph : ease2(ph) * 0.35 + ph * 0.65) : ph < 2 ? lerpU(tc, c.te, ph - 1) : lerpU(c.te, c.dur, ease2(ph - 2));
+        // 前冲包络：起手的后 80% 迈步，判定开始时正好到位（命中定格的一帧刃口贴住对手），收招时退回
+        const env = ph < 0.2 ? 0 : ph < 1 ? ease2((ph - 0.2) / 0.8) : ph < 2 ? 1 : 1 - ease2(ph - 2);
+        return [clip, t, key, null, env, c];
+      }
+      const jumpT = () => 0.12 + M.clamp01((JUMP_V - f.vy) / (2 * JUMP_V)) * 0.5;
+      switch (f.state) {
+        case 'air': {
+          const c = C.air, ph = phaseOf(MOVES.air, f.t, 0);
+          t = ph < 1 ? lerpU(0.36, c.tc, ph) : ph < 2 ? lerpU(c.tc, c.te, ph - 1) : lerpU(c.te, 0.74, ph - 2);
+          return ['heavy', t, key, { lower: 'jump', lowerT: jumpT() }, ph < 1 ? ph : ph < 2 ? 1 : 3 - ph, c];
+        }
+        case 'walk': return ['idle', this.time, 'walk', { lower: 'walk', lowerT: this.walkPhase / (Math.PI * 2) * 1.0 }, 0];
+        case 'guard': return ['block', this.time, 'guard', null, 0];
+        case 'guardstun': return ['block', this.time, key, { blend: { clip: 'hit', t: Math.min(0.07, f.t * 1.2), w: 0.72 } }, 0];
+        case 'guardbreak': return ['guardbreak', f.t < 0.08 ? f.t / 0.08 * 0.1 : 0.1 + (f.t - 0.08) / Math.max(0.1, f.stun - 0.08) * 0.5, key, null, 0];
+        case 'hitstun': {
+          clip = f.hitBack || f.hitH !== 'high' ? 'hitB' : 'hit';
+          t = f.t < 0.07 ? f.t : 0.07 + (f.t - 0.07) / Math.max(0.08, f.stun - 0.07) * 0.35;
+          return [clip, t, key + (f.hitH || ''), null, 0];
+        }
+        case 'parry': return ['parry', f.t < 0.04 ? f.t / 0.04 * 0.06 : 0.06 + Math.min(0.02, (f.t - 0.04) * 0.12), key, null, 0];
+        case 'parryok': return ['parry', 0.08 + Math.min(1, f.t / 0.06) * 0.06 + Math.max(0, f.t - 0.06) * 0.3, key, null, 0];
+        case 'parrywhiff': {
+          const T = f.whiffT || PARRY_WHIFF, u = f.t / T;
+          t = u < 0.25 ? 0.08 + u / 0.25 * 0.06 : 0.14 + (u - 0.25) / 0.75 * 0.22;
+          const w = u < 0.25 ? 1 - 0.55 * (u / 0.25) : 0.45 + 0.55 * ease2((u - 0.25) / 0.75);
+          return ['parry', t, key, { blend: { clip: 'hitB', t: 0.07, w } }, 0];
+        }
+        case 'parried': return ['guardbreak', f.t < 0.08 ? f.t / 0.08 * 0.1 : 0.1 + (f.t - 0.08) / Math.max(0.1, f.stun - 0.08) * 0.5, key, null, 0];
+        case 'backstep': return ['block', this.time, key, { lower: 'jump', lowerT: 0.1 + f.t / BACKSTEP_T * 0.62 }, 0];
+        case 'knockdown': {
+          // 估计落地时间：腾空段播完「仰面倒下」（片段 0 → 0.55），落地时正好躺平
+          const g = GRAV, rem = f.y > 0 || f.vy > 0 ? (f.vy + Math.sqrt(Math.max(0, f.vy * f.vy + 2 * g * Math.max(0, f.y)))) / g : 0;
+          const tot = Math.max(0.2, f.t + rem);
+          return ['knockdown', Math.min(0.55, f.t / tot * 0.55), key, null, 0];
+        }
+        case 'down': return f.ko ? ['down', 0.9 + f.t, key, null, 0] : ['knockdown', 0.55 + Math.min(0.45, f.t), key, null, 0];
+        case 'getup': return ['getup', Math.min(0.8, f.t / 0.42 * 0.8), key, null, 0];
+        case 'dash': return ['dash', f.t, key, null, 0];
+        case 'jump': return ['jump', jumpT(), 'jump', null, 0];
+        case 'land': return ['jump', Math.min(0.8, 0.66 + f.t * 1.2), key, null, 0];
+        case 'charge': return ['heavy', Math.min(0.42, f.t / 0.16 * 0.42), 'charge', null, 0];
+        case 'victory': return ['victory', f.t, key, null, 0];
+        case 'defeat': return f.ko ? ['down', 0.9 + f.t, key, null, 0] : ['defeat', f.t, key, null, 0];
+        default: return ['idle', this.time, 'idle', null, 0];
+      }
+    }
+
+    update(dt, frozen) {
+      const f = this.f, fig = this.fig, st = f.state;
+      this.time += dt;
+      if (this.intro >= 0) this.intro += dt;
+      if (st === 'walk') this.walkPhase += f.vx * f.face * dt * (Math.PI * 2 / 1.25);
+      if (this.bowOn && st !== 'special') this.setBow(false);   // 绝技被打断 / 结束：收弓、拔回主兵器
+      const [clip, t, key, opts, env, cal] = this.pick();
+      const dur = BLEND[st] !== undefined ? BLEND[st] : 0.05;
+      if (key !== this.key) {
+        for (let i = 0; i < this.bones.length; i++) { this.snapQ[i].copy(this.bones[i].quaternion); this.snapP[i].copy(this.bones[i].position); }
+        this.blend = this.key ? 0 : 1;
+        this.blendDur = key.startsWith('sp') || key.startsWith('bs') ? 0.04 : dur;
+        this.key = key;
+      }
+      fig.setPose(clip, t, opts || undefined);
+      if (!frozen) this.blend += dt;
+      if (this.blend < this.blendDur) {
+        const w = ease2(M.clamp01(this.blend / this.blendDur)), B = this.bones, q = this._q;
+        for (let i = 0; i < B.length; i++) {
+          if (!this.blendMask[i]) continue;
+          q.copy(B[i].quaternion);
+          B[i].quaternion.slerpQuaternions(this.snapQ[i], q, w);
+          B[i].position.lerpVectors(this.snapP[i], this._v.copy(B[i].position), w);
+        }
+      }
+      // 程序化叠加：重击举刀的一顿（后仰蓄势）、蓄力颤动、受击 / 被格开的抖动
+      const bn = fig.bones;
+      const hold = st === 'heavy' ? heavySU(f.charge, f.spd) - MOVES.heavy.startup : 0;
+      if (hold > 0 && f.t < hold) { const u = f.t / hold; bn.spine.rotation.x -= 0.1 * u; }
+      let jx = 0, jy = 0;
+      if (st === 'charge') { const q = f.charge, n = this.time * 61; jx += Math.sin(n) * 0.008 * q; jy += Math.cos(n * 1.3) * 0.006 * q; }
+      if (st === 'hitstun' && f.t < 0.12) jx += Math.sin(f.t * 120) * 0.03 * (1 - f.t / 0.12);
+      if (st === 'guardstun' && f.t < 0.1) jx += Math.sin(f.t * 110) * 0.02 * (1 - f.t / 0.1);
+      if (st === 'parried') { const k = Math.max(0, 1 - f.t / Math.max(0.1, f.stun)); jx += Math.sin(f.t * 9) * 0.025 * k; bn.foreArmR.rotation.z += Math.sin(f.t * 70) * 0.05 * k; }
+      fig.update(frozen ? 0 : dt);
+      this.hangCape(st, dt);
+      // 前冲：只冲到刃口刚好碰到对手的身体（对手更近时少冲或不冲；够不着时最多冲到判定距离处）
+      const o = this.opp;
+      let want = 0;
+      if (env > 0 && cal && cal.lunge > 0) {
+        const dx = o ? (o.x - f.x) * f.face : cal.target + BODY * 0.5;
+        want = env * M.clamp(dx - BODY * 0.5 - cal.tip, 0, cal.lunge);
+      }
+      // 出招中跟住包络（确定性：判定开始的一帧必定到位，打击停顿时也不落后；限速 14 米/秒防止换招时跳变）；
+      // 招式被打断 / 换招时先平滑退回，等包络追上当前位置再跟住
+      if (key !== this.lungeKey) { this.lungeKey = key; this.lungeLock = false; }
+      if (env > 0 && want >= this.lungeX - 0.02) this.lungeLock = true;
+      if (this.lungeLock && env > 0) { const mx = 14 * Math.max(dt, 1 / 60); this.lungeX += M.clamp(want - this.lungeX, -mx, mx); }
+      else if (!frozen) this.lungeX += (want - this.lungeX) * (1 - Math.exp(-9 * dt));
+      // 位置与朝向（root.scale.x = 朝向：两人都以握兵器的右手一侧朝向镜头）；胜利姿势时转身面向镜头亮相
+      const turnTo = st === 'victory' ? 1.15 : this.intro >= 0 && this.intro < 0.6 ? 0.75 : TURN;
+      this.turn += (turnTo - this.turn) * (1 - Math.exp(-(st === 'victory' ? 3 : 8) * dt));
+      fig.root.rotation.y = Math.PI / 2 - this.turn;
+      this.root.position.set(f.x + f.face * this.lungeX + jx * f.face, f.y + jy, 0);
+      this.root.scale.x = f.face;
+      // 受击闪光 / 格开架势的冷光 / 反击窗口的金光 / 蓄力与绝技的发光
+      if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 7);
+      const T = this.tint.setRGB(0, 0, 0);
+      if (this.flash > 0) T.copy(this.flashColor).multiplyScalar(this.flash * 0.9);
+      if (st === 'parry' && f.t <= f.parryW) T.add(this._tc.copy(this.parryCol).multiplyScalar(0.2 * (1 - f.t / f.parryW) + 0.06));
+      else if (this.ctr > 0) T.add(this._tc.copy(this.ctrCol).multiplyScalar(0.14 + 0.1 * Math.sin(this.time * 26)));
+      let em = 0;
+      if (st === 'charge') em = f.charge * 0.22 + (f.charge >= 1 ? 0.1 * (0.5 + 0.5 * Math.sin(this.time * 30)) : 0);
+      else if (hold > 0 && f.t < hold + MOVES.heavy.startup) em = 0.16 + 0.2 * f.charge;
+      else if (st === 'special' && f.t < SPECIAL_FREEZE + 0.1) em = 0.24 + 0.08 * Math.sin(this.time * 25);
+      else if (f.rage >= 100) em = 0.04 + 0.04 * Math.sin(this.time * 8);
+      if (em > 0) T.add(this._tc.copy(this.emCol).multiplyScalar(em));
+      fig.setTint(T, 1);
+      // 世界坐标（刀光拖尾与特效用）
+      this.root.updateMatrixWorld(true);
+      const wi = fig.weaponInfo || { tip: [0, 1, 0], base: [0, 0.2, 0] };
+      const ms = [fig.weaponMesh, fig.weaponMesh2];
+      for (let k = 0; k < 2; k++) {
+        const m = ms[k];
+        if (!m) { if (k === 0) { this.tipW[0].set(f.x, 1.2, 0); this.baseW[0].copy(this.tipW[0]); } continue; }
+        this.tipW[k].fromArray(wi.tip).applyMatrix4(m.matrixWorld);
+        this.baseW[k].fromArray(wi.base || [0, 0.2, 0]).applyMatrix4(m.matrixWorld);
+      }
+      bn.chest.getWorldPosition(this.chestW); this.chestW.y += 0.12;
+      if (this.bowOn) this.updateBowString();
+    }
+
+    flashHit(col, k) { this.flash = k || 0.85; this.flashColor.set(col || '#ffffff'); }
+
+    // 披风下垂：figure.js 的披风随躯干前倾一起扬起（弓身、跪地时会向后平伸成一片）。静止类姿势里限制披风偏离铅垂的角度，
+    // 冲刺、突进、劈砍、腾空时放宽（披风可以飘起）
+    hangCape(st, dt) {
+      const bn = this.fig.bones, c1 = bn.cape1, c3 = bn.cape3;
+      if (!c1 || !c3 || !this.fig._hasCape) return;
+      const f = this.f, mv = MOVES[st];
+      const dyn = st === 'dash' || st === 'backstep' || st === 'jump' || st === 'air' || st === 'knockdown' || st === 'special' || (mv && f.phase !== 'startup') || (st === 'walk' && Math.abs(f.vx) > 1.5);
+      const want = dyn ? 0.95 : st === 'down' || st === 'getup' ? 3 : 0.42;
+      this.capeMax = this.capeMax === undefined ? want : this.capeMax + (want - this.capeMax) * (1 - Math.exp(-6 * Math.max(dt, 0.016)));
+      const R = this.fig.root;
+      R.updateMatrixWorld(true);
+      const inv = TMP.cinv || (TMP.cinv = new THREE.Matrix4());
+      inv.copy(R.matrixWorld).invert();
+      const a = c1.getWorldPosition(this._v).applyMatrix4(inv), b = c3.getWorldPosition(this._v2).applyMatrix4(inv);
+      const ang = Math.atan2(a.z - b.z, a.y - b.y);   // 0 = 铅垂下垂，π/2 = 向后水平
+      if (ang > this.capeMax) c1.rotation.x -= (ang - this.capeMax) * 0.9;
+    }
+
+    dispose() {
+      if (this.root.parent) this.root.parent.remove(this.root);
+      for (const e of this.extra) {
+        if (e.isGeo) { e.geometry.dispose(); continue; }
+        if (e.parent) e.parent.remove(e);
+        if (e.userData && e.userData.dispose) e.userData.dispose();
+        else if (e.geometry) e.geometry.dispose();
+        if (e.material && e.material !== this.fig.mesh.material && e.isLine) e.material.dispose();
+      }
+      if (this.nocked && this.nocked.parent) this.nocked.parent.remove(this.nocked);
+      this.extra.length = 0;
+      this.fig.dispose();
+    }
+  }
+
+  // 平滑的箭（杆 + 箭镞 + 尾羽），+X 为箭头方向，原点在箭尾
+  function arrowGeometry(big) {
+    const mb = new SG.MeshBuilder(), L = big ? 1.0 : 0.82, k = big ? 1.25 : 1;
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    const shaftCol = new THREE.Color('#8a6a40'), head = new THREE.Color('#c8ced8'), fl = new THREE.Color(big ? '#d84030' : '#ece6d6');
+    mb.tube([V(0, 0, 0), V(L * 0.5, 0, 0), V(L, 0, 0)], [0.007 * k, 0.007 * k, 0.007 * k], 6, shaftCol);
+    mb.tube([V(L, 0, 0), V(L + 0.035 * k, 0, 0), V(L + 0.09 * k, 0, 0)], [0.012 * k, 0.016 * k, 0.001], 6, head);
+    for (const a of [0, 2.09, 4.19]) {
+      const y = Math.cos(a) * 0.028 * k, z = Math.sin(a) * 0.028 * k, n = V(0, Math.cos(a), Math.sin(a));
+      const nn = V(0, -Math.sin(a), Math.cos(a));
+      mb.triN(V(0.02, 0, 0), V(0.16 * k, 0, 0), V(0.04, y, z), nn, nn, nn, fl);
+      mb.triN(V(0.16 * k, 0, 0), V(0.02, 0, 0), V(0.04, y, z), nn.clone().negate(), nn.clone().negate(), nn.clone().negate(), fl);
+      void n;
+    }
+    return mb.toGeometry();
+  }
+
   // ============================================================ 视图：场地 --
   // 背景随地形：平原 / 森林 / 丘陵（山地）/ 河川 / 城墙（城门、本城）
   const PALETTES = {
@@ -2667,8 +3139,206 @@
     return t;
   }
 
+  // 第三版场地：平滑、细致（与新地图同一画风）——
+  //   地面：非均匀细分的高度场（场中 0.4 米一格，远处渐疏），平滑法线，SG.Gfx.terrainMaterial 的程序化草地 / 泥土 / 农田 /
+  //   沙 / 岩石 / 雪混合（与战略地图同一套着色器）；对决场地是踩实的泥土，四周起伏的草坡，远处是雾中的群山。
+  //   景物：平滑树冠的阔叶树 / 松（叶簇明暗与法线起伏）、圆润的岩石、随风摆动的草丛与野花、芦苇、倒木与灌丛、
+  //   断枪残旗与弃盾、旗杆（车削）与飘动的帅旗；城墙为砌砖纹理的城墙、城门楼、火把。
+  //   两军：js/figure.js 的实例化士兵群（各自的文化衣甲与势力色，待机呼吸，胜方欢呼）；未载入 figure.js 时退回旧的简易士兵。
+  //   植被与石块的几何体、材质跨场次共用（不随单挑释放）；地面、远山、景物网格每场释放。
+  const VEG_VS = '#include <color_vertex>\n#if defined( USE_INSTANCING_COLOR ) && defined( USE_COLOR )\n\tvColor.xyz = color.xyz * mix( vec3( 1.0 ), instanceColor.xyz, sgLeaf );\n#endif';
+  const VEG_VS_PARS = 'attribute float sgLeaf;\nvarying float vSgLeaf;\nvarying vec3 vSgLeafP;\nuniform float sgWindT;\nuniform float sgWind;\n';
+  const VEG_VS_BEGIN = '#include <begin_vertex>\n\tvSgLeaf = sgLeaf;\n\tvSgLeafP = transformed;\n#ifdef USE_INSTANCING\n\tvSgLeafP += instanceMatrix[3].xyz * 0.37;\n\tfloat sgPh = instanceMatrix[3].x * 0.7 + instanceMatrix[3].z * 0.5;\n\ttransformed.x += sin( sgWindT * 1.9 + sgPh ) * transformed.y * sgWind;\n\ttransformed.z += cos( sgWindT * 1.4 + sgPh * 1.3 ) * transformed.y * sgWind * 0.55;\n#endif';
+  const VEG_FS_PARS = 'varying float vSgLeaf;\nvarying vec3 vSgLeafP;\nfloat sgLN( vec3 p ) { return sin( p.x + sin( p.y * 1.3 ) * 1.2 ) * sin( p.y * 1.1 + sin( p.z * 1.2 ) * 1.2 ) * sin( p.z * 0.9 + sin( p.x * 1.4 ) * 1.2 ); }\n';
+  const VEG_FS_COLOR = `#include <color_fragment>
+	vec3 sgLq = vSgLeafP * SG_LEAF_F;
+	float sgL1 = sgLN( sgLq ), sgL2 = sgLN( sgLq * 2.63 + 5.3 ), sgL3 = sgLN( sgLq * 6.1 + 1.7 );
+#ifdef SG_ROCK
+	float sgLc = sgL1 * 0.25 + sgL2 * 0.35 + sgL3 * 0.4;
+	diffuseColor.rgb *= mix( 1.0, 0.86 + 0.22 * sgLc + 0.1 * sin( vSgLeafP.y * 41.0 + sgL1 * 2.0 ), vSgLeaf );
+#else
+	float sgLc = sgL1 * 0.5 + sgL2 * 0.32 + sgL3 * 0.18;
+	diffuseColor.rgb *= mix( 1.0, 0.84 + 0.34 * sgLc + 0.16 * smoothstep( 0.35, 0.85, sgL2 * 0.6 + sgL3 * 0.4 ), vSgLeaf );
+#endif
+`;
+  const VEG_FS_NORMAL = '#include <normal_fragment_maps>\n\tnormal = normalize( normal + vSgLeaf * SG_LEAF_N * vec3( sgL2 + sgL3 * 0.5, sgL1 * 0.6, sgL3 - sgL1 * 0.4 ) );';
+  const VEGM = {};
+  // kind：'leaf' 树冠 / 灌丛 · 'rock' 石块 · 'grass' 草丛 / 野花 / 芦苇（随风摆）
+  function vegMaterial(kind) {
+    if (VEGM[kind]) return VEGM[kind];
+    const mat = SG.Gfx.newLowPoly(), base = mat.onBeforeCompile;
+    const wind = { value: kind === 'grass' ? 0.22 : kind === 'leaf' ? 0.012 : 0 };
+    const time = SG.Gfx.water().uniforms.uTime;
+    mat.defines = kind === 'rock' ? { SG_ROCK: '', SG_LEAF_F: '3.2', SG_LEAF_N: '0.3' } : kind === 'leaf' ? { SG_LEAF_F: '3.6', SG_LEAF_N: '0.42' } : { SG_LEAF_F: '14.0', SG_LEAF_N: '0.1' };
+    mat.onBeforeCompile = function duelVegCompile(shader, renderer) {
+      base.call(this, shader, renderer);
+      shader.uniforms.sgWindT = time; shader.uniforms.sgWind = wind;
+      shader.vertexShader = VEG_VS_PARS + shader.vertexShader.replace('#include <color_vertex>', VEG_VS).replace('#include <begin_vertex>', VEG_VS_BEGIN);
+      shader.fragmentShader = VEG_FS_PARS + shader.fragmentShader.replace('#include <color_fragment>', VEG_FS_COLOR).replace('#include <normal_fragment_maps>', VEG_FS_NORMAL);
+    };
+    mat.customProgramCacheKey = () => 'sgDuelVeg:' + kind;
+    mat.name = 'DuelVeg_' + kind;
+    VEGM[kind] = mat;
+    return mat;
+  }
+  // 合并「保持原色」（树干）与「乘实例色、带叶簇细节」（树冠）两部分
+  function mergeVeg(keep, tint) {
+    const a = keep && keep.count ? keep.toGeometry() : null, b = tint.toGeometry();
+    const na = a ? a.getAttribute('position').count : 0, nb = b.getAttribute('position').count;
+    const g = new THREE.BufferGeometry();
+    for (const name of ['position', 'normal', 'color']) {
+      const arr = new Float32Array((na + nb) * 3);
+      if (a) arr.set(a.getAttribute(name).array, 0);
+      arr.set(b.getAttribute(name).array, na * 3);
+      g.setAttribute(name, new THREE.BufferAttribute(arr, 3));
+    }
+    const lf = new Float32Array(na + nb); lf.fill(1, na);
+    g.setAttribute('sgLeaf', new THREE.BufferAttribute(lf, 1));
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    if (a) a.dispose();
+    b.dispose();
+    return g;
+  }
+  const VEGG = {};
+  const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  // 树（高约 1，实例缩放）：broad 圆冠阔叶 · broad2 双团阔叶 · pine 松 · spruce 杉 · shrub 灌丛；名称后缀 F = 远景简化版
+  function treeGeo(kind) {
+    if (VEGG[kind]) return VEGG[kind];
+    const far = kind.endsWith('F'), K = far ? kind.slice(0, -1) : kind;
+    const tk = new SG.MeshBuilder(), lf = new SG.MeshBuilder();
+    const W = new THREE.Color(0.93, 0.93, 0.93), W2 = new THREE.Color(0.8, 0.82, 0.8), BARK = new THREE.Color(0.36, 0.26, 0.17);
+    const crown = (c, r, col, seed, rough) => {
+      const ro = rough === undefined ? 0.1 : rough;
+      lf.sphere(c, r, col || W, far ? 1 : 2, { seed, rough: ro, bottomShade: 0.34, top: 0.08 });
+      for (let k = 0; k < (far ? 2 : 4); k++) {
+        const a = seed * 1.7 + k * 1.57, up = 0.2 + 0.32 * ((k + seed) % 2);
+        lf.sphere(V3(c.x + Math.cos(a) * r.x * 0.66, c.y + up * r.y, c.z + Math.sin(a) * r.z * 0.66), V3(r.x * 0.48, r.y * 0.5, r.z * 0.48), k % 2 ? W2 : W, far ? 0 : 1, { seed: seed + 7 * k + 1, rough: ro * 0.8, bottomShade: 0.3, top: 0.1 });
+      }
+    };
+    const trunk = (h, r0) => tk.tube([V3(0, 0, 0), V3(0.012, h * 0.5, 0.008), V3(-0.01, h, 0)], [r0, r0 * 0.82, r0 * 0.6], far ? 5 : 9, BARK);
+    const tier = (y, r, h, col) => lf.lathe(V3(0, y, 0), far ? [[0, h * 0.1], [r, 0, null, true], [r * 0.45, h * 0.55], [0, h]] : [[0, h * 0.12], [r * 0.9, h * 0.035], [r, 0, null, true], [r * 0.72, h * 0.2], [r * 0.46, h * 0.5], [r * 0.2, h * 0.8], [0, h]], far ? 9 : 16, col || W);
+    switch (K) {
+      case 'broad': trunk(0.46, 0.06); crown(V3(0, 0.68, 0), V3(0.44, 0.38, 0.44), W, 3); break;
+      case 'broad2': trunk(0.42, 0.055); crown(V3(0.06, 0.6, 0), V3(0.38, 0.33, 0.38), W, 5); crown(V3(-0.16, 0.82, 0.05), V3(0.28, 0.25, 0.28), W2, 9); break;
+      case 'pine': trunk(0.34, 0.05); tier(0.2, 0.44, 0.6, W2); tier(0.52, 0.34, 0.54, W); tier(0.82, 0.22, 0.46, W); break;
+      case 'spruce': trunk(0.22, 0.045); tier(0.12, 0.34, 0.5, W2); tier(0.42, 0.27, 0.46, W); tier(0.72, 0.19, 0.44, W); break;
+      default: crown(V3(0, 0.13, 0), V3(0.3, 0.2, 0.3), W, 17, 0.14); break;   // shrub
+    }
+    return (VEGG[kind] = mergeVeg(tk, lf));
+  }
+  function rockGeo(v) {
+    const key = 'rock' + v;
+    if (VEGG[key]) return VEGG[key];
+    const mb = new SG.MeshBuilder(), g = new THREE.Color(0.92, 0.92, 0.92);
+    const R = [V3(0.34, 0.22, 0.28), V3(0.26, 0.3, 0.24), V3(0.42, 0.15, 0.3)][v];
+    mb.sphere(V3(0, R.y * 0.55, 0), R, g, 2, { seed: v * 13 + 5, rough: 0.22, flat: -0.45, top: 0.1, bottomShade: 0.4 });
+    if (v === 0) mb.sphere(V3(0.27, 0.07, 0.12), V3(0.14, 0.1, 0.12), g, 1, { seed: 77, rough: 0.2, flat: -0.4, bottomShade: 0.4 });
+    return (VEGG[key] = mergeVeg(null, mb));
+  }
+  // 草丛：八片弯曲的草叶（叶根暗、叶尖亮，两面）；野花：花茎 + 五瓣花（花瓣乘实例色）；芦苇：高而细的叶与穗
+  function tuftGeo(reed) {
+    const key = reed ? 'reed' : 'tuft';
+    if (VEGG[key]) return VEGG[key];
+    const mb = new SG.MeshBuilder(), rnd = SG.SeededRandom(reed ? 19 : 91);
+    const dark = new THREE.Color(0.5, 0.5, 0.5), lite = new THREE.Color(1.06, 1.06, 1.0);
+    const n = reed ? 7 : 6;
+    for (let k = 0; k < n; k++) {
+      const a = k * 0.8 + rnd.nextDouble() * 0.6, ca = Math.cos(a), sa = Math.sin(a);
+      const r0 = 0.02 + rnd.nextDouble() * 0.05, h = reed ? 0.7 + rnd.nextDouble() * 0.5 : 0.13 + rnd.nextDouble() * 0.12, lean = reed ? 0.06 + rnd.nextDouble() * 0.08 : 0.05 + rnd.nextDouble() * 0.07, w = reed ? 0.016 : 0.026;
+      const bx = ca * r0, bz = sa * r0;
+      // 两段弯曲的叶片
+      const b0 = V3(bx - sa * w, 0, bz + ca * w), b1 = V3(bx + sa * w, 0, bz - ca * w);
+      const m = V3(bx + ca * lean * 0.35, h * 0.55, bz + sa * lean * 0.35), m0 = V3(m.x - sa * w * 0.6, m.y, m.z + ca * w * 0.6), m1 = V3(m.x + sa * w * 0.6, m.y, m.z - ca * w * 0.6);
+      const tip = V3(bx + ca * lean, h, bz + sa * lean);
+      const nf = V3(ca * 0.3, 1, sa * 0.3).normalize(), nb = V3(-ca * 0.3, 1, -sa * 0.3).normalize();
+      const mid = new THREE.Color(0.8, 0.8, 0.78);
+      for (const nn of [nf, nb]) {
+        mb.triN(b0, b1, m1, nn, nn, nn, dark, dark, mid); mb.triN(b0, m1, m0, nn, nn, nn, dark, mid, mid);
+        mb.triN(m0, m1, tip, nn, nn, nn, mid, mid, lite);
+      }
+      if (reed && k % 3 === 0) mb.sphere(V3(tip.x, tip.y, tip.z), V3(0.018, 0.07, 0.018), new THREE.Color(0.62, 0.48, 0.32), 0, { rough: 0 });
+    }
+    return (VEGG[key] = mergeVeg(null, mb));
+  }
+  function flowerGeo() {
+    if (VEGG.flower) return VEGG.flower;
+    const stem = new SG.MeshBuilder(), pet = new SG.MeshBuilder(), up = V3(0, 1, 0), green = new THREE.Color(0.3, 0.5, 0.2);
+    for (const [x, z, h] of [[0, 0, 0.17], [0.07, 0.04, 0.13], [-0.05, 0.06, 0.15], [0.02, -0.06, 0.12]]) {
+      stem.triN(V3(x - 0.01, 0, z), V3(x + 0.01, 0, z), V3(x, h, z), V3(0, 0.3, 1), V3(0, 0.3, 1), up, green);
+      stem.triN(V3(x + 0.01, 0, z), V3(x - 0.01, 0, z), V3(x, h, z), V3(0, 0.3, -1), V3(0, 0.3, -1), up, green);
+      const r = 0.035;
+      for (let k = 0; k < 5; k++) {
+        const a0 = k * Math.PI * 2 / 5, a1 = a0 + Math.PI * 2 / 5;
+        pet.triN(V3(x, h, z), V3(x + Math.cos(a0) * r, h + 0.006, z + Math.sin(a0) * r), V3(x + Math.cos(a1) * r, h + 0.006, z + Math.sin(a1) * r), up, up, up, new THREE.Color(1, 1, 1));
+      }
+      pet.triN(V3(x, h + 0.012, z), V3(x + 0.012, h + 0.01, z), V3(x, h + 0.01, z + 0.012), up, up, up, new THREE.Color(1.0, 0.9, 0.4));
+    }
+    return (VEGG.flower = mergeVeg(stem, pet));
+  }
+  // 地面材质：地形着色器（顶点版），高度换算为「海拔」（场地 y = 0 不当作海滩，远山山顶才见岩石）
+  let GROUNDM = null;
+  function groundMaterial() {
+    if (GROUNDM) return GROUNDM;
+    const mat = SG.Gfx.terrainMaterial(), base = mat.onBeforeCompile;
+    mat.onBeforeCompile = function duelGroundCompile(shader, renderer) {
+      base.call(this, shader, renderer);
+      shader.fragmentShader = shader.fragmentShader.replace('float sgH = vSgW.y;', 'float sgH = 1.2 + vSgW.y * 0.32;');
+    };
+    mat.customProgramCacheKey = () => 'sgDuelGround';
+    mat.name = 'DuelGround';
+    GROUNDM = mat;
+    return mat;
+  }
+  // 城墙砖石：竖直面为错缝砖（0.64 × 0.32 米），平顶为方砖；只作用于低饱和度的石色
+  let BRICKM = null;
+  function brickMaterial() {
+    if (BRICKM) return BRICKM;
+    const mat = SG.Gfx.newLowPoly(), base = mat.onBeforeCompile;
+    mat.onBeforeCompile = function duelBrickCompile(shader, renderer) {
+      base.call(this, shader, renderer);
+      shader.vertexShader = 'varying vec3 vSgBW;\nvarying vec3 vSgBN;\n' + shader.vertexShader.replace('#include <project_vertex>',
+        '#include <project_vertex>\n\tvSgBW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\n\tvSgBN = normalize( mat3( modelMatrix ) * objectNormal );');
+      shader.fragmentShader = 'varying vec3 vSgBW;\nvarying vec3 vSgBN;\nfloat sgBH( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }\n' +
+        shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+	{
+		vec3 c = diffuseColor.rgb, n = normalize( vSgBN ), p = vSgBW;
+		float mx = max( max( c.r, c.g ), c.b ), mn = min( min( c.r, c.g ), c.b );
+		float stone = clamp( 1.0 - ( ( mx - mn ) / max( mx, 0.001 ) - 0.22 ) * 3.0, 0.0, 1.0 );
+		float k = 1.0;
+		if ( abs( n.y ) < 0.5 ) {
+			float u = abs( n.x ) > abs( n.z ) ? p.z : p.x;
+			float row = floor( p.y / 0.32 ), uu = u / 0.64 + mod( row, 2.0 ) * 0.5;
+			float fy = fract( p.y / 0.32 ), fu = fract( uu );
+			float mort = 1.0 - smoothstep( 0.03, 0.09, min( fy, 1.0 - fy ) ) * smoothstep( 0.015, 0.045, min( fu, 1.0 - fu ) );
+			float h = sgBH( vec2( floor( uu ), row ) );
+			float wear = 0.5 + 0.5 * sin( p.x * 0.7 + sin( p.y * 1.3 ) * 2.0 ) * sin( p.y * 0.9 + p.x * 0.21 );
+			k = ( 0.84 + 0.22 * h ) * ( 1.0 - 0.32 * mort ) * ( 0.9 + 0.14 * wear ) * ( 0.82 + 0.18 * smoothstep( 0.0, 1.6, p.y ) );
+		} else {
+			vec2 g = p.xz / 0.8; vec2 f = abs( fract( g ) - 0.5 );
+			k = ( 0.9 + 0.12 * sgBH( floor( g ) ) ) * ( 0.84 + 0.16 * ( 1.0 - smoothstep( 0.44, 0.49, max( f.x, f.y ) ) ) );
+		}
+		diffuseColor.rgb *= mix( 1.0, k, stone );
+	}
+`);
+    };
+    mat.customProgramCacheKey = () => 'sgDuelBrick';
+    mat.name = 'DuelBrick';
+    BRICKM = mat;
+    return mat;
+  }
+  const ss = (a, b, x) => { const t = M.clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+
   class Arena {
-    constructor(scene, kind, colA, colB, glyphA, glyphB, seed) {
+    // 背景两军的士兵群（预烘焙动作用）
+    static crowdSpecs(kind, cA, cB) {
+      const out = [], seen = new Set();
+      for (const c of [cA, cB]) for (const type of ['spear', 'sword']) {
+        const k = c + type;
+        if (!seen.has(k) && SG.Figure && SG.Figure.cultures.includes(c)) { seen.add(k); out.push({ type, culture: c, seed: 0 }); }
+      }
+      return out;
+    }
+    constructor(scene, kind, colA, colB, glyphA, glyphB, seed, culA, culB) {
       this.scene = scene;
       this.kind = kind;
       this.pal = PALETTES[kind];
@@ -2676,9 +3346,9 @@
       this.group.name = 'DuelArena';
       scene.add(this.group);
       this.geos = []; this.mats = []; this.texs = [];
-      this.banners = [];
-      this.torches = [];
+      this.banners = []; this.torches = []; this.flags = [];
       this.rnd = SG.SeededRandom(seed || 7);
+      this.cul = [culA || 'han', culB || 'han'];
       const pal = this.pal;
       scene.background = C(pal.fog);
       scene.fog = new THREE.Fog(C(pal.fog), pal.fogN, pal.fogF);
@@ -2687,19 +3357,19 @@
         uniforms: { uTop: { value: C(pal.top).clone() }, uHor: { value: C(pal.hor).clone() }, uLow: { value: C(pal.low).clone() }, uSun: { value: C(pal.sun).clone() }, uSunDir: { value: new THREE.Vector3().fromArray(pal.sunDir).normalize() } },
         vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
       });
-      const sg = new THREE.SphereGeometry(300, 24, 12);
+      const sg = new THREE.SphereGeometry(300, 32, 16);
       this.geos.push(sg); this.mats.push(sm);
       this.sky = new THREE.Mesh(sg, sm);
       this.sky.renderOrder = -1000; this.sky.frustumCulled = false;
       this.group.add(this.sky);
-      // 地面 + 远山 + 景物
-      const pb = new PB();
-      this.buildGround(pb);
-      this.buildRidges(pb);
-      const extra = new SG.MeshBuilder();   // Unity 坐标（士兵、城楼屋顶）
-      this.buildProps(pb, extra, colA, colB);
-      this.addMesh(pb.geo(), envMat(), true, true);
-      if (extra.count > 0) this.addMesh(extra.toGeometry(), envMat(), true, true);
+      this.buildGround();
+      this.buildFarRidge();
+      this.inst = {};                       // 实例化景物：种类 → [{ x, y, z, s, yaw, sx?, sy?, col }]
+      const mb = new SG.MeshBuilder();      // 杂项（Unity 坐标：z 取反）
+      this.buildProps(mb, colA, colB);
+      this.flushInstances();
+      if (mb.count > 0) this.addMesh(mb.toGeometry(), envMat(), true, true);
+      this.buildArmies(colA, colB);
       // 帅旗（势力色 + 姓氏）
       const glyphs = [glyphA, glyphB], cols = [colA, colB];
       const bx = 6.6;
@@ -2717,158 +3387,265 @@
       this.group.add(o);
       return o;
     }
-    // 地面：中间平坦的对决场地，两侧与后方起伏
-    buildGround(pb) {
-      const pal = this.pal, r = this.rnd, kind = this.kind;
-      const X0 = -44, X1 = 44, Z0 = -44, Z1 = 10, S = 2;
-      const hill = kind === 'hill' ? 2.2 : kind === 'forest' ? 0.8 : kind === 'castle' ? 0.2 : 1;
-      const h = (x, z) => {
+    // ---------------------------------------------------------- 地形 --
+    noise(x, z) {
+      const P = M.perlinNoise;
+      return P(x * 0.045 + 11, z * 0.045 + 5) * 0.6 + P(x * 0.11 + 3, z * 0.11 + 9) * 0.3 + P(x * 0.27 + 7, z * 0.27 + 1) * 0.1;
+    }
+    height(x, z) {
+      const kind = this.kind, ax = Math.abs(x);
+      const lane = (1 - ss(2.4, 5.5, Math.abs(z))) * (1 - ss(13, 19, ax));
+      const n = this.noise(x, z) - 0.47;
+      const amp = kind === 'hill' ? 2.6 : kind === 'forest' ? 0.9 : kind === 'castle' ? 0.25 : kind === 'river' ? 0.7 : 1.1;
+      let h;
+      if (z < 0) {
+        const b = Math.max(0, -z - 3);
+        h = n * 2.6 * amp * Math.min(1, b / 7) + b * 0.035 * amp;
+        // 远处的群山（雾中）
+        const far = ss(38, 95, b) * (8 + 18 * M.perlinNoise(x * 0.018 + 5, 3.3) + 9 * M.perlinNoise(x * 0.05 + 1, 7.1)) * (kind === 'hill' ? 1.7 : kind === 'castle' ? 0.6 : 1);
+        h += far;
         if (kind === 'river') {
-          if (z < -3.4 && z > -26) return -0.8;
-          if (z <= -26) return (-26 - z) * 0.15 + M.perlinNoise(x * 0.08 + 3, z * 0.08) * 2;
+          // 河道：z ∈ (−26, −3.4) 低于地面，两岸缓坡
+          const bed = ss(-3.0, -4.6, z) * (1 - ss(-24.5, -27.5, z));
+          h = h * (1 - bed) - 0.85 * bed;
         }
-        if (Math.abs(z) < 2.6 && Math.abs(x) < 13) return 0;
-        const back = z < 0 ? Math.max(0, -z - 3) : Math.max(0, z - 3) * 0.4;
-        const n = M.perlinNoise(x * 0.07 + 11, z * 0.07 + 5) - 0.45;
-        return back * 0.09 * hill + n * 1.6 * Math.min(1, back / 4) * hill + Math.max(0, Math.abs(x) - 13) * 0.05 * hill;
-      };
-      const gc = C(pal.ground), gc2 = C(pal.ground2), lane = C(pal.lane);
-      const colAt = (cx, cz) => {
-        let col = mixC(gc, gc2, M.clamp01(M.perlinNoise(cx * 0.15, cz * 0.15) * 1.2 - 0.1));
-        const laneK = 1 - M.smoothStep(0, 1, (Math.abs(cz) - 1.2) / 2.2);
-        if (Math.abs(cx) < 14) col = mixC(col, lane, laneK);
-        return col;
-      };
-      for (let x = X0; x < X1; x += S) {
-        for (let z = Z0; z < Z1; z += S) {
-          const a = [x, h(x, z), z], b = [x, h(x, z + S), z + S], c = [x + S, h(x + S, z + S), z + S], d = [x + S, h(x + S, z), z];
-          const cz = z + S / 2, cx = x + S / 2;
-          let col = mixC(gc, gc2, M.clamp01(M.perlinNoise(cx * 0.15, cz * 0.15) * 1.2 - 0.1));
-          const laneK = 1 - M.smoothStep(0, 1, (Math.abs(cz) - 1.2) / 2.2);
-          if (Math.abs(cx) < 14) col = mixC(col, lane, laneK);
-          if (kind === 'castle' && Math.abs(cz) < 3.6 && Math.abs(cx) < 16) col = ((Math.floor(cx / 2) + Math.floor(cz / 2)) & 1) ? sh(lane, 0.05) : sh(lane, -0.06);
-          if (kind === 'river' && cz < -3.4 && cz > -26) col = C('#5a6a5a');
-          const j = (r.nextDouble() - 0.5) * 0.08;
-          // 比武道与前景（镜头前的地面）在画面上很大：改为逐顶点平滑着色，免得画面中线与下三分之一满是逐块接缝与色带
-          if (cz > -3 && !(kind === 'castle' && Math.abs(cz) < 3.6 && Math.abs(cx) < 16)) {
-            const ca = colAt(a[0], a[2]), cb = colAt(b[0], b[2]), cc = colAt(c[0], c[2]), cd = colAt(d[0], d[2]);
-            pb.triV(a, b, c, ca, cb, cc); pb.triV(a, c, d, ca, cc, cd);
-            continue;
-          }
-          this.quadSplit(pb, a, b, c, d, sh(col, j), sh(col, j - 0.03));
-        }
-      }
-    }
-    quadSplit(pb, a, b, c, d, c1, c2) { pb.tri(a, b, c, c1); pb.tri(a, c, d, c2); }
-    // 远山（两层剪影，雾中淡去）
-    buildRidges(pb) {
-      const pal = this.pal, kind = this.kind;
-      const layers = kind === 'castle' ? [[-60, 7, pal.mid], [-110, 16, pal.far]] : kind === 'hill' ? [[-46, 12, pal.mid], [-95, 30, pal.far]] : [[-55, 8, pal.mid], [-105, 22, pal.far]];
-      layers.forEach(([z, hgt, col], li) => {
-        const c = C(col);
-        let prev = null;
-        for (let x = -200; x <= 200; x += 12) {
-          const n = M.perlinNoise(x * 0.012 + li * 7, li * 3.1);
-          const y = hgt * (0.35 + n * 0.9) + (li === 1 ? Math.max(0, 1 - Math.abs(x + 30) / 60) * hgt * 0.5 : 0);
-          const p = [x, y, z + Math.sin(x * 0.05) * 6];
-          if (prev) {
-            pb.quad([prev[0], -4, prev[2]], [p[0], -4, p[2]], p, prev, sh(c, (n - 0.5) * 0.15));
-            pb.tri(prev, [(prev[0] + p[0]) / 2, (prev[1] + p[1]) / 2 - hgt * 0.15, (prev[2] + p[2]) / 2 + 3], p, sh(c, -0.08));
-          }
-          prev = p;
-        }
-      });
-    }
-    tree(pb, x, z, s, pine) {
-      const y = 0;
-      const leaf = C(this.pal.leaf);
-      const j = (this.rnd.nextDouble() - 0.5) * 0.15;
-      pb.prism(x, z, y, y + 1.2 * s, 0.14 * s, 0.1 * s, 5, '#4a3424');
-      if (pine) {
-        pb.prism(x, z, y + 0.8 * s, y + 2.6 * s, 1.0 * s, 0, 7, sh(leaf, j - 0.05));
-        pb.prism(x, z, y + 1.7 * s, y + 3.4 * s, 0.75 * s, 0, 7, sh(leaf, j + 0.04));
-        pb.prism(x, z, y + 2.6 * s, y + 4.1 * s, 0.45 * s, 0, 7, sh(leaf, j + 0.1));
+        if (kind === 'castle') h *= ss(13.5, 16, -z) * 0.3 + (1 - ss(1, 9, -z)) * 0.7;
       } else {
-        pb.blob(x, y + 2.0 * s, z, 1.2 * s, 1.0 * s, 1.2 * s, sh(leaf, j), (x * 31 + z * 7) | 0);
-        pb.blob(x + 0.5 * s, y + 2.6 * s, z + 0.2 * s, 0.8 * s, 0.7 * s, 0.8 * s, sh(leaf, j + 0.08), (x * 13 + z) | 0);
+        const f = Math.max(0, z - 3);
+        h = f * 0.05 * amp + n * 0.7 * amp * Math.min(1, f / 3);
+      }
+      h += Math.max(0, ax - 17) * 0.05 * amp;
+      return h * (1 - lane);
+    }
+    buildGround() {
+      const pal = this.pal, kind = this.kind;
+      const axis = (lo, hi, c0, c1, fine, coarse, grow) => {
+        const out = [];
+        for (let v = lo; v < hi;) {
+          out.push(v);
+          const d = v < c0 ? c0 - v : v > c1 ? v - c1 : 0;
+          v += Math.min(coarse, fine + d * grow);
+        }
+        out.push(hi);
+        return out;
+      };
+      const xs = axis(-115, 115, -13, 13, 0.5, 8, 0.14), zs = axis(-150, 22, -6, 7, 0.5, 8, 0.12);
+      const nx = xs.length, nz = zs.length, N = nx * nz;
+      const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), mat = new Float32Array(N * 4);
+      const gc = C(pal.ground), gc2 = C(pal.ground2), lane = C(pal.lane);
+      const tc = new THREE.Color(), t2 = new THREE.Color();
+      const P = M.perlinNoise;
+      let i = 0;
+      for (let iz = 0; iz < nz; iz++) {
+        for (let ix = 0; ix < nx; ix++, i++) {
+          const x = xs[ix], z = zs[iz], y = this.height(x, z);
+          pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
+          tc.copy(gc).lerp(gc2, M.clamp01(P(x * 0.09 + 2, z * 0.09) * 1.3 - 0.15));
+          // 对决场地：踩实的泥土（边缘带噪声，两头逐渐过渡到草）
+          const lk = (1 - ss(1.0 + P(x * 0.3, 7) * 1.4, 3.4 + P(x * 0.21, 3) * 1.5, Math.abs(z))) * (1 - ss(11, 16, Math.abs(x)));
+          tc.lerp(lane, lk * 0.92);
+          let sand = 0, rockT = 0, snow = 0, farm = 1;
+          if (kind === 'hill') { rockT = 0.55; snow = ss(17, 26, y); }
+          if (kind === 'river') { const bank = (1 - ss(-2.6, -4.2, z)) * ss(-1.0, -2.6, z) + ss(-23.5, -26.5, z) * (1 - ss(-27, -30, z)); sand = Math.max(sand, bank * 0.9); if (z < -3.2 && z > -26.8) sand = 1; }
+          if (kind === 'castle') { t2.set(pal.lane); tc.lerp(t2, 0.4 * (1 - ss(6, 12, -z))); }
+          // 远处的农田（平原、河川）
+          if (kind === 'plain' && z < -30 && z > -75) farm = 1 - 0.8 * ss(0.42, 0.6, P(x * 0.03 + 9, z * 0.03 + 4) + ss(-30, -40, z) * 0.25 - 0.2);
+          col[i * 3] = tc.r; col[i * 3 + 1] = tc.g; col[i * 3 + 2] = tc.b;
+          mat[i * 4] = sand; mat[i * 4 + 1] = rockT; mat[i * 4 + 2] = snow; mat[i * 4 + 3] = farm;
+        }
+      }
+      const idx = new Uint32Array((nx - 1) * (nz - 1) * 6);
+      let k = 0;
+      for (let iz = 0; iz < nz - 1; iz++) for (let ix = 0; ix < nx - 1; ix++) {
+        const a = iz * nx + ix, b = a + 1, c = a + nx, d = c + 1;
+        idx[k++] = a; idx[k++] = c; idx[k++] = b; idx[k++] = b; idx[k++] = c; idx[k++] = d;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      g.setAttribute('aMat', new THREE.BufferAttribute(mat, 4));
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+      g.computeVertexNormals();
+      g.computeBoundingSphere();
+      this.ground = this.addMesh(g, groundMaterial(), false, true);
+      this.groundTris = idx.length / 3;
+    }
+    // 天际线：最远处一道雾中的山脊（平滑带状网格）
+    buildFarRidge() {
+      const pal = this.pal, kind = this.kind, n = 160, rows = 4;
+      const pos = [], col = [], idx = [];
+      const c0 = C(pal.far), c1 = C(pal.mid);
+      const hgt = kind === 'hill' ? 46 : kind === 'castle' ? 22 : 30;
+      for (let i = 0; i <= n; i++) {
+        const x = -330 + 660 * i / n;
+        const crest = hgt * (0.45 + 0.75 * M.perlinNoise(x * 0.008 + 3, 1.7) + 0.25 * M.perlinNoise(x * 0.03, 4.2));
+        const z = -185 + Math.sin(x * 0.012) * 18;
+        for (let r = 0; r <= rows; r++) {
+          const u = r / rows, y = -8 + (crest + 8) * (1 - (1 - u) * (1 - u));
+          pos.push(x, y, z + u * 6);
+          const c = c1.clone().lerp(c0, 0.5 + 0.5 * u);
+          col.push(c.r, c.g, c.b);
+        }
+      }
+      for (let i = 0; i < n; i++) for (let r = 0; r < rows; r++) {
+        const a = i * (rows + 1) + r, b = a + 1, c = a + rows + 1, d = c + 1;
+        idx.push(a, c, b, b, c, d);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const m = envMat();
+      this.addMesh(g, m, false, false);
+    }
+    // ---------------------------------------------------------- 景物 --
+    place(kind, x, z, s, opt) {
+      (this.inst[kind] || (this.inst[kind] = [])).push(Object.assign({ x, y: this.height(x, z), z, s, yaw: this.rnd.nextDouble() * Math.PI * 2 }, opt || {}));
+    }
+    flushInstances() {
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), e = new THREE.Euler(), c = new THREE.Color();
+      for (const kind in this.inst) {
+        const L = this.inst[kind];
+        if (!L.length) continue;
+        const geo = kind.startsWith('rock') ? rockGeo(+kind.slice(4)) : kind === 'tuft' || kind === 'reed' ? tuftGeo(kind === 'reed') : kind === 'flower' ? flowerGeo() : treeGeo(kind);
+        const mat = vegMaterial(kind.startsWith('rock') ? 'rock' : kind === 'tuft' || kind === 'reed' || kind === 'flower' ? 'grass' : 'leaf');
+        const im = new THREE.InstancedMesh(geo, mat, L.length);
+        L.forEach((o, i) => {
+          p.set(o.x, o.y - (o.sink || 0) * o.s, o.z);
+          q.setFromEuler(e.set(o.tilt || 0, o.yaw, 0));
+          sc.set(o.s * (o.sx || 1), o.s * (o.sy || 1), o.s * (o.sx || 1));
+          im.setMatrixAt(i, m4.compose(p, q, sc));
+          im.setColorAt(i, c.set(o.col || '#ffffff'));
+        });
+        im.instanceMatrix.needsUpdate = true;
+        if (im.instanceColor) im.instanceColor.needsUpdate = true;
+        im.castShadow = kind.startsWith('rock');
+        im.receiveShadow = true;
+        im.computeBoundingSphere();
+        im.name = 'Duel_' + kind;
+        this.group.add(im);
+        this.instMeshes = this.instMeshes || [];
+        this.instMeshes.push(im);
       }
     }
-    rock(pb, x, z, s, col) {
-      pb.blob(x, s * 0.35, z, s, s * 0.7, s * 0.9, col || this.pal.rock, (x * 17 + z * 5) | 0);
+    tree(x, z, s, pine) {
+      const r = this.rnd, leaf = C(this.pal.leaf), j = (r.nextDouble() - 0.5) * 0.22;
+      const kind = (pine ? (r.nextDouble() < 0.5 ? 'pine' : 'spruce') : (r.nextDouble() < 0.5 ? 'broad' : 'broad2')) + (z < -22 ? 'F' : '');
+      const cc = leaf.clone().multiplyScalar(1 + j);
+      this.place(kind, x, z, s * (pine ? 5.2 : 5.6), { col: '#' + cc.getHexString(), sink: 0.01 });
     }
-    // 两军阵列（Unity 坐标的 MeshBuilder：three z = −unity z）
-    army(mb, x0, x1, z0, z1, col, y, rows, cols) {
-      const team = SG.Gfx.color(col);
-      for (let i = 0; i < rows; i++)
-        for (let j = 0; j < cols; j++) {
-          const x = x0 + (x1 - x0) * (cols > 1 ? j / (cols - 1) : 0.5) + (this.rnd.nextDouble() - 0.5) * 0.4;
-          const z = z0 + (z1 - z0) * (rows > 1 ? i / (rows - 1) : 0.5) + (this.rnd.nextDouble() - 0.5) * 0.3;
-          SG.Models.soldier(mb, new THREE.Vector3(x, y || 0, -z), team, true, 3.3);
+    rock(x, z, s, col) {
+      const c = C(col || this.pal.rock).clone().multiplyScalar(0.95 + this.rnd.nextDouble() * 0.15);
+      this.place('rock' + Math.floor(this.rnd.nextDouble() * 3), x, z, s * 2.4, { col: '#' + c.getHexString(), sink: 0.08, sy: 0.85 + this.rnd.nextDouble() * 0.4 });
+    }
+    grass(n, zMin, zMax, xr, density) {
+      const r = this.rnd, pal = this.pal;
+      const g0 = C(pal.leaf), g1 = C(pal.ground2);
+      for (let i = 0; i < n; i++) {
+        const x = (r.nextDouble() * 2 - 1) * xr, z = zMin + r.nextDouble() * (zMax - zMin);
+        const laneK = (1 - ss(1.6, 3.6, Math.abs(z))) * (1 - ss(11, 15, Math.abs(x)));
+        if (r.nextDouble() < laneK * (density || 0.97)) continue;          // 场中踩实，少草
+        if (z > 2.5 && (Math.abs(x) < 4 || r.nextDouble() < 0.5)) continue;     // 镜头近处稀疏（近大远小，免得草叶挡住画面）
+        const k = r.nextDouble();
+        const c = g0.clone().lerp(g1, k * 0.55).multiplyScalar(0.95 + r.nextDouble() * 0.3);
+        this.place('tuft', x, z, (1.1 + r.nextDouble() * 1.1) * (z > 2.5 ? 0.7 : 1), { col: '#' + c.getHexString() });
+        if (r.nextDouble() < 0.08) {
+          const fc = ['#f4f0e4', '#f2d24a', '#d8483a', '#b07ad8', '#f0a0c0'][Math.floor(r.nextDouble() * 5)];
+          this.place('flower', x + (r.nextDouble() - 0.5) * 0.6, z + (r.nextDouble() - 0.5) * 0.6, 1.6 + r.nextDouble() * 0.8, { col: fc });
         }
+      }
     }
-    buildProps(pb, mb, colA, colB) {
+    buildProps(mb, colA, colB) {
       const r = this.rnd, kind = this.kind, pal = this.pal;
       const scatter = (n, fn, zMin, zMax, xr) => {
         for (let i = 0; i < n; i++) {
           const x = (r.nextDouble() * 2 - 1) * (xr || 30), z = zMin + r.nextDouble() * (zMax - zMin);
-          if (Math.abs(z) < 2.2 && Math.abs(x) < 12) continue;
+          if (Math.abs(z) < 2.4 && Math.abs(x) < 12) continue;
           if (z > 2.2 && Math.abs(x) < 5) continue;          // 镜头前方中央留空
           fn(x, z, r.nextDouble());
         }
       };
-      const tuft = (x, z, k) => {
-        const g = mixC(pal.leaf, pal.ground2, k * 0.6);
-        for (let i = 0; i < 3; i++) pb.rod([x + (i - 1) * 0.06, 0, z], [x + (i - 1) * 0.16, 0.32 + k * 0.25, z + (k - 0.5) * 0.1], 0.04, 0, 3, sh(g, i * 0.05));
+      const U = (x, y, z) => new THREE.Vector3(x, y, -z);   // MeshBuilder 的 Unity 坐标
+      const wood = C('#5a3a22'), steel = C('#b8c0ca');
+      // 断枪残旗、弃盾（平原、丘陵）
+      const debris = (n, z0, z1) => {
+        for (let i = 0; i < n; i++) {
+          const x = (r.nextDouble() * 2 - 1) * 11, z = z0 - r.nextDouble() * (z0 - z1);
+          const a = (r.nextDouble() - 0.5) * 0.7, y0 = this.height(x, z) - 0.15;
+          const L = 1.5 + r.nextDouble() * 0.6;
+          const top = U(x + Math.sin(a) * L, y0 + Math.cos(a) * L, z);
+          mb.tube([U(x, y0, z), U(x + Math.sin(a) * L * 0.5, y0 + Math.cos(a) * L * 0.5, z), top], [0.024, 0.022, 0.02], 7, wood);
+          mb.lathe(top, [[0.022, 0], [0.034, 0.05], [0, 0.26]], 8, steel);
+          if (i % 3 === 0) {
+            const fc = C(i % 2 ? colA : colB), fx = top.x, fy = top.y - 0.1;
+            const p0 = U(fx, fy, z), p1 = U(fx + 0.5, fy - 0.1, z + 0.03), p2 = U(fx + 0.46, fy - 0.45, z + 0.05), p3 = U(fx, fy - 0.38, z);
+            const n0 = V3(0, 0, 1);
+            mb.triN(p0, p1, p2, n0, n0, n0, fc); mb.triN(p0, p2, p3, n0, n0, n0, fc);
+            mb.triN(p0, p2, p1, n0.clone().negate(), n0.clone().negate(), n0.clone().negate(), fc); mb.triN(p0, p3, p2, n0.clone().negate(), n0.clone().negate(), n0.clone().negate(), fc);
+          }
+        }
+        for (let i = 0; i < 2; i++) {   // 弃盾（斜倒在地上的圆盾：铜边、盾面、铜钉）
+          const x = (r.nextDouble() * 2 - 1) * 9, z = -3.4 - r.nextDouble() * 2.6, y = this.height(x, z);
+          const c = C(i % 2 ? colA : colB).clone().multiplyScalar(0.7), rim = C('#8a6a3a'), boss = C('#c9a24e');
+          const sb = new SG.MeshBuilder();
+          sb.lathe(V3(0, 0, 0), [[0.36, -0.01, rim], [0.37, 0.02, rim, true], [0.33, 0.04, c], [0.18, 0.07, c], [0.08, 0.08, boss], [0.05, 0.12, boss], [0, 0.13, boss]], 20, c);
+          const geo = sb.toGeometry();
+          geo.rotateX(-1.25); geo.rotateY(r.nextDouble() * 6.28); geo.translate(x, y + 0.2, z);
+          this.addMesh(geo, envMat(), true, true);
+        }
       };
-      if (kind !== 'castle') {
-        this.army(mb, -16, -8.5, -11, -14, colA, 0, 3, 7);
-        this.army(mb, 8.5, 16, -11, -14, colB, 0, 3, 7);
-      }
       switch (kind) {
         case 'plain':
-          scatter(130, tuft, -16, 6);
-          scatter(18, (x, z, k) => this.rock(pb, x, z, 0.2 + k * 0.35), -14, 6);
-          for (let i = 0; i < 9; i++) {           // 战场上插着的断枪残旗
-            const x = (r.nextDouble() * 2 - 1) * 11, z = -2.8 - r.nextDouble() * 3.5;
-            const a = (r.nextDouble() - 0.5) * 0.6;
-            pb.rod([x, 0, z], [x + Math.sin(a) * 1.5, Math.cos(a) * 1.5, z], 0.025, 0.02, 4, '#5a3a22');
-            if (i % 3 === 0) pb.slab([[x + Math.sin(a) * 1.4, Math.cos(a) * 1.4], [x + Math.sin(a) * 1.4 + 0.45, Math.cos(a) * 1.4 - 0.1], [x + Math.sin(a) * 1.4 + 0.4, Math.cos(a) * 1.4 - 0.4], [x + Math.sin(a) * 1.2, Math.cos(a) * 1.2 - 0.3]], z - 0.01, z + 0.01, i % 2 ? colA : colB);
-          }
-          for (let i = 0; i < 14; i++) this.tree(pb, (r.nextDouble() * 2 - 1) * 40, -16 - r.nextDouble() * 18, 0.9 + r.nextDouble() * 0.6, r.nextDouble() < 0.4);
+          this.grass(900, -14, 8, 24);
+          scatter(16, (x, z, k) => this.rock(x, z, 0.12 + k * 0.2), -14, 6);
+          debris(9, -2.8, -6.4);
+          for (let i = 0; i < 16; i++) this.tree((r.nextDouble() * 2 - 1) * 42, -17 - r.nextDouble() * 20, 0.85 + r.nextDouble() * 0.55, r.nextDouble() < 0.35);
+          for (let i = 0; i < 10; i++) this.place('shrub', (r.nextDouble() * 2 - 1) * 30, -9 - r.nextDouble() * 9, 3 + r.nextDouble() * 2, { col: '#' + C(pal.leaf).clone().multiplyScalar(0.9 + r.nextDouble() * 0.25).getHexString() });
           break;
         case 'forest':
           for (let i = 0; i < 70; i++) {
-            const x = (r.nextDouble() * 2 - 1) * 42, z = -5.5 - r.nextDouble() * 32;
+            const x = (r.nextDouble() * 2 - 1) * 44, z = -5.5 - r.nextDouble() * 34;
             if (z > -11 && Math.abs(x) < 5.5 && r.nextDouble() < 0.6) continue;
-            this.tree(pb, x, z, 0.9 + r.nextDouble() * 0.8, r.nextDouble() < 0.55);
+            this.tree(x, z, 0.9 + r.nextDouble() * 0.7, r.nextDouble() < 0.55);
           }
-          for (const x of [-11.5, -9.2, 9.6, 12.2]) this.tree(pb, x, -3.6 - r.nextDouble(), 1.2 + r.nextDouble() * 0.3, x > 0);
-          scatter(90, tuft, -12, 6);
-          scatter(16, (x, z, k) => pb.blob(x, 0.15, z, 0.4 + k * 0.4, 0.25, 0.4, sh(pal.leaf, 0.1), (x * 3) | 0), -10, 5);
-          pb.rod([-4.5, 0.2, -4.4], [-1.2, 0.25, -4.9], 0.22, 0.18, 6, '#5a4030');   // 倒木
+          for (const x of [-11.5, -9.2, 9.6, 12.2]) this.tree(x, -3.8 - r.nextDouble(), 1.1 + r.nextDouble() * 0.25, x > 0);
+          this.grass(800, -12, 8, 22, 0.9);
+          for (let i = 0; i < 26; i++) {
+            const x = (r.nextDouble() * 2 - 1) * 26, z = -3.4 - r.nextDouble() * 9;
+            if (Math.abs(z) < 3 && Math.abs(x) < 12) continue;
+            this.place('shrub', x, z, 2.2 + r.nextDouble() * 1.6, { col: '#' + C(pal.leaf).clone().multiplyScalar(0.95 + r.nextDouble() * 0.3).getHexString() });
+          }
+          scatter(10, (x, z, k) => this.rock(x, z, 0.15 + k * 0.25, '#6a6a5a'), -10, 5);
+          {   // 倒木（树干 + 断枝）
+            const y = this.height(-3, -4.6) + 0.18;
+            mb.tube([U(-4.6, y, -4.4), U(-3.2, y + 0.05, -4.6), U(-1.4, y + 0.02, -4.9)], [0.24, 0.22, 0.17], 12, C('#5a4030'));
+            mb.tube([U(-3.0, y + 0.12, -4.6), U(-2.7, y + 0.6, -4.3)], [0.06, 0.03], 7, C('#5a4030'));
+          }
           break;
         case 'hill':
-          for (let i = 0; i < 12; i++) this.rock(pb, (r.nextDouble() * 2 - 1) * 30, -6 - r.nextDouble() * 12, 0.6 + r.nextDouble() * 1.4, sh(pal.rock, (r.nextDouble() - 0.5) * 0.2));
-          for (const [x, z, s] of [[-19, -17, 5], [-10, -22, 7], [15, -18, 6], [24, -24, 8], [3, -28, 6]]) this.rock(pb, x, z, s, sh(pal.rock, -0.1));
-          scatter(26, (x, z, k) => this.rock(pb, x, z, 0.15 + k * 0.25), -10, 6);
-          for (let i = 0; i < 16; i++) this.tree(pb, (r.nextDouble() * 2 - 1) * 40, -12 - r.nextDouble() * 20, 0.8 + r.nextDouble() * 0.5, true);
-          scatter(60, tuft, -12, 6);
+          for (let i = 0; i < 14; i++) this.rock((r.nextDouble() * 2 - 1) * 30, -6 - r.nextDouble() * 12, 0.5 + r.nextDouble() * 1.2);
+          for (const [x, z, s] of [[-19, -17, 4.2], [-10, -22, 5.5], [15, -18, 5], [24, -24, 6], [3, -28, 5]]) this.rock(x, z, s, '#6a655c');
+          scatter(26, (x, z, k) => this.rock(x, z, 0.1 + k * 0.2), -10, 6);
+          for (let i = 0; i < 20; i++) this.tree((r.nextDouble() * 2 - 1) * 42, -12 - r.nextDouble() * 24, 0.75 + r.nextDouble() * 0.5, true);
+          this.grass(650, -12, 8, 22, 0.95);
+          debris(5, -2.8, -6);
           break;
         case 'river': {
-          for (let i = 0; i < 70; i++) {     // 芦苇
-            const x = (r.nextDouble() * 2 - 1) * 30, z = -3.0 - r.nextDouble() * 0.9;
-            pb.rod([x, -0.3, z], [x + (r.nextDouble() - 0.5) * 0.3, 0.9 + r.nextDouble() * 0.7, z], 0.025, 0.006, 3, r.nextDouble() < 0.5 ? '#9a9a5a' : '#7a8a4a');
+          for (let i = 0; i < 120; i++) {
+            const x = (r.nextDouble() * 2 - 1) * 34, z = -2.9 - r.nextDouble() * 1.4;
+            this.place('reed', x, z, 1.0 + r.nextDouble() * 0.6, { col: r.nextDouble() < 0.5 ? '#a8a86a' : '#86985a' });
           }
-          scatter(40, (x, z, k) => this.rock(pb, x, z, 0.1 + k * 0.18), -3, 6);
-          for (let i = 0; i < 26; i++) this.tree(pb, (r.nextDouble() * 2 - 1) * 50, -28 - r.nextDouble() * 10, 1 + r.nextDouble() * 0.6, r.nextDouble() < 0.4);
-          scatter(50, tuft, 1.5, 6);
-          // 水面（共享的水面材质，不释放）
-          const wg = new THREE.PlaneGeometry(120, 23, 24, 6);
+          for (let i = 0; i < 40; i++) this.place('reed', (r.nextDouble() * 2 - 1) * 40, -25.5 - r.nextDouble() * 1.6, 1.1 + r.nextDouble() * 0.5, { col: '#8a9a5c' });
+          scatter(30, (x, z, k) => this.rock(x, z, 0.08 + k * 0.14), -3, 6);
+          for (let i = 0; i < 26; i++) this.tree((r.nextDouble() * 2 - 1) * 52, -28 - r.nextDouble() * 12, 1 + r.nextDouble() * 0.6, r.nextDouble() < 0.4);
+          this.grass(650, -2.6, 8, 24);
+          const wg = new THREE.PlaneGeometry(160, 24, 40, 8);
           wg.rotateX(-Math.PI / 2);
-          wg.translate(0, -0.12, -14.8);
-          const pos = wg.attributes.position, cols = new Float32Array(pos.count * 3);
-          for (let i = 0; i < pos.count; i++) { const z = pos.getZ(i); cols[i * 3] = M.clamp01(1 - (-3.4 - z) / 6); cols[i * 3 + 1] = 0; cols[i * 3 + 2] = 0; }
-          wg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+          wg.translate(0, -0.22, -15);
+          const wp = wg.attributes.position, wc = new Float32Array(wp.count * 3);
+          for (let i = 0; i < wp.count; i++) { const z = wp.getZ(i); wc[i * 3] = M.clamp01(1 - Math.min(-3.4 - z, z + 26.6) / 5); }
+          wg.setAttribute('color', new THREE.BufferAttribute(wc, 3));
           this.geos.push(wg);
           const water = new THREE.Mesh(wg, SG.Gfx.water());
           water.receiveShadow = false;
@@ -2876,55 +3653,93 @@
           break;
         }
         case 'castle': {
-          // 城墙、城门楼、火把
-          const stone = '#6e665c', z = -12.5, H = 6.6;
-          pb.box(0, H / 2, z, 100, H, 2.4, stone);
-          for (let x = -50; x <= 50; x += 1.4) pb.box(x, H + 0.35, z + 1.0, 0.8, 0.7, 0.4, sh(stone, 0.06));
-          for (let x = -50; x <= 50; x += 6) pb.box(x, H / 2, z + 1.25, 0.12, H, 0.05, sh(stone, -0.12));
-          for (let y = 1; y < H; y += 1.1) pb.box(0, y, z + 1.22, 100, 0.04, 0.05, sh(stone, -0.08));
-          pb.box(0, 2.0, z + 1.26, 3.4, 4.0, 0.1, '#1e140e');                 // 城门
-          for (const yy of [0.8, 1.6, 2.4, 3.2]) for (const xx of [-1.2, -0.4, 0.4, 1.2]) pb.box(xx, yy, z + 1.33, 0.12, 0.12, 0.06, '#8a7040');
-          pb.box(0, 4.15, z + 1.27, 3.8, 0.3, 0.12, sh(stone, -0.2));
-          for (const x of [-14, 14]) pb.box(x, H / 2 + 0.7, z + 0.2, 4.4, H + 1.4, 3.2, sh(stone, -0.04));
-          // 城门楼（Unity 坐标：z 取反）
-          mb.box(new THREE.Vector3(0, H + 1.2, -z), new THREE.Vector3(8.5, 2.4, 3.4), SG.Gfx.color('#7a2418'));
-          for (const x of [-3.7, -1.25, 1.25, 3.7]) mb.box(new THREE.Vector3(x, H + 1.2, -z - 1.72), new THREE.Vector3(0.28, 2.4, 0.1), SG.Gfx.color('#4a140e'));
-          mb.chineseRoof(new THREE.Vector3(0, H + 2.4, -z), 10.8, 5.0, 2.8, SG.Gfx.color('#262a36'));
-          mb.box(new THREE.Vector3(0, H + 3.5, -z), new THREE.Vector3(5.6, 1.2, 2.4), SG.Gfx.color('#7a2418'));
-          mb.chineseRoof(new THREE.Vector3(0, H + 4.1, -z), 7.4, 3.6, 2.4, SG.Gfx.color('#262a36'));
-          for (const x of [-14, 14]) mb.chineseRoof(new THREE.Vector3(x, H + 1.4, -z - 0.2), 5.4, 4.0, 1.8, SG.Gfx.color('#262a36'));
-          // 城头守军（b 方）与城下攻军（a 方）
-          this.army(mb, -10, -4.5, -12.2, -12.8, colB, H, 2, 5);
-          this.army(mb, 4.5, 10, -12.2, -12.8, colB, H, 2, 5);
-          this.army(mb, -17, -9, -8.2, -10.4, colA, 0, 3, 6);
+          // 城墙（砖石纹理）、垛口、马面、城门与门钉、城门楼（两重檐）、角楼、火把
+          const stone = C('#7a7266'), z = -12.5, H = 6.6;
+          const wall = new SG.MeshBuilder();
+          wall.box(U(0, H / 2, z), V3(110, H, 2.4), stone);
+          for (let x = -55; x <= 55; x += 1.4) wall.box(U(x, H + 0.35, z + 1.0), V3(0.8, 0.7, 0.4), stone.clone().multiplyScalar(1.05));
+          for (const x of [-14, 14]) wall.box(U(x, H / 2 + 0.7, z + 0.2), V3(4.4, H + 1.4, 3.2), stone.clone().multiplyScalar(0.96));
+          wall.box(U(0, 0.05, z + 1.4), V3(6.0, 0.1, 1.2), stone.clone().multiplyScalar(0.9));
+          this.addMesh(wall.toGeometry(), brickMaterial(), true, true);
+          // 城门：拱形门洞（车削半圆）+ 门板与门钉
+          mb.box(U(0, 1.9, z + 1.25), V3(3.2, 3.8, 0.1), C('#2a1a10'));
+          for (const yy of [0.7, 1.4, 2.1, 2.8, 3.4]) for (const xx of [-1.1, -0.37, 0.37, 1.1]) mb.sphere(U(xx, yy, z + 1.32), V3(0.06, 0.06, 0.04), C('#b8963c'), 1, {});
+          mb.box(U(0, 4.0, z + 1.27), V3(3.8, 0.34, 0.14), C('#4a3a2a'));
+          mb.box(U(0, H + 1.2, z), V3(8.5, 2.4, 3.4), C('#7a2418'));
+          for (const x of [-3.7, -1.25, 1.25, 3.7]) mb.lathe(U(x, H, z + 1.72), [[0.15, 0], [0.14, 2.4]], 10, C('#5a1810'));
+          mb.chineseRoof(U(0, H + 2.4, z), 10.8, 5.0, 2.8, C('#262a36'));
+          mb.box(U(0, H + 3.5, z), V3(5.6, 1.2, 2.4), C('#7a2418'));
+          mb.chineseRoof(U(0, H + 4.1, z), 7.4, 3.6, 2.4, C('#262a36'));
+          for (const x of [-14, 14]) mb.chineseRoof(U(x, H + 1.4, z + 0.2), 5.4, 4.0, 1.8, C('#262a36'));
           for (const x of [-3.6, 3.6]) {
-            pb.prism(x, -9.6, 0, 2.4, 0.07, 0.06, 5, '#2a1e14');
-            pb.prism(x, -9.6, 2.4, 2.65, 0.14, 0.24, 6, '#2a2424');
+            mb.tube([U(x, 0, -9.6), U(x, 1.2, -9.6), U(x, 2.4, -9.6)], [0.07, 0.065, 0.06], 8, C('#2a1e14'));
+            mb.lathe(U(x, 2.4, -9.6), [[0.06, 0], [0.2, 0.18], [0.22, 0.26], [0.16, 0.28]], 12, C('#2a2424'));
             this.torches.push(new THREE.Vector3(x, 2.85, -9.6));
           }
-          scatter(20, (x, zz, k) => this.rock(pb, x, zz, 0.12 + k * 0.2), -8, 6);
+          scatter(20, (x, zz, k) => this.rock(x, zz, 0.08 + k * 0.14), -8, 6);
+          this.grass(350, -8, 8, 22, 1);
           break;
         }
       }
+    }
+    // ------------------------------------------------------ 两军阵列 --
+    buildArmies(colA, colB) {
+      const r = this.rnd, kind = this.kind;
+      const blocks = kind === 'castle'
+        ? [[1, -10, -4.5, -12.2, -12.8, 6.6, 2, 5], [1, 4.5, 10, -12.2, -12.8, 6.6, 2, 5], [0, -17, -9, -8.2, -10.4, 0, 3, 6]]
+        : [[0, -15.5, -8.5, -11, -14, 0, 3, 6], [1, 8.5, 15.5, -11, -14, 0, 3, 6]];
+      const cols = [colA, colB];
+      if (!SG.Figure || !SG.Figure.crowd) {
+        // 旧版：简易士兵（Unity 坐标的 MeshBuilder）
+        const mb = new SG.MeshBuilder();
+        for (const [s, x0, x1, z0, z1, y, rows, n] of blocks)
+          for (let i = 0; i < rows; i++) for (let j = 0; j < n; j++) {
+            const x = x0 + (x1 - x0) * j / (n - 1) + (r.nextDouble() - 0.5) * 0.4, z = z0 + (z1 - z0) * i / Math.max(1, rows - 1);
+            SG.Models.soldier(mb, new THREE.Vector3(x, y || this.height(x, z), -z), SG.Gfx.color(cols[s]), true, 3.3);
+          }
+        this.addMesh(mb.toGeometry(), envMat(), true, true);
+        return;
+      }
+      const crowd = this.crowd = SG.Figure.crowd({ lod: 'low', shadow: false });
+      this.group.add(crowd.root);
+      this.troops = [[], []];
+      for (const [s, x0, x1, z0, z1, y0, rows, n] of blocks)
+        for (let i = 0; i < rows; i++) for (let j = 0; j < n; j++) {
+          const x = x0 + (x1 - x0) * j / (n - 1) + (r.nextDouble() - 0.5) * 0.35, z = z0 + (z1 - z0) * i / Math.max(1, rows - 1) + (r.nextDouble() - 0.5) * 0.3;
+          const type = (i + j) % 3 === 2 ? 'sword' : 'spear';
+          const id = crowd.add({ type, culture: this.cul[s], color: cols[s], seed: (i * 7 + j) % 3 });
+          const y = y0 || this.height(x, z);
+          crowd.setTransform(id, x, y, z, Math.atan2(-x * 0.5, -z) , 1);
+          crowd.play(id, 'idle', { phase: r.nextDouble(), speed: 0.85 + r.nextDouble() * 0.3 });
+          this.troops[s].push(id);
+        }
+    }
+    // 胜方欢呼
+    cheer(side, t) {
+      if (!this.crowd || this.cheered) return;
+      this.cheered = true;
+      for (const id of this.troops[side] || []) this.crowd.play(id, 'cheer', { t0: t - this.rnd.nextDouble() * 0.4, speed: 0.9 + this.rnd.nextDouble() * 0.25 });
     }
     addBanner(x, z, poleH, w, h, color, glyph, pennant, phase) {
       const tex = bannerTexture(SG.UI && SG.UI.cssColor ? SG.UI.cssColor(color) : color, glyph, pennant);
       this.texs.push(tex);
       const mat = new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide });
       this.mats.push(mat);
-      const g = new THREE.PlaneGeometry(w, h, 6, 6);
+      const g = new THREE.PlaneGeometry(w, h, 10, 8);
       g.translate(w / 2, -h / 2, 0);
       this.geos.push(g);
       const cloth = new THREE.Mesh(g, mat);
       cloth.castShadow = false; cloth.receiveShadow = false;
-      cloth.position.set(x + 0.05, poleH - 0.1, z);
+      const y0 = this.height(x, z);
+      cloth.position.set(x + 0.05, y0 + poleH - 0.1, z);
       this.group.add(cloth);
-      const pb = new PB();
-      pb.prism(x, z, 0, poleH + 0.1, 0.05, 0.04, 6, '#4a2c1a');
-      pb.rod([x, poleH - 0.05, z], [x + w + 0.05, poleH - 0.05, z], 0.025, 0.025, 4, '#4a2c1a');
-      pb.prism(x, z, poleH + 0.1, poleH + 0.42, 0.06, 0, 5, GOLD);
-      pb.blob(x, poleH + 0.02, z, 0.08, 0.1, 0.08, RED, 41);
-      this.addMesh(pb.geo(), envMat(), true, false);
+      const mb = new SG.MeshBuilder(), U = (px, py, pz) => new THREE.Vector3(px, py, -pz);
+      const wood = C('#4a2c1a');
+      mb.lathe(U(x, y0 - 0.1, z), [[0.06, 0], [0.05, 0.3], [0.045, poleH * 0.5], [0.04, poleH + 0.2]], 10, wood);
+      mb.tube([U(x, y0 + poleH - 0.05, z), U(x + w * 0.5, y0 + poleH - 0.05, z), U(x + w + 0.05, y0 + poleH - 0.05, z)], [0.025, 0.025, 0.025], 6, wood);
+      mb.lathe(U(x, y0 + poleH + 0.1, z), [[0.05, 0], [0.075, 0.08], [0.05, 0.16], [0, 0.42]], 10, C(GOLD));
+      mb.sphere(U(x, y0 + poleH + 0.02, z), V3(0.09, 0.11, 0.09), C(RED), 1, { rough: 0.1 });
+      this.addMesh(mb.toGeometry(), envMat(), true, false);
       const base = Float32Array.from(g.attributes.position.array);
       this.banners.push({ cloth, g, base, w, phase });
     }
@@ -2942,11 +3757,14 @@
         pos.needsUpdate = true;
         b.g.computeVertexNormals();
       }
+      if (this.crowd) this.crowd.setTime(t);
     }
     dispose() {
       for (const g of this.geos) g.dispose();
       for (const m of this.mats) m.dispose();
       for (const t of this.texs) t.dispose();
+      for (const im of this.instMeshes || []) im.dispose();
+      if (this.crowd) this.crowd.dispose();
       this.geos.length = this.mats.length = this.texs.length = 0;
       if (this.group.parent) this.group.parent.remove(this.group);
     }
@@ -3605,8 +4423,12 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.camera = cam;
       this.camPos = new THREE.Vector3(0, 1.8, 10);
       this.camLook = new THREE.Vector3(0, 1, 0);
+      // 模型库的共用贴图图集、双方文化的士兵群动作（背景两军）分片预生成（黑场渐入期间进行，不卡画面）
+      if (SG.Figure && SG.Figure.preload) {
+        try { await SG.Figure.preload({ cultures: [...new Set([this.lookA.culture, this.lookB.culture])], types: [], lods: [], crowd: Arena.crowdSpecs(this.kind, this.lookA.culture, this.lookB.culture) }); } catch (e) { console.warn('figure preload', e); }
+      }
       await SG.frame();
-      this.arena = new Arena(scene, this.kind, this.colA, this.colB, String(this.genA.name || '甲').charAt(0), String(this.genB.name || '乙').charAt(0), hashStr(this.genA.name + this.genB.name));
+      this.arena = new Arena(scene, this.kind, this.colA, this.colB, String(this.genA.name || '甲').charAt(0), String(this.genB.name || '乙').charAt(0), hashStr(this.genA.name + this.genB.name), this.lookA.culture, this.lookB.culture);
       const pal = this.arena.pal;
       const hemi = new THREE.HemisphereLight(C(pal.hemiS), C(pal.hemiG), Math.PI * pal.hemiI);
       scene.add(hemi);
@@ -3621,7 +4443,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       scene.add(rim); scene.add(rim.target);
       this.lights = { hemi, key, rim };
       await SG.frame();
-      this.war = [new Warrior(sim.f[0], this.colA), new Warrior(sim.f[1], this.colB)];
+      // 第三版：js/figure.js 的高精度武将（未载入 figure.js 时退回旧的低多边形模型）
+      const Fw = SG.Figure ? FigWarrior : Warrior;
+      this.war = [new Fw(sim.f[0], this.colA), new Fw(sim.f[1], this.colB)];
+      this.war[0].opp = sim.f[1]; this.war[1].opp = sim.f[0];
       for (const w of this.war) scene.add(w.root);
       // 特效
       this.sparks = new Particles(420, THREE.AdditiveBlending, 1.0, 12);
@@ -3645,7 +4470,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         this.rings.push({ o, t: 1, life: 0.5, size: 4 });
       }
       // 飞箭（弓将绝技）：小对象池，位置每帧取自 sim.shots
-      this.arrowGeo = [buildArrow(false).geo(), buildArrow(true).geo()];
+      this.arrowGeo = SG.MeshBuilder ? [arrowGeometry(false), arrowGeometry(true)] : [buildArrow(false).geo(), buildArrow(true).geo()];
       this.arrows = [];
       for (let i = 0; i < 6; i++) {
         const o = new THREE.Mesh(this.arrowGeo[0], envMat()); o.visible = false; o.castShadow = true; scene.add(o);
@@ -4012,7 +4837,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         }
       }
       this.updateArrows(adt);
-      // 环境（城头火把）
+      // 环境（帅旗、两军；城头火把）。胜负已分：胜方阵中欢呼
+      if (sim.result && !this.arena.cheered && sim.endT > 0.6) this.arena.cheer(sim.result.winner, this.realT);
       this.arena.update(this.realT);
       for (const p of this.arena.torches) {
         const k = Math.floor(dt * 34 + this.fxR.nextDouble());

@@ -17,6 +17,9 @@
      UI.faces(html, { gens, skip, factions, max })  在文字里提到的武将（势力名 → 君主）前加行内小头像
      UI.facePx(rem) / UI.faceSizes() / UI.FACE_REM  头像像素尺寸（预生成用）
      打字机效果把行内头像当作一个字，打到时才出现。
+   第三版 §4 成长界面：
+     UI.notice(title, bodyHtml, { ok, width, className }) → Promise   只有一个按钮的说明框（结构同 confirm：.sg-confirm-btns）
+     UI.lvTag(gen) → 「Lv5」小标签 HTML    UI.expBar(pct, cls?) → 经验进度条 HTML（.sg-expbar > i，--v = 0..1）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -884,6 +887,45 @@
       };
       focusEl(bYes);
     });
+  };
+
+  // 只有一个按钮的说明框（战后成长等）：结构与 confirm 相同（.sg-confirm-btns 内唯一的主按钮），
+  // 说明区可滚动。Enter / Space / Escape / × 都是关闭。
+  UI.notice = function (title, body, opts) {
+    ensure();
+    opts = opts || {};
+    return new Promise(resolve => {
+      const m = openModal('sg-confirm sg-notice has-body' + (opts.className ? ' ' + opts.className : ''), { width: opts.width || 640 });
+      let done = false;
+      const finish = () => { if (done) return; done = true; m.close(); resolve(); };
+      const head = el('div', 'sg-dlg-head');
+      head.appendChild(el('div', 'sg-dlg-title', title));
+      UI.button(head, '×', finish, { className: 'sg-close', ariaLabel: '关闭' });
+      m.panel.appendChild(head);
+      if (body) m.panel.appendChild(el('div', 'sg-dlg-info sg-confirm-body sg-notice-body', body));
+      const row = el('div', 'sg-confirm-btns');
+      const ok = UI.button(row, opts.ok || '确定', finish, { primary: true });
+      m.panel.appendChild(row);
+      m.onKey = k => {
+        if (k === 'Escape' || k === 'Enter' || k === 'Space') { sfxClick(); finish(); return true; }
+        return false;
+      };
+      focusEl(ok);
+    });
+  };
+
+  // 等级小标签与经验进度条（第三版成长；未载入成长规则时为空串）
+  UI.lvTag = function (gen, cls) {
+    const P = SG.Progress;
+    if (!P || P.enabled === false || !gen) return '';
+    let lv = gen.level;
+    try { if (typeof P.expInfo === 'function') lv = P.expInfo(gen).level; } catch (e) { /* 用原值 */ }
+    if (!(lv >= 1)) return '';
+    return '<span class="sg-lv' + (cls ? ' ' + cls : '') + '">Lv<b>' + lv + '</b></span>';
+  };
+  UI.expBar = function (pct, cls) {
+    const v = M.clamp01(+pct || 0);
+    return '<span class="sg-expbar' + (cls ? ' ' + cls : '') + '" style="--v:' + v.toFixed(3) + '"><i></i></span>';
   };
 
   // -------------------------------------------------------------- 提示 --

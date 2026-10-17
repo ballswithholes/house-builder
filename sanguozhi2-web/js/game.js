@@ -386,6 +386,8 @@
           preloadPortraits();
           title.remove();
           UI().toast('读取进度：' + SG.esc(scenarioName(loaded.scenario)) + '　' + loaded.year + '年' + loaded.month + '月', 2.4);
+          // 第二版存档（DESIGN-V3 §4）：已补齐成长数据，提示一次
+          if (loaded.migratedFrom === 2) UI().toast('存档已升级：众将从 1 级起步，征战可获经验、习得新招', 3.2);
           break;
         }
         // 新的征程：选择剧本 → 选择君主；中途返回则回到标题

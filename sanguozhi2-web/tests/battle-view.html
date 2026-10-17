@@ -23,11 +23,18 @@
 'use strict';
 /* BattleView 独立测试页。
    参数：?real=1 使用真实的 GameState + BattleModel（需要 data/model/strategy-ai/battle-model）
+         ?terrain=1 先建战略地图（MapView），战场地形取自城池周边（js/battle-terrain.js；本页临时替换 BattleModel.generate）
+         ?sc=world|classic 剧本；?city=江陵&from=襄阳 目标城与出发城（real=1）
          ?fx=1   自动播放全部动画与特效
-         ?atk=cao&def=liubei  指定双方势力（仅假模型） */
+         ?nofig=1 不载入 js/figure.js（旧版低多边形部队）
+         ?atk=cao&def=liubei  指定双方势力（仅假模型）；?cult=roman&acult=steppe 双方城池的文化（仅假模型） */
 (function () {
   const Q = new URLSearchParams(location.search);
-  const optional = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js', '../js/camera.js', '../js/battle-view.js'];
+  const optional = ['../js/world-geo.js', '../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js',
+    '../js/portrait-data.js', '../js/portrait.js', '../js/art.js', '../js/culture-art.js', '../js/camera.js'];
+  if (Q.get('terrain')) optional.push('../js/map-view.js');
+  if (!Q.get('nofig')) optional.push('../js/figure.js');
+  optional.push('../js/battle-terrain.js', '../js/battle-view.js');
   const loaded = {};
   function load(src) {
     return new Promise(res => {
@@ -93,10 +100,10 @@
   }
 
   // ------------------------------------------------------------ 假模型 --
-  // 与 BattleModel.Generate 相同的生成方式（W=14, H=10，右侧城池），并保证各种地形都出现
+  // 与 BattleModel.Generate 相同的生成方式（W × H = Balance.BattleW × BattleH，右侧城池），并保证各种地形都出现
   function fakeModel() {
     const Tn = SG.Terrain, M = SG.M;
-    const W = 14, H = 10;
+    const W = (SG.Balance && SG.Balance.BattleW) || 18, H = (SG.Balance && SG.Balance.BattleH) || 13;
     const grid = v => Array.from({ length: W }, () => Array.from({ length: H }, () => v));
     const map = grid(Tn.Plain), height = grid(0), burning = grid(0);
     const rnd = SG.SeededRandom(7 * 31 + 189);
@@ -111,7 +118,7 @@
     }
     // 保证地形齐全
     const put = (x, y, t, h) => { map[x][y] = t; height[x][y] = h; };
-    put(3, 1, Tn.Mountain, 1.1); put(2, 1, Tn.Mountain, 1.1); put(3, 0, Tn.Hill, 0.45);
+    put(3, 1, Tn.Mountain, 1.1); put(2, 1, Tn.Mountain, 1.1); put(3, 0, Tn.Hill, 0.45); put(9, 11, Tn.Mountain, 1.1); put(10, 11, Tn.Mountain, 1.1); put(9, 12, Tn.Mountain, 1.1);
     put(2, 7, Tn.Forest, 0.05); put(3, 7, Tn.Forest, 0.05); put(2, 8, Tn.Forest, 0.05); put(3, 8, Tn.Forest, 0.06);
     put(7, 2, Tn.Hill, 0.45); put(8, 2, Tn.Hill, 0.45); put(7, 8, Tn.Hill, 0.45);
     put(8, 7, Tn.Forest, 0.05); put(8, 8, Tn.Forest, 0.05); put(1, 3, Tn.Forest, 0.05);
@@ -140,10 +147,10 @@
     const U = (g, side, x, y, extra) => Object.assign({ gen: g, side, x, y, morale: 70, formation: 0, acted: false, confused: 0, commander: false, alive: true,
       get troops() { return this.gen.troops; }, set troops(v) { this.gen.troops = Math.max(0, v); } }, extra || {});
     const units = [
-      U(gen('刘备', 5200, 75, 78), 0, 1, 5, { commander: true }),
-      U(gen('关羽', 6800, 98, 80), 0, 2, 4),
-      U(gen('张飞', 4100, 99, 30), 0, 1, 6, { acted: true }),
-      U(gen('赵云', 2600, 96, 76), 0, 3, 5),
+      U(gen('刘备', 5200, 75, 78), 0, 1, 6, { commander: true }),
+      U(gen('关羽', 6800, 98, 80), 0, 2, 5),
+      U(gen('张飞', 4100, 99, 30), 0, 1, 7, { acted: true }),
+      U(gen('赵云', 2600, 96, 76), 0, 3, 6),
       U(gen('曹仁', 6000, 86, 62), 1, castle.x, castle.y, { commander: true }),
       U(gen('夏侯惇', 3900, 90, 58), 1, W - 4, castle.y),
       U(gen('于禁', 1200, 78, 64), 1, W - 6, castle.y, { confused: 2 }),
@@ -159,19 +166,44 @@
     SG.G = { factions: facs };
     const atk = keys[Q.get('atk') || 'liubei'], def = keys[Q.get('def') || 'cao'];
     return {
-      setup: { attacker: atk, defender: def, target: { id: 7, name: '许昌' } },
+      // ?cult=roman 守方城池的文化（城墙样式、地表色调）；?acult=steppe 攻方的文化（士兵衣甲）
+      setup: { attacker: atk, defender: def, target: { id: 7, name: '许昌', culture: Q.get('cult') || undefined }, src: Q.get('acult') ? { id: 3, name: '出发城', culture: Q.get('acult') } : null },
       W, H, map, height, burning, units, day: 1, side: 0, ap: 3, food: [3000, 3000], castle, result: 0,
       inBounds(x, y) { return x >= 0 && y >= 0 && x < W && y < H; },
     };
   }
 
   function realModel() {
-    const g = SG.G = SG.GameState.newGame('cao');
-    const src = g.cities.find(c => c.owner === g.player);
-    const tgt = src.links.map(id => g.cities[id]).find(c => c.owner >= 0 && c.owner !== g.player) || g.cities.find(c => c.owner >= 0 && c.owner !== g.player);
-    const atk = g.generalsIn(src.id, g.player).slice(0, 5);
-    const s = SG.Conquest.prepare(g.player, src, tgt, atk, Math.min(src.food, 3000), 0);
-    return new SG.BattleModel(s);
+    const g = SG.G = SG.GameState.newGame('cao', Q.get('sc') || undefined);
+    let src = g.cities.find(c => c.owner === g.player);
+    let tgt = src.links.map(id => g.cities[id]).find(c => c.owner >= 0 && c.owner !== g.player) || g.cities.find(c => c.owner >= 0 && c.owner !== g.player);
+    if (Q.get('city')) {
+      tgt = g.cities.find(c => c.name === Q.get('city') || c.key === Q.get('city')) || tgt;
+      src = (Q.get('from') && g.cities.find(c => c.name === Q.get('from') || c.key === Q.get('from'))) || g.cities[tgt.links[0]];
+    }
+    // 攻方：出发城的守将（无主城时借玩家的武将）
+    const owner = src.owner >= 0 && src.owner !== tgt.owner ? src.owner : g.player;
+    let atk = g.generalsIn(src.id, owner).slice(0, 5);
+    if (!atk.length) atk = g.generals.filter(x => x.faction === owner && x.city !== tgt.id).slice(0, 5);
+    if (window.__map) {
+      // 本页临时把 BattleModel 的地形生成换成 BattleTerrain（正式接入见报告 INTEGRATION）
+      const orig = SG.BattleModel.prototype.generate;
+      if (!orig.__bt) {
+        SG.BattleModel.prototype.generate = function (seed) { if (!(SG.BattleTerrain && SG.BattleTerrain.applyTo(this, this.setup))) orig.call(this, seed); };
+        SG.BattleModel.prototype.generate.__bt = true;
+      }
+    }
+    const s = SG.Conquest.prepare(owner, src, tgt, atk, Math.min(src.food, 3000), 0);
+    const t0 = performance.now();
+    const mdl = new SG.BattleModel(s);
+    window.__modelMs = performance.now() - t0;
+    return mdl;
+  }
+
+  function realModelFrom(g) {
+    const ng = SG.GameState.newGame;
+    SG.GameState.newGame = () => g;          // 地图已按这个局面建好：沿用同一个 GameState
+    try { return realModel(); } finally { SG.GameState.newGame = ng; }
   }
 
   // ------------------------------------------------------------ 启动 --
@@ -180,14 +212,27 @@
     SG.Gfx.init(document.getElementById('app'));
     if (SG.UI.init && !window.__uiStub) { try { SG.UI.init(); } catch (e) { console.error(e); } }
     if (SG.Sfx && SG.Sfx.init) { try { SG.Sfx.init(); } catch (e) { console.error(e); } }
-    const model = Q.get('real') ? realModel() : fakeModel();
+    if (Q.get('terrain') && SG.MapView && Q.get('real')) {
+      SG.Random.seed(7);
+      const g0 = SG.G = SG.GameState.newGame('cao', Q.get('sc') || undefined);
+      const map = window.__map = new SG.MapView();
+      const t0 = performance.now();
+      map.build(g0);
+      window.__mapMs = performance.now() - t0;
+      if (map.root) map.root.visible = false;
+      SG.Game = SG.Game || {};
+      SG.Game.map = map;
+      SG.G = g0;
+    }
+    const model = Q.get('real') ? (SG.G && window.__map ? realModelFrom(SG.G) : realModel()) : fakeModel();
     const view = new SG.BattleView(model);
+    window.__viewMs = view.stats ? view.stats.buildMs : 0;
     if (!view.group.parent) SG.Gfx.scene.add(view.group);
     const rig = new SG.CameraRig(SG.Gfx.camera, SG.Gfx.renderer.domElement);
     rig.bounds = { xMin: 400, yMin: 0, xMax: 400 + model.W * 2, yMax: model.H * 2 };
     rig.minDist = 12; rig.maxDist = 62;
     const c = view.boardCenter; c.z += 2;     // C#：BoardCenter - (0,0,2)
-    rig.focusWorld(c, 40, true);
+    rig.focusWorld(c, Number(Q.get('dist')) || 46, true);
     rig.onTap.push((x, y) => {
       const t = view.tileFromScreen(x, y);
       document.getElementById('hud').firstChild.textContent = t ? `点击格子 (${t.x}, ${t.y})` : '棋盘外';

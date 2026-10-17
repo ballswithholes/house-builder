@@ -1,8 +1,14 @@
 'use strict';
 /* ==========================================================================
-   三国志II 霸王的大陆 · 网页版 · 攻击画面（SG.Clash）
+   三国志-霸王的世界 · 网页版 · 攻击画面（SG.Clash）
    原作中部队「攻击」时切换到横向交战画面：两军士兵对冲、兵力数字递减。
-   这里用独立的低多边形三维场景现代化重制（SG.Gfx.pushScreen 全屏场景栈）。
+   这里用独立的三维场景现代化重制（SG.Gfx.pushScreen 全屏场景栈）。
+   第三版（DESIGN-V3 §1、§2）：人物改用 js/figure.js 的平滑蒙皮模型——步兵 / 弓手为按兵种 × 文化成组的实例化士兵群
+   （前排刀盾、其后长枪、弓手，势力色与盾），旗手双手竖持旗枪，武将为中精度名将（专属兵器、与头像一致的面部）
+   骑中精度战马（马衣 / 具装）并插帅旗；动作片段由时间轴驱动（行进、开弓放箭、冲锋 / 疾驰、混战劈砍、受击、
+   倒地 / 溃逃、收队 / 欢呼）。地形为平滑网格 + 程序化细节着色（草地、踩踏泥土、农田、河岸沙、岩石、雪），
+   圆润的树与石块、砖石城墙与半圆拱城门、曲面屋顶，远处为连绵山脊。预算：≤ 350k 三角形、≤ 120 次绘制。
+   依赖：js/figure.js（页面未载入时，首次播放按 clash.js 的路径自动载入）。
 
    公开接口
      await SG.Clash.play({
@@ -15,16 +21,18 @@
        speed: 1,          // 可选：本次额外的时间倍率（与 SG.Clash.speed 相乘），如电脑回合传 1.6
      })                   → Promise<{ skipped, disabled, seconds }>（seconds：画面实际播放时长）
        · gen 至少含 name；color 为势力色 '#rrggbb'；formation 可为阵型名或 SG.Defs.formations 下标；
-         culture 缺省取 gen.culture，再缺省 'han'（见 DESIGN-V2 §6）：士兵头饰 / 甲衣 / 盾 / 腿、武将头盔 / 披风按文化区分（CULT 表）。
-       · 两军势力色相近时自动拉开色相 / 明暗（separateColors），并各配一种识别色（pickAccents：肩甲、腰带、盾缘、盔缨、旗边）。
+         culture 缺省取 gen.culture，再缺省 'han'（见 DESIGN-V2 §6）：士兵与武将的冠服、甲衣、盾、兵器按文化区分（js/figure.js）。
+       · 两军势力色相近时自动拉开色相 / 明暗（separateColors：士兵、武将、马衣都用拉开后的颜色），并各配一种识别色（pickAccents：旗边与旗心）。
        · special 可直接传 specials-data 的条目（kind / fx 映射到火、雷、箭雨，其余为斩击）。
        · 攻方永远在左。兵力数字从 troopsBefore 滚动到 troopsAfter；troopsAfter 为 0 视为溃散。
      await SG.Clash.cutIn({ gen, name, color, side, cry, speed })
                           必杀技 / 单挑用的全屏特写（1.1 秒 ÷（SG.Clash.speed × speed），最短 0.7 秒；轻点 / 空格 / 回车可跳过）：
                           头像滑入 + 招式名大字；cry 为可选台词（显示在招式名下方），speed 为可选额外倍率。enabled 为 false 时立即返回。
+     SG.Clash.prepare({ cultures })  → Promise：可选的预热（战斗开始时调用），后台分片生成这些文化的士兵模板与动作贴图
      SG.Clash.enabled     布尔，默认 true；false 时 play / cutIn 立即返回
      SG.Clash.speed       时间倍率，1 = 正常（全长约 3.7 秒），2 = 快
-     SG.Clash.mode        'on' | 'fast' | 'off'（读写；写入时同步 enabled / speed，并存入 localStorage）
+     SG.Clash.mode        'on' | 'fast' | 'off'（读写；写入时同步 enabled / speed，并存入 localStorage 键 sanguozhi2_clash_v3；
+                          缺省 'on'——第三版换了新键，旧版存下的「关」不再生效）
      SG.Clash.cycleMode() → 新的 mode（设置按钮「动画：开 / 快 / 关」用）
      SG.Clash.modeLabel() → '开' | '快' | '关'
      SG.Clash.fromBattle(model, a, t, beforeA, beforeT, extra) → play() 的参数
@@ -32,12 +40,14 @@
      SG.Clash.active      正在播放的场景对象或 null（测试用）
      SG.Clash.debug       { freezeAt: null, holdCut: false }：freezeAt 设为秒数时动画停在该时刻；
                           holdCut 为 true 时特写不自动结束（截图用，配合 Web Animations API 定格）
+                          cam: { p: [x, y, z], l: [x, y, z] } 时镜头固定在该处（检查模型细节用）
 
    操作：轻点 / 点击 / 空格 / 回车 跳过（直接显示结果约 0.4 秒后退出）。
    画面期间 <html> 加 sg-clash-on 类：隐藏战场 HUD（.sg-screens 的其他子元素）、世界标签与提示层；其余按键不传给相机。
    多次调用 play 会排队依次播放。
-   全部网格、贴图、粒子在退出时释放；士兵用 InstancedMesh 绘制。粒子 / 旗面 / 水面 / 特效材质跨场次常驻
-   （只为保住着色器程序缓存，避免每次播放重新编译），renderer.info.memory 的几何体与贴图数在多次播放后不增长。
+   全部网格、贴图、粒子、人物在退出时释放；士兵用实例化士兵群绘制。粒子 / 旗面 / 水面 / 地形 / 道具 / 特效材质跨场次常驻
+   （只为保住着色器程序缓存，避免每次播放重新编译），renderer.info.memory 的几何体与贴图数在多次播放后不增长
+   （js/figure.js 的士兵模板与动作贴图按文化 × 兵种缓存、常驻，有上限）。
    装饰性随机一律使用 SG.SeededRandom（按双方姓名与兵力取种子），不影响规则随机数。
    ========================================================================== */
 (function () {
@@ -59,12 +69,10 @@
     end: 3.34,           // 自然结束（之后淡出）
   };
   const FADE_IN = 0.2, FADE_OUT = 0.2, SKIP_HOLD = 0.4;
-  const ENTER_DX = 2.8;      // 入场时从队形位置后方多远走进来
+  const ENTER_DX = 1.8;      // 入场时从队形位置后方多远跑进来（第三版：人物按位移换算步频，距离缩短以免滑步）
   const ZC = -0.55;          // 两军纵深中心（three z）
   const FRONT = 2.05;        // 列阵时前排离中线的距离
   const SP_F = 0.54, SP_L = 0.62;
-  const HIP = 0.36;
-  const GRIP = { x: 0.2, y: 0.5, z: -0.2 };   // three 局部坐标：右手握点
   const FOG = [0.86, 0.84, 0.78];
   const SIDE_COLOR = ['#73bfff', '#ff806b'];
   const FORM_NAMES = ['方圆', '长蛇', '鱼鳞', '鹤翼', '偃月', '锋矢', '雁行', '衡轭'];
@@ -167,579 +175,96 @@
     quadOut(mb, A[0], A[1], A[2], A[3], shade(col, -0.1), mid);
     if (w1 > 1e-5) quadOut(mb, B[0], B[1], B[2], B[3], shade(col, 0.06), mid);
   }
-  // 沿 x 轴的扁圆盘（圆盾）：Unity 坐标，中心 c，半径 r（ry 为竖向半径，缺省同 r，椭圆盾用），厚 t
-  function discX(mb, c, r, t, col, seg, ry) {
-    seg = seg || 8;
-    ry = ry || r;
-    const ref = { x: c.x, y: c.y, z: c.z };
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      const p0 = [Math.cos(a0) * r, Math.sin(a0) * ry], p1 = [Math.cos(a1) * r, Math.sin(a1) * ry];
-      const o0 = V(c.x - t / 2, c.y + p0[1], c.z + p0[0]), o1 = V(c.x - t / 2, c.y + p1[1], c.z + p1[0]);
-      const i0 = V(c.x + t / 2, c.y + p0[1], c.z + p0[0]), i1 = V(c.x + t / 2, c.y + p1[1], c.z + p1[0]);
-      quadOut(mb, o0, o1, i1, i0, shade(col, -0.2), ref);
-      const ca = V(c.x - t / 2, c.y, c.z), cb = V(c.x + t / 2, c.y, c.z);
-      // 两个盘面（外侧略亮）
-      const tri = (p, q, s, k) => {
-        const n = vecCross({ x: q.x - p.x, y: q.y - p.y, z: q.z - p.z }, { x: s.x - p.x, y: s.y - p.y, z: s.z - p.z });
-        const m = { x: p.x - ref.x, y: 0, z: 0 };
-        if (n.x * m.x >= 0) mb.tri(p, q, s, k); else mb.tri(p, s, q, k);
-      };
-      tri(ca, o0, o1, shade(col, (i % 2) * 0.05));
-      tri(cb, i0, i1, shade(col, -0.1));
-    }
-  }
 
-  // ======================================================= 士兵模型 --
-  // 全部以 Unity 坐标建模、面朝 +z（three 中朝 −z）。部件分开以便逐个摆动：
-  // 腿（髋部为原点）、身体（含头盔、盾）、兵器（右手握点为原点）。
-  // 文化装束（DESIGN-V2 §6）：全部是参数化的方块 / 圆柱拼件，每方只建一次几何体（InstancedMesh 共用）。
-  //   hat 士兵头饰 / ghat 武将头盔 / shield 盾形 / armor 甲衣样式 / legs 腿（裤、裸腿、长靴、绑腿）
-  //   pants 裤色、hair 发色、beard 胡须、trim 默认镶边色、cloak 武将披风色（缺省为势力色暗部）
-  const HAIR_D = [0.12, 0.1, 0.09];
-  const CULT = {
-    han: { skin: [0.95, 0.79, 0.62], hat: 'cone', ghat: 'g_han', shield: 'rect', armor: 'lamellar', legs: 'trousers' },
-    nanman: { skin: [0.7, 0.5, 0.34], hat: 'bun', ghat: 'g_feather', shield: 'rattan', armor: 'rattan', legs: 'bare', trim: [0.92, 0.88, 0.76] },
-    wa: { skin: [0.93, 0.77, 0.6], hat: 'mizura', ghat: 'g_wa', shield: 'wood', armor: 'tanko', legs: 'wraps', pants: [0.86, 0.82, 0.72] },
-    yi: { skin: [0.68, 0.48, 0.32], hat: 'feather', ghat: 'g_feather', shield: 'round', armor: 'bare', legs: 'bare', trim: [0.95, 0.93, 0.86], tattoo: true },
-    korea: { skin: [0.95, 0.8, 0.64], hat: 'plume', ghat: 'g_plume', shield: 'rect', armor: 'lamellar', legs: 'trousers', pants: [0.84, 0.8, 0.7] },
-    steppe: { skin: [0.86, 0.68, 0.5], hat: 'fur', ghat: 'g_fur', shield: 'small', armor: 'furcoat', legs: 'boots', pants: [0.42, 0.32, 0.22] },
-    seasia: { skin: [0.62, 0.43, 0.28], hat: 'seband', ghat: 'g_crown', shield: 'oval', armor: 'bare', legs: 'bare' },
-    tarim: { skin: [0.92, 0.76, 0.6], hat: 'tall', ghat: 'tall', shield: 'round', armor: 'robe', legs: 'boots', pants: [0.5, 0.36, 0.26], trim: [0.85, 0.78, 0.6] },
-    kushan: { skin: [0.84, 0.64, 0.48], hat: 'kushan', ghat: 'g_kushan', shield: 'round', armor: 'robe', legs: 'boots', pants: [0.3, 0.24, 0.2] },
-    persia: { skin: [0.84, 0.64, 0.48], hat: 'phrygian', ghat: 'g_tiara', shield: 'spara', armor: 'scale', legs: 'boots', pants: [0.46, 0.2, 0.18], beard: true },
-    arab: { skin: [0.78, 0.58, 0.42], hat: 'kufiya', ghat: 'kufiya', shield: 'round', armor: 'robe', legs: 'bare', beard: true, trim: [0.93, 0.9, 0.82] },
-    roman: { skin: [0.95, 0.8, 0.66], hat: 'crest', ghat: 'g_roman', shield: 'scutum', armor: 'segmentata', legs: 'bare', cloak: [0.72, 0.12, 0.1] },
-    celt: { skin: [0.97, 0.84, 0.72], hat: 'limed', ghat: 'limed', shield: 'oval', armor: 'plaid', legs: 'trousers', pants: [0.4, 0.42, 0.3], hair: [0.62, 0.3, 0.12], beard: true },
-    german: { skin: [0.97, 0.84, 0.72], hat: 'knot', ghat: 'knot', shield: 'hex', armor: 'furcloak', legs: 'wraps', pants: [0.36, 0.3, 0.22], hair: [0.8, 0.64, 0.34], beard: true },
-    sarmatian: { skin: [0.9, 0.74, 0.58], hat: 'spike', ghat: 'g_spike', shield: 'small', armor: 'scale', legs: 'boots', pants: [0.3, 0.26, 0.22] },
+  // ======================================================= 人物模型（js/figure.js） --
+  // 第三版：士兵、旗手、骑马的武将全部改用 SG.Figure 的平滑蒙皮模型（DESIGN-V3 §1、§8）：
+  //   · 步兵 / 弓手：SG.Figure.crowd 实例化士兵群（低精度，按兵种 × 文化成组，势力色为实例属性；绘制次数 = 组数）；
+  //   · 旗手：单独的低精度士兵（SkinnedMesh），双手竖持长枪作旗杆，旗面挂在枪杆上；
+  //   · 武将：中精度名将模型（专属兵器、与头像一致的面部）骑中精度战马（马衣为势力色，安息 / 萨尔马提亚为鳞甲具装），
+  //     马鞍后插帅旗。
+  // 模型单位为米、面朝 +Z；本场景沿用旧单位（士兵约 0.9 高），统一缩放 FIG_S。
+  // 动作由时间轴直接求出「片段 + 片段内时刻」（纯函数，跳过时可直接摆出结果）：行进 / 冲锋的步频按位移换算，
+  // 因此脚步与移动同步，倒放即为后退。
+  const FIG_S = 0.5;
+  const BACK = 0.6, GBACK = 0.45;          // 收队时步兵 / 武将后撤的距离
+  const FLAG_GRIP = new THREE.Vector3(-0.2, 1.12, 0.24), FLAG_DIR = new THREE.Vector3(0.04, 1, 0.1);   // 旗手持杆（人物局部坐标，米）
+  function uniq(a) { return a.filter((v, i) => a.indexOf(v) === i); }
+  function mixHex(a, b, k) { return '#' + SG.Gfx.color(a).lerp(SG.Gfx.color(b), k).getHexString(); }
+  const WOOD = C(0.43, 0.3, 0.17), GOLD = C(0.88, 0.7, 0.28);
+  // 步幅（米 / 周期）与步频上限（周期 / 秒）：位移过快时把步幅放大（略有滑步），步频不超过自然值的 1.3 倍
+  const GAIT = {
+    walk: { stride: 1.45, dur: 1.0 }, run: { stride: 3.0, dur: 0.66 },
+    hwalk: { stride: 1.9, dur: 1.1 }, trot: { stride: 2.6, dur: 0.7 }, gallop: { stride: 5.0, dur: 0.5 },
   };
-  function cultOf(c) { return CULT[c] || CULT.han; }
-  const IRON = C(0.42, 0.43, 0.47), IRON_D = C(0.3, 0.31, 0.35), WOOD = C(0.43, 0.3, 0.17), RED = C(0.8, 0.16, 0.12), GOLD = C(0.88, 0.7, 0.28);
-  const BRONZE = C(0.7, 0.5, 0.26), FUR = C(0.46, 0.33, 0.2), TAN = C(0.74, 0.62, 0.4), WHITE = C(0.95, 0.94, 0.89);
-  function rgbC(a, dflt) { return a ? C(a[0], a[1], a[2]) : dflt; }
-
-  // 头饰：y0 = 头顶，z0 = 头部中心 z，s = 尺寸倍数；acc = 识别色（近色对阵时的缨 / 羽 / 带，可为 null）
-  function headgear(mb, hat, team, y0, s, z0, acc, cu) {
-    z0 = z0 || 0;
-    const at = (x, y, z) => V(x * s, y0 + y * s, z0 + z * s);
-    const sz = (x, y, z) => V(x * s, y * s, z * s);
-    const hair = rgbC(cu && cu.hair, rgbC(HAIR_D));
-    const tassel = acc || RED;
-    const cap = () => mb.box(at(0, 0.0, -0.005), sz(0.17, 0.035, 0.165), hair);
-    switch (hat) {
-      case 'bun':      // 南中：椎髻 + 骨簪 + 红头带
-        mb.box(at(0, -0.03, 0), sz(0.17, 0.03, 0.16), acc || RED);
-        mb.box(at(0, 0.03, -0.02), sz(0.08, 0.07, 0.08), hair);
-        mb.box(at(0, 0.05, -0.02), sz(0.17, 0.018, 0.018), C(0.94, 0.9, 0.78));
-        break;
-      case 'mizura':   // 倭：美豆良（左右耳侧的发环）
-        mb.box(at(0, 0.005, 0), sz(0.17, 0.035, 0.16), hair);
-        mb.box(at(-0.1, -0.08, 0), sz(0.04, 0.09, 0.05), hair);
-        mb.box(at(0.1, -0.08, 0), sz(0.04, 0.09, 0.05), hair);
-        mb.box(at(0, -0.025, 0), sz(0.175, 0.02, 0.165), acc || WHITE);
-        break;
-      case 'band':
-        mb.box(at(0, -0.03, 0), sz(0.17, 0.035, 0.16), acc || shade(team, 0.2));
-        mb.box(at(0, 0.005, 0), sz(0.155, 0.03, 0.15), hair);
-        break;
-      case 'feather':  // 夷洲：头带 + 竖羽
-        cap();
-        mb.box(at(0, -0.03, 0), sz(0.175, 0.035, 0.165), acc || shade(team, 0.15));
-        beam(mb, at(-0.04, -0.01, -0.06), at(-0.07, 0.17, -0.09), 0.035 * s, 0.012 * s, WHITE);
-        beam(mb, at(0.0, -0.01, -0.07), at(0.0, 0.2, -0.1), 0.035 * s, 0.012 * s, tassel);
-        beam(mb, at(0.04, -0.01, -0.06), at(0.07, 0.17, -0.09), 0.035 * s, 0.012 * s, WHITE);
-        break;
-      case 'seband':   // 林邑 / 扶南：金箍 + 顶髻
-        cap();
-        mb.box(at(0, -0.03, 0), sz(0.178, 0.03, 0.168), GOLD);
-        mb.cone(at(0, 0.0, -0.01), 0.05 * s, 0.09 * s, 5, hair);
-        mb.box(at(0, 0.05, -0.01), sz(0.03, 0.03, 0.03), GOLD);
-        break;
-      case 'plume':    // 高句丽 / 三韩：铁盔 + 白羽
-        mb.cone(at(0, -0.035, 0), 0.115 * s, 0.12 * s, 6, IRON);
-        mb.box(at(0, 0.13, -0.01), sz(0.025, 0.14, 0.05), acc || C(0.95, 0.95, 0.9));
-        mb.box(at(-0.09, -0.1, 0.02), sz(0.02, 0.08, 0.06), IRON_D);
-        mb.box(at(0.09, -0.1, 0.02), sz(0.02, 0.08, 0.06), IRON_D);
-        break;
-      case 'fur':      // 草原：毡帽 + 毛皮檐
-        mb.cylinder(at(0, -0.05, 0), 0.115 * s, 0.1 * s, 0.09 * s, 6, FUR);
-        mb.cone(at(0, 0.035, 0), 0.08 * s, 0.07 * s, 6, shade(team, -0.1));
-        if (acc) mb.box(at(0, 0.1, 0), sz(0.03, 0.04, 0.03), acc);
-        mb.box(at(0, -0.12, -0.08), sz(0.06, 0.12, 0.03), hair);    // 辫
-        break;
-      case 'tall':     // 西域：白毡尖帽 + 帽檐
-        mb.cylinder(at(0, -0.04, 0), 0.105 * s, 0.1 * s, 0.03 * s, 6, C(0.82, 0.76, 0.62));
-        mb.cone(at(0, -0.01, 0), 0.095 * s, 0.24 * s, 6, C(0.86, 0.8, 0.66));
-        mb.box(at(0, -0.035, 0), sz(0.2, 0.012, 0.19), acc || shade(team, 0.1));
-        break;
-      case 'kushan':   // 贵霜：深色高尖帽 + 金箍
-        mb.cylinder(at(0, -0.045, 0), 0.11 * s, 0.11 * s, 0.035 * s, 6, acc || GOLD);
-        mb.cone(at(0, -0.01, -0.01), 0.1 * s, 0.27 * s, 6, shade(team, -0.42));
-        break;
-      case 'phrygian': // 安息：弗里吉亚软帽（帽尖前倾）+ 护耳垂片
-        mb.cylinder(at(0, -0.05, 0), 0.112 * s, 0.105 * s, 0.07 * s, 6, shade(team, -0.3));
-        beam(mb, at(0, 0.015, -0.01), at(0, 0.12, 0.07), 0.16 * s, 0.03 * s, shade(team, -0.22));
-        mb.box(at(-0.088, -0.12, 0.01), sz(0.02, 0.1, 0.07), shade(team, -0.3));
-        mb.box(at(0.088, -0.12, 0.01), sz(0.02, 0.1, 0.07), shade(team, -0.3));
-        if (acc) mb.box(at(0, -0.03, 0.002), sz(0.228, 0.02, 0.215), acc);
-        break;
-      case 'kufiya':   // 阿拉伯：头巾垂肩 + 深色头箍
-        mb.box(at(0, -0.01, 0), sz(0.185, 0.05, 0.175), WHITE);
-        mb.box(at(0, -0.12, -0.085), sz(0.19, 0.2, 0.025), C(0.9, 0.88, 0.82));
-        mb.box(at(-0.092, -0.1, -0.02), sz(0.02, 0.16, 0.12), C(0.9, 0.88, 0.82));
-        mb.box(at(0.092, -0.1, -0.02), sz(0.02, 0.16, 0.12), C(0.9, 0.88, 0.82));
-        mb.cylinder(at(0, 0.01, 0), 0.1 * s, 0.1 * s, 0.022 * s, 6, acc || C(0.15, 0.12, 0.1));
-        break;
-      case 'spike':    // 萨尔马提亚：尖顶铁盔 + 锁子护颈
-        mb.cone(at(0, -0.04, 0), 0.112 * s, 0.2 * s, 6, IRON);
-        mb.box(at(0, -0.1, -0.075), sz(0.16, 0.09, 0.025), IRON_D);
-        if (acc) mb.box(at(0, 0.165, 0), sz(0.03, 0.05, 0.03), acc);
-        break;
-      case 'crest':    // 罗马：高卢式铁盔 + 纵冠 + 护颊 + 宽护颈
-        mb.cone(at(0, -0.035, 0), 0.115 * s, 0.11 * s, 6, IRON);
-        mb.box(at(0, 0.09, 0), sz(0.03, 0.06, 0.2), tassel);
-        mb.box(at(-0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
-        mb.box(at(0.085, -0.09, 0.03), sz(0.02, 0.08, 0.06), IRON_D);
-        mb.box(at(0, -0.075, -0.085), sz(0.2, 0.025, 0.06), IRON_D);
-        break;
-      case 'limed':    // 喀里多尼亚：石灰竖发 + 长发
-        cap();
-        for (let i = -1; i <= 1; i++) mb.cone(at(i * 0.05, 0.0, -0.01 - Math.abs(i) * 0.02), 0.035 * s, 0.09 * s, 4, shade(hair, 0.25));
-        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.17, 0.035), hair);
-        break;
-      case 'knot':     // 日耳曼：苏维汇发髻（右侧）+ 长发
-        cap();
-        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.18, 0.04), hair);
-        mb.box(at(0.075, 0.0, -0.01), sz(0.06, 0.06, 0.07), shade(hair, -0.1));
-        if (acc) mb.box(at(0, -0.035, 0), sz(0.178, 0.018, 0.168), acc);
-        break;
-      case 'hair':
-        mb.box(at(0, 0.0, -0.01), sz(0.17, 0.04, 0.17), hair);
-        mb.box(at(0, -0.1, -0.075), sz(0.17, 0.18, 0.04), hair);
-        break;
-      case 'turban':
-        mb.cylinder(at(0, -0.05, 0), 0.105 * s, 0.11 * s, 0.08 * s, 6, C(0.92, 0.9, 0.84));
-        mb.cone(at(0, 0.03, 0), 0.07 * s, 0.05 * s, 6, C(0.9, 0.88, 0.8));
-        break;
-      // ---- 武将专用 ----
-      case 'g_han':    // 汉：金盔 + 雉尾
-        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
-        mb.cone(at(0, -0.01, 0), 0.12, 0.14, 6, GOLD);
-        beam(mb, at(0, 0.12, -0.015), at(0, 0.36, -0.215), 0.035, 0.012, tassel);
-        beam(mb, at(0.03, 0.12, -0.015), at(0.06, 0.32, -0.235), 0.03, 0.01, shade(tassel, 0.2));
-        break;
-      case 'g_roman':  // 罗马：铁盔 + 横向红冠（百夫长式）+ 护颊
-        mb.cone(at(0, -0.035, 0), 0.122, 0.12, 6, IRON);
-        mb.box(at(0, 0.095, 0), V(0.3, 0.075, 0.035), tassel);
-        mb.box(at(0, 0.055, 0), V(0.04, 0.03, 0.04), GOLD);
-        mb.box(at(-0.09, -0.11, 0.045), V(0.02, 0.09, 0.07), IRON_D);
-        mb.box(at(0.09, -0.11, 0.045), V(0.02, 0.09, 0.07), IRON_D);
-        mb.box(at(0, -0.1, -0.075), V(0.17, 0.06, 0.03), IRON_D);
-        break;
-      case 'g_spike':  // 萨尔马提亚：鎏金尖顶分片盔 + 锁子护颈 + 两条飘带
-        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.03, 6, shade(GOLD, -0.25));
-        mb.cone(at(0, -0.02, 0), 0.118, 0.24, 6, GOLD);
-        for (let i = -1; i <= 1; i += 2) mb.box(at(i * 0.055, 0.04, 0), V(0.012, 0.11, 0.012), shade(GOLD, -0.35));
-        mb.box(at(0, -0.13, -0.085), V(0.19, 0.12, 0.03), IRON_D);
-        beam(mb, at(-0.04, -0.04, -0.105), at(-0.07, -0.24, -0.315), 0.03, 0.015, WHITE);
-        beam(mb, at(0.04, -0.04, -0.105), at(0.07, -0.21, -0.295), 0.03, 0.015, tassel);
-        break;
-      case 'g_plume':  // 高句丽 / 三韩：鎏金盔 + 高耸白羽
-        mb.cylinder(at(0, -0.04, 0), 0.125, 0.125, 0.035, 6, shade(GOLD, -0.2));
-        mb.cone(at(0, -0.01, 0), 0.115, 0.13, 6, GOLD);
-        beam(mb, at(0, 0.1, 0), at(0, 0.4, -0.03), 0.05, 0.02, acc || C(0.96, 0.95, 0.9));
-        beam(mb, at(0.035, 0.1, 0), at(0.07, 0.34, -0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
-        beam(mb, at(-0.035, 0.1, 0), at(-0.07, 0.34, -0.05), 0.035, 0.012, C(0.92, 0.9, 0.84));
-        break;
-      case 'g_tiara':  // 安息：高圆提亚拉冠（势力色暗部）+ 珠串金箍 + 背后飘带 + 披发
-        mb.cylinder(at(0, -0.045, 0), 0.118, 0.112, 0.17, 6, shade(team, -0.38));
-        mb.cylinder(at(0, 0.125, 0), 0.112, 0.06, 0.06, 6, shade(team, -0.3));
-        mb.cylinder(at(0, -0.045, 0), 0.124, 0.124, 0.035, 6, GOLD);
-        mb.cylinder(at(0, 0.09, 0), 0.116, 0.116, 0.022, 6, GOLD);
-        for (let i = -2; i <= 2; i++) mb.box(at(i * 0.035, 0.035, 0.11), V(0.018, 0.018, 0.014), WHITE);
-        mb.box(at(0, -0.14, -0.08), V(0.18, 0.2, 0.05), hair);
-        beam(mb, at(-0.04, -0.03, -0.11), at(-0.08, -0.25, -0.3), 0.03, 0.015, tassel);
-        beam(mb, at(0.04, -0.03, -0.11), at(0.08, -0.22, -0.3), 0.03, 0.015, GOLD);
-        break;
-      case 'g_wa':     // 倭：冲角付胄（前凸的铁盔）+ 宽护颈 + 立饰
-        mb.cylinder(at(0, -0.045, 0), 0.128, 0.122, 0.05, 6, IRON_D);
-        mb.cone(at(0, 0.0, 0), 0.12, 0.12, 6, IRON);
-        beam(mb, at(0, 0.02, 0.02), at(0, -0.02, 0.15), 0.08, 0.02, IRON);
-        mb.box(at(0, -0.1, -0.1), V(0.27, 0.035, 0.11), IRON_D);
-        mb.box(at(0, -0.14, -0.12), V(0.3, 0.035, 0.11), shade(IRON_D, -0.1));
-        mb.box(at(0, 0.13, 0), V(0.02, 0.07, 0.06), acc || GOLD);
-        break;
-      case 'g_fur':    // 草原：狐皮帽 + 护耳 + 势力色毡顶 + 双辫
-        mb.cylinder(at(0, -0.06, 0), 0.13, 0.12, 0.1, 6, FUR);
-        mb.cone(at(0, 0.04, 0), 0.1, 0.15, 6, shade(team, -0.05));
-        mb.box(at(-0.105, -0.13, 0.0), V(0.03, 0.12, 0.08), shade(FUR, 0.1));
-        mb.box(at(0.105, -0.13, 0.0), V(0.03, 0.12, 0.08), shade(FUR, 0.1));
-        mb.box(at(0, 0.2, 0), V(0.03, 0.05, 0.03), acc || GOLD);
-        mb.box(at(-0.05, -0.18, -0.09), V(0.04, 0.16, 0.03), hair);
-        mb.box(at(0.05, -0.18, -0.09), V(0.04, 0.16, 0.03), hair);
-        break;
-      case 'g_feather':// 南中 / 夷洲首领：金箍 + 扇形羽冠
-        mb.box(at(0, -0.03, 0), V(0.18, 0.04, 0.17), GOLD);
-        mb.box(at(0, 0.0, -0.005), V(0.17, 0.035, 0.165), hair);
-        for (let i = -2; i <= 2; i++) beam(mb, at(i * 0.03, 0.0, -0.06), at(i * 0.09, 0.26 - Math.abs(i) * 0.04, -0.1), 0.045, 0.015, i % 2 ? WHITE : (i ? tassel : shade(team, 0.25)));
-        break;
-      case 'g_crown':  // 林邑 / 扶南：多层金尖冠
-        mb.cylinder(at(0, -0.04, 0), 0.115, 0.11, 0.06, 6, GOLD);
-        mb.cylinder(at(0, 0.02, 0), 0.095, 0.075, 0.08, 6, shade(GOLD, 0.08));
-        mb.cylinder(at(0, 0.1, 0), 0.065, 0.045, 0.07, 6, GOLD);
-        mb.cone(at(0, 0.17, 0), 0.04, 0.14, 5, shade(GOLD, 0.12));
-        if (acc) mb.box(at(0, -0.01, 0.105), V(0.04, 0.04, 0.02), acc);
-        break;
-      case 'g_kushan': // 贵霜王冠：高尖帽 + 金冠带 + 飘带
-        mb.cylinder(at(0, -0.045, 0), 0.12, 0.12, 0.045, 6, GOLD);
-        mb.cone(at(0, 0.0, -0.01), 0.108, 0.3, 6, shade(team, -0.42));
-        beam(mb, at(-0.04, -0.03, -0.11), at(-0.08, -0.23, -0.3), 0.03, 0.015, acc || GOLD);
-        beam(mb, at(0.04, -0.03, -0.11), at(0.08, -0.2, -0.3), 0.03, 0.015, acc || GOLD);
-        break;
-      default:         // 'cone' 汉军铁胄：盔体、帽檐、红缨、顿项
-        mb.cylinder(at(0, -0.045, 0), 0.118 * s, 0.118 * s, 0.03 * s, 6, IRON_D);
-        mb.cone(at(0, -0.02, 0), 0.112 * s, 0.13 * s, 6, IRON);
-        mb.box(at(0, 0.12, 0), sz(0.035, 0.05, 0.035), tassel);
-        mb.box(at(0, -0.1, -0.07), sz(0.17, 0.1, 0.03), IRON_D);
-        break;
-    }
+  // 一段匀加速 / 缓动位移的步态时刻：dist = 已走距离（场景单位），D / T = 全程距离与时长
+  function gaitT(g, dist, D, T) {
+    const G = GAIT[g];
+    const stride = Math.max(G.stride * FIG_S, (D / Math.max(0.05, T)) * G.dur / 1.3);
+    return (dist / stride) * G.dur;
   }
-
-  // 胡须（面朝 +z）：hc = 头部中心，hs = 头部尺寸
-  function beardOf(mb, cu, hc, hs) {
-    if (!cu.beard) return;
-    const hair = rgbC(cu.hair, rgbC(HAIR_D));
-    mb.box(V(hc.x, hc.y - hs * 0.36, hc.z + hs * 0.46), V(hs * 0.82, hs * 0.36, hs * 0.16), hair);
-    mb.box(V(hc.x, hc.y - hs * 0.16, hc.z + hs * 0.52), V(hs * 0.5, hs * 0.08, hs * 0.06), hair);
+  // 名驹与毛色（与旧版相同的人物对应；其余按姓名散列）
+  const HORSE_OF = {
+    '吕布': { name: '赤兔' }, '关羽': { name: '赤兔' }, '刘备': { name: '的卢' }, '曹操': { name: '绝影' },
+    '赵云': { name: '白龙驹' }, '公孙瓒': { coat: '#e8e6e0' }, '马超': { coat: '#d8d4ca' }, '张飞': { coat: '#2a2422' },
+  };
+  const COATS = ['#7a4a2c', '#5e3a22', '#9a7448', '#38302a', '#b8ae9e', '#8a5634'];
+  function horseOpts(info, gen) {
+    const n = info.name;
+    const o = Object.assign({ lod: 'mid', color: info.color, general: true, seed: Math.abs(hashStr(n)) % 5 }, HORSE_OF[n] || {});
+    if (!o.name && !o.coat) o.coat = COATS[Math.abs(hashStr(n)) % COATS.length];
+    // 具装：安息、萨尔马提亚为鳞甲；其余为势力色马衣
+    o.armor = info.culture === 'persia' || info.culture === 'sarmatian' ? 'scale' : 'cloth';
+    void gen;
+    return o;
   }
-
-  // 甲衣样式：F = 躯干 { y, z, w, h, d }（Unity 坐标，面朝 +z）；trim = 镶边 / 识别色
-  function torsoDeco(mb, cu, F, t, trim) {
-    const { y, z, w, h, d } = F;
-    const fz = z + d / 2 + 0.006, bz = z - d / 2 - 0.006;
-    const light = shade(t, 0.16);
-    const both = (cx, cy, sw, sh, col, dz) => { dz = dz || 0; mb.box(V(cx, cy, fz + dz), V(sw, sh, 0.02), col); mb.box(V(cx, cy, bz - dz), V(sw, sh, 0.02), shade(col, -0.08)); };
-    const OV = fz + 0.014;     // 贴在胸甲外的细节
-    switch (cu.armor) {
-      case 'scale':        // 鱼鳞甲：前后三排错色甲片
-        for (let r = 0; r < 3; r++) {
-          const yy = y + h * (0.26 - r * 0.21), ww = w * (0.8 - r * 0.04);
-          both(0, yy, ww, h * 0.2, r % 2 ? IRON : BRONZE);
-          for (let i = -1; i <= 1; i += 2) mb.box(V(i * ww * 0.25, yy - h * 0.09, OV), V(0.02, 0.02, 0.012), shade(r % 2 ? IRON : BRONZE, -0.3));
-        }
-        break;
-      case 'segmentata':   // 环片甲：铁条绕身（缝隙露出势力色）
-        for (let r = 0; r < 3; r++) mb.box(V(0, y + h * (0.32 - r * 0.25), z), V(w + 0.016, h * 0.15, d + 0.016), r % 2 ? IRON_D : IRON);
-        mb.box(V(0, y + h * 0.45, z), V(w * 0.55, h * 0.1, d + 0.02), IRON_D);
-        break;
-      case 'tanko':        // 短甲：铁胸板 + 势力色横带 + 勾玉项链
-        both(0, y + h * 0.08, w * 0.8, h * 0.62, IRON);
-        both(0, y + h * 0.08, w * 0.82, h * 0.1, light, 0.008);
-        for (let i = -2; i <= 2; i++) mb.box(V(i * 0.026, y + h * 0.4 - Math.abs(i) * 0.01, OV), V(0.018, 0.026, 0.014), C(0.2, 0.62, 0.45));
-        break;
-      case 'robe':         // 长袍：前襟镶边
-        both(0, y, w * 0.12, h * 0.95, trim);
-        break;
-      case 'furcoat':      // 皮袍：毛皮领与前襟
-        mb.box(V(0, y + h * 0.43, z), V(w * 0.78, h * 0.16, d + 0.02), FUR);
-        both(0, y - h * 0.05, w * 0.14, h * 0.8, FUR);
-        break;
-      case 'rattan':       // 藤甲：棕黄编织胸甲（纵横两色）
-        both(0, y + h * 0.05, w * 0.82, h * 0.7, TAN);
-        for (let i = -1; i <= 1; i++) mb.box(V(i * w * 0.24, y + h * 0.05, OV), V(0.014, h * 0.66, 0.012), shade(TAN, -0.25));
-        mb.box(V(0, y + h * 0.05, OV), V(w * 0.8, 0.014, 0.012), shade(TAN, -0.25));
-        break;
-      case 'bare':         // 短衣：金饰 / 贝珠项链
-        mb.box(V(0, y + h * 0.42, z + d * 0.2), V(w * 0.6, 0.03, d * 0.75), cu.tattoo ? WHITE : GOLD);
-        if (!cu.tattoo) mb.box(V(0, y + h * 0.3, fz), V(0.05, 0.05, 0.015), GOLD);
-        break;
-      case 'plaid':        // 方格衣 + 金项圈（torc）
-        for (let r = 0; r < 2; r++) for (let i = -1; i <= 1; i++) if ((r + i) % 2 === 0) both(i * w * 0.28, y + h * (0.2 - r * 0.36), w * 0.24, h * 0.3, shade(t, -0.32));
-        mb.box(V(0, y + h * 0.52, z + d * 0.15), V(w * 0.5, 0.03, d * 0.7), GOLD);
-        break;
-      case 'furcloak':     // 毛皮披肩（肩与背）
-        mb.box(V(0, y + h * 0.4, z - d * 0.1), V(w + 0.05, h * 0.22, d + 0.02), FUR);
-        mb.box(V(0, y + h * 0.05, bz - 0.01), V(w * 0.9, h * 0.7, 0.03), shade(FUR, -0.08));
-        break;
-      default:             // 'lamellar' 札甲：胸甲 + 两道甲片横缝
-        both(0, y + h * 0.08, w * 0.76, h * 0.62, light);
-        for (let r = 0; r < 2; r++) mb.box(V(0, y + h * (0.16 - r * 0.2), OV), V(w * 0.74, 0.012, 0.012), shade(t, -0.12));
-        break;
-    }
+  // 兵种：前排刀盾、其后长枪（罗马全为短剑 + 大盾），弓手单列
+  function infType(culture, file) { return culture === 'roman' ? (file % 2 ? 'spear' : 'sword') : (file === 0 ? 'sword' : 'spear'); }
+  const TYPE_SEED = { spear: 0, sword: 1, archer: 0 };
+  function crowdSpecs(cultures) {
+    const out = [];
+    for (const c of cultures) for (const ty of ['spear', 'sword', 'archer']) out.push({ type: ty, culture: c, seed: TYPE_SEED[ty] });
+    return out;
   }
-
-  // 盾（左臂外侧，盾面法线沿 x）：c = 盾心，trim = 镶边 / 识别色（null 时用文化默认）
-  function shieldOf(mb, kind, c, t, trim) {
-    const face = shade(t, 0.06), dark = shade(t, -0.4);
-    const rim = trim || dark, boss = trim || GOLD;
-    const out = (dx) => V(c.x - dx, c.y, c.z);       // 向外（-x）偏移
-    switch (kind) {
-      case 'round':
-        discX(mb, V(c.x + 0.006, c.y, c.z), 0.185, 0.03, rim);
-        discX(mb, c, 0.17, 0.035, face);
-        mb.box(out(0.025), V(0.02, 0.06, 0.06), boss);
-        break;
-      case 'small':        // 小圆皮盾：皮色盾面 + 势力色盾心
-        discX(mb, c, 0.135, 0.03, C(0.4, 0.28, 0.16));
-        discX(mb, out(0.012), 0.09, 0.012, face);
-        mb.box(out(0.026), V(0.02, 0.045, 0.045), boss);
-        break;
-      case 'rattan':       // 藤牌：棕黄编织 + 势力色内圈
-        discX(mb, c, 0.18, 0.035, TAN);
-        discX(mb, out(0.012), 0.1, 0.012, face);
-        mb.box(out(0.028), V(0.02, 0.05, 0.05), trim || C(0.92, 0.88, 0.76));
-        break;
-      case 'oval':         // 长椭圆盾（凯尔特 / 南海）：竖脊 + 盾心
-        discX(mb, V(c.x + 0.006, c.y, c.z), 0.14, 0.03, rim, 10, 0.25);
-        discX(mb, c, 0.125, 0.035, face, 10, 0.235);
-        mb.box(out(0.022), V(0.015, 0.4, 0.03), boss);
-        mb.box(out(0.028), V(0.02, 0.07, 0.07), boss);
-        break;
-      case 'hex':          // 日耳曼六角盾
-        discX(mb, V(c.x + 0.006, c.y, c.z), 0.2, 0.03, rim, 6);
-        discX(mb, c, 0.18, 0.035, face, 6);
-        mb.box(out(0.026), V(0.02, 0.065, 0.065), boss);
-        break;
-      case 'scutum':       // 罗马长方大盾：势力色盾面 + 金色边框、竖脊、盾心
-        mb.box(c, V(0.04, 0.46, 0.3), face);
-        mb.box(out(0.022), V(0.008, 0.46, 0.022), boss);
-        mb.box(V(c.x - 0.022, c.y + 0.22, c.z), V(0.008, 0.022, 0.3), trim || GOLD);
-        mb.box(V(c.x - 0.022, c.y - 0.22, c.z), V(0.008, 0.022, 0.3), trim || GOLD);
-        mb.box(V(c.x - 0.022, c.y, c.z + 0.14), V(0.008, 0.46, 0.02), trim || GOLD);
-        mb.box(V(c.x - 0.022, c.y, c.z - 0.14), V(0.008, 0.46, 0.02), trim || GOLD);
-        mb.box(out(0.03), V(0.02, 0.08, 0.08), boss);
-        break;
-      case 'spara':        // 安息藤编立盾：浅黄编条 + 势力色横纹
-        mb.box(c, V(0.03, 0.46, 0.24), C(0.78, 0.68, 0.46));
-        for (let i = -1; i <= 1; i++) mb.box(V(c.x - 0.018, c.y + i * 0.13, c.z), V(0.008, 0.06, 0.24), face);
-        mb.box(V(c.x - 0.018, c.y, c.z + 0.115), V(0.01, 0.46, 0.02), rim);
-        mb.box(V(c.x - 0.018, c.y, c.z - 0.115), V(0.01, 0.46, 0.02), rim);
-        break;
-      case 'wood':         // 倭：木质立盾 + 势力色锯齿纹
-        mb.box(c, V(0.035, 0.44, 0.2), shade(WOOD, 0.12));
-        for (let i = -1; i <= 1; i++) mb.box(V(c.x - 0.02, c.y + i * 0.13, c.z + (i % 2 ? 0.04 : -0.04)), V(0.008, 0.07, 0.11), face);
-        mb.box(V(c.x - 0.02, c.y + 0.205, c.z), V(0.01, 0.03, 0.2), rim);
-        break;
-      default:             // 'rect' 汉：长方盾
-        mb.box(c, V(0.04, 0.4, 0.25), face);
-        mb.box(out(0.025), V(0.02, 0.3, 0.08), dark);
-        mb.box(out(0.03), V(0.02, 0.07, 0.07), boss);
-        mb.box(V(c.x, c.y + 0.205, c.z), V(0.045, 0.02, 0.25), rim);
-        mb.box(V(c.x, c.y - 0.205, c.z), V(0.045, 0.02, 0.25), rim);
-        break;
-    }
+  // figure.js 未随页面载入时（旧版 index.html），按 clash.js 自身的路径就近载入一次
+  const CLASH_SRC = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '';
+  let figLoading = null;
+  let prepChain = null;      // 进行中的 SG.Clash.prepare（播放前先等它做完）
+  function ensureFigure() {
+    if (SG.Figure) return Promise.resolve(true);
+    if (figLoading) return figLoading;
+    figLoading = new Promise(resolve => {
+      try {
+        const s = document.createElement('script');
+        s.src = CLASH_SRC ? CLASH_SRC.replace(/clash\.js(\?.*)?$/, 'figure.js') : 'js/figure.js';
+        s.onload = () => resolve(!!SG.Figure);
+        s.onerror = () => { figLoading = null; resolve(false); };
+        document.head.appendChild(s);
+      } catch (e) { figLoading = null; resolve(false); }
+    });
+    return figLoading;
   }
-
-  // 士兵身体：acc = 识别色（两军势力色相近时给出，用在肩、腰带、盾缘、盔缨上；否则 null）
-  function bodyGeo(team, culture, archer, acc) {
-    const mb = new SG.MeshBuilder();
-    const cu = cultOf(culture);
-    const t = team, mid = shade(t, -0.18), dark = shade(t, -0.4);
-    const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
-    const leather = C(0.32, 0.22, 0.13);
-    const trim = acc || rgbC(cu.trim, null);
-    const armBare = cu.armor === 'bare' || cu.armor === 'plaid' || cu.armor === 'rattan';
-    const arm = armBare ? skin : mid;
-    const robe = cu.armor === 'robe' || cu.armor === 'furcoat';
-    if (robe) {
-      const hem = cu.armor === 'robe' ? 0.2 : 0.27;
-      mb.box(V(0, (hem + 0.45) / 2, 0), V(0.31, 0.45 - hem, 0.205), mid);                         // 袍摆
-      mb.box(V(0, hem + 0.015, 0), V(0.33, 0.03, 0.215), cu.armor === 'furcoat' ? FUR : (trim || dark));
-    } else {
-      mb.box(V(0, 0.385, 0), V(0.31, 0.13, 0.2), mid);               // 甲裙
-      mb.box(V(0, 0.335, 0.0), V(0.33, 0.04, 0.215), trim || dark);   // 甲裙下缘
-    }
-    mb.box(V(0, 0.565, 0), V(0.29, 0.26, 0.18), t);                   // 躯干
-    torsoDeco(mb, cu, { y: 0.565, z: 0, w: 0.29, h: 0.26, d: 0.18 }, t, trim || GOLD);
-    mb.box(V(0, 0.455, 0), V(0.3, 0.045, 0.19), acc || leather);      // 腰带
-    mb.box(V(0, 0.455, 0.1), V(0.06, 0.05, 0.02), GOLD);              // 带扣
-    if (!armBare && cu.armor !== 'furcloak') {
-      const sh = acc || (cu.armor === 'segmentata' ? IRON : dark);
-      mb.box(V(-0.185, 0.655, 0), V(0.1, 0.075, 0.18), sh);            // 肩甲
-      mb.box(V(0.185, 0.655, 0), V(0.1, 0.075, 0.18), sh);
-    } else if (acc) {
-      mb.box(V(-0.185, 0.665, 0), V(0.09, 0.04, 0.17), acc);
-      mb.box(V(0.185, 0.665, 0), V(0.09, 0.04, 0.17), acc);
-    }
-    mb.box(V(-0.2, 0.53, 0.03), V(0.07, 0.19, 0.08), arm);            // 左臂
-    mb.box(V(0.2, 0.575, 0.04), V(0.07, 0.13, 0.08), arm);            // 右上臂
-    mb.box(V(0.2, 0.505, 0.12), V(0.065, 0.065, 0.16), arm);          // 右前臂（前伸到握点）
-    if (cu.tattoo) for (const sx of [-0.2, 0.2]) mb.box(V(sx, 0.56, 0.072), V(0.074, 0.018, 0.012), C(0.18, 0.22, 0.3));   // 文身
-    mb.box(V(0, 0.71, 0), V(0.08, 0.04, 0.08), skin);                 // 颈
-    mb.box(V(0, 0.795, 0.005), V(0.155, 0.145, 0.15), skin);          // 头
-    mb.box(V(0, 0.79, 0.081), V(0.11, 0.025, 0.01), shade(skin, -0.45));   // 眉眼的阴影
-    beardOf(mb, cu, { x: 0, y: 0.795, z: 0.005 }, 0.15);
-    headgear(mb, cu.hat, t, 0.87, 1, 0, acc, cu);
-    if (archer) {
-      // 箭囊（背后）与箭羽
-      mb.box(V(0.06, 0.6, -0.13), V(0.09, 0.3, 0.08), leather);
-      for (let i = 0; i < 3; i++) mb.box(V(0.04 + i * 0.022, 0.78, -0.13), V(0.016, 0.07, 0.016), C(0.92, 0.9, 0.85));
-    } else shieldOf(mb, cu.shield, V(-0.265, 0.51, 0.07), t, acc);
-    return mb.toGeometry();
-  }
-  // 腿（髋部为原点）：trousers 裤 + 绑腿 + 靴 / bare 裸腿 + 凉鞋 / boots 裤 + 高靴 / wraps 浅色裤 + 交叉绑带
-  function legGeo(culture) {
-    const mb = new SG.MeshBuilder();
-    const cu = cultOf(culture);
-    const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
-    const pants = rgbC(cu.pants, C(0.27, 0.22, 0.19));
-    switch (cu.legs) {
-      case 'bare':
-        mb.box(V(0, -0.12, 0), V(0.095, 0.24, 0.1), skin);
-        mb.box(V(0, -0.25, 0), V(0.1, 0.03, 0.105), C(0.4, 0.27, 0.15));
-        mb.box(V(0, -0.33, 0.02), V(0.11, 0.06, 0.15), C(0.36, 0.24, 0.13));
-        break;
-      case 'boots':
-        mb.box(V(0, -0.1, 0), V(0.11, 0.2, 0.12), pants);
-        mb.box(V(0, -0.27, 0.01), V(0.12, 0.18, 0.135), C(0.2, 0.14, 0.1));
-        mb.box(V(0, -0.345, 0.035), V(0.12, 0.04, 0.17), C(0.15, 0.11, 0.09));
-        break;
-      case 'wraps':
-        mb.box(V(0, -0.12, 0), V(0.11, 0.24, 0.12), pants);
-        mb.box(V(0, -0.17, 0.0), V(0.115, 0.022, 0.125), C(0.3, 0.22, 0.14));
-        mb.box(V(0, -0.24, 0.0), V(0.115, 0.022, 0.125), C(0.3, 0.22, 0.14));
-        mb.box(V(0, -0.31, 0.02), V(0.115, 0.1, 0.16), C(0.24, 0.17, 0.11));
-        break;
-      default:
-        mb.box(V(0, -0.12, 0), V(0.105, 0.24, 0.115), pants);
-        mb.box(V(0, -0.235, 0), V(0.11, 0.05, 0.12), C(0.72, 0.66, 0.55));   // 绑腿
-        mb.box(V(0, -0.31, 0.02), V(0.115, 0.1, 0.16), C(0.15, 0.11, 0.09));  // 靴
-        break;
-    }
-    return mb.toGeometry();
-  }
-  function spearGeo() {
-    const mb = new SG.MeshBuilder();
-    mb.box(V(0, 0.27, 0), V(0.024, 1.38, 0.024), WOOD);                  // 杆：y −0.42 → 0.96
-    mb.cone(V(0, 0.95, 0), 0.034, 0.15, 4, C(0.88, 0.9, 0.94));          // 矛头
-    mb.box(V(0, 0.935, 0), V(0.05, 0.035, 0.05), RED);                    // 红缨
-    mb.box(V(0, 0, 0), V(0.055, 0.065, 0.06), C(0.92, 0.76, 0.6));        // 拳
-    return mb.toGeometry();
-  }
-  function bowGeo() {
-    const mb = new SG.MeshBuilder();
-    const N = 6, R = 0.4;
-    for (let i = 0; i < N; i++) {
-      const y0 = -R + (i / N) * 2 * R, y1 = -R + ((i + 1) / N) * 2 * R;
-      const z0 = 0.14 * (1 - (y0 / R) * (y0 / R)), z1 = 0.14 * (1 - (y1 / R) * (y1 / R));
-      beam(mb, V(0, y0, z0), V(0, y1, z1), 0.028, 0.028, C(0.36, 0.22, 0.12));
-    }
-    beam(mb, V(0, -R, 0), V(0, R, 0), 0.007, 0.007, C(0.9, 0.88, 0.8));   // 弦
-    mb.box(V(0, 0, 0.03), V(0.055, 0.065, 0.06), C(0.92, 0.76, 0.6));
-    return mb.toGeometry();
-  }
+  // 箭（平滑箭杆、箭镞、三片箭羽），沿 three 的 −z 飞行
   function arrowGeo() {
     const mb = new SG.MeshBuilder();
-    beam(mb, V(0, 0, -0.3), V(0, 0, 0.28), 0.018, 0.018, C(0.5, 0.38, 0.22));
-    beam(mb, V(0, 0, 0.28), V(0, 0, 0.4), 0.05, 0, C(0.75, 0.76, 0.8));
-    const fl = C(0.94, 0.93, 0.88);
-    mb.quad(V(0, 0, -0.3), V(0, 0.045, -0.26), V(0, 0.045, -0.16), V(0, 0, -0.18), fl);
-    mb.quad(V(0, 0, -0.3), V(0, 0, -0.18), V(0, 0.045, -0.16), V(0, 0.045, -0.26), fl);
-    mb.quad(V(0, 0, -0.3), V(0.045, 0, -0.26), V(0.045, 0, -0.16), V(0, 0, -0.18), fl);
-    mb.quad(V(0, 0, -0.3), V(0, 0, -0.18), V(0.045, 0, -0.16), V(0.045, 0, -0.26), fl);
-    return mb.toGeometry();
-  }
-  function horseLegGeo() {
-    const mb = new SG.MeshBuilder();
-    beam(mb, V(0, 0.02, 0), V(0, -0.3, 0.02), 0.1, 0.07, C(1, 1, 1));
-    beam(mb, V(0, -0.3, 0.02), V(0, -0.5, 0.0), 0.065, 0.055, C(0.92, 0.92, 0.92));
-    mb.box(V(0, -0.525, 0.015), V(0.075, 0.05, 0.09), C(0.28, 0.28, 0.28));
-    return mb.toGeometry();
-  }
-  // 武将骑马像：马身、马鞍披挂（势力色）、骑者（按文化的头盔 / 甲衣 / 披风）、长柄刀、帅旗杆
-  function generalGeo(team, culture, horse, weapon, acc) {
-    const mb = new SG.MeshBuilder();
-    const cu = cultOf(culture);
-    const t = team, dark = shade(t, -0.4), mid = shade(t, -0.18), light = shade(t, 0.18);
-    const skin = C(cu.skin[0], cu.skin[1], cu.skin[2]);
-    const hd = shade(horse, -0.25), mane = luma(horse) > 0.6 ? C(0.85, 0.83, 0.8) : C(0.12, 0.1, 0.09);
-    const trim = acc || GOLD;
-    // 马
-    mb.box(V(0, 0.69, -0.02), V(0.3, 0.28, 0.86), horse);
-    mb.box(V(0, 0.71, 0.36), V(0.32, 0.3, 0.2), shade(horse, 0.04));      // 胸
-    mb.box(V(0, 0.7, -0.38), V(0.31, 0.27, 0.18), shade(horse, -0.05));   // 臀
-    beam(mb, V(0, 0.76, 0.42), V(0, 1.06, 0.62), 0.2, 0.15, horse);          // 颈
-    beam(mb, V(0, 1.1, 0.6), V(0, 0.97, 0.88), 0.15, 0.1, shade(horse, 0.04));   // 头
-    mb.box(V(0, 0.96, 0.88), V(0.09, 0.07, 0.06), hd);                       // 口鼻
-    mb.cone(V(-0.045, 1.14, 0.6), 0.025, 0.07, 4, hd);
-    mb.cone(V(0.045, 1.14, 0.6), 0.025, 0.07, 4, hd);
-    beam(mb, V(0, 0.87, 0.4), V(0, 1.15, 0.58), 0.06, 0.05, mane);           // 鬃
-    beam(mb, V(0, 0.76, -0.47), V(0, 0.4, -0.66), 0.09, 0.04, mane);         // 尾
-    // 鞍与披挂（草原 / 萨尔马提亚为毛皮鞍褥）
-    mb.box(V(0, 0.85, -0.04), V(0.34, 0.06, 0.4), dark);
-    mb.box(V(0, 0.7, -0.04), V(0.335, 0.26, 0.44), t);
-    mb.box(V(0, 0.575, -0.04), V(0.34, 0.03, 0.45), trim);
-    mb.box(V(0, 0.9, -0.12), V(0.2, 0.06, 0.16), cu.armor === 'furcoat' ? FUR : C(0.36, 0.22, 0.12));
-    // 骑者
-    const robe = cu.armor === 'robe' || cu.armor === 'furcoat';
-    const legC = cu.legs === 'bare' ? skin : (robe ? mid : dark);
-    mb.box(V(-0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), legC);                  // 腿
-    mb.box(V(0.16, 0.8, 0.06), V(0.09, 0.22, 0.12), legC);
-    const boot = cu.legs === 'boots' ? C(0.2, 0.14, 0.1) : C(0.15, 0.11, 0.09);
-    mb.box(V(-0.16, 0.68, 0.1), V(0.1, 0.07 + (cu.legs === 'boots' ? 0.05 : 0), 0.15), boot);
-    mb.box(V(0.16, 0.68, 0.1), V(0.1, 0.07 + (cu.legs === 'boots' ? 0.05 : 0), 0.15), boot);
-    mb.box(V(0, 1.1, -0.06), V(0.3, 0.32, 0.2), t);                          // 躯干
-    torsoDeco(mb, cu, { y: 1.1, z: -0.06, w: 0.3, h: 0.32, d: 0.2 }, t, trim);
-    mb.box(V(0, 0.95, -0.06), V(0.32, 0.06, 0.21), trim);                    // 腰带
-    if (cu.armor !== 'furcloak' && cu.armor !== 'bare') {
-      mb.box(V(-0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), cu.armor === 'segmentata' ? IRON : trim);   // 肩甲
-      mb.box(V(0.19, 1.22, -0.06), V(0.11, 0.08, 0.2), cu.armor === 'segmentata' ? IRON : trim);
+    mb.lathe(V(0, 0, 0), [[0.011, -0.3], [0.011, 0.28]], 5, C(0.52, 0.4, 0.24));
+    mb.lathe(V(0, 0, 0), [[0.024, 0.27], [0.004, 0.42]], 5, C(0.78, 0.79, 0.83));
+    const fl = C(0.95, 0.94, 0.9), up = V(0, 1, 0);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI * 2 / 3, ca = Math.cos(a), sa = Math.sin(a);
+      for (const sd of [1, -1]) {
+        const nrm = V(-sa * sd, 0, ca * sd);
+        mb.triN(V(0, -0.3, 0), V(ca * 0.045, -0.26, sa * 0.045), V(ca * 0.04, -0.15, sa * 0.04), nrm, nrm, nrm, fl);
+        mb.triN(V(0, -0.3, 0), V(ca * 0.04, -0.15, sa * 0.04), V(0, -0.17, 0), nrm, nrm, nrm, fl);
+      }
+      void up;
     }
-    const cloak = rgbC(cu.cloak, cu.armor === 'furcloak' ? FUR : (cu.armor === 'plaid' ? shade(t, -0.3) : mid));
-    beam(mb, V(0, 1.24, -0.17), V(0, 0.84, -0.38), 0.3, 0.38, cloak);         // 披风（罗马将领为红色 paludamentum）
-    const arm = (cu.armor === 'bare' || cu.armor === 'plaid') ? skin : mid;
-    mb.box(V(-0.2, 1.08, 0.0), V(0.075, 0.2, 0.08), arm);                    // 左臂（持缰）
-    mb.box(V(0.21, 1.1, 0.02), V(0.075, 0.18, 0.08), arm);                   // 右臂
-    mb.box(V(0.22, 1.0, 0.12), V(0.07, 0.07, 0.14), arm);
-    mb.box(V(0, 1.29, -0.05), V(0.09, 0.04, 0.09), skin);
-    mb.box(V(0, 1.38, -0.045), V(0.165, 0.155, 0.16), skin);                 // 头
-    mb.box(V(0, 1.375, 0.04), V(0.11, 0.025, 0.01), shade(skin, -0.45));
-    beardOf(mb, cu, { x: 0, y: 1.38, z: -0.045 }, 0.16);
-    // 将盔：按文化区分（DESIGN-V2 §6）；ghat 以 g_ 开头者为武将专用盔
-    const gh = cu.ghat || cu.hat;
-    headgear(mb, gh, t, 1.46, gh.indexOf('g_') === 0 ? 1 : 1.06, -0.045, acc, cu);
-    // 兵器：长柄大刀（右手）
-    const wx = 0.24, wz = 0.14;
-    beam(mb, V(wx, 0.5, wz), V(wx, 1.95, wz), 0.035, 0.03, C(0.35, 0.22, 0.13));
-    if (weapon === 'halberd') {
-      beam(mb, V(wx, 1.95, wz), V(wx, 2.2, wz), 0.05, 0, C(0.88, 0.9, 0.94));
-      beam(mb, V(wx, 1.86, wz), V(wx, 1.86, wz + 0.2), 0.03, 0.05, C(0.85, 0.87, 0.9));
-      beam(mb, V(wx, 1.86, wz), V(wx, 1.86, wz - 0.2), 0.03, 0.05, C(0.85, 0.87, 0.9));
-    } else if (weapon === 'spear') {
-      beam(mb, V(wx, 1.95, wz), V(wx, 2.25, wz + 0.03), 0.045, 0, C(0.88, 0.9, 0.94));
-      beam(mb, V(wx, 2.0, wz), V(wx + 0.02, 2.25, wz + 0.16), 0.03, 0, C(0.85, 0.87, 0.9));
-    } else {
-      // 偃月刀：弯刃（几段方柱拼成）
-      const blade = C(0.86, 0.88, 0.92);
-      beam(mb, V(wx, 1.9, wz + 0.02), V(wx, 2.12, wz + 0.1), 0.03, 0.06, blade);
-      beam(mb, V(wx, 2.12, wz + 0.1), V(wx, 2.3, wz + 0.06), 0.06, 0.04, blade);
-      beam(mb, V(wx, 2.3, wz + 0.06), V(wx, 2.38, wz - 0.04), 0.04, 0.0, blade);
-    }
-    mb.box(V(wx, 1.9, wz), V(0.06, 0.05, 0.06), acc || RED);
-    mb.box(V(wx, 1.0, wz + 0.02), V(0.06, 0.07, 0.07), skin);
-    // 帅旗杆（背后左侧）
-    beam(mb, V(-0.18, 0.78, -0.3), V(-0.18, 3.0, -0.3), 0.035, 0.03, C(0.3, 0.2, 0.12));
-    mb.cone(V(-0.18, 3.0, -0.3), 0.04, 0.14, 4, GOLD);
-    beam(mb, V(-0.18, 2.86, -0.3), V(-0.18, 2.86, -1.06), 0.025, 0.025, C(0.3, 0.2, 0.12));
-    return mb.toGeometry();
+    // 建模沿 y 轴，转到 −z（three）方向。第三版人物约 0.93 单位（1.8 米）高：箭缩到约 0.43 单位（约 0.8 米），
+    // 箭杆略粗于等比（远景仍看得见），箭羽随之变小
+    const g = mb.toGeometry();
+    g.scale(0.8, 0.6, 0.8);
+    g.rotateX(-Math.PI / 2);
+    return g;
   }
-  const HORSES = {
-    '吕布': C(0.66, 0.2, 0.1), '关羽': C(0.6, 0.22, 0.12), '赵云': C(0.88, 0.87, 0.84), '公孙瓒': C(0.86, 0.85, 0.82),
-    '曹操': C(0.17, 0.15, 0.14), '张飞': C(0.16, 0.14, 0.13), '马超': C(0.85, 0.84, 0.8), '刘备': C(0.78, 0.74, 0.68),
-  };
-  function horseColor(name) {
-    if (HORSES[name]) return HORSES[name].clone();
-    const pal = [C(0.5, 0.3, 0.18), C(0.38, 0.23, 0.14), C(0.62, 0.48, 0.3), C(0.22, 0.17, 0.14), C(0.72, 0.68, 0.62), C(0.55, 0.36, 0.22)];
-    return pal[Math.abs(hashStr(name)) % pal.length].clone();
-  }
-  function weaponOf(gen) {
-    const n = gen && gen.name;
-    if (n === '吕布') return 'halberd';
-    if (n === '张飞' || n === '赵云' || n === '马超' || n === '公孙瓒') return 'spear';
-    return (gen && gen.war >= 85 && Math.abs(hashStr(n)) % 3 === 0) ? 'spear' : 'glaive';
-  }
-
   // ======================================================= 常驻材质 --
   // 跨场次复用：材质不释放，其着色器程序就一直留在渲染器的缓存里，下次播放不必重新编译
   // （SwiftShader 下每个程序编译要数百毫秒，手机 GPU 也有几十毫秒）。贴图、几何体仍每次释放。
@@ -795,6 +320,192 @@
     if (k) MATS.fx[k].push(m); else if (m) m.dispose();
   }
 
+
+  // ---------------------------------------------------------- 第三版：平滑地形与道具材质 --
+  // 在 LowPoly 光照（与主场景一致的半兰伯特、三色环境光、阴影）之上加程序化细节（与战略地图同一套细节纹理 SG.Gfx.terrainDetail）。
+  // 全部跨场次常驻（着色器程序只编译一次）；时间等 uniform 由场景每帧写入。
+  const SHARED_U = { time: { value: 0 }, snow: { value: 99 } };
+  // 细节纹理：与战略地图同一份数据，但另建不做各向异性过滤的副本（攻击画面机位低、地面占满画面，各向异性采样太贵）
+  function detailTex() {
+    if (MATS.det) return MATS.det;
+    let d = null;
+    try { d = SG.Gfx.terrainDetail(); } catch (e) { return null; }
+    if (!d || !d.a) return null;
+    const cp = t => { const c = t.clone(); c.anisotropy = 1; c.needsUpdate = true; return c; };
+    MATS.det = { a: cp(d.a), b: cp(d.b) };
+    return MATS.det;
+  }
+  function lpBase() { const m = SG.Gfx.newLowPoly(); return { m, base: m.onBeforeCompile }; }
+  // 地面：顶点色 = 底色；aGnd = (泥土 / 踩踏 / 道路, 沙, 岩石倾向, 农田)。草地按三级细节纹理明暗、干湿斑块，
+  // 泥土与沙按噪声边缘混入，陡坡与高处为三平面投影的岩石，雪线（SHARED_U.snow）以上积雪
+  // 低频斑块噪声（周期约 14 单位）在顶点里采样后插值；近处才采样最细一级（远处省一次采样）
+  const GROUND_VS = ['attribute vec4 aGnd;', 'uniform sampler2D sgDetA;', 'varying vec4 vCG;', 'varying vec3 vCW;', 'varying vec3 vCN;', 'varying vec4 vCM;', 'varying float vCD;'].join('\n') + '\n';
+  const GROUND_VS_MAIN = '#include <project_vertex>\n\tvCG = aGnd;\n\tvCW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\n\tvCN = normalize( mat3( modelMatrix ) * objectNormal );\n' +
+    '\tvCM = texture2D( sgDetA, vCW.xz * 0.071 + vec2( 0.31, 0.67 ) );\n\tvCD = - mvPosition.z;\n';
+  const GROUND_FS_PARS = `uniform sampler2D sgDetA;
+uniform sampler2D sgDetB;
+uniform float sgSnowH;
+varying vec4 vCG;
+varying vec3 vCW;
+varying vec3 vCN;
+varying vec4 vCM;
+varying float vCD;
+vec3 sgCropC( float id ) {
+  vec3 c = vec3( 0.46, 0.6, 0.25 );
+  c = mix( c, vec3( 0.78, 0.68, 0.33 ), step( 0.24, id ) );
+  c = mix( c, vec3( 0.56, 0.44, 0.3 ), step( 0.42, id ) );
+  c = mix( c, vec3( 0.36, 0.52, 0.22 ), step( 0.56, id ) );
+  c = mix( c, vec3( 0.66, 0.64, 0.32 ), step( 0.72, id ) );
+  c = mix( c, vec3( 0.5, 0.63, 0.28 ), step( 0.87, id ) );
+  return c;
+}
+`;
+  const GROUND_FS = `#include <color_fragment>
+	{
+		vec2 p = vCW.xz;
+		vec4 dA = texture2D( sgDetA, p * 0.42 );
+		vec4 dM = vCM;
+		float dF = 0.5;
+#ifndef SG_LITE
+		if ( vCD < 30.0 ) dF = mix( texture2D( sgDetA, p * 1.6 + vec2( 0.53, 0.19 ) ).r, 0.5, smoothstep( 20.0, 30.0, vCD ) );
+#endif
+		vec3 n = normalize( vCN );
+		float slope = 1.0 - n.y;
+		vec3 base = diffuseColor.rgb;
+		vec3 col = base * ( 0.8 + 0.42 * ( dA.r * 0.34 + dF * 0.3 + dM.r * 0.36 ) );
+		col = mix( col, col * vec3( 1.1, 1.04, 0.8 ), smoothstep( 0.5, 0.8, dM.g ) * 0.5 );
+		col = mix( col, col * vec3( 0.8, 0.88, 0.76 ), smoothstep( 0.55, 0.85, dM.a ) * 0.5 );
+		// 农田：田块、犁沟、田埂
+		if ( vCG.w > 0.01 ) {
+			vec4 dB = texture2D( sgDetB, p * 0.045 + vec2( 0.13, 0.71 ) );
+			vec3 crop = sgCropC( dB.b ) * ( 0.8 + 0.34 * dB.a );
+			crop = mix( crop, vec3( 0.6, 0.52, 0.38 ), step( dB.b, 0.03 ) );
+			col = mix( col, crop, smoothstep( 0.25, 0.6, vCG.w + ( dM.r - 0.5 ) * 0.4 ) * ( 1.0 - smoothstep( 0.12, 0.26, slope ) ) );
+		}
+		// 泥土：踩踏、道路
+		float dW = smoothstep( 0.3, 0.72, vCG.x + ( dM.a - 0.5 ) * 0.45 + ( dA.g - 0.5 ) * 0.35 );
+		vec3 dirt = mix( vec3( 0.55, 0.46, 0.33 ), base * vec3( 0.95, 0.85, 0.7 ), 0.25 ) * ( 0.76 + 0.46 * dA.g );
+		col = mix( col, dirt, dW );
+		// 沙：河岸、浅滩
+		float sW = smoothstep( 0.3, 0.7, vCG.y + ( dA.b - 0.5 ) * 0.3 );
+		vec3 sand = vec3( 0.8, 0.74, 0.57 ) * ( 0.86 + 0.2 * dF + 0.08 * dA.b );
+		col = mix( col, sand, sW );
+		// 岩石：陡坡与山巅（三平面投影）
+		float rW = smoothstep( 0.3, 0.52, slope + ( dM.a - 0.5 ) * 0.22 + vCG.z * 0.35 );
+		if ( rW > 0.004 ) {
+			// 按主轴选一个投影面（一次采样；陡坡不拉伸）
+			vec2 ruv = mix( vCW.xy, vCW.zy, step( abs( n.z ), abs( n.x ) ) );
+			ruv = mix( ruv, vCW.xz, step( 0.75, n.y ) );
+			float r = texture2D( sgDetB, ruv * 0.11 ).r;
+			vec3 rc = mix( vec3( 0.5, 0.48, 0.45 ), vec3( 0.58, 0.5, 0.4 ), dM.r ) * ( 0.58 + 0.72 * r );
+			col = mix( col, rc, rW );
+		}
+		// 雪
+		float snW = smoothstep( sgSnowH, sgSnowH + 3.0, vCW.y + ( dM.a - 0.5 ) * 4.0 ) * ( 1.0 - smoothstep( 0.45, 0.75, slope ) );
+		col = mix( col, vec3( 0.86, 0.88, 0.92 ) * ( 0.9 + 0.12 * dA.a ), snW );
+		diffuseColor.rgb = col;
+	}
+`;
+  function groundMaterial() {
+    if (MATS.ground) return MATS.ground;
+    const det = detailTex();
+    const { m, base } = lpBase();
+    const u = { sgDetA: { value: det && det.a }, sgDetB: { value: det && det.b }, sgSnowH: SHARED_U.snow };
+    // 触屏设备（手机 GPU、高像素密度）：地面省掉最细一级细节纹理（每像素少一次采样；近处的草地颗粒略粗）
+    const lite = !!SG.isTouch;
+    m.onBeforeCompile = function clashGround(sh, r) {
+      base.call(this, sh, r);
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = GROUND_VS + sh.vertexShader.replace('#include <project_vertex>', GROUND_VS_MAIN);
+      sh.fragmentShader = (lite ? '#define SG_LITE\n' : '') + GROUND_FS_PARS + sh.fragmentShader.replace('#include <color_fragment>', GROUND_FS);
+    };
+    m.customProgramCacheKey = () => 'sgClashGround' + (lite ? 'L' : '');
+    m.name = 'ClashGround';
+    MATS.ground = m;
+    return m;
+  }
+  // 道具（树、石、城墙、屋顶、木件合并为一个网格）：aKind 0 原色 / 1 树叶（叶簇明暗 + 法线起伏）/ 2 石块（颗粒、层理）/
+  // 3 砖石墙（按世界坐标的错缝砖、灰缝；平面为方砖）/ 4 筒瓦屋面
+  const PROP_VS = 'attribute float aKind;\nvarying float vKind;\nvarying vec3 vPW;\nvarying vec3 vPN;\n';
+  const PROP_VS_MAIN = '#include <project_vertex>\n\tvKind = aKind;\n\tvPW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\n\tvPN = normalize( mat3( modelMatrix ) * objectNormal );\n';
+  const PROP_FS_PARS = `varying float vKind;
+varying vec3 vPW;
+varying vec3 vPN;
+float sgPN( vec3 p ) { return sin( p.x + sin( p.y * 1.3 ) * 1.2 ) * sin( p.y * 1.1 + sin( p.z * 1.2 ) * 1.2 ) * sin( p.z * 0.9 + sin( p.x * 1.4 ) * 1.2 ); }
+float sgPH( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+`;
+  const PROP_FS = `#include <color_fragment>
+	float sgL1 = 0.0, sgL2 = 0.0, sgL3 = 0.0, sgLeafW = 0.0;
+	{
+		vec3 n = normalize( vPN ), p = vPW;
+		float k = 1.0;
+		if ( vKind > 0.5 && vKind < 2.5 ) {
+			vec3 q = p * ( vKind < 1.5 ? 4.2 : 3.0 );
+			sgL1 = sgPN( q ); sgL2 = sgPN( q * 2.63 + 5.3 ); sgL3 = sgPN( q * 6.1 + 1.7 );
+			if ( vKind < 1.5 ) {
+				float c = sgL1 * 0.5 + sgL2 * 0.32 + sgL3 * 0.18;
+				k = 0.82 + 0.36 * c + 0.16 * smoothstep( 0.35, 0.85, sgL2 * 0.6 + sgL3 * 0.4 );
+				sgLeafW = 0.45;
+			} else {
+				float c = sgL1 * 0.25 + sgL2 * 0.35 + sgL3 * 0.4;
+				k = 0.84 + 0.24 * c + 0.1 * sin( p.y * 13.0 + sgL1 * 2.0 );
+				sgLeafW = 0.28;
+			}
+		} else if ( vKind > 2.5 && vKind < 3.5 ) {
+			float ay = abs( n.y );
+			if ( ay < 0.6 ) {
+				float u = abs( n.x ) > abs( n.z ) ? p.z : p.x;
+				float row = floor( p.y / 0.21 );
+				float uu = u / 0.46 + mod( row, 2.0 ) * 0.5;
+				float fy = fract( p.y / 0.21 ), fu = fract( uu );
+				float mort = 1.0 - smoothstep( 0.04, 0.12, min( fy, 1.0 - fy ) ) * smoothstep( 0.02, 0.06, min( fu, 1.0 - fu ) );
+				float h = sgPH( vec2( floor( uu ), row ) );
+				k = ( 0.88 + 0.2 * h ) * ( 1.0 - 0.3 * mort ) * ( 0.94 + 0.08 * sgPN( p * 3.1 ) );
+			} else {
+				vec2 g = p.xz / 0.5;
+				vec2 f = abs( fract( g ) - 0.5 );
+				k = ( 0.9 + 0.12 * sgPH( floor( g ) ) ) * ( 0.84 + 0.16 * ( 1.0 - smoothstep( 0.42, 0.48, max( f.x, f.y ) ) ) );
+			}
+		} else if ( vKind > 3.5 ) {
+			vec2 t = normalize( vec2( - n.z, n.x ) + vec2( 1e-4, 0.0 ) );
+			float u = dot( p.xz, t );
+			float roll = 0.5 + 0.5 * sin( u / 0.16 * 6.2832 );
+			float fy = fract( p.y / 0.11 );
+			k = ( 0.8 + 0.26 * roll * roll ) * ( 1.0 - 0.2 * ( 1.0 - smoothstep( 0.0, 0.25, fy ) ) );
+		}
+		diffuseColor.rgb *= k;
+	}
+`;
+  const PROP_FS_NORMAL = '#include <normal_fragment_maps>\n\tnormal = normalize( normal + sgLeafW * vec3( sgL2 + sgL3 * 0.5, sgL1 * 0.6, sgL3 - sgL1 * 0.4 ) );';
+  function propMaterial() {
+    if (MATS.prop) return MATS.prop;
+    const { m, base } = lpBase();
+    m.onBeforeCompile = function clashProp(sh, r) {
+      base.call(this, sh, r);
+      sh.vertexShader = PROP_VS + sh.vertexShader.replace('#include <project_vertex>', PROP_VS_MAIN);
+      sh.fragmentShader = PROP_FS_PARS + sh.fragmentShader.replace('#include <color_fragment>', PROP_FS).replace('#include <normal_fragment_maps>', PROP_FS_NORMAL);
+    };
+    m.customProgramCacheKey = () => 'sgClashProp';
+    m.name = 'ClashProp';
+    MATS.prop = m;
+    return m;
+  }
+  // 草丛 / 芦苇 / 野花（实例化）：aTint 为 1 的顶点乘实例颜色（草叶、花瓣），随风轻摆（按顶点高度）
+  function grassMaterial() {
+    if (MATS.grass) return MATS.grass;
+    const { m, base } = lpBase();
+    m.onBeforeCompile = function clashGrass(sh, r) {
+      base.call(this, sh, r);
+      sh.uniforms.sgWindT = SHARED_U.time;
+      sh.vertexShader = 'attribute float aTint;\nuniform float sgWindT;\n' + sh.vertexShader
+        .replace('#include <color_vertex>', '#include <color_vertex>\n#if defined( USE_INSTANCING_COLOR ) && defined( USE_COLOR )\n\tvColor.xyz = color.xyz * mix( vec3( 1.0 ), instanceColor.xyz, aTint );\n#endif')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n\tfloat sgPh = instanceMatrix[3].x * 0.9 + instanceMatrix[3].z * 0.6;\n\ttransformed.x += sin( sgWindT * 2.1 + sgPh ) * transformed.y * 0.2;\n\ttransformed.z += cos( sgWindT * 1.6 + sgPh * 1.3 ) * transformed.y * 0.12;\n#endif');
+    };
+    m.customProgramCacheKey = () => 'sgClashGrass';
+    m.name = 'ClashGrass';
+    MATS.grass = m;
+    return m;
+  }
   // ======================================================= 旗帜 --
   // 旗面贴图：势力色底、犬牙边、中央圆徽与姓氏
   // accentHex：识别色（近色对阵时给出），用作犬牙边与内框，让两军旗帜一眼可辨
@@ -983,16 +694,19 @@ void main() {
   }
 
   // ======================================================= 地形 --
+  // 第三版：平滑地形（索引网格 + 平滑法线 + 地形着色器的程序化细节），圆润的树、平滑石块，砖石城墙、拱形城门与曲面屋顶；
+  // 远处为连绵的山脊（同一张网格向后延伸）；草丛 / 芦苇 / 野花为实例化网格（随风轻摆）。
   const RIVER = { x: 1.05, w: 1.7, bank: 1.5, bed: -0.42, surf: -0.1 };
   const WALL_Z = -7.4, GATE_X = 4.6;     // 城墙正面（three z）与城门中心 x
+  function isWalled(kind) { return kind === 'gate' || kind === 'castle' || kind === 'wall'; }
   function makeHeight(kind, seed) {
     const r = SG.SeededRandom(seed);
     const ox = r.nextDouble() * 200, oz = r.nextDouble() * 200;
     const pn = (x, z, f) => M.perlinNoise(ox + x * f, oz + z * f) - 0.465;
     const hilly = kind === 'hill' || kind === 'mountain';
-    const walled = kind === 'gate' || kind === 'castle' || kind === 'wall';
+    const walled = isWalled(kind);
     return function h(x, z) {
-      const far = sstep(9, 42, -z) ;
+      const far = sstep(9, 42, -z);
       const calm = 1 - 0.55 * (1 - sstep(5, 10, Math.abs(z - ZC))) * (1 - sstep(7, 13, Math.abs(x)));
       let y;
       if (hilly) y = (pn(x, z, 0.1) * 1.4 + pn(x, z, 0.32) * 0.22) * calm + 0.7 * sstep(-3, 7.5, x) - 0.18;
@@ -1000,189 +714,369 @@ void main() {
       else y = (pn(x, z, 0.15) * 0.34 + pn(x, z, 0.5) * 0.05) * calm;
       y += far * ((pn(x, z, 0.03) + 0.25) * (hilly ? 14 : 7) + (hilly ? 2.5 : 0.6));
       y += sstep(16, 34, Math.abs(x)) * (hilly ? 3 : 1.4) * (0.6 + pn(x, z, 0.06));
+      // 远山：平滑的脊状噪声
+      const rk = sstep(44, 74, -z);
+      if (rk > 0) {
+        const rn = 1 - Math.min(1, Math.abs(pn(x, z, 0.021) * 2.3));
+        y += rk * (rn * rn * (hilly ? 30 : 15) + (pn(x, z, 0.07) + 0.3) * (hilly ? 7 : 3.5));
+      }
       if (kind === 'river') {
+        // 近处：河床与缓坡河岸；远处：河谷两侧以有限的坡度升起（不在山脊上切出直壁峡谷）
         const d = Math.abs(x - RIVER.x);
         const bank = sstep(RIVER.w, RIVER.w + RIVER.bank, d);
-        y = lerp(RIVER.bed + pn(x, z, 0.8) * 0.04, Math.max(y * 0.6, -0.02) + 0.06, bank);
+        const near = lerp(RIVER.bed + pn(x, z, 0.8) * 0.04, Math.max(y * 0.6, -0.02) + 0.06, bank);
+        const vf = sstep(-6, -26, z);
+        if (vf > 0) {
+          const valley = lerp(RIVER.bed, 0.06, bank) + Math.max(0, d - RIVER.w - RIVER.bank) * (0.18 + 0.22 * sstep(-20, -70, z)) + Math.max(0, d - 7) * 0.12;
+          y = lerp(near, Math.min(y, valley), vf);
+        } else y = near;
       }
       return y;
     };
   }
-  function groundColor(kind, x, z, y, n) {
+  // 顶点底色与地表权重 aGnd = (泥土 / 踩踏 / 道路, 沙, 岩石倾向, 农田)
+  function groundAttr(kind, x, z, y, n, nf, out) {
     let c;
-    const trample = Math.exp(-(x * x) / 10 - ((z - ZC) * (z - ZC)) / 7);
+    let dirt = 0, sand = 0, rock = 0, farm = 0;
+    const walled = isWalled(kind);
+    const trample = Math.exp(-(x * x) / 12 - ((z - ZC) * (z - ZC)) / 8);
     switch (kind) {
-      case 'forest': c = C(0.3, 0.47, 0.25); break;
-      case 'hill': c = C(0.53, 0.6, 0.34); break;
-      case 'mountain': c = C(0.5, 0.54, 0.38); break;
-      case 'gate': case 'castle': case 'wall': c = C(0.6, 0.55, 0.43); break;
-      default: c = C(0.44, 0.64, 0.32); break;
+      case 'forest': c = C(0.33, 0.5, 0.26); break;
+      case 'hill': c = C(0.52, 0.62, 0.33); break;
+      case 'mountain': c = C(0.5, 0.56, 0.36); break;
+      case 'gate': case 'castle': case 'wall': c = C(0.5, 0.6, 0.35); break;
+      default: c = C(0.46, 0.64, 0.31); break;
     }
-    if (kind === 'gate' || kind === 'castle' || kind === 'wall') {
-      const grass = C(0.47, 0.6, 0.35);
-      c.lerp(grass, sstep(3, 12, Math.abs(z - 2.5)) * 0.6 + n * 0.1);
+    c.lerp(C(0.58, 0.68, 0.33), clamp01(n * 1.6) * 0.45);
+    if (walled) {
+      // 墙前夯土与车辙大道、门前石板、墙根阴湿
+      const earth = (1 - sstep(2, 7, z - WALL_Z)) * sstep(WALL_Z - 2, WALL_Z - 0.5, z);
+      dirt = Math.max(dirt, earth * 0.6 + trample * 0.35);
       if (kind !== 'wall') {
-        // 通往城门的夯土大道（两道车辙）与门前石板
         const d = Math.abs(x - GATE_X), w = 1.45 + Math.max(0, z - WALL_Z) * 0.07;
-        const road = 1 - sstep(w - 0.35, w + 0.25, d);
-        if (road > 0) {
-          c.lerp(C(0.55, 0.47, 0.35), road * 0.85);
-          const rut = Math.abs(d - w * 0.42);
-          if (rut < 0.22) c.lerp(C(0.45, 0.38, 0.28), road * 0.55);
-        }
-        if (z < WALL_Z + 2.4 && d < 2.3) c.lerp(C(0.66, 0.64, 0.6), 0.75 * (1 - sstep(1.7, 2.3, d)));
+        const road = 1 - sstep(w - 0.35, w + 0.35, d);
+        dirt = Math.max(dirt, road);
+        if (z < WALL_Z + 2.4 && d < 2.3) { const pv = 1 - sstep(1.7, 2.3, d); c.lerp(C(0.64, 0.62, 0.58), pv); dirt *= 1 - pv; rock = -pv; }
       }
-      // 墙根阴湿
       c.lerp(C(0.42, 0.42, 0.36), (1 - sstep(WALL_Z, WALL_Z + 1.2, z)) * 0.35);
     } else {
-      c.lerp(C(0.58, 0.52, 0.37), trample * 0.42);
-      if (n > 0.12) c.lerp(shade(c, kind === 'forest' ? -0.12 : 0.08), 0.6);
-      if (n < -0.14) c.lerp(C(0.62, 0.62, 0.36), 0.35);
+      dirt = trample * (kind === 'forest' ? 0.55 : 0.7);
+      if (kind === 'forest') dirt = Math.max(dirt, sstep(-4, -9, z) * 0.35 * (0.5 + nf));
+      if ((kind === 'plain' || kind === 'river') && z < -12 && z > -40 && Math.abs(x) < 46) {
+        farm = sstep(-12, -15, z) * (1 - sstep(-34, -40, z)) * (1 - sstep(38, 46, Math.abs(x))) * sstep(-0.05, 0.12, nf);
+        if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + RIVER.bank + 2.5) farm = 0;
+      }
     }
     if (kind === 'river') {
       const d = Math.abs(x - RIVER.x);
-      if (d < RIVER.w + RIVER.bank + 0.5) c = C(0.62, 0.57, 0.42).lerp(C(0.5, 0.46, 0.34), sstep(RIVER.w + RIVER.bank, RIVER.w * 0.4, d));
+      sand = 1 - sstep(RIVER.w + RIVER.bank - 0.3, RIVER.w + RIVER.bank + 0.7, d);
+      if (d < RIVER.w) c.lerp(C(0.5, 0.46, 0.36), 0.6);
     }
-    if (kind === 'mountain' && y > 3) c.lerp(C(0.58, 0.57, 0.54), sstep(3, 8, y));
-    // 远处偏冷偏灰（雾会进一步融合）
-    c.lerp(C(0.5, 0.58, 0.46), sstep(14, 45, -z) * 0.5);
-    return c;
+    if (kind === 'mountain') rock = Math.max(rock, sstep(2.5, 7, y) * 0.8);
+    if (kind === 'hill') rock = Math.max(rock, sstep(5, 10, y) * 0.5);
+    // 远山：高处草色转黄绿、再到岩石
+    const hi = sstep(6, 22, y) * sstep(30, 50, -z);
+    if (hi > 0) { c.lerp(C(0.55, 0.58, 0.4), hi * 0.7); rock = Math.max(rock, hi * 0.6); }
+    // 远处偏冷（雾会进一步融合）
+    c.lerp(C(0.48, 0.58, 0.46), sstep(16, 60, -z) * 0.35);
+    out.c = c; out.g0 = clamp01(dirt); out.g1 = clamp01(sand); out.g2 = rock; out.g3 = clamp01(farm);
   }
-  function axis(a, b, step, fine, grow) {
-    // 中心 ±fine 内用 step，之外按 grow 递增
+  function axis(a, b, step, fine, grow, cap) {
+    // 中心 ±fine 内用 step，之外按 grow 递增（不超过 cap）
+    const st = x => Math.min(cap || 1e9, Math.abs(x) < fine ? step : step + (Math.abs(x) - fine) * grow);
     const out = [];
-    for (let x = 0; x <= b; ) { out.push(x); x += Math.abs(x) < fine ? step : step + (Math.abs(x) - fine) * grow; }
+    for (let x = 0; x <= b; ) { out.push(x); x += st(x); }
     const neg = [];
-    for (let x = -step; x >= a; ) { neg.push(x); x -= Math.abs(x) < fine ? step : step + (Math.abs(x) - fine) * grow; }
+    for (let x = -step; x >= a; ) { neg.push(x); x -= st(x); }
     return neg.reverse().concat(out);
+  }
+
+  // 道具网格：按 aKind 分成几个 MeshBuilder，最后合并为一个几何体（一次绘制 + 一次投影）
+  const K_PLAIN = 0, K_LEAF = 1, K_ROCK = 2, K_BRICK = 3, K_ROOF = 4;
+  function propBuilders() { return [0, 1, 2, 3, 4].map(() => new SG.MeshBuilder()); }
+  function mergeProps(mbs) {
+    const geos = mbs.map(mb => (mb.pos.length ? mb.toGeometry() : null));
+    let n = 0;
+    for (const g of geos) if (g) n += g.getAttribute('position').count;
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), kind = new Float32Array(n);
+    let o = 0;
+    geos.forEach((g, k) => {
+      if (!g) return;
+      const c = g.getAttribute('position').count;
+      pos.set(g.getAttribute('position').array, o * 3);
+      nor.set(g.getAttribute('normal').array, o * 3);
+      col.set(g.getAttribute('color').array, o * 3);
+      kind.fill(k, o, o + c);
+      o += c;
+      g.dispose();
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aKind', new THREE.BufferAttribute(kind, 1));
+    g.computeBoundingBox();
+    g.computeBoundingSphere();
+    return g;
+  }
+  // 树：平滑树干、圆润树冠（近景另加三团叶簇，轮廓起伏）；pine 为层叠的松冠，poplar 为高耸的杨
+  // （x, y, z 为 three 坐标，s ≈ 树高）
+  function treeInto(B, x, y, z, s, type, leaf, seed, near) {
+    const tk = B[K_PLAIN], lf = B[K_LEAF];
+    const p = P(x, y, z);
+    const TR = C(0.38, 0.27, 0.16);
+    const ts = near ? 9 : 6, cs = near ? 16 : 10, d = near ? 2 : 1;
+    const crown = (cx, cy, cz, r, col, sd) => {
+      lf.sphere(V(p.x + cx, p.y + cy, p.z + cz), r, col, d, { seed: sd, rough: 0.09, bottomShade: 0.32, top: 0.08 });
+      if (!near) return;
+      for (let k = 0; k < 3; k++) {
+        const a = sd * 1.7 + k * 2.09, up = 0.25 + 0.3 * ((k + sd) % 2);
+        lf.sphere(V(p.x + cx + Math.cos(a) * r.x * 0.62, p.y + cy + up * r.y, p.z + cz + Math.sin(a) * r.z * 0.62), V(r.x * 0.5, r.y * 0.52, r.z * 0.5),
+          shade(col, k === 1 ? -0.06 : 0.04), 1, { seed: sd + 7 * k + 1, rough: 0.07, bottomShade: 0.28, top: 0.1 });
+      }
+    };
+    if (type === 'pine') {
+      tk.lathe(p, [[0.06 * s, 0], [0.04 * s, 0.32 * s]], ts, TR);
+      const tier = (y0, r, h, col) => lf.lathe(V(p.x, p.y + y0 * s, p.z), [[0, h * s * 0.1], [r * s, 0, null, true], [r * s * 0.5, h * s * 0.5], [0, h * s]], cs, col);
+      tier(0.2, 0.44, 0.62, shade(leaf, -0.06)); tier(0.52, 0.34, 0.56, leaf); tier(0.8, 0.22, 0.42, shade(leaf, 0.06));
+    } else if (type === 'poplar') {
+      tk.lathe(p, [[0.05 * s, 0], [0.035 * s, 0.26 * s]], ts, TR);
+      crown(0, 0.78 * s, 0, V(0.18 * s, 0.56 * s, 0.18 * s), leaf, seed);
+    } else if (type === 'broad2') {
+      tk.lathe(p, [[0.065 * s, 0], [0.045 * s, 0.4 * s]], ts, TR);
+      crown(0.06 * s, 0.6 * s, 0, V(0.38 * s, 0.34 * s, 0.38 * s), leaf, seed);
+      crown(-0.15 * s, 0.82 * s, 0.06 * s, V(0.28 * s, 0.25 * s, 0.28 * s), shade(leaf, 0.06), seed + 3);
+    } else {
+      tk.lathe(p, [[0.065 * s, 0], [0.045 * s, 0.42 * s]], ts, TR);
+      crown(0, 0.66 * s, 0, V(0.44 * s, 0.4 * s, 0.44 * s), leaf, seed);
+    }
+  }
+  function rockInto(B, x, y, z, r, col, seed) {
+    B[K_ROCK].sphere(P(x, y, z), V(r * 1.25, r * 0.75, r), col, 1, { seed, rough: 0.2, flat: -0.35, bottomShade: 0.25, top: 0.08 });
+  }
+  // 草丛（6 片弯叶，根暗梢亮，法线朝上，与地面同调）/ 野花（茎 + 五瓣花，花瓣乘实例颜色）
+  function tuftGeo() {
+    const mb = new SG.MeshBuilder();
+    const rnd = SG.SeededRandom(91);
+    const dark = C(0.55, 0.55, 0.55), lite = C(1.05, 1.05, 1.0);
+    for (let k = 0; k < 7; k++) {
+      const a = k * 0.9 + rnd.nextDouble() * 0.6, ca = Math.cos(a), sa = Math.sin(a);
+      const r0 = 0.02 + rnd.nextDouble() * 0.05, h = 0.14 + rnd.nextDouble() * 0.12, lean = 0.05 + rnd.nextDouble() * 0.08, w = 0.022;
+      const bx = ca * r0, bz = sa * r0;
+      const b0 = V(bx - sa * w, 0, bz + ca * w), b1 = V(bx + sa * w, 0, bz - ca * w);
+      const m0 = V(bx + ca * lean * 0.4 - sa * w * 0.6, h * 0.55, bz + sa * lean * 0.4 + ca * w * 0.6), m1 = V(bx + ca * lean * 0.4 + sa * w * 0.6, h * 0.55, bz + sa * lean * 0.4 - ca * w * 0.6);
+      const tip = V(bx + ca * lean, h, bz + sa * lean);
+      const mid = C(0.8, 0.8, 0.78);
+      for (const sd of [1, -1]) {
+        const nf = V(ca * 0.35 * sd, 1, sa * 0.35 * sd).normalize();
+        mb.triN(b0, b1, m1, nf, nf, nf, dark, dark, mid); mb.triN(b0, m1, m0, nf, nf, nf, dark, mid, mid);
+        mb.triN(m0, m1, tip, nf, nf, nf, mid, mid, lite);
+      }
+    }
+    const g = mb.toGeometry();
+    g.setAttribute('aTint', new THREE.BufferAttribute(new Float32Array(g.getAttribute('position').count).fill(1), 1));
+    return g;
+  }
+  function flowerGeo() {
+    const stem = new SG.MeshBuilder(), pet = new SG.MeshBuilder(), up = V(0, 1, 0);
+    const green = C(0.32, 0.52, 0.22);
+    for (const [x, z, h] of [[0, 0, 0.26], [0.1, 0.06, 0.2], [-0.07, 0.08, 0.23]]) {
+      stem.triN(V(x - 0.012, 0, z), V(x + 0.012, 0, z), V(x, h, z), V(0, 0.3, 1), V(0, 0.3, 1), up, green);
+      stem.triN(V(x + 0.012, 0, z), V(x - 0.012, 0, z), V(x, h, z), V(0, 0.3, -1), V(0, 0.3, -1), up, green);
+      const r = 0.05;
+      for (let k = 0; k < 5; k++) {
+        const a0 = k * Math.PI * 2 / 5, a1 = a0 + Math.PI * 2 / 5;
+        pet.triN(V(x, h, z), V(x + Math.cos(a0) * r, h + 0.01, z + Math.sin(a0) * r), V(x + Math.cos(a1) * r, h + 0.01, z + Math.sin(a1) * r), up, up, up, C(1, 1, 1));
+      }
+      pet.triN(V(x, h + 0.016, z), V(x + 0.016, h + 0.013, z), V(x, h + 0.013, z + 0.016), up, up, up, C(1.0, 0.86, 0.35));
+    }
+    const a = stem.toGeometry(), b = pet.toGeometry();
+    const na = a.getAttribute('position').count, nb = b.getAttribute('position').count;
+    const g = new THREE.BufferGeometry();
+    for (const name of ['position', 'normal', 'color']) {
+      const arr = new Float32Array((na + nb) * 3);
+      arr.set(a.getAttribute(name).array, 0); arr.set(b.getAttribute(name).array, na * 3);
+      g.setAttribute(name, new THREE.BufferAttribute(arr, 3));
+    }
+    const t = new Float32Array(na + nb); t.fill(1, na);
+    g.setAttribute('aTint', new THREE.BufferAttribute(t, 1));
+    a.dispose(); b.dispose();
+    g.computeBoundingSphere();
+    return g;
   }
 
   // 生成器：每做完一段 yield 一次，由 ClashScene.buildAsync 分帧执行（单帧 ≤ 约 10ms）
   function* buildTerrain(sc, kind, rnd, defColor) {
     const H = sc.h;
-    const mb = new SG.MeshBuilder();
-    // 地面网格（three 坐标 x、z）
-    const xs = axis(-48, 48, 0.8, 13, 0.25);
+    const walled = isWalled(kind), hilly = kind === 'hill' || kind === 'mountain';
+    if (SG.Gfx.terrainDetailGen) { try { yield* SG.Gfx.terrainDetailGen(); } catch (e) { /* 旧版 art.js：无细节纹理 */ } }
+    SHARED_U.snow.value = kind === 'mountain' ? 13 : kind === 'hill' ? 17 : 99;
+    // ---- 地面：近处 0.5 的平滑网格，向外渐疏（最疏 2.6），向后延伸成远山；看不到的两侧不建三角形
+    const xs = axis(-150, 150, 0.5, 12, 0.16, 2.6);
     const zs = [];
-    // 近处（z > 16）用越来越疏的行一直铺到镜头身后：竖屏 / 宽阵拉远机位时画面下缘不露底
-    for (let z = 64; z > -95; ) { zs.push(z); z -= z > 16 ? 0.75 + (z - 16) * 0.3 : z > -9 ? 0.75 : 0.75 + (-9 - z) * 0.16; }
-    const pn = (x, z) => M.perlinNoise(x * 0.21 + 11.3, z * 0.21 + 4.7) - 0.465;
-    for (let j = 0; j < zs.length - 1; j++) {
-      if (j % 6 === 5) yield;
-      for (let i = 0; i < xs.length - 1; i++) {
-        const x0 = xs[i], x1 = xs[i + 1], z0 = zs[j], z1 = zs[j + 1];   // z0 > z1（近 → 远）
-        const a = P(x0, H(x0, z0), z0), b = P(x0, H(x0, z1), z1), c = P(x1, H(x1, z1), z1), d = P(x1, H(x1, z0), z0);
-        const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, cy = (a.y + c.y) / 2;
-        const col = groundColor(kind, cx, cz, cy, pn(cx, cz));
-        const flip = ((i + j) & 1) === 0;
-        if (flip) {
-          mb.tri(a, b, c, shade(col, (rnd.nextDouble() - 0.5) * 0.07));
-          mb.tri(a, c, d, shade(col, (rnd.nextDouble() - 0.5) * 0.07));
-        } else {
-          mb.tri(a, b, d, shade(col, (rnd.nextDouble() - 0.5) * 0.07));
-          mb.tri(b, c, d, shade(col, (rnd.nextDouble() - 0.5) * 0.07));
-        }
+    for (let z = 64; z > -126; ) { zs.push(z); z -= z > 16 ? 0.5 + (z - 16) * 0.3 : z > -9 ? 0.5 : Math.min(2.6, 0.5 + (-9 - z) * 0.09); }
+    const NX = xs.length, NZ = zs.length;
+    const pos = new Float32Array(NX * NZ * 3), colA = new Float32Array(NX * NZ * 3), gnd = new Float32Array(NX * NZ * 4);
+    const nA = (x, z) => M.perlinNoise(x * 0.17 + 11.3, z * 0.17 + 4.7) - 0.465, nF = (x, z) => M.perlinNoise(x * 0.09 + 3.1, z * 0.13 + 9.7) - 0.465;
+    const ga = {};
+    for (let j = 0; j < NZ; j++) {
+      if (j % 12 === 11) yield;
+      const z = zs[j];
+      for (let i = 0; i < NX; i++) {
+        const x = xs[i], y = H(x, z), k = j * NX + i;
+        pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
+        groundAttr(kind, x, z, y, nA(x, z), nF(x, z), ga);
+        colA[k * 3] = ga.c.r; colA[k * 3 + 1] = ga.c.g; colA[k * 3 + 2] = ga.c.b;
+        gnd[k * 4] = ga.g0; gnd[k * 4 + 1] = ga.g1; gnd[k * 4 + 2] = ga.g2; gnd[k * 4 + 3] = ga.g3;
+      }
+    }
+    const lim = z => Math.max(15, 0.8 * (28 - z) + 6);
+    const idx = [];
+    for (let j = 0; j < NZ - 1; j++) {
+      const L = lim(zs[j + 1]);
+      for (let i = 0; i < NX - 1; i++) {
+        if (Math.min(Math.abs(xs[i]), Math.abs(xs[i + 1])) > L) continue;
+        const a = j * NX + i, b = a + 1, c = a + NX, d = c + 1;
+        // zs 由近到远（z 递减）：a(x0,z0) b(x1,z0) c(x0,z1) d(x1,z1)，朝上的绕向
+        if ((i + j) & 1) idx.push(a, b, c, b, d, c); else idx.push(a, b, d, a, d, c);
       }
     }
     yield;
-    const deco = new SG.MeshBuilder();
-    const walled = kind === 'gate' || kind === 'castle' || kind === 'wall';
-    // 草丛与小花
-    const flowers = [C(0.98, 0.95, 0.85), C(1, 0.82, 0.3), C(0.95, 0.55, 0.6), C(0.75, 0.62, 0.95)];
-    const blade = (bx, by, bz, h, lean, ang, col) => {
-      const ca = Math.cos(ang), sa = Math.sin(ang), w = 0.045;
-      const a = P(bx - ca * w, by, bz - sa * w), b = P(bx + ca * w, by, bz + sa * w);
-      const tip = P(bx + lean * -sa, by + h, bz + lean * ca);
-      deco.tri(a, tip, b, col); deco.tri(a, b, tip, col);
-    };
-    const tufts = walled ? 140 : kind === 'river' ? 360 : 520;
-    for (let k = 0; k < tufts; k++) {
-      if (k % 120 === 119) yield;
-      const x = (rnd.nextDouble() * 2 - 1) * 14, z = 7 - rnd.nextDouble() * (walled ? 9 : 20);
-      if (walled && z < -6.4) continue;
-      if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + 0.6) continue;
-      const y = H(x, z);
-      const gcol = kind === 'forest' ? C(0.26, 0.45, 0.22) : kind === 'hill' ? C(0.5, 0.58, 0.3) : C(0.36, 0.58, 0.26);
-      const col = shade(gcol, (rnd.nextDouble() - 0.5) * 0.25);
-      const s = 0.8 + rnd.nextDouble() * 0.7;
-      for (let j = 0; j < 3; j++)
-        blade(x + (rnd.nextDouble() - 0.5) * 0.12, y - 0.02, z + (rnd.nextDouble() - 0.5) * 0.12,
-          (0.16 + rnd.nextDouble() * 0.1) * s, (rnd.nextDouble() - 0.5) * 0.14, rnd.nextDouble() * Math.PI, shade(col, j * 0.06));
-      if (!walled && z < 2.5 && rnd.nextDouble() < 0.12) {
-        const fc = flowers[rnd.next(flowers.length)];
-        deco.box(P(x + 0.1, y + 0.06, z + 0.05), V(0.05, 0.035, 0.05), fc, 0.1);
-      }
-    }
-    // 石块
-    const rocks = kind === 'hill' || kind === 'mountain' ? 26 : kind === 'river' ? 22 : 8;
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    gg.setAttribute('color', new THREE.BufferAttribute(colA, 3));
+    gg.setAttribute('aGnd', new THREE.BufferAttribute(gnd, 4));
+    gg.setIndex(NX * NZ > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1));
+    gg.computeVertexNormals();
+    gg.computeBoundingSphere();
+    const ground = new THREE.Mesh(gg, groundMaterial());
+    ground.receiveShadow = true; ground.castShadow = false;
+    sc.scene.add(ground);
+    sc.own.push(gg);
+    sc.groundTris = idx.length / 3;
+    yield;
+    // ---- 道具：石块、树、村舍、城墙
+    const B = propBuilders(), BF = propBuilders();     // BF：远处（阴影相机之外）的树与村舍，不投影
+    const stone = C(0.6, 0.59, 0.56);
+    const rocks = hilly ? 26 : kind === 'river' ? 20 : walled ? 6 : 9;
     for (let k = 0; k < rocks; k++) {
       let x = (rnd.nextDouble() * 2 - 1) * 16, z = 6 - rnd.nextDouble() * 22;
-      if (kind === 'river') { x = RIVER.x + (rnd.nextDouble() < 0.5 ? -1 : 1) * (RIVER.w + 0.4 + rnd.nextDouble() * 1.6); }
+      if (kind === 'river') x = RIVER.x + (rnd.nextDouble() < 0.5 ? -1 : 1) * (RIVER.w + 0.4 + rnd.nextDouble() * 1.6);
       if (Math.abs(x) < 6 && Math.abs(z - ZC) < 3.5) continue;
       if (z > 1.8 && Math.abs(x) < 9) continue;          // 镜头前不放大石头
-      if (walled && z < -6.5) continue;
-      const r = 0.18 + rnd.nextDouble() * (kind === 'mountain' ? 0.7 : 0.4);
-      deco.blob(P(x, H(x, z) + r * 0.25, z), V(r * 1.2, r * 0.75, r), shade(C(0.56, 0.55, 0.52), (rnd.nextDouble() - 0.5) * 0.15), k + 3);
+      if (walled && z < WALL_Z + 0.9) continue;
+      const r = 0.16 + rnd.nextDouble() * (kind === 'mountain' ? 0.6 : 0.36);
+      rockInto(B, x, H(x, z) + r * 0.12, z, r, shade(stone, (rnd.nextDouble() - 0.5) * 0.14), k + 3);
+      if (rnd.nextDouble() < 0.5) rockInto(B, x + r * 1.3, H(x + r * 1.3, z + r * 0.4), z + r * 0.4, r * 0.45, shade(stone, -0.04), k + 31);
     }
-    // 树
-    const tree = (x, z, s, pine, col) => SG.Models.tree(deco, P(x, H(x, z) - 0.05, z), s, col || shade(C(0.24, 0.46, 0.25), (rnd.nextDouble() - 0.5) * 0.18), pine, Math.abs(Math.round(x * 13 + z * 7)));
+    yield;
+    const leafC = () => shade(kind === 'forest' ? C(0.25, 0.44, 0.23) : C(0.28, 0.5, 0.26), (rnd.nextDouble() - 0.5) * 0.16);
+    const pickT = () => { const u = rnd.nextDouble(); return u < 0.34 ? 'pine' : u < 0.62 ? 'broad' : u < 0.84 ? 'broad2' : 'poplar'; };
+    const tree = (x, z, s, type, near) => treeInto(z < -14 ? BF : B, x, H(x, z) - 0.05, z, s, type || pickT(), leafC(), Math.abs(Math.round(x * 13 + z * 7)) % 97, near);
     if (kind === 'forest') {
-      for (let k = 0; k < 120; k++) {
-        if (k % 30 === 29) yield;
+      for (let k = 0; k < 110; k++) {
+        if (k % 20 === 19) yield;
         const x = (rnd.nextDouble() * 2 - 1) * 26, z = -4.4 - rnd.nextDouble() * 26;
-        tree(x, z, 2.2 + rnd.nextDouble() * 1.6, rnd.nextDouble() < 0.45);
+        tree(x, z, 2.2 + rnd.nextDouble() * 1.6, null, false);
       }
       // 两侧与近景的树（框住画面）
       for (const [x, z, s] of [[-9.5, 3.5, 3.4], [10.2, 2.8, 3.1], [-12.5, 0.5, 3.6], [12.8, -1.2, 3.8], [-7.6, -3.6, 2.8], [8.4, -4.0, 3.0], [-10.6, 6.4, 3.2], [11.4, 6.0, 3.3]])
-        tree(x, z, s, rnd.nextDouble() < 0.4);
-      // 落叶
-      for (let k = 0; k < 160; k++) {
-        const x = (rnd.nextDouble() * 2 - 1) * 12, z = 6 - rnd.nextDouble() * 14, y = H(x, z) + 0.012;
-        const lc = [C(0.62, 0.42, 0.18), C(0.72, 0.56, 0.22), C(0.5, 0.36, 0.16)][rnd.next(3)];
-        const s = 0.06 + rnd.nextDouble() * 0.05, a = rnd.nextDouble() * 3;
-        deco.tri(P(x + Math.cos(a) * s, y, z + Math.sin(a) * s), P(x - Math.sin(a) * s, y, z + Math.cos(a) * s), P(x - Math.cos(a) * s, y, z - Math.sin(a) * s), lc);
+        tree(x, z, s, rnd.nextDouble() < 0.4 ? 'pine' : 'broad', true);
+      // 林下灌丛
+      for (let k = 0; k < 24; k++) {
+        const x = (rnd.nextDouble() * 2 - 1) * 14, z = 4 - rnd.nextDouble() * 12;
+        if (Math.abs(z - ZC) < 3.4 && Math.abs(x) < 7.5) continue;
+        B[K_LEAF].sphere(P(x, H(x, z) + 0.05, z), V(0.36, 0.24, 0.32), shade(C(0.27, 0.46, 0.22), (rnd.nextDouble() - 0.5) * 0.15), 1, { seed: k, rough: 0.14, bottomShade: 0.35, flat: -0.4 });
       }
     } else if (!walled) {
-      const n = kind === 'river' ? 28 : 22;
+      const n = kind === 'river' ? 30 : 24;
       for (let k = 0; k < n; k++) {
         const x = (rnd.nextDouble() * 2 - 1) * 30, z = -9 - rnd.nextDouble() * 24;
         if (kind === 'river' && Math.abs(x - RIVER.x) < 4) continue;
-        tree(x, z, 2 + rnd.nextDouble() * 1.4, rnd.nextDouble() < 0.4);
+        if (Math.abs(x) < 9 && z > -16) continue;          // 不在两军交锋处的正后方挡住画面
+        tree(x, z, 2 + rnd.nextDouble() * 1.4, null, false);
       }
-      for (const [x, z, s] of [[-12.8, -2.5, 2.8], [13.6, -3.4, 3.0]]) tree(x, z, s, false);
+      for (const [x, z, s] of [[-12.8, -2.5, 2.8], [13.6, -3.4, 3.0]]) tree(x, z, s, 'broad', true);
+      // 田间村舍（平原、河川）
+      if (kind === 'plain' || kind === 'river') {
+        for (let k = 0; k < 6; k++) {
+          const x = -22 + k * 8.5 + (rnd.nextDouble() - 0.5) * 4, z = -19 - rnd.nextDouble() * 9;
+          if (kind === 'river' && Math.abs(x - RIVER.x) < 6) continue;
+          const y = H(x, z), ry = rnd.nextDouble() < 0.5;
+          const w = 1.6 + rnd.nextDouble() * 0.6, dd = 1.1;
+          BF[K_PLAIN].box(P(x, y + 0.5, z), ry ? V(dd, 1.1, w) : V(w, 1.1, dd), C(0.86, 0.8, 0.68));
+          BF[K_ROOF].chineseRoof(P(x, y + 1.05, z), (ry ? dd : w) + 0.5, (ry ? w : dd) + 0.45, 0.62, C(0.3, 0.32, 0.36));
+          tree(x + 1.9, z - 0.8, 1.8, 'broad', false);
+        }
+      }
+    } else {
+      // 城外两侧的树
+      for (const [x, z, s] of [[-12.6, -2.2, 2.9], [-10.4, -5.6, 2.5], [14.4, -3.6, 2.7]]) tree(x, z, s, 'broad', true);
     }
-    // 河岸芦苇
+    yield;
+    // 城墙与城门
+    if (walled) { buildWall(B, kind, rnd, defColor, H); yield; }
+    for (const [bs, cast] of [[B, true], [BF, false]]) {
+      if (!bs.some(mb => mb.pos.length)) continue;
+      const pg = mergeProps(bs);
+      const props = new THREE.Mesh(pg, propMaterial());
+      props.castShadow = cast; props.receiveShadow = true;
+      sc.scene.add(props);
+      sc.own.push(pg);
+    }
+    yield;
+    // ---- 草丛 / 芦苇 / 野花（实例化，随风轻摆；不投影）
+    const tufts = [];
+    const nT = walled ? 150 : kind === 'river' ? 380 : kind === 'forest' ? 420 : 480;
+    const gcol = kind === 'forest' ? C(0.3, 0.48, 0.24) : hilly ? C(0.5, 0.6, 0.3) : C(0.4, 0.6, 0.28);
+    for (let k = 0; k < nT; k++) {
+      const x = (rnd.nextDouble() * 2 - 1) * 15, z = 8 - rnd.nextDouble() * (walled ? 14 : 22);
+      if (walled && z < WALL_Z + 0.8) continue;
+      if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + 0.5) continue;
+      if (walled && kind !== 'wall' && Math.abs(x - GATE_X) < 1.6 + Math.max(0, z - WALL_Z) * 0.07) continue;
+      const tr = Math.exp(-(x * x) / 12 - ((z - ZC) * (z - ZC)) / 8);
+      if (rnd.nextDouble() < tr * 0.75) continue;
+      if (z > 3.5 && rnd.nextDouble() < 0.45) continue;    // 镜头前稀一些
+      tufts.push([x, H(x, z) - 0.02, z, (0.75 + rnd.nextDouble() * 0.6) * (z > 3.5 ? 0.8 : 1), 1, rnd.nextDouble() * 6.28, shade(gcol, (rnd.nextDouble() - 0.5) * 0.24)]);
+    }
     if (kind === 'river') {
-      for (let k = 0; k < 90; k++) {
-        const sideK = rnd.nextDouble() < 0.5 ? -1 : 1;
-        const x = RIVER.x + sideK * (RIVER.w + 0.9 + rnd.nextDouble() * 1.1), z = 6 - rnd.nextDouble() * 22;
+      for (let k = 0; k < 110; k++) {
+        const sk = rnd.nextDouble() < 0.5 ? -1 : 1;
+        const x = RIVER.x + sk * (RIVER.w + 0.7 + rnd.nextDouble() * 1.3), z = 6 - rnd.nextDouble() * 22;
         if (Math.abs(z - ZC) < 3.6 && Math.abs(x) < 5.5) continue;
         if (z > 2.2) continue;
-        const y = H(x, z);
-        for (let j = 0; j < 4; j++)
-          blade(x + (rnd.nextDouble() - 0.5) * 0.2, y, z + (rnd.nextDouble() - 0.5) * 0.2, 0.45 + rnd.nextDouble() * 0.35,
-            (rnd.nextDouble() - 0.5) * 0.2, rnd.nextDouble() * Math.PI, shade(C(0.58, 0.6, 0.32), (rnd.nextDouble() - 0.5) * 0.2));
+        tufts.push([x, H(x, z) - 0.02, z, 1.0 + rnd.nextDouble() * 0.5, 2.4 + rnd.nextDouble(), rnd.nextDouble() * 6.28, shade(C(0.62, 0.62, 0.34), (rnd.nextDouble() - 0.5) * 0.2)]);
       }
     }
-    yield;
-    // 远山
-    const far = new SG.MeshBuilder();
-    const hilly = kind === 'hill' || kind === 'mountain';
-    for (let k = 0; k < 9; k++) {
-      const x = -70 + k * 17 + (rnd.nextDouble() - 0.5) * 8, z = -62 - rnd.nextDouble() * 22;
-      const h = (hilly ? 14 : 8) + rnd.nextDouble() * (hilly ? 14 : 7);
-      far.cone(P(x, -2, z), 14 + rnd.nextDouble() * 10, h, 7, shade(C(0.5, 0.56, 0.52), (rnd.nextDouble() - 0.5) * 0.1));
-      if (hilly && h > 18) far.cone(P(x, -2 + h * 0.72, z), (14 + 10 * 0.5) * 0.28, h * 0.28, 7, C(0.93, 0.94, 0.96));
+    const inst = (geo, list) => {
+      const im = new THREE.InstancedMesh(geo, grassMaterial(), Math.max(1, list.length));
+      im.count = list.length;
+      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
+      list.forEach((t, i) => {
+        q.setFromEuler(e.set(0, t[5], 0));
+        m.compose(pv.set(t[0], t[1], t[2]), q, sv.set(t[3], t[3] * t[4], t[3]));
+        im.setMatrixAt(i, m);
+        im.setColorAt(i, t[6]);
+      });
+      im.receiveShadow = true; im.castShadow = false;
+      im.frustumCulled = false;
+      sc.scene.add(im);
+      sc.own.push(geo);
+      sc.instanced.push(im);
+      return im;
+    };
+    if (tufts.length) inst(tuftGeo(), tufts);
+    if (!walled) {
+      const fl = [C(0.98, 0.95, 0.86), C(1, 0.82, 0.3), C(0.95, 0.55, 0.62), C(0.72, 0.6, 0.95)], list = [];
+      for (let k = 0; k < (kind === 'forest' ? 40 : 70); k++) {
+        const x = (rnd.nextDouble() * 2 - 1) * 14, z = 3 - rnd.nextDouble() * 16;
+        if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + RIVER.bank) continue;
+        if (Math.abs(x) < 6 && Math.abs(z - ZC) < 3) continue;
+        list.push([x, H(x, z) - 0.01, z, 0.8 + rnd.nextDouble() * 0.5, 1, rnd.nextDouble() * 6.28, fl[rnd.next(fl.length)]]);
+      }
+      if (list.length) inst(flowerGeo(), list);
     }
-    // 城墙与城门
-    if (walled) { yield; buildWall(deco, kind, rnd, defColor, H); }
     yield;
-    const lp = SG.Gfx.lowPoly();
-    const ground = SG.Gfx.mesh(mb.toGeometry(), lp, { castShadow: false, receiveShadow: true });
-    const decoMesh = SG.Gfx.mesh(deco.toGeometry(), lp, { castShadow: true, receiveShadow: true });
-    const farMesh = SG.Gfx.mesh(far.toGeometry(), lp, { castShadow: false, receiveShadow: false });
-    sc.scene.add(ground); sc.scene.add(decoMesh); sc.scene.add(farMesh);
-    sc.own.push(ground.geometry, decoMesh.geometry, farMesh.geometry);
     // 河水
     if (kind === 'river') {
       const wm = new SG.MeshBuilder();
@@ -1193,12 +1087,11 @@ void main() {
       for (let j = 0; j < zz.length - 1; j++)
         for (let i = 0; i < nx; i++) {
           const xa = lerp(x0, x1, i / nx), xb = lerp(x0, x1, (i + 1) / nx);
-          const sa = clamp01(Math.abs(xa - RIVER.x) / (RIVER.w + RIVER.bank)), sb = clamp01(Math.abs(xb - RIVER.x) / (RIVER.w + RIVER.bank));
-          const ka = C(0.25 + sa * 0.6, 0, 0), kb = C(0.25 + sb * 0.6, 0, 0);
+          const sa = clamp01(Math.abs(xa - RIVER.x) / (RIVER.w + RIVER.bank));
+          const ka = C(0.25 + sa * 0.6, 0, 0);
           const y = RIVER.surf;
           const a = P(xa, y, zz[j]), b = P(xa, y, zz[j + 1]), c = P(xb, y, zz[j + 1]), d = P(xb, y, zz[j]);
           wm.tri(a, b, c, ka); wm.tri(a, c, d, ka);
-          void kb;
         }
       const water = SG.Gfx.mesh(wm.toGeometry(), waterMaterial(), { castShadow: false, receiveShadow: false });
       water.renderOrder = 1;
@@ -1207,57 +1100,56 @@ void main() {
     }
   }
 
-  function buildWall(mb, kind, rnd, defColor, H) {
+  // 城墙：砖石墙身（错缝砖纹）、圆润的垛口、角楼与曲面屋顶；城门为半圆拱门（拱券石、包铁门扇与门钉）与城门楼
+  function buildWall(B, kind, rnd, defColor, H) {
     const Z = WALL_Z, TH = 1.4, WH = 3.3, X0 = -0.6, X1 = 44;
     const stone = C(0.7, 0.67, 0.6);
     const zc = Z - TH / 2;
     const gx = kind === 'wall' ? null : GATE_X;
-    // 墙基与墙身
-    mb.box(P((X0 + X1) / 2, 0.15, zc), V(X1 - X0, 0.5, TH + 0.25), shade(stone, -0.12));
-    mb.box(P((X0 + X1) / 2, WH / 2, zc), V(X1 - X0, WH, TH), stone);
-    // 墙砖（正面上不同明暗的块）
-    const fz = Z + 0.012;
-    for (let x = X0; x < X1 - 0.01; x += 1.25)
-      for (let row = 0; row < 4; row++) {
-        const y0 = 0.42 + row * 0.7, x0 = x + (row % 2) * 0.6, x1 = Math.min(X1, x0 + 1.2);
-        if (x1 <= x0) continue;
-        if (gx !== null && Math.abs((x0 + x1) / 2 - gx) < 2.1) continue;
-        const col = shade(stone, (rnd.nextDouble() - 0.5) * 0.12 - 0.02);
-        mb.quad(P(x0 + 0.04, y0 + 0.04, fz), P(x0 + 0.04, y0 + 0.66, fz), P(x1 - 0.04, y0 + 0.66, fz), P(x1 - 0.04, y0 + 0.04, fz), col);
-      }
-    // 垛口
+    const S = B[K_BRICK], W = B[K_PLAIN], R = B[K_ROOF];
+    // 墙基（略外扩）与墙身；城门两侧分段，门洞上方另砌
+    const seg = (a, b) => {
+      if (b - a < 0.05) return;
+      S.box(P((a + b) / 2, 0.2, zc + 0.06), V(b - a, 0.5, TH + 0.3), shade(stone, -0.1));
+      S.box(P((a + b) / 2, WH / 2, zc), V(b - a, WH, TH), stone);
+    };
+    if (gx === null) seg(X0, X1); else { seg(X0, gx - 1.8); seg(gx + 1.8, X1); }
+    // 垛口（顶面圆润：小圆台 + 圆顶）与女墙
+    S.box(P((X0 + X1) / 2, WH + 0.04, Z - 0.12), V(X1 - X0, 0.08, 0.3), shade(stone, -0.06));
     for (let x = X0 + 0.3; x < X1; x += 0.8) {
       if (gx !== null && Math.abs(x - gx) < 1.9) continue;
-      mb.box(P(x, WH + 0.2, Z - 0.15), V(0.45, 0.4, 0.3), shade(stone, 0.05));
+      S.box(P(x, WH + 0.25, Z - 0.15), V(0.46, 0.34, 0.3), shade(stone, 0.04 + (rnd.nextDouble() - 0.5) * 0.06));
+      S.lathe(P(x, WH + 0.42, Z - 0.15), [[0.2, 0], [0.12, 0.08], [0, 0.11]], 8, shade(stone, 0.06));
     }
-    mb.box(P((X0 + X1) / 2, WH + 0.04, Z - 0.12), V(X1 - X0, 0.08, 0.3), shade(stone, -0.08));
     // 角楼（左端）
-    mb.box(P(X0, 2.05, zc), V(1.9, 4.1, 1.9), shade(stone, -0.05));
-    mb.box(P(X0, 4.45, zc), V(1.5, 0.7, 1.5), C(0.62, 0.2, 0.16));
-    mb.chineseRoof(P(X0, 4.8, zc), 2.5, 2.5, 0.9, C(0.24, 0.28, 0.36));
+    S.box(P(X0, 2.05, zc), V(1.9, 4.1, 1.9), shade(stone, -0.05));
+    W.box(P(X0, 4.45, zc), V(1.5, 0.7, 1.5), C(0.62, 0.2, 0.16));
+    for (const dx of [-0.62, 0.62]) for (const dz of [-0.62, 0.62]) W.lathe(P(X0 + dx, 4.1, zc + dz), [[0.07, 0], [0.07, 0.72]], 8, C(0.5, 0.16, 0.12));
+    R.chineseRoof(P(X0, 4.8, zc), 2.5, 2.5, 0.9, C(0.24, 0.28, 0.36));
     // 城内屋顶
     for (let k = 0; k < 7; k++) {
       const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.5 - rnd.nextDouble() * 5;
-      mb.box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86, 0.8, 0.68));
-      mb.chineseRoof(P(x, 3.6, z), 3.0, 2.2, 1.0 + rnd.nextDouble() * 0.4, C(0.27, 0.3, 0.37));
+      W.box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86, 0.8, 0.68));
+      R.chineseRoof(P(x, 3.6, z), 3.0, 2.2, 1.0 + rnd.nextDouble() * 0.4, C(0.27, 0.3, 0.37));
     }
     // 墙根碎石
     for (let k = 0; k < 9; k++) {
       const x = X0 + 1.2 + rnd.nextDouble() * 16;
       if (gx !== null && Math.abs(x - gx) < 2.4) continue;
       const r = 0.12 + rnd.nextDouble() * 0.16;
-      mb.blob(P(x, H(x, Z + 0.35) + r * 0.3, Z + 0.25 + rnd.nextDouble() * 0.4), V(r * 1.3, r * 0.8, r), shade(stone, -0.12 + (rnd.nextDouble() - 0.5) * 0.1), k + 11);
+      rockInto(B, x, H(x, Z + 0.35) + r * 0.1, Z + 0.3 + rnd.nextDouble() * 0.4, r, shade(stone, -0.12 + (rnd.nextDouble() - 0.5) * 0.1), k + 11);
     }
-    // 拒马：横木上交叉的削尖木桩（城门两侧、墙前）
+    // 拒马：横木上交叉的削尖木桩（平滑圆木）
     const stake = shade(WOOD, 0.08);
+    const pole = (a, b, r0, r1, col) => W.tube([a, b], [r0, r1], 6, col, false);
     const juma = (cx, cz, len) => {
       const y0 = H(cx, cz);
-      beam(mb, P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.1, 0.1, shade(WOOD, -0.08));
+      pole(P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.055, 0.055, shade(WOOD, -0.08));
       const n = Math.max(2, Math.round(len / 0.55));
       for (let i = 0; i < n; i++) {
         const x = cx - len / 2 + 0.2 + (len - 0.4) * (i / (n - 1));
-        beam(mb, P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.06, 0.012, stake);
-        beam(mb, P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.06, 0.012, stake);
+        pole(P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.035, 0.006, stake);
+        pole(P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.035, 0.006, stake);
       }
     };
     const jx = gx === null ? [1.4, 6.8] : [gx - 3.3, gx + 3.3, gx + 8.6];
@@ -1265,49 +1157,81 @@ void main() {
     // 倚墙的云梯（攻城痕迹）
     {
       const lx = gx === null ? 9.5 : gx + 6.2, zb = Z + 1.25, zt = Z + 0.12, top = WH - 0.2;
-      for (const s of [-0.24, 0.24]) beam(mb, P(lx + s, H(lx, zb) + 0.02, zb), P(lx + s, top, zt), 0.07, 0.06, WOOD);
+      for (const s of [-0.24, 0.24]) pole(P(lx + s, H(lx, zb) + 0.02, zb), P(lx + s, top, zt), 0.04, 0.035, WOOD);
       for (let i = 1; i < 8; i++) {
         const u = i / 8;
-        beam(mb, P(lx - 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), P(lx + 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), 0.045, 0.045, shade(WOOD, 0.05));
+        pole(P(lx - 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), P(lx + 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), 0.025, 0.025, shade(WOOD, 0.05));
       }
     }
     // 城头旗帜
     for (let k = 0; k < 6; k++) {
       const x = 1.6 + k * 2.6;
       if (gx !== null && Math.abs(x - gx) < 1.9) continue;
-      mb.flag(P(x, WH + 0.1, Z - 0.45), 1.3, 0.55, 0.4, defColor);
+      W.flag(P(x, WH + 0.1, Z - 0.45), 1.3, 0.55, 0.4, defColor);
     }
     if (gx === null) return;
-    // 城门：门洞、门扇与门钉、城门楼
-    const red = C(0.62, 0.2, 0.16);
-    mb.box(P(gx, 1.85, zc + 0.12), V(3.6, 3.7, TH + 0.5), shade(stone, -0.04));
-    const fz2 = Z + 0.38;
-    mb.quad(P(gx - 0.75, 0.05, fz2), P(gx - 0.75, 1.75, fz2), P(gx + 0.75, 1.75, fz2), P(gx + 0.75, 0.05, fz2), C(0.12, 0.1, 0.09));
-    // 拱顶（三角形近似）
-    for (let i = 0; i < 6; i++) {
-      const a0 = Math.PI * i / 6, a1 = Math.PI * (i + 1) / 6;
-      mb.tri(P(gx, 1.75, fz2), P(gx + Math.cos(a1) * 0.75, 1.75 + Math.sin(a1) * 0.45, fz2), P(gx + Math.cos(a0) * 0.75, 1.75 + Math.sin(a0) * 0.45, fz2), C(0.12, 0.1, 0.09));
+    // 城门台：门洞两侧的墩台、拱顶以上的墙体
+    const ar = 0.82, ah = 1.75, fz = Z + 0.38, bz = zc + 0.12, depth = TH + 0.5;
+    S.box(P(gx - 1.31, 1.85, bz), V(0.98, 3.7, depth), shade(stone, -0.04));
+    S.box(P(gx + 1.31, 1.85, bz), V(0.98, 3.7, depth), shade(stone, -0.04));
+    S.box(P(gx, (ah + ar + 3.7) / 2, bz), V(1.64, 3.7 - ah - ar, depth), shade(stone, -0.04));
+    // 拱腹（半圆拱，平滑法线朝内，越深越暗）与两侧门洞壁
+    const N = 14, dark = C(0.16, 0.13, 0.11), ins = shade(stone, -0.35), front = V(0, 0, -1), ri = ar - 0.01;   // front：Unity −z = three +z（朝镜头）
+    for (let i = 0; i < N; i++) {
+      const a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+      const n0 = V(-Math.cos(a0), -Math.sin(a0), 0), n1 = V(-Math.cos(a1), -Math.sin(a1), 0);
+      const A0 = P(gx + Math.cos(a0) * ri, ah + Math.sin(a0) * ri, fz), A1 = P(gx + Math.cos(a1) * ri, ah + Math.sin(a1) * ri, fz);
+      const B0 = P(gx + Math.cos(a0) * ri, ah + Math.sin(a0) * ri, fz - depth + 0.2), B1 = P(gx + Math.cos(a1) * ri, ah + Math.sin(a1) * ri, fz - depth + 0.2);
+      W.triN(A0, B0, A1, n0, n0, n1, ins, dark, ins);
+      W.triN(A1, B0, B1, n1, n0, n1, ins, dark, dark);
     }
     for (const sx of [-1, 1]) {
-      mb.box(P(gx + sx * 0.37, 0.95, fz2 + 0.03), V(0.68, 1.8, 0.06), C(0.4, 0.23, 0.12));
+      const n = V(-sx, 0, 0);
+      W.triN(P(gx + sx * ri, 0, fz), P(gx + sx * ri, ah, fz), P(gx + sx * ri, ah, fz - depth + 0.2), n, n, n, ins, ins, dark);
+      W.triN(P(gx + sx * ri, 0, fz), P(gx + sx * ri, ah, fz - depth + 0.2), P(gx + sx * ri, 0, fz - depth + 0.2), n, n, n, ins, dark, dark);
+    }
+    // 拱肩：拱线与门台正面矩形（宽 2·ar、高至 ah + ar）之间的扇形填充
+    for (let i = 0; i < N; i++) {
+      const a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+      const cx = i < N / 2 ? ar : -ar;
+      S.triN(P(gx + Math.cos(a0) * ar, ah + Math.sin(a0) * ar, fz), P(gx + cx, ah + ar, fz), P(gx + Math.cos(a1) * ar, ah + Math.sin(a1) * ar, fz), front, front, front, shade(stone, -0.04));
+    }
+    // 拱券石（浅色半环，略凸出墙面）
+    for (let i = 0; i < N; i++) {
+      const a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N, r0 = ar, r1 = ar + 0.22;
+      const q = (a, r) => P(gx + Math.cos(a) * r, ah + Math.sin(a) * r, fz + 0.04);
+      S.triN(q(a0, r0), q(a0, r1), q(a1, r1), front, front, front, shade(stone, 0.1 - (i % 2) * 0.05));
+      S.triN(q(a0, r0), q(a1, r1), q(a1, r0), front, front, front, shade(stone, 0.1 - (i % 2) * 0.05));
+    }
+    // 门扇（深红木门 + 铜门钉），退进门洞
+    const dz = fz - 0.35;
+    for (const sx of [-1, 1]) {
+      W.box(P(gx + sx * 0.4, ah * 0.5, dz), V(0.8, ah, 0.08), C(0.42, 0.2, 0.11));
       for (let r = 0; r < 4; r++)
         for (let c = 0; c < 3; c++)
-          mb.box(P(gx + sx * (0.15 + c * 0.19), 0.3 + r * 0.42, fz2 + 0.07), V(0.05, 0.05, 0.03), GOLD);
+          W.sphere(P(gx + sx * (0.16 + c * 0.2), 0.3 + r * 0.38, dz + 0.05), 0.028, GOLD, 0, { top: 0.2 });
     }
-    mb.box(P(gx, 3.8, zc + 0.12), V(3.3, 0.2, TH + 0.3), shade(stone, 0.04));
-    mb.box(P(gx, 4.4, zc), V(2.9, 1.0, 1.3), red);
-    for (let i = -2; i <= 2; i++) mb.box(P(gx + i * 0.68, 4.4, Z + 0.06), V(0.12, 1.0, 0.1), shade(red, -0.25));
-    mb.box(P(gx, 4.75, Z + 0.07), V(1.1, 0.34, 0.04), C(0.12, 0.1, 0.09));
-    mb.box(P(gx, 4.75, Z + 0.09), V(0.9, 0.24, 0.02), GOLD);
-    // 本城：金顶城楼 + 守方大旗（不再叠第二层楼——宽屏 / 手机上第二层会顶进上方 HUD；轮廓与城门同高）
+    // 拱顶以内的门扇上半（半圆）
+    for (let i = 0; i < N; i++) {
+      const a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+      W.triN(P(gx, ah, dz + 0.04), P(gx + Math.cos(a0) * ar, ah + Math.sin(a0) * ar, dz + 0.04), P(gx + Math.cos(a1) * ar, ah + Math.sin(a1) * ar, dz + 0.04), front, front, front, C(0.36, 0.17, 0.1));
+    }
+    // 城门楼：台基、红柱、檐下额枋与匾额、曲面重檐
+    const red = C(0.62, 0.2, 0.16);
+    S.box(P(gx, 3.8, zc + 0.12), V(3.3, 0.2, TH + 0.3), shade(stone, 0.04));
+    W.box(P(gx, 4.4, zc), V(2.9, 1.0, 1.3), shade(red, -0.08));
+    for (let i = -2; i <= 2; i++) W.lathe(P(gx + i * 0.68, 3.9, Z + 0.08), [[0.07, 0], [0.065, 1.0]], 8, red);
+    W.box(P(gx, 4.82, Z + 0.06), V(3.0, 0.14, 0.1), C(0.2, 0.36, 0.4));
+    W.box(P(gx, 4.6, Z + 0.07), V(1.1, 0.34, 0.04), C(0.12, 0.1, 0.09));
+    W.box(P(gx, 4.6, Z + 0.09), V(0.9, 0.24, 0.02), GOLD);
+    // 本城：金顶城楼 + 守方大旗
     const castle = kind === 'castle';
-    mb.chineseRoof(P(gx, 4.9, zc), 4.0, 2.2, 1.15, castle ? C(0.85, 0.65, 0.2) : C(0.22, 0.26, 0.34));
+    R.chineseRoof(P(gx, 4.9, zc), 4.0, 2.2, 1.15, castle ? C(0.85, 0.65, 0.2) : C(0.22, 0.26, 0.34));
     if (castle) {
-      mb.flag(P(gx + 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
-      mb.flag(P(gx - 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
+      W.flag(P(gx + 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
+      W.flag(P(gx - 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
     }
   }
-
   // ======================================================= 阵型 --
   // 返回 K 个步兵的队形位置 { f（向敌为正，前排为 0）, l（纵深方向）, file }
   function formationSlots(fi, K) {
@@ -1463,6 +1387,7 @@ void main() {
       this.evIdx = 0;
       this.seed = seed;
       this.instanced = [];
+      this.figs = [];        // 单独的 SG.Figure（旗手、武将、战马），退出时释放
       this.temp = [];        // 特效网格 { mesh, t0, life, fn }
     }
     // 分帧构建：每帧最多约 budget 毫秒，返回 Promise
@@ -1519,8 +1444,9 @@ void main() {
       this.planCharge();
       this.planArrows();
       yield;
-      yield* this.buildMeshes();
+      yield* this.buildFigures();
       this.planCasualties();
+      this.planActs();
       this.planEvents();
       // 粒子
       this.dust = new Pool(520, THREE.NormalBlending, 0.6, 11);
@@ -1555,19 +1481,19 @@ void main() {
           wt: 9 + rnd.nextDouble() * 6, pt: rnd.nextDouble() * 6.3, p0: rnd.nextDouble() * 6.3,
           fallT: Infinity, fallKind: 'melee', fallDir: rnd.nextDouble() < 0.72 ? 1 : -1, kb: 0,
           hits: [], flash: 0, shotDelay: rnd.nextDouble() * 0.1,
-          bodyIdx: -1, legIdx: -1, wIdx: -1, flag: null,
+          type: 'spear', cid: 0, fig: null, flag: null, acts: null, colKey: '',
         };
         soldiers.push(s);
         return s;
       };
-      for (const sl of slots) mk('inf', sl.f, sl.l, sl.file);
+      for (const sl of slots) mk('inf', sl.f, sl.l, sl.file).type = infType(info.culture, sl.file);
       // 弓手：步兵之后一到两排
       const aRows = nArch > 4 ? 2 : 1, per = Math.ceil(nArch / aRows);
       let minAll = minF;
       for (let k = 0; k < nArch; k++) {
         const row = Math.floor(k / per), cnt = Math.min(per, nArch - row * per), i = k - row * per;
         const f = minF - 0.72 - row * 0.5, l = (i - (cnt - 1) / 2) * 0.82 + (row % 2) * 0.41;
-        mk('arch', f, l, 99);
+        mk('arch', f, l, 99).type = 'archer';
         minAll = Math.min(minAll, f);
       }
       // 旗手：步兵最后一排中最靠近中线的一到两名
@@ -1578,7 +1504,7 @@ void main() {
       for (const s of rear) {
         if (flags.length >= nFlag) break;
         if (flags.some(o => Math.abs(o.l - s.l) < 1.2)) continue;
-        s.role = 'flag'; flags.push(s);
+        s.role = 'flag'; s.type = 'spear'; flags.push(s);
       }
       // 前两排冲进敌阵的深度（交错进入）
       for (const s of soldiers) if (s.role === 'inf' && s.file <= 1) s.push = (s.file === 0 ? 0.18 : 0.06) + rnd.nextDouble() * 0.32;
@@ -1607,79 +1533,77 @@ void main() {
       L.cheer = R.routed && !L.routed; R.cheer = L.routed && !R.routed;
     }
 
-    *buildMeshes() {
-      const lp = SG.Gfx.lowPoly();
+    // 士兵群（实例化）、旗手、武将与战马、帅旗、箭
+    *buildFigures() {
       const scene = this.scene;
-      const inst = (geo, count, opts) => {
-        const m = new THREE.InstancedMesh(geo, lp, Math.max(1, count));
-        m.count = count;
-        m.castShadow = true; m.receiveShadow = true;
-        m.frustumCulled = false;
-        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        for (let i = 0; i < Math.max(1, count); i++) { m.setMatrixAt(i, HIDE); m.setColorAt(i, (opts && opts.color) || C(1, 1, 1)); }
-        if (m.instanceColor) m.instanceColor.setUsage(THREE.DynamicDrawUsage);
-        scene.add(m);
-        this.own.push(geo);
-        this.instanced.push(m);
-        return m;
-      };
-      let nSpear = 0, nBow = 0;
+      const crowd = this.crowd = SG.Figure.crowd({ lod: 'low', shadow: true, capacity: 16 });
+      scene.add(crowd.root);
       for (const A of this.armies) {
-        const team = SG.Gfx.color(A.info.color);
-        const acc = A.info.accent ? SG.Gfx.color(A.info.accent) : null;
-        const infList = A.soldiers.filter(s => s.role !== 'arch'), archList = A.soldiers.filter(s => s.role === 'arch');
-        A.infMesh = inst(bodyGeo(team, A.info.culture, false, acc), infList.length);
-        A.archMesh = inst(bodyGeo(team, A.info.culture, true, acc), archList.length);
-        A.legMesh = inst(legGeo(A.info.culture), A.soldiers.length * 2);    // 腿按文化（裤 / 裸腿 / 长靴 / 绑腿），每方一组
-        infList.forEach((s, i) => { s.bodyIdx = i; });
-        archList.forEach((s, i) => { s.bodyIdx = i; });
-        yield;
-        A.soldiers.forEach((s, i) => {
-          s.legIdx = i * 2;
-          if (s.role === 'arch') s.wIdx = nBow++; else s.wIdx = nSpear++;
-        });
-      }
-      this.spearMesh = inst(spearGeo(), nSpear);
-      this.bowMesh = inst(bowGeo(), nBow);
-      // 武将
-      this.horseLegs = inst(horseLegGeo(), 8);
-      for (const A of this.armies) {
-        const team = SG.Gfx.color(A.info.color);
-        const hc = horseColor(A.info.name);
-        const g = A.general;
-        g.horse = hc;
-        g.mesh = SG.Gfx.mesh(generalGeo(team, A.info.culture, hc, weaponOf(A.info.gen), A.info.accent ? SG.Gfx.color(A.info.accent) : null), lp, { castShadow: true, receiveShadow: true });
-        g.mesh.matrixAutoUpdate = false;
-        g.mesh.frustumCulled = false;
-        scene.add(g.mesh);
-        this.own.push(g.mesh.geometry);
-        for (let i = 0; i < 4; i++) this.horseLegs.setColorAt(A.si * 4 + i, hc);
-        // 帅旗与士兵旗
-        const glyph = surname(A.info.gen);
-        const big = bannerTexture(glyph, A.info.color, true, A.info.accent);
-        const small = bannerTexture(glyph, A.info.color, false, A.info.accent);
-        this.own.push(big, small);
-        g.flag = new Flag(big, 0.74, 0.98, A.dir > 0, A.si * 3.1, true, A.si + 'B');
-        scene.add(g.flag.mesh);
-        this.own.push(g.flag);
-        for (const s of A.soldiers) if (s.role === 'flag') {
-          s.flag = new Flag(small, 0.56, 0.4, A.dir > 0, this.rnd.nextDouble() * 6, false, A.si + 's');
-          scene.add(s.flag.mesh);
-          this.own.push(s.flag);
+        const info = A.info;
+        A.hex = { base: info.color, flash: mixHex(info.color, '#ffffff', 0.55), dead: mixHex(info.color, '#000000', 0.28) };
+        for (const s of A.soldiers) {
+          if (s.role === 'flag') continue;
+          s.cid = crowd.add({ type: s.type, culture: info.culture, color: info.color, seed: TYPE_SEED[s.type] });
+          s.colKey = 'base';
+          yield;
         }
+        // 旗手：双手竖持长枪，旗面挂在枪头下
+        const glyph = surname(info.gen);
+        const big = bannerTexture(glyph, info.color, true, info.accent);
+        const small = bannerTexture(glyph, info.color, false, info.accent);
+        this.own.push(big, small);
+        for (const s of A.soldiers) if (s.role === 'flag') {
+          const f = s.fig = SG.Figure.soldier({ type: 'spear', culture: info.culture, color: info.color, seed: 2, lod: 'low' });
+          f.root.scale.setScalar(FIG_S);
+          scene.add(f.root);
+          this.figs.push(f);
+          const wi = f.weaponInfo || {};
+          const top = (wi.tip ? wi.tip[1] : (wi.len || 2.3) - 0.3) - 0.16;
+          s.flag = new Flag(small, 0.56 / FIG_S, 0.4 / FIG_S, A.dir > 0, this.rnd.nextDouble() * 6, false, A.si + 's');
+          s.flag.mesh.matrix.makeRotationY(Math.PI).setPosition(0, top, 0);
+          f.sockets.gripR.add(s.flag.mesh);
+          this.own.push(s.flag);
+          yield;
+        }
+        // 武将：中精度名将（专属兵器、与头像一致的面部）骑中精度战马；鞍后左侧插帅旗
+        const G = A.general;
+        G.horse = SG.Figure.horse(horseOpts(info, info.gen));
+        G.fig = SG.Figure.general(info.gen, { lod: 'mid', culture: info.culture, color: info.color, mounted: true });
+        G.horse.mount(G.fig);
+        G.horse.root.scale.setScalar(FIG_S);
+        scene.add(G.horse.root);
+        this.figs.push(G.fig, G.horse);
+        const pm = new SG.MeshBuilder();
+        pm.lathe(V(0, 0, 0), [[0.035, 0], [0.028, 4.1]], 8, C(0.3, 0.2, 0.12));
+        pm.lathe(V(0, 4.1, 0), [[0.05, 0], [0.06, 0.05], [0.0, 0.3]], 8, GOLD);
+        pm.sphere(V(0, 4.08, 0), 0.06, GOLD, 1);
+        G.pole = new THREE.Mesh(pm.toGeometry(), SG.Gfx.lowPoly());
+        G.pole.castShadow = true;
+        G.pole.position.set(0.3, -0.35, -0.52);
+        G.horse.attach(G.pole, 'saddle');
+        this.own.push(G.pole.geometry);
+        G.flag = new Flag(big, 0.74 / FIG_S, 0.98 / FIG_S, A.dir > 0, A.si * 3.1, true, A.si + 'B');
+        G.flag.mesh.matrix.makeRotationY(Math.PI).setPosition(0, 3.96, 0);
+        G.pole.add(G.flag.mesh);
+        this.own.push(G.flag);
         yield;
       }
-      if (this.horseLegs.instanceColor) this.horseLegs.instanceColor.needsUpdate = true;
       // 箭（特殊箭雨染成必杀技颜色并发光）
-      this.arrowMesh = inst(arrowGeo(), this.arrows.length);
+      const lp = SG.Gfx.lowPoly();
+      const am = this.arrowMesh = new THREE.InstancedMesh(arrowGeo(), lp, Math.max(1, this.arrows.length));
+      am.count = this.arrows.length;
+      am.castShadow = true; am.receiveShadow = false; am.frustumCulled = false;
+      am.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      for (let i = 0; i < Math.max(1, this.arrows.length); i++) { am.setMatrixAt(i, HIDE); am.setColorAt(i, C(1, 1, 1)); }
       if (this.special) {
         const sc = SG.Gfx.color(this.special.color);
         const glowC = C(0.6 + sc.r * 1.6, 0.6 + sc.g * 1.6, 0.6 + sc.b * 1.6);
-        this.arrows.forEach((r, i) => { if (r.spec) this.arrowMesh.setColorAt(i, glowC); });
+        this.arrows.forEach((r, i) => { if (r.spec) am.setColorAt(i, glowC); });
       }
+      scene.add(am);
+      this.own.push(am.geometry);
+      this.instanced.push(am);
     }
-
-    // 箭：每方一轮齐射
     planArrows() {
       const rnd = this.rnd;
       this.arrows = [];
@@ -1792,6 +1716,29 @@ void main() {
           }
     }
     specialT() { return TL.contact + 0.02; }
+    // 混战动作表（前两排步兵）：横斩、反撩、重劈、格挡交替，受击时插入「受击」
+    planActs() {
+      const rnd = this.rnd;
+      const CLD = { light1: 0.42, light2: 0.42, heavy: 0.9 };
+      for (const A of this.armies)
+        for (const s of A.soldiers) {
+          if (s.role !== 'inf' || s.file > 1) continue;
+          const acts = [];
+          let tt = TL.contact - 0.08 + rnd.nextDouble() * 0.1 + s.file * 0.14;
+          const end = Math.min(s.fallT, TL.melee1 + s.rd);
+          while (tt < end) {
+            const u = rnd.nextDouble();
+            const clip = u < 0.36 ? 'light1' : u < 0.7 ? 'light2' : u < 0.86 ? 'heavy' : 'block';
+            const sp = clip === 'heavy' ? 1.55 : clip === 'block' ? 1 : 1.12 + rnd.nextDouble() * 0.3;
+            const d = clip === 'block' ? 0.22 + rnd.nextDouble() * 0.16 : CLD[clip] / sp;
+            acts.push({ t: tt, clip, sp, d });
+            tt += d + rnd.nextDouble() * 0.07;
+          }
+          for (const h of s.hits) acts.push({ t: h, clip: 'hit', sp: 1.4, d: 0.42 / 1.4 });
+          acts.sort((a, b) => a.t - b.t);
+          s.acts = acts;
+        }
+    }
 
     planEvents() {
       const ev = [];
@@ -1822,188 +1769,177 @@ void main() {
       }
       const jit = s.role === 'arch' ? 0 : seg(t, TL.contact, TL.contact + 0.18) * (1 - seg(t, TL.melee1, TL.melee1 + 0.25));
       const engage = s.file <= 1 ? 1 : 0.4;
-      x += dir * jit * engage * (Math.sin(t * s.w1 + s.p1) * 0.13 + Math.sin(t * s.w2 + s.p2) * 0.06);
-      z += jit * Math.sin(t * s.w3 + s.p3) * 0.09;
+      x += dir * jit * engage * (Math.sin(t * s.w1 + s.p1) * 0.09 + Math.sin(t * s.w2 + s.p2) * 0.04);
+      z += jit * Math.sin(t * s.w3 + s.p3) * 0.06;
       if (A.routed) {
         const uf = seg(t, TL.melee1 + s.rd, TL.regroup1 + 0.25);
         x -= dir * 8 * Math.pow(uf, 1.4);
-      } else if (s.role !== 'arch') {
-        x -= dir * 0.85 * eio(seg(t, TL.melee1 + s.rd, TL.regroup1 - 0.04));
+      } else if (s.role !== 'arch' && !A.cheer) {
+        x -= dir * BACK * eio(seg(t, TL.melee1 + s.rd, TL.regroup1 - 0.04));
       }
       o.x = x; o.z = z;
       o.jit = jit;
     }
     // 步态：相位（腿摆动）、幅度、身体前倾
-    gait(A, s, t, o) {
-      const segs = s.role === 'arch'
-        ? [[s.ed, TL.march1 + s.ed * 0.5, 11, 0.5, -0.05]]
-        : [[s.ed, TL.march1 + s.ed * 0.5, 11, 0.5, -0.05],
-          [TL.charge0 + s.cd, TL.contact + s.cd * 0.35, 18, 0.75, -0.3],
-          [TL.contact, TL.melee1, 6, 0.2, -0.1],
-          A.routed ? [TL.melee1 + s.rd, TL.regroup1 + 0.3, 18, 0.75, -0.3] : [TL.melee1 + s.rd, TL.regroup1 - 0.04, 10, 0.36, 0.07]];
-      if (s.role === 'arch' && A.routed) segs.push([TL.melee1 + s.rd, TL.regroup1 + 0.3, 18, 0.75, -0.3]);
-      let ph = 0, amp = 0, lean = 0, wsum = 0;
-      for (const g of segs) {
-        ph += g[2] * clamp(t - g[0], 0, g[1] - g[0]);
-        const w = trap(t, g[0], g[1], 0.1);
-        amp = Math.max(amp, w * g[3]);
-        lean += w * g[4]; wsum += w;
+    // 动作：时刻 t 该士兵播放的片段与片段内时刻（纯函数；步频由位移换算）
+    animOf(A, s, t, out) {
+      out.clip = 'idle'; out.ct = t + s.p0;
+      if (t >= s.fallT) {
+        const u = t - s.fallT;
+        if (s.fallKind === 'blast') { out.clip = 'knockdown'; out.ct = u * 1.4; }
+        else { out.clip = 'die'; out.ct = Math.min(1.4, 0.12 + u * 1.75); }
+        return out;
       }
-      o.ph = ph + s.p0; o.amp = amp; o.lean = wsum > 0 ? lean / Math.max(1, wsum) : 0;
+      const m0 = s.ed, m1 = TL.march1 + s.ed * 0.5;
+      if (t < m0) return out;
+      if (t < m1) { out.clip = 'run'; out.ct = gaitT('run', ENTER_DX * eo(seg(t, m0, m1)), ENTER_DX, m1 - m0) + s.p0 * 0.1; return out; }
+      if (A.routed && t >= TL.melee1 + s.rd) {
+        const r0 = TL.melee1 + s.rd, r1 = TL.regroup1 + 0.25;
+        out.clip = 'run'; out.ct = gaitT('run', 8 * Math.pow(seg(t, r0, r1), 1.4), 8, r1 - r0) + s.p0 * 0.1;
+        return out;
+      }
+      if (s.role === 'arch') {
+        const aim = TL.aim + s.ed * 0.2, rel = A.volleyT + s.shotDelay;
+        if (t >= aim && t < rel) { out.clip = 'bowDraw'; out.ct = 0.8 * seg(t, aim, rel); }
+        else if (t >= rel && t < rel + 0.5) { out.clip = 'bowShoot'; out.ct = t - rel; }
+        else if (A.cheer && t > TL.melee1 + 0.15) { out.clip = 'cheer'; out.ct = t - TL.melee1 - 0.15 + s.p0 * 0.2; }
+        return out;
+      }
+      const c0 = TL.charge0 + s.cd, c1 = TL.contact + s.cd * 0.35;
+      if (t < c0) {
+        // 敌方箭雨落下前后：前两排举盾（举兵器）护身
+        const E = this.armies[1 - A.si];
+        if (s.role === 'inf' && s.file <= 1 && t > E.volleyT + 0.12 && t < E.volleyT + TL.flight + 0.3) { out.clip = 'block'; out.ct = t - E.volleyT; }
+        return out;
+      }
+      if (t < c1) {
+        const D = A.chargeDX + s.push, u = seg(t, c0, c1);
+        out.clip = 'run'; out.ct = gaitT('run', D * u * u, D, c1 - c0) + s.p0 * 0.1;
+        return out;
+      }
+      if (t < TL.melee1 + s.rd) {
+        if (s.acts) for (let i = s.acts.length - 1; i >= 0; i--) {
+          const a = s.acts[i];
+          if (t >= a.t) { if (t < a.t + a.d) { out.clip = a.clip; out.ct = (t - a.t) * a.sp; } break; }
+        }
+        return out;
+      }
+      if (A.cheer) { out.clip = 'cheer'; out.ct = t - TL.melee1 - s.rd + s.p0 * 0.2; return out; }
+      const b0 = TL.melee1 + s.rd, b1 = TL.regroup1 - 0.04;
+      if (s.role !== 'arch' && t < b1) { out.clip = 'walk'; out.ct = 10 - gaitT('walk', BACK * eio(seg(t, b0, b1)), BACK, b1 - b0); }
+      return out;
     }
-
+    // 武将与战马的动作
+    // 骑手动作之间用 o.bclip / o.bt / o.bw（bw = 前一动作的残留权重）交叉淡化，不再在切换处跳帧
+    genAnim(A, t, o) {
+      const G = A.general;
+      o.hclip = 'idle'; o.ht = t + G.p0; o.rclip = 'idle'; o.rt = t + G.p0; o.move = 0;
+      o.bclip = null; o.bt = 0; o.bw = 0;
+      const fadeFrom = (clip, ct, t0, dur) => { const w = 1 - sm(seg(t, t0, t0 + dur)); if (w > 0.001) { o.bclip = clip; o.bt = ct; o.bw = w; } };
+      const m0 = G.ed, m1 = TL.march1 + 0.05;
+      if (t >= m0 && t < m1) { o.hclip = 'trot'; o.ht = gaitT('trot', ENTER_DX * eo(seg(t, m0, m1)), ENTER_DX, m1 - m0) + G.p0; o.move = 0.8; }
+      // 号令放箭：高举兵器（举起、放下都淡入淡出）
+      const a0 = TL.aim - 0.06, a1 = A.volleyT + 0.3;
+      if (t > a0 && t < a1) { o.rclip = 'charge'; o.rt = t - TL.aim; fadeFrom('idle', t + G.p0, a0, 0.2); }
+      else if (t >= a1) fadeFrom('charge', a1 - TL.aim, a1, 0.22);
+      const c0 = TL.charge0 + 0.1, c1 = TL.contact + 0.1;
+      if (!A.routed) {
+        if (t >= c0 && t < c1) { o.hclip = 'gallop'; o.ht = (t - c0) * 1.15; o.rclip = 'charge'; o.rt = t - c0; o.move = 1; o.bclip = null; o.bw = 0; fadeFrom('idle', t + G.p0, c0, 0.2); }
+        // 接敌：武将在本阵后方督战，不对空挥砍——勒马人立，兵器自高举处向前一指号令全军，随后高举兵器激励士卒。
+        // heavy 片段 0.42 秒处正是 charge 的举起姿势，从那里接着播到前指（约 0.58 秒）定住，无跳帧
+        const p0 = TL.contact - 0.12, q0 = TL.contact + 0.5, e0 = TL.melee1 + 0.1;
+        const ptT = Math.min(0.58, 0.42 + (t - p0) * 0.9);
+        if (t >= p0 && t < e0) {
+          o.rclip = 'heavy'; o.rt = ptT;
+          if (t >= q0) { o.rclip = 'cheer'; o.rt = t - q0; fadeFrom('heavy', 0.58, q0, 0.35); }
+        }
+        if (t >= TL.contact && t < TL.contact + 1.0) { o.hclip = 'rear'; o.ht = (t - TL.contact) * 1.6; }
+        if (t >= e0) {
+          if (A.cheer) { o.rclip = 'victory'; o.rt = t - e0; fadeFrom('cheer', e0 - q0, e0, 0.3); }
+          else {
+            fadeFrom('cheer', e0 - q0, e0, 0.3);
+            const b1 = TL.regroup1;
+            if (t < b1) { o.hclip = 'walk'; o.ht = 10 - gaitT('hwalk', GBACK * eio(seg(t, e0, b1)), GBACK, b1 - e0); }
+          }
+        }
+      } else {
+        if (t >= c0 && t < c1) { o.hclip = 'trot'; o.ht = (t - c0) * 1.1; o.move = 0.6; }
+        if (t >= TL.melee1 + 0.12) {
+          const r0 = TL.melee1 + 0.12, r1 = TL.regroup1 + 0.3;
+          o.hclip = 'gallop'; o.ht = gaitT('gallop', 9 * Math.pow(seg(t, r0, r1), 1.4), 9, r1 - r0); o.move = 1;
+        }
+      }
+      return o;
+    }
     groundY(x, z) {
       return this.h(x, z);
     }
 
     // 按时刻 t 摆出全部士兵、武将、箭（纯函数式：跳过时直接摆出结束姿态）
+    // 按时刻 t 摆出全部士兵、旗手、武将、箭（纯函数式：跳过时直接摆出结束姿态）
     pose(t) {
-      const o = {}, g = {};
+      const o = this._po || (this._po = {}), an = this._pa || (this._pa = {});
+      const cr = this.crowd;
+      cr.setTime(t);
       for (const A of this.armies) {
-        const yaw0 = A.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+        const yaw0 = A.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
         for (const s of A.soldiers) {
           const dead = t >= s.fallT;
           const tt = dead ? s.fallT : t;
           this.soldierXZ(A, s, tt, o);
-          this.gait(A, s, tt, g);
-          let x = o.x, z = o.z, lift = 0;
-          const fk = dead ? Math.pow(seg(t, s.fallT, s.fallT + (s.fallKind === 'blast' ? 0.5 : 0.34)), 2) : 0;
-          let spin = 0;
+          let x = o.x, lift = 0;
+          const z = o.z;
           if (dead && s.fallKind === 'blast') {
             const u = seg(t, s.fallT, s.fallT + 0.5);
             x -= A.dir * s.kb * eo(u);       // 被震飞：朝本方后方
-            lift += 4 * 1.1 * u * (1 - u);
-            spin = (1 - u) * u * 4 * 1.6 * (s.p0 > 3.1 ? 1 : -1);
+            lift = 4 * 1.1 * u * (1 - u);
           }
-          let y = this.groundY(x, z);
-          const bob = Math.abs(Math.sin(g.ph)) * 0.035 * (g.amp / 0.75);
-          // 朝向：溃逃时转身
+          const y = this.groundY(x, z) + lift;
           let yaw = yaw0;
           if (A.routed) yaw += Math.PI * sm(seg(tt, TL.melee1 + s.rd, TL.melee1 + s.rd + 0.2)) * (s.p0 > 3.1 ? 1 : -1);
-          yaw += o.jit * Math.sin(tt * s.w4 + s.p4) * 0.28;
-          let pitch = g.lean + (o.jit ? Math.sin(tt * s.w2 + s.p1) * 0.08 * o.jit : 0);
-          // 胜方欢呼：收队时轻跳
-          let cheer = 0;
-          if (A.cheer && !dead) cheer = seg(t, TL.melee1 + 0.15, TL.melee1 + 0.3);
-          const jump = cheer ? Math.max(0, Math.sin((t - TL.melee1) * 13 + s.p0)) * 0.12 * cheer : 0;
-          if (dead) {
-            pitch = lerp(pitch, s.fallDir * Math.PI / 2 * 0.96, fk);
-            lift += 0.1 * fk;
-            if (fk >= 1) pitch += Math.sin(Math.min(1, (t - s.fallT - 0.34) * 6) * Math.PI) * 0.05 * s.fallDir;
-          }
-          // 身体矩阵 B = T · Ry(yaw) · Rx(pitch)
-          _e.set(pitch, yaw, spin, 'YXZ');
-          _q.setFromEuler(_e);
-          _m.compose(_p.set(x, y + lift + (dead ? 0 : bob + jump), z), _q, _one);
-          const body = s.role === 'arch' ? A.archMesh : A.infMesh;
-          body.setMatrixAt(s.bodyIdx, _m);
-          // 腿
-          const swing = dead ? 0.15 * s.fallDir : Math.sin(g.ph) * g.amp;
-          for (let k = 0; k < 2; k++) {
-            _q2.setFromAxisAngle(_X, k ? -swing : swing);
-            _m2.compose(_p.set(k ? 0.065 : -0.065, HIP, 0), _q2, _one);
-            _m2.premultiply(_m);
-            A.legMesh.setMatrixAt(s.legIdx + k, _m2);
-          }
-          // 兵器
-          let wp, thrust = 0;
-          if (s.role === 'arch') {
-            const rel = A.volleyT + s.shotDelay;
-            const up = sm(seg(tt, TL.aim + s.ed * 0.2, TL.aim + 0.16));
-            const down = sm(seg(tt, rel + 0.12, rel + 0.5));
-            wp = 0.95 * up * (1 - down) + 0.12 * down - 0.1 * (1 - up) - Math.max(0, 1 - Math.abs(tt - rel) * 12) * 0.12;
-            if (A.routed) wp = lerp(wp, 0.5, seg(tt, TL.melee1, TL.melee1 + 0.3));
-          } else if (s.role === 'flag') {
-            wp = Math.sin(tt * 2.3 + s.p0) * 0.05 - 0.08 * seg(tt, TL.charge0, TL.contact);
+          yaw += o.jit * Math.sin(tt * s.w4 + s.p4) * 0.22;
+          this.animOf(A, s, t, an);
+          // 颜色：受击闪亮、阵亡变暗
+          let key = 'base';
+          if (dead) key = t - s.fallT < 0.12 ? 'flash' : t - s.fallT > 0.5 ? 'dead' : 'base';
+          else for (const ht of s.hits) { const d = t - ht; if (d >= 0 && d < 0.14) { key = 'flash'; break; } }
+          if (s.fig) {
+            const f = s.fig;
+            f.root.position.set(x, y, z);
+            f.root.rotation.set(0, yaw, 0);
+            f.setPose(an.clip, an.ct, { ik: false });
+            if (an.clip !== 'die' && an.clip !== 'knockdown') f.grip(FLAG_GRIP, FLAG_DIR, 0);
+            if (key !== s.colKey) { s.colKey = key; f.setTint('#ffffff', key === 'flash' ? 0.5 : 0); }
+            s.flag.k = dead ? 0.15 : an.clip === 'run' ? 1.5 : 0.85;
           } else {
-            wp = Math.sin(tt * 2.1 + s.p0) * 0.04 - 0.06;
-            const lower = sm(seg(tt, TL.charge0 - 0.12 + s.cd * 0.4, TL.charge0 + 0.14 + s.cd * 0.4));
-            wp = lerp(wp, -1.42, lower);
-            if (o.jit > 0) {
-              const eng = s.file <= 1 ? 1 : 0.35;
-              wp += o.jit * Math.sin(tt * s.w4 + s.pt) * 0.16;
-              thrust = o.jit * eng * Math.pow(Math.max(0, Math.sin(tt * s.wt + s.pt)), 3) * 0.34;
-            }
-            const back = seg(tt, TL.melee1 + s.rd, TL.regroup1);
-            if (A.routed) wp = lerp(wp, 0.55, sm(back));
-            else if (A.cheer) wp = lerp(wp, -0.12 + Math.sin(t * 9 + s.p0) * 0.12, sm(back));
-            else wp = lerp(wp, -0.95, sm(back));
+            cr.setTransform(s.cid, x, y, z, yaw, FIG_S);
+            cr.play(s.cid, an.clip, { t0: t - an.ct });
+            if (key !== s.colKey) { s.colKey = key; cr.setColor(s.cid, A.hex[key]); }
           }
-          // 倒地后兵器顺着身体躺平
-          if (dead) { wp = lerp(wp, s.role === 'arch' ? 0.3 : 0.12 * s.fallDir, fk); thrust = 0; }
-          _q2.setFromAxisAngle(_X, wp);
-          _m2.compose(_p.set(GRIP.x, GRIP.y, GRIP.z), _q2, _one);
-          if (thrust) { _m.multiply(_m2); _m2.makeTranslation(0, thrust, 0); _m.multiply(_m2); _m2.copy(_m); }
-          else _m2.premultiply(_m);
-          (s.role === 'arch' ? this.bowMesh : this.spearMesh).setMatrixAt(s.wIdx, _m2);
-          if (s.flag) {
-            _m.compose(_p.set(0, 0.82, 0), _q.identity(), _one);
-            _m.premultiply(_m2);
-            s.flag.mesh.matrix.copy(_m);
-            s.flag.mesh.matrixWorldNeedsUpdate = true;
-            s.flag.k = dead ? 0.15 : 0.75 + g.amp * 0.8;
-          }
-          // 颜色：受击闪白、阵亡变暗
-          let fl = 0;
-          if (!dead) for (const ht of s.hits) { const d = t - ht; if (d >= 0 && d < 0.16) fl = Math.max(fl, 1 - d / 0.16); }
-          if (dead) fl = Math.max(fl, 1 - (t - s.fallT) / 0.18);
-          const darkK = dead ? lerp(1, 0.52, seg(t, s.fallT + 0.1, s.fallT + 0.7)) : 1;
-          const ck = darkK * (1 + Math.max(0, fl) * 0.75);
-          _c.setRGB(ck, ck, ck);
-          body.setColorAt(s.bodyIdx, _c);
-          A.legMesh.setColorAt(s.legIdx, _c); A.legMesh.setColorAt(s.legIdx + 1, _c);
-          (s.role === 'arch' ? this.bowMesh : this.spearMesh).setColorAt(s.wIdx, _c);
         }
         this.poseGeneral(A, t);
       }
       this.poseArrows(t);
-      for (const m of this.instanced) {
-        m.instanceMatrix.needsUpdate = true;
-        if (m.instanceColor && m !== this.horseLegs) m.instanceColor.needsUpdate = true;
-      }
+      if (this.arrowMesh) this.arrowMesh.instanceMatrix.needsUpdate = true;
     }
-
     poseGeneral(A, t) {
-      const G = A.general, dir = A.dir;
-      const x = this.generalX(A, t);
-      const z = G.z0;
-      const y = this.groundY(x, z);
-      // 步态：入场与冲锋时小跑，溃逃时疾驰
-      const moving = trap(t, 0.08, TL.march1 + 0.05, 0.12) * 0.8 + trap(t, TL.charge0 + 0.1, TL.contact + 0.1, 0.12) * 0.6
-        + (A.routed ? trap(t, TL.melee1 + 0.12, TL.regroup1 + 0.5, 0.1) : trap(t, TL.melee1 + 0.1, TL.regroup1, 0.1) * 0.4);
-      const ph = t * 13 + G.p0;
-      const rear = (A.routed ? 0 : 1) * Math.sin(Math.PI * seg(t, TL.contact + 0.02, TL.contact + 0.6)) * 0.36;
-      let yaw = dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+      const G = A.general;
+      const x = this.generalX(A, t), z = G.z0, y = this.groundY(x, z);
+      let yaw = A.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
       if (A.routed) yaw += Math.PI * sm(seg(t, TL.melee1 + 0.12, TL.melee1 + 0.35));
-      const pitch = rear + Math.sin(ph * 2) * 0.03 * moving;
-      _e.set(pitch, yaw, 0, 'YXZ');
-      _q.setFromEuler(_e);
-      // 扬蹄时绕后蹄抬起（后蹄在局部 z = +0.4）
-      const lift = Math.abs(Math.sin(ph)) * 0.05 * moving + Math.sin(rear) * 0.4;
-      _m.compose(_p.set(x, y + lift, z), _q, _one);
-      _m2.makeScale(1.12, 1.12, 1.12);
-      _m.multiply(_m2);
-      G.mesh.matrix.copy(_m);
-      G.mesh.matrixWorldNeedsUpdate = true;
+      const ga = this.genAnim(A, t, this._ga || (this._ga = {}));
+      G.horse.root.position.set(x, y, z);
+      G.horse.root.rotation.set(0, yaw, 0);
+      G.horse.setPose(ga.hclip, ga.ht);
+      const bl = this._gbl || (this._gbl = { clip: null, t: 0, w: 1 });
+      bl.clip = ga.bclip; bl.t = ga.bt; bl.w = 1 - ga.bw;
+      G.fig.setPose(ga.rclip, ga.rt, { gallop: ga.hclip === 'gallop', blend: ga.bw > 0 ? bl : null });
+      // 帅旗竖插在鞍后：战马人立（整匹马抬头约 42°）时旗杆只随之倾斜约四分之一，不像硬牌子一样向后倒、滑出画面
+      const hb = G.horse.bones;
+      G.pole.rotation.x = -(hb.root.rotation.x + hb.body.rotation.x) * 0.75;
       G.x = x; G.y = y; G.z = z;
-      // 马腿（前后腿交替）
-      const legs = [[-0.1, 0.56, -0.36, 0], [0.1, 0.56, -0.36, 0.6], [-0.1, 0.56, 0.38, 2.6], [0.1, 0.56, 0.38, 3.3]];
-      legs.forEach((L, i) => {
-        let sw = Math.sin(ph + L[3]) * 0.55 * moving;
-        if (rear > 0.05 && i < 2) sw = -0.9 * rear / 0.36 + Math.sin(t * 20 + i) * 0.15;
-        _q2.setFromAxisAngle(_X, sw);
-        _m2.compose(_p.set(L[0], L[1], L[2]), _q2, _one);
-        _m2.premultiply(_m);
-        this.horseLegs.setMatrixAt(A.si * 4 + i, _m2);
-      });
-      // 帅旗：旗杆顶端横杆下（局部 Unity (-0.18, 2.86, -0.3) → three (-0.18, 2.86, 0.3)）
-      _m2.compose(_p.set(-0.18, 2.84, 0.32), _q.identity(), _one);
-      _m2.premultiply(_m);
-      G.flag.mesh.matrix.copy(_m2);
-      G.flag.mesh.matrixWorldNeedsUpdate = true;
-      G.flag.k = 0.85 + moving * 0.7;
+      G.flag.k = 0.85 + ga.move * 0.7;
     }
-
     poseArrows(t) {
       const m = this.arrowMesh;
       if (!m) return;
@@ -2017,7 +1953,7 @@ void main() {
         _v2.y += r.apex * 4 * (1 - 2 * u);
         _v2.normalize();
         _q.setFromUnitVectors(_fwd, _v2);
-        if (u >= 1) _v1.addScaledVector(_v2, r.water ? 0.4 : 0.14);   // 插入地面
+        if (u >= 1) _v1.addScaledVector(_v2, r.water ? 0.4 : -0.08);   // 插入地面约 0.17（露出约六成箭杆与箭羽）
         if (u >= 1 && r.water) { m.setMatrixAt(i, HIDE); return; }
         _m.compose(_v1, _q, _one);
         m.setMatrixAt(i, _m);
@@ -2027,10 +1963,10 @@ void main() {
       r.ready = true;
       const o = {};
       this.soldierXZ(r.S, r.archer, r.t0, o);
-      r.p0.set(o.x + r.S.dir * 0.25, this.groundY(o.x, o.z) + 0.95, o.z);
+      r.p0.set(o.x + r.S.dir * 0.3, this.groundY(o.x, o.z) + 0.74, o.z);
       if (r.target) {
         this.soldierXZ(r.E, r.target, r.land, o);
-        r.p1.set(o.x, this.groundY(o.x, o.z) + 0.55, o.z);
+        r.p1.set(o.x, this.groundY(o.x, o.z) + 0.6, o.z);
         r.hit = true;
       } else {
         // 落在敌阵附近
@@ -2267,6 +2203,8 @@ void main() {
     // ---------------------------------------------------------- 镜头 --
     cameraPose(t) {
       const xc = this.xc;
+      const dc = SG.Clash.debug && SG.Clash.debug.cam;
+      if (dc) { this.camera.position.set(dc.p[0], dc.p[1], dc.p[2]); this.camera.lookAt(dc.l[0], dc.l[1], dc.l[2]); return; }
       // 注视点比两军略高一点：画面上方约 1/6 被 HUD 占去，让军阵落在 HUD 之下的画面中部
       const K = [
         { t: 0, p: [-1.1, 4.0, 18.4], l: [0.2, 2.05, -0.8] },
@@ -2288,25 +2226,31 @@ void main() {
       const ext = this.armyExtent(t);
       let lx = lerp(lx0, (ext.l + ext.r) / 2, 0.5);
       if (this.special) lx = lerp(lx, ext.gl, 0.22 * trap(t, TL.charge0 - 0.3, TL.melee1, 0.4));
-      // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
-      const tanH = Math.tan(cam.fov * M.deg2rad / 2) * aspect * 0.92;
-      const need = this.viewNeed(t, lx, lz, dz, tanH);
-      const fit = Math.max(this.fit || 1, need);
       // 竖屏：拉远之后再抬高机位俯视，压低天空、让纵深铺开
       const kP = clamp((1.15 - aspect) / 0.6, 0, 1);
+      // 竖屏（画面很窄）：冲锋到混战期间镜头推向接敌线，只保证前两排在画面内（两端的弓手、武将与帅旗可出画，
+      // 头像与姓名在上方 HUD 里），士兵不再只是一条细带
+      const wP = kP * sm(trap(t, TL.charge0 + 0.35, TL.regroup1 + 0.35, 0.7));
+      if (wP > 0) lx = lerp(lx, this.xc || 0, wP * 0.8);
+      // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
+      const tanH = Math.tan(cam.fov * M.deg2rad / 2) * aspect * 0.92;
+      const need = this.viewNeed(t, lx, lz, dz, tanH, wP);
+      const fit = Math.max(lerp(this.fit || 1, 1, wP), need);
       const dist = Math.hypot(dx, dy, dz) * fit;
-      cam.position.set(lx + dx * fit, ly + dy * fit + kP * dist * 0.27, lz + dz * fit);
+      cam.position.set(lx + dx * fit, ly + dy * fit + kP * dist * 0.27 * (1 - 0.5 * wP), lz + dz * fit);
       if (this.shake > 0.001 && !this.calm) {
         const k = this.shake * 0.11;
         cam.position.x += Math.sin(this.real * 71) * k;
         cam.position.y += Math.sin(this.real * 57 + 1.3) * k * 0.7;
       }
-      let lookY = ly - kP * 0.35;
+      // 竖屏推近时注视点降到士兵胸口附近（远景时高处的注视点到了近处会把军阵压到画面底部）
+      let lookY = ly - kP * 0.35 - wP * 0.95;
       cam.lookAt(lx, lookY, lz);
       // 城门 / 本城：城门楼屋脊不得顶进上方 HUD（宽屏、手机上会被遮成「无顶红楼」）——
       // 投影屋脊，若高于 HUD 下沿就抬高注视点（画面整体下移，脚下空地有余量），最多抬 1.6
-      if (this.kind === 'gate' || this.kind === 'castle') {
-        const hb = this.hudLineNdc();
+      // 竖屏推近混战时不做（近景里城楼本就出画，不再是「无顶红楼」）
+      if ((this.kind === 'gate' || this.kind === 'castle') && wP < 0.999) {
+        const hb = this.hudLineNdc(), upMax = 1.6 * (1 - wP);
         if (hb < 0.98) {
           const tanV = Math.tan(cam.fov * M.deg2rad / 2);
           const dl = Math.hypot(cam.position.x - lx, cam.position.y - lookY, cam.position.z - lz);
@@ -2315,8 +2259,8 @@ void main() {
             cam.updateMatrixWorld();
             const y = _v2.set(GATE_X, 6.2, WALL_Z - 0.7).project(cam).y;
             const over = y - (hb - 0.03);
-            if (over <= 0.004 || up >= 1.6) break;
-            up = Math.min(1.6, up + over * tanV * dl * 0.9);
+            if (over <= 0.004 || up >= upMax) break;
+            up = Math.min(upMax, up + over * tanV * dl * 0.9);
             cam.lookAt(lx, lookY + up, lz);
           }
         }
@@ -2344,7 +2288,7 @@ void main() {
       const uc = seg(t, TL.charge0 + 0.1, TL.contact + 0.1);
       x += dir * A.genDX * uc * uc;
       if (A.routed) x -= dir * 9 * Math.pow(seg(t, TL.melee1 + 0.12, TL.regroup1 + 0.3), 1.4);
-      else x -= dir * 0.45 * eio(seg(t, TL.melee1 + 0.1, TL.regroup1));
+      else if (!A.cheer) x -= dir * GBACK * eio(seg(t, TL.melee1 + 0.1, TL.regroup1));
       return x;
     }
     // 取景用的时刻：入场时按列阵位置（让队伍走进画面），溃逃时停在溃散前（不追着逃兵拉远）
@@ -2354,18 +2298,25 @@ void main() {
       const gl = this.generalX(L, this.frameT(L, t)), gr = this.generalX(R, this.frameT(R, t));
       return { l: gl - 1.75, r: gr + 1.75, gl, gr };
     }
-    viewNeed(t, cx, lz, dz, tanH) {
+    // wCore > 0（竖屏混战）：在「全军」与「前两排」两种取景需求之间插值
+    viewNeed(t, cx, lz, dz, tanH, wCore) {
       if (!(dz > 0.1) || !(tanH > 0.01)) return 1;
-      let need = 0;
+      let need = 0, core = 0;
       const o = this._fo || (this._fo = {});
-      const test = (x, z) => { const n = (Math.abs(x - cx) / tanH + (z - lz)) / dz; if (n > need) need = n; };
+      const nOf = (x, z) => (Math.abs(x - cx) / tanH + (z - lz)) / dz;
+      const test = (x, z) => { const n = nOf(x, z); if (n > need) need = n; };
       for (const A of this.armies) {
         const tt = this.frameT(A, t), gx = this.generalX(A, tt), gz = A.general.z0;
         test(gx - A.dir * 1.75, gz - 0.25);     // 帅旗（含旗面飘动）在武将身后
         test(gx + A.dir * 1.0, gz);             // 马头
-        for (const s of A.soldiers) { this.soldierXZ(A, s, tt, o); test(o.x - A.dir * 0.3, o.z + 0.25); }
+        for (const s of A.soldiers) {
+          this.soldierXZ(A, s, tt, o);
+          const n = nOf(o.x - A.dir * 0.3, o.z + 0.25);
+          if (n > need) need = n;
+          if (s.file <= 1 && s.role !== 'arch' && n > core) core = n;
+        }
       }
-      return need;
+      return wCore > 0 ? lerp(need, core * 1.05, wCore) : need;
     }
     resize(w, h) {
       const aspect = w / Math.max(1, h);
@@ -2409,6 +2360,7 @@ void main() {
       this.cameraPose(this.t);
       // 粒子、旗帜、临时特效：播放中随时间轴推进（慢镜头、特写定格、调试冻结时一并停住）
       const step = wasRun ? Math.max(0, this.t - tBefore) : dt * this.speed;
+      SHARED_U.time.value = this.real;
       const scale = this.pointScale();
       this.dust.update(step, scale); this.fx.update(step, scale); this.glow.update(step, scale);
       for (const A of this.armies) {
@@ -2459,6 +2411,13 @@ void main() {
         if (rnd.nextDouble() < 12 * dt) this.dustAt(xc + (rnd.nextDouble() - 0.5) * 1.8, ZC + (rnd.nextDouble() - 0.5) * 4.2, 0.8, true);
       }
     }
+    // 测试用：模型与预算统计
+    stats() {
+      const c = this.crowd ? this.crowd.stats() : null;
+      let figTris = 0;
+      for (const f of this.figs) figTris += f.triangles || 0;
+      return { crowd: c, figs: this.figs.length, figTris, groundTris: this.groundTris || 0, buildMs: this._buildMs, prepMs: this._prepMs };
+    }
     pointScale() {
       const r = SG.Gfx.renderer;
       const h = r ? r.domElement.height : 720;
@@ -2495,7 +2454,19 @@ void main() {
       this.hud = new Hud(this);
       const tb = performance.now();
       this.hud.fadeBlack(FADE_IN * 0.75);
-      await this.buildAsync(10);
+      // 黑幕下准备超过约 0.3 秒（首次遇到的文化、慢设备）时显示「布阵中」，不让玩家对着纯黑画面干等
+      const waitTimer = setTimeout(() => { if (this.hud) this.hud.wait(true); }, 300);
+      try {
+        // 人物模型库：未载入时就近载入；首次遇到的文化在黑幕下分片生成士兵模板与动作贴图（之后常驻）
+        if (!(await ensureFigure())) throw new Error('SG.Figure 不可用（js/figure.js 未载入）');
+        const tp = performance.now();
+        if (prepChain) await prepChain;      // 正在进行的预热（prepare）先做完，免得同一模板并行生成两遍
+        await SG.Figure.preload({ cultures: [this.A.culture, this.D.culture], types: [], crowd: crowdSpecs(uniq([this.A.culture, this.D.culture])), budget: 24 });
+        this._prepMs = performance.now() - tp;
+        await this.buildAsync(40);     // 黑幕下画面不可见：每片多做一些（约 40ms），少等几帧（宿主仍在每帧绘制底下的战场）
+      } finally {
+        clearTimeout(waitTimer);
+      }
       this.resize(SG.Gfx.width, SG.Gfx.height);
       this.cameraPose(0);
       const r = SG.Gfx.renderer;
@@ -2543,6 +2514,9 @@ void main() {
       for (const f of this.temp) { if (this.scene) this.scene.remove(f.mesh); f.mesh.geometry.dispose(); releaseFx(f.mesh.material); }
       this.temp.length = 0;
       for (const m of this.instanced) { m.dispose(); }
+      if (this.crowd) { this.crowd.dispose(); this.crowd = null; }
+      for (const f of this.figs) { try { f.dispose(); } catch (e) { console.error(e); } }
+      this.figs.length = 0;
       for (const p of [this.dust, this.fx, this.glow]) if (p) p.dispose();
       for (const o of this.own) if (o && typeof o.dispose === 'function') o.dispose();
       this.own.length = 0;
@@ -2667,6 +2641,11 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
 @media (hover:hover){.sg-clash-mode:hover{border-color:rgba(243,201,105,.75);color:#fff6e0;}}
 .sg-clash-flash{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;}
 .sg-clash-fade{position:absolute;inset:0;pointer-events:none;background:#0b0a0f;opacity:1;}
+.sg-clash-wait{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:.7em;
+  color:#f3c969;font-family:${KAI};font-size:max(15px,calc(var(--u)*1.5));letter-spacing:.3em;white-space:nowrap;opacity:0;transition:opacity .25s ease;}
+.sg-clash-wait i{width:1.1em;height:1.1em;border-radius:50%;border:2px solid rgba(243,201,105,.25);border-top-color:#f3c969;animation:sg-clash-spin .9s linear infinite;}
+.sg-clash.is-wait .sg-clash-wait{opacity:.92;}
+@keyframes sg-clash-spin{to{transform:rotate(360deg);}}
 @media (max-height:540px){
   .sg-clash{--u:clamp(8px,min(1.3vw,2.5vh),26px);}
   .sg-clash-side{height:calc(var(--u)*6.6);}
@@ -2858,6 +2837,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       });
       this.flashEl = el('div', 'sg-clash-flash', null, root);
       this.fadeEl = el('div', 'sg-clash-fade', null, root);
+      el('div', 'sg-clash-wait', '<i></i><span>布阵中…</span>', this.fadeEl);
       this.flashA = 0;
       // 跳过：轻点 / 点击 / 空格 / 回车
       this.onDown = e => { e.preventDefault(); e.stopPropagation(); sc.skip(); };
@@ -2889,7 +2869,10 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
       f.style.transition = `opacity ${sec}s ease-in`;
       f.style.opacity = '1';
     }
+    // 黑幕上的「布阵中」提示
+    wait(on) { this.root.classList.toggle('is-wait', !!on); }
     fadeIn(sec) {
+      this.wait(false);
       // 已推入全屏场景（黑幕下）：隐藏战场 HUD、世界标签与提示，退出时恢复
       try { document.documentElement.classList.add('sg-clash-on'); } catch (e) { /* 忽略 */ }
       const f = this.fadeEl;
@@ -3126,9 +3109,15 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   }
 
   // ======================================================= 设置 --
-  const MODE_KEY = 'sanguozhi2_clash';
+  // 第三版：玩家要求「战斗时默认开启动画」——换用新键，旧键里存下的「关」作废一次（DESIGN-V3 §2）
+  const MODE_KEY = 'sanguozhi2_clash_v3';
   function loadMode() {
-    try { const v = window.localStorage && localStorage.getItem(MODE_KEY); if (v === 'on' || v === 'fast' || v === 'off') return v; } catch (e) { /* 忽略 */ }
+    try {
+      const v = window.localStorage && localStorage.getItem(MODE_KEY);
+      if (v === 'on' || v === 'fast' || v === 'off') return v;
+      // 旧键只沿用「快」（仍是开启动画）；旧的「关」不再生效
+      if (window.localStorage && localStorage.getItem('sanguozhi2_clash') === 'fast') return 'fast';
+    } catch (e) { /* 忽略 */ }
     return 'on';
   }
 
@@ -3187,6 +3176,19 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
         return Promise.resolve();
       }
     },
+    // 预热（可选）：战斗开始时传入双方文化，提前在后台分片生成士兵模板与动作贴图，首次攻击画面不再等待
+    prepare(o) {
+      o = o || {};
+      // 依次排队：多次调用不会并行生成同一模板；play 播放前也会先等排队中的预热做完
+      const p = (prepChain || Promise.resolve()).then(() => ensureFigure()).then(ok => {
+        if (!ok || !SG.Figure) return false;
+        const cs = uniq((o.cultures || []).filter(Boolean));
+        return SG.Figure.preload({ cultures: cs.length ? cs : ['han'], types: [], crowd: crowdSpecs(cs.length ? cs : ['han']), budget: o.budget || 8 }).then(() => true);
+      }).catch(() => false);
+      prepChain = p;
+      p.then(() => { if (prepChain === p) prepChain = null; });
+      return p;
+    },
     // 由战场数据组装 play() 参数
     fromBattle(model, a, t, beforeA, beforeT, extra) {
       const g = SG.G;
@@ -3215,4 +3217,17 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
   Clash._Scene = ClashScene;          // 测试用
   Clash._proto = ClashScene.prototype;
   SG.Clash = Clash;
+  // 游戏内兜底预热：宿主即使没有调用 prepare，游戏启动完成（标题画面）后也在后台分片生成最常见的汉军模板与动作贴图，
+  // 首次「攻击」不必在黑幕下等待；动画设为「关」时不做。只在正式游戏页（SG.Game 已启动）进行，测试页不受影响
+  if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof setTimeout === 'function') {
+    let tries = 0;
+    const warm = () => {
+      if (Clash._warmed || ++tries > 40) return;
+      const G = SG.Game;
+      if (!(G && G._booted && G.strategy && SG.Gfx && SG.Gfx.renderer) || document.hidden) { setTimeout(warm, 1500); return; }
+      Clash._warmed = true;
+      if (Clash.enabled) Clash.prepare({ cultures: ['han'], budget: 6 });
+    };
+    setTimeout(warm, 2500);
+  }
 })();

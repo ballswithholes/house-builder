@@ -105,7 +105,7 @@
       switch (t) {
         case Terrain.Plain: return '平原'; case Terrain.Forest: return '森林'; case Terrain.Hill: return '山丘';
         case Terrain.Mountain: return '山岳'; case Terrain.River: return '河川'; case Terrain.Wall: return '城墙';
-        case Terrain.Gate: return '城门'; default: return '本城';
+        case Terrain.Gate: return '城门'; case 8: return '水域'; default: return '本城';
       }
     },
   };

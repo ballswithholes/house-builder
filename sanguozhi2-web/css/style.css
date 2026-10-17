@@ -2111,3 +2111,156 @@ body {
   .sg-say-name.is-xlong { max-width: 6.4rem; font-size: .9rem; }
 }
 .sg-item-main:has(> .sg-item-desc > .sg-item-faces) { align-items: center; }
+
+/* ===================================================== 第三版 §4 成长界面 ==
+   .sg-lv（Lv 小标签）  .sg-expbar > i（经验条，--v 0..1；.is-inline 行内短条）
+   战斗情报卡：.sg-card-lv > .sg-card-exp   必杀列表：.sg-sp-tier（.is-sig 专属） .sg-sp-lore
+   战后：.sg-notice（UI.notice）.sg-lvup > .sg-lvup-row（.sg-lvup-face .sg-lvup-text .sg-lvup-head .sg-lvup-exp .sg-lvup-new）.sg-lvup-rest
+   习得：.sg-learn-kind（.is-special / .is-tactic） .sg-learn-tier.t1..t4 .sg-learn-rules
+   城池面板：.sg-genrow-lv .sg-lv-new   武将详情：.sg-geninfo-lv .sg-geninfo-rec .sg-geninfo-learn .sg-geninfo-sec .sg-geninfo-tacs > .sg-geninfo-tac
+   ========================================================================== */
+.sg-lv {
+  display: inline-flex; align-items: baseline; gap: .08em;
+  margin-left: .45em; padding: 0 .38em; border-radius: .35em;
+  font-size: .72em; font-weight: 700; line-height: 1.45; letter-spacing: .02em;
+  color: #1a1208; background: linear-gradient(180deg, #ffe7a3, #e9b950);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .22);
+  font-variant-numeric: tabular-nums; vertical-align: .08em; white-space: nowrap;
+}
+.sg-lv > b { font-size: 1.12em; font-weight: 800; }
+.sg-lv > b, .sg-genrow-name .sg-lv > b, .sg-gencard-sub .sg-lv > b, .sg-item .sg-lv > b { color: #1a1208; -webkit-text-fill-color: #1a1208; }
+.sg-lv-new {
+  display: inline-grid; place-items: center; margin-left: .3em; padding: 0 .3em; border-radius: .35em;
+  font-size: .66em; font-weight: 700; line-height: 1.45; color: #fff4e6; background: var(--sg-cinnabar, #c8382c);
+  vertical-align: .12em; animation: sg-lv-new 1.6s ease-in-out infinite;
+}
+@keyframes sg-lv-new { 50% { box-shadow: 0 0 .5rem rgba(255, 120, 90, .75); } }
+.sg-genrow-name .sg-lv { font-size: .68em; }
+
+.sg-expbar {
+  --v: 0;
+  position: relative; display: inline-block; flex: none;
+  width: 7.5rem; height: .5rem; border-radius: 99px; vertical-align: middle; overflow: hidden;
+  background: rgba(0, 0, 0, .5); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px rgba(243, 201, 105, .18);
+}
+.sg-expbar > i {
+  position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v) * 100%); border-radius: inherit;
+  background: linear-gradient(90deg, #b98a2c, #ffd76e 70%, #fff1c8);
+  box-shadow: 0 0 .45rem rgba(255, 215, 110, .55);
+  animation: sg-exp-fill .9s var(--sg-ease, ease-out) both;
+}
+@keyframes sg-exp-fill { from { width: 0; } }
+.sg-expbar.is-inline { width: 4.5rem; height: .42rem; }
+
+/* 战斗情报卡：姓名旁的等级与细经验条 */
+.sg-card-lv {
+  display: inline-flex; align-items: center; gap: .3em; margin-left: .5em; vertical-align: .1em;
+  font-size: .78em; font-weight: 700; color: var(--sg-gold); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sg-card-lv > b { color: #fff1c8; margin-left: .05em; }
+.sg-card-exp {
+  --v: 0; position: relative; display: inline-block; width: 2.6em; height: .32em; border-radius: 99px; overflow: hidden;
+  background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 1px rgba(243, 201, 105, .22);
+}
+.sg-card-exp::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v) * 100%); background: linear-gradient(90deg, #c9952f, #ffd76e); }
+
+/* 必杀列表：等阶小标签（专属为朱红），典故小字另起一行 */
+.sg-sp-tier {
+  display: inline-block; margin-right: .45em; padding: 0 .35em; border-radius: .3em;
+  font-size: .62em; font-weight: 700; line-height: 1.5; vertical-align: .18em; letter-spacing: .05em;
+  color: #f5eddb; background: rgba(243, 201, 105, .2); box-shadow: inset 0 0 0 1px rgba(243, 201, 105, .45);
+}
+.sg-sp-tier.is-sig { color: #fff2e0; background: var(--sg-cinnabar, #c8382c); box-shadow: none; }
+.sg-sp-lore { display: block; margin-top: .12em; opacity: .85; font-style: italic; }
+
+/* 只有一个按钮的说明框（UI.notice） */
+.sg-dialog.sg-notice { --w: 32rem; max-height: calc(100% - 1rem); }
+/* .sg-dlg-info 默认 flex: none，说明框正文须能收缩，才会在 max-height 内滚动、按钮留在框底 */
+.sg-notice .sg-notice-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.sg-notice .sg-confirm-btns { grid-template-columns: minmax(0, 18rem); justify-content: center; padding-top: .7rem; }
+
+/* 战后升级通知 */
+.sg-dialog.sg-lvup-dlg { --w: 32rem; }
+.sg-lvup { display: flex; flex-direction: column; gap: .55rem; text-align: left; }
+.sg-lvup-row {
+  flex: none;
+  display: flex; align-items: center; gap: .85rem; padding: .5rem .75rem; border-radius: .7rem;
+  background: linear-gradient(90deg, rgba(243, 201, 105, .16), rgba(243, 201, 105, .03) 70%);
+  border: 1px solid rgba(243, 201, 105, .28);
+  animation: sg-lvup-in .45s var(--sg-ease, ease-out) both;
+}
+.sg-lvup-row:nth-child(2) { animation-delay: .08s; }
+.sg-lvup-row:nth-child(3) { animation-delay: .16s; }
+.sg-lvup-row:nth-child(4) { animation-delay: .24s; }
+.sg-lvup-row:nth-child(n+5) { animation-delay: .3s; }
+@keyframes sg-lvup-in { from { opacity: 0; transform: translateY(.4rem); } }
+.sg-portrait-inline.sg-lvup-face { flex: none; width: 3.4rem !important; height: 3.4rem !important; margin: 0 !important; border-radius: .55rem; box-shadow: 0 0 0 2px rgba(243, 201, 105, .6), 0 .2rem .6rem rgba(0, 0, 0, .5); }
+.sg-lvup-text { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.sg-lvup-head { font-size: 1.2rem; }
+.sg-lvup-name { font-family: var(--sg-font-title); color: #fffaf0; letter-spacing: .04em; }
+.sg-lvup-lv { font-size: 1.35em; color: var(--sg-gold); text-shadow: 0 0 .6rem rgba(255, 210, 110, .55); font-variant-numeric: tabular-nums; }
+.sg-lvup-exp { display: flex; align-items: center; gap: .6rem; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.sg-lvup-new { font-size: .9rem; color: var(--sg-good); }
+.sg-lvup-rest { padding: .15rem .3rem 0; font-size: .95rem; line-height: 1.8; }
+.sg-lvup-rest .sg-portrait-inline.sg-face { vertical-align: -.45em; }
+.sg-lvup-who { white-space: nowrap; margin-right: .9em; }
+
+/* 习得对话框 */
+.sg-learn-kind {
+  display: inline-block; margin-right: .5em; padding: 0 .38em; border-radius: .3em;
+  font-size: .62em; font-weight: 700; line-height: 1.5; vertical-align: .18em; letter-spacing: .08em; color: #fff2e0;
+}
+.sg-learn-kind.is-special { background: var(--sg-cinnabar, #c8382c); }
+.sg-learn-kind.is-tactic { background: #3f6fb0; }
+.sg-learn-tier { display: inline-block; padding: 0 .45em; border-radius: .3em; font-weight: 700; color: #1a1208; background: #bfb6a2; white-space: nowrap; }
+.sg-learn-tier.t2 { background: #9fd3a4; }
+.sg-learn-tier.t3 { background: #8cc0ff; }
+.sg-learn-tier.t4 { background: linear-gradient(180deg, #ffe7a3, #e9b950); }
+.sg-learn-rules { display: block; margin-top: .15em; color: var(--sg-muted); font-size: .92em; }
+.sg-choose .sg-item:has(.sg-learn-kind) { align-items: flex-start; padding-top: .55rem; padding-bottom: .55rem; }
+.sg-choose .sg-item:has(.sg-learn-kind) .sg-item-desc { flex-basis: 100%; line-height: 1.45; color: #d9d0bd; }
+.sg-choose .sg-item:has(.sg-learn-kind) .sg-item-right { padding-top: .1rem; }
+.sg-choose .sg-item:has(.sg-sp-tier) .sg-item-desc { line-height: 1.4; }
+
+/* 武将详情：等级块与招式、计策 */
+.sg-chip-lv > b { color: var(--sg-gold); }
+.sg-geninfo-lv { display: flex; flex-direction: column; gap: .3rem; padding: .5rem .75rem .55rem; border-radius: .6rem; background: rgba(243, 201, 105, .07); border: 1px solid rgba(243, 201, 105, .2); }
+.sg-geninfo-lv-head { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
+.sg-geninfo-lv-head .sg-expbar { width: 9rem; height: .6rem; }
+.sg-geninfo-lv-n { font-family: var(--sg-font-title); font-size: 1.15rem; color: var(--sg-gold); }
+.sg-geninfo-lv-n > b { font-size: 1.4em; margin-left: .12em; color: #fff1c8; font-variant-numeric: tabular-nums; }
+.sg-geninfo-lv-exp { font-size: .92em; font-variant-numeric: tabular-nums; }
+.sg-geninfo-rec { font-size: .9em; color: var(--sg-muted); font-variant-numeric: tabular-nums; }
+.sg-geninfo-rec b { color: #fffaf0; font-weight: 600; }
+.sg-btn.sg-geninfo-learn { align-self: flex-start; margin-top: .2rem; }
+.sg-btn.sg-geninfo-learn small { margin-left: .5em; font-size: .78em; opacity: .85; }
+.sg-geninfo-sec { display: flex; flex-direction: column; gap: .45rem; }
+.sg-geninfo-sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; font-size: .92rem; }
+.sg-geninfo-sec-head .sg-geninfo-sp-label { font-size: .85rem; }
+.sg-geninfo-sp-label.is-tac { background: #3f6fb0; }
+.sg-geninfo-special.is-learned { border-color: rgba(243, 201, 105, .14); background: rgba(255, 255, 255, .03); }
+.sg-geninfo-sp-head .sg-sp-tier { font-size: .58em; vertical-align: .25em; }
+.sg-geninfo-tacs { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .4rem; }
+.sg-geninfo-tac { padding: .4rem .65rem .45rem; border-radius: .55rem; background: rgba(255, 255, 255, .035); border: 1px solid rgba(255, 255, 255, .06); font-size: .92em; line-height: 1.45; }
+.sg-geninfo-tac.is-learned { border-color: rgba(120, 170, 255, .3); background: rgba(80, 130, 220, .07); }
+.sg-geninfo-tac-head { display: flex; align-items: baseline; gap: .5rem; font-size: 1.08em; }
+.sg-geninfo-tac-head small { color: var(--sg-muted); font-size: .78em; white-space: nowrap; }
+.sg-geninfo-tac-lore { margin-top: .1rem; font-style: italic; opacity: .82; font-size: .94em; }
+.sg-geninfo-tac-desc { margin-top: .1rem; color: #ddd3bf; }
+
+@media (max-height: 540px) {
+  .sg-lvup { gap: .4rem; }
+  .sg-lvup-row { padding: .3rem .6rem; gap: .65rem; }
+  .sg-portrait-inline.sg-lvup-face { width: 2.7rem !important; height: 2.7rem !important; }
+  .sg-lvup-head { font-size: 1.05rem; }
+  .sg-lvup-exp, .sg-lvup-new { font-size: .82rem; }
+  .sg-lvup-rest { font-size: .85rem; line-height: 1.6; }
+  .sg-choose .sg-item:has(.sg-learn-kind) { padding-top: .35rem; padding-bottom: .35rem; }
+  .sg-geninfo-lv { padding: .35rem .6rem .4rem; }
+  .sg-geninfo-lv-head .sg-expbar { width: 6.5rem; }
+  .sg-geninfo-tacs { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .3rem; }
+  .sg-geninfo-tac { padding: .3rem .55rem .35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-lv-new, .sg-expbar > i, .sg-lvup-row { animation: none; }
+}

@@ -61,13 +61,15 @@
 /* 单挑格斗（js/duel-game.js）独立测试页。
    URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
              &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子 · &pr=N 最大像素比（软件渲染测试用）
+             &fig=0 不载入 js/figure.js（退回旧模型，对照用）
              &bots=1 载入后立即跑「人机强度」回归 · &pbot=parry|heavy|guard|spam|masher|jumper 玩家一方交给脚本玩家（真实画面里看格开 / 反击；heavy 多用重击，看满蓄重击的举刀一顿与格开）
    测试钩子：window.runDuel(opts) → Promise<结果>（opts.bot = 脚本玩家种类）· window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) ·
              window.botTally(n) · window.parryDemo(a, b) · window.__log */
 (function () {
   const Q = new URLSearchParams(location.search);
-  const optional = ['../js/data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
-    '../js/portrait-data.js', '../js/portrait.js', '../js/specials-data.js', '../js/specials.js', '../js/duel-game.js'];
+  const optional = ['../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
+    '../js/portrait-data.js', '../js/portrait.js', '../js/figure.js', '../js/specials-data.js', '../js/specials.js', '../js/duel-game.js'];
+  if (Q.get('fig') === '0') optional.splice(optional.indexOf('../js/figure.js'), 1);   // &fig=0：不载入 figure.js（旧的低多边形模型，对照用）
   const loaded = {};
   function load(src) {
     return new Promise(res => {
@@ -99,11 +101,15 @@
     window.addEventListener('pointerdown', unlock, true);
     window.addEventListener('keydown', unlock, true);
     // 武将与势力色
+    // 世界剧本（js/world-data.js）载入时含各文化的武将（罗马、安息、贵霜……；culture 取自剧本），否则只有经典剧本
+    const SD = SG.Scenarios && SG.Scenarios.world ? SG.Scenarios.world : SG.ScenarioData;
     const facColor = {};
-    for (const s of SG.ScenarioData.Factions) { const p = s.split('|'); facColor[p[0]] = p[3]; }
-    const gens = SG.ScenarioData.Generals.map((s, i) => {
+    for (const s of SD.Factions) { const p = s.split('|'); facColor[p[0]] = p[3]; }
+    const gens = SD.Generals.map((s, i) => {
       const p = s.split('|');
-      return { id: i, name: p[0], war: +p[1], intel: +p[2], pol: +p[3], fkey: p[4], color: facColor[p[4]] || '#8a8a92' };
+      const g = { id: i, name: p[0], war: +p[1], intel: +p[2], pol: +p[3], fkey: p[4], color: facColor[p[4]] || '#8a8a92' };
+      if (p[9]) g.culture = p[9];
+      return g;
     }).sort((a, b) => b.war - a.war);
     window.__gens = gens;
     const byName = n => gens.find(g => g.name === n);

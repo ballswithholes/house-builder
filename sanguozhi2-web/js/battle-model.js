@@ -107,7 +107,8 @@
       this.progressDone = false;
 
       const g = G();
-      this.generate(s.target.id * 31 + g.year);
+      // 第三版 §2：战场取自城池真实周边并按来向旋转（SG.BattleTerrain）；不可用时（如 Node 测试）退回旧的随机生成
+      if (!(SG.BattleTerrain && SG.BattleTerrain.applyTo(this, s))) this.generate(s.target.id * 31 + g.year);
       this.food[0] = s.atkFood; this.food[1] = s.target.food;
       for (let i = 0; i < s.atk.length; i++) {
         const u = new BUnit({ gen: s.atk[i], side: 0, x: 0, y: 0 });
@@ -775,8 +776,10 @@
       return tt === Terrain.Forest ? 1.5 : tt === Terrain.River ? 0.5 : 1;
     }
     nearRiver(x, y) {
-      if (this.inBounds(x, y) && this.map[x][y] === Terrain.River) return true;
-      for (const d of BattleModel.Dirs) { const nx = x + d.x, ny = y + d.y; if (this.inBounds(nx, ny) && this.map[nx][ny] === Terrain.River) return true; }
+      // 河川与水域（8，湖海，SG.BattleTerrain.Water）都算临水：水计与水淹类必杀可用
+      const wet = t => t === Terrain.River || t === 8;
+      if (this.inBounds(x, y) && wet(this.map[x][y])) return true;
+      for (const d of BattleModel.Dirs) { const nx = x + d.x, ny = y + d.y; if (this.inBounds(nx, ny) && wet(this.map[nx][ny])) return true; }
       return false;
     }
     // 以 c 为中心、曼哈顿半径 r 内的格子

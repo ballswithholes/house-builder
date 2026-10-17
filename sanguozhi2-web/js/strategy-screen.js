@@ -19,6 +19,12 @@
      所有列出武将的列表（指令选人、出征、移动、登用、俘虏、外交、势力一览……）每行带头像（SG.UI.item 的 avatar）；
      指令结果由执行的武将以头像汇报（report）；月末消息由军师汇报，文中提到的武将 / 势力（→ 君主）带小头像（SG.UI.faces）；
      急报以来犯主将的头像示警；俘虏、登用确认显示头像名片（SG.UI.genCard）；「大事」查看记录（带小头像）。
+   第三版 §4 成长界面（规则见 model.js 的 SG.Progress）：
+     玩家武将不再自动习得（Progress.playerAutoLearn = false）。每场战斗（亲自指挥 / 委任 / 空城）之后：
+     growth(s) → 升级通知（头像、「关羽 升至 5 级」、经验条、新解锁的格）→ 对每位有空格的我方武将弹出习得对话框
+     （learnDialog：3 个候选必杀 / 计策，显示等阶、说明、数值摘要与武将头像；「稍后再选」保留空格）。
+     武将详情：等级、经验条、战绩、全部必杀（专属在前）与计策（含说明）及格数；有空格时「习得新招」按钮。
+     城池面板的武将行显示等级（可习得新招时另有「新」标记）；月初若有保留的空格则提示一次。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -116,6 +122,48 @@
   function faces(html, opts) { try { return SG.UI && SG.UI.faces ? SG.UI.faces(html, opts) : html; } catch (e) { return html; } }
   function face(gen) { try { return SG.UI && SG.UI.face ? SG.UI.face(gen) : ''; } catch (e) { return ''; } }
   function genCard(gen, opts) { try { return SG.UI && SG.UI.genCard ? SG.UI.genCard(gen, opts) : ''; } catch (e) { return ''; } }
+  // ---- 成长（第三版 §4） ----
+  function Prog() { const P = SG.Progress; return P && P.enabled !== false && typeof P.expInfo === 'function' ? P : null; }
+  function lvTag(gen, cls) { try { return SG.UI && SG.UI.lvTag ? SG.UI.lvTag(gen, cls) : ''; } catch (e) { return ''; } }
+  function expBar(pct, cls) { try { return SG.UI && SG.UI.expBar ? SG.UI.expBar(pct, cls) : ''; } catch (e) { return ''; } }
+  // 有空格可学（openings 只在载入 tactics-data.js 时计计策格）
+  function canLearn(gen) {
+    const P = Prog();
+    if (!P || !gen) return false;
+    try { return P.openings(gen).total > 0 && P.candidates(gen, 1).length > 0; } catch (e) { return false; }
+  }
+  function tierText(c) {
+    if (c.type === 'special') return SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(c.tier) : c.tier + '阶';
+    return SG.Tactics && SG.Tactics.TIER_NAME ? SG.Tactics.TIER_NAME[c.tier] : c.tier + '阶';
+  }
+  function spColor(x) {
+    try { if (SG.Specials && SG.Specials.uiColor) return SG.Specials.uiColor(x.color || '#f3c969'); } catch (e) { /* 原色 */ }
+    return x.color || '#f3c969';
+  }
+  function shortScreen() { return window.innerHeight > 0 && window.innerHeight < 560; }
+  // 说明去掉开头的典故（lore）：典故另行显示
+  function stripLore(desc, lore) { desc = String(desc || ''); return lore && desc.indexOf(lore) === 0 ? desc.slice(lore.length) : desc; }
+  // 格数说明：「已学 1 / 4 · 可习得 1（二阶）· 上限四阶」「已学 1 / 3 · 6 级可学下一招 · 上限三阶」
+  // 括号里是眼下这一格可学到的等阶（受等级与已学数限制）；「上限」是此人武力 / 智力最终能学到的等阶
+  function slotText(gen, type) {
+    const P = Prog();
+    if (!P) return '';
+    const sp = type === 'special';
+    const sl = sp ? P.specialSlots(gen) : P.tacticSlots(gen);
+    const stat = sp ? '武力' : '智力';
+    if (sl.max <= 0) return stat + ' ' + (sp ? P.SPECIAL_SLOT_WAR[0] : P.TACTIC_SLOT_INT[0]) + ' 以上方可习得';
+    const lvls = sp ? P.SPECIAL_SLOT_LEVEL : P.TACTIC_SLOT_LEVEL;
+    const tierName = t => (sp ? (SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(t) : t + '阶') : (SG.Tactics ? SG.Tactics.TIER_NAME[t] : t + '阶'));
+    const p = ['已学 ' + sl.used + ' / ' + sl.max];
+    if (sl.open > 0) p.push('<span class="sg-good">可习得 ' + sl.open + (sl.tier > 0 ? '（' + tierName(sl.tier) + '）' : '') + '</span>');
+    else if (sl.unlocked < sl.max) p.push(lvls[sl.unlocked] + ' 级可学下一招');
+    else if (sl.used >= sl.max) p.push('已满');
+    // 最终上限：第 k 格至多 k 阶，满级时等级不再限制，故为 min(武力 / 智力等阶, 格数)
+    const cap = Math.min(sl.statTier, sl.max);
+    if (sl.used < sl.max && cap > 0 && !(sl.open > 0 && cap <= sl.tier)) p.push('上限' + tierName(cap));
+    return p.join(' · ');
+  }
+
   // 武将的身份小字：君 / 太守 / 势力名
   function genSub(gen) {
     const g = G();
@@ -219,6 +267,9 @@
   }
 
   // ========================================================== StrategyScreen --
+  // 升级对话框由本画面负责：玩家武将保留空格，战后逐个选择（电脑武将仍自动习得）
+  if (SG.Progress) SG.Progress.playerAutoLearn = false;
+
   class StrategyScreen {
     constructor() {
       this.hud = null; this.cityPanel = null; this.cmdGrid = null; this.genList = null;
@@ -252,6 +303,7 @@
       game.rig.focusMap(p.x, p.y, 48);
       this.selectCity(cap.id);
       UI().banner(G().year + '年 ' + G().month + '月', G().playerFaction.name + '军');
+      this.growthReminder();
       for (;;) {
         this.endMonth = false;
         this.refreshAll();
@@ -279,6 +331,7 @@
         // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初横幅之后补弹提示
         if (this._tipPending && this.moveUsableCity()) await SG.wait(1.2);
         this.busy = false;
+        this.growthReminder();
         if (this._tipPending) await this.moveTip(false);
       }
     }
@@ -610,7 +663,8 @@
         row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.showGeneral(gen); } });
         if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: SG.UI.facePx ? SG.UI.facePx(SG.UI.FACE_REM.item) : 40 }));
         const tag = g.isRuler(gen) ? '<span class="sg-tag sg-tag-ruler">君</span>' : gen.id === c.governor ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
-        h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
+        const lv = lvTag(gen, 'sg-genrow-lv') + (mine && canLearn(gen) ? '<span class="sg-lv-new" title="可习得新招">新</span>' : '');
+        h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + lv + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
         h('div', 'sg-genrow-stats', `武${gen.war} 智${gen.intel} 政${gen.pol}\n兵${gen.troops} 训${gen.training} 忠${g.isRuler(gen) ? 100 : gen.loyalty}`, row);
       }
       this.genList.scrollTop = scroll;
@@ -1030,6 +1084,7 @@
         if (who) await this.report(who, s.summary, s.target.name + '之战', { mood: won ? 'win' : 'hurt' });
         else await UI().say(faces(s.summary));
         await this.reportCaptives(fates, s.attackerWon ? s.attacker : s.defender);
+        await this.growth(s, playerSide);
         return;
       }
       // 说明区：双方出阵武将的小头像
@@ -1071,6 +1126,117 @@
       else await UI().say(res);
       await this.reportCaptives(fates, playerSide === 0 ? s.defender : s.attacker);
       if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(faces(g.factions[s.defender].name + '势力就此灭亡。'));
+      await this.growth(s, playerSide);
+    }
+
+    // ---------------------------------------------------------- 成长（第三版 §4） --
+    // 战后：我方武将的升级通知（头像、「关羽 升至 5 级」、经验条），然后为有空格的武将逐个弹出习得对话框
+    // playerSide：玩家是攻方 0 / 守方 1（缺省不限）。战后归降我方的敌将不算（他们的经验来自对我军作战）
+    async growth(s, playerSide) {
+      const g = G(), P = Prog();
+      if (!P || !g.playerFaction || !g.playerFaction.alive) return;
+      const ours = x => x && x.gen && !x.gen.dead && x.gen.faction === g.player && (!(playerSide >= 0) || x.side === undefined || x.side === playerSide);
+      const prog = (s && s.progress ? s.progress : []).filter(ours);
+      const ups = prog.filter(x => x.to > x.from);
+      try {
+        if (ups.length) await this.levelUpNotice(ups, prog.filter(x => !(x.to > x.from) && x.exp > 0), s);
+        else if (prog.some(x => x.exp > 0)) {
+          const tot = prog.reduce((a, x) => a + (x.exp || 0), 0);
+          UI().toast('出阵武将获得经验 <b>+' + tot + '</b>', 1.8);
+        }
+      } catch (e) { console.error(e); }
+      // 升级的武将先选，其余保留着空格的随后（例如上次「稍后再选」）
+      const order = [];
+      for (const x of ups) if (order.indexOf(x.gen) < 0) order.push(x.gen);
+      for (const x of prog) if (order.indexOf(x.gen) < 0) order.push(x.gen);
+      for (const gen of order) {
+        if (!canLearn(gen)) continue;
+        const r = await this.learnDialog(gen);
+        if (r === 'later-all') break;
+      }
+      this.refreshAll();
+    }
+    // 升级通知：每位升级的武将一行（头像、升至 N 级、经验条与本战所得、新解锁的格）；其余出阵武将的经验附在末尾
+    levelUpNotice(ups, rest, s) {
+      const g = G(), P = Prog();
+      const px = SG.UI.facePx ? SG.UI.facePx(3.4) : 56;
+      const rows = ups.map(x => {
+        const gen = x.gen, e = P.expInfo(gen), op = P.openings(gen);
+        let pic = '';
+        try { if (SG.Portrait) pic = SG.Portrait.html(gen, { size: px, className: 'sg-lvup-face', mood: 'win' }); } catch (err) { pic = ''; }
+        const learn = [];
+        if (op.special > 0) learn.push('可习得新必杀（' + SG.esc(SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(P.specialSlots(gen).tier) : '') + '）');
+        if (op.tactic > 0) learn.push('可习得新计策（' + SG.esc(SG.Tactics ? SG.Tactics.TIER_NAME[P.tacticSlots(gen).tier] : '') + '）');
+        const learned = (x.learned || []).map(c => '「' + SG.esc(c.name) + '」').join('');
+        return '<div class="sg-lvup-row">' + pic + '<div class="sg-lvup-text">' +
+          '<div class="sg-lvup-head"><b class="sg-lvup-name">' + SG.esc(gen.name) + '</b> 升至 <b class="sg-lvup-lv">' + e.level + '</b> 级' +
+          (x.to - x.from > 1 ? '<span class="sg-muted">（连升 ' + (x.to - x.from) + ' 级）</span>' : '') + '</div>' +
+          '<div class="sg-lvup-exp">' + expBar(e.pct) + '<span>+' + x.exp + '<span class="sg-muted">　' + (e.max ? '已满级' : e.exp + ' / ' + e.next) + '</span></span></div>' +
+          (learn.length ? '<div class="sg-lvup-new">' + learn.join('　') + '</div>' : '') +
+          (learned ? '<div class="sg-lvup-new">习得' + learned + '</div>' : '') +
+          '</div></div>';
+      });
+      const tail = rest.length ? '<div class="sg-lvup-rest"><span class="sg-muted">其余出阵</span> ' +
+        rest.map(x => '<span class="sg-lvup-who">' + face(x.gen) + SG.esc(x.gen.name) + ' <b>+' + x.exp + '</b></span>').join(' ') + '</div>' : '';
+      const pend = ups.some(x => canLearn(x.gen));
+      const title = (s && s.target ? SG.esc(s.target.name) + '之战 · ' : '') + '武将成长';
+      return UI().notice(title, '<div class="sg-lvup">' + rows.join('') + tail + '</div>', { ok: pend ? '选择新招' : '确定', width: 640, className: 'sg-lvup-dlg' });
+    }
+    // 习得对话框：3 个候选（必杀 / 计策）→ learn；可连续学（同时开了多个格）。「稍后再选」→ 保留空格（武将详情里可再学）
+    // → 'learned' | 'later' | 'later-all'（× / Esc：本次战后不再逐个询问其余武将）
+    async learnDialog(gen) {
+      const P = Prog(), g = G();
+      if (!P) return 'later';
+      let learnedAny = false;
+      for (let guard = 0; guard < 10; guard++) {
+        const cands = P.candidates(gen, 3);
+        if (!cands.length) break;
+        const short = shortScreen();
+        const items = cands.map(c => {
+          const kind = c.type === 'special' ? '必杀' : '计策';
+          const label = `<span class="sg-learn-kind is-${c.type}">${kind}</span><span style="color:${spColor(c)}">${SG.esc(c.name)}</span>`;
+          const lore = c.ref && c.ref.lore ? c.ref.lore : '';
+          const body = stripLore(c.desc, lore);
+          // 计策的摘要以等阶开头（右栏已有），去掉
+          const rules = String(c.rules || '').replace(/^(初阶|中阶|高阶|绝阶) · /, '');
+          // 矮屏（横屏手机）：说明只留第一句（截断），数值摘要另起一行
+          let brief = body;
+          if (short) { brief = (body.split('。')[0] || body); if (Array.from(brief).length > 30) brief = Array.from(brief).slice(0, 30).join('') + '…'; }
+          const desc = SG.esc(brief) + '<span class="sg-learn-rules">' + SG.esc(rules) + '</span>';
+          return item(label, `<span class="sg-learn-tier t${c.tier}">${tierText(c)}</span>`, true, desc);
+        });
+        items.push(item('<span class="sg-muted">稍后再选</span>', '<span class="sg-muted">保留空格</span>', true));
+        const e = P.expInfo(gen), op = P.openings(gen);
+        const open = [];
+        if (op.special > 0) open.push('必杀 ' + op.special);
+        if (op.tactic > 0) open.push('计策 ' + op.tactic);
+        const sub = lvTag(gen) + ' ' + expBar(e.pct, 'is-inline') + '<span class="sg-muted">　可学：' + open.join('、') + '</span>';
+        const info = genCard(gen, { sub, mood: 'win' });
+        const r = await UI().choose(SG.esc(gen.name) + ' · 习得新招', items, info, 820);
+        // × / Esc：无论本窗口前是否已学过，都不再逐个询问其余武将（已学的招式照常保留）
+        if (r < 0) return 'later-all';
+        if (r >= cands.length) return learnedAny ? 'learned' : 'later';
+        const c = cands[r];
+        if (!P.learn(gen, c)) { UI().toast('无法习得「' + SG.esc(c.name) + '」'); break; }
+        learnedAny = true;
+        try { g.addLog(gen.name + '习得' + (c.type === 'special' ? '必杀' : '计策') + '「' + c.name + '」。'); } catch (err) { /* 无记录 */ }
+        sfx('horn', 0.35);
+        UI().toast(face(gen) + SG.esc(gen.name) + ' 习得' + (c.type === 'special' ? '必杀' : '计策') + '「<span style="color:' + spColor(c) + '">' + SG.esc(c.name) + '</span>」', 2.2);
+        this.refreshAll();
+      }
+      return learnedAny ? 'learned' : 'later';
+    }
+    // 月初：有保留着空格的我方武将时提示一次
+    growthReminder() {
+      const g = G(), P = Prog();
+      if (!P || !g || !g.playerFaction || !g.playerFaction.alive) return;
+      let list = [];
+      try { list = P.pending(g.player); } catch (e) { list = []; }
+      if (!list.length) return;
+      const key = g.year * 12 + g.month;
+      if (this._growthToldAt === key) return;
+      this._growthToldAt = key;
+      UI().toast(list.slice(0, 3).map(x => face(x) + SG.esc(x.name)).join('、') + (list.length > 3 ? ' 等 ' + list.length + ' 人' : '') + ' 可习得新招<span class="sg-muted">（城池面板中点选武将）</span>', 3.2);
     }
 
     // 汇报战果的我方武将：出阵（守城）武将中第一位仍在籍、未被俘的；都不在时为君主；我方已灭亡 → null
@@ -1126,7 +1292,16 @@
       if (!gen || UI().anyModal() || this._genInfoOpen) return;
       click();
       this._genInfoOpen = true;
-      this.generalInfo(gen).catch(e => console.error(e)).then(() => { this._genInfoOpen = false; });
+      // 「习得新招」：关闭详情 → 习得对话框 → 重新打开详情（显示新学的招式）
+      const loop = async () => {
+        for (let k = 0; k < 6; k++) {
+          const r = await this.generalInfo(gen);
+          if (r !== 'learn') return;
+          await this.learnDialog(gen);
+          this.refreshAll();
+        }
+      };
+      loop().catch(e => console.error(e)).then(() => { this._genInfoOpen = false; });
     }
     generalInfo(gen) {
       const g = G();
@@ -1137,14 +1312,14 @@
       return new Promise(resolve => {
         const m = UI().openModal('sg-geninfo', { width: 940 });
         let done = false;
-        const finish = () => { if (done) return; done = true; m.close(); resolve(); };
+        const finish = v => { if (done) return; done = true; m.close(); resolve(v); };
         m.blocker.addEventListener('click', e => { if (e.target === m.blocker) finish(); });
         m.onKey = k => { if (k === 'Escape' || k === 'Enter' || k === 'Space') { finish(); return true; } return false; };
         const head = h('div', 'sg-dlg-head', null, m.panel);
         const tag = isRuler ? '<span class="sg-tag sg-tag-ruler">君</span>' : city && city.governor === gen.id ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
         h('div', 'sg-dlg-title', tag + SG.esc(gen.name) +
           '<small>' + (f ? `<span style="color:${readable(f.color)}">${SG.esc(f.name)}</span>` : '在野') + (city ? '　' + SG.esc(city.name) : '') + '</small>', head);
-        const close = SG.UI.button(head, '×', finish, { className: 'sg-close', ariaLabel: '关闭' });
+        const close = SG.UI.button(head, '×', () => finish(), { className: 'sg-close', ariaLabel: '关闭' });
         const body = h('div', 'sg-geninfo-body', null, m.panel);
         const side = h('div', 'sg-geninfo-side', null, body);
         if (SG.Portrait) { try { side.appendChild(SG.Portrait.el(gen, { size: 168 })); } catch (e) { /* 无头像 */ } }
@@ -1156,24 +1331,17 @@
         }
         const main = h('div', 'sg-geninfo-main', null, body);
         const chips = [];
+        const P = Prog();
         if (f) chips.push(`<span class="sg-chip"><i>兵</i><b>${n0(gen.troops)}</b></span>`, `<span class="sg-chip"><i>训练</i><b>${gen.training}</b></span>`,
           `<span class="sg-chip"><i>忠诚</i><b>${isRuler ? 100 : gen.loyalty}</b></span>`);
         if (gen.born > 0) chips.push(`<span class="sg-chip"><i>生年</i><b>${gen.born}</b><i>${g.year >= gen.born ? (g.year - gen.born) + '岁' : ''}</i></span>`);
         if (chips.length) h('div', 'sg-geninfo-chips', chips.join(''), main);
-        // 必杀技
-        let sp = null;
-        try { sp = SG.Specials ? SG.Specials.of(gen) : null; } catch (e) { sp = null; }
-        if (sp) {
-          const S = SG.Specials;
-          const col = S.uiColor ? S.uiColor(sp) : (sp.color || '#f3c969');
-          const box = h('div', 'sg-geninfo-special', null, main);
-          h('div', 'sg-geninfo-sp-head', `<span class="sg-geninfo-sp-label">必杀</span><b style="color:${col}">${SG.esc(sp.name)}</b>` +
-            (S.kindName ? `<small>${SG.esc(S.kindName(sp.kind))}</small>` : ''), box);
-          if (sp.desc) h('div', 'sg-geninfo-sp-desc', SG.esc(sp.desc), box);
-          let rules = '';
-          try { rules = S.rules ? S.rules(sp) : ''; } catch (e) { rules = ''; }
-          if (rules) h('div', 'sg-geninfo-sp-rules', SG.esc(rules), box);
-        }
+        // 等级、经验、战绩（第三版成长）
+        if (P) { try { this.genInfoLevel(main, gen, f && gen.faction === g.player, () => finish('learn')); } catch (e) { console.error(e); } }
+        // 必杀：专属在前，其后为习得的可习得必杀
+        try { this.genInfoSpecials(main, gen); } catch (e) { console.error(e); }
+        // 计策：原四计（按智力）+ 习得的计策
+        try { this.genInfoTactics(main, gen); } catch (e) { console.error(e); }
         // 世界武将：史实资料
         if (W) {
           const bio = h('div', 'sg-geninfo-bio', null, main);
@@ -1185,6 +1353,71 @@
         }
         try { close.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ }
       });
+    }
+
+    // 详情：等级块（Lv、经验条、距下一级、战绩；我方武将有空格时「习得新招」按钮）
+    genInfoLevel(main, gen, mine, onLearn) {
+      const P = Prog();
+      const e = P.expInfo(gen);
+      const box = h('div', 'sg-geninfo-lv', null, main);
+      const rec = gen.record || {};
+      const need = e.max ? '已满级' : '经验 ' + e.exp + ' / ' + e.next + '<span class="sg-muted">（距 ' + (e.level + 1) + ' 级 ' + e.need + '）</span>';
+      h('div', 'sg-geninfo-lv-head', '<span class="sg-geninfo-lv-n">Lv<b>' + e.level + '</b></span>' + expBar(e.pct) + '<span class="sg-geninfo-lv-exp">' + need + '</span>', box);
+      if (rec.battles > 0) h('div', 'sg-geninfo-rec', `出阵 <b>${rec.battles}</b>　胜 <b>${rec.wins}</b>　击溃 <b>${rec.routs}</b>　单挑胜 <b>${rec.duels}</b>`, box);
+      if (mine && canLearn(gen)) {
+        const op = P.openings(gen);
+        const what = [];
+        if (op.special > 0) what.push('必杀 ' + op.special);
+        if (op.tactic > 0) what.push('计策 ' + op.tactic);
+        const b = SG.UI.button(box, '习得新招<small>' + what.join('、') + '</small>', () => onLearn(), { primary: true, className: 'sg-geninfo-learn' });
+        b.title = '从 3 个候选中选择要学的必杀 / 计策';
+      }
+    }
+    // 详情：必杀列表（每招：名称、专属 / 等阶、机制、说明、数值摘要）
+    genInfoSpecials(main, gen) {
+      const S = SG.Specials;
+      if (!S) return;
+      let list = [];
+      try { list = typeof S.known === 'function' ? S.known(gen) : [S.of(gen)].filter(Boolean); } catch (e) { list = []; }
+      if (!list.length) return;
+      const P = Prog();
+      const sec = h('div', 'sg-geninfo-sec', null, main);
+      const slot = P && typeof S.pool === 'function' ? slotText(gen, 'special') : '';
+      h('div', 'sg-geninfo-sec-head', '<span class="sg-geninfo-sp-label">必杀</span><span class="sg-muted">' + list.length + ' 招' + (slot ? ' · ' + slot : '') + '</span>', sec);
+      for (const sp of list) {
+        const col = S.uiColor ? S.uiColor(sp) : (sp.color || '#f3c969');
+        const box = h('div', 'sg-geninfo-special' + (sp.pool ? ' is-learned' : ''), null, sec);
+        const tier = sp.pool ? (S.tierName ? S.tierName(sp.tier) : sp.tier + '阶') : '专属';
+        h('div', 'sg-geninfo-sp-head', `<span class="sg-sp-tier${sp.pool ? '' : ' is-sig'}">${tier}</span><b style="color:${col}">${SG.esc(sp.name)}</b>` +
+          (S.kindName ? `<small>${SG.esc(S.kindName(sp.kind))}</small>` : ''), box);
+        if (sp.desc) h('div', 'sg-geninfo-sp-desc', SG.esc(sp.desc), box);
+        let rules = '';
+        try { rules = S.rules ? S.rules(sp) : ''; } catch (e) { rules = ''; }
+        if (rules) h('div', 'sg-geninfo-sp-rules', SG.esc(rules), box);
+      }
+    }
+    // 详情：计策列表（原四计按智力自带；习得的计策带等阶与说明）
+    genInfoTactics(main, gen) {
+      const T = SG.Tactics;
+      let list = [];
+      if (T && typeof T.known === 'function') { try { list = T.known(gen); } catch (e) { list = []; } }
+      else list = SG.Defs.tactics.filter(t => gen.intel >= t.reqInt);
+      const P = Prog();
+      const sec = h('div', 'sg-geninfo-sec', null, main);
+      const slot = P && T && typeof T.learnable === 'function' ? slotText(gen, 'tactic') : '';
+      h('div', 'sg-geninfo-sec-head', '<span class="sg-geninfo-sp-label is-tac">计策</span><span class="sg-muted">' + (list.length ? list.length + ' 计' : '未习计策') + (slot ? ' · ' + slot : '') + '</span>', sec);
+      if (!list.length) return;
+      const grid = h('div', 'sg-geninfo-tacs', null, sec);
+      for (const t of list) {
+        const isNew = T && T.isNew ? T.isNew(t) : false;
+        const tier = T && T.TIER_NAME ? T.TIER_NAME[t.tier] || '' : '';
+        const row = h('div', 'sg-geninfo-tac' + (isNew ? ' is-learned' : ''), null, grid);
+        h('div', 'sg-geninfo-tac-head', `<b style="color:${spColor(t)}">${SG.esc(t.name)}</b>` +
+          `<small>${isNew ? SG.esc(tier) : '自带'}${t.reqInt ? ' · 智' + t.reqInt : ''}</small>`, row);
+        const d = isNew ? stripLore(t.desc, t.lore) : (t.desc || '');
+        if (t.lore && isNew) h('div', 'sg-geninfo-tac-lore', SG.esc(t.lore), row);
+        if (d) h('div', 'sg-geninfo-tac-desc', SG.esc(d), row);
+      }
     }
 
     // ---------------------------------------------------------- 情报 --
