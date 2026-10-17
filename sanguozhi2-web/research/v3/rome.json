@@ -1,0 +1,2339 @@
+{
+ "region": "rome",
+ "summary": "第三版罗马区补充：在第二版15座罗马城的基础上，补上西班牙（卢西塔尼亚、贝提卡）、高卢（纳尔博、阿基坦、比利时）、上日耳曼、不列颠西部、多瑙河诸省（下潘诺尼亚、上下默西亚、达契亚、色雷斯）、意大利东北门户阿奎莱亚、达尔马提亚、马其顿与亚该亚、西西里、阿非利加（大莱普提斯、努米底亚）、两毛里塔尼亚、上埃及、卡帕多细亚、阿拉伯行省、巴勒斯坦叙利亚、埃梅萨与美索不达米亚的尼西比斯，共30座城（16座一级、14座二级，供合并时取舍）；新增3个边外势力（毛里人巴夸特部、阿斯丁吉汪达尔人、爱尔兰的塔拉至高王——后者为传说人物）与41名人物：190年前后可考的行省总督与军团长（塞维鲁之兄老盖塔、色雷斯总督阿塔卢斯、努米底亚军团长戈尔迪亚努斯、廷吉塔纳总督拉尔基安、下潘诺尼亚总督特伦提安、禁卫军长官格拉图斯、埃梅萨大祭司巴西安），以及塞维鲁、佩蒂纳克斯、尼格尔、阿尔拜努斯与尤利安努斯一系的人物（苏尔皮基安、尤维纳利斯、维图里乌斯、拉特兰、工程师普里斯克、冒牌元老努梅里安、盗魁布拉、埃梅萨王族阿维图斯、索埃米亚斯、马梅亚、瓦里乌斯等），后来的名将与皇帝（马克西米安、塞内西奥、阿尼修斯、阿德文图斯、科马宗、普皮恩努斯、巴尔比努斯、提梅西修），法学家保罗与爱任纽、德尔图良、革利免、奥利金、犹大亲王等学者。",
+ "factions": [
+  {
+   "key": "baquates",
+   "name": "巴夸特",
+   "full": "巴夸特人（毛里塔尼亚廷吉塔纳以东的毛里部落联盟，与马塞尼特人联合）",
+   "orig": "Baquates (gentes Baquatium et Macennitum)",
+   "ruler": "卡纳尔塔",
+   "capital": "baquates",
+   "culture": "arab",
+   "virtue": 45,
+   "fame": 40,
+   "color": "#8796ff",
+   "note": "沃卢比利斯出土的一组“和平祭坛”记录了廷吉塔纳总督与巴夸特部首领的历次会谈：173—175年总督埃皮迪乌斯·夸德拉图斯与“马塞尼特人与巴夸特人诸族之王”乌克梅提乌斯会谈；180年总督维图里乌斯·马克里努斯为巴夸特人立新首领卡纳尔塔（授予公民权、以其子为人质）；约200年又与另一位首领重订和约。毛里人170年代曾渡海劫掠贝提卡。DESIGN-V2 没有北非土著文化代号，暂用 arab，建议新增 moor。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Baquates",
+    "https://heurist.huma-num.fr/heurist/judaism_and_rome/view/104",
+    "https://www.maroc.ma/index%2ephp/en/history-of-morocco/important-dates?page=3",
+    "https://en.wikipedia.org/wiki/Mauri"
+   ]
+  },
+  {
+   "key": "vandals",
+   "name": "汪达尔",
+   "full": "阿斯丁吉人（哈斯丁汪达尔人）",
+   "orig": "Astingi / Hasdingi",
+   "ruler": "劳斯",
+   "capital": "vandalia",
+   "culture": "german",
+   "virtue": 40,
+   "fame": 45,
+   "color": "#ff4b00",
+   "note": "狄奥记载：马科曼尼战争期间（约171年），阿斯丁吉人在首领劳斯与拉普图斯率领下携全族进入达契亚，求地求金不成，便把妇孺托付给达契亚总督克莱门斯，转而攻夺科斯托博契人的土地；后遭拉克林吉人偷袭大败，向马可·奥勒留求得金钱与“请求土地”的许可，此后不再与罗马为敌。学界多把他们视为汪达尔人的哈斯丁王族；考古上普热沃尔斯克文化于2世纪末出现在达契亚北境外的上蒂萨河流域。年代按蛮族首领放宽到约150—230年的规则收录。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Hasdingi",
+    "https://penelope.uchicago.edu/Thayer/e/roman/texts/cassius_dio/72*.html",
+    "https://ojs.elte.hu/comarchhung/article/view/3025"
+   ]
+  },
+  {
+   "key": "eriu",
+   "name": "爱尔兰",
+   "full": "爱尔兰（希伯尼亚）塔拉至高王",
+   "orig": "Ériu / Hibernia — Kingship of Tara",
+   "ruler": "阿尔特",
+   "capital": "tara",
+   "culture": "celt",
+   "virtue": 60,
+   "fame": 50,
+   "color": "#f000f0",
+   "note": "罗马人称为希伯尼亚的岛屿，从未被罗马征服。中世纪爱尔兰的伪史与传说把“百战之王”康恩之子阿尔特（独身者阿尔特）列为塔拉至高王：《四大师编年史》定其在位约165—195年，《入侵之书》把他与罗马皇帝康茂德（180—192年）同列——恰与本剧本190年开局吻合。阿尔特死于马格穆克拉马之战，败于从不列颠借兵归来的流亡者麦克康。全部人物均为传说（attested: legendary）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Art_mac_Cuinn",
+    "https://en.wikipedia.org/wiki/Cath_Maige_Mucrama",
+    "https://en.wikipedia.org/wiki/Hill_of_Tara"
+   ]
+  }
+ ],
+ "cities": [
+  {
+   "key": "emerita",
+   "name": "埃梅里塔",
+   "full": "奥古斯塔·埃梅里塔（卢西塔尼亚首府）",
+   "orig": "Augusta Emerita",
+   "modern": "西班牙梅里达",
+   "lon": -6.34,
+   "lat": 38.92,
+   "owner": "roma",
+   "culture": "roman",
+   "land": 420,
+   "industry": 360,
+   "town": 340,
+   "population": 280000,
+   "gold": 700,
+   "food": 11000,
+   "priority": 1,
+   "note": "卢西塔尼亚行省首府，奥古斯都为安置老兵而建，有剧场、竞技场与瓜迪亚纳河上的长桥；行省由大法官级的皇帝特使治理，没有驻扎军团。塞维鲁之兄老盖塔约188—191年在此任总督。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Lusitania",
+    "https://en.wikipedia.org/wiki/M%C3%A9rida,_Spain",
+    "https://inslib.kcl.ac.uk/irt2009/IRT541.html"
+   ]
+  },
+  {
+   "key": "corduba",
+   "name": "科尔杜巴",
+   "full": "科尔杜巴（贝提卡首府，“贵族殖民市”）",
+   "orig": "Colonia Patricia Corduba",
+   "modern": "西班牙科尔多瓦",
+   "lon": -4.78,
+   "lat": 37.88,
+   "owner": "-",
+   "culture": "roman",
+   "land": 480,
+   "industry": 420,
+   "town": 400,
+   "population": 380000,
+   "gold": 900,
+   "food": 13000,
+   "priority": 1,
+   "note": "元老院行省贝提卡的首府，瓜达尔基维尔河谷的橄榄油与矿产使之成为帝国最富庶的地区之一；170年代毛里人曾渡海劫掠本省。190年的资深执政官不详，按“不编造人物”的规则设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Hispania_Baetica",
+    "https://en.wikipedia.org/wiki/C%C3%B3rdoba,_Spain",
+    "https://en.wikipedia.org/wiki/Mauri"
+   ]
+  },
+  {
+   "key": "narbo",
+   "name": "纳尔博",
+   "full": "纳尔博·马蒂乌斯（纳尔博高卢首府）",
+   "orig": "Colonia Narbo Martius",
+   "modern": "法国纳博讷",
+   "lon": 3.0,
+   "lat": 43.18,
+   "owner": "-",
+   "culture": "roman",
+   "land": 440,
+   "industry": 440,
+   "town": 400,
+   "population": 320000,
+   "gold": 900,
+   "food": 11000,
+   "priority": 1,
+   "note": "纳尔博高卢（“行省”，今普罗旺斯得名于此）首府与港口，多米提乌斯大道经此连接意大利与西班牙。元老院行省，不驻军团；190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gallia_Narbonensis",
+    "https://en.wikipedia.org/wiki/Narbonne"
+   ]
+  },
+  {
+   "key": "burdigala",
+   "name": "布尔迪加拉",
+   "full": "布尔迪加拉（阿基坦尼亚）",
+   "orig": "Burdigala",
+   "modern": "法国波尔多",
+   "lon": -0.58,
+   "lat": 44.84,
+   "owner": "-",
+   "culture": "roman",
+   "land": 420,
+   "industry": 400,
+   "town": 360,
+   "population": 280000,
+   "gold": 800,
+   "food": 11000,
+   "priority": 2,
+   "note": "加龙河口的商港，阿基坦尼亚行省最大的城市（3世纪起为首府），大西洋锡与葡萄酒贸易的枢纽。190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gallia_Aquitania",
+    "https://en.wikipedia.org/wiki/Bordeaux"
+   ]
+  },
+  {
+   "key": "mogontiacum",
+   "name": "莫贡提亚",
+   "full": "莫贡提亚库姆（上日耳曼首府）",
+   "orig": "Mogontiacum",
+   "modern": "德国美因茨",
+   "lon": 8.27,
+   "lat": 50.0,
+   "owner": "-",
+   "culture": "roman",
+   "land": 380,
+   "industry": 320,
+   "town": 300,
+   "population": 220000,
+   "gold": 500,
+   "food": 9000,
+   "priority": 1,
+   "note": "上日耳曼行省首府、第二十二初创军团大本营，扼莱茵河与美因河汇口，正对卡蒂人；上日耳曼长城（界墙）由此北上。193年上日耳曼诸军团站在塞维鲁一边。190年总督不详，设为空城；日后的皇帝普皮恩努斯曾任日耳曼某行省总督，作为在野人才放在这里。显示名截取前四字。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mogontiacum",
+    "https://en.wikipedia.org/wiki/Germania_Superior"
+   ]
+  },
+  {
+   "key": "treveri",
+   "name": "特雷维里",
+   "full": "奥古斯塔·特雷维罗鲁姆（比利时高卢）",
+   "orig": "Augusta Treverorum",
+   "modern": "德国特里尔",
+   "lon": 6.64,
+   "lat": 49.75,
+   "owner": "-",
+   "culture": "roman",
+   "land": 420,
+   "industry": 400,
+   "town": 360,
+   "population": 260000,
+   "gold": 700,
+   "food": 10000,
+   "priority": 2,
+   "note": "摩泽尔河畔的特雷维里人都城，比利时高卢与两日耳曼财务监理驻地，2世纪后期修建了黑门与城墙；3世纪末成为帝国西部的都城。尤利安努斯170年代任比利时高卢总督时曾击退考契人。190年官员不详，设为空城。与莫贡提亚只相距3.4个地图单位，若嫌拥挤可不并入。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Augusta_Treverorum",
+    "https://en.wikipedia.org/wiki/Gallia_Belgica"
+   ]
+  },
+  {
+   "key": "deva",
+   "name": "德瓦",
+   "full": "德瓦·维克特里克斯（第二十军团营地）",
+   "orig": "Deva Victrix",
+   "modern": "英国切斯特",
+   "lon": -2.89,
+   "lat": 53.19,
+   "owner": "-",
+   "culture": "roman",
+   "land": 320,
+   "industry": 260,
+   "town": 250,
+   "population": 150000,
+   "gold": 350,
+   "food": 7000,
+   "priority": 2,
+   "note": "第二十瓦莱里乌斯胜利军团的大本营，控制威尔士北部与爱尔兰海；隔海与爱尔兰相望。190年军团长不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Deva_Victrix"
+   ]
+  },
+  {
+   "key": "aquincum",
+   "name": "阿昆库姆",
+   "full": "阿昆库姆（下潘诺尼亚首府）",
+   "orig": "Aquincum",
+   "modern": "匈牙利布达佩斯",
+   "lon": 19.04,
+   "lat": 47.5,
+   "owner": "roma",
+   "culture": "roman",
+   "land": 380,
+   "industry": 300,
+   "town": 300,
+   "population": 220000,
+   "gold": 500,
+   "food": 10000,
+   "priority": 1,
+   "note": "下潘诺尼亚行省首府、第二辅助军团营地，多瑙河大拐弯处正对雅济吉斯人的平原；第二版把下潘诺尼亚并入西尔米乌姆，本版分出。总督特伦提安（约187—189年，一说192年）在此。与雅济吉斯城只相距3.2个地图单位，建议把雅济吉斯城南移到北纬46.5°（见 updates）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Aquincum",
+    "https://en.wikipedia.org/wiki/Pannonia_Inferior",
+    "https://en.wikipedia.org/wiki/Gaius_Pomponius_Bassus_Terentianus"
+   ]
+  },
+  {
+   "key": "viminacium",
+   "name": "维米纳基",
+   "full": "维米纳基乌姆（上默西亚首府）",
+   "orig": "Viminacium",
+   "modern": "塞尔维亚科斯托拉茨",
+   "lon": 21.21,
+   "lat": 44.74,
+   "owner": "-",
+   "culture": "roman",
+   "land": 380,
+   "industry": 320,
+   "town": 300,
+   "population": 220000,
+   "gold": 600,
+   "food": 10000,
+   "priority": 1,
+   "note": "上默西亚行省首府、第七克劳狄军团营地，多瑙河畔，军事大道（经奈苏斯、塞尔迪卡通往拜占庭）上的重镇。上默西亚总督在佩蒂纳克斯（约177—179年）之后、法比乌斯·奇洛（约193—195年）之前的人选不详，设为空城。显示名截取前四字。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Viminacium",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Upper_Moesia"
+   ]
+  },
+  {
+   "key": "apulum",
+   "name": "阿普卢姆",
+   "full": "阿普卢姆（三达契亚总督驻地）",
+   "orig": "Apulum",
+   "modern": "罗马尼亚阿尔巴尤利亚",
+   "lon": 23.57,
+   "lat": 46.07,
+   "owner": "-",
+   "culture": "roman",
+   "land": 400,
+   "industry": 360,
+   "town": 300,
+   "population": 240000,
+   "gold": 900,
+   "food": 10000,
+   "priority": 1,
+   "note": "第十三双子军团营地，马可·奥勒留合并三个达契亚行省后，执政官级总督驻于此；附近的金矿使达契亚金多。180年代初总督萨比尼亚努斯劝服一万二千名被逐出故土、正要助战的边外达契亚人罢兵，许以罗马达契亚境内的土地，尼格尔与阿尔拜努斯也在达契亚立功。190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Alba_Iulia",
+    "https://en.wikipedia.org/wiki/Roman_Dacia",
+    "https://en.wikipedia.org/wiki/Gaius_Vettius_Sabinianus_Julius_Hospes"
+   ]
+  },
+  {
+   "key": "novae",
+   "name": "诺维",
+   "full": "诺维（第一意大利军团营地，下默西亚）",
+   "orig": "Novae",
+   "modern": "保加利亚斯维什托夫",
+   "lon": 25.38,
+   "lat": 43.62,
+   "owner": "-",
+   "culture": "roman",
+   "land": 360,
+   "industry": 280,
+   "town": 260,
+   "population": 180000,
+   "gold": 400,
+   "food": 9000,
+   "priority": 1,
+   "note": "下默西亚的多瑙河军团营地。185年塞维鲁之兄老盖塔任第一意大利军团长，193年马略·马克西穆斯任此职并率默西亚军围攻拜占庭（马克西穆斯在现有数据中放在拜占庭）。下默西亚193—201年先后由老盖塔、波利恩努斯·奥斯佩克斯、科斯科尼乌斯·根提亚努斯、奥维尼乌斯·特图卢斯治理，190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Legio_I_Italica",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Lower_Moesia",
+    "https://www.strachan.dk/family/pollienus.htm"
+   ]
+  },
+  {
+   "key": "philippopolis",
+   "name": "菲利波利斯",
+   "full": "菲利波波利斯（色雷斯首府）",
+   "orig": "Philippopolis (Trimontium)",
+   "modern": "保加利亚普罗夫迪夫",
+   "lon": 24.75,
+   "lat": 42.15,
+   "owner": "roma",
+   "culture": "roman",
+   "land": 420,
+   "industry": 360,
+   "town": 340,
+   "population": 280000,
+   "gold": 600,
+   "food": 11000,
+   "priority": 1,
+   "note": "色雷斯行省首府（色雷斯议会所在），赫布鲁斯河畔，军事大道的中段。色雷斯总督提比略·克劳狄乌斯·阿塔卢斯（钱币所见为180年代中期，190年是否仍在任不详）驻此；193年尼格尔军在色雷斯的佩林图斯击败塞维鲁的部将奇洛。第二版的拜占庭“同时代表色雷斯”，本版分出。显示名用通行译名“菲利波波利斯”去一字。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Plovdiv",
+    "https://en.wikipedia.org/wiki/Thracia",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Thracia"
+   ]
+  },
+  {
+   "key": "salona",
+   "name": "萨洛纳",
+   "full": "萨洛纳（达尔马提亚首府）",
+   "orig": "Salona",
+   "modern": "克罗地亚索林（斯普利特附近）",
+   "lon": 16.48,
+   "lat": 43.54,
+   "owner": "-",
+   "culture": "roman",
+   "land": 380,
+   "industry": 400,
+   "town": 360,
+   "population": 260000,
+   "gold": 700,
+   "food": 8000,
+   "priority": 2,
+   "note": "达尔马提亚行省首府与亚得里亚海东岸最大港口；埃梅萨王族阿维图斯的仕履铭文就出土于此。190年总督不详（阿里乌斯·安东尼努斯约178—179年在任，尤利安努斯更早），设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Salona",
+    "https://en.wikipedia.org/wiki/Dalmatia_(Roman_province)",
+    "https://en.wikipedia.org/wiki/Gaius_Julius_Avitus_Alexianus"
+   ]
+  },
+  {
+   "key": "aquileia",
+   "name": "阿奎莱亚",
+   "full": "阿奎莱亚",
+   "orig": "Aquileia",
+   "modern": "意大利阿奎莱亚",
+   "lon": 13.37,
+   "lat": 45.77,
+   "owner": "-",
+   "culture": "roman",
+   "land": 460,
+   "industry": 480,
+   "town": 440,
+   "population": 360000,
+   "gold": 1100,
+   "food": 12000,
+   "priority": 1,
+   "note": "意大利东北门户与琥珀之路的南端，帝国最大的商港之一；约170年马科曼尼—夸迪人曾围攻此城，238年马克西明亦在城下被部下所杀。意大利本土不设总督，190年无可考的主官，设为空城；在野的盗魁布拉与法学家保罗放在这里。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Aquileia",
+    "https://en.wikipedia.org/wiki/Bulla_Felix",
+    "https://en.wikipedia.org/wiki/Julius_Paulus"
+   ]
+  },
+  {
+   "key": "thessalonica",
+   "name": "塞萨洛尼基",
+   "full": "帖撒罗尼迦（马其顿首府）",
+   "orig": "Thessalonica",
+   "modern": "希腊塞萨洛尼基",
+   "lon": 22.95,
+   "lat": 40.64,
+   "owner": "-",
+   "culture": "roman",
+   "land": 420,
+   "industry": 420,
+   "town": 380,
+   "population": 300000,
+   "gold": 800,
+   "food": 10000,
+   "priority": 2,
+   "note": "马其顿行省首府，埃格纳提亚大道上的商港。元老院行省、无军团；190年资深执政官不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Thessaloniki",
+    "https://en.wikipedia.org/wiki/Macedonia_(Roman_province)"
+   ]
+  },
+  {
+   "key": "athenae",
+   "name": "雅典",
+   "full": "雅典（亚该亚）",
+   "orig": "Athenae",
+   "modern": "希腊雅典",
+   "lon": 23.73,
+   "lat": 37.98,
+   "owner": "-",
+   "culture": "roman",
+   "land": 340,
+   "industry": 400,
+   "town": 420,
+   "population": 260000,
+   "gold": 800,
+   "food": 7000,
+   "priority": 2,
+   "note": "希腊文化与哲学之都，马可·奥勒留176年在此设立四大学派的讲席；亚该亚行省首府科林斯与雅典相距不足3个地图单位，合并于此。190年资深执政官不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Achaea_(Roman_province)",
+    "https://en.wikipedia.org/wiki/Athens"
+   ]
+  },
+  {
+   "key": "syracusae",
+   "name": "叙拉古",
+   "full": "叙拉古（西西里首府）",
+   "orig": "Syracusae",
+   "modern": "意大利锡拉库萨",
+   "lon": 15.29,
+   "lat": 37.08,
+   "owner": "-",
+   "culture": "roman",
+   "land": 460,
+   "industry": 400,
+   "town": 380,
+   "population": 300000,
+   "gold": 800,
+   "food": 14000,
+   "priority": 2,
+   "note": "西西里行省首府，产粮大岛；塞维鲁约189年任西西里资深执政官，其兄老盖塔也在180年代后期任此职（年份由仕履顺序推定）。190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Sicilia_(Roman_province)",
+    "https://inslib.kcl.ac.uk/irt2009/IRT541.html"
+   ]
+  },
+  {
+   "key": "lepcis",
+   "name": "莱普提斯",
+   "full": "大莱普提斯（的黎波里塔尼亚）",
+   "orig": "Lepcis Magna",
+   "modern": "利比亚胡姆斯附近",
+   "lon": 14.29,
+   "lat": 32.64,
+   "owner": "-",
+   "culture": "roman",
+   "land": 420,
+   "industry": 440,
+   "town": 420,
+   "population": 300000,
+   "gold": 1000,
+   "food": 10000,
+   "priority": 1,
+   "note": "塞维鲁的故乡，属阿非利加资深执政官行省，以橄榄油致富；塞维鲁称帝后大兴土木（塞维鲁广场、凯旋门），约202—203年亲征南方的加拉曼特人以保护此城。城中无总督，设为空城；同乡普劳提安移到这里（见 updates）。显示名去“大”字。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Leptis_Magna",
+    "https://inslib.kcl.ac.uk/irt2009/IRT541.html",
+    "https://en.wikipedia.org/wiki/Garamantes"
+   ]
+  },
+  {
+   "key": "cirta",
+   "name": "锡尔塔",
+   "full": "锡尔塔（努米底亚，含兰拜西斯军团营地）",
+   "orig": "Cirta (with Lambaesis)",
+   "modern": "阿尔及利亚君士坦丁",
+   "lon": 6.61,
+   "lat": 36.36,
+   "owner": "roma",
+   "culture": "roman",
+   "land": 480,
+   "industry": 360,
+   "town": 340,
+   "population": 300000,
+   "gold": 700,
+   "food": 14000,
+   "priority": 1,
+   "note": "努米底亚的中心城市（锡尔塔四殖民市联盟）；第三奥古斯都军团驻于其南的兰拜西斯，军团长兼管努米底亚（198年前后正式成省）。两地在地图上相距不足3个单位，合并为一城。188年的军团长提比略·克劳狄乌斯·戈尔迪亚努斯在此。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cirta",
+    "https://en.wikipedia.org/wiki/Lambaesis",
+    "https://en.wikipedia.org/wiki/Legio_III_Augusta",
+    "https://edh-www.adw.uni-heidelberg.de/edh/inschrift/HD031519"
+   ]
+  },
+  {
+   "key": "iol",
+   "name": "约尔",
+   "full": "凯撒利亚（约尔，毛里塔尼亚凯撒利亚首府）",
+   "orig": "Caesarea Mauretaniae (Iol)",
+   "modern": "阿尔及利亚舍尔沙勒",
+   "lon": 2.19,
+   "lat": 36.6,
+   "owner": "-",
+   "culture": "roman",
+   "land": 400,
+   "industry": 360,
+   "town": 340,
+   "population": 240000,
+   "gold": 600,
+   "food": 10000,
+   "priority": 2,
+   "note": "毛里塔尼亚凯撒利亚行省首府，原为朱巴二世的王都；日后的皇帝马克里努斯生于此城。为避免与巴勒斯坦的凯撒利亚、卡帕多细亚的凯撒利亚重名，显示名用其旧名“约尔”。190年的骑士级总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cherchell",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Mauretania_Caesariensis",
+    "https://en.wikipedia.org/wiki/Macrinus"
+   ]
+  },
+  {
+   "key": "tingis",
+   "name": "廷吉斯",
+   "full": "廷吉斯（毛里塔尼亚廷吉塔纳首府）",
+   "orig": "Tingis",
+   "modern": "摩洛哥丹吉尔",
+   "lon": -5.8,
+   "lat": 35.77,
+   "owner": "roma",
+   "culture": "roman",
+   "land": 360,
+   "industry": 320,
+   "town": 300,
+   "population": 180000,
+   "gold": 500,
+   "food": 9000,
+   "priority": 2,
+   "note": "毛里塔尼亚廷吉塔纳行省首府，扼直布罗陀海峡；行政上与对岸的贝提卡关系密切，内地的沃卢比利斯（并入此城）是与巴夸特人会盟之地。总督奥卢斯·斯坎提乌斯·拉尔基亚努斯在180—198年间的某个时期在任（具体年份不详）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mauretania_Tingitana",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Mauretania_Tingitana"
+   ]
+  },
+  {
+   "key": "baquates",
+   "name": "巴夸特",
+   "full": "巴夸特人之地（中阿特拉斯山北麓）",
+   "orig": "Baquates",
+   "modern": "摩洛哥中阿特拉斯山北麓（非斯—塞夫鲁一带）",
+   "lon": -4.9,
+   "lat": 33.6,
+   "owner": "baquates",
+   "culture": "arab",
+   "land": 340,
+   "industry": 250,
+   "town": 250,
+   "population": 180000,
+   "gold": 300,
+   "food": 8000,
+   "priority": 2,
+   "note": "沃卢比利斯以东、以南山地的毛里部落联盟；没有固定都城，坐标只是大致位置。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Baquates"
+   ]
+  },
+  {
+   "key": "thebes",
+   "name": "底比斯",
+   "full": "底比斯（上埃及，含科普托斯）",
+   "orig": "Thebae (Diospolis Magna) / Coptos",
+   "modern": "埃及卢克索",
+   "lon": 32.64,
+   "lat": 25.7,
+   "owner": "-",
+   "culture": "roman",
+   "land": 520,
+   "industry": 360,
+   "town": 340,
+   "population": 300000,
+   "gold": 700,
+   "food": 16000,
+   "priority": 2,
+   "note": "上埃及（底比斯区）的古都，门农巨像所在；尼罗河上游的科普托斯是通往红海港口贝勒尼基、米奥斯霍尔莫斯的商道起点，并入此城，故红海航线（往阿杜利斯、阿克苏姆）改由此出发。塞维鲁199—200年巡游埃及时曾到此（传说修复了门农巨像）。设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Thebes,_Egypt",
+    "https://en.wikipedia.org/wiki/Colossi_of_Memnon",
+    "https://en.wikipedia.org/wiki/Coptos"
+   ]
+  },
+  {
+   "key": "mazaca",
+   "name": "马扎卡",
+   "full": "凯撒利亚·马扎卡（卡帕多细亚首府）",
+   "orig": "Caesarea Mazaca",
+   "modern": "土耳其开塞利",
+   "lon": 35.48,
+   "lat": 38.72,
+   "owner": "-",
+   "culture": "roman",
+   "land": 400,
+   "industry": 320,
+   "town": 300,
+   "population": 260000,
+   "gold": 600,
+   "food": 10000,
+   "priority": 1,
+   "note": "卡帕多细亚行省首府，阿尔加厄斯山下；执政官级总督统辖梅利泰内的第十二雷霆军团与萨塔拉的第十五阿波罗军团（两营地并入此城），是罗马通往亚美尼亚的门户（第二版的 ancyra—artaxata 连线改连此城）。为与另两座凯撒利亚区分，显示名用旧名“马扎卡”。190年总督不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Kayseri",
+    "https://en.wikipedia.org/wiki/Cappadocia_(Roman_province)",
+    "https://www.britishmuseum.org/collection/object/C_G-2277"
+   ]
+  },
+  {
+   "key": "bostra",
+   "name": "波斯特拉",
+   "full": "波斯特拉（阿拉伯佩特拉行省首府）",
+   "orig": "Bostra",
+   "modern": "叙利亚布斯拉",
+   "lon": 36.48,
+   "lat": 32.52,
+   "owner": "-",
+   "culture": "arab",
+   "land": 360,
+   "industry": 380,
+   "town": 360,
+   "population": 220000,
+   "gold": 900,
+   "food": 8000,
+   "priority": 1,
+   "note": "106年图拉真吞并纳巴泰王国后设立的阿拉伯行省首府，第三昔兰尼加军团驻地；佩特拉保留“首府”称号（相距较远，可另设，本版未收）。阿拉伯人菲利普的故乡沙赫巴在其北（见 updates）。190年总督不详（一块康茂德时期的铭文残文可能提到某位“弗朗托”），设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Bosra",
+    "https://en.wikipedia.org/wiki/Arabia_Petraea",
+    "https://edh.ub.uni-heidelberg.de/edh/inschrift/HD028423"
+   ]
+  },
+  {
+   "key": "caesarea",
+   "name": "凯撒利亚",
+   "full": "海滨凯撒利亚（巴勒斯坦叙利亚首府）",
+   "orig": "Caesarea Maritima",
+   "modern": "以色列凯撒利亚",
+   "lon": 34.89,
+   "lat": 32.5,
+   "owner": "-",
+   "culture": "roman",
+   "land": 420,
+   "industry": 440,
+   "town": 420,
+   "population": 300000,
+   "gold": 1000,
+   "food": 10000,
+   "priority": 1,
+   "note": "希律王所建的港城，巴勒斯坦叙利亚行省首府；总督统辖驻埃利亚卡皮托利纳（耶路撒冷）的第十海峡军团与驻卡帕科特纳的第六铁甲军团。耶路撒冷、推罗与此城相距不足3个地图单位，并入此城。190年总督不详，设为空城；犹太族长犹大亲王作为在野人才放在这里。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Caesarea_Maritima",
+    "https://en.wikipedia.org/wiki/Roman_Palestine",
+    "https://en.wikipedia.org/wiki/Judah_ha-Nasi"
+   ]
+  },
+  {
+   "key": "emesa",
+   "name": "埃梅萨",
+   "full": "埃梅萨（太阳神埃拉伽巴尔的圣城）",
+   "orig": "Emesa",
+   "modern": "叙利亚霍姆斯",
+   "lon": 36.72,
+   "lat": 34.73,
+   "owner": "roma",
+   "culture": "arab",
+   "land": 400,
+   "industry": 400,
+   "town": 380,
+   "population": 260000,
+   "gold": 900,
+   "food": 10000,
+   "priority": 1,
+   "note": "奥龙特斯河畔的阿拉伯祭司王族旧都，太阳神埃拉伽巴尔的黑石神庙所在；多姆娜、玛伊莎姊妹的父亲尤利乌斯·巴西亚努斯为此地大祭司。附近的拉法内亚驻有第三高卢军团（218年在此拥立埃拉伽巴路斯），阿帕米亚（瓦里乌斯·马塞卢斯的故乡）也并入此城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Homs",
+    "https://en.wikipedia.org/wiki/Julius_Bassianus",
+    "https://en.wikipedia.org/wiki/Emesene_dynasty"
+   ]
+  },
+  {
+   "key": "nisibis",
+   "name": "尼西比斯",
+   "full": "尼西比斯（美索不达米亚）",
+   "orig": "Nisibis",
+   "modern": "土耳其努赛宾",
+   "lon": 41.22,
+   "lat": 37.07,
+   "owner": "-",
+   "culture": "arab",
+   "land": 380,
+   "industry": 360,
+   "town": 340,
+   "population": 240000,
+   "gold": 800,
+   "food": 9000,
+   "priority": 2,
+   "note": "上美索不达米亚的商道重镇。194/195年奥斯若恩人与阿迪亚贝纳人围攻城中的罗马驻军，引发塞维鲁第一次东征；197年尤·莱图斯在此死守、击退安息王；随后成为新设美索不达米亚行省的首府与殖民市。190年归属不明（西亚区第二版即因此未设城），设为空城。若西亚区第三版也收此城，只保留一份。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Nusaybin",
+    "https://en.wikipedia.org/wiki/Roman%E2%80%93Parthian_War_of_194%E2%80%93198",
+    "https://en.wikipedia.org/wiki/Julius_Laetus"
+   ]
+  },
+  {
+   "key": "tara",
+   "name": "塔拉",
+   "full": "塔拉（至高王之丘）",
+   "orig": "Temair (Tara)",
+   "modern": "爱尔兰米斯郡塔拉山",
+   "lon": -6.61,
+   "lat": 53.58,
+   "owner": "eriu",
+   "culture": "celt",
+   "land": 340,
+   "industry": 250,
+   "town": 250,
+   "population": 200000,
+   "gold": 300,
+   "food": 9000,
+   "priority": 2,
+   "note": "爱尔兰传说中至高王的王座所在，铁器时代的大型仪式遗址。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Hill_of_Tara"
+   ]
+  },
+  {
+   "key": "vandalia",
+   "name": "汪达尔",
+   "full": "阿斯丁吉人之地（达契亚北境外，上蒂萨河流域）",
+   "orig": "Astingi / Hasdingi",
+   "modern": "乌克兰外喀尔巴阡—罗马尼亚西北部（上蒂萨河）",
+   "lon": 22.7,
+   "lat": 48.2,
+   "owner": "vandals",
+   "culture": "german",
+   "land": 340,
+   "industry": 250,
+   "town": 250,
+   "population": 180000,
+   "gold": 300,
+   "food": 8000,
+   "priority": 2,
+   "note": "2世纪末普热沃尔斯克文化（一般认为属汪达尔人）出现在达契亚北部边墙外的上蒂萨河谷；坐标只是大致位置。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Hasdingi",
+    "https://ojs.elte.hu/comarchhung/article/view/3025"
+   ]
+  }
+ ],
+ "links": [
+  [
+   "emerita",
+   "corduba",
+   "land"
+  ],
+  [
+   "emerita",
+   "tarraco",
+   "land"
+  ],
+  [
+   "corduba",
+   "tarraco",
+   "land"
+  ],
+  [
+   "corduba",
+   "tingis",
+   "sea"
+  ],
+  [
+   "narbo",
+   "tarraco",
+   "land"
+  ],
+  [
+   "narbo",
+   "lugdunum",
+   "land"
+  ],
+  [
+   "narbo",
+   "burdigala",
+   "land"
+  ],
+  [
+   "burdigala",
+   "lugdunum",
+   "land"
+  ],
+  [
+   "treveri",
+   "colonia",
+   "land"
+  ],
+  [
+   "treveri",
+   "lugdunum",
+   "land"
+  ],
+  [
+   "treveri",
+   "mogontiacum",
+   "land"
+  ],
+  [
+   "mogontiacum",
+   "colonia",
+   "land"
+  ],
+  [
+   "mogontiacum",
+   "carnuntum",
+   "land"
+  ],
+  [
+   "mogontiacum",
+   "marcomannia",
+   "land"
+  ],
+  [
+   "deva",
+   "eboracum",
+   "land"
+  ],
+  [
+   "deva",
+   "londinium",
+   "land"
+  ],
+  [
+   "deva",
+   "tara",
+   "sea"
+  ],
+  [
+   "tara",
+   "caledonia",
+   "sea"
+  ],
+  [
+   "aquincum",
+   "carnuntum",
+   "land"
+  ],
+  [
+   "aquincum",
+   "sirmium",
+   "land"
+  ],
+  [
+   "aquincum",
+   "iazyges",
+   "land"
+  ],
+  [
+   "viminacium",
+   "sirmium",
+   "land"
+  ],
+  [
+   "viminacium",
+   "apulum",
+   "land"
+  ],
+  [
+   "viminacium",
+   "philippopolis",
+   "land"
+  ],
+  [
+   "viminacium",
+   "novae",
+   "land"
+  ],
+  [
+   "apulum",
+   "vandalia",
+   "land"
+  ],
+  [
+   "apulum",
+   "costoboci",
+   "land"
+  ],
+  [
+   "apulum",
+   "novae",
+   "land"
+  ],
+  [
+   "vandalia",
+   "quadia",
+   "land"
+  ],
+  [
+   "vandalia",
+   "gothia",
+   "land"
+  ],
+  [
+   "novae",
+   "philippopolis",
+   "land"
+  ],
+  [
+   "novae",
+   "costoboci",
+   "land"
+  ],
+  [
+   "philippopolis",
+   "byzantium",
+   "land"
+  ],
+  [
+   "philippopolis",
+   "thessalonica",
+   "land"
+  ],
+  [
+   "thessalonica",
+   "athenae",
+   "land"
+  ],
+  [
+   "thessalonica",
+   "salona",
+   "land"
+  ],
+  [
+   "athenae",
+   "ephesus",
+   "sea"
+  ],
+  [
+   "athenae",
+   "syracusae",
+   "sea"
+  ],
+  [
+   "salona",
+   "aquileia",
+   "land"
+  ],
+  [
+   "salona",
+   "sirmium",
+   "land"
+  ],
+  [
+   "aquileia",
+   "roma",
+   "land"
+  ],
+  [
+   "aquileia",
+   "carnuntum",
+   "land"
+  ],
+  [
+   "syracusae",
+   "carthago",
+   "sea"
+  ],
+  [
+   "syracusae",
+   "lepcis",
+   "sea"
+  ],
+  [
+   "lepcis",
+   "carthago",
+   "land"
+  ],
+  [
+   "cirta",
+   "carthago",
+   "land"
+  ],
+  [
+   "cirta",
+   "iol",
+   "land"
+  ],
+  [
+   "cirta",
+   "lepcis",
+   "land"
+  ],
+  [
+   "iol",
+   "tingis",
+   "land"
+  ],
+  [
+   "tingis",
+   "baquates",
+   "land"
+  ],
+  [
+   "baquates",
+   "iol",
+   "land"
+  ],
+  [
+   "thebes",
+   "alexandria",
+   "land"
+  ],
+  [
+   "mazaca",
+   "ancyra",
+   "land"
+  ],
+  [
+   "mazaca",
+   "antioch",
+   "land"
+  ],
+  [
+   "emesa",
+   "antioch",
+   "land"
+  ],
+  [
+   "emesa",
+   "palmyra",
+   "land"
+  ],
+  [
+   "emesa",
+   "bostra",
+   "land"
+  ],
+  [
+   "emesa",
+   "caesarea",
+   "land"
+  ],
+  [
+   "bostra",
+   "caesarea",
+   "land"
+  ],
+  [
+   "bostra",
+   "palmyra",
+   "land"
+  ],
+  [
+   "caesarea",
+   "alexandria",
+   "land"
+  ]
+ ],
+ "crossLinks": [
+  {
+   "from": "thebes",
+   "toKey": "adulis",
+   "toName": "阿杜利斯（阿克苏姆外港）",
+   "kind": "sea",
+   "why": "科普托斯—贝勒尼基—阿杜利斯的红海航线，与 persia-arabia-africa.json 的 adulis—thebes 是同一条，合并时只保留一条；代替第二版的 aksum—alexandria（亚历山大在地中海岸，红海港口须经科普托斯），见 updates。若阿杜利斯不并入，则改连 aksum。麦罗埃经纳帕塔、卡拉诺格沿尼罗河北上即到底比斯，不必另设 thebes—meroe。"
+  },
+  {
+   "from": "mazaca",
+   "toKey": "artaxata",
+   "toName": "阿尔塔沙特（亚美尼亚）",
+   "kind": "land",
+   "why": "经萨塔拉军团营地入亚美尼亚，代替第二版的 artaxata—ancyra（见 updates）。"
+  },
+  {
+   "from": "mazaca",
+   "toKey": "edessa",
+   "toName": "埃德萨（奥斯若恩）",
+   "kind": "land",
+   "why": "经梅利泰内（第十二雷霆军团）沿幼发拉底河南下萨莫萨塔、埃德萨。"
+  },
+  {
+   "from": "nisibis",
+   "toKey": "edessa",
+   "toName": "埃德萨（奥斯若恩）",
+   "kind": "land",
+   "why": "上美索不达米亚的东西商道，194/195年奥斯若恩人由此进围尼西比斯。"
+  },
+  {
+   "from": "nisibis",
+   "toKey": "hatra",
+   "toName": "哈特拉",
+   "kind": "land",
+   "why": "向南经辛贾尔山到哈特拉；198—199年塞维鲁两度围攻哈特拉。"
+  },
+  {
+   "from": "nisibis",
+   "toKey": "arbela",
+   "toName": "阿尔贝拉（阿迪亚贝纳）",
+   "kind": "land",
+   "why": "向东渡底格里斯河到阿迪亚贝纳；194/195年阿迪亚贝纳人参与围城。"
+  }
+ ],
+ "generals": [
+  {
+   "name": "老盖塔",
+   "full": "普布利乌斯·塞普蒂米乌斯·盖塔",
+   "orig": "Publius Septimius Geta (brother of Severus)",
+   "war": 64,
+   "intel": 66,
+   "pol": 72,
+   "faction": "roma",
+   "city": "emerita",
+   "loyalty": 82,
+   "troops": 2000,
+   "hidden": 0,
+   "born": 143,
+   "died": 204,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "卢西塔尼亚总督（约188—191年），塞维鲁之兄",
+   "note": "大莱普提斯人，塞维鲁的哥哥。大莱普提斯剧场出土的195年荣誉铭文（IRT 541）列出其仕履：第一意大利军团长（185年）、西西里资深执政官、卢西塔尼亚总督、执政官，193—194年下默西亚总督、195年三达契亚总督，203年第二次任执政官，约204年卒；临终前向塞维鲁揭发普劳提安。卢西塔尼亚的年份由仕履顺序推定。显示名加“老”字，以区别于其侄、皇子盖塔。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Publius_Septimius_Geta_(brother_of_Septimius_Severus)",
+    "https://inslib.kcl.ac.uk/irt2009/IRT541.html",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Lower_Moesia"
+   ]
+  },
+  {
+   "name": "阿塔卢斯",
+   "full": "提比略·克劳狄乌斯·阿塔卢斯·帕特尔克利亚努斯",
+   "orig": "Tiberius Claudius Attalus Paterclianus",
+   "war": 56,
+   "intel": 58,
+   "pol": 56,
+   "faction": "roma",
+   "city": "philippopolis",
+   "loyalty": 62,
+   "troops": 2000,
+   "hidden": 0,
+   "born": null,
+   "died": 219,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "色雷斯总督（180年代中期；190年是否仍在任不详）",
+   "note": "其名见于色雷斯尼科波利斯、潘陶利亚的钱币（称“总督”）。狄奥记载：塞维鲁在对尼格尔作战期间把他逐出元老院，卡拉卡拉时恢复，抽签得塞浦路斯；他在色雷斯任上曾把犯错的士兵科马宗罚去划桨，约218/219年被已成禁卫军长官的科马宗报复处死。钱币只能把他的色雷斯任期定在180年代中期，190年仍放在菲利波利斯属于年代放宽。忠诚偏低。",
+   "sources": [
+    "https://nomisma.org/id/tiberius_claudius_attalus_paterclianus_pirc795",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Thracia",
+    "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Cassius_Dio/80*.html",
+    "https://en.wikipedia.org/wiki/Publius_Valerius_Comazon"
+   ]
+  },
+  {
+   "name": "提·戈尔迪",
+   "full": "提比略·克劳狄乌斯·戈尔迪亚努斯",
+   "orig": "Tiberius Claudius Gordianus",
+   "war": 66,
+   "intel": 62,
+   "pol": 64,
+   "faction": "roma",
+   "city": "cirta",
+   "loyalty": 76,
+   "troops": 4000,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "努米底亚皇帝特使兼第三奥古斯都军团长（188年在任）",
+   "note": "努米底亚韦雷昆达出土的荣誉铭文称他为188年的努米底亚皇帝特使（PIR C 880）；是否与日后的皇帝戈尔迪安一世同族不明。190年是否仍在任无直接证据。为与“戈尔迪安”区别，显示名取“提·戈尔迪”（同“尤·莱图斯”之例）。",
+   "sources": [
+    "https://edh-www.adw.uni-heidelberg.de/edh/inschrift/HD031519",
+    "https://en.wikipedia.org/wiki/Legio_III_Augusta"
+   ]
+  },
+  {
+   "name": "拉尔基安",
+   "full": "奥卢斯·斯坎提乌斯·拉尔基亚努斯",
+   "orig": "Aulus Scantius Larcianus",
+   "war": 58,
+   "intel": 54,
+   "pol": 60,
+   "faction": "roma",
+   "city": "tingis",
+   "loyalty": 76,
+   "troops": 2500,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "毛里塔尼亚廷吉塔纳总督（180—198年间）",
+   "note": "维基百科的廷吉塔纳总督表把他列在维图里乌斯·马克里努斯（180年）与尤利乌斯·帕卡提亚努斯（198/199年）之间，具体年份不详。骑士级总督统率辅助部队，负责与巴夸特人的会盟。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Mauretania_Tingitana"
+   ]
+  },
+  {
+   "name": "特伦提安",
+   "full": "盖乌斯·庞波尼乌斯·巴苏斯·特伦提亚努斯",
+   "orig": "Gaius Pomponius Bassus Terentianus",
+   "war": 54,
+   "intel": 64,
+   "pol": 70,
+   "faction": "roma",
+   "city": "aquincum",
+   "loyalty": 78,
+   "troops": 3500,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "下潘诺尼亚总督（约187—189年；一说192年）",
+   "note": "约185年任近西班牙司法特使，186或187年任吕基亚—潘菲利亚资深执政官，随后出镇下潘诺尼亚；约190—192年任军库长官，约193年补任执政官；其子即211年的执政官庞波尼乌斯·巴苏斯。下潘诺尼亚任期两说不一，190年初可能刚离任，按就近原则放在阿昆库姆。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gaius_Pomponius_Bassus_Terentianus",
+    "https://en.wikipedia.org/wiki/Pannonia_Inferior",
+    "https://library.hungaricana.hu/hu/view/MEGY_FEJE_C011_albaregia11/?pg=150"
+   ]
+  },
+  {
+   "name": "巴西安",
+   "full": "尤利乌斯·巴西亚努斯",
+   "orig": "Julius Bassianus",
+   "war": 30,
+   "intel": 72,
+   "pol": 70,
+   "faction": "roma",
+   "city": "emesa",
+   "loyalty": 76,
+   "troops": 1500,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "arab",
+   "attested": "yes",
+   "sex": "m",
+   "role": "埃梅萨太阳神埃拉伽巴尔大祭司",
+   "note": "多姆娜与玛伊莎的父亲，出自埃梅萨的祭司王族；卒于217年以前，生卒年不详，妻子姓名不传。按地方大族在任罗马势力，兵少。“巴西亚努斯”也是卡拉卡拉的本名，显示名取“巴西安”。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Julius_Bassianus",
+    "https://en.wikipedia.org/wiki/Julia_Domna",
+    "https://en.wikipedia.org/wiki/Julia_Maesa"
+   ]
+  },
+  {
+   "name": "格拉图斯",
+   "full": "卢基乌斯·尤利乌斯·维希利乌斯·格拉图斯·尤利安努斯",
+   "orig": "Lucius Julius Vehilius Gratus Julianus",
+   "war": 72,
+   "intel": 64,
+   "pol": 62,
+   "faction": "roma",
+   "city": "roma",
+   "loyalty": 56,
+   "troops": 3000,
+   "hidden": 0,
+   "born": null,
+   "died": 190,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "禁卫军长官（188—190年）",
+   "note": "骑士出身的职业军人，从叙利亚、上潘诺尼亚的辅助部队长官做起，两度获军功勋赏，仕履铭文以倒序保存；康茂德任他为禁卫军长官，却当众羞辱（《罗马君王传》说把他推进水池），190年下令处死——剧本开局时仍在任。为与尤利安努斯（狄狄乌斯）区别，显示名取其第四个名字“格拉图斯”。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Lucius_Julius_Vehilius_Gratus_Julianus",
+    "https://edh.ub.uni-heidelberg.de/edh/inschrift/HD032534",
+    "https://apcz.umk.pl/KLIO/article/view/1301"
+   ]
+  },
+  {
+   "name": "苏尔皮基安",
+   "full": "提图斯·弗拉维乌斯·克劳狄乌斯·苏尔皮基亚努斯",
+   "orig": "Titus Flavius Claudius Sulpicianus",
+   "war": 38,
+   "intel": 66,
+   "pol": 74,
+   "faction": "-",
+   "city": "roma",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 197,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "元老，佩蒂纳克斯的岳父（193年城市长官）",
+   "note": "因女儿嫁给佩蒂纳克斯，193年初任罗马城市长官；佩蒂纳克斯被杀后到禁卫军营安抚士兵，被拥为皇帝，与尤利安努斯在营墙内外竞价，出价每人二万塞斯特斯而落败（史称“拍卖帝位”）；197年被塞维鲁处死。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Titus_Flavius_Claudius_Sulpicianus",
+    "https://livius.org/articles/person/flavius-sulpicianus"
+   ]
+  },
+  {
+   "name": "尤维纳利斯",
+   "full": "弗拉维乌斯·尤维纳利斯",
+   "orig": "Flavius Juvenalis",
+   "war": 58,
+   "intel": 64,
+   "pol": 56,
+   "faction": "-",
+   "city": "roma",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "禁卫军长官（193年起）",
+   "note": "尤利安努斯所任的禁卫军长官，及时倒向塞维鲁而得以留任，与维图里乌斯同掌重组后的禁卫军。",
+   "sources": [
+    "https://warhistory.org/article/the-praetorian-guard-180-235-ii",
+    "https://en.wikipedia.org/wiki/Tullius_Crispinus"
+   ]
+  },
+  {
+   "name": "维图里乌斯",
+   "full": "德基姆斯·维图里乌斯·马克里努斯",
+   "orig": "Decimus Veturius Macrinus",
+   "war": 54,
+   "intel": 68,
+   "pol": 72,
+   "faction": "-",
+   "city": "tingis",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "前廷吉塔纳总督、前埃及长官，193年禁卫军长官",
+   "note": "180年10月13日以廷吉塔纳总督身份在沃卢比利斯立坛，为巴夸特人立卡纳尔塔为首领；181—183年前后任埃及长官（柏林纸草记有他主持的庭审）；193年被塞维鲁任为禁卫军长官。为与皇帝马克里努斯区别，显示名用氏族名。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Decimus_Veturius_Macrinus",
+    "https://en.wikipedia.org/wiki/List_of_Roman_governors_of_Mauretania_Tingitana"
+   ],
+   "cityAlt": "roma"
+  },
+  {
+   "name": "拉特兰",
+   "full": "提图斯·塞克斯提乌斯·马吉乌斯·拉特拉努斯",
+   "orig": "Titus Sextius Magius Lateranus",
+   "war": 74,
+   "intel": 66,
+   "pol": 64,
+   "faction": "-",
+   "city": "roma",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "塞维鲁的东征统帅（195年），197年执政官",
+   "note": "195年塞维鲁第一次东征时任“军团统帅”（dux exercitus），与尤·莱图斯、坎迪杜斯分路平定美索不达米亚叛城，197年获任正选执政官。显示名用 Lateranus 的通行译法“拉特兰”；罗马的拉特兰宫一般认为得名于1世纪的普劳提乌斯·拉特拉努斯家族，与他所属的塞克斯提乌斯氏是否有关不详。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Titus_Sextius_Magius_Lateranus_(consul_197)",
+    "https://en.wikipedia.org/wiki/Roman%E2%80%93Parthian_War_of_194%E2%80%93198"
+   ]
+  },
+  {
+   "name": "普里斯克",
+   "full": "尼西亚的普里斯库斯",
+   "orig": "Priscus of Nicaea",
+   "war": 28,
+   "intel": 88,
+   "pol": 32,
+   "faction": "-",
+   "city": "byzantium",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "拜占庭守城工程师",
+   "note": "尼西亚人（尼西亚、尼科米底亚都并入拜占庭一城）。193—195/196年拜占庭为尼格尔坚守，城上的投石机与钩爪多出自他手，塞维鲁军久攻不下；城破后官员与士兵尽被处死，塞维鲁唯独赦免他并收归己用（狄奥第七十五卷）。",
+   "sources": [
+    "https://ccel.org/ccel/gibbon/decline/volume1/nt5/054.htm",
+    "https://www.thecollector.com/siege-byzantium-septemius-severus"
+   ]
+  },
+  {
+   "name": "努梅里安",
+   "full": "努梅里亚努斯",
+   "orig": "Numerianus",
+   "war": 64,
+   "intel": 76,
+   "pol": 38,
+   "faction": "-",
+   "city": "lugdunum",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "罗马城的启蒙教师，冒充元老为塞维鲁募兵（196—197年）",
+   "note": "狄奥记载：塞维鲁与阿尔拜努斯开战时，这位教孩童识字的教师离开罗马前往高卢，自称是塞维鲁派来募兵的元老，聚众袭杀阿尔拜努斯的骑兵；塞维鲁信以为真，来信嘉奖并要他扩军，他又截获七千万塞斯特斯送交塞维鲁。战后他坦白身份，不受官职，只领一份小小的年金终老乡间。放在卢格杜努姆（高卢）。",
+   "sources": [
+    "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Cassius_Dio/76*.html",
+    "https://en.wikipedia.org/wiki/Clodius_Albinus"
+   ]
+  },
+  {
+   "name": "布拉",
+   "full": "布拉·费利克斯",
+   "orig": "Bulla Felix",
+   "war": 78,
+   "intel": 84,
+   "pol": 34,
+   "faction": "-",
+   "city": "aquileia",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 207,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "意大利盗魁（约205—207年）",
+   "note": "狄奥记载：他纠集六百余人（多为逃奴与被欠饷的皇室释奴），在意大利横行两年多，劫富而不滥杀，曾乔装成官员骗出被捕的同伙，塞维鲁亲遣大军也捉不到；后因与人妻私通被告发，在山洞中睡梦里被擒，押到禁卫军长官帕比尼安面前，投兽而死。有学者认为其故事带有文学加工。放在意大利东北的阿奎莱亚只是游戏安排。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Bulla_Felix",
+    "https://imperiumromanum.pl/en/article/bulla-felix-roman-robin-hood/"
+   ]
+  },
+  {
+   "name": "保罗",
+   "full": "尤利乌斯·保卢斯",
+   "orig": "Julius Paulus",
+   "war": 10,
+   "intel": 92,
+   "pol": 90,
+   "faction": "-",
+   "city": "aquileia",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "法学家（罗马五大法学家之一）",
+   "note": "与乌尔比安同为帕比尼安的陪审官，著述极丰，被《引证法》列为五大法学家之一；埃拉伽巴路斯时被流放，塞维鲁·亚历山大时召回，据称任禁卫军长官。出身不详，一说帕塔维乌姆（帕多瓦，有其雕像铭文），故放在阿奎莱亚。中国法学界通称“保罗”。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Julius_Paulus",
+    "https://cts.perseids.org/read/pdlrefwk/viaf88890045/003/perseus-eng1/P.paulus_julius_2"
+   ]
+  },
+  {
+   "name": "阿维图斯",
+   "full": "盖乌斯·尤利乌斯·阿维图斯·亚历克西亚努斯",
+   "orig": "Gaius Julius Avitus Alexianus",
+   "war": 62,
+   "intel": 72,
+   "pol": 74,
+   "faction": "-",
+   "city": "emesa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 217,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "玛伊莎之夫，骑士军官，后任雷提亚总督、执政官",
+   "note": "叙利亚人。萨洛纳出土的长篇仕履铭文记其先后任佩特拉辅助大队长官、军团军事保民官、骑兵队长官、奥斯提亚粮政监理；193年塞维鲁即位后被擢为元老，统率下多瑙河的第四弗拉维军团，约196—198年任雷提亚总督，约200年任执政官；208—211年随塞维鲁父子征不列颠，约217年卒于塞浦路斯总督任上。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gaius_Julius_Avitus_Alexianus",
+    "https://www.livius.org/articles/person/julius-avitus-alexianus/"
+   ]
+  },
+  {
+   "name": "索埃米亚斯",
+   "full": "尤利娅·索埃米亚斯·巴西亚纳",
+   "orig": "Julia Soaemias Bassiana",
+   "war": 8,
+   "intel": 70,
+   "pol": 62,
+   "faction": "-",
+   "city": "emesa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 180,
+   "died": 222,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "f",
+   "role": "玛伊莎长女，埃拉伽巴路斯之母",
+   "note": "约180年生，约193年嫁阿帕米亚人瓦里乌斯·马塞卢斯；218年与母亲玛伊莎策动叙利亚驻军拥立其子埃拉伽巴路斯，据《罗马君王传》曾获准出席元老院；222年与其子一同被禁卫军所杀。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Julia_Soaemias",
+    "https://livius.org/articles/person/julia-soeamias"
+   ]
+  },
+  {
+   "name": "马梅亚",
+   "full": "尤利娅·阿维塔·马梅亚",
+   "orig": "Julia Avita Mamaea",
+   "war": 10,
+   "intel": 82,
+   "pol": 80,
+   "faction": "-",
+   "city": "emesa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 182,
+   "died": 235,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "f",
+   "role": "玛伊莎次女，塞维鲁·亚历山大之母",
+   "note": "生年在180年后（约182年，一说迟至190年代初）；其子塞维鲁·亚历山大222年即位后，她是朝中最有权势的谋主，曾召奥利金讲学；235年与其子在莫贡提亚库姆附近被哗变士兵所杀。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Julia_Avita_Mamaea",
+    "https://www.livius.org/articles/person/julia-mamaea/"
+   ]
+  },
+  {
+   "name": "瓦里乌斯",
+   "full": "塞克斯图斯·瓦里乌斯·马塞卢斯",
+   "orig": "Sextus Varius Marcellus",
+   "war": 40,
+   "intel": 70,
+   "pol": 76,
+   "faction": "-",
+   "city": "emesa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 165,
+   "died": 215,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "骑士官员，索埃米亚斯之夫",
+   "note": "阿帕米亚人（阿帕米亚并入埃梅萨一城），约193年娶索埃米亚斯，203年得子即埃拉伽巴路斯。韦莱特里出土的墓碑（CIL X 6569）记其历任水道监理、不列颠财务监理、皇室私库监理、代理禁卫军长官与城市长官、军库长官、第三奥古斯都军团长，最后卒于努米底亚总督任上（约215年）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Sextus_Varius_Marcellus",
+    "https://www.livius.org/articles/person/varius-marcellus/"
+   ]
+  },
+  {
+   "name": "普皮恩努斯",
+   "full": "马可·克洛狄乌斯·普皮恩努斯·马克西穆斯",
+   "orig": "Marcus Clodius Pupienus Maximus",
+   "war": 74,
+   "intel": 70,
+   "pol": 74,
+   "faction": "-",
+   "city": "mogontiacum",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 164,
+   "died": 238,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "元老（日后皇帝，238年）",
+   "note": "约164年生，曾任某日耳曼行省的皇帝特使、亚细亚资深执政官，234年任罗马城市长官以严厉著称；238年元老院推举他与巴尔比努斯共治以对抗马克西明，同年被禁卫军所杀。早年仕履的年份各书不一。日耳曼总督任上的年份不详，放在莫贡提亚只是游戏安排。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Pupienus",
+    "https://www.roman-emperors.sites.luc.edu/pupi.htm"
+   ],
+   "cityAlt": "colonia"
+  },
+  {
+   "name": "巴尔比努斯",
+   "full": "德基姆斯·凯利乌斯·卡尔维努斯·巴尔比努斯",
+   "orig": "Decimus Caelius Calvinus Balbinus",
+   "war": 30,
+   "intel": 68,
+   "pol": 76,
+   "faction": "-",
+   "city": "roma",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 178,
+   "died": 238,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "贵族元老（日后皇帝，238年）",
+   "note": "出身显贵，历任多个和平行省的总督、两度出任执政官，没有军事经验；238年与普皮恩努斯共治，三个月后同被禁卫军所杀。生年一说约165年。",
+   "sources": [
+    "https://imperiumromanum.pl/en/article/two-emperors-on-one-throne-pupienus-and-balbinus/",
+    "https://cts.perseids.org/read/pdlrefwk/viaf88890045/003/perseus-eng1/B.balbinus_2"
+   ]
+  },
+  {
+   "name": "提梅西修",
+   "full": "盖乌斯·富里乌斯·萨比尼乌斯·阿奎拉·提梅西特乌斯",
+   "orig": "Gaius Furius Sabinius Aquila Timesitheus",
+   "war": 72,
+   "intel": 86,
+   "pol": 86,
+   "faction": "-",
+   "city": "antioch",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 190,
+   "died": 243,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "骑士官员（日后禁卫军长官、戈尔迪安三世的岳父）",
+   "note": "约190年生，大概出身希腊—东方的骑士家族，历任多地财务监理；240—243年任禁卫军长官，241年把女儿嫁给戈尔迪安三世而成为实际执政者，242—243年领兵在雷赛纳击败萨珊的沙普尔一世，收复美索不达米亚诸城，243年病死军中。放在安条克只是游戏安排。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gaius_Furius_Sabinius_Aquila_Timesitheus",
+    "https://www.britannica.com/biography/Gordian-III"
+   ]
+  },
+  {
+   "name": "阿德文图斯",
+   "full": "马可·奥克拉提尼乌斯·阿德文图斯",
+   "orig": "Marcus Oclatinius Adventus",
+   "war": 66,
+   "intel": 56,
+   "pol": 48,
+   "faction": "-",
+   "city": "deva",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "军中密探出身（日后禁卫军长官、218年执政官）",
+   "note": "狄奥说他起于普通士兵，当过斥候、刽子手，后入“军粮兵”（军中密探）并升为其首领；205—207年在阿尔费努斯·塞内西奥麾下任不列颠财务监理，见于里辛厄姆、切斯特斯的铭文；217年已年老，卡拉卡拉死后曾被拥立而推辞，218年与马克里努斯同任执政官。放在不列颠西部的德瓦（若不并入德瓦则放在埃博拉库姆）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Oclatinia_gens",
+    "https://romaninscriptionsofbritain.org/inscriptions/1462",
+    "https://resolve.cambridge.org/core/journals/britannia/article/abs/m-oclatinius-adventus-in-britain/308F53C038EE8EF8DE9C83A52690C764"
+   ],
+   "cityAlt": "eboracum"
+  },
+  {
+   "name": "塞内西奥",
+   "full": "卢基乌斯·阿尔费努斯·塞内西奥",
+   "orig": "Lucius Alfenus Senecio",
+   "war": 70,
+   "intel": 66,
+   "pol": 70,
+   "faction": "-",
+   "city": "cirta",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "骑士官员（日后叙利亚、不列颠总督）",
+   "note": "努米底亚库伊库尔（今杰米拉）人，先后任比利时高卢、毛里塔尼亚凯撒利亚（约196—197年）财务监理，约200年任叙利亚总督，205—207年任不列颠总督，修复哈德良长城沿线诸堡，为塞维鲁北征打下基础。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Lucius_Alfenus_Senecio",
+    "https://en.wikipedia.org/wiki/List_of_governors_of_Roman_Britain",
+    "https://romaninscriptionsofbritain.org/inscriptions/1337"
+   ]
+  },
+  {
+   "name": "阿尼修斯",
+   "full": "昆图斯·阿尼修斯·福斯图斯",
+   "orig": "Quintus Anicius Faustus",
+   "war": 68,
+   "intel": 64,
+   "pol": 72,
+   "faction": "-",
+   "city": "cirta",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "努米底亚皇帝特使（197—201年）",
+   "note": "阿尼修斯家族的“新人”，大概出身努米底亚的乌扎帕（为该城保护人）；197—201年任努米底亚特使兼第三奥古斯都军团长，修筑的黎波里塔尼亚边墙的诸堡以防游牧民，198年在任上遥领补任执政官，此后可能任上默西亚总督（约202—205年）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Quintus_Anicius_Faustus",
+    "https://edh.ub.uni-heidelberg.de/edh/inschrift/HD033475"
+   ]
+  },
+  {
+   "name": "马克西米安",
+   "full": "马可·瓦勒里乌斯·马克西米亚努斯",
+   "orig": "Marcus Valerius Maximianus",
+   "war": 88,
+   "intel": 64,
+   "pol": 56,
+   "faction": "-",
+   "city": "carnuntum",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "马科曼尼战争名将，前努米底亚军团长",
+   "note": "上潘诺尼亚波埃托维奥（今普图伊）人。迪亚纳·韦特拉诺鲁姆出土的长篇铭文记载：他在马科曼尼战争中亲手斩杀纳里斯蒂人之王瓦劳，获赐战马、兵器与勋章；后历任多个军团长，179年率部在夸迪人境内的劳加里西奥（特伦钦）越冬并留下崖刻；183—185年任第三奥古斯都军团长兼努米底亚总督，期间获补任执政官，此后下落不明（190年是否在世无证据）。放在故乡所属的卡农图姆。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Marcus_Valerius_Maximianus",
+    "https://hunektar.sk/en/records/trencseni-varszikla-latin-felirata",
+    "https://edh.ub.uni-heidelberg.de/edh/inschrift/HD026629"
+   ]
+  },
+  {
+   "name": "科马宗",
+   "full": "普布利乌斯·瓦勒里乌斯·科马宗（欧提基亚努斯）",
+   "orig": "Publius Valerius Comazon (Eutychianus)",
+   "war": 58,
+   "intel": 64,
+   "pol": 50,
+   "faction": "-",
+   "city": "philippopolis",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "色雷斯的士兵（日后禁卫军长官、220年执政官、三任城市长官）",
+   "note": "康茂德时在色雷斯当兵，因过失被总督阿塔卢斯罚为桨手；218年参与拥立埃拉伽巴路斯，任禁卫军长官（218—219年），220年与皇帝同任执政官，三度出任罗马城市长官；任内报复处死了阿塔卢斯。生卒年不详，222年后仍在世。与阿塔卢斯同置菲利波利斯。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Publius_Valerius_Comazon",
+    "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Cassius_Dio/80*.html"
+   ]
+  },
+  {
+   "name": "爱任纽",
+   "full": "里昂的爱任纽（伊里奈乌斯）",
+   "orig": "Irenaeus of Lugdunum",
+   "war": 6,
+   "intel": 88,
+   "pol": 68,
+   "faction": "-",
+   "city": "lugdunum",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 130,
+   "died": 202,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "卢格杜努姆主教",
+   "note": "小亚细亚士麦那人，177年里昂教难时奉命携信赴罗马而幸免，归来继任主教；约180年写成《驳异端》，约200—202年卒。生年约130—140年。",
+   "sources": [
+    "https://www.britannica.com/biography/Irenaeus",
+    "https://www.catholicculture.org/commentary/church-fathers-st-irenaeus-lyons-part-i/"
+   ]
+  },
+  {
+   "name": "德尔图良",
+   "full": "昆图斯·塞普蒂米乌斯·弗洛伦斯·德尔图良",
+   "orig": "Quintus Septimius Florens Tertullianus",
+   "war": 10,
+   "intel": 90,
+   "pol": 50,
+   "faction": "-",
+   "city": "carthago",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 155,
+   "died": 220,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "迦太基的护教士、拉丁神学之父",
+   "note": "约155年生于迦太基，197年写成《护教篇》，首创大量拉丁神学术语，被称为“拉丁基督教之父”；约220年后卒。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Tertullian",
+    "https://www.britannica.com/facts/Tertullian"
+   ]
+  },
+  {
+   "name": "革利免",
+   "full": "亚历山大的革利免（提图斯·弗拉维乌斯·克莱门斯）",
+   "orig": "Titus Flavius Clemens (Clement of Alexandria)",
+   "war": 6,
+   "intel": 90,
+   "pol": 52,
+   "faction": "-",
+   "city": "alexandria",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 150,
+   "died": 215,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "亚历山大教理学校主持人",
+   "note": "据说生于雅典，190年前后主持亚历山大的教理学校，奥利金是其学生；202年塞维鲁迫害开始后离开埃及，约215年卒。",
+   "sources": [
+    "https://www.ccel.org/ccel/schaff/npnf201.iii.xi.vi.html",
+    "https://bkv.unifr.ch/works/cpg-3495/versions/the-church-history-of-eusebius/divisions/151"
+   ]
+  },
+  {
+   "name": "奥利金",
+   "full": "奥利金·阿达曼提乌斯",
+   "orig": "Origenes Adamantius",
+   "war": 8,
+   "intel": 92,
+   "pol": 44,
+   "faction": "-",
+   "city": "alexandria",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 185,
+   "died": 253,
+   "culture": "roman",
+   "attested": "yes",
+   "sex": "m",
+   "role": "亚历山大的神学家（190年时五岁）",
+   "note": "约185年生于亚历山大，父亲列奥尼德斯202年殉教，203年起重开教理学校；著述数以千计，编纂六文本合参《圣经》，后移居凯撒利亚，德西乌斯迫害中受刑，约253年卒。",
+   "sources": [
+    "https://www.ccel.org/ccel/robertson/history.iii.vii.html",
+    "https://www.ccel.org/s/schaff/encyc/encyc08/htm/ii.viii.htm"
+   ]
+  },
+  {
+   "name": "犹大亲王",
+   "full": "拉比犹大·哈纳西（犹大亲王）",
+   "orig": "Rabbi Judah ha-Nasi",
+   "war": 12,
+   "intel": 92,
+   "pol": 88,
+   "faction": "-",
+   "city": "caesarea",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 135,
+   "died": 217,
+   "culture": "arab",
+   "attested": "yes",
+   "sex": "m",
+   "role": "巴勒斯坦犹太社团的族长（纳西）",
+   "note": "罗马治下巴勒斯坦犹太人的领袖，驻贝特谢阿里姆、晚年居塞弗里斯，编定《密什那》；塔木德传说他与一位“安东尼努斯”皇帝交好（多半是传说）。约135—217年（一说220年）。DESIGN-V2 没有犹太文化代号，暂用 arab（头巾、长袍、卷须）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Judah_ha-Nasi",
+    "https://www.britannica.com/biography/Judah-ha-Nasi"
+   ]
+  },
+  {
+   "name": "卡纳尔塔",
+   "full": "奥勒留·卡纳尔塔",
+   "orig": "Aurelius Canartha",
+   "war": 72,
+   "intel": 56,
+   "pol": 54,
+   "faction": "baquates",
+   "city": "baquates",
+   "loyalty": 100,
+   "troops": 4500,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "arab",
+   "attested": "yes",
+   "sex": "m",
+   "role": "巴夸特人首领（180年由罗马册立）",
+   "note": "180年廷吉塔纳总督维图里乌斯·马克里努斯在沃卢比利斯与巴夸特人会盟，立新首领卡纳尔塔，授予罗马公民权，并以其子为人质送往罗马（维基百科未写出首领之名，名字据摩洛哥政府的历史年表与180年祭坛的通行释读）。约200年罗马又与一位非公民首领重订和约，可见此后关系曾破裂。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Baquates",
+    "https://www.maroc.ma/index%2ephp/en/history-of-morocco/important-dates?page=3",
+    "https://en.wikipedia.org/wiki/Decimus_Veturius_Macrinus"
+   ]
+  },
+  {
+   "name": "乌克梅特",
+   "full": "乌克梅提乌斯",
+   "orig": "Ucmetius (Ucmet)",
+   "war": 68,
+   "intel": 50,
+   "pol": 48,
+   "faction": "baquates",
+   "city": "baquates",
+   "loyalty": 66,
+   "troops": 3500,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "arab",
+   "attested": "yes",
+   "sex": "m",
+   "role": "马塞尼特人与巴夸特人诸族之王（173—175年）",
+   "note": "沃卢比利斯和平祭坛（AE 1957, 202）记载173—175年总督埃皮迪乌斯·夸德拉图斯与他会谈；他不是罗马公民。180年罗马另立卡纳尔塔，此后下落不明，按蛮族首领放宽年代的规则收为巴夸特势力的部将，忠诚偏低。",
+   "sources": [
+    "https://heurist.huma-num.fr/heurist/judaism_and_rome/view/104",
+    "https://en.wikipedia.org/wiki/Baquates"
+   ]
+  },
+  {
+   "name": "劳斯",
+   "full": "劳斯",
+   "orig": "Raüs",
+   "war": 76,
+   "intel": 54,
+   "pol": 44,
+   "faction": "vandals",
+   "city": "vandalia",
+   "loyalty": 100,
+   "troops": 5000,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "german",
+   "attested": "yes",
+   "sex": "m",
+   "role": "阿斯丁吉人首领（约171年）",
+   "note": "与拉普图斯同为阿斯丁吉人首领，约171年率全族进入达契亚，事见狄奥第七十二卷（见势力说明）。190年是否在世不详。",
+   "sources": [
+    "https://penelope.uchicago.edu/Thayer/e/roman/texts/cassius_dio/72*.html",
+    "https://en.wikipedia.org/wiki/Hasdingi"
+   ]
+  },
+  {
+   "name": "拉普图斯",
+   "full": "拉普图斯",
+   "orig": "Raptus",
+   "war": 74,
+   "intel": 48,
+   "pol": 40,
+   "faction": "vandals",
+   "city": "vandalia",
+   "loyalty": 88,
+   "troops": 4000,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "german",
+   "attested": "yes",
+   "sex": "m",
+   "role": "阿斯丁吉人首领（约171年）",
+   "note": "与劳斯并称的阿斯丁吉首领（狄奥第七十二卷）。",
+   "sources": [
+    "https://penelope.uchicago.edu/Thayer/e/roman/texts/cassius_dio/72*.html",
+    "https://en.wikipedia.org/wiki/Hasdingi"
+   ]
+  },
+  {
+   "name": "阿尔特",
+   "full": "独身者阿尔特·麦克康恩",
+   "orig": "Art mac Cuinn (Art Óenfer)",
+   "war": 76,
+   "intel": 62,
+   "pol": 64,
+   "faction": "eriu",
+   "city": "tara",
+   "loyalty": 100,
+   "troops": 5000,
+   "hidden": 0,
+   "born": null,
+   "died": 195,
+   "culture": "celt",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "塔拉至高王（传说，《四大师编年史》约165—195年在位）",
+   "note": "“百战之王”康恩之子。《四大师编年史》定其在位约165—195年，基廷《爱尔兰史》作143—173年，《入侵之书》把他与康茂德同时。马格穆克拉马之战前夜与铁匠之女阿赫坦生下科马克，次日战死，被麦克康一方的卢格德·拉加所杀。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Art_mac_Cuinn",
+    "https://en.wikipedia.org/wiki/Cath_Maige_Mucrama",
+    "https://iso.ucc.ie/Cath-maige/Cath-maige-background.html"
+   ]
+  },
+  {
+   "name": "欧甘",
+   "full": "欧甘·麦克艾利拉",
+   "orig": "Éogan mac Ailella",
+   "war": 78,
+   "intel": 50,
+   "pol": 46,
+   "faction": "eriu",
+   "city": "tara",
+   "loyalty": 82,
+   "troops": 3500,
+   "hidden": 0,
+   "born": null,
+   "died": 195,
+   "culture": "celt",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "芒斯特王艾利尔·奥洛姆之子（传说）",
+   "note": "《马格穆克拉马之战》：他与义兄麦克康争夺一株紫杉下的乐师而结仇，后与阿尔特联手迎战麦克康，被不列颠王子贝内所杀；同夜所生之子菲亚胡成为芒斯特欧甘纳赫特王族之祖。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cath_Maige_Mucrama",
+    "https://maryjones.us/ctexts/mucrama.html",
+    "https://maryjones.us/ctexts/yew.html"
+   ]
+  },
+  {
+   "name": "麦克康",
+   "full": "卢格德·麦克康",
+   "orig": "Lugaid mac Con",
+   "war": 80,
+   "intel": 66,
+   "pol": 58,
+   "faction": "-",
+   "city": "caledonia",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 225,
+   "culture": "celt",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "流亡的王子（传说中195—225年为塔拉至高王）",
+   "note": "芒斯特王艾利尔·奥洛姆的养子，在切恩阿布拉特之战败于欧甘后流亡海外，与不列颠王之子贝内结盟、借外邦兵归来，于马格穆克拉马之战击杀阿尔特与欧甘而登至高王位，统治约三十年后被阿尔特之子科马克逐走。《四大师编年史》作195—225年。开局放在喀里多尼亚（流亡中）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cath_Maige_Mucrama",
+    "https://en.wikipedia.org/wiki/Art_mac_Cuinn",
+    "https://codecs.vanhamel.nl/Source:Cath_Maige_Mucrama/%C2%A7%C2%A7_05-09/06"
+   ]
+  },
+  {
+   "name": "科马克",
+   "full": "科马克·麦克艾尔特",
+   "orig": "Cormac mac Airt",
+   "war": 70,
+   "intel": 90,
+   "pol": 92,
+   "faction": "-",
+   "city": "tara",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 195,
+   "died": 266,
+   "culture": "celt",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "阿尔特之子（传说中的贤明至高王）",
+   "note": "传说是马格穆克拉马之战前夜阿尔特与阿赫坦所生，故生年记195年（按《四大师编年史》）；长大后逐走麦克康登位，以智慧与立法著称，芬恩与其“菲安纳”武士团在其治下扬名。《四大师编年史》定其在位227—266年，基廷作204—244年。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cormac_mac_Airt",
+    "https://codecs.vanhamel.nl/Source:Cath_Maige_Mucrama/%C2%A7%C2%A7_44-47/44-47",
+    "https://brehonacademy.org/wp-content/uploads/2023/03/King-Cormac-Mac-Airt-Transcript.pdf"
+   ]
+  },
+  {
+   "name": "芬恩",
+   "full": "芬恩·麦克库尔",
+   "orig": "Fionn mac Cumhaill",
+   "war": 92,
+   "intel": 84,
+   "pol": 52,
+   "faction": "-",
+   "city": "tara",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 283,
+   "culture": "celt",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "菲安纳武士团首领（神话传说人物）",
+   "note": "“芬恩故事群”的主角：父亲库尔在克努哈之战中被高尔·麦克莫尔纳所杀（一说被康恩所杀），他是遗腹子；因尝到“智慧鲑鱼”而得先知之能，率菲安纳武士团效力于科马克。中世纪编年家记其死于252或283年。属神话传说，年代不可考，生年留空；放在塔拉。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Fionn_mac_Cumhaill",
+    "https://en.wikisource.org/wiki/1911_Encyclop%C3%A6dia_Britannica/Finn_mac_Cool"
+   ]
+  }
+ ],
+ "updates": [
+  {
+   "target": "普劳提安",
+   "field": "city",
+   "from": "carthago",
+   "to": "lepcis",
+   "reason": "普劳提安是塞维鲁的大莱普提斯同乡与亲戚；第二版因本区未设莱普提斯而放在迦太基。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Gaius_Fulvius_Plautianus",
+    "https://en.wikipedia.org/wiki/Leptis_Magna"
+   ]
+  },
+  {
+   "target": "马克里努斯",
+   "field": "city",
+   "from": "carthago",
+   "to": "iol",
+   "condition": "仅当二级城 iol 并入时",
+   "reason": "马克里努斯生于毛里塔尼亚的凯撒利亚（约尔）；仅当二级城 iol 并入时执行。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Macrinus"
+   ]
+  },
+  {
+   "target": "玛伊莎",
+   "field": "city",
+   "from": "antioch",
+   "to": "emesa",
+   "reason": "玛伊莎出身埃梅萨祭司王族；与其夫阿维图斯、女儿索埃米亚斯、马梅亚同置故乡。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Julia_Maesa",
+    "https://en.wikipedia.org/wiki/Julius_Bassianus"
+   ]
+  },
+  {
+   "target": "菲利普",
+   "field": "city",
+   "from": "palmyra",
+   "to": "bostra",
+   "reason": "阿拉伯人菲利普生于阿拉伯行省特拉科尼提斯的沙赫巴（后改名菲利波波利斯），近波斯特拉而非帕尔米拉。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Philip_the_Arab",
+    "https://en.wikipedia.org/wiki/Shahba"
+   ]
+  },
+  {
+   "target": "iazyges",
+   "field": "lat",
+   "from": 46.8,
+   "to": 46.5,
+   "reason": "新增的阿昆库姆与雅济吉斯城只相距3.17个地图单位；南移到北纬46.5°（仍在多瑙河—蒂萨河之间）后为4.08，与西尔米乌姆5.56、维米纳基6.78。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Iazyges"
+   ]
+  },
+  {
+   "target": "sirmium",
+   "field": "note",
+   "from": "……下潘诺尼亚总督本驻阿昆库姆（布达佩斯），本图合并于此。",
+   "to": "萨瓦河畔重镇，属下潘诺尼亚行省，扼多瑙河中游与巴尔干大道；马可·奥勒留在此接见雅济吉斯使节。下潘诺尼亚首府阿昆库姆第三版另设一城。",
+   "reason": "阿昆库姆分出。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Sirmium"
+   ]
+  },
+  {
+   "target": "byzantium",
+   "field": "note",
+   "from": "……本图同时代表色雷斯与下默西亚方向。",
+   "to": "扼博斯普鲁斯海峡的色雷斯希腊城市；193年站在尼格尔一方，被塞维鲁军围困两年多后攻陷。对岸比提尼亚的尼科米底亚、尼西亚与本城相距不足3个地图单位，并入此城（193—194年两城分别支持塞维鲁与尼格尔）。",
+   "reason": "色雷斯（菲利波利斯）与下默西亚（诺维）第三版另设；尼科米底亚（task 列出）因距拜占庭仅2.24个单位无法单设。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Nicomedia",
+    "https://en.wikipedia.org/wiki/Byzantium"
+   ]
+  },
+  {
+   "target": "alexandria",
+   "field": "note",
+   "from": "……红海诸港（贝勒尼基、米奥斯霍尔莫斯）通阿克苏姆、阿拉伯与印度，本图并入此城。",
+   "to": "帝国第二大城、埃及长官驻地；埃及谷物经此海运罗马。上埃及与通往红海港口的科普托斯第三版另设底比斯一城。",
+   "reason": "底比斯分出。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Alexandria"
+   ]
+  },
+  {
+   "target": "roma-carnuntum",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "罗马经阿奎莱亚、琥珀之路到卡农图姆（roma—aquileia、aquileia—carnuntum）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Amber_Road"
+   ]
+  },
+  {
+   "target": "colonia-carnuntum",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "莱茵—多瑙河防线改经莫贡提亚（colonia—mogontiacum、mogontiacum—carnuntum）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Limes_Germanicus"
+   ]
+  },
+  {
+   "target": "colonia-marcomannia",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "改为 mogontiacum—marcomannia（美因河谷入波希米亚）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mogontiacum"
+   ]
+  },
+  {
+   "target": "carnuntum-sirmium",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "多瑙河沿线改经阿昆库姆；同时把卡农图姆的连线数压在5条。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Aquincum"
+   ]
+  },
+  {
+   "target": "sirmium-byzantium",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "军事大道改经维米纳基、菲利波利斯（sirmium—viminacium—philippopolis—byzantium）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Via_Militaris"
+   ]
+  },
+  {
+   "target": "lugdunum-tarraco",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "改经纳尔博（多米提乌斯大道）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Via_Domitia"
+   ]
+  },
+  {
+   "target": "artaxata-ancyra",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "改连卡帕多细亚的马扎卡（第二版说明本已指出这条线“经卡帕多细亚与萨塔拉军团营地”）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cappadocia_(Roman_province)"
+   ]
+  },
+  {
+   "target": "ancyra-antioch",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "安基拉—安条克的道路经马扎卡与奇里乞亚门，改为 ancyra—mazaca—antioch。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cilician_Gates"
+   ]
+  },
+  {
+   "target": "antioch-palmyra",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "reason": "帕尔米拉经埃梅萨通安条克（emesa—palmyra、emesa—antioch）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Palmyra"
+   ]
+  },
+  {
+   "target": "quadia-gothia",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "condition": "仅当二级城 vandalia 并入时",
+   "reason": "夸迪与哥特之间隔着新设的汪达尔（vandalia—quadia、vandalia—gothia）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Hasdingi"
+   ]
+  },
+  {
+   "target": "aksum-alexandria",
+   "field": "link",
+   "from": "present",
+   "to": "removed",
+   "condition": "仅当二级城 thebes 并入时",
+   "reason": "红海航线改由底比斯（科普托斯—贝勒尼基）出发（见 crossLinks thebes—adulis）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Coptos",
+    "https://en.wikipedia.org/wiki/Berenice_Troglodytica"
+   ]
+  }
+ ],
+ "notes": [
+  "【资料核实】本区 WebFetch 访问维基百科及其镜像、livius.org、nomisma.org 均被代理拒绝（403），全部依据网络搜索结果的摘要与已有知识整理；所列维基链接为搜索结果中出现的标准页面或相应的标准条目，合并前可抽查。",
+  "【优先级】城池带 priority 字段：1 = 建议并入（16座：埃梅里塔、科尔杜巴、纳尔博、莫贡提亚、阿昆库姆、维米纳基、阿普卢姆、诺维、菲利波利斯、阿奎莱亚、莱普提斯、锡尔塔、马扎卡、波斯特拉、凯撒利亚、埃梅萨）；2 = 可选（14座）。只并入一级城时，二级城的连线与人物须相应改动：tara 连 eboracum（海路）代替 deva；阿德文图斯改放 eboracum；维图里乌斯改放 roma（字段 cityAlt）；马克里努斯不移动；baquates/tingis 不并入则巴夸特势力整体不收。",
+  "【空城】190年总督或主官无可考的罗马城一律设为空城（owner \"-\"），共24座，与第二版对苏萨、查拉克斯等城的处理相同；只有6座城由可考人物在任：埃梅里塔（老盖塔）、阿昆库姆（特伦提安）、菲利波利斯（阿塔卢斯）、锡尔塔（提·戈尔迪）、廷吉斯（拉尔基安）、埃梅萨（巴西安）。这些空城多在罗马腹地，开局后会被罗马逐步收取；若平衡模拟显示罗马扩张过快，可把部分空城的土地/人口调低，或干脆只并入一级城。",
+  "【罗马规模】全部并入后罗马开局 21 城（原15 + 6），在任武将 30 人（原23 + 格拉图斯与6位总督）。与第二版的取舍一致，新的在任者忠诚按史实设为62—82；格拉图斯（56）与阿塔卢斯（62）偏低。",
+  "【间距】所有新城与旧城的投影距离都 ≥3（最近：阿昆库姆—雅济吉斯 3.17，见 updates 的南移建议；维米纳基—西尔米乌姆 3.31；特雷维里—莫贡提亚 3.38；波斯特拉—凯撒利亚 3.50；埃梅萨—帕尔米拉 3.47）。task 列出的尼科米底亚距拜占庭仅 2.24，无法单设，并入拜占庭；科林斯并入雅典、兰拜西斯并入锡尔塔、耶路撒冷与推罗并入凯撒利亚、阿帕米亚并入埃梅萨、萨塔拉与梅利泰内并入马扎卡、科普托斯并入底比斯、沃卢比利斯并入廷吉斯。帕加马（盖伦故乡）距以弗所 4.3、塔尔苏斯距安条克 3.8、佩特拉距波斯特拉 8.2，均可再设，本版为免拥挤未收。",
+  "【连线】全部并入后，新旧各城的连线数都在 2—5 条之间（已按 updates 删去 11 条旧线）。最长的新增线：底比斯—阿杜利斯海路 40.6 个单位（代替原亚历山大—阿克苏姆；若阿杜利斯不并入改连阿克苏姆为 43.7）、马扎卡—阿尔塔沙特 20.5、底比斯—亚历山大 20.7；经典地图最长连线约 29.2、平均 12.8。",
+  "【颜色】三个新势力的颜色（#8796ff、#ff4b00、#f000f0）按 tests/world.js 的 CIEDE2000 方法在亮度 38—78、彩度 ≥30 范围内搜索：与现有 55 个势力色差分别 ≥15.7、13.9、14.3，与 45 个地图单位内的势力 ≥28。其他地区第三版若也新增势力，合并时需再检查。",
+  "【文化代号】巴夸特人（毛里人）暂用 arab，建议新增 moor（柏柏尔式长袍、头巾、标枪与小圆盾）；犹大亲王暂用 arab；埃梅萨城、巴西安用 arab（同帕尔米拉），阿维图斯、索埃米亚斯、马梅亚、瓦里乌斯按罗马宫廷装束用 roman（同多姆娜、玛伊莎）；底比斯无埃及文化代号，同亚历山大用 roman。",
+  "【传说人物】爱尔兰一系（阿尔特、欧甘、麦克康、科马克、芬恩）全部来自中世纪伪史与传说，attested 记为 legendary，同首露王、菲利默之例。芬恩属“芬恩故事群”的神话英雄，比阿尔特、科马克更缺乏历史性；若合并时只想收“传说中的历史人物”，可删去芬恩。科马克生年195取自“马格穆克拉马之战前夜受孕”的传说与《四大师编年史》的年代。",
+  "【年代放宽】劳斯、拉普图斯（约171年）、乌克梅特（173—175年）、卡纳尔塔（180年）按“蛮族首领放宽到约150—230年”收录，190年是否在世不详。罗马方面放宽的有：提·戈尔迪（188年在任）、特伦提安（187—189/192年）、拉尔基安（180—198年间）、阿塔卢斯（180年代中期）；马克西米安（183—185年在任，此后下落不明）作为在野。在野人物中190年时尚未成年或尚未出生的有奥利金（185，190年五岁）、提梅西修（约190）、科马克（195，传说）；其余均生于190年以前或生年不详但190年代已成年。",
+  "【显示名】为避免重名：盖塔（皇子）/老盖塔（其伯父）；马克里努斯（皇帝）/维图里乌斯（D. 维图里乌斯·马克里努斯）；戈尔迪安（一世）/提·戈尔迪；尤利安努斯（狄狄乌斯）/格拉图斯（维希利乌斯·格拉图斯·尤利安努斯）；马克西穆斯、马克西明、马克西米安三人并存（马略·马克西穆斯、马克西明·色雷克斯、瓦勒里乌斯·马克西米亚努斯）；三座凯撒利亚分别作“凯撒利亚”（巴勒斯坦）、“马扎卡”（卡帕多细亚）、“约尔”（毛里塔尼亚）。5字名：菲利波利斯、布尔迪加拉、塞萨洛尼基（城），苏尔皮基安、尤维纳利斯、维图里乌斯、索埃米亚斯、普皮恩努斯、巴尔比努斯、阿德文图斯、马克西米安、提·戈尔迪（人）。拉特兰、革利免、爱任纽、德尔图良、奥利金、保罗用中文学界通行译名；其余无通行译名者按音译自拟，拉丁名照例省去词尾 -us（普里斯克、努梅里安、拉尔基安、特伦提安、巴西安）。",
+  "【未收人物】伊苏斯与卢格杜努姆会战的骑兵将领瓦勒里亚努斯（与瓦勒良同名，只知其名）；193年的禁卫军长官图利乌斯·克里斯皮努斯与弗拉维乌斯·盖尼阿利斯；埃及长官卢基利亚努斯（190）、拉尔基乌斯·梅莫尔（192）、曼泰尼乌斯·萨比努斯（192/193—194）、乌尔皮乌斯·普里米亚努斯（195—196）；下默西亚总督波利恩努斯·奥斯佩克斯（193/4—196，两位同名父子的归属有争议）、科斯科尼乌斯·根提亚努斯（195—198）、奥维尼乌斯·特图卢斯（198—201）；萨比尼亚努斯（179—182年达契亚总督）；韦斯普罗尼乌斯·坎迪杜斯（193年尤利安努斯派往塞维鲁军中的老执政官，190年职务未能核实）；乌尔皮乌斯·马克塞卢斯（180年代不列颠总督，190年是否在世不详）；塞维鲁的堂兄弟塞普蒂米乌斯·阿佩尔；戈尔迪安二世（192年生，显示名与戈尔迪安冲突）、埃拉伽巴路斯（203/204年生，译名过长）、塞维鲁·亚历山大（208年生，晚于205年）；斐洛斯特拉图斯、希罗狄安、亚历山大的阿摩尼阿斯等文人；巴夸特首领埃利乌斯·图库达（年代不明）；爱尔兰的卢格德·拉加、不列颠王子贝内、高尔·麦克莫尔纳；阿斯丁吉人的对头拉克林吉人（无首领名）。北非的加拉曼特人（都城加拉马，塞维鲁约202—203年征讨）无可考首领，曾考虑设空城，因只能与莱普提斯一城相连而未收。",
+  "【只并一级城】若只并入 priority 1 的城：tara、tingis、baquates、vandalia 不并入时，阿尔特一系、巴夸特、汪达尔三个势力与拉尔基安整体不收；cirta—lepcis（第三奥古斯都军团守卫的黎波里塔尼亚边墙的军路）保证锡尔塔与莱普提斯各有至少2条连线。",
+  "【数值尺度】本区41人平均武53、智70、政62（学者与宫廷人物多）。并入后新增武将（第二版199人+本区）的平均武力由57.6降到56.9，经典剧本为64.4，tests/world.js 要求差距 <8；若其他地区第三版也以文臣为主，合并时请留意这一项。",
+  "【跨区】crossLinks 中的 artaxata、edessa、hatra、arbela 沿用西亚区键名，adulis 用 persia-arabia-africa.json 的新城键（不并入时改回 aksum）；尼西比斯若西亚区第三版也收录，保留一份即可；麦罗埃经卡拉诺格已与底比斯相通（见该文件 karanog—thebes），不必再连。爱尔兰与喀里多尼亚之间的海路（北海峡）与达尔里阿达的传说相符。",
+  "【核查】核查时网络搜索额度已用尽、维基百科等站点被代理拒绝，只能复用研究阶段的搜索摘要并对照已有史料逐条复核；改正处与仍存疑之处见 rome.md 文末的“核查记录”。"
+ ]
+}

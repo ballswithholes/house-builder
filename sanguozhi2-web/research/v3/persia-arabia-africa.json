@@ -1,0 +1,1496 @@
+{
+ "region": "persia-arabia-africa",
+ "summary": "第三版补充：安息帝国的藩属与伊朗高原诸城、萨珊崛起前后的地方王公与大臣、阿拉伯半岛中部的金达王国，以及非洲的阿克苏姆外港与麦罗埃的库施王国。新增 5 个势力（阿迪亚贝纳、卡拉塞尼、埃利迈斯、金达、库施）、11 座城（雷伊、尼萨、克尔曼、斯帕罕、扎兰季、法奥、阿杜利斯、麦罗埃、纳帕塔、卡拉诺格、加巴拉）、20 条本区连线与 4 条跨区连线、29 名武将（在任 9、在野 20）；另提出更新：苏萨、查拉克斯、阿尔贝拉由空城改归新势力，呼罗珊大道改经雷伊，红海航线改由阿杜利斯出发（对岸接罗马研究区的底比斯），在野的贝加特改为镇守阿杜利斯，阿克苏姆移入新地域“非洲”，并订正阿勒汗条目中的“雅里姆·艾曼共治”。",
+ "factions": [
+  {
+   "key": "adiabene",
+   "name": "阿迪亚贝纳",
+   "full": "阿迪亚贝纳王国（哈迭亚卜）",
+   "orig": "Kingdom of Adiabene (Ḥadyab)",
+   "ruler": "纳尔塞",
+   "capital": "arbela",
+   "culture": "persia",
+   "region": "bosi",
+   "virtue": 55,
+   "fame": 45,
+   "color": "#9696a5",
+   "note": "以阿尔贝拉为都、据有大小扎卜河之间的安息藩国，1世纪王室曾改宗犹太教。193—194年罗马内战之际，阿迪亚贝纳人与奥斯若恩人一同围攻罗马驻守的尼西比斯，事后又自称是在替塞维鲁讨伐尼格尔的党羽；塞维鲁不予承认，195年东征，自号“阿迪亚贝纳征服者”。据《阿尔贝拉编年史》，其王纳尔塞后来因亲近罗马被安息王溺死于大扎卜河。",
+   "liberty": "史实中是安息藩国，游戏中拆为独立势力；君主名取自真伪有争议的《阿尔贝拉编年史》（伊朗百科全书亦有转述）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_kings_of_Adiabene",
+    "https://www.iranicaonline.org/articles/balas/vi-balas-v",
+    "https://iranicaonline.org/articles/arbela-assyrian-arbailu-old",
+    "https://en.wikipedia.org/wiki/Adiabene",
+    "https://en.wikipedia.org/wiki/Chronicle_of_Arbela"
+   ]
+  },
+  {
+   "key": "characene",
+   "name": "卡拉塞尼",
+   "full": "卡拉塞尼王国（梅塞内、梅尚）",
+   "orig": "Characene / Mesene (Mayshan)",
+   "ruler": "阿坦贝洛斯",
+   "capital": "charax",
+   "culture": "arab",
+   "region": "arab",
+   "virtue": 52,
+   "fame": 50,
+   "color": "#a5a500",
+   "note": "两河入海口的商业王国，帕尔米拉商队与印度航船在都城查拉克斯·斯帕西努交汇。151年沃洛吉斯四世击败其王米特里达梯，此后王统只见于钱币：阿坦贝洛斯八世（约180—195年）只见于其子马加的钱币，马加（约195—210年）是有同时代史料可证的最后一位国王。据后世阿拉伯史书，约222年阿尔达希尔一世攻灭梅尚。",
+   "liberty": "史实中是安息藩国，游戏中拆为独立势力。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Characene",
+    "https://en.wikipedia.org/wiki/Maga_of_Characene",
+    "https://en.wikipedia.org/wiki/Attambelos",
+    "https://www.wildwinds.com/coins/greece/characene/maga/i.html"
+   ]
+  },
+  {
+   "key": "elymais",
+   "name": "埃利迈斯",
+   "full": "埃利迈斯王国（埃兰、苏西亚纳）",
+   "orig": "Kingdom of Elymais",
+   "ruler": "奥罗德斯",
+   "capital": "susa",
+   "culture": "persia",
+   "region": "bosi",
+   "virtue": 50,
+   "fame": 45,
+   "color": "#4b3c5a",
+   "note": "扎格罗斯山南麓、胡齐斯坦一带的半自治王国，自公元前2世纪起自铸钱币，2世纪由奥罗德斯诸王统治，钱币一般认为铸于苏萨；伊泽（马拉米尔）一带的摩崖浮雕是其遗迹。末王奥罗德斯五世之后，约221/222年（一说228年前后）被阿尔达希尔一世吞并。",
+   "liberty": "史实中常受安息控制，游戏中拆为独立势力。其王廷可能在扎格罗斯山中的伊泽一带，190年苏萨是否归其治下并不确定（215年苏萨已由安息总督管理），游戏中以苏萨为都。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Elymais",
+    "https://www.coincommunity.com/pdf/an-introduction-to-collecting-coins-from-elymais.pdf",
+    "https://www.britishmuseum.org/collection/object/C_1909-0205-193_1"
+   ]
+  },
+  {
+   "key": "kinda",
+   "name": "金达",
+   "full": "金达王国（金达与盖赫坦之王）",
+   "orig": "Kingdom of Kinda (Kiddat) and Qaḥṭān",
+   "ruler": "拉比阿",
+   "capital": "qaryat",
+   "culture": "arab",
+   "region": "arab",
+   "virtue": 50,
+   "fame": 42,
+   "color": "#ffb4d2",
+   "note": "阿拉伯半岛中部的部落王国，都城卡里亚特·法奥位于从纳季兰经叶麻麦通往波斯湾的商路上。萨巴王沙伊鲁姆·奥塔尔（约210—230年）的铭文 Ja 635 记其北伐的敌人中有“图尔家族的拉比阿，金达与盖赫坦之王”与卡里亚特城民，萨巴军从该城掳回铜像与战利品。",
+   "liberty": "拉比阿可考的年代约在210—230年间，游戏中提前到190年为君主；只有他一名武将。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Kinda_(tribe)",
+    "https://en.wikipedia.org/wiki/Sha%27r_Awtar",
+    "https://www.academia.edu/37661253",
+    "https://gw.uni-jena.de/phifakmedia/19205/39-ein-feldzug-des-scha-irum-awtar-in-a-v-sedov-hg-scripta-yemenica-moskau-2004-273-288.pdf",
+    "https://en.wikipedia.org/wiki/Qaryat_al-Faw"
+   ]
+  },
+  {
+   "key": "kush",
+   "name": "库施",
+   "full": "库施王国（麦罗埃）",
+   "orig": "Kingdom of Kush (Meroë)",
+   "ruler": "耶斯博赫",
+   "capital": "meroe",
+   "culture": "arab",
+   "region": "africa",
+   "virtue": 62,
+   "fame": 58,
+   "color": "#870000",
+   "note": "尼罗河中游的努比亚王国，自公元前3世纪起以麦罗埃为都，以冶铁和黄金、象牙贸易著称，王陵为陡峭的金字塔；纳帕塔巴卡尔山的阿蒙神庙仍是宗教中心，下努比亚由称为“佩什托”的总督治理。2世纪后半叶的君主有塔雷凯尼瓦尔、王后阿马尼哈利卡及其子阿里滕耶斯博赫，3世纪有塔基德阿马尼、马沙达赫尔与特科里德阿马尼（253年菲莱神庙铭文）等，4世纪衰亡。",
+   "liberty": "君主年代只能粗略推定为“2世纪后半叶”，190年以阿里滕耶斯博赫（显示名耶斯博赫）为王、其母阿马尼哈利卡同在王都。游戏没有非洲文化代号，外观暂借阿拉伯式。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Kingdom_of_Kush",
+    "https://en.wikipedia.org/wiki/List_of_monarchs_of_Kush",
+    "https://en.wikipedia.org/wiki/Tarekeniwal",
+    "https://en.wikipedia.org/wiki/Amanikhalika",
+    "https://en.wikipedia.org/wiki/Teqorideamani"
+   ]
+  }
+ ],
+ "cities": [
+  {
+   "key": "rhagae",
+   "name": "雷伊",
+   "full": "雷伊（拉盖、阿萨西亚）",
+   "orig": "Rhagae / Arsacia (Ray)",
+   "modern": "伊朗德黑兰南郊雷伊",
+   "lon": 51.43,
+   "lat": 35.6,
+   "owner": "-",
+   "culture": "persia",
+   "land": 400,
+   "industry": 340,
+   "town": 340,
+   "population": 300000,
+   "gold": 700,
+   "food": 10000,
+   "note": "米底东北的古城，扼呼罗珊大道与里海门之间的通道。塞琉古一世重建时名为“欧罗波斯”，安息时代改名“阿萨西亚”；据古希腊作家阿忒那奥斯，安息王春季驻跸于此，冬季在巴比伦一带，其余时间在和椟城，是轮替的王都之一，也是安息的铸币城与东出呼罗珊的门户。",
+   "liberty": "190年守将无可考，设为空城。",
+   "sources": [
+    "https://webcf.waybackmachine.org/web/20220503110124/https://en.wikipedia.org/wiki/Rey,_Iran",
+    "https://en.wikipedia.org/wiki/Military_history_of_Rey,_Iran",
+    "https://nomisma.org/id/rayy"
+   ]
+  },
+  {
+   "key": "nisa",
+   "name": "尼萨",
+   "full": "尼萨（米特拉达梯城）",
+   "orig": "Nisa / Mithradatkert",
+   "modern": "土库曼斯坦阿什哈巴德以西约18公里",
+   "lon": 58.2,
+   "lat": 37.97,
+   "owner": "-",
+   "culture": "persia",
+   "land": 300,
+   "industry": 260,
+   "town": 260,
+   "population": 160000,
+   "gold": 500,
+   "food": 7000,
+   "note": "安息发祥地帕提亚的中心：山丘上的“旧尼萨”是米特里达梯一世所建的王室要塞与祖庙（米特拉达梯城），出土大批象牙角杯与陶片文书；谷地里的“新尼萨”是城市；萨珊代兴后旧尼萨的王室建筑渐废，新尼萨则延续到中世纪（称奈萨）。",
+   "liberty": "190年守将无可考，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Nisa,_Turkmenistan",
+    "https://whc.unesco.org/document/152143"
+   ]
+  },
+  {
+   "key": "kerman",
+   "name": "克尔曼",
+   "full": "克尔曼（卡尔马尼亚）",
+   "orig": "Carmania (Kerman)",
+   "modern": "伊朗克尔曼",
+   "lon": 57.08,
+   "lat": 30.28,
+   "owner": "-",
+   "culture": "persia",
+   "land": 340,
+   "industry": 280,
+   "town": 260,
+   "population": 200000,
+   "gold": 500,
+   "food": 8000,
+   "note": "波西斯以东的卡尔马尼亚高原，安息时代由本地王公统治。据塔巴里，阿尔达希尔在波西斯站稳后东征克尔曼，俘虏其王巴拉什、攻下其都城，改立自己的同名儿子为克尔曼王。",
+   "liberty": "190年在位者不详，设为空城，巴拉什作为在野人才。",
+   "sources": [
+    "https://www.dr-ursula-weber.de/Prosopographie/web/files/Ardasir_Kerman.pdf",
+    "https://en.wikipedia.org/wiki/Ardashir_I",
+    "https://iranicaonline.org/articles/kerman-05-islamic-conquest"
+   ]
+  },
+  {
+   "key": "spahan",
+   "name": "斯帕罕",
+   "full": "斯帕罕（阿斯帕达纳，今伊斯法罕）",
+   "orig": "Spahan / Aspadana",
+   "modern": "伊朗伊斯法罕",
+   "lon": 51.67,
+   "lat": 32.65,
+   "owner": "-",
+   "culture": "persia",
+   "land": 420,
+   "industry": 320,
+   "town": 300,
+   "population": 280000,
+   "gold": 600,
+   "food": 11000,
+   "note": "扎格罗斯山东麓的绿洲，地处米底与波西斯之间。3世纪初由安息藩臣沙德沙普尔统治；224年阿尔达希尔一世攻取其城、杀死沙德沙普尔，此后成为萨珊的斯帕罕省。",
+   "liberty": "190年在位者不详，设为空城，沙德沙普尔作为在野人才。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Spahan_(province)",
+    "https://en.wikipedia.org/wiki/Shadh-Shapur"
+   ]
+  },
+  {
+   "key": "zarang",
+   "name": "扎兰季",
+   "full": "扎兰季（德兰吉亚纳、萨卡斯坦）",
+   "orig": "Zarang (Drangiana / Sakastan)",
+   "modern": "阿富汗尼姆鲁兹省扎兰季附近",
+   "lon": 61.86,
+   "lat": 30.96,
+   "owner": "-",
+   "culture": "persia",
+   "land": 360,
+   "industry": 260,
+   "town": 260,
+   "population": 220000,
+   "gold": 500,
+   "food": 9000,
+   "note": "赫尔曼德河下游的锡斯坦绿洲，塞种人迁入后称“萨卡斯坦”（塞种之地），1世纪起是印度—帕提亚诸王的根据地。最后一位印度—帕提亚王法恩萨珊（约210—226年）只见于钱币；约226年后萨卡斯坦归属萨珊。",
+   "liberty": "190年在位者不详，设为空城。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Farn-Sasan",
+    "https://journals.ur.edu.pl/anabasis/article/view/10329"
+   ]
+  },
+  {
+   "key": "qaryat",
+   "name": "法奥",
+   "full": "卡里亚特·法奥（卡赫勒神的村镇）",
+   "orig": "Qaryat al-Faw (Qaryat dhāt Kahl)",
+   "modern": "沙特阿拉伯瓦迪达瓦西尔以南",
+   "lon": 45.16,
+   "lat": 19.77,
+   "owner": "kinda",
+   "culture": "arab",
+   "land": 220,
+   "industry": 300,
+   "town": 300,
+   "population": 120000,
+   "gold": 900,
+   "food": 5000,
+   "note": "图韦格山与鲁卜哈利沙漠之间的商队城市，金达王国的都城，以卡赫勒神为主神；遗址有市场、神庙、宫殿与带壁画的房屋，出土用南阿拉伯字母书写的早期阿拉伯语铭文。从纳季兰北上的商路经此通往叶麻麦与波斯湾。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Qaryat_al-Faw",
+    "https://saudipedia.com/en/article/711/history/landmarks-and-monuments/qaryat-al-faw",
+    "https://www.islamic-awareness.org/history/islam/inscriptions/faw"
+   ]
+  },
+  {
+   "key": "adulis",
+   "name": "阿杜利斯",
+   "full": "阿杜利斯（祖拉湾）",
+   "orig": "Adulis",
+   "modern": "厄立特里亚祖拉附近",
+   "lon": 39.66,
+   "lat": 15.26,
+   "owner": "aksum",
+   "culture": "arab",
+   "land": 200,
+   "industry": 420,
+   "town": 320,
+   "population": 120000,
+   "gold": 1100,
+   "food": 4000,
+   "note": "阿克苏姆王国的红海港口，《厄立特里亚海周航记》（1世纪）称之为法定商埠，象牙、龟甲与犀角由此出口，罗马埃及与阿拉伯的商船在此停泊；陆路经高原通往王都阿克苏姆。6世纪的科斯马斯在此抄录了一位不知名阿克苏姆王的纪功碑。",
+   "liberty": "原先并入阿克苏姆城，第三版拆出；红海与曼德海峡航线改由此出发。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Adulis",
+    "https://www.ancientportsantiques.com/wp-content/uploads/Documents/PLACES/RedSea/Adulis-Zazzaro2014.pdf",
+    "https://en.wikipedia.org/wiki/Monumentum_Adulitanum"
+   ]
+  },
+  {
+   "key": "meroe",
+   "name": "麦罗埃",
+   "full": "麦罗埃（库施王都）",
+   "orig": "Meroë (Medewi)",
+   "modern": "苏丹尼罗河州贝格拉维亚",
+   "lon": 33.75,
+   "lat": 16.94,
+   "owner": "kush",
+   "culture": "arab",
+   "land": 460,
+   "industry": 440,
+   "town": 400,
+   "population": 350000,
+   "gold": 900,
+   "food": 12000,
+   "note": "尼罗河与阿特巴拉河之间“麦罗埃岛”上的库施王都，城外冶铁炉渣堆积成丘；北郊王陵区有四十多座陡峭的金字塔，埋葬历代国王与王后。附近的纳加与穆萨瓦拉特有狮神阿佩德马克的神庙。",
+   "sources": [
+    "https://whc.unesco.org/en/list/1336",
+    "https://www.worldhistory.org/meroe/"
+   ]
+  },
+  {
+   "key": "napata",
+   "name": "纳帕塔",
+   "full": "纳帕塔（巴卡尔山）",
+   "orig": "Napata (Jebel Barkal)",
+   "modern": "苏丹北方州卡里迈",
+   "lon": 31.84,
+   "lat": 18.53,
+   "owner": "-",
+   "culture": "arab",
+   "land": 300,
+   "industry": 260,
+   "town": 280,
+   "population": 150000,
+   "gold": 500,
+   "food": 7000,
+   "note": "尼罗河第四瀑布下游的库施故都，巴卡尔山下的阿蒙神庙是王国最重要的圣地。公元前23年被罗马埃及长官佩特罗尼乌斯攻破，其后重建，仍是阿蒙崇拜的中心。",
+   "liberty": "190年守将无可考，设为空城（地处麦罗埃与下努比亚之间）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Napata"
+   ]
+  },
+  {
+   "key": "karanog",
+   "name": "卡拉诺格",
+   "full": "卡拉诺格（下努比亚州府）",
+   "orig": "Karanog",
+   "modern": "埃及下努比亚，今没于纳赛尔湖",
+   "lon": 32.03,
+   "lat": 22.75,
+   "owner": "kush",
+   "culture": "arab",
+   "land": 260,
+   "industry": 240,
+   "town": 260,
+   "population": 100000,
+   "gold": 500,
+   "food": 6000,
+   "note": "2—3世纪下努比亚的州府，由称为“佩什托”的总督驻守，有三层的总督宫室与富丽的墓地（人首鸟身的“巴”魂像、彩陶）；一说州府原在法拉斯，后移到卡拉诺格—阿尼巴一带。北面隔着十二斯科伊诺伊之地（多德卡斯科伊诺斯）与罗马埃及相望。",
+   "liberty": "遗址已没入纳赛尔湖，坐标取阿尼巴附近的约数。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Karanog",
+    "https://www.penn.museum/sites/expedition/karanog-wealthy-capital-of-a-lower-nubian-province/",
+    "https://en.wikipedia.org/wiki/Aniba_(Nubia)"
+   ]
+  },
+  {
+   "key": "kabalaka",
+   "name": "加巴拉",
+   "full": "加巴拉（卡巴拉卡，高加索阿尔巴尼亚都城）",
+   "orig": "Kabalaka / Gabala",
+   "modern": "阿塞拜疆加巴拉区丘胡尔加巴拉村",
+   "lon": 47.69,
+   "lat": 40.89,
+   "owner": "-",
+   "culture": "persia",
+   "land": 300,
+   "industry": 240,
+   "town": 240,
+   "population": 160000,
+   "gold": 400,
+   "food": 8000,
+   "note": "高加索阿尔巴尼亚（与巴尔干的阿尔巴尼亚无关）的都城，老普林尼称为“卡巴拉卡”，至5世纪迁都帕尔塔夫（巴尔达）前一直是王都；控制里海西岸经杰尔宾特通往北方草原的道路。",
+   "liberty": "190年前后的阿尔巴尼亚国王无可考（阿尔沙克王朝约300年才开始），设为空城。显示名用通行的“加巴拉”。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Qabala",
+    "https://en.wikipedia.org/wiki/%C3%87uxur_Q%C9%99b%C9%99l%C9%99",
+    "https://unesco.preslib.az/en/page/WxkAXwEQpz",
+    "https://en.wikipedia.org/wiki/Arsacid_dynasty_of_Caucasian_Albania"
+   ]
+  }
+ ],
+ "links": [
+  [
+   "ecbatana",
+   "rhagae",
+   "land"
+  ],
+  [
+   "rhagae",
+   "hecatompylos",
+   "land"
+  ],
+  [
+   "rhagae",
+   "spahan",
+   "land"
+  ],
+  [
+   "nisa",
+   "hecatompylos",
+   "land"
+  ],
+  [
+   "nisa",
+   "merv",
+   "land"
+  ],
+  [
+   "kerman",
+   "darabgerd",
+   "land"
+  ],
+  [
+   "kerman",
+   "istakhr",
+   "land"
+  ],
+  [
+   "kerman",
+   "zarang",
+   "land"
+  ],
+  [
+   "zarang",
+   "merv",
+   "land"
+  ],
+  [
+   "spahan",
+   "susa",
+   "land"
+  ],
+  [
+   "spahan",
+   "istakhr",
+   "land"
+  ],
+  [
+   "qaryat",
+   "marib",
+   "land"
+  ],
+  [
+   "qaryat",
+   "charax",
+   "land"
+  ],
+  [
+   "adulis",
+   "aksum",
+   "land"
+  ],
+  [
+   "adulis",
+   "zafar",
+   "sea"
+  ],
+  [
+   "aksum",
+   "meroe",
+   "land"
+  ],
+  [
+   "meroe",
+   "napata",
+   "land"
+  ],
+  [
+   "napata",
+   "karanog",
+   "land"
+  ],
+  [
+   "kabalaka",
+   "mtskheta",
+   "land"
+  ],
+  [
+   "kabalaka",
+   "artaxata",
+   "land"
+  ]
+ ],
+ "crossLinks": [
+  {
+   "from": "adulis",
+   "toKey": "thebes",
+   "toName": "底比斯（科普托斯）",
+   "kind": "sea",
+   "why": "红海航线：阿杜利斯—贝勒尼基／米奥斯霍尔莫斯—科普托斯（罗马研究区第三版新设的 thebes 底比斯）。取代原来的 aksum—alexandria 海路；rome.json 的 crossLink thebes→aksum 请改连 adulis，两者是同一条航线，只保留一条。"
+  },
+  {
+   "from": "karanog",
+   "toKey": "thebes",
+   "toName": "底比斯（科普托斯）",
+   "kind": "land",
+   "why": "沿尼罗河北下经十二斯科伊诺伊之地、菲莱、叙埃内到底比斯（rome.json 的 thebes）；库施使团经此往来罗马埃及（菲莱神庙的麦罗埃铭文）。rome.json 建议的 thebes—meroe 不必再设：麦罗埃经纳帕塔、卡拉诺格沿尼罗河北上即到底比斯。"
+  },
+  {
+   "from": "kabalaka",
+   "toKey": "yancai",
+   "toName": "奄蔡（阿兰）",
+   "kind": "land",
+   "why": "沿里海西岸经杰尔宾特（里海门）北上草原，阿兰人由此南侵高加索（欧洲研究区 yancai）。"
+  },
+  {
+   "from": "zarang",
+   "toKey": "kapisa",
+   "toName": "迦毕试",
+   "kind": "land",
+   "why": "经阿拉霍西亚（坎大哈）、喀布尔河谷到迦毕试的旧道。若贵霜／印度研究区新设阿拉霍西亚（坎大哈），请改连该城。"
+  }
+ ],
+ "generals": [
+  {
+   "name": "纳尔塞",
+   "full": "纳尔塞（纳尔萨伊）",
+   "orig": "Narseh / Narsai of Adiabene",
+   "war": 66,
+   "intel": 56,
+   "pol": 58,
+   "faction": "adiabene",
+   "city": "arbela",
+   "loyalty": 100,
+   "troops": 4000,
+   "hidden": 0,
+   "culture": "persia",
+   "role": "阿迪亚贝纳王",
+   "note": "据《阿尔贝拉编年史》，阿迪亚贝纳王纳尔塞因亲近罗马、又不肯协助安息王平定叛乱，被安息王（一般认为是沃洛吉斯五世）废黜并溺死于大扎卜河。194/195年阿迪亚贝纳人曾与奥斯若恩人一同围攻尼西比斯，招致塞维鲁东征。",
+   "liberty": "《阿尔贝拉编年史》的真伪与史料价值有争议；在位起讫不详，游戏中作为190年的君主。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_kings_of_Adiabene",
+    "https://www.iranicaonline.org/articles/balas/vi-balas-v",
+    "https://en.wikipedia.org/wiki/Chronicle_of_Arbela"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "奥罗德斯",
+   "full": "奥罗德斯五世",
+   "orig": "Orodes V of Elymais",
+   "war": 64,
+   "intel": 58,
+   "pol": 62,
+   "faction": "elymais",
+   "city": "susa",
+   "loyalty": 100,
+   "troops": 4000,
+   "hidden": 0,
+   "culture": "persia",
+   "role": "埃利迈斯王（2世纪末—3世纪初）",
+   "note": "埃利迈斯最后一位可考的国王，只见于青铜德拉克马（一般认为铸于苏萨）：正面是戴王冠的胸像，背面为阿耳忒弥斯像，常带船锚纹。其后约221/222年埃利迈斯被萨珊吞并。",
+   "liberty": "钱币年代约为2世纪末至3世纪初，游戏中以他为190年的君主。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Elymais",
+    "https://www.coincommunity.com/pdf/an-introduction-to-collecting-coins-from-elymais.pdf"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "阿坦贝洛斯",
+   "full": "阿坦贝洛斯八世",
+   "orig": "Attambelos VIII of Characene",
+   "war": 58,
+   "intel": 62,
+   "pol": 66,
+   "faction": "characene",
+   "city": "charax",
+   "loyalty": 100,
+   "troops": 3500,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "卡拉塞尼王（约180—195年）",
+   "note": "只见于其子马加的钱币，马加在币文上自称“阿坦贝洛斯王之子”；因钱币粗劣，其名的读法并不确定。",
+   "liberty": "在位约180—195年（一说约190年），游戏中为190年的君主。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Attambelos",
+    "https://en.wikipedia.org/wiki/Maga_of_Characene",
+    "https://www.wildwinds.com/coins/greece/characene/maga/i.html"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "马加",
+   "full": "马加",
+   "orig": "Maga of Characene (mʾg)",
+   "war": 66,
+   "intel": 54,
+   "pol": 56,
+   "faction": "characene",
+   "city": "charax",
+   "loyalty": 90,
+   "troops": 3000,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "卡拉塞尼王子，后为卡拉塞尼王（约195—210年）",
+   "note": "已知最后一位有同时代史料可证的卡拉塞尼王，留下大量安息式钱币，币文用阿拉米字母书写其名；其后的阿比奈尔加奥斯三世只见于后世阿拉伯史书。",
+   "liberty": "190年作为王子随父驻查拉克斯。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Maga_of_Characene",
+    "https://en.wikipedia.org/wiki/Characene",
+    "https://www.wildwinds.com/coins/greece/characene/maga/i.html"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "帕辛",
+   "full": "帕辛（古巴南王）",
+   "orig": "Pāsīn of Gūbānān",
+   "war": 64,
+   "intel": 46,
+   "pol": 50,
+   "faction": "-",
+   "city": "darabgerd",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "古巴南王（波西斯地方王公）",
+   "note": "据塔巴里，阿尔达希尔任达拉布格尔德城堡长官后，首先进兵附近的古巴南，杀死其王帕辛，由此开始兼并波西斯诸王。",
+   "liberty": "被杀年代约在200—205年间，190年应已在位，但与戈契赫尔的从属关系不明；游戏中作为达拉布一带的在野人才（若作在任武将，波西斯在模拟中扩张过快）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Ardashir_I",
+    "https://en.wikipedia.org/wiki/Pars_(Sasanian_province)",
+    "https://iranologie.com/2019/03/12/nugae1-ardashir/"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "马努切赫尔",
+   "full": "马努切赫尔（库努斯王）",
+   "orig": "Manūčihr of Kunus",
+   "war": 66,
+   "intel": 50,
+   "pol": 52,
+   "faction": "-",
+   "city": "istakhr",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "库努斯王（波西斯地方王公）",
+   "note": "据塔巴里，阿尔达希尔攻灭古巴南之后又进兵库努斯，杀死其王马努切赫尔。波西斯钱币上也有名为“马努切赫尔”的诸王，与他是否相关不明。",
+   "liberty": "库努斯地望不详，游戏中作为伊斯塔克尔一带的在野人才。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Ardashir_I",
+    "https://iranologie.com/2019/03/12/nugae1-ardashir/"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "达拉",
+   "full": "达拉（卢尔维尔王）",
+   "orig": "Dārā of Lurwīr",
+   "war": 62,
+   "intel": 48,
+   "pol": 50,
+   "faction": "-",
+   "city": "darabgerd",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "卢尔维尔王（波西斯地方王公）",
+   "note": "据塔巴里，阿尔达希尔继而攻入卢尔维尔，杀死其王达拉，随后劝父帕佩克起兵推翻戈契赫尔（约205/206年）。",
+   "liberty": "卢尔维尔地望不详，游戏中作为达拉布一带的在野人才。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Ardashir_I",
+    "https://iranologie.com/2019/03/12/nugae1-ardashir/"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "罗达格",
+   "full": "罗达格（罗达克）",
+   "orig": "Rōdag",
+   "war": 18,
+   "intel": 66,
+   "pol": 60,
+   "sex": "f",
+   "faction": "persis",
+   "city": "istakhr",
+   "loyalty": 90,
+   "troops": 0,
+   "hidden": 0,
+   "culture": "persia",
+   "role": "帕佩克之妻、阿尔达希尔一世之母",
+   "note": "沙普尔一世在琐罗亚斯德天房的三语铭文（约262年）列有“众王之王之母罗达格”；她是帕佩克之妻、阿尔达希尔一世之母。",
+   "liberty": "随帕佩克驻伊斯塔克尔，不领兵。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Rodag",
+    "https://en.wikipedia.org/wiki/Shapur_I%27s_inscription_at_the_Ka%27ba-ye_Zartosht"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes"
+  },
+  {
+   "name": "拉比阿",
+   "full": "拉比阿（图尔家族）",
+   "orig": "Rabīʿat dhū-Āl-Thawr (RBʿT ḎʾL ṮWR)",
+   "war": 74,
+   "intel": 54,
+   "pol": 56,
+   "faction": "kinda",
+   "city": "qaryat",
+   "loyalty": 100,
+   "troops": 4000,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "金达与盖赫坦之王",
+   "note": "萨巴铭文 Ja 635 记载沙伊鲁姆·奥塔尔北伐时所击的敌人中有“图尔家族的拉比阿，金达与盖赫坦之王”，以及纳季兰一带的阿比西尼亚人与卡里亚特城民；萨巴军攻入卡里亚特，掳回铜像与大批俘虏。",
+   "liberty": "可考年代约在210—230年间，提前到190年为君主。",
+   "sources": [
+    "https://www.academia.edu/37661253",
+    "https://gw.uni-jena.de/phifakmedia/19205/39-ein-feldzug-des-scha-irum-awtar-in-a-v-sedov-hg-scripta-yemenica-moskau-2004-273-288.pdf",
+    "https://en.wikipedia.org/wiki/Kinda_(tribe)",
+    "https://en.wikipedia.org/wiki/Sha%27r_Awtar"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "耶斯博赫",
+   "full": "阿里滕耶斯博赫",
+   "orig": "Aritenyesbokhe",
+   "war": 64,
+   "intel": 62,
+   "pol": 68,
+   "faction": "kush",
+   "city": "meroe",
+   "loyalty": 100,
+   "troops": 4500,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "库施王（2世纪后半叶）",
+   "note": "其供桌铭文称父为塔雷凯尼瓦尔、母为阿马尼哈利卡，可知他是两人之子、2世纪后半叶在位。",
+   "liberty": "年代只能推定为2世纪后半叶，作为190年的君主。显示名取原名的后半。王表中另有一位葬于麦罗埃北墓区 N16 号金字塔的阿耶斯博赫（Aryesbokhe），是另一位国王，并非其异写。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Tarekeniwal",
+    "https://en.wikipedia.org/wiki/Amanikhalika",
+    "https://en.wikipedia.org/wiki/List_of_monarchs_of_Kush"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "阿曼哈利卡",
+   "full": "阿马尼哈利卡",
+   "orig": "Amanikhalika",
+   "war": 44,
+   "intel": 72,
+   "pol": 74,
+   "sex": "f",
+   "faction": "kush",
+   "city": "meroe",
+   "loyalty": 95,
+   "troops": 2500,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "库施王后（坎迪斯），阿里滕耶斯博赫之母",
+   "note": "其名只见于其子阿里滕耶斯博赫的供桌铭文，为塔雷凯尼瓦尔之妻；常被比定为麦罗埃北墓区 N32 号金字塔所葬的女王，若此说成立，她曾在2世纪后半叶以女王身份执政。库施的王后称“坎迪斯”，《使徒行传》中的“埃提阿伯女王干大基”即此称号。",
+   "liberty": "显示名省去一个音节。190年作为太后驻王都。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Amanikhalika",
+    "https://en.wikipedia.org/wiki/Tarekeniwal"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes"
+  },
+  {
+   "name": "马洛顿",
+   "full": "马洛顿（梅莱顿）",
+   "orig": "Maloton (Meleton)",
+   "war": 64,
+   "intel": 58,
+   "pol": 66,
+   "faction": "kush",
+   "city": "karanog",
+   "loyalty": 85,
+   "troops": 3000,
+   "hidden": 0,
+   "culture": "arab",
+   "role": "下努比亚总督（佩什托）",
+   "note": "卡拉诺格墓地出土“总督马洛顿”的砂岩“巴”魂像（2—3世纪）；当地最富丽的墓葬属于下努比亚总督梅莱顿，可能是同一人。",
+   "liberty": "在任年代只能定为2—3世纪，作为190年的卡拉诺格守将。",
+   "sources": [
+    "https://icom.museum/en/object/sandstone-ba-statue-of-the-viceroy-maloton-karanog-meroitic-era-2nd-3rd-century-ad-74-1-x-22-x-56-7-cm",
+    "https://www.penn.museum/sites/expedition/karanog-wealthy-capital-of-a-lower-nubian-province/",
+    "https://en.wikipedia.org/wiki/Karanog"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "米赫拉克",
+   "full": "米赫拉克",
+   "orig": "Mihrak (Mithrak)",
+   "war": 72,
+   "intel": 60,
+   "pol": 58,
+   "faction": "-",
+   "city": "darabgerd",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "died": 222,
+   "role": "阿巴尔萨斯与贾赫罗姆的安息王公",
+   "note": "统治波西斯阿巴尔萨斯（一说贾赫罗姆）的安息王公，约222年与阿尔达希尔一世交战时败死，领地并入阿尔达希尔—花拉。其女后来嫁给阿尔达希尔之子沙普尔，生下霍尔米兹德一世。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mihrak",
+    "https://en.wikipedia.org/wiki/Abarsas",
+    "https://iranicaonline.org/articles/jahrom"
+   ],
+   "born": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "沙德沙普尔",
+   "full": "沙德沙普尔",
+   "orig": "Shādh-Shāpūr",
+   "war": 66,
+   "intel": 54,
+   "pol": 58,
+   "faction": "-",
+   "city": "spahan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "died": 224,
+   "role": "斯帕罕（伊斯法罕）领主（安息藩臣）",
+   "note": "3世纪初以安息藩臣身份统治伊斯法罕及其周边；224年阿尔达希尔一世攻取其城并将他杀死。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Shadh-Shapur",
+    "https://en.wikipedia.org/wiki/Spahan_(province)"
+   ],
+   "born": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "瓦拉赫什",
+   "full": "巴拉什（克尔曼王）",
+   "orig": "Balāš (Walaxš), king of Kerman",
+   "war": 68,
+   "intel": 48,
+   "pol": 54,
+   "faction": "-",
+   "city": "kerman",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "克尔曼王",
+   "note": "据塔巴里与伊本·艾西尔，阿尔达希尔东征克尔曼时俘虏了当地国王巴拉什，攻下其都城，改立自己的同名儿子为克尔曼王。",
+   "liberty": "显示名用中古波斯语读法，以免与安息王巴拉什（沃洛吉斯六世）重名；190年是否已在位不详，作为在野人才。",
+   "sources": [
+    "https://www.dr-ursula-weber.de/Prosopographie/web/files/Ardasir_Kerman.pdf",
+    "https://en.wikipedia.org/wiki/Ardashir_I"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "达德温达德",
+   "full": "达德温达德",
+   "orig": "Dād-windād",
+   "war": 36,
+   "intel": 78,
+   "pol": 80,
+   "faction": "-",
+   "city": "ecbatana",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "died": 224,
+   "role": "阿尔达班四世的首席书记",
+   "note": "安息末王阿尔达班四世的首席书记，224年霍尔木兹甘之战安息战败后被阿尔达希尔一世处死；菲鲁扎巴德摩崖浮雕上被王子沙普尔以长枪刺落马下的安息骑士，一般认为就是他。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Dad-windad",
+    "https://en.wikipedia.org/wiki/Battle_of_Hormozdgan"
+   ],
+   "born": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "阿巴尔萨姆",
+   "full": "阿巴尔萨姆（阿普尔萨姆）",
+   "orig": "Abarsām (Apursām)",
+   "war": 70,
+   "intel": 82,
+   "pol": 84,
+   "faction": "-",
+   "city": "istakhr",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "阿尔达希尔一世的重臣",
+   "note": "沙普尔一世铭文所列阿尔达希尔朝廷显贵之一，名后有“阿尔达希尔之荣光”的称号；塔巴里称他为阿尔达希尔的首席大臣，并说他击败了阿瓦士王。其确切官职学界有争议。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Abarsam",
+    "https://iranicaonline.org/articles/framadar"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "坦萨尔",
+   "full": "坦萨尔（托萨尔）",
+   "orig": "Tansar (Tōsar)",
+   "war": 16,
+   "intel": 90,
+   "pol": 82,
+   "faction": "-",
+   "city": "istakhr",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "琐罗亚斯德教首席祭司（赫尔巴德之长）",
+   "note": "晚期安息的琐罗亚斯德教祭司，投靠阿尔达希尔一世，任首席祭司（赫尔巴德之长），为新王朝整理经典、确立国教。相传他写信劝塔巴里斯坦王古什纳斯普归顺（《坦萨尔书信》），现存文本经后世改写，但被认为以3世纪的原信为本；最早的记载见于10世纪的《宗教行事》。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Tansar",
+    "https://en.wikipedia.org/wiki/Letter_of_Tansar"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "法恩萨珊",
+   "full": "法恩萨珊",
+   "orig": "Farn-Sāsān",
+   "war": 70,
+   "intel": 62,
+   "pol": 64,
+   "faction": "-",
+   "city": "zarang",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "role": "萨卡斯坦的末代印度—帕提亚王（约210—226年）",
+   "note": "只见于钱币，币文追溯其祖先至印度—帕提亚王萨纳巴雷斯；背面的火坛图案在萨卡斯坦钱币中独一无二，与阿尔达希尔一世的钱币相似，孰先孰后不明。约226年被阿尔达希尔一世击败，印度—帕提亚在锡斯坦的统治告终。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Farn-Sasan",
+    "https://journals.ur.edu.pl/anabasis/article/view/10329"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "巴库尔",
+   "full": "巴库尔一世（巴库里乌斯）",
+   "orig": "Bakur I of Iberia (Bacurius)",
+   "war": 64,
+   "intel": 52,
+   "pol": 58,
+   "faction": "-",
+   "city": "mtskheta",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "persia",
+   "died": 249,
+   "role": "伊比利亚王（234—249年）",
+   "note": "据中世纪格鲁吉亚编年史，为瓦切之子，234年即位，传位其子米赫尔达特二世。名字源自中古伊朗语“帕库尔”（神之子）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Bacurius_I",
+    "https://en.wikipedia.org/wiki/List_of_monarchs_of_Georgia"
+   ],
+   "born": null,
+   "attested": "yes",
+   "sex": "m",
+   "liberty": "列夫一世之孙，190年多半尚未出生；与其父瓦切一样作为日后登场的在野人才。"
+  },
+  {
+   "name": "小阿布加尔",
+   "full": "阿布加尔九世·塞维鲁",
+   "orig": "Abgar IX Severus",
+   "war": 60,
+   "intel": 50,
+   "pol": 44,
+   "faction": "-",
+   "city": "edessa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "died": 214,
+   "role": "奥斯若恩王（212—214年）",
+   "note": "阿布加尔八世之子，212年继位；据卡西乌斯·狄奥，他统治严苛、引起不满，卡拉卡拉借机召他会面并将他拘押（一说213年与其子一同在罗马遇害）；214年前后奥斯若恩并为罗马行省，埃德萨成为殖民市。",
+   "liberty": "显示名“小阿布加尔”以区别于其父。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Abgar_IX",
+    "https://en.wikipedia.org/wiki/Abgarid_dynasty",
+    "https://iranicaonline.org/articles/abgar-dynasty-of-edessa-2nd-century-bc-to-3rd-century-ad"
+   ],
+   "born": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "帕鲁特",
+   "full": "帕鲁特",
+   "orig": "Palut",
+   "war": 8,
+   "intel": 82,
+   "pol": 70,
+   "faction": "-",
+   "city": "edessa",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "埃德萨主教（约200年）",
+   "note": "据《阿代教义》，帕鲁特前往安条克，由安条克主教塞拉皮翁（约191—212年在任）祝圣，是埃德萨可考最早的大公教会主教；据圣厄弗冷记载，埃德萨的正统派信徒一度被称为“帕鲁特派”。",
+   "sources": [
+    "https://www.newadvent.org/cathen/05088a.htm",
+    "https://ccat.sas.upenn.edu/rak/courses/535/Harnack/bk4ch3-3-142.htm"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "伊勒沙拉",
+   "full": "伊勒沙拉·亚赫杜卜",
+   "orig": "Ilsharaḥ Yaḥḍub (ʾLŠRḤ YḤḌB)",
+   "war": 80,
+   "intel": 68,
+   "pol": 66,
+   "faction": "-",
+   "city": "marib",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "萨巴与祖赖丹王（3世纪上半叶）",
+   "note": "法里乌姆·亚恩胡卜之子，与其弟亚兹勒·巴因共称“萨巴与祖赖丹王”；其在位与沙伊鲁姆·奥塔尔的先后关系有争议（一说与之同时、互争王位）。铭文记他从萨那出兵追击入侵的阿比西尼亚人直到沿海平原，并击败了阿克苏姆王子加尔马特；其子纳沙卡里卜·尤哈敏后来也称王。",
+   "liberty": "南阿拉伯年代学分歧很大（另有学者把同名的王放在2世纪），按与沙伊鲁姆同时的说法作在野人才。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_rulers_of_Saba_and_Himyar",
+    "https://dasi.cnr.it/project/1/epigraphs/5979",
+    "https://dasi.cnr.it/project/1/epigraphs/5594",
+    "https://en.wikipedia.org/wiki/GRMT"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "亚兹勒",
+   "full": "亚兹勒·巴因",
+   "orig": "Yaʾzil Bayyin",
+   "war": 72,
+   "intel": 56,
+   "pol": 58,
+   "faction": "-",
+   "city": "marib",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "萨巴与祖赖丹王（与兄共治）",
+   "note": "伊勒沙拉·亚赫杜卜之弟，与兄共治；铭文记兄弟二人在萨那会师，合击阿比西尼亚人。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_rulers_of_Saba_and_Himyar",
+    "https://dasi.cnr.it/project/1/epigraphs/5979"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "沙米尔",
+   "full": "沙米尔·尤哈赫米德",
+   "orig": "Shamir Yuhaḥmid",
+   "war": 66,
+   "intel": 66,
+   "pol": 58,
+   "faction": "-",
+   "city": "zafar",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "祖赖丹与希木叶尔王（约230年）",
+   "note": "祖赖丹与希木叶尔王，与萨巴王伊勒沙拉·亚赫杜卜、亚兹勒·巴因兄弟为敌，向阿克苏姆王阿兹巴求援；阿兹巴遂派王子加尔马特率阿比西尼亚与提哈马部众渡海助战。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/%CA%BDDBH",
+    "https://en.wikipedia.org/wiki/GRMT"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "阿兹巴",
+   "full": "阿兹巴（ʿDBH，又读阿德赫巴）",
+   "orig": "ʿDBH (ʿAzaba / ʿAdhebah)",
+   "war": 72,
+   "intel": 64,
+   "pol": 66,
+   "faction": "-",
+   "city": "aksum",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "阿克苏姆王（约230—240年）",
+   "note": "南阿拉伯铭文所称的阿比西尼亚人之王（奈加什），应希木叶尔王沙米尔之请派其子加尔马特出兵也门；其后阿克苏姆在也门西部沿海仍保有势力。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/%CA%BDDBH",
+    "https://en.wikipedia.org/wiki/GRMT"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "加尔马特",
+   "full": "加尔马特（GRMT）",
+   "orig": "GRMT (Gärma[t])",
+   "war": 78,
+   "intel": 52,
+   "pol": 44,
+   "faction": "-",
+   "city": "adulis",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "阿克苏姆王子（“奈加什之子”）",
+   "note": "阿兹巴之子，约230—240年间率阿克苏姆军与提哈马部众在也门作战，支持希木叶尔王沙米尔，终被萨巴王伊勒沙拉·亚赫杜卜击败；见于两件南阿拉伯铭文。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GRMT",
+    "https://en.wikipedia.org/wiki/%CA%BDDBH"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "塔基达马尼",
+   "full": "塔基德阿马尼",
+   "orig": "Takideamani",
+   "war": 62,
+   "intel": 56,
+   "pol": 62,
+   "faction": "-",
+   "city": "meroe",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "库施王（3世纪上半叶）",
+   "note": "只见于麦罗埃北墓区 N29 号金字塔的供桌（今藏柏林），铭文称其父为阿德凯塔利、母为纳帕塔达赫托。",
+   "liberty": "显示名把“德阿”连读为“达”。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Takideamani",
+    "https://en.wikipedia.org/wiki/List_of_monarchs_of_Kush"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  },
+  {
+   "name": "马沙达赫尔",
+   "full": "马沙达赫尔",
+   "orig": "Mashadakhel",
+   "war": 60,
+   "intel": 54,
+   "pol": 58,
+   "faction": "-",
+   "city": "napata",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "culture": "arab",
+   "role": "库施王（3世纪上半叶）",
+   "note": "王表中排在塔基德阿马尼之后、特科里德阿马尼（约245/246年即位）之前，事迹不详。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Takideamani",
+    "https://en.wikipedia.org/wiki/Teqorideamani"
+   ],
+   "born": null,
+   "died": null,
+   "attested": "yes",
+   "sex": "m"
+  }
+ ],
+ "updates": [
+  {
+   "target": "susa",
+   "field": "owner",
+   "from": "-",
+   "to": "elymais",
+   "reason": "埃利迈斯王奥罗德斯五世的青铜钱币一般认为铸于苏萨，故推定190年前后苏萨属埃利迈斯（属推定，215年苏萨已由安息总督管理）；新增势力埃利迈斯以此为都，奥罗德斯驻此。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Elymais",
+    "https://www.coincommunity.com/pdf/an-introduction-to-collecting-coins-from-elymais.pdf"
+   ]
+  },
+  {
+   "target": "susa",
+   "field": "note",
+   "from": "埃利迈斯王国的主要城市，该国在安息宗主下自铸钱币，190年在位者钱币学上无法确定，设为空城；215年石碑记有苏萨总督霍瓦萨克。",
+   "to": "埃利迈斯王国的主要城市与铸币地，2世纪由奥罗德斯诸王统治；215年石碑上的苏萨总督霍瓦萨克从安息王阿尔达班四世手中受命，可见此时苏萨已归安息直辖。",
+   "reason": "190年在位者已可推定为奥罗德斯五世（只见于钱币）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Elymais"
+   ]
+  },
+  {
+   "target": "charax",
+   "field": "owner",
+   "from": "-",
+   "to": "characene",
+   "reason": "钱币显示阿坦贝洛斯八世（约180—195年）、马加（约195—210年）在位；新增势力卡拉塞尼以此为都。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Maga_of_Characene",
+    "https://en.wikipedia.org/wiki/Attambelos"
+   ]
+  },
+  {
+   "target": "charax",
+   "field": "note",
+   "from": "卡拉塞尼王国都城，位于两河入海口，帕尔米拉商队与印度航船在此交汇。151年沃洛吉斯四世击败其王米特里达梯（梅雷达特），另立奥拉巴泽斯二世；190年在位者无法确定，设为空城。",
+   "to": "卡拉塞尼王国都城，位于两河入海口，帕尔米拉商队与印度航船在此交汇。151年沃洛吉斯四世击败其王米特里达梯（梅雷达特），另立奥拉巴泽斯二世；此后的王统只见于钱币（阿坦贝洛斯八世、马加）。",
+   "reason": "同上。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Maga_of_Characene",
+    "https://en.wikipedia.org/wiki/Characene"
+   ]
+  },
+  {
+   "target": "arbela",
+   "field": "owner",
+   "from": "-",
+   "to": "adiabene",
+   "reason": "《阿尔贝拉编年史》与伊朗百科全书“巴拉什五世”条提到190年代的阿迪亚贝纳王纳尔塞；新增势力阿迪亚贝纳以此为都。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_kings_of_Adiabene",
+    "https://www.iranicaonline.org/articles/balas/vi-balas-v"
+   ]
+  },
+  {
+   "target": "arbela",
+   "field": "note",
+   "from": "阿迪亚贝纳王国都城。194/195年阿迪亚贝纳人与奥斯若恩人一同围攻尼西比斯，塞维鲁因而征讨，但史书未记国王名字（《阿尔贝拉编年史》真伪有争议，不采用），设为空城。",
+   "to": "阿迪亚贝纳王国都城。194/195年阿迪亚贝纳人与奥斯若恩人一同围攻尼西比斯，塞维鲁因而征讨；据《阿尔贝拉编年史》，其王纳尔塞后来被安息王溺死于大扎卜河。",
+   "reason": "改用纳尔塞为君主（liberty 中注明史料争议）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/List_of_kings_of_Adiabene",
+    "https://en.wikipedia.org/wiki/Chronicle_of_Arbela"
+   ]
+  },
+  {
+   "target": "aksum",
+   "field": "full",
+   "from": "阿克苏姆（外港阿杜利斯）",
+   "to": "阿克苏姆",
+   "reason": "外港阿杜利斯另设为城（距阿克苏姆 4.6 地图单位，≥ 3）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Adulis"
+   ]
+  },
+  {
+   "target": "aksum",
+   "field": "note",
+   "from": "阿克苏姆王国都城，外港阿杜利斯隔红海与也门相望（地图上不另设）。",
+   "to": "阿克苏姆王国都城，位于提格雷高原，西经阿特巴拉河谷通往库施，东下阿杜利斯港隔红海与也门相望。",
+   "reason": "同上；并补充通往麦罗埃的陆路。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Adulis",
+    "https://en.wikipedia.org/wiki/Kingdom_of_Kush"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "hecatompylos-ecbatana",
+   "to": [
+    "ecbatana-rhagae",
+    "rhagae-hecatompylos"
+   ],
+   "reason": "呼罗珊大道由埃克巴坦那经雷伊、里海门东去和椟城；新设雷伊后改为两程。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Military_history_of_Rey,_Iran"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "zafar-aksum",
+   "to": [
+    "adulis-zafar"
+   ],
+   "reason": "渡曼德海峡的海路改由阿杜利斯出发（仍为海路）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Adulis"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "aksum-alexandria",
+   "to": [
+    "adulis-thebes"
+   ],
+   "reason": "红海航线改由阿杜利斯出发（仍为海路），阿克苏姆本城改为内陆城；对岸的终点用罗马研究区新设的底比斯（科普托斯—贝勒尼基）。rome.json 也提出删去 aksum—alexandria、改设 thebes—aksum，两者合并为 adulis—thebes 一条。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Adulis",
+    "https://www.ancientportsantiques.com/wp-content/uploads/Documents/PLACES/RedSea/Adulis-Zazzaro2014.pdf"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "faction",
+   "from": "-",
+   "to": "aksum",
+   "reason": "阿克苏姆只有加达拉特一名在任武将。贝加特是 Ja 631 所记率阿比西尼亚军进逼扎法尔的“奈加什之子”（约200—210年），作为190年镇守外港的王子较合理。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "city",
+   "from": "aksum",
+   "to": "adulis",
+   "reason": "同上；驻新设的外港阿杜利斯。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "hidden",
+   "from": 1,
+   "to": 0,
+   "reason": "同上。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "loyalty",
+   "from": 0,
+   "to": 85,
+   "reason": "同上（王子，忠诚较高）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "troops",
+   "from": 0,
+   "to": 3000,
+   "reason": "同上（与各国王子同一尺度）。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "贝加特",
+   "field": "liberty",
+   "from": null,
+   "to": "生年不详、是否为加达拉特之子也不确定；游戏中190年作为王子镇守阿杜利斯。",
+   "reason": "说明改为在任的取舍。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/GDRT"
+   ]
+  },
+  {
+   "target": "aksum",
+   "field": "region",
+   "from": "arab",
+   "to": "africa",
+   "reason": "新增地域“非洲”（africa），收阿克苏姆与库施。",
+   "sources": []
+  },
+  {
+   "target": "Regions",
+   "field": "add",
+   "from": null,
+   "to": {
+    "bosi": [
+     "adiabene",
+     "elymais"
+    ],
+    "arab": [
+     "characene",
+     "kinda"
+    ],
+    "africa": {
+     "name": "非洲",
+     "factions": [
+      "aksum",
+      "kush"
+     ]
+    }
+   },
+   "reason": "新势力的地域归属；阿克苏姆从“阿拉伯”移入新地域“非洲”。",
+   "sources": []
+  },
+  {
+   "target": "parthia",
+   "field": "liberty",
+   "from": "亚美尼亚并入本势力；奥斯罗埃斯忠诚偏低。波西斯的巴兹兰吉藩王拆为独立势力“波西斯”，以免安息开局即成庞然大物，也为萨珊崛起留出舞台。",
+   "to": "亚美尼亚并入本势力；奥斯罗埃斯忠诚偏低。波西斯的巴兹兰吉藩王拆为独立势力“波西斯”，以免安息开局即成庞然大物，也为萨珊崛起留出舞台；阿迪亚贝纳、卡拉塞尼、埃利迈斯三个藩国同样拆为独立势力。",
+   "reason": "新增三个藩国势力。",
+   "sources": []
+  },
+  {
+   "target": "ctesiphon",
+   "field": "note",
+   "from": "安息冬都，一般比定为《后汉书·西域传》的“斯宾国”；与底格里斯河对岸的希腊城市塞琉西亚合为一城（两城相距不足一公里，不另设）。165年两城被阿维狄乌斯·卡西乌斯焚掠，此时仍在恢复。",
+   "to": "安息冬都，一般比定为《后汉书·西域传》的“斯宾国”；与底格里斯河对岸的希腊城市塞琉西亚合为一城。165年两城被阿维狄乌斯·卡西乌斯焚掠，此时仍在恢复。南面的古城巴比伦已衰落为神庙之城，幼发拉底河畔的商城沃洛加西亚（帕尔米拉商人聚居）也在附近，地图上一并归入本城。",
+   "reason": "题目要求的塞琉西亚、巴比伦无法另设：塞琉西亚距泰西封 0.1、巴比伦 2.0、沃洛加西亚 3.2 地图单位（< 3 或贴近下限），只在说明中提及。",
+   "sources": [
+    "https://archiv.ub.uni-heidelberg.de/propylaeumdok/id/eprint/4801/contents",
+    "https://en.wikipedia.org/wiki/Valashabad"
+   ]
+  },
+  {
+   "target": "阿勒汗",
+   "field": "note",
+   "from": "雅里姆·艾曼之子；萨巴王，与其子沙伊鲁姆·奥塔尔、雅里姆·艾曼共治（CIH 308，约200年）；",
+   "to": "雅里姆·艾曼之子；萨巴王，与其子沙伊鲁姆·奥塔尔共治（CIH 308，约200年）；",
+   "reason": "雅里姆·艾曼在铭文中是阿勒汗之父（“雅里姆·艾曼之子”）；奥地利科学院所藏铜像题记只称“阿勒汗·纳赫凡及其子沙伊鲁姆·奥塔尔”，找不到雅里姆·艾曼作为共治王子的出处。只改 note 的这一句，其余不变。",
+   "sources": [
+    "https://www.oeaw.ac.at/resources/Record/100110000211/Similar?lng=it",
+    "https://en.wikipedia.org/wiki/List_of_rulers_of_Saba_and_Himyar"
+   ]
+  }
+ ],
+ "notes": [
+  "【资料核实】本区只能用网络搜索（WebSearch）；WebFetch 对所有域名都无法解析（不只维基百科），因此各条依据的是搜索返回的维基百科、伊朗百科全书、博物馆藏品记录、DASI 南阿拉伯铭文库等页面的摘要，sources 列的是这些摘要所出的页面。人名、年代、亲属关系都至少有一条搜索结果支持；数值（武、智、政、兵、城池数据）按现有尺度估定。",
+  "【题目中无法另设的城】塞琉西亚距泰西封 0.1、巴比伦 2.0、沃洛加西亚 3.2、阿尔马维尔距阿尔塔沙特 1.5、提姆纳（卡塔班故都）距马里卜 2.7、辛加拉距哈特拉 3.2 地图单位，都低于或贴近 3 单位的下限，只在城池说明里提及（见 updates 中的 ctesiphon）。苏萨、木鹿、和椟城已在游戏中（前者改归埃利迈斯，后两者仍为空城）。",
+  "【安息诸王与贵族】沃洛吉斯四世、五世（瓦加尔什）、六世（巴拉什）、阿尔达班四世、奥斯罗埃斯二世、帕佩克、沙普尔、阿尔达希尔、萨珊、戈契赫尔、提里、霍瓦萨克已在游戏中，未重复。本次补入：阿尔达班的首席书记达德温达德；萨珊崛起时被消灭的地方王公帕辛、马努切赫尔、达拉、米赫拉克、沙德沙普尔、巴拉什（克尔曼，显示名瓦拉赫什）、法恩萨珊（均为在野）；阿尔达希尔一方的阿巴尔萨姆、坦萨尔，以及阿尔达希尔之母罗达格。",
+  "【未收】阿尔达瓦兹德（“阿尔达班四世之子”）：旧说的钱币归属已被否定（实为阿尔达班四世的钱币），不收。阿比奈尔加奥斯三世（卡拉塞尼末王，约222年）只见于后世阿拉伯史书，史实性存疑；塔巴里所记的阿瓦士王尼罗法尔、梅尚王班杜本次未能用搜索核实；埃利迈斯王后乌尔凡（奥罗德斯四世之妻，钱币约2世纪中后期）190年是否在世不详。以上均未收，可作为日后的候补。",
+  "【高加索】高加索阿尔巴尼亚的阿尔沙克王朝约300年才开始（瓦恰甘一世），190年前后无可考国王，只设空城加巴拉。伊比利亚补入巴库尔一世（234—249年，在野）；列夫一世之妻塞费利亚只见于格鲁吉亚编年史，未收。",
+  "【阿拉伯】新增金达（拉比阿，都城卡里亚特·法奥）。萨巴补入伊勒沙拉·亚赫杜卜、亚兹勒·巴因兄弟（年代分歧大，见其 liberty），希木叶尔补入沙米尔·尤哈赫米德，奥斯若恩补入阿布加尔九世（显示名小阿布加尔）与主教帕鲁特。卡塔班末王纳巴图姆·亚汉阿姆（约160年后亡国）190年是否在世不详；“纳巴泰的后继者”中，塔努赫王贾兹玛（乌姆吉马勒铭文约250年）生年多半晚于205年，莱赫米、加萨尼更晚；纳巴泰旧地（佩特拉、波斯特拉、赫格拉）190年属罗马阿拉伯行省，留给罗马研究区。阿布加尔十世（240—242年）生年不详，未收。尤利乌斯·阿非利加努斯（约160—240年，曾在阿布加尔八世宫廷）是罗马人，留给罗马研究区。",
+  "【非洲】阿克苏姆补入阿兹巴（约230—240年）、加尔马特（在野），并建议把在野的贝加特改为镇守新设外港阿杜利斯的在任武将（见 updates）。森布鲁提斯的年代有3世纪与4世纪两说，DTWNS 约260年以后，未收。库施新设为势力：阿里滕耶斯博赫（君主，显示名耶斯博赫）、其母阿马尼哈利卡、下努比亚总督马洛顿在任，塔基德阿马尼、马沙达赫尔在野；特科里德阿马尼（约245/246—265/266年，253年菲莱铭文）生年多半晚于205年、显示名又长达7字，未收；瓦耶基耶家族（2—3世纪菲莱的努比亚祭司世家，如帕埃塞）身处罗马辖下的十二斯科伊诺伊之地，留给罗马埃及研究。",
+  "【跨区去重】尼西比斯：罗马研究区（rome.json）已新设同键、同坐标、同三条连线（edessa、hatra、arbela）的 nisibis，本区不再重复（初稿曾设，已删去）；它在190年有罗马驻军、197年由尤·莱图斯守住，两区说法一致。红海与尼罗河：本区的 adulis→thebes、karanog→thebes 依赖 rome.json 的 thebes；rome.json 的 thebes→aksum 与本区 adulis→thebes 是同一条航线，合并时只保留后者。若 thebes 最终不并入，则改为 adulis→alexandria（海）、karanog→alexandria（陆）。zarang→kapisa 若贵霜／印度研究区新设阿拉霍西亚（坎大哈），请改连该城；萨卡斯坦的印度—帕提亚诸王可能与印度研究区重叠，以本区的法恩萨珊为准或合并。",
+  "【文化代号】游戏没有非洲文化代号，阿克苏姆、阿杜利斯与库施诸城、诸将暂用 arab。建议新增 africa（或 nubia）：短卷发、白色亚麻长袍与披肩、金臂环与耳饰、羽饰头带（库施王的双蛇冠）、长弓与弓箭手（古称库施为“弓之国”）、战象（麦罗埃的狮神庙浮雕有象）。",
+  "【地域】建议在 REGIONS 中新增“非洲”（africa），收阿克苏姆、库施；阿迪亚贝纳、埃利迈斯归“波斯”（bosi），卡拉塞尼、金达归“阿拉伯”（arab）。",
+  "【颜色】五个新势力的颜色按 CIEDE2000 选出，并避开罗马研究区新势力（巴夸特 #8796ff、汪达尔、爱尔兰）：与全部现有势力及上述新势力的色差最小 14.1（卡拉塞尼 #a5a500，最近的是相距遥远的袁术、新罗、马科曼尼），其余四个 ≥ 15。卡拉塞尼初稿用的 #8796ff 恰与巴夸特相同，已改。",
+  "【数值】新增 29 名武将的平均武力约 60、智力约 61、政力约 61，在任 9 人、在野 20 人。现有新增武将的平均武力（57.6）已比经典剧本（64.4）低近 7，tests/world.js 要求差距 < 8，本批略高于现均值，不会拉低。在任兵力 2000—4500，在野者忠诚、兵力为 0。",
+  "【平衡试算】把本文件连同 rome.json 的尼西比斯、底比斯两城并入一份临时拷贝跑 node tests/world.js：除了“女性武将名单”这一条写死的检查（新增罗达格、阿曼哈利卡，合并时须同步更新 tests/world.js 第 53 行）外全部通过；度数 2—5 的城占 145/150，最近城距仍是襄平—玄菟 3.20。起初把帕辛、马努切赫尔、达拉设为波西斯的在任武将，波西斯 5 年内可占 9—16 城、安息在 1 局中灭亡；改为在野后的结果见 .md 的“平衡试算”一节。阿迪亚贝纳、埃利迈斯、金达是一城一将的小国。新设空城 7 座（雷伊、尼萨、克尔曼、斯帕罕、扎兰季、纳帕塔、加巴拉）。",
+  "【译名】无通行中文译名者按新华社译音规则自拟：阿坦贝洛斯、马努切赫尔、沙德沙普尔、达德温达德、阿巴尔萨姆、阿曼哈利卡（省去一个音节）、塔基达马尼（“德阿”连读）、马沙达赫尔为 5 字，阿里滕耶斯博赫显示为“耶斯博赫”（取原名后半），其余 ≤ 4 字；全名另见 full。显示名均已与游戏现有 361 名武将、137 座城核对不重名。",
+  "【核查】第三版对抗式核查（无网络检索，按标准文献与内部一致性核对）：库施君主原把阿里滕耶斯博赫与 N16 号金字塔的阿耶斯博赫混为一人，已改为前者（显示名耶斯博赫）；阿迪亚贝纳“支持尼格尔”按狄奥改写；雷伊、尼萨、帕鲁特、沙米尔、卡拉诺格删去无据之说；埃利迈斯占有苏萨、伊勒沙拉兄弟与沙伊鲁姆的先后改为存疑口气；盖巴拉改名加巴拉；坦萨尔头衔订正；巴库尔补 liberty。未删人。存疑项见 .md 的“核查记录”。"
+ ]
+}

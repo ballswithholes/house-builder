@@ -1,0 +1,1544 @@
+{
+ "region": "east-steppe-sea",
+ "summary": "第三版东亚、草原与南海补充：朝鲜半岛与东北补入高句丽王后于氏（在任）及国相明临於漱、抗魏三勇士密友、纽由、刘屋句，拔奇之子驳位居，夫余大使位居，新罗沾解、味邹（金氏首王）、忠萱、连珍，百济真忠、真勿，金官伽倻麻品王（传说）；倭地补入《日本书纪》传统纪年落在本时段的传说人物神功皇后、仲哀天皇、武内宿祢、忍熊王、田油津媛；草原补入轲比能部的琐奴、郁筑鞬，西部鲜卑蒲头，乌丸修武卢、骨进、护留、阿罗槃，拓跋先世诘汾（可选新势力“拓跋”的君主，据阴山）与没鹿回部窦宾，以及没于南匈奴的蔡琰；河西补入敦煌太守仓慈与张就；交州补入钱博、戴良、陈时与讨珠崖的陆凯。新增11座城：对马、出云、北沃沮、挹娄、莎车、姑墨、且末、骠人城邦汉林、毗湿奴城、室利差呾罗与海南珠崖，19条本区连线与2条跨区连线（汉林—云南；可选的室利差呾罗—耽摩栗底），以及改道与拓跋势力的更新。共新增1个（可选）势力、11座城、35名武将（在任2、在野33）。",
+ "factions": [
+  {
+   "key": "tuoba",
+   "name": "拓跋",
+   "full": "拓跋部（索头鲜卑，北魏先世）",
+   "orig": "Tuoba (Tabγač) Xianbei",
+   "ruler": "诘汾",
+   "capital": "yinshan",
+   "culture": "steppe",
+   "region": "saibei",
+   "virtue": 55,
+   "fame": 40,
+   "color": "#c3b4a5",
+   "priority": 2,
+   "note": "《魏书·序纪》追述的拓跋先世：献帝邻（“第二推寅”）因神人之言“以位授子”，圣武帝诘汾奉命率部继续南迁，“山谷高深，九难八阻”，由“形似马、声类牛”的神兽导引，“历年乃出，始居匈奴之故地”（一般认为在阴山—河套以北）。诘汾与“天女”生力微（174年），力微220年继立，依附没鹿回部窦宾后壮大，258年会诸部于盛乐，被北魏尊为始祖。诘汾及以前的世系是北魏官方的祖先传说，标 legendary。",
+   "liberty": "可选势力（priority 2）。第二版的阴山是空城；本势力以传说中的诘汾为君主，16岁的力微随父在任，窦宾为在野。不采纳时：诘汾改为阴山的在野人才（hidden 1、忠诚 0、兵 0），力微保持第二版设定，下方与 tuoba 有关的 updates 全部不执行。颜色 #c3b4a5（毡帐色）与全部现有势力 CIEDE2000 ≥ 13.9（与 india-kushan.json 的新势力师子国 #b8b088 为 10.7，仍 ≥ 10，两国相距极远），与五程内的鲜卑、南匈奴、东部鲜卑、乌桓、公孙瓒、董卓、张杨 ≥ 15。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71",
+    "https://zh.wikipedia.org/wiki/%E6%8B%93%E8%B7%8B%E8%A9%B0%E6%B1%BE",
+    "https://en.wikipedia.org/wiki/Tuoba_Liwei",
+    "https://zh.wikipedia.org/zh-hans/%E6%8B%93%E8%B7%8B%E5%8A%9B%E5%BE%AE"
+   ]
+  }
+ ],
+ "cities": [
+  {
+   "key": "tsushima",
+   "name": "对马",
+   "full": "对马国（《魏志·倭人传》）",
+   "orig": "対馬国 Tsushima-no-kuni",
+   "modern": "日本长崎县对马市（浅茅湾一带）",
+   "lon": 129.3,
+   "lat": 34.3,
+   "owner": "-",
+   "culture": "wa",
+   "land": 200,
+   "industry": 260,
+   "town": 200,
+   "population": 50000,
+   "gold": 300,
+   "food": 3000,
+   "priority": 2,
+   "note": "《魏志·倭人传》：自狗邪韩国（金官）“始度一海，千余里至对马国。其大官曰卑狗，副曰卑奴母离。所居绝岛，方可四百余里，土地山险，多深林，道路如禽鹿径。有千余户，无良田，食海物自活，乘船南北市籴”。是半岛与九州之间的必经之岛。卑狗、卑奴母离是官名而非人名，190年无可考的人物，设为空城。（户口远少于游戏最小尺度，人口按下限 5 万。）",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://ja.wikipedia.org/wiki/%E5%AF%BE%E9%A6%AC%E5%9B%BD",
+    "https://ja.wikipedia.org/wiki/%E9%AD%8F%E5%BF%97%E5%80%AD%E4%BA%BA%E4%BC%9D"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "izumo",
+   "name": "出云",
+   "full": "出云（四隅突出型坟丘墓的地域王权）",
+   "orig": "出雲 Izumo",
+   "modern": "日本岛根县出云市（西谷坟墓群一带）",
+   "lon": 132.75,
+   "lat": 35.36,
+   "owner": "-",
+   "culture": "wa",
+   "land": 340,
+   "industry": 300,
+   "town": 280,
+   "population": 150000,
+   "gold": 400,
+   "food": 8000,
+   "priority": 2,
+   "note": "《魏志》未载出云之名，但考古显示弥生时代后期（2世纪后半至3世纪前半）这里是日本海一侧的强大地域王权：出云市西谷坟墓群的四隅突出型坟丘墓是这一时期最大级的王墓之一，墓上祭祀所用的吉备系特殊器台显示它与吉备（游戏中的投马）结盟；附近的荒神谷遗迹一处出土铜剑358口、加茂岩仓遗迹出土铜铎39口（埋藏年代较早）。出云是投马国的比定地之一。190年无具名人物，设为空城。",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E8%A5%BF%E8%B0%B7%E5%A2%B3%E5%A2%93%E7%BE%A4",
+    "https://ja.wikipedia.org/wiki/%E5%9B%9B%E9%9A%85%E7%AA%81%E5%87%BA%E5%9E%8B%E5%A2%B3%E4%B8%98%E5%A2%93",
+    "https://ja.wikipedia.org/wiki/%E8%8D%92%E7%A5%9E%E8%B0%B7%E9%81%BA%E8%B7%A1",
+    "https://ja.wikipedia.org/wiki/%E5%8A%A0%E8%8C%82%E5%B2%A9%E5%80%89%E9%81%BA%E8%B7%A1"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "bukokjeo",
+   "name": "北沃沮",
+   "full": "北沃沮（置沟娄）",
+   "orig": "북옥저 Buk-Okjeo（置溝婁）",
+   "modern": "中国吉林省珲春市一带（一说俄罗斯滨海边疆区南部）",
+   "lon": 130.36,
+   "lat": 42.87,
+   "owner": "-",
+   "culture": "korea",
+   "land": 280,
+   "industry": 220,
+   "town": 220,
+   "population": 60000,
+   "gold": 200,
+   "food": 5000,
+   "priority": 2,
+   "note": "《三国志·东沃沮传》：“北沃沮一名置沟娄，去南沃沮八百余里，其俗南北皆同，与挹娄接。挹娄喜乘船寇钞，北沃沮畏之，夏月恒在山岩深穴中为守备，冬月冰冻，船道不通，乃下居村落。”正始年间毌丘俭破丸都，东川王（位宫）先奔沃沮，再“奔北沃沮”（《东沃沮传》），魏玄菟太守王颀追击，“过沃沮千有余里，至肃慎氏南界，刻石纪功”。无具名人物，设为空城。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B728",
+    "https://en.wikipedia.org/wiki/Okjeo"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "yilou",
+   "name": "挹娄",
+   "full": "挹娄（古肃慎氏之国）",
+   "orig": "挹婁 Yilou",
+   "modern": "俄罗斯滨海边疆区（乌苏里斯克一带）",
+   "lon": 131.95,
+   "lat": 43.8,
+   "owner": "-",
+   "culture": "korea",
+   "land": 260,
+   "industry": 200,
+   "town": 200,
+   "population": 80000,
+   "gold": 200,
+   "food": 4000,
+   "priority": 2,
+   "note": "《三国志·挹娄传》：在夫余东北千余里，滨大海，南与北沃沮接，“古之肃慎氏之国也”；人形似夫余而言语不同，处山林间，常穴居，好养猪；善射，“矢用楛，长尺八寸，青石为镞”，“施毒，人中皆死”。“自汉已来，臣属夫余，夫余责其租赋重，以黄初中叛之。夫余数伐之，其人众虽少，所在山险，邻国人畏其弓矢，卒不能服也。”无具名人物，设为空城。文化暂用 korea（“其人形似夫余”），建议日后新增肃慎／挹娄的外观。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://en.wikipedia.org/wiki/Yilou"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "shache",
+   "name": "莎车",
+   "full": "莎车国",
+   "orig": "Shache / Yarkand（莎車）",
+   "modern": "中国新疆莎车县",
+   "lon": 77.24,
+   "lat": 38.42,
+   "owner": "-",
+   "culture": "tarim",
+   "land": 340,
+   "industry": 260,
+   "town": 280,
+   "population": 150000,
+   "gold": 400,
+   "food": 6000,
+   "priority": 2,
+   "note": "西汉时的南道大国，东汉初莎车王贤一度称霸西域。《魏略·西戎传》记3世纪时“桢中国、莎车国、竭石国、渠沙国、西夜国、依耐国……皆并属疏勒”。190年王名失载，设为空城（引擎若允许无将城，可直接划归疏勒）。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html",
+    "https://en.wikipedia.org/wiki/Yarkant_County"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "gumo",
+   "name": "姑墨",
+   "full": "姑墨国（玄奘所记跋禄迦国）",
+   "orig": "Gumo / Bālukā（姑墨）",
+   "modern": "中国新疆阿克苏市一带",
+   "lon": 80.26,
+   "lat": 41.17,
+   "owner": "-",
+   "culture": "tarim",
+   "land": 300,
+   "industry": 240,
+   "town": 240,
+   "population": 100000,
+   "gold": 300,
+   "food": 5000,
+   "priority": 2,
+   "note": "北道上龟兹与疏勒之间的绿洲国；从这里西北越凌山（别迭里山口）可到伊塞克湖畔的乌孙之地，玄奘即由跋禄迦国走此路。《魏略·西戎传》：“姑墨国、温宿国、尉头国皆并属龟兹也。”设为空城。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html",
+    "https://en.wikipedia.org/wiki/Aksu,_Xinjiang"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "qiemo",
+   "name": "且末",
+   "full": "且末国（《魏略》作且志）",
+   "orig": "Qiemo / Calmadana（且末）",
+   "modern": "中国新疆且末县",
+   "lon": 85.53,
+   "lat": 38.14,
+   "owner": "-",
+   "culture": "tarim",
+   "land": 240,
+   "industry": 200,
+   "town": 200,
+   "population": 50000,
+   "gold": 200,
+   "food": 3000,
+   "priority": 2,
+   "note": "南道精绝与鄯善之间的小绿洲，鄯善佉卢文书称作 Calmadana，是鄯善王国的一州。《魏略·西戎传》：“且志国、小宛国、精绝国、楼兰国皆并属鄯善也”（且志一般认为即且末）。设为空城（引擎若允许无将城，可直接划归鄯善）。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html",
+    "https://en.wikipedia.org/wiki/Qiemo_County",
+    "https://en.wikipedia.org/wiki/Shanshan"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "halin",
+   "name": "汉林",
+   "full": "汉林（骠人古城，“骠国古城”世界遗产之一）",
+   "orig": "Halin / Halingyi",
+   "modern": "缅甸实皆省瑞冒附近",
+   "lon": 95.82,
+   "lat": 22.47,
+   "owner": "-",
+   "culture": "seasia",
+   "land": 380,
+   "industry": 300,
+   "town": 300,
+   "population": 200000,
+   "gold": 500,
+   "food": 9000,
+   "priority": 1,
+   "note": "伊洛瓦底江流域骠人城邦中最北的一座砖城，城址与墓葬自公元前后延续到9世纪；2014年与毗湿奴城、室利差呾罗一同列为“骠国古城”世界遗产。中国史书中，《魏略·西戎传》的“盘越国”（“一名汉越王……与益部相近……蜀人贾似至焉”）与《华阳国志》永昌郡下的“僄越”，可能指骠人或其邻近诸族，经永昌道与云南相通（比定有争议）。190年无具名统治者，设为空城。",
+   "sources": [
+    "https://whc.unesco.org/en/list/1444",
+    "https://en.wikipedia.org/wiki/Halin",
+    "https://en.wikipedia.org/wiki/Pyu_city-states",
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "beikthano",
+   "name": "毗湿奴城",
+   "full": "毗湿奴城（骠人古城）",
+   "orig": "Beikthano（Viṣṇu City）",
+   "modern": "缅甸马圭省东敦枝附近",
+   "lon": 95.38,
+   "lat": 20.0,
+   "owner": "-",
+   "culture": "seasia",
+   "land": 400,
+   "industry": 320,
+   "town": 320,
+   "population": 220000,
+   "gold": 500,
+   "food": 10000,
+   "priority": 1,
+   "note": "骠人最早的大城之一，城址、佛教建筑与瓮棺葬的测年约在公元前2世纪至公元5世纪，以砖砌城墙与灌溉稻作为特色，正处于本剧本的年代。缅甸传说中的女王班陀据此城抗御室利差呾罗的杜塔般王（传说人物，年代无从确定，未收）。190年无具名统治者，设为空城。",
+   "sources": [
+    "https://whc.unesco.org/en/list/1444",
+    "https://en.wikipedia.org/wiki/Beikthano",
+    "https://en.wikipedia.org/wiki/Pyu_city-states"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "srikshetra",
+   "name": "室利差呾罗",
+   "full": "室利差呾罗（骠国都城，见玄奘《大唐西域记》）",
+   "orig": "Sri Ksetra（Śrī Kṣetra）",
+   "modern": "缅甸勃固省卑谬（和摩沙）",
+   "lon": 95.29,
+   "lat": 18.8,
+   "owner": "-",
+   "culture": "seasia",
+   "land": 380,
+   "industry": 320,
+   "town": 300,
+   "population": 200000,
+   "gold": 500,
+   "food": 9000,
+   "priority": 2,
+   "note": "骠人城邦中面积最大的一座，后来成为骠国的都城，玄奘《大唐西域记》卷十记为“室利差呾罗国”。主要繁荣期在5—9世纪，3世纪时的规模尚不确定，因此列为二级城。按通行译名保留5个字（同卢格杜努姆）。",
+   "sources": [
+    "https://whc.unesco.org/en/list/1444",
+    "https://en.wikipedia.org/wiki/Sri_Ksetra_Kingdom",
+    "https://en.wikipedia.org/wiki/Pyu_city-states"
+   ],
+   "verified": "memory"
+  },
+  {
+   "key": "zhuya",
+   "name": "珠崖",
+   "full": "珠崖（海南岛，汉珠崖、儋耳二郡故地）",
+   "orig": "Zhuya (Hainan Island)",
+   "modern": "中国海南省海口市一带",
+   "lon": 110.33,
+   "lat": 20.0,
+   "owner": "-",
+   "culture": "yi",
+   "land": 260,
+   "industry": 240,
+   "town": 220,
+   "population": 100000,
+   "gold": 300,
+   "food": 5000,
+   "priority": 2,
+   "note": "汉武帝置珠崖、儋耳二郡，因岛民屡次反抗，元帝初元三年（前46年）采纳贾捐之之议罢弃珠崖，此后岛上长期不设郡县。242年（赤乌五年）孙权遣将军聂友、校尉陆凯率兵三万讨珠崖、儋耳，复置珠崖郡（郡治设在对岸的徐闻）。190年岛上没有可考的统治者，设为空城；文化借用夷洲（yi）的文身、羽饰形象（岛上居民以文身著称）。",
+   "sources": [
+    "https://zh.wikipedia.org/zh-hans/%E7%8F%A0%E5%B4%96%E9%83%A1",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B747",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B761",
+    "https://zh.wikisource.org/zh-hans/%E6%BC%A2%E6%9B%B8/%E5%8D%B764%E4%B8%8B"
+   ],
+   "verified": "memory"
+  }
+ ],
+ "links": [
+  [
+   "geumgwan",
+   "tsushima",
+   "sea"
+  ],
+  [
+   "tsushima",
+   "ito",
+   "sea"
+  ],
+  [
+   "izumo",
+   "touma",
+   "land"
+  ],
+  [
+   "izumo",
+   "ito",
+   "sea"
+  ],
+  [
+   "okjeo",
+   "bukokjeo",
+   "land"
+  ],
+  [
+   "bukokjeo",
+   "yilou",
+   "land"
+  ],
+  [
+   "fuyu",
+   "yilou",
+   "land"
+  ],
+  [
+   "shache",
+   "shule",
+   "land"
+  ],
+  [
+   "shache",
+   "yutian",
+   "land"
+  ],
+  [
+   "gumo",
+   "shule",
+   "land"
+  ],
+  [
+   "gumo",
+   "qiuci",
+   "land"
+  ],
+  [
+   "gumo",
+   "wusun",
+   "land"
+  ],
+  [
+   "qiemo",
+   "jingjue",
+   "land"
+  ],
+  [
+   "qiemo",
+   "shanshan",
+   "land"
+  ],
+  [
+   "halin",
+   "beikthano",
+   "land"
+  ],
+  [
+   "beikthano",
+   "srikshetra",
+   "land"
+  ],
+  [
+   "srikshetra",
+   "jinlin",
+   "land"
+  ],
+  [
+   "zhuya",
+   "hepu",
+   "sea"
+  ],
+  [
+   "zhuya",
+   "jiaozhi",
+   "sea"
+  ]
+ ],
+ "crossLinks": [
+  {
+   "from": "halin",
+   "toKey": "yunnan",
+   "toName": "云南",
+   "kind": "land",
+   "why": "永昌道（西南丝路）：自益州永昌经滇西、缅北入伊洛瓦底江流域；《魏略》盘越国“与益部相近……蜀人贾似至焉”。约 29 地图单位、600 余公里，与经典地图最长连线相当。"
+  },
+  {
+   "from": "srikshetra",
+   "toKey": "tamralipti",
+   "toName": "耽摩栗底（india-kushan.json 新城）",
+   "kind": "sea",
+   "why": "可选：沿孟加拉湾东岸往来恒河口的航路，骠人的文字与佛教都来自印度东部与南部。仅当 india-kushan 的 tamralipti 与本区的 srikshetra 都并入时设立（约 36 地图单位）。"
+  }
+ ],
+ "generals": [
+  {
+   "name": "于氏",
+   "full": "王后于氏（故国川王、山上王两朝王后）",
+   "orig": "우씨 Queen U（于氏）",
+   "war": 16,
+   "intel": 82,
+   "pol": 72,
+   "faction": "goguryeo",
+   "city": "guonei",
+   "loyalty": 90,
+   "troops": 0,
+   "hidden": 0,
+   "born": null,
+   "died": 234,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "f",
+   "role": "故国川王王后（180年立）→ 山上王王后 → 王太后",
+   "note": "于素之女（出身提那部或椽那部，说法不一），180年立为故国川王王后；其亲族於畀留、左可虑恃势专权，191年作乱被平。197年故国川王死，她秘不发丧，夜访诸王弟，被发歧拒之门外，转而迎立延优（山上王）并再嫁于他——高句丽“兄死妻嫂”习俗的著名例子；发歧举兵争位失败。227年山上王死后为王太后，234年卒，遗命葬于山上王陵侧。",
+   "liberty": "生年约160—165年（维基估计），作开局在任的女性人物；王后不领兵，兵力 0（同玛琪亚）。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Queen_U_of_Goguryeo",
+    "https://zh.wikipedia.org/zh-hans/%E4%BA%8E%E6%B0%8F_(%E9%AB%98%E5%8F%A5%E9%BA%97%E7%8E%8B%E5%90%8E)",
+    "https://www.historyofroyalwomen.com/queen-u-of-goguryeo/queen-u-of-goguryeo-the-twice-crowned-korean-queen/",
+    "https://en.wikipedia.org/wiki/Sansang_of_Goguryeo",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B716"
+   ]
+  },
+  {
+   "name": "明临於漱",
+   "full": "明临於漱",
+   "orig": "명림어수 Myeongnim Eosu（明臨於漱）",
+   "war": 40,
+   "intel": 76,
+   "pol": 80,
+   "faction": "-",
+   "city": "guonei",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 254,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "国相（230—254）",
+   "note": "230年国相高优娄死后继任，历东川王、中川王两朝，辅佐东川王对抗曹魏（242年袭西安平，244—246年毌丘俭之役）；254年卒，由阴友接任。",
+   "liberty": "生年不详；230年已任国相，推定生于190年前后，作国内城的在野人才。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Myeongnim_Eosu",
+    "https://en.wikipedia.org/wiki/Go_Uru",
+    "https://en.wikipedia.org/wiki/Goguryeo%E2%80%93Wei_War",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B717"
+   ]
+  },
+  {
+   "name": "密友",
+   "full": "密友",
+   "orig": "밀우 Mil-u（密友）",
+   "war": 80,
+   "intel": 46,
+   "pol": 30,
+   "faction": "-",
+   "city": "guonei",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "东部人；东川王的护卫将领",
+   "note": "246年毌丘俭攻陷丸都，东川王南走沃沮，魏将王颀紧追。密友自请率敢死队断后，力战重伤，东川王得以脱身收集散兵；王派刘屋句于山谷间寻回密友并救治，事后赐巨谷、青木谷为食邑。（《三国志·毌丘俭传》把此役系于244—245年，与《三国史记》差一年。）",
+   "liberty": "生年不详；246年已为勇将，按生于205年以前作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://namu.moe/w/%EB%B0%80%EC%9A%B0",
+    "https://encykorea.aks.ac.kr/Article/E0020435",
+    "https://en.wikipedia.org/wiki/Goguryeo%E2%80%93Wei_War",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B717"
+   ]
+  },
+  {
+   "name": "纽由",
+   "full": "纽由",
+   "orig": "뉴유 Nyu Yu（紐由）",
+   "war": 72,
+   "intel": 70,
+   "pol": 34,
+   "faction": "-",
+   "city": "guonei",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 246,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "东部人；诈降刺杀魏将的勇士",
+   "note": "东川王被困于南沃沮时，纽由献计携饮食往魏营诈降，于席间以藏在食器中的刀刺杀魏军将领，与之同死；魏军因此大乱，高句丽分道反击，魏军退走。高句丽追录其功。",
+   "liberty": "生年不详，按生于205年以前作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://encykorea.aks.ac.kr/Article/E0041724",
+    "https://namu.moe/w/%EB%B0%80%EC%9A%B0",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B717"
+   ]
+  },
+  {
+   "name": "刘屋句",
+   "full": "刘屋句",
+   "orig": "유옥구 Yu Okgu（劉屋句）",
+   "war": 70,
+   "intel": 52,
+   "pol": 40,
+   "faction": "-",
+   "city": "guonei",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "下部人；东川王的将领",
+   "note": "246年魏将王颀追击东川王，东部密友断后力战重伤；东川王脱身后在山谷中收集散兵，悬赏寻找密友，下部刘屋句应募前往，在战地找到伏地的密友并背回，王以股为枕，密友良久方苏。战后论功（密友、纽由为第一），赐刘屋句鸭渌、杜讷河原为食邑。（韩国学中央研究院百科指出《三国志》系王颀追击于245年，与刘屋句的事迹差一年。）",
+   "liberty": "生年不详，按生于205年以前作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://encykorea.aks.ac.kr/Article/E0041687",
+    "https://namu.moe/w/%EB%B0%80%EC%9A%B0",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B717"
+   ]
+  },
+  {
+   "name": "驳位居",
+   "full": "驳位居（古雏加）",
+   "orig": "박위거 Bak Wigeo（駮位居）",
+   "war": 58,
+   "intel": 52,
+   "pol": 54,
+   "faction": "-",
+   "city": "guonei",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "古雏加；拔奇（发歧）之子",
+   "note": "《三国志·高句丽传》：拔奇（即《三国史记》的发歧）争位不成，与涓奴加率下户三万余口投公孙康，“拔奇遂往辽东，有子留句丽国，今古雏加驳位居是也”。古雏加是王族大加的称号；陈寿所据的魏代资料（3世纪中叶）记他仍在高句丽。",
+   "liberty": "生年不详，应生于拔奇出奔（197—204年间）之前，作在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://en.wikipedia.org/wiki/Sansang_of_Goguryeo"
+   ]
+  },
+  {
+   "name": "位居",
+   "full": "位居（夫余大使）",
+   "orig": "위거 Wigeo（位居）",
+   "war": 52,
+   "intel": 72,
+   "pol": 78,
+   "faction": "-",
+   "city": "fuyu",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "夫余大使（3世纪中叶执政）",
+   "note": "《三国志·夫余传》：牛加兄子，夫余王麻余时任大使，“轻财善施，国人附之，岁岁遣使诣京都贡献”。正始年间毌丘俭讨高句丽，遣玄菟太守王颀到夫余，位居派大加出郊迎接、供给军粮；季父牛加有二心，位居杀季父父子，籍没财物，遣使簿敛送官。",
+   "liberty": "东亚研究稿因生年无考未收；他在麻余时已执掌国政，按“190年前后出生、作在野”收录，属勉强收录（合并时可删）。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://en.wikipedia.org/wiki/Buyeo_kingdom"
+   ]
+  },
+  {
+   "name": "沾解",
+   "full": "沾解尼师今（昔沾解）",
+   "orig": "첨해 이사금 Cheomhae（沾解）",
+   "war": 56,
+   "intel": 62,
+   "pol": 64,
+   "faction": "-",
+   "city": "seorabeol",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 261,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "新罗第12代王（247—261在位）",
+   "note": "伐休之孙、骨正之子，助贲王的同母弟。骨正在伐休之前已死（196年时“太子骨正及第二子伊买先死”），故沾解生于196年以前。247年兄助贲死后即位，在位时与百济交兵；261年死而无子，王位转入金氏的味邹。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cheomhae_of_Silla",
+    "https://en.wikipedia.org/wiki/Jobun_of_Silla",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B702"
+   ]
+  },
+  {
+   "name": "味邹",
+   "full": "味邹尼师今（金味邹）",
+   "orig": "미추 이사금 Michu（味鄒）",
+   "war": 60,
+   "intel": 70,
+   "pol": 74,
+   "faction": "-",
+   "city": "seorabeol",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 284,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "新罗第13代王（262—284在位），金氏首位国王",
+   "note": "仇道之子、金阏智七世孙，助贲王之婿。261年沾解王死无子，国人推立，为金氏登上新罗王位之始，即位后追封其父仇道为葛文王。麦克布赖德（McBride, JAOS 2020）认为味邹的形象是仿照6世纪法兴王塑造的，早期王年也被拉长，须谨慎看待。",
+   "liberty": "生年不详；父仇道190年已为大将，推定生于190年前后，作在野人才。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Michu_of_Silla",
+    "https://lockwoodonlinejournals.com/index.php/jaos/article/view/675",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B702"
+   ]
+  },
+  {
+   "name": "忠萱",
+   "full": "忠萱",
+   "orig": "충훤 Chunghwon（忠萱）",
+   "war": 64,
+   "intel": 42,
+   "pol": 40,
+   "faction": "-",
+   "city": "seorabeol",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "伊伐飡（奈解尼师今时）",
+   "note": "222年十月百济兵入牛头州，伊伐飡忠萱领兵拒战，至熊谷大败，单骑逃还，被贬为镇主，职位由连珍接替（百济本纪记为仇首王于熊谷破新罗兵五千）。",
+   "liberty": "生年不详；222年已居伊伐飡高位，作在野人才。",
+   "verified": "search",
+   "sources": [
+    "https://www.itwiki.kr/w/222%EB%85%84",
+    "https://ko.wikisource.org/wiki/%EB%B2%88%EC%97%AD:%EC%82%BC%EA%B5%AD%EC%82%AC%EA%B8%B0/%EA%B6%8C02",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B724"
+   ]
+  },
+  {
+   "name": "连珍",
+   "full": "连珍",
+   "orig": "연진 Yeonjin（連珍）",
+   "war": 74,
+   "intel": 58,
+   "pol": 50,
+   "faction": "-",
+   "city": "seorabeol",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "伊伐飡、知兵马事",
+   "note": "222年忠萱败于熊谷后，拜伊伐飡，兼知兵马事；224年七月与百济战于烽山下，破之，斩获千余级，八月筑烽山城。",
+   "liberty": "生年不详，作在野人才。224年烽山之战据《三国史记》，本轮未能检索复核。",
+   "verified": "search",
+   "sources": [
+    "https://www.itwiki.kr/w/222%EB%85%84",
+    "https://itwiki.kr/w/224%EB%85%84",
+    "https://ko.wikisource.org/wiki/%EB%B2%88%EC%97%AD:%EC%82%BC%EA%B5%AD%EC%82%AC%EA%B8%B0/%EA%B6%8C02"
+   ]
+  },
+  {
+   "name": "真忠",
+   "full": "真忠",
+   "orig": "진충 Jin Chung（眞忠）",
+   "war": 72,
+   "intel": 62,
+   "pol": 64,
+   "faction": "-",
+   "city": "wirye",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "左将 → 右辅（古尔王时）",
+   "note": "百济大姓真氏。240年拜左将，委以内外兵马事；246年魏幽州刺史毌丘俭与乐浪太守刘茂、朔方太守王遵伐高句丽（《三国史记》原文如此；《三国志》作带方太守弓遵），百济乘虚袭取乐浪边民，因刘茂发怒、恐遭讨伐而送还；247年拜右辅，委以国政。（右辅、左将的任命月份与人选，各家译本略有出入。）",
+   "liberty": "生年不详；240年已为左将，作慰礼城的在野人才。",
+   "verified": "search",
+   "sources": [
+    "https://encykorea.aks.ac.kr/Article/E0054962",
+    "https://en.wikipedia.org/wiki/Goi_of_Baekje",
+    "https://m.cafe.daum.net/thishistory/dZ08/172",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B724"
+   ]
+  },
+  {
+   "name": "真勿",
+   "full": "真勿",
+   "orig": "진물 Jin Mul（眞勿）",
+   "war": 66,
+   "intel": 50,
+   "pol": 46,
+   "faction": "-",
+   "city": "wirye",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "korea",
+   "attested": "yes",
+   "sex": "m",
+   "role": "左将（247年起）",
+   "note": "247年真忠迁右辅，古尔王以真勿为左将，委以兵马事。",
+   "liberty": "生年不详，作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://m.cafe.daum.net/thishistory/dZ08/172",
+    "https://en.wikipedia.org/wiki/Goi_of_Baekje",
+    "https://zh.wikisource.org/zh-hant/%E4%B8%89%E5%9C%8B%E5%8F%B2%E8%A8%98/%E5%8D%B724"
+   ]
+  },
+  {
+   "name": "麻品",
+   "full": "麻品王",
+   "orig": "마품왕 Mapum（麻品）",
+   "war": 46,
+   "intel": 58,
+   "pol": 64,
+   "faction": "-",
+   "city": "geumgwan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 291,
+   "culture": "korea",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "金官伽倻第3代王（传253—291在位）",
+   "note": "《三国遗事·驾洛国记》：居登王与泉府卿申辅之女慕贞所生，253年嗣位，王妃为宗正监赵匡的孙女好仇。王系与年数都出自传说。",
+   "liberty": "传说人物，按“居登之子”作金官的在野人才；王年不可信，生年留空。",
+   "verified": "memory",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mapum_of_Geumgwan_Gaya",
+    "https://en.wikipedia.org/wiki/Geodeung_of_Geumgwan_Gaya"
+   ]
+  },
+  {
+   "name": "神功皇后",
+   "full": "神功皇后（气长足姬尊）",
+   "orig": "神功皇后 Jingū-kōgō／息長帯比売 Okinagatarashi-hime",
+   "war": 82,
+   "intel": 84,
+   "pol": 74,
+   "faction": "-",
+   "city": "ito",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 170,
+   "died": 269,
+   "culture": "wa",
+   "attested": "legendary",
+   "sex": "f",
+   "role": "仲哀天皇皇后、摄政（《日本书纪》传201—269年）",
+   "note": "《日本书纪》《古事记》所载：随夫仲哀天皇西征熊袭，在筑紫橿日宫受神谕；仲哀不信神谕而死，她秘不发丧，亲自讨平筑紫诸部（诛山门县的田油津媛），怀孕渡海“征伐新罗”，归国生誉田别（应神天皇），又平定忍熊王之乱，摄政69年，百岁而崩。《日本书纪》神功纪三十九年、四十年、四十三年条直接引用《魏志》倭女王遣使的记事，可见编者把她比作卑弥呼。现代学者一般认为其事迹是后世形成的传说，所谓“三韩征伐”不是史实。",
+   "liberty": "传说人物；生卒按《日本书纪》传统纪年（一般认为被推前约两个甲子）。游戏中作伊都（筑紫橿日宫附近）的在野人才，与卑弥呼并存。",
+   "verified": "memory",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E7%A5%9E%E5%8A%9F%E7%9A%87%E5%90%8E",
+    "https://en.wikipedia.org/wiki/Empress_Jing%C5%AB",
+    "https://ja.wikipedia.org/wiki/%E6%97%A5%E6%9C%AC%E6%9B%B8%E7%B4%80"
+   ]
+  },
+  {
+   "name": "仲哀天皇",
+   "full": "仲哀天皇（足仲彦尊）",
+   "orig": "仲哀天皇 Chūai-tennō／足仲彦 Tarashinakatsuhiko",
+   "war": 64,
+   "intel": 50,
+   "pol": 56,
+   "faction": "-",
+   "city": "ito",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 200,
+   "culture": "wa",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "第14代天皇（《日本书纪》传192—200年在位）",
+   "note": "日本武尊之子（其生年与父亲卒年矛盾），192年即位，先后居敦贺笥饭宫、穴门丰浦宫；为讨熊袭进驻筑紫橿日宫，不信皇后所受“西有宝国”（新罗）的神谕，次年暴卒（一书说中熊袭之矢）。",
+   "liberty": "传说人物；卒年按传统纪年。作伊都的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E4%BB%B2%E5%93%80%E5%A4%A9%E7%9A%87",
+    "https://en.wikipedia.org/wiki/Emperor_Ch%C5%ABai"
+   ]
+  },
+  {
+   "name": "武内宿祢",
+   "full": "武内宿祢",
+   "orig": "武内宿禰 Takenouchi no Sukune",
+   "war": 76,
+   "intel": 88,
+   "pol": 86,
+   "faction": "-",
+   "city": "ito",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "wa",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "传说中的大臣（景行至仁德五朝）",
+   "note": "《日本书纪》称他历事景行、成务、仲哀、应神、仁德五朝（含神功摄政），后世传其寿至二三百岁（诸说不一）。仲哀死后与神功皇后秘不发丧，并收殓灵柩、由海路送往穴门丰浦宫殡殓；忍熊王作乱时，以“断弦罢兵”之计诱敌解除武备，与武振熊追败之。葛城、苏我、平群、纪、巨势等大族奉他为始祖。",
+   "liberty": "传说人物，生卒留空；作伊都的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E6%AD%A6%E5%86%85%E5%AE%BF%E7%A6%B0",
+    "https://en.wikipedia.org/wiki/Takenouchi_no_Sukune"
+   ]
+  },
+  {
+   "name": "忍熊王",
+   "full": "忍熊王（忍熊皇子）",
+   "orig": "忍熊王 Oshikuma no Miko",
+   "war": 76,
+   "intel": 50,
+   "pol": 44,
+   "faction": "-",
+   "city": "yamatai",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 201,
+   "culture": "wa",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "仲哀天皇之子",
+   "note": "仲哀与大中姬所生。神功皇后自筑紫携幼子誉田别东归时，他与兄麛坂王在畿内起兵拒之；麛坂王在占卜胜负的“祈狩”中被野猪咬死，忍熊王退守菟道，中了武内宿祢“断弦罢兵”之计，败走逢坂，投濑田渡口而死（传201年）。",
+   "liberty": "传说人物；卒年按传统纪年。作邪马台（畿内）的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E5%BF%8D%E7%86%8A%E7%9A%87%E5%AD%90",
+    "https://ja.wikipedia.org/wiki/%E7%A5%9E%E5%8A%9F%E7%9A%87%E5%90%8E"
+   ]
+  },
+  {
+   "name": "田油津媛",
+   "full": "田油津媛（山门县土蜘蛛）",
+   "orig": "田油津媛 Taburatsu-hime",
+   "war": 64,
+   "intel": 58,
+   "pol": 52,
+   "faction": "-",
+   "city": "ito",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 200,
+   "culture": "wa",
+   "attested": "legendary",
+   "sex": "f",
+   "role": "筑紫山门县的女首领",
+   "note": "《日本书纪》神功皇后摄政前纪：仲哀死后，神功皇后转攻山门县，诛杀“土蜘蛛”田油津媛；其兄夏羽兴兵来援，闻妹已死而逃走。山门（今福冈县南部的山门郡故地）是邪马台“九州说”的主要比定地之一，常被拿来与卑弥呼相提并论。",
+   "liberty": "传说人物；卒年按传统纪年。作伊都的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://ja.wikipedia.org/wiki/%E7%94%B0%E6%B2%B9%E6%B4%A5%E5%AA%9B",
+    "https://ja.wikipedia.org/wiki/%E7%A5%9E%E5%8A%9F%E7%9A%87%E5%90%8E",
+    "https://ja.wikipedia.org/wiki/%E9%82%AA%E9%A6%AC%E5%8F%B0%E5%9B%BD"
+   ]
+  },
+  {
+   "name": "琐奴",
+   "full": "琐奴",
+   "orig": "Suonu（瑣奴）",
+   "war": 68,
+   "intel": 40,
+   "pol": 30,
+   "faction": "-",
+   "city": "danhan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "轲比能部下的别小帅",
+   "note": "224年（黄初五年）轲比能再攻东部鲜卑素利，护乌丸校尉田豫率轻骑袭其后，轲比能派别小帅琐奴拒战，被田豫击走；轲比能由此怀贰。",
+   "liberty": "生年不详，作弹汗山的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://en.wikipedia.org/wiki/Kebineng",
+    "https://the-scholars.com/viewtopic.php?p=582955"
+   ]
+  },
+  {
+   "name": "郁筑鞬",
+   "full": "郁筑鞬",
+   "orig": "Yuzhujian（鬱築鞬）",
+   "war": 70,
+   "intel": 42,
+   "pol": 34,
+   "faction": "-",
+   "city": "danhan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "轲比能的女婿、部落首领",
+   "note": "228年（太和二年）田豫派译官夏舍到郁筑鞬部，夏舍被杀；同年秋田豫率西部鲜卑蒲头、泄归泥出塞讨伐，大破之。轲比能随即自领三万骑围田豫于马城七日。",
+   "liberty": "生年不详，作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Xieguini",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B726",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+   ]
+  },
+  {
+   "name": "蒲头",
+   "full": "蒲头",
+   "orig": "Putou（蒲頭）",
+   "war": 66,
+   "intel": 46,
+   "pol": 42,
+   "faction": "-",
+   "city": "yinshan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "西部鲜卑首领",
+   "note": "228年随护乌丸校尉田豫与泄归泥出塞，讨伐轲比能的女婿郁筑鞬，大破之。西部鲜卑在上谷以西，故放在阴山。",
+   "liberty": "生年不详，作在野人才，属勉强收录。",
+   "verified": "search",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Xieguini",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B726"
+   ]
+  },
+  {
+   "name": "修武卢",
+   "full": "修武卢",
+   "orig": "Xiuwulu（修武盧）",
+   "war": 64,
+   "intel": 42,
+   "pol": 36,
+   "faction": "-",
+   "city": "ningcheng",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "代郡乌丸首领",
+   "note": "222年（黄初三年）轲比能率部落大人小子与代郡乌丸修武卢等三千余骑，驱牛马七万余口到魏边交市，并遣魏人千余家居上谷。",
+   "liberty": "生年不详，作宁城的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://en.wikipedia.org/wiki/Kebineng"
+   ]
+  },
+  {
+   "name": "骨进",
+   "full": "骨进",
+   "orig": "Gujin（骨進）",
+   "war": 70,
+   "intel": 40,
+   "pol": 34,
+   "faction": "-",
+   "city": "ningcheng",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "乌丸王",
+   "note": "曹魏初年护乌丸校尉田豫出塞巡行，因乌丸王骨进“桀黠不恭”，单率麾下百余骑入其部，趁骨进出迎下拜时令左右斩之，显其罪恶，以其弟代领部众，诸部震慑。",
+   "liberty": "生年不详；220年代初已为一部之王，作在野人才。",
+   "verified": "search",
+   "sources": [
+    "https://zh.moegirl.org.cn/%E4%B8%89%E5%9B%BD%E6%9D%80:%E7%94%B0%E8%B1%AB",
+    "https://en.wikipedia.org/wiki/Tian_Yu",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B726"
+   ]
+  },
+  {
+   "name": "护留",
+   "full": "护留（辽西乌丸都督率众王）",
+   "orig": "Huliu（護留）",
+   "war": 66,
+   "intel": 50,
+   "pol": 44,
+   "faction": "-",
+   "city": "liucheng",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "辽西乌丸都督、率众王",
+   "note": "约205年随袁尚逃奔辽西乌丸；237年（景初元年）幽州刺史毌丘俭讨公孙渊，与右北平乌丸单于寇娄敦率众五千余人归降。",
+   "liberty": "生年不详；205年前后已随袁尚出奔，应生于190年以前，作柳城的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://baike.baidu.com/item/%E5%AF%87%E5%A8%84%E6%95%A6/171148"
+   ]
+  },
+  {
+   "name": "阿罗槃",
+   "full": "阿罗槃",
+   "orig": "Aluopan（阿羅槃）",
+   "war": 58,
+   "intel": 48,
+   "pol": 50,
+   "faction": "-",
+   "city": "liucheng",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "右北平乌丸首领（寇娄敦之弟）",
+   "note": "237年兄寇娄敦归降后，被派往洛阳朝贡，魏封其渠帅二十余人为王。",
+   "liberty": "生年不详，作在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730",
+    "https://zh-yue.wikipedia.org/wiki/%E9%98%BF%E7%BE%85%E6%A7%83"
+   ]
+  },
+  {
+   "name": "诘汾",
+   "full": "拓跋诘汾（北魏追尊圣武皇帝）",
+   "orig": "Tuoba Jiefen（拓跋詰汾）",
+   "war": 70,
+   "intel": 60,
+   "pol": 62,
+   "faction": "tuoba",
+   "city": "yinshan",
+   "loyalty": 100,
+   "troops": 4000,
+   "hidden": 0,
+   "born": null,
+   "died": null,
+   "culture": "steppe",
+   "attested": "legendary",
+   "sex": "m",
+   "role": "拓跋部首领（传说）",
+   "note": "《魏书·序纪》：献帝邻年老以位授之，奉命率部继续南迁，“山谷高深，九难八阻”，有“形似马、声类牛”的神兽导引，历年乃出，“始居匈奴之故地”。尝率数万骑田猎，遇自天而降的“天女”，次年天女送来所生之子，即始祖力微，故时谚云“诘汾皇帝无妇家，力微皇帝无舅家”。死后力微于220年继立。",
+   "liberty": "传说人物；拓跋势力不采纳时，改为阴山的在野人才（hidden 1、忠诚 0、兵 0）。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71",
+    "https://zh.wikipedia.org/wiki/%E6%8B%93%E8%B7%8B%E8%A9%B0%E6%B1%BE",
+    "https://en.wikipedia.org/wiki/Tuoba_Liwei"
+   ]
+  },
+  {
+   "name": "窦宾",
+   "full": "窦宾（没鹿回部大人）",
+   "orig": "Dou Bin（竇賓）",
+   "war": 66,
+   "intel": 58,
+   "pol": 60,
+   "faction": "-",
+   "city": "yinshan",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": 248,
+   "culture": "steppe",
+   "attested": "yes",
+   "sex": "m",
+   "role": "没鹿回部大人",
+   "note": "《魏书·序纪》：拓跋部被西部鲜卑侵扰离散后，力微投靠没鹿回部大人窦宾。窦宾与力微共攻西部战败失马，力微把坐骑让给他而不言功；窦宾得知后要分国之半相报，力微不受，乃以爱女妻之，并许其率部北居长川。248年窦宾临终嘱二子奉力微，二子不从而谋乱，被力微诛杀，其众尽归拓跋。",
+   "liberty": "生年不详；220年代已为一部大人，作阴山的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71",
+    "https://zh.wikipedia.org/zh-hans/%E6%8B%93%E8%B7%8B%E5%8A%9B%E5%BE%AE"
+   ]
+  },
+  {
+   "name": "蔡琰",
+   "full": "蔡琰（字文姬）",
+   "orig": "Cai Yan（Cai Wenji）",
+   "war": 8,
+   "intel": 88,
+   "pol": 66,
+   "faction": "-",
+   "city": "pingyang",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "f",
+   "role": "蔡邕之女，诗人、音乐家",
+   "note": "博学有才辩，妙于音律。初嫁河东卫仲道，夫亡无子，归宁于家。兴平年间（194—195）天下丧乱，为胡骑所获，没于南匈奴左贤王部中十二年，生二子；曹操痛蔡邕无嗣，遣使以金璧赎回（约207年），再嫁屯田都尉董祀，又为犯法的董祀向曹操求情，并凭记忆缮写亡父遗书四百余篇。传有《悲愤诗》二首（《胡笳十八拍》是否其作有争议）。",
+   "liberty": "生年约177年（不确定，留空）。190年时的行止不详（父蔡邕当年随董卓西迁长安，她出嫁卫仲道的年份也不详）；游戏按“在后来出场的城市作在野”的惯例放在南匈奴的平阳。汉人，文化 han。",
+   "verified": "memory",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Cai_Wenji",
+    "https://zh.wikipedia.org/zh-hans/%E8%94%A1%E7%90%B0",
+    "https://zh.wikisource.org/zh-hans/%E5%BE%8C%E6%BC%A2%E6%9B%B8/%E5%8D%B784"
+   ]
+  },
+  {
+   "name": "仓慈",
+   "full": "仓慈（字孝仁）",
+   "orig": "Cang Ci（倉慈）",
+   "war": 22,
+   "intel": 72,
+   "pol": 88,
+   "faction": "-",
+   "city": "dunhuang",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "曹魏敦煌太守（太和中）",
+   "note": "淮南人。建安中为绥集都尉，黄初末任长安令；太和中迁敦煌太守，郡“旷无太守二十岁，大姓雄张”，他抑豪强、恤贫弱；西域杂胡来贡献常被豪族阻断欺诈，他为欲往洛阳者开具过所，欲回者官为平价交易、派吏民护送。数年卒官，吏民图画其像；西域诸胡闻讯聚于戊己校尉及长吏治所举哀，有人以刀划面以明血诚，并为他立祠。",
+   "liberty": "生年不详；建安中已任都尉，应生于190年以前，作敦煌的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B716",
+    "https://en.wikipedia.org/wiki/Cang_Ci"
+   ]
+  },
+  {
+   "name": "张就",
+   "full": "张就",
+   "orig": "Zhang Jiu（張就）",
+   "war": 48,
+   "intel": 64,
+   "pol": 70,
+   "faction": "-",
+   "city": "dunhuang",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "敦煌功曹张恭之子；后为金城太守",
+   "note": "约220年奉父命东赴曹操处请派太守，途经酒泉被叛将黄华劫持，白刃临颈而不屈，暗中致信张恭：“大人率厉敦煌，忠义显然，岂以就在困厄之中而替之哉？”张恭随即遣从弟张华进攻酒泉沙头、乾齐二县以为声援；黄华后来投降，张就得以脱身，后官至金城太守。",
+   "liberty": "生年不详；约220年已能独当使命，作敦煌的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B718"
+   ]
+  },
+  {
+   "name": "钱博",
+   "full": "钱博",
+   "orig": "Qian Bo（錢博）",
+   "war": 66,
+   "intel": 42,
+   "pol": 34,
+   "faction": "-",
+   "city": "hepu",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "高凉贼帅 → 高凉西部都尉",
+   "note": "220年（延康元年）吕岱代步骘为交州刺史，到州时高凉贼帅钱博乞降，吕岱承制以钱博为高凉西部都尉。高凉县属合浦郡，在今广东阳江、茂名一带，是俚人聚居之地。",
+   "liberty": "生年不详，作合浦的在野人才；是否为俚人不明，文化按交州惯例标 han。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B760"
+   ]
+  },
+  {
+   "name": "戴良",
+   "full": "戴良",
+   "orig": "Dai Liang（戴良）",
+   "war": 54,
+   "intel": 56,
+   "pol": 60,
+   "faction": "-",
+   "city": "panyu",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "孙吴将军、交州刺史（226）",
+   "note": "226年（黄武五年）士燮死后，孙权分海南三郡（交阯、九真、日南）为交州、以将军戴良为刺史，海东四郡为广州、以吕岱为刺史；戴良与新任交阯太守陈时南下，士徽自署交阯太守，发宗兵于海口拒之，戴良留驻合浦；吕岱随即率兵三千浮海南下，“过合浦，与良俱进”，讨平士徽；事后撤销广州，交州复旧。",
+   "liberty": "生年不详，作番禺的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B749",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B760"
+   ]
+  },
+  {
+   "name": "陈时",
+   "full": "陈时",
+   "orig": "Chen Shi（陳時）",
+   "war": 46,
+   "intel": 54,
+   "pol": 60,
+   "faction": "-",
+   "city": "panyu",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": null,
+   "died": null,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "孙吴交阯太守（226）",
+   "note": "226年孙权以校尉陈时代士燮为交阯太守，与戴良同行南下；士徽自署交阯太守、发宗兵于海口拒之，二人留在合浦，其后吕岱浮海南下讨平士徽。",
+   "liberty": "生年不详，作番禺的在野人才。",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B749",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B760"
+   ]
+  },
+  {
+   "name": "陆凯",
+   "full": "陆凯（字敬风）",
+   "orig": "Lu Kai（陸凱）",
+   "war": 58,
+   "intel": 80,
+   "pol": 84,
+   "faction": "-",
+   "city": "zhuya",
+   "loyalty": 0,
+   "troops": 0,
+   "hidden": 1,
+   "born": 198,
+   "died": 269,
+   "culture": "han",
+   "attested": "yes",
+   "sex": "m",
+   "role": "孙吴儋耳太守 → 左丞相",
+   "note": "吴郡吴人，陆逊族子。黄武初为永兴、诸暨长；赤乌中除儋耳太守，与将军聂友率兵三万讨珠崖、儋耳，斩获有功，迁建武校尉；后历镇西大将军、荆州牧，孙晧时任左丞相，以直谏著称，269年卒。",
+   "liberty": "198年生，按在野人才规则收录；珠崖不并入时改放合浦（cityAlt）。",
+   "cityAlt": "hepu",
+   "verified": "memory",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B761",
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B747",
+    "https://en.wikipedia.org/wiki/Lu_Kai"
+   ]
+  }
+ ],
+ "updates": [
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "geumgwan-ito",
+   "to": [
+    "geumgwan-tsushima",
+    "tsushima-ito"
+   ],
+   "condition": "仅当 tsushima 并入时",
+   "reason": "《魏志》的带方郡使路线是狗邪韩国→对马→一支→末卢→伊都；设对马后，金官—伊都海路改为经对马两程（仍为海路）。seorabeol—ito 保留。执行时同时从 SeaLinks 删去 geumgwan-ito、加入 geumgwan-tsushima 与 tsushima-ito。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+   ]
+  },
+  {
+   "target": "ito",
+   "field": "full",
+   "from": "伊都国（代表北九州：伊都、奴、末卢、不弥及对马、一支）",
+   "to": "伊都国（代表北九州：伊都、奴、末卢、不弥及一支）",
+   "condition": "仅当 tsushima 并入时",
+   "reason": "对马单独设城后，伊都不再代表对马（核查补）。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E4%B8%89%E5%9C%8B%E5%BF%97/%E5%8D%B730"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "shanshan-jingjue",
+   "to": [
+    "qiemo-shanshan",
+    "qiemo-jingjue"
+   ],
+   "condition": "仅当 qiemo 并入时",
+   "reason": "南道鄯善与精绝之间经且末。",
+   "sources": [
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "shule-qiuci",
+   "to": [
+    "gumo-shule",
+    "gumo-qiuci"
+   ],
+   "condition": "仅当 gumo 并入时",
+   "reason": "北道疏勒与龟兹之间经姑墨。",
+   "sources": [
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "qiuci-wusun",
+   "to": [
+    "gumo-wusun"
+   ],
+   "condition": "仅当 gumo 并入时",
+   "reason": "塔里木北道往乌孙的山口（凌山／别迭里山口）在姑墨西北；龟兹仍经焉耆、车师有其他出口。",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Aksu,_Xinjiang"
+   ]
+  },
+  {
+   "target": "links",
+   "field": "remove",
+   "from": "yutian-shule",
+   "to": [
+    "shache-yutian",
+    "shache-shule"
+   ],
+   "condition": "仅当 shache 并入时（可选：也可保留直连）",
+   "reason": "于阗与疏勒之间的南道经莎车；去掉直连可让莎车成为必经之地。",
+   "sources": [
+    "https://depts.washington.edu/silkroad/texts/weilue/weilue.html"
+   ]
+  },
+  {
+   "target": "yinshan",
+   "field": "owner",
+   "from": "-",
+   "to": "tuoba",
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "新增可选势力拓跋以阴山为都（《魏书·序纪》诘汾“始居匈奴之故地”）。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "yinshan",
+   "field": "note",
+   "from": "檀石槐时“从上谷以西至敦煌、乌孙”是西部，大人有置鞬落罗、日律推演、宴荔游等；190年时的首领不详，设为空城。拓跋部后来也从这一带南下。",
+   "to": "檀石槐时“从上谷以西至敦煌、乌孙”是西部，大人有置鞬落罗、日律推演、宴荔游等。据《魏书·序纪》，拓跋部在诘汾率领下南迁，“始居匈奴之故地”，即这一带；其子力微后依附没鹿回部窦宾，258年会诸部于盛乐。",
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "城池介绍随归属改变。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "拓跋力微",
+   "field": "faction",
+   "from": "-",
+   "to": "tuoba",
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "190年随父诘汾在部中（16岁），与刘豹随父驻平阳的处理相同。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "拓跋力微",
+   "field": "hidden",
+   "from": 1,
+   "to": 0,
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "同上。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "拓跋力微",
+   "field": "loyalty",
+   "from": 0,
+   "to": 100,
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "君主之子。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "拓跋力微",
+   "field": "troops",
+   "from": 0,
+   "to": 2500,
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "与刘豹（2500）同一尺度。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "拓跋力微",
+   "field": "liberty",
+   "from": null,
+   "to": "190年时年仅16岁，作为诘汾之子在部中任将；《魏书》称其享年104岁，带传说成分。",
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "说明改为在任的取舍。",
+   "sources": [
+    "https://zh.wikisource.org/zh-hans/%E9%AD%8F%E6%9B%B8/%E5%8D%B71"
+   ]
+  },
+  {
+   "target": "Regions",
+   "field": "add",
+   "from": null,
+   "to": {
+    "saibei": [
+     "tuoba"
+    ]
+   },
+   "condition": "仅当拓跋势力采纳时",
+   "reason": "拓跋归入“塞北”地域。",
+   "sources": []
+  }
+ ],
+ "notes": [
+  "【资料核实】本轮 WebFetch 对所有站点都无法解析域名，WebSearch 在核实到一半时用尽了全会话共享的 200 次额度。每条记录带 verified 字段：\"search\" = 本轮检索结果的摘要已确认主要事实（于氏、明临於漱、密友、纽由、刘屋句、沾解、味邹、忠萱、连珍、真忠、真勿、郁筑鞬、蒲头、骨进）；\"memory\" = 依据《三国志》《魏书》《后汉书》《日本书纪》等原典与通行研究的已有知识整理，未经本轮检索复核（其余人物与全部新城）。所附链接是相应原典的维基文库卷页或标准条目，合并前请抽查。",
+  "【已在游戏中的草原人物】任务清单点名的轲比能、步度根、素利、弥加、阙机、扶罗韩、泄归泥第二版都已收录（见 steppe-tarim.json），本文件不重复；新增的是他们周围有名可考的人物：轲比能的别小帅琐奴、女婿郁筑鞬，西部鲜卑蒲头，乌丸修武卢、骨进、护留、阿罗槃，以及拓跋先世（诘汾、窦宾）。",
+  "【年代规则】沿用第二版：只收史有其人或明确的传说人物；在野人才须约生于205年以前（190年前后出生、后来成名者作在野）。生年不详而事迹集中在240年代的（密友、纽由、刘屋句、真勿、郁筑鞬、蒲头、位居）属“勉强收录”，liberty 已注明，合并时可酌删。",
+  "【倭国的传说人物】《魏志·倭人传》中有名可考的倭人（卑弥呼、难升米、都市牛利、伊声耆、掖邪狗、载斯乌越、卑弥弓呼、狗古智卑狗）第二版已全部收录，壹与（台与，约235年生）按年代规则不收。为了让倭地更丰富，本版补入《日本书纪》传统纪年恰好落在190—269年的五位传说人物：神功皇后、仲哀天皇、武内宿祢、忍熊王、田油津媛，一律 attested: legendary，作在野人才，不改动邪马台、狗奴的君主。《日本书纪》神功纪本身就引用《魏志》把神功与倭女王对应，因此放在同一剧本里有据可依；其纪年一般认为被推前约两个甲子（120年），实际时代在4世纪前后，detail 页的 liberty 已说明。",
+  "【拓跋势力（可选）】阴山第二版为空城。《魏书·序纪》的诘汾南迁“匈奴之故地”正当190年前后（力微174年生、220年继立），以之为君主可以填补阴山。诘汾是传说人物，拓跋势力列为 priority 2：采纳则执行 updates 中带“仅当拓跋势力采纳时”的各条；不采纳则诘汾改作阴山在野人才。",
+  "【城池优先级】priority 1（建议并入）：汉林、毗湿奴城——骠人城邦在3世纪确已存在，可让缅甸不再是空白；priority 2（可选）：对马、出云、北沃沮、挹娄、莎车、姑墨、且末、室利差呾罗、珠崖。全部新城与现有城（含 rome.json、persia-arabia-africa.json 的新城）的地图距离都 ≥ 5.5 单位（下限 3）：最近的是对马—金官 5.53、出云—投马 5.68、莎车—疏勒 5.75、东南亚新城均 ≥ 6.5（毗湿奴城—室利差呾罗 6.56）。",
+  "【空城】新城全部设为空城：190年这些地方没有可考的统治者或官员（对马的卑狗、卑奴母离是官名）。莎车、姑墨、且末在《魏略·西戎传》中分属疏勒、龟兹、鄯善，若引擎允许一将多城，可把莎车、且末划归疏勒、鄯善以加强西域小国；龟兹本身为空城，姑墨维持空城。",
+  "【连线】新增 19 条（海路 5：金官—对马、对马—伊都、出云—伊都、珠崖—合浦、珠崖—交趾）与 2 条跨区连线（汉林—云南的永昌道；可选的室利差呾罗—耽摩栗底海路，后者接 india-kushan.json 的新城）。updates 中另有 5 条“改道”（to 中列出的替代连线已包含在 links 里，执行时只需删去 from 那一条，不要重复添加）：金官—伊都改经对马，鄯善—精绝改经且末，疏勒—龟兹改经姑墨、龟兹—乌孙改为姑墨—乌孙，于阗—疏勒改经莎车（可选）。改后受影响各城的连线数：疏勒 4（保留于阗直连则 5）、龟兹 2、乌孙 4、于阗 3、鄯善 3、精绝 2、金官 3、伊都 4、投马 3、沃沮 3、夫余 4、合浦 4、交趾 4、金邻 3、阴山 3，都在 2—5 条之内；新城各 2—3 条（室利差呾罗 2、珠崖 2、挹娄 2、北沃沮 2）。",
+  "【文化代号】骠人城邦借用 seasia；挹娄、北沃沮借用 korea；珠崖借用 yi（岛上居民以文身著称）；蔡琰、仓慈、张就、钱博、戴良、陈时、陆凯为 han。建议日后为肃慎系（挹娄）与骠人另设外观。",
+  "【女性人物】新增四位：于氏（高句丽王后，在任）、神功皇后、田油津媛（传说）、蔡琰（在野），sex: f。",
+  "【数值】隐士按惯例忠诚 0、兵力 0。于氏在任但不领兵（兵 0、忠诚 90）。诘汾按草原一部之主（武 70、兵 4000，略低于魁头、丘力居）。神功皇后按传说中的女武将定为武 82 智 84（与仇首、蹋顿同档），武内宿祢智 88 政 86（接近卑弥呼、巴戴桑一档），其余按同区人物校准。",
+  "【未收录的候选】东川王（位宫，209年生）、台与（约235年生）、慕容木延（生年多半晚于205年）、赵妪（赵氏贞，226年生的九真女英雄）按年代规则不收；范寻、范长（扶南）、范熊（林邑）同第二版不收；高句丽沛者得来（屡谏东川王勿犯魏境，不从，绝食而死；毌丘俭令诸军勿毁其墓、勿伐墓树，放还其妻子）见《三国志·毌丘俭传》与《三国史记·东川王纪》二十年条，史有其人，但生年不详、卒于魏军入境之前，核查时补注出处、未添加，合并时可按“勉强收录”补为国内城的在野人才；骨伐国王阿音夫（236年降新罗）、新罗一伐飡翊宗（255年战死）事迹过少；拓跋邻（献帝）在190年前已让位，传说中多半已死；魏的带方、乐浪、玄菟太守弓遵、刘茂、王颀等是中原官员且生年不详，不收；康泰、朱应维持第二版不收的决定。",
+  "【仍为空白的地区】丁零、坚昆、乌孙、康居、大宛、奄蔡（阿兰）在150—260年间仍找不到具名人物：《魏略·西戎传》只记“奄蔡国一名阿兰……故时羁属康居，今不属也”、丁令国“胜兵六万人”等国情；康居王那鼻（泰始中）、大宛王蓝庾（285年）都晚于本时段。西域诸国3世纪的王名（于阗、龟兹等）本轮未能核实，未收。",
+  "【马来半岛与东南亚】现有顿逊、金邻、狼牙修三城不变。曾考虑吉打的双溪峇都遗址（2—3世纪冶铁与港口），但当时的中文国名无法确定（“羯荼”是7世纪的名称），屈都昆、九稚、典孙、堂明等国的位置也众说纷纭，均未设城。林邑除区连外仍无可收的人物。",
+  "【核查记录（第二轮）】本轮核查时 WebSearch 的全会话额度已用尽，代理拒绝访问维基百科、维基文库、ctext 等站点，核查只能依据《三国志》《三国史记》《三国遗事》《日本书纪》《魏书·序纪》《后汉书》等原典的已有知识逐条对照。更正：刘屋句为“下部”人而非“东部”人，删去其“随王分道夹击”的无据描述并补食邑；戴良是随吕岱“过合浦，与良俱进”而非事后才入交州；陈时同改；武内宿祢是护送仲哀灵柩由海路往穴门，不是“随军渡海”；蔡琰190年行止改为不详；真忠条注明《三国志》作带方太守弓遵；北沃沮补“宫奔北沃沮”；得来补出处；增补伊都 full 的条件更新与海路表同步说明。未删除任何人物或城池。详见 .md「核查记录」。"
+ ]
+}
