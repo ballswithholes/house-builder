@@ -18,16 +18,19 @@
      林地 → 森林；道路上的山岳降为山丘（山口）。
    可玩性保证：城外一圈无山无水、城门前通畅；攻方布阵边（x ≤ 1）山岳降为山丘，至少 6 个可布阵格（不足时把水域改为
    浅滩 = 河川，即「登陆」）；从布阵边到城门必有通路（按代价最小的路线把山岳改为山丘、水域改为浅滩）。
-   若来向一侧几乎全是海（渡海进攻），窗口在 ±100° 内转向最近的可登陆海岸（T.turned 为转过的角度）。
+   渡海进攻（opts.sea = 海路相连，或来向一侧大半是湖海）：攻方在城前的海岸登陆——海路时来向取与名义方向最接近的近岸方向；
+   攻方一侧沿进攻方向压缩（T.kAtt < 1），使布阵边正好落在岸边（x = 0 为浅滩、x = 1 上岸）；
+   来向上找不到海岸时窗口在 ±100° 内转向（T.turned 为转过的角度）。
 
    公开接口
      SG.BattleTerrain.Water                       = 8（新增的深水地块）
-     SG.BattleTerrain.generate(opts) → T | null   opts：{ city（城池对象或 {x, y} 地图坐标）, fromCity | fromDir, W, H, seed, view }
+     SG.BattleTerrain.generate(opts) → T | null   opts：{ city（城池对象或 {x, y} 地图坐标）, fromCity | fromDir, sea, W, H, view }
          fromCity：出发城（城池对象或 {x, y}）；fromDir：攻方来自的方位（度数，地图坐标 0 = 东、90 = 北；或向量 {x, y}，
          由城池指向攻方）。都缺省时视为自西而来。view：MapView 实例（缺省 SG.Game.map）；没有已建成的战略地图时返回 null
          （调用方沿用旧的随机地形）。
      SG.BattleTerrain.applyTo(model, setup) → T | null
-         用 setup.target / setup.src 生成并写入 model.map / height / burning / castle / terrain；返回 null 时什么也不改。
+         用 setup.target / setup.src（sea = SG.linkIsSea(src, target)）生成并写入 model.map / height / burning / castle / terrain；
+         返回 null 时什么也不改。
      SG.BattleTerrain.ascii(T, opts?) → string   调试用的字符图（上 = 棋盘 y 大的一侧）。
      SG.BattleTerrain.rawAscii(view, city, opts?) → string   世界地图窗口（北在上、不旋转）的同一套分类，对照用。
      SG.BattleTerrain.isWater(t) / name(t)       水域判断 / 地块名（含「水域」）
@@ -121,9 +124,9 @@
     return G;
   }
   // 渡海进攻：从城池沿来向回溯，第一处连续 0.4 单位以上的湖海的距离（找不到 → −1）
-  function coastDist(view, C, ang, maxD) {
+  function coastDist(view, C, ang, maxD, seaOnly) {
     const d = { x: Math.cos(ang * D2R), y: Math.sin(ang * D2R) };
-    const wet = t => { const ti = view.terrainInfo(C.x - d.x * t, C.y - d.y * t); return !!ti && (ti.water === 'sea' || ti.water === 'lake'); };
+    const wet = t => { const ti = view.terrainInfo(C.x - d.x * t, C.y - d.y * t); return !!ti && (ti.water === 'sea' || (!seaOnly && ti.water === 'lake')); };
     for (let t = 0.4; t <= maxD; t += 0.2) if (wet(t) && wet(t + 0.2) && wet(t + 0.4)) return t;
     return -1;
   }
@@ -169,7 +172,7 @@
       else if (s.rdC < RIV_T || s.riv >= 0.45) t = Tn.River;
       else if (r >= 0.36) t = Tn.Mountain;
       else if (r >= 0.2) t = (s.forest > 0.6 && r < 0.25) ? Tn.Forest : Tn.Hill;
-      else if (s.forest >= 0.48) t = Tn.Forest;
+      else if (s.forest >= 0.4) t = Tn.Forest;
       map[x][y] = t;
     }
     // 山岳不超过陆地格的 32%：只保留最陡的，其余降为山丘
@@ -178,10 +181,18 @@
       if (map[x][y] !== WATER) land.push(1);
       if (map[x][y] === Tn.Mountain) mts.push({ x, y, r: rug[x][y] });
     }
-    const cap = Math.floor(land.length * 0.32);
+    const cap = Math.floor(land.length * 0.28);
     if (mts.length > cap) {
       mts.sort((a, b) => b.r - a.r);
       for (let i = cap; i < mts.length; i++) map[mts[i].x][mts[i].y] = Tn.Hill;
+    }
+    // 山丘不超过陆地格的 40%：最平缓的降为平原（林地仍为森林）
+    const hills = [];
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (map[x][y] === Tn.Hill) hills.push({ x, y, r: rug[x][y] });
+    const capH = Math.floor(land.length * 0.4);
+    if (hills.length > capH) {
+      hills.sort((a, b) => b.r - a.r);
+      for (let i = capH; i < hills.length; i++) { const q = hills[i]; map[q.x][q.y] = st[q.x][q.y].forest >= 0.4 ? Tn.Forest : Tn.Plain; }
     }
     // 河宽不超过 2 格（垂直于河道方向的连续河格只留离中心线最近的两格）
     const isR = (x, y) => x >= 0 && y >= 0 && x < W && y < H && map[x][y] === Tn.River;
@@ -257,12 +268,24 @@
     // 渡海进攻：来向一侧大半是湖海时，攻方在城前的海岸登陆——攻方一侧沿进攻方向压缩，使布阵边落在岸边；
     // 来向上找不到海岸时，转向最近的可登陆海岸（±100° 内）
     try {
+      // 海路（opts.sea）：攻方从海上来，取与名义来向最接近的近岸方向（每 10° 试一次，近岸与转角加权）
+      if (opts.sea) {
+        let best = null;
+        for (let k = 0; k < 36; k++) {
+          const a = (ang0 + k * 10) % 360, da = Math.min(k * 10, 360 - k * 10);
+          const dc = coastDist(view, C, a, (cx + 1) * S_TILE, true);
+          if (dc <= 0) continue;
+          const score = dc + da * 0.025;
+          if (!best || score < best.score) best = { a, score };
+        }
+        if (best && best.a !== ang) { ang = best.a; notes.push('turned:' + (((ang - ang0 + 540) % 360) - 180)); }
+      }
       const w0 = attackSideWater(view, C, ang, W, H, cx, cy);
-      const dc = w0 > 0.5 ? coastDist(view, C, ang, (cx + 1) * S_TILE) : -1;
+      const dc = w0 > 0.5 || opts.sea ? coastDist(view, C, ang, (cx + 1) * S_TILE, !!opts.sea) : -1;
       if (dc > 0) {
-        kAtt = clamp((dc + 0.3) / ((cx - 0.5) * S_TILE), 0.12, 1);
+        kAtt = clamp(dc / ((cx - 1) * S_TILE), 0.12, 1);
         notes.push('landing');
-      } else if (w0 > 0.55) {
+      } else if (w0 > 0.55 && !opts.sea) {
         let best = { a: ang, w: w0 };
         for (const k of [20, 40, 60, 80, 100]) {
           for (const sgn of [1, -1]) {
@@ -371,7 +394,10 @@
   function applyTo(model, setup) {
     if (!model || !setup || !setup.target) return null;
     let T = null;
-    try { T = generate({ city: setup.target, fromCity: setup.src || setup.from || null, W: model.W, H: model.H }); }
+    const src = setup.src || setup.from || null;
+    let sea = false;
+    try { sea = !!(src && typeof SG.linkIsSea === 'function' && SG.linkIsSea(src.id, setup.target.id)); } catch (e) { sea = false; }
+    try { T = generate({ city: setup.target, fromCity: src, sea, W: model.W, H: model.H }); }
     catch (e) { if (typeof console !== 'undefined') console.warn('BattleTerrain.generate', e); T = null; }
     if (!T) return null;
     model.map = T.map;
