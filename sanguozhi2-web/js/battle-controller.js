@@ -130,6 +130,10 @@
     async main(s) {
       const Mdl = this.M = new SG.BattleModel(s);
       const V = this.V = new SG.BattleView(Mdl);
+      // 攻击画面预热本战双方文化的士兵模板与动作（汉军已在启动后预热；其余文化在开场横幅期间后台分片生成）
+      try {
+        if (SG.Clash && SG.Clash.prepare && SG.Clash.enabled) SG.Clash.prepare({ cultures: Mdl.units.map(u => (u.gen && u.gen.culture) || 'han') });
+      } catch (e) { console.warn(e); }
       const game = SG.Game;
       const rig = game.rig;
       const oldBounds = Object.assign({}, rig.bounds);
@@ -140,8 +144,8 @@
       const O = SG.BattleView.Origin, T = SG.BattleView.T;
       // Unity Rect(Origin.x, Origin.z, W*T, H*T)，地图坐标（Unity x / z）
       rig.bounds = { xMin: O.x, yMin: O.z, xMax: O.x + Mdl.W * T, yMax: O.z + Mdl.H * T };
-      rig.minDist = 12; rig.maxDist = 62;
-      rig.focusWorld(V.boardCenter.clone().sub(SG.U(0, 0, 2)), 40, true);
+      rig.minDist = 12; rig.maxDist = 72;        // 第三版战场 18×13：镜头起始稍远、可拉得更远
+      rig.focusWorld(V.boardCenter.clone().sub(SG.U(0, 0, 2)), 44, true);
       this.portraitOpening(rig, V, Mdl);
       rig.onTap.push(this._onTap);
       // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
@@ -161,6 +165,8 @@
         UI().banner(s.target.name + '之战', an + '军 进攻 ' + dn + '军', 2.2);
         sfx('horn');
         await SG.wait(1.6);
+        // 人物模型分片就绪后再开始第一回合（最多再等 4 秒；没有 figure.js 时 V.ready 立即兑现）
+        if (V.ready) await Promise.race([V.ready, SG.wait(4)]);
 
         while (Mdl.result === 0) {
           this.updateHud();

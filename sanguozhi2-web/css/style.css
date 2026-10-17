@@ -2115,7 +2115,7 @@ body {
 /* ===================================================== 第三版 §4 成长界面 ==
    .sg-lv（Lv 小标签）  .sg-expbar > i（经验条，--v 0..1；.is-inline 行内短条）
    战斗情报卡：.sg-card-lv > .sg-card-exp   必杀列表：.sg-sp-tier（.is-sig 专属） .sg-sp-lore
-   战后：.sg-notice（UI.notice）.sg-lvup > .sg-lvup-row（.sg-lvup-face .sg-lvup-text .sg-lvup-head .sg-lvup-exp .sg-lvup-new）.sg-lvup-rest
+   战后：.sg-notice（UI.notice）.sg-lvup > .sg-lvup-row（.sg-lvup-face .sg-lvup-text .sg-lvup-head .sg-lvup-exp .sg-lvup-new > .sg-lvup-slot）.sg-lvup-rest
    习得：.sg-learn-kind（.is-special / .is-tactic） .sg-learn-tier.t1..t4 .sg-learn-rules
    城池面板：.sg-genrow-lv .sg-lv-new   武将详情：.sg-geninfo-lv .sg-geninfo-rec .sg-geninfo-learn .sg-geninfo-sec .sg-geninfo-tacs > .sg-geninfo-tac
    ========================================================================== */
@@ -2201,6 +2201,8 @@ body {
 .sg-lvup-lv { font-size: 1.35em; color: var(--sg-gold); text-shadow: 0 0 .6rem rgba(255, 210, 110, .55); font-variant-numeric: tabular-nums; }
 .sg-lvup-exp { display: flex; align-items: center; gap: .6rem; font-size: .92rem; font-variant-numeric: tabular-nums; }
 .sg-lvup-new { font-size: .9rem; color: var(--sg-good); }
+.sg-lvup-slot { white-space: nowrap; margin-right: .9em; }   /* 必杀 / 计策两段各自整段换行，不在括号中间断开 */
+.sg-lvup-slot:last-child { margin-right: 0; }
 .sg-lvup-rest { padding: .15rem .3rem 0; font-size: .95rem; line-height: 1.8; }
 .sg-lvup-rest .sg-portrait-inline.sg-face { vertical-align: -.45em; }
 .sg-lvup-who { white-space: nowrap; margin-right: .9em; }

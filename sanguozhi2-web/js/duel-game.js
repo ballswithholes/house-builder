@@ -2712,13 +2712,13 @@
       for (const clip in FIG_SWING) {
         const sw = FIG_SWING[clip], info = fig.clipInfo(clip) || { dur: 0.6 };
         let best = -9, bt = sw[1], gx = 0;
-        const samp = [];                               // 挥击段逐帧：[t, 尖端 x, y, 握点 x, y]×两件兵器（未缩放）
-        for (let t = sw[0]; t <= sw[1] + 1e-6; t += 0.005) {
+        const samp = [];                               // 起手到挥击段逐帧：[t, 尖端 x, y, 握点 x, y]×两件兵器（未缩放）
+        for (let t = clip === 'heavy' ? sw[0] : 0; t <= sw[1] + 1e-6; t += 0.005) {
           fig.setPose(clip, t);
           fig.root.updateMatrixWorld(true);
           const a = tipX(fig.weaponMesh, wi.tip), b = tipX(fig.weaponMesh2, wi.tip);
           const m = a >= b ? fig.weaponMesh : fig.weaponMesh2, x = Math.max(a, b);
-          if (x > best + 1e-4) { best = x; bt = t; gx = m ? v.setFromMatrixPosition(m.matrixWorld).x : 0; }
+          if (t >= sw[0] - 1e-6 && x > best + 1e-4) { best = x; bt = t; gx = m ? v.setFromMatrixPosition(m.matrixWorld).x : 0; }
           const row = [t];
           for (const mm of ms) {
             if (!mm) { row.push(-9, 9, 0, 0); continue; }
@@ -2841,14 +2841,17 @@
       return ['bowShoot', 0.08 + Math.min(0.42, (t - t0 - h[h.length - 1] - 0.06) * 1.2), 'bsE'];
     }
 
-    // 近身时的「打到」时刻：对手比兵器全伸的距离近时，取挥击段里尖端（在头顶以下、正向前挥）第一次越过对手中线的一刻，
+    // 近身时的「打到」时刻：对手比兵器全伸的距离近时，取起手 / 挥击段里尖端（在头顶以下）向前越过对手中线的一刻，
     // 定格（打击停顿）时刃口停在对手身上，而不是整片穿出对手背后；够不到中线时仍取全伸的一刻（远处由前冲补足）
     contactT(c) {
       const o = this.opp, S = c.samp;
       if (!o || !S || S.n < 2) return c.tc;
       const want = (o.x - this.f.x) * this.f.face + FIG_BITE;
       if (want >= c.tip - 0.06) return c.tc;
-      for (let i = 1; i < S.n; i++) if (S.X[i] >= want && S.Y[i] <= 2.0 && S.X[i] > S.X[i - 1] + 1e-3) return S.T[i];
+      // 向前挥出时尖端由近及远越过 want 的一刻（长兵架势里尖端本就在前方，先收后刺，取刺出时的那次越过）
+      for (let i = 1; i < S.n; i++) {
+        if (S.X[i] >= want && S.X[i - 1] < want && S.Y[i] <= 2.0) return lerpU(S.T[i - 1], S.T[i], (want - S.X[i - 1]) / (S.X[i] - S.X[i - 1]));
+      }
       return c.tc;
     }
 
@@ -2861,7 +2864,8 @@
       for (let i = 0; i < h.length; i++) {
         const T = t0 + h[i], [clip, s0] = seq[i], c = C[clip];
         if (t < T) {
-          const u = M.clamp01((t - prev) / Math.max(0.03, T - prev));
+          // 提前一帧到达「打到」的姿势：命中时进入下一段（交叉淡化在打击停顿中不推进），定格的正是这一帧
+          const u = M.clamp01((t - prev) / Math.max(0.03, T - prev - 1 / 60));
           return [clip, lerpU(s0, this.contactT(c), u), 'sp' + (i + 1), i === 0 ? { lower: 'dash', lowerT: t } : null, i === 0 ? ease2(M.clamp01((u - 0.2) / 0.8)) : 1, c];
         }
         prev = T;
@@ -2892,16 +2896,17 @@
         // 「打到」的片段时刻：起手期间按与对手的距离逐帧取（连续变化），进入判定后锁定（打击停顿时姿势不跳）
         if (ph < 1 || this.tcKey !== key) { this.tcKey = key; this.tcHit = this.contactT(c); }
         const tc = this.tcHit;
-        t = ph < 1 ? lerpU(s0, tc, f.state === 'heavy' ? ph : ease2(ph) * 0.35 + ph * 0.65) : ph < 2 ? lerpU(tc, c.te, ph - 1) : lerpU(c.te, c.dur, ease2(ph - 2));
-        // 前冲包络：起手的后 80% 迈步，判定开始时正好到位（命中定格的一帧刃口贴住对手），收招时退回
-        const env = ph < 0.2 ? 0 : ph < 1 ? ease2((ph - 0.2) / 0.8) : ph < 2 ? 1 : 1 - ease2(ph - 2);
+        // 判定段先贴住「打到」的姿势再加速挥过（命中多在判定开始的一两帧，挥击末段极快，线性推进会在定格前就挥过头）
+        t = ph < 1 ? lerpU(s0, tc, f.state === 'heavy' ? ph : ease2(ph) * 0.35 + ph * 0.65) : ph < 2 ? lerpU(tc, c.te, (ph - 1) * (ph - 1)) : lerpU(c.te, c.dur, ease2(ph - 2));
+        // 前冲包络：整个起手里迈步（重击在举刀蓄势的停顿之后才迈），判定开始时正好到位（命中定格的一帧刃口贴住对手），收招时退回
+        const env = ph < 1 ? ease2(ph) : ph < 2 ? 1 : 1 - ease2(ph - 2);
         return [clip, t, key, null, env, c];
       }
       const jumpT = () => 0.12 + M.clamp01((JUMP_V - f.vy) / (2 * JUMP_V)) * 0.5;
       switch (f.state) {
         case 'air': {
           const c = C.air, ph = phaseOf(MOVES.air, f.t, 0);
-          t = ph < 1 ? lerpU(0.36, c.tc, ph) : ph < 2 ? lerpU(c.tc, c.te, ph - 1) : lerpU(c.te, 0.74, ph - 2);
+          t = ph < 1 ? lerpU(0.36, c.tc, ph) : ph < 2 ? lerpU(c.tc, c.te, (ph - 1) * (ph - 1)) : lerpU(c.te, 0.74, ph - 2);
           return ['heavy', t, key, { lower: 'jump', lowerT: jumpT() }, ph < 1 ? ph : ph < 2 ? 1 : 3 - ph, c];
         }
         case 'walk': return ['idle', this.time, 'walk', { lower: 'walk', lowerT: this.walkPhase / (Math.PI * 2) * 1.0 }, 0];

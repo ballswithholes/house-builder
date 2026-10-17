@@ -143,8 +143,14 @@
   function shortScreen() { return window.innerHeight > 0 && window.innerHeight < 560; }
   // 说明去掉开头的典故（lore）：典故另行显示
   function stripLore(desc, lore) { desc = String(desc || ''); return lore && desc.indexOf(lore) === 0 ? desc.slice(lore.length) : desc; }
+  // 空格可学到的等阶：第 k 格至多 k 阶，另受武力 / 智力与等级限制 → 「二阶」或「初阶至中阶」（开着多格时）
+  function openTiers(sl, tierName) {
+    if (!(sl.open > 0) || !(sl.tier > 0)) return { text: '', top: 0 };
+    const top = Math.max(sl.tier, Math.min(sl.statTier, sl.levelTier, sl.used + sl.open));
+    return { text: top > sl.tier ? tierName(sl.tier) + '至' + tierName(top) : tierName(sl.tier), top };
+  }
   // 格数说明：「已学 1 / 4 · 可习得 1（二阶）· 上限四阶」「已学 1 / 3 · 6 级可学下一招 · 上限三阶」
-  // 括号里是眼下这一格可学到的等阶（受等级与已学数限制）；「上限」是此人武力 / 智力最终能学到的等阶
+  // 括号里是眼下空格可学到的等阶（受等级与已学数限制）；「上限」是此人武力 / 智力最终能学到的等阶
   function slotText(gen, type) {
     const P = Prog();
     if (!P) return '';
@@ -155,12 +161,13 @@
     const lvls = sp ? P.SPECIAL_SLOT_LEVEL : P.TACTIC_SLOT_LEVEL;
     const tierName = t => (sp ? (SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(t) : t + '阶') : (SG.Tactics ? SG.Tactics.TIER_NAME[t] : t + '阶'));
     const p = ['已学 ' + sl.used + ' / ' + sl.max];
-    if (sl.open > 0) p.push('<span class="sg-good">可习得 ' + sl.open + (sl.tier > 0 ? '（' + tierName(sl.tier) + '）' : '') + '</span>');
+    const ot = openTiers(sl, tierName);
+    if (sl.open > 0) p.push('<span class="sg-good">可习得 ' + sl.open + (ot.text ? '（' + ot.text + '）' : '') + '</span>');
     else if (sl.unlocked < sl.max) p.push(lvls[sl.unlocked] + ' 级可学下一招');
     else if (sl.used >= sl.max) p.push('已满');
     // 最终上限：第 k 格至多 k 阶，满级时等级不再限制，故为 min(武力 / 智力等阶, 格数)
     const cap = Math.min(sl.statTier, sl.max);
-    if (sl.used < sl.max && cap > 0 && !(sl.open > 0 && cap <= sl.tier)) p.push('上限' + tierName(cap));
+    if (sl.used < sl.max && cap > ot.top) p.push('上限' + tierName(cap));
     return p.join(' · ');
   }
 
@@ -1165,14 +1172,16 @@
         let pic = '';
         try { if (SG.Portrait) pic = SG.Portrait.html(gen, { size: px, className: 'sg-lvup-face', mood: 'win' }); } catch (err) { pic = ''; }
         const learn = [];
-        if (op.special > 0) learn.push('可习得新必杀（' + SG.esc(SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(P.specialSlots(gen).tier) : '') + '）');
-        if (op.tactic > 0) learn.push('可习得新计策（' + SG.esc(SG.Tactics ? SG.Tactics.TIER_NAME[P.tacticSlots(gen).tier] : '') + '）');
+        const spName = t => (SG.Specials && SG.Specials.tierName ? SG.Specials.tierName(t) : t + '阶');
+        const tcName = t => (SG.Tactics && SG.Tactics.TIER_NAME ? SG.Tactics.TIER_NAME[t] : t + '阶');
+        if (op.special > 0) learn.push('可习得新必杀' + (op.special > 1 ? ' ' + op.special + ' 招' : '') + '（' + SG.esc(openTiers(P.specialSlots(gen), spName).text) + '）');
+        if (op.tactic > 0) learn.push('可习得新计策' + (op.tactic > 1 ? ' ' + op.tactic + ' 计' : '') + '（' + SG.esc(openTiers(P.tacticSlots(gen), tcName).text) + '）');
         const learned = (x.learned || []).map(c => '「' + SG.esc(c.name) + '」').join('');
         return '<div class="sg-lvup-row">' + pic + '<div class="sg-lvup-text">' +
           '<div class="sg-lvup-head"><b class="sg-lvup-name">' + SG.esc(gen.name) + '</b> 升至 <b class="sg-lvup-lv">' + e.level + '</b> 级' +
           (x.to - x.from > 1 ? '<span class="sg-muted">（连升 ' + (x.to - x.from) + ' 级）</span>' : '') + '</div>' +
           '<div class="sg-lvup-exp">' + expBar(e.pct) + '<span>+' + x.exp + '<span class="sg-muted">　' + (e.max ? '已满级' : e.exp + ' / ' + e.next) + '</span></span></div>' +
-          (learn.length ? '<div class="sg-lvup-new">' + learn.join('　') + '</div>' : '') +
+          (learn.length ? '<div class="sg-lvup-new">' + learn.map(t => '<span class="sg-lvup-slot">' + t + '</span>').join(' ') + '</div>' : '') +
           (learned ? '<div class="sg-lvup-new">习得' + learned + '</div>' : '') +
           '</div></div>';
       });
