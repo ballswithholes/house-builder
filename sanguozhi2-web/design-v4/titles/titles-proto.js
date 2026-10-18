@@ -4,7 +4,7 @@
    规则取自 design-v4/titles.json 与 TITLES.md：家族 = 最高属性；品阶门槛；国势 → 君主位阶 → 各品阶名额；
    电脑按功绩授官（不耗 SG.Random）；带兵上限、训练、开发、本城金收入 / 秋收 / 征兵 / 人口 / 忠诚、全国加成、
    搜索 / 登用、俸禄、出奔判定加成。战术战斗只估算 攻 / 防 / 主将统率 / 计策威力 / 开战士气（不含会心、计策成功率与识破）。
-   实验开关（env）：KEEP=1 电脑征兵留出下月俸禄；SALARY=a,b,c,d,e 月俸；GRANTCOST=… 授官礼金；FX_OFF=k1,k2 关闭效果；FX_SCALE=k:倍数；SEED0=种子偏移。
+   实验开关（env）：KEEP=1 电脑征兵留出下月俸禄；SALARY=a,b,c,d,e 月俸；GRANTCOST=… 授官礼金；FX_OFF=k1,k2 关闭效果；FX_SCALE=k:倍数；SEED0=种子偏移；NOFAIR=1 电脑授官不按三家轮流。
    用法：
      node design-v4/titles/titles-proto.js classic [种子数=8] [年数=25]     全电脑战役：关 / 开 / 开 + 政绩经验
      node design-v4/titles/titles-proto.js world   [种子数=6] [年数=15]
@@ -113,13 +113,15 @@ function aiManage(f) {
       if (hs.filter(x => x._t.tier === t && !x._t.suspended).length >= caps[t - 1]) break;
       // 俸禄不超过全国金收入的 15%（一、二品不受此限）
       if (t >= 3 && salaryOf(f) + TIER[t - 1].salary > 0.15 * income) break;
-      let best = null, bm = -1, bp = null;
+      // 三家轮流：先给本品阶及以上在任人数最少、且有合格人选的那一家，再在该家中按功绩挑人
+      const famCount = fam => hs.filter(x => !x._t.suspended && x._t.tier >= t && x._t.family === fam).length;
+      let best = null, bm = -1, bp = null, bk = Infinity;
       for (const x of cands) {
         if (curTier(x) >= t || (x._t && x._t.month === g.monthIndex)) continue;
         const post = pickPost(f, x, t);
         if (!post) continue;
-        const m = merit(x);
-        if (m > bm || (m === bm && x.id < best.id)) { bm = m; best = x; bp = post; }
+        const m = merit(x), k = process.env.NOFAIR ? 0 : famCount(post.family);
+        if (k < bk || (k === bk && (m > bm || (m === bm && x.id < best.id)))) { bk = k; bm = m; best = x; bp = post; }
       }
       if (!best) break;
       // 授官礼金（一次性）：由本势力金最多的城支付，须留 100 余额；付不起就不授（玩家同理，按钮置灰）
@@ -299,9 +301,9 @@ const avg = a => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
 const median = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[b.length >> 1] : 0; };
 function campaign(seed, years, variant) {
   T.on = variant !== 'off'; T.dom = variant === 'dom'; T.unpaid = 0; T.grantGold = 0; T.loyDrop = 0; T.lowLoy = 0; T.rank = new Map(); T.seq = 0; T.salary = 0; T.gross = 0; T.defect = 0; T.domMonth.clear();
+  seed += +(process.env.SEED0 || 0);
   SG.Random.seed(seed);
   const key = SG.ScenarioData.Factions[0].split('|')[0];
-  seed += +(process.env.SEED0 || 0);
   const g = SG.G = GameState.newGame(key, SCEN);
   g.player = -1;
   const out = { alive: {}, top: {}, first25: null, tiers: {}, titled: {}, lv: {}, rank: {}, T5: {}, gold: {}, troops: {} };
@@ -323,6 +325,7 @@ function campaign(seed, years, variant) {
       out.titled[y] = live.length ? live.filter(act).length / live.length : 0;
       out.lv[y] = median(live.map(x => x.level));
       out.T5[y] = tc[5];
+      { const ft = {}; for (const x of live) if (act(x)) { const k = x._t.family + x._t.tier; ft[k] = (ft[k] || 0) + 1; } (out.famTier = out.famTier || {})[y] = ft; }
       const rk = [0, 0, 0, 0, 0, 0]; for (const f of g.factions) if (f.alive) rk[T.on ? updateRank(f.id) : 1]++;
       out.rank[y] = rk.slice(1);
       (out.emp = out.emp || {})[y] = g.generals.filter(x => x.faction >= 0 && !x.dead).length;
@@ -351,6 +354,7 @@ function runCampaigns(seeds, years) {
     if (v !== 'off') {
       console.log(`   titled share of non-ruler officers ${ys.map(y => y + 'y ' + (100 * avg(r.map(o => o.titled[y]))).toFixed(0) + '%').join(', ')}; (salary + grant gifts) / gross income ${(100 * avg(r.map(o => o.salaryShare))).toFixed(1)}%`);
       console.log(`   active titles by tier T1..T5 (avg): ${ys.map(y => y + 'y [' + [0, 1, 2, 3, 4].map(k => avg(r.map(o => o.tiers[y][k])).toFixed(1)).join(' ') + ']').join(' ')}`);
+      { const yy = ys[ys.length >= 4 ? 3 : ys.length - 1]; const keys = ['war', 'intel', 'pol']; console.log(`   offices by family × tier at ${yy}y (avg, T1..T5): ` + keys.map(f => f + ' [' + [1, 2, 3, 4, 5].map(t => avg(r.map(o => ((o.famTier || {})[yy] || {})[f + t] || 0)).toFixed(1)).join(' ') + ']').join(' ')); }
       console.log(`   ruler ranks R1..R5 (alive factions, avg): ${ys.map(y => y + 'y [' + [0, 1, 2, 3, 4].map(k => avg(r.map(o => o.rank[y][k])).toFixed(1)).join(' ') + ']').join(' ')}`);
     }
     console.log(`   median level of officers ${ys.map(y => y + 'y ' + avg(r.map(o => o.lv[y])).toFixed(1)).join(', ')}; end level hist (sum) ${JSON.stringify(r.reduce((h, o) => { for (const k of Object.keys(o.lvHist)) h[k] = (h[k] || 0) + o.lvHist[k]; return h; }, {}))}`);

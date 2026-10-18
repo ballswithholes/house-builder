@@ -2,13 +2,13 @@
 
 Player request 10 of v4: **rulers assign titles to generals**. Titles have level requirements; some need one attribute above 80 and the best need one above 90. Which title family a general can hold depends on his **highest attribute**. Titles give gameplay benefits for domestic development, diplomacy, training, or fighting and duelling, and the families are balanced against each other.
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crit hooks, duel caps, its Q3 and Q9) and `ITEMS.md` (gear stats, envoy rule, budgets) first. Where this file conflicts with them, this file wins for the systems it owns: title catalogue, eligibility, ruler rank and seats, title benefits, title loyalty rules, AI granting and the 官制 screen. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §10.5). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). The ceremony uses brush strokes, paper, lacquer, seal stamps and warm gold, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crit hooks, duel caps, its Q3 and Q9), `ITEMS.md` (gear stats, envoy rule, budgets) and `DOMESTIC-FX.md` (command icon, button and sting for 授官) first. Where this file conflicts with them, this file wins for the systems it owns: title catalogue, eligibility, ruler rank and seats, title benefits, title loyalty rules, AI granting and the 官制 screen. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §10.5). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). The ceremony uses brush strokes, paper, lacquer, seal stamps and warm gold, never neon.
 
 Status: design spec only. No game code was changed and nothing was committed. Supporting files:
 
 | File | What it is |
 |---|---|
-| `design-v4/titles.json` | **The catalogue.** 3 families × 5 tiers = 21 posts with their numbers; 18 culture name sets (402 names, each with original term, attestation grade A/B/C and source keys); 11 faction overrides (新罗, 百济, 夫余, 朱罗 / 潘地亚 / 哲罗, 师子国, 西总督, 阿克苏姆, 林邑, 狗奴); tiers, ruler ranks, seat caps, effect dictionary, value weights, 51 sources. Generated, do not hand-edit |
+| `design-v4/titles.json` | **The catalogue.** 3 families × 5 tiers = 21 posts with their numbers; 18 culture name sets (402 names, each with original term, attestation grade A/B/C and source keys); 11 faction overrides (82 more names) (新罗, 百济, 夫余, 朱罗 / 潘地亚 / 哲罗, 师子国, 西总督, 阿克苏姆, 林邑, 狗奴); tiers, ruler ranks, seat caps, effect dictionary, value weights, 51 sources. Generated, do not hand-edit |
 | `design-v4/titles/build-titles-json.js` | Builds `titles.json` and self-checks it (unknown effects, sources, duplicate names after per-faction resolution, clashes with ruler-rank names, value parity between families). `node design-v4/titles/build-titles-json.js` |
 | `design-v4/titles/cultures.js` | The name tables per culture and the source list (the only place names live) |
 | `design-v4/titles/titles-proto.js` | Throw-away balance prototype. It patches the game functions in memory, never on disk. It plays all-AI campaigns with titles off / on / on + domestic exp, and tactical battles from year-8 titled armies. Source of every measured number in §12 |
@@ -24,7 +24,7 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 | Tiers | 九品 T1 · 七品 T2 · 五品 T3 · 三品 T4 · 一品 T5 |
 | Requirements | T1 level 1 · T2 level 2 · T3 level 3 and attribute **> 80** · T4 level 5 and **> 80** · T5 level 7 and **> 90** |
 | Posts | Per family: one T1, one T2, two T3 (A / B branch), two T4 (A / B), one T5 = **21 posts**. Branches: 武 A 统帅 / B 武勇, 谋 A 军略 / B 外交, 文 A 民政 / B 财政 |
-| Names | Culture-specific (汉 军司马 … 大将军; 罗马 centurio … praefectus praetorio; 安息 argbed … spāhbed; 高句丽 先人 … 国相; 倭 卑狗 … 率善中郎将; 匈奴 千长 … 左贤王 …). **Names never change numbers** |
+| Names | Culture-specific (汉 军司马 … 大将军; 罗马 centurio … praefectus praetorio; 安息 argbed … spāhbed; 高句丽 先人 … 莫离支, 使者 … 相加, 优台 … 国相; 倭 卑奴母离 … 安东大将军, 大夫 … 率善中郎将; 匈奴 什长 … 左贤王 …). **Names never change numbers** |
 | Ruler rank | 国势 P = Σ own cities (1 + (land + industry + town) / 1500). R1 P < 3 · R2 ≥ 3 · R3 ≥ 6 · R4 ≥ 10 · R5 ≥ 16. Drop only below 90% of a threshold |
 | Seats (all families together) | R1 [2,1,0,0,0] · R2 [3,2,1,0,0] · R3 [4,3,2,1,0] · R4 [5,4,3,2,1] · R5 [6,5,4,3,3] (T1…T5). Every T3/T4 post has 2 seats, every T5 post 1 seat |
 | Cost | No token. One office change per general per month. One-time **授官礼金** 50 / 100 / 200 / 300 / 500 gold (promotion pays the difference). **No monthly salary** (§6.3 says why) |
@@ -33,8 +33,8 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 | Best of each family (汉) | 大将军: 攻 / 防 +12%, 主将统率 +3%, 城防 +10, 会心 +2pp, 单挑 会心 +3pp, 伤害 +2%. 军师将军: 计策威力 +22%, 成功 +6pp, 全军识破 +6pp, 登用 +8pp, 同盟 +10pp. 丞相: 开发 +22%, 本城金 / 秋收 +10%, 本城忠诚 +2/月, 全国金 +2.5%, 秋收 +2% |
 | Value parity | Value index per tier (§7.8): T1 ≈ 7, T2 ≈ 12, T3 ≈ 20, T4 ≈ 33, T5 ≈ 53. Every post within ±20% of its tier mean (actual spread ≤ 12%) |
 | Caps shared with gear | Army crit: title ≤ 0.02 + gear ≤ 0.04, COMBAT cap 0.06. Duel crit: ≤ 0.03 + ≤ 0.05, cap 0.08. Duel damage: ≤ 0.02 + ≤ 0.04, cap 0.06 |
-| AI | Deterministic, no `SG.Random` draws. Each month it fills seats from T5 down by merit (attribute + 3 × level). It never revokes |
-| Balance (prototype, §12) | Classic 48 seeds × 25 years: factions alive at year 10 are 4.9 with titles off and 4.6 / 4.5 with titles on / on + domestic exp. Median time to the first > 25% faction is 2.3 y (off) and 2.3 / 2.2 y. World 24 × 15 years: no measurable shift. Tactical: titles both sides shift attacker win −0.6 pp; attacker-only vs defender-only swing 2.9 pp |
+| AI | Deterministic, no `SG.Random` draws. Each month it fills seats from T5 down, three families in turn, by merit (attribute + 3 × level). It never revokes |
+| Balance (prototype, §12) | Classic 96 seeds (two sets of 48) × 25 years: factions alive at year 10 are 4.6 with titles off and 4.4 / 4.4 with titles on / on + domestic exp; the two seed sets of titles-off alone differ by 0.6. Median time to the first > 25% faction is 2.2 y (off) and 2.25 / 2.3 y. World 24 × 15 years: no measurable shift. Tactical: titles on both sides shift attacker win by about 1 pp; attacker-only vs defender-only swing about 2–3 pp |
 
 ---
 
@@ -85,7 +85,7 @@ eligible(g, post) =
 
 T5-eligible by attribute in the classic scenario. War: 吕布, 张飞, 关羽, 马超, 赵云, 孙策, 典韦, 许褚, 张辽, 文丑, 庞德, 甘宁, 太史慈, 黄忠, 颜良, 孙坚, 兀突骨, 魏延, 夏侯渊, 徐晃. Intel: 诸葛亮, 司马懿, 郭嘉, 贾诩, 庞统, 周瑜, 陆逊, 田丰, 曹操, 荀攸, 法正, 沮授, 徐庶, 鲁肃, 邓艾. Pol: 荀彧, 张昭, 蒋琬. The world adds war 马克西明 and 芬恩; intel 阿尔达希尔, 巴戴桑, 盖伦, 保罗, 奥利金, 犹大亲王, 龙树, 伊兰戈 and 提婆; pol 乙巴素, 帕比尼安, 乌尔比安 and 科马克. The level 7 requirement (§12.4) does most of the gating in practice.
 
-Pol has few 一品 candidates, which is deliberate. A 丞相 should be a 荀彧 or an 乙巴素. Pol generals still fill T1–T4 broadly, because T3 and T4 need only > 80.
+Pol has few 一品 candidates, which is deliberate. A 丞相 should be a 荀彧 or an 乙巴素. Pol generals fill T1 and T2 broadly; T3 and T4 need > 80 (7 classic, 25 world generals).
 
 ---
 
@@ -121,7 +121,7 @@ nameSet(factionKey, culture, postId) =
   ?? cultures[culture]?.posts[postId]
   ?? cultures[cultureFallback[culture] ?? 'generic'].posts[postId]   // follow fallback until found, at most 4 steps
   ?? cultures.generic.posts[postId]
-rulerRankNames(factionKey, culture) = factionOverrides[factionKey]?.rulerRanks ?? cultures[culture ?? 'generic'].rulerRanks
+rulerRankNames(factionKey, culture) = factionOverrides[factionKey]?.rulerRanks ?? (first culture on the same fallback chain that exists).rulerRanks
 ```
 
 `culture` is `faction.culture` (set by `GameState.init`, 'han' without world data), **not** the general's own culture. A Roman deserter serving 曹操 becomes 偏将军, not legatus. The build check resolves all 70 world factions and asserts two things. Within one faction the 21 default names are distinct. No post name equals one of that faction's ruler-rank names.
@@ -200,7 +200,7 @@ rank(f):  if up > stored → stored = up                                        
 ```
 
 - A starting city scores 1.4–2.3, and a fully developed city 3.0. Classic start: 11 factions R1, 7 R2. World start: 46 R1, 23 R2, and Rome (22 cities, P 40) R5.
-- **Two routes up.** Conquest: about 2 / 4 / 6 / 9 average cities for R2 / R3 / R4 / R5. Development: 2 maxed cities reach R3, 4 reach R4 (one 一品 seat), 6 reach R5. A peaceful player who builds up 4 cities gets an 一品 seat without a war (request 13).
+- **Two routes up.** Conquest: about 2 / 4 / 6 / 10 average cities for R2 / R3 / R4 / R5. Development: 2 maxed cities reach R3, 4 reach R4 (one 一品 seat), 6 reach R5. A peaceful player who builds up 4 cities gets an 一品 seat without a war (request 13).
 - `faction.rank` is saved. It is recomputed at month start, after a conquest (`Conquest.apply`), after 拉拢 hands over a city, and after a 开发 by the player (so the 国势 bar moves visibly).
 - Rank names are only words. 曹操 · 州牧 → 公; 罗马 · 奥古斯都; 贵霜 · 王中之王. A rank-up has its own ceremony (§9.6) and a news line: `曹操晋位为公！可授五品官二人、三品官一人。`
 
@@ -230,7 +230,7 @@ rank(f):  if up > stored → stored = up                                        
 `Titles.grant(f, g, postId, nameIdx?) → { ok, why, office, cost, loyalty, passedOver, ceremony: 'small'|'medium'|'grand' }`
 
 1. Checks (§2.2) plus: the tier has a free seat (`active(f, tier) < caps[tier]`, or the general already holds this tier and is moving laterally). The post has a free seat. `g.office?.month !== G.monthIndex` (one office change per general per month). There is enough gold for the gift.
-2. **Gift (礼金)** = `grantGold[new] − (current ? grantGold[current] : 0)` (promotion pays the difference, lateral costs 0). It is paid by the general's city if that city has enough, otherwise by the richest own city. The AI also leaves 100 behind (§8). The cost shows on the confirm card, `礼金 200 金（自 许昌）`.
+2. **Gift (礼金)** = `grantGold[new] − (current ? grantGold[current] : 0)` (promotion pays the difference, lateral costs 0). It is paid by the general's city if that city has enough, otherwise by the richest own city. The AI also leaves a reserve behind: 100 + 3 months of base salary (`3 × SalaryPerGeneral × officers` of that city, §8). The cost shows on the confirm card, `礼金 200 金（自 许昌）`.
 3. **Loyalty**: `+max(0, loyGrant[new] − loyGrant[g.officeBest])`, then `g.officeBest = max(g.officeBest, new)`. `officeBest` resets to 0 when the general changes faction. So re-granting after a revoke gives no second bonus, and revoke + regrant can never farm loyalty.
 4. **Passed over (不平)**: let X get tier t in family F. Every other non-ruler officer Y of the faction with F ∈ families(Y) who could hold a tier-t post (eligibility ignoring seats), currently holds less than t, and has `merit(Y) ≥ merit(X) + 10` loses 4 loyalty. Here `merit = base(F) + 3 × level`. It applies to at most 3 generals, highest merit first, once per grant, floor 0. The confirm card warns first: `张辽、徐晃自恃功高，将心生不平（忠诚 −4）`. The AI grants by merit, so it rarely triggers the rule.
 5. The new office is `g.office = { post, name, tier, fam, since: monthIndex, seq, faction, month: monthIndex, suspended: false }`. The game adds a log line (`拜关羽为荡寇将军。`) and plays the ceremony (§9.5).
@@ -246,8 +246,8 @@ rank(f):  if up > stored → stored = up                                        
 The first design had a monthly 俸禄 of 3 / 5 / 8 / 12 / 18. The prototype rejected it (`titles-proto.js`, env `SALARY`).
 
 - The v3 AI spends a city's gold down to nearly 0 on 征兵. Any monthly title salary then tips stacked cities (up to 40+ officers in late-game capitals) into `gold < 0`. The v3 rule then cuts **every** officer's loyalty by 3, and generals defect. Defections rose from 2 to 21–107 per seed.
-- Even with a payment rule that keeps a reserve, any recurring drain sped up consolidation. Factions alive at year 10 fell to 3.5–3.9, against 4.9 off. Rich realms pay salaries easily and poor ones cannot, so the drain snowballs.
-- A one-time gift of 50–500 costs about 2.3% of gross income over a game and keeps the campaign within noise of titles-off (§12). It also reads well to the player as 封赏.
+- Even with a payment rule that keeps a reserve, any recurring drain sped up consolidation. Factions alive at year 10 fell to 3.5–4.3 (24-seed runs), against 5.0 off. Rich realms pay salaries easily and poor ones cannot, so the drain snowballs.
+- A one-time gift of 50–500 costs about 2.4% of gross income over a game and keeps the campaign within noise of titles-off (§12). It also reads well to the player as 封赏.
 
 ### 6.4 Revoke and demote
 
@@ -364,10 +364,10 @@ persuadeRes(t) = 0.1 × tier, discordRes(t) = 0.08 × tier
 
 ### 7.4 Worked examples
 
-- **荀彧 丞相 governs 许昌** (land 560, industry 500, town 420). His 开发 gains 6 + 16 + R(0..4) ≈ 24 → ×1.22 ≈ 29. Monthly gold rises from 81 to 81 × (1 + 0.10 + 0.025) ≈ 91. The harvest goes from 1232 to 1386. Every officer in 许昌 gains +2 loyalty per month (up to 95). Every other own city gains +2.5% gold and +2% harvest.
-- **关羽 大将军 commands 5 units.** His own unit's attack and defence are ×1.15 (×1.12 personal + 0.03 command), and each other unit's ×1.03. Army crit is 2 + 7.2 + 0.4 × (L − 1) + 2% (COMBAT-V4), so about 13% at level 7 in 偃月, before gear. In a duel: crit +3pp, damage +2%.
+- **荀彧 丞相 governs 许昌** (land 560, industry 500, town 420). His 开发 gains 6 + 16 + R(0..4) ≈ 24 → ×1.22 ≈ 29. Monthly gold rises from 81 to 81 × (1 + 0.10 + 0.025) ≈ 91. The harvest goes from 1232 to 1232 × 1.12 ≈ 1380. Every officer in 许昌 gains +2 loyalty per month (up to 95). Every other own city gains +2.5% gold and +2% harvest.
+- **关羽 大将军 commands 5 units.** His own unit's attack and defence are ×1.15 (×1.12 personal + 0.03 command), and each other unit's ×1.03. Army crit (COMBAT-V4 §2) is 2% + 7.2% (武力 98) + 0.4% × (level − 1) + 3% (偃月) + 2% (office), so about 16.6% at level 7, before gear (cap 25%). In a duel: crit +3pp, damage +2%.
 - **诸葛亮 军师将军**: 火计 power ×1.22, success +6pp; every unit of his side resists enemy tactics by 6pp. As envoy for 同盟 with 400 gold gift: +10pp.
-- **A small realm (R2, 2 cities)**: 2 九品, 2 七品 and 1 五品 seat. The 五品 might go to 张辽 (偏将军) to deter attacks (城防 +6) or to 陈登 (刺史) to grow the city.
+- **A small realm (R2, 2 cities)**: 3 九品, 2 七品 and 1 五品 seat. The 五品 might go to a 武 officer as 偏将军 to deter attacks (城防 +6), or to 糜竺 as 刺史 to grow the city.
 
 ### 7.5 Duel: numbers only (answers COMBAT-V4 Q9)
 
@@ -402,7 +402,7 @@ Titles change the duel only through `critDuel` (≤ 0.03) and `dmgDuel` (≤ 0.0
 | T4 | w4a 35.5 · w4b 30.0 | i4a 31.7 · i4b 29.9 | p4a 34.1 · p4b 35.7 | 32.8 |
 | T5 | w5 54.6 | i5 49.0 | p5 54.9 | 52.8 |
 
-For scale: one level of 老练 is +4% attack, defence and tactic power, about 12 points on this scale for a fighting general. So a 一品 title is worth about 4–5 levels in its role, and a 九品 about half a level.
+For scale: one level of 老练 (+4% attack, defence and tactic power) is about 8–10 points on this scale for a fighting general. So a 一品 office is worth about 5 levels in its role, and a 九品 about one level.
 
 ---
 
@@ -416,21 +416,25 @@ aiManage(f):
   cands = generalsOf(f) − ruler − pending captives
   for t = 5 … 1:
     while active(f, t) < caps[t]:
-      best = argmax over cands with curTier < t, no change this month, and a postable post at tier t
-             of merit = maxBase + 3 × level           (ties: lower id)
+      best = among cands with curTier < t, no change this month, and a postable post at tier t:
+             first the family with the fewest active holders at tier ≥ t (三家轮流),
+             then the highest merit = maxBase + 3 × level (ties: lower id)
       post = preferred branch if it has a free seat, else the other branch, else the tier's only post
-      gift: the richest own city must hold gift + 100, otherwise stop this tier
+      gift: the own city with the most gold above its reserve (100 + 3 × SalaryPerGeneral × its officers)
+            must hold gift + reserve, otherwise stop this tier
       grant(best, post)                                 // a promotion frees a lower seat, filled when the loop reaches it
 ```
 
 Branch preference, deterministic:
 
-- 武: B 武勇 if `war ≥ 92` or `war − intel ≥ 35` (吕布, 张飞, 典韦, 许褚), else A 统帅 (张辽, 夏侯渊, 曹仁).
-- 谋: B 外交 if `pol ≥ intel − 8` (鲁肃, 简雍), else A 军略 (郭嘉, 贾诩).
-- 文: B 财政 if `war > intel` (rare practical managers), else A 民政.
+- 武: B 武勇 if `war ≥ 92` or `war − intel ≥ 35` (吕布, 张飞, 马超, 典韦, 许褚, 张辽), else A 统帅 (夏侯惇, 夏侯渊, 曹仁, 徐晃).
+- 谋: B 外交 if `pol ≥ intel − 8` (鲁肃, 陈登, 张松), else A 军略 (郭嘉, 贾诩, 法正).
+- 文: B 财政 if `war > intel` (rare practical managers such as 朱治), else A 民政.
 - Ties of family: the family whose tier still has a free seat, in the order war, intel, pol.
 
-The AI **never revokes or demotes**. It promotes, which frees seats from below. It always uses the default names, the first free one in list order. The prototype measured the result (§12). Titled share of non-ruler officers: about 68% at year 1 and 44% at year 10 (classic). Tier mix at year 10: T1 19, T2 16, T3 11, T4 6, T5 0.2 across the map (classic, without domestic exp).
+The AI **never revokes or demotes**. It promotes, which frees seats from below. It always uses the default names, the first free one in list order. The prototype measured the result (§12). Titled share of non-ruler officers: about 66% at year 1 and 46% at year 10 (classic). Tier mix at year 10: T1 19, T2 17, T3 11, T4 6, T5 0.25 across the map (classic, without domestic exp).
+
+By family at year 10 (classic, 24 seeds): 武 10 / 10 / 8 / 7 / 0.2, 谋 7 / 5 / 3 / 0.1 / 0, 文 4 / 3 / 0.3 / 0 / 0 (T1…T5). The AI's high offices are mostly military. This is not a rule bias; the "three families in turn" rule changed it by less than one seat. It comes from the roster and from experience. Of the 7 classic generals with 政治 as their best attribute and above 80, six start as hidden 在野 (荀彧, 钟繇, 张昭, 蒋琬, 刘巴, 华歆; only 糜竺 serves 陶谦), and AI officials who do not fight barely level up. Domestic exp (§11) raises 谋 T3 to 4 and T4 to 0.6, but 文 T3+ remains rare for the AI. The player, who recruits the hermits and can give 文官 exp through domestic work, can build a full civil court. Q10 asks whether the AI needs a 政绩 exp source of its own.
 
 **委任**: the player can press `按功绩授官` on the 官制 board. It runs the same algorithm for the player's faction and shows a summary before applying. Nothing is ever automatic for the player.
 
@@ -444,6 +448,7 @@ The AI **never revokes or demotes**. It promotes, which frees seats from below. 
 - A month-start hint, once per new event: `徐晃已可出任五品官。` with portrait. Clicking opens the board on that seat.
 - City panel: officer rows show the office name in the family colour under the name (`关羽 · 荡寇将军`). The panel header shows `主政：荀彧（尚书令）`.
 - The 任命 command gains a first menu: `太守` (v3 behaviour) / `官爵` (opens the board filtered to this city's officers).
+- **Command name and place (answers DOMESTIC-FX Q1).** The grant action is called **授官**; the board is **官制**. 授官 is not a city command and costs no token. It lives in three places: the top-bar 官制 board, 任命 → 官爵, and the character menu's 官爵 tab. DOMESTIC-FX's `title` icon (进贤冠 on a cushion), the press sound `cmd-press-title` and `sting:title` are used for its button and ceremony. Its tier mapping (good = 五品, great = 三品 / 一品) matches §9.5. Because offices give governor effects (§7.1 city administrator), the 任命 太守 hint in DOMESTIC-FX should show the administrator's office bonuses.
 
 ### 9.2 The 官制 board
 
@@ -451,27 +456,29 @@ Desktop 1280×720:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ [ruler portrait] 曹操 · 州牧   国势 ▓▓▓▓▓▓▓░░░ 7.4 / 10.0 → 公（再授三品 1、一品 1）  │
+│ [ruler portrait] 曹操 · 公   国势 ▓▓▓▓▓▓▓░░░ 7.4 / 10.0 → 王（各品再增一席，开一品）   │
 │                 已授 9 / 10 · 本年礼金 450 金                    [按功绩授官] [×] │
 ├──────┬───────────────────┬───────────────────┬───────────────────┤
 │ 一品 │ 武官 大将军 [锁·需位阶 王] │ 谋臣 军师将军 [锁]       │ 文官 丞相 [锁]         │
 │ 0/0  │                   │                   │                   │
-│ 三品 │ 前将军 [夏侯惇]       │ 军师中郎将 [＋]        │ 尚书令 [ ]            │
-│ 1/1  │ 破虏将军 [  ]        │ 大鸿胪 [  ]          │ 大司农 [  ]           │
-│ 五品 │ 偏将军 [曹仁][  ]     │ 军师祭酒 [郭嘉]       │ 刺史 [ ][ ]           │
-│ 2/2  │ 虎贲中郎将 [  ]      │ 从事中郎 [  ]        │ 典农中郎将 [  ]        │
-│ 七品 │ 校尉 [乐进][李典]     │ 参军 [程昱]          │ 别驾从事 [ ]           │
+│ 三品 │ 前将军 [夏侯惇]       │ 军师中郎将 [名额满]     │ 尚书令 [名额满]        │
+│ 1/1  │ 破虏将军 [名额满]     │ 大鸿胪 [名额满]       │ 大司农 [名额满]        │
+│ 五品 │ 偏将军 [曹仁][满]     │ 军师祭酒 [郭嘉][满]    │ 刺史 [满][满]          │
+│ 2/2  │ 虎贲中郎将 [满]      │ 从事中郎 [满]        │ 典农中郎将 [满]        │
+│ 七品 │ 校尉 [乐进][李典]     │ 参军 [程昱]          │ 别驾从事 [名额满]       │
 │ 3/3  │                   │                   │                   │
-│ 九品 │ 军司马 [曹洪][  ]     │ 主簿 [  ]           │ 从事 [  ]             │
+│ 九品 │ 军司马 [曹洪][典韦]   │ 主簿 [满宠]          │ 从事 [＋]             │
 │ 3/4  │                   │                   │                   │
 └──────┴───────────────────┴───────────────────┴───────────────────┘
 ```
+
+Example: 曹操 at R3 (公, 国势 7.4) with caps 4 / 3 / 2 / 1 / 0 and 9 offices granted. `[满]` / `[名额满]` = the tier's cap is used; `[＋]` = a free seat with an eligible candidate; `[锁]` = the rank does not open the tier yet.
 
 - Rows run from 一品 at the top to 九品. The row header shows `used / cap` and the requirements (`3 级 · 属性 > 80`).
 - Columns have the family colours (vermillion, indigo, jade) as paper strips with a soft edge.
 - A **seat chip** is 56×64. Filled: portrait, name, chosen name of the post, small family seal. Empty and fillable: a dotted lantern outline with "+" and a warm glow. Locked: a grey seal with the reason on hover or press (`名额已满`, `需位阶 公`).
 - A suspended holder shows a hatched paper overlay and the word `虚衔`.
-- Phone 844×390: the header shrinks to one line (`州牧 7.4/10`). The three families become tabs (武 / 谋 / 文), each a vertical list of tiers with horizontal seat chips. All touch targets are ≥ 44 px.
+- Phone 844×390: the header shrinks to one line (`公 7.4/10`). The three families become tabs (武 / 谋 / 文), each a vertical list of tiers with horizontal seat chips. All touch targets are ≥ 44 px.
 
 ### 9.3 Grant flow (from a seat, from the character menu, from 任命 → 官爵)
 
@@ -503,7 +510,7 @@ Desktop 1280×720:
 
 ### 9.5 Ceremony (授官仪式) — Lanternvale style
 
-`SG.TitleArt.ceremony({ gen, ruler, office, culture, size }) → Promise`. It uses the screen stack (`SG.Gfx.pushScreen`) or a DOM overlay for 'small'. It can be skipped by tap, Space or Esc. `prefers-reduced-motion` or the setting `仪式动画: 简` reduces any size to a 0.6 s fade plus the stamp.
+`SG.TitleArt.ceremony({ gen, ruler, office, culture, size }) → Promise`. It supersedes DOMESTIC-FX §5.17's default ceremony but keeps that spec's `palace` anchor, the cap-and-ribbon idea (进贤冠 for 文官 / 谋臣, a plumed helmet for 武官, the ribbon in the family colour) and `sting:title`. It uses the screen stack (`SG.Gfx.pushScreen`) or a DOM overlay for 'small'. It can be skipped by tap, Space or Esc. `prefers-reduced-motion` or the setting `仪式动画: 简` reduces any size to a 0.6 s fade plus the stamp.
 
 | Size | Length | Picture | Sound and voice |
 |---|---|---|---|
@@ -545,7 +552,7 @@ That makes 21 posts × 18 cultures = 378 recognisable icons from about 10 shape 
 | File | Owner | Content |
 |---|---|---|
 | `tools/gen-titles.js` (new) | titles | `design-v4/titles.json` → `js/titles-data.js` (minified, notes kept for the detail page), plus `check` = the build-script checks |
-| `js/titles-data.js` (new, generated) | titles | `SG.TitlesData = {…}` (≈ 70 KB minified). Loads after `world-data.js`, before `model.js` |
+| `js/titles-data.js` (new, generated) | titles | `SG.TitlesData = {…}` (≈ 60 KB minified). Loads after `world-data.js`, before `model.js` |
 | `js/titles.js` (new) | titles | `SG.Titles`: pure logic, Node-testable, no DOM. Loads after `model.js`, before `strategy-ai.js` |
 | `js/title-art.js` (new) | titles / art | `SG.TitleArt`: icons, ceremony |
 | `js/title-ui.js` (new) | titles / UI | `SG.TitleUI`: 官制 board, candidate sheet, confirm card, character-menu tab, rank-up event |
@@ -638,7 +645,7 @@ G.officeSeq    = n               // grant counter (tie-break for suspension orde
 
 ## 11. Dependency: experience for domestic work
 
-Titles need levels, and in v3 only battles give exp. A 文官 who never fights stays level 1 and can never pass 九品. The prototype shows the gap. Without domestic exp the AI's 文官 seldom pass T2. With it, T4 and T5 文官 appear and level 7 or higher is common by year 15 (world).
+Titles need levels, and in v3 only battles give exp. A 文官 who never fights stays level 1 and can never pass 九品. The prototype shows the gap. In classic AI games at year 10 there are on average 1.2 AI 文官 at 七品 or higher on the whole map without domestic exp, and 3.5 with it (§8). In the world, domestic exp raises the number of level-7+ officers at year 15 from about 11 to about 80 per game. 文官 at 三品 and above stay rare for the AI, because the candidates are few and mostly hermits (§8).
 
 Request 13 ("make the non-battle game rewarding") belongs to another v4 spec. **If that spec defines domestic exp, its numbers win.** Otherwise this fallback applies (`Progress.gain(gen, n, 'domestic')`, cap **20 per general per month**, AI included):
 
@@ -654,7 +661,7 @@ Request 13 ("make the non-battle game rewarding") belongs to another v4 spec. **
 
 At the cap a busy governor reaches level 3 in about 10 months, level 5 in about 2.5 years and level 7 in about 4.5 years. That matches the fighting path, where level-ups come mostly from battles.
 
-The prototype used a cap of 30. In world runs that gave many level-7 officers by year 15 (1503 of 9.8k, against 210 without), so 20 is proposed. Levels raise 老练 (+4%/level) in tactical battles, so the request-13 owner must re-run sim.js (7g)/(7h) with domestic exp on.
+The prototype used a cap of 30. In world runs that gave about 80 level-7+ officers per game by year 15 (about 11 without), so 20 is proposed. Levels raise 老练 (+4%/level) in tactical battles, so the request-13 owner must re-run sim.js (7g)/(7h) with domestic exp on.
 
 ---
 
@@ -662,23 +669,26 @@ The prototype used a cap of 30. In world runs that gave many level-7 officers by
 
 ### 12.1 What the prototype measured (`design-v4/titles/proto-results.txt`)
 
-All-AI campaigns, same seeds, variants: off, on (titles), dom (titles + domestic exp, cap 30). The final configuration has no monthly salary, a one-time gift, garrison instead of a troop-cap bonus, and value-tuned numbers.
+All-AI campaigns, same seeds, variants: off, on (titles), dom (titles + domestic exp, cap 30). The final configuration has no monthly salary, a one-time gift with the AI reserve, garrison instead of a troop-cap bonus, and value-tuned numbers. Campaign outcomes are chaotic: one defection cascade or one lucky siege changes a whole run. So the classic figures average **two independent sets of 48 seeds** (1–48 and 1001–1048), and the spread between the two titles-off sets is quoted as the noise floor.
 
-| Metric | off | on | dom | Target |
-|---|---|---|---|---|
-| Classic 48 seeds × 25 y: factions alive y5 / y10 / y25 | 6.5 / 4.9 / 4.6 | 6.4 / 4.6 / 4.3 | 6.3 / 4.5 / 4.3 | y10 ≥ 4.0 and ≥ off − 0.8 |
-| Classic: median time to the first faction > 25% of cities | 2.3 y | 2.3 y | 2.2 y | ≥ off − 0.5 y and ≥ 1.5 y |
-| Classic: largest faction's cities at y10 | 17.1 | 18.4 | 18.9 | ≤ off + 3 |
-| Classic: defections per seed (25 y) | 2.0 | 2.6 | 2.2 | ≤ off + 3 |
-| Classic: titled share of non-ruler officers y1 / y10 | — | 68% / 44% | 69% / 46% | y10 30–60% |
-| Classic: active offices by tier at y10 (whole map) | — | 19 / 16 / 11 / 6 / 0.2 | 19 / 16 / 11 / 7 / 0.7 | T5 0.1–3 |
-| Classic: gifts ÷ gross income | — | 2.3% | 2.6% | ≤ 5% |
-| World 24 seeds × 15 y: factions alive y5 / y10 / y15 | 50.5 / 45.5 / 44.3 | 49.7 / 45.1 / 44.0 | 49.4 / 44.8 / 43.8 | y15 ≥ off − 2; all world.js checks still pass |
-| World: largest faction y10 (Rome) | 24.3 | 24.8 | 25.2 | ≤ off + 3 |
-| Tactical, classic year-8 titled armies, 480 battles per mode: attacker win, no title effects / both / attacker only / defender only | 46.3% | 45.6% / 47.9% / 45.0% | — | both − none within ±3 pp; attacker-only − defender-only swing 1–8 pp |
-| Tactical: defender ÷ attacker losses, none / both / atk only / def only | 1.12 | 1.12 / 1.18 / 1.08 | — | the titled side trades 3–10% better |
+| Metric | off | on | dom | Noise (off set A vs set B) | Target |
+|---|---|---|---|---|---|
+| Classic 96 seeds × 25 y: factions alive y5 / y10 / y25 | 6.4 / 4.6 / 4.25 | 6.55 / 4.4 / 4.15 | 6.35 / 4.4 / 4.25 | y10 4.9 vs 4.3 | y10 ≥ 4.0 and ≥ off − 0.8 |
+| Classic: median time to the first faction > 25% of cities (mean of the two sets) | 2.2 y | 2.25 y | 2.3 y | 2.3 vs 2.1 | ≥ off − 0.5 y and ≥ 1.5 y |
+| Classic: largest faction's cities at y10 | 17.6 | 18.3 | 18.4 | 17.1 vs 18.0 | ≤ off + 3 |
+| Classic: defections per seed (25 y) | 4.2 | 6.7 | 2.0 | 2.0 vs 6.3 | ≤ off + 4 |
+| Classic: titled share of non-ruler officers y1 / y10 | — | 66% / 46% | 67% / 47% | | y10 30–60% |
+| Classic: active offices by tier at y10, whole map (T1…T5) | — | 19.2 / 16.9 / 11.0 / 6.2 / 0.25 | 19.1 / 16.7 / 11.4 / 7.5 / 0.6 | | T5 0.1–3 at y10 |
+| Classic: T5 holders at y25 (whole map) | — | 0.8 | 3.0 | | 0.5–4 |
+| Classic: gifts ÷ gross income | — | 2.4% | 2.7% | | ≤ 5% |
+| World 24 seeds × 15 y: factions alive y5 / y10 / y15 | 50.5 / 45.5 / 44.3 | 50.0 / 45.2 / 43.8 | 49.2 / 44.8 / 43.7 | | y15 ≥ off − 2; all world.js checks still pass |
+| World: largest faction at y10 (Rome) | 24.3 | 24.1 | 24.1 | | ≤ off + 3 |
+| World: titled share y1 / y15; offices by tier at y15 | — | 71% / 62%; 96 / 92 / 30 / 16 / 1.7 | 73% / 63%; 79 / 102 / 30 / 28 / 3.7 | | — |
+| World: defections per seed | 3.5 | 3.5 | 2.3 | | ≤ off + 4 |
+| Tactical, classic year-8 titled armies (8 campaigns, 480 battles per mode): attacker win with title effects none / both / attacker only / defender only | 43.5% | 42.5% / 44.8% / 41.3% | | an earlier snapshot set: 46.3 / 45.6 / 47.9 / 45.0 | both − none within ±3 pp; attacker-only − defender-only swing 1–8 pp (measured 3.5) |
+| Tactical: defender ÷ attacker losses, none / both / attacker only / defender only | 0.92 | 0.93 / 0.98 / 0.88 | | | the titled side trades 3–10% better (measured ≈ 5–6%) |
 
-Rejected options, all measured: monthly salary at any level (3/5/8/12/18, 2/3/5/8/12, 1/2/4/6/10, 0/0/4/6/10) cost 0.6–1.4 factions alive at year 10 and multiplied defections. A troop-cap bonus of +100 … +500 (also at half size) cost about 0.5 factions alive at year 10 and sped up the first > 25% faction by 0.3–0.6 y. A gift of 100–800 was too steep. An AI recruit reserve (env `KEEP`) made no measurable difference, so it is not part of the spec.
+Rejected options, all measured: monthly salary at any level (3/5/8/12/18, 2/3/5/8/12, 1/2/4/6/10, 0/0/4/6/10) cost 0.7–1.5 factions alive at year 10 and multiplied defections. A troop-cap bonus of +100 … +500 (also at half size) cost about 0.5 factions alive at year 10 and sped up the first > 25% faction by 0.3–0.6 y. A gift of 100–800 was too steep. An AI recruit reserve (env `KEEP`) made no measurable difference, so it is not part of the spec.
 
 ### 12.2 `tests/titles.js` (new, Node, exit code = failures)
 
@@ -689,7 +699,7 @@ Rejected options, all measured: monthly salary at any level (3/5/8/12/18, 2/3/5/
 5. **Grant rules**: seats, post seats, one change per month, gift and payer, loyalty once per tier (grant, revoke, regrant gives 0), promotion difference, lateral is free, passed-over penalty (exact set and cap 3), revoke and demote penalties, suspension order (newest first) and reactivation (oldest first), captive inactive, release restores, hire by captor clears, succession clears.
 6. **Hooks**: each §7.1 formula with titles on equals the hand computation; with `enabled = false` every hook is identity.
 7. **Random contract**: an `SG.Random` call counter wraps `value` / `rangeInt` / `rangeFloat` during `aiManageAll`, `grant`, `monthStart` and `bonus` and must read 0. A 5-year classic all-AI run with titles off must equal v4-without-titles (md5 of the JSON, like world.js §3).
-8. **AI determinism**: the same seed gives the same offices; the AI never revokes; no grant without the gift + 100.
+8. **AI determinism**: the same seed gives the same offices; the AI never revokes; no grant without the gift plus the reserve.
 9. **Campaign balance** (the §12.1 targets; 48 classic seeds × 25 y and 24 world seeds × 15 y, about 3 minutes; `--quick` uses 12 / 6).
 10. **Tactical balance** (the §12.1 targets with the real hooks, including `tacHit` / `tacRes` / `critArmy`, which the prototype left out).
 11. **Performance**: `aiManageAll()` ≤ 2 ms per month on the world map (70 factions, 499 generals), and `monthStart` ≤ 1 ms. world.js's 60 ms per-month CPU cap must still pass.
@@ -712,7 +722,20 @@ Rejected options, all measured: monthly salary at any level (3/5/8/12/18, 2/3/5/
 
 The proxy blocked WebFetch in this session for wikipedia.org, wikisource.org and ctext.org (403), so facts were checked through WebSearch results and the sources they cite, plus standard references. Every name in `titles.json` carries `attest` and `src`. Grade A rests on a source of the culture's own period. B is the right culture, wrong period, and the detail page says so. C is invented and descriptive.
 
-- **Han** (A, 47 names): 《后汉书·百官志》 for the 将军 order (大将军, 骠骑, 车骑, 卫; 前后左右), the camp organisation (部校尉 比二千石, 军司马 比千石, 军候, 屯长), the 北军五校, the 中郎将 of the 光禄勋, 谒者仆射, 九卿, 尚书令 / 尚书, 刺史 六百石. 《汉书·百官公卿表》 for seals and cords. 《三国志》 for the attested holders: 诸葛亮 / 庞统 军师中郎将, 诸葛亮 军师将军, 荀攸 军师, 郭嘉 军祭酒, 简雍 从事中郎 「往来使命」, 任峻 典农中郎将, 荀彧 尚书令, 孙坚 破虏, 孙策 讨逆, 关羽 偏将军 / 荡寇 / 前将军, 曹操 奋武 / 丞相, 于禁 虎威. Searched pages: [zdic 墨綬 (表文)](https://www.zdic.net/hans/墨綬), [孙正军《汉武帝朝的秩级整理运动》](https://www.thepaper.cn/newsDetail_forward_9420956), [Nine Ministers](https://en.wikipedia.org/wiki/Nine_Ministers).
+| Set | Names | A | B | C | | Set | Names | A | B | C |
+|---|---|---|---|---|---|---|---|---|---|---|
+| han | 48 | 46 | 2 | 0 | | kushan | 21 | 4 | 13 | 4 |
+| roman | 25 | 25 | 0 | 0 | | india | 21 | 9 | 11 | 1 |
+| steppe | 29 | 26 | 1 | 2 | | persia | 21 | 5 | 13 | 3 |
+| tarim | 24 | 22 | 2 | 0 | | celt | 21 | 1 | 16 | 4 |
+| korea | 22 | 12 | 9 | 1 | | german | 21 | 7 | 5 | 9 |
+| wa | 21 | 11 | 7 | 3 | | arab | 21 | 3 | 7 | 11 |
+| nanman | 21 | 6 | 2 | 13 | | africa | 21 | 4 | 4 | 13 |
+| seasia | 21 | 2 | 7 | 12 | | sarmatian | 21 | 2 | 6 | 13 |
+| moor (partial) | 2 | 1 | 0 | 1 | | generic | 21 | 0 | 0 | 21 |
+| faction overrides | 82 | 44 | 38 | 0 | | **total** | **484** | **230** | **143** | **111** |
+
+- **Han** (48 names, A 46 / B 2): 《后汉书·百官志》 for the 将军 order (大将军, 骠骑, 车骑, 卫; 前后左右), the camp organisation (部校尉 比二千石, 军司马 比千石, 军候, 屯长), the 北军五校, the 中郎将 of the 光禄勋, 谒者仆射, 九卿, 尚书令 / 尚书, 刺史 六百石. 《汉书·百官公卿表》 for seals and cords. 《三国志》 for the attested holders: 诸葛亮 / 庞统 军师中郎将, 诸葛亮 军师将军, 荀攸 军师, 郭嘉 军祭酒, 简雍 从事中郎 「往来使命」, 任峻 典农中郎将, 荀彧 尚书令, 孙坚 破虏, 孙策 讨逆, 关羽 偏将军 / 荡寇 / 前将军, 曹操 奋武 / 丞相, 于禁 虎威. Searched pages: [zdic 墨綬 (表文)](https://www.zdic.net/hans/墨綬), [孙正军《汉武帝朝的秩级整理运动》](https://www.thepaper.cn/newsDetail_forward_9420956), [Nine Ministers](https://en.wikipedia.org/wiki/Nine_Ministers).
 - **Korea**: 《三国志·东夷传》 / 《南史》 for the Goguryeo offices (相加, 对卢, 沛者, 古雏加, 主簿, 优台, 使者, 皂衣, 先人; 对卢 and 沛者 not held together) and Buyeo's 六畜 offices. 《三国史记》 for 左辅 / 右辅, 国相 (166; 乙巴素 191, 赈贷法 194), Silla's 17 官等 and Baekje's 佐平 (260). [南史 卷79](https://zh.wikisource.org/wiki/南史/卷79). Late Goguryeo offices (莫离支, 大模达, 傉萨, 太大兄) are B.
 - **Wa**: 魏志倭人传 for 卑狗 / 卑奴母离, Yamatai's four officials, 一大率 「于国中有如刺史」, 大倭, 大夫, 率善中郎将 / 率善校尉 (239). [Wajinden](https://en.wikipedia.org/wiki/Wajinden); [京都大学 three seals paper](https://repository.kulib.kyoto-u.ac.jp/dspace/handle/2433/240136). Yamato kabane and 安东大将军 are B.
 - **Steppe**: 《史记·匈奴列传》 for the 24 chiefs (左右贤王 … 骨都侯, 万骑, 千长 / 百长 / 什长, 裨小王, 相, 当户, 且渠): [zdic 什长](https://www.zdic.net/hans/什長), [Chinese Notes 史记 110](https://chinesenotes.com/analysis/shiji/shiji110_analysis.html). 《汉书》 for 日逐王 and 僮仆都尉. 《后汉书》 for the Wuhuan 小帅 / 大人 and 檀石槐's three 部大人.
@@ -741,3 +764,4 @@ The proxy blocked WebFetch in this session for wikipedia.org, wikisource.org and
 - **Q7. Gift payer.** The holder's city first, then the richest own city. Should a capital-only treasury be simpler for the player?
 - **Q8. Field-name clash with ITEMS §15** (`G.items.titles` = tournament wins). Rename it to `championships`?
 - **Q9. Naming conflicts with in-game offices.** The han R1 ruler rank is 郡守 to avoid «太守» (the city office). The han T3-A post is 刺史 while 州牧 is the R2 ruler rank. Acceptable to the writers?
+- **Q10. AI civil offices.** Without a monthly 政绩 exp for city administrators (for example 4 + 2 × tier per month, inside the 20/month cap), AI 文官 almost never reach 五品 (§8). Add it in the request-13 spec?

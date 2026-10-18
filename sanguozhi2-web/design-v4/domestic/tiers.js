@@ -57,7 +57,7 @@ function tier(r) {
     }
     case 'train': {
       // 百战 (100) with a near-full army is the drill-ground spectacle; any other rank-up or a top roll is good
-      if (r.after >= 100 && r.before < 100 && r.troops >= 0.8 * r.max) { t = T.X; why.push('hundred+full'); }
+      if (r.after >= 100 && r.before < 100 && r.troops >= 0.9 * r.max) { t = T.X; why.push('hundred+full'); }
       else if (r.roll === 4 || (r.after >= 100 && r.before < 100) || (crossed(r.before, r.after, [80]) && r.roll >= 3)) { t = T.G; why.push('rank'); }
       return { tier: t, why, stamp: t === T.X ? STAMPS.train : null };
     }
