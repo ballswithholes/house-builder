@@ -1026,20 +1026,22 @@ void main() {
     const mb = new SG.MeshBuilder();
     const bark = C(0.4, 0.29, 0.18);
     switch (kind) {
+      // 第三版修订：树冠一律平滑明暗（smoothN：法线向未起伏的椭球法线混合，轮廓仍有起伏），近景二级细分、
+      // 远景（棋盘外）一级细分；杨（poplar）与云杉（spruce）不另建模板，用阔叶树 / 松的模板非等比缩放（不增加绘制次数）
       case 'broad':      // 阔叶树：平滑树干 + 圆润树冠（二级细分）+ 顶上一小团
         mb.lathe(V(0, 0, 0), [[0.09, 0], [0.06, 0.55], [0.035, 0.85]], 8, bark);
-        mb.sphere(V(0, 0.98, 0), V(0.52, 0.46, 0.52), C(0.36, 0.56, 0.28), 2, { seed: 3, rough: 0.05, bottomShade: 0.3 });
-        mb.sphere(V(0.18, 1.3, -0.08), V(0.28, 0.25, 0.28), C(0.42, 0.62, 0.32), 1, { seed: 7, rough: 0.03, bottomShade: 0.2 });
+        mb.sphere(V(0, 0.98, 0), V(0.52, 0.46, 0.52), C(0.36, 0.56, 0.28), 2, { seed: 3, rough: 0.06, bottomShade: 0.3, smoothN: 0.6 });
+        mb.sphere(V(0.18, 1.3, -0.08), V(0.28, 0.25, 0.28), C(0.42, 0.62, 0.32), 1, { seed: 7, rough: 0.03, bottomShade: 0.2, smoothN: 0.7 });
         break;
       case 'broadLo':    // 远景阔叶树
         mb.lathe(V(0, 0, 0), [[0.09, 0], [0.05, 0.6]], 5, bark);
-        mb.sphere(V(0, 1.0, 0), V(0.55, 0.5, 0.55), C(0.38, 0.58, 0.29), 1, { seed: 5, rough: 0.08, bottomShade: 0.3 });
+        mb.sphere(V(0, 1.0, 0), V(0.55, 0.5, 0.55), C(0.38, 0.58, 0.29), 1, { seed: 5, rough: 0.05, bottomShade: 0.3, smoothN: 0.85 });
         break;
       case 'pine':       // 松：三层圆锥树冠（平滑法线）
       case 'pineLo':
         mb.lathe(V(0, 0, 0), [[0.08, 0], [0.04, 0.6]], 6, bark);
         for (const [y0, r0, h0, c] of [[0.3, 0.52, 0.8, C(0.22, 0.42, 0.26)], [0.72, 0.4, 0.7, C(0.26, 0.47, 0.29)], [1.1, 0.27, 0.58, C(0.3, 0.52, 0.32)]])
-          mb.lathe(V(0, y0, 0), [[0, -0.02], [r0 * 0.96, 0.02], [r0, 0.07], [r0 * 0.45, h0 * 0.55], [0, h0]], kind === 'pine' ? 14 : 8, c);
+          mb.lathe(V(0, y0, 0), [[0, -0.02], [r0 * 0.96, 0.02], [r0, 0.07], [r0 * 0.45, h0 * 0.55], [0, h0]], kind === 'pine' ? 14 : 9, c);
         break;
       case 'palm': {     // 椰枣 / 椰树：弯曲树干 + 弧形羽叶
         const pts = [], rad = [];
@@ -1050,20 +1052,36 @@ void main() {
           const a = i * Math.PI * 2 / 7, ca = Math.cos(a), sa = Math.sin(a);
           const L = 0.72, mid = V(top.x + ca * L * 0.5, top.y + 0.12, top.z + sa * L * 0.5), tip = V(top.x + ca * L, top.y - 0.28, top.z + sa * L);
           const sx = -sa * 0.13, sz = ca * 0.13, leaf = shade(C(0.27, 0.5, 0.22), (i % 2) * 0.07);
+          // 第三版修订：羽叶用平滑的朝上 / 朝下法线（同样的三角形数），不再一片片折面分明；叶基略暗、叶尖略亮
+          const nU = V(ca * 0.3, 1, sa * 0.3), nD = V(-ca * 0.3, -1, -sa * 0.3), cB = shade(leaf, -0.14), cT = shade(leaf, 0.08);
           for (const f of [1, -1]) {
-            mb.tri(top, V(mid.x + sx * f, mid.y, mid.z + sz * f), mid, leaf); mb.tri(top, mid, V(mid.x + sx * f, mid.y, mid.z + sz * f), leaf);
-            mb.tri(mid, V(mid.x + sx * f, mid.y, mid.z + sz * f), tip, leaf); mb.tri(mid, tip, V(mid.x + sx * f, mid.y, mid.z + sz * f), leaf);
+            const sd = V(mid.x + sx * f, mid.y - 0.03, mid.z + sz * f);
+            for (const n of [nU, nD]) { mb.triN(top, sd, mid, n, n, n, cB, leaf, leaf); mb.triN(mid, sd, tip, n, n, n, leaf, leaf, cT); }
           }
         }
         break;
       }
-      case 'cypress':    // 柏 / 地中海柏：细高的椭球
-        mb.lathe(V(0, 0, 0), [[0.07, 0], [0.04, 0.4]], 6, bark);
-        mb.sphere(V(0, 1.0, 0), V(0.26, 0.82, 0.26), C(0.22, 0.4, 0.24), 1, { seed: 11, rough: 0.07, bottomShade: 0.25 });
+      case 'cypress':    // 地中海柏：细高的尖塔形（平滑的旋转体，与攻击画面一致）
+        mb.lathe(V(0, 0, 0), [[0.07, 0], [0.04, 0.3]], 6, bark);
+        mb.lathe(V(0, 0.16, 0), [[0.03, 0], [0.24, 0.12], [0.3, 0.45], [0.26, 0.85], [0.16, 1.18], [0.06, 1.38], [0, 1.44]], 12, C(0.22, 0.4, 0.24));
         break;
-      case 'acacia':     // 稀树草原：伞形树冠
+      case 'acacia':     // 稀树草原：斜干分叉 + 伞形平顶
+      case 'acaciaLo':
         mb.tube([V(0, 0, 0), V(0.05, 0.55, 0), V(0.12, 0.95, 0.03)], [0.07, 0.05, 0.035], 6, bark);
-        mb.sphere(V(0.1, 1.05, 0), V(0.66, 0.18, 0.6), C(0.4, 0.52, 0.26), 1, { seed: 13, rough: 0.1, bottomShade: 0.35 });
+        if (kind === 'acacia') mb.tube([V(0.03, 0.45, 0), V(-0.22, 0.88, 0.06)], [0.035, 0.025], 5, bark);
+        // 树冠一级细分（稀树草原一场可有两三百棵近景金合欢，二级细分会多出十几万三角形），明暗靠 smoothN 圆润
+        mb.sphere(V(0.1, 1.05, 0), V(0.64, 0.22, 0.58), C(0.4, 0.52, 0.26), 1, { seed: 13, rough: 0.05, bottomShade: 0.4, smoothN: 0.85 });
+        break;
+      case 'olive':      // 橄榄：扭曲的矮干、灰绿的宽冠（两团）
+      case 'oliveLo':
+        mb.tube([V(0, 0, 0), V(0.07, 0.24, 0.02), V(-0.02, 0.44, 0.05), V(0.03, 0.56, 0)], [0.085, 0.065, 0.05, 0.04], kind === 'olive' ? 7 : 5, C(0.42, 0.36, 0.28));
+        mb.sphere(V(0.02, 0.72, 0), V(0.5, 0.3, 0.46), C(0.45, 0.52, 0.36), kind === 'olive' ? 2 : 1, { seed: 19, rough: 0.1, bottomShade: 0.32, smoothN: kind === 'olive' ? 0.6 : 0.85 });
+        if (kind === 'olive') mb.sphere(V(-0.24, 0.66, 0.12), V(0.3, 0.22, 0.28), C(0.48, 0.55, 0.38), 1, { seed: 20, rough: 0.08, bottomShade: 0.3, smoothN: 0.7 });
+        break;
+      case 'umbrella':   // 石松（地中海伞松）：高直的干、扁平的伞冠
+      case 'umbrellaLo':
+        mb.tube([V(0, 0, 0), V(0.05, 0.62, 0), V(0.1, 1.18, 0.02)], [0.07, 0.05, 0.035], kind === 'umbrella' ? 6 : 5, bark);
+        mb.sphere(V(0.1, 1.28, 0), V(0.6, 0.2, 0.56), C(0.24, 0.42, 0.24), kind === 'umbrella' ? 2 : 1, { seed: 15, rough: 0.06, bottomShade: 0.4, smoothN: kind === 'umbrella' ? 0.65 : 0.9, flat: -0.4 });
         break;
       case 'rock':       // 圆润的石块（单位半径）
         mb.sphere(V(0, 0.35, 0), V(1, 0.72, 0.9), C(0.47, 0.46, 0.43), 1, { seed: 17, rough: 0.16, flat: -0.45, bottomShade: 0.3, top: 0.12 });
@@ -1180,17 +1198,42 @@ void main() {
     PROP_TPL[kind] = geo;
     return geo;
   }
-  function treeKinds(biome, near) {
+  // 第三版修订：树种按「战场群落 + 防守城池的文化」选（与 js/clash.js 的布景一致）：
+  // 沙漠 / 地中海：椰枣、橄榄、柏、灌丛（沙漠格不长松）；温带：阔叶、松、杨；热带：椰、阔叶；寒带：云杉 / 松；稀树草原：金合欢。
+  // 干旱文化（安息、阿拉伯、西域）的城池落在世界地图的温带 / 草原格（河谷绿洲，如泰西封）时，按沙漠绿洲种树（西域是胡杨）；
+  // 阿克苏姆 / 库施按稀树草原；天竺、东南亚的温带格按热带。spruce / poplar 是 pine / broad 模板的非等比缩放。
+  // 安息、阿拉伯的改写只在北纬 39° 以南：高加索的姆茨赫塔、加巴拉、阿尔塔沙特（文化归安息）是湿润的温带林，按世界地图的群落种树。
+  const CULT_TREE_BIOME = { persia: 2, arab: 2, tarim: 2, moor: 5, africa: 4, india: 3, seasia: 3 };
+  const ARID_LAT_MAX = 39;
+  function treeBiome(bi, cult, lat) {
+    const d = CULT_TREE_BIOME[cult] != null ? CULT_TREE_BIOME[cult] : CULT_TREE_BIOME[SG.cultureBase ? SG.cultureBase(cult) : 'han'];
+    if (d === 2 && cult !== 'tarim' && lat != null && lat >= ARID_LAT_MAX) return bi;
+    if ((d === 2 || d === 4) && (bi === 0 || bi === 1)) return d;
+    if (d === 2 && cult !== 'tarim' && (bi === 6 || bi === 7)) return 5;      // 扎格罗斯等干旱山地：橄榄、柏（不是云杉）
+    if (d === 3 && bi === 0) return 3;
+    if (d === 5 && (bi === 0 || bi === 1)) return 5;
+    return bi;
+  }
+  function treeKinds(biome, near, cult) {
+    const B = near ? 'broad' : 'broadLo', O = near ? 'olive' : 'oliveLo', P = near ? 'pine' : 'pineLo', A = near ? 'acacia' : 'acaciaLo', U = near ? 'umbrella' : 'umbrellaLo';
     switch (biome) {
-      case 1: return [[near ? 'broad' : 'broadLo', 0.5], [near ? 'pine' : 'pineLo', 0.5]];        // 草原
-      case 2: return [['palm', 1]];                                                  // 沙漠（绿洲）
-      case 3: return [[near ? 'broad' : 'broadLo', 0.55], ['palm', 0.45]];         // 热带
-      case 4: return [['acacia', 0.75], [near ? 'broad' : 'broadLo', 0.25]];       // 稀树草原
-      case 5: return [['cypress', 0.4], [near ? 'broad' : 'broadLo', 0.6]];        // 地中海
-      case 6: case 7: return [[near ? 'pine' : 'pineLo', 0.85], [near ? 'broad' : 'broadLo', 0.15]];  // 寒带 / 高山
-      default: return [[near ? 'broad' : 'broadLo', 0.6], [near ? 'pine' : 'pineLo', 0.4]];
+      case 1: return [['poplar', 0.45], [B, 0.4], [P, 0.15]];                                     // 草原：杨、阔叶，偶有松
+      case 2: return cult === 'tarim' ? [['poplar', 0.7], [B, 0.3]]                                // 西域绿洲：胡杨（不种橄榄）
+        : cult === 'africa' ? [['palm', 0.55], [A, 0.45]]                                           // 努比亚的尼罗河谷：椰枣、金合欢
+        : [['palm', 0.6], [O, 0.3], ['cypress', 0.1]];                                             // 沙漠绿洲：椰枣、橄榄、柏
+      case 3: return [[B, 0.55], ['palm', 0.45]];                                                 // 热带
+      case 4: return cult === 'india' || cult === 'seasia' ? [[A, 0.5], ['palm', 0.3], [B, 0.2]]    // 天竺的干热林：金合欢、椰、阔叶
+        : [[A, 0.8], ['palm', 0.2]];                                                                // 稀树草原
+      case 5: return [[O, 0.35], ['cypress', 0.2], [U, 0.2], [B, 0.25]];                          // 地中海
+      case 6: return [['spruce', 0.6], [P, 0.3], ['poplar', 0.1]];                                 // 寒带
+      case 7: return [[P, 0.6], ['spruce', 0.3], [B, 0.1]];                                        // 高山
+      default: return [[B, 0.5], [P, 0.3], ['poplar', 0.2]];                                       // 温带
     }
   }
+  // 山岳格上的树（沙漠不种）
+  const MOUNTAIN_TREE = ['pine', 'pine', null, 'broad', 'acacia', 'olive', 'spruce', 'spruce'];
+  // 别名 → [模板（近 / 远）, 横向缩放, 纵向缩放]
+  const TREE_ALIAS = { spruce: ['pine', 'pineLo', 0.72, 1.32], poplar: ['broad', 'broadLo', 0.55, 1.45] };
   function pickW(list, r) { let s = 0; for (const e of list) s += e[1]; r *= s; for (const e of list) { r -= e[1]; if (r <= 0) return e[0]; } return list[list.length - 1][0]; }
   // 树冠的群落色（乘在模板顶点色上）
   const LEAF_MUL = [[1, 1, 1], [1.08, 1.02, 0.86], [1.05, 1.0, 0.9], [0.86, 1.04, 0.84], [1.1, 1.02, 0.84], [1.0, 0.97, 0.9], [0.86, 0.94, 0.95], [0.9, 0.92, 0.92]];
@@ -2120,11 +2163,17 @@ void main() {
       const rnd = SG.SeededRandom((Tm.seed ^ 0x5bd1e995) | 0);
       const R = () => rnd.nextDouble();
       const lists = {};                // kind → [{ x, y, z, s, yaw, c: [r,g,b], near }]
-      const put = (kind, u, v, s, cm, near, sink) => {
+      // hi：棋盘外、镜头一侧离棋盘边 3 格以内的树也用近景模板（镜头下方近在眼前，不再露出一级细分的多边形树冠）
+      const put = (kind, u, v, s, cm, near, sink, hi) => {
         const wx = ORIGIN.x + (u + 0.5) * T, wz = -(ORIGIN.z + (v + 0.5) * T);
         const y = this._gridH(u, v) - (sink || 0.04) * s;
-        (lists[kind] || (lists[kind] = [])).push({ x: wx, y, z: wz, s, yaw: R() * Math.PI * 2, c: cm, near, u, v });
+        const al = TREE_ALIAS[kind];
+        if (al) kind = near || hi ? al[0] : al[1];
+        (lists[kind] || (lists[kind] = [])).push({ x: wx, y, z: wz, s, yaw: R() * Math.PI * 2, c: cm, near, u, v, ax: al ? al[2] : 1, ay: al ? al[3] : 1 });
       };
+      const cult = (this.look && this.look.culture) || 'han';
+      const tgt = (m.setup || {}).target, lat = tgt && typeof tgt.lat === 'number' ? tgt.lat : null;
+      const tb = bi => treeBiome(bi, cult, lat);
       const biomeAt = (u, v) => G.biome[M.clamp(Math.round(Tm.gj(v)), 0, nv - 1) * nu + M.clamp(Math.round(Tm.gi(u)), 0, nu - 1)] | 0;
       const leaf = (bi) => { const L = LEAF_MUL[bi] || LEAF_MUL[0], k = 0.86 + R() * 0.28; return [L[0] * k, L[1] * k, L[2] * k]; };
       const occupied = (x, y) => m.units.some(u => u.alive && u.x === x && u.y === y);
@@ -2137,17 +2186,18 @@ void main() {
           const n = 5, a0 = R() * Math.PI;
           for (let k = 0; k < n; k++) {
             const a = a0 + k * Math.PI * 2 / n + (R() - 0.5) * 0.5, r = 0.66 + R() * 0.26;
-            put(pickW(treeKinds(bi, true), R()), x + Math.cos(a) * r, y + Math.sin(a) * r, 0.85 + R() * 0.4, leaf(bi), true);
+            put(pickW(treeKinds(tb(bi), true, cult), R()), x + Math.cos(a) * r, y + Math.sin(a) * r, 0.85 + R() * 0.4, leaf(bi), true);
           }
-          if (!occupied(x, y) && R() < 0.2) put(pickW(treeKinds(bi, true), R()), x + (R() - 0.5) * 0.3, y + (R() - 0.5) * 0.3, 0.8 + R() * 0.3, leaf(bi), true);
+          if (!occupied(x, y) && R() < 0.2) put(pickW(treeKinds(tb(bi), true, cult), R()), x + (R() - 0.5) * 0.3, y + (R() - 0.5) * 0.3, 0.8 + R() * 0.3, leaf(bi), true);
         } else if (t === Tn.Mountain) {
           const n = R() < 0.6 ? 1 : 0;
           for (let k = 0; k < n; k++) { const g = 0.88 + R() * 0.24; put('rock', x + (R() - 0.5) * 0.9, y + (R() - 0.5) * 0.9, 0.2 + R() * 0.22, [g, g * 0.98, g * 0.95], true, 0.25); }
-          if (bi !== 2 && R() < 0.6) put('pine', x + (R() - 0.5) * 1.1, y + (R() - 0.5) * 1.1, 0.6 + R() * 0.3, leaf(bi), true);
+          const mk = MOUNTAIN_TREE[tb(bi)];
+          if (mk && R() < 0.6) put(mk, x + (R() - 0.5) * 1.1, y + (R() - 0.5) * 1.1, 0.6 + R() * 0.3, leaf(bi), true);
         } else if (t === Tn.Hill) {
           if (R() < 0.3) put('rock', x + (R() - 0.5) * 1.2, y + (R() - 0.5) * 1.2, 0.12 + R() * 0.12, [1, 0.98, 0.95], true, 0.25);
           // 孤树只种在格子靠北（远离镜头）的一半，部队起始格及其南邻不种（免得挡住主将）
-          if (R() < 0.3 && bi !== 2 && !occupied(x, y) && !occupied(x, y + 1)) { const a = (0.2 + R() * 0.6) * Math.PI; put(pickW(treeKinds(bi, true), R()), x + Math.cos(a) * 0.72, y + Math.sin(a) * 0.72, 0.75 + R() * 0.3, leaf(bi), true); }
+          if (R() < 0.3 && tb(bi) !== 2 && !occupied(x, y) && !occupied(x, y + 1)) { const a = (0.2 + R() * 0.6) * Math.PI; put(pickW(treeKinds(tb(bi), true, cult), R()), x + Math.cos(a) * 0.72, y + Math.sin(a) * 0.72, 0.75 + R() * 0.3, leaf(bi), true); }
         }
         // 草丛（平原、山丘、森林；沙漠稀少）。第三版修订：平原格更密（7 簇、略小）
         if (t === Tn.Plain || t === Tn.Hill || t === Tn.Forest) {
@@ -2173,15 +2223,15 @@ void main() {
           for (let k = 0; k < nItems; k++) {
             const [u, v] = spot(0.52, 0.86);
             if (!dryAt(u, v)) continue;
-            const r = R();
-            if (bi === 1 || bi === 4) {              // 草原 / 稀树草原
+            const r = R(), db = tb(bi);              // 点缀与树种同按「群落 + 文化」（泰西封的河谷按沙漠绿洲）
+            if (db === 1 || db === 4) {              // 草原 / 稀树草原
               if (r < 0.06) put('cairn', u, v, 1, [1, 1, 1], true, 0.02);
               else if (r < 0.5) put('scrub', u, v, 0.8 + R() * 0.5, [1.05, 1.0, 0.8], true, 0.02);
               else if (r < 0.75) { const g = 0.92 + R() * 0.16; put('rock', u, v, 0.07 + R() * 0.07, [g, g, g * 0.97], true, 0.25); }
               else put('tuft', u, v, 1.1 + R() * 0.4, [1.1, 1.03, 0.76], true, 0);
-            } else if (bi === 2) {                   // 沙漠
+            } else if (db === 2) {                   // 沙漠
               const wetNear = (G.river[o] < 2.2) || (G.water[o] | 0) > 0;
-              if (wetNear && r < 0.18) put('palm', u, v, 0.55 + R() * 0.25, leaf(bi), true);
+              if (wetNear && r < 0.18) put(cult === 'tarim' ? 'poplar' : 'palm', u, v, (cult === 'tarim' ? 0.75 : 0.55) + R() * 0.25, leaf(bi), true);   // 西域水边是胡杨
               else if (r < 0.6) put('scrub', u, v, 0.7 + R() * 0.5, [1.15, 1.05, 0.78], true, 0.02);
               else { const g = 0.95 + R() * 0.12; put('rock', u, v, 0.06 + R() * 0.07, [g * 1.05, g, g * 0.9], true, 0.25); }
             } else {                                 // 温带、地中海、热带、北方
@@ -2215,7 +2265,9 @@ void main() {
         const sl = G.slope[o] || 0;
         const dOut = Math.max(-0.5 - u, u - (W - 0.5), -0.5 - v, v - (H - 0.5));
         const p = (f > 0.25 ? f * 0.7 : (BIOME_ARID[bi] > 0.5 ? 0.004 : 0.03)) * (dOut > 8 ? 0.45 : 1);
-        if (R() < p && sl < 0.5) put(pickW(treeKinds(bi, false), R()), u, v, 0.9 + R() * 0.55, leaf(bi), false);
+        // 近景模板只给镜头一侧（南边，v < 0）3 格内的树：北、东、西三边离镜头远，用远景模板（森林大城少 3 至 6 万三角形）
+        const hiT = dOut < 3 && v < 0;
+        if (R() < p && sl < 0.5) put(pickW(treeKinds(tb(bi), hiT, cult), R()), u, v, 0.9 + R() * 0.55, leaf(bi), false, undefined, hiT);
         else if ((sl > 0.32 || h > BASE_Y + 1.6) && R() < 0.035) { const g = 0.9 + R() * 0.2; put('rock', u, v, 0.25 + R() * 0.35, [g, g * 0.98, g * 0.95], false, 0.3); }
         else if (Math.max(Math.abs(u - (W - 1) / 2) - W / 2, Math.abs(v - (H - 1) / 2) - H / 2) < 3 && R() < 0.5 * (1 - BIOME_ARID[bi] * 0.7)) put('tuft', u, v, 1 + R() * 0.5, BIOME_ARID[bi] > 0.3 ? [1.12, 1.04, 0.74] : [0.92, 1, 0.86], false, 0);
       }
@@ -2241,7 +2293,7 @@ void main() {
             if (fa.setUsage) fa.setUsage(THREE.DynamicDrawUsage);
             geo.setAttribute('aFade', fa);
             for (let k = 0; k < L.length; k++) {
-              const e = L[k], it = { attr: fa, k, x: e.x, z: e.z, s: e.s, t: 0, cur: 0 };
+              const e = L[k], it = { attr: fa, k, x: e.x, z: e.z, s: e.s * e.ay, t: 0, cur: 0 };
               this._fade.items.push(it);
               const key = Math.round(e.u) + ',' + Math.round(e.v);
               (this._fade.byTile.get(key) || this._fade.byTile.set(key, []).get(key)).push(it);
@@ -2253,7 +2305,7 @@ void main() {
           for (let k = 0; k < L.length; k++) {
             const e = L[k];
             q.setFromAxisAngle(Y, e.yaw);
-            mm.compose(pv.set(e.x, e.y, e.z), q, sv.set(e.s, e.s * (kind === 'rock' ? 0.8 + (k % 3) * 0.15 : 1), e.s));
+            mm.compose(pv.set(e.x, e.y, e.z), q, sv.set(e.s * e.ax, e.s * e.ay * (kind === 'rock' ? 0.8 + (k % 3) * 0.15 : 1), e.s * e.ax));
             im.setMatrixAt(k, mm);
             im.setColorAt(k, cc.setRGB(e.c[0], e.c[1], e.c[2]));
           }

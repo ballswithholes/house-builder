@@ -1731,7 +1731,7 @@
     dhoti: { torso: 'bare', sash: true, skirt: 'sarong', skirtLen: 0.6, sleeves: 'bare', pauldron: 'none', bracer: 'gold', legs: 'bare', boots: 'bare', belt: 'sash', collar: 'gold', armlet: true },
     quilted: { torso: 'quilt', skirt: 'coat', skirtLen: 0.62, sleeves: 'short', pauldron: 'none', bracer: 'leather', legs: 'trousers', boots: 'sandal', belt: 'sash', collar: 'scarf', armlet: true },
     shamma: { torso: 'robe', skirt: 'robe', skirtLen: 0.9, sleeves: 'short', pauldron: 'none', bracer: 'none', legs: 'bare', boots: 'sandal', belt: false, toga: true, sash: true, white: true },
-    meroitic: { torso: 'robe', skirt: 'robe', skirtLen: 0.95, sleeves: 'short', pauldron: 'none', bracer: 'gold', legs: 'trousers', boots: 'sandal', belt: 'sash', sash: true, collar: 'gold', white: true },
+    meroitic: { torso: 'robe', skirt: 'robe', skirtLen: 0.95, sleeves: 'short', pauldron: 'none', bracer: 'gold', legs: 'bare', boots: 'sandal', belt: 'sash', sash: true, collar: 'gold', white: true },
     burnous: { torso: 'cloth', skirt: 'tunic', skirtLen: 0.6, sleeves: 'cloth', pauldron: 'none', bracer: 'none', legs: 'trousers', boots: 'sandal', belt: true, cape: true, collar: 'scarf' },
   };
   // 冠帽类型映射到三维头饰构建器（未专门实现的归入相近类型）
@@ -2075,10 +2075,12 @@
       : t === 'rattan' ? '#c8a060' : t === 'fur' ? '#8a6a4a' : (t === 'segm' || t === 'tanko') ? (X.look.culture === 'roman' ? '#a02a24' : C.cloth) : C.cloth;
     const y0 = R[0].y, y1 = R[R.length - 1].y + 0.01 * pr.k;
     const n = lod.torK, secs = [];
+    // 赤膊外罩长袍 / 纱笼：腰下（裙内）的身体画成衬布色——两片裙在前中线分开时露出的是衬布，不是肤色（与 buildLeg 的衬布同色）
+    const lowIn = bare && robeOverBare(L) ? col(shade(C.cloth, -0.44)) : null;
     for (let k = 0; k <= n; k++) {
       const y = lerp(y0, y1, Math.pow(k / n, 0.95));
       const r = ringAt(R, y);
-      secs.push({ c: [0, y, r.zc], X: [1, 0, 0], Z: [0, 0, 1], rx: r.rx, rz: r.rz, sq: r.sq, t: k / n });
+      secs.push({ c: [0, y, r.zc], X: [1, 0, 0], Z: [0, 0, 1], rx: r.rx, rz: r.rz, sq: r.sq, t: k / n, col: lowIn && y < 1.0 * pr.k ? lowIn : undefined });
     }
     loft(gb, secs, { n: lod.torN, reg: (t === 'segm' || t === 'tanko') && X.hi === 0 ? 'rivet' : reg, col: col((t === 'segm' || t === 'tanko') && X.hi === 0 ? C.metal : cc), wf: W.torso, ptf: (th, s) => torsoPt(R, s.c[1], th, 0, mus, pr.fem), capStart: X.hi >= 1 });
     // 环片甲 / 短甲：一圈圈叠压的金属带
@@ -2362,11 +2364,26 @@
     const lg = L.legs || 'trousers';
     const bootTop = L.boots === 'boot' ? 0.74 : 2;
     const segs = [];
-    if (lg === 'bare') segs.push(['skin', -0.05, 1, 1, C.skin]);
+    // 第三版修订：长袍 / 长裙（robe、coat、sarong，长过膝）下的赤腿——裙内一段画成同色的衬布（略收细），下摆以下才露肤色。
+    // 原来大腿在待机、行走、出招时穿出裙面，成一条肤色的「桨」（僧人、阿克苏姆与库施、孟获、天竺腰布）。分段不增加环数。
+    const robeSk = robeOverBare(L);
+    if (robeSk) {
+      const yHem = Math.max(L.skirt === 'robe' ? 0.1 : 0, 1.04 - L.skirtLen) * pr.k + 0.05 * pr.k;
+      let sH = 1;
+      for (let s = 0.4; s <= 1.0001; s += 0.02) if (legPt(pr, S, s)[1] <= yHem) { sH = s; break; }
+      // 纱笼（锦纹）用同一锦纹贴图，袍 / 长衣用素布。颜色取袍面实际显出的那一面：skirtPanel 朝外的是 colB 面（shade −0.4），
+      // 衬布再略暗（−0.44）。原来只压暗 −0.12，白袍（埃塞俄比亚披袍、库施王袍、托加）的腿前摆时比袍面亮得多，像一条白腿穿出袍子
+      const ir = L.skirt === 'sarong' ? 'brocade' : 'cloth';
+      const inner = shade(C.cloth, -0.44);
+      // 两段的环数之和 = 原来整条腿的环数（三角形不变；低精度士兵的预算只剩几个三角形）
+      const nT = Math.max(2, Math.round(lod.legK * 1.05)), n1 = clamp(Math.round(nT * (sH + 0.05) / 1.05), 1, nT - 1);
+      if (sH > 0.9) segs.push([ir, -0.05, 1, 0.97, inner]);
+      else { segs.push([ir, -0.05, sH, 0.97, inner, n1]); segs.push(['skin', sH, 1, 1, C.skin, nT - n1]); }
+    } else if (lg === 'bare') segs.push(['skin', -0.05, 1, 1, C.skin]);
     else if (lg === 'hakama') { segs.push(['cloth', -0.05, 0.56, 1.45, C.cloth2]); segs.push(['skin', 0.56, 1, 1, C.skin]); }
     else segs.push([L.legsReg || 'cloth', -0.05, Math.min(1, bootTop + 0.04), 1.28, L.legsReg === 'plaid' ? C.cloth : (look.kind === 'general' ? (C.trousers || shade(C.cloth, -0.55)) : shade(C.cloth2, 0.05))]);
-    for (const [reg, s0, s1, sc, cc] of segs) {
-      const n = Math.max(2, Math.round(lod.legK * (s1 - s0)));
+    for (const [reg, s0, s1, sc, cc, nFix] of segs) {
+      const n = nFix || Math.max(2, Math.round(lod.legK * (s1 - s0)));
       const secs = [];
       for (let i = 0; i <= n; i++) {
         const s = lerp(s0, s1, i / n);
@@ -2374,7 +2391,9 @@
         let [rx, rz] = legR(s);
         let g = sc;
         // 裤：大腿根贴身（不穿出腰裙），膝下宽松后收进靴
-        if (reg !== 'skin') g = lerp(1.02, sc, sstep(0.3, 0.6, s)) * (1 - 0.15 * sstep(0.55, 1, s)) + (lg === 'hakama' ? 0.15 * sstep(0.3, 0.5, s) * (1 - sstep(0.5, 0.56, s)) : 0);
+        // 袍内衬布：大腿至膝收细（少穿出袍面；裆部露出的是同色的腰下衬布，见 buildTorso），近踝略收（凉鞋绑带露在外）
+        if (robeSk && reg !== 'skin') g = sc * lerp(0.78, 1, sstep(0.42, 0.72, s)) * (1 - 0.06 * sstep(0.7, 1, s));
+        else if (reg !== 'skin') g = lerp(1.02, sc, sstep(0.3, 0.6, s)) * (1 - 0.15 * sstep(0.55, 1, s)) + (lg === 'hakama' ? 0.15 * sstep(0.3, 0.5, s) * (1 - sstep(0.5, 0.56, s)) : 0);
         secs.push({ c: legPt(pr, S, s), X: F.X, Z: F.Z, rx: rx * k * g, rz: rz * k * g, t: (s - s0) / (s1 - s0) });
       }
       loft(gb, secs, { n: lod.limbN, reg, col: col(cc), wf: W.leg(S), off: reg === 'skin' ? (th, sec, i) => { const s = lerp(s0, s1, i / n); return k * (0.008 * gauss(s, 0.66, 0.08) * gauss(Math.abs(th), PI * 0.75, 0.7) + 0.006 * gauss(s, 0.22, 0.12) * gauss(th, 0, 0.8)); } : null });
@@ -2436,6 +2455,19 @@
   function legSideW(S, top, bot) {
     return (p, s, t) => { const T = clamp01(t); return [[B.pelvis, 1 - T * bot], [B['thigh' + S], T * bot]]; };
   }
+  // 赤腿外罩过膝的袍 / 长衣 / 纱笼（腿在裙内画成衬布，见 buildLeg）
+  function robeOverBare(L) { return (L.legs || 'trousers') === 'bare' && (L.skirt === 'robe' || L.skirt === 'coat' || L.skirt === 'sarong') && (L.skirtLen || 0) >= 0.58; }
+  // 这种袍片的权重：盖在大腿正前方的一带（th ≈ ±0.65）随同侧大腿多（膝高处起 0.82，大腿前摆时把袍面顶起，不让腿穿出），
+  // 前中线（两片交叠处）略少（≈ 0.6，叉腿站立时前襟不至于分成两条裤腿），后片少（0.4）；两片分开处露出的是裙内的衬布腿
+  function robeSideW(S, th0, th1) {
+    const c = S === 'L' ? 0.65 : -0.65;
+    return (p, s, t) => {
+      const th = lerp(th0, th1, s), f = Math.exp(-(th - c) * (th - c) / 0.5);
+      // 前中线与后片在腰下起得慢（两片上端不早早分开，露出裙内的身体）
+      const w = sstep(0, lerp(0.8, 0.4, f), t) * (0.4 + 0.42 * f);
+      return [[B.pelvis, 1 - w], [B['thigh' + S], w]];
+    };
+  }
   function buildSkirt(X) {
     const { gb, lod, pr, C, L, look } = X;
     const sk = L.skirt || 'none';
@@ -2453,10 +2485,10 @@
       const cc = look.L.torso === 'cloth' && L.chest === 'plate' ? C.cloth : C.cloth;
       const fl = sk === 'robe' ? 0.12 : sk === 'coat' ? 0.07 : 0.03;
       const yb = sk === 'robe' ? Math.max(0.1, bot) : bot;
-      const wk = sk === 'robe' ? 0.45 : 0.6;
+      const wk = sk === 'robe' ? 0.45 : 0.6, rb = robeOverBare(L);
       // 左右两片（左压右），各自随同侧大腿
-      skirtPanel(X, { th0: -0.25, th1: PI + 0.25, yTop: top + 0.02, yBot: yb, off: 0.014, flare: fl, reg, col: cc, w: legSideW('L', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
-      skirtPanel(X, { th0: -PI - 0.25, th1: 0.25, yTop: top + 0.02, yBot: yb, off: 0.008, flare: fl, reg, col: cc, w: legSideW('R', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
+      skirtPanel(X, { th0: -0.25, th1: PI + 0.25, yTop: top + 0.02, yBot: yb, off: 0.014, flare: fl, reg, col: cc, w: rb ? robeSideW('L', -0.25, PI + 0.25) : legSideW('L', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
+      skirtPanel(X, { th0: -PI - 0.25, th1: 0.25, yTop: top + 0.02, yBot: yb, off: 0.008, flare: fl, reg, col: cc, w: rb ? robeSideW('R', -PI - 0.25, 0.25) : legSideW('R', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
     } else if (sk === 'tunic' || sk === 'kilt' || sk === 'bands' || sk === 'pteruges') {
       const tun = sk === 'tunic' || sk === 'pteruges' || L.tunic;
       if (tun) {
@@ -2870,17 +2902,30 @@
       }
       res.coversTop = true; res.coversBack = true;
     } else if (tp === 'kushcrown') {
-      // 第三版：库施王的贴头小帽 + 金王带 + 额前双蛇（uraeus）+ 脑后两条飘带
-      headShell(X, Hp, { phi0: rim(0.5, 0.1), off: (th, u) => 0.008 + 0.004 * u, reg: 'cloth', col: hat.color2 || '#2a2422' });
+      // 第三版修订：麦罗埃浮雕（纳塔卡马尼、阿曼尼托尔）的库施王冠——贴头的深色小帽（无檐，额前齐眉上、两侧过耳上、
+      // 脑后到颈），一道窄金王带贴帽箍住，额前一对昂首张颈的眼镜蛇（uraeus），王带脑后结处垂两条飘带。
+      // 原来是黄色圆顶 + 外凸的金圈（像安全帽的檐）+ 两根带球的「触角」。帽色只取深色（头像里的金色帽改为深色）。
+      const capC = hat.color2 && lum(hat.color2) < 0.3 ? hat.color2 : '#2a2422';
       const gc = hat.color || GOLD;
-      headRing(X, Hp, rim(0.5, 0.1), 0.012, 0.009, 'goldEngr', gc, { rz: 0.5 });
-      for (const th of [-0.18, 0.18]) {
-        const p0 = headAt(Hp, th, 0.52, 0.02);
-        tube(gb, bez(p0, [p0[0], p0[1] + 0.02, p0[2] + 0.015], [p0[0], p0[1] + 0.035, p0[2] + 0.01], [p0[0], p0[1] + 0.05, p0[2] + 0.012], 4), { r: s2 => 0.007 - 0.003 * s2, n: 4, reg: 'gold', col: col(gc), w: B.head });
-        if (hi >= 1) ellipsoid(gb, [p0[0], p0[1] + 0.05, p0[2] + 0.014], [0.009, 0.008, 0.004], { nl: 3, n: 5, reg: 'gold', col: col(gc), w: B.head });
+      const capRim = th => { const a = Math.abs(th); return a < 1.0 ? 0.48 : a < 1.3 ? lerp(0.48, 0.05, sstep(1.0, 1.3, a)) : a < 1.65 ? 0.05 : lerp(0.05, -0.66, sstep(1.65, 2.4, a)); };
+      headShell(X, Hp, { phi0: capRim, off: (th, u) => 0.005 + 0.002 * u, reg: 'cloth', col: capC, pw: 0.8 });
+      // 王带：贴帽的窄金带（竖窄横薄，不外凸成檐）
+      const bandP = rim(0.53, 0.28);
+      headRing(X, Hp, bandP, 0.0058, 0.0022, 'goldEngr', gc, { rz: 2.8 });
+      // 双蛇：蛇身自王带昂起（S 形），张开的颈盾（扁椭圆）朝前，小蛇头前伸
+      for (const sg of [1, -1]) {
+        const th = sg * 0.15, p0 = headAt(Hp, th, bandP(th) + 0.01, 0.008), nn = headN(p0);
+        const fw = v3norm([nn[0], 0, nn[2]]), up = [0, 1, 0], sd = v3norm(v3cross(up, fw));
+        const at = (u, f) => v3add(p0, v3add(v3mul(up, u * 1.2), v3mul(fw, f * 1.2)));
+        if (hi === 0) { ellipsoid(gb, at(0.012, 0.004), [0.006, 0.012, 0.003], { nl: 3, n: 4, reg: 'gold', col: col(gc), w: B.head, axes: { X: sd, Y: up, Z: fw } }); continue; }
+        tube(gb, bez(at(-0.002, -0.002), at(0.01, 0.009), at(0.014, -0.003), at(0.026, 0.002), 5), { r: s2 => 0.0042 - 0.001 * s2, n: 5, reg: 'gold', col: col(gc), w: B.head });
+        // 颈盾：上宽下窄，略向前弓
+        ellipsoid(gb, at(0.033, 0.004), [0.0105, 0.015, 0.003], { nl: hi >= 2 ? 5 : 3, n: hi >= 2 ? 8 : 5, reg: 'goldEngr', col: col(gc), w: B.head, axes: { X: sd, Y: v3norm([fw[0] * 0.2, 1, fw[2] * 0.2]), Z: fw } });
+        ellipsoid(gb, at(0.046, 0.009), [0.005, 0.004, 0.0075], { nl: 3, n: hi >= 2 ? 6 : 4, reg: 'gold', col: col(gc), w: B.head, axes: { X: sd, Y: up, Z: fw } });
       }
-      if (hi >= 1) { const kp = headAt(Hp, PI, 0.4, 0.02); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.025, kp[1] - 0.05, kp[2] - 0.04], [kp[0] + sg * 0.04, kp[1] - 0.16, kp[2] - 0.08], [kp[0] + sg * 0.05, kp[1] - 0.3, kp[2] - 0.12], 5), 0.03, 0.022, 'cloth', hat.ribbon || '#e8e0d0', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
-      res.coversTop = true;
+      // 飘带：自王带脑后结处垂下，过肩后
+      if (hi >= 1) { const kp = headAt(Hp, PI, bandP(PI), 0.012); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.014, kp[1] - 0.05, kp[2] - 0.03], [kp[0] + sg * 0.026, kp[1] - 0.16, kp[2] - 0.07], [kp[0] + sg * 0.034, kp[1] - 0.3, kp[2] - 0.1], 5), 0.022, 0.018, 'cloth', hat.ribbon || '#e8e0d0', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
+      res.coversTop = true; res.coversBack = true;
     } else if (tp === 'bellcrown') {
       // 第三版：僧伽罗式圆冠（钟形金冠，层层横箍，顶上尖钮）
       const cc = hat.color || GOLD, c = [0, apexY(0, 0) - 0.07, HEAD_C[2]];
