@@ -195,7 +195,7 @@
     const put = (name, o, x, z, yaw = 0, s = 1) => { const ob = Props.make(name, Object.assign({ color: COLOR }, o)); ob.position.set(x, 0, z); ob.rotation.y = yaw; ob.scale.setScalar(s); scene.add(ob); placed.push(ob); return ob; };
     put('house_han', { seed: 0 }, -7, -6, 0.15);
     put('house_han', { seed: 1 }, 7.5, -7, -0.2);
-    put('house_thatch', { seed: 2 }, -14, 2, 0.6);
+    put('house_thatch', { seed: 3 }, -14, 2, 0.6);
     put('well', {}, 4.2, 1.5, 0.3);
     put('tree_huai', { seed: 1 }, -12, -12);
     put('tree_willow', { seed: 0 }, 13, 4, 0.5);

@@ -1,0 +1,8240 @@
+{
+ "version": 1,
+ "scenario": "classic",
+ "caps": {
+  "atk": 1.6,
+  "def": 1.6,
+  "negFloor": 0.5,
+  "morale": 25,
+  "critAdd": 0.06,
+  "critMul": 0.3,
+  "develop": 0.8,
+  "incomeLo": -0.1,
+  "incomeHi": 0.35,
+  "eventIncomeFloor": -0.5,
+  "harvestLo": -0.2,
+  "harvestHi": 0.35,
+  "recruit": 0.4,
+  "train": 12,
+  "search": 0.9,
+  "hire": 0.95,
+  "ally": 0.9,
+  "discord": 0.9,
+  "persuade": 0.9,
+  "fameBonus": 10,
+  "virtueLo": -10,
+  "virtueHi": 15,
+  "exp": 0.4,
+  "routineCap": 20,
+  "loyAuraCap": 95
+ },
+ "develop": [
+  {
+   "seed": 1,
+   "city": "beiping",
+   "gen": "袁术",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beiping",
+   "gen": "袁术",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beiping",
+   "gen": "袁术",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "gen": "阎圃",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "gen": "阎圃",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "gen": "阎圃",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "gen": "眭固",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "gen": "眭固",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "gen": "眭固",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "gen": "纪灵",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "gen": "纪灵",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "gen": "纪灵",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "gen": "姜维",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "gen": "姜维",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "gen": "姜维",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "贾诩",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "贾诩",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "贾诩",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "袁绍",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "袁绍",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "袁绍",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "gen": "刘繇",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0.05,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0.05,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "gen": "刘繇",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "gen": "刘繇",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "gen": "吕布",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "gen": "吕布",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "gen": "吕布",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "gen": "樊能",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "gen": "樊能",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "gen": "樊能",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "gen": "麴义",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "gen": "麴义",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "gen": "麴义",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0.2,
+    "gain": 22,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0.2,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 17,
+    "pct": 0.22,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0.22,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 17,
+    "pct": 0.33999999999999997,
+    "gain": 23,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0.33999999999999997,
+    "gain": 28,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 17,
+    "pct": 0.22,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0.22,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0.12,
+    "gain": 22,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 24,
+    "pct": 0.12,
+    "gain": 27,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0.24,
+    "gain": 25,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 24,
+    "pct": 0.24,
+    "gain": 30,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0.12,
+    "gain": 22,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 24,
+    "pct": 0.12,
+    "gain": 27,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "gen": "袁术",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "gen": "袁术",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "gen": "袁术",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "马腾",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "马腾",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "马腾",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "公孙瓒",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "公孙瓒",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "公孙瓒",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "gen": "董卓",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "gen": "董卓",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "gen": "董卓",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "田丰",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "田丰",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "田丰",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "gen": "麴义",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "gen": "麴义",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "gen": "麴义",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "gen": "袁绍",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "gen": "袁绍",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "gen": "袁绍",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "gen": "眭固",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "gen": "眭固",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "gen": "眭固",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 13,
+    "pct": 0,
+    "gain": 13,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "gen": "夏侯渊",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "gen": "夏侯渊",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "gen": "夏侯渊",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "gen": "杨任",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "gen": "杨任",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "gen": "杨任",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0.2,
+    "gain": 22,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0.2,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0.22,
+    "gain": 26,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 25,
+    "pct": 0.22,
+    "gain": 31,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0.33999999999999997,
+    "gain": 28,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 25,
+    "pct": 0.33999999999999997,
+    "gain": 34,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0.22,
+    "gain": 26,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 25,
+    "pct": 0.22,
+    "gain": 31,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 16,
+    "pct": 0,
+    "gain": 16,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0,
+    "gain": 20,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 17,
+    "pct": 0.12,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0.12,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 17,
+    "pct": 0.24,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0.24,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 17,
+    "pct": 0.12,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0.12,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "贾诩",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "贾诩",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "贾诩",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "gen": "郭汜",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "gen": "郭汜",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "gen": "郭汜",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "gen": "李儒",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "gen": "李儒",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "gen": "李儒",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "gen": "杨昂",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "gen": "杨昂",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "gen": "杨昂",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "gen": "吕布",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "gen": "吕布",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "gen": "吕布",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 11,
+    "pct": 0,
+    "gain": 11,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "gen": "典韦",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "gen": "典韦",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "gen": "典韦",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "gen": "董卓",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "gen": "董卓",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "gen": "董卓",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 14,
+    "pct": 0,
+    "gain": 14,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "gen": "周泰",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "gen": "周泰",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "gen": "周泰",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0,
+    "gain": 15,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "gen": "武安国",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "gen": "武安国",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "gen": "武安国",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 12,
+    "pct": 0,
+    "gain": 12,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "gen": "曹操",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 24,
+    "pct": 0,
+    "gain": 24,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "gen": "曹操",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 24,
+    "pct": 0,
+    "gain": 24,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "gen": "曹操",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 24,
+    "pct": 0,
+    "gain": 24,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "gen": "马腾",
+   "kind": "land",
+   "roll": 3,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "gen": "马腾",
+   "kind": "industry",
+   "roll": 3,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "gen": "马腾",
+   "kind": "town",
+   "roll": 3,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 3,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 19,
+    "pct": 0,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 23,
+    "pct": 0,
+    "gain": 23,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0.2,
+    "gain": 22,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0.2,
+    "gain": 26,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0.08,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0.08,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.08,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 25,
+    "pct": 0,
+    "gain": 25,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 16,
+    "pct": 0.22,
+    "gain": 20,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 20,
+    "pct": 0.22,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 16,
+    "pct": 0.33999999999999997,
+    "gain": 21,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 20,
+    "pct": 0.33999999999999997,
+    "gain": 27,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 16,
+    "pct": 0.22,
+    "gain": 20,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 20,
+    "pct": 0.22,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.22,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 17,
+    "pct": 0,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 21,
+    "pct": 0,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 18,
+    "pct": 0,
+    "gain": 18,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 22,
+    "pct": 0,
+    "gain": 22,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "land",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 15,
+    "pct": 0.12,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "land",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "land",
+    "g0": 19,
+    "pct": 0.12,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "industry",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 15,
+    "pct": 0.24,
+    "gain": 19,
+    "roll": 0,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "industry",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "industry",
+    "g0": 19,
+    "pct": 0.24,
+    "gain": 24,
+    "roll": 4,
+    "mods": {
+     "gear": 0.12,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "town",
+   "roll": 0,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 15,
+    "pct": 0.12,
+    "gain": 17,
+    "roll": 0,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "kind": "town",
+   "roll": 4,
+   "stacked": true,
+   "r": {
+    "kind": "town",
+    "g0": 19,
+    "pct": 0.12,
+    "gain": 21,
+    "roll": 4,
+    "mods": {
+     "gear": 0,
+     "title": 0.12,
+     "project": 0
+    }
+   }
+  }
+ ],
+ "cityGold": [
+  {
+   "seed": 1,
+   "city": "beiping",
+   "r": {
+    "b": 62.33,
+    "pct": 0.11699999999999999,
+    "ev": 0,
+    "gold": 70,
+    "mods": {
+     "title": 0,
+     "gear": 0.15,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "r": {
+    "b": 71.88,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 70,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "r": {
+    "b": 52.8,
+    "pct": -0.033,
+    "ev": -0.08,
+    "gold": 47,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": -0.08
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "r": {
+    "b": 91.74,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 89,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "r": {
+    "b": 46.989999999999995,
+    "pct": -0.0010000000000000009,
+    "ev": 0,
+    "gold": 47,
+    "mods": {
+     "title": 0.03,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.031,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "r": {
+    "b": 59.849999999999994,
+    "pct": -0.022799999999999997,
+    "ev": 0,
+    "gold": 58,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.022799999999999997,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "r": {
+    "b": 67.46000000000001,
+    "pct": 0.006999999999999999,
+    "ev": 0,
+    "gold": 68,
+    "mods": {
+     "title": 0.04,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "r": {
+    "b": 72,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 70,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "r": {
+    "b": 48,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 46,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "r": {
+    "b": 76.15,
+    "pct": -0.041,
+    "ev": -0.5,
+    "gold": 37,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.041,
+     "events": -0.5
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "r": {
+    "b": 116,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 112,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "r": {
+    "b": 64.31,
+    "pct": -0.027600000000000003,
+    "ev": 0,
+    "gold": 63,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.027600000000000003,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "r": {
+    "b": 79.2,
+    "pct": 0.1216,
+    "ev": 0,
+    "gold": 89,
+    "mods": {
+     "title": 0,
+     "gear": 0.15,
+     "project": 0,
+     "pact": 0,
+     "order": -0.028399999999999998,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "r": {
+    "b": 54.519999999999996,
+    "pct": -0.031,
+    "ev": 0,
+    "gold": 53,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.031,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "r": {
+    "b": 96.91,
+    "pct": -0.031,
+    "ev": 0,
+    "gold": 94,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.031,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "r": {
+    "b": 53.81999999999999,
+    "pct": -0.025799999999999997,
+    "ev": -0.5,
+    "gold": 26,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.025799999999999997,
+     "events": -0.5
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "r": {
+    "b": 59.25,
+    "pct": 0.00020000000000000286,
+    "ev": 0,
+    "gold": 59,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": 0.00020000000000000286,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "r": {
+    "b": 62.6,
+    "pct": -0.019,
+    "ev": 0,
+    "gold": 61,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.019,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "r": {
+    "b": 70.7,
+    "pct": -0.029,
+    "ev": 0,
+    "gold": 69,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.029,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "r": {
+    "b": 46.800000000000004,
+    "pct": -0.031,
+    "ev": 0,
+    "gold": 45,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.031,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "r": {
+    "b": 80.78,
+    "pct": -0.021,
+    "ev": 0,
+    "gold": 79,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.021,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "r": {
+    "b": 83.05,
+    "pct": -0.027,
+    "ev": 0,
+    "gold": 81,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.027,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "r": {
+    "b": 117.2,
+    "pct": -0.024,
+    "ev": 0,
+    "gold": 114,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.024,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "r": {
+    "b": 62.51,
+    "pct": -0.02,
+    "ev": 0,
+    "gold": 61,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.02,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "r": {
+    "b": 75.12,
+    "pct": -0.015600000000000001,
+    "ev": 0,
+    "gold": 74,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.015600000000000001,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "r": {
+    "b": 51,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 49,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "r": {
+    "b": 92.7,
+    "pct": -0.032,
+    "ev": 0,
+    "gold": 90,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.032,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "r": {
+    "b": 47.39,
+    "pct": -0.022,
+    "ev": 0,
+    "gold": 46,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.022,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "r": {
+    "b": 66.47,
+    "pct": -0.006600000000000002,
+    "ev": 0,
+    "gold": 66,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.006600000000000002,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "r": {
+    "b": 64.80000000000001,
+    "pct": -0.029,
+    "ev": 0,
+    "gold": 63,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.029,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "r": {
+    "b": 71.5,
+    "pct": -0.031,
+    "ev": 0,
+    "gold": 69,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.031,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "r": {
+    "b": 45.6,
+    "pct": -0.029,
+    "ev": 0,
+    "gold": 44,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.029,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "r": {
+    "b": 79.05,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 76,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "r": {
+    "b": 85,
+    "pct": -0.027,
+    "ev": 0,
+    "gold": 83,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.027,
+     "events": 0
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "r": {
+    "b": 117.2,
+    "pct": -0.033,
+    "ev": 0,
+    "gold": 113,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "pact": 0,
+     "order": -0.033,
+     "events": 0
+    }
+   }
+  }
+ ],
+ "harvest": [
+  {
+   "seed": 1,
+   "city": "beiping",
+   "roll": 1.07,
+   "r": {
+    "h0": 939.2460000000001,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 908,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1162.8760000000002,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1125,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 894.5200000000002,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 865,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "roll": 1.07,
+   "r": {
+    "h0": 1459.48,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1411,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "roll": 1.07,
+   "r": {
+    "h0": 847.4400000000002,
+    "rollRaw": 1.07,
+    "pct": -0.0010000000000000009,
+    "h": 847,
+    "mods": {
+     "title": 0.03,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.031
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "roll": 1.07,
+   "r": {
+    "h0": 941.6000000000001,
+    "rollRaw": 1.07,
+    "pct": -0.022799999999999997,
+    "h": 920,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.022799999999999997
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1035.7600000000002,
+    "rollRaw": 1.07,
+    "pct": 0.017,
+    "h": 1053,
+    "mods": {
+     "title": 0.05,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "roll": 1.07,
+   "r": {
+    "h0": 1082.8400000000001,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1047,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "roll": 1.07,
+   "r": {
+    "h0": 800.3600000000001,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 774,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1177,
+    "rollRaw": 1.07,
+    "pct": -0.041,
+    "h": 1129,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.041
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1475.958,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1427,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "roll": 1.07,
+   "r": {
+    "h0": 988.6800000000002,
+    "rollRaw": 1.07,
+    "pct": -0.027600000000000003,
+    "h": 961,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.027600000000000003
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1224.0800000000002,
+    "rollRaw": 1.07,
+    "pct": -0.028399999999999998,
+    "h": 1189,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.028399999999999998
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 894.5200000000002,
+    "rollRaw": 1.07,
+    "pct": -0.031,
+    "h": 867,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.031
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "roll": 1.07,
+   "r": {
+    "h0": 1459.48,
+    "rollRaw": 1.07,
+    "pct": -0.031,
+    "h": 1414,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.031
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "roll": 1.07,
+   "r": {
+    "h0": 847.4400000000002,
+    "rollRaw": 1.07,
+    "pct": -0.025799999999999997,
+    "h": 826,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.025799999999999997
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "roll": 1.07,
+   "r": {
+    "h0": 941.6000000000001,
+    "rollRaw": 1.07,
+    "pct": 0.00020000000000000286,
+    "h": 942,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": 0.00020000000000000286
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1035.7600000000002,
+    "rollRaw": 1.07,
+    "pct": -0.019,
+    "h": 1016,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.019
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "roll": 1.07,
+   "r": {
+    "h0": 1028.698,
+    "rollRaw": 1.07,
+    "pct": -0.029,
+    "h": 999,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.029
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "roll": 1.07,
+   "r": {
+    "h0": 800.3600000000001,
+    "rollRaw": 1.07,
+    "pct": -0.031,
+    "h": 776,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.031
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1177,
+    "rollRaw": 1.07,
+    "pct": -0.021,
+    "h": 1152,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.021
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1318.24,
+    "rollRaw": 1.07,
+    "pct": -0.027,
+    "h": 1283,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.027
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1558.3480000000002,
+    "rollRaw": 1.07,
+    "pct": 0.026000000000000002,
+    "h": 1599,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0.05,
+     "order": -0.024
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "roll": 1.07,
+   "r": {
+    "h0": 988.6800000000002,
+    "rollRaw": 1.07,
+    "pct": -0.02,
+    "h": 969,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.02
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1224.0800000000002,
+    "rollRaw": 1.07,
+    "pct": -0.015600000000000001,
+    "h": 1205,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.015600000000000001
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 894.5200000000002,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 865,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "roll": 1.07,
+   "r": {
+    "h0": 1459.48,
+    "rollRaw": 1.07,
+    "pct": -0.032,
+    "h": 1413,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.032
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "roll": 1.07,
+   "r": {
+    "h0": 805.0680000000001,
+    "rollRaw": 1.07,
+    "pct": -0.022,
+    "h": 787,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.022
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "roll": 1.07,
+   "r": {
+    "h0": 941.6000000000001,
+    "rollRaw": 1.07,
+    "pct": -0.006600000000000002,
+    "h": 935,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.006600000000000002
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1035.7600000000002,
+    "rollRaw": 1.07,
+    "pct": -0.029,
+    "h": 1006,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.029
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "roll": 1.07,
+   "r": {
+    "h0": 1082.8400000000001,
+    "rollRaw": 1.07,
+    "pct": -0.031,
+    "h": 1049,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.031
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "roll": 1.07,
+   "r": {
+    "h0": 800.3600000000001,
+    "rollRaw": 1.07,
+    "pct": -0.029,
+    "h": 777,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.029
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "roll": 1.07,
+   "r": {
+    "h0": 1118.15,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1081,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1341.78,
+    "rollRaw": 1.07,
+    "pct": -0.027,
+    "h": 1306,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.027
+    }
+   }
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "roll": 1.07,
+   "r": {
+    "h0": 1537.1620000000003,
+    "rollRaw": 1.07,
+    "pct": -0.033,
+    "h": 1486,
+    "mods": {
+     "title": 0,
+     "gear": 0,
+     "project": 0,
+     "events": 0,
+     "order": -0.033
+    }
+   }
+  }
+ ],
+ "recruit": [
+  {
+   "seed": 1,
+   "city": "beiping",
+   "gen": "袁术",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "gen": "阎圃",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "gen": "眭固",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "gen": "纪灵",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "gen": "姜维",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "贾诩",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "袁绍",
+   "tpg": 5.1
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "gen": "刘繇",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "gen": "吕布",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "gen": "樊能",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "gen": "麴义",
+   "tpg": 5
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "stacked": true,
+   "tpg": 5,
+   "train": 24
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "stacked": true,
+   "tpg": 5.4,
+   "train": 18
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "stacked": true,
+   "tpg": 5.1,
+   "train": 19
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "stacked": true,
+   "tpg": 5,
+   "train": 20
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "stacked": true,
+   "tpg": 5.2,
+   "train": 14
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "gen": "袁术",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "马腾",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "公孙瓒",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "gen": "董卓",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "田丰",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "gen": "麴义",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "gen": "袁绍",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "gen": "眭固",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "gen": "夏侯渊",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "gen": "杨任",
+   "tpg": 5
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "stacked": true,
+   "tpg": 5,
+   "train": 18
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "stacked": true,
+   "tpg": 5.1,
+   "train": 18
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "stacked": true,
+   "tpg": 5,
+   "train": 18
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "stacked": true,
+   "tpg": 5,
+   "train": 24
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "stacked": true,
+   "tpg": 5,
+   "train": 15
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "stacked": true,
+   "tpg": 5,
+   "train": 21
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "stacked": true,
+   "tpg": 5,
+   "train": 18
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "贾诩",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "gen": "郭汜",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "gen": "李儒",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "gen": "杨昂",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "gen": "吕布",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "gen": "典韦",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "gen": "董卓",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "gen": "周泰",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "gen": "武安国",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "gen": "曹操",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "gen": "马腾",
+   "tpg": 5
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "stacked": true,
+   "tpg": 5.1,
+   "train": 19
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "stacked": true,
+   "tpg": 5,
+   "train": 15
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "stacked": true,
+   "tpg": 5,
+   "train": 24
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "stacked": true,
+   "tpg": 5,
+   "train": 18
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "stacked": true,
+   "tpg": 5,
+   "train": 19
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "stacked": true,
+   "tpg": 5.2,
+   "train": 19
+  }
+ ],
+ "search": [
+  {
+   "seed": 1,
+   "city": "beiping",
+   "gen": "袁术",
+   "p": 0.5242124542124542
+  },
+  {
+   "seed": 1,
+   "city": "nanpi",
+   "gen": "阎圃",
+   "p": 0.7374725274725276
+  },
+  {
+   "seed": 1,
+   "city": "jinyang",
+   "gen": "眭固",
+   "p": 0.3972893772893773
+  },
+  {
+   "seed": 1,
+   "city": "ye",
+   "gen": "纪灵",
+   "p": 0.45882783882783884
+  },
+  {
+   "seed": 1,
+   "city": "pingyuan",
+   "gen": "姜维",
+   "p": 0.709010989010989
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "贾诩",
+   "p": 0.6513186813186813
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "袁绍",
+   "p": 0.6634065934065934
+  },
+  {
+   "seed": 1,
+   "city": "chenliu",
+   "gen": "刘繇",
+   "p": 0.6042490842490842
+  },
+  {
+   "seed": 1,
+   "city": "xiaopei",
+   "gen": "吕布",
+   "p": 0.3628571428571429
+  },
+  {
+   "seed": 1,
+   "city": "xiapi",
+   "gen": "樊能",
+   "p": 0.4734798534798535
+  },
+  {
+   "seed": 1,
+   "city": "luoyang",
+   "gen": "麴义",
+   "p": 0.5557142857142857
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "吕蒙",
+   "stacked": true,
+   "p": 0.7337362637362637
+  },
+  {
+   "seed": 1,
+   "gen": "吕蒙",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.10935606060606062,
+   "discord": 0.9,
+   "persuade": 0.0369074839302112
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "赵云",
+   "stacked": true,
+   "p": 0.5628571428571428
+  },
+  {
+   "seed": 1,
+   "gen": "赵云",
+   "foe": "李傕",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.76,
+   "persuade": 0.02029476584022039
+  },
+  {
+   "seed": 1,
+   "city": "runan",
+   "gen": "孙策",
+   "stacked": true,
+   "p": 0.7483516483516484
+  },
+  {
+   "seed": 1,
+   "gen": "孙策",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.10157828282828271,
+   "discord": 0.8600000000000001,
+   "persuade": 0.03321673553719008
+  },
+  {
+   "seed": 1,
+   "city": "beihai",
+   "gen": "张辽",
+   "stacked": true,
+   "p": 0.5628571428571428
+  },
+  {
+   "seed": 1,
+   "gen": "张辽",
+   "foe": "李傕",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.76,
+   "persuade": 0.02029476584022039
+  },
+  {
+   "seed": 1,
+   "city": "jiangxia",
+   "gen": "程普",
+   "stacked": true,
+   "p": 0.676043956043956
+  },
+  {
+   "seed": 1,
+   "gen": "程普",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.07602272727272719,
+   "discord": 0.88,
+   "persuade": 0.03365094123048668
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "张郃",
+   "stacked": true,
+   "p": 0.6664835164835164
+  },
+  {
+   "seed": 1,
+   "gen": "张郃",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.87,
+   "persuade": 0.03083535353535353
+  },
+  {
+   "seed": 1,
+   "city": "wuwei",
+   "gen": "李典",
+   "stacked": true,
+   "p": 0.676043956043956
+  },
+  {
+   "seed": 1,
+   "gen": "李典",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.07602272727272719,
+   "discord": 0.88,
+   "persuade": 0.03365094123048668
+  },
+  {
+   "seed": 1,
+   "city": "puyang",
+   "gen": "沮授",
+   "stacked": true,
+   "p": 0.7095604395604396
+  },
+  {
+   "seed": 1,
+   "gen": "沮授",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.9,
+   "persuade": 0.03463971533516987
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "p": 0.5604761904761905
+  },
+  {
+   "seed": 2,
+   "city": "nanpi",
+   "gen": "袁术",
+   "p": 0.5275091575091575
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "马腾",
+   "p": 0.5861172161172161
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "公孙瓒",
+   "p": 0.5846520146520147
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "p": 0.5604761904761905
+  },
+  {
+   "seed": 2,
+   "city": "beihai",
+   "gen": "董卓",
+   "p": 0.5066300366300366
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "田丰",
+   "p": 0.7873992673992674
+  },
+  {
+   "seed": 2,
+   "city": "chenliu",
+   "gen": "麴义",
+   "p": 0.5604761904761906
+  },
+  {
+   "seed": 2,
+   "city": "xiaopei",
+   "gen": "袁绍",
+   "p": 0.6527838827838828
+  },
+  {
+   "seed": 2,
+   "city": "xiapi",
+   "gen": "眭固",
+   "p": 0.3758608058608059
+  },
+  {
+   "seed": 2,
+   "city": "xuchang",
+   "gen": "夏侯渊",
+   "p": 0.5906959706959707
+  },
+  {
+   "seed": 2,
+   "city": "luoyang",
+   "gen": "杨任",
+   "p": 0.5676190476190477
+  },
+  {
+   "seed": 2,
+   "city": "jianye",
+   "gen": "陆逊",
+   "stacked": true,
+   "p": 0.7335531135531135
+  },
+  {
+   "seed": 2,
+   "gen": "陆逊",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.08679292929292926,
+   "discord": 0.9,
+   "persuade": 0.05148760330578513
+  },
+  {
+   "seed": 2,
+   "city": "jinyang",
+   "gen": "姜维",
+   "stacked": true,
+   "p": 0.7399633699633699
+  },
+  {
+   "seed": 2,
+   "gen": "姜维",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.13487373737373742,
+   "discord": 0.9,
+   "persuade": 0.0533099173553719
+  },
+  {
+   "seed": 2,
+   "city": "shouchun",
+   "gen": "吕蒙",
+   "stacked": true,
+   "p": 0.7789377289377291
+  },
+  {
+   "seed": 2,
+   "gen": "吕蒙",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.09679292929292924,
+   "discord": 0.9,
+   "persuade": 0.04888429752066117
+  },
+  {
+   "seed": 2,
+   "city": "ye",
+   "gen": "赵云",
+   "stacked": true,
+   "p": 0.6461904761904762
+  },
+  {
+   "seed": 2,
+   "gen": "赵云",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.9,
+   "persuade": 0.04445867768595042
+  },
+  {
+   "seed": 2,
+   "city": "guangling",
+   "gen": "鲁肃",
+   "stacked": true,
+   "p": 0.7143223443223443
+  },
+  {
+   "seed": 2,
+   "gen": "鲁肃",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.07568181818181818,
+   "discord": 0.9,
+   "persuade": 0.05004132231404958
+  },
+  {
+   "seed": 2,
+   "city": "beiping",
+   "gen": "关羽",
+   "stacked": true,
+   "p": 0.5943223443223443
+  },
+  {
+   "seed": 2,
+   "gen": "关羽",
+   "foe": "颜良",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.77,
+   "persuade": 0
+  },
+  {
+   "seed": 2,
+   "city": "pingyuan",
+   "gen": "张辽",
+   "stacked": true,
+   "p": 0.5604761904761905
+  },
+  {
+   "seed": 2,
+   "gen": "张辽",
+   "foe": "颜良",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.76,
+   "persuade": 0
+  },
+  {
+   "seed": 2,
+   "city": "puyang",
+   "gen": "程普",
+   "stacked": true,
+   "p": 0.6450915750915751
+  },
+  {
+   "seed": 2,
+   "gen": "程普",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.88,
+   "persuade": 0.04483471074380166
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "贾诩",
+   "p": 0.688937728937729
+  },
+  {
+   "seed": 3,
+   "city": "nanpi",
+   "gen": "郭汜",
+   "p": 0.4143223443223443
+  },
+  {
+   "seed": 3,
+   "city": "jinyang",
+   "gen": "李儒",
+   "p": 0.6658608058608059
+  },
+  {
+   "seed": 3,
+   "city": "ye",
+   "gen": "杨昂",
+   "p": 0.5405128205128205
+  },
+  {
+   "seed": 3,
+   "city": "pingyuan",
+   "gen": "吕布",
+   "p": 0.3604761904761905
+  },
+  {
+   "seed": 3,
+   "city": "beihai",
+   "gen": "典韦",
+   "p": 0.5060805860805861
+  },
+  {
+   "seed": 3,
+   "city": "puyang",
+   "gen": "董卓",
+   "p": 0.5066300366300366
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "p": 0.6635897435897435
+  },
+  {
+   "seed": 3,
+   "city": "xiaopei",
+   "gen": "周泰",
+   "p": 0.578974358974359
+  },
+  {
+   "seed": 3,
+   "city": "xiapi",
+   "gen": "武安国",
+   "p": 0.3604761904761905
+  },
+  {
+   "seed": 3,
+   "city": "xuchang",
+   "gen": "曹操",
+   "p": 0.7445421245421245
+  },
+  {
+   "seed": 3,
+   "city": "luoyang",
+   "gen": "马腾",
+   "p": 0.578974358974359
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "邓艾",
+   "stacked": true,
+   "p": 0.641978021978022
+  },
+  {
+   "seed": 3,
+   "gen": "邓艾",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.9,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "wan",
+   "gen": "姜维",
+   "stacked": true,
+   "p": 0.7328205128205127
+  },
+  {
+   "seed": 3,
+   "gen": "姜维",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.058737373737373755,
+   "discord": 0.9,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "yongan",
+   "gen": "鲁肃",
+   "stacked": true,
+   "p": 0.7871794871794873
+  },
+  {
+   "seed": 3,
+   "gen": "鲁肃",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.9,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "guangling",
+   "gen": "孙策",
+   "stacked": true,
+   "p": 0.6635897435897435
+  },
+  {
+   "seed": 3,
+   "gen": "孙策",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.8600000000000001,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "beiping",
+   "gen": "张辽",
+   "stacked": true,
+   "p": 0.5604761904761905
+  },
+  {
+   "seed": 3,
+   "gen": "张辽",
+   "foe": "张济",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.62,
+   "persuade": 0.06346859504132232
+  },
+  {
+   "seed": 3,
+   "city": "runan",
+   "gen": "程普",
+   "stacked": true,
+   "p": 0.7051282051282051
+  },
+  {
+   "seed": 3,
+   "gen": "程普",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.89,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "hanzhong",
+   "gen": "袁绍",
+   "stacked": true,
+   "p": 0.5765934065934066
+  },
+  {
+   "seed": 3,
+   "gen": "袁绍",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.9,
+   "persuade": 0
+  },
+  {
+   "seed": 3,
+   "city": "chenliu",
+   "gen": "张郃",
+   "stacked": true,
+   "p": 0.6635897435897435
+  },
+  {
+   "seed": 3,
+   "gen": "张郃",
+   "foe": "吕布",
+   "stacked": true,
+   "hire": 0.05,
+   "discord": 0.8600000000000001,
+   "persuade": 0
+  }
+ ],
+ "ally": [
+  {
+   "seed": 1,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 0,
+   "envoy": "吕蒙",
+   "p": 0.05
+  },
+  {
+   "seed": 1,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 500,
+   "envoy": "吕蒙",
+   "p": 0.42333333333333334
+  },
+  {
+   "seed": 1,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 1000,
+   "envoy": "吕蒙",
+   "p": 0.8400000000000001
+  },
+  {
+   "seed": 1,
+   "f": "yuanshao",
+   "t": "sunjian",
+   "gift": 0,
+   "envoy": "赵云",
+   "p": 0.2525
+  },
+  {
+   "seed": 1,
+   "f": "yuanshao",
+   "t": "sunjian",
+   "gift": 500,
+   "envoy": "赵云",
+   "p": 0.6691666666666667
+  },
+  {
+   "seed": 1,
+   "f": "yuanshao",
+   "t": "sunjian",
+   "gift": 1000,
+   "envoy": "赵云",
+   "p": 0.9
+  },
+  {
+   "seed": 1,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 0,
+   "envoy": "孙策",
+   "p": 0.2825
+  },
+  {
+   "seed": 1,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 500,
+   "envoy": "孙策",
+   "p": 0.6991666666666667
+  },
+  {
+   "seed": 1,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 1000,
+   "envoy": "孙策",
+   "p": 0.9
+  },
+  {
+   "seed": 1,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 0,
+   "envoy": "张辽",
+   "p": 0.10333333333333333
+  },
+  {
+   "seed": 1,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 500,
+   "envoy": "张辽",
+   "p": 0.5200000000000001
+  },
+  {
+   "seed": 1,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 1000,
+   "envoy": "张辽",
+   "p": 0.9
+  },
+  {
+   "seed": 1,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 0,
+   "envoy": "程普",
+   "p": 0.3025
+  },
+  {
+   "seed": 1,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 500,
+   "envoy": "程普",
+   "p": 0.7191666666666667
+  },
+  {
+   "seed": 1,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 1000,
+   "envoy": "程普",
+   "p": 0.9
+  },
+  {
+   "seed": 1,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 0,
+   "envoy": "张郃",
+   "p": 0.3208333333333333
+  },
+  {
+   "seed": 1,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 500,
+   "envoy": "张郃",
+   "p": 0.7375
+  },
+  {
+   "seed": 1,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 1000,
+   "envoy": "张郃",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 0,
+   "envoy": "陆逊",
+   "p": 0.05
+  },
+  {
+   "seed": 2,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 500,
+   "envoy": "陆逊",
+   "p": 0.42333333333333334
+  },
+  {
+   "seed": 2,
+   "f": "dong",
+   "t": "yuanshao",
+   "gift": 1000,
+   "envoy": "陆逊",
+   "p": 0.8400000000000001
+  },
+  {
+   "seed": 2,
+   "f": "yuanshao",
+   "t": "cao",
+   "gift": 0,
+   "envoy": "姜维",
+   "p": 0.4991666666666667
+  },
+  {
+   "seed": 2,
+   "f": "yuanshao",
+   "t": "cao",
+   "gift": 500,
+   "envoy": "姜维",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "yuanshao",
+   "t": "cao",
+   "gift": 1000,
+   "envoy": "姜维",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 0,
+   "envoy": "吕蒙",
+   "p": 0.26
+  },
+  {
+   "seed": 2,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 500,
+   "envoy": "吕蒙",
+   "p": 0.6766666666666666
+  },
+  {
+   "seed": 2,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 1000,
+   "envoy": "吕蒙",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 0,
+   "envoy": "赵云",
+   "p": 0.2691666666666667
+  },
+  {
+   "seed": 2,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 500,
+   "envoy": "赵云",
+   "p": 0.6858333333333333
+  },
+  {
+   "seed": 2,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 1000,
+   "envoy": "赵云",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "yuanshu",
+   "t": "gongsun",
+   "gift": 0,
+   "envoy": "鲁肃",
+   "p": 0.29000000000000004
+  },
+  {
+   "seed": 2,
+   "f": "yuanshu",
+   "t": "gongsun",
+   "gift": 500,
+   "envoy": "鲁肃",
+   "p": 0.7066666666666668
+  },
+  {
+   "seed": 2,
+   "f": "yuanshu",
+   "t": "gongsun",
+   "gift": 1000,
+   "envoy": "鲁肃",
+   "p": 0.9
+  },
+  {
+   "seed": 2,
+   "f": "gongsun",
+   "t": "liubiao",
+   "gift": 0,
+   "envoy": "关羽",
+   "p": 0.43666666666666665
+  },
+  {
+   "seed": 2,
+   "f": "gongsun",
+   "t": "liubiao",
+   "gift": 500,
+   "envoy": "关羽",
+   "p": 0.8533333333333333
+  },
+  {
+   "seed": 2,
+   "f": "gongsun",
+   "t": "liubiao",
+   "gift": 1000,
+   "envoy": "关羽",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "dong",
+   "t": "cao",
+   "gift": 0,
+   "envoy": "邓艾",
+   "p": 0.05
+  },
+  {
+   "seed": 3,
+   "f": "dong",
+   "t": "cao",
+   "gift": 500,
+   "envoy": "邓艾",
+   "p": 0.45000000000000007
+  },
+  {
+   "seed": 3,
+   "f": "dong",
+   "t": "cao",
+   "gift": 1000,
+   "envoy": "邓艾",
+   "p": 0.8666666666666667
+  },
+  {
+   "seed": 3,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 0,
+   "envoy": "姜维",
+   "p": 0.22999999999999998
+  },
+  {
+   "seed": 3,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 500,
+   "envoy": "姜维",
+   "p": 0.6466666666666666
+  },
+  {
+   "seed": 3,
+   "f": "cao",
+   "t": "sunjian",
+   "gift": 1000,
+   "envoy": "姜维",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 0,
+   "envoy": "鲁肃",
+   "p": 0.4358333333333333
+  },
+  {
+   "seed": 3,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 500,
+   "envoy": "鲁肃",
+   "p": 0.8525
+  },
+  {
+   "seed": 3,
+   "f": "sunjian",
+   "t": "yuanshu",
+   "gift": 1000,
+   "envoy": "鲁肃",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 0,
+   "envoy": "孙策",
+   "p": 0.10083333333333333
+  },
+  {
+   "seed": 3,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 500,
+   "envoy": "孙策",
+   "p": 0.5174999999999998
+  },
+  {
+   "seed": 3,
+   "f": "yuanshu",
+   "t": "liubiao",
+   "gift": 1000,
+   "envoy": "孙策",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 0,
+   "envoy": "张辽",
+   "p": 0.5066666666666667
+  },
+  {
+   "seed": 3,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 500,
+   "envoy": "张辽",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "liubiao",
+   "t": "mateng",
+   "gift": 1000,
+   "envoy": "张辽",
+   "p": 0.9
+  },
+  {
+   "seed": 3,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 0,
+   "envoy": "程普",
+   "p": 0.27249999999999996
+  },
+  {
+   "seed": 3,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 500,
+   "envoy": "程普",
+   "p": 0.6891666666666667
+  },
+  {
+   "seed": 3,
+   "f": "mateng",
+   "t": "zhanglu",
+   "gift": 1000,
+   "envoy": "程普",
+   "p": 0.9
+  }
+ ],
+ "fame": [
+  {
+   "seed": 1,
+   "f": "dong",
+   "fame": 75,
+   "virtue": 18,
+   "ap": 5
+  },
+  {
+   "seed": 1,
+   "f": "yuanshao",
+   "fame": 91,
+   "virtue": 57,
+   "ap": 6
+  },
+  {
+   "seed": 1,
+   "f": "sunjian",
+   "fame": 73,
+   "virtue": 72,
+   "ap": 5
+  },
+  {
+   "seed": 1,
+   "f": "yuanshu",
+   "fame": 67,
+   "virtue": 26,
+   "ap": 5
+  },
+  {
+   "seed": 1,
+   "f": "liubiao",
+   "fame": 65,
+   "virtue": 72,
+   "ap": 5
+  },
+  {
+   "seed": 1,
+   "f": "mateng",
+   "fame": 62,
+   "virtue": 72,
+   "ap": 5
+  },
+  {
+   "seed": 2,
+   "f": "dong",
+   "fame": 74,
+   "virtue": 17,
+   "ap": 5
+  },
+  {
+   "seed": 2,
+   "f": "yuanshao",
+   "fame": 89,
+   "virtue": 59,
+   "ap": 6
+  },
+  {
+   "seed": 2,
+   "f": "cao",
+   "fame": 83,
+   "virtue": 62,
+   "ap": 6
+  },
+  {
+   "seed": 2,
+   "f": "sunjian",
+   "fame": 73,
+   "virtue": 73,
+   "ap": 5
+  },
+  {
+   "seed": 2,
+   "f": "yuanshu",
+   "fame": 66,
+   "virtue": 29,
+   "ap": 5
+  },
+  {
+   "seed": 2,
+   "f": "gongsun",
+   "fame": 62,
+   "virtue": 53,
+   "ap": 5
+  },
+  {
+   "seed": 3,
+   "f": "dong",
+   "fame": 75,
+   "virtue": 17,
+   "ap": 5
+  },
+  {
+   "seed": 3,
+   "f": "cao",
+   "fame": 82,
+   "virtue": 62,
+   "ap": 6
+  },
+  {
+   "seed": 3,
+   "f": "sunjian",
+   "fame": 75,
+   "virtue": 70,
+   "ap": 5
+  },
+  {
+   "seed": 3,
+   "f": "yuanshu",
+   "fame": 66,
+   "virtue": 27,
+   "ap": 5
+  },
+  {
+   "seed": 3,
+   "f": "liubiao",
+   "fame": 65,
+   "virtue": 72,
+   "ap": 5
+  },
+  {
+   "seed": 3,
+   "f": "mateng",
+   "fame": 60,
+   "virtue": 70,
+   "ap": 5
+  }
+ ],
+ "atk": [
+  {
+   "seed": 1,
+   "gen": "吕蒙",
+   "kit": {
+    "weapon": "han_yue",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "in_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 0,
+   "morale": 70,
+   "atkMul": 1.1330000000000002,
+   "defMul": 1.0712000000000002,
+   "crit": 0.069,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 84
+  },
+  {
+   "seed": 1,
+   "gen": "赵云",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 2,
+   "formation": 1,
+   "morale": 74,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.10250000000000001,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 97
+  },
+  {
+   "seed": 1,
+   "gen": "孙策",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "han_sinan"
+   },
+   "tier": 3,
+   "formation": 2,
+   "morale": 78,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.125,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 96
+  },
+  {
+   "seed": 1,
+   "gen": "张辽",
+   "kit": {
+    "weapon": "fangtian",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "tiejia_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 4,
+   "formation": 3,
+   "morale": 82,
+   "atkMul": 1.5523200000000004,
+   "defMul": 1.1880000000000002,
+   "crit": 0.162,
+   "critK": 1.5,
+   "startMorale": 65,
+   "duelWar": 98
+  },
+  {
+   "seed": 1,
+   "gen": "程普",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 5,
+   "formation": 4,
+   "morale": 86,
+   "atkMul": 1.1021,
+   "defMul": 1.02,
+   "crit": 0.138,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 82
+  },
+  {
+   "seed": 1,
+   "gen": "张郃",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "af_tuo",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 5,
+   "morale": 90,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.15400000000000003,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 90
+  },
+  {
+   "seed": 1,
+   "gen": "李典",
+   "kit": {
+    "weapon": "han_yue_u",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 2,
+   "formation": 6,
+   "morale": 94,
+   "atkMul": 1.2064,
+   "defMul": 1.1024,
+   "crit": 0.11599999999999998,
+   "critK": 1.5,
+   "startMorale": 63,
+   "duelWar": 79
+  },
+  {
+   "seed": 1,
+   "gen": "沮授",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 3,
+   "formation": 7,
+   "morale": 98,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.058,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 40
+  },
+  {
+   "seed": 2,
+   "gen": "陆逊",
+   "kit": {
+    "weapon": "han_yue",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "in_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 0,
+   "morale": 70,
+   "atkMul": 1.1330000000000002,
+   "defMul": 1.0712000000000002,
+   "crit": 0.04800000000000001,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 70
+  },
+  {
+   "seed": 2,
+   "gen": "姜维",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 2,
+   "formation": 1,
+   "morale": 74,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.092,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 85
+  },
+  {
+   "seed": 2,
+   "gen": "吕蒙",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "han_sinan"
+   },
+   "tier": 3,
+   "formation": 2,
+   "morale": 78,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.10700000000000001,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 84
+  },
+  {
+   "seed": 2,
+   "gen": "赵云",
+   "kit": {
+    "weapon": "fangtian",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "tiejia_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 4,
+   "formation": 3,
+   "morale": 82,
+   "atkMul": 1.5523200000000004,
+   "defMul": 1.1880000000000002,
+   "crit": 0.1665,
+   "critK": 1.5,
+   "startMorale": 65,
+   "duelWar": 101
+  },
+  {
+   "seed": 2,
+   "gen": "鲁肃",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 5,
+   "formation": 4,
+   "morale": 86,
+   "atkMul": 1.1021,
+   "defMul": 1.02,
+   "crit": 0.092,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 58
+  },
+  {
+   "seed": 2,
+   "gen": "关羽",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "af_tuo",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 5,
+   "morale": 90,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.16600000000000004,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 98
+  },
+  {
+   "seed": 2,
+   "gen": "张辽",
+   "kit": {
+    "weapon": "han_yue_u",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 2,
+   "formation": 6,
+   "morale": 94,
+   "atkMul": 1.2064,
+   "defMul": 1.1024,
+   "crit": 0.14,
+   "critK": 1.5,
+   "startMorale": 63,
+   "duelWar": 95
+  },
+  {
+   "seed": 2,
+   "gen": "程普",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 3,
+   "formation": 7,
+   "morale": 98,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.106,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 82
+  },
+  {
+   "seed": 3,
+   "gen": "邓艾",
+   "kit": {
+    "weapon": "han_yue",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "in_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 0,
+   "morale": 70,
+   "atkMul": 1.1330000000000002,
+   "defMul": 1.0712000000000002,
+   "crit": 0.07199999999999998,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 86
+  },
+  {
+   "seed": 3,
+   "gen": "姜维",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 2,
+   "formation": 1,
+   "morale": 74,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.092,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 90
+  },
+  {
+   "seed": 3,
+   "gen": "鲁肃",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "han_sinan"
+   },
+   "tier": 3,
+   "formation": 2,
+   "morale": 78,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.068,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 58
+  },
+  {
+   "seed": 3,
+   "gen": "孙策",
+   "kit": {
+    "weapon": "fangtian",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "tiejia_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 4,
+   "formation": 3,
+   "morale": 82,
+   "atkMul": 1.5523200000000004,
+   "defMul": 1.1880000000000002,
+   "crit": 0.165,
+   "critK": 1.5,
+   "startMorale": 65,
+   "duelWar": 100
+  },
+  {
+   "seed": 3,
+   "gen": "张辽",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "aethiopsbow",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 5,
+   "formation": 4,
+   "morale": 86,
+   "atkMul": 1.1021,
+   "defMul": 1.02,
+   "crit": 0.156,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 94
+  },
+  {
+   "seed": 3,
+   "gen": "程普",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "ar_toujin",
+    "mount": "af_tuo",
+    "treasure": "af_banzhi"
+   },
+   "tier": 1,
+   "formation": 5,
+   "morale": 90,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.14200000000000002,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 82
+  },
+  {
+   "seed": 3,
+   "gen": "袁绍",
+   "kit": {
+    "weapon": "han_yue_u",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_xiang",
+    "treasure": "af_banzhi"
+   },
+   "tier": 2,
+   "formation": 6,
+   "morale": 94,
+   "atkMul": 1.2064,
+   "defMul": 1.1024,
+   "crit": 0.104,
+   "critK": 1.5,
+   "startMorale": 63,
+   "duelWar": 71
+  },
+  {
+   "seed": 3,
+   "gen": "张郃",
+   "kit": {
+    "weapon": "af_mao",
+    "offhand": "af_biao",
+    "armour": "af_baipao",
+    "helmet": "af_jinguan",
+    "mount": "af_tuo",
+    "treasure": "ko_tieting"
+   },
+   "tier": 3,
+   "formation": 7,
+   "morale": 98,
+   "atkMul": 1.03,
+   "defMul": 1.02,
+   "crit": 0.118,
+   "critK": 1.5,
+   "startMorale": 60,
+   "duelWar": 90
+  }
+ ]
+}

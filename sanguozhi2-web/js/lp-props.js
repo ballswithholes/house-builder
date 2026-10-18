@@ -43,7 +43,7 @@
      building house_han 汉式民居 · house_thatch 茅屋 · house_med 地中海民居 · house_mud 平顶土屋 · dome_hall 穹顶殿 ·
              stupa 佛塔（窣堵坡） · watchtower 望楼 · gate_tower 城门楼 · city_wall 城墙段 · wall_segment 墙段 · tower_round 圆塔
    建筑部件（给城池工作流组合用）：SG.LPProps.parts.*(M, opts) 直接画进一个 LP.MeshBuilder（当前变换下）：
-     hanRoof（歇山 xieshan / 庑殿 hip / 悬山 gable / 攒尖 pyramid；筒瓦、瓦当、起翘、正脊与鸱吻）· thatchRoof · terracottaRoof ·
+     hanRoof（歇山 xieshan / 庑殿 hip / 悬山 gable / 攒尖 pyramid；筒瓦、瓦当、起翘、正脊与鸱吻）· thatchRoof（loaf Lanternvale 圆顶 / gable / hip）· terracottaRoof ·
      flatRoof · dome · stupa · wall（rammed / brick / stone / mud / plaster；垛口、收分）· gate（券门 / 方门，门钉）· tower ·
      window（格窗，夜里亮）· door · plinth · merlons · columns · banner · ribLantern（见 LP.MeshBuilder）
    ========================================================================== */
@@ -1345,11 +1345,11 @@
       const straw = P.hsv(H('#D6BE80'), (b - 1.5) * 3, 0.9), strawD = P.shade(straw, 0.78), cap = P.hsv(H('#C8A866'), (b - 1.5) * 3, 0.95);
       const R = 0.95 + 0.08 * b;
       M.color = straw;
-      M.lathe([[R * 0.95, 0], [R, 0.3], [R * 1.02, 0.85], [R * 0.96, 1.25]], 10, false, false, false, [strawD, straw, P.shade(straw, 1.05), straw], b * 20);
-      // the cap: a cone whose lip hangs ragged over the stack (alternate lip points lower)
+      M.lathe([[R * 0.92, 0], [R, 0.3], [R * 1.04, 0.9], [R * 0.88, 1.4]], 10, false, false, false, [strawD, straw, P.shade(straw, 1.05), straw], b * 20);
+      // the cap: a full cone whose lip hangs ragged just over the stack (alternate lip points lower)
       const n = 12, lip = [], ring2 = [];
-      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, r = R * 1.22, y = 1.08 - (i % 2 ? 0.1 : 0) - 0.04 * hashN(i, b, 5); lip.push([Math.cos(a) * r, y, Math.sin(a) * r]); ring2.push([Math.cos(a) * R * 0.95, 1.22, Math.sin(a) * R * 0.95]); }
-      const apex = [0, 2.25 + 0.1 * b, 0];
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, r = R * 1.12, y = 1.32 - (i % 2 ? 0.1 : 0) - 0.03 * hashN(i, b, 5); lip.push([Math.cos(a) * r, y, Math.sin(a) * r]); ring2.push([Math.cos(a) * R * 0.86, 1.4, Math.sin(a) * R * 0.86]); }
+      const apex = [0, 2.75 + 0.1 * b, 0];
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n, mid = V.mul(V.add(lip[i], lip[j]), 0.5);
         M.triangleFacing(lip[i], lip[j], apex, [mid[0], 0.8, mid[2]], P.shade(cap, 0.94 + 0.1 * ((i % 3) / 2)));
@@ -1357,9 +1357,14 @@
       }
       M.color = P.shade(cap, 0.85); M.cone([0, apex[1] - 0.25, 0], 0.18, 0.45, 6);
       M.color = WOOD.dark; M.segment([0, apex[1] - 0.1, 0], [0.03, apex[1] + 0.35, 0], 0.04, 0.025, 4);
-      M.color = straw;
-      for (let i = 0; i < 6; i++) { const a = (i * 60 + b * 15) * D2R; M.blade([Math.cos(a) * R * 0.98, 0.02, Math.sin(a) * R * 0.98], [Math.cos(a) * (R + 0.35), 0.05, Math.sin(a) * (R + 0.3)], 0.12, [0, 1, 0]); }
-      return M;
+      // loose straw on the ground around the foot (no ink)
+      const F = builder(o, 'loose', 0.08, 0, 1);
+      F.color = P.shade(straw, 0.95);
+      for (let i = 0; i < 9; i++) {
+        const a = (i * 40 + b * 15 + 14 * hashN(i, b, 7)) * D2R, r0 = R * (0.9 + 0.08 * hashN(i, 2, b)), r1 = r0 + 0.25 + 0.15 * (hashN(i, 3, b) * 0.5 + 0.5), da = 0.25 * hashN(i, 4, b);
+        F.blade([Math.cos(a) * r0, 0.015, Math.sin(a) * r0], [Math.cos(a + da) * r1, 0.03, Math.sin(a + da) * r1], 0.07, [0, 1, 0]);
+      }
+      return { ink: M, plain: F };
     },
   });
 
@@ -1967,16 +1972,19 @@
     return res;
   }
   /**
-   * Thatch roof (Lanternvale farmhouse): thick straw courses with ragged eaves over a w × d wall top at y, gable (ridge
-   * along X) or hip; a rounded ridge roll. opts: { w, d, y, over: 0.5, rise, style: 'gable' | 'hip', color, cx, cz }.
+   * Thatch roof over a w × d wall top at y. style 'loaf' (Lanternvale CottageA): a rounded superellipse cross-section
+   * lofted along X with hipped, shrinking ends and a thick dark drip edge; 'gable' (ridge along X) / 'hip': thick straw
+   * courses with ragged eaves and a rounded ridge roll. opts: { w, d, y, over: 0.5, rise, style, color, cx, cz,
+   * lip: 0.32 (loaf eave drop), p: 1.45 (loaf fullness) }.
    */
   function thatchRoof(M, o) {
     o = Object.assign({ w: 4, d: 3, y: 2.6, over: 0.5, style: 'gable', color: '#C8A868', cx: 0, cz: 0 }, o);
-    const straw = toC(o.color), dark = P.shade(straw, 0.72), W = o.w / 2 + o.over, D = o.d / 2 + o.over, rise = o.rise != null ? o.rise : o.d * 0.62, yR = o.y + rise;
-    const cx = o.cx, cz = o.cz, TH = 0.22, hip = o.style === 'hip', Lr = hip ? Math.max(0.1, W - D * 0.8) : W;
+    if (o.style === 'loaf') return thatchLoaf(M, o);
+    const straw = toC(o.color), dark = P.shade(P.mix(straw, H('#AE8443'), 0.6), 0.8), W = o.w / 2 + o.over, D = o.d / 2 + o.over, rise = o.rise != null ? o.rise : o.d * 0.62, yR = o.y + rise;
+    const cx = o.cx, cz = o.cz, TH = 0.3, hip = o.style === 'hip', Lr = hip ? Math.max(0.1, W - D * 0.8) : W;
     const courses = 4;
     // a gently bulging surface (the straw is thick in the middle of a slope) laid in overlapping courses
-    const bul = (u, v) => 0.16 * Math.sin(Math.PI * u) * Math.sin(Math.PI * Math.min(1, v));
+    const bul = (u, v) => 0.22 * Math.sin(Math.PI * u) * Math.sin(Math.PI * Math.min(1, v));
     for (const f of [1, -1]) {
       for (let k = 0; k < courses; k++) {
         const v0 = k / courses, v1 = (k + 1) / courses + 0.05;
@@ -2011,6 +2019,30 @@
     M.color = WOOD.dark;
     for (let i = 0; i < 4; i++) { const x = cx + lerp(-Lr * 0.8, Lr * 0.8, i / 3); M.band([x, yR + 0.02, cz], 0.235, 0.235, -0.04, 0.04, 6); }
     return { ridgeY: yR, eaveY: o.y, W, D };
+  }
+  /** Lanternvale's rounded thatch (PropBuildings.ThatchRoof): superellipse rings lofted along X, hipped ends. */
+  function thatchLoaf(M, o) {
+    const straw = toC(o.color), K = 10, halfLen = o.w / 2 + o.over, zc = o.cz, cx = o.cx, halfDepth = o.d / 2 + o.over;
+    const baseY = o.y, height = o.rise != null ? o.rise : o.d * 0.72, lip = o.lip != null ? o.lip : 0.26, pw = o.p || 1.45;
+    const bottom = baseY - lip;
+    const ring = (x, s, wobble) => {
+      const r = [[cx + x, bottom, zc - (halfDepth - 0.14) * s]];
+      for (let k = 0; k <= K; k++) {
+        const th = Math.PI * k / K, sn = Math.pow(Math.max(0, Math.sin(th)), pw);
+        const z = zc - halfDepth * Math.cos(th), y = baseY + height * sn + wobble * Math.sin(th * 3 + x);
+        r.push([cx + x, bottom + (y - bottom) * s, zc + (z - zc) * s]);
+      }
+      r.push([cx + x, bottom, zc + (halfDepth - 0.14) * s]);
+      return r;
+    };
+    const xs = [-1, -0.93, -0.78, -0.45, 0, 0.45, 0.78, 0.93, 1], ss = [0.32, 0.62, 0.9, 0.99, 1, 0.99, 0.9, 0.62, 0.32];
+    const rings = xs.map((x, i) => ring(x * halfLen, ss[i], i % 2 === 0 ? 0.04 : -0.03));
+    const top = P.shade(straw, 1.1), side = straw, eave = P.shade(P.mix(straw, H('#AE8443'), 0.75), 0.95), under = P.shade(eave, 0.75);
+    const j0 = M.jitter;
+    M.jitter = Math.min(j0, 0.045);
+    M.loft(rings, true, true, n => (n[1] < -0.3 ? under : n[1] < 0.35 ? eave : P.mix(side, top, (n[1] - 0.35) / 0.65)));
+    M.jitter = j0;
+    return { ridgeY: baseY + height, eaveY: bottom, W: halfLen, D: halfDepth };
   }
   /** Terracotta roof (Mediterranean): a low-pitched gable or hip of barrel tiles in warm orange, no upturn. */
   function terracottaRoof(M, o) {
@@ -3316,7 +3348,8 @@
       M.push().translate(0, 0.3, 0);
       if (!far) windowLattice(M, { x: W * 0.25, y: 1.25, z: D / 2, w: 0.7, h: 0.6, lit: o.lit, bars: 1 });
       M.pop();
-      thatchRoof(M, { w: W, d: D, y: 0.3 + Hw, over: 0.55, rise: D * 0.62, style: b % 2 ? 'hip' : 'gable', color: P.hsv(H('#C8A868'), (b - 1.5) * 3), gableColor: wallC });
+      if (b % 2) thatchRoof(M, { w: W, d: D, y: 0.3 + Hw, over: 0.45, rise: D * 0.66, style: 'loaf', color: P.mix(H('#D7AC62'), H('#E9C680'), b * 0.15) });
+      else thatchRoof(M, { w: W, d: D, y: 0.3 + Hw, over: 0.55, rise: D * 0.62, style: 'gable', color: P.hsv(H('#C8A868'), (b - 1.5) * 3), gableColor: wallC });
       return M;
     },
   });

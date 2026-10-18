@@ -987,7 +987,7 @@ try {
   console.log('(7a) progression rules FAILED: ' + (e.stack || e));
 }
 
-// ---- (7b) 存档 v3 与第二版存档迁移 ----
+// ---- (7b) 存档（第四版：版本 4；v3 / v2 存档只读、读取时迁移）与第二版存档迁移 ----
 try {
   SG.Random.seed(17);
   const g = SG.G = GameState.newGame('cao');
@@ -996,10 +996,14 @@ try {
   if (grown.length < 10) throw new Error('only ' + grown.length + ' generals leveled after 30 AI months');
   const text = JSON.stringify(g);
   const d0 = JSON.parse(text);
-  if (d0.version !== 3) throw new Error('save version should be 3');
+  if (d0.version !== GameState.SAVE_VERSION || GameState.SAVE_VERSION !== 4) throw new Error('save version should be 4');
   const back = GameState.fromJSON(text);
-  if (JSON.stringify(back) !== text) throw new Error('v3 JSON round trip mismatch');
-  if (back.migratedFrom !== 0) throw new Error('v3 save flagged as migrated');
+  if (JSON.stringify(back) !== text) throw new Error('v4 JSON round trip mismatch');
+  if (back.migratedFrom !== 0) throw new Error('v4 save flagged as migrated');
+  // 第三版存档（只差版本号）：读取时迁移
+  const d3 = JSON.parse(text); d3.version = 3;
+  const m3 = GameState.fromJSON(JSON.stringify(d3));
+  if (m3.migratedFrom !== 3 || JSON.stringify(m3) !== text) throw new Error('v3 save should migrate to the same v4 game');
   // 第二版存档：去掉成长字段、version 2
   const d = JSON.parse(text);
   d.version = 2;
@@ -1012,13 +1016,13 @@ try {
     if (SG.Specials.known(x).length !== 1) throw new Error('migrated general should only have the signature special');
   }
   if (JSON.stringify(GameState.fromJSON(JSON.stringify(m))) !== JSON.stringify(m)) throw new Error('migrated game round trip mismatch');
-  for (const bad of [1, 4, undefined]) {
+  for (const bad of [1, 5, undefined]) {
     const db = JSON.parse(text); db.version = bad;
     let msg = '';
     try { GameState.fromJSON(JSON.stringify(db)); } catch (e) { msg = e.message; }
-    if (msg.indexOf('旧存档') < 0) throw new Error('version ' + bad + ' should be refused, got ' + msg);
+    if (msg.indexOf('无法读取') < 0) throw new Error('version ' + bad + ' should be refused, got ' + msg);
   }
-  // 浏览器存储：只有第二版键时能读（迁移），存档写入第三版键并清掉第二版键
+  // 浏览器存储：只有第二版键时能读（迁移），存档写入第四版键，旧键只读（不写、不删）
   const store = {};
   global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
   store[GameState.V2_SAVE_KEY] = v2text;
@@ -1028,18 +1032,18 @@ try {
   const L = GameState.load();
   if (!L || L.migratedFrom !== 2 || L.generals.some(x => x.level !== 1)) throw new Error('load() of a v2 save failed: ' + GameState.loadError);
   SG.G = L;
-  if (L.save() !== true || !store[GameState.SAVE_KEY] || store[GameState.V2_SAVE_KEY]) throw new Error('save() should write the v3 key and drop the v2 key');
-  if (GameState.saveInfo().version !== 3) throw new Error('saveInfo after save should be v3');
+  if (L.save() !== true || !store[GameState.SAVE_KEY] || store[GameState.V2_SAVE_KEY] !== v2text) throw new Error('save() should write the v4 key and leave the v2 key untouched');
+  if (GameState.saveInfo().version !== 4) throw new Error('saveInfo after save should be v4');
   store[GameState.LEGACY_SAVE_KEY] = '{}';
   if (GameState.hasLegacySave()) throw new Error('legacy flag with a v3 save present');
   GameState.deleteSave();
   if (GameState.hasSave() || !GameState.hasLegacySave()) throw new Error('deleteSave() should leave only the v1 save');
   delete global.localStorage;
-  console.log(`(7b) save v3 OK: ${text.length} bytes, ${grown.length} generals leveled after 30 months (max L${Math.max(...g.generals.map(x => x.level))}); v2 save migrated (level 1, exp 0, signature only, innate tactics)`);
+  console.log(`(7b) save v4 OK: ${text.length} bytes, ${grown.length} generals leveled after 30 months (max L${Math.max(...g.generals.map(x => x.level))}); v2 save migrated (level 1, exp 0, signature only, innate tactics)`);
 } catch (e) {
   delete global.localStorage;
   fails++;
-  console.log('(7b) save v3 FAILED: ' + (e.stack || e));
+  console.log('(7b) save v4 FAILED: ' + (e.stack || e));
 }
 
 // ---- (7c) 可习得必杀：数据与按等阶的参考伤害倍率 ----

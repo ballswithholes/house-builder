@@ -30,6 +30,27 @@
        等级 1、经验 0、只有专属必杀、原四计按智力（GameState.migratedFrom = 2，非枚举，界面可提示一次）。
      SG.Progress（本文件末尾，接口说明见该处注释）：经验与等级、按武力 / 智力的格数与等阶上限、
        升级候选（3 选 1）、习得、电脑自动习得、自动结算战斗的经验。
+   第四版（INTEGRATION §4、§6；W0 整合核心）：
+     存档 v4：SAVE_KEY = 'sanguozhi2_save_v4'（自动档），SAVE_VERSION = 4；读档接受版本 2、3、4，
+       2 / 3 先补齐成长数据，再 SG.MigrateV4.run（ITEMS → TITLES → ENGAGEMENT → TOURNAMENT → COMBAT / DOMESTIC）；
+       v4 存档读入后 SG.MigrateV4.load；新局末尾 SG.MigrateV4.init。旧键（v3 / v2）只读，v4 从不写它们。
+       顶层存档字段由 GameState.addSaveKey(key) 登记（INTEGRATION §6.1 的 items / officeSeq / engage / tourney /
+       combos / comboSeen / comboMastery / fxStages / aiBudget 已预先登记），只有 G 上确有该字段时才写入
+       （关掉的系统不建状态，存档与 v3 只差版本号）。武将 / 城 / 势力对象上的可枚举字段照旧全部存档。
+     存档位（UI-V4 §6）：GameState.SLOTS = ['auto', 1, 2, 3]；g.saveSlot(slot, extra?) → bool、GameState.loadSlot(slot)、
+       GameState.listSaves() → [{ slot, scenario, factionKey, factionName, ruler, year, month, cities, generals, gold,
+       savedAt, playMs, version, thumb }]（另含旧版记录 { slot: 'legacy', version }）、GameState.deleteSlot(slot)；
+       先写临时键再替换，写不下（配额）时旧档不动，GameState.saveError = '存储空间不足：请删除一份记录'。
+     Commands 的公式一律经由 SG.Econ（js/econ.js；未载入时用本文件里与之逐位相同的 v3 公式），玩家与电脑共用；
+       每条指令结束时写 Commands.lastResult（DOMESTIC-FX §3.2 + Econ 字段 g0 / pct / mods / tier，INTEGRATION §4.7），
+       然后 SG.Events.emit('command', cmd, res)（= Commands.onCommand(fn)）。不多取任何随机数。
+       新增可选参数：ally(from, f, target, gift, envoy)、allyChance(f, target, gift, envoy)、hire(target, recruiter, f, city, { promise, via })、
+       hireChance(target, recruiter, f, promise)；新指令 Commands.appoint(c, gen)（任命太守）。
+     GameState.generalsIn 跳过外出（gen.away.until > 月序）与「伤病且不能行动」（gen.injury.away）的武将（INTEGRATION §6.4）。
+     GameState.allied 另读提供者 allied(a, b)（ENGAGEMENT 的盟约）；SG.cityDefense 加 SG.Mods.cityDefBonus(c)（官爵驻军、营建城墙）。
+     Progress.vetLevel(gen) = levelFor(exp − 0.5 × dexp)（无内政经验时 = level）；vetK 用它；gain(gen, n, why)：
+       why ≠ 'battle' 的经验记入 gen.dexp；why 为 'battle' / 'tourney' / 'story' 时先乘 SG.Mods.exp（'domestic' 由 ENGAGEMENT
+       在每月上限之前自己乘）；battleExp 的 crits 每次 +2。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -39,10 +60,21 @@
   const ScenarioData = new Proxy({}, { get: (t, k) => SG.ScenarioData[k] });
   const Seq = SG.Seq;
 
-  const SAVE_KEY = 'sanguozhi2_save_v3';
-  const V2_SAVE_KEY = 'sanguozhi2_save_v2';     // 第二版存档：读取时迁移（补齐成长数据），下次存档写入新键
+  const SAVE_KEY = 'sanguozhi2_save_v4';        // 第四版：自动档（INTEGRATION §6.1）
+  const V3_SAVE_KEY = 'sanguozhi2_save_v3';     // 第三版存档：只读，读取时迁移（SG.MigrateV4.run）
+  const V2_SAVE_KEY = 'sanguozhi2_save_v2';     // 第二版存档：只读，读取时迁移（补齐成长数据，再走第四版迁移）
   const LEGACY_SAVE_KEY = 'sanguozhi2_save';
-  const SAVE_VERSION = 3;
+  const SAVE_VERSION = 4;
+  // 存档位（UI-V4 §6）：自动档用 SAVE_KEY，手动档 1–3 各一个键，另有一个索引键
+  const SLOTS = Object.freeze(['auto', 1, 2, 3]);
+  const SLOT_PREFIX = 'sanguozhi2_v4_save_';
+  const SLOT_INDEX_KEY = 'sanguozhi2_v4_saves';
+  const TMP_SUFFIX = '.tmp';
+  function slotKey(slot) { return slot === 'auto' || slot === undefined || slot === null ? SAVE_KEY : SLOT_PREFIX + slot; }
+  // 第四版的顶层存档字段（INTEGRATION §6.1）；各模块可再登记（GameState.addSaveKey）
+  const SAVE_KEYS = new Set(['items', 'officeSeq', 'engage', 'tourney', 'combos', 'comboSeen', 'comboMastery', 'fxStages', 'aiBudget', 'playMs']);
+  const CORE_KEYS = new Set(['version', 'scenario', 'year', 'month', 'player', 'tokens', 'seed', 'cities', 'generals', 'factions', 'alliance', 'log']);
+  function emit(name, a, b, c) { const E = SG.Events; if (E) E.emit(name, a, b, c); }
   // 当前剧本的键：'classic' | 'world'
   function scenarioId() {
     const S = SG.Scenarios;
@@ -87,7 +119,8 @@
   SG.mapPos = function (c) { return SG.project ? SG.project(c.lon, c.lat) : { x: (c.lon - 100) * 5, y: (c.lat - 23) * 5.6 }; };
   // 两城之间是否为海路（剧本 SeaLinks；地图据此画航线、行军沿航线前进）
   SG.linkIsSea = function (a, b) { const g = SG.G; return !!(g && g.seaLinks && g.seaLinks.has(Math.min(a, b) + '-' + Math.max(a, b))); };
-  SG.cityDefense = function (c) { return 20 + M.idiv(c.town, 12); };
+  // 第四版：+ 提供者 cityDef（TITLES 驻军 garrison、ENGAGEMENT 城墙 / 地震；无提供者时为 0）
+  SG.cityDefense = function (c) { const d = 20 + M.idiv(c.town, 12); return SG.Mods ? d + SG.Mods.cityDefBonus(c) : d; };
   SG.maxTroops = function (g) { return Balance.GeneralTroopBase + g.war * Balance.GeneralTroopPerWar; };
   SG.isFree = function (g) { return g.faction < 0 && !g.dead; };
   SG.factionColor = function (f) { return f.color; };
@@ -178,6 +211,9 @@
       const n = g.factions.length;
       for (let i = 0; i < n * n; i++) g.alliance.push(0);
       g.tokens = g.tokensFor(g.player);
+      // 第四版：各模块的新局初始化（ITEMS 起始装备 → TITLES 授官 → ENGAGEMENT 民心 / 邦交 → TOURNAMENT → COMBAT / DOMESTIC）
+      if (SG.MigrateV4) SG.MigrateV4.init(g);
+      if (SG.Clock) SG.Clock.monthStart(g);
       return g;
     }
 
@@ -224,7 +260,12 @@
     get playerFaction() { return this.factions[this.player]; }
     citiesOf(f) { return this.cities.filter(c => c.owner === f); }
     generalsOf(f) { return this.generals.filter(x => x.faction === f && !x.dead); }
-    generalsIn(city, f) { return this.generals.filter(x => x.city === city && x.faction === f && !x.dead); }
+    // 第四版：外出（商队、探索、人质、告假）与伤病不能行动的武将不算在城中（INTEGRATION §6.4）
+    generalsIn(city, f) {
+      const mi = this.monthIndex;
+      return this.generals.filter(x => x.city === city && x.faction === f && !x.dead
+        && !(x.away && x.away.until > mi) && !(x.injury && x.injury.away && x.injury.until > mi));
+    }
     officersIn(c) { return c.owner < 0 ? [] : this.generalsIn(c.id, c.owner); }
     freeFoundIn(city) { return this.generals.filter(x => x.city === city && SG.isFree(x) && !x.hidden); }
     troopsIn(c) { return Seq.sum(this.officersIn(c), x => x.troops); }
@@ -276,7 +317,8 @@
 
     allied(a, b) {
       if (a < 0 || b < 0 || a === b) return false;
-      return this.alliance[a * this.factions.length + b] > this.monthIndex;
+      if (this.alliance[a * this.factions.length + b] > this.monthIndex) return true;
+      return SG.Mods ? SG.Mods.alliedExtra(a, b) : false;   // 第四版：ENGAGEMENT 的盟约（提供者 allied）
     }
     setAlliance(a, b, untilMonth) {
       this.alliance[a * this.factions.length + b] = untilMonth;
@@ -299,6 +341,7 @@
       this.factions[f].alive = false;
       for (const gen of this.generalsOf(f)) { gen.faction = -1; gen.troops = 0; gen.loyalty = 0; }
       this.addLog(this.factions[f].name + '势力灭亡了。');
+      emit('faction.death', f);
     }
 
     // C# 的 Log(string)。G.log(text) 与 G.addLog(text) 等价（见 makeLog）。
@@ -308,8 +351,9 @@
     }
 
     // ------------------------------------------------------------ 存档 --
+    // 第四版：核心字段 + 登记过的顶层字段（G 上确有时才写，INTEGRATION §6.1）
     toJSON() {
-      return {
+      const o = {
         version: SAVE_VERSION, scenario: this.scenario || 'classic',
         year: this.year, month: this.month, player: this.player, tokens: this.tokens, seed: this.seed,
         cities: this.cities.map(c => {
@@ -322,54 +366,122 @@
         alliance: this.alliance.slice(),
         log: this.log.slice(),
       };
+      for (const k of SAVE_KEYS) if (this[k] !== undefined && !CORE_KEYS.has(k)) o[k] = this[k];
+      return o;
     }
-    save() {
+    static addSaveKey(k) {
+      if (typeof k !== 'string' || !k || CORE_KEYS.has(k)) throw new Error('GameState.addSaveKey: bad key ' + k);
+      SAVE_KEYS.add(k);
+    }
+    static saveKeys() { return Array.from(SAVE_KEYS); }
+
+    // 自动档（v3 的 save() 照旧可用）
+    save() { return this.saveSlot('auto'); }
+    // 写入存档位：先写临时键，成功后替换正式键；写不下时旧档不动（UI-V4 §6）
+    saveSlot(slot, extra) {
+      GameState.saveError = null;
+      slot = normSlot(slot);
+      if (slot === null) { GameState.saveError = '没有这个存档位。'; return false; }
       const st = storage();
-      if (!st) return false;
-      try { st.setItem(SAVE_KEY, JSON.stringify(this)); } catch (e) { console.log('save failed', e); return false; }
-      try { st.removeItem(V2_SAVE_KEY); } catch (e) { /* 第二版存档已由新存档取代 */ }
+      if (!st) { GameState.saveError = '此浏览器不允许本地存档'; return false; }
+      let text;
+      try { text = JSON.stringify(this); } catch (e) { console.log('save failed', e); GameState.saveError = '记录失败。'; return false; }
+      const key = slotKey(slot), tmp = key + TMP_SUFFIX;
+      try { st.setItem(tmp, text); } catch (e) {
+        try { st.removeItem(tmp); } catch (e2) { /* 忽略 */ }
+        GameState.saveError = isQuota(e) ? '存储空间不足：请删除一份记录' : '记录失败。';
+        console.log('save failed', e);
+        return false;
+      }
+      try { st.removeItem(key); st.setItem(key, text); try { st.removeItem(tmp); } catch (e) { /* 忽略 */ } } catch (e) { /* 新档留在临时键里，读档时会用它 */ }
+      writeIndexEntry(st, summaryOf(this, slot, extra));
       return true;
     }
-    // 当前存档的文字：第三版键优先，否则第二版键（读取时迁移）
+    // 读档时要读的文字：第四版自动档 → 第三版键 → 第二版键（只读，读取时迁移）
     static saveText(st) {
       st = st || storage();
       if (!st) return null;
-      try { return st.getItem(SAVE_KEY) || st.getItem(V2_SAVE_KEY) || null; } catch (e) { return null; }
+      try { return st.getItem(SAVE_KEY) || st.getItem(SAVE_KEY + TMP_SUFFIX) || st.getItem(V3_SAVE_KEY) || st.getItem(V2_SAVE_KEY) || null; } catch (e) { return null; }
     }
     static hasSave() {
       const st = storage();
       if (!st) return false;
-      return !!GameState.saveText(st);
+      if (GameState.saveText(st)) return true;
+      for (const s of SLOTS) if (s !== 'auto' && readSlotText(st, s)) return true;
+      return false;
     }
     // 只有旧版（第一版）存档：读不了，标题画面提示“新版本，旧存档无法读取”
     static hasLegacySave() {
       const st = storage();
       if (!st) return false;
-      try { return !GameState.saveText(st) && !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
+      try { return !GameState.hasSave() && !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
     }
-    // 存档摘要（不完整读档）：{ scenario, year, month, faction, version } | null
+    // 存档摘要（不完整读档）：{ scenario, year, month, faction, version } | null —— load() 将读的那一份
     static saveInfo() {
       const st = storage();
       if (!st) return null;
       try {
-        const d = JSON.parse(GameState.saveText(st) || 'null');
+        const t = GameState.saveText(st) || newestManualText(st);
+        const d = JSON.parse(t || 'null');
         if (!d || !Array.isArray(d.factions)) return null;
         const f = d.factions[d.player];
         return { scenario: d.scenario || 'classic', year: d.year | 0, month: d.month | 0, faction: f ? f.name : '', version: d.version | 0 };
       } catch (e) { return null; }
     }
+    // 删除「当前存档」：自动档与只读的旧版键（玩家明确要删时）；手动档不动
     static deleteSave() {
       const st = storage();
       if (!st) return;
-      try { st.removeItem(SAVE_KEY); } catch (e) { /* 忽略 */ }
-      try { st.removeItem(V2_SAVE_KEY); } catch (e) { /* 忽略 */ }
+      for (const k of [SAVE_KEY, SAVE_KEY + TMP_SUFFIX, V3_SAVE_KEY, V2_SAVE_KEY]) { try { st.removeItem(k); } catch (e) { /* 忽略 */ } }
+      removeIndexEntry(st, 'auto');
+    }
+    // ---- 存档位（UI-V4 §6）----
+    static listSaves() {
+      const st = storage();
+      if (!st) return [];
+      let idx = readIndex(st);
+      const out = [];
+      for (const s of SLOTS) {
+        const text = readSlotText(st, s);
+        if (!text) continue;
+        let e = idx && idx.find(x => x && String(x.slot) === String(s));
+        if (!e) { try { e = summaryOf(JSON.parse(text), s, null, true); } catch (err) { e = { slot: s, broken: true }; } }
+        out.push(e);
+      }
+      // 旧版记录（第三版 / 第二版）：只读，读取时迁移
+      try {
+        const t3 = st.getItem(V3_SAVE_KEY), t2 = t3 ? null : st.getItem(V2_SAVE_KEY);
+        const t = t3 || t2;
+        if (t) { let e; try { e = summaryOf(JSON.parse(t), 'legacy', null, true); } catch (err) { e = { slot: 'legacy', broken: true }; } e.version = t3 ? 3 : 2; e.legacy = true; out.push(e); }
+      } catch (e) { /* 忽略 */ }
+      return out;
+    }
+    static loadSlot(slot) {
+      GameState.loadError = null;
+      const st = storage();
+      if (!st) { GameState.loadError = '浏览器不允许读取存档。'; return null; }
+      let text = null;
+      try { text = slot === 'legacy' ? (st.getItem(V3_SAVE_KEY) || st.getItem(V2_SAVE_KEY)) : (normSlot(slot) === null ? null : readSlotText(st, normSlot(slot))); } catch (e) { text = null; }
+      if (!text) { GameState.loadError = '没有存档。'; return null; }
+      return GameState.loadText(text);
+    }
+    static deleteSlot(slot) {
+      const st = storage();
+      if (!st) return false;
+      if (slot === 'legacy') { for (const k of [V3_SAVE_KEY, V2_SAVE_KEY]) { try { st.removeItem(k); } catch (e) { /* 忽略 */ } } return true; }
+      slot = normSlot(slot);
+      if (slot === null) return false;
+      for (const k of [slotKey(slot), slotKey(slot) + TMP_SUFFIX]) { try { st.removeItem(k); } catch (e) { /* 忽略 */ } }
+      removeIndexEntry(st, slot);
+      return true;
     }
     // 不合格的存档抛出带中文说明的 Error（load() 把说明放进 GameState.loadError）
     static fromJSON(text) {
       const d = typeof text === 'string' ? JSON.parse(text) : text;
       if (!d || !Array.isArray(d.cities) || !Array.isArray(d.generals) || !Array.isArray(d.factions)) return null;
-      // 第二版存档可读：补齐成长数据（Progress.ensure：等级 1、经验 0、原四计按智力）
-      if (d.version !== SAVE_VERSION && d.version !== 2) throw new Error('新版本，旧存档无法读取。');
+      // 第二版、第三版存档可读：补齐成长数据（Progress.ensure），再走第四版迁移（SG.MigrateV4.run）
+      if (typeof d.version === 'number' && d.version > SAVE_VERSION) throw new Error('这份存档来自更新的版本，无法读取。');
+      if (d.version !== SAVE_VERSION && d.version !== 3 && d.version !== 2) throw new Error('新版本，旧存档无法读取。');
       const sid = d.scenario || 'classic';
       const scen = SG.Scenarios ? SG.Scenarios[sid] : (sid === 'classic' ? SG.ScenarioData : null);
       if (!scen) throw new Error('存档所用的剧本（' + sid + '）不存在，无法读取。');
@@ -391,35 +503,115 @@
       g.init();
       for (const x of g.generals) Progress.ensure(x);
       derived(g, 'migratedFrom', d.version === SAVE_VERSION ? 0 : d.version | 0);
+      if (d.version === SAVE_VERSION) {
+        // 第四版的顶层字段（未登记的也原样保留：读档不丢任何模块的数据）
+        for (const k of Object.keys(d)) {
+          if (CORE_KEYS.has(k) || d[k] === undefined) continue;
+          if (!SAVE_KEYS.has(k)) SAVE_KEYS.add(k);
+          g[k] = d[k];
+        }
+        if (SG.MigrateV4) SG.MigrateV4.load(g, d);
+      } else if (SG.MigrateV4) SG.MigrateV4.run(g, d.version | 0);
+      if (SG.Clock) SG.Clock.monthStart(g, Math.max(g.tokens, g.player >= 0 ? g.tokensFor(g.player) : 0));
       return g;
     }
-    static load() {
+    static loadText(text) {
       GameState.loadError = null;
-      const st = storage();
-      if (!st) { GameState.loadError = '浏览器不允许读取存档。'; return null; }
       const prev = SG.ScenarioData;
       try {
-        const text = GameState.saveText(st);
-        if (!text) {
-          GameState.loadError = st.getItem(LEGACY_SAVE_KEY) ? '新版本，旧存档无法读取。' : '没有存档。';
-          return null;
-        }
         const g = GameState.fromJSON(text);
         if (!g) GameState.loadError = '存档已损坏，无法读取。';
         return g;
       } catch (e) {
         SG.ScenarioData = prev;
         console.log('load failed', e);
-        GameState.loadError = e && /[\u4e00-\u9fff]/.test(e.message || '') ? e.message : '存档已损坏，无法读取。';
+        GameState.loadError = e && /[一-鿿]/.test(e.message || '') ? e.message : '存档已损坏，无法读取。';
         return null;
       }
     }
+    // 自动档 → 第三版 / 第二版（迁移）→ 最近的手动档
+    static load() {
+      GameState.loadError = null;
+      const st = storage();
+      if (!st) { GameState.loadError = '浏览器不允许读取存档。'; return null; }
+      let text = null;
+      try { text = GameState.saveText(st) || newestManualText(st); } catch (e) { text = null; }
+      if (!text) {
+        let legacy = false;
+        try { legacy = !!st.getItem(LEGACY_SAVE_KEY); } catch (e) { /* 忽略 */ }
+        GameState.loadError = legacy ? '新版本，旧存档无法读取。' : '没有存档。';
+        return null;
+      }
+      return GameState.loadText(text);
+    }
   }
   GameState.SAVE_KEY = SAVE_KEY;
+  GameState.V3_SAVE_KEY = V3_SAVE_KEY;
   GameState.V2_SAVE_KEY = V2_SAVE_KEY;
   GameState.LEGACY_SAVE_KEY = LEGACY_SAVE_KEY;
   GameState.SAVE_VERSION = SAVE_VERSION;
+  GameState.SLOTS = SLOTS;
+  GameState.SLOT_INDEX_KEY = SLOT_INDEX_KEY;
+  GameState.slotKey = slotKey;
   GameState.loadError = null;
+  GameState.saveError = null;
+
+  // ---- 存档位的工具 ----
+  function normSlot(slot) {
+    if (slot === undefined || slot === null || slot === 'auto') return 'auto';
+    const n = typeof slot === 'number' ? slot : parseInt(slot, 10);
+    return n >= 1 && n <= 3 ? n : null;
+  }
+  function isQuota(e) { return !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014 || /quota/i.test(e.message || '')); }
+  function readSlotText(st, slot) {
+    const k = slotKey(slot);
+    try { return st.getItem(k) || st.getItem(k + TMP_SUFFIX) || null; } catch (e) { return null; }
+  }
+  function newestManualText(st) {
+    let best = null, bestT = -1;
+    const idx = readIndex(st) || [];
+    for (const s of SLOTS) {
+      if (s === 'auto') continue;
+      const t = readSlotText(st, s);
+      if (!t) continue;
+      const e = idx.find(x => x && String(x.slot) === String(s));
+      const at = e && e.savedAt > 0 ? e.savedAt : 0;
+      if (at > bestT) { bestT = at; best = t; }
+    }
+    return best;
+  }
+  function readIndex(st) {
+    try { const a = JSON.parse(st.getItem(SLOT_INDEX_KEY) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; }
+  }
+  function writeIndex(st, arr) {
+    try { st.setItem(SLOT_INDEX_KEY, JSON.stringify(arr)); return true; } catch (e) { return false; }
+  }
+  function writeIndexEntry(st, e) {
+    const arr = (readIndex(st) || []).filter(x => x && String(x.slot) !== String(e.slot));
+    arr.push(e);
+    arr.sort((a, b) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot));
+    if (!writeIndex(st, arr)) { e.thumb = null; writeIndex(st, arr); }   // 写不下缩略图时不带缩略图
+  }
+  function removeIndexEntry(st, slot) {
+    const arr = readIndex(st);
+    if (!arr) return;
+    writeIndex(st, arr.filter(x => x && String(x.slot) !== String(slot)));
+  }
+  // 存档位卡片的摘要（d 为 GameState 或存档 JSON）
+  function summaryOf(d, slot, extra, fromJSON) {
+    extra = extra || {};
+    const facs = d.factions || [], f = facs[d.player], gens = d.generals || [], cities = d.cities || [];
+    const ruler = f && f.ruler >= 0 ? gens[f.ruler] : null;
+    let nc = 0, gold = 0, ng = 0;
+    for (const c of cities) if (f && c.owner === f.id) { nc++; gold += c.gold | 0; }
+    for (const x of gens) if (f && x.faction === f.id && !x.dead) ng++;
+    return {
+      slot, scenario: d.scenario || 'classic', factionKey: f ? f.key : '', factionName: f ? f.name : '', ruler: ruler ? ruler.name : '',
+      year: d.year | 0, month: d.month | 0, cities: nc, generals: ng, gold,
+      savedAt: fromJSON ? 0 : Date.now(), playMs: extra.playMs !== undefined ? extra.playMs : (d.playMs | 0),
+      version: fromJSON ? d.version | 0 : SAVE_VERSION, thumb: extra.thumb || null,
+    };
+  }
 
   // ================================================================ Commands --
   const DevKind = Object.freeze({ Land: 0, Industry: 1, Town: 2 });
@@ -428,23 +620,98 @@
   const AI_MOVE_HOPS = 2;   // 电脑调动武将的最远路程（相邻 = 1）
   function R(a, b) { return SG.Random.rangeInt(a, b + 1); }
 
+  // ---- 第四版：一条内政公式（INTEGRATION §4）。js/econ.js 未载入时（v3 的 Node 测试、设计原型）用下面这份 v3 公式，
+  //      它与「没有任何提供者的 SG.Econ」逐位相同（tests/econ.js 断言）。----
+  const KIND_KEYS = ['land', 'industry', 'town'];
+  const V3Econ = {
+    develop(c, g, kind, roll) {
+      const key = typeof kind === 'number' ? KIND_KEYS[kind] || 'town' : kind === 'land' || kind === 'industry' ? kind : 'town';
+      const g0 = Balance.DevelopBase + M.idiv(g.pol, Balance.DevelopPolDiv) + roll;
+      return { kind: key, g0, pct: 0, gain: g0, roll, mods: { gear: 0, title: 0, project: 0 } };
+    },
+    troopsPerGold() { return Balance.TroopsPerGold; },
+    recruitMods() { return { gear: 0, title: 0, project: 0, pct: 0 }; },
+    trainGain(g, roll) { return Balance.TrainBase + M.idiv(g.war, 10) + roll; },
+    trainMods() { return { gear: 0, title: 0, project: 0, bonus: 0 }; },
+    searchP(c, g) { return 0.22 + g.intel / 260 + G().factions[c.owner].virtue / 420; },
+    searchMods() { return { gear: 0, title: 0, project: 0 }; },
+    hireP(target, recruiter, faction, promise) {
+      const f = G().factions[faction];
+      let p = 0.32 + f.virtue / 220 + recruiter.intel / 450 - (target.war + target.intel + target.pol) / 900;
+      if (target.faction >= 0) p -= target.loyalty / 160; // 俘虏
+      return M.clamp(p + (promise || 0), 0.05, 0.95);
+    },
+    allyP(f, target, gift) {
+      const a = G().factions[f]; const b = G().factions[target];
+      let p = 0.25 + a.virtue / 300 + gift / 1200 + (a.fame - b.fame) / 300;
+      if (G().cityCount(f) > G().cityCount(target) * 2) p += 0.15; // 弱者愿与强者结盟
+      return M.clamp(p, 0.05, 0.9);
+    },
+    discordP(agent, target) { return M.clamp(0.4 + (agent.intel - target.intel) / 100, 0.1, 0.9); },
+    persuadeP(agent, target, f) {
+      if (G().isRuler(target)) return 0;
+      const p = (100 - target.loyalty) / 110 * (0.45 + agent.intel / 180) * (0.55 + G().factions[f].virtue / 220);
+      return M.clamp(p, 0, 0.9);
+    },
+    rewardLoy(g, roll) { return Balance.RewardLoyalty + roll; },
+    tradeK() { return 0; },
+    allianceMonths() { return Balance.AllianceMonths; },
+  };
+  function econ() { return SG.Econ || V3Econ; }
+  function virtueOf(f) { return SG.Mods ? SG.Mods.virtue(f) : G().factions[f].virtue; }
+  function effOf(gen, k) { return SG.Mods ? SG.Mods.eff(gen, k) : gen[k]; }
+  function zMod(name, a, b) { return SG.Mods ? SG.Mods.z(name, a, b) : 0; }
+  // 结果记录：写好 Commands.lastResult，分级（SG.DomesticTiers 或 SG.Econ 的开发分级），再通知监听者
+  const cmdHooks = [];
+  function finish(cmd, city, gen, res) {
+    const g = G();
+    res.cmd = cmd; res.city = city ? city.id : null; res.gen = gen ? gen.id : null; res.month = g ? g.monthIndex : 0;
+    res.f = city ? city.owner : gen ? gen.faction : -1;
+    if (res.tier === undefined) res.tier = tierOf(res);
+    Commands.lastResult = res;
+    for (const fn of cmdHooks.slice()) { try { fn(cmd, res); } catch (e) { console.error(e); } }
+    emit('command', cmd, res);
+    return res;
+  }
+  function tierOf(res) {
+    const T = SG.DomesticTiers;
+    if (T && typeof T.tier === 'function') {
+      try { const t = T.tier(res); return t && typeof t === 'object' ? t.tier : t || null; } catch (e) { return null; }
+    }
+    const E = SG.Econ;
+    if (E && res.ok !== false && res.cmd === 'develop' && E.tierDevelop) return E.tierDevelop(res);
+    return null;
+  }
+  function borderEnemy(c, f) {
+    const g = G();
+    return c.links.some(j => { const o = g.cities[j].owner; return o >= 0 && o !== f && !g.allied(o, f); });
+  }
+
   // 战略指令（玩家与电脑共用）
   const Commands = {
     searchFound: null,
+    // 第四版：最近一条指令的结果记录（DOMESTIC-FX §3.2；INTEGRATION §4.7 的 Econ 字段）
+    lastResult: null,
+    // 第四版：指令结束后的监听者（ENGAGEMENT 的内政经验、民心、计数……）；返回取消函数
+    onCommand(fn) { cmdHooks.push(fn); return () => { const i = cmdHooks.indexOf(fn); if (i >= 0) cmdHooks.splice(i, 1); }; },
+    // 第四版：ITEMS 的搜索寻宝（§8.5）。设为 (c, g) => ({ item, name }) | null；在寻人之后、金粮之前调用
+    searchItem: null,
+    econ,
+    V3Econ,     // 测试用：没有 js/econ.js 时的 v3 公式（tests/econ.js 断言它与无提供者的 SG.Econ 逐位相同）
 
     devName(k) { return k === DevKind.Land ? '土地' : k === DevKind.Industry ? '产业' : '町'; },
 
     // ---------------------------------------------------------- 开发 --
     develop(c, g, kind) {
-      if (c.gold < Balance.DevelopCost) return '金不足，无法开发。';
+      if (c.gold < Balance.DevelopCost) { finish('develop', c, g, { ok: false, kind: KIND_KEYS[kind] || 'town', reason: 'gold' }); return '金不足，无法开发。'; }
       c.gold -= Balance.DevelopCost;
-      let gain = Balance.DevelopBase + M.idiv(g.pol, Balance.DevelopPolDiv) + R(0, 4);
-      let before;
-      switch (kind) {
-        case DevKind.Land: before = c.land; c.land = Math.min(Balance.StatMax, c.land + gain); gain = c.land - before; break;
-        case DevKind.Industry: before = c.industry; c.industry = Math.min(Balance.StatMax, c.industry + gain); gain = c.industry - before; break;
-        default: before = c.town; c.town = Math.min(Balance.StatMax, c.town + gain); gain = c.town - before; break;
-      }
+      const roll = R(0, 4);
+      const r = econ().develop(c, g, kind, roll);
+      const key = r.kind;
+      const before = c[key];
+      c[key] = Math.min(Balance.StatMax, before + r.gain);
+      const gain = c[key] - before;
+      finish('develop', c, g, { ok: true, kind: key, roll, before, after: c[key], gain, cost: Balance.DevelopCost, g0: r.g0, pct: r.pct, mods: r.mods });
       const n = Commands.devName(kind);
       return `${g.name}主持${n}开发，${n} +${gain}。`;
     },
@@ -452,71 +719,104 @@
     // ---------------------------------------------------------- 征兵 --
     recruitMax(c, g) {
       const room = SG.maxTroops(g) - g.troops;
-      const byGold = Math.min(c.gold, Balance.RecruitGoldMax) * Balance.TroopsPerGold;
+      const tpg = econ().troopsPerGold(c, g);
+      const gold = Math.min(c.gold, Balance.RecruitGoldMax);
+      const byGold = tpg === Balance.TroopsPerGold ? gold * Balance.TroopsPerGold : Math.floor(gold * tpg);
       const byPop = M.idiv(c.population, 10);
       return Math.max(0, Math.min(room, Math.min(byGold, byPop)));
     },
     recruit(c, g, troops) {
       troops = Math.min(troops, Commands.recruitMax(c, g));
-      if (troops <= 0) return '无法征兵（金、人口或带兵上限不足）。';
-      const cost = Math.ceil(troops / Balance.TroopsPerGold);
+      if (troops <= 0) { finish('recruit', c, g, { ok: false, n: 0, reason: 'limit' }); return '无法征兵（金、人口或带兵上限不足）。'; }
+      const tpg = econ().troopsPerGold(c, g);
+      const cost = Math.ceil(troops / tpg);
+      const before = g.troops, trainingBefore = g.training, cityBefore = G().troopsIn(c);
       c.gold -= cost; c.population -= troops;
       const total = g.troops + troops;
-      g.training = M.idiv(g.training * g.troops + 30 * troops, Math.max(1, total));
+      g.training = M.idiv(g.training * g.troops + (30 + zMod('recruitDrill', c)) * troops, Math.max(1, total));
       g.troops = total;
+      const rm = econ().recruitMods(c, g);
+      finish('recruit', c, g, { ok: true, n: troops, cost, before, after: g.troops, max: SG.maxTroops(g), cityBefore, cityAfter: G().troopsIn(c),
+        trainingBefore, trainingAfter: g.training, tpg, g0: troops, pct: rm.pct, mods: { gear: rm.gear, title: rm.title, project: rm.project } });
       return `${g.name}征得新兵 ${troops} 人（花费 ${cost} 金）。`;
     },
 
     // ---------------------------------------------------------- 训练 --
     train(g) {
-      if (g.troops <= 0) return g.name + '麾下无兵，无法训练。';
+      const c = G().cities[g.city];
+      if (g.troops <= 0) { finish('train', c, g, { ok: false, reason: 'troops' }); return g.name + '麾下无兵，无法训练。'; }
       const before = g.training;
-      g.training = Math.min(100, g.training + Balance.TrainBase + M.idiv(g.war, 10) + R(0, 4));
+      const roll = R(0, 4);
+      g.training = Math.min(100, g.training + econ().trainGain(g, roll, c));
+      const tm = econ().trainMods(g, c);
+      finish('train', c, g, { ok: true, roll, before, after: g.training, troops: g.troops, max: SG.maxTroops(g),
+        g0: Balance.TrainBase + M.idiv(effOf(g, 'war'), 10) + roll, pct: 0, bonus: tm.bonus, mods: { gear: tm.gear, title: tm.title, project: tm.project } });
       return `${g.name}操练兵马，训练度 ${before} → ${g.training}。`;
     },
 
     // ---------------------------------------------------------- 搜索 --
     search(c, g) {
       Commands.searchFound = null;
-      const f = G().factions[c.owner];
       const hidden = G().generals.filter(x => x.city === c.id && x.hidden && SG.isFree(x));
-      const p = 0.22 + g.intel / 260 + f.virtue / 420;
+      const p = econ().searchP(c, g);
+      const mods = econ().searchMods(c, g);
       if (hidden.length > 0 && SG.Random.value() < p) {
         const h = hidden[SG.Random.rangeInt(0, hidden.length)];
         h.hidden = false;
         Commands.searchFound = h;
+        finish('search', c, g, { ok: true, outcome: 'talent', found: h.id, value: 0, p, mods });
         return `${g.name}四处寻访，发现了在野的人才——${h.name}！`;
       }
+      if (typeof Commands.searchItem === 'function') {
+        const it = Commands.searchItem(c, g);
+        if (it) {
+          finish('search', c, g, { ok: true, outcome: 'item', item: it.item !== undefined ? it.item : null, itemId: it.id || null, value: 0, p, mods });
+          return `${g.name}在城中寻访，得到了宝物「${it.name || '宝物'}」！`;
+        }
+      }
       const r = SG.Random.value();
-      if (r < 0.25) { const v = R(60, 220); c.gold += v; return `${g.name}在城中搜索，发现了 ${v} 金。`; }
-      if (r < 0.45) { const v = R(800, 2500); c.food += v; return `${g.name}在城中搜索，发现了 ${v} 粮。`; }
+      if (r < 0.25) { const v = R(60, 220); c.gold += v; finish('search', c, g, { ok: true, outcome: 'gold', value: v, p, mods }); return `${g.name}在城中搜索，发现了 ${v} 金。`; }
+      if (r < 0.45) { const v = R(800, 2500); c.food += v; finish('search', c, g, { ok: true, outcome: 'food', value: v, p, mods }); return `${g.name}在城中搜索，发现了 ${v} 粮。`; }
+      finish('search', c, g, { ok: false, outcome: 'none', value: 0, p, mods });
       return g.name + '四处寻访，一无所获。';
     },
 
     // ---------------------------------------------------------- 登用 --
-    hireChance(target, recruiter, faction) {
-      const f = G().factions[faction];
-      let p = 0.32 + f.virtue / 220 + recruiter.intel / 450 - (target.war + target.intel + target.pol) / 900;
-      if (target.faction >= 0) p -= target.loyalty / 160; // 俘虏
-      return M.clamp(p, 0.05, 0.95);
-    },
-    hire(target, recruiter, faction, city) {
-      if (SG.Random.value() > Commands.hireChance(target, recruiter, faction)) return false;
-      const f = G().factions[faction];
+    // promise：许官等许诺的概率加成（TITLES）
+    hireChance(target, recruiter, faction, promise) { return econ().hireP(target, recruiter, faction, promise || 0); },
+    // opts = { promise, via: 'hire' | 'search' | 'captive' }
+    hire(target, recruiter, faction, city, opts) {
+      opts = opts || {};
+      const p = Commands.hireChance(target, recruiter, faction, opts.promise);
+      const via = opts.via || (target.faction >= 0 ? 'captive' : Commands.searchFound === target ? 'search' : 'hire');
+      const cityObj = G().cities[city] || null;
+      if (SG.Random.value() > p) { finish('hire', cityObj, recruiter, { ok: false, p, target: target.id, via }); return false; }
       target.faction = faction; target.city = city; target.hidden = false;
-      target.loyalty = M.clamp(60 + M.idiv(f.virtue, 4) + R(-5, 10), 40, 100);
+      target.loyalty = M.clamp(60 + M.idiv(virtueOf(faction), 4) + R(-5, 10), 40, 100);
       target.training = 40;
       target.moved = true;
+      finish('hire', cityObj, recruiter, { ok: true, p, target: target.id, via, loyalty: target.loyalty });
       return true;
     },
 
     // ---------------------------------------------------------- 赏赐 --
     reward(c, g) {
-      if (c.gold < Balance.RewardGold) return '金不足。';
+      if (c.gold < Balance.RewardGold) { finish('reward', c, g, { ok: false, reason: 'gold' }); return '金不足。'; }
       c.gold -= Balance.RewardGold;
       const before = g.loyalty;
-      g.loyalty = Math.min(100, g.loyalty + Balance.RewardLoyalty + R(0, 4));
+      const roll = R(0, 4);
+      g.loyalty = Math.min(100, g.loyalty + econ().rewardLoy(g, roll, c.owner >= 0 ? G().ruler(c.owner) : null));
+      finish('reward', c, g, { ok: true, roll, before, after: g.loyalty, cost: Balance.RewardGold, gift: null, giftFits: false });
       return `赏赐${g.name} ${Balance.RewardGold} 金，忠诚 ${before} → ${g.loyalty}。`;
+    },
+
+    // ---------------------------------------------------------- 任命 --
+    // 第四版：任命太守也是一条指令（DOMESTIC-FX §5.15 的结果记录）
+    appoint(c, who) {
+      const prev = c.governor >= 0 ? G().generals[c.governor] : null;
+      c.governor = who.id;
+      finish('appoint', c, who, { ok: true, pol: who.pol, prevPol: prev ? prev.pol : 0, prev: prev ? prev.id : null });
+      return `任命${who.name}为${c.name}太守。`;
     },
 
     // ---------------------------------------------------------- 移动 / 输送 --
@@ -552,15 +852,19 @@
     move(g, to) {
       const from = G().cities[g.city];
       // 只能经由己方城池移往己方城（不可达时不做任何改变）
-      if (!G().routeBetween(from, to, g.faction)) return `${to.name}与${from.name}之间没有己方城池相连，${g.name}无法移驻。`;
+      const path = G().routeBetween(from, to, g.faction);
+      if (!path) { finish('move', from, g, { ok: false, to: to.id, reason: 'route' }); return `${to.name}与${from.name}之间没有己方城池相连，${g.name}无法移驻。`; }
       g.city = to.id; g.moved = true;
       G().autoGovernor(from); G().autoGovernor(to);
+      finish('move', from, g, { ok: true, gens: 1, ids: [g.id], troops: g.troops, hops: path.length - 1, to: to.id, frontline: borderEnemy(to, g.faction), ruler: G().isRuler(g) });
       return `${g.name}率兵 ${g.troops} 人移驻${to.name}。`;
     },
     transport(from, to, gold, food) {
-      if (!G().routeBetween(from, to, from.owner)) return `${to.name}与${from.name}之间没有己方城池相连，无法输送。`;
+      if (!G().routeBetween(from, to, from.owner)) { finish('transport', from, null, { ok: false, to: to.id, reason: 'route' }); return `${to.name}与${from.name}之间没有己方城池相连，无法输送。`; }
       gold = M.clamp(gold, 0, from.gold); food = M.clamp(food, 0, from.food);
+      const destFoodBefore = to.food, destNeed = M.idiv(G().troopsIn(to), Balance.TroopsPerFood);
       from.gold -= gold; from.food -= food; to.gold += gold; to.food += food;
+      finish('transport', from, null, { ok: true, to: to.id, gold, food, destFoodBefore, destNeed });
       return `自${from.name}向${to.name}输送金 ${gold}、粮 ${food}。`;
     },
 
@@ -572,53 +876,61 @@
       if (m >= 7 && m <= 9) baseP = 8; else if (m >= 4 && m <= 6) baseP = 16;
       return baseP;
     },
+    // 第四版：城中商才的折扣 t（ITEMS §3.4；买价 × (1 − t)、卖价 × (1 + t)）
+    buyPrice(c) { const p = Commands.foodPrice(), t = econ().tradeK(c); return t > 0 ? p * (1 - t) : p; },
+    sellPrice(c) { const p = Commands.foodPrice(), t = econ().tradeK(c); return t > 0 ? p * (1 + t) : p; },
     buyFood(c, gold) {
       gold = M.clamp(gold, 0, c.gold);
-      const food = M.idiv(gold * 100, Commands.foodPrice());
+      const price = Commands.buyPrice(c);
+      const food = M.idiv(gold * 100, price);
       c.gold -= gold; c.food += food;
+      finish('trade', c, null, { ok: gold > 0, side: 'buy', price: Commands.foodPrice(), priceK: price, gold, food, goldOut: gold });
       return `以 ${gold} 金购入粮 ${food}。`;
     },
     sellFood(c, food) {
       food = M.clamp(food, 0, c.food);
-      const gold = M.idiv(M.idiv(food * Commands.foodPrice(), 100) * 9, 10);
+      const price = Commands.sellPrice(c);
+      const gold = M.idiv(M.idiv(food * price, 100) * 9, 10);
       c.food -= food; c.gold += gold;
+      finish('trade', c, null, { ok: food > 0, side: 'sell', price: Commands.foodPrice(), priceK: price, gold, food, goldOut: gold });
       return `卖出粮 ${food}，得金 ${gold}。`;
     },
 
     // ---------------------------------------------------------- 外交策略 --
-    allyChance(f, target, gift) {
-      const a = G().factions[f]; const b = G().factions[target];
-      let p = 0.25 + a.virtue / 300 + gift / 1200 + (a.fame - b.fame) / 300;
-      if (G().cityCount(f) > G().cityCount(target) * 2) p += 0.15; // 弱者愿与强者结盟
-      return M.clamp(p, 0.05, 0.9);
-    },
-    ally(from, f, target, gift) {
+    // envoy：出使的武将（ITEMS / TITLES 的外交加成；缺省无）
+    allyChance(f, target, gift, envoy) { return econ().allyP(f, target, gift, envoy || null); },
+    ally(from, f, target, gift, envoy) {
       gift = Math.min(gift, from.gold);
       from.gold -= gift;
-      if (SG.Random.value() < Commands.allyChance(f, target, gift)) {
-        G().setAlliance(f, target, G().monthIndex + Balance.AllianceMonths);
-        return `${G().factions[target].name}同意结盟！同盟期限 ${Balance.AllianceMonths} 个月。`;
+      const p = Commands.allyChance(f, target, gift, envoy);
+      const rec = { gift, target, p, targetCities: G().cityCount(target), ourCities: G().cityCount(f), envoy: envoy ? envoy.id : null };
+      if (SG.Random.value() < p) {
+        const months = econ().allianceMonths(f, target, envoy || null);
+        G().setAlliance(f, target, G().monthIndex + months);
+        finish('ally', from, envoy || null, Object.assign(rec, { ok: true, months }));
+        return `${G().factions[target].name}同意结盟！同盟期限 ${months} 个月。`;
       }
+      finish('ally', from, envoy || null, Object.assign(rec, { ok: false }));
       return `${G().factions[target].name}拒绝了结盟的提议。`;
     },
 
     discord(agent, target) {
-      if (G().isRuler(target)) return '离间君主是不可能的。';
-      const p = M.clamp(0.4 + (agent.intel - target.intel) / 100, 0.1, 0.9);
-      if (SG.Random.value() > p) return `${target.name}识破了离间之计。`;
-      let d = M.idiv(R(6, 16) * agent.intel, Math.max(30, target.intel));
+      const c = G().cities[agent.city];
+      if (G().isRuler(target)) { finish('discord', c, agent, { ok: false, target: target.id, d: 0, loyaltyAfter: target.loyalty, p: 0, reason: 'ruler' }); return '离间君主是不可能的。'; }
+      const p = econ().discordP(agent, target);
+      if (SG.Random.value() > p) { finish('discord', c, agent, { ok: false, target: target.id, d: 0, loyaltyAfter: target.loyalty, p }); return `${target.name}识破了离间之计。`; }
+      let d = M.idiv(R(6, 16) * effOf(agent, 'intel'), Math.max(30, effOf(target, 'intel')));
       d = M.clamp(d, 3, 25);
       target.loyalty = Math.max(0, target.loyalty - d);
+      finish('discord', c, agent, { ok: true, target: target.id, d, loyaltyAfter: target.loyalty, p });
       return `离间成功！${target.name}的忠诚下降了 ${d}（现为 ${target.loyalty}）。`;
     },
 
-    persuadeChance(agent, target, f) {
-      if (G().isRuler(target)) return 0;
-      const p = (100 - target.loyalty) / 110 * (0.45 + agent.intel / 180) * (0.55 + G().factions[f].virtue / 220);
-      return M.clamp(p, 0, 0.9);
-    },
+    persuadeChance(agent, target, f) { return econ().persuadeP(agent, target, f); },
     persuade(agent, target, f) {
-      if (SG.Random.value() > Commands.persuadeChance(agent, target, f)) return `${target.name}拒绝了劝诱。`;
+      const c0 = G().cities[agent.city];
+      const p = Commands.persuadeChance(agent, target, f);
+      if (SG.Random.value() > p) { finish('persuade', c0, agent, { ok: false, target: target.id, city: false, p }); return `${target.name}拒绝了劝诱。`; }
       const g = G();
       const oldCity = g.cities[target.city];
       const oldF = target.faction;
@@ -629,10 +941,12 @@
         oldCity.owner = f;
         g.autoGovernor(oldCity);
         g.checkFactionDeath(oldF);
+        finish('persuade', c0, agent, { ok: true, target: target.id, city: true, cityId: oldCity.id, p, from: oldF });
         return `${target.name}献城归降！${oldCity.name}归入我方。`;
       }
       target.city = agent.city; target.troops = M.idiv(target.troops, 2); target.moved = true;
       g.autoGovernor(oldCity); g.autoGovernor(g.cities[agent.city]);
+      finish('persuade', c0, agent, { ok: true, target: target.id, city: false, p, from: oldF });
       return `${target.name}率部来投！`;
     },
   };
@@ -645,7 +959,7 @@
   //     levelFor(exp) → L               expInfo(gen) → { level, exp, cur, next, need, pct, max }（界面进度条用）
   //     gain(gen, amount, why?) → { gen, exp, from, to, learned: [cand] } | null
   //                                     加经验；电脑武将（非玩家势力）有空格即自动习得（learned）
-  //     battleExp(x) → 一战所得经验：x = { dmg, heal, routs, cmdRouts, duelWin, duelLoss, specials, tactics, tacFail, won, commander }
+  //     battleExp(x) → 一战所得经验：x = { dmg, heal, routs, cmdRouts, duelWin, duelLoss, specials, tactics, tacFail, crits, won, commander }
   //       参战 10 + 每击杀 40 兵 1 + 每回复 80 兵 1 + 击溃敌部 12（敌主将再 +12）+ 单挑胜 25 / 负 5 +
   //       每次必杀 6 + 每次计策成功 4（失败 1）+ 胜方 25（主将再 +10），一战至多 BATTLE_CAP。
   //       战术战斗（battle-model.js）在分出胜负时自动结算（Mdl.progress）；自动结算的攻城战见 autoBattle。
@@ -705,8 +1019,15 @@
 
     vetK(gen) {
       if (!Progress.enabled || !gen) return 1;
-      const L = gen.level | 0;
+      const L = Progress.vetLevel(gen);
       return L > 1 ? 1 + Progress.VET_PER_LEVEL * (Math.min(L, Progress.MAX_LEVEL) - 1) : 1;
+    },
+    // 第四版（ENGAGEMENT §4.4）：老练等级只把非战斗经验（gen.dexp）算一半；没有非战斗经验时就是 level（与第三版相同）。
+    // 军队会心的等级项也用它（INTEGRATION §3.2）。
+    vetLevel(gen) {
+      if (!gen) return 1;
+      if (!(gen.dexp > 0)) return gen.level | 0 || 1;
+      return Progress.levelFor(Math.max(0, gen.exp - 0.5 * gen.dexp));
     },
 
     levelFor(exp) {
@@ -887,12 +1208,19 @@
       };
     },
 
+    // 第四版：why = 'battle' | 'tourney' | 'story' 先乘经验倍率 SG.Mods.exp（ITEMS / INTEGRATION §3.4）；
+    //   'domestic'（常规内政经验）由 ENGAGEMENT 在每月上限 20 之前自己乘，这里不再乘。
+    //   why ≠ 'battle' 的经验记入 gen.dexp（老练只算一半，vetLevel）。
+    EXP_MUL_WHY: Object.freeze({ battle: 1, tourney: 1, story: 1 }),
     gain(gen, amount, why) {
       if (!Progress.enabled || !gen || !(amount > 0)) return null;
       Progress.ensure(gen);
       const from = gen.level;
+      if (SG.Mods && Progress.EXP_MUL_WHY[why || 'battle']) amount = SG.Mods.exp(gen, amount);
       const add = Math.round(amount);
+      const e0 = gen.exp;
       gen.exp = Math.min(gen.exp + add, Progress.EXP[Progress.MAX_LEVEL]);
+      if (why && why !== 'battle' && gen.exp > e0) gen.dexp = (gen.dexp || 0) + (gen.exp - e0);
       gen.level = Progress.levelFor(gen.exp);
       const res = { gen, exp: add, why: why || '', from, to: gen.level, learned: [] };
       const player = Progress.isPlayerGen(gen);
@@ -908,6 +1236,7 @@
       e += (x.routs || 0) * 12 + (x.cmdRouts || 0) * 12;
       e += (x.duelWin || 0) * 25 + (x.duelLoss || 0) * 5;
       e += (x.specials || 0) * 6 + (x.tactics || 0) * 4 + (x.tacFail || 0);
+      e += (x.crits || 0) * 2;   // 第四版：每次军队会心 +2（COMBAT-V4 §2.1）
       if (x.won) e += 25 + (x.commander ? 10 : 0);
       return Math.round(Math.min(Progress.BATTLE_CAP, e));
     },

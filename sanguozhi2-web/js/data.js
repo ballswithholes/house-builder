@@ -51,13 +51,105 @@
     AllianceMonths: 12,
     AllianceGift: 200,
     PlayerGraceMonths: 3,     // 开局若干个月内电脑不会进攻玩家
+
+    // ---- 第四版：军队会心（COMBAT-V4 §2.3；公式在 js/battle-math.js 的 SG.Mods.critChance / critK）----
+    CritBase: 0.02,           // 基础会心率
+    CritPerWar: 0.0015,       // 武力每高于 CritWarFrom 1 点 +0.15 %
+    CritWarFrom: 50,
+    CritPerLevel: 0.004,      // 老练等级（vetLevel）每级 +0.4 %
+    CritCap: 0.25,            // 会心率上限
+    CritK: 1.5,               // 会心伤害倍率
+    CritMorale: 5,            // 会心时目标额外失去的士气
+    CritGearCap: 0.06,        // 装备 + 官爵的会心率合计上限（= Caps.critAdd）
+    CritMulCap: 0.3,          // 装备可加的会心伤害倍率上限（= Caps.critMul）
+
+    // ---- 第四版：加成上限与合成（INTEGRATION §3.1；SG.Mods.CAPS 由此复制，tests/econ.js 断言两者一致）----
+    Caps: Object.freeze({
+      atk: 1.60, def: 1.60,          // 战斗中所有正向非等级乘数（装备 × 官职 / 主将 × 羁绊 × 光环 × 条件）之积
+      negFloor: 0.50,                // 负向乘数之积不低于 ×0.5
+      morale: 25,                    // 开战士气加成（装备 + 官职）
+      critAdd: 0.06, critMul: 0.30,  // 军队会心：装备 + 官职的会心率；装备的会心伤害倍率
+      develop: 0.80,                 // 开发：装备（按种类）+ 官职 + 营建
+      incomeLo: -0.10, incomeHi: 0.35, eventIncomeFloor: -0.50,
+      harvestLo: -0.20, harvestHi: 0.35,
+      recruit: 0.40,                 // 征兵：每金得兵
+      train: 12,                     // 训练：固定加成
+      search: 0.90, hire: 0.95, ally: 0.90, discord: 0.90, persuade: 0.90,   // 概率：所有加成之后一次截断
+      fameBonus: 10,                 // 声望人望 + 事件人望 + 装备人望（行动点、外交、登用共用一个上限）
+      virtueLo: -10, virtueHi: 15,   // 事件德 + 装备德
+      exp: 0.40,                     // 经验倍率（装备经验 + expBoost），在每月常规上限之前乘
+      routineCap: 20,                // ENGAGEMENT §4.1 每人每月常规内政经验上限（乘倍率之后）
+      loyAuraCap: 95,                // 忠诚光环不把忠诚抬到 95 以上
+    }),
+
+    // ---- 第四版：电脑预算（INTEGRATION §5；SG.AIBudget）----
+    AIBudget: Object.freeze({
+      Share: 0.22,               // 自由预算 = 每月总收入的 22 %（DESIGN-V4 §20 问题 2 的推荐值）
+      ShareByDifficulty: null,   // 问题 2 的备选：{ easy: 0.18, normal: 0.22, hard: 0.26 }（null = 不随难度变化）
+      CapMonths: 12,             // 最多积 12 个月
+      ReserveBase: 150,          // 每城保留 150 + 8 × 武将数 金
+      ReservePerOfficer: 8,
+      ReserveFoodMonths: 2,      // 与两个月军粮
+      FloorSalaryMonths: 2,      // 贡金 / 盟约付款的底线 = 2 × 俸禄 × 武将数
+      ORDER: Object.freeze(['recruit', 'develop', 'tribute', 'event', 'title', 'gear', 'project', 'festival']),
+      DISCRETIONARY: Object.freeze(['title', 'gear', 'project', 'festival']),
+    }),
+
+    // ---- 第四版：城级（INTEGRATION §12；规则与画面读同一张表；design-v4/domestic/city-stages.js 为参照）----
+    CityLevel: Object.freeze({
+      CORE: Object.freeze(['farms', 'workshop', 'houses', 'walls', 'market']),   // 城级 = 五座核心建筑阶数的平均（四舍五入），0–4
+      NAMES: Object.freeze(['邑', '县城', '郡城', '大郡', '都会']),                // ENGAGEMENT 的 1–5 级 = 下标 + 1
+      T: Object.freeze({
+        farms: Object.freeze([300, 450, 600, 800]),          // 土地
+        workshop: Object.freeze([300, 450, 600, 800]),       // 产业
+        houses: Object.freeze([300, 450, 600, 800]),         // 町
+        walls: Object.freeze([45, 55, 65, 80]),              // 城防 = SG.cityDefense(c)
+        market: Object.freeze([2000, 3000, 4000, 5500]),     // 商店等级 × 1000 + 产业 + 町
+      }),
+      DOWN: 0.95,                                             // 回落滞后：低于 0.95 × 门槛才降阶
+      SHOP: Object.freeze({ sum: Object.freeze([520, 800, 1100]) }),   // 商店等级 = max(1 + 数(产业 + 町 ≥ …), 枢纽等级)
+      HUBS: Object.freeze({                                   // ITEMS §6.2 商路枢纽（城名）
+        4: Object.freeze(['洛阳', '长安', '罗马', '亚历山大', '安条克', '泰西封', '富楼沙', '巴里加扎', '穆济里斯', '帕尔米拉', '查拉克斯', '蓝氏城', '成都']),
+        3: Object.freeze(['番禺', '交趾', '疏勒', '于阗', '撒马尔罕', '塔克西拉', '阿杜利斯', '喔㕭', '马里卜', '襄阳', '大宛', '潘提卡彭', '麦罗埃', '埃德萨', '木鹿']),
+        2: Object.freeze(['敦煌', '武威', '廷吉斯', '约尔', '金官', '邪马台', '伊都', '喀里多尼亚', '塔拉', '伊斯塔克尔', '哈特拉']),
+      }),
+    }),
+
+    // ---- 第四版：结果分级的常数（DOMESTIC-FX §4.2；只读乘成之前的数值：开发用 g0，秋收用 rollRaw）----
+    Tiers: Object.freeze({
+      develop: Object.freeze({ goodRoll: 4, hundred: 100, stages: Object.freeze([300, 450, 600, 800]) }),
+      harvest: Object.freeze({ lean: 0.90, good: 1.04, great: 1.10, greatLand: 600 }),
+    }),
+
+    // ---- 第四版：留待玩家决定的问题（DESIGN-V4 §20），一律取规格的推荐值；改这里即可 ----
+    Decisions: Object.freeze({
+      stackProductCap: null,          // 问题 1：攻 × 防的乘积上限（推荐：不加 = null；要加时填 2.0）
+      aiPurseShare: 0.22,             // 问题 2：电脑自由预算（与 AIBudget.Share 相同；随难度见 AIBudget.ShareByDifficulty）
+      duelBudget: 6,                  // 问题 3：全合一单挑预算（推荐 6；宽松方案 8）
+      duelBudgetLoose: Object.freeze({ budget: 8, gearHp: 12, abilityHp: 6 }),
+      safeSwastikaName: true,         // 问题 4：保留安全的名字「吉祥纹铜剑」
+      classicForeignChance: 0.15,     // 问题 5：经典剧本「异域奇珍」每届出现的机会
+      tourneyWinScale: 6,             // 问题 6：武林大会胜率曲线（COMBAT P1 之后重测并冻结）
+      voiceNativeReview: false,       // 问题 7：外语台词不必等母语者审读即可上线
+      slayRulersOnly: true,           // 问题 8：阵斩只限君主（设置里可打开「所有武将」）
+      slayOthersK: 1 / 3,             //         打开时其他武将的阵斩概率 = 君主的三分之一
+      orderIncomeWeight: 0.05,        // 问题 9：民心对收入 / 收成 ±5 %（(民心 − 50) / 1000）
+      wangdaoPrestige: 1500,          // 问题 10：王道胜利的声望门槛
+      wangdaoOrder: 75,               //          平均民心门槛
+      eventArtSets: 30,               // 问题 11：事件画先做 30 幅
+      tourneyHostTruce: true,         // 问题 12：东道主停战（主办城正月不受攻击）
+      tourneyRulersFight: false,      //          不额外让善战的君主亲自下场
+      hiredForeignKeepLanguage: true, // 问题 13：雇来的外族武将保留自己的语言（设置「一律汉语」可改）
+      voiceFrequency: 'essential',    //          默认语音频率：精简（'all' 全部 · 'essential' 精简 · 'critical' 关键）
+    }),
   });
 
   const Terrain = Object.freeze({ Plain: 0, Forest: 1, Hill: 2, Mountain: 3, River: 4, Wall: 5, Gate: 6, Castle: 7 });
   const TacticKind = Object.freeze({ Fire: 0, Rockfall: 1, Confuse: 2, Inspire: 3 });
 
-  function formation(name, atk, def, move, reqInt, reqWar, desc) {
-    return Object.freeze({ name, atk, def, move, reqInt, reqWar, desc });
+  // 第四版：第 8 个参数 crit = 阵型的会心率加成（COMBAT-V4 §2.1 的 FORM_CRIT），缺省 0
+  function formation(name, atk, def, move, reqInt, reqWar, desc, crit) {
+    return Object.freeze({ name, atk, def, move, reqInt, reqWar, desc, crit: crit || 0 });
   }
   function tactic(kind, name, reqInt, power, desc) {
     return Object.freeze({ kind, name, reqInt, power, desc });
@@ -66,14 +158,14 @@
   const Defs = {
     // 阵型：攻击倍率、防御倍率、机动力加成、所需智力 / 武力
     formations: Object.freeze([
-      formation('方圆', 0.85, 1.35, 0,  0,  0, '坚守之阵，防御大增，攻击略减'),
-      formation('长蛇', 0.95, 0.90, 2,  0,  0, '行军之阵，机动力 +2'),
-      formation('鱼鳞', 1.15, 1.00, 0, 40,  0, '中央突破，攻击提升'),
-      formation('鹤翼', 1.10, 1.10, 0, 60,  0, '两翼包抄，攻守兼备'),
-      formation('偃月', 1.25, 0.90, 0,  0, 75, '主将当先，攻击大增'),
-      formation('锋矢', 1.40, 0.75, 1,  0, 85, '全军突击，攻击极大，防御薄弱'),
-      formation('雁行', 1.05, 1.05, 1, 70,  0, '雁阵展开，机动 +1'),
-      formation('衡轭', 1.00, 1.25, 0, 80,  0, '首尾相应，防御提升'),
+      formation('方圆', 0.85, 1.35, 0,  0,  0, '坚守之阵，防御大增，攻击略减', -0.02),
+      formation('长蛇', 0.95, 0.90, 2,  0,  0, '行军之阵，机动力 +2', 0),
+      formation('鱼鳞', 1.15, 1.00, 0, 40,  0, '中央突破，攻击提升', 0.02),
+      formation('鹤翼', 1.10, 1.10, 0, 60,  0, '两翼包抄，攻守兼备', 0.01),
+      formation('偃月', 1.25, 0.90, 0,  0, 75, '主将当先，攻击大增', 0.03),
+      formation('锋矢', 1.40, 0.75, 1,  0, 85, '全军突击，攻击极大，防御薄弱', 0.04),
+      formation('雁行', 1.05, 1.05, 1, 70,  0, '雁阵展开，机动 +1', 0.01),
+      formation('衡轭', 1.00, 1.25, 0, 80,  0, '首尾相应，防御提升', 0),
     ]),
 
     tactics: Object.freeze([
