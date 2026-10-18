@@ -1,0 +1,526 @@
+{
+ "version": 1,
+ "note": "COMBAT-V4 §11 hand-made strings. seq = 8 steps over L(轻)/M(中)/H(重); step 8 = finisher. Validated: constraints C1-C6, pairwise Hamming >= 2 (see gen-combos-proto.js).",
+ "entries": [
+  {
+   "name": "吕布",
+   "seq": "MLHMHLHH",
+   "finisher": "人中吕布",
+   "finisherVariant": "f_cleave",
+   "why": "飞将：三个重步、重重收尾，最压迫的一套；画戟横扫",
+   "source": "《三国志·吕布传》“便弓马，膂力过人，号为飞将”；裴注引《曹瞒传》“人中有吕布，马中有赤兔”"
+  },
+  {
+   "name": "张飞",
+   "seq": "LLMHMMHH",
+   "finisher": "当阳横矛",
+   "finisherVariant": "f_pierce",
+   "why": "两记快刺起手，怒吼般连刺，重重收尾",
+   "source": "《三国志·张飞传》“飞据水断桥，瞋目横矛”"
+  },
+  {
+   "name": "关羽",
+   "seq": "MMLHMLHH",
+   "finisher": "万众取首",
+   "finisherVariant": "f_pierce",
+   "why": "中中起手：沉稳、威严，节奏层层加重；终结为策马一刺",
+   "source": "《三国志·关羽传》“策马刺良于万众之中，斩其首还”"
+  },
+  {
+   "name": "马超",
+   "seq": "LMLMHLMH",
+   "finisher": "西凉锦枪",
+   "finisherVariant": "f_pierce",
+   "why": "轻中交替的快枪，一重之后再起",
+   "source": "《三国志·马超传》杨阜“超有信、布之勇”"
+  },
+  {
+   "name": "赵云",
+   "seq": "LLMLMLHM",
+   "finisher": "一身是胆",
+   "finisherVariant": "f_pierce",
+   "why": "四个轻步、只有一记重：精准、克制；中段收尾",
+   "source": "《三国志·赵云传》裴注引《云别传》“子龙一身都是胆也”"
+  },
+  {
+   "name": "孙策",
+   "seq": "MLMHLHMH",
+   "finisher": "江东席卷",
+   "finisherVariant": "f_cleave",
+   "why": "两个重步隔开出现，一路压上",
+   "source": "《三国志·孙策传》“转斗千里，尽有江东”"
+  },
+  {
+   "name": "典韦",
+   "seq": "LMMLHLHH",
+   "finisher": "双戟八十斤",
+   "finisherVariant": "f_flurry",
+   "why": "双戟：轻中中起手，重重收尾如双戟齐落",
+   "source": "《三国志·典韦传》“好持大双戟与长刀……帐下壮士有典君，提一双戟八十斤”"
+  },
+  {
+   "name": "许褚",
+   "seq": "MLHMLHMH",
+   "finisher": "虎痴",
+   "finisherVariant": "f_grab",
+   "why": "力大而直：中轻重的笨重节奏反复两次，终结擒摔",
+   "source": "《三国志·许褚传》“褚力如虎而痴，故号曰虎痴”"
+  },
+  {
+   "name": "张辽",
+   "seq": "LLMHLMHM",
+   "finisher": "八百破阵",
+   "finisherVariant": "f_pierce",
+   "why": "不停前压：轻轻起手、两个重步，以中段收尾续冲",
+   "source": "《三国志·张辽传》合肥之战“辽被甲持戟，先登陷陈”（八百人）"
+  },
+  {
+   "name": "文丑",
+   "seq": "MLLMHMHL",
+   "finisher": "河北枪雨",
+   "finisherVariant": "f_flurry",
+   "why": "枪雨：轻步收尾的乱刺",
+   "source": "《三国志·荀彧传》孔融“颜良、文丑，勇冠三军”"
+  },
+  {
+   "name": "颜良",
+   "seq": "MMHLMHLH",
+   "finisher": "河北上将",
+   "finisherVariant": "f_cleave",
+   "why": "中中重的猛攻，重收",
+   "source": "同上（孔融语）；颜良围白马见《三国志·关羽传》"
+  },
+  {
+   "name": "庞德",
+   "seq": "LMHLMLHH",
+   "finisher": "白马将军",
+   "finisherVariant": "f_cleave",
+   "why": "早出的重步、重重收尾：决死之势",
+   "source": "《三国志·庞德传》“德常乘白马，羽军谓之白马将军”；“德亲与羽交战，射羽中额”"
+  },
+  {
+   "name": "甘宁",
+   "seq": "LLMLLMHL",
+   "finisher": "锦帆铃响",
+   "finisherVariant": "f_flurry",
+   "why": "四个轻步的游击快刀，轻步收尾",
+   "source": "《三国志·甘宁传》裴注引《吴书》“负毦带铃，民闻铃声，即知是宁”"
+  },
+  {
+   "name": "太史慈",
+   "seq": "LMLHMLMH",
+   "finisher": "神亭夺戟",
+   "finisherVariant": "f_grab",
+   "why": "缠斗：轻中交错，终结夺戟擒摔",
+   "source": "《三国志·太史慈传》“策刺慈马，而揽得慈项上手戟，慈亦得策兜鍪”"
+  },
+  {
+   "name": "黄忠",
+   "seq": "MLMHMLHM",
+   "finisher": "定军斩将",
+   "finisherVariant": "f_shot",
+   "why": "老将稳重的中段节奏；终结退步一箭（弓将）",
+   "source": "《三国志·黄忠传》定军山“一战斩渊”"
+  },
+  {
+   "name": "孙坚",
+   "seq": "LMHMLMHL",
+   "finisher": "阳人枭将",
+   "finisherVariant": "f_cleave",
+   "why": "古锭刀快斩，轻步收尾（一刀枭首）",
+   "source": "《三国志·孙坚传》阳人之战“大破卓军，枭其都督华雄等”"
+  },
+  {
+   "name": "兀突骨",
+   "seq": "MLHMHMLH",
+   "finisher": "藤甲碎岳",
+   "finisherVariant": "f_cleave",
+   "why": "笨重的骨朵：重步多、节奏慢",
+   "source": "《三国演义》第九十回 藤甲军"
+  },
+  {
+   "name": "魏延",
+   "seq": "LMHLHMLH",
+   "finisher": "子午奇谋",
+   "finisherVariant": "f_pierce",
+   "why": "早出的重步与重收：奇兵突出",
+   "source": "《三国志·魏延传》裴注引《魏略》子午谷之计"
+  },
+  {
+   "name": "夏侯渊",
+   "seq": "LLMLMHLM",
+   "finisher": "三日五百",
+   "finisherVariant": "f_shot",
+   "why": "急行军般的轻快节奏；终结一箭",
+   "source": "《三国志·夏侯渊传》“典军校尉夏侯渊，三日五百，六日一千”"
+  },
+  {
+   "name": "徐晃",
+   "seq": "MLMHLMHH",
+   "finisher": "长驱径入",
+   "finisherVariant": "f_cleave",
+   "why": "大斧：中轻中起手，重重收尾",
+   "source": "《三国志·徐晃传》太祖令“未有长驱径入敌围者也”"
+  },
+  {
+   "name": "华雄",
+   "seq": "MMLHMLLM",
+   "finisher": "汜水关前",
+   "finisherVariant": "f_cleave",
+   "why": "关前猛将：中中起手，中段收尾",
+   "source": "《三国演义》第五回；史载为孙坚所斩（《孙坚传》）"
+  },
+  {
+   "name": "张郃",
+   "seq": "LMLMLHML",
+   "finisher": "识变数",
+   "finisherVariant": "f_flurry",
+   "why": "灵巧多变：轻中交替，重步在后，轻步收尾",
+   "source": "《三国志·张郃传》“郃识变数，善处营陈”"
+  },
+  {
+   "name": "夏侯惇",
+   "seq": "MLHLMMHH",
+   "finisher": "盲夏侯",
+   "finisherVariant": "f_pierce",
+   "why": "刚烈：早出重步、重重收尾",
+   "source": "《三国志·夏侯惇传》“为流矢所中，伤左目”；裴注引《魏略》“军中号惇为盲夏侯”"
+  },
+  {
+   "name": "姜维",
+   "seq": "LMMHLLMM",
+   "finisher": "胆大如斗",
+   "finisherVariant": "f_pierce",
+   "why": "智勇兼备：中段收尾，节奏多变",
+   "source": "《三国志·姜维传》裴注引《世语》“维死时见剖，胆如斗大”"
+  },
+  {
+   "name": "周泰",
+   "seq": "MLMLHMLH",
+   "finisher": "十二创",
+   "finisherVariant": "f_cleave",
+   "why": "耐战：中轻反复，一重之后重收",
+   "source": "《三国志·周泰传》“泰以身卫权……被创十二处”"
+  },
+  {
+   "name": "沙摩柯",
+   "seq": "MLHMMHLH",
+   "finisher": "五溪蛮锤",
+   "finisherVariant": "f_cleave",
+   "why": "铁蒺藜骨朵：重而野",
+   "source": "《三国演义》第八十三回"
+  },
+  {
+   "name": "张任",
+   "seq": "LMHMLLHM",
+   "finisher": "雁桥死节",
+   "finisherVariant": "f_pierce",
+   "why": "严整的枪阵：中段收尾",
+   "source": "《三国志·刘璋传》裴注引《益部耆旧杂记》张任“老臣终不复事二主”"
+  },
+  {
+   "name": "孟获",
+   "seq": "MMHMLLHH",
+   "finisher": "七纵七擒",
+   "finisherVariant": "f_grab",
+   "why": "蛮力：中中重起手，重重收尾",
+   "source": "《三国志·诸葛亮传》裴注引《汉晋春秋》“七纵七禽”"
+  },
+  {
+   "name": "董卓",
+   "seq": "MLHLMHMH",
+   "finisher": "双鞬驰射",
+   "finisherVariant": "f_cleave",
+   "why": "膂力过人：重步多",
+   "source": "《三国志·董卓传》“膂力过人，双带两鞬，左右驰射”"
+  },
+  {
+   "name": "高顺",
+   "seq": "LMLMLMHM",
+   "finisher": "陷阵营",
+   "finisherVariant": "f_pierce",
+   "why": "军纪严整：轻中轻中轻中的规整节拍",
+   "source": "《三国志·吕布传》裴注引《英雄记》“铠甲斗具皆精练齐整，每所攻击无不破者，名为陷陈营”"
+  },
+  {
+   "name": "曹仁",
+   "seq": "MLMLHLMH",
+   "finisher": "将军天人",
+   "finisherVariant": "f_cleave",
+   "why": "守将：中轻反复，重收",
+   "source": "《三国志·曹仁传》“左右叹曰：将军真天人也”"
+  },
+  {
+   "name": "乐进",
+   "seq": "LLHMHLMH",
+   "finisher": "每战先登",
+   "finisherVariant": "f_pierce",
+   "why": "先登：第三步就出重",
+   "source": "《三国志·乐进传》“每临战，常为先登”"
+  },
+  {
+   "name": "纪灵",
+   "seq": "MLMHMLLH",
+   "finisher": "淮南上将",
+   "finisherVariant": "f_cleave",
+   "why": "三尖两刃刀：中段为主",
+   "source": "《三国演义》第十六回（三尖两刃刀）；辕门射戟见《三国志·吕布传》"
+  },
+  {
+   "name": "文聘",
+   "seq": "MMLMHLHL",
+   "finisher": "江夏铁壁",
+   "finisherVariant": "f_flurry",
+   "why": "守城名将：中中起手，轻收",
+   "source": "《三国志·文聘传》石阳坚守"
+  },
+  {
+   "name": "马腾",
+   "seq": "MLLHMLMH",
+   "finisher": "伏波之后",
+   "finisherVariant": "f_pierce",
+   "why": "西凉骑将",
+   "source": "《三国志·马超传》裴注引《典略》“腾……马援后也”"
+  },
+  {
+   "name": "祝融",
+   "seq": "LLMLHMLL",
+   "finisher": "五口飞刀",
+   "finisherVariant": "f_shot",
+   "why": "双刀快斩，终结掷出飞刀（远程收尾）",
+   "source": "《三国演义》第九十回"
+  },
+  {
+   "name": "凌统",
+   "seq": "LMLLMHLM",
+   "finisher": "三百扶捍",
+   "finisherVariant": "f_flurry",
+   "why": "双刀：轻步多，中段收尾",
+   "source": "《三国志·凌统传》合肥“统率亲近三百人陷围，扶捍权出”"
+  },
+  {
+   "name": "邓艾",
+   "seq": "MLLMHLMM",
+   "finisher": "阴平裹毡",
+   "finisherVariant": "f_pierce",
+   "why": "奇袭：重步在中段，以两中收尾",
+   "source": "《三国志·邓艾传》“艾以毡自裹，推转而下”"
+  },
+  {
+   "name": "公孙瓒",
+   "seq": "LMLHLMLM",
+   "finisher": "白马长史",
+   "finisherVariant": "f_pierce",
+   "why": "白马骑兵的轻快冲刺",
+   "source": "《后汉书·公孙瓒传》“白马长史”、“白马义从”"
+  },
+  {
+   "name": "吕蒙",
+   "seq": "LLMMHLML",
+   "finisher": "刮目相待",
+   "finisherVariant": "f_flurry",
+   "why": "士别三日：快而隐蔽，轻步收尾",
+   "source": "《三国志·吕蒙传》裴注引《江表传》“士别三日，即更刮目相待”；白衣渡江“使白衣摇橹”"
+  },
+  {
+   "name": "刘备",
+   "seq": "LMLMHLLM",
+   "finisher": "桃园同心",
+   "finisherVariant": "f_flurry",
+   "why": "双股剑：轻中交替的双剑连环",
+   "source": "《三国演义》第一回；双股剑见《三国演义》"
+  },
+  {
+   "name": "曹操",
+   "seq": "MLLMHMLM",
+   "finisher": "倚天出鞘",
+   "finisherVariant": "f_pierce",
+   "why": "剑：中段起落，收放有度",
+   "source": "《三国演义》第四十一回 倚天剑"
+  },
+  {
+   "name": "周瑜",
+   "seq": "LMLMHMLL",
+   "finisher": "曲有误",
+   "finisherVariant": "f_flurry",
+   "why": "讲究节拍的剑：最后两个轻步像拨弦",
+   "source": "《三国志·周瑜传》“曲有误，周郎顾”"
+  },
+  {
+   "name": "黄盖",
+   "seq": "MMLHLLMH",
+   "finisher": "赤壁火船",
+   "finisherVariant": "f_cleave",
+   "why": "老将：中中起手，重收",
+   "source": "《三国志·周瑜传》黄盖火攻"
+  },
+  {
+   "name": "张绣",
+   "seq": "LLMHMLML",
+   "finisher": "宛城之变",
+   "finisherVariant": "f_flurry",
+   "why": "枪：快起手，轻步收尾",
+   "source": "《三国志·张绣传》宛城袭曹"
+  },
+  {
+   "name": "周仓",
+   "seq": "MMHLLMHM",
+   "finisher": "扛刀随侍",
+   "finisherVariant": "f_cleave",
+   "why": "大刀：中中重",
+   "source": "《三国演义》"
+  },
+  {
+   "name": "关平",
+   "seq": "MMLHLMHL",
+   "finisher": "父子同阵",
+   "finisherVariant": "f_cleave",
+   "why": "前四步与关羽相同（家传），后段不同",
+   "source": "《三国志·关羽传》“羽子平”"
+  },
+  {
+   "name": "袁绍",
+   "seq": "MLMLMHLH",
+   "finisher": "四世三公",
+   "finisherVariant": "f_cleave",
+   "why": "名门：中轻规整，重收",
+   "source": "《三国志·袁绍传》“自安以下四世居三公位”"
+  },
+  {
+   "name": "诸葛亮",
+   "seq": "LMLMLHLM",
+   "finisher": "卧龙吟",
+   "finisherVariant": "f_launch",
+   "why": "文臣之剑：规整的轻中节拍",
+   "source": "《三国志·诸葛亮传》“推演兵法，作八阵图”"
+  },
+  {
+   "name": "马岱",
+   "seq": "LMHMLLMH",
+   "finisher": "汉中追斩",
+   "finisherVariant": "f_pierce",
+   "why": "短戟：早出重步，重收",
+   "source": "《三国志·魏延传》（马岱追斩魏延）；《三国演义》第一百五回"
+  },
+  {
+   "name": "马克西明",
+   "seq": "MLHMLMHH",
+   "finisher": "十六连胜",
+   "finisherVariant": "f_grab",
+   "why": "巨人摔跤手：重步多，终结擒摔",
+   "source": "《罗马君王传·二马克西明》第3章（竞技中连胜十六人）；本仓库 research/europe.md"
+  },
+  {
+   "name": "芬恩",
+   "seq": "LMLHMLHL",
+   "finisher": "菲安纳之誓",
+   "finisherVariant": "f_flurry",
+   "why": "神话英雄：轻快、多变",
+   "source": "芬恩故事群（神话传说）；本仓库 research/v3/rome.md"
+  },
+  {
+   "name": "范师蔓",
+   "seq": "LLMHLMLH",
+   "finisher": "扶南大王",
+   "finisherVariant": "f_cleave",
+   "why": "扶南雄主：快刀起手，重收",
+   "source": "《梁书·扶南国传》“蔓勇健有权略”；本仓库 research/southeast-asia.md"
+  },
+  {
+   "name": "迦梨迦罗",
+   "seq": "MLMLHLHM",
+   "finisher": "文尼大捷",
+   "finisherVariant": "f_pierce",
+   "why": "朱罗王：中轻节拍，中段收尾",
+   "source": "桑伽姆诗歌《波鲁纳拉鲁帕代》（文尼之战）；本仓库 research/v3/india-kushan.md"
+  },
+  {
+   "name": "阿尔达希尔",
+   "seq": "LMMHLHMH",
+   "finisher": "万王之王",
+   "finisherVariant": "f_pierce",
+   "why": "骑矛对冲：两个重步，重收（马上一刺）",
+   "source": "菲鲁扎巴德浮雕（阿尔达希尔马上击落阿尔达班四世），霍尔木兹甘之战（224 年）后称「万王之王」"
+  },
+  {
+   "name": "纳尔奇苏斯",
+   "seq": "LLMLHMMH",
+   "finisher": "摔跤锁喉",
+   "finisherVariant": "f_grab",
+   "why": "摔跤手：近身缠打，终结锁喉擒摔",
+   "source": "卡西乌斯·狄奥《罗马史》73.22（勒死康茂德的摔跤手）；本仓库 research/europe.md"
+  },
+  {
+   "name": "内敦切利扬",
+   "seq": "MLMHLLML",
+   "finisher": "塔莱大捷",
+   "finisherVariant": "f_flurry",
+   "why": "潘地亚王：轻步收尾",
+   "source": "桑伽姆诗歌（塔莱亚兰加南之战）；本仓库 research/v3/india-kushan.md"
+  },
+  {
+   "name": "康茂德",
+   "seq": "LMLLMHML",
+   "finisher": "左手剑",
+   "finisherVariant": "f_flurry",
+   "why": "角斗士皇帝：左手持剑（镜像架势），轻快的角斗节奏",
+   "source": "卡西乌斯·狄奥《罗马史》73（以追击士 secutor 下场，自夸左撇子）"
+  },
+  {
+   "name": "塞维鲁",
+   "seq": "MMLMHLLH",
+   "finisher": "军团拥立",
+   "finisherVariant": "f_pierce",
+   "why": "罗马短剑重刺：维吉提乌斯「刺而不砍」",
+   "source": "维吉提乌斯《兵法简述》卷一「不要砍，要刺」"
+  },
+  {
+   "name": "轲比能",
+   "seq": "LMHLLHMM",
+   "finisher": "鲜卑控弦",
+   "finisherVariant": "f_shot",
+   "why": "草原骑将：两重步、两中收尾，终结回身一箭",
+   "source": "《三国志·乌丸鲜卑东夷传》轲比能“控弦十余万骑”"
+  },
+  {
+   "name": "蹋顿",
+   "seq": "MLHLLMLH",
+   "finisher": "白狼山",
+   "finisherVariant": "f_cleave",
+   "why": "乌桓骨朵：中轻重起手",
+   "source": "《三国志·乌丸传》白狼山之战"
+  },
+  {
+   "name": "神功皇后",
+   "seq": "LMLLHMLM",
+   "finisher": "三韩征伐",
+   "finisherVariant": "f_pierce",
+   "why": "直刀：轻快、中段收尾",
+   "source": "《日本书纪》神功皇后纪（传说）"
+  },
+  {
+   "name": "故国川王",
+   "seq": "LMMLHLML",
+   "finisher": "平左可虑",
+   "finisherVariant": "f_flurry",
+   "why": "短戟：轻步收尾",
+   "source": "《三国史记·高句丽本纪》故国川王（191 年平定左可虑之乱）"
+  },
+  {
+   "name": "巴洛马尔",
+   "seq": "MLHLMHLL",
+   "finisher": "十一族盟",
+   "finisherVariant": "f_cleave",
+   "why": "日耳曼战斧：重步在前，轻轻收尾（连斧）",
+   "source": "本仓库 research/europe.md（166/167 年代表十一个部族议和）"
+  },
+  {
+   "name": "赞提库斯",
+   "seq": "MMLHMHLH",
+   "finisher": "冰河铁骑",
+   "finisherVariant": "f_pierce",
+   "why": "萨尔马提亚双手长矛（kontos）：中中起手，重收",
+   "source": "卡西乌斯·狄奥《罗马史》71.7（雅济吉斯人在结冰的多瑙河上作战）；塔西佗《历史》1.79（双手使用的长兵）"
+  }
+ ]
+}

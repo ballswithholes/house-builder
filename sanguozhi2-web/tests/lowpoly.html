@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>低多边形美术试点</title>
+<style>
+  :root { --bg: #ece9e0; --ink: #1c1426; --panel: rgba(20,16,24,.78); --line: #4a4555; --text: #f2ead8; --on: #7a3a24; --onb: #c8703a; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; }
+  body.view { overflow: hidden; background: #c8d8ea; }
+  #gl { display: block; }
+  body.view #gl { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #shot { display: block; margin: 0 auto; max-width: 100%; image-rendering: auto; }
+  #ui { position: fixed; left: 0; right: 0; top: 0; display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: var(--panel); z-index: 5; align-items: center; color: var(--text); }
+  #ui button { background: #2a2733; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; min-height: 30px; cursor: pointer; }
+  #ui button.on { background: var(--on); border-color: var(--onb); }
+  #ui .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+  #ui .note { opacity: .8; font-size: 12px; }
+  body.sheet { padding-top: 48px; }
+  body.shotmode #ui { display: none; }
+  body.shotmode { padding-top: 0; }
+  @media (max-width: 700px) { #ui button { padding: 4px 6px; font-size: 12px; } }
+</style>
+</head>
+<body>
+<div id="ui"></div>
+<canvas id="gl"></canvas>
+<canvas id="shot" style="display:none"></canvas>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/portrait-data.js"></script>
+<script src="../js/portrait.js"></script>
+<script src="../js/figure.js"></script>
+<script src="../js/lowpoly.js"></script>
+<script src="../js/lp-pilot.js"></script>
+<script>
+'use strict';
+/* 低多边形美术试点的样例页（Lanternvale 预览图的格式）
+   URL 参数
+     shot=units      人物表：关羽、汉军枪兵 —— GAME / 3/4 IDLE / WALK / WIND-UP / STRIKE（棋盘格地面 1 m、1.75 m 石板蓝参照人）
+     shot=creature   生物表：战马（IDLE / WALK / TROT / GALLOP），关羽骑马（IDLE / WALK / GALLOP / STRIKE）
+     shot=props      道具表：城门楼、槐树、松树、灯柱、灌木 / 石头 —— 视图 G（游戏视角）与 Q（3/4）
+     shot=diorama    小场景（城门楼、树、草、骑马的关羽、两名枪兵、土路）；mood=noon | golden | night
+     不带 shot：可交互（拖动旋转、滚轮缩放；按钮切换场景与时间）
+     tile=240（表格单元像素）ss=2（超采样）w / h（场景尺寸）faction=#2f7d4a（势力色） */
+(function () {
+  if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
+  const Q = new URLSearchParams(location.search);
+  const qv = (k, d) => (Q.has(k) ? Q.get(k) : d);
+  const SHOT = Q.get('shot') || '';
+  const LP = SG.LP, Pilot = SG.LPPilot, P = LP.Paint;
+  window.__lp = { ready: false, info: {}, error: null };
+  window.addEventListener('error', e => { window.__lp.error = String(e.message); });
+  const FACTION = qv('faction', '#2f7d4a');
+  const TILE = +qv('tile', 240), SS = +qv('ss', 2);
+
+  const gl = document.getElementById('gl'), shot = document.getElementById('shot');
+  const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;   // the game's Gamma workflow: LP shaders encode themselves
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(1);
+
+  // ------------------------------------------------ 3x5 pixel font (Lanternvale preview sheets)
+  const FONT = { a: '010101111101101', b: '110101110101110', c: '011100100100011', d: '110101101101110', e: '111100110100111', f: '111100110100100', g: '011100101101011', h: '101101111101101', i: '111010010010111', j: '001001001101010', k: '101101110101101', l: '100100100100111', m: '101111111101101', n: '110101101101101', o: '010101101101010', p: '110101110100100', q: '010101101110011', r: '110101110101101', s: '011100010001110', t: '111010010010010', u: '101101101101111', v: '101101101101010', w: '101101111111101', x: '101101010101101', y: '101101010010010', z: '111001010100111', _: '000000000000111', ' ': '000000000000000', 0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110', 4: '101101111001001', 5: '111100110001110', 6: '011100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001110', '@': '010101111100011', '-': '000000111000000', '.': '000000000000010', '/': '001001010100100', ':': '000010000010000', '+': '000010111010000', '(': '010100100100010', ')': '010001001001010', ',': '000000000010100', '=': '000111000111000', '%': '101001010100101', '>': '100010001010100', '#': '101111101111101' };
+  function text(ctx, x, y, s, col) {
+    ctx.fillStyle = col || 'rgb(26,13,38)';
+    let cx = x;
+    for (const ch of String(s).toLowerCase()) {
+      const g = FONT[ch];
+      if (g) for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (g[r * 3 + c] === '1') ctx.fillRect(cx + c * 2, y + r * 2, 2, 2);
+      cx += 8;
+    }
+  }
+
+  // ------------------------------------------------ shared scene bits
+  function checkerGround() {
+    const M = new LP.MeshBuilder(5);
+    const a = [0.66, 0.72, 0.55], b = [0.61, 0.67, 0.51], N = 20;
+    for (let z = -N; z < N; z++) for (let x = -N; x < N; x++) {
+      const c = ((x + z) & 1) === 0 ? a : b;
+      M.quad([x, 0, z], [x + 1, 0, z], [x + 1, 0, z + 1], [x, 0, z + 1], [0, 1, 0], c);
+    }
+    const m = LP.mesh(M.toGeometry(), { outline: false, castShadow: false, side: THREE.DoubleSide });
+    m.name = 'checker';
+    return m;
+  }
+  function referenceFigure() {
+    const M = new LP.MeshBuilder(7);
+    M.color = [0.47, 0.54, 0.66];
+    M.capsule([0, 0, 0], 0.19, 1.47, 10, false);
+    M.sphere([0, 1.63, 0], 0.12, 10, 6, false);
+    const g = new THREE.Group();
+    g.add(LP.mesh(M.toGeometry(), { receiveShadow: false }));
+    g.add(LP.blobShadow(0.3, 0.3, 0.3, 0.65));
+    return g;
+  }
+  function sheetScene(fog) {
+    const scene = new THREE.Scene();
+    const mood = new LP.Mood(scene, { extent: 7, shadowSize: 1024 });
+    mood.set('noon');
+    LP.globals.lpFog.value.x = fog || 0;
+    return { scene, mood };
+  }
+  const tmpBox = new THREE.Box3(), tmpV = new THREE.Vector3();
+  function skinnedBox(meshes, out) {
+    out.makeEmpty();
+    for (const m of meshes) {
+      m.updateMatrixWorld(true);
+      m.computeBoundingBox();
+      tmpBox.copy(m.boundingBox).applyMatrix4(m.matrixWorld);
+      out.union(tmpBox);
+    }
+    return out;
+  }
+  function camFor(target, yawDeg, pitchDeg, dist) {
+    const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
+    const dir = new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p));
+    return { pos: target.clone().addScaledVector(dir, dist), dir };
+  }
+  function tileBackground(ctx, x0, y0, w, h) {
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, 'rgb(204,219,237)'); g.addColorStop(1, 'rgb(230,232,230)');
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, w, h);
+  }
+
+  // ------------------------------------------------ unit sheet (units_exp_* format)
+  const GAME_DIST = 6.2 / Math.tan(19 * Math.PI / 180), GAME_PITCH = 44.3, Q_DIST = 9, Q_PITCH = 14, GAME_PX_PER_M = 1080 / (2 * 6.2);
+  /** rows: [{ label, info, make: () => unit, cols: [{ label, view, yaw, pose(unit) }] }] */
+  function unitSheet(title, rows) {
+    const ncol = Math.max(...rows.map(r => r.cols.length)), header = 18;
+    shot.width = TILE * ncol; shot.height = header + TILE * rows.length;
+    const ctx = shot.getContext('2d');
+    ctx.fillStyle = 'rgb(237,235,224)'; ctx.fillRect(0, 0, shot.width, shot.height);
+    text(ctx, 6, 4, title);
+    const S = TILE * SS;
+    gl.width = S; gl.height = S;
+    renderer.setSize(S, S, false);
+    const info = [];
+    rows.forEach((row, ri) => {
+      const { scene, mood } = sheetScene(0);
+      scene.add(checkerGround());
+      const ref = referenceFigure(); scene.add(ref);
+      const unit = row.make(); scene.add(unit.root);
+      const meshes = unit.meshes || [unit.mesh];
+      const tiles = [];
+      const box = new THREE.Box3();
+      for (const col of row.cols) {
+        unit.root.rotation.y = col.yaw * Math.PI / 180;
+        col.pose(unit);
+        unit.root.updateMatrixWorld(true);
+        skinnedBox(meshes, box);
+        // reference figure 0.45 m clear of the unit's leftmost point (screen left = −X for a camera looking along −Z)
+        const refX = box.min.x - 0.45 - 0.2;
+        const view = col.view === 'game' ? { pitch: GAME_PITCH, dist: GAME_DIST } : { pitch: Q_PITCH, dist: Q_DIST };
+        const all = box.clone().union(new THREE.Box3(new THREE.Vector3(refX - 0.25, 0, -0.25), new THREE.Vector3(refX + 0.25, 1.8, 0.25)));
+        const target = all.getCenter(new THREE.Vector3());
+        const c = camFor(target, 0, view.pitch, view.dist);
+        const cam = new THREE.PerspectiveCamera(30, 1, 0.3, 200);
+        cam.position.copy(c.pos); cam.lookAt(target); cam.updateMatrixWorld(true);
+        let need = 0;
+        const corners = [];
+        for (const b of [box, new THREE.Box3(new THREE.Vector3(refX - 0.25, 0, -0.25), new THREE.Vector3(refX + 0.25, 1.8, 0.25))])
+          for (let i = 0; i < 8; i++) corners.push(new THREE.Vector3(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z));
+        const F = new THREE.Vector3(), R = new THREE.Vector3(), U = new THREE.Vector3();
+        cam.getWorldDirection(F); R.setFromMatrixColumn(cam.matrixWorld, 0); U.setFromMatrixColumn(cam.matrixWorld, 1);
+        for (const p of corners) { const d = p.clone().sub(cam.position), z = d.dot(F); if (z < 0.1) continue; need = Math.max(need, Math.abs(d.dot(R)) / z, Math.abs(d.dot(U)) / z); }
+        tiles.push({ col, target, refX, extent: need * view.dist * 1.1, view });
+      }
+      const extent = Math.max(...tiles.map(t => t.extent));
+      tiles.forEach((t, ci) => {
+        unit.root.rotation.y = t.col.yaw * Math.PI / 180;
+        t.col.pose(unit);
+        ref.position.set(t.refX, 0, 0);
+        const c = camFor(t.target, 0, t.view.pitch, t.view.dist);
+        const cam = new THREE.PerspectiveCamera(2 * Math.atan(extent / t.view.dist) * 180 / Math.PI, 1, 0.3, 200);
+        cam.position.copy(c.pos); cam.lookAt(t.target);
+        // ink: Lanternvale's 1.9 px relative to the on-screen size (px per metre vs the game's)
+        const pxPerM = TILE / (2 * extent);
+        LP.setViewport(S, S); LP.globals.lpView.value.z = Math.max(1.7, 1.9 * pxPerM / GAME_PX_PER_M) * SS / 2.2;
+        mood.sun.target.position.copy(t.target); mood.sun.position.copy(t.target).add(new THREE.Vector3(...mood.state.dir).multiplyScalar(20));
+        renderer.setClearColor(0x000000, 0);
+        renderer.render(scene, cam);
+        const x0 = ci * TILE, y0 = header + ri * TILE;
+        tileBackground(ctx, x0, y0, TILE, TILE);
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(gl, 0, 0, S, S, x0, y0, TILE, TILE);
+        if (ci === 0) { ctx.fillStyle = 'rgba(0,0,0,0.0)'; }
+        text(ctx, x0 + 4, y0 + 4, t.col.label);
+        if (ci === 0) {
+          text(ctx, x0 + 4, y0 + TILE - 26, row.label);
+          text(ctx, x0 + 4, y0 + TILE - 14, row.info(unit));
+        }
+      });
+      // the game column gets the darker "game" tint of the Lanternvale sheets (a lighter sky strip on the others)
+      info.push({ label: row.label, tris: unit.tris });
+    });
+    return info;
+  }
+
+  // poses
+  const walkSpread = (u, clip, dur) => {
+    let best = 0, bt = 0;
+    const a = new THREE.Vector3(), b = new THREE.Vector3();
+    for (let i = 0; i < 16; i++) {
+      const t = i / 16 * dur;
+      u.setPose(clip, t);
+      u.root.updateMatrixWorld(true);
+      const f = u.fig || u.horse;
+      const L = f.bones.footL || f.bones.ftFL, R = f.bones.footR || f.bones.ftHL;
+      L.getWorldPosition(a); R.getWorldPosition(b);
+      const d = a.distanceTo(b);
+      if (d > best) { best = d; bt = t; }
+    }
+    u.setPose(clip, bt);
+  };
+  function guanYuRow() {
+    return {
+      label: 'GUAN_YU', info: u => `${u.height.toFixed(2)}m biped ${u.tris}t`,
+      make: () => Pilot.guanYu(),
+      cols: [
+        { label: 'game', view: 'game', yaw: 55, pose: u => u.setPose('idle', 0.6) },
+        { label: '3/4 idle', view: 'q', yaw: 30, pose: u => u.setPose('idle', 0.6) },
+        { label: 'walk', view: 'q', yaw: 65, pose: u => walkSpread(u, 'walk', 1.0) },
+        { label: 'wind-up', view: 'q', yaw: 65, pose: u => u.setPose('heavy', 0.42) },
+        { label: 'strike', view: 'q', yaw: 65, pose: u => u.setPose('heavy', 0.56) },
+      ],
+    };
+  }
+  function soldierRow() {
+    return {
+      label: 'HAN_SPEARMAN', info: u => `${u.height.toFixed(2)}m biped ${u.tris}t`,
+      make: () => Pilot.soldier({ color: FACTION }),
+      cols: [
+        { label: 'game', view: 'game', yaw: 55, pose: u => u.setPose('idle', 0.6) },
+        { label: '3/4 idle', view: 'q', yaw: 30, pose: u => u.setPose('idle', 0.6) },
+        { label: 'walk', view: 'q', yaw: 65, pose: u => walkSpread(u, 'walk', 1.0) },
+        { label: 'wind-up', view: 'q', yaw: 65, pose: u => u.setPose('light3', 0.14) },
+        { label: 'strike', view: 'q', yaw: 65, pose: u => u.setPose('light3', 0.26) },
+      ],
+    };
+  }
+  function horseRow() {
+    return {
+      label: 'WAR_HORSE', info: u => `2.05m quad ${u.tris}t`,
+      make: () => Pilot.horse({ color: FACTION }),
+      cols: [
+        { label: 'game', view: 'game', yaw: 55, pose: u => u.setPose('idle', 0.5) },
+        { label: '3/4 idle', view: 'q', yaw: 30, pose: u => u.setPose('idle', 0.5) },
+        { label: 'walk', view: 'q', yaw: 65, pose: u => walkSpread(u, 'walk', 1.1) },
+        { label: 'trot', view: 'q', yaw: 65, pose: u => u.setPose('trot', 0.18) },
+        { label: 'gallop', view: 'q', yaw: 65, pose: u => u.setPose('gallop', 0.12) },
+      ],
+    };
+  }
+  function mountedRow() {
+    return {
+      label: 'GUAN_YU_MOUNTED', info: u => `quad+biped ${u.tris}t`,
+      make: () => {
+        const h = Pilot.horse({ color: FACTION }), g = Pilot.guanYu();
+        h.mount(g);
+        return { root: h.root, meshes: [h.mesh, g.mesh], tris: h.tris + g.tris, horse: h.horse, fig: g.fig, h, g, setPose(clip, t) { h.setPose(clip, t); return this; } };
+      },
+      cols: [
+        { label: 'game', view: 'game', yaw: 55, pose: u => { u.h.setPose('idle', 0.5); u.g.setPose('idle', 0.5); } },
+        { label: '3/4 idle', view: 'q', yaw: 30, pose: u => { u.h.setPose('idle', 0.5); u.g.setPose('idle', 0.5); } },
+        { label: 'walk', view: 'q', yaw: 65, pose: u => { u.h.setPose('walk', 0.3); u.g.setPose('idle', 0.3); } },
+        { label: 'gallop', view: 'q', yaw: 65, pose: u => { u.h.setPose('gallop', 0.12); u.g.setPose('idle', 0.2, { gallop: true }); } },
+        { label: 'strike', view: 'q', yaw: 65, pose: u => { u.h.setPose('trot', 0.2); u.g.setPose('heavy', 0.56); } },
+      ],
+    };
+  }
+
+  // ------------------------------------------------ prop sheet (props_* format: views G and Q, blue 1.75 m person, 1 m grid)
+  function gridGround(x0, x1, z0, z1) {
+    const M = new LP.MeshBuilder(3);
+    M.quad([x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1], [0, 1, 0], [0.70, 0.74, 0.62]);
+    const c = [0.6, 0.64, 0.54];
+    for (let x = Math.ceil(x0); x <= x1; x++) M.quad([x - 0.02, 0.004, z0], [x + 0.02, 0.004, z0], [x + 0.02, 0.004, z1], [x - 0.02, 0.004, z1], [0, 1, 0], c);
+    for (let z = Math.ceil(z0); z <= z1; z++) M.quad([x0, 0.004, z - 0.02], [x1, 0.004, z - 0.02], [x1, 0.004, z + 0.02], [x0, 0.004, z + 0.02], [0, 1, 0], c);
+    return LP.mesh(M.toGeometry(), { outline: false, castShadow: false });
+  }
+  function person() {
+    const M = new LP.MeshBuilder(1);
+    M.color = [0.35, 0.45, 0.75];
+    M.capsule([0, 0, 0], 0.22, 1.75, 8);
+    return LP.mesh(M.toGeometry());
+  }
+  function propSheet(items, views, perRow) {
+    const ncol = perRow * views.length, rows = Math.ceil(items.length / perRow);
+    shot.width = TILE * ncol; shot.height = TILE * rows;
+    const ctx = shot.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, shot.width, shot.height);
+    const S = TILE * SS;
+    gl.width = S; gl.height = S; renderer.setSize(S, S, false);
+    const info = [];
+    items.forEach((it, idx) => {
+      const { scene, mood } = sheetScene(0);
+      const obj = it.make();
+      scene.add(obj);
+      obj.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(obj, true);
+      const personX = b.max.x + 0.7;
+      const pm = person(); pm.position.x = personX; scene.add(pm);
+      b.union(new THREE.Box3(new THREE.Vector3(personX - 0.25, 0, -0.25), new THREE.Vector3(personX + 0.25, 1.75, 0.25)));
+      scene.add(gridGround(Math.floor(b.min.x) - 2, Math.ceil(b.max.x) + 2, Math.floor(b.min.z) - 2, Math.ceil(b.max.z) + 2));
+      if (it.lamps) for (const l of it.lamps(obj)) mood.addLamp(l.pos, l.opts);
+      mood.set(it.mood || 'noon');
+      const target = b.getCenter(new THREE.Vector3()), dist = b.getSize(new THREE.Vector3()).length() * 0.5 * 3.2 + 2;
+      // fit by the model's own vertices (not its box corners) and the person, as the Lanternvale prop sheet does
+      const pts = [];
+      obj.traverse(m => { if (!m.isMesh || m.name === 'outline' || m.name === 'blobShadow') return; const pa = m.geometry.attributes.position, st = Math.max(1, Math.floor(pa.count / 3000)); for (let i = 0; i < pa.count; i += st) pts.push(new THREE.Vector3().fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld)); });
+      for (let i = 0; i < 8; i++) pts.push(new THREE.Vector3(personX + (i & 1 ? 0.22 : -0.22), i & 2 ? 1.75 : 0, i & 4 ? 0.22 : -0.22));
+      views.forEach((v, vi) => {
+        const [yaw, pitch] = v === 'g' ? [0, 48] : v === 'q' ? [38, 28] : v === 'f' ? [0, 12] : [160, 25];
+        const c = camFor(target, yaw, pitch, dist);
+        const cam = new THREE.PerspectiveCamera(38, 1, 0.3, 400);
+        cam.position.copy(c.pos); cam.lookAt(target); cam.updateMatrixWorld(true);
+        // fit the bounds to 90 % of the tile
+        const F = new THREE.Vector3(), R = new THREE.Vector3(), U = new THREE.Vector3();
+        cam.getWorldDirection(F); R.setFromMatrixColumn(cam.matrixWorld, 0); U.setFromMatrixColumn(cam.matrixWorld, 1);
+        let need = 0;
+        // centre the view on the projected extent of the points, then fit
+        let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        for (const p of pts) { const d = p.clone().sub(cam.position), z = d.dot(F); const x = d.dot(R) / z, y = d.dot(U) / z; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+        need = Math.max(maxX - minX, maxY - minY) / 2;
+        cam.setViewOffset(1000, 1000, ((minX + maxX) / 2) / (need / 0.87) * 500, -((minY + maxY) / 2) / (need / 0.87) * 500, 1000, 1000);
+        cam.fov = 2 * Math.atan(need / 0.87) * 180 / Math.PI; cam.updateProjectionMatrix();
+        const pxPerM = TILE / (2 * need * dist);
+        LP.setViewport(S, S); LP.globals.lpView.value.z = Math.max(0.55, (1.9 * pxPerM / GAME_PX_PER_M)) * SS / 2.2;
+        mood.sun.target.position.copy(target); mood.sun.position.copy(target).add(new THREE.Vector3(...mood.state.dir).multiplyScalar(40));
+        const e = Math.max(8, b.getSize(new THREE.Vector3()).length() * 0.6), sc = mood.sun.shadow.camera;
+        sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.far = 120; sc.updateProjectionMatrix();
+        renderer.setClearColor(0x000000, 0);
+        renderer.render(scene, cam);
+        const x0 = ((idx % perRow) * views.length + vi) * TILE, y0 = Math.floor(idx / perRow) * TILE;
+        ctx.fillStyle = 'rgb(204,219,234)'; ctx.fillRect(x0, y0, TILE, TILE);
+        const g2 = ctx.createLinearGradient(0, y0, 0, y0 + TILE); g2.addColorStop(0, 'rgb(204,219,235)'); g2.addColorStop(1, 'rgb(179,199,222)');
+        ctx.fillStyle = g2; ctx.fillRect(x0, y0, TILE, TILE);
+        ctx.drawImage(gl, 0, 0, S, S, x0, y0, TILE, TILE);
+        text(ctx, x0 + 3, y0 + 3, it.label + ' ' + v);
+        if (vi === 0) text(ctx, x0 + 3, y0 + TILE - 14, `${(it.tris(obj) | 0)}t ${b.getSize(new THREE.Vector3()).y.toFixed(1)}m`);
+      });
+      info.push({ label: it.label, tris: it.tris(obj) });
+    });
+    return info;
+  }
+  const trisOf = o => { let t = 0; o.traverse(m => { if (m.isMesh && m.name !== 'outline' && m.geometry && m.geometry.userData.tris) t += m.geometry.userData.tris; }); return t; };
+  function propItems() {
+    const lampList = (obj, color) => (obj.userData.lamps || []).map(p => ({ pos: p, opts: { color: color || '#ffb46c', intensity: 1.1, range: 5.5 } }));
+    return [
+      { label: 'PROP_GATE_TOWER', make: () => Pilot.gateTower({ flagColor: FACTION }), tris: trisOf },
+      { label: 'PROP_GATE_TOWER_NIGHT', make: () => Pilot.gateTower({ lit: true, flagColor: FACTION }), tris: trisOf, mood: 'night', lamps: o => lampList(o) },
+      { label: 'PROP_TREE_HUAI', make: () => Pilot.tree(0), tris: trisOf },
+      { label: 'PROP_TREE_HUAI_B', make: () => Pilot.tree(2), tris: trisOf },
+      { label: 'PROP_TREE_PINE', make: () => Pilot.pine(1), tris: trisOf },
+      { label: 'PROP_LAMP_POST', make: () => { const g = new THREE.Group(); g.add(Pilot.lampPost(false)); const b = Pilot.bush(1); b.position.set(1.4, 0, 0.3); g.add(b); const r = Pilot.rock(2); r.position.set(-1.3, 0, 0.4); g.add(r); return g; }, tris: trisOf },
+      { label: 'PROP_CITY_WALL', make: () => Pilot.cityWall(12), tris: trisOf },
+    ];
+  }
+
+  // ------------------------------------------------ diorama
+  function buildDiorama(moodName) {
+    const scene = new THREE.Scene();
+    const night = moodName === 'night';
+    const fogCol = night ? new THREE.Color(0.17, 0.2, 0.36) : moodName === 'golden' ? new THREE.Color(0.93, 0.82, 0.7) : new THREE.Color(0.8, 0.86, 0.92);
+    scene.background = fogCol.clone();
+    scene.fog = new THREE.Fog(fogCol, 42, 140);
+    LP.globals.lpFog.value.x = 0.85;
+    const mood = new LP.Mood(scene, { center: [0, 0, 1], extent: 26, shadowSize: 2048 });
+    const gateZ = -6;
+    // road centre line and helpers
+    const roadX = z => 1.7 * Math.sin((z + 2) / 6.5) * Math.min(1, Math.max(0, (z + 2) / 5));
+    const wob = (z, k) => Math.sin(z * 1.37 + k) * 0.5 + Math.sin(z * 0.53 + 2 * k) * 0.5;
+    const road = (x, z) => {
+      if (z < gateZ - 3.6) return 0;
+      const side = x > roadX(z) ? 1 : -1;
+      const hw = (z < -2.4 ? 1.5 : 1.7 + 0.015 * Math.max(0, z)) + (z > -2.4 ? 0.28 * wob(z, side * 1.7) : 0);
+      const d = Math.abs(x - roadX(z));
+      return 1 - Math.min(1, Math.max(0, (d - hw + 0.7) / 1.3));
+    };
+    const trees = [[-9, 2.5, 0], [9.5, 1.0, 1], [-14, 9, 2], [12.5, 9.5, 3]];
+    const shade = (x, z) => {
+      let s = 0;
+      for (const [tx, tz] of trees) s = Math.max(s, 1 - Math.hypot(x - tx, (z - tz) * 1.2) / 3.6);
+      if (z < gateZ + 4.2 && z > gateZ + 2.4) s = Math.max(s, (z - (gateZ + 2.4)) < 0.9 ? 0.6 : 0.3);
+      return Math.max(0, s);
+    };
+    // two cart ruts ±0.45 m either side of the road's centre line (thin ribbons finer than the ground grid)
+    const ruts = [-0.45, 0.45].map(o => { const pts = []; for (let z = gateZ + 3.9; z <= 27; z += 0.45) { const dz = 0.05, dx = (roadX(z + dz) - roadX(z - dz)) / (2 * dz), n = 1 / Math.hypot(1, dx); pts.push([roadX(z) + o * n, z - o * dx * n]); } return pts; });
+    scene.add(Pilot.ground({ width: 84, depth: 70, cz: -2, cell: 0.5, road, shade, ruts }));
+    const gate = Pilot.gateTower({ lit: night, flagColor: FACTION });
+    gate.position.set(0, 0, gateZ);
+    scene.add(gate);
+    for (const s of [-1, 1]) { const w = Pilot.cityWall(18); w.position.set(s * (6.5 + 9 - 0.3), 0, gateZ - 0.4); scene.add(w); }
+    for (const [x, z, sd] of trees) { const t = Pilot.tree(sd); t.position.set(x, 0, z); t.rotation.y = sd * 1.3; scene.add(t); }
+    for (const [x, z, sd] of [[-10, -12.5, 0], [7.5, -13, 1], [16, -11, 2], [-17, -11.5, 3]]) { const t = Pilot.pine(sd); t.position.set(x, 0, z); scene.add(t); }
+    for (const [x, z, sd, k] of [[-4.6, -2.0, 0, 1], [5.2, -2.1, 1, 0.9], [-7.2, 6.5, 2, 1.1], [6.4, 6.0, 3, 1], [3.8, 13, 1, 0.8], [-5, 14, 2, 0.9]]) { const b = Pilot.bush(sd); b.position.set(x, 0, z); b.scale.setScalar(k); scene.add(b); }
+    for (const [x, z, sd, k] of [[-3.4, 8.4, 0, 0.8], [8.2, 4.6, 1, 1.1], [-10.5, 6.2, 2, 0.9], [2.9, 16, 3, 0.7]]) { const r = Pilot.rock(sd); r.position.set(x, 0, z); r.scale.setScalar(k); r.rotation.y = sd; scene.add(r); }
+    const lampPosts = [[-2.9, 3.2], [3.4, 9.5]];
+    const lampAt = [];
+    for (const [x, z] of lampPosts) { const l = Pilot.lampPost(night); l.position.set(x, 0, z); scene.add(l); const sh = LP.blobShadow(0.32, 0.32, 0.35); sh.position.set(x, 0.01, z); scene.add(sh); const p = l.userData.lamp; lampAt.push([x + p[0], p[1], z + p[2]]); }
+    // grass and flowers off the road
+    const onRoad = (x, z) => road(x, z) > 0.55 && z > gateZ + 3.8;
+    const avoid = (x, z) => road(x, z) > 0.05 || (z < gateZ + 4.0 && Math.abs(x) < 25) || trees.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 0.8);
+    const clumps = [[-6.2, -1.9, 1.2, 14], [6.8, -1.9, 1.3, 14], [-10.5, -1.8, 1.4, 12], [11.5, -1.8, 1.4, 12], [-8.2, 2.9, 1.2, 10], [10.2, 1.6, 1.1, 10], [-2.6, 7.5, 0.9, 9], [4.4, 12, 1.0, 9], [-12.5, 9.5, 1.2, 10], [1.9, 2.0, 0.6, 6], [-1.9, 11, 0.7, 7], [8.8, 5.2, 0.9, 8]];
+    const flowerPatches = [[-4.4, 4.6, 0.9, 12], [5.6, 3.4, 0.8, 10], [-7.4, 9.5, 1.0, 12], [9.6, 8.6, 1.0, 11], [-3.6, -1.7, 0.6, 7], [3.9, -1.8, 0.6, 7], [1.2, 15.5, 0.8, 9]];
+    const litter = trees.map(([x, z]) => [x, z + 0.4, 2.6, 26]);
+    scene.add(Pilot.grassField({ count: 520, specks: 900, pebbles: 40, onRoad, litter, x0: -30, x1: 30, z0: gateZ + 3, z1: 26, avoid, seed: 11, clumps, flowerPatches }));
+    // tufts along the foot of the walls and the gate base (no ink, sway)
+    const footClumps = [];
+    for (let x = -24; x <= 24; x += 1.35) {
+      const ax = Math.abs(x), atGate = ax < 6.6, atButtress = !atGate && (Math.abs(ax - 10.7) < 1.3 || Math.abs(ax - 19.7) < 1.3);
+      const zFoot = gateZ + (atGate ? 3.62 : atButtress ? 3.02 : 2.22) + (ax % 2.7 > 1.35 ? 0.1 : 0);
+      if (atGate && Math.abs(x) < 2.2) continue;
+      footClumps.push([x + 0.3 * Math.sin(x * 3.1), zFoot, 0.32, 3 + (Math.abs(Math.round(x * 7)) % 3)]);
+    }
+    scene.add(Pilot.grassField({ count: 0, x0: -25, x1: 25, z0: gateZ, z1: gateZ + 5, seed: 12, clumps: footClumps }));
+    // soldiers at the gate and Guan Yu on his horse on the road
+    const soldiers = [-2.55, 2.55].map((x, i) => { const s = Pilot.soldier({ color: FACTION, seed: i }); s.root.position.set(x, 0, gateZ + 4.6); s.root.rotation.y = x < 0 ? 0.35 : -0.35; s.setPose('idle', i * 0.7); scene.add(s.root); return s; });
+    const horse = Pilot.horse({ color: FACTION }), gy = Pilot.guanYu();
+    horse.mount(gy);
+    horse.root.position.set(roadX(3.2) + 0.2, 0, 3.2); horse.root.rotation.y = 0.75;
+    horse.setPose('idle', 0.4); gy.setPose('idle', 0.4);
+    scene.add(horse.root);
+    // lamps: gate lanterns (red), lamp posts (cream paper)
+    gate.updateMatrixWorld(true);
+    for (const p of gate.userData.lamps) { const v = new THREE.Vector3(...p).applyMatrix4(gate.matrixWorld); mood.addLamp([v.x, v.y, v.z], { color: '#ffb46c', intensity: 1.0, range: 4.6, haloSize: 1.5 }); }
+    for (const p of lampAt) mood.addLamp(p, { color: '#ffe2a6', intensity: 0.9, range: 5.2, haloSize: 1.3 });
+    mood.set(moodName);
+    return { scene, mood, horse, gy, soldiers, gate };
+  }
+
+  // ------------------------------------------------ modes
+  function sheetMode(fn) {
+    document.body.classList.add('sheet');
+    gl.style.display = 'none'; shot.style.display = 'block';
+    return fn();
+  }
+  function run() {
+    const t0 = performance.now();
+    if (SHOT === 'units') {
+      window.__lp.info.rows = sheetMode(() => unitSheet('EXP_PILOT  HOUR 12.5  CHECKER 1 M  SLATE FIGURE 1.75 M  (SG.LP)', [guanYuRow(), soldierRow()]));
+    } else if (SHOT === 'creature') {
+      window.__lp.info.rows = sheetMode(() => unitSheet('EXP_PILOT_C  HOUR 12.5  CHECKER 1 M  SLATE FIGURE 1.75 M  (SG.LP)', [horseRow(), mountedRow()]));
+    } else if (SHOT === 'closeup') {
+      // review aid: one unit, posed, framed close (who = guanyu | soldier | horse | mounted; pose, t, yaw, pitch, h = framing height)
+      const who = qv('who', 'guanyu'), W = +qv('w', 900), Hh = +qv('h', 900);
+      const { scene, mood } = sheetScene(0);
+      scene.add(checkerGround());
+      let u;
+      if (who === 'soldier') u = Pilot.soldier({ color: FACTION });
+      else if (who === 'horse') u = Pilot.horse({ color: FACTION });
+      else if (who === 'mounted') { const h = Pilot.horse({ color: FACTION }), g = Pilot.guanYu(); h.mount(g); u = { root: h.root, tris: h.tris + g.tris, setPose(c, t) { h.setPose(c, t); g.setPose(qv('rider', 'idle'), t); }, kit: g.kit }; }
+      else u = Pilot.guanYu();
+      scene.add(u.root);
+      u.root.rotation.y = +qv('yaw', 30) * Math.PI / 180;
+      u.setPose(qv('pose', 'idle'), +qv('t', 0.6));
+      const target = new THREE.Vector3(+qv('tx', 0), +qv('ty', 1.45), +qv('tz', 0)), span = +qv('span', 1.0);
+      const c = camFor(target, +qv('cyaw', 0), +qv('pitch', 10), 6);
+      const cam = new THREE.PerspectiveCamera(2 * Math.atan(span / 6) * 180 / Math.PI, W / Hh, 0.3, 100);
+      cam.position.copy(c.pos); cam.lookAt(target);
+      gl.width = W; gl.height = Hh; renderer.setSize(W, Hh, false); gl.id = 'shot'; shot.id = 'unused';
+      document.body.classList.add('shotmode');
+      LP.setViewport(W, Hh); LP.globals.lpView.value.z = +qv('ink', 1.6);
+      renderer.setClearColor(0xcfdcec, 1);
+      renderer.render(scene, cam);
+      window.__lp.info = { tris: u.tris, parts: u.kit && u.kit.parts };
+    } else if (SHOT === 'props') {
+      window.__lp.info.rows = sheetMode(() => propSheet(propItems(), (qv('views', 'gq')).split(''), +qv('per', 3)));
+    } else {
+      // diorama (shot) or interactive view
+      const W = +qv('w', SHOT ? 1600 : innerWidth), Hh = +qv('h', SHOT ? 900 : innerHeight);
+      let mood = qv('mood', 'noon');
+      let D = buildDiorama(mood);
+      const cam = new THREE.PerspectiveCamera(+qv('fov', 38), W / Hh, 0.3, 600);
+      let yaw = +qv('yaw', 0), pitch = +qv('pitch', 42), dist = +qv('dist', 29);
+      const target = new THREE.Vector3(+qv('tx', 0), +qv('ty', 2.4), +qv('tz', -0.6));
+      const place = () => { const c = camFor(target, yaw, pitch, dist); cam.position.copy(c.pos); cam.lookAt(target); };
+      place();
+      if (SHOT) {
+        document.body.classList.add('shotmode');
+        gl.width = W; gl.height = Hh; renderer.setSize(W, Hh, false);
+        gl.id = 'shot'; shot.id = 'unused';
+        LP.setViewport(W, Hh); LP.setTime(+qv('t', 1.2));
+        renderer.render(D.scene, cam);
+        window.__lp.info.tris = { guanYu: D.gy.tris, horse: D.horse.tris, soldier: D.soldiers[0].tris, gate: D.gate.geometry.userData.tris };
+      } else {
+        document.body.classList.add('view');
+        renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+        const resize = () => { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); const v = renderer.getDrawingBufferSize(new THREE.Vector2()); LP.setViewport(v.x, v.y); };
+        addEventListener('resize', resize); resize();
+        const ui = document.getElementById('ui');
+        const btn = (label, fn, on) => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); b.onclick = () => fn(b); ui.appendChild(b); return b; };
+        const moods = {};
+        for (const [m, l] of [['noon', '正午'], ['golden', '黄昏'], ['night', '夜晚']]) moods[m] = btn(l, () => { mood = m; D = buildDiorama(m); for (const k in moods) moods[k].classList.toggle('on', k === m); }, m === mood);
+        ui.appendChild(Object.assign(document.createElement('span'), { className: 'sep' }));
+        for (const [s, l] of [['units', '人物表'], ['creature', '战马表'], ['props', '建筑与树']]) btn(l, () => { location.search = '?shot=' + s; });
+        ui.appendChild(Object.assign(document.createElement('span'), { className: 'note', textContent: '拖动旋转 · 滚轮缩放' }));
+        let drag = null;
+        gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; gl.setPointerCapture(e.pointerId); });
+        gl.addEventListener('pointermove', e => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.25; pitch = Math.max(8, Math.min(80, drag.pitch + (e.clientY - drag.y) * 0.2)); place(); });
+        gl.addEventListener('pointerup', () => { drag = null; });
+        gl.addEventListener('wheel', e => { dist = Math.max(8, Math.min(90, dist * (e.deltaY > 0 ? 1.08 : 0.93))); place(); e.preventDefault(); }, { passive: false });
+        const clock = new THREE.Clock();
+        const loop = () => {
+          const t = clock.getElapsedTime();
+          LP.setTime(t);
+          D.horse.setPose('idle', t); D.gy.setPose('idle', t);
+          D.soldiers.forEach((s, i) => s.setPose('idle', t + i * 0.7));
+          renderer.render(D.scene, cam);
+          requestAnimationFrame(loop);
+        };
+        loop();
+      }
+    }
+    window.__lp.info.ms = Math.round(performance.now() - t0);
+    window.__lp.ready = true;
+  }
+  try { run(); } catch (e) { window.__lp.error = e.stack || String(e); console.error(e); }
+})();
+</script>
+</body>
+</html>
