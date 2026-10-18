@@ -1,6 +1,7 @@
 #!/bin/bash
-# 单挑格斗的无头测试：把规则文件 + Battle/DuelSim.cs 与 Tests~/sim/UnityStub.cs 一起编译成 HarnessDuel.exe，
-# 运行 AI 对 AI、脚本玩家（跳入 / 连按）对 AI 的胜率统计，并与网页版 node tests/duel-bots.js（同样的场数与种子）逐行对照。
+# 单挑格斗的无头测试：把规则文件 + Battle/DuelSim.cs 与 Tests~/sim/UnityStub.cs（及规则测试用的 BattleTerrain 替身）一起编译成
+# HarnessDuel.exe，运行 tests/duel-bots.js 的全部各节（(1)–(7)：AI 对 AI、脚本玩家对 AI 的胜率表、格开规则的脚本化场景、
+# 重击与反应、防守试探型打法与武力差阶梯），并与网页版 node tests/duel-bots.js（同样的场数与种子）逐行对照。
 # 用法：Tests~/duel/run.sh [每组场数，默认 40] [种子，默认 7] [容差（百分点），默认 0]
 #   退出码：C# 自身检查的失败数 + 与 JS 不一致的行数（找不到 node 时只跑 C#）。
 set -u
@@ -15,10 +16,10 @@ command -v mcs >/dev/null 2>&1 || { echo "找不到 mcs（mono-devel）" >&2; ex
 
 RULES=()
 for f in "$S"/Data/*.cs "$S"/Data/Generated/*.cs "$S"/Model/*.cs "$S"/Strategy/StrategyAI.cs "$S"/Strategy/Conquest.cs \
-         "$S"/Battle/BattleModel.cs "$S"/Battle/Specials.cs "$S"/Battle/DuelSim.cs; do
+         "$S"/Battle/BattleModel.cs "$S"/Battle/Specials.cs "$S"/Battle/Tactics.cs "$S"/Battle/DuelSim.cs "$PROJ/Tests~/sim/BattleTerrainStub.cs"; do
   [ -f "$f" ] && RULES+=("$f")
 done
-msg=$(mcs -langversion:7.2 -nowarn:0414,0649,0169,0162,0219 -r:System.Core.dll -out:"$OUT/HarnessDuel.exe" \
+msg=$(mcs -langversion:7.2 -nowarn:0414,0649,0169,0162,0219 -optimize+ -r:System.Core.dll -r:System.Numerics.dll -out:"$OUT/HarnessDuel.exe" \
       "$PROJ/Tests~/sim/UnityStub.cs" "$PROJ/Tests~/sim/SimLib.cs" "${RULES[@]}" "$HERE/HarnessDuel.cs" 2>&1)
 if [ $? -ne 0 ]; then printf '%s\n' "$msg" | grep -E 'error' | head -30; echo "== HarnessDuel：编译失败"; exit 98; fi
 

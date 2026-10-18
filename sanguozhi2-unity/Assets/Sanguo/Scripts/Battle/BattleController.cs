@@ -17,6 +17,15 @@ namespace Sanguo
     //     格斗画面出错时退回简易单挑 + 旧对话框
     //   「动画」按钮与 V 键切换攻击画面模式；战斗音乐（进攻 battle / 守城 battle-defend，地域取敌方势力文化），胜负短曲后回到地图曲；
     //   竖屏开场镜头；电脑行动后镜头回到我军；部队情报卡显示头像与必杀
+    // 第三版（← battle-controller.js v3，DESIGN-V3 §2、§4；规则见 BattleModel / Specials / Tactics / Progress）：
+    //   战场 18×13：开场镜头距离 38（触屏 40），最远 72。
+    //   行动菜单「必杀」→ 列出该部队会的全部必杀（专属在前，每招每战一次；已施展 / 无目标的灰显并注明原因）→ 选目标 →
+    //     特写（所选招式）+ 结算与特效（PerformSpecial，special = 所选招式）；只会一招时直接选目标。
+    //   「策略」→ 列出已会的计策（原四计按智力 + 习得的新计策，Tactics.MenuItems）；新计策经 Tactics.Perform 结算，
+    //     播放各自的 BattleView.SpecialFx 风格与飘字（PerformTactic）；电脑的 "special" / "tactic" 计划走同一条路径（plan.special / plan.tactic）。
+    //   子菜单（必杀 / 策略 / 目标 / 阵型）取消时回到行动菜单；行动菜单本身取消时与旧版相同（移动过则待机）。
+    //   情报卡：姓名旁显示等级（Lv）与经验进度条（Progress.ExpInfo）、老练加成；必杀一行「未施展 / 已施展」，习得的招式另起一行。
+    //   战后的经验结算由 BattleModel.SettleProgress 写入 BattleSetup.progress，回到战略画面后由 StrategyScreen.Growth 显示。
     public class BattleController
     {
         BattleModel M; BattleView V; int playerSide; bool autoPlayer, endTurn;
@@ -48,10 +57,12 @@ namespace Sanguo
             // 布置战场也放进 try：其中任何一步抛出异常时，finally 照样恢复地图、镜头与音乐
             try
             {
+                // INTEGRATION（攻击画面移植后启用）：预热本战双方文化的士兵模板与动作（网页版 SG.Clash.prepare）
+                //   if (Clash.Enabled) Clash.Prepare(M.units.Select(u => u.gen != null && !string.IsNullOrEmpty(u.gen.culture) ? u.gen.culture : "han"));
                 Game.I.Map.Root.gameObject.SetActive(false);
                 rig.Bounds = new Rect(BattleView.Origin.x, BattleView.Origin.z, M.W * BattleView.T, M.H * BattleView.T);
-                rig.MinDist = 12; rig.MaxDist = 62;
-                rig.Focus(V.BoardCenter - new Vector3(0, 0, 2), 40, true);
+                rig.MinDist = 12; rig.MaxDist = 72;        // 第三版战场 18×13：可拉得更远
+                rig.Focus(V.BoardCenter - new Vector3(0, 0, 2), Game.IsTouch ? 40 : 38, true);
                 try { PortraitOpening(rig); } catch (Exception e) { Debug.LogException(e); }
                 rig.OnTap += OnTap;
                 // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
@@ -71,6 +82,8 @@ namespace Sanguo
                 UIKit.Banner(s.target.name + "之战", an + "军 进攻 " + dn + "军", 2.2f);
                 Sfx.Play("horn");
                 yield return new WaitForSeconds(1.6f);
+                // INTEGRATION（战场人物模型移植后启用）：人物模型分片就绪后再开始第一回合（最多再等 4 秒；网页版 V.ready）
+                //   for (float w = 0; !V.Ready && w < 4f; w += Time.unscaledDeltaTime) yield return null;
 
                 while (M.result == 0)
                 {
@@ -203,7 +216,11 @@ namespace Sanguo
             cardPic.raycastTarget = false; cardPic.preserveAspect = true;
             UIKit.Place(cardPic.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -18), new Vector2(88, 88));
             cardHead = UIKit.Label(card, "", 22, UIKit.Text, TextAnchor.MiddleLeft);
+            cardHead.horizontalOverflow = HorizontalWrapMode.Overflow;
             UIKit.Place(cardHead.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(118, -14), new Vector2(336, 42));
+            // 姓名旁的细经验条（.sg-card-exp：2.6em × .32em）
+            cardExp = UIKit.ExpBar(card, 0, 46, 6);
+            cardExp.gameObject.SetActive(false);
             var bar = UIKit.Bar(card, 1, SideColor(0));
             UIKit.Place(bar, new Vector2(0, 1), new Vector2(0, 1), new Vector2(118, -60), new Vector2(330, 10));
             cardBarFill = (RectTransform)bar.Find("Fill");
@@ -229,17 +246,48 @@ namespace Sanguo
         // 「结束回合」只在玩家亲自指挥的本方行动时可按（= 网页版 updateHud 的 endBtn.disabled）
         void SyncEndBtn() { if (endBtn != null && endBtn.button != null) endBtn.button.interactable = M.side == playerSide && !autoPlayer; }
 
+        RectTransform cardExp; string cardExpKey;
         void ShowCard(BUnit u)
         {
             if (u == null) { card.gameObject.SetActive(false); return; }
             card.gameObject.SetActive(true);
             var f = u.Form;
-            cardHead.text = string.Format("<size=30><b>{0}</b></size>  <color=#a8a194>{1}{2}</color>", u.gen.name, u.side == 0 ? "攻方" : "守方", u.commander ? "·主将" : "");
+            // 姓名 + 等级（Lv，第三版成长）+ 攻方 / 守方·主将；Lv 之后放一条细经验条
+            string nameLv = "<size=" + UIKit.Fs(30) + "><b>" + u.gen.name + "</b></size>";
+            ExpInfo ei = null;
+            if (ProgressOn()) { try { ei = Progress.ExpInfo(u.gen); } catch (Exception ex) { Debug.LogException(ex); ei = null; } }
+            if (ei != null) nameLv += "  <color=#f3c969><b>Lv<color=#fff1c8>" + ei.level + "</color></b></color>";
+            string sub = "<color=#a8a194>" + (u.side == 0 ? "攻方" : "守方") + (u.commander ? "·主将" : "") + "</color>";
+            float pre = 0;
+            if (ei != null)
+            {
+                try { pre = cardHead.cachedTextGeneratorForLayout.GetPreferredWidth(nameLv, cardHead.GetGenerationSettings(Vector2.zero)) / Mathf.Max(0.01f, cardHead.pixelsPerUnit); }
+                catch (Exception) { pre = 0; }
+            }
+            cardHead.text = nameLv + (ei != null ? "<size=" + UIKit.Fs(22) + ">" + new string('　', 3) + "</size>" : "  ") + sub;
+            if (cardExp != null)
+            {
+                cardExp.gameObject.SetActive(ei != null && pre > 0);
+                if (ei != null && pre > 0)
+                {
+                    cardExp.anchoredPosition = new Vector2(118 + pre + 10, -14 - 21);
+                    // 换了部队或经验变了才重播长出动画
+                    string key = u.gen.id + ":" + ei.exp;
+                    var fill = cardExp.Find("Fill");
+                    var anim = fill != null ? fill.GetComponent<ExpFill>() : null;
+                    if (anim != null && key != cardExpKey) { anim.target = Mathf.Clamp01((float)ei.pct); anim.enabled = false; anim.enabled = true; }
+                    cardExpKey = key;
+                }
+            }
             if (cardBarFill != null) cardBarFill.anchorMax = new Vector2(Mathf.Clamp01(u.Troops / (float)Mathf.Max(1, u.gen.MaxTroops)), 1);
             if (cardBarImg != null) cardBarImg.color = SideColor(u.side);
             cardSub.text = string.Format("兵力 <b>{0}</b>　士气 {1}　训练 {2}", u.Troops, u.morale, u.gen.training);
-            cardText.text = string.Format("武力 {0}　智力 {1}\n阵型 <color=#f3c969>{2}</color>（攻×{3:0.00} 防×{4:0.00}）\n地形 {5}{6}{7}",
-                u.gen.war, u.gen.intel, f.Name, f.Atk, f.Def, Defs.TerrainName(M.map[u.x, u.y]), u.confused > 0 ? "　<color=#c79bff>混乱中</color>" : "", SpecialLine(u));
+            cardText.text = string.Format("武力 {0}　智力 {1}{8}\n阵型 <color=#f3c969>{2}</color>（攻×{3:0.00} 防×{4:0.00}）\n地形 {5}{6}{7}",
+                u.gen.war, u.gen.intel, f.Name, f.Atk, f.Def, Defs.TerrainName(M.map[u.x, u.y]), u.confused > 0 ? "　<color=#c79bff>混乱中</color>" : "", SpecialLine(u), VetText(u.gen));
+            // 卡片高度随行数（习得的必杀另起一行）
+            float th = Mathf.Ceil(cardText.preferredHeight) + 2;
+            cardText.rectTransform.sizeDelta = new Vector2(430, Mathf.Max(128, th));
+            card.sizeDelta = new Vector2(470, Mathf.Max(250, 114 + th + 14));
             // 头像（势力色边框）；阵亡部队灰暗显示
             try
             {
@@ -250,14 +298,28 @@ namespace Sanguo
             catch (Exception e) { Debug.LogException(e); cardPic.enabled = false; }
         }
 
-        // 情报卡的必杀一行：招式名 + 可用 / 已施展
+        static bool ProgressOn() { return Progress.enabled; }
+        // 老练加成（每高 1 级攻防与计策威力 +4%，Progress.VetK）：1 级时为空
+        static string VetText(General gen)
+        {
+            if (!ProgressOn() || gen == null) return "";
+            double k = Progress.VetK(gen);
+            return k > 1.0001 ? "　<color=#f3c969>老练 +" + Mathf.RoundToInt((float)((k - 1) * 100)) + "%</color>" : "";
+        }
+        // 情报卡的必杀：专属必杀一行「名」未施展 / 已施展（「可用」留给行动菜单：此刻是否有目标）；
+        // 习得的招式压成一行：未施展的着色，已施展的灰显（← Specials.cardLine）
         string SpecialLine(BUnit u)
         {
             try
             {
-                var sp = M.SpecialOf(u);
-                if (sp == null) return "";
-                return "\n必杀 <color=" + Specials.UiColor(sp) + ">「" + sp.name + "」</color>" + (u.specialUsed ? "<color=#a8a194>　已施展</color>" : "<color=#73d98c>　可用</color>");
+                if (u == null || u.gen == null) return "";
+                var list = Specials.Known(u.gen);
+                if (list.Count == 0) return "";
+                var sig = list[0];
+                string head = "\n必杀 <color=" + Specials.UiColor(sig) + ">「" + sig.name + "」</color>" + (Specials.UsedIn(u, sig) ? "<color=#a8a194>　已施展</color>" : "<color=#73d98c>　未施展</color>");
+                if (list.Count == 1) return head;
+                var more = list.Skip(1).Select(sp => Specials.UsedIn(u, sp) ? "<color=#7d776c>" + sp.name + "</color>" : "<color=" + Specials.UiColor(sp) + ">" + sp.name + "</color>");
+                return head + "\n习得 " + string.Join("<color=#a8a194> · </color>", more.ToArray());
             }
             catch (Exception e) { Debug.LogException(e); return ""; }
         }
@@ -371,51 +433,61 @@ namespace Sanguo
             V.Highlight(M.AdjacentEnemies(u).Select(e => new Vector2Int(e.x, e.y)), new Color(1f, 0.3f, 0.25f, 0.7f));
         }
 
+        // 部队会的计策（原四计按智力 + 习得）
+        List<TacticDef> TacticsOf(BUnit u)
+        {
+            try { return M.KnownTactics(u); } catch (Exception e) { Debug.LogException(e); }
+            return Defs.Tactics.Where(t => u.gen.intel >= t.ReqInt).ToList();
+        }
+
+        // 行动菜单。子菜单（必杀 / 策略 / 选目标 / 阵型）取消时回到本菜单；本菜单取消时：移动过的部队待机
         IEnumerator ActionMenu(BUnit u, bool moved = false)
         {
-            var adj = M.AdjacentEnemies(u);
-            var items = new List<UIKit.Item>
-            {
-                new UIKit.Item("攻击", adj.Count > 0 ? adj.Count + " 支敌军相邻" : "无相邻敌军", adj.Count > 0),
-                new UIKit.Item("策略", "智力 " + u.gen.intel, u.gen.intel >= 40),
-                new UIKit.Item("单挑", "武力 " + u.gen.war, adj.Count > 0),
-                new UIKit.Item("阵型", u.Form.Name),
-                new UIKit.Item("待机"),
-            };
-            // 必杀：插在「策略」之后，显示招式名；已施展 / 无目标时灰显并注明原因
             bool SP = SpecialsOn();
-            if (SP)
+            for (int guard = 0; guard < 40; guard++)
             {
-                UIKit.Item it = null;
-                try { it = SpecialMenuItem(u); } catch (Exception e) { Debug.LogException(e); }
-                items.Insert(2, it ?? new UIKit.Item("必杀", "无", false));
-            }
-            var r = new Ref<int>();
-            yield return UIKit.Choose(u.gen.name + " 的行动", items, r, null, SP ? 620 : 520);
-            int ri = r.v;
-            if (SP && ri == 2)
-            {
-                string why;
-                if (!M.SpecialUsable(u, out why)) { UIKit.Toast(string.IsNullOrEmpty(why) ? "无法施展" : why); if (moved) M.Spend(u); }
-                else
+                if (!u.alive || M.result != 0) break;
+                var adj = M.AdjacentEnemies(u);
+                var tacs = TacticsOf(u);
+                int tacOk = tacs.Count(t => { try { return M.TacticUsable(u, t) && M.TacticTargets(u, t).Count > 0; } catch (Exception) { return false; } });
+                var items = new List<UIKit.Item>
                 {
-                    var tgt = new Ref<BUnit>();
-                    yield return PickSpecialTarget(u, tgt);
-                    if (tgt.v != null) { yield return DoSpecial(u, tgt.v, false, null); M.Spend(u); }
-                    else if (moved) M.Spend(u);
+                    new UIKit.Item("攻击", adj.Count > 0 ? adj.Count + " 支敌军相邻" : "无相邻敌军", adj.Count > 0),
+                    new UIKit.Item("策略", tacs.Count > 0 ? "智力 " + u.gen.intel + "<color=#a8a194> · " + tacs.Count + " 计" + (tacOk < tacs.Count ? " · 可用 " + tacOk : "") + "</color>" : "<color=#a8a194>未习计策</color>", tacs.Count > 0),
+                    new UIKit.Item("单挑", "武力 " + u.gen.war, adj.Count > 0),
+                    new UIKit.Item("阵型", u.Form.Name),
+                    new UIKit.Item("待机"),
+                };
+                // 必杀：插在「策略」之后，显示招式名；已施展 / 无目标时灰显并注明原因
+                if (SP)
+                {
+                    UIKit.Item it = null;
+                    try { it = SpecialMenuItem(u); } catch (Exception e) { Debug.LogException(e); }
+                    items.Insert(2, it ?? new UIKit.Item("必杀", "无", false));
                 }
-                foreach (var x in M.units) V.Refresh(x);
-                yield break;
-            }
-            if (SP && ri > 2) ri--;
-            switch (ri)
-            {
-                case 0: { var tgt = new Ref<BUnit>(); yield return PickEnemy(adj, "攻击目标", tgt); if (tgt.v != null) { yield return DoAttack(u, tgt.v); M.Spend(u); } else if (moved) M.Spend(u); break; }
-                case 1: yield return TacticMenu(u, moved); break;
-                case 2: { var tgt = new Ref<BUnit>(); yield return PickEnemy(adj, "单挑对手", tgt); if (tgt.v != null) { yield return DoDuel(u, tgt.v); M.Spend(u); } else if (moved) M.Spend(u); break; }
-                case 3: yield return FormationMenu(u); break;
-                case 4: M.Spend(u); break;
-                default: if (moved) M.Spend(u); break;
+                var r = new Ref<int>();
+                yield return UIKit.Choose(u.gen.name + " 的行动", items, r, null, SP ? 620 : 520);
+                int ri = r.v;
+                if (ri < 0) { if (moved) M.Spend(u); break; }
+                if (SP && ri == 2)
+                {
+                    var sd = new Ref<bool>();
+                    yield return SpecialMenu(u, sd);
+                    if (sd.v) break;
+                    continue;
+                }
+                if (SP && ri > 2) ri--;
+                bool done = true;
+                switch (ri)
+                {
+                    case 0: { var tgt = new Ref<BUnit>(); yield return PickEnemy(adj, "攻击目标", tgt); if (tgt.v != null) { yield return DoAttack(u, tgt.v); M.Spend(u); } else done = false; break; }
+                    case 1: { var td = new Ref<bool>(); yield return TacticMenu(u, td); done = td.v; break; }
+                    case 2: { var tgt = new Ref<BUnit>(); yield return PickEnemy(adj, "单挑对手", tgt); if (tgt.v != null) { yield return DoDuel(u, tgt.v); M.Spend(u); } else done = false; break; }
+                    case 3: { var fd = new Ref<bool>(); yield return FormationMenu(u, fd); done = fd.v; break; }
+                    case 4: M.Spend(u); break;
+                    default: if (moved) M.Spend(u); break;
+                }
+                if (done) break;
             }
             foreach (var x in M.units) V.Refresh(x);
         }
@@ -429,30 +501,57 @@ namespace Sanguo
             if (r.v >= 0) result.v = list[r.v];
         }
 
-        IEnumerator TacticMenu(BUnit u, bool moved)
+        // 「策略」：已会的计策（原四计按智力 + 习得的新计策；Tactics.MenuItems）。施展后 Spend → done = true；取消（回到行动菜单）→ false
+        IEnumerator TacticMenu(BUnit u, Ref<bool> done)
         {
-            var items = new List<UIKit.Item>();
-            foreach (var t in Defs.Tactics)
+            done.v = false;
+            List<TacticMenuRow> rows;
+            try { rows = Tactics.MenuItems(M, u); } catch (Exception e) { Debug.LogException(e); rows = new List<TacticMenuRow>(); }
+            if (rows.Count == 0) { UIKit.Toast("尚未掌握计策"); yield break; }
+            bool shortS = ShortScreen();
+            // 每行：计策名（计策色）；原四计右栏为说明（不可用时为原因），新计策右栏为等阶（及原因）、说明行为数值摘要
+            var items = rows.Select(x =>
             {
-                string why; bool ok = M.TacticUsable(u, t, out why) && M.TacticTargets(u, t).Count > 0;
-                if (why == "" && !ok) why = "范围内无目标";
-                items.Add(new UIKit.Item(t.Name, ok ? t.Desc : why, ok));
-            }
+                var t = x.tactic;
+                string name = "<color=" + (t.Color ?? "#f3c969") + ">" + t.Name + "</color>";
+                if (!t.IsNew) return new UIKit.Item(name, x.ok ? t.Desc : "<color=#a8a194>" + x.why + "</color>", x.ok, null);
+                string tag = "<color=#a8a194>" + x.tierLabel + "</color>";
+                return new UIKit.Item(name, x.ok ? tag : tag + " <color=#a8a194>" + x.why + "</color>", x.ok, shortS ? x.summaryShort : x.summary);
+            }).ToList();
             var r = new Ref<int>();
-            yield return UIKit.Choose("策略", items, r, null, 640);
-            if (r.v < 0) { if (moved) M.Spend(u); yield break; }
-            var tac = Defs.Tactics[r.v];
-            var targets = M.TacticTargets(u, tac);
+            yield return UIKit.Choose(u.gen.name + " 的策略", items, r, null, 680);
+            if (r.v < 0) yield break;
+            var tac = rows[r.v].tactic;
             var tgt = new Ref<BUnit>();
-            if (tac.Kind == TacticKind.Inspire) tgt.v = u;
-            else yield return PickEnemy(targets, tac.Name + "的目标", tgt);
-            if (tgt.v == null) { if (moved) M.Spend(u); yield break; }
+            yield return PickTacticTarget(u, tac, tgt);
+            if (tgt.v == null) yield break;
             yield return DoTactic(u, tac, tgt.v);
             M.Spend(u);
+            done.v = true;
+        }
+        // 计策目标：自身为中心 → 自身；只有一个 → 它；否则在棋盘上标出可选目标（友军绿、敌军红）后沿用 PickEnemy
+        IEnumerator PickTacticTarget(BUnit u, TacticDef tac, Ref<BUnit> result)
+        {
+            result.v = null;
+            var targets = M.TacticTargets(u, tac);
+            if (targets.Count == 0) yield break;
+            if (tac.Kind == TacticKind.Inspire || tac.Target == "self") { result.v = u; yield break; }
+            if (targets.Count == 1) { result.v = targets[0]; yield break; }
+            bool ally = tac.Target == "ally";
+            try
+            {
+                V.ClearHighlights();
+                var c = Art.Hex(ally ? "#73d98c" : "#ff4d40"); c.a = 0.75f;
+                V.Highlight(targets.Select(o => new Vector2Int(o.x, o.y)), c);
+            }
+            catch (Exception e) { Debug.LogException(e); }
+            try { var r = new Ref<BUnit>(); yield return PickEnemy(targets, tac.Name + "的目标", r); result.v = r.v; }
+            finally { try { V.ClearHighlights(); } catch (Exception) { /* 忽略 */ } }
         }
 
-        IEnumerator FormationMenu(BUnit u)
+        IEnumerator FormationMenu(BUnit u, Ref<bool> done)
         {
+            done.v = false;
             var items = Defs.Formations.Select((f, i) => new UIKit.Item(f.Name + (i == u.formation ? "（当前）" : ""),
                 M.FormationAllowed(u, i) ? string.Format("攻×{0:0.00} 防×{1:0.00} 机动{2:+0;-0;0}", f.Atk, f.Def, f.Move) : (f.ReqInt > 0 ? "需智力 " + f.ReqInt : "需武力 " + f.ReqWar),
                 M.FormationAllowed(u, i), f.Desc)).ToList();
@@ -463,7 +562,10 @@ namespace Sanguo
             V.FloatText(V.Tile(u.x, u.y) + Vector3.up * 1.8f, Defs.Formations[r.v].Name + "之阵", UIKit.Gold, 34);
             Sfx.Play("horn", 0.4f);
             M.Spend(u);
+            done.v = true;
         }
+        // 矮屏（横屏手机，视口高 < 560 点）：菜单说明只留一行
+        static bool ShortScreen() { float h = UIKit.ViewHeightPt; return h > 0 && h < 560; }
 
         // ---------------------------------------------------------- 动作 --
         // 当前是否在「看」电脑行动（敌方回合、委任或旁观）：攻击画面 / 必杀特写加速
@@ -500,6 +602,14 @@ namespace Sanguo
 
         IEnumerator DoTactic(BUnit u, TacticDef tac, BUnit t)
         {
+            // 第三版新计策：各自的 BattleView.SpecialFx 风格与飘字（Tactics.Perform；不 Spend）
+            if (tac != null && tac.IsNew)
+            {
+                yield return Co.Guard(PerformTactic(u, tac, t), e => Debug.LogException(e));
+                foreach (var x in M.units) V.Refresh(x);
+                UpdateHud();
+                yield break;
+            }
             UIKit.Toast(u.gen.name + "施展「" + tac.Name + "」！", 1.5f);
             var res = M.UseTactic(u, tac, t);
             switch (tac.Kind)
@@ -518,20 +628,66 @@ namespace Sanguo
             if (!t.alive) { UIKit.Toast(t.gen.name + "部溃散！"); yield return V.Rout(t); }
         }
 
+        // ---------------------------------------------------------- 新计策 --
+        // 网页版 Tactics.perform（新计策部分）：结算 → V.SpecialFx（计策的风格与主色；成功或有命中时）→ 伤害 / 飘字 → 刷新 → 溃散
+        IEnumerator PerformTactic(BUnit u, TacticDef t, BUnit target)
+        {
+            ShowCard(u);
+            string tc = t.Color ?? "#f3c969";
+            UIKit.Toast(u.gen.name + "施展「<color=" + tc + ">" + t.Name + "</color>」！", 1.5f);
+            var res = Tactics.Perform(M, u, t, target);
+            if (res == null) yield break;
+            var shown = new bool[res.hits.Count];
+            Action<int> onHit = i =>
+            {
+                if (i < 0 || i >= res.hits.Count || shown[i]) return;
+                shown[i] = true;
+                try { V.Hit(res.hits[i].unit, res.hits[i].dmg, true); } catch (Exception e) { Debug.LogException(e); }
+            };
+            // 特效的替身招式（同网页版 { id: 'tac:'+id, name, kind: id, fx, color, radius, range }）
+            var sp = new Special { id = "tac:" + t.Id, name = t.Name, kind = t.Id, fx = t.Fx, color = tc, radius = Mathf.Max(1, t.Radius), range = t.Range, tactic = true };
+            if (res.success || res.hits.Count > 0)
+                yield return Co.Guard(V.SpecialFx(u, Tactics.FxTargets(res, u), t.Fx, Art.Hex(tc), new SpecialFxInfo { sp = sp, res = res, target = res.target ?? target, onHit = onHit }), e => Debug.LogException(e));
+            else
+                yield return Co.Guard(V.MagicFx(target ?? u, Art.Hex("#a8a194")), e => Debug.LogException(e));
+            for (int i = 0; i < shown.Length; i++) if (!shown[i]) onHit(i);
+            Action<BUnit, string, string, int, float> text = (x, s, col, size, k) => { try { if (x != null) V.FloatText(V.Tile(x.x, x.y) + Vector3.up * k, s, Art.Hex(col), size); } catch (Exception e) { Debug.LogException(e); } };
+            if (!res.success) text(res.target ?? target ?? u, "识破", "#a8a194", 34, 1.6f);
+            foreach (var x in res.confused) text(x, "混乱", "#cc99ff", 38, 2.4f);
+            if (res.success) foreach (var x in res.resisted) text(x, "识破", "#a8a194", 30, 2.4f);
+            foreach (var h in res.healed) text(h.unit, "+" + h.amount, "#73d98c", 40, 1.6f);
+            string word = Tactics.CurseWord(t.Id);
+            if (word != null) foreach (var x in res.cursed) text(x, word, Tactics.CurseColor(t.Id), 32, 2.6f);
+            string buff = Tactics.BuffWord(t.Id);
+            if (buff != null) foreach (var x in res.buffed) text(x, buff, "#f3c969", 30, 2.3f);
+            foreach (var x in M.units) V.Refresh(x);
+            UpdateHud();
+            yield return new WaitForSeconds(0.4f);
+            var gone = new List<BUnit>();
+            foreach (var x in res.routed.Concat(res.affected).Concat(target != null ? new[] { target } : new BUnit[0])) if (x != null && !x.alive && !gone.Contains(x)) gone.Add(x);
+            foreach (var x in gone) if (V.IsShown(x)) { UIKit.Toast(x.gen.name + "部溃散！"); yield return V.Rout(x); }
+        }
+
         // ---------------------------------------------------------- 必杀 --
-        // 行动菜单的「必杀」条目：招式名（招式色）；不可用时注明原因
+        // 行动菜单的「必杀」条目（← Specials.menuItem）：会一招时显示招式名（不可用时注明原因）与说明；
+        // 会多招时显示「名」等 N 招 · 可用 k（第一招可用的；都不可用时注明原因）
         UIKit.Item SpecialMenuItem(BUnit u)
         {
-            var sp = M.SpecialOf(u);
-            if (sp == null) return new UIKit.Item("必杀", "<color=#a8a194>无</color>", false);
-            string why; bool ok = M.SpecialUsable(u, out why);
+            var info = Specials.MenuInfo(M, u);
+            if (info.list.Count == 0) return new UIKit.Item("必杀", "<color=#a8a194>无</color>", false);
+            var sp = info.shown;
             string nm = "<color=" + Specials.UiColor(sp) + ">「" + sp.name + "」</color>";
-            return new UIKit.Item("必杀", ok ? nm : nm + " <color=#a8a194>" + why + "</color>", ok, MenuDesc(sp));
+            if (info.list.Count == 1) return new UIKit.Item("必杀", info.ok ? nm : nm + " <color=#a8a194>" + info.why + "</color>", info.ok, MenuDesc(sp));
+            string more = "<color=#a8a194>等 " + info.list.Count + " 招 · 可用 " + info.usable + "</color>";
+            string why = info.ok ? "" : " <color=#a8a194>" + (info.why ?? "") + "</color>";
+            return new UIKit.Item("必杀", nm + " " + more + why, info.ok, null);
         }
-        // 行动菜单里的说明：条目是一行，只留机制名 + 说明的第一句（截断）；完整说明在部队卡片与武将详情里
+        // 行动菜单里的说明：矮屏（横屏手机）只留一行（机制名 + 说明的第一句，截断），免得把「待机」挤出菜单；
+        // 完整说明在选择目标时的提示、部队卡片与武将详情里都有
         static string MenuDesc(Special sp)
         {
             string full = sp.desc ?? "";
+            if (!ShortScreen()) return full;
             string first = full.Split('。', '；', '！')[0];
             if (first.Length == 0) first = full;
             const int MAX = 16;
@@ -539,13 +695,61 @@ namespace Sanguo
             return Specials.KindName(sp.kind) + "：" + first;
         }
 
-        // 选择目标：只有一个目标时直接返回；并在棋盘上标出射程与可选目标。自身为中心的招式直接返回 u
-        IEnumerator PickSpecialTarget(BUnit u, Ref<BUnit> result)
+        // 「必杀」：列出全部已会的必杀（专属在前），每招一行：等阶 / 专属、名称、机制 / 不可用的原因、数值摘要（与典故）。
+        // 只会一招时直接选目标。施展后 Spend → done = true；取消（回到行动菜单）→ false
+        IEnumerator SpecialMenu(BUnit u, Ref<bool> done)
+        {
+            done.v = false;
+            var list = M.KnownSpecials(u);
+            if (list.Count == 0) { UIKit.Toast("无必杀技"); yield break; }
+            var sp = list[0];
+            if (list.Count > 1)
+            {
+                var rows = list.Select(x => SpecialItem(u, x)).ToList();
+                int nUsed = list.Count(x => M.SpWasUsed(u, x));
+                string info = "<color=#a8a194>每招每战限一次" + (nUsed > 0 ? " · 已施展 " + nUsed + " / " + list.Count : "") + "</color>";
+                var r = new Ref<int>();
+                yield return UIKit.Choose(u.gen.name + " 的必杀", rows, r, info, 700);
+                if (r.v < 0) { u.spPick = null; yield break; }
+                sp = list[r.v];
+            }
+            string why;
+            if (!M.SpecialUsable(u, sp.id, out why)) { UIKit.Toast(string.IsNullOrEmpty(why) ? "无法施展" : why); yield break; }
+            var tgt = new Ref<BUnit>();
+            yield return PickSpecialTarget(u, sp, tgt);
+            if (tgt.v == null) { u.spPick = null; yield break; }
+            yield return DoSpecial(u, tgt.v, false, null, sp.id);
+            M.Spend(u);
+            done.v = true;
+        }
+        // 必杀列表的一行
+        UIKit.Item SpecialItem(BUnit u, Special sp)
+        {
+            string why; bool ok = M.SpecialUsable(u, sp.id, out why);
+            string col = Specials.UiColor(sp);
+            string tier = sp.pool ? UIText.Tag(TagStyle.SpTier, Specials.TierNameOf(sp.tier)) : UIText.Tag(TagStyle.SpSig, "专属");
+            string label = tier + "<color=" + col + ">" + sp.name + "</color>";
+            string kind = Specials.KindName(sp.kind) ?? "";
+            string right = ok ? "<color=#a8a194>" + kind + "</color>" : "<color=#a8a194>" + (string.IsNullOrEmpty(why) ? "不可用" : why) + "</color>";
+            string rules = "";
+            try { rules = Specials.Rules(sp) ?? ""; } catch (Exception e) { Debug.LogException(e); }
+            // 去掉开头的机制名（右栏已有）
+            if (kind.Length > 0 && rules.StartsWith(kind + " · ", StringComparison.Ordinal)) rules = rules.Substring(kind.Length + 3);
+            // 矮屏（横屏手机）：只留数值摘要，去掉末尾的「依武力 / 依智力」
+            string desc = ShortScreen() ? System.Text.RegularExpressions.Regex.Replace(rules, " · 依(武力|智力|政治)$", "")
+                : rules + (!string.IsNullOrEmpty(sp.lore) ? "\n<i><color=#cfc6b4>" + sp.lore + "</color></i>" : "");
+            return new UIKit.Item(label, right, ok, desc) { descBlock = true };
+        }
+
+        // 选择目标（← Specials.pickTarget）：记入 u.spPick；自身为中心的招式直接返回 u；只有一个目标时直接返回；
+        // 否则在棋盘上标出射程与可选目标后沿用 PickEnemy。没有目标时清除 u.spPick
+        IEnumerator PickSpecialTarget(BUnit u, Special sp, Ref<BUnit> result)
         {
             result.v = null;
-            var sp = M.SpecialOf(u);
-            var list = M.SpecialTargets(u);
-            if (sp == null || list.Count == 0) yield break;
+            if (sp == null) yield break;
+            u.spPick = sp.id;
+            var list = M.SpecialTargets(u, sp.id);
+            if (list.Count == 0) { u.spPick = null; yield break; }
             if (!Specials.NeedsTarget(sp)) { result.v = u; yield break; }
             try
             {
@@ -569,18 +773,22 @@ namespace Sanguo
                 else { var r = new Ref<BUnit>(); yield return PickEnemy(list, sp.name + " 的目标", r); result.v = r.v; }
             }
             finally { V.ClearHighlights(); }
+            if (result.v == null) u.spPick = null;
         }
 
-        // 必杀技：特写（按动画设定播放）→ PerformSpecial（结算、特效、伤害、溃散）。不消耗行动（调用方 Spend）
-        IEnumerator DoSpecial(BUnit u, BUnit target, bool ai, Ref<SpecialResult> outRes)
+        // 必杀技：特写（按动画设定播放，显示所选的招式）→ PerformSpecial（结算、特效、伤害、溃散）。不消耗行动（调用方 Spend）
+        // id：招式编号（缺省 = u.spPick → 第一招可施展的；电脑的计划带 plan.special）
+        IEnumerator DoSpecial(BUnit u, BUnit target, bool ai, Ref<SpecialResult> outRes, string id = null)
         {
-            var sp = M.SpecialOf(u);
+            var sp = M.SpecialOf(u, id);
             string why = "";
-            if (sp == null || !M.SpecialUsable(u, out why)) { UIKit.Toast(string.IsNullOrEmpty(why) ? "无法施展" : why); yield break; }
+            if (sp == null) why = "无必杀技";
+            if (sp == null || !M.SpecialUsable(u, sp.id, out why)) { UIKit.Toast(string.IsNullOrEmpty(why) ? "无法施展" : why); yield break; }
+            u.spPick = sp.id;
             ShowCard(u); V.SetCursor(u);
             yield return SpecialCutIn(u, sp, ai);
             var res = new Ref<SpecialResult>();
-            yield return Co.Guard(PerformSpecial(u, target, res), e => Debug.LogException(e));
+            yield return Co.Guard(PerformSpecial(u, target, sp.id, res), e => Debug.LogException(e));
             V.SpLabelsDim = false;
             if (spRigBack >= 0 && Game.I != null && Game.I.Rig != null) { Game.I.Rig.DesiredDistance = spRigBack; spRigBack = -1; }
             foreach (var x in M.units) V.Refresh(x);
@@ -613,18 +821,20 @@ namespace Sanguo
 
         // 网页版 Specials.perform（特写由 DoSpecial 先播）：结算 → 镜头推近 → 特效（命中时显示伤害）→ 飘字 → 刷新 → 溃散
         float spRigBack = -1;
-        IEnumerator PerformSpecial(BUnit u, BUnit target, Ref<SpecialResult> outRes)
+        IEnumerator PerformSpecial(BUnit u, BUnit target, string sid, Ref<SpecialResult> outRes)
         {
-            var sp = M.SpecialOf(u);
+            var sp = M.SpecialOf(u, sid);
             string why;
-            if (sp == null || !M.SpecialUsable(u, out why)) { UIKit.Toast("无法施展"); yield break; }
-            var cands = M.SpecialTargets(u);
-            if (target == null || !cands.Contains(target)) target = cands[0];
+            if (sp == null || !M.SpecialUsable(u, sp.id, out why)) { UIKit.Toast("无法施展"); yield break; }
+            sid = sp.id;
+            u.spPick = sid;
+            var cands = M.SpecialTargets(u, sid);
+            if (target == null || !cands.Contains(target)) target = cands.Count > 0 ? cands[0] : null;
             ShowCard(u); V.SetCursor(u);
             string uc = Specials.UiColor(sp);
             UIKit.Toast(u.gen.name + "施展必杀「<color=" + uc + ">" + sp.name + "</color>」！", 1.6f);
-            // 结算
-            var res = M.UseSpecial(u, target);
+            // 结算（所选的招式）
+            var res = M.UseSpecial(u, target, sid);
             outRes.v = res;
             if (res.sp == null) yield break;
             // 镜头推近：施展者与主目标的中点；部队名牌暂时淡出，让出画面
@@ -909,7 +1119,7 @@ namespace Sanguo
                 else if (act.kind == "special" && SpecialsOn())
                 {
                     var rr = new Ref<SpecialResult>();
-                    yield return DoSpecial(u, act.target, true, rr);
+                    yield return DoSpecial(u, act.target, true, rr, act.special != null ? act.special.id : null);
                     if (rr.v != null) foreach (var x in rr.v.refreshed) order.Add(x);   // 疾行：再动的友军排到队尾（CanAct 防止重复行动）
                 }
                 M.Spend(u);

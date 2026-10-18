@@ -60,6 +60,16 @@ Tests~/sim/run.sh Harness2 Data   # 只运行 Harness2.cs、HarnessData.cs（可
   UTF-16 码元（`charCodeAt`）计算，`Math.round` 是四舍五入（C# 的 `Math.Round` 缺省是银行家舍入）。
 - `project-ref.txt`：`SG.project` / `SG.unproject` 的采样（含分段断点处与图外外推）、`SG.World` 的范围与各地区矩形。
 
+## 第三版新增的无头测试
+
+| 命令 | 内容 |
+|---|---|
+| `Tests~/battlemap/run.sh` | 战场地形（`Battle/BattleTerrain.cs`）：经典 / 世界两个剧本全部（城池, 来向）的战场与网页版 `battle-terrain.js` 逐格比对，另查可玩性（城门可达、布阵格 ≥ 6）与 BattleModel 接线 |
+| `Tests~/duel/run.sh` | 单挑规则与电脑（格开、反击、新 AI）：各机器人对局的胜率表与 `node tests/duel-bots.js` 逐行对照 |
+| `Tests~/figure/run.sh`、`tex.sh`、`render.sh`、`unity.sh` | 人物模型库（`View/Figure*.cs`）：几何 / 骨骼 / 动作与网页版逐项比对、三角形预算、图集与脸部贴图比对、软件光栅器并排截图、Unity API 冒烟测试（详见 `Tests~/figure/README.md`） |
+| `Tests~/ui/run.sh` | 界面文字：`UI/UIText.cs`（行内头像标记、成长界面文字、城池情报流排）与 `node Tests~/ui/ui-ref.js`（网页版 ui.js / strategy-screen.js）逐行比较 |
+| `Tests~/map/render.sh` | 世界地图的软件光栅器渲染，与网页版截图并排比较 |
+
 ## 生成数据：`sanguozhi2-web/tools/export-unity-data.js`
 
 ```bash

@@ -6,11 +6,14 @@ using UnityEngine.Rendering;
 
 namespace Sanguo.EditorTools
 {
-    // 打开工程时自动完成设置：创建主场景、加入构建列表、横屏、应用名称
+    // 打开工程时自动完成设置：创建主场景、加入构建列表、横屏、应用名称（第三版改名「三国志-霸王的世界」，DESIGN-V3 §7）、
+    // 伽马色彩空间（网页版关闭 ColorManagement、线性输出、不做色调映射；颜色值照抄，见 UNITY-V3 §1）
     [InitializeOnLoad]
     public static class SanguoSetup
     {
         public const string ScenePath = "Assets/Sanguo/Scenes/Main.unity";
+        public const string ProductName = "三国志-霸王的世界";
+        public const string HomeScreenName = "霸王的世界";
 
         static SanguoSetup() { EditorApplication.delayCall += Setup; }
 
@@ -22,8 +25,21 @@ namespace Sanguo.EditorTools
             if (scenes.Length == 0 || scenes[0].path != ScenePath)
                 EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             if (PlayerSettings.companyName == "DefaultCompany") PlayerSettings.companyName = "Sanguo";
-            if (string.IsNullOrEmpty(PlayerSettings.productName) || PlayerSettings.productName == "sanguozhi2-unity" || PlayerSettings.productName.StartsWith("New Unity"))
-                PlayerSettings.productName = "三国志II 霸王的大陆";
+            // 缺省名、工程目录名或第二版的旧名 → 新名（玩家自己改过的名字不动）
+            var pn = PlayerSettings.productName;
+            if (string.IsNullOrEmpty(pn) || pn == "sanguozhi2-unity" || pn.StartsWith("New Unity") || pn == "三国志II 霸王的大陆")
+                PlayerSettings.productName = ProductName;
+            // iOS 主屏幕图标下的名字用短名（← index.html 的 apple-mobile-web-app-title：九个字的全名会被截断）；
+            // 空（缺省取 productName）或仍是新旧全名时才改
+            try
+            {
+                var dn = PlayerSettings.iOS.applicationDisplayName;
+                if (string.IsNullOrEmpty(dn) || dn == ProductName || dn == "三国志II 霸王的大陆" || dn == "sanguozhi2-unity")
+                    PlayerSettings.iOS.applicationDisplayName = HomeScreenName;
+            }
+            catch (System.Exception e) { Debug.LogWarning(ProductName + "：无法设置 iOS 显示名 " + e.Message); }
+            // 伽马工作流：程序生成的颜色、纹理与着色器的光照公式都按网页版（不做 sRGB 转换）
+            if (PlayerSettings.colorSpace != ColorSpace.Gamma) PlayerSettings.colorSpace = ColorSpace.Gamma;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
@@ -45,7 +61,7 @@ namespace Sanguo.EditorTools
             RenderSettings.fogMode = FogMode.Linear;
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.Refresh();
-            Debug.Log("三国志II：已创建主场景 " + ScenePath + "（游戏由代码自动生成，场景保持为空即可）");
+            Debug.Log(ProductName + "：已创建主场景 " + ScenePath + "（游戏由代码自动生成，场景保持为空即可）");
         }
 
         // 着色器变体剥离：雾只在运行时开启（Game / Clash / DuelGame 都用 FogMode.Linear），缺省的“自动”按构建场景
@@ -69,20 +85,20 @@ namespace Sanguo.EditorTools
                 if (!changed) return;
                 so.ApplyModifiedPropertiesWithoutUndo();
                 AssetDatabase.SaveAssets();
-                Debug.Log("三国志II：图形设置改为保留线性雾与 instancing 着色器变体");
+                Debug.Log(ProductName + "：图形设置改为保留线性雾与 instancing 着色器变体");
             }
-            catch (System.Exception e) { Debug.LogWarning("三国志II：无法修改图形设置的变体剥离 " + e.Message); }
+            catch (System.Exception e) { Debug.LogWarning(ProductName + "：无法修改图形设置的变体剥离 " + e.Message); }
         }
 
-        [MenuItem("三国志II/打开主场景")]
+        [MenuItem("三国志-霸王的世界/打开主场景")]
         static void OpenMain() { if (!File.Exists(ScenePath)) CreateScene(); EditorSceneManager.OpenScene(ScenePath); }
 
-        [MenuItem("三国志II/删除存档")]
+        [MenuItem("三国志-霸王的世界/删除存档")]
         static void DeleteSave()
         {
-            // 第二版存档在 PlayerPrefs（GameState.SaveKey）；同时清掉第一版的 PlayerPrefs 键与存档文件、移动提示标记
+            // 第三版存档在 PlayerPrefs（GameState.SaveKey）；同时清掉第二版（V2SaveKey）、第一版的 PlayerPrefs 键与存档文件、移动提示标记
             bool any = false;
-            foreach (var k in new[] { Sanguo.GameState.SaveKey, Sanguo.GameState.LegacySaveKey })
+            foreach (var k in new[] { Sanguo.GameState.SaveKey, Sanguo.GameState.V2SaveKey, Sanguo.GameState.LegacySaveKey })
                 if (PlayerPrefs.HasKey(k)) { PlayerPrefs.DeleteKey(k); any = true; Debug.Log("已删除存档：PlayerPrefs " + k); }
             PlayerPrefs.DeleteKey("sanguozhi2_tip_move");
             PlayerPrefs.Save();

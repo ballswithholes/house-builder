@@ -1,9 +1,9 @@
-# 三国志II 霸王的大陆 · Unity 重制版
+# 三国志-霸王的世界 · Unity 重制版
 
-A 3D low-poly remake of Namco's Famicom strategy game 三国志II 霸王的大陆 (1992),
-in Chinese, for Windows/Mac and iPad/iPhone. Everything (terrain, castles,
-soldiers, UI, music, sound) is generated in code, so the project needs no art
-or audio assets.
+A 3D remake of Namco's Famicom strategy game 三国志II 霸王的大陆 (1992), in
+Chinese, grown into a world game, for Windows/Mac and iPad/iPhone. Everything
+(terrain, castles, soldiers, portraits, UI, music, sound) is generated in code,
+so the project needs no art or audio assets.
 
 ## Opening the project
 
@@ -92,8 +92,8 @@ do not edit those files by hand. `UNITY-V2.md` describes the port.
 
 `Tests~/` (ignored by Unity) holds a compile check and headless tests that
 compare the C# with the browser version: rules (whole games replay identically),
-portraits (rendered to PNG), music (rendered to WAV), map maths and duel AI. See
-`Tests~/README.md`.
+portraits (rendered to PNG), music (rendered to WAV), map maths, duel AI and the
+interface text (inline portraits, growth texts). See `Tests~/README.md`.
 
 ### Not yet seen running in Unity
 
@@ -103,6 +103,48 @@ Unity editor yet. On the first run, check: shaders compile (including the new
 duel screens, touch controls on an iPhone/iPad, music playback and audio after
 switching output devices, and frame rate on a phone during the world map and
 the clash cinematic.
+
+### Version 3 interface: check on the first run
+
+The version 3 interface (strategy screen, dialogs, battle menus) compiles and
+its text matches the browser line by line (`Tests~/ui/run.sh`), but its layout
+has not been seen in Unity. Check, in this order:
+
+1. **Inline portraits and badges** (`InlineDeco` in `Scripts/UI/UIKit.cs`):
+   the small faces in reports, news and the city panel's 太守 line, and the
+   Lv / 新 / 君 / 守 / tier badges, sit exactly on their placeholders, on the
+   right line and not shifted by a character. `InlineDeco` works out whether
+   `TextGenerator` counts rich-text tags in its character indices; if faces are
+   offset, start there. Also check a long report that scrolls, and the
+   typewriter: a face appears when the text reaches it, a badge once the text is
+   complete.
+2. **Avatars in every list**: the general pickers of each command, 出征, 移动,
+   登用, captives, 外交, the faction list and the city panel rows (with Lv and
+   新).
+3. **Speakers**: command results are spoken by the acting general, month news by
+   the advisor with faces, the red 急报 shows the invading commander with a
+   pulsing glow, and the battle result comes from our first general.
+4. **大事** (chronicle) button in the top bar.
+5. **Growth**: the level-up notice after a battle; the learning dialog (3
+   candidates, 稍后再选 keeps the slot, × postpones the remaining generals); the
+   month-start reminder; the general detail (level and EXP bar, record, 老练,
+   all specials and tactics with the slot text, and 习得新招 returning to the
+   detail).
+6. **Battle**: the 必杀 list (every known special, signature first, unusable
+   ones dimmed with the reason), the 策略 list with learned tactics, the cut-in
+   showing the move picked, and the unit card's Lv, EXP bar, 老练 and 已施展
+   lines.
+7. **Toasts** move to the bottom of the screen while a dialog (other than the
+   bottom speech box) is open.
+8. **Help**: the 【单挑】 and 【成长】 sections (touch wording on a phone or
+   tablet).
+9. **Old saves**: loading a version 2 save shows the migration toast.
+10. **Phones** (screen 430 pt tall or less, e.g. an iPhone in landscape): the
+    city stats flow into about three smaller lines with the general list right
+    below them; disabled list rows are dimmed as a whole; the 必杀 / 计策 badges
+    in the general detail stay on one line.
+11. **Names**: the title screen shows 三国志 / 霸王的世界, the app is called
+    三国志-霸王的世界, and the iOS home-screen label is 霸王的世界.
 
 ## Code layout
 
