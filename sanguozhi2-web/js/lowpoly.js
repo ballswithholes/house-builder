@@ -48,7 +48,7 @@
              windBy(startVertex, p => 风摆权重)（头发 / 尾巴：根部 0、梢部 1）
      树叶：  mb.softLump(center, radii, detail, yawDeg, ramp, lumpiness?)（平滑着色的软团：精确椭球法线 + 树冠色阶 + 自身上亮下暗）
      输出：  mb.toGeometry({ skinned: true }) → 非索引 BufferGeometry：position、normal（平面法线；软团为椭球法线）、
-             color（vec4：rgb = sRGB 反照率，a = 自发光）、lpWind（风摆权重）、lpSmooth（平滑法线，墨线用）、
+             color（vec4：rgb = sRGB 反照率，a = 自发光）、lpWind（风摆权重）、lpSmooth（平滑法线，墨线用；其长度 = 该顶点的墨线宽度系数 MeshBuilder.ink）、
              skinIndex / skinWeight（刚性：每个顶点 100% 绑在 bone 上）。geometry.userData.tris = 三角形数。
              mb.triangleCount / vertexCount / random01() / range(a, b)
    SG.LP.Paint   hex('#rrggbb') · shade(c, k) · mix(a, b, t) · hsv(c, hueShiftDeg, sat?, val?) · lin(c)（sRGB→线性）
@@ -172,7 +172,7 @@
 
   class MeshBuilder {
     constructor(seed = 1) {
-      this.P = []; this.N = []; this.C = []; this.E = []; this.W = []; this.B = []; this.T = [];
+      this.P = []; this.N = []; this.C = []; this.E = []; this.W = []; this.B = []; this.T = []; this.K = [];
       this.stack = [];
       this.m = new THREE.Matrix4();
       this.nm = new THREE.Matrix3();
@@ -185,6 +185,8 @@
       this.windGradient = false;
       this.windY0 = 0; this.windY1 = 1;
       this.bone = 0;
+      // ink: width factor of the ink outline on the next vertices (1 = full; small face features 0.3–0.7; 0 = none)
+      this.ink = 1;
       this.jitter = 0;
       // jitterAll: per-face jitter also on explicitly coloured faces (quad / triangle with a colour argument) — buildings
       // pass a colour per course / tile / block, and Lanternvale's walls and roofs are never one exact tone
@@ -259,6 +261,7 @@
       this.E.push(clamp01(this.emission));
       this.W.push(w);
       this.B.push(this.bone | 0);
+      this.K.push(this.ink);
       return this.P.length / 3 - 1;
     }
     addTri(i0, i1, i2) {
@@ -390,10 +393,13 @@
           }
           idx.push(row);
         }
+        // a ring of radius 0 (a pole) makes one triangle of each quad zero-area: skip those (spheres carried 2 × sides of
+        // them for nothing)
         for (let i = 0; i < n - 1; i++)
           for (let j = 0; j < sides; j++) {
             const a = idx[i][j], b = idx[i + 1][j], c = idx[i + 1][j + 1], d = idx[i][j + 1];
-            this.addTri(a, b, c); this.addTri(a, c, d);
+            if (profile[i + 1][0] >= 1e-5) this.addTri(a, b, c);
+            if (profile[i][0] >= 1e-5) this.addTri(a, c, d);
           }
       } else {
         const keep = this.color;
@@ -566,6 +572,7 @@
         this.N.push(nn[0], nn[1], nn[2]);
       }
       this.C.push(...other.C); this.E.push(...other.E); this.W.push(...other.W); this.B.push(...other.B);
+      for (let i = 0; i < other.P.length / 3; i++) this.K.push(other.K && other.K[i] != null ? other.K[i] : 1);
       for (let i = 0; i < other.T.length; i += 3) this.addTri(other.T[i] + base, other.T[i + 1] + base, other.T[i + 2] + base);
     }
 
@@ -835,7 +842,8 @@
         nor[t * 3] = this.N[i * 3]; nor[t * 3 + 1] = this.N[i * 3 + 1]; nor[t * 3 + 2] = this.N[i * 3 + 2];
         col[t * 4] = this.C[i * 3]; col[t * 4 + 1] = this.C[i * 3 + 1]; col[t * 4 + 2] = this.C[i * 3 + 2]; col[t * 4 + 3] = this.E[i];
         wind[t] = this.W[i];
-        const s = V.norm(sum.get(keys[i]));
+        // lpSmooth: the smoothed normal, its length the vertex's ink width factor (MeshBuilder.ink)
+        const s = V.mul(V.norm(sum.get(keys[i])), this.K[i] != null ? this.K[i] : 1);
         sm[t * 3] = s[0]; sm[t * 3 + 1] = s[1]; sm[t * 3 + 2] = s[2];
         if (skinned) { si[t * 4] = this.B[i]; sw[t * 4] = 1; }
       }
@@ -851,7 +859,7 @@
       return g;
     }
     clear() {
-      this.P = []; this.N = []; this.C = []; this.E = []; this.W = []; this.B = []; this.T = []; this.stack = []; this.softParts = [];
+      this.P = []; this.N = []; this.C = []; this.E = []; this.W = []; this.B = []; this.T = []; this.K = []; this.stack = []; this.softParts = [];
       this.setMatrix(new THREE.Matrix4());
     }
     /**
@@ -1195,11 +1203,13 @@ void main() {
   worldPosition.xyz = lpWindSway( worldPosition.xyz, lpWind * uWindScale );
   vec4 mvPosition = viewMatrix * worldPosition;
   vec4 pos = projectionMatrix * mvPosition;
-  vec3 nw = normalize( mat3( lpModel ) * objectNormal );
+  // lpSmooth's length = the vertex's ink width factor (1 on most geometry; 0 = no ink)
+  float ink = min( length( objectNormal ), 1.0 );
+  vec3 nw = ink > 0.00001 ? normalize( mat3( lpModel ) * objectNormal ) : vec3( 0.0 );
   vec2 nc = ( projectionMatrix * viewMatrix * vec4( nw, 0.0 ) ).xy;
   float l = length( nc );
   if ( l > 0.00001 ) {
-    float px = uWidth * lpView.z;
+    float px = uWidth * lpView.z * ink;
     pos.xy += ( nc / l ) * ( px * 2.0 / lpView.xy ) * pos.w;
   }
   gl_Position = pos;

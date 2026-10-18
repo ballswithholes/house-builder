@@ -43,6 +43,7 @@
      shot=creature   生物表：战马（IDLE / WALK / TROT / GALLOP），关羽骑马（IDLE / WALK / GALLOP / STRIKE）
      shot=props      道具表：城门楼、槐树、松树、灯柱、灌木 / 石头 —— 视图 G（游戏视角）与 Q（3/4）
      shot=diorama    小场景（城门楼、树、草、骑马的关羽、两名枪兵、土路）；mood=noon | golden | night
+     shot=proportions 比例图：关羽、枪兵的绑定姿势（A 字）正面正交视图，旁边八段头高色带（头顶向下），标出几头身
      不带 shot：可交互（拖动旋转、滚轮缩放；按钮切换场景与时间）
      tile=240（表格单元像素）ss=2（超采样）w / h（场景尺寸）faction=#2f7d4a（势力色） */
 (function () {
@@ -274,6 +275,75 @@
     };
   }
 
+  // ------------------------------------------------ proportion sheet: bind (A-pose) front views, orthographic, with eight
+  // head-height bands from the crown down beside each figure (where the ground falls in them = heads tall)
+  function headSpan(unit) {
+    const kit = unit.kit;
+    if (!kit || !kit.headV) return null;
+    let lo = 1e9, hi = -1e9, x0 = 1e9, x1 = -1e9;
+    for (let i = kit.headV[0]; i < kit.headV[1]; i++) {
+      const x = kit.M.P[i * 3], y = kit.M.P[i * 3 + 1];
+      lo = Math.min(lo, y); hi = Math.max(hi, y); x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+    }
+    return { crown: hi, chin: lo, width: x1 - x0 };
+  }
+  function proportionSheet(rows) {
+    const PXM = +qv('pxm', 330), Y0 = +qv('y0', -0.08), Y1 = 2.3, XW = 0.72, BAND = 150, header = 70;
+    const fw = Math.round(2 * XW * PXM), tw = fw + BAND, th = Math.round((Y1 - Y0) * PXM);
+    shot.width = tw * rows.length; shot.height = th + header;
+    const ctx = shot.getContext('2d');
+    ctx.fillStyle = 'rgb(237,235,224)'; ctx.fillRect(0, 0, shot.width, shot.height);
+    gl.width = fw * SS; gl.height = th * SS; renderer.setSize(fw * SS, th * SS, false);
+    const info = [];
+    rows.forEach((row, ri) => {
+      const { scene, mood } = sheetScene(0);
+      const unit = row.make(); scene.add(unit.root);
+      unit.fig.skeleton.pose();                       // the bind pose (A-pose), no clip
+      unit.root.updateMatrixWorld(true);
+      const hs = headSpan(unit) || { crown: +qv(row.key + 'Crown', 0), chin: +qv(row.key + 'Chin', 0), width: +qv(row.key + 'W', 0) };
+      const cy = (Y0 + Y1) / 2, cam = new THREE.OrthographicCamera(-XW, XW, (Y1 - Y0) / 2, -(Y1 - Y0) / 2, 0.1, 20);
+      cam.position.set(0, cy, 6); cam.lookAt(0, cy, 0); cam.updateMatrixWorld(true);
+      LP.setViewport(fw * SS, th * SS); LP.globals.lpView.value.z = 2.0 * SS / 2.2;
+      const tgt = new THREE.Vector3(0, 1, 0);
+      mood.sun.target.position.copy(tgt); mood.sun.position.copy(tgt).add(new THREE.Vector3(...mood.state.dir).multiplyScalar(20));
+      renderer.setClearColor(0x000000, 0);
+      renderer.render(scene, cam);
+      const x0 = ri * tw, y0 = header;
+      tileBackground(ctx, x0, y0, tw, th);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(gl, 0, 0, fw * SS, th * SS, x0, y0, fw, th);
+      const Y = y => y0 + (Y1 - y) * PXM, headH = hs.crown - hs.chin, tall = hs.crown / headH;
+      // below the ground (only when the frame reaches under it: y0 < 0)
+      if (Y(0) < y0 + th - 2) { ctx.fillStyle = 'rgba(150,140,120,0.35)'; ctx.fillRect(x0, Y(0), tw, y0 + th - Y(0)); }
+      // eight head-height bands from the crown down, guide lines across the figure at every band boundary
+      const bx = x0 + fw + 16, bw = 38;
+      for (let i = 0; i < 8; i++) {
+        const a = Y(hs.crown - i * headH), b = Y(hs.crown - (i + 1) * headH);
+        ctx.fillStyle = i % 2 ? 'rgba(122,58,36,0.78)' : 'rgba(200,112,58,0.78)';
+        ctx.fillRect(bx, a, bw, b - a);
+        ctx.fillStyle = '#fff6e8'; ctx.font = 'bold 15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), bx + bw / 2, (a + b) / 2);
+      }
+      ctx.strokeStyle = 'rgba(40,28,60,0.32)'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 8; i++) { const y = Math.round(Y(hs.crown - i * headH)) + 0.5; ctx.beginPath(); ctx.moveTo(x0 + 8, y); ctx.lineTo(bx + bw, y); ctx.stroke(); }
+      // ground line and the crown
+      ctx.strokeStyle = 'rgba(30,20,40,0.9)'; ctx.lineWidth = 2;
+      for (const y of [Y(0), Y(hs.crown)]) { ctx.beginPath(); ctx.moveTo(x0 + 8, y); ctx.lineTo(bx + bw + 8, y); ctx.stroke(); }
+      ctx.fillStyle = 'rgb(30,20,40)'; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('ground', bx + bw + 10, Y(0) - 8);
+      ctx.fillText(`${tall.toFixed(2)} heads`, bx + bw + 10, Y(0) + 9);
+      ctx.fillText('crown', bx + bw + 10, Y(hs.crown));
+      // header
+      ctx.fillStyle = 'rgb(26,13,38)'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = 'bold 16px system-ui, sans-serif'; ctx.fillText(row.label, x0 + 10, 22);
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.fillText(`stature ${hs.crown.toFixed(2)} m · head ${headH.toFixed(3)} m tall × ${hs.width.toFixed(3)} m wide`, x0 + 10, 42);
+      ctx.fillText(`${tall.toFixed(2)} heads tall · ${unit.tris} tris`, x0 + 10, 60);
+      info.push({ label: row.label, crown: hs.crown, chin: hs.chin, headH, headsTall: tall, tris: unit.tris });
+    });
+    return info;
+  }
+
   // ------------------------------------------------ prop sheet (props_* format: views G and Q, blue 1.75 m person, 1 m grid)
   function gridGround(x0, x1, z0, z1) {
     const M = new LP.MeshBuilder(3);
@@ -451,6 +521,11 @@
       window.__lp.info.rows = sheetMode(() => unitSheet('EXP_PILOT  HOUR 12.5  CHECKER 1 M  SLATE FIGURE 1.75 M  (SG.LP)', [guanYuRow(), soldierRow()]));
     } else if (SHOT === 'creature') {
       window.__lp.info.rows = sheetMode(() => unitSheet('EXP_PILOT_C  HOUR 12.5  CHECKER 1 M  SLATE FIGURE 1.75 M  (SG.LP)', [horseRow(), mountedRow()]));
+    } else if (SHOT === 'proportions') {
+      window.__lp.info.rows = sheetMode(() => proportionSheet([
+        { key: 'gy', label: '关羽 GUAN YU · 1.95 m', make: () => Pilot.guanYu() },
+        { key: 'so', label: '汉军枪兵 HAN SPEARMAN · 1.80 m', make: () => Pilot.soldier({ color: FACTION }) },
+      ]));
     } else if (SHOT === 'closeup') {
       // review aid: one unit, posed, framed close (who = guanyu | soldier | horse | mounted; pose, t, yaw, pitch, h = framing height)
       const who = qv('who', 'guanyu'), W = +qv('w', 900), Hh = +qv('h', 900);

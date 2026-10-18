@@ -3,11 +3,13 @@
    三国志-霸王的世界 · 网页版 · 低多边形美术试点：四个样例配方（SG.LPPilot）
 
    用 SG.LP（js/lowpoly.js）按《Lanternvale》的风格建模：
-   · 人物：关羽 —— FFX 式风格化低多边形，Lanternvale 的头身比（头半径 = 0.08 × 身高，约六头身）：枣红脸（眉下颊面略暗）、
-     大丹凤眼（带高光）、卧蚕眉、巾帻下露出的黑发与鬓角、三绺美髯（上三分之一随头、其余随胸）、绿色巾帻（带飘带与玉饰）、
+   · 人物：关羽 —— FFX 式风格化低多边形，真实成人的头身比（头顶到下巴 = 身高 / 7.8，头宽 0.16 m；枪兵 7.5 头身、头宽 0.155 m；
+     脖子、斜方肌、手脚都按真人尺寸，脸靠五官设计而不是大头来读：粗眉、带高光的眼、楔形鼻、胡须、头巾与发髻的轮廓）：
+     枣红脸（眉下颊面略暗、方下颌、颧骨）、丹凤眼（带高光）、卧蚕眉、巾帻下露出的黑发与鬓角、三绺美髯（上三分之一随头、其余随胸）、绿色巾帻（带飘带与玉饰）、
      翡翠绿袍（敞襟、暗绿衬里）罩金甲（护心镜、三层叠甲护肩、甲裙）、腰带与朱红束带、青龙偃月刀（烘进同一个蒙皮网格）。
-     刚性蒙皮在 figure.js 的人形骨架上（SG.Figure.general 的骨骼与 setPose 片段直接驱动；袍裙侧片在胯部铰接）。
-     另有同风格的汉军枪兵（SG.Figure.soldier 的骨架）：黑发、发髻、赤帻（两条短带随风）、圆眼带高光、封闭的铁甲裙片。
+     刚性蒙皮在 figure.js 的人形骨架上（SG.Figure.general 的骨骼与 setPose 片段直接驱动；袍裙侧片在胯部铰接；
+     figure.js 的头关节在真人尺寸头部的下巴之下，姿势之后把头骨移到寰椎处转动 —— Pilot.headPivot）。
+     另有同风格的汉军枪兵（SG.Figure.soldier 的骨架）：黑发、发髻、赤帻（两条短带随风）、杏仁眼带高光、封闭的铁甲裙片。
      静止 / 行进时长兵向外后倾，不挡脸（POLE_LEAN）。
    · 生物：战马 —— Lanternvale 生物的敦实：深胸低腹、上粗下细的腿（膝 / 飞节 / 球节隆起、外撇的蹄）、两条白袜、
      圆头大眼（高光）、竖耳、白鼻梁、奶白口鼻、整片鬃毛（下缘分成六绺、两色、随风）、一体的马尾；势力色马衣与鞍、胸前红缨。
@@ -29,6 +31,7 @@
      SG.LPPilot.lampPost(lit) → Mesh（userData.lamp = 灯光位置）
      SG.LPPilot.grassField(opts) → 草丛 + 野花 + 路上卵石（pebbles / onRoad）+ 树下落叶（litter）（无墨线，随风摆）；
      SG.LPPilot.ground(opts) → 顶点色地面（无墨线；ruts: 车辙折线 → 比网格更细的柔和暗线）
+     SG.LPPilot.headPivot(fig, rest, d)：姿势之后让头绕寰椎（头内、约耳垂高）转动，而不是绕 figure.js 的头关节
      SG.LPPilot.POLE_LEAN = { roll, back, clips }：静止 / 行进片段里长兵向外、向后倾，杆子不挡脸（Lanternvale PoleHold）
      SG.LPPilot.geometry(name, opts?) → 对应的 BufferGeometry（缓存）；SG.LPPilot.colors = 调色板
    ========================================================================== */
@@ -53,7 +56,47 @@
   // ======================================================= biped kit ==
   // Built on figure.js joints (fig.pr.J, A-pose bind: arms 40° out, elbows straight, every bone's bind rotation identity),
   // facing +Z, Y up, the character's LEFT is +X (figure.js: right hand on −X). Each part is rigid on one bone.
-  const HEAD_TILT = -12, JAW_FROM = 0.3, JAW_DROP = 0.12, EYE_TURN = 32;
+  const HEAD_TILT = -12, JAW_FROM = 0.3, JAW_DROP = 0.12, EYE_TURN = 30;
+  /**
+   * The unit head: a sphere whose lower half narrows and drops into a jaw (q = the sphere height of a ring, chin pole −1 →
+   * crown pole +1), shaped per (θ, ring) into an adult face: a square jaw angle, a chin pushed forward, cheekbones, a brow
+   * ridge and flatter temples. Columns every 30° (θf = 90° − 30° j from the front, so one column runs down the middle of
+   * the face, others through the eyes, the cheeks and the ears); rings at chin, jaw, mouth, cheek, eye and brow heights.
+   * Returns { ys, rad[i][j] } before the tilt (x = rad·sin θf, z = rad·cos θf).
+   */
+  const HEAD_Q = [-1, -0.95, -0.84, -0.68, -0.47, -0.26, -0.06, 0.14, 0.42, 0.68, 0.9, 1], HEAD_SIDES = 12;
+  const gauss = (v, m, s) => Math.exp(-((v - m) / s) * ((v - m) / s));
+  function headGrid(chin, shape) {
+    const narrow = clamp(0.2 - (chin - 1) * 0.3, 0.06, 0.4), sh = Object.assign({ jaw: 0.1, chin: 0.06, cheek: 0.05, brow: 0.04, temple: 0.04 }, shape || {});
+    const ys = [], rad = [];
+    for (const q of HEAD_Q) {
+      let y = q, r = Math.sqrt(Math.max(0, 1 - q * q));
+      if (q < 0) { const t = clamp01((-q - JAW_FROM) / (1 - JAW_FROM)); r *= 1 - narrow * t * t * (3 - 2 * t); y = q * (1 + JAW_DROP * q * q); }
+      ys.push(y);
+      const row = [];
+      for (let j = 0; j < HEAD_SIDES; j++) {
+        let tf = 90 - j * 360 / HEAD_SIDES; tf = ((tf + 540) % 360) - 180;
+        const at = Math.abs(tf);
+        const g = 1 + sh.jaw * gauss(q, -0.72, 0.17) * gauss(at, 75, 32) + sh.chin * gauss(q, -0.9, 0.11) * gauss(tf, 0, 24)
+          + sh.cheek * gauss(q, -0.24, 0.15) * gauss(at, 55, 22) + sh.brow * gauss(q, 0.12, 0.1) * gauss(at, 20, 36)
+          - sh.temple * gauss(q, 0.36, 0.2) * gauss(at, 90, 24);
+        row.push(r > 0 ? r * g : 0);
+      }
+      rad.push(row);
+    }
+    return { ys, rad };
+  }
+  /** Extents of the unit head after the tilt (before the per-axis scale). */
+  function headExtents(chin, shape) {
+    const G = headGrid(chin, shape), a = HEAD_TILT * D2R, ca = Math.cos(a), sa = Math.sin(a);
+    const e = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 };
+    G.ys.forEach((y, i) => G.rad[i].forEach((r, j) => {
+      const t = j * 2 * Math.PI / HEAD_SIDES, x = Math.cos(t) * r, z = Math.sin(t) * r;
+      const yy = y * ca - z * sa, zz = y * sa + z * ca;
+      e.x0 = Math.min(e.x0, x); e.x1 = Math.max(e.x1, x); e.y0 = Math.min(e.y0, yy); e.y1 = Math.max(e.y1, yy); e.z0 = Math.min(e.z0, zz); e.z1 = Math.max(e.z1, zz);
+    }));
+    return e;
+  }
   class Biped {
     constructor(fig, o) {
       o = o || {};
@@ -64,12 +107,32 @@
       SG.Figure.boneNames.forEach((n, i) => { this.BI[n] = i; });
       this.M = new LP.MeshBuilder(o.seed || 1);
       this.M.jitter = 0.05;
-      // Lanternvale's head size: R = 0.08 × the figure's height (BipedKit: 0.14 m on 1.75 m, about six heads tall) — a big,
-      // readable face from the high game camera. figure.js's skeleton is unchanged: the chin stays just above the neck joint
-      // and the bigger head grows upwards around the same head bone.
+      // A real adult head on figure.js's (real adult) skeleton: crown → chin = height / headsTall (7.5 for a soldier, ~7.8 for
+      // a heroic general), about 0.155 m wide and 0.19 m deep — an egg, not a ball. The skull's crown sits at the figure's
+      // height, so the chin comes out ~2–3 cm above the head joint and the neck shows between the shoulders and the jaw.
+      // The face reads at the game camera through its features (bold brows, dark eye shapes with a catch-light, a wedge
+      // nose, beard, hair and headwear silhouettes), not through a big head.
+      //   Rx, Ry, Rz: the head's semi-axes (the lathe's unit profile scaled per axis); Rzu = Rz / 0.96 (the unit the shells
+      //   over the cranium use in z, so they keep ~4 % of clearance front and back); R: the feature unit (≈ Rx) for eyes,
+      //   brows, nose, beard locks and other face-sized parts.
       this.H = pr.H;
-      this.R = o.headK ? o.headK * pr.H : (o.headR || 0.132) * k;
-      this.headCY = J.head[1] - 0.03 * k + 1.12 * this.R;
+      this.chinK = o.chin || 1; this.headShapeK = o.face || null;
+      this.headG = headGrid(this.chinK, this.headShapeK);
+      const ex = headExtents(this.chinK, this.headShapeK);
+      this.headH = o.headH || pr.H / (o.headsTall || 7.5);
+      this.headW = o.headW || 0.155 * pr.H / 1.8;
+      this.headD = o.headD || 0.19 * pr.H / 1.8;
+      this.Rx = this.headW / (ex.x1 - ex.x0); this.Ry = this.headH / (ex.y1 - ex.y0); this.Rz = this.headD / (ex.z1 - ex.z0);
+      this.Rzu = this.Rz / 0.96;
+      this.R = (o.featureK || 1) * this.Rx;
+      this.crownY = o.crownY || pr.H;
+      this.headC = [0, this.crownY - ex.y1 * this.Ry, o.headZ != null ? o.headZ : 0.004];
+      // the face's reference line (the old head centre line): eyes ≈ headCY − 0.03 Ry (the head's midpoint), brows above,
+      // nose base ≈ −0.5, mouth ≈ −0.68, chin ≈ −1.08 (adult thirds: brow → nose base → chin)
+      this.headCY = this.headC[1] - 0.03 * this.Ry;
+      // the head turns about the atlas (inside the skull, at about the ear lobes), not about figure.js's head joint, which
+      // now sits below the chin of a real-size head: see Pilot.headPivot (applied after every pose)
+      this.headPivot = [0, this.headC[1] - 0.5 * this.Ry, this.headC[2] - 0.15 * this.Rz];
       this.upL = pr.upL; this.foL = pr.foL;
       this.hipY = J.thighL[1]; this.pelvisY = J.pelvis[1] + 0.03 * k; this.spineY = J.spine[1]; this.chestY = J.chest[1];
       this.shoulderY = J.upperArmL[1]; this.shoulderX = J.upperArmL[0]; this.neckY = J.neck[1];
@@ -81,7 +144,13 @@
     }
     bone(n) { this.M.bone = this.BI[n]; return this; }
     /** Triangle bookkeeping per part (kit.parts). */
-    mark(name) { const t = this.M.triangleCount; this.parts = this.parts || {}; this.parts[name] = t - (this._last || 0); this._last = t; }
+    mark(name) {
+      const t = this.M.triangleCount, v = this.M.vertexCount;
+      this.parts = this.parts || {}; this.parts[name] = t - (this._last || 0); this._last = t;
+      // vertex / triangle ranges per part (measuring and review tools: [first, end))
+      this.vparts = this.vparts || {}; this.vparts[name] = [this._lastV || 0, v]; this._lastV = v;
+      this.tparts = this.tparts || {}; this.tparts[name] = [t - this.parts[name], t];
+    }
     /** Arm frame: origin at the shoulder joint, the arm hanging along local −Y (A-pose). */
     armFrame(s) { const S = s > 0 ? 'L' : 'R'; this.M.push().translate(this.J['upperArm' + S]).rotate(0, 0, s * 40); return this; }
 
@@ -93,14 +162,21 @@
       this.bone('spine'); M.color = top;
       M.body([0, 0, 0], [[this.waistR, this.pelvisY - 0.01 * u], [this.waistR * 1.04, (this.pelvisY + this.spineY) / 2 + 0.02 * u], [this.waistR * 1.02, this.spineY + 0.06 * u]], 8, this.depthK, false, false);
       this.bone('chest'); M.color = top;
-      const prof = [[this.waistR, this.spineY], [this.chestR, this.chestY], [this.chestR * 1.02, this.shoulderY - 0.07 * u], [this.shoulderR, this.shoulderY - 0.012 * u], [0.075 * u, this.neckY + 0.005 * u]];
+      // the shoulder line rises over the trapezius to the neck (an adult's neck base sits ~5 cm above the shoulder joints,
+      // so the neck does not show from the collarbones up)
+      const prof = [[this.waistR, this.spineY], [this.chestR, this.chestY], [this.chestR * 1.02, this.shoulderY - 0.07 * u], [this.shoulderR, this.shoulderY - 0.012 * u], [this.shoulderR * 0.84, this.shoulderY + 0.024 * u], [0.084 * u, this.neckY + 0.035 * u]];
       M.push().scale(1, 1, this.depthK);
       M.lathe(prof, 8, false, false, true, ringCols || null, 180 / 8);
       M.pop();
     }
-    neck(c) {
+    /** Neck: from inside the shoulders up into the skull behind the jaw (its top cap hidden in the head); an adult neck is
+     * about as wide as the jaw (0.11–0.12 m), slightly flared into the trapezius at its base. */
+    neck(c, thick = 1) {
+      const k = this.k, rb = 0.062 * k * thick * lerp(1, this.bulk, 0.7), rt = 0.056 * k * thick * lerp(1, this.bulk, 0.5);
+      const top = [0, this.headPivot[1] + 0.03 * this.Ry, this.headPivot[2]];
       this.bone('neck'); this.M.color = c;
-      this.M.segment([0, this.shoulderY - 0.03 * this.k, -0.012], [0, this.J.head[1] + 0.05 * this.k, -0.005], 0.052 * this.k * lerp(1, this.bulk, 0.7), 0.046 * this.k, 7);
+      this.M.segment([0, this.shoulderY - 0.03 * k, -0.02 * k], top, rb, rt, 7);
+      this.neckTop = top;
     }
     /** Upper arm, forearm and fist (cols: [upper, lower, hand]). */
     arm(s, upper, lower, hand, o) {
@@ -174,58 +250,98 @@
     }
 
     // ------------------------------------------------ head & face
-    get headCenter() { return [0, this.headCY + 0.03 * this.R, -0.02 * this.R]; }
+    get headCenter() { return this.headC; }
+    /** Head units → metres: [x Rx, y Ry, z Rzu] (positions and radii of things fitted to the head: hair, caps, buns). */
+    hv(x, y, z) { return [x * this.Rx, y * this.Ry, z * this.Rzu]; }
+    /** A point at head units (x, y, z) from the head centre. */
+    headAt(x, y, z) { return V.add(this.headC, this.hv(x, y, z)); }
     /** cheekShade (< 1) darkens the face below the brow line a little: the brow plane catches more light than the cheeks. */
-    headShape(chin = 1, cheekShade = 1) {
-      const rings = 9, sides = 12, M = this.M;
-      const narrow = clamp(0.2 - (chin - 1) * 0.3, 0.06, 0.4);
-      const prof = [], cols = [];
-      for (let i = 0; i <= rings; i++) {
-        const phi = Math.PI * i / rings;
-        let y = -Math.cos(phi), rad = Math.sin(phi);
-        if (y < 0) { const q = -y, t = clamp01((q - JAW_FROM) / (1 - JAW_FROM)); rad *= 1 - narrow * t * t * (3 - 2 * t); y *= 1 + JAW_DROP * q * q; }
-        prof.push([i === 0 || i === rings ? 0 : rad, y]);
-        cols.push(P.shade(M.color, lerp(cheekShade, 1, sstep((y + 0.05) / 0.3))));
+    headShape(cheekShade = 1) {
+      const M = this.M, G = this.headG, n = G.ys.length, S = HEAD_SIDES;
+      const P0 = G.ys.map((y, i) => G.rad[i].map((r, j) => { const t = j * 2 * Math.PI / S; return [Math.cos(t) * r, y, Math.sin(t) * r]; }));
+      // smooth vertex normals from the grid's faces (the grid wraps round in j)
+      const N0 = P0.map(row => row.map(() => [0, 0, 0]));
+      const tris = [];
+      for (let i = 0; i < n - 1; i++) for (let j = 0; j < S; j++) {
+        const j1 = (j + 1) % S, A = [i, j], B = [i + 1, j], Cc = [i + 1, j1], Dd = [i, j1];
+        if (G.rad[i + 1][0] > 1e-5) tris.push([A, B, Cc]);
+        if (G.rad[i][0] > 1e-5) tris.push([A, Cc, Dd]);
       }
-      this.headProf = prof;
-      M.push().translate(this.headCenter).scale(this.R, this.R, 0.96 * this.R).rotate(HEAD_TILT, 0, 0);
-      M.lathe(prof, sides, true, false, false, cheekShade < 1 ? cols : null);
+      for (const t of tris) {
+        const [a, b, c] = t.map(([i, j]) => P0[i][j]), fn = V.cross(V.sub(b, a), V.sub(c, a));
+        for (const [i, j] of t) { const s = N0[i][j]; s[0] += fn[0]; s[1] += fn[1]; s[2] += fn[2]; }
+      }
+      // the poles: one shared normal straight down / up
+      for (let j = 0; j < S; j++) { N0[0][j] = [0, -1, 0]; N0[n - 1][j] = [0, 1, 0]; }
+      const v0 = M.vertexCount, keep = M.color, idx = [];
+      M.push().translate(this.headC).scale(this.Rx, this.Ry, this.Rz).rotate(HEAD_TILT, 0, 0);
+      for (let i = 0; i < n; i++) {
+        const c = P.shade(keep, lerp(cheekShade, 1, sstep((G.ys[i] + 0.05) / 0.3)));
+        idx.push(P0[i].map((p, j) => M.addVertex(p, V.norm(N0[i][j]), c)));
+      }
       M.pop();
+      // outward triangles: counter-clockwise seen from outside (the grid runs round +Y anticlockwise from above? check by
+      // the normal: flip the winding where the face normal points inwards)
+      for (const t of tris) {
+        const [a, b, c] = t.map(([i, j]) => P0[i][j]), fn = V.cross(V.sub(b, a), V.sub(c, a));
+        const m = V.mul(V.add(V.add(a, b), c), 1 / 3);
+        const ids = t.map(([i, j]) => idx[i][j]);
+        if (V.dot(fn, m) >= 0) M.addTri(ids[0], ids[1], ids[2]); else M.addTri(ids[0], ids[2], ids[1]);
+      }
+      this.headV = [v0, M.vertexCount];
+    }
+    /** Radius of the unit head grid (after the tilt is undone) at height y and angle θf (rad, 0 = front, + towards +X):
+     * the faceted surface (chords between the columns), interpolated between rings. */
+    headRadius(y, tf) {
+      const G = this.headG, ys = G.ys, S = HEAD_SIDES, n = ys.length;
+      if (y <= ys[0] || y >= ys[n - 1]) return 0;
+      let i = 0; while (i < n - 2 && y > ys[i + 1]) i++;
+      const u = (y - ys[i]) / (ys[i + 1] - ys[i]);
+      // column angle θf_j = 90° − j·360/S → j = (90° − θf) / step
+      const step = 2 * Math.PI / S, f = ((Math.PI / 2 - tf) / step % S + S) % S, j0 = Math.floor(f) % S, j1 = (j0 + 1) % S;
+      const chord = (r0, r1) => {
+        const a0 = Math.PI / 2 - j0 * step, a1 = Math.PI / 2 - (j0 + 1) * step;
+        const p0 = [r0 * Math.sin(a0), r0 * Math.cos(a0)], p1 = [r1 * Math.sin(a1), r1 * Math.cos(a1)], ud = [Math.sin(tf), Math.cos(tf)];
+        const e = [p1[0] - p0[0], p1[1] - p0[1]], den = ud[0] * e[1] - ud[1] * e[0];
+        return Math.abs(den) < 1e-9 ? r0 : (p0[0] * e[1] - p0[1] * e[0]) / den;
+      };
+      return lerp(chord(G.rad[i][j0], G.rad[i][j1]), chord(G.rad[i + 1][j0], G.rad[i + 1][j1]), u);
     }
     insideHead(p) {
-      const c = this.headCenter, R = this.R;
-      const d = [(p[0] - c[0]) / R, (p[1] - c[1]) / R, (p[2] - c[2]) / (0.96 * R)];
+      const c = this.headC;
+      const d = [(p[0] - c[0]) / this.Rx, (p[1] - c[1]) / this.Ry, (p[2] - c[2]) / this.Rz];
       const a = -HEAD_TILT * D2R, ca = Math.cos(a), sa = Math.sin(a);
       const y = d[1] * ca - d[2] * sa, z = d[1] * sa + d[2] * ca, rho = Math.hypot(d[0], z);
-      const pr = this.headProf;
-      if (y <= pr[0][1] || y >= pr[pr.length - 1][1]) return false;
-      for (let i = 0; i + 1 < pr.length; i++)
-        if (y <= pr[i + 1][1]) return rho <= lerp(pr[i][0], pr[i + 1][0], (y - pr[i][1]) / (pr[i + 1][1] - pr[i][1]));
-      return false;
+      return rho <= this.headRadius(y, Math.atan2(d[0], z));
     }
-    /** The point on the front of the face at (x, y) head radii (y from the head centre line), lifted `lift` radii. */
+    /** The point on the front of the face at x half-widths (Rx) and y half-heights (Ry, from the face's reference line
+     * headCY), lifted `lift` feature units (R) off the surface. */
     facePoint(x, y, lift = 0) {
-      const R = this.R, px = x * R, py = this.headCY + y * R;
-      let lo = this.headCenter[2], hi = lo + 1.4 * R;
-      if (!this.insideHead([px, py, lo])) return [px, py, lo + lift * R];
-      for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (this.insideHead([px, py, mid])) lo = mid; else hi = mid; }
-      return [px, py, lo + lift * R];
+      const px = x * this.Rx, py = this.headCY + y * this.Ry;
+      let lo = this.headC[2], hi = lo + 1.5 * this.Rz;
+      if (!this.insideHead([px, py, lo])) return [px, py, lo + lift * this.R];
+      for (let i = 0; i < 22; i++) { const mid = (lo + hi) / 2; if (this.insideHead([px, py, mid])) lo = mid; else hi = mid; }
+      return [px, py, lo + lift * this.R];
     }
-    /** Small round ears (BipedKit.Head). */
+    /** Ears: between the brow and the nose base (≈ 6 cm tall on an adult), on the side of the head just behind its middle. */
     ears(c) {
       const M = this.M, R = this.R;
       this.bone('head'); M.color = c;
-      for (const s of [1, -1]) M.sphere([s * 0.95 * R, this.headCY - 0.12 * R, -0.04 * R], [0.12 * R, 0.2 * R, 0.1 * R], 6, 2, true);
+      for (const s of [1, -1]) {
+        M.push().translate(this.headAt(s * 0.98, -0.2, -0.1)).rotate(-8, s * -18, 0);
+        M.sphere([0, 0, 0], [0.2 * R, 0.36 * R, 0.24 * R], 6, 3, true);
+        M.pop();
+      }
     }
-    /** Hair cap over the cranium (BipedKit.HairCap): hairline φ at the forehead / over the ears / at the nape. */
     /**
-     * Hair cap. lineFn(θ) overrides the hairline; topFn(θ) starts the shell lower (just under a headwrap, so its rows stay
-     * short); np rows. Flat rows are chords: rows spanning more than ~30° of φ sink inside the head between their edges.
+     * Hair cap over the cranium (BipedKit.HairCap): hairline φ at the forehead / over the ears / at the nape. lineFn(θ)
+     * overrides the hairline; topFn(θ) starts the shell lower (just under a headwrap, so its rows stay short); np rows.
+     * Flat rows are chords: rows spanning more than ~30° of φ sink inside the head between their edges.
      */
     hairCap(c, front = 58, side = 100, back = 122, puff = 1.08, lineFn = null, topFn = null, np = 2) {
-      const M = this.M, R = this.R;
+      const M = this.M;
       this.bone('head'); M.color = c;
-      const C0 = [0, this.headCY + 0.05 * R, -0.03 * R], RR = [R * puff, R * puff, R * puff * 0.98];
+      const C0 = this.headAt(0, 0.02, -0.01), RR = this.hv(puff, puff, puff * 0.98);
       const line = lineFn || (th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); });
       M.shell(C0, RR, -180, 180, 12, topFn || 0, line, np);
       this.hairC = C0; this.hairR = RR; this.hairLine = line;
@@ -235,49 +351,77 @@
       const c = this.hairC, r = this.hairR, t = th * D2R, p = ph * D2R, s = Math.sin(p);
       return [c[0] + r[0] * k * s * Math.sin(t), c[1] + r[1] * k * Math.cos(p), c[2] + r[2] * k * s * Math.cos(t)];
     }
-    /** Eyes: style 'round' | 'narrow' (phoenix eyes: narrow, outer corners up). */
-    eyes(iris, brow, style = 'round', browTilt = 0, y = -0.1, spread = 0.36, size = 1, eyeTilt = 0, browK = 1) {
+    /**
+     * Eyes: style 'round' | 'almond' | 'narrow' (phoenix eyes: narrow, outer corners up). A dark eye shape, the iris low in
+     * it and a bright catch-light — bolder than life (an adult eye opening is ~1 cm), so the face reads at the game camera.
+     * y in Ry from headCY, spread in Rx, sizes in R.
+     */
+    eyes(iris, brow, style = 'round', browTilt = 0, y = -0.03, spread = 0.4, size = 1, eyeTilt = 0, browK = 1) {
       const M = this.M, R = this.R, keepJ = M.jitter, keepE = M.emission;
       this.bone('head'); M.jitter = 0;
+      const h = style === 'narrow' ? 0.12 : style === 'almond' ? 0.145 : 0.2, wd = style === 'narrow' ? 0.17 : style === 'almond' ? 0.165 : 0.13;
       for (const s of [1, -1]) {
         const p = this.facePoint(s * spread, y, 0);
         M.push().translate(V.add(p, [0, 0, -0.036 * R])).rotate(0, s * EYE_TURN, s * eyeTilt);
-        // BipedKit.Eyes: a dark disc, the iris low in it, a bright catch-light high on the outer side
-        const h = style === 'narrow' ? 0.12 : 0.2, wd = style === 'narrow' ? 0.17 : 0.13;
+        // BipedKit.Eyes: a dark disc, the iris low in it, a bright catch-light high on the outer side. Thin ink on the disc
+        // and none round the catch-light: on a real-size face a full ink ring per part turns the eyes into a dark mask.
+        M.ink = 0.4;
         M.color = P.shade(iris, 0.42);
         M.sphere([0, 0, 0], [wd * R * size, h * R * size, 0.065 * R], 7, 3);
         M.color = iris;
         M.sphere([0, -h * 0.35 * R * size, 0.012 * R], [wd * 0.75 * R * size, h * 0.45 * R * size, 0.06 * R], 6, 2);
-        M.emission = 0.55; M.color = [1, 1, 0.97];
-        M.sphere([s * 0.035 * R * size, h * 0.38 * R * size, 0.05 * R], 0.04 * R * size * (style === 'narrow' ? 0.8 : 1), 4, 2);
-        M.emission = keepE;
+        M.emission = 0.55; M.color = [1, 1, 0.97]; M.ink = 0;
+        M.sphere([s * 0.035 * R * size, h * 0.38 * R * size, 0.05 * R], 0.045 * R * size * (style === 'narrow' ? 0.85 : 1), 4, 2);
+        M.emission = keepE; M.ink = 1;
         M.pop();
         if (brow) {
-          const bp = this.facePoint(s * spread, y + (style === 'narrow' ? 0.22 : 0.27) * Math.max(1, size * 0.9), 0.01);
-          M.color = brow;
+          const dy = (style === 'narrow' ? 0.24 : style === 'almond' ? 0.27 : 0.3) * Math.max(1, size * 0.9) * R / this.Ry;
+          const bp = this.facePoint(s * spread * 1.04, y + dy, 0.01);
+          M.color = brow; M.ink = 0.7;
           M.push().translate(bp).rotate(0, s * EYE_TURN, s * browTilt);
-          M.box([0, 0, 0], [0.3 * R * browK, 0.075 * R * browK, 0.06 * R]);
+          M.box([0, 0, 0], [0.36 * R * browK, 0.085 * R * browK, 0.07 * R]);
           // a swept tail at the outer end (卧蚕眉 / bold brows)
-          if (browK > 1.2) M.box([s * 0.19 * R * browK, 0.03 * R * browK, -0.01 * R], [0.12 * R * browK, 0.05 * R * browK, 0.05 * R]);
-          M.pop();
+          if (browK > 1.2) M.box([s * 0.22 * R * browK, 0.03 * R * browK, -0.012 * R], [0.13 * R * browK, 0.055 * R * browK, 0.055 * R]);
+          M.pop(); M.ink = 1;
         }
       }
       M.jitter = keepJ;
     }
-    nose(c, size = 1, y = -0.3) { this.bone('head'); this.M.color = c; this.M.sphere(this.facePoint(0, y, 0.02 * size), V.mul([0.1, 0.085, 0.09], this.R * size), 5, 3); }
-    smile(c, y = -0.56, width = 0.26) {
-      const M = this.M, R = this.R; this.bone('head'); M.color = c;
-      const Pt = t => this.facePoint(t * width * 0.5, y + 0.07 * t * t, 0.015);
-      M.segment(Pt(-1), Pt(-0.35), 0.022 * R, 0.026 * R, 4);
-      M.segment(Pt(-0.35), Pt(0.35), 0.026 * R, 0.026 * R, 4);
-      M.segment(Pt(0.35), Pt(1), 0.026 * R, 0.022 * R, 4);
+    /**
+     * Nose: a wedge from the bridge between the eyes down to the tip (two lit / shaded side planes and an ink outline, so it
+     * reads in 3/4 view), nostril wings either side and a small round tip. y = the tip line (Ry from headCY), proj = how
+     * far the tip stands off the face (R), w = the half-width of the wings (Rx).
+     */
+    nose(c, size = 1, y = -0.42, proj = 0.32, w = 0.2) {
+      const M = this.M, R = this.R;
+      this.bone('head'); M.color = c; M.ink = 0.6;
+      const root = this.facePoint(0, y + 0.42, 0.03);
+      const tip = this.facePoint(0, y, proj * size), base = this.facePoint(0, y - 0.1, 0.12 * size);
+      const wing = s => this.facePoint(s * w * size, y - 0.05, 0.05 * size);
+      const wl = wing(1), wr = wing(-1);
+      // the wedge: two side planes (root → wing → tip), the underside (wing → base → tip)
+      const out = (a, b, cc, hint) => { const n = V.cross(V.sub(b, a), V.sub(cc, a)); return V.dot(n, hint) >= 0 ? n : V.neg(n); };
+      M.triangleFacing(root, wl, tip, out(root, wl, tip, [1, 0.2, 1]));
+      M.triangleFacing(root, tip, wr, out(root, tip, wr, [-1, 0.2, 1]));
+      M.triangleFacing(wl, base, tip, out(wl, base, tip, [0.4, -1, 0.6]));
+      M.triangleFacing(tip, base, wr, out(tip, base, wr, [-0.4, -1, 0.6]));
+      M.sphere(V.add(tip, [0, -0.025 * R, -0.035 * R]), [0.1 * R * size, 0.085 * R * size, 0.08 * R * size], 5, 2);
+      M.ink = 1;
+    }
+    smile(c, y = -0.68, width = 0.3) {
+      const M = this.M, R = this.R; this.bone('head'); M.color = c; M.ink = 0.3;
+      const Pt = t => this.facePoint(t * width * 0.5, y + 0.06 * t * t, 0.015);
+      M.segment(Pt(-1), Pt(-0.35), 0.024 * R, 0.028 * R, 4);
+      M.segment(Pt(-0.35), Pt(0.35), 0.028 * R, 0.028 * R, 4);
+      M.segment(Pt(0.35), Pt(1), 0.028 * R, 0.024 * R, 4);
+      M.ink = 1;
     }
     /** Hair cap / headwrap shell over the cranium; hairline φ (deg from the top) at front / side / back. */
     cap(c, front = 58, side = 100, back = 122, puff = 1.08) {
-      const M = this.M, R = this.R;
+      const M = this.M;
       this.bone('head'); M.color = c;
-      this.capC = [0, this.headCY + 0.05 * R, -0.03 * R];
-      this.capR = [R * puff, R * puff, R * puff * 0.98];
+      this.capC = this.headAt(0, 0.02, -0.01);
+      this.capR = this.hv(puff, puff, puff * 0.98);
       const line = th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); };
       this.capLine = line;
       M.shell(this.capC, this.capR, -180, 180, 12, 0, line, 2);
@@ -358,7 +502,8 @@
   // ================================================== 关羽 (Guan Yu) ==
   function buildGuanYu(fig, o) {
     o = o || {};
-    const kit = new Biped(fig, { seed: 23, bulk: 1.12, headK: 0.08 });
+    // heroic 1.95 m: 7.8 heads (crown → chin 0.25 m), a broad 0.16 m head with a square jaw
+    const kit = new Biped(fig, { seed: 23, bulk: 1.12, headsTall: 7.8, headW: 0.16, headD: 0.198, chin: 1.4, face: { jaw: 0.16, chin: 0.07, cheek: 0.06, brow: 0.06 } });
     const M = kit.M, J = kit.J, k = kit.k, R = kit.R;
     const robe = o.robe || C.robe;
     // ---- legs and boots (dark green-grey trousers, dark boots with gold bands)
@@ -370,9 +515,9 @@
     }
     kit.mark('legs');
     // ---- torso: gold lamellar armour (banded) — the robe is worn open over it
-    const bands = [C.goldDark, C.gold, C.gold, C.goldLight, H('#7A5A30')];
+    const bands = [C.goldDark, C.gold, C.gold, C.goldLight, C.gold, H('#7A5A30')];
     kit.torso(C.gold, C.goldDark, bands);
-    kit.neck(P.mix(C.gySkinDark, C.gyHair, 0.55));
+    kit.neck(P.shade(C.gySkinDark, 0.78));
     // lamellar bands on the belly armour
     kit.bone('spine'); M.color = C.goldDark;
     M.band([0, 0, 0], kit.waistR * 1.06, kit.waistR * 1.06, kit.spineY - 0.035 * k, kit.spineY - 0.02 * k, 8, kit.depthK);
@@ -391,7 +536,7 @@
     const rp = (r, y) => [r, y];
     kit.bone('chest');
     // lined (dark green), so the inside of the far shoulder never shows as a hole through the front opening
-    M.panel([0, 0, 0], 36, 324, 7, [rp(0.09 * k, kit.neckY + 0.012 * k), rp(kit.shoulderR * 1.08, kit.shoulderY - 0.012 * k), rp(kit.chestR * 1.1, kit.chestY), rp(kit.waistR * 1.12, kit.spineY)], kit.depthK * 1.02, robe, C.robeLining, 0.012);
+    M.panel([0, 0, 0], 36, 324, 7, [rp(0.096 * k, kit.neckY + 0.045 * k), rp(kit.shoulderR * 0.9, kit.shoulderY + 0.03 * k), rp(kit.shoulderR * 1.08, kit.shoulderY - 0.012 * k), rp(kit.chestR * 1.1, kit.chestY), rp(kit.waistR * 1.12, kit.spineY)], kit.depthK * 1.02, robe, C.robeLining, 0.012);
     kit.bone('spine');
     M.panel([0, 0, 0], 36, 324, 7, [rp(kit.waistR * 1.12, kit.spineY + 0.002), rp(kit.waistR * 1.14, kit.pelvisY + 0.03 * k)], kit.depthK * 1.02, robe, C.robeLining, 0.012);
     // trims along the opening (collar lapels): strips lying on the robe edge
@@ -399,18 +544,19 @@
     M.color = C.robeTrim;
     for (const s of [1, -1]) {
       kit.bone('chest');
-      const a = edge(s * 38, 0.105 * k, kit.neckY + 0.01 * k), b = edge(s * 38, kit.shoulderR * 1.1, kit.shoulderY - 0.02 * k), c = edge(s * 38, kit.chestR * 1.12, kit.chestY), d = edge(s * 38, kit.waistR * 1.14, kit.spineY);
+      const a = edge(s * 38, 0.1 * k, kit.neckY + 0.045 * k), a2 = edge(s * 38, kit.shoulderR * 0.93, kit.shoulderY + 0.028 * k), b = edge(s * 38, kit.shoulderR * 1.1, kit.shoulderY - 0.02 * k), c = edge(s * 38, kit.chestR * 1.12, kit.chestY), d = edge(s * 38, kit.waistR * 1.14, kit.spineY);
       const out = [s * 0.6, 0.2, 1];
-      M.strip(a, b, 0.036 * k, 0.04 * k, out, 0.016);
+      M.strip(a, a2, 0.034 * k, 0.038 * k, out, 0.016);
+      M.strip(a2, b, 0.038 * k, 0.04 * k, out, 0.016);
       M.strip(b, c, 0.04 * k, 0.04 * k, out, 0.016);
       M.strip(c, d, 0.04 * k, 0.036 * k, out, 0.016);
       kit.bone('spine');
       M.strip(d, edge(s * 38, kit.waistR * 1.16, kit.pelvisY + 0.03 * k), 0.036 * k, 0.036 * k, out, 0.016);
     }
-    // collar band at the back of the neck
+    // standing collar round the back of the neck (rising out of the robe over the trapezius)
     kit.bone('chest'); M.color = C.robeTrim;
-    M.push().translate(0, 0, -0.01).scale(1, 1, 0.9);
-    M.lathe([[0.1 * k, kit.neckY - 0.03 * k], [0.092 * k, kit.neckY + 0.035 * k]], 8, false, false, false, null, 22.5);
+    M.push().translate(0, kit.neckY + 0.06 * k, -0.012).rotate(14, 0, 0).scale(1, 1, 0.9).translate(0, -kit.neckY - 0.06 * k, 0);
+    M.lathe([[0.102 * k, kit.neckY + 0.03 * k], [0.086 * k, kit.neckY + 0.1 * k]], 8, false, false, false, null, 22.5);
     M.pop();
     kit.mark('robe');
     // ---- belt (leather, gold plaques and a beast-face buckle) and the vermilion sash
@@ -475,11 +621,11 @@
     for (const s of [1, -1]) {
       const S = s > 0 ? 'L' : 'R', sh = J['upperArm' + S];
       kit.bone('sh' + S);
-      const r = kit.armR * 1.9, th0 = -180, th1 = 180;
+      const r = kit.armR * 1.58, th0 = -180, th1 = 180;
       M.push().translate(V.add(sh, [s * 0.03 * k, 0.03 * k, -0.004]));
       for (let i = 2; i >= 0; i--) {
         const kk = 1 - i * 0.08, n = i === 0 ? 10 : 8;
-        M.push().translate(s * i * 0.018 * k, -i * 0.06 * k, 0).rotate(0, 0, -s * (20 + i * 10));
+        M.push().translate(s * i * 0.015 * k, -i * 0.05 * k, 0).rotate(0, 0, -s * (20 + i * 10));
         const rad = [r * kk, r * 0.82 * kk, r * 0.96 * kk];
         M.color = i === 1 ? P.shade(C.gold, 0.93) : i === 0 ? C.goldLight : C.gold;
         if (i === 0) M.shell([0, 0, 0], rad, th0, th1, n, 0, 68, 2); else M.shell([0, 0, 0], rad, th0, th1, n, 36, 68, 1);
@@ -494,25 +640,25 @@
     // ---- head: deep jujube-red face (the cheek planes a shade darker under the brows), big phoenix eyes (丹凤眼) under bold
     // swept brows (卧蚕眉), button nose, small round ears
     kit.bone('head'); M.color = C.gySkin;
-    kit.headShape(1.05, 0.9);
+    kit.headShape(0.9);
     kit.ears(C.gySkin);
-    kit.eyes(C.gyIris, C.gyBrow, 'narrow', 18, -0.1, 0.37, 1.25, 10, 1.45);
-    kit.nose(C.gySkinDark, 1.0, -0.32);
+    kit.eyes(C.gyIris, C.gyBrow, 'narrow', 18, -0.03, 0.42, 1.25, 10, 1.45);
+    kit.nose(C.gySkinDark, 1.15, -0.42, 0.34, 0.22);
     kit.mark('face');
     // ---- hair: near-black hair under the headwrap, showing at the temples, over the ears and at the nape; flat sideburns
     // the hairline drops right behind the ears, so the whole back of the head down to the nape is hair (no red skin)
     // (three short rows from just under the wrap: long flat rows sank inside the skull and the back showed red)
-    const wrapLine = th => { const a = Math.abs(th); if (a < 55) return lerp(38, 48, a / 55); if (a < 110) return lerp(48, 80, (a - 55) / 55); return lerp(80, 104, (a - 110) / 70); };
-    kit.hairCap(C.gyHair, 44, 104, 168, 1.08, th => { const a = Math.abs(th); if (a < 55) return lerp(44, 54, a / 55); if (a < 100) return lerp(54, 104, (a - 55) / 45); if (a < 128) return lerp(104, 166, sstep((a - 100) / 28)); return 168; }, th => wrapLine(th) - 12, 3);
+    const wrapLine = th => { const a = Math.abs(th); if (a < 55) return lerp(48, 56, a / 55); if (a < 110) return lerp(56, 84, (a - 55) / 55); return lerp(84, 106, (a - 110) / 70); };
+    kit.hairCap(C.gyHair, 56, 104, 168, 1.08, th => { const a = Math.abs(th); if (a < 55) return lerp(56, 62, a / 55); if (a < 100) return lerp(62, 104, (a - 55) / 45); if (a < 128) return lerp(104, 166, sstep((a - 100) / 28)); return 168; }, th => wrapLine(th) - 12, 3);
     M.color = C.gyHair;
-    for (const s of [1, -1]) M.strip(kit.facePoint(s * 0.82, 0.14, -0.01), kit.facePoint(s * 0.76, -0.26, 0.0), 0.11 * R, 0.025 * R, [s * 0.85, 0, 0.55], 0.016);
+    for (const s of [1, -1]) M.strip(kit.facePoint(s * 0.9, 0.34, -0.045), kit.facePoint(s * 0.88, -0.24, -0.035), 0.26 * R, 0.08 * R, [s, 0, 0.3], 0.008);
     kit.mark('hair');
     // ---- the beard (美髯): a short chin piece under the jaw line (the cheeks stay clear), then three flowing locks — the
     // centre one to the sternum, two shorter ones splayed ±12° — each a tapered five-sided loft curling forward at the tip,
     // lighter on its upper faces and darker towards the tip; the upper third rides the head, the rest the chest (so it
     // never slides through the chest plate when he turns his head). Moustache drooping either side of the mouth.
     kit.bone('head'); M.color = C.beard;
-    M.shell([0, kit.headCY - 0.3 * R, 0.0], [1.02 * R, 0.86 * R, 1.0 * R], -64, 64, 8, 112, 160, 2);
+    M.shell(kit.headAt(0, -0.33, 0.02), kit.hv(1.03, 0.86, 1.0), -66, 66, 8, 112, 160, 2);
     const chestFront = kit.chestR * kit.depthK + 0.045 * k;
     const tipY = J.chest[1] - 0.02;
     const lockOf = (root, tip, w0, seed) => {
@@ -535,45 +681,46 @@
       const split = root[1] - (root[1] - tip[1]) / 3;
       M.boneBy(start, p => (p[1] > split ? kit.BI.head : kit.BI.chest));
     };
-    const rootC = [0, kit.headCY - 0.92 * R, 0.6 * R], tipC = [0, tipY, chestFront];
+    const rootC = kit.headAt(0, -0.95, 0.62), tipC = [0, tipY, chestFront];
     const dir = V.sub(tipC, rootC), len = V.len(dir);
-    lockOf(rootC, tipC, 0.27 * R, 1);
+    lockOf(rootC, tipC, 0.4 * R, 1);
     for (const s of [1, -1]) {
-      const root = [s * 0.3 * R, kit.headCY - 0.84 * R, 0.56 * R];
+      const root = kit.headAt(s * 0.34, -0.87, 0.58);
       const a = s * 12 * D2R, d = V.mul(V.norm(dir), len * 0.7);
       const tip = V.add(root, [d[0] * Math.cos(a) - d[1] * Math.sin(a), d[0] * Math.sin(a) + d[1] * Math.cos(a), d[2]]);
       tip[2] = Math.max(tip[2], chestFront + 0.01);
-      lockOf(root, tip, 0.23 * R, 3 + s);
+      lockOf(root, tip, 0.34 * R, 3 + s);
     }
     kit.bone('head'); M.color = C.beardTop;
-    for (const s of [1, -1]) M.curve(kit.facePoint(s * 0.05, -0.43, 0.05), kit.facePoint(s * 0.42, -0.5, 0.06), V.add(kit.facePoint(s * 0.5, -0.78, 0.04), [0, -0.05 * k, 0]), 0.06 * R, 0.02 * R, 2, 4);
+    for (const s of [1, -1]) M.curve(kit.facePoint(s * 0.05, -0.56, 0.06), kit.facePoint(s * 0.44, -0.62, 0.07), V.add(kit.facePoint(s * 0.5, -0.95, 0.05), [0, -0.03 * k, 0]), 0.09 * R, 0.03 * R, 2, 4);
     kit.mark('beard');
     // ---- green headwrap (巾帻) worn high (the forehead shows), a darker band at its edge, a knot with two ribbons behind,
     // a jade ornament on the brow
-    kit.cap(C.wrap, 38, 80, 104, 1.1);
+    kit.cap(C.wrap, 48, 84, 106, 1.1);
     M.color = C.wrapBand;
     M.shell(kit.capC, V.mul(kit.capR, 1.03), -180, 180, 12, th => kit.capLine(th) - 14, th => kit.capLine(th) + 1, 1);
     // the knot (a soft bun in the wrap) and its two ribbons hanging behind (hair1: sways)
     kit.bone('head'); M.color = C.wrap;
-    const bun = kit.capPoint(180, 40, 1.02);
-    M.sphere(bun, [0.42 * R, 0.4 * R, 0.4 * R], 6, 3, false);
+    const bun = kit.capPoint(180, 40, 1.02), bunR = kit.hv(0.46, 0.42, 0.44);
+    M.sphere(bun, bunR, 6, 3, false);
     M.color = C.wrapBand;
-    M.band(V.add(bun, [0, -0.08 * R, 0.04 * R]), 0.36 * R, 0.37 * R, 0, 0.12 * R, 7);
+    M.band(V.add(bun, kit.hv(0, -0.08, 0.04)), bunR[0] * 0.86, bunR[0] * 0.88, 0, 0.12 * kit.Ry, 7, bunR[2] / bunR[0]);
     // two short ribbons: tapered (0.07k → 0.02k), flaring out and twisting a little, so they read as cloth, not poles
     kit.bone('hair1'); M.color = C.wrap;
     const rib0 = M.vertexCount;
     for (const s of [1, -1]) {
-      const a = V.add(bun, [s * 0.2 * R, -0.22 * R, -0.25 * R]), m = V.add(a, [s * 0.05 * k, -0.07 * k, -0.035 * k]), t = V.add(a, [s * 0.11 * k, -0.14 * k, -0.03 * k]);
-      M.strip(a, m, 0.07 * k, 0.045 * k, [s * 0.3, 0, -1], 0.01);
-      M.strip(m, t, 0.045 * k, 0.02 * k, [s * 0.95, 0.1, -0.45], 0.01);
+      const a = V.add(bun, kit.hv(s * 0.2, -0.24, -0.26)), m = V.add(a, [s * 0.04 * k, -0.06 * k, -0.03 * k]), t = V.add(a, [s * 0.09 * k, -0.12 * k, -0.026 * k]);
+      M.strip(a, m, 0.055 * k, 0.036 * k, [s * 0.3, 0, -1], 0.009);
+      M.strip(m, t, 0.036 * k, 0.016 * k, [s * 0.95, 0.1, -0.45], 0.009);
     }
-    M.windBy(rib0, p => 0.5 * clamp01((bun[1] - 0.22 * R - p[1]) / (0.14 * k)));
+    const ribTop = bun[1] - 0.24 * kit.Ry;
+    M.windBy(rib0, p => 0.5 * clamp01((ribTop - p[1]) / (0.12 * k)));
     kit.bone('head');
     M.color = C.goldLight;
     const brow = kit.capPoint(0, kit.capLine(0) - 6, 1.06);
-    M.sphere(brow, [0.16 * R, 0.13 * R, 0.08 * R], 6, 3, false);
+    M.sphere(brow, [0.21 * R, 0.17 * R, 0.1 * R], 6, 3, false);
     M.color = C.jade; M.emission = 0.15;
-    M.sphere(V.add(brow, [0, 0, 0.05 * R]), [0.1 * R, 0.08 * R, 0.05 * R], 5, 2, false);
+    M.sphere(V.add(brow, [0, 0, 0.06 * R]), [0.13 * R, 0.1 * R, 0.06 * R], 5, 2, false);
     M.emission = 0;
     kit.mark('wrap');
     // ---- 青龙偃月刀, baked onto the right hand (figure.js grip socket: shaft along +Y, edge towards +Z)
@@ -619,7 +766,8 @@
   // ================================================== Han spearman ==
   function buildSoldier(fig, o) {
     o = o || {};
-    const kit = new Biped(fig, { seed: 31 + (o.seed || 0), bulk: 1.0, headK: 0.08 });
+    // 1.80 m: 7.5 heads (crown → chin 0.24 m), head 0.155 m wide, 0.19 m deep
+    const kit = new Biped(fig, { seed: 31 + (o.seed || 0), bulk: 1.0, headsTall: 7.5, chin: 1.25, face: { jaw: 0.12, chin: 0.06 } });
     const M = kit.M, J = kit.J, k = kit.k, R = kit.R;
     const tunic = o.color ? P.hsv(H(o.color), 0, 0.92, 1.22) : P.hsv(C.robe, 0, 0.9, 1.08);
     // legs: cream trousers with brown wraps, dark shoes
@@ -636,7 +784,7 @@
     // torso: faction tunic under a Han lamellar vest (札甲): six rows of plates in two iron tones, a dark seam between rows,
     // a lacing line in the faction colour down the front and a straight cream-edged hem
     kit.torso(C.ironSeam, tunic, null);
-    kit.neck(P.shade(C.soSkin, 0.9));
+    kit.neck(P.shade(C.soSkin, 0.9), 1.06);
     {
       const u = k, sp = [[kit.waistR, kit.pelvisY - 0.01 * u], [kit.waistR * 1.04, (kit.pelvisY + kit.spineY) / 2 + 0.02 * u], [kit.waistR * 1.02, kit.spineY + 0.06 * u]];
       const ch = [[kit.waistR, kit.spineY], [kit.chestR, kit.chestY], [kit.chestR * 1.02, kit.shoulderY - 0.07 * u], [kit.shoulderR, kit.shoulderY - 0.012 * u]];
@@ -663,9 +811,10 @@
       }
       M.boneBy(v0, p => (p[1] < ySplit - 1e-4 ? kit.BI.spine : kit.BI.chest));
     }
+    // tunic collar round the neck base, tipped forward (higher at the nape than at the throat)
     kit.bone('chest'); M.color = tunic;
-    M.push().translate(0, 0, -0.01).scale(1, 1, 0.92);
-    M.lathe([[0.096 * k, kit.neckY - 0.03 * k], [0.088 * k, kit.neckY + 0.03 * k]], 8, false, false, false, null, 22.5);
+    M.push().translate(0, kit.neckY + 0.05 * k, -0.012).rotate(14, 0, 0).scale(1, 1, 0.92).translate(0, -kit.neckY - 0.05 * k, 0);
+    M.lathe([[0.094 * k, kit.neckY + 0.025 * k], [0.074 * k, kit.neckY + 0.085 * k]], 8, false, false, false, null, 22.5);
     M.pop();
     // belt
     kit.bone('pelvis'); M.color = C.leather;
@@ -719,31 +868,32 @@
     // head: a friendly face with big round eyes (catch-lights), small round ears, black hair with a top-knot (髻) and a red
     // head-wrap (赤帻) with two short tails behind that sway
     kit.bone('head'); M.color = C.soSkin;
-    kit.headShape(0.95, 0.94);
+    kit.headShape(0.94);
     kit.ears(C.soSkin);
-    kit.eyes(H('#3A2C28'), hairTone(C.soHair), 'round', -6, -0.1, 0.36, 1.3, 0, 0.95);
-    kit.nose(P.shade(C.soSkin, 0.88), 1, -0.3);
-    kit.smile(H('#7A4034'), -0.56, 0.22);
+    kit.eyes(H('#3A2C28'), hairTone(C.soHair), 'almond', -6, -0.03, 0.41, 1.1, 0, 1.2);
+    kit.nose(P.shade(C.soSkin, 0.86), 1, -0.42, 0.3, 0.2);
+    kit.smile(H('#9A5244'), -0.68, 0.3);
     kit.mark('face');
     // black hair (#262022) — Lanternvale's hair-tone lift turned it grey-brown here; the top-knot a shade lighter
     const hair = C.soHairCap;
-    kit.hairCap(hair, 56, 100, 124, 1.07);
+    kit.hairCap(hair, 60, 102, 138, 1.07, null, null, 4);
     M.color = C.soKnot;
     const knotAt = kit.hairPoint(180, 26, 1.0);
-    M.sphere(V.add(knotAt, [0, 0.1 * R, 0.02 * R]), [0.34 * R, 0.3 * R, 0.32 * R], 7, 3, true);
+    const knotR = kit.hv(0.42, 0.34, 0.4);
+    M.sphere(V.add(knotAt, kit.hv(0, 0.1, 0.02)), knotR, 7, 3, true);
     M.color = C.soWrap;
-    M.band(V.add(knotAt, [0, -0.02 * R, 0.02 * R]), 0.3 * R, 0.32 * R, 0, 0.12 * R, 7);
+    M.band(V.add(knotAt, kit.hv(0, -0.02, 0.02)), knotR[0] * 0.86, knotR[0] * 0.92, 0, 0.12 * kit.Ry, 7, knotR[2] / knotR[0]);
     // the 赤帻: a red band round the head at the hairline (the hair shows above it), knotted behind
     M.shell(kit.hairC, V.mul(kit.hairR, 1.045), -180, 180, 12, th => kit.hairLine(th) - 20, th => kit.hairLine(th) - 3, 1);
     const back = kit.hairPoint(180, kit.hairLine(180) - 12, 1.06);
-    M.sphere(back, [0.16 * R, 0.13 * R, 0.1 * R], 5, 2, false);
+    M.sphere(back, [0.2 * R, 0.16 * R, 0.12 * R], 5, 2, false);
     kit.bone('hair1');
     const tails = M.vertexCount;
     for (const s of [1, -1]) {
       const a = V.add(back, [s * 0.06 * R, -0.08 * R, -0.04 * R]);
-      M.curvedStrip(a, V.add(a, [s * 0.05 * k, -0.06 * k, -0.04 * k]), V.add(a, [s * 0.08 * k, -0.16 * k, -0.03 * k]), 0.06 * k, 0.045 * k, [s * 0.3, 0, -1], 0.01, 2);
+      M.curvedStrip(a, V.add(a, [s * 0.04 * k, -0.05 * k, -0.035 * k]), V.add(a, [s * 0.065 * k, -0.13 * k, -0.025 * k]), 0.048 * k, 0.036 * k, [s * 0.3, 0, -1], 0.009, 2);
     }
-    M.windBy(tails, p => 0.5 * clamp01((back[1] - p[1]) / (0.16 * k)));
+    M.windBy(tails, p => 0.5 * clamp01((back[1] - p[1]) / (0.13 * k)));
     kit.mark('hair');
     // spear on the right hand (figure.js spear proportions)
     kit.bone('handR');
@@ -786,8 +936,25 @@
   }
   Pilot.poleLean = poleLean;
 
+  /**
+   * figure.js's head joint is placed for its own head (the chin just above it); a real-size head sits higher, so a nod or
+   * a turn about that joint would swing the whole head off the neck. After the pose, the head bone keeps its rotation but
+   * is shifted so that it turns about `pivot` (the atlas, in the bind / character frame) instead: p = p₀ + (I − R)·d.
+   */
+  const _hv = new THREE.Vector3();
+  function headPivot(fig, rest, d) {
+    const hb = fig.bones && fig.bones.head;
+    if (!hb) return;
+    _hv.copy(d).applyQuaternion(hb.quaternion);
+    hb.position.copy(rest).add(d).sub(_hv);
+    hb.updateMatrixWorld(true);
+  }
+  Pilot.headPivot = headPivot;
+
   function makeRig(fig, kit, o) {
     const geo = kit.M.toGeometry({ skinned: true });
+    const headRest = fig.bones.head.position.clone();
+    const headD = new THREE.Vector3(kit.headPivot[0] - kit.J.head[0], kit.headPivot[1] - kit.J.head[1], kit.headPivot[2] - kit.J.head[2]);
     hideFigure(fig);
     const mesh = LP.skinnedMesh(geo, fig.skeleton, { receiveShadow: false });
     mesh.name = 'LP body';
@@ -800,6 +967,7 @@
       fig, mesh, shadow, kit, root: fig.root, tris: geo.userData.tris, height: H_,
       setPose(clip, t, opts) {
         fig.setPose(clip, t, opts);
+        headPivot(fig, headRest, headD);
         if (lean && lean.clips.indexOf(clip) >= 0 && fig.style === 'pole') poleLean(fig, lean);
         shadow.visible = !fig.mounted;
         return this;
