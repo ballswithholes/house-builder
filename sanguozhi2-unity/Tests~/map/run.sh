@@ -1,8 +1,11 @@
 #!/bin/bash
-# 无头地图测试：View/WorldGeo.cs（与渲染无关的地理查询与地形模型）+ 规则层文件 + sim/UnityStub.cs 一起编译，
-# 与网页版（Node 运行 ../sanguozhi2-web 的 world-geo.js、map-view.js）的参考值比对：
-#   投影 / 逆投影、整图范围与镜头地区、海岸 / 河流距离场、陆海判定、平滑场取样（高原、生物群落）、山脉、
-#   高度、实际地表、整张地形网格、地表颜色、树木分布（注入网页版随机数）、海上航线（A* + 拉直 + 平滑）。
+# 无头地图测试（第三版）：View/WorldGeo.cs（与渲染无关的地理查询与地形模型）+ 规则层文件 + sim/UnityStub.cs 一起编译，
+# 与网页版（Node 运行 ../sanguozhi2-web 的 world-geo.js、map-view.js、art.js、culture-art.js）的参考值逐项比对：
+#   投影 / 逆投影、整图范围与镜头地区、Perlin、海岸 / 河流距离场、陆海判定、平滑场取样、山脉、高度、
+#   主网格 / 远景栅格、城基、城外村落、数据纹理（逐字节）、实际地表、TerrainInfo、树木 / 石块 / 灌丛 / 村舍（逐个实例）、
+#   道路 / 桥 / 关隘、海上航线。
+# 第二步（地图视图）：MapView / CultureArt / Art / Raster 与 UnityViewStub.cs 替身一起编译，比对细节纹理（逐字节）、
+#   平滑网格工具与植被 / 各文化城池模型的顶点数、地形块四叉树、各类网格的三角形数，并做构建 / 刷新 / 更新 / 行军冒烟测试。
 # 用法：Tests~/map/run.sh        退出码 = 失败的检查项数（编译失败 / 缺 node 为 99）
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,7 +20,7 @@ node "$HERE/refs.js" "$OUT" || exit 99
 
 SRC=()
 for f in "$S"/Data/*.cs "$S"/Data/Generated/*.cs "$S"/Model/*.cs "$S"/Strategy/StrategyAI.cs "$S"/Strategy/Conquest.cs \
-         "$S"/Battle/BattleModel.cs "$S"/Battle/Specials.cs "$S"/View/WorldGeo.cs; do
+         "$S"/Battle/BattleModel.cs "$S"/Battle/Specials.cs "$S"/Battle/Tactics.cs "$S"/Battle/BattleTerrain.cs "$S"/View/WorldGeo.cs; do
   [ -f "$f" ] && SRC+=("$f")
 done
 echo "== 编译"
@@ -28,10 +31,10 @@ echo "== 比对（地理与地形模型）"
 mono "$OUT/map.exe" "$OUT"; fails=$?
 
 # 地图视图冒烟测试：MapView / CultureArt / Art 与 UnityViewStub.cs 替身一起编译（把 sim 替身里的部分类型改成 partial）
-sed -E 's/public struct (Vector2|Vector3)$/public partial struct \1/; s/public static class Debug$/public static partial class Debug/' \
+sed -E 's/public struct (Vector2|Vector3|Color)$/public partial struct \1/; s/public static class (Debug|Application|Time)$/public static partial class \1/' \
   "$HERE/../sim/UnityStub.cs" > "$OUT/UnityStub.partial.cs"
 VIEW=()
-for f in "${SRC[@]}" "$S"/View/Art.cs "$S"/View/CultureArt.cs "$S"/View/MapView.cs; do VIEW+=("$f"); done
+for f in "${SRC[@]}" "$S"/View/Raster.cs "$S"/View/Art.cs "$S"/View/CultureArt.cs "$S"/View/MapView.cs; do VIEW+=("$f"); done
 echo "== 编译（地图视图）"
 msg=$(mcs -langversion:7.2 -optimize+ -nowarn:0414,0649,0169,0162,0219,0067 -r:System.Core.dll -out:"$OUT/mapview.exe" \
       "$OUT/UnityStub.partial.cs" "$HERE/UnityViewStub.cs" "${VIEW[@]}" "$HERE/MapViewHarness.cs" 2>&1)

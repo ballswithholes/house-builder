@@ -103,7 +103,7 @@ namespace Sanguo
             if (t.owner == A || (t.owner >= 0 && G.Allied(t.owner, A))) { refund(); return false; }
             s.defender = t.owner;
             s.def = Conquest.PickDefenders(t);
-            s.routed = new HashSet<int>(); s.captives = new List<General>();
+            s.routed = new HashSet<int>(); s.captives = new List<General>(); s.captiveInfo = new Dictionary<int, CaptiveInfo>();
             if (t.owner == G.player) return true;
             // 城已落入他人之手：兵力仍占优（或城已空）才继续进攻，否则撤兵
             int sum = s.atk.Sum(a => a.troops);

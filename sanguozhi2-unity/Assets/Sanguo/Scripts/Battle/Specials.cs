@@ -1,4 +1,4 @@
-// 三国志II 霸王的大陆 · 必杀技目录（对应网页版 js/specials.js 的规则 / 数据部分；特写、菜单与特效属于战斗控制层，另行移植）
+// 三国志-霸王的世界 · 必杀技目录（对应网页版 js/specials.js 的规则 / 数据部分；特写、菜单与特效属于战斗控制层，另行移植）
 //
 // 数据：Data/Generated/SpecialsData.g.cs（手写条目、机制表、兜底生成器词库，由导出工具生成）。
 // 规则：Battle/BattleModel.cs（SpecialUsable / SpecialTargets / UseSpecial / AiSpecial）。
@@ -15,6 +15,15 @@
 //   Specials.Explain(sp)          → 由数值生成的效果说明；Specials.Rules(sp) → 紧凑数值摘要；Specials.KindName(kind)
 //   Specials.UiColor(sp | "#hex") → 界面文字用色（主色偏暗时提亮）
 //   Specials.CultureOf(gen)、Specials.Fallback(gen)（调试用：忽略手写条目，直接生成）、Specials.ResetCache()
+// 第三版（成长，DESIGN-V3 §4）：
+//   Specials.Pool()               → 全部「可习得必杀」（按等阶排序，同等阶保持数据顺序）：id = "lp:编号"、pool = true、tier 1–4
+//   Specials.ById(id)             → "sp:武将名"（已解析过的专属必杀）或 "lp:编号"（可习得必杀）| null
+//   Specials.Known(gen)           → 该武将会的全部必杀：[专属必杀, …已习得的可习得必杀（gen.specials 顺序）]
+//                                   （Progress.enabled = false 时只有专属必杀）；每招每战一次
+//   Specials.TierName / TierNameOf(t) → "一阶" … "四阶"
+//   Specials.Check() 另检查池：池内名称、参数与全部专属必杀两两不同（report.poolTotal / poolByTier）
+//   兜底生成的称号词库：文化没有专门词库时按 Defs.CultureBase 回退（india → seasia、africa / moor → arab），再退回能力词库
+//   控制层辅助（纯模型，界面据此画菜单）：UsedIn(u, sp)、MenuInfo(model, u)（「必杀」菜单项）、PickList(model, u)（选招菜单的每一行）
 // 数值一律按 JS 的 double 计算（参数由 float 常数还原为十进制写法），使说明文字、签名与网页版逐字相同。
 using System;
 using System.Collections.Generic;
@@ -28,6 +37,9 @@ namespace Sanguo
     public sealed class Special
     {
         public string id, gen, name, kind, stat;
+        public bool pool;                     // 第三版：可习得必杀（id = "lp:编号"，gen 为空）
+        public int tier;                      // 可习得必杀的等阶 1–4（专属必杀为 0）
+        public bool tactic;                   // 计策结算时的替身（BattleModel.TacticPlan；id = "tac:编号"）
         public string color, fx, cry, lore, desc;
         public bool auto;                     // true：兜底生成器生成（没有手写条目）
         public List<string> problems = new List<string>();
@@ -77,6 +89,28 @@ namespace Sanguo
         public List<string> problems = new List<string>();
         public List<string> missing = new List<string>();
         public bool ok;
+        // 第三版：可习得必杀池（总数、各等阶条数）
+        public int poolTotal;
+        public SortedDictionary<int, int> poolByTier = new SortedDictionary<int, int>();
+    }
+
+    // 「必杀」菜单项（Specials.MenuInfo）：会的招数、可用招数、显示的那一招（第一招可用的，否则第一招）、不可用的原因
+    public sealed class SpecialMenuInfo
+    {
+        public List<Special> list = new List<Special>();
+        public int usable;
+        public Special shown;
+        public bool ok;
+        public string why = "";
+    }
+    // 选招菜单的一行（Specials.PickList）
+    public sealed class SpecialPickRow
+    {
+        public Special sp;
+        public bool ok;
+        public string why = "";
+        public string tierLabel;              // "专属" 或 "一阶" … "四阶"
+        public string rules;                  // Specials.Rules(sp)
     }
 
     public static class Specials
@@ -131,6 +165,42 @@ namespace Sanguo
             if (v == 0) return "0";
             if (v == Math.Floor(v) && Math.Abs(v) < 1e15) return ((long)v).ToString(CultureInfo.InvariantCulture);
             return v.ToString("R", CultureInfo.InvariantCulture);
+        }
+        // Number.prototype.toFixed(n)（0 ≤ n ≤ 20）：按双精度的精确值舍入，两值等距时取绝对值大者；负数（含舍成 0 的）带 "-"。
+        //   不能用 Mono 的 "F" / "G17" + decimal：10.85 实为 10.8499…，JS 得 "10.8"，Mono 的 G17 却写成 "10.85"、舍成 "10.9"。
+        //   做法：|v| = m × 2^e，e < 0 时 = m × 5^(−e) / 10^(−e)，用十亿进制的小大数求出精确十进制展开，再按第 n+1 位小数（≥ 5 进位）舍入。
+        internal static string JsToFixed(double v, int n)
+        {
+            if (n < 0 || n > 20) throw new ArgumentOutOfRangeException("n");
+            if (double.IsNaN(v)) return "NaN";
+            if (double.IsInfinity(v) || Math.Abs(v) >= 1e21) return JsNum(v);
+            long bits = BitConverter.DoubleToInt64Bits(v);
+            int e = (int)((bits >> 52) & 0x7FF);
+            ulong m = (ulong)(bits & 0xFFFFFFFFFFFFFL);
+            if (e == 0) e = 1; else m |= 1UL << 52;
+            e -= 1075;                                               // |v| = m × 2^e
+            const uint B = 1000000000;
+            var big = new List<uint> { (uint)(m % B), (uint)(m / B % B), (uint)(m / B / B) };   // 十亿进制，低位在前
+            Action<uint> mul = k => { ulong c = 0; for (int i = 0; i < big.Count; i++) { c += (ulong)big[i] * k; big[i] = (uint)(c % B); c /= B; } while (c > 0) { big.Add((uint)(c % B)); c /= B; } };
+            int frac = 0;
+            if (e >= 0) for (int k = e; k > 0; k -= 29) mul(1u << Math.Min(29, k));
+            else { frac = -e; for (int k = frac; k > 0; k -= 12) { uint p = 1; for (int j = Math.Min(12, k); j > 0; j--) p *= 5; mul(p); } }
+            int top = big.Count - 1; while (top > 0 && big[top] == 0) top--;
+            var sb = new StringBuilder(big[top].ToString(CultureInfo.InvariantCulture));
+            for (int i = top - 1; i >= 0; i--) sb.Append(big[i].ToString("D9", CultureInfo.InvariantCulture));
+            string digits = sb.ToString();                           // 精确值 × 10^frac 的十进制整数
+            if (digits.Length <= frac) digits = new string('0', frac - digits.Length + 1) + digits;
+            int ip = digits.Length - frac;                           // 整数部分的位数
+            var keep = (digits.Substring(0, ip) + (frac >= n ? digits.Substring(ip, n) : digits.Substring(ip) + new string('0', n - frac))).ToCharArray();
+            if (n < frac && digits[ip + n] >= '5')
+            {
+                int i = keep.Length - 1;
+                while (i >= 0 && keep[i] == '9') keep[i--] = '0';
+                if (i >= 0) keep[i]++; else { keep = ("1" + new string(keep)).ToCharArray(); ip++; }
+            }
+            string s = new string(keep);
+            string intPart = s.Substring(0, ip).TrimStart('0'); if (intPart.Length == 0) intPart = "0";
+            return (v < 0 ? "-" : "") + intPart + (n > 0 ? "." + s.Substring(ip) : "");
         }
         static string Fmt(double v) { return JsNum(Fix(v)); }
         static string Pct(double v) { return JsNum(JsRound(v * 100)) + "%"; }
@@ -193,6 +263,7 @@ namespace Sanguo
         public sealed class Raw
         {
             public string name, kind, stat, fx, color, cry, desc, lore;
+            public double tier = double.NaN;  // 可习得必杀的等阶（元字段，不是数值参数）
             public List<string> keys = new List<string>();
             public List<double> values = new List<double>();
             public bool Has(string k) { return keys.IndexOf(k) >= 0; }
@@ -201,7 +272,7 @@ namespace Sanguo
             public Raw Clone() { var r = (Raw)MemberwiseClone(); r.keys = new List<string>(keys); r.values = new List<double>(values); return r; }
             public static Raw From(SpecialEntry e)
             {
-                var r = new Raw { name = e.Name, kind = e.Kind, stat = e.Stat, fx = e.Fx, color = e.Color, cry = e.Cry, desc = e.Desc, lore = e.Lore };
+                var r = new Raw { name = e.Name, kind = e.Kind, stat = e.Stat, fx = e.Fx, color = e.Color, cry = e.Cry, desc = e.Desc, lore = e.Lore, tier = e.Tier };
                 for (int i = 0; i < e.Keys.Length; i++) { r.keys.Add(e.Keys[i]); r.values.Add(D(e.Values[i])); }
                 return r;
             }
@@ -253,15 +324,19 @@ namespace Sanguo
         }
 
         // 补全默认参数并夹到范围内
-        static Special Normalize(Raw e, string owner, bool auto)
+        // poolKey：可习得必杀的编号（id = "lp:编号"，gen 为空，另有 tier / pool）
+        static Special Normalize(Raw e, string owner, bool auto, string poolKey = null)
         {
             var k = K(e.kind) ?? K("smite");
             string kind = K(e.kind) != null ? e.kind : "smite";
             var sp = new Special
             {
-                id = "sp:" + owner, gen = owner, name = !string.IsNullOrEmpty(e.name) ? e.name : owner + "·绝技", kind = kind,
+                id = poolKey != null ? "lp:" + poolKey : "sp:" + owner, gen = poolKey != null ? "" : owner,
+                name = !string.IsNullOrEmpty(e.name) ? e.name : owner + "·绝技", kind = kind,
                 stat = e.stat != null && Array.IndexOf(SpecialsData.Stats, e.stat) >= 0 ? e.stat : k.def.Stat,
             };
+            bool tierNum = !double.IsNaN(e.tier) && !double.IsInfinity(e.tier);
+            if (poolKey != null) { sp.pool = true; sp.tier = (int)Clamp(JsRound(tierNum ? e.tier : 1), 1, 4); }
             for (int i = 0; i < k.keys.Length; i++)
             {
                 double v = e.Get(k.keys[i]);
@@ -276,7 +351,8 @@ namespace Sanguo
             sp.lore = e.lore != null ? e.lore.Trim() : "";
             sp.desc = e.desc != null && e.desc.Trim().Length > 0 ? e.desc : sp.lore + Explain(sp);
             sp.auto = auto;
-            sp.problems = auto ? new List<string>() : Validate(e, owner);
+            sp.problems = auto ? new List<string>() : Validate(e, poolKey != null ? "可习得「" + poolKey + "」" : owner);
+            if (poolKey != null && !(tierNum && e.tier >= 1 && e.tier <= 4 && JsRound(e.tier) == e.tier)) sp.problems.Add("可习得「" + poolKey + "」：tier 应为 1–4 的整数");
             return sp;
         }
 
@@ -510,7 +586,7 @@ namespace Sanguo
                 double v = e.values[i];
                 e.values[i] = k.step[pi] >= 1 ? JsRound(Clamp(v, k.min[pi], k.max[pi])) : Fix(Clamp(Quant(v, k.step[pi]), k.min[pi], k.max[pi]));
             }
-            var bank = culture == "han" ? Bank(stat) : (Bank(culture) ?? Bank(stat));
+            var bank = culture == "han" ? Bank(stat) : (Bank(culture) ?? Bank(Defs.CultureBase(culture)) ?? Bank(stat));
             var nouns = SpecialsData.Nouns[Array.IndexOf(SpecialsData.NounKeys, kind)];
             string noun = nouns[r.Next(nouns.Length)];
             string epi = bank[r.Next(bank.Length)];
@@ -530,13 +606,15 @@ namespace Sanguo
 
         // ============================================================ 解析与缓存 --
         static readonly Dictionary<string, Special> cache = new Dictionary<string, Special>();   // 武将名 → 条目
-        static readonly Dictionary<string, string> sigOwner = new Dictionary<string, string>();   // 签名 → 武将名
+        static readonly Dictionary<string, string> sigOwner = new Dictionary<string, string>();   // 签名 → 武将名（可习得必杀为 "lp:编号"）
+        static readonly Dictionary<string, Special> poolMap = new Dictionary<string, Special>(); // "lp:编号" → 条目
+        static List<Special> poolList = new List<Special>();
         static bool synced;
         static void Sync()
         {
             if (synced) return;
             synced = true;
-            cache.Clear(); sigOwner.Clear();
+            cache.Clear(); sigOwner.Clear(); poolMap.Clear(); poolList = new List<Special>();
             foreach (var e in SpecialsData.Entries)
             {
                 var sp = Normalize(Raw.From(e), e.Gen, false);
@@ -544,6 +622,79 @@ namespace Sanguo
                 var sig = Signature(sp);
                 if (!sigOwner.ContainsKey(sig)) sigOwner[sig] = e.Gen;
             }
+            // 可习得必杀：兜底生成器同样避开它们的 (机制, 参数)
+            var pl = new List<Special>();
+            foreach (var e in SpecialsData.Pool)
+            {
+                var sp = Normalize(Raw.From(e), "", false, e.Gen);
+                poolMap[sp.id] = sp;
+                pl.Add(sp);
+                var sig = Signature(sp);
+                if (!sigOwner.ContainsKey(sig)) sigOwner[sig] = sp.id;
+            }
+            poolList = pl.OrderBy(sp => sp.tier).ToList();   // 稳定排序（同 JS 的 Array.prototype.sort）
+        }
+
+        // ---- 第三版：可习得必杀 ----
+        public static string[] TierName { get { return SpecialsData.TierName; } }
+        public static string TierNameOf(int t) { return t >= 0 && t < SpecialsData.TierName.Length ? SpecialsData.TierName[t] : ""; }
+        // 全部可习得必杀（按等阶排序的副本）
+        public static List<Special> Pool() { Sync(); return new List<Special>(poolList); }
+        // "lp:编号" → 可习得必杀；"sp:武将名" → 已解析过的专属必杀；其余 null
+        public static Special ById(string id)
+        {
+            if (id == null) return null;
+            Sync();
+            Special r;
+            if (id.StartsWith("lp:", StringComparison.Ordinal)) return poolMap.TryGetValue(id, out r) ? r : null;
+            if (id.StartsWith("sp:", StringComparison.Ordinal)) return cache.TryGetValue(id.Substring(3), out r) ? r : null;
+            return null;
+        }
+        // 该武将会的全部必杀：专属必杀在前，其后为已习得的可习得必杀（每招每战一次）
+        public static List<Special> Known(General gen)
+        {
+            var outList = new List<Special>();
+            var sig = Of(gen);
+            if (sig == null) return outList;
+            outList.Add(sig);
+            if (!Progress.enabled) return outList;
+            if (gen.specials != null)
+                foreach (var id in gen.specials) { var sp = ById(id); if (sp != null && sp.pool && !outList.Contains(sp)) outList.Add(sp); }
+            return outList;
+        }
+
+        // ---- 控制层辅助（纯模型） ----
+        // 本战已施展：可习得必杀看 u.spUsed；专属必杀另看 u.specialUsed（与第二版相同）
+        public static bool UsedIn(BUnit u, Special sp)
+        {
+            if (u == null || sp == null) return false;
+            if (u.spUsed != null && u.spUsed.Contains(sp.id)) return true;
+            return !sp.pool && u.specialUsed;
+        }
+        // 战斗行动菜单的「必杀」条目（网页版 menuItem）：会多招时显示「名」等 N 招 · 可用 k
+        public static SpecialMenuInfo MenuInfo(BattleModel m, BUnit u)
+        {
+            var info = new SpecialMenuInfo();
+            info.list = m.KnownSpecials(u);
+            if (info.list.Count == 0) { info.why = "无"; return info; }
+            Special firstOk = null;
+            foreach (var sp in info.list) { string w; if (m.SpecialUsable(u, sp.id, out w)) { info.usable++; if (firstOk == null) firstOk = sp; } }
+            info.shown = firstOk ?? info.list[0];
+            info.ok = info.usable > 0;
+            if (info.list.Count == 1) { string w; m.SpecialUsable(u, info.shown.id, out w); info.why = w; }
+            else if (!info.ok) { string w; m.SpecialUsable(u, out w); info.why = w ?? ""; }
+            return info;
+        }
+        // 选招菜单（网页版 pickSpecial）：会多招且不止一招可用时才需要弹出；每招一行（名称、等阶 / 专属、摘要、可用 / 原因）
+        public static List<SpecialPickRow> PickList(BattleModel m, BUnit u)
+        {
+            var rows = new List<SpecialPickRow>();
+            foreach (var sp in m.KnownSpecials(u))
+            {
+                string w; bool ok = m.SpecialUsable(u, sp.id, out w);
+                rows.Add(new SpecialPickRow { sp = sp, ok = ok, why = ok ? "" : w, tierLabel = sp.pool ? TierNameOf(sp.tier) : "专属", rules = Rules(sp) });
+            }
+            return rows;
         }
         // 清空缓存（兜底生成的去重状态随之重置；测试用）
         public static void ResetCache() { synced = false; Sync(); }
@@ -616,7 +767,22 @@ namespace Sanguo
             var rep = new SpecialsReport { total = list.Count };
             foreach (var n in nameOrder) if (byName[n].Count > 1) rep.dupNames.Add(new KeyValuePair<string, List<string>>(n, byName[n]));
             foreach (var s in sigOrder) if (bySig[s].Count > 1) rep.dupSigs.Add(new KeyValuePair<string, List<string>>(s, bySig[s]));
-            foreach (var sp in list) rep.problems.AddRange(sp.problems);
+            // 可习得必杀：名称与参数也不得与任何专属必杀（或池内彼此）相同
+            var pl = Pool();
+            foreach (var sp in pl)
+            {
+                int c; rep.poolByTier[sp.tier] = rep.poolByTier.TryGetValue(sp.tier, out c) ? c + 1 : 1;
+                if (!byName.ContainsKey(sp.name)) { byName[sp.name] = new List<string>(); nameOrder.Add(sp.name); }
+                byName[sp.name].Add(sp.id);
+                var s = Signature(sp);
+                if (!bySig.ContainsKey(s)) { bySig[s] = new List<string>(); sigOrder.Add(s); }
+                bySig[s].Add(sp.id);
+            }
+            rep.poolTotal = pl.Count;
+            rep.dupNames.Clear(); rep.dupSigs.Clear();
+            foreach (var n in nameOrder) if (byName[n].Count > 1) rep.dupNames.Add(new KeyValuePair<string, List<string>>(n, byName[n]));
+            foreach (var s in sigOrder) if (bySig[s].Count > 1) rep.dupSigs.Add(new KeyValuePair<string, List<string>>(s, bySig[s]));
+            foreach (var sp in list.Concat(pl)) rep.problems.AddRange(sp.problems);
             foreach (var g in Roster(gens)) if (g != null && !string.IsNullOrEmpty(g.name) && Of(g) == null) rep.missing.Add(g.name);
             rep.hand = list.Count(sp => !sp.auto);
             rep.auto = list.Count - rep.hand;

@@ -1,9 +1,18 @@
+// 三国志-霸王的世界 · 攻城结算（对应网页版 js/strategy-ai.js 的 Conquest）
+// 第三版：
+//   俘虏被俘时记下原势力与是否君主（BattleSetup.captiveInfo，Conquest.CaptiveInfoOf）：攻下守方最后一城时 Apply 随即
+//     CheckFactionDeath，俘虏的 faction 已成 −1，处置俘虏时仍须知道「君主不会投降」与原属势力。
+//   AutoResolve 结算后按战损分摊经验（Progress.Snapshot / AutoBattle，= 网页版 SG.Progress.hookConquest 的包装；不耗随机数），
+//     结果在 s.progress（与战术战斗的 setup.progress 同格式）；s.progressDone 防止同一场再计一次。
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace Sanguo
 {
+    // 俘虏被俘时的身份（原势力、是否君主）
+    public class CaptiveInfo { public int faction; public bool wasRuler; }
+
     // 一场攻城战的参与者与结果
     public class BattleSetup
     {
@@ -14,7 +23,11 @@ namespace Sanguo
         public bool attackerWon;
         public HashSet<int> routed = new HashSet<int>(); // 兵力耗尽或单挑落败的武将
         public List<General> captives = new List<General>();
+        public Dictionary<int, CaptiveInfo> captiveInfo = new Dictionary<int, CaptiveInfo>();   // 武将编号 → 被俘时的身份
         public string summary;
+        // 第三版：战后经验结算（战术战斗的 BattleModel.SettleProgress 或自动结算的 Progress.AutoBattle）
+        public List<ProgressResult> progress;
+        public bool progressDone;
     }
 
     // 俘虏的下落：fate = "hired"（降服）| "released"（获释）| "executed"（处斩）；from = 原势力
@@ -48,8 +61,16 @@ namespace Sanguo
             return G.OfficersIn(target).OrderByDescending(x => G.IsRuler(x) ? 9999 : x.troops).Take(Balance.MaxSortieGenerals).ToList();
         }
 
-        // 电脑之间（或委任）快速结算
+        // 电脑之间（或委任）快速结算；结算后按战损分摊经验（Progress.AutoBattle，不耗随机数，s.progressDone 防重复）
         public static void AutoResolve(BattleSetup s)
+        {
+            Dictionary<int, ProgressSnap> snap = null;
+            try { snap = Progress.Snapshot(s); } catch (System.Exception e) { Debug.LogError(e); }
+            AutoResolveCore(s);
+            try { Progress.AutoBattle(s, snap); } catch (System.Exception e) { Debug.LogError(e); }
+        }
+        // 第二版的快速结算（不看等级）
+        static void AutoResolveCore(BattleSetup s)
         {
             if (s.def.Count == 0 || s.def.All(d => d.troops <= 0)) { s.attackerWon = true; s.summary = s.target.name + "无人防守，不战而下。"; return; }
             double pa = s.atk.Sum(Power), pd = s.def.Sum(Power) * (1 + s.target.Defense / 160.0);
@@ -112,8 +133,11 @@ namespace Sanguo
             }
         }
 
+        // 被俘时记下原势力与是否君主（见文件头）
         static void Capture(BattleSetup s, General g)
         {
+            if (s.captiveInfo == null) s.captiveInfo = new Dictionary<int, CaptiveInfo>();
+            if (!s.captiveInfo.ContainsKey(g.id)) s.captiveInfo[g.id] = new CaptiveInfo { faction = g.faction, wasRuler = g.faction >= 0 && G.factions[g.faction].ruler == g.id };
             g.troops = 0;
             s.captives.Add(g);
             g.city = s.target.id;
@@ -155,6 +179,13 @@ namespace Sanguo
         }
 
         public static bool IsCaptive(General g) { return pendingCaptives.Contains(g.id); }
+        // 俘虏被俘时的身份 → { faction, wasRuler }（无记录时按现状）
+        public static CaptiveInfo CaptiveInfoOf(BattleSetup s, General c)
+        {
+            CaptiveInfo i;
+            if (s != null && s.captiveInfo != null && s.captiveInfo.TryGetValue(c.id, out i)) return i;
+            return new CaptiveInfo { faction = c.faction, wasRuler = c.faction >= 0 && G.factions[c.faction].ruler == c.id };
+        }
         // 本场战斗中被俘、尚待处置的武将：Capture 时登记，释放 / 处斩 / 处置完毕时移除，每场结算开始时清空
         public static HashSet<int> pendingCaptives = new HashSet<int>();
 
@@ -181,8 +212,9 @@ namespace Sanguo
             var outList = new List<CaptiveFate>();
             foreach (var c in s.captives)
             {
-                int oldF = c.faction;
-                bool wasRuler = oldF >= 0 && G.factions[oldF].ruler == c.id;
+                var info = CaptiveInfoOf(s, c);
+                int oldF = c.faction >= 0 ? c.faction : info.faction;
+                bool wasRuler = info.wasRuler;
                 if (wasRuler)
                 {
                     if (Random.value < 0.5) { Execute(c); outList.Add(new CaptiveFate { gen = c, from = oldF, fate = CaptiveFate.Executed }); }

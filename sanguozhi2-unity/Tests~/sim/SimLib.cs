@@ -36,14 +36,32 @@ public static class Check
 // tests/sim.js 中几组测试共用的检查与战斗驱动（Harness.cs、HarnessSpecials.cs 使用）。
 public static class Sim
 {
-    // JS 的 toFixed(n)
-    // （按双精度的精确值四舍五入：14.95 实为 14.9499… → "14.9"；Mono 的 "F1" 会给出 "15.0"）
+    // JS 的 toFixed(n)：按双精度的精确值四舍五入（两值等距时取大者）。14.95 实为 14.9499… → "14.9"；
+    // 10.85 实为 10.8499… → "10.8"（Mono 的 "F1" 与 "G17" 都会给出 15.0 / 10.85，不能用）。用 BigInteger 求精确的十进制展开。
+    // 游戏代码里的同一功能是 Specials.JsToFixed（手写小大数，不依赖 System.Numerics）；HarnessTactics 的 (fmt) 节交叉比对两者。
     public static string F(double v, int n)
     {
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         if (double.IsNaN(v) || double.IsInfinity(v) || Math.Abs(v) >= 1e20) return v.ToString(inv);
-        var d = decimal.Parse(v.ToString("G17", inv), System.Globalization.NumberStyles.Float, inv);
-        return Math.Round(d, n, MidpointRounding.AwayFromZero).ToString("F" + n, inv);
+        long bits = BitConverter.DoubleToInt64Bits(v);
+        bool neg = bits < 0;
+        int exp = (int)((bits >> 52) & 0x7FF);
+        long man = bits & 0xFFFFFFFFFFFFFL;
+        if (exp == 0) exp++; else man |= 1L << 52;
+        exp -= 1075;                                   // |v| = man × 2^exp
+        var num = new System.Numerics.BigInteger(man) * System.Numerics.BigInteger.Pow(10, n);
+        System.Numerics.BigInteger q;
+        if (exp >= 0) q = num << exp;
+        else
+        {
+            var den = System.Numerics.BigInteger.One << -exp;
+            var rem = System.Numerics.BigInteger.Remainder(num, den);
+            q = System.Numerics.BigInteger.Divide(num, den);
+            if (rem * 2 >= den) q += 1;
+        }
+        var digits = q.ToString(inv).PadLeft(n + 1, '0');
+        var str = n > 0 ? digits.Substring(0, digits.Length - n) + "." + digits.Substring(digits.Length - n) : digits;
+        return (neg && v != 0 ? "-" : "") + str;              // JS：x < 0 即带 "-"（(-0.001).toFixed(2) = "-0.00"；-0 不带）
     }
     public static double Median(System.Collections.Generic.List<double> a)
     {

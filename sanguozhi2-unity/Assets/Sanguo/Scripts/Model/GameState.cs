@@ -1,4 +1,4 @@
-// 三国志II 霸王的大陆 · 游戏状态（对应网页版 js/model.js 的 GameState 部分）
+// 三国志-霸王的世界 · 游戏状态（对应网页版 js/model.js 的 GameState 部分与 SG.Progress）
 // 第二版新增：
 //   剧本可换：Scenarios.Classic（手写 ScenarioData）/ Scenarios.World（自动生成 WorldScenarioData），Scenarios.Current = SG.ScenarioData。
 //     GameState.NewGame(playerKey, scenarioId = null)：scenarioId "classic" | "world"（缺省 = 当前剧本）；G.scenario 为剧本键。
@@ -9,6 +9,14 @@
 //   G.RoutesFrom(city, f?, maxHops) → 经由 f 方城池链可达的 f 方城（BFS）；G.RouteBetween(from, to, f?) → 城编号路线或 null。
 //   存档：PlayerPrefs 键 "sanguozhi2_save_v2"，版本 2，JSON 结构与网页版相同（含 version、scenario）。
 //     GameState.LoadError：最近一次读档失败的原因（中文，与网页版相同）；HasLegacySave：只有第一版存档；SaveInfo()：标题画面摘要。
+// 第三版 §4 成长（经验、等级、可习得必杀与计策）：
+//   武将新增存档字段：exp（经验）、level（1–10，由 exp 推出）、specials（已习得的「可习得必杀」编号 "lp:…"，不含专属必杀）、
+//     tactics（已会的计策编号：按智力自带的原四计 + 习得的新计策）、record（GenRecord：battles / wins / routs / duels）。
+//   存档：PlayerPrefs 键 "sanguozhi2_save_v3"、版本 3；读到第二版存档（键 "sanguozhi2_save_v2"，version 2）时补齐：
+//     等级 1、经验 0、只有专属必杀、原四计按智力（G.migratedFrom = 2，不存档，界面可提示一次「存档已升级」）；
+//     下次存档写入新键并删除第二版键。SaveInfo.version 为存档版本。
+//   Progress（本文件末尾，接口见该处注释）：经验与等级、按武力 / 智力的格数与等阶上限、升级候选（3 选 1）、习得、
+//     电脑自动习得、自动结算战斗的经验（Conquest.AutoResolve 内调用）、老练加成 VetK。
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -50,6 +58,12 @@ namespace Sanguo
         public bool dead;
         public int formation;      // 当前阵型
         public bool moved;         // 本月已行动（移动/出征）
+        // 第三版：成长（Progress.Ensure 补齐 tactics 等；level 恒由 exp 推出）
+        public int exp;
+        public int level = 1;
+        public List<string> specials = new List<string>();   // 已习得的「可习得必杀」编号（专属必杀不在此列）
+        public List<string> tactics;                         // 已会的计策编号（null = 尚未补齐：Ensure 按智力填入原四计）
+        public GenRecord record;                             // 战绩（null = 尚未补齐）
         // 由剧本重建、不存档的资料
         [NonSerialized] public string culture;           // GameState.Init 前为 null（同网页版：Specials / Portrait 据此按南蛮名单回退）
         [NonSerialized] public int? born;                // 生年（不详为 null）
@@ -58,6 +72,13 @@ namespace Sanguo
 
         public int MaxTroops { get { return Balance.GeneralTroopBase + war * Balance.GeneralTroopPerWar; } }
         public bool IsFree { get { return faction < 0 && !dead; } }
+    }
+
+    // 武将战绩（第三版）
+    [Serializable]
+    public class GenRecord
+    {
+        public int battles, wins, routs, duels;
     }
 
     [Serializable]
@@ -248,7 +269,7 @@ namespace Sanguo
     public class SaveLoadException : Exception { public SaveLoadException(string msg) : base(msg) { } }
 
     // 存档摘要（标题画面显示用）
-    public class SaveInfo { public string scenario; public int year, month; public string faction; }
+    public class SaveInfo { public string scenario; public int year, month; public string faction; public int version; }
 
     [Serializable]
     public class GameState
@@ -264,6 +285,7 @@ namespace Sanguo
         public List<string> log = new List<string>();
         public string scenario = Scenarios.Current.Id;   // 剧本键 "classic" | "world"
         [NonSerialized] public HashSet<int> seaLinks = new HashSet<int>();   // 海路（小编号 × 4096 + 大编号）
+        [NonSerialized] public int migratedFrom;   // 第三版：读入的是第二版存档时为 2（界面提示一次「存档已升级」），否则 0
 
         public static GameState Current;
 
@@ -304,6 +326,7 @@ namespace Sanguo
                     loyalty = int.Parse(p[6], inv), troops = int.Parse(p[7], inv), hidden = p[8] == "1",
                 };
                 gen.training = gen.faction >= 0 ? 55 + UnityEngine.Random.Range(0, 20) : 40;
+                Progress.Ensure(gen);
                 g.generals.Add(gen);
             }
             // 君主
@@ -485,9 +508,10 @@ namespace Sanguo
         }
 
         // ------------------------------------------------------------ 存档 --
-        public const string SaveKey = "sanguozhi2_save_v2";
+        public const string SaveKey = "sanguozhi2_save_v3";
+        public const string V2SaveKey = "sanguozhi2_save_v2";     // 第二版存档：读取时迁移（补齐成长数据），下次存档写入新键
         public const string LegacySaveKey = "sanguozhi2_save";
-        public const int SaveVersion = 2;
+        public const int SaveVersion = 3;
         // 最近一次读档失败的原因（中文）
         public static string LoadError;
         // 第一版 Unity 存档文件（第二版改存 PlayerPrefs；只用于判断“只有旧存档”）
@@ -498,7 +522,10 @@ namespace Sanguo
             try { if (PlayerPrefs.HasKey(LegacySaveKey)) return true; } catch { }
             try { var p = SavePath; return p.Length > 0 && System.IO.File.Exists(p); } catch { return false; }
         }
-        static string ReadSave() { try { return PlayerPrefs.HasKey(SaveKey) ? PlayerPrefs.GetString(SaveKey, "") : null; } catch { return null; } }
+        // 当前存档的文字：第三版键优先，否则第二版键（读取时迁移）
+        static string ReadKey(string k) { try { if (!PlayerPrefs.HasKey(k)) return null; var t = PlayerPrefs.GetString(k, ""); return string.IsNullOrEmpty(t) ? null : t; } catch { return null; } }
+        public static string SaveText() { return ReadKey(SaveKey) ?? ReadKey(V2SaveKey); }
+        static string ReadSave() { return SaveText(); }
 
         public static bool HasSave { get { var t = ReadSave(); return !string.IsNullOrEmpty(t); } }
         // 只有旧版（第一版）存档：读不了，标题画面提示“新版本，旧存档无法读取”
@@ -506,12 +533,20 @@ namespace Sanguo
 
         public bool Save()
         {
-            try { PlayerPrefs.SetString(SaveKey, ToJson()); PlayerPrefs.Save(); return true; }
+            try { PlayerPrefs.SetString(SaveKey, ToJson()); }
             catch (Exception e) { Debug.Log("save failed " + e); return false; }
+            try { PlayerPrefs.DeleteKey(V2SaveKey); } catch { /* 第二版存档已由新存档取代 */ }
+            try { PlayerPrefs.Save(); } catch { }
+            return true;
         }
-        public static void DeleteSave() { try { PlayerPrefs.DeleteKey(SaveKey); PlayerPrefs.Save(); } catch { } }
+        public static void DeleteSave()
+        {
+            try { PlayerPrefs.DeleteKey(SaveKey); } catch { }
+            try { PlayerPrefs.DeleteKey(V2SaveKey); } catch { }
+            try { PlayerPrefs.Save(); } catch { }
+        }
 
-        // 存档摘要（不完整读档）：{ scenario, year, month, faction } 或 null
+        // 存档摘要（不完整读档）：{ scenario, year, month, faction, version } 或 null
         public static SaveInfo GetSaveInfo()
         {
             try
@@ -521,7 +556,7 @@ namespace Sanguo
                 var fs = (List<object>)d["factions"];
                 int pl = AsInt(Field(d, "player"));
                 var f = pl >= 0 && pl < fs.Count ? fs[pl] as Dictionary<string, object> : null;
-                return new SaveInfo { scenario = Field(d, "scenario") as string ?? "classic", year = AsInt(Field(d, "year")), month = AsInt(Field(d, "month")), faction = f != null ? Field(f, "name") as string ?? "" : "" };
+                return new SaveInfo { scenario = Field(d, "scenario") as string ?? "classic", year = AsInt(Field(d, "year")), month = AsInt(Field(d, "month")), faction = f != null ? Field(f, "name") as string ?? "" : "", version = AsInt(Field(d, "version")) };
             }
             catch { return null; }
         }
@@ -579,7 +614,15 @@ namespace Sanguo
                   .Append(",\"faction\":").Append(x.faction).Append(",\"city\":").Append(x.city).Append(",\"loyalty\":").Append(x.loyalty)
                   .Append(",\"troops\":").Append(x.troops).Append(",\"training\":").Append(x.training)
                   .Append(",\"hidden\":").Append(x.hidden ? "true" : "false").Append(",\"dead\":").Append(x.dead ? "true" : "false")
-                  .Append(",\"formation\":").Append(x.formation).Append(",\"moved\":").Append(x.moved ? "true" : "false").Append('}');
+                  .Append(",\"formation\":").Append(x.formation).Append(",\"moved\":").Append(x.moved ? "true" : "false")
+                  .Append(",\"exp\":").Append(x.exp).Append(",\"level\":").Append(x.level).Append(",\"specials\":");
+                StrList(sb, x.specials);
+                sb.Append(",\"tactics\":"); StrList(sb, x.tactics);
+                sb.Append(",\"record\":");
+                if (x.record == null) sb.Append("null");
+                else sb.Append("{\"battles\":").Append(x.record.battles).Append(",\"wins\":").Append(x.record.wins).Append(",\"routs\":").Append(x.record.routs)
+                       .Append(",\"duels\":").Append(x.record.duels).Append('}');
+                sb.Append('}');
             }
             sb.Append("],\"factions\":[");
             for (int i = 0; i < factions.Count; i++)
@@ -600,6 +643,13 @@ namespace Sanguo
             return sb.ToString();
         }
 
+        static void StrList(StringBuilder sb, List<string> a)
+        {
+            if (a == null) { sb.Append("null"); return; }
+            sb.Append('[');
+            for (int i = 0; i < a.Count; i++) { if (i > 0) sb.Append(','); MiniJson.Str(sb, a[i]); }
+            sb.Append(']');
+        }
         static object Field(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? v : null; }
         // JS 的 x | 0：数字取整（向零），其余为 0
         static int AsInt(object v) { if (v is double) { double d = (double)v; return double.IsNaN(d) || double.IsInfinity(d) ? 0 : (int)(long)Math.Truncate(d); } if (v is bool) return (bool)v ? 1 : 0; return 0; }
@@ -613,7 +663,8 @@ namespace Sanguo
             var d = MiniJson.Parse(text) as Dictionary<string, object>;
             if (d == null || !(Field(d, "cities") is List<object>) || !(Field(d, "generals") is List<object>) || !(Field(d, "factions") is List<object>)) return null;
             var ver = Field(d, "version");
-            if (!(ver is double) || (double)ver != SaveVersion) throw new SaveLoadException("新版本，旧存档无法读取。");
+            // 第二版存档可读：补齐成长数据（Progress.Ensure：等级 1、经验 0、原四计按智力）
+            if (!(ver is double) || ((double)ver != SaveVersion && (double)ver != 2)) throw new SaveLoadException("新版本，旧存档无法读取。");
             var sid = Field(d, "scenario") as string ?? "classic";
             var scen = Scenarios.Get(sid);
             if (scen == null) throw new SaveLoadException("存档所用的剧本（" + sid + "）不存在，无法读取。");
@@ -638,13 +689,27 @@ namespace Sanguo
             foreach (var o in (List<object>)d["generals"])
             {
                 var x = o as Dictionary<string, object> ?? new Dictionary<string, object>();
-                g.generals.Add(new General
+                var gen = new General
                 {
                     id = AsInt(Field(x, "id")), name = AsStr(Field(x, "name"), ""), war = AsInt(Field(x, "war")), intel = AsInt(Field(x, "intel")), pol = AsInt(Field(x, "pol")),
                     faction = Field(x, "faction") == null ? -1 : AsInt(Field(x, "faction")), city = AsInt(Field(x, "city")), loyalty = AsInt(Field(x, "loyalty")),
                     troops = AsInt(Field(x, "troops")), training = Field(x, "training") == null ? 50 : AsInt(Field(x, "training")),
                     hidden = AsBool(Field(x, "hidden")), dead = AsBool(Field(x, "dead")), formation = AsInt(Field(x, "formation")), moved = AsBool(Field(x, "moved")),
-                });
+                };
+                // 第三版成长字段（第二版存档没有：由 Progress.Ensure 补齐）。exp 先四舍五入，非数值或负数视为 0（同网页版）
+                var ex = Field(x, "exp");
+                gen.exp = ex is double && (double)ex >= 0 && !double.IsInfinity((double)ex) ? (int)Math.Min(Progress.JsRound((double)ex), ProgressData.Exp[ProgressData.MaxLevel]) : 0;
+                var sl = Field(x, "specials") as List<object>;
+                gen.specials = sl != null ? sl.Select(v => v as string ?? "\u0001").ToList() : null;
+                var tl = Field(x, "tactics") as List<object>;
+                gen.tactics = tl != null ? tl.Select(v => v as string ?? "\u0001").ToList() : null;
+                var rd = Field(x, "record") as Dictionary<string, object>;
+                if (rd != null)
+                {
+                    Func<string, int> rv = k => { var v = Field(rd, k); return v is double && (double)v >= 0 ? (int)(double)v : 0; };
+                    gen.record = new GenRecord { battles = rv("battles"), wins = rv("wins"), routs = rv("routs"), duels = rv("duels") };
+                }
+                g.generals.Add(gen);
             }
             foreach (var o in (List<object>)d["factions"])
             {
@@ -663,7 +728,405 @@ namespace Sanguo
             var lg = Field(d, "log") as List<object>;
             if (lg != null) foreach (var v in lg) g.log.Add(AsStr(v, "null"));
             g.Init();
+            foreach (var x in g.generals) Progress.Ensure(x);
+            g.migratedFrom = (double)ver == SaveVersion ? 0 : (int)(double)ver;
             return g;
+        }
+    }
+
+    // ================================================================ Progress --
+    // 第三版 §4 成长：经验、等级、可习得必杀与计策（= 网页版 js/model.js 的 SG.Progress；纯逻辑，无头测试可测）。
+    //
+    //   经验与等级（每位武将，电脑势力同样成长）
+    //     Progress.Exp[L]                 升到 L 级所需的累计经验（L = 1..10；表在 ProgressData，由导出工具生成）
+    //     LevelFor(exp) → L               ExpInfo(gen) → { level, exp, cur, next, need, pct, max }（界面进度条用）
+    //     Gain(gen, amount, why?) → ProgressResult { gen, exp, from, to, learned } | null
+    //                                     加经验；电脑武将（非玩家势力）有空格即自动习得（learned）；玩家武将升级时写一条记录
+    //     BattleExp(x, won, commander) → 一战所得经验：
+    //       参战 10 + 每击杀 40 兵 1 + 每回复 80 兵 1 + 击溃敌部 12（敌主将再 +12）+ 单挑胜 25 / 负 5 +
+    //       每次必杀 6 + 每次计策成功 4（失败 1）+ 胜方 25（主将再 +10），一战至多 BattleCap。
+    //       战术战斗（BattleModel）在分出胜负时自动结算（model.progress）；自动结算的攻城战见 AutoBattle。
+    //   格数与等阶（升级时解锁；原四计按智力自带、不占格）
+    //     SpecialSlots(gen) / TacticSlots(gen) → SlotInfo { max, unlocked, used, open, tier, statTier, levelTier }
+    //       必杀：武力 60/70/80/90 各 1 格（至多 4）；等阶上限 武力 60→1、70→2、80→3、92→4（≈(武力−40)/15）；
+    //             第 k 格与第 k 阶在 2/4/6/8 级解锁。
+    //       计策：智力 50/60/70/80/90 各 1 格（至多 5）；等阶上限 智力 50→1、65→2、80→3、92→4（≈(智力−35)/15）；
+    //             第 k 格在 3/5/7/9/10 级、第 k 阶在 3/5/7/9 级解锁。
+    //       第 k 格最高只能学 k 阶（tier = 下一招可学的最高等阶 = min(能力上限, 等级上限, 已学 + 1)），
+    //       故招式按 1、2、3、4 阶逐级习得；推迟选择也不能一口气全学高阶。可习得的暗杀（kind assassinate）每人至多一招。
+    //     Openings(gen) → { special, tactic, total }   现在可学的空格数
+    //   升级选择（玩家从 3 个候选中选 1；电脑自动选）
+    //     Candidates(gen, n = 3) → [LearnCandidate { type "special" | "tactic", id, tier, name, desc, rules, color, fx, special / tactic }]
+    //       候选确定（按姓名、等级、已学、本局种子），不耗 Random；两类都有空格时两类都会出现；每类至少一个候选是当前可学的最高等阶。
+    //     Learn(gen, cand) / Learn(gen, type, id) → bool    AiPick(gen, cands) → cand    AutoLearn(gen) → [cand]
+    //     Pending(f) → [gen]                       f 势力中有空格且有候选的武将（玩家：战后逐个弹出升级对话框）
+    //       对话框循环条件请用 Candidates(gen).Count > 0
+    //     playerAutoLearn（缺省 true）：玩家武将也由 AiPick 自动习得；升级对话框上线时设为 false
+    //     KnownSpecials(gen) / KnownTactics(gen)（专属必杀在前；= Specials.Known / Tactics.Known）
+    //   自动结算的攻城战（Conquest.AutoResolve 内调用，不耗随机数）
+    //     Snapshot(s) → 战前兵力；AutoBattle(s, snap) → [ProgressResult { …, side, won }]
+    //       （按战损与战前战力分摊；结果同时写入 s.progress；s.progressDone 防重复）
+    //   老练：战术战斗中每高 1 级，攻击、防御与计策威力各 +VetPerLevel（4%；1 级为 ×1，10 级 ×1.36）
+    //     VetK(gen) → 乘数（enabled = false 时恒为 1）；只用于 BattleModel 的战术战斗，不影响自动结算（AutoResolve）
+    //   Progress.enabled = false：不再获得经验，战斗只用专属必杀与原四计（平衡对比测试用）
+
+    // 一战的经验来源（战术战斗中 BUnit.xp 累计；自动结算按战损分摊时为小数）
+    public sealed class BattleXp
+    {
+        public double dmg, heal, routs, cmdRouts;
+        public int duelWin, duelLoss, specials, tactics, tacFail;
+        public BattleXp Clone() { return (BattleXp)MemberwiseClone(); }
+    }
+    // 格数与等阶（Progress.SpecialSlots / TacticSlots）
+    public sealed class SlotInfo { public int max, unlocked, used, open, tier, statTier, levelTier; }
+    public struct Openings { public int special, tactic, total; }
+    // 经验进度（界面进度条用）
+    public sealed class ExpInfo { public int level, exp, cur, next, need; public double pct; public bool max; }
+    // 一个升级候选（Progress.Candidates）：可习得必杀（special）或计策（tactic）
+    public sealed class LearnCandidate
+    {
+        public string type;       // "special" | "tactic"
+        public string id;         // "lp:编号" | 计策编号
+        public int tier;
+        public string name, desc, rules, color, fx;
+        public Special special;   // type = special 时
+        public TacticDef tactic;  // type = tactic 时
+        public string Kind { get { return special != null ? special.kind : tactic != null ? tactic.Id : ""; } }
+    }
+    // 经验结算的一条结果（Progress.Gain / AutoBattle、BattleModel.SettleProgress；界面战后统一读取 setup.progress）
+    public sealed class ProgressResult
+    {
+        public General gen;
+        public int exp;                 // 本次获得的经验
+        public string why = "";
+        public int from, to;            // 等级变化
+        public List<LearnCandidate> learned = new List<LearnCandidate>();   // 电脑（或 playerAutoLearn）自动习得的招式
+        public int side;                // 0 攻方 1 守方
+        public bool won;
+        public BattleXp xp;             // 战术战斗的经验来源（自动结算为 null）
+    }
+    // 自动结算前的兵力与战力快照
+    public sealed class ProgressSnap { public int troops; public double power; }
+
+    public static class Progress
+    {
+        public static bool enabled = true;
+        // 玩家武将也自动习得（与电脑相同的选择）。升级对话框接好后（StrategyScreen）设为 false，
+        // 玩家武将改为保留空格，由 Pending(G.player) / Candidates / Learn 逐个选择。
+        public static bool playerAutoLearn = true;
+        public const int MaxLevel = ProgressData.MaxLevel;
+        public const int BattleCap = ProgressData.BattleCap;
+        public const double VetPerLevel = ProgressData.VetPerLevel;
+        public static int[] Exp { get { return ProgressData.Exp; } }
+        public static string[] InnateIds { get { return ProgressData.InnateTactics; } }   // 与 Defs.Tactics 同序
+
+        // Math.round：四舍五入（.5 向 +∞）
+        internal static double JsRound(double x) { double r = Math.Floor(x); if (x - r >= 0.5) r += 1; return r; }
+        static int CountAtLeast(int[] list, int v) { int n = 0; foreach (var t in list) if (v >= t) n++; return n; }
+        // FNV-1a 32 位（按 UTF-16 码元，同 JS charCodeAt）
+        static uint PHash(string str)
+        {
+            uint h = 0x811c9dc5u;
+            unchecked { foreach (char c in str) { h ^= c; h *= 0x01000193u; } }
+            return h;
+        }
+        static double GenPower(General x) { return Math.Max(0, x.troops) * (0.55 + x.war / 220.0) * (0.7 + x.training / 330.0); }
+        static GameState G { get { return GameState.Current; } }
+
+        // 老练加成（战术战斗）：每高 1 级 +4%；1 级与成长关闭时为 1
+        public static double VetK(General gen)
+        {
+            if (!enabled || gen == null) return 1;
+            int L = gen.level;
+            return L > 1 ? 1 + VetPerLevel * (Math.Min(L, MaxLevel) - 1) : 1;
+        }
+
+        public static int LevelFor(int exp)
+        {
+            int L = 1;
+            for (int i = 2; i <= MaxLevel; i++) if (exp >= Exp[i]) L = i;
+            return L;
+        }
+        public static ExpInfo ExpInfo(General gen)
+        {
+            Ensure(gen);
+            int L = gen.level; bool max = L >= MaxLevel;
+            int cur = Exp[L], next = max ? cur : Exp[L + 1];
+            double pct = max ? 1 : Math.Max(0, Math.Min(1, (gen.exp - cur) / (double)Math.Max(1, next - cur)));
+            return new ExpInfo { level = L, exp = gen.exp, cur = cur, next = next, need = max ? 0 : next - gen.exp, pct = pct, max = max };
+        }
+
+        // 原四计中按智力会的（与 Defs.Tactics 的需求智力相同）
+        public static List<string> InnateTactics(General gen)
+        {
+            var outList = new List<string>();
+            var T = Defs.Tactics;
+            for (int i = 0; i < InnateIds.Length; i++) if (i < T.Length && gen.intel >= T[i].ReqInt) outList.Add(InnateIds[i]);
+            return outList;
+        }
+        public static bool IsInnateTactic(string id) { return Array.IndexOf(InnateIds, id) >= 0; }
+
+        // 补齐 / 规范成长字段（幂等：已规范的数据原样不变，存档往返一致）
+        public static General Ensure(General gen)
+        {
+            if (gen == null) return gen;
+            if (!(gen.exp >= 0)) gen.exp = 0;
+            gen.exp = Math.Min(gen.exp, Exp[MaxLevel]);
+            gen.level = LevelFor(gen.exp);
+            var sp0 = gen.specials ?? new List<string>();
+            var sp = new List<string>();
+            foreach (var id in sp0) if (id != null && !sp.Contains(id) && Specials.ById(id) != null) sp.Add(id);
+            if (gen.specials == null || sp.Count != sp0.Count) gen.specials = sp;
+            var t0 = gen.tactics ?? new List<string>();
+            var tac = InnateTactics(gen);
+            foreach (var id in t0) if (id != null && !IsInnateTactic(id) && !tac.Contains(id) && Tactics.ById(id) != null) tac.Add(id);
+            if (gen.tactics == null || string.Join(",", tac.ToArray()) != string.Join(",", t0.ToArray())) gen.tactics = tac;
+            if (gen.record == null) gen.record = new GenRecord();
+            else
+            {
+                var r = gen.record;
+                if (!(r.battles >= 0)) r.battles = 0; if (!(r.wins >= 0)) r.wins = 0; if (!(r.routs >= 0)) r.routs = 0; if (!(r.duels >= 0)) r.duels = 0;
+            }
+            return gen;
+        }
+        public static List<string> LearnedTactics(General gen) { Ensure(gen); return gen.tactics.Where(id => !IsInnateTactic(id)).ToList(); }
+
+        public static SlotInfo SpecialSlots(General gen)
+        {
+            Ensure(gen);
+            int w = gen.war;
+            int max = CountAtLeast(ProgressData.SpecialSlotWar, w);
+            int unlocked = Math.Min(max, CountAtLeast(ProgressData.SpecialSlotLevel, gen.level));
+            int statTier = CountAtLeast(ProgressData.SpecialTierWar, w);
+            int levelTier = CountAtLeast(ProgressData.SpecialTierLevel, gen.level);
+            int used = gen.specials.Count;
+            int tier = Math.Min(statTier, Math.Min(levelTier, used + 1));
+            return new SlotInfo { max = max, unlocked = unlocked, used = used, open = Math.Max(0, unlocked - used), tier = tier, statTier = statTier, levelTier = levelTier };
+        }
+        public static SlotInfo TacticSlots(General gen)
+        {
+            Ensure(gen);
+            int v = gen.intel;
+            int max = CountAtLeast(ProgressData.TacticSlotInt, v);
+            int unlocked = Math.Min(max, CountAtLeast(ProgressData.TacticSlotLevel, gen.level));
+            int statTier = CountAtLeast(ProgressData.TacticTierInt, v);
+            int levelTier = CountAtLeast(ProgressData.TacticTierLevel, gen.level);
+            int used = LearnedTactics(gen).Count;
+            int tier = Math.Min(statTier, Math.Min(levelTier, used + 1));
+            return new SlotInfo { max = max, unlocked = unlocked, used = used, open = Math.Max(0, unlocked - used), tier = tier, statTier = statTier, levelTier = levelTier };
+        }
+        public static Openings OpeningsOf(General gen)
+        {
+            int s = SpecialSlots(gen).open, t = TacticSlots(gen).open;
+            return new Openings { special = s, tactic = t, total = s + t };
+        }
+
+        // 可学的条目（未学、等阶不超过上限）
+        public static List<Special> EligibleSpecials(General gen)
+        {
+            Ensure(gen);
+            var sl = SpecialSlots(gen);
+            if (sl.open <= 0) return new List<Special>();
+            // 可习得的暗杀每人至多一招（得手即整支溃散，多招叠加时主将被刺、一战定局的机会过大）
+            bool hasAssn = gen.specials.Any(id => { var k = Specials.ById(id); return k != null && k.kind == "assassinate"; });
+            return Specials.Pool().Where(sp => sp.tier <= sl.tier && !gen.specials.Contains(sp.id) && !(hasAssn && sp.kind == "assassinate")).ToList();
+        }
+        public static List<TacticDef> EligibleTactics(General gen)
+        {
+            Ensure(gen);
+            var sl = TacticSlots(gen);
+            if (sl.open <= 0) return new List<TacticDef>();
+            return Tactics.Learnable().Where(t => t.Tier <= sl.tier && !gen.tactics.Contains(t.Id) && gen.intel >= t.ReqInt).ToList();
+        }
+        public static List<LearnCandidate> Eligible(General gen, string type)
+        {
+            return type == "special" ? EligibleSpecials(gen).Select(x => Cand(x)).ToList() : EligibleTactics(gen).Select(x => Cand(x)).ToList();
+        }
+        public static LearnCandidate Cand(Special x) { return new LearnCandidate { type = "special", id = x.id, tier = x.tier, name = x.name, desc = x.desc, rules = Specials.Rules(x), color = x.color, fx = x.fx, special = x }; }
+        public static LearnCandidate Cand(TacticDef x) { return new LearnCandidate { type = "tactic", id = x.Id, tier = x.Tier, name = x.Name, desc = x.Desc, rules = Tactics.Rules(x), color = x.Color, fx = x.Fx, tactic = x }; }
+
+        sealed class DrawPool { public string type; public List<LearnCandidate> list; public int cap; public bool drawn; }
+        public static List<LearnCandidate> Candidates(General gen, int n = 3)
+        {
+            n = n > 0 ? n : 3;
+            Ensure(gen);
+            int seed = G != null && G.seed != 0 ? G.seed : 0;
+            var r = new SeededRandom(PHash(gen.name + "|" + gen.level + "|" + string.Join(",", gen.specials.ToArray()) + "|" + string.Join(",", gen.tactics.ToArray()) + "|" + seed));
+            var pools = new List<DrawPool>();
+            foreach (var type in new[] { "special", "tactic" })
+            {
+                var list = Eligible(gen, type);
+                if (list.Count == 0) continue;
+                int cap = type == "special" ? SpecialSlots(gen).tier : TacticSlots(gen).tier;
+                pools.Add(new DrawPool { type = type, list = list, cap = cap });
+            }
+            var outList = new List<LearnCandidate>();
+            if (pools.Count == 0) return outList;
+            // 加权不放回抽取：本等阶上限的条目 ×4、低一阶 ×2、其余 ×1；每类的第一个候选必为本等阶上限的条目
+            // （新解锁的等阶一定出现在候选里，电脑 AiPick 也就总能学到当前最高阶）
+            Func<DrawPool, LearnCandidate> draw = p =>
+            {
+                int tot = 0;
+                bool capOnly = !p.drawn && p.list.Any(x => x.tier >= p.cap);
+                p.drawn = true;
+                var w = new int[p.list.Count];
+                for (int i = 0; i < w.Length; i++) { var x = p.list[i]; int k = x.tier >= p.cap ? 4 : capOnly ? 0 : x.tier == p.cap - 1 ? 2 : 1; w[i] = k; tot += k; }
+                double roll = r.NextDouble() * tot;
+                for (int i = 0; i < p.list.Count; i++)
+                {
+                    roll -= w[i];
+                    if ((roll < 0 && w[i] > 0) || i == p.list.Count - 1) { var c = p.list[i]; p.list.RemoveAt(i); return c; }
+                }
+                return null;
+            };
+            // 两类都有空格时交替抽取（武力 / 智力相对更高的一类先抽），保证两类都出现
+            if (pools.Count == 2 && gen.intel > gen.war) pools.Reverse();
+            for (int guard = 0; outList.Count < n && guard < 32; guard++)
+            {
+                var live = pools.Where(p => p.list.Count > 0).ToList();
+                if (live.Count == 0) break;
+                var c = draw(live[outList.Count % live.Count]);
+                if (c != null) outList.Add(c);
+            }
+            return outList;
+        }
+        public static bool Learn(General gen, LearnCandidate c) { return c != null && Learn(gen, c.type, c.id); }
+        public static bool Learn(General gen, string type, string id)
+        {
+            if (gen == null || string.IsNullOrEmpty(id) || (type != "special" && type != "tactic")) return false;
+            if (type == "special") { if (!EligibleSpecials(gen).Any(x => x.id == id)) return false; gen.specials.Add(id); }
+            else { if (!EligibleTactics(gen).Any(x => x.Id == id)) return false; gen.tactics.Add(id); }
+            return true;
+        }
+        // 电脑的选择：高阶优先；同阶按武将所长（武力系伤害 / 智力系 / 辅助）与姓名哈希
+        static readonly HashSet<string> Support = new HashSet<string> { "rally", "command", "fortify", "haste", "heal" };
+        public static LearnCandidate AiPick(General gen, List<LearnCandidate> cands)
+        {
+            if (cands == null || cands.Count == 0) return null;
+            int W = gen.war, I = gen.intel, Pl = gen.pol;
+            LearnCandidate best = null; double bs = -1e9;
+            foreach (var c in cands)
+            {
+                double s = c.tier * 10;
+                if (c.type == "special") s += Support.Contains(c.Kind) ? (Pl >= W - 5 ? 3 : 0) : (W >= Pl ? 3 : 0);
+                else s += c.tactic != null && c.tactic.Dmg != null ? (I >= 80 ? 3 : 1) : 2;
+                s += (PHash(gen.name + "|" + c.id) % 100) / 100.0;
+                if (s > bs) { bs = s; best = c; }
+            }
+            return best;
+        }
+        public static List<LearnCandidate> AutoLearn(General gen)
+        {
+            var outList = new List<LearnCandidate>();
+            for (int guard = 0; guard < 12 && OpeningsOf(gen).total > 0; guard++)
+            {
+                var c = AiPick(gen, Candidates(gen, 3));
+                if (c == null || !Learn(gen, c)) break;
+                outList.Add(c);
+            }
+            return outList;
+        }
+        public static bool IsPlayerGen(General gen) { var g = G; return g != null && g.player >= 0 && gen != null && gen.faction == g.player; }
+        public static List<General> Pending(int f)
+        {
+            var g = G;
+            if (g == null) return new List<General>();
+            return g.generals.Where(x => x.faction == f && !x.dead && OpeningsOf(x).total > 0 && Candidates(x, 1).Count > 0).ToList();
+        }
+        public static List<Special> KnownSpecials(General gen) { return Specials.Known(gen); }
+        public static List<TacticDef> KnownTactics(General gen) { return Tactics.Known(gen); }
+
+        public static ProgressResult Gain(General gen, double amount, string why = null)
+        {
+            if (!enabled || gen == null || !(amount > 0)) return null;
+            Ensure(gen);
+            int from = gen.level;
+            int add = (int)JsRound(amount);
+            gen.exp = Math.Min(gen.exp + add, Exp[MaxLevel]);
+            gen.level = LevelFor(gen.exp);
+            var res = new ProgressResult { gen = gen, exp = add, why = why ?? "", from = from, to = gen.level };
+            bool player = IsPlayerGen(gen);
+            if (!player || playerAutoLearn) res.learned = AutoLearn(gen);
+            if (player && gen.level > from && G != null)
+                G.Log(gen.name + "升至 " + gen.level + " 级" + (res.learned.Count > 0 ? "，习得" + string.Concat(res.learned.Select(c => "「" + c.name + "」")) : "") + "。");
+            return res;
+        }
+        // 一战所得经验（加法的分组与网页版相同，浮点结果逐位一致）。各来源的权重在网页版 battleExp 里就是字面常数（无数据表可导出），
+        //   此处照抄；导出工具把 battleExp / autoBattle 对一组探针的结果写到 Tests~/sim/ref/progress-ref.txt，HarnessProgress 的 (exp-ref) 节逐行对照
+        public static int BattleExp(double dmg, double heal, double routs, double cmdRouts, double duelWin, double duelLoss, double specials, double tactics, double tacFail, bool won, bool commander)
+        {
+            double e = 10;
+            e += dmg / 40 + heal / 80;
+            e += routs * 12 + cmdRouts * 12;
+            e += duelWin * 25 + duelLoss * 5;
+            e += specials * 6 + tactics * 4 + tacFail;
+            if (won) e += 25 + (commander ? 10 : 0);
+            return (int)JsRound(Math.Min(BattleCap, e));
+        }
+        public static int BattleExp(BattleXp x, bool won, bool commander)
+        {
+            x = x ?? new BattleXp();
+            return BattleExp(x.dmg, x.heal, x.routs, x.cmdRouts, x.duelWin, x.duelLoss, x.specials, x.tactics, x.tacFail, won, commander);
+        }
+        // 战绩（战术战斗与自动结算共用）
+        public static void Note(General gen, bool won, int routs, int duels)
+        {
+            Ensure(gen);
+            var r = gen.record;
+            r.battles++;
+            if (won) r.wins++;
+            r.routs += routs;
+            r.duels += duels;
+        }
+
+        // ---- 自动结算的攻城战 ----
+        public static Dictionary<int, ProgressSnap> Snapshot(BattleSetup s)
+        {
+            var m = new Dictionary<int, ProgressSnap>();
+            foreach (var x in s.atk.Concat(s.def)) m[x.id] = new ProgressSnap { troops = Math.Max(0, x.troops), power = GenPower(x) };
+            return m;
+        }
+        public static List<ProgressResult> AutoBattle(BattleSetup s, Dictionary<int, ProgressSnap> snap)
+        {
+            if (!enabled || s == null || s.progressDone || snap == null) return new List<ProgressResult>();
+            s.progressDone = true;
+            var outList = s.progress = new List<ProgressResult>();          // 与战术战斗的 setup.progress 同格式（界面战后统一读取）
+            var sides = new[] { s.atk, s.def };
+            ProgressSnap b0;
+            // 无人防守，不战而下：攻方只得少量经验
+            if (sides[1].Count == 0 || sides[1].All(d => !(snap.TryGetValue(d.id, out b0) && b0.troops > 0)))
+            {
+                foreach (var a in sides[0]) { var r = Gain(a, 5, "battle"); if (r != null) { r.side = 0; r.won = true; outList.Add(r); } }
+                return outList;
+            }
+            for (int k = 0; k < 2; k++)
+            {
+                var mine = sides[k]; var foes = sides[1 - k];
+                bool won = k == 0 ? s.attackerWon : !s.attackerWon;
+                double loss = 0; int routs = 0, cmd = 0;
+                for (int i = 0; i < foes.Count; i++)
+                {
+                    var e = foes[i]; ProgressSnap b;
+                    if (!snap.TryGetValue(e.id, out b)) continue;
+                    loss += Math.Max(0, b.troops - Math.Max(0, e.troops));
+                    if (b.troops > 0 && (s.routed.Contains(e.id) || e.troops <= 0)) { routs++; if (i == 0) cmd++; }
+                }
+                double tot = 0;
+                foreach (var a in mine) { ProgressSnap b; tot += snap.TryGetValue(a.id, out b) ? b.power : 0; }
+                for (int i = 0; i < mine.Count; i++)
+                {
+                    var a = mine[i]; ProgressSnap b;
+                    if (!snap.TryGetValue(a.id, out b) || !(b.troops > 0)) continue;
+                    double share = tot > 0 ? b.power / tot : 1.0 / mine.Count;
+                    int e = BattleExp(loss * share, 0, routs * share, cmd * share, 0, 0, 0, 0, 0, won, i == 0);
+                    Note(a, won, (int)JsRound(routs * share), 0);
+                    int from = a.level;
+                    var r = Gain(a, e, "battle");
+                    if (r != null) { r.side = k; r.won = won; outList.Add(r); }
+                    else outList.Add(new ProgressResult { gen = a, exp = 0, from = from, to = from, side = k, won = won });
+                }
+            }
+            return outList;
         }
     }
 

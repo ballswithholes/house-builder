@@ -5,7 +5,9 @@
    cases.json  全部比对用例（经典 162 人 × 不同尺寸 / 表情 / 镜像 / 边框，每种文化 8 个角色样例，
                有手工设定的世界武将，120 个随机生成的人）
    js.json     网页版 SG.Portrait.svg 对每个用例的输出（去掉 id 流水号）—— C# 逐条比对
-   sheet.json  联系表用的 40 人（经典名将 + 每种文化一人 + 世界君主），128px
+   sheet.json  联系表用的 40 人（经典名将 + 每种文化一人 + 世界君主），128px（sheet48 / sheet256：其中 16 人的小图 / 大图）
+   sheetv3.json 第三版联系表：天竺 12 人、非洲 8 人、毛里 2 人、僧人 5 人 + 三种新文化各 4 个生成样例，128px
+               （sheetv3_48 / sheetv3_256：其中 16 人的小图 / 大图）
    载入顺序与游戏相同：core.js、data.js、world-data.js、portrait-data.js、portrait.js。 */
 const fs = require('fs');
 const path = require('path');
@@ -82,4 +84,25 @@ fs.writeFileSync(path.join(OUT, 'sheet.json'), JSON.stringify(sheet));
 // 小图（48px，细节档 0）与大图（256px，细节档 2）各 16 人：细线、虚线、甲片等细节的对照
 const pick = [0, 1, 3, 4, 5, 6, 9, 13, 17, 18, 20, 24, 28, 30, 34, 37];
 for (const px of [48, 256]) fs.writeFileSync(path.join(OUT, `sheet${px}.json`), JSON.stringify(pick.map((k, j) => Object.assign({}, sheet[k], { opts: Object.assign({}, sheet[k].opts, { size: px, flip: j % 5 === 2, mood: ['neutral', 'angry', 'hurt', 'win'][j % 4] }) }))));
-console.log(`用例 ${cases.length} 个、联系表 ${sheet.length} 人 → ${OUT}`);
+// ---------------------------------------------------------------- 第三版联系表：天竺 12 人、非洲 8 人、毛里 2 人、僧人，及三种新文化的生成样例
+const V3 = {
+  india: ['耶若室利', '跋婆瞿波', '婆薮', '昌提室利', '迦梨迦罗', '内敦切利扬', '森古图万', '通代曼', '曼塔兰', '纳基拉尔', '室利那伽', '执法帝须'],
+  africa: ['加达拉特', '贝加特', '阿兹巴', '加尔马特', '耶斯博赫', '阿曼哈利卡', '马洛顿', '马沙达赫尔'],
+  moor: ['卡纳尔塔', '乌克梅特'],
+  monk: ['龙树', '提婆', '童受', '伊兰戈', '笮融'],
+};
+const v3 = [];
+for (const k in V3) for (const n of V3[k]) {
+  if (!SG.PortraitData.get(n)) throw new Error('缺少第三版外貌设定：' + n);
+  const g = world[n] || classic[n] || { name: n, war: 60, intel: 60, pol: 60, color: '#5a6a8a' };
+  v3.push({ label: n, gen: { name: n, war: g.war, intel: g.intel, pol: g.pol }, opts: { size: 128, scale: 1, color: g.color || '#5a6a8a', mood: v3.length % 9 === 4 ? 'angry' : 'neutral' } });
+}
+for (const c of ['india', 'africa', 'moor']) for (const role of ['武将', '君主', '谋士', '女性']) {
+  const base = ROLES.find(r => r[0] === role)[1];
+  v3.push({ label: `${c}·${role}`, gen: Object.assign({ name: `〔样例〕${c}·${role}`, culture: c }, base), opts: { size: 128, scale: 1, color: '#8a8a92' } });
+}
+fs.writeFileSync(path.join(OUT, 'sheetv3.json'), JSON.stringify(v3));
+// 小图 48px（细节档 0）与大图 256px（细节档 2）各 16 人
+const pick3 = [0, 1, 2, 4, 6, 10, 12, 13, 16, 17, 19, 20, 22, 23, 25, 28];
+for (const px of [48, 256]) fs.writeFileSync(path.join(OUT, `sheetv3_${px}.json`), JSON.stringify(pick3.map((k, j) => Object.assign({}, v3[k], { opts: Object.assign({}, v3[k].opts, { size: px, flip: j % 5 === 2, mood: ['neutral', 'angry', 'hurt', 'win'][j % 4] }) }))));
+console.log(`用例 ${cases.length} 个、联系表 ${sheet.length} 人、第三版联系表 ${v3.length} 人 → ${OUT}`);

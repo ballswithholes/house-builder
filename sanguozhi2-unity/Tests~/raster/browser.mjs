@@ -1,5 +1,6 @@
 // 用 Playwright 在网页版的 tests/portraits.html 里渲染同一批头像（联系表），并与 C# 输出逐格比较。
 //   node Tests~/raster/browser.mjs [sheet.json] [browser.png] [csharp.png]
+// 退出码 1：页面出错、缺 C# 联系表，或有一格的平均绝对差超过上限（MAX_MAD；缺省 48px 及以下 6、更大 2.5，/255）
 // 依赖全局安装的 playwright（/opt/node22/lib/node_modules/playwright）；页面先载入世界数据（与游戏相同的外貌数据）。
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
@@ -16,7 +17,8 @@ const sheet = JSON.parse(fs.readFileSync(sheetPath, 'utf8'));
 const COLS = +(process.env.COLS || 8), CELL = Math.max(...sheet.map(s => s.opts.size)), PAD = 4;
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ deviceScaleFactor: 1 });
-page.on('pageerror', e => console.log('页面错误', e.message));
+let pageErrors = 0;
+page.on('pageerror', e => { pageErrors++; console.log('页面错误', e.message); });
 await page.goto('file://' + path.join(web, 'tests/portraits.html') + '?perf=0');
 await page.waitForFunction(() => window.SG && SG.Portrait);
 // 游戏的载入顺序里 world-data.js 在 portrait-data.js 之前：补载后重跑外貌数据（add 会合并并清缓存）
@@ -65,9 +67,15 @@ const res = await page.evaluate(async ({ sheet, COLS, CELL, PAD, csData }) => {
 fs.writeFileSync(pngPath, Buffer.from(res.url.split(',')[1], 'base64'));
 const avg = res.times.reduce((a, b) => a + b, 0) / res.times.length;
 console.log(`浏览器联系表 ${sheet.length} 张 → ${pngPath}（P.canvas 平均 ${avg.toFixed(1)} ms，含 PNG 编解码）`);
+const LIMIT = +(process.env.MAX_MAD || (CELL <= 48 ? 6 : 2.5));
+let fail = pageErrors > 0;
 if (res.cmp) {
   const mads = res.cmp.map(c => c.mad);
-  console.log('逐格比较（C# vs 浏览器）：平均绝对差 ' + (mads.reduce((a, b) => a + b, 0) / mads.length).toFixed(2) + ' / 255，最大 ' + Math.max(...mads).toFixed(2));
+  const over = res.cmp.filter(c => c.mad > LIMIT);
+  console.log('逐格比较（C# vs 浏览器）：平均绝对差 ' + (mads.reduce((a, b) => a + b, 0) / mads.length).toFixed(2) + ' / 255，最大 ' + Math.max(...mads).toFixed(2) +
+    `（上限 ${LIMIT}）` + (over.length ? `，超出 ${over.length} 格：` + over.map(c => `${c.label} ${c.mad}`).join('、') : '，通过'));
   for (const c of res.cmp) console.log(`  ${c.label.padEnd(14)} MAD ${String(c.mad).padStart(6)}  差>48 的像素 ${c.bigPct}%`);
-}
+  if (over.length) fail = true;
+} else { console.log('缺少 C# 联系表 ' + csPath); fail = true; }
 await browser.close();
+process.exit(fail ? 1 : 0);

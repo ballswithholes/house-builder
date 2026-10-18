@@ -1,5 +1,6 @@
-// 无头地图测试：View/WorldGeo.cs（投影范围、地理场、地形模型、树木分布、海上航线）与网页版的参考值比对。
-// 参考值由 Tests~/map/refs.js 在 Node 中运行网页版生成（refs.txt + hs-*.bin）。
+// 无头地图测试（第三版）：View/WorldGeo.cs（投影范围、地理场、地形模型、村落、树木 / 石块 / 灌丛 / 村舍、道路 / 关隘、
+// TerrainInfo、海上航线）与网页版的参考值逐项比对。参考值由 Tests~/map/refs.js 在 Node 中运行网页版生成（refs.txt + *.bin）。
+// 城池表取自参考值（与 C# 剧本数据无关）：C# 的 TerrainModel 用与网页版完全相同的城池构建。
 // 用法：mono map.exe <参考值目录>        退出码 = 失败的检查项数
 using System;
 using System.Collections.Generic;
@@ -19,30 +20,26 @@ static class MapHarness
         Console.WriteLine((ok ? "  OK   " : "  FAIL ") + name + "：" + detail);
         if (!ok) fails++;
     }
+    static float[] F32(string path) { var b = File.ReadAllBytes(path); var f = new float[b.Length / 4]; Buffer.BlockCopy(b, 0, f, 0, b.Length); return f; }
 
-    // 网页版 SG.SeededRandom（mulberry32）：让树木分布的随机数序列与网页版逐个相同
-    sealed class JsRandom
+    // 参考值的城池表 → City 对象（经纬度按 float 存，与 C# 剧本数据相同；WorldGeo.CityPos 先还原成十进制 double）
+    public static List<City> CitiesFrom(List<string[]> rows, string which)
     {
-        uint a;
-        public JsRandom(int seed) { a = (uint)(seed ^ unchecked((int)0x9e3779b9)); }
-        public double Next()
+        var list = new List<City>();
+        foreach (var r in rows.Where(r => r[0] == "city" && r[1] == which))
         {
-            a += 0x6D2B79F5u;
-            uint t = (a ^ (a >> 15)) * (1u | a);
-            t = (t + (t ^ (t >> 7)) * (61u | t)) ^ t;
-            return (t ^ (t >> 14)) / 4294967296.0;
+            var c = new City { id = int.Parse(r[2]), key = r[3], name = r[3], lon = float.Parse(r[4], Inv), lat = float.Parse(r[5], Inv), town = int.Parse(r[6]), culture = r[7] };
+            if (r[8] != "-") foreach (var s in r[8].Split(',')) c.links.Add(int.Parse(s));
+            list.Add(c);
         }
+        return list;
     }
-
-    static void CityXY(string[] lines, out double[] xs, out double[] zs)
+    public static HashSet<int> SeaFrom(List<string[]> rows, string which)
     {
-        xs = new double[lines.Length]; zs = new double[lines.Length];
-        for (int i = 0; i < lines.Length; i++)
-        {
-            var p = lines[i].Split('|');
-            double x, y; MapProjection.Project(P(p[2]), P(p[3]), out x, out y);
-            xs[i] = x; zs[i] = y;
-        }
+        var h = new HashSet<int>();
+        var r = rows.First(x => x[0] == "sealinks" && x[1] == which);
+        for (int k = 3; k < r.Length; k++) { var ab = r[k].Split('-'); int a = int.Parse(ab[0]), b = int.Parse(ab[1]); h.Add(Math.Min(a, b) * 4096 + Math.Max(a, b)); }
+        return h;
     }
 
     static int Main(string[] args)
@@ -76,37 +73,35 @@ static class MapHarness
             nr++;
         }
         Check("镜头地区", nr == WorldGeoData.Regions.Length && er < 1e-3, nr + " 个，最大误差 " + er.ToString("E1"));
+        double ePer = 0; int nPer = 0;
+        foreach (var r in rows.Where(r => r[0] == "perlin")) { ePer = Math.Max(ePer, Math.Abs(WorldGeo.Perlin(P(r[1]), P(r[2])) - P(r[3]))); nPer++; }
+        Check("Perlin（网页版 core.js）", nPer > 100 && ePer < 1e-12, nPer + " 点，最大误差 " + ePer.ToString("E1"));
 
         // ---------------------------------------------------- 两种范围 --
         foreach (var which in new[] { "china", "world" })
         {
             Console.WriteLine("== " + which);
             var spec = MapSpec.ForRegion(which);
+            var specRow = rows.First(r => r[0] == "spec" && r[1] == which);
+            int si = rows.IndexOf(specRow), ei = rows.FindIndex(si + 1, r => r[0] == "spec"); if (ei < 0) ei = rows.Count;
+            var R = rows.GetRange(si, ei - si);
             var t0 = sw.ElapsedMilliseconds;
             var geo = GeoFields.Get(spec);
             long tGeo = sw.ElapsedMilliseconds - t0;
-            double[] cx, cz;
-            CityXY(which == "world" ? WorldScenarioData.Cities : ScenarioData.Cities, out cx, out cz);
-            var specRow = rows.First(r => r[0] == "spec" && r[1] == which);
-            Check("城池数", cx.Length == int.Parse(specRow[2]), cx.Length + " / " + specRow[2]);
-            var tm = new TerrainModel(geo, spec, cx, cz);
+            var cities = CitiesFrom(rows, which);
+            var sea = SeaFrom(rows, which);
+            Check("城池数", cities.Count == int.Parse(specRow[2]), cities.Count + " / " + specRow[2]);
+            {
+                // 区域判定（网页版 _spec）：auto / 空 按城池位置；china / world 原样
+                var gs = new GameState(); gs.cities = cities;
+                string ra = MapSpec.Resolve(gs, "auto"), rn = MapSpec.Resolve(gs, null), rc = MapSpec.Resolve(gs, "china"), rw = MapSpec.Resolve(gs, "world");
+                Check("区域判定 MapSpec.Resolve", ra == which && rn == which && rc == "china" && rw == "world", "auto → " + ra + "，空 → " + rn + "，china → " + rc + "，world → " + rw);
+            }
+            var tm = new TerrainModel(geo, spec, cities);
 
-            // 采样点（网格之前：SurfaceY 退回 Height，与网页版构建后的 surfaceY 稍后再比）
-            var pts = rows.Where(r => r[0] == "pt").ToList();
-            // refs.txt 中两个范围的 pt 行依次排列：按 spec 行的位置切分
-            int si = rows.IndexOf(specRow), ei = rows.FindIndex(si + 1, r => r[0] == "spec"); if (ei < 0) ei = rows.Count;
-            pts = rows.GetRange(si, ei - si).Where(r => r[0] == "pt").ToList();
-            var colors = rows.GetRange(si, ei - si).Where(r => r[0] == "color").ToList();
-            var trees = rows.GetRange(si, ei - si).Where(r => r[0] == "tree").ToList();
-            var lanes = rows.GetRange(si, ei - si).Where(r => r[0] == "lane").ToList();
-            var grid = rows.GetRange(si, ei - si).First(r => r[0] == "grid");
-
-            t0 = sw.ElapsedMilliseconds;
-            GeoFields.Run(tm.GenGrid(null));
-            long tGrid = sw.ElapsedMilliseconds - t0;
-            Console.WriteLine(string.Format("  （地理场 {0} ms，地形网格 {1}×{2} 高度 {3} ms）", tGeo, tm.GNx + 1, tm.GNz + 1, tGrid));
-
-            double eCoast = 0, eRiver = 0, eF = 0, eRidge = 0, eH = 0, eS = 0; int seaBad = 0, rwBad = 0, hBad = 0;
+            // 采样点：地理场与程序化高度（构建前），实际地表（构建后）
+            var pts = R.Where(r => r[0] == "pt").ToList();
+            double eCoast = 0, eRiver = 0, eF = 0, eRidge = 0, eH = 0; int seaBad = 0, rwBad = 0, hBad = 0;
             foreach (var r in pts)
             {
                 double x = P(r[1]), z = P(r[2]);
@@ -118,103 +113,120 @@ static class MapHarness
                 for (int k = 0; k < GeoFields.NF; k++) eF = Math.Max(eF, Math.Abs(f[k] - P(r[8 + k])));
                 eRidge = Math.Max(eRidge, Math.Abs(geo.RidgeSum(x, z) - P(r[17])));
                 double dh = Math.Abs(tm.Height(x, z) - P(r[18]));
-                eH = Math.Max(eH, dh); if (dh > 1e-3) hBad++;
-                eS = Math.Max(eS, Math.Abs(tm.SurfaceY(x, z) - P(r[19])));
+                eH = Math.Max(eH, dh); if (dh > 1e-4) hBad++;
             }
             Check("海岸距离", eCoast < 1e-6, pts.Count + " 点，最大误差 " + eCoast.ToString("E1"));
             Check("陆 / 海判定", seaBad == 0, "不一致 " + seaBad);
             Check("河流距离与宽度 / 深度", eRiver < 1e-6 && rwBad == 0, "最大误差 " + eRiver.ToString("E1") + "，宽深不一致 " + rwBad);
             Check("平滑场取样（高原、生物群落、旧版权重）", eF < 1e-5, "最大误差 " + eF.ToString("E1"));
             Check("山脉", eRidge < 2e-4, "最大误差 " + eRidge.ToString("E1"));
-            Check("高度 Height", hBad <= pts.Count / 500, "最大误差 " + eH.ToString("E1") + "，> 1e-3 的点 " + hBad);
-            Check("实际地表 SurfaceY", eS < 2e-3, "最大误差 " + eS.ToString("E1"));
+            Check("高度 Height", hBad == 0, "最大误差 " + eH.ToString("E1") + "，> 1e-4 的点 " + hBad);
 
-            // 地形网格
-            bool gOk = Math.Abs(tm.GX0 - P(grid[2])) < 1e-9 && Math.Abs(tm.GZ0 - P(grid[3])) < 1e-9 && tm.GNx == int.Parse(grid[5]) && tm.GNz == int.Parse(grid[6]);
-            var bytes = File.ReadAllBytes(Path.Combine(dir, "hs-" + which + ".bin"));
-            int nH = bytes.Length / 4, badH = 0; double eG = 0;
-            if (nH != tm.Hs.Length) gOk = false;
-            else
-                for (int i = 0; i < nH; i++)
-                {
-                    double d = Math.Abs(BitConverter.ToSingle(bytes, i * 4) - tm.Hs[i]);
-                    if (d > eG) eG = d;
-                    if (d > 1e-3) badH++;
-                }
-            Check("地形网格高度", gOk && badH <= nH / 2000, string.Format("{0} 个节点，最大误差 {1:E1}，> 1e-3 的节点 {2}", nH, eG, badH));
-
-            // 水面格子（四角都高于 1.2 的格子不出网格）：数目与网页版的 Water 网格一致
-            {
-                var Wt = spec.Water; double st = Wt.step;
-                int wnx = (int)Math.Ceiling((Wt.x1 - Wt.x0) / st), wnz = (int)Math.Ceiling((Wt.z1 - Wt.z0) / st), q = 0;
-                Func<int, int, float> hw = (a2, b2) => (float)tm.Height(Wt.x0 + a2 * st, Wt.z0 + b2 * st);
-                for (int i = 0; i < wnx; i++) for (int j = 0; j < wnz; j++)
-                        if (!(hw(i, j) > 1.2 && hw(i + 1, j) > 1.2 && hw(i, j + 1) > 1.2 && hw(i + 1, j + 1) > 1.2)) q++;
-                var hwb = File.ReadAllBytes(Path.Combine(dir, "hw-" + which + ".bin"));
-                int bad = 0; double emax = 0;
-                for (int i = 0; i <= wnx; i++) for (int j = 0; j <= wnz; j++)
-                    {
-                        double d = Math.Abs(BitConverter.ToSingle(hwb, (i * (wnz + 1) + j) * 4) - hw(i, j));
-                        if (d > emax) emax = d;
-                        if (d > 1e-3 && bad++ < 3) Console.WriteLine(string.Format("    水面网格 ({0:F2}, {1:F2})：{2} / 网页版 {3}", Wt.x0 + i * st, Wt.z0 + j * st, hw(i, j), BitConverter.ToSingle(hwb, (i * (wnz + 1) + j) * 4)));
-                    }
-                Check("水面网格高度", bad == 0, "最大误差 " + emax.ToString("E1") + "，> 1e-3 的节点 " + bad);
-                var wr = rows.GetRange(si, ei - si).FirstOrDefault(r => r[0] == "mesh" && r[2] == "Water");
-                int jsq = wr == null ? -1 : (int)(P(wr[3]) / 2);
-                Check("水面格子", q == jsq, q + " / 网页版 " + jsq);
-            }
-            // 地表颜色（网页版的岩石 / 雪色）
-            var rock0 = TerrainModel.Rock; var snow0 = TerrainModel.Snow;
-            TerrainModel.Rock = new[] { 0.55, 0.53, 0.5 }; TerrainModel.Snow = new[] { 0.88, 0.9, 0.94 };
-            double eC = 0; int cBad = 0;
-            foreach (var r in colors)
-            {
-                double x = P(r[1]), z = P(r[2]), h = P(r[3]), dd = P(r[4]), jit = P(r[5]);
-                const double e = 0.01;
-                double ax = x - e, ay = h + dd, az = z - e, bx = x - e, by = h - dd, bz = z + 2 * e, qx = x + 2 * e, qy = h, qz = z - e;
-                double mx = (ax + bx + qx) / 3, my = (ay + by + qy) / 3, mz = (az + bz + qz) / 3;
-                double ux = bx - ax, uy = by - ay, uz = bz - az, vx = qx - ax, vy = qy - ay, vz = qz - az;
-                double nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-                double ln = Math.Sqrt(nx * nx + ny * ny + nz * nz);
-                double slope = 1 - Math.Abs(ny / (ln > 0 ? ln : 1));
-                var c = tm.GroundColor(mx, mz, my, slope, (jit / 0.06 + 0.5 - 0.5) * 0.06, false);
-                double d = Math.Max(Math.Abs(c.r - P(r[6])), Math.Max(Math.Abs(c.g - P(r[7])), Math.Abs(c.b - P(r[8]))));
-                eC = Math.Max(eC, d); if (d > 2e-3) cBad++;
-            }
-            TerrainModel.Rock = rock0; TerrainModel.Snow = snow0;
-            Check("地表颜色 GroundColor", cBad <= colors.Count / 200, colors.Count + " 例，最大误差 " + eC.ToString("E1") + "，> 2e-3 的 " + cBad);
-
-            // 树木：注入网页版的随机数，与网页版逐棵比对（排序后按位置配对）
-            var mine = new List<TerrainModel.TreeInst>();
-            var rnd = new JsRandom(11);
+            // 地形阶段
             t0 = sw.ElapsedMilliseconds;
-            GeoFields.Run(tm.PlaceTrees(rnd.Next, mine, null));
-            long tTree = sw.ElapsedMilliseconds - t0;
-            int jsCount = int.Parse(specRow[3]);
-            var a = mine.Select(t => new[] { (double)t.x, t.y, t.z, t.s, t.sy }).OrderBy(t => t[0]).ThenBy(t => t[2]).ToList();
-            var bl = trees.Select(r => new[] { P(r[2]), P(r[3]), P(r[4]), P(r[5]), P(r[6]) }).OrderBy(t => t[0]).ThenBy(t => t[2]).ToList();
-            int same = 0;
+            GeoFields.Run(tm.GenTerrain(null));
+            long tTer = sw.ElapsedMilliseconds - t0;
+            Console.WriteLine(string.Format("  （地理场 {0} ms，地形阶段 {1} ms：主网格 {2}×{3}，远景 {4}×{5}）", tGeo, tTer, tm.MNx, tm.MNz, tm.ONx, tm.ONz));
+            // 城外村落
+            var hj = R.Where(r => r[0] == "hamlet").ToList();
+            int hamOk = 0;
+            for (int i = 0; i < Math.Min(hj.Count, tm.Hamlets.Count); i++)
             {
-                // 按位置配对（容差 1e-4）
-                int i = 0, j = 0;
-                while (i < a.Count && j < bl.Count)
-                {
-                    if (Math.Abs(a[i][0] - bl[j][0]) < 1e-4 && Math.Abs(a[i][2] - bl[j][2]) < 1e-4)
-                    {
-                        if (Math.Abs(a[i][1] - bl[j][1]) < 2e-3 && Math.Abs(a[i][3] - bl[j][3]) < 1e-4 && Math.Abs(a[i][4] - bl[j][4]) < 1e-4) same++;
-                        i++; j++;
-                    }
-                    else if (a[i][0] < bl[j][0] || (Math.Abs(a[i][0] - bl[j][0]) < 1e-4 && a[i][2] < bl[j][2])) i++;
-                    else j++;
-                }
+                var r = hj[i]; var h = tm.Hamlets[i];
+                if (Math.Abs(h.x - P(r[2])) < 1e-9 && Math.Abs(h.z - P(r[3])) < 1e-9 && h.culture == r[4] && h.n == int.Parse(r[5]) && h.city == int.Parse(r[7])) hamOk++;
             }
-            Check("树木分布", Math.Abs(mine.Count - jsCount) <= Math.Max(2, jsCount / 100) && same >= jsCount * 0.97,
-                string.Format("{0} 棵（网页版 {1}），位置 / 高度 / 缩放一致 {2}（{3} ms）", mine.Count, jsCount, same, tTree));
-            var sys = new System.Random(11); var mine2 = new List<TerrainModel.TreeInst>();
-            GeoFields.Run(tm.PlaceTrees(sys.NextDouble, mine2, null));
-            Console.WriteLine("  （Unity 用 System.Random(11)：" + mine2.Count + " 棵）");
+            Check("城外村落", hj.Count == tm.Hamlets.Count && hamOk == hj.Count, tm.Hamlets.Count + " 处（网页版 " + hj.Count + "），逐个一致 " + hamOk);
+            // 主网格 / 远景栅格
+            var mr = R.First(r => r[0] == "master");
+            bool dimOk = Math.Abs(tm.MX0 - P(mr[2])) < 1e-9 && Math.Abs(tm.MZ0 - P(mr[3])) < 1e-9 && tm.MNx == int.Parse(mr[5]) && tm.MNz == int.Parse(mr[6])
+                && Math.Abs(tm.OX0 - P(mr[7])) < 1e-9 && Math.Abs(tm.OZ0 - P(mr[8])) < 1e-9 && tm.ONx == int.Parse(mr[10]) && tm.ONz == int.Parse(mr[11]);
+            Action<string, float[], float[], double> cmpGrid = (label, mine, js, tol) =>
+            {
+                int bad = 0; double e = 0;
+                if (mine == null || mine.Length != js.Length) { Check(label, false, "尺寸不一致 " + (mine == null ? -1 : mine.Length) + " / " + js.Length); return; }
+                for (int i = 0; i < js.Length; i++) { double d = Math.Abs(mine[i] - js[i]); if (d > e) e = d; if (d > tol) bad++; }
+                Check(label, dimOk && bad <= js.Length / 5000, string.Format("{0} 个节点，最大误差 {1:E1}，> {2} 的 {3}", js.Length, e, tol, bad));
+            };
+            cmpGrid("远景栅格（5.0）", tm.OH, F32(Path.Combine(dir, "oh-" + which + ".bin")), 1e-4);
+            cmpGrid("主网格（0.625，平滑 + 细节噪声 + 去尖 + 城址压平）", tm.MH, F32(Path.Combine(dir, "mh-" + which + ".bin")), 1e-4);
+            double eBase = 0;
+            foreach (var r in R.Where(r => r[0] == "citybase")) eBase = Math.Max(eBase, Math.Abs(tm.CityBase[int.Parse(r[2])] - P(r[3])));
+            Check("城基高度", eBase < 1e-4, "最大误差 " + eBase.ToString("E1"));
+            // 数据纹理（字节；±1 为舍入边界，允许）
+            var tsz = R.First(r => r[0] == "texsize");
+            Check("数据纹理尺寸", tm.TexW == int.Parse(tsz[2]) && tm.TexH == int.Parse(tsz[3]), tm.TexW + "×" + tm.TexH + " / " + tsz[2] + "×" + tsz[3]);
+            foreach (var kv in new[] { new KeyValuePair<string, byte[]>("n", tm.NData), new KeyValuePair<string, byte[]>("c", tm.CData), new KeyValuePair<string, byte[]>("m", tm.MData), new KeyValuePair<string, byte[]>("oc", tm.OCData), new KeyValuePair<string, byte[]>("om", tm.OMData) })
+            {
+                var js = File.ReadAllBytes(Path.Combine(dir, "tex" + kv.Key + "-" + which + ".bin"));
+                var mine = kv.Value;
+                int big = 0, one = 0;
+                if (mine == null || mine.Length != js.Length) { Check("数据纹理 " + kv.Key, false, "尺寸不一致"); continue; }
+                for (int i = 0; i < js.Length; i++) { int d = Math.Abs(mine[i] - js[i]); if (d > 1) big++; else if (d == 1) one++; }
+                Check("数据纹理 " + kv.Key, big <= js.Length / 5000, string.Format("{0} 字节，差 1 的 {1}，差 > 1 的 {2}", js.Length, one, big));
+            }
+
+            // 实际地表（构建后）
+            double eS = 0; int sBad = 0;
+            foreach (var r in pts) { double d = Math.Abs(tm.SurfaceY(P(r[1]), P(r[2])) - P(r[19])); eS = Math.Max(eS, d); if (d > 1e-4) sBad++; }
+            Check("实际地表 SurfaceY", sBad <= pts.Count / 2000, "最大误差 " + eS.ToString("E1") + "，> 1e-4 的点 " + sBad);
+
+            // 道路 / 桥 / 关隘
+            t0 = sw.ElapsedMilliseconds;
+            GeoFields.Run(tm.PlanRoads((a, c) => sea.Contains(Math.Min(a, c) * 4096 + Math.Max(a, c)), null));
+            var rr = R.First(r => r[0] == "roads");
+            int nPts = tm.Roads.Sum(l => l.n + 1);
+            Check("道路", tm.Roads.Count == int.Parse(rr[2]) && nPts == int.Parse(rr[3]), string.Format("{0} 条 {1} 点（网页版 {2} 条 {3} 点）", tm.Roads.Count, nPts, rr[2], rr[3]));
+            int jsSea = int.Parse(R.First(r => r[0] == "sealinks")[2]);
+            Check("海路连线", tm.SeaPairs.Count == jsSea, tm.SeaPairs.Count + " / " + jsSea);
+            var bnd = spec.Bounds;
+            tm.PlanPasses(bnd);
+            var pj = R.Where(r => r[0] == "pass").ToList();
+            int passOk = 0;
+            foreach (var r in pj)
+            {
+                var p = tm.Passes.FirstOrDefault(q => q.name == r[2]);
+                if (p != null && Math.Abs(p.x - P(r[3])) < 1e-4 && Math.Abs(p.z - P(r[4])) < 1e-4 && Math.Abs(p.labelY - P(r[5])) < 1e-3) passOk++;
+                else Console.WriteLine("    关隘 " + r[2] + "：" + (p == null ? "无" : p.x + ", " + p.z + ", " + p.labelY) + " / 网页版 " + r[3] + ", " + r[4] + ", " + r[5]);
+            }
+            Check("关隘", tm.Passes.Count == pj.Count && passOk == pj.Count, tm.Passes.Count + " 座（网页版 " + pj.Count + "），位置一致 " + passOk + "：" + string.Join("、", tm.Passes.Select(p => p.name)));
+
+            // TerrainInfo（战场地形的取样源）
+            var tis = R.Where(r => r[0] == "ti").ToList();
+            int tiBad = 0, wBad = 0, bBad = 0; double eTi = 0;
+            foreach (var r in tis)
+            {
+                var t = tm.TerrainInfo(P(r[1]), P(r[2]));
+                string jw = r[5] == "-" ? null : r[5];
+                double[] mine = { t.h, t.slope, t.depth, t.forest, t.farm, t.sand, t.snow, t.river, t.coast, Math.Min(t.road, 999) };
+                double[] js = { P(r[3]), P(r[4]), P(r[6]), P(r[7]), P(r[8]), P(r[9]), P(r[10]), P(r[13]), P(r[14]), Math.Min(P(r[15]), 999) };
+                double e = 0;
+                for (int k = 0; k < mine.Length; k++) e = Math.Max(e, Math.Abs(mine[k] - js[k]));
+                eTi = Math.Max(eTi, e);
+                if (e > 2e-3) tiBad++;
+                if (t.water != jw) wBad++;
+                if (t.biome != r[12] || (t.rock ? "1" : "0") != r[11]) bBad++;
+            }
+            Check("TerrainInfo 数值", tiBad <= tis.Count / 500, tis.Count + " 点，最大误差 " + eTi.ToString("E1") + "，> 2e-3 的 " + tiBad);
+            Check("TerrainInfo 水域 / 群落 / 岩石", wBad <= tis.Count / 1000 && bBad <= tis.Count / 1000, "水域不一致 " + wBad + "，群落 / 岩石不一致 " + bBad);
+
+            // 树木：随机数与网页版相同（SeededRandom(11)），逐棵比对（按生成顺序）
+            var trees = new List<TerrainModel.Inst>();
+            t0 = sw.ElapsedMilliseconds;
+            GeoFields.Run(tm.PlaceTrees(trees, null));
+            long tTree = sw.ElapsedMilliseconds - t0;
+            var tj = R.Where(r => r[0] == "tree").ToList();
+            CompareInst("树木", trees, tj, 2, tTree);
+            // 石块 / 灌丛 / 村舍
+            var rocks = new List<TerrainModel.Inst>(); var shrubs = new List<TerrainModel.Inst>(); var houses = new List<TerrainModel.Inst>();
+            GeoFields.Run(tm.PlaceScatter(rocks, shrubs, houses, null));
+            var sc = R.Where(r => r[0] == "scatter").ToList();
+            CompareInst("石块", rocks, sc.Where(r => r[2] == "Rocks").ToList(), 3, -1);
+            CompareInst("灌丛", shrubs, sc.Where(r => r[2] == "Shrubs").ToList(), 3, -1);
+            CompareInst("村舍", houses, sc.Where(r => r[2] == "Villages").ToList(), 3, -1);
+            Check("石块 / 村舍计数", tm.RockCount == int.Parse(specRow[4]) && tm.HouseCount == int.Parse(specRow[5]), tm.RockCount + " / " + specRow[4] + "，" + tm.HouseCount + " / " + specRow[5]);
 
             // 海上航线
+            var lanes = R.Where(r => r[0] == "lane").ToList();
             if (lanes.Count > 0)
             {
                 t0 = sw.ElapsedMilliseconds;
@@ -223,7 +235,7 @@ static class MapHarness
                 foreach (var r in lanes)
                 {
                     var ab = r[2].Split('-'); int ia = int.Parse(ab[0]), ib = int.Parse(ab[1]);
-                    GeoFields.Run(tm.SeaPath(cx[ia], cz[ia], cx[ib], cz[ib], path));
+                    GeoFields.Run(tm.SeaPath(tm.CityX[ia], tm.CityZ[ia], tm.CityX[ib], tm.CityZ[ib], path));
                     int n = int.Parse(r[3]);
                     if (path.Count == 2 * n)
                     {
@@ -240,5 +252,25 @@ static class MapHarness
         }
         Console.WriteLine(fails == 0 ? "== 地图：全部通过" : "== 地图：失败 " + fails + " 项");
         return fails;
+    }
+
+    // 实例列表（树木：kind 列在 r[2]；石块 / 灌丛 / 村舍：列 off 起为位置等）按生成顺序逐个比对位置、高度、缩放、颜色
+    static void CompareInst(string label, List<TerrainModel.Inst> mine, List<string[]> js, int off, long ms)
+    {
+        // 网页版按区块分组输出：两边都按 (x, z) 排序后配对
+        var a = mine.OrderBy(t => (float)t.x).ThenBy(t => (float)t.z).ToList();   // 网页版的位置读自 Float32 实例矩阵
+        var bl = js.Select(r => new { kind = off == 2 ? r[2] : r[3], x = P(r[off + 1]), y = P(r[off + 2]), z = P(r[off + 3]), s = P(r[off + 4]), sy = P(r[off + 5]), r = P(r[off + 6]), g = P(r[off + 7]), b = P(r[off + 8]) })
+            .OrderBy(t => (float)t.x).ThenBy(t => (float)t.z).ToList();
+        int same = 0, kindBad = 0;
+        int n = Math.Min(a.Count, bl.Count);
+        for (int i = 0; i < n; i++)
+        {
+            var p = a[i]; var q = bl[i];
+            if (Math.Abs(p.x - q.x) < 1e-4 && Math.Abs(p.z - q.z) < 1e-4 && Math.Abs(p.y - q.y) < 2e-3 && Math.Abs(p.s - q.s) < 1e-4 && Math.Abs(p.sy - q.sy) < 1e-4
+                && Math.Abs(p.r - q.r) < 1e-4 && Math.Abs(p.g - q.g) < 1e-4 && Math.Abs(p.b - q.b) < 1e-4) same++;
+            if (off == 2 && p.kind != q.kind) { kindBad++; if (kindBad <= 3) Console.WriteLine("    种类不一致 (" + p.x + ", " + p.z + ")：" + p.kind + " / 网页版 " + q.kind + "（" + q.x + ", " + q.z + "）"); }
+        }
+        Check(label, a.Count == bl.Count && same >= bl.Count * 0.995 && kindBad <= bl.Count / 200,
+            string.Format("{0} 个（网页版 {1}），位置 / 高度 / 缩放 / 颜色一致 {2}{3}{4}", a.Count, bl.Count, same, off == 2 ? "，种类不一致 " + kindBad : "", ms >= 0 ? "（" + ms + " ms）" : ""));
     }
 }

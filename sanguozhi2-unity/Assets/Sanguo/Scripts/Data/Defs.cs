@@ -1,5 +1,8 @@
-// 三国志II 霸王的大陆 · 规则定义
+// 三国志-霸王的世界 · 规则定义（对应网页版 js/data.js）
 // 所有可调的数值都集中在这里（Balance），以便与原作比对后修正。
+// 第三版：战场 18 × 13（DESIGN-V3 §2，原 14 × 10）；新增地块 Terrain.Water（= 8，湖海深水，不可通行，规则上等同山岳）；
+//   计策扩展为 18 种（TacticDef 增加 js/tactics-data.js 的规则字段，目录见 Battle/Tactics.cs）；
+//   文化代号与回退表 Defs.Cultures / Defs.CultureBase（= 网页版 SG.CULTURES / SG.cultureBase，core.js）。
 using System.Collections.Generic;
 
 namespace Sanguo
@@ -35,7 +38,7 @@ namespace Sanguo
 
         // ---- 战斗 ----
         public const int BattleDays = 30;
-        public const int BattleW = 14, BattleH = 10;
+        public const int BattleW = 18, BattleH = 13;  // 第三版 §2：战场 +25%（原 14 × 10）
         public const int MaxSortieGenerals = 5;
         public const float DamageK = 0.11f;
         public const float CounterRatio = 0.5f;
@@ -50,7 +53,8 @@ namespace Sanguo
         public const int PlayerGraceMonths = 3;      // 开局若干个月内电脑不会进攻玩家
     }
 
-    public enum Terrain { Plain, Forest, Hill, Mountain, River, Wall, Gate, Castle }
+    // Water（= 8，第三版）：湖、海等深水，不可通行（TerrainCost 99，规则上等同山岳），外观为水面；见 BattleTerrain
+    public enum Terrain { Plain, Forest, Hill, Mountain, River, Wall, Gate, Castle, Water }
 
     public class FormationDef
     {
@@ -61,12 +65,51 @@ namespace Sanguo
         public FormationDef(string n, float a, float d, int m, int ri, int rw, string desc) { Name = n; Atk = a; Def = d; Move = m; ReqInt = ri; ReqWar = rw; Desc = desc; }
     }
 
-    public enum TacticKind { Fire, Rockfall, Confuse, Inspire }
+    // Learned：第三版的可习得计策（网页版 kind 为字符串 = 编号 Id；规则见 BattleModel 的 NewTactic* 方法）
+    public enum TacticKind { Fire, Rockfall, Confuse, Inspire, Learned }
 
+    // 一种计策。原四计（Defs.Tactics，Kind 0..3）的规则与数值同第一版；第三版另带 js/tactics-data.js 的目录字段
+    // （编号、等阶、目标、射程、特效、主色）。14 种可习得计策（Kind = Learned）由 Tactics.cs 按 TacticsData.g.cs 生成，
+    // 规则字段的含义见 tactics-data.js 文件头（未设的数值为 0，未设的子表为 null）。
     public class TacticDef
     {
         public TacticKind Kind; public string Name, Desc; public int ReqInt; public float Power;
+        // ---- 第三版目录字段 ----
+        public string Id;                     // fire / rockfall / confuse / inspire / rumor / feint / …
+        public int Tier = 1;                  // 等阶 1–4（Tactics.TierName）
+        public string Target = "enemy";       // enemy / ally / self
+        public int Range, Radius, Cd;         // 射程、波及半径、冷却日数（0 = 每次行动都可用）
+        public string Need;                   // null / river（目标临河）/ cover（目标靠近林地 / 山丘）/ hill-self（施计者立于山丘，落石）
+        public string Fx, Color, Lore;        // 特效风格（BattleView.SpecialFx）、主色、典故
+        public bool Innate = true;            // 原四计：按智力自带，不占格
+        // ---- 可习得计策的规则字段 ----
+        public double Morale, MoraleI;        // 士气变化 = Morale + MoraleI × 智力（敌为负、友为正）
+        public double Heal, HealI;            // 回复 (Heal + HealI × 智力) × 最大兵力
+        public int Food;                      // 每回复 Food 兵耗粮 1（0 = 不耗粮）
+        public bool Cure, Douse;              // 解除混乱、灭火
+        public TacticRoll Roll;               // 整体成功率（null = 必定成功）
+        public TacticDmg Dmg;                 // 计策伤害（null = 无伤害）
+        public TacticConfuse Confuse;         // 受波及敌军另判混乱
+        public TacticConfuse FoeConfuse;      // 自身为中心：周围敌军另判混乱
+        public TacticMod Mod;                 // 限时加成 / 削弱
+        // 第三版新增的计策（网页版 typeof kind === 'string'）
+        public bool IsNew { get { return Kind == TacticKind.Learned; } }
+
         public TacticDef(TacticKind k, string n, int req, float pow, string desc) { Kind = k; Name = n; ReqInt = req; Power = pow; Desc = desc; }
+        // 可习得计策（Tactics.cs 用；Desc 由 Tactics.Explain 补上）
+        public TacticDef(TacticEntry e)
+        {
+            Kind = TacticKind.Learned; Name = e.Name; ReqInt = e.ReqInt; Power = 0; Innate = false;
+            Apply(e);
+            Morale = e.Morale; MoraleI = e.MoraleI; Heal = e.Heal; HealI = e.HealI; Food = e.Food; Cure = e.Cure != 0; Douse = e.Douse != 0;
+            Roll = e.Roll; Dmg = e.Dmg; Confuse = e.Confuse; FoeConfuse = e.FoeConfuse; Mod = e.Mod;
+        }
+        // 目录字段（原四计的名称 / 需求智力 / 威力 / 说明保持 Defs 的值）
+        internal void Apply(TacticEntry e)
+        {
+            Id = e.Id; Tier = e.Tier; Target = e.Target; Range = e.Range; Radius = e.Radius; Cd = e.Cd; Need = e.Need;
+            Fx = e.Fx; Color = e.Color; Lore = e.Lore;
+        }
     }
 
     // 确定性的种子随机数（网页版 SG.SeededRandom 的 C# 版，mulberry32）。用于战场地形生成与必杀技兜底生成器，
@@ -94,6 +137,14 @@ namespace Sanguo
 
     public static class Defs
     {
+        // 原四计补上第三版的目录字段（TacticsData.Original 与 Defs.Tactics 同序）
+        static Defs()
+        {
+            foreach (var t in Tactics)
+                foreach (var e in TacticsData.Original)
+                    if (e.Kind == (int)t.Kind) { t.Apply(e); t.Innate = true; }
+        }
+
         // 阵型：攻击倍率、防御倍率、机动力加成、所需智力 / 武力
         public static readonly FormationDef[] Formations =
         {
@@ -143,8 +194,21 @@ namespace Sanguo
             {
                 case Terrain.Plain: return "平原"; case Terrain.Forest: return "森林"; case Terrain.Hill: return "山丘";
                 case Terrain.Mountain: return "山岳"; case Terrain.River: return "河川"; case Terrain.Wall: return "城墙";
-                case Terrain.Gate: return "城门"; default: return "本城";
+                case Terrain.Gate: return "城门"; case Terrain.Water: return "水域"; default: return "本城";
             }
+        }
+
+        // ------------------------------------------------------------- 文化代号 --
+        // DESIGN-V2 §6 的 15 种基础文化 + 第三版 india（天竺诸国）、africa（阿克苏姆、库施）、moor（毛里人 / 巴夸特）。
+        // 某个模块没有某文化的专门外观时，用 CultureBase(code) 取它的回退文化（唯一的回退表，= 网页版 SG.cultureBase）：
+        //   india → seasia，africa → arab，moor → arab；基础文化返回自身；未知 / 空 → han。
+        // 已有专门外观的模块应先查 code 本身，查不到再查 CultureBase(code)。表由导出工具从 core.js 生成（WorldScenarioData）。
+        public static string[] Cultures { get { return WorldScenarioData.CultureCodes; } }
+        public static string CultureBase(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return "han";
+            int i = System.Array.IndexOf(WorldScenarioData.CultureCodes, code);
+            return i >= 0 ? WorldScenarioData.CultureBases[i] : "han";
         }
     }
 }

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>地图截图（对照用）</title>
+<!-- 网页版战略地图的截图页（Tests~/map/render.mjs 用 headless Chromium 打开）：载入与 refs.js 相同的脚本，构建世界剧本的地图，
+     window.shot(x, y, dist, yaw) 对准地图点、让地形块与植被就绪后渲染一帧，返回镜头参数（three 坐标）。 -->
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}#app{position:fixed;inset:0}</style></head>
+<body><div id="app"></div>
+<script src="../../../sanguozhi2-web/vendor/three.min.js"></script>
+<script src="../../../sanguozhi2-web/js/core.js"></script>
+<script src="../../../sanguozhi2-web/js/world-geo.js"></script>
+<script src="../../../sanguozhi2-web/js/data.js"></script>
+<script src="../../../sanguozhi2-web/js/world-data.js"></script>
+<script src="../../../sanguozhi2-web/js/model.js"></script>
+<script src="../../../sanguozhi2-web/js/art.js"></script>
+<script src="../../../sanguozhi2-web/js/culture-art.js"></script>
+<script src="../../../sanguozhi2-web/js/camera.js"></script>
+<script src="../../../sanguozhi2-web/js/map-view.js"></script>
+<script>
+'use strict';
+const SG = window.SG;
+SG.Random.seed(1);
+const g = SG.GameState.newGame(Object.keys(SG.FactionInfo)[0], 'world');
+SG.G = g;
+SG.Gfx.init(document.getElementById('app'));
+SG.Gfx.autoQuality = false;
+const rig = new SG.CameraRig();
+rig.focusMap(60, 50, 95, true);
+const map = new SG.MapView();
+const t0 = performance.now();
+map.build(g, { region: 'world' });
+rig.useMap(map);
+window.__buildMs = performance.now() - t0;
+window.shot = function (x, y, dist, yaw) {
+  rig.yaw = rig.desiredYaw = yaw || 0;
+  rig.focusMap(x, y, dist, true);
+  rig.update(0);
+  for (let i = 0; i < 80; i++) { map.update(1 / 60); rig.update(0); }
+  SG.Gfx.setShadowFocus(rig.target, rig.distance * 0.85 + 8);
+  SG.Gfx.render();
+  const c = SG.Gfx.camera, f = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion);
+  return { pos: [c.position.x, c.position.y, c.position.z], fwd: [f.x, f.y, f.z], fov: c.fov, aspect: c.aspect,
+    fogNear: SG.Gfx.scene.fog.near, fogFar: SG.Gfx.scene.fog.far };
+};
+window.cityPos = id => { const cv = map.cities.get(id); return [cv.mapX, cv.mapY]; };
+window.__ready = true;
+</script></body></html>

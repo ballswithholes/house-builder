@@ -4,6 +4,7 @@
 //   mono raster.exe svgdiff cases.json js.json   C# 生成的 SVG 与网页版逐条比对（去掉 id 流水号）
 //   mono raster.exe sheet cases.json out.png [cols] [cell]  渲染联系表 PNG，并报告每张耗时
 //   mono raster.exe bench [n] [px]               n 张 px 像素头像的生成 + 栅格化耗时
+//   mono raster.exe keys                         缓存键拆分（Portrait.Bind 的替身：同一张脸跨尺寸 / 表情 / 年份）
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,6 +27,7 @@ static class RasterHarness
                 case "data": return Data();
                 case "svgdiff": return SvgDiff(args[1], args[2]);
                 case "sheet": return Sheet(args[1], args[2], args.Length > 3 ? int.Parse(args[3]) : 8, args.Length > 4 ? int.Parse(args[4]) : 128);
+                case "keys": return Keys();
                 case "bench": return Bench(args.Length > 1 ? int.Parse(args[1]) : 300, args.Length > 2 ? int.Parse(args[2]) : 128);
                 case "svg":   // mono raster.exe svg in.svg out.png px：任意 SVG（头像所用子集）→ PNG
                     {
@@ -38,6 +40,44 @@ static class RasterHarness
         catch (Exception e) { Console.WriteLine("异常：" + e); return 1; }
         Console.WriteLine("未知模式 " + mode);
         return 1;
+    }
+
+    // ---------------------------------------------------------------- 缓存键拆分（替身）
+    // Portrait.SplitKey：同一人同配色 / 边框 / 镜像，换尺寸、表情或年份（带出生年的人每年换键）仍是同一张脸；
+    // 换配色、边框、镜像、姓名、属性则不是
+    static int Keys()
+    {
+        int bad = 0, n = 0;
+        int year = 200;
+        Portrait.Year = () => year;
+        var born = new PortraitGen { name = "关羽", war = 97, intel = 75, pol = 62, born = 160 };
+        var plain = new PortraitGen { name = "张飞", war = 98, intel = 30, pol = 22 };
+        Func<PortraitGen, PortraitOpts, string> key = (g, o) => Portrait.KeyOf(Portrait.Spec(g), o);
+        Action<bool, string> check = (ok, what) => { n++; if (!ok) { bad++; Console.WriteLine("  不符：" + what); } };
+        string f0, m0, y0; int p0;
+        string k0 = key(born, PortraitOpts.Make(50, "#aa3322"));
+        Portrait.SplitKey(k0, out f0, out p0, out m0, out y0);
+        check(p0 == 50 && m0 == "neutral" && y0 == "200", "拆分 " + k0 + " → px " + p0 + " 表情 " + m0 + " 年 " + y0);
+        Func<string, string> face = k => { string f, m, y; int p; Portrait.SplitKey(k, out f, out p, out m, out y); return f; };
+        check(face(key(born, PortraitOpts.Make(96, "#aa3322"))) == f0, "换尺寸应同脸");
+        check(face(key(born, PortraitOpts.Make(68, "#aa3322", "win"))) == f0, "换表情应同脸");
+        year = 201;
+        string k1 = key(born, PortraitOpts.Make(50, "#aa3322"));
+        check(k1 != k0, "带出生年的人跨年应换键");
+        check(face(k1) == f0, "跨年应同脸");
+        check(face(key(born, PortraitOpts.Make(50, "#3355aa"))) != f0, "换配色不应同脸");
+        check(face(key(born, PortraitOpts.Make(50, "#aa3322", "neutral", false))) != f0, "去边框不应同脸");
+        check(face(key(born, PortraitOpts.Make(50, "#aa3322", "neutral", true, true))) != f0, "镜像不应同脸");
+        check(face(key(plain, PortraitOpts.Make(50, "#aa3322"))) != f0, "不同人不应同脸");
+        string fp, mp, yp; int pp;
+        string kp = key(plain, PortraitOpts.Make(96, "#aa3322", "angry"));
+        Portrait.SplitKey(kp, out fp, out pp, out mp, out yp);
+        check(pp == 96 && mp == "angry" && yp == "", "无出生年 " + kp);
+        year = 202;
+        check(key(plain, PortraitOpts.Make(96, "#aa3322", "angry")) == kp, "无出生年的人跨年不换键");
+        Portrait.Year = () => ScenarioData.StartYear;
+        Console.WriteLine((bad == 0 ? "通过" : "失败") + $"：缓存键拆分 {n - bad}/{n} 项");
+        return bad == 0 ? 0 : 1;
     }
 
     // ---------------------------------------------------------------- 数据完整性

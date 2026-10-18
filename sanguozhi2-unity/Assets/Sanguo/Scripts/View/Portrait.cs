@@ -1,5 +1,5 @@
 // ==========================================================================
-// 三国志II 霸王的大陆 · 武将头像（第二版 DESIGN-V2 §4B；网页版 js/portrait.js 的移植）
+// 三国志-霸王的世界 · 武将头像（第二版 DESIGN-V2 §4B、第三版 DESIGN-V3 §5；网页版 js/portrait.js 的移植）
 //
 // 原作（FC《霸王的大陆》）头像的现代化：深色背景、四分之三侧面胸像、粗轮廓、有限色板 →
 // 代码合成的矢量图（赛璐璐分层阴影、轮廓光、发须与甲胄纹样），统一的势力色边框。
@@ -14,9 +14,15 @@
 //   Portrait.PreloadAsync(gens, size, colorOf) → 协程：后台线程栅格化、主线程按时间片上传纹理
 //   Portrait.Describe                        → General → PortraitGen（文化 / 生年 / 性别的接入点，见 INTEGRATION）
 //   Portrait.Year                            → 当前年份（画像年龄 = 当前年份 − 生年）
+//   第三版「头像无处不在」（网页版 ui.js 的 FACE_REM / facePx / faceSizes 与 SG.Portrait.el 的先显示后替换）：
+//   Portrait.FaceRem.Item / Say / Inline / Card → 列表行 / 对话说话人 / 行内小头像 / 名片的尺寸（rem，1rem = 20 画布单位）
+//   Portrait.FaceUnits(rem) / FacePx(rem) / FaceSizes() → 显示尺寸（画布单位）/ 纹理像素 / 需要预生成的像素尺寸
+//   Portrait.Bind(Image, General, px, color, mood) → 给 UGUI Image 设头像：缓存命中立即显示，否则先用同一人的其它尺寸、
+//                                              后台生成正确尺寸后替换（每帧同步生成预算 SyncBudgetMs）
+//   Portrait.Request(gen, opts, done)        → 后台生成一张，完成后主线程回调（同 key 合并）
 // 公开接口（纯 C#，后台线程可用）
 //   Portrait.Spec(gen) / Svg(gen, opts) / Render(gen, opts) → 外貌参数 / SVG 源码 / Raster
-//   Portrait.Cultures                        → 全部 15 种文化代号
+//   Portrait.Cultures                        → 全部 18 种文化代号（DESIGN-V2 §6 的 15 种 + 第三版 india / africa / moor）
 //   PortraitDataStore.Add(name, JObj)        → 追加 / 覆盖外貌设定（对应 SG.PortraitData.add）
 //
 // 画面约定：视窗 256×256 单位；脸朝画面左侧（四分之三侧面），主光来自左上前方，
@@ -631,7 +637,7 @@ namespace Sanguo
         static readonly string[] BROWNEYE = { "#4a2c1a", "#56351e", "#3c2414", "#4e3420" };
         static readonly string[] LIGHTEYE = { "#3a5a7a", "#4a6a8a", "#5a7a5a", "#6a6a5a", "#4a3a2a", "#3a2a1a" };
         // 插入顺序即 Portrait.Cultures 的顺序（同 JS 的 Object.keys(CULT)）
-        static readonly string[] CULT_ORDER = { "han", "nanman", "wa", "yi", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian" };
+        static readonly string[] CULT_ORDER = { "han", "nanman", "wa", "yi", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian", "india", "africa", "moor" };
         static readonly Dictionary<string, Cult> CULT = new Dictionary<string, Cult>
         {
             { "han", new Cult {
@@ -815,10 +821,59 @@ namespace Sanguo
                 beardsYoung = W("none", 2, "short", 1), beardsAdult = W("long", 2, "full", 2, "short", 1),
                 musts = W("droop", 4, "thick", 1),
                 acc = W("earring", 0.5, "torc", 0.3) } },
+            // 第三版新增文化（回退表见 core.js 的 SG.cultureBase：india → seasia，africa / moor → arab）
+            // india  天竺（百乘、泰米尔三国、师子国；桑奇 / 阿马拉瓦蒂浮雕）：额前大结的缠头、扇形宝冠、宝带；裸上身配帔帛与多褶腰布、
+            //        宝石项链、臂钏、大耳环；武人或着絮甲；泰米尔诸王戴花鬘，师子国王戴僧伽罗式圆冠（PortraitData 逐人指定）。
+            // africa 阿克苏姆与库施（阿克苏姆钱币与石碑、麦罗埃浮雕）：深肤色、短卷发；阿克苏姆王为头巾上的金冠（两侧麦穗）、白麻长袍；
+            //        库施王为贴头小帽 + 双蛇王带与飘带、流苏披肩长袍；“弓之国”的弓手额带插羽，面颊三道疤纹。
+            // moor   毛里人（巴夸特；图拉真柱上的毛里骑兵）：成排的螺旋卷发、短须、连帽斗篷。
+            { "india", new Cult {
+                name = "天竺", skins = new[] { "#c99467", "#bb875a", "#ad7a4e", "#9d6c43", "#8a5c38", "#7a4e2e" }, warSkin = 0.15,
+                hairC = W("#141012", 4, "#221a16", 1), eyeC = BROWNEYE, lid = 0.25, noseBridge = 0.62, noseW = 1.1,
+                noses = W("straight", 3, "aquiline", 1, "broad", 2, "bulb", 0.4),
+                hair = RM("m", W("long", 2, "highbun", 2, "curly", 1), "f", W("highbun", 1)),
+                hat = RM(
+                    "ruler", W("mukuta", 3, "pagri", 2), "warrior", W("pagri", 4, "jewelband", 2, "none", 0.6), "general", W("pagri", 3, "jewelband", 2),
+                    "strategist", W("none", 2, "jewelband", 1, "pagri", 1), "official", W("pagri", 2, "none", 1), "female", W("jewelband", 2, "none", 1),
+                    "_", W("pagri", 3, "jewelband", 1, "none", 1)),
+                outfit = RM("warrior", W("dhoti", 3, "quilted", 2), "general", W("quilted", 2, "dhoti", 2), "ruler", W("dhoti", 3, "quilted", 1), "_", W("dhoti", 3, "quilted", 1), "female", W("dhoti", 1)),
+                cloth = new[] { "#ece4cc", "#e0a838", "#a8322a", "#2c4078", "#c8902a", "#7a2a5a", "#2a6a5a", "#d86a3a" },
+                metal = new[] { "#d4a848", "#c89a3a", "#8a7048" },
+                beardsYoung = W("none", 1), beardsAdult = W("none", 3, "short", 1, "stubble", 1, "goatee", 0.4),
+                musts = W("thick", 3, "curl", 2, "thin", 1),
+                marks = W("tilaka", 0.2), acc = W("bigears", 0.75, "hara", 0.6, "armlets", 0.7) } },
+            { "africa", new Cult {
+                name = "非洲", skins = new[] { "#8c5836", "#7c4c2e", "#6c4026", "#5c3620", "#4e2e1c" }, warSkin = 0.1,
+                hairC = W("#0c0a0a", 1), eyeC = new[] { "#2a1a10", "#3a2416", "#24160e" }, lid = 0.3, noseBridge = 0.5, noseW = 1.18,
+                noses = W("broad", 3, "straight", 2, "flat", 1),
+                hair = RM("m", W("tightcurl", 4, "bald", 0.5), "f", W("tightcurl", 1)),
+                hat = RM(
+                    "ruler", W("kushcrown", 1, "aksumcrown", 1), "warrior", W("featherband", 3, "headband", 1, "none", 2), "female", W("kushcrown", 1, "none", 1),
+                    "strategist", W("none", 2, "headband", 1), "_", W("none", 3, "featherband", 1, "headband", 1)),
+                outfit = RM("warrior", W("shamma", 2, "meroitic", 1, "bare", 1), "ruler", W("meroitic", 1, "shamma", 1), "female", W("meroitic", 1), "_", W("shamma", 2, "meroitic", 1)),
+                cloth = new[] { "#ece6d8", "#e8dcc0", "#a01818", "#d8a030", "#2a7a4a", "#7a2a1a", "#3a3a6a" },
+                metal = new[] { "#d8b050", "#8a7048" },
+                beardsYoung = W("none", 1), beardsAdult = W("none", 3, "short", 2, "goatee", 1),
+                musts = W("none", 2, "thin", 1),
+                acc = W("hoops", 0.4, "goldcollar", 0.45, "armlets", 0.5) } },
+            { "moor", new Cult {
+                name = "毛里", skins = new[] { "#c99466", "#ba875a", "#aa794e", "#9a6b44", "#8a5e3a" }, warSkin = 0.15,
+                hairC = W("#141012", 3, "#221a16", 1), eyeC = BROWNEYE, lid = 0.15, noseBridge = 0.8, noseW = 1.05,
+                noses = W("straight", 2, "aquiline", 2, "broad", 1),
+                hair = RM("m", W("ringlets", 1), "f", W("ringlets", 1)),
+                hat = RM("ruler", W("diadem", 2, "none", 1), "female", W("none", 1), "_", W("none", 4, "headband", 1)),
+                outfit = RM("_", W("burnous", 3, "tunic", 1), "female", W("tunic", 1)),
+                cloth = new[] { "#e8e0cc", "#d0bc98", "#8a5a3a", "#5a4a3a", "#3a5a8a", "#a03a2a" },
+                metal = new[] { "#8a7048", "#7a808c" },
+                beardsYoung = W("none", 1, "short", 1), beardsAdult = W("short", 3, "full", 1, "goatee", 1),
+                musts = W("thin", 2, "thick", 1),
+                acc = W("earring", 0.3) } },
         };
         // 冠帽默认配色（按类型）
         static readonly Dictionary<string, string[]> HAT_COL = new Dictionary<string, string[]>
         {
+            { "pagri", new[] { "#ece6d8", "#f0d8a0", "#e8b040", "#c8382c", "#2a4a8a", "#3a7a5a" } },
+            { "featherband", new[] { "#a02a24", "#d8b050", "#ece6d8", "#2a5a3a" } },
             { "ze", new[] { "#2a2226", "#2a2226", "#7a2424", "#3a2a20", "#2a3040" } },
             { "headband", new[] { "#a02a24", "#2a2a2a", "#c8a030", "#2a4a7a", "#7a2a5a" } },
             { "turban", new[] { "#3a6a3a", "#5a4a3a", "#2a3a5a", "#7a3a2a", "#4a4a4a", "#6a5a2a" } },
@@ -2162,6 +2217,8 @@ namespace Sanguo
             { "mallet", HairMallet }, { "wild", HairWild }, { "mizura", HairMizura }, { "wahair", HairWahair }, { "koreanbraid", HairKoreanbraid },
             { "kunfa", HairKunfa }, { "braids", HairBraids }, { "highbun", HairHighbun }, { "bob", HairBob }, { "short", HairShort },
             { "curly", HairCurly }, { "bushy", HairBushy }, { "spiky", HairSpiky }, { "suebian", HairSuebian }, { "romanf", HairRomanf },
+            // 第三版
+            { "bald", HairBald }, { "tightcurl", HairTightcurl }, { "ringlets", HairRinglets },
         };
         // 汉式束发：梳拢成髻
         static void HairTopknot(Svg S, Geo G, JObj sp, Theme T, HatInfo hatInfo, Tone H)
@@ -2557,6 +2614,9 @@ namespace Sanguo
             { "tallcrown", HatTallcrown }, { "flowerwrap", HatFlowerwrap }, { "pointcap", (S, G, sp, T) => HatPointcap(S, G, sp, T, false) }, { "tallhat", HatTallhat },
             { "diadem", HatDiadem }, { "tiara", HatTiara }, { "phrygian", HatPhrygian }, { "keffiyeh", HatKeffiyeh }, { "arabturban", HatArabturban },
             { "hatra", HatHatra }, { "laurel", HatLaurel }, { "galea", HatGalea }, { "celthelm", HatCelthelm }, { "spangen", HatSpangen }, { "conical", HatConical },
+            // 第三版
+            { "pagri", HatPagri }, { "mukuta", HatMukuta }, { "jewelband", HatJewelband }, { "sinhalacrown", HatSinhalacrown },
+            { "kushcrown", HatKushcrown }, { "aksumcrown", HatAksumcrown }, { "featherband", HatFeatherband },
         };
         // 帻：包住发髻的头巾帽（介帻，后部隆起）
         static HatInfo HatZe(Svg S, Geo G, JObj sp, Theme T, bool flat)
@@ -3572,8 +3632,10 @@ namespace Sanguo
             string type = sp.Outfit.Or("type", "robe");
             OutfitFn fn; if (!OUTFITS.TryGetValue(type, out fn)) fn = OUTFITS["robe"];
             fn(S, G, sp, T, o);
-            if (sp.Outfit.T("cape")) mantle(S, G, sp, T, sp.Outfit.S("cape") == "faction" ? o.color : Js.Str(sp.Outfit.G("cape")));
+            // 自带披挂的第三版衣装（帔帛、白麻披巾、流苏披肩、斗篷）不再叠加君主的势力色披风
+            if (sp.Outfit.T("cape") && !(sp.Outfit.S("cape") == "faction" && DRAPED.Contains(type))) mantle(S, G, sp, T, sp.Outfit.S("cape") == "faction" ? o.color : Js.Str(sp.Outfit.G("cape")));
         }
+        static readonly HashSet<string> DRAPED = new HashSet<string> { "dhoti", "shamma", "meroitic", "burnous" };
         static JObj OutfitWith(JObj sp, JObj outfit) { var o = sp.Clone(); o["outfit"] = outfit; return o; }
         // 交领（右衽）：外襟从近侧颈部斜向远侧下方
         static void crossCollar(Svg S, Geo G, JObj sp, Theme T, string col, string innerCol, double wide = 0)
@@ -3664,6 +3726,8 @@ namespace Sanguo
             { "kantoui", OutKantoui }, { "tanko", OutTanko }, { "yivest", OutYivest }, { "jacket", OutJacket }, { "kaftan", OutKaftan },
             { "fur", OutFur }, { "sash", OutSash }, { "scale", OutScale }, { "tunic", OutTunic }, { "robea", OutRobea },
             { "segmentata", OutSegmentata }, { "musculata", OutMusculata }, { "toga", OutToga }, { "plaid", OutPlaid },
+            // 第三版
+            { "dhoti", OutDhoti }, { "quilted", OutQuilted }, { "shamma", OutShamma }, { "meroitic", OutMeroitic }, { "burnous", OutBurnous },
         };
         // 袍服
         static void OutRobe(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
@@ -4358,6 +4422,42 @@ namespace Sanguo
                     }
                 }
                 if (a == "flower") S.add("hat", flower(G.h3(1.05, 0.55, 1.1)[0], G.h3(1.05, 0.55, 1.1)[1], 0.18 * R, "#f06080"));
+                // 臂钏（天竺、库施）：只在露臂的衣装上画（上臂一道金箍 + 宝石）
+                string ot = sp.Outfit.Or("type", "");
+                if (a == "armlets" && (ot == "bare" || ot == "sash" || ot == "dhoti" || ot == "pelt") && sp.S("sex") != "f")
+                {
+                    var ad = new StringBuilder();
+                    foreach (var xy in new[] { new[] { -3.2 * G.bw, -2.35, 3.62 }, new[] { 2.5, 3.5 * G.bw, 3.42 } })
+                    {
+                        double x0 = xy[0], x1 = xy[1], y = xy[2];
+                        var pts = Pts(G.P(x0, y - 0.04), G.P((x0 + x1) / 2, y + 0.12), G.P(x1, y - 0.03)); var m = pts[1];
+                        ad.Append("<path d=\"" + taper(pts, 0.17 * R) + "\" fill=\"" + GOLD + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>" + "<path d=\"" + spline(shift(pts, 0, -0.05 * R)) + "\" fill=\"none\" stroke=\"#fff0b8\" stroke-width=\"0.9\" opacity=\"0.7\"/>" +
+                            circle(m[0], m[1], 0.08 * R) + " fill=\"#c02a3a\" stroke=\"" + INK + "\" stroke-width=\"0.8\"/>");
+                    }
+                    S.add("body2", "<g clip-path=\"url(#" + S.id("torso") + ")\">" + ad + "</g>");
+                }
+                // 宝石项链（hara）：一串珍珠 + 一串金珠，正中垂坠
+                if (a == "hara")
+                {
+                    List<double[]> s1 = catenary(G.P(-0.7, 1.92), G.P(1.05, 1.62), 0.5 * R, 12), s2 = catenary(G.P(-1.05, 2.05), G.P(1.35, 1.72), 0.95 * R, 14);
+                    foreach (var row in new[] { Tuple.Create(s1, 0.055, "#f4f0e4"), Tuple.Create(s2, 0.068, GOLD) })
+                    {
+                        S.add("body2", "<path d=\"" + spline(row.Item1) + "\" fill=\"none\" stroke=\"" + INK + "\" stroke-width=\"1.6\"/>");
+                        var dd = new StringBuilder();
+                        foreach (var p in Slice(row.Item1, 1, -1)) dd.Append(circle(p[0], p[1], row.Item2 * R) + "/>");
+                        S.add("body2", "<g fill=\"" + row.Item3 + "\" stroke=\"" + INK + "\" stroke-width=\"0.6\">" + dd + "</g>");
+                    }
+                    var m = s2[7];
+                    S.add("body2", "<path d=\"" + leaf(add(m, 0, 0.02 * R), add(m, 0, 0.36 * R), 0.22 * R, 0) + "\" fill=\"" + GOLD + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>" + circle(m[0], m[1] + 0.16 * R, 0.065 * R) + " fill=\"" + sp.Or("gem", "#c02a3a") + "\" stroke=\"" + INK + "\" stroke-width=\"0.6\"/>");
+                }
+                // 花鬘（泰米尔诸王：朱罗戴阿提花、潘地亚戴楝花、哲罗戴棕榈花；颜色 sp.garland）
+                if (a == "garland")
+                {
+                    var pts = catenary(G.P(-1.45, 2.2), G.P(1.75, 1.85), 1.05 * R, 14); string col = sp.Or("garland", "#e8c040");
+                    S.add("body2", "<path d=\"" + spline(pts) + "\" fill=\"none\" stroke=\"#2a5a2a\" stroke-width=\"" + N(0.18 * R) + "\"/>");
+                    var inner = Slice(pts, 1, -1);
+                    for (int i = 0; i < inner.Count; i++) S.add("body2", flower(inner[i][0], inner[i][1], 0.13 * R, i % 2 != 0 ? col : mix(col, "#ffffff", 0.4)));
+                }
             }
         }
         // 面部纹样
@@ -4397,6 +4497,22 @@ namespace Sanguo
                     S.line("face", spline(Pts(G.F(-0.5, 0.3), G.F(-0.75, 0.28))), "#c8302a", 2.2, " opacity=\"0.85\"");
                     S.line("face", spline(Pts(G.F(-0.2, -0.58), G.F(0.05, -0.6))), "#f0ece0", 2.2, " opacity=\"0.9\"");
                 }
+                else if (m == "tilaka")
+                {
+                    // 额前的吉祥痣（朱砂竖纹 + 圆点）
+                    S.line("face", spline(Pts(G.F(-0.1, -0.86), G.F(-0.1, -0.62))), INK, 3.4, " opacity=\"0.35\"");
+                    S.line("face", spline(Pts(G.F(-0.1, -0.86), G.F(-0.1, -0.62))), "#c8281e", 2.2);
+                    S.add("face", circle(G.F(-0.1, -0.52)[0], G.F(-0.1, -0.52)[1], 0.05 * G.R) + " fill=\"#f4e8c8\" stroke=\"#7a1a10\" stroke-width=\"0.6\"/>");
+                }
+                else if (m == "cheekscars")
+                {
+                    // 库施人面颊的三道疤纹（麦罗埃浮雕与王陵壁画）
+                    var d = new StringBuilder();
+                    for (int i = 0; i < 3; i++) d.Append(spline(Pts(G.F(0.22, 0.22 + i * 0.1), G.F(0.48, 0.2 + i * 0.1))));
+                    for (int i = 0; i < 3; i++) d.Append(spline(Pts(G.F(-0.62, 0.22 + i * 0.1), G.F(-0.78, 0.21 + i * 0.1))));
+                    S.line("face", d.ToString(), mix(T.skin.b, "#140804", 0.45), 1.5, " opacity=\"0.75\"");
+                    S.line("face", spline(Pts(G.F(0.22, 0.2), G.F(0.48, 0.18))), T.skin.h, 0.8, " opacity=\"0.45\"");
+                }
                 else if (m == "freckles" && S.o.lod >= 1)
                 {
                     var rr = new Rng(HashStr(sp.S("name") + "fr"));
@@ -4405,6 +4521,342 @@ namespace Sanguo
                     S.add("face", "<g fill=\"" + mix(T.skin.b, "#7a3a1a", 0.45) + "\" opacity=\"0.7\">" + d + "</g>");
                 }
             }
+        }
+
+        // ================================================ 第三版：天竺、非洲、毛里 ==
+        // 发型：bald（光头：龙树、提婆、童受等僧人，笮融）、tightcurl（非洲短卷发）、ringlets（毛里人的成排螺旋卷）
+        static void HairBald(Svg S, Geo G, JObj sp, Theme T, HatInfo hatInfo, Tone H)
+        {
+            double R = G.R;
+            // 剃发后的头皮：发际线以上一层淡淡的发根青色 + 头顶高光；耳朵照常露出
+            var sp0 = sp.Clone(); sp0["hair"] = JObj.Assign(sp.Hair, new JObj { { "recede", 0.0 } });
+            var hl = hairline(G, sp0);
+            var cap = Cat(hl, G.P(1.3, 0.4, 0), G.P(1.5, -2.3, 0), G.P(-1.5, -2.3, 0));
+            string hc = sp.Hair.S("color");
+            string stub = mix(T.skin.b, lum(Js.Or(hc, "#141012")) < 0.4 ? "#3c4a58" : mix(hc, "#808080", 0.5), 0.26);
+            S.headShade.Add("<path d=\"" + spline(cap, true) + "\" fill=\"" + stub + "\" opacity=\"0.55\"/>");
+            if (S.o.lod >= 1)
+            {
+                S.headShade.Add(ellipse(G.hx - 0.28 * R, G.ey - 1.32 * R, 0.46 * R, 0.2 * R, -16) + " fill=\"" + T.skin.h + "\" opacity=\"0.65\"/>");
+                S.headShade.Add(ellipse(G.hx - 0.42 * R, G.ey - 1.36 * R, 0.16 * R, 0.07 * R, -16) + " fill=\"#ffffff\" opacity=\"0.35\"/>");
+            }
+            // 婆罗门的顶髻（sp.hair.tuft）
+            if (sp.Hair.T("tuft") && !hatInfo.coversTop)
+            {
+                var b = G.h3(0.6, 1.25, 1.0);
+                clumps(S, "hair", new List<Item> { It(leaf(b, add(b, 0.5 * R, 0.55 * R), 0.22 * R, 0.25), H.b), It(leaf(b, add(b, 0.3 * R, 0.75 * R), 0.16 * R, -0.1), H.s) }, S.lw * 0.5);
+            }
+        }
+        static void HairTightcurl(Svg S, Geo G, JObj sp, Theme T, HatInfo hatInfo, Tone H)
+        {
+            var hl = Pts(G.P(-0.95, -0.5), G.P(-0.86, -0.78), G.P(-0.6, -0.9, 0.5), G.P(-0.3, -0.93, 0.5), G.P(0.0, -0.9, 0.5), G.P(0.3, -0.82), G.P(0.44, -0.58), G.P(0.47, -0.3), G.P(0.49, -0.05, 0.3), G.P(0.6, -0.05, 0.3), G.P(0.64, 0.3), G.P(0.96, 0.34));
+            hairCap(S, G, sp, T, H, new HairOpt
+            {
+                hairline = hl, vol = 0.05 * sp.Hair.Or("vol", 1), bumps = hatInfo.coversTop ? 0 : 14, strands = false, shine = false, extra = () =>
+                {
+                    if (S.o.lod < 1) return;
+                    var rr = Sub(sp.S("name"), "curl");
+                    var cd = new StringBuilder(); var hd = new StringBuilder();
+                    for (int i = 0; i < 70; i++)
+                    {
+                        double lam = rr.range(-1.1, 1.9), bet = rr.range(0.05, 1.4); var p = G.h3(lam, bet, 1.04); double r0 = rr.range(1.1, 1.8);
+                        string d = "M" + N(p[0] + r0) + "," + N(p[1]) + "a" + N(r0) + "," + N(r0) + " 0 1,0 " + N(-r0) + "," + N(r0);
+                        if (lam < 0.3 && bet > 0.55) hd.Append(d); else cd.Append(d);
+                    }
+                    S.line("hair", cd.ToString(), H.d, 0.9, " opacity=\"0.8\"");
+                    S.line("hair", hd.ToString(), H.h, 1.0, " opacity=\"0.7\"");
+                }
+            });
+        }
+        // 螺旋长卷：中心线左右摆动的细长发绺
+        static string ringletCurl(double[] a, double len, double w)
+        {
+            var pts = new List<double[]>();
+            for (int j = 0; j <= 6; j++) pts.Add(V(a[0] + (j % 2 != 0 ? 0.5 : -0.5) * w * (j != 0 ? 1 : 0), a[1] + j * len / 6));
+            return taper(pts, t => w * (1 - t * 0.45));
+        }
+        static void HairRinglets(Svg S, Geo G, JObj sp, Theme T, HatInfo hatInfo, Tone H)
+        {
+            double R = G.R;
+            HairCurly(S, G, sp, T, hatInfo, H);
+            var back = new List<Item>();
+            for (int i = 0; i < 6; i++) back.Add(It(ringletCurl(G.P(0.62 + i * 0.13, -0.45 + i * 0.1), (0.62 + (i % 2) * 0.2) * R, 0.17 * R), i % 2 != 0 ? H.s : H.b));
+            for (int i = 0; i < 2; i++) back.Add(It(ringletCurl(G.P(-0.98 - i * 0.06, -0.5 + i * 0.12), 0.6 * R, 0.15 * R), H.s));
+            clumps(S, "back", back, S.lw * 0.5);
+            if (hatInfo.coversTop) return;
+            // 额前一排小卷
+            var fd = new StringBuilder(); var hd = new StringBuilder();
+            for (int i = 0; i < 8; i++)
+            {
+                var p = G.P(-0.82 + i * 0.16, -0.88 + Math.Abs(i - 3) * 0.015); double r0 = 0.085 * R;
+                fd.Append(circle(p[0], p[1], r0) + "/>");
+                hd.Append("M" + N(p[0] - r0 * 0.6) + "," + N(p[1] - r0 * 0.2) + "a" + N(r0 * 0.6) + "," + N(r0 * 0.6) + " 0 0,1 " + N(r0 * 0.9) + "," + N(-r0 * 0.3));
+            }
+            S.add("hair", "<g fill=\"" + H.b + "\" stroke=\"" + INK + "\" stroke-width=\"0.9\">" + fd + "</g>");
+            S.line("hair", hd.ToString(), H.h, 1.0, " opacity=\"0.8\"");
+        }
+
+        // 冠帽：pagri（大缠头）mukuta（宝冠）jewelband（宝带）sinhalacrown（僧伽罗圆冠）
+        //       kushcrown（库施小帽 + 双蛇王带）aksumcrown（阿克苏姆金冠）featherband（插羽额带）
+        static void goldStrip(Svg S, Geo G, Theme T, Tone Mt, Strip st, double R)
+        {
+            S.shape("hat", spline(st.pts, true), Mt.b, () =>
+            {
+                S.path("hat", spline(Cat(Slice(st.lo, 9), Rev(Slice(st.hi, 9))), true), Mt.s);
+                if (S.o.lod >= 1) { var dd = new StringBuilder(); foreach (var p in Slice(st.lo, 1, -1)) dd.Append(circle(p[0], p[1] - 0.065 * R, 0.035 * R) + "/>"); S.add("hat", "<g fill=\"#f4ecd0\">" + dd + "</g>"); }
+            }, S.lw * 0.8);
+            bandShadow(S, G, st.lo, T, 0.1);
+        }
+        static HatInfo HatPagri(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            string col = sp.Hat.Or("color", "#ece6d8");
+            var C = clothT(col);
+            HatTurban(S, G, HatOnly(sp, new JObj { { "color", col }, { "noTails", true }, { "big", true } }), T);
+            // 额前上方的大布结（桑奇、巴尔胡特、阿马拉瓦蒂浮雕的缠头）
+            var k = G.h3(-0.1, 1.08, 1.27); double kr = 0.44 * R;
+            string kd = spline(Pts(V(k[0] - kr, k[1] + 0.35 * kr), V(k[0] - 0.92 * kr, k[1] - 0.6 * kr), V(k[0] - 0.1 * kr, k[1] - 1.08 * kr), V(k[0] + 0.86 * kr, k[1] - 0.66 * kr), V(k[0] + 0.95 * kr, k[1] + 0.35 * kr), V(k[0], k[1] + 0.62 * kr)), true);
+            S.shape("hat", kd, C.b, () =>
+            {
+                S.path("hat", spline(Pts(V(k[0] + 0.1 * kr, k[1] - 1.25 * kr), V(k[0] + 1.25 * kr, k[1] - 0.4 * kr), V(k[0] + 1.05 * kr, k[1] + 0.85 * kr), V(k[0] + 0.25 * kr, k[1] + 0.62 * kr)), true), C.s);
+                if (S.o.lod >= 1) S.line("hat", spline(Pts(V(k[0] - 0.72 * kr, k[1] + 0.12 * kr), V(k[0] - 0.2 * kr, k[1] - 0.56 * kr), V(k[0] + 0.62 * kr, k[1] - 0.46 * kr))) + spline(Pts(V(k[0] - 0.56 * kr, k[1] + 0.48 * kr), V(k[0] + 0.1 * kr, k[1] - 0.04 * kr), V(k[0] + 0.82 * kr, k[1] + 0.06 * kr))), C.d, 1.2, " opacity=\"0.6\"");
+                S.add("hat", ellipse(k[0] - 0.38 * kr, k[1] - 0.48 * kr, 0.32 * kr, 0.16 * kr, -25) + " fill=\"" + C.h + "\" opacity=\"0.6\"/>");
+            }, S.lw);
+            // 结下的金饰牌与宝石
+            var g = G.h3(-0.08, 0.6, 1.24);
+            S.add("hat", "<path d=\"" + spline(Pts(V(g[0] - 0.24 * R, g[1]), V(g[0], g[1] - 0.25 * R), V(g[0] + 0.24 * R, g[1]), V(g[0], g[1] + 0.22 * R)), true) + "\" fill=\"" + GOLD + "\" stroke=\"" + INK + "\" stroke-width=\"1.2\"/>");
+            S.add("hat", circle(g[0], g[1], 0.085 * R) + " fill=\"" + sp.Hat.Or("gem", "#c02a3a") + "\" stroke=\"" + INK + "\" stroke-width=\"0.9\"/>");
+            return new HatInfo(true);
+        }
+        static HatInfo HatMukuta(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            var Mt = metalT(sp.Hat.Or("color", "#e0b040"));
+            // 布缠头打底，前面竖起扇形的三片金宝冠，脑后垂宝带
+            HatTurban(S, G, HatOnly(sp, new JObj { { "color", sp.Hat.Or("color2", "#a8302a") }, { "noTails", true }, { "big", true } }), T);
+            goldStrip(S, G, T, Mt, bandStrip(G, 0.18, 0.34, 0.36, 1.21), R);
+            var c = G.h3(-0.1, 0.72, 1.25);
+            foreach (var leafSpec in new[] { new[] { -0.58, 0.8, 0.3 }, new[] { 0.58, 0.8, 0.3 }, new[] { 0, 1.35, 0.42 } })
+            {
+                double dx = leafSpec[0], h = leafSpec[1], w = leafSpec[2];
+                double[] b = V(c[0] + dx * R, c[1] - 0.05 * R), top = V(b[0] + dx * 0.3 * R, b[1] - h * R);
+                string d = spline(Pts(V(b[0] - w * R, b[1], 0.3), V(b[0] - w * 0.8 * R, b[1] - h * 0.55 * R), V(top[0], top[1], 0.2), V(b[0] + w * 0.8 * R, b[1] - h * 0.55 * R), V(b[0] + w * R, b[1], 0.3)), true);
+                S.shape("hat", d, Mt.b, () => S.path("hat", spline(Pts(V(top[0] + 0.05 * R, top[1] - 0.2 * R), V(b[0] + w * 1.4 * R, b[1] - h * 0.5 * R), V(b[0] + w * 1.2 * R, b[1] + 0.2 * R), V(b[0] + 0.12 * R, b[1] + 0.2 * R)), true), Mt.s, 0, " opacity=\"0.75\""), S.lw * 0.8);
+                if (S.o.lod >= 1) S.line("hat", spline(Pts(V(b[0] - w * 0.55 * R, b[1] - 0.06 * R), V(top[0], top[1] + h * 0.3 * R), V(b[0] + w * 0.55 * R, b[1] - 0.06 * R))), Mt.h, 1.1, " opacity=\"0.7\"");
+                S.add("hat", circle(b[0] + dx * 0.08 * R, b[1] - h * 0.4 * R, w * 0.3 * R) + " fill=\"" + (dx != 0 ? "#2a8a6a" : sp.Hat.Or("gem", "#c02a3a")) + "\" stroke=\"" + INK + "\" stroke-width=\"0.9\"/>");
+            }
+            ribbons(S, G, G.h3(1.85, 0.35, 1.2), sp.Hat.Or("ribbon", "#e8c860"), 1.0);
+            return new HatInfo(true);
+        }
+        static HatInfo HatJewelband(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            var Mt = metalT(sp.Hat.Or("color", "#e0b040"));
+            goldStrip(S, G, T, Mt, bandStrip(G, 0.12, 0.27, 0.34, 1.07), R);
+            // 正中的圆形宝饰与三道垂珠
+            var g = G.h3(-0.08, 0.5, 1.09);
+            S.add("hat", circle(g[0], g[1], 0.2 * R) + " fill=\"" + Mt.b + "\" stroke=\"" + INK + "\" stroke-width=\"1.1\"/>" + circle(g[0], g[1], 0.11 * R) + " fill=\"" + sp.Hat.Or("gem", "#c02a3a") + "\" stroke=\"" + INK + "\" stroke-width=\"0.8\"/>");
+            if (S.o.lod >= 1) foreach (double dx in new[] { -0.13, 0, 0.13 }) S.add("hat", "<path d=\"M" + N(g[0] + dx * R) + "," + N(g[1] + 0.18 * R) + "l0," + N(0.15 * R) + "\" stroke=\"" + Mt.b + "\" stroke-width=\"1\"/>" + circle(g[0] + dx * R, g[1] + 0.36 * R, 0.045 * R) + " fill=\"#f4f0e4\" stroke=\"#1a1012\" stroke-width=\"0.6\"/>");
+            ribbons(S, G, G.h3(1.8, 0.3, 1.07), sp.Hat.Or("ribbon", "#e8c860"), 0.8);
+            return new HatInfo(false);
+        }
+        static HatInfo HatSinhalacrown(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            var Mt = metalT(sp.Hat.Or("color", "#e0b040"));
+            // 僧伽罗式圆冠：贴头的钟形金冠，层层横箍，顶上尖钮
+            var sh = capShape(G, 0.1, 0.34, 1.12, 1.42);
+            S.shape("hat", spline(sh.cap, true), Mt.b, () =>
+            {
+                capShade(S, G, Mt);
+                foreach (double b0 in new[] { 0.55, 0.92, 1.22 })
+                {
+                    var pts = new List<double[]>();
+                    for (int j = 0; j <= 10; j++) { double lam = G.lamFar + (G.lamNear - G.lamFar) * j / 10; pts.Add(G.h3(lam, b0 + 0.12 * Math.Cos(lam), 1.14 + (b0 - 0.5) * 0.25)); }
+                    S.line("hat", spline(pts), INK, 3.0);
+                    S.line("hat", spline(pts), Mt.h, 1.3);
+                }
+                if (S.o.lod >= 1)
+                {
+                    var dd = new StringBuilder();
+                    for (int j = 1; j < 10; j++) { double lam = G.lamFar + (G.lamNear - G.lamFar) * j / 10; var p = G.h3(lam, 0.73 + 0.12 * Math.Cos(lam), 1.2); dd.Append(circle(p[0], p[1], 0.06 * R) + "/>"); }
+                    S.add("hat", "<g fill=\"#c02a3a\" stroke=\"" + INK + "\" stroke-width=\"0.6\">" + dd + "</g>");
+                }
+            }, S.lw);
+            int ti = 0;
+            for (int i = 1; i < sh.cap.Count; i++) if (sh.cap[i][1] < sh.cap[ti][1]) ti = i;
+            var top = sh.cap[ti];
+            S.add("hat", "<path d=\"" + spline(Pts(V(top[0] - 0.12 * R, top[1] + 0.12 * R, 0), V(top[0] - 0.06 * R, top[1] - 0.25 * R), V(top[0], top[1] - 0.6 * R, 0), V(top[0] + 0.06 * R, top[1] - 0.25 * R), V(top[0] + 0.12 * R, top[1] + 0.12 * R, 0)), true) + "\" fill=\"" + Mt.b + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>");
+            bandShadow(S, G, sh.bnd, T, 0.14);
+            return new HatInfo(true);
+        }
+        static HatInfo HatKushcrown(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            var capC = clothT(sp.Hat.Or("color2", "#2a2422"));
+            var Mt = metalT(sp.Hat.Or("color", "#d8b050"));
+            // 麦罗埃浮雕中王与王后的贴头小帽，金王带，额前双蛇（uraeus），脑后两条长飘带
+            ribbons(S, G, G.h3(1.85, 0.3, 1.08), sp.Hat.Or("ribbon", "#e8e0d0"), 1.3);
+            var sh = capShape(G, 0.14, 0.3, 1.06, 1.04);
+            S.shape("hat", spline(sh.cap, true), capC.b, () => capShade(S, G, capC), S.lw);
+            goldStrip(S, G, T, Mt, bandStrip(G, 0.12, 0.25, 0.3, 1.08), R);
+            foreach (var lk in new[] { new[] { 0.14, 0.85 }, new[] { -0.24, 1 } })
+            {
+                double lam = lk[0], k = lk[1];
+                var b = G.h3(lam, 0.42, 1.1);
+                string hood = spline(Pts(V(b[0] - 0.08 * R * k, b[1], 0.3), V(b[0] - 0.15 * R * k, b[1] - 0.34 * R * k), V(b[0] - 0.02 * R * k, b[1] - 0.58 * R * k), V(b[0] + 0.12 * R * k, b[1] - 0.38 * R * k), V(b[0] + 0.08 * R * k, b[1], 0.3)), true);
+                S.shape("hat", hood, Mt.b, () => S.path("hat", spline(Pts(V(b[0] + 0.02 * R * k, b[1] - 0.6 * R * k), V(b[0] + 0.3 * R * k, b[1] - 0.3 * R * k), V(b[0] + 0.1 * R * k, b[1] + 0.1 * R * k)), true), Mt.s, 0, " opacity=\"0.7\""), S.lw * 0.7);
+                S.add("hat", circle(b[0] - 0.03 * R * k, b[1] - 0.44 * R * k, 0.04 * R) + " fill=\"#a01818\"/>");
+            }
+            return new HatInfo(true);
+        }
+        static HatInfo HatAksumcrown(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            var Mt = metalT(sp.Hat.Or("color", "#e0b440"));
+            // 阿克苏姆钱币上的王冠：头巾上戴一圈立起的尖叶形金片，两侧各一束麦穗
+            HatTurban(S, G, HatOnly(sp, new JObj { { "color", sp.Hat.Or("color2", "#ece6d8") }, { "noTails", true } }), T);
+            var st = bandStrip(G, 0.3, 0.44, 0.34, 1.15);
+            foreach (int i in new[] { 2, 5, 8, 11, 14 })
+            {
+                var p = st.hi[i]; double h = (i == 8 ? 0.62 : 0.48) * R, w = 0.15 * R;
+                S.add("hat", "<path d=\"" + leaf(add(p, 0, 0.04 * R), add(p, 0.03 * R, -h), w * 2, 0) + "\" fill=\"" + Mt.b + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>");
+                if (S.o.lod >= 1) S.line("hat", "M" + ps(add(p, 0, -0.04 * R)) + "L" + ps(add(p, 0.02 * R, -h * 0.75)), Mt.s, 1, " opacity=\"0.8\"");
+            }
+            goldStrip(S, G, T, Mt, st, R);
+            foreach (double lam in new[] { -0.95, 1.3 })
+            {
+                var b = G.h3(lam, 0.42, 1.16); double dir = lam < 0 ? -1 : 1;
+                var pts = Pts(b, add(b, dir * 0.12 * R, -0.5 * R), add(b, dir * 0.3 * R, -1.0 * R));
+                S.line("hat", spline(pts), INK, 2.6);
+                S.line("hat", spline(pts), Mt.b, 1.4);
+                var gd = new StringBuilder();
+                for (int j = 1; j <= 5; j++) { var q = lp(pts[1], pts[2], j / 5.0 - 0.2); gd.Append(ellipse(q[0] - 0.06 * R, q[1], 0.06 * R, 0.03 * R, -40 * dir) + "/>" + ellipse(q[0] + 0.06 * R, q[1], 0.06 * R, 0.03 * R, 40 * dir) + "/>"); }
+                S.add("hat", "<g fill=\"" + Mt.b + "\" stroke=\"" + INK + "\" stroke-width=\"0.6\">" + gd + "</g>");
+            }
+            return new HatInfo(true);
+        }
+        static HatInfo HatFeatherband(Svg S, Geo G, JObj sp, Theme T)
+        {
+            double R = G.R;
+            HatHeadband(S, G, HatOnly(sp, new JObj { { "color", sp.Hat.Or("color", "#a02a24") } }), T);
+            var b = G.h3(1.15, 0.6, 1.08);
+            feather(S, "hat", Pts(b, add(b, 0.12 * R, -0.6 * R), add(b, 0.08 * R, -1.2 * R), add(b, 0.24 * R, -1.7 * R)), 0.28 * R, sp.Hat.Or("feather", "#f0ece0"), "#c8c0b0");
+            return new HatInfo(false);
+        }
+
+        // 衣装：dhoti（帔帛 + 腰布，裸上身）quilted（絮甲）shamma（阿克苏姆白麻袍）meroitic（库施流苏披肩王袍）burnous（毛里连帽斗篷）
+        static void OutDhoti(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
+        {
+            double R = G.R, bw = G.bw;
+            var C = clothT(sp.Outfit.Or("color", "#ece4cc"));
+            string tr = sp.Outfit.Or("color2", "#c8902a");
+            bool fem = sp.S("sex") == "f";
+            if (fem) OutTunic(S, G, OutfitWith(sp, JObj.Assign(sp.Outfit, new JObj { { "color", sp.Outfit.Or("color2", "#a8322a") }, { "color2", GOLD } })), T, null);
+            else bareTorso(S, G, sp, T);
+            // 圣线（婆罗门诗人、学者）：远侧肩斜到近侧腰
+            string role = sp.S("role");
+            if (!fem && (role == "strategist" || role == "official" || sp.Outfit.T("thread")))
+            {
+                string th = spline(Pts(G.P(-1.55, 2.25), G.P(-0.4, 3.0), G.P(0.8, 3.8), G.P(1.65, 4.5)));
+                S.add("body2", "<path d=\"" + th + "\" fill=\"none\" stroke=\"" + INK + "\" stroke-width=\"2.8\"/><path d=\"" + th + "\" fill=\"none\" stroke=\"#f4f0e4\" stroke-width=\"1.5\"/>");
+            }
+            // 帔帛（uttariya）：搭在两肩，在胸前垂成弧形；远侧一端顺上臂垂下
+            var far = Pts(G.P(-2.8 * bw, 2.5), G.P(-2.3, 2.6), G.P(-2.45, 3.6), G.P(-2.62, 4.5, 0), G.P(-3.18 * bw, 4.5, 0), G.P(-3.08 * bw, 3.3));
+            S.shape("body2", spline(far, true), C.b, () => S.path("body2", spline(Pts(G.P(-2.5, 2.7), G.P(-2.3, 3.6), G.P(-2.45, 4.6), G.P(-2.0, 4.6, 0), G.P(-2.0, 2.6, 0)), true), C.s, 0, " opacity=\"0.8\""), S.lw * 0.9);
+            var top = Pts(G.P(-2.55 * bw, 2.5), G.P(-1.6, 2.72), G.P(-0.5, 3.08), G.P(0.6, 3.1), G.P(1.6, 2.68), G.P(2.6 * bw, 2.3));
+            S.shape("body2", taper(top, t => (0.3 + 0.2 * Math.Sin(Math.PI * t)) * R), C.b, () =>
+            {
+                S.path("body2", spline(Pts(G.P(0.5, 3.0), G.P(2.9, 2.0), G.P(3.0, 3.1), G.P(0.6, 4.3)), true), C.s);
+                if (S.o.lod >= 1) S.line("body2", spline(shift(top, 0, 0.1 * R)) + spline(Slice(shift(top, 0, -0.07 * R), 1, 5)), C.d, 1.2, " opacity=\"0.55\"");
+            }, S.lw * 0.9);
+            S.line("body2", spline(Slice(shift(top, 0, 0.34 * R), 1, 5)), tr, 2.0, " opacity=\"0.95\"");
+        }
+        static void OutQuilted(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
+        {
+            double R = G.R;
+            var C = clothT(sp.Outfit.Or("color", "#e8dcc0"));
+            string tr = sp.Outfit.Or("color2", "#a8322a");
+            torsoBase(S, G, sp, T, C.b, C.s, () =>
+            {
+                if (S.o.lod < 1) return;
+                // 菱形绗缝线 + 每格鼓起的絮棉（淡高光）
+                var qd = new StringBuilder(); var bd = new StringBuilder();
+                for (int i = -7; i <= 8; i++)
+                {
+                    qd.Append("M" + N(G.hx + (i * 0.55 - 1.6) * R) + "," + N(G.ey + 1.3 * R) + "l" + N(2.6 * R) + "," + N(3.4 * R));
+                    qd.Append("M" + N(G.hx + (i * 0.55 + 1.6) * R) + "," + N(G.ey + 1.3 * R) + "l" + N(-2.6 * R) + "," + N(3.4 * R));
+                }
+                for (int i = -6; i <= 6; i++) for (int j = 0; j < 6; j++) { double x = G.hx + (i * 0.55 + (j % 2) * 0.275) * R, y = G.ey + (1.75 + j * 0.36) * R; bd.Append(ellipse(x - 0.06 * R, y - 0.05 * R, 0.1 * R, 0.06 * R) + "/>"); }
+                S.add("body", "<g fill=\"" + C.h + "\" opacity=\"0.35\">" + bd + "</g>");
+                S.line("body", qd.ToString(), C.d, 1.1, " opacity=\"0.5\"");
+            });
+            var nl = Pts(G.P(-0.55 * G.nw, 1.7), G.P(-0.15, 2.05), G.P(0.35, 2.08), G.P(0.95 * G.nw, 1.45));
+            S.add("body2", "<path d=\"" + taper(nl, 0.22 * R) + "\" fill=\"" + tr + "\" stroke=\"" + INK + "\" stroke-width=\"" + N(S.lw * 0.75) + "\"/>");
+            S.add("body2", "<path d=\"" + taper(Pts(G.P(0.12, 2.05), G.P(0.02, 3.2), G.P(-0.15, 4.5)), 0.16 * R) + "\" fill=\"" + tr + "\" stroke=\"" + INK + "\" stroke-width=\"" + N(S.lw * 0.7) + "\"/>");
+            // 斜挎的皮剑带与金扣
+            S.add("body2", "<path d=\"" + taper(Pts(G.P(2.35, 2.3), G.P(1.0, 3.1), G.P(-0.6, 3.9), G.P(-1.95, 4.5)), 0.17 * R) + "\" fill=\"#6a4428\" stroke=\"" + INK + "\" stroke-width=\"" + N(S.lw * 0.7) + "\"/>");
+            var bk = G.P(0.2, 3.46);
+            S.add("body2", circle(bk[0], bk[1], 0.11 * R) + " fill=\"" + GOLD + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>");
+        }
+        static readonly System.Text.RegularExpressions.Regex PlainLinen = new System.Text.RegularExpressions.Regex("^#e[0-9a-f]e[0-9a-f]d[0-9a-f]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        static void OutShamma(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
+        {
+            double R = G.R;
+            var C = clothT(sp.Outfit.Or("toga", "#ece6d8"));
+            string oc = sp.Outfit.S("color");
+            // 彩边：衣色本身是白麻色（#eXeXdX）时改用 color2
+            string border = !string.IsNullOrEmpty(oc) && !PlainLinen.IsMatch(oc) ? oc : sp.Outfit.Or("color2", "#a01818");
+            torsoBase(S, G, sp, T, C.b, C.s, () =>
+            {
+                if (S.o.lod >= 1) S.line("body", spline(Pts(G.P(1.9, 2.8), G.P(2.05, 3.5), G.P(2.0, 4.4))), C.d, 1.3, " opacity=\"0.5\"");
+            });
+            // 白麻披巾：从近侧腋下绕过胸前搭上远侧肩，彩边 + 金线
+            var drape = Pts(G.P(-0.6 * G.nw, 1.72), G.P(-1.5, 2.1), G.P(-2.5, 2.6), G.P(-3.0, 3.2), G.P(-3.2, 4.5, 0), G.P(-0.4, 4.5, 0), G.P(0.9, 3.5), G.P(1.95, 2.6), G.P(0.6, 2.7));
+            S.shape("body2", spline(drape, true), C.b, () =>
+            {
+                var fd = new StringBuilder();
+                for (int i = 0; i < 5; i++) fd.Append(spline(Pts(G.P(-1.7 + i * 0.42, 2.35 + i * 0.05), G.P(-1.0 + i * 0.42, 3.25), G.P(-0.75 + i * 0.36, 4.4))));
+                S.line("body2", fd.ToString(), C.d, 1.4, " opacity=\"0.55\"");
+                S.path("body2", spline(Pts(G.P(-0.1, 2.9), G.P(1.3, 2.4), G.P(0.9, 4.6), G.P(-0.3, 4.6)), true), C.s, 0, " opacity=\"0.6\"");
+            }, S.lw);
+            var edge = Pts(G.P(1.95, 2.6), G.P(0.9, 3.5), G.P(-0.4, 4.5));
+            S.add("body2", "<path d=\"" + taper(edge, 0.22 * R) + "\" fill=\"" + border + "\" stroke=\"" + INK + "\" stroke-width=\"" + N(S.lw * 0.7) + "\"/>");
+            S.add("body2", "<path d=\"" + spline(shift(edge, 0.1 * R, -0.04 * R)) + "\" fill=\"none\" stroke=\"" + GOLD + "\" stroke-width=\"1.5\"/>");
+        }
+        static void OutMeroitic(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
+        {
+            double R = G.R, bw = G.bw;
+            OutTunic(S, G, OutfitWith(sp, JObj.Assign(sp.Outfit, new JObj { { "color", sp.Outfit.Or("toga", "#ece6d8") }, { "color2", GOLD } })), T, null);
+            // 麦罗埃浮雕的王袍：斜披的流苏披肩（近侧肩 → 远侧腰）+ 搭在远侧肩上的流苏绳
+            var sc = clothT(sp.Outfit.Or("color", "#a01818"));
+            var sh = Pts(G.P(2.62 * bw, 2.3), G.P(1.6, 2.08), G.P(-0.6, 3.4), G.P(-2.0, 4.5, 0), G.P(-0.5, 4.5, 0), G.P(0.6, 3.8), G.P(2.95 * bw, 3.0));
+            S.shape("body2", spline(sh, true), sc.b, () =>
+            {
+                S.path("body2", spline(Pts(G.P(1.0, 2.6), G.P(3.2, 2.4), G.P(3.2, 3.4), G.P(0.8, 3.9)), true), sc.s);
+                if (S.o.lod >= 1) S.line("body2", spline(Pts(G.P(2.4, 2.4), G.P(0.4, 3.3), G.P(-1.2, 4.4))), GOLD, 1.4, " opacity=\"0.85\"");
+            }, S.lw);
+            if (S.o.lod >= 1)
+            {
+                var fd = new StringBuilder();
+                foreach (var p in Slice(resample(Pts(G.P(2.95 * bw, 3.0), G.P(0.6, 3.8), G.P(-0.5, 4.5)), 12), 0, -1)) fd.Append("M" + ps(p) + "l" + N(-0.03 * R) + "," + N(0.2 * R));
+                S.line("body2", fd.ToString(), GOLD, 1.6);
+            }
+            var cord = Pts(G.P(-2.4 * bw, 2.5), G.P(-1.6, 2.9), G.P(-1.1, 3.7), G.P(-1.0, 4.3));
+            S.add("body2", "<path d=\"" + spline(cord) + "\" fill=\"none\" stroke=\"" + INK + "\" stroke-width=\"3\"/><path d=\"" + spline(cord) + "\" fill=\"none\" stroke=\"" + GOLD + "\" stroke-width=\"1.6\"/>");
+            var tl = cord[3];
+            S.add("body2", "<path d=\"" + leaf(tl, add(tl, 0.02 * R, 0.4 * R), 0.2 * R, 0) + "\" fill=\"" + sc.b + "\" stroke=\"" + INK + "\" stroke-width=\"1\"/>");
+        }
+        static void OutBurnous(Svg S, Geo G, JObj sp, Theme T, PortraitOpts o)
+        {
+            string col = sp.Outfit.Or("color", "#e8e0cc");
+            var C = clothT(col);
+            // 兜帽垂在脑后
+            var hood = Pts(G.P(0.55, 1.35), G.P(1.2, 0.55), G.P(1.5, -0.35), G.P(1.42, -0.95), G.P(1.05, -1.25), G.P(1.95, -0.7), G.P(2.25, 0.5), G.P(2.05, 1.6), G.P(1.2, 2.0));
+            S.shape("back", spline(hood, true), C.s, () => S.path("back", spline(Pts(G.P(1.3, -0.9), G.P(2.0, -0.5), G.P(2.2, 0.6), G.P(1.6, 0.4)), true), C.d, 0, " opacity=\"0.6\""), S.lw);
+            string c2 = sp.Outfit.S("color2");
+            OutTunic(S, G, OutfitWith(sp, JObj.Assign(sp.Outfit, new JObj { { "color", !string.IsNullOrEmpty(c2) && c2 != col ? c2 : "#c8b48c" }, { "color2", mix(col, "#000000", 0.3) } })), T, null);
+            if (!sp.Outfit.T("cape") || sp.Outfit.S("cape") == "faction") mantle(S, G, sp, T, col);
         }
 
         // ======================================================== 主装配 ==
@@ -4757,6 +5209,27 @@ namespace Sanguo
 
         // ======================================================== 缓存与栅格化 ==
         public static string KeyOf(JObj sp, PortraitOpts o) { return sp.S("key") + "|" + o.px + "|" + o.color + "|" + (o.frame ? 1 : 0) + (o.flip ? 1 : 0) + "|" + o.mood; }
+        // 替身用的“同一张脸”：键去掉像素段与表情段，生年段去掉“@年份”（key = 姓名|文化|武|智|政|生年@年份|性别|px|颜色|边框镜像|表情，
+        // 见 KeyOf / SpecKey）。同一人同配色 / 边框 / 镜像即可互为替身：换了表情、尺寸，或是去年的脸（带出生年的人每年换键）
+        internal static void SplitKey(string key, out string face, out int px, out string mood, out string year)
+        {
+            var parts = key.Split('|');
+            px = 0; mood = ""; year = "";
+            if (parts.Length < 6) { face = key; return; }
+            int n = parts.Length, iPx = n - 4, iMood = n - 1, iBorn = n - 6;
+            int.TryParse(parts[iPx], NumberStyles.Integer, CultureInfo.InvariantCulture, out px);
+            mood = parts[iMood];
+            int at = parts[iBorn].IndexOf('@');
+            if (at >= 0) { year = parts[iBorn].Substring(at + 1); parts[iBorn] = parts[iBorn].Substring(0, at); }
+            var sb = new System.Text.StringBuilder(key.Length);
+            for (int i = 0; i < n; i++)
+            {
+                if (i == iPx || i == iMood) continue;
+                if (sb.Length > 0) sb.Append('|');
+                sb.Append(parts[i]);
+            }
+            face = sb.ToString();
+        }
         sealed class Chrome { public Raster bg, frame; public int w; }
         static readonly Dictionary<string, Chrome> chromeCache = new Dictionary<string, Chrome>();
         static readonly List<string> chromeOrder = new List<string>();
@@ -4876,19 +5349,28 @@ namespace Sanguo
         // 无 Unity 线程（WebGL）时在主线程按时间片栅格化
         public static bool? UseThreadsOverride;
         static bool UseThreads { get { return UseThreadsOverride ?? Application.platform != RuntimePlatform.WebGLPlayer; } }
-        // 纹理缓存上限（LRU）：小图（≤ 128px）按张数，不低于 JS 的 1500，并保证装得下整局预生成（在世武将 × 2 种尺寸
-        // + 君主图）；大图（交锋 / 单挑立绘，可到 512px ≈ 1MB）另有张数与字节预算
+        // 纹理缓存上限（LRU）：小图按张数，不低于 JS 的 1500，并保证装得下整局预生成（在世武将 × 2 种尺寸
+        // + 君主图）与第三版按需生成的行内小头像、名片（共 4 种尺寸，见 FaceRem）；大图（交锋 / 单挑立绘，可到 512px ≈ 1MB）
+        // 另有张数与字节预算。
+        // “小图”= 边长不超过 128px 与当前对话说话人尺寸（FacePx(FaceRem.Say)，最大的预生成尺寸）中较大者：
+        // 画布缩放 > 1.375（2560×1440 等）时说话人头像超过 128px，仍须算小图，否则整局预生成会挤进 48 张的大图缓存、随生成随逐出
         public const int TextureCacheMin = 1500;
         public const int LargeCacheMax = 48;
         public const long LargeCacheBytes = 48L << 20;
-        const int LargePx = 128 * 128;
+        public const int SmallPxMin = 128;
+        static int LargeLimitPx()
+        {
+            int lim = SmallPxMin;
+            try { lim = Math.Max(SmallPxMin, FacePx(FaceRem.Say)); } catch (Exception) { /* 无屏幕信息时按 128 */ }
+            return lim * lim;
+        }
         public static int TextureCacheMax
         {
             get
             {
                 var gs = GameState.Current;
                 int n = gs != null && gs.generals != null ? gs.generals.Count : 0, f = gs != null && gs.factions != null ? gs.factions.Count : 0;
-                return Math.Max(TextureCacheMin, 2 * n + 3 * f + 200);
+                return Math.Max(TextureCacheMin, 4 * n + 3 * f + 200);
             }
         }
 
@@ -4914,7 +5396,8 @@ namespace Sanguo
         }
 
         // 缓存项：每个 key 一个链表结点（命中时 O(1) 挪到队尾）
-        sealed class TexEntry { public string key; public Texture2D tex; public long bytes; public bool large; public LinkedListNode<TexEntry> node; }
+        // face / px / mood / year：由 key 拆出（见 SplitKey），供 StandIn 找同一张脸的其它尺寸、表情、年份
+        sealed class TexEntry { public string key; public Texture2D tex; public long bytes; public bool large; public LinkedListNode<TexEntry> node; public string face, mood, year; public int px; }
         static readonly Dictionary<string, TexEntry> texCache = new Dictionary<string, TexEntry>();
         static readonly Dictionary<Texture2D, TexEntry> texEntry = new Dictionary<Texture2D, TexEntry>();
         static readonly LinkedList<TexEntry> smallOrder = new LinkedList<TexEntry>(), largeOrder = new LinkedList<TexEntry>();
@@ -4937,9 +5420,10 @@ namespace Sanguo
                 if (old.tex == t) { Touch(old); return; }
                 Drop(old);
             }
-            var e = new TexEntry { key = key, tex = t, bytes = (long)t.width * t.height * 4, large = t.width * t.height > LargePx };
+            var e = new TexEntry { key = key, tex = t, bytes = (long)t.width * t.height * 4, large = t.width * t.height > LargeLimitPx() };
             e.node = (e.large ? largeOrder : smallOrder).AddLast(e);
             texCache[key] = e; texEntry[t] = e;
+            IndexFace(e, true);
             if (e.large) largeBytes += e.bytes;
             int cap = TextureCacheMax;
             while (smallOrder.Count > cap) Drop(smallOrder.First.Value);
@@ -4952,6 +5436,7 @@ namespace Sanguo
             if (e.node.List != null) e.node.List.Remove(e.node);
             if (e.large) largeBytes -= e.bytes;
             texCache.Remove(e.key);
+            IndexFace(e, false);
             if (e.tex != null) { texEntry.Remove(e.tex); spriteCache.Remove(e.tex); }
             retiredBytes += e.bytes; retiredCount++;
         }
@@ -5109,6 +5594,212 @@ namespace Sanguo
                 if (finished < todo.Count) yield return null;
             }
         }
+
+        // ======================================================== 第三版：头像无处不在 ==
+        // 非战斗阶段所有提到武将的地方都显示头像（DESIGN-V3 §5；网页版 ui.js 的 UI.FACE_REM / facePx / faceSizes）。
+        // 尺寸以 rem 计：网页版 1rem = 20 参考像素（ui.js 的 rem()），Unity 版 1 参考像素 = 1 画布单位（UIKit 的 1600×900 画布），
+        // 所以 1rem = 20 画布单位；纹理边长 = 画布单位 × 画布缩放，取 8 的倍数（UIKit.PortraitPx，与 UIKit.PortraitImg 同一换算）。
+        public static class FaceRem
+        {
+            public const float Item = 2.5f;    // 列表行（choose / chooseMany 的行首头像、城池面板武将行）
+            public const float Say = 4.8f;     // 对话说话人
+            public const float Inline = 1.9f;  // 文字里的行内小头像（消息、记录、急报的随行武将）
+            public const float Card = 4.4f;    // 头像名片（俘虏处置、登用确认、学习必杀）
+        }
+        // rem → 画布单位（显示尺寸）
+        public static float FaceUnits(float rem) { return rem * 20f; }
+        // rem → 纹理像素边长（同 UI.facePx 再乘设备像素比）
+        public static int FacePx(float rem) { return UIKit.PortraitPx(FaceUnits(rem)); }
+        // 需要预生成的头像尺寸（列表行 / 城池面板、对话说话人；同 UI.faceSizes）。行内小头像与名片按需生成
+        public static int[] FaceSizes() { return new[] { FacePx(FaceRem.Item), FacePx(FaceRem.Say) }; }
+
+        // 本帧已同步栅格化的耗时；超过 SyncBudgetMs 后，Bind 改为后台生成（先显示同一人的其它尺寸，或先隐藏）
+        public static float SyncBudgetMs = 6f;
+        static int syncFrame = -1; static float syncSpent;
+        static bool TakeSyncBudget()
+        {
+            if (syncFrame != Time.frameCount) { syncFrame = Time.frameCount; syncSpent = 0; }
+            return syncSpent < SyncBudgetMs;
+        }
+        static readonly Dictionary<string, List<TexEntry>> byFace = new Dictionary<string, List<TexEntry>>();
+        static void IndexFace(TexEntry e, bool add)
+        {
+            if (e.face == null) SplitKey(e.key, out e.face, out e.px, out e.mood, out e.year);
+            List<TexEntry> l;
+            if (add) { if (!byFace.TryGetValue(e.face, out l)) byFace[e.face] = l = new List<TexEntry>(2); l.Add(e); }
+            else if (byFace.TryGetValue(e.face, out l)) { l.Remove(e); if (l.Count == 0) byFace.Remove(e.face); }
+        }
+        // 替身评分（小者优先）：同表情 > 年份不同（相差一岁看不出）> 平常表情 > 其它表情；同档内较大的优先（缩小显示比放大清楚），其次差值小的
+        static Texture2D StandIn(string key)
+        {
+            string face, mood, year; int want;
+            SplitKey(key, out face, out want, out mood, out year);
+            List<TexEntry> l;
+            if (!byFace.TryGetValue(face, out l)) return null;
+            TexEntry best = null; int bestScore = int.MaxValue;
+            foreach (var e in l)
+            {
+                if (e.tex == null) continue;
+                int px = e.tex.width;
+                int score = px >= want ? px - want : 10000 + want - px;
+                if (e.year != year) score += 20000;
+                if (e.mood != mood) score += e.mood == "neutral" ? 40000 : 80000;
+                if (score < bestScore) { bestScore = score; best = e; }
+            }
+            if (best == null) return null;
+            Touch(best);
+            return best.tex;
+        }
+
+        // 为 UGUI Image 设头像（第三版界面的列表行、对话、消息行内小头像、名片都用它）：
+        //   已缓存 → 立即设上；
+        //   同一张脸的其它尺寸 / 表情 / 去年的图已缓存（StandIn）→ 先用它（UGUI 缩放显示），后台栅格化正确的图后换上；
+        //   都没有 → 本帧同步预算（SyncBudgetMs）内直接生成，超出预算的先隐藏 Image，后台生成后再显示。
+        // 网页版 SG.Portrait.el / html 的做法：先放矢量图（立即可见），栅格化完成后换成位图。
+        // 同一 Image 再次 Bind 时，之前未完成的请求不会再覆盖它。
+        // 返回 false = 本帧同步生成失败（Image 已清空并隐藏，调用方可换成自己的占位，如 UIKit.PortraitImg 的暗色块）；
+        // 后台生成失败时保留同一张脸的替身，没有替身则保持隐藏（不会显示成白块，也不会留着上一个人的脸）
+        public static bool Bind(UnityEngine.UI.Image img, General g, int px, Color factionColor, PortraitMood mood = PortraitMood.Neutral, bool frame = true, bool flip = false)
+        {
+            if (img == null || g == null) return false;
+            return Bind(img, Describe(g), PortraitOpts.Make(px, Hex(factionColor), MoodName(mood), frame, flip));
+        }
+        public static bool Bind(UnityEngine.UI.Image img, General g, int px, PortraitMood mood = PortraitMood.Neutral) { return Bind(img, g, px, FactionColorOf(g), mood); }
+        public static bool Bind(UnityEngine.UI.Image img, PortraitGen gen, PortraitOpts o)
+        {
+            if (img == null || gen == null) return false;
+            string key = KeyOf(Spec(gen), o);
+            var slot = img.GetComponent<PortraitSlot>();   // 编辑器里缺失的组件是“假 null”，不能用 ??
+            if (slot == null) slot = img.gameObject.AddComponent<PortraitSlot>();
+            slot.key = key;
+            TexEntry e;
+            if (texCache.TryGetValue(key, out e) && e.tex != null) { Touch(e); Show(img, e.tex); return true; }
+            var stand = StandIn(key);
+            if (stand == null && TakeSyncBudget())
+            {
+                float t0 = Time.realtimeSinceStartup;
+                Texture2D t = null;
+                try { t = Texture(gen, o); } catch (Exception ex) { Debug.LogWarning("portrait " + gen.name + ": " + ex.Message); }
+                syncSpent += (Time.realtimeSinceStartup - t0) * 1000f;
+                if (t != null) { Show(img, t); return true; }
+                Hide(img);
+                return false;
+            }
+            // 替身是同一张脸，失败时可以留着；否则清掉旧图（可能是这个 Image 之前显示的另一个人）
+            if (stand != null) Show(img, stand);
+            else Hide(img);
+            Request(gen, o, t =>
+            {
+                if (img == null || slot == null || slot.key != key) return;
+                if (t != null) Show(img, t);
+                else if (img.sprite != null) img.enabled = true;   // 生成失败：留着替身；没有替身时保持隐藏
+            });
+            return true;
+        }
+        static void Show(UnityEngine.UI.Image img, Texture2D t) { img.sprite = SpriteOf(t); img.enabled = true; }
+        static void Hide(UnityEngine.UI.Image img) { img.sprite = null; img.enabled = false; }
+
+        // 后台生成一张头像，完成后在主线程回调（已缓存时立即回调）。同一 key 的请求合并。返回已缓存的纹理或 null
+        public static Texture2D Request(PortraitGen gen, PortraitOpts o, Action<Texture2D> done = null)
+        {
+            string key = KeyOf(Spec(gen), o);
+            TexEntry e;
+            if (texCache.TryGetValue(key, out e) && e.tex != null) { Touch(e); if (done != null) done(e.tex); return e.tex; }
+            Req r;
+            if (pendingReq.TryGetValue(key, out r)) { if (done != null) r.cbs.Add(done); return null; }
+            r = new Req { key = key, gen = gen, o = o, ver = dataVersion };
+            if (done != null) r.cbs.Add(done);
+            pendingReq[key] = r;
+            lock (reqQueue) reqQueue.Enqueue(r);
+            PortraitPump.Ensure();
+            if (UseThreads) EnsureWorkers();
+            return null;
+        }
+        sealed class Req { public string key; public PortraitGen gen; public PortraitOpts o; public int ver; public Raster raster; public readonly List<Action<Texture2D>> cbs = new List<Action<Texture2D>>(1); }
+        static readonly Dictionary<string, Req> pendingReq = new Dictionary<string, Req>();   // 只在主线程读写
+        static readonly Queue<Req> reqQueue = new Queue<Req>(), reqDone = new Queue<Req>();
+        static int reqWorkers;
+        // 工作线程数的增减都在 reqQueue 锁内判断（线程退出与新请求入队不会互相错过）
+        static void EnsureWorkers()
+        {
+            int max = Math.Max(1, Math.Min(2, SystemInfo.processorCount - 1));
+            lock (reqQueue)
+            {
+                while (reqWorkers < max && reqWorkers < reqQueue.Count) { reqWorkers++; StartWorker(RequestWorker); }
+            }
+        }
+        static void RequestWorker()
+        {
+            while (true)
+            {
+                Req r;
+                lock (reqQueue)
+                {
+                    if (reqQueue.Count == 0) { reqWorkers--; return; }
+                    r = reqQueue.Dequeue();
+                }
+                try { r.raster = Render(r.gen, r.o); } catch (Exception ex) { Debug.LogWarning("portrait " + ex); }
+                lock (reqDone) reqDone.Enqueue(r);
+            }
+        }
+        // 主线程：上传完成的头像并回调（每帧 budgetMs）；无线程平台在这里按时间片栅格化
+        internal static void PumpRequests(float budgetMs)
+        {
+            float t0 = Time.realtimeSinceStartup;
+            if (!UseThreads)
+            {
+                while ((Time.realtimeSinceStartup - t0) * 1000f < budgetMs * 0.5f)
+                {
+                    Req r;
+                    lock (reqQueue) { if (reqQueue.Count == 0) break; r = reqQueue.Dequeue(); }
+                    try { r.raster = Render(r.gen, r.o); } catch (Exception ex) { Debug.LogWarning("portrait " + ex); }
+                    lock (reqDone) reqDone.Enqueue(r);
+                }
+            }
+            while ((Time.realtimeSinceStartup - t0) * 1000f < budgetMs)
+            {
+                Req r;
+                lock (reqDone) { if (reqDone.Count == 0) break; r = reqDone.Dequeue(); }
+                Texture2D t = null;
+                TexEntry e;
+                if (texCache.TryGetValue(r.key, out e) && e.tex != null) t = e.tex;
+                else if (r.ver != dataVersion)
+                {
+                    // 生成期间外貌数据改过（ClearCache）：旧图不回填，按新数据重新排队（回调保留），免得等它的 Image 一直隐藏
+                    r.ver = dataVersion; r.raster = null;
+                    lock (reqQueue) reqQueue.Enqueue(r);
+                    if (UseThreads) EnsureWorkers();
+                    continue;
+                }
+                else if (r.raster != null) { t = Upload(r.raster, r.key); Remember(r.key, t); }
+                pendingReq.Remove(r.key);
+                foreach (var cb in r.cbs) { try { cb(t); } catch (Exception ex) { Debug.LogException(ex); } }
+            }
+        }
+        internal static bool RequestsIdle { get { lock (reqQueue) lock (reqDone) return reqQueue.Count == 0 && reqDone.Count == 0 && pendingReq.Count == 0; } }
 #endif
     }
+
+#if !SANGUO_HEADLESS
+    // Bind 的目标标记：记下 Image 当前应显示的头像 key（后到的请求覆盖先到的）
+    public sealed class PortraitSlot : MonoBehaviour { public string key; }
+    // 头像请求的主线程泵（隐藏的常驻对象，按需创建）
+    public sealed class PortraitPump : MonoBehaviour
+    {
+        static PortraitPump inst;
+        public static float BudgetMs = 4f;
+        internal static void Ensure()
+        {
+            if (inst != null) { inst.enabled = true; return; }
+            var go = new GameObject("PortraitPump");
+            DontDestroyOnLoad(go);
+            inst = go.AddComponent<PortraitPump>();
+        }
+        void Update()
+        {
+            Portrait.PumpRequests(BudgetMs);
+            if (Portrait.RequestsIdle) enabled = false;
+        }
+    }
+#endif
 }

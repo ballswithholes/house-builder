@@ -1,7 +1,8 @@
 // 世界剧本「天下大势」检测：tests/world.js 的 C# 版。
 //   (0) 投影 MapProjection 与 JS 的 SG.project / SG.unproject 参考值（ref/project-ref.txt）一致；
 //   (1) 数据自检：格式、计数、经典剧本原样包含、连线（全图连通、海路是子集、度数）、势力 / 君主 / 都城、武将、资料表、
-//       城池间距（投影后 ≥ 3）、势力颜色（CIEDE2000 色差）、显示名长度、开局状态与存档往返；
+//       城池间距（投影后 ≥ 3）、势力颜色（CIEDE2000 色差）、显示名长度、开局领土从都城连通（例外列表）、玩家可见文字
+//       （无研究 / 开发说明、同条目无重复分句）、文化代号与回退表（第三版 india / africa / moor）、开局状态与存档往返；
 //   (2) 全电脑模拟：种子 × 年数（缺省同 JS：1-12,101-124,1001-1024 × 25 年；环境变量 WORLD_SEEDS / WORLD_YEARS 可改），
 //       统计每秒月数、单月耗时、各地域势力存活、首个势力超过全部城池 25% 的时间、地域 3 年内全灭、罗马 / 安息 / 贵霜的城数走势；
 //   (3) 经典剧本不受影响：同一种子下，世界剧本对局前后的经典剧本 5 年全电脑对局 JSON 完全相同（打印 MD5，可与 JS 对照）。
@@ -17,7 +18,8 @@ class PW
     static int fails;
     static bool Check(bool cond, string msg) { if (!cond) { fails++; Console.WriteLine("  FAIL " + msg); } return cond; }
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
-    static readonly string[] CULTURES = { "han", "nanman", "wa", "yi", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian" };
+    // DESIGN-V2 §6 的 15 种 + 第三版的 india / africa / moor（Defs.Cultures，回退表 Defs.CultureBase）
+    static readonly string[] CULTURES = { "han", "nanman", "wa", "yi", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian", "india", "africa", "moor" };
     static int CodePoints(string s) { int n = 0; foreach (var ch in s) if (!char.IsLowSurrogate(ch)) n++; return n; }
 
     static string ClassicHash()
@@ -148,6 +150,24 @@ class PW
             }
         }
         foreach (var r in W.Regions) Check(r.Factions.Length > 0 && !string.IsNullOrEmpty(r.Name), "region " + r.Id);
+        // 开局领土连通：各势力的城池从都城出发、只经己方城池即可全部到达（否则开局无法调兵运粮）。
+        // 已知的例外（城键）：经典剧本的袁术、乌桓；贵霜的秣菟罗（第二版起隔着空城塔克西拉）；罗马的廷吉斯（隔着空城科尔杜巴 / 约尔，两地 190 年主官不可考）
+        {
+            var KNOWN_SPLIT = new Dictionary<string, string[]> { { "yuanshu", new[] { "runan" } }, { "wuhuan", new[] { "ningcheng" } }, { "kushan", new[] { "mathura" } }, { "roma", new[] { "tingis" } } };
+            var own = new Dictionary<string, string>(); foreach (var p in G) if (p[4] != "-" && p[8] != "1") own[p[5]] = p[4];
+            var bad = new List<string>();
+            foreach (var p in F)
+            {
+                string[] rg; if (!genByName.TryGetValue(p[2], out rg)) continue;
+                var cap = rg[5];
+                var seen = new HashSet<string> { cap }; var q = new Stack<string>(); q.Push(cap);
+                while (q.Count > 0) { var x = q.Pop(); foreach (var y in adj[x]) { string o; if (own.TryGetValue(y, out o) && o == p[0] && seen.Add(y)) q.Push(y); } }
+                var cut = own.Keys.Where(k => own[k] == p[0] && !seen.Contains(k)).OrderBy(k => k, StringComparer.Ordinal).ToList();
+                var exp = KNOWN_SPLIT.ContainsKey(p[0]) ? KNOWN_SPLIT[p[0]].OrderBy(k => k, StringComparer.Ordinal).ToList() : new List<string>();
+                if (string.Join(",", cut) != string.Join(",", exp)) bad.Add($"{p[1]} [{string.Join(" ", cut)}] (expected [{string.Join(" ", exp)}])");
+            }
+            Check(bad.Count == 0, "every faction's start cities connect to its capital through its own cities (known exceptions listed): " + string.Join("; ", bad));
+        }
         Check(inRegion.Count == F.Count, "every faction has a region");
         // 武将
         var names = new HashSet<string>();
@@ -176,16 +196,19 @@ class PW
             Check((wi.Born == null ? "" : wi.Born.Value.ToString()) == p[10], "born column matches WorldInfo " + p[0]);
         }
         foreach (var p in F.Skip(nF)) { var fi = WorldScenarioData.InfoOfFaction(p[0]); Check(fi != null && fi.Name == p[1] && fi.Ruler == p[2], "FactionInfo name / ruler match " + p[0]); }
-        // 性别：四位女性；SexOf 覆盖经典武将（祝融）
+        // 性别：第二版四位、第三版十位女性；SexOf 覆盖经典武将（祝融）
         {
             var fem = newGens.Where(p => { var wi = WorldScenarioData.InfoOfGeneral(p[0]); return wi != null && wi.Sex == "f"; }).Select(p => p[0]).OrderBy(x => x, StringComparer.Ordinal);
-            Check(string.Join(",", fem) == string.Join(",", new[] { "卑弥呼", "多姆娜", "玛伊莎", "玛琪亚" }.OrderBy(x => x, StringComparer.Ordinal)), "female generals " + string.Join(",", fem));
+            var FEMALE = new[] { "卑弥呼", "多姆娜", "玛伊莎", "玛琪亚",                       // 第二版
+                "索埃米亚斯", "马梅亚", "罗达格", "阿曼哈利卡", "婆薮", "昌提室利", "于氏", "神功皇后", "田油津媛", "蔡琰" };  // 第三版
+            Check(string.Join(",", fem) == string.Join(",", FEMALE.OrderBy(x => x, StringComparer.Ordinal)), "female generals " + string.Join(",", fem));
             Check(WorldLookup.SexOf("玛琪亚") == "f" && WorldLookup.SexOf("祝融") == "f" && WorldLookup.SexOf("曹操") == "m" && WorldLookup.SexOf("塞维鲁") == "m", "WorldLookup.SexOf");
             Check(WorldLookup.BornOf("曹操") == 155 && WorldLookup.BornOf("塞维鲁") == 145 && WorldLookup.BornOf("张飞") == null, "WorldLookup.BornOf");
         }
         // 给玩家看的文字：不得残留研究 / 合并阶段的说明、内部键名或 ASCII 引号
         {
-            var META = new Regex("合并时|去重|研究摘要|JSON|data\\.js|DESIGN|notes?\\b|本区|中国区|【游戏取舍】|\"");
+            // 第三版修订：也不得有版本记录（第三版起…）、外观 / 装束的借用说明与括注的文化代号（india、africa…）
+            var META = new Regex("合并时|去重|研究摘要|JSON|data\\.js|DESIGN|notes?\\b|本区|中国区|【游戏取舍】|建议|TODO|现有数据|\"|第[一二三四]版|外观|装束|[（(](?:" + string.Join("|", CULTURES) + ")[)）]");
             var allKeys = new HashSet<string>(cityKeys.Concat(F.Select(p => p[0])));
             var bad = new List<string>();
             Action<string, string, string> scan = (tab, key, t) =>
@@ -195,7 +218,7 @@ class PW
             };
             foreach (var x in WorldScenarioData.GeneralInfo) { scan("WorldInfo", x.Name + ".full", x.Full); scan("WorldInfo", x.Name + ".role", x.Role); scan("WorldInfo", x.Name + ".note", x.Note); scan("WorldInfo", x.Name + ".liberty", x.Liberty); }
             foreach (var x in WorldScenarioData.FactionInfo) { scan("FactionInfo", x.Key + ".full", x.Full); scan("FactionInfo", x.Key + ".note", x.Note); scan("FactionInfo", x.Key + ".liberty", x.Liberty); }
-            foreach (var x in WorldScenarioData.CityInfo) { scan("CityInfo", x.Key + ".full", x.Full); scan("CityInfo", x.Key + ".note", x.Note); scan("CityInfo", x.Key + ".modern", x.Modern); }
+            foreach (var x in WorldScenarioData.CityInfo) { scan("CityInfo", x.Key + ".full", x.Full); scan("CityInfo", x.Key + ".note", x.Note); scan("CityInfo", x.Key + ".liberty", x.Liberty); scan("CityInfo", x.Key + ".modern", x.Modern); }
             Check(bad.Count == 0, "player-facing text has no research / merge leftovers: " + string.Join(", ", bad));
             var NOTE_META = new Regex("维基|文献作|英文文献|未找到|译名|自拟|数值|三维|按规则|放宽|游戏安排|游戏中|设为空城|在任武将|为凑成|校准|[武智政德望]极?[高低]|忠诚(?:偏|设)?低|故(?:武力|智力|政治|政略|智谋)");
             var noteBad = WorldScenarioData.GeneralInfo.Where(x => NOTE_META.IsMatch(x.Note ?? "")).Select(x => "WorldInfo." + x.Name)
@@ -209,11 +232,55 @@ class PW
             var dashL = WorldScenarioData.GeneralInfo.Where(x => dash(x.Full) || dash(x.Role) || dash(x.Note) || dash(x.Liberty)).Select(x => x.Name)
                 .Concat(WorldScenarioData.FactionInfo.Where(x => dash(x.Full) || dash(x.Note) || dash(x.Liberty)).Select(x => x.Key)).ToList();
             Check(dashL.Count == 0, "date ranges use 「—」, not 「–」: " + string.Join(", ", dashL));
+            // 同一条目的 note 与 liberty 里不得有重复（含换了措辞）的分句：按「。；，」切分，去标点后 ≥ 10 字的分句两两比较字对重合度
+            Func<string, Dictionary<string, int>> bigrams = t =>
+            {
+                var a = new List<string>(); for (int i = 0; i < t.Length; i++) { if (char.IsHighSurrogate(t[i]) && i + 1 < t.Length) { a.Add(t.Substring(i, 2)); i++; } else a.Add(t[i].ToString()); }
+                var m = new Dictionary<string, int>(); for (int i = 0; i + 1 < a.Count; i++) { var k = a[i] + a[i + 1]; int c; m[k] = m.TryGetValue(k, out c) ? c + 1 : 1; }
+                return m;
+            };
+            Func<Dictionary<string, int>, Dictionary<string, int>, double> overlap = (x, y) =>
+            {
+                int n = 0, nx = x.Values.Sum(), ny = y.Values.Sum();
+                foreach (var kv in x) { int v; if (y.TryGetValue(kv.Key, out v)) n += Math.Min(kv.Value, v); }
+                return n / (double)Math.Max(1, Math.Min(nx, ny));
+            };
+            var repL = new List<string>();
+            Action<string, string, string, string> clauses = (tab, key, note, lib) =>
+            {
+                var cl = new List<KeyValuePair<string, Dictionary<string, int>>>();
+                foreach (var f in new[] { note, lib })
+                    foreach (var c in (f ?? "").Split('。', '；', '，'))
+                    {
+                        var t = Regex.Replace(c, "[（）“”《》·、：\\s]", "");
+                        if (CodePoints(t) >= 10) cl.Add(new KeyValuePair<string, Dictionary<string, int>>(c, bigrams(t)));
+                    }
+                for (int i = 0; i < cl.Count; i++) for (int j = i + 1; j < cl.Count; j++) if (overlap(cl[i].Value, cl[j].Value) >= 0.7) repL.Add(tab + "." + key + "「" + cl[j].Key + "」");
+            };
+            foreach (var x in WorldScenarioData.GeneralInfo) clauses("WorldInfo", x.Name, x.Note, x.Liberty);
+            foreach (var x in WorldScenarioData.FactionInfo) clauses("FactionInfo", x.Key, x.Note, x.Liberty);
+            foreach (var x in WorldScenarioData.CityInfo) clauses("CityInfo", x.Key, x.Note, x.Liberty);
+            Check(repL.Count == 0, "no repeated clause inside one note + liberty: " + string.Join(", ", repL));
         }
         foreach (var p in C.Skip(nC)) Check(WorldScenarioData.InfoOfCity(p[0]) != null, "CityInfo " + p[0]);
         foreach (var l in WorldScenarioData.GeneralBorn) { var p = l.Split('|'); Check(genByName.ContainsKey(p[0]) && genByName[p[0]][10] == p[1], "GeneralBorn " + p[0]); }
         foreach (var n in new[] { "孟获", "祝融", "孟优", "兀突骨", "带来洞主", "沙摩柯" }) Check(genByName[n][9] == "nanman", "nanman " + n);
         Check(WorldLookup.CultureOfGeneral("卑弥呼") == "wa" && WorldLookup.RegionOfFaction("roma") == "roma", "WorldLookup lookups");
+        // 文化代号：唯一的回退表（Defs.CultureBase = SG.cultureBase）与世界数据一致；天竺诸国 india、阿克苏姆与库施 africa、巴夸特 moor；西总督（塞种）仍为 kushan
+        Check(CULTURES.Length == Defs.Cultures.Length && CULTURES.All(c => Defs.Cultures.Contains(c)), "Defs.Cultures matches the test list");
+        Check(Defs.CultureBase("india") == "seasia" && Defs.CultureBase("africa") == "arab" && Defs.CultureBase("moor") == "arab" && Defs.CultureBase("roman") == "roman" &&
+            Defs.CultureBase("???") == "han" && Defs.CultureBase(null) == "han", "Defs.CultureBase fallbacks");
+        foreach (var k in new[] { "satavahana", "chola", "pandya", "chera", "lanka" }) Check(WorldLookup.CultureOfFaction(k) == "india", "india faction " + k);
+        foreach (var k in new[] { "aksum", "kush" }) Check(WorldLookup.CultureOfFaction(k) == "africa", "africa faction " + k);
+        Check(WorldLookup.CultureOfFaction("baquates") == "moor" && WorldLookup.CultureOfCity("baquates") == "moor", "moor: baquates");
+        Check(WorldLookup.CultureOfFaction("kshatrapa") == "kushan" && WorldLookup.CultureOfGeneral("鲁德拉辛哈") == "kushan", "Western Satraps (Saka) stay kushan");
+        foreach (var k in new[] { "pratishthana", "amaravati", "madurai", "anuradhapura", "pataliputra", "ujjain", "barygaza" }) Check(WorldLookup.CultureOfCity(k) == "india", "india city " + k);
+        foreach (var k in new[] { "aksum", "adulis", "meroe", "napata", "karanog" }) Check(WorldLookup.CultureOfCity(k) == "africa", "africa city " + k);
+        foreach (var k in new[] { "halin", "oceo" }) Check(WorldLookup.CultureOfCity(k) == "seasia", "seasia city " + k);
+        foreach (var n in new[] { "耶若室利", "迦梨迦罗", "内敦切利扬", "森古图万", "室利那伽", "龙树", "提婆", "鲁德拉布提" }) Check(WorldLookup.CultureOfGeneral(n) == "india", "india general " + n);
+        foreach (var n in new[] { "加达拉特", "耶斯博赫", "阿曼哈利卡" }) Check(WorldLookup.CultureOfGeneral(n) == "africa", "africa general " + n);
+        // 各势力的君主与其势力同文化
+        foreach (var p in F) { string[] r; if (genByName.TryGetValue(p[2], out r)) Check(r[9] == p[6], "ruler culture = faction culture " + p[0] + " " + p[2]); }
         // 统计值与经典剧本同一尺度
         {
             Func<IEnumerable<string[]>, int, double> avg = (rows, i) => rows.Average(p => double.Parse(p[i], Inv));
@@ -266,6 +333,8 @@ class PW
             foreach (var f in g0.factions) Check(g0.CityCount(f.id) >= 1, "faction owns a city at start " + f.name);
             foreach (var c in g0.cities) if (c.owner >= 0) Check(g0.OfficersIn(c).Any(), "owned city has an officer " + c.name);
             int nNeutral = g0.cities.Count(c => c.owner < 0);
+            // 第三版：贵霜不再是两城小国
+            Check(g0.CityCount(g0.FactionByKey("kushan").id) >= 3, "Kushan starts with ≥ 3 cities");
             Console.WriteLine($"start: {g0.factions.Count} factions, {g0.cities.Count - nNeutral} owned cities, {nNeutral} neutral");
             Check(g0.scenario == "world" && g0.seaLinks.Count == W.SeaLinks.Length && g0.cities.All(c => c.culture != null) && g0.factions.All(f => f.region != null), "world derived fields (scenario, sea links, culture, region)");
             Check(g0.LinkIsSea(g0.CityByKey(W.SeaLinks[0].Split('-')[0]).id, g0.CityByKey(W.SeaLinks[0].Split('-')[1]).id), "LinkIsSea");
@@ -318,8 +387,14 @@ class PW
         int n = int.Parse(a); for (int i = 0; i < n; i++) outList.Add(i + 1);
         return outList;
     }
+    // 1 分钟平均负载（/proc/loadavg；读不到时为 0）
+    static double LoadAvg()
+    {
+        try { return double.Parse(System.IO.File.ReadAllText("/proc/loadavg").Split(' ')[0], Inv); } catch { return 0; }
+    }
     static void Simulate()
     {
+        double loadAtStart = LoadAvg();
         var W = Scenarios.World;
         var seeds = SeedList(); int SEEDS = seeds.Count;
         int YEARS = int.TryParse(Environment.GetEnvironmentVariable("WORLD_YEARS"), out YEARS) && YEARS > 0 ? YEARS : 25;
@@ -327,9 +402,10 @@ class PW
         var regionName = W.Regions.ToDictionary(r => r.Id, r => r.Name);
         var CHECK_Y = new[] { 1, 3, 5, 10, 15, 20, 25 }.Where(y => y <= YEARS).ToArray();
         var surv = W.Regions.ToDictionary(r => r.Id, r => new double[CHECK_Y.Length]);
-        var watch = new[] { "roma", "parthia", "kushan" };
+        var watch = new[] { "roma", "parthia", "kushan", "satavahana" };
         var watchN = watch.ToDictionary(k => k, k => CHECK_Y.Select(_ => new List<int>()).ToArray());
-        var WEST_REG = new[] { "roma", "barbar", "bosi", "arab" };
+        // “西方”= 欧洲、西亚与北非：罗马、蛮族、波斯、阿拉伯、非洲五个地域的开局城池，加上这些文化的无主城
+        var WEST_REG = new[] { "roma", "barbar", "bosi", "arab", "africa" };
         var WEST_CULT = new[] { "roman", "celt", "german", "sarmatian", "persia", "arab" };
         var westShare = CHECK_Y.Select(_ => new List<double>()).ToArray();
         int WEST_N = 0;
@@ -385,7 +461,12 @@ class PW
         wall.Sort();
         Func<double, string> pct = p => Sim.F(wall[Math.Min(wall.Count - 1, (int)Math.Floor(wall.Count * p))], 1);
         Console.WriteLine($"speed: {months} months in {Sim.F(simMs / 1000, 1)}s = {Sim.F(months / (simMs / 1000), 0)} months/s; wall ms per month avg {Sim.F(simMs / months, 2)}, p99 {pct(0.99)}, p99.9 {pct(0.999)}, max {Sim.F(wall[wall.Count - 1], 1)} ({maxAt})");
-        Check(double.Parse(pct(0.999), Inv) < 60, "p99.9 per-month wall time < 60 ms");
+        // 墙钟 p99.9 上限 60 ms；其他进程把 1 分钟负载推到超过 CPU 核数时按负载 / 核数放宽（抢占造成的尖峰与数据无关）
+        {
+            int cpus = Environment.ProcessorCount; double load = Math.Max(loadAtStart, LoadAvg());
+            int lim = (int)Math.Round(60 * Math.Max(1, load / cpus));
+            Check(double.Parse(pct(0.999), Inv) < lim, $"p99.9 per-month wall time < {lim} ms" + (lim > 60 ? $" (60 ms × load {Sim.F(load, 1)} / {cpus} CPUs)" : ""));
+        }
         Console.WriteLine("region factions alive (avg over seeds) at years " + string.Join("/", CHECK_Y) + ":");
         foreach (var r in W.Regions) Console.WriteLine($"  {(r.Name + "　　　　").Substring(0, 6)} {r.Factions.Length} → {string.Join(" / ", surv[r.Id].Select(v => Sim.F(v / SEEDS, 1)))}");
         Func<List<int>, string> avgN = a => a.Count > 0 ? Sim.F(a.Average(), 1) : "-";
@@ -422,6 +503,8 @@ class PW
             Check(surv["barbar"][yi5] / SEEDS >= 1.5, "barbarian factions: ≥ 1.5 alive on average at year 5");
             Check(watchN["parthia"][yi5].Count(n => n > 0) >= SEEDS * 0.5, "Parthia alive at year 5 in ≥ 50% of seeds");
             Check(watchN["kushan"][yi5].Count(n => n > 0) >= SEEDS * 0.5, "Kushan alive at year 5 in ≥ 50% of seeds");
+            // 第三版：贵霜开局 3 城，5 年后平均不少于 3 城（不再是两城小国）
+            Check(watchN["kushan"][yi5].Sum() / (double)SEEDS >= 3, "Kushan holds ≥ 3 cities on average at year 5");
         }
     }
 }

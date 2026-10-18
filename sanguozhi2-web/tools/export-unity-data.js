@@ -4,16 +4,24 @@
    Node，无依赖。像 tests/sim.js 一样在 vm 里载入 js/*.js（window = global），再把数据写成 C#：
 
      ../sanguozhi2-unity/Assets/Sanguo/Scripts/Data/Generated/
-       SpecialsData.g.cs   必杀技：全部手写条目（经典 + 世界，未补全默认值）+ 机制表 KINDS、特效名 FX、
-                           兜底生成器的词库（EPI / NOUN / FLAVOR）、南蛮名单与常数（specials-data.js、specials.js）
+       SpecialsData.g.cs   必杀技：全部手写条目（经典 + 世界，未补全默认值）+ 第三版「可习得必杀」池（带等阶）+ 机制表 KINDS、
+                           特效名 FX、兜底生成器的词库（EPI / NOUN / FLAVOR）、南蛮名单、等阶名与常数（specials-data.js、specials.js）
+       TacticsData.g.cs    第三版计策目录：原四计的外观 / 目标字段与 14 种可习得计策的规则字段（tactics-data.js）、
+                           电脑施展习得计策的门槛（battle-model.js 的 BattleModel.aiTactic）；成长表 ProgressData
+                           （经验表、格数 / 等阶的门槛、老练加成、原四计编号；model.js 的 SG.Progress）
        WorldData.g.cs      世界剧本 SG.Scenarios.world（与 ScenarioData.cs 相同的文本表，含经典部分与附加列）、
-                           SeaLinks、Regions、GeneralBorn、经典女性名单、WorldInfo / FactionInfo / CityInfo（world-data.js）
+                           SeaLinks、Regions、GeneralBorn、经典女性名单、WorldInfo / FactionInfo / CityInfo（world-data.js）、
+                           文化代号与回退表（core.js 的 SG.CULTURES / SG.cultureBase）
        WorldGeo.g.cs       地理数据 SG.WorldGeo（陆地环 / 内陆水域 / 岛屿、河流、湖泊、山脉、高原、生物群落、
                            旧版地形范围）与投影断点、地图范围、镜头地区（world-geo.js）
      ../sanguozhi2-unity/Tests~/sim/ref/
        specials-ref.txt    参考结果：SG.Specials.of() 对世界剧本全部武将（含经典）与一批无条目武将（兜底生成）
                            的补全结果、签名与说明文字——供 C# 的 Specials 移植逐条对照
        project-ref.txt     参考结果：SG.project / SG.unproject 的采样、SG.World 的范围与地区矩形——供 WorldGeo 移植对照
+       pool-ref.txt        参考结果：可习得必杀池（SG.Specials.pool()）的补全结果、签名、说明与摘要（rules）
+       tactics-ref.txt     参考结果：18 种计策的说明（SG.Tactics.explain / desc）与摘要（SG.Tactics.rules）
+       progress-ref.txt    参考结果：SG.Progress.battleExp / autoBattle 对一组探针输入的经验结算（经验来源的权重是 JS 里的字面常数，
+                           无表可导出；C# 的 HarnessProgress 逐行对照）
 
    每个 .g.cs 文件头标注「自动生成，勿手改」，并带校验摘要常量 Summary / Hash（条目数 + FNV-1a 哈希）。
    哈希按固定顺序遍历数据：字符串 = UTF-8 字节 + 0x00（null = 0x01 0x00）；整数 = 十进制文本 + 0x00；
@@ -57,6 +65,7 @@ load('world-data.js', [['  SG.Scenarios = { classic: classic, world: world };',
 for (const f of ['model.js', 'strategy-ai.js', 'battle-model.js', 'specials-data.js']) load(f);
 load('specials.js', [['  function pickKind(gen, r) {',
   '  SG.__export.specials = { EPI, NOUN, FLAVOR, NANMAN: Array.from(NANMAN), META_KEYS, STATS };']]);
+load('tactics-data.js');
 const SG = global.SG;
 const X = SG.__export;
 
@@ -139,6 +148,26 @@ function exportSpecials() {
     h.S(gen); for (const k of STR_KEYS) h.S(e[k]);
     h.I(keys.length); keys.forEach((k, i) => { h.S(k); h.N(vals[i]); });
   }
+  // 第三版：可习得必杀池（键 = 编号；tier 为元字段，不进数值参数）
+  const pool = [];
+  for (const key of D.poolIds()) {
+    const e = D.getPool(key);
+    const keys = [], vals = [];
+    for (const k of Object.keys(e)) {
+      const v = e[k];
+      if (k === 'tier') { if (!Number.isInteger(v)) throw new Error('可习得「' + key + '」的 tier 不是整数'); continue; }
+      if (STR_KEYS.indexOf(k) >= 0) { if (typeof v !== 'string') throw new Error(key + '.' + k + ' 不是字符串'); continue; }
+      if (typeof v !== 'number') throw new Error('可习得「' + key + '」.' + k + ' 的类型未知：' + typeof v + '（导出工具需要更新）');
+      keys.push(k); vals.push(v);
+    }
+    if (!e.name || !e.kind) throw new Error('可习得「' + key + '」: 缺 name / kind');
+    pool.push({ gen: key, e, keys, vals, tier: e.tier });
+  }
+  h.I(pool.length);
+  for (const { gen, e, keys, vals, tier } of pool) {
+    h.S(gen); h.I(tier); for (const k of STR_KEYS) h.S(e[k]);
+    h.I(keys.length); keys.forEach((k, i) => { h.S(k); h.N(vals[i]); });
+  }
   const kinds = Object.keys(S.KINDS).map(k => {
     const K = S.KINDS[k];
     only(K, ['label', 'stat', 'target', 'fx', 'color', 'params'], 'KINDS.' + k);
@@ -156,13 +185,13 @@ function exportSpecials() {
   const bank = (keys, obj) => { h.I(keys.length); for (const k of keys) { h.S(k); h.I(obj[k].length); obj[k].forEach(w => h.S(w)); } };
   bank(epiKeys, E.EPI); bank(nounKeys, E.NOUN);
   h.I(flavorKeys.length); for (const k of flavorKeys) { h.S(k); h.S(E.FLAVOR[k]); }
-  for (const list of [E.NANMAN, E.META_KEYS, E.STATS]) { h.I(list.length); list.forEach(w => h.S(w)); }
+  for (const list of [E.NANMAN, E.META_KEYS, E.STATS, S.TIER_NAME]) { h.I(list.length); list.forEach(w => h.S(w)); }
 
   const hand = new Set(D.names());
   const W = SG.Scenarios.world;
   const worldGens = W.Generals.map(l => l.split('|')[0]);
   const missing = worldGens.filter(n => !hand.has(n));
-  const summary = `entries=${entries.length} kinds=${kinds.length} fx=${S.FX.length} hash=${h.hex()}`;
+  const summary = `entries=${entries.length} pool=${pool.length} kinds=${kinds.length} fx=${S.FX.length} hash=${h.hex()}`;
   const I3 = '            ', I4 = '                ';
   const L = [];
   L.push(HEADER('js/specials-data.js、js/specials.js', '必杀技：全部手写条目（经典 + 世界）、机制表、特效名、兜底生成器词库。'));
@@ -170,9 +199,11 @@ function exportSpecials() {
 {
     // 一条必杀技原始条目（SG.SpecialsData 中的写法，未补全机制默认值；补全、校验与说明文字由 Specials.cs 负责）。
     // 字符串字段缺省为 null；数值参数按条目中的书写顺序放在 Keys / Values。
+    // 第三版「可习得必杀」池的条目：Gen 为编号（存档里保存 "lp:编号"），Tier 为等阶 1–4（专属必杀为 0）。
     public sealed class SpecialEntry
     {
-        public readonly string Gen;     // 武将名（条目键）
+        public readonly string Gen;     // 武将名（条目键）；可习得必杀为编号
+        public readonly int Tier;       // 可习得必杀的等阶 1–4；专属必杀为 0
         public readonly string Name;    // 招式名
         public readonly string Kind;    // 机制（smite、cleave…，见 SpecialsData.Kinds）
         public readonly string Stat;    // 所依能力 war / intel / pol；null = 机制默认
@@ -185,10 +216,10 @@ function exportSpecials() {
         public readonly float[] Values; // 数值参数值
 
         public SpecialEntry(string gen, string name, string kind, string stat, string fx, string color, string cry, string desc, string lore,
-            string[] keys, float[] values)
+            string[] keys, float[] values, int tier = 0)
         {
             Gen = gen; Name = name; Kind = kind; Stat = stat; Fx = fx; Color = color; Cry = cry; Desc = desc; Lore = lore;
-            Keys = keys; Values = values;
+            Keys = keys; Values = values; Tier = tier;
         }
         public bool Has(string key) { return System.Array.IndexOf(Keys, key) >= 0; }
         public float Get(string key, float fallback) { int i = System.Array.IndexOf(Keys, key); return i >= 0 ? Values[i] : fallback; }
@@ -214,6 +245,7 @@ function exportSpecials() {
     {
         public const string Summary = ${csStr(summary)};
         public const int EntryCount = ${entries.length};
+        public const int PoolCount = ${pool.length};
         public const int KindCount = ${kinds.length};
         public const uint Hash = ${h.hex()}u;
 
@@ -226,6 +258,15 @@ function exportSpecials() {
   for (const { gen, e, keys, vals } of entries) {
     L.push(`${I3}new SpecialEntry(${[gen, e.name, e.kind, e.stat, e.fx, e.color, e.cry, e.desc, e.lore].map(csStr).join(', ')},`);
     L.push(`${I4}new[] { ${keys.map(csStr).join(', ')} }, new[] { ${vals.map(csFloat).join(', ')} }),`);
+  }
+  L.push(`        };
+
+        // 第三版：可习得必杀池（SG.SpecialsData.poolIds() 的顺序；Gen = 编号，Tier = 等阶）
+        public static readonly SpecialEntry[] Pool =
+        {`);
+  for (const { gen, e, keys, vals, tier } of pool) {
+    L.push(`${I3}new SpecialEntry(${[gen, e.name, e.kind, e.stat, e.fx, e.color, e.cry, e.desc, e.lore].map(csStr).join(', ')},`);
+    L.push(`${I4}new[] { ${keys.map(csStr).join(', ')} }, new[] { ${vals.map(csFloat).join(', ')} }, ${csInt(tier)}),`);
   }
   L.push(`        };
 
@@ -261,6 +302,8 @@ ${nounKeys.map(k => `${I3}new[] { ${E.NOUN[k].map(csStr).join(', ')} },`).join('
         // 条目中的非数值字段名、能力名（specials.js 的 META_KEYS、STATS）
         public static readonly string[] MetaKeys = { ${E.META_KEYS.map(csStr).join(', ')} };
         public static readonly string[] Stats = { ${E.STATS.map(csStr).join(', ')} };
+        // 可习得必杀的等阶名（specials.js 的 TIER_NAME，下标 = 等阶）
+        public static readonly string[] TierName = { ${S.TIER_NAME.map(csStr).join(', ')} };
 
         static System.Collections.Generic.Dictionary<string, SpecialEntry> byGen;
         // 按武将名取手写条目；没有则为 null（由兜底生成器生成）
@@ -274,6 +317,19 @@ ${nounKeys.map(k => `${I3}new[] { ${E.NOUN[k].map(csStr).join(', ')} },`).join('
             }
             SpecialEntry r;
             return gen != null && byGen.TryGetValue(gen, out r) ? r : null;
+        }
+        static System.Collections.Generic.Dictionary<string, SpecialEntry> byPool;
+        // 按编号取可习得必杀的原始条目（不带 "lp:" 前缀）；没有则为 null
+        public static SpecialEntry GetPool(string key)
+        {
+            if (byPool == null)
+            {
+                var d = new System.Collections.Generic.Dictionary<string, SpecialEntry>();
+                foreach (var e in Pool) d[e.Gen] = e;
+                byPool = d;
+            }
+            SpecialEntry r;
+            return key != null && byPool.TryGetValue(key, out r) ? r : null;
         }
         public static SpecialKindDef KindOf(string kind)
         {
@@ -316,9 +372,12 @@ function exportWorld() {
   for (const n of fi) { const w = SG.FactionInfo[n]; h.S(n); for (const k of FI) h.S(w[k]); }
   h.I(ci.length);
   for (const n of ci) { const w = SG.CityInfo[n]; h.S(n); for (const k of CI) h.S(w[k]); }
+  // 第三版：文化代号与回退表（core.js 的 SG.CULTURES / SG.cultureBase）
+  const cultures = SG.CULTURES.slice(), cultureBase = cultures.map(c => SG.cultureBase(c));
+  h.I(cultures.length); cultures.forEach((c, i) => { h.S(c); h.S(cultureBase[i]); });
 
   const summary = `cities=${W.Cities.length} links=${W.Links.length} sea=${W.SeaLinks.length} factions=${W.Factions.length} generals=${W.Generals.length}` +
-    ` regions=${regions.length} generalInfo=${gi.length} factionInfo=${fi.length} cityInfo=${ci.length} born=${born.length} hash=${h.hex()}`;
+    ` regions=${regions.length} generalInfo=${gi.length} factionInfo=${fi.length} cityInfo=${ci.length} born=${born.length} cultures=${cultures.length} hash=${h.hex()}`;
   const I3 = '            ';
   const L = [];
   L.push(HEADER('js/world-data.js', '世界剧本「天下大势」：城池、连线（含海路）、势力、武将、地域与人物 / 势力 / 城池资料。'));
@@ -353,10 +412,10 @@ function exportWorld() {
     // 新增城池的资料（SG.CityInfo）
     public sealed class WorldCityInfo
     {
-        public readonly string Key, Full, Orig, Modern, Note, Culture;
-        public WorldCityInfo(string key, string full, string orig, string modern, string note, string culture)
+        public readonly string Key, Full, Orig, Modern, Note, Liberty, Culture;   // Liberty 可缺（null）
+        public WorldCityInfo(string key, string full, string orig, string modern, string note, string liberty, string culture)
         {
-            Key = key; Full = full; Orig = orig; Modern = modern; Note = note; Culture = culture;
+            Key = key; Full = full; Orig = orig; Modern = modern; Note = note; Liberty = liberty; Culture = culture;
         }
     }
 
@@ -419,6 +478,11 @@ ${strs(born, I3, 6)}
         public static readonly string[] NanmanGenerals = { ${XW.NANMAN.map(csStr).join(', ')} };
         public static readonly string[] NanmanCities = { ${XW.NANMAN_CITIES.map(csStr).join(', ')} };
         public static readonly string[] NanmanFactions = { ${XW.NANMAN_FACTIONS.map(csStr).join(', ')} };
+
+        // 文化代号（core.js 的 SG.CULTURES：DESIGN-V2 §6 的 15 种 + 第三版 india / africa / moor）与各自的回退文化
+        // （SG.cultureBase：没有专门外观时用；基础文化为自身）。Defs.CultureBase 据此查表。
+        public static readonly string[] CultureCodes = { ${cultures.map(csStr).join(', ')} };
+        public static readonly string[] CultureBases = { ${cultureBase.map(csStr).join(', ')} };
 
         // 新增武将资料（SG.WorldInfo，原顺序）
         public static readonly WorldGeneralInfo[] GeneralInfo =
@@ -637,6 +701,155 @@ ${G.eastAsia.map(r => `${I3}new[] { ${r.map(csFloat).join(', ')} },`).join('\n')
   return { summary };
 }
 
+// ============================================================ 计策与成长 ==
+function exportTactics() {
+  const T = SG.Tactics, Pg = SG.Progress, AI = SG.BattleModel.aiTactic;
+  const all = T.all();
+  const KEYS = ['id', 'name', 'kind', 'tier', 'reqInt', 'power', 'desc', 'target', 'range', 'radius', 'cd', 'need', 'innate', 'fx', 'color', 'lore',
+    'roll', 'dmg', 'morale', 'moraleI', 'confuse', 'mod', 'heal', 'healI', 'food', 'cure', 'douse', 'foeConfuse'];
+  const SUB = {
+    roll: ['base', 'div', 'min', 'max', 'forest', 'lowMorale'], dmg: ['base', 'per', 'splash', 'forest', 'pierce'],
+    confuse: ['base', 'div', 'min', 'max', 'turns'], foeConfuse: ['base', 'div', 'min', 'max', 'turns'], mod: ['atk', 'def', 'counter', 'move', 'dot', 'days'],
+  };
+  const TARGETS = ['enemy', 'ally', 'self'], NEEDS = [undefined, 'river', 'cover', 'hill-self'];
+  for (const t of all) {
+    only(t, KEYS, 'Tactics.' + t.id);
+    for (const k of Object.keys(SUB)) if (t[k]) only(t[k], SUB[k], 'Tactics.' + t.id + '.' + k);
+    if (TARGETS.indexOf(t.target) < 0 || NEEDS.indexOf(t.need) < 0) throw new Error('Tactics.' + t.id + ': 未知 target / need');
+    if (t.innate !== (typeof t.kind === 'number')) throw new Error('Tactics.' + t.id + ': innate 与 kind 不符');
+  }
+  const num = v => (v === undefined || v === null ? 0 : v);
+  const h = new Hash();
+  const NN = v => { if (v === undefined || v === null) h.S(null); else h.N(v); };
+  h.I(T.TIER_NAME.length); T.TIER_NAME.forEach(x => h.S(x));
+  h.I(all.length);
+  for (const t of all) {
+    h.S(t.id); h.S(t.innate ? null : t.name); h.I(t.innate ? t.kind : -1); h.I(t.tier); h.I(t.innate ? 0 : t.reqInt);
+    h.S(t.target); h.I(t.range); h.I(t.radius | 0); h.I(t.cd | 0); h.S(t.need || null); h.S(t.fx); h.S(t.color); h.S(t.lore || null);
+    h.N(num(t.morale)); h.N(num(t.moraleI)); h.N(num(t.heal)); h.N(num(t.healI)); h.I(num(t.food)); h.I(num(t.cure)); h.I(num(t.douse));
+    for (const k of ['roll', 'dmg', 'confuse', 'foeConfuse']) { if (!t[k]) { h.S(null); continue; } h.S(k); for (const f of SUB[k]) h.N(num(t[k][f])); }
+    if (!t.mod) h.S(null); else { h.S('mod'); for (const f of SUB.mod) NN(t.mod[f]); }
+  }
+  for (const k of ['kAdj', 'kFree', 'floorAdj', 'floorFree', 'nowDays']) h.N(AI[k]);
+  // 成长表
+  const PK = ['SPECIAL_SLOT_WAR', 'SPECIAL_TIER_WAR', 'SPECIAL_SLOT_LEVEL', 'SPECIAL_TIER_LEVEL', 'TACTIC_SLOT_INT', 'TACTIC_TIER_INT', 'TACTIC_SLOT_LEVEL', 'TACTIC_TIER_LEVEL'];
+  h.I(Pg.MAX_LEVEL); h.I(Pg.BATTLE_CAP); h.N(Pg.VET_PER_LEVEL);
+  h.I(Pg.EXP.length); Pg.EXP.forEach(v => h.I(v));
+  for (const k of PK) { h.S(k); h.I(Pg[k].length); Pg[k].forEach(v => h.I(v)); }
+  h.I(Pg.INNATE_TACTICS.length); Pg.INNATE_TACTICS.forEach(v => h.S(v));
+
+  const D = v => { if (typeof v !== 'number' || !isFinite(v)) throw new Error('不是有限数值：' + v); const x = String(v); return x.indexOf('.') >= 0 || x.indexOf('e') >= 0 ? x : x + '.0'; };
+  const DN = v => (v === undefined || v === null ? 'null' : D(v));
+  const sub = (name, o) => o ? `new Tactic${name}(${SUB[name === 'Roll' ? 'roll' : name === 'Dmg' ? 'dmg' : name === 'Mod' ? 'mod' : 'confuse'].map(f => name === 'Mod' ? DN(o[f]) : D(num(o[f]))).join(', ')})` : 'null';
+  const learn = all.filter(t => !t.innate), orig = all.filter(t => t.innate);
+  const summary = `tactics=${all.length} innate=${orig.length} learnable=${learn.length} levels=${Pg.MAX_LEVEL} hash=${h.hex()}`;
+  const I3 = '            ', I4 = '                ';
+  const row = t => `${I3}new TacticEntry(${csStr(t.id)}, ${csStr(t.innate ? null : t.name)}, ${csInt(t.innate ? t.kind : -1)}, ${csInt(t.tier)}, ${csInt(t.innate ? 0 : t.reqInt)}, ${csStr(t.target)}, ${csInt(t.range)}, ${csInt(t.radius | 0)}, ${csInt(t.cd | 0)}, ${csStr(t.need || null)},\n` +
+    `${I4}${csStr(t.fx)}, ${csStr(t.color)}, ${csStr(t.lore || null)}, ${D(num(t.morale))}, ${D(num(t.moraleI))}, ${D(num(t.heal))}, ${D(num(t.healI))}, ${csInt(num(t.food))}, ${csInt(num(t.cure))}, ${csInt(num(t.douse))},\n` +
+    `${I4}${sub('Roll', t.roll)}, ${sub('Dmg', t.dmg)}, ${sub('Confuse', t.confuse)}, ${sub('Confuse', t.foeConfuse)}, ${sub('Mod', t.mod)}),`;
+  const ints = a => a.map(csInt).join(', ');
+  const L = [];
+  L.push(HEADER('js/tactics-data.js、js/model.js（SG.Progress）、js/battle-model.js（BattleModel.aiTactic）', '第三版计策目录（原四计的外观字段 + 14 种可习得计策的规则字段）与成长表。'));
+  L.push(`namespace Sanguo
+{
+    // 计策的成功率：clamp(Base + (施计者智力 − 目标智力) / Div + 加成, Min, Max)；Forest：目标在林地时 +；LowMorale：目标士气 < 50 时 +
+    public sealed class TacticRoll
+    {
+        public readonly double Base, Div, Min, Max, Forest, LowMorale;
+        public TacticRoll(double b, double div, double min, double max, double forest, double lowMorale) { Base = b; Div = div; Min = min; Max = max; Forest = forest; LowMorale = lowMorale; }
+    }
+    // 计策伤害：(Base + Per × 智力) × 敌兵力系数 ÷ 敌防御加成；Splash 周围敌军倍率、Forest 林地倍率、Pierce = 1 不受城防减免（0 = 无）
+    public sealed class TacticDmg
+    {
+        public readonly double Base, Per, Splash, Forest, Pierce;
+        public TacticDmg(double b, double per, double splash, double forest, double pierce) { Base = b; Per = per; Splash = splash; Forest = forest; Pierce = pierce; }
+    }
+    // 混乱判定：Base ≥ 1 为整体成功后必定混乱，否则 clamp(Base + 智力差 / Div, Min, Max)；Turns 日
+    public sealed class TacticConfuse
+    {
+        public readonly double Base, Div, Min, Max, Turns;
+        public TacticConfuse(double b, double div, double min, double max, double turns) { Base = b; Div = div; Min = min; Max = max; Turns = turns; }
+    }
+    // 限时加成 / 削弱（null = 该项不设）；Days 日
+    public sealed class TacticMod
+    {
+        public readonly double? Atk, Def, Counter, Move, Dot, Days;
+        public TacticMod(double? atk, double? def, double? counter, double? move, double? dot, double? days) { Atk = atk; Def = def; Counter = counter; Move = move; Dot = dot; Days = days; }
+    }
+    // 计策目录的一行（js/tactics-data.js）。原四计（Kind 0..3）的名称、需求智力、威力与说明取自 Defs.Tactics（Name = null、ReqInt = 0）；
+    // 可习得计策 Kind = -1（网页版 kind 为字符串 = Id）。字段含义见 tactics-data.js 文件头；未设的数值为 0。
+    public sealed class TacticEntry
+    {
+        public readonly string Id, Name;
+        public readonly int Kind, Tier, ReqInt;
+        public readonly string Target;           // enemy / ally / self
+        public readonly int Range, Radius, Cd;
+        public readonly string Need;             // null / river / cover / hill-self
+        public readonly string Fx, Color, Lore;
+        public readonly double Morale, MoraleI, Heal, HealI;
+        public readonly int Food, Cure, Douse;
+        public readonly TacticRoll Roll; public readonly TacticDmg Dmg; public readonly TacticConfuse Confuse, FoeConfuse; public readonly TacticMod Mod;
+        public TacticEntry(string id, string name, int kind, int tier, int reqInt, string target, int range, int radius, int cd, string need,
+            string fx, string color, string lore, double morale, double moraleI, double heal, double healI, int food, int cure, int douse,
+            TacticRoll roll, TacticDmg dmg, TacticConfuse confuse, TacticConfuse foeConfuse, TacticMod mod)
+        {
+            Id = id; Name = name; Kind = kind; Tier = tier; ReqInt = reqInt; Target = target; Range = range; Radius = radius; Cd = cd; Need = need;
+            Fx = fx; Color = color; Lore = lore; Morale = morale; MoraleI = moraleI; Heal = heal; HealI = healI; Food = food; Cure = cure; Douse = douse;
+            Roll = roll; Dmg = dmg; Confuse = confuse; FoeConfuse = foeConfuse; Mod = mod;
+        }
+    }
+
+    public static class TacticsData
+    {
+        public const string Summary = ${csStr(summary)};
+        public const uint Hash = ${h.hex()}u;
+
+        // 等阶名（SG.Tactics.TIER_NAME，下标 = 等阶）
+        public static readonly string[] TierName = { ${T.TIER_NAME.map(csStr).join(', ')} };
+
+        // 原四计（与 Defs.Tactics 同序：火计、落石、混乱、激励）
+        public static readonly TacticEntry[] Original =
+        {
+${orig.map(row).join('\n')}
+        };
+
+        // 14 种可习得计策（目录顺序，按等阶）
+        public static readonly TacticEntry[] Learnable =
+        {
+${learn.map(row).join('\n')}
+        };
+
+        // 电脑施展习得新计策的门槛（battle-model.js 的 BattleModel.aiTactic）：期望价值 ≥ max(普通一手 × k, floor)；Adj = 已与敌相邻
+        public const double AiKAdj = ${D(AI.kAdj)}, AiKFree = ${D(AI.kFree)}, AiFloorAdj = ${D(AI.floorAdj)}, AiFloorFree = ${D(AI.floorFree)}, AiNowDays = ${D(AI.nowDays)};
+    }
+
+    // 成长表（js/model.js 的 SG.Progress 常数）
+    public static class ProgressData
+    {
+        public const int MaxLevel = ${csInt(Pg.MAX_LEVEL)};
+        public const int BattleCap = ${csInt(Pg.BATTLE_CAP)};          // 一战至多获得的经验
+        public const double VetPerLevel = ${D(Pg.VET_PER_LEVEL)};      // 老练：每高 1 级攻、防、计策威力 +
+        // 升到 L 级所需的累计经验（下标 = 等级；0、1 为 0）
+        public static readonly int[] Exp = { ${ints(Pg.EXP)} };
+        // 必杀：武力门槛（每过一档 +1 格）、等阶上限的武力门槛、第 k 格 / 第 k 阶解锁的等级
+        public static readonly int[] SpecialSlotWar = { ${ints(Pg.SPECIAL_SLOT_WAR)} };
+        public static readonly int[] SpecialTierWar = { ${ints(Pg.SPECIAL_TIER_WAR)} };
+        public static readonly int[] SpecialSlotLevel = { ${ints(Pg.SPECIAL_SLOT_LEVEL)} };
+        public static readonly int[] SpecialTierLevel = { ${ints(Pg.SPECIAL_TIER_LEVEL)} };
+        // 计策：智力门槛、等阶上限的智力门槛、第 k 格 / 第 k 阶解锁的等级
+        public static readonly int[] TacticSlotInt = { ${ints(Pg.TACTIC_SLOT_INT)} };
+        public static readonly int[] TacticTierInt = { ${ints(Pg.TACTIC_TIER_INT)} };
+        public static readonly int[] TacticSlotLevel = { ${ints(Pg.TACTIC_SLOT_LEVEL)} };
+        public static readonly int[] TacticTierLevel = { ${ints(Pg.TACTIC_TIER_LEVEL)} };
+        // 按智力自带、不占格的原四计（与 Defs.Tactics 同序）
+        public static readonly string[] InnateTactics = { ${Pg.INNATE_TACTICS.map(csStr).join(', ')} };
+    }
+}
+`);
+  emit(path.join(GEN_DIR, 'TacticsData.g.cs'), L.join('\n'));
+  return { summary };
+}
+
 // ============================================================ 参考结果 ==
 function fmt6(v) { return (Math.round(v * 1e6) / 1e6).toFixed(6); }
 function exportRefs() {
@@ -670,6 +883,19 @@ function exportRefs() {
   }
   emit(path.join(REF_DIR, 'specials-ref.txt'), L.join('\n') + '\n');
 
+  // 第三版：可习得必杀池（SG.Specials.pool()，按等阶排序）与 18 种计策的说明 / 摘要
+  const PL = ['# 自动生成，勿手改（sanguozhi2-web/tools/export-unity-data.js）。SG.Specials.pool() 的补全结果（按等阶排序）。',
+    '# 每行以制表符分隔：编号 等阶 招式名 机制 能力 签名 主色 特效 台词 说明 摘要（SG.Specials.rules）'];
+  for (const sp of S.pool()) PL.push([sp.id, sp.tier, sp.name, sp.kind, sp.stat, S.signature(sp), sp.color, sp.fx, sp.cry || '', sp.desc, S.rules(sp)].map(x => String(x).replace(/[\t\n]/g, ' ')).join('\t'));
+  emit(path.join(REF_DIR, 'pool-ref.txt'), PL.join('\n') + '\n');
+  const T = SG.Tactics;
+  const TL = ['# 自动生成，勿手改（sanguozhi2-web/tools/export-unity-data.js）。SG.Tactics.all() 的说明（desc = explain）与摘要（rules）。',
+    '# 每行以制表符分隔：编号 名称 等阶 需求智力 说明 摘要'];
+  for (const t of T.all()) TL.push([t.id, t.name, t.tier, t.reqInt, t.desc, T.rules(t)].map(x => String(x).replace(/[\t\n]/g, ' ')).join('\t'));
+  emit(path.join(REF_DIR, 'tactics-ref.txt'), TL.join('\n') + '\n');
+
+  exportProgressRef();
+
   const P = ['# 自动生成，勿手改（sanguozhi2-web/tools/export-unity-data.js）。SG.project / SG.unproject 的参考结果（6 位小数）。',
     '# project 经度 纬度 => x y ； unproject x y => 经度 纬度 ； world 范围 ； region 键 xMin yMin xMax yMax cx cy'];
   const lons = [], lats = [];
@@ -685,10 +911,59 @@ function exportRefs() {
   emit(path.join(REF_DIR, 'project-ref.txt'), P.join('\n') + '\n');
 }
 
+// 第三版：经验的来源与权重（SG.Progress.battleExp 里的字面常数、autoBattle 的「不战而下 5 点」）没有数据表可导出，
+// 这里改为记录一组探针输入的结果：C# 的 Progress.BattleExp / AutoBattle 在 HarnessProgress 的 (exp-ref) 节逐行对照。
+// JS 改了任一来源的经验，--check 即报 progress-ref.txt 不同；重新导出后 C# 未跟上则测试失败。
+function exportProgressRef() {
+  const Pg = SG.Progress;
+  const EK = ['dmg', 'heal', 'routs', 'cmdRouts', 'duelWin', 'duelLoss', 'specials', 'tactics', 'tacFail'];
+  const L = ['# 自动生成，勿手改（sanguozhi2-web/tools/export-unity-data.js）。SG.Progress.battleExp(x) 与 SG.Progress.autoBattle(s, snap) 对探针输入的结果。',
+    '# exp\t' + EK.join(' ') + ' won commander\t=> 经验',
+    '# auto\t情形\tatk 编号:武力:兵力:训练:战后兵力 …\tdef …\trouted 编号,…\tattackerWon 0|1\t=> 结算（编号:方:胜:经验:等级前>后 …）\t战绩（编号:战/胜/溃/单挑 …）'];
+  const probes = [{}, { won: true }, { won: true, commander: true }, { commander: true }];
+  const one = { dmg: [1, 20, 39, 40, 60, 100, 1234.5, 5000], heal: [1, 40, 80, 333, 2000], routs: [0.5, 1, 3], cmdRouts: [0.4, 1, 2], duelWin: [1, 2],
+    duelLoss: [1, 3], specials: [1, 4], tactics: [1, 5], tacFail: [1, 7] };
+  for (const k of EK) for (const v of one[k]) { probes.push({ [k]: v }); probes.push({ [k]: v, won: true }); }
+  probes.push({ dmg: 20000, won: true, commander: true }, { routs: 30 }, { heal: 1e6 }, { dmg: 8000, heal: 4000, routs: 5, cmdRouts: 1, duelWin: 2, specials: 6, tactics: 6, tacFail: 3, won: true, commander: true });
+  const r = SG.SeededRandom(20261018);
+  for (let i = 0; i < 60; i++) {
+    const x = {};
+    for (const k of EK) if (r.next(3) > 0) x[k] = k === 'dmg' ? r.next(400000) / 100 : k === 'heal' ? r.next(200000) / 100 : r.next(4) + (k === 'routs' || k === 'cmdRouts' ? r.next(1000) / 1000 : 0);
+    if (r.next(2)) x.won = true;
+    if (r.next(2)) x.commander = true;
+    probes.push(x);
+  }
+  for (const x of probes) L.push('exp\t' + EK.map(k => String(x[k] || 0)).concat([x.won ? 1 : 0, x.commander ? 1 : 0]).join(' ') + '\t=> ' + Pg.battleExp(x));
+
+  // 自动结算：[情形, 攻方, 守方, 溃走, 攻方胜]；武将 = [编号, 武力, 兵力, 训练, 战后兵力]
+  const cases = [
+    ['unopposed', [[1, 80, 3000, 60, 3000], [2, 50, 1000, 40, 1000]], [], [], 1],
+    ['empty-defenders', [[1, 70, 2000, 50, 2000]], [[11, 60, 0, 40, 0]], [], 1],
+    ['atk-won', [[1, 85, 3000, 70, 2500], [2, 60, 1200, 50, 0], [3, 40, 900, 30, 900]], [[11, 75, 2500, 60, 0], [12, 55, 1500, 45, 400]], [2, 11], 1],
+    ['def-won', [[1, 90, 4000, 80, 0], [2, 70, 2000, 60, 1500]], [[11, 65, 3000, 55, 2100], [12, 50, 800, 35, 0], [13, 45, 0, 40, 0]], [1, 12], 0],
+    ['duel-rout', [[1, 95, 3500, 75, 3400]], [[11, 88, 3200, 70, 3000], [12, 30, 600, 20, 600]], [11], 1],
+    ['no-loss', [[1, 60, 2000, 50, 2000], [2, 60, 2000, 50, 2000]], [[11, 60, 2000, 50, 2000]], [], 0],
+  ];
+  const mk = (p, side) => { const x = { id: 70000 + p[0], name: '探针' + p[0], war: p[1], intel: 50, pol: 50, faction: -1, city: 0, troops: p[2], training: p[3], loyalty: 80 }; Pg.ensure(x); return x; };
+  const gl = a => a.map(p => p.join(':')).join(' ');
+  for (const [name, A, D, routed, aw] of cases) {
+    const s = { atk: A.map(p => mk(p)), def: D.map(p => mk(p)), routed: new Set(routed.map(id => 70000 + id)), attackerWon: !!aw };
+    const snap = Pg.snapshot(s);
+    A.forEach((p, i) => { s.atk[i].troops = p[4]; });
+    D.forEach((p, i) => { s.def[i].troops = p[4]; });
+    const res = Pg.autoBattle(s, snap);
+    const out = res.map(x => [x.gen.id - 70000, x.side, x.won ? 1 : 0, x.exp, x.from + '>' + x.to].join(':')).join(' ');
+    const rec = s.atk.concat(s.def).map(x => (x.id - 70000) + ':' + [x.record.battles, x.record.wins, x.record.routs, x.record.duels].join('/')).join(' ');
+    L.push(['auto', name, 'atk ' + gl(A), 'def ' + gl(D), 'routed ' + routed.join(','), 'attackerWon ' + aw, '=> ' + out, rec].join('\t'));
+  }
+  emit(path.join(REF_DIR, 'progress-ref.txt'), L.join('\n') + '\n');
+}
+
 // ------------------------------------------------------------------ 主程序 --
 const sp = exportSpecials();
 const wd = exportWorld();
 const geo = exportGeo();
+const tac = exportTactics();
 exportRefs();
 if (sp.missing.length) console.log('注意：以下世界剧本武将没有手写必杀技条目（将由兜底生成）：' + sp.missing.join('、'));
 
@@ -706,4 +981,5 @@ for (const o of outputs) {
 console.log('SpecialsData: ' + sp.summary);
 console.log('WorldData:    ' + wd.summary);
 console.log('WorldGeo:     ' + geo.summary);
+console.log('TacticsData:  ' + tac.summary);
 if (CHECK && diffs) { console.log(diffs + ' 个文件与当前数据不一致，请运行 node tools/export-unity-data.js'); process.exit(1); }

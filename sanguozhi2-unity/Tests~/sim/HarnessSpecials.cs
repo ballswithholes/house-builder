@@ -1,10 +1,12 @@
 // 必杀技测试（tests/sim.js (4)(5)(5b)(5c)(6) 的 C# 版）与参考结果比对：
-//   (ref) Specials.Of 对 ref/specials-ref.txt 全部 433 行（世界剧本 361 名 + 72 名兜底生成）逐字段与 JS 相同；
+//   (ref) Specials.Of 对 ref/specials-ref.txt 全部 571 行（世界剧本 499 名 + 72 名兜底生成）逐字段与 JS 相同；
+//   (pool) 第三版可习得必杀池（Specials.Pool）对 ref/pool-ref.txt 逐字段与 JS 相同（编号、等阶、补全结果、签名、说明、摘要）；
 //   (4) 数据自检：每位武将都有招式、名称唯一、(机制, 参数) 唯一、兜底生成器确定且不撞车、校验器能发现错误；
 //   (5) UseSpecial 随机压力测试（不得出现负兵力 / 重叠 / 越界）与每位武将的参考伤害倍率；
 //   (5b) 规则：攻守对称的持续时间、突击不能撞走本城 / 城门守军、范围封顶、各机制单体 / 密集伤害倍率；
 //   (5c) 世界剧本武将：全部手写、唯一、参考伤害倍率；
 //   (6) Duel() 拆成 DuelAccepts + DuelFinish 后随机数顺序不变。
+// (4)–(6) 同网页版按第二版语义测试专属必杀：关闭成长（Progress.enabled = false：只有专属必杀与原四计、不获得经验）。
 // 测试代码里与 JS 的 SG.Random.value() 对应处用 Random.NextDouble()（替身专有，双精度），使随机局面与 JS 完全相同。
 using System;
 using System.Collections.Generic;
@@ -29,12 +31,15 @@ class PSp
         Console.OutputEncoding = new System.Text.UTF8Encoding(false);
         var t0 = DateTime.Now;
         Section("(ref) Specials.Of vs JS reference (ref/specials-ref.txt)", RefCheck);
+        Section("(pool) learnable specials vs JS reference (ref/pool-ref.txt)", PoolRefCheck);
         Specials.ResetCache();
+        Progress.enabled = false;
         Section("(4) specials data", Data);
         Section("(5) useSpecial fuzz + reference damage ratios", Fuzz);
         Section("(5b) specials rules: symmetric durations, castle hold, area cap, per-kind damage", RulesCheck);
         Section("(5c) world scenario generals: hand-made, unique, reference damage ratios", World);
         Section("(6) duel split keeps the random sequence", DuelSplit);
+        Progress.enabled = true;
         Console.WriteLine($"total {Sim.F((DateTime.Now - t0).TotalSeconds, 1)}s");
         Console.WriteLine(fails == 0 ? "ALL OK" : "FAILURES: " + fails);
         return fails;
@@ -71,6 +76,26 @@ class PSp
         if (bad > 0 || n < 400) throw new Exception("specials differ from the JS reference");
     }
 
+    static void PoolRefCheck()
+    {
+        Specials.ResetCache();
+        var want = System.IO.File.ReadAllLines("ref/pool-ref.txt").Where(l => !l.StartsWith("#") && l.Trim().Length > 0).ToList();
+        var pool = Specials.Pool();
+        Func<string, string> clean = s => (s ?? "").Replace('\t', ' ').Replace('\n', ' ');
+        int bad = 0;
+        for (int i = 0; i < Math.Max(want.Count, pool.Count); i++)
+        {
+            var sp = i < pool.Count ? pool[i] : null;
+            var got = sp == null ? "(none)" : string.Join("\t", new[] { sp.id, sp.tier.ToString(), sp.name, sp.kind, sp.stat, Specials.Signature(sp), sp.color, sp.fx, sp.cry, sp.desc, Specials.Rules(sp) }.Select(clean));
+            var w = i < want.Count ? want[i] : "(none)";
+            if (got != w) { bad++; if (bad <= 4) Console.WriteLine($"  MISMATCH pool line {i + 1}:\n    got  {got}\n    want {w}"); }
+            if (sp != null && (Specials.ById(sp.id) != sp || !sp.pool || sp.problems.Count > 0)) { bad++; Console.WriteLine("  bad pool entry " + sp.id + " " + string.Join("; ", sp.problems)); }
+        }
+        var byTier = pool.GroupBy(sp => sp.tier).OrderBy(g => g.Key).Select(g => "T" + g.Key + ":" + g.Count());
+        Console.WriteLine($"{pool.Count} learnable specials compared ({string.Join(" ", byTier)}), {bad} mismatches");
+        if (bad > 0 || pool.Count < 30) throw new Exception("learnable specials differ from the JS reference");
+    }
+
     // ------------------------------------------------------------ (4) 数据 --
     static void Data()
     {
@@ -97,7 +122,7 @@ class PSp
             throw new Exception("General.culture should default to null with the Nanman-list fallback");
         // 兜底生成器：确定性（同名同招）、名称含姓名、与名单内全部招式不撞车
         var synth = new List<General>();
-        var cultures = new[] { "han", "wa", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian", "nanman", "yi" };
+        var cultures = new[] { "han", "wa", "korea", "steppe", "seasia", "tarim", "kushan", "persia", "arab", "roman", "celt", "german", "sarmatian", "nanman", "yi", "india", "africa", "moor" };
         var rnd = new SeededRandom(4242);
         const string chars = "阿巴卡达伊法加哈米努奥帕萨塔乌瓦克雷图斯马尔罗尼娜莎提亚卑弥呼难升米乙素肖古王区连范师蔓";
         for (int i = 0; i < 160; i++)

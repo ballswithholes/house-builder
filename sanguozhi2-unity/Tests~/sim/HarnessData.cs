@@ -1,4 +1,4 @@
-// (D) 生成数据自检：用与导出工具相同的遍历重算 SpecialsData / WorldScenarioData / WorldGeoData 的哈希，
+// (D) 生成数据自检：用与导出工具相同的遍历重算 SpecialsData / WorldScenarioData / WorldGeoData / TacticsData 的哈希，
 // 与文件里的 Hash 常量比对（确认 C# 数据与 JS 完全一致：字符串转义、浮点字面量、条目顺序）；
 // 再做一致性检查：世界剧本的经典部分与 ScenarioData 相同、连线端点存在、海路 ⊂ 连线、地域覆盖全部势力、
 // 每位世界武将都有手写必杀技、招式名唯一、参数名属于其机制且在范围内、地理点数组成对。
@@ -16,6 +16,7 @@ class PD
         Specials();
         World();
         Geo();
+        TacticsCheck();
         Console.WriteLine(Check.Fails == 0 ? "ALL OK" : "FAILURES: " + Check.Fails);
         return Check.Fails;
     }
@@ -27,6 +28,14 @@ class PD
         foreach (var e in SpecialsData.Entries)
         {
             h.S(e.Gen); h.S(e.Name); h.S(e.Kind); h.S(e.Stat); h.S(e.Fx); h.S(e.Color); h.S(e.Cry); h.S(e.Desc); h.S(e.Lore);
+            h.I(e.Keys.Length);
+            for (int i = 0; i < e.Keys.Length; i++) { h.S(e.Keys[i]); h.N(e.Values[i]); }
+        }
+        // 第三版：可习得必杀池
+        h.I(SpecialsData.Pool.Length);
+        foreach (var e in SpecialsData.Pool)
+        {
+            h.S(e.Gen); h.I(e.Tier); h.S(e.Name); h.S(e.Kind); h.S(e.Stat); h.S(e.Fx); h.S(e.Color); h.S(e.Cry); h.S(e.Desc); h.S(e.Lore);
             h.I(e.Keys.Length);
             for (int i = 0; i < e.Keys.Length; i++) { h.S(e.Keys[i]); h.N(e.Values[i]); }
         }
@@ -44,9 +53,18 @@ class PD
         for (int i = 0; i < SpecialsData.NounKeys.Length; i++) { h.S(SpecialsData.NounKeys[i]); h.SA(SpecialsData.Nouns[i]); }
         h.I(SpecialsData.FlavorKeys.Length);
         for (int i = 0; i < SpecialsData.FlavorKeys.Length; i++) { h.S(SpecialsData.FlavorKeys[i]); h.S(SpecialsData.Flavors[i]); }
-        h.SA(SpecialsData.Nanman); h.SA(SpecialsData.MetaKeys); h.SA(SpecialsData.Stats);
+        h.SA(SpecialsData.Nanman); h.SA(SpecialsData.MetaKeys); h.SA(SpecialsData.Stats); h.SA(SpecialsData.TierName);
         Check.That(h.Value == SpecialsData.Hash, $"SpecialsData hash {h.Hex} != 0x{SpecialsData.Hash:x8}");
-        Check.That(SpecialsData.Entries.Length == SpecialsData.EntryCount && SpecialsData.Kinds.Length == SpecialsData.KindCount, "SpecialsData counts");
+        Check.That(SpecialsData.Entries.Length == SpecialsData.EntryCount && SpecialsData.Kinds.Length == SpecialsData.KindCount && SpecialsData.Pool.Length == SpecialsData.PoolCount, "SpecialsData counts");
+        // 可习得必杀：编号唯一、等阶 1–4、名称不与专属必杀重复、GetPool 查得到
+        var poolKeys = new HashSet<string>();
+        foreach (var e in SpecialsData.Pool)
+        {
+            Check.That(poolKeys.Add(e.Gen), "duplicate pool key " + e.Gen);
+            Check.That(e.Tier >= 1 && e.Tier <= 4, "pool tier " + e.Gen + " " + e.Tier);
+            Check.That(SpecialsData.GetPool(e.Gen) == e && SpecialsData.Get(e.Gen) == null, "GetPool lookup " + e.Gen);
+            Check.That(SpecialsData.KindOf(e.Kind) != null, "pool kind " + e.Gen);
+        }
 
         // 招式名唯一、武将名唯一、机制存在、参数名属于机制且在范围内
         var names = new HashSet<string>(); var gens = new HashSet<string>();
@@ -95,8 +113,13 @@ class PD
             h.S(w.Key); h.S(w.Name); h.S(w.Full); h.S(w.Orig); h.S(w.Ruler); h.S(w.Capital); h.S(w.Culture); h.S(w.Region); h.S(w.Note); h.S(w.Liberty);
         }
         h.I(WorldScenarioData.CityInfo.Length);
-        foreach (var w in WorldScenarioData.CityInfo) { h.S(w.Key); h.S(w.Full); h.S(w.Orig); h.S(w.Modern); h.S(w.Note); h.S(w.Culture); }
+        foreach (var w in WorldScenarioData.CityInfo) { h.S(w.Key); h.S(w.Full); h.S(w.Orig); h.S(w.Modern); h.S(w.Note); h.S(w.Liberty); h.S(w.Culture); }
+        h.I(WorldScenarioData.CultureCodes.Length);
+        for (int i = 0; i < WorldScenarioData.CultureCodes.Length; i++) { h.S(WorldScenarioData.CultureCodes[i]); h.S(WorldScenarioData.CultureBases[i]); }
         Check.That(h.Value == WorldScenarioData.Hash, $"WorldScenarioData hash {h.Hex} != 0x{WorldScenarioData.Hash:x8}");
+        // 文化回退表（= SG.cultureBase）
+        Check.That(Defs.CultureBase("india") == "seasia" && Defs.CultureBase("africa") == "arab" && Defs.CultureBase("moor") == "arab" && Defs.CultureBase("roman") == "roman" &&
+            Defs.CultureBase("???") == "han" && Defs.CultureBase(null) == "han" && Defs.Cultures.Length == 18, "Defs.CultureBase fallbacks");
 
         // 经典部分与 ScenarioData 一致（world-data.js 原样复制，只在行尾加列）
         Func<string[], string[], string, bool> prefix = (w, c, what) =>
@@ -171,6 +194,44 @@ class PD
         foreach (var b in WorldScenarioData.GeneralBorn) { var p = b.Split('|'); Check.That(p.Length == 2 && gens.Contains(p[0]), "GeneralBorn " + b); }
         int female = WorldScenarioData.GeneralInfo.Count(w => w.Female) + WorldScenarioData.ClassicFemale.Length;
         Console.WriteLine($"  {cities.Count} cities, {links.Count} links ({WorldScenarioData.SeaLinks.Length} sea), {factions.Count} factions, {gens.Count} generals ({female} female), hash {h.Hex}");
+    }
+
+    // 第三版计策目录与成长表（TacticsData.g.cs）：哈希、编号唯一、等阶与需求智力
+    static void TacticsCheck()
+    {
+        Console.WriteLine("== tactics data: " + TacticsData.Summary);
+        var h = new DataHash();
+        Action<double?> NN = v => { if (v.HasValue) h.N((float)v.Value); else h.S(null); };
+        Action<double> N = v => h.N((float)v);
+        h.SA(TacticsData.TierName);
+        var all = TacticsData.Original.Concat(TacticsData.Learnable).ToList();
+        h.I(all.Count);
+        foreach (var t in all)
+        {
+            h.S(t.Id); h.S(t.Name); h.I(t.Kind); h.I(t.Tier); h.I(t.ReqInt);
+            h.S(t.Target); h.I(t.Range); h.I(t.Radius); h.I(t.Cd); h.S(t.Need); h.S(t.Fx); h.S(t.Color); h.S(t.Lore);
+            N(t.Morale); N(t.MoraleI); N(t.Heal); N(t.HealI); h.I(t.Food); h.I(t.Cure); h.I(t.Douse);
+            if (t.Roll == null) h.S(null); else { h.S("roll"); N(t.Roll.Base); N(t.Roll.Div); N(t.Roll.Min); N(t.Roll.Max); N(t.Roll.Forest); N(t.Roll.LowMorale); }
+            if (t.Dmg == null) h.S(null); else { h.S("dmg"); N(t.Dmg.Base); N(t.Dmg.Per); N(t.Dmg.Splash); N(t.Dmg.Forest); N(t.Dmg.Pierce); }
+            foreach (var c in new[] { t.Confuse, t.FoeConfuse }) { if (c == null) h.S(null); else { h.S(c == t.Confuse ? "confuse" : "foeConfuse"); N(c.Base); N(c.Div); N(c.Min); N(c.Max); N(c.Turns); } }
+            if (t.Mod == null) h.S(null); else { h.S("mod"); NN(t.Mod.Atk); NN(t.Mod.Def); NN(t.Mod.Counter); NN(t.Mod.Move); NN(t.Mod.Dot); NN(t.Mod.Days); }
+        }
+        foreach (var v in new[] { TacticsData.AiKAdj, TacticsData.AiKFree, TacticsData.AiFloorAdj, TacticsData.AiFloorFree, TacticsData.AiNowDays }) N(v);
+        h.I(ProgressData.MaxLevel); h.I(ProgressData.BattleCap); N(ProgressData.VetPerLevel);
+        h.I(ProgressData.Exp.Length); foreach (var v in ProgressData.Exp) h.I(v);
+        var tabs = new[] { new KeyValuePair<string, int[]>("SPECIAL_SLOT_WAR", ProgressData.SpecialSlotWar), new KeyValuePair<string, int[]>("SPECIAL_TIER_WAR", ProgressData.SpecialTierWar),
+            new KeyValuePair<string, int[]>("SPECIAL_SLOT_LEVEL", ProgressData.SpecialSlotLevel), new KeyValuePair<string, int[]>("SPECIAL_TIER_LEVEL", ProgressData.SpecialTierLevel),
+            new KeyValuePair<string, int[]>("TACTIC_SLOT_INT", ProgressData.TacticSlotInt), new KeyValuePair<string, int[]>("TACTIC_TIER_INT", ProgressData.TacticTierInt),
+            new KeyValuePair<string, int[]>("TACTIC_SLOT_LEVEL", ProgressData.TacticSlotLevel), new KeyValuePair<string, int[]>("TACTIC_TIER_LEVEL", ProgressData.TacticTierLevel) };
+        foreach (var kv in tabs) { h.S(kv.Key); h.I(kv.Value.Length); foreach (var v in kv.Value) h.I(v); }
+        h.SA(ProgressData.InnateTactics);
+        Check.That(h.Value == TacticsData.Hash, $"TacticsData hash {h.Hex} != 0x{TacticsData.Hash:x8}");
+        var ids = new HashSet<string>();
+        foreach (var t in all) Check.That(ids.Add(t.Id), "duplicate tactic id " + t.Id);
+        for (int i = 0; i < TacticsData.Original.Length; i++) Check.That(TacticsData.Original[i].Kind == i && TacticsData.Original[i].Id == ProgressData.InnateTactics[i], "original tactic order " + i);
+        foreach (var t in TacticsData.Learnable) Check.That(t.Kind == -1 && t.Tier >= 1 && t.Tier <= 4 && !string.IsNullOrEmpty(t.Name) && SpecialsData.FxStyles.Contains(t.Fx), "learnable tactic " + t.Id);
+        Check.That(ProgressData.Exp.Length == ProgressData.MaxLevel + 1, "EXP table length");
+        Console.WriteLine($"  {all.Count} tactics ({TacticsData.Learnable.Length} learnable), EXP {string.Join("/", ProgressData.Exp.Skip(1))}, hash {h.Hex}");
     }
 
     static void Geo()

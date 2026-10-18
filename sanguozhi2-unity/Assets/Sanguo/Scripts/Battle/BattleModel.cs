@@ -1,4 +1,4 @@
-// 三国志II 霸王的大陆 · 战术战斗规则（对应网页版 js/battle-model.js）
+// 三国志-霸王的世界 · 战术战斗规则（对应网页版 js/battle-model.js）
 //
 // 第二版新增（必杀技，招式数据见 Battle/Specials.cs）：
 //   SpecialUsable(u, out why)            该部队现在能否施展必杀技（每战一次：u.specialUsed）
@@ -14,6 +14,29 @@
 //   BattleModel.specialsEnabled：false 时规则与电脑完全回到第一版（平衡对比测试用）。默认 true（同网页版）；
 //     无头测试（Tests~/sim）一律显式置 true 与网页版对照
 // 数值按 double 计算（与网页版一致）；战场地形由 SeededRandom 生成，同一种子下与网页版完全相同。
+//
+// 第三版（DESIGN-V3 §4 成长；成长规则见 Model/GameState.cs 的 Progress，计策目录见 Battle/Tactics.cs）：
+//   战场 18 × 13；地形先试 BattleTerrain.ApplyTo（取自城池真实周边、按来向旋转），返回 false 时退回旧的随机生成。
+//   必杀：一支部队可会多招（专属必杀 + 习得的可习得必杀），每招每战一次。
+//     KnownSpecials(u) → [sp]（专属在前）· SpecialOf(u, id?) · SpecialUsable(u, id, out why) · SpecialTargets(u, id?) ·
+//     SpecialPlan(u, target, id?) · UseSpecial(u, target, id?)；TargetsOf(u, sp) / SpPlan(u, sp, target) / SpUsable1(u, sp, out why) 按招式对象。
+//     id 缺省时：u.spPick（选招菜单或电脑记下的那一招）→ 否则第一招可施展的。SpecialUsable(u) 不带 id 且未选招时
+//     回答「是否还有任何一招可用」（「必杀」菜单项用）。已施展的招式记在 u.spUsed（编号表）；专属必杀施展后
+//     u.specialUsed 仍为 true（与第二版相同）。AiSpecial(u) → { target, value, special } —— 电脑在全部已会的招式中
+//     挑最划算的；PlanAction 的 "special" 计划带 plan.special，并记入 u.spPick（旧控制器不传编号也能用对招）。
+//     学来的暗杀（招式池，带 tier）成功率减半。
+//   计策：KnownTactics(u) → 该部队会的计策（原四计按智力 + 习得的新计策，见 Tactics.Known）。
+//     原四计（Kind 0..3）的 TacticUsable / TacticRange / TacticTargets / UseTactic 与第一版完全相同（另乘老练 TacK）；
+//     新计策（Kind = Learned）：TacticUsable 另查是否习得、冷却（u.tacReady[id] = 可再用的日子）、军粮、地形需求；
+//     TacticChance(u, t, target) 成功率；TacticPlan(u, t, target) 效果清单（与 SpPlan 同结构）；
+//     UseNewTactic(u, t, target) → SpecialResult（另有 res.tactic；失败时 success = false、resisted = [目标]）；
+//     UseTactic(u, t, target) 仍返回 (成功, 损伤)，对新计策即 UseNewTactic 的 (success, dmg)；
+//     TacticValue(u, t, target) / AiTactic(u)：电脑按期望价值使用新计策（不耗随机数；原四计的随机判定照旧）。
+//   老练：AtkPower / DefFactor × VetK(u)，计策与智力系必杀 × TacK(u, e)（= Progress.VetK 之比；1 级对 1 级为 1）。
+//   经验：每支部队累计 u.xp（BattleXp：dmg, heal, routs, cmdRouts, duelWin, duelLoss, specials, tactics, tacFail）；
+//     分出胜负时（CheckEnd / 期限）自动结算 Progress.BattleExp → Progress.Gain，结果在
+//     model.progress = setup.progress = [ProgressResult { gen, side, won, exp, from, to, learned, xp }]（电脑武将已自动习得 learned；
+//     玩家武将见 Progress.Pending(G.player)）。setup.progressDone = true，防止同一场再被自动结算计一次。
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,7 +65,12 @@ namespace Sanguo
         public int confused;
         public bool commander;
         public bool alive = true;
-        public bool specialUsed;                      // 本战已施展必杀技
+        public bool specialUsed;                      // 本战已施展专属必杀
+        public List<string> spUsed = new List<string>();   // 第三版：本战已施展的全部必杀（编号）
+        public string spPick;                         // 选招菜单 / 电脑选定、尚未施展的必杀编号
+        public Dictionary<string, int> tacReady = new Dictionary<string, int>();   // 新计策的冷却：编号 → 可再用的日子
+        public BattleXp xp = new BattleXp();          // 本战经验来源
+        internal bool xpRouted;                       // 已记过一次击溃（经验）
         public List<BMod> mods = new List<BMod>();    // 限时加成
         public int troops0 = -1;                      // 出阵兵力：回复类必杀不得超过此数（-1 = 未知）
         public int Troops { get { return gen.troops; } set { gen.troops = Mathf.Max(0, value); } }
@@ -53,7 +81,7 @@ namespace Sanguo
             {
                 int mv = 0;
                 if (mods != null) foreach (var m in mods) if (m.move.HasValue) mv += m.move.Value;
-                return 3 + Form.Move + mv;
+                return Math.Max(1, 3 + Form.Move + mv);   // 疑兵等削弱机动力时至少 1
             }
         }
     }
@@ -79,6 +107,7 @@ namespace Sanguo
         public List<SpBurn> burn = new List<SpBurn>(); public List<Vector2Int> douse = new List<Vector2Int>(); public List<BUnit> refresh = new List<BUnit>();
         public int ap; public SpMove move; public SpPush push; public BUnit blocked; public SpKill kill;
         public double drain; public List<BUnit> pool; public bool seq; public double areaK = 1;
+        public TacticDef tactic;   // 第三版：计策的效果清单（TacticPlan；sp 为替身 id = "tac:编号"）
     }
 
     // ---- 必杀技的结算结果（UseSpecial）----
@@ -94,8 +123,10 @@ namespace Sanguo
         public SpMove moved; public List<SpPush> pushed = new List<SpPush>(); public BUnit blocked, killed;
         public List<BUnit> routed = new List<BUnit>(), affected = new List<BUnit>();
         public List<Vector2Int> area = new List<Vector2Int>(); public Vector2Int? center; public BUnit target;
+        public TacticDef tactic;   // 第三版：新计策的结果（Tactics.Perform 对原四计也补上）
     }
-    public class AiSpecialChoice { public BUnit target; public double value; }
+    public class AiSpecialChoice { public BUnit target; public double value; public Special special; }
+    public class AiTacticChoice { public TacticDef tactic; public BUnit target; public double value; }
 
     public class BattleModel
     {
@@ -116,6 +147,12 @@ namespace Sanguo
         public int result; // 0 进行中 1 攻方胜 2 守方胜
         public string resultReason = "";
         public List<string> dayLog = new List<string>();
+        public List<ProgressResult> progress;   // 第三版：战后经验结算（SettleProgress）
+        public bool progressDone;
+        public object terrain;                  // BattleTerrain.ApplyTo 写入的取样结果（旧的随机地形为 null）
+        // 电脑施展习得新计策的门槛（AiTactic）：期望价值 ≥ max(普通一手 × k, floor)；Adj = 已与敌相邻（= 网页版 BattleModel.aiTactic）
+        public static double aiTacKAdj = TacticsData.AiKAdj, aiTacKFree = TacticsData.AiKFree, aiTacFloorAdj = TacticsData.AiFloorAdj,
+            aiTacFloorFree = TacticsData.AiFloorFree, aiTacNowDays = TacticsData.AiNowDays;
         static GameState G { get { return GameState.Current; } }
 
         // float 常数还原为十进制写法的 double（0.85f → 0.85），与网页版数值一致
@@ -132,7 +169,8 @@ namespace Sanguo
         public BattleModel(BattleSetup s)
         {
             setup = s;
-            Generate(s.target.id * 31 + G.year);
+            // 第三版 §2：战场取自城池真实周边并按来向旋转（BattleTerrain）；不可用时（如无头测试）退回旧的随机生成
+            if (!BattleTerrain.ApplyTo(this, s)) Generate(s.target.id * 31 + G.year);
             food[0] = s.atkFood; food[1] = s.target.food;
             for (int i = 0; i < s.atk.Count; i++)
             {
@@ -318,7 +356,7 @@ namespace Sanguo
         public void StartSide(int s)
         {
             side = s; ap = ActionPoints(s);
-            foreach (var u in units) if (u.side == s) u.acted = u.confused > 0;
+            foreach (var u in units) if (u.side == s) { u.acted = u.confused > 0; u.spPick = null; }
             foreach (var u in units) if (u.side == s && u.mods != null && u.mods.Count > 0) ExpireMods(u);   // 必杀技加成按本方行动计时
         }
         public bool CanAct(BUnit u) { return u.alive && u.side == side && !u.acted && ap > 0 && u.confused <= 0 && result == 0; }
@@ -357,7 +395,7 @@ namespace Sanguo
             for (int x = 0; x < W; x++) for (int y = 0; y < H; y++) if (burning[x, y] > 0) burning[x, y]--;
             day++;
             CheckEnd();
-            if (result == 0 && day > Balance.BattleDays) { result = 2; resultReason = "攻城期限已过，攻方撤退。"; }
+            if (result == 0 && day > Balance.BattleDays) { result = 2; resultReason = "攻城期限已过，攻方撤退。"; SettleProgress(); }
         }
 
         // ---------------------------------------------------------- 行动 --
@@ -365,9 +403,13 @@ namespace Sanguo
 
         public double AtkPower(BUnit u)
         {
-            return u.Troops * (0.5 + u.gen.war / 200.0) * FormAtk[u.formation] * (0.6 + u.gen.training / 250.0) * (0.6 + u.morale / 250.0) * ModK(u, "atk");
+            return u.Troops * (0.5 + u.gen.war / 200.0) * FormAtk[u.formation] * (0.6 + u.gen.training / 250.0) * (0.6 + u.morale / 250.0) * ModK(u, "atk") * VetK(u);
         }
-        public double DefFactor(BUnit u) { return FormDef[u.formation] * TerrainDef(map[u.x, u.y]) * (0.8 + u.gen.training / 500.0) * ModK(u, "def"); }
+        public double DefFactor(BUnit u) { return FormDef[u.formation] * TerrainDef(map[u.x, u.y]) * (0.8 + u.gen.training / 500.0) * ModK(u, "def") * VetK(u); }
+        // 第三版：老练加成（Progress.VetK：每高 1 级攻、防、计策威力 +4%；1 级与成长关闭时为 1，与第一版相同）
+        public double VetK(BUnit u) { return u.gen != null ? Progress.VetK(u.gen) : 1; }
+        // 计策 / 智力系必杀的威力：施计者老练 ÷ 目标老练
+        public double TacK(BUnit u, BUnit e) { return VetK(u) / VetK(e); }
 
         public AttackResult Attack(BUnit a, BUnit t)
         {
@@ -386,8 +428,23 @@ namespace Sanguo
                 r.selfRouted = CheckRout(a);
             }
             a.morale = Math.Min(100, a.morale + (r.dmg > r.counter ? 3 : 0));
+            XpHit(a, t, r.dmg);
+            if (r.counter > 0) XpHit(t, a, r.counter);
             CheckEnd();
             return r;
+        }
+
+        // 经验来源：u 对 victim 造成 dmg（victim 因此溃散时记一次击溃，每支部队只记一次）
+        void XpHit(BUnit u, BUnit victim, int dmg)
+        {
+            if (u == null || u.xp == null) return;
+            u.xp.dmg += Math.Max(0, dmg);
+            if (victim != null && !victim.alive && !victim.xpRouted && victim.side != u.side)
+            {
+                victim.xpRouted = true;
+                u.xp.routs++;
+                if (victim.commander) u.xp.cmdRouts++;
+            }
         }
 
         bool CheckRout(BUnit u)
@@ -405,21 +462,37 @@ namespace Sanguo
         public bool TacticUsable(BUnit u, TacticDef t) { string why; return TacticUsable(u, t, out why); }
         public bool TacticUsable(BUnit u, TacticDef t, out string why)
         {
+            if (t.IsNew) return NewTacticUsable(u, t, out why);
             why = "";
             if (u.gen.intel < t.ReqInt) { why = "智力不足（需 " + t.ReqInt + "）"; return false; }
             if (t.Kind == TacticKind.Rockfall && map[u.x, u.y] != Terrain.Hill) { why = "须立于山丘"; return false; }
             return true;
         }
-        public int TacticRange(TacticDef t) { return t.Kind == TacticKind.Inspire ? 0 : t.Kind == TacticKind.Confuse ? 3 : 2; }
+        public int TacticRange(TacticDef t) { if (t.IsNew) return t.Range; return t.Kind == TacticKind.Inspire ? 0 : t.Kind == TacticKind.Confuse ? 3 : 2; }
         public List<BUnit> TacticTargets(BUnit u, TacticDef t)
         {
+            if (t.IsNew) return NewTacticTargets(u, t);
             if (t.Kind == TacticKind.Inspire) return new List<BUnit> { u };
             int r = TacticRange(t);
             return units.Where(o => o.alive && o.side != u.side && Dist(o, u) <= r && (t.Kind != TacticKind.Fire || map[o.x, o.y] != Terrain.River)).ToList();
         }
 
-        // 返回 (成功, 损伤)
+        // 返回 (成功, 损伤)（新计策：UseNewTactic 的 (success, dmg)；完整结果用 UseNewTactic 或 Tactics.Perform）
         public KeyValuePair<bool, int> UseTactic(BUnit u, TacticDef t, BUnit target)
+        {
+            if (t.IsNew) { var res = UseNewTactic(u, t, target); return new KeyValuePair<bool, int>(res.success, res.dmg); }
+            var r = UseTactic1(u, t, target);
+            if (u.xp != null)
+            {
+                if (r.Key) { u.xp.tactics++; if (r.Value > 0) XpHit(u, target, r.Value); }
+                else u.xp.tacFail++;
+            }
+            // 胜负判定放在记经验之后：火计 / 落石击溃最后一支敌军或敌主将时，施计者的经验也计入战后结算
+            CheckEnd();
+            return r;
+        }
+        // 原四计（第一版规则，原样保留；第一版末尾的 CheckEnd 移到 UseTactic 记经验之后，结果与随机数序列不变）
+        KeyValuePair<bool, int> UseTactic1(BUnit u, TacticDef t, BUnit target)
         {
             if (t.Kind == TacticKind.Inspire)
             {
@@ -442,13 +515,251 @@ namespace Sanguo
                 }
                 baseD *= Clamp(target.Troops / 2500.0, 0.4, 1.4);
                 baseD /= ModK(target, "def");            // 坚守等防御加成（无加成时为 1）
+                baseD *= TacK(u, target);                 // 老练（1 级对 1 级为 1）
                 dmg = Math.Min(target.Troops, RInt(baseD * UnityEngine.Random.Range(0.85f, 1.15f)));
                 target.Troops -= dmg;
                 target.morale = Mathf.Max(0, target.morale - 10);
                 CheckRout(target);
             }
-            CheckEnd();
             return new KeyValuePair<bool, int>(true, dmg);
+        }
+
+        // ======================================================== 新计策（第三版） --
+        // 计策目录与规则字段见 Battle/Tactics.cs（数据 TacticsData.g.cs）。原四计（Kind 0..3）不经过这里。
+        public List<TacticDef> KnownTactics(BUnit u) { return Tactics.Known(u.gen); }
+        public bool KnowsTactic(BUnit u, TacticDef t)
+        {
+            if (!t.IsNew) return u.gen.intel >= t.ReqInt;
+            if (!Progress.enabled) return false;
+            return u.gen.tactics != null && u.gen.tactics.Contains(t.Id);
+        }
+        // 地形需求：river 目标在河上或临河（含水域）；cover 目标在林地 / 山丘上或紧邻之
+        public bool TacNeedOk(TacticDef t, BUnit e)
+        {
+            if (t.Need == "river") return NearRiver(e.x, e.y);
+            if (t.Need == "cover")
+            {
+                Func<int, int, bool> cov = (x, y) => InBounds(x, y) && (map[x, y] == Terrain.Forest || map[x, y] == Terrain.Hill);
+                if (cov(e.x, e.y)) return true;
+                foreach (var d in Dirs) if (cov(e.x + d.x, e.y + d.y)) return true;
+                return false;
+            }
+            return true;
+        }
+        public List<BUnit> NewTacticTargets(BUnit u, TacticDef t)
+        {
+            if (!u.alive) return new List<BUnit>();
+            if (t.Target == "enemy") return Alive(1 - u.side).Where(e => Dist(e, u) <= t.Range && TacNeedOk(t, e)).ToList();
+            if (t.Target == "ally")
+                return Alive(u.side).Where(a => Dist(a, u) <= t.Range && (t.Heal != 0 ? (t.Cure ? NeedsHeal(a) : a.Troops < HealCapOf(a) * 0.95) : true)).ToList();
+            return new List<BUnit> { u };
+        }
+        public bool NewTacticUsable(BUnit u, TacticDef t, out string why)
+        {
+            why = "";
+            if (!KnowsTactic(u, t)) { why = "尚未习得"; return false; }
+            if (u.gen.intel < t.ReqInt) { why = "智力不足（需 " + t.ReqInt + "）"; return false; }
+            int r;
+            if (u.tacReady != null && u.tacReady.TryGetValue(t.Id, out r) && r != 0 && day < r) { why = "冷却中（第 " + r + " 日起可用）"; return false; }
+            if (t.Food != 0 && food[u.side] < 50) { why = "军粮不足"; return false; }
+            if (t.Need != null && NewTacticTargets(u, t).Count == 0) { why = t.Need == "river" ? "射程内无临河的敌军" : "射程内无靠近林地 / 山丘的敌军"; return false; }
+            return true;
+        }
+        // 成功率（原四计：火计 / 落石 / 混乱同第一版公式，激励必定成功）
+        public double TacticChance(BUnit u, TacticDef t, BUnit target)
+        {
+            if (!t.IsNew)
+            {
+                if (t.Kind == TacticKind.Inspire || target == null) return 1;
+                return Clamp(0.5 + (u.gen.intel - target.gen.intel) / 110.0, 0.12, 0.92);
+            }
+            var r = t.Roll;
+            if (r == null || target == null || target.side == u.side) return 1;
+            double p = r.Base + (u.gen.intel - target.gen.intel) / r.Div;
+            if (r.Forest != 0 && map[target.x, target.y] == Terrain.Forest) p += r.Forest;
+            if (r.LowMorale != 0 && target.morale < 50) p += r.LowMorale;
+            return Clamp(p, r.Min, r.Max);
+        }
+        // 计策伤害（期望值，不含随机浮动）：(base + per × 智力) × 敌兵力系数 ÷ 敌防御加成；林地、城防修正；溅射
+        public double TacDmg(BUnit u, BUnit e, TacticDef t, bool primary)
+        {
+            var D0 = t.Dmg;
+            double d = (D0.Base + D0.Per * u.gen.intel) * Clamp(e.Troops / 2500.0, 0.4, 1.4) / ModK(e, "def") * TacK(u, e);
+            var tt = map[e.x, e.y];
+            if (D0.Forest != 0 && tt == Terrain.Forest) d *= D0.Forest;
+            if (D0.Pierce == 0 && (tt == Terrain.Castle || tt == Terrain.Gate)) d *= 0.6;
+            if (!primary) d *= D0.Splash;
+            return d;
+        }
+        // 计策的限时加成 / 削弱 → BMod（extraDays：敌军的削弱在其本方行动开始时计时，故 +1；中毒按日发作，不加）
+        static BMod TacMod(string src, TacticMod m, int extraDays)
+        {
+            return new BMod
+            {
+                src = src, atk = m.Atk, def = m.Def, counter = m.Counter, dot = m.Dot, move = m.Move.HasValue ? (int?)(int)m.Move.Value : null,
+                days = (int)(m.Days ?? 0) + extraDays,
+            };
+        }
+        // 效果清单（与 SpPlan 同结构，由 ApplyPlan 结算；纯计算）
+        public SpPlan TacticPlan(BUnit u, TacticDef t, BUnit target)
+        {
+            int I = u.gen.intel;
+            var foes = Alive(1 - u.side).ToList(); var friends = Alive(u.side).ToList();
+            var tg = target ?? u;
+            var sp = new Special { id = "tac:" + t.Id, name = t.Name, kind = t.Id, fx = t.Fx, color = t.Color, power = 0, tactic = true };
+            var pl = new SpPlan { sp = sp, kind = t.Id, tactic = t, unit = u, target = tg, center = new Vector2Int(tg.x, tg.y) };
+            int morale = (int)Progress.JsRound(t.Morale + t.MoraleI * I);
+            string src = "tac:" + t.Id;
+            if (t.Target == "enemy")
+            {
+                int R = t.Radius;
+                var list = new List<BUnit> { tg };
+                if (R > 0) list.AddRange(foes.Where(e => e != tg && Dist(e, tg) <= R));
+                pl.area = AreaTiles(tg, R);
+                foreach (var e in list)
+                {
+                    if (t.Dmg != null) { double a = TacDmg(u, e, t, e == tg); if (a > 0) pl.dmg.Add(new SpHit { unit = e, amt = a, primary = e == tg, onFail = false }); }
+                    var f = new SpFoe { unit = e, morale = morale < 0 ? morale : 0, p = 0, turns = 0, mod = null };
+                    if (t.Confuse != null) { var c = t.Confuse; f.p = c.Base >= 1 ? 1 : Clamp(c.Base + (I - e.gen.intel) / c.Div, c.Min, c.Max); f.turns = (int)c.Turns; }
+                    // 削弱持续 N 日 = 敌军之后 N 次本方行动（加成在受影响部队本方行动开始时计时，故 +1；中毒按日发作，不加）
+                    if (t.Mod != null) f.mod = TacMod(src, t.Mod, t.Mod.Dot > 0 ? 0 : 1);
+                    if (f.morale != 0 || f.p > 0 || f.mod != null) pl.foe.Add(f);
+                }
+                if (t.Douse) foreach (var p in pl.area) if (burning[p.x, p.y] > 0) pl.douse.Add(p);
+                // 范围封顶（同必杀技）：次要目标合计不超过 AreaTotal × 主目标 − 主目标
+                if (pl.dmg.Count > 1)
+                {
+                    double b = pl.dmg[0].primary ? pl.dmg[0].amt : pl.dmg.Max(h => h.amt);
+                    double S0 = 0;
+                    foreach (var h in pl.dmg) if (!h.primary) S0 += Math.Min(h.amt, h.unit.Troops);
+                    double P0 = pl.dmg[0].primary ? Math.Min(b, tg.Troops) : 0;
+                    double cap = Math.Max(Specials.AreaTotal * b - P0, 0.4 * b);
+                    if (S0 > cap) { double k = cap / S0; foreach (var h in pl.dmg) if (!h.primary) h.amt *= k; pl.areaK = k; }
+                }
+            }
+            else
+            {
+                var c = t.Target == "self" ? u : tg;
+                int R = t.Radius;
+                pl.center = new Vector2Int(c.x, c.y);
+                pl.area = AreaTiles(c, R);
+                foreach (var a in friends)
+                    if (Dist(a, c) <= R)
+                    {
+                        int heal = t.Heal != 0 ? Math.Max(0, Math.Min(HealCapOf(a) - a.Troops, RInt((t.Heal + t.HealI * I) * MaxTroopsOf(a)))) : 0;
+                        var mod = t.Mod != null ? TacMod(src, t.Mod, 0) : null;
+                        if (heal > 0 || morale > 0 || mod != null || t.Cure) pl.ally.Add(new SpAlly { unit = a, morale = morale > 0 ? morale : 0, heal = heal, cure = t.Cure, mod = mod });
+                    }
+                if (t.FoeConfuse != null)
+                {
+                    var fc = t.FoeConfuse;
+                    foreach (var e in foes) if (Dist(e, u) <= R) pl.foe.Add(new SpFoe { unit = e, morale = 0, p = Clamp(fc.Base + (I - e.gen.intel) / fc.Div, fc.Min, fc.Max), turns = (int)fc.Turns, mod = null });
+                }
+            }
+            return pl;
+        }
+        // 电脑用：期望价值 = 成功率 × (SpecialValue + 削弱的价值)
+        public double TacticValue(BUnit u, TacticDef t, BUnit target)
+        {
+            var pl = TacticPlan(u, t, target);
+            double v = SpecialValue(u, pl);
+            var friends = Alive(u.side).ToList();
+            foreach (var f in pl.foe)
+            {
+                var m = f.mod;
+                if (m == null || m.dot > 0) continue;
+                var e = f.unit;
+                BUnit near = null; int bd = 1000000000;
+                foreach (var a in friends) { int d = Dist(a, e); if (d < bd) { bd = d; near = a; } }
+                if (near == null) continue;
+                // 敌方的削弱在其本方行动开始时 −1 日：除之后 days − 1 次己方行动外，本次行动中尚未出手的友军也受益（计半日）
+                double days = m.days - 1 + aiTacNowDays;
+                if (m.atk.HasValue && m.atk.Value != 0 && m.atk.Value < 1) v += (1 - m.atk.Value) * Threat(e, near) * days * 0.8;
+                if (m.def.HasValue && m.def.Value != 0 && m.def.Value < 1)
+                {
+                    double inc = 0;
+                    foreach (var a in friends.Where(x => Dist(x, e) <= 3).Take(2)) inc += Math.Min(e.Troops, AtkExpect(a, e));
+                    v += (1 / m.def.Value - 1) * inc * days * 0.6;
+                }
+                if (m.counter.HasValue && m.counter.Value != 0 && m.counter.Value < 1) v += (1 - m.counter.Value) * AtkExpect(e, near) * CounterRatio * days * 0.5;
+                if (m.move.HasValue && m.move.Value != 0 && m.move.Value < 0) v += (bd > 2 ? 25 : 10) * days;
+            }
+            return v * TacticChance(u, t, target);
+        }
+        // 电脑：划算时使用习得的新计策 → { tactic, target, value } | null（不耗随机数）
+        public AiTacticChoice AiTactic(BUnit u)
+        {
+            if (!Progress.enabled || u.gen == null || u.gen.tactics == null) return null;
+            AiTacticChoice best = null;
+            foreach (var t in KnownTactics(u))
+            {
+                string why;
+                if (!t.IsNew || !TacticUsable(u, t, out why)) continue;
+                foreach (var tg in NewTacticTargets(u, t))
+                {
+                    double v = TacticValue(u, t, tg);
+                    if (best == null || v > best.value) best = new AiTacticChoice { tactic = t, target = tg, value = v };
+                }
+            }
+            if (best == null) return null;
+            // 与本手最好的普通攻击 / 火计期望比较。不与敌相邻时别无他事可做（移动已在前），门槛更低——
+            // 否则伪报、挑拨这类削弱计的期望价值很少过线，委任与电脑几乎从不施展（第三版修订）
+            bool adj = AdjacentEnemies(u).Count > 0;
+            return best.value >= Math.Max(AiNormalValue(u) * (adj ? aiTacKAdj : aiTacKFree), adj ? aiTacFloorAdj : aiTacFloorFree) ? best : null;
+        }
+        public SpecialResult UseNewTactic(BUnit u, TacticDef t, BUnit target)
+        {
+            var res = NewRes();
+            res.tactic = t; res.kind = t.Id; res.name = t.Name;
+            string why;
+            bool ok = NewTacticUsable(u, t, out why);
+            if (!ok || !u.alive || result != 0) { res.why = string.IsNullOrEmpty(why) ? "无法施展" : why; return res; }
+            var cands = NewTacticTargets(u, t);
+            if (cands.Count == 0) { res.why = "范围内无目标"; return res; }
+            if (target == null || cands.IndexOf(target) < 0) target = cands[0];
+            res.target = target; res.center = new Vector2Int(target.x, target.y);
+            if (t.Cd > 0) { if (u.tacReady == null) u.tacReady = new Dictionary<string, int>(); u.tacReady[t.Id] = day + t.Cd + 1; }   // 「冷却 N 日」：之后 N 日不能用
+            double p = TacticChance(u, t, target);
+            if (p < 1 && UnityEngine.Random.value > p)
+            {
+                res.resisted.Add(target);
+                if (u.xp != null) u.xp.tacFail++;
+                return res;
+            }
+            var pl = TacticPlan(u, t, target);
+            res.success = true; res.center = pl.center; res.area = pl.area;
+            ApplyPlan(u, pl, res);
+            if (t.Food != 0 && res.heal > 0) food[u.side] = Math.Max(0, food[u.side] - (int)Math.Ceiling(res.heal / (double)t.Food));
+            if (u.xp != null) u.xp.tactics++;
+            CheckEnd();
+            return res;
+        }
+
+        // ======================================================== 战后经验 --
+        // 分出胜负时调用一次（CheckEnd / 期限）：按 u.xp 结算经验与战绩（Progress），结果在 this.progress
+        public void SettleProgress()
+        {
+            if (progressDone || result == 0) return;
+            progressDone = true;
+            if (setup != null) setup.progressDone = true;
+            progress = new List<ProgressResult>();
+            if (setup != null) setup.progress = progress;     // 与自动结算相同：界面战后读 setup.progress
+            if (!Progress.enabled) return;
+            int win = result == 1 ? 0 : 1;
+            foreach (var u in units)
+            {
+                if (u.gen == null || !(u.troops0 > 0)) continue;     // 无兵上阵的武将不计（与自动结算 AutoBattle 相同）
+                bool won = u.side == win;
+                var x = u.xp ?? new BattleXp();
+                int e = Progress.BattleExp(x, won, u.commander);
+                Progress.Note(u.gen, won, (int)x.routs, x.duelWin);
+                var r = Progress.Gain(u.gen, e, "battle");
+                progress.Add(new ProgressResult
+                {
+                    gen = u.gen, side = u.side, won = won, exp = e, why = "battle", from = r != null ? r.from : u.gen.level, to = r != null ? r.to : u.gen.level,
+                    learned = r != null ? r.learned : new List<LearnCandidate>(), xp = x.Clone(),
+                });
+            }
         }
 
         // 单挑：是否应战（拒绝时双方士气变化）。随机数调用与第一版 Duel() 完全相同
@@ -463,6 +774,8 @@ namespace Sanguo
         {
             var winner = winnerIsA ? a : b; var loser = winnerIsA ? b : a;
             loser.Troops = 0; loser.alive = false; setup.routed.Add(loser.gen.id);
+            if (winner.xp != null) { winner.xp.duelWin++; XpHit(winner, loser, 0); }
+            if (loser.xp != null) loser.xp.duelLoss++;
             foreach (var o in Alive(loser.side)) o.morale = Mathf.Max(0, o.morale - 8);
             winner.morale = Mathf.Min(100, winner.morale + 15);
             CheckEnd();
@@ -491,11 +804,25 @@ namespace Sanguo
         public bool FormationAllowed(BUnit u, int f) { var d = Defs.Formations[f]; return u.gen.intel >= d.ReqInt && u.gen.war >= d.ReqWar; }
 
         // ======================================================== 必杀技 --
-        // 招式数据由 Specials.Of(gen) 提供。specialsEnabled = false 时必杀技一律不可用，电脑也不会考虑。
-        public Special SpecialOf(BUnit u)
+        // 招式数据由 Specials.Of(gen) / Specials.Known(gen) 提供。specialsEnabled = false 时必杀技一律不可用，电脑也不会考虑。
+        // 该部队会的全部必杀（专属在前；第三版起含习得的可习得必杀）
+        public List<Special> KnownSpecials(BUnit u)
         {
-            if (!specialsEnabled || u == null || u.gen == null) return null;
-            return Specials.Of(u.gen);
+            if (!specialsEnabled || u == null || u.gen == null) return new List<Special>();
+            return Specials.Known(u.gen);
+        }
+        public bool SpWasUsed(BUnit u, Special sp) { return (u.spUsed != null && u.spUsed.Contains(sp.id)) || (!sp.pool && u.specialUsed); }
+        public Special SpecialOf(BUnit u) { return SpecialOf(u, (string)null); }
+        // id 缺省时：u.spPick → 第一招尚可施展且有目标的 → 第一招未施展的 → 专属必杀
+        public Special SpecialOf(BUnit u, string id)
+        {
+            var list = KnownSpecials(u);
+            if (list.Count == 0) return null;
+            if (!string.IsNullOrEmpty(id)) return list.FirstOrDefault(s => s.id == id);
+            if (u.spPick != null) { var p = list.FirstOrDefault(s => s.id == u.spPick); if (p != null) return p; }
+            if (list.Count == 1) return list[0];
+            foreach (var s in list) if (!SpWasUsed(u, s) && TargetsOf(u, s).Count > 0) return s;
+            return list.FirstOrDefault(s => !SpWasUsed(u, s)) ?? list[0];
         }
 
         // ---- 限时加成 ----
@@ -566,7 +893,7 @@ namespace Sanguo
             int v = StatOf(u.gen, stat);
             if (stat == "intel" || stat == "pol")
             {
-                double d = (200 + v * 9) * Clamp(t.Troops / 2500.0, 0.4, 1.4) / ModK(t, "def");
+                double d = (200 + v * 9) * Clamp(t.Troops / 2500.0, 0.4, 1.4) / ModK(t, "def") * TacK(u, t);
                 var tt = map[t.x, t.y];
                 if (tt == Terrain.Castle || tt == Terrain.Gate) d *= 0.7;
                 return d;
@@ -581,10 +908,12 @@ namespace Sanguo
             var tt = map[x, y];
             return tt == Terrain.Forest ? 1.5 : tt == Terrain.River ? 0.5 : 1;
         }
+        // 河川与水域（Terrain.Water，湖海）都算临水：水计与水淹类必杀可用
         public bool NearRiver(int x, int y)
         {
-            if (InBounds(x, y) && map[x, y] == Terrain.River) return true;
-            foreach (var d in Dirs) { int nx = x + d.x, ny = y + d.y; if (InBounds(nx, ny) && map[nx, ny] == Terrain.River) return true; }
+            Func<Terrain, bool> wet = t => t == Terrain.River || t == Terrain.Water;
+            if (InBounds(x, y) && wet(map[x, y])) return true;
+            foreach (var d in Dirs) { int nx = x + d.x, ny = y + d.y; if (InBounds(nx, ny) && wet(map[nx, ny])) return true; }
             return false;
         }
         // 以 c 为中心、曼哈顿半径 r 内的格子
@@ -628,9 +957,9 @@ namespace Sanguo
         }
 
         // ---- 目标与可用性 ----
-        public List<BUnit> SpecialTargets(BUnit u)
+        public List<BUnit> SpecialTargets(BUnit u, string id = null) { var sp = SpecialOf(u, id); return sp != null ? TargetsOf(u, sp) : new List<BUnit>(); }
+        public List<BUnit> TargetsOf(BUnit u, Special sp)
         {
-            var sp = SpecialOf(u);
             if (sp == null || !u.alive) return new List<BUnit>();
             var foes = Alive(1 - u.side).ToList(); var friends = Alive(u.side).ToList();
             switch (sp.kind)
@@ -645,17 +974,38 @@ namespace Sanguo
                 default: return foes.Where(e => Dist(e, u) <= sp.range).ToList();
             }
         }
-        public bool SpecialUsable(BUnit u) { string why; return SpecialUsable(u, out why); }
-        public bool SpecialUsable(BUnit u, out string why)
+        public bool SpecialUsable(BUnit u) { string why; return SpecialUsable(u, null, out why); }
+        public bool SpecialUsable(BUnit u, out string why) { return SpecialUsable(u, null, out why); }
+        // id 缺省且未选招时：是否还有任何一招可用（why 为第一招不可用的原因；全部施展过为「本战已施展」）
+        public bool SpecialUsable(BUnit u, string id, out string why)
         {
             why = "";
-            var sp = SpecialOf(u);
-            if (sp == null) { why = specialsEnabled ? "无必杀技" : "必杀技未开放"; return false; }
+            var list = KnownSpecials(u);
+            if (list.Count == 0) { why = specialsEnabled ? "无必杀技" : "必杀技未开放"; return false; }
+            if (string.IsNullOrEmpty(id) && !(u.spPick != null && list.Any(s => s.id == u.spPick)))
+            {
+                string first = null;
+                foreach (var s in list)
+                {
+                    string w;
+                    if (SpUsable1(u, s, out w)) { why = ""; return true; }
+                    if (first == null && w != "本战已施展") first = w;
+                }
+                why = first ?? "本战已施展";
+                return false;
+            }
+            var sp = SpecialOf(u, id);
+            if (sp == null) { why = "未习得此招"; return false; }
+            return SpUsable1(u, sp, out why);
+        }
+        public bool SpUsable1(BUnit u, Special sp, out string why)
+        {
+            why = "";
             if (result != 0) { why = "战斗已结束"; return false; }
             if (!u.alive) { why = "已溃散"; return false; }
-            if (u.specialUsed) { why = "本战已施展"; return false; }
+            if (SpWasUsed(u, sp)) { why = "本战已施展"; return false; }
             if (u.confused > 0) { why = "混乱中"; return false; }
-            if (SpecialTargets(u).Count == 0)
+            if (TargetsOf(u, sp).Count == 0)
             {
                 switch (sp.kind)
                 {
@@ -671,10 +1021,13 @@ namespace Sanguo
         }
 
         // ---- 效果清单（纯计算：不改状态、不耗随机数） ----
-        public SpPlan SpecialPlan(BUnit u, BUnit target)
+        public SpPlan SpecialPlan(BUnit u, BUnit target, string id = null)
         {
-            var sp = SpecialOf(u);
-            if (sp == null) return null;
+            var sp = SpecialOf(u, id);
+            return sp != null ? SpPlan(u, sp, target) : null;
+        }
+        public SpPlan SpPlan(BUnit u, Special sp, BUnit target)
+        {
             var t = target ?? u;
             var foes = Alive(1 - u.side).ToList(); var friends = Alive(u.side).ToList();
             var pl = new SpPlan { sp = sp, kind = sp.kind, unit = u, target = t, center = new Vector2Int(t.x, t.y) };
@@ -837,6 +1190,8 @@ namespace Sanguo
                             ? Clamp(sp.chance + (I - t.gen.intel) / 200.0 + (W - t.gen.war) / 500.0, 0.05, 0.6)
                             : Clamp(sp.chance + (W - t.gen.war) / 250.0 + (I - t.gen.intel) / 300.0, 0.05, 0.6);
                         if (t.commander) p *= 0.5;
+                        // 学来的暗杀（招式池，带 tier）成功率减半：第三版战场放大后电脑更易挑出弱将下手，实测倍率偏高
+                        if (sp.tier != 0) p *= 0.5;
                         pl.kill = new SpKill { unit = t, p = p };
                         if (sp.power > 0) hit(t, sp.power * bse(t), true, true);   // 失手时造成的伤害
                         if (sp.morale != 0) foeMorale(t, (int)sp.morale);
@@ -961,37 +1316,58 @@ namespace Sanguo
             return best;
         }
 
-        // 电脑：划算时施展必杀技 → { target, value } 或 null。越到战斗后期、己方越危急，门槛越低
+        // 电脑：划算时施展必杀技 → { target, value, special } 或 null。越到战斗后期、己方越危急，门槛越低
+        // 第三版：在全部已会、尚未施展的招式中挑期望价值最高的一手（同值时专属必杀优先）
         public AiSpecialChoice AiSpecial(BUnit u)
         {
-            if (!specialsEnabled || !SpecialUsable(u)) return null;
-            BUnit best = null; double bv = 0;
-            foreach (var t in SpecialTargets(u))
+            if (!specialsEnabled) return null;
+            BUnit best = null; double bv = 0; Special bsp = null;
+            foreach (var sp in KnownSpecials(u))
             {
-                double v = SpecialValue(u, SpecialPlan(u, t));
-                if (v > bv) { bv = v; best = t; }
+                string w;
+                if (!SpUsable1(u, sp, out w)) continue;
+                foreach (var t in TargetsOf(u, sp))
+                {
+                    double v = SpecialValue(u, SpPlan(u, sp, t));
+                    if (v > bv) { bv = v; best = t; bsp = sp; }
+                }
             }
             if (best == null) return null;
             double normal = AiNormalValue(u);
             double k = day >= 20 ? 1.05 : day >= 10 ? 1.3 : 1.5;
             if (u.Troops < MaxTroopsOf(u) * 0.3 || u.morale < 30) k = Math.Min(k, 1.0);
-            return bv >= Math.Max(normal * k, 260) ? new AiSpecialChoice { target = best, value = bv } : null;
+            return bv >= Math.Max(normal * k, 260) ? new AiSpecialChoice { target = best, value = bv, special = bsp } : null;
         }
 
         // ---- 结算 ----
-        public SpecialResult UseSpecial(BUnit u, BUnit target)
+        public SpecialResult NewRes() { return new SpecialResult(); }
+        public SpecialResult UseSpecial(BUnit u, BUnit target, string id = null)
         {
-            var res = new SpecialResult();
-            var sp = SpecialOf(u);
-            if (sp == null) { res.why = "无必杀技"; return res; }
+            var res = NewRes();
+            var sp = SpecialOf(u, id);
+            if (sp == null) { res.why = KnownSpecials(u).Count > 0 ? "未习得此招" : "无必杀技"; return res; }
             res.name = sp.name; res.kind = sp.kind; res.sp = sp;
             string why;
-            if (!SpecialUsable(u, out why)) { res.why = why; return res; }
-            var cands = SpecialTargets(u);
+            if (!SpUsable1(u, sp, out why)) { res.why = why; return res; }
+            var cands = TargetsOf(u, sp);
             if (target == null || cands.IndexOf(target) < 0) target = cands[0];
-            var pl = SpecialPlan(u, target);
-            u.specialUsed = true;
+            var pl = SpPlan(u, sp, target);
+            if (u.spUsed == null) u.spUsed = new List<string>();
+            u.spUsed.Add(sp.id);
+            if (!sp.pool) u.specialUsed = true;
+            u.spPick = null;
+            if (u.xp != null) u.xp.specials++;
             res.success = true; res.target = target; res.center = pl.center; res.area = pl.area;
+            ApplyPlan(u, pl, res);
+            if (res.dmg > 0) u.morale = Math.Min(100, u.morale + 6);
+            CheckEnd();
+            return res;
+        }
+
+        // 按效果清单结算（必杀与新计策共用；随机数调用顺序与第二版 UseSpecial 相同）
+        public void ApplyPlan(BUnit u, SpPlan pl, SpecialResult res)
+        {
+            var sp = pl.sp;
             Action<BUnit> touch = x => { if (!res.affected.Contains(x)) res.affected.Add(x); };
             Action<BUnit> routed = x => { if (!res.routed.Contains(x)) res.routed.Add(x); };
             // 1. 突击位移
@@ -1007,6 +1383,7 @@ namespace Sanguo
                     k.Troops = 0; k.alive = false; setup.routed.Add(k.gen.id);
                     res.killed = k; res.dmg += d; res.hits.Add(new SpecialHit { unit = k, dmg = d, primary = true, killed = true });
                     routed(k); touch(k); killed = true;
+                    XpHit(u, k, d);
                 }
                 else res.success = false;                     // 失手（仍可能造成少量伤害）
             }
@@ -1031,6 +1408,7 @@ namespace Sanguo
                 res.hits.Add(new SpecialHit { unit = e, dmg = dd, primary = h.primary });
                 touch(e);
                 if (CheckRout(e)) routed(e);
+                XpHit(u, e, dd);
             }
             // 4. 击退
             if (pl.push != null && pl.push.unit.alive)
@@ -1053,7 +1431,7 @@ namespace Sanguo
                     else res.resisted.Add(e);
                 }
                 if (f.mod != null) { AddMod(e, f.mod.Clone()); res.cursed.Add(e); }
-                if (CheckRout(e)) routed(e);
+                if (CheckRout(e)) { routed(e); XpHit(u, e, 0); }
             }
             // 6. 友军：回复、士气、解除混乱、加成
             foreach (var a in pl.ally)
@@ -1061,7 +1439,7 @@ namespace Sanguo
                 var x = a.unit;
                 if (!x.alive) continue;
                 touch(x);
-                if (a.heal > 0) { x.Troops += a.heal; res.healed.Add(new SpecialHeal { unit = x, amount = a.heal }); res.heal += a.heal; }
+                if (a.heal > 0) { x.Troops += a.heal; res.healed.Add(new SpecialHeal { unit = x, amount = a.heal }); res.heal += a.heal; if (u.xp != null) u.xp.heal += a.heal; }
                 if (a.morale != 0) x.morale = Mathf.Clamp(x.morale + a.morale, 0, 100);
                 if (a.cure && x.confused > 0) x.confused = 0;
                 if (a.mod != null) { AddMod(x, a.mod.Clone()); res.buffed.Add(x); }
@@ -1078,9 +1456,6 @@ namespace Sanguo
                 int g = Math.Max(0, Math.Min(Math.Max(0, MaxTroopsOf(u) - u.Troops), RInt(primaryDmg * pl.drain)));
                 u.Troops += g; res.gained = g;
             }
-            if (res.dmg > 0) u.morale = Math.Min(100, u.morale + 6);
-            CheckEnd();
-            return res;
         }
 
         // ---------------------------------------------------------- 胜负 --
@@ -1093,6 +1468,7 @@ namespace Sanguo
             else if (c1 != null && !c1.alive) { result = 1; resultReason = "守城主将败走，城池陷落！"; }
             else if (c0 != null && !c0.alive) { result = 2; resultReason = "攻方主将败走，全军撤退！"; }
             else if (Alive(0).Any(u => u.x == castle.x && u.y == castle.y)) { result = 1; resultReason = "攻入本城，城池陷落！"; }
+            if (result != 0) SettleProgress();
         }
 
         // ---------------------------------------------------------- 电脑 --
@@ -1111,7 +1487,8 @@ namespace Sanguo
 
         // 电脑为一个单位决定行动；返回描述行动的对象供画面播放。
         // kind："none" | "attack" | "tactic" | "duel" | "special"（第二版；target 为目标，value 为期望价值）
-        public class AiPlan { public BUnit unit; public Vector2Int? move; public string kind; public BUnit target; public TacticDef tactic; public double value; }
+        // 第三版：special 计划带 special（施展的那一招，亦记入 u.spPick）；tactic 计划的 tactic 可为习得的新计策（tactic.IsNew）
+        public class AiPlan { public BUnit unit; public Vector2Int? move; public string kind; public BUnit target; public TacticDef tactic; public double value; public Special special; }
 
         public AiPlan PlanFor(BUnit u)
         {
@@ -1159,8 +1536,16 @@ namespace Sanguo
             if (specialsEnabled)
             {
                 var sp = AiSpecial(u);
-                if (sp != null) { plan.kind = "special"; plan.target = sp.target; plan.value = sp.value; return plan; }
+                if (sp != null)
+                {
+                    plan.kind = "special"; plan.target = sp.target; plan.value = sp.value; plan.special = sp.special;
+                    u.spPick = sp.special != null ? sp.special.id : null;     // 旧控制器不传编号：UseSpecial 缺省用它
+                    return plan;
+                }
             }
+            // 第三版：习得的新计策（按期望价值，不耗随机数；原四计的随机判定照旧在后面）
+            var lt = AiTactic(u);
+            if (lt != null) { plan.kind = "tactic"; plan.tactic = lt.tactic; plan.target = lt.target; plan.value = lt.value; return plan; }
             var adj = AdjacentEnemies(u);
             // 策略
             foreach (var t in Defs.Tactics)

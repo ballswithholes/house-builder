@@ -1,6 +1,7 @@
 // tests/sim.js (2)(3) 的 C# 版：
 //   (2) 随机玩家模拟：6 个势力 × 4 个种子 × 25 年，玩家每月随机下达指令（随机玩家用 SeededRandom，与 JS 同一序列）；
 //   (3) 存档往返：JSON 结构与网页版相同（不含 city.links），PlayerPrefs 读写、读档失败的中文原因、世界剧本存档。
+//   （第三版的存档 v3 与第二版存档迁移见 HarnessProgress.cs (7b)）
 // 环境变量 SIM_DUMP=路径：把 (3) 的 14 个月对局 JSON 写到该文件（与 JS 的 JSON.stringify(G) 逐字比对用）。
 using System;
 using System.Collections.Generic;
@@ -140,7 +141,8 @@ class P2
             Func<string, string> loadErr = t => { UnityEngine.PlayerPrefs.SetString(GameState.SaveKey, t); var r = GameState.Load(); return r == null ? GameState.LoadError : "(loaded)"; };
             var cases = new[]
             {
-                new[] { text.Replace("\"version\":2", "\"version\":1"), "新版本，旧存档无法读取。" },
+                new[] { text.Replace("\"version\":3", "\"version\":1"), "新版本，旧存档无法读取。" },
+                new[] { text.Replace("\"version\":3", "\"version\":4"), "新版本，旧存档无法读取。" },
                 new[] { text.Replace("\"scenario\":\"classic\"", "\"scenario\":\"mars\""), "存档所用的剧本（mars）不存在，无法读取。" },
                 new[] { text.Replace("\"key\":\"luoyang\"", "\"key\":\"luoyang2\""), "存档与当前版本的剧本数据不符，无法读取。" },
                 new[] { text.Substring(0, text.Length / 2), "存档已损坏，无法读取。" },

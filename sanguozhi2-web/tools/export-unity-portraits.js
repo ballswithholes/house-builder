@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 'use strict';
 /* ==========================================================================
-   导出头像外貌设定到 Unity 版（UNITY-V2 §2）
+   导出头像外貌设定到 Unity 版（UNITY-V2 §2、UNITY-V3 §2）
      node tools/export-unity-portraits.js [输出路径]
+     node tools/export-unity-portraits.js --check   只比较：数据改过却没重新导出时退出码 1
    读取 js/portrait-data.js（连同其依赖 core.js、data.js、world-data.js，按游戏的载入顺序），
    把 SG.PortraitData 的全部条目（含世界剧本自动补全的 culture / sex / role / age）原样写成
    ../sanguozhi2-unity/Assets/Sanguo/Scripts/Data/Generated/PortraitData.g.cs：
      PortraitData.Entries   = { 姓名, 条目 JSON, … }（插入顺序，字段一个不少）
      PortraitData.WorldHand = 有手工设定的世界武将名（tests/world-portraits.html 用）
      PortraitData.Count / Hash = 条目数与校验哈希（FNV-1a 32，见下）；C# 测试据此确认数据完整
+   第三版：世界剧本新增人物（天竺 india、非洲 africa、毛里 moor 等）的手工设定由 portrait-data.js 的第三版一节合并，
+   照常导出（2026-10：502 条，其中有手工设定的世界武将 159 人）。
    无依赖，Node 14+。数据有变时重新运行即可。
    ========================================================================== */
 const fs = require('fs');
@@ -16,7 +19,8 @@ const path = require('path');
 const vm = require('vm');
 
 const WEB = path.resolve(__dirname, '..');
-const OUT = process.argv[2] || path.resolve(WEB, '../sanguozhi2-unity/Assets/Sanguo/Scripts/Data/Generated/PortraitData.g.cs');
+const CHECK = process.argv.includes('--check');
+const OUT = process.argv.slice(2).find(a => a !== '--check') || path.resolve(WEB, '../sanguozhi2-unity/Assets/Sanguo/Scripts/Data/Generated/PortraitData.g.cs');
 
 // 在沙箱里按游戏顺序载入（不碰 DOM）
 const sandbox = { console };
@@ -82,6 +86,11 @@ ${lines.join('\n')}
     }
 }
 `;
+if (CHECK) {
+  const same = fs.existsSync(OUT) && fs.readFileSync(OUT, 'utf8') === src;
+  console.log(same ? `PortraitData.g.cs 与 js/portrait-data.js 一致（${names.length} 条）` : `PortraitData.g.cs 已过期：请运行 node tools/export-unity-portraits.js`);
+  process.exit(same ? 0 : 1);
+}
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, src);
 console.log(`PortraitData.g.cs：${names.length} 条（世界手工 ${hand.length}），hash 0x${hash.toString(16).padStart(8, '0')} → ${path.relative(process.cwd(), OUT)}`);
