@@ -553,11 +553,12 @@ void main() {
       const now = performance.now(), p = this._perf;
       if (this.autoQuality && p.last && now - this._t0 > 4000) {
         const dt = now - p.last;
-        if (dt < 250) { p.acc += dt; p.n++; }
-        if (p.n >= 120) {
-          if (p.acc / p.n > 28) this.degrade();
-          p.acc = 0; p.n = 0;
-        }
+        // 长帧也计入（截到 1 秒）；最近 8 帧有 5 帧超过 150 毫秒则立刻降一档
+        p.acc += Math.min(dt, 1000); p.n++;
+        p.slow = ((p.slow || 0) << 1 | (dt > 150 ? 1 : 0)) & 0xff;
+        let k = 0; for (let b = p.slow; b; b >>= 1) k += b & 1;
+        if (k >= 5) { this.degrade(); p.slow = 0; p.acc = 0; p.n = 0; }
+        else if (p.n >= 120) { if (p.acc / p.n > 28) this.degrade(); p.acc = 0; p.n = 0; }
       }
       p.last = now;
     },
@@ -847,6 +848,17 @@ void main() {
         P[i * 3] = center.x + dx * r.x * k; P[i * 3 + 1] = center.y + y * r.y * k; P[i * 3 + 2] = center.z + dz * r.z * k;
       }
       const N = smoothNormals(P, ico.f, center);
+      // smoothN（0–1）：法线向未起伏的椭球法线混合——轮廓仍有起伏，明暗却圆润（不再显出一块块小面）
+      if (o.smoothN > 0) {
+        const k = Math.min(1, o.smoothN);
+        for (let i = 0; i < n; i++) {
+          let ex = ico.v[i * 3] / r.x, ey = ico.v[i * 3 + 1] / r.y, ez = ico.v[i * 3 + 2] / r.z;
+          const el = Math.hypot(ex, ey, ez) || 1;
+          ex = N[i * 3] * (1 - k) + ex / el * k; ey = N[i * 3 + 1] * (1 - k) + ey / el * k; ez = N[i * 3 + 2] * (1 - k) + ez / el * k;
+          const l = Math.hypot(ex, ey, ez) || 1;
+          N[i * 3] = ex / l; N[i * 3 + 1] = ey / l; N[i * 3 + 2] = ez / l;
+        }
+      }
       const top = o.top === undefined ? 0.06 : o.top, bot = o.bottomShade || 0;
       const K = [];
       for (let i = 0; i < n; i++) {
@@ -1282,6 +1294,7 @@ vec3 sgCrop( float id ) {
 	float sgForest = 0.0;
 	float sgAO = 0.5;
 	vec3 sgN = normalize( vSgNW );
+	float sgNearW = 1.0;   // 第三版修订：低地是否靠近水面（海滩 / 河岸沙只在离水约 1 单位内出现；低平的岛屿内陆仍是草地）
 #ifdef SG_TERRAIN_MAPS
 	{
 		vec2 e = min( sgP - sgInner.xy, sgInner.zw - sgP );
@@ -1303,6 +1316,14 @@ vec3 sgCrop( float id ) {
 			sgForest = ic.a * wI;
 			sgAO = mix( 0.5, tn.b, wI );
 			sgN = normalize( mix( sgN, n2, wI ) );
+			if ( sgH < 0.6 ) {
+				// 高度贴图（A = (h + 4) / 8）在四个方向、两个距离上取最低处：附近有水（h < 0.02）才允许沙滩
+				vec2 uvN = sgP * sgXfN.zw + sgXfN.xy, d1 = vec2( 1.1, 0.0 ) * sgXfN.zw, d2 = vec2( 0.0, 1.1 ) * sgXfN.zw;
+				float a1 = min( min( texture2D( sgMapN, uvN + d1 ).a, texture2D( sgMapN, uvN - d1 ).a ), min( texture2D( sgMapN, uvN + d2 ).a, texture2D( sgMapN, uvN - d2 ).a ) );
+				float a2 = min( min( texture2D( sgMapN, uvN + d1 * 0.5 ).a, texture2D( sgMapN, uvN - d1 * 0.5 ).a ), min( texture2D( sgMapN, uvN + d2 * 0.5 ).a, texture2D( sgMapN, uvN - d2 * 0.5 ).a ) );
+				float hmin = min( a1, a2 ) * 8.0 - 4.0;
+				sgNearW = mix( 1.0, 1.0 - smoothstep( 0.03, 0.2, hmin ), wI );
+			}
 		}
 	}
 #else
@@ -1313,8 +1334,13 @@ vec3 sgCrop( float id ) {
 	vec4 sgDM = texture2D( sgDetA, sgP * 0.047 + vec2( 0.31, 0.67 ) );
 	vec4 sgDF = texture2D( sgDetA, sgP * 0.93 + vec2( 0.53, 0.19 ) );
 	float sgSlope = 1.0 - sgN.y;
+	// 第三版修订：近景（镜头 18 单位内满、40 单位外无）多一级细节（土粒、草簇）、田里的垄行
+	float sgNear = 1.0 - smoothstep( 18.0, 40.0, distance( cameraPosition, vSgW ) );
 	// 草地：三级细节明暗（近处可见草簇纹理）+ 大尺度的干湿斑块 + 林下压暗
 	vec3 sgCol = sgTint * ( 0.76 + 0.5 * ( sgDA.r * 0.36 + sgDF.r * 0.28 + sgDM.r * 0.36 ) );
+	if ( sgNear > 0.01 ) { vec4 sgDN = texture2D( sgDetA, sgP * 3.1 + vec2( 0.7, 0.2 ) ); sgCol *= 1.0 + ( sgDN.r - 0.5 ) * 0.24 * sgNear; }
+	// 草色略降饱和，并按大尺度噪声做冷暖斑块（不再是一整片饱和的黄绿）
+	sgCol = mix( vec3( dot( sgCol, vec3( 0.3, 0.59, 0.11 ) ) ), sgCol, 0.9 ) * mix( vec3( 1.035, 1.0, 0.93 ), vec3( 0.96, 1.0, 1.04 ), sgDM.b );
 	sgCol = mix( sgCol, sgCol * vec3( 1.1, 1.03, 0.8 ), smoothstep( 0.5, 0.78, sgDM.g ) * 0.55 );
 	sgCol = mix( sgCol, sgCol * vec3( 0.78, 0.86, 0.74 ), smoothstep( 0.55, 0.85, sgDM.a ) * 0.6 );
 	sgCol *= 1.0 - 0.3 * sgForest;
@@ -1331,11 +1357,16 @@ vec3 sgCrop( float id ) {
 		vec3 sgCrop3 = sgCrop( sgDB.b ) * ( 0.8 + 0.34 * sgDB.a );
 		sgCrop3 = mix( sgCrop3, vec3( 0.58, 0.5, 0.36 ), step( sgDB.b, 0.03 ) );
 		sgCrop3 = mix( sgCrop3, sgTint, 0.15 );
+		if ( sgNear > 0.01 ) {
+			// 垄行：每块田一个方向（按田块编号），近处才画
+			vec2 sgRD = vec2( cos( sgDB.b * 6.2832 ), sin( sgDB.b * 6.2832 ) );
+			sgCrop3 *= mix( 1.0, 0.86 + 0.14 * sin( dot( sgP, sgRD ) * 38.0 ), sgNear * step( 0.03, sgDB.b ) );
+		}
 		sgFw = smoothstep( 0.3, 0.52, sgFarm + ( sgDM.r - 0.5 ) * 0.55 ) * ( 1.0 - smoothstep( 0.1, 0.26, sgSlope ) );
 		sgCol = mix( sgCol, sgCrop3, sgFw );
 	}
 	// 沙：海滩与河岸（按高度）、沙漠（按群落）
-	float sgBeach = 1.0 - smoothstep( 0.2, 0.48, sgH + ( sgDA.b - 0.5 ) * 0.14 );
+	float sgBeach = ( 1.0 - smoothstep( 0.2, 0.48, sgH + ( sgDA.b - 0.5 ) * 0.14 ) ) * max( sgNearW, 1.0 - smoothstep( -0.02, 0.05, sgH ) );
 	// 波纹只在沙漠里明显，海滩、河岸以细噪声为主
 	float sgRip = mix( 0.08, 0.26, smoothstep( 0.3, 0.8, sgMat.r ) );
 	vec3 sgSand = mix( vec3( 0.87, 0.8, 0.62 ), sgTint * 1.05, clamp( sgMat.r * 0.7, 0.0, 0.6 ) ) * ( 1.0 - sgRip * 0.55 + sgRip * sgDA.b + ( sgDF.r - 0.5 ) * 0.08 );

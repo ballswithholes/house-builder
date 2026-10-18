@@ -165,6 +165,8 @@
       o.attacker.gen = CGEN[ca][0]; o.attacker.culture = ca; o.attacker.color = CGEN[ca][1];
       o.defender.gen = CGEN[cd][0]; o.defender.culture = cd; o.defender.color = CGEN[cd][1];
     }
+    // 布景（第三版修订）：?scene=文化&biome=群落&coast=1
+    if (Q.get('scene') || Q.get('biome') || Q.get('coast')) o.scene = { culture: Q.get('scene') || o.defender.culture, biome: Q.get('biome') || undefined, coast: Q.get('coast') === '1' };
     if (extra.culture) {
       o.attacker.gen = GEN.塞维鲁; o.attacker.culture = 'roman'; o.attacker.color = FAC.roman;
       o.defender.gen = GEN.沃洛吉斯; o.defender.culture = 'persia'; o.defender.color = FAC.persia;

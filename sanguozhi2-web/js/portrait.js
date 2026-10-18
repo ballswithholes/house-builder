@@ -25,7 +25,7 @@
    SG.Portrait.html(gen, opts)    → 内嵌 HTML 片段 <span class="sg-portrait sg-portrait-inline"><img></span>
                                      （UI.choose 的 label 等 HTML 字符串用；opts.size 缺省 32）
    SG.Portrait.preloadState(state = SG.G, sizes = [44, 96]) → Promise，预生成全部在世武将
-   SG.Portrait.cultures           → 已实现的文化代号列表（DESIGN-V2 §6 全部 15 种）
+   SG.Portrait.cultures           → 已实现的文化代号列表（DESIGN-V2 §6 全部 15 种 + 第三版 india / africa / moor）
    SG.Portrait.stats              → { built, rastered, maxSliceMs, totalMs, genMs, encMs } 性能统计
 
    gen 至少含 { name, war, intel, pol }；可选 { culture, born, sex, faction, color, portrait }。
@@ -465,8 +465,64 @@
       acc: [['earring', 0.5], ['torc', 0.3]],
     },
   };
+  // 第三版新增文化（回退表见 core.js 的 SG.cultureBase：india → seasia，africa / moor → arab）
+  // india  天竺（百乘、泰米尔三国、师子国；桑奇 / 阿马拉瓦蒂浮雕）：额前大结的缠头、扇形宝冠、宝带；裸上身配帔帛与多褶腰布、
+  //        宝石项链、臂钏、大耳环；武人或着絮甲；泰米尔诸王戴花鬘，师子国王戴僧伽罗式圆冠（portrait-data.js 逐人指定）。
+  // africa 阿克苏姆与库施（阿克苏姆钱币与石碑、麦罗埃浮雕）：深肤色、短卷发；阿克苏姆王为头巾上的金冠（两侧麦穗）、白麻长袍；
+  //        库施王为贴头小帽 + 双蛇王带与飘带、流苏披肩长袍；“弓之国”的弓手额带插羽，面颊三道疤纹。
+  // moor   毛里人（巴夸特；图拉真柱上的毛里骑兵）：成排的螺旋卷发、短须、连帽斗篷。
+  Object.assign(CULT, {
+    india: {
+      name: '天竺', skins: ['#c99467', '#bb875a', '#ad7a4e', '#9d6c43', '#8a5c38', '#7a4e2e'], warSkin: 0.15,
+      hairC: [['#141012', 4], ['#221a16', 1]], eyeC: BROWNEYE, lid: 0.25, noseBridge: 0.62, noseW: 1.1,
+      noses: [['straight', 3], ['aquiline', 1], ['broad', 2], ['bulb', 0.4]],
+      hair: { m: [['long', 2], ['highbun', 2], ['curly', 1]], f: [['highbun', 1]] },
+      hat: {
+        ruler: [['mukuta', 3], ['pagri', 2]], warrior: [['pagri', 4], ['jewelband', 2], ['none', 0.6]], general: [['pagri', 3], ['jewelband', 2]],
+        strategist: [['none', 2], ['jewelband', 1], ['pagri', 1]], official: [['pagri', 2], ['none', 1]], female: [['jewelband', 2], ['none', 1]],
+        _: [['pagri', 3], ['jewelband', 1], ['none', 1]],
+      },
+      outfit: { warrior: [['dhoti', 3], ['quilted', 2]], general: [['quilted', 2], ['dhoti', 2]], ruler: [['dhoti', 3], ['quilted', 1]], _: [['dhoti', 3], ['quilted', 1]], female: [['dhoti', 1]] },
+      cloth: ['#ece4cc', '#e0a838', '#a8322a', '#2c4078', '#c8902a', '#7a2a5a', '#2a6a5a', '#d86a3a'],
+      metal: ['#d4a848', '#c89a3a', '#8a7048'],
+      beards: { young: [['none', 1]], adult: [['none', 3], ['short', 1], ['stubble', 1], ['goatee', 0.4]] },
+      musts: [['thick', 3], ['curl', 2], ['thin', 1]],
+      marks: [['tilaka', 0.2]], acc: [['bigears', 0.75], ['hara', 0.6], ['armlets', 0.7]],
+    },
+    africa: {
+      name: '非洲', skins: ['#8c5836', '#7c4c2e', '#6c4026', '#5c3620', '#4e2e1c'], warSkin: 0.1,
+      hairC: [['#0c0a0a', 1]], eyeC: ['#2a1a10', '#3a2416', '#24160e'], lid: 0.3, noseBridge: 0.5, noseW: 1.18,
+      noses: [['broad', 3], ['straight', 2], ['flat', 1]],
+      hair: { m: [['tightcurl', 4], ['bald', 0.5]], f: [['tightcurl', 1]] },
+      hat: {
+        ruler: [['kushcrown', 1], ['aksumcrown', 1]], warrior: [['featherband', 3], ['headband', 1], ['none', 2]], female: [['kushcrown', 1], ['none', 1]],
+        strategist: [['none', 2], ['headband', 1]], _: [['none', 3], ['featherband', 1], ['headband', 1]],
+      },
+      outfit: { warrior: [['shamma', 2], ['meroitic', 1], ['bare', 1]], ruler: [['meroitic', 1], ['shamma', 1]], female: [['meroitic', 1]], _: [['shamma', 2], ['meroitic', 1]] },
+      cloth: ['#ece6d8', '#e8dcc0', '#a01818', '#d8a030', '#2a7a4a', '#7a2a1a', '#3a3a6a'],
+      metal: ['#d8b050', '#8a7048'],
+      beards: { young: [['none', 1]], adult: [['none', 3], ['short', 2], ['goatee', 1]] },
+      musts: [['none', 2], ['thin', 1]],
+      acc: [['hoops', 0.4], ['goldcollar', 0.45], ['armlets', 0.5]],
+    },
+    moor: {
+      name: '毛里', skins: ['#c99466', '#ba875a', '#aa794e', '#9a6b44', '#8a5e3a'], warSkin: 0.15,
+      hairC: [['#141012', 3], ['#221a16', 1]], eyeC: BROWNEYE, lid: 0.15, noseBridge: 0.8, noseW: 1.05,
+      noses: [['straight', 2], ['aquiline', 2], ['broad', 1]],
+      hair: { m: [['ringlets', 1]], f: [['ringlets', 1]] },
+      hat: { ruler: [['diadem', 2], ['none', 1]], female: [['none', 1]], _: [['none', 4], ['headband', 1]] },
+      outfit: { _: [['burnous', 3], ['tunic', 1]], female: [['tunic', 1]] },
+      cloth: ['#e8e0cc', '#d0bc98', '#8a5a3a', '#5a4a3a', '#3a5a8a', '#a03a2a'],
+      metal: ['#8a7048', '#7a808c'],
+      beards: { young: [['none', 1], ['short', 1]], adult: [['short', 3], ['full', 1], ['goatee', 1]] },
+      musts: [['thin', 2], ['thick', 1]],
+      acc: [['earring', 0.3]],
+    },
+  });
   // 冠帽默认配色（按类型）
   const HAT_COL = {
+    pagri: ['#ece6d8', '#f0d8a0', '#e8b040', '#c8382c', '#2a4a8a', '#3a7a5a'],
+    featherband: ['#a02a24', '#d8b050', '#ece6d8', '#2a5a3a'],
     ze: ['#2a2226', '#2a2226', '#7a2424', '#3a2a20', '#2a3040'],
     headband: ['#a02a24', '#2a2a2a', '#c8a030', '#2a4a7a', '#7a2a5a'],
     turban: ['#3a6a3a', '#5a4a3a', '#2a3a5a', '#7a3a2a', '#4a4a4a', '#6a5a2a'],
@@ -1944,11 +2000,13 @@
 
   // ======================================================== 衣甲 ==
   function torsoD(G) { return spline(G.torso, true); }
+  const DRAPED = new Set(['dhoti', 'shamma', 'meroitic', 'burnous']);
   function drawBody(S, G, sp, T, o) {
     const type = sp.outfit.type || 'robe';
     const fn = OUTFITS[type] || OUTFITS.robe;
     fn(S, G, sp, T, o);
-    if (sp.outfit.cape) mantle(S, G, sp, T, sp.outfit.cape === 'faction' ? o.color : sp.outfit.cape);
+    // 自带披挂的第三版衣装（帔帛、白麻披巾、流苏披肩、斗篷）不再叠加君主的势力色披风
+    if (sp.outfit.cape && !(sp.outfit.cape === 'faction' && DRAPED.has(type))) mantle(S, G, sp, T, sp.outfit.cape === 'faction' ? o.color : sp.outfit.cape);
   }
   // 交领（右衽）：外襟从近侧颈部斜向远侧下方
   function crossCollar(S, G, sp, T, col, innerCol, wide) {
@@ -3406,6 +3464,34 @@
         }
       }
       if (a === 'flower') S.add('hat', flower(G.h3(1.05, 0.55, 1.1)[0], G.h3(1.05, 0.55, 1.1)[1], 0.18 * R, '#f06080'));
+      // 臂钏（天竺、库施）：只在露臂的衣装上画（上臂一道金箍 + 宝石）
+      if (a === 'armlets' && /^(bare|sash|dhoti|pelt)$/.test(sp.outfit.type || '') && sp.sex !== 'f') {
+        let ad = '';
+        for (const [x0, x1, y] of [[-3.2 * G.bw, -2.35, 3.62], [2.5, 3.5 * G.bw, 3.42]]) {
+          const pts = [P(x0, y - 0.04), P((x0 + x1) / 2, y + 0.12), P(x1, y - 0.03)], m = pts[1];
+          ad += `<path d="${taper(pts, 0.17 * R)}" fill="${GOLD}" stroke="${INK}" stroke-width="1"/>` + `<path d="${spline(shift(pts, 0, -0.05 * R))}" fill="none" stroke="#fff0b8" stroke-width="0.9" opacity="0.7"/>` +
+            circle(m[0], m[1], 0.08 * R) + ` fill="#c02a3a" stroke="${INK}" stroke-width="0.8"/>`;
+        }
+        S.add('body2', `<g clip-path="url(#${S.id('torso')})">${ad}</g>`);
+      }
+      // 宝石项链（hara）：一串珍珠 + 一串金珠，正中垂坠
+      if (a === 'hara') {
+        const s1 = catenary(G, P(-0.7, 1.92), P(1.05, 1.62), 0.5 * R, 12), s2 = catenary(G, P(-1.05, 2.05), P(1.35, 1.72), 0.95 * R, 14);
+        for (const [pts, r, c] of [[s1, 0.055, '#f4f0e4'], [s2, 0.068, GOLD]]) {
+          S.add('body2', `<path d="${spline(pts)}" fill="none" stroke="${INK}" stroke-width="1.6"/>`);
+          let dd = '';
+          for (const p of pts.slice(1, -1)) dd += circle(p[0], p[1], r * R) + '/>';
+          S.add('body2', `<g fill="${c}" stroke="${INK}" stroke-width="0.6">${dd}</g>`);
+        }
+        const m = s2[7];
+        S.add('body2', `<path d="${leaf(add(m, 0, 0.02 * R), add(m, 0, 0.36 * R), 0.22 * R, 0)}" fill="${GOLD}" stroke="${INK}" stroke-width="1"/>` + circle(m[0], m[1] + 0.16 * R, 0.065 * R) + ` fill="${sp.gem || '#c02a3a'}" stroke="${INK}" stroke-width="0.6"/>`);
+      }
+      // 花鬘（泰米尔诸王：朱罗戴阿提花、潘地亚戴楝花、哲罗戴棕榈花；颜色 sp.garland）
+      if (a === 'garland') {
+        const pts = catenary(G, P(-1.45, 2.2), P(1.75, 1.85), 1.05 * R, 14), col = sp.garland || '#e8c040';
+        S.add('body2', `<path d="${spline(pts)}" fill="none" stroke="#2a5a2a" stroke-width="${N(0.18 * R)}"/>`);
+        pts.slice(1, -1).forEach((p, i) => S.add('body2', flower(p[0], p[1], 0.13 * R, i % 2 ? col : mix(col, '#ffffff', 0.4))));
+      }
     }
   }
   // 面部纹样
@@ -3435,6 +3521,18 @@
         S.line('face', spline([F(0.12, 0.3), F(0.5, 0.25)]) + spline([F(0.14, 0.42), F(0.52, 0.38)]), '#c8302a', 2.4, ' opacity="0.85"');
         S.line('face', spline([F(-0.5, 0.3), F(-0.75, 0.28)]), '#c8302a', 2.2, ' opacity="0.85"');
         S.line('face', spline([F(-0.2, -0.58), F(0.05, -0.6)]), '#f0ece0', 2.2, ' opacity="0.9"');
+      } else if (m === 'tilaka') {
+        // 额前的吉祥痣（朱砂竖纹 + 圆点）
+        S.line('face', spline([F(-0.1, -0.86), F(-0.1, -0.62)]), INK, 3.4, ' opacity="0.35"');
+        S.line('face', spline([F(-0.1, -0.86), F(-0.1, -0.62)]), '#c8281e', 2.2);
+        S.add('face', circle(F(-0.1, -0.52)[0], F(-0.1, -0.52)[1], 0.05 * R) + ' fill="#f4e8c8" stroke="#7a1a10" stroke-width="0.6"/>');
+      } else if (m === 'cheekscars') {
+        // 库施人面颊的三道疤纹（麦罗埃浮雕与王陵壁画）
+        let d = '';
+        for (let i = 0; i < 3; i++) d += spline([F(0.22, 0.22 + i * 0.1), F(0.48, 0.2 + i * 0.1)]);
+        for (let i = 0; i < 3; i++) d += spline([F(-0.62, 0.22 + i * 0.1), F(-0.78, 0.21 + i * 0.1)]);
+        S.line('face', d, mix(T.skin.b, '#140804', 0.45), 1.5, ' opacity="0.75"');
+        S.line('face', spline([F(0.22, 0.2), F(0.48, 0.18)]), T.skin.h, 0.8, ' opacity="0.45"');
       } else if (m === 'freckles' && S.o.lod >= 1) {
         const rr = Rng(hashStr(sp.name + 'fr'));
         let d = '';
@@ -3444,6 +3542,295 @@
     }
     void P;
   }
+
+  // ================================================ 第三版：天竺、非洲、毛里 ==
+  // 发型：bald（光头：龙树、提婆、童受等僧人，笮融）、tightcurl（非洲短卷发）、ringlets（毛里人的成排螺旋卷）
+  Object.assign(HAIR, {
+    bald(S, G, sp, T, hatInfo, H) {
+      const P = G.P, R = G.R;
+      // 剃发后的头皮：发际线以上一层淡淡的发根青色 + 头顶高光；耳朵照常露出
+      const hl = hairline(G, Object.assign({}, sp, { hair: Object.assign({}, sp.hair, { recede: 0 }) }));
+      const cap = hl.concat([P(1.3, 0.4, 0), P(1.5, -2.3, 0), P(-1.5, -2.3, 0)]);
+      const stub = mix(T.skin.b, lum(sp.hair.color || '#141012') < 0.4 ? '#3c4a58' : mix(sp.hair.color, '#808080', 0.5), 0.26);
+      S.headShade.push(`<path d="${spline(cap, true)}" fill="${stub}" opacity="0.55"/>`);
+      if (S.o.lod >= 1) {
+        S.headShade.push(ellipse(G.hx - 0.28 * R, G.ey - 1.32 * R, 0.46 * R, 0.2 * R, -16) + ` fill="${T.skin.h}" opacity="0.65"/>`);
+        S.headShade.push(ellipse(G.hx - 0.42 * R, G.ey - 1.36 * R, 0.16 * R, 0.07 * R, -16) + ' fill="#ffffff" opacity="0.35"/>');
+      }
+      // 婆罗门的顶髻（sp.hair.tuft）
+      if (sp.hair.tuft && !hatInfo.coversTop) {
+        const b = G.h3(0.6, 1.25, 1.0);
+        clumps(S, 'hair', [{ d: leaf(b, add(b, 0.5 * R, 0.55 * R), 0.22 * R, 0.25), fill: H.b }, { d: leaf(b, add(b, 0.3 * R, 0.75 * R), 0.16 * R, -0.1), fill: H.s }], S.lw * 0.5);
+      }
+    },
+    tightcurl(S, G, sp, T, hatInfo, H) {
+      const P = G.P;
+      const hl = [P(-0.95, -0.5), P(-0.86, -0.78), P(-0.6, -0.9, 0.5), P(-0.3, -0.93, 0.5), P(0.0, -0.9, 0.5), P(0.3, -0.82), P(0.44, -0.58), P(0.47, -0.3), P(0.49, -0.05, 0.3), P(0.6, -0.05, 0.3), P(0.64, 0.3), P(0.96, 0.34)];
+      hairCap(S, G, sp, T, H, { hairline: hl, vol: 0.05 * (sp.hair.vol || 1), bumps: hatInfo.coversTop ? 0 : 14, strands: false, shine: false, extra: () => {
+        if (S.o.lod < 1) return;
+        const rr = sub(sp.name, 'curl');
+        let cd = '', hd = '';
+        for (let i = 0; i < 70; i++) {
+          const lam = rr.range(-1.1, 1.9), bet = rr.range(0.05, 1.4), p = G.h3(lam, bet, 1.04), r0 = rr.range(1.1, 1.8);
+          const d = `M${N(p[0] + r0)},${N(p[1])}a${N(r0)},${N(r0)} 0 1,0 ${N(-r0)},${N(r0)}`;
+          if (lam < 0.3 && bet > 0.55) hd += d; else cd += d;
+        }
+        S.line('hair', cd, H.d, 0.9, ' opacity="0.8"');
+        S.line('hair', hd, H.h, 1.0, ' opacity="0.7"');
+      } });
+    },
+    ringlets(S, G, sp, T, hatInfo, H) {
+      const P = G.P, R = G.R;
+      HAIR.curly(S, G, sp, T, hatInfo, H);
+      // 螺旋长卷：中心线左右摆动的细长发绺
+      const curl = (a, len, w) => {
+        const pts = [];
+        for (let j = 0; j <= 6; j++) pts.push([a[0] + (j % 2 ? 0.5 : -0.5) * w * (j ? 1 : 0), a[1] + j * len / 6]);
+        return taper(pts, t => w * (1 - t * 0.45));
+      };
+      const back = [];
+      for (let i = 0; i < 6; i++) back.push({ d: curl(P(0.62 + i * 0.13, -0.45 + i * 0.1), (0.62 + (i % 2) * 0.2) * R, 0.17 * R), fill: i % 2 ? H.s : H.b });
+      for (let i = 0; i < 2; i++) back.push({ d: curl(P(-0.98 - i * 0.06, -0.5 + i * 0.12), 0.6 * R, 0.15 * R), fill: H.s });
+      clumps(S, 'back', back, S.lw * 0.5);
+      if (hatInfo.coversTop) return;
+      // 额前一排小卷
+      let fd = '', hd = '';
+      for (let i = 0; i < 8; i++) {
+        const p = P(-0.82 + i * 0.16, -0.88 + Math.abs(i - 3) * 0.015), r0 = 0.085 * R;
+        fd += circle(p[0], p[1], r0) + '/>';
+        hd += `M${N(p[0] - r0 * 0.6)},${N(p[1] - r0 * 0.2)}a${N(r0 * 0.6)},${N(r0 * 0.6)} 0 0,1 ${N(r0 * 0.9)},${N(-r0 * 0.3)}`;
+      }
+      S.add('hair', `<g fill="${H.b}" stroke="${INK}" stroke-width="0.9">${fd}</g>`);
+      S.line('hair', hd, H.h, 1.0, ' opacity="0.8"');
+    },
+  });
+
+  // 冠帽：pagri（大缠头）mukuta（宝冠）jewelband（宝带）sinhalacrown（僧伽罗圆冠）
+  //       kushcrown（库施小帽 + 双蛇王带）aksumcrown（阿克苏姆金冠）featherband（插羽额带）
+  function goldStrip(S, G, T, Mt, st, R) {
+    S.shape('hat', spline(st.pts, true), Mt.b, () => {
+      S.path('hat', spline(st.lo.slice(9).concat(st.hi.slice(9).reverse()), true), Mt.s);
+      if (S.o.lod >= 1) { let dd = ''; for (const p of st.lo.slice(1, -1)) dd += circle(p[0], p[1] - 0.065 * R, 0.035 * R) + '/>'; S.add('hat', `<g fill="#f4ecd0">${dd}</g>`); }
+    }, S.lw * 0.8);
+    bandShadow(S, G, st.lo, T, 0.1);
+  }
+  Object.assign(HATS, {
+    pagri(S, G, sp, T) {
+      const R = G.R;
+      const col = sp.hat.color || '#ece6d8';
+      const C = clothT(col);
+      HATS.turban(S, G, Object.assign({}, sp, { hat: { color: col, noTails: true, big: true } }), T);
+      // 额前上方的大布结（桑奇、巴尔胡特、阿马拉瓦蒂浮雕的缠头）
+      const k = G.h3(-0.1, 1.08, 1.27), kr = 0.44 * R;
+      const kd = spline([[k[0] - kr, k[1] + 0.35 * kr], [k[0] - 0.92 * kr, k[1] - 0.6 * kr], [k[0] - 0.1 * kr, k[1] - 1.08 * kr], [k[0] + 0.86 * kr, k[1] - 0.66 * kr], [k[0] + 0.95 * kr, k[1] + 0.35 * kr], [k[0], k[1] + 0.62 * kr]], true);
+      S.shape('hat', kd, C.b, () => {
+        S.path('hat', spline([[k[0] + 0.1 * kr, k[1] - 1.25 * kr], [k[0] + 1.25 * kr, k[1] - 0.4 * kr], [k[0] + 1.05 * kr, k[1] + 0.85 * kr], [k[0] + 0.25 * kr, k[1] + 0.62 * kr]], true), C.s);
+        if (S.o.lod >= 1) S.line('hat', spline([[k[0] - 0.72 * kr, k[1] + 0.12 * kr], [k[0] - 0.2 * kr, k[1] - 0.56 * kr], [k[0] + 0.62 * kr, k[1] - 0.46 * kr]]) + spline([[k[0] - 0.56 * kr, k[1] + 0.48 * kr], [k[0] + 0.1 * kr, k[1] - 0.04 * kr], [k[0] + 0.82 * kr, k[1] + 0.06 * kr]]), C.d, 1.2, ' opacity="0.6"');
+        S.add('hat', ellipse(k[0] - 0.38 * kr, k[1] - 0.48 * kr, 0.32 * kr, 0.16 * kr, -25) + ` fill="${C.h}" opacity="0.6"/>`);
+      }, S.lw);
+      // 结下的金饰牌与宝石
+      const g = G.h3(-0.08, 0.6, 1.24);
+      S.add('hat', `<path d="${spline([[g[0] - 0.24 * R, g[1]], [g[0], g[1] - 0.25 * R], [g[0] + 0.24 * R, g[1]], [g[0], g[1] + 0.22 * R]], true)}" fill="${GOLD}" stroke="${INK}" stroke-width="1.2"/>`);
+      S.add('hat', circle(g[0], g[1], 0.085 * R) + ` fill="${sp.hat.gem || '#c02a3a'}" stroke="${INK}" stroke-width="0.9"/>`);
+      return { coversTop: true };
+    },
+    mukuta(S, G, sp, T) {
+      const R = G.R;
+      const Mt = metalT(sp.hat.color || '#e0b040');
+      // 布缠头打底，前面竖起扇形的三片金宝冠，脑后垂宝带
+      HATS.turban(S, G, Object.assign({}, sp, { hat: { color: sp.hat.color2 || '#a8302a', noTails: true, big: true } }), T);
+      goldStrip(S, G, T, Mt, bandStrip(G, 0.18, 0.34, 0.36, 1.21), R);
+      const c = G.h3(-0.1, 0.72, 1.25);
+      for (const [dx, h, w] of [[-0.58, 0.8, 0.3], [0.58, 0.8, 0.3], [0, 1.35, 0.42]]) {
+        const b = [c[0] + dx * R, c[1] - 0.05 * R], top = [b[0] + dx * 0.3 * R, b[1] - h * R];
+        const d = spline([[b[0] - w * R, b[1], 0.3], [b[0] - w * 0.8 * R, b[1] - h * 0.55 * R], [top[0], top[1], 0.2], [b[0] + w * 0.8 * R, b[1] - h * 0.55 * R], [b[0] + w * R, b[1], 0.3]], true);
+        S.shape('hat', d, Mt.b, () => S.path('hat', spline([[top[0] + 0.05 * R, top[1] - 0.2 * R], [b[0] + w * 1.4 * R, b[1] - h * 0.5 * R], [b[0] + w * 1.2 * R, b[1] + 0.2 * R], [b[0] + 0.12 * R, b[1] + 0.2 * R]], true), Mt.s, 0, ' opacity="0.75"'), S.lw * 0.8);
+        if (S.o.lod >= 1) S.line('hat', spline([[b[0] - w * 0.55 * R, b[1] - 0.06 * R], [top[0], top[1] + h * 0.3 * R], [b[0] + w * 0.55 * R, b[1] - 0.06 * R]]), Mt.h, 1.1, ' opacity="0.7"');
+        S.add('hat', circle(b[0] + dx * 0.08 * R, b[1] - h * 0.4 * R, w * 0.3 * R) + ` fill="${dx ? '#2a8a6a' : (sp.hat.gem || '#c02a3a')}" stroke="${INK}" stroke-width="0.9"/>`);
+      }
+      ribbons(S, G, G.h3(1.85, 0.35, 1.2), sp.hat.ribbon || '#e8c860', 1.0);
+      return { coversTop: true };
+    },
+    jewelband(S, G, sp, T) {
+      const R = G.R;
+      const Mt = metalT(sp.hat.color || '#e0b040');
+      goldStrip(S, G, T, Mt, bandStrip(G, 0.12, 0.27, 0.34, 1.07), R);
+      // 正中的圆形宝饰与三道垂珠
+      const g = G.h3(-0.08, 0.5, 1.09);
+      S.add('hat', circle(g[0], g[1], 0.2 * R) + ` fill="${Mt.b}" stroke="${INK}" stroke-width="1.1"/>` + circle(g[0], g[1], 0.11 * R) + ` fill="${sp.hat.gem || '#c02a3a'}" stroke="${INK}" stroke-width="0.8"/>`);
+      if (S.o.lod >= 1) for (const dx of [-0.13, 0, 0.13]) S.add('hat', `<path d="M${N(g[0] + dx * R)},${N(g[1] + 0.18 * R)}l0,${N(0.15 * R)}" stroke="${Mt.b}" stroke-width="1"/>` + circle(g[0] + dx * R, g[1] + 0.36 * R, 0.045 * R) + ' fill="#f4f0e4" stroke="#1a1012" stroke-width="0.6"/>');
+      ribbons(S, G, G.h3(1.8, 0.3, 1.07), sp.hat.ribbon || '#e8c860', 0.8);
+      return { coversTop: false };
+    },
+    sinhalacrown(S, G, sp, T) {
+      const R = G.R;
+      const Mt = metalT(sp.hat.color || '#e0b040');
+      // 僧伽罗式圆冠：贴头的钟形金冠，层层横箍，顶上尖钮
+      const sh = capShape(G, 0.1, 0.34, 1.12, 1.42);
+      S.shape('hat', spline(sh.cap, true), Mt.b, () => {
+        capShade(S, G, Mt);
+        for (const b0 of [0.55, 0.92, 1.22]) {
+          const pts = [];
+          for (let j = 0; j <= 10; j++) { const lam = G.lamFar + (G.lamNear - G.lamFar) * j / 10; pts.push(G.h3(lam, b0 + 0.12 * Math.cos(lam), 1.14 + (b0 - 0.5) * 0.25)); }
+          S.line('hat', spline(pts), INK, 3.0);
+          S.line('hat', spline(pts), Mt.h, 1.3);
+        }
+        if (S.o.lod >= 1) { let dd = ''; for (let j = 1; j < 10; j++) { const lam = G.lamFar + (G.lamNear - G.lamFar) * j / 10; const p = G.h3(lam, 0.73 + 0.12 * Math.cos(lam), 1.2); dd += circle(p[0], p[1], 0.06 * R) + '/>'; } S.add('hat', `<g fill="#c02a3a" stroke="${INK}" stroke-width="0.6">${dd}</g>`); }
+      }, S.lw);
+      let ti = 0;
+      for (let i = 1; i < sh.cap.length; i++) if (sh.cap[i][1] < sh.cap[ti][1]) ti = i;
+      const top = sh.cap[ti];
+      S.add('hat', `<path d="${spline([[top[0] - 0.12 * R, top[1] + 0.12 * R, 0], [top[0] - 0.06 * R, top[1] - 0.25 * R], [top[0], top[1] - 0.6 * R, 0], [top[0] + 0.06 * R, top[1] - 0.25 * R], [top[0] + 0.12 * R, top[1] + 0.12 * R, 0]], true)}" fill="${Mt.b}" stroke="${INK}" stroke-width="1"/>`);
+      bandShadow(S, G, sh.bnd, T, 0.14);
+      return { coversTop: true };
+    },
+    kushcrown(S, G, sp, T) {
+      const R = G.R;
+      const capC = clothT(sp.hat.color2 || '#2a2422');
+      const Mt = metalT(sp.hat.color || '#d8b050');
+      // 麦罗埃浮雕中王与王后的贴头小帽，金王带，额前双蛇（uraeus），脑后两条长飘带
+      ribbons(S, G, G.h3(1.85, 0.3, 1.08), sp.hat.ribbon || '#e8e0d0', 1.3);
+      const sh = capShape(G, 0.14, 0.3, 1.06, 1.04);
+      S.shape('hat', spline(sh.cap, true), capC.b, () => capShade(S, G, capC), S.lw);
+      goldStrip(S, G, T, Mt, bandStrip(G, 0.12, 0.25, 0.3, 1.08), R);
+      for (const [lam, k] of [[0.14, 0.85], [-0.24, 1]]) {
+        const b = G.h3(lam, 0.42, 1.1);
+        const hood = spline([[b[0] - 0.08 * R * k, b[1], 0.3], [b[0] - 0.15 * R * k, b[1] - 0.34 * R * k], [b[0] - 0.02 * R * k, b[1] - 0.58 * R * k], [b[0] + 0.12 * R * k, b[1] - 0.38 * R * k], [b[0] + 0.08 * R * k, b[1], 0.3]], true);
+        S.shape('hat', hood, Mt.b, () => S.path('hat', spline([[b[0] + 0.02 * R * k, b[1] - 0.6 * R * k], [b[0] + 0.3 * R * k, b[1] - 0.3 * R * k], [b[0] + 0.1 * R * k, b[1] + 0.1 * R * k]], true), Mt.s, 0, ' opacity="0.7"'), S.lw * 0.7);
+        S.add('hat', circle(b[0] - 0.03 * R * k, b[1] - 0.44 * R * k, 0.04 * R) + ' fill="#a01818"/>');
+      }
+      return { coversTop: true };
+    },
+    aksumcrown(S, G, sp, T) {
+      const R = G.R;
+      const Mt = metalT(sp.hat.color || '#e0b440');
+      // 阿克苏姆钱币上的王冠：头巾上戴一圈立起的尖叶形金片，两侧各一束麦穗
+      HATS.turban(S, G, Object.assign({}, sp, { hat: { color: sp.hat.color2 || '#ece6d8', noTails: true } }), T);
+      const st = bandStrip(G, 0.3, 0.44, 0.34, 1.15);
+      for (const i of [2, 5, 8, 11, 14]) {
+        const p = st.hi[i], h = (i === 8 ? 0.62 : 0.48) * R, w = 0.15 * R;
+        S.add('hat', `<path d="${leaf(add(p, 0, 0.04 * R), add(p, 0.03 * R, -h), w * 2, 0)}" fill="${Mt.b}" stroke="${INK}" stroke-width="1"/>`);
+        if (S.o.lod >= 1) S.line('hat', `M${ps(add(p, 0, -0.04 * R))}L${ps(add(p, 0.02 * R, -h * 0.75))}`, Mt.s, 1, ' opacity="0.8"');
+      }
+      goldStrip(S, G, T, Mt, st, R);
+      for (const lam of [-0.95, 1.3]) {
+        const b = G.h3(lam, 0.42, 1.16), dir = lam < 0 ? -1 : 1;
+        const pts = [b, add(b, dir * 0.12 * R, -0.5 * R), add(b, dir * 0.3 * R, -1.0 * R)];
+        S.line('hat', spline(pts), INK, 2.6);
+        S.line('hat', spline(pts), Mt.b, 1.4);
+        let gd = '';
+        for (let j = 1; j <= 5; j++) { const q = lp(pts[1], pts[2], j / 5 - 0.2); gd += ellipse(q[0] - 0.06 * R, q[1], 0.06 * R, 0.03 * R, -40 * dir) + '/>' + ellipse(q[0] + 0.06 * R, q[1], 0.06 * R, 0.03 * R, 40 * dir) + '/>'; }
+        S.add('hat', `<g fill="${Mt.b}" stroke="${INK}" stroke-width="0.6">${gd}</g>`);
+      }
+      return { coversTop: true };
+    },
+    featherband(S, G, sp, T) {
+      const R = G.R;
+      HATS.headband(S, G, Object.assign({}, sp, { hat: { color: sp.hat.color || '#a02a24' } }), T);
+      const b = G.h3(1.15, 0.6, 1.08);
+      feather(S, 'hat', [b, add(b, 0.12 * R, -0.6 * R), add(b, 0.08 * R, -1.2 * R), add(b, 0.24 * R, -1.7 * R)], 0.28 * R, sp.hat.feather || '#f0ece0', '#c8c0b0');
+      return { coversTop: false };
+    },
+  });
+
+  // 衣装：dhoti（帔帛 + 腰布，裸上身）quilted（絮甲）shamma（阿克苏姆白麻袍）meroitic（库施流苏披肩王袍）burnous（毛里连帽斗篷）
+  Object.assign(OUTFITS, {
+    dhoti(S, G, sp, T) {
+      const P = G.P, R = G.R, bw = G.bw;
+      const C = clothT(sp.outfit.color || '#ece4cc');
+      const tr = sp.outfit.color2 || '#c8902a';
+      if (sp.sex === 'f') OUTFITS.tunic(S, G, Object.assign({}, sp, { outfit: Object.assign({}, sp.outfit, { color: sp.outfit.color2 || '#a8322a', color2: GOLD }) }), T);
+      else bareTorso(S, G, sp, T);
+      // 圣线（婆罗门诗人、学者）：远侧肩斜到近侧腰
+      if (sp.sex !== 'f' && (sp.role === 'strategist' || sp.role === 'official' || sp.outfit.thread)) {
+        const th = spline([P(-1.55, 2.25), P(-0.4, 3.0), P(0.8, 3.8), P(1.65, 4.5)]);
+        S.add('body2', `<path d="${th}" fill="none" stroke="${INK}" stroke-width="2.8"/><path d="${th}" fill="none" stroke="#f4f0e4" stroke-width="1.5"/>`);
+      }
+      // 帔帛（uttariya）：搭在两肩，在胸前垂成弧形；远侧一端顺上臂垂下
+      const far = [P(-2.8 * bw, 2.5), P(-2.3, 2.6), P(-2.45, 3.6), P(-2.62, 4.5, 0), P(-3.18 * bw, 4.5, 0), P(-3.08 * bw, 3.3)];
+      S.shape('body2', spline(far, true), C.b, () => S.path('body2', spline([P(-2.5, 2.7), P(-2.3, 3.6), P(-2.45, 4.6), P(-2.0, 4.6, 0), P(-2.0, 2.6, 0)], true), C.s, 0, ' opacity="0.8"'), S.lw * 0.9);
+      const top = [P(-2.55 * bw, 2.5), P(-1.6, 2.72), P(-0.5, 3.08), P(0.6, 3.1), P(1.6, 2.68), P(2.6 * bw, 2.3)];
+      S.shape('body2', taper(top, t => (0.3 + 0.2 * Math.sin(Math.PI * t)) * R), C.b, () => {
+        S.path('body2', spline([P(0.5, 3.0), P(2.9, 2.0), P(3.0, 3.1), P(0.6, 4.3)], true), C.s);
+        if (S.o.lod >= 1) S.line('body2', spline(shift(top, 0, 0.1 * R)) + spline(shift(top, 0, -0.07 * R).slice(1, 5)), C.d, 1.2, ' opacity="0.55"');
+      }, S.lw * 0.9);
+      S.line('body2', spline(shift(top, 0, 0.34 * R).slice(1, 5)), tr, 2.0, ' opacity="0.95"');
+    },
+    quilted(S, G, sp, T) {
+      const P = G.P, R = G.R;
+      const C = clothT(sp.outfit.color || '#e8dcc0');
+      const tr = sp.outfit.color2 || '#a8322a';
+      torsoBase(S, G, sp, T, C.b, C.s, () => {
+        if (S.o.lod < 1) return;
+        // 菱形绗缝线 + 每格鼓起的絮棉（淡高光）
+        let qd = '', bd = '';
+        for (let i = -7; i <= 8; i++) {
+          qd += `M${N(G.hx + (i * 0.55 - 1.6) * R)},${N(G.ey + 1.3 * R)}l${N(2.6 * R)},${N(3.4 * R)}`;
+          qd += `M${N(G.hx + (i * 0.55 + 1.6) * R)},${N(G.ey + 1.3 * R)}l${N(-2.6 * R)},${N(3.4 * R)}`;
+        }
+        for (let i = -6; i <= 6; i++) for (let j = 0; j < 6; j++) { const x = G.hx + (i * 0.55 + (j % 2) * 0.275) * R, y = G.ey + (1.75 + j * 0.36) * R; bd += ellipse(x - 0.06 * R, y - 0.05 * R, 0.1 * R, 0.06 * R) + '/>'; }
+        S.add('body', `<g fill="${C.h}" opacity="0.35">${bd}</g>`);
+        S.line('body', qd, C.d, 1.1, ' opacity="0.5"');
+      });
+      const nl = [P(-0.55 * G.nw, 1.7), P(-0.15, 2.05), P(0.35, 2.08), P(0.95 * G.nw, 1.45)];
+      S.add('body2', `<path d="${taper(nl, 0.22 * R)}" fill="${tr}" stroke="${INK}" stroke-width="${N(S.lw * 0.75)}"/>`);
+      S.add('body2', `<path d="${taper([P(0.12, 2.05), P(0.02, 3.2), P(-0.15, 4.5)], 0.16 * R)}" fill="${tr}" stroke="${INK}" stroke-width="${N(S.lw * 0.7)}"/>`);
+      // 斜挎的皮剑带与金扣
+      S.add('body2', `<path d="${taper([P(2.35, 2.3), P(1.0, 3.1), P(-0.6, 3.9), P(-1.95, 4.5)], 0.17 * R)}" fill="#6a4428" stroke="${INK}" stroke-width="${N(S.lw * 0.7)}"/>`);
+      const bk = P(0.2, 3.46);
+      S.add('body2', circle(bk[0], bk[1], 0.11 * R) + ` fill="${GOLD}" stroke="${INK}" stroke-width="1"/>`);
+    },
+    shamma(S, G, sp, T) {
+      const P = G.P, R = G.R;
+      const C = clothT(sp.outfit.toga || '#ece6d8');
+      const oc = sp.outfit.color;
+      const border = oc && !/^#e[0-9a-f]e[0-9a-f]d[0-9a-f]$/i.test(oc) ? oc : (sp.outfit.color2 || '#a01818');
+      torsoBase(S, G, sp, T, C.b, C.s, () => {
+        if (S.o.lod >= 1) S.line('body', spline([P(1.9, 2.8), P(2.05, 3.5), P(2.0, 4.4)]), C.d, 1.3, ' opacity="0.5"');
+      });
+      // 白麻披巾：从近侧腋下绕过胸前搭上远侧肩，彩边 + 金线
+      const drape = [P(-0.6 * G.nw, 1.72), P(-1.5, 2.1), P(-2.5, 2.6), P(-3.0, 3.2), P(-3.2, 4.5, 0), P(-0.4, 4.5, 0), P(0.9, 3.5), P(1.95, 2.6), P(0.6, 2.7)];
+      S.shape('body2', spline(drape, true), C.b, () => {
+        let fd = '';
+        for (let i = 0; i < 5; i++) fd += spline([P(-1.7 + i * 0.42, 2.35 + i * 0.05), P(-1.0 + i * 0.42, 3.25), P(-0.75 + i * 0.36, 4.4)]);
+        S.line('body2', fd, C.d, 1.4, ' opacity="0.55"');
+        S.path('body2', spline([P(-0.1, 2.9), P(1.3, 2.4), P(0.9, 4.6), P(-0.3, 4.6)], true), C.s, 0, ' opacity="0.6"');
+      }, S.lw);
+      const edge = [P(1.95, 2.6), P(0.9, 3.5), P(-0.4, 4.5)];
+      S.add('body2', `<path d="${taper(edge, 0.22 * R)}" fill="${border}" stroke="${INK}" stroke-width="${N(S.lw * 0.7)}"/>`);
+      S.add('body2', `<path d="${spline(shift(edge, 0.1 * R, -0.04 * R))}" fill="none" stroke="${GOLD}" stroke-width="1.5"/>`);
+    },
+    meroitic(S, G, sp, T) {
+      const P = G.P, R = G.R, bw = G.bw;
+      OUTFITS.tunic(S, G, Object.assign({}, sp, { outfit: Object.assign({}, sp.outfit, { color: sp.outfit.toga || '#ece6d8', color2: GOLD }) }), T);
+      // 麦罗埃浮雕的王袍：斜披的流苏披肩（近侧肩 → 远侧腰）+ 搭在远侧肩上的流苏绳
+      const sc = clothT(sp.outfit.color || '#a01818');
+      const sh = [P(2.62 * bw, 2.3), P(1.6, 2.08), P(-0.6, 3.4), P(-2.0, 4.5, 0), P(-0.5, 4.5, 0), P(0.6, 3.8), P(2.95 * bw, 3.0)];
+      S.shape('body2', spline(sh, true), sc.b, () => {
+        S.path('body2', spline([P(1.0, 2.6), P(3.2, 2.4), P(3.2, 3.4), P(0.8, 3.9)], true), sc.s);
+        if (S.o.lod >= 1) S.line('body2', spline([P(2.4, 2.4), P(0.4, 3.3), P(-1.2, 4.4)]), GOLD, 1.4, ' opacity="0.85"');
+      }, S.lw);
+      if (S.o.lod >= 1) {
+        let fd = '';
+        for (const p of resample([P(2.95 * bw, 3.0), P(0.6, 3.8), P(-0.5, 4.5)], 12).slice(0, -1)) fd += `M${ps(p)}l${N(-0.03 * R)},${N(0.2 * R)}`;
+        S.line('body2', fd, GOLD, 1.6);
+      }
+      const cord = [P(-2.4 * bw, 2.5), P(-1.6, 2.9), P(-1.1, 3.7), P(-1.0, 4.3)];
+      S.add('body2', `<path d="${spline(cord)}" fill="none" stroke="${INK}" stroke-width="3"/><path d="${spline(cord)}" fill="none" stroke="${GOLD}" stroke-width="1.6"/>`);
+      const tl = cord[3];
+      S.add('body2', `<path d="${leaf(tl, add(tl, 0.02 * R, 0.4 * R), 0.2 * R, 0)}" fill="${sc.b}" stroke="${INK}" stroke-width="1"/>`);
+    },
+    burnous(S, G, sp, T) {
+      const P = G.P;
+      const col = sp.outfit.color || '#e8e0cc';
+      const C = clothT(col);
+      // 兜帽垂在脑后
+      const hood = [P(0.55, 1.35), P(1.2, 0.55), P(1.5, -0.35), P(1.42, -0.95), P(1.05, -1.25), P(1.95, -0.7), P(2.25, 0.5), P(2.05, 1.6), P(1.2, 2.0)];
+      S.shape('back', spline(hood, true), C.s, () => S.path('back', spline([P(1.3, -0.9), P(2.0, -0.5), P(2.2, 0.6), P(1.6, 0.4)], true), C.d, 0, ' opacity="0.6"'), S.lw);
+      OUTFITS.tunic(S, G, Object.assign({}, sp, { outfit: Object.assign({}, sp.outfit, { color: sp.outfit.color2 && sp.outfit.color2 !== col ? sp.outfit.color2 : '#c8b48c', color2: mix(col, '#000000', 0.3) }) }), T);
+      if (!sp.outfit.cape || sp.outfit.cape === 'faction') mantle(S, G, sp, T, col);
+    },
+  });
 
   // ======================================================== 主装配 ==
   function figure(S, G, sp, T, o) {

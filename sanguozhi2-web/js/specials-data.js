@@ -1220,7 +1220,7 @@
     '沙德沙普尔': { name: '斯帕罕城', kind: 'fortify', stat: 'war', radius: 1, def: 1.3, counter: 1.32, turns: 2, morale: 4, fx: 'shield', color: '#6a7aa0',
       lore: '沙德沙普尔以安息藩臣身份统治伊斯法罕，224年阿尔达希尔攻取其城。' },
     '瓦拉赫什': { name: '克尔曼王', kind: 'cleave', power: 1.7, splash: 0.62, morale: -10, fx: 'sweep', color: '#a0703a',
-      lore: '阿尔达希尔东征克尔曼时，克尔曼王巴拉什迎战被俘，其城被攻破。' },
+      lore: '阿尔达希尔东征克尔曼时，克尔曼王瓦拉赫什（巴拉什）迎战被俘，其城被攻破。' },
     '达德温达德': { name: '王室文书', kind: 'scheme', range: 3, radius: 1, chance: 0.55, turns: 1, morale: -10, power: 0.1, fx: 'spirit', color: '#9a8ab8',
       lore: '达德温达德是安息末王阿尔达班四世的首席书记，掌管朝廷文书。' },
     '阿巴尔萨姆': { name: '王之荣光', kind: 'command', radius: 2, atk: 1.22, def: 1.22, turns: 2, morale: 10, fx: 'aura', color: '#d8a040',

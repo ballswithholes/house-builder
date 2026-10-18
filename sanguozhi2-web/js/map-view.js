@@ -1057,37 +1057,113 @@ void main() {
     return mat;
   }
 
+  // ---------------------------------------------------------- 海路虚线 --
+  // 第三版修订：半宽 0.16 × clamp(镜头距离 / 60, 0.35, 1)（近看变细），镜头距离 12–28 内淡出，略带蓝的白色、不透明度 0.6
+  const LANE_VS = `attribute vec2 aOff;
+uniform float uW;
+varying float vA;
+#include <fog_pars_vertex>
+void main() {
+  vec4 wp = modelMatrix * vec4( position, 1.0 );
+  float d = distance( cameraPosition, wp.xyz );
+  wp.xz += aOff * uW * clamp( d / 60.0, 0.35, 1.0 );
+  vA = smoothstep( 12.0, 28.0, d );
+  vec4 mvPosition = viewMatrix * wp;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+  const LANE_FS = `uniform vec3 uColor;
+uniform float uOpacity;
+varying float vA;
+#include <fog_pars_fragment>
+void main() {
+  gl_FragColor = vec4( uColor, uOpacity * vA );
+  #include <fog_fragment>
+}`;
+  function seaLaneMaterial() {
+    const m = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uW: { value: 0.16 }, uColor: { value: new THREE.Color(0.88, 0.93, 0.98) }, uOpacity: { value: 0.62 } }]),
+      vertexShader: LANE_VS, fragmentShader: LANE_FS, transparent: true, depthWrite: false, fog: true,
+      side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    });
+    m.name = 'SeaLanes';
+    return m;
+  }
+
   // ---------------------------------------------------------- 云的淡出 --
   // 网页版补充（C# 的云始终不透明）：云离镜头越近越透明，镜头距离 ≥ CLOUD_FADE_FAR 时不透明，≤ CLOUD_FADE_NEAR 时完全隐去。
   // 标题 / 全图视角（镜头距离 85 以上）视野里的云离镜头 51 以上，几乎不透明；战略视角（45～48）视野里的云离镜头约 15～46，
   // 除画面最上缘远处的淡影外全部隐去，城池上方不再留下半透明的灰色多边形。
-  const CLOUD_FADE_NEAR = 41, CLOUD_FADE_FAR = 55;
-  // 云影随云体一起淡出：阴影深度遍按 3×3 有序抖动矩阵丢弃片元（按阴影贴图像素），隐去的云不再在地面上投下看不到来源的暗斑。
-  // 用 3×3 是因为 three 的 PCFSoftShadowMap 恰好对周围 3×3 个阴影像素做盒式平均（两端按亚像素比例分摊权重），
-  // 周期为 3 的图案在任何位置都正好平均成 保留数 / 9，接收面上是平滑的浅影而不是网点（10 级浓淡）。
-  const CLOUD_SHADOW_PARS =
-    'uniform float sgShadowDensity;\n' +
-    'float sgDither3( vec2 p ) {\n' +
-    '\tvec2 c = floor( p ) - 3.0 * floor( p / 3.0 );\n' + // gl_FragCoord 在像素中心（k + 0.5），取模不会落在边界上
-    '\tvec3 row = c.y < 0.5 ? vec3( 0.0, 7.0, 3.0 ) : ( c.y < 1.5 ? vec3( 6.0, 5.0, 2.0 ) : vec3( 4.0, 1.0, 8.0 ) );\n' +
-    '\tfloat m = c.x < 0.5 ? row.x : ( c.x < 1.5 ? row.y : row.z );\n' +
-    '\treturn ( m + 0.5 ) / 9.0;\n' +
-    '}\n';
-  const CLOUD_SHADOW_DISCARD =
-    '#include <clipping_planes_fragment>\n' +
-    '\tif ( sgDither3( gl_FragCoord.xy ) >= sgShadowDensity ) discard;';
-  function cloudShadowMaterial() {
-    const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-    mat.name = 'CloudShadowDepth';
-    const density = { value: 1 };
-    mat.userData.shadowDensity = density;
-    // 所有云共用同一函数源码 → 同一着色器程序；uniform 对象每朵云各自一份
-    mat.onBeforeCompile = function cloudShadowCompile(shader) {
-      shader.uniforms.sgShadowDensity = density;
-      shader.fragmentShader = CLOUD_SHADOW_PARS +
-        shader.fragmentShader.replace('#include <clipping_planes_fragment>', CLOUD_SHADOW_DISCARD);
+  const CLOUD_FADE_NEAR = 44, CLOUD_FADE_FAR = 64;
+  const CLOUD_HIDE_Y = 70, CLOUD_SHOW_DY = 28;     // 第三版修订：镜头高度 ≤ 70 时云全部隐去，≥ 98 时全显
+  // 云团贴图（128²，程序生成，全部云共用）：径向渐隐 × 两级值噪声（蓬松的边），上亮下灰（RGB），alpha 柔边
+  let _cloudTex = null, _cloudMat = null;
+  function cloudTexture() {
+    if (_cloudTex) return _cloudTex;
+    const N = 128, cv = document.createElement('canvas');
+    cv.width = cv.height = N;
+    const g = cv.getContext('2d'), img = g.createImageData(N, N);
+    const h = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
+    const vn = (x, y) => {
+      const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      return (h(xi, yi) * (1 - u) + h(xi + 1, yi) * u) * (1 - v) + (h(xi, yi + 1) * (1 - u) + h(xi + 1, yi + 1) * u) * v;
     };
-    return mat;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const px = (x + 0.5) / N * 2 - 1, py = (y + 0.5) / N * 2 - 1;      // py：-1 上 → 1 下
+      const r = Math.hypot(px, py * 1.05);
+      const nz = vn(px * 3 + 7, py * 3 + 3) * 0.65 + vn(px * 7 + 1, py * 7 + 9) * 0.35;
+      let a = 1 - M.smoothStep(0, 1, M.clamp01((r - 0.25 + (nz - 0.5) * 0.5) / 0.7));
+      a *= M.clamp01(1.25 - Math.max(0, py) * 0.5);                      // 底部略收
+      const lit = M.clamp01(0.5 - py * 0.55 + (nz - 0.5) * 0.35);       // 上亮下灰
+      const i = (y * N + x) * 4;
+      img.data[i] = Math.round(255 * (0.74 + 0.26 * lit));
+      img.data[i + 1] = Math.round(255 * (0.76 + 0.24 * lit));
+      img.data[i + 2] = Math.round(255 * (0.82 + 0.18 * lit));
+      img.data[i + 3] = Math.round(255 * M.clamp01(a));
+    }
+    g.putImageData(img, 0, 0);
+    _cloudTex = new THREE.CanvasTexture(cv);
+    _cloudTex.minFilter = THREE.LinearMipmapLinearFilter;
+    return _cloudTex;
+  }
+  const CLOUD_VS = `attribute vec2 aCorner;
+attribute float aSize;
+attribute float aShade;
+varying vec2 vUv;
+varying float vShade;
+#include <fog_pars_vertex>
+void main() {
+  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  mvPosition.xy += aCorner * aSize;
+  vUv = vec2( aCorner.x * 0.5 + 0.5, 0.5 - aCorner.y * 0.5 );
+  vShade = aShade;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+  const CLOUD_FS = `uniform sampler2D uMap;
+uniform float uOpacity;
+uniform vec3 uTint;
+varying vec2 vUv;
+varying float vShade;
+#include <fog_pars_fragment>
+void main() {
+  vec4 t = texture2D( uMap, vUv );
+  gl_FragColor = vec4( t.rgb * uTint * vShade, t.a * uOpacity );
+  #include <fog_fragment>
+}`;
+  // 每朵云一份材质（各自的不透明度），共用同一着色器程序与贴图
+  function cloudMaterial() {
+    if (!_cloudMat) {
+      _cloudMat = new THREE.ShaderMaterial({
+        uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uMap: { value: null }, uOpacity: { value: 1 }, uTint: { value: new THREE.Color(1.0, 0.99, 0.96) } }]),
+        vertexShader: CLOUD_VS, fragmentShader: CLOUD_FS,
+        transparent: true, depthWrite: false, fog: true,
+      });
+      _cloudMat.name = 'CloudBillboard';
+    }
+    const m = _cloudMat.clone();
+    m.uniforms.uMap.value = cloudTexture();
+    return m;
   }
 
   // ---------------------------------------------------------- 植被与小物件（实例化）--
@@ -1184,7 +1260,8 @@ float sgLN( vec3 p ) { return sin( p.x + sin( p.y * 1.3 ) * 1.2 ) * sin( p.y * 1
     const O = V(0, 0, 0);
     const crown = (c, r, col, seed, rough) => {
       const ro = rough === undefined ? 0.09 : rough;
-      lf.sphere(c, r, col || W, d, { seed, rough: ro, bottomShade: 0.32, top: 0.08 });
+      // 第三版修订：法线向椭球法线混合（中远景的树冠轮廓仍有起伏，明暗却不再显出一块块小面）
+      lf.sphere(c, r, col || W, d, { seed, rough: ro, bottomShade: 0.32, top: 0.08, smoothN: hero ? 0.4 : 0.75 });
       if (!hero || r.x < 0.12) return;
       for (let k = 0; k < 3; k++) {
         const a = seed * 1.7 + k * 2.09, up = 0.25 + 0.3 * ((k + seed) % 2);
@@ -2004,7 +2081,7 @@ void main() {
       for (const m of this._marchers) m.cancelled = true;
       SG.Gfx.disposeTree(this.root);
       this.root = null;
-      // 云的材质每次构建新建（每朵云的主材质、阴影深度材质，以及各朵云共用的 CloudDepth 前置遍材质），随云一起释放
+      // 云的材质每次构建新建（每朵云一份公告板材质，共用贴图与着色器程序），随云一起释放
       for (const c of this._clouds) {
         c.material.dispose();
         if (c.customDepthMaterial) c.customDepthMaterial.dispose();
@@ -2059,7 +2136,8 @@ void main() {
       if (h < 0.42 || h > 2.6 || slope > 0.22) return 0;
       let w = 0;
       const cl = this._cityIdx10 && this._cityIdx10.at(x, z);
-      if (cl) for (const i of cl) { const d = Math.hypot(this._cityX[i] - x, this._cityZ[i] - z); w = Math.max(w, ss(8.5, 4.2, d) * ss(1.7, 2.9, d)); }
+      // 第三版修订：草原上的城（毡帐营地）四周不是农田
+      if (cl) for (const i of cl) { const d = Math.hypot(this._cityX[i] - x, this._cityZ[i] - z); w = Math.max(w, ss(8.5, 4.2, d) * ss(1.7, 2.9, d) * (1 - 0.85 * M.clamp01(gi.st * 1.4))); }
       const hl = this._hamletIdx && this._hamletIdx.at(x, z);
       if (hl) for (const i of hl) { const o = this._hamlets[i]; w = Math.max(w, ss(3.4, 1.0, Math.hypot(o.x - x, o.z - z))); }
       const rv = ss(5.0, 1.5, gi.river) * ss(2.0, 1.1, h);
@@ -2577,8 +2655,10 @@ void main() {
           const a = o.yaw + 1.3 + k * 1.9 + rnd.nextDouble() * 0.6, r = 1.3 + rnd.nextDouble() * 0.5;
           const px = o.x + Math.cos(a) * r, pz = o.z + Math.sin(a) * r, h = this.surfaceY(px, pz);
           if (h < 0.45) continue;
-          const dry = o.culture === 'persia' || o.culture === 'arab' || o.culture === 'tarim' || o.culture === 'kushan';
-          const kind = o.culture === 'seasia' || o.culture === 'yi' || o.culture === 'nanman' ? 'palm' : dry ? (k ? 'poplar' : 'palm') : o.culture === 'roman' ? (k ? 'olive' : 'cypress') : 'broad';
+          // 第三版修订：新增文化（india / africa / moor）按 SG.cultureBase 回退：天竺、非洲的村边是椰枣 / 椰树
+          const cb = SG.cultureBase ? SG.cultureBase(o.culture) : o.culture, cu = o.culture;
+          const dry = cb === 'persia' || cb === 'arab' || cb === 'tarim' || cb === 'kushan';
+          const kind = cb === 'seasia' || cb === 'yi' || cb === 'nanman' || cu === 'africa' ? 'palm' : dry ? (k ? 'poplar' : 'palm') : cb === 'roman' || cu === 'moor' ? (k ? 'olive' : 'cypress') : 'broad';
           const c = kind === 'palm' ? PALM : kind === 'poplar' ? POPLAR : kind === 'olive' ? OLIVE : kind === 'cypress' ? CYPRESS : [0.36, 0.6, 0.27];
           add(kind, px, h - 0.04, pz, 0.75, 0.75, a, c, (rnd.nextDouble() - 0.5) * 0.12);
         }
@@ -2656,7 +2736,7 @@ void main() {
       // 村落：每处 3–6 间，按文化取屋型与屋顶色
       const HB = this._instBuckets();
       const STYLE = { han: 'han', korea: 'han', wa: 'round', yi: 'stilt', nanman: 'stilt', seasia: 'stilt', steppe: 'yurt', tarim: 'flat', kushan: 'flat',
-        persia: 'flat', arab: 'flat', roman: 'tile', sarmatian: 'tile', celt: 'round', german: 'long' };
+        persia: 'flat', arab: 'flat', roman: 'tile', sarmatian: 'tile', celt: 'round', german: 'long', india: 'flat', africa: 'flat', moor: 'flat' };
       const ROOF = {
         han: [[0.36, 0.38, 0.42], [0.3, 0.32, 0.36], [0.42, 0.4, 0.38], [0.62, 0.52, 0.34]], tile: [[0.72, 0.36, 0.24], [0.66, 0.32, 0.22], [0.76, 0.42, 0.28]],
         flat: [[0.86, 0.76, 0.58], [0.8, 0.7, 0.52], [0.9, 0.82, 0.66]], round: [[0.7, 0.6, 0.38], [0.62, 0.54, 0.34]], yurt: [[0.95, 0.93, 0.86], [0.88, 0.84, 0.74]],
@@ -2664,7 +2744,7 @@ void main() {
       };
       let houses = 0;
       for (const o of this._hamlets || []) {
-        const style = STYLE[o.culture] || 'han', pal = ROOF[style];
+        const style = STYLE[o.culture] || STYLE[SG.cultureBase ? SG.cultureBase(o.culture) : 'han'] || 'han', pal = ROOF[style];
         const pts = [];
         for (let k = 0; k < o.n * 4 && pts.length < o.n; k++) {
           const a = rnd.nextDouble() * Math.PI * 2, r = Math.sqrt(rnd.nextDouble()) * 1.15;
@@ -2771,11 +2851,23 @@ void main() {
             const s0 = i - 1, s1 = e;   // 两岸的干点
             const L = Math.hypot(pts[s1].x - pts[s0].x, pts[s1].z - pts[s0].z);
             const mx = (pts[s0].x + pts[s1].x) / 2, mz = (pts[s0].z + pts[s1].z) / 2;
-            if (L <= 5 && !this._geo.inSea(mx, mz)) {
+            // 第三版修订：只在真正横渡河流处架桥——两岸点上「离河距离」的梯度与道路方向基本相对（沿河而行、在河道里穿行的
+            // 路段不再变成一条条长长的高架桥，改为断开）；湖塘（离河远）照旧
+            let crossing = true;
+            {
+              const G0 = this._geo, e = 0.35;
+              if (G0.riverDist(mx, mz) / G0.rW < 3) {
+                const rx = (pts[s1].x - pts[s0].x) / (L || 1), rz = (pts[s1].z - pts[s0].z) / (L || 1);
+                const gr = (x, z) => { const gx = G0.riverDist(x + e, z) - G0.riverDist(x - e, z), gz = G0.riverDist(x, z + e) - G0.riverDist(x, z - e), l = Math.hypot(gx, gz) || 1; return [gx / l, gz / l]; };
+                const g0 = gr(pts[s0].x, pts[s0].z), g1 = gr(pts[s1].x, pts[s1].z);
+                crossing = (-(rx * g0[0] + rz * g0[1]) + (rx * g1[0] + rz * g1[1])) / 2 > 0.55;
+              }
+            }
+            if (L <= 5 && crossing && !this._geo.inSea(mx, mz)) {
               const deck = Math.max(pts[s0].h, pts[s1].h, 0.12) + 0.16;
               for (let k = s0; k <= s1; k++) pts[k].y = Math.max(pts[k].y, deck + 0.03);
               const culture = CA ? CA.cultureOfCity(c) : 'han';
-              const stone = culture === 'han' || culture === 'roman' || culture === 'persia' || culture === 'korea' || culture === 'kushan' || culture === 'arab' || culture === 'sarmatian';
+              const stone = culture === 'han' || culture === 'roman' || culture === 'persia' || culture === 'korea' || culture === 'kushan' || culture === 'arab' || culture === 'sarmatian' || culture === 'india' || culture === 'africa';
               bridgeInto(bridges, pts[s0], pts[s1], deck, stone);
             } else for (let k = s0 + 1; k < s1; k++) pts[k].gap = true;
             i = e;
@@ -2806,23 +2898,22 @@ void main() {
       // 海路：沿水面绕开陆地的虚线航线
       if (seaPairs.length) {
         yield* this._genSeaMask();
-        const DP = [];
+        const DP = [], DO = [];
         for (let k = 0; k < seaPairs.length; k++) {
           const [a, b] = seaPairs[k];
           const path = yield* this._seaPathGen(this._cityX[a], this._cityZ[a], this._cityX[b], this._cityZ[b]);
           this._lanes.set(a + '-' + b, path);
-          this._dashes(path, DP);
+          this._dashes(path, DP, DO);
           this._sub(0.6 + 0.4 * (k + 1) / seaPairs.length);
           yield;
         }
         this._sea = null;   // 只在生成航线时使用
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.Float32BufferAttribute(DP, 3));
+        g.setAttribute('aOff', new THREE.Float32BufferAttribute(DO, 2));
         g.computeBoundingSphere();
-        const mat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(0.97, 0.94, 0.84), transparent: true, opacity: 0.85, depthWrite: false,
-          side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-        });
+        if (g.boundingSphere) g.boundingSphere.radius += 1;
+        const mat = seaLaneMaterial();
         this._ownMats.push(mat);
         const m = new THREE.Mesh(g, mat);
         m.name = 'SeaLanes';
@@ -3032,8 +3123,10 @@ void main() {
     }
     // 沿折线生成虚线（三角形，three 坐标），离城池 2.4 以内不画。
     // 按弧长逐段（周期 DASH + GAP）取点：循环次数只取决于航线长度，不会因浮点累加卡死
-    _dashes(pts, P) {
-      const DASH = 1.0, GAP = 0.7, W = 0.16, PERIOD = DASH + GAP;
+    // 第三版修订：顶点只存中线位置，半宽方向放在 aOff（着色器按镜头距离缩放宽度、近处淡出，近看不再是白木板）；
+    // 经过陆地的线段不画（A* 允许以高代价穿过陆地）
+    _dashes(pts, P, O) {
+      const DASH = 1.0, GAP = 0.7, PERIOD = DASH + GAP, geo = this._geo;
       const n = pts.length >> 1;
       if (n < 2) return;
       const cum = new Float64Array(n);
@@ -3052,10 +3145,13 @@ void main() {
         if (L < 1e-6) return;
         const mx = (sx + ex) / 2, mz = (sz + ez) / 2;
         if (Math.hypot(mx - ax, mz - az) <= 2.4 || Math.hypot(mx - bx, mz - bz) <= 2.4) return;
-        const px = -(ez - sz) / L * W, pz = (ex - sx) / L * W;
+        if (geo && geo.inSea && !geo.inSea(mx, mz)) return;
+        const px = -(ez - sz) / L, pz = (ex - sx) / L;
         const ys = Math.max(0.13, this.surfaceY(sx, sz) + 0.12), ye = Math.max(0.13, this.surfaceY(ex, ez) + 0.12);
-        P.push(sx + px, ys, -(sz + pz), ex + px, ye, -(ez + pz), ex - px, ye, -(ez - pz));
-        P.push(sx + px, ys, -(sz + pz), ex - px, ye, -(ez - pz), sx - px, ys, -(sz - pz));
+        P.push(sx, ys, -sz, ex, ye, -ez, ex, ye, -ez);
+        O.push(px, -pz, px, -pz, -px, pz);
+        P.push(sx, ys, -sz, ex, ye, -ez, sx, ys, -sz);
+        O.push(px, -pz, -px, pz, -px, pz);
       };
       const nd = Math.ceil(total / PERIOD);
       for (let d = 0; d < nd; d++) {
@@ -3246,54 +3342,50 @@ void main() {
       return g;
     }
 
+    // 第三版修订：云改为柔边的公告板云团（每朵 5–8 片朝向镜头的面片，共用一张程序生成的云团贴图：径向渐隐 + 两级噪声、
+    // 上亮下灰），不再是不透明的一团团多边形球；不投影；位置更高（y 26–34）；战略视角（镜头低于约 95）整体隐去，
+    // 只在标题 / 全图的远景里出现；触屏减半
     *_buildClouds() {
       const rnd = SG.SeededRandom(5);
-      // 只写深度的前置遍：半透明的云只显示最外层的面，不会透出内部互相穿插的云团
-      const depthMat = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true });
-      depthMat.name = 'CloudDepth';
       const world = this.region === 'world';
-      // 世界地图：云在镜头周围 ±CLOUD_BOX 的范围内循环（数量与地图大小无关）
       this._cloudBox = world ? { x: 170, z: 115 } : null;
-      const n = this.spec.clouds;
+      const n = SG.isTouch ? Math.ceil(this.spec.clouds / 2) : this.spec.clouds;
       for (let i = 0; i < n; i++) {
-        const mb = new SG.MeshBuilder();
-        const puffs = 4 + rnd.next(4);
+        const puffs = 5 + rnd.next(4);
+        const P = [], Cn = [], S = [], K = [], idx = [];
         for (let k = 0; k < puffs; k++) {
-          const ox = (rnd.nextDouble() - 0.5) * 7, oy = rnd.nextDouble() * 0.8, oz = (rnd.nextDouble() - 0.5) * 3;
-          const r = 1.4 + rnd.nextDouble() * 1.6;
-          mb.sphere(V(ox, oy, oz), V(r, r * 0.62, r * 0.85), new THREE.Color(1, 1, 1), 2, { seed: i * 7 + k, rough: 0.07, top: 0.04, bottomShade: 0.12, flat: -0.55 });
+          const u = puffs > 1 ? k / (puffs - 1) : 0.5;
+          const ox = (u - 0.5) * 8 + (rnd.nextDouble() - 0.5) * 1.6, oz = (rnd.nextDouble() - 0.5) * 3.2;
+          const mid = 1 - Math.abs(u - 0.5) * 2;
+          const r = 2.2 + mid * 1.6 + rnd.nextDouble() * 0.9, oy = 0.2 + mid * 1.1 + rnd.nextDouble() * 0.5;
+          const shadeK = 0.9 + rnd.nextDouble() * 0.1;
+          const base = P.length / 3;
+          for (const [cx, cy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { P.push(ox, oy, -oz); Cn.push(cx, cy); S.push(r); K.push(shadeK); }
+          idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
         }
-        // 白云（C# _Emission 0.35）：向阳面的亮度超过 1，同样走高光肩部，云顶不会截断成一整片纯白。
-        // 每朵云一个材质与一个阴影深度材质：镜头拉近（战略视角）时离镜头近的云连同云影一起淡出隐去，
-        // 不再整片挡住城池（见 update 与 CLOUD_FADE_NEAR / CLOUD_FADE_FAR）
-        const mat = shoulderMaterial('CloudLowPoly');
-        mat.emission = 0.35;
-        mat.color.setRGB(0.74, 0.75, 0.78); // _Color：略压暗，让云的明暗面不被截断成一片白
-        mat.transparent = true;
-        const geo = mb.toGeometry();
-        const m = SG.Gfx.mesh(geo, mat, { castShadow: true, receiveShadow: false });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+        geo.setAttribute('aCorner', new THREE.Float32BufferAttribute(Cn, 2));
+        geo.setAttribute('aSize', new THREE.Float32BufferAttribute(S, 1));
+        geo.setAttribute('aShade', new THREE.Float32BufferAttribute(K, 1));
+        geo.setIndex(idx);
+        geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 12);
+        const m = new THREE.Mesh(geo, cloudMaterial());
         m.name = 'Cloud';
-        m.customDepthMaterial = cloudShadowMaterial();
+        m.castShadow = false; m.receiveShadow = false;
         m.renderOrder = 21;
-        const pre = new THREE.Mesh(geo, depthMat);
-        pre.name = 'CloudDepth';
-        pre.renderOrder = 20;
-        pre.castShadow = false; pre.receiveShadow = false;
-        pre.userData.sharedGeometry = true;
-        m.add(pre);
         let px, py, pz;
         if (world) {
           const b = this._cloudBox, c = this._viewCenter();
           px = c.x + (rnd.nextDouble() * 2 - 1) * b.x; pz = c.z + (rnd.nextDouble() * 2 - 1) * b.z;
-          py = 15 + rnd.nextDouble() * 5;
-        } else { px = rnd.nextDouble() * MapW; py = 15 + rnd.nextDouble() * 5; pz = rnd.nextDouble() * MapH; } // 与旧版相同的取数顺序
+        } else { px = rnd.nextDouble() * MapW; pz = rnd.nextDouble() * MapH; }
+        py = 26 + rnd.nextDouble() * 8;
         m.position.copy(SG.U(px, py, pz));
         this.root.add(m);
         this._clouds.push(m);
         yield;
       }
     }
-    // 镜头视线与地面（y = 0）的交点，地图坐标 { x, z }
     _viewCenter() {
       const cam = SG.Gfx && SG.Gfx.camera;
       const b = this.bounds;
@@ -3400,6 +3492,8 @@ void main() {
       const cam = SG.Gfx && SG.Gfx.camera;
       const box = this._cloudBox;
       const vc = box && this._clouds.length ? this._viewCenter() : null;
+      // 镜头高度低于约 95（战略视角）时云整体淡出
+      const cloudG = cam ? M.smoothStep(0, 1, M.clamp01((cam.position.y - CLOUD_HIDE_Y) / CLOUD_SHOW_DY)) : 1;
       for (const c of this._clouds) {
         c.position.x += 0.6 * dt;
         c.position.z -= 0.15 * dt;
@@ -3417,12 +3511,9 @@ void main() {
         if (cam) {
           c.getWorldPosition(_cloudPos);
           const f = M.clamp01((_cloudPos.distanceTo(cam.position) - CLOUD_FADE_NEAR) / (CLOUD_FADE_FAR - CLOUD_FADE_NEAR));
-          const a = f * f * (3 - 2 * f);
-          const shown = a > 0.01;
-          c.material.opacity = a;
-          c.visible = shown;
-          c.castShadow = a * a > 1 / 18; // 浓度不足半格时 3×3 抖动图案已全部丢弃，不必再画
-          c.customDepthMaterial.userData.shadowDensity.value = a * a;
+          const a = f * f * (3 - 2 * f) * cloudG;
+          c.material.uniforms.uOpacity.value = a;
+          c.visible = a > 0.01;
         }
       }
       if (cam && this.root.visible) {

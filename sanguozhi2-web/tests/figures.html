@@ -87,7 +87,9 @@
   }
   const gen = n => GEN[n] || { name: n, war: 80, intel: 60, pol: 50 };
   const FAMOUS = ['关羽', '张飞', '吕布', '赵云', '诸葛亮', '曹操', '孙策', '马超', '典韦', '许褚', '黄忠', '夏侯惇', '刘备', '孙权', '周瑜', '太史慈', '祝融', '孟获', '甘宁', '张辽',
-    '塞维鲁', '康茂德', '沃洛吉斯', '卑弥呼', '轲比能', '胡维色迦', '范师蔓', '沙伊鲁姆', '阿根托科克斯', '巴洛马尔', '赞提库斯', '故国川王', '安国', '帕佩克'];
+    '塞维鲁', '康茂德', '沃洛吉斯', '卑弥呼', '轲比能', '胡维色迦', '范师蔓', '沙伊鲁姆', '阿根托科克斯', '巴洛马尔', '赞提库斯', '故国川王', '安国', '帕佩克',
+    // 第三版：天竺（india）、阿克苏姆 / 库施（africa）、巴夸特（moor）
+    '耶若室利', '跋婆瞿波', '迦梨迦罗', '内敦切利扬', '室利那伽', '龙树', '加达拉特', '耶斯博赫', '阿曼哈利卡', '马沙达赫尔', '卡纳尔塔', '鲁德拉布提'];
   const FCOL = { '关羽': '#2f7d4a', '张飞': '#2f7d4a', '赵云': '#2f7d4a', '诸葛亮': '#2f7d4a', '刘备': '#2f7d4a', '马超': '#2f7d4a', '黄忠': '#2f7d4a', '曹操': '#2c3d8f', '典韦': '#2c3d8f', '许褚': '#2c3d8f', '夏侯惇': '#2c3d8f', '张辽': '#2c3d8f', '孙策': '#c8382c', '孙权': '#c8382c', '周瑜': '#c8382c', '太史慈': '#c8382c', '甘宁': '#c8382c', '吕布': '#7a2a8a' };
 
   // ------------------------------------------------------------ 场景内容 --
@@ -107,14 +109,17 @@
     const t0 = performance.now();
     const m = state.mode;
     if (m === 'generals') {
-      const per = 6, list = FAMOUS.slice(state.page * per, state.page * per + per);
+      // ?names=甲,乙,…：只列这些武将（一行最多 6 人，多出的排到后排）；?shield=1 单手兵器配本文化的盾
+      const per = 6, list = Q.has('names') ? Q.get('names').split(',') : FAMOUS.slice(state.page * per, state.page * per + per);
+      const rowsN = Math.ceil(list.length / per);
       list.forEach((n, i) => {
-        const f = SG.Figure.general(gen(n), { lod: state.lod || 'high', color: FCOL[n] || gen(n).color });
-        const x = (i - (list.length - 1) / 2) * 1.35;
-        place(f.root, x, 0, 0);
-        const it = { fig: f, x, z: 0 }; label(it, n + ' · ' + (f.weaponInfo ? f.weaponInfo.name : '')); items.push(it);
+        const f = SG.Figure.general(gen(n), { lod: state.lod || 'high', color: FCOL[n] || gen(n).color, shield: Q.has('shield') ? true : undefined });
+        const inRow = Math.min(per, list.length - Math.floor(i / per) * per);
+        const x = ((i % per) - (inRow - 1) / 2) * 1.35, z = -Math.floor(i / per) * 2.2;
+        place(f.root, x, z, 0);
+        const it = { fig: f, x, z }; label(it, n + ' · ' + (f.weaponInfo ? f.weaponInfo.name : '') + (Q.has('tris') ? ' · ' + f.triangles : '')); items.push(it);
       });
-      camTarget.set(0, 1.05, 0); camDist = 7.4; camPitch = 0.08;
+      camTarget.set(0, 1.05, -(rowsN - 1) * 1.1); camDist = 7.4 + (rowsN - 1) * 3.2; camPitch = 0.08 + (rowsN - 1) * 0.1;
     } else if (m === 'one') {
       const f = SG.Figure.general(gen(state.name), { lod: state.lod || 'high', color: FCOL[state.name] || gen(state.name).color });
       place(f.root, 0, 0, 0);
@@ -139,11 +144,14 @@
       const cols = ['#b02a24', '#2c3d8f', '#2f7d4a', '#c89a2a', '#6a2a8a'];
       cults.forEach((c, ci) => types.forEach((ty, ti) => {
         const f = SG.Figure.soldier({ type: ty, culture: c, lod, seed: ci + ti, color: cols[ci % cols.length] });
-        const x = (ti - 1.5) * 0.9 + ((ci % 5) - 2) * 4.2, z = -Math.floor(ci / 5) * 2.6;
+        const nrow = Math.min(5, cults.length);
+        const x = (ti - 1.5) * 0.9 + ((ci % 5) - (nrow - 1) / 2) * 4.2, z = -Math.floor(ci / 5) * 2.6;
         place(f.root, x, z, 0);
         const it = { fig: f, x, z }; if (ti === 0) label(it, c); items.push(it);
       }));
-      camTarget.set(0, 0.8, -2.6); camDist = 21; camPitch = 0.2;
+      // 只列少数文化（?cults=）时镜头拉近、居中；?dist= 可调
+      const rowsS = Math.ceil(cults.length / 5), nS = Math.min(5, cults.length);
+      camTarget.set(0, 0.8, -(rowsS - 1) * 1.3); camDist = +qv('dist', rowsS > 1 ? 21 : 4.5 + nS * 3.3); camPitch = rowsS > 1 ? 0.2 : 0.1;
     } else if (m === 'horses') {
       const riders = ['吕布', '关羽', '马超', '赞提库斯'];
       riders.forEach((n, i) => {

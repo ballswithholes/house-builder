@@ -128,11 +128,14 @@
     han: 'han', nanman: 'han', yi: 'han', wa: 'wa', korea: 'korea', steppe: 'steppe', tarim: 'kushan',
     seasia: 'seasia', kushan: 'kushan', persia: 'persia', arab: 'arab', roman: 'roman', celt: 'celt',
     german: 'celt', sarmatian: 'steppe',
+    // 第三版（不另作新曲）：天竺用贵霜的拉格曲（Yaman / Bhairav、西塔尔、班苏里、塔布拉），阿克苏姆 / 库施与毛里用阿拉伯曲
+    india: 'kushan', africa: 'arab', moor: 'arab',
   };
   function resolve(kind, culture) {
     if (!kind) return null;
     if (kind.indexOf('@') >= 0) return PIECES[kind] ? kind : kind.split('@')[0];
-    const c = CULTURE_FALLBACK[culture] || culture;
+    // 表中没有的文化先按 core.js 的 SG.cultureBase 回退
+    const c = CULTURE_FALLBACK[culture] || (SG.cultureBase && CULTURE_FALLBACK[SG.cultureBase(culture)]) || culture;
     if (c && c !== 'han' && PIECES[kind + '@' + c]) return kind + '@' + c;
     return PIECES[kind] ? kind : null;
   }

@@ -31,7 +31,8 @@
   const q = new URLSearchParams(location.search);
   const size = +(q.get('size') || 1.2);
   const only = q.get('only');
-  const list = (only ? only.split(',') : ['han'].concat(SG.CultureArt.cultures));
+  // 条目可写成「文化:城键」（如 africa:meroe = 库施式，africa = 阿克苏姆式）；?only=india,africa,africa:meroe,moor
+  const list = (only ? only.split(',') : ['han'].concat(SG.CultureArt.cultures, ['africa:meroe']));
   const cv = document.getElementById('cv');
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
@@ -50,10 +51,11 @@
   const labels = [];
   let tris = 0, maxTris = 0, maxName = '';
   const n = list.length, cols = n;
-  list.forEach((cult, i) => {
+  list.forEach((entry, i) => {
+    const cult = entry.split(':')[0], key = entry.split(':')[1] || '';
     for (const cap of [false, true]) {
       const t0 = performance.now();
-      const geo = SG.CultureArt.city(size, cult, cap, { key: cult === 'arab' && cap ? 'aksum' : '', town: cap ? 400 : 260 });
+      const geo = SG.CultureArt.city(size, cult, cap, { key, town: cap ? 400 : 260 });
       const ms = performance.now() - t0;
       const m = new THREE.Mesh(geo, mat);
       const x = (i - (cols - 1) / 2) * gap, z = cap ? gap * 0.55 : -gap * 0.55;
@@ -65,10 +67,10 @@
       scene.add(pole);
       const nt = geo.attributes.position.count / 3;
       tris += nt;
-      if (nt > maxTris) { maxTris = nt; maxName = cult + (cap ? '（都）' : ''); }
+      if (nt > maxTris) { maxTris = nt; maxName = entry + (cap ? '（都）' : ''); }
       const el = document.createElement('div');
       el.className = 'lab';
-      el.innerHTML = (cap ? '<i>都</i> ' : '') + cult + ' <span style="color:#a8a194">' + nt + '△ ' + ms.toFixed(1) + 'ms</span>';
+      el.innerHTML = (cap ? '<i>都</i> ' : '') + entry + ' <span style="color:#a8a194">' + nt + '△ ' + ms.toFixed(1) + 'ms</span>';
       document.body.appendChild(el);
       labels.push({ el, pos: new THREE.Vector3(x, size * 1.6 + 0.6, z) });
     }

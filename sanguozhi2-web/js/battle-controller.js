@@ -144,8 +144,8 @@
       const O = SG.BattleView.Origin, T = SG.BattleView.T;
       // Unity Rect(Origin.x, Origin.z, W*T, H*T)，地图坐标（Unity x / z）
       rig.bounds = { xMin: O.x, yMin: O.z, xMax: O.x + Mdl.W * T, yMax: O.z + Mdl.H * T };
-      rig.minDist = 12; rig.maxDist = 72;        // 第三版战场 18×13：镜头起始稍远、可拉得更远
-      rig.focusWorld(V.boardCenter.clone().sub(SG.U(0, 0, 2)), 44, true);
+      rig.minDist = 12; rig.maxDist = 72;        // 第三版战场 18×13：可拉得更远
+      rig.focusWorld(V.boardCenter.clone().sub(SG.U(0, 0, 2)), SG.isTouch ? 40 : 38, true);
       this.portraitOpening(rig, V, Mdl);
       rig.onTap.push(this._onTap);
       // 战斗音乐：守城用「孤城」（battle-defend），进攻用「出阵」；地域取敌方势力的文化
@@ -334,7 +334,7 @@
         `<div><span class="sg-card-name">${SG.esc(u.gen.name)}</span>${this.levelChip(u.gen)}<span class="sg-card-sub">${u.side === 0 ? '攻方' : '守方'}${u.commander ? '·主将' : ''}</span></div>` +
         `<div class="sg-bar" style="--c:${sideColor(u.side)};--v:${M.clamp01(u.troops / max).toFixed(3)}"><i class="sg-bar-fill"></i></div>` +
         `<div>兵力 <b>${u.troops}</b>　士气 ${u.morale}　训练 ${u.gen.training}</div>` +
-        `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}</div>` +
+        `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}${this.vetText(u.gen)}</div>` +
         `<div>阵型 <span class="sg-goldc">${f.name}</span>（攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)}）</div>` +
         `<div>地形 ${SG.Defs.terrainName(this.M.map[u.x][u.y])}${u.confused > 0 ? '　<span style="color:#c79bff">混乱中</span>' : ''}</div>` +
         this.specialLine(u);
@@ -351,7 +351,14 @@
       } catch (e) { console.error(e); return ''; }
     }
 
-    // 情报卡的必杀一行：招式名 + 可用 / 已施展
+    // 老练加成（每高 1 级攻防与计策威力 +4%，SG.Progress.vetK）：1 级时为空
+    vetText(gen) {
+      if (!progressOn() || !gen || typeof SG.Progress.vetK !== 'function') return '';
+      const k = SG.Progress.vetK(gen);
+      return k > 1.0001 ? `　<span class="sg-goldc" title="老练：攻击、防御与计策威力 +${Math.round((k - 1) * 100)}%（每级 +${Math.round(SG.Progress.VET_PER_LEVEL * 100)}%）">老练 +${Math.round((k - 1) * 100)}%</span>` : '';
+    }
+
+    // 情报卡的必杀一行：招式名 + 未施展 / 已施展（「可用」留给行动菜单：此刻是否有目标）
     specialLine(u) {
       try { return SG.Specials && typeof SG.Specials.cardLine === 'function' ? SG.Specials.cardLine(u) : ''; } catch (e) { console.error(e); return ''; }
     }

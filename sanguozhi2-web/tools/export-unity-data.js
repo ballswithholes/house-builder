@@ -299,7 +299,7 @@ function exportWorld() {
   const born = Object.keys(XW.BORN).map(n => n + '|' + XW.BORN[n]);
   const GI = ['full', 'orig', 'role', 'note', 'liberty', 'born', 'died', 'attested', 'culture', 'sex'];
   const FI = ['name', 'full', 'orig', 'ruler', 'capital', 'culture', 'region', 'note', 'liberty'];
-  const CI = ['full', 'orig', 'modern', 'note', 'culture'];
+  const CI = ['full', 'orig', 'modern', 'note', 'liberty', 'culture'];
   const gi = Object.keys(SG.WorldInfo), fi = Object.keys(SG.FactionInfo), ci = Object.keys(SG.CityInfo);
   const yearOf = v => { if (v === null || v === undefined) return null; if (!Number.isInteger(v)) throw new Error('生卒年不是整数：' + v); return v; };
   for (const n of gi) only(SG.WorldInfo[n], GI, 'WorldInfo.' + n);
@@ -652,7 +652,7 @@ function exportRefs() {
     L.push([g.name, g.war, g.intel, g.pol, g.culture, '=>'].join('\t') + '\t' + one(S.of(g)));
   }
   // 没有手写条目的武将：走兜底生成器（确定性的假名单，覆盖各种能力倾向与文化）
-  const CULT = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian'];
+  const CULT = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian', 'india', 'africa', 'moor'];
   const r = SG.SeededRandom(20261007);
   const SUR = '甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥';
   let made = 0;

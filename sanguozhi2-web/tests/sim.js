@@ -411,7 +411,7 @@ try {
   for (const k of Object.keys(want)) if (S.of({ name: k }).name !== want[k]) throw new Error(k + ' should have ' + want[k]);
   // 兜底生成器：确定性（同名同招）、名称含姓名、与名单内全部招式不撞车
   const synth = [];
-  const cultures = ['han', 'wa', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian', 'nanman', 'yi'];
+  const cultures = ['han', 'wa', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian', 'nanman', 'yi', 'india', 'africa', 'moor'];
   const rnd = SG.SeededRandom(4242);
   const chars = '阿巴卡达伊法加哈米努奥帕萨塔乌瓦克雷图斯马尔罗尼娜莎提亚卑弥呼难升米乙素肖古王区连范师蔓';
   for (let i = 0; i < 160; i++) {
@@ -1457,14 +1457,15 @@ try {
   console.log('(7g) tactical balance FAILED: ' + (e.stack || e));
 }
 
-// ---- (7h) 成长的分量：第 8 年局面里，攻方保留成长、守方打回 1 级（及反过来）的胜率变化 ----
+// ---- (7h) 成长的分量：第 8 年局面里，攻方保留成长、守方打回 1 级（及反过来）的胜率与战损比变化 ----
+// （第三版修订：老练加成 SG.Progress.vetK 每级 +4% 攻防与计策威力；电脑更常施展习得的计策）
 try {
   const strip = x => { x.exp = 0; x.level = 1; x.specials = []; x.tactics = Pg.innateTactics(x); };
   const out = {};
   for (const mode of ['both', 'atkOnly', 'defOnly']) {
-    let n = 0, w = 0;
+    let n = 0, w = 0, lossA = 0, lossD = 0;
     (snaps[95] || []).forEach((text, si) => {
-      for (let k = 0; k < 40; k++) {
+      for (let k = 0; k < 80; k++) {
         const g = SG.G = GameState.fromJSON(text);
         g.player = -1;
         SG.Random.seed(900 + si * 100 + k);
@@ -1480,16 +1481,24 @@ try {
         if (mode === 'atkOnly') for (const x of s.def) strip(x);
         if (mode === 'defOnly') for (const x of s.atk) strip(x);
         const Mdl = new BattleModel(s);
+        const t0s = Mdl.units.map(u => u.troops);
         fightAI(Mdl, newStats(), false);
         n++; if (Mdl.result === 1) w++;
+        Mdl.units.forEach((u, i) => { const l = Math.max(0, t0s[i] - Math.max(0, u.troops)); if (u.side === 0) lossA += l; else lossD += l; });
       }
     });
-    out[mode] = { n, w: w / Math.max(1, n) };
+    out[mode] = { n, w: w / Math.max(1, n), x: lossD / Math.max(1, lossA) };
   }
-  const shiftA = out.atkOnly.w - out.both.w, shiftD = out.both.w - out.defOnly.w;
-  console.log(`(7h) year-8 armies (${out.both.n} battles each): attacker win ${(100 * out.both.w).toFixed(1)}% both progressed, ${(100 * out.atkOnly.w).toFixed(1)}% defenders reset to L1, ${(100 * out.defOnly.w).toFixed(1)}% attackers reset to L1`);
+  const shiftA = out.atkOnly.w - out.both.w, shiftD = out.both.w - out.defOnly.w, swing = out.atkOnly.w - out.defOnly.w;
+  const pct = v => (100 * v).toFixed(1) + '%';
+  console.log(`(7h) year-8 armies (${out.both.n} battles each): attacker win ${pct(out.both.w)} both progressed, ${pct(out.atkOnly.w)} defenders reset to L1, ${pct(out.defOnly.w)} attackers reset to L1 ` +
+    `(swing ${(100 * swing).toFixed(1)} pp); defender / attacker losses ${out.both.x.toFixed(2)} / ${out.atkOnly.x.toFixed(2)} / ${out.defOnly.x.toFixed(2)}`);
   if (!(shiftA >= -0.03 && shiftD >= -0.03)) throw new Error('progression should not hurt the progressed side');
   if (shiftA > 0.35 || shiftD > 0.35) throw new Error('progression decides battles too much: shifts ' + shiftA.toFixed(2) + ' / ' + shiftD.toFixed(2));
+  // 成长须看得出来：只有攻方成长 vs 只有守方成长，攻方胜率差 ≥ 5 个百分点；成长一方的战损比各好 ≥ 8%
+  if (!(swing >= 0.05)) throw new Error('progression barely matters: attacker win swing ' + (100 * swing).toFixed(1) + ' pp');
+  if (!(out.atkOnly.x >= 1.08 * out.both.x && out.both.x >= 1.08 * out.defOnly.x)) throw new Error('progressed side should trade troops clearly better');
+  if (out.atkOnly.x > 1.8 * out.both.x || out.both.x > 1.8 * out.defOnly.x) throw new Error('progression trades troops too much better');
 } catch (e) {
   fails++;
   console.log('(7h) progression weight FAILED: ' + (e.stack || e));

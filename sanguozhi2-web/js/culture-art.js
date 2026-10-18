@@ -9,7 +9,7 @@
    贵霜 / 印度（带栏楯与四面塔门的窣堵波、拱门僧院、都城穹顶宫殿）重新建模；新增构件 arch / archFrame（平滑拱券）、
    ellipseRing（平滑椭圆环）、vault（筒拱）、wallBands（檐线与勒脚）、merlonRing（圆形雉堞）；椰树羽叶为弧形叶片。
    墙面砖缝、屋面瓦垄由地图的 SG.Gfx.masonryMaterial()（js/art.js）在着色器里按世界坐标生成，这里仍只写顶点色。
-   各城三角形约 1.2k–3.5k（罗马都城约 4.4k）。
+   各城三角形约 1.2k–3.5k（罗马都城约 4.4k，天竺都城约 4.1k）。
 
    战略地图上的城池按所属文化换成不同的低多边形模型；汉地城池（han）仍用 SG.Models.cityInto
    （js/art.js）的原模型。与原模型相同的约定：Unity 坐标（x 东、z 北、y 上），size ≈ 占地半径 r，
@@ -32,6 +32,11 @@
      celt       凯尔特：山丘堡垒（土垒 + 木栅）、圆形茅屋
      german     日耳曼：山丘堡垒、长屋；都城为大厅
      sarmatian  萨尔马提亚：篷车与尖顶帐；都城（潘提卡彭等希腊城）为卫城与神庙
+     india      天竺（第三版）：环壕、红砖城墙与半圆马面、筒拱顶门楼、带栏楯与塔门（torana）的窣堵波、支提式筒拱顶宫殿与民居、椰树
+     africa     非洲（第三版）：库施诸城（麦罗埃、纳帕塔、卡拉诺格）为土砖城、陡峭的王陵金字塔、塔门神庙、椰枣树；
+                阿克苏姆诸城为花岗岩石碑、阶梯台基上的石砌宫殿（“猴头”梁端）、圆形茅屋、干砌石矮墙
+     moor       毛里（第三版，巴夸特）：土石台地、干砌石环墙、方形谷仓堡、平顶石屋、游牧帐篷、雪松
+     其他未列出的文化按 SG.cultureBase（core.js）回退
 
    公开接口
      SG.CultureArt.cultures                        已有模型的文化代号
@@ -772,7 +777,8 @@
   B.steppe = function (mb, s, cap) {
     const r = s;
     const felt = H('#e8e0cc'), felt2 = H('#d6cbb0'), wood = H('#7a5a3a');
-    base(mb, r, H('#8a9a5a'));
+    // 第三版修订：营地不放方形台基，改为一片低平的圆形踩踏土地（边缘渐融进草地）
+    mb.lathe(v3(0, -0.01, 0), [[r * 1.22, 0, H('#7e8a52')], [r * 1.12, 0.03, H('#8a8458')], [r * 0.95, 0.055, H('#9a8a62')], [0, 0.065, H('#a08e66')]], 28, H('#9a8a62'));
     // 车阵 / 木篱（低矮的环）
     ringWall(mb, r * 0.95, 12, 0.1 * s, 0.04 * s, wood, Math.PI / 12);
     const ys = [[-0.45, -0.4, 0.2], [0.42, -0.45, 0.19], [-0.58, 0.18, 0.19], [0.12, -0.1, 0.18], [-0.12, -0.62, 0.15], [0.58, 0.02, 0.16]];
@@ -938,11 +944,195 @@
     standard(mb, 0.25 * s, -0.3 * s, 0.6 * s, H('#a8261e'), 'flag');
   };
 
+  // ======================================== 第三版：天竺、阿克苏姆 / 库施、毛里 --
+  // 四棱台（塔门、阶梯台基）：底 w0 × d0，顶 w1 × d1，高 h
+  function frustum(mb, x, y0, z, w0, d0, w1, d1, h, c) {
+    const a = [v3(x - w0 / 2, y0, z - d0 / 2), v3(x + w0 / 2, y0, z - d0 / 2), v3(x + w0 / 2, y0, z + d0 / 2), v3(x - w0 / 2, y0, z + d0 / 2)];
+    const b = [v3(x - w1 / 2, y0 + h, z - d1 / 2), v3(x + w1 / 2, y0 + h, z - d1 / 2), v3(x + w1 / 2, y0 + h, z + d1 / 2), v3(x - w1 / 2, y0 + h, z + d1 / 2)];
+    const out = [v3(0, 0.2, -1), v3(1, 0.2, 0), v3(0, 0.2, 1), v3(-1, 0.2, 0)];
+    for (let i = 0; i < 4; i++) face(mb, [a[i], a[(i + 1) % 4], b[(i + 1) % 4], b[i]], i === 0 ? c : shade(c, i === 2 ? -0.14 : -0.07), out[i]);
+    face(mb, b, shade(c, 0.08), v3(0, 1, 0));
+  }
+  // 筒拱顶的屋子（天竺的支提式屋顶）：墙身 + 沿 z 的半圆筒顶，南面山墙开马蹄形支提窗
+  function barrelHouse(mb, x, z, w, d, h, wallC, roofC, y0, win) {
+    y0 = y0 || 0;
+    mb.box(v3(x, y0 + h / 2, z), v3(w, h, d), wallC, 0.1);
+    const r = w / 2 * 1.06, y = y0 + h;
+    vault(mb, x, y, z + d / 2 + 0.01, z - d / 2 - 0.01, r, roofC, 10);
+    // 北面山墙封口
+    const back = [];
+    for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI; back.push(v3(x + Math.cos(a) * r, y + Math.sin(a) * r, z + d / 2 + 0.01)); }
+    face(mb, back, shade(roofC, -0.2), v3(0, 0, 1));
+    if (win !== false) {
+      archFrame(mb, x, y - r * 0.05, z - d / 2 - 0.012, r * 1.05, r * 0.9, 0, -1, shade(wallC, 0.12), false, 0.012 * w / 0.2);
+      arch(mb, x, y - r * 0.05, z - d / 2 - 0.014, r * 0.75, r * 0.72, 0, -1, H('#2e2016'), false);
+    }
+  }
+  // 塔门（torana）：两柱、三道两端出挑的横梁
+  function torana(mb, x, z, k, c, y0) {
+    y0 = y0 || 0;
+    for (const sx of [-1, 1]) mb.box(v3(x + sx * 0.1 * k, y0 + 0.17 * k, z), v3(0.03 * k, 0.34 * k, 0.03 * k), c);
+    for (const [y, w] of [[0.24, 0.3], [0.3, 0.34], [0.36, 0.36]]) {
+      mb.box(v3(x, y0 + y * k, z), v3(w * k, 0.026 * k, 0.03 * k), shade(c, y === 0.3 ? -0.06 : 0.04));
+      for (const sx of [-1, 1]) mb.box(v3(x + sx * (w / 2) * k, y0 + (y + 0.012) * k, z), v3(0.03 * k, 0.04 * k, 0.034 * k), shade(c, 0.08));   // 出挑的涡卷端
+    }
+    mb.box(v3(x, y0 + 0.41 * k, z), v3(0.03 * k, 0.07 * k, 0.03 * k), shade(c, 0.1));   // 顶上的法轮
+    cyl(mb, v3(x, y0 + 0.45 * k, z - 0.016 * k), 0.035 * k, 0.035 * k, 0.012 * k, 8, H('#d8b050'), true);
+  }
+  // 天竺（百乘、泰米尔三国、师子国、恒河诸城）：环壕 + 带檐线的红砖城墙、半圆马面与方门楼（筒拱顶）、
+  // 城内带栏楯与塔门（torana）的窣堵波、支提式筒拱顶的宫殿与民居、椰树与菩提树；都城为两层的筒拱宫殿与更大的佛塔
+  B.india = function (mb, s, cap) {
+    const r = s, wallH = 0.38 * s, t = 0.17 * s;
+    const brick = H('#b8664a'), brick2 = H('#a45a40'), plaster = H('#e8dcc0'), thatch = H('#a8884e'), wood = H('#7a5232'), sand = H('#d8c8a0');
+    base(mb, r, H('#8a9058'));
+    moat(mb, r * 1.0, r * 1.13, 0.104, H('#4a7a86'));
+    mb.box(v3(0, 0.104, -r * 1.065), v3(0.2 * s, 0.012, r * 0.16), H('#9a8a6a'));   // 南门前的土桥
+    squareWall(mb, r * 0.92, wallH, t, brick, 0.06 * s, 3);
+    wallBands(mb, r * 0.92, wallH, t, brick2);
+    const R = r * 0.92;
+    for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) tower(mb, cx * R, cz * R, t * 1.0, wallH * 1.22, brick2, null);
+    for (const [x, z] of [[-R, -0.4 * R], [-R, 0.4 * R], [R, -0.4 * R], [-0.45 * R, R], [0.5 * R, -R], [-0.5 * R, -R]]) tower(mb, x, z, t * 0.62, wallH * 1.05, brick2, null);
+    // 南门：两座方门楼（上覆筒拱小亭）夹门洞
+    for (const sx of [-1, 1]) {
+      mb.box(v3(sx * 0.19 * s, wallH * 0.62, -R), v3(0.15 * s, wallH * 1.24, t * 1.35), brick2, 0.06);
+      barrelHouse(mb, sx * 0.19 * s, -R, 0.12 * s, 0.14 * s, 0.05 * s, plaster, thatch, wallH * 1.24, false);
+    }
+    archFrame(mb, 0, 0.1, -R - t * 0.68, 0.15 * s, wallH * 0.82, 0, -1, plaster, false, 0.016 * s);
+    arch(mb, 0, 0.1, -R - t * 0.68, 0.15 * s, wallH * 0.82, 0, -1, H('#2e2016'), false);
+    // 窣堵波 + 正面塔门
+    const k = cap ? 1.3 * s : 1.05 * s, sx0 = -0.3 * s, sz0 = 0.3 * s;
+    stupa(mb, sx0, sz0, k, 0.1);
+    torana(mb, sx0, sz0 - 0.36 * k, k, sand, 0.1);
+    // 宫殿：台基 + 列柱厅 + 支提式筒拱顶（都城两层）
+    const px = 0.36 * s, pz = 0.12 * s, ph = cap ? 1.25 : 1;
+    mb.box(v3(px, 0.1 + 0.04 * s, pz), v3(0.42 * s, 0.08 * s, 0.4 * s), brick2, 0.06);
+    for (let i = 0; i < 3; i++) mb.box(v3(px, 0.1 + 0.013 * s * (i + 0.5), pz - 0.2 * s - (2.5 - i) * 0.02 * s), v3(0.14 * s, 0.026 * s * (i + 1) / 2, 0.02 * s), brick);
+    if (cap) {
+      mb.box(v3(px, 0.1 + 0.08 * s + 0.08 * s, pz), v3(0.36 * s, 0.16 * s, 0.32 * s), plaster, 0.06);
+      for (let i = 0; i < 4; i++) column(mb, px + (-0.13 + i * 0.087) * s, 0.1 + 0.08 * s, pz - 0.17 * s, 0.15 * s, 0.014 * s, H('#f0e8d8'));
+      mb.box(v3(px, 0.1 + 0.245 * s, pz), v3(0.4 * s, 0.02 * s, 0.36 * s), wood, 0.06);
+      barrelHouse(mb, px, pz + 0.02 * s, 0.24 * s, 0.26 * s, 0.1 * s, plaster, thatch, 0.1 + 0.255 * s);
+    } else {
+      for (let i = 0; i < 3; i++) column(mb, px + (-0.12 + i * 0.12) * s, 0.1 + 0.08 * s, pz - 0.16 * s, 0.12 * s, 0.014 * s, H('#f0e8d8'));
+      barrelHouse(mb, px, pz + 0.02 * s, 0.3 * s * ph, 0.28 * s, 0.13 * s, plaster, thatch, 0.1 + 0.08 * s);
+    }
+    // 民居（筒拱茅顶）
+    const hs = [[-0.6, -0.5, 0.17, 0.22], [0.58, -0.52, 0.16, 0.2], [-0.25, -0.55, 0.15, 0.2], [0.62, -0.18, 0.15, 0.2], [-0.66, -0.12, 0.15, 0.2]];
+    hs.forEach((h, i) => barrelHouse(mb, h[0] * s, h[1] * s, h[2] * s, h[3] * s, 0.1 * s, i % 2 ? plaster : H('#d0b48a'), i % 2 ? thatch : shade(thatch, -0.1), 0.1, i % 2 === 0));
+    // 椰树、菩提树
+    palm(mb, 0.15 * s, -0.25 * s, s * 0.85, 21, 0.1); palm(mb, -0.72 * s, 0.62 * s, s * 0.9, 22, 0.1);
+    tree(mb, 0.08 * s, 0.62 * s, 0.55 * s, H('#3f7a3a'), 0.1);
+    standard(mb, 0.0, -0.3 * s, 0.68 * s, H('#d8a030'), 'flag', 0.1);
+  };
+  // 非洲：库施（麦罗埃、纳帕塔、卡拉诺格）= 土砖城、陡峭的王陵金字塔、带塔门（pylon）的神庙、椰枣树；
+  //       阿克苏姆（阿克苏姆、阿杜利斯）= 花岗岩石碑（假窗与圆顶）、阶梯台基上的石砌宫殿（“猴头”木梁端）、圆形茅屋
+  const KUSH = new Set(['meroe', 'napata', 'karanog']);
+  function stele(mb, x, z, h, s, y0) {
+    const g = H('#9a8f80'), g2 = H('#6a6056');
+    mb.box(v3(x, y0 + h * s / 2, z), v3(0.07 * s, h * s, 0.04 * s), g, 0.04);
+    mb.lathe(v3(x, y0 + h * s, z), [[0.035 * s, 0], [0.03 * s, 0.03 * s], [0, 0.05 * s]], 10, g);
+    for (let j = 1; j < Math.max(3, Math.round(h * 6)); j++) mb.box(v3(x, y0 + h * s * j / Math.max(3, Math.round(h * 6)), z - 0.021 * s), v3(0.05 * s, 0.025 * s, 0.004), g2);   // 假窗
+    mb.box(v3(x, y0 + 0.012 * s, z - 0.05 * s), v3(0.1 * s, 0.024 * s, 0.06 * s), shade(g, -0.06));   // 祭台
+  }
+  B.africa = function (mb, s, cap, city) {
+    const r = s;
+    if (city && KUSH.has(city.key)) {
+      const mud = H('#b07a50'), mud2 = H('#9a6a44'), sand = H('#d8bc8a'), stone = H('#c8a878'), dark = H('#2e2016');
+      base(mb, r, H('#c8a878'));
+      // 尼罗河岸（西侧一条水带）
+      face(mb, [v3(-r * 1.17, 0.104, -r * 1.17), v3(-r * 1.0, 0.104, -r * 1.17), v3(-r * 1.0, 0.104, r * 1.17), v3(-r * 1.17, 0.104, r * 1.17)], H('#4a7a86'), v3(0, 1, 0));
+      const R = r * 0.86, wallH = 0.3 * s, t = 0.15 * s;
+      squareWall(mb, R, wallH, t, mud, 0.05 * s, 3);
+      wallBands(mb, R, wallH, t, mud2);
+      for (const cx of [-1, 1]) for (const cz of [-1, 1]) if (!(cx > 0 && cz > 0)) mb.box(v3(cx * R, wallH * 0.6, cz * R), v3(t * 1.5, wallH * 1.2, t * 1.5), mud2, 0.06);
+      // 南门：一对塔门（梯形塔）
+      for (const sx of [-1, 1]) frustum(mb, sx * 0.17 * s, 0, -R, 0.16 * s, t * 1.3, 0.12 * s, t * 1.0, wallH * 1.35, stone);
+      arch(mb, 0, 0.08, -R - t * 0.66, 0.12 * s, wallH * 0.8, 0, -1, dark, false);
+      // 阿蒙 / 狮神庙：塔门 + 列柱院 + 圣殿
+      const tx = 0.3 * s, tz = -0.08 * s, k = cap ? 1.2 : 1;
+      for (const sx of [-1, 1]) frustum(mb, tx + sx * 0.11 * s * k, 0.1, tz, 0.15 * s * k, 0.08 * s * k, 0.11 * s * k, 0.06 * s * k, 0.32 * s * k, stone);
+      mb.box(v3(tx, 0.1 + 0.11 * s * k, tz + 0.005), v3(0.07 * s * k, 0.22 * s * k, 0.05 * s * k), shade(stone, -0.05));
+      mb.box(v3(tx, 0.1 + 0.08 * s * k, tz - 0.026 * s * k), v3(0.05 * s * k, 0.16 * s * k, 0.004), dark);
+      mb.box(v3(tx, 0.1 + 0.09 * s * k, tz + 0.2 * s * k), v3(0.26 * s * k, 0.18 * s * k, 0.3 * s * k), stone, 0.06);
+      for (let i = 0; i < 3; i++) column(mb, tx + (-0.09 + i * 0.09) * s * k, 0.1, tz + 0.06 * s * k, 0.16 * s * k, 0.013 * s * k, H('#e0c898'));
+      // 王陵金字塔（陡峭，东面附小祭堂）
+      const pyr = cap ? [[-0.42, 0.42, 0.3], [-0.08, 0.55, 0.24], [-0.6, 0.02, 0.22], [0.2, 0.62, 0.18]] : [[-0.42, 0.42, 0.28], [-0.1, 0.55, 0.22], [-0.6, 0.04, 0.19]];
+      for (const [x, z, w] of pyr) {
+        mb.box(v3(x * s, 0.1 + 0.012 * s, z * s), v3(w * s * 1.04, 0.024 * s, w * s * 1.04), shade(sand, -0.08));
+        hip(mb, x * s, 0.1 + 0.024 * s, z * s, w * s, w * s, w * s * 1.85, sand);
+        mb.box(v3(x * s, 0.1 + 0.03 * s, (z - w / 2 - 0.04) * s), v3(w * 0.4 * s, 0.06 * s, 0.07 * s), stone, 0.05);
+        frustum(mb, x * s, 0.1, (z - w / 2 - 0.085) * s, w * 0.5 * s, 0.03 * s, w * 0.42 * s, 0.025 * s, 0.075 * s, shade(stone, 0.04));
+      }
+      // 土砖平顶房、椰枣树
+      for (const [x, z, w, d] of [[-0.5, -0.5, 0.2, 0.18], [0.55, -0.55, 0.18, 0.16], [-0.18, -0.6, 0.16, 0.16], [0.62, 0.22, 0.16, 0.2]]) flatHouse(mb, x * s, z * s, w * s, d * s, 0.12 * s, mud, 0.1);
+      palm(mb, -0.92 * s, -0.75 * s, s * 0.85, 31); palm(mb, -0.93 * s, -0.35 * s, s * 0.75, 32); palm(mb, 0.62 * s, -0.25 * s, s * 0.7, 33, 0.1);
+      standard(mb, 0.0, -0.32 * s, 0.68 * s, H('#d8b050'), 'flag', 0.1);
+      return;
+    }
+    // 阿克苏姆
+    const stone = H('#a89a86'), stone2 = H('#8e8270'), plaster = H('#d8ccb4'), timber = H('#3a2a1e'), thatch = H('#a08850');
+    base(mb, r, H('#86865a'));
+    // 干砌石的低矮围墙（阿克苏姆没有高大城墙）
+    const R = r * 0.94;
+    for (let i = 0; i < 16; i++) {
+      const a0 = -Math.PI / 2 + 0.22 + i * (Math.PI * 2 - 0.44) / 16, a1 = a0 + (Math.PI * 2 - 0.44) / 16;
+      seg(mb, Math.cos(a0) * R, Math.sin(a0) * R, Math.cos(a1) * R, Math.sin(a1) * R, 0.06, 0.12 * s, 0.07 * s, i % 2 ? stone : stone2);
+    }
+    // 阶梯台基上的宫殿（塔阿卡·马里亚姆式）：三层退台、四角方塔、墙面成排的「猴头」木梁端
+    const px = -0.05 * s, pz = 0.12 * s, k = cap ? 1.15 : 1;
+    let y = 0.1;
+    for (const [w, h] of [[0.7, 0.06], [0.58, 0.06], [0.48, 0.05]]) { mb.box(v3(px, y + h * s / 2, pz), v3(w * s * k, h * s, w * s * k * 0.85), stone2, 0.04); y += h * s; }
+    const bw = 0.34 * s * k, bd = 0.28 * s * k, bh = 0.24 * s * k;
+    mb.box(v3(px, y + bh / 2, pz), v3(bw, bh, bd), plaster, 0.06);
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 5; i++) mb.box(v3(px + (-0.14 + i * 0.07) * s * k, y + (0.05 + j * 0.075) * s * k, pz - bd / 2 - 0.004), v3(0.016 * s, 0.016 * s, 0.012 * s), timber);
+    mb.box(v3(px, y + bh * 0.3, pz - bd / 2 - 0.006), v3(0.06 * s, bh * 0.6, 0.006), H('#2e2016'));
+    for (const cx of [-1, 1]) for (const cz of [-1, 1]) mb.box(v3(px + cx * bw / 2, y + bh * 0.62, pz + cz * bd / 2), v3(0.08 * s * k, bh * 1.24, 0.08 * s * k), stone, 0.06);
+    mb.box(v3(px, y + bh + 0.008 * s, pz), v3(bw * 1.04, 0.016 * s, bd * 1.04), shade(plaster, 0.08));
+    // 前阶
+    for (let i = 0; i < 3; i++) mb.box(v3(px, 0.1 + (i + 0.5) * 0.055 * s, pz - 0.36 * s * k + i * 0.035 * s), v3(0.14 * s, 0.055 * s, 0.035 * s), stone);
+    // 石碑群（王陵区）：最高的在西北
+    const st = cap ? [[-0.62, 0.55, 1.15], [-0.45, 0.62, 0.8], [-0.75, 0.32, 0.6], [-0.3, 0.72, 0.5]] : [[-0.62, 0.55, 0.85], [-0.45, 0.62, 0.6], [-0.75, 0.32, 0.45]];
+    for (const [x, z, h] of st) stele(mb, x * s, z * s, h, s, 0.1);
+    // 圆形茅屋与石屋
+    for (const [x, z, kk] of [[0.55, -0.5, 1], [0.32, -0.62, 0.85], [-0.55, -0.5, 0.95], [0.62, -0.15, 0.9]]) {
+      cyl(mb, v3(x * s, 0.1, z * s), 0.09 * kk * s, 0.09 * kk * s, 0.08 * kk * s, 8, plaster, false);
+      cone(mb, v3(x * s, 0.1 + 0.08 * kk * s, z * s), 0.12 * kk * s, 0.14 * kk * s, 8, thatch);
+    }
+    flatHouse(mb, -0.3 * s, -0.55 * s, 0.2 * s, 0.16 * s, 0.11 * s, stone, 0.1);
+    tree(mb, 0.55 * s, 0.35 * s, 0.5 * s, H('#4a6a34'), 0.1);
+    standard(mb, 0.25 * s, -0.3 * s, 0.68 * s, H('#d8b050'), 'flag', 0.1);
+  };
+  // 毛里（巴夸特）：中阿特拉斯山前的山头聚落——土石台地、干砌石环墙、平顶石屋、游牧帐篷、方形谷仓堡（agadir）、雪松
+  B.moor = function (mb, s, cap) {
+    const r = s;
+    const stone = H('#b8a07e'), stone2 = H('#a08868'), earth = H('#9a8a5e'), tentC = H('#5a4a3a'), cedar = H('#2f5a34');
+    base(mb, r, H('#8a8a5a'));
+    cyl(mb, v3(0, 0, 0.05 * s), r * 0.84, r * 0.72, 0.16 * s, 14, earth, true);
+    const y0 = 0.16 * s, R = r * 0.76;
+    for (let i = 0; i < 12; i++) {
+      const a0 = -Math.PI / 2 + 0.3 + i * (Math.PI * 2 - 0.6) / 12, a1 = a0 + (Math.PI * 2 - 0.6) / 12;
+      seg(mb, Math.cos(a0) * R, Math.sin(a0) * R + 0.05 * s, Math.cos(a1) * R, Math.sin(a1) * R + 0.05 * s, y0 - 0.02 * s, 0.12 * s, 0.06 * s, i % 2 ? stone : stone2);
+    }
+    // 谷仓堡：高方塔，墙上一排小洞
+    const gx = 0.1 * s, gz = 0.3 * s, gh = (cap ? 0.5 : 0.4) * s;
+    frustum(mb, gx, y0, gz, 0.24 * s, 0.24 * s, 0.2 * s, 0.2 * s, gh, stone);
+    for (let j = 0; j < 3; j++) for (let i = -1; i <= 1; i++) mb.box(v3(gx + i * 0.06 * s, y0 + (0.14 + j * 0.1) * gh / 0.4, gz - 0.112 * s), v3(0.02 * s, 0.03 * s, 0.006), H('#2e2016'));
+    for (let i = -2; i <= 2; i++) mb.box(v3(gx + i * 0.045 * s, y0 + gh + 0.015 * s, gz - 0.1 * s), v3(0.03 * s, 0.03 * s, 0.02 * s), stone2);
+    // 平顶石屋与帐篷
+    for (const [x, z, w, d] of [[-0.35, -0.3, 0.2, 0.16], [0.35, -0.32, 0.18, 0.16], [-0.42, 0.12, 0.16, 0.18], [0.42, 0.0, 0.16, 0.16], [-0.12, -0.42, 0.14, 0.14]]) flatHouse(mb, x * s, z * s, w * s, d * s, 0.1 * s, stone, y0);
+    for (const [x, z] of [[-0.82, -0.72], [0.8, -0.74], [-0.86, 0.52]]) tent(mb, x * s, z * s, 0.16 * s, tentC, 0.1);
+    tree(mb, -0.75 * s, -0.15 * s, 0.55 * s, cedar); tree(mb, 0.78 * s, -0.25 * s, 0.5 * s, cedar);
+    standard(mb, -0.15 * s, 0.05 * s, 0.6 * s, H('#3a5a8a'), 'tail', y0);
+  };
+
   // ============================================================ 接口 --
   const MODEL_OF = {
     han: 'han', roman: 'roman', persia: 'persia', arab: 'arab', kushan: 'kushan', wa: 'wa', korea: 'korea', steppe: 'steppe',
     tarim: 'tarim', seasia: 'seasia', yi: 'village', nanman: 'village', celt: 'hillfort', german: 'hillfort', sarmatian: 'sarmatian',
+    india: 'india', africa: 'africa', moor: 'moor',
   };
+  // 没有专门模型的文化按 SG.cultureBase（core.js 的唯一回退表）取回退文化的模型
+  const modelKey = c => MODEL_OF[c] || MODEL_OF[SG.cultureBase ? SG.cultureBase(c) : 'han'] || 'han';
   let capitals = null;
   function worldCapitals() {
     if (capitals) return capitals;
@@ -971,9 +1161,10 @@
     wa: ['village', '#8a6a46', '#a88a52'], yi: ['village', '#6a5034', '#a08a50'], nanman: ['village', '#6a5034', '#8a7448'],
     seasia: ['village', '#7a5a3a', '#9a8048'], celt: ['village', '#7a5a3a', '#a08a50'], german: ['village', '#7a5a3a', '#8a7444'],
     steppe: ['village', '#7a5a3a', '#e8e0cc'],
+    india: ['walled', '#b8664a', '#a8884e', '#e8dcc0', 'flat'], africa: ['walled', '#b07a50', '#d8bc8a', '#d8ccb4', 'flat'], moor: ['walled', '#b8a07e', '#a08868', '#c8b090', 'flat'],
   };
   function cityFarInto(mb, s, culture, capital) {
-    const P = FAR[culture] || FAR.han, r = s;
+    const P = FAR[culture] || FAR[SG.cultureBase ? SG.cultureBase(culture) : 'han'] || FAR.han, r = s;
     base(mb, r, H(P[0] === 'walled' ? '#a0977f' : '#7f8a52'));
     if (P[0] === 'walled') {
       const wall = H(P[1]), roof = H(P[2]), hall = H(P[3]), h = 0.44 * s, t = 0.2 * s;
@@ -1013,8 +1204,7 @@
     return mb;
   }
   function cityInto(mb, size, culture, capital, city) {
-    const m = MODEL_OF[culture] || 'han';
-    B[m](mb, size, !!capital, city || null, culture);
+    B[modelKey(culture)](mb, size, !!capital, city || null, culture);
     return mb;
   }
 

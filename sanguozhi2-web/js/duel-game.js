@@ -219,6 +219,10 @@
     celt: { helm: 'celtic', skin: '#f0c8a6', hair: '#c0682e', torso: 'bare', paint: '#2a58b0', plaid: true, weapons: ['sword'], shield: 'oval', beard: 'long' },
     german: { helm: 'suebian', skin: '#efc6a4', hair: '#c49a4c', torso: 'coat', coat: '#6a5a46', fur: true, weapons: ['handaxe', 'spear', 'handaxe'], shield: 'round', beard: 'bushy' },
     sarmatian: { helm: 'conical', skin: '#e2b08a', hair: '#2a1a10', torso: 'scale', weapons: ['lance', 'lance', 'sword'] },
+    // 第三版：天竺（坎达剑、长枪、长盾）、阿克苏姆 / 库施（长枪、长皮盾）、毛里（标枪、小圆盾）
+    india: { helm: 'goldcrown', skin: '#a8724a', hair: '#141012', bareArms: true, gold: true, weapons: ['sword', 'spear', 'sword'], shield: 'long', beard: 'none' },
+    africa: { helm: 'kufiya', helmColor: '#ece6d8', skin: '#6c4026', hair: '#0c0a0a', torso: 'coat', coat: '#ece6d8', weapons: ['spear', 'spear', 'sword'], shield: 'hide', beard: 'short' },
+    moor: { helm: 'kufiya', helmColor: '#e8dcc0', skin: '#b07e54', hair: '#141012', torso: 'coat', coat: '#e0d4bc', weapons: ['spear', 'sword'], shield: 'round', beard: 'short' },
   };
 
   function hashStr(s) {
@@ -235,7 +239,7 @@
     const WD = SG.WorldData;
     let cul = culture || fix.culture || (gen && gen.culture);
     if (!cul && WD && typeof WD.cultureOfGeneral === 'function') { try { cul = WD.cultureOfGeneral(name); } catch (e) { cul = null; } }
-    if (!CULTURE[cul]) cul = 'han';
+    if (!CULTURE[cul]) cul = SG.cultureBase && CULTURE[SG.cultureBase(cul)] ? SG.cultureBase(cul) : 'han';   // 未知文化按 core.js 的回退表
     let female = !!fix.female || (gen && (gen.sex === 'f' || gen.female === true));
     if (!female && !fix.culture && WD && typeof WD.sexOf === 'function' && SG.WorldInfo && SG.WorldInfo[name]) { try { female = WD.sexOf(name) === 'f'; } catch (e) { /* 忽略 */ } }
     const base = CULTURE[cul] || CULTURE.han;
@@ -1678,7 +1682,7 @@
       }
       pb.blob(0.035, 0, 0, 0.06, 0.06, 0.06, rim, 71);
       for (const y of [-0.22, 0.22]) pb.box(0.018, y, 0, 0.012, 0.025, 0.4, sh(face, 0.35));
-    } else if (shape === 'oval' || shape === 'round' || shape === 'wood') {
+    } else if (shape === 'oval' || shape === 'round' || shape === 'wood' || shape === 'long' || shape === 'hide') {   // 第三版的天竺长盾、非洲皮盾按木盾 / 椭圆盾画
       const R = shape === 'round' ? 0.27 : 0.25, ry = shape === 'oval' ? 1.7 : shape === 'wood' ? 1.9 : 1;
       const pts = [];
       for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; pts.push([Math.cos(a) * R * (shape === 'wood' ? 0.85 : 1), Math.sin(a) * R * ry]); }
@@ -1739,7 +1743,7 @@
     const skin = C(look.skin), hair = C(look.hair);
     const leather = C('#4a3222'), boot = C('#241b16');
     const capeC = look.cape ? C(look.cape) : sh(teamC, -0.18);
-    const nan = look.culture === 'nanman' || look.culture === 'yi' || look.culture === 'seasia';
+    const nan = look.culture === 'nanman' || look.culture === 'yi' || look.culture === 'seasia' || look.culture === 'india';
     const P = {};
 
     // ---- 骨盆 / 腰裙
@@ -2622,8 +2626,8 @@
     sword: 'jian', dao: 'dao', shortji: 'dao', mace: 'mace', twinsword: 'swords', twinji: 'twinji', twindao: 'twindao',
     gladius: 'gladius', lance: 'lance', handaxe: 'handaxe', tachi: 'tachi' };
   // 西方 / 草原 / 南亚文化的「长剑」用 spatha 造型
-  const FIG_SPATHA = new Set(['roman', 'celt', 'german', 'persia', 'arab', 'kushan', 'sarmatian']);
-  const FIG_SHIELD = { wood: 'wa', round: 'round', scutum: 'scutum', oval: 'oval', pai: 'pai', rattan: 'rattan' };
+  const FIG_SPATHA = new Set(['roman', 'celt', 'german', 'persia', 'arab', 'kushan', 'sarmatian', 'africa', 'moor']);
+  const FIG_SHIELD = { wood: 'wa', round: 'round', scutum: 'scutum', oval: 'oval', pai: 'pai', rattan: 'rattan', long: 'long', hide: 'hide' };
   // 兵器：规则的兵器种类决定流派与判定距离；名将若有同流派的专属兵器（青龙偃月刀、方天画戟、涯角枪……）则用专属造型。
   // 规则的「短戟」是单手兵器：figure.js 没有单支短戟，一般武将用单手环首刀造型（流派一致）；
   // 唯一的例外是 太史慈 的专属「双短戟」（figure.js 的 sig 兵器，双持造型，规则仍按单手计时与判定）
@@ -2631,6 +2635,7 @@
     const F = SG.Figure, want = (WEAPONS[look.weapon] || WEAPONS.sword).style;
     let w = FIG_WEAPON[look.weapon] || 'jian';
     if (w === 'jian' && FIG_SPATHA.has(look.culture)) w = 'spatha';
+    if (w === 'jian' && look.culture === 'india') w = 'khanda';   // 天竺的长剑是坎达剑
     try {
       const fl = F.lookOf(gen, { culture: look.culture });
       const sig = fl && fl.sig && fl.sig.weapon;
@@ -3002,11 +3007,12 @@
       this.root.position.set(f.x + f.face * this.lungeX + jx * f.face, f.y + jy, 0);
       this.root.scale.x = f.face;
       // 受击闪光 / 格开架势的冷光 / 反击窗口的金光 / 蓄力与绝技的发光
-      if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 7);
+      // 第三版修订：着色改为以轮廓为主的辉光（figure.js setTint），受击闪光封顶 0.6、衰减更快；反击窗口为脉动的金色轮廓
+      if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 10);
       const T = this.tint.setRGB(0, 0, 0);
-      if (this.flash > 0) T.copy(this.flashColor).multiplyScalar(this.flash * 0.9);
-      if (st === 'parry' && f.t <= f.parryW) T.add(this._tc.copy(this.parryCol).multiplyScalar(0.2 * (1 - f.t / f.parryW) + 0.06));
-      else if (this.ctr > 0) T.add(this._tc.copy(this.ctrCol).multiplyScalar(0.14 + 0.1 * Math.sin(this.time * 26)));
+      if (this.flash > 0) T.copy(this.flashColor).multiplyScalar(Math.min(0.6, this.flash * 0.75));
+      if (st === 'parry' && f.t <= f.parryW) T.add(this._tc.copy(this.parryCol).multiplyScalar(0.34 * (1 - f.t / f.parryW) + 0.1));
+      else if (this.ctr > 0) T.add(this._tc.copy(this.ctrCol).multiplyScalar(0.32 + 0.22 * Math.sin(this.time * 26)));
       let em = 0;
       if (st === 'charge') em = f.charge * 0.22 + (f.charge >= 1 ? 0.1 * (0.5 + 0.5 * Math.sin(this.time * 30)) : 0);
       else if (hold > 0 && f.t < hold + MOVES.heavy.startup) em = 0.16 + 0.2 * f.charge;
@@ -3245,7 +3251,7 @@
     const key = reed ? 'reed' : 'tuft';
     if (VEGG[key]) return VEGG[key];
     const mb = new SG.MeshBuilder(), rnd = SG.SeededRandom(reed ? 19 : 91);
-    const dark = new THREE.Color(0.5, 0.5, 0.5), lite = new THREE.Color(1.06, 1.06, 1.0);
+    const dark = new THREE.Color(0.64, 0.64, 0.62), lite = new THREE.Color(1.06, 1.06, 1.0);
     const n = reed ? 7 : 6;
     for (let k = 0; k < n; k++) {
       const a = k * 0.8 + rnd.nextDouble() * 0.6, ca = Math.cos(a), sa = Math.sin(a);
@@ -3312,12 +3318,15 @@
 		float k = 1.0;
 		if ( abs( n.y ) < 0.5 ) {
 			float u = abs( n.x ) > abs( n.z ) ? p.z : p.x;
-			float row = floor( p.y / 0.32 ), uu = u / 0.64 + mod( row, 2.0 ) * 0.5;
-			float fy = fract( p.y / 0.32 ), fu = fract( uu );
+			float row = floor( p.y / 0.21 ), uu = u / 0.44 + mod( row, 2.0 ) * 0.5;
+			float fy = fract( p.y / 0.21 ), fu = fract( uu );
 			float mort = 1.0 - smoothstep( 0.03, 0.09, min( fy, 1.0 - fy ) ) * smoothstep( 0.015, 0.045, min( fu, 1.0 - fu ) );
 			float h = sgBH( vec2( floor( uu ), row ) );
 			float wear = 0.5 + 0.5 * sin( p.x * 0.7 + sin( p.y * 1.3 ) * 2.0 ) * sin( p.y * 0.9 + p.x * 0.21 );
-			k = ( 0.84 + 0.22 * h ) * ( 1.0 - 0.32 * mort ) * ( 0.9 + 0.14 * wear ) * ( 0.82 + 0.18 * smoothstep( 0.0, 1.6, p.y ) );
+			k = ( 0.84 + 0.22 * h ) * ( 1.0 - 0.32 * mort ) * ( 0.9 + 0.14 * wear ) * ( 0.74 + 0.26 * smoothstep( 0.0, 2.2, p.y ) );
+			// 墙根青苔（第三版修订）
+			float moss = ( 1.0 - smoothstep( 0.0, 1.4, p.y + wear * 0.6 ) ) * stone;
+			diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 0.72, 0.86, 0.6 ), moss * 0.6 );
 		} else {
 			vec2 g = p.xz / 0.8; vec2 f = abs( fract( g ) - 0.5 );
 			k = ( 0.9 + 0.12 * sgBH( floor( g ) ) ) * ( 0.84 + 0.16 * ( 1.0 - smoothstep( 0.44, 0.49, max( f.x, f.y ) ) ) );
@@ -3552,6 +3561,7 @@
         const laneK = (1 - ss(1.6, 3.6, Math.abs(z))) * (1 - ss(11, 15, Math.abs(x)));
         if (r.nextDouble() < laneK * (density || 0.97)) continue;          // 场中踩实，少草
         if (z > 2.5 && (Math.abs(x) < 4 || r.nextDouble() < 0.5)) continue;     // 镜头近处稀疏（近大远小，免得草叶挡住画面）
+        if (z > 2.2) continue;                                                // 第三版修订：镜头前最近的一带不放草（不再是画面下缘的大黑草叶）
         const k = r.nextDouble();
         const c = g0.clone().lerp(g1, k * 0.55).multiplyScalar(0.95 + r.nextDouble() * 0.3);
         this.place('tuft', x, z, (1.1 + r.nextDouble() * 1.1) * (z > 2.5 ? 0.7 : 1), { col: '#' + c.getHexString() });
@@ -3664,6 +3674,8 @@
           wall.box(U(0, H / 2, z), V3(110, H, 2.4), stone);
           for (let x = -55; x <= 55; x += 1.4) wall.box(U(x, H + 0.35, z + 1.0), V3(0.8, 0.7, 0.4), stone.clone().multiplyScalar(1.05));
           for (const x of [-14, 14]) wall.box(U(x, H / 2 + 0.7, z + 0.2), V3(4.4, H + 1.4, 3.2), stone.clone().multiplyScalar(0.96));
+          // 第三版修订：墙身每隔约 3 米一道扶壁（墙面有进深）
+          for (let x = -48; x <= 48; x += 3.2) { if (Math.abs(x) < 4.6 || Math.abs(Math.abs(x) - 14) < 2.8) continue; wall.box(U(x, H * 0.42, z + 1.45), V3(0.7, H * 0.84, 0.55), stone.clone().multiplyScalar(0.93)); }
           wall.box(U(0, 0.05, z + 1.4), V3(6.0, 0.1, 1.2), stone.clone().multiplyScalar(0.9));
           this.addMesh(wall.toGeometry(), brickMaterial(), true, true);
           // 城门：拱形门洞（车削半圆）+ 门板与门钉
@@ -3676,6 +3688,14 @@
           mb.box(U(0, H + 3.5, z), V3(5.6, 1.2, 2.4), C('#7a2418'));
           mb.chineseRoof(U(0, H + 4.1, z), 7.4, 3.6, 2.4, C('#262a36'));
           for (const x of [-14, 14]) mb.chineseRoof(U(x, H + 1.4, z + 0.2), 5.4, 4.0, 1.8, C('#262a36'));
+          // 第三版修订：城头垂下的长幡（两军颜色），远处再一道城内的屋脊（视差层次）
+          for (const [x, cc] of [[-8.2, colA], [-5.6, colB], [5.6, colA], [8.2, colB]]) {
+            const c0 = C(cc || '#a02a24');
+            mb.box(U(x, H - 1.5, z + 1.28), V3(0.95, 2.9, 0.05), c0);
+            mb.box(U(x, H - 3.0, z + 1.29), V3(0.95, 0.12, 0.06), c0.clone().multiplyScalar(0.6));
+            mb.box(U(x, H - 0.06, z + 1.29), V3(1.15, 0.1, 0.1), C('#3a2a1a'));
+          }
+          for (const x of [-30, -20, 22, 32]) mb.chineseRoof(U(x, H + 0.6, z - 6), 7.0, 4.0, 2.0, C('#2a2e38'));
           for (const x of [-3.6, 3.6]) {
             mb.tube([U(x, 0, -9.6), U(x, 1.2, -9.6), U(x, 2.4, -9.6)], [0.07, 0.065, 0.06], 8, C('#2a1e14'));
             mb.lathe(U(x, 2.4, -9.6), [[0.06, 0], [0.2, 0.18], [0.22, 0.26], [0.16, 0.28]], 12, C('#2a2424'));
@@ -3832,15 +3852,17 @@
   }
 
   // 刀光拖尾：记录兵器刃根与刃尖的轨迹，生成渐隐的叠加色带
+  // 刀光拖尾（第三版修订）：每次推入新样本时，在上一样本与新样本之间按「绕刃根旋转」插入细分样本（刃尖走弧线而不是弦），
+  // 不再是几段长直线拼成的白色纸扇；横向四列顶点：刃根一侧透明 → 中段淡 → 刃口亮 → 最外一道近白的亮芯；按样本年龄淡出
   class Trail {
     constructor(n) {
       this.n = n; this.base = []; this.tip = []; this.life = [];
       for (let i = 0; i < n; i++) { this.base.push(new THREE.Vector3()); this.tip.push(new THREE.Vector3()); this.life.push(0); }
       this.count = 0;
-      const verts = n * 2;
+      const verts = n * 4;
       this.posA = new Float32Array(verts * 3); this.colA = new Float32Array(verts * 3);
       const idx = [];
-      for (let i = 0; i < n - 1; i++) { const a = i * 2, b = a + 1, c = a + 2, d = a + 3; idx.push(a, b, d, a, d, c); }
+      for (let i = 0; i < n - 1; i++) for (let c = 0; c < 3; c++) { const a = i * 4 + c, b = a + 1, d = a + 5, e = a + 4; idx.push(a, b, d, a, d, e); }
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(this.posA, 3).setUsage(THREE.DynamicDrawUsage));
       g.setAttribute('color', new THREE.BufferAttribute(this.colA, 3).setUsage(THREE.DynamicDrawUsage));
@@ -3853,28 +3875,61 @@
       this.mesh.renderOrder = 20;
       this.color = new THREE.Color(1, 1, 1);
       this.on = false;
+      this._d0 = new THREE.Vector3(); this._d1 = new THREE.Vector3(); this._q = new THREE.Quaternion(); this._qi = new THREE.Quaternion();
+      this._b = new THREE.Vector3(); this._t = new THREE.Vector3();
+    }
+    _shift(b, t, life) {
+      const B = this.base, T = this.tip, L = this.life, last = this.n - 1;
+      const rb = B[last], rt = T[last];
+      for (let i = last; i > 0; i--) { B[i] = B[i - 1]; T[i] = T[i - 1]; L[i] = L[i - 1]; }
+      B[0] = rb.copy(b); T[0] = rt.copy(t); L[0] = life;
+      this.count = Math.min(this.n, this.count + 1);
     }
     push(b, t) {
-      for (let i = this.n - 1; i > 0; i--) { this.base[i].copy(this.base[i - 1]); this.tip[i].copy(this.tip[i - 1]); this.life[i] = this.life[i - 1]; }
-      this.base[0].copy(b); this.tip[0].copy(t); this.life[0] = this.on ? 1 : 0;
-      this.count = Math.min(this.n, this.count + 1);
+      // 定格（顿帧、暂停）时刃口不动：不推入重复样本（否则拖尾会塌成一条线）
+      if (this.count > 0 && this.base[0].distanceToSquared(b) < 1e-8 && this.tip[0].distanceToSquared(t) < 1e-8) return;
+      if (this.on && this.count > 0 && this.life[0] > 0) {
+        const b0 = this.base[0], t0 = this.tip[0];
+        const d0 = this._d0.subVectors(t0, b0), d1 = this._d1.subVectors(t, b);
+        const l0 = d0.length(), l1 = d1.length();
+        if (l0 > 1e-4 && l1 > 1e-4) {
+          d0.multiplyScalar(1 / l0); d1.multiplyScalar(1 / l1);
+          const ang = Math.acos(M.clamp(d0.dot(d1), -1, 1));
+          const ns = Math.min(7, Math.max(1, Math.ceil(ang / 0.09)));
+          if (ns > 1) {
+            this._q.setFromUnitVectors(d0, d1);
+            const p0 = b0.clone(), dd = d0.clone();
+            for (let s = 1; s < ns; s++) {
+              const f = s / ns;
+              this._qi.identity().slerp(this._q, f);
+              this._b.lerpVectors(p0, b, f);
+              this._t.copy(dd).applyQuaternion(this._qi).multiplyScalar(l0 + (l1 - l0) * f).add(this._b);
+              this._shift(this._b, this._t, 1);
+            }
+          }
+        }
+      }
+      this._shift(b, t, this.on ? 1 : 0);
     }
     update(dt) {
       let any = false;
-      for (let i = 0; i < this.n; i++) { this.life[i] = Math.max(0, this.life[i] - dt * 2.5); if (this.life[i] > 0) any = true; }
-      const c = this.color;
+      for (let i = 0; i < this.n; i++) { this.life[i] = Math.max(0, this.life[i] - dt * 3.2); if (this.life[i] > 0) any = true; }
+      const c = this.color, P = this.posA, Cc = this.colA;
+      const W = [0.12, 0.55, 0.9, 1.0], K = [0, 0.18, 0.8, 1.0];
       for (let i = 0; i < this.n; i++) {
-        const k = this.life[i] * (1 - i / this.n);
+        const age = i / (this.n - 1), k = this.life[i] * Math.pow(1 - age, 0.8);
         const B = this.base[i], T = this.tip[i];
-        // 刃根一侧较暗，刃尖最亮
-        this.posA.set([B.x + (T.x - B.x) * 0.15, B.y + (T.y - B.y) * 0.15, B.z + (T.z - B.z) * 0.15], i * 6);
-        this.posA.set([T.x, T.y, T.z], i * 6 + 3);
-        this.colA.set([c.r * k * 0.25, c.g * k * 0.25, c.b * k * 0.25], i * 6);
-        this.colA.set([c.r * k, c.g * k, c.b * k], i * 6 + 3);
+        for (let q = 0; q < 4; q++) {
+          const w = W[q], o = (i * 4 + q) * 3;
+          P[o] = B.x + (T.x - B.x) * w; P[o + 1] = B.y + (T.y - B.y) * w; P[o + 2] = B.z + (T.z - B.z) * w;
+          const kk = k * K[q];
+          if (q === 3) { const wh = 0.55 * (1 - age); Cc[o] = (c.r * (1 - wh) + wh) * kk; Cc[o + 1] = (c.g * (1 - wh) + wh) * kk; Cc[o + 2] = (c.b * (1 - wh) + wh) * kk; }
+          else { Cc[o] = c.r * kk; Cc[o + 1] = c.g * kk; Cc[o + 2] = c.b * kk; }
+        }
       }
       this.geometry.attributes.position.needsUpdate = true;
       this.geometry.attributes.color.needsUpdate = true;
-      this.geometry.setDrawRange(0, any && this.count > 1 ? (Math.min(this.count, this.n) - 1) * 6 : 0);
+      this.geometry.setDrawRange(0, any && this.count > 1 ? (Math.min(this.count, this.n) - 1) * 18 : 0);
     }
     dispose() { this.geometry.dispose(); this.material.dispose(); }
   }
@@ -4016,7 +4071,8 @@
 .sgd.sgd-compact .sgd-pchip.ctr::before{background:#ffd860;}
 .sgd-k.pk{background:linear-gradient(180deg,#d8f0ff,#8cc4f0);box-shadow:0 2px 0 #2a5a80,0 3px 3px rgba(0,0,0,.4);}
 .sgd-k.pk.cool{opacity:.4;}
-.sgd-dmg.lbl.parry{font-size:calc(2.6*var(--u));color:#dff3ff;letter-spacing:.12em;text-shadow:0 2px 0 #0a2a50,0 0 .5em rgba(120,200,255,.9),0 0 1px #000;}
+.sgd-dmg.lbl.parry{font-size:calc(3.4*var(--u));color:#fff2c8;letter-spacing:.14em;text-shadow:0 .06em 0 #6a1a0a,0 0 .35em rgba(255,150,40,.75),0 .1em .3em rgba(0,0,0,.85),0 0 1px #000;}
+.sgd-edge{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,230,160,0) 55%,rgba(255,214,120,.55) 85%,rgba(255,250,230,.9) 100%);}
 .sgd-dmg.lbl.ctr{font-size:calc(2.1*var(--u));color:#ffd860;text-shadow:0 2px 0 #4a1a00,0 0 .45em rgba(255,170,40,.9);}
 .sgd-dmg.lbl.miss{color:#c8c0d8;font-size:calc(1.25*var(--u));}
 .sgd-skip{position:absolute;right:calc(var(--sar) + 1.2*var(--u));top:calc(var(--sat) + 7.6*var(--u));pointer-events:auto;cursor:pointer;
@@ -4459,7 +4515,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.motes = new Particles(110, THREE.AdditiveBlending, 1.4, 10);
       scene.add(this.sparks.points); scene.add(this.dust.points); scene.add(this.motes.points);
       this.trails = [];
-      for (let i = 0; i < 4; i++) { const t = new Trail(12); this.trails.push(t); scene.add(t.mesh); }
+      for (let i = 0; i < 4; i++) { const t = new Trail(28); this.trails.push(t); scene.add(t.mesh); }
       this.stars = [];
       for (let i = 0; i < 6; i++) {
         const m = new THREE.SpriteMaterial({ map: starTexture(), color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false });
@@ -4532,6 +4588,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.dmgLayer = h(null);
       this.dmgLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
       this.flashEl = h('sgd-flash');
+      this.edgeEl = h('sgd-edge');
       if (this.player !== null && (!SG.isTouch || this.hybrid)) {
         this.legend = h('sgd-legend', '<span><b class="sgd-k">←</b><b class="sgd-k">→</b>移动</span><span><b class="sgd-k">↑</b>跳</span><span><b class="sgd-k">J</b>轻击</span>' +
           '<span><b class="sgd-k">K</b>重击·按住蓄力</span><span><b class="sgd-k">L</b>格挡</span><span><b class="sgd-k pk">U</b>格开</span><span><b class="sgd-k r">I</b>绝技</span>');
@@ -4575,8 +4632,17 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       el.className = 'sgd-dmg' + (cls ? ' ' + cls : '');
       el.textContent = text;
       this.dmgLayer.appendChild(el);
-      this.dmgs.push({ el, p: new THREE.Vector3(x, y, 0.3), t: 0, vx: (this.fxR.nextDouble() - 0.5) * 0.6 });
+      const big = /parry/.test(cls || '');
+      this.dmgs.push({ el, p: new THREE.Vector3(x, y, 0.3), t: 0, vx: big ? 0 : (this.fxR.nextDouble() - 0.5) * 0.6, life: big ? 1.25 : 0.9, pop: big });
       if (this.dmgs.length > 10) { const o = this.dmgs.shift(); o.el.remove(); }
+    }
+    // 画面四周一圈金光（格开得手的提示，约 0.08 秒亮起后淡去）
+    edgeFlash() {
+      if (!this.edgeEl) return;
+      const f = this.edgeEl;
+      f.style.transition = 'none'; f.style.opacity = '1';
+      void f.offsetWidth;
+      f.style.transition = 'opacity .3s ease-out .08s'; f.style.opacity = '0';
     }
     screenFlash(a) {
       const f = this.flashEl;
@@ -4706,9 +4772,12 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             this.burst(e.x, e.y, 0.25, '#e4f6ff', 48, 7.5, { dir: att.face, size: 0.11, life: 0.5, grav: 6 });
             this.burst(e.x, e.y, 0.25, '#ffd27a', 28, 5.5, { dir: att.face, size: 0.08, life: 0.45 });
             this.burst(e.x, e.y, 0.25, '#ffffff', 10, 2.5, { size: 0.2, life: 0.16, grav: 0 });
-            this.star(e.x, e.y, '#eaf7ff', 3.0);
+            this.star(e.x, e.y, '#eaf7ff', 4.2);
+            this.star(e.x, e.y, '#ffd27a', 2.6);
+            this.burst(e.x, e.y, 0.25, '#fff4d0', 20, 9.5, { size: 0.07, life: 0.38, grav: 3 });
             this.ring(def.x, '#a8d8ff', 4.4, 0.45);
             this.screenFlash(0.32);
+            this.edgeFlash();
             this.shake = Math.max(this.shake, 0.17);
             if (!sim.result) { this.slow = Math.min(this.slow, 0.28); this.slowT = Math.max(this.slowT, 0.34); }
             this.zoom = { who: def.idx, until: this.realT + 0.6, parry: true };
@@ -4906,9 +4975,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const aspect = cam.aspect, tanV = Math.tan(cam.fov * M.deg2rad / 2), tanH = tanV * aspect;
       let mid = (a.x + b.x) / 2;
       const sep = Math.abs(a.x - b.x);
-      const frac = this.touch ? 0.54 : this.compact ? 0.62 : 0.7;
-      let dist = M.clamp((sep + 2.6) / frac / (2 * tanH), 6.2, 15);
-      dist = Math.max(dist, (this.touch ? 3.0 : 2.9) / (2 * tanV * (this.touch ? 0.64 : 0.72)));
+      // 第三版修订：取景更紧（两人约占画面高度的一半），两人拉开时镜头随距离后退
+      const frac = this.touch ? 0.56 : this.compact ? 0.66 : 0.76;
+      let dist = M.clamp((sep + 2.2) / frac / (2 * tanH), 5.8, 15);
+      dist = Math.max(dist, (this.touch ? 2.8 : 2.62) / (2 * tanV * (this.touch ? 0.64 : 0.74)));
       let hc = 1.55 + dist * 0.045;
       let ground = this.touch ? 0.42 : 0.46;     // 地平线（脚下）在屏幕中的位置：NDC −ground
       // 特写：绝技发动 / KO
@@ -4947,6 +5017,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const s = this.shake, r = this.fxR;
       cam.position.set(this.camPos.x + (r.nextDouble() - 0.5) * s * 2, this.camPos.y + (r.nextDouble() - 0.5) * s * 2, this.camPos.z);
       cam.lookAt(this.camLook.x + (r.nextDouble() - 0.5) * s, this.camLook.y + (r.nextDouble() - 0.5) * s, 0);
+      // 格开得手：约 3° 的镜头侧倾，0.35 秒内回正
+      if (z && z.parry && this.realT < z.until) { const u = M.clamp01(1 - (z.until - this.realT) / 0.6); if (u < 0.6) cam.rotateZ(0.055 * Math.sin(u / 0.6 * Math.PI) * (sim.f[z.who].face || 1)); }
       // 阴影与光照跟随镜头
       const L = this.lights;
       L.key.target.position.set(this.camPos.x, 0, 0);
@@ -5002,16 +5074,17 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       for (let i = this.dmgs.length - 1; i >= 0; i--) {
         const d = this.dmgs[i];
         d.t += dt;
-        if (d.t > 0.9) { d.el.remove(); this.dmgs.splice(i, 1); continue; }
-        v.copy(d.p); v.x += d.vx * d.t; v.y += d.t * 0.9;
+        const life = d.life || 0.9;
+        if (d.t > life) { d.el.remove(); this.dmgs.splice(i, 1); continue; }
+        v.copy(d.p); v.x += d.vx * d.t; v.y += d.t * (d.pop ? 0.35 : 0.9);
         v.project(this.camera);
         const rr = this.root.getBoundingClientRect ? this.rootRect || (this.rootRect = this.root.getBoundingClientRect()) : { left: 0, top: 0 };
         // 飘字不进顶栏（体力条 / 计时）：夹在顶栏下沿之下
         if (this.hudBot == null) { const tb = this.topEl && this.topEl.getBoundingClientRect ? this.topEl.getBoundingClientRect() : null; this.hudBot = tb && tb.height ? tb.bottom + 18 : 0; }
         const x = (v.x * 0.5 + 0.5) * W, y = Math.max(this.hudBot, (-v.y * 0.5 + 0.5) * Hh);
-        const sc = d.t < 0.12 ? 1.5 - d.t * 4 : 1;
+        const sc = d.pop ? (d.t < 0.14 ? 2.1 - d.t * 7.86 : 1 + 0.04 * Math.sin(d.t * 9)) : d.t < 0.12 ? 1.5 - d.t * 4 : 1;
         d.el.style.transform = 'translate(' + (x - rr.left).toFixed(1) + 'px,' + (y - rr.top).toFixed(1) + 'px) translate(-50%,-50%) scale(' + sc.toFixed(2) + ')';
-        d.el.style.opacity = String(M.clamp01((0.9 - d.t) * 3));
+        d.el.style.opacity = String(M.clamp01((life - d.t) * 3));
       }
     }
 

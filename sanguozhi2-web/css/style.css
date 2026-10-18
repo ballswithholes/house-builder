@@ -31,7 +31,7 @@
    对话框（由 SG.UI.say/choose/chooseMany/pickNumber/confirm 生成）
      .sg-modal .sg-dialog .sg-dlg-head .sg-dlg-title .sg-dlg-info .sg-dlg-foot
      .sg-list .sg-item (.is-on) .sg-item-main .sg-item-label .sg-item-desc .sg-item-right .sg-check
-     .sg-say .sg-say-speaker .sg-say-name .sg-say-text .sg-say-hint
+     .sg-say .sg-say-speaker .sg-say-name .sg-say-text .sg-say-hint（.sg-help 操作说明）
      .sg-number .sg-number-row .sg-number-big .sg-number-desc .sg-range .sg-range-ends
      .sg-confirm .sg-confirm-btns
      .sg-toast-stack .sg-toast   .sg-banner .sg-banner-text .sg-banner-sub
@@ -40,7 +40,7 @@
    画面（由控制器模块用 SG.UI.el / button / panel 搭建）
      战略：.sg-topbar (.sg-topbar-left .sg-topbar-center .sg-topbar-actions)
            .sg-citypanel (.sg-citypanel-head .sg-citypanel-title .sg-citypanel-body)
-           .sg-citystats  .sg-statgrid > .sg-stat  .sg-genlist > .sg-genrow
+           .sg-citystats > .sg-cs (.sg-cs-br)  .sg-statgrid > .sg-stat  .sg-genlist > .sg-genrow
            (.sg-genrow-name .sg-genrow-stats .sg-tag .sg-tag-ruler .sg-tag-gov .sg-moved)
            .sg-cmdgrid（三列指令按钮）
      战斗：.sg-battle-top  .sg-battle-card (.sg-card-name .sg-card-sub)  .sg-battle-actions
@@ -803,6 +803,8 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, .5);
 }
 
+/* 标题画面的「操作说明」（game.js：UI.say(…, { className: 'sg-help' })）：七节，字略小，一屏放得下 */
+.sg-dialog.sg-say.sg-help .sg-say-text { font-size: 1.12rem; line-height: 1.5; letter-spacing: .01em; }
 /* 用自动外边距居中：内容过长时仍可从顶部开始滚动 */
 .sg-say-text > .sg-say-inner { display: block; margin-top: auto; margin-bottom: auto; }
 .sg-tw-hide { visibility: hidden; }
@@ -950,6 +952,12 @@ body {
   align-items: center;
   gap: .45rem;
   pointer-events: none;
+}
+/* 有对话框（底部对话除外）打开时提示移到屏幕下方，免得盖住对话框标题（如连续习得新招时） */
+#ui:has(.sg-modals .sg-modal:not(.sg-say-modal)) .sg-toast-stack {
+  top: auto;
+  bottom: max(calc(var(--sg-sab, 0px) + 1rem), 1rem);
+  flex-direction: column-reverse;
 }
 
 .sg-toast {
@@ -1241,9 +1249,10 @@ body {
   padding: .1rem .4rem;
   font-size: 1.1rem;
   line-height: 1.55;
-  white-space: pre-wrap;
   font-variant-numeric: tabular-nums;
 }
+/* 城池情报的每一项（strategy-screen.js refreshCityPanel）：项内不折行；.sg-cs-br 分行（矮屏隐去，各项自然流排） */
+.sg-cs { white-space: nowrap; margin-right: .55em; }
 
 .sg-statgrid {
   flex: none;
@@ -1848,6 +1857,17 @@ body {
   .sg-duel-log { font-size: 1.05rem; }
 }
 
+@media (max-height: 540px) {
+  .sg-dialog.sg-say.sg-help .sg-say-text { font-size: .98rem; line-height: 1.42; }
+}
+/* 横屏手机（高 ≤ 430）：城池情报不再分四行、改为流排（约三行、字略小），面板里至少露出两行武将 */
+@media (max-height: 430px) {
+  .sg-cs-br { display: none; }
+  .sg-citystats { font-size: .94rem; line-height: 1.38; padding: 0 .3rem; }
+  .sg-cs { margin-right: .35em; }
+  .sg-citypanel-body { gap: .3rem; }
+}
+
 /* 很矮的屏幕（如 iPhone SE 横屏 667×375） */
 @media (max-height: 400px) {
   .sg-title-main { font-size: 4.4rem; }
@@ -2117,7 +2137,7 @@ body {
    战斗情报卡：.sg-card-lv > .sg-card-exp   必杀列表：.sg-sp-tier（.is-sig 专属） .sg-sp-lore
    战后：.sg-notice（UI.notice）.sg-lvup > .sg-lvup-row（.sg-lvup-face .sg-lvup-text .sg-lvup-head .sg-lvup-exp .sg-lvup-new > .sg-lvup-slot）.sg-lvup-rest
    习得：.sg-learn-kind（.is-special / .is-tactic） .sg-learn-tier.t1..t4 .sg-learn-rules
-   城池面板：.sg-genrow-lv .sg-lv-new   武将详情：.sg-geninfo-lv .sg-geninfo-rec .sg-geninfo-learn .sg-geninfo-sec .sg-geninfo-tacs > .sg-geninfo-tac
+   城池面板：.sg-genrow-lv .sg-lv-new   武将详情：.sg-geninfo-lv .sg-geninfo-rec .sg-geninfo-vet .sg-geninfo-learn .sg-geninfo-sec .sg-geninfo-tacs > .sg-geninfo-tac
    ========================================================================== */
 .sg-lv {
   display: inline-flex; align-items: baseline; gap: .08em;
@@ -2185,9 +2205,9 @@ body {
 .sg-lvup-row {
   flex: none;
   display: flex; align-items: center; gap: .85rem; padding: .5rem .75rem; border-radius: .7rem;
-  background: linear-gradient(90deg, rgba(243, 201, 105, .16), rgba(243, 201, 105, .03) 70%);
+  background: linear-gradient(90deg, rgba(243, 201, 105, .16), rgba(243, 201, 105, .03) 70%), #201b15;
   border: 1px solid rgba(243, 201, 105, .28);
-  animation: sg-lvup-in .45s var(--sg-ease, ease-out) both;
+  animation: sg-lvup-in .45s var(--sg-ease, ease-out) backwards;
 }
 .sg-lvup-row:nth-child(2) { animation-delay: .08s; }
 .sg-lvup-row:nth-child(3) { animation-delay: .16s; }
@@ -2234,6 +2254,8 @@ body {
 .sg-geninfo-lv-exp { font-size: .92em; font-variant-numeric: tabular-nums; }
 .sg-geninfo-rec { font-size: .9em; color: var(--sg-muted); font-variant-numeric: tabular-nums; }
 .sg-geninfo-rec b { color: #fffaf0; font-weight: 600; }
+.sg-geninfo-vet { font-size: .9em; color: var(--sg-muted); }
+.sg-geninfo-vet b { color: var(--sg-gold, #f3c969); font-weight: 600; }
 .sg-btn.sg-geninfo-learn { align-self: flex-start; margin-top: .2rem; }
 .sg-btn.sg-geninfo-learn small { margin-left: .5em; font-size: .78em; opacity: .85; }
 .sg-geninfo-sec { display: flex; flex-direction: column; gap: .45rem; }

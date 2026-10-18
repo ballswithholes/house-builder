@@ -415,7 +415,7 @@
     else if (num(e.def)) e.def += (r.next(7) - 3) * 0.01;
     else if (num(e.atk)) e.atk += (r.next(7) - 3) * 0.01;
     for (const k of Object.keys(e)) { const p = K.params[k]; if (p) e[k] = p[3] >= 1 ? Math.round(M.clamp(e[k], p[1], p[2])) : fix(M.clamp(quant(e[k], p[3]), p[1], p[2])); }
-    const bank = culture === 'han' ? EPI[stat] : (EPI[culture] || EPI[stat]);
+    const bank = culture === 'han' ? EPI[stat] : (EPI[culture] || EPI[SG.cultureBase ? SG.cultureBase(culture) : culture] || EPI[stat]);
     const noun = NOUN[kind][r.next(NOUN[kind].length)];
     let epi = bank[r.next(bank.length)];
     if (epi.length + noun.length > 5) epi = epi.slice(0, 1);
@@ -615,7 +615,7 @@
     if (!list.length) return '';
     const sig = list[0];
     const head = '<div>必杀 <span style="color:' + uiColor(sig) + '">「' + esc(sig.name) + '」</span>' +
-      (usedIn(u, sig) ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　可用</span>') + '</div>';
+      (usedIn(u, sig) ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　未施展</span>') + '</div>';
     if (list.length === 1) return head;
     // 习得的招式压成一行：可用的着色，已施展的灰显划线（情报卡在横屏手机上也不至过长）
     const more = list.slice(1).map(sp => usedIn(u, sp)

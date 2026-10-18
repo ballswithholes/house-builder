@@ -27,7 +27,11 @@ const vm = require('vm');
 
 global.window = global;
 const root = path.join(__dirname, '..', 'js');
-for (const f of ['core.js', 'data.js', 'duel-game.js']) vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
+// DUEL_GAME_JS=路径：用另一份 duel-game.js 跑同一套测试（试改电脑 AI 时对比用）
+for (const f of ['core.js', 'data.js', 'duel-game.js']) {
+  const file = f === 'duel-game.js' && process.env.DUEL_GAME_JS ? process.env.DUEL_GAME_JS : path.join(root, f);
+  vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: f });
+}
 const SG = global.SG, D = SG.DuelGame, MV = D.MOVES, PR = D.PARRY;
 const N = +process.argv[2] || 40;
 SG.Random.seed(+process.argv[3] || 7);

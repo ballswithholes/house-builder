@@ -37,7 +37,10 @@ characters, soldiers, portraits, music and sound — is generated in code. Open
 - **必杀**: every general has a unique special attack. Generals gain experience
   and levels (1–10) from fighting; with higher 武力 they learn more and stronger
   special attacks, and with higher 智力 more and stronger 计策 (18 tactics in
-  4 tiers). At each level-up the player picks from three choices.
+  4 tiers). At each level-up the player picks from three choices. Veterans
+  also hit harder in battle: each level above 1 adds 4% to attack, defence and
+  tactic power (老练, shown on the battle card and in the general's details).
+  Under 委任 the AI casts learned tactics such as 伪报 and 挑拨.
 - **单挑** is a side-view fighting game (keyboard: ←→ move, ↑ jump, J light,
   K heavy, L guard, U parry, I special; touch: on-screen pad and buttons).
   A parry staggers the opponent and opens an unblockable counter; it has a
@@ -56,7 +59,8 @@ characters, soldiers, portraits, music and sound — is generated in code. Open
 - `node tests/world.js` — world scenario data and all-AI balance runs.
 - `node tests/duel-bots.js` — duel AI, parry and button-mashing bots.
 - Browser test pages in `tests/*.html` (figures, portraits, clash, specials,
-  duel, music, world map, battle view, UI).
+  duel, music, world map, battle view, UI). `node tests/gen-world-cities.js`
+  refreshes the world map page's city list from `js/world-data.js`.
 
 Design notes: `DESIGN-V3.md` (v3 features), `DESIGN-V2.md` (v2 features),
 `CONTRACT.md` (module APIs), `UI-CLASSES.md` (UI classes).

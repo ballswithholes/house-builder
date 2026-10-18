@@ -336,9 +336,13 @@
     move(u, to) { u.x = to.x; u.y = to.y; this.checkEnd(); }
 
     atkPower(u) {
-      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk');
+      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk') * this.vetK(u);
     }
-    defFactor(u) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def'); }
+    defFactor(u) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def') * this.vetK(u); }
+    // 第三版：老练加成（SG.Progress.vetK：每高 1 级攻、防、计策威力 +4%；1 级与成长关闭时为 1，与第一版相同）
+    vetK(u) { const P = SG.Progress; return P && P.vetK && u.gen ? P.vetK(u.gen) : 1; }
+    // 计策 / 智力系必杀的威力：施计者老练 ÷ 目标老练
+    tacK(u, e) { return this.vetK(u) / this.vetK(e); }
 
     attack(a, t) {
       const r = { dmg: 0, counter: 0, targetRouted: false, selfRouted: false };
@@ -430,6 +434,7 @@
         }
         baseD *= M.clamp(target.troops / 2500, 0.4, 1.4);
         baseD /= this.modK(target, 'def');            // 坚守等防御加成（无加成时为 1）
+        baseD *= this.tacK(u, target);                 // 老练（1 级对 1 级为 1）
         dmg = Math.min(target.troops, M.roundToInt(baseD * SG.Random.rangeFloat(0.85, 1.15)));
         target.troops -= dmg;
         target.morale = Math.max(0, target.morale - 10);
@@ -497,7 +502,7 @@
     // 计策伤害（期望值，不含随机浮动）：(base + per × 智力) × 敌兵力系数 ÷ 敌防御加成；林地、城防修正；溅射
     tacDmg(u, e, t, primary) {
       const D = t.dmg;
-      let d = (D.base + D.per * u.gen.intel) * M.clamp(e.troops / 2500, 0.4, 1.4) / this.modK(e, 'def');
+      let d = (D.base + D.per * u.gen.intel) * M.clamp(e.troops / 2500, 0.4, 1.4) / this.modK(e, 'def') * this.tacK(u, e);
       const tt = this.map[e.x][e.y];
       if (D.forest && tt === Terrain.Forest) d *= D.forest;
       if (!D.pierce && (tt === Terrain.Castle || tt === Terrain.Gate)) d *= 0.6;
@@ -569,7 +574,8 @@
         let near = null, bd = 1e9;
         for (const a of friends) { const d = dist(a, e); if (d < bd) { bd = d; near = a; } }
         if (!near) continue;
-        const days = m.days - 1;
+        // 敌方的削弱在其本方行动开始时 −1 日：除之后 days − 1 次己方行动外，本次行动中尚未出手的友军也受益（计半日）
+        const days = m.days - 1 + BattleModel.aiTactic.nowDays;
         if (m.atk && m.atk < 1) v += (1 - m.atk) * this.threat(e, near) * days * 0.8;
         if (m.def && m.def < 1) {
           let inc = 0;
@@ -594,7 +600,10 @@
         }
       }
       if (!best) return null;
-      return best.value >= Math.max(this.aiNormalValue(u) * 1.15, 120) ? best : null;
+      // 与本手最好的普通攻击 / 火计期望比较。不与敌相邻时别无他事可做（移动已在前），门槛更低——
+      // 否则伪报、挑拨这类削弱计的期望价值很少过线，委任与电脑几乎从不施展（第三版修订）
+      const A = BattleModel.aiTactic, adj = this.adjacentEnemies(u).length > 0;
+      return best.value >= Math.max(this.aiNormalValue(u) * (adj ? A.kAdj : A.kFree), adj ? A.floorAdj : A.floorFree) ? best : null;
     }
     useNewTactic(u, t, target) {
       const res = this.newRes();
@@ -761,7 +770,7 @@
       const stat = sp.stat || 'war';
       const v = statOf(u.gen, stat);
       if (stat === 'intel' || stat === 'pol') {
-        let d = (200 + v * 9) * M.clamp(t.troops / 2500, 0.4, 1.4) / this.modK(t, 'def');
+        let d = (200 + v * 9) * M.clamp(t.troops / 2500, 0.4, 1.4) / this.modK(t, 'def') * this.tacK(u, t);
         const tt = this.map[t.x][t.y];
         if (tt === Terrain.Castle || tt === Terrain.Gate) d *= 0.7;
         return d;
@@ -1367,6 +1376,8 @@
   }
   BattleModel.Dirs = Object.freeze([P(1, 0), P(-1, 0), P(0, 1), P(0, -1)]);
   BattleModel.specialsEnabled = true;   // false：不使用必杀技（tests/sim.js 平衡对比）
+  // 电脑施展习得新计策的门槛（aiTactic）：期望价值 ≥ max(普通一手 × k, floor)；adj = 已与敌相邻
+  BattleModel.aiTactic = { kAdj: 0.9, kFree: 0.8, floorAdj: 80, floorFree: 25, nowDays: 0.5 };
   // 第三版：电脑之间自动结算的攻城战也给经验（strategy-ai.js 先于本文件载入；不耗随机数，s.progressDone 防重复）
   if (SG.Progress && SG.Conquest) SG.Progress.hookConquest(SG.Conquest);
 

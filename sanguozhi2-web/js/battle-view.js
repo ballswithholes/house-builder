@@ -72,8 +72,13 @@
     const STYLE = {
       roman: 'roman', persia: 'persia', arab: 'arab', tarim: 'tarim', kushan: 'kushan', korea: 'korea', wa: 'wa',
       seasia: 'stilt', yi: 'stilt', nanman: 'stilt', celt: 'celt', german: 'german', steppe: 'steppe', sarmatian: 'steppe',
+      // 第三版：天竺用贵霜式的砖城与窣堵波本阵；阿克苏姆 / 库施与毛里用阿拉伯式的石 / 土坯城（没有更贴切的现成城墙）
+      india: 'kushan', africa: 'arab', moor: 'arab',
     };
-    const GROUND_OF = { persia: 'arid', arab: 'arid', tarim: 'arid', kushan: 'arid', steppe: 'steppe', sarmatian: 'steppe', seasia: 'tropic', yi: 'tropic', nanman: 'tropic' };
+    const GROUND_OF = { persia: 'arid', arab: 'arid', tarim: 'arid', kushan: 'arid', steppe: 'steppe', sarmatian: 'steppe', seasia: 'tropic', yi: 'tropic', nanman: 'tropic',
+      india: 'tropic', africa: 'arid', moor: 'arid' };
+    // 表中没有的文化按 SG.cultureBase（core.js）回退
+    const baseOf = c => (SG.cultureBase ? SG.cultureBase(c) : 'han');
     let grounds = null;
     function ground(kind) {
       if (!grounds) grounds = {
@@ -103,7 +108,8 @@
     }
     function of(setup) {
       const culture = cultureOf(setup);
-      return { culture, style: STYLE[culture] || 'han', ground: ground(GROUND_OF[culture] || 'temperate'), groundKind: GROUND_OF[culture] || 'temperate' };
+      const gk = GROUND_OF[culture] || GROUND_OF[baseOf(culture)] || 'temperate';
+      return { culture, style: STYLE[culture] || STYLE[baseOf(culture)] || 'han', ground: ground(gk), groundKind: gk };
     }
 
     // ---- 基本形体（与 culture-art.js 同一约定：Unity 坐标，face 按外向 hint 定正反） --
@@ -390,7 +396,7 @@
       }
       return false;
     }
-    return { of, wall, gate, keep, palm, col, stepMerlon, stake, standard, MUD, TIMBER };
+    return { of, wall, gate, keep, palm, col, stepMerlon, stake, standard, gable, MUD, TIMBER };
   })();
 
   // Unity CanvasScaler（参考 1600×900，match 0.6）对应的界面缩放
@@ -620,12 +626,16 @@ void main() {
   const SUB_IN = 5, SUB_OUT = 2, SUB_FAR = 1;   // 每格网格分段：棋盘内（含一格外缘）/ 棋盘外 7 格 / 更远
   const EXT_X = 16, EXT_Y = 14;    // 棋盘外延伸的格数（远景，与 battle-terrain 的取样边距一致）
   const MID_EXT = 7;
-  const FIG_S = 0.6;               // 人物模型（米）→ 战场（世界单位）：骑马的主将约 1.4、步兵约 1.1
+  const FIG_S = 0.7;               // 人物模型（米）→ 战场（世界单位）：骑马的主将约 1.6、步兵约 1.3（第三版修订：0.6 → 0.7，默认镜头下更易辨认）
   const BIOME_TINT = [[0.38, 0.6, 0.3], [0.6, 0.6, 0.37], [0.8, 0.69, 0.47], [0.25, 0.55, 0.24], [0.6, 0.6, 0.34], [0.5, 0.57, 0.33], [0.3, 0.47, 0.32], [0.55, 0.53, 0.4]];
   const BIOME_ARID = [0, 0.35, 1, 0, 0.3, 0.15, 0, 0.1];       // 各群落的干旱度（草丛、林木的多少）
   const FOREST_TINT = [0.21, 0.4, 0.21], DIRT_TINT = [0.55, 0.45, 0.32];
   const TERRAIN_WATER = 8;          // SG.BattleTerrain.Water（深水：湖、海）
   const COLD = [0.85, 0.85, 0.45, 0, 0, 0.6, 1, 1];               // 各群落山顶积雪的程度（BIOMES 顺序）
+  // 平原上的村舍样式（按战场所在城池的文化；表中没有的按 SG.cultureBase 回退）
+  const HUT_OF = { han: 'han', korea: 'han', wa: 'han', roman: 'tile', persia: 'flat', arab: 'flat', africa: 'flat', moor: 'flat', tarim: 'flat', kushan: 'flat', india: 'thatch',
+    seasia: 'stilt', nanman: 'stilt', yi: 'stilt', celt: 'round', german: 'long', steppe: 'yurt', sarmatian: 'yurt' };
+  const FLOWER_COLS = [[1, 0.97, 0.88], [1, 0.84, 0.32], [0.98, 0.6, 0.66], [0.76, 0.64, 0.98], [1, 0.5, 0.36]];
 
   function sm(e0, e1, x) { const t = M.clamp01((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); }
   function crw(t, w) { const t2 = t * t, t3 = t2 * t; w[0] = (-t3 + 2 * t2 - t) / 2; w[1] = (3 * t3 - 5 * t2 + 2) / 2; w[2] = (-3 * t3 + 4 * t2 + t) / 2; w[3] = (t3 - t2) / 2; return w; }
@@ -725,12 +735,13 @@ void main() {
       Hs[o] = y;
     }
     // 地块目标高度与遮罩（格子中心为栅格点）
-    const N = W * H, tgt = new Float32Array(N);
+    const N = W * H, tgt = new Float32Array(N), relA = new Float32Array(N);
     const mk = () => new Float32Array(N);
-    const mask = { forest: mk(), mountain: mk(), hill: mk(), wet: mk(), plain: mk(), fort: mk() };
+    const mask = { forest: mk(), mountain: mk(), hill: mk(), wet: mk(), plain: mk(), fort: mk(), shoal: mk() };
     for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
       const t = m.map[x][y], o = y * W + x;
       const rel = bilinear(G.h, nu, nv, gi(x), gj(y)) - h0;
+      relA[y * W + x] = rel;
       let h;
       if (inFort(x, y)) { h = BASE_Y + 0.06; mask.fort[o] = 1; }
       else if (bridges.has(x + ',' + y)) { h = WATER_Y - 0.4; mask.wet[o] = 1; }
@@ -738,12 +749,41 @@ void main() {
         case Tn.Mountain: h = BASE_Y + 1.3 + M.clamp(rel * 0.15, 0, 0.35); mask.mountain[o] = 1; break;
         case Tn.Hill: h = BASE_Y + 0.32 + M.clamp(rel * 0.1, 0, 0.16); mask.hill[o] = 1; break;
         // 河川；在湖海里的河川格是浅滩（登陆、涉渡）：水浅、看得见沙底
-        case Tn.River: h = (G.water[Math.round(gj(y)) * nu + Math.round(gi(x))] | 0) >= 2 ? WATER_Y - 0.2 : WATER_Y - 0.4; mask.wet[o] = 1; break;
+        case Tn.River: { const sea = (G.water[Math.round(gj(y)) * nu + Math.round(gi(x))] | 0) >= 2; h = sea ? WATER_Y - 0.2 : WATER_Y - 0.4; mask.wet[o] = 1; if (sea) mask.shoal[o] = 1; break; }
         case TERRAIN_WATER: h = WATER_Y - 0.9; mask.wet[o] = 1; break;
         case Tn.Forest: h = BASE_Y + M.clamp(rel * 0.45, -0.07, 0.3); mask.forest[o] = 1; break;
         default: h = BASE_Y + M.clamp(rel * 0.45, -0.07, 0.3); mask.plain[o] = 1;
       }
       tgt[o] = h;
+    }
+    // 第三版修订：水下的地面连续——深水（湖、海）按离岸距离逐格加深（岸边一格浅、三格外最深），再在水格之间做一次 3×3 平滑，
+    // 不再是一格一个台阶的深浅方块；河川格保持原深度
+    {
+      const wetT = (x, y) => x >= 0 && y >= 0 && x < W && y < H && mask.wet[y * W + x] > 0;
+      const dist = new Float32Array(N).fill(99);
+      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+        if (!wetT(x, y)) continue;
+        let best = 99;
+        for (let yy = Math.max(0, y - 4); yy <= Math.min(H - 1, y + 4); yy++) for (let xx = Math.max(0, x - 4); xx <= Math.min(W - 1, x + 4); xx++)
+          if (!wetT(xx, yy)) best = Math.min(best, Math.hypot(xx - x, yy - y));
+        dist[y * W + x] = best;
+      }
+      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+        const o = y * W + x;
+        if (m.map[x][y] === TERRAIN_WATER) tgt[o] = WATER_Y - 0.38 - 0.52 * sm(1, 3.2, dist[o]);
+      }
+      const t2 = tgt.slice();
+      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+        const o = y * W + x;
+        if (!wetT(x, y) || m.map[x][y] !== TERRAIN_WATER) continue;
+        let sw = 0, sv = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (!wetT(x + dx, y + dy)) continue;
+          const w = dx || dy ? 0.6 : 1;
+          sw += w; sv += w * t2[(y + dy) * W + x + dx];
+        }
+        tgt[o] = sv / sw;
+      }
     }
     // 山峰与丘顶的隆起：山岳是陡峭的尖峰（主峰 + 副峰，峰顶高出平原约 2.4–3 个单位，雪线以上积雪），
     // 山丘是每格一座圆润的小丘（丘顶高出平原约 0.9，相邻的丘之间有约 0.3 深的鞍部），一眼看得出一格一格的丘陵
@@ -753,17 +793,33 @@ void main() {
     for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
       const o = y * W + x, L = [];
       if (mask.mountain[o]) {
-        L.push({ u: x + (rnd.nextDouble() - 0.5) * 0.36, v: y + (rnd.nextDouble() - 0.5) * 0.36, r: 0.92, a: 1.15 + rnd.nextDouble() * 0.55, peak: true });
+        // 第三版修订：峰高按世界地图上的相对起伏缩放（中原、两河的低山不再是高耸的雪峰）
+        const ka = G.synth ? 1 : M.lerp(0.55, 1, sm(0.6, 2.2, relA[o]));
+        L.push({ u: x + (rnd.nextDouble() - 0.5) * 0.36, v: y + (rnd.nextDouble() - 0.5) * 0.36, r: 0.92, a: (1.15 + rnd.nextDouble() * 0.55) * ka, peak: true });
         const a = rnd.nextDouble() * Math.PI * 2;
-        L.push({ u: x + Math.cos(a) * 0.48, v: y + Math.sin(a) * 0.48, r: 0.58, a: 0.35 + rnd.nextDouble() * 0.35, peak: true });
-      } else if (mask.hill[o]) L.push({ u: x + (rnd.nextDouble() - 0.5) * 0.12, v: y + (rnd.nextDouble() - 0.5) * 0.12, r: 0.66, a: 0.5 + rnd.nextDouble() * 0.12 });
+        L.push({ u: x + Math.cos(a) * 0.48, v: y + Math.sin(a) * 0.48, r: 0.58, a: (0.35 + rnd.nextDouble() * 0.35) * ka, peak: true });
+      } else if (mask.hill[o]) {
+        // 第三版修订：丘更低、位置与大小更随机，相邻的丘连成起伏的岗地（不再是一格一个的「棉被格」）
+        const rr = rnd.nextDouble();
+        L.push({ u: x + (rnd.nextDouble() - 0.5) * 0.5, v: y + (rnd.nextDouble() - 0.5) * 0.5, r: 0.75 + rr * 0.25, a: 0.26 + rnd.nextDouble() * 0.12 });
+      }
       if (L.length) bumpAt[o] = L;
     }
     function heightAt(u, v) {
       let h = bicubic(Hs, nu, nv, gi(u), gj(v));
       const dx = Math.max(-0.5 - u, u - (W - 0.5), 0), dy = Math.max(-0.5 - v, v - (H - 0.5), 0), d = Math.sqrt(dx * dx + dy * dy);
-      if (d < 2.4) {
-        let b = bicubic(tgt, W, H, u, v);
+      // 棋盘外的过渡：水面（浅滩 / 深水）只延伸约一格（攻方边的浅滩不再一路伸到画面外）
+      const dB = 2.4 - 1.4 * bilinear(mask.wet, W, H, u, v);
+      if (d < dB) {
+        // 第三版修订：水岸与山脚附近对取样坐标做域扭曲（±0.3 格），岸线与山体轮廓不再沿着格线走；
+        // 扭曲量在格子中心为 0（中心的地块类型不变）
+        let su = u, sv = v;
+        if (d <= 0) {
+          const mw = bilinear(mask.wet, W, H, u, v), mm = bilinear(mask.mountain, W, H, u, v), ms = bilinear(mask.shoal, W, H, u, v);
+          const k = Math.max(4 * mw * (1 - mw), 4 * mm * (1 - mm), 4 * ms * (1 - ms));
+          if (k > 0.01) { su = u + 0.32 * k * (fbm2(u * 0.8 + 3.1, v * 0.8 + 0.7) - 0.5) * 2; sv = v + 0.32 * k * (fbm2(u * 0.8 + 0.3, v * 0.8 + 9.2) - 0.5) * 2; }
+        }
+        let b = bicubic(tgt, W, H, su, sv);
         const xi = Math.round(u), yi = Math.round(v);
         for (let yy = yi - 1; yy <= yi + 1; yy++) {
           if (yy < 0 || yy >= H) continue;
@@ -777,7 +833,12 @@ void main() {
             }
           }
         }
-        h = d <= 0 ? b : M.lerp(h, b, 1 - sm(0, 2.4, d));
+        h = d <= 0 ? b : M.lerp(h, b, 1 - sm(0, dB, d));
+      }
+      // 丘陵：低频起伏把相邻的丘连成岗地
+      if (d < 1) {
+        const hk = bilinear(mask.hill, W, H, u, v);
+        if (hk > 0.02) h += hk * (fbm2(u * 0.35 + 21.7, v * 0.35 + 4.1) - 0.45) * 0.5;
       }
       const amp = 0.05 + 0.24 * sm(BASE_Y + 0.45, BASE_Y + 1.8, h);
       h += (fbm2(u * 0.85 + 13.1, v * 0.85 + 7.7) - 0.5) * amp;
@@ -843,7 +904,7 @@ void main() {
 		if ( sgHl > 0.01 ) {
 			float lum = dot( c, vec3( 0.3, 0.59, 0.11 ) );
 			vec3 dry = vec3( 0.74, 0.69, 0.43 ) * ( 0.55 + 0.8 * lum ) * ( 0.86 + 0.28 * sgDF.r ) * ( 0.9 + 0.16 * smoothstep( 0.95, 1.45, sgH ) );
-			c = mix( c, dry, sgHl * 0.5 );
+			c = mix( c, dry, sgHl * ( 0.3 + 0.3 * sgDM.g ) );
 		}
 		if ( sgMt > 0.01 ) {
 			vec3 bw = sgN * sgN; bw *= bw; bw /= ( bw.x + bw.y + bw.z );
@@ -958,6 +1019,8 @@ void main() {
 
   // ---- 实例化的树、石、草（模板几何体按种类缓存，各场战斗共用） --
   const PROP_TPL = {};
+  // 小件点缀：不随「挡住部队时淡去」处理（本来就矮小）
+  const SMALL_PROP = { rock: 1, tuft: 1, bush: 1, scrub: 1, hay: 1, fence: 1, flowers: 1, cairn: 1 };
   function propTemplate(kind) {
     if (PROP_TPL[kind]) return PROP_TPL[kind];
     const mb = new SG.MeshBuilder();
@@ -1005,6 +1068,99 @@ void main() {
       case 'rock':       // 圆润的石块（单位半径）
         mb.sphere(V(0, 0.35, 0), V(1, 0.72, 0.9), C(0.47, 0.46, 0.43), 1, { seed: 17, rough: 0.16, flat: -0.45, bottomShade: 0.3, top: 0.12 });
         break;
+      // ---- 第三版修订：平原格的点缀（不挡格子中心）与偶见的村舍、水井、大车 --
+      case 'bush':       // 灌木：两团平滑的叶簇
+        mb.sphere(V(0, 0.13, 0), V(0.24, 0.17, 0.21), C(0.36, 0.54, 0.27), 1, { seed: 21, rough: 0.12, bottomShade: 0.35, flat: -0.5, smoothN: 0.6 });
+        mb.sphere(V(0.15, 0.1, 0.06), V(0.15, 0.12, 0.14), C(0.4, 0.58, 0.3), 1, { seed: 22, rough: 0.1, bottomShade: 0.3, flat: -0.5, smoothN: 0.6 });
+        break;
+      case 'scrub':      // 荒漠 / 草原的矮灌丛
+        mb.sphere(V(0, 0.07, 0), V(0.2, 0.1, 0.18), C(0.5, 0.52, 0.32), 1, { seed: 23, rough: 0.22, bottomShade: 0.3, flat: -0.4, smoothN: 0.4 });
+        break;
+      case 'hay':        // 草垛
+        mb.lathe(V(0, 0, 0), [[0.15, 0], [0.16, 0.1], [0.14, 0.26], [0.07, 0.38], [0.012, 0.42], [0, 0.43]], 12, C(0.7, 0.62, 0.42));
+        mb.lathe(V(0, 0.17, 0), [[0.15, 0], [0.145, 0.03]], 12, C(0.52, 0.44, 0.3));
+        break;
+      case 'fence': {    // 一段木栅栏：三根桩、两道横杆
+        const wd = C(0.47, 0.35, 0.22);
+        for (const x of [-0.4, 0, 0.4]) mb.tube([V(x, 0, 0), V(x, 0.26, 0)], [0.022, 0.02], 5, wd, true);
+        for (const y of [0.1, 0.2]) mb.tube([V(-0.42, y, 0), V(0.42, y, 0)], [0.013, 0.013], 4, shade(wd, 0.06), false);
+        break;
+      }
+      case 'flowers': {  // 一片野花（白色花瓣，实例色着色）
+        const up = V(0, 1, 0);
+        for (let k = 0; k < 9; k++) {
+          const a = k * 2.4, r = 0.05 + (k % 4) * 0.045, x = Math.cos(a) * r, z = Math.sin(a) * r, y = 0.04 + (k % 3) * 0.025, pr = 0.028;
+          for (let q = 0; q < 5; q++) {
+            const a0 = q * Math.PI * 2 / 5, a1 = a0 + Math.PI * 2 / 5;
+            mb.triN(V(x, y + 0.004, z), V(x + Math.cos(a0) * pr, y, z + Math.sin(a0) * pr), V(x + Math.cos(a1) * pr, y, z + Math.sin(a1) * pr), up, up, up, C(1, 1, 1));
+          }
+          mb.tube([V(x, 0, z), V(x, y, z)], [0.004, 0.004], 3, C(0.45, 0.62, 0.32), false);
+        }
+        break;
+      }
+      case 'cairn':      // 草原上的石堆（敖包）
+        mb.sphere(V(0, 0.08, 0), V(0.2, 0.1, 0.18), C(0.56, 0.54, 0.5), 1, { seed: 31, rough: 0.12, flat: -0.4, smoothN: 0.4 });
+        mb.sphere(V(0.02, 0.2, 0), V(0.13, 0.08, 0.12), C(0.6, 0.58, 0.54), 1, { seed: 32, rough: 0.12, smoothN: 0.4 });
+        mb.sphere(V(0, 0.29, 0.01), V(0.07, 0.06, 0.07), C(0.62, 0.6, 0.56), 1, { seed: 33, rough: 0.1, smoothN: 0.4 });
+        mb.tube([V(0, 0.3, 0), V(0, 0.55, 0)], [0.01, 0.008], 4, C(0.45, 0.35, 0.22), false);
+        break;
+      case 'well': {     // 水井：石砌井圈、两根井柱与小顶
+        const st = C(0.62, 0.6, 0.55), wd = C(0.42, 0.3, 0.2);
+        mb.lathe(V(0, 0, 0), [[0.17, 0], [0.17, 0.15, null, true], [0.12, 0.15, null, true], [0.12, 0.03]], 12, st);
+        for (const x of [-0.15, 0.15]) mb.tube([V(x, 0.1, 0), V(x, 0.45, 0)], [0.016, 0.015], 5, wd, false);
+        mb.tube([V(-0.18, 0.43, 0), V(0.18, 0.43, 0)], [0.014, 0.014], 5, wd, false);
+        BattleLook.gable(mb, 0, 0.45, 0, 0.44, 0.3, 0.12, C(0.38, 0.34, 0.32), false);
+        break;
+      }
+      case 'cart': {     // 大车：车厢、两只轮子、辕杆
+        const wd = C(0.5, 0.37, 0.23);
+        mb.box(V(0, 0.2, 0), V(0.46, 0.06, 0.26), wd);
+        for (const sz of [-1, 1]) mb.box(V(0, 0.27, sz * 0.13), V(0.46, 0.09, 0.025), shade(wd, -0.08));
+        const M0 = mb.M;
+        for (const sz of [-1, 1]) {
+          mb.M = new THREE.Matrix4().makeTranslation(0, 0.15, sz * 0.16).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+          mb.lathe(V(0, -0.015, 0), [[0.15, 0, null, true], [0.15, 0.03, null, true], [0.04, 0.03], [0.04, 0.05]], 12, shade(wd, -0.15));
+        }
+        mb.M = M0;
+        mb.tube([V(0.22, 0.2, 0.06), V(0.6, 0.06, 0.06)], [0.012, 0.012], 4, wd, false);
+        mb.tube([V(0.22, 0.2, -0.06), V(0.6, 0.06, -0.06)], [0.012, 0.012], 4, wd, false);
+        mb.box(V(-0.05, 0.3, 0), V(0.3, 0.08, 0.2), C(0.78, 0.68, 0.4));
+        break;
+      }
+      case 'hut_han': case 'hut_tile': case 'hut_flat': case 'hut_yurt': case 'hut_thatch': case 'hut_long': case 'hut_round': case 'hut_stilt': {
+        // 村舍（按战场所在城池的文化）：约 0.9 × 0.6 单位，高约 0.8
+        const st = kind.slice(4);
+        if (st === 'yurt') {
+          mb.lathe(V(0, 0, 0), [[0.34, 0], [0.34, 0.24], [0.31, 0.29], [0.14, 0.44], [0.04, 0.48], [0, 0.49]], 14, C(0.88, 0.84, 0.74));
+          mb.lathe(V(0, 0.18, 0), [[0.345, 0], [0.345, 0.035]], 14, C(0.62, 0.28, 0.18));
+          mb.box(V(0, 0.12, -0.33), V(0.14, 0.24, 0.04), C(0.72, 0.32, 0.14));
+        } else if (st === 'round') {
+          mb.lathe(V(0, 0, 0), [[0.34, 0], [0.34, 0.3]], 14, C(0.64, 0.54, 0.4));
+          mb.lathe(V(0, 0.25, 0), [[0.44, 0], [0.22, 0.24], [0.03, 0.5], [0, 0.52]], 14, C(0.68, 0.57, 0.36));
+          mb.box(V(0, 0.13, -0.34), V(0.13, 0.26, 0.03), C(0.3, 0.2, 0.13));
+        } else if (st === 'flat') {
+          const c = C(0.8, 0.66, 0.48);
+          mb.box(V(0, 0.24, 0), V(0.8, 0.48, 0.55), c);
+          mb.box(V(-0.18, 0.62, 0.05), V(0.36, 0.28, 0.36), shade(c, 0.03));
+          for (const [x, z, w, d] of [[0, -0.265, 0.8, 0.04], [0, 0.265, 0.8, 0.04], [-0.39, 0, 0.04, 0.55], [0.39, 0, 0.04, 0.55]]) mb.box(V(x, 0.52, z), V(w, 0.07, d), shade(c, 0.05));
+          mb.box(V(0.2, 0.14, -0.28), V(0.13, 0.28, 0.02), C(0.3, 0.2, 0.13));
+        } else if (st === 'long') {
+          mb.box(V(0, 0.13, 0), V(1.0, 0.26, 0.5), C(0.46, 0.34, 0.22));
+          BattleLook.gable(mb, 0, 0.24, 0, 1.1, 0.78, 0.5, C(0.68, 0.57, 0.36), false);
+        } else if (st === 'stilt') {
+          for (const sx of [-1, 1]) for (const sz of [-1, 1]) mb.tube([V(sx * 0.3, 0, sz * 0.2), V(sx * 0.3, 0.24, sz * 0.2)], [0.02, 0.02], 4, C(0.4, 0.3, 0.2), false);
+          mb.box(V(0, 0.4, 0), V(0.7, 0.3, 0.46), C(0.66, 0.56, 0.38));
+          BattleLook.gable(mb, 0, 0.54, 0, 0.9, 0.74, 0.4, C(0.68, 0.57, 0.36), false);
+        } else {
+          const tile = st === 'tile', th = st === 'thatch';
+          const wallC = tile ? C(0.88, 0.84, 0.76) : th ? C(0.74, 0.58, 0.42) : C(0.86, 0.8, 0.68);
+          mb.box(V(0, 0.22, 0), V(0.78, 0.44, 0.5), wallC);
+          mb.box(V(0.18, 0.14, -0.255), V(0.13, 0.28, 0.02), C(0.3, 0.2, 0.13));
+          if (st === 'han') mb.chineseRoof(V(0, 0.42, 0), 0.98, 0.68, 0.3, C(0.3, 0.32, 0.36));
+          else BattleLook.gable(mb, 0, 0.42, 0, 0.92, 0.66, th ? 0.36 : 0.24, th ? C(0.68, 0.57, 0.36) : C(0.72, 0.36, 0.24), false);
+        }
+        break;
+      }
       case 'tuft': {     // 草丛：一簇向外弯的宽草叶（双面，每片两节）
         const g = C(0.5, 0.68, 0.34);
         for (let k = 0; k < 5; k++) {
@@ -1019,7 +1175,7 @@ void main() {
     }
     const geo = mb.toGeometry();
     // 草叶、椰叶：法线朝上（像草片一样整体受光，不显出一片片的折面）
-    if (kind === 'tuft') { const n = geo.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); }
+    if (kind === 'tuft' || kind === 'flowers') { const n = geo.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); }
     geo.userData.sharedGeometry = true;
     PROP_TPL[kind] = geo;
     return geo;
@@ -1228,7 +1384,8 @@ void main() {
   // 一支部队：骑马的主将（js/figure.js 中精度模型）+ 若干实例化士兵（BattleView.crowd，低精度、势力色）+ 头顶信息。
   // 动作：待机、行军（沿路径行走 / 小跑）、攻击（突进 + 挥击）、受击、必杀（蓄势）、溃散（倒地）。
   // 没有载入 figure.js 时退回旧版低多边形模型（SG.Models.commander / soldier）。
-  const FIG_CULTS = { han: 1, nanman: 1, wa: 1, yi: 1, korea: 1, steppe: 1, seasia: 1, tarim: 1, kushan: 1, persia: 1, arab: 1, roman: 1, celt: 1, german: 1, sarmatian: 1 };
+  const FIG_CULTS = { han: 1, nanman: 1, wa: 1, yi: 1, korea: 1, steppe: 1, seasia: 1, tarim: 1, kushan: 1, persia: 1, arab: 1, roman: 1, celt: 1, german: 1, sarmatian: 1, india: 1, africa: 1, moor: 1 };
+  const figCult = c => (FIG_CULTS[c] ? c : SG.cultureBase && FIG_CULTS[SG.cultureBase(c)] ? SG.cultureBase(c) : 'han');
   const MOUNTED_CULTS = { steppe: 1, sarmatian: 1 };
   const _bv = new THREE.Vector3(), _bm = new THREE.Matrix4(), _bi = new THREE.Matrix4();
   class UnitVisual {
@@ -1332,7 +1489,7 @@ void main() {
       if (!cr) return;
       const want = this._soldierSlots(n);
       while (this.sold.length > want.length) { const s = this.sold.pop(); cr.remove(s.id); }
-      const hex = cssHex(this.col), cul = FIG_CULTS[this.culture] ? this.culture : 'han';
+      const hex = cssHex(this.col), cul = figCult(this.culture);
       for (let i = this.sold.length; i < want.length; i++) {
         const w = want[i];
         const id = cr.add({ type: w.type, culture: cul, color: hex, seed: ((this.u.gen.id | 0) + i) % 2, mounted: w.mounted });
@@ -1767,8 +1924,25 @@ void main() {
         for (const v of this.visuals.values()) v.figuresReady();
         this.stats.phases.preload = Math.round(t1 - t0);
         this.stats.phases.figures = Math.round(performance.now() - t1);
-        return this;
+        return this._warmShaders();
       });
+    }
+    // 第三版修订：人物建好后先编译着色器（compileAsync，最多等 1.5 秒）并渲染两帧再兑现 ready——
+    // 慢的 GPU 上第一回合开始时人物已经画出来（不再只有光环与名牌）
+    async _warmShaders() {
+      const t0 = performance.now();
+      try {
+        const r = SG.Gfx.renderer, sc = SG.Gfx.scene, cam = SG.Gfx.camera;
+        if (r && sc && cam) {
+          // 没有 KHR_parallel_shader_compile 时 compileAsync 只会告警并退化为同步编译：直接同步编译
+          const par = r.extensions && r.extensions.has && r.extensions.has('KHR_parallel_shader_compile');
+          if (r.compileAsync && par) await Promise.race([r.compileAsync(sc, cam), SG.wait(1.5)]);
+          else r.compile(sc, cam);
+        }
+      } catch (e) { /* 首帧再编译 */ }
+      if (SG.frame) { await SG.frame(); await SG.frame(); }
+      this.stats.phases.warm = Math.round(performance.now() - t0);
+      return this;
     }
 
     // 平滑地形网格（非均匀栅格：棋盘内细、棋盘外粗），顶点色 = 群落底色，aMat = (沙, 岩石倾向, 雪, 1 − 农田)
@@ -1810,7 +1984,10 @@ void main() {
         // 农田：棋盘外照世界地图；棋盘内只在城外两三格内淡淡地出现（田块的田埂会和格线混淆）
         const dCa = Math.hypot(u - Tm.castle.x, v - Tm.castle.y);
         const dOut = Math.max(-0.5 - u, u - (W - 0.5), -0.5 - v, v - (H - 0.5), 0);
-        const farm = bilinear(G.farm, nu, nv, fi, fj) * M.clamp01(pl) * (1 - fo) * M.lerp(0.75 * sm(6.5, 3.2, dCa), 1, sm(0, 1.5, dOut));
+        // 第三版修订：棋盘内保留约 35% 的淡淡田色（不再是一块与周围农田硬接的绿毯），棋盘边的过渡加宽到 3 格；
+        // 草原、沙漠群落不画农田（不再出现台阶状的田块）
+        const biF = G.biome[M.clamp(Math.round(fj), 0, nv - 1) * nu + M.clamp(Math.round(fi), 0, nu - 1)] | 0;
+        const farm = bilinear(G.farm, nu, nv, fi, fj) * M.clamp01(pl) * (1 - fo) * M.lerp(Math.max(0.35, 0.75 * sm(6.5, 3.2, dCa)), 1, sm(0, 3, dOut)) * (biF === 1 || biF === 2 ? 0.1 : 1);
         const road = Tm.Tr ? 1 - sm(0.05, 0.12, bilinear(G.road, nu, nv, fi, fj)) : 0;
         const fortK = inB ? Tm.maskAt(Tm.mask.fort, u, v) : 0;
         let r = tint[0], g = tint[1], b = tint[2];
@@ -1827,12 +2004,15 @@ void main() {
         if (ed < 3.01) { if (ed > 2.5) { edgeTint[0] += r; edgeTint[1] += g; edgeTint[2] += b; edgeN++; } }
         const sand = bilinear(G.sand, nu, nv, fi, fj);
         const bi = G.biome[Math.round(fj) * nu + Math.round(fi)] | 0;
-        const cold = bi === 6 || bi === 7 ? 1 : bi === 0 || bi === 1 ? 0.6 : 0;
-        const snow = Math.max(bilinear(G.snow, nu, nv, fi, fj), sm(BASE_Y + 3.0, BASE_Y + 3.7, h) * cold);
+        // 第三版修订：积雪按世界地图的绝对海拔（世界雪线约 6–7.8）：低地战场（中原、两河）的山上不再有雪
+        const gSnow = bilinear(G.snow, nu, nv, fi, fj);
+        const coldW = G.synth ? 1 : Math.max(gSnow > 0.05 ? 1 : 0, sm(3.4, 5.8, bilinear(G.h, nu, nv, fi, fj)));
+        const cold = (bi === 6 || bi === 7 ? 1 : bi === 0 || bi === 1 ? 0.6 : 0) * coldW;
+        const snow = Math.max(gSnow, sm(BASE_Y + 3.0, BASE_Y + 3.7, h) * cold);
         Am[o * 4] = sand; Am[o * 4 + 1] = mt * 0.5 + sm(BASE_Y + 1.4, BASE_Y + 2.6, h) * 0.3; Am[o * 4 + 2] = snow * (1 - mt); Am[o * 4 + 3] = 1 - M.clamp01(farm * (1 - rk) * (1 - fortK));
         // 积雪：山岳上高出本格山基约 1.4–1.85 以上的峰顶（寒冷度按群落）
         const peakH = inB && mt > 0.01 ? h - bilinear(Tm.tgt, W, H, u, v) : 0;
-        Bt[o * 4] = hl * (1 - rk * 0.6); Bt[o * 4 + 1] = mt; Bt[o * 4 + 2] = (COLD[bi] || 0) * sm(1.4, 1.85, peakH) * mt;
+        Bt[o * 4] = hl * (1 - rk * 0.6); Bt[o * 4 + 1] = mt; Bt[o * 4 + 2] = (COLD[bi] || 0) * coldW * sm(1.4, 1.85, peakH) * mt;
       }
       const idx = new (N > 65535 ? Uint32Array : Uint16Array)((nx - 1) * (ny - 1) * 6);
       const split = new Uint8Array((nx - 1) * (ny - 1));   // 1：沿 a–d 对角线切分
@@ -1969,17 +2149,58 @@ void main() {
           // 孤树只种在格子靠北（远离镜头）的一半，部队起始格及其南邻不种（免得挡住主将）
           if (R() < 0.3 && bi !== 2 && !occupied(x, y) && !occupied(x, y + 1)) { const a = (0.2 + R() * 0.6) * Math.PI; put(pickW(treeKinds(bi, true), R()), x + Math.cos(a) * 0.72, y + Math.sin(a) * 0.72, 0.75 + R() * 0.3, leaf(bi), true); }
         }
-        // 草丛（平原、山丘、森林；沙漠稀少）
+        // 草丛（平原、山丘、森林；沙漠稀少）。第三版修订：平原格更密（7 簇、略小）
         if (t === Tn.Plain || t === Tn.Hill || t === Tn.Forest) {
           if (Tm.bridges.has(x + ',' + y)) continue;
-          const arid = BIOME_ARID[bi] || 0, n = Math.round((t === Tn.Plain ? 3 : 2) * (1 - arid * 0.75));
+          const arid = BIOME_ARID[bi] || 0, n = Math.round((t === Tn.Plain ? 7 : 3) * (1 - arid * 0.7));
           for (let k = 0; k < n; k++) {
             let du = (R() - 0.5) * 1.8, dv = (R() - 0.5) * 1.8;
             if (Math.abs(du) < 0.42 && Math.abs(dv) < 0.42) du = du < 0 ? -0.5 - R() * 0.3 : 0.5 + R() * 0.3;
             const g = arid > 0.5 ? [1.18, 1.05, 0.72] : arid > 0.2 ? [1.08, 1.02, 0.78] : [0.9 + R() * 0.15, 1, 0.85];
-            const sc = 0.9 + R() * 0.6;
+            const sc = t === Tn.Plain ? 0.6 + R() * 0.45 : 0.9 + R() * 0.6;
             if (this._gridH(x + du, y + dv) < WATER_Y + 0.12) continue;   // 不长在河里、塘里
             put('tuft', x + du, y + dv, sc, g, true, 0);
+          }
+        }
+        // 第三版修订：平原格的点缀（离格子中心 0.5 格以外，不挡部队）——温带 / 地中海 / 热带：灌木、栅栏、野花、草垛；
+        // 草原：石堆、矮灌、碎石；沙漠：矮灌、碎石、水边的椰枣。约 5% 的空格另有一处村舍（按城池文化）、水井或大车
+        if (t === Tn.Plain && !Tm.bridges.has(x + ',' + y)) {
+          const arid = BIOME_ARID[bi] || 0, o = M.clamp(Math.round(Tm.gj(y)), 0, nv - 1) * nu + M.clamp(Math.round(Tm.gi(x)), 0, nu - 1);
+          const onRoad = Tm.Tr && G.road[o] < 0.14;
+          const spot = (r0, r1) => { const a = R() * Math.PI * 2, r = r0 + R() * (r1 - r0); return [x + Math.cos(a) * r, y + Math.sin(a) * r]; };
+          const dryAt = (u, v) => this._gridH(u, v) > WATER_Y + 0.16;
+          const nItems = onRoad ? 1 : 1 + (R() < 0.55 ? 1 : 0) + (R() < 0.25 ? 1 : 0);
+          for (let k = 0; k < nItems; k++) {
+            const [u, v] = spot(0.52, 0.86);
+            if (!dryAt(u, v)) continue;
+            const r = R();
+            if (bi === 1 || bi === 4) {              // 草原 / 稀树草原
+              if (r < 0.06) put('cairn', u, v, 1, [1, 1, 1], true, 0.02);
+              else if (r < 0.5) put('scrub', u, v, 0.8 + R() * 0.5, [1.05, 1.0, 0.8], true, 0.02);
+              else if (r < 0.75) { const g = 0.92 + R() * 0.16; put('rock', u, v, 0.07 + R() * 0.07, [g, g, g * 0.97], true, 0.25); }
+              else put('tuft', u, v, 1.1 + R() * 0.4, [1.1, 1.03, 0.76], true, 0);
+            } else if (bi === 2) {                   // 沙漠
+              const wetNear = (G.river[o] < 2.2) || (G.water[o] | 0) > 0;
+              if (wetNear && r < 0.18) put('palm', u, v, 0.55 + R() * 0.25, leaf(bi), true);
+              else if (r < 0.6) put('scrub', u, v, 0.7 + R() * 0.5, [1.15, 1.05, 0.78], true, 0.02);
+              else { const g = 0.95 + R() * 0.12; put('rock', u, v, 0.06 + R() * 0.07, [g * 1.05, g, g * 0.9], true, 0.25); }
+            } else {                                 // 温带、地中海、热带、北方
+              if (r < 0.34) put('bush', u, v, 0.75 + R() * 0.5, leaf(bi), true, 0.02);
+              else if (r < 0.52 && !onRoad) put('fence', u, v, 0.9 + R() * 0.3, [1, 1, 1], true, 0);
+              else if (r < 0.78) { const F = FLOWER_COLS[(R() * FLOWER_COLS.length) | 0]; put('flowers', u, v, 0.9 + R() * 0.5, F, true, 0); }
+              else if (r < 0.88 && (G.farm[o] > 0.15 || bi === 0)) put('hay', u, v, 0.65 + R() * 0.3, [1, 1, 1], true, 0.02);
+              else { const g = 0.9 + R() * 0.15; put('rock', u, v, 0.06 + R() * 0.07, [g, g, g * 0.97], true, 0.25); }
+            }
+          }
+          // 偶见的较大点缀：放在格角（离中心约 0.65 格），起始时附近一格内无部队
+          if (!onRoad && R() < 0.06 && !m.units.some(q => q.alive && Math.abs(q.x - x) <= 1 && Math.abs(q.y - y) <= 1)) {
+            const a = (Math.floor(R() * 4) + 0.5) * Math.PI / 2, u = x + Math.cos(a) * 0.66, v = y + Math.sin(a) * 0.66;
+            if (dryAt(u, v)) {
+              const rr = R(), hutK = 'hut_' + (HUT_OF[this.look.culture] || HUT_OF[SG.cultureBase ? SG.cultureBase(this.look.culture) : 'han'] || 'han');
+              if (rr < 0.55) put(hutK, u, v, 0.9 + R() * 0.2, [1, 1, 1], true, 0.02);
+              else if (rr < 0.78) put('well', u, v, 1, [1, 1, 1], true, 0.02);
+              else put('cart', u, v, 1, [1, 1, 1], true, 0.01);
+            }
           }
         }
       }
@@ -2010,7 +2231,7 @@ void main() {
           const L = lists[kind].filter(e => e.near === near);
           if (!L.length) continue;
           const tpl = propTemplate(kind);
-          const fade = near && kind !== 'rock' && kind !== 'tuft';
+          const fade = near && !SMALL_PROP[kind];
           let geo = tpl;
           if (fade) {
             geo = new THREE.BufferGeometry();
@@ -2038,13 +2259,13 @@ void main() {
           }
           im.instanceMatrix.needsUpdate = true;
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
-          im.castShadow = kind !== 'tuft' && near;
-          im.receiveShadow = kind !== 'tuft';
+          im.castShadow = kind !== 'tuft' && kind !== 'flowers' && near;
+          im.receiveShadow = kind !== 'tuft' && kind !== 'flowers';
           im.computeBoundingSphere && im.computeBoundingSphere();
           this.group.add(im);
           this._props.push(im);
           tris += (geo.attributes.position.count / 3) * L.length;
-          if (kind === 'rock') this.stats.rocks += L.length; else if (kind === 'tuft') this.stats.tufts += L.length; else this.stats.trees += L.length;
+          if (kind === 'rock') this.stats.rocks += L.length; else if (kind === 'tuft') this.stats.tufts += L.length; else if (SMALL_PROP[kind] || /^hut_|well|cart/.test(kind)) this.stats.dress = (this.stats.dress || 0) + L.length; else this.stats.trees += L.length;
         }
       }
       this.stats.propTris = tris;
@@ -2342,26 +2563,33 @@ void main() {
         let best = null;
         if (!hits(placed, l0, t0, r0, b0)) best = { dx: 0, dy: 0 };
         else {
-          const maxUp = h * 1.6 + 4, maxDown = h * 0.45, maxSide = w * 0.42;
-          // 只看附近的标签：候选偏移取“贴着它们的边”的位置
-          const near = placed.filter(p => p.l < r0 + maxSide + m && p.r > l0 - maxSide - m && p.t < b0 + maxDown + m && p.b > t0 - maxUp - m);
-          const dys = [0], dxs = [0];
-          for (const p of near) {
-            const up = b0 - p.t + m, down = p.b + m - t0, left = p.l - m - r0, right = p.r + m - l0;
-            if (up > 0 && up <= maxUp) dys.push(up);
-            if (down > 0 && down <= maxDown) dys.push(-down);
-            if (left < 0 && -left <= maxSide) dxs.push(left);
-            if (right > 0 && right <= maxSide) dxs.push(right);
-          }
-          let bestCost = Infinity;
-          for (const dy of dys)
-            for (const dx of dxs) {
-              if (hits(near, l0 + dx, t0 - dy, r0 + dx, b0 - dy)) continue;
-              // 上移最自然，下移会挡住自己的部队，平移次之；与上一帧的目标接近者优先（防抖）
-              const cost = (dy >= 0 ? dy : -dy * 1.8) + Math.abs(dx) * 1.25
-                + (Math.abs(dx - L.tdx) + Math.abs(dy - L.tdy)) * 0.3;
-              if (cost < bestCost) { bestCost = cost; best = { dx, dy }; }
+          // 第三版修订：先在近处找位置；找不到（布阵边上挤着 4–5 支部队）再放宽到上移 2.6 个标签高、左右各 0.9 个标签宽
+          for (const [kUp, kSide] of [[1.6, 0.42], [2.6, 0.9]]) {
+            const maxUp = h * kUp + 4, maxDown = h * 0.45, maxSide = w * kSide;
+            // 只看附近的标签：候选偏移取“贴着它们的边”的位置
+            const near = placed.filter(p => p.l < r0 + maxSide + m && p.r > l0 - maxSide - m && p.t < b0 + maxDown + m && p.b > t0 - maxUp - m);
+            const dys = [0], dxs = [0];
+            for (const p of near) {
+              const up = b0 - p.t + m, down = p.b + m - t0, left = p.l - m - r0, right = p.r + m - l0;
+              if (up > 0 && up <= maxUp) dys.push(up);
+              if (down > 0 && down <= maxDown) dys.push(-down);
+              if (left < 0 && -left <= maxSide) dxs.push(left);
+              if (right > 0 && right <= maxSide) dxs.push(right);
             }
+            // 组合偏移：贴着两个标签的边（向上再横移）
+            const n0 = dys.length;
+            for (let a = 1; a < n0; a++) for (let b = 1; b < n0; b++) { const sum = dys[a] + dys[b]; if (dys[a] > 0 && dys[b] > 0 && sum <= maxUp) dys.push(sum); }
+            let bestCost = Infinity;
+            for (const dy of dys)
+              for (const dx of dxs) {
+                if (hits(near, l0 + dx, t0 - dy, r0 + dx, b0 - dy)) continue;
+                // 上移最自然，下移会挡住自己的部队，平移次之；与上一帧的目标接近者优先（防抖）
+                const cost = (dy >= 0 ? dy : -dy * 1.8) + Math.abs(dx) * 1.25
+                  + (Math.abs(dx - L.tdx) + Math.abs(dy - L.tdy)) * 0.3;
+                if (cost < bestCost) { bestCost = cost; best = { dx, dy }; }
+              }
+            if (best) break;
+          }
         }
         if (best) {
           it.rect = { l: l0 + best.dx, r: r0 + best.dx, t: t0 - best.dy, b: b0 - best.dy };

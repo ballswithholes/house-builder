@@ -671,6 +671,8 @@
   //     snapshot(s) → 战前兵力；autoBattle(s, snap) → [{ gen, exp, from, to, learned, side, won }]
   //       （按战损与战前战力分摊；结果同时写入 s.progress；s.progressDone 防重复）
   //     hookConquest(Conquest)：包装 autoResolve 一次（battle-model.js 载入时调用），不耗随机数
+  //   老练（第三版修订）：战术战斗中每高 1 级，攻击、防御与计策威力各 +VET_PER_LEVEL（4%；1 级为 ×1，10 级 ×1.36）
+  //     vetK(gen) → 乘数（enabled = false 时恒为 1）；只用于 battle-model.js 的战术战斗，不影响自动结算（autoResolve）
   //   Progress.enabled = false：不再获得经验，战斗只用专属必杀与原四计（tests/sim.js 对比平衡用）
   const INNATE_TACTICS = Object.freeze(['fire', 'rockfall', 'confuse', 'inspire']);   // 与 Defs.tactics 同序
   const INNATE_SET = new Set(INNATE_TACTICS);
@@ -699,6 +701,13 @@
     TACTIC_SLOT_LEVEL: Object.freeze([3, 5, 7, 9, 10]),
     TACTIC_TIER_LEVEL: Object.freeze([3, 5, 7, 9]),
     INNATE_TACTICS,
+    VET_PER_LEVEL: 0.04,
+
+    vetK(gen) {
+      if (!Progress.enabled || !gen) return 1;
+      const L = gen.level | 0;
+      return L > 1 ? 1 + Progress.VET_PER_LEVEL * (Math.min(L, Progress.MAX_LEVEL) - 1) : 1;
+    },
 
     levelFor(exp) {
       let L = 1;

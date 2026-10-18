@@ -121,6 +121,13 @@
       }
     },
     isCaptive(gen) { return Conquest.pendingCaptives.has(gen.id); },
+    // 俘虏被俘时的身份 → { faction, wasRuler }（无记录时按现状）
+    captiveInfo(s, c) {
+      const g = G();
+      const i = s && s.captiveInfo && s.captiveInfo[c.id];
+      if (i) return i;
+      return { faction: c.faction, wasRuler: c.faction >= 0 && g.factions[c.faction].ruler === c.id };
+    },
 
     succession(f) {
       const g = G();
@@ -144,8 +151,9 @@
       const recruiter = g.ruler(winner);
       const out = [];
       for (const c of s.captives) {
-        const oldF = c.faction;
-        const wasRuler = oldF >= 0 && g.factions[oldF].ruler === c.id;
+        const info = Conquest.captiveInfo(s, c);
+        const oldF = c.faction >= 0 ? c.faction : info.faction;
+        const wasRuler = info.wasRuler;
         if (wasRuler) {
           if (SG.Random.value() < 0.5) { Conquest.execute(c); out.push({ gen: c, from: oldF, fate: 'executed' }); }
           else { Conquest.release(c); out.push({ gen: c, from: oldF, fate: 'released' }); }
@@ -209,7 +217,12 @@
 
   function power(gen) { return gen.troops * (0.55 + gen.war / 220) * (0.7 + gen.training / 330); }
 
+  // 被俘时记下原势力与是否君主（s.captiveInfo[id] = { faction, wasRuler }）：攻下守方最后一城时 apply 随即
+  // checkFactionDeath，俘虏的 faction 已成 −1，处置俘虏时仍须知道「君主不会投降」与原属势力
   function capture(s, gen) {
+    const g = G();
+    if (!s.captiveInfo) s.captiveInfo = {};
+    if (!s.captiveInfo[gen.id]) s.captiveInfo[gen.id] = { faction: gen.faction, wasRuler: gen.faction >= 0 && g.factions[gen.faction].ruler === gen.id };
     gen.troops = 0;
     s.captives.push(gen);
     gen.city = s.target.id;
@@ -301,7 +314,7 @@
       if (t.owner === A || (t.owner >= 0 && g.allied(t.owner, A))) { refund(); return false; }
       s.defender = t.owner;
       s.def = pickDefenders(t);
-      s.routed = new Set(); s.captives = [];
+      s.routed = new Set(); s.captives = []; s.captiveInfo = {};
       if (t.owner === g.player) return true;
       // 城已落入他人之手：兵力仍占优（或城已空）才继续进攻，否则撤兵
       const sum = Seq.sum(s.atk, a => a.troops);

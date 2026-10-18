@@ -3,7 +3,7 @@
    背景音乐 · 各地域变奏（全新创作；记谱法见 js/music.js 文件头）
    SG.Sfx.setCulture(culture) 之后，map / battle 换成 key = 'map@<地域>' / 'battle@<地域>'。
    未覆盖的文化按 SG.Music.cultureFallback 回退（german → celt，tarim → kushan，sarmatian → steppe，
-   yi → seasia，nanman → han）。
+   yi → seasia，nanman → han；第三版 india → kushan（拉格曲），africa / moor → arab）。
 
    地域    曲目（map / battle）          调式 · 乐器
    wa      邪马台 / 倭国大乱            都节音阶（In，E / A）· 尺八 筝 筱笛 太鼓

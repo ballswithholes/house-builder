@@ -65,7 +65,8 @@ const t0 = Date.now();
 
 // =============================================================== (1) 数据 --
 console.log('== (1) world scenario data ==');
-const CULTURES = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian'];
+// DESIGN-V2 §6 的 15 种 + 第三版的 india / africa / moor（SG.CULTURES，回退表 SG.cultureBase 在 core.js）
+const CULTURES = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian', 'india', 'africa', 'moor'];
 const C = W.Cities.map(l => l.split('|'));
 const F = W.Factions.map(l => l.split('|'));
 const G = W.Generals.map(l => l.split('|'));
@@ -189,7 +190,8 @@ for (const p of F.slice(nF)) check(SG.FactionInfo[p[0]] && SG.FactionInfo[p[0]].
 }
 // 给玩家看的文字：不得残留研究 / 合并阶段的说明、内部键名或 ASCII 引号；【游戏取舍】只放在 liberty 字段
 {
-  const META = /合并时|去重|研究摘要|JSON|data\.js|DESIGN|notes?\b|本区|中国区|【游戏取舍】|建议|TODO|现有数据|"/;
+  // 第三版修订：也不得有版本记录（第三版起…）、外观 / 装束的借用说明与括注的文化代号（india、africa…）
+  const META = new RegExp('合并时|去重|研究摘要|JSON|data\\.js|DESIGN|notes?\\b|本区|中国区|【游戏取舍】|建议|TODO|现有数据|"|第[一二三四]版|外观|装束|[（(](?:' + CULTURES.join('|') + ')[)）]');
   const allKeys = new Set([...cityKeys, ...F.map(p => p[0])]);
   let bad = [];
   for (const [tab, T] of [['WorldInfo', SG.WorldInfo], ['FactionInfo', SG.FactionInfo], ['CityInfo', SG.CityInfo]]) {
@@ -227,6 +229,21 @@ for (const p of C.slice(nC)) check(SG.CityInfo[p[0]], 'CityInfo ' + p[0]);
 for (const n in SG.GeneralBorn) check(genByName[n] && genByName[n][10] === String(SG.GeneralBorn[n]), 'GeneralBorn ' + n);
 for (const n of ['孟获', '祝融', '孟优', '兀突骨', '带来洞主', '沙摩柯']) check(genByName[n][9] === 'nanman', 'nanman ' + n);
 check(SG.WorldData.cultureOfGeneral('卑弥呼') === 'wa' && SG.WorldData.regionOfFaction('roma') === 'roma', 'SG.WorldData lookups');
+// 文化代号：core.js 的唯一回退表与世界数据一致；天竺诸国 india、阿克苏姆与库施 africa、巴夸特 moor；西总督（塞种）仍为 kushan
+check(CULTURES.length === SG.CULTURES.length && CULTURES.every(c => SG.CULTURES.includes(c)), 'SG.CULTURES matches the test list');
+check(SG.cultureBase('india') === 'seasia' && SG.cultureBase('africa') === 'arab' && SG.cultureBase('moor') === 'arab' && SG.cultureBase('roman') === 'roman' &&
+  SG.cultureBase('???') === 'han' && SG.cultureBase(undefined) === 'han', 'SG.cultureBase fallbacks');
+for (const k of ['satavahana', 'chola', 'pandya', 'chera', 'lanka']) check(SG.WorldData.cultureOfFaction(k) === 'india', 'india faction ' + k);
+for (const k of ['aksum', 'kush']) check(SG.WorldData.cultureOfFaction(k) === 'africa', 'africa faction ' + k);
+check(SG.WorldData.cultureOfFaction('baquates') === 'moor' && SG.WorldData.cultureOfCity('baquates') === 'moor', 'moor: baquates');
+check(SG.WorldData.cultureOfFaction('kshatrapa') === 'kushan' && SG.WorldData.cultureOfGeneral('鲁德拉辛哈') === 'kushan', 'Western Satraps (Saka) stay kushan');
+for (const k of ['pratishthana', 'amaravati', 'madurai', 'anuradhapura', 'pataliputra', 'ujjain', 'barygaza']) check(SG.WorldData.cultureOfCity(k) === 'india', 'india city ' + k);
+for (const k of ['aksum', 'adulis', 'meroe', 'napata', 'karanog']) check(SG.WorldData.cultureOfCity(k) === 'africa', 'africa city ' + k);
+for (const k of ['halin', 'oceo']) check(SG.WorldData.cultureOfCity(k) === 'seasia', 'seasia city ' + k);
+for (const n of ['耶若室利', '迦梨迦罗', '内敦切利扬', '森古图万', '室利那伽', '龙树', '提婆', '鲁德拉布提']) check(SG.WorldData.cultureOfGeneral(n) === 'india', 'india general ' + n);
+for (const n of ['加达拉特', '耶斯博赫', '阿曼哈利卡']) check(SG.WorldData.cultureOfGeneral(n) === 'africa', 'africa general ' + n);
+// 各势力的君主与其势力同文化（西总督除外：其下的阿毗罗人大将另为 india）
+for (const p of F) { const r = genByName[p[2]]; if (r) check(r[9] === p[6], 'ruler culture = faction culture ' + p[0] + ' ' + p[2]); }
 // 统计值与经典剧本同一尺度
 {
   const avg = (rows, i) => rows.reduce((s, p) => s + +p[i], 0) / rows.length;

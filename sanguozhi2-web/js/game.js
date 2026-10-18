@@ -20,8 +20,11 @@
   const SG = window.SG;
 
   const TITLE = '三国志-霸王的世界';
-  const HelpText = '【操作】拖动平移地图，滚轮或双指缩放，点击城池查看情报。\n【令牌】每月可下达的指令数量取决于所领城池数。灰色指令点按可查看原因。\n【出征】选择相邻的敌城与至多五名武将；可亲自指挥战斗或委任电脑。\n【移动 / 输送】调动武将、调拨金粮：经由己方城池相连的城都可前往，不必相邻（列表注明经过几城），每次 1 枚令牌。己方两城相连即可使用。\n【战斗】点选部队移动，相邻时可攻击、施展策略或单挑。击败敌军主将或攻入本城即可获胜，三十日内未能攻下则撤退。';
+  const HelpText = '【操作】拖动平移地图，滚轮或双指缩放，点击城池查看情报。\n【令牌】每月可下达的指令数量取决于所领城池数。灰色指令点按可查看原因。\n【出征】选择相邻的敌城与至多五名武将；可亲自指挥战斗或委任电脑。\n【移动 / 输送】调动武将、调拨金粮：经由己方城池相连的城都可前往，不必相邻（列表注明经过几城），每次 1 枚令牌。己方两城相连即可使用。\n【战斗】点选部队移动，相邻时可攻击、施展策略或单挑。击败敌军主将或攻入本城即可获胜，三十日内未能攻下则撤退。\n【单挑】J 轻击（连按三段）· K 重击（按住蓄力，满蓄破防）· L 格挡 · U 格开（来招前一瞬轻按，成功后反击 ×1.5 不可挡；冷却 2.5 秒，按空露出破绽）· I 绝技（怒气满）。\n【成长】武将参战获得经验、升级；武力越高可学越多、越强的必杀，智力越高可学越多、越强的计策。升级后从 3 个候选中选择，也可在城池面板点选武将「习得新招」。';
 
+  // 触屏版：单挑一节改说右下角的按钮（键盘键位对手机无用；正文也短一些，横屏手机一屏放得下）
+  const HelpDuelTouch = '【单挑】右下按钮：轻击（连按三段）· 重击（按住蓄力，满蓄破防）· 格挡 · 格开（来招前一瞬轻点，成功后反击 ×1.5 不可挡；冷却 2.5 秒，点空露出破绽）· 绝技（怒气满）。';
+  function helpText() { return SG.isTouch ? HelpText.replace(/【单挑】[^\n]*/, HelpDuelTouch) : HelpText; }
   function UI() { return SG.UI; }
   // 剧本（SG.Scenarios 的键）
   const SCENARIOS = [
@@ -352,7 +355,7 @@
       const info = GS.saveInfo ? GS.saveInfo() : null;
       if (info) h('div', 'sg-title-saveinfo', SG.esc(scenarioName(info.scenario).split(' · ')[0] + ' · ' + info.faction + ' · ' + info.year + '年' + info.month + '月'), menu);
       else if (legacy) h('div', 'sg-title-saveinfo', '旧版存档（新版本无法读取）', menu);
-      h('div', 'sg-title-foot', SG.isTouch ? '拖动平移 · 双指缩放 · 轻触选取' : '拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转', title);
+      h('div', 'sg-title-foot', SG.isTouch ? '拖动平移 · 双指缩放 · 轻触选取' : '拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转 · 单挑 U 格开', title);
 
       let ang = 0, last = performance.now();
       for (;;) {
@@ -367,7 +370,7 @@
         }
         if (choice === 2) {
           choice = -1;
-          await UI().say(HelpText);
+          await UI().say(helpText(), null, null, { className: 'sg-help' });   // 字略小：七节一屏放得下
           last = performance.now();
           continue;
         }

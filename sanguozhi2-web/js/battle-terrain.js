@@ -388,6 +388,20 @@
       for (let x = 0; x < W && x < xCoast; x++) for (let y = 0; y < H; y++) if (map[x][y] === WATER) { map[x][y] = Tn.River; n++; }
       if (n) notes.push('shallows');
     }
+    // 登陆（续）：岸线弯曲时只按中线算的 xCoast 会在其余各行留下深水，全军只能挤过一格渡口。逐行找第一块陆地 coast(y)，
+    // 其前的海面改为浅滩——中间 cy ± 3 行一律如此（整行是水则铺到城前），其余行在 coast(y) ≤ W − 6 时同样处理
+    if (notes.indexOf('landing') >= 0) {
+      let n = 0;
+      for (let y = 0; y < H; y++) {
+        let coast = -1;
+        for (let x = 0; x < W; x++) if (map[x][y] !== WATER && map[x][y] !== Tn.River) { coast = x; break; }
+        if (coast < 0) coast = W - 5;
+        if (Math.abs(y - cy) > 3 && coast > W - 6) continue;
+        for (let x = 0; x < coast; x++) if (map[x][y] === WATER) { map[x][y] = Tn.River; n++; }
+      }
+      if (n && notes.indexOf('shallows') < 0) notes.push('shallows');
+    }
+
     // 城池（与 BattleModel 旧版相同的布局）
     const inC = (x, y) => x >= W - 5 && y >= cy - 2 && y <= cy + 2;
     let cutRiver = false, cutEast = false;

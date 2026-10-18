@@ -91,7 +91,7 @@
        fig.attach(obj, boneOrSocket)    把任意 Object3D 挂到骨骼 / 挂点上；fig.detach(obj)
        fig.setWeapon(name) / fig.weaponInfo / fig.style（'pole' | 'one' | 'dual' | 'bow' | 'fan' | 'none'）
        fig.weaponTip(out)  → 兵器尖端的世界坐标（刀光拖尾用）；fig.weaponBase(out)
-       fig.setTint(hex, k) 受击闪光等（所有材质的 emissive 叠加；k = 0 关闭）
+       fig.setTint(hex, k) 受击闪光等（以轮廓为主的辉光，正面 0.2；k = 0 关闭）
        fig.triangles / fig.drawCalls / fig.spec（解析后的外观）/ fig.dispose()
    SG.Figure.clips           { name: { dur, loop, desc } } 动作片段目录：
        idle walk run light1 light2 light3 heavy charge block parry hit hitB knockdown down getup victory defeat
@@ -701,7 +701,8 @@
     g.fillStyle = sky; g.fillRect(0, 0, W, H / 2);
     const gr = g.createLinearGradient(0, H / 2, 0, H);
     // 地面一侧不要太暗：刀刃 / 金属朝下的面反射地面，过暗会变成黑色剪影
-    gr.addColorStop(0, '#9a8a70'); gr.addColorStop(0.25, '#7a6a56'); gr.addColorStop(1, '#5a4e42');
+    // 第三版修订：地面一侧再亮一些（刀刃、枪头不再映成暗褐色的「铜器」）
+    gr.addColorStop(0, '#b4a78e'); gr.addColorStop(0.25, '#9a8c74'); gr.addColorStop(1, '#8a7c66');
     g.fillStyle = gr; g.fillRect(0, H / 2, W, H / 2);
     // 云带
     const rr = Rng(31);
@@ -718,8 +719,10 @@
     const dark = g.createLinearGradient(0, 0, W, 0);
     dark.addColorStop(0, 'rgba(20,24,40,0.35)'); dark.addColorStop(0.3, 'rgba(20,24,40,0)'); dark.addColorStop(0.9, 'rgba(20,24,40,0)'); dark.addColorStop(1, 'rgba(20,24,40,0.35)');
     g.fillStyle = dark; g.fillRect(0, 0, W, H);
-    // 地平线一道亮带（金属轮廓更清楚）
+    // 地平线一道亮带（金属轮廓更清楚）+ 两三道柔光箱式的细亮带（刃面上的高光条）
     g.fillStyle = 'rgba(255,244,220,0.5)'; g.fillRect(0, H / 2 - 2, W, 3);
+    g.fillStyle = 'rgba(255,252,244,0.55)'; g.fillRect(W * 0.08, H * 0.4, W * 0.3, 2); g.fillRect(W * 0.55, H * 0.43, W * 0.25, 2);
+    g.fillStyle = 'rgba(255,252,244,0.4)'; g.fillRect(W * 0.3, H * 0.16, W * 0.35, 2);
     const t = new THREE.CanvasTexture(c);
     t.mapping = THREE.EquirectangularReflectionMapping;
     t.needsUpdate = true;
@@ -730,10 +733,21 @@
   }
 
   // 轮廓光（所有人物材质共用的 uniform）
-  const RIM = { color: { value: null }, k: { value: 0.55 } };
+  // 第三版修订：轮廓光改为有方向（镜头空间的右上后方 uRimDir），只在朝向这一侧的边缘出现，并按粗糙度减弱——
+  // 侧看的大片披风 / 战袍不再整片发亮成「霓虹纸片」；强度 0.55 → 0.42（四次方衰减更集中在轮廓上）
+  const RIM = { color: { value: null }, k: { value: 0.42 }, dir: { value: new THREE.Vector3(0.55, 0.62, -0.56).normalize() } };
+  const RIM_GLSL = [
+    '  { float sgR = 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 );',
+    '    float sgL = clamp( dot( normal, uRimDir ) * 0.5 + 0.5, 0.0, 1.0 );',
+    '    float sgR2 = sgR * sgR;',
+    '    totalEmissiveRadiance += uRimColor * ( sgR2 * sgR2 * uRimK * sgL * sgL * 1.6 ) * ( 0.2 + 0.6 * diffuseColor.rgb ) * mix( 1.0, 0.45, roughnessFactor ); }'].join('\n');
+  // 受击 / 格开 / 反击的着色（setTint）：不再是整件材质一层平涂的自发光（人物发白、失去明暗），
+  // 而是以轮廓为主的辉光，正面只有一点（0.2）——仍看得出体积与布料明暗
+  const TINT_GLSL = '  { float sgT = pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 1.6 ); totalEmissiveRadiance += uTint * ( 0.2 + 0.8 * sgT ); }';
   function patchMaterial(mat, tag) {
     if (!RIM.color.value) RIM.color.value = new THREE.Color(1.0, 0.9, 0.78);
     if (!mat.userData.team) mat.userData.team = { value: new THREE.Color(1, 1, 1) };
+    if (!mat.userData.tint) mat.userData.tint = { value: new THREE.Color(0, 0, 0) };
     mat.onBeforeCompile = function (sh) {
       // 地面贴合：蒙皮后低于地面的顶点（倒地时的披风、腰裙、盔缨、长发）压平在地面上，不穿地。
       // 每个人物的开关与地面高度写在骨骼贴图的空余位置（第 GROUND_SLOT 个「骨骼」矩阵，没有顶点引用它；
@@ -746,8 +760,10 @@
         '#endif'].join('\n'));
       sh.uniforms.uRimColor = RIM.color;
       sh.uniforms.uRimK = RIM.k;
+      sh.uniforms.uRimDir = RIM.dir;
       sh.uniforms.uTeam = mat.userData.team;
-      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nuniform vec3 uTeam;\n' + sh.fragmentShader
+      sh.uniforms.uTint = mat.userData.tint;
+      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nuniform vec3 uRimDir;\nuniform vec3 uTeam;\nuniform vec3 uTint;\n' + sh.fragmentShader
         .replace('#include <map_fragment>', [
           '#ifdef USE_MAP',
           '  vec4 sgTex = texture2D( map, vMapUv );',
@@ -768,8 +784,7 @@
           '#endif'].join('\n'))
         .replace('#include <emissivemap_fragment>', [
           '#include <emissivemap_fragment>',
-          '  { float sgR = 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 );',
-          '    totalEmissiveRadiance += uRimColor * ( sgR * sgR * sgR * uRimK ) * ( 0.3 + 0.7 * diffuseColor.rgb ); }'].join('\n'));
+          RIM_GLSL, TINT_GLSL].join('\n'));
     };
     mat.customProgramCacheKey = function () { return 'sgfig-' + (tag || 'kit'); };
     return mat;
@@ -1502,7 +1517,8 @@
     const dark = (k, a) => 'rgba(' + Math.round(sk[0] * 255 * k) + ',' + Math.round(sk[1] * 255 * k * 0.92) + ',' + Math.round(sk[2] * 255 * k * 0.88) + ',' + a + ')';
     P.all({ a: skin, m: 1, h: 0.5, r: 0.68, mt: 0 });
     // 暖色：双颊、鼻、耳；冷色：眼窝；下巴下方阴影
-    const blob = (th, ph, rw, rh, color) => { const c = E(th, ph); const g = (ctx) => { const gr = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], Math.max(rw, rh)); gr.addColorStop(0, color); gr.addColorStop(1, color.replace(/[\d.]+\)$/, '0)')); return gr; }; P.fill(ctx => ctx.ellipse(c[0], c[1], rw, rh, 0, 0, TAU), { a: g }); };
+    // 第三版修订：渐变随椭圆缩放（单位圆渐变 + 平移缩放），椭圆的长轴边上不再被硬切成一条竖线（脸颊上的「接缝」）
+    const blob = (th, ph, rw, rh, color) => { const c = E(th, ph); const g = (ctx) => { const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, color); gr.addColorStop(1, color.replace(/[\d.]+\)$/, '0)')); return gr; }; P.fill(ctx => { ctx.translate(c[0], c[1]); ctx.scale(Math.max(1e-3, rw), Math.max(1e-3, rh)); ctx.arc(0, 0, 1, 0, TAU); }, { a: g }); };
     const bl = (F.blush || 1) * (fem ? 1.4 : 1);
     for (const s of [1, -1]) {
       blob(s * 0.75, -0.25, sxAt(0.75) * 0.32, sy * 0.2, 'rgba(210,90,80,' + (0.16 * bl).toFixed(3) + ')');
@@ -1510,7 +1526,9 @@
       blob(s * PI / 2, -0.06, sxAt(1.5) * 0.25, sy * 0.25, 'rgba(200,90,80,0.16)');
     }
     blob(0, FEAT.noseP + 0.02, sxAt(0.05) * 0.08, sy * 0.1, 'rgba(210,100,90,0.14)');
-    blob(0, -1.2, sxAt(0.3) * 0.9, sy * 0.25, dark(0.75, 0.4));
+    // 下巴下方阴影：女性与深肤色减弱（深色皮肤上这块阴影会读成胡子）
+    const skinL = (() => { const c = col(skin); return 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; })();
+    blob(0, -1.2, sxAt(0.3) * 0.9, sy * 0.25, dark(0.75, fem ? 0.12 : skinL < 0.4 ? 0.22 : 0.4));
     // 胡茬 / 须根
     const bs = F.beard || 'none';
     if (!fem && bs !== 'none') {
@@ -1679,7 +1697,11 @@
 
   // ======================================================== 外观设定 ==
   // 外貌参数（头像）→ 三维服饰层：躯干甲、腰裙、袖、护肩、护臂、腿、胫甲、靴、披风、前垂、领巾、腰带、冠帽、兵器、盾。
-  const CULTURES = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian'];
+  // 第三版加 india（天竺）、africa（阿克苏姆、库施）、moor（毛里）；表里没有的文化按 SG.cultureBase（core.js）回退
+  const CULTURES = ['han', 'nanman', 'wa', 'yi', 'korea', 'steppe', 'seasia', 'tarim', 'kushan', 'persia', 'arab', 'roman', 'celt', 'german', 'sarmatian', 'india', 'africa', 'moor'];
+  const cultBase = c => (SG.cultureBase ? SG.cultureBase(c) : 'han');
+  // 文化 → 本表中有条目的代号（先查自身，再查回退文化，最后 han）
+  function cultOf(c, table) { return table[c] ? c : table[cultBase(c)] ? cultBase(c) : 'han'; }
   // 衣甲类型 → 各层（未写的层取缺省）
   const OUTFIT = {
     lamellar: { torso: 'lamLace', skirt: 'lamellar', skirtLen: 0.58, sleeves: 'cloth', pauldron: 'lamellar', bracer: 'metal', legs: 'trousers', greave: 'none', boots: 'boot', tabard: true, collar: 'scarf', belt: true, mirror: true },
@@ -1704,6 +1726,13 @@
     musculata: { torso: 'muscle', skirt: 'pteruges', skirtLen: 0.5, sleeves: 'short', pauldron: 'pteruges', bracer: 'none', legs: 'bare', greave: 'metal', boots: 'boot', belt: 'sash', cape: true, tunic: true },
     toga: { torso: 'robe', skirt: 'robe', skirtLen: 0.92, sleeves: 'short', pauldron: 'none', bracer: 'none', legs: 'bare', boots: 'sandal', belt: false, toga: true },
     plaid: { torso: 'cloth', skirt: 'tunic', skirtLen: 0.45, sleeves: 'cloth', pauldron: 'none', bracer: 'gold', legs: 'trousers', legsReg: 'plaid', boots: 'shoe', belt: true, cape: true, capeReg: 'plaid' },
+    // 第三版：天竺腰布 + 帔帛（裸上身、臂钏、金项圈、赤足）· 絮甲（菱格绗缝的棉甲）· 阿克苏姆白麻袍（托加式披巾）·
+    //         库施流苏披肩王袍 · 毛里连帽斗篷
+    dhoti: { torso: 'bare', sash: true, skirt: 'sarong', skirtLen: 0.6, sleeves: 'bare', pauldron: 'none', bracer: 'gold', legs: 'bare', boots: 'bare', belt: 'sash', collar: 'gold', armlet: true },
+    quilted: { torso: 'quilt', skirt: 'coat', skirtLen: 0.62, sleeves: 'short', pauldron: 'none', bracer: 'leather', legs: 'trousers', boots: 'sandal', belt: 'sash', collar: 'scarf', armlet: true },
+    shamma: { torso: 'robe', skirt: 'robe', skirtLen: 0.9, sleeves: 'short', pauldron: 'none', bracer: 'none', legs: 'bare', boots: 'sandal', belt: false, toga: true, sash: true, white: true },
+    meroitic: { torso: 'robe', skirt: 'robe', skirtLen: 0.95, sleeves: 'short', pauldron: 'none', bracer: 'gold', legs: 'trousers', boots: 'sandal', belt: 'sash', sash: true, collar: 'gold', white: true },
+    burnous: { torso: 'cloth', skirt: 'tunic', skirtLen: 0.6, sleeves: 'cloth', pauldron: 'none', bracer: 'none', legs: 'trousers', boots: 'sandal', belt: true, cape: true, collar: 'scarf' },
   };
   // 冠帽类型映射到三维头饰构建器（未专门实现的归入相近类型）
   const HAT_MAP = {
@@ -1712,6 +1741,7 @@
     jeolpung: 'jeolpung', birdfeather: 'jeolpung', goldcrown: 'goldcrown', felt: 'felt', fur: 'furhat', furcap: 'furhat', tallcrown: 'tallcrown',
     flowerwrap: 'turban', pointcap: 'pointcap', tallhat: 'tallhat', diadem: 'diadem', tiara: 'tiara', phrygian: 'phrygian', keffiyeh: 'keffiyeh',
     arabturban: 'turban', hatra: 'tallhat', laurel: 'laurel', galea: 'galea', celthelm: 'celthelm', spangen: 'spangen', conical: 'conical',
+    pagri: 'pagri', mukuta: 'mukuta', jewelband: 'diadem', sinhalacrown: 'bellcrown', kushcrown: 'kushcrown', aksumcrown: 'aksumcrown', featherband: 'featherband',
   };
   // 名将：三维专属设定（兵器、披风、前垂、饰物）
   const SIG = {
@@ -1762,8 +1792,12 @@
     celt: { hi: ['spatha'], mid: ['spatha'], lo: ['spatha'] },
     german: { hi: ['handaxe', 'spear'], mid: ['spear', 'handaxe'], lo: ['handaxe'] },
     sarmatian: { hi: ['lance'], mid: ['lance', 'spatha'], lo: ['spatha'] },
+    india: { hi: ['khanda', 'spear'], mid: ['khanda'], lo: ['khanda'] },
+    africa: { hi: ['spear', 'spatha'], mid: ['spear'], lo: ['spatha'] },
+    moor: { hi: ['spear'], mid: ['spear', 'spatha'], lo: ['spatha'] },
   };
-  const CULT_SHIELD = { han: 'pai', nanman: 'rattan', wa: 'wa', yi: 'round', korea: 'round', steppe: 'round', seasia: 'round', tarim: 'round', kushan: 'round', persia: 'round', arab: 'round', roman: 'scutum', celt: 'oval', german: 'round', sarmatian: 'round' };
+  const CULT_SHIELD = { han: 'pai', nanman: 'rattan', wa: 'wa', yi: 'round', korea: 'round', steppe: 'round', seasia: 'round', tarim: 'round', kushan: 'round', persia: 'round', arab: 'round', roman: 'scutum', celt: 'oval', german: 'round', sarmatian: 'round',
+    india: 'long', africa: 'hide', moor: 'round' };
 
   // 简化外貌（没有头像模块时）
   function fallbackSpec(gen) {
@@ -1771,7 +1805,7 @@
     const war = gen.war == null ? 60 : gen.war, intel = gen.intel == null ? 50 : gen.intel;
     const cult = gen.culture || 'han';
     const role = war >= 70 ? 'warrior' : intel >= 75 ? 'strategist' : 'general';
-    const skins = { han: '#e2b48c', nanman: '#a8714c', seasia: '#a06c40', roman: '#e6c09e', celt: '#f0d0b8', german: '#ecccb2', arab: '#c48e5e', persia: '#ca9a72' };
+    const skins = { han: '#e2b48c', nanman: '#a8714c', seasia: '#a06c40', roman: '#e6c09e', celt: '#f0d0b8', german: '#ecccb2', arab: '#c48e5e', persia: '#ca9a72', india: '#a8724a', africa: '#6c4026', moor: '#b07e54' };
     return {
       name, culture: cult, sex: gen.sex || 'm', role, age: 34, war, intel, pol: gen.pol || 50, fat: 0, face: {}, skin: skins[cult] || '#e2b48c', build: 1 + (war - 60) / 300,
       eyes: { shape: r.pick(['normal', 'sharp', 'narrow']), color: '#3a2618' }, brows: { shape: r.pick(['straight', 'angled', 'bushy']), thick: 1.1, color: '#221a18' },
@@ -1832,25 +1866,45 @@
       backBow: !!sig.backBow, quiver: !!sig.quiver, ribbons: sig.ribbons || null,
     };
     if (of.pelt) L.pelt = of.pelt;
+    // 白麻袍（阿克苏姆 / 库施）：袍身白色，原衣色作披巾 / 镶边；毛里斗篷：衣色作斗篷，第二色作内衫
+    if (L.white) { look.C.cloth = of.toga || '#ece6d8'; look.C.cloth2 = of.color && !/^#e[0-9a-f]e[0-9a-f]d[0-9a-f]$/i.test(of.color) ? of.color : (of.color2 || '#a01818'); }
+    if (ot === 'burnous') { look.C.cape = of.color || '#e8e0cc'; look.C.cloth = of.color2 || '#c8b48c'; }
+    // 袈裟 / 白衣（第三版的僧人：龙树、提婆、童受、伊兰戈）：头像里 outfit.toga 为袍色
+    if (ot === 'toga' && of.toga) look.C.cloth = of.toga;
+    if ((culture === 'africa' || culture === 'india') && L.torso === 'bare' && L.legs === 'trousers') { L.legs = 'bare'; L.boots = 'sandal'; }
+    // 第三版修订：安息 / 萨尔马特将领（头像里是长衫）在三维里披鳞甲（铁甲骑兵贵族）；贵霜长袍加鳞片护肩、护胸与护臂——
+    // 不再是一件纯色的「睡衣」
+    {
+      const cb = cultBase(culture);
+      if ((cb === 'persia' || cb === 'sarmatian') && (ot === 'tunic' || ot === 'jacket')) Object.assign(L, { torso: 'scale', pauldron: 'scale', skirt: 'scale', skirtLen: 0.7, sleeves: 'mail', bracer: 'metal' });
+      if (cb === 'kushan' && ot === 'kaftan') Object.assign(L, { pauldron: 'scale', chest: 'plate', bracer: 'metal' });
+    }
     if (sig.sleeves) L.sleeves = sig.sleeves;
     if (sig.pauldron) L.pauldron = sig.pauldron;
     // 披风 / 前垂颜色
     const capeSpec = sig.cape || of.cape || (L.cape ? 'faction' : null);
-    if (capeSpec) look.C.cape = capeSpec === 'faction' ? faction : capeSpec;
+    // 自带披挂的第三版衣装（帔帛、白麻披巾、流苏披肩、斗篷）不再加君主的势力色披风（与头像一致）
+    if (capeSpec && !(capeSpec === 'faction' && (ot === 'burnous' || ot === 'dhoti' || ot === 'shamma' || ot === 'meroitic'))) look.C.cape = capeSpec === 'faction' ? faction : capeSpec;
+    // 库施王袍：外披衣色的流苏披肩（与阿克苏姆的白麻袍区分开）
+    if (ot === 'meroitic') look.C.cape = of.color || '#a01818';
     if (L.tabard) look.C.tabard = sig.tabard || (of.color && ot !== 'lamellar' ? of.color : faction);
     if (sig.beardLen) look.beard.len = sig.beardLen;
     // 女性与文官：去掉多余的甲
     if (look.sex === 'f' && (ot === 'robe')) { L.legs = 'trousers'; }
     // 兵器缺省
     if (!look.weapon) {
-      const cw = CULT_WEAPON[culture] || CULT_WEAPON.han;
+      const cw = CULT_WEAPON[cultOf(culture, CULT_WEAPON)];
       const r = Rng(hashStr(name + 'w'));
       if ((sp.acc || []).includes('fan')) look.weapon = 'fan';
       else look.weapon = r.pick(war >= 80 ? cw.hi : war >= 60 ? cw.mid : cw.lo);
     }
     // 弓：主兵器为刀剑，背弓
-    if (look.weapon === 'bow') { look.weapon = culture === 'han' ? 'dao' : (CULT_WEAPON[culture] || CULT_WEAPON.han).lo[0]; look.backBow = true; look.quiver = true; }
-    if (opts.shield) look.shield = opts.shield === true ? (CULT_SHIELD[culture] || 'round') : opts.shield;
+    if (look.weapon === 'bow') { look.weapon = culture === 'han' ? 'dao' : CULT_WEAPON[cultOf(culture, CULT_WEAPON)].lo[0]; look.backBow = true; look.quiver = true; }
+    // 天竺的「长剑」是坎达剑
+    if (look.weapon === 'jian' && culture === 'india' && !sig.weapon && !opts.weapon) look.weapon = 'khanda';
+    // 第三版修订：光头、着袈裟 / 白衣的僧人（龙树、提婆、伊兰戈）持锡杖，不佩刀剑
+    if (look.hair.style === 'bald' && ot === 'toga' && !sig.weapon && !opts.weapon && !sp.weapon) { look.weapon = 'staff'; look.backBow = false; look.quiver = false; }
+    if (opts.shield) look.shield = opts.shield === true ? (CULT_SHIELD[cultOf(culture, CULT_SHIELD)] || 'round') : opts.shield;
     return look;
   }
 
@@ -1872,14 +1926,22 @@
     celt: { outfit: 'plaid', hat: { type: 'none' }, spear: { outfit: 'plaid', hat: { type: 'celthelm' } }, skin: '#f0d0b8', hair: '#a8481e', hairStyle: 'wild', marks: ['woad'] },
     german: { outfit: 'fur', hat: { type: 'none' }, cavalry: { outfit: 'tunic', hat: { type: 'spangen' } }, skin: '#ecccb2', hair: '#c8a060', hairStyle: 'suebian' },
     sarmatian: { outfit: 'scale', hat: { type: 'conical' }, skin: '#e6c4a2', hair: '#5a3a22', hairStyle: 'long', metal: '#7a808c' },
+    // 天竺：缠头、腰布赤足（刀盾手持长盾与坎达剑），枪兵与骑兵着絮甲，弓手用竹长弓（桑奇、阿马拉瓦蒂浮雕）
+    india: { outfit: 'dhoti', hat: { type: 'pagri' }, spear: { outfit: 'quilted', hat: { type: 'pagri' } }, cavalry: { outfit: 'quilted', hat: { type: 'pagri' } }, archer: { outfit: 'dhoti', hat: { type: 'headband' } },
+      skin: '#a8724a', hair: '#141012', hairStyle: 'long', longbow: true },
+    // 阿克苏姆 / 库施：白麻袍、长枪与长皮盾；弓手赤膊、额带插羽、长弓（“弓之国”）
+    africa: { outfit: 'shamma', hat: { type: 'none' }, archer: { outfit: 'bare', hat: { type: 'featherband' } }, cavalry: { outfit: 'shamma', hat: { type: 'headband' } },
+      skin: '#6c4026', hair: '#0c0a0a', hairStyle: 'tightcurl', longbow: true },
+    // 毛里：短衣斗篷、标枪与小圆盾、螺旋卷发
+    moor: { outfit: 'burnous', hat: { type: 'none' }, archer: { outfit: 'tunic', hat: { type: 'none' } }, skin: '#b07e54', hair: '#141012', hairStyle: 'ringlets' },
   };
   const SOLDIER_WEAPON = {
-    spear: { han: 'spear', nanman: 'spear', wa: 'spear', yi: 'spear', korea: 'spear', steppe: 'spear', seasia: 'spear', tarim: 'spear', kushan: 'lance', persia: 'lance', arab: 'spear', roman: 'pilum', celt: 'spear', german: 'spear', sarmatian: 'lance' },
-    sword: { han: 'dao', nanman: 'dao', wa: 'tachi', yi: 'dao', korea: 'dao', steppe: 'dao', seasia: 'dao', tarim: 'jian', kushan: 'spatha', persia: 'spatha', arab: 'spatha', roman: 'gladius', celt: 'spatha', german: 'handaxe', sarmatian: 'spatha' },
-    cavalry: { han: 'spear', nanman: 'spear', wa: 'spear', yi: 'spear', korea: 'spear', steppe: 'spear', seasia: 'spear', tarim: 'lance', kushan: 'lance', persia: 'lance', arab: 'spear', roman: 'spear', celt: 'spear', german: 'spear', sarmatian: 'lance' },
+    spear: { han: 'spear', nanman: 'spear', wa: 'spear', yi: 'spear', korea: 'spear', steppe: 'spear', seasia: 'spear', tarim: 'spear', kushan: 'lance', persia: 'lance', arab: 'spear', roman: 'pilum', celt: 'spear', german: 'spear', sarmatian: 'lance', india: 'spear', africa: 'spear', moor: 'spear' },
+    sword: { han: 'dao', nanman: 'dao', wa: 'tachi', yi: 'dao', korea: 'dao', steppe: 'dao', seasia: 'dao', tarim: 'jian', kushan: 'spatha', persia: 'spatha', arab: 'spatha', roman: 'gladius', celt: 'spatha', german: 'handaxe', sarmatian: 'spatha', india: 'khanda', africa: 'spatha', moor: 'spatha' },
+    cavalry: { han: 'spear', nanman: 'spear', wa: 'spear', yi: 'spear', korea: 'spear', steppe: 'spear', seasia: 'spear', tarim: 'lance', kushan: 'lance', persia: 'lance', arab: 'spear', roman: 'spear', celt: 'spear', german: 'spear', sarmatian: 'lance', india: 'spear', africa: 'spear', moor: 'spear' },
   };
   function lookOfSoldier(opts) {
-    const type = opts.type || 'spear', culture = CULTURES.includes(opts.culture) ? opts.culture : 'han';
+    const type = opts.type || 'spear', culture = cultOf(opts.culture, SOLDIER);
     const S = SOLDIER[culture], T = S[type] || {};
     const factionHex = opts.color || '#8a2a24';
     const faction = TEAM;
@@ -1889,6 +1951,7 @@
     const L = Object.assign({}, OUTFIT[ot]);
     // 士兵简化：不用胫甲 / 护心镜 / 飘带
     L.greave = 'none'; L.mirror = false;
+    if ((culture === 'africa' || culture === 'india') && L.torso === 'bare' && L.legs === 'trousers') { L.legs = 'bare'; L.boots = 'sandal'; }
     if (type === 'archer') { L.pauldron = 'none'; L.tabard = false; }
     const hat = Object.assign({ color: null }, T.hat || S.hat);
     hat.type = HAT_MAP[hat.type] || hat.type;
@@ -1902,12 +1965,15 @@
       hat, acc: [], marks: S.marks || [], face: 'face' + 'ABCD'[(seed + (culture.length % 2)) % 4],
       C: { faction, cloth: faction, cloth2: shade(faction, -0.4), metal, trim: culture === 'han' || culture === 'korea' ? '#b89048' : BRONZE, leather: LEATHER, skin: S.skin, cape: null, tabard: L.tabard ? faction : null, plume: faction },
       L,
-      weapon: type === 'archer' ? 'bow' : SOLDIER_WEAPON[type === 'cavalry' ? 'cavalry' : type][culture],
+      weapon: type === 'archer' ? (S.longbow ? 'longbow' : 'bow') : SOLDIER_WEAPON[type === 'cavalry' ? 'cavalry' : type][culture],
       shield: type === 'sword' ? CULT_SHIELD[culture] : (culture === 'roman' && type === 'spear' ? 'scutum' : null),
       quiver: type === 'archer', lod: opts.lod || 'low',
     };
     if (L.cape && culture === 'roman') look.C.cape = '#a02a24';
     else if (L.cape) look.C.cape = shade(faction, -0.2);
+    // 白麻袍的士兵：袍白、镶边 / 披肩为势力色（势力色仍清楚可辨）
+    if (L.white) { look.C.cloth = '#e8e2d2'; look.C.cloth2 = faction; }
+    if (culture === 'india' || culture === 'africa') look.beard.style = seed === 1 ? 'short' : 'none';
     if (culture === 'celt' || culture === 'german' || culture === 'nanman' || culture === 'seasia' || culture === 'yi') look.beard.style = seed === 0 ? 'none' : 'full';
     if (culture === 'roman') look.beard.style = seed === 2 ? 'short' : 'none';
     return look;
@@ -1996,7 +2062,8 @@
     }
     return [[list[list.length - 1][0], 1]];
   }
-  const REG_OF = { lamLace: 'lamLace', lamellar: 'lamellar', plate: 'lamellar', scale: 'scale', segm: 'cloth', muscle: 'metal', tanko: 'cloth', rattan: 'rattan', cloth: 'cloth', robe: 'brocade', bare: 'skin', fur: 'fur', mail: 'mail' };
+  // quilt（第三版絮甲）借用藤编区域：编格在布色染色后像菱格绗缝
+  const REG_OF = { lamLace: 'lamLace', lamellar: 'lamellar', plate: 'lamellar', scale: 'scale', segm: 'cloth', muscle: 'metal', tanko: 'cloth', rattan: 'rattan', cloth: 'cloth', robe: 'brocade', bare: 'skin', fur: 'fur', mail: 'mail', quilt: 'rattan' };
 
   // ----------------------------------------------------------- 躯干 --
   function buildTorso(X) {
@@ -2033,7 +2100,7 @@
     // 胸前斜挎的虎皮 / 豹皮 / 绶带 / 托加
     if (L.pelt) sashBand(X, L.pelt === 'leopard' ? 'leopard' : 'tiger', '#ffffff', 0.15, 0.016);
     if (L.sash) sashBand(X, 'hem', C.cloth2, 0.07, 0.01);
-    if (L.toga) sashBand(X, 'hem', '#ece6d8', 0.3, 0.02);
+    if (L.toga) sashBand(X, 'hem', L.white ? C.cloth : '#ece6d8', 0.3, 0.02);
     // 女性赤膊类衣装：加抹胸
     if (pr.fem && (t === 'bare' || t === 'rattan')) bandRing(X, 1.25 * pr.k, 1.39 * pr.k, 0.01, 0.002, L.pelt ? (L.pelt === 'leopard' ? 'leopard' : 'tiger') : 'cloth', L.pelt ? '#ffffff' : (C.cloth2 || C.cloth), 0, W.torso);
     if (L.vest) for (const s of [1, -1]) shellPanel(X, { th0: s * 0.35, th1: s * 2.9, y0: 1.06, y1: 1.47, off: 0.012, reg: 'cloth', col: C.cloth, th: 0.006 });
@@ -2117,7 +2184,8 @@
       const rr = ringAt(R, a[1]).rx;
       const l = Math.hypot(dth * rr, dy) || 1;
       const nth = -dy / l / rr * width, ny = dth * rr / l * width;
-      const th = a[0] + (s - 0.5) * nth * 2, y = a[1] + (s - 0.5) * ny * 2;
+      // 第三版修订：带子不超出肩顶（宽带搭过肩头时不再向上伸成头侧的一片白板）
+      const th = a[0] + (s - 0.5) * nth * 2, y = Math.min(a[1] + (s - 0.5) * ny * 2, 1.49 * k);
       return torsoPt(R, y, th, off, 0, pr.fem);
     }, { nu: 1, nv: seg, th: 0.005, reg, col: col(colr), w: p => W.torso(p), uv: (s, t) => [t, s] });
   }
@@ -2204,6 +2272,11 @@
         // 袖口包边
         tube(gb, ringPts(armPt(pr, S, s1), Xa, Z, armR(s1)[0] * k * sc * 1.1, armR(s1)[1] * k * sc * 1.1, lod.limbN), { r: 0.006 * pr.k, n: 4, reg: 'goldEngr', col: col(C.trim), w: W.arm(S)(armPt(pr, S, s1)), closed: true });
       }
+    }
+    // 臂钏（天竺、库施）：露臂时上臂一道金箍
+    if (L.armlet && X.hi >= 1 && (sl === 'bare' || sl === 'short')) {
+      const s = sl === 'short' ? 0.36 : 0.3, [rx, rz] = armR(s);
+      tube(gb, ringPts(armPt(pr, S, s), Xa, Z, rx * k * 1.08 + 0.003, rz * k * 1.08 + 0.003, lod.limbN), { r: 0.006 * pr.k, n: 4, reg: 'gold', col: col(GOLD), w: W.arm(S)(armPt(pr, S, s)), closed: true });
     }
     // 护臂
     const br = X.hi === 0 ? 'none' : (L.bracer || 'none');
@@ -2382,8 +2455,8 @@
       const yb = sk === 'robe' ? Math.max(0.1, bot) : bot;
       const wk = sk === 'robe' ? 0.45 : 0.6;
       // 左右两片（左压右），各自随同侧大腿
-      skirtPanel(X, { th0: -0.25, th1: PI + 0.25, yTop: top + 0.02, yBot: yb, off: 0.014, flare: fl, reg, col: cc, w: legSideW('L', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? 0.008 : 0, waves: 5, nu: Math.max(3, lod.pn + 2) });
-      skirtPanel(X, { th0: -PI - 0.25, th1: 0.25, yTop: top + 0.02, yBot: yb, off: 0.008, flare: fl, reg, col: cc, w: legSideW('R', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? 0.008 : 0, waves: 5, nu: Math.max(3, lod.pn + 2) });
+      skirtPanel(X, { th0: -0.25, th1: PI + 0.25, yTop: top + 0.02, yBot: yb, off: 0.014, flare: fl, reg, col: cc, w: legSideW('L', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
+      skirtPanel(X, { th0: -PI - 0.25, th1: 0.25, yTop: top + 0.02, yBot: yb, off: 0.008, flare: fl, reg, col: cc, w: legSideW('R', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
     } else if (sk === 'tunic' || sk === 'kilt' || sk === 'bands' || sk === 'pteruges') {
       const tun = sk === 'tunic' || sk === 'pteruges' || L.tunic;
       if (tun) {
@@ -2459,7 +2532,8 @@
     const out = v3norm(v3sub([sg, 0.55, 0], v3mul(d, v3dot([sg, 0.55, 0], d))));
     const fwd = [0, 0, 1];
     // 护肩刚性挂在肩部辅助骨上（所有甲片同一权重 → 手臂高举时整体随动，不会散成碎片）
-    const wpf = (a) => (p) => B['sh' + S];
+    // 第三版修订：甲片 70% 随肩部辅助骨、30% 随上臂（抬臂时略随手臂转动，袖子不再从甲片间穿出）；所有甲片同一权重，不会散开
+    const wpf = (a) => (p) => [[B['sh' + S], 0.7], [B['upperArm' + S], 0.3]];
     const lnv = X.hi === 0 ? 1 : Math.max(2, lod.pv - 4);
     const lame = (a0, a1, r0, r1, half, reg, cc, wk, thk, c0) => panel(gb, (s, t) => {
       const ph = (c0 || 0) + lerp(-half, half, s), al = lerp(a0, a1, t) * k;
@@ -2469,9 +2543,9 @@
       return v3add(v3madd(J, d, al), v3mul(dir, r));
     }, { nu: Math.max(3, lod.pn + 1), nv: lnv, th: thk || 0.007, reg, col: col(cc), colB: shade(cc, -0.45), w: wpf(wk), mirrorS: true });
     if (tp === 'plate' || tp === 'lion') {
-      lame(-0.07, 0.05, 0.075, 0.098, 1.6, tp === 'lion' ? 'gold' : 'metal', tp === 'lion' ? GOLD : C.metal, 0.6, 0.009);
-      lame(0.0, 0.12, 0.088, 0.104, 1.5, 'metal', C.metal, 0.85);
-      if (X.hi >= 2) lame(0.07, 0.19, 0.092, 0.1, 1.4, 'metal', C.metal, 1);
+      lame(-0.07, 0.05, 0.087, 0.108, 1.6, tp === 'lion' ? 'gold' : 'metal', tp === 'lion' ? GOLD : C.metal, 0.6, 0.009);
+      lame(0.0, 0.12, 0.1, 0.114, 1.5, 'metal', C.metal, 0.85);
+      if (X.hi >= 2) lame(0.07, 0.19, 0.104, 0.11, 1.4, 'metal', C.metal, 1);
       // 兽面（狮子吞肩）
       if (tp === 'lion' && X.hi >= 1) {
         const c = v3add(v3madd(J, d, 0.0), v3mul(out, 0.105 * k)), AX = axesFromY(out), r = 0.05 * k, start = gb.nv;
@@ -2481,8 +2555,8 @@
     } else if (tp === 'lamellar' || tp === 'scale' || tp === 'rattan') {
       const reg = tp === 'rattan' ? 'rattan' : tp === 'scale' ? 'scale' : (L.torso === 'lamLace' ? 'lamLace' : 'lamellar');
       const cc = tp === 'rattan' ? '#c8a060' : reg === 'lamLace' ? C.cloth : C.metal;
-      lame(-0.06, 0.1, 0.075, 0.105, 1.55, reg, cc, 0.7);
-      if (X.hi >= 1) lame(0.06, 0.2, 0.088, 0.104, 1.45, reg, cc, 1);
+      lame(-0.06, 0.1, 0.087, 0.115, 1.55, reg, cc, 0.7);
+      if (X.hi >= 1) lame(0.06, 0.2, 0.1, 0.114, 1.45, reg, cc, 1);
     } else if (tp === 'segm' || tp === 'bands') {
       const n = X.hi >= 1 ? 4 : 2;
       for (let i = 0; i < n; i++) lame(-0.06 + i * 0.045, -0.06 + i * 0.045 + 0.06, 0.074 + i * 0.006, 0.084 + i * 0.006, 1.5, 'rivet', C.metal, 0.6 + i * 0.1, 0.005);
@@ -2504,16 +2578,23 @@
     const k = pr.k, sw = pr.sw;
     const reg = look.L.capeReg || 'hem';
     const yb = look.kind === 'soldier' ? 0.62 : 0.3;
+    // 第三版修订：下摆保持弧形横截面（裹住双腿，而不是一条平直的下沿），越往下越深的 4–5 道竖褶，厚度 12 毫米——
+    // 侧看不再是离开背部的一块平板
     panel(gb, (s, t) => {
-      const a = lerp(-1.3, 1.3, s);
-      const top = [Math.sin(a) * 0.19 * sw * k, (1.475 - 0.03 * (1 - Math.cos(a))) * k, (-Math.cos(a) * 0.13 - 0.03) * sw * k];
-      const bw = 0.44 * k;
-      const bot = [lerp(-bw, bw, s), yb * k, -0.3 * k];
+      const a = lerp(-1.3, 1.3, s), sa = Math.sin(a), ca = Math.cos(a);
+      const top = [sa * 0.19 * sw * k, (1.475 - 0.03 * (1 - ca)) * k, (-ca * 0.13 - 0.03) * sw * k];
+      const bot = [sa * 0.34 * k, yb * k, (-ca * 0.27 - 0.06) * k];
       const p = v3lerp(top, bot, Math.pow(t, 0.9));
-      p[2] += -0.07 * Math.sin(PI * t) * k - (look.L.skirt === 'lamellar' ? 0.02 : 0);
-      p[2] += (X.hi >= 1 ? Math.sin(s * PI * 7) * 0.022 * t * k : 0);
+      p[2] += -0.06 * Math.sin(PI * t) * k - (look.L.skirt === 'lamellar' ? 0.02 : 0);
+      if (X.hi >= 1) {
+        const f = (Math.abs(Math.sin(s * PI * 4.5 + 0.7)) - 0.55) * 0.05 * t * k;
+        p[0] += sa * f + Math.sin(s * PI * 9) * 0.008 * t * k; p[2] += -ca * f;
+      }
       return p;
-    }, { nu: X.hi >= 2 ? 12 : X.hi >= 1 ? 5 : 3, nv: X.hi >= 2 ? 12 : X.hi >= 1 ? 5 : 2, th: 0.007, reg, col: col(C.cape), colB: shade(C.cape, -0.45), uv: (s, t) => [Math.abs(2 * s - 1), 1 - t],
+    }, { nu: X.hi >= 2 ? 12 : X.hi >= 1 ? 6 : 3, nv: X.hi >= 2 ? 12 : X.hi >= 1 ? 5 : 2, th: 0.012, reg,
+      // 褶皱明暗烘进顶点色（褶峰亮、褶谷暗，越往下越明显）+ 肩下的遮蔽：大片披风不再被灯光照成一整块平涂的亮色
+      col: X.hi >= 1 ? (s, t) => { const f = Math.abs(Math.sin(s * PI * 4.5 + 0.7)), q = (0.8 + 0.2 * f * (0.4 + 0.6 * t)) * (0.8 + 0.2 * sstep(0, 0.3, t)); return shade(C.cape, q - 1); } : col(C.cape),
+      colB: shade(C.cape, -0.5), uv: (s, t) => [Math.abs(2 * s - 1), 1 - t],
       w: (p, s, t) => wT(t, [[B.chest, 0.02], [B.cape1, 0.12], [B.cape2, 0.5], [B.cape3, 0.9]]) });
   }
   // 飘带：自腰后两侧垂下
@@ -2602,6 +2683,16 @@
       : [[0.005, 0], [0.011, 0.02], [0.03 * s, 0.05 * s], [0.055 * s, 0.045 * s], [0.07 * s, 0.015 * s], [0.07 * s, -0.04 * s], [0.05 * s, -0.07 * s], [0.02 * s, -0.04 * s], [0.006, -0.005]];
     prof.reverse();
     lathe(gb, prof.map((q, i) => [q[0], q[1], null, i / (prof.length - 1)]), { c: p, n: Math.max(6, lod.ring - 4), reg: 'tassel', col: col(cc), w: w != null ? w : [[B.plume1, 1]] });
+    // 第三版修订（高精度）：缨顶散出一圈细丝，向外张开、向后下垂——不再只是一只「纸杯蛋糕」形的圆柱
+    if (X.hi >= 2) {
+      const n = 10, ww = w != null ? w : [[B.plume1, 1]];
+      for (let i = 0; i < n; i++) {
+        const a = i / n * TAU + 0.2, ca = Math.cos(a), sa = Math.sin(a), r0 = 0.03 * s, r1 = (0.07 + 0.03 * (i % 3) / 2) * s;
+        const back = 0.07 * s * (1 - 0.5 * Math.max(0, sa));
+        tube(gb, [[p[0] + ca * r0, p[1] + 0.045 * s, p[2] + sa * r0], [p[0] + ca * (r0 + r1) * 0.6, p[1] + 0.03 * s, p[2] + sa * (r0 + r1) * 0.6 - back * 0.4], [p[0] + ca * r1, p[1] - 0.09 * s, p[2] + sa * r1 - back]],
+          { r: t => 0.005 * (1 - 0.6 * t), n: 3, reg: 'tassel', col: col(cc), w: ww });
+      }
+    }
   }
   // 羽毛 / 雉翎：沿曲线的扁带（贴图 feather），宽度 w0 → w1
   function featherStrip(X, pts, w0, w1, reg, cc, wfn, nv) {
@@ -2620,7 +2711,7 @@
     const hc = hat.color ? col(hat.color) : null;
     const metal = hat.color || C.metal, plume = hat.plume || C.plume || RED;
     const hi = X.hi;
-    const cover = { none: 0, headband: 0, diadem: 0, laurel: 0, crown: 0.3, pheasant: 0.3, feathers: 0, chief: 0, shaman: 0, goldcrown: 0 }[tp];
+    const cover = { none: 0, headband: 0, diadem: 0, laurel: 0, crown: 0.3, pheasant: 0.3, feathers: 0, chief: 0, shaman: 0, goldcrown: 0, featherband: 0 }[tp];
     const res = { coversTop: cover == null || cover > 0.5, coversBack: ['helmet', 'galea', 'wahelm', 'keffiyeh', 'conical', 'spangen', 'celthelm', 'tiara', 'felt', 'furhat', 'turban'].includes(tp) };
     const rim = (front, back) => th => lerp(back, front, (1 + Math.cos(th)) / 2);
     const bowl = (o) => headShell(X, Hp, Object.assign({ phi0: rim(0.3, -0.3), off: (th, u) => 0.014 + 0.01 * u, reg: 'metal', col: metal }, o));
@@ -2735,6 +2826,10 @@
         // 进贤冠：前高后低的冠梁
         const f = headAt(Hp, 0, 0.95, 0.02), bk = headAt(Hp, PI, 1.25, 0.02);
         panel(gb, (s, t) => [lerp(-0.035, 0.035, s), lerp(f[1] + 0.07, bk[1] + 0.02, t), lerp(f[2] - 0.0, bk[2] + 0.02, t)], { nu: 2, nv: 2, th: 0.008, reg: 'cloth', col: col(cc), w: B.head });
+        // 第三版修订：冠梁下补一片竖板连到帻顶（侧看不再是一根悬空的黑条）
+        const midAt = t => { const ph = t < 0.5 ? lerp(0.95, PI / 2 - 0.001, t * 2) : lerp(PI / 2 - 0.001, 1.25, (t - 0.5) * 2); return headAt(Hp, t < 0.5 ? 0 : PI, ph, 0.012); };
+        panel(gb, (s, t) => { const m0 = midAt(t), ty = lerp(f[1] + 0.07, bk[1] + 0.02, t), tz = lerp(f[2], bk[2] + 0.02, t); return [0, lerp(m0[1], ty, s), lerp(m0[2], tz, s)]; },
+          { nu: 1, nv: hi >= 1 ? 6 : 3, th: 0.01, reg: 'cloth', col: col(shade(cc, -0.1)), w: B.head });
         headRing(X, Hp, rim(0.42, -0.1), 0.012, 0.006, 'cloth', shade(cc, 0.2));
       } else if (tp === 'futou' && hi >= 1) {
         const kp = headAt(Hp, PI, 0.4, 0.02);
@@ -2744,8 +2839,58 @@
         for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.06, kp[2] - 0.03], [kp[0] + sg * 0.04, kp[1] - 0.16, kp[2] - 0.05], [kp[0] + sg * 0.05, kp[1] - 0.3, kp[2] - 0.06], 5), 0.025, 0.022, 'cloth', shade(cc, 0.15), (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]]));
       }
       res.coversTop = true;
-    } else if (tp === 'headband' || tp === 'diadem') {
+    } else if (tp === 'pagri' || tp === 'mukuta' || tp === 'aksumcrown') {
+      // 第三版：天竺大缠头（额前大结 + 金饰牌）/ 天竺宝冠（缠头 + 扇形三片金冠 + 脑后宝带）/ 阿克苏姆金冠（头巾 + 尖叶金片 + 两侧麦穗）
+      const cc = tp === 'pagri' ? (hat.color || '#ece6d8') : (hat.color2 || (tp === 'mukuta' ? '#a8302a' : '#ece6d8'));
+      headShell(X, Hp, { phi0: rim(0.42, -0.1), off: (th, u) => 0.012 + 0.022 * u, sy: tp === 'aksumcrown' ? 0.02 : 0.04, reg: 'cloth', col: cc });
+      for (const [f, b, o] of hi >= 1 ? [[0.42, -0.08, 0.022], [0.66, 0.14, 0.03], [0.9, 0.42, 0.034]] : [[0.5, 0.0, 0.026]]) headRing(X, Hp, rim(f, b), o, 0.013, 'cloth', shade(cc, -0.08));
+      if (tp === 'pagri') {
+        const kp = headAt(Hp, 0, 1.0, 0.05); kp[1] += 0.035;
+        ellipsoid(gb, kp, [0.046, 0.04, 0.04], { nl: hi >= 1 ? 6 : 4, n: hi >= 1 ? 8 : 6, reg: 'cloth', col: col(cc), w: B.head });
+        const gp = headAt(Hp, 0, 0.62, 0.04);
+        ellipsoid(gb, gp, [0.017, 0.019, 0.007], { nl: 3, n: 6, reg: 'gold', col: col(GOLD), w: B.head });
+        if (hi >= 1) ellipsoid(gb, v3add(gp, [0, 0, 0.006]), [0.007, 0.007, 0.004], { nl: 3, n: 5, reg: 'white', col: col(hat.gem || '#c02a3a'), w: B.head });
+      } else {
+        const gc = hat.color || GOLD, rr = rim(0.62, 0.3);
+        headRing(X, Hp, rr, 0.036, 0.012, 'goldEngr', gc, { rz: 0.5 });
+        const plates = tp === 'mukuta' ? [[-0.62, 0.08, 0.05], [0.62, 0.08, 0.05], [0, 0.13, 0.07]]
+          : (hi >= 1 ? [[-1.15, 0.05, 0.026], [-0.58, 0.06, 0.028], [0, 0.075, 0.03], [0.58, 0.06, 0.028], [1.15, 0.05, 0.026]] : [[-0.58, 0.06, 0.028], [0, 0.075, 0.03], [0.58, 0.06, 0.028]]);
+        for (const [th, h, w] of plates) {
+          const p0 = headAt(Hp, th, rr(th) + 0.03, 0.036), n = headN(p0), tx = Math.cos(th), tz = -Math.sin(th);
+          panel(gb, (u, t) => { const x = (u - 0.5) * w * (1 - t * (tp === 'mukuta' ? 0.75 : 0.97)); return [p0[0] + x * tx + n[0] * 0.012 * t, p0[1] + h * t, p0[2] + x * tz + n[2] * 0.012 * t]; },
+            { nu: 2, nv: hi >= 1 ? 3 : 1, th: 0.004, reg: 'gold', col: col(gc), w: B.head });
+          if (tp === 'mukuta' && hi >= 1) ellipsoid(gb, [p0[0] + n[0] * 0.01, p0[1] + h * 0.38, p0[2] + n[2] * 0.01], [0.009, 0.009, 0.005], { nl: 3, n: 5, reg: 'white', col: col(th === 0 ? (hat.gem || '#c02a3a') : '#2a8a6a'), w: B.head });
+        }
+        if (tp === 'mukuta' && hi >= 1) { const kp = headAt(Hp, PI, 0.4, 0.04); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.05, kp[2] - 0.04], [kp[0] + sg * 0.05, kp[1] - 0.14, kp[2] - 0.08], [kp[0] + sg * 0.06, kp[1] - 0.26, kp[2] - 0.12], 5), 0.03, 0.022, 'cloth', hat.ribbon || '#e8c860', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
+        if (tp === 'aksumcrown' && hi >= 1) for (const sg of [1, -1]) {
+          const b0 = headAt(Hp, sg * 1.35, 0.55, 0.04), pts = bez(b0, [b0[0] + sg * 0.02, b0[1] + 0.06, b0[2]], [b0[0] + sg * 0.05, b0[1] + 0.12, b0[2] - 0.01], [b0[0] + sg * 0.07, b0[1] + 0.17, b0[2] - 0.02], 4);
+          tube(gb, pts, { r: 0.003, n: 3, reg: 'gold', col: col(gc), w: B.head });
+          for (let j = 2; j <= 4; j++) for (const sd of [1, -1]) ellipsoid(gb, v3add(pts[j], [sd * 0.008, 0, 0]), [0.006, 0.011, 0.004], { nl: 3, n: 4, reg: 'gold', col: col(gc), w: B.head, axes: axesFromY(v3norm([sd * 0.6, 1, 0])) });
+        }
+      }
+      res.coversTop = true; res.coversBack = true;
+    } else if (tp === 'kushcrown') {
+      // 第三版：库施王的贴头小帽 + 金王带 + 额前双蛇（uraeus）+ 脑后两条飘带
+      headShell(X, Hp, { phi0: rim(0.5, 0.1), off: (th, u) => 0.008 + 0.004 * u, reg: 'cloth', col: hat.color2 || '#2a2422' });
+      const gc = hat.color || GOLD;
+      headRing(X, Hp, rim(0.5, 0.1), 0.012, 0.009, 'goldEngr', gc, { rz: 0.5 });
+      for (const th of [-0.18, 0.18]) {
+        const p0 = headAt(Hp, th, 0.52, 0.02);
+        tube(gb, bez(p0, [p0[0], p0[1] + 0.02, p0[2] + 0.015], [p0[0], p0[1] + 0.035, p0[2] + 0.01], [p0[0], p0[1] + 0.05, p0[2] + 0.012], 4), { r: s2 => 0.007 - 0.003 * s2, n: 4, reg: 'gold', col: col(gc), w: B.head });
+        if (hi >= 1) ellipsoid(gb, [p0[0], p0[1] + 0.05, p0[2] + 0.014], [0.009, 0.008, 0.004], { nl: 3, n: 5, reg: 'gold', col: col(gc), w: B.head });
+      }
+      if (hi >= 1) { const kp = headAt(Hp, PI, 0.4, 0.02); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.025, kp[1] - 0.05, kp[2] - 0.04], [kp[0] + sg * 0.04, kp[1] - 0.16, kp[2] - 0.08], [kp[0] + sg * 0.05, kp[1] - 0.3, kp[2] - 0.12], 5), 0.03, 0.022, 'cloth', hat.ribbon || '#e8e0d0', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
+      res.coversTop = true;
+    } else if (tp === 'bellcrown') {
+      // 第三版：僧伽罗式圆冠（钟形金冠，层层横箍，顶上尖钮）
+      const cc = hat.color || GOLD, c = [0, apexY(0, 0) - 0.07, HEAD_C[2]];
+      lathe(gb, [[0.088, 0], [0.09, 0.03], [0.084, 0.06], [0.07, 0.09], [0.05, 0.115], [0.026, 0.135], [0.012, 0.15], [0.008, 0.19], [0.002, 0.22]], { c, n: lod.ring, reg: 'goldEngr', col: col(cc), w: B.head });
+      if (hi >= 1) for (const [y, r] of [[0.03, 0.093], [0.075, 0.08]]) tube(gb, ringPts([c[0], c[1] + y, c[2]], [1, 0, 0], [0, 0, 1], r, r, Math.max(10, lod.ring)), { r: 0.0045, n: 4, reg: 'gold', col: col(cc), w: B.head, closed: true });
+      res.coversTop = true;
+    } else if (tp === 'headband' || tp === 'diadem' || tp === 'featherband') {
       const cc = tp === 'diadem' ? (hat.color || GOLD) : (hat.color || RED);
+      // 库施弓手的插羽额带：脑侧一根立起的白羽
+      if (tp === 'featherband') { const p0 = headAt(Hp, 1.2, 0.5, 0.02); featherStrip(X, bez(p0, [p0[0] + 0.01, p0[1] + 0.08, p0[2] - 0.01], [p0[0] + 0.015, p0[1] + 0.16, p0[2] - 0.03], [p0[0] + 0.02, p0[1] + 0.22, p0[2] - 0.05], 4), 0.03, 0.014, 'feather', hat.feather || '#f0ece0', B.head, 4); }
       headRing(X, Hp, rim(0.56, 0.3), 0.006, 0.011, tp === 'diadem' ? 'goldEngr' : 'cloth', cc, { rz: 0.4 });
       if (hat.gem || tp === 'diadem') ellipsoid(gb, headAt(Hp, 0, 0.56, 0.014), [0.011, 0.013, 0.006], { nl: 4, n: 6, reg: 'white', col: col(hat.gem || '#2a6db5'), w: B.head });
       if (hi >= 1) { const kp = headAt(Hp, PI, 0.3, 0.015); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.04, kp[2] - 0.04], [kp[0] + sg * 0.05, kp[1] - 0.12, kp[2] - 0.08], [kp[0] + sg * 0.06, kp[1] - 0.24, kp[2] - 0.12], 5), 0.03, 0.02, tp === 'diadem' ? 'cloth' : 'cloth', tp === 'diadem' ? '#e8e0d0' : cc, (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
@@ -2763,8 +2908,9 @@
         // 雉翎：两根长尾羽，自冠两侧向上向后弯
         for (const sg of [1, -1]) {
           const p0 = headAt(Hp, sg * 0.35, 1.0, 0.02);
-          featherStrip(X, bez(p0, [p0[0] + sg * 0.06, p0[1] + 0.25, p0[2] + 0.02], [p0[0] + sg * 0.2, p0[1] + 0.5, p0[2] - 0.15], [p0[0] + sg * 0.36, p0[1] + 0.6, p0[2] - 0.42], hi >= 2 ? 14 : 7),
-            0.034, 0.012, 'feather', '#ffffff', (p, s, t) => wT(t, [[B.head, 0], [B.plume1, 0.15], [B.plume2, 0.6]]), hi >= 2 ? 16 : 6);
+          // 第三版修订：更长（×1.3）、先向前再向后外方扫开的 S 形长翎，翎梢更细
+          featherStrip(X, bez(p0, [p0[0] + sg * 0.04, p0[1] + 0.32, p0[2] + 0.06], [p0[0] + sg * 0.26, p0[1] + 0.68, p0[2] - 0.12], [p0[0] + sg * 0.46, p0[1] + 0.76, p0[2] - 0.56], hi >= 2 ? 16 : 7),
+            0.032, 0.008, 'feather', '#ffffff', (p, s, t) => wT(t, [[B.head, 0], [B.plume1, 0.15], [B.plume2, 0.6]]), hi >= 2 ? 18 : 6);
         }
       }
       if (tp === 'goldcrown' && hi >= 0) {
@@ -2814,7 +2960,16 @@
           { nu: Math.max(3, lod.pn + 1), nv: Math.max(1, lod.pv - 6), th: 0.006, reg, col: col(reg === 'mail' ? '#8a909a' : cc), w: (p, s, t) => [[B.head, 1 - 0.4 * t], [B.neck, 0.4 * t]] });
       }
       if (tp === 'spangen' && hi >= 1) tube(gb, [headAt(Hp, 0, 0.35, 0.02), headAt(Hp, 0, 0.0, 0.035)], { r: 0.006, n: 4, reg: 'metal', col: col('#8a909a'), w: B.head });
-      if (tp === 'tiara' && hi >= 1) for (let i = 0; i < 5; i++) { const p = headAt(Hp, PI, lerp(0.5, 1.4, i / 4), 0.03 + 0.05 * i / 4); p[1] += 0.1 * Math.pow(i / 4, 2); ellipsoid(gb, p, [0.006, 0.014, 0.014], { nl: 3, n: 5, reg: 'gold', col: col(GOLD), w: B.head }); }
+      if (tp === 'tiara' && hi >= 1) {
+        // 第三版修订：金珠钉在帽壳表面（与 headShell 同一套偏移与拔顶），不再悬在盔后一列
+        const p0 = rim(0.38, -0.12)(PI);
+        for (let i = 0; i < 5; i++) {
+          const ph = lerp(Math.max(p0 + 0.08, 0.5), 1.3, i / 4), u = Math.pow(clamp01((ph - p0) / (PI / 2 - 0.001 - p0)), 1 / 0.85);
+          const p = headAt(Hp, PI, ph, 0.013 + 0.008 * u + 0.006);
+          p[1] += ap * Math.pow(u, 3);
+          ellipsoid(gb, p, [0.006, 0.012, 0.012], { nl: 3, n: 5, reg: 'gold', col: col(GOLD), w: B.head });
+        }
+      }
       res.coversTop = true;
     } else if (tp === 'keffiyeh') {
       const cc = hat.color || '#ece6da';
@@ -2848,10 +3003,10 @@
     const recede = look.hair.recede || 0;
     // 发壳（被盔帽完全盖住时省略）
     if (!cov.coversTop) {
-      const thick = { short: 0.006, bob: 0.012, curly: 0.014, bushy: 0.02, wild: 0.024, spiky: 0.012, kunfa: 0.004, romanf: 0.012 }[hs] || 0.01;
+      const thick = { short: 0.006, bob: 0.012, curly: 0.014, bushy: 0.02, wild: 0.024, spiky: 0.012, kunfa: 0.004, romanf: 0.012, tightcurl: 0.007, ringlets: 0.014 }[hs] || 0.01;
       headShell(X, Hp, {
         phi0: th => hairline(th, hs, recede), reg: 'hair', col: hc, pw: 0.9,
-        off: (th, u, ph) => (0.003 + thick * vol * sstep(0, 0.25, ph - hairline(th, hs, recede))) * (hs === 'curly' || hs === 'wild' ? 1 + 0.3 * Math.sin(th * 7) * Math.sin(ph * 9) : 1),
+        off: (th, u, ph) => (0.003 + thick * vol * sstep(0, 0.25, ph - hairline(th, hs, recede))) * (hs === 'curly' || hs === 'wild' || hs === 'ringlets' ? 1 + 0.3 * Math.sin(th * 7) * Math.sin(ph * 9) : hs === 'tightcurl' ? 1 + 0.25 * Math.sin(th * 13) * Math.sin(ph * 15) : 1),
       });
     }
     const top = headAt(Hp, PI, 1.25, 0.01);
@@ -2862,7 +3017,9 @@
     if (hs === 'topknot' || hs === 'highbun' || hs === 'mallet') {
       if (cov.coversTop && hs === 'topknot' && !cov.showBun) return;
       const p = hs === 'mallet' ? headAt(Hp, PI, 0.75, 0.04) : headAt(Hp, PI, cov.showBun ? 1.47 : 1.38, cov.showBun ? 0.034 : 0.03);
-      if (hs !== 'mallet') p[1] += hs === 'highbun' ? 0.05 : cov.showBun ? 0.04 : 0.025;
+      if (hs !== 'mallet') p[1] += hs === 'highbun' ? 0.05 : cov.showBun ? 0.012 : 0.025;
+      // 第三版修订：露出冠帽的发髻贴着帽顶（不再悬空），并有一小段发根连到头顶
+      if (cov.showBun && hs !== 'mallet') tube(gb, [headAt(Hp, PI, 1.47, 0.012), p], { r: 0.022, n: Math.max(6, lod.hand[1]), reg: 'hair', col: col(hc), w: B.head });
       const crown = look.hat && look.hat.type === 'crown';
       bunAt(p, hs === 'mallet' ? [0.045, 0.042, 0.042] : [0.036, 0.032, 0.036], crown ? null : look.hair.tie);
       if (crown) {
@@ -2870,7 +3027,7 @@
         lathe(gb, [[0.03, -0.022], [0.042, -0.012], [0.044, 0.012], [0.036, 0.03], [0.03, 0.036]].map((q, i) => [q[0], q[1], null, i / 4]), { c: p, n: Math.max(8, X.lod.ring), reg: 'goldEngr', col: col((look.hat && look.hat.color) || GOLD), w: B.head, sz: 0.85 });
         if (look.hat.gem) ellipsoid(gb, [p[0], p[1] + 0.0, p[2] + 0.04], [0.008, 0.008, 0.005], { nl: 3, n: 5, reg: 'white', col: col(look.hat.gem), w: B.head });
       }
-      if (X.hi >= 1 && (hs === 'topknot' || crown)) tube(gb, [[p[0] - (crown ? 0.075 : 0.05), p[1] + 0.008, p[2]], [p[0] + (crown ? 0.075 : 0.05), p[1] + 0.008, p[2]]], { r: crown ? 0.005 : 0.0035, n: 4, reg: 'gold', col: col(look.hair.pin || GOLD), w: B.head });
+      if (X.hi >= 1 && (hs === 'topknot' || crown)) tube(gb, [[p[0] - (crown ? 0.075 : 0.05), p[1] - 0.004, p[2]], [p[0] + (crown ? 0.075 : 0.05), p[1] - 0.004, p[2]]], { r: crown ? 0.005 : 0.0035, n: 4, reg: 'gold', col: col(look.hair.pin || GOLD), w: B.head });
     } else if (hs === 'bun' || hs === 'romanf' || hs === 'twinbun') {
       if (hs === 'twinbun') for (const sg of [1, -1]) bunAt(headAt(Hp, sg * 1.1, 1.1, 0.03), [0.03, 0.03, 0.03], look.hair.tie);
       else bunAt(headAt(Hp, PI, 0.55, 0.045), [0.042, 0.038, 0.035], look.hair.tie);
@@ -2886,8 +3043,8 @@
       tube(gb, bez(c, [c[0] - 0.02, c[1] - 0.04, c[2] - 0.02], [c[0] - 0.02, c[1] - 0.09, c[2] - 0.04], [c[0] - 0.01, c[1] - 0.14, c[2] - 0.05], X.hi === 0 ? 2 : 5), { r: s => 0.02 * (1 - s) + 0.006, n: X.hi === 0 ? 4 : 6, reg: 'hair', col: col(hc), w: (s) => [[B.head, 1 - s * 0.5], [B.hair1, s * 0.5]] });
     }
     // 长发 / 辫 / 髡发两鬓
-    if (hs === 'long' || hs === 'wahair' || hs === 'wild' || hs === 'bushy' || hs === 'bob' || hs === 'romanf') {
-      const len = { long: 0.28, wahair: 0.36, wild: 0.18, bushy: 0.12, bob: 0.07, romanf: 0.05 }[hs] * (look.sex === 'f' ? 1.2 : 1);
+    if (hs === 'long' || hs === 'wahair' || hs === 'wild' || hs === 'bushy' || hs === 'bob' || hs === 'romanf' || hs === 'ringlets') {
+      const len = { long: 0.28, wahair: 0.36, wild: 0.18, bushy: 0.12, bob: 0.07, romanf: 0.05, ringlets: 0.13 }[hs] * (look.sex === 'f' ? 1.2 : 1);
       if (!(cov.coversBack && len < 0.15)) panel(gb, (s, t) => {
         const th = lerp(1.6, TAU - 1.6, s);
         const p = headAt(Hp, th, lerp(0.2, -0.45, t), 0.012 + 0.012 * vol);
@@ -2990,6 +3147,8 @@
     dao: { name: '环首刀', style: 'one' }, jian: { name: '长剑', style: 'one' }, gladius: { name: '短剑', style: 'one' }, spatha: { name: '长剑', style: 'one' },
     tachi: { name: '直刀', style: 'one' }, mace: { name: '骨朵', style: 'one' }, handaxe: { name: '战斧', style: 'one' }, axe: { name: '大斧', style: 'pole' },
     twindao: { name: '双刀', style: 'dual' }, bow: { name: '弓', style: 'bow' },
+    khanda: { name: '坎达剑', style: 'one' }, longbow: { name: '长弓', style: 'bow' },
+    staff: { name: '锡杖', style: 'pole' },
   };
   const DUAL_BASE = { swords: 'jian', twinji: 'ji1', shortji: 'sji1', twindao: 'dao' };
 
@@ -3133,6 +3292,18 @@
         info = Object.assign(info, { tip: [0, info.len - 0.04, 0], base: [0, b0, 0], off: [0, lance ? 0.7 : 0.6, 0] });
         break;
       }
+      case 'staff': {
+        // 锡杖（第三版修订：僧人龙树、提婆、伊兰戈）：木杖、铜箍，杖头为桃形铜环套小环
+        const top = 1.25;
+        shaft(K, -0.95, top, 0.017, 'wood', '#6a4a2a', 0.1);
+        ringAtY(K, -0.9, 0.019, 0.04, 'goldEngr', BRONZE);
+        ringAtY(K, top - 0.02, 0.02, 0.05, 'goldEngr', BRONZE);
+        tube(gb, ringPts([0, top + 0.11, 0], [1, 0, 0], [0, 1, 0], 0.075, 0.11, K.hi >= 1 ? 14 : 8).concat([[0.0, top + 0.0, 0]]), { r: 0.007, n: 5, reg: 'gold', col: col(BRONZE), w: K.w });
+        if (K.hi >= 1) for (const sx of [-1, 1]) for (const yy of [0.06, 0.15]) tube(gb, ringPts([sx * 0.075, top + yy, 0], [0, 0, 1], [0, 1, 0], 0.02, 0.02, 8), { r: 0.004, n: 4, reg: 'gold', col: col(BRONZE), w: K.w });
+        info.len = top + 0.22;
+        info = Object.assign(info, { tip: [0, top + 0.2, 0], base: [0, top - 0.3, 0], off: [0, 0.6, 0] });
+        break;
+      }
       case 'bigaxe': case 'axe': {
         const big = id === 'bigaxe';
         const top = big ? 1.05 : 0.95;
@@ -3194,6 +3365,25 @@
         info = Object.assign(info, { len: 0.08 + L, tip: [0, 0.06 + L, curved ? -0.03 : 0], base: [0, 0.12, 0] });
         break;
       }
+      case 'khanda': {
+        // 第三版：天竺坎达剑（桑奇、阿马拉瓦蒂浮雕中的长直剑）——直身双刃、向尖端渐宽、钝圆头；圆盘护手、护指弯条、盘形柄头
+        const L = 0.84;
+        tube(gb, K.hi === 0 ? [[0, -0.1, 0], [0, 0.06, 0]] : [[0, -0.1, 0], [0, -0.02, 0], [0, 0.06, 0]], { r: 0.014, n: K.hi === 0 ? 4 : Math.max(5, K.lod.tube), reg: 'wrap', col: col('#3a2418'), w: K.w });
+        lathe(gb, [[0.0, -0.124], [0.034, -0.12], [0.036, -0.11], [0.012, -0.1]], { n: K.hi === 0 ? 5 : 8, reg: 'gold', col: col(GOLD), w: K.w });
+        lathe(gb, [[0.0, 0.06], [0.032, 0.062], [0.034, 0.072], [0.0, 0.076]], { n: K.hi === 0 ? 5 : 8, reg: 'gold', col: col(GOLD), w: K.w, sz: 1.4 });
+        if (K.hi >= 1) {
+          tube(gb, [[0, -0.126, 0], [0, -0.165, 0]], { r: q => 0.006 * (1 - q) + 0.0012, n: 4, reg: 'gold', col: col(GOLD), w: K.w });
+          tube(gb, bez([0, 0.068, 0.04], [0, 0.04, 0.075], [0, -0.07, 0.075], [0, -0.112, 0.032], 5), { r: 0.0048, n: 4, reg: 'gold', col: col(GOLD), w: K.w });
+        }
+        const pts = [], N = K.hi >= 1 ? 8 : 3;
+        for (let i = 0; i <= N; i++) {
+          const t = i / N, wt = t < 0.86 ? 0.019 + 0.012 * t : 0.0293 * Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.86) / 0.14, 2)));
+          pts.push([0.08 + t * L, Math.max(0.003, wt), Math.max(0.003, wt), 0.0055, 0]);
+        }
+        bladeY(K, pts, true);
+        info = Object.assign(info, { len: 0.08 + L, tip: [0, 0.08 + L, 0], base: [0, 0.12, 0] });
+        break;
+      }
       case 'mace': {
         shaft(K, -0.14, 0.5, 0.017, 'wrap', '#3a2418');
         lathe(gb, [[0.018, 0.48], [0.036, 0.51], [0.05, 0.56], [0.052, 0.62], [0.04, 0.67], [0.015, 0.7], [0, 0.71]], { n: 16, reg: 'brushed', col: col('#8a8e98'), w: K.w, off: (th) => 0.016 * Math.pow(Math.max(0, Math.cos(th * 3)), 4) });
@@ -3219,13 +3409,13 @@
         info = Object.assign(info, { len: 0.4, tip: [0, 0.38, 0], base: [0, 0.12, 0] });
         break;
       }
-      case 'bow': case 'huangbow': {
-        // 反曲弓：沿 ±Y 两臂，弓背朝 +Z，弦在 −Z 一侧
-        const gold = id === 'huangbow';
-        const half = gold ? 0.62 : 0.55, pts = [];
+      case 'bow': case 'huangbow': case 'longbow': {
+        // 反曲弓：沿 ±Y 两臂，弓背朝 +Z，弦在 −Z 一侧；longbow（第三版：天竺竹长弓 / 库施长弓）更长、单弯、竹色
+        const gold = id === 'huangbow', lb = id === 'longbow';
+        const half = gold ? 0.62 : lb ? 0.74 : 0.55, pts = [];
         const N = K.hi >= 1 ? 12 : 6;
-        for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, a = Math.abs(t); pts.push([0, t * half, 0.06 * (1 - a * a) - 0.05 * Math.pow(a, 6) * 1.2 + (a > 0.85 ? -0.02 * (a - 0.85) / 0.15 : 0)]); }
-        tube(gb, pts, { r: s => (0.013 - 0.007 * Math.abs(2 * s - 1)) * (gold ? 1.1 : 1), rz: 0.8, n: Math.max(5, K.lod.tube), reg: gold ? 'gold' : 'wood', col: col(gold ? '#c89a48' : '#5a3418'), w: K.w });
+        for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, a = Math.abs(t); pts.push([0, t * half, lb ? 0.07 * (1 - a * a) : 0.06 * (1 - a * a) - 0.05 * Math.pow(a, 6) * 1.2 + (a > 0.85 ? -0.02 * (a - 0.85) / 0.15 : 0)]); }
+        tube(gb, pts, { r: s => (0.013 - 0.007 * Math.abs(2 * s - 1)) * (gold ? 1.1 : 1), rz: 0.8, n: Math.max(5, K.lod.tube), reg: gold ? 'gold' : 'wood', col: col(gold ? '#c89a48' : lb ? '#a8884a' : '#5a3418'), w: K.w });
         tube(gb, [[0, -0.06, 0.05], [0, 0.06, 0.05]], { r: 0.017, n: 6, reg: 'wrap', col: col('#3a2418'), w: K.w });
         // 弦（细管）
         tube(gb, [pts[0], [0, 0, pts[0][2] - 0.005], pts[N]], { r: 0.0018, n: 3, reg: 'white', col: col('#e8e0d0'), w: K.w });
@@ -3257,14 +3447,29 @@
       fixDiscUV(gb, REG(id === 'wa' ? 'mirror' : 'buckle'), c, AX, r, start);
       return { r: H0 / 2 };
     }
-    // 圆盾 / 椭圆盾 / 藤牌
-    const oval = id === 'oval', rat = id === 'rattan';
+    if (id === 'long') {
+      // 第三版：天竺长盾（桑奇浮雕）——窄长、顶边圆拱、竖向弯曲的木盾，正中金泡钉
+      const W0 = 0.4, H0 = 0.98;
+      panel(gb, (s, t) => { const e = 1 - Math.pow(2 * s - 1, 2); return [(s - 0.5) * W0, (t - 0.5) * H0 + Math.pow(t, 4) * 0.11 * e, 0.07 * e]; },
+        { nu: K.hi >= 1 ? 4 : 2, nv: K.hi >= 1 ? 4 : 2, th: 0.02, reg: 'wood', col: fc, colB: col('#5a3a24'), w: K.w, uv: (s, t) => [s, t] });
+      const c = [0, 0.04, 0.09], AX = axesFromY([0, 0, 1]), r = 0.06, start = gb.nv;
+      lathe(gb, [[r, -0.006, null, 0], [r, 0.0, null, 0.1], [r * 0.85, 0.012, null, 0.35], [r * 0.3, 0.02, null, 0.8], [0, 0.022, null, 1]], { c, axes: AX, n: Math.max(6, lod.ring - 4), reg: 'buckle', col: col(GOLD), w: K.w });
+      fixDiscUV(gb, REG('buckle'), c, AX, r, start);
+      return { r: H0 / 2 };
+    }
+    // 圆盾 / 椭圆盾 / 藤牌；hide（第三版：阿克苏姆 / 库施的长皮盾，椭圆、皮色）
+    const oval = id === 'oval' || id === 'hide', rat = id === 'rattan';
     const R0 = oval ? 0.26 : rat ? 0.33 : 0.32;
     const c = [0, 0, 0.07], AX = axesFromY([0, 0, 1]), start = gb.nv;
-    const reg = rat ? 'rattan' : 'shieldRound';
-    lathe(gb, [[R0, -0.02, null, 0], [R0 * 1.02, 0.0, null, 0.04], [R0 * 0.95, 0.012, null, 0.1], [R0 * 0.5, 0.03, null, 0.5], [0, 0.04, null, 1]], { c, axes: AX, n: Math.max(8, lod.ring), reg, col: rat ? col('#c8a060') : fc, w: K.w, sx: 1, sz: oval ? 1.8 : 1, capStart: true });
+    const reg = rat ? 'rattan' : id === 'hide' ? 'cloth' : 'shieldRound';
+    lathe(gb, [[R0, -0.02, null, 0], [R0 * 1.02, 0.0, null, 0.04], [R0 * 0.95, 0.012, null, 0.1], [R0 * 0.5, 0.03, null, 0.5], [0, 0.04, null, 1]], { c, axes: AX, n: Math.max(8, lod.ring), reg, col: rat ? col('#c8a060') : id === 'hide' ? col('#a07a4e') : fc, w: K.w, sx: 1, sz: id === 'hide' ? 2.1 : oval ? 1.8 : 1, capStart: true });
     if (!rat) fixDiscUV(gb, REG(reg), c, AX, R0, start); else fixDiscUV(gb, REG(reg), c, AX, R0, start);
     if (oval) { for (let i = start; i < gb.nv; i++) { /* 椭圆：UV 已按圆投影，纵向拉伸可接受 */ } }
+    if (id === 'hide' && K.hi >= 1) {
+      // 皮盾：纵向一道木脊 + 正中皮钮
+      tube(gb, [[0, -R0 * 1.9, 0.105], [0, 0, 0.118], [0, R0 * 1.9, 0.105]], { r: 0.012, rz: 0.6, n: 4, reg: 'wood', col: col('#6a4a2a'), w: K.w });
+      ellipsoid(gb, [0, 0, 0.12], [0.04, 0.05, 0.02], { nl: 4, n: 6, reg: 'leather', col: col('#5a3a20'), w: K.w });
+    }
     return { r: oval ? R0 * 1.8 : R0 };
   }
 
@@ -3382,8 +3587,9 @@
     }
     // 马面（护额甲）
     if (opts.chamfron || armor === 'scale' || opts.general) {
-      panel(gb, (s, t) => { const d = hd[1].map((v, i) => lerp(v, hd[4][i], t)); const th = lerp(-1.2, 1.2, s); const R = lerp(0.135, 0.095, t); return [Math.sin(th) * R * 0.95 * k, (d[1] + Math.cos(th) * R * 0.62) * k + 0.018, (d[2] + Math.cos(th) * R * 0.5) * k + 0.01]; },
-        { nu: hi >= 1 ? 4 : 2, nv: hi >= 1 ? 4 : 2, th: 0.006, reg: 'metal', col: col(opts.metal || '#a8aeb8'), w: HB.head, mirrorS: true });
+      // 第三版修订：面帘更窄、贴着马脸（不再是罩在脸前的一大块银板），青铜色、錾花
+      panel(gb, (s, t) => { const d = hd[1].map((v, i) => lerp(v, hd[4][i], t)); const th = lerp(-1.0, 1.0, s); const R = lerp(0.1, 0.065, t); return [Math.sin(th) * R * 0.95 * k, (d[1] + Math.cos(th) * R * 0.62) * k + 0.012, (d[2] + Math.cos(th) * R * 0.5) * k + 0.004]; },
+        { nu: hi >= 1 ? 4 : 2, nv: hi >= 1 ? 4 : 2, th: 0.005, reg: 'goldEngr', col: col(opts.metal ? shade(opts.metal, -0.25) : '#8a6e44'), w: HB.head, mirrorS: true });
       if (hi >= 1) tassel({ gb, lod, hi }, [0, 1.98 * k, 0.94 * k], 0.7, opts.plume || '#c8302a', HB.head);
     }
     // 镫
@@ -3785,6 +3991,9 @@
         this._faceMat = faceMaterial(this._face);
         this.head = new THREE.Mesh(tpl.headGeo, this._faceMat);
         this.head.name = 'head'; this.head.castShadow = shadow;
+        // 阴影用不带贴图的深度材质（同 duel-game.js 的 figHeadDepth）：three.js 共用的深度材质会记住面部贴图，
+        // 武将释放后阴影渲染可能把已释放的贴图重新上传（每名武将泄漏一张面部贴图）
+        this.head.customDepthMaterial = headDepthMaterial();
         this.bones.head.add(this.head);
         this.meshes.push(this.head);
       }
@@ -4219,8 +4428,8 @@
         for (const m of [this.weaponMesh, this.weaponMesh2, this.shieldMesh]) if (m) m.material = this._ownMat;
       }
       const c = col(hex || '#ffffff');
-      this._ownMat.emissive.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
-      if (this._faceMat) this._faceMat.emissive.copy(this._ownMat.emissive);
+      this._ownMat.userData.tint.value.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
+      if (this._faceMat && this._faceMat.userData.tint) this._faceMat.userData.tint.value.copy(this._ownMat.userData.tint.value);
       return this;
     }
     dispose() {
@@ -4235,6 +4444,14 @@
       if (this._ownWeaponGeo) this._ownWeaponGeo.dispose();
       releaseTemplate(this.tpl);
     }
+  }
+  let HEAD_DEPTH = null;
+  function headDepthMaterial() {
+    if (HEAD_DEPTH) return HEAD_DEPTH;
+    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    Object.defineProperty(m, 'map', { get: () => null, set: () => {}, configurable: true });
+    m.name = 'SG.Figure.headDepth';
+    return (HEAD_DEPTH = m);
   }
   function ownCopy(base) {
     const m = base.clone();
@@ -4319,7 +4536,7 @@
     detach(obj) { if (obj && obj.parent) obj.parent.remove(obj); return obj; }
     setTint(hex, k) {
       if (!this._ownMat) { this._ownMat = ownCopy(this.mesh.material); this.mesh.material = this._ownMat; }
-      const c = col(hex || '#ffffff'); this._ownMat.emissive.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
+      const c = col(hex || '#ffffff'); this._ownMat.userData.tint.value.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
       return this;
     }
     dispose() {
@@ -4510,17 +4727,16 @@
     m.name = 'SG.Figure.crowd';
     const RIMu = RIM;
     m.onBeforeCompile = function (sh) {
-      Object.assign(sh.uniforms, U, { uRimColor: RIMu.color, uRimK: RIMu.k });
+      Object.assign(sh.uniforms, U, { uRimColor: RIMu.color, uRimK: RIMu.k, uRimDir: RIMu.dir });
       sh.vertexShader = crowdVertex(sh.vertexShader);
-      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nvarying vec3 vSgTeam;\n' + sh.fragmentShader
+      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nuniform vec3 uRimDir;\nvarying vec3 vSgTeam;\n' + sh.fragmentShader
         .replace('#include <map_fragment>', ['#ifdef USE_MAP', '  vec4 sgTex = texture2D( map, vMapUv );', '  diffuseColor.rgb *= sgTex.rgb;', '#endif'].join('\n'))
         .replace('#include <color_fragment>', [
           '#if defined( USE_COLOR_ALPHA )', '  vec3 sgVC = mix( vColor.rgb, vColor.rgb * vSgTeam, vColor.a );',
           '#elif defined( USE_COLOR )', '  vec3 sgVC = vColor.rgb;', '#endif',
           '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )', '  #ifdef USE_MAP', '  diffuseColor.rgb *= mix( vec3( 1.0 ), sgVC, sgTex.a );', '  #else', '  diffuseColor.rgb *= sgVC;', '  #endif', '#endif'].join('\n'))
         .replace('#include <emissivemap_fragment>', ['#include <emissivemap_fragment>',
-          '  { float sgR = 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 );',
-          '    totalEmissiveRadiance += uRimColor * ( sgR * sgR * sgR * uRimK ) * ( 0.3 + 0.7 * diffuseColor.rgb ); }'].join('\n'));
+          RIM_GLSL].join('\n'));
     };
     m.customProgramCacheKey = () => 'sgcrowd';
     return m;

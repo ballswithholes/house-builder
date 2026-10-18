@@ -18,6 +18,8 @@
        special: null,     // 可选 { name, color, kind, cry }：冲锋前先播 cutIn 特写，接敌时附带特效与额外伤亡
                           //   kind：'blaze' 火海 / 'storm' 雷击 / 'volley' 箭雨，其余一律为斩击弧光 + 冲击波
        playerSide: 0 | 1 | null,
+       scene: { culture, biome, coast },   // 可选（第三版修订）：布景——防守城池的文化（城墙、村舍）、群落（temperate / steppe / desert /
+                          //   tropical / savanna / med / boreal / alpine：地面色、树种）、coast（登陆：攻方身后为沙滩与海）；缺省按防守方文化推测
        speed: 1,          // 可选：本次额外的时间倍率（与 SG.Clash.speed 相乘），如电脑回合传 1.6
      })                   → Promise<{ skipped, disabled, seconds }>（seconds：画面实际播放时长）
        · gen 至少含 name；color 为势力色 '#rrggbb'；formation 可为阵型名或 SG.Defs.formations 下标；
@@ -309,11 +311,50 @@
     if (free.length) return free.pop();
     const o = { transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false };
     if (kind === 'ring') o.side = THREE.DoubleSide;
+    else if (kind === 'slash') { o.side = THREE.DoubleSide; o.map = slashTexture(); }
     else if (kind === 'shock') o.map = SG.Gfx.ringTexture;
     else if (kind === 'bolt') o.vertexColors = true;
     const m = new THREE.MeshBasicMaterial(o);
     m.userData.fxKind = kind;
     return m;
+  }
+  // 斩光贴图：u = 径向（0 内缘 → 1 外缘），v = 沿弧（0 → 1）。外缘内侧一道亮芯，内缘柔和渐隐，两端渐隐
+  function slashTexture() {
+    if (MATS.slashTex) return MATS.slashTex;
+    const W = 64, Hh = 64, cv = document.createElement('canvas');
+    cv.width = W; cv.height = Hh;
+    const g = cv.getContext('2d'), img = g.createImageData(W, Hh);
+    const ss = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+      const u = (x + 0.5) / W, v = (y + 0.5) / Hh;
+      const body = ss(0.0, 0.7, u) * (1 - ss(0.9, 1.0, u));
+      const core = Math.exp(-Math.pow((u - 0.8) / 0.07, 2));
+      const ends = Math.pow(Math.sin(Math.PI * v), 0.6);
+      const a = clamp01((body * 0.55 + core) * ends);
+      const w = clamp01(0.55 + core * 0.6);
+      const i = (y * W + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * w * a); img.data[i + 3] = Math.round(255 * a);
+    }
+    g.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    MATS.slashTex = t;
+    return t;
+  }
+  // 月牙几何：外缘半径 r1，内缘自中部 r0 向两端收拢到 r1；wid（0–1）：弧长占比（全长 ±1.05 弧度）
+  function slashGeo(r0, r1, wid) {
+    const N = 24, A = 1.05 * (wid || 1), pos = [], uv = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const v = i / N, a = -A + 2 * A * v, ri = r1 - (r1 - r0) * Math.pow(Math.sin(Math.PI * v), 0.7);
+      pos.push(Math.cos(a) * ri, Math.sin(a) * ri, 0, Math.cos(a) * r1, Math.sin(a) * r1, 0);
+      uv.push(0, v, 1, v);
+      if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 3, k, k + 3, k + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
   }
   function releaseFx(m) {
     const k = m && m.userData && m.userData.fxKind;
@@ -699,8 +740,9 @@ void main() {
   const RIVER = { x: 1.05, w: 1.7, bank: 1.5, bed: -0.42, surf: -0.1 };
   const WALL_Z = -7.4, GATE_X = 4.6;     // 城墙正面（three z）与城门中心 x
   function isWalled(kind) { return kind === 'gate' || kind === 'castle' || kind === 'wall'; }
-  function makeHeight(kind, seed) {
+  function makeHeight(kind, seed, look) {
     const r = SG.SeededRandom(seed);
+    const coast = !!(look && look.coast);
     const ox = r.nextDouble() * 200, oz = r.nextDouble() * 200;
     const pn = (x, z, f) => M.perlinNoise(ox + x * f, oz + z * f) - 0.465;
     const hilly = kind === 'hill' || kind === 'mountain';
@@ -731,11 +773,19 @@ void main() {
           y = lerp(near, Math.min(y, valley), vf);
         } else y = near;
       }
+      if (coast) {
+        // 登陆：海岸线以外降为缓坡沙滩与海床（远山也不在海上隆起）
+        const d = x - shoreX(z);
+        if (d < 5) {
+          const beach = Math.max(-1.5, SEA_Y + 0.04 + d * 0.065);
+          y = lerp(y, beach, sstep(5, 0.6, d));
+        }
+      }
       return y;
     };
   }
   // 顶点底色与地表权重 aGnd = (泥土 / 踩踏 / 道路, 沙, 岩石倾向, 农田)
-  function groundAttr(kind, x, z, y, n, nf, out) {
+  function groundAttr(kind, x, z, y, n, nf, out, look) {
     let c;
     let dirt = 0, sand = 0, rock = 0, farm = 0;
     const walled = isWalled(kind);
@@ -748,6 +798,9 @@ void main() {
       default: c = C(0.46, 0.64, 0.31); break;
     }
     c.lerp(C(0.58, 0.68, 0.33), clamp01(n * 1.6) * 0.45);
+    // 群落底色（草原枯黄、沙漠沙土、热带深绿、地中海橄榄绿……）
+    if (look && look.grass) c.lerp(shade(look.grass, (n - 0.1) * 0.25), kind === 'forest' ? 0.6 : 0.8);
+    if (look && look.sandy) sand = Math.max(sand, look.sandy * sstep(-0.05, 0.25, nf + n * 0.5));
     if (walled) {
       // 墙前夯土与车辙大道、门前石板、墙根阴湿
       const earth = (1 - sstep(2, 7, z - WALL_Z)) * sstep(WALL_Z - 2, WALL_Z - 0.5, z);
@@ -756,14 +809,14 @@ void main() {
         const d = Math.abs(x - GATE_X), w = 1.45 + Math.max(0, z - WALL_Z) * 0.07;
         const road = 1 - sstep(w - 0.35, w + 0.35, d);
         dirt = Math.max(dirt, road);
-        if (z < WALL_Z + 2.4 && d < 2.3) { const pv = 1 - sstep(1.7, 2.3, d); c.lerp(C(0.64, 0.62, 0.58), pv); dirt *= 1 - pv; rock = -pv; }
+        if (z < WALL_Z + 2.4 && d < 2.3 && !(look && look.wall === 'palisade')) { const pv = 1 - sstep(1.7, 2.3, d); c.lerp(C(0.64, 0.62, 0.58), pv); dirt *= 1 - pv; rock = -pv; }
       }
       c.lerp(C(0.42, 0.42, 0.36), (1 - sstep(WALL_Z, WALL_Z + 1.2, z)) * 0.35);
     } else {
       dirt = trample * (kind === 'forest' ? 0.55 : 0.7);
       if (kind === 'forest') dirt = Math.max(dirt, sstep(-4, -9, z) * 0.35 * (0.5 + nf));
       if ((kind === 'plain' || kind === 'river') && z < -12 && z > -40 && Math.abs(x) < 46) {
-        farm = sstep(-12, -15, z) * (1 - sstep(-34, -40, z)) * (1 - sstep(38, 46, Math.abs(x))) * sstep(-0.05, 0.12, nf);
+        farm = sstep(-12, -15, z) * (1 - sstep(-34, -40, z)) * (1 - sstep(38, 46, Math.abs(x))) * sstep(-0.05, 0.12, nf - (1 - (look ? look.farm : 1)) * 0.5);
         if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + RIVER.bank + 2.5) farm = 0;
       }
     }
@@ -771,6 +824,13 @@ void main() {
       const d = Math.abs(x - RIVER.x);
       sand = 1 - sstep(RIVER.w + RIVER.bank - 0.3, RIVER.w + RIVER.bank + 0.7, d);
       if (d < RIVER.w) c.lerp(C(0.5, 0.46, 0.36), 0.6);
+    }
+    if (look && look.coast) {
+      // 海滩：海岸线内外约 3 单位为沙，水下也是沙（透出浅海的青绿）
+      const d = x - shoreX(z);
+      const b = 1 - sstep(1.4, 3.6, d + (nf - 0.1) * 1.5);
+      sand = Math.max(sand, b); farm *= sstep(4, 8, d); dirt *= sstep(0.5, 2.5, d);
+      if (d < 0.2) c.lerp(C(0.62, 0.58, 0.46), 0.6);
     }
     if (kind === 'mountain') rock = Math.max(rock, sstep(2.5, 7, y) * 0.8);
     if (kind === 'hill') rock = Math.max(rock, sstep(5, 10, y) * 0.5);
@@ -825,16 +885,49 @@ void main() {
     const tk = B[K_PLAIN], lf = B[K_LEAF];
     const p = P(x, y, z);
     const TR = C(0.38, 0.27, 0.16);
-    const ts = near ? 9 : 6, cs = near ? 16 : 10, d = near ? 2 : 1;
+    // 第三版修订：树冠一律 detail 2（中远景也不再露出多边形轮廓），法线向椭球法线混合（明暗圆润）
+    const ts = near ? 9 : 6, cs = near ? 16 : 12, d = 2;
     const crown = (cx, cy, cz, r, col, sd) => {
-      lf.sphere(V(p.x + cx, p.y + cy, p.z + cz), r, col, d, { seed: sd, rough: 0.09, bottomShade: 0.32, top: 0.08 });
+      lf.sphere(V(p.x + cx, p.y + cy, p.z + cz), r, col, d, { seed: sd, rough: 0.09, bottomShade: 0.32, top: 0.08, smoothN: 0.6 });
       if (!near) return;
       for (let k = 0; k < 3; k++) {
         const a = sd * 1.7 + k * 2.09, up = 0.25 + 0.3 * ((k + sd) % 2);
         lf.sphere(V(p.x + cx + Math.cos(a) * r.x * 0.62, p.y + cy + up * r.y, p.z + cz + Math.sin(a) * r.z * 0.62), V(r.x * 0.5, r.y * 0.52, r.z * 0.5),
-          shade(col, k === 1 ? -0.06 : 0.04), 1, { seed: sd + 7 * k + 1, rough: 0.07, bottomShade: 0.28, top: 0.1 });
+          shade(col, k === 1 ? -0.06 : 0.04), 1, { seed: sd + 7 * k + 1, rough: 0.07, bottomShade: 0.28, top: 0.1, smoothN: 0.6 });
       }
     };
+    if (type === 'palm') {
+      // 棕榈 / 椰枣：微弯的环纹树干（石块材质的横纹）+ 9 片下垂的羽状叶
+      const lean = (((seed % 7) - 3) * 0.05 + 0.04) * s, n = 6, pts = [], rr = [];
+      for (let i = 0; i < n; i++) { const u = i / (n - 1); pts.push(V(p.x + lean * u * u, p.y + u * 0.92 * s, p.z + lean * 0.35 * u * u)); rr.push(lerp(0.06, 0.034, u) * s); }
+      B[K_ROCK].tube(pts, rr, 7, C(0.5, 0.42, 0.31), false);
+      const top = pts[n - 1];
+      lf.sphere(V(top.x, top.y + 0.01 * s, top.z), 0.055 * s, shade(leaf, -0.22), 1, { smoothN: 1 });
+      for (let k = 0; k < 9; k++) {
+        const a = k * 2.399 + seed * 0.37, L = (0.42 + 0.08 * ((k * 7 + seed) % 3)) * s;
+        frondInto(lf, top, Math.cos(a), Math.sin(a), L, (k % 3 === 0 ? 0.2 : 0.13) * s, 0.075 * s, shade(leaf, ((k % 3) - 1) * 0.05));
+      }
+      return;
+    }
+    if (type === 'cypress') {
+      // 地中海柏树：深绿、细高的尖塔形
+      tk.lathe(p, [[0.05 * s, 0], [0.035 * s, 0.16 * s]], ts, TR);
+      lf.lathe(V(p.x, p.y + 0.1 * s, p.z), [[0.02 * s, 0], [0.15 * s, 0.1 * s], [0.18 * s, 0.32 * s], [0.14 * s, 0.66 * s], [0.06 * s, 0.9 * s], [0, 1.0 * s]], cs, shade(leaf, -0.14));
+      return;
+    }
+    if (type === 'olive' || type === 'acacia' || type === 'umbrella' || type === 'scrub') {
+      // 橄榄（扭曲矮干、灰绿宽冠）/ 金合欢（斜干分叉、伞形平顶）/ 石松（高直干、扁平冠）/ 灌丛
+      const sd = seed % 13;
+      if (type === 'scrub') { lf.sphere(V(p.x, p.y + 0.12 * s, p.z), V(0.3 * s, 0.2 * s, 0.28 * s), shade(leaf, 0.02), 2, { seed: sd, rough: 0.12, bottomShade: 0.35, flat: -0.4, smoothN: 0.5 }); return; }
+      const hy = type === 'olive' ? 0.36 : type === 'acacia' ? 0.62 : 0.66, bend = (sd % 2 ? 1 : -1) * (type === 'olive' ? 0.07 : 0.12) * s;
+      tk.tube([V(p.x, p.y, p.z), V(p.x + bend * 0.6, p.y + hy * 0.5 * s, p.z), V(p.x + bend, p.y + hy * s, p.z + bend * 0.3)], [0.07 * s, 0.05 * s, 0.035 * s], ts, type === 'olive' ? C(0.42, 0.36, 0.28) : TR, false);
+      if (type === 'acacia') tk.tube([V(p.x + bend * 0.5, p.y + hy * 0.45 * s, p.z), V(p.x - bend * 0.9, p.y + hy * s, p.z - bend * 0.2)], [0.035 * s, 0.025 * s], 6, TR, false);
+      const lc = type === 'olive' ? C(0.45, 0.52, 0.36) : leaf;
+      const r = type === 'olive' ? V(0.42 * s, 0.27 * s, 0.4 * s) : V(0.5 * s, 0.13 * s, 0.46 * s);
+      crown(bend, (hy + (type === 'olive' ? 0.14 : 0.06)) * s, 0, r, lc, seed);
+      if (type !== 'umbrella') crown(bend - 0.22 * s, (hy + 0.02) * s, 0.1 * s, V(r.x * 0.62, r.y * 0.8, r.z * 0.6), shade(lc, 0.05), seed + 5);
+      return;
+    }
     if (type === 'pine') {
       tk.lathe(p, [[0.06 * s, 0], [0.04 * s, 0.32 * s]], ts, TR);
       const tier = (y0, r, h, col) => lf.lathe(V(p.x, p.y + y0 * s, p.z), [[0, h * s * 0.1], [r * s, 0, null, true], [r * s * 0.5, h * s * 0.5], [0, h * s]], cs, col);
@@ -852,7 +945,209 @@ void main() {
     }
   }
   function rockInto(B, x, y, z, r, col, seed) {
-    B[K_ROCK].sphere(P(x, y, z), V(r * 1.25, r * 0.75, r), col, 1, { seed, rough: 0.2, flat: -0.35, bottomShade: 0.25, top: 0.08 });
+    B[K_ROCK].sphere(P(x, y, z), V(r * 1.25, r * 0.75, r), col, r > 0.3 ? 2 : 1, { seed, rough: 0.2, flat: -0.35, bottomShade: 0.25, top: 0.08, smoothN: 0.35 });
+  }
+  // 羽状叶（双面，中脉略折）：o 为叶柄起点（Unity），(ca, sa) 为水平方向，L 长、up 起拱、w 半宽
+  function frondInto(mb, o, ca, sa, L, up, w, col) {
+    const N = 5, sx = -sa, sz = ca, row = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N, cx = o.x + ca * L * u, cz = o.z + sa * L * u, cy = o.y + up * Math.sin(Math.PI * u * 0.9) - 0.42 * L * u * u;
+      const wd = w * Math.pow(Math.sin(Math.PI * Math.min(1, 0.1 + u * 0.9)), 0.75);
+      row.push([V(cx + sx * wd, cy - wd * 0.35, cz + sz * wd), V(cx, cy, cz), V(cx - sx * wd, cy - wd * 0.35, cz - sz * wd)]);
+    }
+    const nU = V(ca * 0.25, 1, sa * 0.25), nD = V(-ca * 0.25, -1, -sa * 0.25), cB = shade(col, -0.12), cT = shade(col, 0.08);
+    for (let i = 0; i < N; i++) {
+      const A = row[i], Bq = row[i + 1], c0 = i ? col : cB, c1 = i + 1 === N ? cT : col;
+      for (const [l, m] of [[0, 1], [1, 2]]) {
+        mb.triN(A[l], Bq[l], Bq[m], nU, nU, nU, c0, c1, c1); mb.triN(A[l], Bq[m], A[m], nU, nU, nU, c0, c1, c0);
+        mb.triN(A[l], Bq[m], Bq[l], nD, nD, nD, c0, c1, c1); mb.triN(A[l], A[m], Bq[m], nD, nD, nD, c0, c0, c1);
+      }
+    }
+  }
+
+  // ---- 第三版修订：攻击画面按「防守城池的文化 + 当地群落 + 是否登陆」布景（不再一律是中原的砖城、灰瓦村舍与温带树）
+  // 城墙：han 中式砖城门楼 / roman 石城方塔赤陶瓦 / mud 土坯城圆塔阶梯垛（安息、阿拉伯、非洲、毛里、西域）/
+  //       brick 红砖城与圆顶亭、窣堵波（天竺、贵霜）/ palisade 土垒木栅与木望楼（日耳曼、凯尔特、草原、南方诸族）
+  // 村舍：han 灰瓦 / tile 白墙赤陶瓦 / flat 平顶土坯 / yurt 毡帐 / long 长屋茅顶 / round 圆屋锥顶 / stilt 干栏 / thatch 茅屋
+  const WALL_STYLE = { han: 'han', korea: 'han', wa: 'han', roman: 'roman', persia: 'mud', arab: 'mud', africa: 'mud', moor: 'mud', tarim: 'mud', kushan: 'brick', india: 'brick',
+    seasia: 'palisade', nanman: 'palisade', yi: 'palisade', celt: 'palisade', german: 'palisade', steppe: 'palisade', sarmatian: 'palisade' };
+  const HOUSE_STYLE = { han: 'han', korea: 'han', wa: 'han', roman: 'tile', persia: 'flat', arab: 'flat', africa: 'flat', moor: 'flat', tarim: 'flat', kushan: 'flat', india: 'thatch',
+    seasia: 'stilt', nanman: 'stilt', yi: 'stilt', celt: 'round', german: 'long', steppe: 'yurt', sarmatian: 'yurt' };
+  const BIOME_OF = { roman: 'med', moor: 'med', persia: 'desert', arab: 'desert', tarim: 'desert', africa: 'savanna', kushan: 'steppe', steppe: 'steppe', sarmatian: 'steppe',
+    india: 'tropical', seasia: 'tropical', nanman: 'tropical', yi: 'tropical' };
+  const BIOME_NAMES = ['temperate', 'steppe', 'desert', 'tropical', 'savanna', 'med', 'boreal', 'alpine'];   // = SG.BattleTerrain.BIOMES
+  // grass：地面底色（null = 原温带色）；trees：[树种, 权重]；treeK：树的多寡；farm：农田；snow：雪线系数（0 无雪）；sandy：沙地斑块
+  const BIOME_LOOK = {
+    temperate: { grass: null, leaf: C(0.28, 0.5, 0.26), fleaf: C(0.25, 0.44, 0.23), tuft: null, trees: [['pine', 34], ['broad', 28], ['broad2', 22], ['poplar', 16]], treeK: 1, farm: 1, snow: 1, sandy: 0, flowers: 1 },
+    boreal: { grass: C(0.4, 0.54, 0.32), leaf: C(0.22, 0.42, 0.24), fleaf: C(0.2, 0.38, 0.22), tuft: C(0.38, 0.54, 0.28), trees: [['pine', 70], ['poplar', 15], ['broad', 15]], treeK: 1.1, farm: 0.5, snow: 1, sandy: 0, flowers: 0.6 },
+    alpine: { grass: C(0.46, 0.56, 0.34), leaf: C(0.22, 0.42, 0.24), fleaf: C(0.2, 0.38, 0.22), tuft: C(0.44, 0.56, 0.3), trees: [['pine', 80], ['broad', 20]], treeK: 0.8, farm: 0.3, snow: 1.4, sandy: 0, flowers: 0.8 },
+    steppe: { grass: C(0.64, 0.65, 0.4), leaf: C(0.34, 0.5, 0.28), fleaf: C(0.3, 0.46, 0.26), tuft: C(0.6, 0.6, 0.34), trees: [['poplar', 50], ['broad', 35], ['scrub', 15]], treeK: 0.35, farm: 0.2, snow: 1, sandy: 0.15, flowers: 0.5 },
+    desert: { grass: C(0.78, 0.68, 0.48), leaf: C(0.34, 0.5, 0.24), fleaf: C(0.3, 0.48, 0.22), tuft: C(0.66, 0.6, 0.36), trees: [['palm', 65], ['olive', 15], ['scrub', 20]], treeK: 0.45, farm: 0.35, snow: 0, sandy: 0.5, flowers: 0.1 },
+    savanna: { grass: C(0.7, 0.64, 0.38), leaf: C(0.36, 0.5, 0.24), fleaf: C(0.32, 0.46, 0.22), tuft: C(0.7, 0.64, 0.36), trees: [['acacia', 60], ['palm', 20], ['scrub', 20]], treeK: 0.5, farm: 0.3, snow: 0, sandy: 0.25, flowers: 0.3 },
+    med: { grass: C(0.56, 0.6, 0.34), leaf: C(0.32, 0.46, 0.25), fleaf: C(0.28, 0.42, 0.22), tuft: C(0.56, 0.58, 0.32), trees: [['cypress', 30], ['olive', 40], ['broad2', 15], ['umbrella', 15]], treeK: 0.8, farm: 1, snow: 0.6, sandy: 0.08, flowers: 0.8 },
+    tropical: { grass: C(0.34, 0.58, 0.26), leaf: C(0.2, 0.47, 0.2), fleaf: C(0.16, 0.4, 0.18), tuft: C(0.3, 0.56, 0.22), trees: [['palm', 40], ['broad', 35], ['broad2', 25]], treeK: 1.1, farm: 0.8, snow: 0, sandy: 0, flowers: 1.4 },
+  };
+  function cultPick(table, c, dflt) {
+    if (table[c]) return table[c];
+    const b = SG.cultureBase ? SG.cultureBase(c) : 'han';
+    return table[b] || dflt;
+  }
+  // scn = { culture, biome（名称或 BIOMES 下标）, coast }；缺省时取防守方的文化、按文化推测群落
+  function sceneLook(scn, defCult) {
+    scn = scn || {};
+    const culture = String(scn.culture || defCult || 'han');
+    let biome = typeof scn.biome === 'number' ? BIOME_NAMES[scn.biome] : scn.biome;
+    if (!BIOME_LOOK[biome]) biome = cultPick(BIOME_OF, culture, 'temperate');
+    return Object.assign({ culture, biome, wall: cultPick(WALL_STYLE, culture, 'han'), house: cultPick(HOUSE_STYLE, culture, 'han'), coast: !!scn.coast }, BIOME_LOOK[biome]);
+  }
+  function pickTree(look, rnd) {
+    let tot = 0;
+    for (const t of look.trees) tot += t[1];
+    let u = rnd.nextDouble() * tot;
+    for (const t of look.trees) { u -= t[1]; if (u <= 0) return t[0]; }
+    return look.trees[0][0];
+  }
+  // 海岸线（登陆战）：攻方（左）身后为沙滩与海，海岸线向远处斜向右后方伸去
+  const SEA_Y = -0.14;
+  function shoreX(z) { return -10.6 + Math.min(60, Math.max(0, ZC - z)) * 0.42 - Math.min(20, Math.max(0, z - ZC)) * 0.2 + Math.sin(z * 0.23) * 0.7; }
+
+  // ---- 房屋（three 坐标经 P 转换；y 为地面高度）
+  const WHITE = C(0.88, 0.84, 0.76), MUD = C(0.8, 0.66, 0.48), THATCH = C(0.68, 0.57, 0.36), TERRA = C(0.72, 0.36, 0.24), FELT = C(0.88, 0.84, 0.74), DARKW = C(0.3, 0.2, 0.13);
+  // 双坡顶：w 沿屋脊、d 为跨度、h 脊高；rz = true 时屋脊沿 z（山墙朝镜头）；wallCol 给出时补两端山墙三角
+  function gableInto(R, Wl, x, y0, z, w, d, h, col, wallCol, rz) {
+    const M3 = (u, yy, v) => (rz ? P(x + v, yy, z + u) : P(x + u, yy, z + v));
+    const Nn = (nu, ny, nv) => (rz ? V(nv, ny, -nu) : V(nu, ny, -nv));
+    const hw = w / 2, hd = d / 2, dark = shade(col, -0.16);
+    const r0 = M3(-hw, y0 + h, 0), r1 = M3(hw, y0 + h, 0);
+    for (const sv of [1, -1]) {
+      const e0 = M3(-hw, y0, sv * hd), e1 = M3(hw, y0, sv * hd), n = Nn(0, hd, sv * h);
+      R.triN(r0, e0, e1, n, n, n, col, dark, dark);
+      R.triN(r0, e1, r1, n, n, n, col, dark, col);
+      // 檐下（深色，略厚）
+      const t = Math.min(0.06, h * 0.06), u0 = M3(-hw, y0 - t, sv * hd), u1 = M3(hw, y0 - t, sv * hd), no = Nn(0, 0, sv);
+      Wl.triN(e0, u0, u1, no, no, no, shade(col, -0.45)); Wl.triN(e0, u1, e1, no, no, no, shade(col, -0.45));
+    }
+    if (wallCol) for (const su of [1, -1]) {
+      const g = hw - Math.min(0.15, w * 0.06), n = Nn(su, 0, 0);
+      Wl.triN(M3(su * g, y0, -hd * 0.86), M3(su * g, y0, hd * 0.86), M3(su * g, y0 + h * 0.9, 0), n, n, n, wallCol);
+    }
+  }
+  // 四坡攒尖（金字塔形）
+  function pyramidInto(R, x, y0, z, w, d, h, col) {
+    const a = P(x, y0 + h, z), hw = w / 2, hd = d / 2, dark = shade(col, -0.14);
+    const c = [P(x - hw, y0, z - hd), P(x + hw, y0, z - hd), P(x + hw, y0, z + hd), P(x - hw, y0, z + hd)];
+    const n = [V(0, hd, h), V(h, hw, 0), V(0, hd, -h), V(-h, hw, 0)];
+    for (let i = 0; i < 4; i++) R.triN(a, c[i], c[(i + 1) % 4], n[i], n[i], n[i], col, dark, dark);
+  }
+  function domeInto(Wl, x, y, z, r, col, seg) {
+    Wl.lathe(P(x, y, z), [[r, 0], [r * 0.98, r * 0.3], [r * 0.8, r * 0.7], [r * 0.45, r * 0.95], [0.04 * r, r * 1.06], [0, r * 1.08]], seg || 14, col);
+  }
+  function stupaInto(B, x, y, z, s) {
+    const W = B[K_PLAIN], c = C(0.9, 0.87, 0.8), gold = C(0.85, 0.68, 0.3);
+    W.lathe(P(x, y, z), [[1.5 * s, 0], [1.5 * s, 0.35 * s, null, true], [1.3 * s, 0.4 * s], [1.3 * s, 0.55 * s]], 18, shade(c, -0.08), { capTop: true });
+    W.lathe(P(x, y + 0.55 * s, z), [[1.2 * s, 0], [1.18 * s, 0.35 * s], [1.0 * s, 0.8 * s], [0.6 * s, 1.1 * s], [0, 1.22 * s]], 18, c);
+    W.box(P(x, y + 1.86 * s, z), V(0.36 * s, 0.24 * s, 0.36 * s), shade(gold, -0.15));
+    W.tube([P(x, y + 1.9 * s, z), P(x, y + 2.62 * s, z)], [0.03 * s, 0.022 * s], 6, gold, false);
+    for (const [h, r] of [[2.15, 0.3], [2.33, 0.22], [2.48, 0.14]]) W.lathe(P(x, y + h * s, z), [[r * s, 0], [r * s * 0.9, 0.04 * s], [0, 0.05 * s]], 12, gold);
+  }
+  function houseInto(B, style, x, y, z, rnd, s) {
+    s = s || 1;
+    const Wl = B[K_PLAIN], R = B[K_ROOF], T = B[K_ROCK];
+    const ry = rnd.nextDouble() < 0.5, w = (1.6 + rnd.nextDouble() * 0.6) * s, dd = 1.1 * s;
+    switch (style) {
+      case 'tile': {
+        const hh = 1.05 * s;
+        Wl.box(P(x, y + hh / 2, z), V(dd + 0.3 * s, hh, w), WHITE);
+        Wl.box(P(x, y + 0.36 * s, z + w / 2 + 0.01), V(0.32 * s, 0.72 * s, 0.04), DARKW);
+        gableInto(R, Wl, x, y + hh, z, w + 0.3 * s, dd + 0.65 * s, 0.5 * s, TERRA, WHITE, true);
+        break;
+      }
+      case 'flat': {
+        const hh = (1.1 + rnd.nextDouble() * 0.3) * s, c = shade(MUD, (rnd.nextDouble() - 0.5) * 0.1), ph = 0.16 * s, pt = 0.08 * s;
+        const box = (bx, by, bw, bh, bd) => {
+          Wl.box(P(bx, by + bh / 2, z), V(bw, bh, bd), c);
+          Wl.box(P(bx, by + bh + ph / 2, z + bd / 2 - pt / 2), V(bw, ph, pt), shade(c, 0.05));
+          Wl.box(P(bx, by + bh + ph / 2, z - bd / 2 + pt / 2), V(bw, ph, pt), shade(c, 0.05));
+          Wl.box(P(bx - bw / 2 + pt / 2, by + bh + ph / 2, z), V(pt, ph, bd), shade(c, 0.05));
+          Wl.box(P(bx + bw / 2 - pt / 2, by + bh + ph / 2, z), V(pt, ph, bd), shade(c, 0.05));
+        };
+        box(x, y, w, hh, dd + 0.2 * s);
+        if (rnd.nextDouble() < 0.5) box(x - w * 0.22, y + hh, w * 0.45, 0.62 * s, dd * 0.7);
+        else if (rnd.nextDouble() < 0.45) domeInto(Wl, x + w * 0.15, y + hh, z, 0.42 * s, C(0.9, 0.88, 0.82));
+        Wl.box(P(x + w * 0.2, y + 0.33 * s, z + dd / 2 + 0.11 * s), V(0.3 * s, 0.66 * s, 0.03), DARKW);
+        Wl.box(P(x - w * 0.22, y + 0.7 * s, z + dd / 2 + 0.11 * s), V(0.18 * s, 0.2 * s, 0.03), C(0.18, 0.14, 0.12));
+        break;
+      }
+      case 'yurt': {
+        const r = 0.78 * s;
+        Wl.lathe(P(x, y, z), [[r, 0], [r, 0.5 * s], [r * 0.95, 0.6 * s], [r * 0.45, 0.95 * s], [0.1 * s, 1.06 * s], [0, 1.08 * s]], 16, FELT);
+        Wl.lathe(P(x, y + 0.4 * s, z), [[r + 0.012, 0], [r + 0.012, 0.07 * s]], 16, C(0.62, 0.28, 0.18));
+        Wl.lathe(P(x, y + 0.7 * s, z), [[r * 0.82, 0], [r * 0.7, 0.06 * s]], 16, C(0.62, 0.28, 0.18));
+        Wl.box(P(x, y + 0.28 * s, z + r - 0.03), V(0.34 * s, 0.56 * s, 0.08), C(0.72, 0.32, 0.14));
+        break;
+      }
+      case 'long': {
+        const L = 3.0 * s, D = 1.4 * s, hw = 0.6 * s;
+        Wl.box(P(x, y + hw / 2, z), V(L, hw, D), C(0.46, 0.34, 0.22));
+        Wl.box(P(x + L * 0.2, y + 0.3 * s, z + D / 2 + 0.01), V(0.34 * s, 0.6 * s, 0.04), DARKW);
+        gableInto(T, Wl, x, y + hw - 0.05, z, L + 0.3 * s, D + 0.8 * s, 1.25 * s, THATCH, C(0.5, 0.38, 0.25), false);
+        break;
+      }
+      case 'round': {
+        const r = 0.85 * s;
+        Wl.lathe(P(x, y, z), [[r, 0], [r, 0.72 * s]], 16, C(0.64, 0.54, 0.4));
+        Wl.box(P(x, y + 0.3 * s, z + r), V(0.32 * s, 0.6 * s, 0.06), DARKW);
+        T.lathe(P(x, y + 0.6 * s, z), [[r + 0.24 * s, 0], [r * 0.6, 0.55 * s], [0.06 * s, 1.18 * s], [0, 1.22 * s]], 16, THATCH);
+        break;
+      }
+      case 'stilt': {
+        const L = 2.0 * s, D = 1.3 * s, ph = 0.62 * s, wc = C(0.66, 0.56, 0.38);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) Wl.tube([P(x + sx * L * 0.42, y, z + sz * D * 0.38), P(x + sx * L * 0.42, y + ph, z + sz * D * 0.38)], [0.05 * s, 0.045 * s], 6, C(0.4, 0.3, 0.2), false);
+        Wl.box(P(x, y + ph, z), V(L + 0.2 * s, 0.1 * s, D + 0.3 * s), C(0.46, 0.36, 0.24));
+        Wl.box(P(x, y + ph + 0.36 * s, z), V(L, 0.7 * s, D), wc);
+        gableInto(T, Wl, x, y + ph + 0.68 * s, z, L + 0.5 * s, D + 0.8 * s, 1.0 * s, THATCH, wc, false);
+        break;
+      }
+      case 'thatch': {
+        const hh = 0.9 * s, c = C(0.74, 0.58, 0.42);
+        Wl.box(P(x, y + hh / 2, z), V(w * 0.8, hh, dd), c);
+        Wl.box(P(x, y + 0.32 * s, z + dd / 2 + 0.01), V(0.3 * s, 0.64 * s, 0.04), DARKW);
+        pyramidInto(T, x, y + hh - 0.04, z, w * 0.8 + 0.5 * s, dd + 0.5 * s, 0.85 * s, THATCH);
+        break;
+      }
+      default: {
+        Wl.box(P(x, y + 0.5 * s, z), ry ? V(dd, 1.1 * s, w) : V(w, 1.1 * s, dd), C(0.86, 0.8, 0.68));
+        R.chineseRoof(P(x, y + 1.05 * s, z), (ry ? dd : w) + 0.5 * s, (ry ? w : dd) + 0.45 * s, 0.62 * s, C(0.3, 0.32, 0.36));
+      }
+    }
+  }
+  // 海滩上的小船（登陆）：U 形船壳 + 桅杆
+  function boatInto(B, x, y, z, s, ang) {
+    const W = B[K_PLAIN], wood = C(0.42, 0.3, 0.2), ca = Math.cos(ang), sa = Math.sin(ang);
+    const at = (u, v, h) => P(x + ca * u - sa * v, y + h, z + sa * u + ca * v);
+    const NU = 8, NV = 5, L = 1.5 * s, rows = [];
+    for (let i = 0; i <= NU; i++) {
+      const u = -1 + 2 * i / NU, wd = 0.44 * s * Math.pow(Math.max(0, 1 - u * u), 0.55), dp = 0.36 * s * (1 - 0.4 * u * u), sh = 0.1 * s * u * u, r = [];
+      for (let j = 0; j <= NV; j++) {
+        const th = Math.PI * j / NV, cx = Math.cos(th), cy = -Math.sin(th);
+        r.push({ p: at(u * L, cx * wd, sh + cy * dp + 0.26 * s), n: V(-sa * cx, cy, -ca * cx) });
+      }
+      rows.push(r);
+    }
+    const up = V(0, 1, 0), deck = C(0.5, 0.38, 0.26);
+    for (let i = 0; i < NU; i++) {
+      for (let j = 0; j < NV; j++) {
+        const a = rows[i][j], b = rows[i + 1][j], c = rows[i + 1][j + 1], d = rows[i][j + 1], k = shade(wood, j === 0 || j === NV - 1 ? 0.08 : -0.05);
+        W.triN(a.p, b.p, c.p, a.n, b.n, c.n, k);
+        W.triN(a.p, c.p, d.p, a.n, c.n, d.n, k);
+      }
+      // 甲板（盖住船壳内侧）
+      const a = rows[i][0], b = rows[i + 1][0], c = rows[i + 1][NV], d = rows[i][NV];
+      W.triN(a.p, b.p, c.p, up, up, up, deck); W.triN(a.p, c.p, d.p, up, up, up, deck);
+    }
+    W.tube([at(0.2 * L, 0, 0.1 * s), at(0.2 * L, 0, 1.9 * s)], [0.035 * s, 0.025 * s], 6, wood, false);
+    W.tube([at(0.2 * L - 0.6 * s, 0, 1.25 * s), at(0.2 * L + 0.6 * s, 0, 1.25 * s)], [0.02 * s, 0.02 * s], 5, wood, false);
+    W.tube([at(0.2 * L - 0.5 * s, 0, 1.2 * s), at(0.2 * L + 0.5 * s, 0, 1.2 * s)], [0.07 * s, 0.06 * s], 6, C(0.86, 0.82, 0.7), true);   // 收起的帆
   }
   // 草丛（6 片弯叶，根暗梢亮，法线朝上，与地面同调）/ 野花（茎 + 五瓣花，花瓣乘实例颜色）
   function tuftGeo() {
@@ -907,10 +1202,12 @@ void main() {
 
   // 生成器：每做完一段 yield 一次，由 ClashScene.buildAsync 分帧执行（单帧 ≤ 约 10ms）
   function* buildTerrain(sc, kind, rnd, defColor) {
-    const H = sc.h;
+    const H = sc.h, look = sc.look || sceneLook(null, 'han'), coast = look.coast;
     const walled = isWalled(kind), hilly = kind === 'hill' || kind === 'mountain';
+    // 离海岸线的距离（非登陆战为无穷大）：树、石、房屋不放进海里
+    const dry = coast ? (x, z) => x - shoreX(z) : () => 1e9;
     if (SG.Gfx.terrainDetailGen) { try { yield* SG.Gfx.terrainDetailGen(); } catch (e) { /* 旧版 art.js：无细节纹理 */ } }
-    SHARED_U.snow.value = kind === 'mountain' ? 13 : kind === 'hill' ? 17 : 99;
+    SHARED_U.snow.value = look.snow > 0 ? (kind === 'mountain' ? 13 : kind === 'hill' ? 17 : 99) / Math.max(0.5, look.snow) : 99;
     // ---- 地面：近处 0.5 的平滑网格，向外渐疏（最疏 2.6），向后延伸成远山；看不到的两侧不建三角形
     const xs = axis(-150, 150, 0.5, 12, 0.16, 2.6);
     const zs = [];
@@ -925,7 +1222,7 @@ void main() {
       for (let i = 0; i < NX; i++) {
         const x = xs[i], y = H(x, z), k = j * NX + i;
         pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
-        groundAttr(kind, x, z, y, nA(x, z), nF(x, z), ga);
+        groundAttr(kind, x, z, y, nA(x, z), nF(x, z), ga, look);
         colA[k * 3] = ga.c.r; colA[k * 3 + 1] = ga.c.g; colA[k * 3 + 2] = ga.c.b;
         gnd[k * 4] = ga.g0; gnd[k * 4 + 1] = ga.g1; gnd[k * 4 + 2] = ga.g2; gnd[k * 4 + 3] = ga.g3;
       }
@@ -965,57 +1262,102 @@ void main() {
       if (Math.abs(x) < 6 && Math.abs(z - ZC) < 3.5) continue;
       if (z > 1.8 && Math.abs(x) < 9) continue;          // 镜头前不放大石头
       if (walled && z < WALL_Z + 0.9) continue;
+      if (dry(x, z) < 1.2) continue;
       const r = 0.16 + rnd.nextDouble() * (kind === 'mountain' ? 0.6 : 0.36);
       rockInto(B, x, H(x, z) + r * 0.12, z, r, shade(stone, (rnd.nextDouble() - 0.5) * 0.14), k + 3);
       if (rnd.nextDouble() < 0.5) rockInto(B, x + r * 1.3, H(x + r * 1.3, z + r * 0.4), z + r * 0.4, r * 0.45, shade(stone, -0.04), k + 31);
     }
+    // 近景（镜头前 z 3–6.5）的战场遗物：折断的长枪、丢下的圆盾、倒地的军旗、碎石——框住画面下缘，不挡交锋处
+    {
+      const W = B[K_PLAIN], metal = C(0.62, 0.62, 0.64), cols = [sc.A && sc.A.color, sc.D && sc.D.color].filter(Boolean);
+      const lie = (x, z, len, ang, r, col, tip) => {
+        const ca = Math.cos(ang) * len / 2, sa = Math.sin(ang) * len / 2;
+        const a = P(x - ca, H(x - ca, z - sa) + r, z - sa), b = P(x + ca, H(x + ca, z + sa) + r + 0.02, z + sa);
+        W.tube([a, b], [r, r * 0.9], 5, col, false);
+        if (tip) W.tube([b, P(x + ca * 1.12, H(x + ca, z + sa) + r + 0.02, z + sa * 1.12)], [r * 1.3, 0.003], 5, metal, false);
+      };
+      for (let k = 0; k < 14; k++) {
+        const x = (rnd.nextDouble() * 2 - 1) * 12, z = 3.2 + rnd.nextDouble() * 3.4;
+        if (dry(x, z) < 1) continue;
+        const u = rnd.nextDouble();
+        if (u < 0.28) { const br = rnd.nextDouble() < 0.5; lie(x, z, (br ? 0.45 : 0.9) + rnd.nextDouble() * 0.35, rnd.nextDouble() * 3.14, 0.014, shade(WOOD, 0.1), !br); }
+        else if (u < 0.5) {
+          const y = H(x, z), c = cols.length ? SG.Gfx.color(cols[k % cols.length]) : C(0.5, 0.3, 0.2);
+          // 斜倚在地上的圆盾（MeshBuilder.M：先绕水平轴倾斜再平移）
+          const pu = P(x, y + 0.08, z);
+          W.M = new THREE.Matrix4().makeTranslation(pu.x, pu.y, pu.z).multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.5 + rnd.nextDouble() * 0.5, rnd.nextDouble() * 6.28, 0, 'YXZ')));
+          W.lathe(V(0, 0, 0), [[0.21, -0.012, C(0.3, 0.24, 0.18), true], [0.2, 0.02, null, true], [0.06, 0.04], [0.035, 0.06, metal], [0, 0.065, metal]], 14, shade(c, -0.15));
+          W.M = null;
+        } else if (u < 0.6 && cols.length) {
+          // 倒地的小旗：旗杆 + 平摊在地上的旗面
+          const ang = rnd.nextDouble() * 3.14, c = SG.Gfx.color(cols[k % cols.length]);
+          lie(x, z, 1.3, ang, 0.016, shade(WOOD, -0.05), false);
+          const ca = Math.cos(ang), sa = Math.sin(ang), y = H(x, z) + 0.035, nx = -sa, nz = ca;
+          const q = (a, b) => P(x + ca * a + nx * b, y + 0.012 * Math.sin(a * 5 + b * 3), z + sa * a + nz * b);
+          const up = V(0, 1, 0);
+          for (let i = 0; i < 3; i++) {
+            const a0 = 0.1 + i * 0.16, a1 = a0 + 0.16;
+            W.triN(q(a0, 0), q(a1, 0), q(a1, 0.36), up, up, up, shade(c, i % 2 ? -0.06 : 0.02)); W.triN(q(a0, 0), q(a1, 0.36), q(a0, 0.36), up, up, up, shade(c, i % 2 ? -0.06 : 0.02));
+          }
+        } else rockInto(B, x, H(x, z) + 0.02, z, 0.1 + rnd.nextDouble() * 0.14, shade(stone, (rnd.nextDouble() - 0.5) * 0.12), 70 + k);
+      }
+    }
     yield;
-    const leafC = () => shade(kind === 'forest' ? C(0.25, 0.44, 0.23) : C(0.28, 0.5, 0.26), (rnd.nextDouble() - 0.5) * 0.16);
-    const pickT = () => { const u = rnd.nextDouble(); return u < 0.34 ? 'pine' : u < 0.62 ? 'broad' : u < 0.84 ? 'broad2' : 'poplar'; };
-    const tree = (x, z, s, type, near) => treeInto(z < -14 ? BF : B, x, H(x, z) - 0.05, z, s, type || pickT(), leafC(), Math.abs(Math.round(x * 13 + z * 7)) % 97, near);
+    const leafC = () => shade(kind === 'forest' ? look.fleaf : look.leaf, (rnd.nextDouble() - 0.5) * 0.16);
+    const pickT = () => pickTree(look, rnd);
+    // 近景框边的树：在本群落的树种里挑「大冠」的一种（温带仍是松 / 阔叶）
+    const nearT = () => { const t = pickT(); return t === 'scrub' ? 'broad' : t === 'poplar' ? 'broad' : t; };
+    const tree = (x, z, s, type, near) => { if (dry(x, z) < 1.5) return; treeInto(z < -14 ? BF : B, x, H(x, z) - 0.05, z, s * (type === 'palm' || (!type && look.trees[0][0] === 'palm') ? 1.25 : 1), type || pickT(), leafC(), Math.abs(Math.round(x * 13 + z * 7)) % 97, near); };
     if (kind === 'forest') {
-      for (let k = 0; k < 110; k++) {
+      const nF0 = Math.round(110 * Math.min(1, 0.55 + look.treeK * 0.45));
+      for (let k = 0; k < nF0; k++) {
         if (k % 20 === 19) yield;
         const x = (rnd.nextDouble() * 2 - 1) * 26, z = -4.4 - rnd.nextDouble() * 26;
         tree(x, z, 2.2 + rnd.nextDouble() * 1.6, null, false);
       }
       // 两侧与近景的树（框住画面）
       for (const [x, z, s] of [[-9.5, 3.5, 3.4], [10.2, 2.8, 3.1], [-12.5, 0.5, 3.6], [12.8, -1.2, 3.8], [-7.6, -3.6, 2.8], [8.4, -4.0, 3.0], [-10.6, 6.4, 3.2], [11.4, 6.0, 3.3]])
-        tree(x, z, s, rnd.nextDouble() < 0.4 ? 'pine' : 'broad', true);
+        tree(x, z, s, look.biome === 'temperate' ? (rnd.nextDouble() < 0.4 ? 'pine' : 'broad') : nearT(), true);
       // 林下灌丛
       for (let k = 0; k < 24; k++) {
         const x = (rnd.nextDouble() * 2 - 1) * 14, z = 4 - rnd.nextDouble() * 12;
         if (Math.abs(z - ZC) < 3.4 && Math.abs(x) < 7.5) continue;
-        B[K_LEAF].sphere(P(x, H(x, z) + 0.05, z), V(0.36, 0.24, 0.32), shade(C(0.27, 0.46, 0.22), (rnd.nextDouble() - 0.5) * 0.15), 1, { seed: k, rough: 0.14, bottomShade: 0.35, flat: -0.4 });
+        if (dry(x, z) < 1.5) continue;
+        B[K_LEAF].sphere(P(x, H(x, z) + 0.05, z), V(0.36, 0.24, 0.32), shade(look.fleaf, 0.03 + (rnd.nextDouble() - 0.5) * 0.15), 2, { seed: k, rough: 0.14, bottomShade: 0.35, flat: -0.4, smoothN: 0.5 });
       }
     } else if (!walled) {
-      const n = kind === 'river' ? 30 : 24;
+      const n = Math.round((kind === 'river' ? 30 : 24) * look.treeK);
       for (let k = 0; k < n; k++) {
         const x = (rnd.nextDouble() * 2 - 1) * 30, z = -9 - rnd.nextDouble() * 24;
         if (kind === 'river' && Math.abs(x - RIVER.x) < 4) continue;
         if (Math.abs(x) < 9 && z > -16) continue;          // 不在两军交锋处的正后方挡住画面
         tree(x, z, 2 + rnd.nextDouble() * 1.4, null, false);
       }
-      for (const [x, z, s] of [[-12.8, -2.5, 2.8], [13.6, -3.4, 3.0]]) tree(x, z, s, 'broad', true);
-      // 田间村舍（平原、河川）
+      for (const [x, z, s] of [[-12.8, -2.5, 2.8], [13.6, -3.4, 3.0]]) tree(x, z, s, look.biome === 'temperate' ? 'broad' : nearT(), true);
+      // 田间村舍（平原、河川）：按防守城池的文化（灰瓦、白墙赤陶瓦、平顶土坯、毡帐、长屋、圆屋、干栏、茅屋）
       if (kind === 'plain' || kind === 'river') {
         for (let k = 0; k < 6; k++) {
           const x = -22 + k * 8.5 + (rnd.nextDouble() - 0.5) * 4, z = -19 - rnd.nextDouble() * 9;
           if (kind === 'river' && Math.abs(x - RIVER.x) < 6) continue;
-          const y = H(x, z), ry = rnd.nextDouble() < 0.5;
-          const w = 1.6 + rnd.nextDouble() * 0.6, dd = 1.1;
-          BF[K_PLAIN].box(P(x, y + 0.5, z), ry ? V(dd, 1.1, w) : V(w, 1.1, dd), C(0.86, 0.8, 0.68));
-          BF[K_ROOF].chineseRoof(P(x, y + 1.05, z), (ry ? dd : w) + 0.5, (ry ? w : dd) + 0.45, 0.62, C(0.3, 0.32, 0.36));
-          tree(x + 1.9, z - 0.8, 1.8, 'broad', false);
+          if (dry(x, z) < 3) continue;
+          houseInto(BF, look.house, x, H(x, z), z, rnd, 1);
+          tree(x + 1.9, z - 0.8, 1.8, look.house === 'flat' ? 'palm' : look.biome === 'temperate' ? 'broad' : nearT(), false);
         }
       }
     } else {
       // 城外两侧的树
-      for (const [x, z, s] of [[-12.6, -2.2, 2.9], [-10.4, -5.6, 2.5], [14.4, -3.6, 2.7]]) tree(x, z, s, 'broad', true);
+      for (const [x, z, s] of [[-12.6, -2.2, 2.9], [-10.4, -5.6, 2.5], [14.4, -3.6, 2.7]]) tree(x, z, s, look.biome === 'temperate' ? 'broad' : nearT(), true);
+    }
+    // 登陆：海滩上搁浅的小船（攻方身后）
+    if (coast) {
+      for (const [z, s, a] of [[-4.2, 1.0, 0.5], [-9.5, 1.15, 0.25], [2.8, 0.9, 0.7]]) {
+        const x = shoreX(z) - 0.2;
+        boatInto(B, x, Math.max(SEA_Y - 0.12, H(x, z)) - 0.06, z, s, a);
+      }
     }
     yield;
     // 城墙与城门
-    if (walled) { buildWall(B, kind, rnd, defColor, H); yield; }
+    if (walled) { buildWall(B, kind, rnd, defColor, H, look); yield; }
     for (const [bs, cast] of [[B, true], [BF, false]]) {
       if (!bs.some(mb => mb.pos.length)) continue;
       const pg = mergeProps(bs);
@@ -1028,9 +1370,10 @@ void main() {
     // ---- 草丛 / 芦苇 / 野花（实例化，随风轻摆；不投影）
     const tufts = [];
     const nT = walled ? 150 : kind === 'river' ? 380 : kind === 'forest' ? 420 : 480;
-    const gcol = kind === 'forest' ? C(0.3, 0.48, 0.24) : hilly ? C(0.5, 0.6, 0.3) : C(0.4, 0.6, 0.28);
+    const gcol = look.tuft ? (kind === 'forest' ? shade(look.tuft, -0.08) : look.tuft) : kind === 'forest' ? C(0.3, 0.48, 0.24) : hilly ? C(0.5, 0.6, 0.3) : C(0.4, 0.6, 0.28);
     for (let k = 0; k < nT; k++) {
       const x = (rnd.nextDouble() * 2 - 1) * 15, z = 8 - rnd.nextDouble() * (walled ? 14 : 22);
+      if (dry(x, z) < 2.4) continue;
       if (walled && z < WALL_Z + 0.8) continue;
       if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + 0.5) continue;
       if (walled && kind !== 'wall' && Math.abs(x - GATE_X) < 1.6 + Math.max(0, z - WALL_Z) * 0.07) continue;
@@ -1068,8 +1411,9 @@ void main() {
     if (tufts.length) inst(tuftGeo(), tufts);
     if (!walled) {
       const fl = [C(0.98, 0.95, 0.86), C(1, 0.82, 0.3), C(0.95, 0.55, 0.62), C(0.72, 0.6, 0.95)], list = [];
-      for (let k = 0; k < (kind === 'forest' ? 40 : 70); k++) {
+      for (let k = 0; k < Math.round((kind === 'forest' ? 40 : 70) * look.flowers); k++) {
         const x = (rnd.nextDouble() * 2 - 1) * 14, z = 3 - rnd.nextDouble() * 16;
+        if (dry(x, z) < 3) continue;
         if (kind === 'river' && Math.abs(x - RIVER.x) < RIVER.w + RIVER.bank) continue;
         if (Math.abs(x) < 6 && Math.abs(z - ZC) < 3) continue;
         list.push([x, H(x, z) - 0.01, z, 0.8 + rnd.nextDouble() * 0.5, 1, rnd.nextDouble() * 6.28, fl[rnd.next(fl.length)]]);
@@ -1098,15 +1442,43 @@ void main() {
       sc.scene.add(water);
       sc.own.push(water.geometry);
     }
+    // 海（登陆战）：海岸线以外的水面，岸边浅（顶点色 r → 浪花），远海不做顶点起伏（g = 1）
+    if (coast) {
+      const wm = new SG.MeshBuilder();
+      const zz = [];
+      for (let z = 64; z > -126; ) { zz.push(z); z -= z > 16 ? 1.2 + (z - 16) * 0.3 : z > -10 ? 0.9 : 0.9 + (-10 - z) * 0.2; }
+      const D = [-160, -70, -34, -18, -10, -6, -3.6, -2.2, -1.2, -0.5, 0];
+      const at = (z, d) => P(shoreX(z) + 0.9 + d, SEA_Y, z);
+      const col = d => C(Math.pow(clamp01(1 + d / 7), 1.6), d < -30 ? 1 : 0, 0);
+      for (let j = 0; j < zz.length - 1; j++)
+        for (let i = 0; i < D.length - 1; i++) {
+          const a = at(zz[j], D[i]), b = at(zz[j + 1], D[i]), c = at(zz[j + 1], D[i + 1]), d = at(zz[j], D[i + 1]);
+          wm.triN(a, b, c, V(0, 1, 0), V(0, 1, 0), V(0, 1, 0), col(D[i]), col(D[i]), col(D[i + 1]));
+          wm.triN(a, c, d, V(0, 1, 0), V(0, 1, 0), V(0, 1, 0), col(D[i]), col(D[i + 1]), col(D[i + 1]));
+        }
+      const sea = SG.Gfx.mesh(wm.toGeometry(), waterMaterial(), { castShadow: false, receiveShadow: false });
+      sea.renderOrder = 1;
+      sc.scene.add(sea);
+      sc.own.push(sea.geometry);
+    }
   }
 
-  // 城墙：砖石墙身（错缝砖纹）、圆润的垛口、角楼与曲面屋顶；城门为半圆拱门（拱券石、包铁门扇与门钉）与城门楼
-  function buildWall(B, kind, rnd, defColor, H) {
+  // 城墙：按防守城池的文化（look.wall）——
+  //   han：砖石墙身（错缝砖纹）、圆润的垛口、角楼与曲面屋顶；城门为半圆拱门（拱券石、包铁门扇与门钉）与城门楼
+  //   roman：浅色方石墙、方垛口、方塔赤陶瓦四坡顶，城门两侧方塔（拱窗）；城内白墙赤陶瓦房
+  //   mud：土坯墙、阶梯形垛口、圆塔，城门两侧圆塔；城内平顶土坯房与圆顶
+  //   brick：红砖墙、圆头垛口、方塔顶上圆顶亭；城内茅屋与窣堵波
+  //   palisade：土垒上的削尖木栅、木望楼（茅草攒尖顶）、木门；城内长屋 / 圆屋 / 毡帐 / 干栏
+  const WALL_STONE = { han: C(0.7, 0.67, 0.6), roman: C(0.8, 0.76, 0.67), mud: C(0.8, 0.65, 0.46), brick: C(0.7, 0.42, 0.32) };
+  function buildWall(B, kind, rnd, defColor, H, look) {
+    const st = (look && look.wall) || 'han';
+    if (st === 'palisade') { buildPalisade(B, kind, rnd, defColor, H, look); return; }
     const Z = WALL_Z, TH = 1.4, WH = 3.3, X0 = -0.6, X1 = 44;
-    const stone = C(0.7, 0.67, 0.6);
+    const stone = WALL_STONE[st] || WALL_STONE.han;
     const zc = Z - TH / 2;
     const gx = kind === 'wall' ? null : GATE_X;
     const S = B[K_BRICK], W = B[K_PLAIN], R = B[K_ROOF];
+    const castle = kind === 'castle';
     // 墙基（略外扩）与墙身；城门两侧分段，门洞上方另砌
     const seg = (a, b) => {
       if (b - a < 0.05) return;
@@ -1114,23 +1486,72 @@ void main() {
       S.box(P((a + b) / 2, WH / 2, zc), V(b - a, WH, TH), stone);
     };
     if (gx === null) seg(X0, X1); else { seg(X0, gx - 1.8); seg(gx + 1.8, X1); }
-    // 垛口（顶面圆润：小圆台 + 圆顶）与女墙
+    // 垛口与女墙
+    const merlon = (x, y, z, k) => {
+      const mc = shade(stone, k);
+      if (st === 'roman') S.box(P(x, y + 0.26, z), V(0.46, 0.5, 0.3), mc);
+      else if (st === 'mud') { S.box(P(x, y + 0.14, z), V(0.5, 0.26, 0.3), mc); S.box(P(x, y + 0.36, z), V(0.28, 0.2, 0.3), mc); S.lathe(P(x, y + 0.46, z), [[0.13, 0], [0.08, 0.06], [0, 0.09]], 8, mc); }
+      else if (st === 'brick') { S.box(P(x, y + 0.22, z), V(0.42, 0.4, 0.3), mc); S.lathe(P(x, y + 0.42, z), [[0.21, 0], [0.16, 0.1], [0, 0.17]], 8, shade(mc, 0.03)); }
+      else { S.box(P(x, y + 0.21, z), V(0.46, 0.34, 0.3), mc); S.lathe(P(x, y + 0.38, z), [[0.2, 0], [0.12, 0.08], [0, 0.11]], 8, shade(mc, 0.02)); }
+    };
     S.box(P((X0 + X1) / 2, WH + 0.04, Z - 0.12), V(X1 - X0, 0.08, 0.3), shade(stone, -0.06));
-    for (let x = X0 + 0.3; x < X1; x += 0.8) {
-      if (gx !== null && Math.abs(x - gx) < 1.9) continue;
-      S.box(P(x, WH + 0.25, Z - 0.15), V(0.46, 0.34, 0.3), shade(stone, 0.04 + (rnd.nextDouble() - 0.5) * 0.06));
-      S.lathe(P(x, WH + 0.42, Z - 0.15), [[0.2, 0], [0.12, 0.08], [0, 0.11]], 8, shade(stone, 0.06));
+    for (let x = X0 + 0.3; x < X1; x += st === 'roman' ? 0.85 : 0.8) {
+      if (gx !== null && Math.abs(x - gx) < (st === 'han' ? 1.9 : 3.0)) continue;
+      merlon(x, WH + 0.04, Z - 0.15, 0.04 + (rnd.nextDouble() - 0.5) * 0.06);
     }
     // 角楼（左端）
-    S.box(P(X0, 2.05, zc), V(1.9, 4.1, 1.9), shade(stone, -0.05));
-    W.box(P(X0, 4.45, zc), V(1.5, 0.7, 1.5), C(0.62, 0.2, 0.16));
-    for (const dx of [-0.62, 0.62]) for (const dz of [-0.62, 0.62]) W.lathe(P(X0 + dx, 4.1, zc + dz), [[0.07, 0], [0.07, 0.72]], 8, C(0.5, 0.16, 0.12));
-    R.chineseRoof(P(X0, 4.8, zc), 2.5, 2.5, 0.9, C(0.24, 0.28, 0.36));
-    // 城内屋顶
-    for (let k = 0; k < 7; k++) {
-      const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.5 - rnd.nextDouble() * 5;
-      W.box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86, 0.8, 0.68));
-      R.chineseRoof(P(x, 3.6, z), 3.0, 2.2, 1.0 + rnd.nextDouble() * 0.4, C(0.27, 0.3, 0.37));
+    const towerSq = (x, z, w, h) => {
+      S.box(P(x, h / 2, z), V(w, h, w), shade(stone, -0.05));
+      for (let i = 0; i < 3; i++) for (const sz of [-1, 1]) merlon(x - w * 0.36 + i * w * 0.36, h, z + sz * (w / 2 - 0.15), 0.06);
+      for (const sx of [-1, 1]) merlon(x + sx * (w / 2 - 0.15), h, z, 0.06);
+    };
+    const towerRound = (x, z, r, h) => {
+      S.lathe(P(x, 0, z), [[r * 1.1, 0], [r, h - 0.3, null, true], [r * 1.1, h - 0.22, null, true], [r * 1.1, h]], 18, shade(stone, -0.04), { capTop: true });
+      for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; merlon(x + Math.cos(a) * r * 0.9, h, z + Math.sin(a) * r * 0.9, 0.05); }
+    };
+    const chhatri = (x, y, z, r) => {
+      const c = C(0.86, 0.8, 0.68);
+      W.box(P(x, y + 0.06, z), V(r * 2.2, 0.12, r * 2.2), shade(stone, 0.05));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) W.lathe(P(x + sx * r * 0.8, y + 0.12, z + sz * r * 0.8), [[0.05, 0], [0.05, 0.55]], 6, c);
+      W.box(P(x, y + 0.7, z), V(r * 2.3, 0.1, r * 2.3), shade(c, -0.05));
+      domeInto(W, x, y + 0.75, z, r * 0.95, c, 12);
+      W.tube([P(x, y + 0.75 + r * 1.0, z), P(x, y + 0.95 + r * 1.2, z)], [0.03, 0.01], 5, GOLD, false);
+    };
+    if (st === 'roman') { towerSq(X0, zc, 2.1, 4.9); pyramidInto(R, X0, 5.3, zc, 2.0, 2.0, 0.85, TERRA); W.box(P(X0, 3.7, zc + 1.06), V(0.34, 0.6, 0.04), C(0.16, 0.13, 0.11)); }
+    else if (st === 'mud') towerRound(X0, zc, 1.15, 4.7);
+    else if (st === 'brick') { towerSq(X0, zc, 2.0, 4.6); chhatri(X0, 4.6, zc, 0.7); }
+    else {
+      S.box(P(X0, 2.05, zc), V(1.9, 4.1, 1.9), shade(stone, -0.05));
+      W.box(P(X0, 4.45, zc), V(1.5, 0.7, 1.5), C(0.62, 0.2, 0.16));
+      for (const dx of [-0.62, 0.62]) for (const dz of [-0.62, 0.62]) W.lathe(P(X0 + dx, 4.1, zc + dz), [[0.07, 0], [0.07, 0.72]], 8, C(0.5, 0.16, 0.12));
+      R.chineseRoof(P(X0, 4.8, zc), 2.5, 2.5, 0.9, C(0.24, 0.28, 0.36));
+    }
+    // 城内屋顶（下半截在墙后看不见，只露出屋顶）
+    if (st === 'han') {
+      for (let k = 0; k < 7; k++) {
+        const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.5 - rnd.nextDouble() * 5;
+        W.box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86, 0.8, 0.68));
+        R.chineseRoof(P(x, 3.6, z), 3.0, 2.2, 1.0 + rnd.nextDouble() * 0.4, C(0.27, 0.3, 0.37));
+      }
+    } else {
+      const hs = (look && look.house) || 'flat';
+      for (let k = 0; k < 7; k++) {
+        const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.5 - rnd.nextDouble() * 5;
+        if (k === 3) {
+          // 城中的地标：罗马神庙山花 / 安息与阿拉伯的大圆顶 / 天竺的窣堵波
+          if (st === 'roman') {
+            const y0 = 2.2;
+            W.box(P(x, y0 + 0.9, z), V(3.4, 1.8, 2.4), WHITE);
+            for (let i = 0; i < 6; i++) W.lathe(P(x - 1.5 + i * 0.6, y0, z + 1.3), [[0.12, 0], [0.1, 1.8]], 8, shade(WHITE, 0.04));
+            gableInto(R, W, x, y0 + 1.8, z + 0.2, 3.8, 3.2, 0.7, TERRA, WHITE, true);
+          } else if (st === 'mud') {
+            W.lathe(P(x, 2.4, z), [[1.2, 0], [1.2, 1.2]], 16, shade(MUD, 0.05));
+            domeInto(W, x, 3.6, z, 1.2, look && look.culture === 'persia' ? C(0.36, 0.62, 0.66) : C(0.9, 0.86, 0.78), 18);
+          } else stupaInto(B, x, 1.6, z, 1.2);
+          continue;
+        }
+        houseInto(B, hs, x, hs === 'yurt' || hs === 'round' ? 1.9 : 2.1, z, rnd, 1.45);
+      }
     }
     // 墙根碎石
     for (let k = 0; k < 9; k++) {
@@ -1139,36 +1560,7 @@ void main() {
       const r = 0.12 + rnd.nextDouble() * 0.16;
       rockInto(B, x, H(x, Z + 0.35) + r * 0.1, Z + 0.3 + rnd.nextDouble() * 0.4, r, shade(stone, -0.12 + (rnd.nextDouble() - 0.5) * 0.1), k + 11);
     }
-    // 拒马：横木上交叉的削尖木桩（平滑圆木）
-    const stake = shade(WOOD, 0.08);
-    const pole = (a, b, r0, r1, col) => W.tube([a, b], [r0, r1], 6, col, false);
-    const juma = (cx, cz, len) => {
-      const y0 = H(cx, cz);
-      pole(P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.055, 0.055, shade(WOOD, -0.08));
-      const n = Math.max(2, Math.round(len / 0.55));
-      for (let i = 0; i < n; i++) {
-        const x = cx - len / 2 + 0.2 + (len - 0.4) * (i / (n - 1));
-        pole(P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.035, 0.006, stake);
-        pole(P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.035, 0.006, stake);
-      }
-    };
-    const jx = gx === null ? [1.4, 6.8] : [gx - 3.3, gx + 3.3, gx + 8.6];
-    for (const x of jx) juma(x, Z + 1.75 + (rnd.nextDouble() - 0.5) * 0.3, 1.9);
-    // 倚墙的云梯（攻城痕迹）
-    {
-      const lx = gx === null ? 9.5 : gx + 6.2, zb = Z + 1.25, zt = Z + 0.12, top = WH - 0.2;
-      for (const s of [-0.24, 0.24]) pole(P(lx + s, H(lx, zb) + 0.02, zb), P(lx + s, top, zt), 0.04, 0.035, WOOD);
-      for (let i = 1; i < 8; i++) {
-        const u = i / 8;
-        pole(P(lx - 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), P(lx + 0.24, lerp(H(lx, zb), top, u), lerp(zb, zt, u)), 0.025, 0.025, shade(WOOD, 0.05));
-      }
-    }
-    // 城头旗帜
-    for (let k = 0; k < 6; k++) {
-      const x = 1.6 + k * 2.6;
-      if (gx !== null && Math.abs(x - gx) < 1.9) continue;
-      W.flag(P(x, WH + 0.1, Z - 0.45), 1.3, 0.55, 0.4, defColor);
-    }
+    wallDressing(W, gx, rnd, defColor, H, WH, st === 'han' ? 1.9 : 3.0);
     if (gx === null) return;
     // 城门台：门洞两侧的墩台、拱顶以上的墙体
     const ar = 0.82, ah = 1.75, fz = Z + 0.38, bz = zc + 0.12, depth = TH + 0.5;
@@ -1203,18 +1595,37 @@ void main() {
       S.triN(q(a0, r0), q(a0, r1), q(a1, r1), front, front, front, shade(stone, 0.1 - (i % 2) * 0.05));
       S.triN(q(a0, r0), q(a1, r1), q(a1, r0), front, front, front, shade(stone, 0.1 - (i % 2) * 0.05));
     }
-    // 门扇（深红木门 + 铜门钉），退进门洞
-    const dz = fz - 0.35;
+    // 门扇（深红木门 + 铜门钉；非中式为原木色包铁），退进门洞
+    const dz = fz - 0.35, doorC = st === 'han' ? C(0.42, 0.2, 0.11) : C(0.4, 0.28, 0.17);
     for (const sx of [-1, 1]) {
-      W.box(P(gx + sx * 0.4, ah * 0.5, dz), V(0.8, ah, 0.08), C(0.42, 0.2, 0.11));
+      W.box(P(gx + sx * 0.4, ah * 0.5, dz), V(0.8, ah, 0.08), doorC);
       for (let r = 0; r < 4; r++)
         for (let c = 0; c < 3; c++)
-          W.sphere(P(gx + sx * (0.16 + c * 0.2), 0.3 + r * 0.38, dz + 0.05), 0.028, GOLD, 0, { top: 0.2 });
+          W.sphere(P(gx + sx * (0.16 + c * 0.2), 0.3 + r * 0.38, dz + 0.05), 0.028, st === 'han' ? GOLD : C(0.36, 0.34, 0.32), 0, { top: 0.2 });
     }
     // 拱顶以内的门扇上半（半圆）
     for (let i = 0; i < N; i++) {
       const a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
-      W.triN(P(gx, ah, dz + 0.04), P(gx + Math.cos(a0) * ar, ah + Math.sin(a0) * ar, dz + 0.04), P(gx + Math.cos(a1) * ar, ah + Math.sin(a1) * ar, dz + 0.04), front, front, front, C(0.36, 0.17, 0.1));
+      W.triN(P(gx, ah, dz + 0.04), P(gx + Math.cos(a0) * ar, ah + Math.sin(a0) * ar, dz + 0.04), P(gx + Math.cos(a1) * ar, ah + Math.sin(a1) * ar, dz + 0.04), front, front, front, shade(doorC, -0.1));
+    }
+    if (st !== 'han') {
+      // 城门两侧的塔与门上的女墙（罗马方塔拱窗赤陶顶 / 土坯圆塔 / 红砖方塔圆顶亭）
+      for (let x = gx - 1.6; x <= gx + 1.61; x += st === 'roman' ? 0.8 : 0.8) merlon(x, 3.7, Z - 0.05, 0.05);
+      for (const sx of [-1, 1]) {
+        const tx = gx + sx * 2.35;
+        if (st === 'mud') towerRound(tx, zc + 0.2, 1.0, 5.0);
+        else {
+          towerSq(tx, zc + 0.15, 1.5, 5.2);
+          if (st === 'roman') {
+            pyramidInto(R, tx, 5.6, zc + 0.15, 1.45, 1.45, 0.7, TERRA);
+            for (const wy of [3.0, 4.3]) {
+              W.box(P(tx, wy, zc + 0.92), V(0.3, 0.46, 0.03), C(0.16, 0.13, 0.11));
+            }
+          } else chhatri(tx, 5.2, zc + 0.15, 0.55);
+        }
+        if (castle) W.flag(P(tx + sx * 0.2, st === 'mud' ? 5.0 : 5.2, Z - 0.3), 1.55, 0.8, 0.52, defColor);
+      }
+      return;
     }
     // 城门楼：台基、红柱、檐下额枋与匾额、曲面重檐
     const red = C(0.62, 0.2, 0.16);
@@ -1225,12 +1636,94 @@ void main() {
     W.box(P(gx, 4.6, Z + 0.07), V(1.1, 0.34, 0.04), C(0.12, 0.1, 0.09));
     W.box(P(gx, 4.6, Z + 0.09), V(0.9, 0.24, 0.02), GOLD);
     // 本城：金顶城楼 + 守方大旗
-    const castle = kind === 'castle';
     R.chineseRoof(P(gx, 4.9, zc), 4.0, 2.2, 1.15, castle ? C(0.85, 0.65, 0.2) : C(0.22, 0.26, 0.34));
     if (castle) {
       W.flag(P(gx + 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
       W.flag(P(gx - 1.55, 3.9, Z), 1.55, 0.8, 0.52, defColor);
     }
+  }
+  // 拒马、倚墙的云梯、城头旗帜（各式城墙共用）；top：墙头高度，gap：城门两侧不插旗的半宽
+  function wallDressing(W, gx, rnd, defColor, H, top, gap) {
+    const Z = WALL_Z;
+    const stake = shade(WOOD, 0.08);
+    const pole = (a, b, r0, r1, col) => W.tube([a, b], [r0, r1], 6, col, false);
+    const juma = (cx, cz, len) => {
+      const y0 = H(cx, cz);
+      pole(P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.055, 0.055, shade(WOOD, -0.08));
+      const n = Math.max(2, Math.round(len / 0.55));
+      for (let i = 0; i < n; i++) {
+        const x = cx - len / 2 + 0.2 + (len - 0.4) * (i / (n - 1));
+        pole(P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.035, 0.006, stake);
+        pole(P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.035, 0.006, stake);
+      }
+    };
+    const jx = gx === null ? [1.4, 6.8] : [gx - 3.3, gx + 3.3, gx + 8.6];
+    for (const x of jx) juma(x, Z + 1.75 + (rnd.nextDouble() - 0.5) * 0.3, 1.9);
+    {
+      const lx = gx === null ? 9.5 : gx + 6.2, zb = Z + 1.25, zt = Z + 0.12, tp = top - 0.2;
+      for (const s of [-0.24, 0.24]) pole(P(lx + s, H(lx, zb) + 0.02, zb), P(lx + s, tp, zt), 0.04, 0.035, WOOD);
+      for (let i = 1; i < 8; i++) {
+        const u = i / 8;
+        pole(P(lx - 0.24, lerp(H(lx, zb), tp, u), lerp(zb, zt, u)), P(lx + 0.24, lerp(H(lx, zb), tp, u), lerp(zb, zt, u)), 0.025, 0.025, shade(WOOD, 0.05));
+      }
+    }
+    for (let k = 0; k < 6; k++) {
+      const x = 1.6 + k * 2.6;
+      if (gx !== null && Math.abs(x - gx) < gap) continue;
+      W.flag(P(x, top + 0.1, Z - 0.45), 1.3, 0.55, 0.4, defColor);
+    }
+  }
+  // 木栅寨墙（日耳曼、凯尔特、草原、南方诸族）：土垒、削尖的原木、木望楼与木门
+  function buildPalisade(B, kind, rnd, defColor, H, look) {
+    const Z = WALL_Z, X0 = -0.6, X1 = 44, zc = Z - 0.45;
+    const gx = kind === 'wall' ? null : GATE_X;
+    const W = B[K_PLAIN], T = B[K_ROCK];
+    const earth = C(0.5, 0.42, 0.3), steppeHide = look && (look.culture === 'steppe' || look.culture === 'sarmatian');
+    const roofC = steppeHide ? C(0.62, 0.52, 0.4) : THATCH;
+    // 土垒
+    const bank = (a, b) => { if (b - a > 0.1) T.box(P((a + b) / 2, 0.12, zc + 0.15), V(b - a, 0.5, 1.9), earth); };
+    if (gx === null) bank(X0, X1); else { bank(X0, gx - 1.25); bank(gx + 1.25, X1); }
+    // 原木（顶端削尖），每根高低、粗细、色泽略不同
+    let top = 0;
+    for (let x = X0 + 0.12; x < X1; x += 0.25) {
+      if (gx !== null && Math.abs(x - gx) < 1.25) continue;
+      const h = 2.45 + rnd.nextDouble() * 0.35, r = 0.11 + rnd.nextDouble() * 0.025, c = shade(WOOD, 0.1 + (rnd.nextDouble() - 0.5) * 0.14);
+      W.tube([P(x, 0.2, zc), P(x, h, zc)], [r, r * 0.92], 6, c, false);
+      W.lathe(P(x, h, zc), [[r * 0.92, 0], [0, 0.28]], 6, shade(c, 0.08));
+      top = Math.max(top, h);
+    }
+    // 横向绑木（正面两道）
+    const beam = (a, b, y) => { if (b - a > 0.1) W.tube([P(a, y, Z + 0.06), P(b, y, Z + 0.06)], [0.05, 0.05], 5, shade(WOOD, -0.12), false); };
+    for (const y of [0.9, 1.9]) { if (gx === null) beam(X0, X1, y); else { beam(X0, gx - 1.25, y); beam(gx + 1.25, X1, y); } }
+    // 望楼：四根立柱、平台、栏杆、攒尖顶（草原为毡顶）
+    const post = (x, z, h) => W.tube([P(x, 0, z), P(x, h, z)], [0.08, 0.07], 6, shade(WOOD, -0.05), false);
+    const tower = (x, z, w, h) => {
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(x + sx * w * 0.42, z + sz * w * 0.42, h + 0.9);
+      W.box(P(x, h, z), V(w + 0.2, 0.14, w + 0.2), shade(WOOD, -0.1));
+      for (const sz of [-1, 1]) W.box(P(x, h + 0.42, z + sz * (w / 2 + 0.08)), V(w + 0.2, 0.5, 0.06), shade(WOOD, 0.05));
+      for (const sx of [-1, 1]) W.box(P(x + sx * (w / 2 + 0.08), h + 0.42, z), V(0.06, 0.5, w + 0.2), shade(WOOD, 0.05));
+      pyramidInto(T, x, h + 0.9, z, w + 0.6, w + 0.6, 0.95, roofC);
+    };
+    tower(X0 + 0.4, zc, 1.5, 3.4);
+    // 寨内房屋（只露出屋顶）
+    const hs = (look && look.house) || 'long';
+    for (let k = 0; k < 7; k++) {
+      const x = 2 + k * 3.4 + rnd.nextDouble() * 1.2, z = Z - 3.6 - rnd.nextDouble() * 5;
+      const s = hs === 'long' ? 1.3 : hs === 'yurt' ? 1.6 : 1.45;
+      houseInto(B, k === 3 && hs !== 'yurt' ? (hs === 'stilt' ? 'stilt' : 'long') : hs, x, 1.25, z, rnd, k === 3 ? s * 1.25 : s);
+    }
+    wallDressing(W, gx, rnd, defColor, H, top, 2.0);
+    if (gx === null) return;
+    // 寨门：两座望楼、门上走道、原木门扇
+    for (const sx of [-1, 1]) tower(gx + sx * 1.75, zc, 1.3, 3.6);
+    W.box(P(gx, 2.95, zc), V(3.6, 0.22, 1.0), shade(WOOD, -0.12));
+    W.box(P(gx, 3.3, Z - 0.02), V(3.6, 0.5, 0.08), shade(WOOD, 0.04));
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 4; i++) W.tube([P(gx + sx * (0.15 + i * 0.26), 0.05, Z - 0.2), P(gx + sx * (0.15 + i * 0.26), 2.55, Z - 0.2)], [0.12, 0.12], 6, shade(WOOD, 0.02 + (i % 2) * 0.05), false);
+      W.box(P(gx + sx * 0.55, 1.9, Z - 0.05), V(1.05, 0.12, 0.06), shade(WOOD, -0.15));
+      W.box(P(gx + sx * 0.55, 0.7, Z - 0.05), V(1.05, 0.12, 0.06), shade(WOOD, -0.15));
+    }
+    if (kind === 'castle') for (const sx of [-1, 1]) W.flag(P(gx + sx * 1.9, 4.5, Z - 0.3), 1.55, 0.8, 0.52, defColor);
   }
   // ======================================================= 阵型 --
   // 返回 K 个步兵的队形位置 { f（向敌为正，前排为 0）, l（纵深方向）, file }
@@ -1247,8 +1740,8 @@ void main() {
       default: R = 5; break;                                                // 衡轭
     }
     // 纵深（列数）有上限，免得后排与主将跑出画面
-    R = Math.max(R, Math.ceil(K / (fi === 1 ? 6 : 4)));
-    R = Math.max(1, Math.min(R, K, 8));
+    R = Math.max(R, Math.ceil(K / (fi === 1 ? 5 : 3)));
+    R = Math.max(1, Math.min(R, K, 10));
     const F = Math.ceil(K / R);
     const out = [];
     for (let c = 0; c < F; c++) {
@@ -1368,6 +1861,9 @@ void main() {
       this.kind = terrainKind(opts.terrain);
       this.A = norm(opts.attacker);
       this.D = norm(opts.defender);
+      // 布景：防守城池的文化与当地群落、是否登陆（opts.scene；缺省按防守方文化）
+      this.look = sceneLook(opts.scene, this.D.culture);
+      if (this.kind === 'river') this.look.coast = false;
       const d0 = colorDist(this.A.color, this.D.color);
       this.recolored = separateColors(this.A, this.D);
       if (d0 < ACC_DIST) pickAccents(this.A, this.D);
@@ -1437,7 +1933,7 @@ void main() {
         scene.add(this.sky);
       }
       // 地形
-      this.h = makeHeight(this.kind, seed);
+      this.h = makeHeight(this.kind, seed, this.look);
       yield* buildTerrain(this, this.kind, SG.SeededRandom(seed ^ 0x5bd1e995), this.D.color);
       // 两军
       this.armies = [this.buildArmy(this.A, 0), this.buildArmy(this.D, 1)];
@@ -1460,8 +1956,9 @@ void main() {
     buildArmy(info, si) {
       const rnd = this.rnd;
       const dir = si === 0 ? 1 : -1;
-      const n = info.before > 0 ? clamp(Math.round(info.before / 300), 6, 28) : 6;
-      const nArch = clamp(Math.round(n * 0.22), 2, 6);
+      // 第三版修订：兵更多（约多两排纵深），混战像人群而不是一条细线
+      const n = info.before > 0 ? clamp(Math.round(info.before / 240) + 3, 6, 36) : 6;
+      const nArch = clamp(Math.round(n * 0.2), 2, 6);
       const nInf = n - nArch;
       const slots = formationSlots(info.formation, nInf);
       let minF = 0;
@@ -2136,28 +2633,44 @@ void main() {
       this.shockwave(V(xc + 0.9, this.groundY(xc + 0.9, ZC) + 0.06, ZC), col);
       for (let i = 0; i < 6; i++) this.sparks(V(xc + 0.4 + this.rnd.nextDouble() * 1.6, 0.5 + this.rnd.nextDouble() * 0.8, ZC + (this.rnd.nextDouble() - 0.5) * 3.4), 7, shade(col, 0.5));
     }
+    // 斩光（第三版修订）：月牙形弧（外缘圆、内缘向两端收拢），径向 / 沿弧两端渐隐的柔边贴图，加色混合；
+    // 弧面正对镜头（不再侧对镜头成一堵半透明的墙），沿弧撒火花
     slash(pos, col) {
-      const mk = (r0, r1, c, op) => {
-        const g = new THREE.RingGeometry(r0, r1, 28, 1, -0.95, 1.9);
-        const m = fxMaterial('ring');
+      const cam = this.camera;
+      const base = new THREE.Quaternion();
+      {
+        const o = new THREE.Object3D();
+        o.position.copy(pos);
+        if (cam) o.lookAt(cam.position);
+        base.copy(o.quaternion);
+      }
+      const qz = new THREE.Quaternion(), zAxis = new THREE.Vector3(0, 0, 1);
+      const mk = (r0, r1, c, op, wid) => {
+        const m = fxMaterial('slash');
         m.color.copy(c); m.opacity = op;
-        const mesh = new THREE.Mesh(g, m);
+        const mesh = new THREE.Mesh(slashGeo(r0, r1, wid), m);
         mesh.position.copy(pos);
-        mesh.rotation.set(0, 0, -0.35);
+        mesh.quaternion.copy(base).multiply(qz.setFromAxisAngle(zAxis, -0.35));
         mesh.renderOrder = 15;
         this.scene.add(mesh);
         return mesh;
       };
-      const halo = mk(1.6, 3.3, col.clone(), 0.35), outer = mk(2.15, 3.0, col.clone(), 0.85), inner = mk(2.55, 2.82, C(1, 1, 0.95), 0.95);
+      const halo = mk(1.5, 3.3, col.clone(), 0.4, 1.0), outer = mk(2.1, 3.0, col.clone(), 0.9, 0.85), inner = mk(2.6, 2.9, C(1, 1, 0.95), 1.0, 0.7);
       for (const [mesh, k] of [[halo, 0.98], [outer, 1], [inner, 1.05]]) {
         this.temp.push({
-          mesh, t0: this.t, life: 0.42, fn: (u) => {
-            const s = 0.55 + eo(u) * 0.75 * k;
-            mesh.scale.set(s, s, 1);
-            mesh.rotation.z = -0.35 - u * 0.9;
-            mesh.material.opacity = (1 - u * u) * (k > 1 ? 0.95 : k < 1 ? 0.35 : 0.85);
+          mesh, t0: this.t, life: 0.46, fn: (u) => {
+            const sc = 0.55 + eo(u) * 0.75 * k;
+            mesh.scale.set(sc, sc, 1);
+            mesh.quaternion.copy(base).multiply(qz.setFromAxisAngle(zAxis, -0.35 - u * 0.9));
+            mesh.material.opacity = (1 - u * u) * (k > 1 ? 1.0 : k < 1 ? 0.4 : 0.9);
           },
         });
+      }
+      // 沿弧的火花
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(base), up = new THREE.Vector3(0, 1, 0).applyQuaternion(base);
+      for (let i = 0; i < 5; i++) {
+        const a = -0.8 + i * 0.4 - 0.35, r = 2.4;
+        this.sparks(pos.clone().addScaledVector(right, Math.cos(a) * r * 0.9).addScaledVector(up, Math.sin(a) * r * 0.9), 4, shade(col, 0.5));
       }
     }
     shockwave(pos, col) {
@@ -2209,9 +2722,10 @@ void main() {
       const K = [
         { t: 0, p: [-1.1, 4.0, 18.4], l: [0.2, 2.05, -0.8] },
         { t: 0.7, p: [-0.4, 2.55, 15.0], l: [0, 2.1, -0.8] },
-        { t: TL.charge0, p: [-0.3, 2.5, 14.6], l: [0, 2.05, -0.8] },
-        { t: TL.contact, p: [xc * 0.45 + 0.2, 2.18, 11.9], l: [xc * 0.5, 1.78, -0.8] },
-        { t: TL.melee1, p: [xc * 0.45 + 0.5, 2.1, 11.4], l: [xc * 0.5 + 0.2, 1.72, -0.8] },
+        { t: TL.charge0, p: [-0.3, 2.3, 14.0], l: [0, 1.88, -0.8] },
+        // 第三版修订：接敌到混战时机位更低、更近（士兵占满画面中下部，不再是远处的一条细带）
+        { t: TL.contact, p: [xc * 0.45 + 0.2, 1.5, 9.8], l: [xc * 0.5, 1.22, -0.8] },
+        { t: TL.melee1, p: [xc * 0.45 + 0.5, 1.42, 9.4], l: [xc * 0.5 + 0.2, 1.16, -0.8] },
         { t: TL.regroup1, p: [xc * 0.3 + 0.2, 2.5, 13.8], l: [xc * 0.3, 2.02, -0.8] },
       ];
       let i = 0;
@@ -2230,21 +2744,23 @@ void main() {
       const kP = clamp((1.15 - aspect) / 0.6, 0, 1);
       // 竖屏（画面很窄）：冲锋到混战期间镜头推向接敌线，只保证前两排在画面内（两端的弓手、武将与帅旗可出画，
       // 头像与姓名在上方 HUD 里），士兵不再只是一条细带
-      const wP = kP * sm(trap(t, TL.charge0 + 0.35, TL.regroup1 + 0.35, 0.7));
+      const wP0 = kP * sm(trap(t, TL.charge0 + 0.35, TL.regroup1 + 0.35, 0.7));
+      // 横屏同样在混战时推近：只保证前几排在画面内（两端的武将与帅旗可出画，头像在 HUD 里）
+      const wP = Math.max(wP0, (1 - kP) * 0.62 * sm(trap(t, TL.charge0 + 0.3, TL.regroup1 + 0.1, 0.75)));
       if (wP > 0) lx = lerp(lx, this.xc || 0, wP * 0.8);
       // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
       const tanH = Math.tan(cam.fov * M.deg2rad / 2) * aspect * 0.92;
       const need = this.viewNeed(t, lx, lz, dz, tanH, wP);
       const fit = Math.max(lerp(this.fit || 1, 1, wP), need);
       const dist = Math.hypot(dx, dy, dz) * fit;
-      cam.position.set(lx + dx * fit, ly + dy * fit + kP * dist * 0.27 * (1 - 0.5 * wP), lz + dz * fit);
+      cam.position.set(lx + dx * fit, ly + dy * fit + kP * dist * 0.27 * (1 - 0.5 * wP0), lz + dz * fit);
       if (this.shake > 0.001 && !this.calm) {
         const k = this.shake * 0.11;
         cam.position.x += Math.sin(this.real * 71) * k;
         cam.position.y += Math.sin(this.real * 57 + 1.3) * k * 0.7;
       }
       // 竖屏推近时注视点降到士兵胸口附近（远景时高处的注视点到了近处会把军阵压到画面底部）
-      let lookY = ly - kP * 0.35 - wP * 0.95;
+      let lookY = ly - kP * 0.35 - wP0 * 0.95;
       cam.lookAt(lx, lookY, lz);
       // 城门 / 本城：城门楼屋脊不得顶进上方 HUD（宽屏、手机上会被遮成「无顶红楼」）——
       // 投影屋脊，若高于 HUD 下沿就抬高注视点（画面整体下移，脚下空地有余量），最多抬 1.6
@@ -3121,6 +3637,31 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
     return 'on';
   }
 
+  // 由战场（js/battle-terrain.js 的 model.terrain）取布景：防守城池的文化、交战处的群落、是否在海岸登陆
+  function sceneOfBattle(model, a, t) {
+    const T = model && model.terrain;
+    const out = { culture: (T && T.culture) || (t && t.gen && t.gen.culture) || 'han', biome: T && T.biome, coast: false };
+    try {
+      const G = T && T.grid;
+      if (G && G.biome && G.water) {
+        const idx = (x, y) => { const i = Math.round((x - G.u0) / G.step), j = Math.round((y - G.v0) / G.step); return i >= 0 && j >= 0 && i < G.nu && j < G.nv ? j * G.nu + i : -1; };
+        const o = idx(t.x, t.y);
+        if (o >= 0 && BIOME_NAMES[G.biome[o]]) out.biome = BIOME_NAMES[G.biome[o]];
+        // 攻方身后 3 格内有海（或者是登陆战且攻方站在浅滩 / 水边）→ 海岸布景
+        const sea = (x, y) => { const k = idx(x, y); return k >= 0 && G.water[k] === 3; };
+        let n = 0;
+        for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) if (dx * dx + dy * dy <= 9 && sea(a.x + dx, a.y + dy)) n++;
+        const W8 = SG.BattleTerrain ? SG.BattleTerrain.Water : 8;
+        const wet = model.map && model.map[a.x] && (model.map[a.x][a.y] === W8 || (SG.Terrain && model.map[a.x][a.y] === SG.Terrain.River));
+        out.coast = n >= 3 || (!!(T.notes && T.notes.indexOf('landing') >= 0) && !!wet);
+      }
+      // 干旱文化的城池落在世界地图的「温带」（河谷绿洲）时，攻击画面取半干旱的稀树草原（枯草、金合欢、椰枣），不是中原的青草地
+      const dflt = cultPick(BIOME_OF, out.culture, 'temperate');
+      if (out.biome === 'temperate' && (dflt === 'desert' || dflt === 'savanna')) out.biome = 'savanna';
+    } catch (e) { /* 旧战场：只按文化 */ }
+    return out;
+  }
+
   // ======================================================= SG.Clash --
   let queue = Promise.resolve();
   const Clash = {
@@ -3205,6 +3746,7 @@ html.sg-clash-on #ui .sg-screens>:not(.sg-clash),html.sg-clash-on #ui .sg-toasts
         terrain: model && model.map ? model.map[t.x][t.y] : 0,
         special: null,
         playerSide: null,
+        scene: sceneOfBattle(model, a, t),
       };
       return Object.assign(o, extra || {});
     },

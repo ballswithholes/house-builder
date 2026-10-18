@@ -307,7 +307,8 @@
       mapMusic();
       const cap = G().cities[G().ruler(G().player).city];
       const p = SG.mapPos(cap);
-      game.rig.focusMap(p.x, p.y, 48);
+      // 从标题 / 读档进入时直接切到都城（世界地图上从中原飞到罗马要好几秒，城池面板却已打开）
+      game.rig.focusMap(p.x, p.y, 48, true);
       this.selectCity(cap.id);
       UI().banner(G().year + '年 ' + G().month + '月', G().playerFaction.name + '军');
       this.growthReminder();
@@ -648,12 +649,15 @@
         (owner ? `<span style="color:${readable(owner.color)}">${SG.esc(owner.name)}</span>` : '空城') + '</small>';
       const govGen = c.governor >= 0 ? g.generals[c.governor] : null;
       const free = g.freeFoundIn(c.id);
+      // 每项一个 .sg-cs（不折断）；.sg-cs-br 在常规屏幕上分成四行，矮屏（横屏手机）上隐去、各项自然流成约三行，
+      // 让武将列表多露出一行（css：@media (max-height: 430px)）
+      const it = html => '<span class="sg-cs">' + html + '</span> ', br = '<br class="sg-cs-br">';
       this.cityStats.innerHTML =
-        `太守 ${govGen ? face(govGen) + '<b>' + SG.esc(govGen.name) + '</b>' : '<b>—</b>'}　　人口 ${n0(c.population)}\n` +
-        `土地 <b>${c.land}</b>　产业 <b>${c.industry}</b>　町 <b>${c.town}</b>\n` +
-        `金 <b>${c.gold}</b>　粮 <b>${c.food}</b>　防御 ${SG.cityDefense(c)}\n` +
-        `兵力 <b>${g.troopsIn(c)}</b>　武将 ${g.officersIn(c).length} 人` +
-        (free.length > 0 && mine ? `　<span class="sg-good">在野 ${free.length} 人</span>` : '');
+        it(`太守 ${govGen ? face(govGen) + '<b>' + SG.esc(govGen.name) + '</b>' : '<b>—</b>'}`) + it(`人口 ${n0(c.population)}`) + br +
+        it(`土地 <b>${c.land}</b>`) + it(`产业 <b>${c.industry}</b>`) + it(`町 <b>${c.town}</b>`) + br +
+        it(`金 <b>${c.gold}</b>`) + it(`粮 <b>${c.food}</b>`) + it(`防御 ${SG.cityDefense(c)}`) + br +
+        it(`兵力 <b>${g.troopsIn(c)}</b>`) + it(`武将 ${g.officersIn(c).length} 人`) +
+        (free.length > 0 && mine ? it(`<span class="sg-good">在野 ${free.length} 人</span>`) : '');
 
       // 武将列表（君主优先，其次兵力）
       const scroll = this.genList.scrollTop;
@@ -695,7 +699,8 @@
       this.addCmd('出征', first(busy, canAttack ? null : c.name + '周围没有可攻打的城池（只能攻打相邻的敌城或空城，同盟势力除外）。', noTok), () => this.do(() => this.cmdAttack(c)), true);
       this.addCmd('赏赐', busy, () => this.do(() => this.cmdReward(c)));
       this.addCmd('交易', busy, () => this.do(() => this.cmdTrade(c)));
-      this.addCmd('任命', busy, () => this.do(() => this.cmdAppoint(c)));
+      const rulerHere = g.officersIn(c).some(x => g.isRuler(x));
+      this.addCmd('任命', first(busy, rulerHere ? '君主坐镇此城，无需另设太守。' : null), () => this.do(() => this.cmdAppoint(c)));
     }
 
     // why：不可用的原因（字符串）——按钮显示为灰色（aria-disabled，见 injectStyle），点按时说明原因而不执行；
@@ -1281,15 +1286,19 @@
       const holderCity = s.target;
       const recruiter = g.ruler(g.player);
       for (const cap of s.captives.slice()) {
-        const isRuler = cap.faction >= 0 && g.factions[cap.faction].ruler === cap.id;
+        // 被俘时的身份（攻下其最后一城时势力已灭、faction 已是 −1：仍按原君主 / 原属势力显示与处置）
+        const info = Cq.captiveInfo ? Cq.captiveInfo(s, cap) : { faction: cap.faction, wasRuler: cap.faction >= 0 && g.factions[cap.faction].ruler === cap.id };
+        const isRuler = info.wasRuler;
+        const lostF = cap.faction < 0 && info.faction >= 0 ? g.factions[info.faction] : null;
+        const sub = lostF ? `<span class="sg-muted">原属</span><span style="color:${lifted(lostF.color)}">${SG.esc(lostF.name)}</span>${isRuler ? '·<wbr>君主' : ''}<span class="sg-muted">（已灭）</span>` : genSub(cap);
         const r = await UI().choose('俘虏：' + SG.esc(cap.name) + (isRuler ? '（君主）' : ''), [
           item('登用', isRuler ? '君主不会投降' : '成功率约 ' + pct(C.hireChance(cap, recruiter, g.player)), !isRuler),
           item('释放', '放其归去'),
           item('处斩', '以绝后患'),
-        ], genCard(cap, { sub: genSub(cap) + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
+        ], genCard(cap, { sub: sub + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
         if (r === 0) {
           if (C.hire(cap, recruiter, g.player, holderCity.id)) await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap, CINNABAR, { mood: 'win', sub: genSub(cap) });
-          else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub: genSub(cap) }); Cq.release(cap); }
+          else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub }); Cq.release(cap); }
         } else if (r === 2) { Cq.execute(cap); await UI().say(SG.esc(cap.name) + '被处斩了。', cap, GREY_SPEAKER, { mood: 'hurt' }); }
         else Cq.release(cap);
       }
@@ -1373,6 +1382,11 @@
       const need = e.max ? '已满级' : '经验 ' + e.exp + ' / ' + e.next + '<span class="sg-muted">（距 ' + (e.level + 1) + ' 级 ' + e.need + '）</span>';
       h('div', 'sg-geninfo-lv-head', '<span class="sg-geninfo-lv-n">Lv<b>' + e.level + '</b></span>' + expBar(e.pct) + '<span class="sg-geninfo-lv-exp">' + need + '</span>', box);
       if (rec.battles > 0) h('div', 'sg-geninfo-rec', `出阵 <b>${rec.battles}</b>　胜 <b>${rec.wins}</b>　击溃 <b>${rec.routs}</b>　单挑胜 <b>${rec.duels}</b>`, box);
+      // 老练：每高 1 级，战场上攻击、防御与计策威力 +4%（SG.Progress.vetK）
+      if (typeof P.vetK === 'function') {
+        const per = Math.round((P.VET_PER_LEVEL || 0) * 100), k = P.vetK(gen);
+        if (per > 0) h('div', 'sg-geninfo-vet', k > 1.0001 ? `老练　战场上攻击、防御与计策威力 <b>+${Math.round((k - 1) * 100)}%</b><span class="sg-muted">（每级 +${per}%）</span>` : `<span class="sg-muted">老练　每升一级，战场上攻击、防御与计策威力 +${per}%</span>`, box);
+      }
       if (mine && canLearn(gen)) {
         const op = P.openings(gen);
         const what = [];
