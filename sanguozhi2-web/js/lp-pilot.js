@@ -114,15 +114,16 @@
       if (!o.noElbow) M.sphere([0, -this.upL, 0], this.foreR * 1.05, 6, 3);
       M.segment([0, -this.upL, 0], [0, -this.upL - this.foL + 0.01 * k, 0], this.foreR, this.foreR * 0.82, o.foreSides || 7);
       M.pop();
-      this.fist(s, hand);
+      this.fist(s, hand, o.fistK);
     }
-    fist(s, hand) {
+    /** Fist and thumb; lowK (< 1) builds them with fewer facets (a gauntlet). */
+    fist(s, hand, lowK) {
       const M = this.M, S = s > 0 ? 'L' : 'R', k = this.k * 1.1 * lerp(1, this.bulk, 0.5);
       this.armFrame(s);
       this.bone('hand' + S); M.color = hand;
       const wy = -this.upL - this.foL;
-      M.sphere([0, wy - 0.045 * k, 0.01 * k], [0.04 * k, 0.052 * k, 0.046 * k], 7, 4);
-      M.sphere([-s * 0.024 * k, wy - 0.03 * k, 0.034 * k], [0.016 * k, 0.024 * k, 0.016 * k], 5, 3);
+      M.sphere([0, wy - 0.045 * k, 0.01 * k], [0.04 * k, 0.052 * k, 0.046 * k], lowK ? 6 : 7, lowK ? 3 : 4);
+      M.sphere([-s * 0.024 * k, wy - 0.03 * k, 0.034 * k], [0.016 * k, 0.024 * k, 0.016 * k], lowK ? 4 : 5, lowK ? 2 : 3);
       M.pop();
     }
     /** Ring on the forearm (bracer / cuff), from..to along it (0 elbow … 1 wrist). */
@@ -217,12 +218,16 @@
       for (const s of [1, -1]) M.sphere([s * 0.95 * R, this.headCY - 0.12 * R, -0.04 * R], [0.12 * R, 0.2 * R, 0.1 * R], 6, 2, true);
     }
     /** Hair cap over the cranium (BipedKit.HairCap): hairline φ at the forehead / over the ears / at the nape. */
-    hairCap(c, front = 58, side = 100, back = 122, puff = 1.08) {
+    /**
+     * Hair cap. lineFn(θ) overrides the hairline; topFn(θ) starts the shell lower (just under a headwrap, so its rows stay
+     * short); np rows. Flat rows are chords: rows spanning more than ~30° of φ sink inside the head between their edges.
+     */
+    hairCap(c, front = 58, side = 100, back = 122, puff = 1.08, lineFn = null, topFn = null, np = 2) {
       const M = this.M, R = this.R;
       this.bone('head'); M.color = c;
       const C0 = [0, this.headCY + 0.05 * R, -0.03 * R], RR = [R * puff, R * puff, R * puff * 0.98];
-      const line = th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); };
-      M.shell(C0, RR, -180, 180, 12, 0, line, 2);
+      const line = lineFn || (th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); });
+      M.shell(C0, RR, -180, 180, 12, topFn || 0, line, np);
       this.hairC = C0; this.hairR = RR; this.hairLine = line;
     }
     /** A point on the hair ellipsoid (θ from +Z towards +X, φ from the top, degrees). */
@@ -337,11 +342,12 @@
     beard: H('#2B2324'), beardTop: H('#45393A'),
     robe: H('#3F7F4A'), robeDark: H('#33683D'), robeTrim: H('#E8D8B0'), robeLining: H('#2F5E3A'),
     wrap: H('#3F7F4A'), wrapBand: H('#2F5E3A'), jade: H('#8FD4A8'),
-    gold: H('#D9A441'), goldDark: H('#9A6A2A'), goldLight: H('#EDC46A'),
+    gold: H('#D9A441'), goldDark: H('#9A6A2A'), goldLight: H('#EDC46A'), gauntlet: H('#4A3426'),
     leather: H('#6E3B2C'), sash: H('#C24E34'), trousers: H('#4F5E55'), boots: H('#45302A'),
     shaft: H('#2E5E44'), blade: H('#E4EAEE'), bladeBack: H('#A9B9C6'), tassel: H('#D2402E'), dragon: H('#56A878'),
     // soldier
-    soSkin: H('#EDBF96'), soHair: H('#2A2024'), soWrap: H('#C2402E'), iron: H('#68707E'), ironDark: H('#4E5562'), tunicRed: H('#C2503C'),
+    soSkin: H('#EDBF96'), soHair: H('#2A2024'), soHairCap: H('#262022'), soKnot: H('#3A3032'), soWrap: H('#C2402E'), iron: H('#68707E'), ironDark: H('#4E5562'), tunicRed: H('#C2503C'),
+    lamA: H('#5C6470'), lamB: H('#6E7784'), ironSeam: H('#3A3F4A'),
     cream: H('#EADFC4'), wrapBrown: H('#8C6A4C'), wood: H('#8C6A48'), steel: H('#C9D2DA'),
     // horse: chestnut coat, darker points, near-black-brown mane, cream socks / blaze / muzzle
     coat: H('#A85A36'), coatPoints: H('#6B3A26'), mane: H('#4A2A1E'), mane2: H('#5E3826'), hoof: H('#3A2A22'), marking: H('#EFE2C6'),
@@ -366,7 +372,7 @@
     // ---- torso: gold lamellar armour (banded) — the robe is worn open over it
     const bands = [C.goldDark, C.gold, C.gold, C.goldLight, H('#7A5A30')];
     kit.torso(C.gold, C.goldDark, bands);
-    kit.neck(C.gySkinDark);
+    kit.neck(P.mix(C.gySkinDark, C.gyHair, 0.55));
     // lamellar bands on the belly armour
     kit.bone('spine'); M.color = C.goldDark;
     M.band([0, 0, 0], kit.waistR * 1.06, kit.waistR * 1.06, kit.spineY - 0.035 * k, kit.spineY - 0.02 * k, 8, kit.depthK);
@@ -444,10 +450,11 @@
       });
     }
     kit.mark('skirt');
-    // ---- arms: wide green robe sleeves to the elbow (cream cuff), gold bracers, red fists
+    // ---- arms: wide green robe sleeves to the elbow (cream cuff), gold bracers ending in a dark-gold ring at the wrist,
+    // dark leather gauntlets (red fists read as boxing gloves next to the red face)
     for (const s of [1, -1]) {
       const S = s > 0 ? 'L' : 'R';
-      kit.arm(s, robe, C.robeTrim, C.gySkin, { noShoulder: true, noUpper: true, noElbow: true, foreSides: 6 });
+      kit.arm(s, robe, C.robeTrim, C.gauntlet, { noShoulder: true, noUpper: true, noElbow: true, foreSides: 6, fistK: 0.62 });
       kit.armFrame(s); kit.bone('upperArm' + S);
       M.color = robe;
       M.lathe([[kit.armR * 1.95, -kit.upL * 0.98], [kit.armR * 1.55, -kit.upL * 0.45], [kit.armR * 1.3, 0.02 * k]], 7, false, false, false);
@@ -456,27 +463,29 @@
       M.color = C.robeTrim;
       M.band([0, 0, 0], kit.armR * 1.98, kit.armR * 2.02, -kit.upL * 1.02, -kit.upL * 0.94, 7);
       M.pop();
-      kit.cuff(s, C.gold, 0.12, 0.92, 1.3);
-      kit.cuff(s, C.goldDark, 0.4, 0.48, 1.42);
+      kit.cuff(s, C.gold, 0.12, 0.86, 1.3);
+      kit.cuff(s, C.goldDark, 0.86, 0.99, 1.4);
     }
     kit.mark('arms');
     // ---- shoulders: three overlapping curved gold plates per side (FFX-style lames, BipedKit.BigPauldron): each a 120°
     // shell over the outer shoulder, stepping out and down and fanning a little further outwards, with a dark under-edge
     // band; the underside shows only on the lowest lame. On the shoulder helper bones (follow the upper arm 85 %).
+    // Rounded domes (the top lame ten-sided in two rows from the crown, the lower ones eight-sided) with the dark band as
+    // the lowest row of each lame — no flat six-sided caps (they read as golden hex nuts).
     for (const s of [1, -1]) {
       const S = s > 0 ? 'L' : 'R', sh = J['upperArm' + S];
       kit.bone('sh' + S);
-      const r = kit.armR * 2.05, th0 = -180, th1 = 180;
-      M.push().translate(V.add(sh, [s * 0.03 * k, 0.025 * k, -0.004]));
+      const r = kit.armR * 1.9, th0 = -180, th1 = 180;
+      M.push().translate(V.add(sh, [s * 0.03 * k, 0.03 * k, -0.004]));
       for (let i = 2; i >= 0; i--) {
-        const kk = 1 - i * 0.1;
-        M.push().translate(s * i * 0.016 * k, -i * 0.062 * k, 0).rotate(0, 0, -s * (20 + i * 9));
-        const rad = [r * kk, r * 0.78 * kk, r * 0.96 * kk];
+        const kk = 1 - i * 0.08, n = i === 0 ? 10 : 8;
+        M.push().translate(s * i * 0.018 * k, -i * 0.06 * k, 0).rotate(0, 0, -s * (20 + i * 10));
+        const rad = [r * kk, r * 0.82 * kk, r * 0.96 * kk];
         M.color = i === 1 ? P.shade(C.gold, 0.93) : i === 0 ? C.goldLight : C.gold;
-        M.shell([0, 0, 0], rad, th0, th1, 6, i === 0 ? 0 : 34, 80, 2);
-        if (i === 2) { M.color = C.goldDark; M.shell([0, 0, 0], V.mul(rad, 0.95), th0, th1, 6, 34, 80, 1, true); }
+        if (i === 0) M.shell([0, 0, 0], rad, th0, th1, n, 0, 68, 2); else M.shell([0, 0, 0], rad, th0, th1, n, 36, 68, 1);
         M.color = C.goldDark;
-        M.shell([0, 0, 0], V.mul(rad, 1.03), th0, th1, 6, 72, 84, 1);
+        M.shell([0, 0, 0], rad, th0, th1, n, 68, 84, 1);
+        if (i === 2) M.shell([0, 0, 0], V.mul(rad, 0.95), th0, th1, n, 40, 84, 1, true);
         M.pop();
       }
       M.pop();
@@ -491,7 +500,10 @@
     kit.nose(C.gySkinDark, 1.0, -0.32);
     kit.mark('face');
     // ---- hair: near-black hair under the headwrap, showing at the temples, over the ears and at the nape; flat sideburns
-    kit.hairCap(C.gyHair, 44, 104, 128, 1.06);
+    // the hairline drops right behind the ears, so the whole back of the head down to the nape is hair (no red skin)
+    // (three short rows from just under the wrap: long flat rows sank inside the skull and the back showed red)
+    const wrapLine = th => { const a = Math.abs(th); if (a < 55) return lerp(38, 48, a / 55); if (a < 110) return lerp(48, 80, (a - 55) / 55); return lerp(80, 104, (a - 110) / 70); };
+    kit.hairCap(C.gyHair, 44, 104, 168, 1.08, th => { const a = Math.abs(th); if (a < 55) return lerp(44, 54, a / 55); if (a < 100) return lerp(54, 104, (a - 55) / 45); if (a < 128) return lerp(104, 166, sstep((a - 100) / 28)); return 168; }, th => wrapLine(th) - 12, 3);
     M.color = C.gyHair;
     for (const s of [1, -1]) M.strip(kit.facePoint(s * 0.82, 0.14, -0.01), kit.facePoint(s * 0.76, -0.26, 0.0), 0.11 * R, 0.025 * R, [s * 0.85, 0, 0.55], 0.016);
     kit.mark('hair');
@@ -547,11 +559,15 @@
     M.sphere(bun, [0.42 * R, 0.4 * R, 0.4 * R], 6, 3, false);
     M.color = C.wrapBand;
     M.band(V.add(bun, [0, -0.08 * R, 0.04 * R]), 0.36 * R, 0.37 * R, 0, 0.12 * R, 7);
+    // two short ribbons: tapered (0.07k → 0.02k), flaring out and twisting a little, so they read as cloth, not poles
     kit.bone('hair1'); M.color = C.wrap;
+    const rib0 = M.vertexCount;
     for (const s of [1, -1]) {
-      const a = V.add(bun, [s * 0.18 * R, -0.25 * R, -0.25 * R]);
-      M.curvedStrip(a, V.add(a, [s * 0.06 * k, -0.12 * k, -0.06 * k]), V.add(a, [s * 0.1 * k, -0.3 * k, -0.04 * k]), 0.07 * k, 0.05 * k, [s * 0.4, 0, -1], 0.012, 2);
+      const a = V.add(bun, [s * 0.2 * R, -0.22 * R, -0.25 * R]), m = V.add(a, [s * 0.05 * k, -0.07 * k, -0.035 * k]), t = V.add(a, [s * 0.11 * k, -0.14 * k, -0.03 * k]);
+      M.strip(a, m, 0.07 * k, 0.045 * k, [s * 0.3, 0, -1], 0.01);
+      M.strip(m, t, 0.045 * k, 0.02 * k, [s * 0.95, 0.1, -0.45], 0.01);
     }
+    M.windBy(rib0, p => 0.5 * clamp01((bun[1] - 0.22 * R - p[1]) / (0.14 * k)));
     kit.bone('head');
     M.color = C.goldLight;
     const brow = kit.capPoint(0, kit.capLine(0) - 6, 1.06);
@@ -617,12 +633,36 @@
       M.band(V.lerp(an, kn, 0.4), kit.shinR * 1.18, kit.shinR * 1.18, -0.012, 0.012, 7);
     }
     kit.mark('legs');
-    // torso: faction tunic, iron lamellar vest (banded), shoulder flaps
-    const vest = [C.ironDark, C.iron, C.ironDark, C.iron, C.ironDark];
-    kit.torso(C.iron, tunic, vest);
+    // torso: faction tunic under a Han lamellar vest (札甲): six rows of plates in two iron tones, a dark seam between rows,
+    // a lacing line in the faction colour down the front and a straight cream-edged hem
+    kit.torso(C.ironSeam, tunic, null);
     kit.neck(P.shade(C.soSkin, 0.9));
-    kit.bone('spine'); M.color = C.ironDark;
-    M.band([0, 0, 0], kit.waistR * 1.06, kit.waistR * 1.06, kit.spineY - 0.03 * k, kit.spineY - 0.015 * k, 8, kit.depthK);
+    {
+      const u = k, sp = [[kit.waistR, kit.pelvisY - 0.01 * u], [kit.waistR * 1.04, (kit.pelvisY + kit.spineY) / 2 + 0.02 * u], [kit.waistR * 1.02, kit.spineY + 0.06 * u]];
+      const ch = [[kit.waistR, kit.spineY], [kit.chestR, kit.chestY], [kit.chestR * 1.02, kit.shoulderY - 0.07 * u], [kit.shoulderR, kit.shoulderY - 0.012 * u]];
+      const rIn = (pr, y) => { for (let i = 0; i + 1 < pr.length; i++) if (y <= pr[i + 1][1]) return lerp(pr[i][0], pr[i + 1][0], clamp01((y - pr[i][1]) / (pr[i + 1][1] - pr[i][1]))); return pr[pr.length - 1][0]; };
+      const rAt = y => (y < kit.spineY ? rIn(sp, y) : rIn(ch, y));
+      // skinned per vertex like the torso under it (the spine section's top, spineY + 0.06, is the split), with a margin,
+      // so the dark seam-coloured body never pokes through a plate row when the chest turns against the spine
+      const yH = kit.pelvisY + 0.075 * u, yT = kit.shoulderY - 0.03 * u, NROW = 6, seam = 0.006, RK = 1.085, ySplit = kit.spineY + 0.06 * u;
+      const v0 = M.vertexCount;
+      for (let i = 0; i < NROW; i++) {
+        const y0 = lerp(yH, yT, i / NROW) + seam, y1 = lerp(yH, yT, (i + 1) / NROW) - seam;
+        M.color = i % 2 ? C.lamA : C.lamB;
+        M.band([0, 0, 0], rAt(y0) * RK, rAt(y1) * RK, y0, y1, 8, kit.depthK);
+      }
+      // hem trim and the front lacing
+      M.color = C.cream;
+      M.band([0, 0, 0], rAt(yH) * (RK + 0.02), rAt(yH) * (RK + 0.02), yH - 0.026 * u, yH + seam, 8, kit.depthK);
+      M.color = P.shade(tunic, 0.9);
+      const fz = y => rAt(y) * RK * Math.cos(Math.PI / 8) * kit.depthK + 0.006;
+      const lys = [yH - 0.01 * u, ySplit, kit.chestY, yT];
+      for (let i = 0; i < lys.length - 1; i++) {
+        const w = 0.012 * u;
+        M.quad([-w, lys[i], fz(lys[i])], [w, lys[i], fz(lys[i])], [w, lys[i + 1], fz(lys[i + 1])], [-w, lys[i + 1], fz(lys[i + 1])], [0, 0, 1]);
+      }
+      M.boneBy(v0, p => (p[1] < ySplit - 1e-4 ? kit.BI.spine : kit.BI.chest));
+    }
     kit.bone('chest'); M.color = tunic;
     M.push().translate(0, 0, -0.01).scale(1, 1, 0.92);
     M.lathe([[0.096 * k, kit.neckY - 0.03 * k], [0.088 * k, kit.neckY + 0.03 * k]], 8, false, false, false, null, 22.5);
@@ -685,9 +725,10 @@
     kit.nose(P.shade(C.soSkin, 0.88), 1, -0.3);
     kit.smile(H('#7A4034'), -0.56, 0.22);
     kit.mark('face');
-    const hair = hairTone(C.soHair);
+    // black hair (#262022) — Lanternvale's hair-tone lift turned it grey-brown here; the top-knot a shade lighter
+    const hair = C.soHairCap;
     kit.hairCap(hair, 56, 100, 124, 1.07);
-    M.color = hair;
+    M.color = C.soKnot;
     const knotAt = kit.hairPoint(180, 26, 1.0);
     M.sphere(V.add(knotAt, [0, 0.1 * R, 0.02 * R]), [0.34 * R, 0.3 * R, 0.32 * R], 7, 3, true);
     M.color = C.soWrap;
@@ -936,9 +977,10 @@
       M.sphere([s * 0.08, 1.62, 1.27], 0.018, 5, 2, false);
     }
     M.pop();
-    // ---- mane: ONE curtain of hair hanging from the crest down the left side, its lower edge cut into six pointed locks
-    // in two tones (separate slabs each got a full ink outline and read as a staircase), a crest roll along the top and a
-    // thin inner layer against the neck; neck1 / neck2 by position (shared vertices keep one bone), sways towards the tips
+    // ---- mane, readable from every side: a thick crest ridge from poll to withers (a diamond section, dark on top, so the
+    // neck has a mane line seen from either side and from above), the main curtain hanging down the left side, its lower
+    // edge cut into six pointed locks in two tones and its upper edge tucked under the crest (jittered, no ruler line),
+    // and a short fringe of five locks on the right side; neck1 / neck2 by position, swaying towards the tips
     const crestAt = t => {
       const f = t * 4, i0 = Math.min(3, Math.floor(f)), u = f - i0;
       const c = V.lerp(neckPts[i0], neckPts[i0 + 1], u), up = V.neg(frame(neckPts, Math.min(4, Math.round(f))));
@@ -948,33 +990,38 @@
     let ms = M.vertexCount;
     bone('neck1');
     {
-      const LOCKS = 6, cols = LOCKS * 2, top = [], midO = [], bot = [], inner = [];
-      for (let j = 0; j <= cols; j++) {
-        const t = lerp(0.04, 0.97, j / cols), { p, up } = crestAt(t);
-        const len = lerp(0.34, 0.2, t) * (j % 2 ? 1 : 0.55) * (j === 0 || j === cols ? 0.6 : 1);
-        const tp = V.add(p, [0.012, 0, 0]);
-        top.push(tp);
-        midO.push(V.add(tp, [0.07 + 0.02 * (j % 2), -len * 0.45, -0.01]));
-        bot.push(V.add(tp, [0.1 + 0.02 * (j % 2), -len, -0.03 - 0.015 * (j % 2)]));
-        inner.push(V.add(tp, [-0.02, -len * 0.25, 0]));
-        void up;
-      }
-      for (let j = 0; j < cols; j++) {
-        const col = (j >> 1) % 2 ? mane2 : mane;
-        const out = V.add([1, 0.2, 0], [0, 0, 0]);
-        M.quad(top[j], top[j + 1], midO[j + 1], midO[j], out, P.shade(col, 1 + (M.random01() - 0.5) * 0.06));
-        M.quad(midO[j], midO[j + 1], bot[j + 1], bot[j], out, P.shade(col, 0.94 + (M.random01() - 0.5) * 0.06));
-        M.quad(top[j], top[j + 1], inner[j + 1], inner[j], [-1, 0, 0], P.shade(mane, 0.8));
-        M.quad(inner[j], inner[j + 1], bot[j + 1], bot[j], [-1, -0.3, 0], P.shade(mane, 0.75));
-      }
-      // crest roll
+      // a curtain on side sd (+1 left, −1 right): `locks` pointed locks, length k × the main curtain's
+      const curtain = (sd, locks, lenK, inner) => {
+        const cols = locks * 2, top = [], midO = [], bot = [], inn = [];
+        for (let j = 0; j <= cols; j++) {
+          const t = lerp(0.04, 0.97, j / cols), { p } = crestAt(t);
+          const len = lerp(0.34, 0.2, t) * lenK * (j % 2 ? 1 : 0.55) * (j === 0 || j === cols ? 0.6 : 1);
+          const tp = V.add(p, [sd * (0.045 + 0.012 * M.random01()), -0.02 - 0.015 * M.random01(), 0]);
+          top.push(tp);
+          midO.push(V.add(tp, [sd * (0.06 + 0.02 * (j % 2)), -len * 0.45, -0.01]));
+          bot.push(V.add(tp, [sd * (0.085 + 0.02 * (j % 2)), -len, -0.03 - 0.015 * (j % 2)]));
+          inn.push(V.add(tp, [-sd * 0.03, -len * 0.25, 0]));
+        }
+        for (let j = 0; j < cols; j++) {
+          const col = (j >> 1) % 2 ? mane2 : mane, out = [sd, 0.2, 0];
+          M.quad(top[j], top[j + 1], midO[j + 1], midO[j], out, P.shade(col, 1 + (M.random01() - 0.5) * 0.06));
+          M.quad(midO[j], midO[j + 1], bot[j + 1], bot[j], out, P.shade(col, 0.94 + (M.random01() - 0.5) * 0.06));
+          if (inner) {
+            M.quad(top[j], top[j + 1], inn[j + 1], inn[j], [-sd, 0, 0], P.shade(mane, 0.8));
+            M.quad(inn[j], inn[j + 1], bot[j + 1], bot[j], [-sd, -0.3, 0], P.shade(mane, 0.75));
+          }
+        }
+      };
+      curtain(1, 6, 1, true);
+      curtain(-1, 5, 0.42, false);
+      // the crest ridge: diamond rings (left, top, right, under) along the crest, darker on its top faces
       const rings = [];
       for (let i = 0; i <= 6; i++) {
-        const { p, up } = crestAt(lerp(0.02, 0.98, i / 6));
-        rings.push([V.add(p, [-0.03, 0, 0]), V.add(V.add(p, V.mul(up, 0.04)), [0.01, 0, 0]), V.add(p, [0.04, 0, 0]), V.add(p, V.mul(up, -0.02))]);
+        const t = lerp(0.0, 1.0, i / 6), { p, up } = crestAt(t), w = lerp(0.075, 0.06, t) * (i === 0 || i === 6 ? 0.6 : 1);
+        const h = 0.075 * (i === 0 ? 0.5 : 1) + 0.012 * Math.sin(i * 2.1);
+        rings.push([V.add(V.add(p, [w, 0, 0]), V.mul(up, -0.025)), V.add(p, V.mul(up, h)), V.add(V.add(p, [-w, 0, 0]), V.mul(up, -0.025)), V.add(p, V.mul(up, -0.07))]);
       }
-      M.color = mane2;
-      M.loft(rings, true, true);
+      M.loft(rings, true, true, nrm => (nrm[1] > 0.55 ? mane : mane2));
     }
     M.boneBy(ms, q => (q[2] < zSplit ? BI.neck1 : BI.neck2));
     M.windBy(ms, q => 0.45 * clamp01((crestYAt(q[2]) - q[1]) / 0.3));
@@ -1008,18 +1055,24 @@
       M.pop();
     };
     for (const fh of ['F', 'H']) for (const S of ['L', 'R']) leg(fh, S);
-    // ---- tail: one tapered loft from inside the rump to the tip, in two tones — the dock on tail1, the fall of hair on
-    // tail2 (by position, so the skin never tears), swaying more towards the tip
-    bone('tail2');
-    const tailRings = [[0, 1.36, -0.86, 0.06, 0.055], [0, 1.26, -0.99, 0.08, 0.065], [0, 1.04, -1.08, 0.125, 0.075], [0, 0.78, -1.09, 0.115, 0.07], [0, 0.52, -1.03, 0.03, 0.025]].map(([x, y, z, w, d]) => {
-      const ring = [];
-      for (let j = 0; j < 6; j++) { const a = j * Math.PI * 2 / 6; ring.push([x + Math.sin(a) * w, y, z + Math.cos(a) * d]); }
-      return ring;
-    });
+    // ---- tail, volumetric from every side: a short dock from inside the rump, then three five-sided locks of hair falling
+    // from it, fanned ±8° (≈ 0.2 m across at mid-length), tips staggered, mane / mane2 alternating; it hangs (the post-pose
+    // in Pilot.horse lowers figure.js's idle / walk lift), the dock on tail1, the fall on tail2, swaying towards the tips
     ws = M.vertexCount;
-    M.loft(tailRings, true, true, nrm => (nrm[0] > 0.2 ? mane2 : mane));
-    M.boneBy(ws, q => (q[1] > 1.2 && q[2] > -1.02 ? BI.tail1 : BI.tail2));
-    M.windBy(ws, q => 0.55 * clamp01((1.24 - q[1]) / 0.72));
+    bone('tail1');
+    const dockRing = (c, w, d) => { const r = []; for (let j = 0; j < 5; j++) { const a = j * Math.PI * 2 / 5; r.push([c[0] + Math.sin(a) * w, c[1], c[2] + Math.cos(a) * d]); } return r; };
+    M.color = mane;
+    M.loft([dockRing([0, 1.38, -0.86], 0.06, 0.06), dockRing([0, 1.24, -1.0], 0.085, 0.07)], true, false);
+    const lockCols = [mane2, mane, mane2];
+    [-1, 0, 1].forEach((f, li) => {
+      const a = f * 9 * D2R, len = 0.74 + (li === 1 ? 0.06 : f > 0 ? -0.06 : 0);
+      const pt = (t, bulge) => [Math.sin(a) * len * t + f * 0.025 * Math.sin(Math.PI * t), 1.25 - len * t * Math.cos(a), -1.01 - 0.11 * t - 0.05 * Math.sin(Math.PI * t) + bulge];
+      const ts = [0, 0.3, 0.62, 1], ws_ = [0.062, 0.08, 0.064, 0.014], ds = [0.06, 0.078, 0.062, 0.012];
+      const rings = ts.map((t, i) => dockRing(pt(t, 0), ws_[i], ds[i]));
+      M.loft(rings, false, true, nrm => P.shade(lockCols[li], nrm[0] * f > 0.3 ? 1.1 : 1));
+    });
+    M.boneBy(ws, q => (q[1] > 1.06 ? BI.tail1 : BI.tail2));
+    M.windBy(ws, q => 0.6 * clamp01((1.2 - q[1]) / 0.7));
     // ---- tack: saddle cloth (faction colour, cream hem, gold studs), saddle, girth, breast collar with red tassels
     bone('body');
     const cz = [-0.44, -0.24, -0.04, 0.16, 0.34], angs = [0, 26, 52, 78, 100, 112];
@@ -1072,12 +1125,14 @@
       M.color = C.gold; M.sphere(V.add(p, [0, -0.02, 0.012]), 0.022, 5, 2, false);
       M.color = C.tassel;
       M.push().translate(p[0], 0, p[2] + 0.015);
-      M.lathe([[0.012, p[1] - 0.03], [0.042, p[1] - 0.08], [0.036, p[1] - 0.16], [0.012, p[1] - 0.2]].reverse(), 6, false, true, true);
+      M.lathe([[0.012, p[1] - 0.03], [0.042, p[1] - 0.08], [0.036, p[1] - 0.16], [0.012, p[1] - 0.2]].reverse(), 5, false, true, true);
       M.pop();
     }
     return M;
   }
 
+  /** Degrees taken off figure.js's tail1 / tail2 lift per clip (the tail hangs in idle and walk). */
+  Pilot.TAIL_REST = { idle: [18, 13], walk: [18, 14] };
   Pilot.horse = function (opts) {
     opts = opts || {};
     const horse = SG.Figure.horse({ lod: 'low', color: opts.color || '#2f7d4a', seed: opts.seed || 0, shadow: false });
@@ -1091,7 +1146,14 @@
     horse.root.add(shadow);
     return {
       horse, mesh, shadow, root: horse.root, tris: geo.userData.tris, height: 2.05,
-      setPose(clip, t) { horse.setPose(clip, t); return this; },
+      setPose(clip, t) {
+        horse.setPose(clip, t);
+        // the tail hangs at rest: figure.js lifts it ~35–40° in idle / walk (a flag at the game camera); lower tail1 / tail2
+        // so the fall stays within ~10° of vertical, keeping the side-to-side sway; trot / gallop keep their lift
+        const lw = Pilot.TAIL_REST[clip];
+        if (lw) { const b = horse.bones; b.tail1.rotation.x -= lw[0] * D2R; b.tail2.rotation.x -= lw[1] * D2R; }
+        return this;
+      },
       mount(rider) { horse.mount(rider.fig); if (rider.shadow) rider.shadow.visible = false; return this; },
     };
   };
@@ -1111,20 +1173,25 @@
       x += w;
     }
   }
-  /** Merlons (垛口) along local X on a parapet top at height y, front at z: tone ±0.08 each, a moss tuft on every 4th. */
-  function merlons(M, xsList, y, z, size, base, mossEvery = 4) {
+  /**
+   * Merlons (垛口) along local X on a parapet top at height y, front at z: tone ±0.08 each; on every 4th a cushion of moss
+   * — `lumps` tiny soft lumps (smooth-shaded, a moss ramp from a cool underside to a sunlit top), not a flat patch.
+   */
+  const MOSS = LP.foliage(1, H('#7D9A55'), 6);
+  function merlons(M, xsList, y, z, size, base, mossEvery = 4, lumps = 2) {
     xsList.forEach((x, i) => {
       M.color = P.shade(base, 1 + (M.random01() * 2 - 1) * 0.08);
       M.box([x, y + size[1] / 2, z], size, P.shade(PAL.stoneLight, 0.96 + M.random01() * 0.08), 'tfkrl');
       if (mossEvery && i % mossEvery === 1) {
-        const keep = M.jitter; M.jitter = 0.08;
-        M.facetBlob([x + (M.random01() - 0.5) * size[0] * 0.4, y + size[1] + 0.02, z + size[2] * 0.15], [size[0] * 0.32, 0.09, size[2] * 0.35], 0, 0.25, i * 7 + 3, 0.6, LP.byNormal(PAL.mossLight, PAL.moss, P.shade(PAL.moss, 0.8), 0.4));
-        M.jitter = keep;
+        const top = y + size[1], ramp = LP.canopyRamp(MOSS.top, MOSS.side, MOSS.bottom, top - 0.04, top + 0.16);
+        const mx = x + (M.random01() - 0.5) * size[0] * 0.3, mz = z + size[2] * 0.12;
+        M.softLump([mx, top + 0.03, mz], [size[0] * 0.24, 0.1, size[2] * 0.3], 0, i * 37, ramp, 0.16);
+        if (lumps > 1) M.softLump([mx + size[0] * 0.2, top + 0.02, mz - size[2] * 0.12], [size[0] * 0.14, 0.07, size[2] * 0.18], 0, i * 53 + 20, ramp, 0.16);
       }
     });
   }
-  /** A small stud on a door (门钉): a three-sided gold pyramid facing +Z at p. */
-  function stud(M, p, r) { M.push().translate(p).rotate(90, 0, 0); M.lathe([[r, 0], [0, r * 0.9]], 3, false, false, false, null, 30); M.pop(); }
+  /** A small stud on a door (门钉): a gold square standing just off the leaf (two triangles), facing +Z at p. */
+  function stud(M, p, r) { M.quad([p[0] - r, p[1] - r, p[2]], [p[0] + r, p[1] - r, p[2]], [p[0] + r, p[1] + r, p[2]], [p[0] - r, p[1] + r, p[2]], [0, 0, 1]); }
 
   // ===================================================== gate tower ==
   // 城门楼: battered rammed-earth gate base on a plinth of stone blocks, a brick-framed arch with a dark-wood name plaque,
@@ -1135,7 +1202,8 @@
     o = o || {};
     const lit = !!o.lit;
     const M = new LP.MeshBuilder(101);
-    M.jitter = 0.06; M.aoStrength = 0.35; M.aoHeight = 1.2;
+    M.jitter = 0.06; M.jitterAll = true; M.aoStrength = 0.35; M.aoHeight = 1.2;
+    const decals = [];
     const parts = {}; let lastT = 0; const mark = n => { parts[n] = M.triangleCount - lastT; lastT = M.triangleCount; };
     const HB = 4.8, bat = 0.07, XB = 6.5, ZB = 3.4, PL = 0.6;
     const xs = y => XB - bat * y, zs = y => ZB - bat * y;
@@ -1163,8 +1231,19 @@
       const y0 = sideY[i], y1 = sideY[i + 1], col = courseCol(i + 1, y0);
       M.quad([s * xs(y0), y0, -zs(y0)], [s * xs(y0), y0, zs(y0)], [s * xs(y1), y1, zs(y1)], [s * xs(y1), y1, -zs(y1)], [s, bat, 0], P.shade(col, 1 + (M.random01() - 0.5) * 0.1));
     }
-    // top platform
-    M.quad([-xs(HB), HB, -zs(HB)], [xs(HB), HB, -zs(HB)], [xs(HB), HB, zs(HB)], [-xs(HB), HB, zs(HB)], [0, 1, 0], P.shade(PAL.stoneLight, 0.95));
+    // top platform: dark grout under paving slabs where the walk shows round the hall podium (front strip, side bands)
+    M.quad([-xs(HB), HB, -zs(HB)], [xs(HB), HB, -zs(HB)], [xs(HB), HB, zs(HB)], [-xs(HB), HB, zs(HB)], [0, 1, 0], P.shade(PAL.stone, 0.78));
+    {
+      const pave = (x0, x1, z0, z1, nx, nz) => {
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+          const a = lerp(x0, x1, i / nx) + 0.02, b = lerp(x0, x1, (i + 1) / nx) - 0.02, c = lerp(z0, z1, j / nz) + 0.02, d = lerp(z0, z1, (j + 1) / nz) - 0.02;
+          M.quad([a, HB + 0.012, c], [b, HB + 0.012, c], [b, HB + 0.012, d], [a, HB + 0.012, d], [0, 1, 0], P.shade((i + j) % 2 ? PAL.stoneLight : PAL.stone, 0.9 + M.random01() * 0.08));
+        }
+      };
+      const xIn = xs(HB) - 0.44, zIn = zs(HB) - 0.44;
+      pave(-xIn, xIn, 2.22, zIn, 9, 1);
+      for (const s of [-1, 1]) pave(s > 0 ? 4.72 : -xIn, s > 0 ? xIn : -4.72, -zIn, 2.22, 1, 5);
+    }
     mark('walls');
     // the stone plinth: front (either side of the arch) and both ends
     M.aoStrength = 0.2;
@@ -1209,7 +1288,7 @@
       M.box([s * (aw * 0.5), ys + 0.42, doorZ + 0.055], [aw - 0.3, 0.07, 0.02], null, 'tf');
       M.box([s * (aw * 0.5), 0.2, doorZ + 0.055], [aw - 0.3, 0.07, 0.02], null, 'tf');
       M.color = C.gold;
-      for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) stud(M, [s * lerp(0.26, aw - 0.38, c / 4), lerp(0.42, ys + 0.2, r / 4), doorZ + 0.05], 0.042);
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) stud(M, [s * lerp(0.26, aw - 0.38, c / 4), lerp(0.42, ys + 0.2, r / 4), doorZ + 0.058], 0.036);
       M.sphere([s * 0.16, 1.32, doorZ + 0.07], [0.07, 0.07, 0.035], 6, 2, false);
     }
     M.color = P.shade(PAL.stone, 0.92);
@@ -1226,25 +1305,18 @@
         const y = ys + Math.sin(a) * r, z = zs(y) + 0.03;
         const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, a - Math.PI / 2));
         M.color = i === 3 ? P.mix(brick, PAL.stoneLight, 0.5) : i % 2 ? brick : brickDark;
-        M.obox([Math.cos(a) * r, y, z], [0.4, 0.42, 0.12], q, null);
+        M.push().translate(Math.cos(a) * r, y, z).rotateQ(q); M.box([0, i === 3 ? -0.03 : 0, 0], [0.4, i === 3 ? 0.36 : 0.42, 0.12], null, 'tbfrl'); M.pop();
       }
       for (const s of [-1, 1]) { M.color = brickDark; M.box([s * (aw + 0.2), ys * 0.5, zs(ys * 0.5) + 0.02], [0.4, ys, 0.08], null, 'tfrl'); }
     }
     mark('voussoirs');
-    // the name plaque over the arch: dark wood in a gold border, two gold glyph blocks
+    // the name plaque over the arch: a dark-wood board in a gold border; the city's name is a painted decal on the board
+    // (gold 楷书 on the wood, Lanternvale's signs), added by Pilot.gateTower
     {
-      const py = 4.3, pz = zs(py) + 0.06;
-      M.color = C.gold; M.box([0, py, pz], [1.46, 0.5, 0.06], null, 'tfrl');
-      M.color = H('#3A2A24'); M.box([0, py, pz + 0.035], [1.26, 0.36, 0.03], null, 'tf');
-      // two gold characters as a few brush strokes each (blocks read as a face)
-      M.color = C.goldLight;
-      for (const x of [-0.27, 0.27]) {
-        M.box([x, py + 0.09, pz + 0.055], [0.22, 0.035, 0.02], null, 'f');
-        M.box([x, py, pz + 0.055], [0.16, 0.03, 0.02], null, 'f');
-        M.box([x - 0.02, py - 0.01, pz + 0.055], [0.035, 0.2, 0.02], null, 'f');
-        M.box([x + 0.07, py - 0.06, pz + 0.055], [0.03, 0.12, 0.02], null, 'f');
-        M.box([x, py - 0.1, pz + 0.055], [0.2, 0.03, 0.02], null, 'f');
-      }
+      const py = 4.37, pz = zs(py) + 0.06;
+      M.color = C.gold; M.box([0, py, pz], [1.46, 0.42, 0.06], null, 'tfrl');
+      M.color = H('#3A2A24'); M.box([0, py, pz + 0.035], [1.28, 0.3, 0.03], null, 'tf');
+      decals.push({ text: o.name || '荆州', board: '#3A2A24', ink: '#F2C45C', w: 1.26, h: 0.28, at: [0, py, pz + 0.054], tilt: 0 });
     }
     mark('plaque');
     // a stone cornice under the parapet
@@ -1261,7 +1333,7 @@
     for (const s of [-1, 1]) M.box([s * px, HB + 0.3, 0], [0.44, 0.6, pz * 2], null, 'tkrl');
     const mx = [];
     for (let i = 0; i < 9; i++) { const x = lerp(-px + 0.35, px - 0.35, i / 8); if (Math.abs(x) >= 0.4) mx.push(x); }
-    merlons(M, mx, HB + 0.6, pz, [0.82, 0.44, 0.46], pc);
+    merlons(M, mx, HB + 0.6, pz, [0.82, 0.44, 0.46], pc, 4, 1);
     for (const s of [-1, 1]) { M.push().translate(s * px, 0, 0).rotate(0, 90, 0); merlons(M, [-pz + 0.6, 0, pz - 0.6], HB + 0.6, 0, [0.8, 0.44, 0.46], pc, 0); M.pop(); }
     mark('parapets');
     // ---- the hall: podium, columns, walls, windows, beams, brackets, railing
@@ -1274,9 +1346,9 @@
     for (const x of colX) for (const zz of [HZ, -HZ]) {
       if (zz < 0 && Math.abs(x) < 4) continue;
       M.color = PAL.stone;
-      M.cylinder([x, HY, hz0 + zz], 0.25, 0.22, 0.12, 6, false, false, true);
+      M.box([x, HY + 0.06, hz0 + zz], [0.46, 0.12, 0.46], null, 'tfkrl');
       M.color = vermilion;
-      M.cylinder([x, HY + 0.12, hz0 + zz], 0.165, 0.15, colH - 0.12, 8, false, false, false);
+      M.cylinder([x, HY + 0.12, hz0 + zz], 0.165, 0.15, colH - 0.12, 6, false, false, false);
     }
     M.aoStrength = 0;
     mark('podium+columns');
@@ -1322,17 +1394,26 @@
     M.box([0, HY + 0.2, rz], [HX * 2 + 0.95, 0.06, 0.08], null, 'tfb');
     for (const s of [-1, 1]) { M.box([s * (HX + 0.4), HY + 0.62, hz0 + 0.3], [0.12, 0.08, HZ * 2 + 0.3], null, 'tbrl'); M.box([s * (HX + 0.4), HY + 0.32, hz0 - HZ + 0.5], [0.11, 0.64, 0.11], null, 'tfkrl'); }
     mark('railing');
-    // plaque (匾额) on the hall: dark blue board, gold frame and three gold glyph blocks
-    M.color = C.gold;
-    M.box([0, wallTop + 0.95, hz0 + HZ + 0.36], [1.5, 0.78, 0.08], null, 'tfrl');
-    M.color = H('#2E4466');
-    M.box([0, wallTop + 0.95, hz0 + HZ + 0.4], [1.3, 0.6, 0.06], null, 'f');
-    M.color = C.goldLight;
-    for (let i = 0; i < 3; i++) M.box([-0.38 + i * 0.38, wallTop + 0.95, hz0 + HZ + 0.44], [0.24, 0.32, 0.03], null, 'f');
+    // plaque (匾额) on the hall: hung under the eave in front of the middle bracket set and leaning out, a navy board in a
+    // gold frame (its name a painted decal), below the roof — it never pokes through the lower roof
+    {
+      const pc = [0, wallTop + 0.27, hz0 + HZ + 0.45], tilt = 12;
+      M.push().translate(pc).rotate(tilt, 0, 0);
+      M.color = C.gold; M.box([0, 0, 0], [1.34, 0.5, 0.06], null, 'tfrl');
+      M.color = H('#2E4466'); M.box([0, 0, 0.035], [1.16, 0.36, 0.03], null, 'tf');
+      M.pop();
+      decals.push({ text: o.hallName || '宾阳楼', board: '#2E4466', ink: '#F2C45C', w: 1.14, h: 0.34, at: pc, local: [0, 0, 0.054], tilt });
+    }
     mark('hallplaque');
-    // ---- roof: hip-and-gable (歇山) with upturned eaves; slate-blue tile rows, darker ridges
+    // ---- roof: hip-and-gable (歇山), Lanternvale's CourseRoof in Han dress. Every slope is a gently concave surface laid
+    // in overlapping courses (alternate tones, a dark step line under each course, per-face jitter); raised 筒瓦 tile ribs
+    // run down the visible slopes (a lit and a shaded facet each, fanning out towards the upturned corners like 翼角
+    // tiles) and end in a row of round 瓦当 eave-tile ends over the vermilion fascia; a two-step main ridge with curled
+    // 鸱吻 ends and a gold bird (Han pottery towers carry one), hip ridges that follow the curve to upturned tips with
+    // a small ridge beast. Dusty slate blue (Lanternvale's town-hall / river-house roofs).
     const yE = wallTop + 0.62, We = HX + 1.45, De = HZ + 1.35, yB = yE + 1.25, Lb = HX - 0.3, Db = HZ - 0.55, yR = yB + 1.45, up = 0.55;
-    const tile = H('#7E8B9C'), tileAlt = H('#687587'), ridgeC = PAL.tileSlateDark, soffit = H('#4F6E6A');
+    const tile = H('#808DA6'), tileAlt = H('#73809A'), ribC = H('#8794AD'), endC = H('#4F5B72'), ridgeC = H('#56627A'), soffit = H('#4F6E6A');
+    const SAG = 0.16, STEP = 0.045, RIB_H = 0.1, RIB_W = 0.075;
     const lift = c => up * Math.pow(c, 3);
     const eave = (u, side) => {        // a point on the eave line of a slope (u 0..1 along it)
       const c = Math.abs(u * 2 - 1);
@@ -1343,62 +1424,124 @@
       if (side === 'f' || side === 'b') return [lerp(-Lb, Lb, u), yB, (side === 'f' ? Db : -Db) + hz0];
       return [(side === 'r' ? Lb : -Lb), yB, lerp(-Db, Db, u) + hz0];
     };
-    const slope = (side, cols, under) => {
-      const outward = { f: [0, 1, 1], b: [0, 1, -1], r: [1, 1, 0], l: [-1, 1, 0] }[side];
-      for (let i = 0; i < cols; i++) {
-        const u0 = i / cols, u1 = (i + 1) / cols;
-        const e0 = eave(u0, side), e1 = eave(u1, side), b0 = brk(u0, side), b1 = brk(u1, side);
-        const m0 = V.add(V.lerp(e0, b0, 0.5), [0, -0.12, 0]), m1 = V.add(V.lerp(e1, b1, 0.5), [0, -0.12, 0]);
-        const col = i % 2 ? tile : tileAlt;
-        M.quad(e0, e1, m1, m0, outward, P.shade(col, 0.95));
-        M.quad(m0, m1, b1, b0, outward, P.shade(col, 1.03));
-        // underside (painted rafters) and the eave fascia
-        const d = [0, -0.2, 0];
-        if (under) M.quad(V.add(e0, d), V.add(e1, d), V.add(b1, d), V.add(b0, d), V.neg(outward), soffit);
-        M.quad(e0, e1, V.add(e1, d), V.add(e0, d), [outward[0], 0, outward[2]], P.shade(vermilion, 0.8));
+    const OUT = { f: [0, 1, 1], b: [0, 1, -1], r: [1, 1, 0], l: [-1, 1, 0] };
+    // a point on a lower slope: u along the eave, v up the slope (0 the eave … 1 the break line); concave (举折)
+    const lowerS = side => (u, v) => V.add(V.lerp(eave(u, side), brk(u, side), v), [0, -SAG * 4 * v * (1 - v), 0]);
+    /**
+     * One tiled slope S(u, v): o.cols base columns × o.courses (v breaks) of course quads, each course's foot lifted
+     * STEP over the one below with a dark step face; o.ribs (or o.ribU) tile ribs sampled at o.ribV; o.ends: 瓦当 row;
+     * o.fascia / o.soffit: the eave board and the painted underside (straight, under the sag).
+     */
+    const tiledSlope = (S, o) => {
+      const out = o.out;
+      const Nrm = (u, v) => {
+        const e = 0.01, du = V.sub(S(u + e, v), S(u - e, v)), dv = V.sub(S(u, v + e), S(u, v - e));
+        let n = V.norm(V.cross(du, dv)); if (V.dot(n, out) < 0) n = V.neg(n); return n;
+      };
+      const cs = o.courses;
+      for (let k = 0; k < cs.length - 1; k++) {
+        const v0 = cs[k], v1 = cs[k + 1], base = P.shade(k % 2 ? tileAlt : tile, 1 + 0.025 * (k - 1));
+        for (let j = 0; j < o.cols; j++) {
+          // each course's foot is lifted STEP over the course below (less at the slope's ends, where two slopes meet
+          // under a hip ridge, so their lifted edges never open a gap there)
+          const u0 = j / o.cols, u1 = (j + 1) / o.cols, lift = u => (k ? STEP * (u <= 0 || u >= 1 ? 0.15 : 1) : 0);
+          const a0 = S(u0, v0), a1 = S(u1, v0), a = V.madd(a0, Nrm(u0, v0), lift(u0)), b = V.madd(a1, Nrm(u1, v0), lift(u1));
+          M.quad(a, b, S(u1, v1), S(u0, v1), out, base);
+          if (k) M.quad(a0, a1, b, a, V.sub(a0, S(u0, v0 + 0.05)), P.shade(base, 0.6));
+        }
+      }
+      const ribU = o.ribU || (o.ribs ? Array.from({ length: o.ribs }, (_, i) => (i + 0.5) / o.ribs) : []);
+      for (const u of ribU) {
+        const st = o.ribV, T = v => V.norm(V.sub(S(u + 0.01, v), S(u - 0.01, v)));
+        const pts = st.map(v => { const p = S(u, v), n = Nrm(u, v), t = T(v); return [V.madd(V.madd(p, t, -RIB_W), n, STEP * 0.45), V.madd(p, n, RIB_H), V.madd(V.madd(p, t, RIB_W), n, STEP * 0.45)]; });
+        for (let q = 0; q < st.length - 1; q++) {
+          const A = pts[q], B = pts[q + 1], vm = (st[q] + st[q + 1]) / 2, n = Nrm(u, vm), t = T(vm);
+          M.quad(A[0], B[0], B[1], A[1], V.sub(n, t), P.shade(ribC, 1.14));
+          M.quad(A[1], B[1], B[2], A[2], V.add(n, t), P.shade(ribC, 0.78));
+        }
+        if (o.ends) {
+          // 瓦当: a round tile end (pentagon, fanned from a corner: 3 triangles) closing the rib over the eave
+          const v = st[0], n = Nrm(u, 0), t = T(0), f = V.norm(V.sub(S(u, v), S(u, v + 0.08)));
+          const w = V.norm(V.cross(f, t)), c = V.madd(V.madd(S(u, v), n, RIB_H * 0.45), f, 0.012);
+          const pg = []; for (let q = 0; q < 5; q++) { const a = Math.PI / 2 + q * 2 * Math.PI / 5; pg.push(V.add(c, V.add(V.mul(t, Math.cos(a) * 0.088), V.mul(w, Math.sin(a) * 0.088)))); }
+          for (let q = 1; q < 4; q++) M.triangleFacing(pg[0], pg[q], pg[q + 1], f, endC);
+        }
+      }
+      const d = [0, -0.2, 0], fo = [out[0], 0, out[2]];
+      for (let j = 0; j < o.cols && (o.fascia || o.soffit); j++) {
+        const u0 = j / o.cols, u1 = (j + 1) / o.cols, e0 = S(u0, 0), e1 = S(u1, 0);
+        if (o.fascia) M.quad(e0, e1, V.add(e1, d), V.add(e0, d), fo, P.shade(vermilion, 0.8));
+        // the soffit is straight: it drops further towards the break line so it stays well under the sagging tiles (it
+        // faces down; where it came through the tiles its ink hull showed as a black hole in the roof)
+        if (o.soffit) { const d2 = [0, -0.45, 0], b0 = S(u0, 1), b1 = S(u1, 1); M.quad(V.add(e0, d), V.add(e1, d), V.add(b1, d2), V.add(b0, d2), V.neg(out), soffit); }
       }
     };
-    slope('f', 16, true); slope('b', 5, false); slope('l', 5, true); slope('r', 5, true);
+    const NR = 17;    // front tile ribs (≈ 0.46 m apart at the break line, splaying towards the eave corners)
+    tiledSlope(lowerS('f'), { out: OUT.f, cols: 8, courses: [0, 0.34, 0.68, 1], ribs: NR, ribV: [-0.015, 0.5, 1], ends: true, fascia: true, soffit: true });
+    tiledSlope(lowerS('b'), { out: OUT.b, cols: 4, courses: [0, 0.5, 1], fascia: true });
+    for (const sd of ['l', 'r']) tiledSlope(lowerS(sd), { out: OUT[sd], cols: 3, courses: [0, 0.5, 1], ribs: 7, ribV: [-0.015, 0.5, 1], ends: true, fascia: true, soffit: true });
     mark('lowerroof');
-    // upper gable roof and the gable walls (山花)
+    // upper gable roof (straight, steeper: with the lower slope's sag the whole profile reads concave) and the 山花
     const gx = Lb + 0.25;
-    for (const f of [1, -1]) {
-      const cols = f > 0 ? 14 : 5;
-      for (let i = 0; i < cols; i++) {
-        const x0 = lerp(-gx, gx, i / cols), x1 = lerp(-gx, gx, (i + 1) / cols);
-        const a = [x0, yB - 0.05, f * (Db + 0.15) + hz0], b = [x1, yB - 0.05, f * (Db + 0.15) + hz0], c = [x1, yR, hz0], d = [x0, yR, hz0];
-        const m0 = V.add(V.lerp(a, d, 0.5), [0, 0.1, 0]), m1 = V.add(V.lerp(b, c, 0.5), [0, 0.1, 0]);
-        const col = i % 2 ? tile : tileAlt;
-        M.quad(a, b, m1, m0, [0, 1, f], col);
-        M.quad(m0, m1, c, d, [0, 1, f], P.shade(col, 1.04));
-      }
-    }
+    const upperS = f => (u, v) => V.lerp([lerp(-gx, gx, u), yB - 0.05, f * (Db + 0.15) + hz0], [lerp(-gx, gx, u), yR, hz0], v);
+    // its ribs continue the lower ribs (same x where the two roofs meet)
+    const ribU = Array.from({ length: NR }, (_, i) => (lerp(-Lb, Lb, (i + 0.5) / NR) + gx) / (2 * gx));
+    tiledSlope(upperS(1), { out: [0, 1, 1], cols: 6, courses: [0, 0.5, 1], ribU, ribV: [0, 1] });
+    tiledSlope(upperS(-1), { out: [0, 1, -1], cols: 4, courses: [0, 0.5, 1] });
     for (const s of [-1, 1]) {
       M.color = vermilion;
       M.triangleFacing([s * Lb, yB - 0.05, -Db + hz0], [s * Lb, yR - 0.08, hz0], [s * Lb, yB - 0.05, Db + hz0], [s, 0, 0]);
       M.color = C.gold;
       M.triangleFacing([s * (Lb + 0.02), yB + 0.35, -0.35 + hz0], [s * (Lb + 0.02), yB + 0.85, hz0], [s * (Lb + 0.02), yB + 0.35, 0.35 + hz0], [s, 0, 0]);
       M.color = ridgeC;
-      for (const f of [1, -1]) M.beam([s * gx, yB - 0.02, f * (Db + 0.2) + hz0], [s * gx, yR + 0.05, hz0], 0.16, 0.14, [s, 1, 0]);
+      for (const f of [1, -1]) M.beam([s * gx, yB - 0.02, f * (Db + 0.2) + hz0], [s * gx, yR + 0.08, hz0], 0.16, 0.16, [s, 1, 0]);
     }
     mark('gable');
-    // ridges: the main ridge with curled ends (鸱吻), hip ridges with upturned tips
+    // main ridge (正脊) in two steps, 0.45 m: a dark course and a lighter capping course
     M.color = ridgeC;
-    M.box([0, yR + 0.12, hz0], [gx * 2 + 0.3, 0.3, 0.32], null, 'tfkrl');
-    M.color = P.shade(ridgeC, 1.15);
-    M.box([0, yR + 0.3, hz0], [gx * 2 + 0.1, 0.08, 0.2], null, 'tfkrl');
+    M.box([0, yR + 0.11, hz0], [gx * 2 + 0.3, 0.32, 0.34], P.shade(ridgeC, 1.12), 'tfkrl');
+    M.color = P.shade(ridgeC, 1.06);
+    M.box([0, yR + 0.34, hz0], [gx * 2 + 0.05, 0.14, 0.22], P.shade(ridgeC, 1.25), 'tfkrl');
+    // 鸱吻: a curl rising from each end of the ridge and rolling back over it (a flattened five-sided tube)
     for (const s of [-1, 1]) {
+      const pts = [[s * (gx + 0.06), yR + 0.05], [s * (gx + 0.2), yR + 0.42], [s * (gx + 0.12), yR + 0.8], [s * (gx - 0.1), yR + 0.92], [s * (gx - 0.24), yR + 0.74]];
+      const rs = [0.17, 0.15, 0.12, 0.09, 0.035];
+      const rings = pts.map(([x, y], i) => {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], t = V.norm([b[0] - a[0], b[1] - a[1], 0]), nx = [-t[1], t[0], 0];
+        const ring = []; for (let j = 0; j < 5; j++) { const an = j * Math.PI * 2 / 5; ring.push(V.add([x, y, hz0], V.add(V.mul(nx, Math.cos(an) * rs[i]), [0, 0, Math.sin(an) * rs[i] * 0.75]))); }
+        return ring;
+      });
       M.color = ridgeC;
-      M.curve([s * (gx + 0.05), yR + 0.1, hz0], [s * (gx + 0.35), yR + 0.45, hz0], [s * (gx + 0.1), yR + 0.85, hz0], 0.17, 0.07, 2, 5);
-      M.color = C.gold;
-      M.sphere([s * (gx + 0.1), yR + 0.88, hz0], 0.08, 4, 2, false);
+      M.loft(rings, true, true);
     }
-    M.color = ridgeC;
+    // a gold bird (朱雀) on the middle of the ridge: body, head, spread wings and a swept tail fan — thin closed slabs, not
+    // two-sided quads (a two-sided quad's back copy fills with ink through the outline hull)
+    {
+      const by = yR + 0.42, bz = hz0;
+      const slab = (pts, th) => {
+        const n = V.norm(V.cross(V.sub(pts[1], pts[0]), V.sub(pts[2], pts[0]))), h = V.mul(n, th / 2);
+        const T = pts.map(p => V.add(p, h)), Bm = pts.map(p => V.sub(p, h)), c = V.mul(pts.reduce((a, p) => V.add(a, p), [0, 0, 0]), 1 / pts.length);
+        for (let i = 1; i < pts.length - 1; i++) { M.triangleFacing(T[0], T[i], T[i + 1], n); M.triangleFacing(Bm[0], Bm[i + 1], Bm[i], V.neg(n)); }
+        for (let i = 0; i < pts.length; i++) { const j = (i + 1) % pts.length; M.quad(T[i], T[j], Bm[j], Bm[i], V.sub(V.mul(V.add(pts[i], pts[j]), 0.5), c)); }
+      };
+      M.color = C.gold;
+      M.sphere([0, by + 0.1, bz], [0.11, 0.1, 0.19], 6, 3, false);
+      M.sphere([0, by + 0.25, bz + 0.17], [0.065, 0.07, 0.075], 5, 2, false);
+      M.color = C.goldLight;
+      for (const sd of [1, -1]) slab([[sd * 0.07, by + 0.15, bz + 0.07], [sd * 0.07, by + 0.15, bz - 0.09], [sd * 0.36, by + 0.28, bz - 0.1]], 0.03);
+      slab([[-0.035, by + 0.12, bz - 0.15], [0.035, by + 0.12, bz - 0.15], [0.15, by + 0.34, bz - 0.44], [-0.15, by + 0.34, bz - 0.44]], 0.03);
+    }
+    // hip ridges (垂脊 / 戗脊) along the curved hip edges, upturned tips and a small ridge beast on each
     for (const [u, side] of [[0, 'f'], [1, 'f'], [0, 'b'], [1, 'b']]) {
-      const e = eave(u, side), b = brk(u, side);
-      M.beam(V.add(b, [0, 0.06, 0]), V.add(e, [0, 0.08, 0]), 0.16, 0.14);
-      const dir = V.norm(V.sub(e, b));
-      M.spike(V.add(e, [0, 0.06, 0]), V.add(V.mul(dir, 0.6), [0, 0.8, 0]), 0.09, 0.45, 4);
+      const S = lowerS(side), sx = u ? 1 : -1, sz = side === 'f' ? 1 : -1;
+      const hp = [1, 0.5, 0].map(v => V.add(S(u, v), [0, 0.09, 0]));
+      M.color = ridgeC;
+      M.beam(hp[0], hp[1], 0.17, 0.16);
+      M.beam(hp[1], hp[2], 0.17, 0.16);
+      const dir = V.norm(V.sub(hp[2], hp[1]));
+      M.spike(V.sub(hp[2], V.mul(dir, 0.05)), V.add(V.mul(dir, 0.55), [0, 0.85, 0]), 0.095, 0.5, 4);
+      M.color = P.shade(ridgeC, 1.15);
+      M.sphere(V.add(S(u, 0.2), [sx * 0.01, 0.22, sz * 0.01]), [0.07, 0.1, 0.07], 4, 2, false);
     }
     mark('ridges');
     // ---- banners on the parapet corners (sway) and lanterns
@@ -1406,8 +1549,8 @@
     for (const s of [-1, 1]) {
       const bx = s * (px - 0.1), bz = pz;
       M.color = H('#5A3E2C');
-      M.segment([bx, HB + 0.5, bz], [bx, HB + 4.3, bz], 0.05, 0.04, 5);
-      M.color = C.gold; M.cone([bx, HB + 4.3, bz], 0.07, 0.22, 5);
+      M.segment([bx, HB + 0.5, bz], [bx, HB + 4.3, bz], 0.05, 0.04, 4);
+      M.color = C.gold; M.cone([bx, HB + 4.3, bz], 0.07, 0.22, 4);
       M.windGradient = true; M.windY0 = HB + 3.0; M.windY1 = HB + 4.4; M.wind = 1.2;
       const fx = s * -1;
       M.color = flag;
@@ -1422,7 +1565,7 @@
     const lantern = (c, r, h) => {
       M.color = H('#3E2C24');
       M.segment(V.add(c, [0, h * 0.56, 0]), V.add(c, [0, h * 0.56 + 0.3, 0]), 0.014, 0.014, 3, false, false);
-      M.ribLantern(c, r, h, H('#C8402E'), lit, C.gold, C.gold, 8, 0.2);
+      M.ribLantern(c, r, h, H('#C8402E'), lit, C.gold, C.gold, 6, 0.2);
       lamps.push(c);
     };
     for (const s of [-1, 1]) lantern([s * 3.36, yE - 0.9, hz0 + HZ + 0.62], 0.29, 0.42);
@@ -1433,17 +1576,26 @@
       lantern(c, 0.25, 0.36);
     }
     mark('lanterns');
-    return { M, lamps, parts };
+    return { M, lamps, parts, decals };
   }
 
   Pilot.gateTower = function (o) {
     o = o || {};
-    const key = 'lp_gate|' + (o.lit ? 1 : 0) + '|' + (o.flagColor || '');
+    const key = 'lp_gate|' + (o.lit ? 1 : 0) + '|' + (o.flagColor || '') + '|' + (o.name || '') + '|' + (o.hallName || '');
     let lamps = null;
-    const geo = LP.MeshCache.get(key, () => { const r = buildGateTower(o); lamps = r.lamps; const g = r.M.toGeometry(); g.userData.lamps = r.lamps; g.userData.parts = r.parts; return g; });
+    const geo = LP.MeshCache.get(key, () => { const r = buildGateTower(o); lamps = r.lamps; const g = r.M.toGeometry(); g.userData.lamps = r.lamps; g.userData.parts = r.parts; g.userData.decals = r.decals; return g; });
     const mesh = LP.mesh(geo);
     mesh.userData.lamps = geo.userData.lamps || lamps;
     mesh.name = 'LP gate tower';
+    // painted name boards (decals on the plaques)
+    for (const d of geo.userData.decals || []) {
+      const tex = LP.boardTexture(d.text, { w: 448, h: Math.round(448 * d.h / d.w), board: d.board, ink: d.ink });
+      const dm = LP.decal(tex, d.w, d.h);
+      dm.position.set(...d.at);
+      dm.rotation.x = d.tilt * Math.PI / 180;
+      if (d.local) dm.translateZ(d.local[2]);
+      mesh.add(dm);
+    }
     return mesh;
   };
   // =========================================================== trees ==
@@ -1470,9 +1622,10 @@
   function buildTree(b) {
     b = (b | 0) & 3;
     const M = new LP.MeshBuilder(211 + b * 7919);
-    M.jitter = 0.06; M.aoStrength = 0.3; M.aoHeight = 1.2;
+    M.jitter = 0.06; M.aoStrength = 0.2; M.aoHeight = 1.2;
     M.windGradient = true; M.windY0 = 2.6; M.windY1 = 8; M.wind = 1.6;
-    const bark = H('#7A5E4A'), barkDark = H('#5E4636');
+    // warm mid-brown bark (Lanternvale's oak trunk ≈ (107, 83, 57) at noon; ours sits in the crown's soft shadow)
+    const bark = H('#98724C'), barkDark = H('#735238');
     M.push().rotate(0, 0, (b - 1.5) * 1.6);
     trunk(M, [[0.53, 0], [0.4, 0.3], [0.34, 1.2], [0.31, 2.4], [0.26, 3.3]], 7, bark, 0.8, [barkDark, bark, bark, P.shade(bark, 1.06), bark]);
     roots(M, 5, 0.7, 0.24, 0.55, b * 23, bark);
@@ -1482,7 +1635,7 @@
     for (const t of tips) M.segment(fork, t, 0.24, 0.095, 5);
     M.pop();
     const tune = { topVal: 0.94, coolMix: 0.6 };
-    const f = LP.foliage(b, H('#3A6331'), 7, tune);
+    const f = LP.foliage(b, H('#376634'), 7, tune);
     const ramp = LP.canopyRamp(f.top, f.side, f.bottom, 3.6, 8.0, tune);
     const sx = 1 + 0.04 * ((b * 5) % 3);       // seeds differ a little in breadth
     const blobs = [
@@ -1625,18 +1778,24 @@
     return m;
   };
   /**
-   * A stretch of city wall, centred on x = 0, front +Z: a plinth of stone blocks in three tones, battered rammed-earth
-   * courses darkening towards a damp foot, 马面 buttresses (+0.8 m) every ~8 m, a parapet with merlons in varied tones
-   * (moss on every 4th), two stone drain spouts with damp streaks below them.
+   * A stretch of city wall, centred on x = 0, front +Z: a plinth of stone blocks in three tones, battered (0.12) rammed-earth
+   * courses of uneven height darkening towards a damp foot, each laid in formwork panels of their own tone with a dark seam
+   * between courses, 马面 buttresses (+0.8 m) every ~8 m, a parapet with merlons in varied tones (moss cushions on every
+   * 4th), two stone drain spouts with damp streaks that taper and fade into the wall. On top a paved wall-walk: staggered
+   * slabs in two tones over dark grout (a gutter strip along the parapet), a low inner parapet (宇墙) on the city side and
+   * a few props (o.variant 0: a weapon rack and crates; 1: a banner, crates and a jar).
    */
-  Pilot.cityWall = function (len) {
-    const g = LP.MeshCache.get('lp_wall2|' + len, () => {
-      const M = new LP.MeshBuilder(701);
-      M.jitter = 0.07; M.aoStrength = 0.35; M.aoHeight = 1.2;
-      const Hh = 4.1, Z = 2.4, bat = 0.07, X = len / 2, PL = 0.6, BW = 2.4, BD = 0.8;
+  Pilot.cityWall = function (len, o) {
+    o = o || {};
+    const variant = (o.variant | 0) & 1;
+    const g = LP.MeshCache.get('lp_wall3|' + len + '|' + variant + '|' + (o.flagColor || ''), () => {
+      const M = new LP.MeshBuilder(701 + variant * 37);
+      M.jitter = 0.06; M.jitterAll = true; M.aoStrength = 0.35; M.aoHeight = 1.2;
+      const Hh = 4.1, Z = 2.4, bat = 0.12, X = len / 2, PL = 0.6, BW = 2.4, BD = 0.8;
       const zs = y => Z - bat * y;
-      const ys = [PL, 1.15, 1.75, 2.4, 3.05, 3.7, Hh];
-      const courseCol = i => (i % 2 ? PAL.rammed : P.mix(PAL.rammed, PAL.rammedDark, 0.45));
+      const ys = [PL, 1.2, 1.72, 2.36, 2.92, 3.56, Hh];
+      const courseCol = i => (i % 2 ? PAL.rammed : P.mix(PAL.rammed, PAL.rammedDark, 0.32));
+      const seamC = P.shade(PAL.rammedDark, 0.9);
       const nB = Math.max(1, Math.round(len / 8)), bxs = [];
       for (let i = 0; i < nB; i++) bxs.push(-X + (i + 0.5) * len / nB);
       // the runs of plain wall between the buttresses
@@ -1645,25 +1804,52 @@
       runs.push([x, X]);
       for (let i = 0; i < ys.length - 1; i++) {
         const y0 = ys[i], y1 = ys[i + 1], col = P.shade(courseCol(i), i === 0 ? 0.88 : 1);
-        // each rammed-earth course is laid in formwork panels (~2.2 m, staggered row to row), each its own tone
+        // each rammed-earth course: long formwork lifts (≈ 3 m, staggered) in close tones, each shaded from a lighter top lip
+        // to a darker foot — the layers read as bulging rammed earth, not as milled boards
+        const grad = (c, x0, x1, dz) => { const cb = P.shade(c, 0.93), ct = P.shade(c, 1.02); M.quadColors([x0, y0, zs(y0) + dz], [x1, y0, zs(y0) + dz], [x1, y1, zs(y1) + dz], [x0, y1, zs(y1) + dz], [0, bat, 1], [cb, cb, ct, ct]); };
         for (const [a, b] of runs) {
-          let x0 = a, x1 = a + (i % 2 ? 1.1 : 2.2) + (M.random01() - 0.5) * 0.4;
+          let x0 = a, x1 = a + (i % 2 ? 1.5 : 3.0) + (M.random01() - 0.5) * 0.6;
           while (x0 < b - 1e-3) {
-            x1 = Math.min(b, x1); if (b - x1 < 0.6) x1 = b;
-            M.quad([x0, y0, zs(y0)], [x1, y0, zs(y0)], [x1, y1, zs(y1)], [x0, y1, zs(y1)], [0, bat, 1], P.shade(col, 1 + (M.random01() - 0.5) * 0.1));
-            x0 = x1; x1 = x0 + 2.2 + (M.random01() - 0.5) * 0.4;
+            x1 = Math.min(b, x1); if (b - x1 < 0.8) x1 = b;
+            grad(P.shade(col, 1 + (M.random01() - 0.5) * 0.05), x0, x1, 0);
+            x0 = x1; x1 = x0 + 3.0 + (M.random01() - 0.5) * 0.8;
           }
         }
         M.quad([-X, y0, -zs(y0)], [X, y0, -zs(y0)], [X, y1, -zs(y1)], [-X, y1, -zs(y1)], [0, bat, -1], col);
         // buttress faces: front (battered) and the two sides
         for (const bx of bxs) {
-          const c2 = P.shade(col, 0.97 + (M.random01() - 0.5) * 0.08);
-          M.quad([bx - BW / 2, y0, zs(y0) + BD], [bx + BW / 2, y0, zs(y0) + BD], [bx + BW / 2, y1, zs(y1) + BD], [bx - BW / 2, y1, zs(y1) + BD], [0, bat, 1], c2);
-          for (const s of [-1, 1]) M.quad([bx + s * BW / 2, y0, zs(y0)], [bx + s * BW / 2, y0, zs(y0) + BD], [bx + s * BW / 2, y1, zs(y1) + BD], [bx + s * BW / 2, y1, zs(y1)], [s, 0, 0], P.shade(c2, 0.95));
+          const c2 = P.shade(col, 0.97 + (M.random01() - 0.5) * 0.06);
+          grad(c2, bx - BW / 2, bx + BW / 2, BD);
+          for (const s of [-1, 1]) M.quad([bx + s * BW / 2, y0, zs(y0)], [bx + s * BW / 2, y0, zs(y0) + BD], [bx + s * BW / 2, y1, zs(y1) + BD], [bx + s * BW / 2, y1, zs(y1)], [s, 0, 0], P.shade(c2, 0.93));
         }
       }
-      M.color = PAL.stoneLight; M.quad([-X, Hh, -zs(Hh)], [X, Hh, -zs(Hh)], [X, Hh, zs(Hh)], [-X, Hh, zs(Hh)], [0, 1, 0]);
-      for (const bx of bxs) M.quad([bx - BW / 2, Hh, zs(Hh)], [bx + BW / 2, Hh, zs(Hh)], [bx + BW / 2, Hh, zs(Hh) + BD], [bx - BW / 2, Hh, zs(Hh) + BD], [0, 1, 0]);
+      // a dark seam between the courses, hand-drawn: broken into pieces of uneven thickness and height, with gaps
+      for (let i = 1; i < ys.length - 1; i++) {
+        const seg = (a, b, dz) => {
+          let x0 = a;
+          while (x0 < b - 0.05) {
+            const x1 = Math.min(b, x0 + 0.9 + M.random01() * 1.8);
+            if (M.random01() < 0.8) {
+              const y = ys[i] + (M.random01() - 0.5) * 0.024, h0 = 0.007 + M.random01() * 0.011, h1 = 0.007 + M.random01() * 0.011;
+              M.quad([x0, y - h0, zs(y - h0) + dz + 0.006], [x1, y - h1, zs(y - h1) + dz + 0.006], [x1, y + h1, zs(y + h1) + dz + 0.006], [x0, y + h0, zs(y + h0) + dz + 0.006], [0, bat, 1], seamC);
+            }
+            x0 = x1;
+          }
+        };
+        for (const [a, b] of runs) seg(a, b, 0);
+        for (const bx of bxs) seg(bx - BW / 2, bx + BW / 2, BD);
+      }
+      // weathered patches: irregular darker earth here and there on the lower courses
+      const patchC = P.mix(PAL.rammedDark, PAL.earth, 0.2);
+      for (const [a, b] of runs) {
+        const n = Math.max(1, Math.round((b - a) / 3.2));
+        for (let q = 0; q < n; q++) {
+          const cx = lerp(a + 0.5, b - 0.5, (q + 0.3 + M.random01() * 0.4) / n), cy = 0.95 + M.random01() * 1.9, rx = 0.22 + M.random01() * 0.3, ry = 0.12 + M.random01() * 0.1;
+          const pts = []; for (let j = 0; j < 6; j++) { const an = j * Math.PI / 3 + M.random01() * 0.4, rr = 0.7 + M.random01() * 0.4, y = cy + Math.sin(an) * ry * rr; pts.push([cx + Math.cos(an) * rx * rr, y, zs(y) + 0.009]); }
+          const c = P.shade(patchC, 0.96 + M.random01() * 0.08);
+          for (let j = 1; j < 5; j++) M.triangleFacing(pts[0], pts[j], pts[j + 1], [0, bat, 1], c);
+        }
+      }
       for (const s of [-1, 1]) { M.color = PAL.rammedDark; M.quad([s * X, 0, -Z], [s * X, 0, Z], [s * X, Hh, zs(Hh)], [s * X, Hh, -zs(Hh)], [s, 0, 0]); }
       // plinth: along the runs and round the buttresses; stone below it at the back
       M.aoStrength = 0.2;
@@ -1675,7 +1861,7 @@
       M.color = PAL.stone; M.quad([-X, 0, -Z], [X, 0, -Z], [X, PL, -zs(PL)], [-X, PL, -zs(PL)], [0, bat, -1]);
       M.aoStrength = 0.35;
       // parapet and merlons (the buttresses carry theirs forward)
-      const pc = P.mix(PAL.brick, PAL.rammed, 0.3), pz = zs(Hh) - 0.22;
+      const pc = P.mix(PAL.brick, PAL.rammed, 0.3), zt = zs(Hh), pz = zt - 0.22;
       M.color = pc;
       for (const [a, b] of runs) M.box([(a + b) / 2, Hh + 0.28, pz], [b - a, 0.56, 0.44], null, 'tfkrl');
       const mxs = [];
@@ -1687,23 +1873,86 @@
         for (const s of [-1, 1]) M.box([bx + s * (BW / 2 - 0.22), Hh + 0.28, pz + BD / 2], [0.44, 0.56, BD], null, 'tkrl');
         merlons(M, [bx - 0.65, bx + 0.65], Hh + 0.56, pz + BD, [0.8, 0.44, 0.46], pc, 2);
       }
+      // ---- the wall-walk: dark grout bed (it shows as a gutter strip along the parapet and in the joints), staggered paving
+      // slabs in two tones (jittered), the buttress tops paved too, a low inner parapet (宇墙) on the city side
+      const grout = P.shade(PAL.stone, 0.74), zBack = -zt, ipD = 0.3, ipH = 0.45, zIn = pz - 0.22;
+      M.quad([-X, Hh, zBack], [X, Hh, zBack], [X, Hh, zt], [-X, Hh, zt], [0, 1, 0], grout);
+      for (const bx of bxs) M.quad([bx - BW / 2, Hh, zt], [bx + BW / 2, Hh, zt], [bx + BW / 2, Hh, zt + BD], [bx - BW / 2, Hh, zt + BD], [0, 1, 0], grout);
+      const slabA = P.mix(PAL.stoneLight, PAL.stone, 0.3), slabB = P.mix(PAL.stoneLight, PAL.stone, 0.75);
+      const slab = (x0, x1, z0, z1) => M.quad([x0 + 0.02, Hh + 0.014, z0 + 0.02], [x1 - 0.02, Hh + 0.014, z0 + 0.02], [x1 - 0.02, Hh + 0.014, z1 - 0.02], [x0 + 0.02, Hh + 0.014, z1 - 0.02], [0, 1, 0], P.shade(M.random01() < 0.5 ? slabA : slabB, 0.92 + M.random01() * 0.1));
+      const pz0 = zBack + ipD, pz1 = zIn - 0.26, rows = 4;
+      for (let r = 0; r < rows; r++) {
+        const z0 = lerp(pz0, pz1, r / rows), z1 = lerp(pz0, pz1, (r + 1) / rows);
+        let x0 = -X, x1 = -X + (r % 2 ? 0.55 : 1.15) + M.random01() * 0.3;
+        while (x0 < X - 1e-3) { x1 = Math.min(X, x1); if (X - x1 < 0.4) x1 = X; slab(x0, x1, z0, z1); x0 = x1; x1 = x0 + 1.05 + M.random01() * 0.35; }
+      }
+      for (const bx of bxs) for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
+        const xa = bx - BW / 2 + 0.44, xb = bx + BW / 2 - 0.44, za = pz1 + 0.26, zb = pz + BD - 0.22;
+        slab(lerp(xa, xb, c / 2), lerp(xa, xb, (c + 1) / 2), lerp(za, zb, r / 2), lerp(za, zb, (r + 1) / 2));
+      }
+      {
+        const nS = Math.max(1, Math.round(len / 4.5));
+        for (let k = 0; k < nS; k++) {
+          const x0 = lerp(-X, X, k / nS), x1 = lerp(-X, X, (k + 1) / nS);
+          M.color = P.shade(pc, 0.96 + M.random01() * 0.08);
+          M.box([(x0 + x1) / 2, Hh + ipH / 2, zBack + ipD / 2], [x1 - x0, ipH, ipD], P.shade(PAL.stoneLight, 0.9), 'tfk' + (k === 0 ? 'l' : '') + (k === nS - 1 ? 'r' : ''));
+        }
+      }
+      // ---- a few props on the walk, against the inner parapet
+      const ground = Hh + 0.014, zp = pz0 + 0.28;
+      const crate = (x, z, sz, rot) => {
+        M.push().translate(x, ground, z).rotate(0, rot, 0);
+        M.color = H('#9A7050'); M.box([0, sz / 2, 0], [sz, sz, sz * 0.9], H('#B08460'), 'tfkrl');
+        M.color = H('#6E4B36'); M.box([0, sz * 0.5, sz * 0.455], [sz * 1.01, sz * 0.14, 0.012], null, 'f');
+        M.pop();
+      };
+      if (variant === 0) {
+        // weapon rack (兵器架): two posts, two rails, three spears leaning in it
+        const rx = -X * 0.36;
+        M.push().translate(rx, ground, zp);
+        M.color = PAL.timber;
+        for (const s of [-1, 1]) M.box([s * 0.62, 0.65, 0], [0.08, 1.3, 0.08], null, 'tfkrl');
+        M.color = PAL.timberDark;
+        M.box([0, 1.2, 0], [1.36, 0.07, 0.08], null, 'tfkrl');
+        M.box([0, 0.35, 0], [1.36, 0.07, 0.08], null, 'tfkrl');
+        for (const xx of [-0.36, 0, 0.36]) {
+          M.color = C.wood; M.segment([xx, 0.02, 0.18], [xx + 0.05, 1.95, -0.08], 0.02, 0.018, 4, false, false);
+          M.color = C.steel; M.spike([xx + 0.05, 1.94, -0.08], [0.026, 0.99, -0.135], 0.035, 0.18, 4);
+          M.color = C.tassel; M.sphere([xx + 0.048, 1.88, -0.07], 0.035, 4, 2, false);
+        }
+        M.pop();
+        crate(X * 0.42, zp, 0.6, 8); crate(X * 0.42 + 0.68, zp + 0.05, 0.5, -12); crate(X * 0.42 + 0.3, zp + 0.02, 0.42, 30);
+        M.push().translate(0, 0.6, 0); crate(X * 0.42 + 0.05, zp, 0.42, 20); M.pop();
+      } else {
+        // a faction banner on a pole set in the inner parapet, crates and a water jar
+        const bx = X * 0.18, bz = zBack + ipD / 2;
+        M.color = H('#5A3E2C'); M.segment([bx, Hh, bz], [bx, Hh + 3.4, bz], 0.045, 0.035, 4);
+        M.color = C.gold; M.cone([bx, Hh + 3.4, bz], 0.06, 0.2, 4);
+        M.windGradient = true; M.windY0 = Hh + 2.2; M.windY1 = Hh + 3.5; M.wind = 1.1;
+        M.color = H(o.flagColor || '#2f7d4a'); M.strip([bx + 0.05, Hh + 2.85, bz], [bx + 1.0, Hh + 2.8, bz + 0.04], 0.8, 0.74, [0, 0, 1], 0.03);
+        M.wind = 0; M.windGradient = false;
+        crate(-X * 0.4, zp, 0.6, -6); crate(-X * 0.4 + 0.66, zp + 0.04, 0.48, 14);
+        M.color = H('#7E6250');
+        M.push().translate(-X * 0.4 - 0.75, ground, zp + 0.05);
+        M.lathe([[0.16, 0], [0.26, 0.2], [0.24, 0.45], [0.13, 0.55], [0.15, 0.6]], 6, false, false, true);
+        M.pop();
+      }
       // putlog holes (the formwork beams' sockets) in two rows
       M.color = H('#6E5A44');
-      for (const [yy, off] of [[ys[2] + 0.04, 0.6], [ys[4] + 0.04, 1.7]]) for (const [a, b] of runs) for (let hx = a + off; hx < b - 0.3; hx += 2.2) {
-        const z0 = zs(yy) + 0.006;
-        M.quad([hx - 0.07, yy, z0], [hx + 0.07, yy, z0], [hx + 0.07, yy + 0.11, zs(yy + 0.11) + 0.006], [hx - 0.07, yy + 0.11, zs(yy + 0.11) + 0.006], [0, bat, 1]);
+      for (const [yy, off] of [[ys[2] + 0.06, 0.6], [ys[4] + 0.06, 1.7]]) for (const [a, b] of runs) for (let hx = a + off; hx < b - 0.3; hx += 2.2) {
+        const z0 = zs(yy) + 0.008;
+        M.quad([hx - 0.07, yy, z0], [hx + 0.07, yy, z0], [hx + 0.07, yy + 0.11, zs(yy + 0.11) + 0.008], [hx - 0.07, yy + 0.11, zs(yy + 0.11) + 0.008], [0, bat, 1]);
       }
-      // drain spouts with damp streaks, in the longest run
+      // drain spouts with damp streaks that taper to a point and fade into the earth, in the longest run
       const longest = runs.reduce((m, r) => (r[1] - r[0] > m[1] - m[0] ? r : m), runs[0]);
+      M.aoStrength = 0;
       for (const sx of [-1, 1]) {
         const dx = (longest[0] + longest[1]) / 2 + sx * (longest[1] - longest[0]) * 0.27;
-        const sy = Hh - 0.32;
+        const sy = Hh - 0.32, by = sy - 1.15;
         M.color = PAL.stoneDark;
         M.box([dx, sy, zs(sy) + 0.18], [0.2, 0.13, 0.46], PAL.stone, 'tbfrl');
-        M.color = P.shade(PAL.rammedDark, 0.82);
-        M.aoStrength = 0;
-        M.quad([dx - 0.1, sy - 0.08, zs(sy - 0.08) + 0.012], [dx + 0.1, sy - 0.08, zs(sy - 0.08) + 0.012], [dx + 0.17, 1.3, zs(1.3) + 0.012], [dx - 0.15, 1.3, zs(1.3) + 0.012], [0, bat, 1]);
-        M.aoStrength = 0.35;
+        const damp = P.shade(PAL.rammedDark, 0.8), fade = P.shade(courseCol(3), 0.98);
+        M.quadColors([dx - 0.11, sy - 0.06, zs(sy - 0.06) + 0.012], [dx + 0.11, sy - 0.06, zs(sy - 0.06) + 0.012], [dx + 0.03, by, zs(by) + 0.012], [dx - 0.02, by, zs(by) + 0.012], [0, bat, 1], [damp, damp, fade, fade]);
       }
       return M.toGeometry();
     });
@@ -1738,11 +1987,17 @@
         }
       }
     }
-    // dense clumps of taller grass ([x, z, radius, count]) and flower patches ([x, z, radius, count]: blooms on stems)
-    for (const [cx, cz, r, cnt] of o.clumps || []) for (let i = 0; i < cnt; i++) {
-      const a = M.random01() * Math.PI * 2, d = Math.sqrt(M.random01()) * r;
-      M.tuft([cx + Math.cos(a) * d, 0, cz + Math.sin(a) * d], 0.38 + M.random01() * 0.32, 5, greens[(M.random01() * greens.length) | 0]);
+    // dense clumps of taller grass ([x, z, radius, count, y?, height?]: y lifts a clump onto a wall-walk or a ledge) and
+    // flower patches ([x, z, radius, count]: blooms on stems)
+    for (const [cx, cz, r, cnt, cy, ch] of o.clumps || []) {
+      const y = cy || 0, hk = ch || 1;
+      M.windY0 = y; M.windY1 = y + 0.5;
+      for (let i = 0; i < cnt; i++) {
+        const a = M.random01() * Math.PI * 2, d = Math.sqrt(M.random01()) * r;
+        M.tuft([cx + Math.cos(a) * d, y, cz + Math.sin(a) * d], (0.38 + M.random01() * 0.32) * hk, 5, greens[(M.random01() * greens.length) | 0]);
+      }
     }
+    M.windY0 = 0; M.windY1 = 0.5;
     for (const [cx, cz, r, cnt] of o.flowerPatches || []) for (let i = 0; i < cnt; i++) {
       const a = M.random01() * Math.PI * 2, d = Math.sqrt(M.random01()) * r, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       const fy = 0.22 + M.random01() * 0.22, fc = flowers[(((i * 7 + Math.round(Math.abs(cx * 13 + cz * 5))) % flowers.length) + flowers.length) % flowers.length];

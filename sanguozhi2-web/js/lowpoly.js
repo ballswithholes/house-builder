@@ -186,6 +186,9 @@
       this.windY0 = 0; this.windY1 = 1;
       this.bone = 0;
       this.jitter = 0;
+      // jitterAll: per-face jitter also on explicitly coloured faces (quad / triangle with a colour argument) — buildings
+      // pass a colour per course / tile / block, and Lanternvale's walls and roofs are never one exact tone
+      this.jitterAll = false;
       this.aoStrength = 0; this.aoHeight = 0.5;
       this.softParts = [];
     }
@@ -226,6 +229,12 @@
       const k = 1 + (this.random01() * 2 - 1) * this.jitter;
       return [c[0] * k, c[1] * k, c[2] * k];
     }
+    /** An explicit face colour, jittered when jitterAll is on. */
+    jitterOf(c) {
+      if (!this.jitterAll || this.jitter <= 0) return c;
+      const k = 1 + (this.random01() * 2 - 1) * this.jitter;
+      return [c[0] * k, c[1] * k, c[2] * k];
+    }
     addVertex(local, localNormal, c) {
       const e = this.m.elements, x = local[0], y = local[1], z = local[2];
       const px = e[0] * x + e[4] * y + e[8] * z + e[12], py = e[1] * x + e[5] * y + e[9] * z + e[13], pz = e[2] * x + e[6] * y + e[10] * z + e[14];
@@ -257,7 +266,7 @@
     }
     /** Flat triangle, counter-clockwise seen from its front (three.js); the normal is cross(b − a, c − a). */
     triangle(a, b, c, col) {
-      col = col || this.faceColor();
+      col = col ? this.jitterOf(col) : this.faceColor();
       const n = V.cross(V.sub(b, a), V.sub(c, a));
       const i0 = this.addVertex(a, n, col), i1 = this.addVertex(b, n, col), i2 = this.addVertex(c, n, col);
       this.addTri(i0, i1, i2);
@@ -272,8 +281,21 @@
       let n = V.cross(V.sub(c, a), V.sub(d, b));
       if (V.dot(n, n) < 1e-16) n = V.cross(V.sub(b, a), V.sub(c, a));
       if (V.dot(n, outward) < 0) { const t = b; b = d; d = t; n = V.neg(n); }
-      col = col || this.faceColor();
+      col = col ? this.jitterOf(col) : this.faceColor();
       const i0 = this.addVertex(a, n, col), i1 = this.addVertex(b, n, col), i2 = this.addVertex(c, n, col), i3 = this.addVertex(d, n, col);
+      this.addTri(i0, i1, i2);
+      this.addTri(i0, i2, i3);
+    }
+    /**
+     * Flat quad with a colour per corner (cols[0..3] for a, b, c, d): soft painted gradients — a damp streak fading into
+     * the wall, a course darkening towards its foot. Facing `outward`; no jitter.
+     */
+    quadColors(a, b, c, d, outward, cols) {
+      let n = V.cross(V.sub(c, a), V.sub(d, b));
+      if (V.dot(n, n) < 1e-16) n = V.cross(V.sub(b, a), V.sub(c, a));
+      let ca = cols[0], cb = cols[1], cc = cols[2], cd = cols[3];
+      if (V.dot(n, outward) < 0) { let t = b; b = d; d = t; t = cb; cb = cd; cd = t; n = V.neg(n); }
+      const i0 = this.addVertex(a, n, ca), i1 = this.addVertex(b, n, cb), i2 = this.addVertex(c, n, cc), i3 = this.addVertex(d, n, cd);
       this.addTri(i0, i1, i2);
       this.addTri(i0, i2, i3);
     }
@@ -853,7 +875,7 @@
       const keepC = this.color, keepE = this.emission, keepJ = this.jitter, keepW = this.wind, keepG = this.windGradient;
       this.jitter = 0;
       const body = lit ? P.mix(paper, PAL.glowDeep, 0.3) : paper;
-      const prof = [[r * 0.5, -h * 0.5], [r * 0.86, -h * 0.34], [r, -h * 0.1], [r, h * 0.1], [r * 0.86, h * 0.34], [r * 0.5, h * 0.5]];
+      const prof = [[r * 0.5, -h * 0.5], [r * 0.88, -h * 0.3], [r, 0], [r * 0.88, h * 0.3], [r * 0.5, h * 0.5]];
       this.push().translate(c);
       this.emission = lit ? 0.85 : dayGlow;
       for (let j = 0; j < sides; j++) {
@@ -871,9 +893,8 @@
       this.color = cap;
       this.cylinder([0, h * 0.5 - 0.01, 0], r * 0.56, r * 0.42, h * 0.13, sides, false, false, true);
       this.cylinder([0, -h * 0.5 - h * 0.12, 0], r * 0.42, r * 0.56, h * 0.13, sides, false, true, false);
-      // tassel: a knot and a short strip that sways
+      // tassel: a short strip that sways
       this.color = tassel || cap;
-      this.sphere([0, -h * 0.5 - h * 0.17, 0], r * 0.12, 5, 2, false);
       this.windGradient = false; this.wind = 0.6;
       this.strip([0, -h * 0.5 - h * 0.2, 0], [0, -h * 0.5 - h * 0.62, 0], r * 0.22, r * 0.3, [0, 0, 1], r * 0.06);
       this.pop();
@@ -988,6 +1009,9 @@ varying vec4 vColor;
   uniform float uPlanar;
   varying vec2 vDetailUv;
 #endif
+#ifdef LP_MAP
+  varying vec2 vMapUv;
+#endif
 void main() {
   #include <beginnormal_vertex>
   #include <skinbase_vertex>
@@ -1008,6 +1032,9 @@ void main() {
   vColor = color;
   #ifdef LP_DETAIL
     vDetailUv = worldPosition.xz * uPlanar;
+  #endif
+  #ifdef LP_MAP
+    vMapUv = uv;
   #endif
   #include <shadowmap_vertex>
   #include <fog_vertex>
@@ -1038,6 +1065,10 @@ varying vec4 vColor;
   uniform float uDetailK;
   varying vec2 vDetailUv;
 #endif
+#ifdef LP_MAP
+  uniform sampler2D uMap;
+  varying vec2 vMapUv;
+#endif
 const vec3 LV_LUMA = vec3( 0.3, 0.59, 0.11 );
 const vec3 LV_LAMP_AMBER = vec3( 1.3, 1.0, 0.5 );
 // the sun's soft painterly ramp: wrapped diffuse eased in
@@ -1054,6 +1085,10 @@ void main() {
   #ifdef LP_DETAIL
     // painted detail (Lanternvale's planar _MainTex on terrain): a tileable multiplier around 1 (texel 0.5 = 1)
     albedo *= mix( vec3( 1.0 ), texture2D( uDetail, vDetailUv ).rgb * 2.0, uDetailK );
+  #endif
+  #ifdef LP_MAP
+    // a painted decal (sign boards, plaques): the texture's sRGB colour times the vertex colour, lit like everything else
+    albedo *= lpLin( texture2D( uMap, vMapUv ).rgb );
   #endif
   float emission = vColor.a;
   vec3 pos = - vViewPosition;
@@ -1197,7 +1232,7 @@ void main() {
     opts = opts || {};
     const side = opts.side != null ? opts.side : THREE.FrontSide;
     const tint = opts.tint || [1, 1, 1];
-    const key = ['lp', side, tint.join(','), opts.rim || 0, opts.fogScale != null ? opts.fogScale : 1, opts.windScale != null ? opts.windScale : 1, opts.flash ? opts.flash.join(',') : '', opts.detail ? opts.detail.uuid + ':' + (opts.planar || 0.25) + ':' + (opts.detailK != null ? opts.detailK : 1) : ''].join('|');
+    const key = ['lp', side, tint.join(','), opts.rim || 0, opts.fogScale != null ? opts.fogScale : 1, opts.windScale != null ? opts.windScale : 1, opts.flash ? opts.flash.join(',') : '', opts.detail ? opts.detail.uuid + ':' + (opts.planar || 0.25) + ':' + (opts.detailK != null ? opts.detailK : 1) : '', opts.map ? opts.map.uuid : ''].join('|');
     let m = MATS.get(key);
     if (m) return m;
     const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
@@ -1205,8 +1240,9 @@ void main() {
       uRimBoost: { value: opts.rim || 0 }, uFogScale: { value: opts.fogScale != null ? opts.fogScale : 1 }, uWindScale: { value: opts.windScale != null ? opts.windScale : 1 },
     }]);
     if (opts.detail) { u.uDetail = { value: opts.detail }; u.uPlanar = { value: opts.planar || 0.25 }; u.uDetailK = { value: opts.detailK != null ? opts.detailK : 1 }; }
+    if (opts.map) u.uMap = { value: opts.map };
     m = new THREE.ShaderMaterial({ uniforms: withGlobals(u), vertexShader: LP_VERT, fragmentShader: LP_FRAG, lights: true, fog: true, vertexColors: true, side });
-    if (opts.detail) m.defines = { LP_DETAIL: 1 };
+    if (opts.detail || opts.map) { m.defines = {}; if (opts.detail) m.defines.LP_DETAIL = 1; if (opts.map) m.defines.LP_MAP = 1; }
     m.name = 'LP LowPoly';
     MATS.set(key, m);
     return m;
@@ -1351,6 +1387,65 @@ void main() {
     s.scale.set(size, size, 1);
     s.renderOrder = 2;
     return s;
+  };
+
+  // ------------------------------------------------------------ decal --
+  /**
+   * Painted decal (Lanternvale's signs): a w × h quad in the XY plane facing +Z, centred on the origin, carrying a texture
+   * (sRGB, opaque) through the LowPoly lighting — no ink, no shadow. Place it a few millimetres in front of its board.
+   */
+  LP.decal = function (texture, w, h, opts) {
+    opts = opts || {};
+    const x = w / 2, y = h / 2;
+    const pos = new Float32Array([-x, -y, 0, x, -y, 0, x, y, 0, -x, -y, 0, x, y, 0, -x, y, 0]);
+    const nor = new Float32Array(18), sm = new Float32Array(18);
+    for (let i = 0; i < 6; i++) { nor[i * 3 + 2] = 1; sm[i * 3 + 2] = 1; }
+    const col = new Float32Array(24).fill(1);
+    for (let i = 0; i < 6; i++) col[i * 4 + 3] = opts.emission || 0;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+    g.setAttribute('lpWind', new THREE.BufferAttribute(new Float32Array(6), 1));
+    g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]), 2));
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    g.userData.tris = 2;
+    const m = LP.mesh(g, { map: texture, outline: false, castShadow: false });
+    m.name = 'LP decal';
+    return m;
+  };
+  const TEXT_TEX = new Map();
+  /**
+   * A plaque / sign board painted on a canvas: `text` in a brush (楷书) font on a board colour, an inner gold line.
+   * opts: { w, h (px), board, ink (text colour), line, vertical (one glyph per row) }. Cached by its arguments.
+   */
+  LP.boardTexture = function (text, opts) {
+    opts = opts || {};
+    const key = text + '|' + JSON.stringify(opts);
+    if (TEXT_TEX.has(key)) return TEXT_TEX.get(key);
+    const W = opts.w || 448, Hh = opts.h || 128;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+    const x = cv.getContext('2d');
+    x.fillStyle = opts.board || '#3A2A24'; x.fillRect(0, 0, W, Hh);
+    const line = opts.line || null;
+    if (line) { x.strokeStyle = line; x.lineWidth = Math.max(2, Hh * 0.03); const m = Hh * 0.08; x.strokeRect(m, m, W - 2 * m, Hh - 2 * m); }
+    const chars = Array.from(text), n = chars.length;
+    const font = s => `bold ${s}px "KaiTi", "STKaiti", "Kaiti SC", "Kaiti TC", "BiauKai", "AR PL UKai CN", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", "Songti SC", "WenQuanYi Zen Hei", serif`;
+    x.fillStyle = opts.ink || '#F0C25A'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    if (opts.vertical) {
+      const cell = Hh / (n + 0.4), s = Math.min(W * 0.72, cell * 0.86);
+      x.font = font(Math.round(s));
+      chars.forEach((c, i) => x.fillText(c, W / 2, cell * (i + 0.7)));
+    } else {
+      const cell = W / (n + 0.5), s = Math.min(Hh * 0.7, cell * 0.84);
+      x.font = font(Math.round(s));
+      chars.forEach((c, i) => x.fillText(c, cell * (i + 0.75), Hh / 2 + s * 0.04));
+    }
+    const t = new THREE.CanvasTexture(cv);
+    t.anisotropy = 4;
+    TEXT_TEX.set(key, t);
+    return t;
   };
 
   // ============================================================ Mood ==

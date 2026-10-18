@@ -395,7 +395,7 @@
     const gate = Pilot.gateTower({ lit: night, flagColor: FACTION });
     gate.position.set(0, 0, gateZ);
     scene.add(gate);
-    for (const s of [-1, 1]) { const w = Pilot.cityWall(18); w.position.set(s * (6.5 + 9 - 0.3), 0, gateZ - 0.4); scene.add(w); }
+    for (const s of [-1, 1]) { const w = Pilot.cityWall(18, { variant: s > 0 ? 1 : 0, flagColor: FACTION }); w.position.set(s * (6.5 + 9 - 0.3), 0, gateZ - 0.4); scene.add(w); }
     for (const [x, z, sd] of trees) { const t = Pilot.tree(sd); t.position.set(x, 0, z); t.rotation.y = sd * 1.3; scene.add(t); }
     for (const [x, z, sd] of [[-10, -12.5, 0], [7.5, -13, 1], [16, -11, 2], [-17, -11.5, 3]]) { const t = Pilot.pine(sd); t.position.set(x, 0, z); scene.add(t); }
     for (const [x, z, sd, k] of [[-4.6, -2.0, 0, 1], [5.2, -2.1, 1, 0.9], [-7.2, 6.5, 2, 1.1], [6.4, 6.0, 3, 1], [3.8, 13, 1, 0.8], [-5, 14, 2, 0.9]]) { const b = Pilot.bush(sd); b.position.set(x, 0, z); b.scale.setScalar(k); scene.add(b); }
@@ -418,7 +418,12 @@
       if (atGate && Math.abs(x) < 2.2) continue;
       footClumps.push([x + 0.3 * Math.sin(x * 3.1), zFoot, 0.32, 3 + (Math.abs(Math.round(x * 7)) % 3)]);
     }
+    // a few tufts in the cracks of the wall-walk paving (4.1 m up) and along the inner parapet
+    for (const [x, dz] of [[-21.5, -0.2], [-17.2, 0.6], [-11.4, -0.9], [-8.6, 0.2], [9.2, -0.7], [12.8, 0.4], [18.4, -0.4], [22.6, 0.5]]) footClumps.push([x, gateZ - 0.4 + dz, 0.22, 3, 4.12, 0.75]);
     scene.add(Pilot.grassField({ count: 0, x0: -25, x1: 25, z0: gateZ, z1: gateZ + 5, seed: 12, clumps: footClumps }));
+    // inside the walls: the meadow carries on (sparse tufts and flower specks), so the city field is not a bare plane
+    const inner = (x, z) => z > gateZ - 3.4 || trees.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 0.8);
+    scene.add(Pilot.grassField({ count: 220, specks: 380, x0: -32, x1: 32, z0: gateZ - 30, z1: gateZ - 3.4, avoid: inner, seed: 13, flowerRate: 0.2, clumps: [[-6, gateZ - 6, 1.6, 12], [7, gateZ - 7.5, 1.5, 12], [-15, gateZ - 9, 1.6, 10], [15.5, gateZ - 5, 1.4, 10], [0, gateZ - 12, 1.8, 12]] }));
     // soldiers at the gate and Guan Yu on his horse on the road
     const soldiers = [-2.55, 2.55].map((x, i) => { const s = Pilot.soldier({ color: FACTION, seed: i }); s.root.position.set(x, 0, gateZ + 4.6); s.root.rotation.y = x < 0 ? 0.35 : -0.35; s.setPose('idle', i * 0.7); scene.add(s.root); return s; });
     const horse = Pilot.horse({ color: FACTION }), gy = Pilot.guanYu();
