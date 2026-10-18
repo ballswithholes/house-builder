@@ -451,6 +451,11 @@ void main() {
       sky.matrixAutoUpdate = true;
       scene.add(sky);
       this.sky = sky;
+      this._skyBase = { top: skyMat.uniforms.uTop.value.clone(), horizon: skyMat.uniforms.uHorizon.value.clone(), bottom: skyMat.uniforms.uBottom.value.clone(), sun: skyMat.uniforms.uSunColor.value.clone() };
+
+      // 低多边形工具包（js/lowpoly.js，SG.LP）接入：LP 着色器自行编码 sRGB（本渲染器线性输出 = Gamma 工作流）；
+      // 主场景的氛围（SG.Gfx.mood）用同一套 DayNight 关键帧同时驱动 LP 材质与原有的 Lambert / 地形 / 水面材质（正午 = 原样）。
+      this._initMood();
 
       this._t0 = performance.now();
       this.resize();
@@ -477,6 +482,7 @@ void main() {
         this.camera.updateProjectionMatrix();
         for (const s of this._screens) this._fitScreen(s);
       }
+      if (SG.LP) SG.LP.setViewport(Math.round(w * pr), Math.round(h * pr), 1080, 1.0);
       this._updateRect();
     },
     _updateRect() {
@@ -491,14 +497,15 @@ void main() {
       radius = Math.ceil(M.clamp(radius, 16, 170) / 4) * 4;
       const sun = this.sun, size = sun.shadow.mapSize.x;
       const texel = (2 * radius) / size;
-      _basis.lookAt(SUN_DIR, _origin, _up);
+      const sunDir = this.sunDir || SUN_DIR;
+      _basis.lookAt(sunDir, _origin, _up);
       _basis.extractBasis(_bx, _by, _bz);
       const px = center.dot(_bx), py = center.dot(_by);
       const sx = Math.round(px / texel) * texel - px, sy = Math.round(py / texel) * texel - py;
       _v.copy(center).addScaledVector(_bx, sx).addScaledVector(_by, sy);
       const D = 220;
       sun.target.position.copy(_v);
-      sun.position.copy(_v).addScaledVector(SUN_DIR, D);
+      sun.position.copy(_v).addScaledVector(sunDir, D);
       sun.target.updateMatrixWorld();
       sun.updateMatrixWorld();
       const sc = sun.shadow.camera;
@@ -537,6 +544,7 @@ void main() {
       if (!this.renderer) return;
       this.time = (performance.now() - this._t0) / 1000;
       shared.time.value = this.time;
+      if (SG.LP) SG.LP.setTime(this.time);
       shared.equator.value.copy(this.equatorColor).multiplyScalar(this.hemi.intensity);
       const top = this.topScreen();
       if (top) {
@@ -578,6 +586,70 @@ void main() {
       return false;
     },
 
+    // ----------------------------------------------------------- 氛围 --
+    // 主场景的时间氛围（SG.LP.Mood，见 js/lowpoly.js）。各场景调用：
+    //   SG.Gfx.setMood('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数) → mood.state
+    //   SG.Gfx.addLamp([x,y,z], { color, intensity, range, nightOnly, halo, haloSize, flicker }) → lamp；removeLamp(lamp)；setLampLit(lamp, on)
+    //   SG.Gfx.newMood(scene, opts) → 全屏场景（单挑、攻城等 pushScreen 的独立 scene）自己的 LP.Mood（自带太阳与天光）
+    //   SG.Gfx.mood（LP.Mood）/ SG.Gfx.moodState()
+    // 正午即原有画面（太阳、三色环境光、雾、天空、水面原值）；其他时刻按 Lanternvale 关键帧的比例缩放原有材质的光照，
+    // LP 材质则直接得到 Lanternvale 的光照（金色时刻提亮、夜色调、暖色灯池）。阴影方向随太阳移动（setShadowFocus）。
+    _initMood() {
+      if (!SG.LP || !SG.LP.Mood) { this.mood = null; return; }
+      const LP = SG.LP;
+      LP.setOutputEncoded(true);
+      this.mood = new LP.Mood(this.scene, {
+        sun: this.sun, hemi: this.hemi, positionSun: false, baseDir: [SUN_DIR.x, SUN_DIR.y, SUN_DIR.z],
+        legacy: {
+          sunColor: SUN_COLOR, sunIntensity: SUN_INTENSITY * Math.PI * EXPOSURE_SUN, skyColor: AMB_SKY, groundColor: AMB_GROUND,
+          hemiIntensity: Math.PI * EXPOSURE_AMB, equator: this.equatorColor, equatorBase: AMB_EQUATOR, shadowUniform: shared.shadowStrength, shadowBase: 0.55,
+        },
+        fog: { base: FOG_COLOR, background: true }, fogMax: 0.85, shadowStrength: 0.7, maxLamps: 6,
+      });
+      this.mood.set('noon');
+      this.sunDir = SUN_DIR.clone();
+    },
+    setMood(what) {
+      if (!this.mood) return null;
+      this.mood.set(what);
+      const d = this.mood.state.dir;
+      this.sunDir = new THREE.Vector3(d[0], d[1], d[2]).normalize();
+      this._moodExtras();
+      return this.mood.state;
+    },
+    moodState() { return this.mood ? this.mood.state : null; },
+    // 天空穹顶与水面跟随氛围（正午 = 原值）
+    _moodExtras() {
+      const st = this.mood && this.mood.state;
+      if (!st) return;
+      const noon = SG.LP.moodAt(12.5);
+      const ratio = (a, b) => [0, 1, 2].map(k => (b[k] > 1e-4 ? a[k] / b[k] : 0));
+      const rs = ratio(st.sunCol, noon.sunCol).map(v => v * st.sunI / noon.sunI), rk = ratio(st.sky, noon.sky).map(v => v * st.ambI / noon.ambI);
+      const deep = st.deepK || 0, golden = st.golden || 0;
+      if (this.sky && this._skyBase) {
+        const u = this.sky.material.uniforms, b = this._skyBase, fog = st.fog || [b.horizon.r, b.horizon.g, b.horizon.b];
+        u.uTop.value.setRGB(b.top.r * rk[0], b.top.g * rk[1], b.top.b * rk[2]).lerp(color(0.05, 0.07, 0.17), deep);
+        u.uHorizon.value.setRGB(fog[0], fog[1], fog[2]);
+        u.uBottom.value.setRGB(b.bottom.r * rk[0], b.bottom.g * rk[1], b.bottom.b * rk[2]);
+        u.uSunColor.value.setRGB(b.sun.r * rs[0], b.sun.g * rs[1], b.sun.b * rs[2]).lerp(color(1, 0.72, 0.42), golden * 0.6).multiplyScalar(1 - 0.85 * deep);
+        u.uSunDir.value.copy(this.sunDir || SUN_DIR);
+      }
+      if (this._water && this._waterBase) {
+        const u = this._water.uniforms, b = this._waterBase;
+        u.uSunColor.value.setRGB(b.sun.r * rs[0], b.sun.g * rs[1], b.sun.b * rs[2]);
+        u.uAmbient.value.setRGB(b.amb.r * rk[0], b.amb.g * rk[1], b.amb.b * rk[2]);
+        u.uSheenColor.value.setRGB(b.sheen.r * rs[0], b.sheen.g * rs[1], b.sheen.b * rs[2]).lerp(color(1, 0.78, 0.5), golden * 0.5);
+        u.uSkyColor.value.copy(b.sky).lerp(color(...(st.fog || [b.sky.r, b.sky.g, b.sky.b])), 0.5 * Math.max(golden, deep));
+        u.uDeep.value.copy(b.deep).multiplyScalar(1 - 0.55 * deep);
+        u.uShallow.value.copy(b.shallow).multiplyScalar(1 - 0.55 * deep);
+        u.uSunDir.value.copy(this.sunDir || SUN_DIR);
+      }
+    },
+    addLamp(pos, opts) { return this.mood ? this.mood.addLamp(Array.isArray(pos) ? pos : [pos.x, pos.y, pos.z], opts) : null; },
+    removeLamp(lamp) { if (this.mood && lamp) this.mood.removeLamp(lamp); },
+    setLampLit(lamp, on) { if (this.mood && lamp) this.mood.setLampLit(lamp, on); },
+    newMood(scene, opts) { return SG.LP && SG.LP.Mood ? new SG.LP.Mood(scene, opts) : null; },
+
     // ----------------------------------------------------------- 材质 --
     lowPoly() {
       if (!this._lowPoly) this._lowPoly = new LowPolyMaterial();
@@ -608,6 +680,8 @@ void main() {
       });
       this._water.uniforms.uTime = shared.time;
       this._water.uniforms.uRipple.value = rippleTexture();
+      this._waterBase = { sun: this._water.uniforms.uSunColor.value.clone(), amb: this._water.uniforms.uAmbient.value.clone(), sky: this._water.uniforms.uSkyColor.value.clone(), sheen: this._water.uniforms.uSheenColor.value.clone(), deep: this._water.uniforms.uDeep.value.clone(), shallow: this._water.uniforms.uShallow.value.clone() };
+      if (this.mood && this.mood.state && this.mood.state.hour !== 12.5) this._moodExtras();
       return this._water;
     },
     // Unlit.shader：顶点无关，颜色 × 贴图，半透明，不写深度，双面，深度偏移 -1,-1
